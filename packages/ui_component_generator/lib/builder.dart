@@ -380,7 +380,7 @@ String? _translateStateExpr(Expression e, Map<String, String> propByField) {
           e.operator.type == TokenType.MINUS_MINUS)) {
     final prop = _propOf(e.operand as Identifier, propByField);
     final delta = e.operator.type == TokenType.PLUS_PLUS ? '1' : '-1';
-    return '__state.$prop += $delta;';
+    return '$prop += $delta;';
   }
   // ++_count / --_count
   if (e is PrefixExpression &&
@@ -389,7 +389,7 @@ String? _translateStateExpr(Expression e, Map<String, String> propByField) {
           e.operator.type == TokenType.MINUS_MINUS)) {
     final prop = _propOf(e.operand as Identifier, propByField);
     final delta = e.operator.type == TokenType.PLUS_PLUS ? '1' : '-1';
-    return '__state.$prop += $delta;';
+    return '$prop += $delta;';
   }
   // _count = 0 / _count += 1 / ...
   if (e is AssignmentExpression && e.leftHandSide is Identifier) {
@@ -397,7 +397,7 @@ String? _translateStateExpr(Expression e, Map<String, String> propByField) {
     final op = e.operator.lexeme;
     final rhs = _renderLiteral(e.rightHandSide);
     if (rhs == null) return null;
-    return '__state.$prop $op $rhs;';
+    return '$prop $op $rhs;';
   }
   return null;
 }
@@ -504,11 +504,10 @@ String _renderJs(_Component c, String sourcePath, WidgetTranslatorRegistry regis
     ..writeln()
     ..writeln('// IIFE 闭包：方法/状态不泄漏到全局，加载多个 JS 不会重名')
     ..writeln("__components['${c.name}'] = (function() {")
-    ..writeln('  var __state = {');
+    ..writeln('  // 属性一比一：Dart 字段名 = JS 变量名');
   for (final p in c.props) {
-    b.writeln('    ${p.name}: ${p.initial},');
+    b.writeln('  var ${p.name} = ${p.initial};');
   }
-  b.writeln('  };');
   b.writeln();
   // 方法一比一转换：Dart 方法名 = JS 函数名（方法体静态翻译）
   for (final a in c.actions) {
@@ -525,9 +524,9 @@ String _renderJs(_Component c, String sourcePath, WidgetTranslatorRegistry regis
   b.writeln('    return ${ctx.renderJs(c.tree, 2)};');
   b.writeln('  }');
   b.writeln();
-  // 导出：__state（schema 状态）/ 各方法 / build（渲染入口）
+  // 导出：属性（getter，只读反射）/ 各方法 / build（渲染入口）
   final exports = [
-    '__state: __state',
+    for (final p in c.props) 'get ${p.name}() { return ${p.name}; }',
     for (final a in c.actions) '${a.name}: ${a.name}',
     'build: build',
   ].join(', ');

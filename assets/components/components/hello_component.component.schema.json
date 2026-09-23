@@ -39,7 +39,7 @@
       {
         "type": "Text",
         "props": {
-          "data": "\"count = \" + __state._count",
+          "data": "\"count = \" + _count",
           "style": "body"
         }
       },

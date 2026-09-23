@@ -127,7 +127,7 @@ class WidgetTranslateContext {
     throw FormatException('"$method" 未标注 @UIAction');
   }
 
-  /// 字符串插值 → JS 表达式（`'count = $_count'` → `"count = " + __state.count`）
+  /// 字符串插值 → JS 表达式（`'count = $_count'` → `"count = " + _count`）
   String jsDataExpr(Expression e) {
     if (e is SimpleStringLiteral) return jsString(e.value);
     if (e is AdjacentStrings) {
@@ -141,7 +141,7 @@ class WidgetTranslateContext {
         } else if (el is InterpolationExpression) {
           final x = el.expression;
           if (x is Identifier) {
-            parts.add('__state.${propOf(x)}');
+            parts.add(propOf(x));
           } else {
             throw FormatException(
                 '插值只支持状态字段引用（如 \$_count），不支持 ${x.toSource()}');
