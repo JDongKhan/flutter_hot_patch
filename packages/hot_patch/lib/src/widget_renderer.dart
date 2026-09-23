@@ -104,7 +104,13 @@ class WidgetRenderContext {
       );
     }
     if (!host.isRegistered(name)) {
-      // 无 @UIComponent 注解的 lib 普通 widget：原生直接可用，JS 版占位提示
+      // 无 @UIComponent 注解 / 未注册的组件：
+      // 1) 业务方注入原生 widget（nativeComponents）→ 直接渲染
+      // 2) 否则占位提示（原生场景照常用 Flutter 组件）
+      final args = (node.props['args'] as Map?)?.cast<String, dynamic>() ??
+          const <String, dynamic>{};
+      final native = host.nativeOf(name, args);
+      if (native != null) return native;
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Text(
@@ -113,7 +119,9 @@ class WidgetRenderContext {
         ),
       );
     }
-    final tree = host.treeOf(name);
+    final args = (node.props['args'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final tree = host.treeOf(name, args);
     // 嵌套子树事件回流到宿主（父级重建整棵树）
     final subCtx = WidgetRenderContext(
       registry: registry,
@@ -130,13 +138,18 @@ class WidgetRenderContext {
 /// 后续支持自定义嵌套组件 / 原生回退时无需改稳定渲染类。
 abstract class ComponentHost {
   /// 返回嵌套组件的最新节点树；首次调用会实例化并回调 initState。
-  Object? treeOf(String component);
+  /// [args] 为调用点构造参数字面量（如 _LabeledDivider(text: 'x') 的 {text:'x'}）。
+  Object? treeOf(String component, Map<String, dynamic> args);
 
   /// 上报嵌套组件事件（宿主负责调用其方法并重建整棵树）。
   void dispatch(String component, String event);
 
-  /// 组件是否已在 JS 运行时注册（有 @UIComponent 注解的产物）。
+  /// 组件是否已在 JS 运行时注册（有 @UIComponent 注解 / 私有组件翻译的产物）。
   bool isRegistered(String component);
+
+  /// 原生注入：未注册组件（非私有、无注解）由业务方注入 Flutter widget；
+  /// 返回 null 表示未注入，渲染层回退占位提示。
+  Widget? nativeOf(String component, Map<String, dynamic> args);
 }
 
 /// ===========================================================================

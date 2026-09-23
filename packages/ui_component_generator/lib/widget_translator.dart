@@ -44,12 +44,19 @@ class WidgetTranslateContext {
   final Map<String, String> actionByMethod;
   final String sourcePath;
 
+  /// 翻译过程中遇到的未知自定义组件（Component 兜底），供生成器
+  /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
+  final Set<String> dependencies = {};
+
   WidgetTranslateContext({
     required this.registry,
     required this.propByField,
     required this.actionByMethod,
     required this.sourcePath,
   });
+
+  /// 记录一个被兜底为 Component 节点的自定义组件名。
+  void collectDependency(String name) => dependencies.add(name);
 
   // -------------------------------------------------------------------------
   // 递归入口：表达式 → JSON 描述 / JS 渲染
@@ -64,6 +71,7 @@ class WidgetTranslateContext {
       // 有 @UIComponent 注解的组件运行时递归渲染 JS 版本；
       // 无注解的 lib 自定义 widget 原生直接可用，JS 版渲染为 Component 占位。
       if (_isUpperCamel(node.type)) {
+        collectDependency(node.type);
         return const ComponentTranslator().toJson(node, this);
       }
       throw FormatException(
@@ -272,10 +280,17 @@ class ComponentTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    // 记录构造参数字面量（Dart 值；renderJs 转 JS、运行时 jsonEncode 直用）
+    final args = <String, dynamic>{};
+    for (final entry in node.namedArgs.entries) {
+      final v = _literalValue(entry.value);
+      if (v != null) args[entry.key] = v;
+    }
     return {
       'type': 'Component',
       'props': {
         'component': node.type,
+        if (args.isNotEmpty) 'args': args,
       },
     };
   }
@@ -287,6 +302,30 @@ class ComponentTranslator extends WidgetTranslator {
     WidgetTranslateContext ctx,
   ) {
     final p = json['props'] as Map<String, dynamic>;
-    return '{ type: "Component", props: { component: "${p['component']}" } }';
+    final args = p['args'] as Map<String, dynamic>?;
+    final argsJs = args == null
+        ? ''
+        : ', args: { ${[
+            for (final e in args.entries) '${e.key}: ${_jsLiteral(e.value, ctx)}',
+          ].join(', ')} }';
+    return '{ type: "Component", props: { component: "${p['component']}"$argsJs } }';
+  }
+
+  /// AST 字面量 → Dart 值（null 表示不可翻译）。
+  static Object? _literalValue(Expression e) {
+    if (e is StringLiteral) return e.stringValue;
+    if (e is IntegerLiteral) return e.value;
+    if (e is DoubleLiteral) return e.value;
+    if (e is BooleanLiteral) return e.value;
+    if (e is NullLiteral) return null;
+    return null;
+  }
+
+  /// Dart 值 → JS 表达式字面量。
+  static String _jsLiteral(Object? v, WidgetTranslateContext ctx) {
+    if (v is String) return ctx.jsString(v);
+    if (v is bool) return v ? 'true' : 'false';
+    if (v == null) return 'null';
+    return '$v';
   }
 }

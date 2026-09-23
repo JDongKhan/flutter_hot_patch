@@ -38,6 +38,7 @@ class HotPatchWidget extends StatefulWidget {
     this.requiredAssets = const [],
     this.rendererRegistry,
     this.nativeServices,
+    this.nativeComponents = const {},
   });
 
   /// JS 补丁模块的来源。本 demo 用 assets；生产环境换成远端 URL。
@@ -46,6 +47,12 @@ class HotPatchWidget extends StatefulWidget {
   /// 嵌套组件产物（如 DashboardCard 内嵌 BannerCard）：先于主产物加载，
   /// 使 __components 里注册齐全，渲染层才能递归渲染嵌套组件。
   final List<String> requiredAssets;
+
+  /// 非私有/无注解组件的原生注入：组件名 → Flutter widget 构造。
+  /// 运行时（hot_patch 包）不 import 业务类，由业务方在这里注册，
+  /// 未注册的组件渲染占位提示（原生场景照常用 Flutter 组件）。
+  final Map<String, Widget Function(Map<String, dynamic> args)>
+      nativeComponents;
 
   /// 要实例化的组件名（对应 @UIComponent 注解的 name）。
   final String component;
@@ -219,6 +226,7 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
               runtime: _runtime!,
               parentKey: _instanceKey,
               onNestedEvent: _onNestedEvent,
+              nativeComponents: widget.nativeComponents,
             ),
     );
     final w = ctx.render(_tree);
@@ -278,11 +286,16 @@ class _RuntimeComponentHost implements ComponentHost {
     required this.runtime,
     required this.parentKey,
     required this.onNestedEvent,
+    required this.nativeComponents,
   });
 
   final JavascriptRuntime runtime;
   final String parentKey;
   final void Function(String component, String event) onNestedEvent;
+
+  /// 业务方注入的原生 widget（非私有/无注解组件）。
+  final Map<String, Widget Function(Map<String, dynamic> args)>
+      nativeComponents;
 
   @override
   bool isRegistered(String component) {
@@ -291,14 +304,16 @@ class _RuntimeComponentHost implements ComponentHost {
   }
 
   @override
-  Object? treeOf(String component) {
+  Object? treeOf(String component, Map<String, dynamic> args) {
     final key = '$parentKey::$component';
-    // 首次获取：实例化 + 回调 initState；后续复用同一实例（状态保留）
+    // 首次获取：实例化（构造参数 args）+ 注入 setState + 回调 initState；
+    // 后续复用同一实例（状态保留）
+    final argsJs = jsonEncode(args);
     final r = runtime.evaluate(
       '(function(){ '
       'var key = "$key"; var comp = "$component"; '
       'if (typeof __instances[key] === "undefined") { '
-      '  __instances[key] = new __components[comp](); '
+      '  __instances[key] = new __components[comp]($argsJs); '
       '  __instances[key].setState = function(fn){ '
       '    fn.call(this); '
       '    sendMessage("setState", JSON.stringify({ key: key })); '
@@ -314,5 +329,12 @@ class _RuntimeComponentHost implements ComponentHost {
   @override
   void dispatch(String component, String event) {
     onNestedEvent(component, event);
+  }
+
+  @override
+  Widget? nativeOf(String component, Map<String, dynamic> args) {
+    final builder = nativeComponents[component];
+    if (builder == null) return null;
+    return builder(args);
   }
 }

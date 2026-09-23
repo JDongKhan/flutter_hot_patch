@@ -39,8 +39,11 @@ class _DashboardCardState extends State<DashboardCard> {
         // 有注解的自定义组件：JS 版递归渲染 BannerCard（含其自身状态）
         const BannerCard(),
         const SizedBox(height: 12),
-        // 无注解的自定义 widget：原生版直接使用，JS 版为 Component 占位
-        const _LabeledDivider(text: 'no-annotation widget'),
+        // 私有组件（_ 开头）：生成器递归翻译成 JS 注册进同一产物
+        const _LabeledDivider(text: 'private widget'),
+        const SizedBox(height: 8),
+        // 非私有组件：原生直接可用；JS 版运行时由 nativeComponents 注入
+        const LabeledDivider(text: 'public widget'),
         const SizedBox(height: 12),
         ElevatedButton(
           onPressed: tick,
@@ -51,8 +54,8 @@ class _DashboardCardState extends State<DashboardCard> {
   }
 }
 
-/// 无注解的 lib 自定义 widget（普通 Flutter 组件，生成器不认识）：
-/// 原生场景直接使用；JS 场景翻译为 Component 节点，运行时渲染占位提示。
+/// 私有组件（_ 开头）：生成器递归翻译成 JS 注册进同一产物，
+/// 运行时 ComponentHost 递归渲染 JS 版本。
 class _LabeledDivider extends StatelessWidget {
   const _LabeledDivider({required this.text});
 
@@ -60,15 +63,27 @@ class _LabeledDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        const Expanded(child: Divider()),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(text, style: const TextStyle(fontSize: 12)),
-        ),
-        const Expanded(child: Divider()),
+        Text('— $text —', style: const TextStyle(fontSize: 12)),
+        const SizedBox(height: 4),
       ],
+    );
+  }
+}
+
+/// 非私有组件：原生直接可用；JS 场景运行时由 nativeComponents
+/// 注入 Flutter widget（hot_patch 包不 import 业务类）。
+class LabeledDivider extends StatelessWidget {
+  const LabeledDivider({super.key, required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '★ $text ★',
+      style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
     );
   }
 }

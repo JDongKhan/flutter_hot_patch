@@ -72,6 +72,38 @@ class ComponentBuilder implements Builder {
     }
     if (components.isEmpty) return; // 无组件文件不产出
 
+    // BFS 收集嵌套依赖：主组件 build 里用到的本文件**私有组件**（_Xxx）
+    // 同样翻译成 JS 注册进同一产物；非私有组件保持 Component 节点，
+    // 运行时由业务方注入原生 widget（nativeComponents）或占位。
+    final parsedNames = <String>{
+      for (final d in parsed.unit.declarations)
+        if (d is ClassDeclaration) d.name.lexeme,
+    };
+    final doneDeps = <String>{};
+    final depQueue = <String>[
+      for (final c in components) ...c.deps,
+    ];
+    while (depQueue.isNotEmpty) {
+      final dep = depQueue.removeLast();
+      if (doneDeps.contains(dep)) continue;
+      doneDeps.add(dep);
+      // 只翻译本文件内的私有组件（_ 开头、未注解、非已注册主组件）
+      if (!dep.startsWith('_')) continue;
+      if (!parsedNames.contains(dep)) continue;
+      if (components.any((c) => c.name == dep)) continue;
+      final decl = parsed.unit.declarations
+          .whereType<ClassDeclaration>()
+          .firstWhere((d) => d.name.lexeme == dep);
+      final nested = _parseNestedComponent(decl, parsed.unit, dep, registry);
+      components.add(nested);
+      depQueue.addAll(nested.deps);
+    }
+    // ignore: avoid_print - 构建期日志
+    print(
+      '[ui_component_generator] $inputId: '
+      '${components.map((c) => c.name).join(', ')}',
+    );
+
     // 一次渲染合并产物：一个文件 → 一个 JS（注册多个组件）
     final outputs = buildStep.allowedOutputs.toList();
     final jsOutput = outputs.firstWhere((a) => a.path.endsWith('.component.js'));
@@ -92,7 +124,15 @@ class _Component {
   final List<_Prop> props;
   final List<_Action> actions;
   final Map<String, dynamic> tree; // 节点树（data 以 JS 表达式字符串内嵌）
-  _Component(this.name, this.props, this.actions, this.tree);
+
+  /// 构造参数（私有嵌套组件）：`this.x = args && args.x !== undefined ? args.x : def`。
+  final List<String> ctorArgs;
+
+  /// build 树里依赖的自定义组件名（Component 兜底收集）。
+  final Set<String> deps;
+
+  _Component(this.name, this.props, this.actions, this.tree,
+      {this.ctorArgs = const [], this.deps = const {}});
 }
 
 class _Prop {
@@ -100,7 +140,8 @@ class _Prop {
   final String name; // 状态名，如 count
   final String type; // int / String / bool ...
   final String initial; // JS 初始值字面量
-  _Prop(this.field, this.name, this.type, this.initial);
+  final bool fromArgs; // 由构造参数（args）初始化
+  _Prop(this.field, this.name, this.type, this.initial, {this.fromArgs = false});
 }
 
 class _Action {
@@ -200,14 +241,136 @@ _Component _parseComponent(
     throw FormatException('State 类 $stateClassName 缺少 build() 方法');
   }
 
-  final tree = _translateBuildTree(
+  final (tree, deps) = _translateBuildTree(
     buildMethod,
     propByField,
     actionByMethod,
     registry,
   );
 
-  return _Component(componentName, props, actions, tree);
+  return _Component(
+    componentName,
+    props,
+    actions,
+    tree,
+    deps: deps,
+  );
+}
+
+/// 解析「嵌套组件」：build 树里出现的本文件私有组件（_Xxx），
+/// 与主组件同产物注册（__components['_Xxx']），运行时 ComponentHost 递归渲染。
+///
+/// 与主组件的差异：
+///   - 定位承载 build 的类：有 createState 用 State 类，否则（StatelessWidget）
+///     直接用 widget 类本身；
+///   - 收集 widget 构造函数的命名参数（this.x 形参）→ ctorArgs，
+///     产物构造函数接受 args 并按调用点参数初始化；
+///   - 私有组件默认不强制要求 build 在 State 类上。
+_Component _parseNestedComponent(
+  ClassDeclaration widgetClass,
+  CompilationUnit unit,
+  String componentName,
+  WidgetTranslatorRegistry registry,
+) {
+  // 承载 build 的类：widget 类 或 其 State 类
+  ClassDeclaration hostClass = widgetClass;
+  final stateClassName = _stateClassName(widgetClass);
+  if (stateClassName != null) {
+    for (final d in unit.declarations) {
+      if (d is ClassDeclaration && d.name.lexeme == stateClassName) {
+        hostClass = d;
+        break;
+      }
+    }
+  }
+
+  // 构造参数：widget 类构造函数的 this.xxx 命名形参
+  // （required this.x 在无 resolution 下是 DefaultFormalParameter 包裹
+  //  FieldFormalParameter，需要解包）
+  final ctorArgs = <String>[];
+  for (final m in widgetClass.members) {
+    if (m is ConstructorDeclaration) {
+      for (final param in m.parameters.parameters) {
+        final inner = param is DefaultFormalParameter ? param.parameter : param;
+        if (inner is FieldFormalParameter) ctorArgs.add(inner.name.lexeme);
+      }
+    }
+  }
+
+  final props = <_Prop>[];
+  final actions = <_Action>[];
+  final propByField = <String, String>{};
+  final actionByMethod = <String, String>{};
+  MethodDeclaration? buildMethod;
+
+  for (final member in hostClass.members) {
+    if (member is FieldDeclaration) {
+      for (final variable in member.fields.variables) {
+        final fieldName = variable.name.lexeme;
+        final typeName = member.fields.type?.toSource() ?? 'dynamic';
+        if (member.isStatic) continue;
+        if (!_isBasicType(typeName)) {
+          // ignore: avoid_print - 构建期日志
+          print(
+            '[ui_component_generator] 嵌套组件跳过字段 $fieldName（类型 $typeName 不可翻译）',
+          );
+          continue;
+        }
+        final fromArgs = ctorArgs.contains(fieldName);
+        final initial =
+            _renderLiteral(variable.initializer) ?? _defaultInitial(typeName);
+        final propName = _defaultPropName(fieldName);
+        props.add(_Prop(fieldName, propName, typeName, initial,
+            fromArgs: fromArgs));
+        propByField[fieldName] = propName;
+      }
+    }
+    if (member is MethodDeclaration) {
+      if (member.name.lexeme == 'build') {
+        buildMethod = member;
+        continue;
+      }
+      if (_skipMethod(member)) continue;
+      final methodName = member.name.lexeme;
+      final actionName = _defaultActionName(methodName);
+      final nativeChannel =
+          _snackMessage(member.body) != null ? 'nativeToast' : null;
+      try {
+        actions.add(_Action(
+          methodName,
+          actionName,
+          nativeChannel,
+          _translateActionBody(member.body, propByField, nativeChannel),
+        ));
+        actionByMethod[methodName] = actionName;
+      } on FormatException catch (e) {
+        // ignore: avoid_print - 构建期日志
+        print(
+          '[ui_component_generator] 嵌套组件跳过方法 $methodName（无法静态翻译: ${e.message}）',
+        );
+      }
+    }
+  }
+
+  if (buildMethod == null) {
+    throw FormatException('嵌套组件 $componentName 缺少 build() 方法');
+  }
+
+  final (tree, deps) = _translateBuildTree(
+    buildMethod,
+    propByField,
+    actionByMethod,
+    registry,
+  );
+
+  return _Component(
+    componentName,
+    props,
+    actions,
+    tree,
+    ctorArgs: ctorArgs,
+    deps: deps,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -485,7 +648,7 @@ Expression? _namedArg(List<Expression> args, String name) {
 // build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
 // ---------------------------------------------------------------------------
 
-Map<String, dynamic> _translateBuildTree(
+(Map<String, dynamic>, Set<String>) _translateBuildTree(
   MethodDeclaration buildMethod,
   Map<String, String> propByField,
   Map<String, String> actionByMethod,
@@ -501,7 +664,7 @@ Map<String, dynamic> _translateBuildTree(
     actionByMethod: actionByMethod,
     sourcePath: '',
   );
-  return ctx.translate(e);
+  return (ctx.translate(e), {...ctx.dependencies});
 }
 
 // ---------------------------------------------------------------------------
@@ -524,14 +687,25 @@ String _renderJs(
     ..writeln('var __instances = __instances || {};');
 
   for (final c in components) {
+    final isNested = c.ctorArgs.isNotEmpty;
     b
       ..writeln()
       ..writeln('// IIFE 闭包：不泄漏到全局，加载多个 JS 不会重名')
       ..writeln("__components['${c.name}'] = (function() {")
       ..writeln('  // 构造函数：new 一次得到一个独立组件实例，可重复实例化')
-      ..writeln('  function ${c.name}() {');
+      ..writeln(isNested
+          ? '  function ${c.name}(args) {'
+          : '  function ${c.name}() {');
     for (final p in c.props) {
-      b.writeln('    this.${p.name} = ${p.initial};');
+      if (p.fromArgs) {
+        // 构造参数：来自调用点 args，缺省回退默认值
+        b.writeln(
+          '    this.${p.name} = (args && args.${p.name} !== undefined) '
+          '? args.${p.name} : ${p.initial};',
+        );
+      } else {
+        b.writeln('    this.${p.name} = ${p.initial};');
+      }
     }
     b.writeln('  }');
     b.writeln();

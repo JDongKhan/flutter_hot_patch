@@ -46,7 +46,7 @@ class _DemoEntry {
 class DemoListPage extends StatelessWidget {
   const DemoListPage({super.key});
 
-  static const _demos = <_DemoEntry>[
+  static final _demos = <_DemoEntry>[
     _DemoEntry(
       'HelloCard · 原生组件',
       '正常 StatefulWidget，直接使用（与注解无关）',
@@ -93,13 +93,19 @@ class DemoListPage extends StatelessWidget {
     ),
     _DemoEntry(
       'DashboardCard · JS 热更',
-      '嵌套 BannerCard 递归渲染（Component 节点 + 事件回流）；无注解 widget 占位',
+      '私有组件转 JS 递归渲染 + 事件回流；非私有组件 nativeComponents 注入',
       HotPatchWidget(
         jsAsset: 'assets/components/components/composite_component.component.js',
         component: 'DashboardCard',
         requiredAssets: [
           'assets/components/components/banner_component.component.js',
         ],
+        // 非私有组件（LabeledDivider）运行时注入原生 widget：
+        // hot_patch 包不 import 业务类，由业务方在这里注册
+        nativeComponents: {
+          'LabeledDivider': (args) =>
+              LabeledDivider(text: args['text'] as String? ?? ''),
+        },
       ),
     ),
     _DemoEntry(
