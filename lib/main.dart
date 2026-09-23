@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:hot_patch/hot_patch.dart';
 
 import 'components/hello_component.dart';
-import 'js_widget.dart';
 
 void main() => runApp(const HotDemoApp());
 
 /// 演示「正常组件 ↔ JS 热更版本」两种形态：
 ///
 /// - 原生模式：直接使用 [HelloCard]，组件 100% 正常可用（与注解无关）。
-/// - JS 模式：运行时切换为 [JsWidget]，加载 build_runner 从 HelloCard
+/// - JS 模式：运行时切换为 [HotPatchWidget]，加载 build_runner 从 HelloCard
 ///   静态翻译生成的 hello_component.component.js，由 JS 驱动渲染与逻辑。
 ///
 /// 这就是热修复场景：线上出 bug → 下发新 JS → 运行时切换，无需发版。
@@ -147,8 +147,8 @@ class _CardState extends State<_Card> {
         ],
       ),
       child: useJs
-          ? const JsWidget(
-              jsAsset: 'assets/components/hello_component.component.js',
+          ? const HotPatchWidget(
+              jsAsset: 'assets/components/components/hello_component.component.js',
               component: 'HelloCard',
             )
           : const HelloCard(),

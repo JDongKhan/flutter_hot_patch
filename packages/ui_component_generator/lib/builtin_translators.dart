@@ -23,7 +23,7 @@ class ColumnRowTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children = ctx.listArg(node.positionalArgs, 'children', node.type);
+    final children = ctx.listArg(node.args, 'children', node.type);
     return {
       'type': node.type,
       'children': [
@@ -58,8 +58,7 @@ class TextTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final dataExpr =
-        ctx.namedArg(node.positionalArgs, 'data') ??
-            ctx.positionalArg(node.positionalArgs, 0);
+        ctx.namedArg(node.args, 'data') ?? ctx.positionalArg(node.args, 0);
     if (dataExpr == null) {
       throw FormatException('Text 缺少内容');
     }
@@ -67,7 +66,7 @@ class TextTranslator extends WidgetTranslator {
       'type': 'Text',
       'props': {
         'data': ctx.jsDataExpr(dataExpr),
-        'style': _textStyleFrom(node.positionalArgs),
+        'style': _textStyleFrom(node.args),
       },
     };
   }
@@ -107,10 +106,14 @@ class ButtonTranslator extends WidgetTranslator {
   @override
   Set<String> get types => const {'ElevatedButton'};
 
+  /// 产物节点统一叫 'Button'（运行时 WidgetFactory 识别名）。
+  @override
+  Set<String> get jsonTypes => const {'Button'};
+
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final onPressed = ctx.namedArg(node.positionalArgs, 'onPressed');
-    final child = ctx.namedArg(node.positionalArgs, 'child');
+    final onPressed = ctx.namedArg(node.args, 'onPressed');
+    final child = ctx.namedArg(node.args, 'child');
     if (onPressed == null) {
       throw FormatException('ElevatedButton 缺少 onPressed');
     }

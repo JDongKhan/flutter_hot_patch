@@ -38,7 +38,7 @@ class ComponentBuilder implements Builder {
 
   @override
   Map<String, List<String>> get buildExtensions => const {
-        '^lib/components/{{}}.dart': [
+        '^lib/{{}}.dart': [
           'assets/components/{{}}.component.js',
           'assets/components/{{}}.component.schema.json',
         ],

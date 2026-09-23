@@ -14,14 +14,24 @@ import 'package:analyzer/dart/ast/ast.dart';
 
 /// 一个 widget 构造节点的中立表示（build() 树解析的中间产物）。
 ///
-/// 不直接依赖某个具体 widget：type 是构造名（'Column'/'Text'/...），
-/// 参数按位置/命名分开存放，由对应 translator 自行解析。
+/// 不直接依赖某个具体 widget：type 是构造名（'Column'/'Text'/...）。
+/// [args] 保留原始参数列表（含 NamedExpression，供 ctx 的 namedArg/
+/// positionalArg/listArg 解析）；[positionalArgs]/[namedArgs] 是拆分视图。
 class WidgetNode {
   final String type;
+  final List<Expression> args;
   final List<Expression> positionalArgs;
   final Map<String, Expression> namedArgs;
 
-  WidgetNode(this.type, this.positionalArgs, this.namedArgs);
+  WidgetNode(this.type, this.args)
+      : positionalArgs = [
+          for (final a in args)
+            if (a is! NamedExpression) a,
+        ],
+        namedArgs = {
+          for (final a in args)
+            if (a is NamedExpression) a.name.label.name: a.expression,
+        };
 }
 
 /// 翻译上下文：持有注册表与组件元数据，并向 translator 提供通用解析能力。
@@ -61,7 +71,7 @@ class WidgetTranslateContext {
   /// 渲染一个已翻译的 JSON 节点为 JS 对象字面量。
   String renderJs(Map<String, dynamic> json, int depth) {
     final type = json['type'] as String;
-    final translator = registry.lookup(type);
+    final translator = registry.lookupJson(type);
     if (translator == null) {
       throw FormatException('未知节点类型: $type');
     }
@@ -171,31 +181,27 @@ class WidgetTranslateContext {
     if (ctor == null) {
       throw FormatException('不支持的 UI 表达式: ${e.toSource()}');
     }
-    final positional = <Expression>[];
-    final named = <String, Expression>{};
-    for (final a in args) {
-      if (a is NamedExpression) {
-        named[a.name.label.name] = a.expression;
-      } else {
-        positional.add(a);
-      }
-    }
-    return WidgetNode(ctor, positional, named);
+    return WidgetNode(ctor, args);
   }
 }
 
 /// ===========================================================================
 /// 策略抽象类：一个 widget 类型族的「widget → JSON 描述 + JS 渲染」
 ///
-/// - [types]：处理的 widget 构造名集合（如 {'Text'} 或 {'Column','Row'}）
+/// - [types]：处理的源码 widget 构造名（如 {'Text'} 或 {'Column','Row'}）
+/// - [jsonTypes]：产物 JSON 里的节点 type 名（默认与 [types] 相同；
+///   如 ElevatedButton 的产物节点叫 'Button' 时覆写）
 /// - [toJson]：AST 节点 → 中立 JSON 描述（schema 直接使用这份 JSON）
 /// - [renderJs]：JSON 描述 → JS 对象字面量（运行时 create() 用）
 /// ===========================================================================
 abstract class WidgetTranslator {
   const WidgetTranslator();
 
-  /// 本 translator 支持的 widget 构造名集合。
+  /// 本 translator 支持的源码 widget 构造名集合。
   Set<String> get types;
+
+  /// 本 translator 产物 JSON 中使用的节点 type 名集合（默认与 [types] 相同）。
+  Set<String> get jsonTypes => types;
 
   /// 把 [node] 翻译成 JSON 描述（type/props/children）。
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx);
@@ -215,19 +221,29 @@ class WidgetTranslatorRegistry {
 
   /// 注册一个 translator（同 type 覆盖旧的，后注册者优先）。
   void register(WidgetTranslator translator) {
-    _translators.removeWhere((t) => t.types.intersection(translator.types).isNotEmpty);
+    _translators.removeWhere(
+      (t) =>
+          t.types.intersection(translator.types).isNotEmpty ||
+          t.jsonTypes.intersection(translator.jsonTypes).isNotEmpty,
+    );
     _translators.add(translator);
   }
 
-  /// 按 widget 构造名查找 translator；未注册返回 null。
-  WidgetTranslator? lookup(String type) {
+  /// 按源码 widget 构造名查找 translator；未注册返回 null。
+  WidgetTranslator? lookup(String type) => _find((t) => t.types.contains(type));
+
+  /// 按产物 JSON 节点 type 查找 translator；未注册返回 null。
+  WidgetTranslator? lookupJson(String type) =>
+      _find((t) => t.jsonTypes.contains(type));
+
+  WidgetTranslator? _find(bool Function(WidgetTranslator) match) {
     for (final t in _translators.reversed) {
-      if (t.types.contains(type)) return t;
+      if (match(t)) return t;
     }
     return null;
   }
 
-  /// 当前已注册的类型集合（用于报错信息）。
+  /// 当前已注册的源码类型集合（用于报错信息）。
   Set<String> get registeredTypes =>
       {for (final t in _translators) ...t.types};
 }

@@ -34,7 +34,9 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  flutter_js: ^0.8.7
+  # 热更新运行时（加载 JS 补丁渲染组件，JS 驱动逻辑）
+  hot_patch:
+    path: packages/hot_patch
   # 声明式组件注解包
   ui_component:
     path: packages/ui_component
@@ -67,7 +69,11 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/components/
+    # 注意：Flutter 的目录 asset 声明不会递归打包子目录（flutter_tools
+    # 对目录用 listSync() 非递归），而生成器产物按 lib 相对路径镜像到
+    # assets/components/<lib路径>。因此必须【逐文件显式声明】每个产物。
+    # 新增带注解组件后，把 build_runner 生成的两个产物文件各加一行。
+    - assets/components/components/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

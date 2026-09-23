@@ -1,0 +1,81 @@
+import 'package:flutter/material.dart';
+
+import 'widget_renderer.dart';
+
+/// 内置渲染策略：把 codegen 生成的 JSON 节点渲染为常见 Flutter widget。
+///
+/// 新增内置 widget = 在这里加一个 renderer 类 + register 一行；
+/// 自定义 widget = 业务方实现 WidgetRenderer 并通过
+/// HotPatchWidget(rendererRegistry: ...) 注入，核心代码零改动。
+void registerBuiltinRenderers(WidgetRendererRegistry registry) {
+  registry
+    ..register(const LayoutRenderer())
+    ..register(const TextRenderer())
+    ..register(const ButtonRenderer());
+}
+
+/// Column / Row：布局容器，唯一策略是递归渲染 children。
+class LayoutRenderer extends WidgetRenderer {
+  const LayoutRenderer();
+
+  @override
+  Set<String> get types => const {'Column', 'Row'};
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    final children = [for (final c in node.children) ctx.render(c)];
+    debugPrint(
+      '[hot_patch] ${node.type} render children=${children.length} '
+      'types=[${children.map((w) => w.runtimeType).join(',')}]',
+    );
+    return node.type == 'Column'
+        ? Column(mainAxisSize: MainAxisSize.min, children: children)
+        : Row(mainAxisSize: MainAxisSize.min, children: children);
+  }
+}
+
+/// Text：文案 + 样式映射（title/hint/body）。
+class TextRenderer extends WidgetRenderer {
+  const TextRenderer();
+
+  @override
+  Set<String> get types => const {'Text'};
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    final w = Text(
+      node.props['data']?.toString() ?? '',
+      textAlign: TextAlign.center,
+      style: _styleFor(node.props['style']?.toString()),
+    );
+    debugPrint('[hot_patch] Text render "${node.props['data']}"');
+    return w;
+  }
+
+  static TextStyle? _styleFor(String? style) {
+    final t = ThemeData.light();
+    return switch (style) {
+      'title' => t.textTheme.headlineSmall,
+      'hint' => t.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+      _ => t.textTheme.bodyLarge,
+    };
+  }
+}
+
+/// Button：ElevatedButton，点击时把 props.event 上报给 JS 驱动逻辑。
+class ButtonRenderer extends WidgetRenderer {
+  const ButtonRenderer();
+
+  @override
+  Set<String> get types => const {'Button'};
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    final w = ElevatedButton(
+      onPressed: () => ctx.onEvent(node.props['event']?.toString() ?? ''),
+      child: Text(node.props['label']?.toString() ?? ''),
+    );
+    debugPrint('[hot_patch] Button render "${node.props['label']}"');
+    return w;
+  }
+}
