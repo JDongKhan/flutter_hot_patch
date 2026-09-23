@@ -1,0 +1,11 @@
+builders:
+  ui_component:
+    import: "package:ui_component_generator/builder.dart"
+    builder_factories: ["componentBuilder"]
+    # {{}} 捕获输入文件名；产物落到应用根目录 assets/components/（专门的资源目录）
+    build_extensions:
+      "^lib/components/{{}}.dart":
+        - "assets/components/{{}}.component.js"
+        - "assets/components/{{}}.component.schema.json"
+    auto_apply: dependents
+    build_to: source

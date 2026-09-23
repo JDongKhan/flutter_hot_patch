@@ -1,0 +1,74 @@
+{
+  "name": "HelloCard",
+  "source": "lib/components/hello_component.dart",
+  "state": [
+    {
+      "field": "_count",
+      "name": "count",
+      "type": "int",
+      "initial": "0"
+    }
+  ],
+  "actions": [
+    {
+      "method": "inc",
+      "name": "inc",
+      "native": null
+    },
+    {
+      "method": "reset",
+      "name": "reset",
+      "native": null
+    },
+    {
+      "method": "showNative",
+      "name": "native",
+      "native": "nativeToast"
+    }
+  ],
+  "tree": {
+    "type": "Column",
+    "children": [
+      {
+        "type": "Text",
+        "props": {
+          "data": "\"Hello from JS logic\"",
+          "style": "title"
+        }
+      },
+      {
+        "type": "Text",
+        "props": {
+          "data": "\"count = \" + __state.count",
+          "style": "body"
+        }
+      },
+      {
+        "type": "Row",
+        "children": [
+          {
+            "type": "Button",
+            "props": {
+              "label": "\"+1\"",
+              "event": "inc"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "label": "\"Reset\"",
+              "event": "reset"
+            }
+          },
+          {
+            "type": "Button",
+            "props": {
+              "label": "\"Native\"",
+              "event": "native"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

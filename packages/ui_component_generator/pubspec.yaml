@@ -1,0 +1,14 @@
+name: ui_component_generator
+description: 读取 @UIComponent/@UIProp/@UIAction 注解，生成对应的 JS 描述模块（create/handleEvent）。
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  analyzer: ^7.0.0
+  build: ^2.4.1
+
+dev_dependencies:
+  lints: ^5.0.0
