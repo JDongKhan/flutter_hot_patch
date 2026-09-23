@@ -16,12 +16,7 @@ import 'package:ui_component/ui_component.dart';
 void main() {
   test('注解可携带组件元信息', () {
     const component = UIComponent('HelloCard');
-    const prop = UIProp('count');
-    const action = UIAction('native', native: 'nativeToast');
     expect(component.name, 'HelloCard');
-    expect(prop.name, 'count');
-    expect(action.name, 'native');
-    expect(action.native, 'nativeToast');
   });
 
   test('渲染策略层：节点树渲染为 Column/Text/Button', () {

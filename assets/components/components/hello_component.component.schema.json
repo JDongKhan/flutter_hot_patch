@@ -4,7 +4,7 @@
   "state": [
     {
       "field": "_count",
-      "name": "count",
+      "name": "_count",
       "type": "int",
       "initial": "0"
     }
@@ -22,7 +22,7 @@
     },
     {
       "method": "showNative",
-      "name": "native",
+      "name": "showNative",
       "native": "nativeToast"
     }
   ],
@@ -39,7 +39,7 @@
       {
         "type": "Text",
         "props": {
-          "data": "\"count = \" + __state.count",
+          "data": "\"count = \" + __state._count",
           "style": "body"
         }
       },
@@ -64,7 +64,7 @@
             "type": "Button",
             "props": {
               "label": "\"Native\"",
-              "event": "native"
+              "event": "showNative"
             }
           }
         ]

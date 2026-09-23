@@ -21,8 +21,8 @@ import 'widget_renderer.dart';
 ///      从远端下载 + 版本/签名校验）
 ///   2. 创建 JS 运行时（iOS/macOS=JavaScriptCore，Android=QuickJS），
 ///      把补丁组件注册进全局 __components
-///   3. 调用 create() 拿首帧节点树
-///   4. 事件回流：handleEvent(action) → 新节点树 → setState 重渲染
+///   3. 调用 build() 拿首帧节点树（与组件 build() 原封不动对应）
+///   4. 事件回流：按钮事件 → 直接调用组件同名方法 → build() 新树 → setState
 ///   5. JS→Flutter 原生方向：JS 里 sendMessage(channel, ...) 按通道分发
 ///      到 [NativeService] 实现（默认内置 SnackBar/Log 服务）
 ///
@@ -105,20 +105,12 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
         debugPrint('[hot_patch] native service "$channel" wired');
       }
 
-      // 2.2 把补丁组件注册到全局 __components
-      final setup = '''
-        var __components = {};
-        $jsSource
-        __components['${widget.component}'] = {
-          create: create,
-          handleEvent: handleEvent
-        };
-      ''';
-      runtime.evaluate(setup);
-      debugPrint('[hot_patch] setup evaluated');
+      // 2.2 加载补丁模块（产物自包含：声明 __components + IIFE 注册组件）
+      runtime.evaluate(jsSource);
+      debugPrint('[hot_patch] module loaded');
 
       // 3. 首帧：让 JS 产出节点树
-      _tree = _callCreate();
+      _tree = _callBuild();
       debugPrint('[hot_patch] first tree: $_tree');
       if (!mounted) return;
       setState(() => _loading = false);
@@ -132,24 +124,22 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
     }
   }
 
-  Object? _callCreate() {
+  Object? _callBuild() {
     final r = _runtime!.evaluate(
-      'JSON.stringify(__components["${widget.component}"].create())',
+      'JSON.stringify(__components["${widget.component}"].build())',
     );
-    debugPrint('[hot_patch] create raw: "${r.stringResult}"');
-    return jsonDecode(r.stringResult);
-  }
-
-  Object? _callHandleEvent(String action) {
-    final r = _runtime!.evaluate(
-      'JSON.stringify(__components["${widget.component}"].handleEvent(${jsonEncode(action)}, {}))',
-    );
+    debugPrint('[hot_patch] build raw: "${r.stringResult}"');
     return jsonDecode(r.stringResult);
   }
 
   void _onEvent(String event) {
     debugPrint('[hot_patch] onEvent: $event');
-    final newTree = _callHandleEvent(event);
+    // 事件名 = 组件方法名（一比一）：直接调用同名方法，再重新 build 取新树
+    final r = _runtime!.evaluate(
+      '(function(){ __components["${widget.component}"].$event(); '
+      'return JSON.stringify(__components["${widget.component}"].build()); })()',
+    );
+    final newTree = jsonDecode(r.stringResult);
     if (!mounted) return;
     setState(() => _tree = newTree);
   }

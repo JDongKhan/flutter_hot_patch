@@ -14,7 +14,7 @@ Builder componentBuilder(_) => const ComponentBuilder();
 
 /// 把带 @UIComponent 注解的「正常 Flutter widget」翻译为两份产物：
 ///
-///   1. `*.component.js`          —— 运行时 JS 描述模块（create/handleEvent）
+///   1. `*.component.js`          —— 运行时 JS 描述模块（build/handleEvent）
 ///   2. `*.component.schema.json` —— 组件 schema（状态/动作/节点树描述）
 ///
 /// 组件本身 100% 正常可用（普通 StatefulWidget）；注解只是构建期元数据，
@@ -153,14 +153,22 @@ _Component _parseComponent(
 
   for (final member in stateClass.members) {
     if (member is FieldDeclaration) {
-      final uiProp = _findAnnotation(member.metadata, 'UIProp');
-      if (uiProp == null) continue;
+      // 默认全量：所有非 static 字段自动进 state。
       for (final variable in member.fields.variables) {
         final fieldName = variable.name.lexeme;
-        final propName = _positionalString(uiProp, 0) ?? fieldName;
         final typeName = member.fields.type?.toSource() ?? 'dynamic';
         final initial =
             _renderLiteral(variable.initializer) ?? _defaultInitial(typeName);
+        if (member.isStatic) continue;
+        if (!_isBasicType(typeName)) {
+          // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
+          // ignore: avoid_print - 构建期日志
+          print(
+            '[ui_component_generator] 跳过字段 $fieldName（类型 $typeName 不可翻译）',
+          );
+          continue;
+        }
+        final propName = _defaultPropName(fieldName);
         props.add(_Prop(fieldName, propName, typeName, initial));
         propByField[fieldName] = propName;
       }
@@ -171,18 +179,28 @@ _Component _parseComponent(
         buildMethod = member;
         continue;
       }
-      final uiAction = _findAnnotation(member.metadata, 'UIAction');
-      if (uiAction == null) continue;
+      if (_skipMethod(member)) continue;
+      // 默认全量：所有非生命周期方法自动进 action。
       final methodName = member.name.lexeme;
-      final actionName = _positionalString(uiAction, 0) ?? methodName;
-      final nativeChannel = _namedString(uiAction, 'native');
-      actions.add(_Action(
-        methodName,
-        actionName,
-        nativeChannel,
-        _translateActionBody(member.body, propByField, nativeChannel),
-      ));
-      actionByMethod[methodName] = actionName;
+      final actionName = _defaultActionName(methodName);
+      // 方法体是 SnackBar 形式 → 自动识别为 native 通道
+      final nativeChannel =
+          _snackMessage(member.body) != null ? 'nativeToast' : null;
+      try {
+        actions.add(_Action(
+          methodName,
+          actionName,
+          nativeChannel,
+          _translateActionBody(member.body, propByField, nativeChannel),
+        ));
+        actionByMethod[methodName] = actionName;
+      } on FormatException catch (e) {
+        // 默认全量收集的方法翻译失败则跳过并提示。
+        // ignore: avoid_print - 构建期日志
+        print(
+          '[ui_component_generator] 跳过方法 $methodName（无法静态翻译: ${e.message}）',
+        );
+      }
     }
   }
 
@@ -198,6 +216,40 @@ _Component _parseComponent(
   );
 
   return _Component(componentName, props, actions, tree);
+}
+
+// ---------------------------------------------------------------------------
+// 默认全量收集：命名与过滤规则
+// ---------------------------------------------------------------------------
+
+/// 字段默认状态名：一比一，保持 Dart 字段原名（_count → _count）。
+String _defaultPropName(String fieldName) => fieldName;
+
+/// 方法默认事件名：一比一，保持 Dart 方法原名（inc → inc）。
+String _defaultActionName(String methodName) => methodName;
+
+/// 基础类型（可翻译为 JS 初始值）：无注解时自动进 state。
+bool _isBasicType(String typeName) {
+  final t = typeName.trim();
+  if (t.endsWith('?')) return _isBasicType(t.substring(0, t.length - 1));
+  return switch (t) {
+    'int' || 'double' || 'num' || 'String' || 'bool' || 'dynamic' => true,
+    _ => false,
+  };
+}
+
+/// 跳过 State 生命周期 / getter / setter / static 方法（不是用户动作）。
+bool _skipMethod(MethodDeclaration member) {
+  if (member.isGetter || member.isSetter) return true;
+  if (member.isStatic) return true;
+  return const {
+    'initState',
+    'dispose',
+    'didChangeDependencies',
+    'didUpdateWidget',
+    'deactivate',
+    'activate',
+  }.contains(member.name.lexeme);
 }
 
 String? _stateClassName(ClassDeclaration widgetClass) {
@@ -244,18 +296,6 @@ String? _positionalString(Annotation a, int index) {
   if (args == null || index >= args.arguments.length) return null;
   final e = args.arguments[index];
   return e is StringLiteral ? e.stringValue : null;
-}
-
-String? _namedString(Annotation a, String name) {
-  final args = a.arguments;
-  if (args == null) return null;
-  for (final arg in args.arguments) {
-    if (arg is NamedExpression && arg.name.label.name == name) {
-      final e = arg.expression;
-      return e is StringLiteral ? e.stringValue : null;
-    }
-  }
-  return null;
 }
 
 String? _renderLiteral(Expression? e) {
@@ -365,7 +405,7 @@ String? _translateStateExpr(Expression e, Map<String, String> propByField) {
 String _propOf(Identifier id, Map<String, String> propByField) {
   final prop = propByField[id.name];
   if (prop != null) return prop;
-  throw FormatException('"${id.name}" 不是 @UIProp 状态字段');
+  throw FormatException('"${id.name}" 不是状态字段（或已被跳过）');
 }
 
 /// 提取 SnackBar 消息字符串
@@ -459,28 +499,40 @@ String _renderJs(_Component c, String sourcePath, WidgetTranslatorRegistry regis
     ..writeln('// 由 ui_component_generator 从 $sourcePath 自动生成')
     ..writeln('// 重新生成：dart run build_runner build')
     ..writeln()
-    ..writeln('var __state = {');
+    ..writeln('// 组件注册表：多个 JS 补丁共享，加载顺序无关')
+    ..writeln('var __components = __components || {};')
+    ..writeln()
+    ..writeln('// IIFE 闭包：方法/状态不泄漏到全局，加载多个 JS 不会重名')
+    ..writeln("__components['${c.name}'] = (function() {")
+    ..writeln('  var __state = {');
   for (final p in c.props) {
-    b.writeln('  ${p.name}: ${p.initial},');
+    b.writeln('    ${p.name}: ${p.initial},');
   }
-  b.writeln('};');
+  b.writeln('  };');
   b.writeln();
-  b.writeln('function create() {');
+  // 方法一比一转换：Dart 方法名 = JS 函数名（方法体静态翻译）
+  for (final a in c.actions) {
+    b.writeln('  function ${a.name}() { ${a.bodyJs} }');
+  }
+  b.writeln();
+  b.writeln('  function build() {');
   final ctx = WidgetTranslateContext(
     registry: registry,
     propByField: const {},
     actionByMethod: const {},
     sourcePath: sourcePath,
   );
-  b.writeln('  return ${ctx.renderJs(c.tree, 1)};');
-  b.writeln('}');
+  b.writeln('    return ${ctx.renderJs(c.tree, 2)};');
+  b.writeln('  }');
   b.writeln();
-  b.writeln('function handleEvent(action, payload) {');
-  for (final a in c.actions) {
-    b.writeln('  if (action === ${_jsStringLiteral(a.name)}) { ${a.bodyJs} }');
-  }
-  b.writeln('  return create();');
-  b.writeln('}');
+  // 导出：__state（schema 状态）/ 各方法 / build（渲染入口）
+  final exports = [
+    '__state: __state',
+    for (final a in c.actions) '${a.name}: ${a.name}',
+    'build: build',
+  ].join(', ');
+  b.writeln('  return { $exports };');
+  b.writeln('})();');
   b.writeln();
   return b.toString();
 }
