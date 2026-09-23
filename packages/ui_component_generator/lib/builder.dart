@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -15,7 +14,7 @@ Builder componentBuilder(_) => const ComponentBuilder();
 /// 把带 @UIComponent 注解的「正常 Flutter widget」翻译为两份产物：
 ///
 ///   1. `*.component.js`          —— 运行时 JS 描述模块（build/handleEvent）
-///   2. `*.component.schema.json` —— 组件 schema（状态/动作/节点树描述）
+///   2. （可选扩展）`*.component.schema.json` —— 组件 schema，按需自行输出
 ///
 /// 组件本身 100% 正常可用（普通 StatefulWidget）；注解只是构建期元数据，
 /// 生成器全程静态解析，不执行任何 Dart 代码。
@@ -40,7 +39,6 @@ class ComponentBuilder implements Builder {
   Map<String, List<String>> get buildExtensions => const {
         '^lib/{{}}.dart': [
           'assets/components/{{}}.component.js',
-          'assets/components/{{}}.component.schema.json',
         ],
       };
 
@@ -58,36 +56,30 @@ class ComponentBuilder implements Builder {
     final registry = WidgetTranslatorRegistry();
     registerBuiltinTranslators(registry);
 
+    // 收集本文件内全部 @UIComponent 组件（支持单文件多组件 / 文件内共享普通类）
+    final components = <_Component>[];
     for (final declaration in parsed.unit.declarations) {
       if (declaration is! ClassDeclaration) continue;
       final uiComponent = _findAnnotation(declaration.metadata, 'UIComponent');
-      if (uiComponent == null) continue;
+      if (uiComponent == null) continue; // 普通类（共享基类等）直接跳过
 
-      final component = _parseComponent(
+      components.add(_parseComponent(
         declaration,
         parsed.unit,
         _positionalString(uiComponent, 0) ?? declaration.name.lexeme,
         registry,
-      );
-
-      final outputs = buildStep.allowedOutputs.toList();
-      final jsOutput = outputs.firstWhere(
-        (a) => a.path.endsWith('.component.js'),
-      );
-      final schemaOutput = outputs.firstWhere(
-        (a) => a.path.endsWith('.component.schema.json'),
-      );
-
-      await buildStep.writeAsString(
-        jsOutput,
-        _renderJs(component, inputId.path, registry),
-      );
-      await buildStep.writeAsString(
-        schemaOutput,
-        const JsonEncoder.withIndent('  ')
-            .convert(_renderSchema(component, inputId.path)),
-      );
+      ));
     }
+    if (components.isEmpty) return; // 无组件文件不产出
+
+    // 一次渲染合并产物：一个文件 → 一个 JS（注册多个组件）
+    final outputs = buildStep.allowedOutputs.toList();
+    final jsOutput = outputs.firstWhere((a) => a.path.endsWith('.component.js'));
+
+    await buildStep.writeAsString(
+      jsOutput,
+      _renderJs(components, inputId.path, registry),
+    );
   }
 }
 
@@ -238,18 +230,12 @@ bool _isBasicType(String typeName) {
   };
 }
 
-/// 跳过 State 生命周期 / getter / setter / static 方法（不是用户动作）。
+/// 跳过 getter / setter / static 方法（build 在收集处单独处理；
+/// initState/dispose 等 State 生命周期方法**全量生成**，由运行时在对应生命周期回调）。
 bool _skipMethod(MethodDeclaration member) {
   if (member.isGetter || member.isSetter) return true;
   if (member.isStatic) return true;
-  return const {
-    'initState',
-    'dispose',
-    'didChangeDependencies',
-    'didUpdateWidget',
-    'deactivate',
-    'activate',
-  }.contains(member.name.lexeme);
+  return false;
 }
 
 String? _stateClassName(ClassDeclaration widgetClass) {
@@ -336,40 +322,69 @@ String _translateActionBody(
     return 'sendMessage(${_jsStringLiteral(nativeChannel)}, JSON.stringify({ message: $msg }));';
   }
 
-  final inner = _unwrapSetState(body);
-  if (inner == null) return '/* 空方法体 */';
-  final translated = _translateStateExpr(inner, propByField);
-  return translated ?? '/* TODO(codegen): 无法静态翻译的方法体 */';
-}
-
-/// 提取 setState(() { ... }) / setState(() => ...) 里的表达式
-Expression? _unwrapSetState(FunctionBody body) {
-  Expression? outer;
+  // 逐语句翻译：setState(...) 展开、super.xxx() 忽略、无法翻译的语句降级跳过。
+  final stmts = <String>[];
   if (body is ExpressionFunctionBody) {
-    outer = body.expression;
+    final t = _translateExprStatement(body.expression, propByField);
+    if (t != null) stmts.add(t);
   } else if (body is BlockFunctionBody) {
     for (final s in body.block.statements) {
       if (s is ExpressionStatement) {
-        outer = s.expression;
-        break;
+        final e = s.expression;
+        // super.initState() 等 super 调用：JS 无 super 语义，忽略
+        if (e is MethodInvocation && e.target is SuperExpression) continue;
+        final t = _translateExprStatement(e, propByField);
+        if (t != null) stmts.add(t);
       }
     }
   }
-  if (outer is MethodInvocation &&
-      outer.methodName.name == 'setState' &&
-      outer.argumentList.arguments.length == 1) {
-    final fn = outer.argumentList.arguments.first;
+  if (stmts.isEmpty) return '/* 空方法体 */';
+  return stmts.join(' ');
+}
+
+/// 翻译一条表达式语句：setState((){...}) / 裸赋值 / 状态自增等。
+///
+/// setState 按 Dart 原封翻译：`setState(() => _taps++)` →
+/// `this.setState(function(){ this._taps += 1; });`。
+/// JS 实例上挂载的 setState 由运行时注入（执行回调 + 通知宿主重建），
+/// 生成器不展开、不特殊处理。
+String? _translateExprStatement(
+  Expression e,
+  Map<String, String> propByField,
+) {
+  if (e is MethodInvocation &&
+      e.methodName.name == 'setState' &&
+      e.argumentList.arguments.length == 1) {
+    final fn = e.argumentList.arguments.first;
     if (fn is FunctionExpression) {
-      final fb = fn.body;
-      if (fb is ExpressionFunctionBody) return fb.expression;
-      if (fb is BlockFunctionBody) {
-        for (final s in fb.block.statements) {
-          if (s is ExpressionStatement) return s.expression;
-        }
+      final bodyJs = _translateFunctionBodyJs(fn.body, propByField);
+      if (bodyJs == null) return 'this.setState(function(){});';
+      return 'this.setState(function(){ $bodyJs });';
+    }
+    return null;
+  }
+  return _translateStateExpr(e, propByField);
+}
+
+/// 翻译函数体（setState 回调等）：表达式体或块体，逐语句翻译。
+String? _translateFunctionBodyJs(
+  FunctionBody body,
+  Map<String, String> propByField,
+) {
+  if (body is ExpressionFunctionBody) {
+    return _translateStateExpr(body.expression, propByField);
+  }
+  if (body is BlockFunctionBody) {
+    final parts = <String>[];
+    for (final st in body.block.statements) {
+      if (st is ExpressionStatement) {
+        final t = _translateStateExpr(st.expression, propByField);
+        if (t != null) parts.add(t);
       }
     }
+    return parts.isEmpty ? null : parts.join(' ');
   }
-  return outer;
+  return null;
 }
 
 String? _translateStateExpr(Expression e, Map<String, String> propByField) {
@@ -380,7 +395,7 @@ String? _translateStateExpr(Expression e, Map<String, String> propByField) {
           e.operator.type == TokenType.MINUS_MINUS)) {
     final prop = _propOf(e.operand as Identifier, propByField);
     final delta = e.operator.type == TokenType.PLUS_PLUS ? '1' : '-1';
-    return '$prop += $delta;';
+    return 'this.$prop += $delta;';
   }
   // ++_count / --_count
   if (e is PrefixExpression &&
@@ -389,7 +404,7 @@ String? _translateStateExpr(Expression e, Map<String, String> propByField) {
           e.operator.type == TokenType.MINUS_MINUS)) {
     final prop = _propOf(e.operand as Identifier, propByField);
     final delta = e.operator.type == TokenType.PLUS_PLUS ? '1' : '-1';
-    return '$prop += $delta;';
+    return 'this.$prop += $delta;';
   }
   // _count = 0 / _count += 1 / ...
   if (e is AssignmentExpression && e.leftHandSide is Identifier) {
@@ -397,7 +412,7 @@ String? _translateStateExpr(Expression e, Map<String, String> propByField) {
     final op = e.operator.lexeme;
     final rhs = _renderLiteral(e.rightHandSide);
     if (rhs == null) return null;
-    return '$prop $op $rhs;';
+    return 'this.$prop $op $rhs;';
   }
   return null;
 }
@@ -493,7 +508,11 @@ Map<String, dynamic> _translateBuildTree(
 // 产物渲染
 // ---------------------------------------------------------------------------
 
-String _renderJs(_Component c, String sourcePath, WidgetTranslatorRegistry registry) {
+String _renderJs(
+  List<_Component> components,
+  String sourcePath,
+  WidgetTranslatorRegistry registry,
+) {
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
     ..writeln('// 由 ui_component_generator 从 $sourcePath 自动生成')
@@ -501,65 +520,44 @@ String _renderJs(_Component c, String sourcePath, WidgetTranslatorRegistry regis
     ..writeln()
     ..writeln('// 组件注册表：多个 JS 补丁共享，加载顺序无关')
     ..writeln('var __components = __components || {};')
-    ..writeln()
-    ..writeln('// IIFE 闭包：方法/状态不泄漏到全局，加载多个 JS 不会重名')
-    ..writeln("__components['${c.name}'] = (function() {")
-    ..writeln('  // 属性一比一：Dart 字段名 = JS 变量名');
-  for (final p in c.props) {
-    b.writeln('  var ${p.name} = ${p.initial};');
+    ..writeln('// 实例注册表：每个 HotPatchWidget 持有自己的组件实例（状态互不共享）')
+    ..writeln('var __instances = __instances || {};');
+
+  for (final c in components) {
+    b
+      ..writeln()
+      ..writeln('// IIFE 闭包：不泄漏到全局，加载多个 JS 不会重名')
+      ..writeln("__components['${c.name}'] = (function() {")
+      ..writeln('  // 构造函数：new 一次得到一个独立组件实例，可重复实例化')
+      ..writeln('  function ${c.name}() {');
+    for (final p in c.props) {
+      b.writeln('    this.${p.name} = ${p.initial};');
+    }
+    b.writeln('  }');
+    b.writeln();
+    // 方法一比一：prototype 方法（含 initState/dispose 等生命周期，由运行时回调）
+    for (final a in c.actions) {
+      b.writeln('  ${c.name}.prototype.${a.name} = function() { ${a.bodyJs} };');
+    }
+    b.writeln();
+    b.writeln('  ${c.name}.prototype.build = function() {');
+    final ctx = WidgetTranslateContext(
+      registry: registry,
+      propByField: const {},
+      actionByMethod: const {},
+      sourcePath: sourcePath,
+    );
+    b.writeln('    return ${ctx.renderJs(c.tree, 2)};');
+    b.writeln('  };');
+    b.writeln();
+    b.writeln('  return ${c.name};');
+    b.writeln('})();');
   }
-  b.writeln();
-  // 方法一比一转换：Dart 方法名 = JS 函数名（方法体静态翻译）
-  for (final a in c.actions) {
-    b.writeln('  function ${a.name}() { ${a.bodyJs} }');
-  }
-  b.writeln();
-  b.writeln('  function build() {');
-  final ctx = WidgetTranslateContext(
-    registry: registry,
-    propByField: const {},
-    actionByMethod: const {},
-    sourcePath: sourcePath,
-  );
-  b.writeln('    return ${ctx.renderJs(c.tree, 2)};');
-  b.writeln('  }');
-  b.writeln();
-  // 导出：属性（getter，只读反射）/ 各方法 / build（渲染入口）
-  final exports = [
-    for (final p in c.props) 'get ${p.name}() { return ${p.name}; }',
-    for (final a in c.actions) '${a.name}: ${a.name}',
-    'build: build',
-  ].join(', ');
-  b.writeln('  return { $exports };');
-  b.writeln('})();');
   b.writeln();
   return b.toString();
 }
 
-Map<String, dynamic> _renderSchema(_Component c, String sourcePath) {
-  return {
-    'name': c.name,
-    'source': sourcePath,
-    'state': [
-      for (final p in c.props)
-        {
-          'field': p.field,
-          'name': p.name,
-          'type': p.type,
-          'initial': p.initial,
-        },
-    ],
-    'actions': [
-      for (final a in c.actions)
-        {
-          'method': a.method,
-          'name': a.name,
-          'native': a.nativeChannel,
-        },
-    ],
-    'tree': c.tree,
-  };
-}
+
 
 /// 生成 JS 双引号字符串字面量（与 WidgetTranslateContext.jsString 一致）。
 String _jsStringLiteral(String s) {

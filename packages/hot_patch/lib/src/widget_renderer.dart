@@ -58,9 +58,14 @@ class WidgetRenderContext {
   final WidgetRendererRegistry registry;
   final void Function(String event) onEvent;
 
+  /// 嵌套组件宿主（由 HotPatchWidget 注入）：处理 build 树里的
+  /// Component 节点（如 DashboardCard 内嵌 BannerCard）。
+  final ComponentHost? componentHost;
+
   WidgetRenderContext({
     required this.registry,
     required this.onEvent,
+    this.componentHost,
   });
 
   /// 渲染一个节点。
@@ -76,6 +81,8 @@ class WidgetRenderContext {
       if (parsed == null) return const SizedBox.shrink();
       rn = parsed;
     }
+    // 嵌套组件节点：递归渲染（共享宿主与注册表）
+    if (rn.type == 'Component') return _renderComponent(rn);
     final renderer = registry.lookup(rn.type);
     if (renderer == null) {
       throw StateError(
@@ -86,6 +93,50 @@ class WidgetRenderContext {
     }
     return renderer.render(rn, this);
   }
+
+  Widget _renderComponent(RenderNode node) {
+    final name = node.props['component'] as String? ?? '';
+    final host = componentHost;
+    if (host == null) {
+      return Text(
+        '[$name]',
+        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+      );
+    }
+    if (!host.isRegistered(name)) {
+      // 无 @UIComponent 注解的 lib 普通 widget：原生直接可用，JS 版占位提示
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(
+          '[$name] 无 JS 版本（原生可用）',
+          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+        ),
+      );
+    }
+    final tree = host.treeOf(name);
+    // 嵌套子树事件回流到宿主（父级重建整棵树）
+    final subCtx = WidgetRenderContext(
+      registry: registry,
+      onEvent: (e) => host.dispatch(name, e),
+      componentHost: host,
+    );
+    return subCtx.render(tree);
+  }
+}
+
+/// 嵌套组件宿主：把「实例化/取树/事件分发」与渲染层解耦。
+///
+/// HotPatchWidget 实现（内部与 JS 运行时交互）；渲染层只依赖这个抽象，
+/// 后续支持自定义嵌套组件 / 原生回退时无需改稳定渲染类。
+abstract class ComponentHost {
+  /// 返回嵌套组件的最新节点树；首次调用会实例化并回调 initState。
+  Object? treeOf(String component);
+
+  /// 上报嵌套组件事件（宿主负责调用其方法并重建整棵树）。
+  void dispatch(String component, String event);
+
+  /// 组件是否已在 JS 运行时注册（有 @UIComponent 注解的产物）。
+  bool isRegistered(String component);
 }
 
 /// ===========================================================================

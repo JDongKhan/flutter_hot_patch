@@ -60,6 +60,12 @@ class WidgetTranslateContext {
     final node = _toNode(e);
     final translator = registry.lookup(node.type);
     if (translator == null) {
+      // 未知 widget：按「嵌套组件」兜底翻译。
+      // 有 @UIComponent 注解的组件运行时递归渲染 JS 版本；
+      // 无注解的 lib 自定义 widget 原生直接可用，JS 版渲染为 Component 占位。
+      if (_isUpperCamel(node.type)) {
+        return const ComponentTranslator().toJson(node, this);
+      }
       throw FormatException(
           'ui_component_generator: 不支持的组件 "${node.type}"，'
           '请实现并注册对应的 WidgetTranslator（当前已注册: '
@@ -67,6 +73,9 @@ class WidgetTranslateContext {
     }
     return translator.toJson(node, this);
   }
+
+  static bool _isUpperCamel(String name) =>
+      name.isNotEmpty && name[0] == name[0].toUpperCase();
 
   /// 渲染一个已翻译的 JSON 节点为 JS 对象字面量。
   String renderJs(Map<String, dynamic> json, int depth) {
@@ -127,7 +136,7 @@ class WidgetTranslateContext {
     throw FormatException('"$method" 未标注 @UIAction');
   }
 
-  /// 字符串插值 → JS 表达式（`'count = $_count'` → `"count = " + _count`）
+  /// 字符串插值 → JS 表达式（`'count = $_count'` → `"count = " + this._count`）
   String jsDataExpr(Expression e) {
     if (e is SimpleStringLiteral) return jsString(e.value);
     if (e is AdjacentStrings) {
@@ -141,7 +150,7 @@ class WidgetTranslateContext {
         } else if (el is InterpolationExpression) {
           final x = el.expression;
           if (x is Identifier) {
-            parts.add(propOf(x));
+            parts.add('this.${propOf(x)}');
           } else {
             throw FormatException(
                 '插值只支持状态字段引用（如 \$_count），不支持 ${x.toSource()}');
@@ -246,4 +255,38 @@ class WidgetTranslatorRegistry {
   /// 当前已注册的源码类型集合（用于报错信息）。
   Set<String> get registeredTypes =>
       {for (final t in _translators) ...t.types};
+}
+
+
+/// 嵌套组件兜底翻译：build 树里出现其他自定义 widget 时统一翻译为
+/// Component 节点（{ type: 'Component', props: { component: 类名 } }）。
+/// 运行时 __components[类名] 存在（有 @UIComponent 注解）则递归渲染 JS 版本；
+/// 不存在（无注解的 lib 普通 widget）则渲染占位提示，原生场景照常用 Flutter 组件。
+class ComponentTranslator extends WidgetTranslator {
+  const ComponentTranslator();
+
+  /// 节点类型 'Component' 是生成器→运行时契约的一部分，常驻注册表，
+  /// 这样 translate 的兜底与 renderJs 的递归渲染都能命中。
+  @override
+  Set<String> get types => const {'Component'};
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    return {
+      'type': 'Component',
+      'props': {
+        'component': node.type,
+      },
+    };
+  }
+
+  @override
+  String renderJs(
+    Map<String, dynamic> json,
+    int depth,
+    WidgetTranslateContext ctx,
+  ) {
+    final p = json['props'] as Map<String, dynamic>;
+    return '{ type: "Component", props: { component: "${p['component']}" } }';
+  }
 }

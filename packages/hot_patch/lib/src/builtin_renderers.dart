@@ -11,7 +11,8 @@ void registerBuiltinRenderers(WidgetRendererRegistry registry) {
   registry
     ..register(const LayoutRenderer())
     ..register(const TextRenderer())
-    ..register(const ButtonRenderer());
+    ..register(const ButtonRenderer())
+    ..register(const SizedBoxRenderer());
 }
 
 /// Column / Row：布局容器，唯一策略是递归渲染 children。
@@ -77,5 +78,24 @@ class ButtonRenderer extends WidgetRenderer {
     );
     debugPrint('[hot_patch] Button render "${node.props['label']}"');
     return w;
+  }
+}
+
+
+/// SizedBox：布局空隙，无 UI 内容（JS 树里翻译为占位尺寸）。
+class SizedBoxRenderer extends WidgetRenderer {
+  const SizedBoxRenderer();
+
+  @override
+  Set<String> get types => const {'SizedBox'};
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    final h = node.props['height'];
+    final w = node.props['width'];
+    return SizedBox(
+      height: h is num ? h.toDouble() : (h == null ? null : double.tryParse('$h')),
+      width: w is num ? w.toDouble() : (w == null ? null : double.tryParse('$w')),
+    );
   }
 }

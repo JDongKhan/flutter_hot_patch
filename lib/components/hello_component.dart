@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:ui_component/ui_component.dart';
 
-/// HelloCard —— 一个**完全正常的 Flutter StatefulWidget**：
-/// 原生场景直接 `HelloCard()` 使用，功能完整。
+/// 本文件演示两个能力：
+///   1. HelloCard —— 一个**完全正常的 Flutter StatefulWidget**（原生可直接用）
+///   2. 单文件多组件 —— HelloPanel 与 HelloCard 同文件，codegen 都注册进 JS
+///   3. 共享普通类 —— PanelColors 无注解，codegen 自动跳过
 ///
-/// 上面的注解只是构建期元数据（不影响运行）：
-///   - @UIComponent('HelloCard')  标记组件，codegen 按注解名生成 JS 版本
+/// 注解仅 @UIComponent('组件名') 一个类级注解，其余全量生成：
+///   - 所有非 static 基础类型字段 → JS 属性（一比一，_count → _count）
+///   - 所有非生命周期方法 → JS 方法（一比一，inc → inc）
+///   - SnackBar 形式的方法 → 自动 native 通道（nativeToast）
+///   - build() 原封不动翻译成 JS build()
 ///
-/// 默认全量生成（无需 @UIProp / @UIAction）：
-///   - 所有非 static 字段自动进 JS state（_count → count）
-///   - 所有方法自动进 action（inc → inc / reset → reset）
-///   - SnackBar 形式的方法自动识别为 native 通道（nativeToast）
-/// 注解仅作可选修饰：@UIProp('xx') 自定义状态名 / 强制包含对象字段；
-/// @UIAction('xx', native: 'yy') 自定义事件名 / 指定原生通道。
-///
-/// 构建期由 ui_component_generator 静态翻译出两份产物：
-///   hello_component.component.js / hello_component.component.schema.json
+/// 构建期由 ui_component_generator 静态翻译出：
+///   hello_component.component.js（注册 HelloCard + HelloPanel）
 /// 线上出 bug 时，运行时把组件切换为 HotPatchWidget 加载 JS 版本即可热修复，
 /// 组件本体永远保持可正常使用。
 @UIComponent('HelloCard')
@@ -27,22 +25,22 @@ class HelloCard extends StatefulWidget {
 }
 
 class _HelloCardState extends State<HelloCard> {
-  // 无注解：自动成为 state prop `count`
+  // 无注解：自动成为 JS 属性 `_count`
   int _count = 0;
 
-  // 无注解：自动成为 action `inc`
+  // 无注解：自动成为 JS 方法 `inc`
   void inc() {
     setState(() => _count++);
   }
 
-  // 无注解：自动成为 action `reset`
+  // 无注解：自动成为 JS 方法 `reset`
   void reset() {
     setState(() {
       _count = 0;
     });
   }
 
-  // 无注解：方法体是 SnackBar 形式 → 自动成为 native 通道 `nativeToast`
+  // 无注解：方法体是 SnackBar 形式 → 自动 native 通道 `nativeToast`
   void showNative() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Hello from native (JS-driven)')),
@@ -71,6 +69,64 @@ class _HelloCardState extends State<HelloCard> {
             ElevatedButton(
               onPressed: showNative,
               child: const Text('Native'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// 共享普通类（无 @UIComponent 注解）：codegen 跳过，不产生任何产物。
+/// 用于演示：组件文件里可以自由写公共类，不影响生成。
+class PanelColors {
+  static const primary = Color(0xFF6750A4);
+  static const background = Color(0xFFF5F5F5);
+}
+
+/// 单文件多组件演示：与 HelloCard 同文件、同产物，注册为第二个组件。
+@UIComponent('HelloPanel')
+class HelloPanel extends StatefulWidget {
+  const HelloPanel({super.key});
+
+  @override
+  State<HelloPanel> createState() => _HelloPanelState();
+}
+
+class _HelloPanelState extends State<HelloPanel> {
+  // 全量生成：_taps → JS 属性 `_taps`
+  int _taps = 0;
+
+  // 全量生成：tap → JS 方法 `tap`
+  void tap() {
+    setState(() => _taps++);
+  }
+
+  // 全量生成：clear → JS 方法 `clear`
+  void clear() {
+    setState(() {
+      _taps = 0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'HelloPanel (JS)',
+          style: const TextStyle(fontSize: 20),
+        ),
+        Text('taps = $_taps'),
+        Row(
+          children: [
+            ElevatedButton(
+              onPressed: tap,
+              child: const Text('Tap'),
+            ),
+            ElevatedButton(
+              onPressed: () => clear(),
+              child: const Text('Clear'),
             ),
           ],
         ),

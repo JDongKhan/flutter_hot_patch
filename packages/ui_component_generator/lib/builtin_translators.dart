@@ -11,7 +11,10 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
   registry
     ..register(const ColumnRowTranslator())
     ..register(const TextTranslator())
-    ..register(const ButtonTranslator());
+    ..register(const ButtonTranslator())
+    ..register(const SizedBoxTranslator())
+    // 嵌套组件兜底：build 树里出现的其他自定义 widget → Component 节点
+    ..register(const ComponentTranslator());
 }
 
 /// Column / Row：容器节点，唯一策略是递归翻译 children。
@@ -173,4 +176,49 @@ class ButtonTranslator extends WidgetTranslator {
     return (e.methodName.name, e.argumentList.arguments.toList());
   }
   return (null, const []);
+}
+
+
+
+/// SizedBox：布局空隙（height/width），无 UI 内容。
+class SizedBoxTranslator extends WidgetTranslator {
+  const SizedBoxTranslator();
+
+  @override
+  Set<String> get types => const {'SizedBox'};
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final h = _numLiteral(ctx.namedArg(node.args, 'height'));
+    final w = _numLiteral(ctx.namedArg(node.args, 'width'));
+    if (h != null) props['height'] = h;
+    if (w != null) props['width'] = w;
+    return {'type': 'SizedBox', 'props': props};
+  }
+
+  static String? _numLiteral(Expression? e) {
+    if (e is IntegerLiteral) {
+      final v = e.value;
+      return v == null ? null : '$v';
+    }
+    if (e is DoubleLiteral) {
+      return '${e.value}';
+    }
+    return null;
+  }
+
+  @override
+  String renderJs(
+    Map<String, dynamic> json,
+    int depth,
+    WidgetTranslateContext ctx,
+  ) {
+    final p = json['props'] as Map<String, dynamic>;
+    final parts = [
+      if (p.containsKey('height')) 'height: ${p['height']}',
+      if (p.containsKey('width')) 'width: ${p['width']}',
+    ].join(', ');
+    return '{ type: "SizedBox", props: { $parts } }';
+  }
 }
