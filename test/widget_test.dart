@@ -66,9 +66,10 @@ void main() {
     expect(registry.lookup('log'), isA<LogService>());
     expect(registry.channels, containsAll(['nativeToast', 'log']));
 
-    // 业务方可覆盖同 channel 实现
+    // 业务方可覆盖同 channel 实现；覆盖不影响其他内置服务
     registry.register(_FakeService());
     expect(registry.lookup('nativeToast'), isA<_FakeService>());
+    expect(registry.lookup('log'), isA<LogService>());
   });
 
   test('HotPatchWidget 可构造', () {

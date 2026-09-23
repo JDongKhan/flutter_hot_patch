@@ -49,8 +49,8 @@ class HotPatchWidget extends StatefulWidget {
   /// 业务方可传入扩展后的注册表以支持更多/自定义 widget。
   final WidgetRendererRegistry? rendererRegistry;
 
-  /// 原生服务列表。默认注入内置服务（nativeToast/log）；
-  /// 业务方传入自定义实现以扩展 JS→原生 能力（同 channel 覆盖内置）。
+  /// 原生服务注入列表。内置服务（nativeToast/log）始终可用；
+  /// 传入的服务为增量扩展（同 channel 时覆盖内置实现）。
   final List<NativeService>? nativeServices;
 
   @override
@@ -74,14 +74,11 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
     if (widget.rendererRegistry == null) {
       registerBuiltinRenderers(_registry);
     }
-    // 服务层：默认注册内置服务；业务方注入的列表注册进新注册表。
+    // 服务层：内置服务始终注册，外部注入为增量扩展（同 channel 覆盖内置）。
     _services = NativeServiceRegistry();
-    if (widget.nativeServices == null) {
-      registerBuiltinNativeServices(_services);
-    } else {
-      for (final svc in widget.nativeServices!) {
-        _services.register(svc);
-      }
+    registerBuiltinNativeServices(_services);
+    for (final svc in widget.nativeServices ?? const <NativeService>[]) {
+      _services.register(svc);
     }
     _boot();
   }
