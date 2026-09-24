@@ -66,20 +66,19 @@ class WidgetTranslateContext {
   Map<String, dynamic> translate(Expression e) {
     final node = _toNode(e);
     final translator = registry.lookup(node.type);
-    if (translator == null) {
-      // 未知 widget：按「嵌套组件」兜底翻译。
-      // 有 @UIComponent 注解的组件运行时递归渲染 JS 版本；
-      // 无注解的 lib 自定义 widget 原生直接可用，JS 版渲染为 Component 占位。
-      if (_isUpperCamel(node.type)) {
-        collectDependency(node.type);
-        return const ComponentTranslator().toJson(node, this);
-      }
-      throw FormatException(
-          'ui_component_generator: 不支持的组件 "${node.type}"，'
-          '请实现并注册对应的 WidgetTranslator（当前已注册: '
-          '${registry.registeredTypes.join('/')}）');
+    if (translator != null) return translator.toJson(node, this);
+    // 未注册：按「嵌套组件」兜底翻译（需注册 fallback = ComponentTranslator）。
+    // 有 @UIComponent 注解的组件运行时递归渲染 JS 版本；
+    // 无注解的 lib 自定义 widget 原生直接可用，JS 版渲染为 Component 占位。
+    final fb = registry.fallback;
+    if (fb != null && _isUpperCamel(node.type)) {
+      collectDependency(node.type);
+      return fb.toJson(node, this);
     }
-    return translator.toJson(node, this);
+    throw FormatException(
+        'ui_component_generator: 不支持的组件 "${node.type}"，'
+        '请实现并注册对应的 WidgetTranslator（当前已注册: '
+        '${registry.registeredTypes.join('/')}）');
   }
 
   static bool _isUpperCamel(String name) =>
@@ -113,6 +112,9 @@ class WidgetTranslateContext {
 
   /// 取构造调用：`Foo(...)` 在无 resolution 的 parseString 下可能是
   /// InstanceCreationExpression 或 MethodInvocation（无 const 时），统一处理。
+  ///
+  /// 静态工厂形态（`Image.asset(...)` / `Image.network(...)`）把 ctor 名
+  /// 归一为 target 名（'Image'），与注册表 {Image: ImageTranslator} 匹配。
   (String?, List<Expression>) ctorOf(Expression e) {
     if (e is InstanceCreationExpression) {
       return (
@@ -121,6 +123,10 @@ class WidgetTranslateContext {
       );
     }
     if (e is MethodInvocation) {
+      final target = e.target;
+      if (target is Identifier) {
+        return (target.name, e.argumentList.arguments.toList());
+      }
       return (e.methodName.name, e.argumentList.arguments.toList());
     }
     return (null, const []);
@@ -135,6 +141,15 @@ class WidgetTranslateContext {
 
   Expression? positionalArg(List<Expression> args, int i) =>
       i < args.length ? args[i] : null;
+
+  /// 第一个非命名参数（单子组件的 child 定位）：
+  /// `Container(width: 120)` 无 child 时，跳过命名参数，返回 null。
+  Expression? nonNamedArg(List<Expression> args) {
+    for (final a in args) {
+      if (a is! NamedExpression) return a;
+    }
+    return null;
+  }
 
   List<Expression> listArg(List<Expression> args, String name, String ctor) {
     final e = namedArg(args, name);
@@ -154,6 +169,28 @@ class WidgetTranslateContext {
     final event = actionByMethod[method];
     if (event != null) return event;
     throw FormatException('"$method" 未标注 @UIAction');
+  }
+
+  /// 事件参数解析：`onTap: _tap` 或 `onTap: () => _tap()` → 事件名。
+  String eventExpr(Expression e) {
+    if (e is Identifier) return eventOf(e.name);
+    if (e is FunctionExpression) {
+      final inner = functionInner(e);
+      if (inner is MethodInvocation) return eventOf(inner.methodName.name);
+    }
+    throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
+  }
+
+  /// 状态字段引用或字面量 → JS 表达式
+  /// （Switch value / Slider value 等「绑定状态或常量」的场景）。
+  /// 字段一比一：`_lightsOn` → `this._lightsOn`。
+  String propExpr(Expression e) {
+    if (e is Identifier) return 'this.${propOf(e)}';
+    if (e is BooleanLiteral) return e.value ? 'true' : 'false';
+    if (e is IntegerLiteral) return '${e.value}';
+    if (e is DoubleLiteral) return '${e.value}';
+    if (e is SimpleStringLiteral) return jsString(e.value);
+    throw FormatException('仅支持状态字段/字面量，不支持 ${e.toSource()}');
   }
 
   /// 字符串插值 → JS 表达式（`'count = $_count'` → `"count = " + this._count`）
@@ -251,11 +288,13 @@ class WidgetTranslateContext {
 abstract class WidgetTranslator {
   const WidgetTranslator();
 
-  /// 本 translator 支持的源码 widget 构造名集合。
-  Set<String> get types;
+  /// 本 translator 对应的**单一**源码 widget 构造名（如 'Text' / 'Column'）。
+  /// 一个 type 一个实现；共用逻辑用继承（基类 + 子类覆写 type）。
+  String get type;
 
-  /// 本 translator 产物 JSON 中使用的节点 type 名集合（默认与 [types] 相同）。
-  Set<String> get jsonTypes => types;
+  /// 本 translator 产物 JSON 中使用的节点 type 名集合（默认与 [type] 相同；
+  /// 如三种按钮产物统一叫 'Button'）。
+  Set<String> get jsonTypes => {type};
 
   /// 把 [node] 翻译成 JSON 描述（type/props/children）。
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx);
@@ -280,35 +319,40 @@ abstract class WidgetTranslator {
 /// 扩展新 widget = 写一个 WidgetTranslator 并 register，核心代码零改动。
 /// ===========================================================================
 class WidgetTranslatorRegistry {
-  final List<WidgetTranslator> _translators = [];
+  /// 源码构造名 → translator（Map 直查，O(1)；组件几千个也不退化）。
+  final Map<String, WidgetTranslator> _translators = {};
+
+  /// 产物 JSON 节点 type → translator（renderJs 分发用，同样 O(1)）。
+  final Map<String, WidgetTranslator> _jsonIndex = {};
+
+  /// 兜底 translator（如 ComponentTranslator）：lookup 未命中时由
+  /// WidgetTranslateContext.translate 显式判定后使用（仅 UpperCamel 组件）。
+  WidgetTranslator? _fallback;
 
   /// 注册一个 translator（同 type 覆盖旧的，后注册者优先）。
   void register(WidgetTranslator translator) {
-    _translators.removeWhere(
-      (t) =>
-          t.types.intersection(translator.types).isNotEmpty ||
-          t.jsonTypes.intersection(translator.jsonTypes).isNotEmpty,
-    );
-    _translators.add(translator);
+    _translators[translator.type] = translator;
+    for (final jsonType in translator.jsonTypes) {
+      _jsonIndex[jsonType] = translator;
+    }
   }
+
+  /// 设置兜底 translator（未注册的自定义组件 → Component 节点）。
+  void registerFallback(WidgetTranslator translator) {
+    _fallback = translator;
+  }
+
+  /// 兜底 translator。
+  WidgetTranslator? get fallback => _fallback;
 
   /// 按源码 widget 构造名查找 translator；未注册返回 null。
-  WidgetTranslator? lookup(String type) => _find((t) => t.types.contains(type));
+  WidgetTranslator? lookup(String type) => _translators[type];
 
   /// 按产物 JSON 节点 type 查找 translator；未注册返回 null。
-  WidgetTranslator? lookupJson(String type) =>
-      _find((t) => t.jsonTypes.contains(type));
-
-  WidgetTranslator? _find(bool Function(WidgetTranslator) match) {
-    for (final t in _translators.reversed) {
-      if (match(t)) return t;
-    }
-    return null;
-  }
+  WidgetTranslator? lookupJson(String type) => _jsonIndex[type];
 
   /// 当前已注册的源码类型集合（用于报错信息）。
-  Set<String> get registeredTypes =>
-      {for (final t in _translators) ...t.types};
+  Set<String> get registeredTypes => _translators.keys.toSet();
 }
 
 
@@ -319,10 +363,10 @@ class WidgetTranslatorRegistry {
 class ComponentTranslator extends WidgetTranslator {
   const ComponentTranslator();
 
-  /// 节点类型 'Component' 是生成器→运行时契约的一部分，常驻注册表，
-  /// 这样 translate 的兜底与 renderJs 的递归渲染都能命中。
+  /// 兜底 translator 不需要参与 Map 注册（registry.registerFallback 持有），
+  /// type 取哨兵值 'Component' 仅满足抽象约束。
   @override
-  Set<String> get types => const {'Component'};
+  String get type => 'Component';
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {

@@ -223,3 +223,208 @@ const Map<String, String> _materialColors = {
   'black': '000000',
   'white': 'FFFFFF',
 };
+
+// ---------------------------------------------------------------------------
+// 布局/内容类 toJson（Container/Padding/Align/Stack/Icon/Image 等复用）
+// ---------------------------------------------------------------------------
+
+/// EdgeInsets.all/symmetric/only/fromLTRB → JSON {left,top,right,bottom}。
+/// 返回 null 表示不可翻译/未提供。
+Map<String, dynamic>? edgeInsetsToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  // EdgeInsets.all/symmetric/only/fromLTRB 是静态方法调用（MethodInvocation），
+  // EdgeInsets(...) 直接构造是 InstanceCreationExpression。
+  if (ctor != 'EdgeInsets' &&
+      ctor != 'all' &&
+      ctor != 'symmetric' &&
+      ctor != 'only' &&
+      ctor != 'fromLTRB') {
+    return null;
+  }
+  final map = <String, dynamic>{};
+  double? l, t, r, b;
+  // EdgeInsets.all(8)
+  final pos = args.whereType<Expression>().toList();
+  if (pos.isNotEmpty) {
+    final n = _numExpr(pos.first);
+    if (n != null) {
+      l = t = r = b = double.tryParse(n);
+    }
+  }
+  // EdgeInsets.symmetric / only：命名参数
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    final n = _numExpr(a.expression);
+    if (n == null) continue;
+    final v = double.tryParse(n);
+    if (v == null) continue;
+    switch (a.name.label.name) {
+      case 'left': l = v;
+      case 'top': t = v;
+      case 'right': r = v;
+      case 'bottom': b = v;
+      case 'horizontal': l = r = v;
+      case 'vertical': t = b = v;
+    }
+  }
+  // EdgeInsets.fromLTRB(l, t, r, b)：4 个位置参数
+  if (pos.length == 4) {
+    final nums = pos.map((e) {
+      final n = _numExpr(e);
+      return n == null ? null : double.tryParse(n);
+    }).toList();
+    if (nums.every((x) => x != null)) {
+      l = nums[0]; t = nums[1]; r = nums[2]; b = nums[3];
+    }
+  }
+  if (l == null && t == null && r == null && b == null) return null;
+  map['left'] = '${l ?? 0}';
+  map['top'] = '${t ?? 0}';
+  map['right'] = '${r ?? 0}';
+  map['bottom'] = '${b ?? 0}';
+  return map;
+}
+
+/// Alignment.center/topLeft/... → '"center"' 等（运行时 alignmentFromJson）。
+String? alignmentToJson(Expression? expr, WidgetTranslateContext ctx) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'Alignment' || name == null) return null;
+  return '"$name"';
+}
+
+/// MainAxisAlignment.start/center/spaceBetween → '"start"' 等。
+String? mainAxisAlignmentToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'MainAxisAlignment' || name == null) return null;
+  return '"$name"';
+}
+
+/// CrossAxisAlignment.start/center/stretch → '"start"' 等。
+String? crossAxisAlignmentToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'CrossAxisAlignment' || name == null) return null;
+  return '"$name"';
+}
+
+/// MainAxisSize.min/max → '"min"' / '"max"'。
+String? mainAxisSizeToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'MainAxisSize' || name == null) return null;
+  return '"$name"';
+}
+
+/// Axis.horizontal/vertical → '"horizontal"' / '"vertical"'。
+String? axisToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'Axis' || name == null) return null;
+  return '"$name"';
+}
+
+/// BoxFit.cover/contain/... → '"cover"' 等。
+String? boxFitToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'BoxFit' || name == null) return null;
+  return '"$name"';
+}
+
+/// Icons.add/star/... → '"add"' / '"star"'（运行时 iconFromJson 映射）。
+String? iconDataToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'Icons' || name == null) return null;
+  return '"$name"';
+}
+
+/// BorderRadius.circular(8) / BorderRadius.all(Radius.circular(8)) → JSON。
+Map<String, dynamic>? borderRadiusToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  // BorderRadius.circular/all/only 是静态方法调用。
+  if (ctor != 'BorderRadius' && ctor != 'circular' && ctor != 'all' && ctor != 'only') {
+    return null;
+  }
+  double? radius;
+  // BorderRadius.circular(8)
+  if (args.isNotEmpty) {
+    final n = _numExpr(args.whereType<Expression>().first);
+    if (n != null) radius = double.tryParse(n);
+  }
+  // BorderRadius.all(Radius.circular(8))：解包 Radius.circular
+  for (final a in args) {
+    if (a is! NamedExpression || a.name.label.name != 'all') continue;
+    final (rCtor, rArgs) = _ctorOfExpr(a.expression);
+    if (rCtor == 'Radius' && rArgs.isNotEmpty) {
+      final n = _numExpr(rArgs.whereType<Expression>().first);
+      if (n != null) radius = double.tryParse(n);
+    }
+  }
+  if (radius == null) return null;
+  return {'radius': '$radius'};
+}
+
+/// Colors.xxx / Color(0x...) → JS 字符串字面量（'#RRGGBB' / '#AARRGGBB'）。
+/// 公共包装：widget translator 直接调用；内部实现在 [_colorExpr]。
+String? colorToJson(Expression? expr, WidgetTranslateContext ctx) {
+  if (expr == null) return null;
+  return _colorExpr(expr);
+}
+
+/// BoxDecoration(color/borderRadius) → JSON。
+Map<String, dynamic>? boxDecorationToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  if (ctor != 'BoxDecoration') return null;
+  final map = <String, dynamic>{};
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    switch (a.name.label.name) {
+      case 'color':
+        final c = _colorExpr(a.expression);
+        if (c != null) map['color'] = c;
+      case 'borderRadius':
+        final br = borderRadiusToJson(a.expression, ctx);
+        if (br != null) map['borderRadius'] = br;
+    }
+  }
+  return map.isEmpty ? null : map;
+}
+
+/// Image 源：AssetImage('x') / NetworkImage('url') / Image.asset / Image.network
+/// → source 字符串（运行时 imageFromJson 选择资源/网络）。
+String? imageSourceToJson(Expression? expr, WidgetTranslateContext ctx) {
+  if (expr == null) return null;
+  // 直接收到路径字符串：Image.network('url') / Image.asset('path') 的位置参数
+  if (expr is SimpleStringLiteral) return ctx.jsString(expr.value);
+  final (ctor, args) = _ctorOfExpr(expr);
+  if (ctor == 'AssetImage' || ctor == 'NetworkImage') {
+    final pos = args.whereType<Expression>().toList();
+    if (pos.isNotEmpty && pos.first is SimpleStringLiteral) {
+      return ctx.jsString((pos.first as SimpleStringLiteral).value);
+    }
+    return null;
+  }
+  // Image.asset('x') / Image.network('url')：methodName=asset/network，target=Image
+  if (ctor == 'asset' || ctor == 'network') {
+    final pos = args.whereType<Expression>().toList();
+    if (pos.isNotEmpty && pos.first is SimpleStringLiteral) {
+      return ctx.jsString((pos.first as SimpleStringLiteral).value);
+    }
+  }
+  return null;
+}

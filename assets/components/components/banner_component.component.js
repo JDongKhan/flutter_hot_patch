@@ -40,6 +40,7 @@ __components['BannerCard'] = (function() {
         {
           "type": "Button",
           "props": {
+            "kind": "elevated",
             "label": "Bump",
             "event": "bump"
           }

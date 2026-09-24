@@ -149,7 +149,9 @@ class _Action {
   final String name; // 事件名，如 inc
   final String? nativeChannel;
   final String bodyJs;
-  _Action(this.method, this.name, this.nativeChannel, this.bodyJs);
+  final List<String> params; // 方法形式参数名（JS 一比一透传，如 v）
+  _Action(this.method, this.name, this.nativeChannel, this.bodyJs,
+      {this.params = const []});
 }
 
 // ---------------------------------------------------------------------------
@@ -224,7 +226,13 @@ _Component _parseComponent(
           methodName,
           actionName,
           nativeChannel,
-          _translateActionBody(member.body, propByField, nativeChannel),
+          _translateActionBody(
+            member.body,
+            propByField,
+            nativeChannel,
+            _methodParams(member),
+          ),
+          params: _methodParams(member),
         ));
         actionByMethod[methodName] = actionName;
       } on FormatException catch (e) {
@@ -340,7 +348,13 @@ _Component _parseNestedComponent(
           methodName,
           actionName,
           nativeChannel,
-          _translateActionBody(member.body, propByField, nativeChannel),
+          _translateActionBody(
+            member.body,
+            propByField,
+            nativeChannel,
+            _methodParams(member),
+          ),
+          params: _methodParams(member),
         ));
         actionByMethod[methodName] = actionName;
       } on FormatException catch (e) {
@@ -475,7 +489,9 @@ String _translateActionBody(
   FunctionBody body,
   Map<String, String> propByField,
   String? nativeChannel,
+  List<String> params,
 ) {
+  final extraVars = params.toSet();
   if (nativeChannel != null) {
     final msg = _snackMessage(body);
     if (msg == null) {
@@ -490,7 +506,7 @@ String _translateActionBody(
   // 逐语句翻译：setState(...) 展开、super.xxx() 忽略、无法翻译的语句降级跳过。
   final stmts = <String>[];
   if (body is ExpressionFunctionBody) {
-    final t = _translateExprStatement(body.expression, propByField);
+    final t = _translateExprStatement(body.expression, propByField, extraVars);
     if (t != null) stmts.add(t);
   } else if (body is BlockFunctionBody) {
     for (final s in body.block.statements) {
@@ -498,7 +514,7 @@ String _translateActionBody(
         final e = s.expression;
         // super.initState() 等 super 调用：JS 无 super 语义，忽略
         if (e is MethodInvocation && e.target is SuperExpression) continue;
-        final t = _translateExprStatement(e, propByField);
+        final t = _translateExprStatement(e, propByField, extraVars);
         if (t != null) stmts.add(t);
       }
     }
@@ -516,34 +532,36 @@ String _translateActionBody(
 String? _translateExprStatement(
   Expression e,
   Map<String, String> propByField,
+  Set<String> extraVars,
 ) {
   if (e is MethodInvocation &&
       e.methodName.name == 'setState' &&
       e.argumentList.arguments.length == 1) {
     final fn = e.argumentList.arguments.first;
     if (fn is FunctionExpression) {
-      final bodyJs = _translateFunctionBodyJs(fn.body, propByField);
+      final bodyJs = _translateFunctionBodyJs(fn.body, propByField, extraVars);
       if (bodyJs == null) return 'this.setState(function(){});';
       return 'this.setState(function(){ $bodyJs });';
     }
     return null;
   }
-  return _translateStateExpr(e, propByField);
+  return _translateStateExpr(e, propByField, extraVars);
 }
 
 /// 翻译函数体（setState 回调等）：表达式体或块体，逐语句翻译。
 String? _translateFunctionBodyJs(
   FunctionBody body,
   Map<String, String> propByField,
+  Set<String> extraVars,
 ) {
   if (body is ExpressionFunctionBody) {
-    return _translateStateExpr(body.expression, propByField);
+    return _translateStateExpr(body.expression, propByField, extraVars);
   }
   if (body is BlockFunctionBody) {
     final parts = <String>[];
     for (final st in body.block.statements) {
       if (st is ExpressionStatement) {
-        final t = _translateStateExpr(st.expression, propByField);
+        final t = _translateStateExpr(st.expression, propByField, extraVars);
         if (t != null) parts.add(t);
       }
     }
@@ -552,12 +570,24 @@ String? _translateFunctionBodyJs(
   return null;
 }
 
-String? _translateStateExpr(Expression e, Map<String, String> propByField) {
+String? _translateStateExpr(
+  Expression e,
+  Map<String, String> propByField,
+  Set<String> extraVars,
+) {
+  // 方法形式参数（如 _toggle(bool v) 的 v）：JS 一比一原样引用
+  if (e is Identifier && extraVars.contains(e.name)) {
+    return e.name;
+  }
   // _count++ / _count--
   if (e is PostfixExpression &&
       e.operand is Identifier &&
       (e.operator.type == TokenType.PLUS_PLUS ||
           e.operator.type == TokenType.MINUS_MINUS)) {
+    final name = (e.operand as Identifier).name;
+    if (extraVars.contains(name)) {
+      return '$name += 1;';
+    }
     final prop = _propOf(e.operand as Identifier, propByField);
     final delta = e.operator.type == TokenType.PLUS_PLUS ? '1' : '-1';
     return 'this.$prop += $delta;';
@@ -567,20 +597,42 @@ String? _translateStateExpr(Expression e, Map<String, String> propByField) {
       e.operand is Identifier &&
       (e.operator.type == TokenType.PLUS_PLUS ||
           e.operator.type == TokenType.MINUS_MINUS)) {
+    final name = (e.operand as Identifier).name;
+    if (extraVars.contains(name)) {
+      return '$name += 1;';
+    }
     final prop = _propOf(e.operand as Identifier, propByField);
     final delta = e.operator.type == TokenType.PLUS_PLUS ? '1' : '-1';
     return 'this.$prop += $delta;';
   }
-  // _count = 0 / _count += 1 / ...
+  // _count = 0 / _count += 1 / _count = v（v 为方法参数）
   if (e is AssignmentExpression && e.leftHandSide is Identifier) {
     final prop = _propOf(e.leftHandSide as Identifier, propByField);
     final op = e.operator.lexeme;
-    final rhs = _renderLiteral(e.rightHandSide);
+    final rhs = _rhsJs(e.rightHandSide, propByField, extraVars);
     if (rhs == null) return null;
     return 'this.$prop $op $rhs;';
   }
   return null;
 }
+
+/// 赋值右侧：字面量或方法参数（Identifier in extraVars）→ JS 表达式。
+String? _rhsJs(
+  Expression e,
+  Map<String, String> propByField,
+  Set<String> extraVars,
+) {
+  final lit = _renderLiteral(e);
+  if (lit != null) return lit;
+  if (e is Identifier && extraVars.contains(e.name)) return e.name;
+  return null;
+}
+
+/// 方法形式参数名列表（解 DefaultFormalParameter 包裹）。
+List<String> _methodParams(MethodDeclaration m) => [
+      for (final p in m.parameters!.parameters)
+        (p is DefaultFormalParameter ? p.parameter : p).name?.lexeme ?? '',
+    ];
 
 String _propOf(Identifier id, Map<String, String> propByField) {
   final prop = propByField[id.name];
@@ -713,7 +765,9 @@ String _renderJs(
     b.writeln();
     // 方法一比一：prototype 方法（含 initState/dispose 等生命周期，由运行时回调）
     for (final a in c.actions) {
-      b.writeln('  ${c.name}.prototype.${a.name} = function() { ${a.bodyJs} };');
+      b.writeln(
+        '  ${c.name}.prototype.${a.name} = function(${a.params.join(', ')}) { ${a.bodyJs} };',
+      );
     }
     b.writeln();
     b.writeln('  ${c.name}.prototype.build = function() {');

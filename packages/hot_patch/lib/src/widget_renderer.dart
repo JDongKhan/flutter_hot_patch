@@ -58,6 +58,10 @@ class WidgetRenderContext {
   final WidgetRendererRegistry registry;
   final void Function(String event) onEvent;
 
+  /// 带值事件（Switch/Slider 等 onChanged 需要把新值传给 JS 方法）。
+  /// 未提供时由 renderer 回退到 [onEvent]（无参调用）。
+  final void Function(String event, Object? value)? onEventValue;
+
   /// 嵌套组件宿主（由 HotPatchWidget 注入）：处理 build 树里的
   /// Component 节点（如 DashboardCard 内嵌 BannerCard）。
   final ComponentHost? componentHost;
@@ -65,6 +69,7 @@ class WidgetRenderContext {
   WidgetRenderContext({
     required this.registry,
     required this.onEvent,
+    this.onEventValue,
     this.componentHost,
   });
 
@@ -155,14 +160,15 @@ abstract class ComponentHost {
 /// ===========================================================================
 /// 策略抽象类：一种 JSON 节点类型 → 真实 Flutter Widget
 ///
-/// - [types]：支持的 JSON 节点 type 集合（如 {'Text'} 或 {'Column','Row'}）
+/// - [type]：本 renderer 对应的**单一** JSON 节点 type（如 'Text' / 'Column'）。
+///   一个 type 一个实现；共用逻辑用继承（基类 + 子类覆写 type）。
 /// - [render]：节点 → Widget；子节点用 [ctx.render] 递归
 /// ===========================================================================
 abstract class WidgetRenderer {
   const WidgetRenderer();
 
-  /// 本 renderer 支持的 JSON 节点 type 集合。
-  Set<String> get types;
+  /// 本 renderer 对应的单一 JSON 节点 type。
+  String get type;
 
   /// 把 [node] 渲染成真实 Flutter Widget。
   Widget render(RenderNode node, WidgetRenderContext ctx);
@@ -175,25 +181,17 @@ abstract class WidgetRenderer {
 /// HotPatchWidget(rendererRegistry: ...) 注入扩展。
 /// ===========================================================================
 class WidgetRendererRegistry {
-  final List<WidgetRenderer> _renderers = [];
+  /// JSON 节点 type → renderer（Map 直查 O(1)，组件几千个也不退化）。
+  final Map<String, WidgetRenderer> _renderers = {};
 
   /// 注册一个 renderer（同 type 覆盖旧的，后注册者优先）。
   void register(WidgetRenderer renderer) {
-    _renderers.removeWhere(
-      (r) => r.types.intersection(renderer.types).isNotEmpty,
-    );
-    _renderers.add(renderer);
+    _renderers[renderer.type] = renderer;
   }
 
   /// 按节点 type 查找 renderer；未注册返回 null。
-  WidgetRenderer? lookup(String type) {
-    for (final r in _renderers.reversed) {
-      if (r.types.contains(type)) return r;
-    }
-    return null;
-  }
+  WidgetRenderer? lookup(String type) => _renderers[type];
 
   /// 当前已注册的类型集合（用于报错信息）。
-  Set<String> get registeredTypes =>
-      {for (final r in _renderers) ...r.types};
+  Set<String> get registeredTypes => _renderers.keys.toSet();
 }

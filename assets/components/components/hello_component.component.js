@@ -45,6 +45,7 @@ __components['HelloCard'] = (function() {
             {
               "type": "Button",
               "props": {
+                "kind": "elevated",
                 "label": "+1",
                 "event": "inc",
                 "style": {
@@ -56,6 +57,7 @@ __components['HelloCard'] = (function() {
             {
               "type": "Button",
               "props": {
+                "kind": "elevated",
                 "label": "Reset",
                 "event": "reset"
               }
@@ -63,6 +65,7 @@ __components['HelloCard'] = (function() {
             {
               "type": "Button",
               "props": {
+                "kind": "elevated",
                 "label": "Native",
                 "event": "showNative"
               }
@@ -111,6 +114,7 @@ __components['HelloPanel'] = (function() {
             {
               "type": "Button",
               "props": {
+                "kind": "elevated",
                 "label": "Tap",
                 "event": "tap"
               }
@@ -118,6 +122,7 @@ __components['HelloPanel'] = (function() {
             {
               "type": "Button",
               "props": {
+                "kind": "elevated",
                 "label": "Clear",
                 "event": "clear"
               }

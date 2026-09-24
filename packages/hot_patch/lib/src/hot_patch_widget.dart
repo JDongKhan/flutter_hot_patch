@@ -86,8 +86,9 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
   /// 本实例使用的 JS 运行时管理器：
   /// 外部传入则用传入的（分组共享），否则用全局默认实例。
-  late final JsRuntimeManager _manager =
-      widget.sharedManager ?? JsRuntimeManager.instance;
+  /// 在 initState 提前赋值（而非 late 延迟到首次访问）：确保 _boot 里
+  /// register 服务时 manager 已创建，_wireChannel 才能接到本 manager。
+  late JsRuntimeManager _manager;
 
   Object? _tree;
   bool _loading = true;
@@ -111,6 +112,9 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   @override
   void initState() {
     super.initState();
+    // 先创建/取得 manager：register 服务的 _wireChannel 遍历 _instances
+    // 需要本 manager 已存在（否则通道接不到本 manager 的 runtime）。
+    _manager = widget.sharedManager ?? JsRuntimeManager.instance;
     // 渲染层：默认注册内置策略；业务方注入的注册表原样使用。
     _registry = widget.rendererRegistry ?? WidgetRendererRegistry();
     if (widget.rendererRegistry == null) {
@@ -258,6 +262,28 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
     _manager.evaluate('(function(){ __instances["$_instanceKey"].$event(); })()');
   }
 
+  /// 带值事件（Switch/Slider 等 onChanged）：把新值传给 JS 方法同名参数。
+  void _onEventValue(String event, Object? value) {
+    debugPrint('[hot_patch] onEventValue: $event = $value');
+    _manager.evaluate(
+      '(function(){ __instances["$_instanceKey"].$event(${_jsArg(value)}); })()',
+    );
+  }
+
+  /// Dart 值 → JS 实参字面量（bool/num 原样，String 加引号）。
+  static String _jsArg(Object? v) {
+    if (v == null) return 'null';
+    if (v is bool) return v ? 'true' : 'false';
+    if (v is num) return '$v';
+    if (v is String) {
+      final escaped = v
+          .replaceAll(r'\', r'\\')
+          .replaceAll('"', r'"');
+      return '"$escaped"';
+    }
+    return '"$v"';
+  }
+
   @override
   Widget build(BuildContext context) {
     debugPrint('[hot_patch] build: loading=$_loading error=$_error tree=${_tree != null}');
@@ -272,6 +298,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
     final ctx = WidgetRenderContext(
       registry: _registry,
       onEvent: _onEvent,
+      onEventValue: _onEventValue,
       componentHost: _RuntimeComponentHost(
         manager: _manager,
         parentKey: _instanceKey,

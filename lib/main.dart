@@ -4,6 +4,7 @@ import 'package:hot_patch/hot_patch.dart';
 import 'components/banner_component.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
+import 'components/widget_showcase.dart';
 
 void main() => runApp(const HotDemoApp());
 
@@ -124,6 +125,17 @@ class DemoListPage extends StatelessWidget {
       'BannerCard · 多 runtime 分组',
       '两组 HotPatchWidget 各自使用业务方创建的独立 runtime，点按钮互不影响',
       _RuntimeGroupTest(),
+    ),
+    _DemoEntry(
+      'WidgetShowcase · 常用组件',
+      'text/image/container/listview/icon/card/stack/wrap/switch/slider 等（原生 vs JS）',
+      _CompareTest(
+        native: WidgetShowcase(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/widget_showcase.component.js',
+          component: 'WidgetShowcase',
+        ),
+      ),
     ),
   ];
 

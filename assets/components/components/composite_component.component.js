@@ -81,6 +81,7 @@ __components['DashboardCard'] = (function() {
         {
           "type": "Button",
           "props": {
+            "kind": "elevated",
             "label": "Tick",
             "event": "tick",
             "style": {
