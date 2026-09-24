@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
-import 'builtin_renderers.dart';
-import '../services/builtin_services.dart';
-import '../services/js_runtime_manager.dart';
-import '../services/native_service.dart';
-import 'widget_renderer.dart';
+import 'widgets/builtin_renderers.dart';
+import 'services/builtin_services.dart';
+import 'services/js_runtime_manager.dart';
+import 'services/native_service.dart';
+import 'widgets/widget_renderer.dart';
 
 /// ============================================================
 /// HotPatchWidget —— 热更新组件运行时入口

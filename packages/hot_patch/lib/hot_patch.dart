@@ -14,7 +14,7 @@ library;
 
 export 'src/widgets/builtin_renderers.dart';
 export 'src/services/builtin_services.dart';
-export 'src/widgets/hot_patch_widget.dart';
+export 'src/hot_patch_widget.dart';
 export 'src/services/js_runtime_manager.dart';
 export 'src/services/native_service.dart';
 export 'src/widgets/widget_renderer.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../widgets/hot_patch_widget.dart';
+import '../hot_patch_widget.dart';
 
 // ===========================================================================
 // 原生服务策略扩展点：JS sendMessage(channel, ...) → 原生能力

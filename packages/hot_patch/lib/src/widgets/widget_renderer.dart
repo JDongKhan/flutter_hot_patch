@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/js_asset_resolver.dart';
 
-import 'hot_patch_widget.dart';
+import '../hot_patch_widget.dart';
 import '../services/native_service.dart';
 import '../services/js_runtime_manager.dart';
 
