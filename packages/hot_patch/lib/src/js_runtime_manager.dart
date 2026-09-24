@@ -27,10 +27,11 @@ import 'native_service.dart';
 /// 框架内部机制（如 setState）同样实现为 NativeService，由
 /// HotPatchWidget 的页面级内部实现列表统一 [register]，不设特例方法。
 ///
-/// **通道接线由注册动作驱动**：每次 [register] / [registerGlobal] 都会把
-/// 对应 channel 注册到**所有活跃 manager** 的 runtime 上（[ensureChannels]
-/// 幂等）——注册的处理器一定有回调可路由，不会出现「通道没注册 →
-/// 消息黑洞」。之后新建的 manager 构造时自动补齐已注册过的全部通道。
+/// **通道接线只由注册动作驱动**：每次 [register] / [registerGlobal] 都会把
+/// 对应 channel 注册到**所有活跃 manager** 的 runtime 上（幂等）——
+/// 注册的处理器一定有回调可路由，不会出现「通道没注册 → 消息黑洞」。
+/// 新建 manager 无需补历史通道：它的第一次 register 就把自己接上线。
+/// 不在构造/求值时单独接线：没有 handler 的接线毫无意义。
 /// [evaluate] 是纯求值入口，不掺注册副作用。
 ///
 /// ### 页面级 [pageMessageHandlers]（跟页面 key 绑定）
@@ -70,9 +71,6 @@ class JsRuntimeManager {
 
   /// 所有活跃 manager（static 跟踪）：注册处理器时对所有实例接线通道。
   static final Set<JsRuntimeManager> _instances = {};
-
-  /// 已注册过的全部通道名（static）：新建 manager 构造时补齐接线。
-  static final Set<String> _registeredChannels = {};
 
   // ---------------------------------------------------------------------
   // 全局共享（static）：两套消息处理器表
@@ -129,11 +127,14 @@ class JsRuntimeManager {
     pageMessageHandlers.remove(pageKey);
   }
 
-  /// 内部：把 channel 登记进全局注册表并接线到所有活跃 manager。
+  /// 内部：把 channel 接线到**所有活跃 manager** 的 runtime。
+  ///
+  /// 只接本次注册的 channel（per-manager 幂等）。新 manager 不需要补
+  /// 历史通道——它自己的第一次 register 就会把自己接上线；
+  /// 只 evaluate 不注册时本就不该有接线（没有 handler 的接线是浪费）。
   static void _wireChannel(String channel) {
-    _registeredChannels.add(channel);
     for (final m in _instances) {
-      m.ensureChannels([channel]);
+      m._ensureChannels([channel]);
     }
   }
 
@@ -149,8 +150,9 @@ class JsRuntimeManager {
 
   JsRuntimeManager() {
     _instances.add(this);
-    // 补齐历史上已注册过的通道：新 manager 也能接收既有消息。
-    ensureChannels(_registeredChannels);
+    // 注意：不在构造时接线。通道接线完全由 register/registerGlobal 驱动
+    // （_wireChannel 接到所有活跃 manager）——新 manager 的第一次 register
+    // 就把自己接上线；只 evaluate 不注册时不接线（没有 handler 的接线是浪费）。
   }
 
   /// 所有 JS 求值的统一入口（纯求值，无注册副作用）。
@@ -163,7 +165,10 @@ class JsRuntimeManager {
   /// 消息 args 的 `key` 定位页面层，通道名定位方法层；页面级 miss 或
   /// 无 key 时回退全局级。因此无论消息路由到哪个 manager 的通道，
   /// 都能找到正确处理器。
-  void ensureChannels(Iterable<String> channels) {
+  ///
+  /// **仅供 register/registerGlobal 内部调用**（经 [_wireChannel]）：
+  /// 没有 handler 的通道接线没有意义，外部不得单独调用。
+  void _ensureChannels(Iterable<String> channels) {
     for (final channel in channels) {
       if (!_wiredChannels.add(channel)) continue;
       _runtime.onMessage(channel, (dynamic args) {
