@@ -4,6 +4,7 @@ import 'package:hot_patch/hot_patch.dart';
 import 'components/banner_component.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
+import 'components/stateless_component.dart';
 
 void main() => runApp(const HotDemoApp());
 
@@ -61,6 +62,26 @@ class DemoListPage extends StatelessWidget {
         js: HotPatchWidget(
           jsAsset: 'assets/components/components/hello_component.component.js',
           component: 'HelloPanel',
+        ),
+      ),
+    ),
+    _DemoEntry(
+      'StatelessCard · 原生 vs JS 热更',
+      'StatelessWidget：无 State，build 在 widget 类自身，props 走构造参数',
+      _CompareTest(
+        native: StatelessCard(
+          title: 'Hello Stateless',
+          subtitle: '原生直接渲染，无需 State',
+          badge: 'FLUTTER',
+        ),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/stateless_component.component.js',
+          component: 'StatelessCard',
+          componentArgs: {
+            'title': 'Hello Stateless',
+            'subtitle': 'JS 热更版本，无 State 也能渲染',
+            'badge': 'JS',
+          },
         ),
       ),
     ),

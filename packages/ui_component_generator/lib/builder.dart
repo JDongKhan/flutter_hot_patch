@@ -256,20 +256,33 @@ _Component _parseComponent(
   String sourcePath,
   String? Function(String component) importResolver,
 ) {
+  // 承载 build 的类：StatefulWidget → 其 State 类；StatelessWidget →
+  // widget 类自身（无 createState）。与 _parseNestedComponent 同一规则，
+  // 保证主组件与嵌套组件对 Stateful/Stateless 的支持一致。
+  ClassDeclaration hostClass = widgetClass;
   final stateClassName = _stateClassName(widgetClass);
-  if (stateClassName == null) {
-    throw FormatException('$componentName 未实现 createState()，无法定位 State 类');
-  }
-
-  ClassDeclaration? stateClass;
-  for (final d in unit.declarations) {
-    if (d is ClassDeclaration && d.name.lexeme == stateClassName) {
-      stateClass = d;
-      break;
+  if (stateClassName != null) {
+    for (final d in unit.declarations) {
+      if (d is ClassDeclaration && d.name.lexeme == stateClassName) {
+        hostClass = d;
+        break;
+      }
+    }
+    if (identical(hostClass, widgetClass)) {
+      throw FormatException('找不到 State 类 $stateClassName（需与 widget 同文件）');
     }
   }
-  if (stateClass == null) {
-    throw FormatException('找不到 State 类 $stateClassName（需与 widget 同文件）');
+
+  // 构造参数：widget 类构造函数的 this.xxx 命名形参（props 从 args 初始化）。
+  // 主组件也支持（StatelessWidget / 带业务参数的 StatefulWidget 都需要）。
+  final ctorArgs = <String>[];
+  for (final m in widgetClass.members) {
+    if (m is ConstructorDeclaration) {
+      for (final param in m.parameters.parameters) {
+        final inner = param is DefaultFormalParameter ? param.parameter : param;
+        if (inner is FieldFormalParameter) ctorArgs.add(inner.name.lexeme);
+      }
+    }
   }
 
   final props = <_Prop>[];
@@ -280,7 +293,7 @@ _Component _parseComponent(
   MethodDeclaration? buildMethod;
 
   // Pass 1：只收集方法（含 build），为「按调用链发现模型」做准备
-  for (final member in stateClass.members) {
+  for (final member in hostClass.members) {
     if (member is MethodDeclaration) {
       if (member.name.lexeme == 'build') {
         buildMethod = member;
@@ -292,7 +305,7 @@ _Component _parseComponent(
   }
 
   if (buildMethod == null) {
-    throw FormatException('State 类 $stateClassName 缺少 build() 方法');
+    throw FormatException('$componentName 缺少 build() 方法（StatefulWidget 需在 State 类、StatelessWidget 需在 widget 类）');
   }
 
   // 按调用链发现模型：只在方法体/build 树里出现 `User(...)` 构造时才翻译。
@@ -300,7 +313,7 @@ _Component _parseComponent(
   final models = _collectModels(unit, sourcePath, methods, buildMethod);
 
   // 字段收集：基础类型 + 模型类型（User? → this._user = null）自动进 state。
-  for (final member in stateClass.members) {
+  for (final member in hostClass.members) {
     if (member is FieldDeclaration) {
       for (final variable in member.fields.variables) {
         final fieldName = variable.name.lexeme;
@@ -319,7 +332,8 @@ _Component _parseComponent(
                 ? 'null'
                 : _defaultInitial(typeName));
         final propName = _defaultPropName(fieldName);
-        props.add(_Prop(fieldName, propName, typeName, initial));
+        props.add(_Prop(fieldName, propName, typeName, initial,
+            fromArgs: ctorArgs.contains(fieldName)));
         propByField[fieldName] = propName;
       }
     }
@@ -372,6 +386,7 @@ _Component _parseComponent(
     props,
     actions,
     tree,
+    ctorArgs: ctorArgs,
     deps: deps,
     models: models,
   );

@@ -128,12 +128,18 @@ class WidgetRenderContext {
     final name = node.props['component'] as String? ?? '';
     final args = (node.props['args'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
-    // 递归路径：按「组件索引」（导出类名 → jsAsset，JsRuntimeManager 模块
-    // 加载时登记）反查产物，返回嵌套 HotPatchWidget 递归渲染——它自管理
-    // 加载/实例化/生命周期/事件/状态，层级深度不限；扩展点
-    // （nativeComponents/rendererRegistry/nativeServices/sharedManager）
-    // 从本 ctx 透传，与宿主保持一致。跨文件组件与同文件组件都走索引，
-    // JSON 树里 Component 节点不再携带 import 字段。
+    // 渲染优先级：JS 优先。控制权在 JS 侧——产物可随时发布，想用某组件
+    // 的 JS 版就在产物里保留它的 import / class；想回退原生就发布一个
+    // 去掉该 import 的产物（组件索引里没有它 → 自然落到 nativeComponents）。
+    // 切换全程不动 Dart、不用发版。
+    // 1) JS 组件索引（导出类名 → jsAsset，JsRuntimeManager 模块加载时
+    //    登记）→ 返回嵌套 HotPatchWidget 递归渲染——它自管理加载/实例化/
+    //    生命周期/事件/状态，层级深度不限；扩展点（rendererRegistry/
+    //    nativeServices/sharedManager）从本 ctx 透传，与宿主保持一致。
+    //    跨文件组件与同文件组件都走索引；
+    // 2) 索引未命中 → nativeComponents 显式注入的原生实现（无 JS 产物
+    //    的 lib 普通组件等）；
+    // 3) 都没有 → 占位提示。
     final manager = sharedManager ?? JsRuntimeManager.instance;
     final jsAsset = manager.resolveComponentAsset(name);
     if (jsAsset != null) {
@@ -147,9 +153,6 @@ class WidgetRenderContext {
         sharedManager: manager,
       );
     }
-    // 无 JS 产物（无注解的 lib 普通组件）：
-    // 1) 业务方注入原生 widget（nativeComponents）→ 直接渲染
-    // 2) 否则占位提示（原生场景照常用 Flutter 组件）
     final builder = nativeComponents[name];
     if (builder != null) return builder(args);
     return Container(
