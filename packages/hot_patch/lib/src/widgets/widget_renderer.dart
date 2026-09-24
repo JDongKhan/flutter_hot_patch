@@ -43,10 +43,12 @@ class RenderNode {
     }
     final props = (map['props'] as Map?)?.cast<String, dynamic>() ?? const {};
     final rawChildren = (map['children'] as List?) ?? const [];
-    final children = [
-      for (final c in rawChildren)
-        if (RenderNode.of(c) != null) RenderNode.of(c)!,
-    ];
+    final children = <RenderNode>[];
+    for (final c in rawChildren) {
+      // 单次查找：RenderNode.of 内部依赖 inherited widget 注册表，重复调用浪费
+      final node = RenderNode.of(c);
+      if (node != null) children.add(node);
+    }
     if (rawChildren.isNotEmpty && children.length != rawChildren.length) {
       debugPrint(
         '[hot_patch] RenderNode.of: children dropped '
