@@ -176,6 +176,9 @@ class JsRuntimeManager {
   /// 模块加载：递归加载 import 依赖（先依赖后自身），再把自身预处理后
   /// evaluate 进 JS 全局（__modules 注册）。幂等：同 jsAsset 只执行一次。
   Future<void> loadModule(String jsAsset) async {
+    if (jsAsset.isEmpty) {
+      return;
+    }
     // 已加载成功 / 加载中（防依赖环）→ 短路。注意：只有**完整成功**才进
     // _loadedModules，失败（asset 缺失 / evaluate 出错）可再次重试。
     if (_loadedModules.contains(jsAsset) || _loadingModules.contains(jsAsset)) {
