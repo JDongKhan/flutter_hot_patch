@@ -124,9 +124,11 @@ class ComponentBuilder implements Builder {
       final dep = depQueue.removeLast();
       if (doneDeps.contains(dep)) continue;
       doneDeps.add(dep);
-      // 只翻译本文件内的私有组件（_ 开头、未注解、非已注册主组件）
-      if (!dep.startsWith('_')) continue;
+      // 翻译本文件内的组件类（build 树里 Component 兜底的同文件类：
+      // 私有 _Xxx 或无注解公共 widget 如 LabeledDivider），转成 inline
+      // 组件类（export class，与主组件同产物注册）。已收集的主组件跳过。
       if (!parsedNames.contains(dep)) continue;
+      if (annotatedNames.contains(dep)) continue;
       if (components.any((c) => c.name == dep)) continue;
       final decl = parsed.unit.declarations
           .whereType<ClassDeclaration>()
@@ -148,7 +150,7 @@ class ComponentBuilder implements Builder {
 
     await buildStep.writeAsString(
       jsOutput,
-      _renderJs(components, inputId.path, registry),
+      _renderJs(components, inputId.path, registry, importResolver),
     );
   }
 }
@@ -979,6 +981,12 @@ Map<String, _ModelDef> _collectModels(
     if (!collector.names.contains(name) || models.containsKey(name)) continue;
     if (name.startsWith('_')) continue;
     if (_findAnnotation(decl.metadata, 'UIComponent') != null) continue;
+    // widget 类（有 build 方法）不是模型：同文件组件走嵌套组件翻译路径
+    if (decl.members
+        .whereType<MethodDeclaration>()
+        .any((m) => m.name.lexeme == 'build')) {
+      continue;
+    }
     final fields = <String>[];
     for (final m in decl.members) {
       if (m is FieldDeclaration && !m.isStatic) {
@@ -1175,6 +1183,7 @@ String _renderJs(
   List<_Component> components,
   String sourcePath,
   WidgetTranslatorRegistry registry,
+  String? Function(String component) importResolver,
 ) {
   // 模型分两类：
   //  - 同文件模型（sourcePath == 当前组件文件）：产物内直接 class 定义（inline），
@@ -1206,6 +1215,24 @@ String _renderJs(
     final abs = _modelProductPath(m.sourcePath);
     final rel = _relativeProduct(ownProduct, abs);
     b.writeln("import { ${m.name} } from '$rel';");
+  }
+
+  // 跨文件组件：build 树里 Component 兜底、且产物在其他文件的依赖组件，
+  // 同样用 ES module import（'banner_component.component.js' 相对本产物目录）。
+  // 模块级 import 让依赖关系直观可见；JSON 树里 Component 节点不再携带
+  // import 字段（运行时按组件索引：导出类名 → jsAsset 反查递归）。
+  // 同文件组件（importResolver 返回本文件产物名）是 inline export class，
+  // 不需要 import；null（无 JS 产物的 lib 普通组件）走原生注入。
+  final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
+  final importedComponents = <String>{};
+  for (final c in components) {
+    for (final dep in c.deps) {
+      if (importedComponents.contains(dep)) continue;
+      final rel = importResolver(dep);
+      if (rel == null || rel == ownName) continue;
+      importedComponents.add(dep);
+      b.writeln("import { $dep } from '$rel';");
+    }
   }
 
   // 同文件模型：inline class（不 export，本产物内共享）

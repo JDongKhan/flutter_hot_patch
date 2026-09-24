@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../utils/js_asset_resolver.dart';
 
 import '../hot_patch_widget.dart';
 import '../services/native_service.dart';
@@ -129,20 +128,23 @@ class WidgetRenderContext {
     final name = node.props['component'] as String? ?? '';
     final args = (node.props['args'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
-    final import = node.props['import'] as String?;
-    if (import != null && import.endsWith('.js')) {
-      // 递归路径：依赖产物的组件 → 直接返回嵌套 HotPatchWidget，
-      // 它自管理加载/实例化/生命周期/事件/状态，层级深度不限；
-      // 扩展点（nativeComponents/rendererRegistry/nativeServices/
-      // sharedManager）从本 ctx 透传，与宿主保持一致。
+    // 递归路径：按「组件索引」（导出类名 → jsAsset，JsRuntimeManager 模块
+    // 加载时登记）反查产物，返回嵌套 HotPatchWidget 递归渲染——它自管理
+    // 加载/实例化/生命周期/事件/状态，层级深度不限；扩展点
+    // （nativeComponents/rendererRegistry/nativeServices/sharedManager）
+    // 从本 ctx 透传，与宿主保持一致。跨文件组件与同文件组件都走索引，
+    // JSON 树里 Component 节点不再携带 import 字段。
+    final manager = sharedManager ?? JsRuntimeManager.instance;
+    final jsAsset = manager.resolveComponentAsset(name);
+    if (jsAsset != null) {
       return HotPatchWidget(
-        jsAsset: JsAssetResolver.resolve(baseUri, import),
+        jsAsset: jsAsset,
         component: name,
         componentArgs: args,
         rendererRegistry: nestedRendererRegistry,
         nativeServices: nativeServices,
         nativeComponents: nativeComponents,
-        sharedManager: sharedManager,
+        sharedManager: manager,
       );
     }
     // 无 JS 产物（无注解的 lib 普通组件）：

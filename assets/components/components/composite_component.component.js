@@ -2,14 +2,7 @@
 // 由 ui_component_generator 从 lib/components/composite_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-
-// 模型 LabeledDivider（同文件，仅本产物内可见）
-class LabeledDivider {
-  constructor(args) {
-    this.text = (args && args.text !== undefined) ? args.text : undefined;
-  }
-}
-
+import { BannerCard } from 'banner_component.component.js';
 
 export class DashboardCard {
   constructor() {
@@ -39,8 +32,7 @@ export class DashboardCard {
         {
           "type": "Component",
           "props": {
-            "component": "BannerCard",
-            "import": "banner_component.component.js"
+            "component": "BannerCard"
           }
         },
         {
@@ -53,7 +45,6 @@ export class DashboardCard {
           "type": "Component",
           "props": {
             "component": "_LabeledDivider",
-            "import": "composite_component.component.js",
             "args": {
               "text": "private widget"
             }
@@ -93,6 +84,24 @@ export class DashboardCard {
           }
         }
       ]
+    };
+  }
+}
+
+export class LabeledDivider {
+  constructor(args) {
+    this.text = (args && args.text !== undefined) ? args.text : '';
+  }
+  build() {
+      return {
+      "type": "Text",
+      "props": {
+        "data": "★ " + this.text + " ★",
+        "style": {
+          "fontSize": 12,
+          "color": '#607D8B'
+        }
+      }
     };
   }
 }

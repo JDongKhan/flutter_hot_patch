@@ -211,7 +211,13 @@ class JsRuntimeManager {
     // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）后求值
     try {
       final processed = _preprocessModule(source, jsAsset, base);
-      final evalResult = _runtime.evaluate(processed);
+      final evalResult = _runtime.evaluate(processed.code);
+      // 组件索引：导出类名 → jsAsset（跨文件组件 / 同文件组件都通过
+      // export class 注册进模块表；渲染层 Component 节点按组件名反查，
+      // 递归嵌套 HotPatchWidget 不再依赖 JSON 里的 import 字段）。
+      for (final name in processed.exports) {
+        _componentIndex[name] = jsAsset;
+      }
       // ignore: avoid_print
       print('[js_runtime_manager] eval result for $jsAsset: $evalResult');
       // evaluate 返回错误文本（JS 引擎把异常序列化进返回值）→ 视为加载失败，
@@ -251,7 +257,7 @@ class JsRuntimeManager {
   /// import 语句 -> `const { A, B } = __modules['<解析后绝对路径>'];`。
   /// 模块注册 key 与实例化寻址都用**绝对资产路径**（assets/components/...），
   /// 与 HotPatchWidget 的 jsAsset 一致。
-  static String _preprocessModule(
+  static ({String code, List<String> exports}) _preprocessModule(
     String source,
     String jsAsset,
     String base,
@@ -295,12 +301,19 @@ class JsRuntimeManager {
     // `Can't create duplicate variable`（如 user 模块的 class User 与
     // 组件模块的 const { User } 冲突）。IIFE 内声明互不干扰，
     // 只有 var 全局表（__modules/__instances）跨 evaluate 可见。
-    return '(function() {\n$out\n})();';
+    return (code: '(function() {\n$out\n})();', exports: exportNames);
   }
 
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
   final Set<String> _loadingModules = {};
+
+  /// 组件索引：导出类名 → 所在产物 jsAsset。模块加载成功后登记，
+  /// 渲染层 Component 节点（无 import 字段）按名反查以递归嵌套渲染。
+  final Map<String, String> _componentIndex = {};
+
+  /// 按组件名查它所在产物的 jsAsset（渲染层递归嵌套 HotPatchWidget 用）。
+  String? resolveComponentAsset(String component) => _componentIndex[component];
 
   /// JS 侧模块表是否已初始化。
   bool _moduleTableInited = false;

@@ -402,15 +402,13 @@ class ComponentTranslator extends WidgetTranslator {
       final v = _literalValue(entry.value);
       if (v != null) args[entry.key] = _jsLiteral(v, ctx);
     }
-    // import：该组件可用的 JS 产物路径（本文件私有/注解组件 → 本文件产物；
-    // 跨文件注解组件 → 依赖文件产物）。运行时渲染 Component 节点时发现
-    // import 且后缀为 .js → 返回嵌套 HotPatchWidget(jsAsset: import) 递归。
-    final import = ctx.importResolver?.call(node.type);
+    // 不再输出 import 字段：跨文件/同文件组件依赖统一在产物顶部用
+    // ES module import 表达（_renderJs 收集生成）；运行时按「组件索引」
+    // （导出类名 → jsAsset）递归渲染嵌套 HotPatchWidget。
     return {
       'type': ctx.jsString('Component'),
       'props': {
         'component': ctx.jsString(node.type),
-        if (import != null) 'import': ctx.jsString(import),
         if (args.isNotEmpty) 'args': args,
       },
     };
