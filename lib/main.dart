@@ -23,9 +23,7 @@ class HotDemoApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       // 全局导航 key：热更包全局级服务（toast 等）用它定位 ScaffoldMessenger
       navigatorKey: JsRuntimeManager.navigatorKey = GlobalKey<NavigatorState>(),
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
+      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
       home: const DemoListPage(),
     );
   }
@@ -90,10 +88,7 @@ class DemoListPage extends StatelessWidget {
           // 运行时自动递归加载，使用方无需声明依赖。
           // 非私有组件（LabeledDivider）运行时注入原生 widget：
           // hot_patch 包不 import 业务类，由业务方在这里注册
-          nativeComponents: {
-            'LabeledDivider': (args) =>
-                LabeledDivider(text: args['text'] as String? ?? ''),
-          },
+          nativeComponents: {'LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? '')},
         ),
       ),
     ),
@@ -101,10 +96,7 @@ class DemoListPage extends StatelessWidget {
       'Scaffold · 页面骨架',
       'Scaffold / AppBar / Center / SingleChildScrollView 组件演示（页面级，仅 JS 热更版）',
       // 页面级组件无法与原生同屏比对，直接展示 JS 热更版
-      HotPatchWidget(
-        jsAsset: 'assets/components/components/scaffold_demo.component.js',
-        component: 'ScaffoldDemo',
-      ),
+      HotPatchWidget(jsAsset: 'assets/components/components/scaffold_demo.component.js', component: 'ScaffoldDemo'),
     ),
     _DemoEntry(
       'HelloCard · JS 双实例隔离',
@@ -124,17 +116,12 @@ class DemoListPage extends StatelessWidget {
         label: 'BannerCard',
       ),
     ),
-    _DemoEntry(
-      'BannerCard · 多 runtime 分组',
-      '两组 HotPatchWidget 各自使用业务方创建的独立 runtime，点按钮互不影响',
-      _RuntimeGroupTest(),
-    ),
+    _DemoEntry('BannerCard · 多 runtime 分组', '两组 HotPatchWidget 各自使用业务方创建的独立 runtime，点按钮互不影响', _RuntimeGroupTest()),
     _DemoEntry(
       'WidgetShowcase · 常用组件',
       'text/image/container/listview/icon/card/stack/wrap/switch/slider 等（原生 vs JS）',
-      _CompareTest(
-        native: WidgetShowcase(),
-        js: HotPatchWidget(
+      SingleChildScrollView(
+        child: HotPatchWidget(
           jsAsset: 'assets/components/components/widget_showcase.component.js',
           component: 'WidgetShowcase',
         ),
@@ -205,19 +192,13 @@ class _CompareTest extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          '原生组件',
-          style: const TextStyle(fontSize: 13, color: Colors.grey),
-        ),
+        Text('原生组件', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         native,
         const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 24),
-        Text(
-          'JS 热更（HotPatchWidget）',
-          style: const TextStyle(fontSize: 13, color: Colors.grey),
-        ),
+        Text('JS 热更（HotPatchWidget）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         js,
       ],
@@ -237,10 +218,7 @@ class _RuntimeGroupTest extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          'runtime 组 A（业务方创建 #1）',
-          style: const TextStyle(fontSize: 13, color: Colors.grey),
-        ),
+        Text('runtime 组 A（业务方创建 #1）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         HotPatchWidget(
           jsAsset: 'assets/components/components/banner_component.component.js',
@@ -248,10 +226,7 @@ class _RuntimeGroupTest extends StatelessWidget {
           sharedManager: _managerA,
         ),
         const Divider(height: 32),
-        Text(
-          'runtime 组 B（业务方创建 #2）',
-          style: const TextStyle(fontSize: 13, color: Colors.grey),
-        ),
+        Text('runtime 组 B（业务方创建 #2）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         HotPatchWidget(
           jsAsset: 'assets/components/components/banner_component.component.js',
@@ -273,11 +248,7 @@ final JsRuntimeManager _managerB = JsRuntimeManager();
 /// 双实例隔离测试：同屏渲染两个相同组件（HotPatchWidget 各持独立 JS 实例）。
 /// 验证：点其中一个的按钮，另一个的状态不受影响（__instances[key] 隔离）。
 class _TwinTest extends StatelessWidget {
-  const _TwinTest({
-    required this.jsAsset,
-    required this.component,
-    required this.label,
-  });
+  const _TwinTest({required this.jsAsset, required this.component, required this.label});
 
   final String jsAsset;
   final String component;
@@ -287,17 +258,11 @@ class _TwinTest extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          '$label #1',
-          style: const TextStyle(fontSize: 13, color: Colors.grey),
-        ),
+        Text('$label #1', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         HotPatchWidget(jsAsset: jsAsset, component: component),
         const Divider(height: 32),
-        Text(
-          '$label #2',
-          style: const TextStyle(fontSize: 13, color: Colors.grey),
-        ),
+        Text('$label #2', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         HotPatchWidget(jsAsset: jsAsset, component: component),
       ],
