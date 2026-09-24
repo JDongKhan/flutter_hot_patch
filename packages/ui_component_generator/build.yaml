@@ -1,12 +1,20 @@
 builders:
+  # 组件 builder：lib/ 下含 @UIComponent 注解的 .dart → .component.js
   ui_component:
     import: "package:ui_component_generator/builder.dart"
     builder_factories: ["componentBuilder"]
-    # {{}} 捕获 lib/ 下任意 dart 文件的相对路径（含子目录），
-    # 产物落到应用根目录 assets/components/（镜像 lib 目录结构）
     build_extensions:
       "^lib/{{}}.dart":
         - "assets/components/{{}}.component.js"
-        - "assets/components/{{}}.component.schema.json"
+    auto_apply: dependents
+    build_to: source
+
+  # 模型 builder：lib/model/ 下的 .dart → .model.js（export class 供组件 import）
+  ui_model:
+    import: "package:ui_component_generator/builder.dart"
+    builder_factories: ["modelBuilder"]
+    build_extensions:
+      "^lib/model/{{}}.dart":
+        - "assets/components/model/{{}}.model.js"
     auto_apply: dependents
     build_to: source

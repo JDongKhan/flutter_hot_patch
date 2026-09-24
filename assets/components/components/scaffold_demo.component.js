@@ -2,22 +2,14 @@
 // 由 ui_component_generator 从 lib/components/scaffold_demo.dart 自动生成
 // 重新生成：dart run build_runner build
 
-// 组件注册表：多个 JS 补丁共享，加载顺序无关
-var __components = __components || {};
-// 实例注册表：每个 HotPatchWidget 持有自己的组件实例（状态互不共享）
-var __instances = __instances || {};
 
-// IIFE 闭包：不泄漏到全局，加载多个 JS 不会重名
-__components['ScaffoldDemo'] = (function() {
-  // 构造函数：new 一次得到一个独立组件实例，可重复实例化
-  function ScaffoldDemo() {
+export class ScaffoldDemo {
+  constructor() {
     this._count = 0;
   }
-
-  ScaffoldDemo.prototype._inc = function() { this.setState(function(){ this._count += 1; }); };
-
-  ScaffoldDemo.prototype.build = function() {
-    return {
+  _inc() { this.setState(function(){ this._count += 1; }); }
+  build() {
+      return {
       "type": "Scaffold",
       "children": [
         {
@@ -531,8 +523,6 @@ __components['ScaffoldDemo'] = (function() {
         }
       ]
     };
-  };
-
-  return ScaffoldDemo;
-})();
+  }
+}
 

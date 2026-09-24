@@ -2,24 +2,19 @@
 // 由 ui_component_generator 从 lib/components/hello_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-// 组件注册表：多个 JS 补丁共享，加载顺序无关
-var __components = __components || {};
-// 实例注册表：每个 HotPatchWidget 持有自己的组件实例（状态互不共享）
-var __instances = __instances || {};
+import { User } from '../model/user.model.js';
 
-// IIFE 闭包：不泄漏到全局，加载多个 JS 不会重名
-__components['HelloCard'] = (function() {
-  // 构造函数：new 一次得到一个独立组件实例，可重复实例化
-  function HelloCard() {
+export class HelloCard {
+  constructor() {
     this._count = 0;
+    this._user = null;
   }
-
-  HelloCard.prototype.inc = function() { this.setState(function(){ this._count += 1; }); };
-  HelloCard.prototype.reset = function() { this.setState(function(){ this._count = 0; }); };
-  HelloCard.prototype.showNative = function() { sendMessage("nativeToast", JSON.stringify({ key: this._key, message: "Hello from native (JS-driven)" })); };
-
-  HelloCard.prototype.build = function() {
-    return {
+  inc() { this.setState(function(){ this._count += 1; }); }
+  async loadUser() { await new Promise(function(r){ setTimeout(r, 1000); }); this.setState(function(){ this._user = new User({name: "Alice", age: 18}); }); }
+  reset() { this.setState(function(){ this._count = 0; }); }
+  showNative() { sendMessage("nativeToast", JSON.stringify({ key: this._key, message: "Hello from native (JS-driven)" })); }
+  build() {
+      return {
       "type": "Column",
       "children": [
         {
@@ -37,6 +32,18 @@ __components['HelloCard'] = (function() {
           "type": "Text",
           "props": {
             "data": "count = " + this._count
+          }
+        },
+        {
+          "type": "Text",
+          "props": {
+            "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
+          }
+        },
+        {
+          "type": "Text",
+          "props": {
+            "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
           }
         },
         {
@@ -69,28 +76,30 @@ __components['HelloCard'] = (function() {
                 "label": "Native",
                 "event": "showNative"
               }
+            },
+            {
+              "type": "Button",
+              "props": {
+                "kind": "elevated",
+                "label": "Load User",
+                "event": "loadUser"
+              }
             }
           ]
         }
       ]
     };
-  };
+  }
+}
 
-  return HelloCard;
-})();
-
-// IIFE 闭包：不泄漏到全局，加载多个 JS 不会重名
-__components['HelloPanel'] = (function() {
-  // 构造函数：new 一次得到一个独立组件实例，可重复实例化
-  function HelloPanel() {
+export class HelloPanel {
+  constructor() {
     this._taps = 0;
   }
-
-  HelloPanel.prototype.tap = function() { this.setState(function(){ this._taps += 1; }); };
-  HelloPanel.prototype.clear = function() { this.setState(function(){ this._taps = 0; }); };
-
-  HelloPanel.prototype.build = function() {
-    return {
+  tap() { this.setState(function(){ this._taps += 1; }); }
+  clear() { this.setState(function(){ this._taps = 0; }); }
+  build() {
+      return {
       "type": "Column",
       "children": [
         {
@@ -131,8 +140,6 @@ __components['HelloPanel'] = (function() {
         }
       ]
     };
-  };
-
-  return HelloPanel;
-})();
+  }
+}
 

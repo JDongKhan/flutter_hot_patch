@@ -1,6 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_js/flutter_js.dart';
 
+import '../utils/js_asset_resolver.dart';
 import 'native_service.dart';
 
 /// JS 运行时管理器：与底层 [JavascriptRuntime] **一对一**。
@@ -158,6 +160,130 @@ class JsRuntimeManager {
   /// 所有 JS 求值的统一入口（纯求值，无注册副作用）。
   /// code 内部应带实例 key 寻址，如 `__instances["hp_x"].method()`。
   JsEvalResult evaluate(String code) => _runtime.evaluate(code);
+
+  // ---------------------------------------------------------------------
+  // 模块加载器（ES module 支持）
+  // ---------------------------------------------------------------------
+  //
+  // flutter_js 0.8.7 只有 evaluate（无原生 import/export 求值），因此这里
+  // 做文本级模块加载：把产物的 import/export 预处理成脚本模式——
+  //   - `export class X {...}`   -> `class X {...}`（收集导出名）
+  //   - `import { A } from 'rel'` -> `const { A } = __modules['<abs>'];`
+  //   - 模块尾部注册 `__modules['<jsAsset>'] = { X };`（JS 侧全局表，
+  //     跨 evaluate 共享，与旧 __components 同一机制）
+  // 依赖按相对路径递归加载（JsAssetResolver），同一 jsAsset 只执行一次。
+
+  /// 模块加载：递归加载 import 依赖（先依赖后自身），再把自身预处理后
+  /// evaluate 进 JS 全局（__modules 注册）。幂等：同 jsAsset 只执行一次。
+  Future<void> loadModule(String jsAsset) async {
+    if (!_loadedModules.add(jsAsset)) return; // 已加载（含作为依赖加载过）
+    final source = await rootBundle.loadString(jsAsset);
+    final base = jsAsset.substring(0, jsAsset.lastIndexOf('/') + 1);
+
+    // 1) 递归加载 import 依赖（相对路径，以当前模块目录为基准）
+    for (final (_, rel) in _parseImports(source)) {
+      final dep = JsAssetResolver.resolve(base, rel);
+      await loadModule(dep);
+    }
+
+    // 2) 首次加载前初始化 JS 侧全局表（幂等 var 声明）：
+    //    __modules = 模块注册表（export class 收集）；__instances = 实例句柄表
+    //    （HotPatchWidget 按实例 key 寻址，key 隔离状态互不共享）。
+    //    __components 已随 class + import/export 化删除（组件类在模块表里）。
+    if (!_moduleTableInited) {
+      // typeof 判空（读未声明标识符在部分引擎抛 ReferenceError，
+      // 不能直接 `x || {}`）；var 提升保证同脚本内后续语句可见。
+      _runtime.evaluate(
+        "if (typeof __modules === 'undefined') { var __modules = {}; } "
+        "if (typeof __instances === 'undefined') { var __instances = {}; }",
+      );
+      _moduleTableInited = true;
+    }
+
+    // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）后求值
+    final processed = _preprocessModule(source, jsAsset, base);
+    final evalResult = _runtime.evaluate(processed);
+    // ignore: avoid_print
+    print('[js_runtime_manager] eval result for $jsAsset: $evalResult');
+    // ignore: avoid_print
+    print('[js_runtime_manager] module loaded: $jsAsset');
+  }
+
+  /// 解析模块源码里的 import 语句：`import { A, B } from 'rel';`
+  /// -> [(['A','B'], 'rel')]。只匹配生成器产物的单行 import 形态。
+  static List<(List<String>, String)> _parseImports(String source) {
+    final re = RegExp(
+      r"import\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
+    );
+    return [
+      for (final m in re.allMatches(source))
+        (
+          m.group(1)!
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList(),
+          m.group(2)!,
+        ),
+    ];
+  }
+
+  /// 文本级预处理：export class -> class + 尾部 __modules 注册；
+  /// import 语句 -> `const { A, B } = __modules['<解析后绝对路径>'];`。
+  /// 模块注册 key 与实例化寻址都用**绝对资产路径**（assets/components/...），
+  /// 与 HotPatchWidget 的 jsAsset 一致。
+  static String _preprocessModule(
+    String source,
+    String jsAsset,
+    String base,
+  ) {
+    var out = source;
+
+    // export class -> class（收集导出名，同名模块去重）
+    final exportRe = RegExp(r"^export\s+class\s+(\w+)", multiLine: true);
+    final exportNames = <String>[
+      for (final m in exportRe.allMatches(out)) m.group(1)!,
+    ];
+    out = out.replaceAllMapped(exportRe, (m) => 'class ${m.group(1)}');
+
+    // import { A, B } from 'rel' -> const { A, B } = __modules['abs'];
+    final importRe = RegExp(
+      r"import\s*\{[^}]+\}\s*from\s*[\x27\x22][^\x27\x22]+[\x27\x22]\s*;",
+    );
+    out = out.replaceAllMapped(importRe, (m) {
+      final inner = m.group(0)!;
+      final namesMatch = RegExp(r"\{([^}]+)\}").firstMatch(inner)!;
+      final relMatch =
+          RegExp(r"from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]").firstMatch(inner)!;
+      final names = namesMatch
+          .group(1)!
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      final abs = JsAssetResolver.resolve(base, relMatch.group(1)!);
+      return "const { ${names.join(', ')} } = __modules['$abs'];";
+    });
+
+    // 模块尾部注册导出：__modules['jsAsset'] = { A, B };
+    if (exportNames.isNotEmpty) {
+      out += "\n__modules['$jsAsset'] = { ${exportNames.join(', ')} };";
+    }
+
+    // 整体包进 IIFE：class / const 声明局部化。flutter_js（iOS
+    // JavaScriptCore）多次 evaluate 共享**全局词法环境**——顶层 class、
+    // const 声明跨 evaluate 持久且同名重复声明会抛
+    // `Can't create duplicate variable`（如 user 模块的 class User 与
+    // 组件模块的 const { User } 冲突）。IIFE 内声明互不干扰，
+    // 只有 var 全局表（__modules/__instances）跨 evaluate 可见。
+    return '(function() {\n$out\n})();';
+  }
+
+  /// 宿主侧已加载模块缓存（防重复加载/递归环）。
+  final Set<String> _loadedModules = {};
+
+  /// JS 侧模块表是否已初始化。
+  bool _moduleTableInited = false;
 
   /// 注册消息通道（每个 manager × channel 一次，幂等）。
   ///

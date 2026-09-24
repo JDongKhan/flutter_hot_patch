@@ -2,28 +2,20 @@
 // 由 ui_component_generator 从 lib/components/widget_showcase.dart 自动生成
 // 重新生成：dart run build_runner build
 
-// 组件注册表：多个 JS 补丁共享，加载顺序无关
-var __components = __components || {};
-// 实例注册表：每个 HotPatchWidget 持有自己的组件实例（状态互不共享）
-var __instances = __instances || {};
 
-// IIFE 闭包：不泄漏到全局，加载多个 JS 不会重名
-__components['WidgetShowcase'] = (function() {
-  // 构造函数：new 一次得到一个独立组件实例，可重复实例化
-  function WidgetShowcase() {
+export class WidgetShowcase {
+  constructor() {
     this._bumps = 0;
     this._on = false;
     this._slider = 0.3;
     this._taps = 0;
   }
-
-  WidgetShowcase.prototype.bump = function() { this.setState(function(){ this._bumps += 1; }); };
-  WidgetShowcase.prototype.onSwitch = function(v) { this.setState(function(){ this._on = v; }); };
-  WidgetShowcase.prototype.onSlider = function(v) { this.setState(function(){ this._slider = v; }); };
-  WidgetShowcase.prototype.tap = function() { this.setState(function(){ this._taps += 1; }); };
-
-  WidgetShowcase.prototype.build = function() {
-    return {
+  bump() { this.setState(function(){ this._bumps += 1; }); }
+  onSwitch(v) { this.setState(function(){ this._on = v; }); }
+  onSlider(v) { this.setState(function(){ this._slider = v; }); }
+  tap() { this.setState(function(){ this._taps += 1; }); }
+  build() {
+      return {
       "type": "Column",
       "props": {
         "crossAxisAlignment": "stretch"
@@ -913,8 +905,6 @@ __components['WidgetShowcase'] = (function() {
         }
       ]
     };
-  };
-
-  return WidgetShowcase;
-})();
+  }
+}
 

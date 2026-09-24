@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 
 import 'widgets/builtin_renderers.dart';
 import 'services/builtin_services.dart';
@@ -133,9 +132,12 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
   Future<void> _boot() async {
     try {
-      // 1. 加载 JS 补丁源码（生产环境：从远端下载，校验签名与版本）
-      final jsSource = await rootBundle.loadString(widget.jsAsset);
-      debugPrint('[hot_patch] jsSource loaded: ${jsSource.length} chars');
+      // 1. 加载补丁模块：JsRuntimeManager 模块加载器递归加载 import 依赖
+      //    （先依赖后自身），把产物预处理成脚本模式（export class →
+      //    class + __modules 注册；import → __modules 解构），同一 jsAsset
+      //    只执行一次（多组件/多实例共享同一个模块与模型类）。
+      await _manager.loadModule(widget.jsAsset);
+      debugPrint('[hot_patch] module loaded: ${widget.jsAsset}');
 
       // 1.1 服务注册：统一收 NativeService。
       //     - 页面级：内部实现（setState 等）+ 业务方注入的服务 →
@@ -169,20 +171,27 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       //   在 _bootWithLifecycle 之前完成——见 1.1）
 
 
-      // 2. 加载补丁模块（产物自包含：__components/__instances 注册表 +
-      // 组件构造函数）。嵌套组件（Component 节点带 import）由渲染层递归
-      // 创建嵌套 HotPatchWidget 自行加载，使用方无需声明依赖。
-      _manager.evaluate(jsSource);
-      debugPrint('[hot_patch] module loaded');
-
-      // 2.3 实例化组件：new 一个独立实例（可重复实例化，状态互不共享）。
-      // 构造参数由生成器 ctorArgs 消费（`this.x = args && args.x ...`），
-      // 无参组件传空对象安全（JS 忽略多余实参）。
-      _manager.evaluate(
-        '__instances["$_instanceKey"] = new __components["${widget.component}"]'
+      // 2. 实例化组件：`new __modules['<jsAsset>'].<组件名>(args)`。
+      //    __modules 是 JS 侧全局模块表（模块加载器注册）；class 实例天然
+      //    独立（状态互不共享），可重复实例化。
+      //    嵌套组件（Component 节点带 import）由渲染层递归创建嵌套
+      //    HotPatchWidget 自行加载，使用方无需声明依赖。
+      final moduleExpr = '__modules[${jsonEncode(widget.jsAsset)}]';
+      final instResult = _manager.evaluate(
+        '__instances["$_instanceKey"] = new $moduleExpr.${widget.component}'
         '(${jsonEncode(widget.componentArgs)}); '
         '__instances["$_instanceKey"]._key = "$_instanceKey";',
       );
+      // ignore: avoid_print
+      print('[hot_patch] inst eval result: $instResult');
+      final instDbg = _manager.evaluate(
+        'JSON.stringify({ m: typeof __modules, '
+        'i: typeof __instances, '
+        'mod: typeof __modules[${jsonEncode(widget.jsAsset)}], '
+        'v: typeof __instances["$_instanceKey"] })',
+      );
+      // ignore: avoid_print
+      print('[hot_patch] inst dbg: $instDbg');
       // 2.3.1 给 JS 实例挂载 setState：执行回调（更新 JS 状态）+ sendMessage 通知宿主重建。
       // HotPatchWidget 不直接 setState；重建由 JS 侧 setState 驱动（与 Dart 语义一致）。
       _manager.evaluate(

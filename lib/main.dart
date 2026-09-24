@@ -4,7 +4,6 @@ import 'package:hot_patch/hot_patch.dart';
 import 'components/banner_component.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
-import 'components/widget_showcase.dart';
 
 void main() => runApp(const HotDemoApp());
 

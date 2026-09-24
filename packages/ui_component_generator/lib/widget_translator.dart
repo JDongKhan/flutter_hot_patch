@@ -200,7 +200,12 @@ class WidgetTranslateContext {
     throw FormatException('仅支持状态字段/字面量，不支持 ${e.toSource()}');
   }
 
-  /// 字符串插值 → JS 表达式（`'count = $_count'` → `"count = " + this._count`）
+  /// 文本内容表达式 → JS 表达式（`'count = $_count'` →
+  /// `"count = " + this._count`；`'user: ${_user?.name ?? "x"}'` → 模型属性链）。
+  ///
+  /// 支持：字符串字面量/相邻字符串/插值、状态字段（this._x）、模型属性链
+  /// （this._user.name）、null-aware 访问（? .，转显式三元保证引擎兼容）、
+  /// ?? 合并、+ 拼接、括号。
   String jsDataExpr(Expression e) {
     if (e is SimpleStringLiteral) return jsString(e.value);
     if (e is AdjacentStrings) {
@@ -212,18 +217,30 @@ class WidgetTranslateContext {
         if (el is InterpolationString) {
           if (el.value.isNotEmpty) parts.add(jsString(el.value));
         } else if (el is InterpolationExpression) {
-          final x = el.expression;
-          if (x is Identifier) {
-            parts.add('this.${propOf(x)}');
-          } else {
-            throw FormatException(
-                '插值只支持状态字段引用（如 \$_count），不支持 ${x.toSource()}');
-          }
+          parts.add(jsDataExpr(el.expression));
         }
       }
       return parts.isEmpty ? '""' : parts.join(' + ');
     }
-    throw FormatException('文本内容只支持字符串字面量/插值，不支持 ${e.toSource()}');
+    if (e is Identifier) return 'this.${propOf(e)}';
+    if (e is PropertyAccess && e.target != null) {
+      final target = jsDataExpr(e.target!);
+      final name = e.propertyName.name;
+      if (e.operator.lexeme == '?.') {
+        // `_user?.name` → `(this._user == null ? null : this._user.name)`
+        return '($target == null ? null : $target.$name)';
+      }
+      return '$target.$name';
+    }
+    if (e is BinaryExpression && e.operator.lexeme == '??') {
+      return '(${jsDataExpr(e.leftOperand)} ?? ${jsDataExpr(e.rightOperand)})';
+    }
+    if (e is BinaryExpression && e.operator.lexeme == '+') {
+      return '(${jsDataExpr(e.leftOperand)} + ${jsDataExpr(e.rightOperand)})';
+    }
+    if (e is ParenthesizedExpression) return '(${jsDataExpr(e.expression)})';
+    throw FormatException(
+        '文本内容只支持字符串/插值/状态字段/模型属性，不支持 ${e.toSource()}');
   }
 
   /// 方法 tear-off 或 `() => _inc()` 内部的方法调用表达式

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ui_component/ui_component.dart';
+import 'package:flutter_hot/model/user.dart';
 
 /// 本文件演示两个能力：
 ///   1. HelloCard —— 一个**完全正常的 Flutter StatefulWidget**（原生可直接用）
@@ -28,9 +29,21 @@ class _HelloCardState extends State<HelloCard> {
   // 无注解：自动成为 JS 属性 `_count`
   int _count = 0;
 
+  // 模型类型字段：按调用链进 JS 属性（this._user = null）
+  User? _user;
+
   // 无注解：自动成为 JS 方法 `inc`
   void inc() {
     setState(() => _count++);
+  }
+
+  // 模拟网络请求：await Future.delayed → Promise/setTimeout；
+  // setState 里构造 User（模型）→ new User({name, age})
+  Future<void> loadUser() async {
+    await Future.delayed(const Duration(seconds: 1));
+    setState(() {
+      _user = const User(name: 'Alice', age: 18);
+    });
   }
 
   // 无注解：自动成为 JS 方法 `reset`
@@ -60,6 +73,8 @@ class _HelloCardState extends State<HelloCard> {
           ),
         ),
         Text('count = $_count'),
+        Text('user: ${_user?.name ?? '加载中'}'),
+        Text('age: ${_user?.age ?? '-'}'),
         Row(
           children: [
             ElevatedButton(
@@ -77,6 +92,10 @@ class _HelloCardState extends State<HelloCard> {
             ElevatedButton(
               onPressed: showNative,
               child: const Text('Native'),
+            ),
+            ElevatedButton(
+              onPressed: loadUser,
+              child: const Text('Load User'),
             ),
           ],
         ),
