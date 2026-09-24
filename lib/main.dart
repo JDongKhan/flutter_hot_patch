@@ -48,64 +48,56 @@ class DemoListPage extends StatelessWidget {
 
   static final _demos = <_DemoEntry>[
     _DemoEntry(
-      'HelloCard · 原生组件',
-      '正常 StatefulWidget，直接使用（与注解无关）',
-      HelloCard(),
-    ),
-    _DemoEntry(
-      'HelloCard · JS 热更',
-      'HotPatchWidget 加载 hello_component.component.js，JS 驱动渲染与逻辑',
-      HotPatchWidget(
-        jsAsset: 'assets/components/components/hello_component.component.js',
-        component: 'HelloCard',
+      'HelloCard · 原生 vs JS 热更',
+      '同屏对比：正常组件与 JS 补丁的渲染与逻辑',
+      _CompareTest(
+        native: HelloCard(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/hello_component.component.js',
+          component: 'HelloCard',
+        ),
       ),
     ),
     _DemoEntry(
-      'HelloPanel · 原生组件',
-      '单文件多组件：与 HelloCard 同文件、同产物',
-      HelloPanel(),
-    ),
-    _DemoEntry(
-      'HelloPanel · JS 热更',
-      '同一产物注册的第二个组件（taps 状态）',
-      HotPatchWidget(
-        jsAsset: 'assets/components/components/hello_component.component.js',
-        component: 'HelloPanel',
+      'HelloPanel · 原生 vs JS 热更',
+      '单文件多组件：与 HelloCard 同文件、同产物（taps 状态）',
+      _CompareTest(
+        native: HelloPanel(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/hello_component.component.js',
+          component: 'HelloPanel',
+        ),
       ),
     ),
     _DemoEntry(
-      'BannerCard · 原生组件',
-      '多文件多组件：banner_component.dart 独立产物',
-      BannerCard(),
-    ),
-    _DemoEntry(
-      'BannerCard · JS 热更',
-      '独立产物 banner_component.component.js（views 状态）',
-      HotPatchWidget(
-        jsAsset: 'assets/components/components/banner_component.component.js',
-        component: 'BannerCard',
+      'BannerCard · 原生 vs JS 热更',
+      '多文件多组件：banner_component.dart 独立产物（views 状态）',
+      _CompareTest(
+        native: BannerCard(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/banner_component.component.js',
+          component: 'BannerCard',
+        ),
       ),
     ),
     _DemoEntry(
-      'DashboardCard · 原生组件',
-      '复合组件：build 内嵌 BannerCard（注解组件）+ 无注解自定义 widget',
-      DashboardCard(),
-    ),
-    _DemoEntry(
-      'DashboardCard · JS 热更',
-      '私有组件转 JS 递归渲染 + 事件回流；非私有组件 nativeComponents 注入',
-      HotPatchWidget(
-        jsAsset: 'assets/components/components/composite_component.component.js',
-        component: 'DashboardCard',
-        requiredAssets: [
-          'assets/components/components/banner_component.component.js',
-        ],
-        // 非私有组件（LabeledDivider）运行时注入原生 widget：
-        // hot_patch 包不 import 业务类，由业务方在这里注册
-        nativeComponents: {
-          'LabeledDivider': (args) =>
-              LabeledDivider(text: args['text'] as String? ?? ''),
-        },
+      'DashboardCard · 原生 vs JS 热更',
+      '复合组件：内嵌 BannerCard（注解）+ 私有/非私有自定义 widget 双路径',
+      _CompareTest(
+        native: DashboardCard(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/composite_component.component.js',
+          component: 'DashboardCard',
+          requiredAssets: [
+            'assets/components/components/banner_component.component.js',
+          ],
+          // 非私有组件（LabeledDivider）运行时注入原生 widget：
+          // hot_patch 包不 import 业务类，由业务方在这里注册
+          nativeComponents: {
+            'LabeledDivider': (args) =>
+                LabeledDivider(text: args['text'] as String? ?? ''),
+          },
+        ),
       ),
     ),
     _DemoEntry(
@@ -125,6 +117,11 @@ class DemoListPage extends StatelessWidget {
         component: 'BannerCard',
         label: 'BannerCard',
       ),
+    ),
+    _DemoEntry(
+      'BannerCard · 多 runtime 分组',
+      '两组 HotPatchWidget 各自使用业务方创建的独立 runtime，点按钮互不影响',
+      _RuntimeGroupTest(),
     ),
   ];
 
@@ -160,6 +157,83 @@ class DemoListPage extends StatelessWidget {
     );
   }
 }
+
+/// 原生 vs JS 热更同屏对比：一页上下两块，方便肉眼对照。
+class _CompareTest extends StatelessWidget {
+  const _CompareTest({required this.native, required this.js});
+
+  final Widget native;
+  final Widget js;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '原生组件',
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        native,
+        const SizedBox(height: 24),
+        const Divider(),
+        const SizedBox(height: 24),
+        Text(
+          'JS 热更（HotPatchWidget）',
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        js,
+      ],
+    );
+  }
+}
+
+/// 多 runtime 分组测试：两组 HotPatchWidget 各自使用业务方创建的独立
+/// runtime（等价于两个 RuntimeManager 分组的场景）。iOS/JavaScriptCore 的
+/// sendMessage 桥是库级 static 的（消息路由到最后创建的 runtime 通道表），
+/// 本测试验证：即便两个 runtime 共存，setState 消息仍按实例 key 全局分发，
+/// 点 A 组的按钮不会影响 B 组（反之亦然）。
+class _RuntimeGroupTest extends StatelessWidget {
+  const _RuntimeGroupTest();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'runtime 组 A（业务方创建 #1）',
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        HotPatchWidget(
+          jsAsset: 'assets/components/components/banner_component.component.js',
+          component: 'BannerCard',
+          sharedManager: _managerA,
+        ),
+        const Divider(height: 32),
+        Text(
+          'runtime 组 B（业务方创建 #2）',
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        HotPatchWidget(
+          jsAsset: 'assets/components/components/banner_component.component.js',
+          component: 'BannerCard',
+          sharedManager: _managerB,
+        ),
+      ],
+    );
+  }
+}
+
+/// 业务方创建的两个独立 JsRuntimeManager（每组与 JavascriptRuntime 一对一，
+/// runtime 在 manager 内部消化）：两组 HotPatchWidget 各自共享一个 manager，
+/// 组间 JS 状态隔离。handler 表是 static 全局共享的，跨组消息按实例 key
+/// 分发，互不串台。
+final JsRuntimeManager _managerA = JsRuntimeManager();
+final JsRuntimeManager _managerB = JsRuntimeManager();
 
 /// 双实例隔离测试：同屏渲染两个相同组件（HotPatchWidget 各持独立 JS 实例）。
 /// 验证：点其中一个的按钮，另一个的状态不受影响（__instances[key] 隔离）。
