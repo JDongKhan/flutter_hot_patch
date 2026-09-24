@@ -78,7 +78,7 @@ class DemoListPage extends StatelessWidget {
           jsAsset: 'assets/components/components/stateless_component.component.js',
           component: 'StatelessCard',
           componentArgs: {
-            'title': 'Hello Stateless',
+            'title': 'Hello Stateless 1',
             'subtitle': 'JS 热更版本，无 State 也能渲染',
             'badge': 'JS',
           },
