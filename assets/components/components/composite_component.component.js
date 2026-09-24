@@ -2,7 +2,6 @@
 // 由 ui_component_generator 从 lib/components/composite_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BannerCard } from 'banner_component.model.js';
 
 // 模型 LabeledDivider（同文件，仅本产物内可见）
 class LabeledDivider {

@@ -176,7 +176,12 @@ class JsRuntimeManager {
   /// 模块加载：递归加载 import 依赖（先依赖后自身），再把自身预处理后
   /// evaluate 进 JS 全局（__modules 注册）。幂等：同 jsAsset 只执行一次。
   Future<void> loadModule(String jsAsset) async {
-    if (!_loadedModules.add(jsAsset)) return; // 已加载（含作为依赖加载过）
+    // 已加载成功 / 加载中（防依赖环）→ 短路。注意：只有**完整成功**才进
+    // _loadedModules，失败（asset 缺失 / evaluate 出错）可再次重试。
+    if (_loadedModules.contains(jsAsset) || _loadingModules.contains(jsAsset)) {
+      return;
+    }
+    _loadingModules.add(jsAsset);
     final source = await rootBundle.loadString(jsAsset);
     final base = jsAsset.substring(0, jsAsset.lastIndexOf('/') + 1);
 
@@ -201,12 +206,23 @@ class JsRuntimeManager {
     }
 
     // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）后求值
-    final processed = _preprocessModule(source, jsAsset, base);
-    final evalResult = _runtime.evaluate(processed);
-    // ignore: avoid_print
-    print('[js_runtime_manager] eval result for $jsAsset: $evalResult');
-    // ignore: avoid_print
-    print('[js_runtime_manager] module loaded: $jsAsset');
+    try {
+      final processed = _preprocessModule(source, jsAsset, base);
+      final evalResult = _runtime.evaluate(processed);
+      // ignore: avoid_print
+      print('[js_runtime_manager] eval result for $jsAsset: $evalResult');
+      // evaluate 返回错误文本（JS 引擎把异常序列化进返回值）→ 视为加载失败，
+      // 不进 _loadedModules，下次可重试。
+      final text = evalResult.toString();
+      if (text.startsWith('ERROR:') || text.contains('\nERROR:')) {
+        throw StateError('module evaluate failed: $text');
+      }
+      _loadedModules.add(jsAsset);
+      // ignore: avoid_print
+      print('[js_runtime_manager] module loaded: $jsAsset');
+    } finally {
+      _loadingModules.remove(jsAsset);
+    }
   }
 
   /// 解析模块源码里的 import 语句：`import { A, B } from 'rel';`
@@ -281,6 +297,7 @@ class JsRuntimeManager {
 
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
+  final Set<String> _loadingModules = {};
 
   /// JS 侧模块表是否已初始化。
   bool _moduleTableInited = false;

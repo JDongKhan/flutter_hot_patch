@@ -246,8 +246,8 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   Object? _bootWithLifecycle(String lifecycle) {
     final r = _manager.evaluate(
       '(function(){ var i = __instances["$_instanceKey"]; '
-      'if (typeof i.$lifecycle === "function") { i.$lifecycle(); } '
-      'return JSON.stringify(i.build()); })()',
+      'if (i && typeof i.$lifecycle === "function") { i.$lifecycle(); } '
+      'return JSON.stringify(i ? i.build() : null); })()',
     );
     return jsonDecode(r.stringResult);
   }
@@ -256,7 +256,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   void _callLifecycle(String lifecycle) {
     final r = _manager.evaluate(
       '(function(){ var i = __instances["$_instanceKey"]; '
-      'if (typeof i.$lifecycle === "function") { i.$lifecycle(); } '
+      'if (i && typeof i.$lifecycle === "function") { i.$lifecycle(); } '
       'return true; })()',
     );
     debugPrint('[hot_patch] lifecycle $lifecycle called: ${r.stringResult}');
