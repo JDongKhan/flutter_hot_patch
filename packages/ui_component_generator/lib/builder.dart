@@ -482,7 +482,9 @@ String _translateActionBody(
       throw FormatException(
           'native 动作需要方法体是 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("消息"))) 形式');
     }
-    return 'sendMessage(${_jsStringLiteral(nativeChannel)}, JSON.stringify({ message: $msg }));';
+    // JS 消息统一携带页面 key（this._key 由运行时挂载），
+    // 运行时按 key 定位页面级处理器。
+    return 'sendMessage(${_jsStringLiteral(nativeChannel)}, JSON.stringify({ key: this._key, message: $msg }));';
   }
 
   // 逐语句翻译：setState(...) 展开、super.xxx() 忽略、无法翻译的语句降级跳过。

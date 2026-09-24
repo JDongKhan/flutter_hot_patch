@@ -77,10 +77,10 @@ class HotPatchWidget extends StatefulWidget {
   final JsRuntimeManager? sharedManager;
 
   @override
-  State<HotPatchWidget> createState() => _HotPatchWidgetState();
+  State<HotPatchWidget> createState() => HotPatchWidgetState();
 }
 
-class _HotPatchWidgetState extends State<HotPatchWidget> {
+class HotPatchWidgetState extends State<HotPatchWidget> {
   late final WidgetRendererRegistry _registry;
   late final NativeServiceRegistry _services;
 
@@ -97,6 +97,17 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
   /// 同名组件多处使用（如列表多卡片）时状态互不共享。
   late final String _instanceKey = 'hp_${identityHashCode(this)}';
 
+  /// 页面级内部实现列表：框架内置的页面级服务（如 setState）实例放这里，
+  /// 在 _boot 里统一走 register() 注册——不设特例注册方法，
+  /// 后续新增内部实现只需往这个数组里加一个 NativeService。
+  final List<NativeService> _internalServices = [];
+
+  /// 本页面的实例 key（InstanceNativeService 可通过 state 读取）。
+  String get instanceKey => _instanceKey;
+
+  /// 本页面使用的 JS 运行时管理器。
+  JsRuntimeManager get runtimeManager => _manager;
+
   @override
   void initState() {
     super.initState();
@@ -111,6 +122,8 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
     for (final svc in widget.nativeServices ?? const <NativeService>[]) {
       _services.register(svc);
     }
+    // 页面级内部实现（setState 即普通 InstanceNativeService）
+    _internalServices.add(_SetStateService());
     _boot();
   }
 
@@ -120,34 +133,37 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
       final jsSource = await rootBundle.loadString(widget.jsAsset);
       debugPrint('[hot_patch] jsSource loaded: ${jsSource.length} chars');
 
-      // 1.1 native 服务通道由管理器统一注册（per-manager 幂等）：
-      //     通道回调查 static 全局 serviceHandlers 表、按 channel 分发。
-      for (final channel in _services.channels) {
-        final service = _services.lookup(channel)!;
-        JsRuntimeManager.serviceHandlers[channel] = (dynamic args) {
-          debugPrint('[hot_patch] onMessage "$channel" args=$args');
-          if (!mounted) return;
-          service.handle(context, args);
-        };
-        debugPrint('[hot_patch] native service "$channel" registered');
+      // 1.1 服务注册：统一收 NativeService。
+      //     - 页面级：内部实现（setState 等）+ 业务方注入的服务 →
+      //       register(页面key, service)，按页面 key 隔离、随 dispose 清理；
+      //     - 全局级：内置服务（toast/log）与页面无关 → registerGlobal，
+      //       全局一份。
+      final injected = widget.nativeServices ?? const <NativeService>[];
+      final injectedChannels = injected.map((s) => s.channel).toSet();
+      for (final svc in _internalServices) {
+        _registerPageService(svc);
+        debugPrint('[hot_patch] page internal service "${svc.channel}" registered');
       }
-      _manager.ensureServiceChannels(_services.channels);
+      for (final svc in injected) {
+        if (svc is InstanceNativeService) {
+          _registerPageService(svc);
+        } else {
+          JsRuntimeManager.registerGlobal(svc);
+        }
+        debugPrint('[hot_patch] ${svc is InstanceNativeService ? "page" : "global"} service "${svc.channel}" registered');
+      }
+      for (final channel in _services.channels) {
+        if (injectedChannels.contains(channel)) continue;
+        final service = _services.lookup(channel)!;
+        JsRuntimeManager.registerGlobal(service);
+        debugPrint('[hot_patch] global service "$channel" registered');
+      }
 
       // 1.2 本实例的 setState 重建回调：重新取 JS 实例的最新树并 setState。
       //     宿主只在这里 setState 更新节点树；事件回调本身不直接 setState。
-      JsRuntimeManager.setStateHandlers[_instanceKey] = () {
-        debugPrint('[hot_patch] js setState rebuild: $_instanceKey');
-        if (!mounted) return;
-        try {
-          final r = _manager.evaluate(
-            'JSON.stringify(__instances["$_instanceKey"].build())',
-          );
-          final newTree = jsonDecode(r.stringResult);
-          setState(() => _tree = newTree);
-        } catch (e) {
-          debugPrint('[hot_patch] setState rebuild error: $e');
-        }
-      };
+      // （setState 已由 _internalServices 里的 _SetStateService 注册，
+      //   在 _bootWithLifecycle 之前完成——见 1.1）
+
 
       // 2.1 先加载嵌套组件产物（__components 注册齐全）
       for (final asset in widget.requiredAssets) {
@@ -161,7 +177,8 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
 
       // 2.3 实例化组件：new 一个独立实例（可重复实例化，状态互不共享）
       _manager.evaluate(
-        '__instances["$_instanceKey"] = new __components["${widget.component}"]();',
+        '__instances["$_instanceKey"] = new __components["${widget.component}"](); '
+        '__instances["$_instanceKey"]._key = "$_instanceKey";',
       );
       // 2.3.1 给 JS 实例挂载 setState：执行回调（更新 JS 状态）+ sendMessage 通知宿主重建。
       // HotPatchWidget 不直接 setState；重建由 JS 侧 setState 驱动（与 Dart 语义一致）。
@@ -185,6 +202,31 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
         _error = '$e';
         _loading = false;
       });
+    }
+  }
+
+  /// 页面级服务注册：InstanceNativeService 先注入页面 state 再 register。
+  void _registerPageService(NativeService svc) {
+    if (svc is InstanceNativeService) {
+      svc.build(this);
+    }
+    JsRuntimeManager.register(_instanceKey, svc);
+  }
+
+  /// 页面重建（由 setState 实例服务回调）：重新取 JS 实例的最新树并
+  /// setState。宿主只在这里 setState 更新节点树；事件回调本身不直接
+  /// setState，而是由 JS 侧 setState() → sendMessage 驱动。
+  void rebuild() {
+    debugPrint('[hot_patch] js setState rebuild: $_instanceKey');
+    if (!mounted) return;
+    try {
+      final r = _manager.evaluate(
+        'JSON.stringify(__instances["$_instanceKey"].build())',
+      );
+      final newTree = jsonDecode(r.stringResult);
+      setState(() => _tree = newTree);
+    } catch (e) {
+      debugPrint('[hot_patch] setState rebuild error: $e');
     }
   }
 
@@ -277,10 +319,27 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
 
   @override
   void dispose() {
-    _manager.unregister(_instanceKey);
+    // 一次性移除本页面 key 下的全部注册（setState、native 服务等）
+    JsRuntimeManager.dispose(_instanceKey);
     if (!_loading) _callLifecycle('dispose');
     // manager（及其 runtime）由全局默认/业务方持有，不在此 dispose。
     super.dispose();
+  }
+}
+
+/// 页面级内部服务：setState —— JS 侧 `this.setState(fn)` → sendMessage
+/// → 本服务 handle → 页面重建。
+///
+/// setState 是框架内部机制，但实现上就是一个普通 [InstanceNativeService]
+/// （channel='setState'），由 HotPatchWidgetState._internalServices 持有、
+/// 统一走 register() 注册；后续新增页面级内部实现照此办理即可。
+class _SetStateService extends InstanceNativeService {
+  @override
+  String get channel => 'setState';
+
+  @override
+  void handle(BuildContext context, dynamic payload) {
+    state?.rebuild();
   }
 }
 
@@ -321,6 +380,7 @@ class _RuntimeComponentHost implements ComponentHost {
       'var key = "$key"; var comp = "$component"; '
       'if (typeof __instances[key] === "undefined") { '
       '  __instances[key] = new __components[comp]($argsJs); '
+      '  __instances[key]._key = key; '
       '  __instances[key].setState = function(fn){ '
       '    fn.call(this); '
       '    sendMessage("setState", JSON.stringify({ key: key })); '

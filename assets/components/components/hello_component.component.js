@@ -16,7 +16,7 @@ __components['HelloCard'] = (function() {
 
   HelloCard.prototype.inc = function() { this.setState(function(){ this._count += 1; }); };
   HelloCard.prototype.reset = function() { this.setState(function(){ this._count = 0; }); };
-  HelloCard.prototype.showNative = function() { sendMessage("nativeToast", JSON.stringify({ message: "Hello from native (JS-driven)" })); };
+  HelloCard.prototype.showNative = function() { sendMessage("nativeToast", JSON.stringify({ key: this._key, message: "Hello from native (JS-driven)" })); };
 
   HelloCard.prototype.build = function() {
     return {

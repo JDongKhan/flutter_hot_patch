@@ -25,6 +25,8 @@ class HotDemoApp extends StatelessWidget {
     return MaterialApp(
       title: '注解组件 → JS 热修复',
       debugShowCheckedModeBanner: false,
+      // 全局导航 key：热更包全局级服务（toast 等）用它定位 ScaffoldMessenger
+      navigatorKey: JsRuntimeManager.navigatorKey = GlobalKey<NavigatorState>(),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
