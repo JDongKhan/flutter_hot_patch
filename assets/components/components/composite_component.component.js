@@ -40,7 +40,7 @@ __components['DashboardCard'] = (function() {
           "type": "Component",
           "props": {
             "component": "BannerCard",
-            "import": "assets/components/components/banner_component.component.js"
+            "import": "banner_component.component.js"
           }
         },
         {
@@ -53,7 +53,7 @@ __components['DashboardCard'] = (function() {
           "type": "Component",
           "props": {
             "component": "_LabeledDivider",
-            "import": "assets/components/components/composite_component.component.js",
+            "import": "composite_component.component.js",
             "args": {
               "text": "private widget"
             }

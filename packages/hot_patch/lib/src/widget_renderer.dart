@@ -66,6 +66,12 @@ class WidgetRenderContext {
   /// 未提供时由 renderer 回退到 [onEvent]（无参调用）。
   final void Function(String event, Object? value)? onEventValue;
 
+  /// 当前组件的 jsAsset 所在目录（如 'assets/components/components/'，
+  /// 或远端 URL 的目录）。Component 节点的 import 是相对路径，
+  /// 渲染递归嵌套 HotPatchWidget 时以它为基准解析成完整 jsAsset——
+  /// 产物整体发布（CDN / 包内迁移）后相对关系依然成立。
+  final String baseUri;
+
   /// 原生组件注入表（无 JS 产物的普通 widget）：组件名 → Flutter widget 构造。
   /// 由 HotPatchWidget 透传业务方的 nativeComponents，渲染 Component 节点
   /// 且无 import 时使用；未注册则渲染占位提示。
@@ -82,6 +88,7 @@ class WidgetRenderContext {
     required this.registry,
     required this.onEvent,
     this.onEventValue,
+    this.baseUri = '',
     this.nativeComponents = const {},
     this.nestedRendererRegistry,
     this.nativeServices,
@@ -114,6 +121,29 @@ class WidgetRenderContext {
     return renderer.render(rn, this);
   }
 
+  /// 相对 jsAsset → 完整路径：以 [base]（目录，含尾 '/'）为基准解析
+  /// [rel]（含 './' / '../'）。asset 路径与 URL 通用（纯字符串处理）。
+  static String _resolveJsAsset(String base, String rel) {
+    if (rel.startsWith('http://') || rel.startsWith('https://') ||
+        rel.startsWith('assets/') || rel.startsWith('package:')) {
+      return rel; // 已是绝对/完整地址
+    }
+    final segs = <String>[];
+    if (base.isNotEmpty) {
+      segs.addAll(base.split('/').where((p) => p.isNotEmpty));
+      if (!base.endsWith('/')) segs.removeLast(); // base 是目录则保留
+    }
+    for (final part in rel.split('/')) {
+      if (part == '.' || part.isEmpty) continue;
+      if (part == '..') {
+        if (segs.isNotEmpty) segs.removeLast();
+      } else {
+        segs.add(part);
+      }
+    }
+    return segs.join('/');
+  }
+
   Widget _renderComponent(RenderNode node) {
     final name = node.props['component'] as String? ?? '';
     final args = (node.props['args'] as Map?)?.cast<String, dynamic>() ??
@@ -125,7 +155,7 @@ class WidgetRenderContext {
       // 扩展点（nativeComponents/rendererRegistry/nativeServices/
       // sharedManager）从本 ctx 透传，与宿主保持一致。
       return HotPatchWidget(
-        jsAsset: import,
+        jsAsset: _resolveJsAsset(baseUri, import),
         component: name,
         componentArgs: args,
         rendererRegistry: nestedRendererRegistry,

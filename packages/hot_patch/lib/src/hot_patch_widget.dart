@@ -294,10 +294,15 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
         child: Text('加载失败: $_error', style: const TextStyle(color: Colors.red)),
       );
     }
+    // 当前 jsAsset 的目录：Component 节点的相对 import 以此为基准解析
+    final slash = widget.jsAsset.lastIndexOf('/');
+    final baseUri =
+        slash >= 0 ? widget.jsAsset.substring(0, slash + 1) : '';
     final ctx = WidgetRenderContext(
       registry: _registry,
       onEvent: _onEvent,
       onEventValue: _onEventValue,
+      baseUri: baseUri,
       nativeComponents: widget.nativeComponents,
       nestedRendererRegistry: widget.rendererRegistry,
       nativeServices: widget.nativeServices,

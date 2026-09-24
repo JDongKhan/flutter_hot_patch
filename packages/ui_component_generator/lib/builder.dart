@@ -72,15 +72,21 @@ class ComponentBuilder implements Builder {
             _findAnnotation(d.metadata, 'UIComponent') != null)
           d.name.lexeme,
     };
-    final ownProduct = _productPath(inputId.path);
+    // 产物采用**相对路径**（相对当前产物所在目录，如 'banner_component.component.js'）：
+    // 未来 JS 产物整体发布（CDN / 包内迁移）时，主产物与依赖产物的相对关系
+    // 不变，运行时按当前 jsAsset 的目录解析即可，绝对路径会随部署位置失效。
+    final ownProduct = _productPath(inputId.path); // assets/components/.../x.component.js
+    final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
     String? importResolver(String name) {
       if (parsedNames.contains(name)) {
         if (annotatedNames.contains(name) || name.startsWith('_')) {
-          return ownProduct;
+          return ownName;
         }
         return null;
       }
-      return _resolveImportProduct(parsed.unit, inputId.path);
+      final abs = _resolveImportProduct(parsed.unit, inputId.path);
+      if (abs == null) return null;
+      return _relativeProduct(ownProduct, abs);
     }
 
     // 收集本文件内全部 @UIComponent 组件（支持单文件多组件 / 文件内共享普通类）
@@ -743,6 +749,26 @@ String _productPath(String sourcePath) {
   final rel = sourcePath.substring('lib/'.length); // a/b.dart
   if (!rel.endsWith('.dart')) return sourcePath;
   return 'assets/components/${rel.substring(0, rel.length - '.dart'.length)}.component.js';
+}
+
+/// 两个产物绝对路径 → 相对路径（相对第一个产物所在目录）。
+/// 如 'assets/components/components/composite_component.component.js' →
+/// 'assets/components/components/banner_component.component.js'
+/// 得 'banner_component.component.js'；跨目录时含 '../'。
+String _relativeProduct(String from, String to) {
+  final fromDir = from.substring(0, from.lastIndexOf('/') + 1);
+  final fromSegs = fromDir.split('/').where((p) => p.isNotEmpty).toList();
+  final toSegs = to.split('/').where((p) => p.isNotEmpty).toList();
+  // 公共前缀长度
+  var common = 0;
+  while (common < fromSegs.length &&
+      common < toSegs.length - 1 &&
+      fromSegs[common] == toSegs[common]) {
+    common++;
+  }
+  final ups = List.filled(fromSegs.length - common, '..');
+  final downs = toSegs.skip(common).toList();
+  return [...ups, ...downs].join('/');
 }
 
 /// 从当前文件的 import directives 推导「依赖组件所在文件」的产物路径。
