@@ -13,11 +13,6 @@ void main() => runApp(const HotDemoApp());
 /// 每个组件都先是一个**完全正常的 Flutter StatefulWidget**（原生可直接用）；
 /// 线上出 bug 时，运行时切换到对应的 JS 补丁（HotPatchWidget 加载
 /// build_runner 静态翻译出的 .component.js）即可热修复，无需发版。
-///
-/// 场景覆盖：
-///   - 单组件：HelloCard（原生 / JS）
-///   - 单文件多组件：HelloPanel 与 HelloCard 同文件同产物（原生 / JS）
-///   - 多文件多组件：BannerCard 独立产物（原生 / JS）
 class HotDemoApp extends StatelessWidget {
   const HotDemoApp({super.key});
 
@@ -104,6 +99,15 @@ class DemoListPage extends StatelessWidget {
       ),
     ),
     _DemoEntry(
+      'Scaffold · 页面骨架',
+      'Scaffold / AppBar / Center / SingleChildScrollView 组件演示（页面级，仅 JS 热更版）',
+      // 页面级组件无法与原生同屏比对，直接展示 JS 热更版
+      HotPatchWidget(
+        jsAsset: 'assets/components/components/scaffold_demo.component.js',
+        component: 'ScaffoldDemo',
+      ),
+    ),
+    _DemoEntry(
       'HelloCard · JS 双实例隔离',
       '同屏两个 HotPatchWidget 实例：各自 new 独立实例，状态互不共享',
       _TwinTest(
@@ -161,13 +165,31 @@ class DemoListPage extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => DemoPage(title: d.title, child: d.child),
+                  builder: (_) => _SimpleDemoPage(title: d.title, child: d.child),
                 ),
               ),
             ),
           );
         },
       ),
+    );
+  }
+}
+
+/// 单个场景页的简洁外壳：只提供返回栏与正文区域。
+/// 不使用 Center / SingleChildScrollView（这两个组件由
+/// ScaffoldDemo 注解组件专门演示，避免 main 里重复）。
+class _SimpleDemoPage extends StatelessWidget {
+  const _SimpleDemoPage({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: child,
     );
   }
 }
@@ -280,42 +302,6 @@ class _TwinTest extends StatelessWidget {
         const SizedBox(height: 8),
         HotPatchWidget(jsAsset: jsAsset, component: component),
       ],
-    );
-  }
-}
-
-/// 单个场景页：居中展示组件，方便看效果。
-class DemoPage extends StatelessWidget {
-  const DemoPage({super.key, required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            width: 340,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: child,
-          ),
-        ),
-      ),
     );
   }
 }

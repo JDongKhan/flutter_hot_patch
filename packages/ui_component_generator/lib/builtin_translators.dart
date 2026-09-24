@@ -22,6 +22,8 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const OutlinedButtonTranslator())
     ..register(const SizedBoxTranslator())
     // 布局
+    ..register(const ScaffoldTranslator())
+    ..register(const AppBarTranslator())
     ..register(const CenterTranslator())
     ..register(const PaddingTranslator())
     ..register(const AlignTranslator())
@@ -228,6 +230,47 @@ class SizedBoxTranslator extends WidgetTranslator {
       return '${e.value}';
     }
     return null;
+  }
+}
+
+// ===========================================================================
+// 页面骨架
+// ===========================================================================
+
+/// Scaffold：页面骨架（appBar / body）。
+///
+/// 产物把 appBar 与 body 依次放 children（children[0]=AppBar、children[1]=body），
+/// 运行时 ScaffoldRenderer 按序取用，避免 props 里出现嵌套节点对象。
+class ScaffoldTranslator extends WidgetTranslator {
+  const ScaffoldTranslator();
+
+  @override
+  String get type => 'Scaffold';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final children = <Map<String, dynamic>>[];
+    final appBar = ctx.namedArg(node.args, 'appBar');
+    if (appBar != null) children.add(ctx.translate(appBar));
+    final body = ctx.namedArg(node.args, 'body');
+    if (body != null) children.add(ctx.translate(body));
+    return {'type': ctx.jsString('Scaffold'), 'children': children};
+  }
+}
+
+/// AppBar：顶栏（title 单子）。
+class AppBarTranslator extends WidgetTranslator {
+  const AppBarTranslator();
+
+  @override
+  String get type => 'AppBar';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final children = <Map<String, dynamic>>[];
+    final title = ctx.namedArg(node.args, 'title');
+    if (title != null) children.add(ctx.translate(title));
+    return {'type': ctx.jsString('AppBar'), 'children': children};
   }
 }
 
@@ -491,6 +534,8 @@ class SingleChildScrollViewTranslator extends WidgetTranslator {
     final props = <String, dynamic>{};
     final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
     if (axis != null) props['scrollDirection'] = axis;
+    final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
+    if (padding != null) props['padding'] = padding;
     return {
       'type': ctx.jsString('SingleChildScrollView'),
       if (props.isNotEmpty) 'props': props,

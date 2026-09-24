@@ -26,6 +26,8 @@ void registerBuiltinRenderers(WidgetRendererRegistry registry) {
     ..register(const ContainerRenderer())
     ..register(const DividerRenderer())
     ..register(const CardRenderer())
+    ..register(const ScaffoldRenderer())
+    ..register(const AppBarRenderer())
     ..register(const ListViewRenderer())
     ..register(const SingleChildScrollViewRenderer())
     ..register(const WrapRenderer())
@@ -55,8 +57,10 @@ abstract class _AxisLayoutRenderer extends WidgetRenderer {
       '[hot_patch] ${node.type} render children=${children.length} '
       'types=[${children.map((w) => w.runtimeType).join(',')}]',
     );
+    // Flutter 中 Column / Row 的 mainAxisSize 默认都是 max，
+    // 未显式翻译时保持与原生一致。
     final size = mainAxisSizeFromJson(node.props['mainAxisSize']) ??
-        MainAxisSize.min;
+        MainAxisSize.max;
     final main = mainAxisAlignmentFromJson(node.props['mainAxisAlignment']);
     final cross = crossAxisAlignmentFromJson(node.props['crossAxisAlignment']);
     if (axis == Axis.vertical) {
@@ -395,6 +399,42 @@ class ListViewRenderer extends WidgetRenderer {
     return ListView(
       shrinkWrap: true,
       children: [for (final c in node.children) ctx.render(c)],
+    );
+  }
+}
+
+/// Scaffold：children = [AppBar, body]（生成器约定）。
+class ScaffoldRenderer extends WidgetRenderer {
+  const ScaffoldRenderer();
+
+  @override
+  String get type => 'Scaffold';
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    PreferredSizeWidget? appBar;
+    if (node.children.isNotEmpty && node.children.first.type == 'AppBar') {
+      appBar = ctx.render(node.children.first) as PreferredSizeWidget?;
+    }
+    return Scaffold(
+      backgroundColor: colorFromJson(node.props['backgroundColor']),
+      appBar: appBar,
+      body: node.children.length > 1 ? ctx.render(node.children[1]) : null,
+    );
+  }
+}
+
+/// AppBar：children[0] = title。
+class AppBarRenderer extends WidgetRenderer {
+  const AppBarRenderer();
+
+  @override
+  String get type => 'AppBar';
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    return AppBar(
+      title: node.children.isEmpty ? null : ctx.render(node.children.first),
     );
   }
 }
