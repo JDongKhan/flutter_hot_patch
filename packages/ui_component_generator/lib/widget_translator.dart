@@ -86,13 +86,25 @@ class WidgetTranslateContext {
       name.isNotEmpty && name[0] == name[0].toUpperCase();
 
   /// 渲染一个已翻译的 JSON 节点为 JS 对象字面量。
+  ///
+  /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
+  /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
   String renderJs(Map<String, dynamic> json, int depth) {
-    final type = json['type'] as String;
+    final type = _semanticType(json['type']);
     final translator = registry.lookupJson(type);
     if (translator == null) {
       throw FormatException('未知节点类型: $type');
     }
     return translator.renderJs(json, depth, this);
+  }
+
+  /// 剥离 JS 字符串字面量引号（`"Column"` → `Column`）；非字面量原样返回。
+  static String _semanticType(Object? v) {
+    final s = v?.toString() ?? '';
+    if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+      return s.substring(1, s.length - 1);
+    }
+    return s;
   }
 
   // -------------------------------------------------------------------------
@@ -182,6 +194,31 @@ class WidgetTranslateContext {
     return null;
   }
 
+  /// 把 toJson 产物的值序列化为 JS 对象字面量源码。
+  ///
+  /// 值约定：toJson 输出的叶子值一律为 **JS 表达式字符串**（字符串字面量
+  /// 用 [jsString] 带引号、数字/布尔/表达式原样），这里原样嵌入、不加引号。
+  String jsLiteral(Object? value, int depth) {
+    if (value is Map) {
+      if (value.isEmpty) return '{}';
+      final ind = '  ' * depth;
+      final ind2 = '  ' * (depth + 1);
+      final entries = value.entries
+          .map((e) => '"${e.key}": ${jsLiteral(e.value, depth + 1)}')
+          .join(',\n$ind2');
+      return '{\n$ind2$entries\n$ind}';
+    }
+    if (value is List) {
+      if (value.isEmpty) return '[]';
+      final ind = '  ' * depth;
+      final ind2 = '  ' * (depth + 1);
+      final items = value.map((v) => jsLiteral(v, depth + 1)).join(',\n$ind2');
+      return '[\n$ind2$items\n$ind]';
+    }
+    // 叶子值 = JS 表达式字符串（已带引号的字符串 / 数字 / 表达式）
+    return value?.toString() ?? 'null';
+  }
+
   /// 生成 JS 双引号字符串字面量
   String jsString(String s) {
     final escaped = s
@@ -224,7 +261,16 @@ abstract class WidgetTranslator {
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx);
 
   /// 把 [json]（toJson 的产物）渲染成 JS 对象字面量。
-  String renderJs(Map<String, dynamic> json, int depth, WidgetTranslateContext ctx);
+  ///
+  /// **默认实现**：递归序列化 [json]（Map/List 缩进、叶子值原样嵌入）。
+  /// 需要特殊输出格式（如单行紧凑）的类型可覆写。
+  String renderJs(
+    Map<String, dynamic> json,
+    int depth,
+    WidgetTranslateContext ctx,
+  ) {
+    return ctx.jsLiteral(json, depth);
+  }
 }
 
 /// ===========================================================================
@@ -280,35 +326,20 @@ class ComponentTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    // 记录构造参数字面量（Dart 值；renderJs 转 JS、运行时 jsonEncode 直用）
+    // 构造参数字面量 → 值契约（叶子值一律为 JS 表达式字符串）：
+    // 字符串经 jsString 带引号、数字/布尔转字面量，运行时 jsonEncode 即得原值。
     final args = <String, dynamic>{};
     for (final entry in node.namedArgs.entries) {
       final v = _literalValue(entry.value);
-      if (v != null) args[entry.key] = v;
+      if (v != null) args[entry.key] = _jsLiteral(v, ctx);
     }
     return {
-      'type': 'Component',
+      'type': ctx.jsString('Component'),
       'props': {
-        'component': node.type,
+        'component': ctx.jsString(node.type),
         if (args.isNotEmpty) 'args': args,
       },
     };
-  }
-
-  @override
-  String renderJs(
-    Map<String, dynamic> json,
-    int depth,
-    WidgetTranslateContext ctx,
-  ) {
-    final p = json['props'] as Map<String, dynamic>;
-    final args = p['args'] as Map<String, dynamic>?;
-    final argsJs = args == null
-        ? ''
-        : ', args: { ${[
-            for (final e in args.entries) '${e.key}: ${_jsLiteral(e.value, ctx)}',
-          ].join(', ')} }';
-    return '{ type: "Component", props: { component: "${p['component']}"$argsJs } }';
   }
 
   /// AST 字面量 → Dart 值（null 表示不可翻译）。

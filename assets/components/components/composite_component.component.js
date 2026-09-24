@@ -17,17 +17,80 @@ __components['DashboardCard'] = (function() {
   DashboardCard.prototype.tick = function() { this.setState(function(){ this._ticks += 1; }); };
 
   DashboardCard.prototype.build = function() {
-    return { type: "Column", children: [
-      { type: "Text", props: { data: "Dashboard (JS)", style: "title" } },
-      { type: "Text", props: { data: "ticks = " + this._ticks, style: "body" } },
-      { type: "Component", props: { component: "BannerCard" } },
-      { type: "SizedBox", props: { height: 12 } },
-      { type: "Component", props: { component: "_LabeledDivider", args: { text: "private widget" } } },
-      { type: "SizedBox", props: { height: 8 } },
-      { type: "Component", props: { component: "LabeledDivider", args: { text: "public widget" } } },
-      { type: "SizedBox", props: { height: 12 } },
-      { type: "Button", props: { label: "Tick", event: "tick" } }
-    ] };
+    return {
+      "type": "Column",
+      "children": [
+        {
+          "type": "Text",
+          "props": {
+            "data": "Dashboard (JS)",
+            "style": {
+              "fontSize": 22,
+              "fontWeight": "w600"
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "props": {
+            "data": "ticks = " + this._ticks
+          }
+        },
+        {
+          "type": "Component",
+          "props": {
+            "component": "BannerCard"
+          }
+        },
+        {
+          "type": "SizedBox",
+          "props": {
+            "height": 12
+          }
+        },
+        {
+          "type": "Component",
+          "props": {
+            "component": "_LabeledDivider",
+            "args": {
+              "text": "private widget"
+            }
+          }
+        },
+        {
+          "type": "SizedBox",
+          "props": {
+            "height": 8
+          }
+        },
+        {
+          "type": "Component",
+          "props": {
+            "component": "LabeledDivider",
+            "args": {
+              "text": "public widget"
+            }
+          }
+        },
+        {
+          "type": "SizedBox",
+          "props": {
+            "height": 12
+          }
+        },
+        {
+          "type": "Button",
+          "props": {
+            "label": "Tick",
+            "event": "tick",
+            "style": {
+              "backgroundColor": '#FF9800',
+              "foregroundColor": '#FFFFFF'
+            }
+          }
+        }
+      ]
+    };
   };
 
   return DashboardCard;
@@ -42,10 +105,26 @@ __components['_LabeledDivider'] = (function() {
 
 
   _LabeledDivider.prototype.build = function() {
-    return { type: "Column", children: [
-      { type: "Text", props: { data: "— " + this.text + " —", style: "body" } },
-      { type: "SizedBox", props: { height: 4 } }
-    ] };
+    return {
+      "type": "Column",
+      "children": [
+        {
+          "type": "Text",
+          "props": {
+            "data": "— " + this.text + " —",
+            "style": {
+              "fontSize": 12
+            }
+          }
+        },
+        {
+          "type": "SizedBox",
+          "props": {
+            "height": 4
+          }
+        }
+      ]
+    };
   };
 
   return _LabeledDivider;

@@ -37,7 +37,7 @@ class _BannerCardState extends State<BannerCard> {
       children: [
         Text(
           'Banner from another file',
-          style: const TextStyle(fontSize: 20),
+          style: const TextStyle(fontSize: 20, color: Colors.teal),
         ),
         Text('views = $_views'),
         ElevatedButton(

@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
+import 'style_translators.dart';
 import 'widget_translator.dart';
 
 /// 内置 widget 策略：把常见 Flutter widget 注册进 [WidgetTranslatorRegistry]。
@@ -7,6 +8,10 @@ import 'widget_translator.dart';
 /// 新增内置 widget = 在这里加一个 translator 类 + register 一行；
 /// 自定义 widget = 在业务代码里实现 WidgetTranslator 并 register，
 /// ComponentBuilder 核心逻辑无需改动。
+///
+/// 值约定：toJson 的 props 叶子值一律是 **JS 表达式字符串**（字符串字面量
+/// 用 `ctx.jsString()` 带引号、数字/布尔/表达式原样），默认 renderJs
+/// 由基类把 toJson 产物序列化为 JS 对象字面量。
 void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
   registry
     ..register(const ColumnRowTranslator())
@@ -28,30 +33,15 @@ class ColumnRowTranslator extends WidgetTranslator {
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final children = ctx.listArg(node.args, 'children', node.type);
     return {
-      'type': node.type,
+      'type': ctx.jsString(node.type),
       'children': [
         for (final c in children) ctx.translate(c),
       ],
     };
   }
-
-  @override
-  String renderJs(
-    Map<String, dynamic> json,
-    int depth,
-    WidgetTranslateContext ctx,
-  ) {
-    final ind = '  ' * depth;
-    final ind2 = '  ' * (depth + 1);
-    final type = json['type'] as String;
-    final children = (json['children'] as List)
-        .map((c) => ctx.renderJs(c as Map<String, dynamic>, depth + 1))
-        .join(',\n$ind2');
-    return '{ type: "$type", children: [\n$ind2$children\n$ind] }';
-  }
 }
 
-/// Text：文案（支持状态插值）+ 样式映射（fontSize ≥ 20 → title）。
+/// Text：文案（支持状态插值）+ TextStyle → 结构化 style JSON。
 class TextTranslator extends WidgetTranslator {
   const TextTranslator();
 
@@ -65,44 +55,18 @@ class TextTranslator extends WidgetTranslator {
     if (dataExpr == null) {
       throw FormatException('Text 缺少内容');
     }
-    return {
-      'type': 'Text',
-      'props': {
-        'data': ctx.jsDataExpr(dataExpr),
-        'style': _textStyleFrom(node.args),
-      },
+    final props = <String, dynamic>{
+      'data': ctx.jsDataExpr(dataExpr),
     };
-  }
-
-  @override
-  String renderJs(
-    Map<String, dynamic> json,
-    int depth,
-    WidgetTranslateContext ctx,
-  ) {
-    final p = json['props'] as Map<String, dynamic>;
-    return '{ type: "Text", props: { data: ${p['data']}, style: "${p['style']}" } }';
-  }
-
-  static String _textStyleFrom(List<Expression> args) {
-    for (final a in args) {
-      if (a is! NamedExpression || a.name.label.name != 'style') continue;
-      final (ctor, styleArgs) = _ctorOfArg(a.expression);
-      if (ctor == 'TextStyle') {
-        for (final s in styleArgs) {
-          if (s is NamedExpression && s.name.label.name == 'fontSize') {
-            final fs = s.expression;
-            if (fs is IntegerLiteral && (fs.value ?? 0) >= 20) return 'title';
-            if (fs is DoubleLiteral && fs.value >= 20) return 'title';
-          }
-        }
-      }
-    }
-    return 'body';
+    // TextStyle(...) → JSON（运行时 textStyleFromJson 还原）
+    final style = textStyleToJson(ctx.namedArg(node.args, 'style'), ctx);
+    if (style != null) props['style'] = style;
+    return {'type': ctx.jsString('Text'), 'props': props};
   }
 }
 
-/// ElevatedButton：onPressed → 事件名（@UIAction），child Text → label。
+/// ElevatedButton：onPressed → 事件名，child Text → label，
+/// style（styleFrom / ButtonStyle）→ JSON。
 class ButtonTranslator extends WidgetTranslator {
   const ButtonTranslator();
 
@@ -120,23 +84,14 @@ class ButtonTranslator extends WidgetTranslator {
     if (onPressed == null) {
       throw FormatException('ElevatedButton 缺少 onPressed');
     }
-    return {
-      'type': 'Button',
-      'props': {
-        'label': _labelFrom(child, ctx),
-        'event': _eventFrom(onPressed, ctx),
-      },
+    final props = <String, dynamic>{
+      'label': _labelFrom(child, ctx),
+      'event': ctx.jsString(_eventFrom(onPressed, ctx)),
     };
-  }
-
-  @override
-  String renderJs(
-    Map<String, dynamic> json,
-    int depth,
-    WidgetTranslateContext ctx,
-  ) {
-    final p = json['props'] as Map<String, dynamic>;
-    return '{ type: "Button", props: { label: ${p['label']}, event: "${p['event']}" } }';
+    // ElevatedButton.styleFrom(...) / ButtonStyle(...) → JSON
+    final style = buttonStyleToJson(ctx.namedArg(node.args, 'style'), ctx);
+    if (style != null) props['style'] = style;
+    return {'type': ctx.jsString('Button'), 'props': props};
   }
 
   static String _eventFrom(Expression onPressed, WidgetTranslateContext ctx) {
@@ -164,22 +119,6 @@ class ButtonTranslator extends WidgetTranslator {
   }
 }
 
-/// 局部 ctor 解析（仅本文件内部使用，避免把通用逻辑放大到各处）。
-(String?, List<Expression>) _ctorOfArg(Expression e) {
-  if (e is InstanceCreationExpression) {
-    return (
-      e.constructorName.type.name2.lexeme,
-      e.argumentList.arguments.toList(),
-    );
-  }
-  if (e is MethodInvocation) {
-    return (e.methodName.name, e.argumentList.arguments.toList());
-  }
-  return (null, const []);
-}
-
-
-
 /// SizedBox：布局空隙（height/width），无 UI 内容。
 class SizedBoxTranslator extends WidgetTranslator {
   const SizedBoxTranslator();
@@ -194,7 +133,7 @@ class SizedBoxTranslator extends WidgetTranslator {
     final w = _numLiteral(ctx.namedArg(node.args, 'width'));
     if (h != null) props['height'] = h;
     if (w != null) props['width'] = w;
-    return {'type': 'SizedBox', 'props': props};
+    return {'type': ctx.jsString('SizedBox'), 'props': props};
   }
 
   static String? _numLiteral(Expression? e) {
@@ -206,19 +145,5 @@ class SizedBoxTranslator extends WidgetTranslator {
       return '${e.value}';
     }
     return null;
-  }
-
-  @override
-  String renderJs(
-    Map<String, dynamic> json,
-    int depth,
-    WidgetTranslateContext ctx,
-  ) {
-    final p = json['props'] as Map<String, dynamic>;
-    final parts = [
-      if (p.containsKey('height')) 'height: ${p['height']}',
-      if (p.containsKey('width')) 'width: ${p['width']}',
-    ].join(', ');
-    return '{ type: "SizedBox", props: { $parts } }';
   }
 }

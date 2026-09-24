@@ -33,7 +33,7 @@ class _DashboardCardState extends State<DashboardCard> {
       children: [
         Text(
           'Dashboard (JS)',
-          style: const TextStyle(fontSize: 20),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
         ),
         Text('ticks = $_ticks'),
         // 有注解的自定义组件：JS 版递归渲染 BannerCard（含其自身状态）
@@ -47,6 +47,10 @@ class _DashboardCardState extends State<DashboardCard> {
         const SizedBox(height: 12),
         ElevatedButton(
           onPressed: tick,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+          ),
           child: const Text('Tick'),
         ),
       ],

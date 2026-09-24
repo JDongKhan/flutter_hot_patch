@@ -53,13 +53,21 @@ class _HelloCardState extends State<HelloCard> {
       children: [
         Text(
           'Hello from JS logic',
-          style: const TextStyle(fontSize: 20),
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
         ),
         Text('count = $_count'),
         Row(
           children: [
             ElevatedButton(
               onPressed: inc,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('+1'),
             ),
             ElevatedButton(

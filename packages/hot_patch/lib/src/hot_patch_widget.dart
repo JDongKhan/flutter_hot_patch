@@ -6,6 +6,7 @@ import 'package:flutter_js/flutter_js.dart';
 
 import 'builtin_renderers.dart';
 import 'builtin_services.dart';
+import 'js_runtime_manager.dart';
 import 'native_service.dart';
 import 'widget_renderer.dart';
 
@@ -13,13 +14,14 @@ import 'widget_renderer.dart';
 /// HotPatchWidget —— 热更新组件运行时入口
 ///
 /// 使用场景：线上出现 bug 时，下发由 ui_component_generator 从
-/// 正常组件静态翻译的 JS 补丁（.component.js + .component.schema.json），
+/// 正常组件静态翻译的 JS 补丁（.component.js），
 /// 运行时用本组件替换原组件即可修复，无需发版。
 ///
 /// 流程：
 ///   1. 加载 JS 补丁源码（本 demo 用 assets；生产环境可改为
 ///      从远端下载 + 版本/签名校验）
-///   2. 创建 JS 运行时（iOS/macOS=JavaScriptCore，Android=QuickJS），
+///   2. 使用 [JsRuntimeManager] 的 runtime（默认全局唯一 default 实例，
+///      也可通过 [sharedRuntime] 传入自定义 runtime 分组共享），
 ///      把补丁组件注册进全局 __components
 ///   3. 调用 build() 拿首帧节点树（与组件 build() 原封不动对应）
 ///   4. 事件回流：按钮事件 → 直接调用组件同名方法 → build() 新树 → setState
@@ -39,6 +41,7 @@ class HotPatchWidget extends StatefulWidget {
     this.rendererRegistry,
     this.nativeServices,
     this.nativeComponents = const {},
+    this.sharedRuntime,
   });
 
   /// JS 补丁模块的来源。本 demo 用 assets；生产环境换成远端 URL。
@@ -65,6 +68,13 @@ class HotPatchWidget extends StatefulWidget {
   /// 传入的服务为增量扩展（同 channel 时覆盖内置实现）。
   final List<NativeService>? nativeServices;
 
+  /// 外部传入的共享 JS runtime（可选）。不传时使用
+  /// [JsRuntimeManager.instance] 的默认 default 实例（全局唯一，
+  /// 多个 HotPatchWidget 共享一个 JS 引擎，避免重复创建的性能开销）；
+  /// 传入时多个 HotPatchWidget 共享该 runtime（JS 状态共享，
+  /// 实例仍按 key 隔离，互不串台）。
+  final JavascriptRuntime? sharedRuntime;
+
   @override
   State<HotPatchWidget> createState() => _HotPatchWidgetState();
 }
@@ -81,6 +91,8 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
   /// JS 实例唯一 key：每个 HotPatchWidget 用 __instances[key] 持有独立组件实例，
   /// 同名组件多处使用（如列表多卡片）时状态互不共享。
   late final String _instanceKey = 'hp_${identityHashCode(this)}';
+
+  JsRuntimeManager get _manager => JsRuntimeManager.instance;
 
   @override
   void initState() {
@@ -105,29 +117,39 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
       final jsSource = await rootBundle.loadString(widget.jsAsset);
       debugPrint('[hot_patch] jsSource loaded: ${jsSource.length} chars');
 
-      // 2. 创建 JS 运行时（iOS/macOS 用 JavaScriptCore，Android 用 QuickJS）
-      final runtime = getJavascriptRuntime();
+      // 2. JS 运行时统一走 JsRuntimeManager：默认全局唯一 default 实例，
+      //    外部传入 sharedRuntime 则登记并共享（不重复创建 runtime）。
+      final runtime =
+          widget.sharedRuntime ?? _manager.defaultRuntime;
+      if (widget.sharedRuntime != null) {
+        _manager.registerShared(widget.sharedRuntime!);
+      }
       _runtime = runtime;
-      debugPrint('[hot_patch] runtime created');
+      debugPrint('[hot_patch] runtime ready: ${runtime.hashCode}');
 
-      // 2.1 按注册表挂接 JS→Flutter 原生通道
+      // 2.1 消息通道统一由管理器注册（per-runtime 幂等）：
+      //    - setState 通道：按消息 key 分发到各实例重建回调
+      //    - native 服务通道：按 channel 分发到服务处理器
+      _manager.ensureChannels(runtime);
       for (final channel in _services.channels) {
         final service = _services.lookup(channel)!;
-        runtime.onMessage(channel, (dynamic args) {
+        _manager.serviceHandlers[channel] = (dynamic args) {
           debugPrint('[hot_patch] onMessage "$channel" args=$args');
           if (!mounted) return;
           service.handle(context, args);
-        });
-        debugPrint('[hot_patch] native service "$channel" wired');
+        };
+        debugPrint('[hot_patch] native service "$channel" registered');
       }
+      _manager.ensureServiceChannels(runtime, _services.channels);
 
-      // 2.1.1 JS setState 通道：JS 侧 setState() 执行回调后通知宿主重建。
-      // 宿主只在这里 setState 更新节点树，事件回调本身不直接 setState。
-      runtime.onMessage('setState', (dynamic args) {
-        debugPrint('[hot_patch] js setState: $args');
+      // 2.1.1 本实例的 setState 重建回调：重新取 JS 实例的最新树并 setState。
+      // 宿主只在这里 setState 更新节点树；事件回调本身不直接 setState。
+      _manager.setStateHandlers[_instanceKey] = () {
+        debugPrint('[hot_patch] js setState rebuild: $_instanceKey');
         if (!mounted) return;
         try {
-          final r = _runtime!.evaluate(
+          final r = _manager.evaluate(
+            runtime,
             'JSON.stringify(__instances["$_instanceKey"].build())',
           );
           final newTree = jsonDecode(r.stringResult);
@@ -135,24 +157,27 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
         } catch (e) {
           debugPrint('[hot_patch] setState rebuild error: $e');
         }
-      });
-      debugPrint('[hot_patch] setState channel wired');
+      };
 
       // 2.2 先加载嵌套组件产物（__components 注册齐全）
       for (final asset in widget.requiredAssets) {
         final depSource = await rootBundle.loadString(asset);
-        runtime.evaluate(depSource);
+        _manager.evaluate(runtime, depSource);
         debugPrint('[hot_patch] required asset loaded: $asset');
       }
       // 2.3 加载补丁模块（产物自包含：__components/__instances 注册表 + 组件构造函数）
-      runtime.evaluate(jsSource);
+      _manager.evaluate(runtime, jsSource);
       debugPrint('[hot_patch] module loaded');
 
       // 2.3 实例化组件：new 一个独立实例（可重复实例化，状态互不共享）
-      runtime.evaluate('__instances["$_instanceKey"] = new __components["${widget.component}"]();');
+      _manager.evaluate(
+        runtime,
+        '__instances["$_instanceKey"] = new __components["${widget.component}"]();',
+      );
       // 2.3.1 给 JS 实例挂载 setState：执行回调（更新 JS 状态）+ sendMessage 通知宿主重建。
       // HotPatchWidget 不直接 setState；重建由 JS 侧 setState 驱动（与 Dart 语义一致）。
-      runtime.evaluate(
+      _manager.evaluate(
+        runtime,
         '(function(){ __instances["$_instanceKey"].setState = function(fn){ '
         '  fn.call(this); '
         '  sendMessage("setState", JSON.stringify({ key: "$_instanceKey" })); '
@@ -162,7 +187,6 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
 
       // 3. 生命周期 + 首帧：调 initState（若存在）再 build 首帧
       _tree = _bootWithLifecycle('initState');
-      debugPrint('[hot_patch] first tree: $_tree');
       debugPrint('[hot_patch] first tree: $_tree');
       if (!mounted) return;
       setState(() => _loading = false);
@@ -178,7 +202,8 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
 
   /// 调生命周期方法（若 JS 实例导出该方法）并返回最新节点树。
   Object? _bootWithLifecycle(String lifecycle) {
-    final r = _runtime!.evaluate(
+    final r = _manager.evaluate(
+      _runtime!,
       '(function(){ var i = __instances["$_instanceKey"]; '
       'if (typeof i.$lifecycle === "function") { i.$lifecycle(); } '
       'return JSON.stringify(i.build()); })()',
@@ -188,7 +213,8 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
 
   /// 调用 JS 生命周期（无返回值场景，如 dispose/deactivate）。
   void _callLifecycle(String lifecycle) {
-    final r = _runtime!.evaluate(
+    final r = _manager.evaluate(
+      _runtime!,
       '(function(){ var i = __instances["$_instanceKey"]; '
       'if (typeof i.$lifecycle === "function") { i.$lifecycle(); } '
       'return true; })()',
@@ -201,7 +227,8 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
     // 事件名 = 组件方法名（一比一）：直接调用同名方法。
     // UI 重建由方法体内的 setState()（挂载在 JS 实例上）驱动，
     // 宿主不直接 setState；方法体未调 setState 则 UI 不刷新（与 Dart 一致）。
-    _runtime!.evaluate(
+    _manager.evaluate(
+      _runtime!,
       '(function(){ __instances["$_instanceKey"].$event(); })()',
     );
   }
@@ -240,7 +267,8 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
     // 嵌套实例方法里 setState() → sendMessage('setState') → 宿主重建主实例整树
     // （Component 节点递归取嵌套实例最新树）。
     final key = '$_instanceKey::$component';
-    _runtime!.evaluate(
+    _manager.evaluate(
+      _runtime!,
       '(function(){ __instances["$key"].$event(); })()',
     );
   }
@@ -271,8 +299,9 @@ class _HotPatchWidgetState extends State<HotPatchWidget> {
 
   @override
   void dispose() {
+    _manager.unregister(_instanceKey);
     if (_runtime != null) _callLifecycle('dispose');
-    _runtime?.dispose();
+    // 共享 runtime 由 JsRuntimeManager 统一持有，不在此 dispose。
     super.dispose();
   }
 }
@@ -299,7 +328,8 @@ class _RuntimeComponentHost implements ComponentHost {
 
   @override
   bool isRegistered(String component) {
-    final r = runtime.evaluate('typeof __components["$component"] === "function"');
+    final r = JsRuntimeManager.instance
+        .evaluate(runtime, 'typeof __components["$component"] === "function"');
     return r.stringResult == 'true';
   }
 
@@ -309,7 +339,8 @@ class _RuntimeComponentHost implements ComponentHost {
     // 首次获取：实例化（构造参数 args）+ 注入 setState + 回调 initState；
     // 后续复用同一实例（状态保留）
     final argsJs = jsonEncode(args);
-    final r = runtime.evaluate(
+    final r = JsRuntimeManager.instance.evaluate(
+      runtime,
       '(function(){ '
       'var key = "$key"; var comp = "$component"; '
       'if (typeof __instances[key] === "undefined") { '

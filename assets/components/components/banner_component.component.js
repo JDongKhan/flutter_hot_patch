@@ -18,11 +18,34 @@ __components['BannerCard'] = (function() {
   BannerCard.prototype.bump = function() { this.setState(function(){ this._views += 1; }); };
 
   BannerCard.prototype.build = function() {
-    return { type: "Column", children: [
-      { type: "Text", props: { data: "Banner from another file", style: "title" } },
-      { type: "Text", props: { data: "views = " + this._views, style: "body" } },
-      { type: "Button", props: { label: "Bump", event: "bump" } }
-    ] };
+    return {
+      "type": "Column",
+      "children": [
+        {
+          "type": "Text",
+          "props": {
+            "data": "Banner from another file",
+            "style": {
+              "fontSize": 20,
+              "color": '#009688'
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "props": {
+            "data": "views = " + this._views
+          }
+        },
+        {
+          "type": "Button",
+          "props": {
+            "label": "Bump",
+            "event": "bump"
+          }
+        }
+      ]
+    };
   };
 
   return BannerCard;

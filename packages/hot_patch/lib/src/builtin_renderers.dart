@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'flutter_from_json.dart';
 import 'widget_renderer.dart';
 
 /// 内置渲染策略：把 codegen 生成的 JSON 节点渲染为常见 Flutter widget。
@@ -47,19 +48,14 @@ class TextRenderer extends WidgetRenderer {
     final w = Text(
       node.props['data']?.toString() ?? '',
       textAlign: TextAlign.center,
-      style: _styleFor(node.props['style']?.toString()),
+      style: textStyleFromJson(
+        node.props['style'] is Map
+            ? (node.props['style'] as Map).cast<String, dynamic>()
+            : null,
+      ),
     );
     debugPrint('[hot_patch] Text render "${node.props['data']}"');
     return w;
-  }
-
-  static TextStyle? _styleFor(String? style) {
-    final t = ThemeData.light();
-    return switch (style) {
-      'title' => t.textTheme.headlineSmall,
-      'hint' => t.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-      _ => t.textTheme.bodyLarge,
-    };
   }
 }
 
@@ -74,6 +70,11 @@ class ButtonRenderer extends WidgetRenderer {
   Widget render(RenderNode node, WidgetRenderContext ctx) {
     final w = ElevatedButton(
       onPressed: () => ctx.onEvent(node.props['event']?.toString() ?? ''),
+      style: buttonStyleFromJson(
+        node.props['style'] is Map
+            ? (node.props['style'] as Map).cast<String, dynamic>()
+            : null,
+      ),
       child: Text(node.props['label']?.toString() ?? ''),
     );
     debugPrint('[hot_patch] Button render "${node.props['label']}"');

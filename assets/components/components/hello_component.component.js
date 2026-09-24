@@ -19,15 +19,58 @@ __components['HelloCard'] = (function() {
   HelloCard.prototype.showNative = function() { sendMessage("nativeToast", JSON.stringify({ message: "Hello from native (JS-driven)" })); };
 
   HelloCard.prototype.build = function() {
-    return { type: "Column", children: [
-      { type: "Text", props: { data: "Hello from JS logic", style: "title" } },
-      { type: "Text", props: { data: "count = " + this._count, style: "body" } },
-      { type: "Row", children: [
-        { type: "Button", props: { label: "+1", event: "inc" } },
-        { type: "Button", props: { label: "Reset", event: "reset" } },
-        { type: "Button", props: { label: "Native", event: "showNative" } }
-      ] }
-    ] };
+    return {
+      "type": "Column",
+      "children": [
+        {
+          "type": "Text",
+          "props": {
+            "data": "Hello from JS logic",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "color": '#2196F3'
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "props": {
+            "data": "count = " + this._count
+          }
+        },
+        {
+          "type": "Row",
+          "children": [
+            {
+              "type": "Button",
+              "props": {
+                "label": "+1",
+                "event": "inc",
+                "style": {
+                  "backgroundColor": '#4CAF50',
+                  "foregroundColor": '#FFFFFF'
+                }
+              }
+            },
+            {
+              "type": "Button",
+              "props": {
+                "label": "Reset",
+                "event": "reset"
+              }
+            },
+            {
+              "type": "Button",
+              "props": {
+                "label": "Native",
+                "event": "showNative"
+              }
+            }
+          ]
+        }
+      ]
+    };
   };
 
   return HelloCard;
@@ -44,14 +87,45 @@ __components['HelloPanel'] = (function() {
   HelloPanel.prototype.clear = function() { this.setState(function(){ this._taps = 0; }); };
 
   HelloPanel.prototype.build = function() {
-    return { type: "Column", children: [
-      { type: "Text", props: { data: "HelloPanel (JS)", style: "title" } },
-      { type: "Text", props: { data: "taps = " + this._taps, style: "body" } },
-      { type: "Row", children: [
-        { type: "Button", props: { label: "Tap", event: "tap" } },
-        { type: "Button", props: { label: "Clear", event: "clear" } }
-      ] }
-    ] };
+    return {
+      "type": "Column",
+      "children": [
+        {
+          "type": "Text",
+          "props": {
+            "data": "HelloPanel (JS)",
+            "style": {
+              "fontSize": 20
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "props": {
+            "data": "taps = " + this._taps
+          }
+        },
+        {
+          "type": "Row",
+          "children": [
+            {
+              "type": "Button",
+              "props": {
+                "label": "Tap",
+                "event": "tap"
+              }
+            },
+            {
+              "type": "Button",
+              "props": {
+                "label": "Clear",
+                "event": "clear"
+              }
+            }
+          ]
+        }
+      ]
+    };
   };
 
   return HelloPanel;
