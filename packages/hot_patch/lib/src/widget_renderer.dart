@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'hot_patch_widget.dart';
+import 'native_service.dart';
+import 'js_runtime_manager.dart';
+
 // ===========================================================================
 // 运行时渲染策略扩展点：JSON 节点 → 真实 Flutter Widget
 //
@@ -62,15 +66,26 @@ class WidgetRenderContext {
   /// 未提供时由 renderer 回退到 [onEvent]（无参调用）。
   final void Function(String event, Object? value)? onEventValue;
 
-  /// 嵌套组件宿主（由 HotPatchWidget 注入）：处理 build 树里的
-  /// Component 节点（如 DashboardCard 内嵌 BannerCard）。
-  final ComponentHost? componentHost;
+  /// 原生组件注入表（无 JS 产物的普通 widget）：组件名 → Flutter widget 构造。
+  /// 由 HotPatchWidget 透传业务方的 nativeComponents，渲染 Component 节点
+  /// 且无 import 时使用；未注册则渲染占位提示。
+  final Map<String, Widget Function(Map<String, dynamic> args)>
+      nativeComponents;
+
+  /// 嵌套 HotPatchWidget 的扩展点透传（递归渲染 Component 节点时使用）：
+  /// 与宿主保持一致，嵌套组件自管理加载/实例化/生命周期/事件/状态。
+  final WidgetRendererRegistry? nestedRendererRegistry;
+  final List<NativeService>? nativeServices;
+  final JsRuntimeManager? sharedManager;
 
   WidgetRenderContext({
     required this.registry,
     required this.onEvent,
     this.onEventValue,
-    this.componentHost,
+    this.nativeComponents = const {},
+    this.nestedRendererRegistry,
+    this.nativeServices,
+    this.sharedManager,
   });
 
   /// 渲染一个节点。
@@ -101,60 +116,37 @@ class WidgetRenderContext {
 
   Widget _renderComponent(RenderNode node) {
     final name = node.props['component'] as String? ?? '';
-    final host = componentHost;
-    if (host == null) {
-      return Text(
-        '[$name]',
-        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-      );
-    }
-    if (!host.isRegistered(name)) {
-      // 无 @UIComponent 注解 / 未注册的组件：
-      // 1) 业务方注入原生 widget（nativeComponents）→ 直接渲染
-      // 2) 否则占位提示（原生场景照常用 Flutter 组件）
-      final args = (node.props['args'] as Map?)?.cast<String, dynamic>() ??
-          const <String, dynamic>{};
-      final native = host.nativeOf(name, args);
-      if (native != null) return native;
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Text(
-          '[$name] 无 JS 版本（原生可用）',
-          style: TextStyle(color: Colors.grey[500], fontSize: 12),
-        ),
-      );
-    }
     final args = (node.props['args'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
-    final tree = host.treeOf(name, args);
-    // 嵌套子树事件回流到宿主（父级重建整棵树）
-    final subCtx = WidgetRenderContext(
-      registry: registry,
-      onEvent: (e) => host.dispatch(name, e),
-      componentHost: host,
+    final import = node.props['import'] as String?;
+    if (import != null && import.endsWith('.js')) {
+      // 递归路径：依赖产物的组件 → 直接返回嵌套 HotPatchWidget，
+      // 它自管理加载/实例化/生命周期/事件/状态，层级深度不限；
+      // 扩展点（nativeComponents/rendererRegistry/nativeServices/
+      // sharedManager）从本 ctx 透传，与宿主保持一致。
+      return HotPatchWidget(
+        jsAsset: import,
+        component: name,
+        componentArgs: args,
+        rendererRegistry: nestedRendererRegistry,
+        nativeServices: nativeServices,
+        nativeComponents: nativeComponents,
+        sharedManager: sharedManager,
+      );
+    }
+    // 无 JS 产物（无注解的 lib 普通组件）：
+    // 1) 业务方注入原生 widget（nativeComponents）→ 直接渲染
+    // 2) 否则占位提示（原生场景照常用 Flutter 组件）
+    final builder = nativeComponents[name];
+    if (builder != null) return builder(args);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        '[$name] 无 JS 版本（原生可用）',
+        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+      ),
     );
-    return subCtx.render(tree);
   }
-}
-
-/// 嵌套组件宿主：把「实例化/取树/事件分发」与渲染层解耦。
-///
-/// HotPatchWidget 实现（内部与 JS 运行时交互）；渲染层只依赖这个抽象，
-/// 后续支持自定义嵌套组件 / 原生回退时无需改稳定渲染类。
-abstract class ComponentHost {
-  /// 返回嵌套组件的最新节点树；首次调用会实例化并回调 initState。
-  /// [args] 为调用点构造参数字面量（如 _LabeledDivider(text: 'x') 的 {text:'x'}）。
-  Object? treeOf(String component, Map<String, dynamic> args);
-
-  /// 上报嵌套组件事件（宿主负责调用其方法并重建整棵树）。
-  void dispatch(String component, String event);
-
-  /// 组件是否已在 JS 运行时注册（有 @UIComponent 注解 / 私有组件翻译的产物）。
-  bool isRegistered(String component);
-
-  /// 原生注入：未注册组件（非私有、无注解）由业务方注入 Flutter widget；
-  /// 返回 null 表示未注入，渲染层回退占位提示。
-  Widget? nativeOf(String component, Map<String, dynamic> args);
 }
 
 /// ===========================================================================

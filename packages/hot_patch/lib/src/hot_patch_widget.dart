@@ -39,7 +39,7 @@ class HotPatchWidget extends StatefulWidget {
     super.key,
     required this.jsAsset,
     required this.component,
-    this.requiredAssets = const [],
+    this.componentArgs = const {},
     this.rendererRegistry,
     this.nativeServices,
     this.nativeComponents = const {},
@@ -49,9 +49,9 @@ class HotPatchWidget extends StatefulWidget {
   /// JS 补丁模块的来源。本 demo 用 assets；生产环境换成远端 URL。
   final String jsAsset;
 
-  /// 嵌套组件产物（如 DashboardCard 内嵌 BannerCard）：先于主产物加载，
-  /// 使 __components 里注册齐全，渲染层才能递归渲染嵌套组件。
-  final List<String> requiredAssets;
+  /// 组件构造参数（如 `_LabeledDivider(text: 'x')` 的 {text: 'x'}）：
+  /// 实例化 JS 组件时传给构造函数（生成器 ctorArgs 逐个取用，缺省回退默认值）。
+  final Map<String, dynamic> componentArgs;
 
   /// 非私有/无注解组件的原生注入：组件名 → Flutter widget 构造。
   /// 运行时（hot_patch 包）不 import 业务类，由业务方在这里注册，
@@ -169,19 +169,18 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       //   在 _bootWithLifecycle 之前完成——见 1.1）
 
 
-      // 2.1 先加载嵌套组件产物（__components 注册齐全）
-      for (final asset in widget.requiredAssets) {
-        final depSource = await rootBundle.loadString(asset);
-        _manager.evaluate(depSource);
-        debugPrint('[hot_patch] required asset loaded: $asset');
-      }
-      // 2.2 加载补丁模块（产物自包含：__components/__instances 注册表 + 组件构造函数）
+      // 2. 加载补丁模块（产物自包含：__components/__instances 注册表 +
+      // 组件构造函数）。嵌套组件（Component 节点带 import）由渲染层递归
+      // 创建嵌套 HotPatchWidget 自行加载，使用方无需声明依赖。
       _manager.evaluate(jsSource);
       debugPrint('[hot_patch] module loaded');
 
-      // 2.3 实例化组件：new 一个独立实例（可重复实例化，状态互不共享）
+      // 2.3 实例化组件：new 一个独立实例（可重复实例化，状态互不共享）。
+      // 构造参数由生成器 ctorArgs 消费（`this.x = args && args.x ...`），
+      // 无参组件传空对象安全（JS 忽略多余实参）。
       _manager.evaluate(
-        '__instances["$_instanceKey"] = new __components["${widget.component}"](); '
+        '__instances["$_instanceKey"] = new __components["${widget.component}"]'
+        '(${jsonEncode(widget.componentArgs)}); '
         '__instances["$_instanceKey"]._key = "$_instanceKey";',
       );
       // 2.3.1 给 JS 实例挂载 setState：执行回调（更新 JS 状态）+ sendMessage 通知宿主重建。
@@ -299,25 +298,14 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       registry: _registry,
       onEvent: _onEvent,
       onEventValue: _onEventValue,
-      componentHost: _RuntimeComponentHost(
-        manager: _manager,
-        parentKey: _instanceKey,
-        onNestedEvent: _onNestedEvent,
-        nativeComponents: widget.nativeComponents,
-      ),
+      nativeComponents: widget.nativeComponents,
+      nestedRendererRegistry: widget.rendererRegistry,
+      nativeServices: widget.nativeServices,
+      sharedManager: widget.sharedManager,
     );
     final w = ctx.render(_tree);
     debugPrint('[hot_patch] render -> ${w.runtimeType}');
     return w;
-  }
-
-  /// 嵌套组件事件回流：调嵌套实例方法 → 重建父组件整棵树。
-  void _onNestedEvent(String component, String event) {
-    debugPrint('[hot_patch] nested onEvent: $component.$event');
-    // 嵌套实例方法里 setState() → sendMessage('setState') → 宿主重建主实例整树
-    // （Component 节点递归取嵌套实例最新树）。
-    final key = '$_instanceKey::$component';
-    _manager.evaluate('(function(){ __instances["$key"].$event(); })()');
   }
 
   @override
@@ -370,65 +358,3 @@ class _SetStateService extends InstanceNativeService {
   }
 }
 
-/// 嵌套组件宿主实现：通过 JS 运行时管理器实例化/取树/分发事件。
-///
-/// 嵌套实例 key = 父实例 key + '::' + 组件名（同一父实例内每个组件名一个
-/// 嵌套实例；同一组件多处嵌套的场景后续可按序号扩展 key）。
-class _RuntimeComponentHost implements ComponentHost {
-  _RuntimeComponentHost({
-    required this.manager,
-    required this.parentKey,
-    required this.onNestedEvent,
-    required this.nativeComponents,
-  });
-
-  final JsRuntimeManager manager;
-  final String parentKey;
-  final void Function(String component, String event) onNestedEvent;
-
-  /// 业务方注入的原生 widget（非私有/无注解组件）。
-  final Map<String, Widget Function(Map<String, dynamic> args)>
-      nativeComponents;
-
-  @override
-  bool isRegistered(String component) {
-    final r = manager.evaluate('typeof __components["$component"] === "function"');
-    return r.stringResult == 'true';
-  }
-
-  @override
-  Object? treeOf(String component, Map<String, dynamic> args) {
-    final key = '$parentKey::$component';
-    // 首次获取：实例化（构造参数 args）+ 注入 setState + 回调 initState；
-    // 后续复用同一实例（状态保留）
-    final argsJs = jsonEncode(args);
-    final r = manager.evaluate(
-      '(function(){ '
-      'var key = "$key"; var comp = "$component"; '
-      'if (typeof __instances[key] === "undefined") { '
-      '  __instances[key] = new __components[comp]($argsJs); '
-      '  __instances[key]._key = key; '
-      '  __instances[key].setState = function(fn){ '
-      '    fn.call(this); '
-      '    sendMessage("setState", JSON.stringify({ key: key })); '
-      '  }; '
-      '  if (typeof __instances[key].initState === "function") '
-      '    __instances[key].initState(); '
-      '} '
-      'return JSON.stringify(__instances[key].build()); })()',
-    );
-    return jsonDecode(r.stringResult);
-  }
-
-  @override
-  void dispatch(String component, String event) {
-    onNestedEvent(component, event);
-  }
-
-  @override
-  Widget? nativeOf(String component, Map<String, dynamic> args) {
-    final builder = nativeComponents[component];
-    if (builder == null) return null;
-    return builder(args);
-  }
-}

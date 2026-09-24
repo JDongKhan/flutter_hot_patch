@@ -56,6 +56,33 @@ class ComponentBuilder implements Builder {
     final registry = WidgetTranslatorRegistry();
     registerBuiltinTranslators(registry);
 
+    // 组件名 → 依赖产物 jsAsset 路径。规则：
+    //   本文件注解组件 / 本文件私有组件 → 本文件产物（同产物注册）；
+    //   本文件无注解非私有组件（如 LabeledDivider）→ null（运行时原生注入）；
+    //   跨文件组件 → 从 import directives 推导源文件产物。
+    // （提前于 components 收集构造：_parseComponent 内部翻译 Component
+    //   节点时即会调用 importResolver，闭包必须已初始化）
+    final parsedNames = <String>{
+      for (final d in parsed.unit.declarations)
+        if (d is ClassDeclaration) d.name.lexeme,
+    };
+    final annotatedNames = <String>{
+      for (final d in parsed.unit.declarations)
+        if (d is ClassDeclaration &&
+            _findAnnotation(d.metadata, 'UIComponent') != null)
+          d.name.lexeme,
+    };
+    final ownProduct = _productPath(inputId.path);
+    String? importResolver(String name) {
+      if (parsedNames.contains(name)) {
+        if (annotatedNames.contains(name) || name.startsWith('_')) {
+          return ownProduct;
+        }
+        return null;
+      }
+      return _resolveImportProduct(parsed.unit, inputId.path);
+    }
+
     // 收集本文件内全部 @UIComponent 组件（支持单文件多组件 / 文件内共享普通类）
     final components = <_Component>[];
     for (final declaration in parsed.unit.declarations) {
@@ -68,6 +95,8 @@ class ComponentBuilder implements Builder {
         parsed.unit,
         _positionalString(uiComponent, 0) ?? declaration.name.lexeme,
         registry,
+        inputId.path,
+        importResolver,
       ));
     }
     if (components.isEmpty) return; // 无组件文件不产出
@@ -75,10 +104,6 @@ class ComponentBuilder implements Builder {
     // BFS 收集嵌套依赖：主组件 build 里用到的本文件**私有组件**（_Xxx）
     // 同样翻译成 JS 注册进同一产物；非私有组件保持 Component 节点，
     // 运行时由业务方注入原生 widget（nativeComponents）或占位。
-    final parsedNames = <String>{
-      for (final d in parsed.unit.declarations)
-        if (d is ClassDeclaration) d.name.lexeme,
-    };
     final doneDeps = <String>{};
     final depQueue = <String>[
       for (final c in components) ...c.deps,
@@ -94,7 +119,8 @@ class ComponentBuilder implements Builder {
       final decl = parsed.unit.declarations
           .whereType<ClassDeclaration>()
           .firstWhere((d) => d.name.lexeme == dep);
-      final nested = _parseNestedComponent(decl, parsed.unit, dep, registry);
+      final nested = _parseNestedComponent(
+          decl, parsed.unit, dep, registry, inputId.path, importResolver);
       components.add(nested);
       depQueue.addAll(nested.deps);
     }
@@ -163,6 +189,8 @@ _Component _parseComponent(
   CompilationUnit unit,
   String componentName,
   WidgetTranslatorRegistry registry,
+  String sourcePath,
+  String? Function(String component) importResolver,
 ) {
   final stateClassName = _stateClassName(widgetClass);
   if (stateClassName == null) {
@@ -254,6 +282,8 @@ _Component _parseComponent(
     propByField,
     actionByMethod,
     registry,
+    sourcePath,
+    importResolver,
   );
 
   return _Component(
@@ -275,14 +305,16 @@ _Component _parseComponent(
 ///     产物构造函数接受 args 并按调用点参数初始化；
 ///   - 私有组件默认不强制要求 build 在 State 类上。
 _Component _parseNestedComponent(
-  ClassDeclaration widgetClass,
+  ClassDeclaration decl,
   CompilationUnit unit,
   String componentName,
   WidgetTranslatorRegistry registry,
+  String sourcePath,
+  String? Function(String component) importResolver,
 ) {
   // 承载 build 的类：widget 类 或 其 State 类
-  ClassDeclaration hostClass = widgetClass;
-  final stateClassName = _stateClassName(widgetClass);
+  ClassDeclaration hostClass = decl;
+  final stateClassName = _stateClassName(decl);
   if (stateClassName != null) {
     for (final d in unit.declarations) {
       if (d is ClassDeclaration && d.name.lexeme == stateClassName) {
@@ -296,7 +328,7 @@ _Component _parseNestedComponent(
   // （required this.x 在无 resolution 下是 DefaultFormalParameter 包裹
   //  FieldFormalParameter，需要解包）
   final ctorArgs = <String>[];
-  for (final m in widgetClass.members) {
+  for (final m in decl.members) {
     if (m is ConstructorDeclaration) {
       for (final param in m.parameters.parameters) {
         final inner = param is DefaultFormalParameter ? param.parameter : param;
@@ -375,6 +407,8 @@ _Component _parseNestedComponent(
     propByField,
     actionByMethod,
     registry,
+    sourcePath,
+    importResolver,
   );
 
   return _Component(
@@ -699,6 +733,80 @@ Expression? _namedArg(List<Expression> args, String name) {
 }
 
 // ---------------------------------------------------------------------------
+// 产物路径推导：组件名 → 依赖产物 jsAsset
+// ---------------------------------------------------------------------------
+
+/// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 约定一致）：
+/// `lib/a/b.dart` → `assets/components/a/b.component.js`。
+String _productPath(String sourcePath) {
+  if (!sourcePath.startsWith('lib/')) return sourcePath;
+  final rel = sourcePath.substring('lib/'.length); // a/b.dart
+  if (!rel.endsWith('.dart')) return sourcePath;
+  return 'assets/components/${rel.substring(0, rel.length - '.dart'.length)}.component.js';
+}
+
+/// 从当前文件的 import directives 推导「依赖组件所在文件」的产物路径。
+/// 规则：**相对导入优先**（同目录/子目录的组件文件，如 'banner_component.dart'）；
+/// 相对导入不存在时才尝试 package: 导入（跳过 dart: / flutter —— 注解包
+/// ui_component 等跨包库不在本项目的 assets/components 产物约定内，跳过）。
+/// 把 import uri 映射到 lib 相对路径再换算产物路径。
+String? _resolveImportProduct(CompilationUnit unit, String sourcePath) {
+  final slash = sourcePath.lastIndexOf('/');
+  final dir = slash >= 0 ? sourcePath.substring(0, slash + 1) : ''; // 含尾 /
+  final imports = unit.directives.whereType<ImportDirective>().toList();
+  // 第一轮：相对导入
+  for (final d in imports) {
+    final uri = d.uri.stringValue;
+    if (uri == null || uri.startsWith('package:') || uri.startsWith('dart:')) {
+      continue;
+    }
+    final libRel = _relativeToLib(uri, dir);
+    if (libRel == null || !libRel.endsWith('.dart')) continue;
+    return 'assets/components/${libRel.substring(0, libRel.length - '.dart'.length)}.component.js';
+  }
+  // 第二轮：package: 导入（跳过 dart:/flutter）
+  for (final d in imports) {
+    final uri = d.uri.stringValue;
+    if (uri == null || !uri.startsWith('package:') ||
+        uri.startsWith('package:flutter')) {
+      continue;
+    }
+    // package:<项目名>/<lib 下路径> → 取 '/' 之后部分
+    final slashIdx = uri.indexOf('/');
+    if (slashIdx <= 0 || slashIdx >= uri.length - 1) continue;
+    final libRel = uri.substring(slashIdx + 1);
+    if (!libRel.endsWith('.dart')) continue;
+    return 'assets/components/${libRel.substring(0, libRel.length - '.dart'.length)}.component.js';
+  }
+  return null;
+}
+
+/// 相对导入 uri（'foo.dart' / './foo.dart' / '../x.dart'）→ lib 相对路径。
+String? _relativeToLib(String uri, String dir) {
+  final segments = <String>[];
+  if (dir.startsWith('lib/')) {
+    // dir 含尾斜杠（'lib/components/'），去掉尾 / 再入段
+    final rel = dir.substring('lib/'.length);
+    if (rel.endsWith('/')) {
+      segments.add(rel.substring(0, rel.length - 1));
+    } else {
+      segments.add(rel);
+    }
+  } else {
+    segments.add(dir.endsWith('/') ? dir.substring(0, dir.length - 1) : dir);
+  }
+  for (final part in uri.split('/')) {
+    if (part == '.' || part.isEmpty) continue;
+    if (part == '..') {
+      if (segments.isNotEmpty) segments.removeLast();
+    } else {
+      segments.add(part);
+    }
+  }
+  return segments.join('/');
+}
+
+// ---------------------------------------------------------------------------
 // build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
 // ---------------------------------------------------------------------------
 
@@ -707,6 +815,8 @@ Expression? _namedArg(List<Expression> args, String name) {
   Map<String, String> propByField,
   Map<String, String> actionByMethod,
   WidgetTranslatorRegistry registry,
+  String sourcePath,
+  String? Function(String component) importResolver,
 ) {
   final e = _methodExpression(buildMethod);
   if (e == null) {
@@ -716,7 +826,8 @@ Expression? _namedArg(List<Expression> args, String name) {
     registry: registry,
     propByField: propByField,
     actionByMethod: actionByMethod,
-    sourcePath: '',
+    sourcePath: sourcePath,
+    importResolver: importResolver,
   );
   return (ctx.translate(e), {...ctx.dependencies});
 }

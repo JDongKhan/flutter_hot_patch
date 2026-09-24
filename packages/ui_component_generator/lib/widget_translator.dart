@@ -44,6 +44,12 @@ class WidgetTranslateContext {
   final Map<String, String> actionByMethod;
   final String sourcePath;
 
+  /// 组件名 → 依赖产物 jsAsset 路径（null = 无法确定，渲染层走原生注入）。
+  /// 由生成器注入：本文件私有/注解组件 → 本文件产物；跨文件组件 →
+  /// 从 import directives 推导源文件产物。Component 节点据此产出 import，
+  /// 运行时以嵌套 HotPatchWidget 递归渲染（使用方无需知道依赖）。
+  final String? Function(String component)? importResolver;
+
   /// 翻译过程中遇到的未知自定义组件（Component 兜底），供生成器
   /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
   final Set<String> dependencies = {};
@@ -53,6 +59,7 @@ class WidgetTranslateContext {
     required this.propByField,
     required this.actionByMethod,
     required this.sourcePath,
+    this.importResolver,
   });
 
   /// 记录一个被兜底为 Component 节点的自定义组件名。
@@ -357,9 +364,10 @@ class WidgetTranslatorRegistry {
 
 
 /// 嵌套组件兜底翻译：build 树里出现其他自定义 widget 时统一翻译为
-/// Component 节点（{ type: 'Component', props: { component: 类名 } }）。
-/// 运行时 __components[类名] 存在（有 @UIComponent 注解）则递归渲染 JS 版本；
-/// 不存在（无注解的 lib 普通 widget）则渲染占位提示，原生场景照常用 Flutter 组件。
+/// Component 节点（{ type: 'Component', props: { component, import?, args? } }）。
+/// 运行时发现 import 且后缀为 .js → 返回嵌套 HotPatchWidget(jsAsset: import)
+/// 递归渲染（组件自管理生命周期/事件/状态，层级深度不限）；
+/// 无 import（无注解的 lib 普通 widget）→ 原生注入（nativeComponents）或占位。
 class ComponentTranslator extends WidgetTranslator {
   const ComponentTranslator();
 
@@ -377,10 +385,15 @@ class ComponentTranslator extends WidgetTranslator {
       final v = _literalValue(entry.value);
       if (v != null) args[entry.key] = _jsLiteral(v, ctx);
     }
+    // import：该组件可用的 JS 产物路径（本文件私有/注解组件 → 本文件产物；
+    // 跨文件注解组件 → 依赖文件产物）。运行时渲染 Component 节点时发现
+    // import 且后缀为 .js → 返回嵌套 HotPatchWidget(jsAsset: import) 递归。
+    final import = ctx.importResolver?.call(node.type);
     return {
       'type': ctx.jsString('Component'),
       'props': {
         'component': ctx.jsString(node.type),
+        if (import != null) 'import': ctx.jsString(import),
         if (args.isNotEmpty) 'args': args,
       },
     };

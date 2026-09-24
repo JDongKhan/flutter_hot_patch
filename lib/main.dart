@@ -86,9 +86,8 @@ class DemoListPage extends StatelessWidget {
         js: HotPatchWidget(
           jsAsset: 'assets/components/components/composite_component.component.js',
           component: 'DashboardCard',
-          requiredAssets: [
-            'assets/components/components/banner_component.component.js',
-          ],
+          // 嵌套组件（BannerCard）由生成器在 Component 节点产出 import，
+          // 运行时自动递归加载，使用方无需声明依赖。
           // 非私有组件（LabeledDivider）运行时注入原生 widget：
           // hot_patch 包不 import 业务类，由业务方在这里注册
           nativeComponents: {
