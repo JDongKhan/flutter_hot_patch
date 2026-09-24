@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'flutter_from_json.dart';
+import '../json/flutter_from_json.dart';
 import 'widget_renderer.dart';
 
 /// 内置渲染策略：把 codegen 生成的 JSON 节点渲染为常见 Flutter widget。

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'builtin_renderers.dart';
-import 'builtin_services.dart';
-import 'js_runtime_manager.dart';
-import 'native_service.dart';
+import '../services/builtin_services.dart';
+import '../services/js_runtime_manager.dart';
+import '../services/native_service.dart';
 import 'widget_renderer.dart';
 
 /// ============================================================

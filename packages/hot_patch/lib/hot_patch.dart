@@ -12,9 +12,10 @@
 /// 支持各种原生服务 = 实现 [NativeService] 并注入，核心类零改动。
 library;
 
-export 'src/builtin_renderers.dart';
-export 'src/builtin_services.dart';
-export 'src/hot_patch_widget.dart';
-export 'src/js_runtime_manager.dart';
-export 'src/native_service.dart';
-export 'src/widget_renderer.dart';
+export 'src/widgets/builtin_renderers.dart';
+export 'src/services/builtin_services.dart';
+export 'src/widgets/hot_patch_widget.dart';
+export 'src/services/js_runtime_manager.dart';
+export 'src/services/native_service.dart';
+export 'src/widgets/widget_renderer.dart';
+export 'src/json/flutter_from_json.dart';

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../utils/js_asset_resolver.dart';
+
 import 'hot_patch_widget.dart';
-import 'native_service.dart';
-import 'js_runtime_manager.dart';
+import '../services/native_service.dart';
+import '../services/js_runtime_manager.dart';
 
 // ===========================================================================
 // 运行时渲染策略扩展点：JSON 节点 → 真实 Flutter Widget
@@ -121,29 +123,6 @@ class WidgetRenderContext {
     return renderer.render(rn, this);
   }
 
-  /// 相对 jsAsset → 完整路径：以 [base]（目录，含尾 '/'）为基准解析
-  /// [rel]（含 './' / '../'）。asset 路径与 URL 通用（纯字符串处理）。
-  static String _resolveJsAsset(String base, String rel) {
-    if (rel.startsWith('http://') || rel.startsWith('https://') ||
-        rel.startsWith('assets/') || rel.startsWith('package:')) {
-      return rel; // 已是绝对/完整地址
-    }
-    final segs = <String>[];
-    if (base.isNotEmpty) {
-      segs.addAll(base.split('/').where((p) => p.isNotEmpty));
-      if (!base.endsWith('/')) segs.removeLast(); // base 是目录则保留
-    }
-    for (final part in rel.split('/')) {
-      if (part == '.' || part.isEmpty) continue;
-      if (part == '..') {
-        if (segs.isNotEmpty) segs.removeLast();
-      } else {
-        segs.add(part);
-      }
-    }
-    return segs.join('/');
-  }
-
   Widget _renderComponent(RenderNode node) {
     final name = node.props['component'] as String? ?? '';
     final args = (node.props['args'] as Map?)?.cast<String, dynamic>() ??
@@ -155,7 +134,7 @@ class WidgetRenderContext {
       // 扩展点（nativeComponents/rendererRegistry/nativeServices/
       // sharedManager）从本 ctx 透传，与宿主保持一致。
       return HotPatchWidget(
-        jsAsset: _resolveJsAsset(baseUri, import),
+        jsAsset: JsAssetResolver.resolve(baseUri, import),
         component: name,
         componentArgs: args,
         rendererRegistry: nestedRendererRegistry,
