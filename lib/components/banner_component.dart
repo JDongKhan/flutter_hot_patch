@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ui_component/ui_component.dart';
 
+import 'hello_component.dart';
+
 /// components/ 目录下多文件多组件演示：
 /// BannerCard 独立于 hello_component.dart，单独产出：
 ///   banner_component.component.js
@@ -37,7 +39,7 @@ class _BannerCardState extends State<BannerCard> {
       children: [
         Text(
           'Banner from another file',
-          style: const TextStyle(fontSize: 20, color: Colors.teal),
+          style:  TextStyle(fontSize: 20, color: PanelColors.background),
         ),
         Text('views = $_views'),
         ElevatedButton(

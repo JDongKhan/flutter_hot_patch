@@ -8,6 +8,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart';
 
 import 'builtin_translators.dart';
+import 'style_translators.dart';
 import 'widget_translator.dart';
 
 /// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）
@@ -93,6 +94,14 @@ class ComponentBuilder implements Builder {
       return _relativeProduct(ownProduct, abs);
     }
 
+    // 收集跨文件「静态单例类」映射（PanelColors → {fields, sourceFile}）：
+    // import 源文件里声明了 static 字段的普通类，build 树里 `PanelColors.x`
+    // 这种引用翻译成 JS 表达式（见 style_translators._colorExpr / WidgetTranslateContext）。
+    final singletons = _buildSingletonResolver(parsed.unit, inputId.path);
+
+    // 本文件声明的「静态单例类」→ inline 进本产物（const X = {...}，不 import）
+    final sameFileSingletons = _findSingletonClasses(parsed.unit);
+
     // 收集本文件内全部 @UIComponent 组件（支持单文件多组件 / 文件内共享普通类）
     final components = <_Component>[];
     for (final declaration in parsed.unit.declarations) {
@@ -107,10 +116,23 @@ class ComponentBuilder implements Builder {
         registry,
         inputId.path,
         importResolver,
+        singletons: singletons,
       ));
     }
     if (components.isEmpty) {
-      return; // 无组件文件不产出（模型文件由 modelBuilder 处理）
+      // 无组件文件：若本文件声明了「静态单例类」（含 static 字段的普通类），
+      // 产出对应单例产物（export const PanelColors = {...}）；否则不产出
+      // （模型文件由 modelBuilder 处理）。
+      if (sameFileSingletons.isNotEmpty) {
+        final outputs = buildStep.allowedOutputs.toList();
+        final jsOutput =
+            outputs.firstWhere((a) => a.path.endsWith('.component.js'));
+        await buildStep.writeAsString(
+          jsOutput,
+          _renderSingletonJs(sameFileSingletons, inputId.path, registry),
+        );
+      }
+      return;
     }
 
     // BFS 收集嵌套依赖：主组件 build 里用到的本文件**私有组件**（_Xxx）
@@ -134,7 +156,8 @@ class ComponentBuilder implements Builder {
           .whereType<ClassDeclaration>()
           .firstWhere((d) => d.name.lexeme == dep);
       final nested = _parseNestedComponent(
-          decl, parsed.unit, dep, registry, inputId.path, importResolver);
+          decl, parsed.unit, dep, registry, inputId.path, importResolver,
+          singletons: singletons);
       components.add(nested);
       depQueue.addAll(nested.deps);
     }
@@ -150,7 +173,8 @@ class ComponentBuilder implements Builder {
 
     await buildStep.writeAsString(
       jsOutput,
-      _renderJs(components, inputId.path, registry, importResolver),
+      _renderJs(components, inputId.path, registry, importResolver,
+          singletons: singletons, sameFileSingletons: sameFileSingletons),
     );
   }
 }
@@ -254,8 +278,9 @@ _Component _parseComponent(
   String componentName,
   WidgetTranslatorRegistry registry,
   String sourcePath,
-  String? Function(String component) importResolver,
-) {
+  String? Function(String component) importResolver, {
+  SingletonResolver? singletons,
+}) {
   // 承载 build 的类：StatefulWidget → 其 State 类；StatelessWidget →
   // widget 类自身（无 createState）。与 _parseNestedComponent 同一规则，
   // 保证主组件与嵌套组件对 Stateful/Stateless 的支持一致。
@@ -379,6 +404,7 @@ _Component _parseComponent(
     registry,
     sourcePath,
     importResolver,
+    singletons: singletons,
   );
 
   return _Component(
@@ -407,8 +433,9 @@ _Component _parseNestedComponent(
   String componentName,
   WidgetTranslatorRegistry registry,
   String sourcePath,
-  String? Function(String component) importResolver,
-) {
+  String? Function(String component) importResolver, {
+  SingletonResolver? singletons,
+}) {
   // 承载 build 的类：widget 类 或 其 State 类
   ClassDeclaration hostClass = decl;
   final stateClassName = _stateClassName(decl);
@@ -521,6 +548,7 @@ _Component _parseNestedComponent(
     registry,
     sourcePath,
     importResolver,
+    singletons: singletons,
   );
 
   return _Component(
@@ -1174,8 +1202,9 @@ String? _relativeToLib(String uri, String dir) {
   Map<String, String> actionByMethod,
   WidgetTranslatorRegistry registry,
   String sourcePath,
-  String? Function(String component) importResolver,
-) {
+  String? Function(String component) importResolver, {
+  SingletonResolver? singletons,
+}) {
   final e = _methodExpression(buildMethod);
   if (e == null) {
     throw FormatException('build() 需要返回 widget 树（return 或 =>）');
@@ -1186,6 +1215,7 @@ String? _relativeToLib(String uri, String dir) {
     actionByMethod: actionByMethod,
     sourcePath: sourcePath,
     importResolver: importResolver,
+    singletons: singletons,
   );
   return (ctx.translate(e), {...ctx.dependencies});
 }
@@ -1198,8 +1228,10 @@ String _renderJs(
   List<_Component> components,
   String sourcePath,
   WidgetTranslatorRegistry registry,
-  String? Function(String component) importResolver,
-) {
+  String? Function(String component) importResolver, {
+  SingletonResolver? singletons,
+  List<ClassDeclaration> sameFileSingletons = const [],
+}) {
   // 模型分两类：
   //  - 同文件模型（sourcePath == 当前组件文件）：产物内直接 class 定义（inline），
   //    组件内直接引用（与 Dart 源文件里同文件使用一致，不 export）；
@@ -1226,6 +1258,13 @@ String _renderJs(
   // 跨文件模型：import（ES module 语法；flutter_js 无原生 module 支持，
   // 运行时 JsRuntimeManager 模块加载器会按相对路径解析并预置 __modules）
   final ownProduct = _productPath(sourcePath);
+  // 跨文件静态单例类：import（export const 单例对象，运行时注入 __modules 共享）
+  for (final cls in singletons?.used ?? <String>[]) {
+    final src = singletons?.sourceFileOf(cls);
+    if (src == null || src == sourcePath) continue;
+    final rel = _relativeProduct(ownProduct, _productPath(src));
+    b.writeln("import { $cls } from '$rel';");
+  }
   for (final m in allModels.values) {
     final abs = _modelProductPath(m.sourcePath);
     final rel = _relativeProduct(ownProduct, abs);
@@ -1256,6 +1295,25 @@ String _renderJs(
       ..writeln()
       ..writeln('// 模型 ${m.name}（同文件，仅本产物内可见）')
       ..writeln(_modelJsClass(m));
+  }
+
+  // 同文件 static 单例类：inline const（与 Dart 语义一致，产物内共享，不 import）
+  if (sameFileSingletons.isNotEmpty) {
+    final ctx = WidgetTranslateContext(
+      registry: registry,
+      propByField: const {},
+      actionByMethod: const {},
+      sourcePath: sourcePath,
+    );
+    for (final clazz in sameFileSingletons) {
+      final entries = _singletonEntries(clazz, ctx);
+      b
+        ..writeln()
+        ..writeln('// 同文件静态单例类 ${clazz.name.lexeme}（仅本产物内可见）')
+        ..writeln('const ${clazz.name.lexeme} = {')
+        ..writeln('  ${entries.join(',\n  ')}')
+        ..writeln('};');
+    }
   }
 
   for (final c in components) {
@@ -1346,7 +1404,148 @@ String _renderModelJs(List<_ModelDef> models) {
   return b.toString();
 }
 
+// ---------------------------------------------------------------------------
+// 静态单例类：识别 / 跨文件解析 / 单例产物渲染
+// ---------------------------------------------------------------------------
 
+/// 判断是否「静态单例类」：普通类（无 @UIComponent、非 private、非抽象）、
+/// 且含至少一个非 private **static** 字段。
+bool _isSingletonClass(ClassDeclaration decl) {
+  final name = decl.name.lexeme;
+  if (name.startsWith('_')) return false;
+  if (decl.abstractKeyword != null) return false;
+  if (_findAnnotation(decl.metadata, 'UIComponent') != null) return false;
+  for (final m in decl.members) {
+    if (m is FieldDeclaration && m.isStatic) {
+      for (final v in m.fields.variables) {
+        if (!v.name.lexeme.startsWith('_')) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/// 收集某文件里声明的全部「静态单例类」（用于无组件文件的单例产物产出）。
+List<ClassDeclaration> _findSingletonClasses(CompilationUnit unit) => [
+      for (final d in unit.declarations.whereType<ClassDeclaration>())
+        if (_isSingletonClass(d)) d,
+    ];
+
+/// 收集类里全部非私有 static 字段名。
+Set<String> _publicStaticFieldNames(ClassDeclaration decl) {
+  final fields = <String>{};
+  for (final m in decl.members) {
+    if (m is FieldDeclaration && m.isStatic) {
+      for (final v in m.fields.variables) {
+        if (!v.name.lexeme.startsWith('_')) fields.add(v.name.lexeme);
+      }
+    }
+  }
+  return fields;
+}
+
+/// 解析「静态单例类」映射（类名 → {非私有 static 字段, sourceFile}）：
+/// 同文件的单例类（sourceFile == 当前文件，inline 不 import）与本文件
+/// import 的其它文件单例类（独立产物 + import）一并登记。
+/// 供 build 树里 `PanelColors.background` 这类静态引用翻译与依赖登记使用。
+SingletonResolver _buildSingletonResolver(
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  final resolver = SingletonResolver();
+  // 同文件 static 单例类：inline 进本产物（sourceFile == sourcePath，不 import）
+  for (final decl in unit.declarations.whereType<ClassDeclaration>()) {
+    if (!_isSingletonClass(decl)) continue;
+    resolver.add(decl.name.lexeme, _publicStaticFieldNames(decl), sourcePath);
+  }
+  // 跨文件 static 单例类：独立产物 + import
+  for (final file in _resolveImportFiles(unit, sourcePath)) {
+    final f = File(file);
+    if (!f.existsSync()) continue;
+    final parsed = parseString(content: f.readAsStringSync());
+    for (final decl in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+      if (!_isSingletonClass(decl)) continue;
+      resolver.add(decl.name.lexeme, _publicStaticFieldNames(decl), file);
+    }
+  }
+  return resolver;
+}
+
+/// 静态单例字段初始值 → JS 值（返回带引号的 JS 字面量，如字符串
+/// `'demo'`、颜色 `'#f5f5f5'`、数字/布尔原样）。支持类型：
+/// Color(...) / Colors.xxx（复用颜色求值）、String / int / double / bool
+/// 及简单字面量表达式；求不出（如复杂对象）→ 抛 FormatException，
+/// 让开发者构建期看到错误，而不是静默得到 undefined（与 Dart 语义一致）。
+String _singletonFieldValue(Expression? init, WidgetTranslateContext ctx) {
+  if (init == null) {
+    throw FormatException('static 字段缺少初始化表达式，无法翻译');
+  }
+  // 颜色：Color(...) / Colors.xxx → '#...'（复用现有颜色求值）
+  final c = colorToJson(init, ctx);
+  if (c != null) return c;
+  // 字符串：单引号字面量（与单例对象内其它值一致）
+  if (init is SimpleStringLiteral) return _singletonString(init.value);
+  // 简单字面量：int / double / bool / 简单二元运算
+  final lit = _renderLiteral(init);
+  if (lit != null) return lit;
+  throw FormatException(
+    '无法把 static 字段初始值翻译成 JS 值: ${init.toSource()}',
+  );
+}
+
+/// 单例类全部「名字: JS值」项（含私有 static 字段跳过；任一字段求值失败即抛）。
+List<String> _singletonEntries(ClassDeclaration clazz, WidgetTranslateContext ctx) {
+  final entries = <String>[];
+  for (final m in clazz.members) {
+    if (m is! FieldDeclaration || !m.isStatic) continue;
+    for (final v in m.fields.variables) {
+      final vName = v.name.lexeme;
+      if (vName.startsWith('_')) continue;
+      entries.add('$vName: ${_singletonFieldValue(v.initializer, ctx)}');
+    }
+  }
+  return entries;
+}
+
+/// Js单引号字符串字面量。
+String _singletonString(String s) {
+  final escaped = s
+      .replaceAll(r'\', r'\\')
+      .replaceAll("'", r"\'")
+      .replaceAll('\n', r'\n')
+      .replaceAll('\r', r'\r')
+      .replaceAll('\t', r'\t');
+  return "'$escaped'";
+}
+
+/// 独立单例产物渲染（无组件文件时用）：`export const PanelColors = { ... };`。
+String _renderSingletonJs(
+  List<ClassDeclaration> classes,
+  String sourcePath,
+  WidgetTranslatorRegistry registry,
+) {
+  final b = StringBuffer()
+    ..writeln('// GENERATED CODE - DO NOT EDIT')
+    ..writeln('// 静态单例类：由 ui_component_generator 自动生成')
+    ..writeln('// 重新生成：dart run build_runner build')
+    ..writeln();
+  final ctx = WidgetTranslateContext(
+    registry: registry,
+    propByField: const {},
+    actionByMethod: const {},
+    sourcePath: sourcePath,
+  );
+  for (final clazz in classes) {
+    final name = clazz.name.lexeme;
+    final entries = _singletonEntries(clazz, ctx);
+    b
+      ..writeln('export const $name = {')
+      ..writeln('  ${entries.join(',\n  ')}')
+      ..writeln('};')
+      ..writeln();
+  }
+  return b.toString();
+}
 
 /// 生成 JS 双引号字符串字面量（与 WidgetTranslateContext.jsString 一致）。
 String _jsStringLiteral(String s) {

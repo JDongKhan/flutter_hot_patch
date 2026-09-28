@@ -40,7 +40,7 @@ Map<String, dynamic>? textStyleToJson(
         final s = _fontStyleExpr(v);
         if (s != null) map['fontStyle'] = s;
       case 'color':
-        final c = _colorExpr(v);
+        final c = _colorExpr(v, ctx);
         if (c != null) map['color'] = c;
       case 'letterSpacing':
         final n = _numExpr(v);
@@ -73,10 +73,10 @@ Map<String, dynamic>? buttonStyleToJson(
       final v = a.expression;
       switch (name) {
         case 'backgroundColor':
-          final c = _colorExpr(_unwrapWidgetState(v));
+          final c = _colorExpr(_unwrapWidgetState(v), ctx);
           if (c != null) map['backgroundColor'] = c;
         case 'foregroundColor':
-          final c = _colorExpr(_unwrapWidgetState(v));
+          final c = _colorExpr(_unwrapWidgetState(v), ctx);
           if (c != null) map['foregroundColor'] = c;
       }
     }
@@ -121,7 +121,9 @@ String? _fontStyleExpr(Expression e) {
 }
 
 /// Colors.red → '#F44336'；Color(0xFF112233) → '#112233'；Colors.white/black。
-String? _colorExpr(Expression e) {
+/// 跨文件静态单例类字段引用（PanelColors.background）→ JS 表达式
+/// 'PanelColors.background'（不带引号，jsLiteral 原样输出）。
+String? _colorExpr(Expression e, WidgetTranslateContext ctx) {
   // Color(0xFF...)
   final (ctor, args) = _ctorOfExpr(e);
   if (ctor == 'Color') {
@@ -151,9 +153,14 @@ String? _colorExpr(Expression e) {
   }
   // Colors.red（静态引用）
   final (owner, name) = _staticRef(e);
-  if (owner != 'Colors') return null;
-  final hex = _materialColors[name];
-  if (hex != null) return "'#$hex'";
+  if (owner == 'Colors') {
+    final hex = _materialColors[name];
+    if (hex != null) return "'#$hex'";
+    return null;
+  }
+  // 跨文件静态单例类字段引用（PanelColors.background）→ JS 表达式
+  final singleton = ctx.singletons?.staticRef(e);
+  if (singleton != null) return singleton;
   return null;
 }
 
@@ -379,7 +386,7 @@ Map<String, dynamic>? borderRadiusToJson(
 /// 公共包装：widget translator 直接调用；内部实现在 [_colorExpr]。
 String? colorToJson(Expression? expr, WidgetTranslateContext ctx) {
   if (expr == null) return null;
-  return _colorExpr(expr);
+  return _colorExpr(expr, ctx);
 }
 
 /// BoxDecoration(color/borderRadius) → JSON。
@@ -395,7 +402,7 @@ Map<String, dynamic>? boxDecorationToJson(
     if (a is! NamedExpression) continue;
     switch (a.name.label.name) {
       case 'color':
-        final c = _colorExpr(a.expression);
+        final c = _colorExpr(a.expression, ctx);
         if (c != null) map['color'] = c;
       case 'borderRadius':
         final br = borderRadiusToJson(a.expression, ctx);

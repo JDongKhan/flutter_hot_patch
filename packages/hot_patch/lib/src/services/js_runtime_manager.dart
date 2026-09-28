@@ -264,12 +264,19 @@ class JsRuntimeManager {
   ) {
     var out = source;
 
-    // export class -> class（收集导出名，同名模块去重）
-    final exportRe = RegExp(r"^export\s+class\s+(\w+)", multiLine: true);
+    // export class/const/function -> class/const/function（收集导出名，同名模块去重）。
+    // 扩展支持共享单例产物（export const X = {...}，如静态颜色类）与 export function。
+    // 分类型替换，避免 'const' 被误换成 'class'。
+    final exportReClass = RegExp(r"^export\s+class\s+(\w+)", multiLine: true);
+    final exportReVar =
+        RegExp(r"^export\s+(const|function)\s+(\w+)", multiLine: true);
     final exportNames = <String>[
-      for (final m in exportRe.allMatches(out)) m.group(1)!,
+      for (final m in exportReClass.allMatches(out)) m.group(1)!,
+      for (final m in exportReVar.allMatches(out)) m.group(2)!,
     ];
-    out = out.replaceAllMapped(exportRe, (m) => 'class ${m.group(1)}');
+    out = out.replaceAllMapped(exportReClass, (m) => 'class ${m.group(1)}');
+    out = out.replaceAllMapped(
+        exportReVar, (m) => '${m.group(1)} ${m.group(2)}');
 
     // import { A, B } from 'rel' -> const { A, B } = __modules['abs'];
     final importRe = RegExp(

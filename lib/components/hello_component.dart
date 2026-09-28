@@ -5,7 +5,9 @@ import 'package:flutter_hot/model/user.dart';
 /// 本文件演示两个能力：
 ///   1. HelloCard —— 一个**完全正常的 Flutter StatefulWidget**（原生可直接用）
 ///   2. 单文件多组件 —— HelloPanel 与 HelloCard 同文件，codegen 都注册进 JS
-///   3. 共享普通类 —— PanelColors 无注解，codegen 自动跳过
+///   3. 同文件静态样式类 —— PanelColors 与本组件同文件，codegen inline 进
+///      同一产物（const PanelColors = {...}），build 里 `PanelColors.background`
+///      直接翻译成 JS 表达式引用，无需 import 独立产物。
 ///
 /// 注解仅 @UIComponent('组件名') 一个类级注解，其余全量生成：
 ///   - 所有非 static 基础类型字段 → JS 属性（一比一，_count → _count）
@@ -80,7 +82,7 @@ class _HelloCardState extends State<HelloCard> {
             ElevatedButton(
               onPressed: inc,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: PanelColors.background,
                 foregroundColor: Colors.white,
               ),
               child: const Text('+1'),
@@ -104,11 +106,13 @@ class _HelloCardState extends State<HelloCard> {
   }
 }
 
-/// 共享普通类（无 @UIComponent 注解）：codegen 跳过，不产生任何产物。
-/// 用于演示：组件文件里可以自由写公共类，不影响生成。
+/// 同文件静态样式类：与本组件同文件，由 codegen inline 进同一产物
+/// （const PanelColors = {...}），组件 build 里 `PanelColors.xxx` 直接引用，
+/// 不产生独立单例产物、不 import。
 class PanelColors {
-  static const primary = Color(0xFF6750A4);
-  static const background = Color(0xFFF5F5F5);
+  static Color background = const Color(0xFFFF0000);
+  static const Color primary = Color(0xFF6750A4);
+  static const String tagline = 'demo';
 }
 
 /// 单文件多组件演示：与 HelloCard 同文件、同产物，注册为第二个组件。

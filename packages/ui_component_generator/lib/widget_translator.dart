@@ -50,6 +50,11 @@ class WidgetTranslateContext {
   /// 运行时以嵌套 HotPatchWidget 递归渲染（使用方无需知道依赖）。
   final String? Function(String component)? importResolver;
 
+  /// 跨文件「静态单例类」解析器：build 树里 `PanelColors.background`
+  /// 这类静态引用翻译成 JS 表达式并登记 import 依赖。
+  /// 由生成器从组件文件的 import 源文件解析注入；null = 不启用。
+  final SingletonResolver? singletons;
+
   /// 翻译过程中遇到的未知自定义组件（Component 兜底），供生成器
   /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
   final Set<String> dependencies = {};
@@ -60,6 +65,7 @@ class WidgetTranslateContext {
     required this.actionByMethod,
     required this.sourcePath,
     this.importResolver,
+    this.singletons,
   });
 
   /// 记录一个被兜底为 Component 节点的自定义组件名。
@@ -430,5 +436,56 @@ class ComponentTranslator extends WidgetTranslator {
     if (v is bool) return v ? 'true' : 'false';
     if (v == null) return 'null';
     return '$v';
+  }
+}
+
+/// 跨文件「静态单例类」解析器（如 theme/panel_colors.dart 的 PanelColors）。
+///
+/// 组件 build 树里出现 `PanelColors.background` 这类静态引用时，把它翻译成
+/// JS 表达式 `PanelColors.background`（不带引号，jsLiteral 原样输出），并登记
+/// 该单例类为 import 依赖，产物顶部生成 `import { PanelColors } from '...'`。
+///
+/// 由生成器从组件文件的 import 源文件解析填充；未命中映射时 staticRef
+/// 返回 null，调用方维持「丢键」现状，不影响其它产物。
+class SingletonResolver {
+  /// 类名 → 该类非私有 static 字段名集合。
+  final Map<String, Set<String>> _fields = {};
+
+  /// 类名 → 源文件 dart 路径（lib/...dart，用于推导 import 相对路径）。
+  final Map<String, String> _sourceFile = {};
+
+  /// 翻译过程中实际被引用的单例类（→ 产物 import）。
+  final Set<String> used = {};
+
+  bool get isEmpty => _fields.isEmpty;
+
+  void add(String className, Set<String> publicStaticFields, String sourceFile) {
+    _fields[className] = publicStaticFields;
+    _sourceFile[className] = sourceFile;
+  }
+
+  String? sourceFileOf(String className) => _sourceFile[className];
+
+  bool hasField(String className, String field) =>
+      _fields[className]?.contains(field) ?? false;
+
+  /// 命中静态单例字段引用（`PanelColors.background`）→ 登记依赖并
+  /// 返回 JS 表达式 `PanelColors.background`；否则返回 null。
+  String? staticRef(Expression e) {
+    String? cls;
+    String? field;
+    if (e is PropertyAccess && e.target is Identifier) {
+      cls = (e.target as Identifier).name;
+      field = e.propertyName.name;
+    } else if (e is PrefixedIdentifier) {
+      // `PanelColors.background`（两段点号名，前缀是简单标识符）→ 前缀是类名
+      cls = e.prefix.name;
+      field = e.identifier.name;
+    }
+    if (cls != null && field != null && hasField(cls, field)) {
+      used.add(cls);
+      return '$cls.$field';
+    }
+    return null;
   }
 }

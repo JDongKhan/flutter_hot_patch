@@ -4,6 +4,13 @@
 
 import { User } from '../model/user.model.js';
 
+// 同文件静态单例类 PanelColors（仅本产物内可见）
+const PanelColors = {
+  background: '#ffff0000',
+  primary: '#ff6750a4',
+  tagline: 'demo'
+};
+
 export class HelloCard {
   constructor() {
     this._count = 0;
@@ -56,7 +63,7 @@ export class HelloCard {
                 "label": "+1",
                 "event": "inc",
                 "style": {
-                  "backgroundColor": '#4CAF50',
+                  "backgroundColor": PanelColors.background,
                   "foregroundColor": '#FFFFFF'
                 }
               }

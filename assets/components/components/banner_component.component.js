@@ -2,6 +2,7 @@
 // 由 ui_component_generator 从 lib/components/banner_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { PanelColors } from 'hello_component.component.js';
 
 export class BannerCard {
   constructor() {
@@ -19,7 +20,7 @@ export class BannerCard {
             "data": "Banner from another file",
             "style": {
               "fontSize": 20,
-              "color": '#009688'
+              "color": PanelColors.background
             }
           }
         },
