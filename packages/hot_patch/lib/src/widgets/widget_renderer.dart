@@ -87,6 +87,10 @@ class WidgetRenderContext {
   final List<NativeService>? nativeServices;
   final JsRuntimeManager? sharedManager;
 
+  /// 当前 HotPatchWidget 的 JS 实例 key（`__instances["<key>"]` 寻址）。
+  /// ListenableBuilder 等需要反向调 JS（重取 builder 子树 / 挂 JS 监听）时用。
+  final String? instanceKey;
+
   WidgetRenderContext({
     required this.registry,
     required this.onEvent,
@@ -96,6 +100,7 @@ class WidgetRenderContext {
     this.nestedRendererRegistry,
     this.nativeServices,
     this.sharedManager,
+    this.instanceKey,
   });
 
   /// 渲染一个节点。

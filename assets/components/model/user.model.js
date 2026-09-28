@@ -9,4 +9,3 @@ export class User {
     this.age = (args && args.age !== undefined) ? args.age : undefined;
   }
 }
-

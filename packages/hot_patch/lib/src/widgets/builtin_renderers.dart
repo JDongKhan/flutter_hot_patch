@@ -1,7 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../json/flutter_from_json.dart';
+import '../services/js_runtime_manager.dart';
 import 'widget_renderer.dart';
+
+/// ListenableBuilder 局部重建的回调注册表：
+/// key = `<instanceKey>::<builderName>`（_lbBuilderN），值 = 重取子树 + setState。
+/// JS 模型 notifyListeners → sendMessage('lbNotify', {key, builder}) →
+/// [LbNotifyService] 按 key 查表调用。全局唯一、按实例 key 隔离、随 dispose 清理。
+final Map<String, void Function()> lbRefreshCallbacks = {};
 
 /// 内置渲染策略：把 codegen 生成的 JSON 节点渲染为常见 Flutter widget。
 ///
@@ -40,7 +49,9 @@ void registerBuiltinRenderers(WidgetRendererRegistry registry) {
     ..register(const GestureDetectorRenderer())
     ..register(const SwitchRenderer())
     ..register(const CheckboxRenderer())
-    ..register(const SliderRenderer());
+    ..register(const SliderRenderer())
+    // 响应式：ListenableBuilder（配合 ChangeNotifier 局部重建）
+    ..register(const ListenableBuilderRenderer());
 }
 
 /// Column / Row 共用逻辑：方向决定主轴 + 对齐 + children。
@@ -647,5 +658,103 @@ class SliderRenderer extends WidgetRenderer {
         }
       },
     );
+  }
+}
+
+// ===========================================================================
+// 响应式：ListenableBuilder（ChangeNotifier 局部重建）
+// ===========================================================================
+
+/// ListenableBuilder 渲染：节点 `{type:"ListenableBuilder", props:{listenable,
+/// builder}}`。child 子树不在树里（生成器抽到实例方法 `_lbBuilderN`），
+/// 运行时初始化时重取一次；JS 模型 notifyListeners → 'lbNotify' 服务 →
+/// [_JsListenableBuilderState._refresh] 重取最新子树并 setState（仅此节点，
+/// 不全量 rebuild）。
+class ListenableBuilderRenderer extends WidgetRenderer {
+  const ListenableBuilderRenderer();
+
+  @override
+  String get type => 'ListenableBuilder';
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    final listenable = node.props['listenable']?.toString() ?? '';
+    final builderName = node.props['builder']?.toString() ?? '';
+    return _JsListenableBuilder(
+      ctx: ctx,
+      listenable: listenable,
+      builderName: builderName,
+    );
+  }
+}
+
+class _JsListenableBuilder extends StatefulWidget {
+  const _JsListenableBuilder({
+    required this.ctx,
+    required this.listenable,
+    required this.builderName,
+  });
+
+  final WidgetRenderContext ctx;
+  final String listenable;
+  final String builderName;
+
+  @override
+  State<_JsListenableBuilder> createState() => _JsListenableBuilderState();
+}
+
+class _JsListenableBuilderState extends State<_JsListenableBuilder> {
+  late final String _key;
+  late final String _cbKey;
+  late RenderNode _node;
+
+  JsRuntimeManager get _manager =>
+      widget.ctx.sharedManager ?? JsRuntimeManager.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _key = widget.ctx.instanceKey ?? '';
+    _cbKey = '$_key::${widget.builderName}';
+    _node = _fetch();
+    // 挂 JS 监听：模型 notify 时 sendMessage('lbNotify') → 服务查表调 _refresh。
+    lbRefreshCallbacks[_cbKey] = _refresh;
+    _manager.evaluate(
+      '(function(){ var m = __instances["$_key"].${widget.listenable}; '
+      'if (m && typeof m.addListener === "function") { '
+      ' m.addListener(function(){ '
+      '  sendMessage("lbNotify", JSON.stringify({ key: "$_key", '
+      '    builder: "${widget.builderName}" })); }); } })()',
+    );
+  }
+
+  @override
+  void dispose() {
+    lbRefreshCallbacks.remove(_cbKey);
+    super.dispose();
+  }
+
+  /// 重取 builder 子树（JS 实例 `_lbBuilderN()`，build() 内求值 this._model.n）。
+  RenderNode _fetch() {
+    try {
+      final r = _manager.evaluate(
+        'JSON.stringify(__instances["$_key"].${widget.builderName}())',
+      );
+      final node = RenderNode.of(jsonDecode(r.stringResult));
+      return node ?? RenderNode.of(const {'type': 'SizedBox'})!;
+    } catch (e) {
+      debugPrint('[hot_patch] _lbBuilder fetch error: $e');
+      return RenderNode.of(const {'type': 'SizedBox'})!;
+    }
+  }
+
+  void _refresh() {
+    if (!mounted) return;
+    setState(() => _node = _fetch());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.ctx.render(_node);
   }
 }

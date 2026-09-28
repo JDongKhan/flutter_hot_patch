@@ -46,7 +46,9 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const GestureDetectorTranslator())
     ..register(const SwitchTranslator())
     ..register(const CheckboxTranslator())
-    ..register(const SliderTranslator());
+    ..register(const SliderTranslator())
+    // 响应式（SDK 类，见 class_translator.sdkSuperClassMap 配套的 ChangeNotifier）
+    ..register(const ListenableBuilderTranslator());
   // 嵌套组件兜底：build 树里未注册的自定义 widget → Component 节点
   // （不参与 Map 注册，由 registry.fallback 持有；组件需 UpperCamel 才兜底）
   registry.registerFallback(const ComponentTranslator());
@@ -760,8 +762,51 @@ class SliderTranslator extends WidgetTranslator {
 }
 
 // ---------------------------------------------------------------------------
-// 本地小工具
+// 响应式：ListenableBuilder（与 ChangeNotifier 配套，见 sdkSuperClassMap）
 // ---------------------------------------------------------------------------
+
+/// ListenableBuilder：`ListenableBuilder(listenable: _model, builder: (c,_) => Text(...))`。
+///
+/// 闭包返回的子树抽到组件方法 `_lbBuilderN()`（ctx.builderTrees 收集），节点
+/// props 只引用 `listenable`（模型成员名）与 `builder`（方法名）。运行时把
+/// builder 包装为 Flutter ListenableBuilder，模型 notify 后重新调用
+/// `_lbBuilderN()` 拿到最新子树，做「仅此节点」的局部重建（不全量 setState）。
+class ListenableBuilderTranslator extends WidgetTranslator {
+  const ListenableBuilderTranslator();
+
+  @override
+  String get type => 'ListenableBuilder';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final listenable = ctx.namedArg(node.args, 'listenable');
+    final builderFn = ctx.namedArg(node.args, 'builder');
+    if (listenable == null || builderFn == null) {
+      throw FormatException('ListenableBuilder 需要 listenable 与 builder');
+    }
+    Expression? inner;
+    if (builderFn is FunctionExpression) inner = ctx.functionInner(builderFn);
+    if (inner == null) {
+      throw FormatException('ListenableBuilder.builder 需为返回 widget 的闭包');
+    }
+    // 目前 listenable 限定为模型状态字段（如 `_model`），运行时取成员名。
+    if (listenable is! Identifier) {
+      throw FormatException('ListenableBuilder.listenable 需为模型状态字段（如 _model）');
+    }
+    final listenableRef = ctx.propOf(listenable);
+    // 闭包返回的子树翻译并登记，序号即方法名后缀。
+    final subtree = ctx.translate(inner);
+    ctx.builderTrees.add(subtree);
+    final idx = ctx.builderTrees.length - 1;
+    return {
+      'type': ctx.jsString('ListenableBuilder'),
+      'props': {
+        'listenable': ctx.jsString(listenableRef),
+        'builder': ctx.jsString('_lbBuilder$idx'),
+      },
+    };
+  }
+}
 
 /// 数字字面量 → JS 数字表达式（'12' / '1.5'）；非字面量返回 null。
 String? _numOf(Expression? e) {

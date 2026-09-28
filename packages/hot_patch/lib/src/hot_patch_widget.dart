@@ -126,7 +126,9 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       _services.register(svc);
     }
     // 页面级内部实现（setState 即普通 InstanceNativeService）
-    _internalServices.add(_SetStateService());
+    _internalServices
+      ..add(_SetStateService())
+      ..add(_LbNotifyService());
     _boot();
   }
 
@@ -316,6 +318,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       nestedRendererRegistry: widget.rendererRegistry,
       nativeServices: widget.nativeServices,
       sharedManager: widget.sharedManager,
+      instanceKey: _instanceKey,
     );
     final w = ctx.render(_tree);
     debugPrint('[hot_patch] render -> ${w.runtimeType}');
@@ -369,6 +372,36 @@ class _SetStateService extends InstanceNativeService {
   @override
   void handle(BuildContext context, dynamic payload) {
     state?.rebuild();
+  }
+}
+
+/// ListenableBuilder 局部重建服务：JS 模型 notifyListeners →
+/// sendMessage('lbNotify', {key, builder}) → 查 lbRefreshCallbacks 表调用
+/// 对应 _JsListenableBuilderState._refresh（重取 builder 子树 + setState）。
+/// 仅重建该 ListenableBuilder 自身子树，不全量 rebuild。
+class _LbNotifyService extends InstanceNativeService {
+  @override
+  String get channel => 'lbNotify';
+
+  @override
+  void handle(BuildContext context, dynamic payload) {
+    Map payloadMap;
+    if (payload is Map) {
+      payloadMap = payload.cast<String, dynamic>();
+    } else if (payload is String) {
+      try {
+        final decoded = jsonDecode(payload);
+        if (decoded is! Map) return;
+        payloadMap = decoded.cast<String, dynamic>();
+      } catch (_) {
+        return;
+      }
+    } else {
+      return;
+    }
+    final key = payloadMap['key']?.toString() ?? '';
+    final builder = payloadMap['builder']?.toString() ?? '';
+    lbRefreshCallbacks['$key::$builder']?.call();
   }
 }
 

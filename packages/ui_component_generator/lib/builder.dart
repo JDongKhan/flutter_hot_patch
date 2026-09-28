@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart';
 
 import 'builtin_translators.dart';
+import 'class_translator.dart';
 import 'style_translators.dart';
 import 'widget_translator.dart';
 
@@ -94,13 +94,21 @@ class ComponentBuilder implements Builder {
       return _relativeProduct(ownProduct, abs);
     }
 
-    // 收集跨文件「静态单例类」映射（PanelColors → {fields, sourceFile}）：
-    // import 源文件里声明了 static 字段的普通类，build 树里 `PanelColors.x`
-    // 这种引用翻译成 JS 表达式（见 style_translators._colorExpr / WidgetTranslateContext）。
+    // 统一「类表」：把同文件 + 跨文件的所有普通 Dart 类（去 @UIComponent/
+    // 私有/抽象/widget 类）收集成 ClassInfo 索引。User/CounterModel/静态单例
+    // 都由此统一发现，不再按用途分流（见 class_translator.dart）。
+    final classIndex = _buildClassIndex(parsed.unit, inputId.path);
+
+    // 跨文件「静态单例类」映射：照旧，供 build 树里 `PanelColors.x` 静态引用
+    // 翻译成 JS 表达式（见 style_translators._colorExpr）。产物渲染统一走
+    // class_translator.renderStaticConst。
     final singletons = _buildSingletonResolver(parsed.unit, inputId.path);
 
     // 本文件声明的「静态单例类」→ inline 进本产物（const X = {...}，不 import）
-    final sameFileSingletons = _findSingletonClasses(parsed.unit);
+    final sameFileSingletonInfos = <ClassInfo>[
+      for (final d in _findSingletonClasses(parsed.unit))
+        if (classIndex.containsKey(d.name.lexeme)) classIndex[d.name.lexeme]!,
+    ];
 
     // 收集本文件内全部 @UIComponent 组件（支持单文件多组件 / 文件内共享普通类）
     final components = <_Component>[];
@@ -116,6 +124,7 @@ class ComponentBuilder implements Builder {
         registry,
         inputId.path,
         importResolver,
+        classIndex: classIndex,
         singletons: singletons,
       ));
     }
@@ -123,13 +132,13 @@ class ComponentBuilder implements Builder {
       // 无组件文件：若本文件声明了「静态单例类」（含 static 字段的普通类），
       // 产出对应单例产物（export const PanelColors = {...}）；否则不产出
       // （模型文件由 modelBuilder 处理）。
-      if (sameFileSingletons.isNotEmpty) {
+      if (sameFileSingletonInfos.isNotEmpty) {
         final outputs = buildStep.allowedOutputs.toList();
         final jsOutput =
             outputs.firstWhere((a) => a.path.endsWith('.component.js'));
         await buildStep.writeAsString(
           jsOutput,
-          _renderSingletonJs(sameFileSingletons, inputId.path, registry),
+          _renderSingletonJs(sameFileSingletonInfos, inputId.path, registry),
         );
       }
       return;
@@ -157,7 +166,7 @@ class ComponentBuilder implements Builder {
           .firstWhere((d) => d.name.lexeme == dep);
       final nested = _parseNestedComponent(
           decl, parsed.unit, dep, registry, inputId.path, importResolver,
-          singletons: singletons);
+          classIndex: classIndex, singletons: singletons);
       components.add(nested);
       depQueue.addAll(nested.deps);
     }
@@ -174,7 +183,8 @@ class ComponentBuilder implements Builder {
     await buildStep.writeAsString(
       jsOutput,
       _renderJs(components, inputId.path, registry, importResolver,
-          singletons: singletons, sameFileSingletons: sameFileSingletons),
+          singletons: singletons,
+          sameFileSingletonInfos: sameFileSingletonInfos),
     );
   }
 }
@@ -224,24 +234,91 @@ class _Component {
   /// build 树里依赖的自定义组件名（Component 兜底收集）。
   final Set<String> deps;
 
-  /// 组件（含私有嵌套组件）按调用链用到的模型类：方法体/构建树里出现
-  /// `User(...)` 构造调用时才注入对应 JS 类（IIFE 内共享），
-  /// 未用到的模型不翻译。
-  final Map<String, _ModelDef> models;
+  /// 组件（含私有嵌套组件）按调用链用到的类（State 字段类型 + 构造调用）。
+  /// 统一由 class_translator 翻译（见 _usedClasses / _buildClassIndex）。
+  final Map<String, ClassInfo> models;
 
-  _Component(this.name, this.props, this.actions, this.tree,
+  /// ListenableBuilder 抽出的 builder 子树（译成组件方法 `_lbBuilderN()`，
+  /// 运行时时模型 notify 后重新调用拿最新子树做局部重建）。
+  final List<Map<String, dynamic>> builders;
+
+  const _Component(this.name, this.props, this.actions, this.tree,
       {this.ctorArgs = const [],
       this.deps = const {},
-      this.models = const {}});
+      this.models = const {},
+      this.builders = const []});
 }
 
-/// 模型类定义：从 lib/model/xxx.dart 等业务 import 文件解析。
-/// 只在组件「按调用链用到」时生成（见 _collectModels）。
-class _ModelDef {
-  final String name; // 类名，如 User
-  final List<String> fields; // 非 static 字段名（构造顺序）
-  final String sourcePath; // lib/model/user.dart（注释用）
-  _ModelDef(this.name, this.fields, this.sourcePath);
+/// 统一「类表」：把一个文件（同文件 + 跨文件 import）的全部普通 Dart 类
+/// 收集成 ClassInfo 索引。去 @UIComponent / 私有 / 抽象 / widget 类。
+Map<String, ClassInfo> _buildClassIndex(CompilationUnit unit, String sourcePath) {
+  final out = <String, ClassInfo>{};
+  void addFile(ClassDeclaration d, String file) {
+    final name = d.name.lexeme;
+    if (name.startsWith('_') || out.containsKey(name)) return;
+    if (d.abstractKeyword != null) return;
+    if (_findAnnotation(d.metadata, 'UIComponent') != null) return;
+    // widget 类（有 build 方法）不是普通类，走组件/嵌套翻译路径
+    if (d.members
+        .whereType<MethodDeclaration>()
+        .any((m) => m.name.lexeme == 'build')) {
+      return;
+    }
+    out[name] = classInfoOf(d, file);
+  }
+
+  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+    addFile(d, sourcePath);
+  }
+  for (final file in _resolveImportFiles(unit, sourcePath)) {
+    final f = File(file);
+    if (!f.existsSync()) continue;
+    final parsed = parseString(content: f.readAsStringSync());
+    for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+      addFile(d, file);
+    }
+  }
+  return out;
+}
+
+/// 候选类名：State 实例字段类型 + 方法体/build 树构造调用 并集。
+Set<String> _candidateClassNames(
+  ClassDeclaration hostClass,
+  List<MethodDeclaration> methods,
+  MethodDeclaration buildMethod,
+) {
+  final collector = _CtorCollector();
+  for (final m in methods) {
+    m.body.accept(collector);
+  }
+  buildMethod.body.accept(collector);
+  final names = collector.names;
+  for (final member in hostClass.members) {
+    if (member is FieldDeclaration && !member.isStatic) {
+      final t = _eraseType(member.fields.type?.toSource() ?? 'dynamic');
+      if (!_isBasicType(t) && t.isNotEmpty) names.add(t);
+    }
+  }
+  return names;
+}
+
+/// 候选类名 ∩ 类表 → 实际使用的类（统一翻译的集合）。
+Map<String, ClassInfo> _usedClasses(
+  Set<String> candidates,
+  Map<String, ClassInfo> index,
+) =>
+    {
+      for (final n in candidates)
+        if (index.containsKey(n)) n: index[n]!,
+    };
+
+/// 去除可空 / 泛型：`User?` → `User`，`List<User>` → `User`。
+String _eraseType(String type) {
+  var t = type.trim();
+  if (t.endsWith('?')) t = t.substring(0, t.length - 1);
+  final lt = t.indexOf('<');
+  if (lt >= 0) t = t.substring(0, lt).trim();
+  return t;
 }
 
 class _Prop {
@@ -279,6 +356,7 @@ _Component _parseComponent(
   WidgetTranslatorRegistry registry,
   String sourcePath,
   String? Function(String component) importResolver, {
+  required Map<String, ClassInfo> classIndex,
   SingletonResolver? singletons,
 }) {
   // 承载 build 的类：StatefulWidget → 其 State 类；StatelessWidget →
@@ -333,18 +411,27 @@ _Component _parseComponent(
     throw FormatException('$componentName 缺少 build() 方法（StatefulWidget 需在 State 类、StatelessWidget 需在 widget 类）');
   }
 
-  // 按调用链发现模型：只在方法体/build 树里出现 `User(...)` 构造时才翻译。
-  // 模型发现先于字段/动作翻译（模型类型字段也要进 JS 属性）。
-  final models = _collectModels(unit, sourcePath, methods, buildMethod);
+  // 统一类发现：State 实例字段类型 → 类（State 维度，用户强调），
+  // 方法体/build 树构造调用兜底（如 hello 里的 `User(...)`），并集进 classIndex
+  // 命中的类统一翻译（见 class_translator.dart，不再按用途分流）。
+  final used = _usedClasses(
+    _candidateClassNames(hostClass, methods, buildMethod),
+    classIndex,
+  );
 
-  // 字段收集：基础类型 + 模型类型（User? → this._user = null）自动进 state。
+  // 字段收集：基础类型 / 类类型字段（含对象字段 `_model = CounterModel()` →
+  // `this._model = new CounterModel({})`、`User? _user` → `this._user = null`）
+  // 一律进 JS 实例属性，跨 build 持久。
   for (final member in hostClass.members) {
     if (member is FieldDeclaration) {
       for (final variable in member.fields.variables) {
         final fieldName = variable.name.lexeme;
         final typeName = member.fields.type?.toSource() ?? 'dynamic';
         if (member.isStatic) continue;
-        if (!_isBasicType(typeName) && !_isModelType(typeName, models)) {
+        final erased = _eraseType(typeName);
+        final isBasic = _isBasicType(typeName);
+        final cls = used[erased];
+        if (!isBasic && cls == null) {
           // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
           // ignore: avoid_print - 构建期日志
           print(
@@ -352,10 +439,26 @@ _Component _parseComponent(
           );
           continue;
         }
-        final initial = _renderLiteral(variable.initializer) ??
-            (_isModelType(typeName, models)
-                ? 'null'
-                : _defaultInitial(typeName));
+        String initial;
+        if (isBasic) {
+          initial = _renderLiteral(variable.initializer) ??
+              _defaultInitial(typeName);
+        } else {
+          final init = variable.initializer;
+          String? ctorJs;
+          if (init is InstanceCreationExpression) {
+            ctorJs = modelCtorToJs(init, const FieldScope(), used);
+          } else if (init is MethodInvocation &&
+              init.target == null &&
+              init.typeArguments == null) {
+            // `_model = CounterModel()` 在无 resolution 的 parseString 下会被解析成
+            // MethodInvocation 而非 InstanceCreationExpression（类名即无参构造），
+            // 统一按模型构造处理（见 modelCtorFromPartsJs）。
+            ctorJs = modelCtorFromPartsJs(init.methodName.name,
+                init.argumentList.arguments.toList(), const FieldScope(), used);
+          }
+          initial = ctorJs ?? 'null';
+        }
         final propName = _defaultPropName(fieldName);
         props.add(_Prop(fieldName, propName, typeName, initial,
             fromArgs: ctorArgs.contains(fieldName)));
@@ -364,9 +467,8 @@ _Component _parseComponent(
     }
   }
 
-  // 方法翻译（带 models）
+  // 方法翻译（带类表）
   for (final member in methods) {
-    // 默认全量：所有非生命周期方法自动进 action。
     final methodName = member.name.lexeme;
     final actionName = _defaultActionName(methodName);
     // 方法体是 SnackBar 形式 → 自动识别为 native 通道
@@ -382,7 +484,7 @@ _Component _parseComponent(
           propByField,
           nativeChannel,
           _methodParams(member),
-          models,
+          used,
         ),
         params: _methodParams(member),
         isAsync: member.body.isAsynchronous,
@@ -397,7 +499,7 @@ _Component _parseComponent(
     }
   }
 
-  final (tree, deps) = _translateBuildTree(
+  final (tree, deps, builders) = _translateBuildTree(
     buildMethod,
     propByField,
     actionByMethod,
@@ -414,7 +516,8 @@ _Component _parseComponent(
     tree,
     ctorArgs: ctorArgs,
     deps: deps,
-    models: models,
+    models: used,
+    builders: builders,
   );
 }
 
@@ -434,6 +537,7 @@ _Component _parseNestedComponent(
   WidgetTranslatorRegistry registry,
   String sourcePath,
   String? Function(String component) importResolver, {
+  required Map<String, ClassInfo> classIndex,
   SingletonResolver? singletons,
 }) {
   // 承载 build 的类：widget 类 或 其 State 类
@@ -483,16 +587,23 @@ _Component _parseNestedComponent(
     throw FormatException('嵌套组件 $componentName 缺少 build() 方法');
   }
 
-  final models = _collectModels(unit, sourcePath, methods, buildMethod);
+  // 统一类发现（与主组件同规则）：State 字段类型为主 + 构造调用兜底。
+  final used = _usedClasses(
+    _candidateClassNames(hostClass, methods, buildMethod),
+    classIndex,
+  );
 
-  // 字段收集：基础类型 + 模型类型进 JS 属性
+  // 字段收集：基础类型 / 类类型字段进 JS 属性（对象字段 this._x）
   for (final member in hostClass.members) {
     if (member is FieldDeclaration) {
       for (final variable in member.fields.variables) {
         final fieldName = variable.name.lexeme;
         final typeName = member.fields.type?.toSource() ?? 'dynamic';
         if (member.isStatic) continue;
-        if (!_isBasicType(typeName) && !_isModelType(typeName, models)) {
+        final erased = _eraseType(typeName);
+        final isBasic = _isBasicType(typeName);
+        final cls = used[erased];
+        if (!isBasic && cls == null) {
           // ignore: avoid_print - 构建期日志
           print(
             '[ui_component_generator] 嵌套组件跳过字段 $fieldName（类型 $typeName 不可翻译）',
@@ -500,10 +611,26 @@ _Component _parseNestedComponent(
           continue;
         }
         final fromArgs = ctorArgs.contains(fieldName);
-        final initial = _renderLiteral(variable.initializer) ??
-            (_isModelType(typeName, models)
-                ? 'null'
-                : _defaultInitial(typeName));
+        String initial;
+        if (isBasic) {
+          initial = _renderLiteral(variable.initializer) ??
+              _defaultInitial(typeName);
+        } else {
+          final init = variable.initializer;
+          String? ctorJs;
+          if (init is InstanceCreationExpression) {
+            ctorJs = modelCtorToJs(init, const FieldScope(), used);
+          } else if (init is MethodInvocation &&
+              init.target == null &&
+              init.typeArguments == null) {
+            // `_model = CounterModel()` 在无 resolution 的 parseString 下会被解析成
+            // MethodInvocation 而非 InstanceCreationExpression（类名即无参构造），
+            // 统一按模型构造处理（见 modelCtorFromPartsJs）。
+            ctorJs = modelCtorFromPartsJs(init.methodName.name,
+                init.argumentList.arguments.toList(), const FieldScope(), used);
+          }
+          initial = ctorJs ?? 'null';
+        }
         final propName = _defaultPropName(fieldName);
         props.add(_Prop(fieldName, propName, typeName, initial,
             fromArgs: fromArgs));
@@ -527,7 +654,7 @@ _Component _parseNestedComponent(
           propByField,
           nativeChannel,
           _methodParams(member),
-          models,
+          used,
         ),
         params: _methodParams(member),
         isAsync: member.body.isAsynchronous,
@@ -541,7 +668,7 @@ _Component _parseNestedComponent(
     }
   }
 
-  final (tree, deps) = _translateBuildTree(
+  final (tree, deps, builders) = _translateBuildTree(
     buildMethod,
     propByField,
     actionByMethod,
@@ -558,7 +685,8 @@ _Component _parseNestedComponent(
     tree,
     ctorArgs: ctorArgs,
     deps: deps,
-    models: models,
+    models: used,
+    builders: builders,
   );
 }
 
@@ -580,13 +708,6 @@ bool _isBasicType(String typeName) {
     'int' || 'double' || 'num' || 'String' || 'bool' || 'dynamic' => true,
     _ => false,
   };
-}
-
-/// 模型类型判断：`User` / `User?` 命中按调用链发现的模型 → 进 JS 属性。
-bool _isModelType(String typeName, Map<String, _ModelDef> models) {
-  final t = typeName.trim();
-  if (t.endsWith('?')) return _isModelType(t.substring(0, t.length - 1), models);
-  return models.containsKey(t);
 }
 
 /// 跳过 getter / setter / static 方法（build 在收集处单独处理；
@@ -672,9 +793,15 @@ String _translateActionBody(
   Map<String, String> propByField,
   String? nativeChannel,
   List<String> params,
-  Map<String, _ModelDef> models,
+  Map<String, ClassInfo> classes,
 ) {
-  final extraVars = params.toSet();
+  // 组件动作的可用引用：State 字段（propByField）+ 方法形参。表达式/语句
+  // 统一交给 class_translator.exprStmtToJs（以 FieldScope 为键），与模型
+  // 方法体翻译共用同一套逻辑。
+  final scope = FieldScope(
+    propByField: propByField,
+    params: params.toSet(),
+  );
   if (nativeChannel != null) {
     final msg = _snackMessage(body);
     if (msg == null) {
@@ -690,8 +817,7 @@ String _translateActionBody(
   // super.xxx() 忽略、无法翻译的语句降级跳过。
   final stmts = <String>[];
   if (body is ExpressionFunctionBody) {
-    final t =
-        _translateExprStatement(body.expression, propByField, extraVars, models);
+    final t = _translateExprStatement(body.expression, scope, classes);
     if (t != null) stmts.add(t);
   } else if (body is BlockFunctionBody) {
     for (final s in body.block.statements) {
@@ -699,7 +825,7 @@ String _translateActionBody(
         final e = s.expression;
         // super.initState() 等 super 调用：JS 无 super 语义，忽略
         if (e is MethodInvocation && e.target is SuperExpression) continue;
-        final t = _translateExprStatement(e, propByField, extraVars, models);
+        final t = _translateExprStatement(e, scope, classes);
         if (t != null) stmts.add(t);
       }
     }
@@ -708,25 +834,22 @@ String _translateActionBody(
   return stmts.join(' ');
 }
 
-/// 翻译一条表达式语句：setState((){...}) / 裸赋值 / 状态自增等。
+/// 翻译一条表达式语句：setState((){...}) / await Future.delayed / 其余走
+/// class_translator.exprStmtToJs（赋值 / 自增 / `_model.inc()` 对象方法调用等）。
 ///
 /// setState 按 Dart 原封翻译：`setState(() => _taps++)` →
 /// `this.setState(function(){ this._taps += 1; });`。
-/// JS 实例上挂载的 setState 由运行时注入（执行回调 + 通知宿主重建），
-/// 生成器不展开、不特殊处理。
 String? _translateExprStatement(
   Expression e,
-  Map<String, String> propByField,
-  Set<String> extraVars,
-  Map<String, _ModelDef> models,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
 ) {
   if (e is MethodInvocation &&
       e.methodName.name == 'setState' &&
       e.argumentList.arguments.length == 1) {
     final fn = e.argumentList.arguments.first;
     if (fn is FunctionExpression) {
-      final bodyJs =
-          _translateFunctionBodyJs(fn.body, propByField, extraVars, models);
+      final bodyJs = _translateFunctionBodyJs(fn.body, scope, classes);
       if (bodyJs == null) return 'this.setState(function(){});';
       return 'this.setState(function(){ $bodyJs });';
     }
@@ -738,129 +861,29 @@ String? _translateExprStatement(
     if (delay != null) return 'await new Promise(function(r){ setTimeout(r, $delay); });';
     return null;
   }
-  return _translateStateExpr(e, propByField, extraVars, models);
+  return exprStmtToJs(e, scope, classes);
 }
 
 /// 翻译函数体（setState 回调等）：表达式体或块体，逐语句翻译。
 String? _translateFunctionBodyJs(
   FunctionBody body,
-  Map<String, String> propByField,
-  Set<String> extraVars,
-  Map<String, _ModelDef> models,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
 ) {
   if (body is ExpressionFunctionBody) {
-    return _translateStateExpr(body.expression, propByField, extraVars, models);
+    return exprStmtToJs(body.expression, scope, classes);
   }
   if (body is BlockFunctionBody) {
     final parts = <String>[];
     for (final st in body.block.statements) {
       if (st is ExpressionStatement) {
-        final t = _translateStateExpr(st.expression, propByField, extraVars, models);
+        final t = exprStmtToJs(st.expression, scope, classes);
         if (t != null) parts.add(t);
       }
     }
     return parts.isEmpty ? null : parts.join(' ');
   }
   return null;
-}
-
-String? _translateStateExpr(
-  Expression e,
-  Map<String, String> propByField,
-  Set<String> extraVars,
-  Map<String, _ModelDef> models,
-) {
-  // 方法形式参数（如 _toggle(bool v) 的 v）：JS 一比一原样引用
-  if (e is Identifier && extraVars.contains(e.name)) {
-    return e.name;
-  }
-  // _count++ / _count--
-  if (e is PostfixExpression &&
-      e.operand is Identifier &&
-      (e.operator.type == TokenType.PLUS_PLUS ||
-          e.operator.type == TokenType.MINUS_MINUS)) {
-    final name = (e.operand as Identifier).name;
-    if (extraVars.contains(name)) {
-      return '$name += 1;';
-    }
-    final prop = _propOf(e.operand as Identifier, propByField);
-    final delta = e.operator.type == TokenType.PLUS_PLUS ? '1' : '-1';
-    return 'this.$prop += $delta;';
-  }
-  // ++_count / --_count
-  if (e is PrefixExpression &&
-      e.operand is Identifier &&
-      (e.operator.type == TokenType.PLUS_PLUS ||
-          e.operator.type == TokenType.MINUS_MINUS)) {
-    final name = (e.operand as Identifier).name;
-    if (extraVars.contains(name)) {
-      return '$name += 1;';
-    }
-    final prop = _propOf(e.operand as Identifier, propByField);
-    final delta = e.operator.type == TokenType.PLUS_PLUS ? '1' : '-1';
-    return 'this.$prop += $delta;';
-  }
-  // _count = 0 / _count += 1 / _count = v（v 为方法参数）/
-  // _user = User(name: 'x', age: 1)（模型构造 → new User({...})）
-  if (e is AssignmentExpression && e.leftHandSide is Identifier) {
-    final prop = _propOf(e.leftHandSide as Identifier, propByField);
-    final op = e.operator.lexeme;
-    final rhs = _rhsJs(e.rightHandSide, propByField, extraVars, models);
-    if (rhs == null) return null;
-    return 'this.$prop $op $rhs;';
-  }
-  return null;
-}
-
-/// 赋值右侧：字面量 / 方法参数（Identifier in extraVars）/ 模型构造 → JS 表达式。
-/// 模型构造 `User(name: 'x', age: 18)` → `new User({name: 'x', age: 18})`
-/// （JS 无 Dart 命名参数，按命名参数转对象字面量；位置参数按字段顺序映射）。
-String? _rhsJs(
-  Expression e,
-  Map<String, String> propByField,
-  Set<String> extraVars,
-  Map<String, _ModelDef> models,
-) {
-  final lit = _renderLiteral(e);
-  if (lit != null) return lit;
-  if (e is Identifier && extraVars.contains(e.name)) return e.name;
-  if (e is InstanceCreationExpression) {
-    return _modelCtorJs(e, propByField, extraVars, models);
-  }
-  return null;
-}
-
-/// 模型构造调用 → JS：`new User({name: ..., age: ...})`。
-/// 非模型类返回 null（由调用方跳过该语句）。
-String? _modelCtorJs(
-  InstanceCreationExpression e,
-  Map<String, String> propByField,
-  Set<String> extraVars,
-  Map<String, _ModelDef> models,
-) {
-  final name = e.constructorName.type.name2.lexeme;
-  final def = models[name];
-  if (def == null) return null;
-  final named = <String>[];
-  final positional = <String>[];
-  for (final a in e.argumentList.arguments) {
-    if (a is NamedExpression) {
-      final v = _rhsJs(a.expression, propByField, extraVars, models);
-      if (v == null) return null;
-      named.add('${a.name.label.name}: $v');
-    } else {
-      final v = _rhsJs(a, propByField, extraVars, models);
-      if (v == null) return null;
-      positional.add(v);
-    }
-  }
-  // 位置参数按模型字段声明顺序映射到对象键
-  final entries = <String>[];
-  for (var i = 0; i < def.fields.length && i < positional.length; i++) {
-    entries.add('${def.fields[i]}: ${positional[i]}');
-  }
-  entries.addAll(named);
-  return 'new $name({${entries.join(', ')}})';
 }
 
 /// `await Future.delayed(Duration(seconds: n))` → setTimeout 毫秒数。
@@ -908,12 +931,6 @@ List<String> _methodParams(MethodDeclaration m) => [
       for (final p in m.parameters!.parameters)
         (p is DefaultFormalParameter ? p.parameter : p).name?.lexeme ?? '',
     ];
-
-String _propOf(Identifier id, Map<String, String> propByField) {
-  final prop = propByField[id.name];
-  if (prop != null) return prop;
-  throw FormatException('"${id.name}" 不是状态字段（或已被跳过）');
-}
 
 /// 提取 SnackBar 消息字符串
 String? _snackMessage(FunctionBody body) {
@@ -995,84 +1012,7 @@ String _modelProductPath(String sourcePath) {
   return 'assets/components/${rel.substring(0, rel.length - '.dart'.length)}.model.js';
 }
 
-// ---------------------------------------------------------------------------
-// 模型（Model）翻译：按调用链注入
-// ---------------------------------------------------------------------------
-
-/// 按调用链发现模型：遍历组件全部方法体 + build 树里的
-/// `InstanceCreationExpression`，构造名命中业务 import 文件中的类定义
-/// 才收集（BannerCard 没用 User → 不翻译 User）。
-Map<String, _ModelDef> _collectModels(
-  CompilationUnit unit,
-  String sourcePath,
-  List<MethodDeclaration> methods,
-  MethodDeclaration buildMethod,
-) {
-  final collector = _CtorCollector();
-  for (final m in methods) {
-    m.body.accept(collector);
-  }
-  buildMethod.body.accept(collector);
-  if (collector.names.isEmpty) return const {};
-
-  final models = <String, _ModelDef>{};
-
-  // 同文件模型：组件文件自身声明的普通类（构造名命中才收集）。
-  // 跳过注解组件类与私有嵌套组件类（后者走嵌套翻译路径，不是模型）。
-  for (final decl in unit.declarations.whereType<ClassDeclaration>()) {
-    final name = decl.name.lexeme;
-    if (!collector.names.contains(name) || models.containsKey(name)) continue;
-    if (name.startsWith('_')) continue;
-    if (_findAnnotation(decl.metadata, 'UIComponent') != null) continue;
-    // widget 类（有 build 方法）不是模型：同文件组件走嵌套组件翻译路径
-    if (decl.members
-        .whereType<MethodDeclaration>()
-        .any((m) => m.name.lexeme == 'build')) {
-      continue;
-    }
-    final fields = <String>[];
-    for (final m in decl.members) {
-      if (m is FieldDeclaration && !m.isStatic) {
-        for (final v in m.fields.variables) {
-          fields.add(v.name.lexeme);
-        }
-      }
-    }
-    if (fields.isEmpty && decl.members.whereType<MethodDeclaration>().isEmpty) {
-      continue; // 无字段无方法（如纯接口占位），跳过
-    }
-    models[name] = _ModelDef(name, fields, sourcePath);
-  }
-  if (models.length >= collector.names.length) return models;
-
-  // 跨文件模型：业务 import 文件里的类定义（如 lib/model/user.dart）。
-  // 跳过注解组件类（@UIComponent）：跨文件组件走 Component 节点 import
-  // 组件产物（如 DashboardCard 内嵌 BannerCard），不是模型。
-  for (final file in _resolveImportFiles(unit, sourcePath)) {
-    if (models.length >= collector.names.length) break;
-    final f = File(file);
-    if (!f.existsSync()) continue;
-    final parsed = parseString(content: f.readAsStringSync());
-    for (final decl in parsed.unit.declarations.whereType<ClassDeclaration>()) {
-      final name = decl.name.lexeme;
-      if (!collector.names.contains(name) || models.containsKey(name)) continue;
-      if (name.startsWith('_')) continue;
-      if (_findAnnotation(decl.metadata, 'UIComponent') != null) continue;
-      final fields = <String>[];
-      for (final m in decl.members) {
-        if (m is FieldDeclaration && !m.isStatic) {
-          for (final v in m.fields.variables) {
-            fields.add(v.name.lexeme);
-          }
-        }
-      }
-      models[name] = _ModelDef(name, fields, file);
-    }
-  }
-  return models;
-}
-
-/// 收集表达式树里全部模型构造调用名。
+/// 收集表达式树里全部模型构造调用名（与类发现共用：State 字段类型 + 构造调用）。
 class _CtorCollector extends RecursiveAstVisitor<void> {
   final names = <String>{};
 
@@ -1084,7 +1024,7 @@ class _CtorCollector extends RecursiveAstVisitor<void> {
 }
 
 /// 组件文件的业务 import → lib 相对 dart 路径列表。
-/// 相对导入优先；package: 跳过 dart:/flutter 与注解包（ui_component）。
+/// 相对导入优先；package: 跳过 dart:/flutter 与注解包（ui_component / generator）。
 List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
   final slash = sourcePath.lastIndexOf('/');
   final dir = slash >= 0 ? sourcePath.substring(0, slash + 1) : '';
@@ -1095,6 +1035,7 @@ List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
     // 精确匹配：'package:flutter/' 才是 SDK 包，'package:flutter_hot/' 是业务包
     if (uri.startsWith('package:flutter/') ||
         uri.startsWith('package:ui_component/') ||
+        uri.startsWith('package:ui_component_generator/') ||
         uri.startsWith('dart:')) {
       continue;
     }
@@ -1150,11 +1091,13 @@ String? _resolveImportProduct(CompilationUnit unit, String sourcePath) {
     if (libRel == null || !libRel.endsWith('.dart')) continue;
     return 'assets/components/${libRel.substring(0, libRel.length - '.dart'.length)}.component.js';
   }
-  // 第二轮：package: 导入（跳过 dart:/flutter）
+  // 第二轮：package: 导入（跳过 dart:/flutter 与注解/生成器包）
   for (final d in imports) {
     final uri = d.uri.stringValue;
     if (uri == null || !uri.startsWith('package:') ||
-        uri.startsWith('package:flutter/')) {
+        uri.startsWith('package:flutter/') ||
+        uri.startsWith('package:ui_component/') ||
+        uri.startsWith('package:ui_component_generator/')) {
       continue;
     }
     // package:<项目名>/<lib 下路径> → 取 '/' 之后部分
@@ -1196,7 +1139,8 @@ String? _relativeToLib(String uri, String dir) {
 // build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
 // ---------------------------------------------------------------------------
 
-(Map<String, dynamic>, Set<String>) _translateBuildTree(
+(Map<String, dynamic>, Set<String>, List<Map<String, dynamic>>)
+      _translateBuildTree(
   MethodDeclaration buildMethod,
   Map<String, String> propByField,
   Map<String, String> actionByMethod,
@@ -1217,7 +1161,7 @@ String? _relativeToLib(String uri, String dir) {
     importResolver: importResolver,
     singletons: singletons,
   );
-  return (ctx.translate(e), {...ctx.dependencies});
+  return (ctx.translate(e), {...ctx.dependencies}, ctx.builderTrees);
 }
 
 // ---------------------------------------------------------------------------
@@ -1230,24 +1174,28 @@ String _renderJs(
   WidgetTranslatorRegistry registry,
   String? Function(String component) importResolver, {
   SingletonResolver? singletons,
-  List<ClassDeclaration> sameFileSingletons = const [],
+  List<ClassInfo> sameFileSingletonInfos = const [],
 }) {
-  // 模型分两类：
-  //  - 同文件模型（sourcePath == 当前组件文件）：产物内直接 class 定义（inline），
-  //    组件内直接引用（与 Dart 源文件里同文件使用一致，不 export）；
-  //  - 跨文件模型（lib/model/ 等 import 文件）：import 该文件的 .model.js 产物，
-  //    模型全局共享一份（export class），运行时模块加载器按相对路径加载。
-  final allModels = <String, _ModelDef>{};
-  final inlineModels = <String, _ModelDef>{};
+  // 统一类表按「同文件 inline / 跨文件 import」分组渲染：
+  //  - 同文件模型（sourceFile == 当前组件文件）→ 产物内 inline class（不 export，
+  //    与 Dart 源文件里同文件使用一致）；
+  //  - 跨文件模型（lib/model/ 等 import 文件）→ import 该文件的 .model.js 产物，
+  //    模型全局共享一份（export class），运行时模块加载器按相对路径加载；
+  //  - 同文件静态单例类 → inline const（renderStaticConst）。
+  final allModels = <String, ClassInfo>{};
+  final inlineModels = <String, ClassInfo>{};
   for (final c in components) {
     for (final e in c.models.entries) {
-      if (e.value.sourcePath == sourcePath) {
+      if (e.value.sourceFile == sourcePath) {
         inlineModels[e.key] = e.value;
       } else {
         allModels[e.key] = e.value;
       }
     }
   }
+  final inlineSingletons = <String, ClassInfo>{
+    for (final s in sameFileSingletonInfos) s.name: s,
+  };
 
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
@@ -1266,7 +1214,7 @@ String _renderJs(
     b.writeln("import { $cls } from '$rel';");
   }
   for (final m in allModels.values) {
-    final abs = _modelProductPath(m.sourcePath);
+    final abs = _modelProductPath(m.sourceFile);
     final rel = _relativeProduct(ownProduct, abs);
     b.writeln("import { ${m.name} } from '$rel';");
   }
@@ -1289,30 +1237,33 @@ String _renderJs(
     }
   }
 
-  // 同文件模型：inline class（不 export，本产物内共享）
+  // 同文件模型：inline class（不 export，本产物内共享）。统一由
+  // class_translator.renderClassDecl 翻译（含字段/方法/getter/extends
+  // NotifierBase），与跨文件模型、模型产物共用同一处理器。
   for (final m in inlineModels.values) {
     b
       ..writeln()
       ..writeln('// 模型 ${m.name}（同文件，仅本产物内可见）')
-      ..writeln(_modelJsClass(m));
+      ..writeln(renderClassDecl(m, const {}, exported: false));
   }
 
   // 同文件 static 单例类：inline const（与 Dart 语义一致，产物内共享，不 import）
-  if (sameFileSingletons.isNotEmpty) {
+  if (inlineSingletons.isNotEmpty) {
     final ctx = WidgetTranslateContext(
       registry: registry,
       propByField: const {},
       actionByMethod: const {},
       sourcePath: sourcePath,
     );
-    for (final clazz in sameFileSingletons) {
-      final entries = _singletonEntries(clazz, ctx);
+    for (final cls in inlineSingletons.values) {
       b
         ..writeln()
-        ..writeln('// 同文件静态单例类 ${clazz.name.lexeme}（仅本产物内可见）')
-        ..writeln('const ${clazz.name.lexeme} = {')
-        ..writeln('  ${entries.join(',\n  ')}')
-        ..writeln('};');
+        ..writeln('// 同文件静态单例类 ${cls.name}（仅本产物内可见）')
+        ..writeln(renderStaticConst(
+          cls,
+          valueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
+          exported: false,
+        ));
     }
   }
 
@@ -1348,49 +1299,34 @@ String _renderJs(
     );
     b.writeln('      return ${ctx.renderJs(c.tree, 2)};');
     b.writeln('  }');
+    // ListenableBuilder 的 builder 闭包子树 → 方法 `_lbBuilderN()`。
+    // 运行时时模型 notify 后重新调用本方法拿到最新子树（含已求值的
+    // this._model.n），做「仅此节点」的局部重建。
+    for (var i = 0; i < c.builders.length; i++) {
+      b.writeln('  _lbBuilder$i() {');
+      b.writeln('      return ${ctx.renderJs(c.builders[i], 2)};');
+      b.writeln('  }');
+    }
     b.writeln('}');
   }
   b.writeln();
   return b.toString();
 }
 
-/// 模型 JS class（含缩进，供同文件 inline 与 .model.js 产物复用）。
-String _modelJsClass(_ModelDef m) {
-  final b = StringBuffer()
-    ..writeln('class ${m.name} {')
-    ..writeln('  constructor(args) {');
-  for (final f in m.fields) {
-    b.writeln(
-      '    this.$f = (args && args.$f !== undefined) ? args.$f : undefined;',
-    );
-  }
-  b
-    ..writeln('  }')
-    ..writeln('}');
-  return b.toString();
-}
-
-/// 收集模型文件（lib/model/）中全部可导出的类（非私有、非抽象）。
-List<_ModelDef> _collectModelDecls(CompilationUnit unit) {
-  final out = <_ModelDef>[];
+/// 收集模型文件（lib/model/）中全部可导出的类（非私有、非抽象），
+/// 统一经 classInfoOf 提取为 ClassInfo（与组件产物同处理器，见 class_translator）。
+List<ClassInfo> _collectModelDecls(CompilationUnit unit) {
+  final out = <ClassInfo>[];
   for (final decl in unit.declarations.whereType<ClassDeclaration>()) {
     final name = decl.name.lexeme;
     if (name.startsWith('_')) continue;
-    final fields = <String>[];
-    for (final m in decl.members) {
-      if (m is FieldDeclaration && !m.isStatic) {
-        for (final v in m.fields.variables) {
-          fields.add(v.name.lexeme);
-        }
-      }
-    }
-    out.add(_ModelDef(name, fields, ''));
+    out.add(classInfoOf(decl, ''));
   }
   return out;
 }
 
 /// 模型产物渲染：export class（ES module，运行时加载器收集导出名）。
-String _renderModelJs(List<_ModelDef> models) {
+String _renderModelJs(List<ClassInfo> models) {
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
     ..writeln('// 模型模块：由 ui_component_generator 生成')
@@ -1399,7 +1335,7 @@ String _renderModelJs(List<_ModelDef> models) {
   for (final m in models) {
     b
       ..writeln('// 模型 ${m.name}')
-      ..writeln('export ${_modelJsClass(m)}');
+      ..writeln(renderClassDecl(m, const {}, exported: true));
   }
   return b.toString();
 }
@@ -1493,20 +1429,6 @@ String _singletonFieldValue(Expression? init, WidgetTranslateContext ctx) {
   );
 }
 
-/// 单例类全部「名字: JS值」项（含私有 static 字段跳过；任一字段求值失败即抛）。
-List<String> _singletonEntries(ClassDeclaration clazz, WidgetTranslateContext ctx) {
-  final entries = <String>[];
-  for (final m in clazz.members) {
-    if (m is! FieldDeclaration || !m.isStatic) continue;
-    for (final v in m.fields.variables) {
-      final vName = v.name.lexeme;
-      if (vName.startsWith('_')) continue;
-      entries.add('$vName: ${_singletonFieldValue(v.initializer, ctx)}');
-    }
-  }
-  return entries;
-}
-
 /// Js单引号字符串字面量。
 String _singletonString(String s) {
   final escaped = s
@@ -1520,7 +1442,7 @@ String _singletonString(String s) {
 
 /// 独立单例产物渲染（无组件文件时用）：`export const PanelColors = { ... };`。
 String _renderSingletonJs(
-  List<ClassDeclaration> classes,
+  List<ClassInfo> classes,
   String sourcePath,
   WidgetTranslatorRegistry registry,
 ) {
@@ -1535,14 +1457,15 @@ String _renderSingletonJs(
     actionByMethod: const {},
     sourcePath: sourcePath,
   );
-  for (final clazz in classes) {
-    final name = clazz.name.lexeme;
-    final entries = _singletonEntries(clazz, ctx);
+  for (final cls in classes) {
     b
-      ..writeln('export const $name = {')
-      ..writeln('  ${entries.join(',\n  ')}')
-      ..writeln('};')
-      ..writeln();
+      ..writeln()
+      ..writeln('// 静态单例类 ${cls.name}')
+      ..writeln(renderStaticConst(
+        cls,
+        valueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
+        exported: true,
+      ));
   }
   return b.toString();
 }

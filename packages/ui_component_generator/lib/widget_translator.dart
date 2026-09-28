@@ -59,6 +59,11 @@ class WidgetTranslateContext {
   /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
   final Set<String> dependencies = {};
 
+  /// ListenableBuilder 等「builder 闭包」翻译：闭包返回的子树抽到组件方法
+  /// `_lbBuilderN()`，运行时时模型 notify 后重新调用拿到最新子树做局部重建。
+  /// 收集顺序即 `_lbBuilder${index}` 命名序号。
+  final List<Map<String, dynamic>> builderTrees = [];
+
   WidgetTranslateContext({
     required this.registry,
     required this.propByField,
@@ -227,6 +232,11 @@ class WidgetTranslateContext {
         }
       }
       return parts.isEmpty ? '""' : parts.join(' + ');
+    }
+    // `${_model.n}` / `_model.n` 无 `?.` 时解析为 PrefixedIdentifier
+    // （其是 Identifier 的子类，必须先于此判断，避免落入 propOf）。
+    if (e is PrefixedIdentifier) {
+      return '${jsDataExpr(e.prefix)}.${e.identifier.name}';
     }
     if (e is Identifier) return 'this.${propOf(e)}';
     if (e is PropertyAccess && e.target != null) {

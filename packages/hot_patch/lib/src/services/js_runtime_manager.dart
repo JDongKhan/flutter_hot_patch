@@ -203,7 +203,16 @@ class JsRuntimeManager {
       // 不能直接 `x || {}`）；var 提升保证同脚本内后续语句可见。
       _runtime.evaluate(
         "if (typeof __modules === 'undefined') { var __modules = {}; } "
-        "if (typeof __instances === 'undefined') { var __instances = {}; }",
+        "if (typeof __instances === 'undefined') { var __instances = {}; } "
+        // ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
+        // extends ChangeNotifier` 共用，notifyListeners 触发订阅回调
+        // （ListenableBuilder 局部重建用到）。
+        "function ChangeNotifier(){ this._listeners = []; }"
+        "ChangeNotifier.prototype.addListener = function(f){ this._listeners.push(f); };"
+        "ChangeNotifier.prototype.removeListener = function(f){"
+        "  var i = this._listeners.indexOf(f); if (i >= 0) this._listeners.splice(i, 1); };"
+        "ChangeNotifier.prototype.notifyListeners = function(){"
+        "  this._listeners.slice().forEach(function(f){ f(); }); };",
       );
       _moduleTableInited = true;
     }
