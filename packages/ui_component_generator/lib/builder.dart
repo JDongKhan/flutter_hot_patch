@@ -295,8 +295,10 @@ Set<String> _candidateClassNames(
   final names = collector.names;
   for (final member in hostClass.members) {
     if (member is FieldDeclaration && !member.isStatic) {
-      final t = _eraseType(member.fields.type?.toSource() ?? 'dynamic');
-      if (!_isBasicType(t) && t.isNotEmpty) names.add(t);
+      for (final v in member.fields.variables) {
+        final t = _eraseType(_fieldTypeName(member, v));
+        if (!_isBasicType(t) && t.isNotEmpty) names.add(t);
+      }
     }
   }
   return names;
@@ -311,6 +313,25 @@ Map<String, ClassInfo> _usedClasses(
       for (final n in candidates)
         if (index.containsKey(n)) n: index[n]!,
     };
+
+/// 字段类型：优先显式类型注解；无注解时从初始化器推断
+/// （`final _model = CounterModel();` 在无 resolution 解析下 type 为 null，
+/// 会退化成 dynamic 被当基础类型，需从构造名推回 CounterModel）。
+String _fieldTypeName(FieldDeclaration member, VariableDeclaration variable) {
+  final t = member.fields.type?.toSource();
+  if (t != null && t.isNotEmpty) return t;
+  final init = variable.initializer;
+  if (init is InstanceCreationExpression) {
+    return init.constructorName.type.name2.lexeme;
+  }
+  if (init is MethodInvocation &&
+      init.target == null &&
+      init.typeArguments == null) {
+    final n = init.methodName.name;
+    if (n.isNotEmpty && n[0] == n[0].toUpperCase()) return n;
+  }
+  return 'dynamic';
+}
 
 /// 去除可空 / 泛型：`User?` → `User`，`List<User>` → `User`。
 String _eraseType(String type) {
@@ -426,7 +447,7 @@ _Component _parseComponent(
     if (member is FieldDeclaration) {
       for (final variable in member.fields.variables) {
         final fieldName = variable.name.lexeme;
-        final typeName = member.fields.type?.toSource() ?? 'dynamic';
+        final typeName = _fieldTypeName(member, variable);
         if (member.isStatic) continue;
         final erased = _eraseType(typeName);
         final isBasic = _isBasicType(typeName);
@@ -598,7 +619,7 @@ _Component _parseNestedComponent(
     if (member is FieldDeclaration) {
       for (final variable in member.fields.variables) {
         final fieldName = variable.name.lexeme;
-        final typeName = member.fields.type?.toSource() ?? 'dynamic';
+        final typeName = _fieldTypeName(member, variable);
         if (member.isStatic) continue;
         final erased = _eraseType(typeName);
         final isBasic = _isBasicType(typeName);

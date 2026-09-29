@@ -4,6 +4,8 @@ import 'package:hot_patch/hot_patch.dart';
 import 'components/banner_component.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
+import 'components/listenable_demo.dart';
+import 'components/notifier_component.dart';
 import 'components/stateless_component.dart';
 
 void main() => runApp(const HotDemoApp());
@@ -109,6 +111,28 @@ class DemoListPage extends StatelessWidget {
           // 非私有组件（LabeledDivider）运行时注入原生 widget：
           // hot_patch 包不 import 业务类，由业务方在这里注册
           nativeComponents: {'LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? '')},
+        ),
+      ),
+    ),
+    _DemoEntry(
+      'ListenableDemo · 原生 vs JS 热更',
+      'ChangeNotifier + ListenableBuilder 局部重建（同文件共享模型）',
+      _CompareTest(
+        native: ListenableDemo(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/listenable_demo.component.js',
+          component: 'ListenableDemo',
+        ),
+      ),
+    ),
+    _DemoEntry(
+      'NotifierCard · 原生 vs JS 热更',
+      'ChangeNotifier + ListenableBuilder：模型逻辑热更，notify 局部重建',
+      _CompareTest(
+        native: NotifierCard(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/notifier_component.component.js',
+          component: 'NotifierCard',
         ),
       ),
     ),
