@@ -23,9 +23,7 @@ TextStyle textStyleFromJson(Map<String, dynamic>? json) {
     wordSpacing: (json['wordSpacing'] as num?)?.toDouble(),
     height: (json['height'] as num?)?.toDouble(),
     fontFamily: json['fontFamily'] as String?,
-    fontFamilyFallback: (json['fontFamilyFallback'] as List?)
-        ?.map((x) => x.toString())
-        .toList(),
+    fontFamilyFallback: (json['fontFamilyFallback'] as List?)?.map((x) => x.toString()).toList(),
     backgroundColor: colorFromJson(json['backgroundColor']),
     decoration: textDecorationFromJson(json['decoration']),
     decorationColor: colorFromJson(json['decorationColor']),
@@ -113,6 +111,7 @@ Size? sizeFromJson(Object? v) {
     if (x is num) return x.toDouble();
     return double.tryParse('$x');
   }
+
   final w = d(v['width']);
   final h = d(v['height']);
   if (w == null || h == null) return null;
@@ -124,10 +123,7 @@ BorderSide? borderSideFromJson(Object? v) {
   if (v is! Map) return null;
   final c = colorFromJson(v['color']);
   final w = (v['width'] as num?)?.toDouble();
-  return BorderSide(
-    color: c ?? const Color(0xFF000000),
-    width: w ?? 1.0,
-  );
+  return BorderSide(color: c ?? const Color(0xFF000000), width: w ?? 1.0);
 }
 
 /// JSON → ButtonStyle（null / 空 Map → null，表示用 widget 默认样式）。
@@ -139,22 +135,16 @@ ButtonStyle? buttonStyleFromJson(Map<String, dynamic>? json) {
   final icon = colorFromJson(json['iconColor']);
   final shadow = colorFromJson(json['shadowColor']);
   return ButtonStyle(
-    backgroundColor:
-        bg == null ? null : WidgetStatePropertyAll<Color?>(bg),
-    foregroundColor:
-        fg == null ? null : WidgetStatePropertyAll<Color?>(fg),
-    overlayColor:
-        overlay == null ? null : WidgetStatePropertyAll<Color?>(overlay),
+    backgroundColor: bg == null ? null : WidgetStatePropertyAll<Color?>(bg),
+    foregroundColor: fg == null ? null : WidgetStatePropertyAll<Color?>(fg),
+    overlayColor: overlay == null ? null : WidgetStatePropertyAll<Color?>(overlay),
     iconColor: icon == null ? null : WidgetStatePropertyAll<Color?>(icon),
-    shadowColor:
-        shadow == null ? null : WidgetStatePropertyAll<Color?>(shadow),
+    shadowColor: shadow == null ? null : WidgetStatePropertyAll<Color?>(shadow),
     elevation: json['elevation'] == null
         ? null
-        : WidgetStatePropertyAll<double?>(
-            (json['elevation'] as num).toDouble()),
+        : WidgetStatePropertyAll<double?>((json['elevation'] as num).toDouble()),
     padding: json['padding'] is Map
-        ? WidgetStatePropertyAll<EdgeInsets?>(
-            edgeInsetsFromJson((json['padding'] as Map).cast<String, dynamic>()))
+        ? WidgetStatePropertyAll<EdgeInsets?>(edgeInsetsFromJson((json['padding'] as Map).cast<String, dynamic>()))
         : null,
     minimumSize: sizeFromJson(json['minimumSize']) == null
         ? null
@@ -166,8 +156,7 @@ ButtonStyle? buttonStyleFromJson(Map<String, dynamic>? json) {
         ? null
         : WidgetStatePropertyAll<BorderSide?>(borderSideFromJson(json['side'])),
     textStyle: json['textStyle'] is Map
-        ? WidgetStatePropertyAll<TextStyle?>(
-            textStyleFromJson((json['textStyle'] as Map).cast<String, dynamic>()))
+        ? WidgetStatePropertyAll<TextStyle?>(textStyleFromJson((json['textStyle'] as Map).cast<String, dynamic>()))
         : null,
     alignment: alignmentFromJson(json['alignment']),
     visualDensity: visualDensityFromJson(json['visualDensity']),
@@ -181,11 +170,10 @@ FontWeight? fontWeightFromJson(Object? v) {
   return switch (v) {
     'bold' => FontWeight.bold,
     'normal' => FontWeight.normal,
-    _ when v.startsWith('w') && v.length == 4 =>
-      FontWeight.values.firstWhere(
-        (w) => w.value == int.parse(v.substring(1)),
-        orElse: () => FontWeight.normal,
-      ),
+    _ when v.startsWith('w') && v.length == 4 => FontWeight.values.firstWhere(
+      (w) => w.value == int.parse(v.substring(1)),
+      orElse: () => FontWeight.normal,
+    ),
     _ => null,
   };
 }
@@ -201,8 +189,53 @@ FontStyle? fontStyleFromJson(Object? v) {
 }
 
 /// JSON → Color（'#RRGGBB' / '#AARRGGBB'）。
+/// Flutter 官方 MaterialColor 常量表（'@Colors.blue.shade100' 标记解析用）。
+final Map<String, MaterialColor> _materialColors = {
+  'red': Colors.red,
+  'pink': Colors.pink,
+  'purple': Colors.purple,
+  'deepPurple': Colors.deepPurple,
+  'indigo': Colors.indigo,
+  'blue': Colors.blue,
+  'lightBlue': Colors.lightBlue,
+  'cyan': Colors.cyan,
+  'teal': Colors.teal,
+  'green': Colors.green,
+  'lightGreen': Colors.lightGreen,
+  'lime': Colors.lime,
+  'yellow': Colors.yellow,
+  'amber': Colors.amber,
+  'orange': Colors.orange,
+  'deepOrange': Colors.deepOrange,
+  'brown': Colors.brown,
+  'grey': Colors.grey,
+  'blueGrey': Colors.blueGrey,
+};
+
+Color? _materialShade(String path) {
+  final parts = path.split('.');
+  // path: 'Colors.blue.shade100'
+  if (parts.length != 3 || parts[0] != 'Colors') return null;
+  final base = _materialColors[parts[1]];
+  if (base == null) return null;
+  return switch (parts[2]) {
+    'shade50' => base.shade50,
+    'shade100' => base.shade100,
+    'shade200' => base.shade200,
+    'shade300' => base.shade300,
+    'shade400' => base.shade400,
+    'shade500' => base.shade500,
+    'shade600' => base.shade600,
+    'shade700' => base.shade700,
+    'shade800' => base.shade800,
+    'shade900' => base.shade900,
+    _ => null,
+  };
+}
+
 Color? colorFromJson(Object? v) {
   if (v is! String) return null;
+  if (v.startsWith('@')) return _materialShade(v.substring(1));
   if (!v.startsWith('#') || v.length != 7 && v.length != 9) return null;
   final hex = v.substring(1);
   final value = int.tryParse(hex, radix: 16);
@@ -223,6 +256,7 @@ EdgeInsets edgeInsetsFromJson(Map<String, dynamic>? json) {
     if (x is num) return x.toDouble();
     return double.tryParse('$x') ?? 0;
   }
+
   return EdgeInsets.only(
     left: v(json['left']),
     top: v(json['top']),
@@ -325,9 +359,7 @@ BoxDecoration? boxDecorationFromJson(Map<String, dynamic>? json) {
   return BoxDecoration(
     color: colorFromJson(json['color']),
     borderRadius: borderRadiusFromJson(
-      json['borderRadius'] is Map
-          ? (json['borderRadius'] as Map).cast<String, dynamic>()
-          : null,
+      json['borderRadius'] is Map ? (json['borderRadius'] as Map).cast<String, dynamic>() : null,
     ),
   );
 }

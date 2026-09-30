@@ -21,6 +21,9 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const TextButtonTranslator())
     ..register(const OutlinedButtonTranslator())
     ..register(const SizedBoxTranslator())
+    ..register(const ChipTranslator())
+    ..register(const ListTileTranslator())
+    ..register(const ClipRRectTranslator())
     // 布局
     ..register(const ScaffoldTranslator())
     ..register(const AppBarTranslator())
@@ -335,7 +338,16 @@ class SizedBoxTranslator extends WidgetTranslator {
     final w = _numLiteral(ctx.namedArg(node.args, 'width'));
     if (h != null) props['height'] = h;
     if (w != null) props['width'] = w;
-    return {'type': ctx.jsString('SizedBox'), 'props': props};
+    // SizedBox(height:.., width:.., child:..)：child 进 children，运行时渲染
+    final child = ctx.namedArg(node.args, 'child');
+    final children = <Object?>[
+      if (child != null) ctx.translate(child),
+    ];
+    return {
+      'type': ctx.jsString('SizedBox'),
+      'props': props,
+      if (children.isNotEmpty) 'children': children,
+    };
   }
 
   static String? _numLiteral(Expression? e) {

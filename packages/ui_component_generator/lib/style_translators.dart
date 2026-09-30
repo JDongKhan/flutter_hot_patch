@@ -215,6 +215,11 @@ String? translateColor(Expression e, WidgetTranslateContext ctx) {
     if (hex != null) return "'#$hex'";
     return null;
   }
+  // Colors.blue.shade100 等 MaterialColor 变体：产物放 '@Colors.blue.shade100'
+  // 标记，运行时用 Flutter 官方 Colors 常量解析（值永不漂移）。
+  if (owner != null && owner.startsWith('Colors.')) {
+    return "'@$owner.$name'";
+  }
   // 跨文件静态单例类字段引用（PanelColors.background）→ JS 表达式
   final singleton = ctx.singletons?.staticRef(e);
   if (singleton != null) return singleton;

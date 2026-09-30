@@ -274,6 +274,7 @@ export class LayoutDetail {
                 {
                   "type": "Container",
                   "props": {
+                    "color": '@Colors.blue.shade100',
                     "padding": {
                       "left": 8.0,
                       "top": 8.0,
@@ -308,6 +309,7 @@ export class LayoutDetail {
                 {
                   "type": "Container",
                   "props": {
+                    "color": '@Colors.green.shade100',
                     "padding": {
                       "left": 8.0,
                       "top": 8.0,
@@ -351,6 +353,7 @@ export class LayoutDetail {
             {
               "type": "Container",
               "props": {
+                "color": '@Colors.amber.shade100',
                 "padding": {
                   "left": 12.0,
                   "top": 12.0,
@@ -384,6 +387,7 @@ export class LayoutDetail {
             {
               "type": "Container",
               "props": {
+                "color": '@Colors.purple.shade50',
                 "padding": {
                   "left": 8.0,
                   "top": 8.0,
@@ -447,7 +451,50 @@ export class LayoutDetail {
           "type": "SizedBox",
           "props": {
             "height": 100
-          }
+          },
+          "children": [
+            {
+              "type": "Stack",
+              "children": [
+                {
+                  "type": "Container",
+                  "props": {
+                    "color": '@Colors.grey.shade200'
+                  }
+                },
+                {
+                  "type": "Positioned",
+                  "props": {
+                    "left": 12,
+                    "top": 12
+                  },
+                  "children": [
+                    {
+                      "type": "Text",
+                      "props": {
+                        "data": "TL"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "Positioned",
+                  "props": {
+                    "right": 12,
+                    "bottom": 12
+                  },
+                  "children": [
+                    {
+                      "type": "Text",
+                      "props": {
+                        "data": "BR"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         },
         {
           "type": "SizedBox",
@@ -472,7 +519,7 @@ export class LayoutDetail {
             "runSpacing": 8
           },
           "children": [
-            ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [{ "type": "Component", "props": { "component": "Chip" } }]); } return out; })()
+            ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [{ "type": "Chip", "props": { "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' } }]); } return out; })()
           ]
         }
       ]
@@ -501,9 +548,16 @@ export class ImageDetail {
           }
         },
         {
-          "type": "Component",
+          "type": "ClipRRect",
           "props": {
-            "component": "ClipRRect"
+            "child": {
+              "type": "Image",
+              "props": {
+                "source": "https://picsum.photos/seed/hotpatch/400/160",
+                "height": 120,
+                "fit": "cover"
+              }
+            }
           }
         },
         {
@@ -710,6 +764,7 @@ export class ContainerDetail {
           "props": {
             "width": 120,
             "height": 48,
+            "color": '@Colors.blueGrey.shade100',
             "alignment": "center"
           },
           "children": [
@@ -750,7 +805,74 @@ export class ScrollDetail {
           "type": "SizedBox",
           "props": {
             "height": 160
-          }
+          },
+          "children": [
+            {
+              "type": "ListView",
+              "children": [
+                {
+                  "type": "ListTile",
+                  "props": {
+                    "title": "item A",
+                    "leading": {
+                      "type": "Icon",
+                      "props": {
+                        "icon": "list"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "ListTile",
+                  "props": {
+                    "title": "item B",
+                    "leading": {
+                      "type": "Icon",
+                      "props": {
+                        "icon": "list"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "ListTile",
+                  "props": {
+                    "title": "item C",
+                    "leading": {
+                      "type": "Icon",
+                      "props": {
+                        "icon": "list"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "ListTile",
+                  "props": {
+                    "title": "item D",
+                    "leading": {
+                      "type": "Icon",
+                      "props": {
+                        "icon": "list"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "ListTile",
+                  "props": {
+                    "title": "item E",
+                    "leading": {
+                      "type": "Icon",
+                      "props": {
+                        "icon": "list"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         },
         {
           "type": "SizedBox",
@@ -777,7 +899,7 @@ export class ScrollDetail {
             {
               "type": "Row",
               "children": [
-                ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [{ "type": "Padding", "props": { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, "children": [ { "type": "Component", "props": { "component": "Chip" } } ] }]); } return out; })()
+                ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [{ "type": "Padding", "props": { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, "children": [ { "type": "Chip", "props": { "label": "横向 " + i } } ] }]); } return out; })()
               ]
             }
           ]

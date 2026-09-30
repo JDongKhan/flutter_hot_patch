@@ -261,6 +261,7 @@ class SizedBoxRenderer extends WidgetRenderer {
     return SizedBox(
       height: h is num ? h.toDouble() : (h == null ? null : double.tryParse('$h')),
       width: w is num ? w.toDouble() : (w == null ? null : double.tryParse('$w')),
+      child: node.children.isEmpty ? null : ctx.render(node.children.first),
     );
   }
 }
