@@ -54,6 +54,35 @@ export class HelloCard {
           }
         },
         {
+          "type": "Text",
+          "props": {
+            "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
+          }
+        },
+        ...((this._count > 0) ? [{
+      "type": "Text",
+      "props": {
+        "data": "当前 count 是正数（if 条件渲染）"
+      }
+    }] : []),
+        ...((this._user != null) ? [{
+      "type": "Text",
+      "props": {
+        "data": "用户已加载（if + else 渲染）"
+      }
+    }] : [{
+      "type": "Text",
+      "props": {
+        "data": "用户未加载，点 Load User"
+      }
+    }]),
+        ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [{
+      "type": "Text",
+      "props": {
+        "data": "循环第 " + i + " 个"
+      }
+    }]); } return out; })(),
+        {
           "type": "Row",
           "children": [
             {

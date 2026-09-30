@@ -77,6 +77,17 @@ class _HelloCardState extends State<HelloCard> {
         Text('count = $_count'),
         Text('user: ${_user?.name ?? '加载中'}'),
         Text('age: ${_user?.age ?? '-'}'),
+        // 三目运算：状态驱动的文案（count > 3 切换提示）
+        Text(_count > 3 ? 'count 已经大于 3，点 Reset 归零' : 'count 还小，继续 +1'),
+        // collection-if：按状态条件插入节点（无 else）
+        if (_count > 0) Text('当前 count 是正数（if 条件渲染）'),
+        // collection-if + else：用户加载与否显示不同节点
+        if (_user != null)
+          Text('用户已加载（if + else 渲染）')
+        else
+          Text('用户未加载，点 Load User'),
+        // collection-for：循环渲染（循环变量 i 直接参与插值）
+        for (var i = 0; i < 3; i++) Text('循环第 $i 个'),
         Row(
           children: [
             ElevatedButton(

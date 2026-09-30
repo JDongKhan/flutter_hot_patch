@@ -226,7 +226,7 @@ class _Component {
   final String name;
   final List<_Prop> props;
   final List<_Action> actions;
-  final Map<String, dynamic> tree; // 节点树（data 以 JS 表达式字符串内嵌）
+  final Object? tree; // 节点树（Map = 节点；String = 根 build 三目/if 的 JS 表达式）
 
   /// 构造参数（私有嵌套组件）：`this.x = args && args.x !== undefined ? args.x : def`。
   final List<String> ctorArgs;
@@ -240,7 +240,7 @@ class _Component {
 
   /// ListenableBuilder 抽出的 builder 子树（译成组件方法 `_lbBuilderN()`，
   /// 运行时时模型 notify 后重新调用拿最新子树做局部重建）。
-  final List<Map<String, dynamic>> builders;
+  final List<Object?> builders; // 节点或 JS 表达式（三目）
 
   const _Component(this.name, this.props, this.actions, this.tree,
       {this.ctorArgs = const [],
@@ -1160,7 +1160,7 @@ String? _relativeToLib(String uri, String dir) {
 // build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
 // ---------------------------------------------------------------------------
 
-(Map<String, dynamic>, Set<String>, List<Map<String, dynamic>>)
+(Object?, Set<String>, List<Object?>)
       _translateBuildTree(
   MethodDeclaration buildMethod,
   Map<String, String> propByField,

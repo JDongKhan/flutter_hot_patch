@@ -62,7 +62,7 @@ class WidgetTranslateContext {
   /// ListenableBuilder 等「builder 闭包」翻译：闭包返回的子树抽到组件方法
   /// `_lbBuilderN()`，运行时时模型 notify 后重新调用拿到最新子树做局部重建。
   /// 收集顺序即 `_lbBuilder${index}` 命名序号。
-  final List<Map<String, dynamic>> builderTrees = [];
+  final List<Object?> builderTrees = []; // Map = 节点；String = 三目 JS 表达式
 
   WidgetTranslateContext({
     required this.registry,
@@ -81,7 +81,16 @@ class WidgetTranslateContext {
   // -------------------------------------------------------------------------
 
   /// 把 build() 里的一个 widget 表达式翻译成 JSON 描述（schema 与 JS 共用）。
-  Map<String, dynamic> translate(Expression e) {
+  ///
+  /// 返回 Map = 普通节点；返回 String = JS 表达式（widget 位置三目
+  /// `cond ? A() : B()` → `(condJs ? {...A} : {...B})`），jsLiteral 原样嵌入。
+  Object? translate(Expression e) {
+    if (e is ConditionalExpression) {
+      final cond = jsDataExpr(e.condition);
+      final thenJs = _collectionArrayJs(e.thenExpression);
+      final elseJs = _collectionArrayJs(e.elseExpression);
+      return '($cond ? $thenJs : $elseJs)';
+    }
     final node = _toNode(e);
     final translator = registry.lookup(node.type);
     if (translator != null) return translator.toJson(node, this);
@@ -99,6 +108,81 @@ class WidgetTranslateContext {
         '${registry.registeredTypes.join('/')}）');
   }
 
+  /// children 列表项翻译：Expression → 节点 Map；IfElement / ForElement →
+  /// JS spread 表达式字符串（`...(cond ? [a] : [b])` / `...(function(){...})()`），
+  /// 渲染层 jsLiteral 对 String 原样嵌入，产物仍是纯 JSON 树 + 条件/循环展开。
+  Object? translateElement(CollectionElement e) {
+    if (e is Expression) return translate(e);
+    if (e is IfElement) return '...${_ifAsArray(e)}';
+    if (e is ForElement) return '...${_forAsArray(e)}';
+    throw FormatException('不支持的 collection element: ${e.toSource()}');
+  }
+
+  /// if/for 作为「元素数组」出现（数组字面量里嵌套、三目分支等），
+  /// 不带 spread 前缀：`(cond ? [a] : [b])`。
+  String _ifAsArray(IfElement e) {
+    final cond = jsDataExpr(e.expression);
+    final thenJs = _collectionArrayJs(e.thenElement);
+    final elseJs = e.elseElement == null ? '[]' : _collectionArrayJs(e.elseElement!);
+    return '($cond ? $thenJs : $elseJs)';
+  }
+
+  /// for 循环 → JS IIFE 展开数组（循环变量 var 提升在 IIFE 内，body 直接引用）。
+  String _forAsArray(ForElement e) {
+    final parts = e.forLoopParts;
+    if (parts is! ForParts) {
+      throw FormatException('不支持的 for 循环形式: ${e.toSource()}');
+    }
+    String head;
+    if (parts is ForPartsWithDeclarations) {
+      // 传统 for：`for (var i = 0; i < n; i++)` → JS 同构
+      final vars = parts.variables.variables.toList();
+      // 循环变量先入作用域：condition/updaters/body 里引用 i 都走 loopVars
+      for (final v in vars) {
+        pushLoopVar(v.name.lexeme);
+      }
+      final varList = vars.isEmpty
+          ? ''
+          : 'var ${vars.map((v) => '${v.name.lexeme} = ${v.initializer == null ? '0' : jsDataExpr(v.initializer!)}').join(', ')}';
+      final condJs = parts.condition == null ? '' : jsDataExpr(parts.condition!);
+      final incJs = parts.updaters.isEmpty
+          ? ''
+          : parts.updaters.map((u) => jsDataExpr(u)).join(', ');
+      head = 'for ($varList; $condJs; $incJs)';
+    } else if (parts is ForPartsWithExpression) {
+      // 无声明：`for (i = 0; i < n; i++)`（变量需为已收集的状态字段）
+      final initJs = parts.initialization == null ? '' : jsDataExpr(parts.initialization!);
+      final condJs = parts.condition == null ? '' : jsDataExpr(parts.condition!);
+      final incJs = parts.updaters.isEmpty
+          ? ''
+          : parts.updaters.map((u) => jsDataExpr(u)).join(', ');
+      head = 'for ($initJs; $condJs; $incJs)';
+    } else {
+      throw FormatException('暂不支持该 for 形式（for-in 后续补充）: ${e.toSource()}');
+    }
+    final bodyJs = _collectionArrayJs(e.body);
+    // 清除循环变量作用域（翻译完成后，body 内已引用 i）
+    popLoopVars();
+    return '(function(){ var out = []; $head { out.push.apply(out, $bodyJs); } return out; })()';
+  }
+
+  /// collection element → JS 数组字面量（元素数组语义；嵌套 if/for 递归展开）。
+  String _collectionArrayJs(CollectionElement e) {
+    if (e is Expression) {
+      final t = translate(e);
+      if (t is String) return '[$t]';
+      return '[${renderJs(t, 2)}]';
+    }
+    if (e is IfElement) return _ifAsArray(e);
+    if (e is ForElement) return _forAsArray(e);
+    throw FormatException('不支持的 collection element: ${e.toSource()}');
+  }
+
+  /// 循环变量作用域：for 循环变量（i 等）在 body 翻译期间遮蔽状态字段查表。
+  final Set<String> _loopVars = {};
+  void pushLoopVar(String name) => _loopVars.add(name);
+  void popLoopVars() => _loopVars.clear();
+
   static bool _isUpperCamel(String name) =>
       name.isNotEmpty && name[0] == name[0].toUpperCase();
 
@@ -106,7 +190,11 @@ class WidgetTranslateContext {
   ///
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
   /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
-  String renderJs(Map<String, dynamic> json, int depth) {
+  String renderJs(Object? json, int depth) {
+    if (json is String) return json; // 三目/条件表达式（JS 源码字符串）
+    if (json is! Map<String, dynamic>) {
+      throw FormatException('无法渲染的节点: $json');
+    }
     final type = _semanticType(json['type']);
     final translator = registry.lookupJson(type);
     if (translator == null) {
@@ -169,9 +257,12 @@ class WidgetTranslateContext {
     return null;
   }
 
-  List<Expression> listArg(List<Expression> args, String name, String ctor) {
+  /// children 等列表参数：保留全部 collection elements。
+  /// 注意返回 [CollectionElement]（Expression / IfElement / ForElement），
+  /// 由 [translateElement] 统一翻译（if/for 展开成 JS spread 表达式）。
+  List<CollectionElement> listArg(List<Expression> args, String name, String ctor) {
     final e = namedArg(args, name);
-    if (e is ListLiteral) return e.elements.whereType<Expression>().toList();
+    if (e is ListLiteral) return e.elements.toList();
     throw FormatException('$ctor 缺少 $name 列表');
   }
 
@@ -205,6 +296,7 @@ class WidgetTranslateContext {
   String propExpr(Expression e) {
     if (e is Identifier) return 'this.${propOf(e)}';
     if (e is BooleanLiteral) return e.value ? 'true' : 'false';
+    if (e is NullLiteral) return 'null';
     if (e is IntegerLiteral) return '${e.value}';
     if (e is DoubleLiteral) return '${e.value}';
     if (e is SimpleStringLiteral) return jsString(e.value);
@@ -219,6 +311,10 @@ class WidgetTranslateContext {
   /// ?? 合并、+ 拼接、括号。
   String jsDataExpr(Expression e) {
     if (e is SimpleStringLiteral) return jsString(e.value);
+    if (e is IntegerLiteral && e.value != null) return '${e.value}';
+    if (e is DoubleLiteral) return '${e.value}';
+    if (e is BooleanLiteral) return e.value ? 'true' : 'false';
+    if (e is NullLiteral) return 'null';
     if (e is AdjacentStrings) {
       return e.strings.map(jsDataExpr).join(' + ');
     }
@@ -238,7 +334,11 @@ class WidgetTranslateContext {
     if (e is PrefixedIdentifier) {
       return '${jsDataExpr(e.prefix)}.${e.identifier.name}';
     }
-    if (e is Identifier) return 'this.${propOf(e)}';
+    if (e is Identifier) {
+      // 循环变量（for 循环体里 i 等）直接引用，不查状态字段表
+      if (_loopVars.contains(e.name)) return e.name;
+      return 'this.${propOf(e)}';
+    }
     if (e is PropertyAccess && e.target != null) {
       final target = jsDataExpr(e.target!);
       final name = e.propertyName.name;
@@ -251,12 +351,27 @@ class WidgetTranslateContext {
     if (e is BinaryExpression && e.operator.lexeme == '??') {
       return '(${jsDataExpr(e.leftOperand)} ?? ${jsDataExpr(e.rightOperand)})';
     }
-    if (e is BinaryExpression && e.operator.lexeme == '+') {
-      return '(${jsDataExpr(e.leftOperand)} + ${jsDataExpr(e.rightOperand)})';
+    if (e is BinaryExpression) {
+      final op = e.operator.lexeme;
+      // 比较 / 逻辑 / 算术运算符：一比一翻译（条件、循环、三目都用得到）
+      if (const <String>{'>', '<', '>=', '<=', '==', '!=', '&&', '||', '+'}
+          .contains(op)) {
+        return '(${jsDataExpr(e.leftOperand)} $op ${jsDataExpr(e.rightOperand)})';
+      }
+    }
+    if (e is ConditionalExpression) {
+      return '(${jsDataExpr(e.condition)} ? ${jsDataExpr(e.thenExpression)} : ${jsDataExpr(e.elseExpression)})';
+    }
+    // 自增/自减：for 更新子（i++ / ++i / i-- / --i）
+    if (e is PostfixExpression) {
+      return '(${jsDataExpr(e.operand)}${e.operator.lexeme})';
+    }
+    if (e is PrefixExpression) {
+      return '(${e.operator.lexeme}${jsDataExpr(e.operand)})';
     }
     if (e is ParenthesizedExpression) return '(${jsDataExpr(e.expression)})';
     throw FormatException(
-        '文本内容只支持字符串/插值/状态字段/模型属性，不支持 ${e.toSource()}');
+        '文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
   }
 
   /// 方法 tear-off 或 `() => _inc()` 内部的方法调用表达式

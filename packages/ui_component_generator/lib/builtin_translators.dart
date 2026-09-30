@@ -72,7 +72,7 @@ abstract class _AxisLayoutTranslator extends WidgetTranslator {
       'type': ctx.jsString(node.type),
       if (props.isNotEmpty) 'props': props,
       'children': [
-        for (final c in children) ctx.translate(c),
+        for (final c in children) ctx.translateElement(c),
       ],
     };
   }
@@ -251,7 +251,7 @@ class ScaffoldTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children = <Map<String, dynamic>>[];
+    final children = <Object?>[];
     final appBar = ctx.namedArg(node.args, 'appBar');
     if (appBar != null) children.add(ctx.translate(appBar));
     final body = ctx.namedArg(node.args, 'body');
@@ -269,7 +269,7 @@ class AppBarTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children = <Map<String, dynamic>>[];
+    final children = <Object?>[];
     final title = ctx.namedArg(node.args, 'title');
     if (title != null) children.add(ctx.translate(title));
     return {'type': ctx.jsString('AppBar'), 'children': children};
@@ -390,7 +390,7 @@ class StackTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('Stack'),
       if (props.isNotEmpty) 'props': props,
-      'children': [for (final c in children) ctx.translate(c)],
+      'children': [for (final c in children) ctx.translateElement(c)],
     };
   }
 }
@@ -517,7 +517,7 @@ class ListViewTranslator extends WidgetTranslator {
     final children = ctx.listArg(node.args, 'children', node.type);
     return {
       'type': ctx.jsString('ListView'),
-      'children': [for (final c in children) ctx.translate(c)],
+      'children': [for (final c in children) ctx.translateElement(c)],
     };
   }
 }
@@ -564,7 +564,7 @@ class WrapTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('Wrap'),
       if (props.isNotEmpty) 'props': props,
-      'children': [for (final c in children) ctx.translate(c)],
+      'children': [for (final c in children) ctx.translateElement(c)],
     };
   }
 }
