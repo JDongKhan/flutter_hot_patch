@@ -368,6 +368,23 @@ String? _boolExpr(Expression e) {
 // 布局/内容类 toJson（Container/Padding/Align/Stack/Icon/Image 等复用）
 // ---------------------------------------------------------------------------
 
+/// TextScaler.noScaling → '"noScaling"'；TextScaler.linear(2.0) → {'linear': '2.0'}。
+Object? textScalerToJson(Expression e) {
+  final (ctor, args) = _ctorOfExpr(e);
+  if (ctor == 'linear') {
+    final pos = args.whereType<Expression>().toList();
+    if (pos.isNotEmpty) {
+      final n = _numExpr(pos.first);
+      if (n != null) return {'linear': n};
+    }
+    return null;
+  }
+  // TextScaler.noScaling：静态引用
+  final (owner, name) = _staticRef(e);
+  if (owner == 'TextScaler' && name == 'noScaling') return '"noScaling"';
+  return null;
+}
+
 /// EdgeInsets.all/symmetric/only/fromLTRB → JSON {left,top,right,bottom}。
 /// 返回 null 表示不可翻译/未提供。
 Map<String, dynamic>? edgeInsetsToJson(

@@ -189,6 +189,16 @@ FontStyle? fontStyleFromJson(Object? v) {
 }
 
 /// JSON → Color（'#RRGGBB' / '#AARRGGBB'）。
+/// TextScaler.noScaling / TextScaler.linear(f)（生成器 textScalerToJson 对称）。
+TextScaler? textScalerFromJson(Object? v) {
+  if (v is String && v == 'noScaling') return TextScaler.noScaling;
+  if (v is Map && v['linear'] != null) {
+    final f = double.tryParse('${v['linear']}');
+    if (f != null) return TextScaler.linear(f);
+  }
+  return null;
+}
+
 /// Flutter 官方 MaterialColor 常量表（'@Colors.blue.shade100' 标记解析用）。
 final Map<String, MaterialColor> _materialColors = {
   'red': Colors.red,

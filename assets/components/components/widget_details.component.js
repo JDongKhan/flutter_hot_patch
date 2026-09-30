@@ -58,6 +58,21 @@ export class TextDetail {
         {
           "type": "Text",
           "props": {
+            "data": "textScaler.linear(1.6) 放大",
+            "textScaler": {
+              "linear": 1.6
+            }
+          }
+        },
+        {
+          "type": "SizedBox",
+          "props": {
+            "height": 6
+          }
+        },
+        {
+          "type": "Text",
+          "props": {
             "data": "textAlign 居中",
             "style": {
               "decoration": "underline",

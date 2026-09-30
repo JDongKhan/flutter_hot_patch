@@ -118,7 +118,12 @@ class TextTranslator extends WidgetTranslator {
     final style = textStyleToJson(ctx.namedArg(node.args, 'style'), ctx);
     if (style != null) props['style'] = style;
     _numProp(ctx, node, props, 'maxLines');
-    _numProp(ctx, node, props, 'textScaleFactor');
+    // textScaleFactor 已废弃（Flutter 3.16+ 用 textScaler），不支持废弃 API
+    final scaler = ctx.namedArg(node.args, 'textScaler');
+    if (scaler != null) {
+      final t = textScalerToJson(scaler);
+      if (t != null) props['textScaler'] = t;
+    }
     _enumProp(ctx, node, props, 'overflow', 'TextOverflow');
     _enumProp(ctx, node, props, 'textAlign', 'TextAlign');
     _enumProp(ctx, node, props, 'textDirection', 'TextDirection');
@@ -134,7 +139,7 @@ class TextTranslator extends WidgetTranslator {
     return {'type': ctx.jsString('Text'), 'props': props};
   }
 
-  /// 数字属性（maxLines/minLines/textScaleFactor）：字面量或状态字段表达式。
+  /// 数字属性（maxLines）：字面量或状态字段表达式。
   static void _numProp(WidgetTranslateContext ctx, WidgetNode node,
       Map<String, dynamic> props, String name) {
     final a = ctx.namedArg(node.args, name);
@@ -296,8 +301,7 @@ class ListTileTranslator extends WidgetTranslator {
     if (trailing != null) props['trailing'] = ctx.translate(trailing);
     final onTap = ctx.namedArg(node.args, 'onTap');
     if (onTap != null) {
-      final e = ctx.eventExpr(onTap);
-      if (e != null) props['event'] = ctx.jsString(e);
+      props['event'] = ctx.jsString(ctx.eventExpr(onTap));
     }
     return {'type': ctx.jsString('ListTile'), 'props': props};
   }

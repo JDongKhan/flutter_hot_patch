@@ -126,7 +126,6 @@ class TextRenderer extends WidgetRenderer {
   @override
   Widget render(RenderNode node, WidgetRenderContext ctx) {
     int? i(Object? v) => int.tryParse('$v');
-    double? d(Object? v) => double.tryParse('$v');
     final w = Text(
       node.props['data']?.toString() ?? '',
       textAlign: textAlignFromJson(node.props['textAlign']),
@@ -136,7 +135,7 @@ class TextRenderer extends WidgetRenderer {
           ? null
           : node.props['softWrap'].toString() == 'true',
       maxLines: i(node.props['maxLines']),
-      textScaleFactor: d(node.props['textScaleFactor']),
+      textScaler: textScalerFromJson(node.props['textScaler']),
       semanticsLabel: node.props['semanticsLabel']?.toString(),
       style: textStyleFromJson(
         node.props['style'] is Map
@@ -242,7 +241,7 @@ class ClipRRectRenderer extends WidgetRenderer {
     return ClipRRect(
       borderRadius: radius == null
           ? BorderRadius.zero
-          : BorderRadius.all(Radius.circular(radius!)),
+          : BorderRadius.all(Radius.circular(radius)),
       child: child,
     );
   }

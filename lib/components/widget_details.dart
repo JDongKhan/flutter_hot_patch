@@ -53,6 +53,11 @@ class _TextDetailState extends State<TextDetail> {
         ),
         const SizedBox(height: 6),
         Text(
+          'textScaler.linear(1.6) 放大',
+          textScaler: TextScaler.linear(1.6),
+        ),
+        const SizedBox(height: 6),
+        Text(
           'textAlign 居中',
           textAlign: TextAlign.center,
           style: const TextStyle(
