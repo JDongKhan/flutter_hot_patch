@@ -24,7 +24,9 @@ class WidgetNode {
   final List<Expression> positionalArgs;
   final Map<String, Expression> namedArgs;
 
-  WidgetNode(this.type, this.args)
+  final String? factory;
+
+  WidgetNode(this.type, this.args, {this.factory})
       : positionalArgs = [
           for (final a in args)
             if (a is! NamedExpression) a,
@@ -472,7 +474,11 @@ class WidgetTranslateContext {
     if (ctor == null) {
       throw FormatException('不支持的 UI 表达式: ${e.toSource()}');
     }
-    return WidgetNode(ctor, args);
+    return WidgetNode(
+      ctor,
+      args,
+      factory: e is MethodInvocation ? e.methodName.name : null,
+    );
   }
 }
 

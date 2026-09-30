@@ -465,6 +465,32 @@ export class LayoutDetail {
                 {
                   "type": "Positioned",
                   "props": {
+                    "left": 0,
+                    "top": 0,
+                    "right": 0,
+                    "bottom": 0
+                  },
+                  "children": [
+                    {
+                      "type": "Center",
+                      "children": [
+                        {
+                          "type": "Text",
+                          "props": {
+                            "data": "FILL",
+                            "style": {
+                              "color": '#FFFFFF',
+                              "fontWeight": "bold"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "Positioned",
+                  "props": {
                     "left": 12,
                     "top": 12
                   },

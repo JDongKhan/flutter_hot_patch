@@ -534,12 +534,27 @@ class PositionedTranslator extends WidgetTranslator {
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     if (child == null) throw FormatException('Positioned 缺少 child');
     final props = <String, dynamic>{};
-    for (final name in ['left', 'top', 'right', 'bottom', 'width', 'height']) {
-      final v = ctx.namedArg(node.args, name);
-      if (v is IntegerLiteral && v.value != null) {
-        props[name] = '${v.value}';
-      } else if (v is DoubleLiteral) {
-        props[name] = '${v.value}';
+    if (node.factory == 'fill') {
+      // Positioned.fill({left=0, top=0, right=0, bottom=0})：四边默认全 0
+      // 撑满 Stack，显式参数覆盖；展开后与普通 Positioned 等效（运行时零改动）。
+      for (final name in ['left', 'top', 'right', 'bottom']) {
+        final v = ctx.namedArg(node.args, name);
+        if (v is IntegerLiteral && v.value != null) {
+          props[name] = '${v.value}';
+        } else if (v is DoubleLiteral) {
+          props[name] = '${v.value}';
+        } else {
+          props[name] = '0';
+        }
+      }
+    } else {
+      for (final name in ['left', 'top', 'right', 'bottom', 'width', 'height']) {
+        final v = ctx.namedArg(node.args, name);
+        if (v is IntegerLiteral && v.value != null) {
+          props[name] = '${v.value}';
+        } else if (v is DoubleLiteral) {
+          props[name] = '${v.value}';
+        }
       }
     }
     return {

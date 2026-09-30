@@ -220,6 +220,17 @@ class _LayoutDetailState extends State<LayoutDetail> {
           child: Stack(
             children: [
               Container(color: Colors.grey.shade200),
+              Positioned.fill(
+                child: Center(
+                  child: Text(
+                    'FILL',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
               const Positioned(left: 12, top: 12, child: Text('TL')),
               const Positioned(right: 12, bottom: 12, child: Text('BR')),
             ],
