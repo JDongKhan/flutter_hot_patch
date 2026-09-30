@@ -24,6 +24,9 @@ void registerBuiltinRenderers(WidgetRendererRegistry registry) {
     ..register(const TextRenderer())
     ..register(const ButtonRenderer())
     ..register(const SizedBoxRenderer())
+    ..register(const ChipRenderer())
+    ..register(const ListTileRenderer())
+    ..register(const ClipRRectRenderer())
     // 布局
     ..register(const CenterRenderer())
     ..register(const PaddingRenderer())
@@ -122,9 +125,19 @@ class TextRenderer extends WidgetRenderer {
 
   @override
   Widget render(RenderNode node, WidgetRenderContext ctx) {
+    int? i(Object? v) => int.tryParse('$v');
+    double? d(Object? v) => double.tryParse('$v');
     final w = Text(
       node.props['data']?.toString() ?? '',
-      textAlign: TextAlign.center,
+      textAlign: textAlignFromJson(node.props['textAlign']),
+      textDirection: textDirectionFromJson(node.props['textDirection']),
+      overflow: overflowFromJson(node.props['overflow']),
+      softWrap: node.props['softWrap'] == null
+          ? null
+          : node.props['softWrap'].toString() == 'true',
+      maxLines: i(node.props['maxLines']),
+      textScaleFactor: d(node.props['textScaleFactor']),
+      semanticsLabel: node.props['semanticsLabel']?.toString(),
       style: textStyleFromJson(
         node.props['style'] is Map
             ? (node.props['style'] as Map).cast<String, dynamic>()
@@ -152,7 +165,9 @@ class ButtonRenderer extends WidgetRenderer {
           : null,
     );
     final label = Text(node.props['label']?.toString() ?? '');
-    void onPressed() => ctx.onEvent(event);
+    // event 为空（onPressed: null）→ 禁用态按钮
+    void Function()? onPressed =
+        event.isEmpty ? null : () => ctx.onEvent(event);
     final w = switch (node.props['kind']?.toString()) {
       'text' => TextButton(onPressed: onPressed, style: style, child: label),
       'outlined' =>
@@ -167,6 +182,72 @@ class ButtonRenderer extends WidgetRenderer {
 
 
 /// SizedBox：布局空隙，无 UI 内容（JS 树里翻译为占位尺寸）。
+/// Chip：标签 + 背景色（无交互）。
+class ChipRenderer extends WidgetRenderer {
+  const ChipRenderer();
+
+  @override
+  String get type => 'Chip';
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    return Chip(
+      label: Text(node.props['label']?.toString() ?? ''),
+      backgroundColor: colorFromJson(node.props['backgroundColor']),
+    );
+  }
+}
+
+/// ListTile：列表条目（title/subtitle/leading/trailing/event）。
+class ListTileRenderer extends WidgetRenderer {
+  const ListTileRenderer();
+
+  @override
+  String get type => 'ListTile';
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    final event = node.props['event']?.toString() ?? '';
+    Widget? sub(Object? v) {
+      final rn = RenderNode.of(v);
+      return rn == null ? null : ctx.render(rn);
+    }
+
+    return ListTile(
+      title: Text(node.props['title']?.toString() ?? ''),
+      subtitle: node.props['subtitle'] == null
+          ? null
+          : Text(node.props['subtitle'].toString()),
+      leading: sub(node.props['leading']),
+      trailing: sub(node.props['trailing']),
+      onTap: event.isEmpty ? null : () => ctx.onEvent(event),
+    );
+  }
+}
+
+/// ClipRRect：圆角裁剪（borderRadius + child）。
+/// child 由生成器放进 props['child']（单节点 Map），不经过 children 列表。
+class ClipRRectRenderer extends WidgetRenderer {
+  const ClipRRectRenderer();
+
+  @override
+  String get type => 'ClipRRect';
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    double? r(Object? v) => v is num ? v.toDouble() : double.tryParse('$v');
+    final radius = r(node.props['borderRadius']);
+    final childNode = RenderNode.of(node.props['child']);
+    final child = childNode == null ? null : ctx.render(childNode);
+    return ClipRRect(
+      borderRadius: radius == null
+          ? BorderRadius.zero
+          : BorderRadius.all(Radius.circular(radius!)),
+      child: child,
+    );
+  }
+}
+
 class SizedBoxRenderer extends WidgetRenderer {
   const SizedBoxRenderer();
 

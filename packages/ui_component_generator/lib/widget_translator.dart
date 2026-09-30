@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'style_translators.dart';
 
 // ===========================================================================
 // widget → JSON 翻译的策略扩展点
@@ -202,6 +203,9 @@ class WidgetTranslateContext {
     final type = _semanticType(json['type']);
     final translator = registry.lookupJson(type);
     if (translator == null) {
+      // Component 兜底节点（未注册的第三方/自定义 widget）：原样序列化，
+      // 运行时由 ComponentRenderer 处理（JS 递归 / nativeComponents 注入 / 占位）。
+      if (type == 'Component') return jsLiteral(json, depth);
       throw FormatException('未知节点类型: $type');
     }
     return translator.renderJs(json, depth, this);
@@ -292,6 +296,34 @@ class WidgetTranslateContext {
       if (inner is MethodInvocation) return eventOf(inner.methodName.name);
     }
     throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
+  }
+
+  /// 颜色表达式（Color(0x..)/Colors.x/静态引用/三目）→ JS 表达式字符串。
+  /// 委托给 style_translators 的顶层 [colorExpr]（生成器与样式翻译共用一套逻辑）。
+  String? colorExpr(Expression e) => translateColor(e, this);
+
+  /// BorderRadius.all(Radius.circular(n)) / BorderRadius.circular(n) → 数字字符串。
+  String? borderRadiusExpr(Expression e) {
+    final (ctor, args) = ctorOf(e);
+    if (ctor != 'all' && ctor != 'circular') return null;
+    for (final a in args) {
+      final n = _radiusNum(a);
+      if (n != null) return n;
+    }
+    return null;
+  }
+
+  String? _radiusNum(Expression e) {
+    if (e is IntegerLiteral && e.value != null) return '${e.value}';
+    if (e is DoubleLiteral) return '${e.value}';
+    final (ctor, args) = ctorOf(e);
+    if (ctor == 'circular') {
+      for (final a in args) {
+        if (a is IntegerLiteral && a.value != null) return '${a.value}';
+        if (a is DoubleLiteral) return '${a.value}';
+      }
+    }
+    return null;
   }
 
   /// 状态字段引用或字面量 → JS 表达式

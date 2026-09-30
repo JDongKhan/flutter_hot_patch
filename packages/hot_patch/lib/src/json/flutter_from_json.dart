@@ -20,8 +20,113 @@ TextStyle textStyleFromJson(Map<String, dynamic>? json) {
     color: colorFromJson(json['color']),
     fontStyle: fontStyleFromJson(json['fontStyle']),
     letterSpacing: (json['letterSpacing'] as num?)?.toDouble(),
+    wordSpacing: (json['wordSpacing'] as num?)?.toDouble(),
     height: (json['height'] as num?)?.toDouble(),
     fontFamily: json['fontFamily'] as String?,
+    fontFamilyFallback: (json['fontFamilyFallback'] as List?)
+        ?.map((x) => x.toString())
+        .toList(),
+    backgroundColor: colorFromJson(json['backgroundColor']),
+    decoration: textDecorationFromJson(json['decoration']),
+    decorationColor: colorFromJson(json['decorationColor']),
+    decorationStyle: textDecorationStyleFromJson(json['decorationStyle']),
+    decorationThickness: (json['decorationThickness'] as num?)?.toDouble(),
+  );
+}
+
+/// JSON → TextDecoration（'none'/'underline'/'overline'/'lineThrough'）。
+TextDecoration? textDecorationFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'none' => TextDecoration.none,
+    'underline' => TextDecoration.underline,
+    'overline' => TextDecoration.overline,
+    'lineThrough' => TextDecoration.lineThrough,
+    _ => null,
+  };
+}
+
+/// JSON → TextDecorationStyle（'solid'/'double'/'dotted'/'dashed'/'wavy'）。
+TextDecorationStyle? textDecorationStyleFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'solid' => TextDecorationStyle.solid,
+    'double' => TextDecorationStyle.double,
+    'dotted' => TextDecorationStyle.dotted,
+    'dashed' => TextDecorationStyle.dashed,
+    'wavy' => TextDecorationStyle.wavy,
+    _ => null,
+  };
+}
+
+/// JSON → TextAlign（'left'/'right'/'center'/'justify'/'start'/'end'）。
+TextAlign? textAlignFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'left' => TextAlign.left,
+    'right' => TextAlign.right,
+    'center' => TextAlign.center,
+    'justify' => TextAlign.justify,
+    'start' => TextAlign.start,
+    'end' => TextAlign.end,
+    _ => null,
+  };
+}
+
+/// JSON → TextOverflow（'clip'/'fade'/'ellipsis'/'visible'）。
+TextOverflow? overflowFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'clip' => TextOverflow.clip,
+    'fade' => TextOverflow.fade,
+    'ellipsis' => TextOverflow.ellipsis,
+    'visible' => TextOverflow.visible,
+    _ => null,
+  };
+}
+
+/// JSON → TextDirection（'ltr'/'rtl'）。
+TextDirection? textDirectionFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'ltr' => TextDirection.ltr,
+    'rtl' => TextDirection.rtl,
+    _ => null,
+  };
+}
+
+/// JSON → VisualDensity（'compact'/'standard'/'comfortable'）。
+VisualDensity? visualDensityFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'compact' => VisualDensity.compact,
+    'standard' => VisualDensity.standard,
+    'comfortable' => VisualDensity.comfortable,
+    _ => null,
+  };
+}
+
+/// JSON → Size（{'width':..,'height':..}）。
+Size? sizeFromJson(Object? v) {
+  if (v is! Map) return null;
+  double? d(Object? x) {
+    if (x is num) return x.toDouble();
+    return double.tryParse('$x');
+  }
+  final w = d(v['width']);
+  final h = d(v['height']);
+  if (w == null || h == null) return null;
+  return Size(w, h);
+}
+
+/// JSON → BorderSide（{'color':..,'width':..}）。
+BorderSide? borderSideFromJson(Object? v) {
+  if (v is! Map) return null;
+  final c = colorFromJson(v['color']);
+  final w = (v['width'] as num?)?.toDouble();
+  return BorderSide(
+    color: c ?? const Color(0xFF000000),
+    width: w ?? 1.0,
   );
 }
 
@@ -30,11 +135,43 @@ ButtonStyle? buttonStyleFromJson(Map<String, dynamic>? json) {
   if (json == null || json.isEmpty) return null;
   final bg = colorFromJson(json['backgroundColor']);
   final fg = colorFromJson(json['foregroundColor']);
+  final overlay = colorFromJson(json['overlayColor']);
+  final icon = colorFromJson(json['iconColor']);
+  final shadow = colorFromJson(json['shadowColor']);
   return ButtonStyle(
     backgroundColor:
         bg == null ? null : WidgetStatePropertyAll<Color?>(bg),
     foregroundColor:
         fg == null ? null : WidgetStatePropertyAll<Color?>(fg),
+    overlayColor:
+        overlay == null ? null : WidgetStatePropertyAll<Color?>(overlay),
+    iconColor: icon == null ? null : WidgetStatePropertyAll<Color?>(icon),
+    shadowColor:
+        shadow == null ? null : WidgetStatePropertyAll<Color?>(shadow),
+    elevation: json['elevation'] == null
+        ? null
+        : WidgetStatePropertyAll<double?>(
+            (json['elevation'] as num).toDouble()),
+    padding: json['padding'] is Map
+        ? WidgetStatePropertyAll<EdgeInsets?>(
+            edgeInsetsFromJson((json['padding'] as Map).cast<String, dynamic>()))
+        : null,
+    minimumSize: sizeFromJson(json['minimumSize']) == null
+        ? null
+        : WidgetStatePropertyAll<Size?>(sizeFromJson(json['minimumSize'])),
+    maximumSize: sizeFromJson(json['maximumSize']) == null
+        ? null
+        : WidgetStatePropertyAll<Size?>(sizeFromJson(json['maximumSize'])),
+    side: borderSideFromJson(json['side']) == null
+        ? null
+        : WidgetStatePropertyAll<BorderSide?>(borderSideFromJson(json['side'])),
+    textStyle: json['textStyle'] is Map
+        ? WidgetStatePropertyAll<TextStyle?>(
+            textStyleFromJson((json['textStyle'] as Map).cast<String, dynamic>()))
+        : null,
+    alignment: alignmentFromJson(json['alignment']),
+    visualDensity: visualDensityFromJson(json['visualDensity']),
+    enableFeedback: json['enableFeedback'] as bool?,
   );
 }
 

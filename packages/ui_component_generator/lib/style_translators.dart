@@ -40,7 +40,7 @@ Map<String, dynamic>? textStyleToJson(
         final s = _fontStyleExpr(v);
         if (s != null) map['fontStyle'] = s;
       case 'color':
-        final c = _colorExpr(v, ctx);
+        final c = translateColor(v, ctx);
         if (c != null) map['color'] = c;
       case 'letterSpacing':
         final n = _numExpr(v);
@@ -50,6 +50,27 @@ Map<String, dynamic>? textStyleToJson(
         if (n != null) map['height'] = n;
       case 'fontFamily':
         if (v is SimpleStringLiteral) map['fontFamily'] = ctx.jsString(v.value);
+      case 'wordSpacing':
+        final n = _numExpr(v);
+        if (n != null) map['wordSpacing'] = n;
+      case 'backgroundColor':
+        final c = translateColor(v, ctx);
+        if (c != null) map['backgroundColor'] = c;
+      case 'decoration':
+        final d = enumName(v, 'TextDecoration');
+        if (d != null) map['decoration'] = ctx.jsString(d);
+      case 'decorationColor':
+        final c = translateColor(v, ctx);
+        if (c != null) map['decorationColor'] = c;
+      case 'decorationStyle':
+        final d = enumName(v, 'TextDecorationStyle');
+        if (d != null) map['decorationStyle'] = ctx.jsString(d);
+      case 'decorationThickness':
+        final n = _numExpr(v);
+        if (n != null) map['decorationThickness'] = n;
+      case 'fontFamilyFallback':
+        final list = _stringListExpr(v);
+        if (list != null) map['fontFamilyFallback'] = list;
     }
   }
   return map.isEmpty ? null : map;
@@ -73,11 +94,47 @@ Map<String, dynamic>? buttonStyleToJson(
       final v = a.expression;
       switch (name) {
         case 'backgroundColor':
-          final c = _colorExpr(_unwrapWidgetState(v), ctx);
+          final c = translateColor(_unwrapWidgetState(v), ctx);
           if (c != null) map['backgroundColor'] = c;
         case 'foregroundColor':
-          final c = _colorExpr(_unwrapWidgetState(v), ctx);
+          final c = translateColor(_unwrapWidgetState(v), ctx);
           if (c != null) map['foregroundColor'] = c;
+        case 'overlayColor':
+          final c = translateColor(_unwrapWidgetState(v), ctx);
+          if (c != null) map['overlayColor'] = c;
+        case 'iconColor':
+          final c = translateColor(_unwrapWidgetState(v), ctx);
+          if (c != null) map['iconColor'] = c;
+        case 'shadowColor':
+          final c = translateColor(v, ctx);
+          if (c != null) map['shadowColor'] = c;
+        case 'elevation':
+          final n = _numExpr(v);
+          if (n != null) map['elevation'] = n;
+        case 'padding':
+          final e = edgeInsetsToJson(v, ctx);
+          if (e != null) map['padding'] = e;
+        case 'minimumSize':
+          final sz = _sizeExpr(v);
+          if (sz != null) map['minimumSize'] = sz;
+        case 'maximumSize':
+          final sz = _sizeExpr(v);
+          if (sz != null) map['maximumSize'] = sz;
+        case 'side':
+          final sd = _borderSideExpr(v, ctx);
+          if (sd != null) map['side'] = sd;
+        case 'textStyle':
+          final t = textStyleToJson(v, ctx);
+          if (t != null) map['textStyle'] = t;
+        case 'alignment':
+          final al = enumName(v, 'Alignment');
+          if (al != null) map['alignment'] = ctx.jsString(al);
+        case 'visualDensity':
+          final d = enumName(v, 'VisualDensity');
+          if (d != null) map['visualDensity'] = ctx.jsString(d);
+        case 'enableFeedback':
+          final b = _boolExpr(v);
+          if (b != null) map['enableFeedback'] = b;
       }
     }
   }
@@ -123,7 +180,7 @@ String? _fontStyleExpr(Expression e) {
 /// Colors.red → '#F44336'；Color(0xFF112233) → '#112233'；Colors.white/black。
 /// 跨文件静态单例类字段引用（PanelColors.background）→ JS 表达式
 /// 'PanelColors.background'（不带引号，jsLiteral 原样输出）。
-String? _colorExpr(Expression e, WidgetTranslateContext ctx) {
+String? translateColor(Expression e, WidgetTranslateContext ctx) {
   // Color(0xFF...)
   final (ctor, args) = _ctorOfExpr(e);
   if (ctor == 'Color') {
@@ -164,8 +221,8 @@ String? _colorExpr(Expression e, WidgetTranslateContext ctx) {
   // 三目（isAdult ? PanelColors.adult : PanelColors.background）→ JS 三目表达式
   if (e is ConditionalExpression) {
     final condJs = ctx.jsDataExpr(e.condition);
-    final thenJs = _colorExpr(e.thenExpression, ctx);
-    final elseJs = _colorExpr(e.elseExpression, ctx);
+    final thenJs = translateColor(e.thenExpression, ctx);
+    final elseJs = translateColor(e.elseExpression, ctx);
     if (thenJs == null || elseJs == null) return null;
     return '($condJs ? $thenJs : $elseJs)';
   }
@@ -238,6 +295,69 @@ const Map<String, String> _materialColors = {
   'black': '000000',
   'white': 'FFFFFF',
 };
+
+// ---------------------------------------------------------------------------
+// 新增辅助 toJson（ButtonStyle 扩展 / Text 属性扩展共用）
+// ---------------------------------------------------------------------------
+
+/// 静态枚举引用：`TextOverflow.ellipsis` → 'ellipsis'；非该枚举返回 null。
+String? enumName(Expression e, String owner) {
+  final (o, name) = _staticRef(e);
+  if (o != owner || name == null) return null;
+  return name;
+}
+
+/// Size(w, h) → {'width': '..', 'height': '..'}（叶子值 = JS 数字表达式）。
+Map<String, dynamic>? _sizeExpr(Expression e) {
+  final (ctor, args) = _ctorOfExpr(e);
+  if (ctor != 'Size') return null;
+  final pos = args.whereType<Expression>().toList();
+  if (pos.length < 2) return null;
+  final w = _numExpr(pos[0]);
+  final h = _numExpr(pos[1]);
+  if (w == null || h == null) return null;
+  return {'width': w, 'height': h};
+}
+
+/// BorderSide(color: ..., width: ...) → {'color': c, 'width': n}。
+Map<String, dynamic>? _borderSideExpr(Expression e, WidgetTranslateContext ctx) {
+  final (ctor, args) = _ctorOfExpr(e);
+  if (ctor != 'BorderSide') return null;
+  final map = <String, dynamic>{};
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    final v = a.expression;
+    switch (a.name.label.name) {
+      case 'color':
+        final c = translateColor(v, ctx);
+        if (c != null) map['color'] = c;
+      case 'width':
+        final n = _numExpr(v);
+        if (n != null) map['width'] = n;
+    }
+  }
+  return map.isEmpty ? null : map;
+}
+
+/// 字符串列表（fontFamilyFallback: ['A', 'B']）→ JS 数组表达式。
+String? _stringListExpr(Expression e) {
+  if (e is! ListLiteral) return null;
+  final items = <String>[];
+  for (final el in e.elements) {
+    if (el is SimpleStringLiteral) items.add(_jsQString(el.value));
+  }
+  if (items.isEmpty) return null;
+  return '[${items.join(', ')}]';
+}
+
+/// JS 双引号字符串字面量（列表内联用，无转义处理之外的简化版）。
+String _jsQString(String s) => '"${s.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
+
+/// bool 字面量 → 'true' / 'false'。
+String? _boolExpr(Expression e) {
+  if (e is BooleanLiteral) return e.value ? 'true' : 'false';
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // 布局/内容类 toJson（Container/Padding/Align/Stack/Icon/Image 等复用）
@@ -394,7 +514,7 @@ Map<String, dynamic>? borderRadiusToJson(
 /// 公共包装：widget translator 直接调用；内部实现在 [_colorExpr]。
 String? colorToJson(Expression? expr, WidgetTranslateContext ctx) {
   if (expr == null) return null;
-  return _colorExpr(expr, ctx);
+  return translateColor(expr, ctx);
 }
 
 /// BoxDecoration(color/borderRadius) → JSON。
@@ -410,7 +530,7 @@ Map<String, dynamic>? boxDecorationToJson(
     if (a is! NamedExpression) continue;
     switch (a.name.label.name) {
       case 'color':
-        final c = _colorExpr(a.expression, ctx);
+        final c = translateColor(a.expression, ctx);
         if (c != null) map['color'] = c;
       case 'borderRadius':
         final br = borderRadiusToJson(a.expression, ctx);

@@ -114,7 +114,40 @@ class TextTranslator extends WidgetTranslator {
     // TextStyle(...) → JSON（运行时 textStyleFromJson 还原）
     final style = textStyleToJson(ctx.namedArg(node.args, 'style'), ctx);
     if (style != null) props['style'] = style;
+    _numProp(ctx, node, props, 'maxLines');
+    _numProp(ctx, node, props, 'textScaleFactor');
+    _enumProp(ctx, node, props, 'overflow', 'TextOverflow');
+    _enumProp(ctx, node, props, 'textAlign', 'TextAlign');
+    _enumProp(ctx, node, props, 'textDirection', 'TextDirection');
+    final softWrap = ctx.namedArg(node.args, 'softWrap');
+    if (softWrap != null) {
+      final js = ctx.jsDataExpr(softWrap);
+      if (js != 'null') props['softWrap'] = js;
+    }
+    final semanticsLabel = ctx.namedArg(node.args, 'semanticsLabel');
+    if (semanticsLabel is SimpleStringLiteral) {
+      props['semanticsLabel'] = ctx.jsString(semanticsLabel.value);
+    }
     return {'type': ctx.jsString('Text'), 'props': props};
+  }
+
+  /// 数字属性（maxLines/minLines/textScaleFactor）：字面量或状态字段表达式。
+  static void _numProp(WidgetTranslateContext ctx, WidgetNode node,
+      Map<String, dynamic> props, String name) {
+    final a = ctx.namedArg(node.args, name);
+    if (a == null) return;
+    final js = ctx.jsDataExpr(a);
+    if (js == 'null') return;
+    props[name] = js;
+  }
+
+  /// 枚举属性（overflow/textAlign/textDirection）：`TextOverflow.ellipsis` → 字符串。
+  static void _enumProp(WidgetTranslateContext ctx, WidgetNode node,
+      Map<String, dynamic> props, String name, String owner) {
+    final a = ctx.namedArg(node.args, name);
+    if (a == null) return;
+    final n = enumName(a, owner);
+    if (n != null) props[name] = ctx.jsString(n);
   }
 }
 
@@ -149,6 +182,8 @@ abstract class _ButtonTranslator extends WidgetTranslator {
   }
 
   static String _eventFrom(Expression onPressed, WidgetTranslateContext ctx) {
+    // onPressed: null → 禁用按钮（运行时 event 为空 → onPressed: null）
+    if (onPressed is NullLiteral) return '';
     // 形式一：onPressed: _inc（方法 tear-off）
     if (onPressed is Identifier) {
       return ctx.eventOf(onPressed.name);
@@ -204,6 +239,86 @@ class OutlinedButtonTranslator extends _ButtonTranslator {
 
   @override
   String get kind => 'outlined';
+}
+
+/// Chip：标签（label + backgroundColor），无交互。
+class ChipTranslator extends WidgetTranslator {
+  const ChipTranslator();
+
+  @override
+  String get type => 'Chip';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final label = ctx.namedArg(node.args, 'label');
+    if (label != null) {
+      final (ctor, args) = ctx.ctorOf(label);
+      if (ctor == 'Text') {
+        final data = ctx.namedArg(args, 'data') ?? ctx.positionalArg(args, 0);
+        if (data != null) props['label'] = ctx.jsDataExpr(data);
+      }
+    }
+    final bg = ctx.namedArg(node.args, 'backgroundColor');
+    if (bg != null) {
+      final c = translateColor(bg, ctx);
+      if (c != null) props['backgroundColor'] = c;
+    }
+    return {'type': ctx.jsString('Chip'), 'props': props};
+  }
+}
+
+/// ListTile：列表条目（leading/title/subtitle/trailing/onTap）。
+class ListTileTranslator extends WidgetTranslator {
+  const ListTileTranslator();
+
+  @override
+  String get type => 'ListTile';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    for (final name in ['title', 'subtitle']) {
+      final a = ctx.namedArg(node.args, name);
+      if (a == null) continue;
+      final (ctor, args) = ctx.ctorOf(a);
+      if (ctor == 'Text') {
+        final data = ctx.namedArg(args, 'data') ?? ctx.positionalArg(args, 0);
+        if (data != null) props[name] = ctx.jsDataExpr(data);
+      }
+    }
+    final leading = ctx.namedArg(node.args, 'leading');
+    if (leading != null) props['leading'] = ctx.translate(leading);
+    final trailing = ctx.namedArg(node.args, 'trailing');
+    if (trailing != null) props['trailing'] = ctx.translate(trailing);
+    final onTap = ctx.namedArg(node.args, 'onTap');
+    if (onTap != null) {
+      final e = ctx.eventExpr(onTap);
+      if (e != null) props['event'] = ctx.jsString(e);
+    }
+    return {'type': ctx.jsString('ListTile'), 'props': props};
+  }
+}
+
+/// ClipRRect：圆角裁剪（borderRadius + child）。
+class ClipRRectTranslator extends WidgetTranslator {
+  const ClipRRectTranslator();
+
+  @override
+  String get type => 'ClipRRect';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final radius = ctx.namedArg(node.args, 'borderRadius');
+    if (radius != null) {
+      final r = ctx.borderRadiusExpr(radius);
+      if (r != null) props['borderRadius'] = r;
+    }
+    final child = ctx.namedArg(node.args, 'child');
+    if (child != null) props['child'] = ctx.translate(child);
+    return {'type': ctx.jsString('ClipRRect'), 'props': props};
+  }
 }
 
 /// SizedBox：布局空隙（height/width），无 UI 内容。

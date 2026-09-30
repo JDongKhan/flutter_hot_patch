@@ -7,6 +7,7 @@ import 'components/hello_component.dart';
 import 'components/listenable_demo.dart';
 import 'components/notifier_component.dart';
 import 'components/stateless_component.dart';
+import 'components/widget_showcase.dart';
 
 void main() => runApp(const HotDemoApp());
 
@@ -162,14 +163,9 @@ class DemoListPage extends StatelessWidget {
     ),
     _DemoEntry('BannerCard · 多 runtime 分组', '两组 HotPatchWidget 各自使用业务方创建的独立 runtime，点按钮互不影响', _RuntimeGroupTest()),
     _DemoEntry(
-      'WidgetShowcase · 常用组件',
-      'text/image/container/listview/icon/card/stack/wrap/switch/slider 等（原生 vs JS）',
-      SingleChildScrollView(
-        child: HotPatchWidget(
-          jsAsset: 'assets/components/components/widget_showcase.component.js',
-          component: 'WidgetShowcase',
-        ),
-      ),
+      '常用组件 · 列表',
+      '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）',
+      const WidgetShowcase(),
     ),
   ];
 

@@ -1,329 +1,145 @@
 import 'package:flutter/material.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch/hot_patch.dart';
 
-/// 常用基础组件展示（demo list 页面）：
-/// text / image / container / listview / icon / divider / card / center /
-/// padding / align / stack / positioned / wrap / circleavatar / gesture /
-/// switch / checkbox / slider / expanded 等。
-///
-/// 同一份代码两个身份：
-///   - 原生：直接当正常 StatefulWidget 用；
-///   - JS 热更：@UIComponent 注解 → build_runner 翻译成
-///     widget_showcase.component.js，HotPatchWidget 加载后由 JS 驱动渲染与逻辑。
-@UIComponent('WidgetShowcase')
-class WidgetShowcase extends StatefulWidget {
+import 'widget_details.dart';
+
+/// 常用组件导航列表页（普通页面，无 @UIComponent 注解）：
+/// 分组列出 Flutter 常用组件，点击条目进入对应详情页。
+/// 详情页是 @UIComponent 注解组件（widget_details.dart），同一份代码
+/// 原生可直接用、也可由 HotPatchWidget 加载 JS 产物热更（原生 vs JS 同屏）。
+class WidgetShowcase extends StatelessWidget {
   const WidgetShowcase({super.key});
 
+  static const List<_Group> groups = [
+    _Group('文本展示', [
+      _Entry('Text', '文案 / TextStyle / 截断 / 对齐 / 装饰', 'TextDetail'),
+    ]),
+    _Group('按钮操作', [
+      _Entry('Button', 'Elevated / Text / Outlined + ButtonStyle 全属性', 'ButtonDetail'),
+    ]),
+    _Group('布局', [
+      _Entry('Row / Column / Stack', 'Expanded / Flexible / Wrap / Align / Padding / Center / SizedBox', 'LayoutDetail'),
+    ]),
+    _Group('图片图标', [
+      _Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail'),
+    ]),
+    _Group('容器装饰', [
+      _Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail'),
+    ]),
+    _Group('列表滚动', [
+      _Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail'),
+    ]),
+    _Group('页面骨架', [
+      _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
+    ]),
+  ];
+
   @override
-  State<WidgetShowcase> createState() => _WidgetShowcaseState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('常用组件 · 列表')),
+      body: ListView(
+        children: [
+          for (final g in groups) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Text(
+                g.title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple,
+                ),
+              ),
+            ),
+            for (final e in g.entries)
+              ListTile(
+                leading: const Icon(Icons.widgets_outlined),
+                title: Text(e.title),
+                subtitle: Text(e.subtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => WidgetDetailPage(
+                      component: e.component,
+                      fullPage: e.component == 'ScaffoldDetail',
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
-class _WidgetShowcaseState extends State<WidgetShowcase> {
-  // 全量生成：字段 → JS 属性（一比一，无 __state 包装）
-  int _bumps = 0;
-  bool _on = false;
-  double _slider = 0.3;
-  int _taps = 0;
+class _Group {
+  final String title;
+  final List<_Entry> entries;
+  const _Group(this.title, this.entries);
+}
 
-  // 全量生成：方法 → JS 方法（一比一，方法体原封翻译）
-  void bump() {
-    setState(() => _bumps++);
-  }
+class _Entry {
+  final String title;
+  final String subtitle;
+  final String component;
+  const _Entry(this.title, this.subtitle, this.component);
+}
 
-  void onSwitch(bool v) {
-    setState(() => _on = v);
-  }
+/// 详情容器页：原生组件 ↔ JS 热更版本同屏对比。
+/// 页面级组件（fullPage=true）无法同屏，直接展示 JS 热更版。
+class WidgetDetailPage extends StatelessWidget {
+  const WidgetDetailPage({super.key, required this.component, this.fullPage = false});
 
-  void onSlider(double v) {
-    setState(() => _slider = v);
-  }
+  /// 详情组件名（widget_details.dart 里的 @UIComponent 类名）。
+  final String component;
 
-  void tap() {
-    setState(() => _taps++);
+  /// 页面级组件（Scaffold 等）不比对，直接 JS 热更版全屏展示。
+  final bool fullPage;
+
+  static const String _jsAsset = 'assets/components/components/widget_details.component.js';
+
+  Widget _native() {
+    return switch (component) {
+      'TextDetail' => const TextDetail(),
+      'ButtonDetail' => const ButtonDetail(),
+      'LayoutDetail' => const LayoutDetail(),
+      'ImageDetail' => const ImageDetail(),
+      'ContainerDetail' => const ContainerDetail(),
+      'ScrollDetail' => const ScrollDetail(),
+      'ScaffoldDetail' => const ScaffoldDetail(),
+      _ => const Text('未知组件'),
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'WidgetShowcase · 常用基础组件',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        const Text('来自 JS 热更：bumps = 0 是静态文案，下面用状态插值'),
-        const Divider(),
-        // Text + TextStyle + 状态插值 + 按钮
-        const Text('Text · 文案与 TextStyle'),
-        Text(
-          'Hello 热更组件，bumps = $_bumps',
-          style: const TextStyle(color: Colors.blue, fontSize: 16),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'taps = $_taps（GestureDetector 累计）',
-          style: const TextStyle(color: Colors.green),
-        ),
-        TextButton(onPressed: bump, child: const Text('Bump')),
-        const Divider(),
-        // Image：网络图
-        const Text('Image · 网络图片'),
-        const SizedBox(height: 4),
-        Image.network(
-          'https://picsum.photos/300/120',
-          width: 300,
-          height: 120,
-          fit: BoxFit.cover,
-        ),
-        const Divider(),
-        // Icon / CircleAvatar
-        const Text('Icon / CircleAvatar'),
-        const SizedBox(height: 4),
-        Row(
+    final js = HotPatchWidget(
+      jsAsset: _jsAsset,
+      component: component,
+    );
+    if (fullPage) return js;
+    return Scaffold(
+      appBar: AppBar(title: Text('$component · 原生 vs JS 热更')),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.star, color: Colors.amber, size: 28),
-            const SizedBox(width: 12),
-            const Icon(Icons.home, size: 28),
-            const SizedBox(width: 12),
-            const Icon(Icons.favorite, color: Colors.red, size: 28),
-            const SizedBox(width: 12),
-            const CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.orange,
-              child: Icon(Icons.person, color: Colors.white),
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('原生组件', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: _native()),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 20, 12, 4),
+              child: Text('JS 热更（HotPatchWidget）', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: js),
+            const SizedBox(height: 24),
           ],
         ),
-        const Divider(),
-        // Container：颜色/圆角/Padding
-        const Text('Container · 颜色/圆角/Padding'),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.teal,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Text(
-            '容器内容（teal 圆角）',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-        const Divider(),
-        // Card
-        const Text('Card'),
-        const SizedBox(height: 4),
-        const Card(
-          elevation: 2,
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('卡片内容（elevation=2）'),
-          ),
-        ),
-        const Divider(),
-        // Row + Expanded/Flexible
-        const Text('Row + Expanded / Flexible'),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              flex: 1,
-              child: Container(
-                color: Colors.red,
-                padding: const EdgeInsets.all(8),
-                child: const Text('A', textAlign: TextAlign.center),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              flex: 2,
-              child: Container(
-                color: Colors.blue,
-                padding: const EdgeInsets.all(8),
-                child: const Text('B（flex=2）', textAlign: TextAlign.center),
-              ),
-            ),
-          ],
-        ),
-        const Divider(),
-        // Center / Align
-        const Text('Center / Align'),
-        const SizedBox(height: 4),
-        Center(
-          child: Container(
-            color: Colors.grey,
-            padding: const EdgeInsets.all(8),
-            child: const Text('Center 居中'),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Container(
-            color: Colors.blueGrey,
-            padding: const EdgeInsets.all(8),
-            child: const Text('Align centerLeft'),
-          ),
-        ),
-        const Divider(),
-        // Stack + Positioned
-        const Text('Stack + Positioned'),
-        const SizedBox(height: 4),
-        Stack(
-          children: [
-            Container(width: 120, height: 80, color: Colors.grey),
-            Positioned(
-              left: 8,
-              top: 8,
-              child: Container(
-                color: Colors.deepPurple,
-                padding: const EdgeInsets.all(4),
-                child: const Text(
-                  'TL',
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-            ),
-            Positioned(
-              right: 8,
-              bottom: 8,
-              child: Container(
-                color: Colors.deepOrange,
-                padding: const EdgeInsets.all(4),
-                child: const Text(
-                  'BR',
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const Divider(),
-        // Wrap
-        const Text('Wrap · 自动换行'),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.indigo,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Text(
-                'chip 1',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.indigo,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Text(
-                'chip 2',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.indigo,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Text(
-                'chip 3',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.indigo,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Text(
-                'chip 4',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-        const Divider(),
-        // GestureDetector
-        const Text('GestureDetector · 点击'),
-        const SizedBox(height: 4),
-        GestureDetector(
-          onTap: tap,
-          child: Container(
-            color: Colors.lightGreen,
-            padding: const EdgeInsets.all(12),
-            child: const Text('点我（累计到 taps）'),
-          ),
-        ),
-        const Divider(),
-        // Switch / Checkbox / Slider：带值事件（onChanged → JS 方法带参调用）
-        const Text('Switch / Slider · 带值事件'),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Switch(value: _on, onChanged: onSwitch),
-            const SizedBox(width: 12),
-            const Text('开关'),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Slider(value: _slider, min: 0, max: 1, onChanged: onSlider),
-            ),
-          ],
-        ),
-        Text('switch=$_on  slider=$_slider'),
-        const Divider(),
-        // ListView（shrinkWrap 内嵌）
-        const Text('ListView · 列表'),
-        const SizedBox(height: 4),
-        ListView(
-          shrinkWrap: true,
-          children: [
-            Container(
-              color: Colors.grey,
-              padding: const EdgeInsets.all(6),
-              child: const Row(
-                children: [
-                  Icon(Icons.list, size: 20),
-                  SizedBox(width: 8),
-                  Text('item A'),
-                ],
-              ),
-            ),
-            Container(
-              color: Colors.grey,
-              padding: const EdgeInsets.all(6),
-              child: const Row(
-                children: [
-                  Icon(Icons.list, size: 20),
-                  SizedBox(width: 8),
-                  Text('item B'),
-                ],
-              ),
-            ),
-            Container(
-              color: Colors.grey,
-              padding: const EdgeInsets.all(6),
-              child: const Row(
-                children: [
-                  Icon(Icons.list, size: 20),
-                  SizedBox(width: 8),
-                  Text('item C'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }
