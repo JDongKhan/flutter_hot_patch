@@ -1299,7 +1299,9 @@ String _renderJs(
       ..writeln(renderClassDecl(m, const {}, exported: false));
   }
 
-  // 同文件 static 单例类：inline const（与 Dart 语义一致，产物内共享，不 import）
+  // 同文件 static 单例类：inline export const（exported: true —— 运行时
+  // 预处理层按 export 名收集并注册进 __modules，跨文件组件才能
+  // `import { PanelColors }` 解构拿到；仅 const 会被收集器漏掉）
   if (inlineSingletons.isNotEmpty) {
     final ctx = WidgetTranslateContext(
       registry: registry,
@@ -1310,11 +1312,11 @@ String _renderJs(
     for (final cls in inlineSingletons.values) {
       b
         ..writeln()
-        ..writeln('// 同文件静态单例类 ${cls.name}（仅本产物内可见）')
+        ..writeln('// 同文件静态单例类 ${cls.name}（export，供跨文件 import）')
         ..writeln(renderStaticConst(
           cls,
           valueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
-          exported: false,
+          exported: true,
         ));
     }
   }

@@ -4,8 +4,8 @@
 
 import { User } from '../model/user.model.js';
 
-// 同文件静态单例类 PanelColors（仅本产物内可见）
-const PanelColors = {
+// 同文件静态单例类 PanelColors（export，供跨文件 import）
+export const PanelColors = {
   background: '#ffff0000',
   adult: '#ff4caf50',
   primary: '#ff6750a4',
