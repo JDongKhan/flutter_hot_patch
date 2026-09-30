@@ -161,6 +161,14 @@ String? _colorExpr(Expression e, WidgetTranslateContext ctx) {
   // 跨文件静态单例类字段引用（PanelColors.background）→ JS 表达式
   final singleton = ctx.singletons?.staticRef(e);
   if (singleton != null) return singleton;
+  // 三目（isAdult ? PanelColors.adult : PanelColors.background）→ JS 三目表达式
+  if (e is ConditionalExpression) {
+    final condJs = ctx.jsDataExpr(e.condition);
+    final thenJs = _colorExpr(e.thenExpression, ctx);
+    final elseJs = _colorExpr(e.elseExpression, ctx);
+    if (thenJs == null || elseJs == null) return null;
+    return '($condJs ? $thenJs : $elseJs)';
+  }
   return null;
 }
 

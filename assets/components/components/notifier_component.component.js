@@ -12,7 +12,7 @@ export class NotifierCard {
   _reset() { this._model.reset(); }
   dispose() { this._model.dispose(); }
   build() {
-      return {
+    return {
       "type": "Card",
       "children": [
         {

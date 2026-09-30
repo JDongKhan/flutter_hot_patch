@@ -21,7 +21,7 @@ export class ListenableDemo {
   _inc() { this._model.inc(); }
   _reset() { this._model.reset(); }
   build() {
-      return {
+    return {
       "type": "Column",
       "children": [
         {

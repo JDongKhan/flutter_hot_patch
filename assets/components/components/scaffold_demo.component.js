@@ -9,7 +9,7 @@ export class ScaffoldDemo {
   }
   _inc() { this.setState(function(){ this._count += 1; }); }
   build() {
-      return {
+    return {
       "type": "Scaffold",
       "children": [
         {

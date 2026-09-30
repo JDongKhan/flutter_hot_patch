@@ -64,6 +64,8 @@ class _HelloCardState extends State<HelloCard> {
 
   @override
   Widget build(BuildContext context) {
+    // return 前的局部逻辑：user 已加载且 age >= 18 → 成人
+    final isAdult = _user != null && _user!.age >= 18;
     return Column(
       children: [
         Text(
@@ -93,7 +95,8 @@ class _HelloCardState extends State<HelloCard> {
             ElevatedButton(
               onPressed: inc,
               style: ElevatedButton.styleFrom(
-                backgroundColor: PanelColors.background,
+                // 局部变量驱动的样式：isAdult 时按钮变色
+                backgroundColor: isAdult ? PanelColors.adult : PanelColors.background,
                 foregroundColor: Colors.white,
               ),
               child: const Text('+1'),
@@ -122,6 +125,7 @@ class _HelloCardState extends State<HelloCard> {
 /// 不产生独立单例产物、不 import。
 class PanelColors {
   static Color background = const Color(0xFFFF0000);
+  static Color adult = const Color(0xFF4CAF50); // 成人态按钮色（绿色）
   static const Color primary = Color(0xFF6750A4);
   static const String tagline = 'demo';
 }

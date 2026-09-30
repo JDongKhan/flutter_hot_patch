@@ -10,7 +10,7 @@ export class StatelessCard {
     this.badge = (args && args.badge !== undefined) ? args.badge : '';
   }
   build() {
-      return {
+    return {
       "type": "Card",
       "props": {
         "margin": {

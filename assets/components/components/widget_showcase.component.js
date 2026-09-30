@@ -15,7 +15,7 @@ export class WidgetShowcase {
   onSlider(v) { this.setState(function(){ this._slider = v; }); }
   tap() { this.setState(function(){ this._taps += 1; }); }
   build() {
-      return {
+    return {
       "type": "Column",
       "props": {
         "crossAxisAlignment": "stretch"

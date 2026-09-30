@@ -183,6 +183,10 @@ class WidgetTranslateContext {
   void pushLoopVar(String name) => _loopVars.add(name);
   void popLoopVars() => _loopVars.clear();
 
+  /// build() return 前的局部变量（`final isAdult = ...;`）：树里直接引用。
+  final Set<String> _locals = {};
+  void addLocal(String name) => _locals.add(name);
+
   static bool _isUpperCamel(String name) =>
       name.isNotEmpty && name[0] == name[0].toUpperCase();
 
@@ -335,8 +339,10 @@ class WidgetTranslateContext {
       return '${jsDataExpr(e.prefix)}.${e.identifier.name}';
     }
     if (e is Identifier) {
-      // 循环变量（for 循环体里 i 等）直接引用，不查状态字段表
+      // 循环变量（for 循环体里 i 等）/ build 局部变量（final isAdult = ...）
+      // 直接引用，不查状态字段表
       if (_loopVars.contains(e.name)) return e.name;
+      if (_locals.contains(e.name)) return e.name;
       return 'this.${propOf(e)}';
     }
     if (e is PropertyAccess && e.target != null) {
@@ -364,6 +370,8 @@ class WidgetTranslateContext {
     }
     // 自增/自减：for 更新子（i++ / ++i / i-- / --i）
     if (e is PostfixExpression) {
+      // Dart null 断言（_user!.age）：JS 无此概念，直接忽略（条件短路保护）
+      if (e.operator.lexeme == '!') return jsDataExpr(e.operand);
       return '(${jsDataExpr(e.operand)}${e.operator.lexeme})';
     }
     if (e is PrefixExpression) {
@@ -408,7 +416,12 @@ class WidgetTranslateContext {
       return '[\n$ind2$items\n$ind]';
     }
     // 叶子值 = JS 表达式字符串（已带引号的字符串 / 数字 / 表达式）
-    return value?.toString() ?? 'null';
+    var s = value?.toString() ?? 'null';
+    if (s.contains('\n')) {
+      // 多行 JS 表达式（if/for spread、IIFE）：压缩为单行，保持树缩进整洁
+      s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    }
+    return s;
   }
 
   /// 生成 JS 双引号字符串字面量

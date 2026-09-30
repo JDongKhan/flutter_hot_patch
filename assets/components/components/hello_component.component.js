@@ -7,6 +7,7 @@ import { User } from '../model/user.model.js';
 // 同文件静态单例类 PanelColors（仅本产物内可见）
 const PanelColors = {
   background: '#ffff0000',
+  adult: '#ff4caf50',
   primary: '#ff6750a4',
   tagline: 'demo'
 };
@@ -21,7 +22,8 @@ export class HelloCard {
   reset() { this.setState(function(){ this._count = 0; }); }
   showNative() { sendMessage("nativeToast", JSON.stringify({ key: this._key, message: "Hello from native (JS-driven)" })); }
   build() {
-      return {
+    var isAdult = ((this._user != null) && (this._user.age >= 18));
+    return {
       "type": "Column",
       "children": [
         {
@@ -59,29 +61,9 @@ export class HelloCard {
             "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
           }
         },
-        ...((this._count > 0) ? [{
-      "type": "Text",
-      "props": {
-        "data": "当前 count 是正数（if 条件渲染）"
-      }
-    }] : []),
-        ...((this._user != null) ? [{
-      "type": "Text",
-      "props": {
-        "data": "用户已加载（if + else 渲染）"
-      }
-    }] : [{
-      "type": "Text",
-      "props": {
-        "data": "用户未加载，点 Load User"
-      }
-    }]),
-        ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [{
-      "type": "Text",
-      "props": {
-        "data": "循环第 " + i + " 个"
-      }
-    }]); } return out; })(),
+        ...((this._count > 0) ? [{ "type": "Text", "props": { "data": "当前 count 是正数（if 条件渲染）" } }] : []),
+        ...((this._user != null) ? [{ "type": "Text", "props": { "data": "用户已加载（if + else 渲染）" } }] : [{ "type": "Text", "props": { "data": "用户未加载，点 Load User" } }]),
+        ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [{ "type": "Text", "props": { "data": "循环第 " + i + " 个" } }]); } return out; })(),
         {
           "type": "Row",
           "children": [
@@ -92,7 +74,7 @@ export class HelloCard {
                 "label": "+1",
                 "event": "inc",
                 "style": {
-                  "backgroundColor": PanelColors.background,
+                  "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
                   "foregroundColor": '#FFFFFF'
                 }
               }
@@ -135,7 +117,7 @@ export class HelloPanel {
   tap() { this.setState(function(){ this._taps += 1; }); }
   clear() { this.setState(function(){ this._taps = 0; }); }
   build() {
-      return {
+    return {
       "type": "Column",
       "children": [
         {

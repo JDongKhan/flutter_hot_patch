@@ -242,11 +242,16 @@ class _Component {
   /// 运行时时模型 notify 后重新调用拿最新子树做局部重建）。
   final List<Object?> builders; // 节点或 JS 表达式（三目）
 
+  /// build() return 前的局部变量声明（`final isAdult = ...;` → `var isAdult = ...;`），
+  /// 产物 build() 方法体内先输出声明再 return 树；树里 Identifier 直接引用。
+  final List<String> localDecls;
+
   const _Component(this.name, this.props, this.actions, this.tree,
       {this.ctorArgs = const [],
       this.deps = const {},
       this.models = const {},
-      this.builders = const []});
+      this.builders = const [],
+      this.localDecls = const []});
 }
 
 /// 统一「类表」：把一个文件（同文件 + 跨文件 import）的全部普通 Dart 类
@@ -520,7 +525,7 @@ _Component _parseComponent(
     }
   }
 
-  final (tree, deps, builders) = _translateBuildTree(
+  final (tree, deps, builders, localDecls) = _translateBuildTree(
     buildMethod,
     propByField,
     actionByMethod,
@@ -539,6 +544,7 @@ _Component _parseComponent(
     deps: deps,
     models: used,
     builders: builders,
+    localDecls: localDecls,
   );
 }
 
@@ -689,7 +695,7 @@ _Component _parseNestedComponent(
     }
   }
 
-  final (tree, deps, builders) = _translateBuildTree(
+  final (tree, deps, builders, localDecls) = _translateBuildTree(
     buildMethod,
     propByField,
     actionByMethod,
@@ -708,6 +714,7 @@ _Component _parseNestedComponent(
     deps: deps,
     models: used,
     builders: builders,
+    localDecls: localDecls,
   );
 }
 
@@ -1160,7 +1167,7 @@ String? _relativeToLib(String uri, String dir) {
 // build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
 // ---------------------------------------------------------------------------
 
-(Object?, Set<String>, List<Object?>)
+(Object?, Set<String>, List<Object?>, List<String>)
       _translateBuildTree(
   MethodDeclaration buildMethod,
   Map<String, String> propByField,
@@ -1182,7 +1189,31 @@ String? _relativeToLib(String uri, String dir) {
     importResolver: importResolver,
     singletons: singletons,
   );
-  return (ctx.translate(e), {...ctx.dependencies}, ctx.builderTrees);
+  // build() return 前的局部变量声明（`final isAdult = <expr>;`）：
+  // 收集名字进 ctx 局部作用域（树里直接引用），initializer 翻译成 JS 声明语句。
+  final localDecls = <String>[];
+  final body = buildMethod.body;
+  if (body is BlockFunctionBody) {
+    for (final st in body.block.statements) {
+      if (st is ReturnStatement) break;
+      if (st is VariableDeclarationStatement) {
+        for (final v in st.variables.variables) {
+          final name = v.name.lexeme;
+          ctx.addLocal(name);
+          final js = v.initializer == null
+              ? 'undefined'
+              : ctx.jsDataExpr(v.initializer!);
+          localDecls.add('    var $name = $js;');
+        }
+      }
+    }
+  }
+  return (
+    ctx.translate(e),
+    {...ctx.dependencies},
+    ctx.builderTrees,
+    localDecls,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1318,7 +1349,10 @@ String _renderJs(
       actionByMethod: const {},
       sourcePath: sourcePath,
     );
-    b.writeln('      return ${ctx.renderJs(c.tree, 2)};');
+    for (final d in c.localDecls) {
+      b.writeln(d);
+    }
+    b.writeln('    return ${ctx.renderJs(c.tree, 2)};');
     b.writeln('  }');
     // ListenableBuilder 的 builder 闭包子树 → 方法 `_lbBuilderN()`。
     // 运行时时模型 notify 后重新调用本方法拿到最新子树（含已求值的

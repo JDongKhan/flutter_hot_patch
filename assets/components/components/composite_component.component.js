@@ -10,7 +10,7 @@ export class DashboardCard {
   }
   tick() { this.setState(function(){ this._ticks += 1; }); }
   build() {
-      return {
+    return {
       "type": "Column",
       "children": [
         {
@@ -93,7 +93,7 @@ export class LabeledDivider {
     this.text = (args && args.text !== undefined) ? args.text : '';
   }
   build() {
-      return {
+    return {
       "type": "Text",
       "props": {
         "data": "★ " + this.text + " ★",
@@ -111,7 +111,7 @@ export class _LabeledDivider {
     this.text = (args && args.text !== undefined) ? args.text : '';
   }
   build() {
-      return {
+    return {
       "type": "Column",
       "children": [
         {
