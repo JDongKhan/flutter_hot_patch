@@ -36,40 +36,37 @@ class WidgetShowcase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('常用组件 · 列表')),
-      body: ListView(
-        children: [
-          for (final g in groups) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Text(
-                g.title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.deepPurple,
-                ),
+    return ListView(
+      children: [
+        for (final g in groups) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(
+              g.title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
               ),
             ),
-            for (final e in g.entries)
-              ListTile(
-                leading: const Icon(Icons.widgets_outlined),
-                title: Text(e.title),
-                subtitle: Text(e.subtitle),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => WidgetDetailPage(
-                      component: e.component,
-                      fullPage: e.component == 'ScaffoldDetail',
-                    ),
+          ),
+          for (final e in g.entries)
+            ListTile(
+              leading: const Icon(Icons.widgets_outlined),
+              title: Text(e.title),
+              subtitle: Text(e.subtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => WidgetDetailPage(
+                    component: e.component,
+                    fullPage: e.component == 'ScaffoldDetail',
                   ),
                 ),
               ),
-          ],
+            ),
         ],
-      ),
+      ],
     );
   }
 }
