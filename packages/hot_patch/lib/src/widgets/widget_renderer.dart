@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../hot_patch_widget.dart';
 import '../services/native_service.dart';
 import '../services/js_runtime_manager.dart';
+import '../utils/hot_patch_log.dart';
 
 // ===========================================================================
 // 运行时渲染策略扩展点：JSON 节点 → 真实 Flutter Widget
@@ -31,13 +32,13 @@ class RenderNode {
 
   static RenderNode? of(Object? node) {
     if (node is! Map) {
-      debugPrint('[hot_patch] RenderNode.of: node is ${node.runtimeType} (not Map)');
+      HotPatchLog.log('RenderNode.of: node is ${node.runtimeType} (not Map)');
       return null;
     }
     final map = Map<String, dynamic>.from(node);
     final type = map['type'] as String?;
     if (type == null) {
-      debugPrint('[hot_patch] RenderNode.of: type is null, keys=${map.keys}');
+      HotPatchLog.log('RenderNode.of: type is null, keys=${map.keys}');
       return null;
     }
     final props = (map['props'] as Map?)?.cast<String, dynamic>() ?? const {};
@@ -49,8 +50,8 @@ class RenderNode {
       if (node != null) children.add(node);
     }
     if (rawChildren.isNotEmpty && children.length != rawChildren.length) {
-      debugPrint(
-        '[hot_patch] RenderNode.of: children dropped '
+      HotPatchLog.log(
+        'RenderNode.of: children dropped '
         '${rawChildren.length} -> ${children.length}',
       );
     }

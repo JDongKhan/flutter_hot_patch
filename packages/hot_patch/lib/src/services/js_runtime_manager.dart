@@ -4,6 +4,7 @@ import 'package:flutter_js/flutter_js.dart';
 
 import '../utils/js_asset_resolver.dart';
 import 'native_service.dart';
+import '../utils/hot_patch_log.dart';
 
 /// JS 运行时管理器：与底层 [JavascriptRuntime] **一对一**。
 ///
@@ -114,8 +115,7 @@ class JsRuntimeManager {
     globalMessageHandlers[service.channel] = (dynamic args) {
       final ctx = navigatorKey?.currentContext;
       if (ctx == null || !ctx.mounted) {
-        // ignore: avoid_print
-        print('[js_runtime_manager] ${service.channel} ignored: '
+          HotPatchLog.log('${service.channel} ignored: '
             'navigatorKey not configured / context not ready');
         return;
       }
@@ -243,8 +243,7 @@ ChangeNotifier.prototype.notifyListeners = function() {
       for (final name in processed.exports) {
         _componentIndex[name] = jsAsset;
       }
-      // ignore: avoid_print
-      print('[js_runtime_manager] eval result for $jsAsset: $evalResult');
+      HotPatchLog.log('eval result for $jsAsset: $evalResult');
       // evaluate 返回错误文本（JS 引擎把异常序列化进返回值）→ 视为加载失败，
       // 不进 _loadedModules，下次可重试。
       final text = evalResult.toString();
@@ -252,8 +251,7 @@ ChangeNotifier.prototype.notifyListeners = function() {
         throw StateError('module evaluate failed: $text');
       }
       _loadedModules.add(jsAsset);
-      // ignore: avoid_print
-      print('[js_runtime_manager] module loaded: $jsAsset');
+      HotPatchLog.log('module loaded: $jsAsset');
     } finally {
       _loadingModules.remove(jsAsset);
     }
@@ -377,8 +375,7 @@ $out
         handler ??= globalMessageHandlers[channel];
         if (handler != null) handler(args);
       });
-      // ignore: avoid_print
-      print('[js_runtime_manager] channel wired: $channel (${_runtime.hashCode})');
+      HotPatchLog.log('channel wired: $channel (${_runtime.hashCode})');
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../json/flutter_from_json.dart';
 import '../services/js_runtime_manager.dart';
 import 'widget_renderer.dart';
+import '../utils/hot_patch_log.dart';
 
 /// ListenableBuilder 局部重建的回调注册表：
 /// key = `<instanceKey>::<builderName>`（_lbBuilderN），值 = 重取子树 + setState。
@@ -67,8 +68,8 @@ abstract class _AxisLayoutRenderer extends WidgetRenderer {
   @override
   Widget render(RenderNode node, WidgetRenderContext ctx) {
     final children = [for (final c in node.children) ctx.render(c)];
-    debugPrint(
-      '[hot_patch] ${node.type} render children=${children.length} '
+    HotPatchLog.log(
+      '${node.type} render children=${children.length} '
       'types=[${children.map((w) => w.runtimeType).join(',')}]',
     );
     // Flutter 中 Column / Row 的 mainAxisSize 默认都是 max，
@@ -143,7 +144,7 @@ class TextRenderer extends WidgetRenderer {
             : null,
       ),
     );
-    debugPrint('[hot_patch] Text render "${node.props['data']}"');
+    HotPatchLog.log('Text render "${node.props['data']}"');
     return w;
   }
 }
@@ -173,7 +174,7 @@ class ButtonRenderer extends WidgetRenderer {
         OutlinedButton(onPressed: onPressed, style: style, child: label),
       _ => ElevatedButton(onPressed: onPressed, style: style, child: label),
     };
-    debugPrint('[hot_patch] Button(${node.props['kind'] ?? 'elevated'}) '
+    HotPatchLog.log('Button(${node.props['kind'] ?? 'elevated'}) '
         'render "${node.props['label']}"');
     return w;
   }
@@ -824,7 +825,7 @@ class _JsListenableBuilderState extends State<_JsListenableBuilder> {
       final node = RenderNode.of(jsonDecode(r.stringResult));
       return node ?? RenderNode.of(const {'type': 'SizedBox'})!;
     } catch (e) {
-      debugPrint('[hot_patch] _lbBuilder fetch error: $e');
+      HotPatchLog.log('_lbBuilder fetch error: $e');
       return RenderNode.of(const {'type': 'SizedBox'})!;
     }
   }

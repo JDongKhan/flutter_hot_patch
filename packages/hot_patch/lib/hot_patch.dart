@@ -17,5 +17,6 @@ export 'src/services/builtin_services.dart';
 export 'src/hot_patch_widget.dart';
 export 'src/services/js_runtime_manager.dart';
 export 'src/services/native_service.dart';
+export 'src/utils/hot_patch_log.dart';
 export 'src/widgets/widget_renderer.dart';
 export 'src/json/flutter_from_json.dart';

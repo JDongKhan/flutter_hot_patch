@@ -7,6 +7,7 @@ import 'services/builtin_services.dart';
 import 'services/js_runtime_manager.dart';
 import 'services/native_service.dart';
 import 'widgets/widget_renderer.dart';
+import 'utils/hot_patch_log.dart';
 
 /// ============================================================
 /// HotPatchWidget —— 热更新组件运行时入口
@@ -139,7 +140,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       //    class + __modules 注册；import → __modules 解构），同一 jsAsset
       //    只执行一次（多组件/多实例共享同一个模块与模型类）。
       await _manager.loadModule(widget.jsAsset);
-      debugPrint('[hot_patch] module loaded: ${widget.jsAsset}');
+      HotPatchLog.log('module loaded: ${widget.jsAsset}');
 
       // 1.1 服务注册：统一收 NativeService。
       //     - 页面级：内部实现（setState 等）+ 业务方注入的服务 →
@@ -150,7 +151,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       final injectedChannels = injected.map((s) => s.channel).toSet();
       for (final svc in _internalServices) {
         _registerPageService(svc);
-        debugPrint('[hot_patch] page internal service "${svc.channel}" registered');
+        HotPatchLog.log('page internal service "${svc.channel}" registered');
       }
       for (final svc in injected) {
         if (svc is InstanceNativeService) {
@@ -158,13 +159,13 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
         } else {
           JsRuntimeManager.registerGlobal(svc);
         }
-        debugPrint('[hot_patch] ${svc is InstanceNativeService ? "page" : "global"} service "${svc.channel}" registered');
+        HotPatchLog.log('${svc is InstanceNativeService ? "page" : "global"} service "${svc.channel}" registered');
       }
       for (final channel in _services.channels) {
         if (injectedChannels.contains(channel)) continue;
         final service = _services.lookup(channel)!;
         JsRuntimeManager.registerGlobal(service);
-        debugPrint('[hot_patch] global service "$channel" registered');
+        HotPatchLog.log('global service "$channel" registered');
       }
 
       // 1.2 本实例的 setState 重建回调：重新取 JS 实例的最新树并 setState。
@@ -184,16 +185,14 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
         '(${jsonEncode(widget.componentArgs)}); '
         '__instances["$_instanceKey"]._key = "$_instanceKey";',
       );
-      // ignore: avoid_print
-      print('[hot_patch] inst eval result: $instResult');
+      HotPatchLog.log('inst eval result: $instResult');
       final instDbg = _manager.evaluate(
         'JSON.stringify({ m: typeof __modules, '
         'i: typeof __instances, '
         'mod: typeof __modules[${jsonEncode(widget.jsAsset)}], '
         'v: typeof __instances["$_instanceKey"] })',
       );
-      // ignore: avoid_print
-      print('[hot_patch] inst dbg: $instDbg');
+      HotPatchLog.log('inst dbg: $instDbg');
       // 2.3.1 给 JS 实例挂载 setState：执行回调（更新 JS 状态）+ sendMessage 通知宿主重建。
       // HotPatchWidget 不直接 setState；重建由 JS 侧 setState 驱动（与 Dart 语义一致）。
       _manager.evaluate(
@@ -204,15 +203,15 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   };
 })()''',
       );
-      debugPrint('[hot_patch] instance created: $_instanceKey');
+      HotPatchLog.log('instance created: $_instanceKey');
 
       // 3. 生命周期 + 首帧：调 initState（若存在）再 build 首帧
       _tree = _bootWithLifecycle('initState');
-      debugPrint('[hot_patch] first tree: $_tree');
+      HotPatchLog.log('first tree: $_tree');
       if (!mounted) return;
       setState(() => _loading = false);
     } catch (e) {
-      debugPrint('[hot_patch] boot error: $e');
+      HotPatchLog.log('boot error: $e');
       if (!mounted) return;
       setState(() {
         _error = '$e';
@@ -233,7 +232,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   /// setState。宿主只在这里 setState 更新节点树；事件回调本身不直接
   /// setState，而是由 JS 侧 setState() → sendMessage 驱动。
   void rebuild() {
-    debugPrint('[hot_patch] js setState rebuild: $_instanceKey');
+    HotPatchLog.log('js setState rebuild: $_instanceKey');
     if (!mounted) return;
     try {
       final r = _manager.evaluate(
@@ -242,7 +241,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       final newTree = jsonDecode(r.stringResult);
       setState(() => _tree = newTree);
     } catch (e) {
-      debugPrint('[hot_patch] setState rebuild error: $e');
+      HotPatchLog.log('setState rebuild error: $e');
     }
   }
 
@@ -271,11 +270,11 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   return true;
 })()''',
     );
-    debugPrint('[hot_patch] lifecycle $lifecycle called: ${r.stringResult}');
+    HotPatchLog.log('lifecycle $lifecycle called: ${r.stringResult}');
   }
 
   void _onEvent(String event) {
-    debugPrint('[hot_patch] onEvent: $event');
+    HotPatchLog.log('onEvent: $event');
     // 事件名 = 组件方法名（一比一）：直接调用同名方法。
     // UI 重建由方法体内的 setState()（挂载在 JS 实例上）驱动，
     // 宿主不直接 setState；方法体未调 setState 则 UI 不刷新（与 Dart 一致）。
@@ -284,7 +283,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
   /// 带值事件（Switch/Slider 等 onChanged）：把新值传给 JS 方法同名参数。
   void _onEventValue(String event, Object? value) {
-    debugPrint('[hot_patch] onEventValue: $event = $value');
+    HotPatchLog.log('onEventValue: $event = $value');
     _manager.evaluate(
       '''(function(){ __instances["$_instanceKey"].$event(${_jsArg(value)}); })()''',
     );
@@ -306,7 +305,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[hot_patch] build: loading=$_loading error=$_error tree=${_tree != null}');
+    HotPatchLog.log('build: loading=$_loading error=$_error tree=${_tree != null}');
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -331,7 +330,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       instanceKey: _instanceKey,
     );
     final w = ctx.render(_tree);
-    debugPrint('[hot_patch] render -> ${w.runtimeType}');
+    HotPatchLog.log('render -> ${w.runtimeType}');
     return w;
   }
 

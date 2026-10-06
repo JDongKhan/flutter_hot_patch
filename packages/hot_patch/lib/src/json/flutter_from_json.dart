@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/hot_patch_log.dart';
 
 // ===========================================================================
 // JSON → Flutter 对象的 fromJson 工具集（运行时侧）
@@ -379,7 +380,7 @@ IconData iconFromJson(Object? v) {
   final name = v is String ? v : '';
   final icon = _icons[name];
   if (icon == null) {
-    debugPrint('[hot_patch] iconFromJson: 未注册的 Icons.$name，回退 Icons.circle');
+    HotPatchLog.log('iconFromJson: 未注册的 Icons.$name，回退 Icons.circle');
     return Icons.circle;
   }
   return icon;

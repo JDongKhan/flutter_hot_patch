@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'native_service.dart';
+import '../utils/hot_patch_log.dart';
 
 /// 内置原生服务策略：开箱即用的 JS→原生 能力。
 ///
@@ -46,6 +47,6 @@ class LogService extends GlobalNativeService {
 
   @override
   void handle(BuildContext context, dynamic payload) {
-    debugPrint('[hot_patch][js-log] $payload');
+    HotPatchLog.log('[js-log] $payload');
   }
 }
