@@ -51,7 +51,11 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const CheckboxTranslator())
     ..register(const SliderTranslator())
     // 响应式（SDK 类，见 class_translator.sdkSuperClassMap 配套的 ChangeNotifier）
-    ..register(const ListenableBuilderTranslator());
+    ..register(const ListenableBuilderTranslator())
+    // provider 包：ChangeNotifierProvider / Consumer / MultiProvider
+    ..register(const ChangeNotifierProviderTranslator())
+    ..register(const ConsumerTranslator())
+    ..register(const MultiProviderTranslator());
   // 嵌套组件兜底：build 树里未注册的自定义 widget → Component 节点
   // （不参与 Map 注册，由 registry.fallback 持有；组件需 UpperCamel 才兜底）
   registry.registerFallback(const ComponentTranslator());
@@ -944,6 +948,8 @@ class ListenableBuilderTranslator extends WidgetTranslator {
     final subtree = ctx.translate(inner);
     ctx.builderTrees.add(subtree);
     final idx = ctx.builderTrees.length - 1;
+    ctx.builderNames.add('_lbBuilder$idx');
+    ctx.builderParams.add(null);
     return {
       'type': ctx.jsString('ListenableBuilder'),
       'props': {
@@ -952,6 +958,235 @@ class ListenableBuilderTranslator extends WidgetTranslator {
       },
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// provider 包：ChangeNotifierProvider / Consumer（与 ListenableBuilder 同机制）
+// ---------------------------------------------------------------------------
+
+/// ChangeNotifierProvider：`ChangeNotifierProvider\<CounterModel\>(
+///   create: (_) => _model, child: ...)`。
+///
+/// 节点 `{type:'ChangeNotifierProvider', props:{model:'CounterModel',
+/// create:{ref|construct}, child:子树}}`。模型实例由运行时按 create 语义
+/// 提供：ref = 复用状态字段实例（与 ListenableBuilder 的 listenable 同语义，
+/// 方法 _inc/_reset 操作同一实例）；construct = JS 侧 new 模型类。
+/// child 子树由运行时在 Provider 作用域（`__providers[key][model]`）下渲染。
+class ChangeNotifierProviderTranslator extends WidgetTranslator {
+  const ChangeNotifierProviderTranslator();
+
+  @override
+  String get type => 'ChangeNotifierProvider';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final modelType = _providerTypeArg(node.expr);
+    if (modelType == null) {
+      throw FormatException(
+          'ChangeNotifierProvider 需要类型参数，如 ChangeNotifierProvider<CounterModel>');
+    }
+    final create = ctx.namedArg(node.args, 'create');
+    final childExpr =
+        ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (create == null || childExpr == null) {
+      throw FormatException('ChangeNotifierProvider 需要 create 与 child');
+    }
+    final child = ctx.translate(childExpr);
+    return _providerNodeOf(
+      modelType: modelType,
+      createExpr: create,
+      child: child,
+      ctx: ctx,
+    );
+  }
+}
+
+/// 解析一个 `ChangeNotifierProvider<T>(create: ...)` → provider 节点 Map
+/// （不含 child，由调用方拼装）。ChangeNotifierProvider / MultiProvider 共用。
+/// create 支持：`(_) => _model`（ref，复用状态字段实例）/ `(_) => ModelClass()`
+/// （construct，JS 侧 new 模型类）。
+Map<String, dynamic> _providerNodeOf({
+  required String modelType,
+  required Expression createExpr,
+  required Object? child,
+  required WidgetTranslateContext ctx,
+}) {
+  final inner = createExpr is FunctionExpression
+      ? ctx.functionInner(createExpr)
+      : null;
+  Object? createJs;
+  if (inner is Identifier) {
+    createJs = {'ref': ctx.jsString(ctx.propOf(inner))};
+  } else if (inner is InstanceCreationExpression) {
+    final cn = inner.constructorName;
+    final className = cn.type.name2.lexeme;
+    createJs = {'construct': className};
+  } else {
+    throw FormatException(
+        'ChangeNotifierProvider.create 仅支持返回状态字段或模型构造');
+  }
+  final props = <String, Object?>{
+    'model': ctx.jsString(modelType),
+    'create': createJs,
+  };
+  if (child != null) props['child'] = child;
+  return {
+    'type': ctx.jsString('ChangeNotifierProvider'),
+    'props': props,
+  };
+}
+
+/// Consumer：`Consumer\<CounterModel\>(builder: (context, value, child) =>
+///   Text('count = ${value.count}'))`。
+///
+/// builder 闭包返回的子树抽到实例方法 `_consumerBuilderN(value)`（闭包参数
+/// value 注册为局部变量，子树里 `value.count` 原样翻译），运行时从
+/// `__providers[key][model]` 取模型实例传入，挂监听后 notify →
+/// lbNotify → 仅该节点局部重建（与 ListenableBuilder 同一回调表）。
+class ConsumerTranslator extends WidgetTranslator {
+  const ConsumerTranslator();
+
+  @override
+  String get type => 'Consumer';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final modelType = _providerTypeArg(node.expr);
+    if (modelType == null) {
+      throw FormatException('Consumer 需要类型参数，如 Consumer<CounterModel>');
+    }
+    final builderRaw = ctx.namedArg(node.args, 'builder');
+    if (builderRaw is! FunctionExpression) {
+      throw FormatException('Consumer.builder 需为返回 widget 的闭包');
+    }
+    final params = builderRaw.parameters?.parameters ?? const <FormalParameter>[];
+    final valueName = params.length >= 2 ? params[1].name?.lexeme : null;
+    if (valueName == null) {
+      throw FormatException(
+          'Consumer.builder 需要 (context, value[, child]) 参数');
+    }
+    final inner = ctx.functionInner(builderRaw);
+    if (inner == null) {
+      throw FormatException('Consumer.builder 闭包需返回 widget');
+    }
+    // value 闭包参数注册为局部变量：子树里 value.count 原样翻译
+    ctx.addLocal(valueName);
+    final subtree = ctx.translate(inner);
+    ctx.builderTrees.add(subtree);
+    final idx = ctx.builderTrees.length - 1;
+    ctx.builderNames.add('_consumerBuilder$idx');
+    ctx.builderParams.add(valueName);
+    return {
+      'type': ctx.jsString(type),
+      'props': {
+        'model': ctx.jsString(modelType),
+        'builder': ctx.jsString('_consumerBuilder$idx'),
+      },
+    };
+  }
+}
+
+/// MultiProvider：`MultiProvider(providers: [ChangeNotifierProvider\<A\>(create:
+/// ...), ChangeNotifierProvider\<B\>(create: ...)], child: ...)`。
+///
+/// **一一对应生成一个 `MultiProvider` 节点**：providers 保持平级数组
+/// （与 Dart 源码结构一致），每个条目是一个 ChangeNotifierProvider 节点
+/// （仅 model + create，无 child）。运行时 MultiProviderRenderer 把所有
+/// 条目模型按 key 登记进 `__providerChain`（栈），Consumer 按「最近」取
+/// 实例（与原生 MultiProvider 的嵌套 Provider.of 语义一致）。
+/// 新增 provider 类型（Provider/ListenableProvider 等）只需扩展该解析。
+class MultiProviderTranslator extends WidgetTranslator {
+  const MultiProviderTranslator();
+
+  @override
+  String get type => 'MultiProvider';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final providersArg = ctx.namedArg(node.args, 'providers');
+    final childExpr =
+        ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (providersArg is! ListLiteral || childExpr == null) {
+      throw FormatException('MultiProvider 需要 providers 列表与 child');
+    }
+    final childNode = ctx.translate(childExpr);
+    final providers = <Object>[
+      for (final raw in providersArg.elements) _providerEntryOf(raw, ctx),
+    ];
+    return {
+      'type': ctx.jsString(type),
+      'props': {
+        'providers': providers,
+        'child': childNode,
+      },
+    };
+  }
+}
+
+/// MultiProvider 条目 → ChangeNotifierProvider 节点（model + create，无
+/// child；条目在 providers 数组中保持平级）。
+Map<String, dynamic> _providerEntryOf(
+    CollectionElement raw, WidgetTranslateContext ctx) {
+  final Expression element;
+  if (raw is InstanceCreationExpression || raw is MethodInvocation) {
+    element = raw as Expression;
+  } else {
+    throw FormatException(
+        'MultiProvider.providers 仅支持 ChangeNotifierProvider 条目');
+  }
+  final modelType = _providerTypeArg(element);
+  if (modelType == null) {
+    throw FormatException('MultiProvider 条目需要类型参数，如 <CounterModel>');
+  }
+  final create = _namedOf(_callArgs(element), 'create');
+  if (create == null) {
+    throw FormatException('ChangeNotifierProvider 需要 create');
+  }
+  return _providerNodeOf(
+    modelType: modelType,
+    createExpr: create,
+    child: null,
+    ctx: ctx,
+  );
+}
+
+/// 构造调用参数列表（InstanceCreationExpression / MethodInvocation 共用）。
+List<Expression> _callArgs(Expression e) {
+  if (e is InstanceCreationExpression) return e.argumentList.arguments.toList();
+  if (e is MethodInvocation) return e.argumentList.arguments.toList();
+  return const [];
+}
+
+/// 从参数列表取具名参数表达式（entry 解析用，等价 ctx.namedArg）。
+Expression? _namedOf(List<Expression> args, String name) {
+  for (final a in args) {
+    if (a is NamedExpression && a.name.label.name == name) {
+      final e = a.expression;
+      return e is ParenthesizedExpression ? e.unParenthesized : e;
+    }
+  }
+  return null;
+}
+
+/// `ChangeNotifierProvider\<T\>` / `Consumer\<T\>` 的类型参数 T 类名
+/// （如 `CounterModel`；null = 未提供类型参数）。
+String? _providerTypeArg(Expression? e) {
+  // 有 new：InstanceCreationExpression；无 new 的泛型类构造（如
+  // `Consumer<CounterModel>(...)` / `ChangeNotifierProvider<CounterModel>(...)`）
+  // 在 analyzer 里是 MethodInvocation —— 两者的类型参数都要处理。
+  final TypeArgumentList? ta;
+  if (e is InstanceCreationExpression) {
+    ta = e.constructorName.type.typeArguments;
+  } else if (e is MethodInvocation) {
+    ta = e.typeArguments;
+  } else {
+    return null;
+  }
+  if (ta != null && ta.arguments.isNotEmpty) {
+    final t = ta.arguments.first;
+    if (t is NamedType) return t.name2.lexeme;
+  }
+  return null;
 }
 
 /// 数字字面量 → JS 数字表达式（'12' / '1.5'）；非字面量返回 null。

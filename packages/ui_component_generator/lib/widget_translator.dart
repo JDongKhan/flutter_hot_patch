@@ -24,9 +24,12 @@ class WidgetNode {
   final List<Expression> positionalArgs;
   final Map<String, Expression> namedArgs;
 
+  /// 原始表达式（InstanceCreationExpression 等，取类型参数等用）。
+  final Expression? expr;
+
   final String? factory;
 
-  WidgetNode(this.type, this.args, {this.factory})
+  WidgetNode(this.type, this.args, {this.factory, this.expr})
       : positionalArgs = [
           for (final a in args)
             if (a is! NamedExpression) a,
@@ -66,6 +69,12 @@ class WidgetTranslateContext {
   /// `_lbBuilderN()`，运行时时模型 notify 后重新调用拿到最新子树做局部重建。
   /// 收集顺序即 `_lbBuilder${index}` 命名序号。
   final List<Object?> builderTrees = []; // Map = 节点；String = 三目 JS 表达式
+
+  /// 与 [builderTrees] 同步的方法名（`_lbBuilderN` / `_consumerBuilderN`）。
+  final List<String> builderNames = [];
+
+  /// 与 [builderTrees] 同步的形参名（null = 无参；Consumer 为 value）。
+  final List<String?> builderParams = [];
 
   WidgetTranslateContext({
     required this.registry,
@@ -492,6 +501,7 @@ class WidgetTranslateContext {
       ctor,
       args,
       factory: e is MethodInvocation ? e.methodName.name : null,
+      expr: e,
     );
   }
 }

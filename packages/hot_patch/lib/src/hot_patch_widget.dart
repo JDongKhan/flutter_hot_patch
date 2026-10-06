@@ -246,6 +246,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
   /// 调生命周期方法（若 JS 实例导出该方法）并返回最新节点树。
   Object? _bootWithLifecycle(String lifecycle) {
+    HotPatchLog.log('boot lifecycle begin: $lifecycle');
     final r = _manager.evaluate(
       '''(function() {
   var i = __instances["$_instanceKey"];
@@ -255,6 +256,8 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   return JSON.stringify(i ? i.build() : null);
 })()''',
     );
+    HotPatchLog.log(
+        'boot lifecycle raw head: ${r.stringResult.substring(0, 80)}');
     return jsonDecode(r.stringResult);
   }
 

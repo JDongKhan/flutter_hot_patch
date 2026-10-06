@@ -6,6 +6,7 @@ import 'components/composite_component.dart';
 import 'components/hello_component.dart';
 import 'components/listenable_demo.dart';
 import 'components/notifier_component.dart';
+import 'components/provider_component.dart';
 import 'components/stateless_component.dart';
 import 'components/widget_showcase.dart';
 
@@ -112,6 +113,17 @@ class DemoListPage extends StatelessWidget {
           // 非私有组件（LabeledDivider）运行时注入原生 widget：
           // hot_patch 包不 import 业务类，由业务方在这里注册
           nativeComponents: {'LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? '')},
+        ),
+      ),
+    ),
+    _DemoEntry(
+      'ProviderCard · 原生 vs JS 热更',
+      'MultiProvider：providers 平级数组一一对应转换，Consumer 局部重建',
+      _CompareTest(
+        native: ProviderCard(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/provider_component.component.js',
+          component: 'ProviderCard',
         ),
       ),
     ),

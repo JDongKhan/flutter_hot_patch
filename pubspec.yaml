@@ -34,6 +34,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  provider: ^6.1.2
   # 热更新运行时（加载 JS 补丁渲染组件，JS 驱动逻辑）
   hot_patch:
     path: packages/hot_patch

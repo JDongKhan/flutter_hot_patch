@@ -222,6 +222,9 @@ if (typeof __modules === 'undefined') {
 if (typeof __instances === 'undefined') {
   var __instances = {};
 }
+if (typeof __providerChain === 'undefined') {
+  var __providerChain = {};
+}
 // 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
 // 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
@@ -249,6 +252,16 @@ console.info = function(m) { sendMessage('log', JSON.stringify(String(m))); };
 console.log = function(m) { sendMessage('log', JSON.stringify(String(m))); };
 console.warn = function(m) { sendMessage('log', JSON.stringify(String(m))); };
 console.error = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+// provider 作用域查找：从当前实例的 provider 链（栈）中取「最近的」
+// 指定类型模型实例（同类型嵌套时取栈顶，与原生 Provider 语义一致）。
+function __lookupProvider(key, model) {
+  var chain = __providerChain[key];
+  if (!chain) return undefined;
+  for (var i = chain.length - 1; i >= 0; i--) {
+    if (chain[i][model]) return chain[i][model];
+  }
+  return undefined;
+}
 // ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
 // extends ChangeNotifier` 共用，notifyListeners 触发订阅回调
 // （ListenableBuilder 局部重建用到）。

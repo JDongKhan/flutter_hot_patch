@@ -238,9 +238,15 @@ class _Component {
   /// 统一由 class_translator 翻译（见 _usedClasses / _buildClassIndex）。
   final Map<String, ClassInfo> models;
 
-  /// ListenableBuilder 抽出的 builder 子树（译成组件方法 `_lbBuilderN()`，
-  /// 运行时时模型 notify 后重新调用拿最新子树做局部重建）。
+  /// 响应式 builder 闭包（ListenableBuilder/Consumer）抽出的子树
+  /// （译成实例方法，运行时时模型 notify 后重新调用拿最新子树局部重建）。
   final List<Object?> builders; // 节点或 JS 表达式（三目）
+
+  /// 与 [builders] 同步的方法名（`_lbBuilderN` / `_consumerBuilderN`）。
+  final List<String> builderNames;
+
+  /// 与 [builders] 同步的形参名（null = 无参；Consumer 为 value）。
+  final List<String?> builderParams;
 
   /// build() return 前的局部变量声明（`final isAdult = ...;` → `var isAdult = ...;`），
   /// 产物 build() 方法体内先输出声明再 return 树；树里 Identifier 直接引用。
@@ -251,6 +257,8 @@ class _Component {
       this.deps = const {},
       this.models = const {},
       this.builders = const [],
+      this.builderNames = const [],
+      this.builderParams = const [],
       this.localDecls = const []});
 }
 
@@ -525,7 +533,8 @@ _Component _parseComponent(
     }
   }
 
-  final (tree, deps, builders, localDecls) = _translateBuildTree(
+  final (tree, deps, builders, builderNames, builderParams, localDecls) =
+      _translateBuildTree(
     buildMethod,
     propByField,
     actionByMethod,
@@ -544,6 +553,8 @@ _Component _parseComponent(
     deps: deps,
     models: used,
     builders: builders,
+    builderNames: builderNames,
+    builderParams: builderParams,
     localDecls: localDecls,
   );
 }
@@ -695,7 +706,8 @@ _Component _parseNestedComponent(
     }
   }
 
-  final (tree, deps, builders, localDecls) = _translateBuildTree(
+  final (tree, deps, builders, builderNames, builderParams, localDecls) =
+      _translateBuildTree(
     buildMethod,
     propByField,
     actionByMethod,
@@ -714,6 +726,8 @@ _Component _parseNestedComponent(
     deps: deps,
     models: used,
     builders: builders,
+    builderNames: builderNames,
+    builderParams: builderParams,
     localDecls: localDecls,
   );
 }
@@ -1167,7 +1181,7 @@ String? _relativeToLib(String uri, String dir) {
 // build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
 // ---------------------------------------------------------------------------
 
-(Object?, Set<String>, List<Object?>, List<String>)
+(Object?, Set<String>, List<Object?>, List<String>, List<String?>, List<String>)
       _translateBuildTree(
   MethodDeclaration buildMethod,
   Map<String, String> propByField,
@@ -1226,6 +1240,8 @@ String? _relativeToLib(String uri, String dir) {
     ctx.translate(e),
     {...ctx.dependencies},
     ctx.builderTrees,
+    ctx.builderNames,
+    ctx.builderParams,
     localDecls,
   );
 }
@@ -1370,11 +1386,14 @@ String _renderJs(
     }
     b.writeln('    return ${ctx.renderJs(c.tree, 2)};');
     b.writeln('  }');
-    // ListenableBuilder 的 builder 闭包子树 → 方法 `_lbBuilderN()`。
-    // 运行时时模型 notify 后重新调用本方法拿到最新子树（含已求值的
-    // this._model.n），做「仅此节点」的局部重建。
+    // 响应式 builder 闭包子树（ListenableBuilder/Consumer）→ 实例方法
+    // `_lbBuilderN()` / `_consumerBuilderN(value)`。运行时时模型 notify 后
+    // 重新调用本方法拿到最新子树（含已求值的 this._model.n / value.count），
+    // 做「仅此节点」的局部重建。方法名与形参由 translator 声明。
     for (var i = 0; i < c.builders.length; i++) {
-      b.writeln('  _lbBuilder$i() {');
+      final name = i < c.builderNames.length ? c.builderNames[i] : '_lbBuilder$i';
+      final param = i < c.builderParams.length ? c.builderParams[i] : null;
+      b.writeln('  $name(${param ?? ''}) {');
       b.writeln('      return ${ctx.renderJs(c.builders[i], 2)};');
       b.writeln('  }');
     }
