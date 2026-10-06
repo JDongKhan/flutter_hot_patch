@@ -106,31 +106,3 @@ export class LabeledDivider {
   }
 }
 
-export class _LabeledDivider {
-  constructor(args) {
-    this.text = (args && args.text !== undefined) ? args.text : '';
-  }
-  build() {
-    return {
-      "type": "Column",
-      "children": [
-        {
-          "type": "Text",
-          "props": {
-            "data": "— " + this.text + " —",
-            "style": {
-              "fontSize": 12
-            }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
-            "height": 4
-          }
-        }
-      ]
-    };
-  }
-}
-

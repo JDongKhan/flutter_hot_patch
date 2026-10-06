@@ -112,7 +112,12 @@ class DemoListPage extends StatelessWidget {
           // 运行时自动递归加载，使用方无需声明依赖。
           // 非私有组件（LabeledDivider）运行时注入原生 widget：
           // hot_patch 包不 import 业务类，由业务方在这里注册
-          nativeComponents: {'LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? '')},
+          nativeComponents: {
+            'LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? ''),
+            // 标了 @UIComponentIgnore 的私有组件同样走原生注入
+            //（私有类跨库不可见，注册等价的原生实现）：
+            '_LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? ''),
+          },
         ),
       ),
     ),

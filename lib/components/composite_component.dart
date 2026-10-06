@@ -58,8 +58,11 @@ class _DashboardCardState extends State<DashboardCard> {
   }
 }
 
-/// 私有组件（_ 开头）：生成器递归翻译成 JS 注册进同一产物，
-/// 运行时 ComponentHost 递归渲染 JS 版本。
+/// 私有组件（_ 开头）：默认生成器递归翻译成 JS 注册进同一产物。
+/// 这里标 @UIComponentIgnore 演示「不参与连带转换」：生成器跳过
+/// 翻译（产物里无该 JS 类），build 树保持 Component 节点，运行时
+/// 由业务方原生注入（nativeComponents）渲染。
+@UIComponentIgnore()
 class _LabeledDivider extends StatelessWidget {
   const _LabeledDivider({required this.text});
 

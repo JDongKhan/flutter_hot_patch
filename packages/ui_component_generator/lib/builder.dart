@@ -83,6 +83,9 @@ class ComponentBuilder implements Builder {
     final ownProduct = _productPath(inputId.path); // assets/components/.../x.component.js
     final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
     String? importResolver(String name) {
+      // @UIComponentIgnore：显式「不参与连带转换」的类 → null
+      // （保持 Component 节点，运行时原生注入，等价于无注解公共组件路径）。
+      if (_isIgnoredClass(parsed.unit, name)) return null;
       if (parsedNames.contains(name)) {
         if (annotatedNames.contains(name) || name.startsWith('_')) {
           return ownName;
@@ -155,6 +158,9 @@ class ComponentBuilder implements Builder {
       final dep = depQueue.removeLast();
       if (doneDeps.contains(dep)) continue;
       doneDeps.add(dep);
+      // @UIComponentIgnore：显式「不参与连带转换」→ 跳过（不生成 JS 类），
+      // build 树里该组件保持 Component 节点，运行时由原生注入渲染。
+      if (_isIgnoredClass(parsed.unit, dep)) continue;
       // 翻译本文件内的组件类（build 树里 Component 兜底的同文件类：
       // 私有 _Xxx 或无注解公共 widget 如 LabeledDivider），转成 inline
       // 组件类（export class，与主组件同产物注册）。已收集的主组件跳过。
@@ -797,6 +803,17 @@ Annotation? _findAnnotation(List<Annotation> metadata, String simpleName) {
     }
   }
   return null;
+}
+
+/// 判断本文件里名为 [className] 的类是否带 @UIComponentIgnore。
+/// 带注解 → 不参与连带转换（生成器跳过翻译，运行时原生注入）。
+bool _isIgnoredClass(CompilationUnit unit, String className) {
+  for (final d in unit.declarations) {
+    if (d is ClassDeclaration && d.name.lexeme == className) {
+      return _findAnnotation(d.metadata, 'UIComponentIgnore') != null;
+    }
+  }
+  return false;
 }
 
 String? _positionalString(Annotation a, int index) {
