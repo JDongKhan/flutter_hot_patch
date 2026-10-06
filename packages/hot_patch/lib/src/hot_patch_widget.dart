@@ -197,10 +197,12 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       // 2.3.1 给 JS 实例挂载 setState：执行回调（更新 JS 状态）+ sendMessage 通知宿主重建。
       // HotPatchWidget 不直接 setState；重建由 JS 侧 setState 驱动（与 Dart 语义一致）。
       _manager.evaluate(
-        '(function(){ __instances["$_instanceKey"].setState = function(fn){ '
-        '  fn.call(this); '
-        '  sendMessage("setState", JSON.stringify({ key: "$_instanceKey" })); '
-        '}; })()',
+        '''(function() {
+  __instances["$_instanceKey"].setState = function(fn) {
+    fn.call(this);
+    sendMessage("setState", JSON.stringify({ key: "$_instanceKey" }));
+  };
+})()''',
       );
       debugPrint('[hot_patch] instance created: $_instanceKey');
 
@@ -247,9 +249,13 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   /// 调生命周期方法（若 JS 实例导出该方法）并返回最新节点树。
   Object? _bootWithLifecycle(String lifecycle) {
     final r = _manager.evaluate(
-      '(function(){ var i = __instances["$_instanceKey"]; '
-      'if (i && typeof i.$lifecycle === "function") { i.$lifecycle(); } '
-      'return JSON.stringify(i ? i.build() : null); })()',
+      '''(function() {
+  var i = __instances["$_instanceKey"];
+  if (i && typeof i.$lifecycle === "function") {
+    i.$lifecycle();
+  }
+  return JSON.stringify(i ? i.build() : null);
+})()''',
     );
     return jsonDecode(r.stringResult);
   }
@@ -257,9 +263,13 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   /// 调用 JS 生命周期（无返回值场景，如 dispose/deactivate）。
   void _callLifecycle(String lifecycle) {
     final r = _manager.evaluate(
-      '(function(){ var i = __instances["$_instanceKey"]; '
-      'if (i && typeof i.$lifecycle === "function") { i.$lifecycle(); } '
-      'return true; })()',
+      '''(function() {
+  var i = __instances["$_instanceKey"];
+  if (i && typeof i.$lifecycle === "function") {
+    i.$lifecycle();
+  }
+  return true;
+})()''',
     );
     debugPrint('[hot_patch] lifecycle $lifecycle called: ${r.stringResult}');
   }
@@ -269,14 +279,14 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
     // 事件名 = 组件方法名（一比一）：直接调用同名方法。
     // UI 重建由方法体内的 setState()（挂载在 JS 实例上）驱动，
     // 宿主不直接 setState；方法体未调 setState 则 UI 不刷新（与 Dart 一致）。
-    _manager.evaluate('(function(){ __instances["$_instanceKey"].$event(); })()');
+    _manager.evaluate('''(function(){ __instances["$_instanceKey"].$event(); })()''');
   }
 
   /// 带值事件（Switch/Slider 等 onChanged）：把新值传给 JS 方法同名参数。
   void _onEventValue(String event, Object? value) {
     debugPrint('[hot_patch] onEventValue: $event = $value');
     _manager.evaluate(
-      '(function(){ __instances["$_instanceKey"].$event(${_jsArg(value)}); })()',
+      '''(function(){ __instances["$_instanceKey"].$event(${_jsArg(value)}); })()''',
     );
   }
 

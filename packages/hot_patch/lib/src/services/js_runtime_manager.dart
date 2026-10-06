@@ -201,19 +201,35 @@ class JsRuntimeManager {
     if (!_moduleTableInited) {
       // typeof 判空（读未声明标识符在部分引擎抛 ReferenceError，
       // 不能直接 `x || {}`）；var 提升保证同脚本内后续语句可见。
-      _runtime.evaluate(
-        "if (typeof __modules === 'undefined') { var __modules = {}; } "
-        "if (typeof __instances === 'undefined') { var __instances = {}; } "
-        // ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
-        // extends ChangeNotifier` 共用，notifyListeners 触发订阅回调
-        // （ListenableBuilder 局部重建用到）。
-        "function ChangeNotifier(){ this._listeners = []; }"
-        "ChangeNotifier.prototype.addListener = function(f){ this._listeners.push(f); };"
-        "ChangeNotifier.prototype.removeListener = function(f){"
-        "  var i = this._listeners.indexOf(f); if (i >= 0) this._listeners.splice(i, 1); };"
-        "ChangeNotifier.prototype.notifyListeners = function(){"
-        "  this._listeners.slice().forEach(function(f){ f(); }); };",
-      );
+      // 用 ''' 原始块书写，JS 可读性更好（避免双引号逐段拼接与转义）。
+      _runtime.evaluate('''
+if (typeof __modules === 'undefined') {
+  var __modules = {};
+}
+if (typeof __instances === 'undefined') {
+  var __instances = {};
+}
+// ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
+// extends ChangeNotifier` 共用，notifyListeners 触发订阅回调
+// （ListenableBuilder 局部重建用到）。
+function ChangeNotifier() {
+  this._listeners = [];
+}
+ChangeNotifier.prototype.addListener = function(f) {
+  this._listeners.push(f);
+};
+ChangeNotifier.prototype.removeListener = function(f) {
+  var i = this._listeners.indexOf(f);
+  if (i >= 0) {
+    this._listeners.splice(i, 1);
+  }
+};
+ChangeNotifier.prototype.notifyListeners = function() {
+  this._listeners.slice().forEach(function(f) {
+    f();
+  });
+};
+''');
       _moduleTableInited = true;
     }
 
@@ -317,7 +333,10 @@ class JsRuntimeManager {
     // `Can't create duplicate variable`（如 user 模块的 class User 与
     // 组件模块的 const { User } 冲突）。IIFE 内声明互不干扰，
     // 只有 var 全局表（__modules/__instances）跨 evaluate 可见。
-    return (code: '(function() {\n$out\n})();', exports: exportNames);
+    return (code: '''
+(function() {
+$out
+})();''', exports: exportNames);
   }
 
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
