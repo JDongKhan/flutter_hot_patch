@@ -370,14 +370,28 @@ class WidgetTranslateContext {
     // `${_model.n}` / `_model.n` 无 `?.` 时解析为 PrefixedIdentifier
     // （其是 Identifier 的子类，必须先于此判断，避免落入 propOf）。
     if (e is PrefixedIdentifier) {
+      // Platform.isAndroid 等 → 运行时注入的 Platform 对象（原样保留）
+      if (e.prefix.name == 'Platform') {
+        final flag = platformFlagJs(e.identifier.name);
+        if (flag != null) return flag;
+      }
       return '${jsDataExpr(e.prefix)}.${e.identifier.name}';
     }
     if (e is Identifier) {
+      // kDebugMode / kReleaseMode → 运行时注入的全局标志
+      final flag = globalFlagJs(e.name);
+      if (flag != null) return flag;
       // 循环变量（for 循环体里 i 等）/ build 局部变量（final isAdult = ...）
       // 直接引用，不查状态字段表
       if (_loopVars.contains(e.name)) return e.name;
       if (_locals.contains(e.name)) return e.name;
       return 'this.${propOf(e)}';
+    }
+    if (e is PropertyAccess && e.target is Identifier &&
+        (e.target as Identifier).name == 'Platform') {
+      // Platform.isAndroid 等 → 运行时注入的平台标志
+      final flag = platformFlagJs(e.propertyName.name);
+      if (flag != null) return flag;
     }
     if (e is PropertyAccess && e.target != null) {
       final target = jsDataExpr(e.target!);

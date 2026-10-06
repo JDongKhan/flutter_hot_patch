@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'style_translators.dart';
 
 // ===========================================================================
 // 统一「Dart 类 → JS 类」转换处理器
@@ -228,9 +229,25 @@ String? literalToJs(Expression? e) {
 
 /// 读位置表达式 → JS 表达式（this._model.n / this._model / 字面量 / 形参）。
 String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
-  if (e is Identifier) return scope.fieldRef(e.name);
+  // Platform.isAndroid 等（PrefixedIdentifier 是 Identifier 子类，必须先判）
+  if (e is PrefixedIdentifier && e.prefix.name == 'Platform') {
+    final flag = platformFlagJs(e.identifier.name);
+    if (flag != null) return flag;
+  }
+  if (e is Identifier) {
+    // kDebugMode / kReleaseMode → 运行时注入的全局标志
+    final flag = globalFlagJs(e.name);
+    if (flag != null) return flag;
+    return scope.fieldRef(e.name);
+  }
   final lit = literalToJs(e);
   if (lit != null) return lit;
+  if (e is PropertyAccess && e.target is Identifier &&
+      (e.target as Identifier).name == 'Platform') {
+    // Platform.isAndroid 等 → 运行时注入的平台标志
+    final flag = platformFlagJs(e.propertyName.name);
+    if (flag != null) return flag;
+  }
   if (e is PropertyAccess && e.target != null) {
     final t = exprToJs(e.target!, scope, classes);
     if (t == null) return null;
@@ -307,8 +324,44 @@ String? methodCallStmtJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
+  // Dart 日志 → JS 原生日志方法（运行时注入 console 对象，桥到 log 服务）：
+  // debugPrint → console.debug（仅 debug 模式输出）、print → console.log。
+  // 参数支持字符串插值（拼接翻译）。
+  if (e.target == null) {
+    final name = e.methodName.name;
+    if (name == 'debugPrint' || name == 'print') {
+      final args = e.argumentList.arguments;
+      final v = args.isEmpty ? '""' : _logArgJs(args.first, scope, classes);
+      if (v == null) return null;
+      final method = name == 'debugPrint' ? 'debug' : 'log';
+      return 'console.$method($v);';
+    }
+  }
   final call = methodCallExprJs(e, scope, classes);
   return call == null ? null : '$call;';
+}
+
+/// 日志参数 → JS 表达式：字符串 / 插值拼接 / 字段引用 / 属性链。
+String? _logArgJs(
+  Expression a,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  // 注意：StringInterpolation 是 StringLiteral 的子类，必须先判插值
+  //（否则 stringValue 会把插值表达式拼进字面量、丢失 this._x 引用）。
+  if (a is StringInterpolation) {
+    final parts = <String>[];
+    for (final el in a.elements) {
+      if (el is InterpolationString) {
+        if (el.value.isNotEmpty) parts.add(jsString(el.value));
+      } else if (el is InterpolationExpression) {
+        final v = exprToJs(el.expression, scope, classes);
+        if (v != null) parts.add(v);
+      }
+    }
+    return parts.isEmpty ? '""' : parts.join(' + ');
+  }
+  return exprToJs(a, scope, classes);
 }
 
 /// 方法调用（表达式位置）：返回 `obj.method(args)` / `this.method(args)`。

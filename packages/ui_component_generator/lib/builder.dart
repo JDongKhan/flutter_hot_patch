@@ -1205,6 +1205,20 @@ String? _relativeToLib(String uri, String dir) {
               : ctx.jsDataExpr(v.initializer!);
           localDecls.add('    var $name = $js;');
         }
+      } else if (st is ExpressionStatement) {
+        // build 内 Dart 日志 → JS 原生日志方法（运行时注入 console 对象，
+        // 桥到 log 服务）：debugPrint → console.debug、print → console.log。
+        // 参数走 jsDataExpr（插值/字段/模型属性）。
+        final ex = st.expression;
+        if (ex is MethodInvocation && ex.target == null) {
+          final name = ex.methodName.name;
+          if (name == 'debugPrint' || name == 'print') {
+            final args = ex.argumentList.arguments;
+            final argJs = args.isEmpty ? '""' : ctx.jsDataExpr(args.first);
+            final method = name == 'debugPrint' ? 'debug' : 'log';
+            localDecls.add('    console.$method($argJs);');
+          }
+        }
       }
     }
   }

@@ -17,12 +17,15 @@ export class HelloCard {
     this._count = 0;
     this._user = null;
   }
-  inc() { this.setState(function(){ this._count += 1; }); }
+  inc() { console.debug("inc: count=" + this._count); this.setState(function(){ this._count += 1; }); }
   async loadUser() { await new Promise(function(r){ setTimeout(r, 1000); }); this.setState(function(){ this._user = new User({name: "Alice", age: 18}); }); }
   reset() { this.setState(function(){ this._count = 0; }); }
   showNative() { sendMessage("nativeToast", JSON.stringify({ key: this._key, message: "Hello from native (JS-driven)" })); }
   build() {
     var isAdult = ((this._user != null) && (this._user.age >= 18));
+    var debugActive = kDebugMode;
+    var android = Platform.isAndroid;
+    console.debug("build: count=" + this._count + " debug=" + debugActive + " android=" + android);
     return {
       "type": "Column",
       "children": [

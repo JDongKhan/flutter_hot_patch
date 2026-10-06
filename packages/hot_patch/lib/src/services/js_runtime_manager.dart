@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_js/flutter_js.dart';
@@ -7,6 +8,9 @@ import 'native_service.dart';
 import '../utils/hot_patch_log.dart';
 
 /// JS 运行时管理器：与底层 [JavascriptRuntime] **一对一**。
+///
+/// [debugMode] 控制 JS 侧 `kDebugMode` 标志（console.debug 是否输出）：
+/// 默认跟随 Dart `kDebugMode`，测试/灰度可显式覆盖。
 ///
 /// 每个 [JsRuntimeManager] 内部持有一个 [JavascriptRuntime]，所有与
 /// JavascriptRuntime 相关的操作（创建、求值、通道注册、生命周期）都在
@@ -74,6 +78,10 @@ class JsRuntimeManager {
 
   /// 所有活跃 manager（static 跟踪）：注册处理器时对所有实例接线通道。
   static final Set<JsRuntimeManager> _instances = {};
+
+  /// JS 侧 `kDebugMode` 标志（console.debug 是否输出）：
+  /// 默认跟随 Dart [kDebugMode]，可显式覆盖（如灰度环境强制关闭调试日志）。
+  bool debugMode = kDebugMode;
 
   // ---------------------------------------------------------------------
   // 全局共享（static）：两套消息处理器表
@@ -202,12 +210,42 @@ class JsRuntimeManager {
       // typeof 判空（读未声明标识符在部分引擎抛 ReferenceError，
       // 不能直接 `x || {}`）；var 提升保证同脚本内后续语句可见。
       // 用 ''' 原始块书写，JS 可读性更好（避免双引号逐段拼接与转义）。
+      // Dart 编译期/运行期标志注入：转换产物里的 kDebugMode / kReleaseMode /
+      // Platform.isAndroid 等直接引用这些全局（见生成器 globalFlags 特判）。
+      final isDebug = debugMode;
+      final isRelease = kReleaseMode;
+      final targetPlatform = defaultTargetPlatform;
       _runtime.evaluate('''
 if (typeof __modules === 'undefined') {
   var __modules = {};
 }
 if (typeof __instances === 'undefined') {
   var __instances = {};
+}
+// 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
+// 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
+// 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
+var kDebugMode = $isDebug;
+var kReleaseMode = $isRelease;
+var Platform = {
+  isAndroid: ${targetPlatform == TargetPlatform.android},
+  isIOS: ${targetPlatform == TargetPlatform.iOS},
+  isMacOS: ${targetPlatform == TargetPlatform.macOS},
+  isWindows: ${targetPlatform == TargetPlatform.windows},
+  isLinux: ${targetPlatform == TargetPlatform.linux},
+  isFuchsia: ${targetPlatform == TargetPlatform.fuchsia}
+};
+// JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
+// 统一桥到 sendMessage('log')（运行时 log 服务 → HotPatchLog，可全局开关）。
+// console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
+if (typeof console === 'undefined') {
+  var console = {
+    debug: function(m) { if (kDebugMode) { sendMessage('log', String(m)); } },
+    info: function(m) { sendMessage('log', String(m)); },
+    log: function(m) { sendMessage('log', String(m)); },
+    warn: function(m) { sendMessage('log', String(m)); },
+    error: function(m) { sendMessage('log', String(m)); }
+  };
 }
 // ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
 // extends ChangeNotifier` 共用，notifyListeners 触发订阅回调

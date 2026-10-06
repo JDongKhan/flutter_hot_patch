@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:ui_component/ui_component.dart';
 import 'package:flutter_hot/model/user.dart';
 
@@ -36,6 +38,7 @@ class _HelloCardState extends State<HelloCard> {
 
   // 无注解：自动成为 JS 方法 `inc`
   void inc() {
+    debugPrint('inc: count=$_count'); // 日志：方法体 → sendMessage('log', 插值)
     setState(() => _count++);
   }
 
@@ -66,6 +69,9 @@ class _HelloCardState extends State<HelloCard> {
   Widget build(BuildContext context) {
     // return 前的局部逻辑：user 已加载且 age >= 18 → 成人
     final isAdult = _user != null && _user!.age >= 18;
+    final debugActive = kDebugMode; // 标志转换：kDebugMode → __isDebug
+    final android = Platform.isAndroid; // 标志转换：Platform.isAndroid → __isAndroid
+    debugPrint('build: count=$_count debug=$debugActive android=$android'); // 日志 → console.debug
     return Column(
       children: [
         Text(
