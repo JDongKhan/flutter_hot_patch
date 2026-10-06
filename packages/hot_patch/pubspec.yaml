@@ -10,3 +10,6 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_js: ^0.8.7
+  # 网络补丁包：http(s):// zip 下载解压（RemoteAssetLoader）
+  archive: ^3.6.1
+  path_provider: ^2.1.4

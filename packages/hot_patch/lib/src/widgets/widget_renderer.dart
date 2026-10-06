@@ -76,6 +76,11 @@ class WidgetRenderContext {
   /// 产物整体发布（CDN / 包内迁移）后相对关系依然成立。
   final String baseUri;
 
+  /// 网络补丁包的本地唯一根目录（URL 哈希推导）。嵌套组件递归加载
+  /// HotPatchWidget 时透传，模块读取用「localRoot + 虚拟路径」判断文件
+  /// 存在；null = 纯 asset 模式。
+  final String? localRoot;
+
   /// 原生组件注入表（无 JS 产物的普通 widget）：组件名 → Flutter widget 构造。
   /// 由 HotPatchWidget 透传业务方的 nativeComponents，渲染 Component 节点
   /// 且无 import 时使用；未注册则渲染占位提示。
@@ -97,6 +102,7 @@ class WidgetRenderContext {
     required this.onEvent,
     this.onEventValue,
     this.baseUri = '',
+    this.localRoot,
     this.nativeComponents = const {},
     this.nestedRendererRegistry,
     this.nativeServices,
@@ -157,6 +163,7 @@ class WidgetRenderContext {
         nativeServices: nativeServices,
         nativeComponents: nativeComponents,
         sharedManager: manager,
+        localRoot: localRoot,
       );
     }
     final builder = nativeComponents[name];

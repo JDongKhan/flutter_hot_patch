@@ -8,6 +8,7 @@ import 'services/js_runtime_manager.dart';
 import 'services/native_service.dart';
 import 'widgets/widget_renderer.dart';
 import 'utils/hot_patch_log.dart';
+import 'utils/remote_asset_loader.dart';
 
 /// ============================================================
 /// HotPatchWidget —— 热更新组件运行时入口
@@ -44,10 +45,16 @@ class HotPatchWidget extends StatefulWidget {
     this.nativeServices,
     this.nativeComponents = const {},
     this.sharedManager,
+    this.localRoot,
   });
 
-  /// JS 补丁模块的来源。本 demo 用 assets；生产环境换成远端 URL。
+  /// JS 补丁模块的来源。asset 路径（如 assets/...）或 http(s):// zip 网络补丁。
   final String jsAsset;
+
+  /// 网络补丁包的本地唯一根目录（框架内部/嵌套组件递归透传用）。
+  /// 由 RemoteAssetLoader 按 URL 哈希推导；外部一般不需要传，
+  /// 嵌套 Component 节点递归创建 HotPatchWidget 时由渲染层自动透传。
+  final String? localRoot;
 
   /// 组件构造参数（如 `_LabeledDivider(text: 'x')` 的 {text: 'x'}）：
   /// 实例化 JS 组件时传给构造函数（生成器 ctorArgs 逐个取用，缺省回退默认值）。
@@ -94,6 +101,15 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   bool _loading = true;
   String? _error;
 
+  /// 实际加载的入口模块（asset 风格虚拟路径）。网络补丁包（http:// zip）
+  /// 解压后取 zip 内第一个 .component.js 的虚拟路径，后续模块加载 /
+  /// 相对 import / 实例化全部基于它——与内置 asset 场景完全一致。
+  late String _entryJsAsset;
+
+  /// 网络补丁包的本地唯一根目录（URL 哈希推导，文档目录下 hot_patch/&lt;hash&gt;/）。
+  /// 模块读取时「localRoot + 虚拟路径」拼路径判断文件存在；null = 纯 asset 模式。
+  String? _localRoot;
+
   /// JS 实例唯一 key：每个 HotPatchWidget 用 __instances[key] 持有独立组件实例，
   /// 同名组件多处使用（如列表多卡片）时状态互不共享。
   late final String _instanceKey = 'hp_${identityHashCode(this)}';
@@ -135,12 +151,42 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
   Future<void> _boot() async {
     try {
+      // 0. 网络补丁包：http(s):// 开头的 jsAsset → 下载 zip → 解压到
+      //    <document>/hot_patch/<urlHash>/（URL 哈希即本地唯一路径）。
+      //    入口模块改为 zip 内 .component.js 的虚拟路径；模块读取时用
+      //    「localRoot + 虚拟路径」拼本地文件路径，判断存在即读本地，
+      //    不存在回退内置 asset——不维护映射表，其余逻辑（递归 import /
+      //    实例化 / 相对路径解析）与 asset 场景完全相同。
+      var entry = widget.jsAsset;
+      // 嵌套组件透传的本地根（渲染层把宿主的 localRoot 传下来）；
+      // 若 jsAsset 本身是网络 URL 则下面覆盖。
+      String? localRoot = widget.localRoot;
+      if (RemoteAssetLoader.isRemote(widget.jsAsset)) {
+        final bundle = await RemoteAssetLoader.load(
+          widget.jsAsset,
+          component: widget.component,
+        );
+        if (bundle == null) {
+          HotPatchLog.log('remote bundle failed: ${widget.jsAsset}');
+          if (!mounted) return;
+          setState(() {
+            _error = '远程补丁加载失败（需 http(s):// zip）：${widget.jsAsset}';
+            _loading = false;
+          });
+          return;
+        }
+        entry = bundle.entryJsAsset;
+        localRoot = bundle.localRoot;
+        HotPatchLog.log('remote entry: $entry (root: $localRoot)');
+      }
+      _entryJsAsset = entry;
+      _localRoot = localRoot;
       // 1. 加载补丁模块：JsRuntimeManager 模块加载器递归加载 import 依赖
       //    （先依赖后自身），把产物预处理成脚本模式（export class →
       //    class + __modules 注册；import → __modules 解构），同一 jsAsset
       //    只执行一次（多组件/多实例共享同一个模块与模型类）。
-      await _manager.loadModule(widget.jsAsset);
-      HotPatchLog.log('module loaded: ${widget.jsAsset}');
+      await _manager.loadModule(_entryJsAsset, localRoot: _localRoot);
+      HotPatchLog.log('module loaded: $_entryJsAsset');
 
       // 1.1 服务注册：统一收 NativeService。
       //     - 页面级：内部实现（setState 等）+ 业务方注入的服务 →
@@ -179,7 +225,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       //    独立（状态互不共享），可重复实例化。
       //    嵌套组件（Component 节点带 import）由渲染层递归创建嵌套
       //    HotPatchWidget 自行加载，使用方无需声明依赖。
-      final moduleExpr = '__modules[${jsonEncode(widget.jsAsset)}]';
+      final moduleExpr = '__modules[${jsonEncode(_entryJsAsset)}]';
       final instResult = _manager.evaluate(
         '__instances["$_instanceKey"] = new $moduleExpr.${widget.component}'
         '(${jsonEncode(widget.componentArgs)}); '
@@ -189,7 +235,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       final instDbg = _manager.evaluate(
         'JSON.stringify({ m: typeof __modules, '
         'i: typeof __instances, '
-        'mod: typeof __modules[${jsonEncode(widget.jsAsset)}], '
+        'mod: typeof __modules[${jsonEncode(_entryJsAsset)}], '
         'v: typeof __instances["$_instanceKey"] })',
       );
       HotPatchLog.log('inst dbg: $instDbg');
@@ -316,14 +362,15 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       );
     }
     // 当前 jsAsset 的目录：Component 节点的相对 import 以此为基准解析
-    final slash = widget.jsAsset.lastIndexOf('/');
+    final slash = _entryJsAsset.lastIndexOf('/');
     final baseUri =
-        slash >= 0 ? widget.jsAsset.substring(0, slash + 1) : '';
+        slash >= 0 ? _entryJsAsset.substring(0, slash + 1) : '';
     final ctx = WidgetRenderContext(
       registry: _registry,
       onEvent: _onEvent,
       onEventValue: _onEventValue,
       baseUri: baseUri,
+      localRoot: _localRoot,
       nativeComponents: widget.nativeComponents,
       nestedRendererRegistry: widget.rendererRegistry,
       nativeServices: widget.nativeServices,

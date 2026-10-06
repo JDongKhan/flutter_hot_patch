@@ -161,6 +161,17 @@ class DemoListPage extends StatelessWidget {
       HotPatchWidget(jsAsset: 'assets/components/components/scaffold_demo.component.js', component: 'ScaffoldDemo'),
     ),
     _DemoEntry(
+      'HelloCard · 网络 zip 加载',
+      'jsAsset 为 http(s):// zip：下载解压到 document 后走与 asset 一致的加载逻辑',
+      _CompareTest(
+        native: HelloCard(),
+        js: HotPatchWidget(
+          jsAsset: 'http://127.0.0.1:8765/patch/hello_component.zip',
+          component: 'HelloCard',
+        ),
+      ),
+    ),
+    _DemoEntry(
       'HelloCard · JS 双实例隔离',
       '同屏两个 HotPatchWidget 实例：各自 new 独立实例，状态互不共享',
       _TwinTest(

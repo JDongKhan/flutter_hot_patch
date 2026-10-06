@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -183,7 +185,7 @@ class JsRuntimeManager {
 
   /// 模块加载：递归加载 import 依赖（先依赖后自身），再把自身预处理后
   /// evaluate 进 JS 全局（__modules 注册）。幂等：同 jsAsset 只执行一次。
-  Future<void> loadModule(String jsAsset) async {
+  Future<void> loadModule(String jsAsset, {String? localRoot}) async {
     if (jsAsset.isEmpty) {
       return;
     }
@@ -193,13 +195,16 @@ class JsRuntimeManager {
       return;
     }
     _loadingModules.add(jsAsset);
-    final source = await rootBundle.loadString(jsAsset);
+    // 网络补丁包：localRoot（URL 哈希本地唯一根目录）+ 虚拟路径拼出本地
+    // 文件，存在即读本地，不存在回退内置 asset（rootBundle）。不维护任何
+    // 映射表——文件系统即索引，与 asset 场景共用同一套相对 import 逻辑。
+    final source = await _readModule(jsAsset, localRoot);
     final base = jsAsset.substring(0, jsAsset.lastIndexOf('/') + 1);
 
     // 1) 递归加载 import 依赖（相对路径，以当前模块目录为基准）
     for (final (_, rel) in _parseImports(source)) {
       final dep = JsAssetResolver.resolve(base, rel);
-      await loadModule(dep);
+      await loadModule(dep, localRoot: localRoot);
     }
 
     // 2) 首次加载前初始化 JS 侧全局表（幂等 var 声明）：
@@ -308,6 +313,16 @@ ChangeNotifier.prototype.notifyListeners = function() {
     } finally {
       _loadingModules.remove(jsAsset);
     }
+  }
+
+  /// 读取模块源码：网络补丁（[localRoot] 非空）时用「本地根 + 虚拟路径」
+  /// 拼文件路径，判断存在读本地；否则回退内置 asset。
+  Future<String> _readModule(String jsAsset, String? localRoot) async {
+    if (localRoot != null) {
+      final file = File('$localRoot/$jsAsset');
+      if (file.existsSync()) return file.readAsString();
+    }
+    return rootBundle.loadString(jsAsset);
   }
 
   /// 解析模块源码里的 import 语句：`import { A, B } from 'rel';`
