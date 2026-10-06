@@ -11,7 +11,7 @@ class HotPatchLog {
   HotPatchLog._();
 
   /// 全局开关：true 输出，false 静默。
-  static bool enabled = true;
+  static bool enabled = kDebugMode;
 
   /// 输出日志（统一带 `[hot_patch]` 前缀）。
   static void log(String message) {

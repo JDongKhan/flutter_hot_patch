@@ -68,10 +68,6 @@ abstract class _AxisLayoutRenderer extends WidgetRenderer {
   @override
   Widget render(RenderNode node, WidgetRenderContext ctx) {
     final children = [for (final c in node.children) ctx.render(c)];
-    HotPatchLog.log(
-      '${node.type} render children=${children.length} '
-      'types=[${children.map((w) => w.runtimeType).join(',')}]',
-    );
     // Flutter 中 Column / Row 的 mainAxisSize 默认都是 max，
     // 未显式翻译时保持与原生一致。
     final size = mainAxisSizeFromJson(node.props['mainAxisSize']) ??
@@ -144,7 +140,6 @@ class TextRenderer extends WidgetRenderer {
             : null,
       ),
     );
-    HotPatchLog.log('Text render "${node.props['data']}"');
     return w;
   }
 }
@@ -174,8 +169,6 @@ class ButtonRenderer extends WidgetRenderer {
         OutlinedButton(onPressed: onPressed, style: style, child: label),
       _ => ElevatedButton(onPressed: onPressed, style: style, child: label),
     };
-    HotPatchLog.log('Button(${node.props['kind'] ?? 'elevated'}) '
-        'render "${node.props['label']}"');
     return w;
   }
 }

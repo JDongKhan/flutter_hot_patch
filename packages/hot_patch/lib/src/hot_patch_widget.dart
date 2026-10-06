@@ -207,7 +207,6 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
       // 3. 生命周期 + 首帧：调 initState（若存在）再 build 首帧
       _tree = _bootWithLifecycle('initState');
-      HotPatchLog.log('first tree: $_tree');
       if (!mounted) return;
       setState(() => _loading = false);
     } catch (e) {
@@ -305,7 +304,6 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
   @override
   Widget build(BuildContext context) {
-    HotPatchLog.log('build: loading=$_loading error=$_error tree=${_tree != null}');
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -330,7 +328,6 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
       instanceKey: _instanceKey,
     );
     final w = ctx.render(_tree);
-    HotPatchLog.log('render -> ${w.runtimeType}');
     return w;
   }
 

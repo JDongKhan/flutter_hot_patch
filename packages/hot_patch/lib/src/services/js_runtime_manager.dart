@@ -238,15 +238,17 @@ var Platform = {
 // JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
 // 统一桥到 sendMessage('log')（运行时 log 服务 → HotPatchLog，可全局开关）。
 // console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
-if (typeof console === 'undefined') {
-  var console = {
-    debug: function(m) { if (kDebugMode) { sendMessage('log', String(m)); } },
-    info: function(m) { sendMessage('log', String(m)); },
-    log: function(m) { sendMessage('log', String(m)); },
-    warn: function(m) { sendMessage('log', String(m)); },
-    error: function(m) { sendMessage('log', String(m)); }
-  };
-}
+// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
+// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
+// debug/info/log/warn/error 全部可用且路由到 log 服务。
+var console = (typeof console === 'undefined') ? {} : console;
+// 引擎 sendMessage 的 data 会做 JSON.parse，日志内容必须是合法 JSON：
+// JSON.stringify(String(m)) → '"文本"' → 解析回字符串，Dart 侧收到原文。
+console.debug = function(m) { if (kDebugMode) { sendMessage('log', JSON.stringify(String(m))); } };
+console.info = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+console.log = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+console.warn = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+console.error = function(m) { sendMessage('log', JSON.stringify(String(m))); };
 // ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
 // extends ChangeNotifier` 共用，notifyListeners 触发订阅回调
 // （ListenableBuilder 局部重建用到）。
