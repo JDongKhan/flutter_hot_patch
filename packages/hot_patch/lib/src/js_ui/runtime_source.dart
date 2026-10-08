@@ -33,10 +33,15 @@ const String jsUiRuntimeSource = r'''
   var handlers = {};
   var HOST = 1, COMP = 2;
 
-  // pageKey -> { key, inst, providers, dirty, flushing, ops }
+  // pageKey -> { key, inst, dirty, flushing, ops }
   var roots = {};
   // 正在 mount/patch/flush 的根；emit / 结点归属都读它。
   var activeRoot = null;
+  // 正在构建的元素（build 执行期）——`context` 的锚点。watch/read 据此
+  // 定位 provider 并订阅（与 Dart 的 BuildContext 语义一致：按**位置**而非
+  // 「谁定义了这个方法」）。委托型组件（Builder/Consumer）把 builder 方法
+  // 以 owner 为 this 调用时，锚点仍是它们自身的结点。
+  var building = null;
 
   function nextId() { idSeq += 1; return 'n' + idSeq; }
 
@@ -129,16 +134,24 @@ const String jsUiRuntimeSource = r'''
     if (typeof mutate === 'function') { mutate.call(this); }
     markDirty(this);
   };
-  // 取最近 provider 提供的值并订阅（值变更 -> 本组件 setState）。
+  // 取最近 provider 提供的值并订阅（值变更 -> 重构建该位置的结点）。
+  // 锚点是**当前构建的元素**（`building`）：订阅的是这个位置，notify 只重建
+  // 这个位置（与 Dart context.watch 重建该 BuildContext 一致），且 provider
+  // 按位置向上取最近一个 —— 不再依赖「谁调用」的启发式。
   Component.prototype.watch = function (type) {
-    var node = findProvider(this, type);
+    var anchor = building || this;
+    var node = findProvider(anchor, type);
     if (!node) { return undefined; }
-    if (node.__subs.indexOf(this) < 0) { node.__subs.push(this); }
+    if (node.__subs.indexOf(anchor) < 0) { node.__subs.push(anchor); }
+    // 订阅双方各记一份：provider 侧 `__subs` 用于 notify 广播；订阅者侧
+    // `__providerSubs` 用于卸载时精确退订（避免 provider 上残留死订阅）。
+    var mine = anchor.__providerSubs || (anchor.__providerSubs = []);
+    if (mine.indexOf(node) < 0) { mine.push(node); }
     return node.__value;
   };
-  // 只读不订阅。
+  // 只读不订阅（同样按当前构建位置向上取最近 provider）。
   Component.prototype.read = function (type) {
-    var node = findProvider(this, type);
+    var node = findProvider(building || this, type);
     return node ? node.__value : undefined;
   };
   // 事件句柄：在**构建期**把事件表达式绑定到当前组件实例（Dart tear-off 语义）。
@@ -147,12 +160,15 @@ const String jsUiRuntimeSource = r'''
   // `.call(owner)` 的场景）。句柄随 props 传下去（`{__fn:id, __ev:原表达式}`），
   // 宿主点击时经 invoke(id) 回来；因为绑定信息挂在 props 上，包装型组件
   // （MultiProvider 透传 child）也不会把它弄丢。
+  //   句柄执行时会还原**绑定时的构建位置**：事件表达式里的 `this.__read/__watch`
+  //   按定义该表达式时的 context 位置解析（而非点击时的 `this`）。
   //   按 (实例, 表达式) 缓存：重建产出同一句柄 → props 稳定（增量补丁仍生效）；
   //   卸载时统一释放（markUnmounted）。
   Component.prototype.__bind = function (expr) {
     var bag = this.__bound || (this.__bound = {});
     if (bag[expr]) { return bag[expr]; }
     var self = this;
+    var anchor = building || this; // 绑定时的 context 位置（见上）
     // 两种事件形态，触发即执行：裸方法名（`_incA`）→ 调实例方法；其余整体
     // 作为调用表达式求值（`this.__read("T").inc()`）。二者都无返回值语义。
     var isName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expr);
@@ -165,14 +181,21 @@ const String jsUiRuntimeSource = r'''
           new Function('return (' + expr + ');').call(self);
         };
     var handle = fn(function (payload) {
+      // 还原绑定时的构建位置：表达式若含 `this.__read/__watch`，按当时的
+      // context 位置解析（点击时无 build 上下文，`building` 为 null）。
+      var prev = building;
+      building = anchor;
       try { run(payload); }
       catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
+      finally { building = prev; }
     });
     handle.__ev = expr; // 便于调试：句柄带上原表达式
     bag[expr] = handle;
     return handle;
   };
 
+  // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的 provider —— 与 Dart
+  // `context.read/watch` 的向上查找一致，取不到返回 null（不猜、不回退）。
   function findProvider(inst, type) {
     var p = inst.__parent;
     while (p) {
@@ -181,31 +204,20 @@ const String jsUiRuntimeSource = r'''
       }
       p = p.__parent;
     }
-    // 回退：无可用祖先链时（如 Builder 的委托方法 `_builderN()` 以
-    // provider **之上**的拥有者组件为 this 调用）取本页面最近挂载的同名 provider。
-    var byType = inst.__root ? inst.__root.providers : null;
-    var arr = byType ? byType[type] : null;
-    return (arr && arr.length) ? arr[arr.length - 1] : null;
+    return null;
   }
 
-  // provider 结点按模型类型登记（挂载顺序）：findProvider 的祖先回退用。
-  // 登记在所属根的 providers 表里，天然按页面隔离。
-  function registerProvides(inst) {
-    if (!inst || !inst.__provides || !inst.__root) { return; }
-    var byType = inst.__root.providers;
-    for (var k in inst.__provides) {
-      (byType[k] || (byType[k] = [])).push(inst);
+  // 卸载时按订阅者自己记录的列表精确退订（watch 里登记在 `__providerSubs`）。
+  function unsubscribeAll(inst) {
+    var mine = inst.__providerSubs;
+    if (!mine) { return; }
+    for (var i = 0; i < mine.length; i++) {
+      var subs = mine[i].__subs;
+      if (!subs) { continue; }
+      var j = subs.indexOf(inst);
+      if (j >= 0) { subs.splice(j, 1); }
     }
-  }
-  function unregisterProvides(inst) {
-    if (!inst || !inst.__provides || !inst.__root) { return; }
-    var byType = inst.__root.providers;
-    for (var k in inst.__provides) {
-      var arr = byType[k];
-      if (!arr) { continue; }
-      var i = arr.indexOf(inst);
-      if (i >= 0) { arr.splice(i, 1); }
-    }
+    inst.__providerSubs = null;
   }
 
   // provider 结点：订阅者通知（ChangeNotifier.notifyListeners 也走这里）。
@@ -242,7 +254,7 @@ const String jsUiRuntimeSource = r'''
           inst.__dirty = false;
           if (inst.__unmounted) { continue; }
           root.ops = [];
-          inst.__child = patch(inst.__child, inst.build(), inst, inst.__slot);
+          inst.__child = patch(inst.__child, buildOf(inst), inst, inst.__slot);
           commit(root);
         }
       }
@@ -269,6 +281,16 @@ const String jsUiRuntimeSource = r'''
     inst.__read = Component.prototype.read;
     inst.__bind = Component.prototype.__bind;
     inst.__notify = function () { notifyProvider(this); };
+  }
+
+  // 在 [inst] 的 build 执行期间把 `building` 指向它 —— watch/read 与事件绑定
+  // 据此拿到「当前构建位置」作为 context 锚点。building 只在同步的 build 调用
+  // 内有效，退出即还原（委托型组件的 builder 方法在 build 调用栈内执行，
+  // 因此锚点仍是该委托组件自身的结点）。
+  function buildOf(inst) {
+    var prev = building;
+    building = inst;
+    try { return inst.build(); } finally { building = prev; }
   }
 
   function mount(el, parent, slot) {
@@ -304,8 +326,7 @@ const String jsUiRuntimeSource = r'''
     ci.__root = rootFor(parent);
     augment(ci);
     if (typeof ci.initState === 'function') { ci.initState(); }
-    registerProvides(ci);
-    ci.__child = mount(ci.build(), ci, slot);
+    ci.__child = mount(buildOf(ci), ci, slot);
     return ci;
   }
 
@@ -340,7 +361,7 @@ const String jsUiRuntimeSource = r'''
     oldInst.__el = el;
     oldInst.props = el.props;
     oldInst.children = el.children;
-    oldInst.__child = patch(oldInst.__child, oldInst.build(), oldInst, oldInst.__slot);
+    oldInst.__child = patch(oldInst.__child, buildOf(oldInst), oldInst, oldInst.__slot);
     return oldInst;
   }
 
@@ -433,7 +454,8 @@ const String jsUiRuntimeSource = r'''
       if (typeof inst.dispose === 'function') {
         try { inst.dispose(); } catch (e) {}
       }
-      unregisterProvides(inst);
+      // 从所有 provider 的订阅表里摘掉自己（watch 把订阅登记在 provider 上）。
+      unsubscribeAll(inst);
       // 释放构建期登记的（实例, 表达式）事件句柄，避免 handlers 表泄漏。
       var bag = inst.__bound;
       if (bag) {
@@ -457,7 +479,7 @@ const String jsUiRuntimeSource = r'''
 
   function newRoot(pageKey) {
     return {
-      key: pageKey, inst: null, providers: {}, dirty: [], flushing: false, ops: null
+      key: pageKey, inst: null, dirty: [], flushing: false, ops: null
     };
   }
 
