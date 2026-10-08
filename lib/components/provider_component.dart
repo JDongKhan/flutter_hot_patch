@@ -96,8 +96,9 @@ class _ProviderCardState extends State<ProviderCard> {
 
   @override
   void dispose() {
-    _modelA.dispose();
-    _modelB.dispose();
+    // 模型生命周期交给 ChangeNotifierProvider（create 的模型在 provider
+    // 销毁时自动 dispose）；这里再手动 dispose 会重复释放触发
+    // "used after being disposed" 断言。
     super.dispose();
   }
 }

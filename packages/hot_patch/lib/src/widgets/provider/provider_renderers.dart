@@ -76,8 +76,10 @@ RenderNode? _childOf(RenderNode node) {
 }
 
 /// 把一条 provider create 登记进 `__providerChain[key]`（栈）。
-/// ref：复用状态字段实例（与 Dart 同实例）；construct：JS 侧 new 模型类
-/// （组件索引反查 jsAsset）。ChangeNotifierProvider / MultiProvider 共用。
+/// ref：复用状态字段实例（与 Dart 同实例，生命周期归用户）→ 不释放；
+/// construct：JS 侧 new 模型类（组件索引反查 jsAsset）→ 标记 `__dispose`，
+/// dispose 时由渲染器负责释放（调模型 dispose）。ChangeNotifierProvider /
+/// MultiProvider 共用。
 void _providerPush(JsRuntimeManager manager, String key, String model,
     Map<String, dynamic> create) {
   final ref = create['ref'];
@@ -89,7 +91,7 @@ void _providerPush(JsRuntimeManager manager, String key, String model,
       '__providerChain = __providerChain || {}; '
       '__providerChain["$key"] = __providerChain["$key"] || []; '
       '__providerChain["$key"].push({ "$model": '
-      '__instances["$key"].$refName });',
+      '__instances["$key"].$refName, "__dispose": false });',
     );
   } else if (construct != null) {
     final jsAsset = manager.resolveComponentAsset(construct.toString());
@@ -99,7 +101,7 @@ void _providerPush(JsRuntimeManager manager, String key, String model,
         '__providerChain["$key"] = __providerChain["$key"] || []; '
         'var __c = __modules["$jsAsset"]; '
         '__providerChain["$key"].push({ "$model": '
-        'new __c.$construct() });',
+        'new __c.$construct(), "__dispose": true });',
       );
     }
   }
@@ -107,12 +109,19 @@ void _providerPush(JsRuntimeManager manager, String key, String model,
 
 /// 从 `__providerChain[key]` 倒序 pop 掉 [count] 层（登记顺序 push，
 /// dispose 从内向外触发，倒序 pop 与「Consumer 取最近」对应）。
+/// pop 出的条目若标记了 `__dispose`（construct 创建）→ 调模型 JS dispose
+/// 释放（清订阅、解除监听闭包）；ref 复用（用户管理）的不动。
 void _providerPops(JsRuntimeManager manager, String key, int count) {
   manager.evaluate(
     'if (__providerChain && __providerChain["$key"]) { '
     'for (var __i = 0; __i < $count && '
     '__providerChain["$key"].length > 0; __i++) '
-    '{ __providerChain["$key"].pop(); } }',
+    '{ var __e = __providerChain["$key"].pop(); '
+    'if (__e && __e.__dispose) { '
+    '  for (var __k in __e) { '
+    '    if (__k !== "__dispose" && __e[__k] && '
+    '        typeof __e[__k].dispose === "function") '
+    '    { __e[__k].dispose(); } } } } }',
   );
 }
 

@@ -414,9 +414,12 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
 
   @override
   void dispose() {
-    // 一次性移除本页面 key 下的全部注册（setState、native 服务等）
-    JsRuntimeManager.dispose(_instanceKey);
+    // 顺序：先调 JS 组件 dispose（嵌套 provider 渲染 pop 登记栈，此时
+    // __providerChain[key] 尚在），再一次性移除本页面 key 下的全部注册
+    // （Dart handler + JS 全局表 __instances/__providerChain 的 key 残留，
+    // 防内存泄漏——每次进出页面都新增一个唯一 key，不删会无限增长）。
     if (!_loading) _callLifecycle('dispose');
+    JsRuntimeManager.dispose(_instanceKey);
     // manager（及其 runtime）由全局默认/业务方持有，不在此 dispose。
     super.dispose();
   }

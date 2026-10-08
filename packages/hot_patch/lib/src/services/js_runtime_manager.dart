@@ -135,8 +135,27 @@ class JsRuntimeManager {
   }
 
   /// 移除页面 key 下的**全部**页面级注册（页面/组件销毁时调用）。
+  ///
+  /// 职责：Dart 侧 handler + JS 全局表的**引用**回收——
+  ///   - `__instances[key]`：组件实例（状态字段、模型引用、监听闭包）——
+  ///     不删会随每次进出页面无限增长（每个 HotPatchWidget 一个 key）；
+  ///   - `__providerChain[key]`：provider 登记栈（push/pop 后可能剩空数组，
+  ///     key 仍驻留全局）——直接 delete 释放。
+  /// 注意：模型的 **dispose 调用**不在此做——由 provider 渲染器负责
+  /// （create 创建的模型在其 renderer dispose 时释放，ref 复用归用户）。
+  /// 顺序保证：HotPatchWidget 先调 JS 组件 dispose（renderer pop + 模型
+  /// dispose），再调本方法删表。遍历所有活跃 manager（页面服务可能
+  /// 注册在任意 manager 上）。
   static void dispose(String pageKey) {
     pageMessageHandlers.remove(pageKey);
+    for (final m in _instances) {
+      m._runtime.evaluate(
+        'if (typeof __instances !== "undefined") '
+        'delete __instances["$pageKey"]; '
+        'if (typeof __providerChain !== "undefined") '
+        'delete __providerChain["$pageKey"];',
+      );
+    }
   }
 
   /// 内部：把 channel 接线到**所有活跃 manager** 的 runtime。
@@ -286,6 +305,11 @@ ChangeNotifier.prototype.notifyListeners = function() {
   this._listeners.slice().forEach(function(f) {
     f();
   });
+};
+// Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
+// 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
+ChangeNotifier.prototype.dispose = function() {
+  this._listeners = [];
 };
 ''');
       _moduleTableInited = true;
