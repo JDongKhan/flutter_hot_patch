@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode, defaultTargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_js/flutter_js.dart';
@@ -173,20 +173,37 @@ class JsRuntimeManager {
 
   /// 确保 js_ui 运行时骨架就位（幂等）。
   ///
-  /// 只注入**框架代码**（element/component/reconciler/context + commit 协议），
-  /// 与具体组件无关；组件/模型/按 package 生成的 widget 模块仍走
-  /// [loadModule]。骨架里创建的 `__modules` 与模块表初始化兼容
-  /// （module loader 用 typeof 判空，不会覆盖）。
+  /// 注入两块**框架代码**（均在 `js_ui/runtime_source.dart` 集中维护）：
+  ///   - `jsUiRuntimeSource`：element/component/reconciler/context + commit 协议；
+  ///   - `jsRuntimeEnvSource`：模块表 `__modules`、编译/平台标志、console 桥、
+  ///     ChangeNotifier 基类。
+  /// 与具体组件无关；组件/模型/按 package 生成的 widget 模块仍走 [loadModule]。
   void ensureJsUiRuntime() {
     if (!_jsUiInited) {
       _runtime.evaluate(jsUiRuntimeSource);
       _jsUiInited = true;
     }
+    _ensureRuntimeEnv();
     // 模块表初始化可能新建 __modules：每次确保 core 指向同一个 api。
     _runtime.evaluate(
       "typeof __jsui !== 'undefined' && typeof __modules !== 'undefined' "
       "&& (__modules['js_ui/core'] = __jsui);",
     );
+  }
+
+  /// 注入运行时环境全局（模块表 / 标志 / console / ChangeNotifier），幂等。
+  /// 依赖 Dart 侧标志，故由 [jsRuntimeEnvSource] 生成；[loadModule] 与
+  /// [ensureJsUiRuntime] 都会调用它，保证模块产物求值前全局已就位。
+  void _ensureRuntimeEnv() {
+    if (_envInited) {
+      return;
+    }
+    _runtime.evaluate(jsRuntimeEnvSource(
+      debugMode: debugMode,
+      releaseMode: kReleaseMode,
+      platform: defaultTargetPlatform,
+    ));
+    _envInited = true;
   }
 
   // ---------------------------------------------------------------------
@@ -225,77 +242,9 @@ class JsRuntimeManager {
       await loadModule(dep, localRoot: localRoot);
     }
 
-    // 2) 首次加载前初始化 JS 侧全局表（幂等 var 声明）：
-    //    __modules = 模块注册表（export class/const/function 收集）。
-    //    实例/根状态由 js_ui 运行时（__jsui.roots）自行管理，不经全局表。
-    if (!_moduleTableInited) {
-      // typeof 判空（读未声明标识符在部分引擎抛 ReferenceError，
-      // 不能直接 `x || {}`）；var 提升保证同脚本内后续语句可见。
-      // 用 ''' 原始块书写，JS 可读性更好（避免双引号逐段拼接与转义）。
-      // Dart 编译期/运行期标志注入：转换产物里的 kDebugMode / kReleaseMode /
-      // Platform.isAndroid 等直接引用这些全局（见生成器 globalFlags 特判）。
-      final isDebug = debugMode;
-      final isRelease = kReleaseMode;
-      final targetPlatform = defaultTargetPlatform;
-      _runtime.evaluate('''
-if (typeof __modules === 'undefined') {
-  var __modules = {};
-}
-// 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
-// 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
-// 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
-var kDebugMode = $isDebug;
-var kReleaseMode = $isRelease;
-var Platform = {
-  isAndroid: ${targetPlatform == TargetPlatform.android},
-  isIOS: ${targetPlatform == TargetPlatform.iOS},
-  isMacOS: ${targetPlatform == TargetPlatform.macOS},
-  isWindows: ${targetPlatform == TargetPlatform.windows},
-  isLinux: ${targetPlatform == TargetPlatform.linux},
-  isFuchsia: ${targetPlatform == TargetPlatform.fuchsia}
-};
-// JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
-// 统一桥到 sendMessage('log')（运行时 log 服务 → HotPatchLog，可全局开关）。
-// console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
-// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
-// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
-// debug/info/log/warn/error 全部可用且路由到 log 服务。
-var console = (typeof console === 'undefined') ? {} : console;
-// 引擎 sendMessage 的 data 会做 JSON.parse，日志内容必须是合法 JSON：
-// JSON.stringify(String(m)) → '"文本"' → 解析回字符串，Dart 侧收到原文。
-console.debug = function(m) { if (kDebugMode) { sendMessage('log', JSON.stringify(String(m))); } };
-console.info = function(m) { sendMessage('log', JSON.stringify(String(m))); };
-console.log = function(m) { sendMessage('log', JSON.stringify(String(m))); };
-console.warn = function(m) { sendMessage('log', JSON.stringify(String(m))); };
-console.error = function(m) { sendMessage('log', JSON.stringify(String(m))); };
-// ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
-// extends ChangeNotifier` 共用，notifyListeners 触发订阅回调
-// （ListenableBuilder 局部重建用到）。
-function ChangeNotifier() {
-  this._listeners = [];
-}
-ChangeNotifier.prototype.addListener = function(f) {
-  this._listeners.push(f);
-};
-ChangeNotifier.prototype.removeListener = function(f) {
-  var i = this._listeners.indexOf(f);
-  if (i >= 0) {
-    this._listeners.splice(i, 1);
-  }
-};
-ChangeNotifier.prototype.notifyListeners = function() {
-  this._listeners.slice().forEach(function(f) {
-    f();
-  });
-};
-// Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
-// 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
-ChangeNotifier.prototype.dispose = function() {
-  this._listeners = [];
-};
-''');
-      _moduleTableInited = true;
-    }
+    // 2) 模块产物求值前确保运行时环境全局（__modules / 标志 / console /
+    //    ChangeNotifier）已注入 —— 与 js_ui 骨架同源维护，幂等。
+    _ensureRuntimeEnv();
 
     // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）后求值
     try {
@@ -409,8 +358,8 @@ $out
   final Set<String> _loadedModules = {};
   final Set<String> _loadingModules = {};
 
-  /// JS 侧模块表是否已初始化。
-  bool _moduleTableInited = false;
+  /// 运行时环境全局（__modules / 标志 / console / ChangeNotifier）是否已注入。
+  bool _envInited = false;
 
   /// 注册消息通道（每个 manager × channel 一次，幂等）。
   ///

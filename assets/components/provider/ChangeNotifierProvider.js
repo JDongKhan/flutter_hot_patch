@@ -32,12 +32,6 @@ class ChangeNotifierProviderComponent {
     this.__ownsValue = owns;
     this.__provides = {};
     this.__provides[p.model] = this;
-    this.__subs = [];
-    if (vm && typeof vm.addListener === 'function') {
-      var self = this;
-      this.__listener = function () { self.__notify(); };
-      vm.addListener(this.__listener);
-    }
   }
   build() {
     // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；

@@ -1671,7 +1671,7 @@ String _renderWidgetModule(String package, Set<String> types) {
 /// 因此产物是 `__h(ComponentClass, props, children)`，运行时按组件路径挂载，
 /// 由组件 `build()` 自行消费 props（provider 提供/消费 VM、Builder 委托
 /// 拥有者方法返回子树）。运行时会给普通类实例补挂 `props/setState/watch/
-/// read/__watch/__read/__notify`（见 js_ui/runtime_source.dart）。
+/// read/__watch/__read/__bind`（见 js_ui/runtime_source.dart）。
 const Map<String, String> _logicWidgetSources = {
   'Builder': _jsBuilderComponent,
   'ChangeNotifierProvider': _jsChangeNotifierProviderComponent,
@@ -1700,11 +1700,12 @@ export function Builder(props, children) {
   return __h(BuilderComponent, props, children);
 }''';
 
-/// ChangeNotifierProvider：把 create/value 解析出的 VM 作为「提供者结点」
-/// 挂进组件树（`__provides[model]` + `__value` + `__subs`），VM notify 时
-/// 通过 `__notify()` 标记所有订阅者（Consumer / __watch 过的组件）重建。
-/// 生命周期与原生一致：`create` 语义下 provider 拥有 VM（类引用时 provider
-/// 内 new，实例时直接复用），卸载时 dispose；`value` 语义下不拥有、不释放。
+/// ChangeNotifierProvider：把 create/value 解析出的 VM 挂成「提供者结点」
+/// （`__provides[model]` + `__value`）。provider 是**纯值结点：不监听、不
+/// 记账**——订阅由消费者（`watch`）自己给 VM 挂监听并持有台账，notify 时只
+/// 标记该订阅位置重建，作用域最小。生命周期与原生一致：`create` 语义下
+/// provider 拥有 VM（类引用时 provider 内 new，实例时直接复用），卸载时
+/// dispose；`value` 语义下不拥有、不释放。
 const String _jsChangeNotifierProviderComponent = '''
 class ChangeNotifierProviderComponent {
   constructor(props, children) {
@@ -1725,12 +1726,6 @@ class ChangeNotifierProviderComponent {
     this.__ownsValue = owns;
     this.__provides = {};
     this.__provides[p.model] = this;
-    this.__subs = [];
-    if (vm && typeof vm.addListener === 'function') {
-      var self = this;
-      this.__listener = function () { self.__notify(); };
-      vm.addListener(this.__listener);
-    }
   }
   build() {
     // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；

@@ -12,13 +12,19 @@
 /// widget」才往宿主注册表加一条。
 ///
 /// **多根**：同一 JS 运行时里可并存多个页面，每个页面按 `pageKey` 隔离自己
-/// 的结点树、provider 表、脏队列与出方向 ops（互不订阅、互不重建）。宿主
+/// 的结点树、订阅、脏队列与出方向 ops（互不订阅、互不重建）。宿主
 /// 每次 `mount`/`dispose` 都显式带 `pageKey`；事件在**构建期**由生成器产出
 /// `this.__bind("方法/表达式")` 绑定到产出该结点的组件实例（Dart tear-off 语义），
 /// 宿主点击只回传句柄 id，无任何运行时树形状启发。
 ///
-/// 注入方式：由 JsRuntimeManager.ensureJsUiRuntime() 求值一次（幂等）。
+/// 本文件集中维护 JS 侧**框架代码**，由 JsRuntimeManager 分两块注入（幂等）：
+///   - [jsUiRuntimeSource]：UI 运行时骨架（element/component/reconciler/
+///     context/订阅 + commit 协议），与组件无关；
+///   - [jsRuntimeEnvSource]：运行时环境全局（模块表 `__modules`、编译/平台
+///     标志、console 桥、ChangeNotifier 基类），依赖 Dart 侧注入的标志。
 library;
+
+import 'package:flutter/foundation.dart' show TargetPlatform;
 
 /// 运行时 JS 源码（幂等 IIFE，重复求值无副作用）。
 const String jsUiRuntimeSource = r'''
@@ -134,19 +140,15 @@ const String jsUiRuntimeSource = r'''
     if (typeof mutate === 'function') { mutate.call(this); }
     markDirty(this);
   };
-  // 取最近 provider 提供的值并订阅（值变更 -> 重构建该位置的结点）。
-  // 锚点是**当前构建的元素**（`building`）：订阅的是这个位置，notify 只重建
-  // 这个位置（与 Dart context.watch 重建该 BuildContext 一致），且 provider
-  // 按位置向上取最近一个 —— 不再依赖「谁调用」的启发式。
+  // 取最近 provider 的**值**并订阅（值变更 -> 重构建该位置的结点）。
+  // 锚点是**当前构建的元素**（`building`），即订阅者自己：provider 只是纯值
+  // 结点，不感知订阅（与 Dart context.watch 一致——按位置取最近 provider，
+  // 依赖由该 BuildContext 持有，而非 provider 记账）。
   Component.prototype.watch = function (type) {
     var anchor = building || this;
     var node = findProvider(anchor, type);
     if (!node) { return undefined; }
-    if (node.__subs.indexOf(anchor) < 0) { node.__subs.push(anchor); }
-    // 订阅双方各记一份：provider 侧 `__subs` 用于 notify 广播；订阅者侧
-    // `__providerSubs` 用于卸载时精确退订（避免 provider 上残留死订阅）。
-    var mine = anchor.__providerSubs || (anchor.__providerSubs = []);
-    if (mine.indexOf(node) < 0) { mine.push(node); }
+    subscribeVm(anchor, node, node.__value);
     return node.__value;
   };
   // 只读不订阅（同样按当前构建位置向上取最近 provider）。
@@ -207,24 +209,32 @@ const String jsUiRuntimeSource = r'''
     return null;
   }
 
-  // 卸载时按订阅者自己记录的列表精确退订（watch 里登记在 `__providerSubs`）。
-  function unsubscribeAll(inst) {
-    var mine = inst.__providerSubs;
-    if (!mine) { return; }
+  // 订阅：给 [vm] 挂一个「把 [anchor] 标脏」的监听。订阅由**消费者自己持有**
+  // （provider 不记账），台账记在消费者侧 `__vmSubs`，卸载时精确退订。
+  // 按 provider 结点去重：重建会再次 watch，但不会重复挂监听。
+  function subscribeVm(anchor, node, vm) {
+    if (!vm || typeof vm.addListener !== 'function') { return; }
+    var mine = anchor.__vmSubs || (anchor.__vmSubs = []);
     for (var i = 0; i < mine.length; i++) {
-      var subs = mine[i].__subs;
-      if (!subs) { continue; }
-      var j = subs.indexOf(inst);
-      if (j >= 0) { subs.splice(j, 1); }
+      if (mine[i].node === node) { return; }
     }
-    inst.__providerSubs = null;
+    var entry = { node: node, vm: vm };
+    entry.listener = function () { markDirty(anchor); };
+    vm.addListener(entry.listener);
+    mine.push(entry);
   }
 
-  // provider 结点：订阅者通知（ChangeNotifier.notifyListeners 也走这里）。
-  function notifyProvider(node) {
-    var subs = node.__subs || [];
-    var list = subs.slice();
-    for (var i = 0; i < list.length; i++) { markDirty(list[i]); }
+  // 卸载时按消费者自己记录的台账精确退订。
+  function unsubscribeAll(inst) {
+    var mine = inst.__vmSubs;
+    if (!mine) { return; }
+    for (var i = 0; i < mine.length; i++) {
+      var vm = mine[i].vm;
+      if (vm && typeof vm.removeListener === 'function') {
+        vm.removeListener(mine[i].listener);
+      }
+    }
+    inst.__vmSubs = null;
   }
 
   // ---------------------------------------------------------------------
@@ -268,8 +278,8 @@ const String jsUiRuntimeSource = r'''
   // ---------------------------------------------------------------------
   // 普通类组件（生成器产物不 extends Component）挂载基类能力：
   // props / setState / watch / read（含生成器产物使用的下划线别名
-  // `this.__watch(...)` / `this.__read(...)`）/ __notify（provider 结点在
-  // 模型 notify 时标记订阅者 dirty）。对 extends Component 的类重复赋值无害。
+  // `this.__watch(...)` / `this.__read(...)`）/ __bind（构建期事件句柄）。
+  // 对 extends Component 的类重复赋值无害。
   function augment(inst) {
     if (inst.props === undefined || inst.props === null) {
       inst.props = inst.__el ? inst.__el.props : {};
@@ -280,7 +290,6 @@ const String jsUiRuntimeSource = r'''
     inst.__watch = Component.prototype.watch;
     inst.__read = Component.prototype.read;
     inst.__bind = Component.prototype.__bind;
-    inst.__notify = function () { notifyProvider(this); };
   }
 
   // 在 [inst] 的 build 执行期间把 `building` 指向它 —— watch/read 与事件绑定
@@ -454,7 +463,7 @@ const String jsUiRuntimeSource = r'''
       if (typeof inst.dispose === 'function') {
         try { inst.dispose(); } catch (e) {}
       }
-      // 从所有 provider 的订阅表里摘掉自己（watch 把订阅登记在 provider 上）。
+      // 从各 VM 的监听表里摘掉自己（watch 把订阅登记在消费者侧 `__vmSubs`）。
       unsubscribeAll(inst);
       // 释放构建期登记的（实例, 表达式）事件句柄，避免 handlers 表泄漏。
       var bag = inst.__bound;
@@ -529,12 +538,82 @@ const String jsUiRuntimeSource = r'''
     invoke: invoke,
     Component: Component,
     mount: mountRoot,
-    dispose: disposeRoot,
-    notifyProvider: notifyProvider
+    dispose: disposeRoot
   };
 
   G.__jsui = api;
   G.__modules = G.__modules || {};
   G.__modules['js_ui/core'] = api;
 })();
+''';
+
+/// 运行时环境全局源码（依赖 Dart 侧注入的编译/平台标志，故为函数式生成）。
+///
+/// 与 [jsUiRuntimeSource] 同源维护：模块加载器（JsRuntimeManager.loadModule）
+/// 依赖这里声明的全局，不再自带一份 JS 文本。
+/// 内容：模块注册表 `__modules`、编译/运行期标志、console 桥、ChangeNotifier
+/// 基类。**顶层书写（不包 IIFE）**：`var` 声明必须落到全局，供后续
+/// `evaluate` 的模块产物（`__modules[...] = ...`）与产物里裸引用的
+/// `kDebugMode` / `Platform` / `console` 可见。重复求值安全（`var`/`function`
+/// 重复声明无副作用），由调用方做一次幂等注入。
+String jsRuntimeEnvSource({
+  required bool debugMode,
+  required bool releaseMode,
+  required TargetPlatform platform,
+}) =>
+    '''
+if (typeof __modules === 'undefined') {
+  var __modules = {};
+}
+// 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
+// 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
+// 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
+var kDebugMode = $debugMode;
+var kReleaseMode = $releaseMode;
+var Platform = {
+  isAndroid: ${platform == TargetPlatform.android},
+  isIOS: ${platform == TargetPlatform.iOS},
+  isMacOS: ${platform == TargetPlatform.macOS},
+  isWindows: ${platform == TargetPlatform.windows},
+  isLinux: ${platform == TargetPlatform.linux},
+  isFuchsia: ${platform == TargetPlatform.fuchsia}
+};
+// JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
+// 统一桥到 sendMessage('log')（运行时 log 服务 → HotPatchLog，可全局开关）。
+// console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
+// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
+// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
+// debug/info/log/warn/error 全部可用且路由到 log 服务。
+var console = (typeof console === 'undefined') ? {} : console;
+// 引擎 sendMessage 的 data 会做 JSON.parse，日志内容必须是合法 JSON：
+// JSON.stringify(String(m)) → '"文本"' → 解析回字符串，Dart 侧收到原文。
+console.debug = function(m) { if (kDebugMode) { sendMessage('log', JSON.stringify(String(m))); } };
+console.info = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+console.log = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+console.warn = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+console.error = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+// ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
+// extends ChangeNotifier` 共用，notifyListeners 触发订阅回调。
+function ChangeNotifier() {
+  this._listeners = [];
+}
+ChangeNotifier.prototype.addListener = function(f) {
+  this._listeners.push(f);
+};
+ChangeNotifier.prototype.removeListener = function(f) {
+  var i = this._listeners.indexOf(f);
+  if (i >= 0) {
+    this._listeners.splice(i, 1);
+  }
+};
+ChangeNotifier.prototype.notifyListeners = function() {
+  this._listeners.slice().forEach(function(f) {
+    f();
+  });
+};
+// Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
+// 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
+ChangeNotifier.prototype.dispose = function() {
+  this._listeners = [];
+};
 ''';
