@@ -166,7 +166,9 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: HelloCard(),
         js: HotPatchWidget(
-          jsAsset: 'http://127.0.0.1:8765/patch/hello_component.zip',
+          jsAsset: 'http://127.0.0.1:8765/patch/multi_components.zip',
+          // entryPath 直达 zip 内入口（也可不传，按 component 反查）
+          entryPath: 'components/components/hello_component.component.js',
           component: 'HelloCard',
         ),
       ),

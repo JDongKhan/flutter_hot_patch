@@ -13,3 +13,5 @@ dependencies:
   # 网络补丁包：http(s):// zip 下载解压（RemoteAssetLoader）
   archive: ^3.6.1
   path_provider: ^2.1.4
+  # URL → 本地唯一路径哈希（sha256，避免截断碰撞）
+  crypto: ^3.0.3

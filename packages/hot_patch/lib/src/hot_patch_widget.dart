@@ -46,10 +46,16 @@ class HotPatchWidget extends StatefulWidget {
     this.nativeComponents = const {},
     this.sharedManager,
     this.localRoot,
+    this.entryPath,
   });
 
   /// JS 补丁模块的来源。asset 路径（如 assets/...）或 http(s):// zip 网络补丁。
   final String jsAsset;
+
+  /// 网络补丁包（zip）内入口 .component.js 的相对路径（如
+  /// `components/components/hello_component.component.js`）。仅网络补丁生效：
+  /// 指定时直接用它（无需反查）；不指定则按 [component] 名反查声明位置。
+  final String? entryPath;
 
   /// 网络补丁包的本地唯一根目录（框架内部/嵌套组件递归透传用）。
   /// 由 RemoteAssetLoader 按 URL 哈希推导；外部一般不需要传，
@@ -165,6 +171,7 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
         final bundle = await RemoteAssetLoader.load(
           widget.jsAsset,
           component: widget.component,
+          entryPath: widget.entryPath,
         );
         if (bundle == null) {
           HotPatchLog.log('remote bundle failed: ${widget.jsAsset}');

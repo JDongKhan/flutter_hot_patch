@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'hot_patch_log.dart';
@@ -40,23 +41,25 @@ class RemoteAssetLoader {
   /// 内容是否已存在直接用文件系统判断，无需维护映射表。
   static Future<String> localRootFor(String url) async {
     final doc = await getApplicationDocumentsDirectory();
-    final hash = base64Url
-        .encode(utf8.encode(url))
-        .replaceAll(RegExp('[^a-zA-Z0-9]'), '')
-        .substring(0, 16);
+    // sha256(url)：不同 URL 一定得到不同目录（base64 截断会碰撞）。
+    final hash = sha256.convert(utf8.encode(url)).toString().substring(0, 24);
     return '${doc.path}/hot_patch/$hash';
   }
 
-  /// 加载网络补丁包；[component] 用于在 zip 内定位它所在的 .component.js
-  /// （一个补丁包可含多个组件产物）。失败（非 200 / 非 zip / 解压异常 /
-  /// 包内无该组件）返回 null 并记录日志。
-  static Future<RemoteAssetBundle?> load(String url, {required String component}) async {
+  /// 加载网络补丁包。
+  ///
+  /// [entryPath]：zip 内入口 .component.js 的相对路径（如
+  /// `components/components/hello_component.component.js`）。指定时直接用它，
+  /// 不指定则按 [component] 反查声明它的 .component.js。
+  /// 失败（非 200 / 非 zip / 解压异常 / 包内无该组件或路径）返回 null。
+  static Future<RemoteAssetBundle?> load(String url,
+      {String? component, String? entryPath}) async {
     try {
       final root = await localRootFor(url);
       // 1. 本地已存在（此前下载解压过，URL 哈希目录即持久缓存）→ 直接
-      //    复用，不联网（离线可用；进程重启后依然有效）。按组件名定位
-      //    所在文件（zip 可能含多个 .component.js）。
-      final existing = _findComponentFile(root, component);
+      //    复用，不联网（离线可用；进程重启后依然有效）。指定 entryPath
+      //    直接用（先确认文件存在）；否则按组件名反查所在文件。
+      final existing = _resolveEntry(root, component, entryPath);
       if (existing != null) {
         HotPatchLog.log('remote bundle reused: $url -> $existing');
         return RemoteAssetBundle(existing, root);
@@ -95,10 +98,11 @@ class RemoteAssetLoader {
             target.writeAsBytesSync(file.content as Uint8List);
           }
         }
-        // 5. 入口：按组件名定位它所在的 .component.js（zip 可能含多个）
-        final entry = _findComponentFile(root, component);
+        // 5. 入口：entryPath 直达 / 按组件名反查（zip 可能含多个组件产物）
+        final entry = _resolveEntry(root, component, entryPath);
         if (entry == null) {
-          HotPatchLog.log('remote asset zip has no "$component": $url');
+          HotPatchLog.log(
+              'remote asset zip entry not found ($entryPath / $component): $url');
           return null;
         }
         HotPatchLog.log('remote bundle loaded: $url -> $entry');
@@ -110,6 +114,16 @@ class RemoteAssetLoader {
       HotPatchLog.log('remote asset load failed: $url -> $e');
       return null;
     }
+  }
+
+  /// 解析入口：指定 [entryPath] 直接用（文件存在才返回）；否则按
+  /// [component] 反查声明它的 .component.js。返回 zip 内相对路径。
+  static String? _resolveEntry(String root, String? component, String? entryPath) {
+    if (entryPath != null && entryPath.isNotEmpty) {
+      return File('$root/$entryPath').existsSync() ? entryPath : null;
+    }
+    if (component == null || component.isEmpty) return null;
+    return _findComponentFile(root, component);
   }
 
   /// 扫描本地根目录下的 .component.js，找声明了 [component] 类的那个
