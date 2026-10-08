@@ -49,7 +49,12 @@ const String jsUiRuntimeSource = r'''
   // 以 owner 为 this 调用时，锚点仍是它们自身的结点。
   var building = null;
 
-  function nextId() { idSeq += 1; return 'n' + idSeq; }
+  // 结点 id：`类型#序号`（序号全局单调，仅用于唯一化）。带类型是为了让宿主侧
+  // 的 ValueKey / Flutter DevTools 一眼看出这是哪个 widget / 组件（调试可读性）。
+  function nextId(kind) { idSeq += 1; return (kind || 'node') + '#' + idSeq; }
+
+  // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
+  function compName(type) { return (type && type.name) || 'Component'; }
 
   // ---------------------------------------------------------------------
   // 与宿主唯一的出方向通道
@@ -307,7 +312,7 @@ const String jsUiRuntimeSource = r'''
 
     if (typeof el.type === 'string') {
       var hi = {
-        __k: HOST, __id: nextId(), __type: el.type, __root: rootFor(parent),
+        __k: HOST, __id: nextId(el.type), __type: el.type, __root: rootFor(parent),
         __props: el.props, __children: [], __parent: parent
       };
       emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
@@ -328,7 +333,7 @@ const String jsUiRuntimeSource = r'''
 
     var ci = new el.type(el.props, el.children);
     ci.__k = COMP;
-    ci.__id = nextId();
+    ci.__id = nextId(compName(el.type));
     ci.__el = el;
     ci.__parent = parent;
     ci.__slot = slot;
