@@ -32,8 +32,10 @@ class ChangeNotifierProviderRenderer extends WidgetRenderer {
   Widget render(RenderNode node, WidgetRenderContext ctx) {
     final model = node.props['model']?.toString() ?? '';
     // create（create: (_) => x）或 value（.value(value: x)，字段名与 Dart
-    // 构造一一对应）。value 只可能复用实例 → ref 语义，__dispose:false。
-    final create =
+    // 构造一一对应）。释放语义严格对齐 Provider：create 的模型 provider
+    // 拥有（renderer dispose 时释放）；value 的模型归调用方（不释放）。
+    final fromValue = node.props['value'] is Map;
+    final source =
         (node.props['create'] as Map?)?.cast<String, dynamic>() ??
         (node.props['value'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
@@ -41,7 +43,8 @@ class ChangeNotifierProviderRenderer extends WidgetRenderer {
     return _JsChangeNotifierProvider(
       ctx: ctx,
       model: model,
-      create: create,
+      create: source,
+      fromValue: fromValue,
       child: child,
     );
   }
@@ -52,12 +55,14 @@ class _JsChangeNotifierProvider extends StatefulWidget {
     required this.ctx,
     required this.model,
     required this.create,
+    required this.fromValue,
     required this.child,
   });
 
   final WidgetRenderContext ctx;
   final String model;
   final Map<String, dynamic> create;
+  final bool fromValue;
   final RenderNode? child;
 
   @override
@@ -80,12 +85,13 @@ RenderNode? _childOf(RenderNode node) {
 }
 
 /// 把一条 provider create 登记进 `__providerChain[key]`（栈）。
-/// ref：复用状态字段实例（与 Dart 同实例，生命周期归用户）→ 不释放；
-/// construct：JS 侧 new 模型类（组件索引反查 jsAsset）→ 标记 `__dispose`，
-/// dispose 时由渲染器负责释放（调模型 dispose）。ChangeNotifierProvider /
-/// MultiProvider 共用。
+/// ref：复用状态字段实例（与 Dart 同实例）；construct：JS 侧 new 模型类
+/// （组件索引反查 jsAsset）。释放语义严格对齐 Provider：[disposeOnPop]
+/// 仅由来源决定——create（provider 拥有，销毁时释放）→ true；value
+/// （归调用方）→ false。ChangeNotifierProvider / MultiProvider 共用。
 void _providerPush(JsRuntimeManager manager, String key, String model,
-    Map<String, dynamic> create) {
+    Map<String, dynamic> create,
+    {bool disposeOnPop = true}) {
   final ref = create['ref'];
   final construct = create['construct'];
   if (ref != null) {
@@ -95,7 +101,7 @@ void _providerPush(JsRuntimeManager manager, String key, String model,
       '__providerChain = __providerChain || {}; '
       '__providerChain["$key"] = __providerChain["$key"] || []; '
       '__providerChain["$key"].push({ "$model": '
-      '__instances["$key"].$refName, "__dispose": false });',
+      '__instances["$key"].$refName, "__dispose": $disposeOnPop });',
     );
   } else if (construct != null) {
     final jsAsset = manager.resolveComponentAsset(construct.toString());
@@ -105,7 +111,7 @@ void _providerPush(JsRuntimeManager manager, String key, String model,
         '__providerChain["$key"] = __providerChain["$key"] || []; '
         'var __c = __modules["$jsAsset"]; '
         '__providerChain["$key"].push({ "$model": '
-        'new __c.$construct(), "__dispose": true });',
+        'new __c.$construct(), "__dispose": $disposeOnPop });',
       );
     }
   }
@@ -113,8 +119,8 @@ void _providerPush(JsRuntimeManager manager, String key, String model,
 
 /// 从 `__providerChain[key]` 倒序 pop 掉 [count] 层（登记顺序 push，
 /// dispose 从内向外触发，倒序 pop 与「Consumer 取最近」对应）。
-/// pop 出的条目若标记了 `__dispose`（construct 创建）→ 调模型 JS dispose
-/// 释放（清订阅、解除监听闭包）；ref 复用（用户管理）的不动。
+/// pop 出的条目若标记了 `__dispose`（create 来源，provider 拥有）→ 调模型
+/// JS dispose 释放（清订阅、解除监听闭包）；value 来源（归用户）不动。
 void _providerPops(JsRuntimeManager manager, String key, int count) {
   manager.evaluate(
     'if (__providerChain && __providerChain["$key"]) { '
@@ -138,7 +144,8 @@ class _JsChangeNotifierProviderState extends State<_JsChangeNotifierProvider> {
   @override
   void initState() {
     super.initState();
-    _providerPush(_manager, _key, widget.model, widget.create);
+    _providerPush(_manager, _key, widget.model, widget.create,
+        disposeOnPop: !widget.fromValue);
   }
 
   @override
@@ -205,14 +212,18 @@ class _JsMultiProviderState extends State<_JsMultiProvider> {
   void initState() {
     super.initState();
     for (final entry in widget.providers) {
-      // 条目是 ChangeNotifierProvider 节点：model/create 在 props 里
+      // 条目是 ChangeNotifierProvider 节点：model/create|value 在 props 里
       final props = (entry['props'] as Map?)?.cast<String, dynamic>() ??
           const <String, dynamic>{};
       final model = props['model']?.toString() ?? '';
+      // 释放语义对齐 Provider：create 条目 → renderer 释放；
+      // value 条目 → 归调用方，不释放。
+      final fromValue = props['value'] is Map;
       final create = (props['create'] as Map?)?.cast<String, dynamic>() ??
           (props['value'] as Map?)?.cast<String, dynamic>() ??
           const <String, dynamic>{};
-      _providerPush(_manager, _key, model, create);
+      _providerPush(_manager, _key, model, create,
+          disposeOnPop: !fromValue);
     }
   }
 
