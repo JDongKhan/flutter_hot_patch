@@ -370,6 +370,23 @@ String? methodCallExprJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
+  // `context.watch<T>()` / `context.read<T>()`（provider 包）→ 运行时挂载的
+  // 实例方法：__watch（取最近模型 + 订阅局部刷新）/ __read（仅取，不订阅）。
+  // 类型参数即模型类名（__lookupProvider 按 key+model 找最近实例）。
+  final tgt = e.target;
+  if (tgt is Identifier && tgt.name == 'context') {
+    final name = e.methodName.name;
+    if ((name == 'watch' || name == 'read') &&
+        e.argumentList.arguments.isEmpty) {
+      final ta = e.typeArguments?.arguments;
+      if (ta != null && ta.length == 1 && ta.first is NamedType) {
+        final model = (ta.first as NamedType).name2.lexeme;
+        final method = name == 'watch' ? '__watch' : '__read';
+        return 'this.$method(${jsString(model)})';
+      }
+      return null;
+    }
+  }
   final args = e.argumentList.arguments;
   final argJs = <String>[];
   for (final a in args) {

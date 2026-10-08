@@ -76,6 +76,10 @@ class WidgetTranslateContext {
   /// 与 [builderTrees] 同步的形参名（null = 无参；Consumer 为 value）。
   final List<String?> builderParams = [];
 
+  /// 与 [builderTrees] 同步的「方法体前置语句」（JS 源码，如 Builder 闭包
+  /// 块体里的 `var model = this.__watch('CounterModel');`）。
+  final List<String> builderPreludes = [];
+
   WidgetTranslateContext({
     required this.registry,
     required this.propByField,
@@ -299,14 +303,45 @@ class WidgetTranslateContext {
     throw FormatException('"$method" 未标注 @UIAction');
   }
 
-  /// 事件参数解析：`onTap: _tap` 或 `onTap: () => _tap()` → 事件名。
+  /// 事件参数解析：`onTap: _tap` / `onTap: () => _tap()` → 组件方法名；
+  /// 带 receiver 的调用（Builder 闭包局部变量 `model.inc()`、
+  /// `context.read<T>().reset()` 链式）→ 翻译为 JS 方法调用表达式
+  /// （一比一，不查动作表——方法/属性全量生成，无需标注）。
   String eventExpr(Expression e) {
     if (e is Identifier) return eventOf(e.name);
     if (e is FunctionExpression) {
       final inner = functionInner(e);
-      if (inner is MethodInvocation) return eventOf(inner.methodName.name);
+      if (inner is MethodInvocation) {
+        final target = inner.target;
+        // 局部变量 receiver：`model.inc()` → `model.inc()`（闭包内 var model 已声明）
+        if (target is Identifier && _locals.contains(target.name)) {
+          return '${target.name}.${inner.methodName.name}'
+              '(${_eventArgsJs(inner.argumentList)})';
+        }
+        // context.read<T>().reset() 链式：先翻译 receiver（jsDataExpr →
+        // this.__read('T')），再拼方法调用。
+        if (target is MethodInvocation) {
+          final recv = jsDataExpr(target);
+          return '$recv.${inner.methodName.name}'
+              '(${_eventArgsJs(inner.argumentList)})';
+        }
+        return eventOf(inner.methodName.name);
+      }
     }
     throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
+  }
+
+  /// 事件参数列表翻译：逐参数走 [jsDataExpr]（字符串/字段/局部变量/字面量）。
+  String _eventArgsJs(ArgumentList args) {
+    final out = <String>[];
+    for (final a in args.arguments) {
+      if (a is NamedExpression) {
+        out.add(jsDataExpr(a.expression));
+      } else {
+        out.add(jsDataExpr(a));
+      }
+    }
+    return out.join(', ');
   }
 
   /// 颜色表达式（Color(0x..)/Colors.x/静态引用/三目）→ JS 表达式字符串。
@@ -435,6 +470,25 @@ class WidgetTranslateContext {
       return '(${e.operator.lexeme}${jsDataExpr(e.operand)})';
     }
     if (e is ParenthesizedExpression) return '(${jsDataExpr(e.expression)})';
+    // `context.watch<T>()` / `context.read<T>()`（provider 包，数据表达式
+    // 位置：局部变量初始化 / Text 插值等）→ 运行时挂载的实例方法
+    // __watch（订阅局部刷新）/ __read（仅取）。
+    if (e is MethodInvocation) {
+      final tgt = e.target;
+      if (tgt is Identifier && tgt.name == 'context') {
+        final name = e.methodName.name;
+        if ((name == 'watch' || name == 'read') &&
+            e.argumentList.arguments.isEmpty) {
+          final ta = e.typeArguments?.arguments;
+          if (ta != null && ta.length == 1 && ta.first is NamedType) {
+            final model = (ta.first as NamedType).name2.lexeme;
+            final method = name == 'watch' ? '__watch' : '__read';
+            return 'this.$method(${jsString(model)})';
+          }
+        }
+      }
+      throw FormatException('文本内容不支持方法调用：${e.toSource()}');
+    }
     throw FormatException(
         '文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
   }

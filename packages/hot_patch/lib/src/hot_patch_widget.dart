@@ -151,7 +151,8 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
     // 页面级内部实现（setState 即普通 InstanceNativeService）
     _internalServices
       ..add(_SetStateService())
-      ..add(_LbNotifyService());
+      ..add(_LbNotifyService())
+      ..add(_LbWatchService());
     _boot();
   }
 
@@ -246,13 +247,45 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
         'v: typeof __instances["$_instanceKey"] })',
       );
       HotPatchLog.log('inst dbg: $instDbg');
-      // 2.3.1 给 JS 实例挂载 setState：执行回调（更新 JS 状态）+ sendMessage 通知宿主重建。
-      // HotPatchWidget 不直接 setState；重建由 JS 侧 setState 驱动（与 Dart 语义一致）。
+      // 2.3.1 给 JS 实例挂载框架方法（与 Dart 语义一致）：
+      //   - setState：执行回调（更新 JS 状态）+ 通知宿主重建；
+      //   - __read(model)：context.read<T>() 转换产物——取 provider 链
+      //     最近实例，不订阅；
+      //   - __watch(model)：context.watch<T>() 转换产物——取最近实例 +
+      //     订阅（notify → lbWatch → 本页面 rebuild）；同模型只挂一次
+      //     （__watchListeners 去重），dispose 时 __disposeWatch 解绑。
       _manager.evaluate(
         '''(function() {
-  __instances["$_instanceKey"].setState = function(fn) {
+  var __i = __instances["$_instanceKey"];
+  __i.setState = function(fn) {
     fn.call(this);
     sendMessage("setState", JSON.stringify({ key: "$_instanceKey" }));
+  };
+  __i.__read = function(model) {
+    return __lookupProvider("$_instanceKey", model);
+  };
+  __i.__watch = function(model) {
+    var m = __lookupProvider("$_instanceKey", model);
+    if (m && typeof m.addListener === "function") {
+      if (!this.__watchListeners) this.__watchListeners = {};
+      if (!this.__watchListeners[model]) {
+        this.__watchListeners[model] = function() {
+          sendMessage("lbWatch", JSON.stringify({ key: "$_instanceKey" }));
+        };
+        m.addListener(this.__watchListeners[model]);
+      }
+    }
+    return m;
+  };
+  __i.__disposeWatch = function() {
+    if (!this.__watchListeners) return;
+    for (var __k in this.__watchListeners) {
+      var __m = __lookupProvider("$_instanceKey", __k);
+      if (__m && typeof __m.removeListener === "function") {
+        __m.removeListener(this.__watchListeners[__k]);
+      }
+    }
+    this.__watchListeners = {};
   };
 })()''',
       );
@@ -415,10 +448,15 @@ class HotPatchWidgetState extends State<HotPatchWidget> {
   @override
   void dispose() {
     // 顺序：先调 JS 组件 dispose（嵌套 provider 渲染 pop 登记栈，此时
-    // __providerChain[key] 尚在），再一次性移除本页面 key 下的全部注册
-    // （Dart handler + JS 全局表 __instances/__providerChain 的 key 残留，
-    // 防内存泄漏——每次进出页面都新增一个唯一 key，不删会无限增长）。
+    // __providerChain[key] 尚在），再解绑 watch 监听（__disposeWatch：
+    // context.watch 挂在模型上的 listener，value 模型不随 renderer 释放、
+    // 必须显式 removeListener 防泄漏），最后移除本页面 key 下的全部注册
+    // （Dart handler + JS 全局表 __instances/__providerChain 的 key 残留）。
     if (!_loading) _callLifecycle('dispose');
+    _manager.evaluate(
+      'var __i = __instances["$_instanceKey"]; '
+      'if (__i && __i.__disposeWatch) __i.__disposeWatch();',
+    );
     JsRuntimeManager.dispose(_instanceKey);
     // manager（及其 runtime）由全局默认/业务方持有，不在此 dispose。
     super.dispose();
@@ -468,6 +506,20 @@ class _LbNotifyService extends InstanceNativeService {
     final key = payloadMap['key']?.toString() ?? '';
     final builder = payloadMap['builder']?.toString() ?? '';
     lbRefreshCallbacks['$key::$builder']?.call();
+  }
+}
+
+/// 页面级内部服务：`context.watch<T>()` 订阅触发（JS 实例 __watch 挂的
+/// listener → sendMessage('lbWatch', {key})）→ 本页面整体 rebuild。
+/// watch 依赖整个 build（非单个 builder 子树），走与 setState 相同的
+/// 页面重建路径。
+class _LbWatchService extends InstanceNativeService {
+  @override
+  String get channel => 'lbWatch';
+
+  @override
+  void handle(BuildContext context, dynamic payload) {
+    state?.rebuild();
   }
 }
 

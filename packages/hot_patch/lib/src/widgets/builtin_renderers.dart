@@ -56,7 +56,10 @@ void registerBuiltinRenderers(WidgetRendererRegistry registry) {
     ..register(const CheckboxRenderer())
     ..register(const SliderRenderer())
     // 响应式：ListenableBuilder（配合 ChangeNotifier 局部重建）
-    ..register(const ListenableBuilderRenderer());
+    ..register(const ListenableBuilderRenderer())
+    // Builder：多一层 context 作用域（闭包内 context.watch/read），
+    // 无订阅——每次 build 重新求值 `_builderN()` 子树渲染。
+    ..register(const BuilderRenderer());
   // provider 包（ChangeNotifierProvider / MultiProvider / Consumer）：
   // 独立子目录 provider_renderers.dart，避免基础库文件臃肿。
   registerProviderRenderers(registry);
@@ -835,6 +838,40 @@ class _JsListenableBuilderState extends State<_JsListenableBuilder> {
   @override
   Widget build(BuildContext context) {
     return widget.ctx.render(_node);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Builder：多一层 context 作用域（闭包内 context.watch/read 可用）
+// ---------------------------------------------------------------------------
+
+/// Builder 节点 `{type:'Builder', props:{builder:'_builderN'}}`：子树抽在
+/// 实例方法 `_builderN()`（生成器把闭包 return 的树翻译进方法，块体的
+/// 局部声明/日志作方法体前置）。无订阅——每次 build 重新求值渲染。
+/// `context.watch<T>()` 在闭包内的订阅由 __watch 挂的模型 listener 负责
+/// （lbWatch → 页面 rebuild），与 Builder 本身无关。
+class BuilderRenderer extends WidgetRenderer {
+  const BuilderRenderer();
+
+  @override
+  String get type => 'Builder';
+
+  @override
+  Widget render(RenderNode node, WidgetRenderContext ctx) {
+    final builderName = node.props['builder']?.toString() ?? '';
+    if (builderName.isEmpty) return const SizedBox.shrink();
+    final manager = ctx.sharedManager ?? JsRuntimeManager.instance;
+    final key = ctx.instanceKey ?? '';
+    try {
+      final r = manager.evaluate(
+        'JSON.stringify(__instances["$key"].$builderName())',
+      );
+      final n = RenderNode.of(jsonDecode(r.stringResult));
+      return ctx.render(n ?? RenderNode.of(const {'type': 'SizedBox'})!);
+    } catch (e) {
+      HotPatchLog.log('Builder fetch error: $e');
+      return const SizedBox.shrink();
+    }
   }
 }
 

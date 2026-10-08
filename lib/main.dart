@@ -6,6 +6,7 @@ import 'components/composite_component.dart';
 import 'components/hello_component.dart';
 import 'components/listenable_demo.dart';
 import 'components/notifier_component.dart';
+import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
 import 'components/stateless_component.dart';
 import 'components/widget_showcase.dart';
@@ -151,6 +152,17 @@ class DemoListPage extends StatelessWidget {
         js: HotPatchWidget(
           jsAsset: 'assets/components/components/notifier_component.component.js',
           component: 'NotifierCard',
+        ),
+      ),
+    ),
+    _DemoEntry(
+      'WatchDemo · 原生 vs JS 热更',
+      'context.watch（订阅局部刷新）/ context.read（仅取实例）',
+      _CompareTest(
+        native: WatchDemo(),
+        js: HotPatchWidget(
+          jsAsset: 'assets/components/components/watch_demo.component.js',
+          component: 'WatchDemo',
         ),
       ),
     ),

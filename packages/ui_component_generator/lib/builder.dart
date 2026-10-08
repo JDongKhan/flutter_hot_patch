@@ -254,6 +254,10 @@ class _Component {
   /// 与 [builders] 同步的形参名（null = 无参；Consumer 为 value）。
   final List<String?> builderParams;
 
+  /// 与 [builderNames] 同步的「方法体前置语句」（Builder 闭包块体里的
+  /// 局部声明/日志 → JS 语句串），产物 builder 方法体内先输出再 return 树。
+  final List<String> builderPreludes;
+
   /// build() return 前的局部变量声明（`final isAdult = ...;` → `var isAdult = ...;`），
   /// 产物 build() 方法体内先输出声明再 return 树；树里 Identifier 直接引用。
   final List<String> localDecls;
@@ -265,6 +269,7 @@ class _Component {
       this.builders = const [],
       this.builderNames = const [],
       this.builderParams = const [],
+      this.builderPreludes = const [],
       this.localDecls = const []});
 }
 
@@ -539,7 +544,8 @@ _Component _parseComponent(
     }
   }
 
-  final (tree, deps, builders, builderNames, builderParams, localDecls) =
+  final (tree, deps, builders, builderNames, builderParams, localDecls,
+      builderPreludes) =
       _translateBuildTree(
     buildMethod,
     propByField,
@@ -561,6 +567,7 @@ _Component _parseComponent(
     builders: builders,
     builderNames: builderNames,
     builderParams: builderParams,
+    builderPreludes: builderPreludes,
     localDecls: localDecls,
   );
 }
@@ -712,7 +719,8 @@ _Component _parseNestedComponent(
     }
   }
 
-  final (tree, deps, builders, builderNames, builderParams, localDecls) =
+  final (tree, deps, builders, builderNames, builderParams, localDecls,
+      builderPreludes) =
       _translateBuildTree(
     buildMethod,
     propByField,
@@ -1198,7 +1206,7 @@ String? _relativeToLib(String uri, String dir) {
 // build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
 // ---------------------------------------------------------------------------
 
-(Object?, Set<String>, List<Object?>, List<String>, List<String?>, List<String>)
+(Object?, Set<String>, List<Object?>, List<String>, List<String?>, List<String>, List<String>)
       _translateBuildTree(
   MethodDeclaration buildMethod,
   Map<String, String> propByField,
@@ -1260,6 +1268,7 @@ String? _relativeToLib(String uri, String dir) {
     ctx.builderNames,
     ctx.builderParams,
     localDecls,
+    ctx.builderPreludes,
   );
 }
 
@@ -1410,7 +1419,10 @@ String _renderJs(
     for (var i = 0; i < c.builders.length; i++) {
       final name = i < c.builderNames.length ? c.builderNames[i] : '_lbBuilder$i';
       final param = i < c.builderParams.length ? c.builderParams[i] : null;
+      final prelude =
+          i < c.builderPreludes.length ? c.builderPreludes[i] : '';
       b.writeln('  $name(${param ?? ''}) {');
+      if (prelude.isNotEmpty) b.writeln('      $prelude');
       b.writeln('      return ${ctx.renderJs(c.builders[i], 2)};');
       b.writeln('  }');
     }

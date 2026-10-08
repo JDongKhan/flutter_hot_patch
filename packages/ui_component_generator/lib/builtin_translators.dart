@@ -52,6 +52,8 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const SliderTranslator())
     // 响应式（SDK 类，见 class_translator.sdkSuperClassMap 配套的 ChangeNotifier）
     ..register(const ListenableBuilderTranslator())
+    // Builder：多一层 context 作用域（闭包内 context.watch/read 可用）
+    ..register(const BuilderTranslator())
     // provider 包：ChangeNotifierProvider / Consumer / MultiProvider
     ..register(const ChangeNotifierProviderTranslator())
     ..register(const ConsumerTranslator())
@@ -196,18 +198,9 @@ abstract class _ButtonTranslator extends WidgetTranslator {
   static String _eventFrom(Expression onPressed, WidgetTranslateContext ctx) {
     // onPressed: null → 禁用按钮（运行时 event 为空 → onPressed: null）
     if (onPressed is NullLiteral) return '';
-    // 形式一：onPressed: _inc（方法 tear-off）
-    if (onPressed is Identifier) {
-      return ctx.eventOf(onPressed.name);
-    }
-    // 形式二：onPressed: () => _inc() 或 () { _inc(); }
-    if (onPressed is FunctionExpression) {
-      final inner = ctx.functionInner(onPressed);
-      if (inner is MethodInvocation) {
-        return ctx.eventOf(inner.methodName.name);
-      }
-    }
-    throw FormatException('onPressed 需要直接引用组件方法（如 () => _inc()）');
+    // 委托 ctx.eventExpr：`_inc` / `() => _inc()` / Builder 闭包局部变量
+    // `() => model.inc()` / `() { context.read<T>().reset(); }` 链式。
+    return ctx.eventExpr(onPressed);
   }
 
   static String _labelFrom(Expression? child, WidgetTranslateContext ctx) {
@@ -960,6 +953,75 @@ class ListenableBuilderTranslator extends WidgetTranslator {
   }
 }
 
+/// Builder：`Builder(builder: (context) => ...)` —— 多一层 context 作用域，
+/// 闭包内 `context.watch<T>()` / `context.read<T>()` 可用（翻译成
+/// `this.__watch('T')` / `this.__read('T')`，运行时挂载在实例上）。
+///
+/// 闭包返回的子树抽到组件方法 `_builderN()`（与 ListenableBuilder 同机制，
+/// 但无订阅——Builder 本身无 listenable；watch 订阅由 __watch 内部处理）。
+/// 块体闭包支持：return 前允许局部变量声明（`final model = ...` → 方法体
+/// 前置 `var model = ...;`）与日志语句（debugPrint/print → console 方法）。
+class BuilderTranslator extends WidgetTranslator {
+  const BuilderTranslator();
+
+  @override
+  String get type => 'Builder';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final builderFn = ctx.namedArg(node.args, 'builder');
+    if (builderFn is! FunctionExpression) {
+      throw FormatException('Builder 需要 builder 闭包');
+    }
+    final body = builderFn.body;
+    Expression? retExpr;
+    final preludes = <String>[];
+    if (body is ExpressionFunctionBody) {
+      retExpr = body.expression;
+    } else if (body is BlockFunctionBody) {
+      for (final st in body.block.statements) {
+        if (st is ReturnStatement) {
+          retExpr = st.expression;
+          continue;
+        }
+        if (st is VariableDeclarationStatement) {
+          for (final v in st.variables.variables) {
+            ctx.addLocal(v.name.lexeme);
+            final js = v.initializer == null
+                ? 'undefined'
+                : ctx.jsDataExpr(v.initializer!);
+            preludes.add('var ${v.name.lexeme} = $js;');
+          }
+        } else if (st is ExpressionStatement) {
+          final ex = st.expression;
+          if (ex is MethodInvocation && ex.target == null) {
+            final name = ex.methodName.name;
+            if (name == 'debugPrint' || name == 'print') {
+              final args = ex.argumentList.arguments;
+              final argJs = args.isEmpty ? '""' : ctx.jsDataExpr(args.first);
+              preludes.add(
+                  'console.${name == 'debugPrint' ? 'debug' : 'log'}($argJs);');
+            }
+          }
+        }
+      }
+    }
+    if (retExpr == null) {
+      throw FormatException('Builder.builder 需返回 widget 树');
+    }
+    final subtree = ctx.translate(retExpr);
+    ctx.builderTrees.add(subtree);
+    final idx = ctx.builderTrees.length - 1;
+    ctx.builderNames.add('_builder$idx');
+    ctx.builderParams.add(null);
+    ctx.builderPreludes.add(preludes.isEmpty ? '' : preludes.join(' '));
+    return {
+      'type': ctx.jsString('Builder'),
+      'props': {'builder': ctx.jsString('_builder$idx')},
+    };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // provider 包：ChangeNotifierProvider / Consumer（与 ListenableBuilder 同机制）
 // ---------------------------------------------------------------------------
@@ -1055,7 +1117,10 @@ Map<String, dynamic> _providerNodeOf({
   } else if (inner is InstanceCreationExpression) {
     final cn = inner.constructorName;
     final className = cn.type.name2.lexeme;
-    createJs = {'construct': className};
+    createJs = {'construct': ctx.jsString(className)};
+  } else if (inner is MethodInvocation && inner.target == null) {
+    // 无 const 的 `ModelClass()` 在 parseString 下是 MethodInvocation。
+    createJs = {'construct': ctx.jsString(inner.methodName.name)};
   } else {
     throw FormatException(
         'ChangeNotifierProvider.create 仅支持返回状态字段或模型构造');
