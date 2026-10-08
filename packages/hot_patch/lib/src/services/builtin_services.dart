@@ -7,7 +7,7 @@ import '../utils/hot_patch_log.dart';
 ///
 /// 新增内置服务 = 在这里加一个 service 类 + register 一行；
 /// 自定义服务 = 业务方实现 NativeService 并通过
-/// HotPatchWidget(nativeServices: ...) 注入，核心代码零改动。
+/// JsRuntimeManager.registerGlobal(...) 注入，核心代码零改动。
 void registerBuiltinNativeServices(NativeServiceRegistry registry) {
   registry
     ..register(const SnackBarService())

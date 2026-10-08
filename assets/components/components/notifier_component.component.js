@@ -3,8 +3,26 @@
 // 重新生成：dart run build_runner build
 
 import { CounterModel } from '../model/counter_model.model.js';
+import { Button } from '../flutter/Button.js';
+import { Card } from '../flutter/Card.js';
+import { Column } from '../flutter/Column.js';
+import { ListenableBuilder } from '../flutter/ListenableBuilder.js';
+import { Padding } from '../flutter/Padding.js';
+import { Row } from '../flutter/Row.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Text } from '../flutter/Text.js';
+// 节点工厂：归一化 props/children，形状与 widget 模块一致。
+function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
 
-export class NotifierCard {
+class NotifierCardComponent {
   constructor() {
     this._model = new CounterModel({});
   }
@@ -12,87 +30,57 @@ export class NotifierCard {
   _reset() { this._model.reset(); }
   dispose() { this._model.dispose(); }
   build() {
-    return {
-      "type": "Card",
-      "children": [
-        {
-          "type": "Padding",
-          "props": {
+    return Card({}, [
+        Padding({
             "padding": {
               "left": 16.0,
               "top": 16.0,
               "right": 16.0,
               "bottom": 16.0
             }
-          },
-          "children": [
-            {
-              "type": "Column",
-              "props": {
+          }, [
+            Column({
                 "mainAxisSize": "min"
-              },
-              "children": [
-                {
-                  "type": "ListenableBuilder",
-                  "props": {
+              }, [
+                ListenableBuilder({
                     "listenable": "_model",
                     "builder": "_lbBuilder0"
-                  }
-                },
-                {
-                  "type": "SizedBox",
-                  "props": {
+                  }),
+                SizedBox({
                     "height": 12
-                  }
-                },
-                {
-                  "type": "Row",
-                  "props": {
+                  }),
+                Row({
                     "mainAxisAlignment": "center"
-                  },
-                  "children": [
-                    {
-                      "type": "Button",
-                      "props": {
+                  }, [
+                    Button({
                         "kind": "elevated",
                         "label": "+1",
                         "event": "_inc"
-                      }
-                    },
-                    {
-                      "type": "SizedBox",
-                      "props": {
+                      }),
+                    SizedBox({
                         "width": 12
-                      }
-                    },
-                    {
-                      "type": "Button",
-                      "props": {
+                      }),
+                    Button({
                         "kind": "elevated",
                         "label": "Reset",
                         "event": "_reset"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
+                      })
+                  ])
+              ])
+          ])
+      ]);
   }
   _lbBuilder0() {
-      return {
-      "type": "Text",
-      "props": {
+      return Text({
         "data": "count = " + this._model.count,
         "style": {
           "fontSize": 24,
           "fontWeight": "bold"
         }
-      }
-    };
+      });
   }
+}
+export function NotifierCard(props, children) {
+  return __h(NotifierCardComponent, props, children);
 }
 

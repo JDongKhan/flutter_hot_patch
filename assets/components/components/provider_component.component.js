@@ -3,8 +3,28 @@
 // 重新生成：dart run build_runner build
 
 import { CounterModel } from '../model/counter_model.model.js';
+import { Button } from '../flutter/Button.js';
+import { Card } from '../flutter/Card.js';
+import { ChangeNotifierProvider } from '../provider/ChangeNotifierProvider.js';
+import { Column } from '../flutter/Column.js';
+import { Consumer } from '../provider/Consumer.js';
+import { MultiProvider } from '../provider/MultiProvider.js';
+import { Padding } from '../flutter/Padding.js';
+import { Row } from '../flutter/Row.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Text } from '../flutter/Text.js';
+// 节点工厂：归一化 props/children，形状与 widget 模块一致。
+function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
 
-export class ProviderCard {
+class ProviderCardComponent {
   constructor() {
     this._modelA = new CounterModel({});
     this._modelB = new CounterModel({});
@@ -15,175 +35,107 @@ export class ProviderCard {
   _resetB() { this._modelB.reset(); }
   dispose() { this._modelB.dispose(); }
   build() {
-    return {
-      "type": "Card",
-      "children": [
-        {
-          "type": "Padding",
-          "props": {
+    return Card({}, [
+        Padding({
             "padding": {
               "left": 16.0,
               "top": 16.0,
               "right": 16.0,
               "bottom": 16.0
             }
-          },
-          "children": [
-            {
-              "type": "MultiProvider",
-              "props": {
+          }, [
+            MultiProvider({
                 "providers": [
-                  {
-                    "type": "ChangeNotifierProvider",
-                    "props": {
+                  ChangeNotifierProvider({
                       "model": "CounterModel",
-                      "create": {
-                        "ref": "_modelA"
-                      }
-                    }
-                  },
-                  {
-                    "type": "ChangeNotifierProvider",
-                    "props": {
+                      "create": this._modelA
+                    }),
+                  ChangeNotifierProvider({
                       "model": "CounterModel",
-                      "value": {
-                        "ref": "_modelB"
-                      }
-                    }
-                  }
+                      "value": this._modelB
+                    })
                 ],
-                "child": {
-                  "type": "Column",
-                  "props": {
+                "child": Column({
                     "mainAxisSize": "min"
-                  },
-                  "children": [
-                    {
-                      "type": "Text",
-                      "props": {
+                  }, [
+                    Text({
                         "data": "MultiProvider · 两个模型各自局部重建"
-                      }
-                    },
-                    {
-                      "type": "SizedBox",
-                      "props": {
+                      }),
+                    SizedBox({
                         "height": 8
-                      }
-                    },
-                    {
-                      "type": "Consumer",
-                      "props": {
+                      }),
+                    Consumer({
                         "model": "CounterModel",
                         "builder": "_consumerBuilder0"
-                      }
-                    },
-                    {
-                      "type": "Row",
-                      "props": {
+                      }),
+                    Row({
                         "mainAxisAlignment": "center"
-                      },
-                      "children": [
-                        {
-                          "type": "Button",
-                          "props": {
+                      }, [
+                        Button({
                             "kind": "elevated",
                             "label": "A +1",
                             "event": "_incA"
-                          }
-                        },
-                        {
-                          "type": "SizedBox",
-                          "props": {
+                          }),
+                        SizedBox({
                             "width": 12
-                          }
-                        },
-                        {
-                          "type": "Button",
-                          "props": {
+                          }),
+                        Button({
                             "kind": "elevated",
                             "label": "A Reset",
                             "event": "_resetA"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "type": "SizedBox",
-                      "props": {
+                          })
+                      ]),
+                    SizedBox({
                         "height": 8
-                      }
-                    },
-                    {
-                      "type": "Consumer",
-                      "props": {
+                      }),
+                    Consumer({
                         "model": "CounterModel",
                         "builder": "_consumerBuilder1"
-                      }
-                    },
-                    {
-                      "type": "Row",
-                      "props": {
+                      }),
+                    Row({
                         "mainAxisAlignment": "center"
-                      },
-                      "children": [
-                        {
-                          "type": "Button",
-                          "props": {
+                      }, [
+                        Button({
                             "kind": "elevated",
                             "label": "B +1",
                             "event": "_incB"
-                          }
-                        },
-                        {
-                          "type": "SizedBox",
-                          "props": {
+                          }),
+                        SizedBox({
                             "width": 12
-                          }
-                        },
-                        {
-                          "type": "Button",
-                          "props": {
+                          }),
+                        Button({
                             "kind": "elevated",
                             "label": "B Reset",
                             "event": "_resetB"
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-              }
-            }
-          ]
-        }
-      ]
-    };
+                          })
+                      ])
+                  ])
+              })
+          ])
+      ]);
   }
   _consumerBuilder0(value) {
-      return {
-      "type": "Text",
-      "props": {
+      return Text({
         "data": "A = " + value.count,
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",
           "color": '#2196F3'
         }
-      }
-    };
+      });
   }
   _consumerBuilder1(value) {
-      return {
-      "type": "Text",
-      "props": {
+      return Text({
         "data": "B = " + value.count,
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",
           "color": '#4CAF50'
         }
-      }
-    };
+      });
   }
+}
+export function ProviderCard(props, children) {
+  return __h(ProviderCardComponent, props, children);
 }
 

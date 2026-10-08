@@ -6,7 +6,7 @@ import 'package:ui_component/ui_component.dart';
 /// 每个详情组件都是 @UIComponent 注解组件：同一份代码
 ///   - 原生：直接当正常 StatefulWidget 用（widget_showcase 里 new 使用）；
 ///   - JS 热更：build_runner 翻译成 widget_details.component.js，
-///     WidgetDetailPage 用 HotPatchWidget 加载，原生 vs JS 同屏对比。
+///     WidgetDetailPage 用 JsUiWidget 加载，原生 vs JS 同屏对比。
 /// 单文件多组件：所有详情类在同一个产物里，运行时按组件名实例化。
 ///
 /// 覆盖的 Flutter 常用组件与属性：

@@ -9,6 +9,22 @@ builders:
     auto_apply: dependents
     build_to: source
 
+  # widget 模块 builder：每个 widget 类型 → 一个共享 JS 模块
+  # assets/components/<package>/<Type>.js（如 flutter/Text.js、provider/ChangeNotifierProvider.js）。
+  # 输出名无法按构建期发现的类型动态生成，故全部挂在种子输入 lib/js_widgets.dart 下；
+  # 类型清单由 builder 的 buildExtensions getter 从 translator 注册表静态推导。
+  ui_widget:
+    import: "package:ui_component_generator/builder.dart"
+    builder_factories: ["widgetModuleBuilder"]
+    # 真正的产物清单来自 WidgetModuleBuilder.buildExtensions（由 translator 注册表
+    # 推导）；build_runner 对 builder_factories 返回的 Builder 采用其自身 getter，
+    # 本段落仅为 BuilderDefinition 的语法占位，不参与计算（勿在此维护清单）。
+    build_extensions:
+      "^lib/js_widgets.dart":
+        - "assets/components/flutter/AppBar.js"
+    auto_apply: dependents
+    build_to: source
+
   # 模型 builder：lib/model/ 下的 .dart → .model.js（export class 供组件 import）
   ui_model:
     import: "package:ui_component_generator/builder.dart"

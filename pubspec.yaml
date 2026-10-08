@@ -77,6 +77,10 @@ flutter:
     - assets/components/components/
     # 模型产物（lib/model/ → assets/components/model/*.model.js）
     - assets/components/model/
+    # 按 package 分目录的 JS widget 模块（build() 构造调用：Text/Column/... 与
+    # ChangeNotifierProvider/... 的实现），由 ui_component builder 按依赖产出。
+    - assets/components/flutter/
+    - assets/components/provider/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

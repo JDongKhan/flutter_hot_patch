@@ -16,6 +16,8 @@ Builder componentBuilder(_) => const ComponentBuilder();
 
 Builder modelBuilder(_) => const ModelBuilder();
 
+Builder widgetModuleBuilder(_) => const WidgetModuleBuilder();
+
 /// 把带 @UIComponent 注解的「正常 Flutter widget」翻译为两份产物：
 ///
 ///   1. `*.component.js`          —— 运行时 JS 描述模块（build/handleEvent）
@@ -40,6 +42,8 @@ Builder modelBuilder(_) => const ModelBuilder();
 class ComponentBuilder implements Builder {
   const ComponentBuilder();
 
+  /// 本 builder 只产出组件产物；JS widget 模块（`Text.js` / `Column.js` /
+  /// `ChangeNotifierProvider.js` …）由 [WidgetModuleBuilder] 产出。
   @override
   Map<String, List<String>> get buildExtensions => const {
         '^lib/{{}}.dart': [
@@ -82,6 +86,9 @@ class ComponentBuilder implements Builder {
     // 不变，运行时按当前 jsAsset 的目录解析即可，绝对路径会随部署位置失效。
     final ownProduct = _productPath(inputId.path); // assets/components/.../x.component.js
     final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
+    // 跨文件组件名 → 产物路径（按**类名**精确绑定；见 _resolveImportedComponentProducts）。
+    final importProducts =
+        _resolveImportedComponentProducts(parsed.unit, inputId.path);
     String? importResolver(String name) {
       // @UIComponentIgnore：显式「不参与连带转换」的类 → null
       // （保持 Component 节点，运行时原生注入，等价于无注解公共组件路径）。
@@ -92,7 +99,7 @@ class ComponentBuilder implements Builder {
         }
         return null;
       }
-      final abs = _resolveImportProduct(parsed.unit, inputId.path);
+      final abs = importProducts[name];
       if (abs == null) return null;
       return _relativeProduct(ownProduct, abs);
     }
@@ -113,6 +120,14 @@ class ComponentBuilder implements Builder {
         if (classIndex.containsKey(d.name.lexeme)) classIndex[d.name.lexeme]!,
     ];
 
+    // build() 产物形态：构造调用（`Text({...}, [...])`）需要按 package 产出
+    // 共享 widget 模块，并由本产物相对 import。widget 模块由独立 builder
+    // （WidgetModuleBuilder，种子输入 lib/js_widgets.dart）产出，因此这里只
+    // 判断「本包是否具备 widget 模块」——同包内存在种子文件即启用；
+    // 否则整体降级为旧「对象字面量树」（非破坏性）。
+    final emitConstructorCalls = inputId.path.startsWith('lib/') &&
+        await buildStep.canRead(AssetId(inputId.package, _widgetSeedPath));
+
     // 收集本文件内全部 @UIComponent 组件（支持单文件多组件 / 文件内共享普通类）
     final components = <_Component>[];
     for (final declaration in parsed.unit.declarations) {
@@ -129,6 +144,7 @@ class ComponentBuilder implements Builder {
         importResolver,
         classIndex: classIndex,
         singletons: singletons,
+        emitConstructorCalls: emitConstructorCalls,
       ));
     }
     if (components.isEmpty) {
@@ -158,21 +174,21 @@ class ComponentBuilder implements Builder {
       final dep = depQueue.removeLast();
       if (doneDeps.contains(dep)) continue;
       doneDeps.add(dep);
-      // @UIComponentIgnore：显式「不参与连带转换」→ 跳过（不生成 JS 类），
-      // build 树里该组件保持 Component 节点，运行时由原生注入渲染。
-      if (_isIgnoredClass(parsed.unit, dep)) continue;
-      // 翻译本文件内的组件类（build 树里 Component 兜底的同文件类：
-      // 私有 _Xxx 或无注解公共 widget 如 LabeledDivider），转成 inline
-      // 组件类（export class，与主组件同产物注册）。已收集的主组件跳过。
+      // 翻译本文件内**有产物**的同文件组件（私有 _Xxx / 注解组件）为
+      // inline 工厂（与主组件同产物）。判定与 importResolver 对齐：
+      // 仅「同文件且有产物」（返回本产物名）才翻译；@UIComponentIgnore 与
+      // 无注解公共组件（如 LabeledDivider）返回 null，保持 Component 节点走
+      // 原生注入，不产出无用 JS 类。已收集的主组件跳过。
       if (!parsedNames.contains(dep)) continue;
-      if (annotatedNames.contains(dep)) continue;
+      if (importResolver(dep) != ownName) continue;
       if (components.any((c) => c.name == dep)) continue;
       final decl = parsed.unit.declarations
           .whereType<ClassDeclaration>()
           .firstWhere((d) => d.name.lexeme == dep);
       final nested = _parseNestedComponent(
           decl, parsed.unit, dep, registry, inputId.path, importResolver,
-          classIndex: classIndex, singletons: singletons);
+          classIndex: classIndex, singletons: singletons,
+          emitConstructorCalls: emitConstructorCalls);
       components.add(nested);
       depQueue.addAll(nested.deps);
     }
@@ -186,11 +202,16 @@ class ComponentBuilder implements Builder {
     final outputs = buildStep.allowedOutputs.toList();
     final jsOutput = outputs.firstWhere((a) => a.path.endsWith('.component.js'));
 
+    // 各 package 实际用到的 widget 类型（渲染期收集）：_renderJs 据此为每个
+    // 用到的类型拼一条 import（`import { Text } from '../flutter/Text.js'`）。
+    final usedWidgets = <String, Set<String>>{};
     await buildStep.writeAsString(
       jsOutput,
       _renderJs(components, inputId.path, registry, importResolver,
           singletons: singletons,
-          sameFileSingletonInfos: sameFileSingletonInfos),
+          sameFileSingletonInfos: sameFileSingletonInfos,
+          emitConstructorCalls: emitConstructorCalls,
+          usedWidgets: usedWidgets),
     );
   }
 }
@@ -262,6 +283,11 @@ class _Component {
   /// 产物 build() 方法体内先输出声明再 return 树；树里 Identifier 直接引用。
   final List<String> localDecls;
 
+  /// 本组件 build 树**实际用到**的 widget 类型（package → {type}）：
+  /// 仅「构造调用」形态（emitConstructorCalls）下收集，生成器据此按 package
+  /// 产出 JS widget 模块（只转换用到的，不默认全量）。
+  final Map<String, Set<String>> usedWidgetPackages;
+
   const _Component(this.name, this.props, this.actions, this.tree,
       {this.ctorArgs = const [],
       this.deps = const {},
@@ -270,7 +296,8 @@ class _Component {
       this.builderNames = const [],
       this.builderParams = const [],
       this.builderPreludes = const [],
-      this.localDecls = const []});
+      this.localDecls = const [],
+      this.usedWidgetPackages = const {}});
 }
 
 /// 统一「类表」：把一个文件（同文件 + 跨文件 import）的全部普通 Dart 类
@@ -403,6 +430,7 @@ _Component _parseComponent(
   String? Function(String component) importResolver, {
   required Map<String, ClassInfo> classIndex,
   SingletonResolver? singletons,
+  bool emitConstructorCalls = false,
 }) {
   // 承载 build 的类：StatefulWidget → 其 State 类；StatelessWidget →
   // widget 类自身（无 createState）。与 _parseNestedComponent 同一规则，
@@ -545,7 +573,7 @@ _Component _parseComponent(
   }
 
   final (tree, deps, builders, builderNames, builderParams, localDecls,
-      builderPreludes) =
+      builderPreludes, usedWidgetPackages) =
       _translateBuildTree(
     buildMethod,
     propByField,
@@ -554,6 +582,7 @@ _Component _parseComponent(
     sourcePath,
     importResolver,
     singletons: singletons,
+    emitConstructorCalls: emitConstructorCalls,
   );
 
   return _Component(
@@ -569,6 +598,7 @@ _Component _parseComponent(
     builderParams: builderParams,
     builderPreludes: builderPreludes,
     localDecls: localDecls,
+    usedWidgetPackages: usedWidgetPackages,
   );
 }
 
@@ -590,6 +620,7 @@ _Component _parseNestedComponent(
   String? Function(String component) importResolver, {
   required Map<String, ClassInfo> classIndex,
   SingletonResolver? singletons,
+  bool emitConstructorCalls = false,
 }) {
   // 承载 build 的类：widget 类 或 其 State 类
   ClassDeclaration hostClass = decl;
@@ -720,7 +751,7 @@ _Component _parseNestedComponent(
   }
 
   final (tree, deps, builders, builderNames, builderParams, localDecls,
-      builderPreludes) =
+      builderPreludes, usedWidgetPackages) =
       _translateBuildTree(
     buildMethod,
     propByField,
@@ -729,6 +760,7 @@ _Component _parseNestedComponent(
     sourcePath,
     importResolver,
     singletons: singletons,
+    emitConstructorCalls: emitConstructorCalls,
   );
 
   return _Component(
@@ -743,6 +775,7 @@ _Component _parseNestedComponent(
     builderNames: builderNames,
     builderParams: builderParams,
     localDecls: localDecls,
+    usedWidgetPackages: usedWidgetPackages,
   );
 }
 
@@ -1079,6 +1112,62 @@ String _modelProductPath(String sourcePath) {
   return 'assets/components/${rel.substring(0, rel.length - '.dart'.length)}.model.js';
 }
 
+/// widget 模块产物路径：`assets/components/<package>/<type>.js`
+/// （每个 widget 一个文件，全局共享一份，避免各组件产物重复内联）。
+String _widgetModulePath(String package, String type) =>
+    'assets/components/$package/$type.js';
+
+/// widget 模块 builder 的**种子输入**（构件期固定文件，不含运行时代码）。
+///
+/// build_runner 的输出名必须在 buildExtensions 里静态声明，无法按构建期发现
+/// 的类型动态命名，因此把「全部 widget 模块产物」挂在本文件下，类型清单由
+/// [_registeredWidgetPackages] 静态推导。
+const String _widgetSeedPath = 'lib/js_widgets.dart';
+
+/// 已注册 widget 类型 → (package → {type})：由 translator 注册表推导，
+/// 作为 widget 模块产物清单的唯一来源（构建期 + 生成器共用）。
+Map<String, Set<String>> _registeredWidgetPackages() {
+  final registry = WidgetTranslatorRegistry();
+  registerBuiltinTranslators(registry);
+  final out = <String, Set<String>>{};
+  for (final t in registry.registeredTypes) {
+    final tr = registry.lookup(t);
+    if (tr == null) continue;
+    (out[tr.packageName] ??= <String>{}).addAll(tr.jsonTypes);
+  }
+  return out;
+}
+
+/// widget 模块 builder：把每个已注册 widget 类型各产出一个共享 JS 模块
+/// `assets/components/<package>/<Type>.js`（全局共享一份，消除各组件产物里
+/// 内联同类工厂函数造成的重复）。
+///
+/// 输出挂在种子输入 [_widgetSeedPath] 下（见其注释）；每个文件只有一个类型，
+/// 文件名即类型名，构建时从输出路径反推即可，无需再查注册表。
+class WidgetModuleBuilder implements Builder {
+  const WidgetModuleBuilder();
+
+  @override
+  Map<String, List<String>> get buildExtensions {
+    final outs = <String>[
+      for (final e in _registeredWidgetPackages().entries)
+        for (final t in e.value) _widgetModulePath(e.key, t),
+    ]..sort();
+    return {'^$_widgetSeedPath': outs};
+  }
+
+  @override
+  Future<void> build(BuildStep buildStep) async {
+    // 输出路径形如 assets/components/<package>/<Type>.js → 反推 package / type
+    for (final out in buildStep.allowedOutputs) {
+      final segs = out.path.split('/');
+      if (segs.length != 4 || !segs[3].endsWith('.js')) continue;
+      final type = segs[3].substring(0, segs[3].length - '.js'.length);
+      await buildStep.writeAsString(out, _renderWidgetModule(segs[2], {type}));
+    }
+  }
+}
+
 /// 收集表达式树里全部模型构造调用名（与类发现共用：State 字段类型 + 构造调用）。
 class _CtorCollector extends RecursiveAstVisitor<void> {
   final names = <String>{};
@@ -1087,6 +1176,19 @@ class _CtorCollector extends RecursiveAstVisitor<void> {
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
     names.add(node.constructorName.type.name2.lexeme);
     super.visitInstanceCreationExpression(node);
+  }
+
+  /// 无 `new`/`const` 的构造调用（parseString 下是 MethodInvocation）：
+  /// `CounterModel()` / `(_) => CounterModel()` 里的模型构造。仅收
+  /// UpperCamel 且无 target/泛型的形态（与 [_fieldTypeName] 同启发式），
+  /// widget 构造（Text/Column 等）也会被收进来，但与类表求交后自然丢弃。
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.target == null && node.typeArguments == null) {
+      final n = node.methodName.name;
+      if (n.isNotEmpty && n[0] == n[0].toUpperCase()) names.add(n);
+    }
+    super.visitMethodInvocation(node);
   }
 }
 
@@ -1139,42 +1241,41 @@ String _relativeProduct(String from, String to) {
   return [...ups, ...downs].join('/');
 }
 
-/// 从当前文件的 import directives 推导「依赖组件所在文件」的产物路径。
-/// 规则：**相对导入优先**（同目录/子目录的组件文件，如 'banner_component.dart'）；
-/// 相对导入不存在时才尝试 package: 导入（跳过 dart: / flutter —— 注解包
-/// ui_component 等跨包库不在本项目的 assets/components 产物约定内，跳过）。
-/// 把 import uri 映射到 lib 相对路径再换算产物路径。
-String? _resolveImportProduct(CompilationUnit unit, String sourcePath) {
-  final slash = sourcePath.lastIndexOf('/');
-  final dir = slash >= 0 ? sourcePath.substring(0, slash + 1) : ''; // 含尾 /
-  final imports = unit.directives.whereType<ImportDirective>().toList();
-  // 第一轮：相对导入
-  for (final d in imports) {
-    final uri = d.uri.stringValue;
-    if (uri == null || uri.startsWith('package:') || uri.startsWith('dart:')) {
-      continue;
+/// 扫描当前文件 import 的源文件，收集「有 JS 产物的组件类名 → 产物路径」。
+///
+/// 与 [_parseNestedComponent] 的连带转换规则一致，「有产物」判定为：
+///   - 类带 @UIComponent 注解；或
+///   - 私有类（_Xxx）且声明了 build() 方法。
+/// 按**类名**绑定（而非「第一条 import」），多 import 文件不会串台；
+/// 命中即让 build 树里的 Component 节点渲染成工厂调用并 import 该产物。
+Map<String, String> _resolveImportedComponentProducts(
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  final out = <String, String>{};
+  for (final file in _resolveImportFiles(unit, sourcePath)) {
+    final f = File(file);
+    if (!f.existsSync()) continue;
+    final parsed = parseString(content: f.readAsStringSync());
+    for (final decl in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+      final name = decl.name.lexeme;
+      final annotated = _findAnnotation(decl.metadata, 'UIComponent') != null;
+      final privateWithBuild =
+          name.startsWith('_') && _hasBuildMethod(decl);
+      if (!annotated && !privateWithBuild) continue;
+      out[name] = _productPath(file);
     }
-    final libRel = _relativeToLib(uri, dir);
-    if (libRel == null || !libRel.endsWith('.dart')) continue;
-    return 'assets/components/${libRel.substring(0, libRel.length - '.dart'.length)}.component.js';
   }
-  // 第二轮：package: 导入（跳过 dart:/flutter 与注解/生成器包）
-  for (final d in imports) {
-    final uri = d.uri.stringValue;
-    if (uri == null || !uri.startsWith('package:') ||
-        uri.startsWith('package:flutter/') ||
-        uri.startsWith('package:ui_component/') ||
-        uri.startsWith('package:ui_component_generator/')) {
-      continue;
-    }
-    // package:<项目名>/<lib 下路径> → 取 '/' 之后部分
-    final slashIdx = uri.indexOf('/');
-    if (slashIdx <= 0 || slashIdx >= uri.length - 1) continue;
-    final libRel = uri.substring(slashIdx + 1);
-    if (!libRel.endsWith('.dart')) continue;
-    return 'assets/components/${libRel.substring(0, libRel.length - '.dart'.length)}.component.js';
+  return out;
+}
+
+/// 类（或其 State 类）是否声明了 build() 方法。
+bool _hasBuildMethod(ClassDeclaration decl) {
+  for (final m in decl.members) {
+    if (m is MethodDeclaration && m.name.lexeme == 'build') return true;
   }
-  return null;
+  final stateName = _stateClassName(decl);
+  return stateName != null;
 }
 
 /// 相对导入 uri（'foo.dart' / './foo.dart' / '../x.dart'）→ lib 相对路径。
@@ -1206,7 +1307,8 @@ String? _relativeToLib(String uri, String dir) {
 // build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
 // ---------------------------------------------------------------------------
 
-(Object?, Set<String>, List<Object?>, List<String>, List<String?>, List<String>, List<String>)
+(Object?, Set<String>, List<Object?>, List<String>, List<String?>, List<String>, List<String>,
+        Map<String, Set<String>>)
       _translateBuildTree(
   MethodDeclaration buildMethod,
   Map<String, String> propByField,
@@ -1215,6 +1317,7 @@ String? _relativeToLib(String uri, String dir) {
   String sourcePath,
   String? Function(String component) importResolver, {
   SingletonResolver? singletons,
+  bool emitConstructorCalls = false,
 }) {
   final e = _methodExpression(buildMethod);
   if (e == null) {
@@ -1227,7 +1330,7 @@ String? _relativeToLib(String uri, String dir) {
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,
-  );
+  )..emitConstructorCalls = emitConstructorCalls;
   // build() return 前的局部变量声明（`final isAdult = <expr>;`）：
   // 收集名字进 ctx 局部作用域（树里直接引用），initializer 翻译成 JS 声明语句。
   final localDecls = <String>[];
@@ -1269,6 +1372,7 @@ String? _relativeToLib(String uri, String dir) {
     ctx.builderParams,
     localDecls,
     ctx.builderPreludes,
+    ctx.usedWidgetPackages,
   );
 }
 
@@ -1283,6 +1387,8 @@ String _renderJs(
   String? Function(String component) importResolver, {
   SingletonResolver? singletons,
   List<ClassInfo> sameFileSingletonInfos = const [],
+  bool emitConstructorCalls = false,
+  Map<String, Set<String>>? usedWidgets,
 }) {
   // 统一类表按「同文件 inline / 跨文件 import」分组渲染：
   //  - 同文件模型（sourceFile == 当前组件文件）→ 产物内 inline class（不 export，
@@ -1305,7 +1411,9 @@ String _renderJs(
     for (final s in sameFileSingletonInfos) s.name: s,
   };
 
-  final b = StringBuffer()
+  // 头部（注释 + import 区）：widget 模块 import 依赖「实际用到的类型」，
+  // 只能在各组件渲染完成后得知，所以先渲染 body 再拼装 import，见函数末尾。
+  final head = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
     ..writeln('// 由 ui_component_generator 从 $sourcePath 自动生成')
     ..writeln('// 重新生成：dart run build_runner build')
@@ -1319,12 +1427,12 @@ String _renderJs(
     final src = singletons?.sourceFileOf(cls);
     if (src == null || src == sourcePath) continue;
     final rel = _relativeProduct(ownProduct, _productPath(src));
-    b.writeln("import { $cls } from '$rel';");
+    head.writeln("import { $cls } from '$rel';");
   }
   for (final m in allModels.values) {
     final abs = _modelProductPath(m.sourceFile);
     final rel = _relativeProduct(ownProduct, abs);
-    b.writeln("import { ${m.name} } from '$rel';");
+    head.writeln("import { ${m.name} } from '$rel';");
   }
 
   // 跨文件组件：build 树里 Component 兜底、且产物在其他文件的依赖组件，
@@ -1341,9 +1449,28 @@ String _renderJs(
       final rel = importResolver(dep);
       if (rel == null || rel == ownName) continue;
       importedComponents.add(dep);
-      b.writeln("import { $dep } from '$rel';");
+      head.writeln("import { $dep } from '$rel';");
     }
   }
+
+  // body：模型/单例/组件类主体（不动 import 区；末尾拼装）。
+  final b = StringBuffer();
+
+  // 节点工厂：与 widget 模块同一契约（返回 {type, props, children}）。
+  // 组件产物对外导出工厂函数（`X(props, children)`），与 widget 模块
+  // （flutter/Text.js 等）完全一致：调用工厂即得 element，运行时按 element
+  // 的 type（组件类）递归挂载。嵌套引用因此是普通工厂调用 `X({...})`。
+  b
+    ..writeln('// 节点工厂：归一化 props/children，形状与 widget 模块一致。')
+    ..writeln('function __h(type, props, children) {')
+    ..writeln('  return {')
+    ..writeln('    type: type,')
+    ..writeln('    props: props || {},')
+    ..writeln('    children: children == null')
+    ..writeln('        ? []')
+    ..writeln('        : (Array.isArray(children) ? children : [children]),')
+    ..writeln('  };')
+    ..writeln('}');
 
   // 同文件模型：inline class（不 export，本产物内共享）。统一由
   // class_translator.renderClassDecl 翻译（含字段/方法/getter/extends
@@ -1378,9 +1505,12 @@ String _renderJs(
   }
 
   for (final c in components) {
+    // 翻译阶段（含三目/if/for 内联渲染）已收集的类型并入总表；
+    // 渲染阶段 ctx 会再次收集主树/builders 用到的类型。
+    _mergeUsedWidgets(usedWidgets, c.usedWidgetPackages);
     b.writeln();
-    // 组件：export class（运行时按组件名从 __modules[jsAsset] 取类）
-    b.writeln('export class ${c.name} {');
+    // 组件类（不导出，避免与同名工厂冲突）：由本产物的工厂函数实例化。
+    b.writeln('class ${c.name}Component {');
     final isNested = c.ctorArgs.isNotEmpty;
     b.writeln(isNested ? '  constructor(args) {' : '  constructor() {');
     for (final p in c.props) {
@@ -1406,7 +1536,8 @@ String _renderJs(
       propByField: const {},
       actionByMethod: const {},
       sourcePath: sourcePath,
-    );
+      importResolver: importResolver,
+    )..emitConstructorCalls = emitConstructorCalls;
     for (final d in c.localDecls) {
       b.writeln(d);
     }
@@ -1427,9 +1558,41 @@ String _renderJs(
       b.writeln('  }');
     }
     b.writeln('}');
+    // 对外工厂：与 widget 模块契约一致，返回 element（type = 组件类）。
+    // 运行时 mountRoot / 嵌套引用都以工厂调用取 element（不再 new 类）。
+    b.writeln('export function ${c.name}(props, children) {');
+    b.writeln('  return __h(${c.name}Component, props, children);');
+    b.writeln('}');
+    _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
+
+  // 按类型拼装 widget 模块 import：`import { Text } from '../flutter/Text.js'`。
+  // 每个 widget 类型一个共享模块（全局一份、无重复），故逐类型一条 import。
+  if (emitConstructorCalls && usedWidgets != null) {
+    final lines = <String>[
+      for (final entry in usedWidgets.entries)
+        for (final type in entry.value)
+          "import { $type } from '"
+              "${_relativeProduct(ownProduct, _widgetModulePath(entry.key, type))}';",
+    ]..sort();
+    for (final line in lines) {
+      head.writeln(line);
+    }
+  }
+
   b.writeln();
-  return b.toString();
+  return head.toString() + b.toString();
+}
+
+/// 合并「用到的 widget 类型」：dst[package] ∪= src[package]。
+void _mergeUsedWidgets(
+  Map<String, Set<String>>? dst,
+  Map<String, Set<String>> src,
+) {
+  if (dst == null || src.isEmpty) return;
+  for (final e in src.entries) {
+    (dst[e.key] ??= <String>{}).addAll(e.value);
+  }
 }
 
 /// 收集模型文件（lib/model/）中全部可导出的类（非私有、非抽象），
@@ -1458,6 +1621,216 @@ String _renderModelJs(List<ClassInfo> models) {
   }
   return b.toString();
 }
+
+/// package widget 模块产物：把 [types] 里的 widget 类型导出为 JS 工厂函数
+/// （`Text({...}, [...])` → `{type:'Text', props, children}`）。
+///
+/// 现约定每个文件恰好一个类型（文件名即类型名），组件产物按「实际用到的类型」
+/// 逐条相对 import，全局共享一份、互不重复。产物与旧「JSON 字面量树」**同形状**，
+/// 且自包含（不依赖运行时 `__jsui`），因此宿主既有渲染路径（按 type 查 renderer）
+/// 与新的 JS 运行时都能消费同一份产物。
+String _renderWidgetModule(String package, Set<String> types) {
+  final sorted = types.toList()..sort();
+  final b = StringBuffer()
+    ..writeln('// GENERATED CODE - DO NOT EDIT')
+    ..writeln('// widget 模块（package: $package）：由 ui_component_generator 生成')
+    ..writeln('// 工厂函数返回 {type, props, children}，供组件产物按需 import')
+    ..writeln()
+    ..writeln('// 节点工厂：归一化 props/children，形状与生成器 JSON 字面量树一致。')
+    ..writeln('function __h(type, props, children) {')
+    ..writeln('  return {')
+    ..writeln('    type: type,')
+    ..writeln('    props: props || {},')
+    ..writeln('    children: children == null')
+    ..writeln('        ? []')
+    ..writeln('        : (Array.isArray(children) ? children : [children]),')
+    ..writeln('  };')
+    ..writeln('}');
+  for (final t in sorted) {
+    // 逻辑 widget（provider 状态处理 / Builder 委托）：产物返回**组件**
+    // 元素（type 为 JS 类），状态与订阅逻辑全部在 JS 侧，宿主零感知。
+    final logic = _logicWidgetSources[t];
+    if (logic != null) {
+      b
+        ..writeln()
+        ..writeln(logic);
+      continue;
+    }
+    b
+      ..writeln()
+      ..writeln('export function $t(props, children) {')
+      ..writeln("  return __h('$t', props, children);")
+      ..writeln('}');
+  }
+  return b.toString();
+}
+
+/// 「逻辑 widget」类型 → JS 组件源码（在本模块里内联一个普通类 + 工厂函数）。
+///
+/// 与宿主 type 节点不同：这些 widget 的**状态/订阅逻辑必须跑在 JS 里**，
+/// 因此产物是 `__h(ComponentClass, props, children)`，运行时按组件路径挂载，
+/// 由组件 `build()` 自行消费 props（provider 提供/消费 VM、Builder 委托
+/// 拥有者方法返回子树）。运行时会给普通类实例补挂 `props/setState/watch/
+/// read/__watch/__read/__notify`（见 js_ui/runtime_source.dart）。
+const Map<String, String> _logicWidgetSources = {
+  'Builder': _jsBuilderComponent,
+  'ChangeNotifierProvider': _jsChangeNotifierProviderComponent,
+  'MultiProvider': _jsMultiProviderComponent,
+  'Consumer': _jsConsumerComponent,
+  'ListenableBuilder': _jsListenableBuilderComponent,
+};
+
+/// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
+/// （`_builderN()`，含 `var model = this.__watch(...)` 前置语句）拿子树。
+const String _jsBuilderComponent = '''
+class BuilderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  build() {
+    var name = this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    if (!owner) { return null; }
+    return owner[name].call(owner);
+  }
+}
+export function Builder(props, children) {
+  return __h(BuilderComponent, props, children);
+}''';
+
+/// ChangeNotifierProvider：把 create/value 解析出的 VM 作为「提供者结点」
+/// 挂进组件树（`__provides[model]` + `__value` + `__subs`），VM notify 时
+/// 通过 `__notify()` 标记所有订阅者（Consumer / __watch 过的组件）重建。
+/// 生命周期与原生一致：`create` 语义下 provider 拥有 VM（类引用时 provider
+/// 内 new，实例时直接复用），卸载时 dispose；`value` 语义下不拥有、不释放。
+const String _jsChangeNotifierProviderComponent = '''
+class ChangeNotifierProviderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  initState() {
+    var p = this.props;
+    var vm = null, owns = false;
+    if (p.create !== undefined && p.create !== null) {
+      if (typeof p.create === 'function') { vm = new p.create(); }
+      else { vm = p.create; }
+      owns = true;
+    } else if (p.value !== undefined && p.value !== null) {
+      vm = p.value;
+    }
+    this.__value = vm;
+    this.__ownsValue = owns;
+    this.__provides = {};
+    this.__provides[p.model] = this;
+    this.__subs = [];
+    if (vm && typeof vm.addListener === 'function') {
+      var self = this;
+      this.__listener = function () { self.__notify(); };
+      vm.addListener(this.__listener);
+    }
+  }
+  build() {
+    // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；
+    // 被 MultiProvider 包裹时由 `__h(type, props, [node])` 放进 children。
+    if (this.props.child != null) { return this.props.child; }
+    return this.children.length ? this.children[0] : null;
+  }
+  dispose() {
+    if (this.__ownsValue && this.__value &&
+        typeof this.__value.dispose === 'function') {
+      this.__value.dispose();
+    }
+  }
+}
+export function ChangeNotifierProvider(props, children) {
+  return __h(ChangeNotifierProviderComponent, props, children);
+}''';
+
+/// MultiProvider：把 providers 数组按「嵌套 Provider」语义组合——
+/// providers[0] 最外层，最后一个最内层（离 child 最近），与原生一致。
+const String _jsMultiProviderComponent = '''
+class MultiProviderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  build() {
+    var provs = this.props.providers || [];
+    var node = this.props.child;
+    for (var i = provs.length - 1; i >= 0; i--) {
+      node = __h(provs[i].type, provs[i].props, [node]);
+    }
+    return node;
+  }
+}
+export function MultiProvider(props, children) {
+  return __h(MultiProviderComponent, props, children);
+}''';
+
+/// Consumer：消费 VM——沿祖先找提供者取 VM 并订阅（watch），再调用拥有者
+/// 组件上的 `props.builder` 方法（`_consumerBuilderN(value)`）渲染局部子树。
+const String _jsConsumerComponent = '''
+class ConsumerComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  build() {
+    var vm = this.watch(this.props.model);
+    var name = this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    if (!owner) { return null; }
+    return owner[name].call(owner, vm);
+  }
+}
+export function Consumer(props, children) {
+  return __h(ConsumerComponent, props, children);
+}''';
+
+/// ListenableBuilder：局部重建——订阅 `listenable`（拥有者组件上的模型字段），
+/// 模型 notify 时仅重建本结点子树（`setState` 只标记本结点 dirty）。
+/// 子树抽在拥有者组件的 `props.builder` 方法（`_lbBuilderN()`）里。
+const String _jsListenableBuilderComponent = '''
+class ListenableBuilderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  initState() {
+    var owner = this.__owner();
+    if (!owner) { return; }
+    var l = owner[this.props.listenable];
+    if (l && typeof l.addListener === 'function') {
+      var self = this;
+      this.__listenable = l;
+      this.__listener = function () { self.setState(function () {}); };
+      l.addListener(this.__listener);
+    }
+  }
+  build() {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    return owner[this.props.builder].call(owner);
+  }
+  dispose() {
+    if (this.__listenable && this.__listener) {
+      this.__listenable.removeListener(this.__listener);
+    }
+  }
+}
+export function ListenableBuilder(props, children) {
+  return __h(ListenableBuilderComponent, props, children);
+}''';
 
 // ---------------------------------------------------------------------------
 // 静态单例类：识别 / 跨文件解析 / 单例产物渲染

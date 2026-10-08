@@ -20,7 +20,7 @@ class _BannerCardState extends State<BannerCard> {
   int _views = 0;
 
   // 生命周期方法也全量生成（initState/dispose/... 不再跳过），
-  // HotPatchWidget 在对应生命周期回调同名 JS 方法。
+  // JsUiWidget 在对应生命周期回调同名 JS 方法。
   // 这里演示：JS 版首帧会是 views = 5，证明 JS initState 被回调。
   @override
   void initState() {

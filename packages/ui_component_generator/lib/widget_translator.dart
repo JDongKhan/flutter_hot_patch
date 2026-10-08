@@ -53,7 +53,7 @@ class WidgetTranslateContext {
   /// 组件名 → 依赖产物 jsAsset 路径（null = 无法确定，渲染层走原生注入）。
   /// 由生成器注入：本文件私有/注解组件 → 本文件产物；跨文件组件 →
   /// 从 import directives 推导源文件产物。Component 节点据此产出 import，
-  /// 运行时以嵌套 HotPatchWidget 递归渲染（使用方无需知道依赖）。
+  /// 运行时按 import 递归挂载嵌套组件（使用方无需知道依赖）。
   final String? Function(String component)? importResolver;
 
   /// 跨文件「静态单例类」解析器：build 树里 `PanelColors.background`
@@ -64,6 +64,17 @@ class WidgetTranslateContext {
   /// 翻译过程中遇到的未知自定义组件（Component 兜底），供生成器
   /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
   final Set<String> dependencies = {};
+
+  /// 是否把节点渲染成 **JS 构造调用**（`Text({...}, [...])`）而非对象字面量。
+  ///
+  /// true 时 [renderJs] 走 [WidgetTranslator.packageName] 收集实际用到的
+  /// widget 类型（[usedWidgetPackages]），生成器据此按 package 产出 JS widget
+  /// 模块并 import。false = 旧对象字面量产物（无 widget 模块可用时降级）。
+  bool emitConstructorCalls = false;
+
+  /// 翻译/渲染过程中**实际用到**的 widget 类型：package → {type}。
+  /// 只收集 [emitConstructorCalls] 为 true 的节点（否则不产出模块，无需收集）。
+  final Map<String, Set<String>> usedWidgetPackages = {};
 
   /// ListenableBuilder 等「builder 闭包」翻译：闭包返回的子树抽到组件方法
   /// `_lbBuilderN()`，运行时时模型 notify 后重新调用拿到最新子树做局部重建。
@@ -203,6 +214,13 @@ class WidgetTranslateContext {
   final Set<String> _locals = {};
   void addLocal(String name) => _locals.add(name);
 
+  /// Builder 闭包局部变量 → 模型类型（`final model = context.watch<T>()`）。
+  /// 事件表达式（`() => model.inc()`，局部变量不在回传作用域内）据此翻译成
+  /// `this.__read("T").inc()`——两条运行时都在实例上挂了 `__read`，不依赖
+  /// 局部作用域即可回传执行。
+  final Map<String, String> _localModels = {};
+  void addLocalModel(String name, String modelType) => _localModels[name] = modelType;
+
   static bool _isUpperCamel(String name) =>
       name.isNotEmpty && name[0] == name[0].toUpperCase();
 
@@ -218,12 +236,97 @@ class WidgetTranslateContext {
     final type = _semanticType(json['type']);
     final translator = registry.lookupJson(type);
     if (translator == null) {
-      // Component 兜底节点（未注册的第三方/自定义 widget）：原样序列化，
-      // 运行时由 ComponentRenderer 处理（JS 递归 / nativeComponents 注入 / 占位）。
-      if (type == 'Component') return jsLiteral(json, depth);
+      // Component 兜底节点（未注册的第三方/自定义 widget）：
+      //   - 该组件名有 JS 产物（importResolver 命中）→ 渲染成**工厂调用**
+      //     `X({...args})`，与 widget 模块契约一致（运行时递归挂载 JS 组件）；
+      //   - 无产物（无注解的 lib 普通 widget / @UIComponentIgnore）→ 原样
+      //     序列化，运行时由宿主 nativeComponents 原生注入或占位。
+      if (type == 'Component') {
+        final call = _renderComponentCall(json, depth);
+        if (call != null) return call;
+        // 兜底节点与 __h 产物同形状：补 children: []（运行时按 host 元素
+        // 挂载，固定读 el.children；缺失会整段挂载失败）。
+        final node = Map<String, dynamic>.from(json);
+        node['children'] ??= const <dynamic>[];
+        return jsLiteral(node, depth);
+      }
       throw FormatException('未知节点类型: $type');
     }
+    if (emitConstructorCalls) {
+      // 构造调用形态：登记「实际用到的 widget」（按 package 分组），
+      // 生成器据此只为这些类型产出 JS widget 模块。
+      (usedWidgetPackages[translator.packageName] ??= <String>{}).add(type);
+      return _renderCall(type, json, depth);
+    }
     return translator.renderJs(json, depth, this);
+  }
+
+  /// 把已翻译的 JSON 节点渲染成 **JS 构造调用**：
+  /// `{type:'Text', props:{...}, children:[...]}` → `Text({...}, [...])`。
+  ///
+  /// `props` 为空 → `{}`；`children` 为空 → 省略第二参。嵌套子节点（children、
+  /// 以及 ListTile.leading 这类「props 里的节点」）同样递归成构造调用。
+  /// 函数名即节点 type（由生成器按 package 产出的 widget 模块 export）。
+  String _renderCall(String type, Map<String, dynamic> json, int depth) {
+    final props = json['props'];
+    final children = json['children'];
+    final propsJs = (props is Map && props.isNotEmpty)
+        ? _renderValue(props, depth + 1)
+        : '{}';
+    final b = StringBuffer()
+      ..write(type)
+      ..write('(')
+      ..write(propsJs);
+    if (children is List && children.isNotEmpty) {
+      b
+        ..write(', ')
+        ..write(_renderValue(children, depth + 1));
+    }
+    b.write(')');
+    return b.toString();
+  }
+
+  /// Component 节点的「工厂调用」渲染：命中 JS 产物时输出 `X({...args})`
+  /// （args 复用 [_renderValue]，与其它构造调用同一值渲染规则）；
+  /// 无产物（importResolver 返回 null）→ 返回 null，调用方回退对象字面量
+  /// （运行时走宿主 nativeComponents 原生注入）。
+  String? _renderComponentCall(Map<String, dynamic> json, int depth) {
+    if (!emitConstructorCalls) return null;
+    final props = json['props'];
+    if (props is! Map) return null;
+    final name = _semanticType(props['component']);
+    if (name.isEmpty || importResolver?.call(name) == null) return null;
+    final args = props['args'];
+    final argsJs = (args is Map && args.isNotEmpty)
+        ? _renderValue(args, depth + 1)
+        : '{}';
+    return '$name($argsJs)';
+  }
+
+  /// 构造调用模式下的值渲染：Map 且含 `type` → 视作节点，递归 [renderJs]
+  /// （产出 `Text(...)`）；普通 Map/List → 递归容器；叶子值（JS 表达式
+  /// 字符串，如三目/if/for spread）→ 原样嵌入。
+  String _renderValue(Object? value, int depth) {
+    if (value is Map) {
+      if (value.containsKey('type')) {
+        return renderJs(Map<String, dynamic>.from(value), depth);
+      }
+      if (value.isEmpty) return '{}';
+      final ind = '  ' * depth;
+      final ind2 = '  ' * (depth + 1);
+      final entries = value.entries
+          .map((e) => '"${e.key}": ${_renderValue(e.value, depth + 1)}')
+          .join(',\n$ind2');
+      return '{\n$ind2$entries\n$ind}';
+    }
+    if (value is List) {
+      if (value.isEmpty) return '[]';
+      final ind = '  ' * depth;
+      final ind2 = '  ' * (depth + 1);
+      final items = value.map((v) => _renderValue(v, depth + 1)).join(',\n$ind2');
+      return '[\n$ind2$items\n$ind]';
+    }
+    return jsLiteral(value, depth);
   }
 
   /// 剥离 JS 字符串字面量引号（`"Column"` → `Column`）；非字面量原样返回。
@@ -313,9 +416,14 @@ class WidgetTranslateContext {
       final inner = functionInner(e);
       if (inner is MethodInvocation) {
         final target = inner.target;
-        // 局部变量 receiver：`model.inc()` → `model.inc()`（闭包内 var model 已声明）
+        // 局部变量 receiver：`model.inc()` → 事件表达式中局部变量已不在
+        // 作用域，模型局部（context.watch<T>()）改用 `this.__read('T')`；
+        // 其余局部变量原样保留（`model.inc()`，闭包内 var 已声明）。
         if (target is Identifier && _locals.contains(target.name)) {
-          return '${target.name}.${inner.methodName.name}'
+          final modelType = _localModels[target.name];
+          final recv =
+              modelType != null ? 'this.__read(${jsString(modelType)})' : target.name;
+          return '$recv.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList)})';
         }
         // context.read<T>().reset() 链式：先翻译 receiver（jsDataExpr →
@@ -580,6 +688,11 @@ abstract class WidgetTranslator {
   /// 如三种按钮产物统一叫 'Button'）。
   Set<String> get jsonTypes => {type};
 
+  /// 该 widget 所属的「包」（决定生成器把 JS widget 模块放到哪个目录）。
+  /// 默认 'flutter'（Flutter SDK / material / widgets）；三方包覆写，
+  /// 如 provider 包的 ChangeNotifierProvider → 'provider'。
+  String get packageName => 'flutter';
+
   /// 把 [node] 翻译成 JSON 描述（type/props/children）。
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx);
 
@@ -641,10 +754,10 @@ class WidgetTranslatorRegistry {
 
 
 /// 嵌套组件兜底翻译：build 树里出现其他自定义 widget 时统一翻译为
-/// Component 节点（{ type: 'Component', props: { component, import?, args? } }）。
-/// 运行时发现 import 且后缀为 .js → 返回嵌套 HotPatchWidget(jsAsset: import)
-/// 递归渲染（组件自管理生命周期/事件/状态，层级深度不限）；
-/// 无 import（无注解的 lib 普通 widget）→ 原生注入（nativeComponents）或占位。
+/// Component 节点（{ type: 'Component', props: { component, args? } }）。
+/// 有注解的组件由生成器直接产出 JS 工厂调用（自动 import 其产物）；本兜底
+/// 节点只承载**无 JS 产物**的组件（无注解的 lib 普通 widget）→ 运行时经
+/// nativeComponents 原生注入或占位。
 class ComponentTranslator extends WidgetTranslator {
   const ComponentTranslator();
 
@@ -662,9 +775,8 @@ class ComponentTranslator extends WidgetTranslator {
       final v = _literalValue(entry.value);
       if (v != null) args[entry.key] = _jsLiteral(v, ctx);
     }
-    // 不再输出 import 字段：跨文件/同文件组件依赖统一在产物顶部用
-    // ES module import 表达（_renderJs 收集生成）；运行时按「组件索引」
-    // （导出类名 → jsAsset）递归渲染嵌套 HotPatchWidget。
+    // 只承载无 JS 产物的组件（有注解组件的依赖已在 _renderJs 里用
+    // ES module import 表达，运行时按 import 递归挂载）。
     return {
       'type': ctx.jsString('Component'),
       'props': {

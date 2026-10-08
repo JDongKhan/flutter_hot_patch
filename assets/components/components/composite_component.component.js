@@ -3,44 +3,42 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.component.js';
+import { Button } from '../flutter/Button.js';
+import { Column } from '../flutter/Column.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Text } from '../flutter/Text.js';
+// 节点工厂：归一化 props/children，形状与 widget 模块一致。
+function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
 
-export class DashboardCard {
+class DashboardCardComponent {
   constructor() {
     this._ticks = 0;
   }
   tick() { this.setState(function(){ this._ticks += 1; }); }
   build() {
-    return {
-      "type": "Column",
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+    return Column({}, [
+        Text({
             "data": "Dashboard (JS)",
             "style": {
               "fontSize": 22,
               "fontWeight": "w600"
             }
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "ticks = " + this._ticks
-          }
-        },
-        {
-          "type": "Component",
-          "props": {
-            "component": "BannerCard"
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        BannerCard({}),
+        SizedBox({
             "height": 12
-          }
-        },
+          }),
         {
           "type": "Component",
           "props": {
@@ -48,14 +46,12 @@ export class DashboardCard {
             "args": {
               "text": "private widget"
             }
-          }
+          },
+          "children": []
         },
-        {
-          "type": "SizedBox",
-          "props": {
+        SizedBox({
             "height": 8
-          }
-        },
+          }),
         {
           "type": "Component",
           "props": {
@@ -63,17 +59,13 @@ export class DashboardCard {
             "args": {
               "text": "public widget"
             }
-          }
+          },
+          "children": []
         },
-        {
-          "type": "SizedBox",
-          "props": {
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Button",
-          "props": {
+          }),
+        Button({
             "kind": "elevated",
             "label": "Tick",
             "event": "tick",
@@ -81,28 +73,11 @@ export class DashboardCard {
               "backgroundColor": '#FF9800',
               "foregroundColor": '#FFFFFF'
             }
-          }
-        }
-      ]
-    };
+          })
+      ]);
   }
 }
-
-export class LabeledDivider {
-  constructor(args) {
-    this.text = (args && args.text !== undefined) ? args.text : '';
-  }
-  build() {
-    return {
-      "type": "Text",
-      "props": {
-        "data": "★ " + this.text + " ★",
-        "style": {
-          "fontSize": 12,
-          "color": '#607D8B'
-        }
-      }
-    };
-  }
+export function DashboardCard(props, children) {
+  return __h(DashboardCardComponent, props, children);
 }
 

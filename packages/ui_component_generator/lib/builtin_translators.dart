@@ -987,6 +987,10 @@ class BuilderTranslator extends WidgetTranslator {
         if (st is VariableDeclarationStatement) {
           for (final v in st.variables.variables) {
             ctx.addLocal(v.name.lexeme);
+            // `final model = context.watch<T>()`：登记局部 → 模型类型，
+            // 事件表达式（`() => model.inc()`）据此翻译成 this.__read('T')。
+            final mt = _contextModelTypeOf(v.initializer);
+            if (mt != null) ctx.addLocalModel(v.name.lexeme, mt);
             final js = v.initializer == null
                 ? 'undefined'
                 : ctx.jsDataExpr(v.initializer!);
@@ -1039,6 +1043,10 @@ class ChangeNotifierProviderTranslator extends WidgetTranslator {
 
   @override
   String get type => 'ChangeNotifierProvider';
+
+  /// provider 包：模块产物落到 assets/components/provider/。
+  @override
+  String get packageName => 'provider';
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
@@ -1097,10 +1105,13 @@ String? _constructorNameOf(Expression? e) {
 
 /// 解析一个 `ChangeNotifierProvider<T>(create: ...)` → provider 节点 Map
 /// （不含 child，由调用方拼装）。ChangeNotifierProvider / MultiProvider 共用。
-/// create 支持：`(_) => _model`（ref，复用状态字段实例）/ `(_) => ModelClass()`
-/// （construct，JS 侧 new 模型类）；`ChangeNotifierProvider.value(value: x)`
-/// 的 value 直接传表达式（复用实例 → ref 语义，不释放），节点字段名保持
-/// 与 Dart 构造一一对应：[sourceKey]='create' 或 'value'。
+///
+/// 产出的 props 值直接是**运行时可见的 JS 值**（不是 ID/名称字符串）：
+///   - create = 模型**类引用**（裸标识符，如 `CounterModel`）：provider 内
+///     `new` 一次，生命周期归 provider（卸载 dispose）；
+///   - create = 模型**实例**（状态字段 `this._modelA`）：复用，归调用方；
+///   - value  = 模型实例：复用、不释放（与原生 .value 语义一致）。
+/// provider JS 组件按 `typeof create === 'function'` 区分「类」与「实例」。
 Map<String, dynamic> _providerNodeOf({
   required String modelType,
   required Expression createExpr,
@@ -1111,16 +1122,15 @@ Map<String, dynamic> _providerNodeOf({
   final inner = createExpr is FunctionExpression
       ? ctx.functionInner(createExpr)
       : createExpr;
-  Object? createJs;
+  final Object createJs;
   if (inner is Identifier) {
-    createJs = {'ref': ctx.jsString(ctx.propOf(inner))};
+    // `create: (_) => _modelA`：复用状态字段实例（this._modelA）。
+    createJs = ctx.jsDataExpr(inner);
   } else if (inner is InstanceCreationExpression) {
-    final cn = inner.constructorName;
-    final className = cn.type.name2.lexeme;
-    createJs = {'construct': ctx.jsString(className)};
+    createJs = inner.constructorName.type.name2.lexeme;
   } else if (inner is MethodInvocation && inner.target == null) {
     // 无 const 的 `ModelClass()` 在 parseString 下是 MethodInvocation。
-    createJs = {'construct': ctx.jsString(inner.methodName.name)};
+    createJs = inner.methodName.name;
   } else {
     throw FormatException(
         'ChangeNotifierProvider.create 仅支持返回状态字段或模型构造');
@@ -1148,6 +1158,10 @@ class ConsumerTranslator extends WidgetTranslator {
 
   @override
   String get type => 'Consumer';
+
+  /// provider 包：模块产物落到 assets/components/provider/。
+  @override
+  String get packageName => 'provider';
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
@@ -1200,6 +1214,10 @@ class MultiProviderTranslator extends WidgetTranslator {
 
   @override
   String get type => 'MultiProvider';
+
+  /// provider 包：模块产物落到 assets/components/provider/。
+  @override
+  String get packageName => 'provider';
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
@@ -1280,6 +1298,21 @@ Expression? _namedOf(List<Expression> args, String name) {
       final e = a.expression;
       return e is ParenthesizedExpression ? e.unParenthesized : e;
     }
+  }
+  return null;
+}
+
+/// `context.watch\<T\>()` / `context.read\<T\>()` 的类型参数类名
+/// （如 `CounterModel`；null = 非此形态）。
+String? _contextModelTypeOf(Expression? e) {
+  if (e is! MethodInvocation) return null;
+  final tgt = e.target;
+  if (tgt is! Identifier || tgt.name != 'context') return null;
+  final name = e.methodName.name;
+  if (name != 'watch' && name != 'read') return null;
+  final ta = e.typeArguments?.arguments;
+  if (ta != null && ta.length == 1 && ta.first is NamedType) {
+    return (ta.first as NamedType).name2.lexeme;
   }
   return null;
 }

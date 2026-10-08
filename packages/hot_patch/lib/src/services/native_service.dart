@@ -1,22 +1,17 @@
 import 'package:flutter/widgets.dart';
 
-import '../hot_patch_widget.dart';
-
 // ===========================================================================
 // 原生服务策略扩展点：JS sendMessage(channel, ...) → 原生能力
 //
-// 与渲染层（WidgetRenderer/WidgetRendererRegistry）设计对称：
 // JS 补丁里调 sendMessage('nativeToast', ...)，运行时按 channel 分发到
 // 对应的 NativeService 实现。
 //
 // 扩展一个原生服务只需要两步：
 //   1. 实现 NativeService 的子类（channel + handle）
 //      - 与页面无关（日志/toast）→ 继承 GlobalNativeService
-//      - 与页面相关（需要访问页面实例）→ 继承 InstanceNativeService
-//   2. 注入：HotPatchWidget(nativeServices: [...])（实例级）
-//      或 JsRuntimeManager.registerGlobal(...)（全局级）
+//   2. 注入：JsRuntimeManager.registerGlobal(...)（全局级）
 //
-// 稳定类（JsRuntimeManager / HotPatchWidget）无需改动。
+// 稳定类（JsRuntimeManager / JsUiWidget）无需改动。
 // ===========================================================================
 
 /// ===========================================================================
@@ -47,34 +42,10 @@ abstract class GlobalNativeService extends NativeService {
 }
 
 /// ===========================================================================
-/// 实例（页面）服务基类：与具体页面相关，需要访问页面实例。
-///
-/// 注册：`JsRuntimeManager.register(pageKey, service)`；
-/// 页面挂载时框架调用 [build]，注入 [HotPatchWidgetState]（页面实例），
-/// 服务据此做页面级处理（如 setState 重建、读取页面 key/manager）。
-///
-/// 示例：页面级内部实现 setState 就是普通 InstanceNativeService。
-/// ===========================================================================
-abstract class InstanceNativeService extends NativeService {
-  InstanceNativeService();
-
-  HotPatchWidgetState? _state;
-
-  /// 页面挂载时由框架调用：注入页面 state（多一个 HotPatchWidgetState
-  /// 的构建钩子），之后可通过 [state] 访问页面实例。
-  void build(HotPatchWidgetState state) {
-    _state = state;
-  }
-
-  /// 当前绑定的页面 state（[build] 之后可用）。
-  HotPatchWidgetState? get state => _state;
-}
-
-/// ===========================================================================
 /// 管理类：注册 / 分发原生服务
 ///
-/// HotPatchWidget 默认注册内置服务（SnackBarService 等）；业务方可通过
-/// HotPatchWidget(nativeServices: ...) 注入自定义服务实现。
+/// 内置服务（SnackBarService 等）由 JsUiWidget 启动时经
+/// [registerGlobal] 注入；业务方同样可注册自定义全局服务。
 /// ===========================================================================
 class NativeServiceRegistry {
   final Map<String, NativeService> _services = {};

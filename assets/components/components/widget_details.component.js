@@ -2,77 +2,86 @@
 // 由 ui_component_generator 从 lib/components/widget_details.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { Align } from '../flutter/Align.js';
+import { AppBar } from '../flutter/AppBar.js';
+import { Button } from '../flutter/Button.js';
+import { Card } from '../flutter/Card.js';
+import { Center } from '../flutter/Center.js';
+import { Chip } from '../flutter/Chip.js';
+import { CircleAvatar } from '../flutter/CircleAvatar.js';
+import { ClipRRect } from '../flutter/ClipRRect.js';
+import { Column } from '../flutter/Column.js';
+import { Container } from '../flutter/Container.js';
+import { Divider } from '../flutter/Divider.js';
+import { Expanded } from '../flutter/Expanded.js';
+import { Icon } from '../flutter/Icon.js';
+import { Image } from '../flutter/Image.js';
+import { ListTile } from '../flutter/ListTile.js';
+import { ListView } from '../flutter/ListView.js';
+import { Padding } from '../flutter/Padding.js';
+import { Positioned } from '../flutter/Positioned.js';
+import { Row } from '../flutter/Row.js';
+import { Scaffold } from '../flutter/Scaffold.js';
+import { SingleChildScrollView } from '../flutter/SingleChildScrollView.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Stack } from '../flutter/Stack.js';
+import { Text } from '../flutter/Text.js';
+import { Wrap } from '../flutter/Wrap.js';
+// 节点工厂：归一化 props/children，形状与 widget 模块一致。
+function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
 
-export class TextDetail {
+class TextDetailComponent {
   constructor() {
     this._count = 0;
   }
   bump() { this.setState(function(){ this._count += 1; }); }
   build() {
-    return {
-      "type": "Column",
-      "props": {
+    return Column({
         "crossAxisAlignment": "stretch"
-      },
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+      }, [
+        Text({
             "data": "基础文案 + TextStyle",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "普通文本，count = " + this._count + "（状态插值）",
             "style": {
               "color": '#2196F3',
               "fontSize": 16
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 6
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示",
             "maxLines": 1,
             "overflow": "ellipsis"
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 6
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "textScaler.linear(1.6) 放大",
             "textScaler": {
               "linear": 1.6
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 6
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "textAlign 居中",
             "style": {
               "decoration": "underline",
@@ -80,17 +89,11 @@ export class TextDetail {
               "decorationStyle": "wavy"
             },
             "textAlign": "center"
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 6
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "softWrap=false 不换行测试",
             "style": {
               "fontSize": 12,
@@ -100,58 +103,42 @@ export class TextDetail {
               "backgroundColor": '#ffffe082'
             },
             "softWrap": false
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 6
-          }
-        },
-        {
-          "type": "Button",
-          "props": {
+          }),
+        Button({
             "kind": "text",
             "label": "Bump count",
             "event": "bump"
-          }
-        }
-      ]
-    };
+          })
+      ]);
   }
 }
+export function TextDetail(props, children) {
+  return __h(TextDetailComponent, props, children);
+}
 
-export class ButtonDetail {
+class ButtonDetailComponent {
   constructor() {
     this._pressed = 0;
   }
   onTap() { this.setState(function(){ this._pressed += 1; }); }
   build() {
-    return {
-      "type": "Column",
-      "props": {
+    return Column({
         "crossAxisAlignment": "stretch"
-      },
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+      }, [
+        Text({
             "data": "点击次数 = " + this._pressed,
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 8
-          }
-        },
-        {
-          "type": "Button",
-          "props": {
+          }),
+        Button({
             "kind": "elevated",
             "label": "Elevated · Styled",
             "event": "onTap",
@@ -180,17 +167,11 @@ export class ButtonDetail {
               "backgroundColor": '#009688',
               "foregroundColor": '#FFFFFF'
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 8
-          }
-        },
-        {
-          "type": "Button",
-          "props": {
+          }),
+        Button({
             "kind": "text",
             "label": "TextButton",
             "event": "onTap",
@@ -211,17 +192,11 @@ export class ButtonDetail {
               },
               "foregroundColor": '#3F51B5'
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 8
-          }
-        },
-        {
-          "type": "Button",
-          "props": {
+          }),
+        Button({
             "kind": "outlined",
             "label": "OutlinedButton",
             "event": "onTap",
@@ -236,59 +211,41 @@ export class ButtonDetail {
               },
               "foregroundColor": '#FF5722'
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 8
-          }
-        },
-        {
-          "type": "Button",
-          "props": {
+          }),
+        Button({
             "kind": "elevated",
             "label": "Disabled",
             "event": ""
-          }
-        }
-      ]
-    };
+          })
+      ]);
   }
 }
+export function ButtonDetail(props, children) {
+  return __h(ButtonDetailComponent, props, children);
+}
 
-export class LayoutDetail {
+class LayoutDetailComponent {
   constructor() {
   }
   build() {
-    return {
-      "type": "Column",
-      "props": {
+    return Column({
         "crossAxisAlignment": "stretch"
-      },
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+      }, [
+        Text({
             "data": "Row + Expanded / Flexible",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "Row",
-          "children": [
-            {
-              "type": "Expanded",
-              "props": {
+          }),
+        Row({}, [
+            Expanded({
                 "flex": 1
-              },
-              "children": [
-                {
-                  "type": "Container",
-                  "props": {
+              }, [
+                Container({
                     "color": '@Colors.blue.shade100',
                     "padding": {
                       "left": 8.0,
@@ -296,34 +253,20 @@ export class LayoutDetail {
                       "right": 8.0,
                       "bottom": 8.0
                     }
-                  },
-                  "children": [
-                    {
-                      "type": "Text",
-                      "props": {
+                  }, [
+                    Text({
                         "data": "A",
                         "textAlign": "center"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "SizedBox",
-              "props": {
+                      })
+                  ])
+              ]),
+            SizedBox({
                 "width": 4
-              }
-            },
-            {
-              "type": "Expanded",
-              "props": {
+              }),
+            Expanded({
                 "flex": 2
-              },
-              "children": [
-                {
-                  "type": "Container",
-                  "props": {
+              }, [
+                Container({
                     "color": '@Colors.green.shade100',
                     "padding": {
                       "left": 8.0,
@@ -331,43 +274,26 @@ export class LayoutDetail {
                       "right": 8.0,
                       "bottom": 8.0
                     }
-                  },
-                  "children": [
-                    {
-                      "type": "Text",
-                      "props": {
+                  }, [
+                    Text({
                         "data": "B（flex=2）",
                         "textAlign": "center"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+                      })
+                  ])
+              ])
+          ]),
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "Center / Align / Padding / SizedBox",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "Center",
-          "children": [
-            {
-              "type": "Container",
-              "props": {
+          }),
+        Center({}, [
+            Container({
                 "color": '@Colors.amber.shade100',
                 "padding": {
                   "left": 12.0,
@@ -375,33 +301,19 @@ export class LayoutDetail {
                   "right": 12.0,
                   "bottom": 12.0
                 }
-              },
-              "children": [
-                {
-                  "type": "Text",
-                  "props": {
+              }, [
+                Text({
                     "data": "Center 居中"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+                  })
+              ])
+          ]),
+        SizedBox({
             "height": 8
-          }
-        },
-        {
-          "type": "Align",
-          "props": {
+          }),
+        Align({
             "alignment": "centerLeft"
-          },
-          "children": [
-            {
-              "type": "Container",
-              "props": {
+          }, [
+            Container({
                 "color": '@Colors.purple.shade50',
                 "padding": {
                   "left": 8.0,
@@ -409,307 +321,191 @@ export class LayoutDetail {
                   "right": 8.0,
                   "bottom": 8.0
                 }
-              },
-              "children": [
-                {
-                  "type": "Text",
-                  "props": {
+              }, [
+                Text({
                     "data": "Align centerLeft"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+                  })
+              ])
+          ]),
+        SizedBox({
             "height": 8
-          }
-        },
-        {
-          "type": "Padding",
-          "props": {
+          }),
+        Padding({
             "padding": {
               "left": 8.0,
               "top": 4.0,
               "right": 8.0,
               "bottom": 4.0
             }
-          },
-          "children": [
-            {
-              "type": "Text",
-              "props": {
+          }, [
+            Text({
                 "data": "Padding 包裹文案"
-              }
-            }
-          ]
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+              })
+          ]),
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "Stack + Positioned",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 100
-          },
-          "children": [
-            {
-              "type": "Stack",
-              "children": [
-                {
-                  "type": "Container",
-                  "props": {
+          }, [
+            Stack({}, [
+                Container({
                     "color": '@Colors.grey.shade200'
-                  }
-                },
-                {
-                  "type": "Positioned",
-                  "props": {
+                  }),
+                Positioned({
                     "left": 0,
                     "top": 0,
                     "right": 0,
                     "bottom": 0
-                  },
-                  "children": [
-                    {
-                      "type": "Center",
-                      "children": [
-                        {
-                          "type": "Text",
-                          "props": {
+                  }, [
+                    Center({}, [
+                        Text({
                             "data": "FILL",
                             "style": {
                               "color": '#FFFFFF',
                               "fontWeight": "bold"
                             }
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "Positioned",
-                  "props": {
+                          })
+                      ])
+                  ]),
+                Positioned({
                     "left": 12,
                     "top": 12
-                  },
-                  "children": [
-                    {
-                      "type": "Text",
-                      "props": {
+                  }, [
+                    Text({
                         "data": "TL"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "Positioned",
-                  "props": {
+                      })
+                  ]),
+                Positioned({
                     "right": 12,
                     "bottom": 12
-                  },
-                  "children": [
-                    {
-                      "type": "Text",
-                      "props": {
+                  }, [
+                    Text({
                         "data": "BR"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+                      })
+                  ])
+              ])
+          ]),
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "Wrap · 自动换行",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "Wrap",
-          "props": {
+          }),
+        Wrap({
             "spacing": 8,
             "runSpacing": 8
-          },
-          "children": [
-            ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [{ "type": "Chip", "props": { "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' } }]); } return out; })()
-          ]
-        }
-      ]
-    };
+          }, [
+            ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [Chip({ "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
+          ])
+      ]);
   }
 }
+export function LayoutDetail(props, children) {
+  return __h(LayoutDetailComponent, props, children);
+}
 
-export class ImageDetail {
+class ImageDetailComponent {
   constructor() {
   }
   build() {
-    return {
-      "type": "Column",
-      "props": {
+    return Column({
         "crossAxisAlignment": "stretch"
-      },
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+      }, [
+        Text({
             "data": "Image · 网络图片",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "ClipRRect",
-          "props": {
-            "child": {
-              "type": "Image",
-              "props": {
+          }),
+        ClipRRect({
+            "child": Image({
                 "source": "https://picsum.photos/seed/hotpatch/400/160",
                 "height": 120,
                 "fit": "cover"
-              }
-            }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+              })
+          }),
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "Icon / CircleAvatar",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "Row",
-          "children": [
-            {
-              "type": "Icon",
-              "props": {
+          }),
+        Row({}, [
+            Icon({
                 "icon": "star",
                 "size": 28,
                 "color": '#FFC107'
-              }
-            },
-            {
-              "type": "SizedBox",
-              "props": {
+              }),
+            SizedBox({
                 "width": 12
-              }
-            },
-            {
-              "type": "Icon",
-              "props": {
+              }),
+            Icon({
                 "icon": "home",
                 "size": 28,
                 "color": '#2196F3'
-              }
-            },
-            {
-              "type": "SizedBox",
-              "props": {
+              }),
+            SizedBox({
                 "width": 12
-              }
-            },
-            {
-              "type": "Icon",
-              "props": {
+              }),
+            Icon({
                 "icon": "favorite",
                 "size": 28,
                 "color": '#F44336'
-              }
-            },
-            {
-              "type": "SizedBox",
-              "props": {
+              }),
+            SizedBox({
                 "width": 12
-              }
-            },
-            {
-              "type": "CircleAvatar",
-              "props": {
+              }),
+            CircleAvatar({
                 "radius": 20,
                 "backgroundColor": '#009688'
-              },
-              "children": [
-                {
-                  "type": "Text",
-                  "props": {
+              }, [
+                Text({
                     "data": "AV",
                     "style": {
                       "color": '#FFFFFF'
                     }
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
+                  })
+              ])
+          ])
+      ]);
   }
 }
+export function ImageDetail(props, children) {
+  return __h(ImageDetailComponent, props, children);
+}
 
-export class ContainerDetail {
+class ContainerDetailComponent {
   constructor() {
   }
   build() {
-    return {
-      "type": "Column",
-      "props": {
+    return Column({
         "crossAxisAlignment": "stretch"
-      },
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+      }, [
+        Text({
             "data": "Container · 颜色/圆角/Padding",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "Container",
-          "props": {
+          }),
+        Container({
             "padding": {
               "left": 16.0,
               "top": 16.0,
@@ -719,296 +515,179 @@ export class ContainerDetail {
             "decoration": {
               "color": '#009688'
             }
-          },
-          "children": [
-            {
-              "type": "Text",
-              "props": {
+          }, [
+            Text({
                 "data": "容器内容（teal 圆角）",
                 "style": {
                   "color": '#FFFFFF'
                 }
-              }
-            }
-          ]
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+              })
+          ]),
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "Card",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "Card",
-          "props": {
+          }),
+        Card({
             "elevation": 2
-          },
-          "children": [
-            {
-              "type": "Padding",
-              "props": {
+          }, [
+            Padding({
                 "padding": {
                   "left": 12.0,
                   "top": 12.0,
                   "right": 12.0,
                   "bottom": 12.0
                 }
-              },
-              "children": [
-                {
-                  "type": "Text",
-                  "props": {
+              }, [
+                Text({
                     "data": "卡片内容（elevation=2）"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+                  })
+              ])
+          ]),
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Divider"
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        Divider({}),
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "SizedBox · 尺寸约束",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "Container",
-          "props": {
+          }),
+        Container({
             "width": 120,
             "height": 48,
             "color": '@Colors.blueGrey.shade100',
             "alignment": "center"
-          },
-          "children": [
-            {
-              "type": "Text",
-              "props": {
+          }, [
+            Text({
                 "data": "固定 120×48"
-              }
-            }
-          ]
-        }
-      ]
-    };
+              })
+          ])
+      ]);
   }
 }
+export function ContainerDetail(props, children) {
+  return __h(ContainerDetailComponent, props, children);
+}
 
-export class ScrollDetail {
+class ScrollDetailComponent {
   constructor() {
   }
   build() {
-    return {
-      "type": "Column",
-      "props": {
+    return Column({
         "crossAxisAlignment": "stretch"
-      },
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+      }, [
+        Text({
             "data": "ListView · 列表",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 160
-          },
-          "children": [
-            {
-              "type": "ListView",
-              "children": [
-                {
-                  "type": "ListTile",
-                  "props": {
+          }, [
+            ListView({}, [
+                ListTile({
                     "title": "item A",
-                    "leading": {
-                      "type": "Icon",
-                      "props": {
+                    "leading": Icon({
                         "icon": "list"
-                      }
-                    }
-                  }
-                },
-                {
-                  "type": "ListTile",
-                  "props": {
+                      })
+                  }),
+                ListTile({
                     "title": "item B",
-                    "leading": {
-                      "type": "Icon",
-                      "props": {
+                    "leading": Icon({
                         "icon": "list"
-                      }
-                    }
-                  }
-                },
-                {
-                  "type": "ListTile",
-                  "props": {
+                      })
+                  }),
+                ListTile({
                     "title": "item C",
-                    "leading": {
-                      "type": "Icon",
-                      "props": {
+                    "leading": Icon({
                         "icon": "list"
-                      }
-                    }
-                  }
-                },
-                {
-                  "type": "ListTile",
-                  "props": {
+                      })
+                  }),
+                ListTile({
                     "title": "item D",
-                    "leading": {
-                      "type": "Icon",
-                      "props": {
+                    "leading": Icon({
                         "icon": "list"
-                      }
-                    }
-                  }
-                },
-                {
-                  "type": "ListTile",
-                  "props": {
+                      })
+                  }),
+                ListTile({
                     "title": "item E",
-                    "leading": {
-                      "type": "Icon",
-                      "props": {
+                    "leading": Icon({
                         "icon": "list"
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+                      })
+                  })
+              ])
+          ]),
+        SizedBox({
             "height": 12
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "SingleChildScrollView · 长内容滚动",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
-          }
-        },
-        {
-          "type": "SingleChildScrollView",
-          "props": {
+          }),
+        SingleChildScrollView({
             "scrollDirection": "horizontal"
-          },
-          "children": [
-            {
-              "type": "Row",
-              "children": [
-                ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [{ "type": "Padding", "props": { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, "children": [ { "type": "Chip", "props": { "label": "横向 " + i } } ] }]); } return out; })()
-              ]
-            }
-          ]
-        }
-      ]
-    };
+          }, [
+            Row({}, [
+                ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [Padding({ "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ Chip({ "label": "横向 " + i }) ])]); } return out; })()
+              ])
+          ])
+      ]);
   }
 }
+export function ScrollDetail(props, children) {
+  return __h(ScrollDetailComponent, props, children);
+}
 
-export class ScaffoldDetail {
+class ScaffoldDetailComponent {
   constructor() {
   }
   build() {
-    return {
-      "type": "Scaffold",
-      "children": [
-        {
-          "type": "AppBar",
-          "children": [
-            {
-              "type": "Text",
-              "props": {
+    return Scaffold({}, [
+        AppBar({}, [
+            Text({
                 "data": "Scaffold / AppBar / Center"
-              }
-            }
-          ]
-        },
-        {
-          "type": "Center",
-          "children": [
-            {
-              "type": "Column",
-              "props": {
+              })
+          ]),
+        Center({}, [
+            Column({
                 "mainAxisAlignment": "center"
-              },
-              "children": [
-                {
-                  "type": "Icon",
-                  "props": {
+              }, [
+                Icon({
                     "icon": "extension",
                     "size": 48,
                     "color": '#673AB7'
-                  }
-                },
-                {
-                  "type": "SizedBox",
-                  "props": {
+                  }),
+                SizedBox({
                     "height": 12
-                  }
-                },
-                {
-                  "type": "Text",
-                  "props": {
+                  }),
+                Text({
                     "data": "页面骨架组件演示"
-                  }
-                },
-                {
-                  "type": "Text",
-                  "props": {
+                  }),
+                Text({
                     "data": "Scaffold + AppBar + Center + SingleChildScrollView"
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
+                  })
+              ])
+          ])
+      ]);
   }
+}
+export function ScaffoldDetail(props, children) {
+  return __h(ScaffoldDetailComponent, props, children);
 }
 

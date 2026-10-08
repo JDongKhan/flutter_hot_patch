@@ -6,7 +6,7 @@ import 'widget_details.dart';
 /// 常用组件导航列表页（普通页面，无 @UIComponent 注解）：
 /// 分组列出 Flutter 常用组件，点击条目进入对应详情页。
 /// 详情页是 @UIComponent 注解组件（widget_details.dart），同一份代码
-/// 原生可直接用、也可由 HotPatchWidget 加载 JS 产物热更（原生 vs JS 同屏）。
+/// 原生可直接用、也可由 JsUiWidget 加载 JS 产物热更（原生 vs JS 同屏）。
 class WidgetShowcase extends StatelessWidget {
   const WidgetShowcase({super.key});
 
@@ -112,7 +112,7 @@ class WidgetDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final js = HotPatchWidget(
+    final js = JsUiWidget(
       jsAsset: _jsAsset,
       component: component,
     );
@@ -138,7 +138,7 @@ class WidgetDetailPage extends StatelessWidget {
           final nativeSide =
               SingleChildScrollView(child: side('原生组件', _native()));
           final jsSide =
-              SingleChildScrollView(child: side('JS 热更（HotPatchWidget）', js));
+              SingleChildScrollView(child: side('JS 热更（JsUiWidget）', js));
           if (wide) {
             // 左右对比：两列各自独立滚动
             return Row(

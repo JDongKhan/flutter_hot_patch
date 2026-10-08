@@ -19,7 +19,7 @@ import 'package:flutter_hot/model/user.dart';
 ///
 /// 构建期由 ui_component_generator 静态翻译出：
 ///   hello_component.component.js（注册 HelloCard + HelloPanel）
-/// 线上出 bug 时，运行时把组件切换为 HotPatchWidget 加载 JS 版本即可热修复，
+/// 线上出 bug 时，运行时把组件切换为 JsUiWidget 加载 JS 版本即可热修复，
 /// 组件本体永远保持可正常使用。
 @UIComponent('HelloCard')
 class HelloCard extends StatefulWidget {

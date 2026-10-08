@@ -3,6 +3,20 @@
 // 重新生成：dart run build_runner build
 
 import { User } from '../model/user.model.js';
+import { Button } from '../flutter/Button.js';
+import { Column } from '../flutter/Column.js';
+import { Row } from '../flutter/Row.js';
+import { Text } from '../flutter/Text.js';
+// 节点工厂：归一化 props/children，形状与 widget 模块一致。
+function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
 
 // 同文件静态单例类 PanelColors（export，供跨文件 import）
 export const PanelColors = {
@@ -12,7 +26,7 @@ export const PanelColors = {
   tagline: 'demo'
 };
 
-export class HelloCard {
+class HelloCardComponent {
   constructor() {
     this._count = 0;
     this._user = null;
@@ -26,53 +40,32 @@ export class HelloCard {
     var debugActive = kDebugMode;
     var android = Platform.isAndroid;
     console.debug("build: count=" + this._count + " debug=" + debugActive + " android=" + android);
-    return {
-      "type": "Column",
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+    return Column({}, [
+        Text({
             "data": "Hello from JS logic",
             "style": {
               "fontSize": 24,
               "fontWeight": "bold",
               "color": '#2196F3'
             }
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "count = " + this._count
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
-          }
-        },
-        ...((this._count > 0) ? [{ "type": "Text", "props": { "data": "当前 count 是正数（if 条件渲染）" } }] : []),
-        ...((this._user != null) ? [{ "type": "Text", "props": { "data": "用户已加载（if + else 渲染）" } }] : [{ "type": "Text", "props": { "data": "用户未加载，点 Load User" } }]),
-        ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [{ "type": "Text", "props": { "data": "循环第 " + i + " 个" } }]); } return out; })(),
-        {
-          "type": "Row",
-          "children": [
-            {
-              "type": "Button",
-              "props": {
+          }),
+        ...((this._count > 0) ? [Text({ "data": "当前 count 是正数（if 条件渲染）" })] : []),
+        ...((this._user != null) ? [Text({ "data": "用户已加载（if + else 渲染）" })] : [Text({ "data": "用户未加载，点 Load User" })]),
+        ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [Text({ "data": "循环第 " + i + " 个" })]); } return out; })(),
+        Row({}, [
+            Button({
                 "kind": "elevated",
                 "label": "+1",
                 "event": "inc",
@@ -80,87 +73,63 @@ export class HelloCard {
                   "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
                   "foregroundColor": '#FFFFFF'
                 }
-              }
-            },
-            {
-              "type": "Button",
-              "props": {
+              }),
+            Button({
                 "kind": "elevated",
                 "label": "Reset",
                 "event": "reset"
-              }
-            },
-            {
-              "type": "Button",
-              "props": {
+              }),
+            Button({
                 "kind": "elevated",
                 "label": "Native",
                 "event": "showNative"
-              }
-            },
-            {
-              "type": "Button",
-              "props": {
+              }),
+            Button({
                 "kind": "elevated",
                 "label": "Load User",
                 "event": "loadUser"
-              }
-            }
-          ]
-        }
-      ]
-    };
+              })
+          ])
+      ]);
   }
 }
+export function HelloCard(props, children) {
+  return __h(HelloCardComponent, props, children);
+}
 
-export class HelloPanel {
+class HelloPanelComponent {
   constructor() {
     this._taps = 0;
   }
   tap() { this.setState(function(){ this._taps += 1; }); }
   clear() { this.setState(function(){ this._taps = 0; }); }
   build() {
-    return {
-      "type": "Column",
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+    return Column({}, [
+        Text({
             "data": "HelloPanel (JS)",
             "style": {
               "fontSize": 20
             }
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "taps = " + this._taps
-          }
-        },
-        {
-          "type": "Row",
-          "children": [
-            {
-              "type": "Button",
-              "props": {
+          }),
+        Row({}, [
+            Button({
                 "kind": "elevated",
                 "label": "Tap",
                 "event": "tap"
-              }
-            },
-            {
-              "type": "Button",
-              "props": {
+              }),
+            Button({
                 "kind": "elevated",
                 "label": "Clear",
                 "event": "clear"
-              }
-            }
-          ]
-        }
-      ]
-    };
+              })
+          ])
+      ]);
   }
+}
+export function HelloPanel(props, children) {
+  return __h(HelloPanelComponent, props, children);
 }
 

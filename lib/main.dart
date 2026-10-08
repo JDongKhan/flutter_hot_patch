@@ -16,7 +16,7 @@ void main() => runApp(const HotDemoApp());
 /// Demo 列表：展示「正常组件 ↔ JS 热更版本」的各个场景。
 ///
 /// 每个组件都先是一个**完全正常的 Flutter StatefulWidget**（原生可直接用）；
-/// 线上出 bug 时，运行时切换到对应的 JS 补丁（HotPatchWidget 加载
+/// 线上出 bug 时，运行时切换到对应的 JS 补丁（JsUiWidget 加载
 /// build_runner 静态翻译出的 .component.js）即可热修复，无需发版。
 class HotDemoApp extends StatelessWidget {
   const HotDemoApp({super.key});
@@ -53,7 +53,7 @@ class DemoListPage extends StatelessWidget {
       '同屏对比：正常组件与 JS 补丁的渲染与逻辑',
       _CompareTest(
         native: HelloCard(),
-        js: HotPatchWidget(
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/hello_component.component.js',
           component: 'HelloCard',
         ),
@@ -64,7 +64,7 @@ class DemoListPage extends StatelessWidget {
       '单文件多组件：与 HelloCard 同文件、同产物（taps 状态）',
       _CompareTest(
         native: HelloPanel(),
-        js: HotPatchWidget(
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/hello_component.component.js',
           component: 'HelloPanel',
         ),
@@ -79,10 +79,10 @@ class DemoListPage extends StatelessWidget {
           subtitle: '原生直接渲染，无需 State',
           badge: 'FLUTTER',
         ),
-        js: HotPatchWidget(
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/stateless_component.component.js',
           component: 'StatelessCard',
-          componentArgs: {
+          props: {
             'title': 'Hello Stateless 1',
             'subtitle': 'JS 热更版本，无 State 也能渲染',
             'badge': 'JS',
@@ -95,7 +95,7 @@ class DemoListPage extends StatelessWidget {
       '多文件多组件：banner_component.dart 独立产物（views 状态）',
       _CompareTest(
         native: BannerCard(),
-        js: HotPatchWidget(
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/banner_component.component.js',
           component: 'BannerCard',
         ),
@@ -106,11 +106,11 @@ class DemoListPage extends StatelessWidget {
       '复合组件：内嵌 BannerCard（注解）+ 私有/非私有自定义 widget 双路径',
       _CompareTest(
         native: DashboardCard(),
-        js: HotPatchWidget(
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/composite_component.component.js',
           component: 'DashboardCard',
-          // 嵌套组件（BannerCard）由生成器在 Component 节点产出 import，
-          // 运行时自动递归加载，使用方无需声明依赖。
+          // 嵌套组件（BannerCard）由生成器在 Component 节点产出 JS 工厂调用，
+          // 运行时自动递归挂载，使用方无需声明依赖。
           // 非私有组件（LabeledDivider）运行时注入原生 widget：
           // hot_patch 包不 import 业务类，由业务方在这里注册
           nativeComponents: {
@@ -127,7 +127,9 @@ class DemoListPage extends StatelessWidget {
       'MultiProvider：providers 平级数组一一对应转换，Consumer 局部重建',
       _CompareTest(
         native: ProviderCard(),
-        js: HotPatchWidget(
+        // provider 状态处理在 JS 侧（assets/components/provider/*.js）：
+        // 经 JsUiWidget 新运行时渲染，宿主不实现任何 provider 语义。
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/provider_component.component.js',
           component: 'ProviderCard',
         ),
@@ -138,7 +140,7 @@ class DemoListPage extends StatelessWidget {
       'ChangeNotifier + ListenableBuilder 局部重建（同文件共享模型）',
       _CompareTest(
         native: ListenableDemo(),
-        js: HotPatchWidget(
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/listenable_demo.component.js',
           component: 'ListenableDemo',
         ),
@@ -149,7 +151,7 @@ class DemoListPage extends StatelessWidget {
       'ChangeNotifier + ListenableBuilder：模型逻辑热更，notify 局部重建',
       _CompareTest(
         native: NotifierCard(),
-        js: HotPatchWidget(
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/notifier_component.component.js',
           component: 'NotifierCard',
         ),
@@ -160,7 +162,8 @@ class DemoListPage extends StatelessWidget {
       'context.watch（订阅局部刷新）/ context.read（仅取实例）',
       _CompareTest(
         native: WatchDemo(),
-        js: HotPatchWidget(
+        // context.watch/read 的订阅与 provider 链全在 JS 侧（新运行时）。
+        js: JsUiWidget(
           jsAsset: 'assets/components/components/watch_demo.component.js',
           component: 'WatchDemo',
         ),
@@ -170,14 +173,14 @@ class DemoListPage extends StatelessWidget {
       'Scaffold · 页面骨架',
       'Scaffold / AppBar / Center / SingleChildScrollView 组件演示（页面级，仅 JS 热更版）',
       // 页面级组件无法与原生同屏比对，直接展示 JS 热更版
-      HotPatchWidget(jsAsset: 'assets/components/components/scaffold_demo.component.js', component: 'ScaffoldDemo'),
+      JsUiWidget(jsAsset: 'assets/components/components/scaffold_demo.component.js', component: 'ScaffoldDemo'),
     ),
     _DemoEntry(
       'HelloCard · 网络 zip 加载',
       'jsAsset 为 http(s):// zip：下载解压到 document 后走与 asset 一致的加载逻辑',
       _CompareTest(
         native: HelloCard(),
-        js: HotPatchWidget(
+        js: JsUiWidget(
           jsAsset: 'http://127.0.0.1:8765/patch/multi_components.zip',
           // entryPath 直达 zip 内入口（也可不传，按 component 反查）
           entryPath: 'components/components/hello_component.component.js',
@@ -187,7 +190,7 @@ class DemoListPage extends StatelessWidget {
     ),
     _DemoEntry(
       'HelloCard · JS 双实例隔离',
-      '同屏两个 HotPatchWidget 实例：各自 new 独立实例，状态互不共享',
+      '同屏两个 JsUiWidget 实例：各自 new 独立实例，状态互不共享',
       _TwinTest(
         jsAsset: 'assets/components/components/hello_component.component.js',
         component: 'HelloCard',
@@ -203,7 +206,7 @@ class DemoListPage extends StatelessWidget {
         label: 'BannerCard',
       ),
     ),
-    _DemoEntry('BannerCard · 多 runtime 分组', '两组 HotPatchWidget 各自使用业务方创建的独立 runtime，点按钮互不影响', _RuntimeGroupTest()),
+    _DemoEntry('BannerCard · 多 runtime 分组', '两组 JsUiWidget 各自使用业务方创建的独立 runtime，点按钮互不影响', _RuntimeGroupTest()),
     _DemoEntry(
       '常用组件 · 列表',
       '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）',
@@ -280,7 +283,7 @@ class _CompareTest extends StatelessWidget {
         const SizedBox(height: 24),
         const Divider(),
         const SizedBox(height: 24),
-        Text('JS 热更（HotPatchWidget）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+        Text('JS 热更（JsUiWidget）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         js,
       ],
@@ -288,7 +291,7 @@ class _CompareTest extends StatelessWidget {
   }
 }
 
-/// 多 runtime 分组测试：两组 HotPatchWidget 各自使用业务方创建的独立
+/// 多 runtime 分组测试：两组 JsUiWidget 各自使用业务方创建的独立
 /// runtime（等价于两个 RuntimeManager 分组的场景）。iOS/JavaScriptCore 的
 /// sendMessage 桥是库级 static 的（消息路由到最后创建的 runtime 通道表），
 /// 本测试验证：即便两个 runtime 共存，setState 消息仍按实例 key 全局分发，
@@ -302,7 +305,7 @@ class _RuntimeGroupTest extends StatelessWidget {
       children: [
         Text('runtime 组 A（业务方创建 #1）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
-        HotPatchWidget(
+        JsUiWidget(
           jsAsset: 'assets/components/components/banner_component.component.js',
           component: 'BannerCard',
           sharedManager: _managerA,
@@ -310,7 +313,7 @@ class _RuntimeGroupTest extends StatelessWidget {
         const Divider(height: 32),
         Text('runtime 组 B（业务方创建 #2）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
-        HotPatchWidget(
+        JsUiWidget(
           jsAsset: 'assets/components/components/banner_component.component.js',
           component: 'BannerCard',
           sharedManager: _managerB,
@@ -321,13 +324,13 @@ class _RuntimeGroupTest extends StatelessWidget {
 }
 
 /// 业务方创建的两个独立 JsRuntimeManager（每组与 JavascriptRuntime 一对一，
-/// runtime 在 manager 内部消化）：两组 HotPatchWidget 各自共享一个 manager，
+/// runtime 在 manager 内部消化）：两组 JsUiWidget 各自共享一个 manager，
 /// 组间 JS 状态隔离。handler 表是 static 全局共享的，跨组消息按实例 key
 /// 分发，互不串台。
 final JsRuntimeManager _managerA = JsRuntimeManager();
 final JsRuntimeManager _managerB = JsRuntimeManager();
 
-/// 双实例隔离测试：同屏渲染两个相同组件（HotPatchWidget 各持独立 JS 实例）。
+/// 双实例隔离测试：同屏渲染两个相同组件（JsUiWidget 各持独立 JS 实例）。
 /// 验证：点其中一个的按钮，另一个的状态不受影响（__instances[key] 隔离）。
 class _TwinTest extends StatelessWidget {
   const _TwinTest({required this.jsAsset, required this.component, required this.label});
@@ -342,11 +345,11 @@ class _TwinTest extends StatelessWidget {
       children: [
         Text('$label #1', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
-        HotPatchWidget(jsAsset: jsAsset, component: component),
+        JsUiWidget(jsAsset: jsAsset, component: component),
         const Divider(height: 32),
         Text('$label #2', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
-        HotPatchWidget(jsAsset: jsAsset, component: component),
+        JsUiWidget(jsAsset: jsAsset, component: component),
       ],
     );
   }

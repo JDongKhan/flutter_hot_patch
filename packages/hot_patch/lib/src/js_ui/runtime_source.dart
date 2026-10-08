@@ -1,0 +1,498 @@
+/// js_ui —— JS 侧 UI 运行时（框架代码，非按组件生成）。
+///
+/// 职责：把「JS 对象树」变成宿主能直接应用的增量补丁。
+///   - element：`Text({...})` 返回的不可变描述对象；
+///   - component/state：状态、setState、build 都在 JS；
+///   - reconciler：重建 -> 对比 -> 产出 patch ops；
+///   - context/provider：纯 JS 的作用域查找 + 订阅，宿主完全不感知；
+///   - bridge：仅一个出方向通道 `jsuiCommit`。
+///
+/// 宿主只做两件事：把 `type` 映射成 Flutter widget、应用 patch。
+/// 因此新增 JS 组件/状态库不改宿主；只有新增「Flutter 侧不存在的视觉
+/// widget」才往宿主注册表加一条。
+///
+/// **多根**：同一 JS 运行时里可并存多个页面，每个页面按 `pageKey` 隔离自己
+/// 的结点树、provider 表、脏队列与出方向 ops（互不订阅、互不重建）。宿主
+/// 每次 `mount`/`dispose`/`invokeEvent` 都显式带 `pageKey`。
+///
+/// 注入方式：由 JsRuntimeManager.ensureJsUiRuntime() 求值一次（幂等）。
+library;
+
+/// 运行时 JS 源码（幂等 IIFE，重复求值无副作用）。
+const String jsUiRuntimeSource = r'''
+(function () {
+  var G = typeof globalThis !== 'undefined'
+    ? globalThis
+    : Function('return this')();
+  if (G.__jsui) { return; }
+
+  var idSeq = 0;
+  var handlerSeq = 0;
+  var handlers = {};
+  var HOST = 1, COMP = 2;
+
+  // pageKey -> { key, inst, providers, dirty, flushing, ops }
+  var roots = {};
+  // 正在 mount/patch/flush 的根；emit / 结点归属都读它。
+  var activeRoot = null;
+
+  function nextId() { idSeq += 1; return 'n' + idSeq; }
+
+  // ---------------------------------------------------------------------
+  // 与宿主唯一的出方向通道
+  // ---------------------------------------------------------------------
+  function sendHost(channel, obj, key) {
+    if (typeof sendMessage === 'function') {
+      obj.key = key;
+      sendMessage(channel, JSON.stringify(obj));
+    }
+  }
+
+  function emit(op) {
+    if (activeRoot && activeRoot.ops) { activeRoot.ops.push(op); }
+  }
+  function commit(root) {
+    var list = root.ops;
+    root.ops = null;
+    if (!list || !list.length) { return; }
+    sendHost('jsuiCommit', { ops: list }, root.key);
+  }
+
+  // ---------------------------------------------------------------------
+  // element / 事件句柄
+  // ---------------------------------------------------------------------
+  function h(type, props, children) {
+    var ch = [];
+    if (children != null) {
+      ch = Array.isArray(children) ? children : [children];
+    }
+    return { type: type, props: props || {}, children: ch };
+  }
+
+  // 事件回调无法跨语言传递 -> 登记为句柄，宿主侧回调用 invoke 触发。
+  function fn(f) {
+    handlerSeq += 1;
+    var id = 'fn' + handlerSeq;
+    handlers[id] = f;
+    return { __fn: id };
+  }
+
+  function invoke(id, payload) {
+    var f = handlers[id];
+    if (!f) { return; }
+    if (typeof payload === 'string' && payload.length) {
+      try { payload = JSON.parse(payload); } catch (e) { payload = null; }
+    }
+    f(payload);
+  }
+
+  // 事件表达式回传（Button 等）：生成器把事件翻译成 JS 表达式字符串
+  // （`_incA` / `this.__read("CounterModel").reset()`），以对应页面根组件实例
+  // 为 `this` 求值；结果为函数（方法 tear-off）则调用，否则视为副作用已发生。
+  function invokeEvent(pageKey, expr, payload) {
+    var root = roots[pageKey];
+    if (!root || !root.inst || !expr) { return; }
+    var inst = root.inst;
+    try {
+      var src = expr;
+      // 裸标识符（`_incA`）即根组件上的方法 → 归一为 this._incA
+      if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(src)) { src = 'this.' + src; }
+      var f = new Function('return (' + src + ');');
+      var r = f.call(inst);
+      if (typeof r === 'function') { r.call(inst, payload); }
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.error) { console.error(String(e)); }
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // 深比较（用于避免每次重建都下发 props）
+  // ---------------------------------------------------------------------
+  function eq(a, b, depth) {
+    if (a === b) { return true; }
+    if (depth <= 0) { return false; }
+    if (typeof a !== typeof b) { return false; }
+    if (a === null || b === null || typeof a !== 'object') { return false; }
+    var aArr = Array.isArray(a), bArr = Array.isArray(b);
+    if (aArr !== bArr) { return false; }
+    var ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) { return false; }
+    for (var i = 0; i < ka.length; i++) {
+      if (!eq(a[ka[i]], b[ka[i]], depth - 1)) { return false; }
+    }
+    return true;
+  }
+
+  function keyOf(inst) {
+    var p = inst.__k === HOST ? inst.__props : (inst.__el && inst.__el.props);
+    return p ? p.key : null;
+  }
+
+  function hostIdOf(inst) {
+    while (inst && inst.__k === COMP) { inst = inst.__child; }
+    return inst ? inst.__id : null;
+  }
+
+  // 结点归属的根：mount 期间用 activeRoot，其余情况继承父结点。
+  function rootFor(parent) {
+    return activeRoot || (parent && parent.__root) || null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Component / State
+  // ---------------------------------------------------------------------
+  function Component(props) { this.props = props || {}; }
+  Component.prototype.setState = function (mutate) {
+    if (typeof mutate === 'function') { mutate.call(this); }
+    markDirty(this);
+  };
+  // 取最近 provider 提供的值并订阅（值变更 -> 本组件 setState）。
+  Component.prototype.watch = function (type) {
+    var node = findProvider(this, type);
+    if (!node) { return undefined; }
+    if (node.__subs.indexOf(this) < 0) { node.__subs.push(this); }
+    return node.__value;
+  };
+  // 只读不订阅。
+  Component.prototype.read = function (type) {
+    var node = findProvider(this, type);
+    return node ? node.__value : undefined;
+  };
+
+  function findProvider(inst, type) {
+    var p = inst.__parent;
+    while (p) {
+      if (p.__provides && Object.prototype.hasOwnProperty.call(p.__provides, type)) {
+        return p.__provides[type];
+      }
+      p = p.__parent;
+    }
+    // 回退：无可用祖先链时（如 Builder 的委托方法 `_builderN()` 以
+    // provider **之上**的拥有者组件为 this 调用）取本页面最近挂载的同名 provider。
+    var byType = inst.__root ? inst.__root.providers : null;
+    var arr = byType ? byType[type] : null;
+    return (arr && arr.length) ? arr[arr.length - 1] : null;
+  }
+
+  // provider 结点按模型类型登记（挂载顺序）：findProvider 的祖先回退用。
+  // 登记在所属根的 providers 表里，天然按页面隔离。
+  function registerProvides(inst) {
+    if (!inst || !inst.__provides || !inst.__root) { return; }
+    var byType = inst.__root.providers;
+    for (var k in inst.__provides) {
+      (byType[k] || (byType[k] = [])).push(inst);
+    }
+  }
+  function unregisterProvides(inst) {
+    if (!inst || !inst.__provides || !inst.__root) { return; }
+    var byType = inst.__root.providers;
+    for (var k in inst.__provides) {
+      var arr = byType[k];
+      if (!arr) { continue; }
+      var i = arr.indexOf(inst);
+      if (i >= 0) { arr.splice(i, 1); }
+    }
+  }
+
+  // provider 结点：订阅者通知（ChangeNotifier.notifyListeners 也走这里）。
+  function notifyProvider(node) {
+    var subs = node.__subs || [];
+    var list = subs.slice();
+    for (var i = 0; i < list.length; i++) { markDirty(list[i]); }
+  }
+
+  // ---------------------------------------------------------------------
+  // 调度：collected dirty -> 重建子树 -> 一次 commit（批处理）
+  // ---------------------------------------------------------------------
+  function markDirty(inst) {
+    if (!inst || inst.__unmounted || inst.__dirty) { return; }
+    var root = inst.__root;
+    if (!root) { return; }
+    inst.__dirty = true;
+    root.dirty.push(inst);
+    if (!root.flushing) {
+      root.flushing = true;
+      try { flush(root); } finally { root.flushing = false; }
+    }
+  }
+
+  function flush(root) {
+    var prev = activeRoot;
+    activeRoot = root;
+    try {
+      while (root.dirty.length) {
+        var batch = root.dirty;
+        root.dirty = [];
+        for (var i = 0; i < batch.length; i++) {
+          var inst = batch[i];
+          inst.__dirty = false;
+          if (inst.__unmounted) { continue; }
+          root.ops = [];
+          inst.__child = patch(inst.__child, inst.build(), inst, inst.__slot);
+          commit(root);
+        }
+      }
+    } finally {
+      activeRoot = prev;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // mount / patch / unmount
+  // ---------------------------------------------------------------------
+  // 普通类组件（生成器产物不 extends Component）挂载基类能力：
+  // props / setState / watch / read（含生成器产物使用的下划线别名
+  // `this.__watch(...)` / `this.__read(...)`）/ __notify（provider 结点在
+  // 模型 notify 时标记订阅者 dirty）。对 extends Component 的类重复赋值无害。
+  function augment(inst) {
+    if (inst.props === undefined || inst.props === null) {
+      inst.props = inst.__el ? inst.__el.props : {};
+    }
+    inst.setState = Component.prototype.setState;
+    inst.watch = Component.prototype.watch;
+    inst.read = Component.prototype.read;
+    inst.__watch = Component.prototype.watch;
+    inst.__read = Component.prototype.read;
+    inst.__notify = function () { notifyProvider(this); };
+  }
+
+  function mount(el, parent, slot) {
+    if (el == null || el === false) { return null; }
+
+    if (typeof el.type === 'string') {
+      var hi = {
+        __k: HOST, __id: nextId(), __type: el.type, __root: rootFor(parent),
+        __props: el.props, __children: [], __parent: parent
+      };
+      emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
+      if (slot && slot.hostParentId) {
+        emit({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
+      }
+      var idx = 0;
+      for (var i = 0; i < el.children.length; i++) {
+        var c = mount(el.children[i], hi, { hostParentId: hi.__id, index: idx });
+        if (c) { hi.__children.push(c); idx += 1; }
+      }
+      // 值为 element 的 props（如 Scaffold.body / AppBar.title）：单独挂载，
+      // 不入 children 列表，另发 propsChild 让宿主挂到对应 prop 上。
+      hi.__propsChildren = {};
+      mountPropChildren(hi, null, el.props || {});
+      return hi;
+    }
+
+    var ci = new el.type(el.props, el.children);
+    ci.__k = COMP;
+    ci.__id = nextId();
+    ci.__el = el;
+    ci.__parent = parent;
+    ci.__slot = slot;
+    ci.__root = rootFor(parent);
+    augment(ci);
+    if (typeof ci.initState === 'function') { ci.initState(); }
+    registerProvides(ci);
+    ci.__child = mount(ci.build(), ci, slot);
+    return ci;
+  }
+
+  function patch(oldInst, el, parent, slot) {
+    if (el == null || el === false) {
+      if (oldInst) { unmount(oldInst); }
+      return null;
+    }
+    if (!oldInst) { return mount(el, parent, slot); }
+
+    var newIsHost = (typeof el.type === 'string');
+    var oldIsHost = (oldInst.__k === HOST);
+    var sameType = oldIsHost
+      ? (newIsHost && oldInst.__type === el.type)
+      : (!newIsHost && oldInst.constructor === el.type);
+    if (!sameType) {
+      unmount(oldInst);
+      return mount(el, parent, slot);
+    }
+
+    if (oldIsHost) {
+      var oldProps = oldInst.__props;
+      if (!eq(oldProps, el.props, 4)) {
+        emit({ op: 'props', id: oldInst.__id, props: el.props });
+      }
+      oldInst.__props = el.props;
+      patchChildren(oldInst, el.children);
+      mountPropChildren(oldInst, oldProps, el.props || {});
+      return oldInst;
+    }
+
+    oldInst.__el = el;
+    oldInst.props = el.props;
+    oldInst.children = el.children;
+    oldInst.__child = patch(oldInst.__child, oldInst.build(), oldInst, oldInst.__slot);
+    return oldInst;
+  }
+
+  function patchChildren(parentHost, newEls) {
+    var old = parentHost.__children || [];
+    var remaining = old.slice();
+    var keyedOld = {};
+    var i, j;
+    for (i = 0; i < old.length; i++) {
+      var k = keyOf(old[i]);
+      if (k != null) { keyedOld['k' + k] = old[i]; }
+    }
+
+    var next = [];
+    var hostIdx = 0;
+    for (j = 0; j < newEls.length; j++) {
+      var el = newEls[j];
+      if (el == null || el === false) { continue; }
+      var ek = el.props ? el.props.key : null;
+      var matched = null;
+      if (ek != null && keyedOld['k' + ek]) {
+        matched = keyedOld['k' + ek];
+      } else if (ek == null) {
+        for (i = 0; i < remaining.length; i++) {
+          if (remaining[i] && keyOf(remaining[i]) == null) { matched = remaining[i]; break; }
+        }
+      }
+      if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
+
+      var inst = patch(matched, el, parentHost, { hostParentId: parentHost.__id, index: hostIdx });
+      if (inst) {
+        // 复用的结点位置变化 -> 下发 move（新建的自带 insert）。
+        if (inst === matched && old.indexOf(inst) !== hostIdx) {
+          emit({ op: 'move', parent: parentHost.__id, id: hostIdOf(inst), index: hostIdx });
+        }
+        next.push(inst);
+        hostIdx += 1;
+      }
+    }
+
+    for (i = 0; i < remaining.length; i++) {
+      if (remaining[i]) { unmount(remaining[i]); }
+    }
+    parentHost.__children = next;
+  }
+
+  // 值为 element 的 props：新旧对比后复用/新建/移除，逐个下发 propsChild op。
+  function isElement(v) {
+    return v != null && typeof v === 'object' && v.type != null;
+  }
+
+  function mountPropChildren(hostInst, oldProps, newProps) {
+    var old = hostInst.__propsChildren || {};
+    var next = {};
+    for (var k in newProps) {
+      var pv = newProps[k];
+      if (!isElement(pv)) { continue; }
+      var prev = old[k] || null;
+      var inst = patch(prev, pv, hostInst, null);
+      if (!inst) { continue; }
+      next[k] = inst;
+      if (!prev) {
+        emit({ op: 'propsChild', parent: hostInst.__id, key: k, childId: hostIdOf(inst) });
+      }
+    }
+    for (var k2 in old) {
+      if (!Object.prototype.hasOwnProperty.call(next, k2)) {
+        unmount(old[k2]);
+        emit({ op: 'propsChildRemove', parent: hostInst.__id, key: k2 });
+      }
+    }
+    hostInst.__propsChildren = next;
+  }
+
+  function unmount(inst) {
+    if (!inst) { return; }
+    var hostId = hostIdOf(inst);
+    if (hostId) { emit({ op: 'remove', id: hostId }); }
+    markUnmounted(inst);
+  }
+
+  function markUnmounted(inst) {
+    if (!inst) { return; }
+    inst.__unmounted = true;
+    if (inst.__k === HOST) {
+      for (var i = 0; i < inst.__children.length; i++) { markUnmounted(inst.__children[i]); }
+      var pcs = inst.__propsChildren;
+      if (pcs) { for (var pk in pcs) { markUnmounted(pcs[pk]); } }
+    } else {
+      if (typeof inst.dispose === 'function') {
+        try { inst.dispose(); } catch (e) {}
+      }
+      unregisterProvides(inst);
+      markUnmounted(inst.__child);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // 对外入口
+  // ---------------------------------------------------------------------
+  function parse(x) {
+    if (x == null || x === '') { return {}; }
+    if (typeof x === 'string') {
+      try { return JSON.parse(x); } catch (e) { return {}; }
+    }
+    return x;
+  }
+
+  function newRoot(pageKey) {
+    return {
+      key: pageKey, inst: null, providers: {}, dirty: [], flushing: false, ops: null
+    };
+  }
+
+  // 挂载一个页面：pageKey 隔离根，moduleKey 定位模块，className 是导出工厂。
+  function mountRoot(pageKey, moduleKey, className, propsJson) {
+    var mod = (G.__modules && G.__modules[moduleKey]) || null;
+    var C = (mod && mod[className]) || G[className];
+    if (!C) {
+      throw new Error('jsui: component not found: ' + className + ' in ' + moduleKey);
+    }
+    var root = newRoot(pageKey);
+    roots[pageKey] = root;
+    var prev = activeRoot;
+    activeRoot = root;
+    try {
+      root.ops = [];
+      root.inst = mount(C(parse(propsJson)), null, null);
+      // 末位下发根结点 id，宿主据此挂载 _JsNode。
+      emit({ op: 'root', id: hostIdOf(root.inst) });
+      commit(root);
+    } finally {
+      activeRoot = prev;
+    }
+    return true;
+  }
+
+  function disposeRoot(pageKey) {
+    var root = roots[pageKey];
+    if (!root) { return; }
+    var prev = activeRoot;
+    activeRoot = root;
+    try {
+      root.ops = [];
+      unmount(root.inst);
+      // 宿主随页面 widget 一并销毁，无需回传 remove。
+      root.ops = null;
+    } finally {
+      activeRoot = prev;
+    }
+    root.inst = null;
+    delete roots[pageKey];
+  }
+
+  var api = {
+    h: h,
+    fn: fn,
+    invoke: invoke,
+    invokeEvent: invokeEvent,
+    Component: Component,
+    mount: mountRoot,
+    dispose: disposeRoot,
+    notifyProvider: notifyProvider
+  };
+
+  G.__jsui = api;
+  G.__modules = G.__modules || {};
+  G.__modules['js_ui/core'] = api;
+})();
+''';

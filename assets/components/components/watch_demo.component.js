@@ -2,108 +2,90 @@
 // 由 ui_component_generator 从 lib/components/watch_demo.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { CounterModel } from '../model/counter_model.model.js';
+import { Builder } from '../flutter/Builder.js';
+import { Button } from '../flutter/Button.js';
+import { Card } from '../flutter/Card.js';
+import { ChangeNotifierProvider } from '../provider/ChangeNotifierProvider.js';
+import { Column } from '../flutter/Column.js';
+import { Padding } from '../flutter/Padding.js';
+import { Row } from '../flutter/Row.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Text } from '../flutter/Text.js';
+// 节点工厂：归一化 props/children，形状与 widget 模块一致。
+function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
 
-export class WatchDemo {
+class WatchDemoComponent {
   constructor() {
   }
   build() {
-    return {
-      "type": "Card",
-      "children": [
-        {
-          "type": "Padding",
-          "props": {
+    return Card({}, [
+        Padding({
             "padding": {
               "left": 16.0,
               "top": 16.0,
               "right": 16.0,
               "bottom": 16.0
             }
-          },
-          "children": [
-            {
-              "type": "ChangeNotifierProvider",
-              "props": {
+          }, [
+            ChangeNotifierProvider({
                 "model": "CounterModel",
-                "create": {
-                  "construct": "CounterModel"
-                },
-                "child": {
-                  "type": "Builder",
-                  "props": {
+                "create": CounterModel,
+                "child": Builder({
                     "builder": "_builder0"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      ]
-    };
+                  })
+              })
+          ])
+      ]);
   }
   _builder0() {
       var model = this.__watch("CounterModel");
-      return {
-      "type": "Column",
-      "props": {
+      return Column({
         "mainAxisSize": "min"
-      },
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+      }, [
+        Text({
             "data": "context.watch<CounterModel>"
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "count = " + model.count,
             "style": {
               "fontSize": 22,
               "fontWeight": "bold",
               "color": '#FF5722'
             }
-          }
-        },
-        {
-          "type": "SizedBox",
-          "props": {
+          }),
+        SizedBox({
             "height": 8
-          }
-        },
-        {
-          "type": "Row",
-          "props": {
+          }),
+        Row({
             "mainAxisAlignment": "center"
-          },
-          "children": [
-            {
-              "type": "Button",
-              "props": {
+          }, [
+            Button({
                 "kind": "elevated",
                 "label": "+1",
-                "event": "model.inc()"
-              }
-            },
-            {
-              "type": "SizedBox",
-              "props": {
+                "event": "this.__read(\"CounterModel\").inc()"
+              }),
+            SizedBox({
                 "width": 12
-              }
-            },
-            {
-              "type": "Button",
-              "props": {
+              }),
+            Button({
                 "kind": "elevated",
                 "label": "Reset",
                 "event": "this.__read(\"CounterModel\").reset()"
-              }
-            }
-          ]
-        }
-      ]
-    };
+              })
+          ])
+      ]);
   }
+}
+export function WatchDemo(props, children) {
+  return __h(WatchDemoComponent, props, children);
 }
 

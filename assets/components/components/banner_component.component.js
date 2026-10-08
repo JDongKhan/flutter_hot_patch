@@ -3,43 +3,47 @@
 // 重新生成：dart run build_runner build
 
 import { PanelColors } from 'hello_component.component.js';
+import { Button } from '../flutter/Button.js';
+import { Column } from '../flutter/Column.js';
+import { Text } from '../flutter/Text.js';
+// 节点工厂：归一化 props/children，形状与 widget 模块一致。
+function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
 
-export class BannerCard {
+class BannerCardComponent {
   constructor() {
     this._views = 0;
   }
   initState() { this._views = 5; }
   bump() { this.setState(function(){ this._views += 1; }); }
   build() {
-    return {
-      "type": "Column",
-      "children": [
-        {
-          "type": "Text",
-          "props": {
+    return Column({}, [
+        Text({
             "data": "Banner from another file",
             "style": {
               "fontSize": 20,
               "color": PanelColors.background
             }
-          }
-        },
-        {
-          "type": "Text",
-          "props": {
+          }),
+        Text({
             "data": "views = " + this._views
-          }
-        },
-        {
-          "type": "Button",
-          "props": {
+          }),
+        Button({
             "kind": "elevated",
             "label": "Bump",
             "event": "bump"
-          }
-        }
-      ]
-    };
+          })
+      ]);
   }
+}
+export function BannerCard(props, children) {
+  return __h(BannerCardComponent, props, children);
 }
 

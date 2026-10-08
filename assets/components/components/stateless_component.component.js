@@ -2,98 +2,87 @@
 // 由 ui_component_generator 从 lib/components/stateless_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { Card } from '../flutter/Card.js';
+import { Column } from '../flutter/Column.js';
+import { Divider } from '../flutter/Divider.js';
+import { Expanded } from '../flutter/Expanded.js';
+import { Icon } from '../flutter/Icon.js';
+import { Padding } from '../flutter/Padding.js';
+import { Row } from '../flutter/Row.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Text } from '../flutter/Text.js';
+// 节点工厂：归一化 props/children，形状与 widget 模块一致。
+function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
 
-export class StatelessCard {
+class StatelessCardComponent {
   constructor(args) {
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : '';
     this.badge = (args && args.badge !== undefined) ? args.badge : '';
   }
   build() {
-    return {
-      "type": "Card",
-      "props": {
+    return Card({
         "margin": {
           "left": 12.0,
           "top": 12.0,
           "right": 12.0,
           "bottom": 12.0
         }
-      },
-      "children": [
-        {
-          "type": "Padding",
-          "props": {
+      }, [
+        Padding({
             "padding": {
               "left": 16.0,
               "top": 16.0,
               "right": 16.0,
               "bottom": 16.0
             }
-          },
-          "children": [
-            {
-              "type": "Column",
-              "props": {
+          }, [
+            Column({
                 "mainAxisSize": "min",
                 "crossAxisAlignment": "start"
-              },
-              "children": [
-                {
-                  "type": "Row",
-                  "children": [
-                    {
-                      "type": "Icon",
-                      "props": {
+              }, [
+                Row({}, [
+                    Icon({
                         "icon": "article",
                         "color": '#009688'
-                      }
-                    },
-                    {
-                      "type": "SizedBox",
-                      "props": {
+                      }),
+                    SizedBox({
                         "width": 8
-                      }
-                    },
-                    {
-                      "type": "Expanded",
-                      "children": [
-                        {
-                          "type": "Text",
-                          "props": {
+                      }),
+                    Expanded({}, [
+                        Text({
                             "data": this.badge + " · " + this.title,
                             "style": {
                               "fontSize": 18,
                               "fontWeight": "bold"
                             }
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "Divider",
-                  "props": {
+                          })
+                      ])
+                  ]),
+                Divider({
                     "height": 24
-                  }
-                },
-                {
-                  "type": "Text",
-                  "props": {
+                  }),
+                Text({
                     "data": this.subtitle,
                     "style": {
                       "fontSize": 14,
                       "color": '#9E9E9E'
                     }
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
+                  })
+              ])
+          ])
+      ]);
   }
+}
+export function StatelessCard(props, children) {
+  return __h(StatelessCardComponent, props, children);
 }
 

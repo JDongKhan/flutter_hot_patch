@@ -5,11 +5,11 @@ import 'package:ui_component/ui_component.dart';
 ///   - 无 State、无 createState，build 在 widget 类自身（生成器自动识别：
 ///     有 createState 用 State 类承载 build，否则用 widget 类自身）；
 ///   - 构造参数（this.title / this.subtitle / this.badge）→ JS
-///     constructor(args) 的 args（HotPatchWidget.componentArgs 传入）；
+///     constructor(args) 的 args（JsUiWidget.props 传入）；
 ///   - 实例方法（_tag）→ JS 方法一比一翻译。
 ///
 /// 组件本体是 100% 正常的 Flutter StatelessWidget，原生可直接使用；
-/// 线上出 bug 时切换 HotPatchWidget 加载 JS 版本即可热修复。
+/// 线上出 bug 时切换 JsUiWidget 加载 JS 版本即可热修复。
 @UIComponent('StatelessCard')
 class StatelessCard extends StatelessWidget {
   const StatelessCard({

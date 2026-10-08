@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_js/flutter_js.dart';
 
 import '../utils/js_asset_resolver.dart';
+import '../js_ui/runtime_source.dart';
 import 'native_service.dart';
 import '../utils/hot_patch_log.dart';
 
@@ -16,13 +17,13 @@ import '../utils/hot_patch_log.dart';
 ///
 /// 每个 [JsRuntimeManager] 内部持有一个 [JavascriptRuntime]，所有与
 /// JavascriptRuntime 相关的操作（创建、求值、通道注册、生命周期）都在
-/// 本类内部消化；HotPatchWidget 等使用方只接触 [JsRuntimeManager]，
+/// 本类内部消化；JsUiWidget 等使用方只接触 [JsRuntimeManager]，
 /// 完全不感知底层运行时对象。
 ///
 /// - **默认实例**：使用 [instance]（全局唯一，static 共享）。大多数场景
-///   直接用默认实例即可，多个 HotPatchWidget 共享同一个 JS 环境。
+///   直接用默认实例即可，多个 JsUiWidget 共享同一个 JS 环境。
 /// - **分组隔离**：业务方可以 `JsRuntimeManager()` 自行创建实例，把同一
-///   个实例传给一组 HotPatchWidget（共享该组的 JS 状态），与其他组的
+///   个实例传给一组 JsUiWidget（共享该组的 JS 状态），与其他组的
 ///   状态互不影响。
 /// - **生命周期**：默认实例由本类持有（app 生命周期内常驻）；
 ///   业务方自建的实例由业务方管理（不再需要时置空引用即可，
@@ -31,27 +32,25 @@ import '../utils/hot_patch_log.dart';
 /// ## 消息通道：统一由 [NativeService] 注册
 ///
 /// JS → Flutter 的所有消息统一走「通道注册 + 两套处理器表」。
-/// **对外扩展只有一种能力：实现 [NativeService]（channel + handle），
-/// 用 [register]（页面级）或 [registerGlobal]（全局级）注册。**
-/// 框架内部机制（如 setState）同样实现为 NativeService，由
-/// HotPatchWidget 的页面级内部实现列表统一 [register]，不设特例方法。
+/// **对外扩展只有两种能力：实现 [NativeService]（channel + handle）用
+/// [registerGlobal]（全局级）注册，或用 [registerRawPageHandler] 注册一个
+/// 与页面 key 绑定、不需要 BuildContext 的裸通道处理器（如 js_ui 的 commit）。**
 ///
-/// **通道接线只由注册动作驱动**：每次 [register] / [registerGlobal] 都会把
-/// 对应 channel 注册到**所有活跃 manager** 的 runtime 上（幂等）——
-/// 注册的处理器一定有回调可路由，不会出现「通道没注册 → 消息黑洞」。
-/// 新建 manager 无需补历史通道：它的第一次 register 就把自己接上线。
+/// **通道接线只由注册动作驱动**：每次 [registerGlobal] /
+/// [registerRawPageHandler] 都会把对应 channel 注册到**所有活跃 manager**
+/// 的 runtime 上（幂等）——注册的处理器一定有回调可路由，不会出现
+/// 「通道没注册 → 消息黑洞」。
+/// 新建 manager 无需补历史通道：它的第一次注册就把自己接上线。
 /// 不在构造/求值时单独接线：没有 handler 的接线毫无意义。
 /// [evaluate] 是纯求值入口，不掺注册副作用。
 ///
 /// ### 页面级 [pageMessageHandlers]（跟页面 key 绑定）
 ///
-/// 例：setState、绑定页面状态的内部实现、页面隔离的服务。
-/// 消息**必须携带页面 key**：`sendMessage(channel, { key: 'hp_123', ... })`。
+/// 例：js_ui 的 commit（把 JS 算好的增量补丁交给宿主应用）。
+/// 消息**必须携带页面 key**：`sendMessage(channel, { key: 'jsui_1', ... })`。
 /// 分发：`pageMessageHandlers[key]?[channel]`；key 形如 `主key::组件`
 /// （嵌套实例）时 miss 回退主 key。页面销毁用 [dispose] 一次性移除
 /// 该 key 下的全部注册。
-/// 页面级 handler 的 context 由 InstanceNativeService 自持
-/// （[InstanceNativeService.state] 的 context），本类不持有 BuildContext。
 ///
 /// ### 全局级 [globalMessageHandlers]（与页面无关）
 ///
@@ -90,7 +89,7 @@ class JsRuntimeManager {
   // ---------------------------------------------------------------------
 
   /// 页面级处理器表（全局唯一）：页面 key → (方法 → 处理器)。
-  /// [register] 注册的服务在这里；页面销毁时 [dispose] 移除。
+  /// [registerRawPageHandler] 注册的处理器在这里；页面销毁时 [dispose] 移除。
   static final Map<String, Map<String, void Function(dynamic args)>>
       pageMessageHandlers = {};
 
@@ -98,24 +97,6 @@ class JsRuntimeManager {
   /// [registerGlobal] 注册的服务在这里，全局一份。
   static final Map<String, void Function(dynamic args)> globalMessageHandlers =
       {};
-
-  /// 为页面 key 注册一个**页面级** [NativeService]。
-  ///
-  /// 消息 `sendMessage(channel, { key: 页面key, ... })` 触发；
-  /// handle 的 context 由服务自身提供：InstanceNativeService 经
-  /// [InstanceNativeService.build] 注入页面 state 后取 `state.context`。
-  /// **本类不持有任何 BuildContext**（避免页面销毁后的泄漏）。
-  /// 注册即接线通道：所有活跃 manager 的 runtime 上都注册该 channel。
-  static void register(String pageKey, NativeService service) {
-    (pageMessageHandlers[pageKey] ??= {})[service.channel] = (dynamic args) {
-      final ctx = service is InstanceNativeService
-          ? service.state?.context
-          : null;
-      if (ctx == null || !ctx.mounted) return;
-      service.handle(ctx, args);
-    };
-    _wireChannel(service.channel);
-  }
 
   /// 注册一个**全局级** [NativeService]（与页面无关，全局一份）。
   ///
@@ -134,34 +115,32 @@ class JsRuntimeManager {
     _wireChannel(service.channel);
   }
 
-  /// 移除页面 key 下的**全部**页面级注册（页面/组件销毁时调用）。
+  /// 注册一个页面级**裸通道处理器**（不走 [NativeService]）。
   ///
-  /// 职责：Dart 侧 handler + JS 全局表的**引用**回收——
-  ///   - `__instances[key]`：组件实例（状态字段、模型引用、监听闭包）——
-  ///     不删会随每次进出页面无限增长（每个 HotPatchWidget 一个 key）；
-  ///   - `__providerChain[key]`：provider 登记栈（push/pop 后可能剩空数组，
-  ///     key 仍驻留全局）——直接 delete 释放。
-  /// 注意：模型的 **dispose 调用**不在此做——由 provider 渲染器负责
-  /// （create 创建的模型在其 renderer dispose 时释放，ref 复用归用户）。
-  /// 顺序保证：HotPatchWidget 先调 JS 组件 dispose（renderer pop + 模型
-  /// dispose），再调本方法删表。遍历所有活跃 manager（页面服务可能
-  /// 注册在任意 manager 上）。
+  /// 供不需要 BuildContext 的运行时装使用（如 js_ui 的 `jsuiCommit`：只把
+  /// JS 下发的补丁交给宿主应用，与页面上下文无关）。
+  /// `sendMessage(channel, { key: 页面key, ... })` 触发。
+  static void registerRawPageHandler(
+    String pageKey,
+    String channel,
+    void Function(dynamic args) handler,
+  ) {
+    (pageMessageHandlers[pageKey] ??= {})[channel] = handler;
+    _wireChannel(channel);
+  }
+
+  /// 移除页面 key 下的**全部**页面级注册（页面销毁时调用）。
+  ///
+  /// JS 侧的根（结点树 / provider / 订阅）由 JsUiWidget 先调
+  /// `__jsui.dispose(pageKey)` 释放，本方法只负责回收 Dart 侧 handler 表。
   static void dispose(String pageKey) {
     pageMessageHandlers.remove(pageKey);
-    for (final m in _instances) {
-      m._runtime.evaluate(
-        'if (typeof __instances !== "undefined") '
-        'delete __instances["$pageKey"]; '
-        'if (typeof __providerChain !== "undefined") '
-        'delete __providerChain["$pageKey"];',
-      );
-    }
   }
 
   /// 内部：把 channel 接线到**所有活跃 manager** 的 runtime。
   ///
   /// 只接本次注册的 channel（per-manager 幂等）。新 manager 不需要补
-  /// 历史通道——它自己的第一次 register 就会把自己接上线；
+  /// 历史通道——它自己的第一次注册就会把自己接上线；
   /// 只 evaluate 不注册时本就不该有接线（没有 handler 的接线是浪费）。
   static void _wireChannel(String channel) {
     for (final m in _instances) {
@@ -179,6 +158,8 @@ class JsRuntimeManager {
   /// 本 manager 已注册的通道（per-manager × channel 一次）。
   final Set<String> _wiredChannels = {};
 
+  bool _jsUiInited = false;
+
   JsRuntimeManager() {
     _instances.add(this);
     // 注意：不在构造时接线。通道接线完全由 register/registerGlobal 驱动
@@ -187,8 +168,26 @@ class JsRuntimeManager {
   }
 
   /// 所有 JS 求值的统一入口（纯求值，无注册副作用）。
-  /// code 内部应带实例 key 寻址，如 `__instances["hp_x"].method()`。
+  /// code 内部按需寻址，如 `__jsui.invoke(...)` / `__jsui.mount(...)`。
   JsEvalResult evaluate(String code) => _runtime.evaluate(code);
+
+  /// 确保 js_ui 运行时骨架就位（幂等）。
+  ///
+  /// 只注入**框架代码**（element/component/reconciler/context + commit 协议），
+  /// 与具体组件无关；组件/模型/按 package 生成的 widget 模块仍走
+  /// [loadModule]。骨架里创建的 `__modules` 与模块表初始化兼容
+  /// （module loader 用 typeof 判空，不会覆盖）。
+  void ensureJsUiRuntime() {
+    if (!_jsUiInited) {
+      _runtime.evaluate(jsUiRuntimeSource);
+      _jsUiInited = true;
+    }
+    // 模块表初始化可能新建 __modules：每次确保 core 指向同一个 api。
+    _runtime.evaluate(
+      "typeof __jsui !== 'undefined' && typeof __modules !== 'undefined' "
+      "&& (__modules['js_ui/core'] = __jsui);",
+    );
+  }
 
   // ---------------------------------------------------------------------
   // 模块加载器（ES module 支持）
@@ -199,7 +198,7 @@ class JsRuntimeManager {
   //   - `export class X {...}`   -> `class X {...}`（收集导出名）
   //   - `import { A } from 'rel'` -> `const { A } = __modules['<abs>'];`
   //   - 模块尾部注册 `__modules['<jsAsset>'] = { X };`（JS 侧全局表，
-  //     跨 evaluate 共享，与旧 __components 同一机制）
+  //     跨 evaluate 共享）
   // 依赖按相对路径递归加载（JsAssetResolver），同一 jsAsset 只执行一次。
 
   /// 模块加载：递归加载 import 依赖（先依赖后自身），再把自身预处理后
@@ -227,9 +226,8 @@ class JsRuntimeManager {
     }
 
     // 2) 首次加载前初始化 JS 侧全局表（幂等 var 声明）：
-    //    __modules = 模块注册表（export class 收集）；__instances = 实例句柄表
-    //    （HotPatchWidget 按实例 key 寻址，key 隔离状态互不共享）。
-    //    __components 已随 class + import/export 化删除（组件类在模块表里）。
+    //    __modules = 模块注册表（export class/const/function 收集）。
+    //    实例/根状态由 js_ui 运行时（__jsui.roots）自行管理，不经全局表。
     if (!_moduleTableInited) {
       // typeof 判空（读未声明标识符在部分引擎抛 ReferenceError，
       // 不能直接 `x || {}`）；var 提升保证同脚本内后续语句可见。
@@ -242,12 +240,6 @@ class JsRuntimeManager {
       _runtime.evaluate('''
 if (typeof __modules === 'undefined') {
   var __modules = {};
-}
-if (typeof __instances === 'undefined') {
-  var __instances = {};
-}
-if (typeof __providerChain === 'undefined') {
-  var __providerChain = {};
 }
 // 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
@@ -276,16 +268,6 @@ console.info = function(m) { sendMessage('log', JSON.stringify(String(m))); };
 console.log = function(m) { sendMessage('log', JSON.stringify(String(m))); };
 console.warn = function(m) { sendMessage('log', JSON.stringify(String(m))); };
 console.error = function(m) { sendMessage('log', JSON.stringify(String(m))); };
-// provider 作用域查找：从当前实例的 provider 链（栈）中取「最近的」
-// 指定类型模型实例（同类型嵌套时取栈顶，与原生 Provider 语义一致）。
-function __lookupProvider(key, model) {
-  var chain = __providerChain[key];
-  if (!chain) return undefined;
-  for (var i = chain.length - 1; i >= 0; i--) {
-    if (chain[i][model]) return chain[i][model];
-  }
-  return undefined;
-}
 // ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
 // extends ChangeNotifier` 共用，notifyListeners 触发订阅回调
 // （ListenableBuilder 局部重建用到）。
@@ -318,13 +300,7 @@ ChangeNotifier.prototype.dispose = function() {
     // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）后求值
     try {
       final processed = _preprocessModule(source, jsAsset, base);
-      final evalResult = _runtime.evaluate(processed.code);
-      // 组件索引：导出类名 → jsAsset（跨文件组件 / 同文件组件都通过
-      // export class 注册进模块表；渲染层 Component 节点按组件名反查，
-      // 递归嵌套 HotPatchWidget 不再依赖 JSON 里的 import 字段）。
-      for (final name in processed.exports) {
-        _componentIndex[name] = jsAsset;
-      }
+      final evalResult = _runtime.evaluate(processed);
       HotPatchLog.log('eval result for $jsAsset: $evalResult');
       // evaluate 返回错误文本（JS 引擎把异常序列化进返回值）→ 视为加载失败，
       // 不进 _loadedModules，下次可重试。
@@ -371,8 +347,8 @@ ChangeNotifier.prototype.dispose = function() {
   /// 文本级预处理：export class -> class + 尾部 __modules 注册；
   /// import 语句 -> `const { A, B } = __modules['<解析后绝对路径>'];`。
   /// 模块注册 key 与实例化寻址都用**绝对资产路径**（assets/components/...），
-  /// 与 HotPatchWidget 的 jsAsset 一致。
-  static ({String code, List<String> exports}) _preprocessModule(
+  /// 与 JsUiWidget 的 jsAsset 一致。
+  static String _preprocessModule(
     String source,
     String jsAsset,
     String base,
@@ -422,23 +398,16 @@ ChangeNotifier.prototype.dispose = function() {
     // const 声明跨 evaluate 持久且同名重复声明会抛
     // `Can't create duplicate variable`（如 user 模块的 class User 与
     // 组件模块的 const { User } 冲突）。IIFE 内声明互不干扰，
-    // 只有 var 全局表（__modules/__instances）跨 evaluate 可见。
-    return (code: '''
+    // 只有 var 全局表（__modules）跨 evaluate 可见。
+    return '''
 (function() {
 $out
-})();''', exports: exportNames);
+})();''';
   }
 
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
   final Set<String> _loadingModules = {};
-
-  /// 组件索引：导出类名 → 所在产物 jsAsset。模块加载成功后登记，
-  /// 渲染层 Component 节点（无 import 字段）按名反查以递归嵌套渲染。
-  final Map<String, String> _componentIndex = {};
-
-  /// 按组件名查它所在产物的 jsAsset（渲染层递归嵌套 HotPatchWidget 用）。
-  String? resolveComponentAsset(String component) => _componentIndex[component];
 
   /// JS 侧模块表是否已初始化。
   bool _moduleTableInited = false;
