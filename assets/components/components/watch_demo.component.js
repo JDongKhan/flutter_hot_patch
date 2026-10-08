@@ -39,9 +39,17 @@ class WatchDemoComponent {
             ChangeNotifierProvider({
                 "model": "CounterModel",
                 "create": CounterModel,
-                "child": Builder({
-                    "builder": "_builder0"
-                  })
+                "child": Column({
+                    "mainAxisSize": "min"
+                  }, [
+                    Builder({
+                        "builder": "_builder0"
+                      }),
+                    SizedBox({
+                        "height": 12
+                      }),
+                    WatchCountLabel({})
+                  ])
               })
           ])
       ]);
@@ -87,5 +95,23 @@ class WatchDemoComponent {
 }
 export function WatchDemo(props, children) {
   return __h(WatchDemoComponent, props, children);
+}
+
+class WatchCountLabelComponent {
+  constructor() {
+  }
+  build() {
+    var model = this.__watch("CounterModel");
+    return Text({
+        "data": "another State: count = " + model.count,
+        "style": {
+          "fontSize": 16,
+          "color": '#2196F3'
+        }
+      });
+  }
+}
+export function WatchCountLabel(props, children) {
+  return __h(WatchCountLabelComponent, props, children);
 }
 
