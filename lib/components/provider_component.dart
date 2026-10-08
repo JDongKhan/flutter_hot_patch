@@ -38,11 +38,15 @@ class _ProviderCardState extends State<ProviderCard> {
         padding: const EdgeInsets.all(16),
         child: MultiProvider(
           providers: [
+            // create：模型由 provider 销毁时自动 dispose（State 不手动释放）。
             ChangeNotifierProvider<CounterModel>(
               create: (_) => _modelA,
             ),
-            ChangeNotifierProvider<CounterModel>(
-              create: (_) => _modelB,
+            // value：provider **不**负责释放，_modelB 由本 State dispose
+            // 手动释放（见下方 dispose）。生成器把 value 构造翻译成
+            // create.ref 语义（复用实例、__dispose:false，归用户）。
+            ChangeNotifierProvider<CounterModel>.value(
+              value: _modelB,
             ),
           ],
           child: Column(
@@ -96,9 +100,11 @@ class _ProviderCardState extends State<ProviderCard> {
 
   @override
   void dispose() {
-    // 模型生命周期交给 ChangeNotifierProvider（create 的模型在 provider
-    // 销毁时自动 dispose）；这里再手动 dispose 会重复释放触发
-    // "used after being disposed" 断言。
+    // _modelA：ChangeNotifierProvider(create:) 创建的，provider 销毁时
+    // 自动 dispose（子树先于 State unmount，无重复释放）。
+    // _modelB：ChangeNotifierProvider.value 传入的，provider 不负责释放，
+    // 必须在此手动 dispose；不释放会泄漏。
+    _modelB.dispose();
     super.dispose();
   }
 }

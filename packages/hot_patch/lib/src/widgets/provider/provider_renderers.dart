@@ -31,7 +31,11 @@ class ChangeNotifierProviderRenderer extends WidgetRenderer {
   @override
   Widget render(RenderNode node, WidgetRenderContext ctx) {
     final model = node.props['model']?.toString() ?? '';
-    final create = (node.props['create'] as Map?)?.cast<String, dynamic>() ??
+    // create（create: (_) => x）或 value（.value(value: x)，字段名与 Dart
+    // 构造一一对应）。value 只可能复用实例 → ref 语义，__dispose:false。
+    final create =
+        (node.props['create'] as Map?)?.cast<String, dynamic>() ??
+        (node.props['value'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
     final child = _childOf(node);
     return _JsChangeNotifierProvider(
@@ -206,6 +210,7 @@ class _JsMultiProviderState extends State<_JsMultiProvider> {
           const <String, dynamic>{};
       final model = props['model']?.toString() ?? '';
       final create = (props['create'] as Map?)?.cast<String, dynamic>() ??
+          (props['value'] as Map?)?.cast<String, dynamic>() ??
           const <String, dynamic>{};
       _providerPush(_manager, _key, model, create);
     }

@@ -13,7 +13,7 @@ export class ProviderCard {
   _resetA() { this._modelA.reset(); }
   _incB() { this._modelB.inc(); }
   _resetB() { this._modelB.reset(); }
-  dispose() { this._modelA.dispose(); this._modelB.dispose(); }
+  dispose() { this._modelB.dispose(); }
   build() {
     return {
       "type": "Card",
@@ -46,7 +46,7 @@ export class ProviderCard {
                     "type": "ChangeNotifierProvider",
                     "props": {
                       "model": "CounterModel",
-                      "create": {
+                      "value": {
                         "ref": "_modelB"
                       }
                     }

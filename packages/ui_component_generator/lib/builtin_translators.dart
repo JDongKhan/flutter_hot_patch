@@ -985,9 +985,27 @@ class ChangeNotifierProviderTranslator extends WidgetTranslator {
       throw FormatException(
           'ChangeNotifierProvider 需要类型参数，如 ChangeNotifierProvider<CounterModel>');
     }
-    final create = ctx.namedArg(node.args, 'create');
     final childExpr =
         ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    // 命名构造 `ChangeNotifierProvider.value(value: _model, child: ...)`：
+    // value 复用既有实例、生命周期归调用方 → 与 create 的 ref 同语义
+    // （运行时标 __dispose:false，不随 renderer 释放）。
+    final ctorName = _constructorNameOf(node.expr);
+    if (ctorName == 'value') {
+      final value = ctx.namedArg(node.args, 'value');
+      if (value == null || childExpr == null) {
+        throw FormatException(
+            'ChangeNotifierProvider.value 需要 value 与 child');
+      }
+      return _providerNodeOf(
+        modelType: modelType,
+        createExpr: value,
+        child: ctx.translate(childExpr),
+        ctx: ctx,
+        sourceKey: 'value',
+      );
+    }
+    final create = ctx.namedArg(node.args, 'create');
     if (create == null || childExpr == null) {
       throw FormatException('ChangeNotifierProvider 需要 create 与 child');
     }
@@ -1001,19 +1019,36 @@ class ChangeNotifierProviderTranslator extends WidgetTranslator {
   }
 }
 
+/// 取命名构造函数名（`.value` 等）：
+/// - `InstanceCreationExpression`：`constructorName.name`（命名构造名）；
+/// - 无 const 的 `Foo.bar(...)` 调用可能被解析为 `MethodInvocation`，
+///   `methodName` 即后缀部分（`.bar`）。
+/// 注意 `WidgetNode.expr` 是 `Expression?`，而 `constructorName` 只定义在
+/// `InstanceCreationExpression` 上，不能直接 `node.expr.constructorName`。
+String? _constructorNameOf(Expression? e) {
+  if (e is InstanceCreationExpression) {
+    return e.constructorName.name?.name;
+  }
+  if (e is MethodInvocation) return e.methodName.name;
+  return null;
+}
+
 /// 解析一个 `ChangeNotifierProvider<T>(create: ...)` → provider 节点 Map
 /// （不含 child，由调用方拼装）。ChangeNotifierProvider / MultiProvider 共用。
 /// create 支持：`(_) => _model`（ref，复用状态字段实例）/ `(_) => ModelClass()`
-/// （construct，JS 侧 new 模型类）。
+/// （construct，JS 侧 new 模型类）；`ChangeNotifierProvider.value(value: x)`
+/// 的 value 直接传表达式（复用实例 → ref 语义，不释放），节点字段名保持
+/// 与 Dart 构造一一对应：[sourceKey]='create' 或 'value'。
 Map<String, dynamic> _providerNodeOf({
   required String modelType,
   required Expression createExpr,
   required Object? child,
   required WidgetTranslateContext ctx,
+  String sourceKey = 'create',
 }) {
   final inner = createExpr is FunctionExpression
       ? ctx.functionInner(createExpr)
-      : null;
+      : createExpr;
   Object? createJs;
   if (inner is Identifier) {
     createJs = {'ref': ctx.jsString(ctx.propOf(inner))};
@@ -1027,7 +1062,7 @@ Map<String, dynamic> _providerNodeOf({
   }
   final props = <String, Object?>{
     'model': ctx.jsString(modelType),
-    'create': createJs,
+    sourceKey: createJs,
   };
   if (child != null) props['child'] = child;
   return {
@@ -1137,6 +1172,22 @@ Map<String, dynamic> _providerEntryOf(
   final modelType = _providerTypeArg(element);
   if (modelType == null) {
     throw FormatException('MultiProvider 条目需要类型参数，如 <CounterModel>');
+  }
+  // 条目为 `ChangeNotifierProvider.value(value: x)`：value 复用实例、
+  // 生命周期归调用方 → 与 create 的 ref 同语义（不释放）。
+  final ctorName = _constructorNameOf(element);
+  if (ctorName == 'value') {
+    final value = _namedOf(_callArgs(element), 'value');
+    if (value == null) {
+      throw FormatException('ChangeNotifierProvider.value 需要 value');
+    }
+    return _providerNodeOf(
+      modelType: modelType,
+      createExpr: value,
+      child: null,
+      ctx: ctx,
+      sourceKey: 'value',
+    );
   }
   final create = _namedOf(_callArgs(element), 'create');
   if (create == null) {
