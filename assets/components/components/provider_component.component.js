@@ -74,7 +74,7 @@ class ProviderCardComponent {
                         Button({
                             "kind": "elevated",
                             "label": "A +1",
-                            "event": "_incA"
+                            "event": this.__bind("_incA")
                           }),
                         SizedBox({
                             "width": 12
@@ -82,7 +82,7 @@ class ProviderCardComponent {
                         Button({
                             "kind": "elevated",
                             "label": "A Reset",
-                            "event": "_resetA"
+                            "event": this.__bind("_resetA")
                           })
                       ]),
                     SizedBox({
@@ -98,7 +98,7 @@ class ProviderCardComponent {
                         Button({
                             "kind": "elevated",
                             "label": "B +1",
-                            "event": "_incB"
+                            "event": this.__bind("_incB")
                           }),
                         SizedBox({
                             "width": 12
@@ -106,7 +106,7 @@ class ProviderCardComponent {
                         Button({
                             "kind": "elevated",
                             "label": "B Reset",
-                            "event": "_resetB"
+                            "event": this.__bind("_resetB")
                           })
                       ])
                   ])

@@ -38,7 +38,7 @@ class BannerCardComponent {
         Button({
             "kind": "elevated",
             "label": "Bump",
-            "event": "bump"
+            "event": this.__bind("bump")
           })
       ]);
   }

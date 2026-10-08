@@ -164,18 +164,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
 
   /// 宿主 → JS 的事件回传（按钮点击等）。
   ///
-  /// 两种形态：
-  ///   - `{'__fn': id}`：运行时登记的回调句柄 → `invoke`；
-  ///   - `String`：生成器翻译出的事件表达式（`_incA` /
-  ///     `this.__read("CounterModel").reset()`）→ 以本页面根组件实例求值。
+  /// handler 是运行时登记的句柄 `{'__fn': id}`（生成器在构建期把事件表达式
+  /// 绑到产出该结点的组件实例，绑定信息随 props 传下来）→ `invoke`。
   void _invoke(Object? handler, [Object? payload]) {
-    if (handler is String) {
-      _manager.evaluate(
-        '__jsui.invokeEvent(${jsonEncode(_pageKey)}, ${jsonEncode(handler)}, '
-        '${jsonEncode(jsonEncode(payload))});',
-      );
-      return;
-    }
     if (handler is! Map) return;
     final id = handler['__fn'];
     if (id is! String) return;
@@ -236,6 +227,8 @@ class _JsNode extends StatefulWidget {
   final JsWidgetRegistry registry;
   final Map<String, Widget Function(Map<String, dynamic> args)>
       nativeComponents;
+
+  /// 事件回传：`(handler, payload)`——handler 是运行时登记的句柄。
   final void Function(Object? handler, [Object? payload]) invoke;
 
   @override

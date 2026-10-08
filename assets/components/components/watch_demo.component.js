@@ -71,7 +71,7 @@ class WatchDemoComponent {
             Button({
                 "kind": "elevated",
                 "label": "+1",
-                "event": "this.__read(\"CounterModel\").inc()"
+                "event": this.__bind("this.__read(\"CounterModel\").inc()")
               }),
             SizedBox({
                 "width": 12
@@ -79,7 +79,7 @@ class WatchDemoComponent {
             Button({
                 "kind": "elevated",
                 "label": "Reset",
-                "event": "this.__read(\"CounterModel\").reset()"
+                "event": this.__bind("this.__read(\"CounterModel\").reset()")
               })
           ])
       ]);

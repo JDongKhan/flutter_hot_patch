@@ -39,36 +39,28 @@ class DashboardCardComponent {
         SizedBox({
             "height": 12
           }),
-        {
-          "type": "Component",
-          "props": {
+        __h("Component", {
             "component": "_LabeledDivider",
             "args": {
               "text": "private widget"
             }
-          },
-          "children": []
-        },
+          }, null),
         SizedBox({
             "height": 8
           }),
-        {
-          "type": "Component",
-          "props": {
+        __h("Component", {
             "component": "LabeledDivider",
             "args": {
               "text": "public widget"
             }
-          },
-          "children": []
-        },
+          }, null),
         SizedBox({
             "height": 12
           }),
         Button({
             "kind": "elevated",
             "label": "Tick",
-            "event": "tick",
+            "event": this.__bind("tick"),
             "style": {
               "backgroundColor": '#FF9800',
               "foregroundColor": '#FFFFFF'

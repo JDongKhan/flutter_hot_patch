@@ -34,7 +34,7 @@ class JsBuildContext {
   final Map<String, Widget Function(Map<String, dynamic> args)>
       nativeComponents;
 
-  /// 把事件句柄（`{'__fn': id}` / 事件表达式字符串）回传到 JS 侧执行。
+  /// 把事件句柄（`{'__fn': id}`）回传到 JS 侧执行。
   final void Function(Object? handler, [Object? payload]) invoke;
 
   Widget? child([int index = 0]) => index < children.length ? children[index] : null;
@@ -55,11 +55,18 @@ class JsBuildContext {
   /// 取「值为 element 的 prop」对应的子 widget（如 ListTile.leading）。
   Widget? propChild(String key) => propChildren[key];
 
-  /// 把 props 上的事件字段绑成 Flutter 回调；非句柄（null）时为 null。
-  VoidCallback? on(String key, [Object? Function()? payload]) {
+  /// 把 props 上的事件字段（句柄）绑成 Flutter 回调；无句柄（null）时为 null。
+  VoidCallback? on(String key) {
     final handler = props[key];
     if (handler == null) return null;
-    return () => invoke(handler, payload?.call());
+    return () => invoke(handler);
+  }
+
+  /// 值为句柄的 prop → 带 payload 的回调（Switch/Checkbox/Slider 的 onChanged）。
+  ValueChanged<T>? onValue<T>(String key) {
+    final handler = props[key];
+    if (handler == null) return null;
+    return (v) => invoke(handler, v);
   }
 
   String? str(String key) {
@@ -267,7 +274,6 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       ));
 
   r.register('ListTile', (c) {
-    final event = c.str('event') ?? '';
     final title = c.str('title');
     final subtitle = c.str('subtitle');
     return ListTile(
@@ -275,7 +281,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       subtitle: subtitle == null ? null : Text(subtitle),
       leading: c.propChild('leading'),
       trailing: c.propChild('trailing'),
-      onTap: event.isEmpty ? null : () => c.invoke(event),
+      onTap: c.on('event'),
     );
   });
 
@@ -292,13 +298,12 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       ));
 
   // Button：生成器把 ElevatedButton/TextButton/OutlinedButton 统一译为
-  // `{type:'Button', props:{kind, label, event}}`，event 是事件表达式字符串
-  // （或 null 表示禁用）→ 点击经宿主回传 JS 侧求值。
+  // `{type:'Button', props:{kind, label, event}}`，event 是运行时事件句柄
+  // （或 null 表示禁用）→ 点击经宿主把句柄 id 回传 JS 侧执行。
   r.register('Button', (c) {
-    final event = c.str('event') ?? '';
     final style = buttonStyleFromJson(c.map('style'));
     final label = Text(c.str('label') ?? '');
-    void Function()? onPressed = event.isEmpty ? null : () => c.invoke(event);
+    final onPressed = c.on('event');
     return switch (c.str('kind')) {
       'text' => TextButton(onPressed: onPressed, style: style, child: label),
       'outlined' =>
@@ -307,47 +312,31 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     };
   });
 
-  r.register('InkWell', (c) {
-    final event = c.str('event') ?? '';
-    return InkWell(
-      onTap: event.isEmpty ? null : () => c.invoke(event),
-      child: c.child(),
-    );
-  });
+  r.register('InkWell', (c) => InkWell(onTap: c.on('event'), child: c.child()));
 
-  r.register('GestureDetector', (c) {
-    final event = c.str('event') ?? '';
-    return GestureDetector(
-      onTap: event.isEmpty ? null : () => c.invoke(event),
-      child: c.child(),
-    );
-  });
+  r.register(
+      'GestureDetector',
+      (c) => GestureDetector(
+            onTap: c.on('event'),
+            child: c.child(),
+          ));
 
-  r.register('Switch', (c) {
-    final event = c.str('event') ?? '';
-    return Switch(
-      value: c.bool_('value') ?? false,
-      onChanged: event.isEmpty ? null : (v) => c.invoke(event, v),
-    );
-  });
+  r.register('Switch', (c) => Switch(
+        value: c.bool_('value') ?? false,
+        onChanged: c.onValue<bool?>('event'),
+      ));
 
-  r.register('Checkbox', (c) {
-    final event = c.str('event') ?? '';
-    return Checkbox(
-      value: c.bool_('value') ?? false,
-      onChanged: event.isEmpty ? null : (v) => c.invoke(event, v),
-    );
-  });
+  r.register('Checkbox', (c) => Checkbox(
+        value: c.bool_('value') ?? false,
+        onChanged: c.onValue<bool?>('event'),
+      ));
 
-  r.register('Slider', (c) {
-    final event = c.str('event') ?? '';
-    return Slider(
-      value: c.num_('value') ?? 0,
-      min: c.num_('min') ?? 0,
-      max: c.num_('max') ?? 1,
-      onChanged: event.isEmpty ? null : (v) => c.invoke(event, v),
-    );
-  });
+  r.register('Slider', (c) => Slider(
+        value: c.num_('value') ?? 0,
+        min: c.num_('min') ?? 0,
+        max: c.num_('max') ?? 1,
+        onChanged: c.onValue<double>('event'),
+      ));
 
   r.register('Scaffold', (c) {
     final appBar = c.childOfType('AppBar');

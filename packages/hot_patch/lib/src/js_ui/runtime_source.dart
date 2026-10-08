@@ -13,7 +13,9 @@
 ///
 /// **多根**：同一 JS 运行时里可并存多个页面，每个页面按 `pageKey` 隔离自己
 /// 的结点树、provider 表、脏队列与出方向 ops（互不订阅、互不重建）。宿主
-/// 每次 `mount`/`dispose`/`invokeEvent` 都显式带 `pageKey`。
+/// 每次 `mount`/`dispose` 都显式带 `pageKey`；事件在**构建期**由生成器产出
+/// `this.__bind("方法/表达式")` 绑定到产出该结点的组件实例（Dart tear-off 语义），
+/// 宿主点击只回传句柄 id，无任何运行时树形状启发。
 ///
 /// 注入方式：由 JsRuntimeManager.ensureJsUiRuntime() 求值一次（幂等）。
 library;
@@ -86,25 +88,6 @@ const String jsUiRuntimeSource = r'''
     f(payload);
   }
 
-  // 事件表达式回传（Button 等）：生成器把事件翻译成 JS 表达式字符串
-  // （`_incA` / `this.__read("CounterModel").reset()`），以对应页面根组件实例
-  // 为 `this` 求值；结果为函数（方法 tear-off）则调用，否则视为副作用已发生。
-  function invokeEvent(pageKey, expr, payload) {
-    var root = roots[pageKey];
-    if (!root || !root.inst || !expr) { return; }
-    var inst = root.inst;
-    try {
-      var src = expr;
-      // 裸标识符（`_incA`）即根组件上的方法 → 归一为 this._incA
-      if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(src)) { src = 'this.' + src; }
-      var f = new Function('return (' + src + ');');
-      var r = f.call(inst);
-      if (typeof r === 'function') { r.call(inst, payload); }
-    } catch (e) {
-      if (typeof console !== 'undefined' && console.error) { console.error(String(e)); }
-    }
-  }
-
   // ---------------------------------------------------------------------
   // 深比较（用于避免每次重建都下发 props）
   // ---------------------------------------------------------------------
@@ -157,6 +140,37 @@ const String jsUiRuntimeSource = r'''
   Component.prototype.read = function (type) {
     var node = findProvider(this, type);
     return node ? node.__value : undefined;
+  };
+  // 事件句柄：在**构建期**把事件表达式绑定到当前组件实例（Dart tear-off 语义）。
+  // 生成器产出 `this.__bind("_incA")`——`this` 正是 build 作用域里的组件实例，
+  // 也就是**定义该事件方法的组件**（含 Consumer/Builder 把 builder 方法
+  // `.call(owner)` 的场景）。句柄随 props 传下去（`{__fn:id, __ev:原表达式}`），
+  // 宿主点击时经 invoke(id) 回来；因为绑定信息挂在 props 上，包装型组件
+  // （MultiProvider 透传 child）也不会把它弄丢。
+  //   按 (实例, 表达式) 缓存：重建产出同一句柄 → props 稳定（增量补丁仍生效）；
+  //   卸载时统一释放（markUnmounted）。
+  Component.prototype.__bind = function (expr) {
+    var bag = this.__bound || (this.__bound = {});
+    if (bag[expr]) { return bag[expr]; }
+    var self = this;
+    // 两种事件形态，触发即执行：裸方法名（`_incA`）→ 调实例方法；其余整体
+    // 作为调用表达式求值（`this.__read("T").inc()`）。二者都无返回值语义。
+    var isName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expr);
+    var run = isName
+      ? function (payload) {
+          var m = self[expr];
+          if (typeof m === 'function') { m.call(self, payload); }
+        }
+      : function () {
+          new Function('return (' + expr + ');').call(self);
+        };
+    var handle = fn(function (payload) {
+      try { run(payload); }
+      catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
+    });
+    handle.__ev = expr; // 便于调试：句柄带上原表达式
+    bag[expr] = handle;
+    return handle;
   };
 
   function findProvider(inst, type) {
@@ -253,6 +267,7 @@ const String jsUiRuntimeSource = r'''
     inst.read = Component.prototype.read;
     inst.__watch = Component.prototype.watch;
     inst.__read = Component.prototype.read;
+    inst.__bind = Component.prototype.__bind;
     inst.__notify = function () { notifyProvider(this); };
   }
 
@@ -419,6 +434,12 @@ const String jsUiRuntimeSource = r'''
         try { inst.dispose(); } catch (e) {}
       }
       unregisterProvides(inst);
+      // 释放构建期登记的（实例, 表达式）事件句柄，避免 handlers 表泄漏。
+      var bag = inst.__bound;
+      if (bag) {
+        for (var k in bag) { delete handlers[bag[k].__fn]; }
+        inst.__bound = null;
+      }
       markUnmounted(inst.__child);
     }
   }
@@ -484,7 +505,6 @@ const String jsUiRuntimeSource = r'''
     h: h,
     fn: fn,
     invoke: invoke,
-    invokeEvent: invokeEvent,
     Component: Component,
     mount: mountRoot,
     dispose: disposeRoot,

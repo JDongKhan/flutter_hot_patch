@@ -86,7 +86,7 @@ class ScaffoldDemoComponent {
                                 Button({
                                     "kind": "elevated",
                                     "label": "Bump",
-                                    "event": "_inc"
+                                    "event": this.__bind("_inc")
                                   })
                               ])
                           ])

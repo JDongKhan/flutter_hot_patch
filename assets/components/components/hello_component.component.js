@@ -68,7 +68,7 @@ class HelloCardComponent {
             Button({
                 "kind": "elevated",
                 "label": "+1",
-                "event": "inc",
+                "event": this.__bind("inc"),
                 "style": {
                   "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
                   "foregroundColor": '#FFFFFF'
@@ -77,17 +77,17 @@ class HelloCardComponent {
             Button({
                 "kind": "elevated",
                 "label": "Reset",
-                "event": "reset"
+                "event": this.__bind("reset")
               }),
             Button({
                 "kind": "elevated",
                 "label": "Native",
-                "event": "showNative"
+                "event": this.__bind("showNative")
               }),
             Button({
                 "kind": "elevated",
                 "label": "Load User",
-                "event": "loadUser"
+                "event": this.__bind("loadUser")
               })
           ])
       ]);
@@ -118,12 +118,12 @@ class HelloPanelComponent {
             Button({
                 "kind": "elevated",
                 "label": "Tap",
-                "event": "tap"
+                "event": this.__bind("tap")
               }),
             Button({
                 "kind": "elevated",
                 "label": "Clear",
-                "event": "clear"
+                "event": this.__bind("clear")
               })
           ])
       ]);

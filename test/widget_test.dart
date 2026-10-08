@@ -138,17 +138,18 @@ void main() {
     expect(column, isA<Column>());
     expect((column as Column).children, hasLength(2));
 
-    // Button：event 表达式经 invoke 回传
+    // Button：event 是运行时句柄 → 点击经 invoke 原样回传
     final events = <Object?>[];
+    final handle = {'__fn': 'fn1', '__ev': 'inc'};
     final button = _ctx(
       registry,
       'Button',
-      {'label': '+1', 'event': 'inc'},
+      {'label': '+1', 'event': handle},
       invoke: (h, [p]) => events.add(h),
     );
     expect(button, isA<ElevatedButton>());
     (button as ElevatedButton).onPressed!();
-    expect(events, ['inc']);
+    expect(events, [handle]);
   });
 }
 

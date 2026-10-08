@@ -239,16 +239,20 @@ class WidgetTranslateContext {
       // Component 兜底节点（未注册的第三方/自定义 widget）：
       //   - 该组件名有 JS 产物（importResolver 命中）→ 渲染成**工厂调用**
       //     `X({...args})`，与 widget 模块契约一致（运行时递归挂载 JS 组件）；
-      //   - 无产物（无注解的 lib 普通 widget / @UIComponentIgnore）→ 原样
-      //     序列化，运行时由宿主 nativeComponents 原生注入或占位。
+      //   - 无产物（无注解的 lib 普通 widget / @UIComponentIgnore）→
+      //     `__h("Component", {...})` 占位，运行时由宿主 nativeComponents
+      //     原生注入或占位。
       if (type == 'Component') {
         final call = _renderComponentCall(json, depth);
         if (call != null) return call;
-        // 兜底节点与 __h 产物同形状：补 children: []（运行时按 host 元素
-        // 挂载，固定读 el.children；缺失会整段挂载失败）。
-        final node = Map<String, dynamic>.from(json);
-        node['children'] ??= const <dynamic>[];
-        return jsLiteral(node, depth);
+        // 无 JS 产物（无注解的 lib widget / @UIComponentIgnore）：运行时由宿主
+        // nativeComponents 原生注入。仍经 __h 归一成与其它结点同形状的元素，
+        // 保证运行时统一按 el.children 挂载（不再有裸字面量特例）。
+        final props = json['props'];
+        final propsJs = (props is Map && props.isNotEmpty)
+            ? _renderValue(props, depth + 1)
+            : '{}';
+        return '__h("Component", $propsJs, null)';
       }
       throw FormatException('未知节点类型: $type');
     }
@@ -438,6 +442,15 @@ class WidgetTranslateContext {
     }
     throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
   }
+
+  /// 事件「构建期句柄」：把事件表达式包成 `this.__bind("表达式")`。
+  ///
+  /// 这是事件回传的唯一注入方式：`this` 是 build 作用域的组件实例（也就是
+  /// **定义该事件方法/表达式归属的组件**），运行时据此登记句柄并按（实例,
+  /// 表达式）缓存——重建产出同一句柄（props 稳定、增量补丁仍生效），宿主
+  /// 点击只回传 `{__fn:id}`。相比运行时按裸方法名沿组件链启发式查找，绑定
+  /// 信息在构建期就确定，语义与 Dart tear-off 一致，且不依赖运行时树形状。
+  String eventHandle(Expression e) => 'this.__bind(${jsString(eventExpr(e))})';
 
   /// 事件参数列表翻译：逐参数走 [jsDataExpr]（字符串/字段/局部变量/字面量）。
   String _eventArgsJs(ArgumentList args) {

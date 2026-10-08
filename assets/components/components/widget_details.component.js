@@ -110,7 +110,7 @@ class TextDetailComponent {
         Button({
             "kind": "text",
             "label": "Bump count",
-            "event": "bump"
+            "event": this.__bind("bump")
           })
       ]);
   }
@@ -141,7 +141,7 @@ class ButtonDetailComponent {
         Button({
             "kind": "elevated",
             "label": "Elevated · Styled",
-            "event": "onTap",
+            "event": this.__bind("onTap"),
             "style": {
               "minimumSize": {
                 "width": 180,
@@ -174,7 +174,7 @@ class ButtonDetailComponent {
         Button({
             "kind": "text",
             "label": "TextButton",
-            "event": "onTap",
+            "event": this.__bind("onTap"),
             "style": {
               "minimumSize": {
                 "width": 120,
@@ -199,7 +199,7 @@ class ButtonDetailComponent {
         Button({
             "kind": "outlined",
             "label": "OutlinedButton",
-            "event": "onTap",
+            "event": this.__bind("onTap"),
             "style": {
               "side": {
                 "color": '#FF9800',
@@ -217,8 +217,7 @@ class ButtonDetailComponent {
           }),
         Button({
             "kind": "elevated",
-            "label": "Disabled",
-            "event": ""
+            "label": "Disabled"
           })
       ]);
   }

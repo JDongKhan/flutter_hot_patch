@@ -187,20 +187,13 @@ abstract class _ButtonTranslator extends WidgetTranslator {
     final props = <String, dynamic>{
       'kind': ctx.jsString(kind),
       'label': _labelFrom(child, ctx),
-      'event': ctx.jsString(_eventFrom(onPressed, ctx)),
     };
+    // onPressed: null → 禁用（省略 event）；否则构建期绑定句柄。
+    if (onPressed is! NullLiteral) props['event'] = ctx.eventHandle(onPressed);
     // ElevatedButton.styleFrom(...) / ButtonStyle(...) → JSON
     final style = buttonStyleToJson(ctx.namedArg(node.args, 'style'), ctx);
     if (style != null) props['style'] = style;
     return {'type': ctx.jsString('Button'), 'props': props};
-  }
-
-  static String _eventFrom(Expression onPressed, WidgetTranslateContext ctx) {
-    // onPressed: null → 禁用按钮（运行时 event 为空 → onPressed: null）
-    if (onPressed is NullLiteral) return '';
-    // 委托 ctx.eventExpr：`_inc` / `() => _inc()` / Builder 闭包局部变量
-    // `() => model.inc()` / `() { context.read<T>().reset(); }` 链式。
-    return ctx.eventExpr(onPressed);
   }
 
   static String _labelFrom(Expression? child, WidgetTranslateContext ctx) {
@@ -298,7 +291,7 @@ class ListTileTranslator extends WidgetTranslator {
     if (trailing != null) props['trailing'] = ctx.translate(trailing);
     final onTap = ctx.namedArg(node.args, 'onTap');
     if (onTap != null) {
-      props['event'] = ctx.jsString(ctx.eventExpr(onTap));
+      props['event'] = ctx.eventHandle(onTap);
     }
     return {'type': ctx.jsString('ListTile'), 'props': props};
   }
@@ -802,7 +795,7 @@ class InkWellTranslator extends WidgetTranslator {
     final onTap = ctx.namedArg(node.args, 'onTap');
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     if (onTap == null || child == null) throw FormatException('InkWell 需要 onTap + child');
-    final props = <String, dynamic>{'event': ctx.jsString(ctx.eventExpr(onTap))};
+    final props = <String, dynamic>{'event': ctx.eventHandle(onTap)};
     return {
       'type': ctx.jsString('InkWell'),
       'props': props,
@@ -825,7 +818,7 @@ class GestureDetectorTranslator extends WidgetTranslator {
     if (onTap == null || child == null) {
       throw FormatException('GestureDetector 需要 onTap + child');
     }
-    final props = <String, dynamic>{'event': ctx.jsString(ctx.eventExpr(onTap))};
+    final props = <String, dynamic>{'event': ctx.eventHandle(onTap)};
     return {
       'type': ctx.jsString('GestureDetector'),
       'props': props,
@@ -850,7 +843,7 @@ class SwitchTranslator extends WidgetTranslator {
     }
     final props = <String, dynamic>{
       'value': ctx.propExpr(value),
-      'event': ctx.jsString(ctx.eventExpr(onChanged)),
+      'event': ctx.eventHandle(onChanged),
     };
     return {'type': ctx.jsString('Switch'), 'props': props};
   }
@@ -872,7 +865,7 @@ class CheckboxTranslator extends WidgetTranslator {
     }
     final props = <String, dynamic>{
       'value': ctx.propExpr(value),
-      'event': ctx.jsString(ctx.eventExpr(onChanged)),
+      'event': ctx.eventHandle(onChanged),
     };
     return {'type': ctx.jsString('Checkbox'), 'props': props};
   }
@@ -894,7 +887,7 @@ class SliderTranslator extends WidgetTranslator {
     }
     final props = <String, dynamic>{
       'value': ctx.propExpr(value),
-      'event': ctx.jsString(ctx.eventExpr(onChanged)),
+      'event': ctx.eventHandle(onChanged),
     };
     for (final name in ['min', 'max']) {
       final v = _numOf(ctx.namedArg(node.args, name));

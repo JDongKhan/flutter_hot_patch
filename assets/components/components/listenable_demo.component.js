@@ -52,12 +52,12 @@ class ListenableDemoComponent {
             Button({
                 "kind": "elevated",
                 "label": "+1",
-                "event": "_inc"
+                "event": this.__bind("_inc")
               }),
             Button({
                 "kind": "elevated",
                 "label": "Reset",
-                "event": "_reset"
+                "event": this.__bind("_reset")
               })
           ])
       ]);
