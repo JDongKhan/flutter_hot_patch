@@ -2,16 +2,16 @@
 // 由 ui_component_generator 从 lib/components/stateless_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { __h } from '../../flutter/Node.js';
-import { Card } from '../../flutter/Card.js';
-import { Column } from '../../flutter/Column.js';
-import { Divider } from '../../flutter/Divider.js';
-import { Expanded } from '../../flutter/Expanded.js';
-import { Icon } from '../../flutter/Icon.js';
-import { Padding } from '../../flutter/Padding.js';
-import { Row } from '../../flutter/Row.js';
-import { SizedBox } from '../../flutter/SizedBox.js';
-import { Text } from '../../flutter/Text.js';
+import { __h } from '../flutter/Node.js';
+import { Card } from '../flutter/Card.js';
+import { Column } from '../flutter/Column.js';
+import { Divider } from '../flutter/Divider.js';
+import { Expanded } from '../flutter/Expanded.js';
+import { Icon } from '../flutter/Icon.js';
+import { Padding } from '../flutter/Padding.js';
+import { Row } from '../flutter/Row.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Text } from '../flutter/Text.js';
 
 class StatelessCardComponent {
   constructor(args) {

@@ -3,15 +3,15 @@
 // 重新生成：dart run build_runner build
 
 import { CounterModel } from '../model/counter_model.model.js';
-import { __h } from '../../flutter/Node.js';
-import { Button } from '../../flutter/Button.js';
-import { Card } from '../../flutter/Card.js';
-import { Column } from '../../flutter/Column.js';
-import { ListenableBuilder } from '../../flutter/ListenableBuilder.js';
-import { Padding } from '../../flutter/Padding.js';
-import { Row } from '../../flutter/Row.js';
-import { SizedBox } from '../../flutter/SizedBox.js';
-import { Text } from '../../flutter/Text.js';
+import { __h } from '../flutter/Node.js';
+import { Button } from '../flutter/Button.js';
+import { Card } from '../flutter/Card.js';
+import { Column } from '../flutter/Column.js';
+import { ListenableBuilder } from '../flutter/ListenableBuilder.js';
+import { Padding } from '../flutter/Padding.js';
+import { Row } from '../flutter/Row.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Text } from '../flutter/Text.js';
 
 class NotifierCardComponent {
   constructor() {

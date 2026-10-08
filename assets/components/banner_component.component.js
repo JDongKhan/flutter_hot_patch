@@ -3,10 +3,10 @@
 // 重新生成：dart run build_runner build
 
 import { PanelColors } from 'hello_component.component.js';
-import { __h } from '../../flutter/Node.js';
-import { Button } from '../../flutter/Button.js';
-import { Column } from '../../flutter/Column.js';
-import { Text } from '../../flutter/Text.js';
+import { __h } from '../flutter/Node.js';
+import { Button } from '../flutter/Button.js';
+import { Column } from '../flutter/Column.js';
+import { Text } from '../flutter/Text.js';
 
 class BannerCardComponent {
   constructor() {

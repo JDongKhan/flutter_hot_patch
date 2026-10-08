@@ -25,7 +25,7 @@ import 'js_widget_registry.dart';
 ///
 /// 用法：
 /// ```dart
-/// JsUiWidget(jsAsset: 'assets/components/components/counter.component.js',
+/// JsUiWidget(jsAsset: 'assets/components/counter.component.js',
 ///            component: 'CounterComponent')
 /// ```
 class JsUiWidget extends StatefulWidget {

@@ -5,7 +5,9 @@ builders:
     builder_factories: ["componentBuilder"]
     build_extensions:
       "^lib/{{}}.dart":
-        - "assets/components/{{}}.component.js"
+        # 直接镜像 lib 源码路径（lib/a/b.dart → assets/a/b.component.js）：
+        # 不预设 components 之类固定目录名，源码目录怎么组织产物就怎么落。
+        - "assets/{{}}.component.js"
     auto_apply: dependents
     build_to: source
 
@@ -19,7 +21,8 @@ builders:
     builder_factories: ["widgetModuleBuilder"]
     # 真正的产物清单来自 WidgetModuleBuilder.buildExtensions（由 translator 注册表
     # 推导）；build_runner 对 builder_factories 返回的 Builder 采用其自身 getter，
-    # 本段落仅为 BuilderDefinition 的语法占位，不参与计算（勿在此维护清单）。
+    # 本段落仅为 BuilderDefinition 的语法占位（build_config 要求该键非空），
+    # 不参与计算——因此这里填什么包名都无所谓，勿在此维护清单。
     build_extensions:
       "^lib/js_widgets.dart":
         - "assets/flutter/AppBar.js"
@@ -32,6 +35,7 @@ builders:
     builder_factories: ["modelBuilder"]
     build_extensions:
       "^lib/model/{{}}.dart":
-        - "assets/components/model/{{}}.model.js"
+        # 同样镜像 lib 路径（lib/model/user.dart → assets/model/user.model.js）。
+        - "assets/model/{{}}.model.js"
     auto_apply: dependents
     build_to: source

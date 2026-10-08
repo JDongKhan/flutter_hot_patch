@@ -2,32 +2,32 @@
 // 由 ui_component_generator 从 lib/components/widget_details.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { __h } from '../../flutter/Node.js';
-import { Align } from '../../flutter/Align.js';
-import { AppBar } from '../../flutter/AppBar.js';
-import { Button } from '../../flutter/Button.js';
-import { Card } from '../../flutter/Card.js';
-import { Center } from '../../flutter/Center.js';
-import { Chip } from '../../flutter/Chip.js';
-import { CircleAvatar } from '../../flutter/CircleAvatar.js';
-import { ClipRRect } from '../../flutter/ClipRRect.js';
-import { Column } from '../../flutter/Column.js';
-import { Container } from '../../flutter/Container.js';
-import { Divider } from '../../flutter/Divider.js';
-import { Expanded } from '../../flutter/Expanded.js';
-import { Icon } from '../../flutter/Icon.js';
-import { Image } from '../../flutter/Image.js';
-import { ListTile } from '../../flutter/ListTile.js';
-import { ListView } from '../../flutter/ListView.js';
-import { Padding } from '../../flutter/Padding.js';
-import { Positioned } from '../../flutter/Positioned.js';
-import { Row } from '../../flutter/Row.js';
-import { Scaffold } from '../../flutter/Scaffold.js';
-import { SingleChildScrollView } from '../../flutter/SingleChildScrollView.js';
-import { SizedBox } from '../../flutter/SizedBox.js';
-import { Stack } from '../../flutter/Stack.js';
-import { Text } from '../../flutter/Text.js';
-import { Wrap } from '../../flutter/Wrap.js';
+import { __h } from '../flutter/Node.js';
+import { Align } from '../flutter/Align.js';
+import { AppBar } from '../flutter/AppBar.js';
+import { Button } from '../flutter/Button.js';
+import { Card } from '../flutter/Card.js';
+import { Center } from '../flutter/Center.js';
+import { Chip } from '../flutter/Chip.js';
+import { CircleAvatar } from '../flutter/CircleAvatar.js';
+import { ClipRRect } from '../flutter/ClipRRect.js';
+import { Column } from '../flutter/Column.js';
+import { Container } from '../flutter/Container.js';
+import { Divider } from '../flutter/Divider.js';
+import { Expanded } from '../flutter/Expanded.js';
+import { Icon } from '../flutter/Icon.js';
+import { Image } from '../flutter/Image.js';
+import { ListTile } from '../flutter/ListTile.js';
+import { ListView } from '../flutter/ListView.js';
+import { Padding } from '../flutter/Padding.js';
+import { Positioned } from '../flutter/Positioned.js';
+import { Row } from '../flutter/Row.js';
+import { Scaffold } from '../flutter/Scaffold.js';
+import { SingleChildScrollView } from '../flutter/SingleChildScrollView.js';
+import { SizedBox } from '../flutter/SizedBox.js';
+import { Stack } from '../flutter/Stack.js';
+import { Text } from '../flutter/Text.js';
+import { Wrap } from '../flutter/Wrap.js';
 
 class TextDetailComponent {
   constructor() {

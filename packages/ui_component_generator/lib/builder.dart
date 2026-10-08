@@ -44,10 +44,14 @@ class ComponentBuilder implements Builder {
 
   /// 本 builder 只产出组件产物；JS widget 模块（`Text.js` / `Column.js` /
   /// `ChangeNotifierProvider.js` …）由 [WidgetModuleBuilder] 产出。
+  ///
+  /// 输出路径**直接镜像 lib 源码路径**（`lib/a/b.dart` → `assets/a/b.component.js`），
+  /// 不预设任何目录名（如 `components`）——源码怎么组织、有哪些目录，由使用方
+  /// 决定，产物跟着走。
   @override
   Map<String, List<String>> get buildExtensions => const {
         '^lib/{{}}.dart': [
-          'assets/components/{{}}.component.js',
+          'assets/{{}}.component.js',
         ],
       };
 
@@ -225,7 +229,7 @@ class ModelBuilder implements Builder {
   @override
   Map<String, List<String>> get buildExtensions => const {
         '^lib/model/{{}}.dart': [
-          'assets/components/model/{{}}.model.js',
+          'assets/model/{{}}.model.js',
         ],
       };
 
@@ -1095,21 +1099,22 @@ Expression? _namedArg(List<Expression> args, String name) {
 // ---------------------------------------------------------------------------
 
 /// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 约定一致）：
-/// `lib/a/b.dart` → `assets/components/a/b.component.js`。
+/// `lib/a/b.dart` → `assets/a/b.component.js`（**直接镜像 lib 路径**，
+/// 不预设 `components` 之类固定目录名）。
 String _productPath(String sourcePath) {
   if (!sourcePath.startsWith('lib/')) return sourcePath;
   final rel = sourcePath.substring('lib/'.length); // a/b.dart
   if (!rel.endsWith('.dart')) return sourcePath;
-  return 'assets/components/${rel.substring(0, rel.length - '.dart'.length)}.component.js';
+  return 'assets/${rel.substring(0, rel.length - '.dart'.length)}.component.js';
 }
 
 /// 模型源文件（lib/model/user.dart）→ 模型产物路径
-/// （assets/components/model/user.model.js，镜像 lib 目录结构）。
+/// （assets/model/user.model.js，同样镜像 lib 路径）。
 String _modelProductPath(String sourcePath) {
   if (!sourcePath.startsWith('lib/')) return sourcePath;
   final rel = sourcePath.substring('lib/'.length);
   if (!rel.endsWith('.dart')) return sourcePath;
-  return 'assets/components/${rel.substring(0, rel.length - '.dart'.length)}.model.js';
+  return 'assets/${rel.substring(0, rel.length - '.dart'.length)}.model.js';
 }
 
 /// widget 模块产物路径：`assets/<package>/<type>.js`。
@@ -1239,8 +1244,8 @@ List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
 }
 
 /// 两个产物绝对路径 → 相对路径（相对第一个产物所在目录）。
-/// 如 'assets/components/components/composite_component.component.js' →
-/// 'assets/components/components/banner_component.component.js'
+/// 如 'assets/components/composite_component.component.js' →
+/// 'assets/components/banner_component.component.js'
 /// 得 'banner_component.component.js'；跨目录时含 '../'。
 String _relativeProduct(String from, String to) {
   final fromDir = from.substring(0, from.lastIndexOf('/') + 1);

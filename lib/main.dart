@@ -54,7 +54,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: HelloCard(),
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/hello_component.component.js',
+          jsAsset: 'assets/components/hello_component.component.js',
           component: 'HelloCard',
         ),
       ),
@@ -65,7 +65,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: HelloPanel(),
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/hello_component.component.js',
+          jsAsset: 'assets/components/hello_component.component.js',
           component: 'HelloPanel',
         ),
       ),
@@ -80,7 +80,7 @@ class DemoListPage extends StatelessWidget {
           badge: 'FLUTTER',
         ),
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/stateless_component.component.js',
+          jsAsset: 'assets/components/stateless_component.component.js',
           component: 'StatelessCard',
           props: {
             'title': 'Hello Stateless 1',
@@ -96,7 +96,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: BannerCard(),
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/banner_component.component.js',
+          jsAsset: 'assets/components/banner_component.component.js',
           component: 'BannerCard',
         ),
       ),
@@ -107,7 +107,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: DashboardCard(),
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/composite_component.component.js',
+          jsAsset: 'assets/components/composite_component.component.js',
           component: 'DashboardCard',
           // 嵌套组件（BannerCard）由生成器在 Component 节点产出 JS 工厂调用，
           // 运行时自动递归挂载，使用方无需声明依赖。
@@ -130,7 +130,7 @@ class DemoListPage extends StatelessWidget {
         // provider 状态处理在 JS 侧（assets/provider/*.js）：
         // 经 JsUiWidget 新运行时渲染，宿主不实现任何 provider 语义。
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/provider_component.component.js',
+          jsAsset: 'assets/components/provider_component.component.js',
           component: 'ProviderCard',
         ),
       ),
@@ -141,7 +141,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: ListenableDemo(),
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/listenable_demo.component.js',
+          jsAsset: 'assets/components/listenable_demo.component.js',
           component: 'ListenableDemo',
         ),
       ),
@@ -152,7 +152,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: NotifierCard(),
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/notifier_component.component.js',
+          jsAsset: 'assets/components/notifier_component.component.js',
           component: 'NotifierCard',
         ),
       ),
@@ -164,7 +164,7 @@ class DemoListPage extends StatelessWidget {
         native: WatchDemo(),
         // context.watch/read 的订阅与 provider 链全在 JS 侧（新运行时）。
         js: JsUiWidget(
-          jsAsset: 'assets/components/components/watch_demo.component.js',
+          jsAsset: 'assets/components/watch_demo.component.js',
           component: 'WatchDemo',
         ),
       ),
@@ -173,7 +173,7 @@ class DemoListPage extends StatelessWidget {
       'Scaffold · 页面骨架',
       'Scaffold / AppBar / Center / SingleChildScrollView 组件演示（页面级，仅 JS 热更版）',
       // 页面级组件无法与原生同屏比对，直接展示 JS 热更版
-      JsUiWidget(jsAsset: 'assets/components/components/scaffold_demo.component.js', component: 'ScaffoldDemo'),
+      JsUiWidget(jsAsset: 'assets/components/scaffold_demo.component.js', component: 'ScaffoldDemo'),
     ),
     _DemoEntry(
       'HelloCard · 网络 zip 加载',
@@ -192,7 +192,7 @@ class DemoListPage extends StatelessWidget {
       'HelloCard · JS 双实例隔离',
       '同屏两个 JsUiWidget 实例：各自 new 独立实例，状态互不共享',
       _TwinTest(
-        jsAsset: 'assets/components/components/hello_component.component.js',
+        jsAsset: 'assets/components/hello_component.component.js',
         component: 'HelloCard',
         label: 'HelloCard',
       ),
@@ -201,7 +201,7 @@ class DemoListPage extends StatelessWidget {
       'BannerCard · JS 双实例隔离',
       '两个实例 initState 都生效（views=5），点 Bump 只影响被点的那个',
       _TwinTest(
-        jsAsset: 'assets/components/components/banner_component.component.js',
+        jsAsset: 'assets/components/banner_component.component.js',
         component: 'BannerCard',
         label: 'BannerCard',
       ),
@@ -306,7 +306,7 @@ class _RuntimeGroupTest extends StatelessWidget {
         Text('runtime 组 A（业务方创建 #1）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         JsUiWidget(
-          jsAsset: 'assets/components/components/banner_component.component.js',
+          jsAsset: 'assets/components/banner_component.component.js',
           component: 'BannerCard',
           sharedManager: _managerA,
         ),
@@ -314,7 +314,7 @@ class _RuntimeGroupTest extends StatelessWidget {
         Text('runtime 组 B（业务方创建 #2）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         JsUiWidget(
-          jsAsset: 'assets/components/components/banner_component.component.js',
+          jsAsset: 'assets/components/banner_component.component.js',
           component: 'BannerCard',
           sharedManager: _managerB,
         ),
