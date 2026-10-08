@@ -127,7 +127,7 @@ class DemoListPage extends StatelessWidget {
       'MultiProvider：providers 平级数组一一对应转换，Consumer 局部重建',
       _CompareTest(
         native: ProviderCard(),
-        // provider 状态处理在 JS 侧（assets/components/provider/*.js）：
+        // provider 状态处理在 JS 侧（assets/provider/*.js）：
         // 经 JsUiWidget 新运行时渲染，宿主不实现任何 provider 语义。
         js: JsUiWidget(
           jsAsset: 'assets/components/components/provider_component.component.js',

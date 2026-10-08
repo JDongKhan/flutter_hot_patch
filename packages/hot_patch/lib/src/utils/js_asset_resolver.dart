@@ -8,7 +8,7 @@ class JsAssetResolver {
 
   /// 以 [base]（目录，含尾 '/'）为基准解析 [rel]（含 './' / '../'）。
   ///
-  /// - asset 路径（assets/components/...）与远端 URL（https://...）通用，
+  /// - asset 路径（assets/...）与远端 URL（https://...）通用，
   ///   纯字符串段处理，不区分协议；
   /// - [rel] 本身已是完整地址（http(s)://、assets/、package:）时直接返回。
   static String resolve(String base, String rel) {

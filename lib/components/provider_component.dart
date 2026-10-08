@@ -10,7 +10,7 @@ import '../model/counter_model.dart';
 /// Consumer 分别订阅局部重建。
 /// JS 热更：转换**一一对应**生成一个 `MultiProvider` 节点，providers 保持
 /// 平级数组（每个条目是 ChangeNotifierProvider 节点，model + create/value）。
-/// 状态处理全在 JS 侧（assets/components/provider/*.js，由 JsUiWidget 新
+/// 状态处理全在 JS 侧（assets/provider/*.js，由 JsUiWidget 新
 /// 运行时渲染，宿主不实现任何 provider 语义）：MultiProvider 把 providers
 /// 逆序包裹成嵌套 provider 结点，Consumer 沿祖先链取「最近」VM 并订阅 ——
 /// 与原生 MultiProvider 的嵌套 Provider.of 语义一致。VM notify → 仅该

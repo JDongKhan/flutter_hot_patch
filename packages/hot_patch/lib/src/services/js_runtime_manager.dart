@@ -300,7 +300,7 @@ class JsRuntimeManager {
 
   /// 文本级预处理：export class -> class + 尾部 __modules 注册；
   /// import 语句 -> `const { A, B } = __modules['<解析后绝对路径>'];`。
-  /// 模块注册 key 与实例化寻址都用**绝对资产路径**（assets/components/...），
+  /// 模块注册 key 与实例化寻址都用**绝对资产路径**（assets/...），
   /// 与 JsUiWidget 的 jsAsset 一致。
   static String _preprocessModule(
     String source,

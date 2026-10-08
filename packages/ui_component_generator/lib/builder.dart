@@ -1112,14 +1112,18 @@ String _modelProductPath(String sourcePath) {
   return 'assets/components/${rel.substring(0, rel.length - '.dart'.length)}.model.js';
 }
 
-/// widget 模块产物路径：`assets/components/<package>/<type>.js`
-/// （每个 widget 一个文件，全局共享一份，避免各组件产物重复内联）。
+/// widget 模块产物路径：`assets/<package>/<type>.js`。
+///
+/// 这类产物是 **package 级**（`flutter` / `provider` 等，与 lib 源码目录无关），
+/// 因此直接落在 assets 根下；`assets/components/` 只用来镜像 lib 源码路径
+/// （组件产物、模型产物）。每个 widget 一个文件，全局共享一份，避免各组件
+/// 产物重复内联。
 String _widgetModulePath(String package, String type) =>
-    'assets/components/$package/$type.js';
+    'assets/$package/$type.js';
 
-/// 共享结点工厂模块路径：所有 widget 模块与组件产物统一从它
-/// `import { __h }`，消除每个产物各自内联一份的实现重复。
-const String _nodeModulePath = 'assets/components/flutter/Node.js';
+/// 共享结点工厂模块路径（package 级，与 flutter 模块同目录）：
+/// 所有 widget 模块与组件产物统一从它 `import { __h }`。
+const String _nodeModulePath = 'assets/flutter/Node.js';
 
 /// widget 模块 builder 的**种子输入**（构件期固定文件，不含运行时代码）。
 ///
@@ -1143,8 +1147,8 @@ Map<String, Set<String>> _registeredWidgetPackages() {
 }
 
 /// widget 模块 builder：把每个已注册 widget 类型各产出一个共享 JS 模块
-/// `assets/components/<package>/<Type>.js`（全局共享一份，消除各组件产物里
-/// 内联同类工厂函数造成的重复）。
+/// `assets/<package>/<Type>.js`（全局共享一份，消除各组件产物里内联同类工厂
+/// 函数造成的重复）。
 ///
 /// 输出挂在种子输入 [_widgetSeedPath] 下（见其注释）；每个文件只有一个类型，
 /// 文件名即类型名，构建时从输出路径反推即可，无需再查注册表。
@@ -1170,11 +1174,13 @@ class WidgetModuleBuilder implements Builder {
         await buildStep.writeAsString(out, _renderNodeModule());
         continue;
       }
-      // 输出路径形如 assets/components/<package>/<Type>.js → 反推 package / type
+      // 输出路径形如 assets/<package>/<Type>.js → 反推 package / type
       final segs = out.path.split('/');
-      if (segs.length != 4 || !segs[3].endsWith('.js')) continue;
-      final type = segs[3].substring(0, segs[3].length - '.js'.length);
-      await buildStep.writeAsString(out, _renderWidgetModule(segs[2], {type}));
+      if (segs.length != 3 || segs[0] != 'assets' || !segs[2].endsWith('.js')) {
+        continue;
+      }
+      final type = segs[2].substring(0, segs[2].length - '.js'.length);
+      await buildStep.writeAsString(out, _renderWidgetModule(segs[1], {type}));
     }
   }
 }

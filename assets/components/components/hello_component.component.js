@@ -3,11 +3,11 @@
 // 重新生成：dart run build_runner build
 
 import { User } from '../model/user.model.js';
-import { __h } from '../flutter/Node.js';
-import { Button } from '../flutter/Button.js';
-import { Column } from '../flutter/Column.js';
-import { Row } from '../flutter/Row.js';
-import { Text } from '../flutter/Text.js';
+import { __h } from '../../flutter/Node.js';
+import { Button } from '../../flutter/Button.js';
+import { Column } from '../../flutter/Column.js';
+import { Row } from '../../flutter/Row.js';
+import { Text } from '../../flutter/Text.js';
 
 // 同文件静态单例类 PanelColors（export，供跨文件 import）
 export const PanelColors = {

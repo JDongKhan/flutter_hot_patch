@@ -2,17 +2,17 @@
 // 由 ui_component_generator 从 lib/components/scaffold_demo.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { __h } from '../flutter/Node.js';
-import { AppBar } from '../flutter/AppBar.js';
-import { Button } from '../flutter/Button.js';
-import { Card } from '../flutter/Card.js';
-import { Center } from '../flutter/Center.js';
-import { Column } from '../flutter/Column.js';
-import { Padding } from '../flutter/Padding.js';
-import { Scaffold } from '../flutter/Scaffold.js';
-import { SingleChildScrollView } from '../flutter/SingleChildScrollView.js';
-import { SizedBox } from '../flutter/SizedBox.js';
-import { Text } from '../flutter/Text.js';
+import { __h } from '../../flutter/Node.js';
+import { AppBar } from '../../flutter/AppBar.js';
+import { Button } from '../../flutter/Button.js';
+import { Card } from '../../flutter/Card.js';
+import { Center } from '../../flutter/Center.js';
+import { Column } from '../../flutter/Column.js';
+import { Padding } from '../../flutter/Padding.js';
+import { Scaffold } from '../../flutter/Scaffold.js';
+import { SingleChildScrollView } from '../../flutter/SingleChildScrollView.js';
+import { SizedBox } from '../../flutter/SizedBox.js';
+import { Text } from '../../flutter/Text.js';
 
 class ScaffoldDemoComponent {
   constructor() {

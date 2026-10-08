@@ -2,13 +2,13 @@
 // 由 ui_component_generator 从 lib/components/listenable_demo.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { __h } from '../flutter/Node.js';
-import { Button } from '../flutter/Button.js';
-import { Column } from '../flutter/Column.js';
-import { ListenableBuilder } from '../flutter/ListenableBuilder.js';
-import { Row } from '../flutter/Row.js';
-import { SizedBox } from '../flutter/SizedBox.js';
-import { Text } from '../flutter/Text.js';
+import { __h } from '../../flutter/Node.js';
+import { Button } from '../../flutter/Button.js';
+import { Column } from '../../flutter/Column.js';
+import { ListenableBuilder } from '../../flutter/ListenableBuilder.js';
+import { Row } from '../../flutter/Row.js';
+import { SizedBox } from '../../flutter/SizedBox.js';
+import { Text } from '../../flutter/Text.js';
 
 // 模型 CounterModel（同文件，仅本产物内可见）
 class CounterModel extends ChangeNotifier {
