@@ -3,6 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterModel } from '../model/counter_model.model.js';
+import { __h } from '../flutter/Node.js';
 import { Button } from '../flutter/Button.js';
 import { Card } from '../flutter/Card.js';
 import { Column } from '../flutter/Column.js';
@@ -11,16 +12,6 @@ import { Padding } from '../flutter/Padding.js';
 import { Row } from '../flutter/Row.js';
 import { SizedBox } from '../flutter/SizedBox.js';
 import { Text } from '../flutter/Text.js';
-// 节点工厂：归一化 props/children，形状与 widget 模块一致。
-function __h(type, props, children) {
-  return {
-    type: type,
-    props: props || {},
-    children: children == null
-        ? []
-        : (Array.isArray(children) ? children : [children]),
-  };
-}
 
 class NotifierCardComponent {
   constructor() {

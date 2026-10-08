@@ -1117,6 +1117,10 @@ String _modelProductPath(String sourcePath) {
 String _widgetModulePath(String package, String type) =>
     'assets/components/$package/$type.js';
 
+/// 共享结点工厂模块路径：所有 widget 模块与组件产物统一从它
+/// `import { __h }`，消除每个产物各自内联一份的实现重复。
+const String _nodeModulePath = 'assets/components/flutter/Node.js';
+
 /// widget 模块 builder 的**种子输入**（构件期固定文件，不含运行时代码）。
 ///
 /// build_runner 的输出名必须在 buildExtensions 里静态声明，无法按构建期发现
@@ -1150,6 +1154,8 @@ class WidgetModuleBuilder implements Builder {
   @override
   Map<String, List<String>> get buildExtensions {
     final outs = <String>[
+      // 共享结点工厂（一份，供所有模块 import）
+      _nodeModulePath,
       for (final e in _registeredWidgetPackages().entries)
         for (final t in e.value) _widgetModulePath(e.key, t),
     ]..sort();
@@ -1158,8 +1164,13 @@ class WidgetModuleBuilder implements Builder {
 
   @override
   Future<void> build(BuildStep buildStep) async {
-    // 输出路径形如 assets/components/<package>/<Type>.js → 反推 package / type
     for (final out in buildStep.allowedOutputs) {
+      // 共享结点工厂：单独渲染（它不是「按 widget 类型生成的模块」）。
+      if (out.path == _nodeModulePath) {
+        await buildStep.writeAsString(out, _renderNodeModule());
+        continue;
+      }
+      // 输出路径形如 assets/components/<package>/<Type>.js → 反推 package / type
       final segs = out.path.split('/');
       if (segs.length != 4 || !segs[3].endsWith('.js')) continue;
       final type = segs[3].substring(0, segs[3].length - '.js'.length);
@@ -1456,21 +1467,8 @@ String _renderJs(
   // body：模型/单例/组件类主体（不动 import 区；末尾拼装）。
   final b = StringBuffer();
 
-  // 节点工厂：与 widget 模块同一契约（返回 {type, props, children}）。
-  // 组件产物对外导出工厂函数（`X(props, children)`），与 widget 模块
-  // （flutter/Text.js 等）完全一致：调用工厂即得 element，运行时按 element
-  // 的 type（组件类）递归挂载。嵌套引用因此是普通工厂调用 `X({...})`。
-  b
-    ..writeln('// 节点工厂：归一化 props/children，形状与 widget 模块一致。')
-    ..writeln('function __h(type, props, children) {')
-    ..writeln('  return {')
-    ..writeln('    type: type,')
-    ..writeln('    props: props || {},')
-    ..writeln('    children: children == null')
-    ..writeln('        ? []')
-    ..writeln('        : (Array.isArray(children) ? children : [children]),')
-    ..writeln('  };')
-    ..writeln('}');
+  // 结点工厂 `__h` 复用共享模块（flutter/Node.js），本产物不再内联一份。
+  head.writeln("import { __h } from '${_relativeProduct(ownProduct, _nodeModulePath)}';");
 
   // 同文件模型：inline class（不 export，本产物内共享）。统一由
   // class_translator.renderClassDecl 翻译（含字段/方法/getter/extends
@@ -1622,30 +1620,45 @@ String _renderModelJs(List<ClassInfo> models) {
   return b.toString();
 }
 
+/// 共享结点工厂模块：`export function __h(...)`，被打包进 `__modules`，
+/// 供所有 widget 模块与组件产物 `import { __h }` 复用（全局一份，无重复）。
+String _renderNodeModule() => '''
+// GENERATED CODE - DO NOT EDIT
+// 共享结点工厂：由 ui_component_generator 生成，所有 widget 模块与组件产物共用。
+// 归一化 props/children，返回 {type, props, children} 元素描述（与 JSON 字面量
+// 树同形状），供运行时按 type 映射 Flutter widget 或组件类。
+export function __h(type, props, children) {
+  return {
+    type: type,
+    props: props || {},
+    children: children == null
+        ? []
+        : (Array.isArray(children) ? children : [children]),
+  };
+}
+''';
+
 /// package widget 模块产物：把 [types] 里的 widget 类型导出为 JS 工厂函数
 /// （`Text({...}, [...])` → `{type:'Text', props, children}`）。
 ///
 /// 现约定每个文件恰好一个类型（文件名即类型名），组件产物按「实际用到的类型」
-/// 逐条相对 import，全局共享一份、互不重复。产物与旧「JSON 字面量树」**同形状**，
-/// 且自包含（不依赖运行时 `__jsui`），因此宿主既有渲染路径（按 type 查 renderer）
-/// 与新的 JS 运行时都能消费同一份产物。
+/// 逐条相对 import，全局共享一份、互不重复。结点工厂 `__h` 同样来自共享模块
+/// （[Node.js]，见 [_nodeModulePath]），本文件不再内联。产物自包含（不依赖
+/// 运行时 `__jsui`），宿主既有渲染路径与 JS 运行时都能消费同一份产物。
 String _renderWidgetModule(String package, Set<String> types) {
   final sorted = types.toList()..sort();
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
     ..writeln('// widget 模块（package: $package）：由 ui_component_generator 生成')
     ..writeln('// 工厂函数返回 {type, props, children}，供组件产物按需 import')
-    ..writeln()
-    ..writeln('// 节点工厂：归一化 props/children，形状与生成器 JSON 字面量树一致。')
-    ..writeln('function __h(type, props, children) {')
-    ..writeln('  return {')
-    ..writeln('    type: type,')
-    ..writeln('    props: props || {},')
-    ..writeln('    children: children == null')
-    ..writeln('        ? []')
-    ..writeln('        : (Array.isArray(children) ? children : [children]),')
-    ..writeln('  };')
-    ..writeln('}');
+    ..writeln();
+  if (sorted.isNotEmpty) {
+    final nodeRel = _relativeProduct(
+      _widgetModulePath(package, sorted.first),
+      _nodeModulePath,
+    );
+    b.writeln("import { __h } from '$nodeRel';");
+  }
   for (final t in sorted) {
     // 逻辑 widget（provider 状态处理 / Builder 委托）：产物返回**组件**
     // 元素（type 为 JS 类），状态与订阅逻辑全部在 JS 侧，宿主零感知。

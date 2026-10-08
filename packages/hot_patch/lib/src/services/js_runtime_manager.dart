@@ -250,11 +250,16 @@ class JsRuntimeManager {
     try {
       final processed = _preprocessModule(source, jsAsset, base);
       final evalResult = _runtime.evaluate(processed);
-      HotPatchLog.log('eval result for $jsAsset: $evalResult');
-      // evaluate 返回错误文本（JS 引擎把异常序列化进返回值）→ 视为加载失败，
-      // 不进 _loadedModules，下次可重试。
-      final text = evalResult.toString();
-      if (text.startsWith('ERROR:') || text.contains('\nERROR:')) {
+      // 模块被包进 IIFE，完成值恒为 undefined（真正的作用是 __modules
+      // 注册这一副作用），因此返回值只在**出错**时有诊断价值——正常路径
+      // 不再打印，成功由下面的 `module loaded` 体现。
+      final text = evalResult.stringResult;
+      if (evalResult.isError ||
+          text.startsWith('ERROR:') ||
+          text.contains('\nERROR:')) {
+        HotPatchLog.log('module eval failed: $jsAsset: $text');
+        // evaluate 把异常序列化进返回值 → 视为加载失败，不进
+        // _loadedModules，下次可重试。
         throw StateError('module evaluate failed: $text');
       }
       _loadedModules.add(jsAsset);

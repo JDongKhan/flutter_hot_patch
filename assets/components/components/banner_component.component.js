@@ -3,19 +3,10 @@
 // 重新生成：dart run build_runner build
 
 import { PanelColors } from 'hello_component.component.js';
+import { __h } from '../flutter/Node.js';
 import { Button } from '../flutter/Button.js';
 import { Column } from '../flutter/Column.js';
 import { Text } from '../flutter/Text.js';
-// 节点工厂：归一化 props/children，形状与 widget 模块一致。
-function __h(type, props, children) {
-  return {
-    type: type,
-    props: props || {},
-    children: children == null
-        ? []
-        : (Array.isArray(children) ? children : [children]),
-  };
-}
 
 class BannerCardComponent {
   constructor() {
