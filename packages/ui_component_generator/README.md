@@ -55,15 +55,12 @@ dart run build_runner build --delete-conflicting-outputs
 
 ## 配置
 
-在**使用方**的 `build.yaml` 里可以覆盖种子文件路径：
+在**使用方**的 `build.yaml` 里可以覆盖种子文件路径（只有 `ui_widget` 读这个选项）：
 
 ```yaml
 targets:
   $default:
     builders:
-      ui_component_generator:ui_component:
-        options:
-          seed_file: lib/my_seed.dart
       ui_component_generator:ui_widget:
         options:
           seed_file: lib/my_seed.dart

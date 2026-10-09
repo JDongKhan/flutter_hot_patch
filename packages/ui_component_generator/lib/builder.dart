@@ -12,8 +12,8 @@ import 'style_translators.dart';
 import 'widget_translator.dart';
 
 /// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）
-Builder componentBuilder(BuilderOptions options) =>
-    ComponentBuilder(seedPath: _seedPathFrom(options));
+/// 本 builder 不读任何 options（种子路径只对 [WidgetModuleBuilder] 有意义）。
+Builder componentBuilder(BuilderOptions _) => const ComponentBuilder();
 
 Builder widgetModuleBuilder(BuilderOptions options) =>
     WidgetModuleBuilder(seedPath: _seedPathFrom(options));
@@ -45,16 +45,9 @@ Builder widgetModuleBuilder(BuilderOptions options) =>
 ///   - 新增/自定义 widget = 写一个 WidgetTranslator 并 register，
 ///     核心代码零改动。
 class ComponentBuilder implements Builder {
-  const ComponentBuilder({this.seedPath = _defaultSeedPath});
+  const ComponentBuilder();
 
-  /// widget 模块种子输入路径（见 [WidgetModuleBuilder]）；由使用方
-  /// `build.yaml` 的 `options: { seed_file: ... }` 配置，默认 [_defaultSeedPath]。
-  ///
-  /// 本 builder 只产出与源文件同名的组件/模型产物，种子路径仅用于保持与
-  /// [WidgetModuleBuilder] 的配置一致（widget 模块本身由后者产出）。
-  final String seedPath;
-
-  /// JS widget 模块（`Text.js` / `Column.js` / `ChangeNotifierProvider.js` …）
+  /// JS widget 模块（`assets/flutter.js` / `assets/provider.js` …）
   /// 由 [WidgetModuleBuilder] 产出；本 builder 只产出与源文件同名的产物。
   ///
   /// 输出路径**直接镜像 lib 源码路径**（`lib/a/b.dart` → `assets/a/b.js`），
