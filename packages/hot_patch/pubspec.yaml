@@ -1,5 +1,5 @@
 name: hot_patch
-description: "热更新运行时：加载 codegen 生成的 JS 组件补丁（.component.js + schema），由 JS 驱动渲染与逻辑，渲染仍发生在原生 Flutter 侧。"
+description: "热更新运行时：加载 codegen 生成的 JS 组件补丁（与 dart 源文件同名的 .js），由 JS 驱动渲染与逻辑，渲染仍发生在原生 Flutter 侧。"
 version: 0.1.0
 publish_to: none
 

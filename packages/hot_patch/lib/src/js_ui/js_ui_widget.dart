@@ -25,7 +25,7 @@ import 'js_widget_registry.dart';
 ///
 /// 用法：
 /// ```dart
-/// JsUiWidget(jsAsset: 'assets/components/counter.component.js',
+/// JsUiWidget(jsAsset: 'assets/components/counter.js',
 ///            component: 'CounterComponent')
 /// ```
 class JsUiWidget extends StatefulWidget {
@@ -61,7 +61,7 @@ class JsUiWidget extends StatefulWidget {
   /// 嵌套组件透传的本地补丁根目录（网络补丁解压后的本地根）。
   final String? localRoot;
 
-  /// 网络补丁包（zip）内入口 .component.js 的相对路径。仅网络补丁生效：
+  /// 网络补丁包（zip）内入口 .js 的相对路径。仅网络补丁生效：
   /// 指定时直接用它；不指定则按 [component] 名反查声明位置。
   final String? entryPath;
 

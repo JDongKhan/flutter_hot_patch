@@ -1037,7 +1037,7 @@ class ChangeNotifierProviderTranslator extends WidgetTranslator {
   @override
   String get type => 'ChangeNotifierProvider';
 
-  /// provider 包：模块产物落到 assets/provider/。
+  /// provider 包：模块产物落到 assets/provider.js。
   @override
   String get packageName => 'provider';
 
@@ -1152,7 +1152,7 @@ class ConsumerTranslator extends WidgetTranslator {
   @override
   String get type => 'Consumer';
 
-  /// provider 包：模块产物落到 assets/provider/。
+  /// provider 包：模块产物落到 assets/provider.js。
   @override
   String get packageName => 'provider';
 
@@ -1208,7 +1208,7 @@ class MultiProviderTranslator extends WidgetTranslator {
   @override
   String get type => 'MultiProvider';
 
-  /// provider 包：模块产物落到 assets/provider/。
+  /// provider 包：模块产物落到 assets/provider.js。
   @override
   String get packageName => 'provider';
 

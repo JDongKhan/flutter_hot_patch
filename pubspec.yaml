@@ -46,7 +46,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # 代码生成：扫描注解类 → 生成 .component.js
+  # 代码生成：扫描注解类 → 生成与 dart 同名的 .js
   build_runner: ^2.4.13
   ui_component_generator:
     path: packages/ui_component_generator
@@ -71,20 +71,20 @@ flutter:
 
   assets:
     # 注意：Flutter 的目录 asset 声明不会递归打包子目录（flutter_tools
-    # 对目录用 listSync() 非递归）。产物分两类根：
-    #   - 镜像 lib 源码路径：lib/a/b.dart → assets/a/b.component.js、
-    #     lib/model/user.dart → assets/model/user.model.js；
-    #   - package 级 widget 模块：assets/<package>/<Type>.js（如 flutter/Text.js），
-    #     与 lib 目录结构无关。
-    # 因此【逐目录显式声明】生成器产物所在目录。
-    # 新增带注解组件后，把 build_runner 生成的产物目录按需补一行。
+    # 对目录用 listSync() 非递归）。产物分两类：
+    #   - 镜像 lib 源码路径、文件名与源文件同名：lib/a/b.dart → assets/a/b.js
+    #     （组件与模型同规则，按文件内容分流，产物目录 = lib 目录）；
+    #   - package 级模块：assets/<package>.js（**一个 package 一个文件**，
+    #     如 flutter.js 含 __h 与全部 flutter widget 工厂、provider.js 含
+    #     provider 逻辑组件），与 lib 目录结构无关。
+    # 目录按需逐条声明；单文件（包级模块）需按文件声明。
     - assets/components/
-    # 模型产物（lib/model/ → assets/model/*.model.js）
+    # 模型/普通类产物（lib/model/ → assets/model/*.js）
     - assets/model/
-    # 按 package 分目录的 JS widget 模块（build() 构造调用：Text/Column/... 与
-    # ChangeNotifierProvider/... 的实现），由 ui_component builder 按依赖产出。
-    - assets/flutter/
-    - assets/provider/
+    # package 级模块：build() 构造调用（Text/Column/...）与逻辑组件
+    # （ChangeNotifierProvider/Consumer/...）集中文件，由 ui_widget builder 产出。
+    - assets/flutter.js
+    - assets/provider.js
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

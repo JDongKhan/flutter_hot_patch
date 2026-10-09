@@ -10,8 +10,8 @@ import 'hot_patch_log.dart';
 
 /// 网络补丁包加载结果。
 ///
-/// [entryJsAsset]：[component] 所在的 `.component.js` 的相对路径（虚拟路径，
-/// 与内置 asset 布局一致，如 `components/components/hello_component.component.js`），
+/// [entryJsAsset]：[component] 所在的 `.js` 的相对路径（虚拟路径，
+/// 与内置 asset 布局一致，如 `components/hello_component.js`），
 /// 后续模块加载 / 相对 import 解析全部基于它，与 asset 场景完全一致。
 /// [localRoot]：本包解压后的本地唯一根目录（`<document>/hot_patch/<urlHash>/`）。
 /// 模块读取时用「localRoot + 虚拟路径」拼出本地文件路径，判断文件存在即读本地，
@@ -48,9 +48,9 @@ class RemoteAssetLoader {
 
   /// 加载网络补丁包。
   ///
-  /// [entryPath]：zip 内入口 .component.js 的相对路径（如
-  /// `components/components/hello_component.component.js`）。指定时直接用它，
-  /// 不指定则按 [component] 反查声明它的 .component.js。
+  /// [entryPath]：zip 内入口 .js 的相对路径（如
+  /// `components/hello_component.js`）。指定时直接用它，
+  /// 不指定则按 [component] 反查声明它的 .js。
   /// 失败（非 200 / 非 zip / 解压异常 / 包内无该组件或路径）返回 null。
   static Future<RemoteAssetBundle?> load(String url,
       {String? component, String? entryPath}) async {
@@ -117,7 +117,7 @@ class RemoteAssetLoader {
   }
 
   /// 解析入口：指定 [entryPath] 直接用（文件存在才返回）；否则按
-  /// [component] 反查声明它的 .component.js。返回 zip 内相对路径。
+  /// [component] 反查声明它的 .js。返回 zip 内相对路径。
   static String? _resolveEntry(String root, String? component, String? entryPath) {
     if (entryPath != null && entryPath.isNotEmpty) {
       return File('$root/$entryPath').existsSync() ? entryPath : null;
@@ -126,14 +126,14 @@ class RemoteAssetLoader {
     return _findComponentFile(root, component);
   }
 
-  /// 扫描本地根目录下的 .component.js，找声明了 [component] 类的那个
+  /// 扫描本地根目录下的 .js，找声明了 [component] 类的那个
   /// （生成器产物类名 = @UIComponent 注解 name，匹配 `class <name>`）。
   /// 返回 zip 内相对路径；未找到返回 null。
   static String? _findComponentFile(String root, String component) {
     final dir = Directory(root);
     if (!dir.existsSync()) return null;
     for (final e in dir.listSync(recursive: true)) {
-      if (e is! File || !e.path.endsWith('.component.js')) continue;
+      if (e is! File || !e.path.endsWith('.js')) continue;
       final rel = e.path.substring(root.length + 1);
       if (File(e.path).readAsStringSync().contains('class $component')) {
         return rel;

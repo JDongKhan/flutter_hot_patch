@@ -14,14 +14,17 @@ import 'widget_translator.dart';
 /// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）
 Builder componentBuilder(_) => const ComponentBuilder();
 
-Builder modelBuilder(_) => const ModelBuilder();
-
 Builder widgetModuleBuilder(_) => const WidgetModuleBuilder();
 
-/// 把带 @UIComponent 注解的「正常 Flutter widget」翻译为两份产物：
+/// 把 lib/ 下的 Dart 源文件翻译为**同名** JS 产物（`lib/a/b.dart` → `assets/a/b.js`）：
+/// 文件名与 Dart 源文件一一对应，不区分组件/模型，也不预设目录结构——源码
+/// 怎么组织、有哪些目录，由使用方决定，产物跟着走。
 ///
-///   1. `*.component.js`          —— 运行时 JS 描述模块（build/handleEvent）
-///   2. （可选扩展）`*.component.schema.json` —— 组件 schema，按需自行输出
+/// 按**文件内容**分流（与目录无关）：
+///   - 含 `@UIComponent` 类 → 组件产物（Component 类 + build/handleEvent + 事件绑定）；
+///   - 仅含普通类（非私有、非抽象、无 build()）→ 模型/单例产物
+///     （`export class` / `export const`，供组件产物 import）；
+///   - 都没有（如 main.dart）→ 不产出。
 ///
 /// 组件本身 100% 正常可用（普通 StatefulWidget）；注解只是构建期元数据，
 /// 生成器全程静态解析，不执行任何 Dart 代码。
@@ -32,7 +35,7 @@ Builder widgetModuleBuilder(_) => const WidgetModuleBuilder();
 ///   - 解析 @UIComponent widget → State 类
 ///   - 提取 @UIProp 状态 / @UIAction 动作（方法体静态翻译为 JS）
 ///   - 把 build() 的 widget 树交给 WidgetTranslateContext 翻译
-///   - 组装两份产物
+///   - 组装产物
 ///
 /// 「某个 widget 怎么翻译成 JSON/JS」是策略，由 WidgetTranslator 实现：
 ///   - 抽象类与注册表见 widget_translator.dart
@@ -42,16 +45,15 @@ Builder widgetModuleBuilder(_) => const WidgetModuleBuilder();
 class ComponentBuilder implements Builder {
   const ComponentBuilder();
 
-  /// 本 builder 只产出组件产物；JS widget 模块（`Text.js` / `Column.js` /
-  /// `ChangeNotifierProvider.js` …）由 [WidgetModuleBuilder] 产出。
+  /// JS widget 模块（`Text.js` / `Column.js` / `ChangeNotifierProvider.js` …）
+  /// 由 [WidgetModuleBuilder] 产出；本 builder 只产出与源文件同名的产物。
   ///
-  /// 输出路径**直接镜像 lib 源码路径**（`lib/a/b.dart` → `assets/a/b.component.js`），
-  /// 不预设任何目录名（如 `components`）——源码怎么组织、有哪些目录，由使用方
-  /// 决定，产物跟着走。
+  /// 输出路径**直接镜像 lib 源码路径**（`lib/a/b.dart` → `assets/a/b.js`），
+  /// 文件名与 Dart 源文件一致，不预设目录名、不区分组件/模型。
   @override
   Map<String, List<String>> get buildExtensions => const {
         '^lib/{{}}.dart': [
-          'assets/{{}}.component.js',
+          'assets/{{}}.js',
         ],
       };
 
@@ -69,6 +71,16 @@ class ComponentBuilder implements Builder {
     final registry = WidgetTranslatorRegistry();
     registerBuiltinTranslators(registry);
 
+    // 按内容分流（与目录无关）：文件里没有 @UIComponent → 模型/单例产物
+    // （模型放哪个目录都行）；有 → 组件产物。
+    final hasComponent = parsed.unit.declarations
+        .whereType<ClassDeclaration>()
+        .any((d) => _findAnnotation(d.metadata, 'UIComponent') != null);
+    if (!hasComponent) {
+      await _writeModelProduct(buildStep, parsed.unit, inputId, registry);
+      return;
+    }
+
     // 组件名 → 依赖产物 jsAsset 路径。规则：
     //   本文件注解组件 / 本文件私有组件 → 本文件产物（同产物注册）；
     //   本文件无注解非私有组件（如 LabeledDivider）→ null（运行时原生注入）；
@@ -85,10 +97,10 @@ class ComponentBuilder implements Builder {
             _findAnnotation(d.metadata, 'UIComponent') != null)
           d.name.lexeme,
     };
-    // 产物采用**相对路径**（相对当前产物所在目录，如 'banner_component.component.js'）：
+    // 产物采用**相对路径**（相对当前产物所在目录，如 'banner_component.js'）：
     // 未来 JS 产物整体发布（CDN / 包内迁移）时，主产物与依赖产物的相对关系
     // 不变，运行时按当前 jsAsset 的目录解析即可，绝对路径会随部署位置失效。
-    final ownProduct = _productPath(inputId.path); // assets/components/.../x.component.js
+    final ownProduct = _productPath(inputId.path); // assets/.../x.js
     final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
     // 跨文件组件名 → 产物路径（按**类名**精确绑定；见 _resolveImportedComponentProducts）。
     final importProducts =
@@ -151,21 +163,6 @@ class ComponentBuilder implements Builder {
         emitConstructorCalls: emitConstructorCalls,
       ));
     }
-    if (components.isEmpty) {
-      // 无组件文件：若本文件声明了「静态单例类」（含 static 字段的普通类），
-      // 产出对应单例产物（export const PanelColors = {...}）；否则不产出
-      // （模型文件由 modelBuilder 处理）。
-      if (sameFileSingletonInfos.isNotEmpty) {
-        final outputs = buildStep.allowedOutputs.toList();
-        final jsOutput =
-            outputs.firstWhere((a) => a.path.endsWith('.component.js'));
-        await buildStep.writeAsString(
-          jsOutput,
-          _renderSingletonJs(sameFileSingletonInfos, inputId.path, registry),
-        );
-      }
-      return;
-    }
 
     // BFS 收集嵌套依赖：主组件 build 里用到的本文件**私有组件**（_Xxx）
     // 同样翻译成 JS 注册进同一产物；非私有组件保持 Component 节点，
@@ -202,12 +199,11 @@ class ComponentBuilder implements Builder {
       '${components.map((c) => c.name).join(', ')}',
     );
 
-    // 一次渲染合并产物：一个文件 → 一个 JS（注册多个组件）
-    final outputs = buildStep.allowedOutputs.toList();
-    final jsOutput = outputs.firstWhere((a) => a.path.endsWith('.component.js'));
+    // 一次渲染合并产物：一个文件 → 一个同名 JS（注册多个组件）
+    final jsOutput = buildStep.allowedOutputs.first;
 
     // 各 package 实际用到的 widget 类型（渲染期收集）：_renderJs 据此为每个
-    // 用到的类型拼一条 import（`import { Text } from '../flutter/Text.js'`）。
+    // package 拼一条 import（`import { Text } from '../flutter.js'`）。
     final usedWidgets = <String, Set<String>>{};
     await buildStep.writeAsString(
       jsOutput,
@@ -220,33 +216,42 @@ class ComponentBuilder implements Builder {
   }
 }
 
-/// 模型 builder：lib/model/ 下的 .dart → .model.js 产物。
-/// export class 供组件产物 import（组件产物由 ui_component builder 生成），
-/// 与组件 builder 解耦：模型文件不依赖任何注解。
-class ModelBuilder implements Builder {
-  const ModelBuilder();
-
-  @override
-  Map<String, List<String>> get buildExtensions => const {
-        '^lib/model/{{}}.dart': [
-          'assets/model/{{}}.model.js',
-        ],
-      };
-
-  @override
-  Future<void> build(BuildStep buildStep) async {
-    final inputId = buildStep.inputId;
-    final source = await buildStep.readAsString(inputId);
-    final parsed = parseString(
-      content: source,
-      throwIfDiagnostics: false,
-      path: inputId.path,
-    );
-    final models = _collectModelDecls(parsed.unit);
-    if (models.isEmpty) return;
-    final output = buildStep.allowedOutputs.first;
-    await buildStep.writeAsString(output, _renderModelJs(models));
-  }
+/// 非组件文件（无 @UIComponent）的产物渲染：把文件里的「可导出类」写成 JS。
+///
+/// 判定与目录无关（模型放哪个目录都行），只看内容：
+///   - 静态单例类（含非私有 static 字段）→ `export const X = {...}`；
+///   - 其余普通类（非私有、非抽象、无 build()）→ `export class X`；
+///   - widget / State（有 build()）与私有类跳过，避免 main.dart 这类文件
+///     产出无用 JS。
+/// 无任何可导出类 → 不产出。
+Future<void> _writeModelProduct(
+  BuildStep buildStep,
+  CompilationUnit unit,
+  AssetId inputId,
+  WidgetTranslatorRegistry registry,
+) async {
+  // 复用组件路径的「普通类」判定（非私有 / 非抽象 / 非注解 / 无 build()）。
+  // classIndex 还含 import 文件的类，需按 sourceFile 只取本文件声明的类。
+  final own = <String, ClassInfo>{
+    for (final e in _buildClassIndex(unit, inputId.path).entries)
+      if (e.value.sourceFile == inputId.path) e.key: e.value,
+  };
+  // 静态单例类：本文件里「有非私有 static 字段」的普通类（widget 类已被
+  // classIndex 剔除，故 WidgetShowcase 这类含 build() 的页面不会误产出）。
+  final singletonNames = <String>{
+    for (final d in _findSingletonClasses(unit))
+      if (own.containsKey(d.name.lexeme)) d.name.lexeme,
+  };
+  final singletons = <ClassInfo>[for (final n in singletonNames) own[n]!];
+  final models = <ClassInfo>[
+    for (final e in own.entries)
+      if (!singletonNames.contains(e.key)) e.value,
+  ];
+  if (models.isEmpty && singletons.isEmpty) return;
+  await buildStep.writeAsString(
+    buildStep.allowedOutputs.first,
+    _renderModelJs(models, singletons, inputId.path, registry),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1098,47 +1103,38 @@ Expression? _namedArg(List<Expression> args, String name) {
 // 产物路径推导：组件名 → 依赖产物 jsAsset
 // ---------------------------------------------------------------------------
 
-/// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 约定一致）：
-/// `lib/a/b.dart` → `assets/a/b.component.js`（**直接镜像 lib 路径**，
-/// 不预设 `components` 之类固定目录名）。
+/// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 一致）：
+/// `lib/a/b.dart` → `assets/a/b.js`（**直接镜像 lib 路径、文件名与源文件
+/// 同名**，不预设 `components` 之类固定目录名，也不区分组件/模型）。
 String _productPath(String sourcePath) {
   if (!sourcePath.startsWith('lib/')) return sourcePath;
   final rel = sourcePath.substring('lib/'.length); // a/b.dart
   if (!rel.endsWith('.dart')) return sourcePath;
-  return 'assets/${rel.substring(0, rel.length - '.dart'.length)}.component.js';
+  return 'assets/${rel.substring(0, rel.length - '.dart'.length)}.js';
 }
 
-/// 模型源文件（lib/model/user.dart）→ 模型产物路径
-/// （assets/model/user.model.js，同样镜像 lib 路径）。
-String _modelProductPath(String sourcePath) {
-  if (!sourcePath.startsWith('lib/')) return sourcePath;
-  final rel = sourcePath.substring('lib/'.length);
-  if (!rel.endsWith('.dart')) return sourcePath;
-  return 'assets/${rel.substring(0, rel.length - '.dart'.length)}.model.js';
-}
-
-/// widget 模块产物路径：`assets/<package>/<type>.js`。
+/// package 模块产物路径：`assets/<package>.js`（**一个 package 一个文件**）。
 ///
 /// 这类产物是 **package 级**（`flutter` / `provider` 等，与 lib 源码目录无关），
 /// 因此直接落在 assets 根下；`assets/components/` 只用来镜像 lib 源码路径
-/// （组件产物、模型产物）。每个 widget 一个文件，全局共享一份，避免各组件
-/// 产物重复内联。
-String _widgetModulePath(String package, String type) =>
-    'assets/$package/$type.js';
+/// （组件产物、模型产物）。同包的 widget 工厂/逻辑组件集中在一个文件里，
+/// 避免按类型拆成大量小文件难以维护，也天然只保留一份实现。
+String _packageModulePath(String package) => 'assets/$package.js';
 
-/// 共享结点工厂模块路径（package 级，与 flutter 模块同目录）：
-/// 所有 widget 模块与组件产物统一从它 `import { __h }`。
-const String _nodeModulePath = 'assets/flutter/Node.js';
+/// 共享结点工厂 `__h` 的宿主 package：并入基础包 flutter 的模块
+/// （`assets/flutter.js`）。其它 package 模块与组件产物统一从它
+/// `import { __h }`，使 `__h` 全局只定义一次。
+const String _nodeHelperPackage = 'flutter';
 
 /// widget 模块 builder 的**种子输入**（构件期固定文件，不含运行时代码）。
 ///
 /// build_runner 的输出名必须在 buildExtensions 里静态声明，无法按构建期发现
-/// 的类型动态命名，因此把「全部 widget 模块产物」挂在本文件下，类型清单由
+/// 的类型动态命名，因此把「全部 package 模块产物」挂在本文件下，包清单由
 /// [_registeredWidgetPackages] 静态推导。
 const String _widgetSeedPath = 'lib/js_widgets.dart';
 
 /// 已注册 widget 类型 → (package → {type})：由 translator 注册表推导，
-/// 作为 widget 模块产物清单的唯一来源（构建期 + 生成器共用）。
+/// 作为 package 模块产物清单（每个包一个文件）的唯一来源。
 Map<String, Set<String>> _registeredWidgetPackages() {
   final registry = WidgetTranslatorRegistry();
   registerBuiltinTranslators(registry);
@@ -1151,41 +1147,41 @@ Map<String, Set<String>> _registeredWidgetPackages() {
   return out;
 }
 
-/// widget 模块 builder：把每个已注册 widget 类型各产出一个共享 JS 模块
-/// `assets/<package>/<Type>.js`（全局共享一份，消除各组件产物里内联同类工厂
-/// 函数造成的重复）。
+/// widget 模块 builder：把**每个 package** 的全部已注册 widget 类型产出为
+/// 一个共享 JS 模块 `assets/<package>.js`（工厂函数 + 逻辑组件类，全局唯一
+/// 一份，消除各组件产物里内联同类工厂函数造成的重复与文件爆炸）。
 ///
-/// 输出挂在种子输入 [_widgetSeedPath] 下（见其注释）；每个文件只有一个类型，
-/// 文件名即类型名，构建时从输出路径反推即可，无需再查注册表。
+/// 输出挂在种子输入 [_widgetSeedPath] 下（见其注释）；输出名从
+/// [_registeredWidgetPackages] 静态推导，构建时按包名渲染整包即可。
 class WidgetModuleBuilder implements Builder {
   const WidgetModuleBuilder();
 
   @override
   Map<String, List<String>> get buildExtensions {
-    final outs = <String>[
-      // 共享结点工厂（一份，供所有模块 import）
-      _nodeModulePath,
-      for (final e in _registeredWidgetPackages().entries)
-        for (final t in e.value) _widgetModulePath(e.key, t),
-    ]..sort();
-    return {'^$_widgetSeedPath': outs};
+    final pkgs = <String>{
+      // `__h` 宿主（基础包 flutter）即使未注册任何 flutter widget 也要产出。
+      _nodeHelperPackage,
+      ..._registeredWidgetPackages().keys,
+    }.toList()..sort();
+    return {
+      '^$_widgetSeedPath': [for (final p in pkgs) _packageModulePath(p)],
+    };
   }
 
   @override
   Future<void> build(BuildStep buildStep) async {
+    final packages = _registeredWidgetPackages();
     for (final out in buildStep.allowedOutputs) {
-      // 共享结点工厂：单独渲染（它不是「按 widget 类型生成的模块」）。
-      if (out.path == _nodeModulePath) {
-        await buildStep.writeAsString(out, _renderNodeModule());
-        continue;
-      }
-      // 输出路径形如 assets/<package>/<Type>.js → 反推 package / type
+      // 输出路径形如 assets/<package>.js → 反推 package
       final segs = out.path.split('/');
-      if (segs.length != 3 || segs[0] != 'assets' || !segs[2].endsWith('.js')) {
+      if (segs.length != 2 || segs[0] != 'assets' || !segs[1].endsWith('.js')) {
         continue;
       }
-      final type = segs[2].substring(0, segs[2].length - '.js'.length);
-      await buildStep.writeAsString(out, _renderWidgetModule(segs[1], {type}));
+      final pkg = segs[1].substring(0, segs[1].length - '.js'.length);
+      await buildStep.writeAsString(
+        out,
+        _renderPackageModule(pkg, packages[pkg] ?? const <String>{}),
+      );
     }
   }
 }
@@ -1244,9 +1240,9 @@ List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
 }
 
 /// 两个产物绝对路径 → 相对路径（相对第一个产物所在目录）。
-/// 如 'assets/components/composite_component.component.js' →
-/// 'assets/components/banner_component.component.js'
-/// 得 'banner_component.component.js'；跨目录时含 '../'。
+/// 如 'assets/components/composite_component.js' →
+/// 'assets/components/banner_component.js'
+/// 得 'banner_component.js'；跨目录时含 '../'。
 String _relativeProduct(String from, String to) {
   final fromDir = from.substring(0, from.lastIndexOf('/') + 1);
   final fromSegs = fromDir.split('/').where((p) => p.isNotEmpty).toList();
@@ -1415,7 +1411,7 @@ String _renderJs(
   // 统一类表按「同文件 inline / 跨文件 import」分组渲染：
   //  - 同文件模型（sourceFile == 当前组件文件）→ 产物内 inline class（不 export，
   //    与 Dart 源文件里同文件使用一致）；
-  //  - 跨文件模型（lib/model/ 等 import 文件）→ import 该文件的 .model.js 产物，
+  //  - 跨文件模型（其它文件 import 的普通类）→ import 该文件的同名 JS 产物，
   //    模型全局共享一份（export class），运行时模块加载器按相对路径加载；
   //  - 同文件静态单例类 → inline const（renderStaticConst）。
   final allModels = <String, ClassInfo>{};
@@ -1452,13 +1448,12 @@ String _renderJs(
     head.writeln("import { $cls } from '$rel';");
   }
   for (final m in allModels.values) {
-    final abs = _modelProductPath(m.sourceFile);
-    final rel = _relativeProduct(ownProduct, abs);
+    final rel = _relativeProduct(ownProduct, _productPath(m.sourceFile));
     head.writeln("import { ${m.name} } from '$rel';");
   }
 
   // 跨文件组件：build 树里 Component 兜底、且产物在其他文件的依赖组件，
-  // 同样用 ES module import（'banner_component.component.js' 相对本产物目录）。
+  // 同样用 ES module import（'banner_component.js' 相对本产物目录）。
   // 模块级 import 让依赖关系直观可见；JSON 树里 Component 节点不再携带
   // import 字段（运行时按组件索引：导出类名 → jsAsset 反查递归）。
   // 同文件组件（importResolver 返回本文件产物名）是 inline export class，
@@ -1477,9 +1472,6 @@ String _renderJs(
 
   // body：模型/单例/组件类主体（不动 import 区；末尾拼装）。
   final b = StringBuffer();
-
-  // 结点工厂 `__h` 复用共享模块（flutter/Node.js），本产物不再内联一份。
-  head.writeln("import { __h } from '${_relativeProduct(ownProduct, _nodeModulePath)}';");
 
   // 同文件模型：inline class（不 export，本产物内共享）。统一由
   // class_translator.renderClassDecl 翻译（含字段/方法/getter/extends
@@ -1575,18 +1567,25 @@ String _renderJs(
     _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
 
-  // 按类型拼装 widget 模块 import：`import { Text } from '../flutter/Text.js'`。
-  // 每个 widget 类型一个共享模块（全局一份、无重复），故逐类型一条 import。
+  // 按 package 拼装模块 import：`import { Text, Column } from '../flutter.js'`。
+  // 一个 package 一个文件（全局一份、无重复），故每个 package 一条 import；
+  // 结点工厂 `__h` 组件工厂恒需（`return __h(Component, ...)`），并入其宿主
+  // package（flutter）那一条，避免单独 import。
+  final importsByPackage = <String, Set<String>>{
+    _nodeHelperPackage: {'__h'},
+  };
   if (emitConstructorCalls && usedWidgets != null) {
-    final lines = <String>[
-      for (final entry in usedWidgets.entries)
-        for (final type in entry.value)
-          "import { $type } from '"
-              "${_relativeProduct(ownProduct, _widgetModulePath(entry.key, type))}';",
-    ]..sort();
-    for (final line in lines) {
-      head.writeln(line);
+    for (final entry in usedWidgets.entries) {
+      (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
     }
+  }
+  final importLines = <String>[
+    for (final entry in importsByPackage.entries)
+      "import { ${(entry.value.toList()..sort()).join(', ')} } from "
+          "'${_relativeProduct(ownProduct, _packageModulePath(entry.key))}';",
+  ]..sort();
+  for (final line in importLines) {
+    head.writeln(line);
   }
 
   b.writeln();
@@ -1604,40 +1603,52 @@ void _mergeUsedWidgets(
   }
 }
 
-/// 收集模型文件（lib/model/）中全部可导出的类（非私有、非抽象），
-/// 统一经 classInfoOf 提取为 ClassInfo（与组件产物同处理器，见 class_translator）。
-List<ClassInfo> _collectModelDecls(CompilationUnit unit) {
-  final out = <ClassInfo>[];
-  for (final decl in unit.declarations.whereType<ClassDeclaration>()) {
-    final name = decl.name.lexeme;
-    if (name.startsWith('_')) continue;
-    out.add(classInfoOf(decl, ''));
-  }
-  return out;
-}
-
-/// 模型产物渲染：export class（ES module，运行时加载器收集导出名）。
-String _renderModelJs(List<ClassInfo> models) {
+/// 非组件文件产物渲染：普通类 → `export class`；静态单例类 → `export const`
+/// （均为 ES module，运行时加载器收集导出名后供组件产物 import）。
+String _renderModelJs(
+  List<ClassInfo> models,
+  List<ClassInfo> singletons,
+  String sourcePath,
+  WidgetTranslatorRegistry registry,
+) {
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
-    ..writeln('// 模型模块：由 ui_component_generator 生成')
-    ..writeln('// export class 供组件产物 import（运行时按相对路径加载）')
+    ..writeln('// 模型模块：由 ui_component_generator 从 $sourcePath 生成')
+    ..writeln('// export class / export const 供组件产物 import（运行时按相对路径加载）')
     ..writeln();
   for (final m in models) {
     b
       ..writeln('// 模型 ${m.name}')
       ..writeln(renderClassDecl(m, const {}, exported: true));
   }
+  if (singletons.isNotEmpty) {
+    final ctx = WidgetTranslateContext(
+      registry: registry,
+      propByField: const {},
+      actionByMethod: const {},
+      sourcePath: sourcePath,
+    );
+    for (final cls in singletons) {
+      b
+        ..writeln()
+        ..writeln('// 静态单例类 ${cls.name}')
+        ..writeln(renderStaticConst(
+          cls,
+          valueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
+          exported: true,
+        ));
+    }
+  }
   return b.toString();
 }
 
-/// 共享结点工厂模块：`export function __h(...)`，被打包进 `__modules`，
-/// 供所有 widget 模块与组件产物 `import { __h }` 复用（全局一份，无重复）。
-String _renderNodeModule() => '''
-// GENERATED CODE - DO NOT EDIT
-// 共享结点工厂：由 ui_component_generator 生成，所有 widget 模块与组件产物共用。
-// 归一化 props/children，返回 {type, props, children} 元素描述（与 JSON 字面量
-// 树同形状），供运行时按 type 映射 Flutter widget 或组件类。
+/// 共享结点工厂源码：`export function __h(...)`，归一化 props/children，
+/// 返回 {type, props, children} 元素描述（与 JSON 字面量树同形状）。它是
+/// [_nodeHelperPackage] 包模块的一部分，全局只有这一处定义。
+const String _jsNodeHelperSource = '''
+// 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
+// 归一化 props/children，返回 {type, props, children} 元素描述，供运行时按
+// type 映射 Flutter widget 或组件类。
 export function __h(type, props, children) {
   return {
     type: type,
@@ -1646,29 +1657,33 @@ export function __h(type, props, children) {
         ? []
         : (Array.isArray(children) ? children : [children]),
   };
-}
-''';
+}''';
 
-/// package widget 模块产物：把 [types] 里的 widget 类型导出为 JS 工厂函数
-/// （`Text({...}, [...])` → `{type:'Text', props, children}`）。
+/// package 模块产物：把该 package 的**全部** widget 类型导出为 JS 工厂函数
+/// （`Text({...}, [...])` → `{type:'Text', props, children}`），逻辑组件
+/// （provider 状态处理 / Builder 委托）则内联为普通类 + 工厂。
 ///
-/// 现约定每个文件恰好一个类型（文件名即类型名），组件产物按「实际用到的类型」
-/// 逐条相对 import，全局共享一份、互不重复。结点工厂 `__h` 同样来自共享模块
-/// （[Node.js]，见 [_nodeModulePath]），本文件不再内联。产物自包含（不依赖
-/// 运行时 `__jsui`），宿主既有渲染路径与 JS 运行时都能消费同一份产物。
-String _renderWidgetModule(String package, Set<String> types) {
+/// 一个 package 一个文件（文件名即包名）。结点工厂 `__h` 只在其宿主包
+/// （[_nodeHelperPackage]）里定义一次，其它包从 `<host>.js` 相对 import。
+/// 产物自包含（不依赖运行时 `__jsui`），宿主既有渲染路径与 JS 运行时都能
+/// 消费同一份产物。
+String _renderPackageModule(String package, Set<String> types) {
   final sorted = types.toList()..sort();
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
-    ..writeln('// widget 模块（package: $package）：由 ui_component_generator 生成')
-    ..writeln('// 工厂函数返回 {type, props, children}，供组件产物按需 import')
+    ..writeln('// package 模块（package: $package）：由 ui_component_generator 生成')
+    ..writeln('// 本包全部 widget 工厂集中于此文件；工厂返回 {type, props, children}')
     ..writeln();
-  if (sorted.isNotEmpty) {
-    final nodeRel = _relativeProduct(
-      _widgetModulePath(package, sorted.first),
-      _nodeModulePath,
-    );
-    b.writeln("import { __h } from '$nodeRel';");
+  if (package == _nodeHelperPackage) {
+    b
+      ..writeln(_jsNodeHelperSource)
+      ..writeln();
+  } else {
+    final nodeRel =
+        _relativeProduct(_packageModulePath(package), _packageModulePath(_nodeHelperPackage));
+    b
+      ..writeln("import { __h } from '$nodeRel';")
+      ..writeln();
   }
   for (final t in sorted) {
     // 逻辑 widget（provider 状态处理 / Builder 委托）：产物返回**组件**
@@ -1949,36 +1964,6 @@ String _singletonString(String s) {
       .replaceAll('\r', r'\r')
       .replaceAll('\t', r'\t');
   return "'$escaped'";
-}
-
-/// 独立单例产物渲染（无组件文件时用）：`export const PanelColors = { ... };`。
-String _renderSingletonJs(
-  List<ClassInfo> classes,
-  String sourcePath,
-  WidgetTranslatorRegistry registry,
-) {
-  final b = StringBuffer()
-    ..writeln('// GENERATED CODE - DO NOT EDIT')
-    ..writeln('// 静态单例类：由 ui_component_generator 自动生成')
-    ..writeln('// 重新生成：dart run build_runner build')
-    ..writeln();
-  final ctx = WidgetTranslateContext(
-    registry: registry,
-    propByField: const {},
-    actionByMethod: const {},
-    sourcePath: sourcePath,
-  );
-  for (final cls in classes) {
-    b
-      ..writeln()
-      ..writeln('// 静态单例类 ${cls.name}')
-      ..writeln(renderStaticConst(
-        cls,
-        valueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
-        exported: true,
-      ));
-  }
-  return b.toString();
 }
 
 /// 生成 JS 双引号字符串字面量（与 WidgetTranslateContext.jsString 一致）。

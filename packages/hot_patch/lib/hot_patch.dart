@@ -2,7 +2,7 @@
 ///
 /// 面向「线上出 bug → 运行时切换到 JS 补丁修复」的场景：
 /// 构建期由 ui_component_generator 把带注解的正常 widget 静态翻译成
-/// `.component.js` + `.component.schema.json`，运行时用 [JsUiWidget]
+/// 同名 `.js`（与 dart 源文件对应），运行时用 [JsUiWidget]
 /// 加载 JS 补丁渲染组件、由 JS 驱动逻辑。
 ///
 /// 渲染入口是 [JsUiWidget]（宿主）+ JS 侧 `__jsui` 运行时（element /

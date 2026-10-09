@@ -95,7 +95,7 @@ class WidgetDetailPage extends StatelessWidget {
   /// 页面级组件（Scaffold 等）不比对，直接 JS 热更版全屏展示。
   final bool fullPage;
 
-  static const String _jsAsset = 'assets/components/widget_details.component.js';
+  static const String _jsAsset = 'assets/components/widget_details.js';
 
   Widget _native() {
     return switch (component) {
