@@ -25,6 +25,24 @@
 ///     context/订阅 + commit 协议），与组件无关；
 ///   - [jsRuntimeEnvSource]：运行时环境全局（模块表 `__modules`、编译/平台
 ///     标志、console 桥、ChangeNotifier 基类），依赖 Dart 侧注入的标志。
+///
+/// **分区导航**（`jsUiRuntimeSource` 内以 `// ===== 【n】` 分隔，按代码顺序）：
+///
+/// | 分区 | 内容 | 属于哪个设计 |
+/// | --- | --- | --- |
+/// | 【1】 | 全局状态与工具（id 序号、句柄表、结点标记、页面根表） | 全体共用 |
+/// | 【2】 | 出方向桥（emit / commit / sendHost → `__appSend`） | 全体共用 |
+/// | 【3】 | 宿主注入 `__jsui.host` / `resolve` | @HostInjected 专用 |
+/// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
+/// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
+/// | 【6】 | 组件基类（`setState` / `__bind`） | mini-react（生成器产物的能力袋） |
+/// | 【7】 | provider 取值与订阅（`watch` / `read` / `findProvider`） | provider 模式专用 |
+/// | 【8】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
+/// | 【9】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
+/// | 【10】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
+///
+/// 跨分区交叉点用行内 `[provider]` / `[mini-react]` 标注，便于判断
+/// 「这段代码是为哪个设计写的」。
 library;
 
 import 'package:flutter/foundation.dart' show TargetPlatform;
@@ -37,6 +55,7 @@ const String jsUiRuntimeSource = r'''
     : Function('return this')();
   if (G.__jsui) { return; }
 
+  // ===== 【1】运行环境｜全局状态与工具 ==================================
   var idSeq = 0;
   var handlerSeq = 0;
   var handlers = {};
@@ -59,9 +78,7 @@ const String jsUiRuntimeSource = r'''
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
 
-  // ---------------------------------------------------------------------
-  // 与宿主唯一的出方向通道
-  // ---------------------------------------------------------------------
+  // ===== 【2】出方向桥｜唯一出口（emit / commit / sendHost）============
   // 出方向统一走全局 __appSend（单桥通道 `_app_bridge_`，目标通道名放在
   // 消息体 `ch` 字段）。宿主只订阅该桥通道一次，再按 ch 二次分发。
   function sendHost(channel, obj, key) {
@@ -78,9 +95,8 @@ const String jsUiRuntimeSource = r'''
     sendHost('jsuiCommit', { ops: list }, root.key);
   }
 
-  // ---------------------------------------------------------------------
-  // 宿主注入能力（@HostInjected）：JS 发起调用，宿主实现后回填结果
-  // ---------------------------------------------------------------------
+  // ===== 【3】宿主注入｜__jsui.host / resolve（@HostInjected 专用）====
+  // JS 发起调用，宿主实现后回填结果
   // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
   // `__jsui.host("getUserName", [a, b])`：本函数返回 Promise，经桥通道把
   // `{id, args}` 交给宿主，宿主实现完成后用 `__jsui.resolve(id, value)` 回填
@@ -102,9 +118,7 @@ const String jsUiRuntimeSource = r'''
     r(value);
   }
 
-  // ---------------------------------------------------------------------
-  // element / 事件句柄
-  // ---------------------------------------------------------------------
+  // ===== 【4】mini-react｜element 与事件句柄（h / fn / invoke）========
   function h(type, props, children) {
     var ch = [];
     if (children != null) {
@@ -130,9 +144,9 @@ const String jsUiRuntimeSource = r'''
     f(payload);
   }
 
-  // ---------------------------------------------------------------------
-  // 深比较（用于避免每次重建都下发 props）
-  // ---------------------------------------------------------------------
+  // ===== 【5】mini-react｜reconciler 工具 ==============================
+  // 深比较（用于避免每次重建都下发 props）；下面紧邻的 keyOf / hostIdOf /
+  // rootFor 同属本分区。
   function eq(a, b, depth) {
     if (a === b) { return true; }
     if (depth <= 0) { return false; }
@@ -163,14 +177,16 @@ const String jsUiRuntimeSource = r'''
     return activeRoot || (parent && parent.__root) || null;
   }
 
-  // ---------------------------------------------------------------------
-  // Component / State
-  // ---------------------------------------------------------------------
+  // ===== 【6】mini-react｜组件基类（生成器产物的能力袋）===============
+  // 生成器产物**不** extends 本类：`augment` 把这些方法拷到实例上。
+  // setState / __bind 属于 mini-react；中间的 watch / read 属于 provider
+  // （见行内【7】标注）。
   function Component(props) { this.props = props || {}; }
   Component.prototype.setState = function (mutate) {
     if (typeof mutate === 'function') { mutate.call(this); }
     markDirty(this);
   };
+  // ── 【7】provider｜取值 + 订阅（插入在组件基类中，供 this.watch/read）──
   // 取最近 provider 的**值**并订阅（值变更 -> 重构建该位置的结点）。
   // 锚点是**当前构建的元素**（`building`），即订阅者自己：provider 只是纯值
   // 结点，不感知订阅（与 Dart context.watch 一致——按位置取最近 provider，
@@ -187,6 +203,7 @@ const String jsUiRuntimeSource = r'''
     var node = findProvider(building || this, type);
     return node ? node.__value : undefined;
   };
+  // ── 回到【6】mini-react｜事件句柄（__bind）────────────────────────────
   // 事件句柄：在**构建期**把事件表达式绑定到当前组件实例（Dart tear-off 语义）。
   // 生成器产出 `this.__bind("_incA")`——`this` 正是 build 作用域里的组件实例，
   // 也就是**定义该事件方法的组件**（含 Consumer/Builder 把 builder 方法
@@ -227,6 +244,7 @@ const String jsUiRuntimeSource = r'''
     return handle;
   };
 
+  // ===== 【7】provider｜向上查找 + 消费者侧订阅台账 =====================
   // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的 provider —— 与 Dart
   // `context.read/watch` 的向上查找一致，取不到返回 null（不猜、不回退）。
   function findProvider(inst, type) {
@@ -268,9 +286,9 @@ const String jsUiRuntimeSource = r'''
     inst.__vmSubs = null;
   }
 
-  // ---------------------------------------------------------------------
-  // 调度：collected dirty -> 重建子树 -> 一次 commit（批处理）
-  // ---------------------------------------------------------------------
+  // ===== 【8】mini-react｜调度（dirty → flush 批处理）==================
+  // collected dirty -> 重建子树 -> 一次 commit。
+  // 触发源有两处：mini-react 的 setState、provider 的订阅回调（见【7】）。
   function markDirty(inst) {
     if (!inst || inst.__unmounted || inst.__dirty) { return; }
     var root = inst.__root;
@@ -304,12 +322,11 @@ const String jsUiRuntimeSource = r'''
     }
   }
 
-  // ---------------------------------------------------------------------
-  // mount / patch / unmount
-  // ---------------------------------------------------------------------
+  // ===== 【9】mini-react｜reconciler 主流程（mount / patch / unmount）==
   // 普通类组件（生成器产物不 extends Component）挂载基类能力：
-  // props / setState / watch / read（含生成器产物使用的下划线别名
-  // `this.__watch(...)` / `this.__read(...)`）/ __bind（构建期事件句柄）。
+  //   [mini-react] props / setState / __bind（构建期事件句柄）
+  //   [provider]   watch / read（含生成器产物使用的下划线别名
+  //                `this.__watch(...)` / `this.__read(...)`）
   // 对 extends Component 的类重复赋值无害。
   function augment(inst) {
     if (inst.props === undefined || inst.props === null) {
@@ -494,9 +511,9 @@ const String jsUiRuntimeSource = r'''
       if (typeof inst.dispose === 'function') {
         try { inst.dispose(); } catch (e) {}
       }
-      // 从各 VM 的监听表里摘掉自己（watch 把订阅登记在消费者侧 `__vmSubs`）。
+      // [provider] 从各 VM 的监听表里摘掉自己（订阅登记在消费者侧 `__vmSubs`）。
       unsubscribeAll(inst);
-      // 释放构建期登记的（实例, 表达式）事件句柄，避免 handlers 表泄漏。
+      // [mini-react] 释放构建期登记的（实例, 表达式）事件句柄，避免 handlers 泄漏。
       var bag = inst.__bound;
       if (bag) {
         for (var k in bag) { delete handlers[bag[k].__fn]; }
@@ -506,9 +523,7 @@ const String jsUiRuntimeSource = r'''
     }
   }
 
-  // ---------------------------------------------------------------------
-  // 对外入口
-  // ---------------------------------------------------------------------
+  // ===== 【10】对外入口｜api（Dart 只调 mount / dispose / invoke / host）
   function parse(x) {
     if (x == null || x === '') { return {}; }
     if (typeof x === 'string') {
