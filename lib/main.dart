@@ -117,14 +117,13 @@ class DemoListPage extends StatelessWidget {
     ),
     _DemoEntry(
       'HelloCard · JS 双实例隔离',
-      '同屏两个 JsUiWidget 实例：各自 new 独立实例，状态互不共享',
+      '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
       _TwinTest(
         jsAsset: 'assets/components/hello_component.js',
         component: 'HelloCard',
         label: 'HelloCard',
       ),
     ),
-    _DemoEntry('HelloCard · 多 runtime 分组', '两组 JsUiWidget 各自使用业务方创建的独立 runtime，点按钮互不影响', _RuntimeGroupTest()),
     _DemoEntry(
       '常用组件 · 列表',
       '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）',
@@ -209,47 +208,8 @@ class _CompareTest extends StatelessWidget {
   }
 }
 
-/// 多 runtime 分组测试：两组 JsUiWidget 各自使用业务方创建的独立
-/// runtime（等价于两个 RuntimeManager 分组的场景）。iOS/JavaScriptCore 的
-/// sendMessage 桥是库级 static 的（消息路由到最后创建的 runtime 通道表），
-/// 本测试验证：即便两个 runtime 共存，setState 消息仍按实例 key 全局分发，
-/// 点 A 组的 HelloCard 不会影响 B 组（反之亦然）。
-class _RuntimeGroupTest extends StatelessWidget {
-  const _RuntimeGroupTest();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text('runtime 组 A（业务方创建 #1）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        const SizedBox(height: 8),
-        JsUiWidget(
-          jsAsset: 'assets/components/hello_component.js',
-          component: 'HelloCard',
-          sharedManager: _managerA,
-        ),
-        const Divider(height: 32),
-        Text('runtime 组 B（业务方创建 #2）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        const SizedBox(height: 8),
-        JsUiWidget(
-          jsAsset: 'assets/components/hello_component.js',
-          component: 'HelloCard',
-          sharedManager: _managerB,
-        ),
-      ],
-    );
-  }
-}
-
-/// 业务方创建的两个独立 JsRuntimeManager（每组与 JavascriptRuntime 一对一，
-/// runtime 在 manager 内部消化）：两组 JsUiWidget 各自共享一个 manager，
-/// 组间 JS 状态隔离。handler 表是 static 全局共享的，跨组消息按实例 key
-/// 分发，互不串台。
-final JsRuntimeManager _managerA = JsRuntimeManager();
-final JsRuntimeManager _managerB = JsRuntimeManager();
-
-/// 双实例隔离测试：同屏渲染两个相同组件（JsUiWidget 各持独立 JS 实例）。
-/// 验证：点其中一个的按钮，另一个的状态不受影响（__instances[key] 隔离）。
+/// 双实例隔离测试：同屏渲染两个相同组件（单 runtime 内按 pageKey 隔离）。
+/// 验证：点其中一个的按钮，另一个的状态不受影响（roots[pageKey] 隔离）。
 class _TwinTest extends StatelessWidget {
   const _TwinTest({required this.jsAsset, required this.component, required this.label});
 

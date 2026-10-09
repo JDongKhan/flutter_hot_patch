@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode, defaultTargetPlatform;
@@ -224,12 +225,20 @@ class JsRuntimeManager {
     if (jsAsset.isEmpty) {
       return;
     }
-    // 已加载成功 / 加载中（防依赖环）→ 短路。注意：只有**完整成功**才进
-    // _loadedModules，失败（asset 缺失 / evaluate 出错）可再次重试。
-    if (_loadedModules.contains(jsAsset) || _loadingModules.contains(jsAsset)) {
+    // 已加载成功 → 短路。注意：只有**完整成功**才进 _loadedModules，
+    // 失败（asset 缺失 / evaluate 出错）可再次重试。
+    if (_loadedModules.contains(jsAsset)) {
       return;
     }
+    // 加载中（防依赖环 + 防并发竞争）→ 等待首个加载完成后再继续。
+    // 同屏多个 JsUiWidget 用同一 manager 时，会并发调用 loadModule，
+    // 若直接 return，后续 widget 的 __jsui.mount 在模块注册前执行 →
+    // 找不到组件 → _rootId 为 null → 一直显示进度条。
+    if (_loadingModules.contains(jsAsset)) {
+      return _loadingCompleters[jsAsset]!.future;
+    }
     _loadingModules.add(jsAsset);
+    _loadingCompleters[jsAsset] = Completer<void>();
     // 网络补丁包：localRoot（URL 哈希本地唯一根目录）+ 虚拟路径拼出本地
     // 文件，存在即读本地，不存在回退内置 asset（rootBundle）。不维护任何
     // 映射表——文件系统即索引，与 asset 场景共用同一套相对 import 逻辑。
@@ -264,8 +273,13 @@ class JsRuntimeManager {
       }
       _loadedModules.add(jsAsset);
       HotPatchLog.log('module loaded: $jsAsset');
+      _loadingCompleters[jsAsset]!.complete();
+    } catch (e) {
+      _loadingCompleters[jsAsset]!.completeError(e);
+      rethrow;
     } finally {
       _loadingModules.remove(jsAsset);
+      _loadingCompleters.remove(jsAsset);
     }
   }
 
@@ -362,6 +376,9 @@ $out
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
   final Set<String> _loadingModules = {};
+  /// 并发加载等待表：同 jsAsset 正在加载时，后续调用者 await 对应
+  /// Completer，等首个加载完成后再继续（防 mount 在模块加载前执行）。
+  final Map<String, Completer<void>> _loadingCompleters = {};
 
   /// 运行时环境全局（__modules / 标志 / console / ChangeNotifier）是否已注入。
   bool _envInited = false;
