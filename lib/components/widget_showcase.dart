@@ -41,6 +41,9 @@ class WidgetShowcase extends StatelessWidget {
     _Group('状态管理', [
       _Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard'),
     ]),
+    _Group('无状态组件', [
+      _Entry('StatelessWidget', '无 State，build 在 widget 类自身，props 走构造参数', 'StatelessCard'),
+    ]),
   ];
 
   @override
@@ -118,6 +121,11 @@ class WidgetDetailPage extends StatelessWidget {
       'InputDetail' => const InputDetail(),
       'ProgressDetail' => const ProgressDetail(),
       'NotifierCard' => const NotifierCard(),
+      'StatelessCard' => const StatelessCard(
+        title: 'Hello Stateless',
+        subtitle: '原生直接渲染，无需 State',
+        badge: 'FLUTTER',
+      ),
       _ => const Text('未知组件'),
     };
   }

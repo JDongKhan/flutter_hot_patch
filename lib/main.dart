@@ -3,6 +3,7 @@ import 'package:hot_patch/hot_patch.dart';
 
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
+import 'components/widget_details.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
 import 'components/widget_showcase.dart';
@@ -76,7 +77,7 @@ class DemoListPage extends StatelessWidget {
           badge: 'FLUTTER',
         ),
         js: JsUiWidget(
-          jsAsset: 'assets/components/hello_component.js',
+          jsAsset: 'assets/components/widget_details.js',
           component: 'StatelessCard',
           props: {
             'title': 'Hello Stateless 1',
