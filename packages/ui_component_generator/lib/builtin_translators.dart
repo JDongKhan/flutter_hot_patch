@@ -10,8 +10,8 @@ import 'widget_translator.dart';
 /// ComponentBuilder 核心逻辑无需改动。
 ///
 /// 值约定：toJson 的 props 叶子值一律是 **JS 表达式字符串**（字符串字面量
-/// 用 `ctx.jsString()` 带引号、数字/布尔/表达式原样），默认 renderJs
-/// 由基类把 toJson 产物序列化为 JS 对象字面量。
+/// 用 `ctx.jsString()` 带引号、数字/布尔/表达式原样），由渲染层统一输出为
+/// JS 构造调用形态。
 void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
   registry
     ..register(const ColumnTranslator())
@@ -363,7 +363,7 @@ class SizedBoxTranslator extends WidgetTranslator {
 /// Scaffold：页面骨架（appBar / body）。
 ///
 /// 产物把 appBar 与 body 依次放 children（children[0]=AppBar、children[1]=body），
-/// 运行时 ScaffoldRenderer 按序取用，避免 props 里出现嵌套节点对象。
+/// 运行时 JsWidgetRegistry 按序取用，避免 props 里出现嵌套节点对象。
 class ScaffoldTranslator extends WidgetTranslator {
   const ScaffoldTranslator();
 
@@ -1023,10 +1023,10 @@ class BuilderTranslator extends WidgetTranslator {
 // provider 包：ChangeNotifierProvider / Consumer（与 ListenableBuilder 同机制）
 // ---------------------------------------------------------------------------
 
-/// ChangeNotifierProvider：`ChangeNotifierProvider\<CounterModel\>(
+/// ChangeNotifierProvider：`ChangeNotifierProvider\<MyModel\>(
 ///   create: (_) => _model, child: ...)`。
 ///
-/// 节点 `{type:'ChangeNotifierProvider', props:{model:'CounterModel',
+/// 节点 `{type:'ChangeNotifierProvider', props:{model:'MyModel',
 /// create:{ref|construct}, child:子树}}`。模型实例由运行时按 create 语义
 /// 提供：ref = 复用状态字段实例（与 ListenableBuilder 的 listenable 同语义，
 /// 方法 _inc/_reset 操作同一实例）；construct = JS 侧 new 模型类。
@@ -1046,7 +1046,7 @@ class ChangeNotifierProviderTranslator extends WidgetTranslator {
     final modelType = _providerTypeArg(node.expr);
     if (modelType == null) {
       throw FormatException(
-          'ChangeNotifierProvider 需要类型参数，如 ChangeNotifierProvider<CounterModel>');
+          'ChangeNotifierProvider 需要类型参数，如 ChangeNotifierProvider<MyModel>');
     }
     final childExpr =
         ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
@@ -1100,7 +1100,7 @@ String? _constructorNameOf(Expression? e) {
 /// （不含 child，由调用方拼装）。ChangeNotifierProvider / MultiProvider 共用。
 ///
 /// 产出的 props 值直接是**运行时可见的 JS 值**（不是 ID/名称字符串）：
-///   - create = 模型**类引用**（裸标识符，如 `CounterModel`）：provider 内
+///   - create = 模型**类引用**（裸标识符，如 `MyModel`）：provider 内
 ///     `new` 一次，生命周期归 provider（卸载 dispose）；
 ///   - create = 模型**实例**（状态字段 `this._modelA`）：复用，归调用方；
 ///   - value  = 模型实例：复用、不释放（与原生 .value 语义一致）。
@@ -1139,7 +1139,7 @@ Map<String, dynamic> _providerNodeOf({
   };
 }
 
-/// Consumer：`Consumer\<CounterModel\>(builder: (context, value, child) =>
+/// Consumer：`Consumer\<MyModel\>(builder: (context, value, child) =>
 ///   Text('count = ${value.count}'))`。
 ///
 /// builder 闭包返回的子树抽到实例方法 `_consumerBuilderN(value)`（闭包参数
@@ -1160,7 +1160,7 @@ class ConsumerTranslator extends WidgetTranslator {
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final modelType = _providerTypeArg(node.expr);
     if (modelType == null) {
-      throw FormatException('Consumer 需要类型参数，如 Consumer<CounterModel>');
+      throw FormatException('Consumer 需要类型参数，如 Consumer<MyModel>');
     }
     final builderRaw = ctx.namedArg(node.args, 'builder');
     if (builderRaw is! FunctionExpression) {
@@ -1247,7 +1247,7 @@ Map<String, dynamic> _providerEntryOf(
   }
   final modelType = _providerTypeArg(element);
   if (modelType == null) {
-    throw FormatException('MultiProvider 条目需要类型参数，如 <CounterModel>');
+    throw FormatException('MultiProvider 条目需要类型参数，如 <MyModel>');
   }
   // 条目为 `ChangeNotifierProvider.value(value: x)`：value 复用实例、
   // 生命周期归调用方 → 与 create 的 ref 同语义（不释放）。
@@ -1296,7 +1296,7 @@ Expression? _namedOf(List<Expression> args, String name) {
 }
 
 /// `context.watch\<T\>()` / `context.read\<T\>()` 的类型参数类名
-/// （如 `CounterModel`；null = 非此形态）。
+/// （如 `MyModel`；null = 非此形态）。
 String? _contextModelTypeOf(Expression? e) {
   if (e is! MethodInvocation) return null;
   final tgt = e.target;
@@ -1311,10 +1311,10 @@ String? _contextModelTypeOf(Expression? e) {
 }
 
 /// `ChangeNotifierProvider\<T\>` / `Consumer\<T\>` 的类型参数 T 类名
-/// （如 `CounterModel`；null = 未提供类型参数）。
+/// （如 `MyModel`；null = 未提供类型参数）。
 String? _providerTypeArg(Expression? e) {
   // 有 new：InstanceCreationExpression；无 new 的泛型类构造（如
-  // `Consumer<CounterModel>(...)` / `ChangeNotifierProvider<CounterModel>(...)`）
+  // `Consumer<MyModel>(...)` / `ChangeNotifierProvider<MyModel>(...)`）
   // 在 analyzer 里是 MethodInvocation —— 两者的类型参数都要处理。
   final TypeArgumentList? ta;
   if (e is InstanceCreationExpression) {

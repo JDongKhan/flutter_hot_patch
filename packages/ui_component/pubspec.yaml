@@ -1,7 +1,8 @@
 name: ui_component
-description: 声明式 UI 组件注解。标记一个 Flutter 类为可动态下发的组件，供 ui_component_generator 在构建期生成 JS 描述模块。
+description: 声明式注解：标记一个普通 Flutter widget 为「可动态下发的 UI 组件」。注解仅为构建期元数据，不影响组件正常运行。
 version: 0.1.0
-publish_to: none
+# 发布前填写（pub.dev 会展示，用于溯源；缺失只会有警告）：
+# repository: https://github.com/<your-org>/flutter_hot
 
 environment:
   sdk: ^3.11.5

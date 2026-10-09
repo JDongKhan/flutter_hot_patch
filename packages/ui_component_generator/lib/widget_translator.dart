@@ -6,7 +6,7 @@ import 'style_translators.dart';
 //
 // 设计目标：新增/自定义 widget 时不动 ComponentBuilder 的核心代码。
 // 扩展一个 widget 只需要两步：
-//   1. 实现 WidgetTranslator（types + toJson + renderJs）
+//   1. 实现 WidgetTranslator（type + toJson）
 //   2. 注册：registry.register(MyTranslator())
 //
 // 核心代码（注解解析、状态/动作提取、产物组装）只与
@@ -56,7 +56,7 @@ class WidgetTranslateContext {
   /// 运行时按 import 递归挂载嵌套组件（使用方无需知道依赖）。
   final String? Function(String component)? importResolver;
 
-  /// 跨文件「静态单例类」解析器：build 树里 `PanelColors.background`
+  /// 跨文件「静态单例类」解析器：build 树里 `MyColors.background`
   /// 这类静态引用翻译成 JS 表达式并登记 import 依赖。
   /// 由生成器从组件文件的 import 源文件解析注入；null = 不启用。
   final SingletonResolver? singletons;
@@ -65,15 +65,8 @@ class WidgetTranslateContext {
   /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
   final Set<String> dependencies = {};
 
-  /// 是否把节点渲染成 **JS 构造调用**（`Text({...}, [...])`）而非对象字面量。
-  ///
-  /// true 时 [renderJs] 走 [WidgetTranslator.packageName] 收集实际用到的
-  /// widget 类型（[usedWidgetPackages]），生成器据此按 package 产出 JS widget
-  /// 模块并 import。false = 旧对象字面量产物（无 widget 模块可用时降级）。
-  bool emitConstructorCalls = false;
-
   /// 翻译/渲染过程中**实际用到**的 widget 类型：package → {type}。
-  /// 只收集 [emitConstructorCalls] 为 true 的节点（否则不产出模块，无需收集）。
+  /// [renderJs] 在此登记，生成器据此按 package 产出 JS widget 模块并 import。
   final Map<String, Set<String>> usedWidgetPackages = {};
 
   /// ListenableBuilder 等「builder 闭包」翻译：闭包返回的子树抽到组件方法
@@ -88,7 +81,7 @@ class WidgetTranslateContext {
   final List<String?> builderParams = [];
 
   /// 与 [builderTrees] 同步的「方法体前置语句」（JS 源码，如 Builder 闭包
-  /// 块体里的 `var model = this.__watch('CounterModel');`）。
+  /// 块体里的 `var model = this.__watch('MyModel');`）。
   final List<String> builderPreludes = [];
 
   WidgetTranslateContext({
@@ -107,7 +100,7 @@ class WidgetTranslateContext {
   // 递归入口：表达式 → JSON 描述 / JS 渲染
   // -------------------------------------------------------------------------
 
-  /// 把 build() 里的一个 widget 表达式翻译成 JSON 描述（schema 与 JS 共用）。
+  /// 把 build() 里的一个 widget 表达式翻译成 JSON 描述（JS 产物与宿主共用）。
   ///
   /// 返回 Map = 普通节点；返回 String = JS 表达式（widget 位置三目
   /// `cond ? A() : B()` → `(condJs ? {...A} : {...B})`），jsLiteral 原样嵌入。
@@ -256,13 +249,10 @@ class WidgetTranslateContext {
       }
       throw FormatException('未知节点类型: $type');
     }
-    if (emitConstructorCalls) {
-      // 构造调用形态：登记「实际用到的 widget」（按 package 分组），
-      // 生成器据此只为这些类型产出 JS widget 模块。
-      (usedWidgetPackages[translator.packageName] ??= <String>{}).add(type);
-      return _renderCall(type, json, depth);
-    }
-    return translator.renderJs(json, depth, this);
+    // 登记「实际用到的 widget」（按 package 分组），
+    // 生成器据此只为这些类型产出 JS widget 模块。
+    (usedWidgetPackages[translator.packageName] ??= <String>{}).add(type);
+    return _renderCall(type, json, depth);
   }
 
   /// 把已翻译的 JSON 节点渲染成 **JS 构造调用**：
@@ -292,10 +282,9 @@ class WidgetTranslateContext {
 
   /// Component 节点的「工厂调用」渲染：命中 JS 产物时输出 `X({...args})`
   /// （args 复用 [_renderValue]，与其它构造调用同一值渲染规则）；
-  /// 无产物（importResolver 返回 null）→ 返回 null，调用方回退对象字面量
-  /// （运行时走宿主 nativeComponents 原生注入）。
+  /// 无产物（importResolver 返回 null）→ 返回 null，调用方回退
+  /// `__h("Component", ...)` 占位（运行时走宿主 nativeComponents 原生注入）。
   String? _renderComponentCall(Map<String, dynamic> json, int depth) {
-    if (!emitConstructorCalls) return null;
     final props = json['props'];
     if (props is! Map) return null;
     final name = _semanticType(props['component']);
@@ -682,13 +671,12 @@ class WidgetTranslateContext {
 }
 
 /// ===========================================================================
-/// 策略抽象类：一个 widget 类型族的「widget → JSON 描述 + JS 渲染」
+/// 策略抽象类：一个 widget 类型族的「widget → JSON 描述」
 ///
 /// - [types]：处理的源码 widget 构造名（如 {'Text'} 或 {'Column','Row'}）
 /// - [jsonTypes]：产物 JSON 里的节点 type 名（默认与 [types] 相同；
 ///   如 ElevatedButton 的产物节点叫 'Button' 时覆写）
-/// - [toJson]：AST 节点 → 中立 JSON 描述（schema 直接使用这份 JSON）
-/// - [renderJs]：JSON 描述 → JS 对象字面量（运行时 create() 用）
+/// - [toJson]：AST 节点 → 中立 JSON 描述（渲染层据此输出 JS 构造调用）
 /// ===========================================================================
 abstract class WidgetTranslator {
   const WidgetTranslator();
@@ -708,18 +696,6 @@ abstract class WidgetTranslator {
 
   /// 把 [node] 翻译成 JSON 描述（type/props/children）。
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx);
-
-  /// 把 [json]（toJson 的产物）渲染成 JS 对象字面量。
-  ///
-  /// **默认实现**：递归序列化 [json]（Map/List 缩进、叶子值原样嵌入）。
-  /// 需要特殊输出格式（如单行紧凑）的类型可覆写。
-  String renderJs(
-    Map<String, dynamic> json,
-    int depth,
-    WidgetTranslateContext ctx,
-  ) {
-    return ctx.jsLiteral(json, depth);
-  }
 }
 
 /// ===========================================================================
@@ -818,11 +794,11 @@ class ComponentTranslator extends WidgetTranslator {
   }
 }
 
-/// 跨文件「静态单例类」解析器（如 theme/panel_colors.dart 的 PanelColors）。
+/// 跨文件「静态单例类」解析器（如 theme/panel_colors.dart 的 MyColors）。
 ///
-/// 组件 build 树里出现 `PanelColors.background` 这类静态引用时，把它翻译成
-/// JS 表达式 `PanelColors.background`（不带引号，jsLiteral 原样输出），并登记
-/// 该单例类为 import 依赖，产物顶部生成 `import { PanelColors } from '...'`。
+/// 组件 build 树里出现 `MyColors.background` 这类静态引用时，把它翻译成
+/// JS 表达式 `MyColors.background`（不带引号，jsLiteral 原样输出），并登记
+/// 该单例类为 import 依赖，产物顶部生成 `import { MyColors } from '...'`。
 ///
 /// 由生成器从组件文件的 import 源文件解析填充；未命中映射时 staticRef
 /// 返回 null，调用方维持「丢键」现状，不影响其它产物。
@@ -848,8 +824,8 @@ class SingletonResolver {
   bool hasField(String className, String field) =>
       _fields[className]?.contains(field) ?? false;
 
-  /// 命中静态单例字段引用（`PanelColors.background`）→ 登记依赖并
-  /// 返回 JS 表达式 `PanelColors.background`；否则返回 null。
+  /// 命中静态单例字段引用（`MyColors.background`）→ 登记依赖并
+  /// 返回 JS 表达式 `MyColors.background`；否则返回 null。
   String? staticRef(Expression e) {
     String? cls;
     String? field;
@@ -857,7 +833,7 @@ class SingletonResolver {
       cls = (e.target as Identifier).name;
       field = e.propertyName.name;
     } else if (e is PrefixedIdentifier) {
-      // `PanelColors.background`（两段点号名，前缀是简单标识符）→ 前缀是类名
+      // `MyColors.background`（两段点号名，前缀是简单标识符）→ 前缀是类名
       cls = e.prefix.name;
       field = e.identifier.name;
     }

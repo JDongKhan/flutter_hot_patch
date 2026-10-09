@@ -12,16 +12,18 @@ import 'style_translators.dart';
 import 'widget_translator.dart';
 
 /// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）
-Builder componentBuilder(_) => const ComponentBuilder();
+Builder componentBuilder(BuilderOptions options) =>
+    ComponentBuilder(seedPath: _seedPathFrom(options));
 
-Builder widgetModuleBuilder(_) => const WidgetModuleBuilder();
+Builder widgetModuleBuilder(BuilderOptions options) =>
+    WidgetModuleBuilder(seedPath: _seedPathFrom(options));
 
 /// 把 lib/ 下的 Dart 源文件翻译为**同名** JS 产物（`lib/a/b.dart` → `assets/a/b.js`）：
 /// 文件名与 Dart 源文件一一对应，不区分组件/模型，也不预设目录结构——源码
 /// 怎么组织、有哪些目录，由使用方决定，产物跟着走。
 ///
 /// 按**文件内容**分流（与目录无关）：
-///   - 含 `@UIComponent` 类 → 组件产物（Component 类 + build/handleEvent + 事件绑定）；
+///   - 含 `@UIComponent` 类 → 组件产物（Component 类 + build + 事件绑定）；
 ///   - 仅含普通类（非私有、非抽象、无 build()）→ 模型/单例产物
 ///     （`export class` / `export const`，供组件产物 import）；
 ///   - 都没有（如 main.dart）→ 不产出。
@@ -43,7 +45,14 @@ Builder widgetModuleBuilder(_) => const WidgetModuleBuilder();
 ///   - 新增/自定义 widget = 写一个 WidgetTranslator 并 register，
 ///     核心代码零改动。
 class ComponentBuilder implements Builder {
-  const ComponentBuilder();
+  const ComponentBuilder({this.seedPath = _defaultSeedPath});
+
+  /// widget 模块种子输入路径（见 [WidgetModuleBuilder]）；由使用方
+  /// `build.yaml` 的 `options: { seed_file: ... }` 配置，默认 [_defaultSeedPath]。
+  ///
+  /// 本 builder 只产出与源文件同名的组件/模型产物，种子路径仅用于保持与
+  /// [WidgetModuleBuilder] 的配置一致（widget 模块本身由后者产出）。
+  final String seedPath;
 
   /// JS widget 模块（`Text.js` / `Column.js` / `ChangeNotifierProvider.js` …）
   /// 由 [WidgetModuleBuilder] 产出；本 builder 只产出与源文件同名的产物。
@@ -83,7 +92,7 @@ class ComponentBuilder implements Builder {
 
     // 组件名 → 依赖产物 jsAsset 路径。规则：
     //   本文件注解组件 / 本文件私有组件 → 本文件产物（同产物注册）；
-    //   本文件无注解非私有组件（如 LabeledDivider）→ null（运行时原生注入）；
+    //   本文件无注解非私有组件（如 MyCustomCard）→ null（运行时原生注入）；
     //   跨文件组件 → 从 import directives 推导源文件产物。
     // （提前于 components 收集构造：_parseComponent 内部翻译 Component
     //   节点时即会调用 importResolver，闭包必须已初始化）
@@ -97,7 +106,7 @@ class ComponentBuilder implements Builder {
             _findAnnotation(d.metadata, 'UIComponent') != null)
           d.name.lexeme,
     };
-    // 产物采用**相对路径**（相对当前产物所在目录，如 'banner_component.js'）：
+    // 产物采用**相对路径**（相对当前产物所在目录，如 'bar_component.js'）：
     // 未来 JS 产物整体发布（CDN / 包内迁移）时，主产物与依赖产物的相对关系
     // 不变，运行时按当前 jsAsset 的目录解析即可，绝对路径会随部署位置失效。
     final ownProduct = _productPath(inputId.path); // assets/.../x.js
@@ -121,11 +130,11 @@ class ComponentBuilder implements Builder {
     }
 
     // 统一「类表」：把同文件 + 跨文件的所有普通 Dart 类（去 @UIComponent/
-    // 私有/抽象/widget 类）收集成 ClassInfo 索引。User/CounterModel/静态单例
+    // 私有/抽象/widget 类）收集成 ClassInfo 索引。User/MyModel/静态单例
     // 都由此统一发现，不再按用途分流（见 class_translator.dart）。
     final classIndex = _buildClassIndex(parsed.unit, inputId.path);
 
-    // 跨文件「静态单例类」映射：照旧，供 build 树里 `PanelColors.x` 静态引用
+    // 跨文件「静态单例类」映射：照旧，供 build 树里 `MyColors.x` 静态引用
     // 翻译成 JS 表达式（见 style_translators._colorExpr）。产物渲染统一走
     // class_translator.renderStaticConst。
     final singletons = _buildSingletonResolver(parsed.unit, inputId.path);
@@ -135,14 +144,6 @@ class ComponentBuilder implements Builder {
       for (final d in _findSingletonClasses(parsed.unit))
         if (classIndex.containsKey(d.name.lexeme)) classIndex[d.name.lexeme]!,
     ];
-
-    // build() 产物形态：构造调用（`Text({...}, [...])`）需要按 package 产出
-    // 共享 widget 模块，并由本产物相对 import。widget 模块由独立 builder
-    // （WidgetModuleBuilder，种子输入 lib/js_widgets.dart）产出，因此这里只
-    // 判断「本包是否具备 widget 模块」——同包内存在种子文件即启用；
-    // 否则整体降级为旧「对象字面量树」（非破坏性）。
-    final emitConstructorCalls = inputId.path.startsWith('lib/') &&
-        await buildStep.canRead(AssetId(inputId.package, _widgetSeedPath));
 
     // 收集本文件内全部 @UIComponent 组件（支持单文件多组件 / 文件内共享普通类）
     final components = <_Component>[];
@@ -160,7 +161,6 @@ class ComponentBuilder implements Builder {
         importResolver,
         classIndex: classIndex,
         singletons: singletons,
-        emitConstructorCalls: emitConstructorCalls,
       ));
     }
 
@@ -178,7 +178,7 @@ class ComponentBuilder implements Builder {
       // 翻译本文件内**有产物**的同文件组件（私有 _Xxx / 注解组件）为
       // inline 工厂（与主组件同产物）。判定与 importResolver 对齐：
       // 仅「同文件且有产物」（返回本产物名）才翻译；@UIComponentIgnore 与
-      // 无注解公共组件（如 LabeledDivider）返回 null，保持 Component 节点走
+      // 无注解公共组件（如 MyCustomCard）返回 null，保持 Component 节点走
       // 原生注入，不产出无用 JS 类。已收集的主组件跳过。
       if (!parsedNames.contains(dep)) continue;
       if (importResolver(dep) != ownName) continue;
@@ -188,8 +188,7 @@ class ComponentBuilder implements Builder {
           .firstWhere((d) => d.name.lexeme == dep);
       final nested = _parseNestedComponent(
           decl, parsed.unit, dep, registry, inputId.path, importResolver,
-          classIndex: classIndex, singletons: singletons,
-          emitConstructorCalls: emitConstructorCalls);
+          classIndex: classIndex, singletons: singletons);
       components.add(nested);
       depQueue.addAll(nested.deps);
     }
@@ -210,7 +209,6 @@ class ComponentBuilder implements Builder {
       _renderJs(components, inputId.path, registry, importResolver,
           singletons: singletons,
           sameFileSingletonInfos: sameFileSingletonInfos,
-          emitConstructorCalls: emitConstructorCalls,
           usedWidgets: usedWidgets),
     );
   }
@@ -237,7 +235,7 @@ Future<void> _writeModelProduct(
       if (e.value.sourceFile == inputId.path) e.key: e.value,
   };
   // 静态单例类：本文件里「有非私有 static 字段」的普通类（widget 类已被
-  // classIndex 剔除，故 WidgetShowcase 这类含 build() 的页面不会误产出）。
+  // classIndex 剔除，故 MyPage 这类含 build() 的页面不会误产出）。
   final singletonNames = <String>{
     for (final d in _findSingletonClasses(unit))
       if (own.containsKey(d.name.lexeme)) d.name.lexeme,
@@ -293,8 +291,8 @@ class _Component {
   final List<String> localDecls;
 
   /// 本组件 build 树**实际用到**的 widget 类型（package → {type}）：
-  /// 仅「构造调用」形态（emitConstructorCalls）下收集，生成器据此按 package
-  /// 产出 JS widget 模块（只转换用到的，不默认全量）。
+  /// 由渲染期收集，生成器据此按 package 产出 JS widget 模块（只转换用到的，
+  /// 不默认全量）。
   final Map<String, Set<String>> usedWidgetPackages;
 
   const _Component(this.name, this.props, this.actions, this.tree,
@@ -375,8 +373,8 @@ Map<String, ClassInfo> _usedClasses(
     };
 
 /// 字段类型：优先显式类型注解；无注解时从初始化器推断
-/// （`final _model = CounterModel();` 在无 resolution 解析下 type 为 null，
-/// 会退化成 dynamic 被当基础类型，需从构造名推回 CounterModel）。
+/// （`final _model = MyModel();` 在无 resolution 解析下 type 为 null，
+/// 会退化成 dynamic 被当基础类型，需从构造名推回 MyModel）。
 String _fieldTypeName(FieldDeclaration member, VariableDeclaration variable) {
   final t = member.fields.type?.toSource();
   if (t != null && t.isNotEmpty) return t;
@@ -439,7 +437,6 @@ _Component _parseComponent(
   String? Function(String component) importResolver, {
   required Map<String, ClassInfo> classIndex,
   SingletonResolver? singletons,
-  bool emitConstructorCalls = false,
 }) {
   // 承载 build 的类：StatefulWidget → 其 State 类；StatelessWidget →
   // widget 类自身（无 createState）。与 _parseNestedComponent 同一规则，
@@ -501,8 +498,8 @@ _Component _parseComponent(
     classIndex,
   );
 
-  // 字段收集：基础类型 / 类类型字段（含对象字段 `_model = CounterModel()` →
-  // `this._model = new CounterModel({})`、`User? _user` → `this._user = null`）
+  // 字段收集：基础类型 / 类类型字段（含对象字段 `_model = MyModel()` →
+  // `this._model = new MyModel({})`、`User? _user` → `this._user = null`）
   // 一律进 JS 实例属性，跨 build 持久。
   for (final member in hostClass.members) {
     if (member is FieldDeclaration) {
@@ -533,7 +530,7 @@ _Component _parseComponent(
           } else if (init is MethodInvocation &&
               init.target == null &&
               init.typeArguments == null) {
-            // `_model = CounterModel()` 在无 resolution 的 parseString 下会被解析成
+            // `_model = MyModel()` 在无 resolution 的 parseString 下会被解析成
             // MethodInvocation 而非 InstanceCreationExpression（类名即无参构造），
             // 统一按模型构造处理（见 modelCtorFromPartsJs）。
             ctorJs = modelCtorFromPartsJs(init.methodName.name,
@@ -714,7 +711,7 @@ _Component _parseNestedComponent(
           } else if (init is MethodInvocation &&
               init.target == null &&
               init.typeArguments == null) {
-            // `_model = CounterModel()` 在无 resolution 的 parseString 下会被解析成
+            // `_model = MyModel()` 在无 resolution 的 parseString 下会被解析成
             // MethodInvocation 而非 InstanceCreationExpression（类名即无参构造），
             // 统一按模型构造处理（见 modelCtorFromPartsJs）。
             ctorJs = modelCtorFromPartsJs(init.methodName.name,
@@ -823,7 +820,7 @@ String? _stateClassName(ClassDeclaration widgetClass) {
       if (e is InstanceCreationExpression) {
         return e.constructorName.type.name2.lexeme;
       }
-      // `_HelloCardState()`：下划线开头不是合法类型名，语法解析器会当成
+      // `_MyCardState()`：下划线开头不是合法类型名，语法解析器会当成
       // MethodInvocation（parseString 无 resolution 时的行为），这里统一处理。
       if (e is MethodInvocation) {
         return e.methodName.name;
@@ -1197,7 +1194,7 @@ class _CtorCollector extends RecursiveAstVisitor<void> {
   }
 
   /// 无 `new`/`const` 的构造调用（parseString 下是 MethodInvocation）：
-  /// `CounterModel()` / `(_) => CounterModel()` 里的模型构造。仅收
+  /// `MyModel()` / `(_) => MyModel()` 里的模型构造。仅收
   /// UpperCamel 且无 target/泛型的形态（与 [_fieldTypeName] 同启发式），
   /// widget 构造（Text/Column 等）也会被收进来，但与类表求交后自然丢弃。
   @override
@@ -1219,7 +1216,7 @@ List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
   for (final d in unit.directives.whereType<ImportDirective>()) {
     final uri = d.uri.stringValue;
     if (uri == null) continue;
-    // 精确匹配：'package:flutter/' 才是 SDK 包，'package:flutter_hot/' 是业务包
+    // 精确匹配：'package:flutter/' 才是 SDK 包，'package:my_app/' 是业务包
     if (uri.startsWith('package:flutter/') ||
         uri.startsWith('package:ui_component/') ||
         uri.startsWith('package:ui_component_generator/') ||
@@ -1240,9 +1237,9 @@ List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
 }
 
 /// 两个产物绝对路径 → 相对路径（相对第一个产物所在目录）。
-/// 如 'assets/components/composite_component.js' →
-/// 'assets/components/banner_component.js'
-/// 得 'banner_component.js'；跨目录时含 '../'。
+/// 如 'assets/components/foo_component.js' →
+/// 'assets/components/bar_component.js'
+/// 得 'bar_component.js'；跨目录时含 '../'。
 String _relativeProduct(String from, String to) {
   final fromDir = from.substring(0, from.lastIndexOf('/') + 1);
   final fromSegs = fromDir.split('/').where((p) => p.isNotEmpty).toList();
@@ -1453,7 +1450,7 @@ String _renderJs(
   }
 
   // 跨文件组件：build 树里 Component 兜底、且产物在其他文件的依赖组件，
-  // 同样用 ES module import（'banner_component.js' 相对本产物目录）。
+  // 同样用 ES module import（'bar_component.js' 相对本产物目录）。
   // 模块级 import 让依赖关系直观可见；JSON 树里 Component 节点不再携带
   // import 字段（运行时按组件索引：导出类名 → jsAsset 反查递归）。
   // 同文件组件（importResolver 返回本文件产物名）是 inline export class，
@@ -1485,7 +1482,7 @@ String _renderJs(
 
   // 同文件 static 单例类：inline export const（exported: true —— 运行时
   // 预处理层按 export 名收集并注册进 __modules，跨文件组件才能
-  // `import { PanelColors }` 解构拿到；仅 const 会被收集器漏掉）
+  // `import { MyColors }` 解构拿到；仅 const 会被收集器漏掉）
   if (inlineSingletons.isNotEmpty) {
     final ctx = WidgetTranslateContext(
       registry: registry,
@@ -1909,7 +1906,7 @@ Set<String> _publicStaticFieldNames(ClassDeclaration decl) {
 /// 解析「静态单例类」映射（类名 → {非私有 static 字段, sourceFile}）：
 /// 同文件的单例类（sourceFile == 当前文件，inline 不 import）与本文件
 /// import 的其它文件单例类（独立产物 + import）一并登记。
-/// 供 build 树里 `PanelColors.background` 这类静态引用翻译与依赖登记使用。
+/// 供 build 树里 `MyColors.background` 这类静态引用翻译与依赖登记使用。
 SingletonResolver _buildSingletonResolver(
   CompilationUnit unit,
   String sourcePath,

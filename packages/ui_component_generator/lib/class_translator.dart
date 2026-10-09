@@ -5,7 +5,7 @@ import 'style_translators.dart';
 // 统一「Dart 类 → JS 类」转换处理器
 //
 // 不按用途分流：任何普通 Dart 类（value object 如 User、ChangeNotifier 状态
-// 对象如 CounterModel、静态单例如 PanelColors）都按同一套「如何声明 +
+// 对象如 MyModel、静态单例如 MyColors）都按同一套「如何声明 +
 // 如何被 State 字段 / 构建 / 方法引用」处理。
 //
 //   - 实例字段    → constructor 里 this.x（this.x 形参取值 / 字段初始化器）
@@ -553,7 +553,7 @@ String renderClassDecl(
   return b.toString();
 }
 
-/// 纯 static 类 → JS const 对象：`const PanelColors = { a: v, b: v };`。
+/// 纯 static 类 → JS const 对象：`const MyColors = { a: v, b: v };`。
 /// [valueRenderer] 由调用方提供（颜色/字符串/字面量统一求值）。
 String renderStaticConst(
   ClassInfo info, {

@@ -26,7 +26,7 @@ import 'js_widget_registry.dart';
 /// 用法：
 /// ```dart
 /// JsUiWidget(jsAsset: 'assets/components/counter.js',
-///            component: 'CounterComponent')
+///            component: 'Counter')
 /// ```
 class JsUiWidget extends StatefulWidget {
   const JsUiWidget({
@@ -47,7 +47,7 @@ class JsUiWidget extends StatefulWidget {
   /// 入口模块里注册进 `__modules` 的组件类名（@UIComponent 的 name）。
   final String component;
 
-  /// 传给组件构造的 props（如 `StatelessCard(title: ...)` 的 {title: ...}）。
+  /// 传给组件构造的 props（如 `MyStatelessCard(title: ...)` 的 {title: ...}）。
   final Map<String, dynamic> props;
 
   /// 无 JS 产物的组件（Component 节点）的原生注入：组件名 → 构造。

@@ -178,8 +178,8 @@ String? _fontStyleExpr(Expression e) {
 }
 
 /// Colors.red → '#F44336'；Color(0xFF112233) → '#112233'；Colors.white/black。
-/// 跨文件静态单例类字段引用（PanelColors.background）→ JS 表达式
-/// 'PanelColors.background'（不带引号，jsLiteral 原样输出）。
+/// 跨文件静态单例类字段引用（MyColors.background）→ JS 表达式
+/// 'MyColors.background'（不带引号，jsLiteral 原样输出）。
 String? translateColor(Expression e, WidgetTranslateContext ctx) {
   // Color(0xFF...)
   final (ctor, args) = _ctorOfExpr(e);
@@ -220,10 +220,10 @@ String? translateColor(Expression e, WidgetTranslateContext ctx) {
   if (owner != null && owner.startsWith('Colors.')) {
     return "'@$owner.$name'";
   }
-  // 跨文件静态单例类字段引用（PanelColors.background）→ JS 表达式
+  // 跨文件静态单例类字段引用（MyColors.background）→ JS 表达式
   final singleton = ctx.singletons?.staticRef(e);
   if (singleton != null) return singleton;
-  // 三目（isAdult ? PanelColors.adult : PanelColors.background）→ JS 三目表达式
+  // 三目（isAdult ? MyColors.adult : MyColors.background）→ JS 三目表达式
   if (e is ConditionalExpression) {
     final condJs = ctx.jsDataExpr(e.condition);
     final thenJs = translateColor(e.thenExpression, ctx);
