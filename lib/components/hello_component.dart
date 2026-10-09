@@ -6,9 +6,7 @@ import 'package:flutter_hot/model/user.dart';
 
 /// 本文件演示两个能力：
 ///   1. HelloCard —— 一个**完全正常的 Flutter StatefulWidget**（原生可直接用）
-///   2. 单文件多组件 —— HelloPanel 与 HelloCard 同文件，codegen 都注册进
-///      同一 JS 产物
-///   3. 同文件静态样式类 —— PanelColors 与本组件同文件，codegen inline 进
+///   2. 同文件静态样式类 —— PanelColors 与本组件同文件，codegen inline 进
 ///      同一产物（const PanelColors = {...}），build 里 `PanelColors.background`
 ///      直接翻译成 JS 表达式引用，无需 import 独立产物。
 ///
@@ -19,7 +17,7 @@ import 'package:flutter_hot/model/user.dart';
 ///   - build() 原封不动翻译成 JS build()
 ///
 /// 构建期由 ui_component_generator 静态翻译出：
-///   hello_component.js（注册 HelloCard + HelloPanel + StatelessCard）
+///   hello_component.js（注册 HelloCard）
 /// 线上出 bug 时，运行时把组件切换为 JsUiWidget 加载 JS 版本即可热修复，
 /// 组件本体永远保持可正常使用。
 @UIComponent('HelloCard')
@@ -135,56 +133,4 @@ class PanelColors {
   static Color adult = const Color(0xFF4CAF50); // 成人态按钮色（绿色）
   static const Color primary = Color(0xFF6750A4);
   static const String tagline = 'demo';
-}
-
-/// 单文件多组件演示：与 HelloCard 同文件、同产物，注册为第二个组件。
-/// （StatelessCard 已迁移到 widget_details.dart，作为常用组件详情项）
-@UIComponent('HelloPanel')
-class HelloPanel extends StatefulWidget {
-  const HelloPanel({super.key});
-
-  @override
-  State<HelloPanel> createState() => _HelloPanelState();
-}
-
-class _HelloPanelState extends State<HelloPanel> {
-  // 全量生成：_taps → JS 属性 `_taps`
-  int _taps = 0;
-
-  // 全量生成：tap → JS 方法 `tap`
-  void tap() {
-    setState(() => _taps++);
-  }
-
-  // 全量生成：clear → JS 方法 `clear`
-  void clear() {
-    setState(() {
-      _taps = 0;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          'HelloPanel (JS)',
-          style: const TextStyle(fontSize: 20),
-        ),
-        Text('taps = $_taps'),
-        Row(
-          children: [
-            ElevatedButton(
-              onPressed: tap,
-              child: const Text('Tap'),
-            ),
-            ElevatedButton(
-              onPressed: () => clear(),
-              child: const Text('Clear'),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 }

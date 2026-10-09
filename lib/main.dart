@@ -57,17 +57,6 @@ class DemoListPage extends StatelessWidget {
       ),
     ),
     _DemoEntry(
-      'HelloPanel · 原生 vs JS 热更',
-      '单文件多组件：与 HelloCard 同文件、同产物（taps 状态）',
-      _CompareTest(
-        native: HelloPanel(),
-        js: JsUiWidget(
-          jsAsset: 'assets/components/hello_component.js',
-          component: 'HelloPanel',
-        ),
-      ),
-    ),
-    _DemoEntry(
       'StatelessCard · 原生 vs JS 热更',
       'StatelessWidget：无 State，build 在 widget 类自身，props 走构造参数',
       _CompareTest(

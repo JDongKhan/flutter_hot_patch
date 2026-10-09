@@ -6,7 +6,7 @@ import 'hello_component.dart';
 /// components/ 目录下多文件多组件演示：
 /// BannerCard 独立于 hello_component.dart，单独产出：
 ///   banner_component.js
-/// 运行时与 HelloCard/HelloPanel 共享同一个 __components 注册表。
+/// 运行时与 HelloCard 共享同一个 __components 注册表。
 @UIComponent('BannerCard')
 class BannerCard extends StatefulWidget {
   const BannerCard({super.key});

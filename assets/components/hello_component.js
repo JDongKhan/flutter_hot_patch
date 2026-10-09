@@ -84,39 +84,3 @@ export function HelloCard(props, children) {
   return __h(HelloCardComponent, props, children);
 }
 
-class HelloPanelComponent {
-  constructor() {
-    this._taps = 0;
-  }
-  tap() { this.setState(function(){ this._taps += 1; }); }
-  clear() { this.setState(function(){ this._taps = 0; }); }
-  build() {
-    return Column({}, [
-        Text({
-            "data": "HelloPanel (JS)",
-            "style": {
-              "fontSize": 20
-            }
-          }),
-        Text({
-            "data": "taps = " + this._taps
-          }),
-        Row({}, [
-            Button({
-                "kind": "elevated",
-                "label": "Tap",
-                "event": this.__bind("tap")
-              }),
-            Button({
-                "kind": "elevated",
-                "label": "Clear",
-                "event": this.__bind("clear")
-              })
-          ])
-      ]);
-  }
-}
-export function HelloPanel(props, children) {
-  return __h(HelloPanelComponent, props, children);
-}
-
