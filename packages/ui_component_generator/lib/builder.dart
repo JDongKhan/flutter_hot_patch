@@ -588,7 +588,6 @@ _Component _parseComponent(
     sourcePath,
     importResolver,
     singletons: singletons,
-    emitConstructorCalls: emitConstructorCalls,
   );
 
   return _Component(
@@ -626,7 +625,6 @@ _Component _parseNestedComponent(
   String? Function(String component) importResolver, {
   required Map<String, ClassInfo> classIndex,
   SingletonResolver? singletons,
-  bool emitConstructorCalls = false,
 }) {
   // 承载 build 的类：widget 类 或 其 State 类
   ClassDeclaration hostClass = decl;
@@ -766,7 +764,6 @@ _Component _parseNestedComponent(
     sourcePath,
     importResolver,
     singletons: singletons,
-    emitConstructorCalls: emitConstructorCalls,
   );
 
   return _Component(
@@ -780,13 +777,14 @@ _Component _parseNestedComponent(
     builders: builders,
     builderNames: builderNames,
     builderParams: builderParams,
+    builderPreludes: builderPreludes,
     localDecls: localDecls,
     usedWidgetPackages: usedWidgetPackages,
   );
 }
 
 // ---------------------------------------------------------------------------
-// 默认全量收集：命名与过滤规则
+// 注解 / 类解析
 // ---------------------------------------------------------------------------
 
 /// 字段默认状态名：一比一，保持 Dart 字段原名（_count → _count）。
@@ -1123,12 +1121,23 @@ String _packageModulePath(String package) => 'assets/$package.js';
 /// `import { __h }`，使 `__h` 全局只定义一次。
 const String _nodeHelperPackage = 'flutter';
 
-/// widget 模块 builder 的**种子输入**（构件期固定文件，不含运行时代码）。
+/// widget 模块 builder 的**种子输入默认路径**（构建期固定文件，不含运行时代码）。
 ///
 /// build_runner 的输出名必须在 buildExtensions 里静态声明，无法按构建期发现
 /// 的类型动态命名，因此把「全部 package 模块产物」挂在本文件下，包清单由
 /// [_registeredWidgetPackages] 静态推导。
-const String _widgetSeedPath = 'lib/js_widgets.dart';
+///
+/// 该路径可由使用方 `build.yaml` 的 `options: { seed_file: ... }` 覆盖
+/// （见 [_seedPathFrom]）；使用方**必须**在包内提供该种子文件。
+const String _defaultSeedPath = 'lib/js_widgets.dart';
+
+/// 从 builder options 读取种子输入路径：`options: { seed_file: <path> }`，
+/// 缺省或非法值回退 [_defaultSeedPath]。
+String _seedPathFrom(BuilderOptions options) {
+  final value = options.config['seed_file'];
+  if (value is String && value.isNotEmpty) return value;
+  return _defaultSeedPath;
+}
 
 /// 已注册 widget 类型 → (package → {type})：由 translator 注册表推导，
 /// 作为 package 模块产物清单（每个包一个文件）的唯一来源。
@@ -1148,10 +1157,17 @@ Map<String, Set<String>> _registeredWidgetPackages() {
 /// 一个共享 JS 模块 `assets/<package>.js`（工厂函数 + 逻辑组件类，全局唯一
 /// 一份，消除各组件产物里内联同类工厂函数造成的重复与文件爆炸）。
 ///
-/// 输出挂在种子输入 [_widgetSeedPath] 下（见其注释）；输出名从
+/// 输出挂在种子输入 [seedPath] 下（默认 [_defaultSeedPath]，可由使用方
+/// `build.yaml` 的 `options: { seed_file: ... }` 覆盖）；输出名从
 /// [_registeredWidgetPackages] 静态推导，构建时按包名渲染整包即可。
+///
+/// **使用方必须提供该种子文件**——本 builder 无降级路径，缺少种子输入即
+/// 不产出任何 package 模块，组件产物的 import 会因此悬空。
 class WidgetModuleBuilder implements Builder {
-  const WidgetModuleBuilder();
+  const WidgetModuleBuilder({this.seedPath = _defaultSeedPath});
+
+  /// 种子输入路径（见 [_defaultSeedPath]），可由 builder options 覆盖。
+  final String seedPath;
 
   @override
   Map<String, List<String>> get buildExtensions {
@@ -1161,7 +1177,7 @@ class WidgetModuleBuilder implements Builder {
       ..._registeredWidgetPackages().keys,
     }.toList()..sort();
     return {
-      '^$_widgetSeedPath': [for (final p in pkgs) _packageModulePath(p)],
+      '^$seedPath': [for (final p in pkgs) _packageModulePath(p)],
     };
   }
 
@@ -1332,7 +1348,6 @@ String? _relativeToLib(String uri, String dir) {
   String sourcePath,
   String? Function(String component) importResolver, {
   SingletonResolver? singletons,
-  bool emitConstructorCalls = false,
 }) {
   final e = _methodExpression(buildMethod);
   if (e == null) {
@@ -1345,7 +1360,7 @@ String? _relativeToLib(String uri, String dir) {
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,
-  )..emitConstructorCalls = emitConstructorCalls;
+  );
   // build() return 前的局部变量声明（`final isAdult = <expr>;`）：
   // 收集名字进 ctx 局部作用域（树里直接引用），initializer 翻译成 JS 声明语句。
   final localDecls = <String>[];
@@ -1402,7 +1417,6 @@ String _renderJs(
   String? Function(String component) importResolver, {
   SingletonResolver? singletons,
   List<ClassInfo> sameFileSingletonInfos = const [],
-  bool emitConstructorCalls = false,
   Map<String, Set<String>>? usedWidgets,
 }) {
   // 统一类表按「同文件 inline / 跨文件 import」分组渲染：
@@ -1535,7 +1549,7 @@ String _renderJs(
       actionByMethod: const {},
       sourcePath: sourcePath,
       importResolver: importResolver,
-    )..emitConstructorCalls = emitConstructorCalls;
+    );
     for (final d in c.localDecls) {
       b.writeln(d);
     }
@@ -1571,7 +1585,7 @@ String _renderJs(
   final importsByPackage = <String, Set<String>>{
     _nodeHelperPackage: {'__h'},
   };
-  if (emitConstructorCalls && usedWidgets != null) {
+  if (usedWidgets != null) {
     for (final entry in usedWidgets.entries) {
       (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
     }
