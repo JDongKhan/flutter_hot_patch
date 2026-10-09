@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 
+import 'base/account_center.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
 import 'components/widget_details.dart';
@@ -8,7 +9,15 @@ import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
 import 'components/widget_showcase.dart';
 
-void main() => runApp(const HotDemoApp());
+void main() {
+  // @HostInjected 宿主方法：JS 侧调用点被翻译为 `__jsui.host('getUserName', [])`，
+  // 这里把该通道接到 Dart 实现（未来可加缓存/网络等复杂逻辑），返回值回填 JS 的 Promise。
+  JsRuntimeManager.registerHostMethod(
+    'getUserName',
+    (args) => AccountCenter.getUserName(),
+  );
+  runApp(const HotDemoApp());
+}
 
 /// Demo 列表：展示「正常组件 ↔ JS 热更版本」的各个场景。
 ///

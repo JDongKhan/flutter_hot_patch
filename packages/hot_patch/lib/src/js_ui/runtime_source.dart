@@ -5,7 +5,10 @@
 ///   - component/state：状态、setState、build 都在 JS；
 ///   - reconciler：重建 -> 对比 -> 产出 patch ops；
 ///   - context/provider：纯 JS 的作用域查找 + 订阅，宿主完全不感知；
-///   - bridge：仅一个出方向通道 `jsuiCommit`。
+///   - bridge：出方向统一走单桥通道 `_app_bridge_`（消息体 `ch` 字段标示
+///     目标通道，宿主一次订阅、二次分发）——增量补丁 `jsuiCommit`、日志
+///     `log`、native 通道、`__jsui.host`（宿主注入，经 `__jsui.resolve`
+///     回填 Promise）全部复用同一条出口。
 ///
 /// 宿主只做两件事：把 `type` 映射成 Flutter widget、应用 patch。
 /// 因此新增 JS 组件/状态库不改宿主；只有新增「Flutter 侧不存在的视觉
@@ -59,11 +62,10 @@ const String jsUiRuntimeSource = r'''
   // ---------------------------------------------------------------------
   // 与宿主唯一的出方向通道
   // ---------------------------------------------------------------------
+  // 出方向统一走全局 __appSend（单桥通道 `_app_bridge_`，目标通道名放在
+  // 消息体 `ch` 字段）。宿主只订阅该桥通道一次，再按 ch 二次分发。
   function sendHost(channel, obj, key) {
-    if (typeof sendMessage === 'function') {
-      obj.key = key;
-      sendMessage(channel, JSON.stringify(obj));
-    }
+    if (typeof __appSend === 'function') { __appSend(channel, obj, key); }
   }
 
   function emit(op) {
@@ -74,6 +76,30 @@ const String jsUiRuntimeSource = r'''
     root.ops = null;
     if (!list || !list.length) { return; }
     sendHost('jsuiCommit', { ops: list }, root.key);
+  }
+
+  // ---------------------------------------------------------------------
+  // 宿主注入能力（@HostInjected）：JS 发起调用，宿主实现后回填结果
+  // ---------------------------------------------------------------------
+  // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
+  // `__jsui.host("getUserName", [a, b])`：本函数返回 Promise，经桥通道把
+  // `{id, args}` 交给宿主，宿主实现完成后用 `__jsui.resolve(id, value)` 回填
+  // （见 JsRuntimeManager.registerHostMethod）。
+  var hostSeq = 0;
+  var hostPending = {};
+  function host(channel, args) {
+    hostSeq += 1;
+    var id = 'host' + hostSeq;
+    var key = activeRoot ? activeRoot.key : null;
+    var p = new Promise(function (resolve) { hostPending[id] = resolve; });
+    sendHost(channel, { id: id, args: args || [] }, key);
+    return p;
+  }
+  function resolveHost(id, value) {
+    var r = hostPending[id];
+    if (!r) { return; }
+    delete hostPending[id];
+    r(value);
   }
 
   // ---------------------------------------------------------------------
@@ -543,7 +569,9 @@ const String jsUiRuntimeSource = r'''
     invoke: invoke,
     Component: Component,
     mount: mountRoot,
-    dispose: disposeRoot
+    dispose: disposeRoot,
+    host: host,
+    resolve: resolveHost
   };
 
   G.__jsui = api;
@@ -570,6 +598,19 @@ String jsRuntimeEnvSource({
 if (typeof __modules === 'undefined') {
   var __modules = {};
 }
+// JS → 宿主的**唯一出口**：所有消息都打到单桥通道 `_app_bridge_`，目标
+// 通道名放在消息体 `ch` 字段里。这样 Dart 侧只需 `onMessage` 订阅这一个
+// 通道（构造时一次），再按 `ch` 二次分发到对应处理器——订阅与注册时机
+// 彻底解耦，不会出现「channel 未接线 → No channel xxx registered」。
+// 任何 JS 侧发送（运行时 commit/host、console 日志、生成器产出的 native
+// 通道）都必须走这里，不要再裸调 sendMessage。
+var __appBridgeChannel = '_app_bridge_';
+var __appSend = function (channel, data, key) {
+  if (typeof sendMessage !== 'function') { return; }
+  var env = { ch: channel, data: data };
+  if (key != null) { env.key = key; }
+  sendMessage(__appBridgeChannel, JSON.stringify(env));
+};
 // 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
 // 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
@@ -584,19 +625,18 @@ var Platform = {
   isFuchsia: ${platform == TargetPlatform.fuchsia}
 };
 // JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
-// 统一桥到 sendMessage('log')（运行时 log 服务 → HotPatchLog，可全局开关）。
+// 统一桥到逻辑通道 'log'（运行时 log 服务 → HotPatchLog，可全局开关）。
 // console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
 // 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
 // `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
 // debug/info/log/warn/error 全部可用且路由到 log 服务。
 var console = (typeof console === 'undefined') ? {} : console;
-// 引擎 sendMessage 的 data 会做 JSON.parse，日志内容必须是合法 JSON：
-// JSON.stringify(String(m)) → '"文本"' → 解析回字符串，Dart 侧收到原文。
-console.debug = function(m) { if (kDebugMode) { sendMessage('log', JSON.stringify(String(m))); } };
-console.info = function(m) { sendMessage('log', JSON.stringify(String(m))); };
-console.log = function(m) { sendMessage('log', JSON.stringify(String(m))); };
-console.warn = function(m) { sendMessage('log', JSON.stringify(String(m))); };
-console.error = function(m) { sendMessage('log', JSON.stringify(String(m))); };
+// 经 __appSend 转发（单桥通道 + ch='log'），data 直接是日志文本字符串。
+console.debug = function(m) { if (kDebugMode) { __appSend('log', String(m)); } };
+console.info = function(m) { __appSend('log', String(m)); };
+console.log = function(m) { __appSend('log', String(m)); };
+console.warn = function(m) { __appSend('log', String(m)); };
+console.error = function(m) { __appSend('log', String(m)); };
 // ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
 // extends ChangeNotifier` 共用，notifyListeners 触发订阅回调。
 function ChangeNotifier() {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode, defaultTargetPlatform;
@@ -30,25 +31,30 @@ import '../utils/hot_patch_log.dart';
 ///   业务方自建的实例由业务方管理（不再需要时置空引用即可，
 ///   不要 dispose 底层 runtime，避免其他仍在使用该 runtime 的组件失效）。
 ///
-/// ## 消息通道：统一由 [NativeService] 注册
+/// ## 消息通道：单一桥通道 `_app_bridge_` + 两套处理器表
 ///
-/// JS → Flutter 的所有消息统一走「通道注册 + 两套处理器表」。
-/// **对外扩展只有两种能力：实现 [NativeService]（channel + handle）用
-/// [registerGlobal]（全局级）注册，或用 [registerRawPageHandler] 注册一个
-/// 与页面 key 绑定、不需要 BuildContext 的裸通道处理器（如 js_ui 的 commit）。**
+/// JS → Flutter 的所有消息都打到**唯一的桥通道** `_app_bridge_`，消息体里
+/// 用 `ch` 字段标示目标逻辑通道：
 ///
-/// **通道接线只由注册动作驱动**：每次 [registerGlobal] /
-/// [registerRawPageHandler] 都会把对应 channel 注册到**所有活跃 manager**
-/// 的 runtime 上（幂等）——注册的处理器一定有回调可路由，不会出现
-/// 「通道没注册 → 消息黑洞」。
-/// 新建 manager 无需补历史通道：它的第一次注册就把自己接上线。
-/// 不在构造/求值时单独接线：没有 handler 的接线毫无意义。
+///   sendMessage('_app_bridge_', JSON.stringify({ ch: 'jsuiCommit', key, data }))
+///
+/// 本类在**构造时**用 `_runtime.onMessage('_app_bridge_', _dispatch)` 订阅一次，
+/// [_dispatch] 再按 `ch` 二次分发到 [globalMessageHandlers] /
+/// [pageMessageHandlers]。因此**注册与订阅完全解耦**：处理器可以在任何时机
+/// 注册（包括第一个 manager 出现之前，如 main() 里直接调用），不需要「补接线」，
+/// 也不会出现「channel 未接线 → No channel xxx registered」。
 /// [evaluate] 是纯求值入口，不掺注册副作用。
+///
+/// **对外扩展只有三种能力：实现 [NativeService]（channel + handle）用
+/// [registerGlobal]（全局级）注册；用 [registerRawPageHandler] 注册一个
+/// 与页面 key 绑定、不需要 BuildContext 的裸通道处理器（如 js_ui 的 commit）；
+/// 或用 [registerHostMethod] 注册一个 @HostInjected 宿主注入方法（全局级，
+/// JS 侧 `__jsui.host` 调用、宿主实现并回填结果）。**
 ///
 /// ### 页面级 [pageMessageHandlers]（跟页面 key 绑定）
 ///
 /// 例：js_ui 的 commit（把 JS 算好的增量补丁交给宿主应用）。
-/// 消息**必须携带页面 key**：`sendMessage(channel, { key: 'jsui_1', ... })`。
+/// 消息**必须携带页面 key**：`ch: 'jsuiCommit', key: 'jsui_1'`。
 /// 分发：`pageMessageHandlers[key]?[channel]`；key 形如 `主key::组件`
 /// （嵌套实例）时 miss 回退主 key。页面销毁用 [dispose] 一次性移除
 /// 该 key 下的全部注册。
@@ -78,7 +84,11 @@ class JsRuntimeManager {
   /// ScaffoldMessenger。业务方在 MaterialApp.navigatorKey 传入。
   static GlobalKey<NavigatorState>? navigatorKey;
 
-  /// 所有活跃 manager（static 跟踪）：注册处理器时对所有实例接线通道。
+  /// JS 侧单桥通道名：所有 JS→宿主消息都打到这里，再按消息体 `ch` 分发。
+  static const String _bridgeChannel = '_app_bridge_';
+
+  /// 所有活跃 manager（static 跟踪）：[registerHostMethod] 的返回值回填
+  /// （`__jsui.resolve`）需要对每个 runtime 求值一次。
   static final Set<JsRuntimeManager> _instances = {};
 
   /// JS 侧 `kDebugMode` 标志（console.debug 是否输出）：
@@ -101,8 +111,9 @@ class JsRuntimeManager {
 
   /// 注册一个**全局级** [NativeService]（与页面无关，全局一份）。
   ///
-  /// 例：日志、toast。消息 `sendMessage(channel, { ... })` 触发；
+  /// 例：日志、toast。JS 经桥通道发 `ch` = [NativeService.channel] 触发；
   /// handle 的 context 由框架取 [navigatorKey] 提供。
+  /// 只写处理器表——桥通道在 manager 构造时已订阅，无需接线。
   static void registerGlobal(NativeService service) {
     globalMessageHandlers[service.channel] = (dynamic args) {
       final ctx = navigatorKey?.currentContext;
@@ -113,21 +124,54 @@ class JsRuntimeManager {
       }
       service.handle(ctx, args);
     };
-    _wireChannel(service.channel);
   }
 
   /// 注册一个页面级**裸通道处理器**（不走 [NativeService]）。
   ///
   /// 供不需要 BuildContext 的运行时装使用（如 js_ui 的 `jsuiCommit`：只把
   /// JS 下发的补丁交给宿主应用，与页面上下文无关）。
-  /// `sendMessage(channel, { key: 页面key, ... })` 触发。
+  /// JS 经桥通道发 `ch` = [channel] + 页面 key 触发。
+  /// 只写处理器表——桥通道在 manager 构造时已订阅，无需接线。
   static void registerRawPageHandler(
     String pageKey,
     String channel,
     void Function(dynamic args) handler,
   ) {
     (pageMessageHandlers[pageKey] ??= {})[channel] = handler;
-    _wireChannel(channel);
+  }
+
+  /// 注册一个**宿主注入方法**（@HostInjected 通道）。
+  ///
+  /// 生成器把 Dart 的 static 方法调用（`AccountCenter.getUserName(a)`）在
+  /// 调用点翻译为 JS 侧 `__jsui.host("通道名", [a])`（返回 Promise，可 await）。
+  /// 本方法把该通道接到宿主实现 [impl]：收到 JS 的 `{id, key, args}` 后
+  /// await impl，再把返回值经 `__jsui.resolve(id, value)` 回填 JS 的 Promise。
+  ///
+  /// 与页面无关（全局一份）；通道名即 @HostInjected 注解里的名称
+  /// （缺省为方法名）。只写处理器表——桥通道在 manager 构造时已订阅。
+  static void registerHostMethod(
+    String channel,
+    FutureOr<Object?> Function(List<dynamic> args) impl,
+  ) {
+    globalMessageHandlers[channel] = (dynamic args) async {
+      final map = args is Map ? args : const {};
+      final id = map['id']?.toString();
+      final raw = map['args'];
+      final list = raw is List ? raw : const <dynamic>[];
+      Object? value;
+      try {
+        value = await impl(list);
+      } catch (_) {
+        value = null;
+      }
+      if (id == null || id.isEmpty) return;
+      // resolve 挂在 JS 全局（__jsui），对每个活跃 runtime 求值一次：
+      // 持有该 id 的 runtime 回填 Promise，其余为 no-op。
+      final code = '__jsui.resolve("$id", ${jsonEncode(value)});';
+      for (final m in _instances.toList()) {
+        m.evaluate(code);
+      }
+    };
   }
 
   /// 移除页面 key 下的**全部**页面级注册（页面销毁时调用）。
@@ -138,17 +182,6 @@ class JsRuntimeManager {
     pageMessageHandlers.remove(pageKey);
   }
 
-  /// 内部：把 channel 接线到**所有活跃 manager** 的 runtime。
-  ///
-  /// 只接本次注册的 channel（per-manager 幂等）。新 manager 不需要补
-  /// 历史通道——它自己的第一次注册就会把自己接上线；
-  /// 只 evaluate 不注册时本就不该有接线（没有 handler 的接线是浪费）。
-  static void _wireChannel(String channel) {
-    for (final m in _instances) {
-      m._ensureChannels([channel]);
-    }
-  }
-
   // ---------------------------------------------------------------------
   // 实例状态：与 JavascriptRuntime 一对一
   // ---------------------------------------------------------------------
@@ -156,16 +189,14 @@ class JsRuntimeManager {
   /// 本 manager 独占的底层运行时（对外不可见，全部内部消化）。
   final JavascriptRuntime _runtime = getJavascriptRuntime();
 
-  /// 本 manager 已注册的通道（per-manager × channel 一次）。
-  final Set<String> _wiredChannels = {};
-
   bool _jsUiInited = false;
 
   JsRuntimeManager() {
     _instances.add(this);
-    // 注意：不在构造时接线。通道接线完全由 register/registerGlobal 驱动
-    // （_wireChannel 接到所有活跃 manager）——新 manager 的第一次 register
-    // 就把自己接上线；只 evaluate 不注册时不接线（没有 handler 的接线是浪费）。
+    // 只订阅**一个**桥通道：所有 JS→宿主消息都打到这里，本类再按消息体
+    // `ch` 字段二次分发（[_dispatch]）。订阅只发生这一次，与处理器注册
+    // 时机完全解耦——不需要任何「补接线 / 防重」逻辑。
+    _runtime.onMessage(_bridgeChannel, _dispatch);
   }
 
   /// 所有 JS 求值的统一入口（纯求值，无注册副作用）。
@@ -383,31 +414,31 @@ $out
   /// 运行时环境全局（__modules / 标志 / console / ChangeNotifier）是否已注入。
   bool _envInited = false;
 
-  /// 注册消息通道（每个 manager × channel 一次，幂等）。
+  /// 桥通道回调：解出消息体 `ch` 字段，二次分发到两套 static 全局表。
   ///
-  /// 通道回调统一查两套 static 全局表分发（规则见类注释）：
-  /// 消息 args 的 `key` 定位页面层，通道名定位方法层；页面级 miss 或
-  /// 无 key 时回退全局级。因此无论消息路由到哪个 manager 的通道，
-  /// 都能找到正确处理器。
+  /// 信封格式（JS 侧 `__appSend` 产出）：
+  ///   `{ ch: <逻辑通道名>, data: <原有消息体>, key?: <页面key> }`
   ///
-  /// **仅供 register/registerGlobal 内部调用**（经 [_wireChannel]）：
-  /// 没有 handler 的通道接线没有意义，外部不得单独调用。
-  void _ensureChannels(Iterable<String> channels) {
-    for (final channel in channels) {
-      if (!_wiredChannels.add(channel)) continue;
-      _runtime.onMessage(channel, (dynamic args) {
-        final key =
-            (args is Map && args['key'] != null) ? args['key'].toString() : '';
-        void Function(dynamic args)? handler;
-        if (key.isNotEmpty) {
-          final mainKey = key.split('::').first;
-          handler = (pageMessageHandlers[key] ??
-                  pageMessageHandlers[mainKey])?[channel];
-        }
-        handler ??= globalMessageHandlers[channel];
-        if (handler != null) handler(args);
-      });
-      HotPatchLog.log('channel wired: $channel (${_runtime.hashCode})');
+  /// 分发规则（见类注释）：`key` 定位页面层（miss 回退主 key），`ch`
+  /// 定位方法层；页面级查不到或无 key 时回退全局级。因为处理器表是 static
+  /// 全局唯一的，无论消息路由到哪个 manager 的 runtime，都能找到正确处理器。
+  void _dispatch(dynamic raw) {
+    if (raw is! Map) return;
+    final channel = raw['ch']?.toString() ?? '';
+    if (channel.isEmpty) return;
+    final data = raw['data'];
+    var key = raw['key']?.toString() ?? '';
+    // 兼容：页面 key 也可能放在消息体内（生成器产出的 native 通道）。
+    if (key.isEmpty && data is Map && data['key'] != null) {
+      key = data['key'].toString();
     }
+    void Function(dynamic args)? handler;
+    if (key.isNotEmpty) {
+      final mainKey = key.split('::').first;
+      handler =
+          (pageMessageHandlers[key] ?? pageMessageHandlers[mainKey])?[channel];
+    }
+    handler ??= globalMessageHandlers[channel];
+    handler?.call(data);
   }
 }

@@ -17,7 +17,7 @@ void registerBuiltinNativeServices(NativeServiceRegistry registry) {
 /// SnackBarService：channel=nativeToast，弹原生 SnackBar。
 /// 与页面无关 → 全局服务（context 由 JsRuntimeManager.navigatorKey 提供）。
 ///
-/// JS 侧：sendMessage('nativeToast', JSON.stringify({key, message: '...'}))
+/// JS 侧：__appSend('nativeToast', {key, message: '...'})（经单桥通道）
 class SnackBarService extends GlobalNativeService {
   const SnackBarService();
 
@@ -38,7 +38,7 @@ class SnackBarService extends GlobalNativeService {
 /// LogService：channel=log，JS 侧打日志（调试用）。
 /// 与页面无关 → 全局服务。
 ///
-/// JS 侧：sendMessage('log', '任意文本')
+/// JS 侧：__appSend('log', '任意文本')（经单桥通道）
 class LogService extends GlobalNativeService {
   const LogService();
 

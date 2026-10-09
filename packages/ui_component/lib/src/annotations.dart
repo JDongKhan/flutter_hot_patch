@@ -8,7 +8,7 @@
 ///   所有非 static 字段 → JS 状态 __state（_count → count）
 ///   所有方法（除 build/生命周期）→ JS 事件方法（构建期以 this.__bind 绑定）
 ///   build()           → JS 渲染入口（原封不动翻译为 build 函数）
-///   SnackBar 形式的方法 → 自动识别为 native 通道（sendMessage）
+///   SnackBar 形式的方法 → 自动识别为 native 通道（__appSend）
 ///
 /// 注解只是构建期元数据，不影响组件正常运行：
 /// 线上出 bug 时，运行时切换到 JsUiWidget 加载 JS 版本即可热修复，无需发版。
@@ -32,4 +32,25 @@ class UIComponent {
 /// 注解只是构建期元数据，不影响组件正常运行。
 class UIComponentIgnore {
   const UIComponentIgnore();
+}
+
+/// 标记一个 **static 方法**为「宿主注入」（Host Injected）能力。
+///
+/// 这类方法的实现留在 Dart 侧（可访问缓存、网络、原生能力等），**不翻译成
+/// JS、不产出任何 JS 产物**；当 @UIComponent 组件的方法体（或模型方法体）里
+/// 调用到被标注的 static 方法时，生成器只把**调用点**替换为宿主编排的调用：
+///
+///   AccountCenter.getUserName(a, b)
+///     →  __jsui.host("getUserName", [a, b])   // 返回 Promise，可 await
+///
+/// [name] 为消息通道名；缺省（不传）时取方法名本身。
+/// JS 侧 `__jsui.host(channel, args)` 经单桥通道把 `{id, args}` 交回宿主，
+/// 宿主用 `JsRuntimeManager.registerHostMethod(channel, impl)`
+/// 接回调，impl 完成后返回值被 resolve 回 JS 的 Promise。
+///
+/// 注解只是构建期元数据，不影响方法正常运行。
+class HostInjected {
+  /// 消息通道名；缺省（null）时用方法名。
+  final String? name;
+  const HostInjected([this.name]);
 }

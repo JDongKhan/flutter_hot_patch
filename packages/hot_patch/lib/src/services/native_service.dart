@@ -1,10 +1,10 @@
 import 'package:flutter/widgets.dart';
 
 // ===========================================================================
-// 原生服务策略扩展点：JS sendMessage(channel, ...) → 原生能力
+// 原生服务策略扩展点：JS __appSend(channel, ...) → 原生能力
 //
-// JS 补丁里调 sendMessage('nativeToast', ...)，运行时按 channel 分发到
-// 对应的 NativeService 实现。
+// JS 补丁里调 __appSend('nativeToast', ...)（经单桥通道 `_app_bridge_`），
+// 运行时按逻辑通道名分发到对应的 NativeService 实现。
 //
 // 扩展一个原生服务只需要两步：
 //   1. 实现 NativeService 的子类（channel + handle）
@@ -17,13 +17,13 @@ import 'package:flutter/widgets.dart';
 /// ===========================================================================
 /// 策略抽象类：一个 JS→原生 服务通道
 ///
-/// - [channel]：JS 侧 sendMessage(channel, ...) 使用的通道名
+/// - [channel]：JS 侧 __appSend(channel, ...) 使用的逻辑通道名
 /// - [handle]：收到 JS 消息时执行的原生行为（用 [context] 做 UI 交互）
 /// ===========================================================================
 abstract class NativeService {
   const NativeService();
 
-  /// JS→原生 通道名（与 JS 侧 sendMessage 的第一个参数一致）。
+  /// JS→原生 逻辑通道名（与 JS 侧 __appSend 的第一个参数一致）。
   String get channel;
 
   /// 处理 JS 发来的消息。

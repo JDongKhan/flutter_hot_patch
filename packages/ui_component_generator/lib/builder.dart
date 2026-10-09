@@ -78,8 +78,11 @@ class ComponentBuilder implements Builder {
     final hasComponent = parsed.unit.declarations
         .whereType<ClassDeclaration>()
         .any((d) => _findAnnotation(d.metadata, 'UIComponent') != null);
+    // 宿主注入方法表（类名 → {方法名 → 通道名}）：组件与模型两条路径都要用。
+    final hostMethods = _buildHostMethods(parsed.unit, inputId.path);
     if (!hasComponent) {
-      await _writeModelProduct(buildStep, parsed.unit, inputId, registry);
+      await _writeModelProduct(
+          buildStep, parsed.unit, inputId, registry, hostMethods);
       return;
     }
 
@@ -154,6 +157,7 @@ class ComponentBuilder implements Builder {
         importResolver,
         classIndex: classIndex,
         singletons: singletons,
+        hostMethods: hostMethods,
       ));
     }
 
@@ -181,7 +185,8 @@ class ComponentBuilder implements Builder {
           .firstWhere((d) => d.name.lexeme == dep);
       final nested = _parseNestedComponent(
           decl, parsed.unit, dep, registry, inputId.path, importResolver,
-          classIndex: classIndex, singletons: singletons);
+          classIndex: classIndex, singletons: singletons,
+          hostMethods: hostMethods);
       components.add(nested);
       depQueue.addAll(nested.deps);
     }
@@ -197,7 +202,8 @@ class ComponentBuilder implements Builder {
       jsOutput,
       _renderJs(components, inputId.path, registry, importResolver,
           singletons: singletons,
-          sameFileSingletonInfos: sameFileSingletonInfos),
+          sameFileSingletonInfos: sameFileSingletonInfos,
+          hostMethods: hostMethods),
     );
   }
 }
@@ -215,6 +221,7 @@ Future<void> _writeModelProduct(
   CompilationUnit unit,
   AssetId inputId,
   WidgetTranslatorRegistry registry,
+  Map<String, Map<String, String>> hostMethods,
 ) async {
   // 复用组件路径的「普通类」判定（非私有 / 非抽象 / 非注解 / 无 build()）。
   // classIndex 还含 import 文件的类，需按 sourceFile 只取本文件声明的类。
@@ -236,7 +243,7 @@ Future<void> _writeModelProduct(
   if (models.isEmpty && singletons.isEmpty) return;
   await buildStep.writeAsString(
     buildStep.allowedOutputs.first,
-    _renderModelJs(models, singletons, inputId.path, registry),
+    _renderModelJs(models, singletons, inputId.path, registry, hostMethods),
   );
 }
 
@@ -304,6 +311,9 @@ Map<String, ClassInfo> _buildClassIndex(CompilationUnit unit, String sourcePath)
     if (name.startsWith('_') || out.containsKey(name)) return;
     if (d.abstractKeyword != null) return;
     if (_findAnnotation(d.metadata, 'UIComponent') != null) return;
+    // @HostInjected 类：方法实现留在 Dart，不产出 JS（调用点被翻译为
+    // __jsui.host，见 _buildHostMethods 与 class_translator.methodCallExprJs）。
+    if (_classHasHostInjectedMethod(d)) return;
     // widget 类（有 build 方法）不是普通类，走组件/嵌套翻译路径
     if (d.members
         .whereType<MethodDeclaration>()
@@ -425,6 +435,7 @@ _Component _parseComponent(
   String? Function(String component) importResolver, {
   required Map<String, ClassInfo> classIndex,
   SingletonResolver? singletons,
+  Map<String, Map<String, String>> hostMethods = const {},
 }) {
   // 承载 build 的类：StatefulWidget → 其 State 类；StatelessWidget →
   // widget 类自身（无 createState）。与 _parseNestedComponent 同一规则，
@@ -561,6 +572,7 @@ _Component _parseComponent(
           nativeChannel,
           _methodParams(member),
           used,
+          hostMethods: hostMethods,
         ),
         params: _methodParams(member),
         isAsync: member.body.isAsynchronous,
@@ -622,6 +634,7 @@ _Component _parseNestedComponent(
   String? Function(String component) importResolver, {
   required Map<String, ClassInfo> classIndex,
   SingletonResolver? singletons,
+  Map<String, Map<String, String>> hostMethods = const {},
 }) {
   // 承载 build 的类：widget 类 或 其 State 类
   ClassDeclaration hostClass = decl;
@@ -746,6 +759,7 @@ _Component _parseNestedComponent(
           nativeChannel,
           _methodParams(member),
           used,
+          hostMethods: hostMethods,
         ),
         params: _methodParams(member),
         isAsync: member.body.isAsynchronous,
@@ -855,6 +869,45 @@ Annotation? _findAnnotation(List<Annotation> metadata, String simpleName) {
   return null;
 }
 
+/// 类是否声明了带 @HostInjected 的方法（static 宿主注入能力）。
+bool _classHasHostInjectedMethod(ClassDeclaration d) {
+  for (final m in d.members.whereType<MethodDeclaration>()) {
+    if (_findAnnotation(m.metadata, 'HostInjected') != null) return true;
+  }
+  return false;
+}
+
+/// 收集宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）。
+///
+/// 扫描本文件 + import 源文件里带 @HostInjected 的方法；通道名取注解的位置
+/// 字符串参数（`@HostInjected('通道')`），缺省用方法名本身。
+/// 供翻译上下文把 `ClassName.method(...)` 调用点替换为
+/// `__jsui.host("通道", [...])`。
+Map<String, Map<String, String>> _buildHostMethods(
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  final out = <String, Map<String, String>>{};
+  void scan(CompilationUnit u) {
+    for (final d in u.declarations.whereType<ClassDeclaration>()) {
+      for (final m in d.members.whereType<MethodDeclaration>()) {
+        final a = _findAnnotation(m.metadata, 'HostInjected');
+        if (a == null) continue;
+        final channel = _positionalString(a, 0) ?? m.name.lexeme;
+        (out[d.name.lexeme] ??= {})[m.name.lexeme] = channel;
+      }
+    }
+  }
+
+  scan(unit);
+  for (final file in _resolveImportFiles(unit, sourcePath)) {
+    final f = File(file);
+    if (!f.existsSync()) continue;
+    scan(parseString(content: f.readAsStringSync()).unit);
+  }
+  return out;
+}
+
 /// 判断本文件里名为 [className] 的类是否带 @UIComponentIgnore。
 /// 带注解 → 不参与连带转换（生成器跳过翻译，运行时原生注入）。
 bool _isIgnoredClass(CompilationUnit unit, String className) {
@@ -902,14 +955,19 @@ String _translateActionBody(
   WidgetTranslateContext ctx,
   String? nativeChannel,
   List<String> params,
-  Map<String, ClassInfo> classes,
-) {
+  Map<String, ClassInfo> classes, {
+  Map<String, Map<String, String>> hostMethods = const {},
+}) {
   // 组件动作的可用引用：State 字段（ctx.propByField）+ 方法形参。表达式/
   // 语句统一交给 class_translator.exprStmtToJs（以 FieldScope 为键），与模型
   // 方法体翻译共用同一套逻辑。
+  // params 用**可变集合**：方法体内声明的局部变量（`String? name = ...`）
+  // 边翻译边登记，后续语句里的 `$name` / `name` 才能解析。
+  final locals = <String>{...params};
   final scope = FieldScope(
     propByField: ctx.propByField,
-    params: params.toSet(),
+    params: locals,
+    hostMethods: hostMethods,
   );
   if (nativeChannel != null) {
     final msg = _snackMessage(body, ctx);
@@ -917,9 +975,10 @@ String _translateActionBody(
       throw FormatException(
           'native 动作需要方法体是 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("消息"))) 形式');
     }
-    // JS 消息统一携带页面 key（this._key 由运行时挂载），
-    // 运行时按 key 定位页面级处理器。
-    return 'sendMessage(${jsString(nativeChannel)}, JSON.stringify({ key: this._key, message: $msg }));';
+    // JS 消息统一携带页面 key（this._key 由运行时挂载），运行时按 key 定位
+    // 页面级处理器。统一走运行时单桥出口 __appSend（目标通道名由它放进
+    // 消息体 ch 字段）——不要再裸调 sendMessage，否则宿主收不到。
+    return '__appSend(${jsString(nativeChannel)}, { key: this._key, message: $msg });';
   }
 
   // 逐语句翻译：setState(...) 展开、await Future.delayed(...)、
@@ -936,11 +995,52 @@ String _translateActionBody(
         if (e is MethodInvocation && e.target is SuperExpression) continue;
         final t = _translateExprStatement(e, scope, classes);
         if (t != null) stmts.add(t);
+      } else if (s is VariableDeclarationStatement) {
+        // 局部变量声明 `String? name = await X.y();` → `var name = ...;`，
+        // 名字登记进 scope，后续语句（含插值）可直接引用。
+        for (final v in s.variables.variables) {
+          final init = v.initializer == null
+              ? 'undefined'
+              : _valueExprJs(v.initializer!, scope, classes);
+          if (init == null) continue;
+          locals.add(v.name.lexeme);
+          stmts.add('var ${v.name.lexeme} = $init;');
+        }
       }
     }
   }
   if (stmts.isEmpty) return '/* 空方法体 */';
   return stmts.join(' ');
+}
+
+/// 取「值表达式」的 JS：用于变量初始化等表达式位置。`await <expr>` 会保留
+/// await 前缀（仅 async 方法体可 await），其余走 rhsToJs。
+String? _valueExprJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is AwaitExpression) {
+    final v = _awaitExprJs(e, scope, classes);
+    return v == null ? null : 'await $v';
+  }
+  return rhsToJs(e, scope, classes);
+}
+
+/// `await <expr>` 里的 `<expr>` → JS 表达式（不含 await 前缀）。
+/// 特殊形态 `Future.delayed(Duration(...))` → setTimeout Promise。
+String? _awaitExprJs(
+  AwaitExpression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final delay = _delayedMsJs(e.expression);
+  if (delay != null) {
+    return 'new Promise(function(r){ setTimeout(r, $delay); })';
+  }
+  final stmt = exprStmtToJs(e.expression, scope, classes);
+  if (stmt == null) return null;
+  return stmt.substring(0, stmt.length - 1); // 去掉尾部分号
 }
 
 /// 翻译一条表达式语句：setState((){...}) / await Future.delayed / 其余走
@@ -964,11 +1064,11 @@ String? _translateExprStatement(
     }
     return null;
   }
-  // await Future.delayed(Duration(...)) → Promise/setTimeout（模拟网络延迟）
+  // await <expr>：Future.delayed → Promise/setTimeout（模拟网络延迟）；
+  // 其余（如宿主调用 `await AccountCenter.getUserName()`）→ `await __jsui.host(...)`。
   if (e is AwaitExpression) {
-    final delay = _delayedMsJs(e.expression);
-    if (delay != null) return 'await new Promise(function(r){ setTimeout(r, $delay); });';
-    return null;
+    final v = _awaitExprJs(e, scope, classes);
+    return v == null ? null : 'await $v;';
   }
   return exprStmtToJs(e, scope, classes);
 }
@@ -1398,6 +1498,7 @@ String _renderJs(
   String? Function(String component) importResolver, {
   SingletonResolver? singletons,
   List<ClassInfo> sameFileSingletonInfos = const [],
+  Map<String, Map<String, String>> hostMethods = const {},
 }) {
   // 统一类表按「同文件 inline / 跨文件 import」分组渲染：
   //  - 同文件模型（sourceFile == 当前组件文件）→ 产物内 inline class（不 export，
@@ -1474,7 +1575,8 @@ String _renderJs(
     b
       ..writeln()
       ..writeln('// 模型 ${m.name}（同文件，仅本产物内可见）')
-      ..writeln(renderClassDecl(m, const {}, exported: false));
+      ..writeln(renderClassDecl(m, const {}, exported: false,
+          hostMethods: hostMethods));
   }
 
   // 同文件 static 单例类：inline export const（exported: true —— 运行时
@@ -1602,6 +1704,7 @@ String _renderModelJs(
   List<ClassInfo> singletons,
   String sourcePath,
   WidgetTranslatorRegistry registry,
+  Map<String, Map<String, String>> hostMethods,
 ) {
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
@@ -1611,7 +1714,8 @@ String _renderModelJs(
   for (final m in models) {
     b
       ..writeln('// 模型 ${m.name}')
-      ..writeln(renderClassDecl(m, const {}, exported: true));
+      ..writeln(renderClassDecl(m, const {}, exported: true,
+          hostMethods: hostMethods));
   }
   if (singletons.isNotEmpty) {
     final ctx = WidgetTranslateContext(
@@ -1869,6 +1973,8 @@ bool _isSingletonClass(ClassDeclaration decl) {
   if (name.startsWith('_')) return false;
   if (decl.abstractKeyword != null) return false;
   if (_findAnnotation(decl.metadata, 'UIComponent') != null) return false;
+  // @HostInjected 类不产出 JS（无同名产物可 import），不登记为静态单例。
+  if (_classHasHostInjectedMethod(decl)) return false;
   for (final m in decl.members) {
     if (m is FieldDeclaration && m.isStatic) {
       for (final v in m.fields.variables) {

@@ -165,11 +165,16 @@ class FieldScope {
   final Set<String> params; // 形参名（原样引用）
   final Set<String> methods; // 裸调白名单（this.method()）
 
+  /// 宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）。
+  /// 命中时 static 调用翻译成 `__jsui.host("通道名", [args])`。
+  final Map<String, Map<String, String>> hostMethods;
+
   const FieldScope({
     this.propByField = const {},
     this.instanceFields = const {},
     this.params = const {},
     this.methods = const {},
+    this.hostMethods = const {},
   });
 
   /// 该名字是否本 scope 可解析的字段。
@@ -412,6 +417,15 @@ String? methodCallExprJs(
       argJs.add(v);
     }
   }
+  // 宿主注入（@HostInjected）：static 调用 `AccountCenter.getUserName(a)`
+  // 整体替换为 `__jsui.host("通道名", [a])`（返回 Promise，可 await）。
+  final hostTarget = e.target;
+  if (hostTarget is Identifier) {
+    final channel = scope.hostMethods[hostTarget.name]?[e.methodName.name];
+    if (channel != null) {
+      return '__jsui.host(${jsString(channel)}, [${argJs.join(', ')}])';
+    }
+  }
   final passed = argJs.join(', ');
   final target = e.target;
   if (target == null) {
@@ -469,8 +483,9 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
 String translateClassMethodBody(
   ClassInfo info,
   ClassMethod m,
-  Map<String, ClassInfo> classes,
-) {
+  Map<String, ClassInfo> classes, {
+  Map<String, Map<String, String>> hostMethods = const {},
+}) {
   final scope = FieldScope(
     instanceFields: info.instanceFieldNames,
     params: m.params.toSet(),
@@ -478,6 +493,7 @@ String translateClassMethodBody(
       ...info.methodNames,
       if (sdkBaseName(info) != null) 'notifyListeners',
     },
+    hostMethods: hostMethods,
   );
   final stmts = <String>[];
   final body = m.body;
@@ -527,6 +543,7 @@ String renderClassDecl(
   ClassInfo info,
   Map<String, ClassInfo> classes, {
   bool exported = false,
+  Map<String, Map<String, String>> hostMethods = const {},
 }) {
   final b = StringBuffer();
   b.write(exported ? 'export class ' : 'class ');
@@ -562,7 +579,8 @@ String renderClassDecl(
       b.write('  get ${m.name}() { return ${_getterReturnJs(info, m)}; }\n');
     } else {
       final fn = m.isAsync ? 'async ' : '';
-      final body = translateClassMethodBody(info, m, classes);
+      final body =
+          translateClassMethodBody(info, m, classes, hostMethods: hostMethods);
       b.write('  $fn${m.name}(${m.params.join(', ')}) { $body }\n');
     }
   }
