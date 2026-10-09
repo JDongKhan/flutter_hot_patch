@@ -6,7 +6,8 @@ import 'package:flutter_hot/model/user.dart';
 
 /// 本文件演示两个能力：
 ///   1. HelloCard —— 一个**完全正常的 Flutter StatefulWidget**（原生可直接用）
-///   2. 单文件多组件 —— HelloPanel 与 HelloCard 同文件，codegen 都注册进 JS
+///   2. 单文件多组件 —— HelloPanel / StatelessCard 与 HelloCard 同文件，
+///      codegen 都注册进同一 JS 产物
 ///   3. 同文件静态样式类 —— PanelColors 与本组件同文件，codegen inline 进
 ///      同一产物（const PanelColors = {...}），build 里 `PanelColors.background`
 ///      直接翻译成 JS 表达式引用，无需 import 独立产物。
@@ -18,7 +19,7 @@ import 'package:flutter_hot/model/user.dart';
 ///   - build() 原封不动翻译成 JS build()
 ///
 /// 构建期由 ui_component_generator 静态翻译出：
-///   hello_component.js（注册 HelloCard + HelloPanel）
+///   hello_component.js（注册 HelloCard + HelloPanel + StatelessCard）
 /// 线上出 bug 时，运行时把组件切换为 JsUiWidget 加载 JS 版本即可热修复，
 /// 组件本体永远保持可正常使用。
 @UIComponent('HelloCard')
@@ -183,6 +184,63 @@ class _HelloPanelState extends State<HelloPanel> {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// 单文件多组件演示之三：StatelessWidget 版本。
+///
+///   - 无 State、无 createState，build 在 widget 类自身（生成器自动识别：
+///     有 createState 用 State 类承载 build，否则用 widget 类自身）；
+///   - 构造参数（this.title / this.subtitle / this.badge）→ JS
+///     constructor(args) 的 args（JsUiWidget.props 传入）；
+///   - 实例方法 → JS 方法一比一翻译。
+@UIComponent('StatelessCard')
+class StatelessCard extends StatelessWidget {
+  const StatelessCard({
+    super.key,
+    required this.title,
+    this.subtitle = '',
+    this.badge = 'NEW',
+  });
+
+  final String title;
+  final String subtitle;
+  final String badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.all(12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.article, color: Colors.teal),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$badge · $title',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

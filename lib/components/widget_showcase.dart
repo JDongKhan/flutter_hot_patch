@@ -38,6 +38,9 @@ class WidgetShowcase extends StatelessWidget {
     _Group('进度指示', [
       _Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail'),
     ]),
+    _Group('状态管理', [
+      _Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard'),
+    ]),
   ];
 
   @override
@@ -114,6 +117,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ScaffoldDetail' => const ScaffoldDetail(),
       'InputDetail' => const InputDetail(),
       'ProgressDetail' => const ProgressDetail(),
+      'NotifierCard' => const NotifierCard(),
       _ => const Text('未知组件'),
     };
   }

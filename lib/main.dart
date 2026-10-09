@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 
-import 'components/banner_component.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
-import 'components/listenable_demo.dart';
-import 'components/notifier_component.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
-import 'components/stateless_component.dart';
 import 'components/widget_showcase.dart';
 
 void main() => runApp(const HotDemoApp());
@@ -80,24 +76,13 @@ class DemoListPage extends StatelessWidget {
           badge: 'FLUTTER',
         ),
         js: JsUiWidget(
-          jsAsset: 'assets/components/stateless_component.js',
+          jsAsset: 'assets/components/hello_component.js',
           component: 'StatelessCard',
           props: {
             'title': 'Hello Stateless 1',
             'subtitle': 'JS 热更版本，无 State 也能渲染',
             'badge': 'JS',
           },
-        ),
-      ),
-    ),
-    _DemoEntry(
-      'BannerCard · 原生 vs JS 热更',
-      '多文件多组件：banner_component.dart 独立产物（views 状态）',
-      _CompareTest(
-        native: BannerCard(),
-        js: JsUiWidget(
-          jsAsset: 'assets/components/banner_component.js',
-          component: 'BannerCard',
         ),
       ),
     ),
@@ -136,28 +121,6 @@ class DemoListPage extends StatelessWidget {
       ),
     ),
     _DemoEntry(
-      'ListenableDemo · 原生 vs JS 热更',
-      'ChangeNotifier + ListenableBuilder 局部重建（同文件共享模型）',
-      _CompareTest(
-        native: ListenableDemo(),
-        js: JsUiWidget(
-          jsAsset: 'assets/components/listenable_demo.js',
-          component: 'ListenableDemo',
-        ),
-      ),
-    ),
-    _DemoEntry(
-      'NotifierCard · 原生 vs JS 热更',
-      'ChangeNotifier + ListenableBuilder：模型逻辑热更，notify 局部重建',
-      _CompareTest(
-        native: NotifierCard(),
-        js: JsUiWidget(
-          jsAsset: 'assets/components/notifier_component.js',
-          component: 'NotifierCard',
-        ),
-      ),
-    ),
-    _DemoEntry(
       'WatchDemo · 原生 vs JS 热更',
       'context.watch（订阅局部刷新）/ context.read（仅取实例）',
       _CompareTest(
@@ -168,12 +131,6 @@ class DemoListPage extends StatelessWidget {
           component: 'WatchDemo',
         ),
       ),
-    ),
-    _DemoEntry(
-      'Scaffold · 页面骨架',
-      'Scaffold / AppBar / Center / SingleChildScrollView 组件演示（页面级，仅 JS 热更版）',
-      // 页面级组件无法与原生同屏比对，直接展示 JS 热更版
-      JsUiWidget(jsAsset: 'assets/components/scaffold_demo.js', component: 'ScaffoldDemo'),
     ),
     _DemoEntry(
       'HelloCard · 网络 zip 加载',
@@ -197,16 +154,7 @@ class DemoListPage extends StatelessWidget {
         label: 'HelloCard',
       ),
     ),
-    _DemoEntry(
-      'BannerCard · JS 双实例隔离',
-      '两个实例 initState 都生效（views=5），点 Bump 只影响被点的那个',
-      _TwinTest(
-        jsAsset: 'assets/components/banner_component.js',
-        component: 'BannerCard',
-        label: 'BannerCard',
-      ),
-    ),
-    _DemoEntry('BannerCard · 多 runtime 分组', '两组 JsUiWidget 各自使用业务方创建的独立 runtime，点按钮互不影响', _RuntimeGroupTest()),
+    _DemoEntry('HelloCard · 多 runtime 分组', '两组 JsUiWidget 各自使用业务方创建的独立 runtime，点按钮互不影响', _RuntimeGroupTest()),
     _DemoEntry(
       '常用组件 · 列表',
       '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）',
@@ -295,7 +243,7 @@ class _CompareTest extends StatelessWidget {
 /// runtime（等价于两个 RuntimeManager 分组的场景）。iOS/JavaScriptCore 的
 /// sendMessage 桥是库级 static 的（消息路由到最后创建的 runtime 通道表），
 /// 本测试验证：即便两个 runtime 共存，setState 消息仍按实例 key 全局分发，
-/// 点 A 组的按钮不会影响 B 组（反之亦然）。
+/// 点 A 组的 HelloCard 不会影响 B 组（反之亦然）。
 class _RuntimeGroupTest extends StatelessWidget {
   const _RuntimeGroupTest();
 
@@ -306,16 +254,16 @@ class _RuntimeGroupTest extends StatelessWidget {
         Text('runtime 组 A（业务方创建 #1）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         JsUiWidget(
-          jsAsset: 'assets/components/banner_component.js',
-          component: 'BannerCard',
+          jsAsset: 'assets/components/hello_component.js',
+          component: 'HelloCard',
           sharedManager: _managerA,
         ),
         const Divider(height: 32),
         Text('runtime 组 B（业务方创建 #2）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
         JsUiWidget(
-          jsAsset: 'assets/components/banner_component.js',
-          component: 'BannerCard',
+          jsAsset: 'assets/components/hello_component.js',
+          component: 'HelloCard',
           sharedManager: _managerB,
         ),
       ],
