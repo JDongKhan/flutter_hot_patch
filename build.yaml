@@ -1,0 +1,9 @@
+targets:
+  $default:
+    builders:
+      ui_component_generator:ui_widget:
+        options:
+          seed_file: lib/__nonexistent__.dart
+      ui_component_generator:ui_component:
+        options:
+          seed_file: lib/__nonexistent__.dart

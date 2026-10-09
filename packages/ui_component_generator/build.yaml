@@ -17,6 +17,10 @@ builders:
   # 逻辑组件）。这类产物是 package 级（与 lib 源码目录无关），故直接落在 assets 根下；
   # 输出名无法按构建期发现的类型动态生成，故全部挂在种子输入 lib/js_widgets.dart 下；
   # 包清单/类型清单由 builder 的 buildExtensions getter 从 translator 注册表静态推导。
+  #
+  # 种子文件路径可配置：使用方在自己的 build.yaml 里用
+  # `options: { seed_file: <path> }` 覆盖（默认 lib/js_widgets.dart）。
+  # 注意该种子文件是必需项——使用方必须在包内提供它，否则不产出 package 模块。
   ui_widget:
     import: "package:ui_component_generator/builder.dart"
     builder_factories: ["widgetModuleBuilder"]
