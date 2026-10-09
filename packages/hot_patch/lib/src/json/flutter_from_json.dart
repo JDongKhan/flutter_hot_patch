@@ -705,6 +705,7 @@ IconData iconFromJson(Object? v) {
 const Map<String, IconData> _icons = {
   'add': Icons.add,
   'add_circle': Icons.add_circle,
+  'article': Icons.article,
   'arrow_back': Icons.arrow_back,
   'arrow_forward': Icons.arrow_forward,
   'arrow_drop_down': Icons.arrow_drop_down,
@@ -725,6 +726,7 @@ const Map<String, IconData> _icons = {
   'error': Icons.error,
   'exit_to_app': Icons.exit_to_app,
   'explore': Icons.explore,
+  'extension': Icons.extension,
   'face': Icons.face,
   'favorite': Icons.favorite,
   'favorite_border': Icons.favorite_border,

@@ -130,11 +130,26 @@ class WidgetDetailPage extends StatelessWidget {
     };
   }
 
+  /// JS 热更侧构造参数：只有依赖构造参数的组件（如 StatelessCard 的
+  /// title/subtitle/badge）需要在此传入；StatefulWidget 的初始状态
+  /// 硬编码在 JS 构造函数里，不需要传 props。
+  Map<String, dynamic> _jsProps() {
+    return switch (component) {
+      'StatelessCard' => const {
+          'title': 'Hello Stateless',
+          'subtitle': '原生直接渲染，无需 State',
+          'badge': 'FLUTTER',
+        },
+      _ => const {},
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final js = JsUiWidget(
       jsAsset: _jsAsset,
       component: component,
+      props: _jsProps(),
     );
     if (fullPage) return js;
 
