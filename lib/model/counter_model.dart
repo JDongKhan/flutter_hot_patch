@@ -19,4 +19,8 @@ class CounterModel extends ChangeNotifier {
     _count = 0;
     notifyListeners();
   }
+
+  Future<String> getUserName() async {
+    return "22";
+  }
 }

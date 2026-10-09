@@ -11,4 +11,5 @@ export class CounterModel extends ChangeNotifier {
   get count() { return this._count; }
   inc() { this._count += 1; this.notifyListeners(); }
   reset() { this._count = 0; this.notifyListeners(); }
+  async getUserName() { return "22"; }
 }

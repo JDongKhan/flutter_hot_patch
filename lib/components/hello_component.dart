@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hot/base/account_center.dart';
 import 'dart:io';
 import 'package:ui_component/ui_component.dart';
 import 'package:flutter_hot/model/user.dart';
@@ -44,6 +45,8 @@ class _HelloCardState extends State<HelloCard> {
   // 模拟网络请求：await Future.delayed → Promise/setTimeout；
   // setState 里构造 User（模型）→ new User({name, age})
   Future<void> loadUser() async {
+    String? name = await AccountCenter.getUserName();
+    print("用户信息:$name");
     await Future.delayed(const Duration(seconds: 1));
     setState(() {
       _user = const User(name: 'Alice', age: 18);
@@ -59,9 +62,7 @@ class _HelloCardState extends State<HelloCard> {
 
   // 无注解：方法体是 SnackBar 形式 → 自动 native 通道 `nativeToast`
   void showNative() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Hello from native (JS-driven)')),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hello from native (JS-driven)')));
   }
 
   @override
@@ -75,11 +76,7 @@ class _HelloCardState extends State<HelloCard> {
       children: [
         Text(
           'Hello from JS logic',
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.blue,
-          ),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
         ),
         Text('count = $_count'),
         Text('user: ${_user?.name ?? '加载中'}'),
@@ -89,10 +86,7 @@ class _HelloCardState extends State<HelloCard> {
         // collection-if：按状态条件插入节点（无 else）
         if (_count > 0) Text('当前 count 是正数（if 条件渲染）'),
         // collection-if + else：用户加载与否显示不同节点
-        if (_user != null)
-          Text('用户已加载（if + else 渲染）')
-        else
-          Text('用户未加载，点 Load User'),
+        if (_user != null) Text('用户已加载（if + else 渲染）') else Text('用户未加载，点 Load User'),
         // collection-for：循环渲染（循环变量 i 直接参与插值）
         for (var i = 0; i < 3; i++) Text('循环第 $i 个'),
         Row(
@@ -106,18 +100,9 @@ class _HelloCardState extends State<HelloCard> {
               ),
               child: const Text('+1'),
             ),
-            ElevatedButton(
-              onPressed: () => reset(),
-              child: const Text('Reset'),
-            ),
-            ElevatedButton(
-              onPressed: showNative,
-              child: const Text('Native'),
-            ),
-            ElevatedButton(
-              onPressed: loadUser,
-              child: const Text('Load User'),
-            ),
+            ElevatedButton(onPressed: () => reset(), child: const Text('Reset')),
+            ElevatedButton(onPressed: showNative, child: const Text('Native')),
+            ElevatedButton(onPressed: loadUser, child: const Text('Load User')),
           ],
         ),
       ],

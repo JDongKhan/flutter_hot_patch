@@ -491,6 +491,12 @@ String translateClassMethodBody(
         if (ex is MethodInvocation && ex.target is SuperExpression) continue;
         final t = exprStmtToJs(ex, scope, classes);
         if (t != null) stmts.add(t);
+      } else if (s is ReturnStatement) {
+        // `return "22";` 是 ReturnStatement（不是 ExpressionStatement），
+        // 需单独翻译为 `return <expr>;`，否则 async 方法体被整体丢弃。
+        final e = s.expression;
+        final v = e == null ? null : rhsToJs(e, scope, classes);
+        if (v != null) stmts.add('return $v;');
       }
     }
   }
