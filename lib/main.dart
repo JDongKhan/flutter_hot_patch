@@ -57,26 +57,6 @@ class DemoListPage extends StatelessWidget {
       ),
     ),
     _DemoEntry(
-      'StatelessCard · 原生 vs JS 热更',
-      'StatelessWidget：无 State，build 在 widget 类自身，props 走构造参数',
-      _CompareTest(
-        native: StatelessCard(
-          title: 'Hello Stateless',
-          subtitle: '原生直接渲染，无需 State',
-          badge: 'FLUTTER',
-        ),
-        js: JsUiWidget(
-          jsAsset: 'assets/components/widget_details.js',
-          component: 'StatelessCard',
-          props: {
-            'title': 'Hello Stateless 1',
-            'subtitle': 'JS 热更版本，无 State 也能渲染',
-            'badge': 'JS',
-          },
-        ),
-      ),
-    ),
-    _DemoEntry(
       'DashboardCard · 原生 vs JS 热更',
       '复合组件：内嵌 BannerCard（注解）+ 私有/非私有自定义 widget 双路径',
       _CompareTest(
