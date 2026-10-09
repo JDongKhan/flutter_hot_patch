@@ -565,12 +565,14 @@ Map<String, dynamic>? borderRadiusToJson(
     return map.isEmpty ? null : map;
   }
   double? radius;
-  // BorderRadius.circular(8)
+  // BorderRadius.circular(8)：裸数字字面量；
+  // BorderRadius.all(Radius.circular(8))：首个位置参数是 Radius，需解包。
   if (args.isNotEmpty) {
-    final n = _numExpr(args.whereType<Expression>().first);
+    final first = args.whereType<Expression>().first;
+    final n = _numExpr(first) ?? _radiusValue(first);
     if (n != null) radius = double.tryParse(n);
   }
-  // BorderRadius.all(Radius.circular(8))：解包 Radius.circular
+  // BorderRadius.all(Radius.circular(8)) 的防御性兜底（正常走上面的解包）
   for (final a in args) {
     if (a is! NamedExpression || a.name.label.name != 'all') continue;
     final n = _radiusValue(a.expression);

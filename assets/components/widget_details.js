@@ -176,7 +176,10 @@ class ButtonDetailComponent {
                 "height": 40
               },
               "shape": {
-                "kind": "rounded"
+                "kind": "rounded",
+                "borderRadius": {
+                  "radius": 20.0
+                }
               },
               "foregroundColor": '#FF5722'
             }
@@ -575,7 +578,10 @@ class ContainerDetailComponent {
               "bottom": 16.0
             },
             "decoration": {
-              "color": '#009688'
+              "color": '#009688',
+              "borderRadius": {
+                "radius": 12.0
+              }
             }
           }, [
             Text({
