@@ -2,7 +2,7 @@
 // 由 ui_component_generator 从 lib/components/widget_details.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, AppBar, Button, Card, Center, Chip, CircleAvatar, ClipRRect, Column, Container, Divider, Expanded, Icon, Image, ListTile, ListView, Padding, Positioned, Row, Scaffold, SingleChildScrollView, SizedBox, Stack, Text, Wrap, __h } from '../flutter.js';
+import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, Icon, Image, LinearProgressIndicator, ListTile, ListView, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
 
 class TextDetailComponent {
   constructor() {
@@ -175,6 +175,9 @@ class ButtonDetailComponent {
                 "width": 120,
                 "height": 40
               },
+              "shape": {
+                "kind": "rounded"
+              },
               "foregroundColor": '#FF5722'
             }
           }),
@@ -200,7 +203,7 @@ class LayoutDetailComponent {
         "crossAxisAlignment": "stretch"
       }, [
         Text({
-            "data": "Row + Expanded / Flexible",
+            "data": "Row + Expanded / Flexible / Spacer",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
@@ -225,8 +228,8 @@ class LayoutDetailComponent {
                       })
                   ])
               ]),
-            SizedBox({
-                "width": 4
+            Spacer({
+                "flex": 1
               }),
             Expanded({
                 "flex": 2
@@ -320,7 +323,10 @@ class LayoutDetailComponent {
         SizedBox({
             "height": 100
           }, [
-            Stack({}, [
+            Stack({
+                "fit": "expand",
+                "clipBehavior": "hardEdge"
+              }, [
                 Container({
                     "color": '@Colors.grey.shade200'
                   }),
@@ -370,9 +376,100 @@ class LayoutDetailComponent {
           }),
         Wrap({
             "spacing": 8,
-            "runSpacing": 8
+            "runSpacing": 8,
+            "direction": "horizontal",
+            "alignment": "start",
+            "runAlignment": "center",
+            "crossAxisAlignment": "center"
           }, [
             ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [Chip({ "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
+          ]),
+        SizedBox({
+            "height": 12
+          }),
+        Text({
+            "data": "Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        Opacity({
+            "opacity": 0.5
+          }, [
+            Container({
+                "color": '#F44336',
+                "padding": {
+                  "left": 8.0,
+                  "top": 8.0,
+                  "right": 8.0,
+                  "bottom": 8.0
+                }
+              }, [
+                Text({
+                    "data": "50% 透明"
+                  })
+              ])
+          ]),
+        SizedBox({
+            "height": 8
+          }),
+        ConstrainedBox({
+            "constraints": {
+              "minWidth": 120,
+              "maxWidth": 200
+            }
+          }, [
+            Container({
+                "color": '@Colors.orange.shade100',
+                "padding": {
+                  "left": 8.0,
+                  "top": 8.0,
+                  "right": 8.0,
+                  "bottom": 8.0
+                }
+              }, [
+                Text({
+                    "data": "ConstrainedBox 宽度 120-200"
+                  })
+              ])
+          ]),
+        SizedBox({
+            "height": 8
+          }),
+        AspectRatio({
+            "aspectRatio": 1.78
+          }, [
+            Container({
+                "color": '@Colors.indigo.shade100',
+                "alignment": "center"
+              }, [
+                Text({
+                    "data": "16:9 比例"
+                  })
+              ])
+          ]),
+        SizedBox({
+            "height": 8
+          }),
+        FractionallySizedBox({
+            "widthFactor": 0.6,
+            "alignment": "center"
+          }, [
+            Container({
+                "color": '@Colors.pink.shade100',
+                "padding": {
+                  "left": 8.0,
+                  "top": 8.0,
+                  "right": 8.0,
+                  "bottom": 8.0
+                }
+              }, [
+                Text({
+                    "data": "60% 宽度",
+                    "textAlign": "center"
+                  })
+              ])
           ])
       ]);
   }
@@ -492,14 +589,79 @@ class ContainerDetailComponent {
             "height": 12
           }),
         Text({
-            "data": "Card",
+            "data": "Container · 边框 + 阴影 + 渐变",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Card({
-            "elevation": 2
+        Container({
+            "padding": {
+              "left": 16.0,
+              "top": 16.0,
+              "right": 16.0,
+              "bottom": 16.0
+            },
+            "decoration": {
+              "gradient": {
+                "kind": "linear",
+                "colors": [
+                  '#2196F3',
+                  '#9C27B0'
+                ],
+                "begin": "topLeft",
+                "end": "bottomRight"
+              },
+              "borderRadius": {
+                "radius": 16.0
+              },
+              "border": {
+                "all": {
+                  "color": '#FFFFFF',
+                  "width": 2
+                }
+              },
+              "boxShadow": [
+                {
+                  "color": '#66000000',
+                  "dx": 0,
+                  "dy": 4,
+                  "blur": 12,
+                  "spread": 1
+                }
+              ]
+            }
+          }, [
+            Text({
+                "data": "渐变 + 边框 + 阴影",
+                "style": {
+                  "color": '#FFFFFF'
+                }
+              })
+          ]),
+        SizedBox({
+            "height": 12
+          }),
+        Text({
+            "data": "DecoratedBox · 纯装饰",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        DecoratedBox({
+            "decoration": {
+              "color": '@Colors.amber.shade100',
+              "border": {
+                "all": {
+                  "color": '#FFC107',
+                  "width": 2
+                }
+              },
+              "borderRadius": {
+                "radius": 8.0
+              }
+            }
           }, [
             Padding({
                 "padding": {
@@ -510,7 +672,45 @@ class ContainerDetailComponent {
                 }
               }, [
                 Text({
-                    "data": "卡片内容（elevation=2）"
+                    "data": "DecoratedBox 内容"
+                  })
+              ])
+          ]),
+        SizedBox({
+            "height": 12
+          }),
+        Text({
+            "data": "Card · shape / clipBehavior",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        Card({
+            "elevation": 4,
+            "shape": {
+              "kind": "rounded",
+              "borderRadius": {
+                "radius": 16.0
+              },
+              "side": {
+                "color": '#673AB7',
+                "width": 1
+              }
+            },
+            "clipBehavior": "antiAlias",
+            "shadowColor": '#673AB7'
+          }, [
+            Padding({
+                "padding": {
+                  "left": 16.0,
+                  "top": 16.0,
+                  "right": 16.0,
+                  "bottom": 16.0
+                }
+              }, [
+                Text({
+                    "data": "圆角卡片 + 描边 + 阴影"
                   })
               ])
           ]),
@@ -562,7 +762,16 @@ class ScrollDetailComponent {
         SizedBox({
             "height": 160
           }, [
-            ListView({}, [
+            ListView({
+                "padding": {
+                  "left": 8.0,
+                  "top": 8.0,
+                  "right": 8.0,
+                  "bottom": 8.0
+                },
+                "physics": "BouncingScrollPhysics",
+                "itemExtent": 56
+              }, [
                 ListTile({
                     "title": "item A",
                     "leading": Icon({
@@ -606,7 +815,8 @@ class ScrollDetailComponent {
             }
           }),
         SingleChildScrollView({
-            "scrollDirection": "horizontal"
+            "scrollDirection": "horizontal",
+            "physics": "ClampingScrollPhysics"
           }, [
             Row({}, [
                 ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [Padding({ "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ Chip({ "label": "横向 " + i }) ])]); } return out; })()
@@ -621,32 +831,89 @@ export function ScrollDetail(props, children) {
 
 class ScaffoldDetailComponent {
   constructor() {
+    this._navIndex = 0;
   }
+  _onNavTap(index) { this.setState(function(){ this._navIndex = index; }); }
+  _onFab() { /* 空方法体 */ }
   build() {
-    return Scaffold({}, [
-        AppBar({}, [
-            Text({
-                "data": "Scaffold / AppBar / Center"
+    return Scaffold({
+        "backgroundColor": '@Colors.grey.shade50',
+        "floatingActionButton": FloatingActionButton({
+            "child": Icon({
+                "icon": "add"
+              }),
+            "event": this.__bind("_onFab"),
+            "backgroundColor": '#673AB7',
+            "foregroundColor": '#FFFFFF',
+            "tooltip": "添加"
+          }),
+        "bottomNavigationBar": BottomNavigationBar({
+            "currentIndex": this._navIndex,
+            "event": this.__bind("_onNavTap"),
+            "selectedItemColor": '#673AB7',
+            "unselectedItemColor": '#9E9E9E'
+          }, [
+            BottomNavigationBarItem({
+                "icon": Icon({
+                    "icon": "home"
+                  }),
+                "label": "首页"
+              }),
+            BottomNavigationBarItem({
+                "icon": Icon({
+                    "icon": "search"
+                  }),
+                "label": "搜索"
+              }),
+            BottomNavigationBarItem({
+                "icon": Icon({
+                    "icon": "person"
+                  }),
+                "label": "我的"
+              })
+          ])
+      }, [
+        AppBar({
+            "title": Text({
+                "data": "Scaffold / AppBar / FAB / BottomNav"
+              }),
+            "leading": Icon({
+                "icon": "menu"
+              }),
+            "backgroundColor": '#673AB7',
+            "foregroundColor": '#FFFFFF',
+            "elevation": 4,
+            "toolbarHeight": 56,
+            "centerTitle": true
+          }, [
+            Icon({
+                "icon": "search",
+                "color": '#FFFFFF'
+              }),
+            SizedBox({
+                "width": 16
               })
           ]),
-        Center({}, [
-            Column({
-                "mainAxisAlignment": "center"
-              }, [
-                Icon({
-                    "icon": "extension",
-                    "size": 48,
-                    "color": '#673AB7'
-                  }),
-                SizedBox({
-                    "height": 12
-                  }),
-                Text({
-                    "data": "页面骨架组件演示"
-                  }),
-                Text({
-                    "data": "Scaffold + AppBar + Center + SingleChildScrollView"
-                  })
+        SafeArea({}, [
+            Center({}, [
+                Column({
+                    "mainAxisAlignment": "center"
+                  }, [
+                    Icon({
+                        "icon": "extension",
+                        "size": 48,
+                        "color": '#673AB7'
+                      }),
+                    SizedBox({
+                        "height": 12
+                      }),
+                    Text({
+                        "data": "页面骨架组件演示"
+                      }),
+                    Text({
+                        "data": "BottomNav 选中：" + this._navIndex
+                      })
+                  ])
               ])
           ])
       ]);
@@ -654,5 +921,241 @@ class ScaffoldDetailComponent {
 }
 export function ScaffoldDetail(props, children) {
   return __h(ScaffoldDetailComponent, props, children);
+}
+
+class InputDetailComponent {
+  constructor() {
+    this._text = "";
+    this._choice = "A";
+    this._dropdown = "苹果";
+    this._switchOn = false;
+    this._checked = false;
+    this._slider = 0.4;
+  }
+  _onTextChanged(v) { this.setState(function(){ this._text = v; }); }
+  _onChoiceChanged(v) { this.setState(function(){ this._choice = ""; }); }
+  _onDropdownChanged(v) { this.setState(function(){ this._dropdown = ""; }); }
+  _onSwitchChanged(v) { this.setState(function(){}); }
+  _onCheckChanged(v) { this.setState(function(){ this._checked = v; }); }
+  _onSliderChanged(v) { this.setState(function(){ this._slider = v; }); }
+  build() {
+    return Column({
+        "crossAxisAlignment": "stretch"
+      }, [
+        Text({
+            "data": "TextField",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        TextField({
+            "event": this.__bind("_onTextChanged"),
+            "hintText": "请输入文本",
+            "labelText": "用户名",
+            "maxLines": 1,
+            "style": {
+              "fontSize": 16
+            }
+          }),
+        SizedBox({
+            "height": 4
+          }),
+        Text({
+            "data": "输入内容：" + this._text,
+            "style": {
+              "fontSize": 14,
+              "color": '#9E9E9E'
+            }
+          }),
+        SizedBox({
+            "height": 12
+          }),
+        Text({
+            "data": "Radio 单选",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        Row({}, [
+            Radio({
+                "value": "A",
+                "groupValue": this._choice,
+                "event": this.__bind("_onChoiceChanged"),
+                "activeColor": '#673AB7'
+              }),
+            Text({
+                "data": "选项 A"
+              }),
+            Radio({
+                "value": "B",
+                "groupValue": this._choice,
+                "event": this.__bind("_onChoiceChanged"),
+                "activeColor": '#673AB7'
+              }),
+            Text({
+                "data": "选项 B"
+              })
+          ]),
+        Text({
+            "data": "当前选择：" + this._choice,
+            "style": {
+              "fontSize": 14,
+              "color": '#9E9E9E'
+            }
+          }),
+        SizedBox({
+            "height": 12
+          }),
+        Text({
+            "data": "DropdownButton",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        DropdownButton({
+            "value": this._dropdown,
+            "event": this.__bind("_onDropdownChanged"),
+            "isExpanded": true
+          }, [
+            DropdownMenuItem({
+                "value": "苹果",
+                "label": "苹果"
+              }),
+            DropdownMenuItem({
+                "value": "香蕉",
+                "label": "香蕉"
+              }),
+            DropdownMenuItem({
+                "value": "橙子",
+                "label": "橙子"
+              })
+          ]),
+        SizedBox({
+            "height": 12
+          }),
+        Row({}, [
+            Switch({
+                "value": this._switchOn,
+                "event": this.__bind("_onSwitchChanged"),
+                "activeColor": '#FFFFFF',
+                "activeTrackColor": '#673AB7',
+                "inactiveThumbColor": '#9E9E9E',
+                "inactiveTrackColor": '@Colors.grey.shade300'
+              }),
+            SizedBox({
+                "width": 8
+              }),
+            Text({
+                "data": "Switch：" + (this._switchOn ? "开" : "关")
+              })
+          ]),
+        Row({}, [
+            Checkbox({
+                "value": this._checked,
+                "event": this.__bind("_onCheckChanged"),
+                "activeColor": '#673AB7',
+                "checkColor": '#FFFFFF'
+              }),
+            SizedBox({
+                "width": 8
+              }),
+            Text({
+                "data": "Checkbox：" + (this._checked ?? false)
+              })
+          ]),
+        SizedBox({
+            "height": 8
+          }),
+        Text({
+            "data": "Slider 值：" + this._slider,
+            "style": {
+              "fontSize": 14
+            }
+          }),
+        Slider({
+            "value": this._slider,
+            "event": this.__bind("_onSliderChanged"),
+            "min": 0,
+            "max": 1,
+            "divisions": 10,
+            "activeColor": '#673AB7',
+            "inactiveColor": '@Colors.grey.shade300'
+          })
+      ]);
+  }
+}
+export function InputDetail(props, children) {
+  return __h(InputDetailComponent, props, children);
+}
+
+class ProgressDetailComponent {
+  constructor() {
+    this._progress = 0.65;
+  }
+  build() {
+    return Column({
+        "crossAxisAlignment": "stretch"
+      }, [
+        Text({
+            "data": "CircularProgressIndicator",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        SizedBox({
+            "height": 8
+          }),
+        Row({}, [
+            CircularProgressIndicator({
+                "color": '#673AB7',
+                "backgroundColor": '@Colors.deepPurple.shade50',
+                "strokeWidth": 6
+              }),
+            SizedBox({
+                "width": 24
+              }),
+            CircularProgressIndicator({})
+          ]),
+        SizedBox({
+            "height": 16
+          }),
+        Text({
+            "data": "LinearProgressIndicator",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        SizedBox({
+            "height": 8
+          }),
+        LinearProgressIndicator({
+            "color": '#673AB7',
+            "backgroundColor": '@Colors.deepPurple.shade50',
+            "minHeight": 8
+          }),
+        SizedBox({
+            "height": 4
+          }),
+        LinearProgressIndicator({}),
+        SizedBox({
+            "height": 8
+          }),
+        Text({
+            "data": "进度值：" + this._progress,
+            "style": {
+              "fontSize": 14,
+              "color": '#9E9E9E'
+            }
+          })
+      ]);
+  }
+}
+export function ProgressDetail(props, children) {
+  return __h(ProgressDetailComponent, props, children);
 }
 

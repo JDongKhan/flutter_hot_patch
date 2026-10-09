@@ -146,29 +146,48 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
 
   r.register('Stack', (c) => Stack(
         alignment: alignmentFromJson(c.props['alignment']) ?? AlignmentDirectional.topStart,
+        fit: stackFitFromJson(c.props['fit']) ?? StackFit.loose,
+        clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.hardEdge,
         children: c.children,
       ));
 
   r.register('Wrap', (c) => Wrap(
+        direction: axisFromJson(c.props['direction']) ?? Axis.horizontal,
         spacing: c.num_('spacing') ?? 0,
         runSpacing: c.num_('runSpacing') ?? 0,
+        alignment: wrapAlignmentFromJson(c.props['alignment']) ?? WrapAlignment.start,
+        runAlignment:
+            wrapAlignmentFromJson(c.props['runAlignment']) ?? WrapAlignment.start,
+        crossAxisAlignment: wrapCrossAlignmentFromJson(
+                c.props['crossAxisAlignment']) ??
+            WrapCrossAlignment.start,
         children: c.children,
       ));
 
   r.register('ListView', (c) => ListView(
-        shrinkWrap: true,
+        // shrinkWrap 未下发时保持旧产物行为（true），兼容存量 JS。
+        shrinkWrap: c.bool_('shrinkWrap') ?? true,
         scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+        padding: edgeInsetsFromJson(c.map('padding')),
+        physics: scrollPhysicsFromJson(c.props['physics']),
+        itemExtent: c.num_('itemExtent'),
         children: c.children,
       ));
 
   r.register('SingleChildScrollView', (c) => SingleChildScrollView(
         scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
         padding: edgeInsetsFromJson(c.map('padding')),
+        physics: scrollPhysicsFromJson(c.props['physics']),
+        reverse: c.bool_('reverse') ?? false,
         child: c.child(),
       ));
 
   r.register('Container', (c) {
     final deco = boxDecorationFromJson(c.map('decoration'));
+    // decoration 为空时 clipBehavior 必须为 Clip.none（Flutter 断言）。
+    final clip = deco == null
+        ? Clip.none
+        : (clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.none);
     return Container(
       width: c.num_('width'),
       height: c.num_('height'),
@@ -178,6 +197,8 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       padding: edgeInsetsFromJson(c.map('padding')),
       margin: edgeInsetsFromJson(c.map('margin')),
       alignment: alignmentFromJson(c.props['alignment']),
+      constraints: boxConstraintsFromJson(c.map('constraints')),
+      clipBehavior: clip,
       child: c.child(),
     );
   });
@@ -225,6 +246,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     return ClipRRect(
       borderRadius:
           radius == null ? BorderRadius.zero : BorderRadius.all(Radius.circular(radius)),
+      clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
       child: c.propChild('child'),
     );
   });
@@ -233,6 +255,9 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         elevation: c.num_('elevation'),
         margin: edgeInsetsFromJson(c.map('margin')),
         color: colorFromJson(c.props['color']),
+        shape: shapeFromJson(c.props['shape']),
+        clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']),
+        shadowColor: colorFromJson(c.props['shadowColor']),
         child: c.child(),
       ));
 
@@ -247,16 +272,45 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     final width = c.num_('width');
     final height = c.num_('height');
     final fit = boxFitFromJson(c.props['fit']);
+    final color = colorFromJson(c.props['color']);
+    final blend = blendModeFromJson(c.props['colorBlendMode']);
+    final align = alignmentFromJson(c.props['alignment']) ?? Alignment.center;
+    final repeat = imageRepeatFromJson(c.props['repeat']) ?? ImageRepeat.noRepeat;
     return source.startsWith('http')
-        ? Image.network(source, width: width, height: height, fit: fit)
-        : Image.asset(source, width: width, height: height, fit: fit);
+        ? Image.network(source,
+            width: width,
+            height: height,
+            fit: fit,
+            color: color,
+            colorBlendMode: blend,
+            alignment: align,
+            repeat: repeat)
+        : Image.asset(source,
+            width: width,
+            height: height,
+            fit: fit,
+            color: color,
+            colorBlendMode: blend,
+            alignment: align,
+            repeat: repeat);
   });
 
-  r.register('CircleAvatar', (c) => CircleAvatar(
-        radius: c.num_('radius'),
-        backgroundColor: colorFromJson(c.props['backgroundColor']),
-        child: c.child(),
-      ));
+  r.register('CircleAvatar', (c) {
+    final bgImage = c.str('backgroundImage');
+    return CircleAvatar(
+      radius: c.num_('radius'),
+      minRadius: c.num_('minRadius'),
+      maxRadius: c.num_('maxRadius'),
+      backgroundColor: colorFromJson(c.props['backgroundColor']),
+      foregroundColor: colorFromJson(c.props['foregroundColor']),
+      backgroundImage: bgImage == null
+          ? null
+          : (bgImage.startsWith('http')
+              ? NetworkImage(bgImage)
+              : AssetImage(bgImage)) as ImageProvider,
+      child: c.child(),
+    );
+  });
 
   r.register('Divider', (c) => Divider(
         height: c.num_('height'),
@@ -266,11 +320,19 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         color: colorFromJson(c.props['color']),
       ));
 
-  r.register('Spacer', (c) => const Spacer());
+  r.register('Spacer', (c) => Spacer(flex: c.int_('flex') ?? 1));
 
   r.register('Chip', (c) => Chip(
-        label: Text(c.str('label') ?? ''),
+        label: Text(c.str('label') ?? '',
+            style: textStyleFromJson(c.map('labelStyle'))),
+        avatar: c.propChild('avatar'),
+        deleteIcon: c.propChild('deleteIcon'),
+        onDeleted: c.on('onDeleted'),
         backgroundColor: colorFromJson(c.props['backgroundColor']),
+        padding: edgeInsetsFromJson(c.map('padding')),
+        side: borderSideFromJson(c.props['side']),
+        shape: shapeFromJson(c.props['shape']),
+        elevation: c.num_('elevation'),
       ));
 
   r.register('ListTile', (c) {
@@ -282,6 +344,13 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       leading: c.propChild('leading'),
       trailing: c.propChild('trailing'),
       onTap: c.on('event'),
+      onLongPress: c.on('onLongPress'),
+      tileColor: colorFromJson(c.props['tileColor']),
+      iconColor: colorFromJson(c.props['iconColor']),
+      textColor: colorFromJson(c.props['textColor']),
+      contentPadding: edgeInsetsFromJson(c.map('contentPadding')),
+      dense: c.bool_('dense'),
+      shape: shapeFromJson(c.props['shape']),
     );
   });
 
@@ -312,29 +381,55 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     };
   });
 
-  r.register('InkWell', (c) => InkWell(onTap: c.on('event'), child: c.child()));
+  r.register('InkWell', (c) {
+    final radius = c.num_('borderRadius');
+    return InkWell(
+      onTap: c.on('event'),
+      onLongPress: c.on('onLongPress'),
+      onDoubleTap: c.on('onDoubleTap'),
+      borderRadius: radius == null ? null : BorderRadius.circular(radius),
+      splashColor: colorFromJson(c.props['splashColor']),
+      highlightColor: colorFromJson(c.props['highlightColor']),
+      child: c.child(),
+    );
+  });
 
   r.register(
       'GestureDetector',
       (c) => GestureDetector(
             onTap: c.on('event'),
+            onLongPress: c.on('onLongPress'),
+            onDoubleTap: c.on('onDoubleTap'),
+            behavior: hitTestBehaviorFromJson(c.props['behavior']),
             child: c.child(),
           ));
 
   r.register('Switch', (c) => Switch(
         value: c.bool_('value') ?? false,
         onChanged: c.onValue<bool?>('event'),
+        // 协议键仍叫 activeColor（生成器侧），Flutter 新版改名为 activeThumbColor
+        activeThumbColor: colorFromJson(c.props['activeColor']),
+        activeTrackColor: colorFromJson(c.props['activeTrackColor']),
+        inactiveThumbColor: colorFromJson(c.props['inactiveThumbColor']),
+        inactiveTrackColor: colorFromJson(c.props['inactiveTrackColor']),
       ));
 
   r.register('Checkbox', (c) => Checkbox(
-        value: c.bool_('value') ?? false,
+        value: c.bool_('value'),
+        tristate: c.bool_('tristate') ?? false,
         onChanged: c.onValue<bool?>('event'),
+        activeColor: colorFromJson(c.props['activeColor']),
+        checkColor: colorFromJson(c.props['checkColor']),
       ));
 
   r.register('Slider', (c) => Slider(
         value: c.num_('value') ?? 0,
         min: c.num_('min') ?? 0,
         max: c.num_('max') ?? 1,
+        divisions: c.int_('divisions'),
+        label: c.str('label'),
+        activeColor: colorFromJson(c.props['activeColor']),
+        inactiveColor: colorFromJson(c.props['inactiveColor']),
         onChanged: c.onValue<double>('event'),
       ));
 
@@ -344,10 +439,160 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       backgroundColor: colorFromJson(c.props['backgroundColor']),
       appBar: appBar is AppBar ? appBar : null,
       body: c.hasChildOfType('AppBar') ? c.child(1) : c.child(0),
+      floatingActionButton: c.propChild('floatingActionButton'),
+      bottomNavigationBar: c.propChild('bottomNavigationBar'),
     );
   });
 
-  r.register('AppBar', (c) => AppBar(title: c.child()));
+  // AppBar：title / leading 是「值为 element 的 prop」（propChild），
+  // actions 全部进 children（生成器把 actions 追加为子节点）。
+  r.register('AppBar', (c) => AppBar(
+        leading: c.propChild('leading'),
+        title: c.propChild('title'),
+        actions: c.children.isEmpty ? null : c.children,
+        backgroundColor: colorFromJson(c.props['backgroundColor']),
+        foregroundColor: colorFromJson(c.props['foregroundColor']),
+        elevation: c.num_('elevation'),
+        toolbarHeight: c.num_('toolbarHeight'),
+        centerTitle: c.bool_('centerTitle'),
+        titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
+      ));
+
+  // ---------------------------------------------------------------------
+  // 布局 / 装饰补充
+  // ---------------------------------------------------------------------
+
+  r.register('SafeArea', (c) => SafeArea(
+        left: c.bool_('left') ?? true,
+        top: c.bool_('top') ?? true,
+        right: c.bool_('right') ?? true,
+        bottom: c.bool_('bottom') ?? true,
+        child: c.childOrEmpty,
+      ));
+
+  r.register('Opacity', (c) => Opacity(
+        opacity: c.num_('opacity') ?? 1,
+        child: c.child(),
+      ));
+
+  r.register('ConstrainedBox', (c) => ConstrainedBox(
+        constraints:
+            boxConstraintsFromJson(c.map('constraints')) ?? const BoxConstraints(),
+        child: c.childOrEmpty,
+      ));
+
+  r.register('AspectRatio', (c) => AspectRatio(
+        aspectRatio: c.num_('aspectRatio') ?? 1,
+        child: c.child(),
+      ));
+
+  r.register('FractionallySizedBox', (c) => FractionallySizedBox(
+        widthFactor: c.num_('widthFactor'),
+        heightFactor: c.num_('heightFactor'),
+        alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+        child: c.child(),
+      ));
+
+  r.register('DecoratedBox', (c) => DecoratedBox(
+        decoration:
+            boxDecorationFromJson(c.map('decoration')) ?? const BoxDecoration(),
+        child: c.child(),
+      ));
+
+  // ---------------------------------------------------------------------
+  // 指示器
+  // ---------------------------------------------------------------------
+
+  r.register('CircularProgressIndicator', (c) => CircularProgressIndicator(
+        value: c.num_('value'),
+        color: colorFromJson(c.props['color']),
+        backgroundColor: colorFromJson(c.props['backgroundColor']),
+        strokeWidth: c.num_('strokeWidth') ?? 4.0,
+      ));
+
+  r.register('LinearProgressIndicator', (c) => LinearProgressIndicator(
+        value: c.num_('value'),
+        color: colorFromJson(c.props['color']),
+        backgroundColor: colorFromJson(c.props['backgroundColor']),
+        minHeight: c.num_('minHeight'),
+      ));
+
+  // ---------------------------------------------------------------------
+  // 输入 / 导航
+  // ---------------------------------------------------------------------
+
+  r.register('TextField', (c) => _JsTextField(
+        value: c.str('value'),
+        onChanged: c.onValue<String>('event'),
+        hintText: c.str('hintText'),
+        labelText: c.str('labelText'),
+        obscureText: c.bool_('obscureText') ?? false,
+        enabled: c.bool_('enabled'),
+        keyboardType: textInputTypeFromJson(c.props['keyboardType']),
+        maxLines: c.int_('maxLines') ?? 1,
+        style: textStyleFromJson(c.map('style')),
+        textAlign: textAlignFromJson(c.props['textAlign']),
+      ));
+
+  r.register('IconButton', (c) => IconButton(
+        icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
+        onPressed: c.on('event'),
+        color: colorFromJson(c.props['color']),
+        iconSize: c.num_('iconSize'),
+        tooltip: c.str('tooltip'),
+      ));
+
+  r.register('FloatingActionButton', (c) => FloatingActionButton(
+        onPressed: c.on('event') ?? () {},
+        backgroundColor: colorFromJson(c.props['backgroundColor']),
+        foregroundColor: colorFromJson(c.props['foregroundColor']),
+        mini: c.bool_('mini') ?? false,
+        tooltip: c.str('tooltip'),
+        elevation: c.num_('elevation'),
+        child: c.propChild('child'),
+      ));
+
+  r.register('BottomNavigationBar', (c) => BottomNavigationBar(
+        items: c.children
+            .whereType<_JsBottomNavItem>()
+            .map((w) => w.item)
+            .toList(),
+        currentIndex: c.int_('currentIndex') ?? 0,
+        onTap: c.onValue<int>('event'),
+        selectedItemColor: colorFromJson(c.props['selectedItemColor']),
+        unselectedItemColor: colorFromJson(c.props['unselectedItemColor']),
+      ));
+
+  // BottomNavigationBarItem 不是 Widget，运行时包装为占位组件，
+  // 由 BottomNavigationBar renderer 提取 unwrap。
+  r.register('BottomNavigationBarItem', (c) => _JsBottomNavItem(
+        BottomNavigationBarItem(
+          icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
+          label: c.str('label'),
+        ),
+      ));
+
+  r.register('Radio', (c) => Radio<dynamic>(
+        value: c.props['value'],
+        // ignore: deprecated_member_use
+        groupValue: c.props['groupValue'],
+        // ignore: deprecated_member_use
+        onChanged: c.onValue<dynamic>('event'),
+        activeColor: colorFromJson(c.props['activeColor']),
+      ));
+
+  r.register('DropdownButton', (c) => DropdownButton<dynamic>(
+        value: c.props['value'],
+        items: c.children.whereType<DropdownMenuItem<dynamic>>().toList(),
+        onChanged: c.onValue<dynamic>('event'),
+        hint: c.str('hint') == null ? null : Text(c.str('hint')!),
+        isExpanded: c.bool_('isExpanded') ?? false,
+      ));
+
+  r.register('DropdownMenuItem', (c) => DropdownMenuItem<dynamic>(
+        value: c.props['value'],
+        child: Text(c.str('label') ?? ''),
+      ));
 
   // Component：无 JS 产物的组件节点（无注解的 lib 普通 widget /
   // @UIComponentIgnore）→ 宿主 nativeComponents 原生注入；未注册给可见占位。
@@ -357,6 +602,92 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     if (native != null) return native(c.map('args') ?? const {});
     return buildMissingJsWidget(name, c.children);
   });
+}
+
+/// TextField 受控封装：JS 侧只下发 value 字符串与 onChanged 句柄，
+/// controller 由宿主持有并在 props.value 变化时同步（光标移到末尾）。
+class _JsTextField extends StatefulWidget {
+  const _JsTextField({
+    required this.value,
+    required this.onChanged,
+    this.hintText,
+    this.labelText,
+    this.obscureText = false,
+    this.enabled,
+    this.keyboardType,
+    this.maxLines = 1,
+    this.style,
+    this.textAlign,
+  });
+
+  final String? value;
+  final ValueChanged<String>? onChanged;
+  final String? hintText;
+  final String? labelText;
+  final bool obscureText;
+  final bool? enabled;
+  final TextInputType? keyboardType;
+  final int? maxLines;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+
+  @override
+  State<_JsTextField> createState() => _JsTextFieldState();
+}
+
+class _JsTextFieldState extends State<_JsTextField> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.value ?? '');
+
+  @override
+  void didUpdateWidget(_JsTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 仅受控模式（value 非空）同步 controller；value 为 null 时是非受控，
+    // 重建不回写，避免清空用户输入。
+    final v = widget.value;
+    if (v != null && v != _controller.text) {
+      _controller.value = TextEditingValue(
+        text: v,
+        selection: TextSelection.collapsed(offset: v.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      onChanged: widget.onChanged,
+      obscureText: widget.obscureText,
+      enabled: widget.enabled,
+      keyboardType: widget.keyboardType,
+      // obscureText 时 Flutter 要求 maxLines == 1
+      maxLines: widget.obscureText ? 1 : widget.maxLines,
+      style: widget.style,
+      textAlign: widget.textAlign ?? TextAlign.start,
+      decoration: InputDecoration(
+        hintText: widget.hintText,
+        labelText: widget.labelText,
+      ),
+    );
+  }
+}
+
+/// BottomNavigationBarItem 不是 Widget：宿主侧用它包装 item 数据，
+/// 由 BottomNavigationBar renderer 收集还原为 items 列表。
+class _JsBottomNavItem extends StatelessWidget {
+  const _JsBottomNavItem(this.item);
+
+  final BottomNavigationBarItem item;
+
+  @override
+  Widget build(BuildContext context) => item.icon;
 }
 
 /// 迁移中的 JS 组件引用了宿主未注册的类型时，给出可见占位。

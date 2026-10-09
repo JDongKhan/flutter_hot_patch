@@ -119,12 +119,16 @@ Size? sizeFromJson(Object? v) {
   return Size(w, h);
 }
 
-/// JSON → BorderSide（{'color':..,'width':..}）。
+/// JSON → BorderSide（{'color':..,'width':..,'style':..}）。
 BorderSide? borderSideFromJson(Object? v) {
   if (v is! Map) return null;
   final c = colorFromJson(v['color']);
   final w = (v['width'] as num?)?.toDouble();
-  return BorderSide(color: c ?? const Color(0xFF000000), width: w ?? 1.0);
+  return BorderSide(
+    color: c ?? const Color(0xFF000000),
+    width: w ?? 1.0,
+    style: v['style'] == 'none' ? BorderStyle.none : BorderStyle.solid,
+  );
 }
 
 /// JSON → ButtonStyle（null / 空 Map → null，表示用 widget 默认样式）。
@@ -135,9 +139,21 @@ ButtonStyle? buttonStyleFromJson(Map<String, dynamic>? json) {
   final overlay = colorFromJson(json['overlayColor']);
   final icon = colorFromJson(json['iconColor']);
   final shadow = colorFromJson(json['shadowColor']);
+  final disabledBg = colorFromJson(json['disabledBackgroundColor']);
+  final disabledFg = colorFromJson(json['disabledForegroundColor']);
+  // ButtonStyle 无 disabledXxx 参数（那是 styleFrom 的便捷参数）：
+  // 合并进 backgroundColor/foregroundColor 的 resolveWith。
+  final bgProp = (bg == null && disabledBg == null)
+      ? null
+      : WidgetStateProperty.resolveWith<Color?>((states) =>
+          states.contains(WidgetState.disabled) ? (disabledBg ?? bg) : bg);
+  final fgProp = (fg == null && disabledFg == null)
+      ? null
+      : WidgetStateProperty.resolveWith<Color?>((states) =>
+          states.contains(WidgetState.disabled) ? (disabledFg ?? fg) : fg);
   return ButtonStyle(
-    backgroundColor: bg == null ? null : WidgetStatePropertyAll<Color?>(bg),
-    foregroundColor: fg == null ? null : WidgetStatePropertyAll<Color?>(fg),
+    backgroundColor: bgProp,
+    foregroundColor: fgProp,
     overlayColor: overlay == null ? null : WidgetStatePropertyAll<Color?>(overlay),
     iconColor: icon == null ? null : WidgetStatePropertyAll<Color?>(icon),
     shadowColor: shadow == null ? null : WidgetStatePropertyAll<Color?>(shadow),
@@ -156,6 +172,12 @@ ButtonStyle? buttonStyleFromJson(Map<String, dynamic>? json) {
     side: borderSideFromJson(json['side']) == null
         ? null
         : WidgetStatePropertyAll<BorderSide?>(borderSideFromJson(json['side'])),
+    shape: shapeFromJson(json['shape']) == null
+        ? null
+        : WidgetStatePropertyAll<OutlinedBorder?>(shapeFromJson(json['shape'])),
+    fixedSize: sizeFromJson(json['fixedSize']) == null
+        ? null
+        : WidgetStatePropertyAll<Size?>(sizeFromJson(json['fixedSize'])),
     textStyle: json['textStyle'] is Map
         ? WidgetStatePropertyAll<TextStyle?>(textStyleFromJson((json['textStyle'] as Map).cast<String, dynamic>()))
         : null,
@@ -355,22 +377,315 @@ BoxFit? boxFitFromJson(Object? v) {
   };
 }
 
-/// JSON → BorderRadius（{radius: n}）。
+/// JSON → BorderRadius（{radius: n} 统一圆角，或
+/// {topLeft, topRight, bottomLeft, bottomRight} 四角独立；缺省角 = 0）。
 BorderRadius? borderRadiusFromJson(Map<String, dynamic>? json) {
   if (json == null) return null;
-  final r = json['radius'];
-  final radius = r is num ? r.toDouble() : double.tryParse('$r');
-  if (radius == null) return null;
-  return BorderRadius.circular(radius);
+  double? v(Object? x) {
+    if (x is num) return x.toDouble();
+    return double.tryParse('$x');
+  }
+
+  final r = v(json['radius']);
+  if (r != null) return BorderRadius.circular(r);
+  final tl = v(json['topLeft']);
+  final tr = v(json['topRight']);
+  final bl = v(json['bottomLeft']);
+  final br = v(json['bottomRight']);
+  if (tl == null && tr == null && bl == null && br == null) return null;
+  return BorderRadius.only(
+    topLeft: Radius.circular(tl ?? 0),
+    topRight: Radius.circular(tr ?? 0),
+    bottomLeft: Radius.circular(bl ?? 0),
+    bottomRight: Radius.circular(br ?? 0),
+  );
 }
 
-/// JSON → BoxDecoration（{color, borderRadius}）。
+/// JSON → Border（{'all': borderSide} 四边统一，或
+/// {'top': ..., 'right': ..., 'bottom': ..., 'left': ...} 四边独立）。
+Border? borderFromJson(Map<String, dynamic>? json) {
+  if (json == null || json.isEmpty) return null;
+  final all = borderSideFromJson(json['all']);
+  if (all != null) return Border.fromBorderSide(all);
+  return Border(
+    top: borderSideFromJson(json['top']) ?? BorderSide.none,
+    right: borderSideFromJson(json['right']) ?? BorderSide.none,
+    bottom: borderSideFromJson(json['bottom']) ?? BorderSide.none,
+    left: borderSideFromJson(json['left']) ?? BorderSide.none,
+  );
+}
+
+/// JSON → BoxShadow（{'color': c, 'dx': n, 'dy': n, 'blur': n, 'spread': n,
+/// 'blurStyle': s}）。
+BoxShadow? boxShadowFromJson(Object? v) {
+  if (v is! Map) return null;
+  double d(Object? x) {
+    if (x is num) return x.toDouble();
+    return double.tryParse('$x') ?? 0;
+  }
+
+  return BoxShadow(
+    color: colorFromJson(v['color']) ?? const Color(0xFF000000),
+    offset: Offset(d(v['dx']), d(v['dy'])),
+    blurRadius: d(v['blur']),
+    spreadRadius: d(v['spread']),
+    blurStyle: switch (v['blurStyle']) {
+      'solid' => BlurStyle.solid,
+      'outer' => BlurStyle.outer,
+      'inner' => BlurStyle.inner,
+      _ => BlurStyle.normal,
+    },
+  );
+}
+
+/// JSON → BoxShadow 列表。
+List<BoxShadow>? boxShadowListFromJson(Object? v) {
+  if (v is! List) return null;
+  final list = [for (final e in v) boxShadowFromJson(e)].nonNulls.toList();
+  return list.isEmpty ? null : list;
+}
+
+/// JSON → Gradient（{kind:'linear'|'radial'|'sweep', colors, begin/end/center,
+/// radius, stops}）。
+Gradient? gradientFromJson(Map<String, dynamic>? json) {
+  if (json == null) return null;
+  final colors = (json['colors'] as List?)
+      ?.map(colorFromJson)
+      .nonNulls
+      .toList();
+  if (colors == null || colors.length < 2) return null;
+  final stops = (json['stops'] as List?)
+      ?.map((x) => x is num ? x.toDouble() : double.tryParse('$x'))
+      .nonNulls
+      .toList();
+  double? radius() {
+    final r = json['radius'];
+    return r is num ? r.toDouble() : double.tryParse('$r');
+  }
+
+  return switch (json['kind']) {
+    'radial' => RadialGradient(
+        colors: colors,
+        stops: stops,
+        center: alignmentFromJson(json['center']) ?? Alignment.center,
+        radius: radius() ?? 0.5,
+      ),
+    'sweep' => SweepGradient(
+        colors: colors,
+        stops: stops,
+        center: alignmentFromJson(json['center']) ?? Alignment.center,
+      ),
+    _ => LinearGradient(
+        colors: colors,
+        stops: stops,
+        begin: alignmentFromJson(json['begin']) ?? Alignment.centerLeft,
+        end: alignmentFromJson(json['end']) ?? Alignment.centerRight,
+      ),
+  };
+}
+
+/// JSON → DecorationImage（{source, fit}）。
+DecorationImage? decorationImageFromJson(Map<String, dynamic>? json) {
+  if (json == null) return null;
+  final source = json['source'];
+  if (source is! String || source.isEmpty) return null;
+  return DecorationImage(
+    image: source.startsWith('http')
+        ? NetworkImage(source)
+        : AssetImage(source) as ImageProvider,
+    fit: boxFitFromJson(json['fit']),
+  );
+}
+
+/// JSON → BoxConstraints（{minWidth, maxWidth, minHeight, maxHeight}）。
+BoxConstraints? boxConstraintsFromJson(Map<String, dynamic>? json) {
+  if (json == null || json.isEmpty) return null;
+  double? v(Object? x) {
+    if (x is num) return x.toDouble();
+    return double.tryParse('$x');
+  }
+
+  return BoxConstraints(
+    minWidth: v(json['minWidth']) ?? 0,
+    maxWidth: v(json['maxWidth']) ?? double.infinity,
+    minHeight: v(json['minHeight']) ?? 0,
+    maxHeight: v(json['maxHeight']) ?? double.infinity,
+  );
+}
+
+/// JSON → OutlinedBorder（{kind:'rounded'|'stadium'|'circle'|'beveled'|
+/// 'continuous', borderRadius?, side?}）。
+OutlinedBorder? shapeFromJson(Object? v) {
+  if (v is! Map) return null;
+  final radius = borderRadiusFromJson(
+    v['borderRadius'] is Map
+        ? (v['borderRadius'] as Map).cast<String, dynamic>()
+        : null,
+  );
+  final side = borderSideFromJson(v['side']) ?? BorderSide.none;
+  return switch (v['kind']) {
+    'stadium' => StadiumBorder(side: side),
+    'circle' => CircleBorder(side: side),
+    'beveled' => BeveledRectangleBorder(
+        borderRadius: radius ?? BorderRadius.zero, side: side),
+    'continuous' => ContinuousRectangleBorder(
+        borderRadius: radius ?? BorderRadius.zero, side: side),
+    _ => RoundedRectangleBorder(
+        borderRadius: radius ?? BorderRadius.zero, side: side),
+  };
+}
+
+/// JSON → ClipBehavior（'hardEdge'/'antiAlias'/'antiAliasWithSaveLayer'/'none'）。
+Clip? clipBehaviorFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'hardEdge' => Clip.hardEdge,
+    'antiAlias' => Clip.antiAlias,
+    'antiAliasWithSaveLayer' => Clip.antiAliasWithSaveLayer,
+    'none' => Clip.none,
+    _ => null,
+  };
+}
+
+/// JSON → StackFit（'loose'/'expand'/'passthrough'）。
+StackFit? stackFitFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'loose' => StackFit.loose,
+    'expand' => StackFit.expand,
+    'passthrough' => StackFit.passthrough,
+    _ => null,
+  };
+}
+
+/// JSON → HitTestBehavior（'deferToChild'/'opaque'/'translucent'）。
+HitTestBehavior? hitTestBehaviorFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'deferToChild' => HitTestBehavior.deferToChild,
+    'opaque' => HitTestBehavior.opaque,
+    'translucent' => HitTestBehavior.translucent,
+    _ => null,
+  };
+}
+
+/// JSON → ImageRepeat（'repeat'/'repeatX'/'repeatY'/'noRepeat'）。
+ImageRepeat? imageRepeatFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'repeat' => ImageRepeat.repeat,
+    'repeatX' => ImageRepeat.repeatX,
+    'repeatY' => ImageRepeat.repeatY,
+    'noRepeat' => ImageRepeat.noRepeat,
+    _ => null,
+  };
+}
+
+/// JSON → WrapAlignment。
+WrapAlignment? wrapAlignmentFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'start' => WrapAlignment.start,
+    'end' => WrapAlignment.end,
+    'center' => WrapAlignment.center,
+    'spaceBetween' => WrapAlignment.spaceBetween,
+    'spaceAround' => WrapAlignment.spaceAround,
+    'spaceEvenly' => WrapAlignment.spaceEvenly,
+    _ => null,
+  };
+}
+
+/// JSON → WrapCrossAlignment。
+WrapCrossAlignment? wrapCrossAlignmentFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'start' => WrapCrossAlignment.start,
+    'end' => WrapCrossAlignment.end,
+    'center' => WrapCrossAlignment.center,
+    _ => null,
+  };
+}
+
+/// JSON → TextInputType。
+TextInputType? textInputTypeFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'text' => TextInputType.text,
+    'number' => TextInputType.number,
+    'phone' => TextInputType.phone,
+    'emailAddress' => TextInputType.emailAddress,
+    'url' => TextInputType.url,
+    'multiline' => TextInputType.multiline,
+    'datetime' => TextInputType.datetime,
+    'visiblePassword' => TextInputType.visiblePassword,
+    _ => null,
+  };
+}
+
+/// JSON → BlendMode（Image.colorBlendMode 用，覆盖常用混合模式）。
+BlendMode? blendModeFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'modulate' => BlendMode.modulate,
+    'multiply' => BlendMode.multiply,
+    'screen' => BlendMode.screen,
+    'overlay' => BlendMode.overlay,
+    'darken' => BlendMode.darken,
+    'lighten' => BlendMode.lighten,
+    'srcIn' => BlendMode.srcIn,
+    'srcATop' => BlendMode.srcATop,
+    'colorDodge' => BlendMode.colorDodge,
+    'colorBurn' => BlendMode.colorBurn,
+    'hue' => BlendMode.hue,
+    'saturation' => BlendMode.saturation,
+    'color' => BlendMode.color,
+    'luminosity' => BlendMode.luminosity,
+    _ => null,
+  };
+}
+
+/// JSON → ScrollPhysics（类名字符串）。
+ScrollPhysics? scrollPhysicsFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'NeverScrollableScrollPhysics' => const NeverScrollableScrollPhysics(),
+    'BouncingScrollPhysics' => const BouncingScrollPhysics(),
+    'ClampingScrollPhysics' => const ClampingScrollPhysics(),
+    'AlwaysScrollableScrollPhysics' => const AlwaysScrollableScrollPhysics(),
+    _ => null,
+  };
+}
+
+/// JSON → BoxDecoration（{color, borderRadius, border, boxShadow, gradient,
+/// shape, image}）。
 BoxDecoration? boxDecorationFromJson(Map<String, dynamic>? json) {
   if (json == null || json.isEmpty) return null;
   return BoxDecoration(
     color: colorFromJson(json['color']),
     borderRadius: borderRadiusFromJson(
-      json['borderRadius'] is Map ? (json['borderRadius'] as Map).cast<String, dynamic>() : null,
+      json['borderRadius'] is Map
+          ? (json['borderRadius'] as Map).cast<String, dynamic>()
+          : null,
+    ),
+    border: borderFromJson(
+      json['border'] is Map
+          ? (json['border'] as Map).cast<String, dynamic>()
+          : null,
+    ),
+    boxShadow: boxShadowListFromJson(json['boxShadow']),
+    gradient: gradientFromJson(
+      json['gradient'] is Map
+          ? (json['gradient'] as Map).cast<String, dynamic>()
+          : null,
+    ),
+    shape: switch (json['shape']) {
+      'circle' => BoxShape.circle,
+      _ => BoxShape.rectangle,
+    },
+    image: decorationImageFromJson(
+      json['image'] is Map
+          ? (json['image'] as Map).cast<String, dynamic>()
+          : null,
     ),
   );
 }

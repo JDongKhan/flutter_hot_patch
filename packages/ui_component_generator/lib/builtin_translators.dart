@@ -21,6 +21,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const TextButtonTranslator())
     ..register(const OutlinedButtonTranslator())
     ..register(const SizedBoxTranslator())
+    ..register(const SpacerTranslator())
     ..register(const ChipTranslator())
     ..register(const ListTileTranslator())
     ..register(const ClipRRectTranslator())
@@ -40,16 +41,32 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const ListViewTranslator())
     ..register(const SingleChildScrollViewTranslator())
     ..register(const WrapTranslator())
+    ..register(const SafeAreaTranslator())
+    ..register(const OpacityTranslator())
+    ..register(const ConstrainedBoxTranslator())
+    ..register(const AspectRatioTranslator())
+    ..register(const FractionallySizedBoxTranslator())
+    ..register(const DecoratedBoxTranslator())
     // 内容
     ..register(const IconTranslator())
     ..register(const ImageTranslator())
     ..register(const CircleAvatarTranslator())
+    ..register(const CircularProgressIndicatorTranslator())
+    ..register(const LinearProgressIndicatorTranslator())
     // 交互
     ..register(const InkWellTranslator())
     ..register(const GestureDetectorTranslator())
     ..register(const SwitchTranslator())
     ..register(const CheckboxTranslator())
     ..register(const SliderTranslator())
+    ..register(const TextFieldTranslator())
+    ..register(const IconButtonTranslator())
+    ..register(const FloatingActionButtonTranslator())
+    ..register(const BottomNavigationBarTranslator())
+    ..register(const BottomNavigationBarItemTranslator())
+    ..register(const RadioTranslator())
+    ..register(const DropdownButtonTranslator())
+    ..register(const DropdownMenuItemTranslator())
     // 响应式（SDK 类，见 class_translator.sdkSuperClassMap 配套的 ChangeNotifier）
     ..register(const ListenableBuilderTranslator())
     // Builder：多一层 context 作用域（闭包内 context.watch/read 可用）
@@ -239,7 +256,8 @@ class OutlinedButtonTranslator extends _ButtonTranslator {
   String get kind => 'outlined';
 }
 
-/// Chip：标签（label + backgroundColor），无交互。
+/// Chip：标签（label + avatar/backgroundColor/labelStyle/padding/side/shape/
+/// elevation/deleteIcon/onDeleted）。
 class ChipTranslator extends WidgetTranslator {
   const ChipTranslator();
 
@@ -262,11 +280,32 @@ class ChipTranslator extends WidgetTranslator {
       final c = translateColor(bg, ctx);
       if (c != null) props['backgroundColor'] = c;
     }
+    final avatar = ctx.namedArg(node.args, 'avatar');
+    if (avatar != null) props['avatar'] = ctx.translate(avatar);
+    final deleteIcon = ctx.namedArg(node.args, 'deleteIcon');
+    if (deleteIcon != null) props['deleteIcon'] = ctx.translate(deleteIcon);
+    final onDeleted = ctx.namedArg(node.args, 'onDeleted');
+    if (onDeleted != null) props['onDeleted'] = ctx.eventHandle(onDeleted);
+    final labelStyle =
+        textStyleToJson(ctx.namedArg(node.args, 'labelStyle'), ctx);
+    if (labelStyle != null) props['labelStyle'] = labelStyle;
+    final pad = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
+    if (pad != null) props['padding'] = pad;
+    final sideExpr = ctx.namedArg(node.args, 'side');
+    if (sideExpr != null) {
+      final sd = borderSideToJson(sideExpr, ctx);
+      if (sd != null) props['side'] = sd;
+    }
+    final shape = shapeToJson(ctx.namedArg(node.args, 'shape'), ctx);
+    if (shape != null) props['shape'] = shape;
+    final elevation = _numOf(ctx.namedArg(node.args, 'elevation'));
+    if (elevation != null) props['elevation'] = elevation;
     return {'type': ctx.jsString('Chip'), 'props': props};
   }
 }
 
-/// ListTile：列表条目（leading/title/subtitle/trailing/onTap）。
+/// ListTile：列表条目（leading/title/subtitle/trailing/onTap/onLongPress/
+/// tileColor/contentPadding/dense/shape/iconColor/textColor）。
 class ListTileTranslator extends WidgetTranslator {
   const ListTileTranslator();
 
@@ -293,11 +332,28 @@ class ListTileTranslator extends WidgetTranslator {
     if (onTap != null) {
       props['event'] = ctx.eventHandle(onTap);
     }
+    final onLongPress = ctx.namedArg(node.args, 'onLongPress');
+    if (onLongPress != null) {
+      props['onLongPress'] = ctx.eventHandle(onLongPress);
+    }
+    final tileColor = colorToJson(ctx.namedArg(node.args, 'tileColor'), ctx);
+    if (tileColor != null) props['tileColor'] = tileColor;
+    final iconColor = colorToJson(ctx.namedArg(node.args, 'iconColor'), ctx);
+    if (iconColor != null) props['iconColor'] = iconColor;
+    final textColor = colorToJson(ctx.namedArg(node.args, 'textColor'), ctx);
+    if (textColor != null) props['textColor'] = textColor;
+    final padding =
+        edgeInsetsToJson(ctx.namedArg(node.args, 'contentPadding'), ctx);
+    if (padding != null) props['contentPadding'] = padding;
+    final dense = _boolOf(ctx.namedArg(node.args, 'dense'));
+    if (dense != null) props['dense'] = dense;
+    final shape = shapeToJson(ctx.namedArg(node.args, 'shape'), ctx);
+    if (shape != null) props['shape'] = shape;
     return {'type': ctx.jsString('ListTile'), 'props': props};
   }
 }
 
-/// ClipRRect：圆角裁剪（borderRadius + child）。
+/// ClipRRect：圆角裁剪（borderRadius + clipBehavior + child）。
 class ClipRRectTranslator extends WidgetTranslator {
   const ClipRRectTranslator();
 
@@ -312,6 +368,8 @@ class ClipRRectTranslator extends WidgetTranslator {
       final r = ctx.borderRadiusExpr(radius);
       if (r != null) props['borderRadius'] = r;
     }
+    final clip = clipBehaviorToJson(ctx.namedArg(node.args, 'clipBehavior'));
+    if (clip != null) props['clipBehavior'] = clip;
     final child = ctx.namedArg(node.args, 'child');
     if (child != null) props['child'] = ctx.translate(child);
     return {'type': ctx.jsString('ClipRRect'), 'props': props};
@@ -360,10 +418,12 @@ class SizedBoxTranslator extends WidgetTranslator {
 // 页面骨架
 // ===========================================================================
 
-/// Scaffold：页面骨架（appBar / body）。
+/// Scaffold：页面骨架（appBar / body / backgroundColor /
+/// floatingActionButton / bottomNavigationBar）。
 ///
 /// 产物把 appBar 与 body 依次放 children（children[0]=AppBar、children[1]=body），
-/// 运行时 JsWidgetRegistry 按序取用，避免 props 里出现嵌套节点对象。
+/// floatingActionButton / bottomNavigationBar 作为「值为 element 的 prop」
+/// 下发（运行时按 prop 名挂载），运行时 JsWidgetRegistry 按序取用。
 class ScaffoldTranslator extends WidgetTranslator {
   const ScaffoldTranslator();
 
@@ -377,11 +437,28 @@ class ScaffoldTranslator extends WidgetTranslator {
     if (appBar != null) children.add(ctx.translate(appBar));
     final body = ctx.namedArg(node.args, 'body');
     if (body != null) children.add(ctx.translate(body));
-    return {'type': ctx.jsString('Scaffold'), 'children': children};
+    final props = <String, dynamic>{};
+    final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
+    if (bg != null) props['backgroundColor'] = bg;
+    final fab = ctx.namedArg(node.args, 'floatingActionButton');
+    if (fab != null) props['floatingActionButton'] = ctx.translate(fab);
+    final bottomNav = ctx.namedArg(node.args, 'bottomNavigationBar');
+    if (bottomNav != null) {
+      props['bottomNavigationBar'] = ctx.translate(bottomNav);
+    }
+    return {
+      'type': ctx.jsString('Scaffold'),
+      if (props.isNotEmpty) 'props': props,
+      'children': children,
+    };
   }
 }
 
-/// AppBar：顶栏（title 单子）。
+/// AppBar：title / leading（element prop）+ actions（children）
+/// + backgroundColor/elevation/centerTitle/toolbarHeight/titleTextStyle。
+///
+/// title 走「值为 element 的 prop」而非 children[0]：actions 进 children，
+/// 避免「无 title 时 children[0] 是 title 还是第一个 action」的歧义。
 class AppBarTranslator extends WidgetTranslator {
   const AppBarTranslator();
 
@@ -391,9 +468,35 @@ class AppBarTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final children = <Object?>[];
+    final actions = ctx.namedArg(node.args, 'actions');
+    if (actions is ListLiteral) {
+      for (final a in actions.elements) {
+        children.add(ctx.translateElement(a));
+      }
+    }
+    final props = <String, dynamic>{};
     final title = ctx.namedArg(node.args, 'title');
-    if (title != null) children.add(ctx.translate(title));
-    return {'type': ctx.jsString('AppBar'), 'children': children};
+    if (title != null) props['title'] = ctx.translate(title);
+    final leading = ctx.namedArg(node.args, 'leading');
+    if (leading != null) props['leading'] = ctx.translate(leading);
+    final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
+    if (bg != null) props['backgroundColor'] = bg;
+    final fg = colorToJson(ctx.namedArg(node.args, 'foregroundColor'), ctx);
+    if (fg != null) props['foregroundColor'] = fg;
+    final elevation = _numOf(ctx.namedArg(node.args, 'elevation'));
+    if (elevation != null) props['elevation'] = elevation;
+    final toolbarHeight = _numOf(ctx.namedArg(node.args, 'toolbarHeight'));
+    if (toolbarHeight != null) props['toolbarHeight'] = toolbarHeight;
+    final centerTitle = _boolOf(ctx.namedArg(node.args, 'centerTitle'));
+    if (centerTitle != null) props['centerTitle'] = centerTitle;
+    final titleStyle =
+        textStyleToJson(ctx.namedArg(node.args, 'titleTextStyle'), ctx);
+    if (titleStyle != null) props['titleTextStyle'] = titleStyle;
+    return {
+      'type': ctx.jsString('AppBar'),
+      if (props.isNotEmpty) 'props': props,
+      'children': children,
+    };
   }
 }
 
@@ -495,7 +598,7 @@ class FlexibleTranslator extends _FlexTranslator {
   String get type => 'Flexible';
 }
 
-/// Stack：children + alignment。
+/// Stack：children + alignment/fit/clipBehavior。
 class StackTranslator extends WidgetTranslator {
   const StackTranslator();
 
@@ -508,6 +611,10 @@ class StackTranslator extends WidgetTranslator {
     final props = <String, dynamic>{};
     final align = alignmentToJson(ctx.namedArg(node.args, 'alignment'), ctx);
     if (align != null) props['alignment'] = align;
+    final fit = stackFitToJson(ctx.namedArg(node.args, 'fit'));
+    if (fit != null) props['fit'] = fit;
+    final clip = clipBehaviorToJson(ctx.namedArg(node.args, 'clipBehavior'));
+    if (clip != null) props['clipBehavior'] = clip;
     return {
       'type': ctx.jsString('Stack'),
       if (props.isNotEmpty) 'props': props,
@@ -559,7 +666,8 @@ class PositionedTranslator extends WidgetTranslator {
   }
 }
 
-/// Container：width/height/color/padding/margin/alignment/decoration + 单子。
+/// Container：width/height/color/padding/margin/alignment/decoration/
+/// constraints/clipBehavior + 单子。
 class ContainerTranslator extends WidgetTranslator {
   const ContainerTranslator();
 
@@ -583,6 +691,11 @@ class ContainerTranslator extends WidgetTranslator {
     if (align != null) props['alignment'] = align;
     final deco = boxDecorationToJson(ctx.namedArg(node.args, 'decoration'), ctx);
     if (deco != null) props['decoration'] = deco;
+    final constraints =
+        boxConstraintsToJson(ctx.namedArg(node.args, 'constraints'), ctx);
+    if (constraints != null) props['constraints'] = constraints;
+    final clip = clipBehaviorToJson(ctx.namedArg(node.args, 'clipBehavior'));
+    if (clip != null) props['clipBehavior'] = clip;
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     return {
       'type': ctx.jsString('Container'),
@@ -615,7 +728,7 @@ class DividerTranslator extends WidgetTranslator {
   }
 }
 
-/// Card：child + elevation/margin/color。
+/// Card：child + elevation/margin/color/shape/clipBehavior/shadowColor。
 class CardTranslator extends WidgetTranslator {
   const CardTranslator();
 
@@ -633,6 +746,12 @@ class CardTranslator extends WidgetTranslator {
     if (margin != null) props['margin'] = margin;
     final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
     if (color != null) props['color'] = color;
+    final shape = shapeToJson(ctx.namedArg(node.args, 'shape'), ctx);
+    if (shape != null) props['shape'] = shape;
+    final clip = clipBehaviorToJson(ctx.namedArg(node.args, 'clipBehavior'));
+    if (clip != null) props['clipBehavior'] = clip;
+    final shadow = colorToJson(ctx.namedArg(node.args, 'shadowColor'), ctx);
+    if (shadow != null) props['shadowColor'] = shadow;
     return {
       'type': ctx.jsString('Card'),
       if (props.isNotEmpty) 'props': props,
@@ -641,7 +760,7 @@ class CardTranslator extends WidgetTranslator {
   }
 }
 
-/// ListView：children 列表。
+/// ListView：children + scrollDirection/padding/shrinkWrap/physics/itemExtent。
 class ListViewTranslator extends WidgetTranslator {
   const ListViewTranslator();
 
@@ -651,14 +770,26 @@ class ListViewTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final children = ctx.listArg(node.args, 'children', node.type);
+    final props = <String, dynamic>{};
+    final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
+    if (axis != null) props['scrollDirection'] = axis;
+    final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
+    if (padding != null) props['padding'] = padding;
+    final shrinkWrap = _boolOf(ctx.namedArg(node.args, 'shrinkWrap'));
+    if (shrinkWrap != null) props['shrinkWrap'] = shrinkWrap;
+    final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
+    if (physics != null) props['physics'] = physics;
+    final itemExtent = _numOf(ctx.namedArg(node.args, 'itemExtent'));
+    if (itemExtent != null) props['itemExtent'] = itemExtent;
     return {
       'type': ctx.jsString('ListView'),
+      if (props.isNotEmpty) 'props': props,
       'children': [for (final c in children) ctx.translateElement(c)],
     };
   }
 }
 
-/// SingleChildScrollView：child + scrollDirection。
+/// SingleChildScrollView：child + scrollDirection/padding/physics/reverse。
 class SingleChildScrollViewTranslator extends WidgetTranslator {
   const SingleChildScrollViewTranslator();
 
@@ -674,6 +805,10 @@ class SingleChildScrollViewTranslator extends WidgetTranslator {
     if (axis != null) props['scrollDirection'] = axis;
     final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
     if (padding != null) props['padding'] = padding;
+    final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
+    if (physics != null) props['physics'] = physics;
+    final reverse = _boolOf(ctx.namedArg(node.args, 'reverse'));
+    if (reverse != null) props['reverse'] = reverse;
     return {
       'type': ctx.jsString('SingleChildScrollView'),
       if (props.isNotEmpty) 'props': props,
@@ -682,7 +817,8 @@ class SingleChildScrollViewTranslator extends WidgetTranslator {
   }
 }
 
-/// Wrap：children + spacing/runSpacing。
+/// Wrap：children + spacing/runSpacing/direction/alignment/runAlignment/
+/// crossAxisAlignment。
 class WrapTranslator extends WidgetTranslator {
   const WrapTranslator();
 
@@ -697,6 +833,16 @@ class WrapTranslator extends WidgetTranslator {
       final v = _numOf(ctx.namedArg(node.args, name));
       if (v != null) props[name] = v;
     }
+    final direction = axisToJson(ctx.namedArg(node.args, 'direction'));
+    if (direction != null) props['direction'] = direction;
+    final alignment = wrapAlignmentToJson(ctx.namedArg(node.args, 'alignment'));
+    if (alignment != null) props['alignment'] = alignment;
+    final runAlignment =
+        wrapAlignmentToJson(ctx.namedArg(node.args, 'runAlignment'));
+    if (runAlignment != null) props['runAlignment'] = runAlignment;
+    final cross =
+        wrapCrossAlignmentToJson(ctx.namedArg(node.args, 'crossAxisAlignment'));
+    if (cross != null) props['crossAxisAlignment'] = cross;
     return {
       'type': ctx.jsString('Wrap'),
       if (props.isNotEmpty) 'props': props,
@@ -730,7 +876,8 @@ class IconTranslator extends WidgetTranslator {
   }
 }
 
-/// Image：Image.asset / Image.network → source + width/height/fit。
+/// Image：Image.asset / Image.network → source + width/height/fit/color/
+/// colorBlendMode/alignment/repeat。
 class ImageTranslator extends WidgetTranslator {
   const ImageTranslator();
 
@@ -752,11 +899,20 @@ class ImageTranslator extends WidgetTranslator {
     }
     final fit = boxFitToJson(ctx.namedArg(node.args, 'fit'));
     if (fit != null) props['fit'] = fit;
+    final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
+    if (color != null) props['color'] = color;
+    final blend = blendModeToJson(ctx.namedArg(node.args, 'colorBlendMode'));
+    if (blend != null) props['colorBlendMode'] = blend;
+    final align = alignmentToJson(ctx.namedArg(node.args, 'alignment'), ctx);
+    if (align != null) props['alignment'] = align;
+    final repeat = imageRepeatToJson(ctx.namedArg(node.args, 'repeat'));
+    if (repeat != null) props['repeat'] = repeat;
     return {'type': ctx.jsString('Image'), 'props': props};
   }
 }
 
-/// CircleAvatar：radius/backgroundColor + 可选 child。
+/// CircleAvatar：radius/backgroundColor/foregroundColor/backgroundImage/
+/// minRadius/maxRadius + 可选 child。
 class CircleAvatarTranslator extends WidgetTranslator {
   const CircleAvatarTranslator();
 
@@ -766,10 +922,17 @@ class CircleAvatarTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final props = <String, dynamic>{};
-    final r = _numOf(ctx.namedArg(node.args, 'radius'));
-    if (r != null) props['radius'] = r;
+    for (final name in ['radius', 'minRadius', 'maxRadius']) {
+      final v = _numOf(ctx.namedArg(node.args, name));
+      if (v != null) props[name] = v;
+    }
     final color = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
     if (color != null) props['backgroundColor'] = color;
+    final fg = colorToJson(ctx.namedArg(node.args, 'foregroundColor'), ctx);
+    if (fg != null) props['foregroundColor'] = fg;
+    final bgImage = imageSourceToJson(
+        ctx.namedArg(node.args, 'backgroundImage'), ctx);
+    if (bgImage != null) props['backgroundImage'] = bgImage;
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     return {
       'type': ctx.jsString('CircleAvatar'),
@@ -783,7 +946,7 @@ class CircleAvatarTranslator extends WidgetTranslator {
 // 交互类
 // ===========================================================================
 
-/// InkWell：onTap → 事件 + 单子。
+/// InkWell：onTap/onLongPress/onDoubleTap → 事件 + 圆角/水波纹颜色 + 单子。
 class InkWellTranslator extends WidgetTranslator {
   const InkWellTranslator();
 
@@ -793,9 +956,25 @@ class InkWellTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final onTap = ctx.namedArg(node.args, 'onTap');
+    final onLongPress = ctx.namedArg(node.args, 'onLongPress');
+    final onDoubleTap = ctx.namedArg(node.args, 'onDoubleTap');
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
-    if (onTap == null || child == null) throw FormatException('InkWell 需要 onTap + child');
-    final props = <String, dynamic>{'event': ctx.eventHandle(onTap)};
+    if (child == null) throw FormatException('InkWell 需要 child');
+    final props = <String, dynamic>{};
+    if (onTap != null) props['event'] = ctx.eventHandle(onTap);
+    if (onLongPress != null) props['onLongPress'] = ctx.eventHandle(onLongPress);
+    if (onDoubleTap != null) props['onDoubleTap'] = ctx.eventHandle(onDoubleTap);
+    if (props.isEmpty) throw FormatException('InkWell 需要至少一个事件');
+    final brExpr = ctx.namedArg(node.args, 'borderRadius');
+    if (brExpr != null) {
+      final r = ctx.borderRadiusExpr(brExpr);
+      if (r != null) props['borderRadius'] = r;
+    }
+    final splash = colorToJson(ctx.namedArg(node.args, 'splashColor'), ctx);
+    if (splash != null) props['splashColor'] = splash;
+    final highlight =
+        colorToJson(ctx.namedArg(node.args, 'highlightColor'), ctx);
+    if (highlight != null) props['highlightColor'] = highlight;
     return {
       'type': ctx.jsString('InkWell'),
       'props': props,
@@ -804,7 +983,7 @@ class InkWellTranslator extends WidgetTranslator {
   }
 }
 
-/// GestureDetector：onTap → 事件 + 单子。
+/// GestureDetector：onTap/onLongPress/onDoubleTap + behavior + 单子。
 class GestureDetectorTranslator extends WidgetTranslator {
   const GestureDetectorTranslator();
 
@@ -814,11 +993,19 @@ class GestureDetectorTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final onTap = ctx.namedArg(node.args, 'onTap');
+    final onLongPress = ctx.namedArg(node.args, 'onLongPress');
+    final onDoubleTap = ctx.namedArg(node.args, 'onDoubleTap');
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
-    if (onTap == null || child == null) {
-      throw FormatException('GestureDetector 需要 onTap + child');
+    if (child == null) throw FormatException('GestureDetector 需要 child');
+    final props = <String, dynamic>{};
+    if (onTap != null) props['event'] = ctx.eventHandle(onTap);
+    if (onLongPress != null) props['onLongPress'] = ctx.eventHandle(onLongPress);
+    if (onDoubleTap != null) props['onDoubleTap'] = ctx.eventHandle(onDoubleTap);
+    if (props.isEmpty) {
+      throw FormatException('GestureDetector 需要至少一个事件');
     }
-    final props = <String, dynamic>{'event': ctx.eventHandle(onTap)};
+    final behavior = hitTestBehaviorToJson(ctx.namedArg(node.args, 'behavior'));
+    if (behavior != null) props['behavior'] = behavior;
     return {
       'type': ctx.jsString('GestureDetector'),
       'props': props,
@@ -827,7 +1014,7 @@ class GestureDetectorTranslator extends WidgetTranslator {
   }
 }
 
-/// Switch：value（状态字段/字面量）+ onChanged（带值事件）。
+/// Switch：value（状态字段/字面量）+ onChanged（带值事件）+ 轨道/滑块颜色。
 class SwitchTranslator extends WidgetTranslator {
   const SwitchTranslator();
 
@@ -845,11 +1032,20 @@ class SwitchTranslator extends WidgetTranslator {
       'value': ctx.propExpr(value),
       'event': ctx.eventHandle(onChanged),
     };
+    for (final name in [
+      'activeColor',
+      'activeTrackColor',
+      'inactiveThumbColor',
+      'inactiveTrackColor',
+    ]) {
+      final c = colorToJson(ctx.namedArg(node.args, name), ctx);
+      if (c != null) props[name] = c;
+    }
     return {'type': ctx.jsString('Switch'), 'props': props};
   }
 }
 
-/// Checkbox：value + onChanged（带值事件）。
+/// Checkbox：value + onChanged（带值事件）+ activeColor/checkColor/tristate。
 class CheckboxTranslator extends WidgetTranslator {
   const CheckboxTranslator();
 
@@ -867,11 +1063,17 @@ class CheckboxTranslator extends WidgetTranslator {
       'value': ctx.propExpr(value),
       'event': ctx.eventHandle(onChanged),
     };
+    final active = colorToJson(ctx.namedArg(node.args, 'activeColor'), ctx);
+    if (active != null) props['activeColor'] = active;
+    final check = colorToJson(ctx.namedArg(node.args, 'checkColor'), ctx);
+    if (check != null) props['checkColor'] = check;
+    final tristate = _boolOf(ctx.namedArg(node.args, 'tristate'));
+    if (tristate != null) props['tristate'] = tristate;
     return {'type': ctx.jsString('Checkbox'), 'props': props};
   }
 }
 
-/// Slider：value + min/max + onChanged（带值事件）。
+/// Slider：value + min/max + divisions/label/颜色 + onChanged（带值事件）。
 class SliderTranslator extends WidgetTranslator {
   const SliderTranslator();
 
@@ -893,6 +1095,14 @@ class SliderTranslator extends WidgetTranslator {
       final v = _numOf(ctx.namedArg(node.args, name));
       if (v != null) props[name] = v;
     }
+    final divisions = _numOf(ctx.namedArg(node.args, 'divisions'));
+    if (divisions != null) props['divisions'] = divisions;
+    final label = ctx.namedArg(node.args, 'label');
+    if (label is SimpleStringLiteral) props['label'] = ctx.jsString(label.value);
+    final active = colorToJson(ctx.namedArg(node.args, 'activeColor'), ctx);
+    if (active != null) props['activeColor'] = active;
+    final inactive = colorToJson(ctx.namedArg(node.args, 'inactiveColor'), ctx);
+    if (inactive != null) props['inactiveColor'] = inactive;
     return {'type': ctx.jsString('Slider'), 'props': props};
   }
 }
@@ -1336,4 +1546,490 @@ String? _numOf(Expression? e) {
   if (e is IntegerLiteral && e.value != null) return '${e.value}';
   if (e is DoubleLiteral) return '${e.value}';
   return null;
+}
+
+/// bool 字面量 → 'true' / 'false'。
+String? _boolOf(Expression? e) {
+  if (e is BooleanLiteral) return e.value ? 'true' : 'false';
+  return null;
+}
+
+// ===========================================================================
+// 补齐组件：布局 / 装饰 / 指示器 / 输入 / 导航
+// ===========================================================================
+
+/// Spacer：Row/Column 内弹性空隙（flex）。
+class SpacerTranslator extends WidgetTranslator {
+  const SpacerTranslator();
+
+  @override
+  String get type => 'Spacer';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final flex = _numOf(ctx.namedArg(node.args, 'flex'));
+    if (flex != null) props['flex'] = flex;
+    return {
+      'type': ctx.jsString('Spacer'),
+      if (props.isNotEmpty) 'props': props,
+    };
+  }
+}
+
+/// SafeArea：单子 + 四边开关。
+class SafeAreaTranslator extends WidgetTranslator {
+  const SafeAreaTranslator();
+
+  @override
+  String get type => 'SafeArea';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (child == null) throw FormatException('SafeArea 缺少 child');
+    final props = <String, dynamic>{};
+    for (final name in ['left', 'top', 'right', 'bottom']) {
+      final b = _boolOf(ctx.namedArg(node.args, name));
+      if (b != null) props[name] = b;
+    }
+    return {
+      'type': ctx.jsString('SafeArea'),
+      if (props.isNotEmpty) 'props': props,
+      'children': [ctx.translate(child)],
+    };
+  }
+}
+
+/// Opacity：透明度 + 单子。
+class OpacityTranslator extends WidgetTranslator {
+  const OpacityTranslator();
+
+  @override
+  String get type => 'Opacity';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (child == null) throw FormatException('Opacity 缺少 child');
+    final opacity = _numOf(ctx.namedArg(node.args, 'opacity'));
+    if (opacity == null) throw FormatException('Opacity 需要 opacity 字面量');
+    return {
+      'type': ctx.jsString('Opacity'),
+      'props': {'opacity': opacity},
+      'children': [ctx.translate(child)],
+    };
+  }
+}
+
+/// ConstrainedBox：constraints + 单子。
+class ConstrainedBoxTranslator extends WidgetTranslator {
+  const ConstrainedBoxTranslator();
+
+  @override
+  String get type => 'ConstrainedBox';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (child == null) throw FormatException('ConstrainedBox 缺少 child');
+    final constraints =
+        boxConstraintsToJson(ctx.namedArg(node.args, 'constraints'), ctx);
+    if (constraints == null) {
+      throw FormatException('ConstrainedBox 需要 constraints');
+    }
+    return {
+      'type': ctx.jsString('ConstrainedBox'),
+      'props': {'constraints': constraints},
+      'children': [ctx.translate(child)],
+    };
+  }
+}
+
+/// AspectRatio：宽高比 + 单子。
+class AspectRatioTranslator extends WidgetTranslator {
+  const AspectRatioTranslator();
+
+  @override
+  String get type => 'AspectRatio';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (child == null) throw FormatException('AspectRatio 缺少 child');
+    final ratio = _numOf(ctx.namedArg(node.args, 'aspectRatio'));
+    if (ratio == null) {
+      throw FormatException('AspectRatio 需要 aspectRatio 字面量');
+    }
+    return {
+      'type': ctx.jsString('AspectRatio'),
+      'props': {'aspectRatio': ratio},
+      'children': [ctx.translate(child)],
+    };
+  }
+}
+
+/// FractionallySizedBox：宽高因子 + alignment + 单子。
+class FractionallySizedBoxTranslator extends WidgetTranslator {
+  const FractionallySizedBoxTranslator();
+
+  @override
+  String get type => 'FractionallySizedBox';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (child == null) {
+      throw FormatException('FractionallySizedBox 缺少 child');
+    }
+    final props = <String, dynamic>{};
+    final wf = _numOf(ctx.namedArg(node.args, 'widthFactor'));
+    if (wf != null) props['widthFactor'] = wf;
+    final hf = _numOf(ctx.namedArg(node.args, 'heightFactor'));
+    if (hf != null) props['heightFactor'] = hf;
+    final align = alignmentToJson(ctx.namedArg(node.args, 'alignment'), ctx);
+    if (align != null) props['alignment'] = align;
+    return {
+      'type': ctx.jsString('FractionallySizedBox'),
+      if (props.isNotEmpty) 'props': props,
+      'children': [ctx.translate(child)],
+    };
+  }
+}
+
+/// DecoratedBox：decoration + 单子（无尺寸/内边距逻辑的纯装饰容器）。
+class DecoratedBoxTranslator extends WidgetTranslator {
+  const DecoratedBoxTranslator();
+
+  @override
+  String get type => 'DecoratedBox';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (child == null) throw FormatException('DecoratedBox 缺少 child');
+    final deco =
+        boxDecorationToJson(ctx.namedArg(node.args, 'decoration'), ctx);
+    if (deco == null) throw FormatException('DecoratedBox 需要 decoration');
+    return {
+      'type': ctx.jsString('DecoratedBox'),
+      'props': {'decoration': deco},
+      'children': [ctx.translate(child)],
+    };
+  }
+}
+
+/// CircularProgressIndicator：value/color/backgroundColor/strokeWidth。
+class CircularProgressIndicatorTranslator extends WidgetTranslator {
+  const CircularProgressIndicatorTranslator();
+
+  @override
+  String get type => 'CircularProgressIndicator';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final v = _numOf(ctx.namedArg(node.args, 'value'));
+    if (v != null) props['value'] = v;
+    final c = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
+    if (c != null) props['color'] = c;
+    final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
+    if (bg != null) props['backgroundColor'] = bg;
+    final sw = _numOf(ctx.namedArg(node.args, 'strokeWidth'));
+    if (sw != null) props['strokeWidth'] = sw;
+    return {
+      'type': ctx.jsString('CircularProgressIndicator'),
+      if (props.isNotEmpty) 'props': props,
+    };
+  }
+}
+
+/// LinearProgressIndicator：value/color/backgroundColor/minHeight。
+class LinearProgressIndicatorTranslator extends WidgetTranslator {
+  const LinearProgressIndicatorTranslator();
+
+  @override
+  String get type => 'LinearProgressIndicator';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final v = _numOf(ctx.namedArg(node.args, 'value'));
+    if (v != null) props['value'] = v;
+    final c = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
+    if (c != null) props['color'] = c;
+    final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
+    if (bg != null) props['backgroundColor'] = bg;
+    final mh = _numOf(ctx.namedArg(node.args, 'minHeight'));
+    if (mh != null) props['minHeight'] = mh;
+    return {
+      'type': ctx.jsString('LinearProgressIndicator'),
+      if (props.isNotEmpty) 'props': props,
+    };
+  }
+}
+
+/// TextField：受控输入（value 状态字段 + onChanged 带值事件）+
+/// hintText/labelText/obscureText/keyboardType/maxLines/enabled/style/textAlign。
+///
+/// 产物无 controller（JS 侧不持有 TextEditingController），运行时
+/// _JsTextField 内部受控封装：value 变化同步 controller，onChanged 回传文本。
+class TextFieldTranslator extends WidgetTranslator {
+  const TextFieldTranslator();
+
+  @override
+  String get type => 'TextField';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final onChanged = ctx.namedArg(node.args, 'onChanged');
+    if (onChanged == null) {
+      throw FormatException('TextField 需要 onChanged');
+    }
+    final props = <String, dynamic>{
+      'event': ctx.eventHandle(onChanged),
+    };
+    final value = ctx.namedArg(node.args, 'value');
+    if (value != null) props['value'] = ctx.propExpr(value);
+    // hintText/labelText：支持顶层直传与 decoration: InputDecoration(...) 两种形态。
+    String? decName(String name) {
+      final direct = ctx.namedArg(node.args, name);
+      if (direct is SimpleStringLiteral) return direct.value;
+      final deco = ctx.namedArg(node.args, 'decoration');
+      if (deco != null) {
+        final (ctor, dArgs) = ctx.ctorOf(deco);
+        if (ctor == 'InputDecoration') {
+          final v = ctx.namedArg(dArgs, name);
+          if (v is SimpleStringLiteral) return v.value;
+        }
+      }
+      return null;
+    }
+
+    for (final name in ['hintText', 'labelText']) {
+      final v = decName(name);
+      if (v != null) props[name] = ctx.jsString(v);
+    }
+    final obscure = _boolOf(ctx.namedArg(node.args, 'obscureText'));
+    if (obscure != null) props['obscureText'] = obscure;
+    final enabled = _boolOf(ctx.namedArg(node.args, 'enabled'));
+    if (enabled != null) props['enabled'] = enabled;
+    final keyboard =
+        textInputTypeToJson(ctx.namedArg(node.args, 'keyboardType'));
+    if (keyboard != null) props['keyboardType'] = keyboard;
+    final maxLines = _numOf(ctx.namedArg(node.args, 'maxLines'));
+    if (maxLines != null) props['maxLines'] = maxLines;
+    final style = textStyleToJson(ctx.namedArg(node.args, 'style'), ctx);
+    if (style != null) props['style'] = style;
+    final alignExpr = ctx.namedArg(node.args, 'textAlign');
+    if (alignExpr != null) {
+      final align = enumName(alignExpr, 'TextAlign');
+      if (align != null) props['textAlign'] = ctx.jsString(align);
+    }
+    return {'type': ctx.jsString('TextField'), 'props': props};
+  }
+}
+
+/// IconButton：icon（element prop）+ onPressed + color/iconSize/tooltip。
+class IconButtonTranslator extends WidgetTranslator {
+  const IconButtonTranslator();
+
+  @override
+  String get type => 'IconButton';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final onPressed = ctx.namedArg(node.args, 'onPressed');
+    final icon = ctx.namedArg(node.args, 'icon');
+    if (icon == null) throw FormatException('IconButton 需要 icon');
+    final props = <String, dynamic>{'icon': ctx.translate(icon)};
+    // onPressed: null → 禁用（省略 event）
+    if (onPressed != null && onPressed is! NullLiteral) {
+      props['event'] = ctx.eventHandle(onPressed);
+    }
+    final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
+    if (color != null) props['color'] = color;
+    final size = _numOf(ctx.namedArg(node.args, 'iconSize'));
+    if (size != null) props['iconSize'] = size;
+    final tooltip = ctx.namedArg(node.args, 'tooltip');
+    if (tooltip is SimpleStringLiteral) {
+      props['tooltip'] = ctx.jsString(tooltip.value);
+    }
+    return {'type': ctx.jsString('IconButton'), 'props': props};
+  }
+}
+
+/// FloatingActionButton：child（element prop）+ onPressed +
+/// backgroundColor/foregroundColor/mini/tooltip/elevation。
+class FloatingActionButtonTranslator extends WidgetTranslator {
+  const FloatingActionButtonTranslator();
+
+  @override
+  String get type => 'FloatingActionButton';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final onPressed = ctx.namedArg(node.args, 'onPressed');
+    final child = ctx.namedArg(node.args, 'child');
+    final props = <String, dynamic>{};
+    if (child != null) props['child'] = ctx.translate(child);
+    if (onPressed != null && onPressed is! NullLiteral) {
+      props['event'] = ctx.eventHandle(onPressed);
+    }
+    final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
+    if (bg != null) props['backgroundColor'] = bg;
+    final fg = colorToJson(ctx.namedArg(node.args, 'foregroundColor'), ctx);
+    if (fg != null) props['foregroundColor'] = fg;
+    final mini = _boolOf(ctx.namedArg(node.args, 'mini'));
+    if (mini != null) props['mini'] = mini;
+    final tooltip = ctx.namedArg(node.args, 'tooltip');
+    if (tooltip is SimpleStringLiteral) {
+      props['tooltip'] = ctx.jsString(tooltip.value);
+    }
+    final elevation = _numOf(ctx.namedArg(node.args, 'elevation'));
+    if (elevation != null) props['elevation'] = elevation;
+    return {'type': ctx.jsString('FloatingActionButton'), 'props': props};
+  }
+}
+
+/// BottomNavigationBar：items（BottomNavigationBarItem 列表）→ children +
+/// currentIndex（状态字段）+ onTap（带 index 值事件）+ 选中/未选中颜色。
+class BottomNavigationBarTranslator extends WidgetTranslator {
+  const BottomNavigationBarTranslator();
+
+  @override
+  String get type => 'BottomNavigationBar';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final items = ctx.namedArg(node.args, 'items');
+    if (items is! ListLiteral) {
+      throw FormatException('BottomNavigationBar 需要 items 列表');
+    }
+    final children = <Object?>[
+      for (final el in items.elements) ctx.translateElement(el),
+    ];
+    final props = <String, dynamic>{};
+    final currentIndex = ctx.namedArg(node.args, 'currentIndex');
+    if (currentIndex != null) props['currentIndex'] = ctx.propExpr(currentIndex);
+    final onTap = ctx.namedArg(node.args, 'onTap');
+    if (onTap != null) props['event'] = ctx.eventHandle(onTap);
+    final selected =
+        colorToJson(ctx.namedArg(node.args, 'selectedItemColor'), ctx);
+    if (selected != null) props['selectedItemColor'] = selected;
+    final unselected =
+        colorToJson(ctx.namedArg(node.args, 'unselectedItemColor'), ctx);
+    if (unselected != null) props['unselectedItemColor'] = unselected;
+    return {
+      'type': ctx.jsString('BottomNavigationBar'),
+      if (props.isNotEmpty) 'props': props,
+      'children': children,
+    };
+  }
+}
+
+/// BottomNavigationBarItem：icon（element prop）+ label。
+class BottomNavigationBarItemTranslator extends WidgetTranslator {
+  const BottomNavigationBarItemTranslator();
+
+  @override
+  String get type => 'BottomNavigationBarItem';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final icon = ctx.namedArg(node.args, 'icon');
+    if (icon == null) {
+      throw FormatException('BottomNavigationBarItem 需要 icon');
+    }
+    final props = <String, dynamic>{'icon': ctx.translate(icon)};
+    final label = ctx.namedArg(node.args, 'label');
+    if (label is SimpleStringLiteral) props['label'] = ctx.jsString(label.value);
+    return {'type': ctx.jsString('BottomNavigationBarItem'), 'props': props};
+  }
+}
+
+/// Radio：value + groupValue（状态字段）+ onChanged（带值事件）+ activeColor。
+class RadioTranslator extends WidgetTranslator {
+  const RadioTranslator();
+
+  @override
+  String get type => 'Radio';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final value = ctx.namedArg(node.args, 'value');
+    final groupValue = ctx.namedArg(node.args, 'groupValue');
+    final onChanged = ctx.namedArg(node.args, 'onChanged');
+    if (value == null || groupValue == null || onChanged == null) {
+      throw FormatException('Radio 需要 value + groupValue + onChanged');
+    }
+    final props = <String, dynamic>{
+      'value': ctx.propExpr(value),
+      'groupValue': ctx.propExpr(groupValue),
+      'event': ctx.eventHandle(onChanged),
+    };
+    final active = colorToJson(ctx.namedArg(node.args, 'activeColor'), ctx);
+    if (active != null) props['activeColor'] = active;
+    return {'type': ctx.jsString('Radio'), 'props': props};
+  }
+}
+
+/// DropdownButton：value（状态字段）+ items（DropdownMenuItem 列表）→ children
+/// + onChanged（带值事件）+ hint/isExpanded。
+class DropdownButtonTranslator extends WidgetTranslator {
+  const DropdownButtonTranslator();
+
+  @override
+  String get type => 'DropdownButton';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final value = ctx.namedArg(node.args, 'value');
+    final items = ctx.namedArg(node.args, 'items');
+    final onChanged = ctx.namedArg(node.args, 'onChanged');
+    if (value == null || items is! ListLiteral || onChanged == null) {
+      throw FormatException('DropdownButton 需要 value + items + onChanged');
+    }
+    final children = <Object?>[
+      for (final el in items.elements) ctx.translateElement(el),
+    ];
+    final props = <String, dynamic>{
+      'value': ctx.propExpr(value),
+      'event': ctx.eventHandle(onChanged),
+    };
+    final hint = ctx.namedArg(node.args, 'hint');
+    if (hint is SimpleStringLiteral) props['hint'] = ctx.jsString(hint.value);
+    final isExpanded = _boolOf(ctx.namedArg(node.args, 'isExpanded'));
+    if (isExpanded != null) props['isExpanded'] = isExpanded;
+    return {
+      'type': ctx.jsString('DropdownButton'),
+      'props': props,
+      'children': children,
+    };
+  }
+}
+
+/// DropdownMenuItem：value + child（Text）。
+class DropdownMenuItemTranslator extends WidgetTranslator {
+  const DropdownMenuItemTranslator();
+
+  @override
+  String get type => 'DropdownMenuItem';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final value = ctx.namedArg(node.args, 'value');
+    final child = ctx.namedArg(node.args, 'child');
+    if (value == null || child == null) {
+      throw FormatException('DropdownMenuItem 需要 value 与 child');
+    }
+    final props = <String, dynamic>{'value': ctx.propExpr(value)};
+    // child 限定 Text：提取纯文案
+    final (ctor, args) = ctx.ctorOf(child);
+    if (ctor == 'Text') {
+      final data = ctx.namedArg(args, 'data') ?? ctx.positionalArg(args, 0);
+      if (data != null) props['label'] = ctx.jsDataExpr(data);
+    }
+    return {'type': ctx.jsString('DropdownMenuItem'), 'props': props};
+  }
 }

@@ -12,12 +12,14 @@ import 'package:ui_component/ui_component.dart';
 /// 覆盖的 Flutter 常用组件与属性：
 ///   Text / TextStyle（maxLines、overflow、textAlign、decoration…）
 ///   ElevatedButton / TextButton / OutlinedButton + ButtonStyle 全属性
-///   Row / Column / Expanded / Flexible / Stack / Positioned / Wrap
-///   Align / Padding / Center / SizedBox
+///   Row / Column / Expanded / Flexible / Stack / Positioned / Wrap / Spacer / SafeArea
+///   Align / Padding / Center / SizedBox / Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox
 ///   Image / Icon / CircleAvatar
-///   Container / Card / Divider
+///   Container / Card / Divider / DecoratedBox
 ///   ListView / SingleChildScrollView
-///   Scaffold / AppBar
+///   Scaffold / AppBar / FloatingActionButton / BottomNavigationBar
+///   TextField / Radio / DropdownButton / Switch / Checkbox / Slider
+///   CircularProgressIndicator / LinearProgressIndicator
 
 // ---------------------------------------------------------------------------
 // Text 详情
@@ -173,7 +175,8 @@ class _LayoutDetailState extends State<LayoutDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Row + Expanded / Flexible', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Row + Expanded / Flexible / Spacer',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Row(
           children: [
             Expanded(
@@ -184,7 +187,7 @@ class _LayoutDetailState extends State<LayoutDetail> {
                 child: const Text('A', textAlign: TextAlign.center),
               ),
             ),
-            const SizedBox(width: 4),
+            const Spacer(flex: 1),
             Expanded(
               flex: 2,
               child: Container(
@@ -196,7 +199,8 @@ class _LayoutDetailState extends State<LayoutDetail> {
           ],
         ),
         const SizedBox(height: 12),
-        const Text('Center / Align / Padding / SizedBox', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Center / Align / Padding / SizedBox',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Center(
           child: Container(
             color: Colors.amber.shade100,
@@ -223,6 +227,8 @@ class _LayoutDetailState extends State<LayoutDetail> {
         SizedBox(
           height: 100,
           child: Stack(
+            fit: StackFit.expand,
+            clipBehavior: Clip.hardEdge,
             children: [
               Container(color: Colors.grey.shade200),
               Positioned.fill(
@@ -244,8 +250,12 @@ class _LayoutDetailState extends State<LayoutDetail> {
         const SizedBox(height: 12),
         const Text('Wrap · 自动换行', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Wrap(
+          direction: Axis.horizontal,
           spacing: 8,
           runSpacing: 8,
+          alignment: WrapAlignment.start,
+          runAlignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             for (var i = 1; i <= 5; i++)
               Chip(
@@ -253,6 +263,45 @@ class _LayoutDetailState extends State<LayoutDetail> {
                 backgroundColor: Colors.teal.shade50,
               ),
           ],
+        ),
+        const SizedBox(height: 12),
+        const Text('Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Opacity(
+          opacity: 0.5,
+          child: Container(
+            color: Colors.red,
+            padding: const EdgeInsets.all(8),
+            child: const Text('50% 透明'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 120, maxWidth: 200),
+          child: Container(
+            color: Colors.orange.shade100,
+            padding: const EdgeInsets.all(8),
+            child: const Text('ConstrainedBox 宽度 120-200'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        AspectRatio(
+          aspectRatio: 1.78,
+          child: Container(
+            color: Colors.indigo.shade100,
+            alignment: Alignment.center,
+            child: const Text('16:9 比例'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FractionallySizedBox(
+          widthFactor: 0.6,
+          alignment: Alignment.center,
+          child: Container(
+            color: Colors.pink.shade100,
+            padding: const EdgeInsets.all(8),
+            child: const Text('60% 宽度', textAlign: TextAlign.center),
+          ),
         ),
       ],
     );
@@ -336,12 +385,54 @@ class _ContainerDetailState extends State<ContainerDetail> {
           child: const Text('容器内容（teal 圆角）', style: TextStyle(color: Colors.white)),
         ),
         const SizedBox(height: 12),
-        const Text('Card', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Container · 边框 + 阴影 + 渐变', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Colors.blue, Colors.purple],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x66000000),
+                offset: Offset(0, 4),
+                blurRadius: 12,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: const Text('渐变 + 边框 + 阴影', style: TextStyle(color: Colors.white)),
+        ),
+        const SizedBox(height: 12),
+        const Text('DecoratedBox · 纯装饰', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.amber.shade100,
+            border: Border.all(color: Colors.amber, width: 2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('DecoratedBox 内容'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text('Card · shape / clipBehavior', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: const Text('卡片内容（elevation=2）'),
+          elevation: 4,
+          shadowColor: Colors.deepPurple,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Colors.deepPurple, width: 1),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('圆角卡片 + 描边 + 阴影'),
           ),
         ),
         const SizedBox(height: 12),
@@ -382,6 +473,9 @@ class _ScrollDetailState extends State<ScrollDetail> {
         SizedBox(
           height: 160,
           child: ListView(
+            padding: const EdgeInsets.all(8),
+            itemExtent: 56,
+            physics: const BouncingScrollPhysics(),
             children: const [
               ListTile(leading: Icon(Icons.list), title: Text('item A')),
               ListTile(leading: Icon(Icons.list), title: Text('item B')),
@@ -395,6 +489,7 @@ class _ScrollDetailState extends State<ScrollDetail> {
         const Text('SingleChildScrollView · 长内容滚动', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          physics: const ClampingScrollPhysics(),
           child: Row(
             children: [
               for (var i = 1; i <= 8; i++)
@@ -423,24 +518,252 @@ class ScaffoldDetail extends StatefulWidget {
 }
 
 class _ScaffoldDetailState extends State<ScaffoldDetail> {
+  int _navIndex = 0;
+
+  void _onNavTap(int index) {
+    setState(() => _navIndex = index);
+  }
+
+  void _onFab() {}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Scaffold / AppBar / Center'),
+        leading: const Icon(Icons.menu),
+        title: const Text('Scaffold / AppBar / FAB / BottomNav'),
         backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        centerTitle: true,
+        toolbarHeight: 56,
+        actions: const [
+          Icon(Icons.search, color: Colors.white),
+          SizedBox(width: 16),
+        ],
       ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.extension, size: 48, color: Colors.deepPurple),
-            SizedBox(height: 12),
-            Text('页面骨架组件演示'),
-            Text('Scaffold + AppBar + Center + SingleChildScrollView'),
-          ],
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.extension, size: 48, color: Colors.deepPurple),
+              const SizedBox(height: 12),
+              const Text('页面骨架组件演示'),
+              Text('BottomNav 选中：$_navIndex'),
+            ],
+          ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _onFab,
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        tooltip: '添加',
+        child: const Icon(Icons.add),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _navIndex,
+        onTap: _onNavTap,
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: '首页'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: '搜索'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: '我的'),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Input 详情（TextField / Radio / DropdownButton / Switch / Checkbox / Slider）
+// ---------------------------------------------------------------------------
+
+@UIComponent('InputDetail')
+class InputDetail extends StatefulWidget {
+  const InputDetail({super.key});
+
+  @override
+  State<InputDetail> createState() => _InputDetailState();
+}
+
+class _InputDetailState extends State<InputDetail> {
+  // TextField 原生侧用 controller；JS 热更侧为受控封装（见 _JsTextField），
+  // value 不下发时为非受控模式，onChanged 回传照常驱动 _text。
+  final TextEditingController _controller = TextEditingController();
+  String _text = '';
+  String _choice = 'A';
+  String _dropdown = '苹果';
+  bool _switchOn = false;
+  bool? _checked = false;
+  double _slider = 0.4;
+
+  void _onTextChanged(String v) {
+    setState(() => _text = v);
+  }
+
+  void _onChoiceChanged(Object? v) {
+    setState(() => _choice = '$v');
+  }
+
+  void _onDropdownChanged(Object? v) {
+    setState(() => _dropdown = '$v');
+  }
+
+  void _onSwitchChanged(bool? v) {
+    setState(() => _switchOn = v ?? false);
+  }
+
+  void _onCheckChanged(bool? v) {
+    setState(() => _checked = v);
+  }
+
+  void _onSliderChanged(double v) {
+    setState(() => _slider = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('TextField', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        TextField(
+          controller: _controller,
+          onChanged: _onTextChanged,
+          decoration: const InputDecoration(
+            hintText: '请输入文本',
+            labelText: '用户名',
+          ),
+          maxLines: 1,
+          style: const TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 4),
+        Text('输入内容：$_text', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        const SizedBox(height: 12),
+        const Text('Radio 单选', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Row(
+          children: [
+            // Radio groupValue/onChanged 已废弃（RadioGroup 方案暂无 translator），
+            // demo 先用旧 API 验证协议。
+            // ignore: deprecated_member_use
+            Radio(value: 'A', groupValue: _choice, onChanged: _onChoiceChanged, activeColor: Colors.deepPurple),
+            const Text('选项 A'),
+            // ignore: deprecated_member_use
+            Radio(value: 'B', groupValue: _choice, onChanged: _onChoiceChanged, activeColor: Colors.deepPurple),
+            const Text('选项 B'),
+          ],
+        ),
+        Text('当前选择：$_choice', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        const SizedBox(height: 12),
+        const Text('DropdownButton', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        DropdownButton(
+          value: _dropdown,
+          isExpanded: true,
+          onChanged: _onDropdownChanged,
+          items: const [
+            DropdownMenuItem(value: '苹果', child: Text('苹果')),
+            DropdownMenuItem(value: '香蕉', child: Text('香蕉')),
+            DropdownMenuItem(value: '橙子', child: Text('橙子')),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Switch(
+              value: _switchOn,
+              onChanged: _onSwitchChanged,
+              // 协议键为 activeColor（生成器按此名提取），运行时映射到 activeThumbColor
+              // ignore: deprecated_member_use
+              activeColor: Colors.white,
+              activeTrackColor: Colors.deepPurple,
+              inactiveThumbColor: Colors.grey,
+              inactiveTrackColor: Colors.grey.shade300,
+            ),
+            const SizedBox(width: 8),
+            Text('Switch：${_switchOn ? "开" : "关"}'),
+          ],
+        ),
+        Row(
+          children: [
+            Checkbox(
+              value: _checked,
+              onChanged: _onCheckChanged,
+              activeColor: Colors.deepPurple,
+              checkColor: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text('Checkbox：${_checked ?? false}'),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text('Slider 值：$_slider', style: const TextStyle(fontSize: 14)),
+        Slider(
+          value: _slider,
+          min: 0,
+          max: 1,
+          divisions: 10,
+          label: '${(_slider * 100).round()}%',
+          activeColor: Colors.deepPurple,
+          inactiveColor: Colors.grey.shade300,
+          onChanged: _onSliderChanged,
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Progress 详情（指示器）
+// ---------------------------------------------------------------------------
+
+@UIComponent('ProgressDetail')
+class ProgressDetail extends StatefulWidget {
+  const ProgressDetail({super.key});
+
+  @override
+  State<ProgressDetail> createState() => _ProgressDetailState();
+}
+
+class _ProgressDetailState extends State<ProgressDetail> {
+  final double _progress = 0.65;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('CircularProgressIndicator', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            CircularProgressIndicator(
+              value: _progress,
+              color: Colors.deepPurple,
+              backgroundColor: Colors.deepPurple.shade50,
+              strokeWidth: 6,
+            ),
+            const SizedBox(width: 24),
+            const CircularProgressIndicator(),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const Text('LinearProgressIndicator', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: _progress,
+          color: Colors.deepPurple,
+          backgroundColor: Colors.deepPurple.shade50,
+          minHeight: 8,
+        ),
+        const SizedBox(height: 4),
+        const LinearProgressIndicator(),
+        const SizedBox(height: 8),
+        Text('进度值：$_progress', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+      ],
     );
   }
 }

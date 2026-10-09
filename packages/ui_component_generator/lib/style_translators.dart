@@ -121,8 +121,20 @@ Map<String, dynamic>? buttonStyleToJson(
           final sz = _sizeExpr(v);
           if (sz != null) map['maximumSize'] = sz;
         case 'side':
-          final sd = _borderSideExpr(v, ctx);
+          final sd = borderSideToJson(v, ctx);
           if (sd != null) map['side'] = sd;
+        case 'shape':
+          final sh = shapeToJson(v, ctx);
+          if (sh != null) map['shape'] = sh;
+        case 'fixedSize':
+          final sz = _sizeExpr(v);
+          if (sz != null) map['fixedSize'] = sz;
+        case 'disabledBackgroundColor':
+          final c = translateColor(v, ctx);
+          if (c != null) map['disabledBackgroundColor'] = c;
+        case 'disabledForegroundColor':
+          final c = translateColor(v, ctx);
+          if (c != null) map['disabledForegroundColor'] = c;
         case 'textStyle':
           final t = textStyleToJson(v, ctx);
           if (t != null) map['textStyle'] = t;
@@ -324,8 +336,8 @@ Map<String, dynamic>? _sizeExpr(Expression e) {
   return {'width': w, 'height': h};
 }
 
-/// BorderSide(color: ..., width: ...) → {'color': c, 'width': n}。
-Map<String, dynamic>? _borderSideExpr(Expression e, WidgetTranslateContext ctx) {
+/// BorderSide(color: ..., width: ..., style: ...) → {'color': c, 'width': n, 'style': s}。
+Map<String, dynamic>? borderSideToJson(Expression e, WidgetTranslateContext ctx) {
   final (ctor, args) = _ctorOfExpr(e);
   if (ctor != 'BorderSide') return null;
   final map = <String, dynamic>{};
@@ -339,6 +351,9 @@ Map<String, dynamic>? _borderSideExpr(Expression e, WidgetTranslateContext ctx) 
       case 'width':
         final n = _numExpr(v);
         if (n != null) map['width'] = n;
+      case 'style':
+        final s = enumName(v, 'BorderStyle');
+        if (s != null) map['style'] = ctx.jsString(s);
     }
   }
   return map.isEmpty ? null : map;
@@ -520,7 +535,10 @@ String? iconDataToJson(Expression? expr) {
   return '"$name"';
 }
 
-/// BorderRadius.circular(8) / BorderRadius.all(Radius.circular(8)) → JSON。
+/// BorderRadius.circular(8) / BorderRadius.all(Radius.circular(8)) /
+/// BorderRadius.only(topLeft: Radius.circular(8), ...) → JSON。
+/// 统一圆角 → {'radius': n}；四角独立 → {'topLeft': n, 'topRight': n, ...}
+/// （缺省角 = 0，运行时按边角名组装 BorderRadius.only）。
 Map<String, dynamic>? borderRadiusToJson(
   Expression? expr,
   WidgetTranslateContext ctx,
@@ -531,6 +549,21 @@ Map<String, dynamic>? borderRadiusToJson(
   if (ctor != 'BorderRadius' && ctor != 'circular' && ctor != 'all' && ctor != 'only') {
     return null;
   }
+  // BorderRadius.only(topLeft: Radius.circular(8), ...)：四角独立
+  if (ctor == 'only') {
+    final map = <String, dynamic>{};
+    for (final a in args) {
+      if (a is! NamedExpression) continue;
+      final corner = a.name.label.name;
+      if (corner != 'topLeft' && corner != 'topRight' &&
+          corner != 'bottomLeft' && corner != 'bottomRight') {
+        continue;
+      }
+      final n = _radiusValue(a.expression);
+      if (n != null) map[corner] = n;
+    }
+    return map.isEmpty ? null : map;
+  }
   double? radius;
   // BorderRadius.circular(8)
   if (args.isNotEmpty) {
@@ -540,14 +573,23 @@ Map<String, dynamic>? borderRadiusToJson(
   // BorderRadius.all(Radius.circular(8))：解包 Radius.circular
   for (final a in args) {
     if (a is! NamedExpression || a.name.label.name != 'all') continue;
-    final (rCtor, rArgs) = _ctorOfExpr(a.expression);
-    if (rCtor == 'Radius' && rArgs.isNotEmpty) {
-      final n = _numExpr(rArgs.whereType<Expression>().first);
-      if (n != null) radius = double.tryParse(n);
-    }
+    final n = _radiusValue(a.expression);
+    if (n != null) radius = double.tryParse(n);
   }
   if (radius == null) return null;
   return {'radius': '$radius'};
+}
+
+/// Radius.circular(8) → '8'；裸数字字面量 → '8'。
+String? _radiusValue(Expression e) {
+  final n = _numExpr(e);
+  if (n != null) return n;
+  final (ctor, args) = _ctorOfExpr(e);
+  if (ctor == 'Radius' || ctor == 'circular') {
+    final pos = args.whereType<Expression>().toList();
+    if (pos.isNotEmpty) return _numExpr(pos.first);
+  }
+  return null;
 }
 
 /// Colors.xxx / Color(0x...) → JS 字符串字面量（'#RRGGBB' / '#AARRGGBB'）。
@@ -557,7 +599,7 @@ String? colorToJson(Expression? expr, WidgetTranslateContext ctx) {
   return translateColor(expr, ctx);
 }
 
-/// BoxDecoration(color/borderRadius) → JSON。
+/// BoxDecoration(color/borderRadius/border/boxShadow/gradient/shape/image) → JSON。
 Map<String, dynamic>? boxDecorationToJson(
   Expression? expr,
   WidgetTranslateContext ctx,
@@ -568,16 +610,366 @@ Map<String, dynamic>? boxDecorationToJson(
   final map = <String, dynamic>{};
   for (final a in args) {
     if (a is! NamedExpression) continue;
+    final v = a.expression;
     switch (a.name.label.name) {
       case 'color':
-        final c = translateColor(a.expression, ctx);
+        final c = translateColor(v, ctx);
         if (c != null) map['color'] = c;
       case 'borderRadius':
-        final br = borderRadiusToJson(a.expression, ctx);
+        final br = borderRadiusToJson(v, ctx);
         if (br != null) map['borderRadius'] = br;
+      case 'border':
+        final b = borderToJson(v, ctx);
+        if (b != null) map['border'] = b;
+      case 'boxShadow':
+        final s = boxShadowListToJson(v, ctx);
+        if (s != null) map['boxShadow'] = s;
+      case 'gradient':
+        final g = gradientToJson(v, ctx);
+        if (g != null) map['gradient'] = g;
+      case 'shape':
+        final s = enumName(v, 'BoxShape');
+        if (s != null) map['shape'] = ctx.jsString(s);
+      case 'image':
+        final img = decorationImageToJson(v, ctx);
+        if (img != null) map['image'] = img;
     }
   }
   return map.isEmpty ? null : map;
+}
+
+/// Border.all(color:, width:, style:) / Border.fromBorderSide(BorderSide(...)) /
+/// Border(top:, right:, bottom:, left:) → JSON。
+/// 四边统一 → {'all': borderSide}；四边独立 → {'top': ..., 'right': ...}。
+Map<String, dynamic>? borderToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  // Border.all(...)：color/width/style 直接生成统一边
+  if (ctor == 'all') {
+    final side = <String, dynamic>{};
+    for (final a in args) {
+      if (a is! NamedExpression) continue;
+      final v = a.expression;
+      switch (a.name.label.name) {
+        case 'color':
+          final c = translateColor(v, ctx);
+          if (c != null) side['color'] = c;
+        case 'width':
+          final n = _numExpr(v);
+          if (n != null) side['width'] = n;
+        case 'style':
+          final s = enumName(v, 'BorderStyle');
+          if (s != null) side['style'] = ctx.jsString(s);
+      }
+    }
+    return side.isEmpty ? null : {'all': side};
+  }
+  if (ctor == 'Border' || ctor == 'fromBorderSide') {
+    // Border.fromBorderSide(BorderSide(...)) → 四边统一
+    final pos = args.whereType<Expression>().toList();
+    if (pos.isNotEmpty) {
+      final side = borderSideToJson(pos.first, ctx);
+      if (side != null) return {'all': side};
+    }
+    // Border(top:, right:, bottom:, left:)：四边独立
+    final map = <String, dynamic>{};
+    for (final a in args) {
+      if (a is! NamedExpression) continue;
+      final edge = a.name.label.name;
+      if (edge != 'top' && edge != 'right' && edge != 'bottom' && edge != 'left') {
+        continue;
+      }
+      final side = borderSideToJson(a.expression, ctx);
+      if (side != null) map[edge] = side;
+    }
+    return map.isEmpty ? null : map;
+  }
+  return null;
+}
+
+/// BoxShadow 列表（boxShadow: [BoxShadow(...), ...]）→ JSON 数组：
+/// [{'color': c, 'dx': n, 'dy': n, 'blur': n, 'spread': n, 'blurStyle': s}, ...]。
+/// 元素也支持 BoxShadow 作为 const 构造（InstanceCreationExpression）。
+List<Map<String, dynamic>>? boxShadowListToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr is! ListLiteral) return null;
+  final list = <Map<String, dynamic>>[];
+  for (final el in expr.elements) {
+    if (el is! Expression) continue;
+    final s = boxShadowToJson(el, ctx);
+    if (s != null) list.add(s);
+  }
+  return list.isEmpty ? null : list;
+}
+
+/// 单个 BoxShadow(color:, offset: Offset(dx, dy), blurRadius:, spreadRadius:,
+/// blurStyle:) → JSON。
+Map<String, dynamic>? boxShadowToJson(Expression e, WidgetTranslateContext ctx) {
+  final (ctor, args) = _ctorOfExpr(e);
+  if (ctor != 'BoxShadow') return null;
+  final map = <String, dynamic>{};
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    final v = a.expression;
+    switch (a.name.label.name) {
+      case 'color':
+        final c = translateColor(v, ctx);
+        if (c != null) map['color'] = c;
+      case 'offset':
+        final (oCtor, oArgs) = _ctorOfExpr(v);
+        if (oCtor == 'Offset') {
+          final pos = oArgs.whereType<Expression>().toList();
+          if (pos.length >= 2) {
+            final dx = _numExpr(pos[0]);
+            final dy = _numExpr(pos[1]);
+            if (dx != null) map['dx'] = dx;
+            if (dy != null) map['dy'] = dy;
+          }
+        }
+      case 'blurRadius':
+        final n = _numExpr(v);
+        if (n != null) map['blur'] = n;
+      case 'spreadRadius':
+        final n = _numExpr(v);
+        if (n != null) map['spread'] = n;
+      case 'blurStyle':
+        final s = enumName(v, 'BlurStyle');
+        if (s != null) map['blurStyle'] = ctx.jsString(s);
+    }
+  }
+  return map.isEmpty ? null : map;
+}
+
+/// LinearGradient / RadialGradient / SweepGradient → JSON：
+/// {kind:'linear', colors:[...], begin:'topLeft', end:'bottomRight', stops:[...]}
+/// {kind:'radial', colors:[...], center:'center', radius:0.8, stops:[...]}
+/// 注意用 kind 而不是 type：jsLiteral 把含 type 键的 Map 当 widget 节点渲染。
+Map<String, dynamic>? gradientToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  final kind = switch (ctor) {
+    'LinearGradient' => 'linear',
+    'RadialGradient' => 'radial',
+    'SweepGradient' => 'sweep',
+    _ => null,
+  };
+  if (kind == null) return null;
+  final map = <String, dynamic>{'kind': ctx.jsString(kind)};
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    final v = a.expression;
+    switch (a.name.label.name) {
+      case 'colors':
+        if (v is ListLiteral) {
+          final colors = <String>[];
+          for (final el in v.elements) {
+            if (el is! Expression) continue;
+            final c = translateColor(el, ctx);
+            if (c != null) colors.add(c);
+          }
+          if (colors.isNotEmpty) map['colors'] = colors;
+        }
+      case 'stops':
+        if (v is ListLiteral) {
+          final stops = <String>[];
+          for (final el in v.elements) {
+            if (el is! Expression) continue;
+            final n = _numExpr(el);
+            if (n != null) stops.add(n);
+          }
+          if (stops.isNotEmpty) map['stops'] = stops;
+        }
+      case 'begin':
+      case 'end':
+      case 'center':
+        final al = alignmentToJson(v, ctx);
+        if (al != null) map[a.name.label.name] = al;
+      case 'radius':
+        final n = _numExpr(v);
+        if (n != null) map['radius'] = n;
+    }
+  }
+  return map['colors'] == null ? null : map;
+}
+
+/// DecorationImage(image: NetworkImage/AssetImage(...), fit:) → {source, fit}。
+Map<String, dynamic>? decorationImageToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  if (ctor != 'DecorationImage') return null;
+  final map = <String, dynamic>{};
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    final v = a.expression;
+    switch (a.name.label.name) {
+      case 'image':
+        final s = imageSourceToJson(v, ctx);
+        if (s != null) map['source'] = s;
+      case 'fit':
+        final f = boxFitToJson(v);
+        if (f != null) map['fit'] = f;
+    }
+  }
+  return map['source'] == null ? null : map;
+}
+
+/// BoxConstraints(minWidth:, maxWidth:, minHeight:, maxHeight:) /
+/// BoxConstraints.tightFor(width:, height:) → JSON（值需数字字面量）。
+Map<String, dynamic>? boxConstraintsToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  if (ctor != 'BoxConstraints' && ctor != 'tightFor' && ctor != 'expand') {
+    return null;
+  }
+  final map = <String, dynamic>{};
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    final v = a.expression;
+    final n = _numExpr(v);
+    if (n == null) continue;
+    switch (a.name.label.name) {
+      case 'minWidth':
+      case 'maxWidth':
+      case 'minHeight':
+      case 'maxHeight':
+        map[a.name.label.name] = n;
+      // BoxConstraints.tightFor(width:, height:)：等价 min=max
+      case 'width':
+        map['minWidth'] = n;
+        map['maxWidth'] = n;
+      case 'height':
+        map['minHeight'] = n;
+        map['maxHeight'] = n;
+    }
+  }
+  return map.isEmpty ? null : map;
+}
+
+/// 形状（ButtonStyle.shape / Card.shape / Chip.shape / ListTile.shape）：
+/// RoundedRectangleBorder(borderRadius:, side:) → {kind:'rounded', ...}
+/// StadiumBorder(side:) → {kind:'stadium', ...}
+/// CircleBorder(side:) → {kind:'circle', ...}
+Map<String, dynamic>? shapeToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  final kind = switch (ctor) {
+    'RoundedRectangleBorder' => 'rounded',
+    'StadiumBorder' => 'stadium',
+    'CircleBorder' => 'circle',
+    'BeveledRectangleBorder' => 'beveled',
+    'ContinuousRectangleBorder' => 'continuous',
+    _ => null,
+  };
+  if (kind == null) return null;
+  final map = <String, dynamic>{'kind': ctx.jsString(kind)};
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    final v = a.expression;
+    switch (a.name.label.name) {
+      case 'borderRadius':
+        final br = borderRadiusToJson(v, ctx);
+        if (br != null) map['borderRadius'] = br;
+      case 'side':
+        final sd = borderSideToJson(v, ctx);
+        if (sd != null) map['side'] = sd;
+    }
+  }
+  return map;
+}
+
+/// ClipBehavior 枚举（clipBehavior 参数通用）：Clip.hardEdge → 'hardEdge'。
+String? clipBehaviorToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'Clip' || name == null) return null;
+  return '"$name"';
+}
+
+/// StackFit.loose/expand/passthrough → 字符串。
+String? stackFitToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'StackFit' || name == null) return null;
+  return '"$name"';
+}
+
+/// HitTestBehavior.deferToChild/opaque/translucent → 字符串。
+String? hitTestBehaviorToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'HitTestBehavior' || name == null) return null;
+  return '"$name"';
+}
+
+/// ImageRepeat.repeat/repeatX/repeatY/noRepeat → 字符串。
+String? imageRepeatToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'ImageRepeat' || name == null) return null;
+  return '"$name"';
+}
+
+/// WrapAlignment.start/end/center/spaceBetween/spaceAround/spaceEvenly → 字符串。
+String? wrapAlignmentToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'WrapAlignment' || name == null) return null;
+  return '"$name"';
+}
+
+/// WrapCrossAlignment.start/end/center → 字符串。
+String? wrapCrossAlignmentToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'WrapCrossAlignment' || name == null) return null;
+  return '"$name"';
+}
+
+/// TextInputType.text/number/phone/emailAddress/... → 字符串。
+String? textInputTypeToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'TextInputType' || name == null) return null;
+  return '"$name"';
+}
+
+/// BlendMode.modulate/multiply/... → 字符串（Image.colorBlendMode 用）。
+String? blendModeToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'BlendMode' || name == null) return null;
+  return '"$name"';
+}
+
+/// ScrollPhysics 构造（NeverScrollableScrollPhysics() 等）→ 类名字符串。
+String? scrollPhysicsToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (ctor, _) = _ctorOfExpr(expr);
+  const known = {
+    'NeverScrollableScrollPhysics',
+    'AlwaysScrollableScrollPhysics',
+    'BouncingScrollPhysics',
+    'ClampingScrollPhysics',
+  };
+  if (ctor == null || !known.contains(ctor)) return null;
+  return '"$ctor"';
 }
 
 /// Image 源：AssetImage('x') / NetworkImage('url') / Image.asset / Image.network

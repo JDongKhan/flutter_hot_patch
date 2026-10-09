@@ -32,6 +32,12 @@ class WidgetShowcase extends StatelessWidget {
     _Group('页面骨架', [
       _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
     ]),
+    _Group('表单输入', [
+      _Entry('TextField / Radio / Dropdown', '输入框、单选、下拉、开关、勾选、滑块', 'InputDetail'),
+    ]),
+    _Group('进度指示', [
+      _Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail'),
+    ]),
   ];
 
   @override
@@ -106,6 +112,8 @@ class WidgetDetailPage extends StatelessWidget {
       'ContainerDetail' => const ContainerDetail(),
       'ScrollDetail' => const ScrollDetail(),
       'ScaffoldDetail' => const ScaffoldDetail(),
+      'InputDetail' => const InputDetail(),
+      'ProgressDetail' => const ProgressDetail(),
       _ => const Text('未知组件'),
     };
   }

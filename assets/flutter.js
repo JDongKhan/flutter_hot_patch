@@ -24,6 +24,18 @@ export function AppBar(props, children) {
   return __h('AppBar', props, children);
 }
 
+export function AspectRatio(props, children) {
+  return __h('AspectRatio', props, children);
+}
+
+export function BottomNavigationBar(props, children) {
+  return __h('BottomNavigationBar', props, children);
+}
+
+export function BottomNavigationBarItem(props, children) {
+  return __h('BottomNavigationBarItem', props, children);
+}
+
 class BuilderComponent {
   constructor(props, children) {
     this.props = props || {};
@@ -65,6 +77,10 @@ export function CircleAvatar(props, children) {
   return __h('CircleAvatar', props, children);
 }
 
+export function CircularProgressIndicator(props, children) {
+  return __h('CircularProgressIndicator', props, children);
+}
+
 export function ClipRRect(props, children) {
   return __h('ClipRRect', props, children);
 }
@@ -73,12 +89,28 @@ export function Column(props, children) {
   return __h('Column', props, children);
 }
 
+export function ConstrainedBox(props, children) {
+  return __h('ConstrainedBox', props, children);
+}
+
 export function Container(props, children) {
   return __h('Container', props, children);
 }
 
+export function DecoratedBox(props, children) {
+  return __h('DecoratedBox', props, children);
+}
+
 export function Divider(props, children) {
   return __h('Divider', props, children);
+}
+
+export function DropdownButton(props, children) {
+  return __h('DropdownButton', props, children);
+}
+
+export function DropdownMenuItem(props, children) {
+  return __h('DropdownMenuItem', props, children);
 }
 
 export function Expanded(props, children) {
@@ -89,6 +121,14 @@ export function Flexible(props, children) {
   return __h('Flexible', props, children);
 }
 
+export function FloatingActionButton(props, children) {
+  return __h('FloatingActionButton', props, children);
+}
+
+export function FractionallySizedBox(props, children) {
+  return __h('FractionallySizedBox', props, children);
+}
+
 export function GestureDetector(props, children) {
   return __h('GestureDetector', props, children);
 }
@@ -97,12 +137,20 @@ export function Icon(props, children) {
   return __h('Icon', props, children);
 }
 
+export function IconButton(props, children) {
+  return __h('IconButton', props, children);
+}
+
 export function Image(props, children) {
   return __h('Image', props, children);
 }
 
 export function InkWell(props, children) {
   return __h('InkWell', props, children);
+}
+
+export function LinearProgressIndicator(props, children) {
+  return __h('LinearProgressIndicator', props, children);
 }
 
 export function ListTile(props, children) {
@@ -150,6 +198,10 @@ export function ListenableBuilder(props, children) {
   return __h(ListenableBuilderComponent, props, children);
 }
 
+export function Opacity(props, children) {
+  return __h('Opacity', props, children);
+}
+
 export function Padding(props, children) {
   return __h('Padding', props, children);
 }
@@ -158,8 +210,16 @@ export function Positioned(props, children) {
   return __h('Positioned', props, children);
 }
 
+export function Radio(props, children) {
+  return __h('Radio', props, children);
+}
+
 export function Row(props, children) {
   return __h('Row', props, children);
+}
+
+export function SafeArea(props, children) {
+  return __h('SafeArea', props, children);
 }
 
 export function Scaffold(props, children) {
@@ -178,6 +238,10 @@ export function Slider(props, children) {
   return __h('Slider', props, children);
 }
 
+export function Spacer(props, children) {
+  return __h('Spacer', props, children);
+}
+
 export function Stack(props, children) {
   return __h('Stack', props, children);
 }
@@ -188,6 +252,10 @@ export function Switch(props, children) {
 
 export function Text(props, children) {
   return __h('Text', props, children);
+}
+
+export function TextField(props, children) {
+  return __h('TextField', props, children);
 }
 
 export function Wrap(props, children) {

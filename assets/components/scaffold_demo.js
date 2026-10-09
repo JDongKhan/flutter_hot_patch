@@ -11,11 +11,11 @@ class ScaffoldDemoComponent {
   _inc() { this.setState(function(){ this._count += 1; }); }
   build() {
     return Scaffold({}, [
-        AppBar({}, [
-            Text({
+        AppBar({
+            "title": Text({
                 "data": "Scaffold · 页面骨架"
               })
-          ]),
+          }),
         Center({}, [
             SingleChildScrollView({
                 "padding": {
