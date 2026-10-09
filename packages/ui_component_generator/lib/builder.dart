@@ -193,16 +193,11 @@ class ComponentBuilder implements Builder {
 
     // 一次渲染合并产物：一个文件 → 一个同名 JS（注册多个组件）
     final jsOutput = buildStep.allowedOutputs.first;
-
-    // 各 package 实际用到的 widget 类型（渲染期收集）：_renderJs 据此为每个
-    // package 拼一条 import（`import { Text } from '../flutter.js'`）。
-    final usedWidgets = <String, Set<String>>{};
     await buildStep.writeAsString(
       jsOutput,
       _renderJs(components, inputId.path, registry, importResolver,
           singletons: singletons,
-          sameFileSingletonInfos: sameFileSingletonInfos,
-          usedWidgets: usedWidgets),
+          sameFileSingletonInfos: sameFileSingletonInfos),
     );
   }
 }
@@ -539,13 +534,22 @@ _Component _parseComponent(
     }
   }
 
-  // 方法翻译（带类表）
+  // 方法翻译（带类表）：SnackBar 识别与动作体翻译复用翻译上下文的解析能力
+  // （ctorOf/namedArg/positionalArg/jsString），不在本地另建一套。
+  final parseCtx = WidgetTranslateContext(
+    registry: registry,
+    propByField: propByField,
+    actionByMethod: actionByMethod,
+    sourcePath: sourcePath,
+    importResolver: importResolver,
+    singletons: singletons,
+  );
   for (final member in methods) {
     final methodName = member.name.lexeme;
     final actionName = _defaultActionName(methodName);
     // 方法体是 SnackBar 形式 → 自动识别为 native 通道
     final nativeChannel =
-        _snackMessage(member.body) != null ? 'nativeToast' : null;
+        _snackMessage(member.body, parseCtx) != null ? 'nativeToast' : null;
     try {
       actions.add(_Action(
         methodName,
@@ -553,7 +557,7 @@ _Component _parseComponent(
         nativeChannel,
         _translateActionBody(
           member.body,
-          propByField,
+          parseCtx,
           nativeChannel,
           _methodParams(member),
           used,
@@ -601,7 +605,7 @@ _Component _parseComponent(
 }
 
 /// 解析「嵌套组件」：build 树里出现的本文件私有组件（_Xxx），
-/// 与主组件同产物注册（__components['_Xxx']），运行时 ComponentHost 递归渲染。
+/// 与主组件同产物注册（export 同名工厂函数），运行时按类 type 递归渲染。
 ///
 /// 与主组件的差异：
 ///   - 定位承载 build 的类：有 createState 用 State 类，否则（StatelessWidget）
@@ -718,11 +722,19 @@ _Component _parseNestedComponent(
     }
   }
 
+  final parseCtx = WidgetTranslateContext(
+    registry: registry,
+    propByField: propByField,
+    actionByMethod: actionByMethod,
+    sourcePath: sourcePath,
+    importResolver: importResolver,
+    singletons: singletons,
+  );
   for (final member in methods) {
     final methodName = member.name.lexeme;
     final actionName = _defaultActionName(methodName);
     final nativeChannel =
-        _snackMessage(member.body) != null ? 'nativeToast' : null;
+        _snackMessage(member.body, parseCtx) != null ? 'nativeToast' : null;
     try {
       actions.add(_Action(
         methodName,
@@ -730,7 +742,7 @@ _Component _parseNestedComponent(
         nativeChannel,
         _translateActionBody(
           member.body,
-          propByField,
+          parseCtx,
           nativeChannel,
           _methodParams(member),
           used,
@@ -863,7 +875,7 @@ String? _positionalString(Annotation a, int index) {
 
 String? _renderLiteral(Expression? e) {
   if (e == null) return null;
-  if (e is StringLiteral) return _jsStringLiteral(e.stringValue ?? '');
+  if (e is StringLiteral) return jsString(e.stringValue ?? '');
   if (e is IntegerLiteral) return e.value?.toString();
   if (e is DoubleLiteral) return e.value.toString();
   if (e is BooleanLiteral) return e.value.toString();
@@ -887,27 +899,27 @@ String _defaultInitial(String typeName) {
 
 String _translateActionBody(
   FunctionBody body,
-  Map<String, String> propByField,
+  WidgetTranslateContext ctx,
   String? nativeChannel,
   List<String> params,
   Map<String, ClassInfo> classes,
 ) {
-  // 组件动作的可用引用：State 字段（propByField）+ 方法形参。表达式/语句
-  // 统一交给 class_translator.exprStmtToJs（以 FieldScope 为键），与模型
+  // 组件动作的可用引用：State 字段（ctx.propByField）+ 方法形参。表达式/
+  // 语句统一交给 class_translator.exprStmtToJs（以 FieldScope 为键），与模型
   // 方法体翻译共用同一套逻辑。
   final scope = FieldScope(
-    propByField: propByField,
+    propByField: ctx.propByField,
     params: params.toSet(),
   );
   if (nativeChannel != null) {
-    final msg = _snackMessage(body);
+    final msg = _snackMessage(body, ctx);
     if (msg == null) {
       throw FormatException(
           'native 动作需要方法体是 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("消息"))) 形式');
     }
     // JS 消息统一携带页面 key（this._key 由运行时挂载），
     // 运行时按 key 定位页面级处理器。
-    return 'sendMessage(${_jsStringLiteral(nativeChannel)}, JSON.stringify({ key: this._key, message: $msg }));';
+    return 'sendMessage(${jsString(nativeChannel)}, JSON.stringify({ key: this._key, message: $msg }));';
   }
 
   // 逐语句翻译：setState(...) 展开、await Future.delayed(...)、
@@ -1030,7 +1042,7 @@ List<String> _methodParams(MethodDeclaration m) => [
     ];
 
 /// 提取 SnackBar 消息字符串
-String? _snackMessage(FunctionBody body) {
+String? _snackMessage(FunctionBody body, WidgetTranslateContext ctx) {
   Expression? outer;
   if (body is ExpressionFunctionBody) {
     outer = body.expression;
@@ -1047,42 +1059,19 @@ String? _snackMessage(FunctionBody body) {
     if (args.isNotEmpty) {
       final snack = args.first;
       // 无 const 的 Foo(...) 在无 resolution 的 parseString 下是 MethodInvocation，
-      // 统一用 _ctorOf 取构造名与参数。
-      final (snackCtor, snackArgs) = _ctorOf(snack);
+      // 统一用 ctx.ctorOf 取构造名与参数。
+      final (snackCtor, snackArgs) = ctx.ctorOf(snack);
       if (snackCtor == 'SnackBar') {
-        final content = _namedArg(snackArgs, 'content');
+        final content = ctx.namedArg(snackArgs, 'content');
         if (content != null) {
-          final (textCtor, textArgs) = _ctorOf(content);
+          final (textCtor, textArgs) = ctx.ctorOf(content);
           if (textCtor == 'Text') {
-            final data = _positionalArg(textArgs, 0);
-            if (data is StringLiteral) return _jsStringLiteral(data.stringValue ?? '');
+            final data = ctx.positionalArg(textArgs, 0);
+            if (data is StringLiteral) return ctx.jsString(data.stringValue ?? '');
           }
         }
       }
     }
-  }
-  return null;
-}
-
-(String?, List<Expression>) _ctorOf(Expression e) {
-  if (e is InstanceCreationExpression) {
-    return (
-      e.constructorName.type.name2.lexeme,
-      e.argumentList.arguments.toList(),
-    );
-  }
-  if (e is MethodInvocation) {
-    return (e.methodName.name, e.argumentList.arguments.toList());
-  }
-  return (null, const []);
-}
-
-Expression? _positionalArg(List<Expression> args, int i) =>
-    i < args.length ? args[i] : null;
-
-Expression? _namedArg(List<Expression> args, String name) {
-  for (final a in args) {
-    if (a is NamedExpression && a.name.label.name == name) return a.expression;
   }
   return null;
 }
@@ -1104,9 +1093,9 @@ String _productPath(String sourcePath) {
 /// package 模块产物路径：`assets/<package>.js`（**一个 package 一个文件**）。
 ///
 /// 这类产物是 **package 级**（`flutter` / `provider` 等，与 lib 源码目录无关），
-/// 因此直接落在 assets 根下；`assets/components/` 只用来镜像 lib 源码路径
-/// （组件产物、模型产物）。同包的 widget 工厂/逻辑组件集中在一个文件里，
-/// 避免按类型拆成大量小文件难以维护，也天然只保留一份实现。
+/// 因此直接落在 assets 根下；而组件/模型产物落在 `assets/` 下镜像 lib 源码路径。
+/// 同包的 widget 工厂/逻辑组件集中在一个文件里，避免按类型拆成大量小文件难以
+/// 维护，也天然只保留一份实现。
 String _packageModulePath(String package) => 'assets/$package.js';
 
 /// 共享结点工厂 `__h` 的宿主 package：并入基础包 flutter 的模块
@@ -1246,9 +1235,8 @@ List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
 }
 
 /// 两个产物绝对路径 → 相对路径（相对第一个产物所在目录）。
-/// 如 'assets/components/foo_component.js' →
-/// 'assets/components/bar_component.js'
-/// 得 'bar_component.js'；跨目录时含 '../'。
+/// 如 'assets/foo_component.js' → 'assets/sub/bar_component.js'
+/// 得 'sub/bar_component.js'；跨目录时含 '../'。
 String _relativeProduct(String from, String to) {
   final fromDir = from.substring(0, from.lastIndexOf('/') + 1);
   final fromSegs = fromDir.split('/').where((p) => p.isNotEmpty).toList();
@@ -1410,7 +1398,6 @@ String _renderJs(
   String? Function(String component) importResolver, {
   SingletonResolver? singletons,
   List<ClassInfo> sameFileSingletonInfos = const [],
-  Map<String, Set<String>>? usedWidgets,
 }) {
   // 统一类表按「同文件 inline / 跨文件 import」分组渲染：
   //  - 同文件模型（sourceFile == 当前组件文件）→ 产物内 inline class（不 export，
@@ -1458,8 +1445,7 @@ String _renderJs(
 
   // 跨文件组件：build 树里 Component 兜底、且产物在其他文件的依赖组件，
   // 同样用 ES module import（'bar_component.js' 相对本产物目录）。
-  // 模块级 import 让依赖关系直观可见；JSON 树里 Component 节点不再携带
-  // import 字段（运行时按组件索引：导出类名 → jsAsset 反查递归）。
+  // 模块级 import 让依赖关系直观可见；Component 节点据此渲染成对应工厂调用。
   // 同文件组件（importResolver 返回本文件产物名）是 inline export class，
   // 不需要 import；null（无 JS 产物的 lib 普通组件）走原生注入。
   final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
@@ -1476,6 +1462,10 @@ String _renderJs(
 
   // body：模型/单例/组件类主体（不动 import 区；末尾拼装）。
   final b = StringBuffer();
+
+  // 各 package 实际用到的 widget 类型（渲染期收集）：末尾据此为每个 package
+  // 拼一条 import（`import { Text } from '../flutter.js'`）。
+  final usedWidgets = <String, Set<String>>{};
 
   // 同文件模型：inline class（不 export，本产物内共享）。统一由
   // class_translator.renderClassDecl 翻译（含字段/方法/getter/extends
@@ -1534,7 +1524,7 @@ String _renderJs(
       final fn = a.isAsync ? 'async ' : '';
       b.writeln('  $fn${a.name}(${a.params.join(', ')}) { ${a.bodyJs} }');
     }
-    // build：树结构 JSON（由 WidgetTranslateContext 翻译）
+    // build：返回 widget 树（由 WidgetTranslateContext 渲染为 JS 构造调用）
     b.writeln('  build() {');
     final ctx = WidgetTranslateContext(
       registry: registry,
@@ -1578,10 +1568,8 @@ String _renderJs(
   final importsByPackage = <String, Set<String>>{
     _nodeHelperPackage: {'__h'},
   };
-  if (usedWidgets != null) {
-    for (final entry in usedWidgets.entries) {
-      (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
-    }
+  for (final entry in usedWidgets.entries) {
+    (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
   }
   final importLines = <String>[
     for (final entry in importsByPackage.entries)
@@ -1598,10 +1586,10 @@ String _renderJs(
 
 /// 合并「用到的 widget 类型」：dst[package] ∪= src[package]。
 void _mergeUsedWidgets(
-  Map<String, Set<String>>? dst,
+  Map<String, Set<String>> dst,
   Map<String, Set<String>> src,
 ) {
-  if (dst == null || src.isEmpty) return;
+  if (src.isEmpty) return;
   for (final e in src.entries) {
     (dst[e.key] ??= <String>{}).addAll(e.value);
   }
@@ -1968,15 +1956,4 @@ String _singletonString(String s) {
       .replaceAll('\r', r'\r')
       .replaceAll('\t', r'\t');
   return "'$escaped'";
-}
-
-/// 生成 JS 双引号字符串字面量（与 WidgetTranslateContext.jsString 一致）。
-String _jsStringLiteral(String s) {
-  final escaped = s
-      .replaceAll(r'\', r'\\')
-      .replaceAll('"', r'\"')
-      .replaceAll('\n', r'\n')
-      .replaceAll('\r', r'\r')
-      .replaceAll('\t', r'\t');
-  return '"$escaped"';
 }

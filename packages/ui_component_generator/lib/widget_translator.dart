@@ -100,10 +100,10 @@ class WidgetTranslateContext {
   // 递归入口：表达式 → JSON 描述 / JS 渲染
   // -------------------------------------------------------------------------
 
-  /// 把 build() 里的一个 widget 表达式翻译成 JSON 描述（JS 产物与宿主共用）。
+  /// 把 build() 里的一个 widget 表达式翻译成中立描述（渲染层据此产出 JS）。
   ///
   /// 返回 Map = 普通节点；返回 String = JS 表达式（widget 位置三目
-  /// `cond ? A() : B()` → `(condJs ? {...A} : {...B})`），jsLiteral 原样嵌入。
+  /// `cond ? A() : B()` → `(condJs ? [A] : [B])`），渲染层对 String 原样嵌入。
   Object? translate(Expression e) {
     if (e is ConditionalExpression) {
       final cond = jsDataExpr(e.condition);
@@ -130,7 +130,7 @@ class WidgetTranslateContext {
 
   /// children 列表项翻译：Expression → 节点 Map；IfElement / ForElement →
   /// JS spread 表达式字符串（`...(cond ? [a] : [b])` / `...(function(){...})()`），
-  /// 渲染层 jsLiteral 对 String 原样嵌入，产物仍是纯 JSON 树 + 条件/循环展开。
+  /// 渲染层对 String 原样嵌入（内联构造调用 + 条件/循环展开）。
   Object? translateElement(CollectionElement e) {
     if (e is Expression) return translate(e);
     if (e is IfElement) return '...${_ifAsArray(e)}';
@@ -217,7 +217,7 @@ class WidgetTranslateContext {
   static bool _isUpperCamel(String name) =>
       name.isNotEmpty && name[0] == name[0].toUpperCase();
 
-  /// 渲染一个已翻译的 JSON 节点为 JS 对象字面量。
+  /// 渲染一个已翻译的中立节点为 JS 构造调用（如 `Text({...}, [...])`）。
   ///
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
   /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
@@ -243,7 +243,7 @@ class WidgetTranslateContext {
         // 保证运行时统一按 el.children 挂载（不再有裸字面量特例）。
         final props = json['props'];
         final propsJs = (props is Map && props.isNotEmpty)
-            ? _renderValue(props, depth + 1)
+            ? jsLiteral(props, depth + 1)
             : '{}';
         return '__h("Component", $propsJs, null)';
       }
@@ -265,7 +265,7 @@ class WidgetTranslateContext {
     final props = json['props'];
     final children = json['children'];
     final propsJs = (props is Map && props.isNotEmpty)
-        ? _renderValue(props, depth + 1)
+        ? jsLiteral(props, depth + 1)
         : '{}';
     final b = StringBuffer()
       ..write(type)
@@ -274,14 +274,14 @@ class WidgetTranslateContext {
     if (children is List && children.isNotEmpty) {
       b
         ..write(', ')
-        ..write(_renderValue(children, depth + 1));
+        ..write(jsLiteral(children, depth + 1));
     }
     b.write(')');
     return b.toString();
   }
 
   /// Component 节点的「工厂调用」渲染：命中 JS 产物时输出 `X({...args})`
-  /// （args 复用 [_renderValue]，与其它构造调用同一值渲染规则）；
+  /// （args 复用 [jsLiteral]，与其它构造调用同一值渲染规则）；
   /// 无产物（importResolver 返回 null）→ 返回 null，调用方回退
   /// `__h("Component", ...)` 占位（运行时走宿主 nativeComponents 原生注入）。
   String? _renderComponentCall(Map<String, dynamic> json, int depth) {
@@ -291,35 +291,9 @@ class WidgetTranslateContext {
     if (name.isEmpty || importResolver?.call(name) == null) return null;
     final args = props['args'];
     final argsJs = (args is Map && args.isNotEmpty)
-        ? _renderValue(args, depth + 1)
+        ? jsLiteral(args, depth + 1)
         : '{}';
     return '$name($argsJs)';
-  }
-
-  /// 构造调用模式下的值渲染：Map 且含 `type` → 视作节点，递归 [renderJs]
-  /// （产出 `Text(...)`）；普通 Map/List → 递归容器；叶子值（JS 表达式
-  /// 字符串，如三目/if/for spread）→ 原样嵌入。
-  String _renderValue(Object? value, int depth) {
-    if (value is Map) {
-      if (value.containsKey('type')) {
-        return renderJs(Map<String, dynamic>.from(value), depth);
-      }
-      if (value.isEmpty) return '{}';
-      final ind = '  ' * depth;
-      final ind2 = '  ' * (depth + 1);
-      final entries = value.entries
-          .map((e) => '"${e.key}": ${_renderValue(e.value, depth + 1)}')
-          .join(',\n$ind2');
-      return '{\n$ind2$entries\n$ind}';
-    }
-    if (value is List) {
-      if (value.isEmpty) return '[]';
-      final ind = '  ' * depth;
-      final ind2 = '  ' * (depth + 1);
-      final items = value.map((v) => _renderValue(v, depth + 1)).join(',\n$ind2');
-      return '[\n$ind2$items\n$ind]';
-    }
-    return jsLiteral(value, depth);
   }
 
   /// 剥离 JS 字符串字面量引号（`"Column"` → `Column`）；非字面量原样返回。
@@ -615,12 +589,19 @@ class WidgetTranslateContext {
     return null;
   }
 
-  /// 把 toJson 产物的值序列化为 JS 对象字面量源码。
+  /// 把 toJson 产物的值序列化为 JS 源码（构造调用树）。
   ///
   /// 值约定：toJson 输出的叶子值一律为 **JS 表达式字符串**（字符串字面量
   /// 用 [jsString] 带引号、数字/布尔/表达式原样），这里原样嵌入、不加引号。
+  ///
+  /// 容器：Map 含 `type` 键 → 视作**节点**，递归 [renderJs] 产出构造调用
+  /// （如 `Text(...)`）——props 里嵌套的节点（如 ListTile.leading）据此还原；
+  /// 普通 Map/List → 递归容器。
   String jsLiteral(Object? value, int depth) {
     if (value is Map) {
+      if (value.containsKey('type')) {
+        return renderJs(Map<String, dynamic>.from(value), depth);
+      }
       if (value.isEmpty) return '{}';
       final ind = '  ' * depth;
       final ind2 = '  ' * (depth + 1);
