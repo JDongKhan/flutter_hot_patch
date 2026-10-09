@@ -169,7 +169,7 @@ class JsRuntimeManager {
       // 持有该 id 的 runtime 回填 Promise，其余为 no-op。
       final code = '__jsui.resolve("$id", ${jsonEncode(value)});';
       for (final m in _instances.toList()) {
-        m.evaluate(code);
+        m._eval(code, '__jsui.resolve');
       }
     };
   }
@@ -201,7 +201,30 @@ class JsRuntimeManager {
 
   /// 所有 JS 求值的统一入口（纯求值，无注册副作用）。
   /// code 内部按需寻址，如 `__jsui.invoke(...)` / `__jsui.mount(...)`。
-  JsEvalResult evaluate(String code) => _runtime.evaluate(code);
+  ///
+  /// 求值失败经 [_eval] 打日志（flutter_js 的 evaluate 不抛异常，
+  /// 不查返回值就会静默失败）。
+  JsEvalResult evaluate(String code) => _eval(code, 'evaluate');
+
+  /// 求值 + 错误检查：本类内所有 `_runtime.evaluate` 的统一出口。
+  ///
+  /// flutter_js 的 `evaluate` **不会抛异常**：JS 侧的语法/运行错误以
+  /// [JsEvalResult.isError] + [JsEvalResult.stringResult]（JSC 下形如
+  /// `ERROR: ...`）返回。所以每次求值都必须查 `isError` 并打日志，否则
+  /// 注入失败会被静默吞掉——之后所有调用都是 undefined，却看不到任何报错。
+  /// [where] 标明出错的是哪段注入/调用，便于定位。
+  JsEvalResult _eval(String code, String where) {
+    final result = _runtime.evaluate(code);
+    if (result.isError) {
+      final preview = code.replaceAll('\n', ' ').trim();
+      final brief =
+          preview.length > 80 ? '${preview.substring(0, 80)}…' : preview;
+      HotPatchLog.log(
+        'JS eval failed [$where]: ${result.stringResult} | code: $brief',
+      );
+    }
+    return result;
+  }
 
   /// 确保 js_ui 运行时骨架就位（幂等）。
   ///
@@ -212,14 +235,15 @@ class JsRuntimeManager {
   /// 与具体组件无关；组件/模型/按 package 生成的 widget 模块仍走 [loadModule]。
   void ensureJsUiRuntime() {
     if (!_jsUiInited) {
-      _runtime.evaluate(jsUiRuntimeSource);
+      _eval(jsUiRuntimeSource, 'jsUiRuntimeSource');
       _jsUiInited = true;
     }
     _ensureRuntimeEnv();
     // 模块表初始化可能新建 __modules：每次确保 core 指向同一个 api。
-    _runtime.evaluate(
+    _eval(
       "typeof __jsui !== 'undefined' && typeof __modules !== 'undefined' "
       "&& (__modules['js_ui/core'] = __jsui);",
+      'js_ui/core',
     );
   }
 
@@ -230,11 +254,14 @@ class JsRuntimeManager {
     if (_envInited) {
       return;
     }
-    _runtime.evaluate(jsRuntimeEnvSource(
-      debugMode: debugMode,
-      releaseMode: kReleaseMode,
-      platform: defaultTargetPlatform,
-    ));
+    _eval(
+      jsRuntimeEnvSource(
+        debugMode: debugMode,
+        releaseMode: kReleaseMode,
+        platform: defaultTargetPlatform,
+      ),
+      'jsRuntimeEnvSource',
+    );
     _envInited = true;
   }
 
