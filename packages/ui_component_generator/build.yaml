@@ -20,10 +20,12 @@ builders:
   ui_widget:
     import: "package:ui_component_generator/builder.dart"
     builder_factories: ["widgetModuleBuilder"]
-    # 真正的产物清单来自 WidgetModuleBuilder.buildExtensions（由 translator 注册表
-    # 推导）；build_runner 对 builder_factories 返回的 Builder 采用其自身 getter，
-    # 本段落仅为 BuilderDefinition 的语法占位（build_config 要求该键非空），
-    # 不参与计算——因此这里填什么包名都无所谓，勿在此维护清单。
+    # 注意：build_runner 计算产物时用的是**实例化 Builder 的 buildExtensions
+    # getter**（本 builder 由 _registeredWidgetPackages 推导出 assets/<package>.js
+    # 清单，如 flutter.js + provider.js），并不读取下面这段的输出列表；
+    # yaml 里的 build_extensions 只在 `build_runner doctor` 校验输入扩展名 key。
+    # 但 build_config 强制 BuilderDefinition 提供非空 build_extensions，故保留一条
+    # 占位输入键即可——输出列表填什么都不影响产物，勿在此维护清单。
     build_extensions:
       "^lib/js_widgets.dart":
         - "assets/flutter.js"
