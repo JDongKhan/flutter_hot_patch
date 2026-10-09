@@ -167,6 +167,7 @@ Widget _ctx(
     props: props,
     children: children,
     childTypes: childTypes,
+    childContexts: const [],
     propChildren: propChildren,
     nativeComponents: const {},
     invoke: invoke ?? (_, [_]) {},

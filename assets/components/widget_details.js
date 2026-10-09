@@ -939,9 +939,9 @@ class InputDetailComponent {
     this._slider = 0.4;
   }
   _onTextChanged(v) { this.setState(function(){ this._text = v; }); }
-  _onChoiceChanged(v) { this.setState(function(){ this._choice = ""; }); }
-  _onDropdownChanged(v) { this.setState(function(){ this._dropdown = ""; }); }
-  _onSwitchChanged(v) { this.setState(function(){}); }
+  _onChoiceChanged(v) { this.setState(function(){ this._choice = v; }); }
+  _onDropdownChanged(v) { this.setState(function(){ this._dropdown = v; }); }
+  _onSwitchChanged(v) { this.setState(function(){ this._switchOn = (v ?? false); }); }
   _onCheckChanged(v) { this.setState(function(){ this._checked = v; }); }
   _onSliderChanged(v) { this.setState(function(){ this._slider = v; }); }
   build() {

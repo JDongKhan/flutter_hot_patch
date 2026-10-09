@@ -170,6 +170,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
     if (handler is! Map) return;
     final id = handler['__fn'];
     if (id is! String) return;
+    // payload 双重编码：内层把值变成 JSON 文本（true→"true"、'a'→"\"a\""），
+    // 外层再包成 JS 字符串字面量；JS 侧 invoke 对字符串参数做一次
+    // JSON.parse 还原原始类型。单层编码会把字符串 payload 解析失败置 null。
     _manager.evaluate(
       '__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(payload))});',
     );
@@ -259,10 +262,27 @@ class _JsNodeState extends State<_JsNode> {
 
     final children = <Widget>[];
     final childTypes = <String>[];
+    final childContexts = <JsBuildContext>[];
     for (final childId in node.childIds) {
-      final childType = widget.store.nodes[childId]?.type ?? '';
+      final childNode = widget.store.nodes[childId];
+      final childType = childNode?.type ?? '';
       childTypes.add(childType);
       children.add(_node(childId));
+      // 数据载体型子结点（BottomNavigationBarItem / DropdownMenuItem 等
+      // 非 Widget 类型）：父 renderer 直接读其 props/propChildren 组装。
+      childContexts.add(JsBuildContext(
+        props: childNode?.props ?? const {},
+        children: const [],
+        childTypes: const [],
+        childContexts: const [],
+        propChildren: {
+          for (final e in childNode?.propChildIds.entries ??
+              const <MapEntry<String, String>>[])
+            e.key: _node(e.value),
+        },
+        nativeComponents: widget.nativeComponents,
+        invoke: widget.invoke,
+      ));
     }
 
     final propChildren = <String, Widget>{};
@@ -277,6 +297,7 @@ class _JsNodeState extends State<_JsNode> {
       props: node.props,
       children: children,
       childTypes: childTypes,
+      childContexts: childContexts,
       propChildren: propChildren,
       nativeComponents: widget.nativeComponents,
       invoke: widget.invoke,

@@ -13,6 +13,7 @@ class JsBuildContext {
     required this.props,
     required this.children,
     required this.childTypes,
+    required this.childContexts,
     required this.propChildren,
     required this.nativeComponents,
     required this.invoke,
@@ -24,6 +25,11 @@ class JsBuildContext {
   /// 与 [children] 一一对应的宿主 type（用于 Scaffold 这类需要按类型
   /// 区分插槽的容器；JS 只能下发 element，无法在 props 里塞 widget）。
   final List<String> childTypes;
+
+  /// 与 [children] 一一对应的子结点数据（type/props/propChildren），
+  /// 用于 BottomNavigationBarItem / DropdownMenuItem 这类「非 Widget
+  /// 数据载体」子结点——父 renderer 直接读数据组装，不走 widget 包装。
+  final List<JsBuildContext> childContexts;
 
   /// 值为 element 的 props（如 ListTile.leading / ClipRRect.child）：
   /// prop 名 -> 已构建好的子 widget。
@@ -552,19 +558,29 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         child: c.propChild('child'),
       ));
 
-  r.register('BottomNavigationBar', (c) => BottomNavigationBar(
-        items: c.children
-            .whereType<_JsBottomNavItem>()
-            .map((w) => w.item)
-            .toList(),
-        currentIndex: c.int_('currentIndex') ?? 0,
-        onTap: c.onValue<int>('event'),
-        selectedItemColor: colorFromJson(c.props['selectedItemColor']),
-        unselectedItemColor: colorFromJson(c.props['unselectedItemColor']),
+  r.register('BottomNavigationBar', (c) {
+    // BottomNavigationBarItem 非 Widget：从 childContexts 读数据直接组装，
+    // c.children 里对应的占位结点不渲染。
+    final items = <BottomNavigationBarItem>[];
+    for (var i = 0; i < c.childContexts.length; i++) {
+      if (c.childTypes[i] != 'BottomNavigationBarItem') continue;
+      final item = c.childContexts[i];
+      items.add(BottomNavigationBarItem(
+        icon: item.propChild('icon') ?? const Icon(Icons.error_outline),
+        label: item.str('label'),
       ));
+    }
+    return BottomNavigationBar(
+      items: items,
+      currentIndex: c.int_('currentIndex') ?? 0,
+      onTap: c.onValue<int>('event'),
+      selectedItemColor: colorFromJson(c.props['selectedItemColor']),
+      unselectedItemColor: colorFromJson(c.props['unselectedItemColor']),
+    );
+  });
 
-  // BottomNavigationBarItem 不是 Widget，运行时包装为占位组件，
-  // 由 BottomNavigationBar renderer 提取 unwrap。
+  // BottomNavigationBarItem 非 Widget（见 BottomNavigationBar renderer，
+  // 从 childContexts 组装）；若被单独挂载则退回显示 icon。
   r.register('BottomNavigationBarItem', (c) => _JsBottomNavItem(
         BottomNavigationBarItem(
           icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
@@ -581,13 +597,26 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         activeColor: colorFromJson(c.props['activeColor']),
       ));
 
-  r.register('DropdownButton', (c) => DropdownButton<dynamic>(
-        value: c.props['value'],
-        items: c.children.whereType<DropdownMenuItem<dynamic>>().toList(),
-        onChanged: c.onValue<dynamic>('event'),
-        hint: c.str('hint') == null ? null : Text(c.str('hint')!),
-        isExpanded: c.bool_('isExpanded') ?? false,
+  r.register('DropdownButton', (c) {
+    // DropdownMenuItem 同上：从 childContexts 读 value/label 组装。
+    final items = <DropdownMenuItem<dynamic>>[];
+    for (var i = 0; i < c.childContexts.length; i++) {
+      if (c.childTypes[i] != 'DropdownMenuItem') continue;
+      final item = c.childContexts[i];
+      items.add(DropdownMenuItem<dynamic>(
+        value: item.props['value'],
+        child: Text(item.str('label') ?? ''),
       ));
+    }
+    final hint = c.str('hint');
+    return DropdownButton<dynamic>(
+      value: c.props['value'],
+      items: items,
+      onChanged: c.onValue<dynamic>('event'),
+      hint: hint == null ? null : Text(hint),
+      isExpanded: c.bool_('isExpanded') ?? false,
+    );
+  });
 
   r.register('DropdownMenuItem', (c) => DropdownMenuItem<dynamic>(
         value: c.props['value'],

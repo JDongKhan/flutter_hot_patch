@@ -234,6 +234,16 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     final flag = platformFlagJs(e.identifier.name);
     if (flag != null) return flag;
   }
+  // StringInterpolation 是 StringLiteral 子类，必须先判（否则被字面量分支
+  // 吞成 ""——插值表达式丢失）：拼接触发与 _logArgJs 同一逻辑。
+  if (e is StringInterpolation) return _logArgJs(e, scope, classes);
+  // `a ?? b` → JS 原生空值合并（方法体内如 `_switchOn = v ?? false`）
+  if (e is BinaryExpression && e.operator.lexeme == '??') {
+    final l = exprToJs(e.leftOperand, scope, classes);
+    final r = exprToJs(e.rightOperand, scope, classes);
+    if (l == null || r == null) return null;
+    return '($l ?? $r)';
+  }
   if (e is Identifier) {
     // kDebugMode / kReleaseMode → 运行时注入的全局标志
     final flag = globalFlagJs(e.name);
@@ -265,14 +275,16 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   return null;
 }
 
-/// 赋值右侧：字面量 / 形参 / 字段读 / 模型构造 `new X({...})`。
+/// 赋值右侧：字面量 / 形参 / 字段读 / 模型构造 `new X({...})` /
+/// 插值、`??` 等其余形态兜底走 exprToJs。
 String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+  // StringInterpolation 是 StringLiteral 子类，必须先判（否则被吞成 ""）
+  if (e is StringInterpolation) return _logArgJs(e, scope, classes);
   final lit = literalToJs(e);
   if (lit != null) return lit;
   if (e is Identifier) return scope.fieldRef(e.name);
   if (e is InstanceCreationExpression) return modelCtorToJs(e, scope, classes);
-  if (e is PropertyAccess) return exprToJs(e, scope, classes);
-  return null;
+  return exprToJs(e, scope, classes);
 }
 
 /// 模型构造调用 → JS：`new User({name:..., age:...})`。
