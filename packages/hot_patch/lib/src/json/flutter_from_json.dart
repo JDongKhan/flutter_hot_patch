@@ -298,6 +298,13 @@ EdgeInsets edgeInsetsFromJson(Map<String, dynamic>? json) {
   );
 }
 
+/// 缺省 → null（保持 Flutter 组件默认语义）：[edgeInsetsFromJson] 对 null 返回
+/// EdgeInsets.zero，但 Chip / ListView / SingleChildScrollView 等组件的
+/// padding 是可选参数，null 时应走组件/主题默认值（如 Chip 默认
+/// EdgeInsets.all(8.0)）——若用 zero 覆盖，JS 侧渲染会比原生窄。
+EdgeInsets? nullableEdgeInsets(Map<String, dynamic>? json) =>
+    json == null || json.isEmpty ? null : edgeInsetsFromJson(json);
+
 /// JSON → Alignment（'center'/'topLeft'/...）。
 Alignment? alignmentFromJson(Object? v) {
   if (v is! String) return null;

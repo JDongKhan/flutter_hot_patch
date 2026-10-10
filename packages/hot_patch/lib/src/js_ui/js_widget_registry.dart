@@ -235,7 +235,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         // shrinkWrap 未下发时保持旧产物行为（true），兼容存量 JS。
         shrinkWrap: c.bool_('shrinkWrap') ?? true,
         scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-        padding: edgeInsetsFromJson(c.map('padding')),
+        padding: nullableEdgeInsets(c.map('padding')),
         physics: scrollPhysicsFromJson(c.props['physics']),
         itemExtent: c.num_('itemExtent'),
         children: c.children,
@@ -268,7 +268,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     }
     return SingleChildScrollView(
       scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-      padding: edgeInsetsFromJson(c.map('padding')),
+      padding: nullableEdgeInsets(c.map('padding')),
       physics: scrollPhysicsFromJson(c.props['physics']),
       reverse: c.bool_('reverse') ?? false,
       child: c.child(),
@@ -422,7 +422,10 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         deleteIcon: c.propChild('deleteIcon'),
         onDeleted: c.on('onDeleted'),
         backgroundColor: colorFromJson(c.props['backgroundColor']),
-        padding: edgeInsetsFromJson(c.map('padding')),
+        // padding 缺省必须为 null：否则 EdgeInsets.zero 会覆盖 Chip 默认
+        // EdgeInsets.all(8.0)，JS 侧每个 chip 窄 16px（8 个 = 128px），
+        // 与原生渲染/滚动范围不一致。
+        padding: nullableEdgeInsets(c.map('padding')),
         side: borderSideFromJson(c.props['side']),
         shape: shapeFromJson(c.props['shape']),
         elevation: c.num_('elevation'),
