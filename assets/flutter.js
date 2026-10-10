@@ -137,6 +137,37 @@ export function GestureDetector(props, children) {
   return __h('GestureDetector', props, children);
 }
 
+class GridViewBuilderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.delegateBuilder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  build() {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var out = [];
+    var n = this.props.childCount || 0;
+    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
+    var p = {};
+    for (var k in this.props) {
+      if (k !== 'delegateBuilder' && k !== 'childCount') { p[k] = this.props[k]; }
+    }
+    return __h('GridView', p, out);
+  }
+}
+export function GridView(props, children) {
+  if (props && props.delegateBuilder !== undefined) {
+    return __h(GridViewBuilderComponent, props, children);
+  }
+  return __h('GridView', props, children);
+}
+
 export function Icon(props, children) {
   return __h('Icon', props, children);
 }

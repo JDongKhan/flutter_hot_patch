@@ -1778,9 +1778,10 @@ String _renderPackageModule(String package, Set<String> types) {
   return b.toString();
 }
 
-/// 支持 `SliverChildBuilderDelegate` 写法的 sliver 组件（产物带
+/// 支持 builder/factory 写法的滚动视图与 sliver 组件（产物带
 /// `delegateBuilder` 时走内联代理组件，普通 children 形态走宿主节点）。
 const Set<String> _sliverBuilderTypes = {
+  'GridView',
   'SliverList',
   'SliverGrid',
   'SliverFixedExtentList',

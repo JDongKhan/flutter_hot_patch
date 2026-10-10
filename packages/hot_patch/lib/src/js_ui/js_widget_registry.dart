@@ -166,6 +166,30 @@ class JsBuildContext {
 
 typedef JsWidgetBuilder = Widget Function(JsBuildContext c);
 
+/// 从 props 还原 SliverGridDelegate：含 `maxCrossAxisExtent` →
+/// SliverGridDelegateWithMaxCrossAxisExtent，否则
+/// SliverGridDelegateWithFixedCrossAxisCount（crossAxisCount 缺省 1 兜底；
+/// 间距 0/比例 1.0 即 Flutter 默认）。SliverGrid 与 GridView 共用。
+SliverGridDelegate _gridDelegateFromJson(JsBuildContext c) {
+  final maxExtent = c.num_('maxCrossAxisExtent');
+  if (maxExtent != null) {
+    return SliverGridDelegateWithMaxCrossAxisExtent(
+      maxCrossAxisExtent: maxExtent,
+      mainAxisSpacing: c.num_('mainAxisSpacing') ?? 0,
+      crossAxisSpacing: c.num_('crossAxisSpacing') ?? 0,
+      childAspectRatio: c.num_('childAspectRatio') ?? 1,
+      mainAxisExtent: c.num_('mainAxisExtent'),
+    );
+  }
+  return SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: c.int_('crossAxisCount') ?? 1,
+    mainAxisSpacing: c.num_('mainAxisSpacing') ?? 0,
+    crossAxisSpacing: c.num_('crossAxisSpacing') ?? 0,
+    childAspectRatio: c.num_('childAspectRatio') ?? 1,
+    mainAxisExtent: c.num_('mainAxisExtent'),
+  );
+}
+
 /// `type -> Flutter widget` 注册表（宿主唯一扩展点）。
 class JsWidgetRegistry {
   final Map<String, JsWidgetBuilder> _builders = {};
@@ -271,6 +295,44 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
+  // GridView：普通构造 / .builder（懒加载，产物带 delegateBuilder/itemCount，
+  // flutter.js 代理组件展开 children）/ .count / .extent。gridDelegate 按
+  // props 还原（crossAxisCount / maxCrossAxisExtent 双形态）；controller 与
+  // ListView 同款走 _JsScrollControllerView 桥接。
+  r.register('GridView', (c) {
+    final gridDelegate = _gridDelegateFromJson(c);
+    final scrollDirection =
+        axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
+    final padding = nullableEdgeInsets(c.map('padding'));
+    final shrinkWrap = c.bool_('shrinkWrap') ?? false;
+    final physics = scrollPhysicsFromJson(c.props['physics']);
+    final children = c.children;
+    final scId = _scrollControllerIdOf(c.props['controller']);
+    if (scId != null) {
+      return _JsScrollControllerView(
+        controllerId: scId,
+        invoke: c.invoke,
+        buildScrollView: (controller) => GridView(
+          controller: controller,
+          gridDelegate: gridDelegate,
+          scrollDirection: scrollDirection,
+          padding: padding,
+          shrinkWrap: shrinkWrap,
+          physics: physics,
+          children: children,
+        ),
+      );
+    }
+    return GridView(
+      gridDelegate: gridDelegate,
+      scrollDirection: scrollDirection,
+      padding: padding,
+      shrinkWrap: shrinkWrap,
+      physics: physics,
+      children: children,
+    );
+  });
+
   // CustomScrollView：slivers 是 children（宿主侧 SliverList/SliverAppBar 等
   // 已注册为 widget，直接进 slivers 列表）；controller 与 ListView 同款
   // 分流通用 _JsScrollControllerView 包装器。
@@ -315,28 +377,10 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   // SliverGridDelegateWithFixedCrossAxisCount（crossAxisCount）与
   // SliverGridDelegateWithMaxCrossAxisExtent（maxCrossAxisExtent），
   // 按 props 是否含 maxCrossAxisExtent 分流；缺省间距 0/比例 1.0 即 Flutter 默认。
-  r.register('SliverGrid', (c) {
-    final maxExtent = c.num_('maxCrossAxisExtent');
-    final gridDelegate = maxExtent != null
-        ? SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: maxExtent,
-            mainAxisSpacing: c.num_('mainAxisSpacing') ?? 0,
-            crossAxisSpacing: c.num_('crossAxisSpacing') ?? 0,
-            childAspectRatio: c.num_('childAspectRatio') ?? 1,
-            mainAxisExtent: c.num_('mainAxisExtent'),
-          )
-        : SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: c.int_('crossAxisCount') ?? 1,
-            mainAxisSpacing: c.num_('mainAxisSpacing') ?? 0,
-            crossAxisSpacing: c.num_('crossAxisSpacing') ?? 0,
-            childAspectRatio: c.num_('childAspectRatio') ?? 1,
-            mainAxisExtent: c.num_('mainAxisExtent'),
-          );
-    return SliverGrid(
-      gridDelegate: gridDelegate,
-      delegate: SliverChildListDelegate(c.children),
-    );
-  });
+  r.register('SliverGrid', (c) => SliverGrid(
+        gridDelegate: _gridDelegateFromJson(c),
+        delegate: SliverChildListDelegate(c.children),
+      ));
 
   // SliverAppBar：与 AppBar 同款（title/leading 是 element-prop、actions 是
   // children）+ sliver 专属 pinned/floating/snap/expandedHeight

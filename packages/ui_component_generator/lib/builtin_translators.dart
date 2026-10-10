@@ -39,6 +39,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const DividerTranslator())
     ..register(const CardTranslator())
     ..register(const ListViewTranslator())
+    ..register(const GridViewTranslator())
     ..register(const NotificationListenerTranslator())
     ..register(const SingleChildScrollViewTranslator())
     // 滚动视图 + sliver 家族（CustomScrollView 及其 sliver 子组件）
@@ -810,6 +811,78 @@ class ListViewTranslator extends WidgetTranslator {
   }
 }
 
+/// GridView：普通构造 / `.builder`（懒加载）/ `.count` / `.extent` 四形态。
+/// - `GridView(children:, gridDelegate:)` → children 直接展开
+/// - `GridView.builder(gridDelegate:, itemCount:, itemBuilder:)` → 闭包抽成
+///   `_gridViewBuilderN(index)` 方法 + `delegateBuilder`/`itemCount` props，
+///   运行时由 flutter.js 代理组件循环调用展开（懒加载写法）
+/// - `GridView.count(crossAxisCount:, children:)` / `GridView.extent(
+///   maxCrossAxisExtent:, children:)` → gridDelegate 便捷参数进 props
+/// controller 透传与 ListView 同款（id-bridge）。
+class GridViewTranslator extends WidgetTranslator {
+  const GridViewTranslator();
+
+  @override
+  String get type => 'GridView';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final ctrl = ctx.namedArg(node.args, 'controller');
+    if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
+    final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
+    if (axis != null) props['scrollDirection'] = axis;
+    final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
+    if (padding != null) props['padding'] = padding;
+    final shrinkWrap = _boolOf(ctx.namedArg(node.args, 'shrinkWrap'));
+    if (shrinkWrap != null) props['shrinkWrap'] = shrinkWrap;
+    final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
+    if (physics != null) props['physics'] = physics;
+    // gridDelegate 数值（两种形态，显式传 delegate 或 .count/.extent 便捷参数）
+    final grid = _gridDelegateToJson(ctx.namedArg(node.args, 'gridDelegate'), ctx);
+    if (grid != null) props.addAll(grid);
+    for (final n in [
+      'crossAxisCount',
+      'maxCrossAxisExtent',
+      'mainAxisSpacing',
+      'crossAxisSpacing',
+      'childAspectRatio',
+      'mainAxisExtent',
+    ]) {
+      final v = _numOf(ctx.namedArg(node.args, n));
+      if (v != null) props[n] = v;
+    }
+
+    // `.builder` 懒加载形态：itemBuilder 闭包抽方法 + itemCount。
+    if (node.factory == 'builder') {
+      final itemBuilder = ctx.namedArg(node.args, 'itemBuilder');
+      final itemCount = ctx.namedArg(node.args, 'itemCount');
+      if (itemBuilder is FunctionExpression && itemCount != null) {
+        final method = _extractBuilderMethod(ctx, itemBuilder, '_gridViewBuilder');
+        if (method != null) {
+          props['delegateBuilder'] = ctx.jsString(method);
+          props['itemCount'] = ctx.jsDataExpr(itemCount);
+          return {
+            'type': ctx.jsString('GridView'),
+            if (props.isNotEmpty) 'props': props,
+            'children': const [],
+          };
+        }
+      }
+      throw FormatException(
+          'GridView.builder 需要 itemBuilder((context, index) => widget) 与 itemCount');
+    }
+
+    // 普通形态（GridView / .count / .extent）：children 直接展开。
+    final children = ctx.listArg(node.args, 'children', node.type);
+    return {
+      'type': ctx.jsString('GridView'),
+      if (props.isNotEmpty) 'props': props,
+      'children': [for (final c in children) ctx.translateElement(c)],
+    };
+  }
+}
+
 // ===========================================================================
 // 滚动视图 + sliver 家族（CustomScrollView 及其 sliver 子组件）
 // ===========================================================================
@@ -841,12 +914,32 @@ List<CollectionElement>? _sliverListDelegateChildren(Expression? delegate) {
   return null;
 }
 
+/// 统一的 builder 闭包 → 组件方法抽取：`(context, index[, child])` 闭包抽成
+/// `$prefix$idx(index)` 实例方法（builderTrees 机制），返回方法名。
+/// 形参不符（少于两个参数/非表达式体）返回 null。
+String? _extractBuilderMethod(
+    WidgetTranslateContext ctx, FunctionExpression builder, String prefix) {
+  final params = builder.parameters?.parameters ?? const <FormalParameter>[];
+  // (context, index[, child]) —— index 是第二个参数（Consumer 同款约定）。
+  final indexName = params.length >= 2 ? params[1].name?.lexeme : null;
+  if (indexName == null) return null;
+  final inner = ctx.functionInner(builder);
+  if (inner == null) return null;
+  ctx.addLocal(indexName);
+  final subtree = ctx.translate(inner);
+  ctx.builderTrees.add(subtree);
+  final idx = ctx.builderTrees.length - 1;
+  ctx.builderNames.add('$prefix$idx');
+  ctx.builderParams.add(indexName);
+  return '$prefix$idx';
+}
+
 /// 解析 `SliverChildBuilderDelegate((context, index) => widget, childCount: n)`
 /// 的 builder 形态：把闭包抽成组件方法 `_sliverBuilderN(index)`（沿用
 /// builderTrees 机制；childCount 支持任意表达式），返回
 /// `{'delegateBuilder': '_sliverBuilderN', 'childCount': <jsExpr>}` props——
-/// 运行时由 flutter.js 的 SliverXxxBuilderComponent 循环调用该方法收集子树
-/// （懒构建语义见组件注释）。返回 null = 形态不支持。
+/// 运行时由 flutter.js 的 SliverXxxBuilderComponent 循环调用该方法收集子树。
+/// 返回 null = 形态不支持。
 Map<String, dynamic>? _sliverBuilderDelegateProps(
     Expression? delegate, WidgetTranslateContext ctx) {
   final (name, args) = _ctorCall(delegate);
@@ -855,20 +948,10 @@ Map<String, dynamic>? _sliverBuilderDelegateProps(
   final builderRaw = ctx.namedArg(args, 'builder') ?? ctx.nonNamedArg(args);
   final childCount = ctx.namedArg(args, 'childCount');
   if (builderRaw is! FunctionExpression || childCount == null) return null;
-  final params = builderRaw.parameters?.parameters ?? const <FormalParameter>[];
-  // (context, index[, child]) —— index 是第二个参数（Consumer 同款约定）。
-  final indexName = params.length >= 2 ? params[1].name?.lexeme : null;
-  if (indexName == null) return null;
-  final inner = ctx.functionInner(builderRaw);
-  if (inner == null) return null;
-  ctx.addLocal(indexName);
-  final subtree = ctx.translate(inner);
-  ctx.builderTrees.add(subtree);
-  final idx = ctx.builderTrees.length - 1;
-  ctx.builderNames.add('_sliverBuilder$idx');
-  ctx.builderParams.add(indexName);
+  final method = _extractBuilderMethod(ctx, builderRaw, '_sliverBuilder');
+  if (method == null) return null;
   return {
-    'delegateBuilder': ctx.jsString('_sliverBuilder$idx'),
+    'delegateBuilder': ctx.jsString(method),
     'childCount': ctx.jsDataExpr(childCount),
   };
 }

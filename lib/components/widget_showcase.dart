@@ -31,6 +31,7 @@ class WidgetShowcase extends StatelessWidget {
     ]),
     _Group('Sliver 滚动', [
       _Entry('CustomScrollView', 'Sliver 全家桶整页（仅 JS 热更版）', 'SliverDetail'),
+      _Entry('GridView', 'GridView 懒加载验证（仅 JS 热更版）', 'GridDetail'),
     ]),
     _Group('页面骨架', [
       _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
@@ -76,7 +77,8 @@ class WidgetShowcase extends StatelessWidget {
                   builder: (_) => WidgetDetailPage(
                     component: e.component,
                     fullPage: e.component == 'ScaffoldDetail' ||
-                        e.component == 'SliverDetail',
+                        e.component == 'SliverDetail' ||
+                        e.component == 'GridDetail',
                   ),
                 ),
               ),
@@ -122,6 +124,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ContainerDetail' => const ContainerDetail(),
       'ScrollDetail' => const ScrollDetail(),
       'SliverDetail' => const SliverDetail(),
+      'GridDetail' => const GridDetail(),
       'ScaffoldDetail' => const ScaffoldDetail(),
       'InputDetail' => const InputDetail(),
       'ProgressDetail' => const ProgressDetail(),
