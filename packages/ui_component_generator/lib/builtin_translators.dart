@@ -762,6 +762,9 @@ class CardTranslator extends WidgetTranslator {
 }
 
 /// ListView：children + scrollDirection/padding/shrinkWrap/physics/itemExtent。
+/// controller 参数（Dart 侧 ScrollController）与 SingleChildScrollView 同款
+/// 透传：JS 产物引用 `this._scrollController`，跨桥序列化为
+/// `{__jsuiScrollController: id}`，宿主按 id 绑定真实 controller。
 class ListViewTranslator extends WidgetTranslator {
   const ListViewTranslator();
 
@@ -772,6 +775,8 @@ class ListViewTranslator extends WidgetTranslator {
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final children = ctx.listArg(node.args, 'children', node.type);
     final props = <String, dynamic>{};
+    final ctrl = ctx.namedArg(node.args, 'controller');
+    if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
     final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
     if (axis != null) props['scrollDirection'] = axis;
     final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);

@@ -231,16 +231,45 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         children: c.children,
       ));
 
-  r.register('ListView', (c) => ListView(
-        // shrinkWrap 缺省保持 Flutter 默认（false）——与原生渲染一致；
-        // 存量 JS 产物未下发时同样按默认处理。
-        shrinkWrap: c.bool_('shrinkWrap') ?? false,
-        scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-        padding: nullableEdgeInsets(c.map('padding')),
-        physics: scrollPhysicsFromJson(c.props['physics']),
-        itemExtent: c.num_('itemExtent'),
-        children: c.children,
-      ));
+  r.register('ListView', (c) {
+    // controller 是 JS ScrollController 句柄时走通用桥接包装器（与
+    // SingleChildScrollView 同一套 controller 绑定/metrics 回传），
+    // 无 controller → 原样 ListView。
+    final scId = _scrollControllerIdOf(c.props['controller']);
+    if (scId != null) {
+      final shrinkWrap = c.bool_('shrinkWrap') ?? false;
+      final scrollDirection =
+          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
+      final padding = nullableEdgeInsets(c.map('padding'));
+      final physics = scrollPhysicsFromJson(c.props['physics']);
+      final itemExtent = c.num_('itemExtent');
+      final children = c.children;
+      return _JsScrollControllerView(
+        controllerId: scId,
+        invoke: c.invoke,
+        buildScrollView: (controller) => ListView(
+          controller: controller,
+          // shrinkWrap 缺省保持 Flutter 默认（false）——与原生渲染一致。
+          shrinkWrap: shrinkWrap,
+          scrollDirection: scrollDirection,
+          padding: padding,
+          physics: physics,
+          itemExtent: itemExtent,
+          children: children,
+        ),
+      );
+    }
+    return ListView(
+      // shrinkWrap 缺省保持 Flutter 默认（false）——与原生渲染一致；
+      // 存量 JS 产物未下发时同样按默认处理。
+      shrinkWrap: c.bool_('shrinkWrap') ?? false,
+      scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+      padding: nullableEdgeInsets(c.map('padding')),
+      physics: scrollPhysicsFromJson(c.props['physics']),
+      itemExtent: c.num_('itemExtent'),
+      children: c.children,
+    );
+  });
 
   // NotificationListener：JS 侧没有 ScrollPosition/controller，滚动监听统一
   // 由宿主抓 ScrollNotification，把 metrics 快照经 invoke 回传 JS 事件方法
@@ -259,12 +288,21 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('SingleChildScrollView', (c) {
     final scId = _scrollControllerIdOf(c.props['controller']);
     if (scId != null) {
+      final scrollDirection =
+          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
+      final physics = scrollPhysicsFromJson(c.props['physics']);
+      final reverse = c.bool_('reverse') ?? false;
+      final child = c.child();
       return _JsScrollControllerView(
         controllerId: scId,
         invoke: c.invoke,
-        scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-        physics: scrollPhysicsFromJson(c.props['physics']),
-        child: c.childOrEmpty,
+        buildScrollView: (controller) => SingleChildScrollView(
+          controller: controller,
+          scrollDirection: scrollDirection,
+          physics: physics,
+          reverse: reverse,
+          child: child,
+        ),
       );
     }
     return SingleChildScrollView(
@@ -786,20 +824,18 @@ class _NotificationListenerState extends State<_NotificationListener> {
   }
 }
 
-/// SingleChildScrollView 的 controller 桥接组件（props.controller 是 JS
-/// ScrollController 实例的序列化句柄 `{__jsuiScrollController: id}` 时替代
-/// 原样 SingleChildScrollView）：
-/// 按 id 取/建真实 ScrollController（多视图复用同一 id 时共享），滚动经
-/// invoke 回传 metrics 快照给 JS 实例（__onMetrics 更新镜像 → 触发其
-/// listeners——匿名 addListener 闭包由 JS 侧直接持有，天然支持）。
-/// jumpTo/animateTo/dispose 由 JS 实例走实例级 host 通道（带 id）。
+/// ScrollController 桥接的通用包装器：任何 ScrollView 子类
+/// （SingleChildScrollView / ListView / 后续的 CustomScrollView）把各自的
+/// 构建逻辑放进 [buildScrollView] 闭包即可复用同一套桥接——按 controllerId
+/// 取/建真实 controller、滚动经 invoke 回传 metrics 镜像到 JS 实例
+/// （__onMetrics 更新镜像 → 触发其 listeners——匿名 addListener 闭包由 JS 侧
+/// 直接持有，天然支持）、首次 attach 回传初始 metrics、jumpTo/animateTo/
+/// dispose 走实例级 host 通道。不再需要为每个 scrollview 重复实现。
 class _JsScrollControllerView extends StatefulWidget {
   const _JsScrollControllerView({
     required this.controllerId,
     required this.invoke,
-    required this.scrollDirection,
-    this.physics,
-    required this.child,
+    required this.buildScrollView,
   });
 
   /// JS 侧 ScrollController 实例的 id（nextId('sc')，如 'sc#5'）。
@@ -808,9 +844,10 @@ class _JsScrollControllerView extends StatefulWidget {
   /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
   final void Function(Object? handler, [Object? payload]) invoke;
 
-  final Axis scrollDirection;
-  final ScrollPhysics? physics;
-  final Widget child;
+  /// 用（按 id 绑定好的）真实 controller 构建具体滚动组件
+  /// （SingleChildScrollView / ListView / CustomScrollView 等）；
+  /// 其它 props（scrollDirection/physics/children…）由调用方闭包捕获。
+  final Widget Function(ScrollController controller) buildScrollView;
 
   @override
   State<_JsScrollControllerView> createState() => _JsScrollControllerViewState();
@@ -858,12 +895,7 @@ class _JsScrollControllerViewState extends State<_JsScrollControllerView> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: _controller,
-      scrollDirection: widget.scrollDirection,
-      physics: widget.physics,
-      child: widget.child,
-    );
+    return widget.buildScrollView(_controller);
   }
 }
 
