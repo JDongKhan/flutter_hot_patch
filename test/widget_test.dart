@@ -1,10 +1,9 @@
 // 冒烟测试：
 // 1. 注解可携带组件元信息
-// 2. 服务策略层：NativeService 注册/分发
-// 3. 宿主补丁应用层：JsUiStore 按 op 改写结点表（create/insert/move/props/
+// 2. 宿主补丁应用层：JsUiStore 按 op 改写结点表（create/insert/move/props/
 //    propsChild/remove/root），只重建被触碰结点
-// 4. 宿主翻译层：JsWidgetRegistry 把结点译成真实 Flutter widget（Text/Column/Button）
-// 5. 宿主注入：@HostInjected 通道回填（位置/具名实参按 Dart 语义还原）
+// 3. 宿主翻译层：JsWidgetRegistry 把结点译成真实 Flutter widget（Text/Column/Button）
+// 4. 宿主注入：@HostInjected 通道回填（位置/具名实参按 Dart 语义还原）
 //
 // 注意：JsUiWidget 的 JS 引擎加载依赖原生 JS 运行时（flutter_js 在测试环境会
 // 创建轮询 Timer），widget 级渲染验证留到真机集成测试。
@@ -17,19 +16,6 @@ void main() {
   test('注解可携带组件元信息', () {
     const component = UIComponent('HelloCard');
     expect(component.name, 'HelloCard');
-  });
-
-  test('服务策略层：NativeService 注册/查找/分发', () {
-    final registry = NativeServiceRegistry();
-    registerBuiltinNativeServices(registry);
-    expect(registry.lookup('nativeToast'), isA<SnackBarService>());
-    expect(registry.lookup('log'), isA<LogService>());
-    expect(registry.channels, containsAll(['nativeToast', 'log']));
-
-    // 业务方可覆盖同 channel 实现；覆盖不影响其他内置服务
-    registry.register(_FakeService());
-    expect(registry.lookup('nativeToast'), isA<_FakeService>());
-    expect(registry.lookup('log'), isA<LogService>());
   });
 
   test('宿主注入：位置/具名实参按 Dart 调用语义还原', () {
@@ -225,12 +211,4 @@ Widget _ctx(
     nativeComponents: const {},
     invoke: invoke ?? (_, [_]) {},
   ));
-}
-
-class _FakeService extends NativeService {
-  const _FakeService();
-  @override
-  String get channel => 'nativeToast';
-  @override
-  void handle(BuildContext context, dynamic payload) {}
 }

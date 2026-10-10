@@ -53,15 +53,22 @@ JsUiWidget(
 
 ## 扩展：JS → 原生能力
 
-走服务注册表：实现 `NativeService` 并注入 `JsRuntimeManager` 即可，核心类零改动。
-内置 `toast` / `log` 两个服务。
+统一走「宿主方法」：JS 侧唯一出口 `__jsui.host(channel, args)`（返回 Promise，
+可用 `await`），宿主侧唯一入口 `JsRuntimeManager.registerHostMethod(channel, impl)`。
+JS 传来的 `{id, args}` 按 Dart 调用语义（位置/具名实参、默认值）还原后执行，
+返回值经 `__jsui.resolve` 回填 Promise。
+
+业务方法用 `@HostInjected()` 注解，由生成器自动收集并注册；框架内建通道
+（`log` / `nativeToast` / `jsuiCommit`）在 `JsUiWidget` 启动时自动注册。
 
 ```dart
-class MyService extends NativeService {
-  @override
-  String get channel => 'myChannel';
-  // ...
-}
+@HostInjected()
+static String greet(String name) => 'Hi, $name';
+```
+
+```dart
+// 或手动注册任意通道
+JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
 ```
 
 ## 日志

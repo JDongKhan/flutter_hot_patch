@@ -9,7 +9,6 @@ import 'package:flutter_js/flutter_js.dart';
 
 import '../utils/js_asset_resolver.dart';
 import '../js_ui/runtime_source.dart';
-import 'native_service.dart';
 import '../utils/hot_patch_log.dart';
 
 /// JS 运行时管理器：与底层 [JavascriptRuntime] **一对一**。
@@ -31,51 +30,39 @@ import '../utils/hot_patch_log.dart';
 ///   业务方自建的实例由业务方管理（不再需要时置空引用即可，
 ///   不要 dispose 底层 runtime，避免其他仍在使用该 runtime 的组件失效）。
 ///
-/// ## 消息通道：单一桥通道 `_app_bridge_` + 两套处理器表
+/// ## 消息通道：单一桥通道 `_app_bridge_` + 单一处理器表
 ///
 /// JS → Flutter 的所有消息都打到**唯一的桥通道** `_app_bridge_`，消息体里
 /// 用 `ch` 字段标示目标逻辑通道：
 ///
-///   sendMessage('_app_bridge_', JSON.stringify({ ch: 'jsuiCommit', key, data }))
+///   sendMessage('_app_bridge_', JSON.stringify({ ch: 'jsuiCommit', data }))
+///
+/// 其中 `data` 固定为 `{id, args}`。JS 侧对外只有**一个**出口
+/// `__jsui.host(channel, args)`：它把 `{id, args}` 交给宿主，宿主实现后用
+/// `__jsui.resolve(id, value)` 回填 Promise。框架内建通道（增量补丁
+/// `jsuiCommit`、日志 `log`、native 通道）与业务 @HostInjected 方法
+/// 共用这一张表。
 ///
 /// 本类在**构造时**用 `_runtime.onMessage('_app_bridge_', _dispatch)` 订阅一次，
-/// [_dispatch] 再按 `ch` 二次分发到 [globalMessageHandlers] /
-/// [pageMessageHandlers]。因此**注册与订阅完全解耦**：处理器可以在任何时机
-/// 注册（包括第一个 manager 出现之前，如 main() 里直接调用），不需要「补接线」，
-/// 也不会出现「channel 未接线 → No channel xxx registered」。
-/// [evaluate] 是纯求值入口，不掺注册副作用。
+/// [_dispatch] 再按 `ch` 二次分发到 [globalMessageHandlers]。因此**注册与订阅
+/// 完全解耦**：处理器可以在任何时机注册（包括第一个 manager 出现之前，如
+/// main() 里直接调用），不需要「补接线」，也不会出现「channel 未接线 →
+/// No channel xxx registered」。 [evaluate] 是纯求值入口，不掺注册副作用。
 ///
-/// **对外扩展只有三种能力：实现 [NativeService]（channel + handle）用
-/// [registerGlobal]（全局级）注册；用 [registerRawPageHandler] 注册一个
-/// 与页面 key 绑定、不需要 BuildContext 的裸通道处理器（如 js_ui 的 commit）；
-/// 或用 [registerHostMethod] 注册一个 @HostInjected 宿主注入方法（全局级，
-/// JS 侧 `__jsui.host` 调用、宿主实现并回填结果）。**
+/// **对外扩展只有一个能力：[registerHostMethod] 注册一个宿主方法
+/// （@HostInjected 方法，或框架内建通道），JS 侧 `__jsui.host` 调用、
+/// 宿主实现并回填结果。**
 ///
-/// ### 页面级 [pageMessageHandlers]（跟页面 key 绑定）
+/// 页面隔离（多 JsUiWidget 共用单 runtime）由处理器**内部**按参数里的
+/// 页面 key 自行路由（如 js_ui 的 `jsuiCommit`：payload 带 key，路由到
+/// 对应 JsUiStore），分发层不再区分页面级/全局级。
 ///
-/// 例：js_ui 的 commit（把 JS 算好的增量补丁交给宿主应用）。
-/// 消息**必须携带页面 key**：`ch: 'jsuiCommit', key: 'jsui_1'`。
-/// 分发：`pageMessageHandlers[key]?[channel]`；key 形如 `主key::组件`
-/// （嵌套实例）时 miss 回退主 key。页面销毁用 [dispose] 一次性移除
-/// 该 key 下的全部注册。
-///
-/// ### 全局级 [globalMessageHandlers]（与页面无关）
-///
-/// 例：日志、toast。全局一份处理器，不需要页面 key 隔离。
-/// 消息不带 key，或页面级查不到时回退到这里。
-/// 全局 handler 的 context 由 [navigatorKey] 提供。
-///
-/// ### 分发规则（统一）
-///
-/// 1. 消息带 key → 先查页面级（`key`，miss 回退 `key.split('::').first`）；
-/// 2. 页面级查不到或消息不带 key → 查全局级。
-///
-/// [pageMessageHandlers] / [globalMessageHandlers] 必须是 static 全局唯一：
+/// [globalMessageHandlers] 必须是 static 全局唯一：
 /// flutter_js 0.8.7（iOS/JavaScriptCore）的消息桥是库级全局的，
 /// `sendMessage` 的 Dart 回调是 static 字段（由最后创建的 runtime 覆盖
 /// 赋值），通道表也是 static Map（key=engineId）。若处理器表是实例级的，
-/// 消息到达某个 manager 的通道回调后查不到属于另一个 manager 的页面
-/// key，就会串台/丢消息。
+/// 消息到达某个 manager 的通道回调后查不到属于另一个 manager 的处理器，
+/// 就会串台/丢消息。
 class JsRuntimeManager {
   /// 全局默认实例（static 共享）：大多数场景直接用这个。
   static final JsRuntimeManager instance = JsRuntimeManager();
@@ -103,68 +90,31 @@ class JsRuntimeManager {
   bool debugMode = kDebugMode;
 
   // ---------------------------------------------------------------------
-  // 全局共享（static）：两套消息处理器表
+  // 全局共享（static）：唯一消息处理器表
   // ---------------------------------------------------------------------
 
-  /// 页面级处理器表（全局唯一）：页面 key → (方法 → 处理器)。
-  /// [registerRawPageHandler] 注册的处理器在这里；页面销毁时 [dispose] 移除。
-  static final Map<String, Map<String, void Function(dynamic args)>>
-      pageMessageHandlers = {};
-
-  /// 全局级处理器表（全局唯一）：方法 → 处理器。
-  /// [registerGlobal] 注册的服务在这里，全局一份。
+  /// 唯一处理器表（全局唯一）：通道名 → 处理器。
+  /// [registerHostMethod] 注册的宿主方法在这里，全局一份；框架内建通道
+  /// （`jsuiCommit` / `log` / native 通道）也走同一张表。
   static final Map<String, void Function(dynamic args)> globalMessageHandlers =
       {};
 
-  /// 注册一个**全局级** [NativeService]（与页面无关，全局一份）。
-  ///
-  /// 例：日志、toast。JS 经桥通道发 `ch` = [NativeService.channel] 触发；
-  /// handle 的 context 由框架取 [navigatorKey] 提供。
-  /// 只写处理器表——桥通道在 manager 构造时已订阅，无需接线。
-  static void registerGlobal(NativeService service) {
-    globalMessageHandlers[service.channel] = (dynamic args) {
-      final ctx = navigatorKey?.currentContext;
-      if (ctx == null || !ctx.mounted) {
-          HotPatchLog.log('${service.channel} ignored: '
-            'navigatorKey not configured / context not ready');
-        return;
-      }
-      service.handle(ctx, args);
-    };
-  }
-
-  /// 注册一个页面级**裸通道处理器**（不走 [NativeService]）。
-  ///
-  /// 供不需要 BuildContext 的运行时装使用（如 js_ui 的 `jsuiCommit`：只把
-  /// JS 下发的补丁交给宿主应用，与页面上下文无关）。
-  /// JS 经桥通道发 `ch` = [channel] + 页面 key 触发。
-  /// 只写处理器表——桥通道在 manager 构造时已订阅，无需接线。
-  static void registerRawPageHandler(
-    String pageKey,
-    String channel,
-    void Function(dynamic args) handler,
-  ) {
-    (pageMessageHandlers[pageKey] ??= {})[channel] = handler;
-  }
-
-  /// 注册一个**宿主注入方法**（@HostInjected 通道）。
+  /// 注册一个**宿主方法**（@HostInjected 通道；框架内建通道同用此入口）。
   ///
   /// 生成器把 Dart 的 static 方法调用（`AccountCenter.getUserName(a)`）在
   /// 调用点翻译为 JS 侧 `__jsui.host("通道名", 参数载荷)`（返回 Promise，可
   /// await；载荷按实参形态给数组/对象，见 [_hostCallArgs]）。本方法把该通道接到
-  /// 宿主实现 [impl]：收到 JS 的 `{id, key, args}` 后按
+  /// 宿主实现 [impl]：收到 JS 的 `{id, args}` 后按
   /// `Function.apply(impl, 位置实参, 具名实参)` 调用——Dart 调用语义完整还原，
   /// 位置/具名实参**个数不限**，未传的参数走实现自身的默认值，返回值类型也不限。
   /// 之后把返回值经 `__jsui.resolve(id, value)` 回填 JS 的 Promise。
   ///
-  /// 与页面无关（全局一份）；通道名即 @HostInjected 注解里的名称
-  /// （缺省为方法名）。只写处理器表——桥通道在 manager 构造时已订阅。
+  /// 全局一份；通道名即 @HostInjected 注解里的名称（缺省为方法名），或框架
+  /// 内建通道名。只写处理器表——桥通道在 manager 构造时已订阅。
   /// 通道名需唯一：debug 下重复注册会触发断言失败。
   static void registerHostMethod(String channel, Function impl) {
-    // debug 阶段消灭重复：同一通道注册两次（如两个方法用了同一个 @HostInjected
-    // 通道名）会静默覆盖前一个实现，JS 侧调到的实现与预期不符且无从察觉。
-    // 断言让问题在启动时立刻暴露。通道名与 registerGlobal 的 service.channel
-    // 共用一张全局表，故本条同时拦住这两类撞名。
+    // debug 阶段消灭重复：同一通道注册两次会静默覆盖前一个实现，JS 侧调到的
+    // 实现与预期不符且无从察觉。断言让问题在启动时立刻暴露。
     assert(
       !globalMessageHandlers.containsKey(channel),
       'registerHostMethod: 通道 "$channel" 已被注册——'
@@ -218,14 +168,6 @@ class JsRuntimeManager {
       return (pos is List ? pos : const <dynamic>[], named);
     }
     return (const <dynamic>[], const <Symbol, dynamic>{});
-  }
-
-  /// 移除页面 key 下的**全部**页面级注册（页面销毁时调用）。
-  ///
-  /// JS 侧的根（结点树 / provider / 订阅）由 JsUiWidget 先调
-  /// `__jsui.dispose(pageKey)` 释放，本方法只负责回收 Dart 侧 handler 表。
-  static void dispose(String pageKey) {
-    pageMessageHandlers.remove(pageKey);
   }
 
   // ---------------------------------------------------------------------
@@ -487,31 +429,18 @@ $out
   /// 运行时环境全局（__modules / 标志 / console / ChangeNotifier）是否已注入。
   bool _envInited = false;
 
-  /// 桥通道回调：解出消息体 `ch` 字段，二次分发到两套 static 全局表。
+  /// 桥通道回调：解出消息体 `ch` 字段，二次分发到唯一处理器表。
   ///
-  /// 信封格式（JS 侧 `__appSend` 产出）：
-  ///   `{ ch: <逻辑通道名>, data: <原有消息体>, key?: <页面key> }`
+  /// 信封格式（JS 侧 `__jsui.host` / 内部 `send` 产出）：
+  ///   `{ ch: <逻辑通道名>, data: {id, args} }`
   ///
-  /// 分发规则（见类注释）：`key` 定位页面层（miss 回退主 key），`ch`
-  /// 定位方法层；页面级查不到或无 key 时回退全局级。因为处理器表是 static
-  /// 全局唯一的，无论消息路由到哪个 manager 的 runtime，都能找到正确处理器。
+  /// `ch` 定位通道；`data` 交给对应处理器（[registerHostMethod] 的包装按
+  /// `{id, args}` 还原 Dart 调用语义）。因为处理器表是 static 全局唯一的，
+  /// 无论消息路由到哪个 manager 的 runtime，都能找到正确处理器。
   void _dispatch(dynamic raw) {
     if (raw is! Map) return;
     final channel = raw['ch']?.toString() ?? '';
     if (channel.isEmpty) return;
-    final data = raw['data'];
-    var key = raw['key']?.toString() ?? '';
-    // 兼容：页面 key 也可能放在消息体内（生成器产出的 native 通道）。
-    if (key.isEmpty && data is Map && data['key'] != null) {
-      key = data['key'].toString();
-    }
-    void Function(dynamic args)? handler;
-    if (key.isNotEmpty) {
-      final mainKey = key.split('::').first;
-      handler =
-          (pageMessageHandlers[key] ?? pageMessageHandlers[mainKey])?[channel];
-    }
-    handler ??= globalMessageHandlers[channel];
-    handler?.call(data);
+    globalMessageHandlers[channel]?.call(raw['data']);
   }
 }

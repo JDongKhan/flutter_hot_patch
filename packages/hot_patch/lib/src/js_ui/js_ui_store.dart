@@ -123,3 +123,10 @@ class JsUiStore {
     nodes.remove(id);
   }
 }
+
+/// 页面 key → 该页面的 [JsUiStore]（全局注册表）。
+///
+/// 多 JsUiWidget 共用单 runtime 时，`jsuiCommit` 补丁带页面 key 下发；宿主
+/// 的 `jsuiCommit` 处理器据此表把补丁路由到对应页面。JsUiWidget 在 initState
+/// 登记、dispose 移除——这是「页面级路由」的唯一落点。
+final Map<String, JsUiStore> jsUiPageStores = {};

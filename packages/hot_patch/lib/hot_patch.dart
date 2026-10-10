@@ -10,13 +10,12 @@
 /// setState 等）全部在 JS 侧实现，宿主只做「JS 结点 → Flutter widget」映射
 /// （[JsWidgetRegistry]）+ 增量补丁应用（[JsUiStore]）。
 ///
-/// JS→原生能力走服务注册表（[NativeService] / [JsRuntimeManager]）：
-/// 支持各种原生服务 = 实现 [NativeService] 并注入，核心类零改动。
+/// JS→原生能力统一走「宿主方法」：JS 侧唯一出口 `__jsui.host`，宿主侧唯一
+/// 入口 [JsRuntimeManager.registerHostMethod]（业务方法用 @HostInjected 注解
+/// 由生成器注册，框架内建通道由 JsUiWidget 启动时注册），核心类零改动。
 library;
 
-export 'src/services/builtin_services.dart';
 export 'src/services/js_runtime_manager.dart';
-export 'src/services/native_service.dart';
 export 'src/utils/hot_patch_log.dart';
 export 'src/json/flutter_from_json.dart';
 export 'src/js_ui/js_ui_widget.dart';

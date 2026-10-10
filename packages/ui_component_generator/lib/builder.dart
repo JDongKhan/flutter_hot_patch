@@ -1007,10 +1007,10 @@ String _translateActionBody(
       throw FormatException(
           'native 动作需要方法体是 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("消息"))) 形式');
     }
-    // JS 消息统一携带页面 key（this._key 由运行时挂载），运行时按 key 定位
-    // 页面级处理器。统一走运行时单桥出口 __appSend（目标通道名由它放进
-    // 消息体 ch 字段）——不要再裸调 sendMessage，否则宿主收不到。
-    return '__appSend(${jsString(nativeChannel)}, { key: this._key, message: $msg });';
+    // 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；消息体给具名参数
+    // {message}，宿主内建 `nativeToast` 处理器用 navigatorKey 取 context
+    // 弹 SnackBar。不要再裸调 sendMessage，否则宿主收不到。
+    return '__jsui.host(${jsString(nativeChannel)}, { message: $msg });';
   }
 
   // 逐语句翻译：setState(...) 展开、await Future.delayed(...)、

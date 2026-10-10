@@ -2,9 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-import '../services/builtin_services.dart';
+import '../services/builtin_host_methods.dart';
 import '../services/js_runtime_manager.dart';
-import '../services/native_service.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
 import 'js_ui_store.dart';
@@ -75,9 +74,6 @@ class JsUiWidget extends StatefulWidget {
 class JsUiWidgetState extends State<JsUiWidget> {
   static int _seq = 0;
 
-  /// 内置全局服务（toast/log）只注册一次（全局一份）。
-  static bool _builtinsRegistered = false;
-
   late final JsRuntimeManager _manager;
   late final JsWidgetRegistry _registry;
   final JsUiStore _store = JsUiStore();
@@ -99,14 +95,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
     if (widget.registry == null) {
       registerBuiltinJsWidgets(_registry);
     }
-    if (!_builtinsRegistered) {
-      final builtins = NativeServiceRegistry();
-      registerBuiltinNativeServices(builtins);
-      for (final channel in builtins.channels) {
-        JsRuntimeManager.registerGlobal(builtins.lookup(channel)!);
-      }
-      _builtinsRegistered = true;
-    }
+    // 框架内建宿主方法（log / nativeToast / jsuiCommit）：全局一次。
+    registerBuiltinHostMethods();
     _store.onRoot = (id) {
       _rootId = id;
       if (mounted) setState(() => _loading = false);
@@ -114,8 +104,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // ScrollController 桥接通道（JS ScrollController ↔ Dart ScrollController）：
     // 必须在任何 JS 组件 mount（new ScrollController → host 登记）前就位。
     ensureScrollControllerChannels();
-    // 页面级 commit 通道：JS 算好补丁后从这里进来（不需要 BuildContext）。
-    JsRuntimeManager.registerRawPageHandler(_pageKey, 'jsuiCommit', _onCommit);
+    // jsuiCommit 补丁按页面 key 路由：登记本页 store（key 由 JS 补丁带下来）。
+    jsUiPageStores[_pageKey] = _store;
     _boot();
   }
 
@@ -158,13 +148,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
     }
   }
 
-  void _onCommit(dynamic args) {
-    if (args is! Map) return;
-    final ops = args['ops'];
-    if (ops is! List) return;
-    _store.apply(ops);
-  }
-
   /// 宿主 → JS 的事件回传（按钮点击等）。
   ///
   /// handler 是运行时登记的句柄 `{'__fn': id}`（生成器在构建期把事件表达式
@@ -186,7 +169,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
     _manager.evaluate(
       'if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});',
     );
-    JsRuntimeManager.dispose(_pageKey);
+    // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
+    jsUiPageStores.remove(_pageKey);
     super.dispose();
   }
 

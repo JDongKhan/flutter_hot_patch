@@ -5,10 +5,11 @@
 ///   - component/state：状态、setState、build 都在 JS；
 ///   - reconciler：重建 -> 对比 -> 产出 patch ops；
 ///   - context/provider：纯 JS 的作用域查找 + 订阅，宿主完全不感知；
-///   - bridge：出方向统一走单桥通道 `_app_bridge_`（消息体 `ch` 字段标示
-///     目标通道，宿主一次订阅、二次分发）——增量补丁 `jsuiCommit`、日志
-///     `log`、native 通道、`__jsui.host`（宿主注入，经 `__jsui.resolve`
-///     回填 Promise）全部复用同一条出口。
+///   - bridge：出方向只有一个对外入口 `__jsui.host(channel, args)`——
+///     JS 发起调用，宿主实现后用 `__jsui.resolve(id, value)` 回填 Promise。
+///     增量补丁 `jsuiCommit`、日志 `log`、native 通道、@HostInjected 方法
+///     全部复用这一个入口（内部统一打到单桥通道 `_app_bridge_`，消息体 `ch`
+///     字段标示目标通道，宿主一次订阅、二次分发）。
 ///
 /// 宿主只做两件事：把 `type` 映射成 Flutter widget、应用 patch。
 /// 因此新增 JS 组件/状态库不改宿主；只有新增「Flutter 侧不存在的视觉
@@ -31,8 +32,8 @@
 /// | 分区 | 内容 | 属于哪个设计 |
 /// | --- | --- | --- |
 /// | 【1】 | 全局状态与工具（id 序号、句柄表、结点标记、页面根表） | 全体共用 |
-/// | 【2】 | 出方向桥（emit / commit / sendHost → `__appSend`） | 全体共用 |
-/// | 【3】 | 宿主注入 `__jsui.host` / `resolve` | @HostInjected 专用 |
+/// | 【2】 | 出方向桥（emit / commit / send → `sendMessage`） | 全体共用 |
+/// | 【3】 | 宿主注入 `__jsui.host` / `resolve`（唯一对外出口） | @HostInjected 专用 |
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
 /// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
 /// | 【6】 | 组件基类（`setState` / `__bind`） | mini-react（生成器产物的能力袋） |
@@ -78,11 +79,15 @@ const String jsUiRuntimeSource = r'''
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
 
-  // ===== 【2】出方向桥｜唯一出口（emit / commit / sendHost）============
-  // 出方向统一走全局 __appSend（单桥通道 `_app_bridge_`，目标通道名放在
-  // 消息体 `ch` 字段）。宿主只订阅该桥通道一次，再按 ch 二次分发。
-  function sendHost(channel, obj, key) {
-    if (typeof __appSend === 'function') { __appSend(channel, obj, key); }
+  // ===== 【2】出方向桥｜唯一底层发送（emit / commit / send）============
+  // 所有 JS→宿主消息都打到单桥通道 `_app_bridge_`，目标通道名放在消息体
+  // `ch` 字段。宿主只订阅该桥通道一次，再按 ch 二次分发。
+  // `send` 是运行时**内部**的低层发送（不对外暴露）；对外的唯一入口是
+  // `__jsui.host`（见【3】），它等于 `send` + Promise 回填。
+  var APP_BRIDGE = '_app_bridge_';
+  function send(channel, data) {
+    if (typeof sendMessage !== 'function') { return; }
+    sendMessage(APP_BRIDGE, JSON.stringify({ ch: channel, data: data }));
   }
 
   function emit(op) {
@@ -92,24 +97,25 @@ const String jsUiRuntimeSource = r'''
     var list = root.ops;
     root.ops = null;
     if (!list || !list.length) { return; }
-    sendHost('jsuiCommit', { ops: list }, root.key);
+    // 补丁按页面 key 路由到对应 JsUiStore（key 放进 args，宿主 handler 解析）。
+    send('jsuiCommit', { args: { key: root.key, ops: list } });
   }
 
-  // ===== 【3】宿主注入｜__jsui.host / resolve（@HostInjected 专用）====
+  // ===== 【3】宿主注入｜__jsui.host / resolve（唯一对外出口）==========
   // JS 发起调用，宿主实现后回填结果
   // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
   // `__jsui.host("getUserName", [a, b])`（参数载荷按形态给：纯位置→数组、
   // 纯具名→对象、混合→对象 + "@args" 键装位置实参）：本函数返回 Promise，
   // 经桥通道把 `{id, args}` 交给宿主，宿主实现完成后用
   // `__jsui.resolve(id, value)` 回填（见 JsRuntimeManager.registerHostMethod）。
+  // 框架内建通道（日志 `log`、native 通道等）同样走这里，保持单一出口。
   var hostSeq = 0;
   var hostPending = {};
   function host(channel, args) {
     hostSeq += 1;
     var id = 'host' + hostSeq;
-    var key = activeRoot ? activeRoot.key : null;
     var p = new Promise(function (resolve) { hostPending[id] = resolve; });
-    sendHost(channel, { id: id, args: args || [] }, key);
+    send(channel, { id: id, args: args || [] });
     return p;
   }
   function resolveHost(id, value) {
@@ -688,19 +694,6 @@ String jsRuntimeEnvSource({
 if (typeof __modules === 'undefined') {
   var __modules = {};
 }
-// JS → 宿主的**唯一出口**：所有消息都打到单桥通道 `_app_bridge_`，目标
-// 通道名放在消息体 `ch` 字段里。这样 Dart 侧只需 `onMessage` 订阅这一个
-// 通道（构造时一次），再按 `ch` 二次分发到对应处理器——订阅与注册时机
-// 彻底解耦，不会出现「channel 未接线 → No channel xxx registered」。
-// 任何 JS 侧发送（运行时 commit/host、console 日志、生成器产出的 native
-// 通道）都必须走这里，不要再裸调 sendMessage。
-var __appBridgeChannel = '_app_bridge_';
-var __appSend = function (channel, data, key) {
-  if (typeof sendMessage !== 'function') { return; }
-  var env = { ch: channel, data: data };
-  if (key != null) { env.key = key; }
-  sendMessage(__appBridgeChannel, JSON.stringify(env));
-};
 // 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
 // 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
@@ -715,18 +708,24 @@ var Platform = {
   isFuchsia: ${platform == TargetPlatform.fuchsia}
 };
 // JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
-// 统一桥到逻辑通道 'log'（运行时 log 服务 → HotPatchLog，可全局开关）。
+// 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
 // console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
 // 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
 // `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
 // debug/info/log/warn/error 全部可用且路由到 log 服务。
+// 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
+// 故 Promise 一定被回填、不会悬挂。
 var console = (typeof console === 'undefined') ? {} : console;
-// 经 __appSend 转发（单桥通道 + ch='log'），data 直接是日志文本字符串。
-console.debug = function(m) { if (kDebugMode) { __appSend('log', String(m)); } };
-console.info = function(m) { __appSend('log', String(m)); };
-console.log = function(m) { __appSend('log', String(m)); };
-console.warn = function(m) { __appSend('log', String(m)); };
-console.error = function(m) { __appSend('log', String(m)); };
+function __log(m) {
+  if (typeof __jsui !== 'undefined' && __jsui.host) {
+    __jsui.host('log', [String(m)]);
+  }
+}
+console.debug = function(m) { if (kDebugMode) { __log(m); } };
+console.info = function(m) { __log(m); };
+console.log = function(m) { __log(m); };
+console.warn = function(m) { __log(m); };
+console.error = function(m) { __log(m); };
 // ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
 // extends ChangeNotifier` 共用，notifyListeners 触发订阅回调。
 function ChangeNotifier() {
