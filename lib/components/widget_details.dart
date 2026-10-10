@@ -659,42 +659,92 @@ class _SliverDetailState extends State<SliverDetail> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: SliverToBoxAdapter(
               child: Text(
-                '九宫格 · SliverGrid',
+                'SliverChildBuilderDelegate · 懒构建列表',
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 1,
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => ListTile(
+                  leading: Icon(Icons.build, color: Colors.orange.shade700),
+                  title: Text('builder item $index'),
+                  subtitle: Text('index * 10 = ${index * 10}'),
+                ),
+                childCount: 8,
               ),
-              delegate: SliverChildListDelegate([
-                for (var i = 1; i <= 9; i++)
-                  Container(
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'SliverFixedExtentList · 固定高度',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            sliver: SliverFixedExtentList(
+              itemExtent: 44,
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.height, color: Colors.teal),
+                  title: Text('fixed item $index'),
+                ),
+                childCount: 6,
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'SliverOpacity + SliverGrid · MaxCrossAxisExtent 九宫格',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          SliverOpacity(
+            opacity: 0.6,
+            sliver: SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 140,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => Container(
                     decoration: BoxDecoration(
                       color: Colors.teal.shade100,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      '格 $i',
+                      '格 $index',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-              ]),
+                  childCount: 9,
+                ),
+              ),
             ),
           ),
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: Text(
-                '底部 · SliverFillRemaining',
-                style: const TextStyle(color: Colors.grey),
+          SliverSafeArea(
+            sliver: SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Text(
+                  '底部 · SliverSafeArea + SliverFillRemaining',
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ),
             ),
           ),

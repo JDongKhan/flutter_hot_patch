@@ -311,19 +311,32 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         delegate: SliverChildListDelegate(c.children),
       ));
 
-  // SliverGrid：gridDelegate 仅支持 SliverGridDelegateWithFixedCrossAxisCount
-  // （crossAxisCount 必填——与 Flutter 一致，缺失会断言；其余缺省 0/1.0 即
-  // Flutter 默认）。
-  r.register('SliverGrid', (c) => SliverGrid(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: c.int_('crossAxisCount') ?? 1,
-          mainAxisSpacing: c.num_('mainAxisSpacing') ?? 0,
-          crossAxisSpacing: c.num_('crossAxisSpacing') ?? 0,
-          childAspectRatio: c.num_('childAspectRatio') ?? 1,
-          mainAxisExtent: c.num_('mainAxisExtent'),
-        ),
-        delegate: SliverChildListDelegate(c.children),
-      ));
+  // SliverGrid：gridDelegate 支持两种——
+  // SliverGridDelegateWithFixedCrossAxisCount（crossAxisCount）与
+  // SliverGridDelegateWithMaxCrossAxisExtent（maxCrossAxisExtent），
+  // 按 props 是否含 maxCrossAxisExtent 分流；缺省间距 0/比例 1.0 即 Flutter 默认。
+  r.register('SliverGrid', (c) {
+    final maxExtent = c.num_('maxCrossAxisExtent');
+    final gridDelegate = maxExtent != null
+        ? SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: maxExtent,
+            mainAxisSpacing: c.num_('mainAxisSpacing') ?? 0,
+            crossAxisSpacing: c.num_('crossAxisSpacing') ?? 0,
+            childAspectRatio: c.num_('childAspectRatio') ?? 1,
+            mainAxisExtent: c.num_('mainAxisExtent'),
+          )
+        : SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: c.int_('crossAxisCount') ?? 1,
+            mainAxisSpacing: c.num_('mainAxisSpacing') ?? 0,
+            crossAxisSpacing: c.num_('crossAxisSpacing') ?? 0,
+            childAspectRatio: c.num_('childAspectRatio') ?? 1,
+            mainAxisExtent: c.num_('mainAxisExtent'),
+          );
+    return SliverGrid(
+      gridDelegate: gridDelegate,
+      delegate: SliverChildListDelegate(c.children),
+    );
+  });
 
   // SliverAppBar：与 AppBar 同款（title/leading 是 element-prop、actions 是
   // children）+ sliver 专属 pinned/floating/snap/expandedHeight
@@ -362,6 +375,53 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         hasScrollBody: c.bool_('hasScrollBody') ?? true,
         fillOverscroll: c.bool_('fillOverscroll') ?? false,
         child: c.childOrEmpty,
+      ));
+
+  // SliverFixedExtentList：delegate（List/Build 双形态统一为 children）+
+  // itemExtent（必填，缺失按 0 兜底暴露问题）。
+  r.register('SliverFixedExtentList', (c) => SliverFixedExtentList(
+        delegate: SliverChildListDelegate(c.children),
+        itemExtent: c.num_('itemExtent') ?? 0,
+      ));
+
+  // SliverFillViewport：delegate + viewportFraction（缺省 1.0，Flutter 默认）。
+  r.register('SliverFillViewport', (c) => SliverFillViewport(
+        delegate: SliverChildListDelegate(c.children),
+        viewportFraction: c.num_('viewportFraction') ?? 1,
+      ));
+
+  // SliverOpacity / SliverOffstage / SliverIgnorePointer：必填属性缺省按
+  // Flutter 组件同名默认兜底（opacity 1 / offstage false / ignoring false）。
+  r.register('SliverOpacity', (c) => SliverOpacity(
+        opacity: c.num_('opacity') ?? 1,
+        sliver: c.childOrEmpty,
+      ));
+
+  r.register('SliverOffstage', (c) => SliverOffstage(
+        offstage: c.bool_('offstage') ?? false,
+        sliver: c.childOrEmpty,
+      ));
+
+  r.register('SliverIgnorePointer', (c) => SliverIgnorePointer(
+        ignoring: c.bool_('ignoring') ?? false,
+        sliver: c.childOrEmpty,
+      ));
+
+  // SliverSafeArea：left/top/right/bottom 缺省 true（Flutter 默认）。
+  r.register('SliverSafeArea', (c) => SliverSafeArea(
+        left: c.bool_('left') ?? true,
+        top: c.bool_('top') ?? true,
+        right: c.bool_('right') ?? true,
+        bottom: c.bool_('bottom') ?? true,
+        sliver: c.childOrEmpty,
+      ));
+
+  // SliverVisibility：visible 缺省 true（与 Visibility 同默认），
+  // maintainState 缺省 false（Flutter 默认）。
+  r.register('SliverVisibility', (c) => SliverVisibility(
+        visible: c.bool_('visible') ?? true,
+        maintainState: c.bool_('maintainState') ?? false,
+        sliver: c.childOrEmpty,
       ));
 
   // NotificationListener：JS 侧没有 ScrollPosition/controller，滚动监听统一

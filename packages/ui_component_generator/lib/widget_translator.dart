@@ -536,9 +536,14 @@ class WidgetTranslateContext {
     if (e is BinaryExpression) {
       final op = e.operator.lexeme;
       // 比较 / 逻辑 / 算术运算符：一比一翻译（条件、循环、三目都用得到）
-      if (const <String>{'>', '<', '>=', '<=', '==', '!=', '&&', '||', '+'}
-          .contains(op)) {
+      if (const <String>{
+        '>', '<', '>=', '<=', '==', '!=', '&&', '||', '+', '-', '*', '/', '%'
+      }.contains(op)) {
         return '(${jsDataExpr(e.leftOperand)} $op ${jsDataExpr(e.rightOperand)})';
+      }
+      // Dart 整除 `a ~/ b`：JS 无对应运算符，转 Math.floor(a / b)。
+      if (op == '~/') {
+        return 'Math.floor(${jsDataExpr(e.leftOperand)} / ${jsDataExpr(e.rightOperand)})';
       }
     }
     if (e is ConditionalExpression) {

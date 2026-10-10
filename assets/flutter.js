@@ -254,20 +254,48 @@ export function SliverFillRemaining(props, children) {
   return __h('SliverFillRemaining', props, children);
 }
 
+export function SliverFillViewport(props, children) {
+  return __h('SliverFillViewport', props, children);
+}
+
+export function SliverFixedExtentList(props, children) {
+  return __h('SliverFixedExtentList', props, children);
+}
+
 export function SliverGrid(props, children) {
   return __h('SliverGrid', props, children);
+}
+
+export function SliverIgnorePointer(props, children) {
+  return __h('SliverIgnorePointer', props, children);
 }
 
 export function SliverList(props, children) {
   return __h('SliverList', props, children);
 }
 
+export function SliverOffstage(props, children) {
+  return __h('SliverOffstage', props, children);
+}
+
+export function SliverOpacity(props, children) {
+  return __h('SliverOpacity', props, children);
+}
+
 export function SliverPadding(props, children) {
   return __h('SliverPadding', props, children);
 }
 
+export function SliverSafeArea(props, children) {
+  return __h('SliverSafeArea', props, children);
+}
+
 export function SliverToBoxAdapter(props, children) {
   return __h('SliverToBoxAdapter', props, children);
+}
+
+export function SliverVisibility(props, children) {
+  return __h('SliverVisibility', props, children);
 }
 
 export function Spacer(props, children) {

@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterModel } from '../model/counter_model.js';
-import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverGrid, SliverList, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
+import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
 
 class TextDetailComponent {
   constructor() {
@@ -949,7 +949,7 @@ class SliverDetailComponent {
               }, [
                 SliverToBoxAdapter({}, [
                     Text({
-                        "data": "九宫格 · SliverGrid",
+                        "data": "SliverChildBuilderDelegate · 懒构建列表",
                         "style": {
                           "fontSize": 14,
                           "fontWeight": "bold"
@@ -965,28 +965,134 @@ class SliverDetailComponent {
                   "bottom": 0.0
                 }
               }, [
-                SliverGrid({
-                    "crossAxisCount": 3,
-                    "mainAxisSpacing": 8,
-                    "crossAxisSpacing": 8,
-                    "childAspectRatio": 1
-                  }, [
-                    ...(function(){ var out = []; for (var i = 1; (i <= 9); (i++)) { out.push.apply(out, [Container({ "alignment": "center", "decoration": { "color": '@Colors.teal.shade100', "borderRadius": { "radius": 8.0 } } }, [ Text({ "data": "格 " + i, "style": { "fontWeight": "bold" } }) ])]); } return out; })()
+                SliverList({}, [
+                    ...(function(){ var out = []; for (var i = 0; i < (8); i++) { out.push(this._sliverBuilder0(i)); } return out; }).call(this)
                   ])
               ]),
-            SliverFillRemaining({
-                "hasScrollBody": false
+            SliverPadding({
+                "padding": {
+                  "left": 12.0,
+                  "top": 8.0,
+                  "right": 12.0,
+                  "bottom": 8.0
+                }
               }, [
-                Center({}, [
+                SliverToBoxAdapter({}, [
                     Text({
-                        "data": "底部 · SliverFillRemaining",
+                        "data": "SliverFixedExtentList · 固定高度",
                         "style": {
-                          "color": '#9E9E9E'
+                          "fontSize": 14,
+                          "fontWeight": "bold"
                         }
                       })
                   ])
+              ]),
+            SliverPadding({
+                "padding": {
+                  "left": 12.0,
+                  "top": 0.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                }
+              }, [
+                SliverFixedExtentList({
+                    "itemExtent": 44
+                  }, [
+                    ...(function(){ var out = []; for (var i = 0; i < (6); i++) { out.push(this._sliverBuilder1(i)); } return out; }).call(this)
+                  ])
+              ]),
+            SliverPadding({
+                "padding": {
+                  "left": 12.0,
+                  "top": 8.0,
+                  "right": 12.0,
+                  "bottom": 8.0
+                }
+              }, [
+                SliverToBoxAdapter({}, [
+                    Text({
+                        "data": "SliverOpacity + SliverGrid · MaxCrossAxisExtent 九宫格",
+                        "style": {
+                          "fontSize": 14,
+                          "fontWeight": "bold"
+                        }
+                      })
+                  ])
+              ]),
+            SliverOpacity({
+                "opacity": 0.6
+              }, [
+                SliverPadding({
+                    "padding": {
+                      "left": 12.0,
+                      "top": 0.0,
+                      "right": 12.0,
+                      "bottom": 0.0
+                    }
+                  }, [
+                    SliverGrid({
+                        "maxCrossAxisExtent": 140,
+                        "mainAxisSpacing": 8,
+                        "crossAxisSpacing": 8,
+                        "childAspectRatio": 1
+                      }, [
+                        ...(function(){ var out = []; for (var i = 0; i < (9); i++) { out.push(this._sliverBuilder2(i)); } return out; }).call(this)
+                      ])
+                  ])
+              ]),
+            SliverSafeArea({}, [
+                SliverFillRemaining({
+                    "hasScrollBody": false
+                  }, [
+                    Center({}, [
+                        Text({
+                            "data": "底部 · SliverSafeArea + SliverFillRemaining",
+                            "style": {
+                              "color": '#9E9E9E'
+                            }
+                          })
+                      ])
+                  ])
               ])
           ])
+      ]);
+  }
+  _sliverBuilder0(index) {
+      return ListTile({
+        "title": "builder item " + index,
+        "subtitle": "index * 10 = " + (index * 10),
+        "leading": Icon({
+            "icon": "build",
+            "color": '@Colors.orange.shade700'
+          })
+      });
+  }
+  _sliverBuilder1(index) {
+      return ListTile({
+        "title": "fixed item " + index,
+        "leading": Icon({
+            "icon": "height",
+            "color": '#009688'
+          }),
+        "dense": true
+      });
+  }
+  _sliverBuilder2(index) {
+      return Container({
+        "alignment": "center",
+        "decoration": {
+          "color": '@Colors.teal.shade100',
+          "borderRadius": {
+            "radius": 8.0
+          }
+        }
+      }, [
+        Text({
+            "data": "格 " + index,
+            "style": {
+              "fontWeight": "bold"
+            }
+          })
       ]);
   }
 }
