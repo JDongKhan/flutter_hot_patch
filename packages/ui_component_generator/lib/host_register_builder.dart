@@ -155,12 +155,9 @@ class HostRegisterBuilder implements Builder {
       b.writeln('  // 本包没有 @HostInjected 方法。');
     }
     for (final e in deduped) {
-      // Function.apply 免去参数个数/类型推断（JS 侧透传的参数个数是运行期才知道的），
-      // 故 static 方法 / 顶层函数、任意形参与返回类型都同一套注册。
-      b.writeln(
-        "  $registerCall('${e.channel}', "
-        '(args) => Function.apply(${e.targetExpr}, args));',
-      );
+      // 只登记「通道 → 函数引用」：参数绑定（位置/具名、个数、返回类型）由
+      // 运行时用 Function.apply 统一处理，注册点无需关心调用形态。
+      b.writeln("  $registerCall('${e.channel}', ${e.targetExpr});");
     }
     b.writeln('}');
     return b.toString();

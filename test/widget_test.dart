@@ -4,6 +4,7 @@
 // 3. 宿主补丁应用层：JsUiStore 按 op 改写结点表（create/insert/move/props/
 //    propsChild/remove/root），只重建被触碰结点
 // 4. 宿主翻译层：JsWidgetRegistry 把结点译成真实 Flutter widget（Text/Column/Button）
+// 5. 宿主注入：@HostInjected 通道回填（位置/具名实参按 Dart 语义还原）
 //
 // 注意：JsUiWidget 的 JS 引擎加载依赖原生 JS 运行时（flutter_js 在测试环境会
 // 创建轮询 Timer），widget 级渲染验证留到真机集成测试。
@@ -29,6 +30,58 @@ void main() {
     registry.register(_FakeService());
     expect(registry.lookup('nativeToast'), isA<_FakeService>());
     expect(registry.lookup('log'), isA<LogService>());
+  });
+
+  test('宿主注入：位置/具名实参按 Dart 调用语义还原', () {
+    // 直接驱动处理器表（不建 runtime）：registerHostMethod 只写 static 表，
+    // 桥通道在那里按 ch 分发，故这里手动喂 JS 侧载荷即可。
+    // 载荷按实参形态有三种编码（生成器产出，见 hostArgsJs）：
+    //   纯位置 → 数组、纯具名 → 对象、混合 → 对象 + "@args" 装位置实参。
+
+    // ① 纯具名：`Network.post(params: {...})` 曾被扁平化成位置实参，
+    //    Function.apply 因「函数只接受具名参数 params」抛异常 → 被 catch 吞成
+    //    null（这就是 userMap 为 null 的根因）。
+    Object? namedArg;
+    JsRuntimeManager.registerHostMethod('tNamed', ({dynamic params}) {
+      namedArg = params;
+      return null;
+    });
+    JsRuntimeManager.globalMessageHandlers['tNamed']!({
+      'id': '',
+      'args': {
+        'params': {'name': '22'},
+      },
+    });
+    expect(namedArg, {'name': '22'});
+
+    // ② 纯位置：载荷就是数组
+    List<dynamic>? posArg;
+    JsRuntimeManager.registerHostMethod('tPos', (dynamic a, dynamic b) {
+      posArg = [a, b];
+      return null;
+    });
+    JsRuntimeManager.globalMessageHandlers['tPos']!({
+      'id': '',
+      'args': [1, 2],
+    });
+    expect(posArg, [1, 2]);
+
+    // ③ 混合 + 多参数 + 默认值：3 位置 + 3 具名（只传 2 个具名，c1 走默认值）
+    List<dynamic>? all;
+    JsRuntimeManager.registerHostMethod('tMixed',
+        (String a, String b, String c, {int times = 1, int c1 = 2, int c2 = 3}) {
+      all = [a, b, c, times, c1, c2];
+      return null;
+    });
+    JsRuntimeManager.globalMessageHandlers['tMixed']!({
+      'id': '',
+      'args': {
+        '@args': ['a1', 'b1', 'c1'],
+        'times': 2,
+        'c2': 9,
+      },
+    });
+    expect(all, ['a1', 'b1', 'c1', 2, 2, 9]);
   });
 
   group('JsUiStore 补丁应用', () {

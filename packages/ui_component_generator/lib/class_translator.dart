@@ -168,8 +168,9 @@ class FieldScope {
 
   /// 宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
   /// 顶层函数（全局方法）挂在空串 key 下（`'' → {函数名 → 通道名}`）。
-  /// 命中时调用点整体翻译成 `__jsui.host("通道名", [args])`——参数个数与
-  /// 返回值类型都无关（宿主侧用 Function.apply 调实现）。
+  /// 命中时调用点整体翻译成 `__jsui.host("通道名", 参数载荷)`（载荷形态见
+  /// [hostArgsJs]）——参数个数、是否具名、返回值类型都无关（宿主侧用
+  /// Function.apply 调实现）。
   final Map<String, Map<String, String>> hostMethods;
 
   const FieldScope({
@@ -283,6 +284,17 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       return '($t == null ? null : $t.${e.propertyName.name})';
     }
     return '$t.${e.propertyName.name}';
+  }
+  // 下标访问 `a[b]`（如 `userMap["code"]`）：JS 的方括号语法一一对应。
+  // 与上面的通用 `a.b` 同理，不在 exprToJs 里兜住就会整条翻译失败（在插值里
+  // 表现为片段被丢弃，如 `"用户信息:${userMap["code"]}"` → `"用户信息:"`）。
+  if (e is IndexExpression) {
+    final tgt = e.target;
+    if (tgt == null) return null;
+    final t = exprToJs(tgt, scope, classes);
+    final i = exprToJs(e.index, scope, classes);
+    if (t == null || i == null) return null;
+    return '$t[$i]';
   }
   if (e is ParenthesizedExpression) {
     final inner = exprToJs(e.expression, scope, classes);
@@ -507,6 +519,34 @@ String? _logArgJs(
   return exprToJs(a, scope, classes);
 }
 
+/// 混合调用时承载**位置实参**的哨兵键。
+///
+/// 用哨兵键而不是靠「有没有 `p`/`n` 两个键」来猜，是因为 Dart 标识符
+/// 不允许 `@`：任何具名形参都不可能叫 `@args`，判定零歧义。
+const String hostPositionalKey = '@args';
+
+/// 宿主注入调用的参数载荷（按实参形态给最简编码）。
+///
+///   - 纯位置：数组 `[a, b]`（运行时用 `Array.isArray` 判定）
+///   - 纯具名：具名表本身 `{"times": 2}`
+///   - 混合：具名表 + [hostPositionalKey] 装位置实参
+///     `{"@args": ["hi"], "times": 2}`
+///
+/// 位置实参与具名实参**必须分开传**，宿主侧才能用
+/// `Function.apply(impl, 位置, 具名)` 还原 Dart 调用语义。绝不能像普通 JS
+/// 调用那样把具名实参扁平化进数组：`Network.post(params: {...})` 会变成 1 个
+/// 位置实参，而该函数只接受具名参数 `params`，`Function.apply` 直接抛异常。
+///
+/// 实参**个数不限**（位置数组与具名键数量都无上限）；未传的可选位置参数
+/// (`[int b]`) / 具名默认值 (`int times = 1`) 由 Dart 函数自身兜底，
+/// `Function.apply` 自动走默认值。
+String hostArgsJs(List<String> positional, List<String> named) {
+  if (named.isEmpty) return '[${positional.join(', ')}]';
+  if (positional.isEmpty) return '{${named.join(', ')}}';
+  return '{${jsString(hostPositionalKey)}: [${positional.join(', ')}], '
+      '${named.join(', ')}}';
+}
+
 /// 方法调用（表达式位置）：返回 `obj.method(args)` / `this.method(args)`。
 String? methodCallExprJs(
   MethodInvocation e,
@@ -531,34 +571,38 @@ String? methodCallExprJs(
     }
   }
   final args = e.argumentList.arguments;
-  final argJs = <String>[];
+  final argJs = <String>[]; // 普通调用：位置化扁平（JS 无具名参数）
+  final posJs = <String>[]; // 宿主注入：位置实参
+  final namedJs = <String>[]; // 宿主注入：具名实参（`"名": 值`）
   for (final a in args) {
     if (a is NamedExpression) {
       final v = rhsToJs(a.expression, scope, classes);
       if (v == null) return null;
       argJs.add(v);
+      namedJs.add('${jsString(a.name.label.name)}: $v');
     } else {
       final v = rhsToJs(a, scope, classes);
       if (v == null) return null;
       argJs.add(v);
+      posJs.add(v);
     }
   }
   // 宿主注入（@HostInjected）：static 调用 `AccountCenter.getUserName(a)`
-  // 整体替换为 `__jsui.host("通道名", [a])`（返回 Promise，可 await）。
+  // 整体替换为 `__jsui.host("通道名", {p: [a], n: {...}})`（返回 Promise，可 await）。
   final hostTarget = e.target;
   if (hostTarget is Identifier) {
     final channel = scope.hostMethods[hostTarget.name]?[e.methodName.name];
     if (channel != null) {
-      return '__jsui.host(${jsString(channel)}, [${argJs.join(', ')}])';
+      return '__jsui.host(${jsString(channel)}, ${hostArgsJs(posJs, namedJs)})';
     }
   }
   final passed = argJs.join(', ');
   final target = e.target;
   if (target == null) {
-    // 顶层函数（全局方法）：@HostInjected → `__jsui.host("通道", [args])`。
+    // 顶层函数（全局方法）：@HostInjected → `__jsui.host("通道", {p, n})`。
     final topChannel = scope.hostMethods['']?[e.methodName.name];
     if (topChannel != null) {
-      return '__jsui.host(${jsString(topChannel)}, [$passed])';
+      return '__jsui.host(${jsString(topChannel)}, ${hostArgsJs(posJs, namedJs)})';
     }
     if (!scope.isMethod(e.methodName.name)) return null;
     return 'this.${e.methodName.name}($passed)';

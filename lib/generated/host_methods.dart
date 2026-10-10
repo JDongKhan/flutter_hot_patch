@@ -15,6 +15,6 @@ import '../base/network.dart';
 
 /// 注册本包全部 `@HostInjected` 宿主方法（无注解时为空实现）。
 void registerHostMethods() {
-  JsRuntimeManager.registerHostMethod('getUserName', (args) => Function.apply(AccountCenter.getUserName, args));
-  JsRuntimeManager.registerHostMethod('post', (args) => Function.apply(Network.post, args));
+  JsRuntimeManager.registerHostMethod('getUserName', AccountCenter.getUserName);
+  JsRuntimeManager.registerHostMethod('post', Network.post);
 }

@@ -48,7 +48,7 @@ class _HelloCardState extends State<HelloCard> {
   Future<void> loadUser() async {
     String? name = await AccountCenter.getUserName();
     Map userMap = await Network.post(params: {"name": name});
-    print("用户信息:$userMap");
+    print("用户信息:${userMap["code"]}");
     await Future.delayed(const Duration(seconds: 1));
     setState(() {
       _user = const User(name: 'Alice', age: 18);

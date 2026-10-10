@@ -98,9 +98,10 @@ const String jsUiRuntimeSource = r'''
   // ===== 【3】宿主注入｜__jsui.host / resolve（@HostInjected 专用）====
   // JS 发起调用，宿主实现后回填结果
   // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
-  // `__jsui.host("getUserName", [a, b])`：本函数返回 Promise，经桥通道把
-  // `{id, args}` 交给宿主，宿主实现完成后用 `__jsui.resolve(id, value)` 回填
-  // （见 JsRuntimeManager.registerHostMethod）。
+  // `__jsui.host("getUserName", [a, b])`（参数载荷按形态给：纯位置→数组、
+  // 纯具名→对象、混合→对象 + "@args" 键装位置实参）：本函数返回 Promise，
+  // 经桥通道把 `{id, args}` 交给宿主，宿主实现完成后用
+  // `__jsui.resolve(id, value)` 回填（见 JsRuntimeManager.registerHostMethod）。
   var hostSeq = 0;
   var hostPending = {};
   function host(channel, args) {

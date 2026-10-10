@@ -87,6 +87,13 @@ class JsRuntimeManager {
   /// JS 侧单桥通道名：所有 JS→宿主消息都打到这里，再按消息体 `ch` 分发。
   static const String _bridgeChannel = '_app_bridge_';
 
+  /// 宿主注入「位置 + 具名」混合调用时，承载**位置实参**的哨兵键。
+  ///
+  /// 协议常量：由生成器 `ui_component_generator` 产出（其 `hostPositionalKey`
+  /// 是同一个值），运行时在这里解析。`@` 不是合法的 Dart 标识符字符，故不会
+  /// 与任何具名形参重名，判定无歧义。
+  static const String hostPositionalKey = '@args';
+
   /// 所有活跃 manager（static 跟踪）：[registerHostMethod] 的返回值回填
   /// （`__jsui.resolve`）需要对每个 runtime 求值一次。
   static final Set<JsRuntimeManager> _instances = {};
@@ -143,17 +150,17 @@ class JsRuntimeManager {
   /// 注册一个**宿主注入方法**（@HostInjected 通道）。
   ///
   /// 生成器把 Dart 的 static 方法调用（`AccountCenter.getUserName(a)`）在
-  /// 调用点翻译为 JS 侧 `__jsui.host("通道名", [a])`（返回 Promise，可 await）。
-  /// 本方法把该通道接到宿主实现 [impl]：收到 JS 的 `{id, key, args}` 后
-  /// await impl，再把返回值经 `__jsui.resolve(id, value)` 回填 JS 的 Promise。
+  /// 调用点翻译为 JS 侧 `__jsui.host("通道名", 参数载荷)`（返回 Promise，可
+  /// await；载荷按实参形态给数组/对象，见 [_hostCallArgs]）。本方法把该通道接到
+  /// 宿主实现 [impl]：收到 JS 的 `{id, key, args}` 后按
+  /// `Function.apply(impl, 位置实参, 具名实参)` 调用——Dart 调用语义完整还原，
+  /// 位置/具名实参**个数不限**，未传的参数走实现自身的默认值，返回值类型也不限。
+  /// 之后把返回值经 `__jsui.resolve(id, value)` 回填 JS 的 Promise。
   ///
   /// 与页面无关（全局一份）；通道名即 @HostInjected 注解里的名称
   /// （缺省为方法名）。只写处理器表——桥通道在 manager 构造时已订阅。
   /// 通道名需唯一：debug 下重复注册会触发断言失败。
-  static void registerHostMethod(
-    String channel,
-    FutureOr<Object?> Function(List<dynamic> args) impl,
-  ) {
+  static void registerHostMethod(String channel, Function impl) {
     // debug 阶段消灭重复：同一通道注册两次（如两个方法用了同一个 @HostInjected
     // 通道名）会静默覆盖前一个实现，JS 侧调到的实现与预期不符且无从察觉。
     // 断言让问题在启动时立刻暴露。通道名与 registerGlobal 的 service.channel
@@ -166,12 +173,16 @@ class JsRuntimeManager {
     globalMessageHandlers[channel] = (dynamic args) async {
       final map = args is Map ? args : const {};
       final id = map['id']?.toString();
-      final raw = map['args'];
-      final list = raw is List ? raw : const <dynamic>[];
+      final (positional, named) = _hostCallArgs(map['args']);
       Object? value;
       try {
-        value = await impl(list);
-      } catch (_) {
+        value = await Function.apply(impl, positional, named);
+      } catch (e, s) {
+        // 不静默：实现调用失败若悄悄回填 null，JS 侧只看到「结果是 null」，
+        // 完全不知道宿主侧压根没调成功（具名参数不匹配就是这样被吞掉的）。
+        HotPatchLog.log(
+          'registerHostMethod("$channel") 调用宿主实现失败: $e\n$s',
+        );
         value = null;
       }
       if (id == null || id.isEmpty) return;
@@ -182,6 +193,31 @@ class JsRuntimeManager {
         m._eval(code, '__jsui.resolve');
       }
     };
+  }
+
+  /// JS 宿主调用的参数载荷 → (`位置实参`, `具名实参`)。
+  ///
+  /// 生成器（见 `__jsui.host`）按实参形态给三种编码，这里对称解析：
+  ///   - 数组 `[a, b]`            → 全是位置实参
+  ///   - 对象 `{"times": 2}`      → 全是具名实参
+  ///   - 对象带 [hostPositionalKey] → 混合（该键是位置实参，其余键是具名）
+  ///
+  /// 位置实参与具名实参的**个数都不设限**；具名键转成 [Symbol]
+  /// （`Function.apply` 的具名表要求 `Map<Symbol, dynamic>`，`Symbol('times')`
+  /// 等价于 `#times`）。未传的参数由实现自身的默认值兜底。
+  static (List<dynamic>, Map<Symbol, dynamic>) _hostCallArgs(dynamic raw) {
+    if (raw is List) return (raw, const {});
+    if (raw is Map) {
+      final pos = raw[hostPositionalKey];
+      final named = <Symbol, dynamic>{};
+      for (final e in raw.entries) {
+        final key = e.key.toString();
+        if (key == hostPositionalKey) continue;
+        named[Symbol(key)] = e.value;
+      }
+      return (pos is List ? pos : const <dynamic>[], named);
+    }
+    return (const <dynamic>[], const <Symbol, dynamic>{});
   }
 
   /// 移除页面 key 下的**全部**页面级注册（页面销毁时调用）。

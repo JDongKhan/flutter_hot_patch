@@ -885,8 +885,8 @@ bool _classHasHostInjectedMethod(ClassDeclaration d) {
 /// 只有 [HostMethodDecl.usable] 的声明进表——与注册清单（host_register_builder）
 /// 用同一个扫描器、同一个判定，保证「翻译了的都注册了」，不因两套逻辑分叉。
 ///
-/// 供翻译上下文把调用点整体替换为 `__jsui.host("通道", [args])`
-/// （参数个数、返回值类型都不参与判定）。
+/// 供翻译上下文把调用点整体替换为 `__jsui.host("通道", 参数载荷)`
+/// （参数个数、是否具名、返回值类型都不参与判定）。
 Map<String, Map<String, String>> _buildHostMethods(
   CompilationUnit unit,
   String sourcePath,

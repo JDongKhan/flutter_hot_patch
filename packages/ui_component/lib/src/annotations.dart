@@ -34,19 +34,23 @@ class UIComponentIgnore {
   const UIComponentIgnore();
 }
 
-/// 标记一个 **static 方法**为「宿主注入」（Host Injected）能力。
+/// 标记一个 **static 方法 / 顶层函数**为「宿主注入」（Host Injected）能力。
 ///
 /// 这类方法的实现留在 Dart 侧（可访问缓存、网络、原生能力等），**不翻译成
 /// JS、不产出任何 JS 产物**；当 @UIComponent 组件的方法体（或模型方法体）里
 /// 调用到被标注的 static 方法时，生成器只把**调用点**替换为宿主编排的调用：
 ///
 ///   AccountCenter.getUserName(a, b)
-///     →  __jsui.host("getUserName", [a, b])   // 返回 Promise，可 await
+///     →  __jsui.host("getUserName", [a, b])            // Promise，可 await
+///   Network.post(params: m)
+///     →  __jsui.host("post", {"params": m})
 ///
 /// [name] 为消息通道名；缺省（不传）时取方法名本身。
-/// JS 侧 `__jsui.host(channel, args)` 经单桥通道把 `{id, args}` 交回宿主，
-/// 宿主用 `JsRuntimeManager.registerHostMethod(channel, impl)`
-/// 接回调，impl 完成后返回值被 resolve 回 JS 的 Promise。
+/// 参数载荷按实参形态给：纯位置→数组、纯具名→对象、混合→对象 + `"@args"`
+/// 键装位置实参。载荷经单桥通道以 `{id, args}` 交回宿主，宿主用
+/// `JsRuntimeManager.registerHostMethod(channel, fn)` 接回调（宿主按
+/// `Function.apply(fn, 位置实参, 具名实参)` 还原 Dart 调用语义，故位置/具名
+/// 实参个数不限、未传参数走默认值），fn 完成后返回值被 resolve 回 JS 的 Promise。
 ///
 /// 注解只是构建期元数据，不影响方法正常运行。
 class HostInjected {
