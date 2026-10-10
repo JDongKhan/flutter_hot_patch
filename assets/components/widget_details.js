@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterModel } from '../model/counter_model.js';
-import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
+import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
 
 class TextDetailComponent {
   constructor() {
@@ -754,61 +754,67 @@ export function ContainerDetail(props, children) {
 
 class ScrollDetailComponent {
   constructor() {
+    this._offset = 0;
   }
+  _onScroll(n) { this.setState(function(){ this._offset = n.metrics.pixels; }); }
   build() {
     return Column({
         "crossAxisAlignment": "stretch"
       }, [
         Text({
-            "data": "ListView · 列表",
+            "data": "ListView · 列表（offset: " + this._offset + "）",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        SizedBox({
-            "height": 160
+        NotificationListener({
+            "onNotification": this.__bind("_onScroll")
           }, [
-            ListView({
-                "padding": {
-                  "left": 8.0,
-                  "top": 8.0,
-                  "right": 8.0,
-                  "bottom": 8.0
-                },
-                "physics": "BouncingScrollPhysics",
-                "itemExtent": 56
+            SizedBox({
+                "height": 160
               }, [
-                ListTile({
-                    "title": "item A",
-                    "leading": Icon({
-                        "icon": "list"
+                ListView({
+                    "padding": {
+                      "left": 8.0,
+                      "top": 8.0,
+                      "right": 8.0,
+                      "bottom": 8.0
+                    },
+                    "physics": "BouncingScrollPhysics",
+                    "itemExtent": 56
+                  }, [
+                    ListTile({
+                        "title": "item A",
+                        "leading": Icon({
+                            "icon": "list"
+                          })
+                      }),
+                    ListTile({
+                        "title": "item B",
+                        "leading": Icon({
+                            "icon": "list"
+                          })
+                      }),
+                    ListTile({
+                        "title": "item C",
+                        "leading": Icon({
+                            "icon": "list"
+                          })
+                      }),
+                    ListTile({
+                        "title": "item D",
+                        "leading": Icon({
+                            "icon": "list"
+                          })
+                      }),
+                    ListTile({
+                        "title": "item E",
+                        "leading": Icon({
+                            "icon": "list"
+                          })
                       })
-                  }),
-                ListTile({
-                    "title": "item B",
-                    "leading": Icon({
-                        "icon": "list"
-                      })
-                  }),
-                ListTile({
-                    "title": "item C",
-                    "leading": Icon({
-                        "icon": "list"
-                      })
-                  }),
-                ListTile({
-                    "title": "item D",
-                    "leading": Icon({
-                        "icon": "list"
-                      })
-                  }),
-                ListTile({
-                    "title": "item E",
-                    "leading": Icon({
-                        "icon": "list"
-                      })
-                  })
+                  ])
               ])
           ]),
         SizedBox({

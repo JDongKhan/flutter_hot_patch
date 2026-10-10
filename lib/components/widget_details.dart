@@ -466,25 +466,39 @@ class ScrollDetail extends StatefulWidget {
 }
 
 class _ScrollDetailState extends State<ScrollDetail> {
+  /// 当前滚动偏移。原生侧由 NotificationListener 直接更新；
+  /// JS 热更侧同一份 build 源码经生成器翻译，宿主桥接组件把 metrics
+  /// 快照 invoke 回传 `_onScroll`，JS 里同样落到 this.offset。
+  double _offset = 0;
+
+  bool _onScroll(ScrollNotification n) {
+    setState(() => _offset = n.metrics.pixels);
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('ListView · 列表', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        SizedBox(
-          height: 160,
-          child: ListView(
-            padding: const EdgeInsets.all(8),
-            itemExtent: 56,
-            physics: const BouncingScrollPhysics(),
-            children: const [
-              ListTile(leading: Icon(Icons.list), title: Text('item A')),
-              ListTile(leading: Icon(Icons.list), title: Text('item B')),
-              ListTile(leading: Icon(Icons.list), title: Text('item C')),
-              ListTile(leading: Icon(Icons.list), title: Text('item D')),
-              ListTile(leading: Icon(Icons.list), title: Text('item E')),
-            ],
+        Text('ListView · 列表（offset: $_offset）',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        NotificationListener<ScrollNotification>(
+          onNotification: _onScroll,
+          child: SizedBox(
+            height: 160,
+            child: ListView(
+              padding: const EdgeInsets.all(8),
+              itemExtent: 56,
+              physics: const BouncingScrollPhysics(),
+              children: const [
+                ListTile(leading: Icon(Icons.list), title: Text('item A')),
+                ListTile(leading: Icon(Icons.list), title: Text('item B')),
+                ListTile(leading: Icon(Icons.list), title: Text('item C')),
+                ListTile(leading: Icon(Icons.list), title: Text('item D')),
+                ListTile(leading: Icon(Icons.list), title: Text('item E')),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),

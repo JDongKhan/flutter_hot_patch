@@ -39,6 +39,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const DividerTranslator())
     ..register(const CardTranslator())
     ..register(const ListViewTranslator())
+    ..register(const NotificationListenerTranslator())
     ..register(const SingleChildScrollViewTranslator())
     ..register(const WrapTranslator())
     ..register(const SafeAreaTranslator())
@@ -785,6 +786,34 @@ class ListViewTranslator extends WidgetTranslator {
       'type': ctx.jsString('ListView'),
       if (props.isNotEmpty) 'props': props,
       'children': [for (final c in children) ctx.translateElement(c)],
+    };
+  }
+}
+
+/// NotificationListener：滚动/尺寸通知监听（Flutter 官方 widget）。
+///
+/// 只翻译两件事：
+///   - onNotification：事件句柄（`onNotification: _onScroll` →
+///     `this.__bind("_onScroll")`，宿主滚动时 invoke 回传 metrics 快照）；
+///   - child：被监听的单子树。
+/// 泛型参数（`NotificationListener<ScrollNotification>`）不参与产物。
+class NotificationListenerTranslator extends WidgetTranslator {
+  const NotificationListenerTranslator();
+
+  @override
+  String get type => 'NotificationListener';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (child == null) throw FormatException('NotificationListener 缺少 child');
+    final props = <String, dynamic>{};
+    final onNotif = ctx.namedArg(node.args, 'onNotification');
+    if (onNotif != null) props['onNotification'] = ctx.eventHandle(onNotif);
+    return {
+      'type': ctx.jsString('NotificationListener'),
+      if (props.isNotEmpty) 'props': props,
+      'children': [ctx.translateElement(child)],
     };
   }
 }

@@ -198,6 +198,10 @@ export function ListenableBuilder(props, children) {
   return __h(ListenableBuilderComponent, props, children);
 }
 
+export function NotificationListener(props, children) {
+  return __h('NotificationListener', props, children);
+}
+
 export function Opacity(props, children) {
   return __h('Opacity', props, children);
 }
