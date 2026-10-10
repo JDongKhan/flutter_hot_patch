@@ -97,6 +97,10 @@ export function Container(props, children) {
   return __h('Container', props, children);
 }
 
+export function CustomScrollView(props, children) {
+  return __h('CustomScrollView', props, children);
+}
+
 export function DecoratedBox(props, children) {
   return __h('DecoratedBox', props, children);
 }
@@ -240,6 +244,30 @@ export function SizedBox(props, children) {
 
 export function Slider(props, children) {
   return __h('Slider', props, children);
+}
+
+export function SliverAppBar(props, children) {
+  return __h('SliverAppBar', props, children);
+}
+
+export function SliverFillRemaining(props, children) {
+  return __h('SliverFillRemaining', props, children);
+}
+
+export function SliverGrid(props, children) {
+  return __h('SliverGrid', props, children);
+}
+
+export function SliverList(props, children) {
+  return __h('SliverList', props, children);
+}
+
+export function SliverPadding(props, children) {
+  return __h('SliverPadding', props, children);
+}
+
+export function SliverToBoxAdapter(props, children) {
+  return __h('SliverToBoxAdapter', props, children);
 }
 
 export function Spacer(props, children) {

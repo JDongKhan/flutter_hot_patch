@@ -569,6 +569,149 @@ class _ScrollDetailState extends State<ScrollDetail> {
 }
 
 // ---------------------------------------------------------------------------
+// Sliver 详情（CustomScrollView 整页：sliver 全家桶，仅 JS 热更版展示）
+// ---------------------------------------------------------------------------
+
+/// CustomScrollView 完整页面 demo：SliverAppBar（导航）+ SliverToBoxAdapter
+/// （普通盒子）+ SliverPadding + SliverList（列表）+ SliverGrid（九宫格）+
+/// SliverFillRemaining（底部），外加 controller 监听滚动与 FAB「跳到底」。
+@UIComponent('SliverDetail')
+class SliverDetail extends StatefulWidget {
+  const SliverDetail({super.key});
+
+  @override
+  State<SliverDetail> createState() => _SliverDetailState();
+}
+
+class _SliverDetailState extends State<SliverDetail> {
+  /// CustomScrollView 的 controller（整页滚动监听 + FAB「写」能力演示）。
+  final ScrollController _controller = ScrollController();
+
+  /// 当前滚动偏移（controller 监听镜像）。
+  double _offset = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      setState(() => _offset = _controller.offset);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// FAB：跳到底（controller「写」能力）。
+  void _scrollToEnd() {
+    _controller.jumpTo(_controller.position.maxScrollExtent);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Sliver 全家桶 · offset $_offset'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+      ),
+      body: CustomScrollView(
+        controller: _controller,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            title: const Text('SliverAppBar 导航'),
+            backgroundColor: Colors.deepPurple,
+            foregroundColor: Colors.white,
+            pinned: true,
+            floating: true,
+          ),
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'CustomScrollView 整页 · SliverToBoxAdapter 盒子',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                for (var i = 1; i <= 5; i++)
+                  ListTile(
+                    leading: const Icon(Icons.list, color: Colors.deepPurple),
+                    title: Text('SliverList item $i'),
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+              ]),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                '九宫格 · SliverGrid',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 1,
+              ),
+              delegate: SliverChildListDelegate([
+                for (var i = 1; i <= 9; i++)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.teal.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '格 $i',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ]),
+            ),
+          ),
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Text(
+                '底部 · SliverFillRemaining',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _scrollToEnd,
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+        tooltip: '跳到底',
+        child: const Icon(Icons.arrow_downward),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Scaffold 详情（页面级，仅 JS 热更版展示）
 // ---------------------------------------------------------------------------
 

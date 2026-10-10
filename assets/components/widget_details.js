@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterModel } from '../model/counter_model.js';
-import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
+import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverGrid, SliverList, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
 
 class TextDetailComponent {
   constructor() {
@@ -855,6 +855,143 @@ class ScrollDetailComponent {
 }
 export function ScrollDetail(props, children) {
   return __h(ScrollDetailComponent, props, children);
+}
+
+class SliverDetailComponent {
+  constructor() {
+    this._controller = new ScrollController();
+    this._offset = 0;
+  }
+  initState() { this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); }); }
+  dispose() { this._controller.dispose(); }
+  _scrollToEnd() { this._controller.jumpTo(this._controller.position.maxScrollExtent); }
+  build() {
+    return Scaffold({
+        "floatingActionButton": FloatingActionButton({
+            "child": Icon({
+                "icon": "arrow_downward"
+              }),
+            "event": this.__bind("_scrollToEnd"),
+            "backgroundColor": '#673AB7',
+            "foregroundColor": '#FFFFFF',
+            "tooltip": "跳到底"
+          })
+      }, [
+        AppBar({
+            "title": Text({
+                "data": "Sliver 全家桶 · offset " + this._offset
+              }),
+            "backgroundColor": '#673AB7',
+            "foregroundColor": '#FFFFFF'
+          }),
+        CustomScrollView({
+            "controller": this._controller,
+            "physics": "BouncingScrollPhysics"
+          }, [
+            SliverAppBar({
+                "title": Text({
+                    "data": "SliverAppBar 导航"
+                  }),
+                "backgroundColor": '#673AB7',
+                "foregroundColor": '#FFFFFF',
+                "pinned": true,
+                "floating": true
+              }),
+            SliverToBoxAdapter({}, [
+                Container({
+                    "padding": {
+                      "left": 16.0,
+                      "top": 16.0,
+                      "right": 16.0,
+                      "bottom": 16.0
+                    },
+                    "margin": {
+                      "left": 12.0,
+                      "top": 12.0,
+                      "right": 12.0,
+                      "bottom": 12.0
+                    },
+                    "decoration": {
+                      "color": '@Colors.deepPurple.shade50',
+                      "borderRadius": {
+                        "radius": 12.0
+                      }
+                    }
+                  }, [
+                    Text({
+                        "data": "CustomScrollView 整页 · SliverToBoxAdapter 盒子",
+                        "style": {
+                          "fontSize": 14,
+                          "fontWeight": "bold"
+                        }
+                      })
+                  ])
+              ]),
+            SliverPadding({
+                "padding": {
+                  "left": 12.0,
+                  "top": 0.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                }
+              }, [
+                SliverList({}, [
+                    ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [ListTile({ "title": "SliverList item " + i, "leading": Icon({ "icon": "list", "color": '#673AB7' }), "trailing": Icon({ "icon": "chevron_right" }) })]); } return out; })()
+                  ])
+              ]),
+            SliverPadding({
+                "padding": {
+                  "left": 12.0,
+                  "top": 8.0,
+                  "right": 12.0,
+                  "bottom": 8.0
+                }
+              }, [
+                SliverToBoxAdapter({}, [
+                    Text({
+                        "data": "九宫格 · SliverGrid",
+                        "style": {
+                          "fontSize": 14,
+                          "fontWeight": "bold"
+                        }
+                      })
+                  ])
+              ]),
+            SliverPadding({
+                "padding": {
+                  "left": 12.0,
+                  "top": 0.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                }
+              }, [
+                SliverGrid({
+                    "crossAxisCount": 3,
+                    "mainAxisSpacing": 8,
+                    "crossAxisSpacing": 8,
+                    "childAspectRatio": 1
+                  }, [
+                    ...(function(){ var out = []; for (var i = 1; (i <= 9); (i++)) { out.push.apply(out, [Container({ "alignment": "center", "decoration": { "color": '@Colors.teal.shade100', "borderRadius": { "radius": 8.0 } } }, [ Text({ "data": "格 " + i, "style": { "fontWeight": "bold" } }) ])]); } return out; })()
+                  ])
+              ]),
+            SliverFillRemaining({
+                "hasScrollBody": false
+              }, [
+                Center({}, [
+                    Text({
+                        "data": "底部 · SliverFillRemaining",
+                        "style": {
+                          "color": '#9E9E9E'
+                        }
+                      })
+                  ])
+              ])
+          ])
+      ]);
+  }
+}
+export function SliverDetail(props, children) {
+  return __h(SliverDetailComponent, props, children);
 }
 
 class ScaffoldDetailComponent {

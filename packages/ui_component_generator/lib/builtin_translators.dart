@@ -807,16 +807,28 @@ class ListViewTranslator extends WidgetTranslator {
 // 滚动视图 + sliver 家族（CustomScrollView 及其 sliver 子组件）
 // ===========================================================================
 
+/// 从表达式里提取「构造名 + 位置/命名参数列表」，兼容两种 AST 形态：
+/// `Foo(...)`（InvocationExpression）与 `const Foo(...)`（
+/// InstanceCreationExpression）。非构造调用返回 (null, null)。
+(String?, List<Expression>?) _ctorCall(Expression? e) {
+  if (e is InstanceCreationExpression) {
+    return (e.constructorName.type.name2.lexeme, e.argumentList.arguments);
+  }
+  if (e is InvocationExpression) {
+    final fn = e.function;
+    if (fn is Identifier) return (fn.name, e.argumentList.arguments);
+  }
+  return (null, null);
+}
+
 /// 解析 `SliverChildListDelegate(children)` 中的 children 列表。
 /// 仅支持 ListDelegate 形态；builder delegate（SliverChildBuilderDelegate）
 /// 暂不支持——返回 null 由调用方明确报错。
 List<CollectionElement>? _sliverListDelegateChildren(Expression? delegate) {
-  if (delegate is InvocationExpression) {
-    final fn = delegate.function;
-    if (fn is Identifier && fn.name.lexeme == 'SliverChildListDelegate') {
-      for (final a in delegate.argumentList.arguments) {
-        if (a is ListLiteral) return a.elements;
-      }
+  final (name, args) = _ctorCall(delegate);
+  if (name == 'SliverChildListDelegate' && args != null) {
+    for (final a in args) {
+      if (a is ListLiteral) return a.elements;
     }
   }
   return null;
@@ -827,24 +839,20 @@ List<CollectionElement>? _sliverListDelegateChildren(Expression? delegate) {
 /// mainAxisExtent）；非该形态返回 null。
 Map<String, dynamic>? _fixedCrossAxisGridDelegateToJson(
     Expression? e, WidgetTranslateContext ctx) {
-  if (e is InvocationExpression) {
-    final fn = e.function;
-    if (fn is Identifier &&
-        fn.name.lexeme == 'SliverGridDelegateWithFixedCrossAxisCount') {
-      final args = e.argumentList.arguments;
-      final props = <String, dynamic>{};
-      for (final name in [
-        'crossAxisCount',
-        'mainAxisSpacing',
-        'crossAxisSpacing',
-        'childAspectRatio',
-        'mainAxisExtent',
-      ]) {
-        final v = _numOf(ctx.namedArg(args, name));
-        if (v != null) props[name] = v;
-      }
-      if (props.isNotEmpty) return props;
+  final (name, args) = _ctorCall(e);
+  if (name == 'SliverGridDelegateWithFixedCrossAxisCount' && args != null) {
+    final props = <String, dynamic>{};
+    for (final n in [
+      'crossAxisCount',
+      'mainAxisSpacing',
+      'crossAxisSpacing',
+      'childAspectRatio',
+      'mainAxisExtent',
+    ]) {
+      final v = _numOf(ctx.namedArg(args, n));
+      if (v != null) props[n] = v;
     }
+    if (props.isNotEmpty) return props;
   }
   return null;
 }
@@ -866,8 +874,6 @@ class CustomScrollViewTranslator extends WidgetTranslator {
     if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
     final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
     if (axis != null) props['scrollDirection'] = axis;
-    final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
-    if (padding != null) props['padding'] = padding;
     final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
     if (physics != null) props['physics'] = physics;
     final reverse = _boolOf(ctx.namedArg(node.args, 'reverse'));

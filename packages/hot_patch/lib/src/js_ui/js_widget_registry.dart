@@ -271,6 +271,99 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
+  // CustomScrollView：slivers 是 children（宿主侧 SliverList/SliverAppBar 等
+  // 已注册为 widget，直接进 slivers 列表）；controller 与 ListView 同款
+  // 分流通用 _JsScrollControllerView 包装器。
+  r.register('CustomScrollView', (c) {
+    final scId = _scrollControllerIdOf(c.props['controller']);
+    if (scId != null) {
+      final scrollDirection =
+          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
+      final physics = scrollPhysicsFromJson(c.props['physics']);
+      final reverse = c.bool_('reverse') ?? false;
+      final shrinkWrap = c.bool_('shrinkWrap') ?? false;
+      final slivers = c.children;
+      return _JsScrollControllerView(
+        controllerId: scId,
+        invoke: c.invoke,
+        buildScrollView: (controller) => CustomScrollView(
+          controller: controller,
+          scrollDirection: scrollDirection,
+          physics: physics,
+          reverse: reverse,
+          shrinkWrap: shrinkWrap,
+          slivers: slivers,
+        ),
+      );
+    }
+    return CustomScrollView(
+      scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+      physics: scrollPhysicsFromJson(c.props['physics']),
+      reverse: c.bool_('reverse') ?? false,
+      shrinkWrap: c.bool_('shrinkWrap') ?? false,
+      slivers: c.children,
+    );
+  });
+
+  // SliverList：生成器把 `delegate: SliverChildListDelegate([...])` 的 children
+  // 展开为子节点，宿主侧补回 delegate 还原官方写法。
+  r.register('SliverList', (c) => SliverList(
+        delegate: SliverChildListDelegate(c.children),
+      ));
+
+  // SliverGrid：gridDelegate 仅支持 SliverGridDelegateWithFixedCrossAxisCount
+  // （crossAxisCount 必填——与 Flutter 一致，缺失会断言；其余缺省 0/1.0 即
+  // Flutter 默认）。
+  r.register('SliverGrid', (c) => SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: c.int_('crossAxisCount') ?? 1,
+          mainAxisSpacing: c.num_('mainAxisSpacing') ?? 0,
+          crossAxisSpacing: c.num_('crossAxisSpacing') ?? 0,
+          childAspectRatio: c.num_('childAspectRatio') ?? 1,
+          mainAxisExtent: c.num_('mainAxisExtent'),
+        ),
+        delegate: SliverChildListDelegate(c.children),
+      ));
+
+  // SliverAppBar：与 AppBar 同款（title/leading 是 element-prop、actions 是
+  // children）+ sliver 专属 pinned/floating/snap/expandedHeight
+  // （缺省 false/false/false/null，即 Flutter 默认）。
+  r.register('SliverAppBar', (c) => SliverAppBar(
+        leading: c.propChild('leading'),
+        title: c.propChild('title'),
+        actions: c.children.isEmpty ? null : c.children,
+        backgroundColor: colorFromJson(c.props['backgroundColor']),
+        foregroundColor: colorFromJson(c.props['foregroundColor']),
+        elevation: c.num_('elevation'),
+        // toolbarHeight 缺省为 Flutter 默认 kToolbarHeight（SDK 非空参数）。
+        toolbarHeight: c.num_('toolbarHeight') ?? kToolbarHeight,
+        centerTitle: c.bool_('centerTitle'),
+        titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
+        pinned: c.bool_('pinned') ?? false,
+        floating: c.bool_('floating') ?? false,
+        snap: c.bool_('snap') ?? false,
+        expandedHeight: c.num_('expandedHeight'),
+      ));
+
+  // SliverPadding：padding + 单个 sliver（命名参数 sliver 翻译为子节点）。
+  r.register('SliverPadding', (c) => SliverPadding(
+        padding: edgeInsetsFromJson(c.map('padding')),
+        sliver: c.childOrEmpty,
+      ));
+
+  // SliverToBoxAdapter：普通 widget 包装成 sliver。
+  r.register('SliverToBoxAdapter', (c) => SliverToBoxAdapter(
+        child: c.childOrEmpty,
+      ));
+
+  // SliverFillRemaining：child + hasScrollBody（缺省 true）/fillOverscroll
+  // （缺省 false），即 Flutter 默认。
+  r.register('SliverFillRemaining', (c) => SliverFillRemaining(
+        hasScrollBody: c.bool_('hasScrollBody') ?? true,
+        fillOverscroll: c.bool_('fillOverscroll') ?? false,
+        child: c.childOrEmpty,
+      ));
+
   // NotificationListener：JS 侧没有 ScrollPosition/controller，滚动监听统一
   // 由宿主抓 ScrollNotification，把 metrics 快照经 invoke 回传 JS 事件方法
   // （payload 形状与 Dart ScrollNotification 一致，JS 里 `n.metrics.pixels`
