@@ -64,6 +64,10 @@ const String jsUiRuntimeSource = r'''
 
   // pageKey -> { key, inst, dirty, flushing, ops }
   var roots = {};
+  // pageKey -> ScrollController[]（本页面构造的控制器）。
+  // 控制器内的 metrics 句柄是框架内部实现（用户无从释放），故按页面登记，
+  // 页面退出时由 disposeRoot 兜底释放；组件已在自身 dispose() 释放则为空操作。
+  var pageControllers = {};
   // 正在 mount/patch/flush 的根；emit / 结点归属都读它。
   var activeRoot = null;
   // 正在构建的元素（build 执行期）——`context` 的锚点。watch/read 据此
@@ -582,6 +586,13 @@ const String jsUiRuntimeSource = r'''
       activeRoot = prev;
     }
     root.inst = null;
+    // 页面退出兜底：释放本页面登记的 ScrollController（删句柄 + 通知宿主
+    // 释放真实 controller）。组件若已在自身 dispose() 里释放，这里幂等。
+    var scs = pageControllers[pageKey];
+    if (scs) {
+      for (var i = 0; i < scs.length; i++) { releaseController(scs[i]); }
+      delete pageControllers[pageKey];
+    }
     delete roots[pageKey];
   }
 
@@ -596,6 +607,18 @@ const String jsUiRuntimeSource = r'''
   //   - offset / position / hasClients：本地镜像（宿主回传更新）。
   // 跨桥序列化：props 里的实例经 toJSON 输出 `{__jsuiScrollController: id}`，
   // 宿主据此取/建真实 controller（见 js_widget_registry.dart）。
+  //
+  // 释放一个控制器：删掉它登记的 metrics 句柄（框架内部，用户无从释放），
+  // 并通知宿主释放真实 controller。幂等——重复调用为空操作。
+  function releaseController(sc) {
+    if (!sc) { return; }
+    if (sc.__metricsFn) { delete handlers[sc.__metricsFn.__fn]; sc.__metricsFn = null; }
+    if (sc.__id != null) {
+      host('scrollControllerDispose', [sc.__id]);
+      sc.__id = null;
+    }
+    sc.__listeners = [];
+  }
   function ScrollController() {
     this.__id = nextId('sc');
     this.__listeners = [];
@@ -605,6 +628,13 @@ const String jsUiRuntimeSource = r'''
     this.__extentAfter = 0;
     var self = this;
     this.__metricsFn = fn(function (p) { self.__onMetrics(p); });
+    // 按当前页面登记（构造发生在 mount/构建期间，activeRoot 即本页根），
+    // 页面退出时 disposeRoot 兜底释放。
+    if (activeRoot) {
+      var list = pageControllers[activeRoot.key] ||
+        (pageControllers[activeRoot.key] = []);
+      list.push(this);
+    }
     host('scrollControllerRegister', [this.__id, this.__metricsFn]);
   }
   ScrollController.prototype.addListener = function (f) {
@@ -624,11 +654,7 @@ const String jsUiRuntimeSource = r'''
     host('scrollControllerAnimateTo', [this.__id, offset, ms, curve]);
   };
   ScrollController.prototype.dispose = function () {
-    if (this.__id != null) {
-      host('scrollControllerDispose', [this.__id]);
-      this.__id = null;
-      this.__listeners = [];
-    }
+    releaseController(this);
   };
   ScrollController.prototype.toJSON = function () {
     return { __jsuiScrollController: this.__id };
