@@ -1760,6 +1760,15 @@ String _renderPackageModule(String package, Set<String> types) {
         ..writeln(logic);
       continue;
     }
+    // Sliver builder 代理：`SliverList({delegateBuilder, childCount})` 形态
+    // 走内联组件（build 时循环调用拥有者方法收集子树）；普通形态仍是宿主
+    // 节点工厂。
+    if (_sliverBuilderTypes.contains(t)) {
+      b
+        ..writeln()
+        ..writeln(_sliverBuilderSource(t));
+      continue;
+    }
     b
       ..writeln()
       ..writeln('export function $t(props, children) {')
@@ -1767,6 +1776,55 @@ String _renderPackageModule(String package, Set<String> types) {
       ..writeln('}');
   }
   return b.toString();
+}
+
+/// 支持 `SliverChildBuilderDelegate` 写法的 sliver 组件（产物带
+/// `delegateBuilder` 时走内联代理组件，普通 children 形态走宿主节点）。
+const Set<String> _sliverBuilderTypes = {
+  'SliverList',
+  'SliverGrid',
+  'SliverFixedExtentList',
+  'SliverFillViewport',
+};
+
+/// SliverChildBuilderDelegate 的 JS 侧代理组件源码（按 [type] 参数化类名与
+/// 工厂）：`props.delegateBuilder` 是拥有者组件上的 `_sliverBuilderN(index)`
+/// 方法名、`childCount` 指定数量；build 时循环调用收集子树，包回同名的宿主
+/// 节点（children 交给宿主 SliverChildListDelegate 还原）。与
+/// ListenableBuilder 的 `__owner()` 向上找拥有者方法机制一致。
+String _sliverBuilderSource(String type) {
+  final cls = '${type}BuilderComponent';
+  return '''
+class $cls {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.delegateBuilder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  build() {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var out = [];
+    var n = this.props.childCount || 0;
+    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
+    var p = {};
+    for (var k in this.props) {
+      if (k !== 'delegateBuilder' && k !== 'childCount') { p[k] = this.props[k]; }
+    }
+    return __h('$type', p, out);
+  }
+}
+export function $type(props, children) {
+  if (props && props.delegateBuilder !== undefined) {
+    return __h($cls, props, children);
+  }
+  return __h('$type', props, children);
+}''';
 }
 
 /// 「逻辑 widget」类型 → JS 组件源码（在本模块里内联一个普通类 + 工厂函数）。

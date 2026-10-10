@@ -254,15 +254,96 @@ export function SliverFillRemaining(props, children) {
   return __h('SliverFillRemaining', props, children);
 }
 
+class SliverFillViewportBuilderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.delegateBuilder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  build() {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var out = [];
+    var n = this.props.childCount || 0;
+    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
+    var p = {};
+    for (var k in this.props) {
+      if (k !== 'delegateBuilder' && k !== 'childCount') { p[k] = this.props[k]; }
+    }
+    return __h('SliverFillViewport', p, out);
+  }
+}
 export function SliverFillViewport(props, children) {
+  if (props && props.delegateBuilder !== undefined) {
+    return __h(SliverFillViewportBuilderComponent, props, children);
+  }
   return __h('SliverFillViewport', props, children);
 }
 
+class SliverFixedExtentListBuilderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.delegateBuilder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  build() {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var out = [];
+    var n = this.props.childCount || 0;
+    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
+    var p = {};
+    for (var k in this.props) {
+      if (k !== 'delegateBuilder' && k !== 'childCount') { p[k] = this.props[k]; }
+    }
+    return __h('SliverFixedExtentList', p, out);
+  }
+}
 export function SliverFixedExtentList(props, children) {
+  if (props && props.delegateBuilder !== undefined) {
+    return __h(SliverFixedExtentListBuilderComponent, props, children);
+  }
   return __h('SliverFixedExtentList', props, children);
 }
 
+class SliverGridBuilderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.delegateBuilder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  build() {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var out = [];
+    var n = this.props.childCount || 0;
+    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
+    var p = {};
+    for (var k in this.props) {
+      if (k !== 'delegateBuilder' && k !== 'childCount') { p[k] = this.props[k]; }
+    }
+    return __h('SliverGrid', p, out);
+  }
+}
 export function SliverGrid(props, children) {
+  if (props && props.delegateBuilder !== undefined) {
+    return __h(SliverGridBuilderComponent, props, children);
+  }
   return __h('SliverGrid', props, children);
 }
 
@@ -270,7 +351,34 @@ export function SliverIgnorePointer(props, children) {
   return __h('SliverIgnorePointer', props, children);
 }
 
+class SliverListBuilderComponent {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.delegateBuilder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  build() {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var out = [];
+    var n = this.props.childCount || 0;
+    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
+    var p = {};
+    for (var k in this.props) {
+      if (k !== 'delegateBuilder' && k !== 'childCount') { p[k] = this.props[k]; }
+    }
+    return __h('SliverList', p, out);
+  }
+}
 export function SliverList(props, children) {
+  if (props && props.delegateBuilder !== undefined) {
+    return __h(SliverListBuilderComponent, props, children);
+  }
   return __h('SliverList', props, children);
 }
 

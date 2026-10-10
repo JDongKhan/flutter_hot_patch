@@ -965,9 +965,10 @@ class SliverDetailComponent {
                   "bottom": 0.0
                 }
               }, [
-                SliverList({}, [
-                    ...(function(){ var out = []; for (var i = 0; i < (8); i++) { out.push(this._sliverBuilder0(i)); } return out; }).call(this)
-                  ])
+                SliverList({
+                    "delegateBuilder": "_sliverBuilder0",
+                    "childCount": 8
+                  })
               ]),
             SliverPadding({
                 "padding": {
@@ -996,10 +997,10 @@ class SliverDetailComponent {
                 }
               }, [
                 SliverFixedExtentList({
+                    "delegateBuilder": "_sliverBuilder1",
+                    "childCount": 6,
                     "itemExtent": 44
-                  }, [
-                    ...(function(){ var out = []; for (var i = 0; i < (6); i++) { out.push(this._sliverBuilder1(i)); } return out; }).call(this)
-                  ])
+                  })
               ]),
             SliverPadding({
                 "padding": {
@@ -1031,13 +1032,13 @@ class SliverDetailComponent {
                     }
                   }, [
                     SliverGrid({
+                        "delegateBuilder": "_sliverBuilder2",
+                        "childCount": 9,
                         "maxCrossAxisExtent": 140,
                         "mainAxisSpacing": 8,
                         "crossAxisSpacing": 8,
                         "childAspectRatio": 1
-                      }, [
-                        ...(function(){ var out = []; for (var i = 0; i < (9); i++) { out.push(this._sliverBuilder2(i)); } return out; }).call(this)
-                      ])
+                      })
                   ])
               ]),
             SliverSafeArea({}, [

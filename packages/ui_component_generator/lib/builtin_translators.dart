@@ -843,10 +843,11 @@ List<CollectionElement>? _sliverListDelegateChildren(Expression? delegate) {
 
 /// 解析 `SliverChildBuilderDelegate((context, index) => widget, childCount: n)`
 /// 的 builder 形态：把闭包抽成组件方法 `_sliverBuilderN(index)`（沿用
-/// builderTrees 机制；childCount 支持任意表达式），产物 children 返回
-/// **JS 展开表达式字符串**（for 循环调用该方法 i 次收集子树，`.call(this)`
-/// 保证 this 指向组件实例）。返回 null = 形态不支持。
-List<Object?>? _sliverBuilderDelegateChildren(
+/// builderTrees 机制；childCount 支持任意表达式），返回
+/// `{'delegateBuilder': '_sliverBuilderN', 'childCount': <jsExpr>}` props——
+/// 运行时由 flutter.js 的 SliverXxxBuilderComponent 循环调用该方法收集子树
+/// （懒构建语义见组件注释）。返回 null = 形态不支持。
+Map<String, dynamic>? _sliverBuilderDelegateProps(
     Expression? delegate, WidgetTranslateContext ctx) {
   final (name, args) = _ctorCall(delegate);
   if (name != 'SliverChildBuilderDelegate' || args == null) return null;
@@ -866,24 +867,27 @@ List<Object?>? _sliverBuilderDelegateChildren(
   final idx = ctx.builderTrees.length - 1;
   ctx.builderNames.add('_sliverBuilder$idx');
   ctx.builderParams.add(indexName);
-  final countJs = ctx.jsDataExpr(childCount);
-  // children 为 spread 展开表达式：`...` 把数组展开为子节点列表；
-  // `.call(this)` 返回数组并保证 IIFE 内 this 指向组件实例。
-  return [
-    '...(function(){ var out = []; for (var i = 0; i < ($countJs); i++) '
-        '{ out.push(this._sliverBuilder$idx(i)); } return out; }).call(this)'
-  ];
+  return {
+    'delegateBuilder': ctx.jsString('_sliverBuilder$idx'),
+    'childCount': ctx.jsDataExpr(childCount),
+  };
 }
 
-/// 统一的 sliver delegate → children 翻译：ListDelegate 直接展开 children；
-/// BuilderDelegate 抽方法并返回展开表达式字符串。两者都不支持 → null。
-List<Object?>? _sliverDelegateToChildren(
-    Expression? delegate, WidgetTranslateContext ctx) {
+/// 统一的 sliver delegate → children/props 翻译：ListDelegate 直接展开
+/// children；BuilderDelegate 抽方法并返回 delegateBuilder/childCount props。
+/// 返回 `(children, builderProps)`；两者都不支持 → null。
+({List<Object?> children, Map<String, dynamic> builder})?
+    _sliverDelegateResult(Expression? delegate, WidgetTranslateContext ctx) {
   final listChildren = _sliverListDelegateChildren(delegate);
   if (listChildren != null) {
-    return [for (final c in listChildren) ctx.translateElement(c)];
+    return (
+      children: [for (final c in listChildren) ctx.translateElement(c)],
+      builder: const {},
+    );
   }
-  return _sliverBuilderDelegateChildren(delegate, ctx);
+  final builder = _sliverBuilderDelegateProps(delegate, ctx);
+  if (builder != null) return (children: const [], builder: builder);
+  return null;
 }
 
 /// 解析 grid delegate 的数值参数，支持两种形态：
@@ -949,8 +953,9 @@ class CustomScrollViewTranslator extends WidgetTranslator {
 /// SliverList：delegate 支持两种形态——`SliverChildListDelegate([...])`
 /// （children 展开为子节点，宿主侧补回 delegate）与
 /// `SliverChildBuilderDelegate((context, index) => widget, childCount: n)`
-/// （闭包抽成 `_sliverBuilderN(index)` 方法，产物以 for 展开表达式填充
-/// children）。JS 写法与 ListView 一致。
+/// （闭包抽成 `_sliverBuilderN(index)` 方法，产物带 delegateBuilder/
+/// childCount props，运行时由 flutter.js 代理组件循环调用展开）。
+/// JS 写法与 ListView 一致。
 class SliverListTranslator extends WidgetTranslator {
   const SliverListTranslator();
 
@@ -959,16 +964,17 @@ class SliverListTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children =
-        _sliverDelegateToChildren(ctx.namedArg(node.args, 'delegate'), ctx);
-    if (children == null) {
+    final result =
+        _sliverDelegateResult(ctx.namedArg(node.args, 'delegate'), ctx);
+    if (result == null) {
       throw FormatException(
           'SliverList 仅支持 delegate: SliverChildListDelegate([...]) 或 '
           'SliverChildBuilderDelegate(...)');
     }
     return {
       'type': ctx.jsString('SliverList'),
-      'children': children,
+      if (result.builder.isNotEmpty) 'props': result.builder,
+      'children': result.children,
     };
   }
 }
@@ -985,23 +991,25 @@ class SliverGridTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children =
-        _sliverDelegateToChildren(ctx.namedArg(node.args, 'delegate'), ctx);
-    if (children == null) {
+    final result =
+        _sliverDelegateResult(ctx.namedArg(node.args, 'delegate'), ctx);
+    if (result == null) {
       throw FormatException(
           'SliverGrid 仅支持 delegate: SliverChildListDelegate([...]) 或 '
           'SliverChildBuilderDelegate(...)');
     }
+    final props = <String, dynamic>{...result.builder};
     final grid = _gridDelegateToJson(ctx.namedArg(node.args, 'gridDelegate'), ctx);
     if (grid == null) {
       throw FormatException(
           'SliverGrid 仅支持 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(...) '
           '或 SliverGridDelegateWithMaxCrossAxisExtent(...)');
     }
+    props.addAll(grid);
     return {
       'type': ctx.jsString('SliverGrid'),
-      'props': grid,
-      'children': children,
+      if (props.isNotEmpty) 'props': props,
+      'children': result.children,
     };
   }
 }
@@ -1130,14 +1138,14 @@ class SliverFixedExtentListTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children =
-        _sliverDelegateToChildren(ctx.namedArg(node.args, 'delegate'), ctx);
-    if (children == null) {
+    final result =
+        _sliverDelegateResult(ctx.namedArg(node.args, 'delegate'), ctx);
+    if (result == null) {
       throw FormatException(
           'SliverFixedExtentList 仅支持 delegate: SliverChildListDelegate([...]) '
           '或 SliverChildBuilderDelegate(...)');
     }
-    final props = <String, dynamic>{};
+    final props = <String, dynamic>{...result.builder};
     final itemExtent = _numOf(ctx.namedArg(node.args, 'itemExtent'));
     if (itemExtent == null) {
       throw FormatException('SliverFixedExtentList 缺少 itemExtent');
@@ -1145,8 +1153,8 @@ class SliverFixedExtentListTranslator extends WidgetTranslator {
     props['itemExtent'] = itemExtent;
     return {
       'type': ctx.jsString('SliverFixedExtentList'),
-      'props': props,
-      'children': children,
+      if (props.isNotEmpty) 'props': props,
+      'children': result.children,
     };
   }
 }
@@ -1160,20 +1168,20 @@ class SliverFillViewportTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children =
-        _sliverDelegateToChildren(ctx.namedArg(node.args, 'delegate'), ctx);
-    if (children == null) {
+    final result =
+        _sliverDelegateResult(ctx.namedArg(node.args, 'delegate'), ctx);
+    if (result == null) {
       throw FormatException(
           'SliverFillViewport 仅支持 delegate: SliverChildListDelegate([...]) '
           '或 SliverChildBuilderDelegate(...)');
     }
-    final props = <String, dynamic>{};
+    final props = <String, dynamic>{...result.builder};
     final fraction = _numOf(ctx.namedArg(node.args, 'viewportFraction'));
     if (fraction != null) props['viewportFraction'] = fraction;
     return {
       'type': ctx.jsString('SliverFillViewport'),
       if (props.isNotEmpty) 'props': props,
-      'children': children,
+      'children': result.children,
     };
   }
 }
