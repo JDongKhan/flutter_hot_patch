@@ -362,13 +362,20 @@ Set<String> _candidateClassNames(
 }
 
 /// 候选类名 ∩ 类表 → 实际使用的类（统一翻译的集合）。
+/// [excludeTypes]：已注册 WidgetTranslator 的 widget 构造名（如业务侧自定义
+/// 受控滚动组件 ControlledScrollView）——它们由 translator 接管翻译成 JS
+/// 构造调用（经 flutter.js 工厂 + 宿主注册表），不能再当模型类翻译进产物，
+/// 否则与 import 的工厂函数同名冲突（ES module 重复声明直接加载失败）。
 Map<String, ClassInfo> _usedClasses(
   Set<String> candidates,
   Map<String, ClassInfo> index,
+  [Set<String>? excludeTypes]
 ) =>
     {
       for (final n in candidates)
-        if (index.containsKey(n)) n: index[n]!,
+        if (index.containsKey(n) &&
+            (excludeTypes == null || !excludeTypes.contains(n)))
+          n: index[n]!,
     };
 
 /// 字段类型：优先显式类型注解；无注解时从初始化器推断
@@ -496,6 +503,7 @@ _Component _parseComponent(
   final used = _usedClasses(
     _candidateClassNames(hostClass, methods, buildMethod),
     classIndex,
+    registry.registeredTypes,
   );
 
   // 字段收集：基础类型 / 类类型字段（含对象字段 `_model = MyModel()` →
@@ -688,6 +696,7 @@ _Component _parseNestedComponent(
   final used = _usedClasses(
     _candidateClassNames(hostClass, methods, buildMethod),
     classIndex,
+    registry.registeredTypes,
   );
 
   // 字段收集：基础类型 / 类类型字段进 JS 属性（对象字段 this._x）

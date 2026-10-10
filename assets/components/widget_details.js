@@ -755,8 +755,12 @@ export function ContainerDetail(props, children) {
 class ScrollDetailComponent {
   constructor() {
     this._offset = 0;
+    this._ctrlOffset = 0;
   }
-  _onScroll(n) { this.setState(function(){ this._offset = n.metrics.pixels; }); }
+  initState() { /* 空方法体 */ }
+  dispose() { /* 空方法体 */ }
+  _onListScroll(n) { this.setState(function(){ this._offset = n.metrics.pixels; }); }
+  _onScroll(v) { this.setState(function(){ this._ctrlOffset = v; }); }
   build() {
     return Column({
         "crossAxisAlignment": "stretch"
@@ -769,7 +773,7 @@ class ScrollDetailComponent {
             }
           }),
         NotificationListener({
-            "onNotification": this.__bind("_onScroll")
+            "onNotification": this.__bind("_onListScroll")
           }, [
             SizedBox({
                 "height": 160
@@ -821,13 +825,14 @@ class ScrollDetailComponent {
             "height": 12
           }),
         Text({
-            "data": "SingleChildScrollView · 长内容滚动",
+            "data": "SingleChildScrollView · 长内容滚动（ctrl offset: " + this._ctrlOffset + "）",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
         SingleChildScrollView({
+            "onScroll": this.__bind("_onScroll"),
             "scrollDirection": "horizontal",
             "physics": "ClampingScrollPhysics"
           }, [

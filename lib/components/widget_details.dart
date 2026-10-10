@@ -466,14 +466,46 @@ class ScrollDetail extends StatefulWidget {
 }
 
 class _ScrollDetailState extends State<ScrollDetail> {
-  /// 当前滚动偏移。原生侧由 NotificationListener 直接更新；
+  /// 当前滚动偏移（ListView，NotificationListener 演示）。
+  /// 原生侧由 NotificationListener 直接更新；
   /// JS 热更侧同一份 build 源码经生成器翻译，宿主桥接组件把 metrics
-  /// 快照 invoke 回传 `_onScroll`，JS 里同样落到 this.offset。
+  /// 快照 invoke 回传 `_onListScroll`，JS 里同样落到 this.offset。
   double _offset = 0;
 
-  bool _onScroll(ScrollNotification n) {
+  /// 横向 SingleChildScrollView 的滚动偏移（controller 监听演示）。
+  /// 原生侧由 initState 的 addListener → `_onScroll` 更新；
+  /// JS 热更侧同一份源码翻译后由宿主桥接组件（自建 controller）invoke
+  /// 回传 pixels 给 `_onScroll`。
+  double _ctrlOffset = 0;
+
+  /// 横向滚动视图的 controller（controller 监听演示）：
+  /// 原生侧真实持有；JS 热更侧该字段类型含原生对象不可翻译，自动跳过，
+  /// controller 由宿主桥接组件（SingleChildScrollView 带 onScroll 时）自建。
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // 原生侧：controller 监听驱动 `_onScroll`（与 JS 侧回传路径同构）。
+    _scrollController.addListener(() => _onScroll(_scrollController.offset));
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  bool _onListScroll(ScrollNotification n) {
     setState(() => _offset = n.metrics.pixels);
     return false;
+  }
+
+  /// controller 监听回调（约定方法名：SingleChildScrollView 带 controller
+  /// 参数时，生成器按此约定把 `onScroll: this.__bind("_onScroll")` 补进
+  /// 产物，宿主桥接回传 pixels；原生侧由 addListener 驱动同一方法）。
+  void _onScroll(double v) {
+    setState(() => _ctrlOffset = v);
   }
 
   @override
@@ -484,7 +516,7 @@ class _ScrollDetailState extends State<ScrollDetail> {
         Text('ListView · 列表（offset: $_offset）',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         NotificationListener<ScrollNotification>(
-          onNotification: _onScroll,
+          onNotification: _onListScroll,
           child: SizedBox(
             height: 160,
             child: ListView(
@@ -502,8 +534,10 @@ class _ScrollDetailState extends State<ScrollDetail> {
           ),
         ),
         const SizedBox(height: 12),
-        const Text('SingleChildScrollView · 长内容滚动', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text('SingleChildScrollView · 长内容滚动（ctrl offset: $_ctrlOffset）',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         SingleChildScrollView(
+          controller: _scrollController,
           scrollDirection: Axis.horizontal,
           physics: const ClampingScrollPhysics(),
           child: Row(

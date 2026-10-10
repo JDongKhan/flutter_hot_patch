@@ -190,13 +190,29 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         child: c.childOrEmpty,
       ));
 
-  r.register('SingleChildScrollView', (c) => SingleChildScrollView(
+  // SingleChildScrollView：带 onScroll（生成器按 controller 约定补发）时，
+  // controller 语义由宿主桥接组件接管（自建 controller + addListener →
+  // invoke 回传 pixels，double 与 Dart 侧 `void _onScroll(double)` 一致）；
+  // 无 onScroll → 原样 SingleChildScrollView（存量 JS 兼容）。
+  r.register('SingleChildScrollView', (c) {
+    final onScroll = c.props['onScroll'];
+    if (onScroll != null) {
+      return _JsScrollControllerView(
+        onScroll: onScroll,
+        invoke: c.invoke,
         scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-        padding: edgeInsetsFromJson(c.map('padding')),
         physics: scrollPhysicsFromJson(c.props['physics']),
-        reverse: c.bool_('reverse') ?? false,
-        child: c.child(),
-      ));
+        child: c.childOrEmpty,
+      );
+    }
+    return SingleChildScrollView(
+      scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+      padding: edgeInsetsFromJson(c.map('padding')),
+      physics: scrollPhysicsFromJson(c.props['physics']),
+      reverse: c.bool_('reverse') ?? false,
+      child: c.child(),
+    );
+  });
 
   r.register('Container', (c) {
     final deco = boxDecorationFromJson(c.map('decoration'));
@@ -696,6 +712,75 @@ class _NotificationListenerState extends State<_NotificationListener> {
         // 不拦截：返回 false 让通知继续向上冒泡，外部其它监听不受影响。
         return false;
       },
+      child: widget.child,
+    );
+  }
+}
+
+/// SingleChildScrollView 的 controller 桥接组件（宿主注册表里
+/// `onScroll` 存在时替代原样 SingleChildScrollView）：
+/// 宿主自建 ScrollController 模拟 Dart 侧 controller 语义。
+///
+/// JS 侧写法（生成器按 controller 约定自动补发 onScroll）：
+/// ```js
+/// SingleChildScrollView({ onScroll: this.__bind("_onScroll") }, [ ... ])
+/// ```
+/// 滚动时宿主 addListener 触发，经 invoke 回传 **pixels（double）**——
+/// 与 Dart 侧 `void _onScroll(double)` 回调签名一致，JS 事件方法
+/// 形参直接收下（`_onScroll(v) { this._ctrlOffset = v; }` 一比一翻译）。
+/// scrollDirection / physics 透传（默认与 SingleChildScrollView 一致）。
+class _JsScrollControllerView extends StatefulWidget {
+  const _JsScrollControllerView({
+    required this.onScroll,
+    required this.invoke,
+    required this.scrollDirection,
+    this.physics,
+    required this.child,
+  });
+
+  /// JS 侧事件句柄（`{'__fn': id}`）。
+  final Object? onScroll;
+
+  /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
+  final void Function(Object? handler, [Object? payload]) invoke;
+
+  final Axis scrollDirection;
+  final ScrollPhysics? physics;
+  final Widget child;
+
+  @override
+  State<_JsScrollControllerView> createState() => _JsScrollControllerViewState();
+}
+
+class _JsScrollControllerViewState extends State<_JsScrollControllerView> {
+  late final ScrollController _controller = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onPositionChanged);
+  }
+
+  void _onPositionChanged() {
+    final handler = widget.onScroll;
+    // 首帧 hasClients 可能尚未就绪，position 未 attach 时跳过。
+    if (handler != null && _controller.hasClients) {
+      widget.invoke(handler, _controller.offset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _controller,
+      scrollDirection: widget.scrollDirection,
+      physics: widget.physics,
       child: widget.child,
     );
   }

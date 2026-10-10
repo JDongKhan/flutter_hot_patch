@@ -819,6 +819,12 @@ class NotificationListenerTranslator extends WidgetTranslator {
 }
 
 /// SingleChildScrollView：child + scrollDirection/padding/physics/reverse。
+///
+/// controller 参数（Dart 侧原生 ScrollController）在 JS 侧无对应对象：
+/// 当存在 `controller:` 参数且组件内定义了约定监听方法 `_onScroll` 时，
+/// 产物自动加 `onScroll: this.__bind("_onScroll")`，宿主注册表据此返回
+/// 桥接组件（自建 controller 监听并 invoke 回传 pixels，double 与 Dart 侧
+/// `void _onScroll(double)` 回调签名一致）；否则原样透传（存量 JS 兼容）。
 class SingleChildScrollViewTranslator extends WidgetTranslator {
   const SingleChildScrollViewTranslator();
 
@@ -830,6 +836,11 @@ class SingleChildScrollViewTranslator extends WidgetTranslator {
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     if (child == null) throw FormatException('SingleChildScrollView 缺少 child');
     final props = <String, dynamic>{};
+    final ctrl = ctx.namedArg(node.args, 'controller');
+    if (ctrl is Identifier && ctx.hasAction('_onScroll')) {
+      // 约定：controller 桥接的滚动监听方法名（与 Dart 侧 `_onScroll` 一比一）。
+      props['onScroll'] = ctx.eventHandleByName('_onScroll');
+    }
     final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
     if (axis != null) props['scrollDirection'] = axis;
     final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
