@@ -517,8 +517,11 @@ _Component _parseComponent(
         if (member.isStatic) continue;
         final erased = _eraseType(typeName);
         final isBasic = _isBasicType(typeName);
+        // JS 运行时类型（ScrollController）：JS 侧有同名类（new ScrollController()），
+        // 字段进 JS 实例属性，方法/属性调用一比一翻译，不再跳过。
+        final jsRuntime = _jsRuntimeTypes.contains(erased);
         final cls = used[erased];
-        if (!isBasic && cls == null) {
+        if (!isBasic && cls == null && !jsRuntime) {
           // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
           // ignore: avoid_print - 构建期日志
           print(
@@ -530,6 +533,11 @@ _Component _parseComponent(
         if (isBasic) {
           initial = _renderLiteral(variable.initializer) ??
               _defaultInitial(typeName);
+        } else if (jsRuntime) {
+          // `ScrollController()` → `new ScrollController()`；可空字段 → null。
+          initial = variable.initializer == null
+              ? 'null'
+              : (_jsRuntimeCtor(erased) ?? 'null');
         } else {
           final init = variable.initializer;
           String? ctorJs;
@@ -708,8 +716,9 @@ _Component _parseNestedComponent(
         if (member.isStatic) continue;
         final erased = _eraseType(typeName);
         final isBasic = _isBasicType(typeName);
+        final jsRuntime = _jsRuntimeTypes.contains(erased);
         final cls = used[erased];
-        if (!isBasic && cls == null) {
+        if (!isBasic && cls == null && !jsRuntime) {
           // ignore: avoid_print - 构建期日志
           print(
             '[ui_component_generator] 嵌套组件跳过字段 $fieldName（类型 $typeName 不可翻译）',
@@ -721,6 +730,10 @@ _Component _parseNestedComponent(
         if (isBasic) {
           initial = _renderLiteral(variable.initializer) ??
               _defaultInitial(typeName);
+        } else if (jsRuntime) {
+          initial = variable.initializer == null
+              ? 'null'
+              : (_jsRuntimeCtor(erased) ?? 'null');
         } else {
           final init = variable.initializer;
           String? ctorJs;
@@ -815,6 +828,16 @@ _Component _parseNestedComponent(
 // ---------------------------------------------------------------------------
 // 注解 / 类解析
 // ---------------------------------------------------------------------------
+
+/// JS 运行时已有同名类的 Dart 类型（翻译成 JS 同名构造，如
+/// `ScrollController` → `new ScrollController()`）：字段不再跳过，方法/属性
+/// 一比一翻译（`addListener` / `jumpTo` / `offset` / `position` 由 JS 侧
+/// 实例提供，宿主按 id 绑定真实对象）。
+const Set<String> _jsRuntimeTypes = {'ScrollController'};
+
+/// JS 运行时类型的构造表达式；非运行时类型返回 null。
+String? _jsRuntimeCtor(String erased) =>
+    _jsRuntimeTypes.contains(erased) ? 'new $erased()' : null;
 
 /// 字段默认状态名：一比一，保持 Dart 字段原名（_count → _count）。
 String _defaultPropName(String fieldName) => fieldName;

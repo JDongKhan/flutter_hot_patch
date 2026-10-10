@@ -3,7 +3,6 @@ import 'package:hot_patch/hot_patch.dart';
 
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
-import 'components/widget_details.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
 import 'components/widget_showcase.dart';

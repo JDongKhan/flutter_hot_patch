@@ -756,11 +756,12 @@ class ScrollDetailComponent {
   constructor() {
     this._offset = 0;
     this._ctrlOffset = 0;
+    this._scrollController = new ScrollController();
   }
-  initState() { /* 空方法体 */ }
-  dispose() { /* 空方法体 */ }
+  initState() { this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); }); }
+  dispose() { this._scrollController.dispose(); }
   _onListScroll(n) { this.setState(function(){ this._offset = n.metrics.pixels; }); }
-  _onScroll(v) { this.setState(function(){ this._ctrlOffset = v; }); }
+  _scrollToEnd() { this._scrollController.jumpTo(this._scrollController.position.maxScrollExtent); }
   build() {
     return Column({
         "crossAxisAlignment": "stretch"
@@ -832,13 +833,22 @@ class ScrollDetailComponent {
             }
           }),
         SingleChildScrollView({
-            "onScroll": this.__bind("_onScroll"),
+            "controller": this._scrollController,
             "scrollDirection": "horizontal",
             "physics": "ClampingScrollPhysics"
           }, [
             Row({}, [
                 ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [Padding({ "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ Chip({ "label": "横向 " + i }) ])]); } return out; })()
               ])
+          ]),
+        Align({
+            "alignment": "centerLeft"
+          }, [
+            Button({
+                "kind": "text",
+                "label": "横向 · 跳到底",
+                "event": this.__bind("_scrollToEnd")
+              })
           ])
       ]);
   }

@@ -547,6 +547,71 @@ String hostArgsJs(List<String> positional, List<String> named) {
       '${named.join(', ')}}';
 }
 
+/// 闭包参数 → JS 函数表达式：`() {...}` → `function(){ ... }`、
+/// `(v) => expr` → `function(v){ return <expr>; }`。
+///
+/// 闭包体逐语句翻译，其中 `setState(() {...})` 展开为
+/// `this.setState(function(){ ... })`（与组件方法体里的 setState 同构）。
+String? closureToJs(
+  FunctionExpression fn,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final params = <String>[];
+  for (final p in fn.parameters?.parameters ?? const <FormalParameter>[]) {
+    final name = p is DefaultFormalParameter
+        ? p.parameter.name?.lexeme
+        : p.name?.lexeme;
+    if (name != null && name.isNotEmpty) params.add(name);
+  }
+  final pjs = params.join(', ');
+  final body = fn.body;
+  // 一律输出箭头函数：this 词法绑定到定义处（组件实例），与 Dart 闭包
+  // 捕获 this 的语义一致——回调（如 addListener 闭包）由宿主经 invoke
+  // 普通调用触发时 this 不会丢失，无需 .bind。引擎为 flutter_js
+  // （macOS/iOS JavaScriptCore、Android QuickJS），均完整支持 ES6。
+  if (body is ExpressionFunctionBody) {
+    // 表达式体也按语句翻译（赋值 `_x = rhs`、方法调用等），
+    // 返回值无意义时保留语句即可（Dart 闭包返回值在 JS 侧常被忽略）。
+    final v = exprStmtToJs(body.expression, scope, classes);
+    if (v == null) return null;
+    return '($pjs) => { $v }';
+  }
+  if (body is BlockFunctionBody) {
+    final parts = <String>[];
+    for (final s in body.block.statements) {
+      if (s is ExpressionStatement) {
+        final t = closureBodyStmtJs(s.expression, scope, classes);
+        if (t != null) parts.add(t);
+      }
+    }
+    if (parts.isEmpty) return null;
+    return '($pjs) => { ${parts.join(' ')} }';
+  }
+  return null;
+}
+
+/// 闭包体内的语句翻译：setState(...) 展开 + 其余走 exprStmtToJs。
+String? closureBodyStmtJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is MethodInvocation &&
+      e.methodName.name == 'setState' &&
+      e.argumentList.arguments.length == 1) {
+    final fn = e.argumentList.arguments.first;
+    if (fn is FunctionExpression) {
+      final inner = closureToJs(fn, scope, classes);
+      return inner == null
+          ? 'this.setState(function(){});'
+          : 'this.setState($inner);';
+    }
+    return null;
+  }
+  return exprStmtToJs(e, scope, classes);
+}
+
 /// 方法调用（表达式位置）：返回 `obj.method(args)` / `this.method(args)`。
 String? methodCallExprJs(
   MethodInvocation e,
@@ -575,6 +640,16 @@ String? methodCallExprJs(
   final posJs = <String>[]; // 宿主注入：位置实参
   final namedJs = <String>[]; // 宿主注入：具名实参（`"名": 值`）
   for (final a in args) {
+    // 闭包参数（addListener(() {...}) / TextButton(onPressed: () => ...) 等）：
+    // 翻译成 JS 函数表达式，匿名天然支持——不合成方法名、无重名问题。
+    // 闭包体逐语句翻译，setState(...) 展开为 this.setState(function(){...})。
+    if (a is FunctionExpression) {
+      final fnJs = closureToJs(a, scope, classes);
+      if (fnJs == null) return null;
+      argJs.add(fnJs);
+      posJs.add(fnJs);
+      continue;
+    }
     if (a is NamedExpression) {
       final v = rhsToJs(a.expression, scope, classes);
       if (v == null) return null;

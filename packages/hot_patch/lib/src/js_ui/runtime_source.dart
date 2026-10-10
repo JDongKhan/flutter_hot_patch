@@ -579,6 +579,80 @@ const String jsUiRuntimeSource = r'''
     delete roots[pageKey];
   }
 
+  // ===== 【10.5】ScrollController 代理类（对应 Flutter 官方 ScrollController）===
+  // 生成器把 Dart 侧 `final ScrollController _scrollController = ScrollController();`
+  // 翻译成 `this._scrollController = new ScrollController()`；实例与宿主侧真实
+  // ScrollController 按 id 绑定：
+  //   - 构造：登记 metrics 转发句柄（fn），宿主滚动时经 invoke 回传镜像；
+  //   - addListener/removeListener：JS 闭包直接登记——**匿名闭包天然支持**，
+  //     无需生成器合成方法名，不存在重名问题；
+  //   - jumpTo/animateTo/dispose：实例级 host 通道（载荷带 id），多实例互不干扰；
+  //   - offset / position / hasClients：本地镜像（宿主回传更新）。
+  // 跨桥序列化：props 里的实例经 toJSON 输出 `{__jsuiScrollController: id}`，
+  // 宿主据此取/建真实 controller（见 js_widget_registry.dart）。
+  function ScrollController() {
+    this.__id = nextId('sc');
+    this.__listeners = [];
+    this.offset = 0;
+    this.__maxScrollExtent = 0;
+    this.__viewportDimension = 0;
+    this.__extentAfter = 0;
+    var self = this;
+    this.__metricsFn = fn(function (p) { self.__onMetrics(p); });
+    host('scrollControllerRegister', [this.__id, this.__metricsFn]);
+  }
+  ScrollController.prototype.addListener = function (f) {
+    if (typeof f === 'function') { this.__listeners.push(f); }
+  };
+  ScrollController.prototype.removeListener = function (f) {
+    var i = this.__listeners.indexOf(f);
+    if (i >= 0) { this.__listeners.splice(i, 1); }
+  };
+  ScrollController.prototype.jumpTo = function (offset) {
+    if (this.__id != null) { host('scrollControllerJumpTo', [this.__id, offset]); }
+  };
+  ScrollController.prototype.animateTo = function (offset, opts) {
+    if (this.__id == null) { return; }
+    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
+    var curve = (opts && opts.curve) ? opts.curve : 'easeOut';
+    host('scrollControllerAnimateTo', [this.__id, offset, ms, curve]);
+  };
+  ScrollController.prototype.dispose = function () {
+    if (this.__id != null) {
+      host('scrollControllerDispose', [this.__id]);
+      this.__id = null;
+      this.__listeners = [];
+    }
+  };
+  ScrollController.prototype.toJSON = function () {
+    return { __jsuiScrollController: this.__id };
+  };
+  Object.defineProperty(ScrollController.prototype, 'position', {
+    get: function () {
+      return {
+        pixels: this.offset,
+        maxScrollExtent: this.__maxScrollExtent,
+        viewportDimension: this.__viewportDimension,
+        extentAfter: this.__extentAfter
+      };
+    }
+  });
+  Object.defineProperty(ScrollController.prototype, 'hasClients', {
+    get: function () { return this.__id != null; }
+  });
+  // 宿主回传 metrics 快照 → 更新镜像并触发 listeners（listener 无参，
+  // 与 Dart addListener 语义一致；闭包内读 this._scrollController.offset）。
+  ScrollController.prototype.__onMetrics = function (p) {
+    if (!p) { return; }
+    this.offset = p.pixels;
+    this.__maxScrollExtent = p.maxScrollExtent;
+    this.__viewportDimension = p.viewportDimension;
+    this.__extentAfter = p.extentAfter;
+    var fs = this.__listeners;
+    for (var i = 0; i < fs.length; i++) { fs[i](); }
+  };
+  G.ScrollController = ScrollController;
+
   var api = {
     h: h,
     fn: fn,

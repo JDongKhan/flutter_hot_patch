@@ -1,7 +1,68 @@
 import 'package:flutter/material.dart';
 
 import '../json/flutter_from_json.dart';
+import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
+
+// ===== ScrollController 桥接表（JS ScrollController ↔ Dart ScrollController）====
+// JS 侧 `new ScrollController()` 经 scrollControllerRegister 通道登记
+// metrics 转发句柄；宿主渲染 SingleChildScrollView(controller: {__jsuiScrollController:
+// id}) 时按 id 取/建真实 controller 并挂转发（滚动 → invoke 句柄 → JS 实例
+// 更新镜像 → 触发其 listeners）。jumpTo/animateTo/dispose 走实例级通道。
+final Map<String, ScrollController> _jsScrollControllers = {};
+final Map<String, Object?> _jsScrollMetricsHandles = {};
+final Set<String> _jsScrollAttached = {};
+
+bool _scrollControllerChannelsRegistered = false;
+
+/// 幂等注册 ScrollController 桥接通道（JsUiWidget 启动时调用一次；
+/// registerHostMethod 全局表 + 断言防重复，故用标志位兜底）。
+void ensureScrollControllerChannels() {
+  if (_scrollControllerChannelsRegistered) return;
+  _scrollControllerChannelsRegistered = true;
+  JsRuntimeManager.registerHostMethod('scrollControllerRegister',
+      (Object? id, Object? metricsFn) {
+    if (id is String) _jsScrollMetricsHandles[id] = metricsFn;
+  });
+  JsRuntimeManager.registerHostMethod('scrollControllerJumpTo',
+      (Object? id, Object? offset) {
+    final c = id is String ? _jsScrollControllers[id] : null;
+    if (c != null) c.jumpTo(offset is num ? offset.toDouble() : 0);
+  });
+  JsRuntimeManager.registerHostMethod('scrollControllerAnimateTo',
+      (Object? id, Object? offset, Object? ms, Object? curve) {
+    final c = id is String ? _jsScrollControllers[id] : null;
+    if (c == null) return;
+    final name = curve?.toString();
+    final curves = <String, Curve>{
+      'linear': Curves.linear,
+      'easeOut': Curves.easeOut,
+      'easeIn': Curves.easeIn,
+      'easeInOut': Curves.easeInOut,
+    };
+    c.animateTo(
+      offset is num ? offset.toDouble() : 0,
+      duration: Duration(milliseconds: (ms is num ? ms : 300).toInt()),
+      curve: curves[name] ?? Curves.easeOut,
+    );
+  });
+  JsRuntimeManager.registerHostMethod('scrollControllerDispose', (Object? id) {
+    if (id is! String) return;
+    _jsScrollControllers.remove(id)?.dispose();
+    _jsScrollMetricsHandles.remove(id);
+    _jsScrollAttached.remove(id);
+  });
+}
+
+/// 从 props 的 controller 取值里解析 JS ScrollController id。
+/// JS 侧实例跨桥经 toJSON 序列化为 `{__jsuiScrollController: 'sc#N'}`。
+String? _scrollControllerIdOf(Object? prop) {
+  if (prop is Map) {
+    final id = prop['__jsuiScrollController'];
+    if (id is String) return id;
+  }
+  return null;
+}
 
 /// 一次结点构建的上下文：JS 下发的 props + 已构建好的子 widget + 事件回传。
 ///
@@ -190,15 +251,15 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         child: c.childOrEmpty,
       ));
 
-  // SingleChildScrollView：带 onScroll（生成器按 controller 约定补发）时，
-  // controller 语义由宿主桥接组件接管（自建 controller + addListener →
-  // invoke 回传 pixels，double 与 Dart 侧 `void _onScroll(double)` 一致）；
-  // 无 onScroll → 原样 SingleChildScrollView（存量 JS 兼容）。
+  // SingleChildScrollView：controller 是 JS ScrollController 实例的序列化句柄
+  // （{__jsuiScrollController: id}）时，返回 _JsScrollControllerView（按 id
+  // 绑定真实 controller，滚动经 invoke 回传 metrics 镜像到 JS 实例）；
+  // 无 controller → 原样 SingleChildScrollView（存量 JS 兼容）。
   r.register('SingleChildScrollView', (c) {
-    final onScroll = c.props['onScroll'];
-    if (onScroll != null) {
+    final scId = _scrollControllerIdOf(c.props['controller']);
+    if (scId != null) {
       return _JsScrollControllerView(
-        onScroll: onScroll,
+        controllerId: scId,
         invoke: c.invoke,
         scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
         physics: scrollPhysicsFromJson(c.props['physics']),
@@ -717,29 +778,24 @@ class _NotificationListenerState extends State<_NotificationListener> {
   }
 }
 
-/// SingleChildScrollView 的 controller 桥接组件（宿主注册表里
-/// `onScroll` 存在时替代原样 SingleChildScrollView）：
-/// 宿主自建 ScrollController 模拟 Dart 侧 controller 语义。
-///
-/// JS 侧写法（生成器按 controller 约定自动补发 onScroll）：
-/// ```js
-/// SingleChildScrollView({ onScroll: this.__bind("_onScroll") }, [ ... ])
-/// ```
-/// 滚动时宿主 addListener 触发，经 invoke 回传 **pixels（double）**——
-/// 与 Dart 侧 `void _onScroll(double)` 回调签名一致，JS 事件方法
-/// 形参直接收下（`_onScroll(v) { this._ctrlOffset = v; }` 一比一翻译）。
-/// scrollDirection / physics 透传（默认与 SingleChildScrollView 一致）。
+/// SingleChildScrollView 的 controller 桥接组件（props.controller 是 JS
+/// ScrollController 实例的序列化句柄 `{__jsuiScrollController: id}` 时替代
+/// 原样 SingleChildScrollView）：
+/// 按 id 取/建真实 ScrollController（多视图复用同一 id 时共享），滚动经
+/// invoke 回传 metrics 快照给 JS 实例（__onMetrics 更新镜像 → 触发其
+/// listeners——匿名 addListener 闭包由 JS 侧直接持有，天然支持）。
+/// jumpTo/animateTo/dispose 由 JS 实例走实例级 host 通道（带 id）。
 class _JsScrollControllerView extends StatefulWidget {
   const _JsScrollControllerView({
-    required this.onScroll,
+    required this.controllerId,
     required this.invoke,
     required this.scrollDirection,
     this.physics,
     required this.child,
   });
 
-  /// JS 侧事件句柄（`{'__fn': id}`）。
-  final Object? onScroll;
+  /// JS 侧 ScrollController 实例的 id（nextId('sc')，如 'sc#5'）。
+  final String controllerId;
 
   /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
   final void Function(Object? handler, [Object? payload]) invoke;
@@ -753,25 +809,42 @@ class _JsScrollControllerView extends StatefulWidget {
 }
 
 class _JsScrollControllerViewState extends State<_JsScrollControllerView> {
-  late final ScrollController _controller = ScrollController();
+  late final ScrollController _controller = _jsScrollControllers.putIfAbsent(
+    widget.controllerId,
+    () => ScrollController(),
+  );
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_onPositionChanged);
+    // 同一 id 只挂一次转发（多视图共享同一 controller 时不重复回传）。
+    final metricsFn = _jsScrollMetricsHandles[widget.controllerId];
+    if (metricsFn != null && _jsScrollAttached.add(widget.controllerId)) {
+      _controller.addListener(_forwardMetrics);
+      // 首次 attach 即回传一次初始 metrics：JS 镜像（offset/position/
+      // maxScrollExtent）不依赖「先滚动才更新」，构造后立即准确——否则
+      // 用户不滚动直接点「跳到底」会读到镜像 maxScrollExtent=0，
+      // jumpTo(0) 完全无效。
+      WidgetsBinding.instance.addPostFrameCallback((_) => _forwardMetrics());
+    }
   }
 
-  void _onPositionChanged() {
-    final handler = widget.onScroll;
-    // 首帧 hasClients 可能尚未就绪，position 未 attach 时跳过。
-    if (handler != null && _controller.hasClients) {
-      widget.invoke(handler, _controller.offset);
-    }
+  void _forwardMetrics() {
+    if (!_controller.hasClients) return;
+    final handler = _jsScrollMetricsHandles[widget.controllerId];
+    if (handler == null) return;
+    widget.invoke(handler, {
+      'pixels': _controller.offset,
+      'maxScrollExtent': _controller.position.maxScrollExtent,
+      'viewportDimension': _controller.position.viewportDimension,
+      'extentAfter': _controller.position.extentAfter,
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    // 真实 controller 生命周期由 JS 侧 dispose()（scrollControllerDispose
+    // 通道）管理；页面卸载时 JS 组件 dispose 同样触发，这里不重复释放。
     super.dispose();
   }
 

@@ -111,6 +111,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
       _rootId = id;
       if (mounted) setState(() => _loading = false);
     };
+    // ScrollController 桥接通道（JS ScrollController ↔ Dart ScrollController）：
+    // 必须在任何 JS 组件 mount（new ScrollController → host 登记）前就位。
+    ensureScrollControllerChannels();
     // 页面级 commit 通道：JS 算好补丁后从这里进来（不需要 BuildContext）。
     JsRuntimeManager.registerRawPageHandler(_pageKey, 'jsuiCommit', _onCommit);
     _boot();

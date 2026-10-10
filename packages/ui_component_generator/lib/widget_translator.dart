@@ -415,15 +415,6 @@ class WidgetTranslateContext {
   /// 信息在构建期就确定，语义与 Dart tear-off 一致，且不依赖运行时树形状。
   String eventHandle(Expression e) => 'this.__bind(${jsString(eventExpr(e))})';
 
-  /// 组件动作表里是否存在该方法。用于约定式事件绑定（如
-  /// SingleChildScrollView 带 controller 参数时按约定绑定 `_onScroll`）。
-  bool hasAction(String method) => actionByMethod.containsKey(method);
-
-  /// 按方法名绑定事件句柄（约定场景：Dart 侧组件没有对应事件参数，
-  /// 由生成器按命名约定补发 `this.__bind(...)`）。
-  String eventHandleByName(String method) =>
-      'this.__bind(${jsString(eventOf(method))})';
-
   /// 事件参数列表翻译：逐参数走 [jsDataExpr]（字符串/字段/局部变量/字面量）。
   String _eventArgsJs(ArgumentList args) {
     final out = <String>[];

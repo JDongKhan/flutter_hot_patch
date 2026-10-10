@@ -473,21 +473,26 @@ class _ScrollDetailState extends State<ScrollDetail> {
   double _offset = 0;
 
   /// 横向 SingleChildScrollView 的滚动偏移（controller 监听演示）。
-  /// 原生侧由 initState 的 addListener → `_onScroll` 更新；
-  /// JS 热更侧同一份源码翻译后由宿主桥接组件（自建 controller）invoke
-  /// 回传 pixels 给 `_onScroll`。
+  /// 原生侧由 initState 的 addListener 匿名闭包更新；
+  /// JS 热更侧同一份源码翻译成 `this._scrollController.addListener(
+  /// function(){ this._ctrlOffset = this._scrollController.offset; })`——
+  /// JS 侧也有 ScrollController 代理类（new ScrollController()），
+  /// 宿主按 id 绑定真实 controller，滚动回传 metrics 镜像后触发该闭包。
   double _ctrlOffset = 0;
 
-  /// 横向滚动视图的 controller（controller 监听演示）：
-  /// 原生侧真实持有；JS 热更侧该字段类型含原生对象不可翻译，自动跳过，
-  /// controller 由宿主桥接组件（SingleChildScrollView 带 onScroll 时）自建。
+  /// 横向滚动视图的 controller（controller 监听 + 按钮「写」能力演示）：
+  /// 原生侧真实持有；JS 热更侧翻译成 `this._scrollController =
+  /// new ScrollController()`（JS 代理实例，方法/属性一比一）。
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // 原生侧：controller 监听驱动 `_onScroll`（与 JS 侧回传路径同构）。
-    _scrollController.addListener(() => _onScroll(_scrollController.offset));
+    // 匿名闭包监听：原生侧直接挂真实 controller；
+    // JS 热更侧同构翻译成 JS 闭包挂到代理实例（匿名天然支持，无需合成方法名）。
+    _scrollController.addListener(() {
+      setState(() => _ctrlOffset = _scrollController.offset);
+    });
   }
 
   @override
@@ -501,11 +506,12 @@ class _ScrollDetailState extends State<ScrollDetail> {
     return false;
   }
 
-  /// controller 监听回调（约定方法名：SingleChildScrollView 带 controller
-  /// 参数时，生成器按此约定把 `onScroll: this.__bind("_onScroll")` 补进
-  /// 产物，宿主桥接回传 pixels；原生侧由 addListener 驱动同一方法）。
-  void _onScroll(double v) {
-    setState(() => _ctrlOffset = v);
+  /// 按钮：横向滚动视图跳到底（controller 的「写」能力）。
+  /// 原生侧直接 jumpTo；JS 热更侧翻译成 `this._scrollController.jumpTo(
+  /// this._scrollController.position.maxScrollExtent)`，JS 代理实例经
+  /// 实例级 host 通道（scrollControllerJumpTo，载荷带 id）控制真实 controller。
+  void _scrollToEnd() {
+    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
   }
 
   @override
@@ -548,6 +554,13 @@ class _ScrollDetailState extends State<ScrollDetail> {
                   child: Chip(label: Text('横向 $i')),
                 ),
             ],
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: _scrollToEnd,
+            child: const Text('横向 · 跳到底'),
           ),
         ),
       ],
