@@ -232,8 +232,9 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       ));
 
   r.register('ListView', (c) => ListView(
-        // shrinkWrap 未下发时保持旧产物行为（true），兼容存量 JS。
-        shrinkWrap: c.bool_('shrinkWrap') ?? true,
+        // shrinkWrap 缺省保持 Flutter 默认（false）——与原生渲染一致；
+        // 存量 JS 产物未下发时同样按默认处理。
+        shrinkWrap: c.bool_('shrinkWrap') ?? false,
         scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
         padding: nullableEdgeInsets(c.map('padding')),
         physics: scrollPhysicsFromJson(c.props['physics']),
@@ -444,7 +445,9 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       tileColor: colorFromJson(c.props['tileColor']),
       iconColor: colorFromJson(c.props['iconColor']),
       textColor: colorFromJson(c.props['textColor']),
-      contentPadding: edgeInsetsFromJson(c.map('contentPadding')),
+      // contentPadding 缺省必须为 null：否则 EdgeInsets.zero 会覆盖主题
+      // 默认（水平 16），JS 侧 ListTile 内容贴边。
+      contentPadding: nullableEdgeInsets(c.map('contentPadding')),
       dense: c.bool_('dense'),
       shape: shapeFromJson(c.props['shape']),
     );
@@ -639,7 +642,9 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       ));
 
   r.register('FloatingActionButton', (c) => FloatingActionButton(
-        onPressed: c.on('event') ?? () {},
+        // onPressed 缺省必须为 null：Flutter 默认 null = 禁用（灰色不可点）；
+        // `() {}` 会变成可点但无动作，与原生语义不一致。
+        onPressed: c.on('event'),
         backgroundColor: colorFromJson(c.props['backgroundColor']),
         foregroundColor: colorFromJson(c.props['foregroundColor']),
         mini: c.bool_('mini') ?? false,
