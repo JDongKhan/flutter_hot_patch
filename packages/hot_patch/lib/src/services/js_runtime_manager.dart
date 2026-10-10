@@ -222,17 +222,14 @@ class JsRuntimeManager {
   ///     ChangeNotifier 基类。
   /// 与具体组件无关；组件/模型/按 package 生成的 widget 模块仍走 [loadModule]。
   void ensureJsUiRuntime() {
+    // 环境全局先注入：它单点声明/创建模块表 `__modules`（骨架只往里登记
+    // core）。env 不依赖 `__jsui`（console 仅在调用时才读 `__jsui.host`），
+    // 故先 env 后骨架安全。
+    _ensureRuntimeEnv();
     if (!_jsUiInited) {
       _eval(jsUiRuntimeSource, 'jsUiRuntimeSource');
       _jsUiInited = true;
     }
-    _ensureRuntimeEnv();
-    // 模块表初始化可能新建 __modules：每次确保 core 指向同一个 api。
-    _eval(
-      "typeof __jsui !== 'undefined' && typeof __modules !== 'undefined' "
-      "&& (__modules['js_ui/core'] = __jsui);",
-      'js_ui/core',
-    );
   }
 
   /// 注入运行时环境全局（模块表 / 标志 / console / ChangeNotifier），幂等。

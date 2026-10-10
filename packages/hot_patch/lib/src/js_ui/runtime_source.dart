@@ -671,7 +671,8 @@ const String jsUiRuntimeSource = r'''
   };
 
   G.__jsui = api;
-  G.__modules = G.__modules || {};
+  // 模块表 `__modules` 由环境全局（jsRuntimeEnvSource）单点声明/创建，
+  // 骨架注入前必已就位；此处只登记 core，不再自带一份守卫。
   G.__modules['js_ui/core'] = api;
 })();
 ''';
