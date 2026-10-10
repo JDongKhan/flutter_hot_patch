@@ -177,12 +177,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text('JS 组件加载失败：$_error', style: const TextStyle(color: Color(0xFFB00020))),
-        ),
-      );
+      return _JsLoadErrorView(message: _error!, onRetry: _retry);
     }
     if (_loading || _rootId == null) {
       return const Center(child: CircularProgressIndicator());
@@ -193,6 +188,93 @@ class JsUiWidgetState extends State<JsUiWidget> {
       registry: _registry,
       nativeComponents: widget.nativeComponents,
       invoke: _invoke,
+    );
+  }
+
+  /// 失败后重走一遍加载：模块加载按文件幂等，重复调用无副作用。
+  void _retry() {
+    setState(() {
+      _error = null;
+      _loading = true;
+      _rootId = null;
+    });
+    _boot();
+  }
+}
+
+/// JS 补丁加载失败的兜底视图。
+///
+/// 自带 [Material]（不依赖祖先提供 Material/DefaultTextStyle——缺省时会退化成
+/// 无主题的默认文字样式，落得又大又糙），按当前主题排版：图标 + 标题 + 说明 +
+/// 错误详情（单独成块、等宽小字、整体可滚动），而不是把整段错误串直接铺满屏幕。
+class _JsLoadErrorView extends StatelessWidget {
+  const _JsLoadErrorView({required this.message, this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Material(
+      type: MaterialType.transparency,
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 380),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.cloud_off_rounded, size: 56, color: scheme.error),
+                const SizedBox(height: 16),
+                Text(
+                  'JS 组件加载失败',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '页面补丁资源不可用，请确认资源已打包或重新下发。',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    message,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontFamily: 'monospace',
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                if (onRetry != null) ...[
+                  const SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.center,
+                    child: FilledButton.tonalIcon(
+                      onPressed: onRetry,
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('重新加载'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

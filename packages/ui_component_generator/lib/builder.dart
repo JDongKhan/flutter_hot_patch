@@ -1811,11 +1811,16 @@ class $cls {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
-    var n = this.props.childCount || 0;
+    // 计数键兼容两种写法：sliver 的 childCount / GridView.builder 的 itemCount。
+    var n = this.props.childCount !== undefined
+        ? this.props.childCount
+        : (this.props.itemCount || 0);
     for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
     var p = {};
     for (var k in this.props) {
-      if (k !== 'delegateBuilder' && k !== 'childCount') { p[k] = this.props[k]; }
+      if (k !== 'delegateBuilder' && k !== 'childCount' && k !== 'itemCount') {
+        p[k] = this.props[k];
+      }
     }
     return __h('$type', p, out);
   }

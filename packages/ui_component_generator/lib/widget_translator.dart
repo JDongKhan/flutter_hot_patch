@@ -576,6 +576,12 @@ class WidgetTranslateContext {
           }
         }
       }
+      // Dart `num.toStringAsFixed(n)` → JS `toFixed(n)`（插值格式化数字常用）。
+      if (tgt != null &&
+          e.methodName.name == 'toStringAsFixed' &&
+          e.argumentList.arguments.length == 1) {
+        return '${jsDataExpr(tgt)}.toFixed(${jsDataExpr(e.argumentList.arguments.first)})';
+      }
       throw FormatException('文本内容不支持方法调用：${e.toSource()}');
     }
     throw FormatException(
