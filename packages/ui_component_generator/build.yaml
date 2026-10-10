@@ -35,3 +35,27 @@ builders:
         - "assets/flutter.js"
     auto_apply: dependents
     build_to: source
+
+  # 宿主注入注册 builder：扫描全包 @HostInjected 方法，把 registerHostMethod
+  # 的注册调用集中生成到**一个 Dart 文件** lib/generated/host_methods.dart，
+  # 使用方在 main() 里调用一次 registerHostMethods() 即可。
+  #
+  # 与上面两个 builder 的区别：它们的产物是 assets/ 下的 **JS**（运行期被 JS
+  # 引擎加载），本 builder 的产物是**参与编译的 Dart 源码**，故单独一个 builder。
+  # 输入是包根伪资产 $package$（build_runner 支持的「整包」输入键，无需种子
+  # 文件）；产物路径固定，不随发现的注解动态变化。
+  #
+  # 注册目标默认指向配套运行时（package:hot_patch/hot_patch.dart +
+  # JsRuntimeManager.registerHostMethod），**使用方无需任何配置**；
+  # 仅当换用别的运行时实现时才在自己的 build.yaml 里覆盖（均为可选项）：
+  #   options:
+  #     register_import: "package:<runtime>/<runtime>.dart"
+  #     register_call: "<Runtime>.registerHostMethod"
+  ui_host_register:
+    import: "package:ui_component_generator/host_register_builder.dart"
+    builder_factories: ["hostRegisterBuilder"]
+    build_extensions:
+      "$package$":
+        - "lib/generated/host_methods.dart"
+    auto_apply: dependents
+    build_to: source

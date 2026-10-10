@@ -149,10 +149,20 @@ class JsRuntimeManager {
   ///
   /// 与页面无关（全局一份）；通道名即 @HostInjected 注解里的名称
   /// （缺省为方法名）。只写处理器表——桥通道在 manager 构造时已订阅。
+  /// 通道名需唯一：debug 下重复注册会触发断言失败。
   static void registerHostMethod(
     String channel,
     FutureOr<Object?> Function(List<dynamic> args) impl,
   ) {
+    // debug 阶段消灭重复：同一通道注册两次（如两个方法用了同一个 @HostInjected
+    // 通道名）会静默覆盖前一个实现，JS 侧调到的实现与预期不符且无从察觉。
+    // 断言让问题在启动时立刻暴露。通道名与 registerGlobal 的 service.channel
+    // 共用一张全局表，故本条同时拦住这两类撞名。
+    assert(
+      !globalMessageHandlers.containsKey(channel),
+      'registerHostMethod: 通道 "$channel" 已被注册——'
+      '通道名必须唯一（重复注册会静默覆盖前一个实现）',
+    );
     globalMessageHandlers[channel] = (dynamic args) async {
       final map = args is Map ? args : const {};
       final id = map['id']?.toString();

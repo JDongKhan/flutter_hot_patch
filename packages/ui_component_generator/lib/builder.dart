@@ -8,6 +8,7 @@ import 'package:build/build.dart';
 
 import 'builtin_translators.dart';
 import 'class_translator.dart';
+import 'host_method_scan.dart';
 import 'style_translators.dart';
 import 'widget_translator.dart';
 
@@ -877,26 +878,25 @@ bool _classHasHostInjectedMethod(ClassDeclaration d) {
   return false;
 }
 
-/// 收集宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）。
+/// 收集宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
+/// 顶层函数挂在空串 key 下（`'' → {函数名 → 通道名}`）。
 ///
-/// 扫描本文件 + import 源文件里带 @HostInjected 的方法；通道名取注解的位置
-/// 字符串参数（`@HostInjected('通道')`），缺省用方法名本身。
-/// 供翻译上下文把 `ClassName.method(...)` 调用点替换为
-/// `__jsui.host("通道", [...])`。
+/// 扫描本文件 + import 源文件（调用点能写出来，就必然 import 得到）；
+/// 只有 [HostMethodDecl.usable] 的声明进表——与注册清单（host_register_builder）
+/// 用同一个扫描器、同一个判定，保证「翻译了的都注册了」，不因两套逻辑分叉。
+///
+/// 供翻译上下文把调用点整体替换为 `__jsui.host("通道", [args])`
+/// （参数个数、返回值类型都不参与判定）。
 Map<String, Map<String, String>> _buildHostMethods(
   CompilationUnit unit,
   String sourcePath,
 ) {
   final out = <String, Map<String, String>>{};
   void scan(CompilationUnit u) {
-    for (final d in u.declarations.whereType<ClassDeclaration>()) {
-      for (final m in d.members.whereType<MethodDeclaration>()) {
-        final a = _findAnnotation(m.metadata, 'HostInjected');
-        if (a == null) continue;
-        final channel = _positionalString(a, 0) ?? m.name.lexeme;
-        (out[d.name.lexeme] ??= {})[m.name.lexeme] = channel;
-      }
-    }
+    scanHostMethods(u, (h) {
+      if (!h.usable) return;
+      (out[h.owner] ??= {})[h.name] = h.channel;
+    });
   }
 
   scan(unit);
@@ -994,15 +994,26 @@ String _translateActionBody(
         // super.initState() 等 super 调用：JS 无 super 语义，忽略
         if (e is MethodInvocation && e.target is SuperExpression) continue;
         final t = _translateExprStatement(e, scope, classes);
-        if (t != null) stmts.add(t);
+        if (t != null) {
+          stmts.add(t);
+        } else {
+          // 不静默：丢语句会让 JS 版逻辑悄悄比 Dart 版少一截。
+          log.warning('[ui_component_generator] 语句无法翻译，已在 JS 产物中'
+              '丢弃：${e.toSource()}');
+        }
       } else if (s is VariableDeclarationStatement) {
         // 局部变量声明 `String? name = await X.y();` → `var name = ...;`，
         // 名字登记进 scope，后续语句（含插值）可直接引用。
         for (final v in s.variables.variables) {
           final init = v.initializer == null
               ? 'undefined'
-              : _valueExprJs(v.initializer!, scope, classes);
-          if (init == null) continue;
+              : rhsToJs(v.initializer!, scope, classes);
+          if (init == null) {
+            // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
+            log.warning('[ui_component_generator] 局部变量声明无法翻译，已在 JS '
+                '产物中丢弃：${s.toSource()}');
+            continue;
+          }
           locals.add(v.name.lexeme);
           stmts.add('var ${v.name.lexeme} = $init;');
         }
@@ -1011,36 +1022,6 @@ String _translateActionBody(
   }
   if (stmts.isEmpty) return '/* 空方法体 */';
   return stmts.join(' ');
-}
-
-/// 取「值表达式」的 JS：用于变量初始化等表达式位置。`await <expr>` 会保留
-/// await 前缀（仅 async 方法体可 await），其余走 rhsToJs。
-String? _valueExprJs(
-  Expression e,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
-  if (e is AwaitExpression) {
-    final v = _awaitExprJs(e, scope, classes);
-    return v == null ? null : 'await $v';
-  }
-  return rhsToJs(e, scope, classes);
-}
-
-/// `await <expr>` 里的 `<expr>` → JS 表达式（不含 await 前缀）。
-/// 特殊形态 `Future.delayed(Duration(...))` → setTimeout Promise。
-String? _awaitExprJs(
-  AwaitExpression e,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
-  final delay = _delayedMsJs(e.expression);
-  if (delay != null) {
-    return 'new Promise(function(r){ setTimeout(r, $delay); })';
-  }
-  final stmt = exprStmtToJs(e.expression, scope, classes);
-  if (stmt == null) return null;
-  return stmt.substring(0, stmt.length - 1); // 去掉尾部分号
 }
 
 /// 翻译一条表达式语句：setState((){...}) / await Future.delayed / 其余走
@@ -1063,12 +1044,6 @@ String? _translateExprStatement(
       return 'this.setState(function(){ $bodyJs });';
     }
     return null;
-  }
-  // await <expr>：Future.delayed → Promise/setTimeout（模拟网络延迟）；
-  // 其余（如宿主调用 `await AccountCenter.getUserName()`）→ `await __jsui.host(...)`。
-  if (e is AwaitExpression) {
-    final v = _awaitExprJs(e, scope, classes);
-    return v == null ? null : 'await $v;';
   }
   return exprStmtToJs(e, scope, classes);
 }
@@ -1095,45 +1070,7 @@ String? _translateFunctionBodyJs(
   return null;
 }
 
-/// `await Future.delayed(Duration(seconds: n))` → setTimeout 毫秒数。
-/// 只映射这一种 Dart 异步延迟 API（JS 无等价物），其余 await 不支持。
-String? _delayedMsJs(Expression e) {
-  if (e is! MethodInvocation || e.methodName.name != 'delayed') return null;
-  final target = e.target;
-  if (target == null || target.toSource() != 'Future') return null;
-  final args = e.argumentList.arguments;
-  if (args.isEmpty) return null;
-  final dur = args.first;
-  String? unit;
-  double? value;
-  if (dur is InstanceCreationExpression &&
-      dur.constructorName.type.name2.lexeme == 'Duration') {
-    for (final a in dur.argumentList.arguments) {
-      if (a is NamedExpression) {
-        final lit = a.expression;
-        if (lit is IntegerLiteral) {
-          if (unit != null) return null; // 多个时间单位不支持
-          unit = a.name.label.name;
-          value = (lit.value ?? 0).toDouble();
-        } else if (lit is DoubleLiteral) {
-          if (unit != null) return null;
-          unit = a.name.label.name;
-          value = lit.value;
-        }
-      }
-    }
-  }
-  if (unit == null || value == null) return null;
-  final ms = switch (unit) {
-    'seconds' => value * 1000,
-    'milliseconds' => value,
-    'microseconds' => value / 1000,
-    'minutes' => value * 60 * 1000,
-    _ => null,
-  };
-  if (ms == null) return null;
-  return ms == ms.roundToDouble() ? '${ms.round()}' : '$ms';
-}
+
 
 /// 方法形式参数名列表（解 DefaultFormalParameter 包裹）。
 List<String> _methodParams(MethodDeclaration m) => [

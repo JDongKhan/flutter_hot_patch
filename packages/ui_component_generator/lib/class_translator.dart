@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:build/build.dart' show log;
 import 'style_translators.dart';
 
 // ===========================================================================
@@ -165,8 +166,10 @@ class FieldScope {
   final Set<String> params; // 形参名（原样引用）
   final Set<String> methods; // 裸调白名单（this.method()）
 
-  /// 宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）。
-  /// 命中时 static 调用翻译成 `__jsui.host("通道名", [args])`。
+  /// 宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
+  /// 顶层函数（全局方法）挂在空串 key 下（`'' → {函数名 → 通道名}`）。
+  /// 命中时调用点整体翻译成 `__jsui.host("通道名", [args])`——参数个数与
+  /// 返回值类型都无关（宿主侧用 Function.apply 调实现）。
   final Map<String, Map<String, String>> hostMethods;
 
   const FieldScope({
@@ -239,6 +242,15 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     final flag = platformFlagJs(e.identifier.name);
     if (flag != null) return flag;
   }
+  // 通用 `a.b`：前缀与属性都是简单标识符时 analyzer 用 PrefixedIdentifier
+  // （不是 PropertyAccess），如 `ids.length` / `_user.name` / `m.keys`。
+  // 不在这里拦下来，它会落到下面的 Identifier 分支，用整串 `a.b` 去查字段
+  // 必然失败——这是「属性访问普遍翻译不出来」的根因。
+  if (e is PrefixedIdentifier) {
+    final p = scope.fieldRef(e.prefix.name);
+    if (p != null) return '$p.${e.identifier.name}';
+    return null;
+  }
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被字面量分支
   // 吞成 ""——插值表达式丢失）：拼接触发与 _logArgJs 同一逻辑。
   if (e is StringInterpolation) return _logArgJs(e, scope, classes);
@@ -285,11 +297,118 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
 String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被吞成 ""）
   if (e is StringInterpolation) return _logArgJs(e, scope, classes);
+  // `await <expr>` 统一在这里处理：声明初始化、赋值右侧、实参、独立语句
+  // 全都经过 rhsToJs，await 不再只认声明那一种位置（原来 `_x = await f()`
+  // 会整条丢掉）。
+  if (e is AwaitExpression) {
+    final v = _awaitInnerJs(e.expression, scope, classes);
+    return v == null ? null : 'await $v';
+  }
   final lit = literalToJs(e);
   if (lit != null) return lit;
+  // PrefixedIdentifier（`a.b`）不是单纯字段名，交给 exprToJs 的属性分支；
+  // 若走下面的 Identifier 分支会用整串名字查字段而必然失败。
+  if (e is PrefixedIdentifier) return exprToJs(e, scope, classes);
   if (e is Identifier) return scope.fieldRef(e.name);
   if (e is InstanceCreationExpression) return modelCtorToJs(e, scope, classes);
+  // 集合字面量：与 JS 对象/数组一一对应（元素递归翻译）。
+  // 缺了这两条，`Network.post({"name": name})` 这类调用会因「参数翻译不了」
+  // 整体返回 null，调用方再把整条语句丢掉（原来的静默丢代码就出在这里）。
+  if (e is SetOrMapLiteral) return _collectionLiteralJs(e, scope, classes);
+  if (e is ListLiteral) return _listLiteralJs(e.elements, scope, classes);
   return exprToJs(e, scope, classes);
+}
+
+/// `await <expr>` 里的 `<expr>`（不含 await 前缀）。
+/// 特殊形态 `Future.delayed(Duration(...))` → setTimeout Promise——JS 没有
+/// 等价的 Dart 异步延迟 API，只映射这一种；其余 await 走普通表达式翻译。
+String? _awaitInnerJs(
+  Expression inner,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final delay = delayedMsJs(inner);
+  if (delay != null) {
+    return 'new Promise(function(r){ setTimeout(r, $delay); })';
+  }
+  return rhsToJs(inner, scope, classes);
+}
+
+/// `Future.delayed(Duration(seconds: n))` → setTimeout 毫秒数（不是则 null）。
+String? delayedMsJs(Expression e) {
+  if (e is! MethodInvocation || e.methodName.name != 'delayed') return null;
+  final target = e.target;
+  if (target == null || target.toSource() != 'Future') return null;
+  final args = e.argumentList.arguments;
+  if (args.isEmpty) return null;
+  final dur = args.first;
+  String? unit;
+  double? value;
+  if (dur is InstanceCreationExpression &&
+      dur.constructorName.type.name2.lexeme == 'Duration') {
+    for (final a in dur.argumentList.arguments) {
+      if (a is NamedExpression) {
+        final lit = a.expression;
+        if (lit is IntegerLiteral) {
+          if (unit != null) return null; // 多个时间单位不支持
+          unit = a.name.label.name;
+          value = (lit.value ?? 0).toDouble();
+        } else if (lit is DoubleLiteral) {
+          if (unit != null) return null;
+          unit = a.name.label.name;
+          value = lit.value;
+        }
+      }
+    }
+  }
+  if (unit == null || value == null) return null;
+  final ms = switch (unit) {
+    'seconds' => value * 1000,
+    'milliseconds' => value,
+    'microseconds' => value / 1000,
+    'minutes' => value * 60 * 1000,
+    _ => null,
+  };
+  if (ms == null) return null;
+  return ms == ms.roundToDouble() ? '${ms.round()}' : '$ms';
+}
+
+/// `{k: v, ...}` → JS 对象字面量；`{a, b}`（Set）→ `new Set([a, b])`。
+String? _collectionLiteralJs(
+  SetOrMapLiteral e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final entries = e.elements;
+  // 无 resolution 下不依赖 isMap：元素全是 entry 即 Map，否则按 Set 处理。
+  if (entries.every((el) => el is MapLiteralEntry)) {
+    final parts = <String>[];
+    for (final el in entries.whereType<MapLiteralEntry>()) {
+      final k = rhsToJs(el.key, scope, classes);
+      final v = rhsToJs(el.value, scope, classes);
+      if (k == null || v == null) return null;
+      parts.add('$k: $v');
+    }
+    return '{${parts.join(', ')}}';
+  }
+  final items = _listLiteralJs(entries, scope, classes);
+  return items == null ? null : 'new Set($items)';
+}
+
+/// `[a, b]` → JS 数组字面量。展开（`...xs`）与 collection-if/for 不支持。
+String? _listLiteralJs(
+  NodeList<CollectionElement> elements,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final parts = <String>[];
+  for (final el in elements) {
+    if (el is! Expression) return null;
+    final v = rhsToJs(el, scope, classes);
+    if (v == null) return null;
+    parts.add(v);
+  }
+  return '[${parts.join(', ')}]';
 }
 
 /// 模型构造调用 → JS：`new User({name:..., age:...})`。
@@ -373,7 +492,14 @@ String? _logArgJs(
         if (el.value.isNotEmpty) parts.add(jsString(el.value));
       } else if (el is InterpolationExpression) {
         final v = exprToJs(el.expression, scope, classes);
-        if (v != null) parts.add(v);
+        if (v != null) {
+          parts.add(v);
+        } else {
+          // 丢片段会让产物「看着对、其实少东西」（如 `"用户信息:$x"` →
+          // `"用户信息:"`），故必须出声，不能静默。
+          log.warning('[ui_component_generator] 插值片段无法翻译，已在 JS 产物中'
+              '丢失：\${${el.expression.toSource()}}');
+        }
       }
     }
     return parts.isEmpty ? '""' : parts.join(' + ');
@@ -429,6 +555,11 @@ String? methodCallExprJs(
   final passed = argJs.join(', ');
   final target = e.target;
   if (target == null) {
+    // 顶层函数（全局方法）：@HostInjected → `__jsui.host("通道", [args])`。
+    final topChannel = scope.hostMethods['']?[e.methodName.name];
+    if (topChannel != null) {
+      return '__jsui.host(${jsString(topChannel)}, [$passed])';
+    }
     if (!scope.isMethod(e.methodName.name)) return null;
     return 'this.${e.methodName.name}($passed)';
   }
@@ -470,6 +601,11 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
       if (rhs != null) return '$ref ${e.operator.lexeme} $rhs;';
     }
     return null;
+  }
+  // 独立语句 `await <expr>;`：await 的翻译统一在 rhsToJs 里。
+  if (e is AwaitExpression) {
+    final v = rhsToJs(e, scope, classes);
+    return v == null ? null : '$v;';
   }
   if (e is MethodInvocation) return methodCallStmtJs(e, scope, classes);
   return null;

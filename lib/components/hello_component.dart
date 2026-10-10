@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hot/base/account_center.dart';
+import 'package:flutter_hot/base/network.dart';
 import 'dart:io';
 import 'package:ui_component/ui_component.dart';
 import 'package:flutter_hot/model/user.dart';
@@ -46,7 +47,8 @@ class _HelloCardState extends State<HelloCard> {
   // setState 里构造 User（模型）→ new User({name, age})
   Future<void> loadUser() async {
     String? name = await AccountCenter.getUserName();
-    print("用户信息:$name");
+    Map userMap = await Network.post(params: {"name": name});
+    print("用户信息:$userMap");
     await Future.delayed(const Duration(seconds: 1));
     setState(() {
       _user = const User(name: 'Alice', age: 18);

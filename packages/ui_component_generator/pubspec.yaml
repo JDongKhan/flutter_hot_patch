@@ -10,6 +10,8 @@ environment:
 dependencies:
   analyzer: ^7.0.0
   build: ^2.4.1
+  # 扫全包 dart 源（BuildStep.findAssets）需要 Glob
+  glob: ^2.1.2
 
 dev_dependencies:
   lints: ^5.0.0
