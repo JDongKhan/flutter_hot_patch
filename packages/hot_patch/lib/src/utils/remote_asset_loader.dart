@@ -78,13 +78,26 @@ class RemoteAssetLoader {
         }
         final response = await request.close();
 
-        // 2. 304 Not Modified：zip 未变，直接复用本地解压产物。
+        // 2. 304 Not Modified：zip 未变，验证本地缓存完整性后复用。
         if (response.statusCode == HttpStatus.notModified && existing != null) {
-          HotPatchLog.log('remote bundle reused (304): $url -> $existing');
-          return RemoteAssetBundle(existing, root, fresh: false);
+          final entryFile = File('$root/$existing');
+          if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
+            HotPatchLog.log('remote bundle reused (304): $url -> $existing');
+            return RemoteAssetBundle(existing, root, fresh: false);
+          }
+          // 本地缓存损坏（文件丢失/空文件）→  fallthrough 到 200 重新下载。
+          HotPatchLog.log('remote bundle cache corrupted, re-downloading: $url');
         }
         if (response.statusCode != HttpStatus.ok) {
           HotPatchLog.log('remote asset HTTP ${response.statusCode}: $url');
+          // 非 200 且本地有旧缓存 → 降级回退用旧缓存。
+          if (existing != null) {
+            final entryFile = File('$root/$existing');
+            if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
+              HotPatchLog.log('remote asset fallback to cached: $url -> $existing');
+              return RemoteAssetBundle(existing, root, fresh: false);
+            }
+          }
           return null;
         }
 
@@ -102,6 +115,15 @@ class RemoteAssetLoader {
             bytes[0] != 0x50 ||
             bytes[1] != 0x4B) {
           HotPatchLog.log('remote asset is not a zip: $url');
+          // 非 zip 且本地有旧缓存 → 降级回退。
+          final prevExisting = _resolveEntry(root, component, entryPath);
+          if (prevExisting != null) {
+            final entryFile = File('$root/$prevExisting');
+            if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
+              HotPatchLog.log('remote asset fallback to cached (bad zip): $url -> $prevExisting');
+              return RemoteAssetBundle(prevExisting, root, fresh: false);
+            }
+          }
           return null;
         }
         final archive = ZipDecoder().decodeBytes(bytes);
@@ -131,6 +153,20 @@ class RemoteAssetLoader {
       }
     } catch (e) {
       HotPatchLog.log('remote asset load failed: $url -> $e');
+      // 网络异常时回退本地旧缓存（如果有且完整）。
+      try {
+        final root = await localRootFor(url);
+        final existing = _resolveEntry(root, null, null);
+        if (existing != null) {
+          final entryFile = File('$root/$existing');
+          if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
+            HotPatchLog.log('remote asset fallback to cached (network error): $url -> $existing');
+            return RemoteAssetBundle(existing, root, fresh: false);
+          }
+        }
+      } catch (_) {
+        // 回退也失败，忽略。
+      }
       return null;
     }
   }

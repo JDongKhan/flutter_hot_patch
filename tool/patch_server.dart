@@ -67,12 +67,30 @@ Future<void> _handle(HttpRequest request) async {
       await request.response.close();
       return;
     }
+    final modified = file.statSync().modified;
+    // 304 协商：客户端带 If-Modified-Since 且文件未变 → 返回 304，不发 body。
+    // 注意：① 文件 mtime 精确到毫秒，请求头精确到秒——截断到秒再对比；
+    // ② 文件 mtime 是本地时区，HttpDate.parse 是 UTC——统一转 UTC 再对比。
+    final ifModifiedSince = request.headers.value(HttpHeaders.ifModifiedSinceHeader);
+    if (ifModifiedSince != null) {
+      final since = HttpDate.parse(ifModifiedSince).toUtc();
+      final modUtc = modified.toUtc();
+      final modifiedSec = DateTime.utc(
+        modUtc.year, modUtc.month, modUtc.day,
+        modUtc.hour, modUtc.minute, modUtc.second,
+      );
+      if (!modifiedSec.isAfter(since)) {
+        request.response.statusCode = HttpStatus.notModified;
+        request.response.headers.set('Last-Modified', HttpDate.format(modified));
+        await request.response.close();
+        return;
+      }
+    }
     final ext = rel.contains('.') ? rel.substring(rel.lastIndexOf('.')) : '';
     request.response.headers.contentType = ContentType.parse(
       _mime[ext] ?? 'application/octet-stream',
     );
     // Last-Modified：客户端据此发 If-Modified-Since 做协商缓存。
-    final modified = file.statSync().modified;
     request.response.headers.set('Last-Modified', HttpDate.format(modified));
     // 关主动缓存：改完 js 立即生效；客户端仍可用 Last-Modified 做协商。
     request.response.headers.set('Cache-Control', 'no-cache');

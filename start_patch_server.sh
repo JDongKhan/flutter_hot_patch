@@ -10,8 +10,14 @@ HOST="127.0.0.1"
 PORT="8765"
 
 echo "[start] 杀掉旧 patch_server 进程..."
-# 匹配 dart run tool/patch_server.dart 与直接 dart patch_server.dart 两种形态
-pkill -f "patch_server.dart" 2>/dev/null && echo "[start] 已杀掉旧进程" || echo "[start] 无旧进程"
+# pkill 匹配 dart run 父进程，但 dartvm 子进程命令行不含 patch_server.dart——
+# 用 lsof 直接按端口找 PID 杀，更可靠。
+OLD_PID=$(lsof -ti :$PORT 2>/dev/null || true)
+if [ -n "$OLD_PID" ]; then
+  kill -9 $OLD_PID 2>/dev/null && echo "[start] 已杀掉旧进程 PID=$OLD_PID" || echo "[start] 杀进程失败"
+else
+  echo "[start] 无旧进程"
+fi
 # 等端口释放
 sleep 0.5
 
