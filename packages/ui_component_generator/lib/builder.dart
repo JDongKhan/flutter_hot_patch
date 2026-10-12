@@ -1724,11 +1724,19 @@ String _renderModelJs(
     ..writeln('// 模型模块：由 ui_component_generator 从 $sourcePath 生成')
     ..writeln('// export class / export const 供组件产物 import（运行时按相对路径加载）')
     ..writeln();
+  // 构建 widget 翻译上下文：model 类里如果有 getWidget() 等返回 Widget 的方法，
+  // 方法体里的 return Container(...) 走 widget 树翻译路径。
+  final widgetCtx = WidgetTranslateContext(
+    registry: registry,
+    propByField: const {},
+    actionByMethod: const {},
+    sourcePath: sourcePath,
+  );
   for (final m in models) {
     b
       ..writeln('// 模型 ${m.name}')
       ..writeln(renderClassDecl(m, const {}, exported: true,
-          hostMethods: hostMethods));
+          hostMethods: hostMethods, widgetCtx: widgetCtx));
   }
   if (singletons.isNotEmpty) {
     final ctx = WidgetTranslateContext(

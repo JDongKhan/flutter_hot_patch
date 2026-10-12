@@ -759,11 +759,15 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
 // ---------------------------------------------------------------------------
 
 /// 翻译一个模型/状态类的方法体 → JS（字段表 = 类自身实例字段）。
+///
+/// [widgetCtx]：可选的 widget 翻译上下文。传入后，`return Container(...)`
+/// 这类返回 Widget 的表达式走 widget 树翻译路径。
 String translateClassMethodBody(
   ClassInfo info,
   ClassMethod m,
   Map<String, ClassInfo> classes, {
   Map<String, Map<String, String>> hostMethods = const {},
+  Object? widgetCtx,
 }) {
   final scope = FieldScope(
     instanceFields: info.instanceFieldNames,
@@ -777,8 +781,14 @@ String translateClassMethodBody(
   final stmts = <String>[];
   final body = m.body;
   if (body is ExpressionFunctionBody) {
-    final t = exprStmtToJs(body.expression, scope, classes);
-    if (t != null) stmts.add(t);
+    // 箭头函数体：`Widget getWidget() => Container(...)` → return Container(...)
+    final e = body.expression;
+    String? t;
+    if (widgetCtx != null && e is InstanceCreationExpression) {
+      t = _widgetExprToJs(widgetCtx, e);
+    }
+    t ??= exprStmtToJs(e, scope, classes);
+    if (t != null) stmts.add('return $t;');
   } else if (body is BlockFunctionBody) {
     for (final s in body.block.statements) {
       if (s is ExpressionStatement) {
@@ -790,7 +800,16 @@ String translateClassMethodBody(
         // `return "22";` 是 ReturnStatement（不是 ExpressionStatement），
         // 需单独翻译为 `return <expr>;`，否则 async 方法体被整体丢弃。
         final e = s.expression;
-        final v = e == null ? null : rhsToJs(e, scope, classes);
+        if (e == null) {
+          stmts.add('return;');
+          continue;
+        }
+        // 返回 Widget 构造表达式 → 走 widget 树翻译路径（model 的 getWidget() 等）。
+        String? v;
+        if (widgetCtx != null && e is InstanceCreationExpression) {
+          v = _widgetExprToJs(widgetCtx, e);
+        }
+        v ??= rhsToJs(e, scope, classes);
         if (v != null) stmts.add('return $v;');
       } else if (s is VariableDeclarationStatement) {
         // `dynamic data = await Network.post(...);` → `var data = await ...;`
@@ -815,6 +834,19 @@ String translateClassMethodBody(
   return stmts.isEmpty ? '/* 空方法体 */' : stmts.join(' ');
 }
 
+/// 把一个 Widget 构造表达式（如 `Container(...)`）通过 WidgetTranslateContext
+/// 翻译成 JS 构造调用字符串。失败返回 null（回退到普通表达式翻译）。
+String? _widgetExprToJs(Object widgetCtx, Expression e) {
+  try {
+    // WidgetTranslateContext.translate(Expression) → JSON Map / String
+    final json = (widgetCtx as dynamic).translate(e);
+    // renderJs(Object?, int depth) → JS 字符串
+    return (widgetCtx as dynamic).renderJs(json, 0) as String?;
+  } catch (_) {
+    return null;
+  }
+}
+
 /// getter 表达式体 → JS 返回值表达式（`int get n => _n` → `this._n`）。
 String? _getterReturnJs(ClassInfo info, ClassMethod m) {
   Expression? e;
@@ -835,11 +867,16 @@ String? _getterReturnJs(ClassInfo info, ClassMethod m) {
 }
 
 /// 类声明 → JS（export 可选）。含 constructor / 方法 / getter / extends NotifierBase。
+///
+/// [widgetCtx]：可选的 widget 翻译上下文。传入后，方法体里返回 Widget
+/// 构造表达式（如 `return Container(...)`）会走 widget 树翻译路径，
+/// 而不是被当作普通方法调用丢弃。model 类里的 `getWidget()` 方法也能用。
 String renderClassDecl(
   ClassInfo info,
   Map<String, ClassInfo> classes, {
   bool exported = false,
   Map<String, Map<String, String>> hostMethods = const {},
+  Object? widgetCtx,
 }) {
   final b = StringBuffer();
   b.write(exported ? 'export class ' : 'class ');
@@ -875,8 +912,8 @@ String renderClassDecl(
       b.write('  get ${m.name}() { return ${_getterReturnJs(info, m)}; }\n');
     } else {
       final fn = m.isAsync ? 'async ' : '';
-      final body =
-          translateClassMethodBody(info, m, classes, hostMethods: hostMethods);
+      final body = translateClassMethodBody(info, m, classes,
+          hostMethods: hostMethods, widgetCtx: widgetCtx);
       b.write('  $fn${m.name}(${m.params.join(', ')}) { $body }\n');
     }
   }
