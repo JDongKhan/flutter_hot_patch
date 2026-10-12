@@ -390,11 +390,21 @@ $out
   final Set<String> _loadingModules = {};
 
   /// 清除所有已加载模块缓存（远程 zip 更新后调用，强制下次重新 evaluate）。
-  /// 注意：不卸载 JS 侧已 mount 的组件——只让 loadModule 重新执行模块代码。
+  /// 同时清空 JS 侧 `__modules` 表——依赖模块（flutter.js / provider.js 等）
+  /// 下次也会重新加载，避免拿到旧类引用。
   void invalidateModules() {
     _loadedModules.clear();
     _loadingModules.clear();
     _loadingCompleters.clear();
+    // 清空 JS 侧模块注册表：下次 import 解构时 __modules['path'] 为空，
+    // loadModule 会重新执行该模块代码并重新注册。
+    _eval('''
+      (function() {
+        if (typeof __modules === 'object' && __modules) {
+          for (var k in Object.keys(__modules)) { delete __modules[k]; }
+        }
+      })();
+    ''', 'invalidateModules');
   }
   /// 并发加载等待表：同 jsAsset 正在加载时，后续调用者 await 对应
   /// Completer，等首个加载完成后再继续（防 mount 在模块加载前执行）。
