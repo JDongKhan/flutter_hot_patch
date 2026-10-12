@@ -11,11 +11,21 @@ export class CounterVm extends ChangeNotifier {
     this._count = 0;
   }
   get count() { return this._count; }
-  async inc() { this._count += 1; this.notifyListeners(); }
-  reset() { this._count = 0; this.notifyListeners(); }
-  async getUserName() { return "22"; }
-  buildText() { return __h('Text', {
-    "data": "test 2"
-  }); }
+  async inc() {
+    this._count += 1;
+    this.notifyListeners();
+  }
+  reset() {
+    this._count = 0;
+    this.notifyListeners();
+  }
+  async getUserName() {
+    return "22";
+  }
+  buildText() {
+    return __h('Text', {
+        "data": "test 2"
+      });
+  }
 }
 

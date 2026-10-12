@@ -43,32 +43,56 @@ class ClassField {
 
 /// 类的实例方法 / getter。
 ///
-/// 方法体二选一：普通类给 [body]（AST，渲染期翻译）；组件路径给预渲染好的
-/// [bodyJs] JS 语句串（组件动作体已由组件翻译器完成）。
+/// **方法体翻译只有一条路径**：所有方法体都由 [translateClassMethodBody]
+/// → [translateMethodBody] 翻译，方法体里 `return Text(...)` 这类「返回 widget」
+/// 的表达式一律走 widget 层渲染——build 与其它返回 widget 的方法没有任何区别
+/// （不存在「是不是 build」的判断）。
+///
+/// [bodyJs] 只是同一份翻译的**缓存**：组件类在生成期（需要先遍历一次以发现
+/// 依赖类）就把方法体译好存下，渲染期直接用；普通类给 [body] 由渲染期翻译。
+/// 两者形状一致、来自同一个翻译器。
 class ClassMethod {
   final String name;
   final List<String> params; // 形参名（JS 一比一）
   final bool isAsync;
   final bool isGetter;
+
+  /// 返回类型为 void：箭头体会被译为语句（不加 `return`）。
+  final bool isVoid;
+
+  /// 返回值是否为 widget：`return Text(...)` 只有在此为真时才走 widget 树
+  /// 渲染路径。普通类里返回模型的方法（`User makeUser() => User(...)`）返回
+  /// 的是数据而非 widget，按普通表达式翻译，不会被误判成组件占位节点。
+  final bool returnsWidget;
   final FunctionBody? body;
   final String? bodyJs; // 预渲染方法体（非 null 时优先于 body）
+
+  /// 方法体是「宿主通道」形式（如 SnackBar → `nativeToast`）：整体译为
+  /// `__jsui.host("通道名", {...})`，[nativeMessage] 是已译好的消息 JS 表达式。
+  final String? nativeChannel;
+  final String? nativeMessage;
   const ClassMethod({
     required this.name,
     required this.params,
     this.isAsync = false,
     this.isGetter = false,
+    this.isVoid = false,
+    this.returnsWidget = true,
     this.body,
     this.bodyJs,
+    this.nativeChannel,
+    this.nativeMessage,
   });
 }
 
 /// 一个 Dart 类翻译成 JS 后的中立描述（按「声明」建模，不看用途）。
 ///
-/// 同一份模型承载两条来源：普通类（字段/方法给 AST，渲染期翻译）与组件
-/// （字段/方法给预渲染 JS，另带 build 树等数据）。**渲染不分叉**——两者都由
-/// [renderClassDecl] 输出同一形状的 JS class（`export class X`，类名 = Dart
-/// 类名，无工厂）；组件只是额外带 [tree]/[builders] 这些 build 树输入，
-/// 渲染器按「tree 是否为空」数据驱动地决定是否输出 build()。
+/// 组件（@UIComponent）与普通类都是 Dart 类，用**完全相同**的模型描述：
+/// 字段、方法（方法体翻译唯一走 [translateClassMethodBody]）、构造参数。
+/// 组件只是额外带两项数据：
+///   1. [builders]/[builderNames]/… —— 响应式 builder 闭包子方法（翻译过程中
+///      由 widget 层收集，渲染成 `_lbBuilderN` 实例方法）；
+///   2. [isComponent] —— 仅用于产物注释标注。
 class ClassInfo {
   final String name;
   final String sourceFile; // dart 源文件路径（用于推导 import/相对产物）
@@ -78,17 +102,28 @@ class ClassInfo {
   final List<ClassMethod> methods; // 含 getter
   final Set<String> ctorParams; // this.x 构造形参名
 
-  /// build() 的 JS 树（节点 Map 或 JS 表达式字符串）；非 null → 渲染 build()。
-  final Object? tree;
+  /// 是否为 @UIComponent 组件（仅用于产物注释标注，不参与结构分叉）。
+  final bool isComponent;
 
-  /// 响应式 builder 闭包子树（ListenableBuilder/Consumer）。
+  /// 响应式 builder 闭包子方法（ListenableBuilder/Consumer）。
   final List<Object?> builders;
   final List<String> builderNames;
   final List<String?> builderParams;
   final List<String> builderPreludes;
 
-  /// build() return 前的局部变量声明（JS 语句串）。
-  final List<String> localDecls;
+  // --- 翻译期发现的依赖信息（组件/普通类同一份模型，builder 据此递归、import）---
+
+  /// 翻译本类时引用到的其它类/组件名：字段类型 + 方法体里构造调用 + 嵌套组件。
+  /// builder 据此**递归翻译**依赖组件，并按 [sourceFile] 决定同文件内联还是
+  /// 跨文件 import。依赖发现与「类 → JS」是同一次翻译的产物（不在 builder 里另起一套）。
+  final Set<String> dependencies;
+
+  /// 本类实际用到的 widget 类型（package → {type}）：据「只转换用到的」按 package
+  /// 产出 JS widget 模块。
+  final Map<String, Set<String>> usedWidgetPackages;
+
+  /// 方法体里是否用到结点工厂 `__h`（决定产物是否 import `__h`）。
+  final bool usedNodeHelper;
 
   const ClassInfo({
     required this.name,
@@ -98,12 +133,14 @@ class ClassInfo {
     required this.staticFields,
     required this.methods,
     this.ctorParams = const {},
-    this.tree,
+    this.isComponent = false,
     this.builders = const [],
     this.builderNames = const [],
     this.builderParams = const [],
     this.builderPreludes = const [],
-    this.localDecls = const [],
+    this.dependencies = const {},
+    this.usedWidgetPackages = const {},
+    this.usedNodeHelper = false,
   });
 
   bool get isStaticOnly => instanceFields.isEmpty && methods.isEmpty;
@@ -126,7 +163,7 @@ List<String> jsMethodParams(MethodDeclaration m) {
     final name = inner.name?.lexeme;
     if (name == null || name.isEmpty) continue;
     if (inner is SimpleFormalParameter &&
-        _noJsParamTypes.contains(_eraseGeneric(inner.type?.toSource()))) {
+        _noJsParamTypes.contains(eraseType(inner.type?.toSource()))) {
       continue;
     }
     out.add(name);
@@ -137,8 +174,24 @@ List<String> jsMethodParams(MethodDeclaration m) {
 /// JS 侧无对应物、需从方法签名中剔除的形参类型。
 const Set<String> _noJsParamTypes = {'BuildContext'};
 
+/// 方法是否 `void`：返回类型为 `void`（箭头体译为语句，不产生 `return`）。
+bool isVoidReturn(MethodDeclaration m) {
+  final t = m.returnType?.toSource().trim();
+  return t == 'void';
+}
+
+/// 方法返回值是否为 widget：显式返回类型里出现 `Widget`（`Widget` / `Widget?` /
+/// `Future<Widget>` / `XxxWidget`）即视为 widget 方法，`return Text(...)` 走
+/// widget 树渲染；返回模型等数据类型的普通方法（`User makeUser()`）按普通表达
+/// 式翻译，不会被误判成组件占位节点。无显式返回类型时按 widget 处理（保守）。
+bool returnsWidgetOf(MethodDeclaration m) {
+  final t = m.returnType?.toSource().trim() ?? '';
+  if (t.isEmpty) return true;
+  return t.contains('Widget');
+}
+
 /// 去掉可空 / 泛型后缀：`BuildContext?` → `BuildContext`、`List<T>` → `List`。
-String _eraseGeneric(String? type) {
+String eraseType(String? type) {
   var t = (type ?? '').trim();
   if (t.endsWith('?')) t = t.substring(0, t.length - 1);
   final lt = t.indexOf('<');
@@ -146,76 +199,15 @@ String _eraseGeneric(String? type) {
   return t;
 }
 
-/// 提取 ClassDeclaration → ClassInfo（统一入口）。
-///
-/// getter/setter 只保留 getter；static 方法不翻译（Dart static 方法无 JS
-/// 等价物，通常业务不用）；构造收集 this.x 形参名。
-ClassInfo classInfoOf(ClassDeclaration decl, String sourceFile) {
-  final instanceFields = <ClassField>[];
-  final staticFields = <ClassField>[];
-  final methods = <ClassMethod>[];
-  final ctorParams = <String>{};
-
-  // 构造器 this.x 形参（DefaultFormalParameter 解包）
-  for (final m in decl.members) {
-    if (m is ConstructorDeclaration) {
-      for (final p in m.parameters.parameters) {
-        final inner = p is DefaultFormalParameter ? p.parameter : p;
-        if (inner is FieldFormalParameter) ctorParams.add(inner.name.lexeme);
-      }
-    }
-  }
-
-  for (final m in decl.members) {
-    if (m is FieldDeclaration) {
-      final typeName = m.fields.type?.toSource() ?? 'dynamic';
-      for (final v in m.fields.variables) {
-        final f = ClassField(
-          name: v.name.lexeme,
-          typeName: typeName,
-          initializer: v.initializer,
-          isStatic: m.isStatic,
-        );
-        if (m.isStatic) {
-          staticFields.add(f);
-        } else {
-          instanceFields.add(f);
-        }
-      }
-    } else if (m is MethodDeclaration) {
-      if (m.isGetter) {
-        methods.add(ClassMethod(
-          name: m.name.lexeme,
-          params: const [],
-          isGetter: true,
-          body: m.body,
-        ));
-      } else if (m.isSetter || m.isStatic) {
-        // static 方法 / setter：暂不翻译
-      } else {
-        methods.add(ClassMethod(
-          name: m.name.lexeme,
-          params: jsMethodParams(m),
-          isAsync: m.body.isAsynchronous,
-          body: m.body,
-        ));
-      }
-    }
-  }
-
-  String? superType;
-  final ext = decl.extendsClause;
-  if (ext != null) superType = ext.superclass.toSource();
-
-  return ClassInfo(
-    name: decl.name.lexeme,
-    sourceFile: sourceFile,
-    superType: superType,
-    instanceFields: instanceFields,
-    staticFields: staticFields,
-    methods: methods,
-    ctorParams: ctorParams,
-  );
+/// 基础类型（可翻译为 JS 初始值）：int/double/num/String/bool/dynamic。
+/// 类发现与字段收集共用这一处——新增「基础类型」只改这里。
+bool isBasicType(String typeName) {
+  final t = typeName.trim();
+  if (t.endsWith('?')) return isBasicType(t.substring(0, t.length - 1));
+  return switch (t) {
+    'int' || 'double' || 'num' || 'String' || 'bool' || 'dynamic' => true,
+    _ => false,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -919,34 +911,43 @@ String translateMethodBody(
   Map<String, ClassInfo> classes, {
   WidgetExprRenderer? widgetCtx,
   bool returnExpressionBody = false,
+  bool returnsWidget = true,
+  int depth = 2,
 }) {
   final out = <String>[];
+  final ind = '  ' * depth;
   if (body is ExpressionFunctionBody) {
     final e = body.expression;
     String? t;
-    if (widgetCtx != null && _isWidgetCtorExpr(e)) {
-      t = _widgetExprToJs(widgetCtx, e);
+    if (widgetCtx != null && returnsWidget && _isWidgetCtorExpr(e)) {
+      t = _widgetExprToJs(widgetCtx, e, depth);
     }
     t ??= _bodyExprStmtJs(e, scope, classes);
-    if (t != null) out.add(returnExpressionBody ? 'return $t;' : t);
+    if (t != null) out.add('$ind${returnExpressionBody ? 'return $t;' : t}');
   } else if (body is BlockFunctionBody) {
-    final r = translateStmtList(body.block.statements, scope, classes, widgetCtx);
+    final r = translateStmtList(body.block.statements, scope, classes, widgetCtx,
+        depth: depth, returnsWidget: returnsWidget);
     if (r.isNotEmpty) out.add(r);
   }
-  return out.isEmpty ? '' : out.join(' ');
+  return out.isEmpty ? '' : out.join('\n');
 }
 
 /// 语句列表 → JS（方法体块、if 分支体共用同一套循环）。
 ///
 /// 支持：表达式语句（super 调用忽略、setState 展开）、变量声明、return、
 /// if/else。无法翻译的语句出声告警（不静默丢代码）。
+///
+/// 输出为**多行可读**格式：每条语句一行、按 [depth] 缩进（2 空格/层）。
 String translateStmtList(
   List<Statement> stmts,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-  WidgetExprRenderer? widgetCtx,
-) {
+  WidgetExprRenderer? widgetCtx, {
+  int depth = 0,
+  bool returnsWidget = true,
+}) {
   final out = <String>[];
+  final ind = '  ' * depth;
   for (final s in stmts) {
     if (s is ExpressionStatement) {
       final e = s.expression;
@@ -954,7 +955,7 @@ String translateStmtList(
       if (e is MethodInvocation && e.target is SuperExpression) continue;
       final t = _bodyExprStmtJs(e, scope, classes);
       if (t != null) {
-        out.add(t);
+        out.add('$ind$t');
       } else {
         log.warning('[ui_component_generator] 语句无法翻译，已在 JS 产物中'
             '丢弃：${e.toSource()}');
@@ -964,8 +965,11 @@ String translateStmtList(
       // 名字登记进 scope，后续语句（含插值）可直接引用。
       for (final v in s.variables.variables) {
         final name = v.name.lexeme;
+        // 同步登记到 widget 层：方法体里随后 `return Text('$name')` 时，
+        // widget 翻译器要用同一份局部变量表解析标识符（与语句翻译同源）。
+        widgetCtx?.registerLocal(name);
         if (v.initializer == null) {
-          out.add('var $name;');
+          out.add('${ind}var $name;');
           scope.localVars.add(name);
           continue;
         }
@@ -976,7 +980,7 @@ String translateStmtList(
               '产物中丢弃：${s.toSource()}');
           continue;
         }
-        out.add('var $name = $init;');
+        out.add('${ind}var $name = $init;');
         scope.localVars.add(name);
       }
     } else if (s is ReturnStatement) {
@@ -984,15 +988,20 @@ String translateStmtList(
       // 需单独翻译为 `return <expr>;`，否则 async 方法体被整体丢弃。
       final e = s.expression;
       if (e == null) {
-        out.add('return;');
+        out.add('${ind}return;');
         continue;
       }
       String? v;
-      if (widgetCtx != null && _isWidgetCtorExpr(e)) {
-        v = _widgetExprToJs(widgetCtx, e);
+      if (widgetCtx != null && returnsWidget && _isWidgetCtorExpr(e)) {
+        v = _widgetExprToJs(widgetCtx, e, depth);
       }
       v ??= rhsToJs(e, scope, classes);
-      if (v != null) out.add('return $v;');
+      if (v != null) {
+        out.add('${ind}return $v;');
+      } else {
+        log.warning('[ui_component_generator] return 表达式无法翻译，已在 JS '
+            '产物中丢弃：${s.toSource()}');
+      }
     } else if (s is IfStatement) {
       final condJs = exprToJs(s.expression, scope, classes);
       if (condJs == null) {
@@ -1002,18 +1011,20 @@ String translateStmtList(
       }
       final thenStmts =
           s.thenStatement is Block ? (s.thenStatement as Block).statements : [s.thenStatement];
-      var js =
-          'if ($condJs) { ${translateStmtList(thenStmts, scope, classes, widgetCtx)} }';
+      var js = '$ind' 'if ($condJs) {\n'
+          '${translateStmtList(thenStmts, scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+          '$ind}';
       final els = s.elseStatement;
       if (els != null) {
         final elseStmts = els is Block ? els.statements : [els];
-        js +=
-            ' else { ${translateStmtList(elseStmts, scope, classes, widgetCtx)} }';
+        js += ' else {\n'
+            '${translateStmtList(elseStmts, scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+            '$ind}';
       }
       out.add(js);
     }
   }
-  return out.join(' ');
+  return out.join('\n');
 }
 
 /// 一条表达式语句 → JS：`setState(...)` 展开为 `this.setState(function(){...})`，
@@ -1047,21 +1058,33 @@ String _setStateJs(
   } else if (body is BlockFunctionBody) {
     inner = translateStmtList(body.block.statements, scope, classes, null);
   }
+  // 回调体保持内联（`function(){ ... }`），把多行折回单行。
+  inner = inner.replaceAll('\n', ' ');
   return inner.isEmpty
       ? 'this.setState(function(){});'
       : 'this.setState(function(){ $inner });';
 }
 
-/// 翻译一个模型/状态类的方法体 → JS（字段表 = 类自身实例字段）。
+/// 翻译一个类的方法体 → JS。**组件与普通类共用这一条**：字段表 = 类自身实例
+/// 字段，返回 widget 的表达式走 widget 层渲染（与 build 无差别）。
 ///
-/// 只是为统一翻译器 [translateMethodBody] 组装模型侧作用域；组件动作侧同理。
+/// [ClassMethod.nativeChannel] 非空（如 SnackBar → `nativeToast`）时整体译为
+/// 宿主通道调用，不再走普通语句翻译。
 String translateClassMethodBody(
   ClassInfo info,
   ClassMethod m,
   Map<String, ClassInfo> classes, {
   Map<String, Map<String, String>> hostMethods = const {},
   WidgetExprRenderer? widgetCtx,
+  int depth = 2,
 }) {
+  final ind = '  ' * depth;
+  final channel = m.nativeChannel;
+  if (channel != null) {
+    return '$ind'
+        '__jsui.host(${jsString(channel)}, '
+        '{ message: ${m.nativeMessage ?? '""'} });';
+  }
   final scope = FieldScope(
     instanceFields: info.instanceFieldNames,
     params: m.params.toSet(),
@@ -1076,7 +1099,9 @@ String translateClassMethodBody(
     scope,
     classes,
     widgetCtx: widgetCtx,
-    returnExpressionBody: true,
+    returnExpressionBody: !m.isVoid,
+    returnsWidget: m.returnsWidget,
+    depth: depth,
   );
 }
 
@@ -1092,11 +1117,13 @@ bool _isWidgetCtorExpr(Expression e) =>
 /// 把一个 Widget 构造表达式（如 `Container(...)`）通过 [WidgetExprRenderer]
 /// （widget2js 层的 WidgetTranslateContext）翻译成 JS 构造调用字符串。
 /// 失败返回 null（回退到普通表达式翻译），并出声告警（不静默丢代码）。
-String? _widgetExprToJs(WidgetExprRenderer? widgetCtx, Expression e) {
+///
+/// [depth]：该表达式所在语句的缩进深度，widget 树的子节点按此对齐缩进。
+String? _widgetExprToJs(WidgetExprRenderer? widgetCtx, Expression e, int depth) {
   if (widgetCtx == null) return null;
   try {
     // translate(Expression) → JSON Map / String；renderJs(json, depth) → JS
-    return widgetCtx.renderJs(widgetCtx.translate(e), 0);
+    return widgetCtx.renderJs(widgetCtx.translate(e), depth);
   } catch (err) {
     log.warning('[ui_component_generator] widget 表达式无法翻译，已在 JS 产物中'
         '丢弃：${e.toSource()}（$err）');
@@ -1144,4 +1171,9 @@ abstract class WidgetExprRenderer {
 
   /// 中立描述 → JS 源码（构造调用树）。
   String renderJs(Object? node, int depth);
+
+  /// 方法体内声明的局部变量（`final isAdult = ...;`）→ 登记进 widget 层局部表。
+  /// 方法体翻译与 widget 渲染必须共用同一份标识符作用域，否则返回的 widget
+  /// 树里引用局部变量时会解析失败。
+  void registerLocal(String name);
 }

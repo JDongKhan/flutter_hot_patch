@@ -10,7 +10,9 @@ export class TextDetail {
   constructor() {
     this._count = 0;
   }
-  bump() { this.setState(function(){ this._count += 1; }); }
+  bump() {
+    this.setState(function(){ this._count += 1; });
+  }
   build() {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
@@ -89,7 +91,9 @@ export class ButtonDetail {
   constructor() {
     this._pressed = 0;
   }
-  onTap() { this.setState(function(){ this._pressed += 1; }); }
+  onTap() {
+    this.setState(function(){ this._pressed += 1; });
+  }
   build() {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
@@ -749,10 +753,19 @@ export class ScrollDetail {
     this._ctrlOffset = 0;
     this._scrollController = new ScrollController();
   }
-  initState() { this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); }); }
-  dispose() { this._scrollController.dispose(); }
-  _onListScroll(n) { this.setState(function(){ this._offset = n.metrics.pixels; }); return false; }
-  _scrollToEnd() { this._scrollController.jumpTo(this._scrollController.position.maxScrollExtent); }
+  initState() {
+    this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); });
+  }
+  dispose() {
+    this._scrollController.dispose();
+  }
+  _onListScroll(n) {
+    this.setState(function(){ this._offset = n.metrics.pixels; });
+    return false;
+  }
+  _scrollToEnd() {
+    this._scrollController.jumpTo(this._scrollController.position.maxScrollExtent);
+  }
   build() {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
@@ -851,9 +864,15 @@ export class SliverDetail {
     this._controller = new ScrollController();
     this._offset = 0;
   }
-  initState() { this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); }); }
-  dispose() { this._controller.dispose(); }
-  _scrollToEnd() { this._controller.jumpTo(this._controller.position.maxScrollExtent); }
+  initState() {
+    this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
+  }
+  dispose() {
+    this._controller.dispose();
+  }
+  _scrollToEnd() {
+    this._controller.jumpTo(this._controller.position.maxScrollExtent);
+  }
   build() {
     return __h('Scaffold', {
         "body": __h('CustomScrollView', {
@@ -1085,9 +1104,15 @@ export class GridDetail {
     this._controller = new ScrollController();
     this._offset = 0;
   }
-  initState() { this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); }); }
-  dispose() { this._controller.dispose(); }
-  _jumpBottom() { this._controller.jumpTo(this._controller.position.maxScrollExtent); }
+  initState() {
+    this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
+  }
+  dispose() {
+    this._controller.dispose();
+  }
+  _jumpBottom() {
+    this._controller.jumpTo(this._controller.position.maxScrollExtent);
+  }
   build() {
     return __h('Scaffold', {
         "appBar": __h('AppBar', {
@@ -1229,8 +1254,11 @@ export class ScaffoldDetail {
   constructor() {
     this._navIndex = 0;
   }
-  _onNavTap(index) { this.setState(function(){ this._navIndex = index; }); }
-  _onFab() {  }
+  _onNavTap(index) {
+    this.setState(function(){ this._navIndex = index; });
+  }
+  _onFab() {
+  }
   build() {
     return __h('Scaffold', {
         "appBar": __h('AppBar', {
@@ -1326,14 +1354,32 @@ export class InputDetail {
     this._checked = false;
     this._slider = 0.4;
   }
-  initState() { this._controller.addListener((...args) => this._onControllerChanged(...args)); }
-  _onControllerChanged() { if (!this.__unmounted) { this.setState(function(){ this._text = this._controller.text; }); } }
-  _onTextChanged(v) { this.setState(function(){ this._text = v; }); }
-  _onChoiceChanged(v) { this.setState(function(){ this._choice = v; }); }
-  _onDropdownChanged(v) { this.setState(function(){ this._dropdown = v; }); }
-  _onSwitchChanged(v) { this.setState(function(){ this._switchOn = (v ?? false); }); }
-  _onCheckChanged(v) { this.setState(function(){ this._checked = v; }); }
-  _onSliderChanged(v) { this.setState(function(){ this._slider = v; }); }
+  initState() {
+    this._controller.addListener((...args) => this._onControllerChanged(...args));
+  }
+  _onControllerChanged() {
+    if (!this.__unmounted) {
+      this.setState(function(){ this._text = this._controller.text; });
+    }
+  }
+  _onTextChanged(v) {
+    this.setState(function(){ this._text = v; });
+  }
+  _onChoiceChanged(v) {
+    this.setState(function(){ this._choice = v; });
+  }
+  _onDropdownChanged(v) {
+    this.setState(function(){ this._dropdown = v; });
+  }
+  _onSwitchChanged(v) {
+    this.setState(function(){ this._switchOn = (v ?? false); });
+  }
+  _onCheckChanged(v) {
+    this.setState(function(){ this._checked = v; });
+  }
+  _onSliderChanged(v) {
+    this.setState(function(){ this._slider = v; });
+  }
   build() {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
@@ -1575,9 +1621,12 @@ export class NotifierCard {
   constructor() {
     this._model = new CounterVm({});
   }
-  _inc() { this._model.inc(); }
-  _reset() { this._model.reset(); }
-  dispose() { this._model.dispose(); }
+  _inc() {
+    this._model.inc();
+  }
+  _reset() {
+    this._model.reset();
+  }
   build() {
     return __h('Card', {}, [
         __h('Padding', {
@@ -1618,6 +1667,9 @@ export class NotifierCard {
               ])
           ])
       ]);
+  }
+  dispose() {
+    this._model.dispose();
   }
   _lbBuilder0() {
       return __h('Text', {

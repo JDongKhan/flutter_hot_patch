@@ -19,10 +19,23 @@ export class HelloCard {
     this._count = 0;
     this._user = null;
   }
-  inc() { console.debug("inc: count=" + this._count); this.setState(function(){ this._count += 1; }); }
-  async loadUser() { var name = await __jsui.host("getUserName", []); var userMap = await __jsui.host("post", {"params": {"name": name}}); console.log("用户信息:" + userMap["code"]); await new Promise(function(r){ setTimeout(r, 1000); }); this.setState(function(){ this._user = new User({name: "Alice", age: 18}); }); }
-  reset() { this.setState(function(){ this._count = 0; }); }
-  showNative() { __jsui.host("nativeToast", { message: "Hello from native (JS-driven)" }); }
+  inc() {
+    console.debug("inc: count=" + this._count);
+    this.setState(function(){ this._count += 1; });
+  }
+  async loadUser() {
+    var name = await __jsui.host("getUserName", []);
+    var userMap = await __jsui.host("post", {"params": {"name": name}});
+    console.log("用户信息:" + userMap["code"]);
+    await new Promise(function(r){ setTimeout(r, 1000); });
+    this.setState(function(){ this._user = new User({name: "Alice", age: 18}); });
+  }
+  reset() {
+    this.setState(function(){ this._count = 0; });
+  }
+  showNative() {
+    __jsui.host("nativeToast", { message: "Hello from native (JS-driven)" });
+  }
   build() {
     var isAdult = ((this._user != null) && (this._user.age >= 18));
     var debugActive = kDebugMode;

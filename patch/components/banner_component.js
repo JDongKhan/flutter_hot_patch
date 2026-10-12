@@ -10,8 +10,12 @@ export class BannerCard {
   constructor() {
     this._views = 0;
   }
-  initState() { this._views = 5; }
-  bump() { this.setState(function(){ this._views += 1; }); }
+  initState() {
+    this._views = 5;
+  }
+  bump() {
+    this.setState(function(){ this._views += 1; });
+  }
   build() {
     return __h('Column', {}, [
         __h('Text', {

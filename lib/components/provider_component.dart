@@ -49,6 +49,8 @@ class _ProviderCardState extends State<ProviderCard> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _buildText(),
+              _modelA.buildText(),
               const Text('MultiProvider · 两个模型各自局部重建'),
               const SizedBox(height: 8),
               Consumer<NetworkVm>(

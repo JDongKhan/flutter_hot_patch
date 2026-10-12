@@ -10,7 +10,9 @@ export class DashboardCard {
   constructor() {
     this._ticks = 0;
   }
-  tick() { this.setState(function(){ this._ticks += 1; }); }
+  tick() {
+    this.setState(function(){ this._ticks += 1; });
+  }
   build() {
     return __h('Column', {}, [
         __h('Text', {

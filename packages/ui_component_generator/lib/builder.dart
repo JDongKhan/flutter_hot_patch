@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart';
 
 import 'builtin_translators.dart';
@@ -91,7 +90,7 @@ class ComponentBuilder implements Builder {
     //   本文件注解组件 / 本文件私有组件 → 本文件产物（同产物注册）；
     //   本文件无注解非私有组件（如 MyCustomCard）→ null（运行时原生注入）；
     //   跨文件组件 → 从 import directives 推导源文件产物。
-    // （提前于 components 收集构造：_parseComponent 内部翻译 Component
+    // （提前于 components 收集构造：_translateComponentClass 内部翻译 Component
     //   节点时即会调用 importResolver，闭包必须已初始化）
     final parsedNames = <String>{
       for (final d in parsed.unit.declarations)
@@ -143,13 +142,13 @@ class ComponentBuilder implements Builder {
     ];
 
     // 收集本文件内全部 @UIComponent 组件（支持单文件多组件 / 文件内共享普通类）
-    final components = <_Component>[];
+    final components = <ClassInfo>[];
     for (final declaration in parsed.unit.declarations) {
       if (declaration is! ClassDeclaration) continue;
       final uiComponent = _findAnnotation(declaration.metadata, 'UIComponent');
       if (uiComponent == null) continue; // 普通类（共享基类等）直接跳过
 
-      components.add(_parseComponent(
+      components.add(_translateComponentClass(
         declaration,
         parsed.unit,
         _positionalString(uiComponent, 0) ?? declaration.name.lexeme,
@@ -167,7 +166,7 @@ class ComponentBuilder implements Builder {
     // 运行时由业务方注入原生 widget（nativeComponents）或占位。
     final doneDeps = <String>{};
     final depQueue = <String>[
-      for (final c in components) ...c.deps,
+      for (final c in components) ...c.dependencies,
     ];
     while (depQueue.isNotEmpty) {
       final dep = depQueue.removeLast();
@@ -184,12 +183,12 @@ class ComponentBuilder implements Builder {
       final decl = parsed.unit.declarations
           .whereType<ClassDeclaration>()
           .firstWhere((d) => d.name.lexeme == dep);
-      final nested = _parseNestedComponent(
+      final nested = _translateComponentClass(
           decl, parsed.unit, dep, registry, inputId.path, importResolver,
           classIndex: classIndex, singletons: singletons,
           hostMethods: hostMethods);
       components.add(nested);
-      depQueue.addAll(nested.deps);
+      depQueue.addAll(nested.dependencies);
     }
     // ignore: avoid_print - 构建期日志
     print(
@@ -204,11 +203,13 @@ class ComponentBuilder implements Builder {
     final inlineModels = <String, ClassInfo>{};
     final crossModels = <String, ClassInfo>{};
     for (final c in components) {
-      for (final e in c.models.entries) {
-        if (e.value.sourceFile == inputId.path) {
-          inlineModels[e.key] = e.value;
+      for (final name in c.dependencies) {
+        final model = classIndex[name];
+        if (model == null) continue;
+        if (model.sourceFile == inputId.path) {
+          inlineModels[name] = model;
         } else {
-          crossModels[e.key] = e.value;
+          crossModels[name] = model;
         }
       }
     }
@@ -234,7 +235,7 @@ class ComponentBuilder implements Builder {
     // import；null（无 JS 产物的普通组件）走原生注入。
     final importedComponents = <String>{};
     for (final c in components) {
-      for (final dep in c.deps) {
+      for (final dep in c.dependencies) {
         if (importedComponents.contains(dep)) continue;
         final rel = importResolver(dep);
         if (rel == null || rel == ownName) continue;
@@ -254,13 +255,13 @@ class ComponentBuilder implements Builder {
       _renderModuleJs(
         inputId.path,
         registry: registry,
-        exportedClasses: [
-          for (final c in components) _componentToClassInfo(c, inputId.path),
-        ],
+        exportedClasses: components,
         inlineClasses: inlineModels.values.toList(),
         singletons: sameFileSingletonInfos,
+        classes: classIndex,
         dependencyImports: dependencyImports,
         extraUsedWidgets: extraUsedWidgets,
+        extraUsedNodeHelper: components.any((c) => c.usedNodeHelper),
         importResolver: importResolver,
         hostMethods: hostMethods,
       ),
@@ -285,9 +286,10 @@ Future<void> _writeModelProduct(
   Map<String, Map<String, String>> hostMethods,
 ) async {
   // 复用组件路径的「普通类」判定（非私有 / 非抽象 / 非注解 / 无 build()）。
-  // classIndex 还含 import 文件的类，需按 sourceFile 只取本文件声明的类。
+  // 类表还含 import 文件的类（用于依赖解析），需按 sourceFile 只取本文件的类。
+  final index = _buildClassIndex(unit, inputId.path);
   final own = <String, ClassInfo>{
-    for (final e in _buildClassIndex(unit, inputId.path).entries)
+    for (final e in index.entries)
       if (e.value.sourceFile == inputId.path) e.key: e.value,
   };
   // 静态单例类：本文件里「有非私有 static 字段」的普通类（widget 类已被
@@ -302,6 +304,23 @@ Future<void> _writeModelProduct(
       if (!singletonNames.contains(e.key)) e.value,
   ];
   if (models.isEmpty && singletons.isEmpty) return;
+  // 依赖 import：本文件普通类引用到的跨文件类（模型 / 单例）按其产物相对路径
+  // import。依赖由「类 → ClassInfo」层发现（dart2js.referencedClassNames），
+  // 与组件路径同一套规则——普通类也要处理依赖其它类的情况。
+  final ownProduct = _productPath(inputId.path);
+  final dependencyImports = <String>[];
+  final seenDeps = <String>{};
+  for (final cls in [...models, ...singletons]) {
+    for (final dep in cls.dependencies) {
+      final target = index[dep];
+      if (target == null || target.sourceFile == inputId.path) continue;
+      if (!seenDeps.add(dep)) continue;
+      dependencyImports.add(
+        "import { $dep } from "
+        "'${_relativeProduct(ownProduct, _productPath(target.sourceFile))}';",
+      );
+    }
+  }
   await buildStep.writeAsString(
     buildStep.allowedOutputs.first,
     _renderModuleJs(
@@ -309,6 +328,8 @@ Future<void> _writeModelProduct(
       registry: registry,
       exportedClasses: models,
       singletons: singletons,
+      classes: index,
+      dependencyImports: dependencyImports,
       hostMethods: hostMethods,
     ),
   );
@@ -318,64 +339,16 @@ Future<void> _writeModelProduct(
 // 组件模型
 // ---------------------------------------------------------------------------
 
-class _Component {
-  final String name;
-  final List<_Prop> props;
-  final List<_Action> actions;
-  final Object? tree; // 节点树（Map = 节点；String = 根 build 三目/if 的 JS 表达式）
-
-  /// 构造参数（私有嵌套组件）：`this.x = args && args.x !== undefined ? args.x : def`。
-  final List<String> ctorArgs;
-
-  /// build 树里依赖的自定义组件名（Component 兜底收集）。
-  final Set<String> deps;
-
-  /// 组件（含私有嵌套组件）按调用链用到的类（State 字段类型 + 构造调用）。
-  /// 统一由 dart2js 渲染（见 _usedClasses / _buildClassIndex）。
-  final Map<String, ClassInfo> models;
-
-  /// 响应式 builder 闭包（ListenableBuilder/Consumer）抽出的子树
-  /// （译成实例方法，运行时时模型 notify 后重新调用拿最新子树局部重建）。
-  final List<Object?> builders; // 节点或 JS 表达式（三目）
-
-  /// 与 [builders] 同步的方法名（`_lbBuilderN` / `_consumerBuilderN`）。
-  final List<String> builderNames;
-
-  /// 与 [builders] 同步的形参名（null = 无参；Consumer 为 value）。
-  final List<String?> builderParams;
-
-  /// 与 [builderNames] 同步的「方法体前置语句」（Builder 闭包块体里的
-  /// 局部声明/日志 → JS 语句串），产物 builder 方法体内先输出再 return 树。
-  final List<String> builderPreludes;
-
-  /// build() return 前的局部变量声明（`final isAdult = ...;` → `var isAdult = ...;`），
-  /// 产物 build() 方法体内先输出声明再 return 树；树里 Identifier 直接引用。
-  final List<String> localDecls;
-
-  /// 本组件 build 树**实际用到**的 widget 类型（package → {type}）：
-  /// 由渲染期收集，生成器据此按 package 产出 JS widget 模块（只转换用到的，
-  /// 不默认全量）。
-  final Map<String, Set<String>> usedWidgetPackages;
-
-  const _Component(this.name, this.props, this.actions, this.tree,
-      {this.ctorArgs = const [],
-      this.deps = const {},
-      this.models = const {},
-      this.builders = const [],
-      this.builderNames = const [],
-      this.builderParams = const [],
-      this.builderPreludes = const [],
-      this.localDecls = const [],
-      this.usedWidgetPackages = const {}});
-}
-
 /// 统一「类表」：把一个文件（同文件 + 跨文件 import）的全部普通 Dart 类
 /// 收集成 ClassInfo 索引。去 @UIComponent / 私有 / 抽象 / widget 类。
 Map<String, ClassInfo> _buildClassIndex(CompilationUnit unit, String sourcePath) {
-  final out = <String, ClassInfo>{};
+  // 两阶段：先收集「可翻译的类声明」，再据**全量类名表**求每个类的依赖。
+  // 依赖发现统一在 dart2js 的「类 → ClassInfo」层（referencedClassNames），
+  // builder 不再自行计算——组件与普通类共用同一份。
+  final decls = <String, (ClassDeclaration, String)>{};
   void addFile(ClassDeclaration d, String file) {
     final name = d.name.lexeme;
-    if (name.startsWith('_') || out.containsKey(name)) return;
+    if (name.startsWith('_') || decls.containsKey(name)) return;
     if (d.abstractKeyword != null) return;
     if (_findAnnotation(d.metadata, 'UIComponent') != null) return;
     // @HostInjected 类：方法实现留在 Dart，不产出 JS（调用点被翻译为
@@ -387,7 +360,7 @@ Map<String, ClassInfo> _buildClassIndex(CompilationUnit unit, String sourcePath)
         .any((m) => m.name.lexeme == 'build')) {
       return;
     }
-    out[name] = classInfoOf(d, file);
+    decls[name] = (d, file);
   }
 
   for (final d in unit.declarations.whereType<ClassDeclaration>()) {
@@ -401,30 +374,16 @@ Map<String, ClassInfo> _buildClassIndex(CompilationUnit unit, String sourcePath)
       addFile(d, file);
     }
   }
-  return out;
-}
 
-/// 候选类名：State 实例字段类型 + 方法体/build 树构造调用 并集。
-Set<String> _candidateClassNames(
-  ClassDeclaration hostClass,
-  List<MethodDeclaration> methods,
-  MethodDeclaration buildMethod,
-) {
-  final collector = _CtorCollector();
-  for (final m in methods) {
-    m.body.accept(collector);
-  }
-  buildMethod.body.accept(collector);
-  final names = collector.names;
-  for (final member in hostClass.members) {
-    if (member is FieldDeclaration && !member.isStatic) {
-      for (final v in member.fields.variables) {
-        final t = _eraseType(_fieldTypeName(member, v));
-        if (!_isBasicType(t) && t.isNotEmpty) names.add(t);
-      }
-    }
-  }
-  return names;
+  final names = decls.keys.toSet();
+  return {
+    for (final e in decls.entries)
+      e.key: classInfoOf(
+        e.value.$1,
+        e.value.$2,
+        dependencies: referencedClassNames(e.value.$1).intersection(names),
+      ),
+  };
 }
 
 /// 候选类名 ∩ 类表 → 实际使用的类（统一翻译的集合）。
@@ -444,99 +403,18 @@ Map<String, ClassInfo> _usedClasses(
           n: index[n]!,
     };
 
-/// 字段类型：优先显式类型注解；无注解时从初始化器推断
-/// （`final _model = MyModel();` 在无 resolution 解析下 type 为 null，
-/// 会退化成 dynamic 被当基础类型，需从构造名推回 MyModel）。
-String _fieldTypeName(FieldDeclaration member, VariableDeclaration variable) {
-  final t = member.fields.type?.toSource();
-  if (t != null && t.isNotEmpty) return t;
-  final init = variable.initializer;
-  if (init is InstanceCreationExpression) {
-    return init.constructorName.type.name2.lexeme;
-  }
-  if (init is MethodInvocation &&
-      init.target == null &&
-      init.typeArguments == null) {
-    final n = init.methodName.name;
-    if (n.isNotEmpty && n[0] == n[0].toUpperCase()) return n;
-  }
-  return 'dynamic';
-}
-
-/// 去除可空 / 泛型：`User?` → `User`，`List<User>` → `User`。
-String _eraseType(String type) {
-  var t = type.trim();
-  if (t.endsWith('?')) t = t.substring(0, t.length - 1);
-  final lt = t.indexOf('<');
-  if (lt >= 0) t = t.substring(0, lt).trim();
-  return t;
-}
-
-/// 把组件解析模型 [_Component] 映射成统一渲染模型 [ClassInfo]：
-/// 字段（预渲染初始值）+ 动作（预渲染方法体）+ 构造参数 + build 树/builders/
-/// 局部声明。
+/// 翻译一个组件类 → [ClassInfo]（builder 的递归单元）。
 ///
-/// 与普通类同构：**JS 类名 = Dart 类名**（`HelloCard`），元素 type 就是这个类
-/// 本身（`__h(HelloCard, {...})`，运行时 `new` 实例化），共用 [renderClassDecl]
-/// 这一条渲染路径、没有「factory」包装。组件相对普通类**只多两个输入**：
-///   1. [ClassInfo.tree]/builders/localDecls —— widget 语言特有的 build 树；
-///   2. 字段/方法给的是**预渲染 JS**（[ClassField.jsInitial]/[ClassMethod.bodyJs]），
-///      普通类给的是 AST（渲染期翻译）。二者在 [renderClassDecl] 里同形输出。
-ClassInfo _componentToClassInfo(_Component c, String sourcePath) => ClassInfo(
-      name: c.name,
-      sourceFile: sourcePath,
-      instanceFields: [
-        for (final p in c.props)
-          ClassField(name: p.name, typeName: p.type, jsInitial: p.initial),
-      ],
-      staticFields: const [],
-      methods: [
-        for (final a in c.actions)
-          ClassMethod(
-            name: a.name,
-            params: a.params,
-            isAsync: a.isAsync,
-            bodyJs: a.bodyJs,
-          ),
-      ],
-      ctorParams: {for (final p in c.props) if (p.fromArgs) p.name},
-      tree: c.tree,
-      builders: c.builders,
-      builderNames: c.builderNames,
-      builderParams: c.builderParams,
-      builderPreludes: c.builderPreludes,
-      localDecls: c.localDecls,
-    );
-
-class _Prop {
-  final String field; // Dart 字段名，如 _count
-  final String name; // 状态名，如 count
-  final String type; // int / String / bool ...
-  final String initial; // JS 初始值字面量
-  final bool fromArgs; // 由构造参数（args）初始化
-  _Prop(this.field, this.name, this.type, this.initial, {this.fromArgs = false});
-}
-
-class _Action {
-  final String method; // Dart 方法名，如 _inc
-  final String name; // 事件名，如 inc
-  final String? nativeChannel;
-  final String bodyJs;
-  final List<String> params; // 方法形式参数名（JS 一比一透传，如 v）
-
-  /// 方法是 async（`Future<void> load() async {...}`）→ 产物输出
-  /// `async function`（await 只能在 async 函数内使用）。
-  final bool isAsync;
-
-  _Action(this.method, this.name, this.nativeChannel, this.bodyJs,
-      {this.params = const [], this.isAsync = false});
-}
-
-// ---------------------------------------------------------------------------
-// 注解 / 类解析
-// ---------------------------------------------------------------------------
-
-_Component _parseComponent(
+/// **主组件与嵌套组件走同一套逻辑**（不再分两个函数）：定位承载 build 的类
+/// （StatefulWidget → 其 State 类；StatelessWidget → widget 类自身）→ 收集字段
+/// 与方法（**build 也是一个普通方法，不做「是不是 build」的判断**）→ 逐个方法
+/// 交给**唯一**的方法体翻译器 [translateClassMethodBody]。
+///
+/// 方法体里返回 widget 的表达式（`return Text(...)`）在翻译期就经 widget 层
+/// 渲染成 `__h(...)`；[WidgetTranslateContext] 在翻译过程中同时收集依赖组件
+/// （builder 递归翻译用）、用到的普通类、用到的 widget 类型、响应式 builder
+/// 子方法。JS 类名 = Dart 类名，共用 [renderClassDecl] 这一条渲染路径。
+ClassInfo _translateComponentClass(
   ClassDeclaration widgetClass,
   CompilationUnit unit,
   String componentName,
@@ -547,9 +425,7 @@ _Component _parseComponent(
   SingletonResolver? singletons,
   Map<String, Map<String, String>> hostMethods = const {},
 }) {
-  // 承载 build 的类：StatefulWidget → 其 State 类；StatelessWidget →
-  // widget 类自身（无 createState）。与 _parseNestedComponent 同一规则，
-  // 保证主组件与嵌套组件对 Stateful/Stateless 的支持一致。
+  // 承载 build 的类：widget 类 或 其 State 类。
   ClassDeclaration hostClass = widgetClass;
   final stateClassName = _stateClassName(widgetClass);
   if (stateClassName != null) {
@@ -565,7 +441,8 @@ _Component _parseComponent(
   }
 
   // 构造参数：widget 类构造函数的 this.xxx 命名形参（props 从 args 初始化）。
-  // 主组件也支持（StatelessWidget / 带业务参数的 StatefulWidget 都需要）。
+  // `required this.x` 在无 resolution 下是 DefaultFormalParameter 包裹
+  // FieldFormalParameter，需要解包。
   final ctorArgs = <String>[];
   for (final m in widgetClass.members) {
     if (m is ConstructorDeclaration) {
@@ -576,34 +453,16 @@ _Component _parseComponent(
     }
   }
 
-  final props = <_Prop>[];
-  final actions = <_Action>[];
-  final propByField = <String, String>{};
-  final actionByMethod = <String, String>{};
-  final methods = <MethodDeclaration>[];
-  MethodDeclaration? buildMethod;
+  // 方法收集：**build 与其它返回 widget 的方法一视同仁**，全部按普通方法处理。
+  final methods = <MethodDeclaration>[
+    for (final member in hostClass.members)
+      if (member is MethodDeclaration && !_skipMethod(member)) member,
+  ];
 
-  // Pass 1：只收集方法（含 build），为「按调用链发现模型」做准备
-  for (final member in hostClass.members) {
-    if (member is MethodDeclaration) {
-      if (member.name.lexeme == 'build') {
-        buildMethod = member;
-        continue;
-      }
-      if (_skipMethod(member)) continue;
-      methods.add(member);
-    }
-  }
-
-  if (buildMethod == null) {
-    throw FormatException('$componentName 缺少 build() 方法（StatefulWidget 需在 State 类、StatelessWidget 需在 widget 类）');
-  }
-
-  // 统一类发现：State 实例字段类型 → 类（State 维度，用户强调），
-  // 方法体/build 树构造调用兜底（如 hello 里的 `User(...)`），并集进 classIndex
-  // 命中的类统一翻译（见 dart2js.dart，不再按用途分流）。
+  // 统一类发现：State 实例字段类型为主 + 方法体里构造调用兜底，交集进 classIndex
+  // 命中的类统一翻译（见 dart2js.dart，不按用途分流）。
   final used = _usedClasses(
-    _candidateClassNames(hostClass, methods, buildMethod),
+    referencedClassNames(hostClass, methods: methods),
     classIndex,
     registry.registeredTypes,
   );
@@ -611,14 +470,16 @@ _Component _parseComponent(
   // 字段收集：基础类型 / 类类型字段（含对象字段 `_model = MyModel()` →
   // `this._model = new MyModel({})`、`User? _user` → `this._user = null`）
   // 一律进 JS 实例属性，跨 build 持久。
+  final propByField = <String, String>{};
+  final instanceFields = <ClassField>[];
   for (final member in hostClass.members) {
     if (member is FieldDeclaration) {
       for (final variable in member.fields.variables) {
         final fieldName = variable.name.lexeme;
-        final typeName = _fieldTypeName(member, variable);
+        final typeName = fieldTypeName(member, variable);
         if (member.isStatic) continue;
-        final erased = _eraseType(typeName);
-        final isBasic = _isBasicType(typeName);
+        final erased = eraseType(typeName);
+        final isBasic = isBasicType(typeName);
         // JS 运行时类型（ScrollController）：JS 侧有同名类（new ScrollController()），
         // 字段进 JS 实例属性，方法/属性调用一比一翻译，不再跳过。
         final jsRuntime = _jsRuntimeTypes.contains(erased);
@@ -656,289 +517,90 @@ _Component _parseComponent(
           }
           initial = ctorJs ?? 'null';
         }
-        final propName = _defaultPropName(fieldName);
-        props.add(_Prop(fieldName, propName, typeName, initial,
-            fromArgs: ctorArgs.contains(fieldName)));
-        propByField[fieldName] = propName;
+        instanceFields.add(ClassField(
+          name: fieldName,
+          typeName: typeName,
+          jsInitial: initial,
+        ));
+        propByField[fieldName] = _defaultPropName(fieldName);
       }
     }
   }
 
-  // 方法翻译（带类表）：SnackBar 识别与动作体翻译复用翻译上下文的解析能力
-  // （ctorOf/namedArg/positionalArg/jsString），不在本地另建一套。
+  // 翻译上下文：状态字段表（propByField）+ 方法名表（actionByMethod）——
+  // widget 层据此解析标识符（`_count` → `this._count`）与事件绑定（`__bind`）。
   final parseCtx = WidgetTranslateContext(
     registry: registry,
     propByField: propByField,
-    actionByMethod: actionByMethod,
+    actionByMethod: {
+      for (final m in methods) m.name.lexeme: _defaultActionName(m.name.lexeme),
+    },
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,
     jsClassWidgets: _jsClassWidgetTypes,
     delegateClassWidgets: _sliverBuilderTypes,
   );
-  // 本组件全部方法名（裸调/方法引用白名单）：initState、dispose、
-  // 事件方法、builder 等都在内，methodCallExprJs 据此把命名方法引用参数
-  // 包装成箭头函数。
-  final methodNames = {for (final m in methods) m.name.lexeme};
-  for (final member in methods) {
-    final methodName = member.name.lexeme;
-    final actionName = _defaultActionName(methodName);
-    // 方法体是 SnackBar 形式 → 自动识别为 native 通道
-    final nativeChannel =
-        _snackMessage(member.body, parseCtx) != null ? 'nativeToast' : null;
-    try {
-      actions.add(_Action(
-        methodName,
-        actionName,
-        nativeChannel,
-        _translateActionBody(
-          member.body,
-          parseCtx,
-          nativeChannel,
-          _methodParams(member),
-          used,
-          hostMethods: hostMethods,
-          methods: methodNames,
-        ),
-        params: _methodParams(member),
-        isAsync: member.body.isAsynchronous,
-      ));
-      actionByMethod[methodName] = actionName;
-    } on FormatException catch (e) {
-      // 默认全量收集的方法翻译失败则跳过并提示。
-      // ignore: avoid_print - 构建期日志
-      print(
-        '[ui_component_generator] 跳过方法 $methodName（无法静态翻译: ${e.message}）',
-      );
-    }
+
+  // 方法声明（方法体仍是 AST，供翻译器组装作用域）；方法体是 SnackBar 形式 →
+  // 自动识别为 native 通道（整体译为 `__jsui.host`）。
+  ClassMethod decl(MethodDeclaration m, {String? bodyJs}) {
+    final msg = _snackMessage(m.body, parseCtx);
+    return ClassMethod(
+      name: m.name.lexeme,
+      params: _methodParams(m),
+      isAsync: m.body.isAsynchronous,
+      isVoid: isVoidReturn(m),
+      returnsWidget: returnsWidgetOf(m),
+      body: m.body,
+      bodyJs: bodyJs,
+      nativeChannel: msg != null ? 'nativeToast' : null,
+      nativeMessage: msg,
+    );
   }
 
-  final (tree, deps, builders, builderNames, builderParams, localDecls,
-      builderPreludes, usedWidgetPackages) =
-      _translateBuildTree(
-    buildMethod,
-    propByField,
-    actionByMethod,
-    registry,
-    sourcePath,
-    importResolver,
-    singletons: singletons,
+  final proto = ClassInfo(
+    name: componentName,
+    sourceFile: sourcePath,
+    instanceFields: instanceFields,
+    staticFields: const [],
+    methods: [for (final m in methods) decl(m)],
+    ctorParams: {
+      for (final f in instanceFields)
+        if (ctorArgs.contains(f.name)) f.name,
+    },
+    isComponent: true,
   );
 
-  return _Component(
-    componentName,
-    props,
-    actions,
-    tree,
-    ctorArgs: ctorArgs,
-    deps: deps,
-    models: used,
-    builders: builders,
-    builderNames: builderNames,
-    builderParams: builderParams,
-    builderPreludes: builderPreludes,
-    localDecls: localDecls,
-    usedWidgetPackages: usedWidgetPackages,
+  // 逐个方法翻译：**唯一**的方法体翻译器，组件与普通类、build 与其它方法
+  // 完全同一条路径。翻译过程中 parseCtx 收集依赖 / 用到的 widget 类型 /
+  // 响应式 builder 子方法。
+  final translated = <ClassMethod>[
+    for (final m in methods)
+      decl(m,
+          bodyJs: translateClassMethodBody(proto, decl(m), used,
+              hostMethods: hostMethods, widgetCtx: parseCtx)),
+  ];
+
+  final cls = ClassInfo(
+    name: componentName,
+    sourceFile: sourcePath,
+    instanceFields: instanceFields,
+    staticFields: const [],
+    methods: translated,
+    ctorParams: proto.ctorParams,
+    isComponent: true,
+    builders: parseCtx.builderTrees,
+    builderNames: parseCtx.builderNames,
+    builderParams: parseCtx.builderParams,
+    builderPreludes: parseCtx.builderPreludes,
+    // 依赖 = 嵌套组件（parseCtx 收集）+ 用到的普通类（字段类型 / 构造调用）。
+    // 两者统一挂在「类」上：builder 只按名字递归/决定内联或 import。
+    dependencies: {...parseCtx.dependencies, ...used.keys},
+    usedWidgetPackages: parseCtx.usedWidgetPackages,
+    usedNodeHelper: parseCtx.usedNodeHelper,
   );
-}
-
-/// 解析「嵌套组件」：build 树里出现的本文件私有组件（_Xxx），
-/// 与主组件同产物注册（export 同名工厂函数），运行时按类 type 递归渲染。
-///
-/// 与主组件的差异：
-///   - 定位承载 build 的类：有 createState 用 State 类，否则（StatelessWidget）
-///     直接用 widget 类本身；
-///   - 收集 widget 构造函数的命名参数（this.x 形参）→ ctorArgs，
-///     产物构造函数接受 args 并按调用点参数初始化；
-///   - 私有组件默认不强制要求 build 在 State 类上。
-_Component _parseNestedComponent(
-  ClassDeclaration decl,
-  CompilationUnit unit,
-  String componentName,
-  WidgetTranslatorRegistry registry,
-  String sourcePath,
-  String? Function(String component) importResolver, {
-  required Map<String, ClassInfo> classIndex,
-  SingletonResolver? singletons,
-  Map<String, Map<String, String>> hostMethods = const {},
-}) {
-  // 承载 build 的类：widget 类 或 其 State 类
-  ClassDeclaration hostClass = decl;
-  final stateClassName = _stateClassName(decl);
-  if (stateClassName != null) {
-    for (final d in unit.declarations) {
-      if (d is ClassDeclaration && d.name.lexeme == stateClassName) {
-        hostClass = d;
-        break;
-      }
-    }
-  }
-
-  // 构造参数：widget 类构造函数的 this.xxx 命名形参
-  // （required this.x 在无 resolution 下是 DefaultFormalParameter 包裹
-  //  FieldFormalParameter，需要解包）
-  final ctorArgs = <String>[];
-  for (final m in decl.members) {
-    if (m is ConstructorDeclaration) {
-      for (final param in m.parameters.parameters) {
-        final inner = param is DefaultFormalParameter ? param.parameter : param;
-        if (inner is FieldFormalParameter) ctorArgs.add(inner.name.lexeme);
-      }
-    }
-  }
-
-  final props = <_Prop>[];
-  final actions = <_Action>[];
-  final propByField = <String, String>{};
-  final actionByMethod = <String, String>{};
-  final methods = <MethodDeclaration>[];
-  MethodDeclaration? buildMethod;
-
-  for (final member in hostClass.members) {
-    if (member is MethodDeclaration) {
-      if (member.name.lexeme == 'build') {
-        buildMethod = member;
-        continue;
-      }
-      if (_skipMethod(member)) continue;
-      methods.add(member);
-    }
-  }
-
-  if (buildMethod == null) {
-    throw FormatException('嵌套组件 $componentName 缺少 build() 方法');
-  }
-
-  // 统一类发现（与主组件同规则）：State 字段类型为主 + 构造调用兜底。
-  final used = _usedClasses(
-    _candidateClassNames(hostClass, methods, buildMethod),
-    classIndex,
-    registry.registeredTypes,
-  );
-
-  // 字段收集：基础类型 / 类类型字段进 JS 属性（对象字段 this._x）
-  for (final member in hostClass.members) {
-    if (member is FieldDeclaration) {
-      for (final variable in member.fields.variables) {
-        final fieldName = variable.name.lexeme;
-        final typeName = _fieldTypeName(member, variable);
-        if (member.isStatic) continue;
-        final erased = _eraseType(typeName);
-        final isBasic = _isBasicType(typeName);
-        final jsRuntime = _jsRuntimeTypes.contains(erased);
-        final cls = used[erased];
-        if (!isBasic && cls == null && !jsRuntime) {
-          // ignore: avoid_print - 构建期日志
-          print(
-            '[ui_component_generator] 嵌套组件跳过字段 $fieldName（类型 $typeName 不可翻译）',
-          );
-          continue;
-        }
-        final fromArgs = ctorArgs.contains(fieldName);
-        String initial;
-        if (isBasic) {
-          initial = literalToJs(variable.initializer) ??
-              _defaultInitial(typeName);
-        } else if (jsRuntime) {
-          initial = variable.initializer == null
-              ? 'null'
-              : (_jsRuntimeCtor(erased) ?? 'null');
-        } else {
-          final init = variable.initializer;
-          String? ctorJs;
-          if (init is InstanceCreationExpression) {
-            ctorJs = modelCtorToJs(init, FieldScope(), used);
-          } else if (init is MethodInvocation &&
-              init.target == null &&
-              init.typeArguments == null) {
-            // `_model = MyModel()` 在无 resolution 的 parseString 下会被解析成
-            // MethodInvocation 而非 InstanceCreationExpression（类名即无参构造），
-            // 统一按模型构造处理（见 modelCtorFromPartsJs）。
-            ctorJs = modelCtorFromPartsJs(init.methodName.name,
-                init.argumentList.arguments.toList(), FieldScope(), used);
-          }
-          initial = ctorJs ?? 'null';
-        }
-        final propName = _defaultPropName(fieldName);
-        props.add(_Prop(fieldName, propName, typeName, initial,
-            fromArgs: fromArgs));
-        propByField[fieldName] = propName;
-      }
-    }
-  }
-
-  final parseCtx = WidgetTranslateContext(
-    registry: registry,
-    propByField: propByField,
-    actionByMethod: actionByMethod,
-    sourcePath: sourcePath,
-    importResolver: importResolver,
-    singletons: singletons,
-    jsClassWidgets: _jsClassWidgetTypes,
-    delegateClassWidgets: _sliverBuilderTypes,
-  );
-  // 本组件全部方法名（裸调/方法引用白名单）：initState、dispose、
-  // 事件方法、builder 等都在内，methodCallExprJs 据此把命名方法引用参数
-  // 包装成箭头函数。
-  final methodNames = {for (final m in methods) m.name.lexeme};
-  for (final member in methods) {
-    final methodName = member.name.lexeme;
-    final actionName = _defaultActionName(methodName);
-    final nativeChannel =
-        _snackMessage(member.body, parseCtx) != null ? 'nativeToast' : null;
-    try {
-      actions.add(_Action(
-        methodName,
-        actionName,
-        nativeChannel,
-        _translateActionBody(
-          member.body,
-          parseCtx,
-          nativeChannel,
-          _methodParams(member),
-          used,
-          hostMethods: hostMethods,
-          methods: methodNames,
-        ),
-        params: _methodParams(member),
-        isAsync: member.body.isAsynchronous,
-      ));
-      actionByMethod[methodName] = actionName;
-    } on FormatException catch (e) {
-      // ignore: avoid_print - 构建期日志
-      print(
-        '[ui_component_generator] 嵌套组件跳过方法 $methodName（无法静态翻译: ${e.message}）',
-      );
-    }
-  }
-
-  final (tree, deps, builders, builderNames, builderParams, localDecls,
-      builderPreludes, usedWidgetPackages) =
-      _translateBuildTree(
-    buildMethod,
-    propByField,
-    actionByMethod,
-    registry,
-    sourcePath,
-    importResolver,
-    singletons: singletons,
-  );
-
-  return _Component(
-    componentName,
-    props,
-    actions,
-    tree,
-    ctorArgs: ctorArgs,
-    deps: deps,
-    models: used,
-    builders: builders,
-    builderNames: builderNames,
-    builderParams: builderParams,
-    builderPreludes: builderPreludes,
-    localDecls: localDecls,
-    usedWidgetPackages: usedWidgetPackages,
-  );
+  return cls;
 }
 
 // ---------------------------------------------------------------------------
@@ -960,16 +622,6 @@ String _defaultPropName(String fieldName) => fieldName;
 
 /// 方法默认事件名：一比一，保持 Dart 方法原名（inc → inc）。
 String _defaultActionName(String methodName) => methodName;
-
-/// 基础类型（可翻译为 JS 初始值）：无注解时自动进 state。
-bool _isBasicType(String typeName) {
-  final t = typeName.trim();
-  if (t.endsWith('?')) return _isBasicType(t.substring(0, t.length - 1));
-  return switch (t) {
-    'int' || 'double' || 'num' || 'String' || 'bool' || 'dynamic' => true,
-    _ => false,
-  };
-}
 
 /// 跳过 getter / setter / static 方法（build 在收集处单独处理；
 /// initState/dispose 等 State 生命周期方法**全量生成**，由运行时在对应生命周期回调）。
@@ -1079,47 +731,6 @@ String _defaultInitial(String typeName) {
   if (typeName.contains('bool')) return 'false';
   return '0';
 }
-
-// ---------------------------------------------------------------------------
-// 方法体静态翻译 → JS
-// ---------------------------------------------------------------------------
-
-String _translateActionBody(
-  FunctionBody body,
-  WidgetTranslateContext ctx,
-  String? nativeChannel,
-  List<String> params,
-  Map<String, ClassInfo> classes, {
-  Map<String, Map<String, String>> hostMethods = const {},
-  Set<String> methods = const {},
-}) {
-  // 组件动作的可用引用：State 字段（ctx.propByField）+ 方法形参。语句/表达式
-  // 统一交给 dart2js.translateMethodBody（**唯一**的方法体翻译器），与模型
-  // 方法体共用同一套语法支持——新增语法只改那一处。
-  // 方法体内声明的局部变量由翻译器边翻译边登记进 scope，后续语句可解析。
-  // widgetCtx = ctx：方法体里 `return Text(...)` 这类返回 widget 的表达式走
-  // widget 树翻译路径（与模型方法体同一条路径）。
-  final scope = FieldScope(
-    propByField: ctx.propByField,
-    params: params.toSet(),
-    hostMethods: hostMethods,
-    methods: methods,
-  );
-  if (nativeChannel != null) {
-    final msg = _snackMessage(body, ctx);
-    if (msg == null) {
-      throw FormatException(
-          'native 动作需要方法体是 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("消息"))) 形式');
-    }
-    // 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；消息体给具名参数
-    // {message}，宿主内建 `nativeToast` 处理器用 navigatorKey 取 context
-    // 弹 SnackBar。不要再裸调 sendMessage，否则宿主收不到。
-    return '__jsui.host(${jsString(nativeChannel)}, { message: $msg });';
-  }
-  return translateMethodBody(body, scope, classes, widgetCtx: ctx);
-}
-
-
 
 /// 方法形式参数名列表 → JS 形参：与模型/状态类共用 dart2js.jsMethodParams
 /// （统一过滤 BuildContext 等 JS 无对应物的形参类型）。
@@ -1265,30 +876,6 @@ class WidgetModuleBuilder implements Builder {
   }
 }
 
-/// 收集表达式树里全部模型构造调用名（与类发现共用：State 字段类型 + 构造调用）。
-class _CtorCollector extends RecursiveAstVisitor<void> {
-  final names = <String>{};
-
-  @override
-  void visitInstanceCreationExpression(InstanceCreationExpression node) {
-    names.add(node.constructorName.type.name2.lexeme);
-    super.visitInstanceCreationExpression(node);
-  }
-
-  /// 无 `new`/`const` 的构造调用（parseString 下是 MethodInvocation）：
-  /// `MyModel()` / `(_) => MyModel()` 里的模型构造。仅收
-  /// UpperCamel 且无 target/泛型的形态（与 [_fieldTypeName] 同启发式），
-  /// widget 构造（Text/Column 等）也会被收进来，但与类表求交后自然丢弃。
-  @override
-  void visitMethodInvocation(MethodInvocation node) {
-    if (node.target == null && node.typeArguments == null) {
-      final n = node.methodName.name;
-      if (n.isNotEmpty && n[0] == n[0].toUpperCase()) names.add(n);
-    }
-    super.visitMethodInvocation(node);
-  }
-}
-
 /// 组件文件的业务 import → lib 相对 dart 路径列表。
 /// 相对导入优先；package: 跳过 dart:/flutter 与注解包（ui_component / generator）。
 List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
@@ -1339,7 +926,7 @@ String _relativeProduct(String from, String to) {
 
 /// 扫描当前文件 import 的源文件，收集「有 JS 产物的组件类名 → 产物路径」。
 ///
-/// 与 [_parseNestedComponent] 的连带转换规则一致，「有产物」判定为：
+/// 与 [_translateComponentClass] 的连带转换规则一致，「有产物」判定为：
 ///   - 类带 @UIComponent 注解；或
 ///   - 私有类（_Xxx）且声明了 build() 方法。
 /// 按**类名**绑定（而非「第一条 import」），多 import 文件不会串台；
@@ -1400,80 +987,6 @@ String? _relativeToLib(String uri, String dir) {
 }
 
 // ---------------------------------------------------------------------------
-// build()：widget 树 → 节点树（策略分发到 WidgetTranslator）
-// ---------------------------------------------------------------------------
-
-(Object?, Set<String>, List<Object?>, List<String>, List<String?>, List<String>, List<String>,
-        Map<String, Set<String>>)
-      _translateBuildTree(
-  MethodDeclaration buildMethod,
-  Map<String, String> propByField,
-  Map<String, String> actionByMethod,
-  WidgetTranslatorRegistry registry,
-  String sourcePath,
-  String? Function(String component) importResolver, {
-  SingletonResolver? singletons,
-}) {
-  final e = _methodExpression(buildMethod);
-  if (e == null) {
-    throw FormatException('build() 需要返回 widget 树（return 或 =>）');
-  }
-  final ctx = WidgetTranslateContext(
-    registry: registry,
-    propByField: propByField,
-    actionByMethod: actionByMethod,
-    sourcePath: sourcePath,
-    importResolver: importResolver,
-    singletons: singletons,
-    jsClassWidgets: _jsClassWidgetTypes,
-    delegateClassWidgets: _sliverBuilderTypes,
-  );
-  // build() return 前的局部变量声明（`final isAdult = <expr>;`）：
-  // 收集名字进 ctx 局部作用域（树里直接引用），initializer 翻译成 JS 声明语句。
-  final localDecls = <String>[];
-  final body = buildMethod.body;
-  if (body is BlockFunctionBody) {
-    for (final st in body.block.statements) {
-      if (st is ReturnStatement) break;
-      if (st is VariableDeclarationStatement) {
-        for (final v in st.variables.variables) {
-          final name = v.name.lexeme;
-          ctx.addLocal(name);
-          final js = v.initializer == null
-              ? 'undefined'
-              : ctx.jsDataExpr(v.initializer!);
-          localDecls.add('    var $name = $js;');
-        }
-      } else if (st is ExpressionStatement) {
-        // build 内 Dart 日志 → JS 原生日志方法（运行时注入 console 对象，
-        // 桥到 log 服务）：debugPrint → console.debug、print → console.log。
-        // 参数走 jsDataExpr（插值/字段/模型属性）。
-        final ex = st.expression;
-        if (ex is MethodInvocation && ex.target == null) {
-          final name = ex.methodName.name;
-          if (name == 'debugPrint' || name == 'print') {
-            final args = ex.argumentList.arguments;
-            final argJs = args.isEmpty ? '""' : ctx.jsDataExpr(args.first);
-            final method = name == 'debugPrint' ? 'debug' : 'log';
-            localDecls.add('    console.$method($argJs);');
-          }
-        }
-      }
-    }
-  }
-  return (
-    ctx.translate(e),
-    {...ctx.dependencies},
-    ctx.builderTrees,
-    ctx.builderNames,
-    ctx.builderParams,
-    localDecls,
-    ctx.builderPreludes,
-    ctx.usedWidgetPackages,
-  );
-}
-
-// ---------------------------------------------------------------------------
 // 产物渲染
 // ---------------------------------------------------------------------------
 
@@ -1482,8 +995,8 @@ String? _relativeToLib(String uri, String dir) {
 /// 组件文件与非组件（模型）文件走**同一入口**，差异全部数据驱动：
 ///   - [inlineClasses]：本产物内共享的类（不 export），组件文件里的同文件模型；
 ///   - [singletons]：静态单例类 → `export const`；
-///   - [exportedClasses]：对外产出的类（`export class`）——组件（tree 非空即出
-///     build/builders）与普通模型类走同一条渲染路径；
+///   - [exportedClasses]：对外产出的类（`export class`）——组件与普通模型类
+///     走同一条渲染路径；
 ///   - [dependencyImports]：跨文件依赖的 import 行（仅组件文件非空）。
 /// 所有类统一由 [dart2js] 渲染、统一带 [WidgetExprRenderer] 上下文：方法体里
 /// `return Container(...)` 一律走 widget 翻译路径（普通类里返回 widget 的方法
@@ -1495,8 +1008,10 @@ String _renderModuleJs(
   required List<ClassInfo> exportedClasses,
   List<ClassInfo> inlineClasses = const [],
   List<ClassInfo> singletons = const [],
+  Map<String, ClassInfo> classes = const {},
   List<String> dependencyImports = const [],
   Map<String, Set<String>> extraUsedWidgets = const {},
+  bool extraUsedNodeHelper = false,
   String? Function(String component)? importResolver,
   Map<String, Map<String, String>> hostMethods = const {},
 }) {
@@ -1514,8 +1029,8 @@ String _renderModuleJs(
     head.writeln(line);
   }
 
-  // 统一翻译上下文：所有类共用（组件动作、模型方法同一套）。tree 非空的类出
-  // build/builders；方法体里 `return Container(...)` 走 widget 树翻译路径。
+  // 统一翻译上下文：所有类共用（组件动作、模型方法同一套）。方法体里
+  // `return Container(...)` 走 widget 树翻译路径。
   final ctx = WidgetTranslateContext(
     registry: registry,
     propByField: const {},
@@ -1540,7 +1055,10 @@ String _renderModuleJs(
       ..writeln()
       ..writeln('// 模型 ${cls.name}（同文件，仅本产物内可见）')
       ..writeln(dart2js(cls,
-          exported: false, hostMethods: hostMethods, widgetCtx: ctx));
+          exported: false,
+          classes: classes,
+          hostMethods: hostMethods,
+          widgetCtx: ctx));
     _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
 
@@ -1557,18 +1075,18 @@ String _renderModuleJs(
       ));
   }
 
-  // 对外产出的类：组件（tree 非空 → build/builders）与普通类同一条渲染路径。
+  // 对外产出的类：组件与普通类同一条渲染路径。
   // 组件类 export（= Dart 类名）：既作本产物 build 树的元素 type，也供其它
   // 产物 import 后引用；与普通类共用统一入口 dart2js，无工厂包装。
   for (final cls in exportedClasses) {
     b
       ..writeln()
-      ..writeln('// ${cls.tree != null ? '组件' : '模型'} ${cls.name}')
+      ..writeln('// ${cls.isComponent ? '组件' : '模型'} ${cls.name}')
       ..writeln(dart2js(
         cls,
         exported: true,
+        classes: classes,
         hostMethods: hostMethods,
-        treeCtx: ctx,
         widgetCtx: ctx,
       ));
     _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
@@ -1584,7 +1102,9 @@ String _renderModuleJs(
   }
   // 结点工厂 `__h`：产物里有元素树（组件 build 树 / 方法体里返回 widget）
   // 才需要，并入其宿主 package（flutter）那一条；纯模型产物不产生多余 import。
-  if (ctx.usedNodeHelper || usedWidgets.isNotEmpty) {
+  // 组件方法体在生成期译好（标志经 [extraUsedNodeHelper] 带出），内联模型则
+  // 由渲染期 [ctx] 收集，两者取「或」。
+  if (extraUsedNodeHelper || ctx.usedNodeHelper || usedWidgets.isNotEmpty) {
     (importsByPackage[_nodeHelperPackage] ??= <String>{}).add('__h');
   }
   final ownProduct = _productPath(sourcePath);

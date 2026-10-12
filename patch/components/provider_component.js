@@ -13,13 +13,15 @@ export class ProviderCard {
     this._modelA = new CounterVm({});
     this._modelB = new NetworkVm({});
   }
-  _incA() { this._modelA.inc(); }
-  _resetA() { this._modelA.reset(); }
-  _loadUser() { this._modelB.loadUserInfo({"h": 1}); }
-  _buildText() { return __h('Text', {
-    "data": "test 1"
-  }); }
-  dispose() { this._modelB.dispose(); }
+  _incA() {
+    this._modelA.inc();
+  }
+  _resetA() {
+    this._modelA.reset();
+  }
+  _loadUser() {
+    this._modelB.loadUserInfo({"h": 1});
+  }
   build() {
     return __h('Card', {}, [
         __h('Padding', {
@@ -44,6 +46,8 @@ export class ProviderCard {
                 "child": __h('Column', {
                     "mainAxisSize": "min"
                   }, [
+                    this._buildText(),
+                    this._modelA.buildText(),
                     __h('Text', {
                         "data": "MultiProvider · 两个模型各自局部重建"
                       }),
@@ -91,6 +95,14 @@ export class ProviderCard {
               })
           ])
       ]);
+  }
+  _buildText() {
+    return __h('Text', {
+        "data": "test 1"
+      });
+  }
+  dispose() {
+    this._modelB.dispose();
   }
   _consumerBuilder0(value) {
       return __h('Text', {

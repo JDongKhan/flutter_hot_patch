@@ -147,21 +147,52 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       final elseJs = _collectionArrayJs(e.elseExpression);
       return '($cond ? $thenJs : $elseJs)';
     }
-    final node = _toNode(e);
-    final translator = registry.lookup(node.type);
-    if (translator != null) return translator.toJson(node, this);
-    // 未注册：按「嵌套组件」兜底翻译（需注册 fallback = ComponentTranslator）。
-    // 有 @UIComponent 注解的组件运行时递归渲染 JS 版本；
+    // widget 位置上可能是「构造形态」的只有：InstanceCreationExpression
+    // （`const Text(..)`）、无 receiver 的裸调用（`Text(..)` / `_LabeledDivider(..)`）、
+    // 以及**静态工厂**（`Image.network(..)` / `Positioned.fill(..)`）。
+    // 其余表达式——带实例 receiver 的方法调用（`_modelA.buildText()`）、
+    // 字段/属性引用——都是**普通 JS 表达式**，运行时求值即得到元素；绝不能当
+    // 组件类构造（否则会把实例方法 `_buildText` 误判成名为 `_buildText` 的组件，
+    // 产出错误的 Component 占位节点）。区分靠「构造名是否命中已注册 translator」：
+    // 静态工厂的 receiver 是类名，必然命中；实例方法/字段的 receiver 不会命中。
+    final (ctor, _) = ctorOf(e);
+    if (ctor == null) return _exprAsElement(e);
+    final translator = registry.lookup(ctor);
+    if (translator != null) return translator.toJson(_toNode(e), this);
+    // 未注册：带 receiver 的调用是实例方法（类构造的静态工厂已被 translator 命中）。
+    if (e is MethodInvocation && e.target != null) return _exprAsElement(e);
+    // 无 receiver 的裸调用：本组件自己的实例方法（`_buildText()` 返回 widget）
+    // 按 JS 方法调用翻译（`this._buildText()`），与 build 同一条路径。
+    if (e is MethodInvocation && actionByMethod.containsKey(ctor)) {
+      return _exprAsElement(e);
+    }
+    // 未注册的类构造：按「嵌套组件」兜底翻译（需注册 fallback =
+    // ComponentTranslator）。有 @UIComponent 注解的组件运行时递归渲染 JS 版本；
     // 无注解的 lib 自定义 widget 原生直接可用，JS 版渲染为 Component 占位。
     final fb = registry.fallback;
-    if (fb != null && _isUpperCamel(node.type)) {
-      collectDependency(node.type);
-      return fb.toJson(node, this);
+    if (fb != null && _isUpperCamel(ctor)) {
+      collectDependency(ctor);
+      return fb.toJson(_toNode(e), this);
     }
+    // 无 receiver 的裸调用仍未命中：也按普通 JS 表达式翻译（返回 widget 的
+    // 实例方法，只是不在动作表里）。
+    if (e is MethodInvocation) return _exprAsElement(e);
     throw FormatException(
-        'ui_component_generator: 不支持的组件 "${node.type}"，'
+        'ui_component_generator: 不支持的组件 "$ctor"，'
         '请实现并注册对应的 WidgetTranslator（当前已注册: '
         '${registry.registeredTypes.join('/')}）');
+  }
+
+  /// widget 位置上的「非构造表达式」→ JS 表达式字符串（运行时求值即元素）：
+  /// `_buildText()` / `_modelA.buildText()` / 字段引用等。翻译不了则出声抛错。
+  Object? _exprAsElement(Expression e) {
+    try {
+      return jsDataExpr(e);
+    } catch (err) {
+      throw FormatException(
+          'ui_component_generator: widget 位置的表达式无法翻译：'
+          '${e.toSource()}（$err）');
+    }
   }
 
   /// children 列表项翻译：Expression → 节点 Map；IfElement / ForElement →
@@ -242,6 +273,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// build() return 前的局部变量（`final isAdult = ...;`）：树里直接引用。
   final Set<String> _locals = {};
   void addLocal(String name) => _locals.add(name);
+
+  /// [WidgetExprRenderer.registerLocal] 实现：方法体翻译器声明局部变量时
+  /// 同步登记，保证同一方法体里返回的 widget 树能解析这些名字。
+  @override
+  void registerLocal(String name) => addLocal(name);
 
   /// Builder 闭包局部变量 → 模型类型（`final model = context.watch<T>()`）。
   /// 事件表达式（`() => model.inc()`，局部变量不在回传作用域内）据此翻译成
