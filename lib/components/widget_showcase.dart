@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
-
-import '../patch_version.dart';
 import 'widget_details.dart';
 
 /// 常用组件导航列表页（普通页面，无 @UIComponent 注解）：
