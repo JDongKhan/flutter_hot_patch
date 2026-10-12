@@ -6,9 +6,9 @@ builders:
     builder_factories: ["componentBuilder"]
     build_extensions:
       "^lib/{{}}.dart":
-        # 直接镜像 lib 源码路径（lib/a/b.dart → assets/a/b.js）：
+        # 直接镜像 lib 源码路径（lib/a/b.dart → patch/a/b.js）：
         # 不预设目录名、不区分组件/模型，产物文件名与 dart 源文件一致。
-        - "assets/{{}}.js"
+        - "patch/{{}}.js"
     auto_apply: dependents
     build_to: source
 
@@ -32,7 +32,7 @@ builders:
     # 占位输入键即可——输出列表填什么都不影响产物，勿在此维护清单。
     build_extensions:
       "^lib/js_widgets.dart":
-        - "assets/flutter.js"
+        - "patch/flutter.js"
     auto_apply: dependents
     build_to: source
 
