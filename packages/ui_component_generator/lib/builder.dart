@@ -406,10 +406,13 @@ String _eraseType(String type) {
 
 /// 把组件解析模型 [_Component] 映射成统一渲染模型 [ClassInfo]：
 /// 字段（预渲染初始值）+ 动作（预渲染方法体）+ 构造参数 + build 树/builders/
-/// 局部声明 + 工厂名。名称在此确定（`<name>` 为对外工厂，`<name>Component`
-/// 为 JS 类名，避免与工厂同名冲突）——dart2js 只按数据渲染，不做用途分叉。
+/// 局部声明 + 工厂名。
+///
+/// 命名统一（与普通类一致）：**JS 类名 = Dart 类名**（`HelloCard`），元素工厂
+/// 用统一后缀 `<类名>Factory`——避免「组件一套命名、普通类一套命名」，也避免
+/// 类名与工厂名同作用域冲突。dart2js 只按数据渲染，不做用途分叉。
 ClassInfo _componentToClassInfo(_Component c) => ClassInfo(
-      name: '${c.name}Component',
+      name: c.name,
       sourceFile: '',
       instanceFields: [
         for (final p in c.props)
@@ -426,7 +429,7 @@ ClassInfo _componentToClassInfo(_Component c) => ClassInfo(
           ),
       ],
       ctorParams: {for (final p in c.props) if (p.fromArgs) p.name},
-      factory: c.name,
+      factory: '${c.name}Factory',
       ctorNoArgs: c.ctorArgs.isEmpty,
       tree: c.tree,
       builders: c.builders,
@@ -601,6 +604,7 @@ _Component _parseComponent(
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,
+    jsClassWidgets: _jsClassWidgetTypes,
   );
   // 本组件全部方法名（裸调/方法引用白名单）：initState、dispose、
   // 事件方法、builder 等都在内，methodCallExprJs 据此把命名方法引用参数
@@ -800,6 +804,7 @@ _Component _parseNestedComponent(
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,
+    jsClassWidgets: _jsClassWidgetTypes,
   );
   // 本组件全部方法名（裸调/方法引用白名单）：initState、dispose、
   // 事件方法、builder 等都在内，methodCallExprJs 据此把命名方法引用参数
@@ -1361,6 +1366,7 @@ String? _relativeToLib(String uri, String dir) {
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,
+    jsClassWidgets: _jsClassWidgetTypes,
   );
   // build() return 前的局部变量声明（`final isAdult = <expr>;`）：
   // 收集名字进 ctx 局部作用域（树里直接引用），initializer 翻译成 JS 声明语句。
@@ -1477,7 +1483,8 @@ String _renderJs(
       final rel = importResolver(dep);
       if (rel == null || rel == ownName) continue;
       importedComponents.add(dep);
-      head.writeln("import { $dep } from '$rel';");
+      // 依赖组件产物同样遵循「JS 类名 = Dart 类名、工厂 = `<类名>Factory`」。
+      head.writeln("import { ${dep}Factory } from '$rel';");
     }
   }
 
@@ -1525,14 +1532,15 @@ String _renderJs(
     // 渲染阶段 ctx 会再次收集主树/builders 用到的类型。
     _mergeUsedWidgets(usedWidgets, c.usedWidgetPackages);
     b.writeln();
-    // 组件类（不导出，避免与同名工厂冲突）：由本产物的工厂函数实例化。
-    // 与普通类共用统一入口 dart2js（component 模式：`XComponent` + 工厂）。
+    // 组件类（不导出，避免与同名工厂冲突）：JS 类名 = Dart 类名；由本产物
+    // 导出的元素工厂 `<类名>Factory` 实例化。与普通类共用统一入口 dart2js。
     final ctx = WidgetTranslateContext(
       registry: registry,
       propByField: const {},
       actionByMethod: const {},
       sourcePath: sourcePath,
       importResolver: importResolver,
+      jsClassWidgets: _jsClassWidgetTypes,
     );
     b.writeln(dart2js(_componentToClassInfo(c), treeCtx: ctx));
     _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
@@ -1546,7 +1554,12 @@ String _renderJs(
     _nodeHelperPackage: {'__h'},
   };
   for (final entry in usedWidgets.entries) {
-    (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
+    final names = importsByPackage[entry.key] ??= <String>{};
+    // 引入名与渲染调用点同源：有 JS 类的 widget 引入 `<类名>Factory`
+    // （类名与工厂同处一个 ES module，不能同名）。
+    for (final t in entry.value) {
+      names.add(widgetRefName(t, _jsClassWidgetTypes));
+    }
   }
   final importLines = <String>[
     for (final entry in importsByPackage.entries)
@@ -1593,6 +1606,7 @@ String _renderModelJs(
     propByField: const {},
     actionByMethod: const {},
     sourcePath: sourcePath,
+    jsClassWidgets: _jsClassWidgetTypes,
   );
   for (final m in models) {
     b
@@ -1708,7 +1722,7 @@ const Set<String> _sliverBuilderTypes = {
 /// 节点（children 交给宿主 SliverChildListDelegate 还原）。与
 /// ListenableBuilder 的 `__owner()` 向上找拥有者方法机制一致。
 String _sliverBuilderSource(String type) {
-  final cls = '${type}BuilderComponent';
+  final cls = type;
   return '''
 class $cls {
   constructor(props, children) {
@@ -1739,7 +1753,7 @@ class $cls {
     return __h('$type', p, out);
   }
 }
-export function $type(props, children) {
+export function ${type}Factory(props, children) {
   if (props && props.delegateBuilder !== undefined) {
     return __h($cls, props, children);
   }
@@ -1750,10 +1764,11 @@ export function $type(props, children) {
 /// 「逻辑 widget」类型 → JS 组件源码（在本模块里内联一个普通类 + 工厂函数）。
 ///
 /// 与宿主 type 节点不同：这些 widget 的**状态/订阅逻辑必须跑在 JS 里**，
-/// 因此产物是 `__h(ComponentClass, props, children)`，运行时按组件路径挂载，
-/// 由组件 `build()` 自行消费 props（provider 提供/消费 VM、Builder 委托
-/// 拥有者方法返回子树）。运行时会给普通类实例补挂 `props/setState/watch/
-/// read/__watch/__read/__bind`（见 js_ui/runtime_source.dart）。
+/// 因此产物是 `__h(<类名>, props, children)`（JS 类名 = Dart 类名，元素工厂
+/// 为 `<类名>Factory`），运行时按组件路径挂载，由组件 `build()` 自行消费
+/// props（provider 提供/消费 VM、Builder 委托拥有者方法返回子树）。运行时
+/// 会给普通类实例补挂 `props/setState/watch/read/__watch/__read/__bind`
+/// （见 js_ui/runtime_source.dart）。
 const Map<String, String> _logicWidgetSources = {
   'Builder': _jsBuilderComponent,
   'ChangeNotifierProvider': _jsChangeNotifierProviderComponent,
@@ -1762,10 +1777,18 @@ const Map<String, String> _logicWidgetSources = {
   'ListenableBuilder': _jsListenableBuilderComponent,
 };
 
+/// 「以 JS 类渲染」的 widget 类型集合（唯一事实源：模板表 + sliver 代理表）。
+///
+/// 命名统一：这些类型的 **JS 类名 = Dart 类名**，元素工厂 = `<类名>Factory`；
+/// 其余宿主 widget 无 JS 类，工厂仍用 Dart 类名。渲染调用点与产物 import 名
+/// 都经 [widgetRefName] 查本集合，保证两侧一致。
+Set<String> get _jsClassWidgetTypes =>
+    {..._sliverBuilderTypes, ..._logicWidgetSources.keys};
+
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
 /// （`_builderN()`，含 `var model = this.__watch(...)` 前置语句）拿子树。
 const String _jsBuilderComponent = '''
-class BuilderComponent {
+class Builder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1778,8 +1801,8 @@ class BuilderComponent {
     return owner[name].call(owner);
   }
 }
-export function Builder(props, children) {
-  return __h(BuilderComponent, props, children);
+export function BuilderFactory(props, children) {
+  return __h(Builder, props, children);
 }''';
 
 /// ChangeNotifierProvider：把 create/value 解析出的 VM 挂成「提供者结点」
@@ -1789,7 +1812,7 @@ export function Builder(props, children) {
 /// provider 拥有 VM（类引用时 provider 内 new，实例时直接复用），卸载时
 /// dispose；`value` 语义下不拥有、不释放。
 const String _jsChangeNotifierProviderComponent = '''
-class ChangeNotifierProviderComponent {
+class ChangeNotifierProvider {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1822,14 +1845,14 @@ class ChangeNotifierProviderComponent {
     }
   }
 }
-export function ChangeNotifierProvider(props, children) {
-  return __h(ChangeNotifierProviderComponent, props, children);
+export function ChangeNotifierProviderFactory(props, children) {
+  return __h(ChangeNotifierProvider, props, children);
 }''';
 
 /// MultiProvider：把 providers 数组按「嵌套 Provider」语义组合——
 /// providers[0] 最外层，最后一个最内层（离 child 最近），与原生一致。
 const String _jsMultiProviderComponent = '''
-class MultiProviderComponent {
+class MultiProvider {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1843,14 +1866,14 @@ class MultiProviderComponent {
     return node;
   }
 }
-export function MultiProvider(props, children) {
-  return __h(MultiProviderComponent, props, children);
+export function MultiProviderFactory(props, children) {
+  return __h(MultiProvider, props, children);
 }''';
 
 /// Consumer：消费 VM——沿祖先找提供者取 VM 并订阅（watch），再调用拥有者
 /// 组件上的 `props.builder` 方法（`_consumerBuilderN(value)`）渲染局部子树。
 const String _jsConsumerComponent = '''
-class ConsumerComponent {
+class Consumer {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1864,15 +1887,15 @@ class ConsumerComponent {
     return owner[name].call(owner, vm);
   }
 }
-export function Consumer(props, children) {
-  return __h(ConsumerComponent, props, children);
+export function ConsumerFactory(props, children) {
+  return __h(Consumer, props, children);
 }''';
 
 /// ListenableBuilder：局部重建——订阅 `listenable`（拥有者组件上的模型字段），
 /// 模型 notify 时仅重建本结点子树（`setState` 只标记本结点 dirty）。
 /// 子树抽在拥有者组件的 `props.builder` 方法（`_lbBuilderN()`）里。
 const String _jsListenableBuilderComponent = '''
-class ListenableBuilderComponent {
+class ListenableBuilder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1905,8 +1928,8 @@ class ListenableBuilderComponent {
     }
   }
 }
-export function ListenableBuilder(props, children) {
-  return __h(ListenableBuilderComponent, props, children);
+export function ListenableBuilderFactory(props, children) {
+  return __h(ListenableBuilder, props, children);
 }''';
 
 // ---------------------------------------------------------------------------

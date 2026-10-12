@@ -3,9 +3,9 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, GridView, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
+import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, GridViewFactory, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilderFactory, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentListFactory, SliverGridFactory, SliverListFactory, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
 
-class TextDetailComponent {
+class TextDetail {
   constructor() {
     this._count = 0;
   }
@@ -82,11 +82,11 @@ class TextDetailComponent {
       ]);
   }
 }
-export function TextDetail(props, children) {
-  return __h(TextDetailComponent, props, children);
+export function TextDetailFactory(props, children) {
+  return __h(TextDetail, props, children);
 }
 
-class ButtonDetailComponent {
+class ButtonDetail {
   constructor() {
     this._pressed = 0;
   }
@@ -195,11 +195,11 @@ class ButtonDetailComponent {
       ]);
   }
 }
-export function ButtonDetail(props, children) {
-  return __h(ButtonDetailComponent, props, children);
+export function ButtonDetailFactory(props, children) {
+  return __h(ButtonDetail, props, children);
 }
 
-class LayoutDetailComponent {
+class LayoutDetail {
   constructor() {
   }
   build() {
@@ -478,11 +478,11 @@ class LayoutDetailComponent {
       ]);
   }
 }
-export function LayoutDetail(props, children) {
-  return __h(LayoutDetailComponent, props, children);
+export function LayoutDetailFactory(props, children) {
+  return __h(LayoutDetail, props, children);
 }
 
-class ImageDetailComponent {
+class ImageDetail {
   constructor() {
   }
   build() {
@@ -553,11 +553,11 @@ class ImageDetailComponent {
       ]);
   }
 }
-export function ImageDetail(props, children) {
-  return __h(ImageDetailComponent, props, children);
+export function ImageDetailFactory(props, children) {
+  return __h(ImageDetail, props, children);
 }
 
-class ContainerDetailComponent {
+class ContainerDetail {
   constructor() {
   }
   build() {
@@ -748,11 +748,11 @@ class ContainerDetailComponent {
       ]);
   }
 }
-export function ContainerDetail(props, children) {
-  return __h(ContainerDetailComponent, props, children);
+export function ContainerDetailFactory(props, children) {
+  return __h(ContainerDetail, props, children);
 }
 
-class ScrollDetailComponent {
+class ScrollDetail {
   constructor() {
     this._offset = 0;
     this._ctrlOffset = 0;
@@ -853,11 +853,11 @@ class ScrollDetailComponent {
       ]);
   }
 }
-export function ScrollDetail(props, children) {
-  return __h(ScrollDetailComponent, props, children);
+export function ScrollDetailFactory(props, children) {
+  return __h(ScrollDetail, props, children);
 }
 
-class SliverDetailComponent {
+class SliverDetail {
   constructor() {
     this._controller = new ScrollController();
     this._offset = 0;
@@ -918,7 +918,7 @@ class SliverDetailComponent {
                   "bottom": 0.0
                 }
               }, [
-                SliverList({}, [
+                SliverListFactory({}, [
                     ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [ListTile({ "title": "SliverList item " + i, "leading": Icon({ "icon": "list", "color": '#673AB7' }), "trailing": Icon({ "icon": "chevron_right" }) })]); } return out; })()
                   ])
               ]),
@@ -948,7 +948,7 @@ class SliverDetailComponent {
                   "bottom": 0.0
                 }
               }, [
-                SliverList({
+                SliverListFactory({
                     "delegateBuilder": "_sliverBuilder0",
                     "childCount": 8
                   })
@@ -979,7 +979,7 @@ class SliverDetailComponent {
                   "bottom": 0.0
                 }
               }, [
-                SliverFixedExtentList({
+                SliverFixedExtentListFactory({
                     "delegateBuilder": "_sliverBuilder1",
                     "childCount": 6,
                     "itemExtent": 44
@@ -1014,7 +1014,7 @@ class SliverDetailComponent {
                       "bottom": 0.0
                     }
                   }, [
-                    SliverGrid({
+                    SliverGridFactory({
                         "delegateBuilder": "_sliverBuilder2",
                         "childCount": 9,
                         "maxCrossAxisExtent": 140,
@@ -1089,11 +1089,11 @@ class SliverDetailComponent {
       ]);
   }
 }
-export function SliverDetail(props, children) {
-  return __h(SliverDetailComponent, props, children);
+export function SliverDetailFactory(props, children) {
+  return __h(SliverDetail, props, children);
 }
 
-class GridDetailComponent {
+class GridDetail {
   constructor() {
     this._controller = new ScrollController();
     this._offset = 0;
@@ -1148,7 +1148,7 @@ class GridDetailComponent {
             Expanded({
                 "flex": 5
               }, [
-                GridView({
+                GridViewFactory({
                     "controller": this._controller,
                     "crossAxisCount": 3,
                     "mainAxisSpacing": 8,
@@ -1177,7 +1177,7 @@ class GridDetailComponent {
             Expanded({
                 "flex": 4
               }, [
-                GridView({
+                GridViewFactory({
                     "maxCrossAxisExtent": 120,
                     "mainAxisSpacing": 8,
                     "crossAxisSpacing": 8,
@@ -1236,11 +1236,11 @@ class GridDetailComponent {
       ]);
   }
 }
-export function GridDetail(props, children) {
-  return __h(GridDetailComponent, props, children);
+export function GridDetailFactory(props, children) {
+  return __h(GridDetail, props, children);
 }
 
-class ScaffoldDetailComponent {
+class ScaffoldDetail {
   constructor() {
     this._navIndex = 0;
   }
@@ -1329,11 +1329,11 @@ class ScaffoldDetailComponent {
       });
   }
 }
-export function ScaffoldDetail(props, children) {
-  return __h(ScaffoldDetailComponent, props, children);
+export function ScaffoldDetailFactory(props, children) {
+  return __h(ScaffoldDetail, props, children);
 }
 
-class InputDetailComponent {
+class InputDetail {
   constructor() {
     this._controller = new TextEditingController();
     this._text = "";
@@ -1520,11 +1520,11 @@ class InputDetailComponent {
       ]);
   }
 }
-export function InputDetail(props, children) {
-  return __h(InputDetailComponent, props, children);
+export function InputDetailFactory(props, children) {
+  return __h(InputDetail, props, children);
 }
 
-class ProgressDetailComponent {
+class ProgressDetail {
   constructor() {
     this._progress = 0.65;
   }
@@ -1588,11 +1588,11 @@ class ProgressDetailComponent {
       ]);
   }
 }
-export function ProgressDetail(props, children) {
-  return __h(ProgressDetailComponent, props, children);
+export function ProgressDetailFactory(props, children) {
+  return __h(ProgressDetail, props, children);
 }
 
-class NotifierCardComponent {
+class NotifierCard {
   constructor() {
     this._model = new CounterVm({});
   }
@@ -1612,7 +1612,7 @@ class NotifierCardComponent {
             Column({
                 "mainAxisSize": "min"
               }, [
-                ListenableBuilder({
+                ListenableBuilderFactory({
                     "listenable": "_model",
                     "builder": "_lbBuilder0"
                   }),
@@ -1650,11 +1650,11 @@ class NotifierCardComponent {
       });
   }
 }
-export function NotifierCard(props, children) {
-  return __h(NotifierCardComponent, props, children);
+export function NotifierCardFactory(props, children) {
+  return __h(NotifierCard, props, children);
 }
 
-class StatelessCardComponent {
+class StatelessCard {
   constructor(args) {
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : '';
@@ -1714,7 +1714,7 @@ class StatelessCardComponent {
       ]);
   }
 }
-export function StatelessCard(props, children) {
-  return __h(StatelessCardComponent, props, children);
+export function StatelessCardFactory(props, children) {
+  return __h(StatelessCard, props, children);
 }
 

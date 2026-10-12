@@ -5,7 +5,7 @@
 import { __h } from 'flutter.js';
 
 
-class ChangeNotifierProviderComponent {
+class ChangeNotifierProvider {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -38,11 +38,11 @@ class ChangeNotifierProviderComponent {
     }
   }
 }
-export function ChangeNotifierProvider(props, children) {
-  return __h(ChangeNotifierProviderComponent, props, children);
+export function ChangeNotifierProviderFactory(props, children) {
+  return __h(ChangeNotifierProvider, props, children);
 }
 
-class ConsumerComponent {
+class Consumer {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -56,11 +56,11 @@ class ConsumerComponent {
     return owner[name].call(owner, vm);
   }
 }
-export function Consumer(props, children) {
-  return __h(ConsumerComponent, props, children);
+export function ConsumerFactory(props, children) {
+  return __h(Consumer, props, children);
 }
 
-class MultiProviderComponent {
+class MultiProvider {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -74,6 +74,6 @@ class MultiProviderComponent {
     return node;
   }
 }
-export function MultiProvider(props, children) {
-  return __h(MultiProviderComponent, props, children);
+export function MultiProviderFactory(props, children) {
+  return __h(MultiProvider, props, children);
 }

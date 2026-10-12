@@ -36,7 +36,7 @@ export function BottomNavigationBarItem(props, children) {
   return __h('BottomNavigationBarItem', props, children);
 }
 
-class BuilderComponent {
+class Builder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -49,8 +49,8 @@ class BuilderComponent {
     return owner[name].call(owner);
   }
 }
-export function Builder(props, children) {
-  return __h(BuilderComponent, props, children);
+export function BuilderFactory(props, children) {
+  return __h(Builder, props, children);
 }
 
 export function Button(props, children) {
@@ -137,7 +137,7 @@ export function GestureDetector(props, children) {
   return __h('GestureDetector', props, children);
 }
 
-class GridViewBuilderComponent {
+class GridView {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -166,9 +166,9 @@ class GridViewBuilderComponent {
     return __h('GridView', p, out);
   }
 }
-export function GridView(props, children) {
+export function GridViewFactory(props, children) {
   if (props && props.delegateBuilder !== undefined) {
-    return __h(GridViewBuilderComponent, props, children);
+    return __h(GridView, props, children);
   }
   return __h('GridView', props, children);
 }
@@ -201,7 +201,7 @@ export function ListView(props, children) {
   return __h('ListView', props, children);
 }
 
-class ListenableBuilderComponent {
+class ListenableBuilder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -234,8 +234,8 @@ class ListenableBuilderComponent {
     }
   }
 }
-export function ListenableBuilder(props, children) {
-  return __h(ListenableBuilderComponent, props, children);
+export function ListenableBuilderFactory(props, children) {
+  return __h(ListenableBuilder, props, children);
 }
 
 export function NotificationListener(props, children) {
@@ -290,7 +290,7 @@ export function SliverFillRemaining(props, children) {
   return __h('SliverFillRemaining', props, children);
 }
 
-class SliverFillViewportBuilderComponent {
+class SliverFillViewport {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -319,14 +319,14 @@ class SliverFillViewportBuilderComponent {
     return __h('SliverFillViewport', p, out);
   }
 }
-export function SliverFillViewport(props, children) {
+export function SliverFillViewportFactory(props, children) {
   if (props && props.delegateBuilder !== undefined) {
-    return __h(SliverFillViewportBuilderComponent, props, children);
+    return __h(SliverFillViewport, props, children);
   }
   return __h('SliverFillViewport', props, children);
 }
 
-class SliverFixedExtentListBuilderComponent {
+class SliverFixedExtentList {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -355,14 +355,14 @@ class SliverFixedExtentListBuilderComponent {
     return __h('SliverFixedExtentList', p, out);
   }
 }
-export function SliverFixedExtentList(props, children) {
+export function SliverFixedExtentListFactory(props, children) {
   if (props && props.delegateBuilder !== undefined) {
-    return __h(SliverFixedExtentListBuilderComponent, props, children);
+    return __h(SliverFixedExtentList, props, children);
   }
   return __h('SliverFixedExtentList', props, children);
 }
 
-class SliverGridBuilderComponent {
+class SliverGrid {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -391,9 +391,9 @@ class SliverGridBuilderComponent {
     return __h('SliverGrid', p, out);
   }
 }
-export function SliverGrid(props, children) {
+export function SliverGridFactory(props, children) {
   if (props && props.delegateBuilder !== undefined) {
-    return __h(SliverGridBuilderComponent, props, children);
+    return __h(SliverGrid, props, children);
   }
   return __h('SliverGrid', props, children);
 }
@@ -402,7 +402,7 @@ export function SliverIgnorePointer(props, children) {
   return __h('SliverIgnorePointer', props, children);
 }
 
-class SliverListBuilderComponent {
+class SliverList {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -431,9 +431,9 @@ class SliverListBuilderComponent {
     return __h('SliverList', p, out);
   }
 }
-export function SliverList(props, children) {
+export function SliverListFactory(props, children) {
   if (props && props.delegateBuilder !== undefined) {
-    return __h(SliverListBuilderComponent, props, children);
+    return __h(SliverList, props, children);
   }
   return __h('SliverList', props, children);
 }

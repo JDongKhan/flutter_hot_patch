@@ -3,10 +3,10 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { Builder, Button, Card, Column, Padding, Row, SizedBox, Text, __h } from '../flutter.js';
-import { ChangeNotifierProvider } from '../provider.js';
+import { BuilderFactory, Button, Card, Column, Padding, Row, SizedBox, Text, __h } from '../flutter.js';
+import { ChangeNotifierProviderFactory } from '../provider.js';
 
-class WatchDemoComponent {
+class WatchDemo {
   constructor() {
   }
   build() {
@@ -19,19 +19,19 @@ class WatchDemoComponent {
               "bottom": 16.0
             }
           }, [
-            ChangeNotifierProvider({
+            ChangeNotifierProviderFactory({
                 "model": "CounterVm",
                 "create": CounterVm,
                 "child": Column({
                     "mainAxisSize": "min"
                   }, [
-                    Builder({
+                    BuilderFactory({
                         "builder": "_builder0"
                       }),
                     SizedBox({
                         "height": 12
                       }),
-                    WatchCountLabel({})
+                    WatchCountLabelFactory({})
                   ])
               })
           ])
@@ -76,11 +76,11 @@ class WatchDemoComponent {
       ]);
   }
 }
-export function WatchDemo(props, children) {
-  return __h(WatchDemoComponent, props, children);
+export function WatchDemoFactory(props, children) {
+  return __h(WatchDemo, props, children);
 }
 
-class WatchCountLabelComponent {
+class WatchCountLabel {
   constructor() {
   }
   build() {
@@ -94,7 +94,7 @@ class WatchCountLabelComponent {
       });
   }
 }
-export function WatchCountLabel(props, children) {
-  return __h(WatchCountLabelComponent, props, children);
+export function WatchCountLabelFactory(props, children) {
+  return __h(WatchCountLabel, props, children);
 }
 

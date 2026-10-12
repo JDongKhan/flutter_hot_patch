@@ -5,7 +5,7 @@
 import { PanelColors } from 'hello_component.js';
 import { Button, Column, Text, __h } from '../flutter.js';
 
-class BannerCardComponent {
+class BannerCard {
   constructor() {
     this._views = 0;
   }
@@ -31,7 +31,7 @@ class BannerCardComponent {
       ]);
   }
 }
-export function BannerCard(props, children) {
-  return __h(BannerCardComponent, props, children);
+export function BannerCardFactory(props, children) {
+  return __h(BannerCard, props, children);
 }
 

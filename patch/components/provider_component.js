@@ -5,9 +5,9 @@
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
 import { Button, Card, Column, Padding, Row, SizedBox, Text, __h } from '../flutter.js';
-import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
+import { ChangeNotifierProviderFactory, ConsumerFactory, MultiProviderFactory } from '../provider.js';
 
-class ProviderCardComponent {
+class ProviderCard {
   constructor() {
     this._modelA = new CounterVm({});
     this._modelB = new NetworkVm({});
@@ -26,13 +26,13 @@ class ProviderCardComponent {
               "bottom": 16.0
             }
           }, [
-            MultiProvider({
+            MultiProviderFactory({
                 "providers": [
-                  ChangeNotifierProvider({
+                  ChangeNotifierProviderFactory({
                       "model": "CounterVm",
                       "create": this._modelA
                     }),
-                  ChangeNotifierProvider({
+                  ChangeNotifierProviderFactory({
                       "model": "NetworkVm",
                       "value": this._modelB
                     })
@@ -46,7 +46,7 @@ class ProviderCardComponent {
                     SizedBox({
                         "height": 8
                       }),
-                    Consumer({
+                    ConsumerFactory({
                         "model": "NetworkVm",
                         "builder": "_consumerBuilder0"
                       }),
@@ -62,7 +62,7 @@ class ProviderCardComponent {
                     SizedBox({
                         "height": 8
                       }),
-                    Consumer({
+                    ConsumerFactory({
                         "model": "CounterVm",
                         "builder": "_consumerBuilder1"
                       }),
@@ -109,7 +109,7 @@ class ProviderCardComponent {
       });
   }
 }
-export function ProviderCard(props, children) {
-  return __h(ProviderCardComponent, props, children);
+export function ProviderCardFactory(props, children) {
+  return __h(ProviderCard, props, children);
 }
 

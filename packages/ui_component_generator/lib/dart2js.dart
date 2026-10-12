@@ -1300,6 +1300,17 @@ class WidgetNode {
         };
 }
 
+/// widget 类型 → 产物内可引用的名字（全局唯一事实源）。
+///
+/// 命名统一：**JS 类名 = Dart 类名**（组件类、逻辑 widget、sliver builder
+/// 代理、普通类一律同名）。但 ES module 里类名与元素工厂同作用域不能同名，
+/// 所以「有 JS 类的类型」其元素工厂用统一后缀 `<类名>Factory`；宿主 widget
+/// （无 JS 类，工厂只 `return __h('Text', ...)`）工厂仍用 Dart 类名。
+///
+/// 渲染调用点与生成器拼 import 名共用本函数，避免「一处改名、另一处漏改」。
+String widgetRefName(String type, Set<String> jsClassWidgets) =>
+    jsClassWidgets.contains(type) ? '${type}Factory' : type;
+
 /// 翻译上下文：持有注册表与组件元数据，并向 translator 提供通用解析能力。
 ///
 /// translator 通过 [translate] 递归子节点、通过 [renderJs] 递归渲染子节点，
@@ -1351,7 +1362,20 @@ class WidgetTranslateContext {
     required this.sourcePath,
     this.importResolver,
     this.singletons,
+    this.jsClassWidgets = const {},
   });
+
+  /// 「以 JS 类渲染」的 widget 类型（逻辑 widget / sliver builder 代理）。
+  /// 由生成器注入（builder 的模板表是唯一事实源）。
+  ///
+  /// 命名统一：这些类型的 **JS 类名 = Dart 类名**，元素工厂 = `<类名>Factory`；
+  /// 其余宿主 widget 无 JS 类，元素工厂仍用 Dart 类名。引用名统一由
+  /// [widgetRef] 决定，渲染调用点与 import 名共用同一处逻辑。
+  final Set<String> jsClassWidgets;
+
+  /// widget 类型 → 产物内可引用的名字（宿主 widget = 类型名；有 JS 类的 =
+  /// `<类型名>Factory`）。统一委托 [widgetRefName]。
+  String widgetRef(String type) => widgetRefName(type, jsClassWidgets);
 
   /// 记录一个被兜底为 Component 节点的自定义组件名。
   void collectDependency(String name) => dependencies.add(name);
@@ -1528,7 +1552,7 @@ class WidgetTranslateContext {
         ? jsLiteral(props, depth + 1)
         : '{}';
     final b = StringBuffer()
-      ..write(type)
+      ..write(widgetRef(type))
       ..write('(')
       ..write(propsJs);
     if (children is List && children.isNotEmpty) {
@@ -1553,7 +1577,8 @@ class WidgetTranslateContext {
     final argsJs = (args is Map && args.isNotEmpty)
         ? jsLiteral(args, depth + 1)
         : '{}';
-    return '$name($argsJs)';
+    // 组件产物的元素工厂统一为 `<类名>Factory`（JS 类名 = Dart 类名）。
+    return '${name}Factory($argsJs)';
   }
 
   /// 剥离 JS 字符串字面量引号（`"Column"` → `Column`）；非字面量原样返回。

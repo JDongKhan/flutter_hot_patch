@@ -13,7 +13,7 @@ export const PanelColors = {
   tagline: 'demo'
 };
 
-class HelloCardComponent {
+class HelloCard {
   constructor() {
     this._count = 0;
     this._user = null;
@@ -80,7 +80,7 @@ class HelloCardComponent {
       ]);
   }
 }
-export function HelloCard(props, children) {
-  return __h(HelloCardComponent, props, children);
+export function HelloCardFactory(props, children) {
+  return __h(HelloCard, props, children);
 }
 

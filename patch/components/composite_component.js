@@ -2,10 +2,10 @@
 // 由 ui_component_generator 从 lib/components/composite_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BannerCard } from 'banner_component.js';
+import { BannerCardFactory } from 'banner_component.js';
 import { Button, Column, SizedBox, Text, __h } from '../flutter.js';
 
-class DashboardCardComponent {
+class DashboardCard {
   constructor() {
     this._ticks = 0;
   }
@@ -22,7 +22,7 @@ class DashboardCardComponent {
         Text({
             "data": "ticks = " + this._ticks
           }),
-        BannerCard({}),
+        BannerCardFactory({}),
         SizedBox({
             "height": 12
           }),
@@ -56,7 +56,7 @@ class DashboardCardComponent {
       ]);
   }
 }
-export function DashboardCard(props, children) {
-  return __h(DashboardCardComponent, props, children);
+export function DashboardCardFactory(props, children) {
+  return __h(DashboardCard, props, children);
 }
 
