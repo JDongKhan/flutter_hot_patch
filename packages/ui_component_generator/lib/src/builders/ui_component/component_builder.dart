@@ -11,12 +11,11 @@ import 'package:build/build.dart';
 import '../../translator/builtin_translators.dart';
 import '../../translator/class_translator.dart';
 import '../../translator/js_translator.dart';
+import '../../translator/source_index.dart';
 import '../../translator/widget2js.dart';
 
 import '../js_widget_defs.dart';
 import '../product_path.dart';
-import '../source_index.dart';
-import '../ui_host_register/host_method_scan.dart';
 import 'class_table.dart';
 import 'model_builder.dart';
 import 'module_renderer.dart';
@@ -85,11 +84,8 @@ class ComponentBuilder implements Builder {
     final hasComponent = parsed.unit.declarations
         .whereType<ClassDeclaration>()
         .any((d) => findAnnotation(d.metadata, 'UIComponent') != null);
-    // 宿主注入方法表（类名 → {方法名 → 通道名}）：组件与模型两条路径都要用。
-    final hostMethods = buildHostMethods(parsed.unit, inputId.path);
     if (!hasComponent) {
-      await writeModelProduct(
-          buildStep, parsed.unit, inputId, registry, hostMethods);
+      await writeModelProduct(buildStep, parsed.unit, inputId, registry);
       return;
     }
 
@@ -164,7 +160,6 @@ class ComponentBuilder implements Builder {
         classTable: classTable,
         importResolver: importResolver,
         singletons: singletons,
-        hostMethods: hostMethods,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: sliverBuilderTypes,
         isComponent: true,
@@ -214,7 +209,6 @@ class ComponentBuilder implements Builder {
         classTable: classTable,
         importResolver: importResolver,
         singletons: singletons,
-        hostMethods: hostMethods,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: sliverBuilderTypes,
         isComponent: isWidgetDep,
@@ -303,7 +297,6 @@ class ComponentBuilder implements Builder {
         extraUsedWidgets: extraUsedWidgets,
         extraUsedNodeHelper: allTranslated.any((c) => c.usedNodeHelper),
         importResolver: importResolver,
-        hostMethods: hostMethods,
       ),
     );
   }

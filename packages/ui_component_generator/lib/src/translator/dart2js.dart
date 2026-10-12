@@ -219,7 +219,6 @@ String renderClassDecl(
   ClassInfo info,
   Map<String, ClassInfo> classes, {
   bool exported = false,
-  Map<String, Map<String, String>> hostMethods = const {},
   WidgetExprRenderer? widgetCtx,
 }) {
   final b = StringBuffer();
@@ -260,7 +259,7 @@ String renderClassDecl(
       // 大括号独占行。
       final body = (m.bodyJs ??
               translateClassMethodBody(info, m, classes,
-                  hostMethods: hostMethods, widgetCtx: widgetCtx))
+                  hostMethods: info.hostMethods, widgetCtx: widgetCtx))
           .trimRight();
       b.write('  $fn${m.name}(${m.params.join(', ')}) {\n');
       if (body.isNotEmpty) b.write('$body\n');
@@ -317,16 +316,17 @@ String renderStaticConst(
 /// 参数：
 ///   - [exported]：类声明是否 `export`。
 ///   - [classes]：方法体内构造调用（`new X({...})`）用的类表。
-///   - [hostMethods]：@HostInjected 方法表。
 ///   - [widgetCtx]：类方法体里 `return Container(...)` 与 builder 子方法的
 ///     widget 翻译上下文。
 ///   - [singletonValueRenderer]：纯 static 类的字段值渲染器（颜色/字面量求值）。
+///
+/// `@HostInjected` 通道表不在参数里：它随 [ClassInfo.hostMethods] 一起由
+/// [translateClass] 在翻译期算好挂在模型上（组件与普通类同一份数据）。
 /// ===========================================================================
 String dart2js(
   ClassInfo info, {
   bool exported = false,
   Map<String, ClassInfo> classes = const {},
-  Map<String, Map<String, String>> hostMethods = const {},
   WidgetExprRenderer? widgetCtx,
   String Function(ClassField field)? singletonValueRenderer,
 }) {
@@ -336,7 +336,6 @@ String dart2js(
   }
   return renderClassDecl(info, classes,
       exported: exported,
-      hostMethods: hostMethods,
       widgetCtx: widgetCtx);
 }
 

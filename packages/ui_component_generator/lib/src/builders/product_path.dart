@@ -10,8 +10,7 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
 import '../translator/class_translator.dart';
-
-import 'source_index.dart';
+import '../translator/source_index.dart';
 
 /// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 一致）：
 /// `lib/a/b.dart` → `patch/a/b.js`（**直接镜像 lib 路径、文件名与源文件

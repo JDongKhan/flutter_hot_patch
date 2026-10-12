@@ -1,22 +1,26 @@
+/// `@HostInjected` 的**唯一**识别口径：哪些声明算宿主注入、通道名怎么取、
+/// 调用点怎么落地成 `__jsui.host(...)`。
+///
+/// 这里是翻译层的一部分（不是构建层）：`@HostInjected` 方法调用在 Dart 侧写法
+/// 与普通静态方法完全一样，把它整体换成宿主通道调用是**翻译**的职责。因此
+/// [translateClass] 翻译任一方法体前自行调 [buildHostMethods] 得到通道表，
+/// 挂在 [ClassInfo.hostMethods] 上，组件与普通类共用同一份数据、同一条路径，
+/// 构建层不参与、也不需要传任何参数。
+///
+/// 同一份扫描口径还被 `ui_host_register/host_register_builder.dart` 用来生成
+/// 宿主侧注册清单（通道 → Dart 实现），保证「翻译成 `__jsui.host` 的一定被注册」。
+///
+/// 不支持参数个数 / 是否具名 / 返回值类型的差异：调用点整体换成
+/// `__jsui.host(通道, 参数载荷)`（纯位置→数组、纯具名→对象、混合→数组+具名），
+/// 宿主侧用 `Function.apply(impl, 位置, 具名)` 还原，故任意形参与返回类型都成立。
+library;
+
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../source_index.dart';
-
-// ===========================================================================
-// @HostInjected 的统一扫描口径
-//
-// 「哪些声明算宿主注入、通道名怎么取、能不能落地」只有这一份实现：
-//   - 组件/模型翻译（component_builder 的 hostMethods 表）
-//   - 注册清单生成（host_register_builder.dart）
-// 都调 [scanHostMethods]，避免两套逻辑分叉导致「翻译了但没注册」。
-//
-// 不支持参数个数 / 是否具名 / 返回值类型的差异：调用点整体换成
-// __jsui.host(通道, 参数载荷)（纯位置→数组、纯具名→对象、混合→数组+具名），
-// 宿主侧用 Function.apply(impl, 位置, 具名) 还原，故任意形参与返回类型都成立。
-// ===========================================================================
+import 'source_index.dart';
 
 /// 一个被 `@HostInjected` 标注的可调用实体：static 方法 / 实例方法 / 顶层函数。
 class HostMethodDecl {
@@ -99,12 +103,13 @@ bool classHasHostInjectedMethod(ClassDeclaration d) {
 /// 收集宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
 /// 顶层函数挂在空串 key 下（`'' → {函数名 → 通道名}`）。
 ///
-/// 扫描本文件 + import 源文件（调用点能写出来，就必然 import 得到）；
-/// 只有 [HostMethodDecl.usable] 的声明进表——与注册清单（host_register_builder）
-/// 用同一个扫描器、同一个判定，保证「翻译了的都注册了」，不因两套逻辑分叉。
+/// 扫描本文件 + import 源文件（调用点能写出来，就必然 import 得到）——跨文件
+/// 声明要读源文件，这是本函数直接用 dart:io 的原因（与类表扫描同一做法）；
+/// 只有 [HostMethodDecl.usable] 的声明进表，与注册清单用同一个判定。
 ///
-/// 供翻译上下文把调用点整体替换为 `__jsui.host("通道", 参数载荷)`
-/// （参数个数、是否具名、返回值类型都不参与判定）。
+/// 调用方是 [translateClass]（翻译任一方法体前），结果挂在
+/// [ClassInfo.hostMethods] 上供方法体翻译把调用点整体替换为
+/// `__jsui.host("通道", 参数载荷)`。
 Map<String, Map<String, String>> buildHostMethods(
   CompilationUnit unit,
   String sourcePath,

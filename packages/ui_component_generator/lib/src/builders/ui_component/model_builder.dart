@@ -8,11 +8,11 @@ import 'package:build/build.dart';
 
 import '../../translator/class_translator.dart';
 import '../../translator/js_translator.dart';
+import '../../translator/source_index.dart';
 import '../../translator/widget2js.dart';
 
 import '../js_widget_defs.dart';
 import '../product_path.dart';
-import '../source_index.dart';
 import 'class_table.dart';
 import 'module_renderer.dart';
 import 'singleton_support.dart';
@@ -33,7 +33,6 @@ Future<void> writeModelProduct(
   CompilationUnit unit,
   AssetId inputId,
   WidgetTranslatorRegistry registry,
-  Map<String, Map<String, String>> hostMethods,
 ) async {
   // 全量类表（含组件 / widget 类，打 isComponent 标记）。
   final table = buildClassTable(unit, inputId.path);
@@ -86,7 +85,6 @@ Future<void> writeModelProduct(
       classTable: table,
       importResolver: importResolver,
       singletons: singletonResolver,
-      hostMethods: hostMethods,
       jsClassWidgets: jsClassWidgetTypes,
       delegateClassWidgets: sliverBuilderTypes,
     ));
@@ -148,7 +146,6 @@ Future<void> writeModelProduct(
       extraUsedWidgets: extraUsedWidgets,
       extraUsedNodeHelper: models.any((c) => c.usedNodeHelper),
       importResolver: importResolver,
-      hostMethods: hostMethods,
     ),
   );
 }

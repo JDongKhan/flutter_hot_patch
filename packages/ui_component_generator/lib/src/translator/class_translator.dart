@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
 import 'dart2js.dart';
+import 'host_injected.dart';
 import 'js_translator.dart';
 import 'widget2js.dart';
 
@@ -36,6 +37,9 @@ const Set<String> _jsRuntimeTypes = {'ScrollController', 'TextEditingController'
 ///     运行时原生注入）。
 ///   - [isComponent]：是否作为组件产物输出（仅影响注释与 superType 处理：
 ///     State 合并时不把 `State<X>` / `StatefulWidget` 写成 JS 基类）。
+///
+/// `@HostInjected` 通道表由本入口自行扫描（见 [buildHostMethods]）并挂在产出的
+/// [ClassInfo.hostMethods] 上——组件与普通类同一条路径，调用方无需传参。
 ClassInfo translateClass(
   ClassDeclaration decl,
   CompilationUnit unit,
@@ -44,11 +48,15 @@ ClassInfo translateClass(
   required Map<String, ClassInfo> classTable,
   required String? Function(String name) importResolver,
   SingletonResolver? singletons,
-  Map<String, Map<String, String>> hostMethods = const {},
   Set<String> jsClassWidgets = const {},
   Set<String> delegateClassWidgets = const {},
   bool isComponent = false,
 }) {
+  // @HostInjected 通道表：翻译层自己扫（本文件 + import 源文件）。方法体里
+  // `Foo.bar(...)` 命中即整体换成 `__jsui.host("通道", 载荷)`，组件与普通类
+  // 共用同一份数据、同一条翻译路径，构建层不参与。
+  final hostMethods = buildHostMethods(unit, sourcePath);
+
   // --- 唯一分叉：StatefulWidget → widget 类与同文件 State 类合并 ------------
   ClassDeclaration widgetClass = decl;
   ClassDeclaration hostClass = decl;
@@ -232,6 +240,7 @@ ClassInfo translateClass(
     methods: translated,
     ctorParams: proto.ctorParams,
     isComponent: isComponent,
+    hostMethods: hostMethods,
     builders: parseCtx.builderTrees,
     builderNames: parseCtx.builderNames,
     builderParams: parseCtx.builderParams,

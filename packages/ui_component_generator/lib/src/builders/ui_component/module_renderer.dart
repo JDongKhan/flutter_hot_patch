@@ -35,7 +35,6 @@ String renderModuleJs(
   Map<String, Set<String>> extraUsedWidgets = const {},
   bool extraUsedNodeHelper = false,
   String? Function(String component)? importResolver,
-  Map<String, Map<String, String>> hostMethods = const {},
 }) {
   // 头部（注释 + import 区）：widget 模块 import 依赖「实际用到的类型」，
   // 只能在各组件渲染完成后得知，所以先渲染 body 再拼装 import，见函数末尾。
@@ -79,7 +78,6 @@ String renderModuleJs(
       ..writeln(dart2js(cls,
           exported: false,
           classes: classes,
-          hostMethods: hostMethods,
           widgetCtx: ctx));
     mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
@@ -108,7 +106,6 @@ String renderModuleJs(
         cls,
         exported: true,
         classes: classes,
-        hostMethods: hostMethods,
         widgetCtx: ctx,
       ));
     mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);

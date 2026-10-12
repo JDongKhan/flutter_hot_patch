@@ -1,8 +1,8 @@
-/// 源码索引：注解识别与 import 源文件解析（构建期静态解析的公共基础）。
+/// 源码索引：注解识别与 import 源文件解析（Dart 源码静态解析的公共基础）。
 ///
-/// 识别类上的注解、把 import directive 解析成 lib 相对源文件路径——翻译、
-/// 类表、单例解析、产物路径推导都复用这里的实现，避免各自重复解析。
-/// `@HostInjected` 相关的扫描与注册生成见 `ui_host_register/`。
+/// 识别类上的注解、把 import directive 解析成 lib 相对源文件路径——翻译入口
+/// （[translateClass]）与 `@HostInjected` 扫描（host_injected.dart）都复用这里的
+/// 实现，避免各自重复解析。产物路径推导等构建层逻辑也复用同一份。
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';

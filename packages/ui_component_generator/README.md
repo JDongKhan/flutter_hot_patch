@@ -112,6 +112,8 @@ translator/  ←  builders/  ←  builder.dart
 
 `lib/src/translator/`：`js_translator`（公共语言层）· `dart2js`（类声明）·
 `widget2js`（widget 树）· `class_translator`（唯一入口）·
+`source_index`（注解识别 / import 源文件解析）·
+`host_injected`（@HostInjected 通道表，翻译层自扫）·
 `style_translators` · `builtin_translators`（内置 widget 策略）。
 
 `lib/src/builders/` 按 builder 再分目录：
@@ -119,10 +121,9 @@ translator/  ←  builders/  ←  builder.dart
 - `ui_component/`：`component_builder` · `model_builder` · `module_renderer`
   （产物渲染）· `class_table` · `singleton_support`
 - `ui_widget/`：`widget_module_builder`
-- `ui_host_register/`：`host_register_builder` · `host_method_scan`
-  （@HostInjected 扫描与注册生成）
-- 根下为两个 builder 共用的基础：`source_index` · `product_path` ·
-  `js_widget_defs`
+- `ui_host_register/`：`host_register_builder`（宿主侧注册清单生成；
+  @HostInjected 的识别口径在 `translator/host_injected.dart`）
+- 根下为各 builder 共用的产物基础：`product_path` · `js_widget_defs`
 
 框架的其它包：
 

@@ -125,6 +125,12 @@ class ClassInfo {
   /// 方法体里是否用到结点工厂 `__h`（决定产物是否 import `__h`）。
   final bool usedNodeHelper;
 
+  /// 本文件 `@HostInjected` 声明的通道表（类名 → {方法名 → 通道名}；顶层函数
+  /// 挂在空串 key 下）。由 [translateClass] 翻译时自行扫好挂在模型上，方法体
+  /// 翻译据此把调用点整体换成 `__jsui.host(通道, 载荷)`——组件与普通类同一份
+  /// 数据、同一条路径，构建层不参与。
+  final Map<String, Map<String, String>> hostMethods;
+
   const ClassInfo({
     required this.name,
     required this.sourceFile,
@@ -141,6 +147,7 @@ class ClassInfo {
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
     this.usedNodeHelper = false,
+    this.hostMethods = const {},
   });
 
   bool get isStaticOnly => instanceFields.isEmpty && methods.isEmpty;
