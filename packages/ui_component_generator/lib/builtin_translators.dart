@@ -449,12 +449,14 @@ class ScaffoldTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children = <Object?>[];
-    final appBar = ctx.namedArg(node.args, 'appBar');
-    if (appBar != null) children.add(ctx.translate(appBar));
-    final body = ctx.namedArg(node.args, 'body');
-    if (body != null) children.add(ctx.translate(body));
+    // appBar / body / floatingActionButton / bottomNavigationBar 全部走
+    // 「值为 element 的 prop」（与 AppBar.title 同机制）：宿主 propChild
+    // 直取，不依赖 children 顺序/类型判断。
     final props = <String, dynamic>{};
+    final appBar = ctx.namedArg(node.args, 'appBar');
+    if (appBar != null) props['appBar'] = ctx.translate(appBar);
+    final body = ctx.namedArg(node.args, 'body');
+    if (body != null) props['body'] = ctx.translate(body);
     final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
     if (bg != null) props['backgroundColor'] = bg;
     final fab = ctx.namedArg(node.args, 'floatingActionButton');
@@ -466,7 +468,7 @@ class ScaffoldTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('Scaffold'),
       if (props.isNotEmpty) 'props': props,
-      'children': children,
+      'children': const [],
     };
   }
 }

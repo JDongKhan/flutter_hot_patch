@@ -767,12 +767,18 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         onChanged: c.onValue<double>('event'),
       ));
 
+  // Scaffold：appBar / body / floatingActionButton / bottomNavigationBar
+  // 都是「值为 element 的 prop」（生成器把命名参数翻译进 props，产物
+  // `Scaffold({appBar: AppBar({...}), body: Column({...})})`）——宿主
+  // propChild 直取，不依赖 children 顺序/类型判断。appBar 经
+  // _JsAppBarAdaptor 适配 PreferredSizeWidget（JS 节点是 JsUiWidget 包装，
+  // 非原生 AppBar 实例）。
   r.register('Scaffold', (c) {
-    final appBar = c.childOfType('AppBar');
+    final appBar = c.propChild('appBar');
     return Scaffold(
       backgroundColor: colorFromJson(c.props['backgroundColor']),
-      appBar: appBar is AppBar ? appBar : null,
-      body: c.hasChildOfType('AppBar') ? c.child(1) : c.child(0),
+      appBar: appBar == null ? null : _JsAppBarAdaptor(appBar),
+      body: c.propChild('body'),
       floatingActionButton: c.propChild('floatingActionButton'),
       bottomNavigationBar: c.propChild('bottomNavigationBar'),
     );
@@ -961,6 +967,21 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     if (native != null) return native(c.map('args') ?? const {});
     return buildMissingJsWidget(name, c.children);
   });
+}
+
+/// AppBar 插槽适配器：把 JS 节点（JsUiWidget 包装）适配为
+/// PreferredSizeWidget 交给 Scaffold.appBar。preferredSize 取 AppBar 默认
+/// 高度 kToolbarHeight（demo 内 AppBar 均为默认 toolbarHeight）。
+class _JsAppBarAdaptor extends StatelessWidget implements PreferredSizeWidget {
+  const _JsAppBarAdaptor(this.child);
+
+  final Widget child;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) => child;
 }
 
 /// NotificationListener 桥接组件（对应注册 key 'NotificationListener'）：
