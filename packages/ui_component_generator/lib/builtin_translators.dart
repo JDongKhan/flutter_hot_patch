@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
 import 'style_translators.dart';
-import 'dart2js.dart';
+import 'widget2js.dart';
 
 /// 内置 widget 策略：把常见 Flutter widget 注册进 [WidgetTranslatorRegistry]。
 ///

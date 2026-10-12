@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
-import 'dart2js.dart';
+import 'widget2js.dart';
 
 // ===========================================================================
 // Flutter 类 → JSON 的 toJson 工具集（生成器侧）
@@ -382,24 +382,6 @@ String? _boolExpr(Expression e) {
 // ---------------------------------------------------------------------------
 // 布局/内容类 toJson（Container/Padding/Align/Stack/Icon/Image 等复用）
 // ---------------------------------------------------------------------------
-
-/// Dart 编译期/运行期全局标志 → JS 原样名（产物与 Dart 一比一）。
-/// `kDebugMode` → `kDebugMode`、`kReleaseMode` → `kReleaseMode`，
-/// 运行时注入同名全局（见 js_runtime_manager 模块表初始化）。
-String? globalFlagJs(String dartName) {
-  const set = {'kDebugMode', 'kReleaseMode'};
-  return set.contains(dartName) ? dartName : null;
-}
-
-/// `Platform.isXxx` → 原样 `Platform.isXxx`（运行时注入同名 Platform 对象，
-/// 含 isAndroid/isIOS/isMacOS/isWindows/isLinux/isFuchsia），不命中返回 null。
-String? platformFlagJs(String platformProp) {
-  const set = {
-    'isAndroid', 'isIOS', 'isMacOS',
-    'isWindows', 'isLinux', 'isFuchsia',
-  };
-  return set.contains(platformProp) ? 'Platform.$platformProp' : null;
-}
 
 /// TextScaler.noScaling → '"noScaling"'；TextScaler.linear(2.0) → {'linear': '2.0'}。
 Object? textScalerToJson(Expression e) {

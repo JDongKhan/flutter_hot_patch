@@ -9,7 +9,9 @@ import 'package:build/build.dart';
 import 'builtin_translators.dart';
 import 'dart2js.dart';
 import 'host_method_scan.dart';
+import 'js_translator.dart';
 import 'style_translators.dart';
+import 'widget2js.dart';
 
 /// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）
 /// 本 builder 不读任何 options（种子路径只对 [WidgetModuleBuilder] 有意义）。
