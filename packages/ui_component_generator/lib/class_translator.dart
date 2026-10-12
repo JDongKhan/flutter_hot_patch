@@ -266,6 +266,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     // kDebugMode / kReleaseMode → 运行时注入的全局标志
     final flag = globalFlagJs(e.name);
     if (flag != null) return flag;
+    // State.mounted：JS 组件基类有 __unmounted 标记，未卸载即视为已挂载
+    if (e.name == 'mounted') return '!this.__unmounted';
     return scope.fieldRef(e.name);
   }
   final lit = literalToJs(e);

@@ -1031,40 +1031,73 @@ String _translateActionBody(
     final t = _translateExprStatement(body.expression, scope, classes);
     if (t != null) stmts.add(t);
   } else if (body is BlockFunctionBody) {
-    for (final s in body.block.statements) {
-      if (s is ExpressionStatement) {
-        final e = s.expression;
-        // super.initState() 等 super 调用：JS 无 super 语义，忽略
-        if (e is MethodInvocation && e.target is SuperExpression) continue;
-        final t = _translateExprStatement(e, scope, classes);
-        if (t != null) {
-          stmts.add(t);
-        } else {
-          // 不静默：丢语句会让 JS 版逻辑悄悄比 Dart 版少一截。
-          log.warning('[ui_component_generator] 语句无法翻译，已在 JS 产物中'
-              '丢弃：${e.toSource()}');
-        }
-      } else if (s is VariableDeclarationStatement) {
-        // 局部变量声明 `String? name = await X.y();` → `var name = ...;`，
-        // 名字登记进 scope，后续语句（含插值）可直接引用。
-        for (final v in s.variables.variables) {
-          final init = v.initializer == null
-              ? 'undefined'
-              : rhsToJs(v.initializer!, scope, classes);
-          if (init == null) {
-            // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
-            log.warning('[ui_component_generator] 局部变量声明无法翻译，已在 JS '
-                '产物中丢弃：${s.toSource()}');
-            continue;
-          }
-          locals.add(v.name.lexeme);
-          stmts.add('var ${v.name.lexeme} = $init;');
-        }
-      }
-    }
+    stmts.add(_translateStmtList(body.block.statements, scope, classes, locals));
   }
   if (stmts.isEmpty) return '/* 空方法体 */';
   return stmts.join(' ');
+}
+
+/// 翻译语句列表（Block 内容或 if 分支体），无法翻译的语句降级跳过。
+/// 支持 ExpressionStatement / VariableDeclarationStatement / IfStatement（含
+/// else，条件走 exprToJs，故 `if (mounted) setState(...)` 一比一翻译）。
+String _translateStmtList(
+  List<Statement> stmts,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+  Set<String> locals,
+) {
+  final out = <String>[];
+  for (final s in stmts) {
+    if (s is ExpressionStatement) {
+      final e = s.expression;
+      // super.initState() 等 super 调用：JS 无 super 语义，忽略
+      if (e is MethodInvocation && e.target is SuperExpression) continue;
+      final t = _translateExprStatement(e, scope, classes);
+      if (t != null) {
+        out.add(t);
+      } else {
+        // 不静默：丢语句会让 JS 版逻辑悄悄比 Dart 版少一截。
+        log.warning('[ui_component_generator] 语句无法翻译，已在 JS 产物中'
+            '丢弃：${e.toSource()}');
+      }
+    } else if (s is VariableDeclarationStatement) {
+      // 局部变量声明 `String? name = await X.y();` → `var name = ...;`，
+      // 名字登记进 scope，后续语句（含插值）可直接引用。
+      for (final v in s.variables.variables) {
+        final init = v.initializer == null
+            ? 'undefined'
+            : rhsToJs(v.initializer!, scope, classes);
+        if (init == null) {
+          // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
+          log.warning('[ui_component_generator] 局部变量声明无法翻译，已在 JS '
+              '产物中丢弃：${s.toSource()}');
+          continue;
+        }
+        locals.add(v.name.lexeme);
+        out.add('var ${v.name.lexeme} = $init;');
+      }
+    } else if (s is IfStatement) {
+      final condJs = exprToJs(s.expression, scope, classes);
+      if (condJs == null) {
+        log.warning('[ui_component_generator] if 条件无法翻译，已在 JS 产物中'
+            '丢弃：${s.toSource()}');
+        continue;
+      }
+      final thenStmts = s.thenStatement is Block
+          ? (s.thenStatement as Block).statements
+          : [s.thenStatement];
+      var js =
+          'if ($condJs) { ${_translateStmtList(thenStmts, scope, classes, locals)} }';
+      final els = s.elseStatement;
+      if (els != null) {
+        final elseStmts = els is Block ? els.statements : [els];
+        js +=
+            ' else { ${_translateStmtList(elseStmts, scope, classes, locals)} }';
+      }
+      out.add(js);
+    }
+  }
+  return out.join(' ');
 }
 
 /// 翻译一条表达式语句：setState((){...}) / await Future.delayed / 其余走

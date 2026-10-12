@@ -1245,7 +1245,7 @@ class ScaffoldDetailComponent {
     this._navIndex = 0;
   }
   _onNavTap(index) { this.setState(function(){ this._navIndex = index; }); }
-  _onFab() { /* 空方法体 */ }
+  _onFab() {  }
   build() {
     return Scaffold({
         "appBar": AppBar({
@@ -1344,7 +1344,7 @@ class InputDetailComponent {
     this._slider = 0.4;
   }
   initState() { this._controller.addListener((...args) => this._onControllerChanged(...args)); }
-  _onControllerChanged() { /* 空方法体 */ }
+  _onControllerChanged() { if (!this.__unmounted) { this.setState(function(){ this._text = this._controller.text; }); } }
   _onTextChanged(v) { this.setState(function(){ this._text = v; }); }
   _onChoiceChanged(v) { this.setState(function(){ this._choice = v; }); }
   _onDropdownChanged(v) { this.setState(function(){ this._dropdown = v; }); }
