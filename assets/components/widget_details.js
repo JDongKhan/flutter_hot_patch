@@ -867,24 +867,14 @@ class SliverDetailComponent {
   _scrollToEnd() { this._controller.jumpTo(this._controller.position.maxScrollExtent); }
   build() {
     return Scaffold({
-        "floatingActionButton": FloatingActionButton({
-            "child": Icon({
-                "icon": "arrow_downward"
-              }),
-            "event": this.__bind("_scrollToEnd"),
-            "backgroundColor": '#673AB7',
-            "foregroundColor": '#FFFFFF',
-            "tooltip": "跳到底"
-          })
-      }, [
-        AppBar({
+        "appBar": AppBar({
             "title": Text({
                 "data": "Sliver 全家桶 · offset " + this._offset
               }),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF'
           }),
-        CustomScrollView({
+        "body": CustomScrollView({
             "controller": this._controller,
             "physics": "BouncingScrollPhysics"
           }, [
@@ -1055,8 +1045,17 @@ class SliverDetailComponent {
                       ])
                   ])
               ])
-          ])
-      ]);
+          ]),
+        "floatingActionButton": FloatingActionButton({
+            "child": Icon({
+                "icon": "arrow_downward"
+              }),
+            "event": this.__bind("_scrollToEnd"),
+            "backgroundColor": '#673AB7',
+            "foregroundColor": '#FFFFFF',
+            "tooltip": "跳到底"
+          })
+      });
   }
   _sliverBuilder0(index) {
       return ListTile({
@@ -1111,25 +1110,14 @@ class GridDetailComponent {
   _jumpBottom() { this._controller.jumpTo(this._controller.position.maxScrollExtent); }
   build() {
     return Scaffold({
-        "backgroundColor": '@Colors.grey.shade50',
-        "floatingActionButton": FloatingActionButton({
-            "child": Icon({
-                "icon": "arrow_downward"
-              }),
-            "event": this.__bind("_jumpBottom"),
-            "backgroundColor": '#009688',
-            "foregroundColor": '#FFFFFF',
-            "tooltip": "跳到底"
-          })
-      }, [
-        AppBar({
+        "appBar": AppBar({
             "title": Text({
                 "data": "GridView 懒加载验证"
               }),
             "backgroundColor": '#009688',
             "foregroundColor": '#FFFFFF'
           }),
-        Column({
+        "body": Column({
             "crossAxisAlignment": "stretch"
           }, [
             Padding({
@@ -1205,8 +1193,18 @@ class GridDetailComponent {
                     "itemCount": 20
                   })
               ])
-          ])
-      ]);
+          ]),
+        "backgroundColor": '@Colors.grey.shade50',
+        "floatingActionButton": FloatingActionButton({
+            "child": Icon({
+                "icon": "arrow_downward"
+              }),
+            "event": this.__bind("_jumpBottom"),
+            "backgroundColor": '#009688',
+            "foregroundColor": '#FFFFFF',
+            "tooltip": "跳到底"
+          })
+      });
   }
   _gridViewBuilder0(index) {
       return Container({
@@ -1257,6 +1255,49 @@ class ScaffoldDetailComponent {
   _onFab() { /* 空方法体 */ }
   build() {
     return Scaffold({
+        "appBar": AppBar({
+            "title": Text({
+                "data": "Scaffold / AppBar / FAB / BottomNav"
+              }),
+            "leading": Icon({
+                "icon": "menu"
+              }),
+            "backgroundColor": '#673AB7',
+            "foregroundColor": '#FFFFFF',
+            "elevation": 4,
+            "toolbarHeight": 56,
+            "centerTitle": true
+          }, [
+            Icon({
+                "icon": "search",
+                "color": '#FFFFFF'
+              }),
+            SizedBox({
+                "width": 16
+              })
+          ]),
+        "body": SafeArea({}, [
+            Center({}, [
+                Column({
+                    "mainAxisAlignment": "center"
+                  }, [
+                    Icon({
+                        "icon": "extension",
+                        "size": 48,
+                        "color": '#673AB7'
+                      }),
+                    SizedBox({
+                        "height": 12
+                      }),
+                    Text({
+                        "data": "页面骨架组件演示"
+                      }),
+                    Text({
+                        "data": "BottomNav 选中：" + this._navIndex
+                      })
+                  ])
+              ])
+          ]),
         "backgroundColor": '@Colors.grey.shade50',
         "floatingActionButton": FloatingActionButton({
             "child": Icon({
@@ -1292,51 +1333,7 @@ class ScaffoldDetailComponent {
                 "label": "我的"
               })
           ])
-      }, [
-        AppBar({
-            "title": Text({
-                "data": "Scaffold / AppBar / FAB / BottomNav"
-              }),
-            "leading": Icon({
-                "icon": "menu"
-              }),
-            "backgroundColor": '#673AB7',
-            "foregroundColor": '#FFFFFF',
-            "elevation": 4,
-            "toolbarHeight": 56,
-            "centerTitle": true
-          }, [
-            Icon({
-                "icon": "search",
-                "color": '#FFFFFF'
-              }),
-            SizedBox({
-                "width": 16
-              })
-          ]),
-        SafeArea({}, [
-            Center({}, [
-                Column({
-                    "mainAxisAlignment": "center"
-                  }, [
-                    Icon({
-                        "icon": "extension",
-                        "size": 48,
-                        "color": '#673AB7'
-                      }),
-                    SizedBox({
-                        "height": 12
-                      }),
-                    Text({
-                        "data": "页面骨架组件演示"
-                      }),
-                    Text({
-                        "data": "BottomNav 选中：" + this._navIndex
-                      })
-                  ])
-              ])
-          ])
-      ]);
+      });
   }
 }
 export function ScaffoldDetail(props, children) {
