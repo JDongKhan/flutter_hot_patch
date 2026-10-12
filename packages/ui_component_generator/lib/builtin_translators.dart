@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
 import 'style_translators.dart';
-import 'widget_translator.dart';
+import 'dart2js.dart';
 
 /// 内置 widget 策略：把常见 Flutter widget 注册进 [WidgetTranslatorRegistry]。
 ///
@@ -85,7 +85,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const RadioTranslator())
     ..register(const DropdownButtonTranslator())
     ..register(const DropdownMenuItemTranslator())
-    // 响应式（SDK 类，见 class_translator.sdkSuperClassMap 配套的 ChangeNotifier）
+    // 响应式（SDK 类，见 dart2js.sdkSuperClassMap 配套的 ChangeNotifier）
     ..register(const ListenableBuilderTranslator())
     // Builder：多一层 context 作用域（闭包内 context.watch/read 可用）
     ..register(const BuilderTranslator())

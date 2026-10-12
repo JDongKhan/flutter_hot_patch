@@ -760,7 +760,7 @@ class ScrollDetailComponent {
   }
   initState() { this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); }); }
   dispose() { this._scrollController.dispose(); }
-  _onListScroll(n) { this.setState(function(){ this._offset = n.metrics.pixels; }); }
+  _onListScroll(n) { this.setState(function(){ this._offset = n.metrics.pixels; }); return false; }
   _scrollToEnd() { this._scrollController.jumpTo(this._scrollController.position.maxScrollExtent); }
   build() {
     return Column({

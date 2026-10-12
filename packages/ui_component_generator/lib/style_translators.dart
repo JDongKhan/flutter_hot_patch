@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
-import 'widget_translator.dart';
+import 'dart2js.dart';
 
 // ===========================================================================
 // Flutter 类 → JSON 的 toJson 工具集（生成器侧）

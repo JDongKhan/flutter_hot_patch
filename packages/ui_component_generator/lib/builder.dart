@@ -7,10 +7,9 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart';
 
 import 'builtin_translators.dart';
-import 'class_translator.dart';
+import 'dart2js.dart';
 import 'host_method_scan.dart';
 import 'style_translators.dart';
-import 'widget_translator.dart';
 
 /// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）
 /// 本 builder 不读任何 options（种子路径只对 [WidgetModuleBuilder] 有意义）。
@@ -40,7 +39,7 @@ Builder widgetModuleBuilder(BuilderOptions options) =>
 ///   - 组装产物
 ///
 /// 「某个 widget 怎么翻译成 JSON/JS」是策略，由 WidgetTranslator 实现：
-///   - 抽象类与注册表见 widget_translator.dart
+///   - 抽象类与注册表见 dart2js.dart
 ///   - 内置 Column/Row/Text/ElevatedButton 见 builtin_translators.dart
 ///   - 新增/自定义 widget = 写一个 WidgetTranslator 并 register，
 ///     核心代码零改动。
@@ -127,12 +126,12 @@ class ComponentBuilder implements Builder {
 
     // 统一「类表」：把同文件 + 跨文件的所有普通 Dart 类（去 @UIComponent/
     // 私有/抽象/widget 类）收集成 ClassInfo 索引。User/MyModel/静态单例
-    // 都由此统一发现，不再按用途分流（见 class_translator.dart）。
+    // 都由此统一发现，不再按用途分流（见 dart2js.dart）。
     final classIndex = _buildClassIndex(parsed.unit, inputId.path);
 
     // 跨文件「静态单例类」映射：照旧，供 build 树里 `MyColors.x` 静态引用
     // 翻译成 JS 表达式（见 style_translators._colorExpr）。产物渲染统一走
-    // class_translator.renderStaticConst。
+    // dart2js（singletonValueRenderer）。
     final singletons = _buildSingletonResolver(parsed.unit, inputId.path);
 
     // 本文件声明的「静态单例类」→ inline 进本产物（const X = {...}，不 import）
@@ -264,7 +263,7 @@ class _Component {
   final Set<String> deps;
 
   /// 组件（含私有嵌套组件）按调用链用到的类（State 字段类型 + 构造调用）。
-  /// 统一由 class_translator 翻译（见 _usedClasses / _buildClassIndex）。
+  /// 统一由 dart2js 渲染（见 _usedClasses / _buildClassIndex）。
   final Map<String, ClassInfo> models;
 
   /// 响应式 builder 闭包（ListenableBuilder/Consumer）抽出的子树
@@ -312,7 +311,7 @@ Map<String, ClassInfo> _buildClassIndex(CompilationUnit unit, String sourcePath)
     if (d.abstractKeyword != null) return;
     if (_findAnnotation(d.metadata, 'UIComponent') != null) return;
     // @HostInjected 类：方法实现留在 Dart，不产出 JS（调用点被翻译为
-    // __jsui.host，见 _buildHostMethods 与 class_translator.methodCallExprJs）。
+    // __jsui.host，见 _buildHostMethods 与 dart2js.methodCallExprJs）。
     if (_classHasHostInjectedMethod(d)) return;
     // widget 类（有 build 方法）不是普通类，走组件/嵌套翻译路径
     if (d.members
@@ -404,6 +403,38 @@ String _eraseType(String type) {
   if (lt >= 0) t = t.substring(0, lt).trim();
   return t;
 }
+
+/// 把组件解析模型 [_Component] 映射成统一渲染模型 [ClassInfo]：
+/// 字段（预渲染初始值）+ 动作（预渲染方法体）+ 构造参数 + build 树/builders/
+/// 局部声明 + 工厂名。名称在此确定（`<name>` 为对外工厂，`<name>Component`
+/// 为 JS 类名，避免与工厂同名冲突）——dart2js 只按数据渲染，不做用途分叉。
+ClassInfo _componentToClassInfo(_Component c) => ClassInfo(
+      name: '${c.name}Component',
+      sourceFile: '',
+      instanceFields: [
+        for (final p in c.props)
+          ClassField(name: p.name, typeName: p.type, jsInitial: p.initial),
+      ],
+      staticFields: const [],
+      methods: [
+        for (final a in c.actions)
+          ClassMethod(
+            name: a.name,
+            params: a.params,
+            isAsync: a.isAsync,
+            bodyJs: a.bodyJs,
+          ),
+      ],
+      ctorParams: {for (final p in c.props) if (p.fromArgs) p.name},
+      factory: c.name,
+      ctorNoArgs: c.ctorArgs.isEmpty,
+      tree: c.tree,
+      builders: c.builders,
+      builderNames: c.builderNames,
+      builderParams: c.builderParams,
+      builderPreludes: c.builderPreludes,
+      localDecls: c.localDecls,
+    );
 
 class _Prop {
   final String field; // Dart 字段名，如 _count
@@ -498,7 +529,7 @@ _Component _parseComponent(
 
   // 统一类发现：State 实例字段类型 → 类（State 维度，用户强调），
   // 方法体/build 树构造调用兜底（如 hello 里的 `User(...)`），并集进 classIndex
-  // 命中的类统一翻译（见 class_translator.dart，不再按用途分流）。
+  // 命中的类统一翻译（见 dart2js.dart，不再按用途分流）。
   final used = _usedClasses(
     _candidateClassNames(hostClass, methods, buildMethod),
     classIndex,
@@ -1000,15 +1031,13 @@ String _translateActionBody(
   Map<String, Map<String, String>> hostMethods = const {},
   Set<String> methods = const {},
 }) {
-  // 组件动作的可用引用：State 字段（ctx.propByField）+ 方法形参。表达式/
-  // 语句统一交给 class_translator.exprStmtToJs（以 FieldScope 为键），与模型
-  // 方法体翻译共用同一套逻辑。
-  // params 用**可变集合**：方法体内声明的局部变量（`String? name = ...`）
-  // 边翻译边登记，后续语句里的 `$name` / `name` 才能解析。
-  final locals = <String>{...params};
+  // 组件动作的可用引用：State 字段（ctx.propByField）+ 方法形参。语句/表达式
+  // 统一交给 dart2js.translateMethodBody（**唯一**的方法体翻译器），与模型
+  // 方法体共用同一套语法支持——新增语法只改那一处。
+  // 方法体内声明的局部变量由翻译器边翻译边登记进 scope，后续语句可解析。
   final scope = FieldScope(
     propByField: ctx.propByField,
-    params: locals,
+    params: params.toSet(),
     hostMethods: hostMethods,
     methods: methods,
   );
@@ -1023,136 +1052,14 @@ String _translateActionBody(
     // 弹 SnackBar。不要再裸调 sendMessage，否则宿主收不到。
     return '__jsui.host(${jsString(nativeChannel)}, { message: $msg });';
   }
-
-  // 逐语句翻译：setState(...) 展开、await Future.delayed(...)、
-  // super.xxx() 忽略、无法翻译的语句降级跳过。
-  final stmts = <String>[];
-  if (body is ExpressionFunctionBody) {
-    final t = _translateExprStatement(body.expression, scope, classes);
-    if (t != null) stmts.add(t);
-  } else if (body is BlockFunctionBody) {
-    stmts.add(_translateStmtList(body.block.statements, scope, classes, locals));
-  }
-  if (stmts.isEmpty) return '/* 空方法体 */';
-  return stmts.join(' ');
-}
-
-/// 翻译语句列表（Block 内容或 if 分支体），无法翻译的语句降级跳过。
-/// 支持 ExpressionStatement / VariableDeclarationStatement / IfStatement（含
-/// else，条件走 exprToJs，故 `if (mounted) setState(...)` 一比一翻译）。
-String _translateStmtList(
-  List<Statement> stmts,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-  Set<String> locals,
-) {
-  final out = <String>[];
-  for (final s in stmts) {
-    if (s is ExpressionStatement) {
-      final e = s.expression;
-      // super.initState() 等 super 调用：JS 无 super 语义，忽略
-      if (e is MethodInvocation && e.target is SuperExpression) continue;
-      final t = _translateExprStatement(e, scope, classes);
-      if (t != null) {
-        out.add(t);
-      } else {
-        // 不静默：丢语句会让 JS 版逻辑悄悄比 Dart 版少一截。
-        log.warning('[ui_component_generator] 语句无法翻译，已在 JS 产物中'
-            '丢弃：${e.toSource()}');
-      }
-    } else if (s is VariableDeclarationStatement) {
-      // 局部变量声明 `String? name = await X.y();` → `var name = ...;`，
-      // 名字登记进 scope，后续语句（含插值）可直接引用。
-      for (final v in s.variables.variables) {
-        final init = v.initializer == null
-            ? 'undefined'
-            : rhsToJs(v.initializer!, scope, classes);
-        if (init == null) {
-          // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
-          log.warning('[ui_component_generator] 局部变量声明无法翻译，已在 JS '
-              '产物中丢弃：${s.toSource()}');
-          continue;
-        }
-        locals.add(v.name.lexeme);
-        out.add('var ${v.name.lexeme} = $init;');
-      }
-    } else if (s is IfStatement) {
-      final condJs = exprToJs(s.expression, scope, classes);
-      if (condJs == null) {
-        log.warning('[ui_component_generator] if 条件无法翻译，已在 JS 产物中'
-            '丢弃：${s.toSource()}');
-        continue;
-      }
-      final thenStmts = s.thenStatement is Block
-          ? (s.thenStatement as Block).statements
-          : [s.thenStatement];
-      var js =
-          'if ($condJs) { ${_translateStmtList(thenStmts, scope, classes, locals)} }';
-      final els = s.elseStatement;
-      if (els != null) {
-        final elseStmts = els is Block ? els.statements : [els];
-        js +=
-            ' else { ${_translateStmtList(elseStmts, scope, classes, locals)} }';
-      }
-      out.add(js);
-    }
-  }
-  return out.join(' ');
-}
-
-/// 翻译一条表达式语句：setState((){...}) / await Future.delayed / 其余走
-/// class_translator.exprStmtToJs（赋值 / 自增 / `_model.inc()` 对象方法调用等）。
-///
-/// setState 按 Dart 原封翻译：`setState(() => _taps++)` →
-/// `this.setState(function(){ this._taps += 1; });`。
-String? _translateExprStatement(
-  Expression e,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
-  if (e is MethodInvocation &&
-      e.methodName.name == 'setState' &&
-      e.argumentList.arguments.length == 1) {
-    final fn = e.argumentList.arguments.first;
-    if (fn is FunctionExpression) {
-      final bodyJs = _translateFunctionBodyJs(fn.body, scope, classes);
-      if (bodyJs == null) return 'this.setState(function(){});';
-      return 'this.setState(function(){ $bodyJs });';
-    }
-    return null;
-  }
-  return exprStmtToJs(e, scope, classes);
-}
-
-/// 翻译函数体（setState 回调等）：表达式体或块体，逐语句翻译。
-String? _translateFunctionBodyJs(
-  FunctionBody body,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
-  if (body is ExpressionFunctionBody) {
-    return exprStmtToJs(body.expression, scope, classes);
-  }
-  if (body is BlockFunctionBody) {
-    final parts = <String>[];
-    for (final st in body.block.statements) {
-      if (st is ExpressionStatement) {
-        final t = exprStmtToJs(st.expression, scope, classes);
-        if (t != null) parts.add(t);
-      }
-    }
-    return parts.isEmpty ? null : parts.join(' ');
-  }
-  return null;
+  return translateMethodBody(body, scope, classes);
 }
 
 
 
-/// 方法形式参数名列表（解 DefaultFormalParameter 包裹）。
-List<String> _methodParams(MethodDeclaration m) => [
-      for (final p in m.parameters!.parameters)
-        (p is DefaultFormalParameter ? p.parameter : p).name?.lexeme ?? '',
-    ];
+/// 方法形式参数名列表 → JS 形参：与模型/状态类共用 dart2js.jsMethodParams
+/// （统一过滤 BuildContext 等 JS 无对应物的形参类型）。
+List<String> _methodParams(MethodDeclaration m) => jsMethodParams(m);
 
 /// 提取 SnackBar 消息字符串
 String? _snackMessage(FunctionBody body, WidgetTranslateContext ctx) {
@@ -1518,7 +1425,7 @@ String _renderJs(
   //    与 Dart 源文件里同文件使用一致）；
   //  - 跨文件模型（其它文件 import 的普通类）→ import 该文件的同名 JS 产物，
   //    模型全局共享一份（export class），运行时模块加载器按相对路径加载；
-  //  - 同文件静态单例类 → inline const（renderStaticConst）。
+  //  - 同文件静态单例类 → inline const（dart2js）。
   final allModels = <String, ClassInfo>{};
   final inlineModels = <String, ClassInfo>{};
   for (final c in components) {
@@ -1582,14 +1489,13 @@ String _renderJs(
   final usedWidgets = <String, Set<String>>{};
 
   // 同文件模型：inline class（不 export，本产物内共享）。统一由
-  // class_translator.renderClassDecl 翻译（含字段/方法/getter/extends
-  // NotifierBase），与跨文件模型、模型产物共用同一处理器。
+  // dart2js 渲染（含字段/方法/getter/extends NotifierBase），
+  // 与跨文件模型、模型产物共用同一处理器。
   for (final m in inlineModels.values) {
     b
       ..writeln()
       ..writeln('// 模型 ${m.name}（同文件，仅本产物内可见）')
-      ..writeln(renderClassDecl(m, const {}, exported: false,
-          hostMethods: hostMethods));
+      ..writeln(dart2js(m, exported: false, hostMethods: hostMethods));
   }
 
   // 同文件 static 单例类：inline export const（exported: true —— 运行时
@@ -1606,10 +1512,10 @@ String _renderJs(
       b
         ..writeln()
         ..writeln('// 同文件静态单例类 ${cls.name}（export，供跨文件 import）')
-        ..writeln(renderStaticConst(
+        ..writeln(dart2js(
           cls,
-          valueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
           exported: true,
+          singletonValueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
         ));
     }
   }
@@ -1620,27 +1526,7 @@ String _renderJs(
     _mergeUsedWidgets(usedWidgets, c.usedWidgetPackages);
     b.writeln();
     // 组件类（不导出，避免与同名工厂冲突）：由本产物的工厂函数实例化。
-    b.writeln('class ${c.name}Component {');
-    final isNested = c.ctorArgs.isNotEmpty;
-    b.writeln(isNested ? '  constructor(args) {' : '  constructor() {');
-    for (final p in c.props) {
-      if (p.fromArgs) {
-        b.writeln(
-          '    this.${p.name} = (args && args.${p.name} !== undefined) '
-          '? args.${p.name} : ${p.initial};',
-        );
-      } else {
-        b.writeln('    this.${p.name} = ${p.initial};');
-      }
-    }
-    b.writeln('  }');
-    // 方法一比一：class 方法（async 方法带 async 前缀，await 仅限 async 内）
-    for (final a in c.actions) {
-      final fn = a.isAsync ? 'async ' : '';
-      b.writeln('  $fn${a.name}(${a.params.join(', ')}) { ${a.bodyJs} }');
-    }
-    // build：返回 widget 树（由 WidgetTranslateContext 渲染为 JS 构造调用）
-    b.writeln('  build() {');
+    // 与普通类共用统一入口 dart2js（component 模式：`XComponent` + 工厂）。
     final ctx = WidgetTranslateContext(
       registry: registry,
       propByField: const {},
@@ -1648,31 +1534,7 @@ String _renderJs(
       sourcePath: sourcePath,
       importResolver: importResolver,
     );
-    for (final d in c.localDecls) {
-      b.writeln(d);
-    }
-    b.writeln('    return ${ctx.renderJs(c.tree, 2)};');
-    b.writeln('  }');
-    // 响应式 builder 闭包子树（ListenableBuilder/Consumer）→ 实例方法
-    // `_lbBuilderN()` / `_consumerBuilderN(value)`。运行时时模型 notify 后
-    // 重新调用本方法拿到最新子树（含已求值的 this._model.n / value.count），
-    // 做「仅此节点」的局部重建。方法名与形参由 translator 声明。
-    for (var i = 0; i < c.builders.length; i++) {
-      final name = i < c.builderNames.length ? c.builderNames[i] : '_lbBuilder$i';
-      final param = i < c.builderParams.length ? c.builderParams[i] : null;
-      final prelude =
-          i < c.builderPreludes.length ? c.builderPreludes[i] : '';
-      b.writeln('  $name(${param ?? ''}) {');
-      if (prelude.isNotEmpty) b.writeln('      $prelude');
-      b.writeln('      return ${ctx.renderJs(c.builders[i], 2)};');
-      b.writeln('  }');
-    }
-    b.writeln('}');
-    // 对外工厂：与 widget 模块契约一致，返回 element（type = 组件类）。
-    // 运行时 mountRoot / 嵌套引用都以工厂调用取 element（不再 new 类）。
-    b.writeln('export function ${c.name}(props, children) {');
-    b.writeln('  return __h(${c.name}Component, props, children);');
-    b.writeln('}');
+    b.writeln(dart2js(_componentToClassInfo(c), treeCtx: ctx));
     _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
 
@@ -1735,7 +1597,7 @@ String _renderModelJs(
   for (final m in models) {
     b
       ..writeln('// 模型 ${m.name}')
-      ..writeln(renderClassDecl(m, const {}, exported: true,
+      ..writeln(dart2js(m, exported: true,
           hostMethods: hostMethods, widgetCtx: widgetCtx));
   }
   if (singletons.isNotEmpty) {
@@ -1749,10 +1611,10 @@ String _renderModelJs(
       b
         ..writeln()
         ..writeln('// 静态单例类 ${cls.name}')
-        ..writeln(renderStaticConst(
+        ..writeln(dart2js(
           cls,
-          valueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
           exported: true,
+          singletonValueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
         ));
     }
   }

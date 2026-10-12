@@ -70,7 +70,7 @@ targets:
 
 翻译产物必须与 Dart 源码**一比一对应**，这是本框架的核心约束：
 
-1. **Dart 合法写法都要静态翻译支持**。遇到不认识的语法形态，补正式翻译分支（在 `widget_translator.dart` 的 `eventExpr` / `jsDataExpr` / `class_translator.dart` 等翻译路径上一比一映射成等价 JS），**不降级、不兜底成通用节点、不让用户改 Dart 写法来适配框架**。
+1. **Dart 合法写法都要静态翻译支持**。遇到不认识的语法形态，补正式翻译分支（在 `dart2js.dart` 的表达式/语句/类渲染等统一翻译路径上一比一映射成等价 JS），**不降级、不兜底成通用节点、不让用户改 Dart 写法来适配框架**。所有翻译只有一处实现，组件与普通类共用。
 2. **禁止临时方案**。报错时不得在 demo 里加临时字段/中间层绕过（如为规避 setState 无 diff 而加的镜像触发字段）；产物 JS 应与 Dart 写法逐行对应，修就修翻译路径本身。
 3. **能力按文件隔离**。新增运行时能力（如 ScrollController / TextEditingController id-bridge）时，宿主侧按能力放 `hot_patch/lib/src/js_ui/capabilities/` 独立文件，**不动 `js_widget_registry` / `js_ui_widget` 核心**；JS 运行时片段按能力拆命名字符串、由 `runtime_source.dart` 拼接。
 4. **默认值与 Flutter 百分百一致**。宿主渲染时 nullable 属性缺省保持 `null`，不得默认成 `0` / `EdgeInsets.zero` 等覆盖 Flutter 主题默认。
