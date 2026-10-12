@@ -61,8 +61,10 @@ class ClassMethod {
 /// 一个 Dart 类翻译成 JS 后的中立描述（按「声明」建模，不看用途）。
 ///
 /// 同一份模型承载两条来源：普通类（字段/方法给 AST，渲染期翻译）与组件
-/// （字段/方法给预渲染 JS，另带 build 树等组件专属数据）。两者的 JS 声明
-/// 形状一致，差异只在渲染期由 [component] 这一个参数控制（类名后缀/工厂）。
+/// （字段/方法给预渲染 JS，另带 build 树等数据）。**渲染不分叉**——两者都由
+/// [renderClassDecl] 输出同一形状的 JS class（`export class X`，类名 = Dart
+/// 类名，无工厂）；组件只是额外带 [tree]/[builders] 这些 build 树输入，
+/// 渲染器按「tree 是否为空」数据驱动地决定是否输出 build()。
 class ClassInfo {
   final String name;
   final String sourceFile; // dart 源文件路径（用于推导 import/相对产物）
@@ -71,10 +73,6 @@ class ClassInfo {
   final List<ClassField> staticFields;
   final List<ClassMethod> methods; // 含 getter
   final Set<String> ctorParams; // this.x 构造形参名
-
-  /// 无参构造：true → 渲染 `constructor()`，false → 渲染 `constructor(args)`。
-  /// 组件无构造参数时用无参形态；普通类恒带 `args`（历史契约）。
-  final bool ctorNoArgs;
 
   /// build() 的 JS 树（节点 Map 或 JS 表达式字符串）；非 null → 渲染 build()。
   final Object? tree;
@@ -96,7 +94,6 @@ class ClassInfo {
     required this.staticFields,
     required this.methods,
     this.ctorParams = const {},
-    this.ctorNoArgs = false,
     this.tree,
     this.builders = const [],
     this.builderNames = const [],
@@ -299,12 +296,21 @@ String? sdkBaseName(ClassInfo info) => sdkSuperClassMap[info.superType];
 // ---------------------------------------------------------------------------
 
 /// 字面量 → JS 字面量（字符串带双引号、数字/布尔原样）。不可翻译返回 null。
+///
+/// **唯一**的「编译期常量字面量」翻译实现：字段初始值（[renderClassDecl]）、
+/// 组件 stat/props 初值（builder 侧）、静态单例字段值都走这里——新增字面量
+/// 能力只改这一处。当前覆盖 string/int/double/bool 与由它们构成的二元运算。
 String? literalToJs(Expression? e) {
   if (e == null) return null;
   if (e is StringLiteral) return jsString(e.stringValue ?? '');
   if (e is IntegerLiteral) return e.value?.toString();
   if (e is DoubleLiteral) return e.value.toString();
   if (e is BooleanLiteral) return e.value.toString();
+  if (e is BinaryExpression) {
+    final l = literalToJs(e.leftOperand);
+    final r = literalToJs(e.rightOperand);
+    if (l != null && r != null) return '($l ${e.operator.lexeme} $r)';
+  }
   return null;
 }
 
@@ -1126,8 +1132,10 @@ String renderClassDecl(
   if (base != null) b.write(' extends $base');
   b.write(' {\n');
 
-  // constructor
-  b.write(info.ctorNoArgs ? '  constructor() {\n' : '  constructor(args) {\n');
+  // constructor：有无 this.x 构造形参决定形态（组件与普通类同一规则）：
+  // 无参 → `constructor()`（JS 侧多传实参无害）；有参 → `constructor(args)`
+  // 并逐字段按 `args.x ?? 默认值` 取值。
+  b.write(info.ctorParams.isEmpty ? '  constructor() {\n' : '  constructor(args) {\n');
   if (base != null) b.write('    super();\n');
   for (final f in info.instanceFields) {
     final def = f.jsInitial ??

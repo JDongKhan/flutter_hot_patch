@@ -4,7 +4,7 @@
 
 // 模型 CounterVm
 export class CounterVm extends ChangeNotifier {
-  constructor(args) {
+  constructor() {
     super();
     this._count = 0;
   }

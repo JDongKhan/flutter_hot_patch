@@ -408,12 +408,15 @@ String _eraseType(String type) {
 /// 字段（预渲染初始值）+ 动作（预渲染方法体）+ 构造参数 + build 树/builders/
 /// 局部声明。
 ///
-/// 命名统一（与普通类一致）：**JS 类名 = Dart 类名**（`HelloCard`），元素 type
-/// 就是这个类本身（`__h(HelloCard, {...})`，运行时 `new` 实例化）——JS 里没有
-/// 「factory」这层包装，组件与普通类共用同一条渲染路径，不做用途分叉。
-ClassInfo _componentToClassInfo(_Component c) => ClassInfo(
+/// 与普通类同构：**JS 类名 = Dart 类名**（`HelloCard`），元素 type 就是这个类
+/// 本身（`__h(HelloCard, {...})`，运行时 `new` 实例化），共用 [renderClassDecl]
+/// 这一条渲染路径、没有「factory」包装。组件相对普通类**只多两个输入**：
+///   1. [ClassInfo.tree]/builders/localDecls —— widget 语言特有的 build 树；
+///   2. 字段/方法给的是**预渲染 JS**（[ClassField.jsInitial]/[ClassMethod.bodyJs]），
+///      普通类给的是 AST（渲染期翻译）。二者在 [renderClassDecl] 里同形输出。
+ClassInfo _componentToClassInfo(_Component c, String sourcePath) => ClassInfo(
       name: c.name,
-      sourceFile: '',
+      sourceFile: sourcePath,
       instanceFields: [
         for (final p in c.props)
           ClassField(name: p.name, typeName: p.type, jsInitial: p.initial),
@@ -429,7 +432,6 @@ ClassInfo _componentToClassInfo(_Component c) => ClassInfo(
           ),
       ],
       ctorParams: {for (final p in c.props) if (p.fromArgs) p.name},
-      ctorNoArgs: c.ctorArgs.isEmpty,
       tree: c.tree,
       builders: c.builders,
       builderNames: c.builderNames,
@@ -563,7 +565,7 @@ _Component _parseComponent(
         }
         String initial;
         if (isBasic) {
-          initial = _renderLiteral(variable.initializer) ??
+          initial = literalToJs(variable.initializer) ??
               _defaultInitial(typeName);
         } else if (jsRuntime) {
           // `ScrollController()` → `new ScrollController()`；可空字段 → null。
@@ -767,7 +769,7 @@ _Component _parseNestedComponent(
         final fromArgs = ctorArgs.contains(fieldName);
         String initial;
         if (isBasic) {
-          initial = _renderLiteral(variable.initializer) ??
+          initial = literalToJs(variable.initializer) ??
               _defaultInitial(typeName);
         } else if (jsRuntime) {
           initial = variable.initializer == null
@@ -1002,20 +1004,6 @@ String? _positionalString(Annotation a, int index) {
   if (args == null || index >= args.arguments.length) return null;
   final e = args.arguments[index];
   return e is StringLiteral ? e.stringValue : null;
-}
-
-String? _renderLiteral(Expression? e) {
-  if (e == null) return null;
-  if (e is StringLiteral) return jsString(e.stringValue ?? '');
-  if (e is IntegerLiteral) return e.value?.toString();
-  if (e is DoubleLiteral) return e.value.toString();
-  if (e is BooleanLiteral) return e.value.toString();
-  if (e is BinaryExpression) {
-    final l = _renderLiteral(e.leftOperand);
-    final r = _renderLiteral(e.rightOperand);
-    if (l != null && r != null) return '($l ${e.operator.lexeme} $r)';
-  }
-  return null;
 }
 
 String _defaultInitial(String typeName) {
@@ -1545,7 +1533,7 @@ String _renderJs(
       jsClassWidgets: _jsClassWidgetTypes,
       delegateClassWidgets: _sliverBuilderTypes,
     );
-    b.writeln(dart2js(_componentToClassInfo(c), exported: true, treeCtx: ctx));
+    b.writeln(dart2js(_componentToClassInfo(c, sourcePath), exported: true, treeCtx: ctx));
     _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
 
@@ -1992,7 +1980,7 @@ String _singletonFieldValue(Expression? init, WidgetTranslateContext ctx) {
   // 字符串：单引号字面量（与单例对象内其它值一致）
   if (init is SimpleStringLiteral) return _singletonString(init.value);
   // 简单字面量：int / double / bool / 简单二元运算
-  final lit = _renderLiteral(init);
+  final lit = literalToJs(init);
   if (lit != null) return lit;
   throw FormatException(
     '无法把 static 字段初始值翻译成 JS 值: ${init.toSource()}',
