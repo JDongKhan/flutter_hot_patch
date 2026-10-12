@@ -541,7 +541,7 @@ _Component _parseComponent(
           final init = variable.initializer;
           String? ctorJs;
           if (init is InstanceCreationExpression) {
-            ctorJs = modelCtorToJs(init, const FieldScope(), used);
+            ctorJs = modelCtorToJs(init, FieldScope(), used);
           } else if (init is MethodInvocation &&
               init.target == null &&
               init.typeArguments == null) {
@@ -549,7 +549,7 @@ _Component _parseComponent(
             // MethodInvocation 而非 InstanceCreationExpression（类名即无参构造），
             // 统一按模型构造处理（见 modelCtorFromPartsJs）。
             ctorJs = modelCtorFromPartsJs(init.methodName.name,
-                init.argumentList.arguments.toList(), const FieldScope(), used);
+                init.argumentList.arguments.toList(), FieldScope(), used);
           }
           initial = ctorJs ?? 'null';
         }
@@ -742,7 +742,7 @@ _Component _parseNestedComponent(
           final init = variable.initializer;
           String? ctorJs;
           if (init is InstanceCreationExpression) {
-            ctorJs = modelCtorToJs(init, const FieldScope(), used);
+            ctorJs = modelCtorToJs(init, FieldScope(), used);
           } else if (init is MethodInvocation &&
               init.target == null &&
               init.typeArguments == null) {
@@ -750,7 +750,7 @@ _Component _parseNestedComponent(
             // MethodInvocation 而非 InstanceCreationExpression（类名即无参构造），
             // 统一按模型构造处理（见 modelCtorFromPartsJs）。
             ctorJs = modelCtorFromPartsJs(init.methodName.name,
-                init.argumentList.arguments.toList(), const FieldScope(), used);
+                init.argumentList.arguments.toList(), FieldScope(), used);
           }
           initial = ctorJs ?? 'null';
         }

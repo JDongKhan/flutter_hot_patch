@@ -166,6 +166,9 @@ class FieldScope {
   final Set<String> params; // 形参名（原样引用）
   final Set<String> methods; // 裸调白名单（this.method()）
 
+  /// 方法体内声明的局部变量（`var data = ...`），后续引用原样返回。
+  final Set<String> localVars;
+
   /// 宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
   /// 顶层函数（全局方法）挂在空串 key 下（`'' → {函数名 → 通道名}`）。
   /// 命中时调用点整体翻译成 `__jsui.host("通道名", 参数载荷)`（载荷形态见
@@ -173,21 +176,25 @@ class FieldScope {
   /// Function.apply 调实现）。
   final Map<String, Map<String, String>> hostMethods;
 
-  const FieldScope({
+  FieldScope({
     this.propByField = const {},
     this.instanceFields = const {},
     this.params = const {},
     this.methods = const {},
     this.hostMethods = const {},
-  });
+    Set<String>? localVars,
+  }) : localVars = localVars ?? {};
 
   /// 该名字是否本 scope 可解析的字段。
   bool hasField(String name) =>
-      propByField.containsKey(name) || instanceFields.contains(name);
+      propByField.containsKey(name) ||
+      instanceFields.contains(name) ||
+      localVars.contains(name);
 
-  /// 字段 Identifier → JS 引用（`this.x`）；形参原样返回；未知返回 null。
+  /// 字段 Identifier → JS 引用（`this.x`）；形参/局部变量原样返回；未知返回 null。
   String? fieldRef(String name) {
     if (params.contains(name)) return name;
+    if (localVars.contains(name)) return name;
     final p = propByField[name];
     if (p != null) return 'this.$p';
     if (instanceFields.contains(name)) return 'this.$name';
@@ -250,6 +257,11 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   if (e is PrefixedIdentifier) {
     final p = scope.fieldRef(e.prefix.name);
     if (p != null) return '$p.${e.identifier.name}';
+    // prefix 是大写开头的外部类名（如 Network.post）→ 原样保留。
+    if (e.prefix.name.isNotEmpty &&
+        RegExp(r'^[A-Z]').hasMatch(e.prefix.name)) {
+      return '${e.prefix.name}.${e.identifier.name}';
+    }
     return null;
   }
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被字面量分支
@@ -780,6 +792,23 @@ String translateClassMethodBody(
         final e = s.expression;
         final v = e == null ? null : rhsToJs(e, scope, classes);
         if (v != null) stmts.add('return $v;');
+      } else if (s is VariableDeclarationStatement) {
+        // `dynamic data = await Network.post(...);` → `var data = await ...;`
+        for (final v in s.variables.variables) {
+          final name = v.name.lexeme;
+          final init = v.initializer;
+          if (init != null) {
+            final rhs = rhsToJs(init, scope, classes);
+            if (rhs != null) {
+              stmts.add('var $name = $rhs;');
+              // 把局部变量加入 scope，后续引用（如 print("$data")）能解析到。
+              scope.localVars.add(name);
+            }
+          } else {
+            stmts.add('var $name;');
+            scope.localVars.add(name);
+          }
+        }
       }
     }
   }

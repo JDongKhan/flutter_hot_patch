@@ -7,5 +7,5 @@ export class NetworkVm extends ChangeNotifier {
   constructor(args) {
     super();
   }
-  async loadUserInfo(params) { console.log("获取数据:"); }
+  async loadUserInfo(params) { var data = await __jsui.host("post", {"params": params}); console.log("获取数据:" + data); return data; }
 }
