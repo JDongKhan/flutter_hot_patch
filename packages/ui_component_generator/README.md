@@ -121,10 +121,13 @@ translator/  ←  builders/  ←  builder.dart
 - `ui_component/`：`component_builder`（收集本文件根类并统一调
   `translateClass`，并把结果拼装为同名 JS 产物）· `class_table` ·
   `singleton_support`
-- `ui_widget/`：`widget_module_builder`
+- `ui_widget/`：`widget_module_builder`（package 模块产物 + 各逻辑
+  组件/sliver 代理的 JS 类源码，仅本 builder 使用）
 - `ui_host_register/`：`host_register_builder`（宿主侧注册清单生成；
   @HostInjected 的识别口径在 `translator/host_injected.dart`）
-- 根下为各 builder 共用的产物基础：`product_path` · `js_widget_defs`
+- 根下为各 builder 共用的产物基础：`product_path` ·
+  `js_widget_defs`（`nodeHelperPackage` / `packageModulePath` /
+  有 JS 类的 widget 类型集合）
 
 框架的其它包：
 

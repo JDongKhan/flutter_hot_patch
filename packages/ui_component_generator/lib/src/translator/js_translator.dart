@@ -387,6 +387,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (c == null || t == null || f == null) return null;
     return '($c ? $t : $f)';
   }
+  // switch 表达式（Dart 3）→ IIFE + JS switch（JS 无 switch 表达式语法）。
+  if (e is SwitchExpression) return _switchExpressionJs(e, scope, classes);
   if (e is Identifier) {
     // kDebugMode / kReleaseMode → 运行时注入的全局标志
     final flag = globalFlagJs(e.name);
@@ -942,7 +944,8 @@ String translateMethodBody(
 /// 语句列表 → JS（方法体块、if 分支体共用同一套循环）。
 ///
 /// 支持：表达式语句（super 调用忽略、setState 展开）、变量声明、return、
-/// if/else。无法翻译的语句出声告警（不静默丢代码）。
+/// if/else、for（三段式 / for-in）、while、do-while、switch（常量 case）、
+/// break / continue。无法翻译的语句出声告警（不静默丢代码）。
 ///
 /// 输出为**多行可读**格式：每条语句一行、按 [depth] 缩进（2 空格/层）。
 String translateStmtList(
@@ -1029,9 +1032,225 @@ String translateStmtList(
             '$ind}';
       }
       out.add(js);
+    } else if (s is ForStatement) {
+      final js = _forStatementJs(s, scope, classes, widgetCtx, depth, returnsWidget);
+      if (js == null) {
+        log.warning('[ui_component_generator] for 语句无法翻译，已在 JS 产物中'
+            '丢弃：${s.toSource()}');
+      } else {
+        out.add(js);
+      }
+    } else if (s is WhileStatement) {
+      final condJs = exprToJs(s.condition, scope, classes);
+      if (condJs == null) {
+        log.warning('[ui_component_generator] while 条件无法翻译，已在 JS 产物'
+            '中丢弃：${s.toSource()}');
+        continue;
+      }
+      out.add('$ind' 'while ($condJs) {\n'
+          '${translateStmtList(_bodyStmts(s.body), scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+          '$ind}');
+    } else if (s is DoStatement) {
+      final condJs = exprToJs(s.condition, scope, classes);
+      if (condJs == null) {
+        log.warning('[ui_component_generator] do-while 条件无法翻译，已在 JS '
+            '产物中丢弃：${s.toSource()}');
+        continue;
+      }
+      out.add('$ind' 'do {\n'
+          '${translateStmtList(_bodyStmts(s.body), scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+          '$ind} while ($condJs);');
+    } else if (s is SwitchStatement) {
+      final js = _switchStatementJs(s, scope, classes, widgetCtx, depth, returnsWidget);
+      if (js == null) {
+        log.warning('[ui_component_generator] switch 语句无法翻译（仅支持常量 '
+            'case），已在 JS 产物中丢弃：${s.toSource()}');
+      } else {
+        out.add(js);
+      }
+    } else if (s is BreakStatement) {
+      out.add('${ind}break;');
+    } else if (s is ContinueStatement) {
+      out.add('${ind}continue;');
     }
   }
   return out.join('\n');
+}
+
+/// 语句体 → 语句列表（Block 或单条语句统一成列表，供 translateStmtList 递归）。
+List<Statement> _bodyStmts(Statement s) => s is Block ? s.statements : [s];
+
+/// for 语句 → JS（三段式与 for-in）：
+///   - `for (var i = 0; i < n; i++)` → 一比一（循环变量登记进 localVars）；
+///   - `for (var x in list)` → `for (var x of list)`（Dart 可迭代 → JS 数组）。
+/// 不可翻译返回 null（调用方出声告警）。
+String? _forStatementJs(
+  ForStatement s,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+  WidgetExprRenderer? widgetCtx,
+  int depth,
+  bool returnsWidget,
+) {
+  final parts = s.forLoopParts;
+  String? header;
+  if (parts is ForEachPartsWithDeclaration) {
+    // for-in 声明式：`for (var x in list)` → `for (var x of list)`。
+    final name = parts.loopVariable.name.lexeme;
+    scope.localVars.add(name);
+    final it = exprToJs(parts.iterable, scope, classes);
+    if (it == null) return null;
+    header = 'for (var $name of $it)';
+  } else if (parts is ForEachPartsWithIdentifier) {
+    // for-in 复用已有变量：`for (x in list)` → `for (x of list)`。
+    final it = exprToJs(parts.iterable, scope, classes);
+    if (it == null) return null;
+    header = 'for (${parts.identifier.name} of $it)';
+  } else if (parts is ForParts) {
+    // 三段式：`for (var i = 0; i < n; i++)` → 一比一。
+    final inits = <String>[];
+    if (parts is ForPartsWithDeclarations) {
+      for (final v in parts.variables.variables) {
+        final name = v.name.lexeme;
+        scope.localVars.add(name);
+        if (v.initializer == null) {
+          inits.add('var $name');
+          continue;
+        }
+        final rhs = rhsToJs(v.initializer!, scope, classes);
+        if (rhs == null) return null;
+        inits.add('var $name = $rhs');
+      }
+    } else if (parts is ForPartsWithExpression) {
+      final init = parts.initialization;
+      if (init != null) {
+        final t = exprToJs(init, scope, classes);
+        if (t == null) return null;
+        inits.add(t);
+      }
+    } else {
+      return null; // ForPartsWithPattern：Dart 3 模式 for 头
+    }
+    String? condJs;
+    if (parts.condition != null) {
+      condJs = exprToJs(parts.condition!, scope, classes);
+      if (condJs == null) return null;
+    }
+    final upds = <String>[];
+    for (final u in parts.updaters) {
+      final t = exprToJs(u, scope, classes);
+      if (t == null) return null;
+      upds.add(t);
+    }
+    header = 'for (${inits.join(', ')}; ${condJs ?? ''}; ${upds.join(', ')})';
+  } else {
+    return null;
+  }
+  final ind = '  ' * depth;
+  final bodyJs = translateStmtList(_bodyStmts(s.body), scope, classes, widgetCtx,
+      depth: depth + 1, returnsWidget: returnsWidget);
+  return '$ind$header {\n$bodyJs\n$ind}';
+}
+
+/// switch 语句 → JS switch。仅支持常量 case（analyzer 把常量 case 也解析为
+/// SwitchPatternCase(ConstantPattern)）与 default：
+///   - Dart 无贯穿语义：非空 case 体若不以 return / break / continue / throw
+///     收尾，自动补 `break;`（空 case 体是显式贯穿，JS 天然同形）；
+///   - guard / 解构 / 关系 / 逻辑或等模式、带 label 的 case 暂不支持，
+///     返回 null 整体丢弃（调用方出声告警），避免产出半翻译的 switch。
+String? _switchStatementJs(
+  SwitchStatement s,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+  WidgetExprRenderer? widgetCtx,
+  int depth,
+  bool returnsWidget,
+) {
+  final subj = exprToJs(s.expression, scope, classes);
+  if (subj == null) return null;
+  final ind = '  ' * depth;
+  final caseInd = '  ' * (depth + 1);
+  final lines = <String>['$ind' 'switch ($subj) {'];
+  for (final member in s.members) {
+    if (member.labels.isNotEmpty) return null; // 带标签的 break/continue 不支持
+    String? label;
+    if (member is SwitchDefault) {
+      label = 'default:';
+    } else if (member is SwitchPatternCase) {
+      // Dart 3 解析形态：常量 case 也是 SwitchPatternCase(ConstantPattern)
+      //（实测 analyzer 7 对 switch 语句不再产出旧 SwitchCase）。
+      if (member.guardedPattern.whenClause != null) return null;
+      final p = member.guardedPattern.pattern;
+      if (p is WildcardPattern) {
+        label = 'default:'; // `case _:` 等价 default
+      } else if (p is ConstantPattern) {
+        final v = exprToJs(p.expression, scope, classes);
+        if (v == null) return null;
+        label = 'case $v:';
+      } else {
+        return null; // 解构 / 关系 / 逻辑或等模式
+      }
+    } else if (member is SwitchCase) {
+      // 旧解析形态兜底（常量 case 直接挂在 SwitchCase.expression 上）。
+      final v = exprToJs(member.expression, scope, classes);
+      if (v == null) return null;
+      label = 'case $v:';
+    } else {
+      return null;
+    }
+    lines.add('$caseInd$label');
+    for (final st in member.statements) {
+      final js = translateStmtList([st], scope, classes, widgetCtx,
+          depth: depth + 2, returnsWidget: returnsWidget);
+      if (js.isEmpty) return null; // 某条语句翻译失败 → 整个 switch 丢弃
+      lines.add(js);
+    }
+    if (member.statements.isNotEmpty) {
+      final last = member.statements.last;
+      final terminated = last is ReturnStatement ||
+          last is BreakStatement ||
+          last is ContinueStatement ||
+          (last is ExpressionStatement && last.expression is ThrowExpression);
+      if (!terminated) lines.add('$caseInd' 'break;');
+    }
+  }
+  lines.add('$ind}');
+  return lines.join('\n');
+}
+
+/// switch 表达式（Dart 3）→ JS IIFE：
+///   `switch (x) { 0 => '零', _ => '多' }` →
+///   `(() => { switch (x) { case 0: return "零"; default: return "多"; } })()`
+/// 仅支持常量模式与 `_`（guard / 解构 / 关系 / 逻辑或模式返回 null，调用方
+/// 出声告警）。case 值走普通表达式翻译，不支持返回 widget 的 case（widget
+/// 渲染路径只认 return 语句/表达式位置的构造调用）。
+String? _switchExpressionJs(
+  SwitchExpression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final subj = exprToJs(e.expression, scope, classes);
+  if (subj == null) return null;
+  final arms = <String>[];
+  for (final c in e.cases) {
+    if (c.guardedPattern.whenClause != null) return null;
+    final p = c.guardedPattern.pattern;
+    String? label;
+    if (p is WildcardPattern) {
+      label = 'default:';
+    } else if (p is ConstantPattern) {
+      final v = exprToJs(p.expression, scope, classes);
+      if (v == null) return null;
+      label = 'case $v:';
+    } else {
+      return null;
+    }
+    final v = rhsToJs(c.expression, scope, classes);
+    if (v == null) return null;
+    arms.add('    $label return $v;');
+  }
+  if (arms.isEmpty) return null;
+  return '(() => { switch ($subj) {\n${arms.join('\n')}\n} })()';
 }
 
 /// 一条表达式语句 → JS：`setState(...)` 展开为 `this.setState(function(){...})`，

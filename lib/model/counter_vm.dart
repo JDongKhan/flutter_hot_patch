@@ -15,11 +15,18 @@ class CounterVm extends ChangeNotifier {
 
   void inc() async {
     _count++;
+    // 语句级 if：到达上限自动归零（生成器 if 语句翻译演示）
+    if (_count >= 10) {
+      _count = 0;
+    }
     notifyListeners();
   }
 
   void reset() {
-    _count = 0;
+    // 语句级 while：逐次递减归零（生成器 while 语句翻译演示）
+    while (_count > 0) {
+      _count--;
+    }
     notifyListeners();
   }
 

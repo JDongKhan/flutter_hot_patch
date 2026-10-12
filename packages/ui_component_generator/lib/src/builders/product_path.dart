@@ -9,7 +9,6 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../translator/class_translator.dart';
 import '../translator/source_index.dart';
 
 /// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 一致）：
@@ -43,11 +42,16 @@ String relativeProduct(String from, String to) {
 
 /// 扫描当前文件 import 的源文件，收集「有 JS 产物的组件类名 → 产物路径」。
 ///
-/// 与 [translateClass] 的连带转换规则一致，「有产物」判定为：
-///   - 类带 @UIComponent 注解；或
-///   - 私有类（_Xxx）且声明了 build() 方法。
-/// 按**类名**绑定（而非「第一条 import」），多 import 文件不会串台；
-/// 命中即让 build 树里的 Component 节点渲染成类引用元素并 import 该产物。
+/// 「有产物」判定只有一条：类带 **@UIComponent 注解**（注解即意味着该源文件
+/// 是组件文件、会产出同名 JS 产物，且该类被 `export class` 出去）。**不按方法名
+/// 判断**（build / buildText / 任何返回 widget 的方法一律等价）——「类是不是
+/// widget」的口径统一在翻译层，本函数不另立一套。
+///
+/// 私有类不进表：私有名不可能出现在别的文件里，跨文件解析用不到；本文件内的
+/// 私有类由 [translateClass] 的连带转换按「本产物名」处理（见 importResolver）。
+///
+/// 按**类名**绑定（而非「第一条 import」），多 import 文件不会串台；命中即让
+/// build 树里的 Component 节点渲染成类引用元素并 import 该产物。
 Map<String, String> resolveImportedComponentProducts(
   CompilationUnit unit,
   String sourcePath,
@@ -58,21 +62,9 @@ Map<String, String> resolveImportedComponentProducts(
     if (!f.existsSync()) continue;
     final parsed = parseString(content: f.readAsStringSync());
     for (final decl in parsed.unit.declarations.whereType<ClassDeclaration>()) {
-      final name = decl.name.lexeme;
-      final annotated = findAnnotation(decl.metadata, 'UIComponent') != null;
-      final privateWithBuild =
-          name.startsWith('_') && hasBuildMethod(decl);
-      if (!annotated && !privateWithBuild) continue;
-      out[name] = productPath(file);
+      if (findAnnotation(decl.metadata, 'UIComponent') == null) continue;
+      out[decl.name.lexeme] = productPath(file);
     }
   }
   return out;
-}
-
-/// 类（或其 State 类）是否声明了 build() 方法。
-bool hasBuildMethod(ClassDeclaration decl) {
-  for (final m in decl.members) {
-    if (m is MethodDeclaration && m.name.lexeme == 'build') return true;
-  }
-  return stateClassNameOf(decl) != null;
 }

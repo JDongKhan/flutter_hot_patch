@@ -41,6 +41,10 @@ export class HelloCard {
     var debugActive = kDebugMode;
     var android = Platform.isAndroid;
     console.debug("build: count=" + this._count + " debug=" + debugActive + " android=" + android);
+    var stage = (() => { switch (this._count) {
+    case 0: return "起步";
+    default: return "推进中";
+} })();
     return __h('Column', {}, [
         __h('Text', {
             "data": "Hello from JS logic 4",
@@ -52,6 +56,9 @@ export class HelloCard {
           }),
         __h('Text', {
             "data": "count = " + this._count
+          }),
+        __h('Text', {
+            "data": "阶段：" + stage
           }),
         __h('Text', {
             "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")

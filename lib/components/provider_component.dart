@@ -51,6 +51,7 @@ class _ProviderCardState extends State<ProviderCard> {
             children: [
               _buildText(),
               _modelA.buildText(),
+              _buildBadge(),
               const Text('MultiProvider · 两个模型各自局部重建'),
               const SizedBox(height: 8),
               Consumer<NetworkVm>(
@@ -87,6 +88,35 @@ class _ProviderCardState extends State<ProviderCard> {
 
   Widget _buildText() {
     return Text("test 1");
+  }
+
+  /// 语句级 switch + for 演示：按计数档位给档位名、按计数拼重复标记。
+  /// 挂载时求值一次（不在 Consumer 内，计数变化由下方 Consumer 行实时展示）。
+  Widget _buildBadge() {
+    var label = '';
+    // 语句级 switch：case 1 / case 2 空体贯穿共用一段，default 兜底
+    //（Dart 无贯穿语义，生成器为非空 case 自动补 break）。
+    switch (_modelA.count) {
+      case 0:
+        label = 'B·零';
+        break;
+      case 1:
+      case 2:
+        label = 'B·少';
+        break;
+      case 3:
+      case 4:
+        label = 'B·多';
+        break;
+      default:
+        label = 'B·爆表';
+    }
+    // 语句级 for：循环变量 i 直接参与拼接（for 头声明的 i 由生成器登记为局部变量）。
+    var dots = '';
+    for (var i = 0; i < _modelA.count; i++) {
+      dots = '$dots·';
+    }
+    return Text('$label$dots');
   }
 
   @override

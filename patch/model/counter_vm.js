@@ -14,10 +14,15 @@ export class CounterVm extends ChangeNotifier {
   get count() { return this._count; }
   async inc() {
     this._count += 1;
+    if ((this._count >= 10)) {
+      this._count = 0;
+    }
     this.notifyListeners();
   }
   reset() {
-    this._count = 0;
+    while ((this._count > 0)) {
+      this._count += -1;
+    }
     this.notifyListeners();
   }
   async getUserName() {

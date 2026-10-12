@@ -48,6 +48,7 @@ export class ProviderCard {
                   }, [
                     this._buildText(),
                     this._modelA.buildText(),
+                    this._buildBadge(),
                     __h('Text', {
                         "data": "MultiProvider · 两个模型各自局部重建"
                       }),
@@ -99,6 +100,32 @@ export class ProviderCard {
   _buildText() {
     return __h('Text', {
         "data": "test 1"
+      });
+  }
+  _buildBadge() {
+    var label = "";
+    switch (this._modelA.count) {
+      case 0:
+        label = "B·零";
+        break;
+      case 1:
+      case 2:
+        label = "B·少";
+        break;
+      case 3:
+      case 4:
+        label = "B·多";
+        break;
+      default:
+        label = "B·爆表";
+      break;
+    }
+    var dots = "";
+    for (var i = 0; (i < this._modelA.count); (i++)) {
+      dots = dots + "·";
+    }
+    return __h('Text', {
+        "data": label + dots
       });
   }
   dispose() {

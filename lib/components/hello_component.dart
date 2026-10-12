@@ -74,6 +74,11 @@ class _HelloCardState extends State<HelloCard> {
     final debugActive = kDebugMode; // 标志转换：kDebugMode → __isDebug
     final android = Platform.isAndroid; // 标志转换：Platform.isAndroid → __isAndroid
     debugPrint('build: count=$_count debug=$debugActive android=$android'); // 日志 → console.debug
+    // switch 表达式：按计数值选阶段文案（生成器翻译为 IIFE + JS switch）
+    final stage = switch (_count) {
+      0 => '起步',
+      _ => '推进中',
+    };
     return Column(
       children: [
         Text(
@@ -81,6 +86,7 @@ class _HelloCardState extends State<HelloCard> {
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
         ),
         Text('count = $_count'),
+        Text('阶段：$stage'),
         Text('user: ${_user?.name ?? '加载中'}'),
         Text('age: ${_user?.age ?? '-'}'),
         // 三目运算：状态驱动的文案（count > 3 切换提示）
