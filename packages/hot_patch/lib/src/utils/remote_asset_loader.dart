@@ -17,10 +17,14 @@ import 'hot_patch_log.dart';
 /// 模块读取时用「localRoot + 虚拟路径」拼出本地文件路径，判断文件存在即读本地，
 /// 不存在回退内置 asset——**不需要任何虚拟路径映射表**，文件系统即索引。
 class RemoteAssetBundle {
-  const RemoteAssetBundle(this.entryJsAsset, this.localRoot);
+  const RemoteAssetBundle(this.entryJsAsset, this.localRoot, {this.fresh = false});
 
   final String entryJsAsset;
   final String localRoot;
+
+  /// true = 本次是重新下载解压（zip 有更新）；false = 304 复用本地缓存。
+  /// JsUiWidget 据此决定是否清除 JsRuntimeManager 的模块缓存。
+  final bool fresh;
 }
 
 /// 网络补丁包加载器：`http(s)://` 开头的 jsAsset → 下载 zip → 校验格式 →
@@ -77,7 +81,7 @@ class RemoteAssetLoader {
         // 2. 304 Not Modified：zip 未变，直接复用本地解压产物。
         if (response.statusCode == HttpStatus.notModified && existing != null) {
           HotPatchLog.log('remote bundle reused (304): $url -> $existing');
-          return RemoteAssetBundle(existing, root);
+          return RemoteAssetBundle(existing, root, fresh: false);
         }
         if (response.statusCode != HttpStatus.ok) {
           HotPatchLog.log('remote asset HTTP ${response.statusCode}: $url');
@@ -121,7 +125,7 @@ class RemoteAssetLoader {
           return null;
         }
         HotPatchLog.log('remote bundle loaded (fresh): $url -> $entry');
-        return RemoteAssetBundle(entry, root);
+        return RemoteAssetBundle(entry, root, fresh: true);
       } finally {
         client.close(force: true);
       }

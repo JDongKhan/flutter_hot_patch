@@ -388,6 +388,14 @@ $out
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
   final Set<String> _loadingModules = {};
+
+  /// 清除所有已加载模块缓存（远程 zip 更新后调用，强制下次重新 evaluate）。
+  /// 注意：不卸载 JS 侧已 mount 的组件——只让 loadModule 重新执行模块代码。
+  void invalidateModules() {
+    _loadedModules.clear();
+    _loadingModules.clear();
+    _loadingCompleters.clear();
+  }
   /// 并发加载等待表：同 jsAsset 正在加载时，后续调用者 await 对应
   /// Completer，等首个加载完成后再继续（防 mount 在模块加载前执行）。
   final Map<String, Completer<void>> _loadingCompleters = {};

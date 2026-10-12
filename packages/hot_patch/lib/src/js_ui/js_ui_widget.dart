@@ -138,6 +138,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
         if (bundle == null) {
           throw StateError('远程补丁加载失败（需 http(s):// zip）：$realAsset');
         }
+        // zip 有更新（fresh）→ 清除模块缓存，强制重新 evaluate 最新产物。
+        if (bundle.fresh) {
+          _manager.invalidateModules();
+        }
         entry = bundle.entryJsAsset;
         localRoot = bundle.localRoot;
       }
