@@ -54,6 +54,7 @@ import 'package:flutter/foundation.dart' show TargetPlatform;
 import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/text_editing_controller_js.dart';
 import 'mini_react_js.dart';
+import 'change_notifier_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
@@ -278,12 +279,19 @@ final String jsUiRuntimeSource = [
 /// `evaluate` 的模块产物（`__modules[...] = ...`）与产物里裸引用的
 /// `kDebugMode` / `Platform` / `console` 可见。重复求值安全（`var`/`function`
 /// 重复声明无副作用），由调用方做一次幂等注入。
+/// 依赖这里声明的全局，不再自带一份 JS 文本。
+/// 内容：模块注册表 `__modules`、编译/运行期标志、console 桥（ChangeNotifier
+/// 基类已拆到 change_notifier_js.dart，不属于 env）。**顶层书写（不包 IIFE）**：
+/// `var` 声明必须落到全局，供后续 `evaluate` 的模块产物（`__modules[...] =
+/// ...`）与产物里裸引用的 `kDebugMode` / `Platform` / `console` 可见。
+/// 重复求值安全（`var`/`function` 重复声明无副作用），由调用方做一次幂等注入。
 String jsRuntimeEnvSource({
   required bool debugMode,
   required bool releaseMode,
   required TargetPlatform platform,
-}) =>
-    '''
+}) {
+  final env = '''
+
 if (typeof __modules === 'undefined') {
   var __modules = {};
 }
@@ -318,29 +326,8 @@ console.debug = function(m) { if (kDebugMode) { __log(m); } };
 console.info = function(m) { __log(m); };
 console.log = function(m) { __log(m); };
 console.warn = function(m) { __log(m); };
-console.error = function(m) { __log(m); };
-// ChangeNotifier 的 JS 基类（1:1 保持 Dart 类名）：模型 `class X
-// extends ChangeNotifier` 共用，notifyListeners 触发订阅回调。
-function ChangeNotifier() {
-  this._listeners = [];
-}
-ChangeNotifier.prototype.addListener = function(f) {
-  this._listeners.push(f);
-};
-ChangeNotifier.prototype.removeListener = function(f) {
-  var i = this._listeners.indexOf(f);
-  if (i >= 0) {
-    this._listeners.splice(i, 1);
-  }
-};
-ChangeNotifier.prototype.notifyListeners = function() {
-  this._listeners.slice().forEach(function(f) {
-    f();
-  });
-};
-// Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
-// 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
-ChangeNotifier.prototype.dispose = function() {
-  this._listeners = [];
-};
+console.error = function(m) { __log(m); }
 ''';
+  // env 是已求值的字符串（内部插值在定义时完成），外层插值安全。
+  return '$env\n$changeNotifierSource';
+}
