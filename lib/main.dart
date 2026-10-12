@@ -37,6 +37,10 @@ class HotDemoApp extends StatelessWidget {
   }
 }
 
+/// 本地 patch 服务（tool/start_patch_server.sh 启动）暴露的 zip 包。
+/// demo 全部从这里加载：散 .js 与 zip 同目录，改完产物重启服务即可。
+const String _patchZipUrl = 'http://127.0.0.1:8765/patch/patch.zip';
+
 /// 一个 Demo 场景条目。
 class _DemoEntry {
   final String title;
@@ -57,7 +61,8 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: HelloCard(),
         js: JsUiWidget(
-          jsAsset: 'assets/components/hello_component.js',
+          jsAsset: _patchZipUrl,
+          entryPath: 'components/hello_component.js',
           component: 'HelloCard',
         ),
       ),
@@ -68,7 +73,8 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: DashboardCard(),
         js: JsUiWidget(
-          jsAsset: 'assets/components/composite_component.js',
+          jsAsset: _patchZipUrl,
+          entryPath: 'components/composite_component.js',
           component: 'DashboardCard',
           // 嵌套组件（BannerCard）由生成器在 Component 节点产出 JS 工厂调用，
           // 运行时自动递归挂载，使用方无需声明依赖。
@@ -91,7 +97,8 @@ class DemoListPage extends StatelessWidget {
         // provider 状态处理在 JS 侧（assets/provider.js）：
         // 经 JsUiWidget 新运行时渲染，宿主不实现任何 provider 语义。
         js: JsUiWidget(
-          jsAsset: 'assets/components/provider_component.js',
+          jsAsset: _patchZipUrl,
+          entryPath: 'components/provider_component.js',
           component: 'ProviderCard',
         ),
       ),
@@ -103,18 +110,19 @@ class DemoListPage extends StatelessWidget {
         native: WatchDemo(),
         // context.watch/read 的订阅与 provider 链全在 JS 侧（新运行时）。
         js: JsUiWidget(
-          jsAsset: 'assets/components/watch_demo.js',
+          jsAsset: _patchZipUrl,
+          entryPath: 'components/watch_demo.js',
           component: 'WatchDemo',
         ),
       ),
     ),
     _DemoEntry(
-      'HelloCard · 网络 zip 加载',
-      'jsAsset 为 http(s):// zip：下载解压到 document 后走与 asset 一致的加载逻辑',
+      'HelloCard · 本地 zip 加载',
+      'jsAsset 为 http:// zip：tool/start_patch_server.sh 提供静态服务，下载解压后走与 asset 一致的加载逻辑',
       _CompareTest(
         native: HelloCard(),
         js: JsUiWidget(
-          jsAsset: 'http://127.0.0.1:8765/patch/multi_components.zip',
+          jsAsset: _patchZipUrl,
           // entryPath 直达 zip 内入口（也可不传，按 component 反查）
           entryPath: 'components/hello_component.js',
           component: 'HelloCard',
@@ -125,7 +133,7 @@ class DemoListPage extends StatelessWidget {
       'HelloCard · JS 双实例隔离',
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
       _TwinTest(
-        jsAsset: 'assets/components/hello_component.js',
+        jsAsset: _patchZipUrl,
         component: 'HelloCard',
         label: 'HelloCard',
       ),

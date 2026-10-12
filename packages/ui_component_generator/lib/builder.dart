@@ -47,15 +47,15 @@ Builder widgetModuleBuilder(BuilderOptions options) =>
 class ComponentBuilder implements Builder {
   const ComponentBuilder();
 
-  /// JS widget 模块（`assets/flutter.js` / `assets/provider.js` …）
+  /// JS widget 模块（`patch/flutter.js` / `patch/provider.js` …）
   /// 由 [WidgetModuleBuilder] 产出；本 builder 只产出与源文件同名的产物。
   ///
-  /// 输出路径**直接镜像 lib 源码路径**（`lib/a/b.dart` → `assets/a/b.js`），
+  /// 输出路径**直接镜像 lib 源码路径**（`lib/a/b.dart` → `patch/a/b.js`），
   /// 文件名与 Dart 源文件一致，不预设目录名、不区分组件/模型。
   @override
   Map<String, List<String>> get buildExtensions => const {
         '^lib/{{}}.dart': [
-          'assets/{{}}.js',
+          'patch/{{}}.js',
         ],
       };
 
@@ -105,7 +105,7 @@ class ComponentBuilder implements Builder {
     // 产物采用**相对路径**（相对当前产物所在目录，如 'bar_component.js'）：
     // 未来 JS 产物整体发布（CDN / 包内迁移）时，主产物与依赖产物的相对关系
     // 不变，运行时按当前 jsAsset 的目录解析即可，绝对路径会随部署位置失效。
-    final ownProduct = _productPath(inputId.path); // assets/.../x.js
+    final ownProduct = _productPath(inputId.path); // patch/.../x.js
     final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
     // 跨文件组件名 → 产物路径（按**类名**精确绑定；见 _resolveImportedComponentProducts）。
     final importProducts =
@@ -1194,25 +1194,25 @@ String? _snackMessage(FunctionBody body, WidgetTranslateContext ctx) {
 // ---------------------------------------------------------------------------
 
 /// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 一致）：
-/// `lib/a/b.dart` → `assets/a/b.js`（**直接镜像 lib 路径、文件名与源文件
+/// `lib/a/b.dart` → `patch/a/b.js`（**直接镜像 lib 路径、文件名与源文件
 /// 同名**，不预设 `components` 之类固定目录名，也不区分组件/模型）。
 String _productPath(String sourcePath) {
   if (!sourcePath.startsWith('lib/')) return sourcePath;
   final rel = sourcePath.substring('lib/'.length); // a/b.dart
   if (!rel.endsWith('.dart')) return sourcePath;
-  return 'assets/${rel.substring(0, rel.length - '.dart'.length)}.js';
+  return 'patch/${rel.substring(0, rel.length - '.dart'.length)}.js';
 }
 
-/// package 模块产物路径：`assets/<package>.js`（**一个 package 一个文件**）。
+/// package 模块产物路径：`patch/<package>.js`（**一个 package 一个文件**）。
 ///
 /// 这类产物是 **package 级**（`flutter` / `provider` 等，与 lib 源码目录无关），
-/// 因此直接落在 assets 根下；而组件/模型产物落在 `assets/` 下镜像 lib 源码路径。
+/// 因此直接落在 patch 根下；而组件/模型产物落在 `patch/` 下镜像 lib 源码路径。
 /// 同包的 widget 工厂/逻辑组件集中在一个文件里，避免按类型拆成大量小文件难以
 /// 维护，也天然只保留一份实现。
-String _packageModulePath(String package) => 'assets/$package.js';
+String _packageModulePath(String package) => 'patch/$package.js';
 
 /// 共享结点工厂 `__h` 的宿主 package：并入基础包 flutter 的模块
-/// （`assets/flutter.js`）。其它 package 模块与组件产物统一从它
+/// （`patch/flutter.js`）。其它 package 模块与组件产物统一从它
 /// `import { __h }`，使 `__h` 全局只定义一次。
 const String _nodeHelperPackage = 'flutter';
 
@@ -1280,9 +1280,9 @@ class WidgetModuleBuilder implements Builder {
   Future<void> build(BuildStep buildStep) async {
     final packages = _registeredWidgetPackages();
     for (final out in buildStep.allowedOutputs) {
-      // 输出路径形如 assets/<package>.js → 反推 package
+      // 输出路径形如 patch/<package>.js → 反推 package
       final segs = out.path.split('/');
-      if (segs.length != 2 || segs[0] != 'assets' || !segs[1].endsWith('.js')) {
+      if (segs.length != 2 || segs[0] != 'patch' || !segs[1].endsWith('.js')) {
         continue;
       }
       final pkg = segs[1].substring(0, segs[1].length - '.js'.length);
@@ -1348,7 +1348,7 @@ List<String> _resolveImportFiles(CompilationUnit unit, String sourcePath) {
 }
 
 /// 两个产物绝对路径 → 相对路径（相对第一个产物所在目录）。
-/// 如 'assets/foo_component.js' → 'assets/sub/bar_component.js'
+/// 如 'patch/foo_component.js' → 'patch/sub/bar_component.js'
 /// 得 'sub/bar_component.js'；跨目录时含 '../'。
 String _relativeProduct(String from, String to) {
   final fromDir = from.substring(0, from.lastIndexOf('/') + 1);

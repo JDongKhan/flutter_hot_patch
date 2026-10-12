@@ -69,22 +69,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  assets:
-    # 注意：Flutter 的目录 asset 声明不会递归打包子目录（flutter_tools
-    # 对目录用 listSync() 非递归）。产物分两类：
-    #   - 镜像 lib 源码路径、文件名与源文件同名：lib/a/b.dart → assets/a/b.js
-    #     （组件与模型同规则，按文件内容分流，产物目录 = lib 目录）；
-    #   - package 级模块：assets/<package>.js（**一个 package 一个文件**，
-    #     如 flutter.js 含 __h 与全部 flutter widget 工厂、provider.js 含
-    #     provider 逻辑组件），与 lib 目录结构无关。
-    # 目录按需逐条声明；单文件（包级模块）需按文件声明。
-    - assets/components/
-    # 模型/普通类产物（lib/model/ → assets/model/*.js）
-    - assets/model/
-    # package 级模块：build() 构造调用（Text/Column/...）与逻辑组件
-    # （ChangeNotifierProvider/Consumer/...）集中文件，由 ui_widget builder 产出。
-    - assets/flutter.js
-    - assets/provider.js
+  # JS 产物已改由 build_runner 输出到 patch/ 目录，demo 通过本地 http 服务
+  # （tool/start_patch_server.sh，默认 127.0.0.1:8765）加载 patch.zip，
+  # 不再走 Flutter asset 打包。调试时 patch/ 下散 .js 与 patch.zip 同时存在。
+  # assets: []
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

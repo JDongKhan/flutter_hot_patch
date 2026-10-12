@@ -92,7 +92,8 @@ class WidgetDetailPage extends StatelessWidget {
   /// 页面级组件（Scaffold 等）不比对，直接 JS 热更版全屏展示。
   final bool fullPage;
 
-  static const String _jsAsset = 'assets/components/widget_details.js';
+  static const String _jsAsset = 'http://127.0.0.1:8765/patch/patch.zip';
+  static const String _jsEntry = 'components/widget_details.js';
 
   Widget _native() {
     return switch (component) {
@@ -125,7 +126,12 @@ class WidgetDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final js = JsUiWidget(jsAsset: _jsAsset, component: component, props: _jsProps());
+    final js = JsUiWidget(
+      jsAsset: _jsAsset,
+      entryPath: _jsEntry,
+      component: component,
+      props: _jsProps(),
+    );
     if (fullPage) return js;
 
     // 大屏（宽度 ≥ 700，桌面/iPad/横屏）左右并排对比；小屏上下堆叠。
