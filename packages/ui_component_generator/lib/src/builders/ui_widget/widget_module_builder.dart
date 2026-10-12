@@ -46,7 +46,7 @@ Map<String, Set<String>> registeredWidgetPackages() {
 }
 
 /// widget 模块 builder：把**每个 package** 的全部已注册 widget 类型产出为
-/// 一个共享 JS 模块 `assets/<package>.js`（工厂函数 + 逻辑组件类，全局唯一
+/// 一个共享 JS 模块 `patch/<package>.js`（工厂函数 + 逻辑组件类，全局唯一
 /// 一份，消除各组件产物里内联同类工厂函数造成的重复与文件爆炸）。
 ///
 /// 输出挂在种子输入 [seedPath] 下（默认 [defaultSeedPath]，可由使用方

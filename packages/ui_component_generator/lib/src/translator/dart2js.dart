@@ -291,7 +291,7 @@ String renderClassDecl(
 
 /// 纯 static 类 → JS const 对象：`const MyColors = { a: v, b: v };`。
 /// [valueRenderer] 由调用方提供（颜色/字符串/字面量统一求值）。
-String renderStaticConst(
+String _renderStaticConst(
   ClassInfo info, {
   required String Function(ClassField field) valueRenderer,
   bool exported = false,
@@ -331,7 +331,7 @@ String dart2js(
   String Function(ClassField field)? singletonValueRenderer,
 }) {
   if (info.isStaticOnly && singletonValueRenderer != null) {
-    return renderStaticConst(info,
+    return _renderStaticConst(info,
         valueRenderer: singletonValueRenderer, exported: exported);
   }
   return renderClassDecl(info, classes,

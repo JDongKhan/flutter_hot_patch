@@ -17,7 +17,7 @@ import '../../translator/widget2js.dart';
 
 /// 判断是否「静态单例类」：普通类（无 @UIComponent、非 private、非抽象）、
 /// 且含至少一个非 private **static** 字段。
-bool isSingletonClass(ClassDeclaration decl) {
+bool _isSingletonClass(ClassDeclaration decl) {
   final name = decl.name.lexeme;
   if (name.startsWith('_')) return false;
   if (decl.abstractKeyword != null) return false;
@@ -37,11 +37,11 @@ bool isSingletonClass(ClassDeclaration decl) {
 /// 收集某文件里声明的全部「静态单例类」（用于无组件文件的单例产物产出）。
 List<ClassDeclaration> findSingletonClasses(CompilationUnit unit) => [
       for (final d in unit.declarations.whereType<ClassDeclaration>())
-        if (isSingletonClass(d)) d,
+        if (_isSingletonClass(d)) d,
     ];
 
 /// 收集类里全部非私有 static 字段名。
-Set<String> publicStaticFieldNames(ClassDeclaration decl) {
+Set<String> _publicStaticFieldNames(ClassDeclaration decl) {
   final fields = <String>{};
   for (final m in decl.members) {
     if (m is FieldDeclaration && m.isStatic) {
@@ -64,8 +64,8 @@ SingletonResolver buildSingletonResolver(
   final resolver = SingletonResolver();
   // 同文件 static 单例类：inline 进本产物（sourceFile == sourcePath，不 import）
   for (final decl in unit.declarations.whereType<ClassDeclaration>()) {
-    if (!isSingletonClass(decl)) continue;
-    resolver.add(decl.name.lexeme, publicStaticFieldNames(decl), sourcePath);
+    if (!_isSingletonClass(decl)) continue;
+    resolver.add(decl.name.lexeme, _publicStaticFieldNames(decl), sourcePath);
   }
   // 跨文件 static 单例类：独立产物 + import
   for (final file in resolveImportFiles(unit, sourcePath)) {
@@ -73,8 +73,8 @@ SingletonResolver buildSingletonResolver(
     if (!f.existsSync()) continue;
     final parsed = parseString(content: f.readAsStringSync());
     for (final decl in parsed.unit.declarations.whereType<ClassDeclaration>()) {
-      if (!isSingletonClass(decl)) continue;
-      resolver.add(decl.name.lexeme, publicStaticFieldNames(decl), file);
+      if (!_isSingletonClass(decl)) continue;
+      resolver.add(decl.name.lexeme, _publicStaticFieldNames(decl), file);
     }
   }
   return resolver;
@@ -93,7 +93,7 @@ String singletonFieldValue(Expression? init, WidgetTranslateContext ctx) {
   final c = colorToJson(init, ctx);
   if (c != null) return c;
   // 字符串：单引号字面量（与单例对象内其它值一致）
-  if (init is SimpleStringLiteral) return singletonString(init.value);
+  if (init is SimpleStringLiteral) return _singletonString(init.value);
   // 简单字面量：int / double / bool / 简单二元运算
   final lit = literalToJs(init);
   if (lit != null) return lit;
@@ -103,7 +103,7 @@ String singletonFieldValue(Expression? init, WidgetTranslateContext ctx) {
 }
 
 /// Js单引号字符串字面量。
-String singletonString(String s) {
+String _singletonString(String s) {
   final escaped = s
       .replaceAll(r'\', r'\\')
       .replaceAll("'", r"\'")

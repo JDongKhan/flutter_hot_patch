@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
 import 'js_translator.dart';
-import 'style_translators.dart';
 
 // ===========================================================================
 // widget2js：widget → JS（build 树的翻译与渲染）
@@ -521,10 +520,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return out.join(', ');
   }
 
-  /// 颜色表达式（Color(0x..)/Colors.x/静态引用/三目）→ JS 表达式字符串。
-  /// 委托给 style_translators 的顶层 [colorExpr]（生成器与样式翻译共用一套逻辑）。
-  String? colorExpr(Expression e) => translateColor(e, this);
-
   /// BorderRadius.all(Radius.circular(n)) / BorderRadius.circular(n) → 数字字符串。
   String? borderRadiusExpr(Expression e) {
     final (ctor, args) = ctorOf(e);
@@ -537,14 +532,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   }
 
   String? _radiusNum(Expression e) {
-    if (e is IntegerLiteral && e.value != null) return '${e.value}';
-    if (e is DoubleLiteral) return '${e.value}';
+    final direct = numLiteralJs(e);
+    if (direct != null) return direct;
     final (ctor, args) = ctorOf(e);
-    if (ctor == 'circular') {
-      for (final a in args) {
-        if (a is IntegerLiteral && a.value != null) return '${a.value}';
-        if (a is DoubleLiteral) return '${a.value}';
-      }
+    if (ctor != 'circular') return null;
+    for (final a in args) {
+      final n = numLiteralJs(a);
+      if (n != null) return n;
     }
     return null;
   }
@@ -789,8 +783,6 @@ class SingletonResolver {
 
   /// 翻译过程中实际被引用的单例类（→ 产物 import）。
   final Set<String> used = {};
-
-  bool get isEmpty => _fields.isEmpty;
 
   void add(String className, Set<String> publicStaticFields, String sourceFile) {
     _fields[className] = publicStaticFields;

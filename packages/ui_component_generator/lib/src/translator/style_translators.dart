@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
+import 'js_translator.dart';
 import 'widget2js.dart';
 
 // ===========================================================================
@@ -31,7 +32,7 @@ Map<String, dynamic>? textStyleToJson(
     final v = a.expression;
     switch (name) {
       case 'fontSize':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['fontSize'] = n;
       case 'fontWeight':
         final w = _fontWeightExpr(v);
@@ -43,15 +44,15 @@ Map<String, dynamic>? textStyleToJson(
         final c = translateColor(v, ctx);
         if (c != null) map['color'] = c;
       case 'letterSpacing':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['letterSpacing'] = n;
       case 'height':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['height'] = n;
       case 'fontFamily':
         if (v is SimpleStringLiteral) map['fontFamily'] = ctx.jsString(v.value);
       case 'wordSpacing':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['wordSpacing'] = n;
       case 'backgroundColor':
         final c = translateColor(v, ctx);
@@ -66,7 +67,7 @@ Map<String, dynamic>? textStyleToJson(
         final d = enumName(v, 'TextDecorationStyle');
         if (d != null) map['decorationStyle'] = ctx.jsString(d);
       case 'decorationThickness':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['decorationThickness'] = n;
       case 'fontFamilyFallback':
         final list = _stringListExpr(v);
@@ -109,7 +110,7 @@ Map<String, dynamic>? buttonStyleToJson(
           final c = translateColor(v, ctx);
           if (c != null) map['shadowColor'] = c;
         case 'elevation':
-          final n = _numExpr(v);
+          final n = numLiteralJs(v);
           if (n != null) map['elevation'] = n;
         case 'padding':
           final e = edgeInsetsToJson(v, ctx);
@@ -145,7 +146,7 @@ Map<String, dynamic>? buttonStyleToJson(
           final d = enumName(v, 'VisualDensity');
           if (d != null) map['visualDensity'] = ctx.jsString(d);
         case 'enableFeedback':
-          final b = _boolExpr(v);
+          final b = boolLiteralJs(v);
           if (b != null) map['enableFeedback'] = b;
       }
     }
@@ -156,18 +157,6 @@ Map<String, dynamic>? buttonStyleToJson(
 // ---------------------------------------------------------------------------
 // 基础表达式解析（样式专用，值一律输出 JS 表达式字符串）
 // ---------------------------------------------------------------------------
-
-/// 数字字面量 → JS 数字表达式（'12' / '1.5'）。
-String? _numExpr(Expression e) {
-  if (e is IntegerLiteral) {
-    final v = e.value;
-    return v == null ? null : '$v';
-  }
-  if (e is DoubleLiteral) {
-    return '${e.value}';
-  }
-  return null;
-}
 
 /// FontWeight.bold / FontWeight.w500 → '"bold"' / '"w500"'（JS 字符串字面量）。
 String? _fontWeightExpr(Expression e) {
@@ -330,16 +319,18 @@ Map<String, dynamic>? _sizeExpr(Expression e) {
   if (ctor != 'Size') return null;
   final pos = args.whereType<Expression>().toList();
   if (pos.length < 2) return null;
-  final w = _numExpr(pos[0]);
-  final h = _numExpr(pos[1]);
+  final w = numLiteralJs(pos[0]);
+  final h = numLiteralJs(pos[1]);
   if (w == null || h == null) return null;
   return {'width': w, 'height': h};
 }
 
-/// BorderSide(color: ..., width: ..., style: ...) → {'color': c, 'width': n, 'style': s}。
-Map<String, dynamic>? borderSideToJson(Expression e, WidgetTranslateContext ctx) {
-  final (ctor, args) = _ctorOfExpr(e);
-  if (ctor != 'BorderSide') return null;
+/// BorderSide 字段（color/width/style）的一串具名实参 → JSON map。
+/// `BorderSide(...)` 与 `Border.all(...)` 字段一致，共用这一处解析。
+Map<String, dynamic> _borderSideProps(
+  List<Expression> args,
+  WidgetTranslateContext ctx,
+) {
   final map = <String, dynamic>{};
   for (final a in args) {
     if (a is! NamedExpression) continue;
@@ -349,13 +340,21 @@ Map<String, dynamic>? borderSideToJson(Expression e, WidgetTranslateContext ctx)
         final c = translateColor(v, ctx);
         if (c != null) map['color'] = c;
       case 'width':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['width'] = n;
       case 'style':
         final s = enumName(v, 'BorderStyle');
         if (s != null) map['style'] = ctx.jsString(s);
     }
   }
+  return map;
+}
+
+/// BorderSide(color: ..., width: ..., style: ...) → {'color': c, 'width': n, 'style': s}。
+Map<String, dynamic>? borderSideToJson(Expression e, WidgetTranslateContext ctx) {
+  final (ctor, args) = _ctorOfExpr(e);
+  if (ctor != 'BorderSide') return null;
+  final map = _borderSideProps(args, ctx);
   return map.isEmpty ? null : map;
 }
 
@@ -364,19 +363,10 @@ String? _stringListExpr(Expression e) {
   if (e is! ListLiteral) return null;
   final items = <String>[];
   for (final el in e.elements) {
-    if (el is SimpleStringLiteral) items.add(_jsQString(el.value));
+    if (el is SimpleStringLiteral) items.add(jsString(el.value));
   }
   if (items.isEmpty) return null;
   return '[${items.join(', ')}]';
-}
-
-/// JS 双引号字符串字面量（列表内联用，无转义处理之外的简化版）。
-String _jsQString(String s) => '"${s.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
-
-/// bool 字面量 → 'true' / 'false'。
-String? _boolExpr(Expression e) {
-  if (e is BooleanLiteral) return e.value ? 'true' : 'false';
-  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -389,7 +379,7 @@ Object? textScalerToJson(Expression e) {
   if (ctor == 'linear') {
     final pos = args.whereType<Expression>().toList();
     if (pos.isNotEmpty) {
-      final n = _numExpr(pos.first);
+      final n = numLiteralJs(pos.first);
       if (n != null) return {'linear': n};
     }
     return null;
@@ -422,7 +412,7 @@ Map<String, dynamic>? edgeInsetsToJson(
   // EdgeInsets.all(8)
   final pos = args.whereType<Expression>().toList();
   if (pos.isNotEmpty) {
-    final n = _numExpr(pos.first);
+    final n = numLiteralJs(pos.first);
     if (n != null) {
       l = t = r = b = double.tryParse(n);
     }
@@ -430,7 +420,7 @@ Map<String, dynamic>? edgeInsetsToJson(
   // EdgeInsets.symmetric / only：命名参数
   for (final a in args) {
     if (a is! NamedExpression) continue;
-    final n = _numExpr(a.expression);
+    final n = numLiteralJs(a.expression);
     if (n == null) continue;
     final v = double.tryParse(n);
     if (v == null) continue;
@@ -446,7 +436,7 @@ Map<String, dynamic>? edgeInsetsToJson(
   // EdgeInsets.fromLTRB(l, t, r, b)：4 个位置参数
   if (pos.length == 4) {
     final nums = pos.map((e) {
-      final n = _numExpr(e);
+      final n = numLiteralJs(e);
       return n == null ? null : double.tryParse(n);
     }).toList();
     if (nums.every((x) => x != null)) {
@@ -551,7 +541,7 @@ Map<String, dynamic>? borderRadiusToJson(
   // BorderRadius.all(Radius.circular(8))：首个位置参数是 Radius，需解包。
   if (args.isNotEmpty) {
     final first = args.whereType<Expression>().first;
-    final n = _numExpr(first) ?? _radiusValue(first);
+    final n = numLiteralJs(first) ?? _radiusValue(first);
     if (n != null) radius = double.tryParse(n);
   }
   // BorderRadius.all(Radius.circular(8)) 的防御性兜底（正常走上面的解包）
@@ -566,18 +556,18 @@ Map<String, dynamic>? borderRadiusToJson(
 
 /// Radius.circular(8) → '8'；裸数字字面量 → '8'。
 String? _radiusValue(Expression e) {
-  final n = _numExpr(e);
+  final n = numLiteralJs(e);
   if (n != null) return n;
   final (ctor, args) = _ctorOfExpr(e);
   if (ctor == 'Radius' || ctor == 'circular') {
     final pos = args.whereType<Expression>().toList();
-    if (pos.isNotEmpty) return _numExpr(pos.first);
+    if (pos.isNotEmpty) return numLiteralJs(pos.first);
   }
   return null;
 }
 
 /// Colors.xxx / Color(0x...) → JS 字符串字面量（'#RRGGBB' / '#AARRGGBB'）。
-/// 公共包装：widget translator 直接调用；内部实现在 [_colorExpr]。
+/// 公共包装：widget translator 直接调用；内部实现在 [translateColor]。
 String? colorToJson(Expression? expr, WidgetTranslateContext ctx) {
   if (expr == null) return null;
   return translateColor(expr, ctx);
@@ -633,22 +623,7 @@ Map<String, dynamic>? borderToJson(
   final (ctor, args) = _ctorOfExpr(expr);
   // Border.all(...)：color/width/style 直接生成统一边
   if (ctor == 'all') {
-    final side = <String, dynamic>{};
-    for (final a in args) {
-      if (a is! NamedExpression) continue;
-      final v = a.expression;
-      switch (a.name.label.name) {
-        case 'color':
-          final c = translateColor(v, ctx);
-          if (c != null) side['color'] = c;
-        case 'width':
-          final n = _numExpr(v);
-          if (n != null) side['width'] = n;
-        case 'style':
-          final s = enumName(v, 'BorderStyle');
-          if (s != null) side['style'] = ctx.jsString(s);
-      }
-    }
+    final side = _borderSideProps(args, ctx);
     return side.isEmpty ? null : {'all': side};
   }
   if (ctor == 'Border' || ctor == 'fromBorderSide') {
@@ -709,17 +684,17 @@ Map<String, dynamic>? boxShadowToJson(Expression e, WidgetTranslateContext ctx) 
         if (oCtor == 'Offset') {
           final pos = oArgs.whereType<Expression>().toList();
           if (pos.length >= 2) {
-            final dx = _numExpr(pos[0]);
-            final dy = _numExpr(pos[1]);
+            final dx = numLiteralJs(pos[0]);
+            final dy = numLiteralJs(pos[1]);
             if (dx != null) map['dx'] = dx;
             if (dy != null) map['dy'] = dy;
           }
         }
       case 'blurRadius':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['blur'] = n;
       case 'spreadRadius':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['spread'] = n;
       case 'blurStyle':
         final s = enumName(v, 'BlurStyle');
@@ -766,7 +741,7 @@ Map<String, dynamic>? gradientToJson(
           final stops = <String>[];
           for (final el in v.elements) {
             if (el is! Expression) continue;
-            final n = _numExpr(el);
+            final n = numLiteralJs(el);
             if (n != null) stops.add(n);
           }
           if (stops.isNotEmpty) map['stops'] = stops;
@@ -777,7 +752,7 @@ Map<String, dynamic>? gradientToJson(
         final al = alignmentToJson(v, ctx);
         if (al != null) map[a.name.label.name] = al;
       case 'radius':
-        final n = _numExpr(v);
+        final n = numLiteralJs(v);
         if (n != null) map['radius'] = n;
     }
   }
@@ -823,7 +798,7 @@ Map<String, dynamic>? boxConstraintsToJson(
   for (final a in args) {
     if (a is! NamedExpression) continue;
     final v = a.expression;
-    final n = _numExpr(v);
+    final n = numLiteralJs(v);
     if (n == null) continue;
     switch (a.name.label.name) {
       case 'minWidth':

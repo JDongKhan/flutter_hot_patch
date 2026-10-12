@@ -31,7 +31,7 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
     // @HostInjected 类：方法实现留在 Dart，不产出 JS（调用点被翻译为
     // __jsui.host，见 buildHostMethods 与 js_translator.methodCallExprJs）。
     if (classHasHostInjectedMethod(d)) return;
-    decls[name] = (d, file, isWidgetClass(d));
+    decls[name] = (d, file, _isWidgetClass(d));
   }
 
   for (final d in unit.declarations.whereType<ClassDeclaration>()) {
@@ -61,7 +61,7 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
 /// 类是否为 widget / 组件类：带 @UIComponent 注解，或继承
 /// StatefulWidget / StatelessWidget / State（State 子类通常私有，已在收集处
 /// 排除，这里仅作兜底）。
-bool isWidgetClass(ClassDeclaration d) {
+bool _isWidgetClass(ClassDeclaration d) {
   if (findAnnotation(d.metadata, 'UIComponent') != null) return true;
   final sup = d.extendsClause?.superclass;
   if (sup != null) {

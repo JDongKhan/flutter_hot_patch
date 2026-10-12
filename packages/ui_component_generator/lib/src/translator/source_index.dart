@@ -53,14 +53,14 @@ List<String> resolveImportFiles(CompilationUnit unit, String sourcePath) {
       if (rel.endsWith('.dart')) out.add('lib/$rel');
       continue;
     }
-    final rel = relativeToLib(uri, dir);
+    final rel = _relativeToLib(uri, dir);
     if (rel != null && rel.endsWith('.dart')) out.add('lib/$rel');
   }
   return out;
 }
 
 /// 相对导入 uri（'foo.dart' / './foo.dart' / '../x.dart'）→ lib 相对路径。
-String? relativeToLib(String uri, String dir) {
+String? _relativeToLib(String uri, String dir) {
   final segments = <String>[];
   if (dir.startsWith('lib/')) {
     // dir 含尾斜杠（'lib/components/'），去掉尾 / 再入段

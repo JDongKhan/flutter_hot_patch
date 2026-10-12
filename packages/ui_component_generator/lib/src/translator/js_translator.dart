@@ -318,6 +318,22 @@ String? literalToJs(Expression? e) {
   return null;
 }
 
+/// 数字字面量（int/double）→ JS 数字表达式（'12' / '1.5'）；非数字字面量返回 null。
+///
+/// 值域比 [literalToJs] 窄（只认数字），供「只接受数字」的属性/样式读取——
+/// 样式翻译与 widget 翻译共用这一处，不各自重复一份。
+String? numLiteralJs(Expression? e) {
+  if (e is IntegerLiteral) return e.value?.toString();
+  if (e is DoubleLiteral) return '${e.value}';
+  return null;
+}
+
+/// bool 字面量 → 'true' / 'false'；非 bool 字面量返回 null（见 [numLiteralJs]）。
+String? boolLiteralJs(Expression? e) {
+  if (e is BooleanLiteral) return e.value.toString();
+  return null;
+}
+
 /// 读位置表达式 → JS 表达式（this._model.n / this._model / 字面量 / 形参）。
 String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
   // Platform.isAndroid 等（PrefixedIdentifier 是 Identifier 子类，必须先判）

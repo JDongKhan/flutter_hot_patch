@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
+import 'js_translator.dart';
 import 'style_translators.dart';
 import 'widget2js.dart';
 
@@ -327,7 +328,7 @@ class ChipTranslator extends WidgetTranslator {
     }
     final shape = shapeToJson(ctx.namedArg(node.args, 'shape'), ctx);
     if (shape != null) props['shape'] = shape;
-    final elevation = _numOf(ctx.namedArg(node.args, 'elevation'));
+    final elevation = numLiteralJs(ctx.namedArg(node.args, 'elevation'));
     if (elevation != null) props['elevation'] = elevation;
     return {'type': ctx.jsString('Chip'), 'props': props};
   }
@@ -374,7 +375,7 @@ class ListTileTranslator extends WidgetTranslator {
     final padding =
         edgeInsetsToJson(ctx.namedArg(node.args, 'contentPadding'), ctx);
     if (padding != null) props['contentPadding'] = padding;
-    final dense = _boolOf(ctx.namedArg(node.args, 'dense'));
+    final dense = boolLiteralJs(ctx.namedArg(node.args, 'dense'));
     if (dense != null) props['dense'] = dense;
     final shape = shapeToJson(ctx.namedArg(node.args, 'shape'), ctx);
     if (shape != null) props['shape'] = shape;
@@ -415,8 +416,8 @@ class SizedBoxTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final props = <String, dynamic>{};
-    final h = _numLiteral(ctx.namedArg(node.args, 'height'));
-    final w = _numLiteral(ctx.namedArg(node.args, 'width'));
+    final h = numLiteralJs(ctx.namedArg(node.args, 'height'));
+    final w = numLiteralJs(ctx.namedArg(node.args, 'width'));
     if (h != null) props['height'] = h;
     if (w != null) props['width'] = w;
     // SizedBox(height:.., width:.., child:..)：child 进 children，运行时渲染
@@ -429,17 +430,6 @@ class SizedBoxTranslator extends WidgetTranslator {
       'props': props,
       if (children.isNotEmpty) 'children': children,
     };
-  }
-
-  static String? _numLiteral(Expression? e) {
-    if (e is IntegerLiteral) {
-      final v = e.value;
-      return v == null ? null : '$v';
-    }
-    if (e is DoubleLiteral) {
-      return '${e.value}';
-    }
-    return null;
   }
 }
 
@@ -514,11 +504,11 @@ class AppBarTranslator extends WidgetTranslator {
     if (bg != null) props['backgroundColor'] = bg;
     final fg = colorToJson(ctx.namedArg(node.args, 'foregroundColor'), ctx);
     if (fg != null) props['foregroundColor'] = fg;
-    final elevation = _numOf(ctx.namedArg(node.args, 'elevation'));
+    final elevation = numLiteralJs(ctx.namedArg(node.args, 'elevation'));
     if (elevation != null) props['elevation'] = elevation;
-    final toolbarHeight = _numOf(ctx.namedArg(node.args, 'toolbarHeight'));
+    final toolbarHeight = numLiteralJs(ctx.namedArg(node.args, 'toolbarHeight'));
     if (toolbarHeight != null) props['toolbarHeight'] = toolbarHeight;
-    final centerTitle = _boolOf(ctx.namedArg(node.args, 'centerTitle'));
+    final centerTitle = boolLiteralJs(ctx.namedArg(node.args, 'centerTitle'));
     if (centerTitle != null) props['centerTitle'] = centerTitle;
     final titleStyle =
         textStyleToJson(ctx.namedArg(node.args, 'titleTextStyle'), ctx);
@@ -708,8 +698,8 @@ class ContainerTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final props = <String, dynamic>{};
-    final w = _numOf(ctx.namedArg(node.args, 'width'));
-    final h = _numOf(ctx.namedArg(node.args, 'height'));
+    final w = numLiteralJs(ctx.namedArg(node.args, 'width'));
+    final h = numLiteralJs(ctx.namedArg(node.args, 'height'));
     if (w != null) props['width'] = w;
     if (h != null) props['height'] = h;
     final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
@@ -747,7 +737,7 @@ class DividerTranslator extends WidgetTranslator {
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final props = <String, dynamic>{};
     for (final name in ['height', 'thickness', 'indent', 'endIndent']) {
-      final v = _numOf(ctx.namedArg(node.args, name));
+      final v = numLiteralJs(ctx.namedArg(node.args, name));
       if (v != null) props[name] = v;
     }
     final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
@@ -771,7 +761,7 @@ class CardTranslator extends WidgetTranslator {
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     if (child == null) throw FormatException('Card 缺少 child');
     final props = <String, dynamic>{};
-    final e = _numOf(ctx.namedArg(node.args, 'elevation'));
+    final e = numLiteralJs(ctx.namedArg(node.args, 'elevation'));
     if (e != null) props['elevation'] = e;
     final margin = edgeInsetsToJson(ctx.namedArg(node.args, 'margin'), ctx);
     if (margin != null) props['margin'] = margin;
@@ -811,11 +801,11 @@ class ListViewTranslator extends WidgetTranslator {
     if (axis != null) props['scrollDirection'] = axis;
     final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
     if (padding != null) props['padding'] = padding;
-    final shrinkWrap = _boolOf(ctx.namedArg(node.args, 'shrinkWrap'));
+    final shrinkWrap = boolLiteralJs(ctx.namedArg(node.args, 'shrinkWrap'));
     if (shrinkWrap != null) props['shrinkWrap'] = shrinkWrap;
     final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
     if (physics != null) props['physics'] = physics;
-    final itemExtent = _numOf(ctx.namedArg(node.args, 'itemExtent'));
+    final itemExtent = numLiteralJs(ctx.namedArg(node.args, 'itemExtent'));
     if (itemExtent != null) props['itemExtent'] = itemExtent;
     return {
       'type': ctx.jsString('ListView'),
@@ -848,7 +838,7 @@ class GridViewTranslator extends WidgetTranslator {
     if (axis != null) props['scrollDirection'] = axis;
     final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
     if (padding != null) props['padding'] = padding;
-    final shrinkWrap = _boolOf(ctx.namedArg(node.args, 'shrinkWrap'));
+    final shrinkWrap = boolLiteralJs(ctx.namedArg(node.args, 'shrinkWrap'));
     if (shrinkWrap != null) props['shrinkWrap'] = shrinkWrap;
     final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
     if (physics != null) props['physics'] = physics;
@@ -863,7 +853,7 @@ class GridViewTranslator extends WidgetTranslator {
       'childAspectRatio',
       'mainAxisExtent',
     ]) {
-      final v = _numOf(ctx.namedArg(node.args, n));
+      final v = numLiteralJs(ctx.namedArg(node.args, n));
       if (v != null) props[n] = v;
     }
 
@@ -1009,7 +999,7 @@ Map<String, dynamic>? _gridDelegateToJson(
     'childAspectRatio',
     'mainAxisExtent',
   ]) {
-    final v = _numOf(ctx.namedArg(args, n));
+    final v = numLiteralJs(ctx.namedArg(args, n));
     if (v != null) props[n] = v;
   }
   if (props.isNotEmpty) return props;
@@ -1035,9 +1025,9 @@ class CustomScrollViewTranslator extends WidgetTranslator {
     if (axis != null) props['scrollDirection'] = axis;
     final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
     if (physics != null) props['physics'] = physics;
-    final reverse = _boolOf(ctx.namedArg(node.args, 'reverse'));
+    final reverse = boolLiteralJs(ctx.namedArg(node.args, 'reverse'));
     if (reverse != null) props['reverse'] = reverse;
-    final shrinkWrap = _boolOf(ctx.namedArg(node.args, 'shrinkWrap'));
+    final shrinkWrap = boolLiteralJs(ctx.namedArg(node.args, 'shrinkWrap'));
     if (shrinkWrap != null) props['shrinkWrap'] = shrinkWrap;
     return {
       'type': ctx.jsString('CustomScrollView'),
@@ -1137,22 +1127,22 @@ class SliverAppBarTranslator extends WidgetTranslator {
     if (bg != null) props['backgroundColor'] = bg;
     final fg = colorToJson(ctx.namedArg(node.args, 'foregroundColor'), ctx);
     if (fg != null) props['foregroundColor'] = fg;
-    final elevation = _numOf(ctx.namedArg(node.args, 'elevation'));
+    final elevation = numLiteralJs(ctx.namedArg(node.args, 'elevation'));
     if (elevation != null) props['elevation'] = elevation;
-    final toolbarHeight = _numOf(ctx.namedArg(node.args, 'toolbarHeight'));
+    final toolbarHeight = numLiteralJs(ctx.namedArg(node.args, 'toolbarHeight'));
     if (toolbarHeight != null) props['toolbarHeight'] = toolbarHeight;
-    final centerTitle = _boolOf(ctx.namedArg(node.args, 'centerTitle'));
+    final centerTitle = boolLiteralJs(ctx.namedArg(node.args, 'centerTitle'));
     if (centerTitle != null) props['centerTitle'] = centerTitle;
     final titleStyle =
         textStyleToJson(ctx.namedArg(node.args, 'titleTextStyle'), ctx);
     if (titleStyle != null) props['titleTextStyle'] = titleStyle;
-    final pinned = _boolOf(ctx.namedArg(node.args, 'pinned'));
+    final pinned = boolLiteralJs(ctx.namedArg(node.args, 'pinned'));
     if (pinned != null) props['pinned'] = pinned;
-    final floating = _boolOf(ctx.namedArg(node.args, 'floating'));
+    final floating = boolLiteralJs(ctx.namedArg(node.args, 'floating'));
     if (floating != null) props['floating'] = floating;
-    final snap = _boolOf(ctx.namedArg(node.args, 'snap'));
+    final snap = boolLiteralJs(ctx.namedArg(node.args, 'snap'));
     if (snap != null) props['snap'] = snap;
-    final expandedHeight = _numOf(ctx.namedArg(node.args, 'expandedHeight'));
+    final expandedHeight = numLiteralJs(ctx.namedArg(node.args, 'expandedHeight'));
     if (expandedHeight != null) props['expandedHeight'] = expandedHeight;
     return {
       'type': ctx.jsString('SliverAppBar'),
@@ -1214,9 +1204,9 @@ class SliverFillRemainingTranslator extends WidgetTranslator {
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     if (child == null) throw FormatException('SliverFillRemaining 缺少 child');
     final props = <String, dynamic>{};
-    final hasScrollBody = _boolOf(ctx.namedArg(node.args, 'hasScrollBody'));
+    final hasScrollBody = boolLiteralJs(ctx.namedArg(node.args, 'hasScrollBody'));
     if (hasScrollBody != null) props['hasScrollBody'] = hasScrollBody;
-    final fillOverscroll = _boolOf(ctx.namedArg(node.args, 'fillOverscroll'));
+    final fillOverscroll = boolLiteralJs(ctx.namedArg(node.args, 'fillOverscroll'));
     if (fillOverscroll != null) props['fillOverscroll'] = fillOverscroll;
     return {
       'type': ctx.jsString('SliverFillRemaining'),
@@ -1243,7 +1233,7 @@ class SliverFixedExtentListTranslator extends WidgetTranslator {
           '或 SliverChildBuilderDelegate(...)');
     }
     final props = <String, dynamic>{...result.builder};
-    final itemExtent = _numOf(ctx.namedArg(node.args, 'itemExtent'));
+    final itemExtent = numLiteralJs(ctx.namedArg(node.args, 'itemExtent'));
     if (itemExtent == null) {
       throw FormatException('SliverFixedExtentList 缺少 itemExtent');
     }
@@ -1273,7 +1263,7 @@ class SliverFillViewportTranslator extends WidgetTranslator {
           '或 SliverChildBuilderDelegate(...)');
     }
     final props = <String, dynamic>{...result.builder};
-    final fraction = _numOf(ctx.namedArg(node.args, 'viewportFraction'));
+    final fraction = numLiteralJs(ctx.namedArg(node.args, 'viewportFraction'));
     if (fraction != null) props['viewportFraction'] = fraction;
     return {
       'type': ctx.jsString('SliverFillViewport'),
@@ -1295,7 +1285,7 @@ class SliverOpacityTranslator extends WidgetTranslator {
     final sliver = ctx.namedArg(node.args, 'sliver') ?? ctx.nonNamedArg(node.args);
     if (sliver == null) throw FormatException('SliverOpacity 缺少 sliver');
     final props = <String, dynamic>{};
-    final opacity = _numOf(ctx.namedArg(node.args, 'opacity'));
+    final opacity = numLiteralJs(ctx.namedArg(node.args, 'opacity'));
     if (opacity == null) throw FormatException('SliverOpacity 缺少 opacity');
     props['opacity'] = opacity;
     return {
@@ -1318,7 +1308,7 @@ class SliverOffstageTranslator extends WidgetTranslator {
     final sliver = ctx.namedArg(node.args, 'sliver') ?? ctx.nonNamedArg(node.args);
     if (sliver == null) throw FormatException('SliverOffstage 缺少 sliver');
     final props = <String, dynamic>{};
-    final offstage = _boolOf(ctx.namedArg(node.args, 'offstage'));
+    final offstage = boolLiteralJs(ctx.namedArg(node.args, 'offstage'));
     if (offstage == null) throw FormatException('SliverOffstage 缺少 offstage');
     props['offstage'] = offstage;
     return {
@@ -1342,7 +1332,7 @@ class SliverSafeAreaTranslator extends WidgetTranslator {
     if (sliver == null) throw FormatException('SliverSafeArea 缺少 sliver');
     final props = <String, dynamic>{};
     for (final n in ['left', 'top', 'right', 'bottom']) {
-      final v = _boolOf(ctx.namedArg(node.args, n));
+      final v = boolLiteralJs(ctx.namedArg(node.args, n));
       if (v != null) props[n] = v;
     }
     return {
@@ -1365,7 +1355,7 @@ class SliverIgnorePointerTranslator extends WidgetTranslator {
     final sliver = ctx.namedArg(node.args, 'sliver') ?? ctx.nonNamedArg(node.args);
     if (sliver == null) throw FormatException('SliverIgnorePointer 缺少 sliver');
     final props = <String, dynamic>{};
-    final ignoring = _boolOf(ctx.namedArg(node.args, 'ignoring'));
+    final ignoring = boolLiteralJs(ctx.namedArg(node.args, 'ignoring'));
     if (ignoring == null) throw FormatException('SliverIgnorePointer 缺少 ignoring');
     props['ignoring'] = ignoring;
     return {
@@ -1388,9 +1378,9 @@ class SliverVisibilityTranslator extends WidgetTranslator {
     final sliver = ctx.namedArg(node.args, 'sliver') ?? ctx.nonNamedArg(node.args);
     if (sliver == null) throw FormatException('SliverVisibility 缺少 sliver');
     final props = <String, dynamic>{};
-    final visible = _boolOf(ctx.namedArg(node.args, 'visible'));
+    final visible = boolLiteralJs(ctx.namedArg(node.args, 'visible'));
     if (visible != null) props['visible'] = visible;
-    final maintain = _boolOf(ctx.namedArg(node.args, 'maintainState'));
+    final maintain = boolLiteralJs(ctx.namedArg(node.args, 'maintainState'));
     if (maintain != null) props['maintainState'] = maintain;
     return {
       'type': ctx.jsString('SliverVisibility'),
@@ -1453,7 +1443,7 @@ class SingleChildScrollViewTranslator extends WidgetTranslator {
     if (padding != null) props['padding'] = padding;
     final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
     if (physics != null) props['physics'] = physics;
-    final reverse = _boolOf(ctx.namedArg(node.args, 'reverse'));
+    final reverse = boolLiteralJs(ctx.namedArg(node.args, 'reverse'));
     if (reverse != null) props['reverse'] = reverse;
     return {
       'type': ctx.jsString('SingleChildScrollView'),
@@ -1476,7 +1466,7 @@ class WrapTranslator extends WidgetTranslator {
     final children = ctx.listArg(node.args, 'children', node.type);
     final props = <String, dynamic>{};
     for (final name in ['spacing', 'runSpacing']) {
-      final v = _numOf(ctx.namedArg(node.args, name));
+      final v = numLiteralJs(ctx.namedArg(node.args, name));
       if (v != null) props[name] = v;
     }
     final direction = axisToJson(ctx.namedArg(node.args, 'direction'));
@@ -1514,7 +1504,7 @@ class IconTranslator extends WidgetTranslator {
     final icon = iconDataToJson(iconExpr);
     if (icon == null) throw FormatException('Icon 需要 Icons.xxx');
     final props = <String, dynamic>{'icon': icon};
-    final size = _numOf(ctx.namedArg(node.args, 'size'));
+    final size = numLiteralJs(ctx.namedArg(node.args, 'size'));
     if (size != null) props['size'] = size;
     final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
     if (color != null) props['color'] = color;
@@ -1540,7 +1530,7 @@ class ImageTranslator extends WidgetTranslator {
     if (source == null) throw FormatException('Image 需要 asset/network 源');
     final props = <String, dynamic>{'source': source};
     for (final name in ['width', 'height']) {
-      final v = _numOf(ctx.namedArg(node.args, name));
+      final v = numLiteralJs(ctx.namedArg(node.args, name));
       if (v != null) props[name] = v;
     }
     final fit = boxFitToJson(ctx.namedArg(node.args, 'fit'));
@@ -1569,7 +1559,7 @@ class CircleAvatarTranslator extends WidgetTranslator {
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final props = <String, dynamic>{};
     for (final name in ['radius', 'minRadius', 'maxRadius']) {
-      final v = _numOf(ctx.namedArg(node.args, name));
+      final v = numLiteralJs(ctx.namedArg(node.args, name));
       if (v != null) props[name] = v;
     }
     final color = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
@@ -1713,7 +1703,7 @@ class CheckboxTranslator extends WidgetTranslator {
     if (active != null) props['activeColor'] = active;
     final check = colorToJson(ctx.namedArg(node.args, 'checkColor'), ctx);
     if (check != null) props['checkColor'] = check;
-    final tristate = _boolOf(ctx.namedArg(node.args, 'tristate'));
+    final tristate = boolLiteralJs(ctx.namedArg(node.args, 'tristate'));
     if (tristate != null) props['tristate'] = tristate;
     return {'type': ctx.jsString('Checkbox'), 'props': props};
   }
@@ -1738,10 +1728,10 @@ class SliderTranslator extends WidgetTranslator {
       'event': ctx.eventHandle(onChanged),
     };
     for (final name in ['min', 'max']) {
-      final v = _numOf(ctx.namedArg(node.args, name));
+      final v = numLiteralJs(ctx.namedArg(node.args, name));
       if (v != null) props[name] = v;
     }
-    final divisions = _numOf(ctx.namedArg(node.args, 'divisions'));
+    final divisions = numLiteralJs(ctx.namedArg(node.args, 'divisions'));
     if (divisions != null) props['divisions'] = divisions;
     final label = ctx.namedArg(node.args, 'label');
     if (label is SimpleStringLiteral) props['label'] = ctx.jsString(label.value);
@@ -1893,7 +1883,7 @@ class ChangeNotifierProviderTranslator extends WidgetTranslator {
   @override
   String get type => 'ChangeNotifierProvider';
 
-  /// provider 包：模块产物落到 assets/provider.js。
+  /// provider 包：模块产物落到 patch/provider.js。
   @override
   String get packageName => 'provider';
 
@@ -2008,7 +1998,7 @@ class ConsumerTranslator extends WidgetTranslator {
   @override
   String get type => 'Consumer';
 
-  /// provider 包：模块产物落到 assets/provider.js。
+  /// provider 包：模块产物落到 patch/provider.js。
   @override
   String get packageName => 'provider';
 
@@ -2064,7 +2054,7 @@ class MultiProviderTranslator extends WidgetTranslator {
   @override
   String get type => 'MultiProvider';
 
-  /// provider 包：模块产物落到 assets/provider.js。
+  /// provider 包：模块产物落到 patch/provider.js。
   @override
   String get packageName => 'provider';
 
@@ -2187,19 +2177,6 @@ String? _providerTypeArg(Expression? e) {
   return null;
 }
 
-/// 数字字面量 → JS 数字表达式（'12' / '1.5'）；非字面量返回 null。
-String? _numOf(Expression? e) {
-  if (e is IntegerLiteral && e.value != null) return '${e.value}';
-  if (e is DoubleLiteral) return '${e.value}';
-  return null;
-}
-
-/// bool 字面量 → 'true' / 'false'。
-String? _boolOf(Expression? e) {
-  if (e is BooleanLiteral) return e.value ? 'true' : 'false';
-  return null;
-}
-
 // ===========================================================================
 // 补齐组件：布局 / 装饰 / 指示器 / 输入 / 导航
 // ===========================================================================
@@ -2214,7 +2191,7 @@ class SpacerTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final props = <String, dynamic>{};
-    final flex = _numOf(ctx.namedArg(node.args, 'flex'));
+    final flex = numLiteralJs(ctx.namedArg(node.args, 'flex'));
     if (flex != null) props['flex'] = flex;
     return {
       'type': ctx.jsString('Spacer'),
@@ -2236,7 +2213,7 @@ class SafeAreaTranslator extends WidgetTranslator {
     if (child == null) throw FormatException('SafeArea 缺少 child');
     final props = <String, dynamic>{};
     for (final name in ['left', 'top', 'right', 'bottom']) {
-      final b = _boolOf(ctx.namedArg(node.args, name));
+      final b = boolLiteralJs(ctx.namedArg(node.args, name));
       if (b != null) props[name] = b;
     }
     return {
@@ -2258,7 +2235,7 @@ class OpacityTranslator extends WidgetTranslator {
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     if (child == null) throw FormatException('Opacity 缺少 child');
-    final opacity = _numOf(ctx.namedArg(node.args, 'opacity'));
+    final opacity = numLiteralJs(ctx.namedArg(node.args, 'opacity'));
     if (opacity == null) throw FormatException('Opacity 需要 opacity 字面量');
     return {
       'type': ctx.jsString('Opacity'),
@@ -2303,7 +2280,7 @@ class AspectRatioTranslator extends WidgetTranslator {
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
     if (child == null) throw FormatException('AspectRatio 缺少 child');
-    final ratio = _numOf(ctx.namedArg(node.args, 'aspectRatio'));
+    final ratio = numLiteralJs(ctx.namedArg(node.args, 'aspectRatio'));
     if (ratio == null) {
       throw FormatException('AspectRatio 需要 aspectRatio 字面量');
     }
@@ -2329,9 +2306,9 @@ class FractionallySizedBoxTranslator extends WidgetTranslator {
       throw FormatException('FractionallySizedBox 缺少 child');
     }
     final props = <String, dynamic>{};
-    final wf = _numOf(ctx.namedArg(node.args, 'widthFactor'));
+    final wf = numLiteralJs(ctx.namedArg(node.args, 'widthFactor'));
     if (wf != null) props['widthFactor'] = wf;
-    final hf = _numOf(ctx.namedArg(node.args, 'heightFactor'));
+    final hf = numLiteralJs(ctx.namedArg(node.args, 'heightFactor'));
     if (hf != null) props['heightFactor'] = hf;
     final align = alignmentToJson(ctx.namedArg(node.args, 'alignment'), ctx);
     if (align != null) props['alignment'] = align;
@@ -2375,13 +2352,13 @@ class CircularProgressIndicatorTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final props = <String, dynamic>{};
-    final v = _numOf(ctx.namedArg(node.args, 'value'));
+    final v = numLiteralJs(ctx.namedArg(node.args, 'value'));
     if (v != null) props['value'] = v;
     final c = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
     if (c != null) props['color'] = c;
     final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
     if (bg != null) props['backgroundColor'] = bg;
-    final sw = _numOf(ctx.namedArg(node.args, 'strokeWidth'));
+    final sw = numLiteralJs(ctx.namedArg(node.args, 'strokeWidth'));
     if (sw != null) props['strokeWidth'] = sw;
     return {
       'type': ctx.jsString('CircularProgressIndicator'),
@@ -2400,13 +2377,13 @@ class LinearProgressIndicatorTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final props = <String, dynamic>{};
-    final v = _numOf(ctx.namedArg(node.args, 'value'));
+    final v = numLiteralJs(ctx.namedArg(node.args, 'value'));
     if (v != null) props['value'] = v;
     final c = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
     if (c != null) props['color'] = c;
     final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
     if (bg != null) props['backgroundColor'] = bg;
-    final mh = _numOf(ctx.namedArg(node.args, 'minHeight'));
+    final mh = numLiteralJs(ctx.namedArg(node.args, 'minHeight'));
     if (mh != null) props['minHeight'] = mh;
     return {
       'type': ctx.jsString('LinearProgressIndicator'),
@@ -2462,14 +2439,14 @@ class TextFieldTranslator extends WidgetTranslator {
       final v = decName(name);
       if (v != null) props[name] = ctx.jsString(v);
     }
-    final obscure = _boolOf(ctx.namedArg(node.args, 'obscureText'));
+    final obscure = boolLiteralJs(ctx.namedArg(node.args, 'obscureText'));
     if (obscure != null) props['obscureText'] = obscure;
-    final enabled = _boolOf(ctx.namedArg(node.args, 'enabled'));
+    final enabled = boolLiteralJs(ctx.namedArg(node.args, 'enabled'));
     if (enabled != null) props['enabled'] = enabled;
     final keyboard =
         textInputTypeToJson(ctx.namedArg(node.args, 'keyboardType'));
     if (keyboard != null) props['keyboardType'] = keyboard;
-    final maxLines = _numOf(ctx.namedArg(node.args, 'maxLines'));
+    final maxLines = numLiteralJs(ctx.namedArg(node.args, 'maxLines'));
     if (maxLines != null) props['maxLines'] = maxLines;
     final style = textStyleToJson(ctx.namedArg(node.args, 'style'), ctx);
     if (style != null) props['style'] = style;
@@ -2501,7 +2478,7 @@ class IconButtonTranslator extends WidgetTranslator {
     }
     final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
     if (color != null) props['color'] = color;
-    final size = _numOf(ctx.namedArg(node.args, 'iconSize'));
+    final size = numLiteralJs(ctx.namedArg(node.args, 'iconSize'));
     if (size != null) props['iconSize'] = size;
     final tooltip = ctx.namedArg(node.args, 'tooltip');
     if (tooltip is SimpleStringLiteral) {
@@ -2532,13 +2509,13 @@ class FloatingActionButtonTranslator extends WidgetTranslator {
     if (bg != null) props['backgroundColor'] = bg;
     final fg = colorToJson(ctx.namedArg(node.args, 'foregroundColor'), ctx);
     if (fg != null) props['foregroundColor'] = fg;
-    final mini = _boolOf(ctx.namedArg(node.args, 'mini'));
+    final mini = boolLiteralJs(ctx.namedArg(node.args, 'mini'));
     if (mini != null) props['mini'] = mini;
     final tooltip = ctx.namedArg(node.args, 'tooltip');
     if (tooltip is SimpleStringLiteral) {
       props['tooltip'] = ctx.jsString(tooltip.value);
     }
-    final elevation = _numOf(ctx.namedArg(node.args, 'elevation'));
+    final elevation = numLiteralJs(ctx.namedArg(node.args, 'elevation'));
     if (elevation != null) props['elevation'] = elevation;
     return {'type': ctx.jsString('FloatingActionButton'), 'props': props};
   }
@@ -2651,7 +2628,7 @@ class DropdownButtonTranslator extends WidgetTranslator {
     };
     final hint = ctx.namedArg(node.args, 'hint');
     if (hint is SimpleStringLiteral) props['hint'] = ctx.jsString(hint.value);
-    final isExpanded = _boolOf(ctx.namedArg(node.args, 'isExpanded'));
+    final isExpanded = boolLiteralJs(ctx.namedArg(node.args, 'isExpanded'));
     if (isExpanded != null) props['isExpanded'] = isExpanded;
     return {
       'type': ctx.jsString('DropdownButton'),

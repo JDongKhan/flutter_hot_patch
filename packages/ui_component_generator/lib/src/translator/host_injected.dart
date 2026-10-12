@@ -67,7 +67,7 @@ void scanHostMethods(
       sink(HostMethodDecl(
         owner: '',
         name: n,
-        channel: positionalString(a) ?? n,
+        channel: _positionalString(a) ?? n,
         isStatic: true,
         isPrivate: n.startsWith('_'),
       ));
@@ -83,7 +83,7 @@ void scanHostMethods(
         sink(HostMethodDecl(
           owner: owner,
           name: n,
-          channel: positionalString(a) ?? n,
+          channel: _positionalString(a) ?? n,
           isStatic: m.isStatic,
           isPrivate: ownerPrivate || n.startsWith('_'),
         ));
@@ -132,7 +132,7 @@ Map<String, Map<String, String>> buildHostMethods(
 }
 
 /// 注解的第 [index] 个位置参数，是字符串字面量时取其值。
-String? positionalString(Annotation a, [int index = 0]) {
+String? _positionalString(Annotation a, [int index = 0]) {
   final args = a.arguments;
   if (args == null || index >= args.arguments.length) return null;
   final e = args.arguments[index];

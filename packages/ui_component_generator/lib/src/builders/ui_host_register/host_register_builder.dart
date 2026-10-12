@@ -21,7 +21,7 @@ const String defaultRegisterCall = 'JsRuntimeManager.registerHostMethod';
 ///
 /// # 与另外两个 builder 的区别
 ///
-/// 另外两个 builder（`ui_component` / `ui_widget`）的产物是 **assets/ 下的 JS**
+/// 另外两个 builder（`ui_component` / `ui_widget`）的产物是 **patch/ 下的 JS**
 /// （运行期被 JS 引擎加载），本 builder 的产物是**参与编译的 Dart 源码**，
 /// 因此单独成一个 builder：输入是包根伪资产（无种子文件）、产物落在 lib/ 下。
 ///

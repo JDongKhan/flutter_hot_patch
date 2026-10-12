@@ -32,22 +32,22 @@ dart run build_runner build --delete-conflicting-outputs
 ```
 
 - 默认路径：`lib/js_widgets.dart`
-- 这是**必需项**：没有它，`assets/<package>.js` 这类包级模块不会被产出。
+- 这是**必需项**：没有它，`patch/<package>.js` 这类包级模块不会被产出。
 - 可通过 `build.yaml` 的 `options.seed_file` 覆盖（见下）。
 
 ## 产物
 
-产物目录 `assets/` 与 `lib/` 源码路径**一一对应**，文件名与 Dart 源文件同名：
+产物目录 `patch/` 与 `lib/` 源码路径**一一对应**，文件名与 Dart 源文件同名：
 
 | 源码 | 产物 | 说明 |
 | --- | --- | --- |
-| `lib/components/counter.dart` | `assets/components/counter.js` | 含 `@UIComponent` 的组件产物 |
-| `lib/model/user.dart` | `assets/model/user.js` | 普通类 / 静态单例（`export class` / `export const`） |
-| `lib/js_widgets.dart`（种子） | `assets/flutter.js`、`assets/provider.js` | **每个 package 一个文件**的 widget 工厂模块 |
+| `lib/components/counter.dart` | `patch/components/counter.js` | 含 `@UIComponent` 的组件产物 |
+| `lib/model/user.dart` | `patch/model/user.js` | 普通类 / 静态单例（`export class` / `export const`） |
+| `lib/js_widgets.dart`（种子） | `patch/flutter.js`、`patch/provider.js` | **每个 package 一个文件**的 widget 工厂模块 |
 
 - 按**文件内容**分流（与目录无关）：含 `@UIComponent` → 组件产物；仅含普通类
-  （非私有、非抽象、无 `build()`）→ 模型/单例产物；都没有 → 不产出。
-- `assets/flutter.js` 内含共享结点工厂 `__h` 与全部 flutter widget 工厂；
+  （非私有、非抽象、非组件）→ 模型/单例产物；都没有 → 不产出。
+- `patch/flutter.js` 内含共享结点工厂 `__h` 与全部 flutter widget 工厂；
   其它包模块与组件产物统一从它 `import { __h }`。
 
 > 注意：Flutter 的目录 asset 声明**不递归**，需在 `pubspec.yaml` 的 `assets:`
