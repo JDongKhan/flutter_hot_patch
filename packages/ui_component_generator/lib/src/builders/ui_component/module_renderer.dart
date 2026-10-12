@@ -4,12 +4,12 @@
 /// 是「Dart 类 → JS 文本」的最终拼装层，统一委托 [dart2js] 渲染各类声明。
 library;
 
-import '../translator/dart2js.dart';
-import '../translator/js_translator.dart';
-import '../translator/widget2js.dart';
+import '../../translator/dart2js.dart';
+import '../../translator/js_translator.dart';
+import '../../translator/widget2js.dart';
 
-import 'js_widget_defs.dart';
-import 'product_path.dart';
+import '../js_widget_defs.dart';
+import '../product_path.dart';
 import 'singleton_support.dart';
 
 /// 文件级产物入口：一个 Dart 源文件 → 一个同名 JS（ES module）。

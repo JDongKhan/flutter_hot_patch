@@ -8,9 +8,9 @@ library;
 
 import 'package:build/build.dart';
 
-import 'src/builders/component_builder.dart';
-import 'src/builders/host_register_builder.dart';
-import 'src/builders/widget_module_builder.dart';
+import 'src/builders/ui_component/component_builder.dart';
+import 'src/builders/ui_host_register/host_register_builder.dart';
+import 'src/builders/ui_widget/widget_module_builder.dart';
 
 /// 组件/模型 builder 工厂：`ui_component`。
 ///

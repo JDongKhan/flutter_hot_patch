@@ -1,10 +1,15 @@
+import 'dart:io';
+
+import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+
+import '../source_index.dart';
 
 // ===========================================================================
 // @HostInjected 的统一扫描口径
 //
 // 「哪些声明算宿主注入、通道名怎么取、能不能落地」只有这一份实现：
-//   - 组件/模型翻译（builder.dart 的 hostMethods 表）
+//   - 组件/模型翻译（component_builder 的 hostMethods 表）
 //   - 注册清单生成（host_register_builder.dart）
 // 都调 [scanHostMethods]，避免两套逻辑分叉导致「翻译了但没注册」。
 //
@@ -83,16 +88,42 @@ void scanHostMethods(
   }
 }
 
-/// 元数据里是否/哪个注解的「简单名」为 [simpleName]（忽略 import 前缀）。
-Annotation? findAnnotation(List<Annotation> metadata, String simpleName) {
-  for (final a in metadata) {
-    final name = a.name;
-    if (name is SimpleIdentifier && name.name == simpleName) return a;
-    if (name is PrefixedIdentifier && name.identifier.name == simpleName) {
-      return a;
-    }
+/// 类是否声明了带 @HostInjected 的方法（static 宿主注入能力）→ 不产出 JS。
+bool classHasHostInjectedMethod(ClassDeclaration d) {
+  for (final m in d.members.whereType<MethodDeclaration>()) {
+    if (findAnnotation(m.metadata, 'HostInjected') != null) return true;
   }
-  return null;
+  return false;
+}
+
+/// 收集宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
+/// 顶层函数挂在空串 key 下（`'' → {函数名 → 通道名}`）。
+///
+/// 扫描本文件 + import 源文件（调用点能写出来，就必然 import 得到）；
+/// 只有 [HostMethodDecl.usable] 的声明进表——与注册清单（host_register_builder）
+/// 用同一个扫描器、同一个判定，保证「翻译了的都注册了」，不因两套逻辑分叉。
+///
+/// 供翻译上下文把调用点整体替换为 `__jsui.host("通道", 参数载荷)`
+/// （参数个数、是否具名、返回值类型都不参与判定）。
+Map<String, Map<String, String>> buildHostMethods(
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  final out = <String, Map<String, String>>{};
+  void scan(CompilationUnit u) {
+    scanHostMethods(u, (h) {
+      if (!h.usable) return;
+      (out[h.owner] ??= {})[h.name] = h.channel;
+    });
+  }
+
+  scan(unit);
+  for (final file in resolveImportFiles(unit, sourcePath)) {
+    final f = File(file);
+    if (!f.existsSync()) continue;
+    scan(parseString(content: f.readAsStringSync()).unit);
+  }
+  return out;
 }
 
 /// 注解的第 [index] 个位置参数，是字符串字面量时取其值。

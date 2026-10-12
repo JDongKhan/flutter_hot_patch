@@ -6,16 +6,16 @@ import 'dart:async';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 
-import '../translator/class_translator.dart';
-import '../translator/js_translator.dart';
-import '../translator/widget2js.dart';
+import '../../translator/class_translator.dart';
+import '../../translator/js_translator.dart';
+import '../../translator/widget2js.dart';
 
+import '../js_widget_defs.dart';
+import '../product_path.dart';
+import '../source_index.dart';
 import 'class_table.dart';
-import 'js_widget_defs.dart';
 import 'module_renderer.dart';
-import 'product_path.dart';
 import 'singleton_support.dart';
-import 'source_index.dart';
 
 /// 非组件文件（无 @UIComponent）的产物渲染：把文件里的「可导出类」写成 JS。
 ///

@@ -114,10 +114,15 @@ translator/  ←  builders/  ←  builder.dart
 `widget2js`（widget 树）· `class_translator`（唯一入口）·
 `style_translators` · `builtin_translators`（内置 widget 策略）。
 
-`lib/src/builders/`：`component_builder` · `model_builder` ·
-`widget_module_builder` · `module_renderer`（产物渲染）· `class_table` ·
-`singleton_support` · `source_index` · `product_path` · `js_widget_defs` ·
-`host_method_scan` · `host_register_builder`。
+`lib/src/builders/` 按 builder 再分目录：
+
+- `ui_component/`：`component_builder` · `model_builder` · `module_renderer`
+  （产物渲染）· `class_table` · `singleton_support`
+- `ui_widget/`：`widget_module_builder`
+- `ui_host_register/`：`host_register_builder` · `host_method_scan`
+  （@HostInjected 扫描与注册生成）
+- 根下为两个 builder 共用的基础：`source_index` · `product_path` ·
+  `js_widget_defs`
 
 框架的其它包：
 
