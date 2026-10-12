@@ -924,7 +924,7 @@ String translateMethodBody(
   if (body is ExpressionFunctionBody) {
     final e = body.expression;
     String? t;
-    if (widgetCtx != null && e is InstanceCreationExpression) {
+    if (widgetCtx != null && _isWidgetCtorExpr(e)) {
       t = _widgetExprToJs(widgetCtx, e);
     }
     t ??= _bodyExprStmtJs(e, scope, classes);
@@ -988,7 +988,7 @@ String translateStmtList(
         continue;
       }
       String? v;
-      if (widgetCtx != null && e is InstanceCreationExpression) {
+      if (widgetCtx != null && _isWidgetCtorExpr(e)) {
         v = _widgetExprToJs(widgetCtx, e);
       }
       v ??= rhsToJs(e, scope, classes);
@@ -1080,14 +1080,26 @@ String translateClassMethodBody(
   );
 }
 
+/// 是否为「widget 构造表达式」：`Text(...)` / `new Text(...)`。
+///
+/// [parseString] 只做语法解析（无符号解析），无 `new` 的类构造在 AST 上是
+/// [MethodInvocation]（target 为 null），因此不能只认 [InstanceCreationExpression]。
+/// 带 target 的调用（`this.x()` / `a.b()`）不是构造，返回 false。
+bool _isWidgetCtorExpr(Expression e) =>
+    e is InstanceCreationExpression ||
+    (e is MethodInvocation && e.target == null);
+
 /// 把一个 Widget 构造表达式（如 `Container(...)`）通过 [WidgetExprRenderer]
 /// （widget2js 层的 WidgetTranslateContext）翻译成 JS 构造调用字符串。
-/// 失败返回 null（回退到普通表达式翻译）。
+/// 失败返回 null（回退到普通表达式翻译），并出声告警（不静默丢代码）。
 String? _widgetExprToJs(WidgetExprRenderer? widgetCtx, Expression e) {
+  if (widgetCtx == null) return null;
   try {
     // translate(Expression) → JSON Map / String；renderJs(json, depth) → JS
-    return widgetCtx?.renderJs(widgetCtx.translate(e), 0);
-  } catch (_) {
+    return widgetCtx.renderJs(widgetCtx.translate(e), 0);
+  } catch (err) {
+    log.warning('[ui_component_generator] widget 表达式无法翻译，已在 JS 产物中'
+        '丢弃：${e.toSource()}（$err）');
     return null;
   }
 }

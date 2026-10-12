@@ -2,6 +2,7 @@
 // 由 ui_component_generator 从 lib/model/counter_vm.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { __h } from '../flutter.js';
 
 // 模型 CounterVm
 export class CounterVm extends ChangeNotifier {
@@ -13,6 +14,8 @@ export class CounterVm extends ChangeNotifier {
   async inc() { this._count += 1; this.notifyListeners(); }
   reset() { this._count = 0; this.notifyListeners(); }
   async getUserName() { return "22"; }
-  buildText() {  }
+  buildText() { return __h('Text', {
+    "data": "test 2"
+  }); }
 }
 

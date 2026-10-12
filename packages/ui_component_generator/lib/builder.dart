@@ -1097,6 +1097,8 @@ String _translateActionBody(
   // 统一交给 dart2js.translateMethodBody（**唯一**的方法体翻译器），与模型
   // 方法体共用同一套语法支持——新增语法只改那一处。
   // 方法体内声明的局部变量由翻译器边翻译边登记进 scope，后续语句可解析。
+  // widgetCtx = ctx：方法体里 `return Text(...)` 这类返回 widget 的表达式走
+  // widget 树翻译路径（与模型方法体同一条路径）。
   final scope = FieldScope(
     propByField: ctx.propByField,
     params: params.toSet(),
@@ -1114,7 +1116,7 @@ String _translateActionBody(
     // 弹 SnackBar。不要再裸调 sendMessage，否则宿主收不到。
     return '__jsui.host(${jsString(nativeChannel)}, { message: $msg });';
   }
-  return translateMethodBody(body, scope, classes);
+  return translateMethodBody(body, scope, classes, widgetCtx: ctx);
 }
 
 
@@ -1580,9 +1582,9 @@ String _renderModuleJs(
   for (final entry in usedWidgets.entries) {
     (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
   }
-  // 结点工厂 `__h`：产物里有元素树（或方法体返回 widget）才需要，并入其宿主
-  // package（flutter）那一条；纯模型产物不需要，不会产出多余 import。
-  if (usedWidgets.isNotEmpty || exportedClasses.any((c) => c.tree != null)) {
+  // 结点工厂 `__h`：产物里有元素树（组件 build 树 / 方法体里返回 widget）
+  // 才需要，并入其宿主 package（flutter）那一条；纯模型产物不产生多余 import。
+  if (ctx.usedNodeHelper || usedWidgets.isNotEmpty) {
     (importsByPackage[_nodeHelperPackage] ??= <String>{}).add('__h');
   }
   final ownProduct = _productPath(sourcePath);

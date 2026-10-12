@@ -78,6 +78,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// [renderJs] 在此登记，生成器据此按 package 产出 JS widget 模块并 import。
   final Map<String, Set<String>> usedWidgetPackages = {};
 
+  /// 渲染过程中是否产出过元素构造 [`__h`]。生成器据此决定产物是否 import
+  /// 结点工厂：有元素树（组件 build 树 / 方法体里返回 widget）就必须 import；
+  /// 纯模型产物（无任何元素）不产生多余 import。
+  bool usedNodeHelper = false;
+
   /// ListenableBuilder 等「builder 闭包」翻译：闭包返回的子树抽到组件方法
   /// `_lbBuilderN()`，运行时时模型 notify 后重新调用拿到最新子树做局部重建。
   /// 收集顺序即 `_lbBuilder${index}` 命名序号。
@@ -257,6 +262,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (json is! Map<String, dynamic>) {
       throw FormatException('无法渲染的节点: $json');
     }
+    usedNodeHelper = true; // 渲染元素 → 产物必须 import 结点工厂 __h
     final type = _semanticType(json['type']);
     final translator = registry.lookupJson(type);
     if (translator == null) {
