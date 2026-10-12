@@ -117,17 +117,6 @@ class DemoListPage extends StatelessWidget {
       ),
     ),
     _DemoEntry(
-      'HelloCard · 本地 zip 加载',
-      'jsAsset 为 http:// zip：tool/start_patch_server.sh 提供静态服务，下载解压后走与 asset 一致的加载逻辑',
-      _CompareTest(
-        native: HelloCard(),
-        js: JsUiWidget(
-          // entry 直达 zip 内入口（也可省略，按 component 反查）
-          jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'),
-        ),
-      ),
-    ),
-    _DemoEntry(
       'HelloCard · JS 双实例隔离',
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
       _TwinTest(

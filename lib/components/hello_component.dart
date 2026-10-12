@@ -77,7 +77,7 @@ class _HelloCardState extends State<HelloCard> {
     return Column(
       children: [
         Text(
-          'Hello from JS logic',
+          'Hello from JS logic 1',
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
         ),
         Text('count = $_count'),

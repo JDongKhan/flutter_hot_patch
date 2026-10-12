@@ -52,60 +52,75 @@ class RemoteAssetLoader {
   /// `components/hello_component.js`）。指定时直接用它，
   /// 不指定则按 [component] 反查声明它的 .js。
   /// 失败（非 200 / 非 zip / 解压异常 / 包内无该组件或路径）返回 null。
+  ///
+  /// 缓存策略（HTTP 标准协商缓存）：记录上次响应的 `Last-Modified`，
+  /// 下次请求带 `If-Modified-Since`——服务端返回 304 则复用本地解压产物，
+  /// 返回 200 则清空旧目录重新下载解压。通用，任意 zip 包都适用。
   static Future<RemoteAssetBundle?> load(String url,
       {String? component, String? entryPath}) async {
     try {
       final root = await localRootFor(url);
-      // 1. 本地已存在（此前下载解压过，URL 哈希目录即持久缓存）→ 直接
-      //    复用，不联网（离线可用；进程重启后依然有效）。指定 entryPath
-      //    直接用（先确认文件存在）；否则按组件名反查所在文件。
+      final lmFile = File('$root/_last_modified.txt');
+      final cachedLm = lmFile.existsSync() ? lmFile.readAsStringSync().trim() : null;
+
+      // 1. 本地已有解压产物：先发协商请求（带 If-Modified-Since）。
       final existing = _resolveEntry(root, component, entryPath);
-      if (existing != null) {
-        HotPatchLog.log('remote bundle reused: $url -> $existing');
-        return RemoteAssetBundle(existing, root);
-      }
-      // 2. 下载（dart:io HttpClient，不引入额外 http 依赖）
       final client = HttpClient();
       try {
-        final request = await client.getUrl(Uri.parse(url));
+        final uri = Uri.parse(url);
+        final request = await client.getUrl(uri);
+        if (cachedLm != null && cachedLm.isNotEmpty) {
+          request.headers.set(HttpHeaders.ifModifiedSinceHeader, cachedLm);
+        }
         final response = await request.close();
-        if (response.statusCode != 200) {
+
+        // 2. 304 Not Modified：zip 未变，直接复用本地解压产物。
+        if (response.statusCode == HttpStatus.notModified && existing != null) {
+          HotPatchLog.log('remote bundle reused (304): $url -> $existing');
+          return RemoteAssetBundle(existing, root);
+        }
+        if (response.statusCode != HttpStatus.ok) {
           HotPatchLog.log('remote asset HTTP ${response.statusCode}: $url');
           return null;
         }
+
+        // 3. 200：zip 有更新，清空旧目录重新下载解压。
+        if (Directory(root).existsSync()) {
+          Directory(root).deleteSync(recursive: true);
+        }
+        Directory(root).createSync(recursive: true);
+
         final builder = BytesBuilder(copy: false);
         await response.forEach((chunk) => builder.add(chunk));
         final bytes = builder.takeBytes();
-        // 3. 格式校验：必须是 zip（PK 魔数 0x50 0x4B）
+        // 格式校验：必须是 zip（PK 魔数 0x50 0x4B）
         if (bytes.length < 4 ||
             bytes[0] != 0x50 ||
             bytes[1] != 0x4B) {
           HotPatchLog.log('remote asset is not a zip: $url');
           return null;
         }
-        // 4. 解压到本地唯一根目录（zip 内相对路径原样落盘）
-        final dir = Directory(root);
-        if (!dir.existsSync()) {
-          dir.createSync(recursive: true);
-        }
         final archive = ZipDecoder().decodeBytes(bytes);
         for (final file in archive) {
           if (!file.isFile) continue;
           final rel = file.name;
           final target = File('$root/$rel');
-          if (!target.existsSync()) {
-            target.parent.createSync(recursive: true);
-            target.writeAsBytesSync(file.content as Uint8List);
-          }
+          target.parent.createSync(recursive: true);
+          target.writeAsBytesSync(file.content as Uint8List);
         }
-        // 5. 入口：entryPath 直达 / 按组件名反查（zip 可能含多个组件产物）
+        // 记录新的 Last-Modified，下次协商用。
+        final lm = response.headers.value(HttpHeaders.lastModifiedHeader);
+        if (lm != null && lm.isNotEmpty) {
+          lmFile.writeAsStringSync(lm);
+        }
+        // 入口：entryPath 直达 / 按组件名反查
         final entry = _resolveEntry(root, component, entryPath);
         if (entry == null) {
           HotPatchLog.log(
               'remote asset zip entry not found ($entryPath / $component): $url');
           return null;
         }
-        HotPatchLog.log('remote bundle loaded: $url -> $entry');
+        HotPatchLog.log('remote bundle loaded (fresh): $url -> $entry');
         return RemoteAssetBundle(entry, root);
       } finally {
         client.close(force: true);

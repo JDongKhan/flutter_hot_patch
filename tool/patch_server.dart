@@ -71,8 +71,11 @@ Future<void> _handle(HttpRequest request) async {
     request.response.headers.contentType = ContentType.parse(
       _mime[ext] ?? 'application/octet-stream',
     );
-    // 关缓存：改完 js 立即生效。
-    request.response.headers.set('Cache-Control', 'no-store');
+    // Last-Modified：客户端据此发 If-Modified-Since 做协商缓存。
+    final modified = file.statSync().modified;
+    request.response.headers.set('Last-Modified', HttpDate.format(modified));
+    // 关主动缓存：改完 js 立即生效；客户端仍可用 Last-Modified 做协商。
+    request.response.headers.set('Cache-Control', 'no-cache');
     await request.response.addStream(file.openRead());
     await request.response.close();
   } catch (e) {

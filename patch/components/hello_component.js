@@ -29,7 +29,7 @@ class HelloCardComponent {
     console.debug("build: count=" + this._count + " debug=" + debugActive + " android=" + android);
     return Column({}, [
         Text({
-            "data": "Hello from JS logic",
+            "data": "Hello from JS logic 1",
             "style": {
               "fontSize": 24,
               "fontWeight": "bold",
