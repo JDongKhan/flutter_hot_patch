@@ -83,6 +83,10 @@ class _ProviderCardState extends State<ProviderCard> {
     );
   }
 
+  Widget _buildText() {
+    return Text("test 1");
+  }
+
   @override
   void dispose() {
     // _modelA：ChangeNotifierProvider(create:) 创建的，provider 销毁时

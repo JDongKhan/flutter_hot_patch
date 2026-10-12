@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
 /// 响应式模型：ChangeNotifier 子类。
@@ -22,5 +23,9 @@ class CounterVm extends ChangeNotifier {
 
   Future<String> getUserName() async {
     return "22";
+  }
+
+  Widget buildText() {
+    return Text("test 2");
   }
 }

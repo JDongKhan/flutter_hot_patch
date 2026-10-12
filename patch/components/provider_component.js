@@ -15,6 +15,7 @@ export class ProviderCard {
   _incA() { this._modelA.inc(); }
   _resetA() { this._modelA.reset(); }
   _loadUser() { this._modelB.loadUserInfo({"h": 1}); }
+  _buildText() {  }
   dispose() { this._modelB.dispose(); }
   build() {
     return __h('Card', {}, [

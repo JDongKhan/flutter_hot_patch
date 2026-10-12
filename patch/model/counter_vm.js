@@ -12,4 +12,5 @@ export class CounterVm extends ChangeNotifier {
   async inc() { this._count += 1; this.notifyListeners(); }
   reset() { this._count = 0; this.notifyListeners(); }
   async getUserName() { return "22"; }
+  buildText() {  }
 }
