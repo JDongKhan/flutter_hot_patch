@@ -51,8 +51,7 @@ class JsUiWidget extends StatefulWidget {
 
   /// 无 JS 产物的组件（Component 节点）的原生注入：组件名 → 构造。
   /// 运行时（hot_patch 包）不 import 业务类，由业务方注册。
-  final Map<String, Widget Function(Map<String, dynamic> args)>
-      nativeComponents;
+  final Map<String, Widget Function(Map<String, dynamic> args)> nativeComponents;
 
   /// 共享运行时；多组件共用一个引擎时传入。
   final JsRuntimeManager? sharedManager;
@@ -159,16 +158,12 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // payload 双重编码：内层把值变成 JSON 文本（true→"true"、'a'→"\"a\""），
     // 外层再包成 JS 字符串字面量；JS 侧 invoke 对字符串参数做一次
     // JSON.parse 还原原始类型。单层编码会把字符串 payload 解析失败置 null。
-    _manager.evaluate(
-      '__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(payload))});',
-    );
+    _manager.evaluate('__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(payload))});');
   }
 
   @override
   void dispose() {
-    _manager.evaluate(
-      'if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});',
-    );
+    _manager.evaluate('if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});');
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
     jsUiPageStores.remove(_pageKey);
     super.dispose();
@@ -180,7 +175,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
       return _JsLoadErrorView(message: _error!, onRetry: _retry);
     }
     if (_loading || _rootId == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Material(
+        color: Colors.white,
+        child: const Center(child: CircularProgressIndicator()),
+      );
     }
     return _JsNode(
       store: _store,
@@ -233,15 +231,13 @@ class _JsLoadErrorView extends StatelessWidget {
                 Text(
                   'JS 组件加载失败',
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '页面补丁资源不可用，请确认资源已打包或重新下发。',
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 20),
                 Container(
@@ -297,8 +293,7 @@ class _JsNode extends StatefulWidget {
   final JsUiStore store;
   final String id;
   final JsWidgetRegistry registry;
-  final Map<String, Widget Function(Map<String, dynamic> args)>
-      nativeComponents;
+  final Map<String, Widget Function(Map<String, dynamic> args)> nativeComponents;
 
   /// 事件回传：`(handler, payload)`——handler 是运行时登记的句柄。
   final void Function(Object? handler, [Object? payload]) invoke;
@@ -339,19 +334,20 @@ class _JsNodeState extends State<_JsNode> {
       children.add(_node(childId));
       // 数据载体型子结点（BottomNavigationBarItem / DropdownMenuItem 等
       // 非 Widget 类型）：父 renderer 直接读其 props/propChildren 组装。
-      childContexts.add(JsBuildContext(
-        props: childNode?.props ?? const {},
-        children: const [],
-        childTypes: const [],
-        childContexts: const [],
-        propChildren: {
-          for (final e in childNode?.propChildIds.entries ??
-              const <MapEntry<String, String>>[])
-            e.key: _node(e.value),
-        },
-        nativeComponents: widget.nativeComponents,
-        invoke: widget.invoke,
-      ));
+      childContexts.add(
+        JsBuildContext(
+          props: childNode?.props ?? const {},
+          children: const [],
+          childTypes: const [],
+          childContexts: const [],
+          propChildren: {
+            for (final e in childNode?.propChildIds.entries ?? const <MapEntry<String, String>>[])
+              e.key: _node(e.value),
+          },
+          nativeComponents: widget.nativeComponents,
+          invoke: widget.invoke,
+        ),
+      );
     }
 
     final propChildren = <String, Widget>{};
@@ -362,23 +358,25 @@ class _JsNodeState extends State<_JsNode> {
     final builder = widget.registry.lookup(node.type);
     if (builder == null) return buildMissingJsWidget(node.type, children);
 
-    return builder(JsBuildContext(
-      props: node.props,
-      children: children,
-      childTypes: childTypes,
-      childContexts: childContexts,
-      propChildren: propChildren,
-      nativeComponents: widget.nativeComponents,
-      invoke: widget.invoke,
-    ));
+    return builder(
+      JsBuildContext(
+        props: node.props,
+        children: children,
+        childTypes: childTypes,
+        childContexts: childContexts,
+        propChildren: propChildren,
+        nativeComponents: widget.nativeComponents,
+        invoke: widget.invoke,
+      ),
+    );
   }
 
   Widget _node(String id) => _JsNode(
-        key: ValueKey(id),
-        store: widget.store,
-        id: id,
-        registry: widget.registry,
-        nativeComponents: widget.nativeComponents,
-        invoke: widget.invoke,
-      );
+    key: ValueKey(id),
+    store: widget.store,
+    id: id,
+    registry: widget.registry,
+    nativeComponents: widget.nativeComponents,
+    invoke: widget.invoke,
+  );
 }
