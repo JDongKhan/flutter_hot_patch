@@ -612,11 +612,6 @@ class _SliverDetailState extends State<SliverDetail> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Sliver 全家桶 · offset $_offset'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-      ),
       body: CustomScrollView(
         controller: _controller,
         physics: const BouncingScrollPhysics(),

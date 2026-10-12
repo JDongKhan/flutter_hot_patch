@@ -867,13 +867,6 @@ class SliverDetailComponent {
   _scrollToEnd() { this._controller.jumpTo(this._controller.position.maxScrollExtent); }
   build() {
     return Scaffold({
-        "appBar": AppBar({
-            "title": Text({
-                "data": "Sliver 全家桶 · offset " + this._offset
-              }),
-            "backgroundColor": '#673AB7',
-            "foregroundColor": '#FFFFFF'
-          }),
         "body": CustomScrollView({
             "controller": this._controller,
             "physics": "BouncingScrollPhysics"
