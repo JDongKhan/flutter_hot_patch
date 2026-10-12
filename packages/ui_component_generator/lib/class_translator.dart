@@ -650,6 +650,16 @@ String? methodCallExprJs(
       posJs.add(fnJs);
       continue;
     }
+    // 命名方法引用（`_controller.addListener(_onControllerChanged)`）：Dart
+    // tear-off 语义 → 箭头包装（this 词法绑定组件实例，与匿名闭包形态一致），
+    // 参数透传以便用于带参回调（builder 等）。仅当名字是本组件方法时包装，
+    // 状态字段/局部变量照常 rhsToJs。
+    if (a is Identifier && scope.isMethod(a.name)) {
+      final wrap = '(...args) => this.${a.name}(...args)';
+      argJs.add(wrap);
+      posJs.add(wrap);
+      continue;
+    }
     if (a is NamedExpression) {
       final v = rhsToJs(a.expression, scope, classes);
       if (v == null) return null;

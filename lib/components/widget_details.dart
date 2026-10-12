@@ -617,7 +617,7 @@ class _SliverDetailState extends State<SliverDetail> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            title: const Text('SliverAppBar 导航'),
+            title: Text('SliverAppBar 导航 · offset ${_offset.toStringAsFixed(0)}'),
             backgroundColor: Colors.deepPurple,
             foregroundColor: Colors.white,
             pinned: true,
@@ -970,8 +970,9 @@ class InputDetail extends StatefulWidget {
 }
 
 class _InputDetailState extends State<InputDetail> {
-  // TextField 原生侧用 controller；JS 热更侧为受控封装（见 _JsTextField），
-  // value 不下发时为非受控模式，onChanged 回传照常驱动 _text。
+  // TextEditingController 走 id-bridge（JS 代理类 ↔ 宿主真实实例）：
+  // 输入经 textFn 回传镜像触发 listeners，JS 侧 _controller.text 可读、
+  // _controller.clear() 可写，与 ScrollController 同款设计。
   final TextEditingController _controller = TextEditingController();
   String _text = '';
   String _choice = 'A';
@@ -979,6 +980,18 @@ class _InputDetailState extends State<InputDetail> {
   bool _switchOn = false;
   bool? _checked = false;
   double _slider = 0.4;
+
+  @override
+  void initState() {
+    super.initState();
+    // controller 监听：输入回传（__onHostText）与 clear() 都会触发，
+    // 从 controller.text 镜像取值驱动 _text 显示。
+    _controller.addListener(_onControllerChanged);
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() => _text = _controller.text);
+  }
 
   void _onTextChanged(String v) {
     setState(() => _text = v);
@@ -1022,6 +1035,17 @@ class _InputDetailState extends State<InputDetail> {
         ),
         const SizedBox(height: 4),
         Text('输入内容：$_text', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        // 验证 JS 侧读 controller.text 镜像（经 __onHostText 回传）。
+        Text('controller.text：${_controller.text}', style: const TextStyle(fontSize: 14, color: Colors.deepPurple)),
+        const SizedBox(height: 8),
+        // 验证 JS 侧写 controller（clear() → host 通道清空宿主真实 controller）。
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton(
+            onPressed: () => _controller.clear(),
+            child: const Text('清空输入'),
+          ),
+        ),
         const SizedBox(height: 12),
         const Text('Radio 单选', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Row(

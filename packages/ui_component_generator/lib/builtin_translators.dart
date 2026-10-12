@@ -2423,6 +2423,12 @@ class TextFieldTranslator extends WidgetTranslator {
     final props = <String, dynamic>{
       'event': ctx.eventHandle(onChanged),
     };
+    // controller 透传：Dart 侧 TextEditingController 在 JS 侧是同名代理类
+    // （见 JS 运行时），产物透传实例引用 `this._controller`，跨桥序列化时经
+    // toJSON 输出 `{__jsuiTextEditingController: id}`，宿主按 id 取真实
+    // controller 作为受控输入（同 ScrollController 模式）。
+    final ctrl = ctx.namedArg(node.args, 'controller');
+    if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
     final value = ctx.namedArg(node.args, 'value');
     if (value != null) props['value'] = ctx.propExpr(value);
     // hintText/labelText：支持顶层直传与 decoration: InputDecoration(...) 两种形态。

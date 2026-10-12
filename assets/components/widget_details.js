@@ -873,7 +873,7 @@ class SliverDetailComponent {
           }, [
             SliverAppBar({
                 "title": Text({
-                    "data": "SliverAppBar 导航"
+                    "data": "SliverAppBar 导航 · offset " + this._offset.toFixed(0)
                   }),
                 "backgroundColor": '#673AB7',
                 "foregroundColor": '#FFFFFF',
@@ -1335,6 +1335,7 @@ export function ScaffoldDetail(props, children) {
 
 class InputDetailComponent {
   constructor() {
+    this._controller = new TextEditingController();
     this._text = "";
     this._choice = "A";
     this._dropdown = "苹果";
@@ -1342,6 +1343,8 @@ class InputDetailComponent {
     this._checked = false;
     this._slider = 0.4;
   }
+  initState() { this._controller.addListener((...args) => this._onControllerChanged(...args)); }
+  _onControllerChanged() { /* 空方法体 */ }
   _onTextChanged(v) { this.setState(function(){ this._text = v; }); }
   _onChoiceChanged(v) { this.setState(function(){ this._choice = v; }); }
   _onDropdownChanged(v) { this.setState(function(){ this._dropdown = v; }); }
@@ -1361,6 +1364,7 @@ class InputDetailComponent {
           }),
         TextField({
             "event": this.__bind("_onTextChanged"),
+            "controller": this._controller,
             "hintText": "请输入文本",
             "labelText": "用户名",
             "maxLines": 1,
@@ -1378,6 +1382,23 @@ class InputDetailComponent {
               "color": '#9E9E9E'
             }
           }),
+        Text({
+            "data": "controller.text：" + this._controller.text,
+            "style": {
+              "fontSize": 14,
+              "color": '#673AB7'
+            }
+          }),
+        SizedBox({
+            "height": 8
+          }),
+        Align({
+            "alignment": "centerLeft"
+          }, [
+            __h("Component", {
+                "component": "FilledButton"
+              }, null)
+          ]),
         SizedBox({
             "height": 12
           }),

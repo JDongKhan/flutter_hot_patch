@@ -48,8 +48,14 @@ library;
 
 import 'package:flutter/foundation.dart' show TargetPlatform;
 
-/// 运行时 JS 源码（幂等 IIFE，重复求值无副作用）。
-const String jsUiRuntimeSource = r'''
+// 能力 JS 片段（各能力文件内聚，runtime_source 拼接注入）：
+//   - capabilities/scroll_controller_js.dart      → ScrollController 代理类
+//   - capabilities/text_editing_controller_js.dart → TextEditingController 代理类
+import 'capabilities/scroll_controller_js.dart';
+import 'capabilities/text_editing_controller_js.dart';
+
+/// UI 运行时骨架头部（到 ScrollController 片段前）。
+const String _jsUiRuntimeSkeletonHead = r'''
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
@@ -596,94 +602,10 @@ const String jsUiRuntimeSource = r'''
     delete roots[pageKey];
   }
 
-  // ===== 【10.5】ScrollController 代理类（对应 Flutter 官方 ScrollController）===
-  // 生成器把 Dart 侧 `final ScrollController _scrollController = ScrollController();`
-  // 翻译成 `this._scrollController = new ScrollController()`；实例与宿主侧真实
-  // ScrollController 按 id 绑定：
-  //   - 构造：登记 metrics 转发句柄（fn），宿主滚动时经 invoke 回传镜像；
-  //   - addListener/removeListener：JS 闭包直接登记——**匿名闭包天然支持**，
-  //     无需生成器合成方法名，不存在重名问题；
-  //   - jumpTo/animateTo/dispose：实例级 host 通道（载荷带 id），多实例互不干扰；
-  //   - offset / position / hasClients：本地镜像（宿主回传更新）。
-  // 跨桥序列化：props 里的实例经 toJSON 输出 `{__jsuiScrollController: id}`，
-  // 宿主据此取/建真实 controller（见 js_widget_registry.dart）。
-  //
-  // 释放一个控制器：删掉它登记的 metrics 句柄（框架内部，用户无从释放），
-  // 并通知宿主释放真实 controller。幂等——重复调用为空操作。
-  function releaseController(sc) {
-    if (!sc) { return; }
-    if (sc.__metricsFn) { delete handlers[sc.__metricsFn.__fn]; sc.__metricsFn = null; }
-    if (sc.__id != null) {
-      host('scrollControllerDispose', [sc.__id]);
-      sc.__id = null;
-    }
-    sc.__listeners = [];
-  }
-  function ScrollController() {
-    this.__id = nextId('sc');
-    this.__listeners = [];
-    this.offset = 0;
-    this.__maxScrollExtent = 0;
-    this.__viewportDimension = 0;
-    this.__extentAfter = 0;
-    var self = this;
-    this.__metricsFn = fn(function (p) { self.__onMetrics(p); });
-    // 按当前页面登记（构造发生在 mount/构建期间，activeRoot 即本页根），
-    // 页面退出时 disposeRoot 兜底释放。
-    if (activeRoot) {
-      var list = pageControllers[activeRoot.key] ||
-        (pageControllers[activeRoot.key] = []);
-      list.push(this);
-    }
-    host('scrollControllerRegister', [this.__id, this.__metricsFn]);
-  }
-  ScrollController.prototype.addListener = function (f) {
-    if (typeof f === 'function') { this.__listeners.push(f); }
-  };
-  ScrollController.prototype.removeListener = function (f) {
-    var i = this.__listeners.indexOf(f);
-    if (i >= 0) { this.__listeners.splice(i, 1); }
-  };
-  ScrollController.prototype.jumpTo = function (offset) {
-    if (this.__id != null) { host('scrollControllerJumpTo', [this.__id, offset]); }
-  };
-  ScrollController.prototype.animateTo = function (offset, opts) {
-    if (this.__id == null) { return; }
-    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
-    var curve = (opts && opts.curve) ? opts.curve : 'easeOut';
-    host('scrollControllerAnimateTo', [this.__id, offset, ms, curve]);
-  };
-  ScrollController.prototype.dispose = function () {
-    releaseController(this);
-  };
-  ScrollController.prototype.toJSON = function () {
-    return { __jsuiScrollController: this.__id };
-  };
-  Object.defineProperty(ScrollController.prototype, 'position', {
-    get: function () {
-      return {
-        pixels: this.offset,
-        maxScrollExtent: this.__maxScrollExtent,
-        viewportDimension: this.__viewportDimension,
-        extentAfter: this.__extentAfter
-      };
-    }
-  });
-  Object.defineProperty(ScrollController.prototype, 'hasClients', {
-    get: function () { return this.__id != null; }
-  });
-  // 宿主回传 metrics 快照 → 更新镜像并触发 listeners（listener 无参，
-  // 与 Dart addListener 语义一致；闭包内读 this._scrollController.offset）。
-  ScrollController.prototype.__onMetrics = function (p) {
-    if (!p) { return; }
-    this.offset = p.pixels;
-    this.__maxScrollExtent = p.maxScrollExtent;
-    this.__viewportDimension = p.viewportDimension;
-    this.__extentAfter = p.extentAfter;
-    var fs = this.__listeners;
-    for (var i = 0; i < fs.length; i++) { fs[i](); }
-  };
-  G.ScrollController = ScrollController;
+''';
+
+/// UI 运行时骨架尾部（TextEditingController 片段后到 IIFE 闭包结束）。
+const String _jsUiRuntimeSkeletonTail = r'''
 
   var api = {
     h: h,
@@ -702,6 +624,17 @@ const String jsUiRuntimeSource = r'''
   G.__modules['js_ui/core'] = api;
 })();
 ''';
+
+/// UI 运行时源码 = 骨架 + 各能力 JS 片段拼接（能力片段见 capabilities/*_js.dart）。
+/// 顺序：骨架头部 → 滚动控制器 → 文本控制器 → 骨架尾部（同一 IIFE 作用域，
+/// 片段间靠函数提升/后声明互相引用，与拆分前语义一致）。
+final String jsUiRuntimeSource = [
+  _jsUiRuntimeSkeletonHead,
+  scrollControllerJsSource,
+  textEditingControllerJsSource,
+  _jsUiRuntimeSkeletonTail,
+].join('\n');
+
 
 /// 运行时环境全局源码（依赖 Dart 侧注入的编译/平台标志，故为函数式生成）。
 ///

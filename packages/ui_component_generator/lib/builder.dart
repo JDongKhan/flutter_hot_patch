@@ -572,6 +572,10 @@ _Component _parseComponent(
     importResolver: importResolver,
     singletons: singletons,
   );
+  // 本组件全部方法名（裸调/方法引用白名单）：initState、dispose、
+  // 事件方法、builder 等都在内，methodCallExprJs 据此把命名方法引用参数
+  // 包装成箭头函数。
+  final methodNames = {for (final m in methods) m.name.lexeme};
   for (final member in methods) {
     final methodName = member.name.lexeme;
     final actionName = _defaultActionName(methodName);
@@ -590,6 +594,7 @@ _Component _parseComponent(
           _methodParams(member),
           used,
           hostMethods: hostMethods,
+          methods: methodNames,
         ),
         params: _methodParams(member),
         isAsync: member.body.isAsynchronous,
@@ -766,6 +771,10 @@ _Component _parseNestedComponent(
     importResolver: importResolver,
     singletons: singletons,
   );
+  // 本组件全部方法名（裸调/方法引用白名单）：initState、dispose、
+  // 事件方法、builder 等都在内，methodCallExprJs 据此把命名方法引用参数
+  // 包装成箭头函数。
+  final methodNames = {for (final m in methods) m.name.lexeme};
   for (final member in methods) {
     final methodName = member.name.lexeme;
     final actionName = _defaultActionName(methodName);
@@ -783,6 +792,7 @@ _Component _parseNestedComponent(
           _methodParams(member),
           used,
           hostMethods: hostMethods,
+          methods: methodNames,
         ),
         params: _methodParams(member),
         isAsync: member.body.isAsynchronous,
@@ -833,7 +843,7 @@ _Component _parseNestedComponent(
 /// `ScrollController` → `new ScrollController()`）：字段不再跳过，方法/属性
 /// 一比一翻译（`addListener` / `jumpTo` / `offset` / `position` 由 JS 侧
 /// 实例提供，宿主按 id 绑定真实对象）。
-const Set<String> _jsRuntimeTypes = {'ScrollController'};
+const Set<String> _jsRuntimeTypes = {'ScrollController', 'TextEditingController'};
 
 /// JS 运行时类型的构造表达式；非运行时类型返回 null。
 String? _jsRuntimeCtor(String erased) =>
@@ -989,6 +999,7 @@ String _translateActionBody(
   List<String> params,
   Map<String, ClassInfo> classes, {
   Map<String, Map<String, String>> hostMethods = const {},
+  Set<String> methods = const {},
 }) {
   // 组件动作的可用引用：State 字段（ctx.propByField）+ 方法形参。表达式/
   // 语句统一交给 class_translator.exprStmtToJs（以 FieldScope 为键），与模型
@@ -1000,6 +1011,7 @@ String _translateActionBody(
     propByField: ctx.propByField,
     params: locals,
     hostMethods: hostMethods,
+    methods: methods,
   );
   if (nativeChannel != null) {
     final msg = _snackMessage(body, ctx);

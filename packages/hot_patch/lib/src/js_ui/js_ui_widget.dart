@@ -6,6 +6,7 @@ import '../services/builtin_host_methods.dart';
 import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
+import 'capabilities/js_ui_capabilities.dart';
 import 'js_ui_store.dart';
 import 'js_widget_registry.dart';
 
@@ -92,7 +93,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
     _manager = widget.sharedManager ?? JsRuntimeManager.instance;
     _registry = widget.registry ?? JsWidgetRegistry();
     if (widget.registry == null) {
-      registerBuiltinJsWidgets(_registry);
+      // 核心注册 + 各能力域注册（滚动/文本/通知…），见 js_ui_capabilities。
+      registerAllJsWidgets(_registry);
     }
     // 框架内建宿主方法（log / nativeToast / jsuiCommit）：全局一次。
     registerBuiltinHostMethods();
@@ -100,9 +102,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
       _rootId = id;
       if (mounted) setState(() => _loading = false);
     };
-    // ScrollController 桥接通道（JS ScrollController ↔ Dart ScrollController）：
-    // 必须在任何 JS 组件 mount（new ScrollController → host 登记）前就位。
-    ensureScrollControllerChannels();
+    // 能力桥接通道（ScrollController / TextEditingController …）：必须在任何
+    // JS 组件 mount（new XxxController → host 登记）前就位。新增能力只改
+    // js_ui_capabilities.ensureJsUiCapabilities，本文件不再变动。
+    ensureJsUiCapabilities();
     // jsuiCommit 补丁按页面 key 路由：登记本页 store（key 由 JS 补丁带下来）。
     jsUiPageStores[_pageKey] = _store;
     _boot();
