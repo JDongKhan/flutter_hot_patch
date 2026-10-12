@@ -4,10 +4,10 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
-import { Button, Card, Column, Padding, Row, SizedBox, Text, __h } from '../flutter.js';
-import { ChangeNotifierProviderFactory, ConsumerFactory, MultiProviderFactory } from '../provider.js';
+import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
+import { __h } from '../flutter.js';
 
-class ProviderCard {
+export class ProviderCard {
   constructor() {
     this._modelA = new CounterVm({});
     this._modelB = new NetworkVm({});
@@ -17,8 +17,8 @@ class ProviderCard {
   _loadUser() { this._modelB.loadUserInfo({"h": 1}); }
   dispose() { this._modelB.dispose(); }
   build() {
-    return Card({}, [
-        Padding({
+    return __h('Card', {}, [
+        __h('Padding', {
             "padding": {
               "left": 16.0,
               "top": 16.0,
@@ -26,58 +26,58 @@ class ProviderCard {
               "bottom": 16.0
             }
           }, [
-            MultiProviderFactory({
+            __h(MultiProvider, {
                 "providers": [
-                  ChangeNotifierProviderFactory({
+                  __h(ChangeNotifierProvider, {
                       "model": "CounterVm",
                       "create": this._modelA
                     }),
-                  ChangeNotifierProviderFactory({
+                  __h(ChangeNotifierProvider, {
                       "model": "NetworkVm",
                       "value": this._modelB
                     })
                 ],
-                "child": Column({
+                "child": __h('Column', {
                     "mainAxisSize": "min"
                   }, [
-                    Text({
+                    __h('Text', {
                         "data": "MultiProvider · 两个模型各自局部重建"
                       }),
-                    SizedBox({
+                    __h('SizedBox', {
                         "height": 8
                       }),
-                    ConsumerFactory({
+                    __h(Consumer, {
                         "model": "NetworkVm",
                         "builder": "_consumerBuilder0"
                       }),
-                    Row({
+                    __h('Row', {
                         "mainAxisAlignment": "center"
                       }, [
-                        Button({
+                        __h('Button', {
                             "kind": "elevated",
                             "label": "加载用户信息",
                             "event": this.__bind("_loadUser")
                           })
                       ]),
-                    SizedBox({
+                    __h('SizedBox', {
                         "height": 8
                       }),
-                    ConsumerFactory({
+                    __h(Consumer, {
                         "model": "CounterVm",
                         "builder": "_consumerBuilder1"
                       }),
-                    Row({
+                    __h('Row', {
                         "mainAxisAlignment": "center"
                       }, [
-                        Button({
+                        __h('Button', {
                             "kind": "elevated",
                             "label": "B +1",
                             "event": this.__bind("_incA")
                           }),
-                        SizedBox({
+                        __h('SizedBox', {
                             "width": 12
                           }),
-                        Button({
+                        __h('Button', {
                             "kind": "elevated",
                             "label": "B Reset",
                             "event": this.__bind("_resetA")
@@ -89,7 +89,7 @@ class ProviderCard {
       ]);
   }
   _consumerBuilder0(value) {
-      return Text({
+      return __h('Text', {
         "data": "加载用户信息：",
         "style": {
           "fontSize": 22,
@@ -99,7 +99,7 @@ class ProviderCard {
       });
   }
   _consumerBuilder1(value) {
-      return Text({
+      return __h('Text', {
         "data": "B = " + value.count,
         "style": {
           "fontSize": 22,
@@ -108,8 +108,5 @@ class ProviderCard {
         }
       });
   }
-}
-export function ProviderCardFactory(props, children) {
-  return __h(ProviderCard, props, children);
 }
 

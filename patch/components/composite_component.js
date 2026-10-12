@@ -2,28 +2,28 @@
 // 由 ui_component_generator 从 lib/components/composite_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BannerCardFactory } from 'banner_component.js';
-import { Button, Column, SizedBox, Text, __h } from '../flutter.js';
+import { BannerCard } from 'banner_component.js';
+import { __h } from '../flutter.js';
 
-class DashboardCard {
+export class DashboardCard {
   constructor() {
     this._ticks = 0;
   }
   tick() { this.setState(function(){ this._ticks += 1; }); }
   build() {
-    return Column({}, [
-        Text({
+    return __h('Column', {}, [
+        __h('Text', {
             "data": "Dashboard (JS)",
             "style": {
               "fontSize": 22,
               "fontWeight": "w600"
             }
           }),
-        Text({
+        __h('Text', {
             "data": "ticks = " + this._ticks
           }),
-        BannerCardFactory({}),
-        SizedBox({
+        __h(BannerCard, {}),
+        __h('SizedBox', {
             "height": 12
           }),
         __h("Component", {
@@ -32,7 +32,7 @@ class DashboardCard {
               "text": "private widget"
             }
           }, null),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
         __h("Component", {
@@ -41,10 +41,10 @@ class DashboardCard {
               "text": "public widget"
             }
           }, null),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Button({
+        __h('Button', {
             "kind": "elevated",
             "label": "Tick",
             "event": this.__bind("tick"),
@@ -55,8 +55,5 @@ class DashboardCard {
           })
       ]);
   }
-}
-export function DashboardCardFactory(props, children) {
-  return __h(DashboardCard, props, children);
 }
 

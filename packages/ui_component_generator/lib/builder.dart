@@ -406,11 +406,11 @@ String _eraseType(String type) {
 
 /// 把组件解析模型 [_Component] 映射成统一渲染模型 [ClassInfo]：
 /// 字段（预渲染初始值）+ 动作（预渲染方法体）+ 构造参数 + build 树/builders/
-/// 局部声明 + 工厂名。
+/// 局部声明。
 ///
-/// 命名统一（与普通类一致）：**JS 类名 = Dart 类名**（`HelloCard`），元素工厂
-/// 用统一后缀 `<类名>Factory`——避免「组件一套命名、普通类一套命名」，也避免
-/// 类名与工厂名同作用域冲突。dart2js 只按数据渲染，不做用途分叉。
+/// 命名统一（与普通类一致）：**JS 类名 = Dart 类名**（`HelloCard`），元素 type
+/// 就是这个类本身（`__h(HelloCard, {...})`，运行时 `new` 实例化）——JS 里没有
+/// 「factory」这层包装，组件与普通类共用同一条渲染路径，不做用途分叉。
 ClassInfo _componentToClassInfo(_Component c) => ClassInfo(
       name: c.name,
       sourceFile: '',
@@ -429,7 +429,6 @@ ClassInfo _componentToClassInfo(_Component c) => ClassInfo(
           ),
       ],
       ctorParams: {for (final p in c.props) if (p.fromArgs) p.name},
-      factory: '${c.name}Factory',
       ctorNoArgs: c.ctorArgs.isEmpty,
       tree: c.tree,
       builders: c.builders,
@@ -605,6 +604,7 @@ _Component _parseComponent(
     importResolver: importResolver,
     singletons: singletons,
     jsClassWidgets: _jsClassWidgetTypes,
+    delegateClassWidgets: _sliverBuilderTypes,
   );
   // 本组件全部方法名（裸调/方法引用白名单）：initState、dispose、
   // 事件方法、builder 等都在内，methodCallExprJs 据此把命名方法引用参数
@@ -805,6 +805,7 @@ _Component _parseNestedComponent(
     importResolver: importResolver,
     singletons: singletons,
     jsClassWidgets: _jsClassWidgetTypes,
+    delegateClassWidgets: _sliverBuilderTypes,
   );
   // 本组件全部方法名（裸调/方法引用白名单）：initState、dispose、
   // 事件方法、builder 等都在内，methodCallExprJs 据此把命名方法引用参数
@@ -1367,6 +1368,7 @@ String? _relativeToLib(String uri, String dir) {
     importResolver: importResolver,
     singletons: singletons,
     jsClassWidgets: _jsClassWidgetTypes,
+    delegateClassWidgets: _sliverBuilderTypes,
   );
   // build() return 前的局部变量声明（`final isAdult = <expr>;`）：
   // 收集名字进 ctx 局部作用域（树里直接引用），initializer 翻译成 JS 声明语句。
@@ -1483,8 +1485,8 @@ String _renderJs(
       final rel = importResolver(dep);
       if (rel == null || rel == ownName) continue;
       importedComponents.add(dep);
-      // 依赖组件产物同样遵循「JS 类名 = Dart 类名、工厂 = `<类名>Factory`」。
-      head.writeln("import { ${dep}Factory } from '$rel';");
+      // 依赖组件产物的 JS 类与 Dart 类同名，import 类名即可（元素 type = 类）。
+      head.writeln("import { $dep } from '$rel';");
     }
   }
 
@@ -1532,8 +1534,8 @@ String _renderJs(
     // 渲染阶段 ctx 会再次收集主树/builders 用到的类型。
     _mergeUsedWidgets(usedWidgets, c.usedWidgetPackages);
     b.writeln();
-    // 组件类（不导出，避免与同名工厂冲突）：JS 类名 = Dart 类名；由本产物
-    // 导出的元素工厂 `<类名>Factory` 实例化。与普通类共用统一入口 dart2js。
+    // 组件类 export（= Dart 类名）：既作本产物 build 树的元素 type，也供
+    // 其它组件产物 import 后引用；与普通类共用统一入口 dart2js，无工厂包装。
     final ctx = WidgetTranslateContext(
       registry: registry,
       propByField: const {},
@@ -1541,25 +1543,22 @@ String _renderJs(
       sourcePath: sourcePath,
       importResolver: importResolver,
       jsClassWidgets: _jsClassWidgetTypes,
+      delegateClassWidgets: _sliverBuilderTypes,
     );
-    b.writeln(dart2js(_componentToClassInfo(c), treeCtx: ctx));
+    b.writeln(dart2js(_componentToClassInfo(c), exported: true, treeCtx: ctx));
     _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
 
-  // 按 package 拼装模块 import：`import { Text, Column } from '../flutter.js'`。
-  // 一个 package 一个文件（全局一份、无重复），故每个 package 一条 import；
-  // 结点工厂 `__h` 组件工厂恒需（`return __h(Component, ...)`），并入其宿主
-  // package（flutter）那一条，避免单独 import。
+  // 按 package 拼装模块 import：只 import **有 JS 类的类型**（`Builder` /
+  // `ChangeNotifierProvider` / sliver 代理等），元素写成 `__h(Builder, ...)`
+  // 需要类引用。宿主 widget 的元素 type 是字符串字面量（`__h('Text', ...)`），
+  // 由宿主注册表映射，无需 import。
+  // 结点工厂 `__h` 恒需，并入其宿主 package（flutter）那一条。
   final importsByPackage = <String, Set<String>>{
     _nodeHelperPackage: {'__h'},
   };
   for (final entry in usedWidgets.entries) {
-    final names = importsByPackage[entry.key] ??= <String>{};
-    // 引入名与渲染调用点同源：有 JS 类的 widget 引入 `<类名>Factory`
-    // （类名与工厂同处一个 ES module，不能同名）。
-    for (final t in entry.value) {
-      names.add(widgetRefName(t, _jsClassWidgetTypes));
-    }
+    (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
   }
   final importLines = <String>[
     for (final entry in importsByPackage.entries)
@@ -1607,6 +1606,7 @@ String _renderModelJs(
     actionByMethod: const {},
     sourcePath: sourcePath,
     jsClassWidgets: _jsClassWidgetTypes,
+    delegateClassWidgets: _sliverBuilderTypes,
   );
   for (final m in models) {
     b
@@ -1652,11 +1652,14 @@ export function __h(type, props, children) {
   };
 }''';
 
-/// package 模块产物：把该 package 的**全部** widget 类型导出为 JS 工厂函数
-/// （`Text({...}, [...])` → `{type:'Text', props, children}`），逻辑组件
-/// （provider 状态处理 / Builder 委托）则内联为普通类 + 工厂。
+/// package 模块产物：把该 package 里**有 JS 类**的 widget 类型导出为 JS 类
+/// （逻辑组件：provider 状态处理 / Builder 委托；sliver builder 代理）。
 ///
-/// 一个 package 一个文件（文件名即包名）。结点工厂 `__h` 只在其宿主包
+/// 宿主 widget（Text/Column/...）**不产出任何代码**：它们的元素 type 就是类型名
+/// 字符串（`__h('Text', {...}, [...])`），由宿主注册表映射成 Flutter widget；
+/// 本模块只在有 JS 逻辑时才有存在意义。
+///
+/// 一个 package 一个文件（文件名即包名）。共用元素工厂 `__h` 只在其宿主包
 /// （[_nodeHelperPackage]）里定义一次，其它包从 `<host>.js` 相对 import。
 /// 产物自包含（不依赖运行时 `__jsui`），宿主既有渲染路径与 JS 运行时都能
 /// 消费同一份产物。
@@ -1665,7 +1668,7 @@ String _renderPackageModule(String package, Set<String> types) {
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
     ..writeln('// package 模块（package: $package）：由 ui_component_generator 生成')
-    ..writeln('// 本包全部 widget 工厂集中于此文件；工厂返回 {type, props, children}')
+    ..writeln('// 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件')
     ..writeln();
   if (package == _nodeHelperPackage) {
     b
@@ -1679,8 +1682,8 @@ String _renderPackageModule(String package, Set<String> types) {
       ..writeln();
   }
   for (final t in sorted) {
-    // 逻辑 widget（provider 状态处理 / Builder 委托）：产物返回**组件**
-    // 元素（type 为 JS 类），状态与订阅逻辑全部在 JS 侧，宿主零感知。
+    // 逻辑 widget（provider 状态处理 / Builder 委托）：状态与订阅逻辑全部在
+    // JS 侧，本包导出普通类，元素 type 即该类，宿主零感知。
     final logic = _logicWidgetSources[t];
     if (logic != null) {
       b
@@ -1689,19 +1692,13 @@ String _renderPackageModule(String package, Set<String> types) {
       continue;
     }
     // Sliver builder 代理：`SliverList({delegateBuilder, childCount})` 形态
-    // 走内联组件（build 时循环调用拥有者方法收集子树）；普通形态仍是宿主
-    // 节点工厂。
+    // 走本类（build 时循环调用拥有者方法收集子树）；普通形态由渲染层直接
+    // 产出宿主节点（`__h('SliverList', ...)`），不经过本类。
     if (_sliverBuilderTypes.contains(t)) {
       b
         ..writeln()
         ..writeln(_sliverBuilderSource(t));
-      continue;
     }
-    b
-      ..writeln()
-      ..writeln('export function $t(props, children) {')
-      ..writeln("  return __h('$t', props, children);")
-      ..writeln('}');
   }
   return b.toString();
 }
@@ -1716,15 +1713,17 @@ const Set<String> _sliverBuilderTypes = {
   'SliverFillViewport',
 };
 
-/// SliverChildBuilderDelegate 的 JS 侧代理组件源码（按 [type] 参数化类名与
-/// 工厂）：`props.delegateBuilder` 是拥有者组件上的 `_sliverBuilderN(index)`
-/// 方法名、`childCount` 指定数量；build 时循环调用收集子树，包回同名的宿主
-/// 节点（children 交给宿主 SliverChildListDelegate 还原）。与
-/// ListenableBuilder 的 `__owner()` 向上找拥有者方法机制一致。
+/// SliverChildBuilderDelegate 的 JS 侧代理类源码（类名 = Dart 类型名）：
+/// `props.delegateBuilder` 是拥有者组件上的 `_sliverBuilderN(index)` 方法名、
+/// `childCount` 指定数量；build 时循环调用收集子树，包回同名的宿主节点
+/// （children 交给宿主 SliverChildListDelegate 还原）。与 ListenableBuilder 的
+/// `__owner()` 向上找拥有者方法机制一致。
+///
+/// 只在 `.builder` 懒加载形态下被渲染层引用（普通形态直接是宿主节点
+/// `__h('SliverList', ...)`），因此 build() 无需再判形态。
 String _sliverBuilderSource(String type) {
-  final cls = type;
   return '''
-class $cls {
+export class $type {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1752,22 +1751,16 @@ class $cls {
     }
     return __h('$type', p, out);
   }
-}
-export function ${type}Factory(props, children) {
-  if (props && props.delegateBuilder !== undefined) {
-    return __h($cls, props, children);
-  }
-  return __h('$type', props, children);
 }''';
 }
 
-/// 「逻辑 widget」类型 → JS 组件源码（在本模块里内联一个普通类 + 工厂函数）。
+/// 「逻辑 widget」类型 → JS 类源码（在本模块里内联一个普通类，类名 = Dart 名）。
 ///
 /// 与宿主 type 节点不同：这些 widget 的**状态/订阅逻辑必须跑在 JS 里**，
-/// 因此产物是 `__h(<类名>, props, children)`（JS 类名 = Dart 类名，元素工厂
-/// 为 `<类名>Factory`），运行时按组件路径挂载，由组件 `build()` 自行消费
-/// props（provider 提供/消费 VM、Builder 委托拥有者方法返回子树）。运行时
-/// 会给普通类实例补挂 `props/setState/watch/read/__watch/__read/__bind`
+/// 因此元素写成 `__h(<类名>, props, children)`（类引用，由本模块 export），
+/// 运行时 `new` 该组件类并按组件路径挂载，由组件 `build()` 自行消费 props
+/// （provider 提供/消费 VM、Builder 委托拥有者方法返回子树）。运行时会给普通
+/// 类实例补挂 `props/setState/watch/read/__watch/__read/__bind`
 /// （见 js_ui/runtime_source.dart）。
 const Map<String, String> _logicWidgetSources = {
   'Builder': _jsBuilderComponent,
@@ -1777,18 +1770,16 @@ const Map<String, String> _logicWidgetSources = {
   'ListenableBuilder': _jsListenableBuilderComponent,
 };
 
-/// 「以 JS 类渲染」的 widget 类型集合（唯一事实源：模板表 + sliver 代理表）。
-///
-/// 命名统一：这些类型的 **JS 类名 = Dart 类名**，元素工厂 = `<类名>Factory`；
-/// 其余宿主 widget 无 JS 类，工厂仍用 Dart 类名。渲染调用点与产物 import 名
-/// 都经 [widgetRefName] 查本集合，保证两侧一致。
+/// 「元素 type 是 JS 类」的 widget 类型集合 = 有 JS 类的类型（唯一事实源：
+/// 逻辑 widget 表 + sliver 代理表）。渲染层据此决定元素 type 用类引用还是
+/// 类型名字符串；宿主 widget 不在其中，零 import。
 Set<String> get _jsClassWidgetTypes =>
     {..._sliverBuilderTypes, ..._logicWidgetSources.keys};
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
 /// （`_builderN()`，含 `var model = this.__watch(...)` 前置语句）拿子树。
 const String _jsBuilderComponent = '''
-class Builder {
+export class Builder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1800,9 +1791,6 @@ class Builder {
     if (!owner) { return null; }
     return owner[name].call(owner);
   }
-}
-export function BuilderFactory(props, children) {
-  return __h(Builder, props, children);
 }''';
 
 /// ChangeNotifierProvider：把 create/value 解析出的 VM 挂成「提供者结点」
@@ -1812,7 +1800,7 @@ export function BuilderFactory(props, children) {
 /// provider 拥有 VM（类引用时 provider 内 new，实例时直接复用），卸载时
 /// dispose；`value` 语义下不拥有、不释放。
 const String _jsChangeNotifierProviderComponent = '''
-class ChangeNotifierProvider {
+export class ChangeNotifierProvider {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1844,15 +1832,12 @@ class ChangeNotifierProvider {
       this.__value.dispose();
     }
   }
-}
-export function ChangeNotifierProviderFactory(props, children) {
-  return __h(ChangeNotifierProvider, props, children);
 }''';
 
 /// MultiProvider：把 providers 数组按「嵌套 Provider」语义组合——
 /// providers[0] 最外层，最后一个最内层（离 child 最近），与原生一致。
 const String _jsMultiProviderComponent = '''
-class MultiProvider {
+export class MultiProvider {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1865,15 +1850,12 @@ class MultiProvider {
     }
     return node;
   }
-}
-export function MultiProviderFactory(props, children) {
-  return __h(MultiProvider, props, children);
 }''';
 
 /// Consumer：消费 VM——沿祖先找提供者取 VM 并订阅（watch），再调用拥有者
 /// 组件上的 `props.builder` 方法（`_consumerBuilderN(value)`）渲染局部子树。
 const String _jsConsumerComponent = '''
-class Consumer {
+export class Consumer {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1886,16 +1868,13 @@ class Consumer {
     if (!owner) { return null; }
     return owner[name].call(owner, vm);
   }
-}
-export function ConsumerFactory(props, children) {
-  return __h(Consumer, props, children);
 }''';
 
 /// ListenableBuilder：局部重建——订阅 `listenable`（拥有者组件上的模型字段），
 /// 模型 notify 时仅重建本结点子树（`setState` 只标记本结点 dirty）。
 /// 子树抽在拥有者组件的 `props.builder` 方法（`_lbBuilderN()`）里。
 const String _jsListenableBuilderComponent = '''
-class ListenableBuilder {
+export class ListenableBuilder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -1927,9 +1906,6 @@ class ListenableBuilder {
       this.__listenable.removeListener(this.__listener);
     }
   }
-}
-export function ListenableBuilderFactory(props, children) {
-  return __h(ListenableBuilder, props, children);
 }''';
 
 // ---------------------------------------------------------------------------

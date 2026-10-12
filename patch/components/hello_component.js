@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { User } from '../model/user.js';
-import { Button, Column, Row, Text, __h } from '../flutter.js';
+import { __h } from '../flutter.js';
 
 // 同文件静态单例类 PanelColors（export，供跨文件 import）
 export const PanelColors = {
@@ -13,7 +13,7 @@ export const PanelColors = {
   tagline: 'demo'
 };
 
-class HelloCard {
+export class HelloCard {
   constructor() {
     this._count = 0;
     this._user = null;
@@ -27,8 +27,8 @@ class HelloCard {
     var debugActive = kDebugMode;
     var android = Platform.isAndroid;
     console.debug("build: count=" + this._count + " debug=" + debugActive + " android=" + android);
-    return Column({}, [
-        Text({
+    return __h('Column', {}, [
+        __h('Text', {
             "data": "Hello from JS logic 4",
             "style": {
               "fontSize": 24,
@@ -36,23 +36,23 @@ class HelloCard {
               "color": '#2196F3'
             }
           }),
-        Text({
+        __h('Text', {
             "data": "count = " + this._count
           }),
-        Text({
+        __h('Text', {
             "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
           }),
-        Text({
+        __h('Text', {
             "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
           }),
-        Text({
+        __h('Text', {
             "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
           }),
-        ...((this._count > 0) ? [Text({ "data": "当前 count 是正数（if 条件渲染）" })] : []),
-        ...((this._user != null) ? [Text({ "data": "用户已加载（if + else 渲染）" })] : [Text({ "data": "用户未加载，点 Load User" })]),
-        ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [Text({ "data": "循环第 " + i + " 个" })]); } return out; })(),
-        Row({}, [
-            Button({
+        ...((this._count > 0) ? [__h('Text', { "data": "当前 count 是正数（if 条件渲染）" })] : []),
+        ...((this._user != null) ? [__h('Text', { "data": "用户已加载（if + else 渲染）" })] : [__h('Text', { "data": "用户未加载，点 Load User" })]),
+        ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + i + " 个" })]); } return out; })(),
+        __h('Row', {}, [
+            __h('Button', {
                 "kind": "elevated",
                 "label": "+1",
                 "event": this.__bind("inc"),
@@ -61,17 +61,17 @@ class HelloCard {
                   "foregroundColor": '#FFFFFF'
                 }
               }),
-            Button({
+            __h('Button', {
                 "kind": "elevated",
                 "label": "Reset",
                 "event": this.__bind("reset")
               }),
-            Button({
+            __h('Button', {
                 "kind": "elevated",
                 "label": "Native",
                 "event": this.__bind("showNative")
               }),
-            Button({
+            __h('Button', {
                 "kind": "elevated",
                 "label": "Load User",
                 "event": this.__bind("loadUser")
@@ -79,8 +79,5 @@ class HelloCard {
           ])
       ]);
   }
-}
-export function HelloCardFactory(props, children) {
-  return __h(HelloCard, props, children);
 }
 

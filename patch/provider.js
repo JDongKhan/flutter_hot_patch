@@ -1,11 +1,11 @@
 // GENERATED CODE - DO NOT EDIT
 // package 模块（package: provider）：由 ui_component_generator 生成
-// 本包全部 widget 工厂集中于此文件；工厂返回 {type, props, children}
+// 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件
 
 import { __h } from 'flutter.js';
 
 
-class ChangeNotifierProvider {
+export class ChangeNotifierProvider {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -38,11 +38,8 @@ class ChangeNotifierProvider {
     }
   }
 }
-export function ChangeNotifierProviderFactory(props, children) {
-  return __h(ChangeNotifierProvider, props, children);
-}
 
-class Consumer {
+export class Consumer {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -56,11 +53,8 @@ class Consumer {
     return owner[name].call(owner, vm);
   }
 }
-export function ConsumerFactory(props, children) {
-  return __h(Consumer, props, children);
-}
 
-class MultiProvider {
+export class MultiProvider {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -73,7 +67,4 @@ class MultiProvider {
     }
     return node;
   }
-}
-export function MultiProviderFactory(props, children) {
-  return __h(MultiProvider, props, children);
 }

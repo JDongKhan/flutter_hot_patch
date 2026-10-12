@@ -72,12 +72,7 @@ class ClassInfo {
   final List<ClassMethod> methods; // 含 getter
   final Set<String> ctorParams; // this.x 构造形参名
 
-  /// 对外工厂函数名（非 null → 类声明后追加
-  /// `export function <factory>(props, children) { return __h(<name>, ...) }`）。
-  /// 组件恒有工厂；普通类按需（如 VM 构造）。
-  final String? factory;
-
-  /// 无参构造：true → 渲染 `constructor()`，false → `constructor(args)`。
+  /// 无参构造：true → 渲染 `constructor()`，false → 渲染 `constructor(args)`。
   /// 组件无构造参数时用无参形态；普通类恒带 `args`（历史契约）。
   final bool ctorNoArgs;
 
@@ -101,7 +96,6 @@ class ClassInfo {
     required this.staticFields,
     required this.methods,
     this.ctorParams = const {},
-    this.factory,
     this.ctorNoArgs = false,
     this.tree,
     this.builders = const [],
@@ -1108,8 +1102,10 @@ String? _getterReturnJs(ClassInfo info, ClassMethod m) {
 }
 
 /// 类声明 → JS（export 可选）。含 constructor / 方法 / getter / extends 基类，
-/// 并数据驱动地追加 build()/builder 子方法（[ClassInfo.tree] 非空）与对外
-/// 工厂函数（[ClassInfo.factory] 非空）。普通类与组件共用这一条渲染路径。
+/// 并数据驱动地追加 build()/builder 子方法（[ClassInfo.tree] 非空）。
+/// 普通类与组件共用这一条渲染路径——**没有对外工厂函数**：元素的 type 就是
+/// 类本身（宿主 widget 则是类型名字符串），由渲染层统一写成
+/// `__h(type, props, children)`，JS 侧不存在「factory」这层包装。
 ///
 /// [widgetCtx]：可选。传入后，方法体里返回 Widget 构造表达式
 /// （如 `return Container(...)`）会走 widget 树翻译路径，而不是被当作普通
@@ -1189,13 +1185,6 @@ String renderClassDecl(
   }
 
   b.write('}');
-  // 对外工厂（组件/VM 等）：与 widget 模块契约一致，返回 element（type = 类）。
-  // 运行时 mountRoot / 嵌套引用都以工厂调用取 element（不再 new 类）。
-  if (info.factory != null) {
-    b.write('\nexport function ${info.factory}(props, children) {\n');
-    b.write('  return __h(${info.name}, props, children);\n');
-    b.write('}');
-  }
   return b.toString();
 }
 
@@ -1300,17 +1289,6 @@ class WidgetNode {
         };
 }
 
-/// widget 类型 → 产物内可引用的名字（全局唯一事实源）。
-///
-/// 命名统一：**JS 类名 = Dart 类名**（组件类、逻辑 widget、sliver builder
-/// 代理、普通类一律同名）。但 ES module 里类名与元素工厂同作用域不能同名，
-/// 所以「有 JS 类的类型」其元素工厂用统一后缀 `<类名>Factory`；宿主 widget
-/// （无 JS 类，工厂只 `return __h('Text', ...)`）工厂仍用 Dart 类名。
-///
-/// 渲染调用点与生成器拼 import 名共用本函数，避免「一处改名、另一处漏改」。
-String widgetRefName(String type, Set<String> jsClassWidgets) =>
-    jsClassWidgets.contains(type) ? '${type}Factory' : type;
-
 /// 翻译上下文：持有注册表与组件元数据，并向 translator 提供通用解析能力。
 ///
 /// translator 通过 [translate] 递归子节点、通过 [renderJs] 递归渲染子节点，
@@ -1363,19 +1341,28 @@ class WidgetTranslateContext {
     this.importResolver,
     this.singletons,
     this.jsClassWidgets = const {},
+    this.delegateClassWidgets = const {},
   });
 
-  /// 「以 JS 类渲染」的 widget 类型（逻辑 widget / sliver builder 代理）。
+  /// 有 JS 类实现的 widget 类型（组件、逻辑 widget、sliver builder 代理）。
   /// 由生成器注入（builder 的模板表是唯一事实源）。
-  ///
-  /// 命名统一：这些类型的 **JS 类名 = Dart 类名**，元素工厂 = `<类名>Factory`；
-  /// 其余宿主 widget 无 JS 类，元素工厂仍用 Dart 类名。引用名统一由
-  /// [widgetRef] 决定，渲染调用点与 import 名共用同一处逻辑。
   final Set<String> jsClassWidgets;
 
-  /// widget 类型 → 产物内可引用的名字（宿主 widget = 类型名；有 JS 类的 =
-  /// `<类型名>Factory`）。统一委托 [widgetRefName]。
-  String widgetRef(String type) => widgetRefName(type, jsClassWidgets);
+  /// 仅「builder/delegate 形态」才走 JS 类的类型（sliver 代理：普通
+  /// `GridView(children: [...])` 仍是宿主节点，`.builder` 懒加载形态才需要
+  /// 类来循环调用拥有者方法展开子树）。
+  final Set<String> delegateClassWidgets;
+
+  /// 本节点的元素 type 用 **JS 类引用**还是**类型名字符串**。
+  ///
+  /// JS 里没有「factory」这层包装：元素的 type 就是类本身（有 JS 逻辑的类型）
+  /// 或宿主 widget 的类型名（由宿主注册表映射成 Flutter widget）。有 JS 类的
+  /// 类型要 import 类名，宿主类型名是字符串字面量、无需 import。
+  bool usesJsClass(String type, Map<String, dynamic>? props) {
+    if (!jsClassWidgets.contains(type)) return false;
+    if (!delegateClassWidgets.contains(type)) return true;
+    return props != null && props.containsKey('delegateBuilder');
+  }
 
   /// 记录一个被兜底为 Component 节点的自定义组件名。
   void collectDependency(String name) => dependencies.add(name);
@@ -1501,7 +1488,7 @@ class WidgetTranslateContext {
   static bool _isUpperCamel(String name) =>
       name.isNotEmpty && name[0] == name[0].toUpperCase();
 
-  /// 渲染一个已翻译的中立节点为 JS 构造调用（如 `Text({...}, [...])`）。
+  /// 渲染一个已翻译的中立节点为统一元素构造 `__h(type, props, children)`。
   ///
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
   /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
@@ -1514,8 +1501,8 @@ class WidgetTranslateContext {
     final translator = registry.lookupJson(type);
     if (translator == null) {
       // Component 兜底节点（未注册的第三方/自定义 widget）：
-      //   - 该组件名有 JS 产物（importResolver 命中）→ 渲染成**工厂调用**
-      //     `X({...args})`，与 widget 模块契约一致（运行时递归挂载 JS 组件）；
+      //   - 该组件名有 JS 产物（importResolver 命中）→ 渲染成类引用元素
+      //     `__h(X, {...args})`，与组件产物契约一致（运行时递归挂载 JS 组件）；
       //   - 无产物（无注解的 lib 普通 widget / @UIComponentIgnore）→
       //     `__h("Component", {...})` 占位，运行时由宿主 nativeComponents
       //     原生注入或占位。
@@ -1533,27 +1520,38 @@ class WidgetTranslateContext {
       }
       throw FormatException('未知节点类型: $type');
     }
-    // 登记「实际用到的 widget」（按 package 分组），
-    // 生成器据此只为这些类型产出 JS widget 模块。
-    (usedWidgetPackages[translator.packageName] ??= <String>{}).add(type);
-    return _renderCall(type, json, depth);
+    final props = json['props'];
+    // 元素 type 用类引用（有 JS 逻辑）还是类型名字符串（宿主 widget）：前者
+    // 需要 import 该类的 widget 模块，后者是字符串字面量、零 import。
+    final asClass = usesJsClass(type, props is Map<String, dynamic> ? props : null);
+    if (asClass) {
+      (usedWidgetPackages[translator.packageName] ??= <String>{}).add(type);
+    }
+    return _renderCall(type, json, depth, asClass: asClass);
   }
 
-  /// 把已翻译的 JSON 节点渲染成 **JS 构造调用**：
-  /// `{type:'Text', props:{...}, children:[...]}` → `Text({...}, [...])`。
+  /// 把已翻译的 JSON 节点渲染成统一元素构造：`__h(<type>, {...}, [...])`。
   ///
-  /// `props` 为空 → `{}`；`children` 为空 → 省略第二参。嵌套子节点（children、
-  /// 以及 ListTile.leading 这类「props 里的节点」）同样递归成构造调用。
-  /// 函数名即节点 type（由生成器按 package 产出的 widget 模块 export）。
-  String _renderCall(String type, Map<String, dynamic> json, int depth) {
+  /// JS 没有「factory」这层包装：元素 type 直接是类（有 JS 逻辑的类型，[asClass]
+  /// 为 true）或宿主 widget 类型名字符串。`props` 为空 → `{}`；`children` 为空 →
+  /// 省略第三参（`__h` 归一为 `[]`）。嵌套子节点（children、以及
+  /// ListTile.leading 这类「props 里的节点」）同样递归成元素构造。
+  String _renderCall(
+    String type,
+    Map<String, dynamic> json,
+    int depth, {
+    required bool asClass,
+  }) {
     final props = json['props'];
     final children = json['children'];
     final propsJs = (props is Map && props.isNotEmpty)
         ? jsLiteral(props, depth + 1)
         : '{}';
+    final typeArg = asClass ? type : "'$type'";
     final b = StringBuffer()
-      ..write(widgetRef(type))
-      ..write('(')
+      ..write('__h(')
+      ..write(typeArg)
+      ..write(', ')
       ..write(propsJs);
     if (children is List && children.isNotEmpty) {
       b
@@ -1564,9 +1562,9 @@ class WidgetTranslateContext {
     return b.toString();
   }
 
-  /// Component 节点的「工厂调用」渲染：命中 JS 产物时输出 `X({...args})`
-  /// （args 复用 [jsLiteral]，与其它构造调用同一值渲染规则）；
-  /// 无产物（importResolver 返回 null）→ 返回 null，调用方回退
+  /// Component 节点的渲染：命中 JS 产物时输出 `__h(X, {...args})`（X 是组件
+  /// 产物的类引用，需 import；args 复用 [jsLiteral]，与其它元素同一值渲染
+  /// 规则）；无产物（importResolver 返回 null）→ 返回 null，调用方回退
   /// `__h("Component", ...)` 占位（运行时走宿主 nativeComponents 原生注入）。
   String? _renderComponentCall(Map<String, dynamic> json, int depth) {
     final props = json['props'];
@@ -1577,8 +1575,7 @@ class WidgetTranslateContext {
     final argsJs = (args is Map && args.isNotEmpty)
         ? jsLiteral(args, depth + 1)
         : '{}';
-    // 组件产物的元素工厂统一为 `<类名>Factory`（JS 类名 = Dart 类名）。
-    return '${name}Factory($argsJs)';
+    return '__h($name, $argsJs)';
   }
 
   /// 剥离 JS 字符串字面量引号（`"Column"` → `Column`）；非字面量原样返回。

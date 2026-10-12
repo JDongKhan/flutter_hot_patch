@@ -235,12 +235,11 @@ const String _jsUiApi = r'''
   }
 
   // 挂载一个页面：pageKey 隔离根，moduleKey 定位模块，className 是组件类名。
-  // 组件产物里 **JS 类名 = Dart 类名**，元素工厂统一为 `<类名>Factory`
-  // （类名与工厂同处一个 ES module 作用域，不能同名）；`G[className]` 兜底
-  // 全局注册的组件函数。
+  // 组件产物里 **JS 类名 = Dart 类名**，元素 type 就是这个类本身（JS 里没有
+  // 「factory」这层包装）；`G[className]` 兜底全局注册的组件类。
   function mountRoot(pageKey, moduleKey, className, propsJson) {
     var mod = (G.__modules && G.__modules[moduleKey]) || null;
-    var C = (mod && mod[className + 'Factory']) || G[className];
+    var C = (mod && mod[className]) || G[className];
     if (!C) {
       throw new Error('jsui: component not found: ' + className + ' in ' + moduleKey);
     }
@@ -250,7 +249,7 @@ const String _jsUiApi = r'''
     activeRoot = root;
     try {
       root.ops = [];
-      root.inst = mount(C(parse(propsJson)), null, null);
+      root.inst = mount(h(C, parse(propsJson), null), null, null);
       // 末位下发根结点 id，宿主据此挂载 _JsNode。
       emit({ op: 'root', id: hostIdOf(root.inst) });
       commit(root);

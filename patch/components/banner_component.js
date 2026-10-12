@@ -3,35 +3,32 @@
 // 重新生成：dart run build_runner build
 
 import { PanelColors } from 'hello_component.js';
-import { Button, Column, Text, __h } from '../flutter.js';
+import { __h } from '../flutter.js';
 
-class BannerCard {
+export class BannerCard {
   constructor() {
     this._views = 0;
   }
   initState() { this._views = 5; }
   bump() { this.setState(function(){ this._views += 1; }); }
   build() {
-    return Column({}, [
-        Text({
+    return __h('Column', {}, [
+        __h('Text', {
             "data": "Banner from another file",
             "style": {
               "fontSize": 20,
               "color": PanelColors.background
             }
           }),
-        Text({
+        __h('Text', {
             "data": "views = " + this._views
           }),
-        Button({
+        __h('Button', {
             "kind": "elevated",
             "label": "Bump",
             "event": this.__bind("bump")
           })
       ]);
   }
-}
-export function BannerCardFactory(props, children) {
-  return __h(BannerCard, props, children);
 }
 

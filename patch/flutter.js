@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT EDIT
 // package 模块（package: flutter）：由 ui_component_generator 生成
-// 本包全部 widget 工厂集中于此文件；工厂返回 {type, props, children}
+// 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件
 
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
 // 归一化 props/children，返回 {type, props, children} 元素描述，供运行时按
@@ -16,27 +16,7 @@ export function __h(type, props, children) {
 }
 
 
-export function Align(props, children) {
-  return __h('Align', props, children);
-}
-
-export function AppBar(props, children) {
-  return __h('AppBar', props, children);
-}
-
-export function AspectRatio(props, children) {
-  return __h('AspectRatio', props, children);
-}
-
-export function BottomNavigationBar(props, children) {
-  return __h('BottomNavigationBar', props, children);
-}
-
-export function BottomNavigationBarItem(props, children) {
-  return __h('BottomNavigationBarItem', props, children);
-}
-
-class Builder {
+export class Builder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -49,95 +29,8 @@ class Builder {
     return owner[name].call(owner);
   }
 }
-export function BuilderFactory(props, children) {
-  return __h(Builder, props, children);
-}
 
-export function Button(props, children) {
-  return __h('Button', props, children);
-}
-
-export function Card(props, children) {
-  return __h('Card', props, children);
-}
-
-export function Center(props, children) {
-  return __h('Center', props, children);
-}
-
-export function Checkbox(props, children) {
-  return __h('Checkbox', props, children);
-}
-
-export function Chip(props, children) {
-  return __h('Chip', props, children);
-}
-
-export function CircleAvatar(props, children) {
-  return __h('CircleAvatar', props, children);
-}
-
-export function CircularProgressIndicator(props, children) {
-  return __h('CircularProgressIndicator', props, children);
-}
-
-export function ClipRRect(props, children) {
-  return __h('ClipRRect', props, children);
-}
-
-export function Column(props, children) {
-  return __h('Column', props, children);
-}
-
-export function ConstrainedBox(props, children) {
-  return __h('ConstrainedBox', props, children);
-}
-
-export function Container(props, children) {
-  return __h('Container', props, children);
-}
-
-export function CustomScrollView(props, children) {
-  return __h('CustomScrollView', props, children);
-}
-
-export function DecoratedBox(props, children) {
-  return __h('DecoratedBox', props, children);
-}
-
-export function Divider(props, children) {
-  return __h('Divider', props, children);
-}
-
-export function DropdownButton(props, children) {
-  return __h('DropdownButton', props, children);
-}
-
-export function DropdownMenuItem(props, children) {
-  return __h('DropdownMenuItem', props, children);
-}
-
-export function Expanded(props, children) {
-  return __h('Expanded', props, children);
-}
-
-export function Flexible(props, children) {
-  return __h('Flexible', props, children);
-}
-
-export function FloatingActionButton(props, children) {
-  return __h('FloatingActionButton', props, children);
-}
-
-export function FractionallySizedBox(props, children) {
-  return __h('FractionallySizedBox', props, children);
-}
-
-export function GestureDetector(props, children) {
-  return __h('GestureDetector', props, children);
-}
-
-class GridView {
+export class GridView {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -166,42 +59,8 @@ class GridView {
     return __h('GridView', p, out);
   }
 }
-export function GridViewFactory(props, children) {
-  if (props && props.delegateBuilder !== undefined) {
-    return __h(GridView, props, children);
-  }
-  return __h('GridView', props, children);
-}
 
-export function Icon(props, children) {
-  return __h('Icon', props, children);
-}
-
-export function IconButton(props, children) {
-  return __h('IconButton', props, children);
-}
-
-export function Image(props, children) {
-  return __h('Image', props, children);
-}
-
-export function InkWell(props, children) {
-  return __h('InkWell', props, children);
-}
-
-export function LinearProgressIndicator(props, children) {
-  return __h('LinearProgressIndicator', props, children);
-}
-
-export function ListTile(props, children) {
-  return __h('ListTile', props, children);
-}
-
-export function ListView(props, children) {
-  return __h('ListView', props, children);
-}
-
-class ListenableBuilder {
+export class ListenableBuilder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -234,63 +93,8 @@ class ListenableBuilder {
     }
   }
 }
-export function ListenableBuilderFactory(props, children) {
-  return __h(ListenableBuilder, props, children);
-}
 
-export function NotificationListener(props, children) {
-  return __h('NotificationListener', props, children);
-}
-
-export function Opacity(props, children) {
-  return __h('Opacity', props, children);
-}
-
-export function Padding(props, children) {
-  return __h('Padding', props, children);
-}
-
-export function Positioned(props, children) {
-  return __h('Positioned', props, children);
-}
-
-export function Radio(props, children) {
-  return __h('Radio', props, children);
-}
-
-export function Row(props, children) {
-  return __h('Row', props, children);
-}
-
-export function SafeArea(props, children) {
-  return __h('SafeArea', props, children);
-}
-
-export function Scaffold(props, children) {
-  return __h('Scaffold', props, children);
-}
-
-export function SingleChildScrollView(props, children) {
-  return __h('SingleChildScrollView', props, children);
-}
-
-export function SizedBox(props, children) {
-  return __h('SizedBox', props, children);
-}
-
-export function Slider(props, children) {
-  return __h('Slider', props, children);
-}
-
-export function SliverAppBar(props, children) {
-  return __h('SliverAppBar', props, children);
-}
-
-export function SliverFillRemaining(props, children) {
-  return __h('SliverFillRemaining', props, children);
-}
-
-class SliverFillViewport {
+export class SliverFillViewport {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -319,14 +123,8 @@ class SliverFillViewport {
     return __h('SliverFillViewport', p, out);
   }
 }
-export function SliverFillViewportFactory(props, children) {
-  if (props && props.delegateBuilder !== undefined) {
-    return __h(SliverFillViewport, props, children);
-  }
-  return __h('SliverFillViewport', props, children);
-}
 
-class SliverFixedExtentList {
+export class SliverFixedExtentList {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -355,14 +153,8 @@ class SliverFixedExtentList {
     return __h('SliverFixedExtentList', p, out);
   }
 }
-export function SliverFixedExtentListFactory(props, children) {
-  if (props && props.delegateBuilder !== undefined) {
-    return __h(SliverFixedExtentList, props, children);
-  }
-  return __h('SliverFixedExtentList', props, children);
-}
 
-class SliverGrid {
+export class SliverGrid {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -391,18 +183,8 @@ class SliverGrid {
     return __h('SliverGrid', p, out);
   }
 }
-export function SliverGridFactory(props, children) {
-  if (props && props.delegateBuilder !== undefined) {
-    return __h(SliverGrid, props, children);
-  }
-  return __h('SliverGrid', props, children);
-}
 
-export function SliverIgnorePointer(props, children) {
-  return __h('SliverIgnorePointer', props, children);
-}
-
-class SliverList {
+export class SliverList {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
@@ -430,58 +212,4 @@ class SliverList {
     }
     return __h('SliverList', p, out);
   }
-}
-export function SliverListFactory(props, children) {
-  if (props && props.delegateBuilder !== undefined) {
-    return __h(SliverList, props, children);
-  }
-  return __h('SliverList', props, children);
-}
-
-export function SliverOffstage(props, children) {
-  return __h('SliverOffstage', props, children);
-}
-
-export function SliverOpacity(props, children) {
-  return __h('SliverOpacity', props, children);
-}
-
-export function SliverPadding(props, children) {
-  return __h('SliverPadding', props, children);
-}
-
-export function SliverSafeArea(props, children) {
-  return __h('SliverSafeArea', props, children);
-}
-
-export function SliverToBoxAdapter(props, children) {
-  return __h('SliverToBoxAdapter', props, children);
-}
-
-export function SliverVisibility(props, children) {
-  return __h('SliverVisibility', props, children);
-}
-
-export function Spacer(props, children) {
-  return __h('Spacer', props, children);
-}
-
-export function Stack(props, children) {
-  return __h('Stack', props, children);
-}
-
-export function Switch(props, children) {
-  return __h('Switch', props, children);
-}
-
-export function Text(props, children) {
-  return __h('Text', props, children);
-}
-
-export function TextField(props, children) {
-  return __h('TextField', props, children);
-}
-
-export function Wrap(props, children) {
-  return __h('Wrap', props, children);
 }

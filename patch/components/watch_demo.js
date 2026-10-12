@@ -3,15 +3,15 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { BuilderFactory, Button, Card, Column, Padding, Row, SizedBox, Text, __h } from '../flutter.js';
-import { ChangeNotifierProviderFactory } from '../provider.js';
+import { Builder, __h } from '../flutter.js';
+import { ChangeNotifierProvider } from '../provider.js';
 
-class WatchDemo {
+export class WatchDemo {
   constructor() {
   }
   build() {
-    return Card({}, [
-        Padding({
+    return __h('Card', {}, [
+        __h('Padding', {
             "padding": {
               "left": 16.0,
               "top": 16.0,
@@ -19,19 +19,19 @@ class WatchDemo {
               "bottom": 16.0
             }
           }, [
-            ChangeNotifierProviderFactory({
+            __h(ChangeNotifierProvider, {
                 "model": "CounterVm",
                 "create": CounterVm,
-                "child": Column({
+                "child": __h('Column', {
                     "mainAxisSize": "min"
                   }, [
-                    BuilderFactory({
+                    __h(Builder, {
                         "builder": "_builder0"
                       }),
-                    SizedBox({
+                    __h('SizedBox', {
                         "height": 12
                       }),
-                    WatchCountLabelFactory({})
+                    __h(WatchCountLabel, {})
                   ])
               })
           ])
@@ -39,13 +39,13 @@ class WatchDemo {
   }
   _builder0() {
       var model = this.__watch("CounterVm");
-      return Column({
+      return __h('Column', {
         "mainAxisSize": "min"
       }, [
-        Text({
+        __h('Text', {
             "data": "context.watch<CounterModel>"
           }),
-        Text({
+        __h('Text', {
             "data": "count = " + model.count,
             "style": {
               "fontSize": 22,
@@ -53,21 +53,21 @@ class WatchDemo {
               "color": '#FF5722'
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Row({
+        __h('Row', {
             "mainAxisAlignment": "center"
           }, [
-            Button({
+            __h('Button', {
                 "kind": "elevated",
                 "label": "+1",
                 "event": this.__bind("this.__read(\"CounterVm\").inc()")
               }),
-            SizedBox({
+            __h('SizedBox', {
                 "width": 12
               }),
-            Button({
+            __h('Button', {
                 "kind": "elevated",
                 "label": "Reset",
                 "event": this.__bind("this.__read(\"CounterVm\").reset()")
@@ -76,16 +76,13 @@ class WatchDemo {
       ]);
   }
 }
-export function WatchDemoFactory(props, children) {
-  return __h(WatchDemo, props, children);
-}
 
-class WatchCountLabel {
+export class WatchCountLabel {
   constructor() {
   }
   build() {
     var model = this.__watch("CounterVm");
-    return Text({
+    return __h('Text', {
         "data": "another State: count = " + model.count,
         "style": {
           "fontSize": 16,
@@ -93,8 +90,5 @@ class WatchCountLabel {
         }
       });
   }
-}
-export function WatchCountLabelFactory(props, children) {
-  return __h(WatchCountLabel, props, children);
 }
 

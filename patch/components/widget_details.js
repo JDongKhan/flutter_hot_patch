@@ -3,52 +3,52 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, GridViewFactory, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilderFactory, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentListFactory, SliverGridFactory, SliverListFactory, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
+import { GridView, ListenableBuilder, SliverFixedExtentList, SliverGrid, SliverList, __h } from '../flutter.js';
 
-class TextDetail {
+export class TextDetail {
   constructor() {
     this._count = 0;
   }
   bump() { this.setState(function(){ this._count += 1; }); }
   build() {
-    return Column({
+    return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        Text({
+        __h('Text', {
             "data": "基础文案 + TextStyle",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Text({
+        __h('Text', {
             "data": "普通文本，count = " + this._count + "（状态插值）",
             "style": {
               "color": '#2196F3',
               "fontSize": 16
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 6
           }),
-        Text({
+        __h('Text', {
             "data": "maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示",
             "maxLines": 1,
             "overflow": "ellipsis"
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 6
           }),
-        Text({
+        __h('Text', {
             "data": "textScaler.linear(1.6) 放大",
             "textScaler": {
               "linear": 1.6
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 6
           }),
-        Text({
+        __h('Text', {
             "data": "textAlign 居中",
             "style": {
               "decoration": "underline",
@@ -57,10 +57,10 @@ class TextDetail {
             },
             "textAlign": "center"
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 6
           }),
-        Text({
+        __h('Text', {
             "data": "softWrap=false 不换行测试",
             "style": {
               "fontSize": 12,
@@ -71,10 +71,10 @@ class TextDetail {
             },
             "softWrap": false
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 6
           }),
-        Button({
+        __h('Button', {
             "kind": "text",
             "label": "Bump count",
             "event": this.__bind("bump")
@@ -82,30 +82,27 @@ class TextDetail {
       ]);
   }
 }
-export function TextDetailFactory(props, children) {
-  return __h(TextDetail, props, children);
-}
 
-class ButtonDetail {
+export class ButtonDetail {
   constructor() {
     this._pressed = 0;
   }
   onTap() { this.setState(function(){ this._pressed += 1; }); }
   build() {
-    return Column({
+    return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        Text({
+        __h('Text', {
             "data": "点击次数 = " + this._pressed,
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Button({
+        __h('Button', {
             "kind": "elevated",
             "label": "Elevated · Styled",
             "event": this.__bind("onTap"),
@@ -135,10 +132,10 @@ class ButtonDetail {
               "foregroundColor": '#FFFFFF'
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Button({
+        __h('Button', {
             "kind": "text",
             "label": "TextButton",
             "event": this.__bind("onTap"),
@@ -160,10 +157,10 @@ class ButtonDetail {
               "foregroundColor": '#3F51B5'
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Button({
+        __h('Button', {
             "kind": "outlined",
             "label": "OutlinedButton",
             "event": this.__bind("onTap"),
@@ -185,39 +182,36 @@ class ButtonDetail {
               "foregroundColor": '#FF5722'
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Button({
+        __h('Button', {
             "kind": "elevated",
             "label": "Disabled"
           })
       ]);
   }
 }
-export function ButtonDetailFactory(props, children) {
-  return __h(ButtonDetail, props, children);
-}
 
-class LayoutDetail {
+export class LayoutDetail {
   constructor() {
   }
   build() {
-    return Column({
+    return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        Text({
+        __h('Text', {
             "data": "Row + Expanded / Flexible / Spacer",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Row({}, [
-            Expanded({
+        __h('Row', {}, [
+            __h('Expanded', {
                 "flex": 1
               }, [
-                Container({
+                __h('Container', {
                     "color": '@Colors.blue.shade100',
                     "padding": {
                       "left": 8.0,
@@ -226,19 +220,19 @@ class LayoutDetail {
                       "bottom": 8.0
                     }
                   }, [
-                    Text({
+                    __h('Text', {
                         "data": "A",
                         "textAlign": "center"
                       })
                   ])
               ]),
-            Spacer({
+            __h('Spacer', {
                 "flex": 1
               }),
-            Expanded({
+            __h('Expanded', {
                 "flex": 2
               }, [
-                Container({
+                __h('Container', {
                     "color": '@Colors.green.shade100',
                     "padding": {
                       "left": 8.0,
@@ -247,25 +241,25 @@ class LayoutDetail {
                       "bottom": 8.0
                     }
                   }, [
-                    Text({
+                    __h('Text', {
                         "data": "B（flex=2）",
                         "textAlign": "center"
                       })
                   ])
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "Center / Align / Padding / SizedBox",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Center({}, [
-            Container({
+        __h('Center', {}, [
+            __h('Container', {
                 "color": '@Colors.amber.shade100',
                 "padding": {
                   "left": 12.0,
@@ -274,18 +268,18 @@ class LayoutDetail {
                   "bottom": 12.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "Center 居中"
                   })
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Align({
+        __h('Align', {
             "alignment": "centerLeft"
           }, [
-            Container({
+            __h('Container', {
                 "color": '@Colors.purple.shade50',
                 "padding": {
                   "left": 8.0,
@@ -294,15 +288,15 @@ class LayoutDetail {
                   "bottom": 8.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "Align centerLeft"
                   })
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Padding({
+        __h('Padding', {
             "padding": {
               "left": 8.0,
               "top": 4.0,
@@ -310,38 +304,38 @@ class LayoutDetail {
               "bottom": 4.0
             }
           }, [
-            Text({
+            __h('Text', {
                 "data": "Padding 包裹文案"
               })
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "Stack + Positioned",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 100
           }, [
-            Stack({
+            __h('Stack', {
                 "fit": "expand",
                 "clipBehavior": "hardEdge"
               }, [
-                Container({
+                __h('Container', {
                     "color": '@Colors.grey.shade200'
                   }),
-                Positioned({
+                __h('Positioned', {
                     "left": 0,
                     "top": 0,
                     "right": 0,
                     "bottom": 0
                   }, [
-                    Center({}, [
-                        Text({
+                    __h('Center', {}, [
+                        __h('Text', {
                             "data": "FILL",
                             "style": {
                               "color": '#FFFFFF',
@@ -350,35 +344,35 @@ class LayoutDetail {
                           })
                       ])
                   ]),
-                Positioned({
+                __h('Positioned', {
                     "left": 12,
                     "top": 12
                   }, [
-                    Text({
+                    __h('Text', {
                         "data": "TL"
                       })
                   ]),
-                Positioned({
+                __h('Positioned', {
                     "right": 12,
                     "bottom": 12
                   }, [
-                    Text({
+                    __h('Text', {
                         "data": "BR"
                       })
                   ])
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "Wrap · 自动换行",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Wrap({
+        __h('Wrap', {
             "spacing": 8,
             "runSpacing": 8,
             "direction": "horizontal",
@@ -386,22 +380,22 @@ class LayoutDetail {
             "runAlignment": "center",
             "crossAxisAlignment": "center"
           }, [
-            ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [Chip({ "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
+            ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Opacity({
+        __h('Opacity', {
             "opacity": 0.5
           }, [
-            Container({
+            __h('Container', {
                 "color": '#F44336',
                 "padding": {
                   "left": 8.0,
@@ -410,21 +404,21 @@ class LayoutDetail {
                   "bottom": 8.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "50% 透明"
                   })
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        ConstrainedBox({
+        __h('ConstrainedBox', {
             "constraints": {
               "minWidth": 120,
               "maxWidth": 200
             }
           }, [
-            Container({
+            __h('Container', {
                 "color": '@Colors.orange.shade100',
                 "padding": {
                   "left": 8.0,
@@ -433,34 +427,34 @@ class LayoutDetail {
                   "bottom": 8.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "ConstrainedBox 宽度 120-200"
                   })
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        AspectRatio({
+        __h('AspectRatio', {
             "aspectRatio": 1.78
           }, [
-            Container({
+            __h('Container', {
                 "color": '@Colors.indigo.shade100',
                 "alignment": "center"
               }, [
-                Text({
+                __h('Text', {
                     "data": "16:9 比例"
                   })
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        FractionallySizedBox({
+        __h('FractionallySizedBox', {
             "widthFactor": 0.6,
             "alignment": "center"
           }, [
-            Container({
+            __h('Container', {
                 "color": '@Colors.pink.shade100',
                 "padding": {
                   "left": 8.0,
@@ -469,7 +463,7 @@ class LayoutDetail {
                   "bottom": 8.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "60% 宽度",
                     "textAlign": "center"
                   })
@@ -478,71 +472,68 @@ class LayoutDetail {
       ]);
   }
 }
-export function LayoutDetailFactory(props, children) {
-  return __h(LayoutDetail, props, children);
-}
 
-class ImageDetail {
+export class ImageDetail {
   constructor() {
   }
   build() {
-    return Column({
+    return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        Text({
+        __h('Text', {
             "data": "Image · 网络图片",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        ClipRRect({
-            "child": Image({
+        __h('ClipRRect', {
+            "child": __h('Image', {
                 "source": "https://picsum.photos/seed/hotpatch/400/160",
                 "height": 120,
                 "fit": "cover"
               })
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "Icon / CircleAvatar",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Row({}, [
-            Icon({
+        __h('Row', {}, [
+            __h('Icon', {
                 "icon": "star",
                 "size": 28,
                 "color": '#FFC107'
               }),
-            SizedBox({
+            __h('SizedBox', {
                 "width": 12
               }),
-            Icon({
+            __h('Icon', {
                 "icon": "home",
                 "size": 28,
                 "color": '#2196F3'
               }),
-            SizedBox({
+            __h('SizedBox', {
                 "width": 12
               }),
-            Icon({
+            __h('Icon', {
                 "icon": "favorite",
                 "size": 28,
                 "color": '#F44336'
               }),
-            SizedBox({
+            __h('SizedBox', {
                 "width": 12
               }),
-            CircleAvatar({
+            __h('CircleAvatar', {
                 "radius": 20,
                 "backgroundColor": '#009688'
               }, [
-                Text({
+                __h('Text', {
                     "data": "AV",
                     "style": {
                       "color": '#FFFFFF'
@@ -553,25 +544,22 @@ class ImageDetail {
       ]);
   }
 }
-export function ImageDetailFactory(props, children) {
-  return __h(ImageDetail, props, children);
-}
 
-class ContainerDetail {
+export class ContainerDetail {
   constructor() {
   }
   build() {
-    return Column({
+    return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        Text({
+        __h('Text', {
             "data": "Container · 颜色/圆角/Padding",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Container({
+        __h('Container', {
             "padding": {
               "left": 16.0,
               "top": 16.0,
@@ -585,24 +573,24 @@ class ContainerDetail {
               }
             }
           }, [
-            Text({
+            __h('Text', {
                 "data": "容器内容（teal 圆角）",
                 "style": {
                   "color": '#FFFFFF'
                 }
               })
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "Container · 边框 + 阴影 + 渐变",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Container({
+        __h('Container', {
             "padding": {
               "left": 16.0,
               "top": 16.0,
@@ -639,24 +627,24 @@ class ContainerDetail {
               ]
             }
           }, [
-            Text({
+            __h('Text', {
                 "data": "渐变 + 边框 + 阴影",
                 "style": {
                   "color": '#FFFFFF'
                 }
               })
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "DecoratedBox · 纯装饰",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        DecoratedBox({
+        __h('DecoratedBox', {
             "decoration": {
               "color": '@Colors.amber.shade100',
               "border": {
@@ -670,7 +658,7 @@ class ContainerDetail {
               }
             }
           }, [
-            Padding({
+            __h('Padding', {
                 "padding": {
                   "left": 12.0,
                   "top": 12.0,
@@ -678,22 +666,22 @@ class ContainerDetail {
                   "bottom": 12.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "DecoratedBox 内容"
                   })
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "Card · shape / clipBehavior",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Card({
+        __h('Card', {
             "elevation": 4,
             "shape": {
               "kind": "rounded",
@@ -708,7 +696,7 @@ class ContainerDetail {
             "clipBehavior": "antiAlias",
             "shadowColor": '#673AB7'
           }, [
-            Padding({
+            __h('Padding', {
                 "padding": {
                   "left": 16.0,
                   "top": 16.0,
@@ -716,43 +704,40 @@ class ContainerDetail {
                   "bottom": 16.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "圆角卡片 + 描边 + 阴影"
                   })
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Divider({}),
-        SizedBox({
+        __h('Divider', {}),
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "SizedBox · 尺寸约束",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Container({
+        __h('Container', {
             "width": 120,
             "height": 48,
             "color": '@Colors.blueGrey.shade100',
             "alignment": "center"
           }, [
-            Text({
+            __h('Text', {
                 "data": "固定 120×48"
               })
           ])
       ]);
   }
 }
-export function ContainerDetailFactory(props, children) {
-  return __h(ContainerDetail, props, children);
-}
 
-class ScrollDetail {
+export class ScrollDetail {
   constructor() {
     this._offset = 0;
     this._ctrlOffset = 0;
@@ -763,23 +748,23 @@ class ScrollDetail {
   _onListScroll(n) { this.setState(function(){ this._offset = n.metrics.pixels; }); return false; }
   _scrollToEnd() { this._scrollController.jumpTo(this._scrollController.position.maxScrollExtent); }
   build() {
-    return Column({
+    return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        Text({
+        __h('Text', {
             "data": "ListView · 列表（offset: " + this._offset + "）",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        NotificationListener({
+        __h('NotificationListener', {
             "onNotification": this.__bind("_onListScroll")
           }, [
-            SizedBox({
+            __h('SizedBox', {
                 "height": 160
               }, [
-                ListView({
+                __h('ListView', {
                     "padding": {
                       "left": 8.0,
                       "top": 8.0,
@@ -789,62 +774,62 @@ class ScrollDetail {
                     "physics": "BouncingScrollPhysics",
                     "itemExtent": 56
                   }, [
-                    ListTile({
+                    __h('ListTile', {
                         "title": "item A",
-                        "leading": Icon({
+                        "leading": __h('Icon', {
                             "icon": "list"
                           })
                       }),
-                    ListTile({
+                    __h('ListTile', {
                         "title": "item B",
-                        "leading": Icon({
+                        "leading": __h('Icon', {
                             "icon": "list"
                           })
                       }),
-                    ListTile({
+                    __h('ListTile', {
                         "title": "item C",
-                        "leading": Icon({
+                        "leading": __h('Icon', {
                             "icon": "list"
                           })
                       }),
-                    ListTile({
+                    __h('ListTile', {
                         "title": "item D",
-                        "leading": Icon({
+                        "leading": __h('Icon', {
                             "icon": "list"
                           })
                       }),
-                    ListTile({
+                    __h('ListTile', {
                         "title": "item E",
-                        "leading": Icon({
+                        "leading": __h('Icon', {
                             "icon": "list"
                           })
                       })
                   ])
               ])
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "SingleChildScrollView · 长内容滚动（ctrl offset: " + this._ctrlOffset + "）",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        SingleChildScrollView({
+        __h('SingleChildScrollView', {
             "controller": this._scrollController,
             "scrollDirection": "horizontal",
             "physics": "ClampingScrollPhysics"
           }, [
-            Row({}, [
-                ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [Padding({ "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ Chip({ "label": "横向 " + i }) ])]); } return out; })()
+            __h('Row', {}, [
+                ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": "横向 " + i }) ])]); } return out; })()
               ])
           ]),
-        Align({
+        __h('Align', {
             "alignment": "centerLeft"
           }, [
-            Button({
+            __h('Button', {
                 "kind": "text",
                 "label": "横向 · 跳到底",
                 "event": this.__bind("_scrollToEnd")
@@ -853,11 +838,8 @@ class ScrollDetail {
       ]);
   }
 }
-export function ScrollDetailFactory(props, children) {
-  return __h(ScrollDetail, props, children);
-}
 
-class SliverDetail {
+export class SliverDetail {
   constructor() {
     this._controller = new ScrollController();
     this._offset = 0;
@@ -866,13 +848,13 @@ class SliverDetail {
   dispose() { this._controller.dispose(); }
   _scrollToEnd() { this._controller.jumpTo(this._controller.position.maxScrollExtent); }
   build() {
-    return Scaffold({
-        "body": CustomScrollView({
+    return __h('Scaffold', {
+        "body": __h('CustomScrollView', {
             "controller": this._controller,
             "physics": "BouncingScrollPhysics"
           }, [
-            SliverAppBar({
-                "title": Text({
+            __h('SliverAppBar', {
+                "title": __h('Text', {
                     "data": "SliverAppBar 导航 · offset " + this._offset.toFixed(0)
                   }),
                 "backgroundColor": '#673AB7',
@@ -880,8 +862,8 @@ class SliverDetail {
                 "pinned": true,
                 "floating": true
               }),
-            SliverToBoxAdapter({}, [
-                Container({
+            __h('SliverToBoxAdapter', {}, [
+                __h('Container', {
                     "padding": {
                       "left": 16.0,
                       "top": 16.0,
@@ -901,7 +883,7 @@ class SliverDetail {
                       }
                     }
                   }, [
-                    Text({
+                    __h('Text', {
                         "data": "CustomScrollView 整页 · SliverToBoxAdapter 盒子",
                         "style": {
                           "fontSize": 14,
@@ -910,7 +892,7 @@ class SliverDetail {
                       })
                   ])
               ]),
-            SliverPadding({
+            __h('SliverPadding', {
                 "padding": {
                   "left": 12.0,
                   "top": 0.0,
@@ -918,11 +900,11 @@ class SliverDetail {
                   "bottom": 0.0
                 }
               }, [
-                SliverListFactory({}, [
-                    ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [ListTile({ "title": "SliverList item " + i, "leading": Icon({ "icon": "list", "color": '#673AB7' }), "trailing": Icon({ "icon": "chevron_right" }) })]); } return out; })()
+                __h('SliverList', {}, [
+                    ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "SliverList item " + i, "leading": __h('Icon', { "icon": "list", "color": '#673AB7' }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
                   ])
               ]),
-            SliverPadding({
+            __h('SliverPadding', {
                 "padding": {
                   "left": 12.0,
                   "top": 8.0,
@@ -930,8 +912,8 @@ class SliverDetail {
                   "bottom": 8.0
                 }
               }, [
-                SliverToBoxAdapter({}, [
-                    Text({
+                __h('SliverToBoxAdapter', {}, [
+                    __h('Text', {
                         "data": "SliverChildBuilderDelegate · 懒构建列表",
                         "style": {
                           "fontSize": 14,
@@ -940,7 +922,7 @@ class SliverDetail {
                       })
                   ])
               ]),
-            SliverPadding({
+            __h('SliverPadding', {
                 "padding": {
                   "left": 12.0,
                   "top": 0.0,
@@ -948,12 +930,12 @@ class SliverDetail {
                   "bottom": 0.0
                 }
               }, [
-                SliverListFactory({
+                __h(SliverList, {
                     "delegateBuilder": "_sliverBuilder0",
                     "childCount": 8
                   })
               ]),
-            SliverPadding({
+            __h('SliverPadding', {
                 "padding": {
                   "left": 12.0,
                   "top": 8.0,
@@ -961,8 +943,8 @@ class SliverDetail {
                   "bottom": 8.0
                 }
               }, [
-                SliverToBoxAdapter({}, [
-                    Text({
+                __h('SliverToBoxAdapter', {}, [
+                    __h('Text', {
                         "data": "SliverFixedExtentList · 固定高度",
                         "style": {
                           "fontSize": 14,
@@ -971,7 +953,7 @@ class SliverDetail {
                       })
                   ])
               ]),
-            SliverPadding({
+            __h('SliverPadding', {
                 "padding": {
                   "left": 12.0,
                   "top": 0.0,
@@ -979,13 +961,13 @@ class SliverDetail {
                   "bottom": 0.0
                 }
               }, [
-                SliverFixedExtentListFactory({
+                __h(SliverFixedExtentList, {
                     "delegateBuilder": "_sliverBuilder1",
                     "childCount": 6,
                     "itemExtent": 44
                   })
               ]),
-            SliverPadding({
+            __h('SliverPadding', {
                 "padding": {
                   "left": 12.0,
                   "top": 8.0,
@@ -993,8 +975,8 @@ class SliverDetail {
                   "bottom": 8.0
                 }
               }, [
-                SliverToBoxAdapter({}, [
-                    Text({
+                __h('SliverToBoxAdapter', {}, [
+                    __h('Text', {
                         "data": "SliverOpacity + SliverGrid · MaxCrossAxisExtent 九宫格",
                         "style": {
                           "fontSize": 14,
@@ -1003,10 +985,10 @@ class SliverDetail {
                       })
                   ])
               ]),
-            SliverOpacity({
+            __h('SliverOpacity', {
                 "opacity": 0.6
               }, [
-                SliverPadding({
+                __h('SliverPadding', {
                     "padding": {
                       "left": 12.0,
                       "top": 0.0,
@@ -1014,7 +996,7 @@ class SliverDetail {
                       "bottom": 0.0
                     }
                   }, [
-                    SliverGridFactory({
+                    __h(SliverGrid, {
                         "delegateBuilder": "_sliverBuilder2",
                         "childCount": 9,
                         "maxCrossAxisExtent": 140,
@@ -1024,12 +1006,12 @@ class SliverDetail {
                       })
                   ])
               ]),
-            SliverSafeArea({}, [
-                SliverFillRemaining({
+            __h('SliverSafeArea', {}, [
+                __h('SliverFillRemaining', {
                     "hasScrollBody": false
                   }, [
-                    Center({}, [
-                        Text({
+                    __h('Center', {}, [
+                        __h('Text', {
                             "data": "底部 · SliverSafeArea + SliverFillRemaining",
                             "style": {
                               "color": '#9E9E9E'
@@ -1039,8 +1021,8 @@ class SliverDetail {
                   ])
               ])
           ]),
-        "floatingActionButton": FloatingActionButton({
-            "child": Icon({
+        "floatingActionButton": __h('FloatingActionButton', {
+            "child": __h('Icon', {
                 "icon": "arrow_downward"
               }),
             "event": this.__bind("_scrollToEnd"),
@@ -1051,19 +1033,19 @@ class SliverDetail {
       });
   }
   _sliverBuilder0(index) {
-      return ListTile({
+      return __h('ListTile', {
         "title": "builder item " + index,
         "subtitle": "index * 10 = " + (index * 10),
-        "leading": Icon({
+        "leading": __h('Icon', {
             "icon": "build",
             "color": '@Colors.orange.shade700'
           })
       });
   }
   _sliverBuilder1(index) {
-      return ListTile({
+      return __h('ListTile', {
         "title": "fixed item " + index,
-        "leading": Icon({
+        "leading": __h('Icon', {
             "icon": "height",
             "color": '#009688'
           }),
@@ -1071,7 +1053,7 @@ class SliverDetail {
       });
   }
   _sliverBuilder2(index) {
-      return Container({
+      return __h('Container', {
         "alignment": "center",
         "decoration": {
           "color": '@Colors.teal.shade100',
@@ -1080,7 +1062,7 @@ class SliverDetail {
           }
         }
       }, [
-        Text({
+        __h('Text', {
             "data": "格 " + index,
             "style": {
               "fontWeight": "bold"
@@ -1089,11 +1071,8 @@ class SliverDetail {
       ]);
   }
 }
-export function SliverDetailFactory(props, children) {
-  return __h(SliverDetail, props, children);
-}
 
-class GridDetail {
+export class GridDetail {
   constructor() {
     this._controller = new ScrollController();
     this._offset = 0;
@@ -1102,18 +1081,18 @@ class GridDetail {
   dispose() { this._controller.dispose(); }
   _jumpBottom() { this._controller.jumpTo(this._controller.position.maxScrollExtent); }
   build() {
-    return Scaffold({
-        "appBar": AppBar({
-            "title": Text({
+    return __h('Scaffold', {
+        "appBar": __h('AppBar', {
+            "title": __h('Text', {
                 "data": "GridView 懒加载验证"
               }),
             "backgroundColor": '#009688',
             "foregroundColor": '#FFFFFF'
           }),
-        "body": Column({
+        "body": __h('Column', {
             "crossAxisAlignment": "stretch"
           }, [
-            Padding({
+            __h('Padding', {
                 "padding": {
                   "left": 12.0,
                   "top": 12.0,
@@ -1121,7 +1100,7 @@ class GridDetail {
                   "bottom": 12.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "controller offset: " + this._offset.toFixed(1),
                     "style": {
                       "fontSize": 13,
@@ -1129,7 +1108,7 @@ class GridDetail {
                     }
                   })
               ]),
-            Padding({
+            __h('Padding', {
                 "padding": {
                   "left": 12.0,
                   "top": 0.0,
@@ -1137,7 +1116,7 @@ class GridDetail {
                   "bottom": 0.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "GridView.builder · 固定 3 列 · 30 项（懒加载）",
                     "style": {
                       "fontSize": 14,
@@ -1145,10 +1124,10 @@ class GridDetail {
                     }
                   })
               ]),
-            Expanded({
+            __h('Expanded', {
                 "flex": 5
               }, [
-                GridViewFactory({
+                __h(GridView, {
                     "controller": this._controller,
                     "crossAxisCount": 3,
                     "mainAxisSpacing": 8,
@@ -1158,7 +1137,7 @@ class GridDetail {
                     "itemCount": 30
                   })
               ]),
-            Padding({
+            __h('Padding', {
                 "padding": {
                   "left": 12.0,
                   "top": 8.0,
@@ -1166,7 +1145,7 @@ class GridDetail {
                   "bottom": 8.0
                 }
               }, [
-                Text({
+                __h('Text', {
                     "data": "GridView.builder · MaxCrossAxisExtent 120 · 20 项（懒加载）",
                     "style": {
                       "fontSize": 14,
@@ -1174,10 +1153,10 @@ class GridDetail {
                     }
                   })
               ]),
-            Expanded({
+            __h('Expanded', {
                 "flex": 4
               }, [
-                GridViewFactory({
+                __h(GridView, {
                     "maxCrossAxisExtent": 120,
                     "mainAxisSpacing": 8,
                     "crossAxisSpacing": 8,
@@ -1188,8 +1167,8 @@ class GridDetail {
               ])
           ]),
         "backgroundColor": '@Colors.grey.shade50',
-        "floatingActionButton": FloatingActionButton({
-            "child": Icon({
+        "floatingActionButton": __h('FloatingActionButton', {
+            "child": __h('Icon', {
                 "icon": "arrow_downward"
               }),
             "event": this.__bind("_jumpBottom"),
@@ -1200,7 +1179,7 @@ class GridDetail {
       });
   }
   _gridViewBuilder0(index) {
-      return Container({
+      return __h('Container', {
         "alignment": "center",
         "decoration": {
           "color": '@Colors.teal.shade100',
@@ -1209,7 +1188,7 @@ class GridDetail {
           }
         }
       }, [
-        Text({
+        __h('Text', {
             "data": "格 " + index,
             "style": {
               "fontWeight": "bold"
@@ -1218,7 +1197,7 @@ class GridDetail {
       ]);
   }
   _gridViewBuilder1(index) {
-      return Container({
+      return __h('Container', {
         "alignment": "center",
         "decoration": {
           "color": '@Colors.orange.shade100',
@@ -1227,7 +1206,7 @@ class GridDetail {
           }
         }
       }, [
-        Text({
+        __h('Text', {
             "data": "项 " + index,
             "style": {
               "fontWeight": "bold"
@@ -1236,23 +1215,20 @@ class GridDetail {
       ]);
   }
 }
-export function GridDetailFactory(props, children) {
-  return __h(GridDetail, props, children);
-}
 
-class ScaffoldDetail {
+export class ScaffoldDetail {
   constructor() {
     this._navIndex = 0;
   }
   _onNavTap(index) { this.setState(function(){ this._navIndex = index; }); }
   _onFab() {  }
   build() {
-    return Scaffold({
-        "appBar": AppBar({
-            "title": Text({
+    return __h('Scaffold', {
+        "appBar": __h('AppBar', {
+            "title": __h('Text', {
                 "data": "Scaffold / AppBar / FAB / BottomNav"
               }),
-            "leading": Icon({
+            "leading": __h('Icon', {
                 "icon": "menu"
               }),
             "backgroundColor": '#673AB7',
@@ -1261,39 +1237,39 @@ class ScaffoldDetail {
             "toolbarHeight": 56,
             "centerTitle": true
           }, [
-            Icon({
+            __h('Icon', {
                 "icon": "search",
                 "color": '#FFFFFF'
               }),
-            SizedBox({
+            __h('SizedBox', {
                 "width": 16
               })
           ]),
-        "body": SafeArea({}, [
-            Center({}, [
-                Column({
+        "body": __h('SafeArea', {}, [
+            __h('Center', {}, [
+                __h('Column', {
                     "mainAxisAlignment": "center"
                   }, [
-                    Icon({
+                    __h('Icon', {
                         "icon": "extension",
                         "size": 48,
                         "color": '#673AB7'
                       }),
-                    SizedBox({
+                    __h('SizedBox', {
                         "height": 12
                       }),
-                    Text({
+                    __h('Text', {
                         "data": "页面骨架组件演示"
                       }),
-                    Text({
+                    __h('Text', {
                         "data": "BottomNav 选中：" + this._navIndex
                       })
                   ])
               ])
           ]),
         "backgroundColor": '@Colors.grey.shade50',
-        "floatingActionButton": FloatingActionButton({
-            "child": Icon({
+        "floatingActionButton": __h('FloatingActionButton', {
+            "child": __h('Icon', {
                 "icon": "add"
               }),
             "event": this.__bind("_onFab"),
@@ -1301,26 +1277,26 @@ class ScaffoldDetail {
             "foregroundColor": '#FFFFFF',
             "tooltip": "添加"
           }),
-        "bottomNavigationBar": BottomNavigationBar({
+        "bottomNavigationBar": __h('BottomNavigationBar', {
             "currentIndex": this._navIndex,
             "event": this.__bind("_onNavTap"),
             "selectedItemColor": '#673AB7',
             "unselectedItemColor": '#9E9E9E'
           }, [
-            BottomNavigationBarItem({
-                "icon": Icon({
+            __h('BottomNavigationBarItem', {
+                "icon": __h('Icon', {
                     "icon": "home"
                   }),
                 "label": "首页"
               }),
-            BottomNavigationBarItem({
-                "icon": Icon({
+            __h('BottomNavigationBarItem', {
+                "icon": __h('Icon', {
                     "icon": "search"
                   }),
                 "label": "搜索"
               }),
-            BottomNavigationBarItem({
-                "icon": Icon({
+            __h('BottomNavigationBarItem', {
+                "icon": __h('Icon', {
                     "icon": "person"
                   }),
                 "label": "我的"
@@ -1329,11 +1305,8 @@ class ScaffoldDetail {
       });
   }
 }
-export function ScaffoldDetailFactory(props, children) {
-  return __h(ScaffoldDetail, props, children);
-}
 
-class InputDetail {
+export class InputDetail {
   constructor() {
     this._controller = new TextEditingController();
     this._text = "";
@@ -1352,17 +1325,17 @@ class InputDetail {
   _onCheckChanged(v) { this.setState(function(){ this._checked = v; }); }
   _onSliderChanged(v) { this.setState(function(){ this._slider = v; }); }
   build() {
-    return Column({
+    return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        Text({
+        __h('Text', {
             "data": "TextField",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        TextField({
+        __h('TextField', {
             "event": this.__bind("_onTextChanged"),
             "controller": this._controller,
             "hintText": "请输入文本",
@@ -1372,105 +1345,105 @@ class InputDetail {
               "fontSize": 16
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 4
           }),
-        Text({
+        __h('Text', {
             "data": "输入内容：" + this._text,
             "style": {
               "fontSize": 14,
               "color": '#9E9E9E'
             }
           }),
-        Text({
+        __h('Text', {
             "data": "controller.text：" + this._controller.text,
             "style": {
               "fontSize": 14,
               "color": '#673AB7'
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Align({
+        __h('Align', {
             "alignment": "centerLeft"
           }, [
-            Button({
+            __h('Button', {
                 "kind": "filled",
                 "label": "清空输入",
                 "event": this.__bind("this._controller.clear()")
               })
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "Radio 单选",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        Row({}, [
-            Radio({
+        __h('Row', {}, [
+            __h('Radio', {
                 "value": "A",
                 "groupValue": this._choice,
                 "event": this.__bind("_onChoiceChanged"),
                 "activeColor": '#673AB7'
               }),
-            Text({
+            __h('Text', {
                 "data": "选项 A"
               }),
-            Radio({
+            __h('Radio', {
                 "value": "B",
                 "groupValue": this._choice,
                 "event": this.__bind("_onChoiceChanged"),
                 "activeColor": '#673AB7'
               }),
-            Text({
+            __h('Text', {
                 "data": "选项 B"
               })
           ]),
-        Text({
+        __h('Text', {
             "data": "当前选择：" + this._choice,
             "style": {
               "fontSize": 14,
               "color": '#9E9E9E'
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Text({
+        __h('Text', {
             "data": "DropdownButton",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        DropdownButton({
+        __h('DropdownButton', {
             "value": this._dropdown,
             "event": this.__bind("_onDropdownChanged"),
             "isExpanded": true
           }, [
-            DropdownMenuItem({
+            __h('DropdownMenuItem', {
                 "value": "苹果",
                 "label": "苹果"
               }),
-            DropdownMenuItem({
+            __h('DropdownMenuItem', {
                 "value": "香蕉",
                 "label": "香蕉"
               }),
-            DropdownMenuItem({
+            __h('DropdownMenuItem', {
                 "value": "橙子",
                 "label": "橙子"
               })
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 12
           }),
-        Row({}, [
-            Switch({
+        __h('Row', {}, [
+            __h('Switch', {
                 "value": this._switchOn,
                 "event": this.__bind("_onSwitchChanged"),
                 "activeColor": '#FFFFFF',
@@ -1478,37 +1451,37 @@ class InputDetail {
                 "inactiveThumbColor": '#9E9E9E',
                 "inactiveTrackColor": '@Colors.grey.shade300'
               }),
-            SizedBox({
+            __h('SizedBox', {
                 "width": 8
               }),
-            Text({
+            __h('Text', {
                 "data": "Switch：" + (this._switchOn ? "开" : "关")
               })
           ]),
-        Row({}, [
-            Checkbox({
+        __h('Row', {}, [
+            __h('Checkbox', {
                 "value": this._checked,
                 "event": this.__bind("_onCheckChanged"),
                 "activeColor": '#673AB7',
                 "checkColor": '#FFFFFF'
               }),
-            SizedBox({
+            __h('SizedBox', {
                 "width": 8
               }),
-            Text({
+            __h('Text', {
                 "data": "Checkbox：" + (this._checked ?? false)
               })
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Text({
+        __h('Text', {
             "data": "Slider 值：" + this._slider,
             "style": {
               "fontSize": 14
             }
           }),
-        Slider({
+        __h('Slider', {
             "value": this._slider,
             "event": this.__bind("_onSliderChanged"),
             "min": 0,
@@ -1520,65 +1493,62 @@ class InputDetail {
       ]);
   }
 }
-export function InputDetailFactory(props, children) {
-  return __h(InputDetail, props, children);
-}
 
-class ProgressDetail {
+export class ProgressDetail {
   constructor() {
     this._progress = 0.65;
   }
   build() {
-    return Column({
+    return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        Text({
+        __h('Text', {
             "data": "CircularProgressIndicator",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        Row({}, [
-            CircularProgressIndicator({
+        __h('Row', {}, [
+            __h('CircularProgressIndicator', {
                 "color": '#673AB7',
                 "backgroundColor": '@Colors.deepPurple.shade50',
                 "strokeWidth": 6
               }),
-            SizedBox({
+            __h('SizedBox', {
                 "width": 24
               }),
-            CircularProgressIndicator({})
+            __h('CircularProgressIndicator', {})
           ]),
-        SizedBox({
+        __h('SizedBox', {
             "height": 16
           }),
-        Text({
+        __h('Text', {
             "data": "LinearProgressIndicator",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
             }
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 8
           }),
-        LinearProgressIndicator({
+        __h('LinearProgressIndicator', {
             "color": '#673AB7',
             "backgroundColor": '@Colors.deepPurple.shade50',
             "minHeight": 8
           }),
-        SizedBox({
+        __h('SizedBox', {
             "height": 4
           }),
-        LinearProgressIndicator({}),
-        SizedBox({
+        __h('LinearProgressIndicator', {}),
+        __h('SizedBox', {
             "height": 8
           }),
-        Text({
+        __h('Text', {
             "data": "进度值：" + this._progress,
             "style": {
               "fontSize": 14,
@@ -1588,11 +1558,8 @@ class ProgressDetail {
       ]);
   }
 }
-export function ProgressDetailFactory(props, children) {
-  return __h(ProgressDetail, props, children);
-}
 
-class NotifierCard {
+export class NotifierCard {
   constructor() {
     this._model = new CounterVm({});
   }
@@ -1600,8 +1567,8 @@ class NotifierCard {
   _reset() { this._model.reset(); }
   dispose() { this._model.dispose(); }
   build() {
-    return Card({}, [
-        Padding({
+    return __h('Card', {}, [
+        __h('Padding', {
             "padding": {
               "left": 16.0,
               "top": 16.0,
@@ -1609,28 +1576,28 @@ class NotifierCard {
               "bottom": 16.0
             }
           }, [
-            Column({
+            __h('Column', {
                 "mainAxisSize": "min"
               }, [
-                ListenableBuilderFactory({
+                __h(ListenableBuilder, {
                     "listenable": "_model",
                     "builder": "_lbBuilder0"
                   }),
-                SizedBox({
+                __h('SizedBox', {
                     "height": 12
                   }),
-                Row({
+                __h('Row', {
                     "mainAxisAlignment": "center"
                   }, [
-                    Button({
+                    __h('Button', {
                         "kind": "elevated",
                         "label": "+1",
                         "event": this.__bind("_inc")
                       }),
-                    SizedBox({
+                    __h('SizedBox', {
                         "width": 12
                       }),
-                    Button({
+                    __h('Button', {
                         "kind": "elevated",
                         "label": "Reset",
                         "event": this.__bind("_reset")
@@ -1641,7 +1608,7 @@ class NotifierCard {
       ]);
   }
   _lbBuilder0() {
-      return Text({
+      return __h('Text', {
         "data": "count = " + this._model.count,
         "style": {
           "fontSize": 24,
@@ -1650,18 +1617,15 @@ class NotifierCard {
       });
   }
 }
-export function NotifierCardFactory(props, children) {
-  return __h(NotifierCard, props, children);
-}
 
-class StatelessCard {
+export class StatelessCard {
   constructor(args) {
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : '';
     this.badge = (args && args.badge !== undefined) ? args.badge : '';
   }
   build() {
-    return Card({
+    return __h('Card', {
         "margin": {
           "left": 12.0,
           "top": 12.0,
@@ -1669,7 +1633,7 @@ class StatelessCard {
           "bottom": 12.0
         }
       }, [
-        Padding({
+        __h('Padding', {
             "padding": {
               "left": 16.0,
               "top": 16.0,
@@ -1677,20 +1641,20 @@ class StatelessCard {
               "bottom": 16.0
             }
           }, [
-            Column({
+            __h('Column', {
                 "mainAxisSize": "min",
                 "crossAxisAlignment": "start"
               }, [
-                Row({}, [
-                    Icon({
+                __h('Row', {}, [
+                    __h('Icon', {
                         "icon": "article",
                         "color": '#009688'
                       }),
-                    SizedBox({
+                    __h('SizedBox', {
                         "width": 8
                       }),
-                    Expanded({}, [
-                        Text({
+                    __h('Expanded', {}, [
+                        __h('Text', {
                             "data": this.badge + " · " + this.title,
                             "style": {
                               "fontSize": 18,
@@ -1699,10 +1663,10 @@ class StatelessCard {
                           })
                       ])
                   ]),
-                Divider({
+                __h('Divider', {
                     "height": 24
                   }),
-                Text({
+                __h('Text', {
                     "data": this.subtitle,
                     "style": {
                       "fontSize": 14,
@@ -1713,8 +1677,5 @@ class StatelessCard {
           ])
       ]);
   }
-}
-export function StatelessCardFactory(props, children) {
-  return __h(StatelessCard, props, children);
 }
 
