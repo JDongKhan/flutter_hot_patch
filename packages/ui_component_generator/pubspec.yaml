@@ -1,5 +1,5 @@
 name: ui_component_generator
-description: 读取 @UIComponent/@UIProp/@UIAction 注解，把 Flutter widget 静态翻译为与源文件同名的 JS 模块（包级 widget 工厂 + 组件类），供 hot_patch 运行时热更渲染。
+description: 读取 @UIComponent注解，把 Flutter widget 静态翻译为与源文件同名的 JS 模块（包级 widget 工厂 + 组件类），供 hot_patch 运行时热更渲染。
 version: 0.1.0
 # 发布前填写（pub.dev 会展示，用于溯源；缺失只会有警告）：
 # repository: https://github.com/<your-org>/flutter_hot

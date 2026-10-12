@@ -366,11 +366,11 @@ class WidgetTranslateContext {
     throw FormatException('"${id.name}" 不是 @UIProp 状态字段');
   }
 
-  /// @UIAction 方法名 → 事件名
+  /// 方法名 → 事件名
   String eventOf(String method) {
     final event = actionByMethod[method];
     if (event != null) return event;
-    throw FormatException('"$method" 未标注 @UIAction');
+    throw FormatException('"$method" 不是组件方法（未注册为动作）');
   }
 
   /// 事件参数解析：`onTap: _tap` / `onTap: () => _tap()` → 组件方法名；
@@ -398,6 +398,13 @@ class WidgetTranslateContext {
         if (target is MethodInvocation) {
           final recv = jsDataExpr(target);
           return '$recv.${inner.methodName.name}'
+              '(${_eventArgsJs(inner.argumentList)})';
+        }
+        // 组件字段/实例 receiver（非局部变量即组件成员）：`_controller.clear()`
+        // / `_scrollController.jumpTo(...)` → this._controller.clear()，
+        // 不查动作表（实例方法全量生成，与 Dart 写法一致）。
+        if (target is Identifier) {
+          return 'this.${target.name}.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList)})';
         }
         return eventOf(inner.methodName.name);

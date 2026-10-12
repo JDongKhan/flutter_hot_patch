@@ -36,7 +36,6 @@ Builder widgetModuleBuilder(BuilderOptions options) =>
 ///
 /// ComponentBuilder 只负责「总控」：
 ///   - 解析 @UIComponent widget → State 类
-///   - 提取 @UIProp 状态 / @UIAction 动作（方法体静态翻译为 JS）
 ///   - 把 build() 的 widget 树交给 WidgetTranslateContext 翻译
 ///   - 组装产物
 ///
@@ -989,7 +988,7 @@ String _defaultInitial(String typeName) {
 }
 
 // ---------------------------------------------------------------------------
-// @UIAction：方法体静态翻译 → JS
+// 方法体静态翻译 → JS
 // ---------------------------------------------------------------------------
 
 String _translateActionBody(
