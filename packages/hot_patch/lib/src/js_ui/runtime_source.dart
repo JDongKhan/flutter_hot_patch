@@ -55,7 +55,9 @@ import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/text_editing_controller_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
-const String _jsUiRuntimeSkeletonHead = r'''
+/// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
+const String _jsUiGlobals = r'''
+
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
@@ -89,6 +91,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
 
+''';
+
+/// 出方向桥｜emit / commit / send → sendMessage（唯一底层发送）【2】。
+const String _jsUiEmit = r'''
   // ===== 【2】出方向桥｜唯一底层发送（emit / commit / send）============
   // 所有 JS→宿主消息都打到单桥通道 `_app_bridge_`，目标通道名放在消息体
   // `ch` 字段。宿主只订阅该桥通道一次，再按 ch 二次分发。
@@ -111,6 +117,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
     send('jsuiCommit', { args: { key: root.key, ops: list } });
   }
 
+''';
+
+/// 宿主注入｜__jsui.host / resolve（唯一对外出口）【3】。
+const String _jsUiHostBridge = r'''
   // ===== 【3】宿主注入｜__jsui.host / resolve（唯一对外出口）==========
   // JS 发起调用，宿主实现后回填结果
   // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
@@ -135,6 +145,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
     r(value);
   }
 
+''';
+
+/// mini-react｜element 与事件句柄（h / fn / invoke）【4】。
+const String _jsUiElement = r'''
   // ===== 【4】mini-react｜element 与事件句柄（h / fn / invoke）========
   function h(type, props, children) {
     var ch = [];
@@ -161,6 +175,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
     f(payload);
   }
 
+''';
+
+/// mini-react｜reconciler 工具（eq / keyOf / hostIdOf / rootFor）【5】。
+const String _jsUiReconcilerUtils = r'''
   // ===== 【5】mini-react｜reconciler 工具 ==============================
   // 深比较（用于避免每次重建都下发 props）；下面紧邻的 keyOf / hostIdOf /
   // rootFor 同属本分区。
@@ -194,6 +212,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
     return activeRoot || (parent && parent.__root) || null;
   }
 
+''';
+
+/// mini-react｜组件基类（setState / __bind，生成器产物的能力袋）【6】。
+const String _jsUiComponentBase = r'''
   // ===== 【6】mini-react｜组件基类（生成器产物的能力袋）===============
   // 生成器产物**不** extends 本类：`augment` 把这些方法拷到实例上。
   // setState / __bind 属于 mini-react；中间的 watch / read 属于 provider
@@ -261,6 +283,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
     return handle;
   };
 
+''';
+
+/// provider｜向上查找 + 消费者侧订阅台账（watch / read / findProvider）【7】。
+const String _jsUiProvider = r'''
   // ===== 【7】provider｜向上查找 + 消费者侧订阅台账 =====================
   // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的 provider —— 与 Dart
   // `context.read/watch` 的向上查找一致，取不到返回 null（不猜、不回退）。
@@ -303,6 +329,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
     inst.__vmSubs = null;
   }
 
+''';
+
+/// mini-react｜调度（markDirty → flush 批处理）【8】。
+const String _jsUiScheduler = r'''
   // ===== 【8】mini-react｜调度（dirty → flush 批处理）==================
   // collected dirty -> 重建子树 -> 一次 commit。
   // 触发源有两处：mini-react 的 setState、provider 的订阅回调（见【7】）。
@@ -339,6 +369,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
     }
   }
 
+''';
+
+/// mini-react｜reconciler 主流程（mount / patch / unmount）【9】。
+const String _jsUiReconciler = r'''
   // ===== 【9】mini-react｜reconciler 主流程（mount / patch / unmount）==
   // 普通类组件（生成器产物不 extends Component）挂载基类能力：
   //   [mini-react] props / setState / __bind（构建期事件句柄）
@@ -540,6 +574,10 @@ const String _jsUiRuntimeSkeletonHead = r'''
     }
   }
 
+''';
+
+/// 对外入口｜api（Dart 只调 mount / dispose / invoke / host）【10】。
+const String _jsUiApi = r'''
   // ===== 【10】对外入口｜api（Dart 只调 mount / dispose / invoke / host）
   function parse(x) {
     if (x == null || x === '') { return {}; }
@@ -628,8 +666,19 @@ const String _jsUiRuntimeSkeletonTail = r'''
 /// UI 运行时源码 = 骨架 + 各能力 JS 片段拼接（能力片段见 capabilities/*_js.dart）。
 /// 顺序：骨架头部 → 滚动控制器 → 文本控制器 → 骨架尾部（同一 IIFE 作用域，
 /// 片段间靠函数提升/后声明互相引用，与拆分前语义一致）。
+/// UI 运行时源码 = 骨架各分区 + 各能力 JS 片段拼接（片段见上；同一 IIFE
+/// 作用域，片段间靠函数提升/后声明互相引用，与拆分前语义一致）。
 final String jsUiRuntimeSource = [
-  _jsUiRuntimeSkeletonHead,
+  _jsUiGlobals,
+  _jsUiEmit,
+  _jsUiHostBridge,
+  _jsUiElement,
+  _jsUiReconcilerUtils,
+  _jsUiComponentBase,
+  _jsUiProvider,
+  _jsUiScheduler,
+  _jsUiReconciler,
+  _jsUiApi,
   scrollControllerJsSource,
   textEditingControllerJsSource,
   _jsUiRuntimeSkeletonTail,
