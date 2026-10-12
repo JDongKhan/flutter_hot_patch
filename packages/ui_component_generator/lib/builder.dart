@@ -197,14 +197,73 @@ class ComponentBuilder implements Builder {
       '${components.map((c) => c.name).join(', ')}',
     );
 
-    // 一次渲染合并产物：一个文件 → 一个同名 JS（注册多个组件）
+    // 一次渲染合并产物：一个文件 → 一个同名 JS（注册多个组件）。
+    // 组装产物输入（数据驱动），渲染统一走 _renderModuleJs：
+    //   - 同文件共享模型 → inlineClasses（不 export，本产物内可见）；
+    //   - 跨文件依赖（模型/单例/组件）→ dependencyImports（ES module import）。
+    final inlineModels = <String, ClassInfo>{};
+    final crossModels = <String, ClassInfo>{};
+    for (final c in components) {
+      for (final e in c.models.entries) {
+        if (e.value.sourceFile == inputId.path) {
+          inlineModels[e.key] = e.value;
+        } else {
+          crossModels[e.key] = e.value;
+        }
+      }
+    }
+    final dependencyImports = <String>[];
+    // 跨文件静态单例类：import（export const 单例对象，运行时注入 __modules 共享）
+    for (final cls in singletons.used) {
+      final src = singletons.sourceFileOf(cls);
+      if (src == null || src == inputId.path) continue;
+      dependencyImports.add(
+        "import { $cls } from "
+        "'${_relativeProduct(ownProduct, _productPath(src))}';",
+      );
+    }
+    // 跨文件模型（export class，运行时按相对路径加载并全局共享一份）
+    for (final m in crossModels.values) {
+      dependencyImports.add(
+        "import { ${m.name} } from "
+        "'${_relativeProduct(ownProduct, _productPath(m.sourceFile))}';",
+      );
+    }
+    // 跨文件组件：build 树里 Component 兜底、且产物在其他文件的依赖组件。
+    // 同文件组件（importResolver 返回本产物名）是 inline export class，无需
+    // import；null（无 JS 产物的普通组件）走原生注入。
+    final importedComponents = <String>{};
+    for (final c in components) {
+      for (final dep in c.deps) {
+        if (importedComponents.contains(dep)) continue;
+        final rel = importResolver(dep);
+        if (rel == null || rel == ownName) continue;
+        importedComponents.add(dep);
+        dependencyImports.add("import { $dep } from '$rel';");
+      }
+    }
+    // 翻译阶段（含三目/if/for 内联渲染）已收集的类型并入渲染期总表。
+    final extraUsedWidgets = <String, Set<String>>{};
+    for (final c in components) {
+      _mergeUsedWidgets(extraUsedWidgets, c.usedWidgetPackages);
+    }
+
     final jsOutput = buildStep.allowedOutputs.first;
     await buildStep.writeAsString(
       jsOutput,
-      _renderJs(components, inputId.path, registry, importResolver,
-          singletons: singletons,
-          sameFileSingletonInfos: sameFileSingletonInfos,
-          hostMethods: hostMethods),
+      _renderModuleJs(
+        inputId.path,
+        registry: registry,
+        exportedClasses: [
+          for (final c in components) _componentToClassInfo(c, inputId.path),
+        ],
+        inlineClasses: inlineModels.values.toList(),
+        singletons: sameFileSingletonInfos,
+        dependencyImports: dependencyImports,
+        extraUsedWidgets: extraUsedWidgets,
+        importResolver: importResolver,
+        hostMethods: hostMethods,
+      ),
     );
   }
 }
@@ -217,6 +276,7 @@ class ComponentBuilder implements Builder {
 ///   - widget / State（有 build()）与私有类跳过，避免 main.dart 这类文件
 ///     产出无用 JS。
 /// 无任何可导出类 → 不产出。
+/// 渲染与组件文件共用 [_renderModuleJs]——组件文件只是多传组件类与跨文件依赖 import。
 Future<void> _writeModelProduct(
   BuildStep buildStep,
   CompilationUnit unit,
@@ -244,7 +304,13 @@ Future<void> _writeModelProduct(
   if (models.isEmpty && singletons.isEmpty) return;
   await buildStep.writeAsString(
     buildStep.allowedOutputs.first,
-    _renderModelJs(models, singletons, inputId.path, registry, hostMethods),
+    _renderModuleJs(
+      inputId.path,
+      registry: registry,
+      exportedClasses: models,
+      singletons: singletons,
+      hostMethods: hostMethods,
+    ),
   );
 }
 
@@ -1409,36 +1475,29 @@ String? _relativeToLib(String uri, String dir) {
 // 产物渲染
 // ---------------------------------------------------------------------------
 
-String _renderJs(
-  List<_Component> components,
-  String sourcePath,
-  WidgetTranslatorRegistry registry,
-  String? Function(String component) importResolver, {
-  SingletonResolver? singletons,
-  List<ClassInfo> sameFileSingletonInfos = const [],
+/// 文件级产物入口：一个 Dart 源文件 → 一个同名 JS（ES module）。
+///
+/// 组件文件与非组件（模型）文件走**同一入口**，差异全部数据驱动：
+///   - [inlineClasses]：本产物内共享的类（不 export），组件文件里的同文件模型；
+///   - [singletons]：静态单例类 → `export const`；
+///   - [exportedClasses]：对外产出的类（`export class`）——组件（tree 非空即出
+///     build/builders）与普通模型类走同一条渲染路径；
+///   - [dependencyImports]：跨文件依赖的 import 行（仅组件文件非空）。
+/// 所有类统一由 [dart2js] 渲染、统一带 [WidgetExprRenderer] 上下文：方法体里
+/// `return Container(...)` 一律走 widget 翻译路径（普通类里返回 widget 的方法
+/// 同样生效），用到的 widget 类型统一收集成 package import。因此没有
+/// 「组件渲染 / 模型渲染」两条分支——新增类结构能力只改这一处。
+String _renderModuleJs(
+  String sourcePath, {
+  required WidgetTranslatorRegistry registry,
+  required List<ClassInfo> exportedClasses,
+  List<ClassInfo> inlineClasses = const [],
+  List<ClassInfo> singletons = const [],
+  List<String> dependencyImports = const [],
+  Map<String, Set<String>> extraUsedWidgets = const {},
+  String? Function(String component)? importResolver,
   Map<String, Map<String, String>> hostMethods = const {},
 }) {
-  // 统一类表按「同文件 inline / 跨文件 import」分组渲染：
-  //  - 同文件模型（sourceFile == 当前组件文件）→ 产物内 inline class（不 export，
-  //    与 Dart 源文件里同文件使用一致）；
-  //  - 跨文件模型（其它文件 import 的普通类）→ import 该文件的同名 JS 产物，
-  //    模型全局共享一份（export class），运行时模块加载器按相对路径加载；
-  //  - 同文件静态单例类 → inline const（dart2js）。
-  final allModels = <String, ClassInfo>{};
-  final inlineModels = <String, ClassInfo>{};
-  for (final c in components) {
-    for (final e in c.models.entries) {
-      if (e.value.sourceFile == sourcePath) {
-        inlineModels[e.key] = e.value;
-      } else {
-        allModels[e.key] = e.value;
-      }
-    }
-  }
-  final inlineSingletons = <String, ClassInfo>{
-    for (final s in sameFileSingletonInfos) s.name: s,
-  };
-
   // 头部（注释 + import 区）：widget 模块 import 依赖「实际用到的类型」，
   // 只能在各组件渲染完成后得知，所以先渲染 body 再拼装 import，见函数末尾。
   final head = StringBuffer()
@@ -1447,95 +1506,69 @@ String _renderJs(
     ..writeln('// 重新生成：dart run build_runner build')
     ..writeln();
 
-  // 跨文件模型：import（ES module 语法；flutter_js 无原生 module 支持，
-  // 运行时 JsRuntimeManager 模块加载器会按相对路径解析并预置 __modules）
-  final ownProduct = _productPath(sourcePath);
-  // 跨文件静态单例类：import（export const 单例对象，运行时注入 __modules 共享）
-  for (final cls in singletons?.used ?? <String>[]) {
-    final src = singletons?.sourceFileOf(cls);
-    if (src == null || src == sourcePath) continue;
-    final rel = _relativeProduct(ownProduct, _productPath(src));
-    head.writeln("import { $cls } from '$rel';");
-  }
-  for (final m in allModels.values) {
-    final rel = _relativeProduct(ownProduct, _productPath(m.sourceFile));
-    head.writeln("import { ${m.name} } from '$rel';");
+  // 跨文件依赖：import（ES module 语法；flutter_js 无原生 module 支持，
+  // 运行时 JsRuntimeManager 模块加载器按相对路径解析并预置 __modules）。
+  for (final line in dependencyImports) {
+    head.writeln(line);
   }
 
-  // 跨文件组件：build 树里 Component 兜底、且产物在其他文件的依赖组件，
-  // 同样用 ES module import（'bar_component.js' 相对本产物目录）。
-  // 模块级 import 让依赖关系直观可见；Component 节点据此渲染成对应工厂调用。
-  // 同文件组件（importResolver 返回本文件产物名）是 inline export class，
-  // 不需要 import；null（无 JS 产物的 lib 普通组件）走原生注入。
-  final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
-  final importedComponents = <String>{};
-  for (final c in components) {
-    for (final dep in c.deps) {
-      if (importedComponents.contains(dep)) continue;
-      final rel = importResolver(dep);
-      if (rel == null || rel == ownName) continue;
-      importedComponents.add(dep);
-      // 依赖组件产物的 JS 类与 Dart 类同名，import 类名即可（元素 type = 类）。
-      head.writeln("import { $dep } from '$rel';");
-    }
-  }
+  // 统一翻译上下文：所有类共用（组件动作、模型方法同一套）。tree 非空的类出
+  // build/builders；方法体里 `return Container(...)` 走 widget 树翻译路径。
+  final ctx = WidgetTranslateContext(
+    registry: registry,
+    propByField: const {},
+    actionByMethod: const {},
+    sourcePath: sourcePath,
+    importResolver: importResolver,
+    jsClassWidgets: _jsClassWidgetTypes,
+    delegateClassWidgets: _sliverBuilderTypes,
+  );
 
-  // body：模型/单例/组件类主体（不动 import 区；末尾拼装）。
+  // body：各类主体（不动 import 区；末尾拼装）。
   final b = StringBuffer();
 
   // 各 package 实际用到的 widget 类型（渲染期收集）：末尾据此为每个 package
   // 拼一条 import（`import { Text } from '../flutter.js'`）。
   final usedWidgets = <String, Set<String>>{};
+  _mergeUsedWidgets(usedWidgets, extraUsedWidgets);
 
-  // 同文件模型：inline class（不 export，本产物内共享）。统一由
-  // dart2js 渲染（含字段/方法/getter/extends NotifierBase），
-  // 与跨文件模型、模型产物共用同一处理器。
-  for (final m in inlineModels.values) {
+  // 本产物内共享的类：inline class（不 export，本产物内可见）。
+  for (final cls in inlineClasses) {
     b
       ..writeln()
-      ..writeln('// 模型 ${m.name}（同文件，仅本产物内可见）')
-      ..writeln(dart2js(m, exported: false, hostMethods: hostMethods));
+      ..writeln('// 模型 ${cls.name}（同文件，仅本产物内可见）')
+      ..writeln(dart2js(cls,
+          exported: false, hostMethods: hostMethods, widgetCtx: ctx));
+    _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
 
-  // 同文件 static 单例类：inline export const（exported: true —— 运行时
-  // 预处理层按 export 名收集并注册进 __modules，跨文件组件才能
-  // `import { MyColors }` 解构拿到；仅 const 会被收集器漏掉）
-  if (inlineSingletons.isNotEmpty) {
-    final ctx = WidgetTranslateContext(
-      registry: registry,
-      propByField: const {},
-      actionByMethod: const {},
-      sourcePath: sourcePath,
-    );
-    for (final cls in inlineSingletons.values) {
-      b
-        ..writeln()
-        ..writeln('// 同文件静态单例类 ${cls.name}（export，供跨文件 import）')
-        ..writeln(dart2js(
-          cls,
-          exported: true,
-          singletonValueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
-        ));
-    }
+  // 静态单例类：`export const X = {...}`（运行时按 export 名收集并注册进
+  // __modules，跨文件组件才能 `import { MyColors }` 解构拿到；仅 const 会被漏掉）
+  for (final cls in singletons) {
+    b
+      ..writeln()
+      ..writeln('// 静态单例类 ${cls.name}')
+      ..writeln(dart2js(
+        cls,
+        exported: true,
+        singletonValueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
+      ));
   }
 
-  for (final c in components) {
-    // 翻译阶段（含三目/if/for 内联渲染）已收集的类型并入总表；
-    // 渲染阶段 ctx 会再次收集主树/builders 用到的类型。
-    _mergeUsedWidgets(usedWidgets, c.usedWidgetPackages);
-    b.writeln();
-    // 组件类 export（= Dart 类名）：既作本产物 build 树的元素 type，也供
-    // 其它组件产物 import 后引用；与普通类共用统一入口 dart2js，无工厂包装。
-    final ctx = WidgetTranslateContext(
-      registry: registry,
-      propByField: const {},
-      actionByMethod: const {},
-      sourcePath: sourcePath,
-      importResolver: importResolver,
-      jsClassWidgets: _jsClassWidgetTypes,
-      delegateClassWidgets: _sliverBuilderTypes,
-    );
-    b.writeln(dart2js(_componentToClassInfo(c, sourcePath), exported: true, treeCtx: ctx));
+  // 对外产出的类：组件（tree 非空 → build/builders）与普通类同一条渲染路径。
+  // 组件类 export（= Dart 类名）：既作本产物 build 树的元素 type，也供其它
+  // 产物 import 后引用；与普通类共用统一入口 dart2js，无工厂包装。
+  for (final cls in exportedClasses) {
+    b
+      ..writeln()
+      ..writeln('// ${cls.tree != null ? '组件' : '模型'} ${cls.name}')
+      ..writeln(dart2js(
+        cls,
+        exported: true,
+        hostMethods: hostMethods,
+        treeCtx: ctx,
+        widgetCtx: ctx,
+      ));
     _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
   }
 
@@ -1543,13 +1576,16 @@ String _renderJs(
   // `ChangeNotifierProvider` / sliver 代理等），元素写成 `__h(Builder, ...)`
   // 需要类引用。宿主 widget 的元素 type 是字符串字面量（`__h('Text', ...)`），
   // 由宿主注册表映射，无需 import。
-  // 结点工厂 `__h` 恒需，并入其宿主 package（flutter）那一条。
-  final importsByPackage = <String, Set<String>>{
-    _nodeHelperPackage: {'__h'},
-  };
+  final importsByPackage = <String, Set<String>>{};
   for (final entry in usedWidgets.entries) {
     (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
   }
+  // 结点工厂 `__h`：产物里有元素树（或方法体返回 widget）才需要，并入其宿主
+  // package（flutter）那一条；纯模型产物不需要，不会产出多余 import。
+  if (usedWidgets.isNotEmpty || exportedClasses.any((c) => c.tree != null)) {
+    (importsByPackage[_nodeHelperPackage] ??= <String>{}).add('__h');
+  }
+  final ownProduct = _productPath(sourcePath);
   final importLines = <String>[
     for (final entry in importsByPackage.entries)
       "import { ${(entry.value.toList()..sort()).join(', ')} } from "
@@ -1572,57 +1608,6 @@ void _mergeUsedWidgets(
   for (final e in src.entries) {
     (dst[e.key] ??= <String>{}).addAll(e.value);
   }
-}
-
-/// 非组件文件产物渲染：普通类 → `export class`；静态单例类 → `export const`
-/// （均为 ES module，运行时加载器收集导出名后供组件产物 import）。
-String _renderModelJs(
-  List<ClassInfo> models,
-  List<ClassInfo> singletons,
-  String sourcePath,
-  WidgetTranslatorRegistry registry,
-  Map<String, Map<String, String>> hostMethods,
-) {
-  final b = StringBuffer()
-    ..writeln('// GENERATED CODE - DO NOT EDIT')
-    ..writeln('// 模型模块：由 ui_component_generator 从 $sourcePath 生成')
-    ..writeln('// export class / export const 供组件产物 import（运行时按相对路径加载）')
-    ..writeln();
-  // 构建 widget 翻译上下文：model 类里如果有 getWidget() 等返回 Widget 的方法，
-  // 方法体里的 return Container(...) 走 widget 树翻译路径。
-  final widgetCtx = WidgetTranslateContext(
-    registry: registry,
-    propByField: const {},
-    actionByMethod: const {},
-    sourcePath: sourcePath,
-    jsClassWidgets: _jsClassWidgetTypes,
-    delegateClassWidgets: _sliverBuilderTypes,
-  );
-  for (final m in models) {
-    b
-      ..writeln('// 模型 ${m.name}')
-      ..writeln(dart2js(m, exported: true,
-          hostMethods: hostMethods, widgetCtx: widgetCtx));
-  }
-  if (singletons.isNotEmpty) {
-    final ctx = WidgetTranslateContext(
-      registry: registry,
-      propByField: const {},
-      actionByMethod: const {},
-      sourcePath: sourcePath,
-    );
-    for (final cls in singletons) {
-      b
-        ..writeln()
-        ..writeln('// 静态单例类 ${cls.name}')
-        ..writeln(dart2js(
-          cls,
-          exported: true,
-          singletonValueRenderer: (f) => _singletonFieldValue(f.initializer, ctx),
-        ));
-    }
-  }
-  return b.toString();
 }
 
 /// 共享结点工厂源码：`export function __h(...)`，归一化 props/children，

@@ -698,7 +698,7 @@ class ComponentTranslator extends WidgetTranslator {
       final v = _literalValue(entry.value);
       if (v != null) args[entry.key] = _jsLiteral(v, ctx);
     }
-    // 只承载无 JS 产物的组件（有注解组件的依赖已在 _renderJs 里用
+    // 只承载无 JS 产物的组件（有注解组件的依赖已在 _renderModuleJs 里用
     // ES module import 表达，运行时按 import 递归挂载）。
     return {
       'type': ctx.jsString('Component'),

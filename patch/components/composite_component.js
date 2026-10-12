@@ -5,6 +5,7 @@
 import { BannerCard } from 'banner_component.js';
 import { __h } from '../flutter.js';
 
+// 组件 DashboardCard
 export class DashboardCard {
   constructor() {
     this._ticks = 0;

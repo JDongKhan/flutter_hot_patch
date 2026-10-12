@@ -7,6 +7,7 @@ import { NetworkVm } from '../model/network_vm.js';
 import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
 import { __h } from '../flutter.js';
 
+// 组件 ProviderCard
 export class ProviderCard {
   constructor() {
     this._modelA = new CounterVm({});

@@ -6,6 +6,7 @@ import { CounterVm } from '../model/counter_vm.js';
 import { Builder, __h } from '../flutter.js';
 import { ChangeNotifierProvider } from '../provider.js';
 
+// 组件 WatchDemo
 export class WatchDemo {
   constructor() {
   }
@@ -77,6 +78,7 @@ export class WatchDemo {
   }
 }
 
+// 组件 WatchCountLabel
 export class WatchCountLabel {
   constructor() {
   }

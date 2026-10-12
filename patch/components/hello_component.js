@@ -5,7 +5,7 @@
 import { User } from '../model/user.js';
 import { __h } from '../flutter.js';
 
-// 同文件静态单例类 PanelColors（export，供跨文件 import）
+// 静态单例类 PanelColors
 export const PanelColors = {
   background: '#ffff0000',
   adult: '#ff4caf50',
@@ -13,6 +13,7 @@ export const PanelColors = {
   tagline: 'demo'
 };
 
+// 组件 HelloCard
 export class HelloCard {
   constructor() {
     this._count = 0;

@@ -1,6 +1,7 @@
 // GENERATED CODE - DO NOT EDIT
-// 模型模块：由 ui_component_generator 从 lib/model/counter_vm.dart 生成
-// export class / export const 供组件产物 import（运行时按相对路径加载）
+// 由 ui_component_generator 从 lib/model/counter_vm.dart 自动生成
+// 重新生成：dart run build_runner build
+
 
 // 模型 CounterVm
 export class CounterVm extends ChangeNotifier {
@@ -14,3 +15,4 @@ export class CounterVm extends ChangeNotifier {
   async getUserName() { return "22"; }
   buildText() {  }
 }
+

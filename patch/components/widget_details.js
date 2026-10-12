@@ -5,6 +5,7 @@
 import { CounterVm } from '../model/counter_vm.js';
 import { GridView, ListenableBuilder, SliverFixedExtentList, SliverGrid, SliverList, __h } from '../flutter.js';
 
+// 组件 TextDetail
 export class TextDetail {
   constructor() {
     this._count = 0;
@@ -83,6 +84,7 @@ export class TextDetail {
   }
 }
 
+// 组件 ButtonDetail
 export class ButtonDetail {
   constructor() {
     this._pressed = 0;
@@ -193,6 +195,7 @@ export class ButtonDetail {
   }
 }
 
+// 组件 LayoutDetail
 export class LayoutDetail {
   constructor() {
   }
@@ -473,6 +476,7 @@ export class LayoutDetail {
   }
 }
 
+// 组件 ImageDetail
 export class ImageDetail {
   constructor() {
   }
@@ -545,6 +549,7 @@ export class ImageDetail {
   }
 }
 
+// 组件 ContainerDetail
 export class ContainerDetail {
   constructor() {
   }
@@ -737,6 +742,7 @@ export class ContainerDetail {
   }
 }
 
+// 组件 ScrollDetail
 export class ScrollDetail {
   constructor() {
     this._offset = 0;
@@ -839,6 +845,7 @@ export class ScrollDetail {
   }
 }
 
+// 组件 SliverDetail
 export class SliverDetail {
   constructor() {
     this._controller = new ScrollController();
@@ -1072,6 +1079,7 @@ export class SliverDetail {
   }
 }
 
+// 组件 GridDetail
 export class GridDetail {
   constructor() {
     this._controller = new ScrollController();
@@ -1216,6 +1224,7 @@ export class GridDetail {
   }
 }
 
+// 组件 ScaffoldDetail
 export class ScaffoldDetail {
   constructor() {
     this._navIndex = 0;
@@ -1306,6 +1315,7 @@ export class ScaffoldDetail {
   }
 }
 
+// 组件 InputDetail
 export class InputDetail {
   constructor() {
     this._controller = new TextEditingController();
@@ -1494,6 +1504,7 @@ export class InputDetail {
   }
 }
 
+// 组件 ProgressDetail
 export class ProgressDetail {
   constructor() {
     this._progress = 0.65;
@@ -1559,6 +1570,7 @@ export class ProgressDetail {
   }
 }
 
+// 组件 NotifierCard
 export class NotifierCard {
   constructor() {
     this._model = new CounterVm({});
@@ -1618,6 +1630,7 @@ export class NotifierCard {
   }
 }
 
+// 组件 StatelessCard
 export class StatelessCard {
   constructor(args) {
     this.title = (args && args.title !== undefined) ? args.title : '';

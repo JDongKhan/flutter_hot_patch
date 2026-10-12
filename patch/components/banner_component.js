@@ -5,6 +5,7 @@
 import { PanelColors } from 'hello_component.js';
 import { __h } from '../flutter.js';
 
+// 组件 BannerCard
 export class BannerCard {
   constructor() {
     this._views = 0;
