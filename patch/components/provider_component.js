@@ -48,7 +48,10 @@ export class ProviderCard {
                   }, [
                     this._buildText(),
                     this._modelA.buildText(),
-                    this._buildBadge(),
+                    __h(Consumer, {
+                        "model": "CounterVm",
+                        "builder": "_consumerBuilder0"
+                      }),
                     __h('Text', {
                         "data": "MultiProvider · 两个模型各自局部重建"
                       }),
@@ -57,7 +60,7 @@ export class ProviderCard {
                       }),
                     __h(Consumer, {
                         "model": "NetworkVm",
-                        "builder": "_consumerBuilder0"
+                        "builder": "_consumerBuilder1"
                       }),
                     __h('Row', {
                         "mainAxisAlignment": "center"
@@ -73,7 +76,7 @@ export class ProviderCard {
                       }),
                     __h(Consumer, {
                         "model": "CounterVm",
-                        "builder": "_consumerBuilder1"
+                        "builder": "_consumerBuilder2"
                       }),
                     __h('Row', {
                         "mainAxisAlignment": "center"
@@ -132,6 +135,9 @@ export class ProviderCard {
     this._modelB.dispose();
   }
   _consumerBuilder0(value) {
+      return this._buildBadge();
+  }
+  _consumerBuilder1(value) {
       return __h('Text', {
         "data": "加载用户信息：",
         "style": {
@@ -141,7 +147,7 @@ export class ProviderCard {
         }
       });
   }
-  _consumerBuilder1(value) {
+  _consumerBuilder2(value) {
       return __h('Text', {
         "data": "B = " + value.count,
         "style": {

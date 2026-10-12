@@ -51,7 +51,7 @@ class _ProviderCardState extends State<ProviderCard> {
             children: [
               _buildText(),
               _modelA.buildText(),
-              _buildBadge(),
+              Consumer<CounterVm>(builder: (context, value, child) => _buildBadge()),
               const Text('MultiProvider · 两个模型各自局部重建'),
               const SizedBox(height: 8),
               Consumer<NetworkVm>(
