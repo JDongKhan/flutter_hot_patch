@@ -33,10 +33,14 @@ import 'js_translator.dart';
 /// getter/setter 只保留 getter；static 方法不翻译（Dart static 方法无 JS
 /// 等价物，通常业务不用）；构造收集 this.x 形参名。
 /// [dependencies]：本类引用到的其它类名（由 [referencedClassNames] 与类表求交）。
+/// [isComponent]：该类是 widget/组件类（@UIComponent 或 Stateful/Stateless/
+/// State 子类）——类表据此把它与普通模型类区分开（组件不作为模型内联、组件
+/// 类型字段不当模型构造翻译）。
 ClassInfo classInfoOf(
   ClassDeclaration decl,
   String sourceFile, {
   Set<String> dependencies = const {},
+  bool isComponent = false,
 }) {
   final instanceFields = <ClassField>[];
   final staticFields = <ClassField>[];
@@ -104,6 +108,7 @@ ClassInfo classInfoOf(
     staticFields: staticFields,
     methods: methods,
     ctorParams: ctorParams,
+    isComponent: isComponent,
     dependencies: dependencies,
   );
 }

@@ -6,8 +6,8 @@
 // 模型 User
 export class User {
   constructor(args) {
-    this.name = (args && args.name !== undefined) ? args.name : undefined;
-    this.age = (args && args.age !== undefined) ? args.age : undefined;
+    this.name = (args && args.name !== undefined) ? args.name : '';
+    this.age = (args && args.age !== undefined) ? args.age : 0;
   }
 }
 

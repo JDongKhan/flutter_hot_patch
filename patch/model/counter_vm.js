@@ -2,6 +2,7 @@
 // 由 ui_component_generator 从 lib/model/counter_vm.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { BannerCard } from '../components/banner_component.js';
 import { __h } from '../flutter.js';
 
 // 模型 CounterVm
@@ -23,9 +24,7 @@ export class CounterVm extends ChangeNotifier {
     return "22";
   }
   buildText() {
-    return __h('Text', {
-        "data": "test 2"
-      });
+    return __h(BannerCard, {});
   }
 }
 

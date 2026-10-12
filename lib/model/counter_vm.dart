@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 
+import '../components/banner_component.dart';
+
 /// 响应式模型：ChangeNotifier 子类。
 ///
 /// 生成器把本类翻译成 JS class（extends ChangeNotifier，运行时注入基类），
@@ -26,6 +28,6 @@ class CounterVm extends ChangeNotifier {
   }
 
   Widget buildText() {
-    return Text("test 2");
+    return BannerCard();
   }
 }
