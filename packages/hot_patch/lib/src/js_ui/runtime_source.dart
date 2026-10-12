@@ -56,8 +56,8 @@ import 'package:flutter/foundation.dart'
 //   - capabilities/text_editing_controller_js.dart → TextEditingController 代理类
 import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/text_editing_controller_js.dart';
-import 'mini_react_js.dart';
-import 'change_notifier_js.dart';
+import 'js/mini_react_js.dart';
+import 'js/change_notifier_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
