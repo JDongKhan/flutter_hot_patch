@@ -23,29 +23,30 @@ import 'js_widget_registry.dart';
 /// 每个实例按 `pageKey` 在共享 JS 运行时里隔离自己的根（结点树 / provider /
 /// 订阅 / 脏队列），同屏多实例、多 runtime 分组都互不影响。
 ///
-/// 用法：
+/// 用法（组件名与入口都通过 URL query 传入，方便运营配置）：
 /// ```dart
-/// JsUiWidget(jsAsset: 'assets/components/counter.js',
-///            component: 'Counter')
+/// JsUiWidget(jsAsset: 'http://host/patch/patch.zip?component=Counter&entry=components/counter.js')
 /// ```
+///
+/// query 参数：
+/// - `component`（必填）：入口模块里注册进 `__modules` 的组件类名
+/// - `entry`（可选）：zip 内入口 .js 的相对路径；不指定则按 component 反查
 class JsUiWidget extends StatefulWidget {
   const JsUiWidget({
     super.key,
     required this.jsAsset,
-    required this.component,
     this.props = const {},
     this.nativeComponents = const {},
     this.sharedManager,
     this.localRoot,
-    this.entryPath,
     this.registry,
   });
 
   /// 补丁入口 JS（asset 路径或 http(s):// zip 网络补丁）。
+  ///
+  /// 网络补丁时可带 query 参数：`?component=Xxx&entry=path/to.js`——
+  /// 下载 zip 前会剥离 query，只用 path 部分请求。
   final String jsAsset;
-
-  /// 入口模块里注册进 `__modules` 的组件类名（@UIComponent 的 name）。
-  final String component;
 
   /// 传给组件构造的 props（如 `MyStatelessCard(title: ...)` 的 {title: ...}）。
   final Map<String, dynamic> props;
@@ -59,10 +60,6 @@ class JsUiWidget extends StatefulWidget {
 
   /// 嵌套组件透传的本地补丁根目录（网络补丁解压后的本地根）。
   final String? localRoot;
-
-  /// 网络补丁包（zip）内入口 .js 的相对路径。仅网络补丁生效：
-  /// 指定时直接用它；不指定则按 [component] 名反查声明位置。
-  final String? entryPath;
 
   /// 宿主 widget 翻译注册表；null 用内置集合。
   final JsWidgetRegistry? registry;
@@ -115,18 +112,31 @@ class JsUiWidgetState extends State<JsUiWidget> {
     try {
       // 运行时骨架先就位（`__jsui` + `__modules['js_ui/core']`）。
       _manager.ensureJsUiRuntime();
+      // 从 jsAsset URL 解析组件名与入口路径（query 参数，方便运营配置）：
+      //   ?component=HelloCard&entry=components/hello.js
+      // 实际下载 zip 时剥离 query，只用 path 部分。
+      final uri = Uri.parse(widget.jsAsset);
+      final component = uri.queryParameters['component'];
+      final entryPath = uri.queryParameters['entry'];
+      if (component == null || component.isEmpty) {
+        throw StateError(
+            'jsAsset 缺少 ?component=xxx 参数：${widget.jsAsset}');
+      }
+      // 剥离 query 后的真实资源地址（zip 下载 / asset 加载用）。
+      final realAsset = uri.replace(queryParameters: {}).toString();
+
       // 网络补丁包：http(s):// → 下载 zip 解压到本地根；入口改为包内虚拟路径，
       // 其余（递归 import / 实例化 / 相对路径）与 asset 场景一致。
-      var entry = widget.jsAsset;
+      var entry = realAsset;
       String? localRoot = widget.localRoot;
-      if (RemoteAssetLoader.isRemote(widget.jsAsset)) {
+      if (RemoteAssetLoader.isRemote(realAsset)) {
         final bundle = await RemoteAssetLoader.load(
-          widget.jsAsset,
-          component: widget.component,
-          entryPath: widget.entryPath,
+          realAsset,
+          component: component,
+          entryPath: entryPath,
         );
         if (bundle == null) {
-          throw StateError('远程补丁加载失败（需 http(s):// zip）：${widget.jsAsset}');
+          throw StateError('远程补丁加载失败（需 http(s):// zip）：$realAsset');
         }
         entry = bundle.entryJsAsset;
         localRoot = bundle.localRoot;
@@ -136,7 +146,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       await _manager.loadModule(_entryJsAsset, localRoot: _localRoot);
       _manager.evaluate(
         '__jsui.mount(${jsonEncode(_pageKey)}, ${jsonEncode(_entryJsAsset)}, '
-        '${jsonEncode(widget.component)}, '
+        '${jsonEncode(component)}, '
         '${jsonEncode(jsonEncode(widget.props))});',
       );
       if (mounted && _loading) setState(() => _loading = false);

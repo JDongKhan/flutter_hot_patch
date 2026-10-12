@@ -37,9 +37,17 @@ class HotDemoApp extends StatelessWidget {
   }
 }
 
-/// 本地 patch 服务（tool/start_patch_server.sh 启动）暴露的 zip 包。
+/// 本地 patch 服务（start_patch_server.sh 启动）暴露的 zip 包。
 /// demo 全部从这里加载：散 .js 与 zip 同目录，改完产物重启服务即可。
 const String _patchZipUrl = 'http://127.0.0.1:8765/patch/patch.zip';
+
+/// 拼接补丁 URL：组件名与入口路径都走 query 参数（运营可直接改 URL 配置）。
+///   ?component=HelloCard&entry=components/hello_component.js
+String _patchUrl(String component, [String? entry]) {
+  final q = StringBuffer('component=$component');
+  if (entry != null) q.write('&entry=${Uri.encodeComponent(entry)}');
+  return '$_patchZipUrl?$q';
+}
 
 /// 一个 Demo 场景条目。
 class _DemoEntry {
@@ -61,9 +69,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: HelloCard(),
         js: JsUiWidget(
-          jsAsset: _patchZipUrl,
-          entryPath: 'components/hello_component.js',
-          component: 'HelloCard',
+          jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'),
         ),
       ),
     ),
@@ -73,9 +79,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: DashboardCard(),
         js: JsUiWidget(
-          jsAsset: _patchZipUrl,
-          entryPath: 'components/composite_component.js',
-          component: 'DashboardCard',
+          jsAsset: _patchUrl('DashboardCard', 'components/composite_component.js'),
           // 嵌套组件（BannerCard）由生成器在 Component 节点产出 JS 工厂调用，
           // 运行时自动递归挂载，使用方无需声明依赖。
           // 非私有组件（LabeledDivider）运行时注入原生 widget：
@@ -97,9 +101,7 @@ class DemoListPage extends StatelessWidget {
         // provider 状态处理在 JS 侧（assets/provider.js）：
         // 经 JsUiWidget 新运行时渲染，宿主不实现任何 provider 语义。
         js: JsUiWidget(
-          jsAsset: _patchZipUrl,
-          entryPath: 'components/provider_component.js',
-          component: 'ProviderCard',
+          jsAsset: _patchUrl('ProviderCard', 'components/provider_component.js'),
         ),
       ),
     ),
@@ -110,9 +112,7 @@ class DemoListPage extends StatelessWidget {
         native: WatchDemo(),
         // context.watch/read 的订阅与 provider 链全在 JS 侧（新运行时）。
         js: JsUiWidget(
-          jsAsset: _patchZipUrl,
-          entryPath: 'components/watch_demo.js',
-          component: 'WatchDemo',
+          jsAsset: _patchUrl('WatchDemo', 'components/watch_demo.js'),
         ),
       ),
     ),
@@ -122,10 +122,8 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: HelloCard(),
         js: JsUiWidget(
-          jsAsset: _patchZipUrl,
-          // entryPath 直达 zip 内入口（也可不传，按 component 反查）
-          entryPath: 'components/hello_component.js',
-          component: 'HelloCard',
+          // entry 直达 zip 内入口（也可省略，按 component 反查）
+          jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'),
         ),
       ),
     ),
@@ -133,8 +131,7 @@ class DemoListPage extends StatelessWidget {
       'HelloCard · JS 双实例隔离',
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
       _TwinTest(
-        jsAsset: _patchZipUrl,
-        component: 'HelloCard',
+        jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'),
         label: 'HelloCard',
       ),
     ),
@@ -225,10 +222,9 @@ class _CompareTest extends StatelessWidget {
 /// 双实例隔离测试：同屏渲染两个相同组件（单 runtime 内按 pageKey 隔离）。
 /// 验证：点其中一个的按钮，另一个的状态不受影响（roots[pageKey] 隔离）。
 class _TwinTest extends StatelessWidget {
-  const _TwinTest({required this.jsAsset, required this.component, required this.label});
+  const _TwinTest({required this.jsAsset, required this.label});
 
   final String jsAsset;
-  final String component;
   final String label;
 
   @override
@@ -237,11 +233,11 @@ class _TwinTest extends StatelessWidget {
       children: [
         Text('$label #1', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
-        JsUiWidget(jsAsset: jsAsset, component: component),
+        JsUiWidget(jsAsset: jsAsset),
         const Divider(height: 32),
         Text('$label #2', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
-        JsUiWidget(jsAsset: jsAsset, component: component),
+        JsUiWidget(jsAsset: jsAsset),
       ],
     );
   }
