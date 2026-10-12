@@ -2,7 +2,7 @@
 // 由 ui_component_generator 从 lib/components/watch_demo.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { CounterModel } from '../model/counter_model.js';
+import { CounterVm } from '../model/counter_vm.js';
 import { Builder, Button, Card, Column, Padding, Row, SizedBox, Text, __h } from '../flutter.js';
 import { ChangeNotifierProvider } from '../provider.js';
 
@@ -20,8 +20,8 @@ class WatchDemoComponent {
             }
           }, [
             ChangeNotifierProvider({
-                "model": "CounterModel",
-                "create": CounterModel,
+                "model": "CounterVm",
+                "create": CounterVm,
                 "child": Column({
                     "mainAxisSize": "min"
                   }, [
@@ -38,7 +38,7 @@ class WatchDemoComponent {
       ]);
   }
   _builder0() {
-      var model = this.__watch("CounterModel");
+      var model = this.__watch("CounterVm");
       return Column({
         "mainAxisSize": "min"
       }, [
@@ -62,7 +62,7 @@ class WatchDemoComponent {
             Button({
                 "kind": "elevated",
                 "label": "+1",
-                "event": this.__bind("this.__read(\"CounterModel\").inc()")
+                "event": this.__bind("this.__read(\"CounterVm\").inc()")
               }),
             SizedBox({
                 "width": 12
@@ -70,7 +70,7 @@ class WatchDemoComponent {
             Button({
                 "kind": "elevated",
                 "label": "Reset",
-                "event": this.__bind("this.__read(\"CounterModel\").reset()")
+                "event": this.__bind("this.__read(\"CounterVm\").reset()")
               })
           ])
       ]);
@@ -84,7 +84,7 @@ class WatchCountLabelComponent {
   constructor() {
   }
   build() {
-    var model = this.__watch("CounterModel");
+    var model = this.__watch("CounterVm");
     return Text({
         "data": "another State: count = " + model.count,
         "style": {

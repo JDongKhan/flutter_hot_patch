@@ -2,7 +2,7 @@
 // 由 ui_component_generator 从 lib/components/widget_details.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { CounterModel } from '../model/counter_model.js';
+import { CounterVm } from '../model/counter_vm.js';
 import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, Button, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, Divider, DropdownButton, DropdownMenuItem, Expanded, FloatingActionButton, FractionallySizedBox, GridView, Icon, Image, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, Padding, Positioned, Radio, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Text, TextField, Wrap, __h } from '../flutter.js';
 
 class TextDetailComponent {
@@ -1594,7 +1594,7 @@ export function ProgressDetail(props, children) {
 
 class NotifierCardComponent {
   constructor() {
-    this._model = new CounterModel({});
+    this._model = new CounterVm({});
   }
   _inc() { this._model.inc(); }
   _reset() { this._model.reset(); }

@@ -2,19 +2,19 @@
 // 由 ui_component_generator 从 lib/components/provider_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { CounterModel } from '../model/counter_model.js';
+import { CounterVm } from '../model/counter_vm.js';
+import { NetworkVm } from '../model/network_vm.js';
 import { Button, Card, Column, Padding, Row, SizedBox, Text, __h } from '../flutter.js';
 import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
 
 class ProviderCardComponent {
   constructor() {
-    this._modelA = new CounterModel({});
-    this._modelB = new CounterModel({});
+    this._modelA = new CounterVm({});
+    this._modelB = new NetworkVm({});
   }
   _incA() { this._modelA.inc(); }
   _resetA() { this._modelA.reset(); }
-  _incB() { this._modelB.inc(); }
-  _resetB() { this._modelB.reset(); }
+  _loadUser() { this._modelB.loadUserInfo({"h": 1}); }
   dispose() { this._modelB.dispose(); }
   build() {
     return Card({}, [
@@ -29,11 +29,11 @@ class ProviderCardComponent {
             MultiProvider({
                 "providers": [
                   ChangeNotifierProvider({
-                      "model": "CounterModel",
+                      "model": "CounterVm",
                       "create": this._modelA
                     }),
                   ChangeNotifierProvider({
-                      "model": "CounterModel",
+                      "model": "NetworkVm",
                       "value": this._modelB
                     })
                 ],
@@ -47,7 +47,7 @@ class ProviderCardComponent {
                         "height": 8
                       }),
                     Consumer({
-                        "model": "CounterModel",
+                        "model": "NetworkVm",
                         "builder": "_consumerBuilder0"
                       }),
                     Row({
@@ -55,23 +55,15 @@ class ProviderCardComponent {
                       }, [
                         Button({
                             "kind": "elevated",
-                            "label": "A +1",
-                            "event": this.__bind("_incA")
-                          }),
-                        SizedBox({
-                            "width": 12
-                          }),
-                        Button({
-                            "kind": "elevated",
-                            "label": "A Reset",
-                            "event": this.__bind("_resetA")
+                            "label": "加载用户信息",
+                            "event": this.__bind("_loadUser")
                           })
                       ]),
                     SizedBox({
                         "height": 8
                       }),
                     Consumer({
-                        "model": "CounterModel",
+                        "model": "CounterVm",
                         "builder": "_consumerBuilder1"
                       }),
                     Row({
@@ -80,7 +72,7 @@ class ProviderCardComponent {
                         Button({
                             "kind": "elevated",
                             "label": "B +1",
-                            "event": this.__bind("_incB")
+                            "event": this.__bind("_incA")
                           }),
                         SizedBox({
                             "width": 12
@@ -88,7 +80,7 @@ class ProviderCardComponent {
                         Button({
                             "kind": "elevated",
                             "label": "B Reset",
-                            "event": this.__bind("_resetB")
+                            "event": this.__bind("_resetA")
                           })
                       ])
                   ])
@@ -98,7 +90,7 @@ class ProviderCardComponent {
   }
   _consumerBuilder0(value) {
       return Text({
-        "data": "A = " + value.count,
+        "data": "加载用户信息：",
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",

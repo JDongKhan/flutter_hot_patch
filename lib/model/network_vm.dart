@@ -3,10 +3,10 @@ import 'package:flutter/cupertino.dart';
 import '../base/network.dart';
 
 /// @author jd
-class NetworkVm  extends ChangeNotifier{
-
-  Future<Map> loadUserInfo({dynamic params}) {
-    return Network.post(params: params);
+class NetworkVm extends ChangeNotifier {
+  Future<Map> loadUserInfo({dynamic params}) async {
+    dynamic data = await Network.post(params: params);
+    print("获取数据:$data");
+    return data;
   }
 }
-
