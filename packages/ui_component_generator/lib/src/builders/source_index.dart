@@ -12,17 +12,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 
 import 'host_method_scan.dart';
 
-/// 在注解列表里按**简单名**查找注解（支持 `@Foo` 与 `@a.Foo` 两种写法）。
-Annotation? findAnnotation(List<Annotation> metadata, String simpleName) {
-  for (final a in metadata) {
-    final name = a.name;
-    if (name is SimpleIdentifier && name.name == simpleName) return a;
-    if (name is PrefixedIdentifier && name.identifier.name == simpleName) {
-      return a;
-    }
-  }
-  return null;
-}
+// 注解按简单名查找的实现在最底层的 host_method_scan.dart（@HostInjected 扫描
+// 也用它），这里只做再导出，避免同名声明被 barrel 同时导出造成 ambiguous_export。
+export 'host_method_scan.dart' show findAnnotation;
 
 /// 类是否声明了带 @HostInjected 的方法（static 宿主注入能力）。
 bool classHasHostInjectedMethod(ClassDeclaration d) {

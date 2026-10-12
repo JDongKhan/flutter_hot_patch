@@ -9,7 +9,8 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
-import 'class_translator.dart';
+import '../translator/class_translator.dart';
+
 import 'source_index.dart';
 
 /// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 一致）：

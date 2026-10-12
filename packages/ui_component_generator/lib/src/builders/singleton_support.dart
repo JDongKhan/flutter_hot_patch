@@ -9,10 +9,11 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
-import 'js_translator.dart';
+import '../translator/js_translator.dart';
+import '../translator/style_translators.dart';
+import '../translator/widget2js.dart';
+
 import 'source_index.dart';
-import 'style_translators.dart';
-import 'widget2js.dart';
 
 /// 判断是否「静态单例类」：普通类（无 @UIComponent、非 private、非抽象）、
 /// 且含至少一个非 private **static** 字段。

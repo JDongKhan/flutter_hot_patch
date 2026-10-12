@@ -93,15 +93,41 @@ class MyWidgetTranslator extends WidgetTranslator {
 ```
 
 在 `WidgetTranslatorRegistry` 里 `register` 即可，核心代码零改动。
-内置策略见 `lib/builtin_translators.dart`（Column / Row / Text / Scaffold / provider 系列等）。
+内置策略见 `lib/src/translator/builtin_translators.dart`
+（Column / Row / Text / Scaffold / provider 系列等）。
 
-## 相关包
+## 代码结构
+
+本包按功能分目录组织（`lib/src/` 下），依赖单向无环：
+
+| 目录 / 文件 | 作用 |
+| --- | --- |
+| `lib/builder.dart` | **对外入口**：`build.yaml` 的三个 builder 工厂函数 |
+| `lib/src/translator/` | 翻译内核：Dart AST → JS（唯一入口 `translateClass`） |
+| `lib/src/builders/` | build_runner Builder 实现与产物组装 |
+
+```
+translator/  ←  builders/  ←  builder.dart
+```
+
+`lib/src/translator/`：`js_translator`（公共语言层）· `dart2js`（类声明）·
+`widget2js`（widget 树）· `class_translator`（唯一入口）·
+`style_translators` · `builtin_translators`（内置 widget 策略）。
+
+`lib/src/builders/`：`component_builder` · `model_builder` ·
+`widget_module_builder` · `module_renderer`（产物渲染）· `class_table` ·
+`singleton_support` · `source_index` · `product_path` · `js_widget_defs` ·
+`host_method_scan` · `host_register_builder`。
+
+框架的其它包：
 
 | 包 | 作用 |
 | --- | --- |
-| `ui_component` | 注解 |
-| `ui_component_generator` | 本包：构建期静态翻译 |
+| `ui_component` | 声明式注解 |
+| `ui_component_generator` | **本包**：`build.yaml` + 工厂入口 + 翻译/构建实现 |
 | `hot_patch` | 运行时加载 JS 补丁渲染组件，由 JS 驱动逻辑 |
+
+使用方只需在 `dev_dependencies` 里依赖 `ui_component_generator`。
 
 ## License
 

@@ -52,7 +52,7 @@ builders:
   #     register_import: "package:<runtime>/<runtime>.dart"
   #     register_call: "<Runtime>.registerHostMethod"
   ui_host_register:
-    import: "package:ui_component_generator/host_register_builder.dart"
+    import: "package:ui_component_generator/builder.dart"
     builder_factories: ["hostRegisterBuilder"]
     build_extensions:
       "$package$":

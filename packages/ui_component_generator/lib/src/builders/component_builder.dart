@@ -8,17 +8,18 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 
-import 'builtin_translators.dart';
+import '../translator/builtin_translators.dart';
+import '../translator/class_translator.dart';
+import '../translator/js_translator.dart';
+import '../translator/widget2js.dart';
+
 import 'class_table.dart';
-import 'class_translator.dart';
-import 'js_translator.dart';
 import 'js_widget_defs.dart';
 import 'model_builder.dart';
 import 'module_renderer.dart';
 import 'product_path.dart';
 import 'singleton_support.dart';
 import 'source_index.dart';
-import 'widget2js.dart';
 
 /// 把 lib/ 下的 Dart 源文件翻译为**同名** JS 产物（`lib/a/b.dart` → `patch/a/b.js`）：
 /// 文件名与 Dart 源文件一一对应，不区分组件/模型，也不预设目录结构——源码

@@ -7,10 +7,11 @@ import 'dart:async';
 
 import 'package:build/build.dart';
 
-import 'builtin_translators.dart';
+import '../translator/builtin_translators.dart';
+import '../translator/widget2js.dart';
+
 import 'js_widget_defs.dart';
 import 'product_path.dart';
-import 'widget2js.dart';
 
 /// widget 模块 builder 的**种子输入默认路径**（构建期固定文件，不含运行时代码）。
 ///

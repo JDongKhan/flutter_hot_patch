@@ -8,8 +8,9 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
-import 'dart2js.dart';
-import 'js_translator.dart';
+import '../translator/dart2js.dart';
+import '../translator/js_translator.dart';
+
 import 'source_index.dart';
 
 /// 全量「类表」：把一个文件（同文件 + 跨文件 import）的全部公共 Dart 类

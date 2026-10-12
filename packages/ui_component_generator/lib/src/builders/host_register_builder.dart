@@ -6,34 +6,11 @@ import 'host_method_scan.dart';
 
 /// 注册目标的默认值：本生成器配套的运行时（hot_patch）自带的注册 API。
 /// 使用方**无需任何配置**即可零配置工作。
-const String _defaultRegisterImport = 'package:hot_patch/hot_patch.dart';
-const String _defaultRegisterCall = 'JsRuntimeManager.registerHostMethod';
-
-/// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）。
 ///
-/// 注册目标默认指向配套运行时（见 [_defaultRegisterImport] / [_defaultRegisterCall]），
-/// 使用方**开箱即用、不必写任何 build.yaml**。换用别的运行时实现时，才需要
-/// 在自己的 build.yaml 里覆盖这两项（属于少数派场景，故不作强制）：
-///
-/// ```yaml
-/// targets:
-///   $default:
-///     builders:
-///       ui_component_generator:ui_host_register:
-///         options:
-///           register_import: "package:<runtime>/<runtime>.dart"
-///           register_call: "<Runtime>.registerHostMethod"
-/// ```
-Builder hostRegisterBuilder(BuilderOptions options) {
-  final import = options.config['register_import'];
-  final call = options.config['register_call'];
-  return HostRegisterBuilder(
-    registerImport:
-        import is String && import.isNotEmpty ? import : _defaultRegisterImport,
-    registerCall:
-        call is String && call.isNotEmpty ? call : _defaultRegisterCall,
-  );
-}
+/// 默认值的装配（`hostRegisterBuilder` 工厂）在入口包 ui_component_generator，
+/// 那里读 build.yaml 的 `register_import` / `register_call` 覆盖项后传入本类。
+const String defaultRegisterImport = 'package:hot_patch/hot_patch.dart';
+const String defaultRegisterCall = 'JsRuntimeManager.registerHostMethod';
 
 /// 宿主注入注册 builder：扫描全包的 `@HostInjected` static 方法，把它们对应的
 /// 注册调用集中生成到**一个 Dart 文件**里，业务方在 `main()` 里调用一次即可：

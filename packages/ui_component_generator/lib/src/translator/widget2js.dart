@@ -140,6 +140,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///
   /// 返回 Map = 普通节点；返回 String = JS 表达式（widget 位置三目
   /// `cond ? A() : B()` → `(condJs ? [A] : [B])`），渲染层对 String 原样嵌入。
+  @override
   Object? translate(Expression e) {
     if (e is ConditionalExpression) {
       final cond = jsDataExpr(e.condition);
@@ -293,6 +294,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
   /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
+  @override
   String renderJs(Object? json, int depth) {
     if (json is String) return json; // 三目/条件表达式（JS 源码字符串）
     if (json is! Map<String, dynamic>) {
