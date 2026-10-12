@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ui_component/ui_component.dart';
 
-import '../model/counter_model.dart';
+import '../model/counter_vm.dart';
 
 /// 常用组件详情页集合（widget_showcase 列表页点击进入）。
 ///
@@ -50,16 +50,9 @@ class _TextDetailState extends State<TextDetail> {
         const Text('基础文案 + TextStyle', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Text('普通文本，count = $_count（状态插值）', style: const TextStyle(color: Colors.blue, fontSize: 16)),
         const SizedBox(height: 6),
-        Text(
-          'maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        Text('maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示', maxLines: 1, overflow: TextOverflow.ellipsis),
         const SizedBox(height: 6),
-        Text(
-          'textScaler.linear(1.6) 放大',
-          textScaler: TextScaler.linear(1.6),
-        ),
+        Text('textScaler.linear(1.6) 放大', textScaler: TextScaler.linear(1.6)),
         const SizedBox(height: 6),
         Text(
           'textAlign 居中',
@@ -177,8 +170,7 @@ class _LayoutDetailState extends State<LayoutDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Row + Expanded / Flexible / Spacer',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Row + Expanded / Flexible / Spacer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Row(
           children: [
             Expanded(
@@ -201,8 +193,7 @@ class _LayoutDetailState extends State<LayoutDetail> {
           ],
         ),
         const SizedBox(height: 12),
-        const Text('Center / Align / Padding / SizedBox',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Center / Align / Padding / SizedBox', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Center(
           child: Container(
             color: Colors.amber.shade100,
@@ -220,10 +211,7 @@ class _LayoutDetailState extends State<LayoutDetail> {
           ),
         ),
         const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: const Text('Padding 包裹文案'),
-        ),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), child: const Text('Padding 包裹文案')),
         const SizedBox(height: 12),
         const Text('Stack + Positioned', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         SizedBox(
@@ -237,10 +225,7 @@ class _LayoutDetailState extends State<LayoutDetail> {
                 child: Center(
                   child: Text(
                     'FILL',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -258,24 +243,16 @@ class _LayoutDetailState extends State<LayoutDetail> {
           alignment: WrapAlignment.start,
           runAlignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            for (var i = 1; i <= 5; i++)
-              Chip(
-                label: Text('chip $i'),
-                backgroundColor: Colors.teal.shade50,
-              ),
-          ],
+          children: [for (var i = 1; i <= 5; i++) Chip(label: Text('chip $i'), backgroundColor: Colors.teal.shade50)],
         ),
         const SizedBox(height: 12),
-        const Text('Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Opacity(
           opacity: 0.5,
-          child: Container(
-            color: Colors.red,
-            padding: const EdgeInsets.all(8),
-            child: const Text('50% 透明'),
-          ),
+          child: Container(color: Colors.red, padding: const EdgeInsets.all(8), child: const Text('50% 透明')),
         ),
         const SizedBox(height: 8),
         ConstrainedBox(
@@ -289,11 +266,7 @@ class _LayoutDetailState extends State<LayoutDetail> {
         const SizedBox(height: 8),
         AspectRatio(
           aspectRatio: 1.78,
-          child: Container(
-            color: Colors.indigo.shade100,
-            alignment: Alignment.center,
-            child: const Text('16:9 比例'),
-          ),
+          child: Container(color: Colors.indigo.shade100, alignment: Alignment.center, child: const Text('16:9 比例')),
         ),
         const SizedBox(height: 8),
         FractionallySizedBox(
@@ -331,11 +304,7 @@ class _ImageDetailState extends State<ImageDetail> {
         const Text('Image · 网络图片', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.network(
-            'https://picsum.photos/seed/hotpatch/400/160',
-            height: 120,
-            fit: BoxFit.cover,
-          ),
+          child: Image.network('https://picsum.photos/seed/hotpatch/400/160', height: 120, fit: BoxFit.cover),
         ),
         const SizedBox(height: 12),
         const Text('Icon / CircleAvatar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -380,10 +349,7 @@ class _ContainerDetailState extends State<ContainerDetail> {
         const Text('Container · 颜色/圆角/Padding', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(
-            color: Colors.teal,
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
+          decoration: const BoxDecoration(color: Colors.teal, borderRadius: BorderRadius.all(Radius.circular(12))),
           child: const Text('容器内容（teal 圆角）', style: TextStyle(color: Colors.white)),
         ),
         const SizedBox(height: 12),
@@ -399,12 +365,7 @@ class _ContainerDetailState extends State<ContainerDetail> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white, width: 2),
             boxShadow: const [
-              BoxShadow(
-                color: Color(0x66000000),
-                offset: Offset(0, 4),
-                blurRadius: 12,
-                spreadRadius: 1,
-              ),
+              BoxShadow(color: Color(0x66000000), offset: Offset(0, 4), blurRadius: 12, spreadRadius: 1),
             ],
           ),
           child: const Text('渐变 + 边框 + 阴影', style: TextStyle(color: Colors.white)),
@@ -417,10 +378,7 @@ class _ContainerDetailState extends State<ContainerDetail> {
             border: Border.all(color: Colors.amber, width: 2),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('DecoratedBox 内容'),
-          ),
+          child: const Padding(padding: EdgeInsets.all(12), child: Text('DecoratedBox 内容')),
         ),
         const SizedBox(height: 12),
         const Text('Card · shape / clipBehavior', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -432,10 +390,7 @@ class _ContainerDetailState extends State<ContainerDetail> {
             side: const BorderSide(color: Colors.deepPurple, width: 1),
           ),
           clipBehavior: Clip.antiAlias,
-          child: const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('圆角卡片 + 描边 + 阴影'),
-          ),
+          child: const Padding(padding: EdgeInsets.all(16), child: Text('圆角卡片 + 描边 + 阴影')),
         ),
         const SizedBox(height: 12),
         const Divider(),
@@ -519,8 +474,7 @@ class _ScrollDetailState extends State<ScrollDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('ListView · 列表（offset: $_offset）',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text('ListView · 列表（offset: $_offset）', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         NotificationListener<ScrollNotification>(
           onNotification: _onListScroll,
           child: SizedBox(
@@ -540,8 +494,10 @@ class _ScrollDetailState extends State<ScrollDetail> {
           ),
         ),
         const SizedBox(height: 12),
-        Text('SingleChildScrollView · 长内容滚动（ctrl offset: $_ctrlOffset）',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          'SingleChildScrollView · 长内容滚动（ctrl offset: $_ctrlOffset）',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         SingleChildScrollView(
           controller: _scrollController,
           scrollDirection: Axis.horizontal,
@@ -558,10 +514,7 @@ class _ScrollDetailState extends State<ScrollDetail> {
         ),
         Align(
           alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: _scrollToEnd,
-            child: const Text('横向 · 跳到底'),
-          ),
+          child: TextButton(onPressed: _scrollToEnd, child: const Text('横向 · 跳到底')),
         ),
       ],
     );
@@ -627,10 +580,7 @@ class _SliverDetailState extends State<SliverDetail> {
             child: Container(
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.deepPurple.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(12)),
               child: const Text(
                 'CustomScrollView 整页 · SliverToBoxAdapter 盒子',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
@@ -717,15 +667,9 @@ class _SliverDetailState extends State<SliverDetail> {
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => Container(
-                    decoration: BoxDecoration(
-                      color: Colors.teal.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    decoration: BoxDecoration(color: Colors.teal.shade100, borderRadius: BorderRadius.circular(8)),
                     alignment: Alignment.center,
-                    child: Text(
-                      '格 $index',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    child: Text('格 $index', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   childCount: 9,
                 ),
@@ -736,10 +680,7 @@ class _SliverDetailState extends State<SliverDetail> {
             sliver: SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
-                child: Text(
-                  '底部 · SliverSafeArea + SliverFillRemaining',
-                  style: const TextStyle(color: Colors.grey),
-                ),
+                child: Text('底部 · SliverSafeArea + SliverFillRemaining', style: const TextStyle(color: Colors.grey)),
               ),
             ),
           ),
@@ -795,11 +736,7 @@ class _GridDetailState extends State<GridDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text('GridView 懒加载验证'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('GridView 懒加载验证'), backgroundColor: Colors.teal, foregroundColor: Colors.white),
       floatingActionButton: FloatingActionButton(
         onPressed: _jumpBottom,
         backgroundColor: Colors.teal,
@@ -836,15 +773,9 @@ class _GridDetailState extends State<GridDetail> {
               ),
               itemCount: 30,
               itemBuilder: (context, index) => Container(
-                decoration: BoxDecoration(
-                  color: Colors.teal.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                decoration: BoxDecoration(color: Colors.teal.shade100, borderRadius: BorderRadius.circular(8)),
                 alignment: Alignment.center,
-                child: Text(
-                  '格 $index',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                child: Text('格 $index', style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ),
@@ -866,15 +797,9 @@ class _GridDetailState extends State<GridDetail> {
               ),
               itemCount: 20,
               itemBuilder: (context, index) => Container(
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(8)),
                 alignment: Alignment.center,
-                child: Text(
-                  '项 $index',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                child: Text('项 $index', style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ),
@@ -1026,10 +951,7 @@ class _InputDetailState extends State<InputDetail> {
         TextField(
           controller: _controller,
           onChanged: _onTextChanged,
-          decoration: const InputDecoration(
-            hintText: '请输入文本',
-            labelText: '用户名',
-          ),
+          decoration: const InputDecoration(hintText: '请输入文本', labelText: '用户名'),
           maxLines: 1,
           style: const TextStyle(fontSize: 16),
         ),
@@ -1042,10 +964,7 @@ class _InputDetailState extends State<InputDetail> {
         // 验证 JS 侧写 controller（clear() → host 通道清空宿主真实 controller）。
         Align(
           alignment: Alignment.centerLeft,
-          child: FilledButton(
-            onPressed: () => _controller.clear(),
-            child: const Text('清空输入'),
-          ),
+          child: FilledButton(onPressed: () => _controller.clear(), child: const Text('清空输入')),
         ),
         const SizedBox(height: 12),
         const Text('Radio 单选', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -1192,7 +1111,7 @@ class NotifierCard extends StatefulWidget {
 }
 
 class _NotifierCardState extends State<NotifierCard> {
-  final _model = CounterModel();
+  final _model = CounterVm();
 
   void _inc() => _model.inc();
   void _reset() => _model.reset();
@@ -1207,13 +1126,8 @@ class _NotifierCardState extends State<NotifierCard> {
           children: [
             ListenableBuilder(
               listenable: _model,
-              builder: (context, _) => Text(
-                'count = ${_model.count}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              builder: (context, _) =>
+                  Text('count = ${_model.count}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 12),
             Row(
@@ -1243,12 +1157,7 @@ class _NotifierCardState extends State<NotifierCard> {
 /// 由 JsUiWidget.props 传入。
 @UIComponent('StatelessCard')
 class StatelessCard extends StatelessWidget {
-  const StatelessCard({
-    super.key,
-    required this.title,
-    this.subtitle = '',
-    this.badge = 'NEW',
-  });
+  const StatelessCard({super.key, required this.title, this.subtitle = '', this.badge = 'NEW'});
 
   final String title;
   final String subtitle;
@@ -1269,21 +1178,12 @@ class StatelessCard extends StatelessWidget {
                 const Icon(Icons.article, color: Colors.teal),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    '$badge · $title',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: Text('$badge · $title', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
             const Divider(height: 24),
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
+            Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
           ],
         ),
       ),

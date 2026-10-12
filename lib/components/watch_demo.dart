@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ui_component/ui_component.dart';
 
-import '../model/counter_model.dart';
+import '../model/counter_vm.dart';
 
 /// context.watch / context.read demo：
 /// - `context.watch<T>()`：取 provider 链最近实例 + 订阅（模型 notify →
@@ -31,8 +31,8 @@ class _WatchDemoState extends State<WatchDemo> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: ChangeNotifierProvider<CounterModel>(
-          create: (_) => CounterModel(),
+        child: ChangeNotifierProvider<CounterVm>(
+          create: (_) => CounterVm(),
           // 两个消费者都在 provider 子树内，各自按位置订阅：
           // Builder（委托 builder）与 WatchCountLabel（独立 State）。
           child: Column(
@@ -41,32 +41,25 @@ class _WatchDemoState extends State<WatchDemo> {
               Builder(
                 builder: (context) {
                   // watch：订阅局部刷新（模型 notify → 本组件重建）
-                  final model = context.watch<CounterModel>();
+                  final model = context.watch<CounterVm>();
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text('context.watch<CounterModel>'),
                       Text(
                         'count = ${model.count}',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange,
-                        ),
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepOrange),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          ElevatedButton(
-                            onPressed: () => model.inc(),
-                            child: const Text('+1'),
-                          ),
+                          ElevatedButton(onPressed: () => model.inc(), child: const Text('+1')),
                           const SizedBox(width: 12),
                           ElevatedButton(
                             // read：仅取实例（不订阅），按钮回调里合法用法
                             onPressed: () {
-                              context.read<CounterModel>().reset();
+                              context.read<CounterVm>().reset();
                             },
                             child: const Text('Reset'),
                           ),
@@ -103,10 +96,7 @@ class WatchCountLabel extends StatefulWidget {
 class _WatchCountLabelState extends State<WatchCountLabel> {
   @override
   Widget build(BuildContext context) {
-    final model = context.watch<CounterModel>();
-    return Text(
-      'another State: count = ${model.count}',
-      style: const TextStyle(fontSize: 16, color: Colors.blue),
-    );
+    final model = context.watch<CounterVm>();
+    return Text('another State: count = ${model.count}', style: const TextStyle(fontSize: 16, color: Colors.blue));
   }
 }

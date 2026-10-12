@@ -5,12 +5,12 @@ import 'package:flutter/foundation.dart';
 /// 生成器把本类翻译成 JS class（extends ChangeNotifier，运行时注入基类），
 /// 业务方法（inc/reset）一比一翻译，notifyListeners 触发 JS 侧
 /// ListenableBuilder 局部重建。
-class CounterModel extends ChangeNotifier {
+class CounterVm extends ChangeNotifier {
   int _count = 0;
 
   int get count => _count;
 
-  void inc() {
+  void inc() async {
     _count++;
     notifyListeners();
   }

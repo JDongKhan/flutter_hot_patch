@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ui_component/ui_component.dart';
 
-import '../model/counter_model.dart';
+import '../model/counter_vm.dart';
+import '../model/network_vm.dart';
 
 /// MultiProvider 响应式热更 demo。
 ///
@@ -24,13 +25,12 @@ class ProviderCard extends StatefulWidget {
 }
 
 class _ProviderCardState extends State<ProviderCard> {
-  final _modelA = CounterModel();
-  final _modelB = CounterModel();
+  final _modelA = CounterVm();
+  final _modelB = NetworkVm();
 
   void _incA() => _modelA.inc();
   void _resetA() => _modelA.reset();
-  void _incB() => _modelB.inc();
-  void _resetB() => _modelB.reset();
+  void _loadUser() => _modelB.loadUserInfo(params: {"h": 1});
 
   @override
   Widget build(BuildContext context) {
@@ -40,56 +40,40 @@ class _ProviderCardState extends State<ProviderCard> {
         child: MultiProvider(
           providers: [
             // create：模型由 provider 销毁时自动 dispose（State 不手动释放）。
-            ChangeNotifierProvider<CounterModel>(
-              create: (_) => _modelA,
-            ),
+            ChangeNotifierProvider<CounterVm>(create: (_) => _modelA),
             // value：provider **不**负责释放，_modelB 由本 State dispose
             // 手动释放（见下方 dispose）。生成器把 value 构造翻译成
             // create.ref 语义（复用实例、__dispose:false，归用户）。
-            ChangeNotifierProvider<CounterModel>.value(
-              value: _modelB,
-            ),
+            ChangeNotifierProvider<NetworkVm>.value(value: _modelB),
           ],
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text('MultiProvider · 两个模型各自局部重建'),
               const SizedBox(height: 8),
-              Consumer<CounterModel>(
+              Consumer<NetworkVm>(
                 builder: (context, value, child) => Text(
-                  'A = ${value.count}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
+                  '加载用户信息：',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue),
                 ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(onPressed: _incA, child: const Text('A +1')),
-                  const SizedBox(width: 12),
-                  ElevatedButton(onPressed: _resetA, child: const Text('A Reset')),
-                ],
+                children: [ElevatedButton(onPressed: _loadUser, child: const Text('加载用户信息'))],
               ),
               const SizedBox(height: 8),
-              Consumer<CounterModel>(
+              Consumer<CounterVm>(
                 builder: (context, value, child) => Text(
                   'B = ${value.count}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
                 ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(onPressed: _incB, child: const Text('B +1')),
+                  ElevatedButton(onPressed: _incA, child: const Text('B +1')),
                   const SizedBox(width: 12),
-                  ElevatedButton(onPressed: _resetB, child: const Text('B Reset')),
+                  ElevatedButton(onPressed: _resetA, child: const Text('B Reset')),
                 ],
               ),
             ],
