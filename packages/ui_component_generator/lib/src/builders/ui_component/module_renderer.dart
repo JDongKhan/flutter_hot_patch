@@ -19,7 +19,7 @@ import 'singleton_support.dart';
 ///   - [singletons]：静态单例类 → `export const`；
 ///   - [exportedClasses]：对外产出的类（`export class`）——组件与普通模型类
 ///     走同一条渲染路径；
-///   - [dependencyImports]：跨文件依赖的 import 行（仅组件文件非空）。
+///   - [dependencyImports]：跨文件依赖的 import 行（组件文件与模型文件都可能非空）。
 /// 所有类统一由 [dart2js] 渲染、统一带 [WidgetExprRenderer] 上下文：方法体里
 /// `return Container(...)` 一律走 widget 翻译路径（普通类里返回 widget 的方法
 /// 同样生效），用到的 widget 类型统一收集成 package import。因此没有

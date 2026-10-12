@@ -1,5 +1,8 @@
-/// 组件/模型 builder 的**组件路径**：把含 @UIComponent 的 Dart 源文件翻译为
-/// 同名 JS 产物。不含 @UIComponent 的文件交给 model_builder.dart 处理。
+/// 组件/模型 builder：把 lib/ 下的 Dart 源文件翻译为同名 JS 产物。
+///
+/// 组件文件与非组件（模型/单例）文件走**同一个入口**：先收集本文件「根类」，
+/// 再统一调 [translateClass] 翻译；两处的差别只是传给 translateClass 的
+/// `isComponent` 参数。翻译与产物组装逻辑组件/普通类完全共用。
 library;
 
 import 'dart:async';
@@ -17,7 +20,6 @@ import '../../translator/widget2js.dart';
 import '../js_widget_defs.dart';
 import '../product_path.dart';
 import 'class_table.dart';
-import 'model_builder.dart';
 import 'module_renderer.dart';
 import 'singleton_support.dart';
 
@@ -25,9 +27,10 @@ import 'singleton_support.dart';
 /// 文件名与 Dart 源文件一一对应，不区分组件/模型，也不预设目录结构——源码
 /// 怎么组织、有哪些目录，由使用方决定，产物跟着走。
 ///
-/// 按**文件内容**分流（与目录无关）：
-///   - 含 `@UIComponent` 类 → 组件产物（Component 类 + build + 事件绑定）；
-///   - 仅含普通类（非私有、非抽象、无 build()）→ 模型/单例产物
+/// 按**文件内容**分「根类」收集（与目录无关），分支只体现在 `isComponent`：
+///   - 含 `@UIComponent` 类 → 根类 = 这些注解类（组件产物：Component 类 + build）；
+///   - 否则 → 根类 = 本文件「可导出普通类」（非私有、非抽象、非组件、非静态
+///     单例；静态单例类另以 `export const` 渲染）→ 模型/单例产物
 ///     （`export class` / `export const`，供组件产物 import）；
 ///   - 都没有（如 main.dart）→ 不产出。
 ///
@@ -36,8 +39,8 @@ import 'singleton_support.dart';
 ///
 /// # 架构
 ///
-/// ComponentBuilder 只负责「总控」，不含任何翻译分叉：
-///   - 扫描 @UIComponent 根类，调唯一入口 translateClass 翻译；
+/// ComponentBuilder 只负责「总控」，不含任何翻译逻辑：
+///   - 收集本文件根类（组件或普通类），调唯一入口 translateClass 翻译；
 ///   - 按 ClassInfo.dependencies 递归：同文件类内联、跨文件类生成 import；
 ///   - 组装并写出产物（package 模块由 WidgetModuleBuilder 另出）。
 ///
@@ -79,21 +82,11 @@ class ComponentBuilder implements Builder {
     final registry = WidgetTranslatorRegistry();
     registerBuiltinTranslators(registry);
 
-    // 按内容分流（与目录无关）：文件里没有 @UIComponent → 模型/单例产物
-    // （模型放哪个目录都行）；有 → 组件产物。
-    final hasComponent = parsed.unit.declarations
-        .whereType<ClassDeclaration>()
-        .any((d) => findAnnotation(d.metadata, 'UIComponent') != null);
-    if (!hasComponent) {
-      await writeModelProduct(buildStep, parsed.unit, inputId, registry);
-      return;
-    }
-
     // 组件名 → 依赖产物 jsAsset 路径。规则：
     //   本文件注解组件 / 本文件私有组件 → 本文件产物（同产物注册）；
     //   本文件无注解非私有组件（如 MyCustomCard）→ null（运行时原生注入）；
     //   跨文件组件 → 从 import directives 推导源文件产物。
-    // （提前于 components 收集构造：translateClass 内部翻译 Component
+    // （提前于根类收集构造：translateClass 内部翻译 Component
     //   节点时即会调用 importResolver，闭包必须已初始化）
     final parsedNames = <String>{
       for (final d in parsed.unit.declarations)
@@ -138,22 +131,47 @@ class ComponentBuilder implements Builder {
     // dart2js（singletonValueRenderer）。
     final singletons = buildSingletonResolver(parsed.unit, inputId.path);
 
-    // 本文件声明的「静态单例类」→ inline 进本产物（const X = {...}，不 import）
+    // 本文件声明的「静态单例类」→ inline 进本产物（const X = {...}，不 import）。
+    // 排除组件/widget 类（它们即使带 static 字段也按类翻译，不当单例）。
     final sameFileSingletonInfos = <ClassInfo>[
       for (final d in findSingletonClasses(parsed.unit))
-        if (classTable.containsKey(d.name.lexeme)) classTable[d.name.lexeme]!,
+        if (classTable[d.name.lexeme] case final info? when !info.isComponent)
+          info,
     ];
+    final sameFileSingletonNames = {
+      for (final c in sameFileSingletonInfos) c.name,
+    };
 
-    // 统一翻译入口：收集本文件内全部 @UIComponent 根组件（支持单文件多组件 /
-    // 文件内共享普通类）。JS 类名 = Dart 类名；State 合并与字段/方法/依赖
-    // 处理全部在 translateClass 内部完成，builder 不做任何翻译分叉。
-    final components = <ClassInfo>[];
-    for (final declaration in parsed.unit.declarations) {
-      if (declaration is! ClassDeclaration) continue;
-      if (findAnnotation(declaration.metadata, 'UIComponent') == null) continue;
+    // 收集本文件「根类」——两种文件走同一入口，差别只在 isComponent 参数：
+    //   - 有 @UIComponent 类 → 根类 = 全部注解类（组件产物，export 组件类）；
+    //   - 否则 → 根类 = 本文件「可导出普通类」（非私有、非抽象、非组件、非静态
+    //     单例）→ 模型产物（export class）；静态单例类另行以 export const 渲染。
+    // 两者都没有（如 main.dart、纯 widget 文件）→ 不产出。
+    final roots = <(ClassDeclaration, bool)>[];
+    final annotated = <ClassDeclaration>[
+      for (final d in parsed.unit.declarations.whereType<ClassDeclaration>())
+        if (findAnnotation(d.metadata, 'UIComponent') != null) d,
+    ];
+    if (annotated.isNotEmpty) {
+      roots.addAll([for (final d in annotated) (d, true)]);
+    } else {
+      for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+        final name = d.name.lexeme;
+        if (name.startsWith('_') || d.abstractKeyword != null) continue;
+        if (sameFileSingletonNames.contains(name)) continue;
+        final info = classTable[name];
+        if (info == null || info.isComponent) continue;
+        roots.add((d, false));
+      }
+    }
+    if (roots.isEmpty && sameFileSingletonInfos.isEmpty) return;
 
-      components.add(translateClass(
-        declaration,
+    // 逐个根类翻译：JS 类名 = Dart 类名；State 合并、字段 / 方法 / 依赖处理
+    // 全部在 translateClass 内部完成，builder 只决定「以组件身份还是普通类身份」。
+    final exportedClasses = <ClassInfo>[];
+    for (final (decl, isComponent) in roots) {
+      exportedClasses.add(translateClass(
+        decl,
         parsed.unit,
         inputId.path,
         registry: registry,
@@ -162,11 +180,11 @@ class ComponentBuilder implements Builder {
         singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: sliverBuilderTypes,
-        isComponent: true,
+        isComponent: isComponent,
       ));
     }
 
-    // 按依赖关系递归：从根组件的 dependencies 做 BFS——
+    // 按依赖关系递归：从根类的 dependencies 做 BFS（组件与普通类同一套）——
     //   - 同文件**有产物**的组件（@UIComponent / 私有 _Xxx）→ 翻译进同一产物；
     //   - 同文件普通类（模型/共享类）→ 翻译为产物内可见的 inline class；
     //   - @UIComponentIgnore / 无注解公共组件（importResolver 返回 null）→
@@ -174,12 +192,9 @@ class ComponentBuilder implements Builder {
     //   - 跨文件依赖 → 不翻译，后面统一生成 import。
     // 普通类里引用到的类与组件走同一套递归（dependencies 是翻译期统一收集的）。
     final inlineClasses = <String, ClassInfo>{};
-    final sameFileSingletonNames = {
-      for (final c in sameFileSingletonInfos) c.name,
-    };
     final doneDeps = <String>{};
     final depQueue = <String>[
-      for (final c in components) ...c.dependencies,
+      for (final c in exportedClasses) ...c.dependencies,
     ];
     while (depQueue.isNotEmpty) {
       final dep = depQueue.removeLast();
@@ -188,7 +203,7 @@ class ComponentBuilder implements Builder {
       if (!parsedNames.contains(dep)) continue; // 跨文件 → import 阶段处理
       // 同文件静态单例类走 const 内联（sameFileSingletonInfos），不按类翻译。
       if (sameFileSingletonNames.contains(dep)) continue;
-      if (components.any((c) => c.name == dep) ||
+      if (exportedClasses.any((c) => c.name == dep) ||
           inlineClasses.containsKey(dep)) {
         continue;
       }
@@ -214,7 +229,7 @@ class ComponentBuilder implements Builder {
         isComponent: isWidgetDep,
       );
       if (isWidgetDep) {
-        components.add(translated);
+        exportedClasses.add(translated);
       } else {
         inlineClasses[dep] = translated;
       }
@@ -223,7 +238,7 @@ class ComponentBuilder implements Builder {
     // ignore: avoid_print - 构建期日志
     print(
       '[ui_component_generator] $inputId: '
-      '${components.map((c) => c.name).join(', ')}',
+      '${exportedClasses.map((c) => c.name).join(', ')}',
     );
 
     // 一次渲染合并产物：一个文件 → 一个同名 JS（注册多个组件）。
@@ -239,7 +254,7 @@ class ComponentBuilder implements Builder {
       }
     }
 
-    components.forEach(collectModelDeps);
+    exportedClasses.forEach(collectModelDeps);
     inlineClasses.values.forEach(collectModelDeps);
 
     final dependencyImports = <String>[];
@@ -273,11 +288,11 @@ class ComponentBuilder implements Builder {
       }
     }
 
-    components.forEach(collectComponentImports);
+    exportedClasses.forEach(collectComponentImports);
     inlineClasses.values.forEach(collectComponentImports);
 
     // 翻译阶段（含三目/if/for 内联渲染）已收集的类型并入渲染期总表。
-    final allTranslated = [...components, ...inlineClasses.values];
+    final allTranslated = [...exportedClasses, ...inlineClasses.values];
     final extraUsedWidgets = <String, Set<String>>{};
     for (final c in allTranslated) {
       mergeUsedWidgets(extraUsedWidgets, c.usedWidgetPackages);
@@ -289,7 +304,7 @@ class ComponentBuilder implements Builder {
       renderModuleJs(
         inputId.path,
         registry: registry,
-        exportedClasses: components,
+        exportedClasses: exportedClasses,
         inlineClasses: inlineClasses.values.toList(),
         singletons: sameFileSingletonInfos,
         classes: classTable,
