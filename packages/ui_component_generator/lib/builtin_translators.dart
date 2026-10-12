@@ -18,6 +18,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const RowTranslator())
     ..register(const TextTranslator())
     ..register(const ElevatedButtonTranslator())
+    ..register(const FilledButtonTranslator())
     ..register(const TextButtonTranslator())
     ..register(const OutlinedButtonTranslator())
     ..register(const SizedBoxTranslator())
@@ -249,6 +250,17 @@ class ElevatedButtonTranslator extends _ButtonTranslator {
 
   @override
   String get kind => 'elevated';
+}
+
+/// FilledButton：M3 填充按钮（默认色背景、无边框）。
+class FilledButtonTranslator extends _ButtonTranslator {
+  const FilledButtonTranslator();
+
+  @override
+  String get type => 'FilledButton';
+
+  @override
+  String get kind => 'filled';
 }
 
 /// TextButton：无背景文字按钮。

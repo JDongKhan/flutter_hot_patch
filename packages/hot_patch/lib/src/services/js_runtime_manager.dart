@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode, defaultTargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_js/flutter_js.dart';
@@ -12,10 +11,6 @@ import '../js_ui/runtime_source.dart';
 import '../utils/hot_patch_log.dart';
 
 /// JS 运行时管理器：与底层 [JavascriptRuntime] **一对一**。
-///
-/// [debugMode] 控制 JS 侧 `kDebugMode` 标志（console.debug 是否输出）：
-/// 默认跟随 Dart `kDebugMode`，测试/灰度可显式覆盖。
-///
 /// 每个 [JsRuntimeManager] 内部持有一个 [JavascriptRuntime]，所有与
 /// JavascriptRuntime 相关的操作（创建、求值、通道注册、生命周期）都在
 /// 本类内部消化；JsUiWidget 等使用方只接触 [JsRuntimeManager]，
@@ -84,10 +79,6 @@ class JsRuntimeManager {
   /// 所有活跃 manager（static 跟踪）：[registerHostMethod] 的返回值回填
   /// （`__jsui.resolve`）需要对每个 runtime 求值一次。
   static final Set<JsRuntimeManager> _instances = {};
-
-  /// JS 侧 `kDebugMode` 标志（console.debug 是否输出）：
-  /// 默认跟随 Dart [kDebugMode]，可显式覆盖（如灰度环境强制关闭调试日志）。
-  bool debugMode = kDebugMode;
 
   // ---------------------------------------------------------------------
   // 全局共享（static）：唯一消息处理器表
@@ -216,38 +207,16 @@ class JsRuntimeManager {
 
   /// 确保 js_ui 运行时骨架就位（幂等）。
   ///
-  /// 注入两块**框架代码**（均在 `js_ui/runtime_source.dart` 集中维护）：
-  ///   - `jsUiRuntimeSource`：element/component/reconciler/context + commit 协议；
-  ///   - `jsRuntimeEnvSource`：模块表 `__modules`、编译/平台标志、console 桥、
-  ///     ChangeNotifier 基类。
+  /// 注入**一块**框架代码（`js_ui/runtime_source.dart` 集中维护）：
+  /// [jsUiRuntimeSource]（IIFE）——运行环境全局（模块表 `__modules` /
+  /// 编译平台标志 / console 桥，挂在 globalThis）+ element/component/
+  /// reconciler/context + 能力桥 + ChangeNotifier 基类 + commit 协议。
   /// 与具体组件无关；组件/模型/按 package 生成的 widget 模块仍走 [loadModule]。
   void ensureJsUiRuntime() {
-    // 环境全局先注入：它单点声明/创建模块表 `__modules`（骨架只往里登记
-    // core）。env 不依赖 `__jsui`（console 仅在调用时才读 `__jsui.host`），
-    // 故先 env 后骨架安全。
-    _ensureRuntimeEnv();
     if (!_jsUiInited) {
-      _eval(jsUiRuntimeSource, 'jsUiRuntimeSource');
+      _eval(jsUiRuntimeSource(), 'jsUiRuntimeSource');
       _jsUiInited = true;
     }
-  }
-
-  /// 注入运行时环境全局（模块表 / 标志 / console / ChangeNotifier），幂等。
-  /// 依赖 Dart 侧标志，故由 [jsRuntimeEnvSource] 生成；[loadModule] 与
-  /// [ensureJsUiRuntime] 都会调用它，保证模块产物求值前全局已就位。
-  void _ensureRuntimeEnv() {
-    if (_envInited) {
-      return;
-    }
-    _eval(
-      jsRuntimeEnvSource(
-        debugMode: debugMode,
-        releaseMode: kReleaseMode,
-        platform: defaultTargetPlatform,
-      ),
-      'jsRuntimeEnvSource',
-    );
-    _envInited = true;
   }
 
   // ---------------------------------------------------------------------
@@ -294,9 +263,9 @@ class JsRuntimeManager {
       await loadModule(dep, localRoot: localRoot);
     }
 
-    // 2) 模块产物求值前确保运行时环境全局（__modules / 标志 / console /
-    //    ChangeNotifier）已注入 —— 与 js_ui 骨架同源维护，幂等。
-    _ensureRuntimeEnv();
+    // 2) 模块产物求值前确保运行时骨架（含环境全局 __modules / 标志 /
+    //    console / ChangeNotifier）已注入 —— 幂等。
+    ensureJsUiRuntime();
 
     // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）后求值
     try {
@@ -422,9 +391,6 @@ $out
   /// 并发加载等待表：同 jsAsset 正在加载时，后续调用者 await 对应
   /// Completer，等首个加载完成后再继续（防 mount 在模块加载前执行）。
   final Map<String, Completer<void>> _loadingCompleters = {};
-
-  /// 运行时环境全局（__modules / 标志 / console / ChangeNotifier）是否已注入。
-  bool _envInited = false;
 
   /// 桥通道回调：解出消息体 `ch` 字段，二次分发到唯一处理器表。
   ///

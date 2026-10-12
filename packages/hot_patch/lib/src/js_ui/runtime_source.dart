@@ -21,11 +21,13 @@
 /// `this.__bind("方法/表达式")` 绑定到产出该结点的组件实例（Dart tear-off 语义），
 /// 宿主点击只回传句柄 id，无任何运行时树形状启发。
 ///
-/// 本文件集中维护 JS 侧**框架代码**，由 JsRuntimeManager 分两块注入（幂等）：
-///   - [jsUiRuntimeSource]：UI 运行时骨架（element/component/reconciler/
-///     context/订阅 + commit 协议），与组件无关；
-///   - [jsRuntimeEnvSource]：运行时环境全局（模块表 `__modules`、编译/平台
-///     标志、console 桥、ChangeNotifier 基类），依赖 Dart 侧注入的标志。
+/// 本文件集中维护 JS 侧**框架代码**，由 JsRuntimeManager 单入口注入（幂等）：
+///   - [jsUiRuntimeSource]：UI 运行时骨架（IIFE）——环境全局（模块表
+///     `__modules`、编译/平台标志、console 桥，挂 globalThis）+ element/
+///     component/reconciler/context/订阅 + 能力桥 + ChangeNotifier 基类 +
+///     commit 协议，与组件无关；
+///   - 核心片段拆分：mini-react（mini_react_js.dart）、ChangeNotifier
+///     （change_notifier_js.dart）、能力桥（capabilities/）。
 ///
 /// **分区导航**（`jsUiRuntimeSource` 内以 `// ===== 【n】` 分隔，按代码顺序）：
 ///
@@ -46,7 +48,8 @@
 /// 「这段代码是为哪个设计写的」。
 library;
 
-import 'package:flutter/foundation.dart' show TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kReleaseMode, defaultTargetPlatform, TargetPlatform;
 
 // 能力 JS 片段（各能力文件内聚，runtime_source 拼接注入）：
 //   - capabilities/scroll_controller_js.dart      → ScrollController 代理类
@@ -58,13 +61,66 @@ import 'change_notifier_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
-const String _jsUiGlobals = r'''
+/// IIFE 骨架第一段：全局对象 + 运行环境（模块表 / 编译平台标志 / console
+/// 桥，原 jsRuntimeEnvSource 并入）。环境全局在 IIFE 内挂 G（globalThis），
+/// 产物（模块 evaluate）经全局对象裸引用可见，与顶层 var 语义等价。
+String _jsUiGlobals() => _jsUiGlobalsHead + _jsUiEnvVars() + _jsUiGlobalsTail;
+
+/// 静态头部：IIFE 入口 + 全局对象 + 幂等守卫。
+const String _jsUiGlobalsHead = r'''
+
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
   if (G.__jsui) { return; }
+''';
+/// env 标志（插值生成）：模块表 / 编译平台标志 / console 桥。
+/// 直接引用 Flutter 全局 [kDebugMode] / [kReleaseMode] / [defaultTargetPlatform]，
+/// 不再经参数传递。
+String _jsUiEnvVars() =>
+    '''
+
+
+if (typeof G.__modules === 'undefined') {
+  G.__modules = {};
+}
+// 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
+// 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
+// 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
+G.kDebugMode = $kDebugMode;
+G.kReleaseMode = $kReleaseMode;
+G.Platform = {
+  isAndroid: ${defaultTargetPlatform == TargetPlatform.android},
+  isIOS: ${defaultTargetPlatform == TargetPlatform.iOS},
+  isMacOS: ${defaultTargetPlatform == TargetPlatform.macOS},
+  isWindows: ${defaultTargetPlatform == TargetPlatform.windows},
+  isLinux: ${defaultTargetPlatform == TargetPlatform.linux},
+  isFuchsia: ${defaultTargetPlatform == TargetPlatform.fuchsia}
+};
+// JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
+// 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
+// G.console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
+// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
+// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
+// debug/info/log/warn/error 全部可用且路由到 log 服务。
+// 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
+// 故 Promise 一定被回填、不会悬挂。
+G.console = (typeof G.console === 'undefined') ? {} : G.console;
+function __log(m) {
+  if (typeof G.__jsui !== 'undefined' && G.__jsui.host) {
+    __jsui.host('log', [String(m)]);
+  }
+}
+G.console.debug = function(m) { if (G.kDebugMode) { __log(m); } };
+G.console.info = function(m) { __log(m); };
+G.console.log = function(m) { __log(m); };
+G.console.warn = function(m) { __log(m); };
+G.console.error = function(m) { __log(m); }
+''';
+/// 静态尾部：骨架状态与工具（原 _jsUiGlobals 其余）。
+const String _jsUiGlobalsTail = r'''
 
   // ===== 【1】运行环境｜全局状态与工具 ==================================
   var idSeq = 0;
@@ -242,8 +298,8 @@ const String _jsUiRuntimeSkeletonTail = r'''
   };
 
   G.__jsui = api;
-  // 模块表 `__modules` 由环境全局（jsRuntimeEnvSource）单点声明/创建，
-  // 骨架注入前必已就位；此处只登记 core，不再自带一份守卫。
+  // 模块表 `__modules` 由同一 IIFE 首段（_jsUiEnvVars）创建（挂 G），
+  // 此处只登记 core，不再自带守卫。
   G.__modules['js_ui/core'] = api;
 })();
 ''';
@@ -253,8 +309,11 @@ const String _jsUiRuntimeSkeletonTail = r'''
 /// 片段间靠函数提升/后声明互相引用，与拆分前语义一致）。
 /// UI 运行时源码 = 骨架各分区 + 各能力 JS 片段拼接（片段见上；同一 IIFE
 /// 作用域，片段间靠函数提升/后声明互相引用，与拆分前语义一致）。
-final String jsUiRuntimeSource = [
-  _jsUiGlobals,
+/// js_ui 运行时骨架（IIFE），由 [ensureJsUiRuntime] 注入。
+/// 环境全局（模块表 / 标志 / console）并入 [_jsUiGlobals]；ChangeNotifier
+/// 基类经 [changeNotifierSource] 拼接（均在 IIFE 内定义、挂 G 暴露给产物）。
+String jsUiRuntimeSource() => [
+  _jsUiGlobals(),
   _jsUiEmit,
   _jsUiHostBridge,
   miniReactElementSource,
@@ -264,6 +323,7 @@ final String jsUiRuntimeSource = [
   miniReactSchedulerSource,
   miniReactReconcilerSource,
   _jsUiApi,
+  changeNotifierSource,
   scrollControllerJsSource,
   textEditingControllerJsSource,
   _jsUiRuntimeSkeletonTail,
@@ -283,51 +343,3 @@ final String jsUiRuntimeSource = [
 /// 内容：模块注册表 `__modules`、编译/运行期标志、console 桥（ChangeNotifier
 /// 基类已拆到 change_notifier_js.dart，不属于 env）。**顶层书写（不包 IIFE）**：
 /// `var` 声明必须落到全局，供后续 `evaluate` 的模块产物（`__modules[...] =
-/// ...`）与产物里裸引用的 `kDebugMode` / `Platform` / `console` 可见。
-/// 重复求值安全（`var`/`function` 重复声明无副作用），由调用方做一次幂等注入。
-String jsRuntimeEnvSource({
-  required bool debugMode,
-  required bool releaseMode,
-  required TargetPlatform platform,
-}) {
-  final env = '''
-
-if (typeof __modules === 'undefined') {
-  var __modules = {};
-}
-// 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
-// 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
-// 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
-var kDebugMode = $debugMode;
-var kReleaseMode = $releaseMode;
-var Platform = {
-  isAndroid: ${platform == TargetPlatform.android},
-  isIOS: ${platform == TargetPlatform.iOS},
-  isMacOS: ${platform == TargetPlatform.macOS},
-  isWindows: ${platform == TargetPlatform.windows},
-  isLinux: ${platform == TargetPlatform.linux},
-  isFuchsia: ${platform == TargetPlatform.fuchsia}
-};
-// JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
-// 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
-// console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
-// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
-// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
-// debug/info/log/warn/error 全部可用且路由到 log 服务。
-// 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
-// 故 Promise 一定被回填、不会悬挂。
-var console = (typeof console === 'undefined') ? {} : console;
-function __log(m) {
-  if (typeof __jsui !== 'undefined' && __jsui.host) {
-    __jsui.host('log', [String(m)]);
-  }
-}
-console.debug = function(m) { if (kDebugMode) { __log(m); } };
-console.info = function(m) { __log(m); };
-console.log = function(m) { __log(m); };
-console.warn = function(m) { __log(m); };
-console.error = function(m) { __log(m); }
-''';
-  // env 是已求值的字符串（内部插值在定义时完成），外层插值安全。
-  return '$env\n$changeNotifierSource';
-}

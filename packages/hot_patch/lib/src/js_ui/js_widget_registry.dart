@@ -351,21 +351,15 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         child: c.childOrEmpty,
       ));
 
-  r.register('FilledButton', (c) => FilledButton(
-        onPressed: c.on('onPressed'),
-        style: buttonStyleFromJson(c.map('style')),
-        child: c.childOrEmpty,
-      ));
-
   r.register('TextButton', (c) => TextButton(
         onPressed: c.on('onPressed'),
         style: buttonStyleFromJson(c.map('style')),
         child: c.childOrEmpty,
       ));
 
-  // Button：生成器把 ElevatedButton/TextButton/OutlinedButton 统一译为
-  // `{type:'Button', props:{kind, label, event}}`，event 是运行时事件句柄
-  // （或 null 表示禁用）→ 点击经宿主把句柄 id 回传 JS 侧执行。
+  // Button：生成器把 ElevatedButton/FilledButton/TextButton/OutlinedButton
+  // 统一译为 `{type:'Button', props:{kind, label, event}}`，event 是运行时事件
+  // 句柄（或 null 表示禁用）→ 点击经宿主把句柄 id 回传 JS 侧执行。
   r.register('Button', (c) {
     final style = buttonStyleFromJson(c.map('style'));
     final label = Text(c.str('label') ?? '');
@@ -374,6 +368,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       'text' => TextButton(onPressed: onPressed, style: style, child: label),
       'outlined' =>
         OutlinedButton(onPressed: onPressed, style: style, child: label),
+      'filled' => FilledButton(onPressed: onPressed, style: style, child: label),
       _ => ElevatedButton(onPressed: onPressed, style: style, child: label),
     };
   });
@@ -656,7 +651,7 @@ Widget buildMissingJsWidget(String type, List<Widget> children) {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('<未注册 widget: $type>', style: const TextStyle(fontSize: 11, color: Color(0xFFB00020))),
+        Text('<missing widget: $type>', style: const TextStyle(fontSize: 11, color: Color(0xFFB00020))),
         ...children,
       ],
     ),
