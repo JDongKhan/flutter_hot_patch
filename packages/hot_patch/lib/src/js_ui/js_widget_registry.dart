@@ -351,6 +351,12 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         child: c.childOrEmpty,
       ));
 
+  r.register('FilledButton', (c) => FilledButton(
+        onPressed: c.on('onPressed'),
+        style: buttonStyleFromJson(c.map('style')),
+        child: c.childOrEmpty,
+      ));
+
   r.register('TextButton', (c) => TextButton(
         onPressed: c.on('onPressed'),
         style: buttonStyleFromJson(c.map('style')),

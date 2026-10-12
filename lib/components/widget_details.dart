@@ -985,7 +985,7 @@ class _InputDetailState extends State<InputDetail> {
   void initState() {
     super.initState();
     // controller 监听：输入回传（__onHostText）与 clear() 都会触发，
-    // 从 controller.text 镜像取值驱动 _text 显示。
+    // 从 controller.text 镜像取值驱动 _text 显示（与 Dart 写法一致）。
     _controller.addListener(_onControllerChanged);
   }
 
@@ -1035,7 +1035,8 @@ class _InputDetailState extends State<InputDetail> {
         ),
         const SizedBox(height: 4),
         Text('输入内容：$_text', style: const TextStyle(fontSize: 14, color: Colors.grey)),
-        // 验证 JS 侧读 controller.text 镜像（经 __onHostText 回传）。
+        // 验证 JS 侧读 controller.text 镜像（经 __onHostText 回传），
+        // 插值写法与 Dart 侧源码一比一。
         Text('controller.text：${_controller.text}', style: const TextStyle(fontSize: 14, color: Colors.deepPurple)),
         const SizedBox(height: 8),
         // 验证 JS 侧写 controller（clear() → host 通道清空宿主真实 controller）。
