@@ -11,7 +11,7 @@ import { ListView, __h } from '../../flutter.js';
 // 组件 OrdersPage
 export class OrdersPage {
   constructor(args) {
-    this.initialStatus = (args && args.initialStatus !== undefined) ? args.initialStatus : '';
+    this.initialStatus = (args && args.initialStatus !== undefined) ? args.initialStatus : null;
     this._status = (this.initialStatus ?? kOrderStatus[0]);
   }
   get _list() {
@@ -52,7 +52,7 @@ export class OrdersPage {
               ])
           ]),
         __h('Expanded', {}, [
-            ((this._list.length === 0) ? [__h('Center', {}, [ __h('Text', { "data": "该状态下暂无订单", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ])] : [__h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "builder": "_listViewBuilder0", "itemCount": this._list.length, "separatorBuilder": "_listViewBuilderSeparator1" })])
+            ((this._list.length === 0) ? __h('Center', {}, [ __h('Text', { "data": "该状态下暂无订单", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ]) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "builder": "_listViewBuilder0", "itemCount": this._list.length, "separatorBuilder": "_listViewBuilderSeparator1" }))
           ])
       ]);
   }

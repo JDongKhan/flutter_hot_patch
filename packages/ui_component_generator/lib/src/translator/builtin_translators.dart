@@ -27,6 +27,8 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const ChipTranslator())
     ..register(const ListTileTranslator())
     ..register(const ClipRRectTranslator())
+    ..register(const ClipOvalTranslator())
+    ..register(const MaterialTranslator())
     // 布局
     ..register(const ScaffoldTranslator())
     ..register(const AppBarTranslator())
@@ -415,6 +417,46 @@ class ClipRRectTranslator extends WidgetTranslator {
     final child = ctx.namedArg(node.args, 'child');
     if (child != null) props['child'] = ctx.translate(child);
     return {'type': ctx.jsString('ClipRRect'), 'props': props};
+  }
+}
+
+/// ClipOval：圆形裁剪（clipBehavior + child）。「我的」页头像用
+/// `ClipOval(child: Image.network(...))` 裁成圆形。
+class ClipOvalTranslator extends WidgetTranslator {
+  const ClipOvalTranslator();
+
+  @override
+  String get type => 'ClipOval';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final clip = clipBehaviorToJson(ctx.namedArg(node.args, 'clipBehavior'));
+    if (clip != null) props['clipBehavior'] = clip;
+    final child = ctx.namedArg(node.args, 'child');
+    if (child != null) props['child'] = ctx.translate(child);
+    return {'type': ctx.jsString('ClipOval'), 'props': props};
+  }
+}
+
+/// Material：底纹/阴影容器（color + elevation + child）。社区页筛选面板用
+/// `Material(color: Colors.white, elevation: 8, child: ...)` 做浮层阴影。
+class MaterialTranslator extends WidgetTranslator {
+  const MaterialTranslator();
+
+  @override
+  String get type => 'Material';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
+    if (color != null) props['color'] = color;
+    final elevation = numLiteralJs(ctx.namedArg(node.args, 'elevation'));
+    if (elevation != null) props['elevation'] = elevation;
+    final child = ctx.namedArg(node.args, 'child');
+    if (child != null) props['child'] = ctx.translate(child);
+    return {'type': ctx.jsString('Material'), 'props': props};
   }
 }
 

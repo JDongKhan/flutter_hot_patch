@@ -423,6 +423,15 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     // 不在这里拦下来，会落到下面的「大写开头前缀原样保留」，产出未定义的 JS
     // 全局 `Icons`——作为组件实参（`_DevRow(icon: Icons.x)`）直接运行时崩。
     if (e.prefix.name == 'Icons') return jsString(e.identifier.name);
+    // `Colors.white` → 色值字符串（'#FFFFFF'）。不在这里拦下来会落到下面
+    // 「大写开头前缀原样保留」，产出**未定义全局** `Colors`——组件实参
+    // （`Material(color: Colors.white)`）在 build() 求值对象字面量时即
+    // ReferenceError：事件 setState 触发的重建整棵抛错并被吞掉，表现为
+    // 「点击有反馈但状态永不更新」。
+    if (e.prefix.name == 'Colors') {
+      final hex = materialColorHex(e.identifier.name);
+      if (hex != null) return "'#$hex'";
+    }
     final p = scope.fieldRef(e.prefix.name);
     String? base;
     if (p != null) {
@@ -544,7 +553,14 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (flag != null) return flag;
   }
   if (e is PropertyAccess && e.target != null) {
-    final t = exprToJs(e.target!, scope, classes);
+    // `Colors.blue.shade100` 等 MaterialColor 变体：产物放 '@Colors.blue.shade100'
+    // 标记，运行时按 Flutter 官方 Colors 常量解析（与样式翻译同一约定，绝不
+    // 产出未定义的 `Colors` 全局）。
+    final tgt = e.target;
+    if (tgt is PrefixedIdentifier && tgt.prefix.name == 'Colors') {
+      return "'@Colors.${tgt.identifier.name}.${e.propertyName.name}'";
+    }
+    final t = exprToJs(tgt!, scope, classes);
     if (t == null) return null;
     final op = e.operator.lexeme;
     if (op == '?.') {
@@ -1566,6 +1582,37 @@ String? _widgetExprToJs(WidgetExprRenderer? widgetCtx, Expression e, int depth) 
     return null;
   }
 }
+
+/// Material 主色板（500 档）→ hex（不含 #）。放通用表达式层：任意表达式位置
+/// （组件实参、数据绑定、样式属性）都能解析 `Colors.*`，避免某一处漏掉后
+/// 产出未定义的 `Colors` 全局。样式翻译（style_translators）复用同一份表。
+const Map<String, String> materialColors = {
+  'red': 'F44336',
+  'pink': 'E91E63',
+  'purple': '9C27B0',
+  'deepPurple': '673AB7',
+  'indigo': '3F51B5',
+  'blue': '2196F3',
+  'lightBlue': '03A9F4',
+  'cyan': '00BCD4',
+  'teal': '009688',
+  'green': '4CAF50',
+  'lightGreen': '8BC34A',
+  'lime': 'CDDC39',
+  'yellow': 'FFEB3B',
+  'amber': 'FFC107',
+  'orange': 'FF9800',
+  'deepOrange': 'FF5722',
+  'brown': '795548',
+  'grey': '9E9E9E',
+  'blueGrey': '607D8B',
+  'black': '000000',
+  'white': 'FFFFFF',
+};
+
+/// `Colors.<name>` → hex（不含 #）；非主色板名（含 `.shadeNNN` 形态由调用方
+/// 单独处理）返回 null。
+String? materialColorHex(String name) => materialColors[name];
 
 /// `Color(0xAARRGGBB)` / `Color.fromARGB(a, r, g, b)` → JS 颜色字符串
 /// `'#aarrggbb'`（运行时按 '#rrggbb' 解析为 Color，与样式翻译同一契约）。

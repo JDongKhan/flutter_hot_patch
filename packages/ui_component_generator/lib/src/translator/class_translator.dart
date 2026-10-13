@@ -381,6 +381,11 @@ Expression? _methodExpression(MethodDeclaration m) {
 /// 保证 JS 侧漏传 props 时遍历/取值不炸；对象类型（模型字段）给 `null`
 /// ——给 `0` 会让「漏传」变成更难排查的假数据。
 String _defaultInitial(String typeName) {
+  // 可空类型（`String?` / `int?` / `List<T>?`）无初始化器时 Dart 语义就是 null，
+  // 不能给类型默认值：`''`/`0`/`false` 会让 `x ?? 回退值` 直接取到该默认值而
+  // 永不回退（订单页 `widget.initialStatus ?? kOrderStatus.first` 因此把「全部」
+  // 筛成空列表）。
+  if (typeName.trim().endsWith('?')) return 'null';
   final t = eraseType(typeName);
   if (t == 'String') return "''";
   if (t == 'bool') return 'false';

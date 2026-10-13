@@ -158,8 +158,8 @@ export class PostRow {
     this.img = (args && args.img !== undefined) ? args.img : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.sub = (args && args.sub !== undefined) ? args.sub : '';
-    this.trailing = (args && args.trailing !== undefined) ? args.trailing : '';
-    this.footNote = (args && args.footNote !== undefined) ? args.footNote : '';
+    this.trailing = (args && args.trailing !== undefined) ? args.trailing : null;
+    this.footNote = (args && args.footNote !== undefined) ? args.footNote : null;
   }
   build() {
     return __h('Container', {

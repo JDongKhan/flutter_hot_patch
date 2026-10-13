@@ -157,8 +157,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 
   /// 把 build() 里的一个 widget 表达式翻译成中立描述（渲染层据此产出 JS）。
   ///
-  /// 返回 Map = 普通节点；返回 String = JS 表达式（widget 位置三目
-  /// `cond ? A() : B()` → `(condJs ? [A] : [B])`），渲染层对 String 原样嵌入。
+  /// 返回 Map = 普通节点；返回 String = **单元素**位置的 JS 源码，渲染层原样
+  /// 内联（widget 位置三目 `cond ? A() : B()` → `(condJs ? A : B)`，每支各是
+  /// **一个**元素，不是数组——见 [_elementExprJs]）。
   ///
   /// **单个叶子失败不再炸掉整棵 build 树**（放大器缺陷修复）：每次递归调用
   /// 各自兜底——坏叶子降级为占位结点 + 构建期告警，兄弟结点照常翻译。
@@ -174,9 +175,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 
   Object? _translateExpr(Expression e) {
     if (e is ConditionalExpression) {
+      // widget 位置三目：每支都是**单个**元素（`child: cond ? A : B`）。
+      // 绝不能走 [_collectionArrayJs]——那产出的是「元素数组」，用在单子位置
+      // 会变成 children 里的嵌套数组（`[ (cond ? [A] : [B]) ]`），运行时
+      // `mount` 拿到数组 → `el.type` undefined → `new el.type` 抛错。
       final cond = jsDataExpr(e.condition);
-      final thenJs = _collectionArrayJs(e.thenExpression);
-      final elseJs = _collectionArrayJs(e.elseExpression);
+      final thenJs = _elementExprJs(e.thenExpression);
+      final elseJs = _elementExprJs(e.elseExpression);
       return '($cond ? $thenJs : $elseJs)';
     }
     // widget 位置上可能是「构造形态」的只有：InstanceCreationExpression
@@ -344,6 +349,17 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// `...spread` / IIFE / 三目）原样内联，节点 Map 走 [renderJs]。
   String _elementJs(CollectionElement e) {
     final t = translateElement(e);
+    return t is String ? t : renderJs(t, 2);
+  }
+
+  /// 单个 widget 表达式 → JS 源码（**单元素**语义）：节点 Map 走 [renderJs]，
+  /// 已是 JS 表达式（三目 / 字段引用 / 方法调用）原样内联。
+  ///
+  /// 与 [_elementJs] 的分工：后者输入是「集合元素」（数组语义，可带 spread），
+  /// 本方法输入是「元素本身」（如 `child: cond ? A : B` 的单支、单子组件的
+  /// 实参）——绝不能产出数组字面量，否则会变成 children 里的嵌套数组。
+  String _elementExprJs(Expression e) {
+    final t = translate(e);
     return t is String ? t : renderJs(t, 2);
   }
 

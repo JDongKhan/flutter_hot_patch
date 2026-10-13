@@ -209,10 +209,10 @@ String? translateColor(Expression e, WidgetTranslateContext ctx) {
     }
     return null;
   }
-  // Colors.red（静态引用）
+  // Colors.red（静态引用）：主色板表与通用表达式层共用同一份。
   final (owner, name) = _staticRef(e);
   if (owner == 'Colors') {
-    final hex = _materialColors[name];
+    final hex = materialColorHex(name ?? '');
     if (hex != null) return "'#$hex'";
     return null;
   }
@@ -291,30 +291,8 @@ Expression _unwrapWidgetState(Expression e) {
   return (null, const []);
 }
 
-/// Material 主色板（500 档）→ hex（不含 #）。
-const Map<String, String> _materialColors = {
-  'red': 'F44336',
-  'pink': 'E91E63',
-  'purple': '9C27B0',
-  'deepPurple': '673AB7',
-  'indigo': '3F51B5',
-  'blue': '2196F3',
-  'lightBlue': '03A9F4',
-  'cyan': '00BCD4',
-  'teal': '009688',
-  'green': '4CAF50',
-  'lightGreen': '8BC34A',
-  'lime': 'CDDC39',
-  'yellow': 'FFEB3B',
-  'amber': 'FFC107',
-  'orange': 'FF9800',
-  'deepOrange': 'FF5722',
-  'brown': '795548',
-  'grey': '9E9E9E',
-  'blueGrey': '607D8B',
-  'black': '000000',
-  'white': 'FFFFFF',
-};
+/// Material 主色板（500 档）→ hex 表已收敛到通用表达式层（js_translator.dart
+/// 的 [materialColors]），样式翻译与数据表达式共用同一份，见 [materialColorHex]。
 
 // ---------------------------------------------------------------------------
 // 新增辅助 toJson（ButtonStyle 扩展 / Text 属性扩展共用）

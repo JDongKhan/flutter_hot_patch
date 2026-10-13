@@ -222,97 +222,94 @@ export class _FilterPanel {
       ]);
   }
   build() {
-    return __h("Component", {
-        "component": "Material",
-        "args": {
-          "color": Colors.white,
-          "elevation": 8,
-          "child": __h('Padding', {
-              "padding": {
-                "left": 16.0,
-                "top": 16.0,
-                "right": 16.0,
-                "bottom": 14.0
-              }
-            }, [
-              __h('Column', {
-                  "crossAxisAlignment": "start"
-                }, [
-                  this._group("排序方式", "sort", kSorts, this.sort),
-                  __h('SizedBox', {
-                      "height": 16
-                    }),
-                  this._group("内容类型", "type", kPostTypes, this.type),
-                  __h('SizedBox', {
-                      "height": 16
-                    }),
-                  this._group("距离范围", "dist", kDists, this.dist),
-                  __h('SizedBox', {
-                      "height": 16
-                    }),
-                  this._group("价格区间", "price", kPriceRanges, this.price),
-                  __h('SizedBox', {
-                      "height": 18
-                    }),
-                  __h('Row', {}, [
-                      __h('Expanded', {}, [
-                          __h('GestureDetector', {
-                              "event": this.__bind("this.onReset()")
-                            }, [
-                              __h('Container', {
-                                  "height": 42,
-                                  "alignment": "center",
-                                  "decoration": {
-                                    "color": '#fff3f5f8',
-                                    "borderRadius": {
-                                      "radius": 21.0
-                                    }
+    return __h('Material', {
+        "color": '#FFFFFF',
+        "elevation": 8,
+        "child": __h('Padding', {
+            "padding": {
+              "left": 16.0,
+              "top": 16.0,
+              "right": 16.0,
+              "bottom": 14.0
+            }
+          }, [
+            __h('Column', {
+                "crossAxisAlignment": "start"
+              }, [
+                this._group("排序方式", "sort", kSorts, this.sort),
+                __h('SizedBox', {
+                    "height": 16
+                  }),
+                this._group("内容类型", "type", kPostTypes, this.type),
+                __h('SizedBox', {
+                    "height": 16
+                  }),
+                this._group("距离范围", "dist", kDists, this.dist),
+                __h('SizedBox', {
+                    "height": 16
+                  }),
+                this._group("价格区间", "price", kPriceRanges, this.price),
+                __h('SizedBox', {
+                    "height": 18
+                  }),
+                __h('Row', {}, [
+                    __h('Expanded', {}, [
+                        __h('GestureDetector', {
+                            "event": this.__bind("this.onReset()")
+                          }, [
+                            __h('Container', {
+                                "height": 42,
+                                "alignment": "center",
+                                "decoration": {
+                                  "color": '#fff3f5f8',
+                                  "borderRadius": {
+                                    "radius": 21.0
                                   }
-                                }, [
-                                  __h('Text', {
-                                      "data": "重置",
-                                      "style": {
-                                        "fontSize": 14,
-                                        "fontWeight": "w600",
-                                        "color": '#ff5c6270'
-                                      }
-                                    })
-                                ])
-                            ])
-                        ]),
-                      __h('SizedBox', {
-                          "width": 10
-                        }),
-                      __h('Expanded', {}, [
-                          __h('GestureDetector', {
-                              "event": this.__bind("this.onApply()")
-                            }, [
-                              __h('Container', {
-                                  "height": 42,
-                                  "alignment": "center",
-                                  "decoration": {
-                                    "color": kBrand,
-                                    "borderRadius": {
-                                      "radius": 21.0
+                                }
+                              }, [
+                                __h('Text', {
+                                    "data": "重置",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "fontWeight": "w600",
+                                      "color": '#ff5c6270'
                                     }
+                                  })
+                              ])
+                          ])
+                      ]),
+                    __h('SizedBox', {
+                        "width": 10
+                      }),
+                    __h('Expanded', {}, [
+                        __h('GestureDetector', {
+                            "event": this.__bind("this.onApply()")
+                          }, [
+                            __h('Container', {
+                                "height": 42,
+                                "alignment": "center",
+                                "decoration": {
+                                  "color": kBrand,
+                                  "borderRadius": {
+                                    "radius": 21.0
                                   }
-                                }, [
-                                  __h('Text', {
-                                      "data": "查看结果",
-                                      "style": {
-                                        "fontSize": 14,
-                                        "fontWeight": "w600",
-                                        "color": '#FFFFFF'
-                                      }
-                                    })
-                                ])
-                            ])
-                        ])
-                    ])
-                ])
-            ])
-        }
-      }, null);
+                                }
+                              }, [
+                                __h('Text', {
+                                    "data": "查看结果",
+                                    "style": {
+                                      "fontSize": 14,
+                                      "fontWeight": "w600",
+                                      "color": '#FFFFFF'
+                                    }
+                                  })
+                              ])
+                          ])
+                      ])
+                  ])
+              ])
+          ])
+      });
   }
 }
 

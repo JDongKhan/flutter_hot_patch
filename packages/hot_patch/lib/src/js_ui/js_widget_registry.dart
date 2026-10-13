@@ -246,6 +246,28 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
+  r.register('ClipOval', (c) => ClipOval(
+        clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
+        child: c.propChild('child'),
+      ));
+
+  r.register('Material', (c) => Material(
+        color: colorFromJson(c.props['color']),
+        elevation: c.num_('elevation') ?? 0,
+        child: c.propChild('child'),
+      ));
+
+  // Transform.translate：位移（props.offset = {dx, dy}）+ child。
+  r.register('Transform', (c) {
+    final offset = c.map('offset') ?? const <String, dynamic>{};
+    final dx = (offset['dx'] as num?)?.toDouble() ?? 0;
+    final dy = (offset['dy'] as num?)?.toDouble() ?? 0;
+    return Transform.translate(
+      offset: Offset(dx, dy),
+      child: c.propChild('child'),
+    );
+  });
+
   r.register('Card', (c) => Card(
         elevation: c.num_('elevation'),
         margin: edgeInsetsFromJson(c.map('margin')),

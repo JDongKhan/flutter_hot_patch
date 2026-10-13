@@ -52,17 +52,14 @@ export class MinePage {
                     "event": this.__bind("__jsui.host(\"openLogin\", [])")
                   }, [
                     __h('Row', {}, [
-                        __h("Component", {
-                            "component": "ClipOval",
-                            "args": {
-                              "child": __h('Image', {
-                                  "source": kAvatarImg,
-                                  "width": 58,
-                                  "height": 58,
-                                  "fit": "cover"
-                                })
-                            }
-                          }, null),
+                        __h('ClipOval', {
+                            "child": __h('Image', {
+                                "source": kAvatarImg,
+                                "width": 58,
+                                "height": 58,
+                                "fit": "cover"
+                              })
+                          }),
                         __h('SizedBox', {
                             "width": 13
                           }),
