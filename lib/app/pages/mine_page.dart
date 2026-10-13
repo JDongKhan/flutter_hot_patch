@@ -1,32 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:ui_component/ui_component.dart';
 
+import '../../base/app_router.dart';
 import '../../base/web_view.dart';
-import '../../components/widget_showcase.dart';
-// 开发者 Demo 列表（原生 vs JS 同屏对比）仍挂在 main.dart 的调试入口上，
-// 这里直接复用；main.dart 也会 import 本文件所在的 app 外壳，属于 Dart
-// 允许的循环引用，两边都只用到对方的顶层声明。
-import '../../main.dart';
 import '../model/app_data.dart';
 import 'detail_pages.dart';
-import 'orders_page.dart';
 
-/// 我的 tab（`@UIComponentIgnore` → 不参与连带翻译，运行时原生注入）。
+/// 我的 tab（`@UIComponent` → 连带翻译，产物 patch/app/pages/mine_page.js）。
 ///
 /// 对应 docs/app-prototype.html 的「我的」：渐变个人信息头（点击进登录页）
 /// + 订单统计四项 + 功能菜单 + 退出登录。末尾额外挂两项**开发者入口**：
 /// 「组件案例」（widget_details 的常用组件 demo 列表）与「热更 Demo 列表」。
 ///
-/// 本页用了翻译器覆盖不到的构造（方法体 tear-off `onOpenTab`、
-/// `Navigator.push(MaterialPageRoute(...))`、集合 for 展开、静态 const 颜色表），
-/// 连带翻译会产出空的 `build()`；故显式退出翻译，由宿主 `nativeComponents`
-/// 原生注入。
-@UIComponentIgnore()
+/// 本页用了翻译器覆盖不到的构造（`Navigator.push(MaterialPageRoute(...))`、
+/// 方法体 tear-off 回调），相关跳转统一收敛到 [AppRouter] 的 `@HostInjected`
+/// 通道（与 JS 侧同一条通路）。
+@UIComponent()
 class MinePage extends StatelessWidget {
-  const MinePage({super.key, this.onOpenTab});
-
-  /// 切到指定底部 tab（统计项/菜单里的「我的订单」用它跳到订单 tab）。
-  final void Function(int index)? onOpenTab;
+  const MinePage({super.key});
 
   static const List<Color> _menuTints = [
     Color(0xFFE8F2FF),
@@ -35,25 +26,15 @@ class MinePage extends StatelessWidget {
     Color(0xFFE9F7EF),
   ];
 
-  void _openMenu(BuildContext context, int i) {
+  void _openMenu(int i) {
     final m = kMineMenu[i];
-    switch (m.screen) {
-      case 'orders':
-        // 原生外壳下切到订单 tab；JS 外壳注入的 MinePage 没有回调，退化为 push。
-        if (onOpenTab != null) {
-          onOpenTab!(2);
-        } else {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const OrdersPage()));
-        }
-      case 'showcase':
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const WidgetShowcase()));
-      default:
-        // webview：走与 JS 侧同一条宿主通道（lib/base/web_view.dart）。
-        WebView.open('https://flutter.dev', m.arg.isEmpty ? m.title : m.arg);
+    if (m.screen == 'orders') {
+      AppRouter.openOrders();
+    } else if (m.screen == 'showcase') {
+      AppRouter.openWidgetShowcase();
+    } else {
+      // webview：走与 JS 侧同一条宿主通道（lib/base/web_view.dart）。
+      WebView.open('https://flutter.dev', m.arg.isEmpty ? m.title : m.arg);
     }
   }
 
@@ -75,9 +56,7 @@ class MinePage extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: GestureDetector(
-              onTap: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const LoginPage())),
+              onTap: () => AppRouter.openLogin(),
               child: Row(
                 children: [
                   ClipOval(
@@ -150,7 +129,7 @@ class MinePage extends StatelessWidget {
                 for (final s in kMineStats)
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => onOpenTab?.call(2),
+                      onTap: () => AppRouter.openOrders(),
                       child: Column(
                         children: [
                           Text(
@@ -194,7 +173,7 @@ class MinePage extends StatelessWidget {
                     color: Color(0xFFF0F2F6),
                   ),
                 GestureDetector(
-                  onTap: () => _openMenu(context, i),
+                  onTap: () => _openMenu(i),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
                     child: Row(
@@ -236,7 +215,7 @@ class MinePage extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
           child: GestureDetector(
-            onTap: () => appToast(context, '已退出登录（演示）'),
+            onTap: () => AppRouter.toast('已退出登录（演示）'),
             child: Container(
               height: 46,
               alignment: Alignment.center,
@@ -279,18 +258,14 @@ class MinePage extends StatelessWidget {
                 icon: Icons.widgets_outlined,
                 title: '组件案例',
                 subtitle: '常用组件 原生 ↔ JS 同屏对比',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const WidgetShowcase()),
-                ),
+                onTap: () => AppRouter.openWidgetShowcase(),
               ),
               const Divider(height: 1, indent: 56, color: Color(0xFFF0F2F6)),
               _DevRow(
                 icon: Icons.compare_arrows,
                 title: '热更 Demo 列表',
                 subtitle: 'HelloCard / ProviderCard / WatchDemo 等对比',
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const DemoListPage())),
+                onTap: () => AppRouter.openDemoList(),
               ),
             ],
           ),

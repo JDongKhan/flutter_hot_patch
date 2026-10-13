@@ -3,7 +3,12 @@
 // 重新生成：dart run build_runner build
 
 import { HomePage } from 'pages/home_page.js';
+import { CommunityPage } from 'pages/community_page.js';
+import { OrdersPage } from 'pages/orders_page.js';
+import { MinePage } from 'pages/mine_page.js';
 import { __h } from '../flutter.js';
+
+const _zip = "http://127.0.0.1:8765/patch/patch.zip";
 
 // 组件 AppShell
 export class AppShell {
@@ -19,15 +24,9 @@ export class AppShell {
             "index": this._index
           }, [
             __h(HomePage, {}),
-            __h("Component", {
-                "component": "CommunityPage"
-              }, null),
-            __h("Component", {
-                "component": "OrdersPage"
-              }, null),
-            __h("Component", {
-                "component": "MinePage"
-              }, null)
+            __h(CommunityPage, {}),
+            __h(OrdersPage, {}),
+            __h(MinePage, {})
           ]),
         "backgroundColor": '#fff4f5f7',
         "bottomNavigationBar": __h('BottomNavigationBar', {

@@ -129,11 +129,17 @@ ClassInfo translateClass(
     }
   }
 
-  // 方法收集：getter 保留（渲染为 get 访问器），setter / static 方法跳过。
+  // 方法收集：getter 保留（渲染为 get 访问器），setter 跳过。私有 static
+  // 方法按**实例方法**翻译（`_PostCard._likeText(n)` 这类同文件私有工具）：JS
+  // 侧就是原型方法，类内裸调用 `_likeText(x)` 落成 `this._likeText(x)`。
+  // 公开 static 方法不翻译（无 JS 等价物，跨文件引用会给不出正确语义）。
   // build 与其它返回 widget 的方法一视同仁，不做「是不是 build」的判断。
   final methods = <MethodDeclaration>[
     for (final m in hostClass.members)
-      if (m is MethodDeclaration && !m.isSetter && !m.isStatic) m,
+      if (m is MethodDeclaration &&
+          !m.isSetter &&
+          (!m.isStatic || m.name.lexeme.startsWith('_')))
+        m,
   ];
 
   // 依赖发现：字段类型 + 方法体构造调用（referencedClassNames）∩ 全量类表。
@@ -154,13 +160,31 @@ ClassInfo translateClass(
   // 同一套规则）。
   final propByField = <String, String>{};
   final instanceFields = <ClassField>[];
-  for (final member in hostClass.members) {
-    if (member is! FieldDeclaration || member.isStatic) continue;
-    for (final variable in member.fields.variables) {
+  // 字段来源：StatefulWidget 场景下 **widget 类**的字段（构造参数，如
+  // `OrdersPage.initialStatus`）与 State 类字段合并——运行时 `new Type(props)`
+  // 把 widget 属性作为 args 传入，二者在 JS 侧就是同一个类的实例属性；State 内
+  // 的 `widget.x` 因此能解析成 `this.x`（见 js_translator 的 widget 分支）。
+  final fieldDecls = <(FieldDeclaration, VariableDeclaration)>[];
+  final seenField = <String>{};
+  for (final cls in [if (stateClassName != null) widgetClass, hostClass]) {
+    for (final member in cls.members) {
+      if (member is! FieldDeclaration || member.isStatic) continue;
+      for (final variable in member.fields.variables) {
+        if (seenField.add(variable.name.lexeme)) {
+          fieldDecls.add((member, variable));
+        }
+      }
+    }
+  }
+  // 字段名全集：字段初始化器可能引用其它字段（`widget.x` → `this.x`），
+  // 解析初值的作用域需先知道全部字段名（propByField 在下循环里才逐步填充）。
+  final fieldNames = {for (final (_, v) in fieldDecls) v.name.lexeme};
+  for (final (member, variable) in fieldDecls) {
+    {
       final fieldName = variable.name.lexeme;
       final typeName = fieldTypeName(member, variable);
       final erased = eraseType(typeName);
-      final isBasic = isBasicType(typeName);
+      final isBasic = isBasicType(typeName) || _valueSdkTypes.contains(erased);
       final jsRuntime = _jsRuntimeTypes.contains(erased);
       if (!_fieldTranslatable(typeName, classTable, registry.registeredTypes)) {
         // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
@@ -174,12 +198,17 @@ ClassInfo translateClass(
       // 初值来源：字段初始化器，否则构造形参默认值（`this.x = <默认值>`）。
       // 两者都走同一条通用表达式翻译（顶层常量 / 集合字面量 / 模型构造都支持）。
       final defaultExpr = ctorDefaults[fieldName];
-      final initScope = FieldScope(globalConsts: globalConsts);
+      final initScope = FieldScope(
+        instanceFields: fieldNames,
+        globalConsts: globalConsts,
+      );
       final String initial;
       if (isBasic) {
-        // 无初始化器 / 初始化器不是编译期常量 → 类型默认值（String→''、
-        // bool→false、数字→0）。组件与普通类同一条规则。
+        // 初始化器优先（如 `late String _status = widget.x ?? kOrderStatus.first`
+        // → `(this.initialStatus ?? kOrderStatus[0])`）；不是编译期常量时再依次
+        // 回退到构造形参默认值、类型默认值（String→''、bool→false、数字→0）。
         initial = literalToJs(init) ??
+            (init == null ? null : rhsToJs(init, initScope, used)) ??
             (defaultExpr == null
                 ? null
                 : rhsToJs(defaultExpr, initScope, used)) ??
@@ -226,10 +255,15 @@ ClassInfo translateClass(
       for (final m in methods)
         if (!m.isGetter) m.name.lexeme: m.name.lexeme,
     },
+    // 本类全部实例方法 / getter 名（含非动作方法）：数据表达式里的裸调用
+    // （`Text(_likeText(post.like))`）与 setState/事件体里的 this.xxx(...) 都
+    // 依赖它解析为本类方法，而不只限于注册为动作的方法。
+    methodNames: {for (final m in methods) m.name.lexeme},
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,
     globalConsts: globalConsts,
+    hostMethods: hostMethods,
     jsClassWidgets: jsClassWidgets,
     delegateClassWidgets: delegateClassWidgets,
   );
@@ -359,14 +393,43 @@ String _defaultInitial(String typeName) {
 /// 泛型容器类型（字段类型里的外层名）。
 const Set<String> _containerTypes = {'List', 'Set', 'Iterable', 'Map'};
 
+/// 函数值类型（事件回调字段）：JS 侧函数就是值，原样持有 / 传递即可。
+/// `onTap` / `onPick` / `onReset` 这类字段不再被跳过。
+const Set<String> _callbackTypes = {
+  'Function',
+  'VoidCallback',
+  'ValueChanged',
+  'ValueGetter',
+  'ValueSetter',
+  'AsyncCallback',
+  'GestureTapCallback',
+  'GestureLongPressCallback',
+  'GestureTapDownCallback',
+  'WidgetBuilder',
+  'IndexedWidgetBuilder',
+};
+
+/// 可承载「元素值」的字段类型：JS 侧元素就是普通对象（`{type, props,
+/// children}`），持有 / 转发没有障碍。`child` / `children` / `trailing` /
+/// `leading` / `title` 这类 widget 字段因此能进实例属性，`Row(children:
+/// children)` 也能拿到真实数组。
+const Set<String> _widgetValueTypes = {'Widget', 'PreferredSizeWidget'};
+
+/// 有 JS 值形态的 SDK 类型字段：JS 侧就是字符串（`Color` → `'#aarrggbb'`、
+/// `IconData` → 图标名，由运行时映射回真实对象），持有 / 转发都成立。
+/// 缺了它，`_OrderCard.statusColor` / `_DevRow.icon` 这类字段会被整条跳过，
+/// 传进来也用不上（子组件里 `color: statusColor` 解析失败）。
+const Set<String> _valueSdkTypes = {'Color', 'IconData'};
+
 /// 字段类型是否可翻译（进 JS 实例属性）：
 ///   - 基础类型（int/double/num/String/bool/dynamic）；
 ///   - JS 运行时同名代理类（ScrollController / TextEditingController / …）；
-///   - 已登记的**非组件**类（模型，如 `Spot`）；
-///   - 泛型容器按**类型实参**递归判定：`List<Spot>` / `Map<String, int>` 可翻译，
-///     `List<Widget>` / `Key?` 不可翻译。
-///
-/// 组件类型字段不参与（组件的 JS 版本由运行时递归挂载，宿主侧不持有实例）。
+///   - 已登记**非组件**类（模型，如 `Spot`）；
+///   - 函数值类型（VoidCallback / `void Function(...)`）——事件回调字段；
+///   - 元素值类型（`Widget` / `List<Widget>` / 已登记 widget 类型）——JS 侧
+///     元素是普通对象，可持有 / 转发；
+///   - 泛型容器按**类型实参**递归判定：`List<Spot>` / `Map<String, int>` /
+///     `List<Widget>` 可翻译，`Key?` 不可翻译。
 bool _fieldTranslatable(
   String typeName,
   Map<String, ClassInfo> classTable,
@@ -378,17 +441,25 @@ bool _fieldTranslatable(
   }
   if (isBasicType(t)) return true;
   final lt = t.indexOf('<');
+  final base = lt >= 0 ? t.substring(0, lt).trim() : t;
+  // 函数值：`void Function(String, String)`（`Function(` 形态）与
+  // `VoidCallback` / `ValueChanged<int>` 这类 typedef 都放行。
+  if (_callbackTypes.contains(base) || t.contains('Function(')) return true;
   if (lt >= 0 && t.endsWith('>')) {
-    if (!_containerTypes.contains(t.substring(0, lt).trim())) return false;
+    if (!_containerTypes.contains(base)) return false;
     final args = _typeArgs(t.substring(lt + 1, t.length - 1));
     return args.isNotEmpty &&
         args.every((a) => _fieldTranslatable(a, classTable, widgetTypes));
   }
   if (t.isEmpty) return false;
   if (_jsRuntimeTypes.contains(t)) return true;
-  if (widgetTypes.contains(t)) return false;
+  // 有 JS 值形态的 SDK 类型（Color → '#aarrggbb'、IconData → 图标名）。
+  if (_valueSdkTypes.contains(t)) return true;
+  // 元素值字段（Widget / 已登记 widget 类型 / 自定义组件）：JS 侧元素是普通
+  // 对象，持有与转发都成立（`child` / `trailing` / `Row(children: children)`）。
+  if (_widgetValueTypes.contains(t) || widgetTypes.contains(t)) return true;
   final cls = classTable[t];
-  return cls != null && !cls.isComponent;
+  return cls != null;
 }
 
 /// 拆分泛型类型实参（按顶层逗号，忽略嵌套尖括号里的逗号）。

@@ -45,10 +45,8 @@ class _AppShellState extends State<AppShell> {
           const HomePage(),
           const CommunityPage(),
           const OrdersPage(),
-          // onOpenTab 是方法 tear-off，翻译器无法表达为数据。不过本页已标
-          // @UIComponentIgnore（不产出 JS），外壳产物里是 Component 占位结点，
-          // 这个参数会被构建期告警跳过——JS 版里由 nativeComponents 注入默认形态。
-          MinePage(onOpenTab: _openTab),
+          // 三个 tab 页均有 JS 产物（连带翻译）。
+          const MinePage(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -93,14 +91,14 @@ class AppShellJsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return JsUiWidget(
       jsAsset: _jsAsset,
-      nativeComponents: {
-        // 三个 @UIComponentIgnore 的 tab 页：原生注入（HomePage 有 JS 产物，
-        // 不需要在这里注册）。
-        'CommunityPage': (args) => const CommunityPage(),
-        'OrdersPage': (args) => const OrdersPage(),
-        // JS 侧拿不到 _openTab（构建期已告警跳过），这里注入默认形态。
-        'MinePage': (args) => const MinePage(),
-      },
+      // nativeComponents: {
+      //   // 三个 @UIComponentIgnore 的 tab 页：原生注入（HomePage 有 JS 产物，
+      //   // 不需要在这里注册）。
+      //   'CommunityPage': (args) => const CommunityPage(),
+      //   'OrdersPage': (args) => const OrdersPage(),
+      //   // JS 侧拿不到 _openTab（构建期已告警跳过），这里注入默认形态。
+      //   'MinePage': (args) => const MinePage(),
+      // },
     );
   }
 }

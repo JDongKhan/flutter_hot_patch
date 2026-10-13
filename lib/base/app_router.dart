@@ -5,6 +5,9 @@ import 'package:ui_component/ui_component.dart';
 import '../app/model/app_data.dart';
 import '../app/model/app_models.dart';
 import '../app/pages/detail_pages.dart';
+import '../app/pages/orders_page.dart';
+import '../components/widget_showcase.dart';
+import '../main.dart';
 
 /// 宿主路由能力：`@UIComponent` 首页的所有点击入口都走这里。
 ///
@@ -53,6 +56,36 @@ class AppRouter {
   @HostInjected()
   static Future<void> openOrder(String no) async {
     _push(OrderDetailPage(order: _orderOf(no)));
+  }
+
+  /// 返回上一页。
+  @HostInjected()
+  static Future<void> pop() async {
+    _navigator?.maybePop();
+  }
+
+  /// 打开登录页。
+  @HostInjected()
+  static Future<void> openLogin() async {
+    _push(const LoginPage());
+  }
+
+  /// 打开订单 tab 对应的页面（「我的」页统计项/菜单入口）。
+  @HostInjected()
+  static Future<void> openOrders() async {
+    _push(const OrdersPage());
+  }
+
+  /// 打开「组件案例」页。
+  @HostInjected()
+  static Future<void> openWidgetShowcase() async {
+    _push(const WidgetShowcase());
+  }
+
+  /// 打开「热更 Demo 列表」页。
+  @HostInjected()
+  static Future<void> openDemoList() async {
+    _push(const DemoListPage());
   }
 
   /// 轻提示（原生与 JS 组件共用；JS 侧 `AppRouter.toast('...')` 走同一通道）。

@@ -33,7 +33,7 @@ export class HomePage {
                         "height": 150
                       }, [
                         __h('PageView', {}, [
-                            ...(() => { var out = []; for (var i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": this.banners[i] })]); } return out; })()
+                            ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": this.banners[i] })]); } return out; })()
                           ])
                       ]),
                     __h('SizedBox', {
@@ -42,7 +42,7 @@ export class HomePage {
                     __h('Row', {
                         "mainAxisAlignment": "center"
                       }, [
-                        ...(() => { var out = []; for (var i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
+                        ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
                       ]),
                     __h('SizedBox', {
                         "height": 12
@@ -72,7 +72,7 @@ export class HomePage {
                             "physics": "NeverScrollableScrollPhysics",
                             "crossAxisCount": 4
                           }, [
-                            ...(() => { var out = []; for (var i = 0; (i < this.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this.grid[i] })]); } return out; })()
+                            ...(() => { var out = []; for (let i = 0; (i < this.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this.grid[i] })]); } return out; })()
                           ])
                       ]),
                     __h('SizedBox', {

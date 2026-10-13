@@ -147,6 +147,31 @@ const String miniReactComponentBaseSource = r'''
     bag[expr] = handle;
     return handle;
   };
+  // 构建期**闭包**句柄：与 __bind 语义相同（绑定到构建时的组件实例 / 构建
+  // 位置），但接受真实 JS 函数而非表达式字符串——用于事件表达式引用了
+  // 「构建期才存在的名字」（循环变量、build 局部变量）的场景：字符串方案在
+  // 点击时求值，拿不到这些名字（如 `for (final s in kSorts) onTap: () =>
+  // setState(() => _sort = s)`）。
+  //   按 [key] 缓存：同一 (实例, key) 重复构建复用同一句柄 id（props 稳定，
+  //   增量补丁不失效），只是把内部执行的闭包换成最新的（新捕获值）。
+  //   key 由生成器按「表达式源码 + 当前循环变量值」拼出，故每次迭代互不串味。
+  Component.prototype.__bindFn = function (key, f) {
+    var bag = this.__boundFn || (this.__boundFn = {});
+    var handle = bag[key];
+    if (handle) { handle.__run = f; return handle; }
+    var anchor = building || this;
+    handle = fn(function (payload) {
+      var prev = building;
+      building = anchor;
+      try { handle.__run(payload); }
+      catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
+      finally { building = prev; }
+    });
+    handle.__run = f;
+    handle.__key = key; // 便于调试：句柄带上构建期 key
+    bag[key] = handle;
+    return handle;
+  };
 
 ''';
 
@@ -257,6 +282,7 @@ const String miniReactReconcilerSource = r'''
     inst.__watch = Component.prototype.watch;
     inst.__read = Component.prototype.read;
     inst.__bind = Component.prototype.__bind;
+    inst.__bindFn = Component.prototype.__bindFn;
   }
 
   // 在 [inst] 的 build 执行期间把 `building` 指向它 —— watch/read 与事件绑定
@@ -437,6 +463,12 @@ const String miniReactReconcilerSource = r'''
       if (bag) {
         for (var k in bag) { delete handlers[bag[k].__fn]; }
         inst.__bound = null;
+      }
+      // 同理解放 __bindFn 登记的构建期闭包句柄。
+      var bagFn = inst.__boundFn;
+      if (bagFn) {
+        for (var k in bagFn) { delete handlers[bagFn[k].__fn]; }
+        inst.__boundFn = null;
       }
       markUnmounted(inst.__child);
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../base/app_router.dart';
 import '../model/app_data.dart';
 import '../model/app_models.dart';
 
@@ -43,7 +44,7 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).maybePop(),
+            onTap: () => AppRouter.pop(),
             child: Container(
               width: 34,
               height: 34,
@@ -79,16 +80,15 @@ class _TopBar extends StatelessWidget {
 
 /// 白色圆角内容块。
 class _Block extends StatelessWidget {
-  const _Block({required this.child, this.padding});
+  const _Block({required this.child});
 
   final Widget child;
-  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: padding ?? const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -228,7 +228,7 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _go(String kw) {
-    appToast(context, '搜索：${kw.isEmpty ? '全部' : kw}');
+    AppRouter.toast('搜索：${kw.isEmpty ? '全部' : kw}');
   }
 
   @override
@@ -332,11 +332,7 @@ class _SearchPageState extends State<SearchPage> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                     child: GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SpotDetailPage(spot: s),
-                        ),
-                      ),
+                      onTap: () => AppRouter.openSpot(s.id),
                       child: PostRow(
                         img: s.img,
                         title: s.title,
@@ -500,7 +496,7 @@ class SpotDetailPage extends StatelessWidget {
                         left: 14,
                         top: 44,
                         child: GestureDetector(
-                          onTap: () => Navigator.of(context).maybePop(),
+                          onTap: () => AppRouter.pop(),
                           child: Container(
                             width: 34,
                             height: 34,
@@ -639,7 +635,7 @@ class SpotDetailPage extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => appToast(context, '已提交预订（演示）'),
+                  onPressed: () => AppRouter.toast('已提交预订（演示）'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kBrand,
                     foregroundColor: Colors.white,
@@ -702,7 +698,7 @@ class PostDetailPage extends StatelessWidget {
                         left: 14,
                         top: 44,
                         child: GestureDetector(
-                          onTap: () => Navigator.of(context).maybePop(),
+                          onTap: () => AppRouter.pop(),
                           child: Container(
                             width: 34,
                             height: 34,
@@ -767,7 +763,7 @@ class PostDetailPage extends StatelessWidget {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => appToast(context, '已关注 ${post.author}'),
+                        onTap: () => AppRouter.toast('已关注 ${post.author}'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -832,7 +828,7 @@ class PostDetailPage extends StatelessWidget {
                 child: MiniButton(
                   label:
                       '♡ 点赞 · ${post.like > 999 ? '${(post.like / 1000).toStringAsFixed(1)}k' : post.like}',
-                  onTap: () => appToast(context, '已点赞'),
+                  onTap: () => AppRouter.toast('已点赞'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -840,7 +836,7 @@ class PostDetailPage extends StatelessWidget {
                 child: MiniButton(
                   label: '收藏',
                   primary: true,
-                  onTap: () => appToast(context, '已收藏'),
+                  onTap: () => AppRouter.toast('已收藏'),
                 ),
               ),
             ],
@@ -935,11 +931,7 @@ class ResourceDetailPage extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                     child: GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => PostDetailPage(post: p),
-                        ),
-                      ),
+                      onTap: () => AppRouter.openPost(p.id),
                       child: PostRow(
                         img: p.img,
                         title: p.title,
@@ -1114,14 +1106,13 @@ class OrderDetailPage extends StatelessWidget {
               Expanded(
                 child: MiniButton(
                   label: '联系客服',
-                  onTap: () => appToast(context, '已联系客服（演示）'),
+                  onTap: () => AppRouter.toast('已联系客服（演示）'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => appToast(
-                    context,
+                  onPressed: () => AppRouter.toast(
                     order.status == '待付款' ? '支付成功（演示）' : '已申请开票（演示）',
                   ),
                   style: ElevatedButton.styleFrom(
@@ -1166,26 +1157,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _login() {
-    if (_phone.text.replaceAll(RegExp(r'\D'), '').length < 11) {
-      appToast(context, '请输入 11 位手机号');
+    if (_phone.text.length < 11) {
+      AppRouter.toast('请输入 11 位手机号');
       return;
     }
-    appToast(context, '登录成功，欢迎回来');
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (mounted) Navigator.of(context).maybePop();
-    });
+    AppRouter.toast('登录成功，欢迎回来');
+    AppRouter.pop();
   }
-
-  InputDecoration _deco(String hint) => InputDecoration(
-    hintText: hint,
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: BorderSide.none,
-    ),
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -1257,7 +1235,18 @@ class _LoginPageState extends State<LoginPage> {
                         child: TextField(
                           controller: _phone,
                           keyboardType: TextInputType.phone,
-                          decoration: _deco('请输入手机号'),
+                          decoration: InputDecoration(
+                            hintText: '请输入手机号',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1281,7 +1270,7 @@ class _LoginPageState extends State<LoginPage> {
                         borderSide: BorderSide.none,
                       ),
                       suffixIcon: GestureDetector(
-                        onTap: () => appToast(context, '验证码已发送'),
+                        onTap: () => AppRouter.toast('验证码已发送'),
                         child: const Center(
                           widthFactor: 1,
                           child: Text(
@@ -1356,7 +1345,7 @@ class WebViewPage extends StatelessWidget {
             child: _TopBar(
               title: title,
               trailing: GestureDetector(
-                onTap: () => appToast(context, '已刷新'),
+                onTap: () => AppRouter.toast('已刷新'),
                 child: const Icon(
                   Icons.refresh,
                   size: 18,

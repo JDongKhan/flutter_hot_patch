@@ -387,7 +387,7 @@ export class LayoutDetail {
             "runAlignment": "center",
             "crossAxisAlignment": "center"
           }, [
-            ...(() => { var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
+            ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
           ]),
         __h('SizedBox', {
             "height": 12
@@ -754,7 +754,7 @@ export class ScrollDetail {
     this._scrollController = new ScrollController();
   }
   initState() {
-    this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); });
+    this._scrollController.addListener(() => { this.setState(function(){ this._ctrlOffset = this._scrollController.offset; }); });
   }
   dispose() {
     this._scrollController.dispose();
@@ -838,7 +838,7 @@ export class ScrollDetail {
             "physics": "ClampingScrollPhysics"
           }, [
             __h('Row', {}, [
-                ...(() => { var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": "横向 " + i }) ])]); } return out; })()
+                ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": "横向 " + i }) ])]); } return out; })()
               ])
           ]),
         __h('Align', {
@@ -884,7 +884,7 @@ export class SliverDetail {
     this._offset = 0;
   }
   initState() {
-    this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
+    this._controller.addListener(() => { this.setState(function(){ this._offset = this._controller.offset; }); });
   }
   dispose() {
     this._controller.dispose();
@@ -946,7 +946,7 @@ export class SliverDetail {
                 }
               }, [
                 __h('SliverList', {}, [
-                    ...(() => { var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "SliverList item " + i, "leading": __h('Icon', { "icon": "list", "color": '#673AB7' }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
+                    ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "SliverList item " + i, "leading": __h('Icon', { "icon": "list", "color": '#673AB7' }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
                   ])
               ]),
             __h('SliverPadding', {
@@ -1171,7 +1171,7 @@ export class GridDetail {
     this._offset = 0;
   }
   initState() {
-    this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
+    this._controller.addListener(() => { this.setState(function(){ this._offset = this._controller.offset; }); });
   }
   dispose() {
     this._controller.dispose();
@@ -1817,7 +1817,7 @@ export class TabDetail {
     this._index = 0;
   }
   initState() {
-    this._controller.addListener(() => { this.setState(() => { this._index = this._controller.index; }); });
+    this._controller.addListener(() => { this.setState(function(){ this._index = this._controller.index; }); });
   }
   dispose() {
     this._controller.dispose();
@@ -2010,7 +2010,7 @@ export class PageViewDetail {
         __h('Row', {
             "mainAxisAlignment": "center"
           }, [
-            ...(() => { var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Container', { "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
+            ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Container', { "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
           ])
       ]);
   }

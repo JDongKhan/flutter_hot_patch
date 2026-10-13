@@ -124,7 +124,7 @@ export class ProviderCard {
       break;
     }
     var dots = "";
-    for (var i = 0; (i < this._modelA.count); (i++)) {
+    for (let i = 0; (i < this._modelA.count); (i++)) {
       dots = dots + "·";
     }
     return __h('Text', {

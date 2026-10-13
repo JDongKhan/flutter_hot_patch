@@ -67,6 +67,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const AspectRatioTranslator())
     ..register(const FractionallySizedBoxTranslator())
     ..register(const DecoratedBoxTranslator())
+    ..register(const TransformTranslator())
     // 内容
     ..register(const IconTranslator())
     ..register(const ImageTranslator())
@@ -127,9 +128,7 @@ abstract class _AxisLayoutTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString(node.type),
       if (props.isNotEmpty) 'props': props,
-      'children': [
-        for (final c in children) ctx.translateElement(c),
-      ],
+      'children': children,
     };
   }
 }
@@ -248,8 +247,10 @@ abstract class _ButtonTranslator extends WidgetTranslator {
     final (ctor, args) = ctx.ctorOf(child);
     if (ctor != 'Text') throw FormatException('按钮的 child 需要是 Text');
     final data = ctx.namedArg(args, 'data') ?? ctx.positionalArg(args, 0);
-    if (data is SimpleStringLiteral) return ctx.jsString(data.value);
-    throw FormatException('按钮文案需要是纯字符串字面量');
+    if (data == null) throw FormatException('按钮缺少文案');
+    // 文案与文本结点共用同一套数据表达式翻译：字面量 / 插值 / 字段 / 三目都能
+    // 落到 JS 表达式（`order.status == '待付款' ? '立即支付' : '申请开票'`）。
+    return ctx.jsDataExpr(data);
   }
 }
 
@@ -659,7 +660,7 @@ class StackTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('Stack'),
       if (props.isNotEmpty) 'props': props,
-      'children': [for (final c in children) ctx.translateElement(c)],
+      'children': children,
     };
   }
 }
@@ -686,7 +687,7 @@ class IndexedStackTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('IndexedStack'),
       if (props.isNotEmpty) 'props': props,
-      'children': [for (final c in children) ctx.translateElement(c)],
+      'children': children,
     };
   }
 }
@@ -880,7 +881,7 @@ class ListViewTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('ListView'),
       if (props.isNotEmpty) 'props': props,
-      'children': [for (final c in children) ctx.translateElement(c)],
+      'children': children,
     };
   }
 }
@@ -936,7 +937,7 @@ class GridViewTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('GridView'),
       if (props.isNotEmpty) 'props': props,
-      'children': [for (final c in children) ctx.translateElement(c)],
+      'children': children,
     };
   }
 }
@@ -974,21 +975,50 @@ List<CollectionElement>? _sliverListDelegateChildren(Expression? delegate) {
 
 /// 统一的 builder 闭包 → 组件方法抽取：`(context, index[, child])` 闭包抽成
 /// `$prefix$idx(index)` 实例方法（builderTrees 机制），返回方法名。
-/// 形参不符（少于两个参数/非表达式体）返回 null。
+///
+/// 两种体形态都支持：
+///   - 箭头体 `(context, i) => _Card(...)`：表达式即子树；
+///   - 块体 `(context, i) { final o = xs[i]; return _Card(...); }`：局部变量
+///     声明抽成方法前置语句（builderPreludes），`return` 的表达式作子树。
+/// 形参不符（少于两个参数）或体里含不支持的语句 → 返回 null（调用方出声告警）。
 String? _extractBuilderMethod(
     WidgetTranslateContext ctx, FunctionExpression builder, String prefix) {
   final params = builder.parameters?.parameters ?? const <FormalParameter>[];
   // (context, index[, child]) —— index 是第二个参数（Consumer 同款约定）。
   final indexName = params.length >= 2 ? params[1].name?.lexeme : null;
   if (indexName == null) return null;
-  final inner = ctx.functionInner(builder);
-  if (inner == null) return null;
   ctx.addLocal(indexName);
-  final subtree = ctx.translate(inner);
+  Expression? retExpr;
+  final preludes = <String>[];
+  final body = builder.body;
+  if (body is ExpressionFunctionBody) {
+    retExpr = body.expression;
+  } else if (body is BlockFunctionBody) {
+    for (final st in body.block.statements) {
+      if (st is ReturnStatement) {
+        retExpr = st.expression;
+        continue;
+      }
+      if (st is VariableDeclarationStatement) {
+        for (final v in st.variables.variables) {
+          ctx.addLocal(v.name.lexeme);
+          preludes.add(v.initializer == null
+              ? 'var ${v.name.lexeme};'
+              : 'var ${v.name.lexeme} = ${ctx.jsDataExpr(v.initializer!)};');
+        }
+        continue;
+      }
+      // 其余语句无法作为「抽取方法」的一部分，整体放弃（保持原编译期告警）。
+      return null;
+    }
+  }
+  if (retExpr == null) return null;
+  final subtree = ctx.translate(retExpr);
   ctx.builderTrees.add(subtree);
   final idx = ctx.builderTrees.length - 1;
   ctx.builderNames.add('$prefix$idx');
   ctx.builderParams.add(indexName);
+  ctx.builderPreludes.add(preludes.isEmpty ? '' : preludes.join(' '));
   return '$prefix$idx';
 }
 
@@ -1121,7 +1151,7 @@ class CustomScrollViewTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('CustomScrollView'),
       if (props.isNotEmpty) 'props': props,
-      'children': [for (final s in slivers) ctx.translateElement(s)],
+      'children': slivers,
     };
   }
 }
@@ -1602,7 +1632,7 @@ class WrapTranslator extends WidgetTranslator {
     return {
       'type': ctx.jsString('Wrap'),
       if (props.isNotEmpty) 'props': props,
-      'children': [for (final c in children) ctx.translateElement(c)],
+      'children': children,
     };
   }
 }
@@ -1610,6 +1640,25 @@ class WrapTranslator extends WidgetTranslator {
 // ===========================================================================
 // 内容类
 // ===========================================================================
+
+/// Transform.translate：位移（offset: Offset(dx, dy)）+ child。
+/// 「我的」页头部用 `Transform.translate(offset: Offset(0, -12))` 做卡片上浮。
+class TransformTranslator extends WidgetTranslator {
+  const TransformTranslator();
+
+  @override
+  String get type => 'Transform';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final offset = offsetExprToJson(ctx.namedArg(node.args, 'offset'));
+    if (offset != null) props['offset'] = offset;
+    final child = ctx.namedArg(node.args, 'child');
+    if (child != null) props['child'] = ctx.translate(child);
+    return {'type': ctx.jsString('Transform'), 'props': props};
+  }
+}
 
 /// Icon：Icons.xxx → icon 名，+ size/color。
 class IconTranslator extends WidgetTranslator {
@@ -1621,8 +1670,10 @@ class IconTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final iconExpr = ctx.namedArg(node.args, 'icon') ?? ctx.nonNamedArg(node.args);
-    final icon = iconDataToJson(iconExpr);
-    if (icon == null) throw FormatException('Icon 需要 Icons.xxx');
+    if (iconExpr == null) throw FormatException('Icon 需要图标参数');
+    // 字面量 `Icons.xxx` → 图标名；字段 / 表达式（`Icon(icon, ...)` 里 icon 是
+    // 图标名字段）按数据表达式翻译，运行时 iconFromJson 统一按名映射。
+    final icon = iconDataToJson(iconExpr) ?? ctx.jsDataExpr(iconExpr);
     final props = <String, dynamic>{'icon': icon};
     final size = numLiteralJs(ctx.namedArg(node.args, 'size'));
     if (size != null) props['size'] = size;
@@ -2450,14 +2501,14 @@ class DecoratedBoxTranslator extends WidgetTranslator {
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
     final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
-    if (child == null) throw FormatException('DecoratedBox 缺少 child');
     final deco =
         boxDecorationToJson(ctx.namedArg(node.args, 'decoration'), ctx);
     if (deco == null) throw FormatException('DecoratedBox 需要 decoration');
+    // child 可省略（无 child 的 DecoratedBox 常作渐变遮罩/背景铺满父容器）。
     return {
       'type': ctx.jsString('DecoratedBox'),
       'props': {'decoration': deco},
-      'children': [ctx.translate(child)],
+      if (child != null) 'children': [ctx.translate(child)],
     };
   }
 }
@@ -2525,13 +2576,13 @@ class TextFieldTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    // onChanged 可省略：非受控输入（仅 controller / 只读展示）无需回传文本。
     final onChanged = ctx.namedArg(node.args, 'onChanged');
-    if (onChanged == null) {
-      throw FormatException('TextField 需要 onChanged');
-    }
-    final props = <String, dynamic>{
-      'event': ctx.eventHandle(onChanged),
-    };
+    if (onChanged != null) props['event'] = ctx.eventHandle(onChanged);
+    // onSubmitted：提交（回车）事件，可省略。
+    final onSubmitted = ctx.namedArg(node.args, 'onSubmitted');
+    if (onSubmitted != null) props['onSubmitted'] = ctx.eventHandle(onSubmitted);
     // controller 透传：Dart 侧 TextEditingController 在 JS 侧是同名代理类
     // （见 JS 运行时），产物透传实例引用 `this._controller`，跨桥序列化时经
     // toJSON 输出 `{__jsuiTextEditingController: id}`，宿主按 id 取真实
@@ -2829,10 +2880,7 @@ class TabBarTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children = <Object?>[
-      for (final t in ctx.listArg(node.args, 'tabs', node.type))
-        ctx.translateElement(t),
-    ];
+    final children = ctx.listArg(node.args, 'tabs', node.type);
     final props = <String, dynamic>{};
     final ctrl = ctx.namedArg(node.args, 'controller');
     if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
@@ -2918,10 +2966,7 @@ class TabBarViewTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children = <Object?>[
-      for (final e in ctx.listArg(node.args, 'children', node.type))
-        ctx.translateElement(e),
-    ];
+    final children = ctx.listArg(node.args, 'children', node.type);
     final props = <String, dynamic>{};
     final ctrl = ctx.namedArg(node.args, 'controller');
     if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
@@ -2948,10 +2993,7 @@ class PageViewTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children = <Object?>[
-      for (final e in ctx.listArg(node.args, 'children', node.type))
-        ctx.translateElement(e),
-    ];
+    final children = ctx.listArg(node.args, 'children', node.type);
     final props = <String, dynamic>{};
     final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
     if (axis != null) props['scrollDirection'] = axis;

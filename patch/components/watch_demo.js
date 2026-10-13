@@ -85,7 +85,7 @@ export class WatchCountLabel {
   build() {
     var model = this.__watch("CounterVm");
     return __h('Text', {
-        "data": "another State: count = " + model.count,
+        "data": "another State: count = " + this.__watch("CounterVm").count,
         "style": {
           "fontSize": 16,
           "color": '#2196F3'

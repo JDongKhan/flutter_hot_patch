@@ -232,6 +232,20 @@ String? translateColor(Expression e, WidgetTranslateContext ctx) {
     if (thenJs == null || elseJs == null) return null;
     return '($condJs ? $thenJs : $elseJs)';
   }
+  // 具名颜色常量（`kBrand` / `kPrice` / `_menuTints`）：常量在产物里已经译成
+  // 色值字符串（同文件内联 / 跨文件 import），直接引用同名 JS 常量即可。
+  if (e is SimpleIdentifier && ctx.globalConsts.contains(e.name)) {
+    return e.name;
+  }
+  // 常量颜色表索引（`_menuTints[i % _menuTints.length]`）：常量表在产物顶部是
+  // 「颜色字符串数组」（值已是色值契约里的字符串），索引取值直接产出 JS 索引
+  // 表达式即可，无需在 JS 侧再翻译颜色。
+  if (e is IndexExpression && e.target is SimpleIdentifier) {
+    final name = (e.target as SimpleIdentifier).name;
+    if (ctx.globalConsts.contains(name)) {
+      return '$name[${ctx.jsDataExpr(e.index)}]';
+    }
+  }
   return null;
 }
 
@@ -505,6 +519,20 @@ String? iconDataToJson(Expression? expr) {
   final (owner, name) = _staticRef(expr);
   if (owner != 'Icons' || name == null) return null;
   return '"$name"';
+}
+
+/// `Offset(dx, dy)` → `{ "dx": <js>, "dy": <js> }`（Transform.translate 用；
+/// 运行时 offsetFromJson 组装 Offset）。
+String? offsetExprToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  if (ctor != 'Offset') return null;
+  final pos = args.whereType<Expression>().toList();
+  if (pos.length < 2) return null;
+  final dx = numLiteralJs(pos[0]);
+  final dy = numLiteralJs(pos[1]);
+  if (dx == null || dy == null) return null;
+  return '{ "dx": $dx, "dy": $dy }';
 }
 
 /// BorderRadius.circular(8) / BorderRadius.all(Radius.circular(8)) /

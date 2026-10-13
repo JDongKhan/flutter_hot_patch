@@ -184,25 +184,6 @@ class _CtorNameCollector extends RecursiveAstVisitor<void> {
   }
 }
 
-/// getter 表达式体 → JS 返回值表达式（`int get n => _n` → `this._n`）。
-String? _getterReturnJs(ClassInfo info, ClassMethod m) {
-  Expression? e;
-  final body = m.body;
-  if (body is ExpressionFunctionBody) {
-    e = body.expression;
-  } else if (body is BlockFunctionBody) {
-    for (final s in body.block.statements) {
-      if (s is ReturnStatement) {
-        e = s.expression;
-        break;
-      }
-    }
-  }
-  if (e == null) return 'null';
-  final scope = FieldScope(instanceFields: info.instanceFieldNames);
-  return exprToJs(e, scope, const {}) ?? 'null';
-}
-
 /// 类声明 → JS（export 可选）。含 constructor / 方法 / getter / extends 基类，
 /// 并数据驱动地追加响应式 builder 子方法（[ClassInfo.builders] 非空）。
 ///
@@ -249,20 +230,25 @@ String renderClassDecl(
   }
   b.write('  }\n');
 
-  // 方法 + getter
+  // 方法 + getter：**同一套方法体翻译**（只有这一个入口）。getter 体里有局部
+  // 变量 / 集合过滤 / switch 等语句时，必须走完整语句翻译——旧实现只取单条
+  // `return <expr>` 再用 exprToJs 翻译，块体 getter（`get _list`）会静默产出
+  // `return null`，运行时 `list.length` 直接崩。
   for (final m in info.methods) {
+    final fn = m.isAsync ? 'async ' : '';
+    // 方法体多行可读：语句各自成行、按方法体深度缩进（翻译器已带缩进），
+    // 大括号独占行。
+    final body = (m.bodyJs ??
+            translateClassMethodBody(info, m, classes,
+                hostMethods: info.hostMethods,
+                widgetCtx: widgetCtx,
+                globalConsts: widgetCtx?.globalConsts ?? const {}))
+        .trimRight();
     if (m.isGetter) {
-      b.write('  get ${m.name}() { return ${_getterReturnJs(info, m)}; }\n');
+      b.write('  get ${m.name}() {\n');
+      if (body.isNotEmpty) b.write('$body\n');
+      b.write('  }\n');
     } else {
-      final fn = m.isAsync ? 'async ' : '';
-      // 方法体多行可读：语句各自成行、按方法体深度缩进（翻译器已带缩进），
-      // 大括号独占行。
-      final body = (m.bodyJs ??
-              translateClassMethodBody(info, m, classes,
-                  hostMethods: info.hostMethods,
-                  widgetCtx: widgetCtx,
-                  globalConsts: widgetCtx?.globalConsts ?? const {}))
-          .trimRight();
       b.write('  $fn${m.name}(${m.params.join(', ')}) {\n');
       if (body.isNotEmpty) b.write('$body\n');
       b.write('  }\n');

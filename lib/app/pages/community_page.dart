@@ -6,20 +6,19 @@ import '../model/app_data.dart';
 import '../model/app_models.dart';
 import 'detail_pages.dart';
 
-/// 社区 tab（`@UIComponentIgnore` → 不参与连带翻译，运行时原生注入）。
+/// 社区 tab（`@UIComponent` → 连带翻译，产物 patch/app/pages/community_page.js）。
 ///
 /// 对应 docs/app-prototype.html 的「社区」：广场/推荐双 tab + 横向资源推荐
 /// + 排序快捷条 + 「筛选」下拉面板（从顶部展开，面板内四组条件：排序方式 /
 /// 内容类型 / 距离范围 / 价格区间）+ 帖子列表。
 ///
-/// 筛选面板用页面内 [Stack] 实现：面板 top 位置在打开时按筛选条的**实际
-/// 布局位置**测量，避免写死高度。
+/// 筛选面板用页面内 [Stack] 实现：面板放在「列表区域」的 Stack 顶部，位置由
+/// 布局自然决定（紧贴筛选条下沿），不做 GlobalKey/RenderBox 实测——实测在
+/// JS 侧无法表达（`currentContext` / `localToGlobal` 都是宿主专有 API）。
 ///
-/// 本页用了翻译器覆盖不到的构造（GlobalKey/RenderBox 实测布局、
-/// `.where().toList()` 过滤、集合 for-if 展开、build 内局部变量），强行连带
-/// 翻译会产出空的 `build()`；故显式标 `@UIComponentIgnore()` 退出翻译，
-/// 在外壳产物里保持 `Component` 占位结点，由宿主 `nativeComponents` 原生注入。
-@UIComponentIgnore()
+/// 本页与「订单/我的」一样纳入连带翻译（`@UIComponent`）：数据过滤
+/// （`.where().toList()` + `switch` 排序）与集合 for-if 展开均已支持。
+@UIComponent()
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
 
@@ -28,12 +27,8 @@ class CommunityPage extends StatefulWidget {
 }
 
 class _CommunityPageState extends State<CommunityPage> {
-  final GlobalKey _stackKey = GlobalKey();
-  final GlobalKey _barKey = GlobalKey();
-
   String _tab = kCommunityTabs.first;
   bool _filterOpen = false;
-  double _panelTop = 0;
 
   // 筛选条件（与原型 state.filters 对应）。
   String _sort = kSorts.first;
@@ -56,23 +51,10 @@ class _CommunityPageState extends State<CommunityPage> {
     return list;
   }
 
+  /// 打开/关闭筛选面板。面板位置由布局决定（见 [build] 的列表区 Stack），
+  /// 这里只切换开关，不做任何测量。
   void _toggleFilter() {
-    if (_filterOpen) {
-      setState(() => _filterOpen = false);
-      return;
-    }
-    // 面板紧贴筛选条下沿：按实际布局测量（不写死高度）。
-    var top = 0.0;
-    final stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
-    final barBox = _barKey.currentContext?.findRenderObject() as RenderBox?;
-    if (stackBox != null && barBox != null) {
-      final dy = barBox.localToGlobal(Offset.zero, ancestor: stackBox).dy;
-      top = dy + barBox.size.height;
-    }
-    setState(() {
-      _panelTop = top;
-      _filterOpen = true;
-    });
+    setState(() => _filterOpen = !_filterOpen);
   }
 
   void _resetFilter() {
@@ -87,174 +69,172 @@ class _CommunityPageState extends State<CommunityPage> {
   @override
   Widget build(BuildContext context) {
     final posts = _visiblePosts;
-    return Stack(
-      key: _stackKey,
+    return Column(
       children: [
-        Column(
-          children: [
-            // 顶部双 tab（广场 / 推荐）
-            Container(
-              color: Colors.white,
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-                  child: Row(
-                    children: [
-                      for (final t in kCommunityTabs)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: GestureDetector(
-                            onTap: () => setState(() => _tab = t),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 15,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _tab == t
-                                    ? const Color(0xFFE8F2FF)
-                                    : const Color(0xFFF3F5F8),
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: Text(
-                                t,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: _tab == t
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  color: _tab == t
-                                      ? kBrand
-                                      : const Color(0xFF5C6270),
-                                ),
-                              ),
+        // 顶部双 tab（广场 / 推荐）
+        Container(
+          color: Colors.white,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+              child: Row(
+                children: [
+                  for (final t in kCommunityTabs)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _tab = t),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 15,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _tab == t
+                                ? const Color(0xFFE8F2FF)
+                                : const Color(0xFFF3F5F8),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Text(
+                            t,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: _tab == t
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: _tab == t
+                                  ? kBrand
+                                  : const Color(0xFF5C6270),
                             ),
                           ),
                         ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => appToast(context, '发布新动态（演示）'),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF3F5F8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            size: 16,
-                            color: Color(0xFF5C6270),
-                          ),
+                      ),
+                    ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => AppRouter.toast('发布新动态（演示）'),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF3F5F8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        size: 16,
+                        color: Color(0xFF5C6270),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // 横向资源推荐
+        SizedBox(
+          height: 116,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: kResources.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) => _ResourceCard(
+              resource: kResources[i],
+              onTap: () => AppRouter.openResource(kResources[i].id),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // 排序快捷条 + 筛选入口
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: Row(
+            children: [
+              for (final s in kSorts)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _sort = s),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _sort == s
+                            ? const Color(0xFFE8F2FF)
+                            : const Color(0xFFF3F5F8),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        s,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: _sort == s
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: _sort == s
+                              ? kBrand
+                              : const Color(0xFF5C6270),
                         ),
+                      ),
+                    ),
+                  ),
+                ),
+              const Spacer(),
+              GestureDetector(
+                onTap: _toggleFilter,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _filterOpen
+                        ? const Color(0xFFE8F2FF)
+                        : const Color(0xFFF3F5F8),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '筛选',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: _filterOpen
+                              ? kBrand
+                              : const Color(0xFF5C6270),
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Icon(
+                        Icons.tune,
+                        size: 14,
+                        color: _filterOpen
+                            ? kBrand
+                            : const Color(0xFF5C6270),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
-            Expanded(
-              child: ListView(
+            ],
+          ),
+        ),
+        // 列表 + 下拉筛选面板：面板顶 = 列表区 Stack 顶部（即筛选条下沿），
+        // 位置由布局决定，不需要任何测量。
+        Expanded(
+          child: Stack(
+            children: [
+              ListView(
                 padding: const EdgeInsets.only(bottom: 20),
                 children: [
-                  const SizedBox(height: 10),
-                  // 横向资源推荐
-                  SizedBox(
-                    height: 116,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemCount: kResources.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemBuilder: (context, i) => _ResourceCard(
-                        resource: kResources[i],
-                        onTap: () => AppRouter.openResource(kResources[i].id),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // 排序快捷条 + 筛选入口
-                  Container(
-                    key: _barKey,
-                    color: Colors.white,
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                    child: Row(
-                      children: [
-                        for (final s in kSorts)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: GestureDetector(
-                              onTap: () => setState(() => _sort = s),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _sort == s
-                                      ? const Color(0xFFE8F2FF)
-                                      : const Color(0xFFF3F5F8),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Text(
-                                  s,
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: _sort == s
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: _sort == s
-                                        ? kBrand
-                                        : const Color(0xFF5C6270),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: _toggleFilter,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _filterOpen
-                                  ? const Color(0xFFE8F2FF)
-                                  : const Color(0xFFF3F5F8),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  '筛选',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: _filterOpen
-                                        ? kBrand
-                                        : const Color(0xFF5C6270),
-                                  ),
-                                ),
-                                const SizedBox(width: 3),
-                                Icon(
-                                  Icons.tune,
-                                  size: 14,
-                                  color: _filterOpen
-                                      ? kBrand
-                                      : const Color(0xFF5C6270),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // 帖子列表
                   if (posts.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 60),
@@ -279,43 +259,43 @@ class _CommunityPageState extends State<CommunityPage> {
                       ),
                 ],
               ),
-            ),
-          ],
+              // 筛选面板（从筛选条下沿展开，覆盖列表区）
+              if (_filterOpen) ...[
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: _toggleFilter,
+                    child: Container(color: const Color(0x66000000)),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: _FilterPanel(
+                    sort: _sort,
+                    type: _type,
+                    dist: _dist,
+                    price: _price,
+                    onPick: (key, value) => setState(() {
+                      switch (key) {
+                        case 'sort':
+                          _sort = value;
+                        case 'type':
+                          _type = value;
+                        case 'dist':
+                          _dist = value;
+                        case 'price':
+                          _price = value;
+                      }
+                    }),
+                    onReset: _resetFilter,
+                    onApply: _toggleFilter,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-        // 筛选面板（从顶部下拉展开）
-        if (_filterOpen) ...[
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: _toggleFilter,
-              child: Container(color: const Color(0x66000000)),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: _panelTop,
-            child: _FilterPanel(
-              sort: _sort,
-              type: _type,
-              dist: _dist,
-              price: _price,
-              onPick: (key, value) => setState(() {
-                switch (key) {
-                  case 'sort':
-                    _sort = value;
-                  case 'type':
-                    _type = value;
-                  case 'dist':
-                    _dist = value;
-                  case 'price':
-                    _price = value;
-                }
-              }),
-              onReset: _resetFilter,
-              onApply: _toggleFilter,
-            ),
-          ),
-        ],
       ],
     );
   }

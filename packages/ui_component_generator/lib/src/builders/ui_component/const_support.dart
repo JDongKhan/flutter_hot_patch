@@ -17,6 +17,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../../translator/js_translator.dart';
 import '../../translator/source_index.dart';
+import 'class_table.dart';
 
 /// 本文件可见的顶层常量表（值已在解析期翻译为 JS）。
 class TopLevelConstResolver {
@@ -36,7 +37,8 @@ class TopLevelConstResolver {
   String? sourceFileOf(String name) => importedFileOf[name];
 }
 
-/// 收集并**翻译**顶层常量：同文件（含私有）+ import 文件（仅公共）。
+/// 收集并**翻译**常量：同文件（顶层 const 含私有；外加类的私有 static const）
+/// + import 文件（仅顶层公共）。
 ///
 /// 翻译在解析期就完成（不延迟到产物渲染）：只有翻译成功的名字才进入
 /// [TopLevelConstResolver.names]（→ 组件里的引用才会被译成同名 JS 常量）。
@@ -54,6 +56,10 @@ TopLevelConstResolver buildTopLevelConstResolver(
   // 常量**，但必须进 [exprs] 参与翻译——否则 `'$_img?x'` 这类引用了本文件私有
   // 常量的表达式的翻译会因作用域缺名而失败，并误报「插值片段无法翻译」。
   final foreignPrivate = <String>{};
+  // 被解析的跨文件（常量声明文件）：其自身 import 的类也要能被常量值引用到
+  // （如 `kMineMenu = [MenuEntry(...)]`——MenuEntry 在 app_models.dart，只被
+  // app_data.dart import，组件文件本身不一定直接 import）。
+  final foreignUnits = <(CompilationUnit, String)>[];
 
   void add(CompilationUnit u, String file, {required bool sameFile}) {
     for (final d in u.declarations.whereType<TopLevelVariableDeclaration>()) {
@@ -72,13 +78,42 @@ TopLevelConstResolver buildTopLevelConstResolver(
         if (!sameFile) importedOf[name] = file;
       }
     }
+    if (!sameFile) return;
+    // 类的**私有 static const** 字段（`static const List<String> _steps = [...]`）：
+    // 与顶层常量一样要参与表达式翻译（`_steps.length`、`_menuTints[i % …]`），
+    // 产物顶部同样内联为模块级 `const _x = …`。私有名不可能跨文件引用，故只在
+    // 同文件收集；跨文件同名常量不冲突。
+    for (final c in u.declarations.whereType<ClassDeclaration>()) {
+      for (final m in c.members.whereType<FieldDeclaration>()) {
+        if (!m.isStatic || !m.fields.isConst) continue;
+        for (final v in m.fields.variables) {
+          final init = v.initializer;
+          final name = v.name.lexeme;
+          if (init == null || !name.startsWith('_')) continue;
+          if (exprs.containsKey(name)) continue;
+          exprs[name] = init;
+        }
+      }
+    }
   }
 
   add(unit, sourcePath, sameFile: true);
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final f = File(file);
     if (!f.existsSync()) continue;
-    add(parseString(content: f.readAsStringSync()).unit, file, sameFile: false);
+    final parsed = parseString(content: f.readAsStringSync());
+    add(parsed.unit, file, sameFile: false);
+    foreignUnits.add((parsed.unit, file));
+  }
+
+  // 翻译跨文件常量时补齐「声明文件自身的可见类」：跨文件 const 的值可能引用
+  // 其声明文件（而非本组件文件）import 的模型类，本文件的 [classTable] 里没有
+  // 这些类，会导致整条常量被判为「不可翻译」。这里按需并入，已有条目优先。
+  final effectiveTable = <String, ClassInfo>{...classTable};
+  for (final (u, file) in foreignUnits) {
+    for (final e in buildClassTable(u, file).entries) {
+      effectiveTable.putIfAbsent(e.key, () => e.value);
+    }
   }
 
   // 按依赖序翻译（被引用者先译）：已译成功的名字才作为可引用常量注入作用域，
@@ -88,7 +123,7 @@ TopLevelConstResolver buildTopLevelConstResolver(
     final js = rhsToJs(
       exprs[name]!,
       FieldScope(globalConsts: translated.keys.toSet()),
-      classTable,
+      effectiveTable,
     );
     if (js == null) {
       // 跨文件常量由它的声明文件负责翻译与告警，本文件只跳过（避免同一条

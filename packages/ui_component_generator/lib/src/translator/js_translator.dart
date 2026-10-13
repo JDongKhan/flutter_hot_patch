@@ -246,30 +246,60 @@ class FieldScope {
   /// Function.apply 调实现）。
   final Map<String, Map<String, String>> hostMethods;
 
+  /// 局部变量别名：`final list = _list;` → `list → this._list`。
+  /// 抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用被捕获的
+  /// 局部变量时必须落到真实字段引用，否则是未定义的自由变量。
+  final Map<String, String> localAliases;
+
   FieldScope({
     this.propByField = const {},
     this.instanceFields = const {},
     this.params = const {},
     this.methods = const {},
     this.hostMethods = const {},
+    Map<String, String>? localAliases,
     Set<String>? localVars,
     Set<String>? globalConsts,
   })  : localVars = localVars ?? {},
+        localAliases = localAliases ?? const {},
         globalConsts = globalConsts ?? {};
+
+  /// 派生作用域：追加形参名（闭包形参 `(o) => o.status`），其余照旧。
+  ///
+  /// 缺这一步，闭包体里的形参引用（`o`）解析不出来，谓词整条翻译失败，
+  /// 连带 `where(...)` / `map(...)` 与外层表达式一起被丢弃。
+  FieldScope withParams(Iterable<String> names) => FieldScope(
+        propByField: propByField,
+        instanceFields: instanceFields,
+        params: {...params, ...names},
+        methods: methods,
+        localVars: localVars,
+        globalConsts: globalConsts,
+        hostMethods: hostMethods,
+        localAliases: localAliases,
+      );
 
   /// 该名字是否本 scope 可解析的字段。
   bool hasField(String name) =>
       propByField.containsKey(name) ||
       instanceFields.contains(name) ||
+      localAliases.containsKey(name) ||
       localVars.contains(name);
 
   /// 字段 Identifier → JS 引用（`this.x`）；形参/局部变量原样返回；未知返回 null。
   String? fieldRef(String name) {
     if (params.contains(name)) return name;
+    final alias = localAliases[name];
+    if (alias != null) return alias;
     if (localVars.contains(name)) return name;
     final p = propByField[name];
     if (p != null) return 'this.$p';
     if (instanceFields.contains(name)) return 'this.$name';
+    // 实例方法 / getter 引用（`_toggleFilter`、`_visiblePosts` 这类）：
+    // JS 类里它们就是原型上的方法 / `get` 访问器，裸引用一律落成 `this.<name>`。
+    // 少了这一条，`final list = _list;`（getter）与 tear-off 实参会整条翻译失败，
+    // 进而连带把整个 build 树丢掉。
+    if (methods.contains(name)) return 'this.$name';
     return null;
   }
 
@@ -352,8 +382,28 @@ String? boolLiteralJs(Expression? e) {
   return null;
 }
 
+/// List/Iterable 的属性 → JS 数组等价写法。
+///
+/// JS 数组没有 `first` / `last` / `isEmpty`（Dart 有），一比一透传会在运行时
+/// 得到 `undefined`。按 JS 数组语义改写：`xs.first` → `xs[0]`、
+/// `xs.last` → `xs[xs.length - 1]`、`xs.isEmpty` → `(xs.length === 0)`。
+/// 其余属性（`length` 等 JS 同名）返回 null，调用方按原样透传。
+String? _listPropJs(String base, String prop) => switch (prop) {
+      'first' => '$base[0]',
+      'last' => '$base[$base.length - 1]',
+      'isEmpty' => '($base.length === 0)',
+      'isNotEmpty' => '($base.length > 0)',
+      // `list.reversed` → 反转副本（Dart 返回 Iterable；后续 `.toList()` 已被
+      // 去掉、数组语义一致）。
+      'reversed' => '[...$base].reverse()',
+      _ => null,
+    };
+
 /// 读位置表达式 → JS 表达式（this._model.n / this._model / 字面量 / 形参）。
 String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+  // 颜色字面量：任意位置都直接译成 '#aarrggbb'（不再只支持 widget 样式属性）。
+  final color = colorLiteralJs(e);
+  if (color != null) return color;
   // Platform.isAndroid 等（PrefixedIdentifier 是 Identifier 子类，必须先判）
   if (e is PrefixedIdentifier && e.prefix.name == 'Platform') {
     final flag = platformFlagJs(e.identifier.name);
@@ -364,18 +414,31 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 不在这里拦下来，它会落到下面的 Identifier 分支，用整串 `a.b` 去查字段
   // 必然失败——这是「属性访问普遍翻译不出来」的根因。
   if (e is PrefixedIdentifier) {
+    // State 内 `widget.x`（访问 widget 自身字段）→ 合并类的实例属性 `this.x`：
+    // widget 与 State 在 JS 侧是同一个类，widget 字段即实例字段。
+    if (e.prefix.name == 'widget') {
+      return scope.fieldRef(e.identifier.name);
+    }
+    // `Icons.chevron_right` → 图标名字符串（运行时按名映射回 IconData）。
+    // 不在这里拦下来，会落到下面的「大写开头前缀原样保留」，产出未定义的 JS
+    // 全局 `Icons`——作为组件实参（`_DevRow(icon: Icons.x)`）直接运行时崩。
+    if (e.prefix.name == 'Icons') return jsString(e.identifier.name);
     final p = scope.fieldRef(e.prefix.name);
-    if (p != null) return '$p.${e.identifier.name}';
-    // 前缀是顶层常量（如 `kOrderStatus.first`）→ JS 侧同名模块级常量。
-    if (scope.globalConsts.contains(e.prefix.name)) {
-      return '${e.prefix.name}.${e.identifier.name}';
-    }
-    // prefix 是大写开头的外部类名（如 Network.post）→ 原样保留。
-    if (e.prefix.name.isNotEmpty &&
+    String? base;
+    if (p != null) {
+      base = p;
+    } else if (scope.globalConsts.contains(e.prefix.name)) {
+      // 前缀是顶层常量（如 `kOrderStatus.first`）→ JS 侧同名模块级常量。
+      base = e.prefix.name;
+    } else if (e.prefix.name.isNotEmpty &&
         RegExp(r'^[A-Z]').hasMatch(e.prefix.name)) {
-      return '${e.prefix.name}.${e.identifier.name}';
+      // prefix 是大写开头的外部类名（如 Network.post）→ 原样保留。
+      base = e.prefix.name;
     }
-    return null;
+    if (base == null) return null;
+    final lp = _listPropJs(base, e.identifier.name);
+    if (lp != null) return lp;
+    return '$base.${e.identifier.name}';
   }
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被字面量分支
   // 吞成 ""——插值表达式丢失）：拼接触发与 _logArgJs 同一逻辑。
@@ -416,6 +479,34 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       if (l == null || r == null) return null;
       return 'Math.floor($l / $r)';
     }
+  }
+  // 级联 `target..m(a)..n(b)`：Dart 返回 target 本身。译成 IIFE：
+  // `(() => { const _t = <target>; _t.m(a); _t.n(b); return _t; })()`。
+  // 常见形态 `list..sort(cmp)`（原方法体内就地排序）与 `c..addListener(..)`，
+  // 顺序与返回值都与 Dart 一致。
+  if (e is CascadeExpression) {
+    final t = exprToJs(e.target, scope, classes);
+    if (t == null) return null;
+    final stmts = <String>[];
+    for (final s in e.cascadeSections) {
+      if (s is MethodInvocation) {
+        final argsJs = <String>[];
+        for (final a in s.argumentList.arguments) {
+          final inner = a is NamedExpression ? a.expression : a;
+          final v = inner is FunctionExpression
+              ? closureToJs(inner, scope, classes)
+              : rhsToJs(inner, scope, classes);
+          if (v == null) return null;
+          argsJs.add(v);
+        }
+        stmts.add('_t.${s.methodName.name}(${argsJs.join(', ')})');
+      } else if (s is PropertyAccess) {
+        stmts.add('_t.${s.propertyName.name}');
+      } else {
+        return null;
+      }
+    }
+    return '(() => { const _t = $t; ${stmts.join('; ')}; return _t; })()';
   }
   // 三目 `c ? a : b`（组件数据/样式与模型方法体共用）。
   if (e is ConditionalExpression) {
@@ -459,6 +550,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (op == '?.') {
       return '($t == null ? null : $t.${e.propertyName.name})';
     }
+    final lp = _listPropJs(t, e.propertyName.name);
+    if (lp != null) return lp;
     return '$t.${e.propertyName.name}';
   }
   // 下标访问 `a[b]`（如 `userMap["code"]`）：JS 的方括号语法一一对应。
@@ -507,6 +600,11 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   }
   final lit = literalToJs(e);
   if (lit != null) return lit;
+  // 颜色字面量（`Color(0xFF...)` / `Color.fromARGB(...)`）→ '#aarrggbb'。
+  // 必须早于下面的 InstanceCreationExpression 分支：那支对非模型类返回 null
+  // 后直接返回（不再往下走），颜色常量会在那里被吞掉。
+  final color = colorLiteralJs(e);
+  if (color != null) return color;
   // PrefixedIdentifier（`a.b`）不是单纯字段名，交给 exprToJs 的属性分支；
   // 若走下面的 Identifier 分支会用整串名字查字段而必然失败。
   if (e is PrefixedIdentifier) return exprToJs(e, scope, classes);
@@ -767,52 +865,47 @@ String? closureToJs(
     if (name != null && name.isNotEmpty) params.add(name);
   }
   final pjs = params.join(', ');
+  // 闭包形参登记进作用域：`where((o) => o.status == _status)` 里的 `o` 必须
+  // 解析为形参，否则谓词翻译失败、连带整个 `where(...)` 与外围表达式被丢弃。
+  final bodyScope = params.isEmpty ? scope : scope.withParams(params);
   final body = fn.body;
   // 一律输出箭头函数：this 词法绑定到定义处（组件实例），与 Dart 闭包
   // 捕获 this 的语义一致——回调（如 addListener 闭包）由宿主经 invoke
   // 普通调用触发时 this 不会丢失，无需 .bind。引擎为 flutter_js
   // （macOS/iOS JavaScriptCore、Android QuickJS），均完整支持 ES6。
   if (body is ExpressionFunctionBody) {
-    // 表达式体也按语句翻译（赋值 `_x = rhs`、方法调用等），
-    // 返回值无意义时保留语句即可（Dart 闭包返回值在 JS 侧常被忽略）。
-    final v = exprStmtToJs(body.expression, scope, classes);
-    if (v == null) return null;
-    return '($pjs) => { $v }';
+    // 表达式体在 Dart 里就是一个**值**，JS 侧必须 `return`，否则
+    // `sort((a, b) => a.compareTo(b))` / `map((e) => e.name)` 这类回调会把
+    // 返回值丢掉（谓词恒为 undefined）。先按值翻译并 return；只有值形态翻译
+    // 不出来（赋值 `_x = 5`、`setState(...)` 等语句形态）才退回语句翻译。
+    final rv = rhsToJs(body.expression, bodyScope, classes);
+    if (rv != null) return '($pjs) => { return $rv; }';
+    final v = closureBodyStmtJs(body.expression, bodyScope, classes);
+    if (v != null) return '($pjs) => { $v }';
+    return null;
   }
   if (body is BlockFunctionBody) {
-    final parts = <String>[];
-    for (final s in body.block.statements) {
-      if (s is ExpressionStatement) {
-        final t = closureBodyStmtJs(s.expression, scope, classes);
-        if (t != null) parts.add(t);
-      }
-    }
-    if (parts.isEmpty) return null;
-    return '($pjs) => { ${parts.join(' ')} }';
+    // 块体逐语句翻译——与方法体、`_setStateJs` 共用**同一条** [translateStmtList]：
+    // 声明、if/for/while/switch、setState 展开全部覆盖。旧实现只收
+    // `ExpressionStatement`，`onPick: (k, v) { setState(() { switch ... }) }`
+    // 这类块体会被静默丢成 `(...) => {}`（筛选面板点选条件无任何反应）。
+    final stmts =
+        translateStmtList(body.block.statements, bodyScope, classes, null);
+    if (stmts.trim().isEmpty) return null;
+    return '($pjs) => { ${stmts.trim()} }';
   }
   return null;
 }
 
-/// 闭包体内的语句翻译：setState(...) 展开 + 其余走 exprStmtToJs。
+/// 闭包体内的单条表达式语句 → JS：与方法体共用 [\_bodyExprStmtJs]
+/// （`setState(...)` 展开 + 赋值/自增/对象方法调用等）。保留本函数只为兼容
+/// 表达式体闭包的调用点（`(v) => expr` 分支）。
 String? closureBodyStmtJs(
   Expression e,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-) {
-  if (e is MethodInvocation &&
-      e.methodName.name == 'setState' &&
-      e.argumentList.arguments.length == 1) {
-    final fn = e.argumentList.arguments.first;
-    if (fn is FunctionExpression) {
-      final inner = closureToJs(fn, scope, classes);
-      return inner == null
-          ? 'this.setState(function(){});'
-          : 'this.setState($inner);';
-    }
-    return null;
-  }
-  return exprStmtToJs(e, scope, classes);
-}
+) =>
+    _bodyExprStmtJs(e, scope, classes);
 
 /// 方法调用（表达式位置）：返回 `obj.method(args)` / `this.method(args)`。
 String? methodCallExprJs(
@@ -846,6 +939,43 @@ String? methodCallExprJs(
     final a = exprToJs(e.argumentList.arguments.first, scope, classes);
     if (t != null && a != null) return '$t.toFixed($a)';
     return null;
+  }
+  // Dart 集合 API → JS 数组 API（List/Iterable 在 JS 侧就是数组）：
+  //   `xs.where(f)` → `xs.filter(f)`；`xs.where(f).toList()` → `xs.filter(f)`；
+  //   `xs.toList()` → `xs`（数组本身即 List，无需拷贝）。
+  // 缺这一条，订单页 `kOrders.where((o) => ...).toList()` 这类过滤整条失败。
+  if (e.target != null) {
+    final collName = e.methodName.name;
+    if (collName == 'toList' && e.argumentList.arguments.isEmpty) {
+      return exprToJs(e.target!, scope, classes);
+    }
+    if (collName == 'where' && e.argumentList.arguments.length == 1) {
+      final t = exprToJs(e.target!, scope, classes);
+      if (t == null) return null;
+      final fn = e.argumentList.arguments.first;
+      if (fn is! FunctionExpression) return null;
+      final fnJs = closureToJs(fn, scope, classes);
+      if (fnJs == null) return null;
+      return '$t.filter($fnJs)';
+    }
+    // `list.sort((a, b) => …)` → 就地排序（JS Array.sort 同位，返回值仍为数组）；
+    // Dart 的 `..sort()` 级联见 [exprToJs] 的 CascadeExpression 分支。
+    if (collName == 'sort' && e.argumentList.arguments.length == 1) {
+      final t = exprToJs(e.target!, scope, classes);
+      if (t == null) return null;
+      final fn = e.argumentList.arguments.first;
+      if (fn is! FunctionExpression) return null;
+      final fnJs = closureToJs(fn, scope, classes);
+      if (fnJs == null) return null;
+      return '$t.sort($fnJs)';
+    }
+    // `b.like.compareTo(a.like)` → `(b.like - a.like)`（数值比较；用于排序比较器）。
+    if (collName == 'compareTo' && e.argumentList.arguments.length == 1) {
+      final t = exprToJs(e.target!, scope, classes);
+      final o = exprToJs(e.argumentList.arguments.first, scope, classes);
+      if (t == null || o == null) return null;
+      return '($t - $o)';
+    }
   }
   final args = e.argumentList.arguments;
   final argJs = <String>[]; // 普通调用：位置化扁平（JS 无具名参数）
@@ -987,7 +1117,20 @@ String translateMethodBody(
       t = _widgetExprToJs(widgetCtx, e, depth);
     }
     t ??= _bodyExprStmtJs(e, scope, classes);
-    if (t != null) out.add('$ind${returnExpressionBody ? 'return $t;' : t}');
+    if (t != null) {
+      out.add('$ind${returnExpressionBody ? 'return $t;' : t}');
+    } else {
+      // 语句级不认的表达式（switch 表达式、集合字面量、纯值表达式）：回退到
+      // 通用表达式翻译。缺这一步会让「箭头体方法」静默产出空方法体
+      // （如 `Color _statusColor(s) => switch (s) {...}` → 空 `{}`）。
+      final v = rhsToJs(e, scope, classes);
+      if (v != null) {
+        out.add('$ind${returnExpressionBody ? 'return $v;' : v}');
+      } else {
+        log.warning('[ui_component_generator] 方法体表达式无法翻译，已在 JS '
+            '产物中丢弃：${e.toSource()}');
+      }
+    }
   } else if (body is BlockFunctionBody) {
     final r = translateStmtList(body.block.statements, scope, classes, widgetCtx,
         depth: depth, returnsWidget: returnsWidget);
@@ -1047,6 +1190,12 @@ String translateStmtList(
         }
         out.add('${ind}var $name = $init;');
         scope.localVars.add(name);
+        // 该局部只是「字段 / getter 的别名」（`final list = _list;` →
+        // `this._list`）：同步登记进 widget 层，懒加载 builder 抽成实例方法后
+        // 引用它时才能落到 `this._list`，而不是未定义的自由变量。
+        if (init.startsWith('this.')) {
+          widgetCtx?.registerLocalAlias(name, init);
+        }
       }
     } else if (s is ReturnStatement) {
       // `return "22";` 是 ReturnStatement（不是 ExpressionStatement），
@@ -1155,7 +1304,7 @@ String? _forStatementJs(
     scope.localVars.add(name);
     final it = exprToJs(parts.iterable, scope, classes);
     if (it == null) return null;
-    header = 'for (var $name of $it)';
+    header = 'for (let $name of $it)';
   } else if (parts is ForEachPartsWithIdentifier) {
     // for-in 复用已有变量：`for (x in list)` → `for (x of list)`。
     final it = exprToJs(parts.iterable, scope, classes);
@@ -1169,12 +1318,12 @@ String? _forStatementJs(
         final name = v.name.lexeme;
         scope.localVars.add(name);
         if (v.initializer == null) {
-          inits.add('var $name');
+          inits.add('let $name');
           continue;
         }
         final rhs = rhsToJs(v.initializer!, scope, classes);
         if (rhs == null) return null;
-        inits.add('var $name = $rhs');
+        inits.add('let $name = $rhs');
       }
     } else if (parts is ForPartsWithExpression) {
       final init = parts.initialization;
@@ -1377,15 +1526,19 @@ String translateClassMethodBody(
     hostMethods: hostMethods,
     globalConsts: globalConsts,
   );
-  return translateMethodBody(
-    m.body,
-    scope,
-    classes,
-    widgetCtx: widgetCtx,
-    returnExpressionBody: !m.isVoid,
-    returnsWidget: m.returnsWidget,
-    depth: depth,
-  );
+  // 方法形参同步登记进 widget 层（方法体期间），使返回的 widget 树里
+  // `Text(title)` 这类形参引用可解析；翻译结束即恢复，不污染同类其它方法。
+  String run() => translateMethodBody(
+        m.body,
+        scope,
+        classes,
+        widgetCtx: widgetCtx,
+        returnExpressionBody: !m.isVoid,
+        returnsWidget: m.returnsWidget,
+        depth: depth,
+      );
+  if (widgetCtx == null || m.params.isEmpty) return run();
+  return widgetCtx.withMethodParams(m.params, run);
 }
 
 /// 是否为「widget 构造表达式」：`Text(...)` / `new Text(...)`。
@@ -1412,6 +1565,52 @@ String? _widgetExprToJs(WidgetExprRenderer? widgetCtx, Expression e, int depth) 
         '丢弃：${e.toSource()}（$err）');
     return null;
   }
+}
+
+/// `Color(0xAARRGGBB)` / `Color.fromARGB(a, r, g, b)` → JS 颜色字符串
+/// `'#aarrggbb'`（运行时按 '#rrggbb' 解析为 Color，与样式翻译同一契约）。
+///
+/// 放在通用表达式层：任意位置的颜色字面量（顶层常量、模型字段默认值、集合
+/// 元素……）都能翻译，而不只是 widget 的样式属性。
+String? colorLiteralJs(Expression e) {
+  ArgumentList? args;
+  String? ctor;
+  String? named;
+  if (e is InstanceCreationExpression) {
+    ctor = e.constructorName.type.name2.lexeme;
+    named = e.constructorName.name?.name;
+    args = e.argumentList;
+  } else if (e is MethodInvocation && e.target == null) {
+    ctor = e.methodName.name;
+    args = e.argumentList;
+  } else if (e is MethodInvocation && e.target is Identifier) {
+    // `Color.fromARGB(...)`：target 是类名。
+    ctor = (e.target as Identifier).name;
+    named = e.methodName.name;
+    args = e.argumentList;
+  } else {
+    return null;
+  }
+  if (ctor != 'Color') return null;
+  final ints = args.arguments
+      .whereType<IntegerLiteral>()
+      .map((x) => x.value)
+      .whereType<int>()
+      .toList();
+  if (named == 'fromARGB') {
+    if (ints.length != 4) return null;
+    final hex = ints
+        .map((x) => x.clamp(0, 255).toRadixString(16).padLeft(2, '0'))
+        .join();
+    return "'#$hex'";
+  }
+  // `Color(0xAARRGGBB)`：单个整数实参。
+  for (final a in args.arguments) {
+    if (a is IntegerLiteral && a.value != null) {
+      return "'#${a.value!.toRadixString(16).padLeft(8, '0')}'";
+    }
+  }
+  return null;
 }
 
 /// JS 双引号字符串字面量。
@@ -1459,6 +1658,16 @@ abstract class WidgetExprRenderer {
   /// 方法体翻译与 widget 渲染必须共用同一份标识符作用域，否则返回的 widget
   /// 树里引用局部变量时会解析失败。
   void registerLocal(String name);
+
+  /// 把「字段/ getter 的局部别名」（`final list = _list;` → `this._list`）登记
+  /// 进 widget 层：抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用该
+  /// 名字时必须落成 `this._list`，否则方法体内是未定义的自由变量（ReferenceError）。
+  void registerLocalAlias(String name, String jsExpr);
+
+  /// 方法形参：翻译**该方法体期间**登记进 widget 层作用域（`_group(String title,
+  /// …)` 里 `Text(title)` 要能与局部变量同样解析），方法体翻译结束后恢复，
+  /// 避免形参名泄漏到同类的其它方法。成对调用。
+  T withMethodParams<T>(Iterable<String> params, T Function() body);
 
   /// 本文件可见的顶层常量名（widget 树里 `kBrand` 这类引用要与方法体翻译
   /// 共用同一份作用域）。

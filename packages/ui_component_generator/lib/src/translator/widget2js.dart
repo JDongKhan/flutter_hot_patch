@@ -58,6 +58,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   final Map<String, String> actionByMethod;
   final String sourcePath;
 
+  /// 本类**全部**实例方法 / getter 名（含非动作方法，如返回字符串的
+  /// `_likeText`）。JS 类根部会生成所有方法，故数据表达式里的裸调用
+  /// （`Text(_likeText(post.like))`）应翻译成 `this._likeText(...)`，而不只限于
+  /// 注册为动作的方法。缺了它，非动作方法调用会整条翻译失败。
+  final Set<String> methodNames;
+
   /// 组件名 → 依赖产物 jsAsset 路径（null = 无法确定，渲染层走原生注入）。
   /// 由生成器注入：本文件私有/注解组件 → 本文件产物；跨文件组件 →
   /// 从 import directives 推导源文件产物。Component 节点据此产出 import，
@@ -73,6 +79,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// `kBanners` 这类引用与字段初值、方法体共用同一份作用域。
   @override
   final Set<String> globalConsts;
+
+  /// 宿主注入方法表（`类名 → {方法名 → 通道名}`；顶层函数挂在 `''` key 下）。
+  /// 数据表达式 / 事件回调里 `AppRouter.openPost(id)` 这类 `@HostInjected`
+  /// 调用要整体换成 `__jsui.host("通道", 载荷)`——与普通类方法体共用同一份表，
+  /// 否则事件里的跳转/提示整条翻译失败。
+  final Map<String, Map<String, String>> hostMethods;
 
   /// 翻译过程中遇到的未知自定义组件（Component 兜底），供生成器
   /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
@@ -107,9 +119,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     required this.propByField,
     required this.actionByMethod,
     required this.sourcePath,
+    this.methodNames = const {},
     this.importResolver,
     this.singletons,
     this.globalConsts = const {},
+    this.hostMethods = const {},
     this.jsClassWidgets = const {},
     this.delegateClassWidgets = const {},
   });
@@ -145,8 +159,20 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///
   /// 返回 Map = 普通节点；返回 String = JS 表达式（widget 位置三目
   /// `cond ? A() : B()` → `(condJs ? [A] : [B])`），渲染层对 String 原样嵌入。
+  ///
+  /// **单个叶子失败不再炸掉整棵 build 树**（放大器缺陷修复）：每次递归调用
+  /// 各自兜底——坏叶子降级为占位结点 + 构建期告警，兄弟结点照常翻译。
   @override
   Object? translate(Expression e) {
+    try {
+      return _translateExpr(e);
+    } catch (err) {
+      _warnDegrade('widget 表达式', e.toSource(), err);
+      return _placeholderNodeJson();
+    }
+  }
+
+  Object? _translateExpr(Expression e) {
     if (e is ConditionalExpression) {
       final cond = jsDataExpr(e.condition);
       final thenJs = _collectionArrayJs(e.thenExpression);
@@ -205,10 +231,20 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// JS spread 表达式字符串（`...(cond ? [a] : [b])` / `...(function(){...})()`），
   /// 渲染层对 String 原样嵌入（内联构造调用 + 条件/循环展开）。
   Object? translateElement(CollectionElement e) {
-    if (e is Expression) return translate(e);
-    if (e is IfElement) return '...${_ifAsArray(e)}';
-    if (e is ForElement) return '...${_forAsArray(e)}';
-    throw FormatException('不支持的 collection element: ${e.toSource()}');
+    try {
+      if (e is Expression) return translate(e);
+      if (e is IfElement) return '...${_ifAsArray(e)}';
+      if (e is ForElement) return '...${_forAsArray(e)}';
+      // `...<list>` 展开（`...[Positioned.fill(...), Positioned(...)]`）：把内层
+      // 元素数组原样展开进 children（`...[a, b]` ≡ `a, b`）。
+      if (e is SpreadElement) return '...${_collectionArrayJs(e.expression)}';
+      throw FormatException('不支持的 collection element: ${e.toSource()}');
+    } catch (err) {
+      // 单个集合元素（如 `...[...]` spread）无法翻译：降级为占位结点，
+      // 兄弟元素照常翻译（放大器缺陷修复）。
+      _warnDegrade('集合元素', e.toSource(), err);
+      return _placeholderNodeJson();
+    }
   }
 
   /// if/for 作为「元素数组」出现（数组字面量里嵌套、三目分支等），
@@ -223,42 +259,60 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// for 循环 → JS IIFE 展开数组（循环变量 var 提升在 IIFE 内，body 直接引用）。
   String _forAsArray(ForElement e) {
     final parts = e.forLoopParts;
-    if (parts is! ForParts) {
-      throw FormatException('不支持的 for 循环形式: ${e.toSource()}');
-    }
+    // 本循环推入的循环变量：渲染结束（含失败）后精确移除，避免异常路径
+    // 把作用域泄漏给兄弟结点（放大器缺陷修复的一部分）。
+    final pushed = <String>[];
     String head;
-    if (parts is ForPartsWithDeclarations) {
-      // 传统 for：`for (var i = 0; i < n; i++)` → JS 同构
-      final vars = parts.variables.variables.toList();
-      // 循环变量先入作用域：condition/updaters/body 里引用 i 都走 loopVars
-      for (final v in vars) {
-        pushLoopVar(v.name.lexeme);
+    try {
+      if (parts is ForPartsWithDeclarations) {
+        // 传统 for：`for (var i = 0; i < n; i++)` → JS 同构
+        final vars = parts.variables.variables.toList();
+        // 循环变量先入作用域：condition/updaters/body 里引用 i 都走 loopVars
+        for (final v in vars) {
+          pushLoopVar(v.name.lexeme);
+          pushed.add(v.name.lexeme);
+        }
+        final varList = vars.isEmpty
+            ? ''
+            : 'let ${vars.map((v) => '${v.name.lexeme} = ${v.initializer == null ? '0' : jsDataExpr(v.initializer!)}').join(', ')}';
+        final condJs = parts.condition == null ? '' : jsDataExpr(parts.condition!);
+        final incJs = parts.updaters.isEmpty
+            ? ''
+            : parts.updaters.map((u) => jsDataExpr(u)).join(', ');
+        head = 'for ($varList; $condJs; $incJs)';
+      } else if (parts is ForPartsWithExpression) {
+        // 无声明：`for (i = 0; i < n; i++)`（变量需为已收集的状态字段）
+        final initJs = parts.initialization == null ? '' : jsDataExpr(parts.initialization!);
+        final condJs = parts.condition == null ? '' : jsDataExpr(parts.condition!);
+        final incJs = parts.updaters.isEmpty
+            ? ''
+            : parts.updaters.map((u) => jsDataExpr(u)).join(', ');
+        head = 'for ($initJs; $condJs; $incJs)';
+      } else if (parts is ForEachPartsWithDeclaration) {
+        // for-in（带声明）：`for (final s in kOrderStatus)` → `for (let s of <iter>)`。
+        // 用 `let` 而非 `var`：每次迭代一个独立绑定，迭代内注册的事件闭包
+        // （`__bindFn`）才能捕获到**本次**的值（`var` 会让所有迭代共享末值）。
+        final name = parts.loopVariable.name.lexeme;
+        pushLoopVar(name);
+        pushed.add(name);
+        head = 'for (let $name of ${jsDataExpr(parts.iterable)})';
+      } else if (parts is ForEachPartsWithIdentifier) {
+        // for-in（无声明）：`for (s in kOrderStatus)`（变量为已收集的状态字段/局部量）
+        final name = parts.identifier.name;
+        head = 'for ($name of ${jsDataExpr(parts.iterable)})';
+      } else {
+        throw FormatException('不支持的 for 循环形式: ${e.toSource()}');
       }
-      final varList = vars.isEmpty
-          ? ''
-          : 'var ${vars.map((v) => '${v.name.lexeme} = ${v.initializer == null ? '0' : jsDataExpr(v.initializer!)}').join(', ')}';
-      final condJs = parts.condition == null ? '' : jsDataExpr(parts.condition!);
-      final incJs = parts.updaters.isEmpty
-          ? ''
-          : parts.updaters.map((u) => jsDataExpr(u)).join(', ');
-      head = 'for ($varList; $condJs; $incJs)';
-    } else if (parts is ForPartsWithExpression) {
-      // 无声明：`for (i = 0; i < n; i++)`（变量需为已收集的状态字段）
-      final initJs = parts.initialization == null ? '' : jsDataExpr(parts.initialization!);
-      final condJs = parts.condition == null ? '' : jsDataExpr(parts.condition!);
-      final incJs = parts.updaters.isEmpty
-          ? ''
-          : parts.updaters.map((u) => jsDataExpr(u)).join(', ');
-      head = 'for ($initJs; $condJs; $incJs)';
-    } else {
-      throw FormatException('暂不支持该 for 形式（for-in 后续补充）: ${e.toSource()}');
+      final bodyJs = _collectionArrayJs(e.body);
+      // 必须用**箭头函数** IIFE：body 里常引用状态字段（`this.banners`），
+      // 普通 function 立即调用时 this 丢失（严格模式下为 undefined）。
+      return '(() => { var out = []; $head { out.push.apply(out, $bodyJs); } return out; })()';
+    } finally {
+      // 清除本循环的循环变量作用域（渲染完成后，body 内已引用 i）
+      for (final n in pushed) {
+        _loopVars.remove(n);
+      }
     }
-    final bodyJs = _collectionArrayJs(e.body);
-    // 清除循环变量作用域（翻译完成后，body 内已引用 i）
-    popLoopVars();
-    // 必须用**箭头函数** IIFE：body 里常引用状态字段（`this.banners`），
-    // 普通 function 立即调用时 this 丢失（严格模式下为 undefined）。
-    return '(() => { var out = []; $head { out.push.apply(out, $bodyJs); } return out; })()';
   }
 
   /// collection element → JS 数组字面量（元素数组语义；嵌套 if/for 递归展开）。
@@ -270,13 +324,33 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     }
     if (e is IfElement) return _ifAsArray(e);
     if (e is ForElement) return _forAsArray(e);
+    // `...<list>` / `...<field>`：展开内层元素。
+    //   - 内层是**列表字面量**（widget 列表）：逐元素走 [translateElement]
+    //     渲染成元素数组（`...[Positioned(...), Positioned(...)]`）。
+    //   - 其余（运行时数组字段）：`[...<expr>]` 运行时展开。
+    if (e is SpreadElement) {
+      final inner = e.expression;
+      if (inner is ListLiteral) {
+        final items = inner.elements.map(_elementJs).join(', ');
+        return '[$items]';
+      }
+      final t = translate(inner);
+      return '[...${t is String ? t : renderJs(t, 2)}]';
+    }
     throw FormatException('不支持的 collection element: ${e.toSource()}');
   }
 
+  /// 单个 collection element → JS 数组项源码：String（已是 JS 表达式，含
+  /// `...spread` / IIFE / 三目）原样内联，节点 Map 走 [renderJs]。
+  String _elementJs(CollectionElement e) {
+    final t = translateElement(e);
+    return t is String ? t : renderJs(t, 2);
+  }
+
   /// 循环变量作用域：for 循环变量（i 等）在 body 翻译期间遮蔽状态字段查表。
+  /// 入/出成对：[_forAsArray] 用 `finally` 精确移除本次循环推入的变量。
   final Set<String> _loopVars = {};
   void pushLoopVar(String name) => _loopVars.add(name);
-  void popLoopVars() => _loopVars.clear();
 
   /// build() return 前的局部变量（`final isAdult = ...;`）：树里直接引用。
   final Set<String> _locals = {};
@@ -286,6 +360,36 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 同步登记，保证同一方法体里返回的 widget 树能解析这些名字。
   @override
   void registerLocal(String name) => addLocal(name);
+
+  /// 局部别名（`final list = _list;` → `list → this._list`）。被抽成实例方法的
+  /// 懒加载 builder 引用该名字时，必须落成真实字段引用（见 [jsDataExpr]）。
+  final Map<String, String> _localAliases = {};
+  @override
+  void registerLocalAlias(String name, String jsExpr) => _localAliases[name] = jsExpr;
+
+  /// 当前正在翻译的方法形参（`withMethodParams` 期间有效）。
+  final Set<String> _methodParams = {};
+
+  /// [WidgetExprRenderer.withMethodParams] 实现：翻译某方法体期间把形参登记进
+  /// widget 层作用域，结束后恢复（连同本方法产生的局部别名一起回收，避免跨方法串味）。
+  @override
+  T withMethodParams<T>(Iterable<String> params, T Function() body) {
+    final added = <String>[];
+    for (final p in params) {
+      if (_methodParams.add(p)) added.add(p);
+    }
+    final aliasesBackup = Map<String, String>.from(_localAliases);
+    try {
+      return body();
+    } finally {
+      for (final p in added) {
+        _methodParams.remove(p);
+      }
+      _localAliases
+        ..clear()
+        ..addAll(aliasesBackup);
+    }
+  }
 
   /// Builder 闭包局部变量 → 模型类型（`final model = context.watch<T>()`）。
   /// 事件表达式（`() => model.inc()`，局部变量不在回传作用域内）据此翻译成
@@ -301,8 +405,20 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
   /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
+  ///
+  /// 渲染失败同样兜底为占位结点（放大器缺陷修复）：单个结点渲染异常不影响
+  /// 兄弟结点与上层结点。
   @override
   String renderJs(Object? json, int depth) {
+    try {
+      return _renderJsImpl(json, depth);
+    } catch (err) {
+      _warnDegrade('结点', json.toString(), err);
+      return _placeholderJs();
+    }
+  }
+
+  String _renderJsImpl(Object? json, int depth) {
     if (json is String) return json; // 三目/条件表达式（JS 源码字符串）
     if (json is! Map<String, dynamic>) {
       throw FormatException('无法渲染的节点: $json');
@@ -443,12 +559,25 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return null;
   }
 
-  /// children 等列表参数：保留全部 collection elements。
-  /// 注意返回 [CollectionElement]（Expression / IfElement / ForElement），
-  /// 由 [translateElement] 统一翻译（if/for 展开成 JS spread 表达式）。
-  List<CollectionElement> listArg(List<Expression> args, String name, String ctor) {
+  /// children / slivers 等列表参数 → **已翻译的**JS 数组项（节点 Map / JS 表达式
+  /// 字符串），渲染层逐项 [jsLiteral]。
+  ///
+  ///   - `children: [...]` 字面量 → 逐元素 [translateElement]（if/for/spread 由它
+  ///     统一展开成 JS spread 表达式）；
+  ///   - `children: someList`（字段 / 局部变量，如 `Row(children: children)`）→
+  ///     单个 `...<expr>` spread 项，运行时把该数组展开进 children。
+  List<Object?> listArg(List<Expression> args, String name, String ctor) {
     final e = namedArg(args, name);
-    if (e is ListLiteral) return e.elements.toList();
+    if (e is ListLiteral) {
+      return [for (final c in e.elements) translateElement(c)];
+    }
+    if (e != null) {
+      try {
+        return ['...${jsDataExpr(e)}'];
+      } catch (err) {
+        throw FormatException('$ctor 的 $name 无法翻译：${e.toSource()}（$err）');
+      }
+    }
     throw FormatException('$ctor 缺少 $name 列表');
   }
 
@@ -471,11 +600,30 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// `context.read<T>().reset()` 链式）→ 翻译为 JS 方法调用表达式
   /// （一比一，不查动作表——方法/属性全量生成，无需标注）。
   String eventExpr(Expression e) {
-    if (e is Identifier) return eventOf(e.name);
+    if (e is Identifier) {
+      // 字段型回调（`onTap: onTap` / `onTap: _onTap`）：字段里存的就是可调用值，
+      // 事件触发即调它。字段本身由父组件经函数实参传入（见 [functionJs]）。
+      final prop = propByField[e.name];
+      if (prop != null) return 'this.$prop()';
+      return eventOf(e.name);
+    }
     if (e is FunctionExpression) {
       final inner = functionInner(e);
       if (inner is MethodInvocation) {
+        // `setState(() {...})`：组件自身的状态更新，不是 @UIComponentAction 方法
+        // （Dart 的 State.setState 由框架提供）。翻译成 `this.setState(<closure>)`，
+        // 运行时基类已提供 setState（见 mini_react_js）。
+        if (inner.target == null && inner.methodName.name == 'setState') {
+          return _setStateCallJs(inner);
+        }
         final target = inner.target;
+        // @HostInjected 调用（`AppRouter.pop()` / `AppRouter.toast('x')`）：事件
+        // 表达式与方法体翻译共用同一份通道表，整体换成 `__jsui.host(通道, 载荷)`。
+        // 少了这一步，事件串里的 `this.AppRouter.pop()` 在运行时只是对一个不存在
+        // 属性的访问（抛错被运行时吞掉），点击静默失效。
+        final hostCall =
+            _hostEventJs(target, inner.methodName.name, inner.argumentList);
+        if (hostCall != null) return hostCall;
         // 局部变量 receiver：`model.inc()` → 事件表达式中局部变量已不在
         // 作用域，模型局部（context.watch<T>()）改用 `this.__read('T')`；
         // 其余局部变量原样保留（`model.inc()`，闭包内 var 已声明）。
@@ -500,7 +648,23 @@ class WidgetTranslateContext implements WidgetExprRenderer {
           return 'this.${target.name}.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList)})';
         }
-        return eventOf(inner.methodName.name);
+        // 无 receiver 的裸调用 `_openMenu(context, i)` / `_go(text)`：本组件实例
+        // 方法 → `this.<name>(<args>)`。必须保留「调用 + 实参」形态：只回方法名会
+        // 让闭包体变成 `() => { _openMenu; }`（引用而非调用，点击无任何反应）。
+        final method = inner.methodName.name;
+        // 顶层 @HostInjected 函数（无 receiver，如 `toast('x')`）→ 宿主通道。
+        final topHost = _hostEventJs(null, method, inner.argumentList);
+        if (topHost != null) return topHost;
+        if (actionByMethod.containsKey(method) || methodNames.contains(method)) {
+          return 'this.$method(${_eventArgsJs(inner.argumentList)})';
+        }
+        // 字段型回调用法（`() => onPick(key, v)` / `_FilterPanel` 里的分组循环）：
+        // 字段存的是父组件传进来的函数，调它即 `this.<prop>(<args>)`。
+        final prop = propByField[method];
+        if (prop != null) {
+          return 'this.$prop(${_eventArgsJs(inner.argumentList)})';
+        }
+        return eventOf(method);
       }
     }
     throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
@@ -513,12 +677,89 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 表达式）缓存——重建产出同一句柄（props 稳定、增量补丁仍生效），宿主
   /// 点击只回传 `{__fn:id}`。相比运行时按裸方法名沿组件链启发式查找，绑定
   /// 信息在构建期就确定，语义与 Dart tear-off 一致，且不依赖运行时树形状。
-  String eventHandle(Expression e) => 'this.__bind(${jsString(eventExpr(e))})';
+  String eventHandle(Expression e) {
+    try {
+      final exprJs = eventExpr(e);
+      // 事件表达式引用了「构建期才存在的名字」（循环变量）：字符串方案在点击时
+      // 才求值、拿不到它们，必须用构建期闭包 `__bindFn` 注册（见 mini_react_js）。
+      if (_loopVars.isNotEmpty) {
+        return 'this.__bindFn(${_bindKeyExpr(e)}, () => { $exprJs; })';
+      }
+      return 'this.__bind(${jsString(exprJs)})';
+    } catch (err) {
+      // 单个事件翻译失败不该炸掉整棵 build 树（放大器缺陷）：降级为「空操作
+      // 句柄」，其余结点照常翻译（运行时 `__noop` 不命中实例方法 → 什么都不做）。
+      // ignore: avoid_print - 构建期日志
+      print('[ui_component_generator] 事件处理无法翻译，已降级为空操作：'
+          '${e.toSource()}（$err）');
+      return 'this.__bind("__noop")';
+    }
+  }
+
+  /// `setState(() {...})` / `setState(() => _x = v)` → `this.setState(() => {...})`。
+  ///
+  /// 闭包体走统一的语句/表达式翻译（状态字段 → `this.<field>`，与普通方法体
+  /// 同一套作用域），翻译失败即抛错，由 [eventHandle] 统一降级为空操作。
+  String _setStateCallJs(MethodInvocation call) {
+    final args = call.argumentList.arguments;
+    final fn = args.isNotEmpty ? args.first : null;
+    if (fn is! FunctionExpression) {
+      throw const FormatException('setState 需要函数实参');
+    }
+    final scope = FieldScope(
+      propByField: propByField,
+      params: {..._loopVars, ..._locals, ..._methodParams},
+      methods: {...actionByMethod.keys, ...methodNames},
+      hostMethods: hostMethods,
+      globalConsts: globalConsts,
+      localAliases: _localAliases,
+    );
+    final body = fn.body;
+    String bodyJs;
+    if (body is ExpressionFunctionBody) {
+      // 箭头体通常是「赋值 / 自增 / 方法调用」语句（`() => _tab = t`）——走语句级
+      // 翻译（赋值/自增由 [exprStmtToJs] 处理，纯表达式回退到 [exprToJs]）。
+      final stmt = exprStmtToJs(body.expression, scope, const {});
+      if (stmt != null) {
+        bodyJs = '  $stmt';
+      } else {
+        final v = exprToJs(body.expression, scope, const {});
+        if (v == null) {
+          throw FormatException(
+              'setState 闭包体无法翻译：${body.expression.toSource()}');
+        }
+        bodyJs = '  $v;';
+      }
+    } else if (body is BlockFunctionBody) {
+      bodyJs = translateStmtList(body.block.statements, scope, const {}, null,
+          depth: 1, returnsWidget: false);
+    } else {
+      throw const FormatException('不支持的 setState 闭包体');
+    }
+    return 'this.setState(() => {\n$bodyJs\n})';
+  }
+
+  /// 构建期句柄 key：表达式源码 + 当前全部循环变量的运行期值。
+  ///
+  /// 循环变量在字符串方案里根本拿不到（点击时才求值），故走 `__bindFn` 闭包
+  /// 分支；而闭包分支按 key 缓存句柄，key 必须「同一次迭代稳定、不同迭代不同」
+  /// ——所以把循环变量的值拼进去。
+  String _bindKeyExpr(Expression e) {
+    final parts = <String>[jsString(e.toSource())];
+    for (final v in _loopVars) {
+      parts.add('String($v)');
+    }
+    return parts.join(' + ":" + ');
+  }
 
   /// 事件参数列表翻译：逐参数走 [jsDataExpr]（字符串/字段/局部变量/字面量）。
   String _eventArgsJs(ArgumentList args) {
     final out = <String>[];
     for (final a in args.arguments) {
+      // `BuildContext` 实参（约定名 context）：JS 侧方法签名已剔除（见
+      // jsMethodParams），调用点也要同步跳过——否则 `() => _openMenu(context, i)`
+      // 会因 context 翻译不出来整条事件丢弃。
+      if (a is Identifier && a.name == 'context') continue;
       if (a is NamedExpression) {
         out.add(jsDataExpr(a.expression));
       } else {
@@ -526,6 +767,35 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       }
     }
     return out.join(', ');
+  }
+
+  /// 事件表达式里的 @HostInjected 调用 → `__jsui.host(通道, 载荷)`。
+  ///
+  /// [target] 是 @HostInjected 类名（`AppRouter`）或 null（顶层宿主函数）；
+  /// 通道表 [hostMethods] 与方法体翻译共用同一份数据，未命中返回 null。
+  /// 位置 / 具名实参分开传，宿主侧用 `Function.apply` 还原 Dart 调用语义。
+  String? _hostEventJs(Expression? target, String method, ArgumentList args) {
+    final String? channel;
+    if (target is Identifier) {
+      channel = hostMethods[target.name]?[method];
+    } else if (target == null) {
+      channel = hostMethods['']?[method];
+    } else {
+      channel = null;
+    }
+    if (channel == null) return null;
+    final pos = <String>[];
+    final named = <String>[];
+    for (final a in args.arguments) {
+      // BuildContext 实参（约定名 context）：JS 侧无对应值，跳过（同 [_eventArgsJs]）。
+      if (a is Identifier && a.name == 'context') continue;
+      if (a is NamedExpression) {
+        named.add('${jsString(a.name.label.name)}: ${jsDataExpr(a.expression)}');
+      } else {
+        pos.add(jsDataExpr(a));
+      }
+    }
+    return '__jsui.host(${jsString(channel)}, ${hostArgsJs(pos, named)})';
   }
 
   /// BorderRadius.all(Radius.circular(n)) / BorderRadius.circular(n) → 数字字符串。
@@ -563,18 +833,53 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 组件侧：状态字段（[propByField]）+ 循环变量 + build 局部变量 + 组件方法。
   /// 无法翻译即抛错（组件数据绑定不允许静默丢表达式）。
   String jsDataExpr(Expression e) {
-    final scope = FieldScope(
-      propByField: propByField,
-      params: {..._loopVars, ..._locals},
-      methods: actionByMethod.keys.toSet(),
-      globalConsts: globalConsts,
-    );
-    final js = rhsToJs(e, scope, const {});
+    final js = rhsToJs(e, _dataScope(), const {});
     if (js == null) {
       throw FormatException(
           '文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
     }
     return js;
+  }
+
+  /// 组件侧数据作用域（文本插值 / 数据表达式 / 事件参数 / 闭包共用一份）：
+  /// 状态字段 + 循环变量 + build 局部变量 + 方法形参 + 本类方法 + 顶层常量 +
+  /// 宿主注入方法表 + 局部别名。
+  ///
+  /// 有别名（`final list = _list;` → `list → this._list`）的局部从形参表剔除：
+  /// [FieldScope.fieldRef] 先查形参，若不剔除就会把 `list` 原样透传成未定义的
+  /// 自由变量（懒加载 builder 抽成实例方法后尤其致命）。
+  FieldScope _dataScope() => FieldScope(
+        propByField: propByField,
+        params: {
+          ..._loopVars,
+          ..._methodParams,
+          for (final l in _locals)
+            if (!_localAliases.containsKey(l)) l,
+        },
+        methods: {...actionByMethod.keys, ...methodNames},
+        hostMethods: hostMethods,
+        globalConsts: globalConsts,
+        localAliases: _localAliases,
+      );
+
+  /// 组件参数位置上的「函数值」翻译：返回 null = 不是函数形态。
+  ///
+  ///   - 闭包字面量（`onTap: () => ...` / `onPick: (k, v) => ...`）→ JS 箭头函数；
+  ///   - 方法 tear-off（`onReset: _resetFilter`）→ 绑定宿主实例的箭头闭包
+  ///     （直接传 `this._resetFilter` 会在子组件调用时丢 this）；
+  ///   - 字段型回调透传（`onTap: onTap`）→ 原样函数值。
+  String? functionJs(Expression e) {
+    if (e is FunctionExpression) {
+      return closureToJs(e, _dataScope(), const {});
+    }
+    if (e is Identifier) {
+      if (actionByMethod.containsKey(e.name) || methodNames.contains(e.name)) {
+        return '(...__a) => this.${e.name}(...__a)';
+      }
+      final prop = propByField[e.name];
+      if (prop != null) return 'this.$prop';
+    }
+    return null;
   }
 
   /// 方法 tear-off 或 `() => _inc()` 内部的方法调用表达式
@@ -599,7 +904,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 普通 Map/List → 递归容器。
   String jsLiteral(Object? value, int depth) {
     if (value is Map) {
-      if (value.containsKey('type')) {
+      if (_isNodeMap(value)) {
         return renderJs(Map<String, dynamic>.from(value), depth);
       }
       if (value.isEmpty) return '{}';
@@ -626,6 +931,22 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return s;
   }
 
+  /// 判断一个 Map 是「widget 节点」还是「普通 props / args 容器」。
+  ///
+  /// 不能用「含 `type` 键」当判据：组件构造里 `Foo(type: _type)` 这类实参名就叫
+  /// `type`，会把整个 props Map 误判成节点（读出的 `type` 是 JS 表达式而非类型名，
+  /// 查表落空后整条结点降级）。节点 Map 由 translator 产出，特征明确：
+  ///   - 键只有 `type` / `props` / `children` 三种；
+  ///   - `type` 的值是 [jsString] 产出的**带引号字符串字面量**（类型名），
+  ///     而不是 `this._type` 这类运行时表达式。
+  static bool _isNodeMap(Map value) {
+    final t = value['type'];
+    if (t is! String || !t.startsWith('"')) return false;
+    return value.keys.every(
+      (k) => k == 'type' || k == 'props' || k == 'children',
+    );
+  }
+
   /// 生成 JS 双引号字符串字面量
   String jsString(String s) {
     final escaped = s
@@ -649,6 +970,30 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       expr: e,
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// 「放大器缺陷」兜底：单个叶子/结点翻译失败时的降级
+//
+// 原行为：build() 树里**任意一个叶子表达式**抛 FormatException 会一路冒泡，
+// 最终让 `_widgetExprToJs` 返回 null，整棵 `return Column(...)` 被丢弃 → 页面
+// 退化成空 build。现在把兜底放在每一次 [WidgetTranslateContext.translate] /
+// [translateElement] / [renderJs] 递归调用上：坏叶子只丢自己（降级为占位结点），
+// 兄弟结点与上层结点照常产出，同时打印构建期告警（不静默）。
+// ---------------------------------------------------------------------------
+
+/// 无法翻译的结点占位（中立描述层）：空的 `SizedBox`，渲染成
+/// `__h('SizedBox', {})`，运行时零尺寸、不产生可见内容。
+Map<String, dynamic> _placeholderNodeJson() => {'type': '"SizedBox"'};
+
+/// 无法渲染的结点占位（JS 源码层）：与 [_placeholderNodeJson] 同义。
+String _placeholderJs() => "__h('SizedBox', {})";
+
+/// 构建期降级告警：出声（不静默丢代码），但不再抛错连累兄弟结点。
+void _warnDegrade(String what, String source, Object err) {
+  // ignore: avoid_print - 构建期日志
+  print('[ui_component_generator] $what 无法翻译，已降级为占位结点：'
+      '$source（$err）');
 }
 
 /// ===========================================================================
@@ -746,6 +1091,17 @@ class ComponentTranslator extends WidgetTranslator {
     // 整批丢掉，退化成 `__h(X, {})`（子组件拿不到数据）。
     final args = <String, dynamic>{};
     for (final entry in node.namedArgs.entries) {
+      // `children: [...]`（自定义组件的子结点列表，如 `_BottomBar(children: [...])`）：
+      // 整表按元素翻译成 JS 数组（`args.children`），生成类构造函数正是读
+      // `args.children`（见 class_translator 的字段契约）——与 `children: someList`
+      // 的 spread 形态在运行时等价。逐项走 [translateElement]，if/for/spread 照常展开。
+      if (entry.key == 'children' && entry.value is ListLiteral) {
+        args['children'] = [
+          for (final c in (entry.value as ListLiteral).elements)
+            ctx.translateElement(c),
+        ];
+        continue;
+      }
       final js = _argJs(entry.value, ctx);
       if (js != null) args[entry.key] = js;
     }
@@ -764,14 +1120,28 @@ class ComponentTranslator extends WidgetTranslator {
   ///
   /// 一律走组件侧数据表达式翻译（与文本插值/事件参数同一套语法支持）：
   /// 字面量、字段引用、下标、循环变量、局部变量、三目都能落成 JS 表达式。
-  /// 翻译不了的参数出声告警（不静默丢），并跳过该参数。
-  static String? _argJs(Expression e, WidgetTranslateContext ctx) {
+  /// 翻译不了的参数出声提示（不静默丢），并跳过该参数。
+  static Object? _argJs(Expression e, WidgetTranslateContext ctx) {
     if (e is NullLiteral) return null;
+    // 函数形态实参（`onTap: () => ...` / `onReset: _resetFilter` / `onTap: onTap`）：
+    // 先按函数值翻译，避免被当成普通数据表达式（tear-off 会丢 this）。
+    final fn = ctx.functionJs(e);
+    if (fn != null) return fn;
     try {
       return ctx.jsDataExpr(e);
-    } catch (err) {
-      // ignore: avoid_print - 构建期日志
-      print('[ui_component_generator] 跳过组件参数 ${e.toSource()}（$err）');
+    } catch (_) {
+      // 非数据形态：还可能是**元素**（`trailing: Icon(...)` / `child: Column(...)`）
+      // ——按结点翻译，渲染层产出元素构造，运行时子组件按元素使用。
+      try {
+        return ctx.translate(e);
+      } catch (_) {}
+      // 组件参数只接受「数据 / 函数 / 元素」三种形态。其余（如原生宿主对象）
+      // 在 JS 侧没有等价物，属**预期内**的跳过，不是产物错误——因此不透出
+      // 底层异常细节。
+      // ignore: avoid_print - 构建期提示
+      print('[ui_component_generator] 组件参数 ${e.toSource()} 不是数据表达式，'
+          '已跳过（JS 侧无法传递方法/函数引用）；'
+          '如需该行为请用 JsUiWidget.nativeComponents 注入原生实现');
       return null;
     }
   }

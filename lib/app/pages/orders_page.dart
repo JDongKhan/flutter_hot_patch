@@ -6,16 +6,15 @@ import '../model/app_data.dart';
 import '../model/app_models.dart';
 import 'detail_pages.dart';
 
-/// 订单 tab（`@UIComponentIgnore` → 不参与连带翻译，运行时原生注入）。
+/// 订单 tab（`@UIComponent` → 连带翻译，产物 patch/app/pages/orders_page.js）。
 ///
 /// 对应 docs/app-prototype.html 的「订单」：顶部状态条（全部/待付款/待发货/
 /// 待收货/已完成）+ 订单卡列表（订单号 / 状态 / 商品 / 合计 / 操作按钮）。
 ///
-/// 本页用了翻译器覆盖不到的构造（`.where().toList()` 过滤、`late` 字段初始化
-/// 依赖 `widget.x`、集合 for 循环、ListView.separated 的 itemBuilder 局部变量、
-/// switch 表达式返回 Color），连带翻译会产出空的 `build()`；故显式退出翻译，
-/// 由宿主 `nativeComponents` 原生注入。
-@UIComponentIgnore()
+/// 本页纳入连带翻译（`@UIComponent`）：`.where().toList()` 过滤、`late` 字段
+/// 初始化（`widget.initialStatus`）、集合 for 循环、ListView.separated 的
+/// itemBuilder 局部变量、switch 表达式返回 Color 均已支持。
+@UIComponent()
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key, this.initialStatus});
 
@@ -245,7 +244,7 @@ class _OrderCard extends StatelessWidget {
                   if (pending) ...[
                     MiniButton(
                       label: '取消',
-                      onTap: () => appToast(context, '已取消订单 ${order.no}（演示）'),
+                      onTap: () => AppRouter.toast('已取消订单 ${order.no}（演示）'),
                     ),
                     const SizedBox(width: 8),
                     MiniButton(label: '去支付', primary: true, onTap: onOpen),

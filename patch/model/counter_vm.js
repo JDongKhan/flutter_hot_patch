@@ -11,7 +11,9 @@ export class CounterVm extends ChangeNotifier {
     super();
     this._count = 0;
   }
-  get count() { return this._count; }
+  get count() {
+    return this._count;
+  }
   async inc() {
     this._count += 1;
     if ((this._count >= 10)) {
