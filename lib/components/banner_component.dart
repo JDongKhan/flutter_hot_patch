@@ -7,7 +7,8 @@ import 'hello_component.dart';
 /// BannerCard 独立于 hello_component.dart，单独产出：
 ///   banner_component.js
 /// 运行时与 HelloCard 共享同一个 __components 注册表。
-@UIComponent('BannerCard')
+/// 注解不传 name：组件名直接取类名（BannerCard）。
+@UIComponent()
 class BannerCard extends StatefulWidget {
   const BannerCard({super.key});
 

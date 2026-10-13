@@ -49,11 +49,12 @@ class _CounterState extends State<Counter> {
 
 ## 注解
 
-### `@UIComponent(name)`
+### `@UIComponent()` / `@UIComponent(name)`
 
 标记一个类为可动态下发的 UI 组件。
 
-- `name`：组件名。运行时用 `JsUiWidget(component: name)` 实例化 JS 版本。
+- `name`：组件名，**可省略**；不传（写 `@UIComponent()`）时组件名即**类名**。
+  运行时用 `JsUiWidget(component: 组件名)` 实例化 JS 版本。
 - 热更基于**整个 widget**，不做字段/方法级标注。生成器默认全量收集：
   - 所有非 static 字段 → JS 状态（`_count` → `count`）
   - 所有方法（除 build / 生命周期）→ JS 事件方法（构建期以 `this.__bind` 绑定）

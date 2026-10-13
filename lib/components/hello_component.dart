@@ -12,7 +12,7 @@ import 'package:flutter_hot/model/user.dart';
 ///      同一产物（const PanelColors = {...}），build 里 `PanelColors.background`
 ///      直接翻译成 JS 表达式引用，无需 import 独立产物。
 ///
-/// 注解仅 @UIComponent('组件名') 一个类级注解，其余全量生成：
+/// 注解仅 @UIComponent() 一个类级注解（name 可省略，缺省取类名），其余全量生成：
 ///   - 所有非 static 基础类型字段 → JS 属性（一比一，_count → _count）
 ///   - 所有非生命周期方法 → JS 方法（一比一，inc → inc）
 ///   - SnackBar 形式的方法 → 自动 native 通道（nativeToast）

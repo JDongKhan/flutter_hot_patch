@@ -13,9 +13,12 @@ import 'package:hot_patch/hot_patch.dart';
 import 'package:ui_component/ui_component.dart';
 
 void main() {
-  test('注解可携带组件元信息', () {
+  test('注解可携带组件元信息（name 可省略，缺省取类名）', () {
     const component = UIComponent('HelloCard');
     expect(component.name, 'HelloCard');
+    // 不传 name：等价于用类名作组件名（JS 类名与 Dart 类名一致）。
+    const unnamed = UIComponent();
+    expect(unnamed.name, isNull);
   });
 
   test('宿主注入：位置/具名实参按 Dart 调用语义还原', () {
