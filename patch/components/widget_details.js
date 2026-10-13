@@ -387,7 +387,7 @@ export class LayoutDetail {
             "runAlignment": "center",
             "crossAxisAlignment": "center"
           }, [
-            ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
+            ...(() => { var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
           ]),
         __h('SizedBox', {
             "height": 12
@@ -838,7 +838,7 @@ export class ScrollDetail {
             "physics": "ClampingScrollPhysics"
           }, [
             __h('Row', {}, [
-                ...(function(){ var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": "横向 " + i }) ])]); } return out; })()
+                ...(() => { var out = []; for (var i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": "横向 " + i }) ])]); } return out; })()
               ])
           ]),
         __h('Align', {
@@ -946,7 +946,7 @@ export class SliverDetail {
                 }
               }, [
                 __h('SliverList', {}, [
-                    ...(function(){ var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "SliverList item " + i, "leading": __h('Icon', { "icon": "list", "color": '#673AB7' }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
+                    ...(() => { var out = []; for (var i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "SliverList item " + i, "leading": __h('Icon', { "icon": "list", "color": '#673AB7' }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
                   ])
               ]),
             __h('SliverPadding', {
@@ -1752,8 +1752,8 @@ export class NotifierCard {
 export class StatelessCard {
   constructor(args) {
     this.title = (args && args.title !== undefined) ? args.title : '';
-    this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : '';
-    this.badge = (args && args.badge !== undefined) ? args.badge : '';
+    this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : "";
+    this.badge = (args && args.badge !== undefined) ? args.badge : "NEW";
   }
   build() {
     return __h('Card', {
@@ -2010,7 +2010,7 @@ export class PageViewDetail {
         __h('Row', {
             "mainAxisAlignment": "center"
           }, [
-            ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Container', { "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
+            ...(() => { var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Container', { "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
           ])
       ]);
   }

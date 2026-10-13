@@ -2,6 +2,7 @@
 // 由 ui_component_generator 从 lib/app/app.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { HomePage } from 'pages/home_page.js';
 import { __h } from '../flutter.js';
 
 // 组件 AppShell
@@ -17,9 +18,7 @@ export class AppShell {
         "body": __h('IndexedStack', {
             "index": this._index
           }, [
-            __h("Component", {
-                "component": "HomePage"
-              }, null),
+            __h(HomePage, {}),
             __h("Component", {
                 "component": "CommunityPage"
               }, null),

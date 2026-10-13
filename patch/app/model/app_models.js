@@ -78,7 +78,7 @@ export class MenuEntry {
     this.emoji = (args && args.emoji !== undefined) ? args.emoji : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.screen = (args && args.screen !== undefined) ? args.screen : '';
-    this.arg = (args && args.arg !== undefined) ? args.arg : '';
+    this.arg = (args && args.arg !== undefined) ? args.arg : "";
   }
 }
 

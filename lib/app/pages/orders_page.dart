@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:ui_component/ui_component.dart';
 
 import '../../base/app_router.dart';
 import '../model/app_data.dart';
 import '../model/app_models.dart';
 import 'detail_pages.dart';
 
-/// 订单 tab（常规 Flutter 页面，无 @UIComponent 注解）。
+/// 订单 tab（`@UIComponentIgnore` → 不参与连带翻译，运行时原生注入）。
 ///
 /// 对应 docs/app-prototype.html 的「订单」：顶部状态条（全部/待付款/待发货/
 /// 待收货/已完成）+ 订单卡列表（订单号 / 状态 / 商品 / 合计 / 操作按钮）。
+///
+/// 本页用了翻译器覆盖不到的构造（`.where().toList()` 过滤、`late` 字段初始化
+/// 依赖 `widget.x`、集合 for 循环、ListView.separated 的 itemBuilder 局部变量、
+/// switch 表达式返回 Color），连带翻译会产出空的 `build()`；故显式退出翻译，
+/// 由宿主 `nativeComponents` 原生注入。
+@UIComponentIgnore()
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key, this.initialStatus});
 

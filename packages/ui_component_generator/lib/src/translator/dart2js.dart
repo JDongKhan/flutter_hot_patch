@@ -259,7 +259,9 @@ String renderClassDecl(
       // 大括号独占行。
       final body = (m.bodyJs ??
               translateClassMethodBody(info, m, classes,
-                  hostMethods: info.hostMethods, widgetCtx: widgetCtx))
+                  hostMethods: info.hostMethods,
+                  widgetCtx: widgetCtx,
+                  globalConsts: widgetCtx?.globalConsts ?? const {}))
           .trimRight();
       b.write('  $fn${m.name}(${m.params.join(', ')}) {\n');
       if (body.isNotEmpty) b.write('$body\n');

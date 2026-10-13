@@ -21,6 +21,8 @@ import '../../translator/widget2js.dart';
 import '../js_widget_defs.dart';
 import '../product_path.dart';
 import 'class_table.dart';
+import 'component_scope.dart';
+import 'const_support.dart';
 import 'singleton_support.dart';
 
 /// 把 lib/ 下的 Dart 源文件翻译为**同名** JS 产物（`lib/a/b.dart` → `patch/a/b.js`）：
@@ -83,20 +85,15 @@ class ComponentBuilder implements Builder {
     registerBuiltinTranslators(registry);
 
     // 组件名 → 依赖产物 jsAsset 路径。规则：
-    //   本文件注解组件 / 本文件私有组件 → 本文件产物（同产物注册）；
-    //   本文件无注解非私有组件（如 MyCustomCard）→ null（运行时原生注入）；
-    //   跨文件组件 → 从 import directives 推导源文件产物。
+    //   本文件类（注解组件 / public 或私有 widget 类）→ 本文件产物（同产物注册）；
+    //   @UIComponentIgnore → null（运行时原生注入）；
+    //   跨文件组件 → 从 import directives 推导源文件产物（见
+    //   resolveImportedComponentProducts，口径与根类收集一致）。
     // （提前于根类收集构造：translateClass 内部翻译 Component
     //   节点时即会调用 importResolver，闭包必须已初始化）
     final parsedNames = <String>{
       for (final d in parsed.unit.declarations)
         if (d is ClassDeclaration) d.name.lexeme,
-    };
-    final annotatedNames = <String>{
-      for (final d in parsed.unit.declarations)
-        if (d is ClassDeclaration &&
-            findAnnotation(d.metadata, 'UIComponent') != null)
-          d.name.lexeme,
     };
     // 产物采用**相对路径**（相对当前产物所在目录，如 'bar_component.js'）：
     // 未来 JS 产物整体发布（CDN / 包内迁移）时，主产物与依赖产物的相对关系
@@ -108,14 +105,9 @@ class ComponentBuilder implements Builder {
         resolveImportedComponentProducts(parsed.unit, inputId.path);
     String? importResolver(String name) {
       // @UIComponentIgnore：显式「不参与连带转换」的类 → null
-      // （保持 Component 节点，运行时原生注入，等价于无注解公共组件路径）。
+      // （保持 Component 节点，运行时原生注入）。
       if (isIgnoredClass(parsed.unit, name)) return null;
-      if (parsedNames.contains(name)) {
-        if (annotatedNames.contains(name) || name.startsWith('_')) {
-          return ownName;
-        }
-        return null;
-      }
+      if (parsedNames.contains(name)) return ownName;
       final abs = importProducts[name];
       if (abs == null) return null;
       return relativeProduct(ownProduct, abs);
@@ -143,10 +135,13 @@ class ComponentBuilder implements Builder {
     };
 
     // 收集本文件「根类」——两种文件走同一入口，差别只在 isComponent 参数：
-    //   - 有 @UIComponent 类 → 根类 = 全部注解类（组件产物，export 组件类）；
-    //   - 否则 → 根类 = 本文件「可导出普通类」（非私有、非抽象、非组件、非静态
-    //     单例）→ 模型产物（export class）；静态单例类另行以 export const 渲染。
-    // 两者都没有（如 main.dart、纯 widget 文件）→ 不产出。
+    //   - 有 @UIComponent 类 → 根文件：根类 = 全部注解类（组件产物）；
+    //   - 否则 → **只有被注解组件依赖（可达）的文件才产出**（见
+    //     componentReachableFiles）：根类 = 本文件 public 的 widget 类
+    //     （与注解组件同一条渲染路径）+ public 普通类（模型）。
+    //     数据的可翻译性由「被引用」决定（`model/user.dart` 同理）——入口页 /
+    //     展示页（main.dart、widget_showcase.dart、detail_pages.dart）不被任何
+    //     注解组件引用，故不产出 JS；@UIComponentIgnore / @HostInjected 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
     final annotated = <ClassDeclaration>[
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>())
@@ -155,16 +150,50 @@ class ComponentBuilder implements Builder {
     if (annotated.isNotEmpty) {
       roots.addAll([for (final d in annotated) (d, true)]);
     } else {
+      final reachable = await componentReachableFiles(buildStep);
+      if (!reachable.contains(inputId.path)) return;
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
         final name = d.name.lexeme;
         if (name.startsWith('_') || d.abstractKeyword != null) continue;
         if (sameFileSingletonNames.contains(name)) continue;
+        if (isIgnoredClass(parsed.unit, name)) continue;
         final info = classTable[name];
-        if (info == null || info.isComponent) continue;
-        roots.add((d, false));
+        if (info == null) continue;
+        // isComponent=true → 组件根类（build 树 / export class）；
+        // false → 普通类根类（模型，export class）。
+        roots.add((d, info.isComponent));
       }
     }
-    if (roots.isEmpty && sameFileSingletonInfos.isEmpty) return;
+    if (roots.isEmpty && sameFileSingletonInfos.isEmpty) {
+      // 纯数据文件（如 lib/app/model/app_data.dart）：文件里没有任何可翻译的类，
+      // 只有顶层常量 → 产出「顶层常量」产物（`export const kBanners = [...]`），
+      // 组件产物才能 import 到这些值（与类产物同一个文件级产物路径）。
+      if (!_hasOwnTopLevelConst(parsed.unit)) return;
+      final constResolver =
+          buildTopLevelConstResolver(parsed.unit, inputId.path, classTable);
+      if (constResolver.sameFile.isEmpty) return;
+      final importByFile = <String, Set<String>>{};
+      _addConstImports(importByFile, constResolver,
+          referencedImportedConsts(parsed.unit, constResolver));
+      _addClassImports(
+          importByFile, classTable, constResolver.sameFileConstClasses);
+      final text = renderTopLevelConstProduct(
+        inputId.path,
+        consts: constResolver.sameFile,
+        imports: _importLines(importByFile, ownProduct),
+      );
+      if (text.isEmpty) return;
+      await buildStep.writeAsString(buildStep.allowedOutputs.first, text);
+      return;
+    }
+
+    // 顶层常量（数据文件）解析：把本文件可见的顶层 const（同文件 + import 文件）
+    // 在解析期翻译成 JS 值。同文件的 inline 进本产物，跨文件的 import——与类
+    // 同一套「同文件内联 / 跨文件 import」规则。globalConsts 是「已译成功」的
+    // 常量名集合，注入翻译作用域后组件里的 `kBanners` 才能解析为同名 JS 常量。
+    final constResolver =
+        buildTopLevelConstResolver(parsed.unit, inputId.path, classTable);
+    final globalConsts = constResolver.names;
 
     // 逐个根类翻译：JS 类名 = Dart 类名；State 合并、字段 / 方法 / 依赖处理
     // 全部在 translateClass 内部完成，builder 只决定「以组件身份还是普通类身份」。
@@ -180,6 +209,7 @@ class ComponentBuilder implements Builder {
         singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: builderFormTypes,
+        globalConsts: globalConsts,
         isComponent: isComponent,
       ));
     }
@@ -226,6 +256,7 @@ class ComponentBuilder implements Builder {
         singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: builderFormTypes,
+        globalConsts: globalConsts,
         isComponent: isWidgetDep,
       );
       if (isWidgetDep) {
@@ -291,6 +322,20 @@ class ComponentBuilder implements Builder {
     exportedClasses.forEach(collectComponentImports);
     inlineClasses.values.forEach(collectComponentImports);
 
+    // 顶层常量：本文件常量内联进产物（见 _renderJsProduct），引用到的跨文件常量
+    // 与「常量里构造的跨文件模型」→ import。按源文件聚合，与上面的 import 合并
+    // 后统一去重。
+    final constImportsByFile = <String, Set<String>>{};
+    _addConstImports(constImportsByFile, constResolver,
+        referencedImportedConsts(parsed.unit, constResolver));
+    _addClassImports(
+        constImportsByFile, classTable, constResolver.sameFileConstClasses);
+    dependencyImports.addAll(_importLines(constImportsByFile, ownProduct));
+    final dedupedImports = <String>[];
+    for (final line in dependencyImports) {
+      if (!dedupedImports.contains(line)) dedupedImports.add(line);
+    }
+
     // 翻译阶段（含三目/if/for 内联渲染）已收集的类型并入渲染期总表。
     final allTranslated = [...exportedClasses, ...inlineClasses.values];
     final extraUsedWidgets = <String, Set<String>>{};
@@ -308,7 +353,9 @@ class ComponentBuilder implements Builder {
         inlineClasses: inlineClasses.values.toList(),
         singletons: sameFileSingletonInfos,
         classes: classTable,
-        dependencyImports: dependencyImports,
+        consts: constResolver.sameFile,
+        globalConsts: globalConsts,
+        dependencyImports: dedupedImports,
         extraUsedWidgets: extraUsedWidgets,
         extraUsedNodeHelper: allTranslated.any((c) => c.usedNodeHelper),
         importResolver: importResolver,
@@ -324,7 +371,10 @@ class ComponentBuilder implements Builder {
 ///   - [singletons]：静态单例类 → `export const`；
 ///   - [exportedClasses]：对外产出的类（`export class`）——组件与普通模型类
 ///     走同一条渲染路径；
-///   - [dependencyImports]：跨文件依赖的 import 行（组件文件与模型文件都可能非空）。
+///   - [dependencyImports]：跨文件依赖的 import 行（组件文件与模型文件都可能非空）；
+///   - [consts]：本文件顶层常量（名字 → 已译 JS 值）→ `export const X = ...;`
+///     内联在产物顶部，`_` 开头的私有名不 export；[globalConsts] 为全部可见常量名
+///     （同文件 + import 文件），供方法体内的常量引用解析。
 /// 所有类统一由 [dart2js] 渲染、统一带 [WidgetExprRenderer] 上下文：方法体里
 /// `return Container(...)` 一律走 widget 翻译路径（普通类里返回 widget 的方法
 /// 同样生效），用到的 widget 类型统一收集成 package import。因此没有
@@ -336,6 +386,8 @@ String _renderJsProduct(
   List<ClassInfo> inlineClasses = const [],
   List<ClassInfo> singletons = const [],
   Map<String, ClassInfo> classes = const {},
+  Map<String, String> consts = const {},
+  Set<String> globalConsts = const {},
   List<String> dependencyImports = const [],
   Map<String, Set<String>> extraUsedWidgets = const {},
   bool extraUsedNodeHelper = false,
@@ -364,6 +416,7 @@ String _renderJsProduct(
     actionByMethod: const {},
     sourcePath: sourcePath,
     importResolver: importResolver,
+    globalConsts: globalConsts,
     jsClassWidgets: jsClassWidgetTypes,
     delegateClassWidgets: builderFormTypes,
   );
@@ -375,6 +428,14 @@ String _renderJsProduct(
   // 拼一条 import（`import { Text } from '../flutter.js'`）。
   final usedWidgets = <String, Set<String>>{};
   _mergeUsedWidgets(usedWidgets, extraUsedWidgets);
+
+  // 本文件顶层常量：内联在产物顶部（`export const kBanners = [...]`），供本产物
+  // 内的类与其它产物按名引用。私有常量不 export（仅本产物内可见）。
+  if (consts.isNotEmpty) {
+    b
+      ..writeln()
+      ..write(renderTopLevelConstBody(consts));
+  }
 
   // 本产物内共享的类：inline class（不 export，本产物内可见）。
   for (final cls in inlineClasses) {
@@ -456,3 +517,41 @@ void _mergeUsedWidgets(
     (dst[e.key] ??= <String>{}).addAll(e.value);
   }
 }
+
+/// 跨文件顶层常量名 → 按声明源文件归集 import 名（dst[源文件] ∪= {名字}）。
+void _addConstImports(
+  Map<String, Set<String>> dst,
+  TopLevelConstResolver resolver,
+  Set<String> names,
+) {
+  for (final name in names) {
+    final file = resolver.sourceFileOf(name);
+    if (file != null) (dst[file] ??= <String>{}).add(name);
+  }
+}
+
+/// 跨文件类名 → 按声明源文件归集 import 名（供数据产物 import 常量里构造的模型）。
+void _addClassImports(
+  Map<String, Set<String>> dst,
+  Map<String, ClassInfo> classTable,
+  Set<String> names,
+) {
+  for (final name in names) {
+    final info = classTable[name];
+    if (info != null) (dst[info.sourceFile] ??= <String>{}).add(name);
+  }
+}
+
+/// 按源文件归集的 import 表 → ES module import 行（`import { a, b } from 'x.js';`）。
+List<String> _importLines(Map<String, Set<String>> byFile, String ownProduct) => [
+      for (final entry in byFile.entries)
+        "import { ${(entry.value.toList()..sort()).join(', ')} } from "
+            "'${relativeProduct(ownProduct, productPath(entry.key))}';",
+    ]..sort();
+
+/// 本文件是否声明了带初始化器的顶层变量（数据文件判据；先探后建，避免为
+/// 没有任何常量、也没有类的文件白跑一遍常量解析）。
+bool _hasOwnTopLevelConst(CompilationUnit unit) => unit.declarations
+    .whereType<TopLevelVariableDeclaration>()
+    .expand((d) => d.variables.variables)
+    .any((v) => v.initializer != null);

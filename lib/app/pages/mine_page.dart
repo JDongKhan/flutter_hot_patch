@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ui_component/ui_component.dart';
 
 import '../../base/web_view.dart';
 import '../../components/widget_showcase.dart';
@@ -10,15 +11,17 @@ import '../model/app_data.dart';
 import 'detail_pages.dart';
 import 'orders_page.dart';
 
-/// 我的 tab（常规 Flutter 页面，无 @UIComponent 注解）。
+/// 我的 tab（`@UIComponentIgnore` → 不参与连带翻译，运行时原生注入）。
 ///
 /// 对应 docs/app-prototype.html 的「我的」：渐变个人信息头（点击进登录页）
 /// + 订单统计四项 + 功能菜单 + 退出登录。末尾额外挂两项**开发者入口**：
 /// 「组件案例」（widget_details 的常用组件 demo 列表）与「热更 Demo 列表」。
 ///
-/// 本页被外壳 `AppShell`（@UIComponent）原生注入使用：[onOpenTab] 只在外壳
-/// 原生渲染时有值；JS 版外壳拿不到方法 tear-off（构建期告警跳过该参数），
-/// 此时「我的订单」退化为直接 push 订单页。
+/// 本页用了翻译器覆盖不到的构造（方法体 tear-off `onOpenTab`、
+/// `Navigator.push(MaterialPageRoute(...))`、集合 for 展开、静态 const 颜色表），
+/// 连带翻译会产出空的 `build()`；故显式退出翻译，由宿主 `nativeComponents`
+/// 原生注入。
+@UIComponentIgnore()
 class MinePage extends StatelessWidget {
   const MinePage({super.key, this.onOpenTab});
 

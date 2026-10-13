@@ -38,12 +38,9 @@ export class DashboardCard {
         __h('SizedBox', {
             "height": 8
           }),
-        __h("Component", {
-            "component": "LabeledDivider",
-            "args": {
-              "text": "public widget"
-            }
-          }, null),
+        __h(LabeledDivider, {
+            "text": "public widget"
+          }),
         __h('SizedBox', {
             "height": 12
           }),
@@ -57,6 +54,22 @@ export class DashboardCard {
             }
           })
       ]);
+  }
+}
+
+// 组件 LabeledDivider
+export class LabeledDivider {
+  constructor(args) {
+    this.text = (args && args.text !== undefined) ? args.text : '';
+  }
+  build() {
+    return __h('Text', {
+        "data": "★ " + this.text + " ★",
+        "style": {
+          "fontSize": 12,
+          "color": '#607D8B'
+        }
+      });
   }
 }
 

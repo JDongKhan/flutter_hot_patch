@@ -13,9 +13,12 @@ import 'pages/orders_page.dart';
 /// `_index`、[IndexedStack]、[BottomNavigationBar]）都跑在 JS 运行时里，出问题
 /// 直接下发补丁即可热修整壳布局。
 ///
-/// 四个 tab 页面**本身是常规 Flutter 页面**（没有 JS 产物），在外壳产物里以
-/// `Component` 占位结点出现，由宿主经 [JsUiWidget.nativeComponents] 原生注入
-/// （见 [AppShellJsPage]）。于是热更的只是外壳，页面逻辑/原生依赖不必翻译。
+/// 依赖的 widget 类会**连带翻译**：`HomePage`（及其同文件的
+/// HomeHeader/BannerSlide/GridCell/SpotCard/PromoCard）已是 `patch/app/pages/
+/// home_page.js` 里的 JS 类，外壳产物直接 `import` 后 `new` 出来。
+/// 其余三个 tab 页用了翻译器覆盖不到的构造，标了 `@UIComponentIgnore()`
+/// 显式退出翻译 → 在外壳产物里保持 `Component` 占位结点，由宿主经
+/// `JsUiWidget.nativeComponents` 原生注入（见 [AppShellJsPage]）。
 @UIComponent()
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -37,13 +40,14 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(
         index: _index,
         children: [
-          // 首页：原生渲染，数据用构造参数的默认值（app_data.dart 的顶层 const）
+          // 首页：有 JS 产物（连带翻译），外壳产物里是类引用，由 JS 运行时直接
+          // new 出来；数据用构造参数的默认值（app_data.dart 的顶层 const）。
           const HomePage(),
           const CommunityPage(),
           const OrdersPage(),
-          // onOpenTab 是方法 tear-off，翻译器无法表达为数据（构建期会打印
-          // 「跳过组件参数」告警）——JS 版里 MinePage 收到 null，页内会退化为
-          // 直接 push 订单页（见 mine_page.dart 的 _openMenu 兜底）。
+          // onOpenTab 是方法 tear-off，翻译器无法表达为数据。不过本页已标
+          // @UIComponentIgnore（不产出 JS），外壳产物里是 Component 占位结点，
+          // 这个参数会被构建期告警跳过——JS 版里由 nativeComponents 注入默认形态。
           MinePage(onOpenTab: _openTab),
         ],
       ),
@@ -71,9 +75,10 @@ class _AppShellState extends State<AppShell> {
 
 /// 「完整 App · JS 热更」入口：整个四 tab 外壳由 JS 补丁渲染。
 ///
-/// 外壳（`patch/app/app.js`）里引用的四个 tab 页面没有 JS 产物，翻译器把它们
-/// 产出为 `Component` 占位结点；这里用 [nativeComponents] 把同名原生页面注进去，
-/// 于是「壳在 JS、页在原生」——页面代码不需要任何翻译适配。
+/// 外壳（`patch/app/app.js`）里 [HomePage] 是**类引用**（有 JS 产物，JS 运行时
+/// 直接 new）；其余三个 tab 页标了 `@UIComponentIgnore`、没有 JS 产物，翻译器
+/// 把它们产出为 `Component` 占位结点 → 这里用 [nativeComponents] 把同名原生页面
+/// 注进去。
 class AppShellJsPage extends StatelessWidget {
   const AppShellJsPage({super.key});
 
@@ -89,7 +94,8 @@ class AppShellJsPage extends StatelessWidget {
     return JsUiWidget(
       jsAsset: _jsAsset,
       nativeComponents: {
-        'HomePage': (args) => const HomePage(),
+        // 三个 @UIComponentIgnore 的 tab 页：原生注入（HomePage 有 JS 产物，
+        // 不需要在这里注册）。
         'CommunityPage': (args) => const CommunityPage(),
         'OrdersPage': (args) => const OrdersPage(),
         // JS 侧拿不到 _openTab（构建期已告警跳过），这里注入默认形态。

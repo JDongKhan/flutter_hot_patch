@@ -84,6 +84,7 @@ ClassInfo translateClass(
   SingletonResolver? singletons,
   Set<String> jsClassWidgets = const {},
   Set<String> delegateClassWidgets = const {},
+  Set<String> globalConsts = const {},
   bool isComponent = false,
 }) {
   // @HostInjected 通道表：翻译层自己扫（本文件 + import 源文件）。方法体里
@@ -109,13 +110,21 @@ ClassInfo translateClass(
 
   // 构造参数：widget 类（普通类即自身）构造函数的 this.xxx 命名形参——
   // `required this.x` 在无 resolution 下是 DefaultFormalParameter 包裹
-  // FieldFormalParameter，需要解包。
+  // FieldFormalParameter，需要解包。带默认值（`this.banners = kBanners`）的
+  // 一并记下：这就是 JS 实例属性的兜底初值（JS 侧漏传 props 时用它，而不是
+  // 类型默认值 `[]`/`''`）。
   final ctorArgs = <String>{};
+  final ctorDefaults = <String, Expression>{};
   for (final m in widgetClass.members) {
     if (m is ConstructorDeclaration) {
       for (final param in m.parameters.parameters) {
         final inner = param is DefaultFormalParameter ? param.parameter : param;
-        if (inner is FieldFormalParameter) ctorArgs.add(inner.name.lexeme);
+        if (inner is FieldFormalParameter) {
+          ctorArgs.add(inner.name.lexeme);
+          if (param is DefaultFormalParameter && param.defaultValue != null) {
+            ctorDefaults[inner.name.lexeme] = param.defaultValue!;
+          }
+        }
       }
     }
   }
@@ -162,11 +171,19 @@ ClassInfo translateClass(
         continue;
       }
       final init = variable.initializer;
+      // 初值来源：字段初始化器，否则构造形参默认值（`this.x = <默认值>`）。
+      // 两者都走同一条通用表达式翻译（顶层常量 / 集合字面量 / 模型构造都支持）。
+      final defaultExpr = ctorDefaults[fieldName];
+      final initScope = FieldScope(globalConsts: globalConsts);
       final String initial;
       if (isBasic) {
         // 无初始化器 / 初始化器不是编译期常量 → 类型默认值（String→''、
         // bool→false、数字→0）。组件与普通类同一条规则。
-        initial = literalToJs(init) ?? _defaultInitial(typeName);
+        initial = literalToJs(init) ??
+            (defaultExpr == null
+                ? null
+                : rhsToJs(defaultExpr, initScope, used)) ??
+            _defaultInitial(typeName);
       } else if (jsRuntime) {
         // JS 运行时同名代理类（ScrollController / TextEditingController /
         // TabController）：构造按命名实参透传（代理类自行取用，如 TabController
@@ -175,14 +192,16 @@ ClassInfo translateClass(
       } else {
         String? ctorJs;
         if (init is InstanceCreationExpression) {
-          ctorJs = modelCtorToJs(init, FieldScope(), used);
+          ctorJs = modelCtorToJs(init, initScope, used);
         } else if (init is MethodInvocation &&
             init.target == null &&
             init.typeArguments == null) {
           // `_model = MyModel()` 在无 resolution 的 parseString 下会被解析成
           // MethodInvocation（类名即无参构造），统一按模型构造处理。
           ctorJs = modelCtorFromPartsJs(init.methodName.name,
-              init.argumentList.arguments.toList(), FieldScope(), used);
+              init.argumentList.arguments.toList(), initScope, used);
+        } else if (init == null && defaultExpr != null) {
+          ctorJs = rhsToJs(defaultExpr, initScope, used);
         }
         // 无初始化器（如 `List<Spot> spots` 由构造参数注入）→ 类型默认值
         // （容器→[]/{}），而不是 null：JS 侧漏传 props 时仍能安全遍历。
@@ -210,6 +229,7 @@ ClassInfo translateClass(
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,
+    globalConsts: globalConsts,
     jsClassWidgets: jsClassWidgets,
     delegateClassWidgets: delegateClassWidgets,
   );
@@ -265,7 +285,9 @@ ClassInfo translateClass(
         bodyJs: m.isGetter
             ? null
             : translateClassMethodBody(proto, buildMethod(m), used,
-                hostMethods: hostMethods, widgetCtx: parseCtx),
+                hostMethods: hostMethods,
+                widgetCtx: parseCtx,
+                globalConsts: globalConsts),
       ),
   ];
 

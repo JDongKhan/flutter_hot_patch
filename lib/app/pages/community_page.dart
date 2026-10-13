@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:ui_component/ui_component.dart';
 
 import '../../base/app_router.dart';
 import '../model/app_data.dart';
 import '../model/app_models.dart';
 import 'detail_pages.dart';
 
-/// 社区 tab（常规 Flutter 页面，无 @UIComponent 注解）。
+/// 社区 tab（`@UIComponentIgnore` → 不参与连带翻译，运行时原生注入）。
 ///
 /// 对应 docs/app-prototype.html 的「社区」：广场/推荐双 tab + 横向资源推荐
 /// + 排序快捷条 + 「筛选」下拉面板（从顶部展开，面板内四组条件：排序方式 /
@@ -13,6 +14,12 @@ import 'detail_pages.dart';
 ///
 /// 筛选面板用页面内 [Stack] 实现：面板 top 位置在打开时按筛选条的**实际
 /// 布局位置**测量，避免写死高度。
+///
+/// 本页用了翻译器覆盖不到的构造（GlobalKey/RenderBox 实测布局、
+/// `.where().toList()` 过滤、集合 for-if 展开、build 内局部变量），强行连带
+/// 翻译会产出空的 `build()`；故显式标 `@UIComponentIgnore()` 退出翻译，
+/// 在外壳产物里保持 `Component` 占位结点，由宿主 `nativeComponents` 原生注入。
+@UIComponentIgnore()
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
 

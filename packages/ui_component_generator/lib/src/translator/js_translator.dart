@@ -234,6 +234,11 @@ class FieldScope {
   /// 方法体内声明的局部变量（`var data = ...`），后续引用原样返回。
   final Set<String> localVars;
 
+  /// 本文件可见的**顶层常量**名（同文件 + import 文件，如 `kBanners` / `kBrand`）。
+  /// 命中即原样作为 JS 模块级常量引用：同文件的写在同一产物顶部，跨文件的由
+  /// import 语句提供（与类引用同一套「同文件内联 / 跨文件 import」规则）。
+  final Set<String> globalConsts;
+
   /// 宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
   /// 顶层函数（全局方法）挂在空串 key 下（`'' → {函数名 → 通道名}`）。
   /// 命中时调用点整体翻译成 `__jsui.host("通道名", 参数载荷)`（载荷形态见
@@ -248,7 +253,9 @@ class FieldScope {
     this.methods = const {},
     this.hostMethods = const {},
     Set<String>? localVars,
-  }) : localVars = localVars ?? {};
+    Set<String>? globalConsts,
+  })  : localVars = localVars ?? {},
+        globalConsts = globalConsts ?? {};
 
   /// 该名字是否本 scope 可解析的字段。
   bool hasField(String name) =>
@@ -359,6 +366,10 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   if (e is PrefixedIdentifier) {
     final p = scope.fieldRef(e.prefix.name);
     if (p != null) return '$p.${e.identifier.name}';
+    // 前缀是顶层常量（如 `kOrderStatus.first`）→ JS 侧同名模块级常量。
+    if (scope.globalConsts.contains(e.prefix.name)) {
+      return '${e.prefix.name}.${e.identifier.name}';
+    }
     // prefix 是大写开头的外部类名（如 Network.post）→ 原样保留。
     if (e.prefix.name.isNotEmpty &&
         RegExp(r'^[A-Z]').hasMatch(e.prefix.name)) {
@@ -426,6 +437,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (flag != null) return flag;
     // State.mounted：JS 组件基类有 __unmounted 标记，未卸载即视为已挂载
     if (e.name == 'mounted') return '!this.__unmounted';
+    // 顶层常量（如 `kBanners`）：JS 侧是同名模块级常量，原样引用。
+    if (scope.globalConsts.contains(e.name)) return e.name;
     return scope.fieldRef(e.name);
   }
   // null 字面量（`data ?? null` 等）：只影响表达式位置，字段默认值仍走
@@ -501,6 +514,17 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // 字段/形参/局部变量同一套解析）——不再在此处单独 fieldRef，否则这些
   // 「非字段标识符」会被漏掉。
   if (e is InstanceCreationExpression) return modelCtorToJs(e, scope, classes);
+  // 无 `const`/`new` 的模型构造（如 `const kX = [HomeBanner(...)]` 的元素）在无
+  // resolution 的 parseString 下是 MethodInvocation。仅当名字命中已知类表时才按
+  // 模型构造处理（避免把 widget 构造 `Text(...)` 误当模型）。
+  if (e is MethodInvocation && e.target == null && e.typeArguments == null) {
+    final n = e.methodName.name;
+    if (classes.containsKey(n)) {
+      final ctor = modelCtorFromPartsJs(
+          n, e.argumentList.arguments.toList(), scope, classes);
+      if (ctor != null) return ctor;
+    }
+  }
   // 集合字面量：与 JS 对象/数组一一对应（元素递归翻译）。
   // 缺了这两条，`Network.post({"name": name})` 这类调用会因「参数翻译不了」
   // 整体返回 null，调用方再把整条语句丢掉（原来的静默丢代码就出在这里）。
@@ -1333,6 +1357,7 @@ String translateClassMethodBody(
   Map<String, ClassInfo> classes, {
   Map<String, Map<String, String>> hostMethods = const {},
   WidgetExprRenderer? widgetCtx,
+  Set<String> globalConsts = const {},
   int depth = 2,
 }) {
   final ind = '  ' * depth;
@@ -1350,6 +1375,7 @@ String translateClassMethodBody(
       if (sdkBaseName(info) != null) 'notifyListeners',
     },
     hostMethods: hostMethods,
+    globalConsts: globalConsts,
   );
   return translateMethodBody(
     m.body,
@@ -1433,4 +1459,8 @@ abstract class WidgetExprRenderer {
   /// 方法体翻译与 widget 渲染必须共用同一份标识符作用域，否则返回的 widget
   /// 树里引用局部变量时会解析失败。
   void registerLocal(String name);
+
+  /// 本文件可见的顶层常量名（widget 树里 `kBrand` 这类引用要与方法体翻译
+  /// 共用同一份作用域）。
+  Set<String> get globalConsts;
 }

@@ -69,6 +69,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 由生成器从组件文件的 import 源文件解析注入；null = 不启用。
   final SingletonResolver? singletons;
 
+  /// 本文件可见的顶层常量名（同文件 + import 文件）：build 树里 `kBrand` /
+  /// `kBanners` 这类引用与字段初值、方法体共用同一份作用域。
+  @override
+  final Set<String> globalConsts;
+
   /// 翻译过程中遇到的未知自定义组件（Component 兜底），供生成器
   /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
   final Set<String> dependencies = {};
@@ -104,6 +109,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     required this.sourcePath,
     this.importResolver,
     this.singletons,
+    this.globalConsts = const {},
     this.jsClassWidgets = const {},
     this.delegateClassWidgets = const {},
   });
@@ -250,7 +256,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final bodyJs = _collectionArrayJs(e.body);
     // 清除循环变量作用域（翻译完成后，body 内已引用 i）
     popLoopVars();
-    return '(function(){ var out = []; $head { out.push.apply(out, $bodyJs); } return out; })()';
+    // 必须用**箭头函数** IIFE：body 里常引用状态字段（`this.banners`），
+    // 普通 function 立即调用时 this 丢失（严格模式下为 undefined）。
+    return '(() => { var out = []; $head { out.push.apply(out, $bodyJs); } return out; })()';
   }
 
   /// collection element → JS 数组字面量（元素数组语义；嵌套 if/for 递归展开）。
@@ -559,6 +567,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       propByField: propByField,
       params: {..._loopVars, ..._locals},
       methods: actionByMethod.keys.toSet(),
+      globalConsts: globalConsts,
     );
     final js = rhsToJs(e, scope, const {});
     if (js == null) {

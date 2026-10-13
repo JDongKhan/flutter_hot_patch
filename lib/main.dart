@@ -89,14 +89,11 @@ class DemoListPage extends StatelessWidget {
         native: DashboardCard(),
         js: JsUiWidget(
           jsAsset: _patchUrl('DashboardCard', 'components/composite_component.js'),
-          // 嵌套组件（BannerCard）由生成器在 Component 节点产出 JS 工厂调用，
-          // 运行时自动递归挂载，使用方无需声明依赖。
-          // 非私有组件（LabeledDivider）运行时注入原生 widget：
-          // hot_patch 包不 import 业务类，由业务方在这里注册
+          // 嵌套组件（BannerCard）与公开 widget（LabeledDivider）都由生成器
+          // 连带翻译进同一产物（JS 类引用），运行时直接 new，使用方无需声明依赖。
+          // 只有标了 @UIComponentIgnore 的私有组件走原生注入：
+          //（私有类跨库不可见，注册等价的原生实现）：
           nativeComponents: {
-            'LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? ''),
-            // 标了 @UIComponentIgnore 的私有组件同样走原生注入
-            //（私有类跨库不可见，注册等价的原生实现）：
             '_LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? ''),
           },
         ),
