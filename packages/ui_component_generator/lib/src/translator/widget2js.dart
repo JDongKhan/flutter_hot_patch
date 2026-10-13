@@ -729,12 +729,16 @@ class ComponentTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    // 构造参数字面量 → 值契约（叶子值一律为 JS 表达式字符串）：
-    // 字符串经 jsString 带引号、数字/布尔转字面量，运行时 jsonEncode 即得原值。
+    // 构造参数 → 值契约（叶子值一律为 JS 表达式字符串）：字面量经 jsDataExpr
+    // 得到带引号的字符串/数字/布尔，运行时 jsonEncode 即得原值。
+    //
+    // 非字面量参数（`BannerSlide(banner: banners[i])` / `SpotCard(spot: spots[index])`）
+    // 同样要翻译成 JS 表达式（`this.banners[i]`）——否则列表里的嵌套组件参数会被
+    // 整批丢掉，退化成 `__h(X, {})`（子组件拿不到数据）。
     final args = <String, dynamic>{};
     for (final entry in node.namedArgs.entries) {
-      final v = _literalValue(entry.value);
-      if (v != null) args[entry.key] = _jsLiteral(v, ctx);
+      final js = _argJs(entry.value, ctx);
+      if (js != null) args[entry.key] = js;
     }
     // 只承载无 JS 产物的组件（有注解组件的依赖已在 _renderJsProduct 里用
     // ES module import 表达，运行时按 import 递归挂载）。
@@ -747,22 +751,20 @@ class ComponentTranslator extends WidgetTranslator {
     };
   }
 
-  /// AST 字面量 → Dart 值（null 表示不可翻译）。
-  static Object? _literalValue(Expression e) {
-    if (e is StringLiteral) return e.stringValue;
-    if (e is IntegerLiteral) return e.value;
-    if (e is DoubleLiteral) return e.value;
-    if (e is BooleanLiteral) return e.value;
+  /// 构造实参 → JS 表达式（null = 该参数丢弃）。
+  ///
+  /// 一律走组件侧数据表达式翻译（与文本插值/事件参数同一套语法支持）：
+  /// 字面量、字段引用、下标、循环变量、局部变量、三目都能落成 JS 表达式。
+  /// 翻译不了的参数出声告警（不静默丢），并跳过该参数。
+  static String? _argJs(Expression e, WidgetTranslateContext ctx) {
     if (e is NullLiteral) return null;
-    return null;
-  }
-
-  /// Dart 值 → JS 表达式字面量。
-  static String _jsLiteral(Object? v, WidgetTranslateContext ctx) {
-    if (v is String) return ctx.jsString(v);
-    if (v is bool) return v ? 'true' : 'false';
-    if (v == null) return 'null';
-    return '$v';
+    try {
+      return ctx.jsDataExpr(e);
+    } catch (err) {
+      // ignore: avoid_print - 构建期日志
+      print('[ui_component_generator] 跳过组件参数 ${e.toSource()}（$err）');
+      return null;
+    }
   }
 }
 

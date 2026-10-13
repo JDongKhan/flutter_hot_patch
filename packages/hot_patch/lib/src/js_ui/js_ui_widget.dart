@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/builtin_host_methods.dart';
@@ -119,8 +120,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       final component = uri.queryParameters['component'];
       final entryPath = uri.queryParameters['entry'];
       if (component == null || component.isEmpty) {
-        throw StateError(
-            'jsAsset 缺少 ?component=xxx 参数：${widget.jsAsset}');
+        throw StateError('jsAsset 缺少 ?component=xxx 参数：${widget.jsAsset}');
       }
       // 剥离 query 后的真实资源地址（zip 下载 / asset 加载用）。
       final realAsset = uri.replace(queryParameters: {}).toString();
@@ -130,11 +130,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       var entry = realAsset;
       String? localRoot = widget.localRoot;
       if (RemoteAssetLoader.isRemote(realAsset)) {
-        final bundle = await RemoteAssetLoader.load(
-          realAsset,
-          component: component,
-          entryPath: entryPath,
-        );
+        final bundle = await RemoteAssetLoader.load(realAsset, component: component, entryPath: entryPath);
         if (bundle == null) {
           throw StateError('远程补丁加载失败（需 http(s):// zip）：$realAsset');
         }
@@ -201,13 +197,26 @@ class JsUiWidgetState extends State<JsUiWidget> {
         child: const Center(child: CircularProgressIndicator()),
       );
     }
-    return _JsNode(
+    Widget child = _JsNode(
       store: _store,
       id: _rootId!,
       registry: _registry,
       nativeComponents: widget.nativeComponents,
       invoke: _invoke,
     );
+    if (kDebugMode) {
+      child = Stack(
+        children: [
+          child,
+          Positioned(
+            left: 10,
+            right: 10,
+            child: Text("JS", style: TextStyle(color: Colors.yellow, fontSize: 20)),
+          ),
+        ],
+      );
+    }
+    return child;
   }
 
   /// 失败后重走一遍加载：模块加载按文件幂等，重复调用无副作用。

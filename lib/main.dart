@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 
+import 'app/app.dart';
 import 'components/composite_component.dart';
 import 'components/hello_component.dart';
 import 'components/watch_demo.dart';
@@ -13,25 +14,27 @@ void main() {
   // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
   // 调一次即可，无需手写每条通道。
   registerHostMethods();
+  // 入口是 Demo 列表页，其中的两条「完整 App」入口分别渲染**原生外壳**与
+  // **JS 热更外壳**（AppShell，见 lib/app/app.dart）。
   runApp(const HotDemoApp());
 }
 
-/// Demo 列表：展示「正常组件 ↔ JS 热更版本」的各个场景。
-///
-/// 每个组件都先是一个**完全正常的 Flutter StatefulWidget**（原生可直接用）；
-/// 线上出 bug 时，运行时切换到对应的 JS 补丁（JsUiWidget 加载
-/// build_runner 静态翻译出的同名 .js）即可热修复，无需发版。
+/// Demo 列表的外壳（App）：整体 App 结构在 lib/app/app.dart 的 [AppShell] 里，
+/// 这里只提供 Demo 列表所需的 MaterialApp 与全局 Navigator。
 class HotDemoApp extends StatelessWidget {
   const HotDemoApp({super.key});
+
+  /// 全局导航 key：热更包全局级服务（toast / AppRouter 推页）靠它定位
+  /// Navigator 与 ScaffoldMessenger。用 static final 保证重建时 key 稳定。
+  static final GlobalKey<NavigatorState> navKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '注解组件 → JS 热修复',
+      title: '旅行 App · 注解组件热更示例',
       debugShowCheckedModeBanner: false,
-      // 全局导航 key：热更包全局级服务（toast 等）用它定位 ScaffoldMessenger
-      navigatorKey: JsRuntimeManager.navigatorKey = GlobalKey<NavigatorState>(),
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+      navigatorKey: JsRuntimeManager.navigatorKey = navKey,
+      theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0E7AFB))),
       home: const DemoListPage(),
     );
   }
@@ -54,8 +57,9 @@ class _DemoEntry {
   final String title;
   final String subtitle;
   final Widget child;
+  final bool hasAppBar;
 
-  const _DemoEntry(this.title, this.subtitle, this.child);
+  const _DemoEntry(this.title, this.subtitle, this.child, {this.hasAppBar = true});
 }
 
 /// Demo 场景列表页。
@@ -63,14 +67,19 @@ class DemoListPage extends StatelessWidget {
   const DemoListPage({super.key});
 
   static final _demos = <_DemoEntry>[
+    _DemoEntry('完整 App · 原生', '四 tab 外壳（AppShell）原生渲染：首页 / 社区 / 订单 / 我的', const AppShell(), hasAppBar: false),
+    _DemoEntry(
+      '完整 App · JS 热更',
+      'AppShell 由 JS 补丁渲染，四个 tab 页面由宿主 nativeComponents 原生注入',
+      const AppShellJsPage(),
+      hasAppBar: false,
+    ),
     _DemoEntry(
       'HelloCard · 原生 vs JS 热更',
       '同屏对比：正常组件与 JS 补丁的渲染与逻辑',
       _CompareTest(
         native: HelloCard(),
-        js: JsUiWidget(
-          jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'),
-        ),
+        js: JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
       ),
     ),
     _DemoEntry(
@@ -100,9 +109,7 @@ class DemoListPage extends StatelessWidget {
         native: ProviderCard(),
         // provider 状态处理在 JS 侧（assets/provider.js）：
         // 经 JsUiWidget 新运行时渲染，宿主不实现任何 provider 语义。
-        js: JsUiWidget(
-          jsAsset: _patchUrl('ProviderCard', 'components/provider_component.js'),
-        ),
+        js: JsUiWidget(jsAsset: _patchUrl('ProviderCard', 'components/provider_component.js')),
       ),
     ),
     _DemoEntry(
@@ -111,24 +118,15 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: WatchDemo(),
         // context.watch/read 的订阅与 provider 链全在 JS 侧（新运行时）。
-        js: JsUiWidget(
-          jsAsset: _patchUrl('WatchDemo', 'components/watch_demo.js'),
-        ),
+        js: JsUiWidget(jsAsset: _patchUrl('WatchDemo', 'components/watch_demo.js')),
       ),
     ),
     _DemoEntry(
       'HelloCard · JS 双实例隔离',
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
-      _TwinTest(
-        jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'),
-        label: 'HelloCard',
-      ),
+      _TwinTest(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'), label: 'HelloCard'),
     ),
-    _DemoEntry(
-      '常用组件 · 列表',
-      '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）',
-      const WidgetShowcase(),
-    ),
+    _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),
   ];
 
   @override
@@ -153,7 +151,7 @@ class DemoListPage extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => _SimpleDemoPage(title: d.title, child: d.child),
+                  builder: (_) => _SimpleDemoPage(title: d.title, hasAppBar: d.hasAppBar, child: d.child),
                 ),
               ),
             ),
@@ -168,15 +166,16 @@ class DemoListPage extends StatelessWidget {
 /// 不使用 Center / SingleChildScrollView（这两个组件由
 /// ScaffoldDemo 注解组件专门演示，避免 main 里重复）。
 class _SimpleDemoPage extends StatelessWidget {
-  const _SimpleDemoPage({required this.title, required this.child});
+  const _SimpleDemoPage({required this.title, required this.child, this.hasAppBar = true});
 
   final String title;
   final Widget child;
+  final bool hasAppBar;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: hasAppBar ? AppBar(title: Text(title)) : null,
       body: child,
     );
   }

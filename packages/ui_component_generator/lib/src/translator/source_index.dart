@@ -61,17 +61,12 @@ List<String> resolveImportFiles(CompilationUnit unit, String sourcePath) {
 
 /// 相对导入 uri（'foo.dart' / './foo.dart' / '../x.dart'）→ lib 相对路径。
 String? _relativeToLib(String uri, String dir) {
+  // 目录按 '/' 拆成**逐级** segment，`..` 才能一级一级回退
+  // （否则 'lib/app/pages/' 会整段算作一个 segment，`..` 一次删掉 'app/pages'）。
   final segments = <String>[];
-  if (dir.startsWith('lib/')) {
-    // dir 含尾斜杠（'lib/components/'），去掉尾 / 再入段
-    final rel = dir.substring('lib/'.length);
-    if (rel.endsWith('/')) {
-      segments.add(rel.substring(0, rel.length - 1));
-    } else {
-      segments.add(rel);
-    }
-  } else {
-    segments.add(dir.endsWith('/') ? dir.substring(0, dir.length - 1) : dir);
+  final base = dir.startsWith('lib/') ? dir.substring('lib/'.length) : dir;
+  for (final s in base.split('/')) {
+    if (s.isNotEmpty) segments.add(s);
   }
   for (final part in uri.split('/')) {
     if (part == '.' || part.isEmpty) continue;

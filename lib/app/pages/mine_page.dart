@@ -1,0 +1,357 @@
+import 'package:flutter/material.dart';
+
+import '../../base/web_view.dart';
+import '../../components/widget_showcase.dart';
+// 开发者 Demo 列表（原生 vs JS 同屏对比）仍挂在 main.dart 的调试入口上，
+// 这里直接复用；main.dart 也会 import 本文件所在的 app 外壳，属于 Dart
+// 允许的循环引用，两边都只用到对方的顶层声明。
+import '../../main.dart';
+import '../model/app_data.dart';
+import 'detail_pages.dart';
+import 'orders_page.dart';
+
+/// 我的 tab（常规 Flutter 页面，无 @UIComponent 注解）。
+///
+/// 对应 docs/app-prototype.html 的「我的」：渐变个人信息头（点击进登录页）
+/// + 订单统计四项 + 功能菜单 + 退出登录。末尾额外挂两项**开发者入口**：
+/// 「组件案例」（widget_details 的常用组件 demo 列表）与「热更 Demo 列表」。
+///
+/// 本页被外壳 `AppShell`（@UIComponent）原生注入使用：[onOpenTab] 只在外壳
+/// 原生渲染时有值；JS 版外壳拿不到方法 tear-off（构建期告警跳过该参数），
+/// 此时「我的订单」退化为直接 push 订单页。
+class MinePage extends StatelessWidget {
+  const MinePage({super.key, this.onOpenTab});
+
+  /// 切到指定底部 tab（统计项/菜单里的「我的订单」用它跳到订单 tab）。
+  final void Function(int index)? onOpenTab;
+
+  static const List<Color> _menuTints = [
+    Color(0xFFE8F2FF),
+    Color(0xFFFFF3E0),
+    Color(0xFFEEF0F4),
+    Color(0xFFE9F7EF),
+  ];
+
+  void _openMenu(BuildContext context, int i) {
+    final m = kMineMenu[i];
+    switch (m.screen) {
+      case 'orders':
+        // 原生外壳下切到订单 tab；JS 外壳注入的 MinePage 没有回调，退化为 push。
+        if (onOpenTab != null) {
+          onOpenTab!(2);
+        } else {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const OrdersPage()));
+        }
+      case 'showcase':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const WidgetShowcase()));
+      default:
+        // webview：走与 JS 侧同一条宿主通道（lib/base/web_view.dart）。
+        WebView.open('https://flutter.dev', m.arg.isEmpty ? m.title : m.arg);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        // 个人信息头
+        Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 22),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1E88FF), Color(0xFF0E7AFB)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: GestureDetector(
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const LoginPage())),
+              child: Row(
+                children: [
+                  ClipOval(
+                    child: Image.network(
+                      kAvatarImg,
+                      width: 58,
+                      height: 58,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, e, s) => Container(
+                        width: 58,
+                        height: 58,
+                        color: const Color(0x33FFFFFF),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 13),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '旅行家小七',
+                          style: TextStyle(
+                            fontSize: 17.5,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '138****8888',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xCCFFFFFF),
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '点击头像可跳转登录页 ›',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xB3FFFFFF),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xCCFFFFFF),
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // 订单统计
+        Transform.translate(
+          offset: const Offset(0, -12),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                for (final s in kMineStats)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onOpenTab?.call(2),
+                      child: Column(
+                        children: [
+                          Text(
+                            s[1],
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF171A21),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            s[0],
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFF8B909A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        // 功能菜单
+        Container(
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < kMineMenu.length; i++) ...[
+                if (i > 0)
+                  const Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Color(0xFFF0F2F6),
+                  ),
+                GestureDetector(
+                  onTap: () => _openMenu(context, i),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 30,
+                          height: 30,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _menuTints[i % _menuTints.length],
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Text(
+                            kMineMenu[i].emoji,
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            kMineMenu[i].title,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: Color(0xFFC3C8D2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // 退出登录
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+          child: GestureDetector(
+            onTap: () => appToast(context, '已退出登录（演示）'),
+            child: Container(
+              height: 46,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Text(
+                '退出登录',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: kPrice,
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 开发者入口
+        const Padding(
+          padding: EdgeInsets.fromLTRB(18, 4, 18, 8),
+          child: Text(
+            '开发者',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF98A0AC),
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              _DevRow(
+                icon: Icons.widgets_outlined,
+                title: '组件案例',
+                subtitle: '常用组件 原生 ↔ JS 同屏对比',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const WidgetShowcase()),
+                ),
+              ),
+              const Divider(height: 1, indent: 56, color: Color(0xFFF0F2F6)),
+              _DevRow(
+                icon: Icons.compare_arrows,
+                title: '热更 Demo 列表',
+                subtitle: 'HelloCard / ProviderCard / WatchDemo 等对比',
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const DemoListPage())),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 开发者入口行。
+class _DevRow extends StatelessWidget {
+  const _DevRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F2FF),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(icon, size: 16, color: kBrand),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF98A0AC),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 18, color: Color(0xFFC3C8D2)),
+          ],
+        ),
+      ),
+    );
+  }
+}

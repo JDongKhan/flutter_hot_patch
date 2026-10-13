@@ -154,6 +154,15 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         children: c.children,
       ));
 
+  r.register('IndexedStack', (c) => IndexedStack(
+        // index 是状态字段（`this._index`），切换后只重下发 props、子结点原位复用，
+        // 因此各 tab 页的状态（滚动位置、输入内容）都能保留。
+        index: c.int_('index') ?? 0,
+        alignment: alignmentFromJson(c.props['alignment']) ??
+            AlignmentDirectional.topStart,
+        children: c.children,
+      ));
+
   r.register('Wrap', (c) => Wrap(
         direction: axisFromJson(c.props['direction']) ?? Axis.horizontal,
         spacing: c.num_('spacing') ?? 0,

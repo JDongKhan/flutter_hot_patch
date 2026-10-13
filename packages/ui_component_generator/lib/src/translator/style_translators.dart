@@ -949,24 +949,46 @@ String? scrollPhysicsToJson(Expression? expr) {
 
 /// Image 源：AssetImage('x') / NetworkImage('url') / Image.asset / Image.network
 /// → source 字符串（运行时 imageFromJson 选择资源/网络）。
+///
+/// 位置参数既可以是字符串字面量，也可以是**任意可翻译表达式**
+/// （`Image.network(spot.img)` / `Image.network('$base/$id')`）——后者输出
+/// 该表达式的 JS 源码，运行时求值即 URL/资源路径。
 String? imageSourceToJson(Expression? expr, WidgetTranslateContext ctx) {
   if (expr == null) return null;
   // 直接收到路径字符串：Image.network('url') / Image.asset('path') 的位置参数
   if (expr is SimpleStringLiteral) return ctx.jsString(expr.value);
   final (ctor, args) = _ctorOfExpr(expr);
   if (ctor == 'AssetImage' || ctor == 'NetworkImage') {
-    final pos = args.whereType<Expression>().toList();
-    if (pos.isNotEmpty && pos.first is SimpleStringLiteral) {
-      return ctx.jsString((pos.first as SimpleStringLiteral).value);
-    }
-    return null;
+    final first = _firstPositional(args);
+    return first == null ? null : _imageSourceArg(first, ctx);
   }
   // Image.asset('x') / Image.network('url')：methodName=asset/network，target=Image
   if (ctor == 'asset' || ctor == 'network') {
-    final pos = args.whereType<Expression>().toList();
-    if (pos.isNotEmpty && pos.first is SimpleStringLiteral) {
-      return ctx.jsString((pos.first as SimpleStringLiteral).value);
-    }
+    final first = _firstPositional(args);
+    return first == null ? null : _imageSourceArg(first, ctx);
+  }
+  // 其余情况：ImageTranslator 传进来的就是**源实参本身**
+  // （`Image.network(spot.img)` 的位置参数是 `spot.img`，不是 `Image.network(...)`），
+  // 按任意可翻译表达式输出其 JS 源码；翻译不出返回 null 由调用方报错。
+  return _imageSourceArg(expr, ctx);
+}
+
+/// 第一个**位置**实参（具名实参不参与；AssetImage/Image.network 的源都是位置参数）。
+Expression? _firstPositional(List<Expression> args) {
+  for (final a in args) {
+    if (a is NamedExpression) continue;
+    return a;
   }
   return null;
+}
+
+/// 源实参 → JS 值：字面量直接引号包裹；其余表达式交给通用表达式翻译
+/// （翻译不出返回 null，由调用方给出「Image 需要 asset/network 源」的错误）。
+String? _imageSourceArg(Expression e, WidgetTranslateContext ctx) {
+  if (e is SimpleStringLiteral) return ctx.jsString(e.value);
+  try {
+    return ctx.jsDataExpr(e);
+  } catch (_) {
+    return null;
+  }
 }

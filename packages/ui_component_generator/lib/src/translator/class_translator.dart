@@ -153,8 +153,7 @@ ClassInfo translateClass(
       final erased = eraseType(typeName);
       final isBasic = isBasicType(typeName);
       final jsRuntime = _jsRuntimeTypes.contains(erased);
-      final cls = used[erased];
-      if (!isBasic && (cls == null || cls.isComponent) && !jsRuntime) {
+      if (!_fieldTranslatable(typeName, classTable, registry.registeredTypes)) {
         // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
         // ignore: avoid_print - 构建期日志
         print(
@@ -185,7 +184,9 @@ ClassInfo translateClass(
           ctorJs = modelCtorFromPartsJs(init.methodName.name,
               init.argumentList.arguments.toList(), FieldScope(), used);
         }
-        initial = ctorJs ?? 'null';
+        // 无初始化器（如 `List<Spot> spots` 由构造参数注入）→ 类型默认值
+        // （容器→[]/{}），而不是 null：JS 侧漏传 props 时仍能安全遍历。
+        initial = ctorJs ?? (init == null ? _defaultInitial(typeName) : 'null');
       }
       instanceFields.add(ClassField(
         name: fieldName,
@@ -320,10 +321,70 @@ Expression? _methodExpression(MethodDeclaration m) {
 }
 
 /// 基础类型字段的默认初值：无初始化器且非常量初始化表达式时兜底。
+/// 泛型容器按外层类型给空集合（`List<Spot>` → `[]`、`Map<K,V>` → `{}`），
+/// 保证 JS 侧漏传 props 时遍历/取值不炸；对象类型（模型字段）给 `null`
+/// ——给 `0` 会让「漏传」变成更难排查的假数据。
 String _defaultInitial(String typeName) {
-  if (typeName.contains('String')) return "''";
-  if (typeName.contains('bool')) return 'false';
-  return '0';
+  final t = eraseType(typeName);
+  if (t == 'String') return "''";
+  if (t == 'bool') return 'false';
+  if (t == 'List' || t == 'Set' || t == 'Iterable') return '[]';
+  if (t == 'Map') return '{}';
+  if (isBasicType(t)) return '0'; // int / double / num
+  return 'null';
+}
+
+/// 泛型容器类型（字段类型里的外层名）。
+const Set<String> _containerTypes = {'List', 'Set', 'Iterable', 'Map'};
+
+/// 字段类型是否可翻译（进 JS 实例属性）：
+///   - 基础类型（int/double/num/String/bool/dynamic）；
+///   - JS 运行时同名代理类（ScrollController / TextEditingController / …）；
+///   - 已登记的**非组件**类（模型，如 `Spot`）；
+///   - 泛型容器按**类型实参**递归判定：`List<Spot>` / `Map<String, int>` 可翻译，
+///     `List<Widget>` / `Key?` 不可翻译。
+///
+/// 组件类型字段不参与（组件的 JS 版本由运行时递归挂载，宿主侧不持有实例）。
+bool _fieldTranslatable(
+  String typeName,
+  Map<String, ClassInfo> classTable,
+  Set<String> widgetTypes,
+) {
+  final t = typeName.trim();
+  if (t.endsWith('?')) {
+    return _fieldTranslatable(t.substring(0, t.length - 1), classTable, widgetTypes);
+  }
+  if (isBasicType(t)) return true;
+  final lt = t.indexOf('<');
+  if (lt >= 0 && t.endsWith('>')) {
+    if (!_containerTypes.contains(t.substring(0, lt).trim())) return false;
+    final args = _typeArgs(t.substring(lt + 1, t.length - 1));
+    return args.isNotEmpty &&
+        args.every((a) => _fieldTranslatable(a, classTable, widgetTypes));
+  }
+  if (t.isEmpty) return false;
+  if (_jsRuntimeTypes.contains(t)) return true;
+  if (widgetTypes.contains(t)) return false;
+  final cls = classTable[t];
+  return cls != null && !cls.isComponent;
+}
+
+/// 拆分泛型类型实参（按顶层逗号，忽略嵌套尖括号里的逗号）。
+List<String> _typeArgs(String src) {
+  final out = <String>[];
+  var depth = 0;
+  var start = 0;
+  for (var i = 0; i < src.length; i++) {
+    final c = src[i];
+    if (c == '<') depth++;
+    if (c == '>') depth--;
+    if (c == ',' && depth == 0) {
+      out.add(src.substring(start, i));
+      start = i + 1;
+    }
+  }
+  out.add(src.substring(start));
+  return [for (final s in out) if (s.trim().isNotEmpty) s.trim()];
 }
 
 /// 提取 SnackBar 消息字符串：方法体为

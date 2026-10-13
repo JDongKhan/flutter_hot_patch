@@ -36,6 +36,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const ExpandedTranslator())
     ..register(const FlexibleTranslator())
     ..register(const StackTranslator())
+    ..register(const IndexedStackTranslator())
     ..register(const PositionedTranslator())
     ..register(const ContainerTranslator())
     ..register(const DividerTranslator())
@@ -657,6 +658,33 @@ class StackTranslator extends WidgetTranslator {
     if (clip != null) props['clipBehavior'] = clip;
     return {
       'type': ctx.jsString('Stack'),
+      if (props.isNotEmpty) 'props': props,
+      'children': [for (final c in children) ctx.translateElement(c)],
+    };
+  }
+}
+
+/// IndexedStack：多子节点堆叠、只显示第 index 个（切 tab 时各页状态都保留）。
+///
+/// `index` 走 [WidgetTranslateContext.propExpr]，因此可以引用状态字段
+/// （`index: _index` → `this._index`）：JS 侧 setState 后只重下发 props，
+/// 子结点原位复用，宿主按新 index 重建——与原生 IndexedStack 语义一致。
+class IndexedStackTranslator extends WidgetTranslator {
+  const IndexedStackTranslator();
+
+  @override
+  String get type => 'IndexedStack';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final children = ctx.listArg(node.args, 'children', node.type);
+    final props = <String, dynamic>{};
+    final index = ctx.namedArg(node.args, 'index');
+    if (index != null) props['index'] = ctx.propExpr(index);
+    final align = alignmentToJson(ctx.namedArg(node.args, 'alignment'), ctx);
+    if (align != null) props['alignment'] = align;
+    return {
+      'type': ctx.jsString('IndexedStack'),
       if (props.isNotEmpty) 'props': props,
       'children': [for (final c in children) ctx.translateElement(c)],
     };
