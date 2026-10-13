@@ -21,3 +21,4 @@ export 'src/json/flutter_from_json.dart';
 export 'src/js_ui/js_ui_widget.dart';
 export 'src/js_ui/js_ui_store.dart';
 export 'src/js_ui/js_widget_registry.dart';
+export 'src/js_ui/capabilities/tab_drawer_bridge.dart';

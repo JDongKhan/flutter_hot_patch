@@ -54,7 +54,9 @@ import 'package:flutter/foundation.dart'
 // 能力 JS 片段（各能力文件内聚，runtime_source 拼接注入）：
 //   - capabilities/scroll_controller_js.dart      → ScrollController 代理类
 //   - capabilities/text_editing_controller_js.dart → TextEditingController 代理类
+//   - capabilities/tab_controller_js.dart         → TabController 代理类
 import 'capabilities/scroll_controller_js.dart';
+import 'capabilities/tab_controller_js.dart';
 import 'capabilities/text_editing_controller_js.dart';
 import 'js/mini_react_js.dart';
 import 'js/change_notifier_js.dart';
@@ -130,9 +132,10 @@ const String _jsUiGlobalsTail = r'''
 
   // pageKey -> { key, inst, dirty, flushing, ops }
   var roots = {};
-  // pageKey -> ScrollController[]（本页面构造的控制器）。
-  // 控制器内的 metrics 句柄是框架内部实现（用户无从释放），故按页面登记，
-  // 页面退出时由 disposeRoot 兜底释放；组件已在自身 dispose() 释放则为空操作。
+  // pageKey -> 控制器[]（本页面构造的 ScrollController / TextEditingController /
+  // TabController）。控制器内登记的转发句柄是框架内部实现（用户无从释放），
+  // 故按页面登记，页面退出时由 disposeRoot 兜底释放；组件已在自身 dispose()
+  // 释放则为空操作（releaseController 按 __kind 分派）。
   var pageControllers = {};
   // 正在 mount/patch/flush 的根；emit / 结点归属都读它。
   var activeRoot = null;
@@ -273,8 +276,8 @@ const String _jsUiApi = r'''
       activeRoot = prev;
     }
     root.inst = null;
-    // 页面退出兜底：释放本页面登记的 ScrollController（删句柄 + 通知宿主
-    // 释放真实 controller）。组件若已在自身 dispose() 里释放，这里幂等。
+    // 页面退出兜底：释放本页面登记的控制器（删转发句柄 + 通知宿主释放真实
+    // controller，按 __kind 分派）。组件若已在自身 dispose() 里释放，这里幂等。
     var scs = pageControllers[pageKey];
     if (scs) {
       for (var i = 0; i < scs.length; i++) { releaseController(scs[i]); }
@@ -328,6 +331,7 @@ String jsUiRuntimeSource() => [
   changeNotifierSource,
   scrollControllerJsSource,
   textEditingControllerJsSource,
+  tabControllerJsSource,
   _jsUiRuntimeSkeletonTail,
 ].join('\n');
 

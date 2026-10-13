@@ -11,7 +11,18 @@ const String textEditingControllerJsSource = r'''
   //   - clear()：发 host Clear + 清镜像；
   //   - dispose：释放登记句柄 + 通知宿主释放真实 controller（幂等）。
   // 跨桥序列化：props 里的实例经 toJSON 输出 `{__jsuiTextEditingController: id}`。
+  // 释放（组件 dispose / 页面退出兜底共用入口，见 releaseController 的 __kind 分派）。
+  function releaseTextEditingController(tec) {
+    if (!tec) { return; }
+    if (tec.__textFn) { delete handlers[tec.__textFn.__fn]; tec.__textFn = null; }
+    if (tec.__id != null) {
+      host('textEditingControllerDispose', [tec.__id]);
+      tec.__id = null;
+    }
+    tec.__listeners = [];
+  }
   function TextEditingController(initial) {
+    this.__kind = 'tec';
     this.__id = nextId('tec');
     this.__listeners = [];
     this.__text =
@@ -43,12 +54,7 @@ const String textEditingControllerJsSource = r'''
     this.__notify();
   };
   TextEditingController.prototype.dispose = function () {
-    if (this.__textFn) { delete handlers[this.__textFn.__fn]; this.__textFn = null; }
-    if (this.__id != null) {
-      host('textEditingControllerDispose', [this.__id]);
-      this.__id = null;
-    }
-    this.__listeners = [];
+    releaseTextEditingController(this);
   };
   TextEditingController.prototype.toJSON = function () {
     return { __jsuiTextEditingController: this.__id };

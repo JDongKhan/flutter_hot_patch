@@ -310,6 +310,12 @@ String? literalToJs(Expression? e) {
   if (e is IntegerLiteral) return e.value?.toString();
   if (e is DoubleLiteral) return e.value.toString();
   if (e is BooleanLiteral) return e.value.toString();
+  // 一元前缀（`-1` / `+1` / `!done` / `~x`）：不是字面量节点，Dart 与 JS 语义
+  // 一致，一比一透传。不认这层会把 `int _picked = -1` 静默翻译成默认值 0。
+  if (e is PrefixExpression) {
+    final inner = literalToJs(e.operand);
+    if (inner != null) return '(${e.operator.lexeme}$inner)';
+  }
   if (e is BinaryExpression) {
     final l = literalToJs(e.leftOperand);
     final r = literalToJs(e.rightOperand);
@@ -325,6 +331,11 @@ String? literalToJs(Expression? e) {
 String? numLiteralJs(Expression? e) {
   if (e is IntegerLiteral) return e.value?.toString();
   if (e is DoubleLiteral) return '${e.value}';
+  // 负数字面量（`-1`）：同样是一元前缀，不认会在样式/属性里静默丢值。
+  if (e is PrefixExpression) {
+    final inner = numLiteralJs(e.operand);
+    if (inner != null) return '(${e.operator.lexeme}$inner)';
+  }
   return null;
 }
 
@@ -405,6 +416,10 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   }
   // switch 表达式（Dart 3）→ IIFE + JS switch（JS 无 switch 表达式语法）。
   if (e is SwitchExpression) return _switchExpressionJs(e, scope, classes);
+  // `this`（如 `TabController(length: n, vsync: this)`）：JS 侧方法/构造实参里
+  // 的 this 就是组件实例，一比一透传；Dart 侧专属的实参（vsync）由 JS 代理类
+  // 构造自行忽略。
+  if (e is ThisExpression) return 'this';
   if (e is Identifier) {
     // kDebugMode / kReleaseMode → 运行时注入的全局标志
     final flag = globalFlagJs(e.name);

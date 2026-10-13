@@ -37,6 +37,42 @@ class _HelloCardState extends State<HelloCard> {
   // 模型类型字段：按调用链进 JS 属性（this._user = null）
   User? _user;
 
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('[HelloCard] initState');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    debugPrint('[HelloCard] didChangeDependencies');
+  }
+
+  @override
+  void didUpdateWidget(covariant HelloCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    debugPrint('[HelloCard] didUpdateWidget: old=$oldWidget');
+  }
+
+  @override
+  void deactivate() {
+    super.deactivate();
+    debugPrint('[HelloCard] deactivate');
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    debugPrint('[HelloCard] activate');
+  }
+
+  @override
+  void dispose() {
+    debugPrint('[HelloCard] dispose');
+    super.dispose();
+  }
+
   // 无注解：自动成为 JS 方法 `inc`
   void inc() {
     debugPrint('inc: count=$_count'); // 日志：方法体 → sendMessage('log', 插值)

@@ -23,7 +23,41 @@ import 'widget2js.dart';
 /// `ScrollController` → `new ScrollController()`）：字段不跳过，方法/属性
 /// 调用一比一翻译（`addListener` / `jumpTo` / `offset` 由 JS 侧实例提供，
 /// 宿主按 id 绑定真实对象）。
-const Set<String> _jsRuntimeTypes = {'ScrollController', 'TextEditingController'};
+const Set<String> _jsRuntimeTypes = {
+  'ScrollController',
+  'TextEditingController',
+  'TabController',
+};
+
+/// JS 运行时同名代理类的构造调用 → JS：命名实参一比一透传成对象字面量
+/// （`TabController(length: 3, vsync: this)` → `new TabController({length: 3,
+/// vsync: this})`），代理类自行取用/忽略（如 TabController 取 length，
+/// 忽略 Dart 专属的 vsync）。实参翻译不出来时跳过该条；全空则退化为无参构造。
+String _jsRuntimeCtorToJs(
+  String type,
+  Expression init,
+  Map<String, ClassInfo> used,
+) {
+  // 无 resolution 的 parseString 下 `TabController(...)` 与 `Foo()` 一样被解析成
+  // MethodInvocation（类名即无参构造），显式 `new` 才是 InstanceCreationExpression
+  // ——两种形态都要认，否则实参整批丢失（只留下 `new TabController()`）。
+  final NodeList<Expression> args;
+  if (init is InstanceCreationExpression) {
+    args = init.argumentList.arguments;
+  } else if (init is MethodInvocation && init.target == null) {
+    args = init.argumentList.arguments;
+  } else {
+    return 'new $type()';
+  }
+  final entries = <String>[];
+  for (final a in args) {
+    // 代理类的语义面由 JS 侧定义，位置参数不参与（均为具名参数调用）。
+    if (a is! NamedExpression) continue;
+    final v = rhsToJs(a.expression, FieldScope(), used);
+    if (v != null) entries.add('${a.name.label.name}: $v');
+  }
+  return entries.isEmpty ? 'new $type()' : 'new $type({${entries.join(', ')}})';
+}
 
 /// 任意 Dart 类声明 → 已翻译的 [ClassInfo]（方法体 [ClassMethod.bodyJs]
 /// 在本次调用中全部预渲染好，依赖 / 用到的 widget 类型也已收集齐）。
@@ -135,7 +169,10 @@ ClassInfo translateClass(
         // bool→false、数字→0）。组件与普通类同一条规则。
         initial = literalToJs(init) ?? _defaultInitial(typeName);
       } else if (jsRuntime) {
-        initial = init == null ? 'null' : 'new $erased()';
+        // JS 运行时同名代理类（ScrollController / TextEditingController /
+        // TabController）：构造按命名实参透传（代理类自行取用，如 TabController
+        // 的 length/initialIndex）。
+        initial = init == null ? 'null' : _jsRuntimeCtorToJs(erased, init, used);
       } else {
         String? ctorJs;
         if (init is InstanceCreationExpression) {

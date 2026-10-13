@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>flutter_hot · App 高保真交互原型</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:#e9ecf2;
+  background-image:radial-gradient(900px 520px at 50% -18%,#d9e6fd 0,rgba(233,236,242,0) 72%);
+  font-family:-apple-system,"SF Pro Text","PingFang SC",system-ui,"Segoe UI",Roboto,sans-serif;
+  color:#171a21;display:flex;justify-content:center;align-items:flex-start;padding:26px 12px 48px;
+}
+.stage{display:flex;flex-direction:column;align-items:center;gap:14px}
+.hint{font-size:13px;color:#697284;text-align:center;line-height:1.6;max-width:520px}
+.hint b{color:#2b6cf6}
+
+/* ---------- 手机外壳 ---------- */
+.phone{width:390px;height:844px;background:linear-gradient(180deg,#242833,#0b0d12);border-radius:56px;padding:13px;
+  box-shadow:0 44px 90px -24px rgba(16,28,56,.5),0 0 0 1.5px rgba(255,255,255,.09) inset;position:relative;flex:0 0 auto}
+.screen{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:#F3F5F8;display:flex;flex-direction:column}
+.island{position:absolute;top:19px;left:50%;transform:translateX(-50%);width:106px;height:28px;border-radius:18px;background:#090b0f;z-index:80}
+.statusbar{flex:0 0 auto;height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 5px;
+  font-size:13px;font-weight:650;color:#0d1117;position:relative;z-index:40}
+.sb-icons{display:flex;gap:5px;align-items:center}
+.viewport{position:relative;flex:1;min-height:0;overflow:hidden}
+.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth}
+.scroll::-webkit-scrollbar{width:0;height:0}
+.tabbar{flex:0 0 auto;height:74px;display:flex;padding:8px 6px 0;background:rgba(255,255,255,.95);
+  backdrop-filter:blur(18px);border-top:1px solid #e8ebf0;position:relative;z-index:30}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#9aa1ad;cursor:pointer;transition:color .18s}
+.tab span{font-size:10.5px;font-weight:550}
+.tab.active{color:#0E7AFB}
+.tab svg{width:24px;height:24px}
+.home-indicator{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:132px;height:5px;border-radius:3px;background:#101319;opacity:.85;z-index:45}
+
+/* ---------- 通用 ---------- */
+.card{background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(20,30,60,.04)}
+.pad{padding:0 12px}
+.muted{color:#8b909a}
+.press{transition:transform .12s ease,opacity .12s ease}
+.press:active{transform:scale(.985);opacity:.9}
+.price{color:#FF5A36;font-weight:700}
+.chev{color:#c3c8d2;font-size:15px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 10px}
+.sec-title{font-size:17px;font-weight:700;letter-spacing:.2px}
+.sec-more{font-size:12.5px;color:#8b909a;display:flex;align-items:center;gap:2px}
+
+/* ---------- 首页 ---------- */
+.home-head{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0E7AFB 0%,#3B93FF 62%,#F3F5F8 100%);
+  padding:6px 14px 16px;border-radius:0 0 20px 20px}
+.home-top{display:flex;align-items:center;justify-content:space-between;color:#fff;margin-bottom:12px}
+.home-loc{font-size:15px;font-weight:650;display:flex;align-items:center;gap:4px}
+.searchbar{display:flex;align-items:center;gap:8px;height:40px;background:#fff;border-radius:20px;padding:0 14px;
+  box-shadow:0 6px 16px -6px rgba(10,40,90,.35);cursor:pointer}
+.searchbar .ph-txt{font-size:13.5px;color:#a3a9b4}
+.bell{width:30px;height:30px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
+.bell i{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#FF5A36;border:1.5px solid #3B93FF}
+
+.banner-wrap{margin-top:-4px;padding-top:4px}
+.banner{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 12px 6px;scrollbar-width:none}
+.banner::-webkit-scrollbar{display:none}
+.slide{flex:0 0 calc(100% - 8px);scroll-snap-align:center;height:150px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;
+  box-shadow:0 8px 20px -12px rgba(20,40,90,.45)}
+.slide img{width:100%;height:100%;object-fit:cover;display:block}
+.slide .cap{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 12px;color:#fff;
+  background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.62));font-size:15px;font-weight:650}
+.slide .cap em{display:block;font-style:normal;font-size:11.5px;font-weight:400;opacity:.85;margin-top:2px}
+.dots{display:flex;gap:5px;justify-content:center;margin-top:6px}
+.dots i{width:5px;height:5px;border-radius:3px;background:#c8cdd8;transition:all .2s}
+.dots i.on{width:14px;background:#0E7AFB}
+
+.grid9{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 0;margin:12px;padding:16px 6px}
+.g9{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer}
+.g9 .ico{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.g9 .lbl{font-size:11.5px;color:#4d5462;font-weight:500}
+
+.ad{margin:0 12px;height:88px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;
+  box-shadow:0 8px 20px -14px rgba(20,40,90,.5)}
+.ad img{width:100%;height:100%;object-fit:cover;display:block}
+.ad .badge{position:absolute;top:8px;left:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.42);padding:2px 6px;border-radius:6px}
+.ad .cap{position:absolute;left:12px;bottom:10px;color:#fff;font-size:14px;font-weight:650;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+
+.spots{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 12px 18px}
+.spot{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 10px -6px rgba(20,40,90,.25);cursor:pointer}
+.spot .im{height:98px;position:relative}
+.spot .im img{width:100%;height:100%;object-fit:cover;display:block}
+.spot .im .tag{position:absolute;left:8px;top:8px;font-size:10px;color:#fff;background:rgba(14,122,251,.9);padding:2px 7px;border-radius:8px}
+.spot .bd{padding:9px 10px 11px}
+.spot .tt{font-size:13.5px;font-weight:650;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spot .ss{font-size:11px;color:#8b909a;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spot .pr{margin-top:7px;font-size:12px;display:flex;align-items:baseline;justify-content:space-between}
+.spot .pr .price{font-size:15px}
+.spot .pr .sold{font-size:10.5px;color:#a3a9b4}
+
+/* ---------- 社区 ---------- */
+.tab-head{padding:4px 0 8px;background:#fff;border-bottom:1px solid #eef1f5;position:sticky;top:0;z-index:20}
+.seg{display:flex;justify-content:center;gap:34px}
+.seg .sg{font-size:16.5px;color:#7c828e;padding:6px 2px;position:relative;cursor:pointer;font-weight:550}
+.seg .sg.on{color:#171a21;font-weight:750}
+.seg .sg.on::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:22px;height:3px;border-radius:2px;background:#0E7AFB}
+.hscroll{display:flex;gap:10px;overflow-x:auto;padding:12px 14px 4px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.rescard{flex:0 0 138px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px -6px rgba(20,40,90,.25);cursor:pointer}
+.rescard .im{height:82px}
+.rescard .im img{width:100%;height:100%;object-fit:cover;display:block}
+.rescard .tt{font-size:12.5px;font-weight:600;padding:8px 9px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rescard .tt em{font-style:normal;display:block;font-weight:400;font-size:10.5px;color:#8b909a;margin-top:2px}
+
+.filterbar{display:flex;align-items:center;gap:18px;padding:12px 16px 10px;position:relative}
+.fb{font-size:13.5px;color:#5c6270;cursor:pointer;display:flex;align-items:center;gap:3px}
+.fb.on{color:#0E7AFB;font-weight:650}
+.fb .caret{font-size:9px;transition:transform .2s}
+.fb.open .caret{transform:rotate(180deg)}
+.fb-filter{margin-left:auto;font-size:12.5px;color:#4d5462;display:flex;align-items:center;gap:5px;
+  border:1px solid #e2e6ee;border-radius:14px;padding:4px 10px;background:#fff;cursor:pointer}
+.fb-filter.on{border-color:#0E7AFB;color:#0E7AFB;background:#EAF3FF}
+
+.posts{padding:2px 12px 18px;display:flex;flex-direction:column;gap:10px}
+.post{display:flex;gap:11px;background:#fff;border-radius:14px;padding:10px;box-shadow:0 2px 10px -7px rgba(20,40,90,.28);cursor:pointer}
+.post .im{width:86px;height:86px;border-radius:10px;overflow:hidden;flex:0 0 auto}
+.post .im img{width:100%;height:100%;object-fit:cover;display:block}
+.post .bd{flex:1;min-width:0;display:flex;flex-direction:column}
+.post .tt{font-size:14px;font-weight:650;line-height:1.4}
+.post .ss{font-size:11.5px;color:#8b909a;margin-top:5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.post .ft{margin-top:auto;display:flex;align-items:center;gap:8px;font-size:11px;color:#a3a9b4}
+.post .who{display:flex;align-items:center;gap:4px}
+.dotav{width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#9ec2ff,#c9b6ff)}
+
+/* 下拉筛选面板 */
+.dd-panel{position:absolute;left:12px;right:12px;background:#fff;border-radius:16px;padding:14px 14px 12px;
+  box-shadow:0 18px 44px -12px rgba(16,34,70,.35);pointer-events:auto;animation:drop .2s ease}
+@keyframes drop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.dd-scrim{position:absolute;inset:0;background:rgba(14,20,34,.3);pointer-events:auto;animation:fade .2s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.dd-grp{margin-bottom:12px}
+.dd-grp h4{margin:0 0 8px;font-size:12px;color:#8b909a;font-weight:600;letter-spacing:.3px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:12.5px;color:#4d5462;background:#F3F5F8;border-radius:14px;padding:6px 13px;cursor:pointer;transition:all .15s}
+.chip.on{background:#EAF3FF;color:#0E7AFB;font-weight:650;box-shadow:0 0 0 1px #0E7AFB inset}
+.dd-actions{display:flex;gap:10px;border-top:1px solid #eef1f5;padding-top:12px}
+.btn{flex:1;height:40px;border-radius:20px;border:0;font-size:14.5px;font-weight:650;cursor:pointer;font-family:inherit}
+.btn.ghost{background:#F3F5F8;color:#4d5462}
+.btn.primary{background:#0E7AFB;color:#fff}
+.btn.accent{background:#FF5A36;color:#fff}
+
+/* ---------- 订单 ---------- */
+.status-tabs{display:flex;gap:20px;overflow-x:auto;padding:12px 16px 10px;background:#fff;border-bottom:1px solid #eef1f5;
+  scrollbar-width:none;position:sticky;top:0;z-index:20}
+.status-tabs::-webkit-scrollbar{display:none}
+.st{font-size:13.5px;color:#7c828e;white-space:nowrap;cursor:pointer;position:relative;padding-bottom:6px}
+.st.on{color:#171a21;font-weight:700}
+.st.on::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:18px;height:3px;border-radius:2px;background:#0E7AFB}
+.order{background:#fff;border-radius:14px;margin:12px 12px 0;padding:12px;box-shadow:0 2px 10px -7px rgba(20,40,90,.28);cursor:pointer}
+.order-h{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:#98a0ac}
+.order-h .stat{color:#0E7AFB;font-weight:650}
+.order-h .stat.done{color:#9aa1ad}
+.order-h .stat.warn{color:#FF5A36}
+.order-b{display:flex;gap:10px;margin-top:10px;padding-top:10px;border-top:1px dashed #eef1f5}
+.order-b .im{width:62px;height:62px;border-radius:10px;overflow:hidden;flex:0 0 auto}
+.order-b .im img{width:100%;height:100%;object-fit:cover;display:block}
+.order-b .bd{flex:1;min-width:0}
+.order-b .tt{font-size:13.5px;font-weight:650}
+.order-b .ss{font-size:11px;color:#8b909a;margin-top:5px}
+.order-b .qt{font-size:11px;color:#a3a9b4;margin-top:5px;text-align:right}
+.order-f{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #f2f4f8}
+.order-f .sum{font-size:12px;color:#5c6270}
+.order-f .sum b{font-size:16px}
+.order-f .acts{display:flex;gap:8px}
+.mini{font-size:12px;padding:6px 14px;border-radius:14px;border:1px solid #dfe4ec;color:#4d5462;background:#fff;cursor:pointer;font-family:inherit}
+.mini.primary{background:#0E7AFB;border-color:#0E7AFB;color:#fff;font-weight:600}
+
+/* ---------- 我的 ---------- */
+.mine-head{background:linear-gradient(160deg,#0E7AFB,#4E9DFF 60%,#8CC2FF);padding:14px 18px 26px;border-radius:0 0 22px 22px;
+  display:flex;align-items:center;gap:14px;cursor:pointer;position:relative}
+.avatar{width:64px;height:64px;border-radius:50%;overflow:hidden;border:2.5px solid rgba(255,255,255,.85);flex:0 0 auto}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.mine-info{flex:1;color:#fff}
+.mine-info .nm{font-size:18px;font-weight:750}
+.mine-info .ph{font-size:12px;opacity:.88;margin-top:4px}
+.mine-info .login-tip{font-size:12px;opacity:.92;margin-top:5px}
+.mine-head .arrow{color:rgba(255,255,255,.9);font-size:18px}
+.stats{display:flex;background:#fff;border-radius:16px;margin:-16px 14px 0;padding:14px 0;box-shadow:0 8px 22px -14px rgba(20,40,90,.4);position:relative;z-index:2}
+.stat{flex:1;text-align:center;cursor:pointer}
+.stat b{display:block;font-size:17px;font-weight:750}
+.stat span{font-size:11px;color:#8b909a;margin-top:3px;display:block}
+.menu{background:#fff;border-radius:16px;margin:14px 14px 0;overflow:hidden}
+.mrow{display:flex;align-items:center;gap:12px;padding:15px 16px;cursor:pointer;border-bottom:1px solid #f2f4f8}
+.mrow:last-child{border-bottom:0}
+.mrow .mi{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.mrow .mt{flex:1;font-size:14.5px;font-weight:550}
+.logout{margin:18px 14px 20px;height:46px;border-radius:23px;background:#fff;color:#FF5A36;font-size:15px;font-weight:650;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 10px -7px rgba(20,40,90,.3)}
+
+/* ---------- 二级页 ---------- */
+.topbar{display:flex;align-items:center;gap:10px;padding:6px 14px 12px;background:#fff;position:sticky;top:0;z-index:20;border-bottom:1px solid #eef1f5}
+.back{width:34px;height:34px;border-radius:50%;background:#F3F5F8;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto}
+.topbar .tt{font-size:16.5px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.searchpage{display:flex;align-items:center;gap:8px;height:38px;background:#F3F5F8;border-radius:19px;padding:0 14px;flex:1}
+.searchpage input{border:0;background:transparent;outline:0;font-size:14px;flex:1;font-family:inherit;color:#171a21}
+.hero{height:230px;position:relative}
+.hero img{width:100%;height:100%;object-fit:cover;display:block}
+.hero .back{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.9)}
+.hero .cap{position:absolute;left:0;right:0;bottom:0;padding:40px 16px 16px;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.6))}
+.hero .cap h1{margin:0;font-size:21px;font-weight:750}
+.hero .cap p{margin:6px 0 0;font-size:12.5px;opacity:.9}
+.blk{background:#fff;border-radius:16px;margin:12px;padding:14px 16px}
+.blk h3{margin:0 0 10px;font-size:15px;font-weight:700}
+.tags{display:flex;gap:7px;flex-wrap:wrap}
+.tag{font-size:11.5px;color:#0E7AFB;background:#EAF3FF;border-radius:8px;padding:3px 9px}
+.tag.g{color:#0a9a63;background:#E6F8F0}
+.ptxt{font-size:13px;line-height:1.85;color:#4d5462}
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:8px 0;color:#4d5462}
+.kv b{color:#171a21;font-weight:600}
+.timeline{padding-left:4px}
+.tl{display:flex;gap:10px;font-size:12.5px;color:#8b909a;padding:5px 0}
+.tl i{width:8px;height:8px;border-radius:50%;background:#dfe4ec;margin-top:5px;flex:0 0 auto}
+.tl.on{color:#171a21;font-weight:600}
+.tl.on i{background:#0E7AFB}
+.cta{display:flex;align-items:center;gap:12px;padding:12px 16px 16px;background:#fff;border-top:1px solid #eef1f5}
+.cta .cprice{font-size:13px;color:#5c6270}
+.cta .cprice b{font-size:22px;color:#FF5A36}
+.cta .btn{flex:1}
+.author{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fff}
+.author .ava{width:38px;height:38px;border-radius:50%;overflow:hidden}
+.author .ava img{width:100%;height:100%;object-fit:cover}
+.author .an{font-size:14px;font-weight:650}
+.author .as{font-size:11px;color:#8b909a;margin-top:2px}
+.follow{margin-left:auto;font-size:12.5px;color:#fff;background:#0E7AFB;border-radius:14px;padding:6px 16px;cursor:pointer}
+.login-wrap{padding:32px 26px}
+.login-logo{width:66px;height:66px;border-radius:20px;background:linear-gradient(140deg,#0E7AFB,#7FB6FF);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 18px}
+.login-title{text-align:center;font-size:20px;font-weight:750}
+.login-sub{text-align:center;font-size:12.5px;color:#8b909a;margin-top:7px}
+.field{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:0 14px;height:50px;margin-top:14px}
+.field input{border:0;outline:0;background:transparent;font-size:15px;flex:1;font-family:inherit;color:#171a21}
+.field .code-btn{font-size:13px;color:#0E7AFB;font-weight:600;cursor:pointer;white-space:nowrap}
+.field .prefix{font-size:14px;color:#4d5462;font-weight:600}
+.agree{font-size:11px;color:#8b909a;margin-top:16px;text-align:center;line-height:1.7}
+.web-url{font-size:11px;color:#98a0ac;background:#F3F5F8;border-radius:10px;padding:8px 12px;margin:12px;word-break:break-all;font-family:ui-monospace,Menlo,monospace}
+.web-body{background:#fff;border-radius:16px;margin:0 12px 16px;padding:18px 16px}
+.web-body h2{font-size:17px;margin:0 0 12px}
+.web-body p{font-size:13.5px;line-height:1.9;color:#4d5462;margin:0 0 12px}
+.web-body .bannerimg{height:130px;border-radius:12px;overflow:hidden;margin-bottom:14px}
+.web-body .bannerimg img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* ---------- 其他 ---------- */
+.toast{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(20,26,40,.9);color:#fff;
+  font-size:13px;padding:10px 18px;border-radius:22px;pointer-events:none;animation:toastIn .22s ease;z-index:99;white-space:nowrap}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.empty{text-align:center;color:#a3a9b4;font-size:13px;padding:48px 0}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div class="island"></div>
+    <div class="screen">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="sb-icons">▮▮▮ ᯤ 100%</span>
+      </div>
+      <div class="viewport">
+        <div class="scroll" id="app"></div>
+      </div>
+      <div class="tabbar" id="tabbar"></div>
+      <div class="overlay" id="overlay"></div>
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+  <p class="hint">高保真交互原型 · 点击 <b>任意卡片 / 入口 / 头像</b> 查看跳转，社区页点「筛选」可从顶部下拉过滤列表</p>
+</div>
+
+<script>
+/* ============ 图片资源（Trae 文生图，带 CSS 兜底） ============ */
+function img(p, s){ return 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=' + p + '&image_size=' + s; }
+const IMG = {
+  banner1: img('aerial%20view%20of%20tropical%20island%20beach%20turquoise%20water%20travel%20photography','landscape_16_9'),
+  banner2: img('snowy%20mountain%20lake%20at%20sunrise%20mirror%20reflection%20travel%20photography','landscape_16_9'),
+  banner3: img('ancient%20chinese%20water%20town%20with%20lanterns%20at%20dusk','landscape_16_9'),
+  ad1:     img('hot%20air%20balloons%20over%20cappadocia%20at%20sunrise%20wide%20travel%20banner','landscape_4_3'),
+  spot1:   img('tropical%20island%20resort%20beach%20wooden%20bungalow%20clear%20sea','landscape_4_3'),
+  spot2:   img('chinese%20ancient%20town%20canal%20stone%20bridge%20old%20houses','landscape_4_3'),
+  spot3:   img('vast%20green%20grassland%20winding%20road%20blue%20sky%20road%20trip','landscape_4_3'),
+  spot4:   img('snow%20village%20wooden%20houses%20winter%20warm%20lights','landscape_4_3'),
+  res1:    img('camping%20tent%20in%20forest%20at%20dusk%20warm%20light','landscape_4_3'),
+  res2:    img('autumn%20city%20street%20walk%20golden%20leaves%20sunlight','landscape_4_3'),
+  res3:    img('seaside%20lighthouse%20at%20sunset%20waves%20rocks','landscape_4_3'),
+  post1:   img('camping%20gear%20flat%20lay%20on%20grass%20outdoor%20equipment','square'),
+  post2:   img('narrow%20old%20town%20alley%20stone%20steps%20traditional%20houses','square'),
+  post3:   img('autumn%20forest%20path%20with%20red%20leaves','square'),
+  post4:   img('lakeside%20campsite%20tents%20mountains%20morning%20mist','square'),
+  post5:   img('weekend%20road%20trip%20car%20on%20country%20road%20sunny','square'),
+  post6:   img('jiangnan%20water%20town%20boat%20at%20dusk%20lanterns','square'),
+  order1:  img('happy%20couple%20on%20tropical%20beach%20vacation','square'),
+  order2:  img('traveler%20walking%20in%20chinese%20ancient%20town%20alley','square'),
+  order3:  img('car%20road%20trip%20on%20grassland%20highway','square'),
+  avatar:  img('portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar','square')
+};
+function imgtag(src, grad){
+  return '<img src="' + src + '" alt="" loading="lazy" onerror="this.style.opacity=0">';
+}
+
+/* ============ 数据 ============ */
+const SPOTS = [
+  {id:'s1',title:'海岛三日游',sub:'含往返机票 · 4星海景房',price:1280,sold:'2.3k 人已订',tag:'热销',img:IMG.spot1,
+   tags:['含机票','含2晚酒店','中文导游','免费退改'],desc:'湛蓝海水与细软白沙滩，行程含出海浮潜、日落巡航与海鲜大餐，适合情侣与家庭出行。'},
+  {id:'s2',title:'古镇自由行',sub:'慢游水乡 · 精品民宿',price:860,sold:'1.1k 人已订',tag:'慢游',img:IMG.spot2,
+   tags:['含1晚民宿','含早餐','可选接驳','自由行程'],desc:'青石板路、枕水人家。清晨的薄雾与傍晚的灯笼，是这座古镇最好的两个时刻。'},
+  {id:'s3',title:'草原自驾',sub:'越野穿越 · 5日行程',price:1520,sold:'860 人已订',tag:'自驾',img:IMG.spot3,
+   tags:['含租车','含油费','车队领航','含保险'],desc:'沿草原天路一路向北，途经牧场、湖泊与白桦林，5天4晚深度穿越。'},
+  {id:'s4',title:'雪乡温泉',sub:'雪景温泉 · 亲子首选',price:1980,sold:'640 人已订',tag:'温泉',img:IMG.spot4,
+   tags:['含温泉','含门票','亲子房','含接送'],desc:'雪蘑菇屋顶与露天温泉的组合，夜里零下二十度泡汤看星空，是冬天的限定体验。'}
+];
+const BANNERS = [
+  {img:IMG.banner1,title:'海岛季 · 早鸟立减 300',sub:'10月出行专属优惠'},
+  {img:IMG.banner2,title:'雪山湖泊 6 日环线',sub:'含全程住宿与向导'},
+  {img:IMG.banner3,title:'江南水乡夜游船票',sub:'限时 8 折，可随时退'}
+];
+const GRID9 = [
+  {e:'🎫',t:'门票',c:'#EAF3FF'},{e:'🏨',t:'酒店',c:'#FFF1E8'},{e:'✈️',t:'机票',c:'#EDF7EE'},{e:'📖',t:'攻略',c:'#F3EEFF'},
+  {e:'🚗',t:'租车',c:'#EAF7FA'},{e:'🍜',t:'美食',c:'#FFEEF0'},{e:'🎭',t:'演出',c:'#FDF3E3'},{e:'⋯',t:'更多',c:'#F0F2F5'}
+];
+const TYPES = ['全部','攻略','游记','榜单'];
+const DISTS = ['不限','1km 内','5km 内','20km 内'];
+const PRICES = ['不限','免费','¥100 以下','¥100 以上'];
+const SORTS = ['综合','最新','最热'];
+const POSTS = [
+  {id:'p1',title:'京郊露营全攻略',sub:'装备清单、营地选择与避坑指南，新手一次看懂。',type:'攻略',like:2300,img:IMG.post1,author:'山野派',time:'2 天前'},
+  {id:'p2',title:'小众古镇自驾路线',sub:'避开人潮，3 天 2 晚串联 4 个安静的江南小镇。',type:'游记',like:1800,img:IMG.post2,author:'慢行记',time:'4 天前'},
+  {id:'p3',title:'深秋赏叶地图',sub:'江浙沪最适合看红叶的 12 个地方，附最佳观赏期。',type:'榜单',like:960,img:IMG.post3,author:'旅拍君',time:'1 周前'},
+  {id:'p4',title:'城市周边露营地测评',sub:'实测 8 个露营地：水电、厕所、风景与性价比。',type:'攻略',like:1420,img:IMG.post4,author:'露营实验室',time:'3 天前'},
+  {id:'p5',title:'周末两天一夜怎么玩',sub:'不用请假也能出发的 6 条短线行程，人均 500 起。',type:'游记',like:1180,img:IMG.post5,author:'周末出发',time:'5 天前'},
+  {id:'p6',title:'江浙沪古镇榜单',sub:'按人气、美食与夜景综合排名，第一名出人意料。',type:'榜单',like:2040,img:IMG.post6,author:'江南笔记',time:'6 天前'}
+];
+const RESOURCES = [
+  {id:'r1',title:'露营地推荐',sub:'12 个营地',img:IMG.res1},
+  {id:'r2',title:'城市漫步路线',sub:'秋日限定',img:IMG.res2},
+  {id:'r3',title:'海边日落机位',sub:'拍照攻略',img:IMG.res3}
+];
+const ORDER_STATUS = ['全部','待付款','待发货','待收货','已完成'];
+const ORDERS = [
+  {no:'20261013001',status:'待付款',title:'海岛三日游 · 2 人',spec:'2026-10-20 出发 · 含机酒',price:2560,img:IMG.order1,step:0},
+  {no:'20261012007',status:'已完成',title:'古镇自由行 · 1 人',spec:'2026-09-28 出发 · 含民宿',price:860,img:IMG.order2,step:3},
+  {no:'20261011033',status:'待收货',title:'草原自驾套餐',spec:'2026-10-15 出发 · 含租车',price:1520,img:IMG.order3,step:2},
+  {no:'20261010022',status:'待发货',title:'雪乡温泉 · 2 人',spec:'2026-11-02 出发 · 含温泉',price:3960,img:IMG.spot4,step:1}
+];
+const MENU = [
+  {e:'📦',t:'我的订单',c:'#EAF3FF',screen:'orders'},
+  {e:'⭐',t:'我的收藏',c:'#FFF4E5',screen:'webview',arg:'我的收藏'},
+  {e:'⚙️',t:'设置',c:'#F0F2F5',screen:'webview',arg:'设置'},
+  {e:'❓',t:'帮助与关于',c:'#EDF7EE',screen:'webview',arg:'帮助与关于'}
+];
+
+/* ============ 状态 ============ */
+const state = {
+  tab:'home',
+  stack:[],
+  communityTab:'广场',
+  posts:POSTS.slice(),
+  filterOpen:false,
+  filterTop:300,
+  filters:{sort:'综合',type:'全部',dist:'不限',price:'不限'},
+  orderStatus:'全部',
+  toast:'',
+  toastTimer:null
+};
+
+/* ============ 工具 ============ */
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showToast(msg){
+  state.toast = msg;
+  renderOverlay();
+  clearTimeout(state.toastTimer);
+  state.toastTimer = setTimeout(()=>{ state.toast=''; renderOverlay(); }, 1600);
+}
+function go(screen, arg){ state.stack.push({screen, arg}); state.filterOpen=false; render(); }
+function back(){ state.stack.pop(); render(); }
+function setTab(t){ state.tab=t; state.stack=[]; state.filterOpen=false; render(); }
+function cur(){ return state.stack.length ? state.stack[state.stack.length-1] : {screen:'tab', arg:state.tab}; }
+
+/* ============ 区块渲染 ============ */
+function tabbarHtml(){
+  const items = [
+    {t:'home',l:'首页',p:'M3 10.6 12 3.2l9 7.4V20a1 1 0 0 1-1 1h-4.6v-5.6H9.6V21H4a1 1 0 0 1-1-1z'},
+    {t:'community',l:'社区',p:'M4.5 4.5h15a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H9.6l-4.6 3.6V6a1.5 1.5 0 0 1 1.5-1.5z'},
+    {t:'orders',l:'订单',p:'M7.5 3.5h9a1 1 0 0 1 1 1v16l-2.8-1.8-2.7 1.8-2.7-1.8L6.5 20.5v-16a1 1 0 0 1 1-1zM9.5 8.5h5M9.5 12h5'},
+    {t:'mine',l:'我的',p:'M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2zM4.5 21c0-3.2 3.4-5.4 7.5-5.4s7.5 2.2 7.5 5.4'}
+  ];
+  return items.map(i=>(
+    '<div class="tab '+(state.tab===i.t?'active':'')+'" data-action="tab" data-tab="'+i.t+'">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="'+i.p+'"/></svg>'+
+      '<span>'+i.l+'</span></div>'
+  )).join('');
+}
+
+function homeHtml(){
+  const banners = BANNERS.map((b,i)=>(
+    '<div class="slide" data-action="open" data-screen="webview" data-arg="'+esc(b.title)+'">'+
+      imgtag(b.img)+'<div class="cap">'+esc(b.title)+'<em>'+esc(b.sub)+'</em></div></div>'
+  )).join('');
+  const dots = BANNERS.map((_,i)=>'<i class="'+(i===0?'on':'')+'"></i>').join('');
+  const grid = GRID9.map(g=>(
+    '<div class="g9" data-action="open" data-screen="webview" data-arg="'+esc(g.t)+'频道">'+
+      '<div class="ico" style="background:'+g.c+'">'+g.e+'</div><div class="lbl">'+g.t+'</div></div>'
+  )).join('');
+  const spots = SPOTS.map(s=>(
+    '<div class="spot press" data-action="open" data-screen="spot" data-arg="'+s.id+'">'+
+      '<div class="im"><span class="tag">'+esc(s.tag)+'</span>'+imgtag(s.img)+'</div>'+
+      '<div class="bd"><div class="tt">'+esc(s.title)+'</div><div class="ss">'+esc(s.sub)+'</div>'+
+      '<div class="pr"><span class="price">￥'+s.price+'<span style="font-size:10px;font-weight:400"> 起</span></span>'+
+      '<span class="sold">'+esc(s.sold)+'</span></div></div></div>'
+  )).join('');
+  return ''+
+  '<div class="home-head">'+
+    '<div class="home-top">'+
+      '<div class="home-loc">📍 上海 <span style="font-size:11px;opacity:.85">▾</span></div>'+
+      '<div class="bell" data-action="open" data-screen="webview" data-arg="消息中心">🔔<i></i></div>'+
+    '</div>'+
+    '<div class="searchbar press" data-action="open" data-screen="search">'+
+      '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#a3a9b4" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>'+
+      '<span class="ph-txt">搜索景点 / 目的地 / 攻略</span></div>'+
+  '</div>'+
+  '<div class="banner-wrap">'+
+    '<div class="banner" id="banner">'+banners+'</div>'+
+    '<div class="dots" id="dots">'+dots+'</div>'+
+  '</div>'+
+  '<div class="grid9 card">'+grid+'</div>'+
+  '<div class="ad press" data-action="open" data-screen="webview" data-arg="品牌广告 ｜ 秋季出行季">'+
+    '<span class="badge">广告</span>'+imgtag(IMG.ad1)+'<div class="cap">秋季出行季 · 全场立减</div></div>'+
+  '<div class="sec-head"><div class="sec-title">景点推荐</div>'+
+    '<div class="sec-more" data-action="open" data-screen="webview" data-arg="景点推荐">更多 <span class="chev">›</span></div></div>'+
+  '<div class="spots">'+spots+'</div>';
+}
+
+function communityHtml(){
+  const res = RESOURCES.map(r=>(
+    '<div class="rescard press" data-action="open" data-screen="resource" data-arg="'+r.id+'">'+
+      '<div class="im">'+imgtag(r.img)+'</div>'+
+      '<div class="tt">'+esc(r.title)+'<em>'+esc(r.sub)+'</em></div></div>'
+  )).join('');
+  const f = state.filters;
+  const fb = SORTS.map(s=>'<div class="fb '+(f.sort===s?'on':'')+'" data-action="set-filter" data-key="sort" data-value="'+s+'">'+s+'</div>').join('');
+  const list = visiblePosts();
+  const posts = list.length ? list.map(p=>(
+    '<div class="post press" data-action="open" data-screen="post" data-arg="'+p.id+'">'+
+      '<div class="im">'+imgtag(p.img)+'</div>'+
+      '<div class="bd"><div class="tt">'+esc(p.title)+'</div>'+
+        '<div class="ss">'+esc(p.sub)+'</div>'+
+        '<div class="ft"><span class="who"><i class="dotav"></i>'+esc(p.author)+'</span><span>·</span><span>'+esc(p.time)+'</span>'+
+        '<span style="margin-left:auto">♡ '+(p.like>999?(p.like/1000).toFixed(1)+'k':p.like)+'</span></div>'+
+      '</div></div>'
+  )).join('') : '<div class="empty">没有符合条件的帖子，试试放宽筛选条件</div>';
+  const tabs = ['广场','推荐'].map(t=>'<div class="sg '+(state.communityTab===t?'on':'')+'" data-action="community-tab" data-tab="'+t+'">'+t+'</div>').join('');
+  return ''+
+  '<div class="tab-head"><div class="seg">'+tabs+'</div></div>'+
+  '<div class="hscroll">'+res+'</div>'+
+  '<div class="filterbar" id="filterbar">'+fb+
+    '<div class="fb-filter '+(state.filterOpen?'on':'')+'" data-action="toggle-filter">筛选 <span>⚙</span></div></div>'+
+  '<div class="posts">'+posts+'</div>';
+}
+
+function visiblePosts(){
+  const f = state.filters;
+  let list = POSTS.slice();
+  if(f.type !== '全部') list = list.filter(p=>p.type===f.type);
+  if(f.sort === '最新') list = list.slice().reverse();
+  if(f.sort === '最热') list = list.slice().sort((a,b)=>b.like-a.like);
+  return list;
+}
+
+function filterPanelHtml(){
+  const f = state.filters;
+  const grp = (title, key, arr) => '<div class="dd-grp"><h4>'+title+'</h4><div class="chips">'+
+    arr.map(v=>'<div class="chip '+(f[key]===v?'on':'')+'" data-action="pick-filter" data-key="'+key+'" data-value="'+v+'">'+v+'</div>').join('')+
+    '</div></div>';
+  return '<div class="dd-scrim" data-action="toggle-filter"></div>'+
+    '<div class="dd-panel" id="ddpanel" style="top:'+state.filterTop+'px">'+
+      grp('排序方式','sort',SORTS)+
+      grp('内容类型','type',TYPES)+
+      grp('距离范围','dist',DISTS)+
+      grp('价格区间','price',PRICES)+
+      '<div class="dd-actions"><button class="btn ghost" data-action="reset-filter">重置</button>'+
+      '<button class="btn primary" data-action="toggle-filter">查看结果</button></div>'+
+    '</div>';
+}
+
+function ordersHtml(){
+  const st = ORDER_STATUS.map(s=>'<div class="st '+(state.orderStatus===s?'on':'')+'" data-action="order-status" data-value="'+s+'">'+s+'</div>').join('');
+  const list = state.orderStatus==='全部' ? ORDERS : ORDERS.filter(o=>o.status===state.orderStatus);
+  const cards = list.length ? list.map(o=>{
+    const cls = o.status==='待付款' ? 'warn' : (o.status==='已完成' ? 'done' : '');
+    const act = o.status==='待付款'
+      ? '<div class="mini primary" data-action="open" data-screen="orderDetail" data-arg="'+o.no+'">去支付</div><div class="mini" data-action="open" data-screen="orderDetail" data-arg="'+o.no+'">取消</div>'
+      : '<div class="mini" data-action="open" data-screen="orderDetail" data-arg="'+o.no+'">查看详情</div>';
+    return '<div class="order press" data-action="open" data-screen="orderDetail" data-arg="'+o.no+'">'+
+      '<div class="order-h"><span>订单号 '+o.no+'</span><span class="stat '+cls+'">'+o.status+'</span></div>'+
+      '<div class="order-b"><div class="im">'+imgtag(o.img)+'</div>'+
+        '<div class="bd"><div class="tt">'+esc(o.title)+'</div><div class="ss">'+esc(o.spec)+'</div>'+
+        '<div class="qt">×1</div></div></div>'+
+      '<div class="order-f"><div class="sum">合计 <b class="price">￥'+o.price+'</b></div>'+
+        '<div class="acts">'+act+'</div></div></div>';
+  }).join('') : '<div class="empty">该状态下暂无订单</div>';
+  return '<div class="status-tabs">'+st+'</div><div style="padding-bottom:18px">'+cards+'</div>';
+}
+
+function mineHtml(){
+  const stats = [['待付款','1'],['待收货','1'],['收藏','12'],['优惠券','3']].map(s=>
+    '<div class="stat" data-action="open" data-screen="orders"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>').join('');
+  const menu = MENU.map(m=>(
+    '<div class="mrow" data-action="open" data-screen="'+m.screen+'" data-arg="'+esc(m.arg||'')+'">'+
+      '<div class="mi" style="background:'+m.c+'">'+m.e+'</div><div class="mt">'+esc(m.t)+'</div>'+
+      '<span class="chev">›</span></div>'
+  )).join('');
+  return ''+
+  '<div class="mine-head" data-action="open" data-screen="login">'+
+    '<div class="avatar">'+imgtag(IMG.avatar)+'</div>'+
+    '<div class="mine-info"><div class="nm">旅行家小七</div><div class="ph">138****8888</div>'+
+      '<div class="login-tip">点击头像可跳转登录页 ›</div></div>'+
+    '<div class="arrow">›</div></div>'+
+  '<div class="stats">'+stats+'</div>'+
+  '<div class="menu">'+menu+'</div>'+
+  '<div class="logout" data-action="toast" data-msg="已退出登录（原型演示）">退出登录</div>';
+}
+
+function searchHtml(){
+  const hot = ['海岛','古镇','露营','温泉','赏秋','自驾','亲子','美食'].map(k=>
+    '<div class="chip" data-action="search-go" data-value="'+k+'">'+k+'</div>').join('');
+  const guesses = SPOTS.slice().reverse().map(s=>(
+    '<div class="post press" data-action="open" data-screen="spot" data-arg="'+s.id+'">'+
+      '<div class="im">'+imgtag(s.img)+'</div>'+
+      '<div class="bd"><div class="tt">'+esc(s.title)+'</div><div class="ss">'+esc(s.sub)+'</div>'+
+      '<div class="ft"><span class="price" style="font-size:13px">￥'+s.price+' 起</span><span style="margin-left:auto">'+esc(s.sold)+'</span></div>'+
+      '</div></div>'
+  )).join('');
+  return ''+
+  '<div class="topbar"><div class="back" data-action="back">'+
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#171a21" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>'+
+    '<div class="searchpage">'+
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a9b4" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>'+
+      '<input id="searchinput" placeholder="搜索景点 / 目的地 / 攻略"></div>'+
+    '<div style="font-size:13.5px;color:#0E7AFB;font-weight:600;cursor:pointer" data-action="search-go" data-value="搜索">搜索</div></div>'+
+  '<div class="blk"><h3>热门搜索</h3><div class="chips">'+hot+'</div></div>'+
+  '<div class="sec-head"><div class="sec-title">猜你想去</div></div>'+
+  '<div class="posts" style="padding-top:0">'+guesses+'</div>';
+}
+
+function spotHtml(id){
+  const s = SPOTS.find(x=>x.id===id) || SPOTS[0];
+  const tags = s.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join('');
+  return ''+
+  '<div class="hero">'+imgtag(s.img)+
+    '<div class="back" data-action="back">'+
+      '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#171a21" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>'+
+    '<div class="cap"><h1>'+esc(s.title)+'</h1><p>'+esc(s.sub)+'</p></div></div>'+
+  '<div class="blk"><h3>行程亮点</h3><div class="tags">'+tags+'</div>'+
+    '<div class="ptxt" style="margin-top:12px">'+esc(s.desc)+'</div></div>'+
+  '<div class="blk"><h3>费用说明</h3>'+
+    '<div class="kv"><span>成人价</span><b class="price">￥'+s.price+' / 人</b></div>'+
+    '<div class="kv"><span>已售</span><b>'+esc(s.sold)+'</b></div>'+
+    '<div class="kv"><span>退改政策</span><b>出行前 24 小时免费退</b></div></div>'+
+  '<div class="blk"><h3>用户评价 （4.8 分）</h3>'+
+    '<div class="ptxt">“海岛的水真的很蓝，浮潜看到了很多鱼，酒店离沙滩走路两分钟，值。” —— 旅行家小七</div></div>'+
+  '<div class="cta"><div class="cprice">￥<b>'+s.price+'</b> 起</div>'+
+    '<button class="btn primary" data-action="toast" data-msg="已提交预订（原型演示）">立即预订</button></div>';
+}
+
+function postHtml(id){
+  const p = POSTS.find(x=>x.id===id) || POSTS[0];
+  return ''+
+  '<div class="hero" style="height:180px">'+imgtag(p.img)+
+    '<div class="back" data-action="back">'+
+      '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#171a21" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>'+
+    '<div class="cap"><h1 style="font-size:19px">'+esc(p.title)+'</h1></div></div>'+
+  '<div class="author"><div class="ava">'+imgtag(IMG.avatar)+'</div>'+
+    '<div><div class="an">'+esc(p.author)+'</div><div class="as">'+esc(p.time)+' · '+esc(p.type)+'</div></div>'+
+    '<div class="follow" data-action="toast" data-msg="已关注 '+esc(p.author)+'">关注</div></div>'+
+  '<div class="blk"><div class="ptxt">'+esc(p.sub)+'</div>'+
+    '<p class="ptxt" style="margin-top:12px">这次出行一共 3 天，人均花费不到 800。第一天上午出发，中午到营地搭好帐篷，下午沿着湖边走了差不多 6 公里，傍晚的日落是全程最值得的部分。</p>'+
+    '<p class="ptxt" style="margin-top:12px">装备方面，帐篷和防潮垫是必须的，夜里温度会降到 10 度以下，建议带一件抓绒。营地有热水和厕所，但没有便利店，食物要提前备好。</p></div>'+
+  '<div class="cta"><div class="mini" style="flex:1;text-align:center" data-action="toast" data-msg="已点赞">♡ 点赞 '+(p.like>999?(p.like/1000).toFixed(1)+'k':p.like)+'</div>'+
+    '<div class="mini primary" style="flex:1;text-align:center" data-action="toast" data-msg="已收藏">收藏</div></div>';
+}
+
+function resourceHtml(id){
+  const r = RESOURCES.find(x=>x.id===id) || RESOURCES[0];
+  const items = POSTS.slice(0,3).map(p=>(
+    '<div class="post press" data-action="open" data-screen="post" data-arg="'+p.id+'">'+
+      '<div class="im">'+imgtag(p.img)+'</div>'+
+      '<div class="bd"><div class="tt">'+esc(p.title)+'</div><div class="ss">'+esc(p.sub)+'</div></div></div>'
+  )).join('');
+  return ''+
+  '<div class="topbar"><div class="back" data-action="back">'+
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#171a21" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>'+
+    '<div class="tt">'+esc(r.title)+'</div></div>'+
+  '<div class="hero" style="height:150px">'+imgtag(r.img)+
+    '<div class="cap"><h1 style="font-size:18px">'+esc(r.title)+'</h1><p>'+esc(r.sub)+'</p></div></div>'+
+  '<div class="sec-head"><div class="sec-title" style="font-size:15px">相关推荐</div></div>'+
+  '<div class="posts" style="padding-top:0">'+items+'</div>';
+}
+
+function orderDetailHtml(no){
+  const o = ORDERS.find(x=>x.no===no) || ORDERS[0];
+  const steps = ['提交订单','支付成功','商家发货','已完成'];
+  const tl = steps.map((s,i)=>'<div class="tl '+(i<=o.step?'on':'')+'"><i></i><span>'+s+'</span></div>').join('');
+  return ''+
+  '<div class="topbar"><div class="back" data-action="back">'+
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#171a21" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>'+
+    '<div class="tt">订单详情</div><span class="chev">⋯</span></div>'+
+  '<div class="blk"><h3>'+o.status+'</h3><div class="timeline">'+tl+'</div></div>'+
+  '<div class="blk"><h3>出行信息</h3>'+
+    '<div class="order-b" style="border-top:0;padding-top:0;margin-top:0">'+
+      '<div class="im">'+imgtag(o.img)+'</div>'+
+      '<div class="bd"><div class="tt">'+esc(o.title)+'</div><div class="ss">'+esc(o.spec)+'</div>'+
+      '<div class="qt">×1</div></div></div></div>'+
+  '<div class="blk"><h3>订单信息</h3>'+
+    '<div class="kv"><span>订单号</span><b>'+o.no+'</b></div>'+
+    '<div class="kv"><span>下单时间</span><b>2026-10-13 09:41</b></div>'+
+    '<div class="kv"><span>出行人</span><b>旅行家小七</b></div></div>'+
+  '<div class="blk"><h3>价格明细</h3>'+
+    '<div class="kv"><span>成人票 × 1</span><b>￥'+o.price+'</b></div>'+
+    '<div class="kv"><span>优惠</span><b style="color:#FF5A36">-￥0</b></div>'+
+    '<div class="kv" style="border-top:1px solid #f2f4f8;margin-top:6px;padding-top:10px"><span>实付</span><b class="price" style="font-size:17px">￥'+o.price+'</b></div></div>'+
+  '<div class="cta"><div class="mini" style="flex:1;text-align:center" data-action="toast" data-msg="已联系客服（原型演示）">联系客服</div>'+
+    (o.status==='待付款'
+      ? '<button class="btn accent" data-action="toast" data-msg="支付成功（原型演示）">立即支付</button>'
+      : '<button class="btn primary" data-action="toast" data-msg="已申请开票（原型演示）">申请开票</button>')+
+  '</div>';
+}
+
+function loginHtml(){
+  return ''+
+  '<div class="topbar"><div class="back" data-action="back">'+
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#171a21" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>'+
+    '<div class="tt">登录</div></div>'+
+  '<div class="login-wrap">'+
+    '<div class="login-logo">🧭</div>'+
+    '<div class="login-title">欢迎回来</div>'+
+    '<div class="login-sub">登录后可同步订单与收藏</div>'+
+    '<div class="field"><span class="prefix">+86</span><input id="loginphone" placeholder="请输入手机号" inputmode="numeric"></div>'+
+    '<div class="field"><input id="logincode" placeholder="请输入验证码" inputmode="numeric">'+
+      '<span class="code-btn" data-action="toast" data-msg="验证码已发送">获取验证码</span></div>'+
+    '<button class="btn primary" style="width:100%;margin-top:20px;height:48px;border-radius:24px" data-action="login">登录</button>'+
+    '<div class="agree">登录即代表同意《用户协议》与《隐私政策》</div></div>';
+}
+
+function webviewHtml(title){
+  return ''+
+  '<div class="topbar"><div class="back" data-action="back">'+
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#171a21" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></div>'+
+    '<div class="tt">'+esc(title)+'</div><span class="chev">⟳</span></div>'+
+  '<div class="web-url">https://m.example.com/'+encodeURIComponent(title)+'</div>'+
+  '<div class="web-body">'+
+    '<div class="bannerimg">'+imgtag(IMG.banner1)+'</div>'+
+    '<h2>'+esc(title)+'</h2>'+
+    '<p>这是通过宿主 WebView 打开的 H5 页面（原型演示）。在真实实现中，这里会加载真实的网页内容，并复用统一的导航栏与加载进度。</p>'+
+    '<p>页面通过宿主注入能力打开：JS 侧调用 <code>AppRouter.openWebView(url, title)</code>，宿主侧使用 Navigator 推入 WebView 页面。</p>'+
+    '<p>点击底部导航或返回按钮可继续浏览其它页面。</p></div>';
+}
+
+/* ============ 主渲染 ============ */
+function render(){
+  const c = cur();
+  let html = '';
+  if(c.screen === 'tab'){
+    if(state.tab==='home') html = homeHtml();
+    else if(state.tab==='community') html = communityHtml();
+    else if(state.tab==='orders') html = ordersHtml();
+    else html = mineHtml();
+  } else if(c.screen==='search') html = searchHtml();
+  else if(c.screen==='spot') html = spotHtml(c.arg);
+  else if(c.screen==='post') html = postHtml(c.arg);
+  else if(c.screen==='resource') html = resourceHtml(c.arg);
+  else if(c.screen==='orderDetail') html = orderDetailHtml(c.arg);
+  else if(c.screen==='login') html = loginHtml();
+  else if(c.screen==='webview') html = webviewHtml(c.arg || '详情');
+  else if(c.screen==='orders'){ state.tab='orders'; html = ordersHtml(); }
+
+  const app = $('app');
+  app.innerHTML = html;
+  app.scrollTop = 0;
+  $('tabbar').style.display = state.stack.length ? 'none' : 'flex';
+  $('tabbar').innerHTML = tabbarHtml();
+  renderOverlay();
+  afterRender();
+}
+
+function renderOverlay(){
+  const ov = $('overlay');
+  let html = '';
+  if(state.filterOpen) html += filterPanelHtml();
+  if(state.toast) html += '<div class="toast">'+esc(state.toast)+'</div>';
+  ov.innerHTML = html;
+  ov.style.pointerEvents = 'none';
+}
+
+function afterRender(){
+  // 轮播指示点
+  const b = $('banner'), d = $('dots');
+  if(b && d){
+    b.addEventListener('scroll', ()=>{
+      const i = Math.round(b.scrollLeft / (b.scrollWidth / BANNERS.length));
+      [...d.children].forEach((el,k)=>el.className = (k===i?'on':''));
+    }, {passive:true});
+  }
+  // 搜索框聚焦
+  const si = $('searchinput');
+  if(si) setTimeout(()=>si.focus(), 60);
+  // 筛选面板定位
+  if(state.filterOpen){
+    const bar = $('filterbar'), panel = $('ddpanel');
+    if(bar && panel){
+      const br = bar.getBoundingClientRect(), sr = document.querySelector('.screen').getBoundingClientRect();
+      state.filterTop = br.bottom - sr.top + 4;
+      panel.style.top = state.filterTop + 'px';
+    }
+  }
+}
+
+/* ============ 事件 ============ */
+document.querySelector('.screen').addEventListener('click', function(e){
+  const el = e.target.closest('[data-action]');
+  if(!el) return;
+  const a = el.dataset.action;
+  if(a === 'tab'){ setTab(el.dataset.tab); }
+  else if(a === 'open'){ 
+    const scr = el.dataset.screen;
+    if(scr==='orders'){ state.tab='orders'; state.stack=[]; render(); }
+    else go(scr, el.dataset.arg);
+  }
+  else if(a === 'back'){ back(); }
+  else if(a === 'community-tab'){ state.communityTab = el.dataset.tab; render(); }
+  else if(a === 'toggle-filter'){
+    if(!state.filterOpen){
+      const bar = $('filterbar');
+      if(bar){
+        const br = bar.getBoundingClientRect(), sr = document.querySelector('.screen').getBoundingClientRect();
+        state.filterTop = br.bottom - sr.top + 4;
+      }
+    }
+    state.filterOpen = !state.filterOpen;
+    render();
+  }
+  else if(a === 'pick-filter'){
+    state.filters[el.dataset.key] = el.dataset.value;
+    render();
+    if(state.filterOpen){ /* 保持面板打开 */ }
+  }
+  else if(a === 'reset-filter'){
+    state.filters = {sort:'综合',type:'全部',dist:'不限',price:'不限'};
+    state.filterOpen = false;
+    render();
+    showToast('已重置筛选条件');
+  }
+  else if(a === 'order-status'){ state.orderStatus = el.dataset.value; render(); }
+  else if(a === 'toast'){ showToast(el.dataset.msg || '操作成功'); }
+  else if(a === 'search-go'){
+    const kw = el.dataset.value && el.dataset.value !== '搜索' ? el.dataset.value : (($('searchinput')||{}).value || '');
+    showToast('搜索：' + (kw || '全部'));
+  }
+  else if(a === 'login'){
+    const ph = ($('loginphone')||{}).value || '';
+    if(ph.replace(/\D/g,'').length < 11){ showToast('请输入 11 位手机号'); return; }
+    showToast('登录成功，欢迎回来');
+    setTimeout(back, 700);
+  }
+}, false);
+
+render();
+</script>
+</body>
+</html>

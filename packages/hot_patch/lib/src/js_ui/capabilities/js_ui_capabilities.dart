@@ -11,6 +11,7 @@
 import '../js_widget_registry.dart';
 import 'notification_listener_bridge.dart';
 import 'scroll_controller_bridge.dart';
+import 'tab_drawer_bridge.dart';
 import 'text_editing_controller_bridge.dart';
 
 /// 全部能力通道（幂等）：在 JS 组件 mount（new XxxController → host 登记）
@@ -18,6 +19,7 @@ import 'text_editing_controller_bridge.dart';
 void ensureJsUiCapabilities() {
   ensureScrollControllerChannels();
   ensureTextEditingControllerChannels();
+  ensureTabControllerChannels();
 }
 
 /// 全部组件注册 = 核心注册（js_widget_registry）+ 各能力域注册。
@@ -26,4 +28,5 @@ void registerAllJsWidgets(JsWidgetRegistry r) {
   registerScrollWidgets(r);
   registerTextWidgets(r);
   registerNotificationWidgets(r);
+  registerTabDrawerWidgets(r);
 }

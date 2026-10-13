@@ -13,18 +13,22 @@ const String scrollControllerJsSource = r'''
   // 跨桥序列化：props 里的实例经 toJSON 输出 `{__jsuiScrollController: id}`，
   // 宿主据此取/建真实 controller（见 js_widget_registry.dart）。
   //
-  // 释放一个控制器：删掉它登记的 metrics 句柄（框架内部，用户无从释放），
-  // 并通知宿主释放真实 controller。幂等——重复调用为空操作。
-  function releaseController(sc) {
-    if (!sc) { return; }
-    if (sc.__metricsFn) { delete handlers[sc.__metricsFn.__fn]; sc.__metricsFn = null; }
-    if (sc.__id != null) {
-      host('scrollControllerDispose', [sc.__id]);
-      sc.__id = null;
+  // 释放一个控制器：页面退出兜底与组件 dispose 共用的入口——按 __kind 分派到
+  // 各自的释放逻辑（sc / tec / tc），避免走错通道导致宿主真实对象泄漏。
+  // 幂等——重复调用为空操作。
+  function releaseController(c) {
+    if (!c) { return; }
+    if (c.__kind === 'tec') { releaseTextEditingController(c); return; }
+    if (c.__kind === 'tc') { releaseTabController(c); return; }
+    if (c.__metricsFn) { delete handlers[c.__metricsFn.__fn]; c.__metricsFn = null; }
+    if (c.__id != null) {
+      host('scrollControllerDispose', [c.__id]);
+      c.__id = null;
     }
-    sc.__listeners = [];
+    c.__listeners = [];
   }
   function ScrollController() {
+    this.__kind = 'sc';
     this.__id = nextId('sc');
     this.__listeners = [];
     this.offset = 0;

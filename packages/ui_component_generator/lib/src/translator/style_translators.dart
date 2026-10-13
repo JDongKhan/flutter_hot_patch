@@ -861,6 +861,22 @@ String? clipBehaviorToJson(Expression? expr) {
   return '"$name"';
 }
 
+/// TabBarIndicatorSize.tab/label → 字符串。
+String? tabBarIndicatorSizeToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'TabBarIndicatorSize' || name == null) return null;
+  return '"$name"';
+}
+
+/// TabAlignment 枚举（start/startOffset/fill/center）→ 字符串。
+String? tabAlignmentToJson(Expression? expr) {
+  if (expr == null) return null;
+  final (owner, name) = _staticRef(expr);
+  if (owner != 'TabAlignment' || name == null) return null;
+  return '"$name"';
+}
+
 /// StackFit.loose/expand/passthrough → 字符串。
 String? stackFitToJson(Expression? expr) {
   if (expr == null) return null;

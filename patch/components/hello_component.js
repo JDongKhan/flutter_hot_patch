@@ -19,6 +19,24 @@ export class HelloCard {
     this._count = 0;
     this._user = null;
   }
+  initState() {
+    console.debug("[HelloCard] initState");
+  }
+  didChangeDependencies() {
+    console.debug("[HelloCard] didChangeDependencies");
+  }
+  didUpdateWidget(oldWidget) {
+    console.debug("[HelloCard] didUpdateWidget: old=" + oldWidget);
+  }
+  deactivate() {
+    console.debug("[HelloCard] deactivate");
+  }
+  activate() {
+    console.debug("[HelloCard] activate");
+  }
+  dispose() {
+    console.debug("[HelloCard] dispose");
+  }
   inc() {
     console.debug("inc: count=" + this._count);
     this.setState(function(){ this._count += 1; });

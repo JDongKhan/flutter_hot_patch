@@ -86,6 +86,16 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const RadioTranslator())
     ..register(const DropdownButtonTranslator())
     ..register(const DropdownMenuItemTranslator())
+    // TabBar / TabBarView 家族（配合 DefaultTabController 用官方惯用法）
+    ..register(const DefaultTabControllerTranslator())
+    ..register(const TabBarTranslator())
+    ..register(const TabTranslator())
+    ..register(const TabBarViewTranslator())
+    // 分页视图
+    ..register(const PageViewTranslator())
+    // 抽屉
+    ..register(const DrawerTranslator())
+    ..register(const DrawerHeaderTranslator())
     // 响应式（SDK 类，见 dart2js.sdkSuperClassMap 配套的 ChangeNotifier）
     ..register(const ListenableBuilderTranslator())
     // Builder：多一层 context 作用域（闭包内 context.watch/read 可用）
@@ -467,6 +477,15 @@ class ScaffoldTranslator extends WidgetTranslator {
     if (bottomNav != null) {
       props['bottomNavigationBar'] = ctx.translate(bottomNav);
     }
+    // drawer / endDrawer 同为 element prop：接进真实 Scaffold 后 AppBar 自动
+    // 出现汉堡按钮，开抽屉原生可用（关闭见 tab_drawer_bridge 的抽屉作用域）。
+    final drawer = ctx.namedArg(node.args, 'drawer');
+    if (drawer != null) props['drawer'] = ctx.translate(drawer);
+    final endDrawer = ctx.namedArg(node.args, 'endDrawer');
+    if (endDrawer != null) props['endDrawer'] = ctx.translate(endDrawer);
+    final drawerScrimColor =
+        colorToJson(ctx.namedArg(node.args, 'drawerScrimColor'), ctx);
+    if (drawerScrimColor != null) props['drawerScrimColor'] = drawerScrimColor;
     return {
       'type': ctx.jsString('Scaffold'),
       if (props.isNotEmpty) 'props': props,
@@ -2733,5 +2752,248 @@ class DropdownMenuItemTranslator extends WidgetTranslator {
       if (data != null) props['label'] = ctx.jsDataExpr(data);
     }
     return {'type': ctx.jsString('DropdownMenuItem'), 'props': props};
+  }
+}
+
+// ===========================================================================
+// TabBar / TabBarView / DefaultTabController 家族
+//
+// 翻译为**真实** Flutter widget。两种 controller 来源都支持：
+//   - 不传 `controller:` → 由祖先 DefaultTabController 提供 TabController
+//     （Flutter 官方惯用法 `DefaultTabController(length:n, child: ...)`）；
+//   - 显式 `controller:`（Dart 侧 TabController）→ 与 ScrollController 同款
+//     id-bridge：产物透传 `this._tabController`，跨桥序列化为
+//     `{__jsuiTabController: id, length, initialIndex}`，宿主按 id 取/建真实
+//     TabController 并挂到 TabBar / TabBarView（见 tab_drawer_bridge）。
+// ===========================================================================
+
+/// DefaultTabController：length / initialIndex（值 props）+ child（element）。
+class DefaultTabControllerTranslator extends WidgetTranslator {
+  const DefaultTabControllerTranslator();
+
+  @override
+  String get type => 'DefaultTabController';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final length = ctx.namedArg(node.args, 'length');
+    if (length != null) props['length'] = ctx.propExpr(length);
+    final initialIndex = ctx.namedArg(node.args, 'initialIndex');
+    if (initialIndex != null) props['initialIndex'] = ctx.propExpr(initialIndex);
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    return {
+      'type': ctx.jsString('DefaultTabController'),
+      if (props.isNotEmpty) 'props': props,
+      'children': child == null ? const [] : [ctx.translate(child)],
+    };
+  }
+}
+
+/// TabBar：tabs（Tab 列表）→ children + 常用外观参数。
+/// `controller` 为 JS TabController 实例时透传（跨桥序列化为 id 句柄），
+/// 否则不下发（由祖先 DefaultTabController 提供）。
+class TabBarTranslator extends WidgetTranslator {
+  const TabBarTranslator();
+
+  @override
+  String get type => 'TabBar';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final children = <Object?>[
+      for (final t in ctx.listArg(node.args, 'tabs', node.type))
+        ctx.translateElement(t),
+    ];
+    final props = <String, dynamic>{};
+    final ctrl = ctx.namedArg(node.args, 'controller');
+    if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
+    final isScrollable = boolLiteralJs(ctx.namedArg(node.args, 'isScrollable'));
+    if (isScrollable != null) props['isScrollable'] = isScrollable;
+    final pad = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
+    if (pad != null) props['padding'] = pad;
+    final indicatorColor =
+        colorToJson(ctx.namedArg(node.args, 'indicatorColor'), ctx);
+    if (indicatorColor != null) props['indicatorColor'] = indicatorColor;
+    final indicatorWeight =
+        numLiteralJs(ctx.namedArg(node.args, 'indicatorWeight'));
+    if (indicatorWeight != null) props['indicatorWeight'] = indicatorWeight;
+    final indicatorSize =
+        tabBarIndicatorSizeToJson(ctx.namedArg(node.args, 'indicatorSize'));
+    if (indicatorSize != null) props['indicatorSize'] = indicatorSize;
+    final dividerColor = colorToJson(ctx.namedArg(node.args, 'dividerColor'), ctx);
+    if (dividerColor != null) props['dividerColor'] = dividerColor;
+    final dividerHeight = numLiteralJs(ctx.namedArg(node.args, 'dividerHeight'));
+    if (dividerHeight != null) props['dividerHeight'] = dividerHeight;
+    final labelColor = colorToJson(ctx.namedArg(node.args, 'labelColor'), ctx);
+    if (labelColor != null) props['labelColor'] = labelColor;
+    final labelStyle =
+        textStyleToJson(ctx.namedArg(node.args, 'labelStyle'), ctx);
+    if (labelStyle != null) props['labelStyle'] = labelStyle;
+    final labelPadding =
+        edgeInsetsToJson(ctx.namedArg(node.args, 'labelPadding'), ctx);
+    if (labelPadding != null) props['labelPadding'] = labelPadding;
+    final unselected =
+        colorToJson(ctx.namedArg(node.args, 'unselectedLabelColor'), ctx);
+    if (unselected != null) props['unselectedLabelColor'] = unselected;
+    final unselectedStyle =
+        textStyleToJson(ctx.namedArg(node.args, 'unselectedLabelStyle'), ctx);
+    if (unselectedStyle != null) props['unselectedLabelStyle'] = unselectedStyle;
+    final tabAlignment =
+        tabAlignmentToJson(ctx.namedArg(node.args, 'tabAlignment'));
+    if (tabAlignment != null) props['tabAlignment'] = tabAlignment;
+    final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
+    if (physics != null) props['physics'] = physics;
+    final onTap = ctx.namedArg(node.args, 'onTap');
+    if (onTap != null && onTap is! NullLiteral) {
+      props['event'] = ctx.eventHandle(onTap);
+    }
+    return {
+      'type': ctx.jsString('TabBar'),
+      if (props.isNotEmpty) 'props': props,
+      'children': children,
+    };
+  }
+}
+
+/// Tab：text（值）/ icon（element）/ child（element）三者至少其一。
+class TabTranslator extends WidgetTranslator {
+  const TabTranslator();
+
+  @override
+  String get type => 'Tab';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final text = ctx.namedArg(node.args, 'text');
+    if (text != null) props['text'] = ctx.jsDataExpr(text);
+    final icon = ctx.namedArg(node.args, 'icon');
+    if (icon != null) props['icon'] = ctx.translate(icon);
+    final child = ctx.namedArg(node.args, 'child');
+    if (child != null) props['child'] = ctx.translate(child);
+    if (props.isEmpty) {
+      throw FormatException('Tab 需要 text / icon / child 之一');
+    }
+    return {'type': ctx.jsString('Tab'), 'props': props};
+  }
+}
+
+/// TabBarView：children（每 tab 一页）+ physics / viewportFraction。
+/// `controller` 同 TabBar：JS TabController 实例透传，否则由祖先
+/// DefaultTabController 提供。
+class TabBarViewTranslator extends WidgetTranslator {
+  const TabBarViewTranslator();
+
+  @override
+  String get type => 'TabBarView';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final children = <Object?>[
+      for (final e in ctx.listArg(node.args, 'children', node.type))
+        ctx.translateElement(e),
+    ];
+    final props = <String, dynamic>{};
+    final ctrl = ctx.namedArg(node.args, 'controller');
+    if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
+    final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
+    if (physics != null) props['physics'] = physics;
+    final vf = numLiteralJs(ctx.namedArg(node.args, 'viewportFraction'));
+    if (vf != null) props['viewportFraction'] = vf;
+    return {
+      'type': ctx.jsString('TabBarView'),
+      if (props.isNotEmpty) 'props': props,
+      'children': children,
+    };
+  }
+}
+
+/// PageView：children（children 列表）+ scrollDirection / reverse /
+/// pageSnapping / physics / onPageChanged（带页码值事件）。controller 传 null
+/// 时 PageView 内部自建（源写法显式传入的 controller 不下发）。
+class PageViewTranslator extends WidgetTranslator {
+  const PageViewTranslator();
+
+  @override
+  String get type => 'PageView';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final children = <Object?>[
+      for (final e in ctx.listArg(node.args, 'children', node.type))
+        ctx.translateElement(e),
+    ];
+    final props = <String, dynamic>{};
+    final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
+    if (axis != null) props['scrollDirection'] = axis;
+    final reverse = boolLiteralJs(ctx.namedArg(node.args, 'reverse'));
+    if (reverse != null) props['reverse'] = reverse;
+    final pageSnapping = boolLiteralJs(ctx.namedArg(node.args, 'pageSnapping'));
+    if (pageSnapping != null) props['pageSnapping'] = pageSnapping;
+    final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
+    if (physics != null) props['physics'] = physics;
+    final onPageChanged = ctx.namedArg(node.args, 'onPageChanged');
+    if (onPageChanged != null && onPageChanged is! NullLiteral) {
+      props['event'] = ctx.eventHandle(onPageChanged);
+    }
+    return {
+      'type': ctx.jsString('PageView'),
+      if (props.isNotEmpty) 'props': props,
+      'children': children,
+    };
+  }
+}
+
+/// Drawer：backgroundColor / elevation / shape / width + child（element）。
+class DrawerTranslator extends WidgetTranslator {
+  const DrawerTranslator();
+
+  @override
+  String get type => 'Drawer';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final bg = colorToJson(ctx.namedArg(node.args, 'backgroundColor'), ctx);
+    if (bg != null) props['backgroundColor'] = bg;
+    final elevation = numLiteralJs(ctx.namedArg(node.args, 'elevation'));
+    if (elevation != null) props['elevation'] = elevation;
+    final shape = shapeToJson(ctx.namedArg(node.args, 'shape'), ctx);
+    if (shape != null) props['shape'] = shape;
+    final width = numLiteralJs(ctx.namedArg(node.args, 'width'));
+    if (width != null) props['width'] = width;
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    return {
+      'type': ctx.jsString('Drawer'),
+      if (props.isNotEmpty) 'props': props,
+      'children': child == null ? const [] : [ctx.translate(child)],
+    };
+  }
+}
+
+/// DrawerHeader：decoration / padding / margin + child（element）。
+class DrawerHeaderTranslator extends WidgetTranslator {
+  const DrawerHeaderTranslator();
+
+  @override
+  String get type => 'DrawerHeader';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final decoration =
+        boxDecorationToJson(ctx.namedArg(node.args, 'decoration'), ctx);
+    if (decoration != null) props['decoration'] = decoration;
+    final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
+    if (padding != null) props['padding'] = padding;
+    final margin = edgeInsetsToJson(ctx.namedArg(node.args, 'margin'), ctx);
+    if (margin != null) props['margin'] = margin;
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    return {
+      'type': ctx.jsString('DrawerHeader'),
+      if (props.isNotEmpty) 'props': props,
+      'children': child == null ? const [] : [ctx.translate(child)],
+    };
   }
 }

@@ -26,7 +26,14 @@ class WidgetShowcase extends StatelessWidget {
       _Entry('CustomScrollView', 'Sliver 全家桶整页（仅 JS 热更版）', 'SliverDetail'),
       _Entry('GridView', 'GridView 懒加载验证（仅 JS 热更版）', 'GridDetail'),
     ]),
-    _Group('页面骨架', [_Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail')]),
+    _Group('页面骨架', [
+      _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
+      _Entry('Drawer / endDrawer', '抽屉 + AppBar 汉堡按钮（仅 JS 热更版）', 'DrawerDetail'),
+    ]),
+    _Group('Tab 切换', [
+      _Entry('TabBar / TabBarView', 'DefaultTabController + 显式 TabController 驱动切页', 'TabDetail'),
+    ]),
+    _Group('分页视图', [_Entry('PageView', '分页切换 + 页码回传', 'PageViewDetail')]),
     _Group('表单输入', [_Entry('TextField / Radio / Dropdown', '输入框、单选、下拉、开关、勾选、滑块', 'InputDetail')]),
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
     _Group('状态管理', [_Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard')]),
@@ -55,8 +62,10 @@ class WidgetShowcase extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => WidgetDetailPage(
                     component: e.component,
-                    fullPage:
-                        e.component == 'ScaffoldDetail' || e.component == 'SliverDetail' || e.component == 'GridDetail',
+                    fullPage: e.component == 'ScaffoldDetail' ||
+                        e.component == 'SliverDetail' ||
+                        e.component == 'GridDetail' ||
+                        e.component == 'DrawerDetail',
                   ),
                 ),
               ),
@@ -108,6 +117,9 @@ class WidgetDetailPage extends StatelessWidget {
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
       'ScaffoldDetail' => const ScaffoldDetail(),
+      'DrawerDetail' => const DrawerDetail(),
+      'TabDetail' => const TabDetail(),
+      'PageViewDetail' => const PageViewDetail(),
       'InputDetail' => const InputDetail(),
       'ProgressDetail' => const ProgressDetail(),
       'NotifierCard' => const NotifierCard(),

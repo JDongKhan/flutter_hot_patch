@@ -22,6 +22,8 @@ import '../model/counter_vm.dart';
 ///   Scaffold / AppBar / FloatingActionButton / BottomNavigationBar
 ///   TextField / Radio / DropdownButton / Switch / Checkbox / Slider
 ///   CircularProgressIndicator / LinearProgressIndicator
+///   TabBar / TabBarView / Tab（DefaultTabController 与显式 TabController id-bridge）
+///   PageView / Drawer / DrawerHeader
 
 // ---------------------------------------------------------------------------
 // Text 详情
@@ -1217,6 +1219,269 @@ class StatelessCard extends StatelessWidget {
             ),
             const Divider(height: 24),
             Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TabBar / TabBarView 详情（tab 家族：DefaultTabController 与显式 TabController）
+// ---------------------------------------------------------------------------
+
+/// Tab 家族详情，两段：
+///   1) DefaultTabController 官方惯用法——TabBar / TabBarView 不传 controller，
+///      由祖先 DefaultTabController 提供；
+///   2) 显式 TabController——JS 侧 `new TabController({length: 3, vsync: this})`
+///      与宿主真实 TabController 按 id 绑定（同 ScrollController 模式）：
+///      用户点 tab 经 invoke 回传页码更新 index，按钮经 animateTo 驱动宿主切页。
+@UIComponent('TabDetail')
+class TabDetail extends StatefulWidget {
+  const TabDetail({super.key});
+
+  @override
+  State<TabDetail> createState() => _TabDetailState();
+}
+
+class _TabDetailState extends State<TabDetail> with SingleTickerProviderStateMixin {
+  /// 显式 TabController（vsync 由 JS 代理类忽略，length/initialIndex 下发宿主建实例）。
+  late final TabController _controller = TabController(length: 3, vsync: this);
+
+  /// 当前页（controller 监听镜像）。
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      setState(() => _index = _controller.index);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// controller 驱动切页（「写」能力）。
+  void _next() {
+    _controller.animateTo((_index + 1) % 3);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'DefaultTabController · 官方惯用法（controller 由祖先提供）',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 180,
+          child: DefaultTabController(
+            length: 3,
+            child: Column(
+              children: [
+                TabBar(
+                  isScrollable: true,
+                  indicatorColor: Colors.deepPurple,
+                  labelColor: Colors.deepPurple,
+                  unselectedLabelColor: Colors.grey,
+                  tabs: const [Tab(text: '广场'), Tab(text: '推荐'), Tab(text: '关注')],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      Center(child: Text('TabBarView · 广场')),
+                      Center(child: Text('TabBarView · 推荐')),
+                      Center(child: Text('TabBarView · 关注')),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('显式 TabController · index = $_index', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 170,
+          child: Column(
+            children: [
+              TabBar(
+                controller: _controller,
+                tabs: const [Tab(text: '首页'), Tab(text: '社区'), Tab(text: '我的')],
+              ),
+              Expanded(
+                child: TabBarView(
+                  controller: _controller,
+                  children: [
+                    Center(child: Text('第 1 页（index 0）')),
+                    Center(child: Text('第 2 页（index 1）')),
+                    Center(child: Text('第 3 页（index 2）')),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(onPressed: _next, child: const Text('下一 tab · controller.animateTo')),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PageView 详情
+// ---------------------------------------------------------------------------
+
+/// PageView 详情：分页切换 + 指示点。页切换经 onPageChanged 回传页码
+/// （值事件），JS 侧据此更新指示点。
+@UIComponent('PageViewDetail')
+class PageViewDetail extends StatefulWidget {
+  const PageViewDetail({super.key});
+
+  @override
+  State<PageViewDetail> createState() => _PageViewDetailState();
+}
+
+class _PageViewDetailState extends State<PageViewDetail> {
+  /// 当前页（onPageChanged 回传）。
+  int _page = 0;
+
+  void _onPageChanged(int index) {
+    setState(() => _page = index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('PageView · 当前第 ${_page + 1} / 3 页', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 150,
+          child: PageView(
+            onPageChanged: _onPageChanged,
+            children: [
+              Container(color: Colors.deepPurple.shade100, alignment: Alignment.center, child: const Text('第 1 页')),
+              Container(color: Colors.teal.shade100, alignment: Alignment.center, child: const Text('第 2 页')),
+              Container(color: Colors.orange.shade100, alignment: Alignment.center, child: const Text('第 3 页')),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < 3; i++)
+              Container(
+                width: 9,
+                height: 9,
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i == _page ? Colors.deepPurple : const Color(0xFFBDBDBD),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Drawer 详情（页面级，仅 JS 热更版展示）
+// ---------------------------------------------------------------------------
+
+/// Drawer / endDrawer 详情：drawer 接进真实 Scaffold 后 AppBar 左侧自动出现
+/// 汉堡按钮，右侧为 endDrawer 入口；点菜单项回写选中项。
+@UIComponent('DrawerDetail')
+class DrawerDetail extends StatefulWidget {
+  const DrawerDetail({super.key});
+
+  @override
+  State<DrawerDetail> createState() => _DrawerDetailState();
+}
+
+class _DrawerDetailState extends State<DrawerDetail> {
+  /// 当前选中的菜单项（-1 = 未选）。
+  int _picked = -1;
+
+  void _pickOrders() {
+    setState(() => _picked = 0);
+  }
+
+  void _pickFavorites() {
+    setState(() => _picked = 1);
+  }
+
+  void _pickSettings() {
+    setState(() => _picked = 2);
+  }
+
+  void _pickHelp() {
+    setState(() => _picked = 3);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: const Text('Drawer / endDrawer'),
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+      ),
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(color: Colors.indigo),
+              child: const Align(
+                alignment: Alignment.bottomLeft,
+                child: Text('左侧抽屉', style: TextStyle(color: Colors.white, fontSize: 20)),
+              ),
+            ),
+            ListTile(leading: const Icon(Icons.receipt_long), title: const Text('我的订单'), onTap: _pickOrders),
+            ListTile(leading: const Icon(Icons.favorite_border), title: const Text('我的收藏'), onTap: _pickFavorites),
+          ],
+        ),
+      ),
+      endDrawer: Drawer(
+        child: ListView(
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(color: Colors.teal),
+              child: const Align(
+                alignment: Alignment.bottomLeft,
+                child: Text('右侧抽屉', style: TextStyle(color: Colors.white, fontSize: 20)),
+              ),
+            ),
+            ListTile(leading: const Icon(Icons.settings), title: const Text('设置'), onTap: _pickSettings),
+            ListTile(leading: const Icon(Icons.help_outline), title: const Text('帮助与关于'), onTap: _pickHelp),
+          ],
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.menu_open, size: 48, color: Colors.indigo),
+            const SizedBox(height: 12),
+            const Text('AppBar 左侧为汉堡按钮，右侧为 endDrawer 入口'),
+            const SizedBox(height: 8),
+            Text(_picked < 0 ? '尚未选择菜单项' : '选中菜单项 #$_picked'),
           ],
         ),
       ),

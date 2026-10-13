@@ -1810,3 +1810,333 @@ export class StatelessCard {
   }
 }
 
+// 组件 TabDetail
+export class TabDetail {
+  constructor() {
+    this._controller = new TabController({length: 3, vsync: this});
+    this._index = 0;
+  }
+  initState() {
+    this._controller.addListener(() => { this.setState(() => { this._index = this._controller.index; }); });
+  }
+  dispose() {
+    this._controller.dispose();
+  }
+  _next() {
+    this._controller.animateTo((((this._index + 1)) % 3));
+  }
+  build() {
+    return __h('Column', {
+        "crossAxisAlignment": "stretch"
+      }, [
+        __h('Text', {
+            "data": "DefaultTabController · 官方惯用法（controller 由祖先提供）",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold"
+            }
+          }),
+        __h('SizedBox', {
+            "height": 6
+          }),
+        __h('SizedBox', {
+            "height": 180
+          }, [
+            __h('DefaultTabController', {
+                "length": 3
+              }, [
+                __h('Column', {}, [
+                    __h('TabBar', {
+                        "isScrollable": true,
+                        "indicatorColor": '#673AB7',
+                        "labelColor": '#673AB7',
+                        "unselectedLabelColor": '#9E9E9E'
+                      }, [
+                        __h('Tab', {
+                            "text": "广场"
+                          }),
+                        __h('Tab', {
+                            "text": "推荐"
+                          }),
+                        __h('Tab', {
+                            "text": "关注"
+                          })
+                      ]),
+                    __h('Expanded', {}, [
+                        __h('TabBarView', {}, [
+                            __h('Center', {}, [
+                                __h('Text', {
+                                    "data": "TabBarView · 广场"
+                                  })
+                              ]),
+                            __h('Center', {}, [
+                                __h('Text', {
+                                    "data": "TabBarView · 推荐"
+                                  })
+                              ]),
+                            __h('Center', {}, [
+                                __h('Text', {
+                                    "data": "TabBarView · 关注"
+                                  })
+                              ])
+                          ])
+                      ])
+                  ])
+              ])
+          ]),
+        __h('SizedBox', {
+            "height": 14
+          }),
+        __h('Text', {
+            "data": "显式 TabController · index = " + this._index,
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold"
+            }
+          }),
+        __h('SizedBox', {
+            "height": 6
+          }),
+        __h('SizedBox', {
+            "height": 170
+          }, [
+            __h('Column', {}, [
+                __h('TabBar', {
+                    "controller": this._controller
+                  }, [
+                    __h('Tab', {
+                        "text": "首页"
+                      }),
+                    __h('Tab', {
+                        "text": "社区"
+                      }),
+                    __h('Tab', {
+                        "text": "我的"
+                      })
+                  ]),
+                __h('Expanded', {}, [
+                    __h('TabBarView', {
+                        "controller": this._controller
+                      }, [
+                        __h('Center', {}, [
+                            __h('Text', {
+                                "data": "第 1 页（index 0）"
+                              })
+                          ]),
+                        __h('Center', {}, [
+                            __h('Text', {
+                                "data": "第 2 页（index 1）"
+                              })
+                          ]),
+                        __h('Center', {}, [
+                            __h('Text', {
+                                "data": "第 3 页（index 2）"
+                              })
+                          ])
+                      ])
+                  ])
+              ])
+          ]),
+        __h('Align', {
+            "alignment": "centerLeft"
+          }, [
+            __h('Button', {
+                "kind": "text",
+                "label": "下一 tab · controller.animateTo",
+                "event": this.__bind("_next")
+              })
+          ])
+      ]);
+  }
+}
+
+// 组件 PageViewDetail
+export class PageViewDetail {
+  constructor() {
+    this._page = 0;
+  }
+  _onPageChanged(index) {
+    this.setState(function(){ this._page = index; });
+  }
+  build() {
+    return __h('Column', {
+        "crossAxisAlignment": "stretch"
+      }, [
+        __h('Text', {
+            "data": "PageView · 当前第 " + (this._page + 1) + " / 3 页",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold"
+            }
+          }),
+        __h('SizedBox', {
+            "height": 6
+          }),
+        __h('SizedBox', {
+            "height": 150
+          }, [
+            __h('PageView', {
+                "event": this.__bind("_onPageChanged")
+              }, [
+                __h('Container', {
+                    "color": '@Colors.deepPurple.shade100',
+                    "alignment": "center"
+                  }, [
+                    __h('Text', {
+                        "data": "第 1 页"
+                      })
+                  ]),
+                __h('Container', {
+                    "color": '@Colors.teal.shade100',
+                    "alignment": "center"
+                  }, [
+                    __h('Text', {
+                        "data": "第 2 页"
+                      })
+                  ]),
+                __h('Container', {
+                    "color": '@Colors.orange.shade100',
+                    "alignment": "center"
+                  }, [
+                    __h('Text', {
+                        "data": "第 3 页"
+                      })
+                  ])
+              ])
+          ]),
+        __h('SizedBox', {
+            "height": 10
+          }),
+        __h('Row', {
+            "mainAxisAlignment": "center"
+          }, [
+            ...(function(){ var out = []; for (var i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Container', { "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
+          ])
+      ]);
+  }
+}
+
+// 组件 DrawerDetail
+export class DrawerDetail {
+  constructor() {
+    this._picked = (-1);
+  }
+  _pickOrders() {
+    this.setState(function(){ this._picked = 0; });
+  }
+  _pickFavorites() {
+    this.setState(function(){ this._picked = 1; });
+  }
+  _pickSettings() {
+    this.setState(function(){ this._picked = 2; });
+  }
+  _pickHelp() {
+    this.setState(function(){ this._picked = 3; });
+  }
+  build() {
+    return __h('Scaffold', {
+        "appBar": __h('AppBar', {
+            "title": __h('Text', {
+                "data": "Drawer / endDrawer"
+              }),
+            "backgroundColor": '#3F51B5',
+            "foregroundColor": '#FFFFFF'
+          }),
+        "body": __h('Center', {}, [
+            __h('Column', {
+                "mainAxisAlignment": "center"
+              }, [
+                __h('Icon', {
+                    "icon": "menu_open",
+                    "size": 48,
+                    "color": '#3F51B5'
+                  }),
+                __h('SizedBox', {
+                    "height": 12
+                  }),
+                __h('Text', {
+                    "data": "AppBar 左侧为汉堡按钮，右侧为 endDrawer 入口"
+                  }),
+                __h('SizedBox', {
+                    "height": 8
+                  }),
+                __h('Text', {
+                    "data": ((this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked)
+                  })
+              ])
+          ]),
+        "backgroundColor": '@Colors.grey.shade50',
+        "drawer": __h('Drawer', {}, [
+            __h('ListView', {}, [
+                __h('DrawerHeader', {
+                    "decoration": {
+                      "color": '#3F51B5'
+                    }
+                  }, [
+                    __h('Align', {
+                        "alignment": "bottomLeft"
+                      }, [
+                        __h('Text', {
+                            "data": "左侧抽屉",
+                            "style": {
+                              "color": '#FFFFFF',
+                              "fontSize": 20
+                            }
+                          })
+                      ])
+                  ]),
+                __h('ListTile', {
+                    "title": "我的订单",
+                    "leading": __h('Icon', {
+                        "icon": "receipt_long"
+                      }),
+                    "event": this.__bind("_pickOrders")
+                  }),
+                __h('ListTile', {
+                    "title": "我的收藏",
+                    "leading": __h('Icon', {
+                        "icon": "favorite_border"
+                      }),
+                    "event": this.__bind("_pickFavorites")
+                  })
+              ])
+          ]),
+        "endDrawer": __h('Drawer', {}, [
+            __h('ListView', {}, [
+                __h('DrawerHeader', {
+                    "decoration": {
+                      "color": '#009688'
+                    }
+                  }, [
+                    __h('Align', {
+                        "alignment": "bottomLeft"
+                      }, [
+                        __h('Text', {
+                            "data": "右侧抽屉",
+                            "style": {
+                              "color": '#FFFFFF',
+                              "fontSize": 20
+                            }
+                          })
+                      ])
+                  ]),
+                __h('ListTile', {
+                    "title": "设置",
+                    "leading": __h('Icon', {
+                        "icon": "settings"
+                      }),
+                    "event": this.__bind("_pickSettings")
+                  }),
+                __h('ListTile', {
+                    "title": "帮助与关于",
+                    "leading": __h('Icon', {
+                        "icon": "help_outline"
+                      }),
+                    "event": this.__bind("_pickHelp")
+                  })
+              ])
+          ])
+      });
+  }
+}
+

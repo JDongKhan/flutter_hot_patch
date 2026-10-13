@@ -527,4 +527,17 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       child: c.child(),
     );
   });
+
+  // PageView：`controller` 传 null（译者不下发显式 controller，无需 PageController
+  // 桥）→ PageView 内部自建 PageController。页切换经 onPageChanged 回传
+  // 页码（值事件），JS 侧据此更新指示点。
+  r.register('PageView', (c) => PageView(
+        scrollDirection:
+            axisFromJson(c.props['scrollDirection']) ?? Axis.horizontal,
+        reverse: c.bool_('reverse') ?? false,
+        pageSnapping: c.bool_('pageSnapping') ?? true,
+        physics: scrollPhysicsFromJson(c.props['physics']),
+        onPageChanged: c.onValue<int>('event'),
+        children: c.children,
+      ));
 }

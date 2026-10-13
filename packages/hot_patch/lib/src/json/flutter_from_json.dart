@@ -384,6 +384,28 @@ BoxFit? boxFitFromJson(Object? v) {
   };
 }
 
+/// JSON → TabBarIndicatorSize（'tab'/'label'）。
+TabBarIndicatorSize? tabBarIndicatorSizeFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'tab' => TabBarIndicatorSize.tab,
+    'label' => TabBarIndicatorSize.label,
+    _ => null,
+  };
+}
+
+/// JSON → TabAlignment（'start'/'startOffset'/'fill'/'center'）。
+TabAlignment? tabAlignmentFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'start' => TabAlignment.start,
+    'startOffset' => TabAlignment.startOffset,
+    'fill' => TabAlignment.fill,
+    'center' => TabAlignment.center,
+    _ => null,
+  };
+}
+
 /// JSON → BorderRadius（{radius: n} 统一圆角，或
 /// {topLeft, topRight, bottomLeft, bottomRight} 四角独立；缺省角 = 0）。
 BorderRadius? borderRadiusFromJson(Map<String, dynamic>? json) {
