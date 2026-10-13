@@ -36,7 +36,7 @@ export class GridView {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.delegateBuilder;
+    var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -45,18 +45,50 @@ export class GridView {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
-    // 计数键兼容两种写法：sliver 的 childCount / GridView.builder 的 itemCount。
+    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
         ? this.props.childCount
         : (this.props.itemCount || 0);
-    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
-    var p = {};
-    for (var k in this.props) {
-      if (k !== 'delegateBuilder' && k !== 'childCount' && k !== 'itemCount') {
-        p[k] = this.props[k];
-      }
+    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
+    var sep = this.props.separatorBuilder;
+    for (var i = 0; i < n; i++) {
+      out.push(owner[this.props.builder].call(owner, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
     }
-    return __h('GridView', p, out);
+    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
+    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    return __h('GridView', this.props, out);
+  }
+}
+
+export class ListView {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  build() {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var out = [];
+    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
+    var n = this.props.childCount !== undefined
+        ? this.props.childCount
+        : (this.props.itemCount || 0);
+    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
+    var sep = this.props.separatorBuilder;
+    for (var i = 0; i < n; i++) {
+      out.push(owner[this.props.builder].call(owner, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
+    }
+    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
+    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    return __h('ListView', this.props, out);
   }
 }
 
@@ -100,7 +132,7 @@ export class SliverFillViewport {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.delegateBuilder;
+    var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -109,18 +141,19 @@ export class SliverFillViewport {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
-    // 计数键兼容两种写法：sliver 的 childCount / GridView.builder 的 itemCount。
+    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
         ? this.props.childCount
         : (this.props.itemCount || 0);
-    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
-    var p = {};
-    for (var k in this.props) {
-      if (k !== 'delegateBuilder' && k !== 'childCount' && k !== 'itemCount') {
-        p[k] = this.props[k];
-      }
+    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
+    var sep = this.props.separatorBuilder;
+    for (var i = 0; i < n; i++) {
+      out.push(owner[this.props.builder].call(owner, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
     }
-    return __h('SliverFillViewport', p, out);
+    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
+    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    return __h('SliverFillViewport', this.props, out);
   }
 }
 
@@ -130,7 +163,7 @@ export class SliverFixedExtentList {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.delegateBuilder;
+    var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -139,18 +172,19 @@ export class SliverFixedExtentList {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
-    // 计数键兼容两种写法：sliver 的 childCount / GridView.builder 的 itemCount。
+    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
         ? this.props.childCount
         : (this.props.itemCount || 0);
-    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
-    var p = {};
-    for (var k in this.props) {
-      if (k !== 'delegateBuilder' && k !== 'childCount' && k !== 'itemCount') {
-        p[k] = this.props[k];
-      }
+    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
+    var sep = this.props.separatorBuilder;
+    for (var i = 0; i < n; i++) {
+      out.push(owner[this.props.builder].call(owner, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
     }
-    return __h('SliverFixedExtentList', p, out);
+    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
+    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    return __h('SliverFixedExtentList', this.props, out);
   }
 }
 
@@ -160,7 +194,7 @@ export class SliverGrid {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.delegateBuilder;
+    var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -169,18 +203,19 @@ export class SliverGrid {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
-    // 计数键兼容两种写法：sliver 的 childCount / GridView.builder 的 itemCount。
+    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
         ? this.props.childCount
         : (this.props.itemCount || 0);
-    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
-    var p = {};
-    for (var k in this.props) {
-      if (k !== 'delegateBuilder' && k !== 'childCount' && k !== 'itemCount') {
-        p[k] = this.props[k];
-      }
+    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
+    var sep = this.props.separatorBuilder;
+    for (var i = 0; i < n; i++) {
+      out.push(owner[this.props.builder].call(owner, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
     }
-    return __h('SliverGrid', p, out);
+    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
+    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    return __h('SliverGrid', this.props, out);
   }
 }
 
@@ -190,7 +225,7 @@ export class SliverList {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.delegateBuilder;
+    var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -199,17 +234,18 @@ export class SliverList {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
-    // 计数键兼容两种写法：sliver 的 childCount / GridView.builder 的 itemCount。
+    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
         ? this.props.childCount
         : (this.props.itemCount || 0);
-    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
-    var p = {};
-    for (var k in this.props) {
-      if (k !== 'delegateBuilder' && k !== 'childCount' && k !== 'itemCount') {
-        p[k] = this.props[k];
-      }
+    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
+    var sep = this.props.separatorBuilder;
+    for (var i = 0; i < n; i++) {
+      out.push(owner[this.props.builder].call(owner, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
     }
-    return __h('SliverList', p, out);
+    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
+    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    return __h('SliverList', this.props, out);
   }
 }

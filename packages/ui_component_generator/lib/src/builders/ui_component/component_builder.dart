@@ -179,7 +179,7 @@ class ComponentBuilder implements Builder {
         importResolver: importResolver,
         singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
-        delegateClassWidgets: sliverBuilderTypes,
+        delegateClassWidgets: builderFormTypes,
         isComponent: isComponent,
       ));
     }
@@ -225,7 +225,7 @@ class ComponentBuilder implements Builder {
         importResolver: importResolver,
         singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
-        delegateClassWidgets: sliverBuilderTypes,
+        delegateClassWidgets: builderFormTypes,
         isComponent: isWidgetDep,
       );
       if (isWidgetDep) {
@@ -365,7 +365,7 @@ String _renderJsProduct(
     sourcePath: sourcePath,
     importResolver: importResolver,
     jsClassWidgets: jsClassWidgetTypes,
-    delegateClassWidgets: sliverBuilderTypes,
+    delegateClassWidgets: builderFormTypes,
   );
 
   // body：各类主体（不动 import 区；末尾拼装）。

@@ -108,13 +108,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     this.delegateClassWidgets = const {},
   });
 
-  /// 有 JS 类实现的 widget 类型（组件、逻辑 widget、sliver builder 代理）。
+  /// 有 JS 类实现的 widget 类型（组件、逻辑 widget、builder 代理）。
   /// 由生成器注入（builder 的模板表是唯一事实源）。
   final Set<String> jsClassWidgets;
 
-  /// 仅「builder/delegate 形态」才走 JS 类的类型（sliver 代理：普通
-  /// `GridView(children: [...])` 仍是宿主节点，`.builder` 懒加载形态才需要
-  /// 类来循环调用拥有者方法展开子树）。
+  /// 仅 builder 形态才走 JS 类的类型（滚动视图/sliver 代理：普通
+  /// `GridView(children: [...])`、`SliverList(delegate: ...)` 仍是宿主节点，
+  /// `.builder` / `.separated` 形态才需要类来循环调用拥有者方法展开子树）。
   final Set<String> delegateClassWidgets;
 
   /// 本节点的元素 type 用 **JS 类引用**还是**类型名字符串**。
@@ -125,7 +125,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   bool usesJsClass(String type, Map<String, dynamic>? props) {
     if (!jsClassWidgets.contains(type)) return false;
     if (!delegateClassWidgets.contains(type)) return true;
-    return props != null && props.containsKey('delegateBuilder');
+    return props != null && props.containsKey('builder');
   }
 
   /// 记录一个被兜底为 Component 节点的自定义组件名。

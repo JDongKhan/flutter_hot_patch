@@ -174,25 +174,64 @@ SliverGridDelegate _gridDelegateFromJson(JsBuildContext c) {
   );
 }
 
+/// sliver delegate 还原（**delegate 形态**：`SliverChildBuilderDelegate` 源写法）：
+/// 有 `childCount` → `SliverChildBuilderDelegate`（代理类已按 childCount 展开
+/// children）；否则 → `SliverChildListDelegate`。四个 sliver 组件共用。
+SliverChildDelegate _sliverDelegate(JsBuildContext c) {
+  final count = c.int_('childCount');
+  if (c.str('builder') == null || count == null) {
+    return SliverChildListDelegate(c.children);
+  }
+  final children = c.children;
+  return SliverChildBuilderDelegate(
+    (_, i) => _childAt(children, i),
+    childCount: count,
+  );
+}
+
+/// builder 形态的计数：命名构造（`.builder`/`.separated`）用 `itemCount`，
+/// delegate 形态用 `childCount`；都缺省时退回已展开的子节点数。
+int _builderCount(JsBuildContext c, int fallback) =>
+    c.int_('itemCount') ?? c.int_('childCount') ?? fallback;
+
+/// 第 [i] 个子节点（越界给占位，避免宿主在 JS 补丁未到齐时越界崩溃）。
+Widget _childAt(List<Widget> children, int i) =>
+    i < children.length ? children[i] : const SizedBox.shrink();
+
+/// `.separated` 形态：代理类已按 `[item, sep, item, sep, ...]` 交替展开，
+/// 宿主按奇偶拆回 items / separators 两组，分别喂给原生 `.separated` 的两个
+/// builder（满足 Flutter「itemCount 为 item 数」的语义）。
+({List<Widget> items, List<Widget> separators}) _splitSeparated(
+    List<Widget> children) {
+  final items = <Widget>[];
+  final separators = <Widget>[];
+  for (var i = 0; i < children.length; i++) {
+    (i.isEven ? items : separators).add(children[i]);
+  }
+  return (items: items, separators: separators);
+}
+
 /// 滚动能力域组件注册（滚动视图 + sliver 家族）。
 void registerScrollWidgets(JsWidgetRegistry r) {
   r.register('ListView', (c) {
     // controller 是 JS ScrollController 句柄时走通用桥接包装器（与
-    // SingleChildScrollView 同一套 controller 绑定/metrics 回传），
-    // 无 controller → 原样 ListView。
-    final scId = scrollControllerIdOf(c.props['controller']);
-    if (scId != null) {
+    // SingleChildScrollView 同一套 controller 绑定/metrics 回传）。
+    // 三种形态：普通 children / `.builder`（props 带 builder+itemCount）/
+    // `.separated`（另带 separatorBuilder）——builder 形态一律还原 Flutter
+    // 原生命名构造，不用 `ListView(children: [...])` 顶替。
+    final children = c.children;
+    final builder = c.str('builder');
+    final separator = c.str('separatorBuilder');
+
+    Widget build(ScrollController? controller) {
       final shrinkWrap = c.bool_('shrinkWrap') ?? false;
       final scrollDirection =
           axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
       final padding = nullableEdgeInsets(c.map('padding'));
       final physics = scrollPhysicsFromJson(c.props['physics']);
       final itemExtent = c.num_('itemExtent');
-      final children = c.children;
-      return _JsScrollControllerView(
-        controllerId: scId,
-        invoke: c.invoke,
-        buildScrollView: (controller) => ListView(
+      if (builder == null) {
+        return ListView(
           controller: controller,
           // shrinkWrap 缺省保持 Flutter 默认（false）——与原生渲染一致。
           shrinkWrap: shrinkWrap,
@@ -201,25 +240,53 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           physics: physics,
           itemExtent: itemExtent,
           children: children,
-        ),
+        );
+      }
+      if (separator != null) {
+        // `.separated` 形态：还原 Flutter 原生 `ListView.separated`（代理类已
+        // 展开 [item, sep, ...]，按奇偶拆回两组；itemCount 是 item 数）。
+        final split = _splitSeparated(children);
+        return ListView.separated(
+          controller: controller,
+          shrinkWrap: shrinkWrap,
+          scrollDirection: scrollDirection,
+          padding: padding,
+          physics: physics,
+          itemCount: _builderCount(c, split.items.length),
+          itemBuilder: (_, i) => _childAt(split.items, i),
+          separatorBuilder: (_, i) => _childAt(split.separators, i),
+        );
+      }
+      // `.builder` 形态：还原 Flutter 原生 `ListView.builder`。
+      return ListView.builder(
+        controller: controller,
+        shrinkWrap: shrinkWrap,
+        scrollDirection: scrollDirection,
+        padding: padding,
+        physics: physics,
+        itemExtent: itemExtent,
+        itemCount: _builderCount(c, children.length),
+        itemBuilder: (_, i) => _childAt(children, i),
       );
     }
-    return ListView(
-      // shrinkWrap 缺省保持 Flutter 默认（false）——与原生渲染一致；
-      // 存量 JS 产物未下发时同样按默认处理。
-      shrinkWrap: c.bool_('shrinkWrap') ?? false,
-      scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-      padding: nullableEdgeInsets(c.map('padding')),
-      physics: scrollPhysicsFromJson(c.props['physics']),
-      itemExtent: c.num_('itemExtent'),
-      children: c.children,
-    );
+
+    final scId = scrollControllerIdOf(c.props['controller']);
+    if (scId != null) {
+      return _JsScrollControllerView(
+        controllerId: scId,
+        invoke: c.invoke,
+        buildScrollView: build,
+      );
+    }
+    return build(null);
   });
 
-  // GridView：普通构造 / .builder（懒加载，产物带 delegateBuilder/itemCount，
-  // flutter.js 代理组件展开 children）/ .count / .extent。gridDelegate 按
+  // GridView：普通构造 / .builder（懒加载）/ .count / .extent。gridDelegate 按
   // props 还原（crossAxisCount / maxCrossAxisExtent 双形态）；controller 与
   // ListView 同款走 _JsScrollControllerView 桥接。
+  //
+  // `.builder` 形态（props 带 `builder` 方法名）还原 Flutter 原生
+  // `GridView.builder`，不用 `GridView(children: [...])` 顶替。
   r.register('GridView', (c) {
     final gridDelegate = _gridDelegateFromJson(c);
     final scrollDirection =
@@ -228,30 +295,39 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final shrinkWrap = c.bool_('shrinkWrap') ?? false;
     final physics = scrollPhysicsFromJson(c.props['physics']);
     final children = c.children;
+    final isBuilder = c.str('builder') != null;
+    final itemCount = _builderCount(c, children.length);
+
+    Widget build(ScrollController? controller) => isBuilder
+        ? GridView.builder(
+            controller: controller,
+            gridDelegate: gridDelegate,
+            scrollDirection: scrollDirection,
+            padding: padding,
+            shrinkWrap: shrinkWrap,
+            physics: physics,
+            itemCount: itemCount,
+            itemBuilder: (_, i) => _childAt(children, i),
+          )
+        : GridView(
+            controller: controller,
+            gridDelegate: gridDelegate,
+            scrollDirection: scrollDirection,
+            padding: padding,
+            shrinkWrap: shrinkWrap,
+            physics: physics,
+            children: children,
+          );
+
     final scId = scrollControllerIdOf(c.props['controller']);
     if (scId != null) {
       return _JsScrollControllerView(
         controllerId: scId,
         invoke: c.invoke,
-        buildScrollView: (controller) => GridView(
-          controller: controller,
-          gridDelegate: gridDelegate,
-          scrollDirection: scrollDirection,
-          padding: padding,
-          shrinkWrap: shrinkWrap,
-          physics: physics,
-          children: children,
-        ),
+        buildScrollView: build,
       );
     }
-    return GridView(
-      gridDelegate: gridDelegate,
-      scrollDirection: scrollDirection,
-      padding: padding,
-      shrinkWrap: shrinkWrap,
-      physics: physics,
-      children: children,
-    );
+    return build(null);
   });
 
   // CustomScrollView：slivers 是 children（宿主侧 SliverList/SliverAppBar 等
@@ -288,20 +364,49 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     );
   });
 
-  // SliverList：生成器把 `delegate: SliverChildListDelegate([...])` 的 children
-  // 展开为子节点，宿主侧补回 delegate 还原官方写法。
-  r.register('SliverList', (c) => SliverList(
-        delegate: SliverChildListDelegate(c.children),
-      ));
+  // SliverList：`.builder`/`.separated` 命名构造还原 Flutter 同名原生构造；
+  // `SliverChildBuilderDelegate` 形态（只有 childCount）还原
+  // `SliverChildBuilderDelegate`；ListDelegate 形态还原 `SliverChildListDelegate`。
+  r.register('SliverList', (c) {
+    final builder = c.str('builder');
+    if (builder == null) return SliverList(delegate: _sliverDelegate(c));
+    final children = c.children;
+    final separator = c.str('separatorBuilder');
+    if (separator != null) {
+      final split = _splitSeparated(children);
+      return SliverList.separated(
+        itemCount: _builderCount(c, split.items.length),
+        itemBuilder: (_, i) => _childAt(split.items, i),
+        separatorBuilder: (_, i) => _childAt(split.separators, i),
+      );
+    }
+    // 命名构造 `.builder`（带 itemCount）才还原 `SliverList.builder`；delegate
+    // 形态回到 SliverChildBuilderDelegate（保持源写法）。
+    if (c.int_('itemCount') != null) {
+      return SliverList.builder(
+        itemCount: c.int_('itemCount'),
+        itemBuilder: (_, i) => _childAt(children, i),
+      );
+    }
+    return SliverList(delegate: _sliverDelegate(c));
+  });
 
   // SliverGrid：gridDelegate 支持两种——
   // SliverGridDelegateWithFixedCrossAxisCount（crossAxisCount）与
   // SliverGridDelegateWithMaxCrossAxisExtent（maxCrossAxisExtent），
   // 按 props 是否含 maxCrossAxisExtent 分流；缺省间距 0/比例 1.0 即 Flutter 默认。
-  r.register('SliverGrid', (c) => SliverGrid(
-        gridDelegate: _gridDelegateFromJson(c),
-        delegate: SliverChildListDelegate(c.children),
-      ));
+  // `.builder` 命名构造还原 `SliverGrid.builder`，其余走 delegate 还原。
+  r.register('SliverGrid', (c) {
+    final gridDelegate = _gridDelegateFromJson(c);
+    if (c.str('builder') != null && c.int_('itemCount') != null) {
+      return SliverGrid.builder(
+        gridDelegate: gridDelegate,
+        itemCount: c.int_('itemCount'),
+        itemBuilder: (_, i) => _childAt(c.children, i),
+      );
+    }
+    return SliverGrid(gridDelegate: gridDelegate, delegate: _sliverDelegate(c));
+  });
 
   // SliverAppBar：与 AppBar 同款（title/leading 是 element-prop、actions 是
   // children）+ sliver 专属 pinned/floating/snap/expandedHeight
@@ -342,16 +447,17 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         child: c.childOrEmpty,
       ));
 
-  // SliverFixedExtentList：delegate（List/Build 双形态统一为 children）+
-  // itemExtent（必填，缺失按 0 兜底暴露问题）。
+  // SliverFixedExtentList：delegate（.builder → 原生 SliverChildBuilderDelegate，
+  // 否则 SliverChildListDelegate）+ itemExtent（必填，缺失按 0 兜底暴露问题）。
   r.register('SliverFixedExtentList', (c) => SliverFixedExtentList(
-        delegate: SliverChildListDelegate(c.children),
+        delegate: _sliverDelegate(c),
         itemExtent: c.num_('itemExtent') ?? 0,
       ));
 
-  // SliverFillViewport：delegate + viewportFraction（缺省 1.0，Flutter 默认）。
+  // SliverFillViewport：delegate（同上分流）+ viewportFraction（缺省 1.0，
+  // Flutter 默认）。
   r.register('SliverFillViewport', (c) => SliverFillViewport(
-        delegate: SliverChildListDelegate(c.children),
+        delegate: _sliverDelegate(c),
         viewportFraction: c.num_('viewportFraction') ?? 1,
       ));
 

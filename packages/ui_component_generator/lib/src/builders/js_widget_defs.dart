@@ -22,9 +22,11 @@ const String nodeHelperPackage = 'flutter';
 /// 维护，也天然只保留一份实现。
 String packageModulePath(String package) => 'patch/$package.js';
 
-/// 支持 builder/factory 写法的滚动视图与 sliver 组件（产物带
-/// `delegateBuilder` 时走内联代理组件，普通 children 形态走宿主节点）。
-const Set<String> sliverBuilderTypes = {
+/// 有 **builder/factory 写法**的滚动视图与 sliver 组件（`.builder` /
+/// `.separated`：产物带 `builder` 时走内联代理类展开子树，宿主据此还原
+/// 原生命名构造；普通 children / delegate 形态走宿主节点）。
+const Set<String> builderFormTypes = {
+  'ListView',
   'GridView',
   'SliverList',
   'SliverGrid',
@@ -44,7 +46,7 @@ const Set<String> logicWidgetTypes = {
 };
 
 /// 「元素 type 是 JS 类」的 widget 类型集合 = 有 JS 类的类型（唯一事实源：
-/// 逻辑 widget 表 + sliver 代理表）。渲染层据此决定元素 type 用类引用还是
+/// 逻辑 widget 表 + builder 代理表）。渲染层据此决定元素 type 用类引用还是
 /// 类型名字符串；宿主 widget 不在其中，零 import。
 Set<String> get jsClassWidgetTypes =>
-    {...sliverBuilderTypes, ...logicWidgetTypes};
+    {...builderFormTypes, ...logicWidgetTypes};

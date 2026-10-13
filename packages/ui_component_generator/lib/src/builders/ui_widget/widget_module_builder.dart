@@ -109,15 +109,18 @@ export function __h(type, props, children) {
   };
 }''';
 
-/// SliverChildBuilderDelegate 的 JS 侧代理类源码（类名 = Dart 类型名）：
-/// `props.delegateBuilder` 是拥有者组件上的 `_sliverBuilderN(index)` 方法名、
-/// `childCount` 指定数量；build 时循环调用收集子树，包回同名的宿主节点
-/// （children 交给宿主 SliverChildListDelegate 还原）。与 ListenableBuilder 的
-/// `__owner()` 向上找拥有者方法机制一致。
+/// builder/factory 形态（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
+/// 源码（类名 = Dart 类型名）：`props.builder` 是拥有者组件上的
+/// `_xxxBuilderN(index)` 方法名、`props.separatorBuilder`（`.separated` 形态）
+/// 是分隔项方法名、计数键为 `itemCount`（命名构造）或 `childCount`
+/// （`SliverChildBuilderDelegate` 形态）；build 时循环调用收集子树，包回同名的
+/// 宿主节点——children 交给宿主按原生 `ListView.builder` / `SliverList.builder`
+/// / `GridView.builder` / `SliverChildBuilderDelegate` 还原。与 ListenableBuilder
+/// 的 `__owner()` 向上找拥有者方法机制一致。
 ///
-/// 只在 `.builder` 懒加载形态下被渲染层引用（普通形态直接是宿主节点
+/// 只在 builder 形态下被渲染层引用（普通 children/delegate 形态直接是宿主节点
 /// `__h('SliverList', ...)`），因此 build() 无需再判形态。
-String sliverBuilderSource(String type) {
+String builderProxySource(String type) {
   return '''
 export class $type {
   constructor(props, children) {
@@ -125,7 +128,7 @@ export class $type {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.delegateBuilder;
+    var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -134,18 +137,19 @@ export class $type {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
-    // 计数键兼容两种写法：sliver 的 childCount / GridView.builder 的 itemCount。
+    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
         ? this.props.childCount
         : (this.props.itemCount || 0);
-    for (var i = 0; i < n; i++) { out.push(owner[this.props.delegateBuilder].call(owner, i)); }
-    var p = {};
-    for (var k in this.props) {
-      if (k !== 'delegateBuilder' && k !== 'childCount' && k !== 'itemCount') {
-        p[k] = this.props[k];
-      }
+    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
+    var sep = this.props.separatorBuilder;
+    for (var i = 0; i < n; i++) {
+      out.push(owner[this.props.builder].call(owner, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
     }
-    return __h('$type', p, out);
+    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
+    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    return __h('$type', this.props, out);
   }
 }''';
 }
@@ -338,13 +342,13 @@ String renderPackageModule(String package, Set<String> types) {
         ..writeln(logic);
       continue;
     }
-    // Sliver builder 代理：`SliverList({delegateBuilder, childCount})` 形态
+    // Sliver builder 代理：`SliverList({builder, childCount})` 形态
     // 走本类（build 时循环调用拥有者方法收集子树）；普通形态由渲染层直接
     // 产出宿主节点（`__h('SliverList', ...)`），不经过本类。
-    if (sliverBuilderTypes.contains(t)) {
+    if (builderFormTypes.contains(t)) {
       b
         ..writeln()
-        ..writeln(sliverBuilderSource(t));
+        ..writeln(builderProxySource(t));
     }
   }
   return b.toString();

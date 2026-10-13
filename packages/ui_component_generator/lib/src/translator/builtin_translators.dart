@@ -781,10 +781,17 @@ class CardTranslator extends WidgetTranslator {
   }
 }
 
-/// ListView：children + scrollDirection/padding/shrinkWrap/physics/itemExtent。
-/// controller 参数（Dart 侧 ScrollController）与 SingleChildScrollView 同款
-/// 透传：JS 产物引用 `this._scrollController`，跨桥序列化为
-/// `{__jsuiScrollController: id}`，宿主按 id 绑定真实 controller。
+/// ListView：三种形态。
+/// - `ListView(children:, ...)` → children 直接展开
+/// - `ListView.builder(itemBuilder:, itemCount:)` → 闭包抽成
+///   `_listViewBuilderN(index)` 方法 + `builder`/`itemCount` props
+/// - `ListView.separated(itemBuilder:, separatorBuilder:, itemCount:)` → 另加
+///   `separatorBuilder` props（首尾交替展开）
+/// builder 形态的 children 由 JS 代理类运行时循环展开，宿主据 props `builder`
+/// 还原 Flutter 原生 `ListView.builder` / `ListView.separated`（见
+/// scroll_controller_bridge）。controller 参数（Dart 侧 ScrollController）与
+/// SingleChildScrollView 同款透传：JS 产物引用 `this._scrollController`，跨桥
+/// 序列化为 `{__jsuiScrollController: id}`，宿主按 id 绑定真实 controller。
 class ListViewTranslator extends WidgetTranslator {
   const ListViewTranslator();
 
@@ -793,7 +800,6 @@ class ListViewTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    final children = ctx.listArg(node.args, 'children', node.type);
     final props = <String, dynamic>{};
     final ctrl = ctx.namedArg(node.args, 'controller');
     if (ctrl != null) props['controller'] = ctx.jsDataExpr(ctrl);
@@ -807,6 +813,23 @@ class ListViewTranslator extends WidgetTranslator {
     if (physics != null) props['physics'] = physics;
     final itemExtent = numLiteralJs(ctx.namedArg(node.args, 'itemExtent'));
     if (itemExtent != null) props['itemExtent'] = itemExtent;
+
+    // `.builder` / `.separated` 命名构造：itemBuilder（+ separatorBuilder）
+    // 闭包抽方法 + itemCount，children 留空由代理类展开。
+    if (node.factory == 'builder' || node.factory == 'separated') {
+      final bp = _builderFactoryProps(node, ctx, '_listViewBuilder');
+      if (bp == null) {
+        throw FormatException(
+            'ListView.${node.factory} 需要 itemBuilder((context, index) => widget) 与 itemCount');
+      }
+      return {
+        'type': ctx.jsString('ListView'),
+        'props': {...props, ...bp},
+        'children': const [],
+      };
+    }
+
+    final children = ctx.listArg(node.args, 'children', node.type);
     return {
       'type': ctx.jsString('ListView'),
       if (props.isNotEmpty) 'props': props,
@@ -818,8 +841,8 @@ class ListViewTranslator extends WidgetTranslator {
 /// GridView：普通构造 / `.builder`（懒加载）/ `.count` / `.extent` 四形态。
 /// - `GridView(children:, gridDelegate:)` → children 直接展开
 /// - `GridView.builder(gridDelegate:, itemCount:, itemBuilder:)` → 闭包抽成
-///   `_gridViewBuilderN(index)` 方法 + `delegateBuilder`/`itemCount` props，
-///   运行时由 flutter.js 代理组件循环调用展开（懒加载写法）
+///   `_gridViewBuilderN(index)` 方法 + `builder`/`itemCount` props，
+///   宿主侧据此还原 Flutter 原生 `GridView.builder`（见 scroll_controller_bridge）
 /// - `GridView.count(crossAxisCount:, children:)` / `GridView.extent(
 ///   maxCrossAxisExtent:, children:)` → gridDelegate 便捷参数进 props
 /// controller 透传与 ListView 同款（id-bridge）。
@@ -845,36 +868,20 @@ class GridViewTranslator extends WidgetTranslator {
     // gridDelegate 数值（两种形态，显式传 delegate 或 .count/.extent 便捷参数）
     final grid = _gridDelegateToJson(ctx.namedArg(node.args, 'gridDelegate'), ctx);
     if (grid != null) props.addAll(grid);
-    for (final n in [
-      'crossAxisCount',
-      'maxCrossAxisExtent',
-      'mainAxisSpacing',
-      'crossAxisSpacing',
-      'childAspectRatio',
-      'mainAxisExtent',
-    ]) {
-      final v = numLiteralJs(ctx.namedArg(node.args, n));
-      if (v != null) props[n] = v;
-    }
+    props.addAll(_gridNumericProps(node.args, ctx));
 
-    // `.builder` 懒加载形态：itemBuilder 闭包抽方法 + itemCount。
+    // `.builder` 形态：itemBuilder 闭包抽方法 + itemCount。
     if (node.factory == 'builder') {
-      final itemBuilder = ctx.namedArg(node.args, 'itemBuilder');
-      final itemCount = ctx.namedArg(node.args, 'itemCount');
-      if (itemBuilder is FunctionExpression && itemCount != null) {
-        final method = _extractBuilderMethod(ctx, itemBuilder, '_gridViewBuilder');
-        if (method != null) {
-          props['delegateBuilder'] = ctx.jsString(method);
-          props['itemCount'] = ctx.jsDataExpr(itemCount);
-          return {
-            'type': ctx.jsString('GridView'),
-            if (props.isNotEmpty) 'props': props,
-            'children': const [],
-          };
-        }
+      final bp = _builderFactoryProps(node, ctx, '_gridViewBuilder');
+      if (bp == null) {
+        throw FormatException(
+            'GridView.builder 需要 itemBuilder((context, index) => widget) 与 itemCount');
       }
-      throw FormatException(
-          'GridView.builder 需要 itemBuilder((context, index) => widget) 与 itemCount');
+      return {
+        'type': ctx.jsString('GridView'),
+        'props': {...props, ...bp},
+        'children': const [],
+      };
     }
 
     // 普通形态（GridView / .count / .extent）：children 直接展开。
@@ -941,8 +948,8 @@ String? _extractBuilderMethod(
 /// 解析 `SliverChildBuilderDelegate((context, index) => widget, childCount: n)`
 /// 的 builder 形态：把闭包抽成组件方法 `_sliverBuilderN(index)`（沿用
 /// builderTrees 机制；childCount 支持任意表达式），返回
-/// `{'delegateBuilder': '_sliverBuilderN', 'childCount': <jsExpr>}` props——
-/// 运行时由 flutter.js 的 SliverXxxBuilderComponent 循环调用该方法收集子树。
+/// `{'builder': '_sliverBuilderN', 'childCount': <jsExpr>}` props——
+/// 宿主侧据此还原 Flutter 原生 `SliverChildBuilderDelegate`。
 /// 返回 null = 形态不支持。
 Map<String, dynamic>? _sliverBuilderDelegateProps(
     Expression? delegate, WidgetTranslateContext ctx) {
@@ -955,13 +962,13 @@ Map<String, dynamic>? _sliverBuilderDelegateProps(
   final method = _extractBuilderMethod(ctx, builderRaw, '_sliverBuilder');
   if (method == null) return null;
   return {
-    'delegateBuilder': ctx.jsString(method),
+    'builder': ctx.jsString(method),
     'childCount': ctx.jsDataExpr(childCount),
   };
 }
 
 /// 统一的 sliver delegate → children/props 翻译：ListDelegate 直接展开
-/// children；BuilderDelegate 抽方法并返回 delegateBuilder/childCount props。
+/// children；BuilderDelegate 抽方法并返回 builder/childCount props。
 /// 返回 `(children, builderProps)`；两者都不支持 → null。
 ({List<Object?> children, Map<String, dynamic> builder})?
     _sliverDelegateResult(Expression? delegate, WidgetTranslateContext ctx) {
@@ -977,6 +984,53 @@ Map<String, dynamic>? _sliverBuilderDelegateProps(
   return null;
 }
 
+/// `X.builder(itemBuilder: (context, index) => widget, itemCount: n)` /
+/// `X.separated(itemBuilder:, separatorBuilder:, itemCount:)` 两种命名构造的
+/// 统一翻译：itemBuilder（+ separatorBuilder）闭包抽成 `$prefix$idx(index)`
+/// 组件方法（builderTrees 机制），返回 `{'builder': ..., 'itemCount': <jsExpr>[,
+/// 'separatorBuilder': ...]}` props——宿主侧据此还原 Flutter 原生命名构造。
+/// 形态不符（缺 itemBuilder/itemCount 或闭包形参不匹配）→ null。
+Map<String, dynamic>? _builderFactoryProps(
+    WidgetNode node, WidgetTranslateContext ctx, String prefix) {
+  final itemBuilder = ctx.namedArg(node.args, 'itemBuilder');
+  final itemCount = ctx.namedArg(node.args, 'itemCount');
+  if (itemBuilder is! FunctionExpression || itemCount == null) return null;
+  final method = _extractBuilderMethod(ctx, itemBuilder, prefix);
+  if (method == null) return null;
+  final props = <String, dynamic>{
+    'builder': ctx.jsString(method),
+    'itemCount': ctx.jsDataExpr(itemCount),
+  };
+  // `.separated` 形态的第二个闭包（首尾交替展开时调用）。
+  final separator = ctx.namedArg(node.args, 'separatorBuilder');
+  if (separator is FunctionExpression) {
+    final sepMethod = _extractBuilderMethod(ctx, separator, '${prefix}Separator');
+    if (sepMethod != null) props['separatorBuilder'] = ctx.jsString(sepMethod);
+  }
+  return props;
+}
+
+/// 从参数列表收集 grid delegate 的数值参数（`SliverGridDelegateWith*` 字段与
+/// `GridView.count/.extent`、`SliverGrid.count/.extent` 的便捷参数同名）：
+/// crossAxisCount / maxCrossAxisExtent / mainAxisSpacing / crossAxisSpacing /
+/// childAspectRatio / mainAxisExtent。未出现的键不进 props。
+Map<String, dynamic> _gridNumericProps(
+    List<Expression> args, WidgetTranslateContext ctx) {
+  final props = <String, dynamic>{};
+  for (final n in const [
+    'crossAxisCount',
+    'maxCrossAxisExtent',
+    'mainAxisSpacing',
+    'crossAxisSpacing',
+    'childAspectRatio',
+    'mainAxisExtent',
+  ]) {
+    final v = numLiteralJs(ctx.namedArg(args, n));
+    if (v != null) props[n] = v;
+  }
+  return props;
+}
+
 /// 解析 grid delegate 的数值参数，支持两种形态：
 /// - `SliverGridDelegateWithFixedCrossAxisCount(...)`：crossAxisCount/
 ///   mainAxisSpacing/crossAxisSpacing/childAspectRatio/mainAxisExtent
@@ -990,20 +1044,8 @@ Map<String, dynamic>? _gridDelegateToJson(
   final fixed = name == 'SliverGridDelegateWithFixedCrossAxisCount';
   final max = name == 'SliverGridDelegateWithMaxCrossAxisExtent';
   if (!fixed && !max) return null;
-  final props = <String, dynamic>{};
-  for (final n in [
-    'crossAxisCount',
-    'maxCrossAxisExtent',
-    'mainAxisSpacing',
-    'crossAxisSpacing',
-    'childAspectRatio',
-    'mainAxisExtent',
-  ]) {
-    final v = numLiteralJs(ctx.namedArg(args, n));
-    if (v != null) props[n] = v;
-  }
-  if (props.isNotEmpty) return props;
-  return null;
+  final props = _gridNumericProps(args, ctx);
+  return props.isEmpty ? null : props;
 }
 
 /// CustomScrollView：slivers（命名参数）列表 + controller/scrollDirection/
@@ -1037,12 +1079,15 @@ class CustomScrollViewTranslator extends WidgetTranslator {
   }
 }
 
-/// SliverList：delegate 支持两种形态——`SliverChildListDelegate([...])`
-/// （children 展开为子节点，宿主侧补回 delegate）与
-/// `SliverChildBuilderDelegate((context, index) => widget, childCount: n)`
-/// （闭包抽成 `_sliverBuilderN(index)` 方法，产物带 delegateBuilder/
-/// childCount props，运行时由 flutter.js 代理组件循环调用展开）。
-/// JS 写法与 ListView 一致。
+/// SliverList：delegate 双形态 + `.builder` / `.separated` 命名构造。
+/// - `SliverList(delegate: SliverChildListDelegate([...]))` → children 展开
+/// - `SliverList(delegate: SliverChildBuilderDelegate((c, i) => w, childCount: n))`
+///   → 闭包抽成 `_sliverBuilderN(index)` 方法，props 带 builder/childCount
+/// - `SliverList.builder(itemBuilder:, itemCount:)` / `.separated(itemBuilder:,
+///   separatorBuilder:, itemCount:)` → 闭包抽方法，props 带 builder/itemCount
+///   （+ separatorBuilder）
+/// builder 形态的 children 由 JS 代理类运行时循环展开，宿主据 props 还原
+/// Flutter 原生 `SliverList.builder`/`.separated` 或 `SliverChildBuilderDelegate`。
 class SliverListTranslator extends WidgetTranslator {
   const SliverListTranslator();
 
@@ -1051,12 +1096,26 @@ class SliverListTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    // 命名构造：`.builder` / `.separated`（itemBuilder + 可选 separatorBuilder +
+    // itemCount），children 留空由代理类展开。
+    if (node.factory == 'builder' || node.factory == 'separated') {
+      final bp = _builderFactoryProps(node, ctx, '_sliverListBuilder');
+      if (bp == null) {
+        throw FormatException(
+            'SliverList.${node.factory} 需要 itemBuilder((context, index) => widget) 与 itemCount');
+      }
+      return {
+        'type': ctx.jsString('SliverList'),
+        'props': bp,
+        'children': const [],
+      };
+    }
     final result =
         _sliverDelegateResult(ctx.namedArg(node.args, 'delegate'), ctx);
     if (result == null) {
       throw FormatException(
           'SliverList 仅支持 delegate: SliverChildListDelegate([...]) 或 '
-          'SliverChildBuilderDelegate(...)');
+          'SliverChildBuilderDelegate(...)，或 .builder/.separated 命名构造');
     }
     return {
       'type': ctx.jsString('SliverList'),
@@ -1066,7 +1125,7 @@ class SliverListTranslator extends WidgetTranslator {
   }
 }
 
-/// SliverGrid：delegate 同 SliverList（List/Build 双形态）；gridDelegate 支持
+/// SliverGrid：delegate 双形态 + `.builder` 命名构造；gridDelegate 支持
 /// SliverGridDelegateWithFixedCrossAxisCount（crossAxisCount 等）与
 /// SliverGridDelegateWithMaxCrossAxisExtent（maxCrossAxisExtent 等），
 /// 数值参数进 props，宿主侧还原为真实 gridDelegate。
@@ -1078,24 +1137,38 @@ class SliverGridTranslator extends WidgetTranslator {
 
   @override
   Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final grid = _gridDelegateToJson(ctx.namedArg(node.args, 'gridDelegate'), ctx);
+    // `.builder` 命名构造：gridDelegate + itemBuilder + itemCount，children 留空
+    // 由代理类展开。
+    if (node.factory == 'builder') {
+      final bp = _builderFactoryProps(node, ctx, '_sliverGridBuilder');
+      if (bp == null || grid == null) {
+        throw FormatException(
+            'SliverGrid.builder 需要 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(...) '
+            '或 SliverGridDelegateWithMaxCrossAxisExtent(...)，以及 '
+            'itemBuilder((context, index) => widget) 与 itemCount');
+      }
+      return {
+        'type': ctx.jsString('SliverGrid'),
+        'props': {...bp, ...grid},
+        'children': const [],
+      };
+    }
     final result =
         _sliverDelegateResult(ctx.namedArg(node.args, 'delegate'), ctx);
     if (result == null) {
       throw FormatException(
           'SliverGrid 仅支持 delegate: SliverChildListDelegate([...]) 或 '
-          'SliverChildBuilderDelegate(...)');
+          'SliverChildBuilderDelegate(...)，或 .builder 命名构造');
     }
-    final props = <String, dynamic>{...result.builder};
-    final grid = _gridDelegateToJson(ctx.namedArg(node.args, 'gridDelegate'), ctx);
     if (grid == null) {
       throw FormatException(
           'SliverGrid 仅支持 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(...) '
           '或 SliverGridDelegateWithMaxCrossAxisExtent(...)');
     }
-    props.addAll(grid);
     return {
       'type': ctx.jsString('SliverGrid'),
-      if (props.isNotEmpty) 'props': props,
+      'props': {...result.builder, ...grid},
       'children': result.children,
     };
   }

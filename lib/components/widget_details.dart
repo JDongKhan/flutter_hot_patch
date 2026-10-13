@@ -474,22 +474,38 @@ class _ScrollDetailState extends State<ScrollDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('ListView · 列表（offset: $_offset）', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text('ListView.builder · 懒构建列表（offset: $_offset）', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         NotificationListener<ScrollNotification>(
           onNotification: _onListScroll,
           child: SizedBox(
             height: 160,
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(8),
               itemExtent: 56,
               physics: const BouncingScrollPhysics(),
-              children: const [
-                ListTile(leading: Icon(Icons.list), title: Text('item A')),
-                ListTile(leading: Icon(Icons.list), title: Text('item B')),
-                ListTile(leading: Icon(Icons.list), title: Text('item C')),
-                ListTile(leading: Icon(Icons.list), title: Text('item D')),
-                ListTile(leading: Icon(Icons.list), title: Text('item E')),
-              ],
+              itemCount: 5,
+              itemBuilder: (context, index) => ListTile(
+                leading: const Icon(Icons.list),
+                title: Text('builder item $index'),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'ListView.separated · 分隔列表',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(
+          height: 140,
+          child: ListView.separated(
+            padding: const EdgeInsets.all(8),
+            itemCount: 6,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) => ListTile(
+              dense: true,
+              leading: Icon(Icons.arrow_right, color: Colors.teal.shade300),
+              title: Text('separated item $index'),
             ),
           ),
         ),
@@ -604,22 +620,41 @@ class _SliverDetailState extends State<SliverDetail> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: SliverToBoxAdapter(
               child: Text(
-                'SliverChildBuilderDelegate · 懒构建列表',
+                'SliverList.builder · 懒构建列表',
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => ListTile(
-                  leading: Icon(Icons.build, color: Colors.orange.shade700),
-                  title: Text('builder item $index'),
-                  subtitle: Text('index * 10 = ${index * 10}'),
-                ),
-                childCount: 8,
+            sliver: SliverList.builder(
+              itemCount: 8,
+              itemBuilder: (context, index) => ListTile(
+                leading: Icon(Icons.build, color: Colors.orange.shade700),
+                title: Text('builder item $index'),
+                subtitle: Text('index * 10 = ${index * 10}'),
               ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'SliverList.separated · 分隔列表',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            sliver: SliverList.separated(
+              itemCount: 5,
+              itemBuilder: (context, index) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.arrow_right, color: Colors.deepPurple),
+                title: Text('separated item $index'),
+              ),
+              separatorBuilder: (context, index) => const Divider(height: 1),
             ),
           ),
           SliverPadding(
@@ -649,7 +684,7 @@ class _SliverDetailState extends State<SliverDetail> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: SliverToBoxAdapter(
               child: Text(
-                'SliverOpacity + SliverGrid · MaxCrossAxisExtent 九宫格',
+                'SliverOpacity + SliverGrid.builder · MaxCrossAxisExtent 九宫格',
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
@@ -658,20 +693,18 @@ class _SliverDetailState extends State<SliverDetail> {
             opacity: 0.6,
             sliver: SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              sliver: SliverGrid(
+              sliver: SliverGrid.builder(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 140,
                   mainAxisSpacing: 8,
                   crossAxisSpacing: 8,
                   childAspectRatio: 1,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => Container(
-                    decoration: BoxDecoration(color: Colors.teal.shade100, borderRadius: BorderRadius.circular(8)),
-                    alignment: Alignment.center,
-                    child: Text('格 $index', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                  childCount: 9,
+                itemCount: 9,
+                itemBuilder: (context, index) => Container(
+                  decoration: BoxDecoration(color: Colors.teal.shade100, borderRadius: BorderRadius.circular(8)),
+                  alignment: Alignment.center,
+                  child: Text('格 $index', style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ),

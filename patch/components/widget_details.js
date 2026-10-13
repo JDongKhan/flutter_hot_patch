@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { GridView, ListenableBuilder, SliverFixedExtentList, SliverGrid, SliverList, __h } from '../flutter.js';
+import { GridView, ListView, ListenableBuilder, SliverFixedExtentList, SliverGrid, SliverList, __h } from '../flutter.js';
 
 // 组件 TextDetail
 export class TextDetail {
@@ -771,7 +771,7 @@ export class ScrollDetail {
         "crossAxisAlignment": "stretch"
       }, [
         __h('Text', {
-            "data": "ListView · 列表（offset: " + this._offset + "）",
+            "data": "ListView.builder · 懒构建列表（offset: " + this._offset + "）",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
@@ -783,7 +783,7 @@ export class ScrollDetail {
             __h('SizedBox', {
                 "height": 160
               }, [
-                __h('ListView', {
+                __h(ListView, {
                     "padding": {
                       "left": 8.0,
                       "top": 8.0,
@@ -791,40 +791,36 @@ export class ScrollDetail {
                       "bottom": 8.0
                     },
                     "physics": "BouncingScrollPhysics",
-                    "itemExtent": 56
-                  }, [
-                    __h('ListTile', {
-                        "title": "item A",
-                        "leading": __h('Icon', {
-                            "icon": "list"
-                          })
-                      }),
-                    __h('ListTile', {
-                        "title": "item B",
-                        "leading": __h('Icon', {
-                            "icon": "list"
-                          })
-                      }),
-                    __h('ListTile', {
-                        "title": "item C",
-                        "leading": __h('Icon', {
-                            "icon": "list"
-                          })
-                      }),
-                    __h('ListTile', {
-                        "title": "item D",
-                        "leading": __h('Icon', {
-                            "icon": "list"
-                          })
-                      }),
-                    __h('ListTile', {
-                        "title": "item E",
-                        "leading": __h('Icon', {
-                            "icon": "list"
-                          })
-                      })
-                  ])
+                    "itemExtent": 56,
+                    "builder": "_listViewBuilder0",
+                    "itemCount": 5
+                  })
               ])
+          ]),
+        __h('SizedBox', {
+            "height": 12
+          }),
+        __h('Text', {
+            "data": "ListView.separated · 分隔列表",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        __h('SizedBox', {
+            "height": 140
+          }, [
+            __h(ListView, {
+                "padding": {
+                  "left": 8.0,
+                  "top": 8.0,
+                  "right": 8.0,
+                  "bottom": 8.0
+                },
+                "builder": "_listViewBuilder1",
+                "itemCount": 6,
+                "separatorBuilder": "_listViewBuilderSeparator2"
+              })
           ]),
         __h('SizedBox', {
             "height": 12
@@ -855,6 +851,29 @@ export class ScrollDetail {
               })
           ])
       ]);
+  }
+  _listViewBuilder0(index) {
+      return __h('ListTile', {
+        "title": "builder item " + index,
+        "leading": __h('Icon', {
+            "icon": "list"
+          })
+      });
+  }
+  _listViewBuilder1(index) {
+      return __h('ListTile', {
+        "title": "separated item " + index,
+        "leading": __h('Icon', {
+            "icon": "arrow_right",
+            "color": '@Colors.teal.shade300'
+          }),
+        "dense": true
+      });
+  }
+  _listViewBuilderSeparator2(index) {
+      return __h('Divider', {
+        "height": 1
+      });
   }
 }
 
@@ -940,7 +959,7 @@ export class SliverDetail {
               }, [
                 __h('SliverToBoxAdapter', {}, [
                     __h('Text', {
-                        "data": "SliverChildBuilderDelegate · 懒构建列表",
+                        "data": "SliverList.builder · 懒构建列表",
                         "style": {
                           "fontSize": 14,
                           "fontWeight": "bold"
@@ -957,8 +976,40 @@ export class SliverDetail {
                 }
               }, [
                 __h(SliverList, {
-                    "delegateBuilder": "_sliverBuilder0",
-                    "childCount": 8
+                    "builder": "_sliverListBuilder0",
+                    "itemCount": 8
+                  })
+              ]),
+            __h('SliverPadding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 8.0,
+                  "right": 12.0,
+                  "bottom": 8.0
+                }
+              }, [
+                __h('SliverToBoxAdapter', {}, [
+                    __h('Text', {
+                        "data": "SliverList.separated · 分隔列表",
+                        "style": {
+                          "fontSize": 14,
+                          "fontWeight": "bold"
+                        }
+                      })
+                  ])
+              ]),
+            __h('SliverPadding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 0.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                }
+              }, [
+                __h(SliverList, {
+                    "builder": "_sliverListBuilder1",
+                    "itemCount": 5,
+                    "separatorBuilder": "_sliverListBuilderSeparator2"
                   })
               ]),
             __h('SliverPadding', {
@@ -988,7 +1039,7 @@ export class SliverDetail {
                 }
               }, [
                 __h(SliverFixedExtentList, {
-                    "delegateBuilder": "_sliverBuilder1",
+                    "builder": "_sliverBuilder3",
                     "childCount": 6,
                     "itemExtent": 44
                   })
@@ -1003,7 +1054,7 @@ export class SliverDetail {
               }, [
                 __h('SliverToBoxAdapter', {}, [
                     __h('Text', {
-                        "data": "SliverOpacity + SliverGrid · MaxCrossAxisExtent 九宫格",
+                        "data": "SliverOpacity + SliverGrid.builder · MaxCrossAxisExtent 九宫格",
                         "style": {
                           "fontSize": 14,
                           "fontWeight": "bold"
@@ -1023,8 +1074,8 @@ export class SliverDetail {
                     }
                   }, [
                     __h(SliverGrid, {
-                        "delegateBuilder": "_sliverBuilder2",
-                        "childCount": 9,
+                        "builder": "_sliverGridBuilder4",
+                        "itemCount": 9,
                         "maxCrossAxisExtent": 140,
                         "mainAxisSpacing": 8,
                         "crossAxisSpacing": 8,
@@ -1058,7 +1109,7 @@ export class SliverDetail {
           })
       });
   }
-  _sliverBuilder0(index) {
+  _sliverListBuilder0(index) {
       return __h('ListTile', {
         "title": "builder item " + index,
         "subtitle": "index * 10 = " + (index * 10),
@@ -1068,7 +1119,22 @@ export class SliverDetail {
           })
       });
   }
-  _sliverBuilder1(index) {
+  _sliverListBuilder1(index) {
+      return __h('ListTile', {
+        "title": "separated item " + index,
+        "leading": __h('Icon', {
+            "icon": "arrow_right",
+            "color": '#673AB7'
+          }),
+        "dense": true
+      });
+  }
+  _sliverListBuilderSeparator2(index) {
+      return __h('Divider', {
+        "height": 1
+      });
+  }
+  _sliverBuilder3(index) {
       return __h('ListTile', {
         "title": "fixed item " + index,
         "leading": __h('Icon', {
@@ -1078,7 +1144,7 @@ export class SliverDetail {
         "dense": true
       });
   }
-  _sliverBuilder2(index) {
+  _sliverGridBuilder4(index) {
       return __h('Container', {
         "alignment": "center",
         "decoration": {
@@ -1166,7 +1232,7 @@ export class GridDetail {
                     "mainAxisSpacing": 8,
                     "crossAxisSpacing": 8,
                     "childAspectRatio": 1,
-                    "delegateBuilder": "_gridViewBuilder0",
+                    "builder": "_gridViewBuilder0",
                     "itemCount": 30
                   })
               ]),
@@ -1194,7 +1260,7 @@ export class GridDetail {
                     "mainAxisSpacing": 8,
                     "crossAxisSpacing": 8,
                     "childAspectRatio": 1,
-                    "delegateBuilder": "_gridViewBuilder1",
+                    "builder": "_gridViewBuilder1",
                     "itemCount": 20
                   })
               ])
