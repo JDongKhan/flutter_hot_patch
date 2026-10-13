@@ -68,6 +68,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
   @override
   Widget build(BuildContext context) {
+    print("-----$_filterOpen");
     final posts = _visiblePosts;
     return Column(
       children: [

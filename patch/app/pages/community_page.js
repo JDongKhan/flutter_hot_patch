@@ -37,6 +37,7 @@ export class CommunityPage {
     this.setState(function(){ this._sort = kSorts[0]; this._type = kPostTypes[0]; this._dist = kDists[0]; this._price = kPriceRanges[0]; });
   }
   build() {
+    console.log("-----" + this._filterOpen);
     var posts = this._visiblePosts;
     return __h('Column', {}, [
         __h('Container', {

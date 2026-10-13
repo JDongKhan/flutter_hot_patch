@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/builtin_host_methods.dart';
@@ -169,9 +168,19 @@ class JsUiWidgetState extends State<JsUiWidget> {
   /// handler 是运行时登记的句柄 `{'__fn': id}`（生成器在构建期把事件表达式
   /// 绑到产出该结点的组件实例，绑定信息随 props 传下来）→ `invoke`。
   void _invoke(Object? handler, [Object? payload]) {
-    if (handler is! Map) return;
+    if (handler is! Map) {
+      // 【临时诊断】handler 形态不对 → 静默丢弃，点了没反应。
+      HotPatchLog.log('js_ui _invoke: handler 非 Map（${handler.runtimeType}=$handler）→ 丢弃');
+      return;
+    }
     final id = handler['__fn'];
-    if (id is! String) return;
+    if (id is! String) {
+      // 【临时诊断】句柄缺 __fn → 静默丢弃。
+      HotPatchLog.log('js_ui _invoke: handler 缺 __fn（keys=${handler.keys.toList()}）→ 丢弃');
+      return;
+    }
+    // 【临时诊断】确认宿主点击确实走到了回传点。
+    HotPatchLog.log('js_ui _invoke: 回传 JS id=$id payload=$payload');
     // payload 双重编码：内层把值变成 JSON 文本（true→"true"、'a'→"\"a\""），
     // 外层再包成 JS 字符串字面量；JS 侧 invoke 对字符串参数做一次
     // JSON.parse 还原原始类型。单层编码会把字符串 payload 解析失败置 null。
@@ -197,26 +206,15 @@ class JsUiWidgetState extends State<JsUiWidget> {
         child: const Center(child: CircularProgressIndicator()),
       );
     }
-    Widget child = _JsNode(
+    // 注意：不要在根结点外套额外的 Stack / Positioned 调试层——Stack 的最上层
+    // 子结点会参与 hit-test，覆盖下方真实内容的触摸区域（曾导致顶部 tab 点不动）。
+    return _JsNode(
       store: _store,
       id: _rootId!,
       registry: _registry,
       nativeComponents: widget.nativeComponents,
       invoke: _invoke,
     );
-    if (kDebugMode) {
-      child = Stack(
-        children: [
-          child,
-          Positioned(
-            left: 10,
-            right: 10,
-            child: Text("JS", style: TextStyle(color: Colors.yellow, fontSize: 20)),
-          ),
-        ],
-      );
-    }
-    return child;
   }
 
   /// 失败后重走一遍加载：模块加载按文件幂等，重复调用无副作用。

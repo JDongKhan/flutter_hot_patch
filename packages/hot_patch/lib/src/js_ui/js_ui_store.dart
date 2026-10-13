@@ -87,9 +87,19 @@ class JsUiStore {
         case 'remove':
           final id = raw['id'] as String?;
           if (id == null) break;
+          // 先记下父结点：`_JsNodeState.build` 只按 `node.childIds` 渲染，
+          // 摘除子结点后父结点必须重建，否则宿主侧会继续渲染已被删除的子树
+          // （表现为：筛选弹框关不掉、切换筛选条件后列表不刷新）。
+          final parents = <String>[
+            for (final entry in nodes.entries)
+              if (entry.value.childIds.contains(id) ||
+                  entry.value.propChildIds.containsValue(id))
+                entry.key,
+          ];
           _unlink(id);
           _removeSubtree(id);
           touched.remove(id);
+          touched.addAll(parents);
       }
     }
     for (final id in touched) {

@@ -60,7 +60,13 @@ class JsBuildContext {
   /// 把 props 上的事件字段（句柄）绑成 Flutter 回调；无句柄（null）时为 null。
   VoidCallback? on(String key) {
     final handler = props[key];
-    if (handler == null) return null;
+    if (handler == null) {
+      // 【临时诊断】事件键缺失 → onTap 为 null，点了必然没反应。
+      if (key == 'event') {
+        HotPatchLog.log('js_ui on("event"): props 无该键，keys=${props.keys.toList()}');
+      }
+      return null;
+    }
     return () => invoke(handler);
   }
 
