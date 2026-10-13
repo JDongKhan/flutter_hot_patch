@@ -148,10 +148,14 @@ class JsUiWidgetState extends State<JsUiWidget> {
       _entryJsAsset = entry;
       _localRoot = localRoot;
       await _manager.loadModule(_entryJsAsset, localRoot: _localRoot);
-      _manager.evaluate(
+      // 挂载必须用 evaluateOrThrow：JS 侧 `component not found`（典型是 patch.zip
+      // 陈旧 / 组件名拼错）时 evaluate 只记日志，root 永不下发 → 页面一直转圈。
+      // 抛出来才能落进下面的 catch，进错误兜底视图。
+      _manager.evaluateOrThrow(
         '__jsui.mount(${jsonEncode(_pageKey)}, ${jsonEncode(_entryJsAsset)}, '
         '${jsonEncode(component)}, '
         '${jsonEncode(jsonEncode(widget.props))});',
+        where: 'mount',
       );
       if (mounted && _loading) setState(() => _loading = false);
     } catch (e) {

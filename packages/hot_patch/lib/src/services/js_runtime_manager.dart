@@ -185,6 +185,20 @@ class JsRuntimeManager {
   /// 不查返回值就会静默失败）。
   JsEvalResult evaluate(String code) => _eval(code, 'evaluate');
 
+  /// 求值 + **失败即抛**：给「失败必须让上层感知」的调用点用（典型是
+  /// JsUiWidget 挂载组件——组件名在包里不存在时必须进错误态，而不是因为
+  /// `isError` 只被记了日志、`root` 永远不下发而一直转圈）。
+  ///
+  /// 事件回传 / dispose 这类「失败只该记日志、不影响界面」的调用点仍用
+  /// [evaluate]（在 UI 回调里抛异常会把一次点击变成崩溃）。
+  JsEvalResult evaluateOrThrow(String code, {String where = 'evaluate'}) {
+    final result = _eval(code, where);
+    if (result.isError) {
+      throw JsEvalException('JS eval failed [$where]: ${result.stringResult}');
+    }
+    return result;
+  }
+
   /// 求值 + 错误检查：本类内所有 `_runtime.evaluate` 的统一出口。
   ///
   /// flutter_js 的 `evaluate` **不会抛异常**：JS 侧的语法/运行错误以
@@ -424,4 +438,17 @@ $out
     if (channel.isEmpty) return;
     globalMessageHandlers[channel]?.call(raw['data']);
   }
+}
+
+/// JS 求值失败（[JsRuntimeManager.evaluateOrThrow]）。
+///
+/// [toString] 直接给出可展示的诊断信息——不带 `Bad state:` 之类框架前缀，
+/// 因为它会被直接投进 UI 的错误兜底视图。
+class JsEvalException implements Exception {
+  const JsEvalException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }
