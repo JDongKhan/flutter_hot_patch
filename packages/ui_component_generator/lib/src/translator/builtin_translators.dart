@@ -44,6 +44,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const DividerTranslator())
     ..register(const CardTranslator())
     ..register(const ListViewTranslator())
+    ..register(const ReorderableListViewTranslator())
     ..register(const GridViewTranslator())
     ..register(const NotificationListenerTranslator())
     ..register(const SingleChildScrollViewTranslator())
@@ -922,6 +923,42 @@ class ListViewTranslator extends WidgetTranslator {
     final children = ctx.listArg(node.args, 'children', node.type);
     return {
       'type': ctx.jsString('ListView'),
+      if (props.isNotEmpty) 'props': props,
+      'children': children,
+    };
+  }
+}
+
+/// ReorderableListView：长按拖拽重排的列表。
+///
+/// padding / scrollDirection / shrinkWrap / physics 与 ListView 同款透传；
+/// 事件 `onReorder` 是**双参**回调 `(int oldIndex, int newIndex)`——生成器把
+/// 回调表达式绑成句柄写进 props.event，宿主侧用 `on2<int,int>` 还原，经统一
+/// 「参数数组」ABI 回传 JS（用于验证多参事件链路）。children 的每个子结点在
+/// JS 运行时自带 key（`_JsNode` 的 ValueKey），满足 ReorderableListView 对
+/// 子项 key 的断言。
+class ReorderableListViewTranslator extends WidgetTranslator {
+  const ReorderableListViewTranslator();
+
+  @override
+  String get type => 'ReorderableListView';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final onReorder = ctx.namedArg(node.args, 'onReorder');
+    if (onReorder != null) props['event'] = ctx.eventHandle(onReorder);
+    final axis = axisToJson(ctx.namedArg(node.args, 'scrollDirection'));
+    if (axis != null) props['scrollDirection'] = axis;
+    final padding = edgeInsetsToJson(ctx.namedArg(node.args, 'padding'), ctx);
+    if (padding != null) props['padding'] = padding;
+    final shrinkWrap = boolLiteralJs(ctx.namedArg(node.args, 'shrinkWrap'));
+    if (shrinkWrap != null) props['shrinkWrap'] = shrinkWrap;
+    final physics = scrollPhysicsToJson(ctx.namedArg(node.args, 'physics'));
+    if (physics != null) props['physics'] = physics;
+    final children = ctx.listArg(node.args, 'children', node.type);
+    return {
+      'type': ctx.jsString('ReorderableListView'),
       if (props.isNotEmpty) 'props': props,
       'children': children,
     };

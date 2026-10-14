@@ -11,8 +11,11 @@ import { ListView, __h } from '../../flutter.js';
 // 组件 OrdersPage
 export class OrdersPage {
   constructor(args) {
-    this.initialStatus = (args && args.initialStatus !== undefined) ? args.initialStatus : null;
+    this.__applyProps(args);
     this._status = (this.initialStatus ?? kOrderStatus[0]);
+  }
+  __applyProps(args) {
+    this.initialStatus = (args && args.initialStatus !== undefined) ? args.initialStatus : null;
   }
   get _list() {
     return ((this._status == kOrderStatus[0]) ? kOrders : kOrders.filter((o) => { return (o.status == this._status); }));
@@ -76,6 +79,9 @@ export class OrdersPage {
 // 组件 _OrderCard
 export class _OrderCard {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.order = (args && args.order !== undefined) ? args.order : null;
     this.statusColor = (args && args.statusColor !== undefined) ? args.statusColor : null;
     this.onOpen = (args && args.onOpen !== undefined) ? args.onOpen : null;

@@ -60,6 +60,9 @@ export class DashboardCard {
 // 组件 LabeledDivider
 export class LabeledDivider {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.text = (args && args.text !== undefined) ? args.text : '';
   }
   build() {

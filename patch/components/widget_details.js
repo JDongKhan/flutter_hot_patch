@@ -1751,6 +1751,9 @@ export class NotifierCard {
 // 组件 StatelessCard
 export class StatelessCard {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : "";
     this.badge = (args && args.badge !== undefined) ? args.badge : "NEW";

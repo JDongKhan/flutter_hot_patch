@@ -6,6 +6,7 @@ import 'components/composite_component.dart';
 import 'components/hello_component.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
+import 'components/reorder_list.dart';
 import 'components/widget_showcase.dart';
 import 'generated/host_methods.dart';
 
@@ -123,6 +124,14 @@ class DemoListPage extends StatelessWidget {
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
       _TwinTest(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'), label: 'HelloCard'),
     ),
+    _DemoEntry(
+      'ReorderListDemo · 原生 vs JS 热更',
+      '长按拖拽重排：onReorder 双参事件（on2 多参链路），重排/添加列表项',
+      _CompareTest(
+        native: ReorderListDemo(),
+        js: JsUiWidget(jsAsset: _patchUrl('ReorderListDemo', 'components/reorder_list.js')),
+      ),
+    ),
     _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),
   ];
 
@@ -187,19 +196,23 @@ class _CompareTest extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('原生组件', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        const SizedBox(height: 8),
-        native,
-        const SizedBox(height: 24),
-        const Divider(),
-        const SizedBox(height: 24),
-        Text('JS 热更（JsUiWidget）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        const SizedBox(height: 8),
-        js,
-      ],
+    // 可滚动：对比块里既有紧凑组件也可能有固定高度区块（如 ReorderListDemo
+    // 的 320 高列表 ×2），整页高度会超出一屏，需可滚动避免 RenderFlex 溢出。
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('原生组件', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          const SizedBox(height: 8),
+          native,
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 24),
+          Text('JS 热更（JsUiWidget）', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          const SizedBox(height: 8),
+          js,
+        ],
+      ),
     );
   }
 }

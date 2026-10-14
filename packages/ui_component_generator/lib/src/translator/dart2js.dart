@@ -220,25 +220,40 @@ String renderClassDecl(
   b.write(' {\n');
 
   // constructor：有无 this.x 构造形参决定形态（组件与普通类同一规则）：
-  // 无参 → `constructor()`（JS 侧多传实参无害）；有参 → `constructor(args)`
-  // 并逐字段按 `args.x ?? 默认值` 取值。
+  // 无参 → `constructor()`（JS 侧多传实参无害）；有参 → `constructor(args)`，
+  // 构造参数**统一经 `__applyProps(args)` 派生**（构造参数 → 实例字段只有这一处
+  // 映射，构造函数首行调用）。
+  //
+  // 为什么单独成方法：运行时 patch 复用组件实例时（props 变了）**不会重跑构造
+  // 函数**，只更新实例的 `this.props`；参数↔字段映射若只写在构造函数里，子组件
+  // 就会永远拿着旧 props 派生的字段（表现为「切换排序/筛选后列表内容不更新」）。
+  // 运行时在 patch 的复用路径上会再调一次 `__applyProps(el.props)` 同步字段
+  // （见 mini_react_js 的 patch）。
+  //
+  // 参数先于其它字段派生：Dart 里 `this.x` 形参在构造体开头即已可用，状态字段
+  // 可能依赖它（如 `_status = widget.initialStatus ?? kOrderStatus.first`）。
   b.write(info.ctorParams.isEmpty ? '  constructor() {\n' : '  constructor(args) {\n');
   if (base != null) b.write('    super();\n');
+  if (info.ctorParams.isNotEmpty) b.write('    this.__applyProps(args);\n');
   for (final f in info.instanceFields) {
-    final def = f.jsInitial ??
-        (f.initializer != null
-            ? (literalToJs(f.initializer) ?? 'undefined')
-            : 'undefined');
-    if (info.ctorParams.contains(f.name)) {
-      b.write(
-        '    this.${f.name} = (args && args.${f.name} !== undefined) '
-        '? args.${f.name} : $def;\n',
-      );
-    } else {
-      b.write('    this.${f.name} = $def;\n');
-    }
+    if (info.ctorParams.contains(f.name)) continue;
+    b.write('    this.${f.name} = ${_fieldDefaultJs(f)};\n');
   }
   b.write('  }\n');
+
+  // 构造参数 → 实例字段的唯一映射：构造函数首行调用；实例被 patch 复用
+  // （props 变更）时由运行时再调一次 `__applyProps`，保证字段与最新 props 同步。
+  if (info.ctorParams.isNotEmpty) {
+    b.write('  __applyProps(args) {\n');
+    for (final f in info.instanceFields) {
+      if (!info.ctorParams.contains(f.name)) continue;
+      b.write(
+        '    this.${f.name} = (args && args.${f.name} !== undefined) '
+        '? args.${f.name} : ${_fieldDefaultJs(f)};\n',
+      );
+    }
+    b.write('  }\n');
+  }
 
   // 方法 + getter：**同一套方法体翻译**（只有这一个入口）。getter 体里有局部
   // 变量 / 集合过滤 / switch 等语句时，必须走完整语句翻译——旧实现只取单条
@@ -286,6 +301,17 @@ String renderClassDecl(
   b.write('}');
   return b.toString();
 }
+
+/// 实例字段的 JS 默认值：翻译期预渲染好的 [ClassField.jsInitial] 优先，
+/// 否则由字段初始化器字面量求值，都没有则 `undefined`。
+///
+/// 构造函数（非构造参数字段）与 `__applyProps`（构造参数字段在实参缺省时）
+/// 共用这一处默认值口径，避免两处走样。
+String _fieldDefaultJs(ClassField f) =>
+    f.jsInitial ??
+    (f.initializer != null
+        ? (literalToJs(f.initializer) ?? 'undefined')
+        : 'undefined');
 
 /// 纯 static 类 → JS const 对象：`const MyColors = { a: v, b: v };`。
 /// [valueRenderer] 由调用方提供（颜色/字符串/字面量统一求值）。

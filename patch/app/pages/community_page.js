@@ -185,6 +185,9 @@ export class CommunityPage {
 // 组件 _FilterPanel
 export class _FilterPanel {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.sort = (args && args.sort !== undefined) ? args.sort : '';
     this.type = (args && args.type !== undefined) ? args.type : '';
     this.dist = (args && args.dist !== undefined) ? args.dist : '';
@@ -194,22 +197,22 @@ export class _FilterPanel {
     this.onApply = (args && args.onApply !== undefined) ? args.onApply : null;
   }
   initState() {
-    console.debug("[HelloCard] initState");
+    console.debug("[_FilterPanel] initState");
   }
   didChangeDependencies() {
-    console.debug("[HelloCard] didChangeDependencies");
+    console.debug("[_FilterPanel] didChangeDependencies");
   }
   didUpdateWidget(oldWidget) {
-    console.debug("[HelloCard] didUpdateWidget: old=" + oldWidget);
+    console.debug("[_FilterPanel] didUpdateWidget: old=" + oldWidget);
   }
   deactivate() {
-    console.debug("[HelloCard] deactivate");
+    console.debug("[_FilterPanel] deactivate");
   }
   activate() {
-    console.debug("[HelloCard] activate");
+    console.debug("[_FilterPanel] activate");
   }
   dispose() {
-    console.debug("[HelloCard] dispose");
+    console.debug("[_FilterPanel] dispose");
   }
   _group(title, key, values, current) {
     return __h('Column', {
@@ -335,6 +338,9 @@ export class _FilterPanel {
 // 组件 _PostCard
 export class _PostCard {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.post = (args && args.post !== undefined) ? args.post : null;
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
@@ -466,6 +472,9 @@ export class _PostCard {
 // 组件 _ResourceCard
 export class _ResourceCard {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.resource = (args && args.resource !== undefined) ? args.resource : null;
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }

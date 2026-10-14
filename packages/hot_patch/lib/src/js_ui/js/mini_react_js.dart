@@ -6,6 +6,13 @@
 // 新增框架级机制（如 fiber、portals）改本文件；新增业务能力桥接
 // （controller 等）仍走 capabilities/，两边互不干扰。
 //
+// 组件生命周期与 Flutter 对齐，统一由本文件派发：
+//   initState / didChangeDependencies（首帧）→ mount【9】；
+//   依赖变更 → didChangeDependencies → flush【8】；
+//   父级重建 → didUpdateWidget(oldWidget) → patch【9】；
+//   摘除 → deactivate → dispose → unmount【9】。
+//   （activate 需「重挂载/reparent」场景，mini-react 无此能力，故不派发。）
+//
 // 分区与 runtime_source.dart 导航表一致（【4】~【9】）。
 
 
@@ -215,7 +222,9 @@ const String miniReactProviderSource = r'''
       if (mine[i].node === node) { return; }
     }
     var entry = { node: node, vm: vm };
-    entry.listener = function () { markDirty(anchor); };
+    // 依赖变更必须区别于 setState：标记 __depDirty，flush 时据此在 build 前
+    // 补一次 didChangeDependencies（对应 Flutter 的 InheritedWidget 变更语义）。
+    entry.listener = function () { anchor.__depDirty = true; markDirty(anchor); };
     vm.addListener(entry.listener);
     mine.push(entry);
   }
@@ -265,6 +274,14 @@ const String miniReactSchedulerSource = r'''
           inst.__dirty = false;
           if (inst.__unmounted) { continue; }
           root.ops = [];
+          // provider 依赖变更（__depDirty）走这里：与 Flutter 一致，
+          // 先 didChangeDependencies 再 build；setState 触发的重建不调。
+          if (inst.__depDirty) {
+            inst.__depDirty = false;
+            if (typeof inst.didChangeDependencies === 'function') {
+              inst.didChangeDependencies();
+            }
+          }
           inst.__child = patch(inst.__child, buildOf(inst), inst, inst.__slot);
           commit(root);
         }
@@ -340,7 +357,11 @@ const String miniReactReconcilerSource = r'''
     ci.__slot = slot;
     ci.__root = rootFor(parent);
     augment(ci);
+    // 生命周期与 Flutter 对齐：initState → didChangeDependencies → build。
+    // （后续「依赖变更」走 flush 的 __depDirty，「父级重建」走 patch 的
+    //  didUpdateWidget，见【8】/【9】。）
     if (typeof ci.initState === 'function') { ci.initState(); }
+    if (typeof ci.didChangeDependencies === 'function') { ci.didChangeDependencies(); }
     ci.__child = mount(buildOf(ci), ci, slot);
     return ci;
   }
@@ -373,9 +394,23 @@ const String miniReactReconcilerSource = r'''
       return oldInst;
     }
 
+    // 复用同一实例（= Flutter 的 State 复用），只替换 element（= 新 Widget）。
+    // 先取旧 props 作为 oldWidget 快照（el.props 每次 build 都是新对象，故旧引用
+    // 自然保留），再把新 props 落到实例（`widget` 即新值），然后以旧 props 回调
+    // didUpdateWidget，最后 build——顺序与 Flutter 完全一致。
+    var oldWidget = oldInst.props;
     oldInst.__el = el;
     oldInst.props = el.props;
     oldInst.children = el.children;
+    // props 变更 → 重新派生「构造参数字段」。生成器产物把 `this.x = args.x` 的
+    // 参数↔字段映射放在 `__applyProps` 里；复用实例不会重跑构造函数，若不在此
+    // 同步一次，子组件会一直拿着旧 props 派生的字段（如列表项不随排序刷新）。
+    if (typeof oldInst.__applyProps === 'function') {
+      oldInst.__applyProps(el.props);
+    }
+    if (typeof oldInst.didUpdateWidget === 'function') {
+      oldInst.didUpdateWidget(oldWidget);
+    }
     oldInst.__child = patch(oldInst.__child, buildOf(oldInst), oldInst, oldInst.__slot);
     return oldInst;
   }
@@ -466,6 +501,10 @@ const String miniReactReconcilerSource = r'''
       var pcs = inst.__propsChildren;
       if (pcs) { for (var pk in pcs) { markUnmounted(pcs[pk]); } }
     } else {
+      // 与 Flutter 一致：从树上摘除时先 deactivate、再最终 dispose。
+      if (typeof inst.deactivate === 'function') {
+        try { inst.deactivate(); } catch (e) {}
+      }
       if (typeof inst.dispose === 'function') {
         try { inst.dispose(); } catch (e) {}
       }

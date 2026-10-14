@@ -6,6 +6,9 @@
 // 模型 Spot
 export class Spot {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.id = (args && args.id !== undefined) ? args.id : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.sub = (args && args.sub !== undefined) ? args.sub : '';
@@ -21,6 +24,9 @@ export class Spot {
 // 模型 HomeBanner
 export class HomeBanner {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.img = (args && args.img !== undefined) ? args.img : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.sub = (args && args.sub !== undefined) ? args.sub : '';
@@ -30,6 +36,9 @@ export class HomeBanner {
 // 模型 GridEntry
 export class GridEntry {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.emoji = (args && args.emoji !== undefined) ? args.emoji : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
   }
@@ -38,6 +47,9 @@ export class GridEntry {
 // 模型 Post
 export class Post {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.id = (args && args.id !== undefined) ? args.id : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.sub = (args && args.sub !== undefined) ? args.sub : '';
@@ -52,6 +64,9 @@ export class Post {
 // 模型 Resource
 export class Resource {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.id = (args && args.id !== undefined) ? args.id : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.sub = (args && args.sub !== undefined) ? args.sub : '';
@@ -62,6 +77,9 @@ export class Resource {
 // 模型 Order
 export class Order {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.no = (args && args.no !== undefined) ? args.no : '';
     this.status = (args && args.status !== undefined) ? args.status : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
@@ -75,6 +93,9 @@ export class Order {
 // 模型 MenuEntry
 export class MenuEntry {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.emoji = (args && args.emoji !== undefined) ? args.emoji : '';
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.screen = (args && args.screen !== undefined) ? args.screen : '';

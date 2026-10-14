@@ -11,6 +11,9 @@ import { SliverGrid, __h } from '../../flutter.js';
 // 组件 HomePage
 export class HomePage {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.banners = (args && args.banners !== undefined) ? args.banners : kBanners;
     this.grid = (args && args.grid !== undefined) ? args.grid : kGrid;
     this.spots = (args && args.spots !== undefined) ? args.spots : kSpots;
@@ -338,6 +341,9 @@ export class HomeHeader {
 // 组件 BannerSlide
 export class BannerSlide {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.banner = (args && args.banner !== undefined) ? args.banner : null;
   }
   open() {
@@ -414,6 +420,9 @@ export class BannerSlide {
 // 组件 GridCell
 export class GridCell {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.entry = (args && args.entry !== undefined) ? args.entry : null;
   }
   open() {
@@ -450,6 +459,9 @@ export class GridCell {
 // 组件 SpotCard
 export class SpotCard {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.spot = (args && args.spot !== undefined) ? args.spot : null;
   }
   open() {
@@ -584,6 +596,9 @@ export class SpotCard {
 // 组件 PromoCard
 export class PromoCard {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.img = (args && args.img !== undefined) ? args.img : '';
   }
   open() {

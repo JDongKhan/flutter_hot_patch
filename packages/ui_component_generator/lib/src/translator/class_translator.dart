@@ -234,7 +234,12 @@ ClassInfo translateClass(
         }
         // 无初始化器（如 `List<Spot> spots` 由构造参数注入）→ 类型默认值
         // （容器→[]/{}），而不是 null：JS 侧漏传 props 时仍能安全遍历。
-        initial = ctorJs ?? (init == null ? _defaultInitial(typeName) : 'null');
+        // 有初始化器时按集合/表达式翻译（`final _items = ['a','b']` → `["a","b"]`）；
+        // 翻译不出来（如宿主 widget 引用）才退化为 null。
+        initial = ctorJs ??
+            (init == null
+                ? _defaultInitial(typeName)
+                : (rhsToJs(init, initScope, used) ?? 'null'));
       }
       instanceFields.add(ClassField(
         name: fieldName,

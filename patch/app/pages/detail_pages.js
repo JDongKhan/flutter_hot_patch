@@ -12,6 +12,9 @@ const _steps = ["提交订单", "支付成功", "商家发货", "已完成"];
 // 组件 MiniButton
 export class MiniButton {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.label = (args && args.label !== undefined) ? args.label : '';
     this.primary = (args && args.primary !== undefined) ? args.primary : false;
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;

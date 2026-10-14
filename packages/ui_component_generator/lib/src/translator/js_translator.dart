@@ -992,6 +992,30 @@ String? methodCallExprJs(
       if (t == null || o == null) return null;
       return '($t - $o)';
     }
+    // 就地增删（List 在 JS 侧就是数组）：
+    //   `xs.add(v)`      → `xs.push(v)`
+    //   `xs.removeAt(i)` → `xs.splice(i, 1)[0]`（返回被删元素，供重排复用）
+    //   `xs.insert(i, v)`→ `xs.splice(i, 0, v)`
+    // ReorderableListView 的 onReorder 重排惯用法（removeAt + insert）依赖这组。
+    if (collName == 'add' && e.argumentList.arguments.length == 1) {
+      final t = exprToJs(e.target!, scope, classes);
+      final v = exprToJs(e.argumentList.arguments.first, scope, classes);
+      if (t == null || v == null) return null;
+      return '$t.push($v)';
+    }
+    if (collName == 'removeAt' && e.argumentList.arguments.length == 1) {
+      final t = exprToJs(e.target!, scope, classes);
+      final i = exprToJs(e.argumentList.arguments.first, scope, classes);
+      if (t == null || i == null) return null;
+      return '$t.splice($i, 1)[0]';
+    }
+    if (collName == 'insert' && e.argumentList.arguments.length == 2) {
+      final t = exprToJs(e.target!, scope, classes);
+      final i = exprToJs(e.argumentList.arguments[0], scope, classes);
+      final v = exprToJs(e.argumentList.arguments[1], scope, classes);
+      if (t == null || i == null || v == null) return null;
+      return '$t.splice($i, 0, $v)';
+    }
   }
   final args = e.argumentList.arguments;
   final argJs = <String>[]; // 普通调用：位置化扁平（JS 无具名参数）

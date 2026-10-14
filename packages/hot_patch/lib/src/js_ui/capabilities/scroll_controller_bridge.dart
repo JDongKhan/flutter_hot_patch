@@ -281,6 +281,23 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     return build(null);
   });
 
+  // ReorderableListView：长按拖拽重排。事件 onReorder 是**双参**回调
+  // `(int oldIndex, int newIndex)`，用 `on2` 还原——宿主把 `[oldIndex, newIndex]`
+  // 参数数组回传，JS 侧 __bind 的 wrapper 摊开成位置实参（多参事件 ABI）。
+  // children 为 JS 运行时下发的子结点，各自自带 ValueKey，满足 key 断言。
+  r.register('ReorderableListView', (c) {
+    return ReorderableListView(
+      // onReorder 非空：无句柄时给空实现，避免拖拽结束抛断言。
+      onReorder: c.on2<int, int>('event') ?? (_, __) {},
+      scrollDirection:
+          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+      padding: nullableEdgeInsets(c.map('padding')),
+      shrinkWrap: c.bool_('shrinkWrap') ?? false,
+      physics: scrollPhysicsFromJson(c.props['physics']),
+      children: c.children,
+    );
+  });
+
   // GridView：普通构造 / .builder（懒加载）/ .count / .extent。gridDelegate 按
   // props 还原（crossAxisCount / maxCrossAxisExtent 双形态）；controller 与
   // ListView 同款走 _JsScrollControllerView 桥接。

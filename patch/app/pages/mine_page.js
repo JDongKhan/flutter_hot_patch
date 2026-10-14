@@ -241,6 +241,9 @@ export class MinePage {
 // 组件 _DevRow
 export class _DevRow {
   constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
     this.icon = (args && args.icon !== undefined) ? args.icon : null;
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : '';
