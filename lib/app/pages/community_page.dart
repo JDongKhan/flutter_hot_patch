@@ -246,7 +246,7 @@ class _ListContentState extends State<_ListContent> {
   @override
   void didUpdateWidget(covariant _ListContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    print("--0");
+    print("--0：$oldWidget");
     if (widget.list.length != oldWidget.list.length) {
       print("--1");
     }

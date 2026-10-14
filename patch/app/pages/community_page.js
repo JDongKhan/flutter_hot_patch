@@ -37,7 +37,7 @@ export class CommunityPage {
     this.setState(function(){ this._sort = kSorts[0]; this._type = kPostTypes[0]; this._dist = kDists[0]; this._price = kPriceRanges[0]; });
   }
   build() {
-    console.log("-----" + this._filterOpen);
+    console.log("-----" + __str(this._filterOpen));
     return __h('Column', {}, [
         __h('Container', {
             "color": '#FFFFFF'
@@ -196,7 +196,7 @@ export class _ListContent {
     this.toggleFilter = (args && args.toggleFilter !== undefined) ? args.toggleFilter : null;
   }
   didUpdateWidget(oldWidget) {
-    console.log("--0");
+    console.log("--0：" + __str(oldWidget));
     if ((this.list.length != oldWidget.list.length)) {
       console.log("--1");
     }
@@ -241,7 +241,7 @@ export class _FilterPanel {
     console.debug("[_FilterPanel] didChangeDependencies");
   }
   didUpdateWidget(oldWidget) {
-    console.debug("[_FilterPanel] didUpdateWidget: old=" + oldWidget);
+    console.debug("[_FilterPanel] didUpdateWidget: old=" + __str(oldWidget));
   }
   deactivate() {
     console.debug("[_FilterPanel] deactivate");
@@ -383,7 +383,7 @@ export class _PostCard {
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
   _likeText(n) {
-    return ((n > 999) ? ((n / 1000)).toFixed(1) + "k" : n);
+    return ((n > 999) ? __str(((n / 1000)).toFixed(1)) + "k" : __str(n));
   }
   build() {
     return __h('GestureDetector', {
@@ -475,7 +475,7 @@ export class _PostCard {
                                     "width": 6
                                   }),
                                 __h('Text', {
-                                    "data": this.post.author + " · " + this.post.time,
+                                    "data": __str(this.post.author) + " · " + __str(this.post.time),
                                     "style": {
                                       "fontSize": 10.5,
                                       "color": '#ffa3a9b4'

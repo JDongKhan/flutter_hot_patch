@@ -25,7 +25,7 @@ export class TextDetail {
             }
           }),
         __h('Text', {
-            "data": "普通文本，count = " + this._count + "（状态插值）",
+            "data": "普通文本，count = " + __str(this._count) + "（状态插值）",
             "style": {
               "color": '#2196F3',
               "fontSize": 16
@@ -99,7 +99,7 @@ export class ButtonDetail {
         "crossAxisAlignment": "stretch"
       }, [
         __h('Text', {
-            "data": "点击次数 = " + this._pressed,
+            "data": "点击次数 = " + __str(this._pressed),
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
@@ -387,7 +387,7 @@ export class LayoutDetail {
             "runAlignment": "center",
             "crossAxisAlignment": "center"
           }, [
-            ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": "chip " + i, "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
+            ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": "chip " + __str(i), "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
           ]),
         __h('SizedBox', {
             "height": 12
@@ -771,7 +771,7 @@ export class ScrollDetail {
         "crossAxisAlignment": "stretch"
       }, [
         __h('Text', {
-            "data": "ListView.builder · 懒构建列表（offset: " + this._offset + "）",
+            "data": "ListView.builder · 懒构建列表（offset: " + __str(this._offset) + "）",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
@@ -826,7 +826,7 @@ export class ScrollDetail {
             "height": 12
           }),
         __h('Text', {
-            "data": "SingleChildScrollView · 长内容滚动（ctrl offset: " + this._ctrlOffset + "）",
+            "data": "SingleChildScrollView · 长内容滚动（ctrl offset: " + __str(this._ctrlOffset) + "）",
             "style": {
               "fontSize": 16,
               "fontWeight": "bold"
@@ -838,7 +838,7 @@ export class ScrollDetail {
             "physics": "ClampingScrollPhysics"
           }, [
             __h('Row', {}, [
-                ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": "横向 " + i }) ])]); } return out; })()
+                ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": "横向 " + __str(i) }) ])]); } return out; })()
               ])
           ]),
         __h('Align', {
@@ -854,7 +854,7 @@ export class ScrollDetail {
   }
   _listViewBuilder0(index) {
       return __h('ListTile', {
-        "title": "builder item " + index,
+        "title": "builder item " + __str(index),
         "leading": __h('Icon', {
             "icon": "list"
           })
@@ -862,7 +862,7 @@ export class ScrollDetail {
   }
   _listViewBuilder1(index) {
       return __h('ListTile', {
-        "title": "separated item " + index,
+        "title": "separated item " + __str(index),
         "leading": __h('Icon', {
             "icon": "arrow_right",
             "color": '@Colors.teal.shade300'
@@ -900,7 +900,7 @@ export class SliverDetail {
           }, [
             __h('SliverAppBar', {
                 "title": __h('Text', {
-                    "data": "SliverAppBar 导航 · offset " + this._offset.toFixed(0)
+                    "data": "SliverAppBar 导航 · offset " + __str(this._offset.toFixed(0))
                   }),
                 "backgroundColor": '#673AB7',
                 "foregroundColor": '#FFFFFF',
@@ -946,7 +946,7 @@ export class SliverDetail {
                 }
               }, [
                 __h('SliverList', {}, [
-                    ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "SliverList item " + i, "leading": __h('Icon', { "icon": "list", "color": '#673AB7' }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
+                    ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "SliverList item " + __str(i), "leading": __h('Icon', { "icon": "list", "color": '#673AB7' }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
                   ])
               ]),
             __h('SliverPadding', {
@@ -1111,8 +1111,8 @@ export class SliverDetail {
   }
   _sliverListBuilder0(index) {
       return __h('ListTile', {
-        "title": "builder item " + index,
-        "subtitle": "index * 10 = " + (index * 10),
+        "title": "builder item " + __str(index),
+        "subtitle": "index * 10 = " + __str((index * 10)),
         "leading": __h('Icon', {
             "icon": "build",
             "color": '@Colors.orange.shade700'
@@ -1121,7 +1121,7 @@ export class SliverDetail {
   }
   _sliverListBuilder1(index) {
       return __h('ListTile', {
-        "title": "separated item " + index,
+        "title": "separated item " + __str(index),
         "leading": __h('Icon', {
             "icon": "arrow_right",
             "color": '#673AB7'
@@ -1136,7 +1136,7 @@ export class SliverDetail {
   }
   _sliverBuilder3(index) {
       return __h('ListTile', {
-        "title": "fixed item " + index,
+        "title": "fixed item " + __str(index),
         "leading": __h('Icon', {
             "icon": "height",
             "color": '#009688'
@@ -1155,7 +1155,7 @@ export class SliverDetail {
         }
       }, [
         __h('Text', {
-            "data": "格 " + index,
+            "data": "格 " + __str(index),
             "style": {
               "fontWeight": "bold"
             }
@@ -1200,7 +1200,7 @@ export class GridDetail {
                 }
               }, [
                 __h('Text', {
-                    "data": "controller offset: " + this._offset.toFixed(1),
+                    "data": "controller offset: " + __str(this._offset.toFixed(1)),
                     "style": {
                       "fontSize": 13,
                       "color": '#9E9E9E'
@@ -1288,7 +1288,7 @@ export class GridDetail {
         }
       }, [
         __h('Text', {
-            "data": "格 " + index,
+            "data": "格 " + __str(index),
             "style": {
               "fontWeight": "bold"
             }
@@ -1306,7 +1306,7 @@ export class GridDetail {
         }
       }, [
         __h('Text', {
-            "data": "项 " + index,
+            "data": "项 " + __str(index),
             "style": {
               "fontWeight": "bold"
             }
@@ -1365,7 +1365,7 @@ export class ScaffoldDetail {
                         "data": "页面骨架组件演示"
                       }),
                     __h('Text', {
-                        "data": "BottomNav 选中：" + this._navIndex
+                        "data": "BottomNav 选中：" + __str(this._navIndex)
                       })
                   ])
               ])
@@ -1432,10 +1432,10 @@ export class InputDetail {
     this.setState(function(){ this._text = v; });
   }
   _onChoiceChanged(v) {
-    this.setState(function(){ this._choice = v; });
+    this.setState(function(){ this._choice = __str(v); });
   }
   _onDropdownChanged(v) {
-    this.setState(function(){ this._dropdown = v; });
+    this.setState(function(){ this._dropdown = __str(v); });
   }
   _onSwitchChanged(v) {
     this.setState(function(){ this._switchOn = (v ?? false); });
@@ -1471,14 +1471,14 @@ export class InputDetail {
             "height": 4
           }),
         __h('Text', {
-            "data": "输入内容：" + this._text,
+            "data": "输入内容：" + __str(this._text),
             "style": {
               "fontSize": 14,
               "color": '#9E9E9E'
             }
           }),
         __h('Text', {
-            "data": "controller.text：" + this._controller.text,
+            "data": "controller.text：" + __str(this._controller.text),
             "style": {
               "fontSize": 14,
               "color": '#673AB7'
@@ -1527,7 +1527,7 @@ export class InputDetail {
               })
           ]),
         __h('Text', {
-            "data": "当前选择：" + this._choice,
+            "data": "当前选择：" + __str(this._choice),
             "style": {
               "fontSize": 14,
               "color": '#9E9E9E'
@@ -1577,7 +1577,7 @@ export class InputDetail {
                 "width": 8
               }),
             __h('Text', {
-                "data": "Switch：" + (this._switchOn ? "开" : "关")
+                "data": "Switch：" + __str((this._switchOn ? "开" : "关"))
               })
           ]),
         __h('Row', {}, [
@@ -1591,14 +1591,14 @@ export class InputDetail {
                 "width": 8
               }),
             __h('Text', {
-                "data": "Checkbox：" + (this._checked ?? false)
+                "data": "Checkbox：" + __str((this._checked ?? false))
               })
           ]),
         __h('SizedBox', {
             "height": 8
           }),
         __h('Text', {
-            "data": "Slider 值：" + this._slider,
+            "data": "Slider 值：" + __str(this._slider),
             "style": {
               "fontSize": 14
             }
@@ -1672,7 +1672,7 @@ export class ProgressDetail {
             "height": 8
           }),
         __h('Text', {
-            "data": "进度值：" + this._progress,
+            "data": "进度值：" + __str(this._progress),
             "style": {
               "fontSize": 14,
               "color": '#9E9E9E'
@@ -1739,7 +1739,7 @@ export class NotifierCard {
   }
   _lbBuilder0() {
       return __h('Text', {
-        "data": "count = " + this._model.count,
+        "data": "count = " + __str(this._model.count),
         "style": {
           "fontSize": 24,
           "fontWeight": "bold"
@@ -1789,7 +1789,7 @@ export class StatelessCard {
                       }),
                     __h('Expanded', {}, [
                         __h('Text', {
-                            "data": this.badge + " · " + this.title,
+                            "data": __str(this.badge) + " · " + __str(this.title),
                             "style": {
                               "fontSize": 18,
                               "fontWeight": "bold"
@@ -1891,7 +1891,7 @@ export class TabDetail {
             "height": 14
           }),
         __h('Text', {
-            "data": "显式 TabController · index = " + this._index,
+            "data": "显式 TabController · index = " + __str(this._index),
             "style": {
               "fontSize": 15,
               "fontWeight": "bold"
@@ -1966,7 +1966,7 @@ export class PageViewDetail {
         "crossAxisAlignment": "stretch"
       }, [
         __h('Text', {
-            "data": "PageView · 当前第 " + (this._page + 1) + " / 3 页",
+            "data": "PageView · 当前第 " + __str((this._page + 1)) + " / 3 页",
             "style": {
               "fontSize": 15,
               "fontWeight": "bold"
@@ -2064,7 +2064,7 @@ export class DrawerDetail {
                     "height": 8
                   }),
                 __h('Text', {
-                    "data": ((this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked)
+                    "data": ((this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + __str(this._picked))
                   })
               ])
           ]),

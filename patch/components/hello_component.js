@@ -26,7 +26,7 @@ export class HelloCard {
     console.debug("[HelloCard] didChangeDependencies");
   }
   didUpdateWidget(oldWidget) {
-    console.debug("[HelloCard] didUpdateWidget: old=" + oldWidget);
+    console.debug("[HelloCard] didUpdateWidget: old=" + __str(oldWidget));
   }
   deactivate() {
     console.debug("[HelloCard] deactivate");
@@ -38,13 +38,13 @@ export class HelloCard {
     console.debug("[HelloCard] dispose");
   }
   inc() {
-    console.debug("inc: count=" + this._count);
+    console.debug("inc: count=" + __str(this._count));
     this.setState(function(){ this._count += 1; });
   }
   async loadUser() {
     var name = await __jsui.host("getUserName", []);
     var userMap = await __jsui.host("post", {"params": {"name": name}});
-    console.log("用户信息:" + userMap["code"]);
+    console.log("用户信息:" + __str(userMap["code"]));
     await new Promise(function(r){ setTimeout(r, 1000); });
     this.setState(function(){ this._user = new User({name: "Alice", age: 18}); });
   }
@@ -58,7 +58,7 @@ export class HelloCard {
     var isAdult = ((this._user != null) && (this._user.age >= 18));
     var debugActive = kDebugMode;
     var android = Platform.isAndroid;
-    console.debug("build: count=" + this._count + " debug=" + debugActive + " android=" + android);
+    console.debug("build: count=" + __str(this._count) + " debug=" + __str(debugActive) + " android=" + __str(android));
     var stage = (() => { switch (this._count) {
     case 0: return "起步";
     default: return "推进中";
@@ -73,23 +73,23 @@ export class HelloCard {
             }
           }),
         __h('Text', {
-            "data": "count = " + this._count
+            "data": "count = " + __str(this._count)
           }),
         __h('Text', {
-            "data": "阶段：" + stage
+            "data": "阶段：" + __str(stage)
           }),
         __h('Text', {
-            "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
+            "data": "user: " + __str(((this._user == null ? null : this._user.name) ?? "加载中"))
           }),
         __h('Text', {
-            "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
+            "data": "age: " + __str(((this._user == null ? null : this._user.age) ?? "-"))
           }),
         __h('Text', {
             "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
           }),
         ...((this._count > 0) ? [__h('Text', { "data": "当前 count 是正数（if 条件渲染）" })] : []),
         ...((this._user != null) ? [__h('Text', { "data": "用户已加载（if + else 渲染）" })] : [__h('Text', { "data": "用户未加载，点 Load User" })]),
-        ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + i + " 个" })]); } return out; })(),
+        ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + __str(i) + " 个" })]); } return out; })(),
         __h('Row', {}, [
             __h('Button', {
                 "kind": "elevated",

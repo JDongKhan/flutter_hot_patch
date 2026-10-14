@@ -806,11 +806,18 @@ String? methodCallStmtJs(
 }
 
 /// 日志参数 → JS 表达式：字符串 / 插值拼接 / 字段引用 / 属性链。
+///
+/// [expand] 仅由「日志调用」置真（`print` / `debugPrint` 的实参）：插值片段
+/// 包一层运行时 `__str`，把对象/数组展开成字段文本（Dart 的 `'$x'` 走
+/// `toString()`，JS 的 `+` 只给 `[object Object]`）。
+/// **其余位置（widget 文案、props 数据、模型初始化）保持原样**：那里的插值
+/// 值都是字符串/数字，包一层只是无谓地给产物引入 `__str` 全局依赖。
 String? _logArgJs(
   Expression a,
   FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
+  Map<String, ClassInfo> classes, {
+  bool expand = false,
+}) {
   // 注意：StringInterpolation 是 StringLiteral 的子类，必须先判插值
   //（否则 stringValue 会把插值表达式拼进字面量、丢失 this._x 引用）。
   if (a is StringInterpolation) {
@@ -821,7 +828,7 @@ String? _logArgJs(
       } else if (el is InterpolationExpression) {
         final v = exprToJs(el.expression, scope, classes);
         if (v != null) {
-          parts.add(v);
+          parts.add(expand ? '__str($v)' : v);
         } else {
           // 丢片段会让产物「看着对、其实少东西」（如 `"用户信息:$x"` →
           // `"用户信息:"`），故必须出声，不能静默。

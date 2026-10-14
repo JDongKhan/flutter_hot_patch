@@ -110,7 +110,7 @@ export class _OrderCard {
                   }, [
                     __h('Row', {}, [
                         __h('Text', {
-                            "data": "订单号 " + this.order.no,
+                            "data": "订单号 " + __str(this.order.no),
                             "style": {
                               "fontSize": 12,
                               "color": '#ff8b909a'
@@ -212,7 +212,7 @@ export class _OrderCard {
                             }
                           }),
                         __h('Text', {
-                            "data": "￥" + this.order.price,
+                            "data": "￥" + __str(this.order.price),
                             "style": {
                               "fontSize": 16,
                               "fontWeight": "w700",
@@ -220,7 +220,7 @@ export class _OrderCard {
                             }
                           }),
                         __h('Spacer', {}),
-                        ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": () => { return __jsui.host("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.onOpen })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.onOpen })])
+                        ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": () => { return __jsui.host("toast", ["已取消订单 " + __str(this.order.no) + "（演示）"]); } }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.onOpen })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.onOpen })])
                       ])
                   ])
               ])

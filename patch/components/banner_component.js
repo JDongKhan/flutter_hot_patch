@@ -26,7 +26,7 @@ export class BannerCard {
             }
           }),
         __h('Text', {
-            "data": "views = " + this._views
+            "data": "views = " + __str(this._views)
           }),
         __h('Button', {
             "kind": "elevated",

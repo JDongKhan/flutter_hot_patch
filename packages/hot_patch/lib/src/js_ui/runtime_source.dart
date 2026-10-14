@@ -109,17 +109,58 @@ G.Platform = {
 // debug/info/log/warn/error 全部可用且路由到 log 服务。
 // 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
 // 故 Promise 一定被回填、不会悬挂。
+// 值 → 字符串（对象/数组完整展开，循环引用安全）：JS 侧 `String(obj)` 只会
+// 得到 `[object Object]`，日志里看不到任何字段。`__str` 递归展开 own 字段，
+// 函数标成 `[Function name]`、循环引用标成 `[Circular]`（与 JSON.stringify
+// 不同：不会因循环引用直接抛错，也不丢函数字段）。
+// 生成器把 Dart 字符串插值（形如 '\$name'）翻译成 __str(name)（见
+// js_translator _logArgJs），console 桥也用它，故挂在 G 上供产物裸引用。
+function __fmt(v, stack) {
+  if (typeof v === 'string') return v;
+  if (v === null) return 'null';
+  if (typeof v === 'undefined') return 'undefined';
+  var t = typeof v;
+  if (t === 'function') return '[Function ' + (v.name || 'anonymous') + ']';
+  if (t !== 'object') return String(v);
+  if (stack.indexOf(v) >= 0) return '[Circular]';
+  var next = stack.concat([v]);
+  if (Array.isArray(v)) {
+    var items = [];
+    for (var i = 0; i < v.length; i++) { items.push(__fmt(v[i], next)); }
+    return '[' + items.join(', ') + ']';
+  }
+  var keys = Object.keys(v);
+  var out = [];
+  for (var j = 0; j < keys.length; j++) {
+    out.push(keys[j] + ': ' + __fmt(v[keys[j]], next));
+  }
+  return '{' + out.join(', ') + '}';
+}
+G.__str = function (v) { return __fmt(v, []); };
+// 原生日志方法（Dart debugPrint/print 转换产物直接调用）：统一桥到逻辑通道
+// 'log'（宿主 log 处理器 → HotPatchLog）。支持多实参（`console.log(a, b)` 与
+// 浏览器一致，空格分隔），每个实参都走 __fmt 展开。
+// G.console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
+// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
+// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
+// debug/info/log/warn/error 全部可用且路由到 log 服务。
+// 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
+// 故 Promise 一定被回填、不会悬挂。
 G.console = (typeof G.console === 'undefined') ? {} : G.console;
-function __log(m) {
+function __log(args) {
   if (typeof G.__jsui !== 'undefined' && G.__jsui.host) {
-    __jsui.host('log', [String(m)]);
+    var text = '';
+    for (var i = 0; i < args.length; i++) {
+      text += (i ? ' ' : '') + __fmt(args[i], []);
+    }
+    __jsui.host('log', [text]);
   }
 }
-G.console.debug = function(m) { if (G.kDebugMode) { __log(m); } };
-G.console.info = function(m) { __log(m); };
-G.console.log = function(m) { __log(m); };
-G.console.warn = function(m) { __log(m); };
-G.console.error = function(m) { __log(m); }
+G.console.debug = function() { if (G.kDebugMode) { __log(arguments); } };
+G.console.info = function() { __log(arguments); };
+G.console.log = function() { __log(arguments); };
+G.console.warn = function() { __log(arguments); };
+G.console.error = function() { __log(arguments); }
 ''';
 /// 静态尾部：骨架状态与工具（原 _jsUiGlobals 其余）。
 const String _jsUiGlobalsTail = r'''
