@@ -107,7 +107,7 @@ class RemoteAssetLoader {
           final entryFile = File('$root/$existing');
           if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
             HotPatchLog.log('remote bundle reused (304): $url -> $existing');
-            return RemoteAssetBundle(existing, root, fresh: false);
+            return _bundle(existing, root);
           }
           // 本地缓存损坏（文件丢失/空文件）→  fallthrough 到 200 重新下载。
           HotPatchLog.log('remote bundle cache corrupted, re-downloading: $url');
@@ -185,7 +185,7 @@ class RemoteAssetLoader {
           final entryFile = File('$root/$existing');
           if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
             HotPatchLog.log('remote asset fallback to cached (network error): $url -> $existing');
-            return RemoteAssetBundle(existing, root, fresh: false);
+            return _bundle(existing, root);
           }
         }
       } catch (_) {
