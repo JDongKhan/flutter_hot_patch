@@ -1,0 +1,25 @@
+{
+  "name": "flutter_hot",
+  "buildTime": "2026-10-14T10:41:20.500309",
+  "resources": {
+    "flutter.js": "80f534bd51293d4e31a7cc638ed8cc08fb24567d64860a8654017fdcc67f2feb",
+    "provider.js": "08bb402de3453e218ce2e8bea8c042326fa80827267f36da33cf0ab505761f7e",
+    "app/model/app_models.js": "ceb3218bc900d5712973bf811c8481b7d54adf43878e802a5e91cc5dfa77d9e2",
+    "app/model/app_data.js": "e36df54a15162dd4973c7176dc21521599b76f2071c743f35ebdb57852d232b2",
+    "app/pages/orders_page.js": "f5e84820da3ea7d4080782b7de86772ae255e69cf813c72881f1c889409ae248",
+    "app/pages/community_page.js": "6c9c6a3c099effdaf0646c40837c0d4f08229aa61ed31d2ecaeade3fb10ee799",
+    "app/pages/home_page.js": "74dbc4343c06b696780cbc4a86c596ca5f3347c35e45d968e05fbff29f6d501d",
+    "app/pages/mine_page.js": "fe38e572ef8eea1fc4d08299c1d37751cfa1b99b8c15a0eb01e56014848a98a0",
+    "app/pages/detail_pages.js": "258a8ae3fa02e30bdccd6938164012f4c295ab78df4c703552d8a43632f2033e",
+    "app/app.js": "e1f24ed89f65797f471ee1e49d019b7809b324974d15e9910e9cb7efb90e89ce",
+    "components/widget_details.js": "b2b99d33da81409e64cf959151f2b5f6bda022200b34a7e97f6915b1aa0c5efb",
+    "components/provider_component.js": "6d1142882b0f1c42233c141f0eaedb630cc69970969917a9be5c7d8473ac4888",
+    "components/banner_component.js": "937e3de81e84737edaf67d7cc0838269987e51b9b1bd76b28d9891eab13364e6",
+    "components/composite_component.js": "4f0776d05f370327ea74fdee80567503d7d2fa6c377c1d063d07d75aefb9a72d",
+    "components/hello_component.js": "bfb5b88a55aede39f5cd45645e2b85fba906c0d7ff66f161826fec9c13a638f6",
+    "components/watch_demo.js": "6869621d55b570dd9ab0bd15368d7fdcb2b8050a02ebaac8491f3efa144f50df",
+    "model/user.js": "6624c73087bb4382f6bcd9e871fc0ec3bf41b3650a7d0c099cbdd378c0127b78",
+    "model/network_vm.js": "49252eaa2f85d340176ad87d2d58a19d768914443fbbb83ed49b8b18ba44781d",
+    "model/counter_vm.js": "e81a61bd8743ab0ddb020dc126627ae52e3d3782e360f39437666910097a6136"
+  }
+}

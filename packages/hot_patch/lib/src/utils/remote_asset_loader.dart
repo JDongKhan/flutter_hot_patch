@@ -17,7 +17,8 @@ import 'hot_patch_log.dart';
 /// 模块读取时用「localRoot + 虚拟路径」拼出本地文件路径，判断文件存在即读本地，
 /// 不存在回退内置 asset——**不需要任何虚拟路径映射表**，文件系统即索引。
 class RemoteAssetBundle {
-  const RemoteAssetBundle(this.entryJsAsset, this.localRoot, {this.fresh = false});
+  const RemoteAssetBundle(this.entryJsAsset, this.localRoot,
+      {this.fresh = false, this.buildTime});
 
   final String entryJsAsset;
   final String localRoot;
@@ -25,6 +26,10 @@ class RemoteAssetBundle {
   /// true = 本次是重新下载解压（zip 有更新）；false = 304 复用本地缓存。
   /// JsUiWidget 据此决定是否清除 JsRuntimeManager 的模块缓存。
   final bool fresh;
+
+  /// 包根 `manifest.json` 里的 `buildTime`（补丁打包时间）；无清单时为 null。
+  /// 仅供调试展示（JsUiWidget 的 `showBuildTime`），不影响加载。
+  final String? buildTime;
 }
 
 /// 网络补丁包加载器：`http(s)://` 开头的 jsAsset → 下载 zip → 校验格式 →
@@ -35,6 +40,25 @@ class RemoteAssetBundle {
 /// 没有则下载解压后落盘再返回。
 class RemoteAssetLoader {
   RemoteAssetLoader._();
+
+  /// 组包并读取包根清单里的打包时间（`manifest.json` 由 build_runner 产出、
+  /// 随 zip 分发；缺失/解析失败一律返回 null，不影响加载）。
+  static RemoteAssetBundle _bundle(String entry, String root, {bool fresh = false}) =>
+      RemoteAssetBundle(entry, root, fresh: fresh, buildTime: _readBuildTime(root));
+
+  /// 读包根 `manifest.json` 的 `buildTime` 字段；无清单 / 非 JSON / 字段缺失返回 null。
+  static String? _readBuildTime(String root) {
+    try {
+      final file = File('$root/manifest.json');
+      if (!file.existsSync()) return null;
+      final decoded = jsonDecode(file.readAsStringSync());
+      if (decoded is! Map) return null;
+      final buildTime = decoded['buildTime'];
+      return buildTime is String && buildTime.isNotEmpty ? buildTime : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// 判断 [jsAsset] 是否为网络补丁包地址（http:// 或 https:// 开头）。
   static bool isRemote(String jsAsset) =>
@@ -95,7 +119,7 @@ class RemoteAssetLoader {
             final entryFile = File('$root/$existing');
             if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
               HotPatchLog.log('remote asset fallback to cached: $url -> $existing');
-              return RemoteAssetBundle(existing, root, fresh: false);
+              return _bundle(existing, root);
             }
           }
           return null;
@@ -121,7 +145,7 @@ class RemoteAssetLoader {
             final entryFile = File('$root/$prevExisting');
             if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
               HotPatchLog.log('remote asset fallback to cached (bad zip): $url -> $prevExisting');
-              return RemoteAssetBundle(prevExisting, root, fresh: false);
+              return _bundle(prevExisting, root);
             }
           }
           return null;
@@ -147,7 +171,7 @@ class RemoteAssetLoader {
           return null;
         }
         HotPatchLog.log('remote bundle loaded (fresh): $url -> $entry');
-        return RemoteAssetBundle(entry, root, fresh: true);
+        return _bundle(entry, root, fresh: true);
       } finally {
         client.close(force: true);
       }

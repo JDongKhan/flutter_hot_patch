@@ -91,6 +91,8 @@ class AppShellJsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return JsUiWidget(
       jsAsset: _jsAsset,
+      // 右上角显示补丁打包时间（来自 patch/manifest.json，纯展示、不吃手势）。
+      showBuildTime: true,
       // nativeComponents: {
       //   // 三个 @UIComponentIgnore 的 tab 页：原生注入（HomePage 有 JS 产物，
       //   // 不需要在这里注册）。

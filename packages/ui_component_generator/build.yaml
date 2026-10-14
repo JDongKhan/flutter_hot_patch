@@ -59,3 +59,21 @@ builders:
         - "lib/generated/host_methods.dart"
     auto_apply: dependents
     build_to: source
+
+  # patch 清单 builder：每次 build 产出一份 patch/manifest.json（基本信息 +
+  # 打包时间 + 各 JS 资源的内容 hash）。挂在包根伪资产 $package$ 下，产物路径
+  # 静态、无需种子文件。
+  #
+  # `required_inputs: [".js"]` 是关键：它让 build_runner 把本 builder 排到
+  # **所有产出 .js 的 builder（ui_component / ui_widget）之后**的阶段——同一阶段
+  # 读不到彼此产物，更早阶段可以。于是本 builder 能用 findAssets('patch/**.js')
+  # 列出全部已生成 JS 并逐个读取计算 hash；新增产物自动进清单，无需维护列表。
+  ui_patch_manifest:
+    import: "package:ui_component_generator/builder.dart"
+    builder_factories: ["patchManifestBuilder"]
+    build_extensions:
+      "$package$":
+        - "patch/manifest.json"
+    required_inputs: [".js"]
+    auto_apply: dependents
+    build_to: source

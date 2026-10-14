@@ -10,6 +10,7 @@ import 'package:build/build.dart';
 
 import 'src/builders/ui_component/component_builder.dart';
 import 'src/builders/ui_host_register/host_register_builder.dart';
+import 'src/builders/ui_patch_manifest/patch_manifest_builder.dart';
 import 'src/builders/ui_widget/widget_module_builder.dart';
 
 /// 组件/模型 builder 工厂：`ui_component`。
@@ -52,5 +53,30 @@ Builder hostRegisterBuilder(BuilderOptions options) {
         import is String && import.isNotEmpty ? import : defaultRegisterImport,
     registerCall:
         call is String && call.isNotEmpty ? call : defaultRegisterCall,
+  );
+}
+
+/// patch 清单 builder 工厂：`ui_patch_manifest`。
+///
+/// 每次 build 在 `patch/manifest.json` 产出一份清单（基本信息 + 打包时间 +
+/// 各 JS 资源的内容 hash）。它靠 `required_inputs: [".js"]` 被排到
+/// `ui_component` / `ui_widget` **之后**的阶段，从而读到它们的产物并计算 hash。
+/// 基本信息可由使用方 `build.yaml` 覆盖（均为可选项，缺省取包名 / 省略版本）：
+///
+/// ```yaml
+/// targets:
+///   $default:
+///     builders:
+///       ui_component_generator:ui_patch_manifest:
+///         options:
+///           name: my_app
+///           version: 1.2.3
+/// ```
+Builder patchManifestBuilder(BuilderOptions options) {
+  final name = options.config['name'];
+  final version = options.config['version'];
+  return PatchManifestBuilder(
+    name: name is String && name.isNotEmpty ? name : null,
+    version: version is String && version.isNotEmpty ? version : null,
   );
 }

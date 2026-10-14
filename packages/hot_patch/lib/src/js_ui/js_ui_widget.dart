@@ -40,6 +40,7 @@ class JsUiWidget extends StatefulWidget {
     this.sharedManager,
     this.localRoot,
     this.registry,
+    this.showBuildTime = false,
   });
 
   /// 补丁入口 JS（asset 路径或 http(s):// zip 网络补丁）。
@@ -64,6 +65,13 @@ class JsUiWidget extends StatefulWidget {
   /// 宿主 widget 翻译注册表；null 用内置集合。
   final JsWidgetRegistry? registry;
 
+  /// 调试开关：在**右上角**显示所加载补丁的打包时间（取自包根 `manifest.json`
+  /// 的 `buildTime`，由 build_runner 产出、随 zip 分发）。
+  ///
+  /// 角标自身 [IgnorePointer] 包裹，只做展示、**不参与命中测试**，不影响任何
+  /// 手势/点击；无清单（如本地 asset 场景或旧包）时自动隐藏。
+  final bool showBuildTime;
+
   @override
   State<JsUiWidget> createState() => JsUiWidgetState();
 }
@@ -83,6 +91,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
   String? _rootId;
   String? _error;
   bool _loading = true;
+
+  /// 所加载补丁的打包时间（包根 `manifest.json` 的 `buildTime`）；无清单为 null。
+  String? _buildTime;
 
   @override
   void initState() {
@@ -137,6 +148,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
         if (bundle.fresh) {
           _manager.invalidateModules();
         }
+        // 记录该包的打包时间（调试展示用，见 showBuildTime）。
+        _buildTime = bundle.buildTime;
         entry = bundle.entryJsAsset;
         localRoot = bundle.localRoot;
       }
@@ -202,15 +215,40 @@ class JsUiWidgetState extends State<JsUiWidget> {
         child: const Center(child: CircularProgressIndicator()),
       );
     }
-    // 注意：不要在根结点外套额外的 Stack / Positioned 调试层——Stack 的最上层
-    // 子结点会参与 hit-test，覆盖下方真实内容的触摸区域（曾导致顶部 tab 点不动）。
-    return _JsNode(
+    // 根结点是唯一的「真实内容」；任何调试叠加层都必须满足两点，否则会顶掉
+    // 下方的手势（曾因未包裹的 Stack 顶层全宽 Positioned 让顶部整条区域点不动）：
+    //   1. 角标自带 IgnorePointer —— 不参与命中测试；
+    //   2. Stack 用 StackFit.passthrough —— 原样透传父约束给内容，不改变既有布局
+    //      （loose/expand 都会给内容另一套约束，Column 里会直接改变尺寸）。
+    final content = _JsNode(
       store: _store,
       id: _rootId!,
       registry: _registry,
       nativeComponents: widget.nativeComponents,
       invoke: _invoke,
     );
+    final buildTime = _buildTime;
+    if (!widget.showBuildTime || buildTime == null) return content;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        content,
+        Positioned(
+          top: 4,
+          right: 4,
+          child: _BuildTimeBadge(label: _formatBuildTime(buildTime)),
+        ),
+      ],
+    );
+  }
+
+  /// ISO-8601 打包时间 → `YYYY-MM-DD HH:mm:ss`；解析失败原样返回。
+  static String _formatBuildTime(String raw) {
+    final t = DateTime.tryParse(raw);
+    if (t == null) return raw;
+    String p(int n) => n.toString().padLeft(2, '0');
+    return '${t.year}-${p(t.month)}-${p(t.day)} '
+        '${p(t.hour)}:${p(t.minute)}:${p(t.second)}';
   }
 
   /// 失败后重走一遍加载：模块加载按文件幂等，重复调用无副作用。
@@ -293,6 +331,34 @@ class _JsLoadErrorView extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 右上角「补丁打包时间」角标（纯调试展示）。
+///
+/// 自带 [IgnorePointer]：叠加层只做展示、绝不参与命中测试——否则会吃掉下方
+/// 真实内容的手势（历史上出现过顶部整条区域点不动）。尺寸只随文字内容收缩，
+/// 不做任何拉伸，进一步压缩干扰面。
+class _BuildTimeBadge extends StatelessWidget {
+  const _BuildTimeBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 10, height: 1.2),
         ),
       ),
     );

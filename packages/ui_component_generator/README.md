@@ -44,6 +44,7 @@ dart run build_runner build --delete-conflicting-outputs
 | `lib/components/counter.dart` | `patch/components/counter.js` | 含 `@UIComponent` 的组件产物 |
 | `lib/model/user.dart` | `patch/model/user.js` | 普通类 / 静态单例（`export class` / `export const`） |
 | `lib/js_widgets.dart`（种子） | `patch/flutter.js`、`patch/provider.js` | **每个 package 一个文件**的 widget 工厂模块 |
+| （包根伪资产，无种子） | `patch/manifest.json` | patch 清单：基本信息 + 打包时间 + 各 JS 资源的内容 hash |
 
 - 按**文件内容**分流（与目录无关）：含 `@UIComponent` → 组件产物；仅含普通类
   （非私有、非抽象、非组件）→ 模型/单例产物；都没有 → 不产出。
@@ -102,7 +103,7 @@ class MyWidgetTranslator extends WidgetTranslator {
 
 | 目录 / 文件 | 作用 |
 | --- | --- |
-| `lib/builder.dart` | **对外入口**：`build.yaml` 的三个 builder 工厂函数 |
+| `lib/builder.dart` | **对外入口**：`build.yaml` 的四个 builder 工厂函数 |
 | `lib/src/translator/` | 翻译内核：Dart AST → JS（唯一入口 `translateClass`） |
 | `lib/src/builders/` | build_runner Builder 实现与产物组装 |
 
@@ -125,6 +126,9 @@ translator/  ←  builders/  ←  builder.dart
   组件/sliver 代理的 JS 类源码，仅本 builder 使用）
 - `ui_host_register/`：`host_register_builder`（宿主侧注册清单生成；
   @HostInjected 的识别口径在 `translator/host_injected.dart`）
+- `ui_patch_manifest/`：`patch_manifest_builder`（产出 `patch/manifest.json`；
+  靠 `required_inputs: [".js"]` 排到 `ui_component` / `ui_widget` 之后的阶段，
+  用 `findAssets('patch/**.js')` 列出全部 JS 产物逐个算 hash）
 - 根下为各 builder 共用的产物基础：`product_path` ·
   `js_widget_defs`（`nodeHelperPackage` / `packageModulePath` /
   有 JS 类的 widget 类型集合）

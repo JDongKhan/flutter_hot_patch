@@ -10,6 +10,8 @@ environment:
 dependencies:
   analyzer: ^7.0.0
   build: ^2.4.1
+  # patch 清单（patch/manifest.json）里资源的内容 hash：sha256
+  crypto: ^3.0.0
   # 扫全包 dart 源（BuildStep.findAssets）需要 Glob
   glob: ^2.1.2
 
