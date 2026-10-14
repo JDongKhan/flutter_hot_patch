@@ -61,10 +61,7 @@ class JsBuildContext {
   VoidCallback? on(String key) {
     final handler = props[key];
     if (handler == null) {
-      // 【临时诊断】事件键缺失 → onTap 为 null，点了必然没反应。
-      if (key == 'event') {
-        HotPatchLog.log('js_ui on("event"): props 无该键，keys=${props.keys.toList()}');
-      }
+      // 事件键缺失 → onTap 为 null，点了必然没反应。
       return null;
     }
     return () => invoke(handler);

@@ -347,6 +347,20 @@ ClassInfo translateClass(
   );
 }
 
+/// 类 + 同文件 State 类（StatefulWidget 的字段 / 方法 / 依赖分布在两个类里，
+/// 翻译与依赖发现都必须合并扫描）。非 StatefulWidget → 只返回自身。
+List<ClassDeclaration> classAndStateDecls(
+  ClassDeclaration decl,
+  CompilationUnit unit,
+) {
+  final stateName = _stateClassNameOf(decl);
+  if (stateName == null) return [decl];
+  for (final d in unit.declarations) {
+    if (d is ClassDeclaration && d.name.lexeme == stateName) return [decl, d];
+  }
+  return [decl];
+}
+
 /// 取 StatefulWidget 的 State 类名：解析 createState() 返回的构造
 /// （`_MyCardState()` 在无 resolution 下可能是 MethodInvocation）。
 /// 未声明 createState → null（StatelessWidget / 普通类）。

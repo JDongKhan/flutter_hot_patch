@@ -32,10 +32,8 @@ const String miniReactElementSource = r'''
   function invoke(id, payload) {
     var f = handlers[id];
     if (!f) {
-      // 【临时诊断】宿主回传的句柄 id 在 JS 侧找不到 —— 说明该结点下发时的
-      // handler 与当前 handlers 表不一致（已卸载回收 / 从未登记）。
-      console.warn('js_ui invoke: 句柄不存在 id=' + id +
-        '（当前登记数 ' + Object.keys(handlers).length + '）');
+      // 宿主回传的句柄 id 在 JS 侧找不到 —— 说明该结点下发时的 handler 与当前
+      // handlers 表不一致（已卸载回收 / 从未登记）。
       return;
     }
     if (typeof payload === 'string' && payload.length) {
@@ -141,8 +139,6 @@ const String miniReactComponentBaseSource = r'''
           new Function('return (' + expr + ');').call(self);
         };
     var handle = fn(function (payload) {
-      // 【临时诊断】确认句柄真正被执行（宿主点击 → invoke → 到此）。
-      console.log('js_ui bind 执行 expr=' + expr + ' id=' + handle.__fn);
       // 还原绑定时的构建位置：表达式若含 `this.__read/__watch`，按当时的
       // context 位置解析（点击时无 build 上下文，`building` 为 null）。
       var prev = building;
@@ -169,8 +165,6 @@ const String miniReactComponentBaseSource = r'''
     if (handle) { handle.__run = f; return handle; }
     var anchor = building || this;
     handle = fn(function (payload) {
-      // 【临时诊断】确认闭包句柄真正被执行。
-      console.log('js_ui bindFn 执行 key=' + key + ' id=' + handle.__fn);
       var prev = building;
       building = anchor;
       try { handle.__run(payload); }

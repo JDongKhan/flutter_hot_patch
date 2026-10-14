@@ -160,6 +160,16 @@ Set<String> referencedClassNames(
   return names;
 }
 
+/// 任意表达式里构造调用的类名集合（顶层常量初始化器用：`const List<Spot> kSpots
+/// = [Spot(...)]` 里被构造出来的模型类必须跟着常量一起产出）。与
+/// [referencedClassNames] 共用同一个收集器，口径一致。
+Set<String> ctorClassNames(Expression? expression) {
+  if (expression == null) return const {};
+  final collector = _CtorNameCollector();
+  expression.accept(collector);
+  return collector.names;
+}
+
 /// 收集表达式树里全部类型构造调用名（与类发现共用：字段类型 + 构造调用）。
 class _CtorNameCollector extends RecursiveAstVisitor<void> {
   final names = <String>{};

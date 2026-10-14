@@ -136,12 +136,14 @@ class ComponentBuilder implements Builder {
 
     // 收集本文件「根类」——两种文件走同一入口，差别只在 isComponent 参数：
     //   - 有 @UIComponent 类 → 根文件：根类 = 全部注解类（组件产物）；
-    //   - 否则 → **只有被注解组件依赖（可达）的文件才产出**（见
-    //     componentReachableFiles）：根类 = 本文件 public 的 widget 类
-    //     （与注解组件同一条渲染路径）+ public 普通类（模型）。
-    //     数据的可翻译性由「被引用」决定（`model/user.dart` 同理）——入口页 /
-    //     展示页（main.dart、widget_showcase.dart、detail_pages.dart）不被任何
-    //     注解组件引用，故不产出 JS；@UIComponentIgnore / @HostInjected 亦不翻译。
+    //   - 否则 → 双重判据（见 componentTranslationScope）：文件级可达 + 符号级
+    //     「被引用」——根类 = 本文件里**真的被会产出的类引用到**的类
+    //     （public 的 widget 类与普通类）。数据的可翻译性由「被引用」决定
+    //     （`model/user.dart` 同理）——入口页 / 展示页（main.dart、
+    //     widget_showcase.dart）不被任何注解组件引用、不产出；`detail_pages.dart`
+    //     只有三个 tab 页订单卡真的用到的 MiniButton 产出，只在 @HostInjected
+    //     宿主方法体里 `new` 出来的详情页不翻译（依赖链在 @HostInjected 处断掉）。
+    //     @UIComponentIgnore / @HostInjected 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
     final annotated = <ClassDeclaration>[
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>())
@@ -150,11 +152,13 @@ class ComponentBuilder implements Builder {
     if (annotated.isNotEmpty) {
       roots.addAll([for (final d in annotated) (d, true)]);
     } else {
-      final reachable = await componentReachableFiles(buildStep);
-      if (!reachable.contains(inputId.path)) return;
+      final scope = await componentTranslationScope(buildStep);
+      if (!scope.reachableFiles.contains(inputId.path)) return;
+      final neededHere = scope.neededClasses[inputId.path] ?? const <String>{};
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
         final name = d.name.lexeme;
         if (name.startsWith('_') || d.abstractKeyword != null) continue;
+        if (!neededHere.contains(name)) continue;
         if (sameFileSingletonNames.contains(name)) continue;
         if (isIgnoredClass(parsed.unit, name)) continue;
         final info = classTable[name];

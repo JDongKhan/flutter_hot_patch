@@ -169,18 +169,14 @@ class JsUiWidgetState extends State<JsUiWidget> {
   /// 绑到产出该结点的组件实例，绑定信息随 props 传下来）→ `invoke`。
   void _invoke(Object? handler, [Object? payload]) {
     if (handler is! Map) {
-      // 【临时诊断】handler 形态不对 → 静默丢弃，点了没反应。
-      HotPatchLog.log('js_ui _invoke: handler 非 Map（${handler.runtimeType}=$handler）→ 丢弃');
+      // handler 形态不对 → 静默丢弃，点了没反应。
       return;
     }
     final id = handler['__fn'];
     if (id is! String) {
-      // 【临时诊断】句柄缺 __fn → 静默丢弃。
-      HotPatchLog.log('js_ui _invoke: handler 缺 __fn（keys=${handler.keys.toList()}）→ 丢弃');
+      // 句柄缺 __fn → 静默丢弃。
       return;
     }
-    // 【临时诊断】确认宿主点击确实走到了回传点。
-    HotPatchLog.log('js_ui _invoke: 回传 JS id=$id payload=$payload');
     // payload 双重编码：内层把值变成 JSON 文本（true→"true"、'a'→"\"a\""），
     // 外层再包成 JS 字符串字面量；JS 侧 invoke 对字符串参数做一次
     // JSON.parse 还原原始类型。单层编码会把字符串 payload 解析失败置 null。
