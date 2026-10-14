@@ -248,7 +248,8 @@ export class _DevRow {
   }
   build() {
     return __h('GestureDetector', {
-        "event": this.__bind("this.onTap()")
+        "event": this.__bind("this.onTap()"),
+        "behavior": "opaque"
       }, [
         __h('Padding', {
             "padding": {
