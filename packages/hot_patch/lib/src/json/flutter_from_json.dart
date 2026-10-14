@@ -796,4 +796,12 @@ const Map<String, IconData> _icons = {
   'volume_up': Icons.volume_up,
   'warning': Icons.warning,
   'wifi': Icons.wifi,
+  'height': Icons.height,
+  'arrow_right': Icons.arrow_right,
+  'build': Icons.build,
+  'center_focus_strong' : Icons.center_focus_strong,
+  'straighten': Icons.straighten,
+  'tune': Icons.tune,
+  'widgets_outlined': Icons.widgets_outlined,
+  'compare_arrows': Icons.compare_arrows,
 };

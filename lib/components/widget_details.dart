@@ -619,13 +619,23 @@ class _SliverDetailState extends State<SliverDetail> {
   /// 句柄、真实实例在宿主），JS→宿主又只有异步桥——故这一处 await 宿主回填的
   /// 测量结果（见 capabilities/key_bridge.dart 的 `measure` op）。
   ///
-  /// `dynamic` 中转（keyProxy）：GlobalKey 在 Dart 侧没有 measure()（该方法由
-  /// JS 侧 KeyRef 代理提供），dynamic 让同一份代码在两端都成立——原生端这里走
-  /// 不到（SliverDetail 仅 JS 热更版展示），JS 端落到 KeyRef.prototype.measure。
+  /// 链路与 Flutter 原生一致：`currentContext → findRenderObject()` 拿到
+  /// 「RenderObject 代理」再取位置尺寸（`measure` 挂在代理上，GlobalKey 本身没有
+  /// 这个方法）。`dynamic` 中转在 findRenderObject 这一跳：原生端返回 RenderObject
+  /// （没有 measure()），JS 端返回 KeyRef 代理（有 measure()）——同一份代码两端都
+  /// 成立；本组件只在 JS 热更版展示（widget_showcase 走 JsUiWidget），原生端不执行。
   Future<void> _measureFixed() async {
-    final dynamic keyProxy = _fixedKey;
-    final dynamic rect = await keyProxy.measure();
+    final ctx = _fixedKey.currentContext;
+    if (ctx == null) {
+      return;
+    }
+    final dynamic box = ctx.findRenderObject();
+    if (box == null) {
+      return;
+    }
+    final dynamic rect = await box.measure();
     if (rect == null) {
+      setState(() => _measureText = '量不到（未布局）');
       return;
     }
     setState(() {

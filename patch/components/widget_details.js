@@ -906,9 +906,17 @@ export class SliverDetail {
     target.showOnScreen();
   }
   async _measureFixed() {
-    var keyProxy = this._fixedKey;
-    var rect = await keyProxy.measure();
+    var ctx = this._fixedKey.currentContext;
+    if ((ctx == null)) {
+      return;
+    }
+    var box = ctx.findRenderObject();
+    if ((box == null)) {
+      return;
+    }
+    var rect = await box.measure();
     if ((rect == null)) {
+      this.setState(function(){ this._measureText = "量不到（未布局）"; });
       return;
     }
     this.setState(function(){ this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
