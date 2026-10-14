@@ -67,7 +67,6 @@ class _CommunityPageState extends State<CommunityPage> {
   @override
   Widget build(BuildContext context) {
     print("-----$_filterOpen");
-    final posts = _visiblePosts;
     return Column(
       children: [
         // 顶部双 tab（广场 / 推荐）
@@ -189,63 +188,117 @@ class _CommunityPageState extends State<CommunityPage> {
         // 列表 + 下拉筛选面板：面板顶 = 列表区 Stack 顶部（即筛选条下沿），
         // 位置由布局决定，不需要任何测量。
         Expanded(
-          child: Stack(
-            children: [
-              ListView(
-                padding: const EdgeInsets.only(bottom: 20),
-                children: [
-                  if (posts.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 60),
-                      child: Center(
-                        child: Text('没有符合条件的帖子，试试放宽筛选条件', style: TextStyle(fontSize: 13, color: Color(0xFF98A0AC))),
-                      ),
-                    )
-                  else
-                    for (final p in posts)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                        child: _PostCard(post: p, onTap: () => AppRouter.openPost(p.id)),
-                      ),
-                ],
-              ),
-              // 筛选面板（从筛选条下沿展开，覆盖列表区）
-              if (_filterOpen) ...[
-                Positioned.fill(
-                  child: GestureDetector(
-                    onTap: _toggleFilter,
-                    child: Container(color: const Color(0x66000000)),
-                  ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  child: _FilterPanel(
-                    sort: _sort,
-                    type: _type,
-                    dist: _dist,
-                    price: _price,
-                    onPick: (key, value) => setState(() {
-                      switch (key) {
-                        case 'sort':
-                          _sort = value;
-                        case 'type':
-                          _type = value;
-                        case 'dist':
-                          _dist = value;
-                        case 'price':
-                          _price = value;
-                      }
-                    }),
-                    onReset: _resetFilter,
-                    onApply: _toggleFilter,
-                  ),
-                ),
-              ],
-            ],
+          child: _ListContent(
+            resetFilter: _resetFilter,
+            openFilter: _filterOpen,
+            toggleFilter: _toggleFilter,
+            list: _visiblePosts,
+            sort: _sort,
+            type: _type,
+            dist: _dist,
+            price: _price,
+            onSelectFilter: (key, value) => setState(() {
+              switch (key) {
+                case 'sort':
+                  _sort = value;
+                case 'type':
+                  _type = value;
+                case 'dist':
+                  _dist = value;
+                case 'price':
+                  _price = value;
+              }
+            }),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _ListContent extends StatefulWidget {
+  final List<Post> list;
+  final bool openFilter;
+  final String sort;
+  final String type;
+  final String dist;
+  final String price;
+  final VoidCallback resetFilter;
+  final Function(String, String) onSelectFilter;
+  final VoidCallback toggleFilter;
+  const _ListContent({
+    required this.list,
+    this.openFilter = false,
+    required this.sort,
+    required this.type,
+    required this.dist,
+    required this.price,
+    required this.onSelectFilter,
+    required this.resetFilter,
+    required this.toggleFilter,
+  });
+
+  @override
+  State<_ListContent> createState() => _ListContentState();
+}
+
+class _ListContentState extends State<_ListContent> {
+  @override
+  void didUpdateWidget(covariant _ListContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print("--0");
+    if (widget.list.length != oldWidget.list.length) {
+      print("--1");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final posts = widget.list;
+    final filterOpen = widget.openFilter;
+    return Stack(
+      children: [
+        ListView(
+          padding: const EdgeInsets.only(bottom: 20),
+          children: [
+            if (posts.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 60),
+                child: Center(
+                  child: Text('没有符合条件的帖子，试试放宽筛选条件', style: TextStyle(fontSize: 13, color: Color(0xFF98A0AC))),
+                ),
+              )
+            else
+              for (final p in posts)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  child: _PostCard(post: p, onTap: () => AppRouter.openPost(p.id)),
+                ),
+          ],
+        ),
+        // 筛选面板（从筛选条下沿展开，覆盖列表区）
+        if (filterOpen) ...[
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: widget.toggleFilter,
+              child: Container(color: const Color(0x66000000)),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: _FilterPanel(
+              sort: widget.sort,
+              type: widget.type,
+              dist: widget.dist,
+              price: widget.price,
+              onPick: widget.onSelectFilter,
+              onReset: widget.resetFilter,
+              onApply: widget.toggleFilter,
+            ),
+          ),
+        ],
       ],
     );
   }
