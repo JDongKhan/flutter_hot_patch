@@ -466,7 +466,7 @@ class _ScrollDetailState extends State<ScrollDetail> {
   /// 按钮：横向滚动视图跳到底（controller 的「写」能力）。
   /// 原生侧直接 jumpTo；JS 热更侧翻译成 `this._scrollController.jumpTo(
   /// this._scrollController.position.maxScrollExtent)`，JS 代理实例经
-  /// 实例级 host 通道（scrollControllerJumpTo，载荷带 id）控制真实 controller。
+  /// 通用句柄 op（handleOp 'call' jumpTo，载荷带句柄 id）控制真实 controller。
   void _scrollToEnd() {
     _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
   }

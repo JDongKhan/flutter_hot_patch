@@ -8,11 +8,12 @@
 //     Flutter widget。controller 有两种来源：
 //       1) 不传 → 由祖先 DefaultTabController 提供（官方惯用法
 //          `DefaultTabController(length:n, child: Column([TabBar, Expanded(TabBarView)]))`）；
-//       2) 显式传 TabController → 走本文件的 TabController id-bridge（与
-//          ScrollController 同款 id 绑定）：JS 实例跨桥序列化为
-//          `{__jsuiTabController: id, length, initialIndex}`，宿主按 id 取/建
-//          真实 TabController 并挂到 TabBar / TabBarView；用户点 tab 经
-//          invoke 回传页码给 JS 实例，JS 侧 `index= / animateTo()` 下发驱动宿主。
+//       2) 显式传 TabController → 走本文件的 TabController 句柄桥（与
+//          ScrollController 同款，通用层见 capabilities/handle_registry.dart）：
+//          JS 实例跨桥序列化为 `{__handle: id, length, initialIndex}`，宿主按 id
+//          取/建真实 TabController 并挂到 TabBar / TabBarView；用户点 tab 经
+//          invoke 回传页码给 JS 实例，JS 侧 `index= / animateTo()` 走通用 op
+//          下发驱动宿主。
 //   - Drawer / DrawerHeader：还原为真实 Drawer。Scaffold.drawer 接进真实
 //     Scaffold 后 AppBar 自动出现汉堡按钮，开启抽屉原生可用。
 //   - 抽屉关闭：Drawer 是 Scaffold 的后代，其子树内 `Scaffold.maybeOf(context)`
@@ -25,11 +26,11 @@ import 'package:flutter/scheduler.dart'
     show Ticker, TickerCallback, TickerProvider;
 
 import '../../json/flutter_from_json.dart';
-import '../../services/js_runtime_manager.dart';
 import '../js_widget_registry.dart';
+import 'handle_registry.dart';
 
 // ---------------------------------------------------------------------------
-// TabController id-bridge
+// TabController 句柄桥
 // （JS 侧代理类见 capabilities/tab_controller_js.dart，与 ScrollController 同构）
 // ---------------------------------------------------------------------------
 
@@ -37,7 +38,7 @@ final Map<String, TabController> _jsTabControllers = {};
 final Map<String, Object?> _jsTabIndexHandles = {};
 final Set<String> _jsTabAttached = {};
 
-bool _tabControllerChannelsRegistered = false;
+bool _tabKindRegistered = false;
 
 /// 脱离 State 生命周期的 TickerProvider：真实 TabController 的生命周期由 JS 侧
 /// dispose 通道管理（不随某次 widget 卸载而失效），故不能用某个 State 的
@@ -53,43 +54,43 @@ class _DetachedTickerProvider implements TickerProvider {
 
 const TickerProvider _detachedTickerProvider = _DetachedTickerProvider();
 
-/// 幂等注册 TabController 桥接通道（由 js_ui_capabilities.ensureJsUiCapabilities
-/// 聚合调用；registerHostMethod 全局表 + 断言防重复，故用标志位兜底）。
+/// 幂等注册 TabController 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities
+/// 聚合调用）。
 void ensureTabControllerChannels() {
-  if (_tabControllerChannelsRegistered) return;
-  _tabControllerChannelsRegistered = true;
-  JsRuntimeManager.registerHostMethod(
-      'tabControllerRegister', (Object? id, Object? indexFn) {
-    if (id is String) _jsTabIndexHandles[id] = indexFn;
-  });
-  JsRuntimeManager.registerHostMethod(
-      'tabControllerSetIndex', (Object? id, Object? index) {
-    final c = id is String ? _jsTabControllers[id] : null;
-    if (c == null || index is! num) return;
-    c.index = index.toInt();
-  });
-  JsRuntimeManager.registerHostMethod(
-      'tabControllerAnimateTo', (Object? id, Object? index) {
-    final c = id is String ? _jsTabControllers[id] : null;
-    if (c == null || index is! num) return;
-    c.animateTo(index.toInt());
-  });
-  JsRuntimeManager.registerHostMethod('tabControllerDispose', (Object? id) {
-    if (id is! String) return;
-    _jsTabControllers.remove(id)?.dispose();
-    _jsTabIndexHandles.remove(id);
-    _jsTabAttached.remove(id);
-  });
+  if (_tabKindRegistered) return;
+  _tabKindRegistered = true;
+  registerHandleKind('ctrl/Tab', JsHandleKind(
+    onCreate: (id, meta) {
+      _jsTabIndexHandles[id] = meta is Map ? meta['fn'] : null;
+    },
+    onOp: (id, op, payload) {
+      final c = _jsTabControllers[id];
+      if (c == null) return null;
+      if (op == 'set' && payload['name'] == 'index') {
+        final v = payload['value'];
+        if (v is num) c.index = v.toInt();
+      } else if (op == 'call' && payload['method'] == 'animateTo') {
+        final args = payload['args'] is List ? payload['args'] as List : const [];
+        if (args.isNotEmpty && args[0] is num) c.animateTo((args[0] as num).toInt());
+      }
+      return null;
+    },
+    onRelease: (id) {
+      _jsTabControllers.remove(id)?.dispose();
+      _jsTabIndexHandles.remove(id);
+      _jsTabAttached.remove(id);
+    },
+  ));
 }
 
-/// JS TabController 句柄：`{__jsuiTabController: id, length, initialIndex}`。
+/// JS TabController 句柄：`{__handle: id, length, initialIndex}`。
 typedef TabControllerHandle = ({String id, int length, int initialIndex});
 
 /// 从 props 的 controller 取值里解析 JS TabController 句柄；非句柄（缺省/null）
 /// → null，即「由祖先 DefaultTabController 提供」。
 TabControllerHandle? tabControllerHandleOf(Object? prop) {
   if (prop is! Map) return null;
-  final id = prop['__jsuiTabController'];
+  final id = prop['__handle'];
   if (id is! String) return null;
   final length = prop['length'];
   final initialIndex = prop['initialIndex'];
@@ -111,7 +112,7 @@ class _JsTabControllerHost extends StatefulWidget {
     required this.buildChild,
   });
 
-  /// JS 侧 TabController 实例的 id（nextId('tc')，如 'tc#5'）+ 构造参数。
+  /// JS 侧 TabController 实例的句柄 id（如 'js:ctrl/Tab#5'）+ 构造参数。
   final TabControllerHandle handle;
 
   /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
@@ -154,8 +155,8 @@ class _JsTabControllerHostState extends State<_JsTabControllerHost> {
 
   @override
   void dispose() {
-    // 真实 controller 生命周期由 JS 侧 dispose()（tabControllerDispose
-    // 通道）管理；页面卸载时 JS 组件 dispose 同样触发，这里不重复释放。
+    // 真实 controller 生命周期由 JS 侧句柄释放驱动（jsHandle release →
+    // ctrl/Tab onRelease）；页面卸载时 JS 组件 dispose 同样触发，这里不重复。
     super.dispose();
   }
 

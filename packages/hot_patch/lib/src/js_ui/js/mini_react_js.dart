@@ -28,11 +28,11 @@ const String miniReactElementSource = r'''
     return { type: type, props: props || {}, children: ch };
   }
 
-  // 事件回调无法跨语言传递 -> 登记为句柄，宿主侧回调用 invoke 触发。
+  // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local：由拥有者
+  // 代码显式释放，如构建期 __bind 随组件卸载释放，见【1b】句柄注册表）。
+  // 宿主侧回调用 invoke 触发。
   function fn(f) {
-    handlerSeq += 1;
-    var id = 'fn' + handlerSeq;
-    handlers[id] = f;
+    var id = reg(f, 'fn', { scope: 'local', sync: false });
     return { __fn: id };
   }
 
@@ -42,10 +42,11 @@ const String miniReactElementSource = r'''
   // wrapper 用 `arguments` 汇总任意个数再摊开调用目标方法。故 0/1/N 参事件共用
   // 同一条通路，新增多参事件无需改这里。
   function invoke(id, args) {
-    var f = handlers[id];
-    if (!f) {
+    var h = handles[id];
+    var f = h && h.obj;
+    if (typeof f !== 'function') {
       // 宿主回传的句柄 id 在 JS 侧找不到 —— 说明该结点下发时的 handler 与当前
-      // handlers 表不一致（已卸载回收 / 从未登记）。
+      // 句柄表不一致（已卸载回收 / 从未登记）。
       return;
     }
     if (typeof args === 'string' && args.length) {
@@ -330,7 +331,7 @@ const String miniReactReconcilerSource = r'''
 
     if (typeof el.type === 'string') {
       var hi = {
-        __k: HOST, __id: nextId(el.type), __type: el.type, __root: rootFor(parent),
+        __k: HOST, __id: nodeId(el.type), __type: el.type, __root: rootFor(parent),
         __props: el.props, __children: [], __parent: parent
       };
       emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
@@ -351,7 +352,7 @@ const String miniReactReconcilerSource = r'''
 
     var ci = new el.type(el.props, el.children);
     ci.__k = COMP;
-    ci.__id = nextId(compName(el.type));
+    ci.__id = compId(el.type);
     ci.__el = el;
     ci.__parent = parent;
     ci.__slot = slot;
@@ -510,16 +511,16 @@ const String miniReactReconcilerSource = r'''
       }
       // [provider] 从各 VM 的监听表里摘掉自己（订阅登记在消费者侧 `__vmSubs`）。
       unsubscribeAll(inst);
-      // [mini-react] 释放构建期登记的（实例, 表达式）事件句柄，避免 handlers 泄漏。
+      // [mini-react] 释放构建期登记的（实例, 表达式）事件句柄，避免句柄泄漏。
       var bag = inst.__bound;
       if (bag) {
-        for (var k in bag) { delete handlers[bag[k].__fn]; }
+        for (var k in bag) { releaseHandle(bag[k].__fn, false); }
         inst.__bound = null;
       }
       // 同理解放 __bindFn 登记的构建期闭包句柄。
       var bagFn = inst.__boundFn;
       if (bagFn) {
-        for (var k in bagFn) { delete handlers[bagFn[k].__fn]; }
+        for (var k in bagFn) { releaseHandle(bagFn[k].__fn, false); }
         inst.__boundFn = null;
       }
       markUnmounted(inst.__child);

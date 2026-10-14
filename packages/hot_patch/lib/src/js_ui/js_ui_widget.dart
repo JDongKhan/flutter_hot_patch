@@ -6,6 +6,7 @@ import '../services/builtin_host_methods.dart';
 import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
+import 'capabilities/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'js_ui_store.dart';
 import 'js_widget_registry.dart';
@@ -203,6 +204,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
   @override
   void dispose() {
     _manager.evaluate('if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});');
+    // 页面级兜底：本页登记的跨语言句柄在当前页面销毁时统一释放（正常路径下
+    // JS 的 disposeRoot 已逐个通知到本端，此处为空操作；异常路径兜底）。
+    releasePageHandles(_pageKey);
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
     jsUiPageStores.remove(_pageKey);
     super.dispose();

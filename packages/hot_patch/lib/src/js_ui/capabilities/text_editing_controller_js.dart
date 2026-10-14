@@ -2,40 +2,32 @@
 // runtime_source 把骨架与各能力片段拼接后注入（同一 IIFE 作用域）。
 const String textEditingControllerJsSource = r'''
   // TextEditingController：JS 侧代理类，与宿主真实 TextEditingController 按
-  // id 绑定（同 ScrollController 模式）：
-  //   - 构造：host('textEditingControllerRegister', [id, textFn]) → 宿主创建
-  //     真实 controller 并登记输入回传句柄；TextField(controller: 句柄) 渲染时
-  //     宿主按 id 取真实实例，用户输入经 textFn 回传 JS 镜像并触发 listeners。
+  // **句柄 id** 绑定（通用层，同 ScrollController 模式，见【1b】句柄注册表）：
+  //   - 构造：登记 kind=ctrl/Text 句柄（scope=page）+ host 通知宿主创建真实
+  //     controller 并登记输入回传句柄；TextField(controller: 句柄) 渲染时宿主按
+  //     id 取真实实例，用户输入经 textFn 回传 JS 镜像并触发 listeners。
   //   - text：本地镜像（宿主回传更新），setter 发 host SetText 同步宿主；
   //   - selection：本地镜像，setter 发 host SetSelection；
   //   - clear()：发 host Clear + 清镜像；
-  //   - dispose：释放登记句柄 + 通知宿主释放真实 controller（幂等）。
-  // 跨桥序列化：props 里的实例经 toJSON 输出 `{__jsuiTextEditingController: id}`。
-  // 释放（组件 dispose / 页面退出兜底共用入口，见 releaseController 的 __kind 分派）。
-  function releaseTextEditingController(tec) {
-    if (!tec) { return; }
-    if (tec.__textFn) { delete handlers[tec.__textFn.__fn]; tec.__textFn = null; }
-    if (tec.__id != null) {
-      host('textEditingControllerDispose', [tec.__id]);
-      tec.__id = null;
+  //   - dispose：通用 releaseHandle（释放内部句柄 + 通知宿主释放真实 controller）。
+  // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`。
+  defineHandleKind('ctrl/Text', {
+    release: function (h) {
+      var tec = h.obj;
+      if (!tec) { return; }
+      if (tec.__textFn) { releaseHandle(tec.__textFn.__fn, false); tec.__textFn = null; }
+      tec.__listeners = [];
     }
-    tec.__listeners = [];
-  }
+  });
   function TextEditingController(initial) {
-    this.__kind = 'tec';
-    this.__id = nextId('tec');
     this.__listeners = [];
     this.__text =
       (initial && typeof initial.text === 'string') ? initial.text : '';
     this.__selection = null;
     var self = this;
     this.__textFn = fn(function (t) { self.__onHostText(t); });
-    if (activeRoot) {
-      var list = pageControllers[activeRoot.key] ||
-        (pageControllers[activeRoot.key] = []);
-      list.push(this);
-    }
-    host('textEditingControllerRegister', [this.__id, this.__textFn]);
+    // 登记为句柄（scope=page）：自动同步宿主 onCreate（meta 携带输入回传句柄）。
+    this.__id = reg(this, 'ctrl/Text', { meta: { fn: this.__textFn } });
   }
   TextEditingController.prototype.addListener = function (f) {
     if (typeof f === 'function') { this.__listeners.push(f); }
@@ -50,21 +42,22 @@ const String textEditingControllerJsSource = r'''
   };
   TextEditingController.prototype.clear = function () {
     this.__text = '';
-    if (this.__id != null) { host('textEditingControllerClear', [this.__id]); }
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'clear' }); }
     this.__notify();
   };
   TextEditingController.prototype.dispose = function () {
-    releaseTextEditingController(this);
+    releaseHandle(this.__id);
+    this.__id = null;
   };
   TextEditingController.prototype.toJSON = function () {
-    return { __jsuiTextEditingController: this.__id };
+    return { __handle: this.__id };
   };
   Object.defineProperty(TextEditingController.prototype, 'text', {
     get: function () { return this.__text; },
     set: function (v) {
       this.__text = (v == null) ? '' : String(v);
       if (this.__id != null) {
-        host('textEditingControllerSetText', [this.__id, this.__text]);
+        handleOp(this.__id, 'set', { name: 'text', value: this.__text });
       }
       this.__notify();
     }
@@ -76,7 +69,7 @@ const String textEditingControllerJsSource = r'''
       if (this.__id != null) {
         var b = (s && typeof s.baseOffset === 'number') ? s.baseOffset : 0;
         var e = (s && typeof s.extentOffset === 'number') ? s.extentOffset : b;
-        host('textEditingControllerSetSelection', [this.__id, b, e]);
+        handleOp(this.__id, 'call', { method: 'setSelection', args: [b, e] });
       }
     }
   });

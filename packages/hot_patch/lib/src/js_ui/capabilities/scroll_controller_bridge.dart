@@ -1,75 +1,78 @@
-// ===== 能力：ScrollController id-bridge + 滚动视图/sliver 组件注册 =====
+// ===== 能力：ScrollController 句柄桥 + 滚动视图/sliver 组件注册 =====
 //
-// 一个能力 = 桥接表 + 通道 + 桥接组件 + 组件注册，全部内聚在本文件。
-// 未来新增滚动域能力（如 ScrollbarController、PageController）时新建
-// capabilities/xxx_bridge.dart，不碰核心文件（js_widget_registry /
-// js_ui_widget / runtime_source 的骨架部分）。
+// 一个能力 = 描述符 + 通道 + 桥接组件 + 组件注册，全部内聚在本文件。
 //
-// 本能力做什么：
-//   - JS 侧 `new ScrollController()` 经 scrollControllerRegister 通道登记
-//     metrics 转发句柄；宿主渲染 SingleChildScrollView / ListView /
-//     CustomScrollView / GridView（controller: {__jsuiScrollController: id}）
-//     时按 id 取/建真实 controller 并挂转发（滚动 → invoke 句柄 → JS 实例
-//     更新镜像 → 触发其 listeners）。
-//   - jumpTo/animateTo/dispose 走实例级通道。
-//   - sliver 家族（SliverList/SliverAppBar/SliverPadding/...）与四个滚动视图
-//     的注册一并收敛于此（滚动能力域）。
+// 句柄桥（通用层，见 capabilities/handle_registry.dart）：
+//   JS 侧 `new ScrollController()` 经 `reg(obj, 'ctrl/Scroll', {meta:{fn}})` 登记，
+//   通用通道 `jsHandle` 的 create 落到本文件的 `ctrl/Scroll` 描述符 → 创建宿主
+//   真实 ScrollController 并登记 metrics 转发句柄；渲染 SingleChildScrollView /
+//   ListView / CustomScrollView / GridView（controller: {__handle: id}）时按 id
+//   取真实 controller 并挂转发（滚动 → invoke 句柄 → JS 实例更新镜像 → 触发
+//   listeners）。jumpTo / animateTo 走通用 op（call）；dispose 走通用 release。
 import 'package:flutter/material.dart';
 
 import '../../json/flutter_from_json.dart';
-import '../../services/js_runtime_manager.dart';
 import '../js_widget_registry.dart';
+import 'handle_registry.dart';
 
 final Map<String, ScrollController> _jsScrollControllers = {};
 final Map<String, Object?> _jsScrollMetricsHandles = {};
 final Set<String> _jsScrollAttached = {};
 
-bool _scrollControllerChannelsRegistered = false;
+bool _scrollKindRegistered = false;
 
-/// 幂等注册 ScrollController 桥接通道（由 js_ui_capabilities.ensureJsUiCapabilities
-/// 聚合调用；registerHostMethod 全局表 + 断言防重复，故用标志位兜底）。
+/// 幂等注册 ScrollController 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities
+/// 聚合调用）。
 void ensureScrollControllerChannels() {
-  if (_scrollControllerChannelsRegistered) return;
-  _scrollControllerChannelsRegistered = true;
-  JsRuntimeManager.registerHostMethod('scrollControllerRegister',
-      (Object? id, Object? metricsFn) {
-    if (id is String) _jsScrollMetricsHandles[id] = metricsFn;
-  });
-  JsRuntimeManager.registerHostMethod('scrollControllerJumpTo',
-      (Object? id, Object? offset) {
-    final c = id is String ? _jsScrollControllers[id] : null;
-    if (c != null) c.jumpTo(offset is num ? offset.toDouble() : 0);
-  });
-  JsRuntimeManager.registerHostMethod('scrollControllerAnimateTo',
-      (Object? id, Object? offset, Object? ms, Object? curve) {
-    final c = id is String ? _jsScrollControllers[id] : null;
-    if (c == null) return;
-    final name = curve?.toString();
-    final curves = <String, Curve>{
-      'linear': Curves.linear,
-      'easeOut': Curves.easeOut,
-      'easeIn': Curves.easeIn,
-      'easeInOut': Curves.easeInOut,
-    };
-    c.animateTo(
-      offset is num ? offset.toDouble() : 0,
-      duration: Duration(milliseconds: (ms is num ? ms : 300).toInt()),
-      curve: curves[name] ?? Curves.easeOut,
-    );
-  });
-  JsRuntimeManager.registerHostMethod('scrollControllerDispose', (Object? id) {
-    if (id is! String) return;
-    _jsScrollControllers.remove(id)?.dispose();
-    _jsScrollMetricsHandles.remove(id);
-    _jsScrollAttached.remove(id);
-  });
+  if (_scrollKindRegistered) return;
+  _scrollKindRegistered = true;
+  registerHandleKind('ctrl/Scroll', JsHandleKind(
+    onCreate: (id, meta) {
+      // putIfAbsent：桥接组件若已先建（消息与 commit 的到达顺序），复用同一实例，
+      // 避免同一句柄 id 出现两个真实 controller。
+      _jsScrollControllers.putIfAbsent(id, () => ScrollController());
+      _jsScrollMetricsHandles[id] = meta is Map ? meta['fn'] : null;
+    },
+    onOp: (id, op, payload) {
+      final c = _jsScrollControllers[id];
+      if (c == null) return null;
+      if (op == 'call') {
+        final method = payload['method']?.toString() ?? '';
+        final args = payload['args'] is List ? payload['args'] as List : const [];
+        if (method == 'jumpTo') {
+          c.jumpTo(args.isNotEmpty && args[0] is num ? (args[0] as num).toDouble() : 0);
+        } else if (method == 'animateTo') {
+          final offset = args.isNotEmpty && args[0] is num ? (args[0] as num).toDouble() : 0.0;
+          final ms = args.length > 1 && args[1] is num ? (args[1] as num).toInt() : 300;
+          final name = args.length > 2 ? args[2]?.toString() : null;
+          const curves = <String, Curve>{
+            'linear': Curves.linear,
+            'easeOut': Curves.easeOut,
+            'easeIn': Curves.easeIn,
+            'easeInOut': Curves.easeInOut,
+          };
+          c.animateTo(
+            offset,
+            duration: Duration(milliseconds: ms),
+            curve: curves[name] ?? Curves.easeOut,
+          );
+        }
+      }
+      return null;
+    },
+    onRelease: (id) {
+      _jsScrollControllers.remove(id)?.dispose();
+      _jsScrollMetricsHandles.remove(id);
+      _jsScrollAttached.remove(id);
+    },
+  ));
 }
 
-/// 从 props 的 controller 取值里解析 JS ScrollController id。
-/// JS 侧实例跨桥经 toJSON 序列化为 `{__jsuiScrollController: 'sc#N'}`。
+/// 从 props 的 controller 取值里解析 JS ScrollController 句柄 id。
+/// JS 侧实例跨桥经 toJSON 序列化为 `{__handle: 'js:ctrl/Scroll#N'}`。
 String? scrollControllerIdOf(Object? prop) {
   if (prop is Map) {
-    final id = prop['__jsuiScrollController'];
+    final id = prop['__handle'];
     if (id is String) return id;
   }
   return null;
@@ -89,7 +92,7 @@ class _JsScrollControllerView extends StatefulWidget {
     required this.buildScrollView,
   });
 
-  /// JS 侧 ScrollController 实例的 id（nextId('sc')，如 'sc#5'）。
+  /// JS 侧 ScrollController 实例的句柄 id（如 'js:ctrl/Scroll#5'）。
   final String controllerId;
 
   /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
@@ -139,8 +142,8 @@ class _JsScrollControllerViewState extends State<_JsScrollControllerView> {
 
   @override
   void dispose() {
-    // 真实 controller 生命周期由 JS 侧 dispose()（scrollControllerDispose
-    // 通道）管理；页面卸载时 JS 组件 dispose 同样触发，这里不重复释放。
+    // 真实 controller 生命周期由 JS 侧句柄释放驱动（jsHandle release →
+    // ctrl/Scroll onRelease）；页面卸载时 JS 组件 dispose 同样触发，这里不重复。
     super.dispose();
   }
 
@@ -513,7 +516,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       ));
 
   // SingleChildScrollView：controller 是 JS ScrollController 实例的序列化句柄
-  // （{__jsuiScrollController: id}）时，返回 _JsScrollControllerView（按 id
+  // （{__handle: 'js:ctrl/Scroll#N'}）时，返回 _JsScrollControllerView（按 id
   // 绑定真实 controller，滚动经 invoke 回传 metrics 镜像到 JS 实例）；
   // 无 controller → 原样 SingleChildScrollView（存量 JS 兼容）。
   r.register('SingleChildScrollView', (c) {

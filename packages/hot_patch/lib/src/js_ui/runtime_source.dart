@@ -58,6 +58,7 @@ import 'package:flutter/foundation.dart'
 import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/tab_controller_js.dart';
 import 'capabilities/text_editing_controller_js.dart';
+import 'js/handle_registry_js.dart';
 import 'js/mini_react_js.dart';
 import 'js/change_notifier_js.dart';
 
@@ -167,17 +168,14 @@ const String _jsUiGlobalsTail = r'''
 
   // ===== 【1】运行环境｜全局状态与工具 ==================================
   var idSeq = 0;
-  var handlerSeq = 0;
-  var handlers = {};
   var HOST = 1, COMP = 2;
 
   // pageKey -> { key, inst, dirty, flushing, ops }
   var roots = {};
-  // pageKey -> 控制器[]（本页面构造的 ScrollController / TextEditingController /
-  // TabController）。控制器内登记的转发句柄是框架内部实现（用户无从释放），
-  // 故按页面登记，页面退出时由 disposeRoot 兜底释放；组件已在自身 dispose()
-  // 释放则为空操作（releaseController 按 __kind 分派）。
-  var pageControllers = {};
+  // pageKey -> 句柄 id[]：本页面（scope=page）登记的全部跨语言句柄（控制器 /
+  // 函数 / 未来的 Key / 对象…）。页面退出时由 disposeRoot 统一释放——新增能力
+  // 只要按句柄登记即自动获得页面回收，无需再改 disposeRoot（见【1b】句柄注册表）。
+  var pageHandles = {};
   // 正在 mount/patch/flush 的根；emit / 结点归属都读它。
   var activeRoot = null;
   // 正在构建的元素（build 执行期）——`context` 的锚点。watch/read 据此
@@ -186,9 +184,13 @@ const String _jsUiGlobalsTail = r'''
   // 以 owner 为 this 调用时，锚点仍是它们自身的结点。
   var building = null;
 
-  // 结点 id：`类型#序号`（序号全局单调，仅用于唯一化）。带类型是为了让宿主侧
-  // 的 ValueKey / Flutter DevTools 一眼看出这是哪个 widget / 组件（调试可读性）。
-  function nextId(kind) { idSeq += 1; return (kind || 'node') + '#' + idSeq; }
+  // id 统一规则：`<端>:<种类>/<子类>#<序号>`（子类可省），序号全局单调仅用于
+  // 唯一化。带前缀是为了让宿主侧 ValueKey / Flutter DevTools 一眼看出 id 的
+  // 归属端（js/dt）与种类（node/comp/ctrl/fn/key…）——调试可读性。
+  //   结点：js:node/<Type>#N（宿主结点）/ js:comp/<Name>#N（组件结点）
+  //   句柄：js:ctrl/Scroll#N、js:fn#N、dt:key/Global#N（见【1b】句柄注册表）
+  function nodeId(type) { idSeq += 1; return 'js:node/' + type + '#' + idSeq; }
+  function compId(type) { idSeq += 1; return 'js:comp/' + compName(type) + '#' + idSeq; }
 
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
@@ -317,13 +319,10 @@ const String _jsUiApi = r'''
       activeRoot = prev;
     }
     root.inst = null;
-    // 页面退出兜底：释放本页面登记的控制器（删转发句柄 + 通知宿主释放真实
-    // controller，按 __kind 分派）。组件若已在自身 dispose() 里释放，这里幂等。
-    var scs = pageControllers[pageKey];
-    if (scs) {
-      for (var i = 0; i < scs.length; i++) { releaseController(scs[i]); }
-      delete pageControllers[pageKey];
-    }
+    // 页面退出兜底：统一释放本页面登记的**全部**句柄（控制器 / 函数 / Key /
+    // 对象…，见【1b】句柄注册表）——拥有端销毁真实对象，对端丢句柄。组件若已
+    // 在自身 dispose() 里释放，这里幂等。
+    releasePageHandles(pageKey);
     delete roots[pageKey];
   }
 
@@ -340,7 +339,11 @@ const String _jsUiRuntimeSkeletonTail = r'''
     mount: mountRoot,
     dispose: disposeRoot,
     host: host,
-    resolve: resolveHost
+    resolve: resolveHost,
+    // 跨语言句柄（通用层）：Dart 侧 JsHandleRegistry 经此调用本端真实对象。
+    reg: reg,
+    release: releaseFromHost,
+    call: callHandle
   };
 
   G.__jsui = api;
@@ -362,6 +365,7 @@ String jsUiRuntimeSource() => [
   _jsUiGlobals(),
   _jsUiEmit,
   _jsUiHostBridge,
+  handleRegistryJsSource,
   miniReactElementSource,
   miniReactReconcilerUtilsSource,
   miniReactComponentBaseSource,
