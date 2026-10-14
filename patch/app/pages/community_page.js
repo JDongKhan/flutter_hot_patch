@@ -38,7 +38,6 @@ export class CommunityPage {
   }
   build() {
     console.log("-----" + this._filterOpen);
-    var posts = this._visiblePosts;
     return __h('Column', {}, [
         __h('Container', {
             "color": '#FFFFFF'
@@ -216,7 +215,7 @@ export class _ListContent {
           }, [
             ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "data": "没有符合条件的帖子，试试放宽筛选条件", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": () => { return __jsui.host("openPost", [p.id]); } }) ])]); } return out; })())
           ]),
-        ...(this.openFilter ? [__h('Positioned', { "left": 0, "top": 0, "right": 0, "bottom": 0 }, [ __h('GestureDetector', { "event": this.__bind("__noop") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "top": 0, "right": 0 }, [ __h(_FilterPanel, { "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
+        ...(this.openFilter ? [__h('Positioned', { "left": 0, "top": 0, "right": 0, "bottom": 0 }, [ __h('GestureDetector', { "event": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "top": 0, "right": 0 }, [ __h(_FilterPanel, { "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
       ]);
   }
 }
@@ -278,7 +277,7 @@ export class _FilterPanel {
             "spacing": 8,
             "runSpacing": 8
           }, [
-            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "event": this.__bindFn("() => widget.onPick(key, v)" + ":" + String(v), () => { this.widget.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": v, "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') } }) ]) ])]); } return out; })()
+            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "event": this.__bindFn("() => widget.onPick(key, v)" + ":" + String(v), () => { this.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": v, "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') } }) ]) ])]); } return out; })()
           ])
       ]);
   }
@@ -316,7 +315,7 @@ export class _FilterPanel {
                 __h('Row', {}, [
                     __h('Expanded', {}, [
                         __h('GestureDetector', {
-                            "event": this.__bind("__noop")
+                            "event": this.__bind("this.onReset()")
                           }, [
                             __h('Container', {
                                 "height": 42,
@@ -344,7 +343,7 @@ export class _FilterPanel {
                       }),
                     __h('Expanded', {}, [
                         __h('GestureDetector', {
-                            "event": this.__bind("__noop")
+                            "event": this.__bind("this.onApply()")
                           }, [
                             __h('Container', {
                                 "height": 42,

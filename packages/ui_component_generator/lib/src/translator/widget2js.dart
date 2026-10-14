@@ -611,12 +611,32 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     throw FormatException('"$method" 不是组件方法（未注册为动作）');
   }
 
+  /// `widget.<name>`（State 里引用 widget 自身成员）→ 成员名 `<name>`。
+  ///
+  /// widget 与 State 在 JS 侧合并成同一个类，`widget.x` 就是 `this.x`。
+  /// 注意 analyzer 里 [PrefixedIdentifier] 是 [Identifier] 的子类且 `name` 是
+  /// 整串 `widget.x`：不先识别出来，就会拿整串名字去查字段/动作表而必然失败。
+  /// 非 `widget.` 前缀（或非简单 `x.y`）返回 null。
+  String? widgetMemberName(Expression? e) =>
+      e is PrefixedIdentifier && e.prefix.name == 'widget'
+          ? e.identifier.name
+          : null;
+
   /// 事件参数解析：`onTap: _tap` / `onTap: () => _tap()` → 组件方法名；
   /// 带 receiver 的调用（Builder 闭包局部变量 `model.inc()`、
   /// `context.read<T>().reset()` 链式）→ 翻译为 JS 方法调用表达式
   /// （一比一，不查动作表——方法/属性全量生成，无需标注）。
   String eventExpr(Expression e) {
     if (e is Identifier) {
+      // `widget.<name>`（State 里引用 widget 自身的字段/方法，如
+      // `onReset: widget.onReset`）：合并类里就是实例成员，调它即可。
+      final wm = widgetMemberName(e);
+      if (wm != null) {
+        final prop = propByField[wm];
+        if (prop != null) return 'this.$prop()';
+        if (methodNames.contains(wm)) return 'this.$wm()';
+        return eventOf(wm);
+      }
       // 字段型回调（`onTap: onTap` / `onTap: _onTap`）：字段里存的就是可调用值，
       // 事件触发即调它。字段本身由父组件经函数实参传入（见 [functionJs]）。
       final prop = propByField[e.name];
@@ -656,6 +676,18 @@ class WidgetTranslateContext implements WidgetExprRenderer {
           final recv = jsDataExpr(target);
           return '$recv.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList)})';
+        }
+        // `widget.onPick(key, v)`（`() => widget.onPick(key, v)`）：调用 widget
+        // 自身成员——合并类里就是实例方法/字段回调，落成 `this.onPick(key, v)`。
+        // 不拦下来会走下面的「组件字段 receiver」分支产出 `this.widget.onPick(...)`
+        // ——`widget` 在 JS 侧根本没有这个字段，点击直接抛错失效。
+        if (target is Identifier && target.name == 'widget') {
+          final wm = inner.methodName.name;
+          final args = _eventArgsJs(inner.argumentList);
+          final prop = propByField[wm];
+          if (prop != null) return 'this.$prop($args)';
+          if (methodNames.contains(wm)) return 'this.$wm($args)';
+          return eventOf(wm);
         }
         // 组件字段/实例 receiver（非局部变量即组件成员）：`_controller.clear()`
         // / `_scrollController.jumpTo(...)` → this._controller.clear()，
@@ -881,18 +913,23 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 组件参数位置上的「函数值」翻译：返回 null = 不是函数形态。
   ///
   ///   - 闭包字面量（`onTap: () => ...` / `onPick: (k, v) => ...`）→ JS 箭头函数；
-  ///   - 方法 tear-off（`onReset: _resetFilter`）→ 绑定宿主实例的箭头闭包
-  ///     （直接传 `this._resetFilter` 会在子组件调用时丢 this）；
-  ///   - 字段型回调透传（`onTap: onTap`）→ 原样函数值。
+  ///   - 方法 tear-off（`onReset: _resetFilter` / `onReset: widget._resetFilter`）→
+  ///     绑定宿主实例的箭头闭包（直接传 `this._resetFilter` 会在子组件调用时丢 this）；
+  ///   - 字段型回调透传（`onTap: onTap` / `onReset: widget.onReset`）→ 原样函数值。
   String? functionJs(Expression e) {
     if (e is FunctionExpression) {
       return closureToJs(e, _dataScope(), const {});
     }
     if (e is Identifier) {
-      if (actionByMethod.containsKey(e.name) || methodNames.contains(e.name)) {
-        return '(...__a) => this.${e.name}(...__a)';
+      // `widget.<name>`：State 里转发 widget 自身成员，合并类里就是实例成员；
+      // 非 `widget.` 前缀的 `a.b` 不支持（返回 null，交给数据表达式分支）。
+      final name =
+          e is PrefixedIdentifier ? widgetMemberName(e) : e.name;
+      if (name == null) return null;
+      if (actionByMethod.containsKey(name) || methodNames.contains(name)) {
+        return '(...__a) => this.$name(...__a)';
       }
-      final prop = propByField[e.name];
+      final prop = propByField[name];
       if (prop != null) return 'this.$prop';
     }
     return null;
