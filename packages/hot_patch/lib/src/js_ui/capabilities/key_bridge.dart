@@ -32,6 +32,18 @@ void ensureKeyChannels() {
       // 同一句柄 id 必须始终对应同一个 GlobalKey 实例（换实例即丢 State）。
       _jsKeys.putIfAbsent(id, () => GlobalKey(debugLabel: _labelOf(meta)));
     },
+    onOp: (id, op, payload) {
+      // 「取位置 + 滚动」只能在宿主做：BuildContext / RenderObject 是宿主端概念，
+      // JS 侧只有句柄 id、没有同步取值能力（见 capabilities/key_js.dart 的 KeyRef）。
+      // 这里还原真实 GlobalKey → 真实 BuildContext → 真实 RenderObject，把 Dart
+      // 单源的 `ctx.findRenderObject()?.showOnScreen()` 整条语义补全。
+      if (op != 'showOnScreen') return null;
+      final key = _jsKeys[id];
+      if (key is GlobalKey) {
+        key.currentContext?.findRenderObject()?.showOnScreen();
+      }
+      return null;
+    },
     onRelease: (id) => _jsKeys.remove(id),
   ));
   registerHandleKind('key/Unique', JsHandleKind(

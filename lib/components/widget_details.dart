@@ -561,6 +561,14 @@ class _SliverDetailState extends State<SliverDetail> {
   /// 当前滚动偏移（controller 监听镜像）。
   double _offset = 0;
 
+  /// 「SliverFixedExtentList · 固定高度」分区的 GlobalKey。
+  ///
+  /// 导航右侧按钮据此**取该结点所在位置**再滚动过去：GlobalKey 的身份跨帧
+  /// 稳定（JS 侧是句柄、宿主持真实实例），currentContext / findRenderObject
+  /// 是**宿主端**概念，故「取位置 + 滚动」由宿主用真实 BuildContext 完成
+  /// （JS→宿主只有异步桥，拿不到同步的位置值）。
+  final GlobalKey _fixedKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -580,6 +588,23 @@ class _SliverDetailState extends State<SliverDetail> {
     _controller.jumpTo(_controller.position.maxScrollExtent);
   }
 
+  /// 导航右侧按钮：用 GlobalKey 定位「固定高度」分区并滚动到它。
+  ///
+  /// 与 FAB 的 `controller.jumpTo`（直接给偏移）不同，这里给的是**结点身份**：
+  /// showOnScreen 沿渲染树向上交给所在 viewport，由 viewport 自己算出该结点的
+  /// 位置并滚动——位置在宿主端计算，JS 侧只交出 GlobalKey 句柄。
+  void _scrollToFixed() {
+    final ctx = _fixedKey.currentContext;
+    if (ctx == null) {
+      return;
+    }
+    final target = ctx.findRenderObject();
+    if (target == null) {
+      return;
+    }
+    target.showOnScreen();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -593,6 +618,14 @@ class _SliverDetailState extends State<SliverDetail> {
             foregroundColor: Colors.white,
             pinned: true,
             floating: true,
+            actions: [
+              // 导航右侧按钮：用 GlobalKey 定位「固定高度」分区并滚动过去。
+              IconButton(
+                icon: const Icon(Icons.center_focus_strong),
+                tooltip: '定位到「固定高度」分区',
+                onPressed: _scrollToFixed,
+              ),
+            ],
           ),
           SliverToBoxAdapter(
             child: Container(
@@ -662,6 +695,8 @@ class _SliverDetailState extends State<SliverDetail> {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: SliverToBoxAdapter(
+              // 导航按钮的定位目标：GlobalKey 让这个分区可被「取位置 + 滚动到」。
+              key: _fixedKey,
               child: Text(
                 'SliverFixedExtentList · 固定高度',
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),

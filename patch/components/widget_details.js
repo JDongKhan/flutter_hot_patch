@@ -882,6 +882,7 @@ export class SliverDetail {
   constructor() {
     this._controller = new ScrollController();
     this._offset = 0;
+    this._fixedKey = new GlobalKey();
   }
   initState() {
     this._controller.addListener(() => { this.setState(function(){ this._offset = this._controller.offset; }); });
@@ -891,6 +892,17 @@ export class SliverDetail {
   }
   _scrollToEnd() {
     this._controller.jumpTo(this._controller.position.maxScrollExtent);
+  }
+  _scrollToFixed() {
+    var ctx = this._fixedKey.currentContext;
+    if ((ctx == null)) {
+      return;
+    }
+    var target = ctx.findRenderObject();
+    if ((target == null)) {
+      return;
+    }
+    target.showOnScreen();
   }
   build() {
     return __h('Scaffold', {
@@ -906,7 +918,15 @@ export class SliverDetail {
                 "foregroundColor": '#FFFFFF',
                 "pinned": true,
                 "floating": true
-              }),
+              }, [
+                __h('IconButton', {
+                    "icon": __h('Icon', {
+                        "icon": "center_focus_strong"
+                      }),
+                    "event": this.__bind("_scrollToFixed"),
+                    "tooltip": "定位到「固定高度」分区"
+                  })
+              ]),
             __h('SliverToBoxAdapter', {}, [
                 __h('Container', {
                     "padding": {
@@ -1020,7 +1040,9 @@ export class SliverDetail {
                   "bottom": 8.0
                 }
               }, [
-                __h('SliverToBoxAdapter', {}, [
+                __h('SliverToBoxAdapter', {
+                    "key": this._fixedKey
+                  }, [
                     __h('Text', {
                         "data": "SliverFixedExtentList · 固定高度",
                         "style": {

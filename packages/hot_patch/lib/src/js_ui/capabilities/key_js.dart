@@ -64,6 +64,21 @@ const String keyJsSource = r'''
   }
   GlobalKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
+  // GlobalKey.currentContext / findRenderObject()：BuildContext 与 RenderObject 是
+  // **宿主端**概念——JS 侧既没有真实对象，也没有同步取值的能力（JS→宿主只有异步
+  // 桥，见 handleOp）。故 currentContext 返回一个只携带 key 句柄 id 的代理，链式
+  // 调用在 JS 侧是空壳，最后一次调用（showOnScreen）经通用 op 落到宿主，由宿主用
+  // **真实** BuildContext 取该结点的位置并执行滚动——单源写的是 Flutter 原生的
+  // 「取位置 → 滚动」语义，位置只在真正算得出来的一端计算。
+  function KeyRef(id) { this.__key = id; }
+  KeyRef.prototype.findRenderObject = function () { return new KeyRef(this.__key); };
+  KeyRef.prototype.showOnScreen = function () {
+    if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
+  };
+  Object.defineProperty(GlobalKey.prototype, 'currentContext', {
+    get: function () { return this.__id == null ? null : new KeyRef(this.__id); }
+  });
+
   defineHandleKind('key/Unique', {});
   function UniqueKey() {
     this.__id = reg(this, 'key/Unique', {});
