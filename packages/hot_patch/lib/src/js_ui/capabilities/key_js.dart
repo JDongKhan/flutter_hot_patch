@@ -67,13 +67,20 @@ const String keyJsSource = r'''
   // GlobalKey.currentContext / findRenderObject()：BuildContext 与 RenderObject 是
   // **宿主端**概念——JS 侧既没有真实对象，也没有同步取值的能力（JS→宿主只有异步
   // 桥，见 handleOp）。故 currentContext 返回一个只携带 key 句柄 id 的代理，链式
-  // 调用在 JS 侧是空壳，最后一次调用（showOnScreen）经通用 op 落到宿主，由宿主用
-  // **真实** BuildContext 取该结点的位置并执行滚动——单源写的是 Flutter 原生的
-  // 「取位置 → 滚动」语义，位置只在真正算得出来的一端计算。
+  // 调用在 JS 侧是空壳，最后一次调用经通用 op 落到宿主，由宿主用**真实**对象把
+  // Flutter 原生语义补全——位置/尺寸只在真正算得出来的一端计算。
+  //   - showOnScreen()：void 语义，fire-and-forget，宿主算出该结点位置并滚动；
+  //   - measure()：Flutter 的 `box.size` / `box.localToGlobal(Offset.zero)` 是
+  //     **同步属性**，而 JS→宿主只能异步，故这里返回 Promise（单源侧 `await`
+  //     后即为真实值，见 widget_details 的 _measureFixed）。
   function KeyRef(id) { this.__key = id; }
   KeyRef.prototype.findRenderObject = function () { return new KeyRef(this.__key); };
   KeyRef.prototype.showOnScreen = function () {
     if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
+  };
+  KeyRef.prototype.measure = function () {
+    if (this.__key == null) { return Promise.resolve(null); }
+    return handleOp(this.__key, 'measure', {});
   };
   Object.defineProperty(GlobalKey.prototype, 'currentContext', {
     get: function () { return this.__id == null ? null : new KeyRef(this.__id); }

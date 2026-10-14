@@ -883,6 +883,7 @@ export class SliverDetail {
     this._controller = new ScrollController();
     this._offset = 0;
     this._fixedKey = new GlobalKey();
+    this._measureText = "未测量";
   }
   initState() {
     this._controller.addListener(() => { this.setState(function(){ this._offset = this._controller.offset; }); });
@@ -903,6 +904,14 @@ export class SliverDetail {
       return;
     }
     target.showOnScreen();
+  }
+  async _measureFixed() {
+    var keyProxy = this._fixedKey;
+    var rect = await keyProxy.measure();
+    if ((rect == null)) {
+      return;
+    }
+    this.setState(function(){ this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
   }
   build() {
     return __h('Scaffold', {
@@ -925,6 +934,13 @@ export class SliverDetail {
                       }),
                     "event": this.__bind("_scrollToFixed"),
                     "tooltip": "定位到「固定高度」分区"
+                  }),
+                __h('IconButton', {
+                    "icon": __h('Icon', {
+                        "icon": "straighten"
+                      }),
+                    "event": this.__bind("_measureFixed"),
+                    "tooltip": "测量「固定高度」分区的位置与尺寸"
                   })
               ]),
             __h('SliverToBoxAdapter', {}, [
@@ -953,6 +969,36 @@ export class SliverDetail {
                         "style": {
                           "fontSize": 14,
                           "fontWeight": "bold"
+                        }
+                      })
+                  ])
+              ]),
+            __h('SliverToBoxAdapter', {}, [
+                __h('Container', {
+                    "padding": {
+                      "left": 10.0,
+                      "top": 10.0,
+                      "right": 10.0,
+                      "bottom": 10.0
+                    },
+                    "margin": {
+                      "left": 12.0,
+                      "top": 0.0,
+                      "right": 12.0,
+                      "bottom": 4.0
+                    },
+                    "decoration": {
+                      "color": '@Colors.teal.shade50',
+                      "borderRadius": {
+                        "radius": 8.0
+                      }
+                    }
+                  }, [
+                    __h('Text', {
+                        "data": "GlobalKey 测量：「固定高度」分区 " + this._measureText,
+                        "style": {
+                          "fontSize": 13,
+                          "color": '#009688'
                         }
                       })
                   ])
@@ -1040,16 +1086,30 @@ export class SliverDetail {
                   "bottom": 8.0
                 }
               }, [
-                __h('SliverToBoxAdapter', {
-                    "key": this._fixedKey
-                  }, [
-                    __h('Text', {
-                        "data": "SliverFixedExtentList · 固定高度",
-                        "style": {
-                          "fontSize": 14,
-                          "fontWeight": "bold"
-                        }
-                      })
+                __h('SliverToBoxAdapter', {}, [
+                    __h('Container', {
+                        "padding": {
+                          "left": 10.0,
+                          "top": 8.0,
+                          "right": 10.0,
+                          "bottom": 8.0
+                        },
+                        "decoration": {
+                          "color": '@Colors.teal.shade50',
+                          "borderRadius": {
+                            "radius": 6.0
+                          }
+                        },
+                        "key": this._fixedKey
+                      }, [
+                        __h('Text', {
+                            "data": "SliverFixedExtentList · 固定高度",
+                            "style": {
+                              "fontSize": 14,
+                              "fontWeight": "bold"
+                            }
+                          })
+                      ])
                   ])
               ]),
             __h('SliverPadding', {

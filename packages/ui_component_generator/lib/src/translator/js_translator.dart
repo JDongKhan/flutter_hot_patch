@@ -340,9 +340,26 @@ const Map<String, String> sdkSuperClassMap = {
 ///
 /// **唯一**的「编译期常量字面量」翻译实现：字段初始值（[renderClassDecl]）、
 /// 组件 stat/props 初值（builder 侧）、静态单例字段值都走这里——新增字面量
-/// 能力只改这一处。当前覆盖 string/int/double/bool 与由它们构成的二元运算。
+/// 能力只改这一处。当前覆盖 string/int/double/bool、相邻字符串字面量拼接，
+/// 以及由它们构成的二元运算。
 String? literalToJs(Expression? e) {
   if (e == null) return null;
+  // StringInterpolation / AdjacentStrings 都是 StringLiteral 的**子类**，而它们的
+  // stringValue 是 null：若被下面那行字面量分支接住，整串会被静默翻译成 `""`
+  // （插值表达式与拼接内容全丢）。本函数没有作用域、翻不了插值，故如实返回 null，
+  // 由带作用域的 rhsToJs / exprToJs 兜底。
+  if (e is StringInterpolation) return null;
+  // 相邻字符串字面量拼接（`'a' 'b'`）本身是编译期常量：逐段递归后 `+` 拼接；
+  // 任一段非常量（如含插值）则整体放弃，同样交给带作用域的调用方。
+  if (e is AdjacentStrings) {
+    final parts = <String>[];
+    for (final s in e.strings) {
+      final v = literalToJs(s);
+      if (v == null) return null;
+      parts.add(v);
+    }
+    return parts.join(' + ');
+  }
   if (e is StringLiteral) return jsString(e.stringValue ?? '');
   if (e is IntegerLiteral) return e.value?.toString();
   if (e is DoubleLiteral) return e.value.toString();
@@ -607,6 +624,10 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
 String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被吞成 ""）
   if (e is StringInterpolation) return _logArgJs(e, scope, classes);
+  // 相邻字符串字面量拼接（`'a' 'b'`，Dart 语义是**拼接**）同为 StringLiteral 子类，
+  // 在 literalToJs 里只能翻「全为常量」的情况；这里交给 exprToJs 的
+  // AdjacentStrings 分支逐段翻译，含插值的段才翻得出来（必须早于下面的 literalToJs）。
+  if (e is AdjacentStrings) return exprToJs(e, scope, classes);
   // `await <expr>` 统一在这里处理：声明初始化、赋值右侧、实参、独立语句
   // 全都经过 rhsToJs，await 不再只认声明那一种位置（原来 `_x = await f()`
   // 会整条丢掉）。

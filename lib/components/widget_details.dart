@@ -561,13 +561,20 @@ class _SliverDetailState extends State<SliverDetail> {
   /// 当前滚动偏移（controller 监听镜像）。
   double _offset = 0;
 
-  /// 「SliverFixedExtentList · 固定高度」分区的 GlobalKey。
+  /// 「SliverFixedExtentList · 固定高度」分区的 GlobalKey（挂在分区**盒子**上，
+  /// 不是 sliver 上：`size` / `localToGlobal` 都是 RenderBox 语义）。
   ///
-  /// 导航右侧按钮据此**取该结点所在位置**再滚动过去：GlobalKey 的身份跨帧
-  /// 稳定（JS 侧是句柄、宿主持真实实例），currentContext / findRenderObject
-  /// 是**宿主端**概念，故「取位置 + 滚动」由宿主用真实 BuildContext 完成
-  /// （JS→宿主只有异步桥，拿不到同步的位置值）。
+  /// 导航右侧两个按钮都据此拿到**结点身份**：
+  ///   - 「定位」：currentContext → findRenderObject → showOnScreen（位置由
+  ///     viewport 自己算，滚动过去）；
+  ///   - 「测量」：位置与尺寸同样只能在宿主端算——`box.size` /
+  ///     `box.localToGlobal(Offset.zero)` 在 Flutter 里是**同步属性**，而
+  ///     JS→宿主只有异步桥，故单源里 await 宿主回填的结果。
+  /// GlobalKey 的身份跨帧稳定（JS 侧是句柄、宿主持真实实例）。
   final GlobalKey _fixedKey = GlobalKey();
+
+  /// 「测量」结果文案（宿主回填的位置 + 尺寸快照）。
+  String _measureText = '未测量';
 
   @override
   void initState() {
@@ -605,6 +612,28 @@ class _SliverDetailState extends State<SliverDetail> {
     target.showOnScreen();
   }
 
+  /// 导航右侧按钮：用 GlobalKey 取「固定高度」分区的位置与尺寸。
+  ///
+  /// 与「定位」不同，这里要的是**值**：Flutter 侧 `box.localToGlobal(Offset.zero)`
+  /// 与 `box.size` 都是同步属性，而 JS 侧 RenderObject 根本不存在（GlobalKey 只是
+  /// 句柄、真实实例在宿主），JS→宿主又只有异步桥——故这一处 await 宿主回填的
+  /// 测量结果（见 capabilities/key_bridge.dart 的 `measure` op）。
+  ///
+  /// `dynamic` 中转（keyProxy）：GlobalKey 在 Dart 侧没有 measure()（该方法由
+  /// JS 侧 KeyRef 代理提供），dynamic 让同一份代码在两端都成立——原生端这里走
+  /// 不到（SliverDetail 仅 JS 热更版展示），JS 端落到 KeyRef.prototype.measure。
+  Future<void> _measureFixed() async {
+    final dynamic keyProxy = _fixedKey;
+    final dynamic rect = await keyProxy.measure();
+    if (rect == null) {
+      return;
+    }
+    setState(() {
+      _measureText = 'x=${rect.dx.toStringAsFixed(1)} y=${rect.dy.toStringAsFixed(1)}'
+          ' · ${rect.width.toStringAsFixed(0)} × ${rect.height.toStringAsFixed(0)}';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -625,6 +654,12 @@ class _SliverDetailState extends State<SliverDetail> {
                 tooltip: '定位到「固定高度」分区',
                 onPressed: _scrollToFixed,
               ),
+              // 导航右侧按钮：用 GlobalKey 取该分区的位置与尺寸（宿主端计算回填）。
+              IconButton(
+                icon: const Icon(Icons.straighten),
+                tooltip: '测量「固定高度」分区的位置与尺寸',
+                onPressed: _measureFixed,
+              ),
             ],
           ),
           SliverToBoxAdapter(
@@ -635,6 +670,18 @@ class _SliverDetailState extends State<SliverDetail> {
               child: const Text(
                 'CustomScrollView 整页 · SliverToBoxAdapter 盒子',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          // 「测量」结果展示：点导航右侧直尺按钮 → GlobalKey 取位置 + 尺寸。
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(8)),
+              child: Text(
+                'GlobalKey 测量：「固定高度」分区 $_measureText',
+                style: const TextStyle(fontSize: 13, color: Colors.teal),
               ),
             ),
           ),
@@ -695,11 +742,20 @@ class _SliverDetailState extends State<SliverDetail> {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             sliver: SliverToBoxAdapter(
-              // 导航按钮的定位目标：GlobalKey 让这个分区可被「取位置 + 滚动到」。
-              key: _fixedKey,
-              child: Text(
-                'SliverFixedExtentList · 固定高度',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              // 导航两个按钮的目标：GlobalKey 挂在**盒子**（RenderBox）上而不是
+              // sliver 上——showOnScreen 两种都能用，但 size / localToGlobal 只有
+              // RenderBox 才有（sliver 是 RenderSliver）。
+              child: Container(
+                key: _fixedKey,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'SliverFixedExtentList · 固定高度',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),

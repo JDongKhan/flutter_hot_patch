@@ -33,14 +33,32 @@ void ensureKeyChannels() {
       _jsKeys.putIfAbsent(id, () => GlobalKey(debugLabel: _labelOf(meta)));
     },
     onOp: (id, op, payload) {
-      // 「取位置 + 滚动」只能在宿主做：BuildContext / RenderObject 是宿主端概念，
+      // 「取位置 / 取尺寸」只能在宿主做：BuildContext / RenderObject 是宿主端概念，
       // JS 侧只有句柄 id、没有同步取值能力（见 capabilities/key_js.dart 的 KeyRef）。
       // 这里还原真实 GlobalKey → 真实 BuildContext → 真实 RenderObject，把 Dart
-      // 单源的 `ctx.findRenderObject()?.showOnScreen()` 整条语义补全。
-      if (op != 'showOnScreen') return null;
+      // 单源的整条语义补全：
+      //   - `ctx.findRenderObject()?.showOnScreen()`：位置 + 滚动，void 语义；
+      //   - `box.measure()`：RenderBox 的 `size` 与 `localToGlobal(Offset.zero)`
+      //     都是同步属性，宿主算完回填（返回值经通道回填 JS Promise，见
+      //     JsRuntimeManager.registerHostMethod）。
       final key = _jsKeys[id];
-      if (key is GlobalKey) {
-        key.currentContext?.findRenderObject()?.showOnScreen();
+      if (key is! GlobalKey) return null;
+      final ro = key.currentContext?.findRenderObject();
+      if (op == 'showOnScreen') {
+        ro?.showOnScreen();
+        return null;
+      }
+      // 位置与尺寸是 RenderBox 才有的语义（RenderObject 无 size / localToGlobal）；
+      // 未布局（hasSize=false）时算不出来，回 null 由单源侧判空。
+      if (op == 'measure') {
+        if (ro is! RenderBox || !ro.hasSize) return null;
+        final topLeft = ro.localToGlobal(Offset.zero);
+        return <String, Object?>{
+          'dx': topLeft.dx,
+          'dy': topLeft.dy,
+          'width': ro.size.width,
+          'height': ro.size.height,
+        };
       }
       return null;
     },
