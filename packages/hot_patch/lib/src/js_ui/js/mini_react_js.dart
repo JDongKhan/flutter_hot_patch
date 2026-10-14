@@ -29,17 +29,23 @@ const String miniReactElementSource = r'''
     return { __fn: id };
   }
 
-  function invoke(id, payload) {
+  // 事件回传载荷统一为**参数数组**（Dart 侧 `_invoke(handler, args)` 的 args）：
+  // 0 参事件 `[]`、onChanged `[v]`、多参事件 `[a,b]`…。句柄是普通位置函数——
+  // 能力桥 `fn(function(t){…})` 按真实形参直接收下；__bind/__bindFn 生成的
+  // wrapper 用 `arguments` 汇总任意个数再摊开调用目标方法。故 0/1/N 参事件共用
+  // 同一条通路，新增多参事件无需改这里。
+  function invoke(id, args) {
     var f = handlers[id];
     if (!f) {
       // 宿主回传的句柄 id 在 JS 侧找不到 —— 说明该结点下发时的 handler 与当前
       // handlers 表不一致（已卸载回收 / 从未登记）。
       return;
     }
-    if (typeof payload === 'string' && payload.length) {
-      try { payload = JSON.parse(payload); } catch (e) { payload = null; }
+    if (typeof args === 'string' && args.length) {
+      try { args = JSON.parse(args); } catch (e) { args = null; }
     }
-    f(payload);
+    if (!Array.isArray(args)) { args = args == null ? [] : [args]; }
+    f.apply(null, args);
   }
 
 ''';
@@ -131,19 +137,21 @@ const String miniReactComponentBaseSource = r'''
     // 作为调用表达式求值（`this.__read("T").inc()`）。二者都无返回值语义。
     var isName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expr);
     var run = isName
-      ? function (payload) {
+      // 方法名形态：句柄收到的参数数组用 apply 摊开成位置实参（支持 N 参事件）。
+      ? function (args) {
           var m = self[expr];
-          if (typeof m === 'function') { m.call(self, payload); }
+          if (typeof m === 'function') { m.apply(self, args); }
         }
       : function () {
           new Function('return (' + expr + ');').call(self);
         };
-    var handle = fn(function (payload) {
+    var handle = fn(function () {
       // 还原绑定时的构建位置：表达式若含 `this.__read/__watch`，按当时的
       // context 位置解析（点击时无 build 上下文，`building` 为 null）。
+      // 事件位置实参在 `arguments` 里（invoke 已摊开），原样交给 run 转发。
       var prev = building;
       building = anchor;
-      try { run(payload); }
+      try { run(arguments); }
       catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
       finally { building = prev; }
     });
@@ -164,10 +172,11 @@ const String miniReactComponentBaseSource = r'''
     var handle = bag[key];
     if (handle) { handle.__run = f; return handle; }
     var anchor = building || this;
-    handle = fn(function (payload) {
+    handle = fn(function () {
       var prev = building;
       building = anchor;
-      try { handle.__run(payload); }
+      // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
+      try { handle.__run.apply(handle, arguments); }
       catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
       finally { building = prev; }
     });

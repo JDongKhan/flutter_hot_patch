@@ -31,7 +31,7 @@ class _NotificationListener extends StatefulWidget {
   final Object? onNotification;
 
   /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
-  final void Function(Object? handler, [Object? payload]) invoke;
+  final void Function(Object? handler, [List<Object?> args]) invoke;
 
   final Widget child;
 
@@ -49,7 +49,7 @@ class _NotificationListenerState extends State<_NotificationListener> {
           // payload 形状对齐 Dart ScrollNotification（metrics 对象 + type 名），
           // JS 事件方法体里的 `n.metrics.pixels` / `n.metrics.extentAfter`
           // 由生成器原样翻译后可直接读取。
-          widget.invoke(handler, {
+          widget.invoke(handler, [{
             'type': n.runtimeType.toString(),
             'metrics': {
               'pixels': n.metrics.pixels,
@@ -58,7 +58,7 @@ class _NotificationListenerState extends State<_NotificationListener> {
               'viewportDimension': n.metrics.viewportDimension,
               'axisDirection': n.metrics.axisDirection.name,
             },
-          });
+          }]);
         }
         // 不拦截：返回 false 让通知继续向上冒泡，外部其它监听不受影响。
         return false;

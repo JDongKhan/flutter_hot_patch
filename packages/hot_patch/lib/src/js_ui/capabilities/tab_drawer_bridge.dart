@@ -115,7 +115,7 @@ class _JsTabControllerHost extends StatefulWidget {
   final TabControllerHandle handle;
 
   /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
-  final void Function(Object? handler, [Object? payload]) invoke;
+  final void Function(Object? handler, [List<Object?> args]) invoke;
 
   final Widget Function(TabController controller) buildChild;
 
@@ -149,7 +149,7 @@ class _JsTabControllerHostState extends State<_JsTabControllerHost> {
   void _forwardIndex() {
     final handler = _jsTabIndexHandles[widget.handle.id];
     if (handler == null) return;
-    widget.invoke(handler, _controller.index);
+    widget.invoke(handler, [_controller.index]);
   }
 
   @override
@@ -255,7 +255,7 @@ void registerTabDrawerWidgets(JsWidgetRegistry r) {
           unselectedLabelStyle: textStyleFromJson(c.map('unselectedLabelStyle')),
           tabAlignment: tabAlignmentFromJson(c.props['tabAlignment']),
           physics: scrollPhysicsFromJson(c.props['physics']),
-          onTap: c.onValue<int>('event'),
+          onTap: c.on1<int>('event'),
         );
     final handle = tabControllerHandleOf(c.props['controller']);
     if (handle == null) return build(null);

@@ -187,7 +187,7 @@ void main() {
       registry,
       'Button',
       {'label': '+1', 'event': handle},
-      invoke: (h, [p]) => events.add(h),
+      invoke: (h, [args = const []]) => events.add(h),
     );
     expect(button, isA<ElevatedButton>());
     (button as ElevatedButton).onPressed!();
@@ -202,7 +202,7 @@ Widget _ctx(
   List<Widget> children = const [],
   List<String> childTypes = const [],
   Map<String, Widget> propChildren = const {},
-  void Function(Object? handler, [Object? payload])? invoke,
+  void Function(Object? handler, [List<Object?> args])? invoke,
 }) {
   final builder = registry.lookup(type)!;
   return builder(JsBuildContext(
@@ -212,6 +212,6 @@ Widget _ctx(
     childContexts: const [],
     propChildren: propChildren,
     nativeComponents: const {},
-    invoke: invoke ?? (_, [_]) {},
+    invoke: invoke ?? (_, [args = const []]) {},
   ));
 }

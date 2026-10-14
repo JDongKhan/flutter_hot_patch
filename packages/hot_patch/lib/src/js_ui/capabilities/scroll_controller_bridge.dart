@@ -93,7 +93,7 @@ class _JsScrollControllerView extends StatefulWidget {
   final String controllerId;
 
   /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
-  final void Function(Object? handler, [Object? payload]) invoke;
+  final void Function(Object? handler, [List<Object?> args]) invoke;
 
   /// 用（按 id 绑定好的）真实 controller 构建具体滚动组件
   /// （SingleChildScrollView / ListView / CustomScrollView 等）；
@@ -129,12 +129,12 @@ class _JsScrollControllerViewState extends State<_JsScrollControllerView> {
     if (!_controller.hasClients) return;
     final handler = _jsScrollMetricsHandles[widget.controllerId];
     if (handler == null) return;
-    widget.invoke(handler, {
+    widget.invoke(handler, [{
       'pixels': _controller.offset,
       'maxScrollExtent': _controller.position.maxScrollExtent,
       'viewportDimension': _controller.position.viewportDimension,
       'extentAfter': _controller.position.extentAfter,
-    });
+    }]);
   }
 
   @override
@@ -537,7 +537,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         reverse: c.bool_('reverse') ?? false,
         pageSnapping: c.bool_('pageSnapping') ?? true,
         physics: scrollPhysicsFromJson(c.props['physics']),
-        onPageChanged: c.onValue<int>('event'),
+        onPageChanged: c.on1<int>('event'),
         children: c.children,
       ));
 }

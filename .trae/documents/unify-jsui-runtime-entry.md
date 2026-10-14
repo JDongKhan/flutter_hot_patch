@@ -64,7 +64,7 @@
 - `JsBuildContext` 增 `nativeComponents`、`propChildren`、`Widget? propChild(String key)`。
 - 补齐缺失 type（照搬 `builtin_renderers.dart`，复用 `json/flutter_from_json.dart` 转换器）：
   - demo 必需：`Chip`、`ListTile`（title/subtitle + `propChild('leading'/'trailing')` + 事件）、`ClipRRect`（`propChild('child')`）、`Align`、`Flexible`、`Positioned`、`SingleChildScrollView`、`Wrap`、`Image`、`CircleAvatar`。
-  - parity：`InkWell`/`GestureDetector`（事件 + child）、`Switch`/`Checkbox`/`Slider`（带值事件 `c.invoke(handler, newValue)`；生成产物事件键统一为 `event`）。
+  - parity：`InkWell`/`GestureDetector`（事件 + child）、`Switch`/`Checkbox`/`Slider`（带值事件 `c.invoke(handler, [newValue])`；生成产物事件键统一为 `event`）。
 - **`Builder` 冲突**：不移植 `BuilderRenderer`——`Builder` 现已是 JS 逻辑组件（`builder.dart` 的 `_jsBuilderComponent`）。
 - 注册 `'Component'` 处理器：`name=props.component`、`args=props.args` → `nativeComponents[name]?.call(args)`，否则 `buildMissingJsWidget`。
 - **`ListenableBuilder` 改为 JS 逻辑组件**（加入 `_logicWidgetSources`），而非宿主 type：`build()` 沿 `__parent` 找拥有 `props.builder` 的组件 → `owner[props.listenable].addListener(...)`（只挂一次，`setState` 局部重建）→ `return owner[name].call(owner)`；`dispose()` 里 `removeListener`。彻底删除旧 `lbRefreshCallbacks`/`_LbNotifyService`。

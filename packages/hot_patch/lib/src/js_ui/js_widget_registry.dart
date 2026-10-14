@@ -37,7 +37,7 @@ class JsBuildContext {
       nativeComponents;
 
   /// 把事件句柄（`{'__fn': id}`）回传到 JS 侧执行。
-  final void Function(Object? handler, [Object? payload]) invoke;
+  final void Function(Object? handler, [List<Object?> args]) invoke;
 
   Widget? child([int index = 0]) => index < children.length ? children[index] : null;
 
@@ -58,20 +58,46 @@ class JsBuildContext {
   Widget? propChild(String key) => propChildren[key];
 
   /// 把 props 上的事件字段（句柄）绑成 Flutter 回调；无句柄（null）时为 null。
+  ///
+  /// 事件回传统一按**参数数组**下发，`on`/`on1`…`on4` 只是按回调形参个数
+  /// 糖化：`on` = 0 参（onTap/onPressed），`on1` = 1 参（onChanged…），
+  /// `on2`/`on3`/`on4` = 2/3/4 参（onReorder、onPopInvokedWithResult…）。
+  /// 每个 renderer 按事件真实签名选对应糖即可，JS 侧 __bind/__bindFn 无需改动。
   VoidCallback? on(String key) {
     final handler = props[key];
     if (handler == null) {
       // 事件键缺失 → onTap 为 null，点了必然没反应。
       return null;
     }
-    return () => invoke(handler);
+    return () => invoke(handler, const []);
   }
 
-  /// 值为句柄的 prop → 带 payload 的回调（Switch/Checkbox/Slider 的 onChanged）。
-  ValueChanged<T>? onValue<T>(String key) {
+  /// 值为句柄的 prop → 带 1 个参数的回调（Switch/Checkbox/Slider 的 onChanged）。
+  ValueChanged<T>? on1<T>(String key) {
     final handler = props[key];
     if (handler == null) return null;
-    return (v) => invoke(handler, v);
+    return (v) => invoke(handler, [v]);
+  }
+
+  /// 带 2 个参数的回调（如 ReorderableListView.onReorder、onPopInvokedWithResult）。
+  void Function(A, B)? on2<A, B>(String key) {
+    final handler = props[key];
+    if (handler == null) return null;
+    return (a, b) => invoke(handler, [a, b]);
+  }
+
+  /// 带 3 个参数的回调。
+  void Function(A, B, C)? on3<A, B, C>(String key) {
+    final handler = props[key];
+    if (handler == null) return null;
+    return (a, b, c) => invoke(handler, [a, b, c]);
+  }
+
+  /// 带 4 个参数的回调。
+  void Function(A, B, C, D)? on4<A, B, C, D>(String key) {
+    final handler = props[key];
+    if (handler == null) return null;
+    return (a, b, c, d) => invoke(handler, [a, b, c, d]);
   }
 
   String? str(String key) {
@@ -432,7 +458,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
 
   r.register('Switch', (c) => Switch(
         value: c.bool_('value') ?? false,
-        onChanged: c.onValue<bool?>('event'),
+        onChanged: c.on1<bool?>('event'),
         // 协议键仍叫 activeColor（生成器侧），Flutter 新版改名为 activeThumbColor
         activeThumbColor: colorFromJson(c.props['activeColor']),
         activeTrackColor: colorFromJson(c.props['activeTrackColor']),
@@ -443,7 +469,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('Checkbox', (c) => Checkbox(
         value: c.bool_('value'),
         tristate: c.bool_('tristate') ?? false,
-        onChanged: c.onValue<bool?>('event'),
+        onChanged: c.on1<bool?>('event'),
         activeColor: colorFromJson(c.props['activeColor']),
         checkColor: colorFromJson(c.props['checkColor']),
       ));
@@ -456,7 +482,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         label: c.str('label'),
         activeColor: colorFromJson(c.props['activeColor']),
         inactiveColor: colorFromJson(c.props['inactiveColor']),
-        onChanged: c.onValue<double>('event'),
+        onChanged: c.on1<double>('event'),
       ));
 
   // Scaffold：appBar / body / floatingActionButton / bottomNavigationBar
@@ -594,7 +620,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     return BottomNavigationBar(
       items: items,
       currentIndex: c.int_('currentIndex') ?? 0,
-      onTap: c.onValue<int>('event'),
+      onTap: c.on1<int>('event'),
       selectedItemColor: colorFromJson(c.props['selectedItemColor']),
       unselectedItemColor: colorFromJson(c.props['unselectedItemColor']),
     );
@@ -614,7 +640,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         // ignore: deprecated_member_use
         groupValue: c.props['groupValue'],
         // ignore: deprecated_member_use
-        onChanged: c.onValue<dynamic>('event'),
+        onChanged: c.on1<dynamic>('event'),
         activeColor: colorFromJson(c.props['activeColor']),
       ));
 
@@ -633,7 +659,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     return DropdownButton<dynamic>(
       value: c.props['value'],
       items: items,
-      onChanged: c.onValue<dynamic>('event'),
+      onChanged: c.on1<dynamic>('event'),
       hint: hint == null ? null : Text(hint),
       isExpanded: c.bool_('isExpanded') ?? false,
     );

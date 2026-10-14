@@ -180,7 +180,11 @@ class JsUiWidgetState extends State<JsUiWidget> {
   ///
   /// handler 是运行时登记的句柄 `{'__fn': id}`（生成器在构建期把事件表达式
   /// 绑到产出该结点的组件实例，绑定信息随 props 传下来）→ `invoke`。
-  void _invoke(Object? handler, [Object? payload]) {
+  ///
+  /// [args] 是**参数数组**：0 参事件 `[]`、onChanged `[v]`、多参事件 `[a,b]`…；
+  /// JS 侧句柄（__bind/__bindFn 生成的 wrapper）对它 apply 摊开成位置实参，
+  /// 故任意形参个数的事件共用同一条通路。
+  void _invoke(Object? handler, [List<Object?> args = const []]) {
     if (handler is! Map) {
       // handler 形态不对 → 静默丢弃，点了没反应。
       return;
@@ -190,10 +194,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
       // 句柄缺 __fn → 静默丢弃。
       return;
     }
-    // payload 双重编码：内层把值变成 JSON 文本（true→"true"、'a'→"\"a\""），
-    // 外层再包成 JS 字符串字面量；JS 侧 invoke 对字符串参数做一次
-    // JSON.parse 还原原始类型。单层编码会把字符串 payload 解析失败置 null。
-    _manager.evaluate('__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(payload))});');
+    // args 双重编码：内层把数组变成 JSON 文本，外层再包成 JS 字符串字面量；
+    // JS 侧 invoke 对字符串参数做一次 JSON.parse 还原为数组。单层编码会把
+    // 字符串 payload 解析失败置 null。
+    _manager.evaluate('__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(args))});');
   }
 
   @override
@@ -385,8 +389,8 @@ class _JsNode extends StatefulWidget {
   final JsWidgetRegistry registry;
   final Map<String, Widget Function(Map<String, dynamic> args)> nativeComponents;
 
-  /// 事件回传：`(handler, payload)`——handler 是运行时登记的句柄。
-  final void Function(Object? handler, [Object? payload]) invoke;
+  /// 事件回传：`(handler, args)`——handler 是运行时登记的句柄，args 为参数数组。
+  final void Function(Object? handler, [List<Object?> args]) invoke;
 
   @override
   State<_JsNode> createState() => _JsNodeState();

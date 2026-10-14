@@ -81,10 +81,10 @@ void registerTextWidgets(JsWidgetRegistry r) {
           ? null
           : (v) {
               final h = tecId != null ? _jsTextHandles[tecId] : null;
-              if (h != null) c.invoke(h, v);
+              if (h != null) c.invoke(h, [v]);
             },
       value: c.str('value'),
-      onChanged: c.onValue<String>('event'),
+      onChanged: c.on1<String>('event'),
       hintText: c.str('hintText'),
       labelText: c.str('labelText'),
       obscureText: c.bool_('obscureText') ?? false,
