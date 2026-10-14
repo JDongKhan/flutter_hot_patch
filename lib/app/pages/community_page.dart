@@ -39,9 +39,7 @@ class _CommunityPageState extends State<CommunityPage> {
   /// 按「内容类型 + 排序方式」过滤列表（距离/价格在原型的示例数据里无对应字段，
   /// 仅作为可选条件参与面板交互）。
   List<Post> get _visiblePosts {
-    var list = kPosts
-        .where((p) => _type == kPostTypes.first || p.type == _type)
-        .toList();
+    var list = kPosts.where((p) => _type == kPostTypes.first || p.type == _type).toList();
     switch (_sort) {
       case '最新':
         list = list.reversed.toList();
@@ -87,26 +85,17 @@ class _CommunityPageState extends State<CommunityPage> {
                       child: GestureDetector(
                         onTap: () => setState(() => _tab = t),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 15,
-                            vertical: 6,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
                           decoration: BoxDecoration(
-                            color: _tab == t
-                                ? const Color(0xFFE8F2FF)
-                                : const Color(0xFFF3F5F8),
+                            color: _tab == t ? const Color(0xFFE8F2FF) : const Color(0xFFF3F5F8),
                             borderRadius: BorderRadius.circular(15),
                           ),
                           child: Text(
                             t,
                             style: TextStyle(
                               fontSize: 13.5,
-                              fontWeight: _tab == t
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                              color: _tab == t
-                                  ? kBrand
-                                  : const Color(0xFF5C6270),
+                              fontWeight: _tab == t ? FontWeight.w700 : FontWeight.w500,
+                              color: _tab == t ? kBrand : const Color(0xFF5C6270),
                             ),
                           ),
                         ),
@@ -118,15 +107,8 @@ class _CommunityPageState extends State<CommunityPage> {
                     child: Container(
                       width: 32,
                       height: 32,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF3F5F8),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.edit,
-                        size: 16,
-                        color: Color(0xFF5C6270),
-                      ),
+                      decoration: const BoxDecoration(color: Color(0xFFF3F5F8), shape: BoxShape.circle),
+                      child: const Icon(Icons.edit, size: 16, color: Color(0xFF5C6270)),
                     ),
                   ),
                 ],
@@ -143,10 +125,8 @@ class _CommunityPageState extends State<CommunityPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: kResources.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, i) => _ResourceCard(
-              resource: kResources[i],
-              onTap: () => AppRouter.openResource(kResources[i].id),
-            ),
+            itemBuilder: (context, i) =>
+                _ResourceCard(resource: kResources[i], onTap: () => AppRouter.openResource(kResources[i].id)),
           ),
         ),
         const SizedBox(height: 12),
@@ -162,26 +142,17 @@ class _CommunityPageState extends State<CommunityPage> {
                   child: GestureDetector(
                     onTap: () => setState(() => _sort = s),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 5,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                       decoration: BoxDecoration(
-                        color: _sort == s
-                            ? const Color(0xFFE8F2FF)
-                            : const Color(0xFFF3F5F8),
+                        color: _sort == s ? const Color(0xFFE8F2FF) : const Color(0xFFF3F5F8),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Text(
                         s,
                         style: TextStyle(
                           fontSize: 12.5,
-                          fontWeight: _sort == s
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: _sort == s
-                              ? kBrand
-                              : const Color(0xFF5C6270),
+                          fontWeight: _sort == s ? FontWeight.w700 : FontWeight.w500,
+                          color: _sort == s ? kBrand : const Color(0xFF5C6270),
                         ),
                       ),
                     ),
@@ -191,14 +162,9 @@ class _CommunityPageState extends State<CommunityPage> {
               GestureDetector(
                 onTap: _toggleFilter,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
-                    vertical: 5,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
                   decoration: BoxDecoration(
-                    color: _filterOpen
-                        ? const Color(0xFFE8F2FF)
-                        : const Color(0xFFF3F5F8),
+                    color: _filterOpen ? const Color(0xFFE8F2FF) : const Color(0xFFF3F5F8),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
@@ -208,19 +174,11 @@ class _CommunityPageState extends State<CommunityPage> {
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: _filterOpen
-                              ? kBrand
-                              : const Color(0xFF5C6270),
+                          color: _filterOpen ? kBrand : const Color(0xFF5C6270),
                         ),
                       ),
                       const SizedBox(width: 3),
-                      Icon(
-                        Icons.tune,
-                        size: 14,
-                        color: _filterOpen
-                            ? kBrand
-                            : const Color(0xFF5C6270),
-                      ),
+                      Icon(Icons.tune, size: 14, color: _filterOpen ? kBrand : const Color(0xFF5C6270)),
                     ],
                   ),
                 ),
@@ -240,23 +198,14 @@ class _CommunityPageState extends State<CommunityPage> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 60),
                       child: Center(
-                        child: Text(
-                          '没有符合条件的帖子，试试放宽筛选条件',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF98A0AC),
-                          ),
-                        ),
+                        child: Text('没有符合条件的帖子，试试放宽筛选条件', style: TextStyle(fontSize: 13, color: Color(0xFF98A0AC))),
                       ),
                     )
                   else
                     for (final p in posts)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                        child: _PostCard(
-                          post: p,
-                          onTap: () => AppRouter.openPost(p.id),
-                        ),
+                        child: _PostCard(post: p, onTap: () => AppRouter.openPost(p.id)),
                       ),
                 ],
               ),
@@ -316,10 +265,7 @@ class _ResourceCard extends StatelessWidget {
       child: Container(
         width: 156,
         clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -329,8 +275,7 @@ class _ResourceCard extends StatelessWidget {
               child: Image.network(
                 resource.img,
                 fit: BoxFit.cover,
-                errorBuilder: (_, e, s) =>
-                    Container(height: 68, color: const Color(0xFFE8EBF0)),
+                errorBuilder: (_, e, s) => Container(height: 68, color: const Color(0xFFE8EBF0)),
               ),
             ),
             Padding(
@@ -342,20 +287,14 @@ class _ResourceCard extends StatelessWidget {
                     resource.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     resource.sub,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      color: Color(0xFF98A0AC),
-                    ),
+                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF98A0AC)),
                   ),
                 ],
               ),
@@ -374,8 +313,7 @@ class _PostCard extends StatelessWidget {
   final Post post;
   final VoidCallback onTap;
 
-  static String _likeText(int n) =>
-      n > 999 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
+  static String _likeText(int n) => n > 999 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
 
   @override
   Widget build(BuildContext context) {
@@ -383,10 +321,7 @@ class _PostCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -397,11 +332,7 @@ class _PostCard extends StatelessWidget {
                 width: 92,
                 height: 92,
                 fit: BoxFit.cover,
-                errorBuilder: (_, e, s) => Container(
-                  width: 92,
-                  height: 92,
-                  color: const Color(0xFFE8EBF0),
-                ),
+                errorBuilder: (_, e, s) => Container(width: 92, height: 92, color: const Color(0xFFE8EBF0)),
               ),
             ),
             const SizedBox(width: 11),
@@ -415,10 +346,7 @@ class _PostCard extends StatelessWidget {
                       post.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 5),
                     Expanded(
@@ -426,54 +354,28 @@ class _PostCard extends StatelessWidget {
                         post.sub,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF8B909A),
-                          height: 1.5,
-                        ),
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF8B909A), height: 1.5),
                       ),
                     ),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF3F5F8),
                             borderRadius: BorderRadius.circular(5),
                           ),
-                          child: Text(
-                            post.type,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF5C6270),
-                            ),
-                          ),
+                          child: Text(post.type, style: const TextStyle(fontSize: 10, color: Color(0xFF5C6270))),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           '${post.author} · ${post.time}',
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: Color(0xFFA3A9B4),
-                          ),
+                          style: const TextStyle(fontSize: 10.5, color: Color(0xFFA3A9B4)),
                         ),
                         const Spacer(),
-                        const Icon(
-                          Icons.favorite_border,
-                          size: 13,
-                          color: Color(0xFFA3A9B4),
-                        ),
+                        const Icon(Icons.favorite_border, size: 13, color: Color(0xFFA3A9B4)),
                         const SizedBox(width: 3),
-                        Text(
-                          _likeText(post.like),
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: Color(0xFFA3A9B4),
-                          ),
-                        ),
+                        Text(_likeText(post.like), style: const TextStyle(fontSize: 10.5, color: Color(0xFFA3A9B4))),
                       ],
                     ),
                   ],
@@ -488,7 +390,7 @@ class _PostCard extends StatelessWidget {
 }
 
 /// 顶部下拉筛选面板：四组条件 chips + 重置 / 查看结果。
-class _FilterPanel extends StatelessWidget {
+class _FilterPanel extends StatefulWidget {
   const _FilterPanel({
     required this.sort,
     required this.type,
@@ -507,6 +409,47 @@ class _FilterPanel extends StatelessWidget {
   final VoidCallback onReset;
   final VoidCallback onApply;
 
+  @override
+  State<_FilterPanel> createState() => _FilterPanelState();
+}
+
+class _FilterPanelState extends State<_FilterPanel> {
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('[_FilterPanel] initState');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    debugPrint('[_FilterPanel] didChangeDependencies');
+  }
+
+  @override
+  void didUpdateWidget(covariant _FilterPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    debugPrint('[_FilterPanel] didUpdateWidget: old=$oldWidget');
+  }
+
+  @override
+  void deactivate() {
+    super.deactivate();
+    debugPrint('[_FilterPanel] deactivate');
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    debugPrint('[_FilterPanel] activate');
+  }
+
+  @override
+  void dispose() {
+    debugPrint('[_FilterPanel] dispose');
+    super.dispose();
+  }
+
   Widget _group(String title, String key, List<String> values, String current) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,11 +458,7 @@ class _FilterPanel extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             title,
-            style: const TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF171A21),
-            ),
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF171A21)),
           ),
         ),
         Wrap(
@@ -528,12 +467,9 @@ class _FilterPanel extends StatelessWidget {
           children: [
             for (final v in values)
               GestureDetector(
-                onTap: () => onPick(key, v),
+                onTap: () => widget.onPick(key, v),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 6,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
                   decoration: BoxDecoration(
                     color: current == v ? kBrand : const Color(0xFFF3F5F8),
                     borderRadius: BorderRadius.circular(14),
@@ -543,9 +479,7 @@ class _FilterPanel extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: current == v
-                          ? Colors.white
-                          : const Color(0xFF5C6270),
+                      color: current == v ? Colors.white : const Color(0xFF5C6270),
                     ),
                   ),
                 ),
@@ -566,19 +500,19 @@ class _FilterPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _group('排序方式', 'sort', kSorts, sort),
+            _group('排序方式', 'sort', kSorts, widget.sort),
             const SizedBox(height: 16),
-            _group('内容类型', 'type', kPostTypes, type),
+            _group('内容类型', 'type', kPostTypes, widget.type),
             const SizedBox(height: 16),
-            _group('距离范围', 'dist', kDists, dist),
+            _group('距离范围', 'dist', kDists, widget.dist),
             const SizedBox(height: 16),
-            _group('价格区间', 'price', kPriceRanges, price),
+            _group('价格区间', 'price', kPriceRanges, widget.price),
             const SizedBox(height: 18),
             Row(
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: onReset,
+                    onTap: widget.onReset,
                     child: Container(
                       height: 42,
                       alignment: Alignment.center,
@@ -588,11 +522,7 @@ class _FilterPanel extends StatelessWidget {
                       ),
                       child: const Text(
                         '重置',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF5C6270),
-                        ),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF5C6270)),
                       ),
                     ),
                   ),
@@ -600,21 +530,14 @@ class _FilterPanel extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: GestureDetector(
-                    onTap: onApply,
+                    onTap: widget.onApply,
                     child: Container(
                       height: 42,
                       alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: kBrand,
-                        borderRadius: BorderRadius.circular(21),
-                      ),
+                      decoration: BoxDecoration(color: kBrand, borderRadius: BorderRadius.circular(21)),
                       child: const Text(
                         '查看结果',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
                       ),
                     ),
                   ),

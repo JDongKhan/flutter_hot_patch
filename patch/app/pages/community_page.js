@@ -193,6 +193,24 @@ export class _FilterPanel {
     this.onReset = (args && args.onReset !== undefined) ? args.onReset : null;
     this.onApply = (args && args.onApply !== undefined) ? args.onApply : null;
   }
+  initState() {
+    console.debug("[HelloCard] initState");
+  }
+  didChangeDependencies() {
+    console.debug("[HelloCard] didChangeDependencies");
+  }
+  didUpdateWidget(oldWidget) {
+    console.debug("[HelloCard] didUpdateWidget: old=" + oldWidget);
+  }
+  deactivate() {
+    console.debug("[HelloCard] deactivate");
+  }
+  activate() {
+    console.debug("[HelloCard] activate");
+  }
+  dispose() {
+    console.debug("[HelloCard] dispose");
+  }
   _group(title, key, values, current) {
     return __h('Column', {
         "crossAxisAlignment": "start"
@@ -218,7 +236,7 @@ export class _FilterPanel {
             "spacing": 8,
             "runSpacing": 8
           }, [
-            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "event": this.__bindFn("() => onPick(key, v)" + ":" + String(v), () => { this.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": v, "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') } }) ]) ])]); } return out; })()
+            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "event": this.__bindFn("() => widget.onPick(key, v)" + ":" + String(v), () => { this.widget.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": v, "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') } }) ]) ])]); } return out; })()
           ])
       ]);
   }
@@ -256,7 +274,7 @@ export class _FilterPanel {
                 __h('Row', {}, [
                     __h('Expanded', {}, [
                         __h('GestureDetector', {
-                            "event": this.__bind("this.onReset()")
+                            "event": this.__bind("__noop")
                           }, [
                             __h('Container', {
                                 "height": 42,
@@ -284,7 +302,7 @@ export class _FilterPanel {
                       }),
                     __h('Expanded', {}, [
                         __h('GestureDetector', {
-                            "event": this.__bind("this.onApply()")
+                            "event": this.__bind("__noop")
                           }, [
                             __h('Container', {
                                 "height": 42,
