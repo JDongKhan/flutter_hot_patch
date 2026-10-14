@@ -426,7 +426,7 @@ export class GridCell {
     this.entry = (args && args.entry !== undefined) ? args.entry : null;
   }
   open() {
-    __jsui.host("toast", [__str(this.entry.title) + " 频道"]);
+    __jsui.host("toast", [this.entry.title + " 频道"]);
   }
   build() {
     return __h('InkWell', {
@@ -569,7 +569,7 @@ export class SpotCard {
                                 }
                               }),
                             __h('Text', {
-                                "data": __str(this.spot.price),
+                                "data": this.spot.price,
                                 "style": {
                                   "fontSize": 17,
                                   "color": '#ffff5a36',

@@ -73,23 +73,23 @@ export class HelloCard {
             }
           }),
         __h('Text', {
-            "data": "count = " + __str(this._count)
+            "data": "count = " + this._count
           }),
         __h('Text', {
-            "data": "阶段：" + __str(stage)
+            "data": "阶段：" + stage
           }),
         __h('Text', {
-            "data": "user: " + __str(((this._user == null ? null : this._user.name) ?? "加载中"))
+            "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
           }),
         __h('Text', {
-            "data": "age: " + __str(((this._user == null ? null : this._user.age) ?? "-"))
+            "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
           }),
         __h('Text', {
             "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
           }),
         ...((this._count > 0) ? [__h('Text', { "data": "当前 count 是正数（if 条件渲染）" })] : []),
         ...((this._user != null) ? [__h('Text', { "data": "用户已加载（if + else 渲染）" })] : [__h('Text', { "data": "用户未加载，点 Load User" })]),
-        ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + __str(i) + " 个" })]); } return out; })(),
+        ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + i + " 个" })]); } return out; })(),
         __h('Row', {}, [
             __h('Button', {
                 "kind": "elevated",

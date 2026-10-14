@@ -14,7 +14,7 @@ export class ReorderListDemo {
     this.setState(function(){ var item = this._items.splice(oldIndex, 1)[0]; var target = ((newIndex > oldIndex) ? (newIndex - 1) : newIndex); this._items.splice(target, 0, item); });
   }
   _add() {
-    this.setState(function(){ this._items.push("城市 " + __str((this._items.length + 1))); });
+    this.setState(function(){ this._items.push("城市 " + (this._items.length + 1)); });
   }
   build() {
     return __h('Column', {

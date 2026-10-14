@@ -383,7 +383,7 @@ export class _PostCard {
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
   _likeText(n) {
-    return ((n > 999) ? __str(((n / 1000)).toFixed(1)) + "k" : __str(n));
+    return ((n > 999) ? ((n / 1000)).toFixed(1) + "k" : n);
   }
   build() {
     return __h('GestureDetector', {
@@ -475,7 +475,7 @@ export class _PostCard {
                                     "width": 6
                                   }),
                                 __h('Text', {
-                                    "data": __str(this.post.author) + " · " + __str(this.post.time),
+                                    "data": this.post.author + " · " + this.post.time,
                                     "style": {
                                       "fontSize": 10.5,
                                       "color": '#ffa3a9b4'

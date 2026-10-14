@@ -23,7 +23,7 @@ export class DashboardCard {
             }
           }),
         __h('Text', {
-            "data": "ticks = " + __str(this._ticks)
+            "data": "ticks = " + this._ticks
           }),
         __h(BannerCard, {}),
         __h('SizedBox', {
@@ -67,7 +67,7 @@ export class LabeledDivider {
   }
   build() {
     return __h('Text', {
-        "data": "★ " + __str(this.text) + " ★",
+        "data": "★ " + this.text + " ★",
         "style": {
           "fontSize": 12,
           "color": '#607D8B'

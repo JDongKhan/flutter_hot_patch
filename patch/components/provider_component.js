@@ -125,10 +125,10 @@ export class ProviderCard {
     }
     var dots = "";
     for (let i = 0; (i < this._modelA.count); (i++)) {
-      dots = __str(dots) + "·";
+      dots = dots + "·";
     }
     return __h('Text', {
-        "data": __str(label) + __str(dots)
+        "data": label + dots
       });
   }
   dispose() {
@@ -149,7 +149,7 @@ export class ProviderCard {
   }
   _consumerBuilder2(value) {
       return __h('Text', {
-        "data": "B = " + __str(value.count),
+        "data": "B = " + value.count,
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",

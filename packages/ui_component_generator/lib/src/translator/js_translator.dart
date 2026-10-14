@@ -790,12 +790,15 @@ String? methodCallStmtJs(
 ) {
   // Dart 日志 → JS 原生日志方法（运行时注入 console 对象，桥到 log 服务）：
   // debugPrint → console.debug（仅 debug 模式输出）、print → console.log。
-  // 参数支持字符串插值（拼接翻译）。
+  // 参数支持字符串插值（拼接翻译），插值对象时经 `__str` 展开字段
+  //（`console.log(oldWidget)` 这类直接传对象的由运行时 console 桥负责展开）。
   if (e.target == null) {
     final name = e.methodName.name;
     if (name == 'debugPrint' || name == 'print') {
       final args = e.argumentList.arguments;
-      final v = args.isEmpty ? '""' : _logArgJs(args.first, scope, classes);
+      final v = args.isEmpty
+          ? '""'
+          : _logArgJs(args.first, scope, classes, expand: true);
       if (v == null) return null;
       final method = name == 'debugPrint' ? 'debug' : 'log';
       return 'console.$method($v);';
