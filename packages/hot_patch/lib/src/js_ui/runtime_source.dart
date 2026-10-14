@@ -33,7 +33,8 @@
 ///
 /// | 分区 | 内容 | 属于哪个设计 |
 /// | --- | --- | --- |
-/// | 【1】 | 全局状态与工具（id 序号、句柄表、结点标记、页面根表） | 全体共用 |
+/// | 【1】 | 全局状态与工具（id 序号、结点标记、页面根表） | 全体共用 |
+/// | 【1b】 | 跨语言句柄注册表（`reg` / `release` / `call` / `handleOp`） | 全体共用（新增能力只注册 kind） |
 /// | 【2】 | 出方向桥（emit / commit / send → `sendMessage`） | 全体共用 |
 /// | 【3】 | 宿主注入 `__jsui.host` / `resolve`（唯一对外出口） | @HostInjected 专用 |
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
@@ -55,6 +56,7 @@ import 'package:flutter/foundation.dart'
 //   - capabilities/scroll_controller_js.dart      → ScrollController 代理类
 //   - capabilities/text_editing_controller_js.dart → TextEditingController 代理类
 //   - capabilities/tab_controller_js.dart         → TabController 代理类
+//   - js/handle_registry_js.dart                  → 跨语言句柄注册表（通用层地基）
 import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/tab_controller_js.dart';
 import 'capabilities/text_editing_controller_js.dart';
@@ -340,7 +342,8 @@ const String _jsUiRuntimeSkeletonTail = r'''
     dispose: disposeRoot,
     host: host,
     resolve: resolveHost,
-    // 跨语言句柄（通用层）：Dart 侧 JsHandleRegistry 经此调用本端真实对象。
+    // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
+    // （见 capabilities/handle_registry.dart）。
     reg: reg,
     release: releaseFromHost,
     call: callHandle

@@ -28,7 +28,9 @@ void ensureTextEditingControllerChannels() {
   _textKindRegistered = true;
   registerHandleKind('ctrl/Text', JsHandleKind(
     onCreate: (id, meta) {
-      _jsTextControllers[id] = TextEditingController();
+      // putIfAbsent：与 ctrl/Scroll 同款——同一句柄 id 只对应一个真实对象
+      // （重复 create 时复用，不产生第二个 controller 泄漏）。
+      _jsTextControllers.putIfAbsent(id, () => TextEditingController());
       _jsTextHandles[id] = meta is Map ? meta['fn'] : null;
     },
     onOp: (id, op, payload) {
