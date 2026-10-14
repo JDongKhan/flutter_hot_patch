@@ -79,6 +79,9 @@ const String miniReactReconcilerUtilsSource = r'''
     return true;
   }
 
+  // 结点声明的 key（**值**，不是结点）：ValueKey / ObjectKey 实例、GlobalKey /
+  // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【10.6】），
+  // 不在此处做归一——`keyOf` 只负责取。
   function keyOf(inst) {
     var p = inst.__k === HOST ? inst.__props : (inst.__el && inst.__el.props);
     return p ? p.key : null;
@@ -421,9 +424,12 @@ const String miniReactReconcilerSource = r'''
     var remaining = old.slice();
     var keyedOld = {};
     var i, j;
+    // 带 key 的旧结点按**签名**建索引（keySig：ValueKey 按值 / ObjectKey 按身份 /
+    // GlobalKey、UniqueKey 按句柄 id）。绝不能拿 key 对象直接当索引键——对象会被
+    // 隐式 toString 成 "[object Object]"，所有 key 撞成一条。
     for (i = 0; i < old.length; i++) {
-      var k = keyOf(old[i]);
-      if (k != null) { keyedOld['k' + k] = old[i]; }
+      var k = keySig(keyOf(old[i]));
+      if (k != null) { keyedOld[k] = old[i]; }
     }
 
     var next = [];
@@ -431,13 +437,16 @@ const String miniReactReconcilerSource = r'''
     for (j = 0; j < newEls.length; j++) {
       var el = newEls[j];
       if (el == null || el === false) { continue; }
-      var ek = el.props ? el.props.key : null;
+      var ek = keySig(el.props ? el.props.key : null);
       var matched = null;
-      if (ek != null && keyedOld['k' + ek]) {
-        matched = keyedOld['k' + ek];
+      if (ek != null && keyedOld[ek]) {
+        matched = keyedOld[ek];
+        // 同一签名的 key 只认领一个旧结点：重复 key（Dart 侧本就是错误写法）
+        // 时另一个按新建处理，绝不让同一实例被挂两次（会串坏 __parent/__slot）。
+        keyedOld[ek] = null;
       } else if (ek == null) {
         for (i = 0; i < remaining.length; i++) {
-          if (remaining[i] && keyOf(remaining[i]) == null) { matched = remaining[i]; break; }
+          if (remaining[i] && keySig(keyOf(remaining[i])) == null) { matched = remaining[i]; break; }
         }
       }
       if (matched) { remaining.splice(remaining.indexOf(matched), 1); }

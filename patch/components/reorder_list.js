@@ -57,7 +57,7 @@ export class ReorderListDemo {
                   "bottom": 0.0
                 }
               }, [
-                ...(() => { var out = []; for (let item of this._items) { out.push.apply(out, [__h('Card', {}, [ __h('ListTile', { "title": item, "leading": __h('Icon', { "icon": "drag_handle" }) }) ])]); } return out; })()
+                ...(() => { var out = []; for (let item of this._items) { out.push.apply(out, [__h('Card', { "key": new ValueKey(item) }, [ __h('ListTile', { "title": item, "leading": __h('Icon', { "icon": "drag_handle" }) }) ])]); } return out; })()
               ])
           ])
       ]);

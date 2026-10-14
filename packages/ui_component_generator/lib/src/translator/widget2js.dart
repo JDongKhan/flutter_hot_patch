@@ -202,7 +202,14 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final (ctor, _) = ctorOf(e);
     if (ctor == null) return _exprAsElement(e);
     final translator = registry.lookup(ctor);
-    if (translator != null) return translator.toJson(_toNode(e), this);
+    if (translator != null) {
+      final node = _toNode(e);
+      final json = translator.toJson(node, this);
+      // `key:` 是**跨所有 widget 的通用参数**（Key 是值不是结点），各 translator
+      // 不单独处理；此处统一注入 props['key']（见 [_applyKeyProp]）。
+      _applyKeyProp(json, node);
+      return json;
+    }
     // 未注册：带 receiver 的调用是实例方法（类构造的静态工厂已被 translator 命中）。
     if (e is MethodInvocation && e.target != null) return _exprAsElement(e);
     // 无 receiver 的裸调用：本组件自己的实例方法（`_buildText()` 返回 widget）
@@ -216,7 +223,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final fb = registry.fallback;
     if (fb != null && _isUpperCamel(ctor)) {
       collectDependency(ctor);
-      return fb.toJson(_toNode(e), this);
+      final node = _toNode(e);
+      final json = fb.toJson(node, this);
+      // 兜底组件结点同样要带上 `key:`（元素级参数，见 [_applyKeyProp]）：
+      // 有 JS 产物时渲染成 `__h(X, {…, key})`，无产物时
+      // `__h("Component", {…, key})`——两条路径的 key 都落在元素 props 上。
+      _applyKeyProp(json, node);
+      return json;
     }
     // 无 receiver 的裸调用仍未命中：也按普通 JS 表达式翻译（返回 widget 的
     // 实例方法，只是不在动作表里）。
@@ -236,6 +249,33 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       throw FormatException(
           'ui_component_generator: widget 位置的表达式无法翻译：'
           '${e.toSource()}（$err）');
+    }
+  }
+
+  /// 把 widget 构造里的 `key:` 实参注入到翻译产物的 props['key']。
+  ///
+  /// `key` 是**所有 widget 共有的通用参数**（Key 是**值**不是结点，见
+  /// js_translator.keyCtorJs）——各 translator 只挑自己关心的参数，故 key 必须
+  /// 在这里统一注入，否则被静默丢弃（曾导致 ReorderableListView 项的
+  /// `key: ValueKey(item)` 丢失、重排后列表状态错位）。
+  /// 产物 props['key'] 存 JS 表达式字符串（`new ValueKey(this._items[i])`），
+  /// 运行时随 props 序列化下发，宿主侧还原成真实 Flutter Key（key_bridge）。
+  /// key 是**附加**信息：翻译不出来只丢 key（并出声），不拖垮整个结点。
+  void _applyKeyProp(Map<String, dynamic> json, WidgetNode node) {
+    final keyExpr = node.namedArgs['key'];
+    if (keyExpr == null) return;
+    final String js;
+    try {
+      js = jsDataExpr(keyExpr);
+    } catch (err) {
+      _warnDegrade('key', keyExpr.toSource(), err);
+      return;
+    }
+    final props = json['props'];
+    if (props is Map) {
+      props['key'] = js;
+    } else {
+      json['props'] = <String, dynamic>{'key': js};
     }
   }
 
@@ -462,10 +502,8 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         // 无 JS 产物（无注解的 lib widget / @UIComponentIgnore）：运行时由宿主
         // nativeComponents 原生注入。仍经 __h 归一成与其它结点同形状的元素，
         // 保证运行时统一按 el.children 挂载（不再有裸字面量特例）。
-        final props = json['props'];
-        final propsJs = (props is Map && props.isNotEmpty)
-            ? jsLiteral(props, depth + 1)
-            : '{}';
+        final props = _propsWithKey(json['props'], json['key']);
+        final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
         return '__h("Component", $propsJs, null)';
       }
       throw FormatException('未知节点类型: $type');
@@ -480,6 +518,20 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return _renderCall(type, json, depth, asClass: asClass);
   }
 
+  /// 结点级的 `key` 并入元素 props：Key 是**元素级参数**（见
+  /// [WidgetTranslateContext._applyKeyProp]），渲染时统一落在 `props.key` 上
+  /// ——运行时 `keyOf` / 宿主 key 桥读的就是它。无 key 时 props 原样复制。
+  static Map<String, dynamic> _propsWithKey(Object? props, Object? key) {
+    final out = <String, dynamic>{};
+    if (props is Map) {
+      for (final e in props.entries) {
+        out['${e.key}'] = e.value;
+      }
+    }
+    if (key != null) out['key'] = key;
+    return out;
+  }
+
   /// 把已翻译的 JSON 节点渲染成统一元素构造：`__h(<type>, {...}, [...])`。
   ///
   /// JS 没有「factory」这层包装：元素 type 直接是类（有 JS 逻辑的类型，[asClass]
@@ -492,11 +544,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     int depth, {
     required bool asClass,
   }) {
-    final props = json['props'];
+    final props = _propsWithKey(json['props'], json['key']);
     final children = json['children'];
-    final propsJs = (props is Map && props.isNotEmpty)
-        ? jsLiteral(props, depth + 1)
-        : '{}';
+    final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
     final typeArg = asClass ? type : "'$type'";
     final b = StringBuffer()
       ..write('__h(')
@@ -521,10 +571,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (props is! Map) return null;
     final name = _semanticType(props['component']);
     if (name.isEmpty || importResolver?.call(name) == null) return null;
-    final args = props['args'];
-    final argsJs = (args is Map && args.isNotEmpty)
-        ? jsLiteral(args, depth + 1)
-        : '{}';
+    // 组件的构造实参（args）就是 JS 组件的 props：key 与它们同一层。
+    final args = _propsWithKey(props['args'], json['key']);
+    final argsJs = args.isNotEmpty ? jsLiteral(args, depth + 1) : '{}';
     return '__h($name, $argsJs)';
   }
 
@@ -999,14 +1048,15 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 不能用「含 `type` 键」当判据：组件构造里 `Foo(type: _type)` 这类实参名就叫
   /// `type`，会把整个 props Map 误判成节点（读出的 `type` 是 JS 表达式而非类型名，
   /// 查表落空后整条结点降级）。节点 Map 由 translator 产出，特征明确：
-  ///   - 键只有 `type` / `props` / `children` 三种；
+  ///   - 键只有 `type` / `props` / `children` / `key` 四种（`key` 是元素级 Key，
+  ///     由 [WidgetTranslateContext._applyKeyProp] 注入，渲染时并入 props）；
   ///   - `type` 的值是 [jsString] 产出的**带引号字符串字面量**（类型名），
   ///     而不是 `this._type` 这类运行时表达式。
   static bool _isNodeMap(Map value) {
     final t = value['type'];
     if (t is! String || !t.startsWith('"')) return false;
     return value.keys.every(
-      (k) => k == 'type' || k == 'props' || k == 'children',
+      (k) => k == 'type' || k == 'props' || k == 'children' || k == 'key',
     );
   }
 
@@ -1165,6 +1215,9 @@ class ComponentTranslator extends WidgetTranslator {
         ];
         continue;
       }
+      // `key:` 由 [WidgetTranslateContext._applyKeyProp] 统一提到元素 props.key
+      // （Key 是元素级参数，不是组件构造实参），此处跳过避免重复下发。
+      if (entry.key == 'key') continue;
       final js = _argJs(entry.value, ctx);
       if (js != null) args[entry.key] = js;
     }

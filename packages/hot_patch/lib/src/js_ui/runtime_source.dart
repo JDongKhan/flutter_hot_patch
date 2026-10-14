@@ -56,7 +56,9 @@ import 'package:flutter/foundation.dart'
 //   - capabilities/scroll_controller_js.dart      → ScrollController 代理类
 //   - capabilities/text_editing_controller_js.dart → TextEditingController 代理类
 //   - capabilities/tab_controller_js.dart         → TabController 代理类
+//   - capabilities/key_js.dart                    → ValueKey/ObjectKey/UniqueKey/GlobalKey 代理类
 //   - js/handle_registry_js.dart                  → 跨语言句柄注册表（通用层地基）
+import 'capabilities/key_js.dart';
 import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/tab_controller_js.dart';
 import 'capabilities/text_editing_controller_js.dart';
@@ -380,6 +382,7 @@ String jsUiRuntimeSource() => [
   scrollControllerJsSource,
   textEditingControllerJsSource,
   tabControllerJsSource,
+  keyJsSource,
   _jsUiRuntimeSkeletonTail,
 ].join('\n');
 

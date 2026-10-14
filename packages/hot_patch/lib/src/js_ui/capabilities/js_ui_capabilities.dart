@@ -10,6 +10,7 @@
 // 在此聚合，JS 侧片段由 runtime_source 拼接（见 capabilities/*_js.dart）。
 import '../js_widget_registry.dart';
 import 'handle_registry.dart';
+import 'key_bridge.dart';
 import 'notification_listener_bridge.dart';
 import 'scroll_controller_bridge.dart';
 import 'tab_drawer_bridge.dart';
@@ -19,6 +20,7 @@ import 'text_editing_controller_bridge.dart';
 /// 前调用。JsUiWidget 启动时调用一次。
 void ensureJsUiCapabilities() {
   ensureHandleChannels();
+  ensureKeyChannels();
   ensureScrollControllerChannels();
   ensureTextEditingControllerChannels();
   ensureTabControllerChannels();

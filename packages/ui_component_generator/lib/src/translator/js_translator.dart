@@ -621,6 +621,13 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // 后直接返回（不再往下走），颜色常量会在那里被吞掉。
   final color = colorLiteralJs(e);
   if (color != null) return color;
+  // Key 构造（`ValueKey(item)` / `GlobalKey<FormState>()` / `ObjectKey(x)` /
+  // `UniqueKey()`）：Key 是**值**不是结点，宿主/JS 各自有同名代理类（见
+  // hot_patch capabilities/key_js.dart），这里一律译成 `new Xxx(...)`（裸引用
+  // 全局类，与 ScrollController 等代理类同款）。必须早于下面的
+  // InstanceCreationExpression 分支：那支对非模型类返回 null 后直接返回。
+  final keyJs = keyCtorJs(e, scope, classes);
+  if (keyJs != null) return keyJs;
   // PrefixedIdentifier（`a.b`）不是单纯字段名，交给 exprToJs 的属性分支；
   // 若走下面的 Identifier 分支会用整串名字查字段而必然失败。
   if (e is PrefixedIdentifier) return exprToJs(e, scope, classes);
@@ -737,6 +744,54 @@ String? _listLiteralJs(
     parts.add(v);
   }
   return '[${parts.join(', ')}]';
+}
+
+/// 支持翻译的 Key 类名（Dart 的 Key 家族里在 JS 侧有同名代理类的部分）。
+/// Key 是**值**：JS 用同名类实例承载，跨桥 toJSON 成 `{__vkey:…}` / `{__okey:…}`
+/// / `{__handle:…}`（见 hot_patch capabilities/key_js.dart、key_bridge.dart）。
+/// 宿主与 JS 共用这**一条**表达式路径——widget 的 key 参数、模型字段初值、
+/// 集合元素都经过 [rhsToJs]，故支持范围只在这里维护。
+const Set<String> keyClassNames = {
+  'ValueKey',
+  'ObjectKey',
+  'UniqueKey',
+  'GlobalKey',
+};
+
+/// Key 构造表达式 → JS `new Xxx(...)`；非 Key 构造返回 null。
+///
+/// 兼容两种 AST 形态：显式 `new`/`const` 是 InstanceCreationExpression；
+/// 无 `new` 的 `GlobalKey<FormState>()`（带类型实参）在无 resolution 的
+/// parseString 下是 MethodInvocation。实参按位置摊平（ValueKey/ObjectKey 取值，
+/// GlobalKey 的 `debugLabel:` 具名实参同样落到唯一位置参）。
+String? keyCtorJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  String? name;
+  List<Expression> args = const [];
+  if (e is InstanceCreationExpression) {
+    final n = e.constructorName.type.name2.lexeme;
+    if (keyClassNames.contains(n)) {
+      name = n;
+      args = e.argumentList.arguments.toList();
+    }
+  } else if (e is MethodInvocation && e.target == null) {
+    final n = e.methodName.name;
+    if (keyClassNames.contains(n)) {
+      name = n;
+      args = e.argumentList.arguments.toList();
+    }
+  }
+  if (name == null) return null;
+  final parts = <String>[];
+  for (final a in args) {
+    final v = rhsToJs(a is NamedExpression ? a.expression : a, scope, classes);
+    if (v == null) return null;
+    parts.add(v);
+  }
+  return 'new $name(${parts.join(', ')})';
 }
 
 /// 模型构造调用 → JS：`new User({name:..., age:...})`。

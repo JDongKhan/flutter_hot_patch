@@ -1,0 +1,97 @@
+// 由 runtime_source.dart 拆出的 Key 代理类 JS 片段（能力内聚，见 capabilities/ 设计规范）。
+//
+// Key 与 Controller 不同：它是**值**（元素 props 里的 `key`），不是结点，也不
+// 绑定到某个宿主 widget。生成器把 Dart 侧 `key: ValueKey(item)` / `key: _formKey`
+// 翻译成 `props.key = new ValueKey(item)` / `this._formKey`；reconciler 只按
+// **签名**比较（见 patchChildren 的 keySig），宿主按序列化形态还原真实 Flutter
+// Key（见 capabilities/key_bridge.dart）。
+//
+// 四类语义（与 Flutter 对齐）：
+//   - ValueKey ：按**值**相等。纯值 codec、不登记句柄；跨桥 `{__vkey:value}`，
+//     值本身是对象时退化为 `{__vtok:token}`（对象无跨语言同一性）；宿主现造
+//     ValueKey（Flutter 的 ValueKey 相等即值相等，无需映射表——否则每次 build
+//     新实例会让表无限增长）。签名：原始值 `v:<typeof>:<值>`，对象按身份。
+//   - ObjectKey：按**被包裹对象的身份**相等（Dart `identical(value, other.value)`）。
+//     身份 token 由 WeakMap + 序号给出（原始值没有身份，退化为值 string）；
+//     跨桥 `{__okey:token}`——跨语言保持不了对象同一性，用 token 等价复现
+//     （同一对象恒等、不同对象不等）。
+//   - GlobalKey / UniqueKey：登记为**句柄**（kind=key/Global、key/Unique），宿主侧
+//     持真实 GlobalKey() / UniqueKey()，按句柄 id 复用同一实例（GlobalKey 身份
+//     跨帧稳定；页面退出随句柄释放）。跨桥 `{__handle:id}`，签名 `h:<id>`。
+//
+// keySig 是 reconciler 唯一的 key 比较入口：把 key 归一成可比较字符串（null =
+// 无 key），patchChildren 据此做「带 key 优先按 key、无 key 按位置」匹配。
+// 判据用**结构**（__vkey / __okey / __id）而非 instanceof——key 可能来自父级
+// props 透传，形态必须与宿主侧 key_bridge 的解析保持一致。
+const String keyJsSource = r'''
+  // ===== 【10.6】Key 代理类（ValueKey / ObjectKey / UniqueKey / GlobalKey）===
+  // ObjectKey / ValueKey(对象值) 的身份 token：对象走 WeakMap（不阻止回收），
+  // 原始值没有身份，退化为值 string。
+  var okeySeq = 0;
+  var okeyIdx = new WeakMap();
+  function objectToken(v) {
+    if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
+      return 'p:' + String(v);
+    }
+    var t = okeyIdx.get(v);
+    if (t == null) { okeySeq += 1; t = 'i:' + okeySeq; okeyIdx.set(v, t); }
+    return t;
+  }
+
+  // ValueKey：按值相等，纯值 codec（不登记句柄）。
+  // 实例的**自有字段名 = 序列化字段名**（__vkey）：reconciler 的 keySig 用字段
+  // 形态判据，而 props.key 传的是 live 实例（不是 toJSON 产物），两边必须同形。
+  // 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
+  function ValueKey(value) { this.__vkey = value; }
+  ValueKey.prototype.toJSON = function () {
+    var v = this.__vkey;
+    if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
+      return { __vtok: objectToken(v) };
+    }
+    return { __vkey: v };
+  };
+
+  // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
+  function ObjectKey(value) { this.__okey = objectToken(value); }
+  ObjectKey.prototype.toJSON = function () { return { __okey: this.__okey }; };
+
+  // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
+  defineHandleKind('key/Global', {});
+  function GlobalKey(debugLabel) {
+    this.__id = reg(this, 'key/Global', {
+      meta: debugLabel == null ? null : { debugLabel: debugLabel }
+    });
+  }
+  GlobalKey.prototype.toJSON = function () { return { __handle: this.__id }; };
+
+  defineHandleKind('key/Unique', {});
+  function UniqueKey() {
+    this.__id = reg(this, 'key/Unique', {});
+  }
+  UniqueKey.prototype.toJSON = function () { return { __handle: this.__id }; };
+
+  // 值 → 签名片段（原始值按「类型 + 值」，对象按身份）。
+  function keyValueSig(v) {
+    if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
+      return typeof v + ':' + String(v);
+    }
+    return 'i:' + objectToken(v);
+  }
+
+  // key → 可比较签名；null / undefined（无 key）返回 null。
+  // 形态判据用**自有字段**（`__vkey` / `__okey`）：ValueKey 的值本身可以是
+  // null/undefined，故只能判「有没有这个字段」，不能判它的值。
+  function keySig(k) {
+    if (k == null) { return null; }
+    if (Object.prototype.hasOwnProperty.call(k, '__vkey')) { return 'v:' + keyValueSig(k.__vkey); }
+    if (Object.prototype.hasOwnProperty.call(k, '__okey')) { return 'o:' + k.__okey; }
+    var hid = k.__id != null ? k.__id : k.__handle;
+    if (hid != null) { return 'h:' + hid; }
+    return 'x:' + String(k);
+  }
+
+  G.ValueKey = ValueKey;
+  G.ObjectKey = ObjectKey;
+  G.UniqueKey = UniqueKey;
+  G.GlobalKey = GlobalKey;
+''';

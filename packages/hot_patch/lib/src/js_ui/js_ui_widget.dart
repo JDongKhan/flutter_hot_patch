@@ -8,6 +8,7 @@ import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
 import 'capabilities/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
+import 'capabilities/key_bridge.dart';
 import 'js_ui_store.dart';
 import 'js_widget_registry.dart';
 
@@ -407,6 +408,18 @@ class _JsNodeState extends State<_JsNode> {
     widget.store.bind(widget.id, _rebuild);
   }
 
+  /// 结点 key 现在可能来自 JS 声明（见 [_JsNodeState._node]）：同一 key 下
+  /// 结点 id 变化时（JS 侧重建出新的 host 结点）Flutter 会复用本 State，
+  /// 必须把重建回调改绑到新 id，否则 build 里查到的还是旧结点。
+  @override
+  void didUpdateWidget(covariant _JsNode oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id || !identical(oldWidget.store, widget.store)) {
+      oldWidget.store.unbind(oldWidget.id, _rebuild);
+      widget.store.bind(widget.id, _rebuild);
+    }
+  }
+
   @override
   void dispose() {
     widget.store.unbind(widget.id, _rebuild);
@@ -469,12 +482,19 @@ class _JsNodeState extends State<_JsNode> {
     );
   }
 
-  Widget _node(String id) => _JsNode(
-    key: ValueKey(id),
-    store: widget.store,
-    id: id,
-    registry: widget.registry,
-    nativeComponents: widget.nativeComponents,
-    invoke: widget.invoke,
-  );
+  Widget _node(String id) {
+    final node = widget.store.nodes[id];
+    // key：JS 侧声明的 key（ValueKey/ObjectKey/GlobalKey/UniqueKey → 真实 Flutter
+    // Key，见 capabilities/key_bridge.dart）优先；未声明时退回 `ValueKey(结点 id)`
+    // ——保证每个结点都有稳定 key，Flutter 才能复用 element（状态不丢）。
+    final declared = jsKeyOf(node?.props['key']);
+    return _JsNode(
+      key: declared ?? ValueKey(id),
+      store: widget.store,
+      id: id,
+      registry: widget.registry,
+      nativeComponents: widget.nativeComponents,
+      invoke: widget.invoke,
+    );
+  }
 }
