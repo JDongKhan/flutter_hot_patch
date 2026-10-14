@@ -42,6 +42,10 @@ class _OrdersPageState extends State<OrdersPage> {
   Widget build(BuildContext context) {
     final list = _list;
     return Column(
+      // 状态条的白色底必须横贯整屏。Column 默认按子结点自身宽度居中排布，
+      // `Container(color: white)` 会缩成状态条那么宽，"白底没铺满"。stretch
+      // 让子结点拉满交叉轴，白底占到整行（宽屏同样如此）。
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // 状态条
         Container(

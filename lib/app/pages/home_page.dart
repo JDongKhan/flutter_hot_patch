@@ -80,8 +80,18 @@ class HomePage extends StatelessWidget {
                     color: Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.all(Radius.circular(14)),
                   ),
-                  child: GridView.count(
-                    crossAxisCount: 4,
+                  // 九宫格的高度必须**恒定**：格子高度交给 mainAxisExtent 固定，
+                  // 列数交给 Flutter 按可用宽度动态算（maxCrossAxisExtent）。
+                  // 原先用 GridView.count(crossAxisCount: 4) —— 格子高 = 格子宽，
+                  // 窗口一宽行高就被拉高，整个白卡变成一大块空白。
+                  child: GridView(
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 150,
+                          mainAxisSpacing: 6,
+                          crossAxisSpacing: 6,
+                          mainAxisExtent: 84,
+                        ),
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
@@ -138,11 +148,13 @@ class HomePage extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
+              // 卡片高度固定（不再用 childAspectRatio 让高度跟着宽度走）：
+              // 窄屏 2 列（与原型一致），宽屏按 maxCrossAxisExtent 自动铺成 3~4 列。
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 300,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 0.72,
+                mainAxisExtent: 190,
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, index) => SpotCard(spot: spots[index]),

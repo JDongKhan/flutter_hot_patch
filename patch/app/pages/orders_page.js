@@ -26,7 +26,9 @@ export class OrdersPage {
   }
   build() {
     var list = this._list;
-    return __h('Column', {}, [
+    return __h('Column', {
+        "crossAxisAlignment": "stretch"
+      }, [
         __h('Container', {
             "color": '#FFFFFF'
           }, [

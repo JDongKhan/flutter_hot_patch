@@ -71,9 +71,18 @@ class AppRouter {
   }
 
   /// 打开订单 tab 对应的页面（「我的」页统计项/菜单入口）。
+  ///
+  /// 订单页自身只画内容（tab 形态要贴进 `AppShell` 的 body），独立成页时必须
+  /// 自带 `Scaffold`：否则没有背景色、没有标题栏与返回键，整页黑底且文字失去
+  /// Material 上下文（实测就是"从我的页进来很丑"的那一页）。
   @HostInjected()
   static Future<void> openOrders() async {
-    _push(const OrdersPage());
+    _push(
+      Scaffold(
+        appBar: AppBar(title: const Text('我的订单')),
+        body: const OrdersPage(),
+      ),
+    );
   }
 
   /// 打开「组件案例」页。

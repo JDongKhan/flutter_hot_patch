@@ -70,7 +70,10 @@ export class HomePage {
                         __h('GridView', {
                             "shrinkWrap": true,
                             "physics": "NeverScrollableScrollPhysics",
-                            "crossAxisCount": 4
+                            "maxCrossAxisExtent": 150,
+                            "mainAxisSpacing": 6,
+                            "crossAxisSpacing": 6,
+                            "mainAxisExtent": 84
                           }, [
                             ...(() => { var out = []; for (let i = 0; (i < this.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this.grid[i] })]); } return out; })()
                           ])
@@ -149,10 +152,10 @@ export class HomePage {
                 __h(SliverGrid, {
                     "builder": "_sliverBuilder0",
                     "childCount": this.spots.length,
-                    "crossAxisCount": 2,
+                    "maxCrossAxisExtent": 300,
                     "mainAxisSpacing": 10,
                     "crossAxisSpacing": 10,
-                    "childAspectRatio": 0.72
+                    "mainAxisExtent": 190
                   })
               ]),
             __h('SliverToBoxAdapter', {}, [
