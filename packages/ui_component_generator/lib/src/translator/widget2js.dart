@@ -64,6 +64,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 注册为动作的方法。缺了它，非动作方法调用会整条翻译失败。
   final Set<String> methodNames;
 
+  /// 本类 **getter** 名（`_visiblePosts` 这类）。getter 在 JS 类里是 `get` 访问器，
+  /// 作为**函数值**传参时只能按值读（`this._visiblePosts`），不能像方法那样包装成
+  /// 调用（`(...__a) => this._visiblePosts(...__a)` —— 访问器不可调用，传出去的
+  /// 是函数而非 getter 的值，子组件拿到 `.length` 为 0 的空数据）。
+  final Set<String> getterNames;
+
   /// 组件名 → 依赖产物 jsAsset 路径（null = 无法确定，渲染层走原生注入）。
   /// 由生成器注入：本文件私有/注解组件 → 本文件产物；跨文件组件 →
   /// 从 import directives 推导源文件产物。Component 节点据此产出 import，
@@ -120,6 +126,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     required this.actionByMethod,
     required this.sourcePath,
     this.methodNames = const {},
+    this.getterNames = const {},
     this.importResolver,
     this.singletons,
     this.globalConsts = const {},
@@ -926,6 +933,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       final name =
           e is PrefixedIdentifier ? widgetMemberName(e) : e.name;
       if (name == null) return null;
+      // getter（`list: _visiblePosts`）：JS 侧是 `get` 访问器，按值读即可；
+      // 包装成调用会传出去一个函数，子组件拿到空数据。
+      if (getterNames.contains(name)) return 'this.$name';
       if (actionByMethod.containsKey(name) || methodNames.contains(name)) {
         return '(...__a) => this.$name(...__a)';
       }

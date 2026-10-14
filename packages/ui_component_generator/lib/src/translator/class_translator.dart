@@ -264,6 +264,12 @@ ClassInfo translateClass(
     // （`Text(_likeText(post.like))`）与 setState/事件体里的 this.xxx(...) 都
     // 依赖它解析为本类方法，而不只限于注册为动作的方法。
     methodNames: {for (final m in methods) m.name.lexeme},
+    // getter 名（`_visiblePosts`）：JS 类里是 `get` 访问器，作为函数值传参时
+    // 必须按值读，不能包装成调用（见 [WidgetTranslateContext.getterNames]）。
+    getterNames: {
+      for (final m in methods)
+        if (m.isGetter) m.name.lexeme,
+    },
     sourcePath: sourcePath,
     importResolver: importResolver,
     singletons: singletons,

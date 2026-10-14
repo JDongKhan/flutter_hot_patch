@@ -156,7 +156,7 @@ export class CommunityPage {
                 "resetFilter": (...__a) => this._resetFilter(...__a),
                 "openFilter": this._filterOpen,
                 "toggleFilter": (...__a) => this._toggleFilter(...__a),
-                "list": (...__a) => this._visiblePosts(...__a),
+                "list": this._visiblePosts,
                 "sort": this._sort,
                 "type": this._type,
                 "dist": this._dist,
