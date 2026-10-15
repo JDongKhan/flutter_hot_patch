@@ -1018,7 +1018,7 @@ String? methodCallExprJs(
   // 宿主结点，同时把类型名发给宿主（Dart 端通用 VM 记着它）。
   // receiver 走 [exprToJs] 而非硬编码：构建作用域里就是形参 `context`；
   // 事件等**延迟作用域**里形参不可见，由作用域别名解析成 `this.context`
-  // （同一代理，见 WidgetTranslateContext._dataScope）。
+  // （运行时按执行位置解析到对应代理，见 WidgetTranslateContext._eventScope）。
   final tgt = e.target;
   if (tgt is Identifier && tgt.name == 'context') {
     final name = e.methodName.name;

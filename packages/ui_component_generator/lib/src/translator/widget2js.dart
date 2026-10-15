@@ -859,7 +859,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 事件参数列表翻译：逐参数走 [jsDataExpr]（字符串/字段/局部变量/字面量）。
   ///
   /// 作用域用 [_eventScope]：实参里的 `context` 照常翻译成 `this.context`
-  /// （实例上的同一代理），形参与调用点一一对应，不做任何剔除。
+  /// （运行时按**执行位置**解析到对应代理），形参与调用点一一对应，不做剔除。
   String _eventArgsJs(ArgumentList args) {
     final out = <String>[];
     for (final a in args.arguments) {
@@ -938,8 +938,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 无法翻译即抛错（组件数据绑定不允许静默丢表达式）。
   ///
   /// [scope] 可覆盖默认的组件数据作用域：事件路径传 [_eventScope]，把 `context`
-  /// 落到实例上的同一代理 `this.context`（事件串在运行时隔离求值，看不见 build
-  /// 形参，裸 `context` 必然 ReferenceError）。
+  /// 落到 `this.context`（事件串在运行时隔离求值，看不见 build 形参，裸 `context`
+  /// 必然 ReferenceError）。运行时 `this.context` 按**执行位置**解析——被委托的
+  /// builder 方法里取的是**被委托组件**的代理，与 Dart 闭包捕获 `context` 形参同语义。
   String jsDataExpr(Expression e, [FieldScope? scope]) {
     final js = rhsToJs(e, scope ?? _dataScope(), const {});
     if (js == null) {
@@ -975,8 +976,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///
   /// 缘由：事件串由运行时用隔离函数求值（`new Function`），build 形参 / 方法
   /// 局部变量在点击时都不可见——裸 `context` 落到那里必然是 ReferenceError。
-  /// 实例上的 `context` 与 build 传参是**同一代理对象**（见【10.7】），故改走
-  /// `this.context` 即可保持「调用面与 Dart 一致」。
+  /// 运行时 `this.context` 按**绑定时的执行位置**解析（见【10.7】与
+  /// `augment` 的 context getter）：被委托的 builder 方法里取的是**被委托组件**
+  /// 的代理（位于 provider 子树之内），与 Dart 闭包捕获 `context` 形参同语义；
+  /// 组件自身作用域里则是 build 传参的同一代理。故改走 `this.context` 即可保持
+  /// 「调用面与 Dart 一致」。
   /// [FieldScope.fieldRef] 的顺序是形参优先，因此这里必须同时把 `context`
   /// 移出 `params`，别名才会生效（否则渲染期翻译出的 `context.watch` 会占位）。
   FieldScope _eventScope() {

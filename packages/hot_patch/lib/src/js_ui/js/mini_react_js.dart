@@ -302,12 +302,18 @@ const String miniReactReconcilerSource = r'''
     inst.__bind = Component.prototype.__bind;
     inst.__bindFn = Component.prototype.__bindFn;
     // 与 Dart 一致：`context` 既是 build 形参、也是实例上可访问的同一对象。
-    // 事件/延迟作用域里形参不可见，`this.context` 是同步可达路径；两者恒等
-    // （同一个代理实例，见 capabilities/build_context_js.dart 的 contextOf）。
+    // 事件/延迟作用域里形参不可见，`this.context` 是同步可达路径。
+    //
+    // **按执行位置解析**：`building` 非空时取**它的**代理。被委托的 builder 方法
+    // （`_builderN` / `_consumerBuilderN` / `_lbBuilderN`，由 Builder / Consumer /
+    // ListView.builder 代理以 `owner[..].call(owner, context, …)` 调用）里 `this`
+    // 是 owner，而 `this.context` 必须是**被委托组件**的代理（它在 provider 子树
+    // 之内）——这正是 Dart 里闭包捕获 `context` 形参的语义。`this === building`
+    // 的路径（组件自身 build、顶层绑定）行为不变。
     // 惰性：不用 context 的组件不建代理、不建跨语言句柄。
     Object.defineProperty(inst, 'context', {
       configurable: true,
-      get: function () { return contextOf(this); }
+      get: function () { return contextOf(building || this); }
     });
   }
 
