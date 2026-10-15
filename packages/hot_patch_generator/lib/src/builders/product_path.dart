@@ -53,7 +53,7 @@ String relativeProduct(String from, String to) {
 /// 不产出产物的类（拿不到 JS，运行时走宿主 nativeComponents 原生注入）：
 ///   - 私有类：私有名不可能出现在别的文件里，不进表；
 ///   - **@PatchIgnore**：显式「不参与连带转换」；
-///   - **@HostInjected**：方法实现留在 Dart，调用点被翻译为 `__jsui.host`。
+///   - **@HostInjected**：方法实现留在 Dart，调用点被翻译为 `_app_host_.invoke`。
 ///
 /// 按**类名**绑定（而非「第一条 import」），多 import 文件不会串台；命中即让
 /// build 树里的 Component 节点渲染成类引用元素并 import 该产物。

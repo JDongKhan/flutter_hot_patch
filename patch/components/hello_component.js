@@ -42,8 +42,8 @@ export class HelloCard {
     this.setState(function(){ this._count += 1; });
   }
   async loadUser() {
-    var name = await __jsui.host("getUserName", []);
-    var userMap = await __jsui.host("post", {"params": {"name": name}});
+    var name = await _app_host_.invoke("getUserName", []);
+    var userMap = await _app_host_.invoke("post", {"params": {"name": name}});
     console.log("用户信息:" + __str(userMap["code"]));
     await new Promise(function(r){ setTimeout(r, 1000); });
     this.setState(function(){ this._user = new User({name: "Alice", age: 18}); });
@@ -52,7 +52,7 @@ export class HelloCard {
     this.setState(function(){ this._count = 0; });
   }
   showNative() {
-    __jsui.host("nativeToast", { message: "Hello from native (JS-driven)" });
+    _app_host_.invoke("nativeToast", { message: "Hello from native (JS-driven)" });
   }
   build(context) {
     var isAdult = ((this._user != null) && (this._user.age >= 18));

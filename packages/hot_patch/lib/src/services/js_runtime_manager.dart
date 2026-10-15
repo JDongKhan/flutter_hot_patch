@@ -33,8 +33,8 @@ import '../utils/hot_patch_log.dart';
 ///   sendMessage('_app_bridge_', JSON.stringify({ ch: 'jsuiCommit', data }))
 ///
 /// 其中 `data` 固定为 `{id, args}`。JS 侧对外只有**一个**出口
-/// `__jsui.host(channel, args)`：它把 `{id, args}` 交给宿主，宿主实现后用
-/// `__jsui.resolve(id, value)` 回填 Promise。框架内建通道（增量补丁
+/// `_app_host_.invoke(channel, args)`：它把 `{id, args}` 交给宿主，宿主实现后用
+/// `_app_host_.resolve(id, value)` 回填 Promise。框架内建通道（增量补丁
 /// `jsuiCommit`、日志 `log`、native 通道）与业务 @HostInjected 方法
 /// 共用这一张表。
 ///
@@ -45,7 +45,7 @@ import '../utils/hot_patch_log.dart';
 /// No channel xxx registered」。 [evaluate] 是纯求值入口，不掺注册副作用。
 ///
 /// **对外扩展只有一个能力：[registerHostMethod] 注册一个宿主方法
-/// （@HostInjected 方法，或框架内建通道），JS 侧 `__jsui.host` 调用、
+/// （@HostInjected 方法，或框架内建通道），JS 侧 `_app_host_.invoke` 调用、
 /// 宿主实现并回填结果。**
 ///
 /// 页面隔离（多 JsUiWidget 共用单 runtime）由处理器**内部**按参数里的
@@ -77,7 +77,7 @@ class JsRuntimeManager {
   static const String hostPositionalKey = '@args';
 
   /// 所有活跃 manager（static 跟踪）：[registerHostMethod] 的返回值回填
-  /// （`__jsui.resolve`）需要对每个 runtime 求值一次。
+  /// （`_app_host_.resolve`）需要对每个 runtime 求值一次。
   static final Set<JsRuntimeManager> _instances = {};
 
   // ---------------------------------------------------------------------
@@ -93,12 +93,12 @@ class JsRuntimeManager {
   /// 注册一个**宿主方法**（@HostInjected 通道；框架内建通道同用此入口）。
   ///
   /// 生成器把 Dart 的 static 方法调用（`AccountCenter.getUserName(a)`）在
-  /// 调用点翻译为 JS 侧 `__jsui.host("通道名", 参数载荷)`（返回 Promise，可
+  /// 调用点翻译为 JS 侧 `_app_host_.invoke("通道名", 参数载荷)`（返回 Promise，可
   /// await；载荷按实参形态给数组/对象，见 [_hostCallArgs]）。本方法把该通道接到
   /// 宿主实现 [impl]：收到 JS 的 `{id, args}` 后按
   /// `Function.apply(impl, 位置实参, 具名实参)` 调用——Dart 调用语义完整还原，
   /// 位置/具名实参**个数不限**，未传的参数走实现自身的默认值，返回值类型也不限。
-  /// 之后把返回值经 `__jsui.resolve(id, value)` 回填 JS 的 Promise。
+  /// 之后把返回值经 `_app_host_.resolve(id, value)` 回填 JS 的 Promise。
   ///
   /// 全局一份；通道名即 @HostInjected 注解里的名称（缺省为方法名），或框架
   /// 内建通道名。只写处理器表——桥通道在 manager 构造时已订阅。
@@ -127,18 +127,18 @@ class JsRuntimeManager {
         value = null;
       }
       if (id == null || id.isEmpty) return;
-      // resolve 挂在 JS 全局（__jsui），对每个活跃 runtime 求值一次：
+      // resolve 挂在 JS 全局（_app_host_），对每个活跃 runtime 求值一次：
       // 持有该 id 的 runtime 回填 Promise，其余为 no-op。
-      final code = '__jsui.resolve("$id", ${jsonEncode(value)});';
+      final code = '_app_host_.resolve("$id", ${jsonEncode(value)});';
       for (final m in _instances.toList()) {
-        m._eval(code, '__jsui.resolve');
+        m._eval(code, '_app_host_.resolve');
       }
     };
   }
 
   /// JS 宿主调用的参数载荷 → (`位置实参`, `具名实参`)。
   ///
-  /// 生成器（见 `__jsui.host`）按实参形态给三种编码，这里对称解析：
+  /// 生成器（见 `_app_host_.invoke`）按实参形态给三种编码，这里对称解析：
   ///   - 数组 `[a, b]`            → 全是位置实参
   ///   - 对象 `{"times": 2}`      → 全是具名实参
   ///   - 对象带 [hostPositionalKey] → 混合（该键是位置实参，其余键是具名）
@@ -426,7 +426,7 @@ $out
 
   /// 桥通道回调：解出消息体 `ch` 字段，二次分发到唯一处理器表。
   ///
-  /// 信封格式（JS 侧 `__jsui.host` / 内部 `send` 产出）：
+  /// 信封格式（JS 侧 `_app_host_.invoke` / 内部 `send` 产出）：
   ///   `{ ch: <逻辑通道名>, data: {id, args} }`
   ///
   /// `ch` 定位通道；`data` 交给对应处理器（[registerHostMethod] 的包装按

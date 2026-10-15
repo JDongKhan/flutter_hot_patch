@@ -24,7 +24,7 @@ import '../../js_widget_registry.dart';
 final Set<VoidCallback> _openDrawerClosers = {};
 
 /// 关闭当前打开的抽屉（drawer / endDrawer 均可）；无打开抽屉时 no-op。
-/// 供业务侧 @HostInjected 方法转调（JS 侧 `__jsui.host('closeDrawer')`）。
+/// 供业务侧 @HostInjected 方法转调（JS 侧 `_app_host_.invoke('closeDrawer')`）。
 void closeOpenDrawer() {
   for (final closer in _openDrawerClosers.toList()) {
     closer();

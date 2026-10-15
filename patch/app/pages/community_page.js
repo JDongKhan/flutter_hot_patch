@@ -57,7 +57,7 @@ export class CommunityPage {
                         ...(() => { var out = []; for (let t of kCommunityTabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _tab = t)" + ":" + String(t), () => { this.setState(() => { this._tab = t; }); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "data": t, "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
                         __h('Spacer', {}),
                         __h('GestureDetector', {
-                            "event": this.__bind("__jsui.host(\"toast\", [\"发布新动态（演示）\"])")
+                            "event": this.__bind("_app_host_.invoke(\"toast\", [\"发布新动态（演示）\"])")
                           }, [
                             __h('Container', {
                                 "width": 32,
@@ -169,7 +169,7 @@ export class CommunityPage {
   _listViewBuilder0(context, i) {
       return __h(_ResourceCard, {
         "resource": kResources[i],
-        "onTap": () => { return __jsui.host("openResource", [kResources[i].id]); }
+        "onTap": () => { return _app_host_.invoke("openResource", [kResources[i].id]); }
       });
   }
   _listViewBuilderSeparator1(context, _) {
@@ -213,7 +213,7 @@ export class _ListContent {
               "bottom": 20.0
             }
           }, [
-            ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "data": "没有符合条件的帖子，试试放宽筛选条件", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": () => { return __jsui.host("openPost", [p.id]); } }) ])]); } return out; })())
+            ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "data": "没有符合条件的帖子，试试放宽筛选条件", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) ])]); } return out; })())
           ]),
         ...(this.openFilter ? [__h('Positioned', { "left": 0, "top": 0, "right": 0, "bottom": 0 }, [ __h('GestureDetector', { "event": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "top": 0, "right": 0 }, [ __h(_FilterPanel, { "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
       ]);

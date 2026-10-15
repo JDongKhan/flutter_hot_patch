@@ -88,7 +88,7 @@ ClassInfo translateClass(
   bool isComponent = false,
 }) {
   // @HostInjected 通道表：翻译层自己扫（本文件 + import 源文件）。方法体里
-  // `Foo.bar(...)` 命中即整体换成 `__jsui.host("通道", 载荷)`，组件与普通类
+  // `Foo.bar(...)` 命中即整体换成 `_app_host_.invoke("通道", 载荷)`，组件与普通类
   // 共用同一份数据、同一条翻译路径，构建层不参与。
   final hostMethods = buildHostMethods(unit, sourcePath);
 

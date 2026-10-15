@@ -66,7 +66,7 @@ export class OrdersPage {
       return __h(_OrderCard, {
         "order": o,
         "statusColor": this._statusColor(o.status),
-        "onOpen": () => { return __jsui.host("openOrder", [o.no]); }
+        "onOpen": () => { return _app_host_.invoke("openOrder", [o.no]); }
       });
   }
   _listViewBuilderSeparator1(context, _) {
@@ -220,7 +220,7 @@ export class _OrderCard {
                             }
                           }),
                         __h('Spacer', {}),
-                        ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": () => { return __jsui.host("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.onOpen })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.onOpen })])
+                        ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.onOpen })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.onOpen })])
                       ])
                   ])
               ])

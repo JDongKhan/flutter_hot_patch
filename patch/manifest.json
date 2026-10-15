@@ -1,15 +1,15 @@
 {
   "name": "flutter_hot",
-  "buildTime": "2026-10-15T16:32:58.504094",
+  "buildTime": "2026-10-15T16:47:24.980013",
   "resources": {
     "flutter.js": "b2c73a5ccb23f81113d39c49a16533e072cfbdbdbab66dc79fa2ad2a8356e8fc",
     "provider.js": "269a1e9e4ca491a13289455cf3b33a82b75607858f0c1ad7bea5613cd29e4158",
     "app/model/app_models.js": "2a8b5129307548ba4400210b6a8c07bf2160560642386fdb6630283b766a2a0f",
     "app/model/app_data.js": "594a32216fc73c218fd089c63a0bbaef91cc2b281692f789ab7cb6e674052085",
-    "app/pages/orders_page.js": "35296b26e34396c5ea88072dcd28c474c06953926ad91ee8d57efa4ff7fd4776",
-    "app/pages/community_page.js": "1040ebc33f17cf6d36f832f65691b6a2f958952e6b85581121be4e75f119a2ab",
-    "app/pages/home_page.js": "32525987069b0a0dd9c52eed620db8cef762fae882be0d815d72571f91b60261",
-    "app/pages/mine_page.js": "f0d393f41822eca503a32defd09c69a2faee6bdd9dc42e1f35270cf0e390f605",
+    "app/pages/orders_page.js": "2d51defeaf4076426e3c4cff58f3af6d632d8a028bf3bae9a8cff3ac80858ee0",
+    "app/pages/community_page.js": "0a6858ec37e1bd1ca05121e9981f2a3b9805298190763f0f8ee64046e43d1879",
+    "app/pages/home_page.js": "bbfdf8aa4c5f740ff563ef0d67c25f5ee4fb24b0b83f5cdb1e7c3cfa1678ba83",
+    "app/pages/mine_page.js": "49c3afce96fa196779416c696063fa4666f9d97a1dee513095ce9b878f154504",
     "app/pages/detail_pages.js": "d35e0b90d1d9a268a807d15fd1962591517d8315a0c052ba834db94587ed3f5d",
     "app/app.js": "33fb06351a4c0bb952e555fd38cda51171da620d67f3e0c9fbf4e0eadfbba996",
     "components/widget_details.js": "83a4e2158e9fa38bb226f6c4299607aa1549e64d95e243dde683ce03f4183ffc",
@@ -17,10 +17,10 @@
     "components/provider_component.js": "a0a15aa8a251b543281cd5b0a91befc1efc69353376b936697700f87b5925173",
     "components/banner_component.js": "bf5028d55d6880ad3644195f0bf3124619dbdcbd5a8638fb3cd6437c113f6c6d",
     "components/composite_component.js": "57017c4e2be54d77daad74a33985d1792810117884f055169d75cb449d4ee255",
-    "components/hello_component.js": "fc998965f6a57d4d2affeacd2e4932d0ed18422ea6f48fe9ed524716eead6f28",
+    "components/hello_component.js": "abc4831c295abd74f24b0ba15e6e5d2e6aa74d62ab40cb38650b191cf934ca3b",
     "components/watch_demo.js": "73dd4845026d687b2d6a61b123f4dc5179ef35341879157a24f4b03cf8490efd",
     "model/user.js": "ab8c8036baf1abf5b77011450304fce02eef9b4b7ef7b9af278fce23e7db9063",
-    "model/network_vm.js": "666616aeb56ba4fdcc70a2b6a2eabb1de3007e8adc455b0090347d0a0e16beec",
+    "model/network_vm.js": "11be52dc14a46caa1cc37c56c081d35b3c8973a338adbfe797ec084b48858232",
     "model/counter_vm.js": "601fb66c8e3c382b8267c4e24f3135e86c68ba6a27f4ef2511d3e64a65505abd"
   }
 }

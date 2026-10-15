@@ -29,7 +29,7 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
     if (name.startsWith('_') || decls.containsKey(name)) return;
     if (d.abstractKeyword != null) return;
     // @HostInjected 类：方法实现留在 Dart，不产出 JS（调用点被翻译为
-    // __jsui.host，见 buildHostMethods 与 js_translator.methodCallExprJs）。
+    // _app_host_.invoke，见 buildHostMethods 与 js_translator.methodCallExprJs）。
     if (classHasHostInjectedMethod(d)) return;
     decls[name] = (d, file, isWidgetClassDecl(d));
   }

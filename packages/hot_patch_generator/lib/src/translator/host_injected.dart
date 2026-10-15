@@ -1,5 +1,5 @@
 /// `@HostInjected` 的**唯一**识别口径：哪些声明算宿主注入、通道名怎么取、
-/// 调用点怎么落地成 `__jsui.host(...)`。
+/// 调用点怎么落地成 `_app_host_.invoke(...)`。
 ///
 /// 这里是翻译层的一部分（不是构建层）：`@HostInjected` 方法调用在 Dart 侧写法
 /// 与普通静态方法完全一样，把它整体换成宿主通道调用是**翻译**的职责。因此
@@ -8,10 +8,10 @@
 /// 构建层不参与、也不需要传任何参数。
 ///
 /// 同一份扫描口径还被 `ui_host_register/host_register_builder.dart` 用来生成
-/// 宿主侧注册清单（通道 → Dart 实现），保证「翻译成 `__jsui.host` 的一定被注册」。
+/// 宿主侧注册清单（通道 → Dart 实现），保证「翻译成 `_app_host_.invoke` 的一定被注册」。
 ///
 /// 不支持参数个数 / 是否具名 / 返回值类型的差异：调用点整体换成
-/// `__jsui.host(通道, 参数载荷)`（纯位置→数组、纯具名→对象、混合→数组+具名），
+/// `_app_host_.invoke(通道, 参数载荷)`（纯位置→数组、纯具名→对象、混合→数组+具名），
 /// 宿主侧用 `Function.apply(impl, 位置, 具名)` 还原，故任意形参与返回类型都成立。
 library;
 
@@ -109,7 +109,7 @@ bool classHasHostInjectedMethod(ClassDeclaration d) {
 ///
 /// 调用方是 [translateClass]（翻译任一方法体前），结果挂在
 /// [ClassInfo.hostMethods] 上供方法体翻译把调用点整体替换为
-/// `__jsui.host("通道", 参数载荷)`。
+/// `_app_host_.invoke("通道", 参数载荷)`。
 Map<String, Map<String, String>> buildHostMethods(
   CompilationUnit unit,
   String sourcePath,

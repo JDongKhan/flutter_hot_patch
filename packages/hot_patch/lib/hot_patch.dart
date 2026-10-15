@@ -17,7 +17,7 @@
 /// `_seedBuiltins`；也可在 App 的 `main()` 里注册，从而完全不改本包）。
 /// 宿主核心文件零改动。
 ///
-/// JS→原生能力统一走「宿主方法」：JS 侧唯一出口 `__jsui.host`，宿主侧唯一
+/// JS→原生能力统一走「宿主方法」：JS 侧唯一出口 `_app_host_.invoke`，宿主侧唯一
 /// 入口 [JsRuntimeManager.registerHostMethod]（业务方法用 @HostInjected 注解
 /// 由生成器注册，框架内建通道由 JsUiWidget 启动时注册），核心类零改动。
 library;

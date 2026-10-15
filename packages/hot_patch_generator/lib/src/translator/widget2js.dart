@@ -88,7 +88,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 
   /// 宿主注入方法表（`类名 → {方法名 → 通道名}`；顶层函数挂在 `''` key 下）。
   /// 数据表达式 / 事件回调里 `AppRouter.openPost(id)` 这类 `@HostInjected`
-  /// 调用要整体换成 `__jsui.host("通道", 载荷)`——与普通类方法体共用同一份表，
+  /// 调用要整体换成 `_app_host_.invoke("通道", 载荷)`——与普通类方法体共用同一份表，
   /// 否则事件里的跳转/提示整条翻译失败。
   final Map<String, Map<String, String>> hostMethods;
 
@@ -718,7 +718,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         }
         final target = inner.target;
         // @HostInjected 调用（`AppRouter.pop()` / `AppRouter.toast('x')`）：事件
-        // 表达式与方法体翻译共用同一份通道表，整体换成 `__jsui.host(通道, 载荷)`。
+        // 表达式与方法体翻译共用同一份通道表，整体换成 `_app_host_.invoke(通道, 载荷)`。
         // 少了这一步，事件串里的 `this.AppRouter.pop()` 在运行时只是对一个不存在
         // 属性的访问（抛错被运行时吞掉），点击静默失效。
         final hostCall =
@@ -874,7 +874,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return out.join(', ');
   }
 
-  /// 事件表达式里的 @HostInjected 调用 → `__jsui.host(通道, 载荷)`。
+  /// 事件表达式里的 @HostInjected 调用 → `_app_host_.invoke(通道, 载荷)`。
   ///
   /// [target] 是 @HostInjected 类名（`AppRouter`）或 null（顶层宿主函数）；
   /// 通道表 [hostMethods] 与方法体翻译共用同一份数据，未命中返回 null。
@@ -901,7 +901,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         pos.add(jsDataExpr(a, _eventScope()));
       }
     }
-    return '__jsui.host(${jsString(channel)}, ${hostArgsJs(pos, named)})';
+    return '_app_host_.invoke(${jsString(channel)}, ${hostArgsJs(pos, named)})';
   }
 
   /// BorderRadius.all(Radius.circular(n)) / BorderRadius.circular(n) → 数字字符串。

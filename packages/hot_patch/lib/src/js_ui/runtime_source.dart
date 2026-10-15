@@ -7,8 +7,8 @@
 ///   - 作用域/context：按**类型名**向上查找 + 订阅（不关心类型是模型还是别的），
 ///     取值在 JS 内同步完成；同时向宿主发同名 op，由宿主在真值 BuildContext 上
 ///     登记依赖（宿主侧的权威校验）；
-///   - bridge：出方向只有一个对外入口 `__jsui.host(channel, args)`——
-///     JS 发起调用，宿主实现后用 `__jsui.resolve(id, value)` 回填 Promise。
+///   - bridge：出方向只有一个对外入口 `_app_host_.invoke(channel, args)`——
+///     JS 发起调用，宿主实现后用 `_app_host_.resolve(id, value)` 回填 Promise。
 ///     增量补丁 `jsuiCommit`、日志 `log`、native 通道、@HostInjected 方法
 ///     全部复用这一个入口（内部统一打到单桥通道 `_app_bridge_`，消息体 `ch`
 ///     字段标示目标通道，宿主一次订阅、二次分发）。
@@ -39,7 +39,7 @@
 /// | 【1b】 | 跨语言句柄注册表（`reg` / `release` / `call` / `handleOp`） | 全体共用（新增能力只注册 kind） |
 /// | 【1c】 | Dart 标准库 → JS 内建补齐（`Array.prototype.clear` 等） | 全体共用（生成器看不到接收者类型，同名方法无法在编译期区分） |
 /// | 【2】 | 出方向桥（emit / commit / send → `sendMessage`） | 全体共用 |
-/// | 【3】 | 宿主注入 `__jsui.host` / `resolve`（唯一对外出口） | @HostInjected 专用 |
+/// | 【3】 | 宿主桥 `_app_host_`（`invoke` / `resolve`，唯一对外出口） | @HostInjected 专用 |
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
 /// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
 /// | 【6】 | 组件基类（`setState` / `__bind`） | mini-react（生成器产物的能力袋） |
@@ -110,7 +110,7 @@ G.Platform = {
 // 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
 // `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
 // debug/info/log/warn/error 全部可用且路由到 log 服务。
-// 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
+// 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
 // 故 Promise 一定被回填、不会悬挂。
 // 值 → 字符串（对象/数组完整展开，循环引用安全）：JS 侧 `String(obj)` 只会
 // 得到 `[object Object]`，日志里看不到任何字段。`__str` 递归展开 own 字段，
@@ -147,16 +147,16 @@ G.__str = function (v) { return __fmt(v, []); };
 // 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
 // `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
 // debug/info/log/warn/error 全部可用且路由到 log 服务。
-// 出口统一走 `__jsui.host`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
+// 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
 // 故 Promise 一定被回填、不会悬挂。
 G.console = (typeof G.console === 'undefined') ? {} : G.console;
 function __log(args) {
-  if (typeof G.__jsui !== 'undefined' && G.__jsui.host) {
+  if (typeof G._app_host_ !== 'undefined' && G._app_host_.invoke) {
     var text = '';
     for (var i = 0; i < args.length; i++) {
       text += (i ? ' ' : '') + __fmt(args[i], []);
     }
-    __jsui.host('log', [text]);
+    G._app_host_.invoke('log', [text]);
   }
 }
 G.console.debug = function() { if (G.kDebugMode) { __log(arguments); } };
@@ -239,7 +239,7 @@ const String _jsUiEmit = r'''
   // 所有 JS→宿主消息都打到单桥通道 `_app_bridge_`，目标通道名放在消息体
   // `ch` 字段。宿主只订阅该桥通道一次，再按 ch 二次分发。
   // `send` 是运行时**内部**的低层发送（不对外暴露）；对外的唯一入口是
-  // `__jsui.host`（见【3】），它等于 `send` + Promise 回填。
+  // `_app_host_.invoke`（见【3】），它等于 `send` + Promise 回填。
   var APP_BRIDGE = '_app_bridge_';
   function send(channel, data) {
     if (typeof sendMessage !== 'function') { return; }
@@ -259,15 +259,15 @@ const String _jsUiEmit = r'''
 
 ''';
 
-/// 宿主注入｜__jsui.host / resolve（唯一对外出口）【3】。
+/// 宿主桥｜_app_host_.invoke / resolve（唯一对外出口）【3】。
 const String _jsUiHostBridge = r'''
-  // ===== 【3】宿主注入｜__jsui.host / resolve（唯一对外出口）==========
+  // ===== 【3】宿主桥｜_app_host_.invoke / resolve（唯一对外出口）======
   // JS 发起调用，宿主实现后回填结果
   // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
-  // `__jsui.host("getUserName", [a, b])`（参数载荷按形态给：纯位置→数组、
+  // `_app_host_.invoke("getUserName", [a, b])`（参数载荷按形态给：纯位置→数组、
   // 纯具名→对象、混合→对象 + "@args" 键装位置实参）：本函数返回 Promise，
   // 经桥通道把 `{id, args}` 交给宿主，宿主实现完成后用
-  // `__jsui.resolve(id, value)` 回填（见 JsRuntimeManager.registerHostMethod）。
+  // `_app_host_.resolve(id, value)` 回填（见 JsRuntimeManager.registerHostMethod）。
   // 框架内建通道（日志 `log`、native 通道等）同样走这里，保持单一出口。
   var hostSeq = 0;
   var hostPending = {};
@@ -374,8 +374,6 @@ const String _jsUiRuntimeSkeletonTail = r'''
     Component: Component,
     mount: mountRoot,
     dispose: disposeRoot,
-    host: host,
-    resolve: resolveHost,
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
     // （见 capabilities/core/handle_registry.dart）。
     reg: reg,
@@ -384,6 +382,9 @@ const String _jsUiRuntimeSkeletonTail = r'''
   };
 
   G.__jsui = api;
+  // JS→宿主唯一出口（宿主桥）：`invoke` 发起调用、`resolve` 回填 Promise。
+  // 与 `__jsui`（页面挂载/事件回传等运行入口）分开，语义单一。
+  G._app_host_ = { invoke: host, resolve: resolveHost };
   // 模块表 `__modules` 由同一 IIFE 首段（_jsUiEnvVars）创建（挂 G），
   // 此处只登记 core，不再自带守卫。
   G.__modules['js_ui/core'] = api;

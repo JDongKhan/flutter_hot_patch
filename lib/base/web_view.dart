@@ -9,7 +9,7 @@ import '../app/pages/detail_pages.dart';
 /// 被设计为 **@HostInjected**：实现留在 Dart 侧（真实项目里会换成
 /// webview_flutter 或原生 WebView），@PatchEntry 组件里写
 /// `WebView.open(url, title)` 时，生成器只把调用点替换为
-/// `__jsui.host('openWebView', [url, title])`，由宿主
+/// `_app_host_.invoke('openWebView', [url, title])`，由宿主
 /// `JsRuntimeManager.registerHostMethod` 接回调并经 Navigator 推入页面。
 class WebView {
   const WebView._();

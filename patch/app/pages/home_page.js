@@ -181,13 +181,13 @@ export class HomeHeader {
   constructor() {
   }
   openSearch() {
-    __jsui.host("openSearch", []);
+    _app_host_.invoke("openSearch", []);
   }
   openMessages() {
-    __jsui.host("toast", ["暂无新消息"]);
+    _app_host_.invoke("toast", ["暂无新消息"]);
   }
   openLocation() {
-    __jsui.host("toast", ["定位：上海市 · 点击切换城市"]);
+    _app_host_.invoke("toast", ["定位：上海市 · 点击切换城市"]);
   }
   build(context) {
     return __h('Container', {
@@ -347,7 +347,7 @@ export class BannerSlide {
     this.banner = (args && args.banner !== undefined) ? args.banner : null;
   }
   open() {
-    __jsui.host("toast", [this.banner.title]);
+    _app_host_.invoke("toast", [this.banner.title]);
   }
   build(context) {
     return __h('Padding', {
@@ -426,7 +426,7 @@ export class GridCell {
     this.entry = (args && args.entry !== undefined) ? args.entry : null;
   }
   open() {
-    __jsui.host("toast", [this.entry.title + " 频道"]);
+    _app_host_.invoke("toast", [this.entry.title + " 频道"]);
   }
   build(context) {
     return __h('InkWell', {
@@ -465,7 +465,7 @@ export class SpotCard {
     this.spot = (args && args.spot !== undefined) ? args.spot : null;
   }
   open() {
-    __jsui.host("openSpot", [this.spot.id]);
+    _app_host_.invoke("openSpot", [this.spot.id]);
   }
   build(context) {
     return __h('InkWell', {
@@ -602,7 +602,7 @@ export class PromoCard {
     this.img = (args && args.img !== undefined) ? args.img : '';
   }
   open() {
-    __jsui.host("open", ["https://flutter.dev", "活动详情"]);
+    _app_host_.invoke("open", ["https://flutter.dev", "活动详情"]);
   }
   build(context) {
     return __h('InkWell', {

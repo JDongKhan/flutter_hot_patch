@@ -9,7 +9,7 @@
 ///   所有非 static 字段 → JS 状态 __state（_count → count）
 ///   所有方法（除 build/生命周期）→ JS 事件方法（构建期以 this.__bind 绑定）
 ///   build()           → JS 渲染入口（原封不动翻译为 build 函数）
-///   SnackBar 形式的方法 → 自动识别为 native 通道（__jsui.host）
+///   SnackBar 形式的方法 → 自动识别为 native 通道（_app_host_.invoke）
 ///
 /// 注解只是构建期元数据，不影响组件正常运行：
 /// 线上出 bug 时，运行时切换到 JsUiWidget 加载 JS 版本即可热修复，无需发版。
@@ -44,9 +44,9 @@ class PatchIgnore {
 /// 调用到被标注的 static 方法时，生成器只把**调用点**替换为宿主编排的调用：
 ///
 ///   AccountCenter.getUserName(a, b)
-///     →  __jsui.host("getUserName", [a, b])            // Promise，可 await
+///     →  _app_host_.invoke("getUserName", [a, b])            // Promise，可 await
 ///   Network.post(params: m)
-///     →  __jsui.host("post", {"params": m})
+///     →  _app_host_.invoke("post", {"params": m})
 ///
 /// [name] 为消息通道名；缺省（不传）时取方法名本身。
 /// 参数载荷按实参形态给：纯位置→数组、纯具名→对象、混合→对象 + `"@args"`

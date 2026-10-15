@@ -11,7 +11,7 @@ import 'components/widget_showcase.dart';
 import 'generated/host_methods.dart';
 
 void main() {
-  // @HostInjected 宿主方法：JS 侧调用点被翻译为 `__jsui.host('getUserName', [])`。
+  // @HostInjected 宿主方法：JS 侧调用点被翻译为 `_app_host_.invoke('getUserName', [])`。
   // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
   // 调一次即可，无需手写每条通道。
   registerHostMethods();

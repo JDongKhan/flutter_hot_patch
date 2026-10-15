@@ -15,12 +15,12 @@ export class MinePage {
   _openMenu(i) {
     var m = kMineMenu[i];
     if ((m.screen == "orders")) {
-      __jsui.host("openOrders", []);
+      _app_host_.invoke("openOrders", []);
     } else {
       if ((m.screen == "showcase")) {
-        __jsui.host("openWidgetShowcase", []);
+        _app_host_.invoke("openWidgetShowcase", []);
       } else {
-        __jsui.host("open", ["https://flutter.dev", ((m.arg.length === 0) ? m.title : m.arg)]);
+        _app_host_.invoke("open", ["https://flutter.dev", ((m.arg.length === 0) ? m.title : m.arg)]);
       }
     }
   }
@@ -49,7 +49,7 @@ export class MinePage {
                 "bottom": false
               }, [
                 __h('GestureDetector', {
-                    "event": this.__bind("__jsui.host(\"openLogin\", [])")
+                    "event": this.__bind("_app_host_.invoke(\"openLogin\", [])")
                   }, [
                     __h('Row', {}, [
                         __h('ClipOval', {
@@ -129,7 +129,7 @@ export class MinePage {
                 }
               }, [
                 __h('Row', {}, [
-                    ...(() => { var out = []; for (let s of kMineStats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "event": this.__bindFn("() => AppRouter.openOrders()" + ":" + String(s), () => { __jsui.host("openOrders", []); }) }, [ __h('Column', {}, [ __h('Text', { "data": s[1], "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' } }), __h('SizedBox', { "height": 3 }), __h('Text', { "data": s[0], "style": { "fontSize": 11.5, "color": '#ff8b909a' } }) ]) ]) ])]); } return out; })()
+                    ...(() => { var out = []; for (let s of kMineStats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "event": this.__bindFn("() => AppRouter.openOrders()" + ":" + String(s), () => { _app_host_.invoke("openOrders", []); }) }, [ __h('Column', {}, [ __h('Text', { "data": s[1], "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' } }), __h('SizedBox', { "height": 3 }), __h('Text', { "data": s[0], "style": { "fontSize": 11.5, "color": '#ff8b909a' } }) ]) ]) ])]); } return out; })()
                   ])
               ])
           }),
@@ -160,7 +160,7 @@ export class MinePage {
             }
           }, [
             __h('GestureDetector', {
-                "event": this.__bind("__jsui.host(\"toast\", [\"已退出登录（演示）\"])")
+                "event": this.__bind("_app_host_.invoke(\"toast\", [\"已退出登录（演示）\"])")
               }, [
                 __h('Container', {
                     "height": 46,
@@ -219,7 +219,7 @@ export class MinePage {
                     "icon": "widgets_outlined",
                     "title": "组件案例",
                     "subtitle": "常用组件 原生 ↔ JS 同屏对比",
-                    "onTap": () => { return __jsui.host("openWidgetShowcase", []); }
+                    "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
                   }),
                 __h('Divider', {
                     "height": 1,
@@ -230,7 +230,7 @@ export class MinePage {
                     "icon": "compare_arrows",
                     "title": "热更 Demo 列表",
                     "subtitle": "HelloCard / ProviderCard / WatchDemo 等对比",
-                    "onTap": () => { return __jsui.host("openDemoList", []); }
+                    "onTap": () => { return _app_host_.invoke("openDemoList", []); }
                   })
               ])
           ])

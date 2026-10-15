@@ -68,7 +68,7 @@ class ClassMethod {
   final String? bodyJs; // 预渲染方法体（非 null 时优先于 body）
 
   /// 方法体是「宿主通道」形式（如 SnackBar → `nativeToast`）：整体译为
-  /// `__jsui.host("通道名", {...})`，[nativeMessage] 是已译好的消息 JS 表达式。
+  /// `_app_host_.invoke("通道名", {...})`，[nativeMessage] 是已译好的消息 JS 表达式。
   final String? nativeChannel;
   final String? nativeMessage;
   const ClassMethod({
@@ -127,7 +127,7 @@ class ClassInfo {
 
   /// 本文件 `@HostInjected` 声明的通道表（类名 → {方法名 → 通道名}；顶层函数
   /// 挂在空串 key 下）。由 [translateClass] 翻译时自行扫好挂在模型上，方法体
-  /// 翻译据此把调用点整体换成 `__jsui.host(通道, 载荷)`——组件与普通类同一份
+  /// 翻译据此把调用点整体换成 `_app_host_.invoke(通道, 载荷)`——组件与普通类同一份
   /// 数据、同一条路径，构建层不参与。
   final Map<String, Map<String, String>> hostMethods;
 
@@ -236,7 +236,7 @@ class FieldScope {
 
   /// 宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
   /// 顶层函数（全局方法）挂在空串 key 下（`'' → {函数名 → 通道名}`）。
-  /// 命中时调用点整体翻译成 `__jsui.host("通道名", 参数载荷)`（载荷形态见
+  /// 命中时调用点整体翻译成 `_app_host_.invoke("通道名", 参数载荷)`（载荷形态见
   /// [hostArgsJs]）——参数个数、是否具名、返回值类型都无关（宿主侧用
   /// Function.apply 调实现）。
   final Map<String, Map<String, String>> hostMethods;
@@ -1207,21 +1207,21 @@ String? methodCallExprJs(
     }
   }
   // 宿主注入（@HostInjected）：static 调用 `AccountCenter.getUserName(a)`
-  // 整体替换为 `__jsui.host("通道名", {p: [a], n: {...}})`（返回 Promise，可 await）。
+  // 整体替换为 `_app_host_.invoke("通道名", {p: [a], n: {...}})`（返回 Promise，可 await）。
   final hostTarget = e.target;
   if (hostTarget is Identifier) {
     final channel = scope.hostMethods[hostTarget.name]?[e.methodName.name];
     if (channel != null) {
-      return '__jsui.host(${jsString(channel)}, ${hostArgsJs(posJs, namedJs)})';
+      return '_app_host_.invoke(${jsString(channel)}, ${hostArgsJs(posJs, namedJs)})';
     }
   }
   final passed = argJs.join(', ');
   final target = e.target;
   if (target == null) {
-    // 顶层函数（全局方法）：@HostInjected → `__jsui.host("通道", {p, n})`。
+    // 顶层函数（全局方法）：@HostInjected → `_app_host_.invoke("通道", {p, n})`。
     final topChannel = scope.hostMethods['']?[e.methodName.name];
     if (topChannel != null) {
-      return '__jsui.host(${jsString(topChannel)}, ${hostArgsJs(posJs, namedJs)})';
+      return '_app_host_.invoke(${jsString(topChannel)}, ${hostArgsJs(posJs, namedJs)})';
     }
     if (!scope.isMethod(e.methodName.name)) return null;
     return 'this.${e.methodName.name}($passed)';
@@ -1745,7 +1745,7 @@ String translateClassMethodBody(
   final channel = m.nativeChannel;
   if (channel != null) {
     return '$ind'
-        '__jsui.host(${jsString(channel)}, '
+        '_app_host_.invoke(${jsString(channel)}, '
         '{ message: ${m.nativeMessage ?? '""'} });';
   }
   final scope = FieldScope(

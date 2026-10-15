@@ -16,7 +16,7 @@
 ///   - `@HostInjected` 类所在文件（跨库不可见，只在宿主侧实现）。
 ///
 /// 符号级闭包从根类出发，且**不经过 `@HostInjected` 类**（这类类不进类表，其方法
-/// 体里 `new Foo()` 在 JS 侧是 `__jsui.host(...)`，不产生 JS 引用）。因此「只在
+/// 体里 `new Foo()` 在 JS 侧是 `_app_host_.invoke(...)`，不产生 JS 引用）。因此「只在
 /// 宿主路由（`AppRouter` 的 @HostInjected 方法）里 `new` 出来的页面」不会被翻译
 /// ——依赖链在 @HostInjected 处断掉：`detail_pages.dart` 只有三个 tab 页订单卡
 /// 真的用到的 `MiniButton` 与 `kBrand` / `kPrice` 两个常量会产出，`SearchPage` /
@@ -180,7 +180,7 @@ Map<String, Set<String>> _neededClasses(
 }
 
 /// 类是否参与翻译与依赖传播：非抽象、非 `@HostInjected`（方法实现留在宿主侧，
-/// 调用点是 `__jsui.host`，不产生 JS 引用）、非 `@PatchIgnore`（原生注入）。
+/// 调用点是 `_app_host_.invoke`，不产生 JS 引用）、非 `@PatchIgnore`（原生注入）。
 bool _translatableDecl(ClassDeclaration d) =>
     d.abstractKeyword == null &&
     !classHasHostInjectedMethod(d) &&

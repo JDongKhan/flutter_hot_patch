@@ -8,10 +8,10 @@ import 'js_runtime_manager.dart';
 // 框架内建宿主方法（通道）注册
 //
 // 与业务 @HostInjected 方法共用唯一入口 JsRuntimeManager.registerHostMethod
-// 与唯一处理器表；JS 侧也只有唯一出口 `__jsui.host`。三条内建通道：
-//   - `log`          ← console.* 桥（JS 侧 __log → __jsui.host('log', [..])）
+// 与唯一处理器表；JS 侧也只有唯一出口 `_app_host_.invoke`。三条内建通道：
+//   - `log`          ← console.* 桥（JS 侧 __log → _app_host_.invoke('log', [..])）
 //   - `nativeToast`  ← 生成器把 SnackBar 形式动作译为
-//                      `__jsui.host('nativeToast', {message})`
+//                      `_app_host_.invoke('nativeToast', {message})`
 //   - `jsuiCommit`   ← JS 增量补丁，payload 带页面 key，路由到对应 JsUiStore
 //
 // 幂等（全局一次）：由 JsUiWidget 启动时调用。
