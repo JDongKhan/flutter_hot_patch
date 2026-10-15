@@ -2104,7 +2104,7 @@ class BuilderTranslator extends WidgetTranslator {
           for (final v in st.variables.variables) {
             ctx.addLocal(v.name.lexeme);
             // `final model = context.watch<T>()`：登记局部 → 模型类型，
-            // 事件表达式（`() => model.inc()`）据此翻译成 this.read('T')。
+            // 事件表达式（`() => model.inc()`）据此翻译成 this.context.read('T')。
             final mt = _contextModelTypeOf(v.initializer);
             if (mt != null) ctx.addLocalModel(v.name.lexeme, mt);
             final js = v.initializer == null

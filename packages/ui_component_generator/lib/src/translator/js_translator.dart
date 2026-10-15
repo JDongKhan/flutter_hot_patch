@@ -162,7 +162,8 @@ class ClassInfo {
 ///
 /// **一一对应**：Dart 是什么形参，JS 就是什么形参（形参名、顺序、个数完全一致），
 /// 不做任何类型剔除——`BuildContext` 也有对应物（运行时以最近宿主祖先结点为锚
-/// 的代理，生成器把裸 `context` 译成 `this.context`，见 exprToJs）。
+/// 的代理，由 build 传参）。形参名在作用域内保持裸引用；仅事件等延迟作用域因
+/// 看不见形参，才由作用域别名译成 `this.context`（见 WidgetTranslateContext._eventScope）。
 /// 组件与普通类共用这一处。
 List<String> jsMethodParams(MethodDeclaration m) {
   final out = <String>[];

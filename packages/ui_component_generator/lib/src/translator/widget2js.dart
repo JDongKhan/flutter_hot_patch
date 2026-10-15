@@ -464,8 +464,8 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 
   /// Builder 闭包局部变量 → 模型类型（`final model = context.watch<T>()`）。
   /// 事件表达式（`() => model.inc()`，局部变量不在回传作用域内）据此翻译成
-  /// `this.read("T").inc()`——两条运行时都在实例上挂了 `read`，不依赖
-  /// 局部作用域即可回传执行。
+  /// `this.context.read("T").inc()`——`read` 挂在 **context 代理**上（与 Dart
+  /// 调用面一致），事件按绑定位置取到同一个代理，不依赖局部作用域即可回传执行。
   final Map<String, String> _localModels = {};
   void addLocalModel(String name, String modelType) => _localModels[name] = modelType;
 

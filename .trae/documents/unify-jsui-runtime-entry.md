@@ -53,7 +53,7 @@
 - `mount` 的 HOST 分支：遍历 `el.props`，值为 element（含 `.type`）的项额外 mount，记入 `hi.__propsChildren[key]`，并 `emit({op:'propsChild', id, key, childId})`。
 - `patch` HOST 分支：逐 key 复用/新建/移除（移除发 `{op:'propsChildRemove', id, key}`）；`markUnmounted` 一并卸载 `__propsChildren`。
 - `JsUiNode` 增 `Map<String,String> propChildIds`；`apply` 处理两个新 op 并 `touched` 父节点；`_removeSubtree`/`_unlink` 同步清理。
-- `js_ui_widget.dart` 的 `_JsNodeState.build` 把 propChildIds 对应子 widget 建好，作为 `propChildren` 传入 `JsBuildContext`。
+- `js_ui_widget.dart` 的 `_JsNodeState.build` 把 propChildIds 对应子 widget 建好，作为 `propChildren` 传入 `JsRenderContext`。
 
 > 这是本次最大且最易出错的改动，建议单独提交并配单测（见「测试」）。
 
@@ -61,7 +61,7 @@
 
 文件：`packages/hot_patch/lib/src/js_ui/js_widget_registry.dart`
 
-- `JsBuildContext` 增 `nativeComponents`、`propChildren`、`Widget? propChild(String key)`。
+- `JsRenderContext` 增 `nativeComponents`、`propChildren`、`Widget? propChild(String key)`。
 - 补齐缺失 type（照搬 `builtin_renderers.dart`，复用 `json/flutter_from_json.dart` 转换器）：
   - demo 必需：`Chip`、`ListTile`（title/subtitle + `propChild('leading'/'trailing')` + 事件）、`ClipRRect`（`propChild('child')`）、`Align`、`Flexible`、`Positioned`、`SingleChildScrollView`、`Wrap`、`Image`、`CircleAvatar`。
   - parity：`InkWell`/`GestureDetector`（事件 + child）、`Switch`/`Checkbox`/`Slider`（带值事件 `c.invoke(handler, [newValue])`；生成产物事件键统一为 `event`）。

@@ -254,8 +254,10 @@ export class MultiProvider {
   }
 }''';
 
-/// Consumer：消费 VM——沿祖先找最近 provider 的 VM 并订阅（watch），再调用拥有者
-/// 组件上的 `props.builder` 方法（`_consumerBuilderN(context, value)`）渲染局部子树。
+/// Consumer：消费 VM——按 `props.model`（类型名）经 **build 收到的 context**
+/// 取值并订阅（`context.watch(model)`，与 Dart 的 `Consumer` 口径一致），
+/// 再调用拥有者组件上的 `props.builder` 方法
+/// （`_consumerBuilderN(context, value)`）渲染局部子树。
 ///
 /// 本类仍必须订阅 VM：UI 的真正更新来自 **JS 侧重建**（VM notify → 标脏该位置
 /// → 重读 `model.count` → 下发 patch）。宿主侧同时把这段子树映射成 Dart 的

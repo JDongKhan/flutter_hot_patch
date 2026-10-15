@@ -24,14 +24,18 @@ import 'vm_bridge.dart';
 /// 宿主侧 `ChangeNotifierProvider` 的映射实现。
 ///
 /// `InheritedNotifier` 自带「notifier 变更 → 依赖者重建」语义，等价于
-/// provider 包的 `ChangeNotifierProvider`（提供者结点 + 依赖通知）。Dart 侧
-/// 消费者用 [JsVmProvider.maybeOf] 建立依赖，VM notify 时只重建该子树。
+/// provider 包的 `ChangeNotifierProvider`（提供者结点 + 依赖通知）。Dart 侧的
+/// 消费者用 [maybeOf] 建立依赖，VM notify 时只重建该子树。
+///
+/// 生产链路上 JS 的 `context.watch<T>()` 走的是 [jsVmOfTypeAt]（**按类型**精确
+/// 匹配，不能取「最近的那个」）；[maybeOf] 是给**宿主侧 Dart 消费者**用的
+/// 常规入口（如测试里模拟依赖者、将来宿主 widget 直接消费 JS 提供的 VM）。
 class JsVmProvider extends InheritedNotifier<JsVm> {
   const JsVmProvider({super.key, required JsVm vm, required super.child})
       : super(notifier: vm);
 
-  /// 取祖先最近的 VM（Dart 侧消费者用；JS 侧 consumer 走自己的作用域解析，
-  /// 见 build_context_bridge 的 `context.watch/read` op）。
+  /// 取祖先最近的 VM（**宿主侧 Dart 消费者**用；JS 侧的 context 走
+  /// [jsVmOfTypeAt] 按类型精确解析，见 build_context_bridge 的 `context.watch/read` op）。
   static JsVm? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<JsVmProvider>()?.notifier;
 }

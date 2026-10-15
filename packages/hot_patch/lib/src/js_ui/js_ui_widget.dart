@@ -19,11 +19,12 @@ import 'js_widget_registry.dart';
 ///   1. 把 JS 下发的 `type` 映射成真实 Flutter widget（[JsWidgetRegistry]）；
 ///   2. 应用 JS 算好的增量补丁（[JsUiStore]）。
 ///
-/// **不理解任何状态语义**：provider / setState / 任何状态库都在 JS 侧，
-/// 最终都归约为「JS 重建子树 → 下发 patch → 宿主重建受影响结点」。
-/// 因此宿主代码不随状态库增加而改动。
+/// **不理解任何状态语义**：setState / provider / 任何状态库的状态与重建都在
+/// JS 侧，最终都归约为「JS 重建子树 → 下发 patch → 宿主重建受影响结点」。
+/// 宿主只额外做两件事：把 `type` 映射成 widget、把作用域（context）查询落到
+/// 真值 BuildContext 上做权威校验/订阅。故宿主代码不随状态库增加而改动。
 ///
-/// 每个实例按 `pageKey` 在共享 JS 运行时里隔离自己的根（结点树 / provider /
+/// 每个实例按 `pageKey` 在共享 JS 运行时里隔离自己的根（结点树 / 作用域 /
 /// 订阅 / 脏队列），同屏多实例、多 runtime 分组都互不影响。
 ///
 /// 用法（组件名与入口都通过 URL query 传入，方便运营配置）：

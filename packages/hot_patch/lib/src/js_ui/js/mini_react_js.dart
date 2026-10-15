@@ -2,7 +2,7 @@
 //
 // 与 runtime_source.dart 的骨架入口/桥（【1】~【3】、【10】+尾部）拼接后
 // 注入同一 IIFE：这里定义 element 描述、reconciler（mount/patch/unmount）、
-// 组件基类（setState/__bind）、provider 上下文查找与订阅、脏调度批处理。
+// 组件基类（setState/__bind）、作用域（按类型名）查找与订阅、脏调度批处理。
 // 新增框架级机制（如 fiber、portals）改本文件；新增业务能力桥接
 // （controller 等）仍走 capabilities/，两边互不干扰。
 //
@@ -267,7 +267,7 @@ const String miniReactSchedulerSource = r'''
 
   // ===== 【8】mini-react｜调度（dirty → flush 批处理）==================
   // collected dirty -> 重建子树 -> 一次 commit。
-  // 触发源有两处：mini-react 的 setState、provider 的订阅回调（见【7】）。
+  // 触发源有两处：mini-react 的 setState、作用域订阅回调（见【7】`subscribeListenable`）。
   function markDirty(inst) {
     if (!inst || inst.__unmounted || inst.__dirty) { return; }
     var root = inst.__root;
