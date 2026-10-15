@@ -43,7 +43,7 @@ void ensureBuildContextChannels() {
       final node = meta is Map ? meta['node'] : null;
       if (node is String && node.isNotEmpty) _ctxHandleNode[id] = node;
     },
-    onOp: (id, op, payload) => _resolveProviderOp(id, op, payload),
+    onOp: (id, op, payload) => _resolveContextOp(id, op, payload),
     onRelease: (id) {
       _ctxHandleNode.remove(id);
       _releaseCtxWatch(id);
@@ -77,7 +77,7 @@ final Map<String, Map<String, _CtxWatch>> _ctxWatches = {};
 ///
 /// 查不到（或类型不匹配）说明 JS 侧解析越过了 provider 边界（消费点被放到了
 /// provider 子树之外），按项目规则出运行时告警而非静默。
-Object? _resolveProviderOp(String id, String op, Map payload) {
+Object? _resolveContextOp(String id, String op, Map payload) {
   if (op != 'watch' && op != 'read')  {
     HotPatchLog.log(
       '[jsui] 不支持context.$op()方法 ',
