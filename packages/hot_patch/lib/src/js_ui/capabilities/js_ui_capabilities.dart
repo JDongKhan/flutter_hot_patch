@@ -12,8 +12,9 @@
 //
 // 目录结构：**一个能力一个目录**，内有宿主侧 `<x>_bridge.dart`（通道 +
 // 宿主组件）、JS 侧 `<x>_js.dart`（片段）、接入声明 `<x>_library.dart`。
-// 留在本层的只有三样：通用句柄地基 handle_registry.dart、能力模板
-// js_ui_library.dart、本聚合入口。
+// 留在本层的只有四样：**句柄地基两端**（handle_registry.dart +
+// handle_registry_js.dart，刻意不是 JsUiLibrary 子类，理由见其文件头）、能力
+// 模板 js_ui_library.dart、本聚合入口。
 import '../js_widget_registry.dart';
 import 'handle_registry.dart';
 import 'js_ui_library.dart';

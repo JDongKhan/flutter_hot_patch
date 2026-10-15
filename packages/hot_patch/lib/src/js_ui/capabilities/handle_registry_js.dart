@@ -19,6 +19,13 @@
 //
 // 释放语义（拥有端为准 + 页面兜底）：任一端 release 都会通知对端一并释放
 // （1:1 资源两端必须同时消失）；重复 release 幂等，不会形成通知回环。
+//
+// **为什么本片段刻意不是 [JsUiLibrary.jsFragments]**（地基而非能力）：
+//   1. 它必须拼在 mini-react 骨架**之前**（见 runtime_source 的拼接位置），
+//      而模板片段统一落在骨架之后；
+//   2. 各能力片段的**顶层**就调用 defineHandleKind(...)（需 handleKinds 已
+//      初始化）；地基必须先于一切能力；
+//   3. 与宿主侧 handle_registry.dart 同因：它是插座，不是插头，永无第二实现。
 const String handleRegistryJsSource = r'''
   // ===== 【1b】跨语言句柄注册表（通用层地基）===========================
   // handleSeq 与 idSeq 相互独立：句柄 id 与结点 id 分属两套命名空间。

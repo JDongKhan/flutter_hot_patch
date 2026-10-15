@@ -1,6 +1,6 @@
 // 跨语言句柄注册表（宿主侧，通用层地基）。
 //
-// 与 JS 侧 js/handle_registry_js.dart **对称**：一个真实对象只存在于一端，
+// 与 JS 侧 handle_registry_js.dart **对称**（同目录并排）：一个真实对象只存在于一端，
 // 另一端只持句柄（id），操作按 id 转发。
 //   - JS 端登记句柄（`new ScrollController()`）→ 经 `jsHandle:create` 同步到宿主，
 //     由同名 kind 描述符创建真实对象；
@@ -12,6 +12,17 @@
 // **扩展点**：新增能力 = 两端各 registerHandleKind 注册一个描述符
 // （onCreate / onOp / onRelease），核心文件（本文件 / runtime_source 骨架 /
 // disposeRoot）零改动。
+//
+// **为什么本文件刻意不是 [JsUiLibrary] 子类**（地基而非能力）：
+//   1. 它是「插座」而不是「插头」——各能力的 `ensureChannels()` 全都调
+//      [registerHandleKind]，故 [ensureHandleChannels] 必须**显式**排在
+//      js_ui_capabilities 的遍历循环之前；若改成靠注册表顺序自律，重排
+//      清单会静默炸掉全部能力；
+//   2. JS 侧 handle_registry_js.dart 目前拼在 mini-react 骨架**之前**
+//      （见 runtime_source），进模板循环会被挪到骨架之后，需逐段重新论证
+//      求值顺序；
+//   3. 全框架只有这一个句柄注册表，永无「第二个实现」，模板的幂等注册/
+//      可替换价值在此为零。
 import 'dart:convert';
 
 import '../../services/js_runtime_manager.dart';
