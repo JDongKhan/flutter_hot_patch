@@ -1076,8 +1076,8 @@ String? _extractBuilderMethod(
   // index 是第二个参数（Consumer 同款约定）。
   final indexName = params.length >= 2 ? params[1].name?.lexeme : null;
   if (indexName == null) return null;
-  ctx.addLocal(contextName);
-  ctx.addLocal(indexName);
+  ctx.addBuilderLocal(contextName);
+  ctx.addBuilderLocal(indexName);
   Expression? retExpr;
   final preludes = <String>[];
   final body = builder.body;
@@ -1091,10 +1091,15 @@ String? _extractBuilderMethod(
       }
       if (st is VariableDeclarationStatement) {
         for (final v in st.variables.variables) {
-          ctx.addLocal(v.name.lexeme);
-          preludes.add(v.initializer == null
-              ? 'var ${v.name.lexeme};'
-              : 'var ${v.name.lexeme} = ${ctx.jsDataExpr(v.initializer!)};');
+          ctx.addBuilderLocal(v.name.lexeme);
+          final init = v.initializer;
+          if (init == null) {
+            preludes.add('var ${v.name.lexeme};');
+            continue;
+          }
+          // 前置语句的初始化器同样要抽查：它也在抽取出的实例方法里求值。
+          ctx.warnCapturedLocals(init);
+          preludes.add('var ${v.name.lexeme} = ${ctx.jsDataExpr(init)};');
         }
         continue;
       }
@@ -1103,6 +1108,9 @@ String? _extractBuilderMethod(
     }
   }
   if (retExpr == null) return null;
+  // 构建期抽查：闭包捕获了「折算不成字段引用」的方法体局部变量 / 循环变量时
+  // 出声告警——抽取成实例方法后它们是未定义自由变量（见 warnCapturedLocals）。
+  ctx.warnCapturedLocals(retExpr);
   final subtree = ctx.translate(retExpr);
   ctx.builderTrees.add(subtree);
   final idx = ctx.builderTrees.length - 1;

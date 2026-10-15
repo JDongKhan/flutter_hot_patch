@@ -29,6 +29,10 @@ export class HomePage {
           __h('CircularProgressIndicator', {})
         ]);
     }
+    var banners = this._feed.banners;
+    var grid = this._feed.grid;
+    var spots = this._feed.spots;
+    var adImg = this._feed.adImg;
     return __h('Container', {
         "color": '#fff4f5f7'
       }, [

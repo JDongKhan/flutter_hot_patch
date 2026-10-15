@@ -1,6 +1,6 @@
 {
   "name": "flutter_hot",
-  "buildTime": "2026-10-15T17:25:54.280325",
+  "buildTime": "2026-10-15T18:42:14.251148",
   "resources": {
     "flutter.js": "b2c73a5ccb23f81113d39c49a16533e072cfbdbdbab66dc79fa2ad2a8356e8fc",
     "provider.js": "269a1e9e4ca491a13289455cf3b33a82b75607858f0c1ad7bea5613cd29e4158",
@@ -9,7 +9,7 @@
     "app/service/app_service.js": "8d4faf7b74df5d7917c44074ef811e974af995486c0aa67712aa9631535e8b7a",
     "app/pages/orders_page.js": "755707f7c6d883adf317e7e14d09c126b3bb5326438d031b719ae47e22c7da83",
     "app/pages/community_page.js": "1c377fa6919cc9a2f0ec5f3e772e8ffcf7aae07715a9c1a83f1cabb7fa50d0cf",
-    "app/pages/home_page.js": "e159f277e59cccacb2d2a4db362b452032a98c1254aabcd6de7208cebf0a39bd",
+    "app/pages/home_page.js": "049034aa6f61fe9a6a1a84ae91c87042199cb1d46b8a41d1afdc42473a212bfd",
     "app/pages/mine_page.js": "4a2692913e342f3134b41f96b5ca9c80723627096f6f053325025c85f93f408f",
     "app/pages/detail_pages.js": "81b3daab3f6509ea11bce7220b113600e741bd8949a03c4897b49e45a10660aa",
     "app/app.js": "9ce55ab3a75f8415a6f3cf32f117cebe94a91eedd84f1623ca2d5adfbdcb1312",

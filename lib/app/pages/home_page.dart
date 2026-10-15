@@ -46,10 +46,14 @@ class _HomePageState extends State<HomePage> {
     if (feed == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    // 注意：这里**不要**再声明 `banners/spots/...` 这类二级局部别名——
-    // 懒加载（SliverGrid 的 builder）会被抽成实例方法，方法体里的自由局部
-    // 变量在 JS 侧解析不到（`ReferenceError: Can't find variable: spots`）。
-    // 别名 `feed` 本身是「字段别名」，受字段解析规则覆盖，`feed.xxx` 才安全。
+    // 字段派生的 final 局部：翻译器会把它们折算成字段别名（`feed.banners`
+    // → `this._feed.banners`），因此 SliverGrid 的懒加载 builder 被抽成实例
+    // 方法后照样引用得到（见 js_translator 的链式别名 + widget2js 的
+    // warnCapturedLocals 告警口径）。
+    final banners = feed.banners;
+    final grid = feed.grid;
+    final spots = feed.spots;
+    final adImg = feed.adImg;
     return Container(
       color: const Color(0xFFF4F5F7),
       child: CustomScrollView(
@@ -65,8 +69,8 @@ class _HomePageState extends State<HomePage> {
                   height: 150,
                   child: PageView(
                     children: [
-                      for (var i = 0; i < feed.banners.length; i++)
-                        BannerSlide(banner: feed.banners[i]),
+                      for (var i = 0; i < banners.length; i++)
+                        BannerSlide(banner: banners[i]),
                     ],
                   ),
                 ),
@@ -75,7 +79,7 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    for (var i = 0; i < feed.banners.length; i++)
+                    for (var i = 0; i < banners.length; i++)
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 3),
                         width: 6,
@@ -115,8 +119,8 @@ class _HomePageState extends State<HomePage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
-                      for (var i = 0; i < feed.grid.length; i++)
-                        GridCell(entry: feed.grid[i]),
+                      for (var i = 0; i < grid.length; i++)
+                        GridCell(entry: grid[i]),
                     ],
                   ),
                 ),
@@ -124,7 +128,7 @@ class _HomePageState extends State<HomePage> {
                 // 图片广告位
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 12),
-                  child: PromoCard(img: feed.adImg),
+                  child: PromoCard(img: adImg),
                 ),
                 const SizedBox(height: 16),
                 // 栏目标题
@@ -177,8 +181,8 @@ class _HomePageState extends State<HomePage> {
                 mainAxisExtent: 190,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, index) => SpotCard(spot: feed.spots[index]),
-                childCount: feed.spots.length,
+                (context, index) => SpotCard(spot: spots[index]),
+                childCount: spots.length,
               ),
             ),
           ),

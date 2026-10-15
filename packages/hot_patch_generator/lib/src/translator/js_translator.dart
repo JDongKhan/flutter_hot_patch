@@ -246,6 +246,32 @@ class FieldScope {
   /// 局部变量时必须落到真实字段引用，否则是未定义的自由变量。
   final Map<String, String> localAliases;
 
+  /// 声明期登记的字段别名表（`final feed = _feed;` → `feed → this._feed`）。
+  ///
+  /// **只供后续「变量声明的初始化器」折算**（[forInitializer]）——这样才能闭合
+  /// 链式别名：`final spots = feed.spots;` 里的 `feed` 先折成 `this._feed`，
+  /// `spots` 于是也成了字段别名，被抽进懒加载 builder 方法后仍能落字段引用。
+  ///
+  /// 刻意不并进 [localAliases]：那会让方法体里**所有**语句中的引用都变成
+  /// 「按引用重求值」，副作用初始化器（`_items.removeAt(i)`、`GlobalKey
+  /// .currentContext`）会被每条语句重跑一遍，把既有产物改坏。
+  final Map<String, String> declAliases;
+
+  /// 变量声明的初始化器专用作用域：把 [declAliases] 当作别名表，其余照旧。
+  /// 只影响**这一次初始化器**的折算，方法体其余语句一律不受影响。
+  FieldScope forInitializer() => declAliases.isEmpty
+      ? this
+      : FieldScope(
+          propByField: propByField,
+          instanceFields: instanceFields,
+          params: params,
+          methods: methods,
+          localVars: localVars,
+          globalConsts: globalConsts,
+          hostMethods: hostMethods,
+          localAliases: declAliases,
+        );
+
   FieldScope({
     this.propByField = const {},
     this.instanceFields = const {},
@@ -253,10 +279,12 @@ class FieldScope {
     this.methods = const {},
     this.hostMethods = const {},
     Map<String, String>? localAliases,
+    Map<String, String>? declAliases,
     Set<String>? localVars,
     Set<String>? globalConsts,
   })  : localVars = localVars ?? {},
         localAliases = localAliases ?? const {},
+        declAliases = declAliases ?? {},
         globalConsts = globalConsts ?? {};
 
   /// 派生作用域：追加形参名（闭包形参 `(o) => o.status`），其余照旧。
@@ -272,6 +300,9 @@ class FieldScope {
         globalConsts: globalConsts,
         hostMethods: hostMethods,
         localAliases: localAliases,
+        // 同一个别名表实例：派生作用域里登记的别名，母作用域后续声明同样可见
+        // （闭包体内的 `final x = _feed.spots;` 也算链式别名）。
+        declAliases: declAliases,
       );
 
   /// 该名字是否本 scope 可解析的字段。
@@ -1371,6 +1402,14 @@ String translateMethodBody(
   return out.isEmpty ? '' : out.join('\n');
 }
 
+/// 「纯字段路径」形初始化器：`x` / `feed.spots` / `this.a.b`——只有标识符与点号，
+/// 没有调用、下标、运算、await。变量声明的**别名折算**只对这类形态生效（见
+/// [translateStmtList] 的声明分支）：折算出的别名是「按引用重求值」语义，
+/// 带调用的表达式一旦被折算，每次使用都会重跑，语义就不再等价。
+final RegExp _fieldPath = RegExp(
+  r'^[A-Za-z_$][A-Za-z0-9_$]*(?:\s*\.\s*[A-Za-z_$][A-Za-z0-9_$]*)*\s*$',
+);
+
 /// 语句列表 → JS（方法体块、if 分支体共用同一套循环）。
 ///
 /// 支持：表达式语句（super 调用忽略、setState 展开）、变量声明、return、
@@ -1413,7 +1452,20 @@ String translateStmtList(
           scope.localVars.add(name);
           continue;
         }
-        final init = rhsToJs(v.initializer!, scope, classes);
+        // 初始化器单独用一份作用域（[FieldScope.forInitializer]）：把**已登记
+        // 的字段别名**折算进来，方法体其余语句不受影响。
+        //
+        // 只对「纯字段路径」（`x` / `feed.spots` / `this.a.b`，无调用、下标、运算）
+        // 折算：别的形态（`ctx.findRenderObject()`、`label + "…"`）一旦折算，
+        // 局部会被登记成「按引用重求值」的别名，那**每一次使用**都要重跑——
+        // 有调用的表达式（GlobalKey.currentContext、List.removeAt）重跑即语义
+        // 不同，会把既有产物改坏。链式别名的收益只发生在字段路径上，收窄到它即可。
+        final purePath = _fieldPath.hasMatch(v.initializer!.toSource());
+        final init = rhsToJs(
+          v.initializer!,
+          purePath ? scope.forInitializer() : scope,
+          classes,
+        );
         if (init == null) {
           // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
           log.warning('[hot_patch_generator] 局部变量声明无法翻译，已在 JS '
@@ -1423,10 +1475,22 @@ String translateStmtList(
         out.add('${ind}var $name = $init;');
         scope.localVars.add(name);
         // 该局部只是「字段 / getter 的别名」（`final list = _list;` →
-        // `this._list`）：同步登记进 widget 层，懒加载 builder 抽成实例方法后
-        // 引用它时才能落到 `this._list`，而不是未定义的自由变量。
+        // `this._list`）：登记进 widget 层，懒加载 builder 抽成实例方法后引用它
+        // 时才能落到 `this._list`，而不是未定义的自由变量（`ReferenceError`）。
+        //
+        // 同时记进 [FieldScope.declAliases]，供**后续声明的初始化器**折算——
+        // 链式别名靠这一步闭合：`final spots = feed.spots;` 里的 `feed` 先折成
+        // `this._feed`，`spots` 于是也成了字段别名。缺这一步，二级别名会以裸名
+        // 进产物（`spots[index]`），被抽进 builder 方法后就是
+        // `ReferenceError: Can't find variable: spots`。
+        //
+        // 仅限 final / const：别名语义是「按引用重求值」，可重新赋值的变量用它
+        // 会让后续声明拿到旧表达式（`list = other;` 之后再声明就以旧值折算）。
         if (init.startsWith('this.')) {
           widgetCtx?.registerLocalAlias(name, init);
+          if (purePath && (s.variables.isFinal || s.variables.isConst)) {
+            scope.declAliases[name] = init;
+          }
         }
       }
     } else if (s is ReturnStatement) {

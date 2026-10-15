@@ -1,4 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:build/build.dart' show log;
 
 import 'js_translator.dart';
 
@@ -427,10 +429,68 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   final Set<String> _locals = {};
   void addLocal(String name) => _locals.add(name);
 
+  /// **方法体局部变量**（来自 [registerLocal]，即各方法体里 `var/final x = ...`）。
+  ///
+  /// 它们只在**本方法**内可见：懒加载 builder 被抽成实例方法
+  /// （`_listViewBuilderN` / `_sliverBuilderN`）后看不到这些名字——只有被折算成
+  /// 字段引用（[registerLocalAlias]）才安全，否则产物里就是未定义自由变量。
+  final Set<String> _methodBodyLocals = {};
+
+  /// 抽取出的 builder 方法里**真实可见**的名字（闭包形参 context/index +
+  /// 块体前置语句声明的局部，见 [addBuilderLocal]）。判「捕获了方法体局部变量」
+  /// 时用来排除。
+  final Set<String> _extractedVisible = {};
+
+  /// 懒加载 builder 自己的名字：闭包形参（context / index）与块体前置语句声明的
+  /// 局部——它们会成为抽取方法的前置语句，方法体里天然可见。
+  void addBuilderLocal(String name) {
+    _locals.add(name);
+    _extractedVisible.add(name);
+  }
+
   /// [WidgetExprRenderer.registerLocal] 实现：方法体翻译器声明局部变量时
   /// 同步登记，保证同一方法体里返回的 widget 树能解析这些名字。
+  ///
+  /// 同时记为「方法体局部变量」：被抽走的 builder 子树里引用了它就必须告警
+  /// （见 [warnCapturedLocals]）。
   @override
-  void registerLocal(String name) => addLocal(name);
+  void registerLocal(String name) {
+    _locals.add(name);
+    _methodBodyLocals.add(name);
+  }
+
+  /// 抽查懒加载 builder 闭包捕获的名字（构建期告警，不静默）。
+  ///
+  /// 会被抽成独立实例方法的子树里，只有**闭包形参与前置语句局部**、类成员
+  /// （字段 / getter / 方法）、顶层常量可见；`build` 的方法体局部变量与循环变量
+  /// 都不在其中——折算不出字段引用时产物就是未定义自由变量，运行时
+  /// `ReferenceError`（子结点展开失败 → 页面停在 loading，且错误被求值层吞掉，
+  /// 现场几乎无法定位）。
+  ///
+  /// 正常路径（`final spots = _feed.spots;` 这类字段派生的 final 局部）会先被
+  /// [registerLocalAlias] 折算成 `this._feed.spots`，不会命中本告警。
+  void warnCapturedLocals(Expression body) {
+    final used = <String>{};
+    body.accept(_SimpleIdentifierCollector(used));
+    for (final name in used) {
+      if (!_methodBodyLocals.contains(name) && !_loopVars.contains(name)) {
+        continue;
+      }
+      if (_extractedVisible.contains(name) ||
+          _localAliases.containsKey(name) ||
+          propByField.containsKey(name) ||
+          methodNames.contains(name) ||
+          getterNames.contains(name) ||
+          globalConsts.contains(name)) {
+        continue;
+      }
+      log.warning('[hot_patch_generator] $sourcePath: "$name" 被懒加载 builder '
+          '捕获，却折算不成字段引用（字段 / getter / 顶层常量）：抽取成实例方法'
+          '后 JS 侧是未定义自由变量（运行时 ReferenceError，页面会停在 loading）。'
+          '请把该值放到字段 / getter 上，或改用「字段派生的 final 局部」'
+          '（如 `final spots = _feed.spots;`）。');
+    }
+  }
 
   /// 局部别名（`final list = _list;` → `list → this._list`）。被抽成实例方法的
   /// 懒加载 builder 引用该名字时，必须落成真实字段引用（见 [jsDataExpr]）。
@@ -1343,4 +1403,18 @@ class SingletonResolver {
     }
     return null;
   }
+}
+
+/// 收集表达式里出现的简单标识符名——[WidgetTranslateContext.warnCapturedLocals]
+/// 的构建期抽查用。
+///
+/// 成员名（`a.b` 里的 `b`）也会被收进来，误报面由「名字必须是**本类**的方法体
+/// 局部变量 / 循环变量」这条过滤限制住，故不做 AST 位置细分。
+class _SimpleIdentifierCollector extends RecursiveAstVisitor<void> {
+  _SimpleIdentifierCollector(this.names);
+
+  final Set<String> names;
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) => names.add(node.name);
 }
