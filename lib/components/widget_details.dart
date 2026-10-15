@@ -617,7 +617,7 @@ class _SliverDetailState extends State<SliverDetail> {
   /// 与「定位」不同，这里要的是**值**：Flutter 侧 `box.localToGlobal(Offset.zero)`
   /// 与 `box.size` 都是同步属性，而 JS 侧 RenderObject 根本不存在（GlobalKey 只是
   /// 句柄、真实实例在宿主），JS→宿主又只有异步桥——故这一处 await 宿主回填的
-  /// 测量结果（见 capabilities/key_bridge.dart 的 `measure` op）。
+  /// 测量结果（见 capabilities/key/key_bridge.dart 的 `measure` op）。
   ///
   /// 链路与 Flutter 原生一致：`currentContext → findRenderObject()` 拿到
   /// 「RenderObject 代理」再取位置尺寸（`measure` 挂在代理上，GlobalKey 本身没有

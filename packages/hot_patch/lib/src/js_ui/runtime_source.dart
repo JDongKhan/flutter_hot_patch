@@ -57,20 +57,20 @@ import 'package:flutter/foundation.dart'
 
 // 能力 JS 片段（各能力文件内聚，runtime_source 拼接注入）：
 //   - 核心片段（Flutter 等价物，固定在 [jsUiRuntimeSource] 列表里）：
-//       capabilities/scroll_controller_js.dart      → ScrollController 代理类
-//       capabilities/text_editing_controller_js.dart → TextEditingController 代理类
-//       capabilities/tab_controller_js.dart         → TabController 代理类
-//       capabilities/key_js.dart                    → ValueKey/ObjectKey/UniqueKey/GlobalKey 代理类
-//       capabilities/build_context_js.dart          → BuildContext 代理（`this.context`）
+//       capabilities/scroll_controller/scroll_controller_js.dart → ScrollController 代理类
+//       capabilities/text_editing_controller/text_editing_controller_js.dart → TextEditingController 代理类
+//       capabilities/tab_drawer/tab_controller_js.dart → TabController 代理类
+//       capabilities/key/key_js.dart                → ValueKey/ObjectKey/UniqueKey/GlobalKey 代理类
+//       capabilities/build_context/build_context_js.dart → BuildContext 代理（`this.context`）
 //       js/handle_registry_js.dart                  → 跨语言句柄注册表（通用层地基）
 //   - 三方库片段：**不在此 import**，由各库的 [JsUiLibrary.jsFragments] 提供
 //     （见 capabilities/js_ui_library.dart；provider 见 capabilities/provider/）。
-import 'capabilities/build_context_js.dart';
+import 'capabilities/build_context/build_context_js.dart';
 import 'capabilities/js_ui_library.dart';
-import 'capabilities/key_js.dart';
-import 'capabilities/scroll_controller_js.dart';
-import 'capabilities/tab_controller_js.dart';
-import 'capabilities/text_editing_controller_js.dart';
+import 'capabilities/key/key_js.dart';
+import 'capabilities/scroll_controller/scroll_controller_js.dart';
+import 'capabilities/tab_drawer/tab_controller_js.dart';
+import 'capabilities/text_editing_controller/text_editing_controller_js.dart';
 import 'js/handle_registry_js.dart';
 import 'js/mini_react_js.dart';
 import 'js/change_notifier_js.dart';
@@ -214,7 +214,7 @@ const String _jsUiGlobalsTail = r'''
   // 里做名字映射、也不改单源去绕开。
   // 为什么放在运行时而不是生成器：生成器不带类型解析，只看得到**方法名**，而
   // Dart 的方法名与别的类的同名方法经常撞车（`clear` 既是 `List.clear()`，也是
-  // TextEditingController.clear()，见 capabilities/text_editing_controller_js.dart）。
+  // TextEditingController.clear()，见 capabilities/text_editing_controller/text_editing_controller_js.dart）。
   // 若在生成器里按名字映射成 `xs.length = 0`，控制器那次 clear 会被**静默改错**
   // （清不掉输入框、还平白多一个 length 属性）——比报错更难发现。补齐到具体的内建
   // 原型上则天然按**接收者类型**分发：挂 Array.prototype 只影响数组，别处同名方法

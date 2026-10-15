@@ -8,17 +8,21 @@
 // main() 里注册），本文件与 runtime_source / js_widget_registry / js_ui_widget
 // 三个核心文件从此不再变动。
 //
-// 核心能力文件规范（见 capabilities/ 各文件）：一个能力 = 桥接表 + 通道 +
-// 桥接组件 + 组件注册，全部内聚。
+// 目录结构：**一个能力一个目录**（宿主侧 `<x>_bridge.dart` + JS 侧 `<x>_js.dart`，
+// 如 build_context/、key/、scroll_controller/、text_editing_controller/、
+// tab_drawer/、notification_listener/；三方库见 provider/）。留在本层的只有：
+// 通用句柄地基 handle_registry.dart、三方库模板 js_ui_library.dart、本聚合入口。
+//
+// 核心能力文件规范：一个能力 = 桥接表 + 通道 + 桥接组件 + 组件注册，全部内聚。
 import '../js_widget_registry.dart';
-import 'build_context_bridge.dart';
+import 'build_context/build_context_bridge.dart';
 import 'handle_registry.dart';
 import 'js_ui_library.dart';
-import 'key_bridge.dart';
-import 'notification_listener_bridge.dart';
-import 'scroll_controller_bridge.dart';
-import 'tab_drawer_bridge.dart';
-import 'text_editing_controller_bridge.dart';
+import 'key/key_bridge.dart';
+import 'notification_listener/notification_listener_bridge.dart';
+import 'scroll_controller/scroll_controller_bridge.dart';
+import 'tab_drawer/tab_drawer_bridge.dart';
+import 'text_editing_controller/text_editing_controller_bridge.dart';
 
 /// 全部能力通道（幂等）：在 JS 组件 mount（new XxxController → host 登记）
 /// 前调用。JsUiWidget 启动时调用一次；顺序上必须先于 ensureJsUiRuntime（见

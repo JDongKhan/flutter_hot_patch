@@ -4,7 +4,7 @@
 // 绑定到某个宿主 widget。生成器把 Dart 侧 `key: ValueKey(item)` / `key: _formKey`
 // 翻译成 `props.key = new ValueKey(item)` / `this._formKey`；reconciler 只按
 // **签名**比较（见 patchChildren 的 keySig），宿主按序列化形态还原真实 Flutter
-// Key（见 capabilities/key_bridge.dart）。
+// Key（见 capabilities/key/key_bridge.dart）。
 //
 // 五类语义（与 Flutter 对齐）：
 //   - ValueKey ：按**值**相等。纯值 codec、不登记句柄；跨桥 `{__vkey:value}`，

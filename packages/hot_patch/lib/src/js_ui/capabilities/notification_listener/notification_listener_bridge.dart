@@ -8,7 +8,7 @@
 // 等属性访问原样可用）。固定 return false，不拦截事件继续冒泡。
 import 'package:flutter/material.dart';
 
-import '../js_widget_registry.dart';
+import '../../js_widget_registry.dart';
 
 /// NotificationListener 桥接组件（对应注册 key 'NotificationListener'）：
 /// 宿主侧监听子树里的滚动通知，把 metrics 快照回传 JS。

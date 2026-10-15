@@ -1,6 +1,6 @@
 // ===== 能力：Key 句柄桥 =====
 //
-// Key 是**值**（元素 props 的 `key`），不是结点：JS 侧由 capabilities/key_js.dart
+// Key 是**值**（元素 props 的 `key`），不是结点：JS 侧由 capabilities/key/key_js.dart
 // 的代理类产出，随 props 序列化下发（`{__vkey:…}` / `{__okey:…}` / `{__handle:…}`），
 // 宿主在渲染结点时还原成真实 Flutter Key（见 js_ui_widget 的 _JsNodeState）。
 //
@@ -17,7 +17,7 @@
 //     端行为，值本体（`__psk`）只是用来区分存储槽。
 import 'package:flutter/widgets.dart';
 
-import 'handle_registry.dart';
+import '../handle_registry.dart';
 
 /// 句柄 id → 宿主侧真实 Key（GlobalKey / UniqueKey）。页面销毁时由句柄释放摘除。
 final Map<String, Key> _jsKeys = {};
@@ -36,7 +36,7 @@ void ensureKeyChannels() {
     },
     onOp: (id, op, payload) {
       // 「取位置 / 取尺寸」只能在宿主做：BuildContext / RenderObject 是宿主端概念，
-      // JS 侧只有句柄 id、没有同步取值能力（见 capabilities/key_js.dart 的 KeyRef）。
+      // JS 侧只有句柄 id、没有同步取值能力（见 capabilities/key/key_js.dart 的 KeyRef）。
       // 这里还原真实 GlobalKey → 真实 BuildContext → 真实 RenderObject，把 Dart
       // 单源的整条语义补全：
       //   - `ctx.findRenderObject()?.showOnScreen()`：位置 + 滚动，void 语义；

@@ -12,9 +12,9 @@
 //   TextField 的注册（含受控/非受控分流）随能力内聚于此。
 import 'package:flutter/material.dart';
 
-import '../../json/flutter_from_json.dart';
-import '../js_widget_registry.dart';
-import 'handle_registry.dart';
+import '../../../json/flutter_from_json.dart';
+import '../../js_widget_registry.dart';
+import '../handle_registry.dart';
 
 final Map<String, TextEditingController> _jsTextControllers = {};
 final Map<String, Object?> _jsTextHandles = {};

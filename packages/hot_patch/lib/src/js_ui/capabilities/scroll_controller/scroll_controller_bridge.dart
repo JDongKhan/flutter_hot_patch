@@ -11,9 +11,9 @@
 //   listeners）。jumpTo / animateTo 走通用 op（call）；dispose 走通用 release。
 import 'package:flutter/material.dart';
 
-import '../../json/flutter_from_json.dart';
-import '../js_widget_registry.dart';
-import 'handle_registry.dart';
+import '../../../json/flutter_from_json.dart';
+import '../../js_widget_registry.dart';
+import '../handle_registry.dart';
 
 final Map<String, ScrollController> _jsScrollControllers = {};
 final Map<String, Object?> _jsScrollMetricsHandles = {};

@@ -6,10 +6,10 @@ import '../services/builtin_host_methods.dart';
 import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
-import 'capabilities/build_context_bridge.dart';
+import 'capabilities/build_context/build_context_bridge.dart';
 import 'capabilities/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
-import 'capabilities/key_bridge.dart';
+import 'capabilities/key/key_bridge.dart';
 import 'js_ui_store.dart';
 import 'js_widget_registry.dart';
 
@@ -220,7 +220,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
   @override
   Widget build(BuildContext context) {
     // 页面锚点：根组件（COMP 之上没有宿主结点）的 `this.context` 代理按
-    // `page:<pageKey>` 反查 —— 见 capabilities/build_context_js.dart。
+    // `page:<pageKey>` 反查 —— 见 capabilities/build_context/build_context_js.dart。
     registerJsBuildContext(jsBuildContextPageAnchor(_pageKey), context);
     if (_error != null) {
       return _JsLoadErrorView(message: _error!, onRetry: _retry);
@@ -444,7 +444,7 @@ class _JsNodeState extends State<_JsNode> {
     if (node == null) return const SizedBox.shrink();
 
     // JS 组件的 `this.context` 代理按**最近宿主祖先结点 id** 反查真实
-    // BuildContext（见 capabilities/build_context_bridge.dart）：在此登记/
+    // BuildContext（见 capabilities/build_context/build_context_bridge.dart）：在此登记/
     // 刷新，dispose 注销——这就是「element 级 scope」。
     registerJsBuildContext(widget.id, context);
 
@@ -498,7 +498,7 @@ class _JsNodeState extends State<_JsNode> {
   Widget _node(String id) {
     final node = widget.store.nodes[id];
     // key：JS 侧声明的 key（ValueKey/ObjectKey/GlobalKey/UniqueKey → 真实 Flutter
-    // Key，见 capabilities/key_bridge.dart）优先；未声明时退回 `ValueKey(结点 id)`
+    // Key，见 capabilities/key/key_bridge.dart）优先；未声明时退回 `ValueKey(结点 id)`
     // ——保证每个结点都有稳定 key，Flutter 才能复用 element（状态不丢）。
     final declared = jsKeyOf(node?.props['key']);
     return _JsNode(

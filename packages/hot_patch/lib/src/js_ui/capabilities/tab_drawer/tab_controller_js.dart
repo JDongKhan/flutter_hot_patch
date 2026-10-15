@@ -14,7 +14,7 @@ const String tabControllerJsSource = r'''
   //   - addListener/removeListener：闭包直接登记（匿名闭包天然支持）；
   //   - dispose：通用 releaseHandle（释放内部句柄 + 通知宿主释放真实 controller）。
   // 跨桥序列化：toJSON 输出 `{__handle: id, length, initialIndex}`——宿主据此取/建
-  // 真实 controller（见 capabilities/tab_drawer_bridge.dart）。
+  // 真实 controller（见 capabilities/tab_drawer/tab_drawer_bridge.dart）。
   defineHandleKind('ctrl/Tab', {
     release: function (h) {
       var tc = h.obj;

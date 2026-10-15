@@ -1,6 +1,6 @@
 // ===== 能力：BuildContext 代理桥 =====
 //
-// 与 capabilities/build_context_js.dart **对称**：JS 组件的 `this.context` 是
+// 与 capabilities/build_context/build_context_js.dart **对称**：JS 组件的 `this.context` 是
 // 一个代理，真实 BuildContext 只存在于宿主。
 //
 // 两端靠 **nodeId** 对齐：JS 侧代理记「最近宿主祖先结点 id」，宿主侧
@@ -14,9 +14,9 @@
 // 编译期知道 T 是什么，运行时按本文件的映射取宿主真值。
 import 'package:flutter/widgets.dart';
 
-import '../../utils/hot_patch_log.dart';
-import 'handle_registry.dart';
-import 'js_ui_library.dart';
+import '../../../utils/hot_patch_log.dart';
+import '../handle_registry.dart';
+import '../js_ui_library.dart';
 
 /// 页面锚点的结点键：JS 侧根组件（COMP 之上没有宿主结点）的 `this.context`
 /// 代理用它反查页面级 BuildContext（两端必须一致）。

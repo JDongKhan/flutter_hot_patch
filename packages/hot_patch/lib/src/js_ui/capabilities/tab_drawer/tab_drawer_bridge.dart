@@ -25,13 +25,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart'
     show Ticker, TickerCallback, TickerProvider;
 
-import '../../json/flutter_from_json.dart';
-import '../js_widget_registry.dart';
-import 'handle_registry.dart';
+import '../../../json/flutter_from_json.dart';
+import '../../js_widget_registry.dart';
+import '../handle_registry.dart';
 
 // ---------------------------------------------------------------------------
 // TabController 句柄桥
-// （JS 侧代理类见 capabilities/tab_controller_js.dart，与 ScrollController 同构）
+// （JS 侧代理类见 capabilities/tab_drawer/tab_controller_js.dart，与 ScrollController 同构）
 // ---------------------------------------------------------------------------
 
 final Map<String, TabController> _jsTabControllers = {};

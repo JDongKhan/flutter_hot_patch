@@ -484,7 +484,7 @@ bool _fieldTranslatable(
   if (t.isEmpty) return false;
   if (_jsRuntimeTypes.contains(t)) return true;
   // Key 字段（`final _formKey = GlobalKey<FormState>()` / `ValueKey k`）：
-  // JS 侧有同名代理类（值对象，见 capabilities/key_js.dart），可持有/转发。
+  // JS 侧有同名代理类（值对象，见 capabilities/key/key_js.dart），可持有/转发。
   if (keyClassNames.contains(t)) return true;
   // 有 JS 值形态的 SDK 类型（Color → '#aarrggbb'、IconData → 图标名）。
   if (_valueSdkTypes.contains(t)) return true;
