@@ -12,15 +12,15 @@ export class ChangeNotifierProvider {
   }
   initState() {
     var p = this.props;
-    var vm = null, owns = false;
+    var notifier = null, owns = false;
     if (p.create !== undefined && p.create !== null) {
-      if (typeof p.create === 'function') { vm = new p.create(); }
-      else { vm = p.create; }
+      if (typeof p.create === 'function') { notifier = new p.create(); }
+      else { notifier = p.create; }
       owns = true;
     } else if (p.value !== undefined && p.value !== null) {
-      vm = p.value;
+      notifier = p.value;
     }
-    this.__value = vm;
+    this.__value = notifier;
     this.__ownsValue = owns;
   }
   build() {
@@ -28,7 +28,7 @@ export class ChangeNotifierProvider {
     // 被 MultiProvider 包裹时由 `__h(type, props, [node])` 放进 children。
     var child = this.props.child != null ? this.props.child
         : (this.children.length ? this.children[0] : null);
-    return __h('ChangeNotifierProvider', { model: this.props.model, vm: this.__value }, [child]);
+    return __h('ChangeNotifierProvider', { model: this.props.model, notifier: this.__value }, [child]);
   }
   dispose() {
     if (this.__ownsValue && this.__value &&
@@ -44,13 +44,13 @@ export class Consumer {
     this.children = children || [];
   }
   build(context) {
-    var vm = context.watch(this.props.model);
+    var notifier = context.watch(this.props.model);
     var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    var child = owner[name].call(owner, context, vm);
-    return __h('Consumer', { model: this.props.model, vm: vm }, [child]);
+    var child = owner[name].call(owner, context, notifier);
+    return __h('Consumer', { model: this.props.model, notifier: notifier }, [child]);
   }
 }
 

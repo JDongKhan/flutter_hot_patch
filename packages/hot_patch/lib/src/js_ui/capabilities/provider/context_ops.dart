@@ -9,8 +9,8 @@
 // **职责分工**（同步约束）：JS 侧的**取值**留在 JS 内（build 里
 // `context.watch<T>().count` 与事件串的链式调用都是同步求值，而 JS→宿主只有
 // 异步桥），JS 的 `watch` 同步返回自己沿作用域取到的值；**订阅**落在本文件——
-// `watch` op 让该位置的 `_JsNode` element 订阅按类型解析出的那个 VM，它 notify
-// 时标脏重建，与 Dart `context.watch<T>()` 建立依赖的语义一致。
+// `watch` op 让该位置的 `_JsNode` element 订阅按类型解析出的那个模型镜像，它
+// notify 时标脏重建，与 Dart `context.watch<T>()` 建立依赖的语义一致。
 import 'package:flutter/widgets.dart';
 
 import '../../../utils/hot_patch_log.dart';
@@ -55,7 +55,8 @@ void ensureProviderContextOps() {
 }
 
 /// `context.watch<T>()` / `read<T>()` 落到宿主**真值 BuildContext** 上的权威查找：
-/// 句柄 id → 结点 id → 该结点的真值 BuildContext → 按 `jsType == T` 精确解析出 VM。
+/// 句柄 id → 结点 id → 该结点的真值 BuildContext → 按 `jsType == T` 精确解析出
+/// 模型镜像。
 ///
 /// 查不到（或类型不匹配）说明 JS 侧解析越过了提供者边界（消费点被放到了
 /// provider 子树之外），按项目规则出运行时告警而非静默。
@@ -84,9 +85,9 @@ Object? _resolveWatchOp(String ctxId, String op, Map payload) {
 
 /// 让该位置（ctx 句柄 id 对应的 `_JsNode` element）**按类型精确订阅**。
 ///
-/// 订阅挂的是 [jsChangeNotifierOfTypeAt] 按类型解析出的那个 VM——不是「最近的那个
-/// 提供者」（里层嵌套了别的类型时会订错），也不是 props 里顺手拿到的那个。被订阅者
-/// notify → 该 element 标脏 → 重建（重建时重新读 JS 已补丁后的值）。
+/// 订阅挂的是 [jsChangeNotifierOfTypeAt] 按类型解析出的那个模型镜像——不是「最近的
+/// 那个提供者」（里层嵌套了别的类型时会订错），也不是 props 里顺手拿到的那个。被
+/// 订阅者 notify → 该 element 标脏 → 重建（重建时重新读 JS 已补丁后的值）。
 void _subscribeNode(String ctxId, String type, JsChangeNotifier target) {
   final subs = _ctxWatches[ctxId] ??= <String, _CtxWatch>{};
   // 同一类型已订阅同一个对象：重建重发 op，直接返回（不叠监听器）。

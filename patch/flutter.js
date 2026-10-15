@@ -118,7 +118,7 @@ export class ListenableBuilder {
     var owner = this.__owner();
     if (!owner) { return null; }
     var child = owner[this.props.builder].call(owner, context);
-    return __h('ListenableBuilder', { vm: owner[this.props.listenable] }, [child]);
+    return __h('ListenableBuilder', { notifier: owner[this.props.listenable] }, [child]);
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -279,7 +279,7 @@ export class ValueListenableBuilder {
     var l = owner[this.props.listenable];
     var value = (l && l.value !== undefined) ? l.value : null;
     var child = owner[this.props.builder].call(owner, context, value);
-    return __h('ValueListenableBuilder', { vm: l }, [child]);
+    return __h('ValueListenableBuilder', { notifier: l }, [child]);
   }
   dispose() {
     if (this.__listenable && this.__listener) {

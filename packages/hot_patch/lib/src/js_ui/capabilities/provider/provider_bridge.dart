@@ -1,17 +1,17 @@
 // ===== 能力：provider 宿主映射（ChangeNotifierProvider / Consumer）=====
 //
 // provider 的**状态与订阅**全部下沉到 Dart 侧：
-//   - JS 端 `ChangeNotifierProvider` 只负责造/取 VM，然后把宿主结点
-//     `ChangeNotifierProvider {model, vm}` 交给宿主（见 hot_patch_generator
+//   - JS 端 `ChangeNotifierProvider` 只负责造/取模型实例，然后把宿主结点
+//     `ChangeNotifierProvider {model, notifier}` 交给宿主（见 hot_patch_generator
 //     的 widget_module_builder）——JS 侧没有 provider 专用记账，只在结点上按
 //     **类型名**声明作用域（`__provides`，注册见 provider_js.dart）；
 //   - JS 端 `context.watch<T>()` 只是「按**类型名**沿 `__parent` 向上取最近作用域
 //     的值」+ 用原生 `addListener` 订阅（UI 更新仍由 JS 侧重建产生，
 //     这是同步取值约束决定的、无法消除的一步）。
 //
-// 宿主侧映射的职责：把 JS 下发的 `{model, vm 句柄}` 还原成真实的 Dart
-// provider 子树——VM 是 change_notifier_bridge.dart 的**通用镜像**（不认识业务
-// 类，只记 JS 端类型 + 转发 notify）。
+// 宿主侧映射的职责：把 JS 下发的 `{model, notifier 句柄}` 还原成真实的 Dart
+// provider 子树——notifier 是 change_notifier_bridge.dart 的**通用镜像**（不
+// 认识业务类，只记 JS 端类型 + 转发 notify）。
 //
 // **本文件属于三方库层**（provider 的接入实现，见 provider_library.dart），核心
 // 不 import 它：核心把 `context.watch/read` 的 op 分发给本库注册的处理器
@@ -30,20 +30,20 @@ import '../change_notifier/listenable_builder_bridge.dart';
 ///
 /// `InheritedNotifier` 自带「notifier 变更 → 依赖者重建」语义，等价于
 /// provider 包的 `ChangeNotifierProvider`（提供者结点 + 依赖通知）。Dart 侧的
-/// 消费者用 [maybeOf] 建立依赖，VM notify 时只重建该子树。
+/// 消费者用 [maybeOf] 建立依赖，notify 时只重建该子树。
 ///
 /// 生产链路上 JS 的 `context.watch<T>()` 走的是 [jsChangeNotifierOfTypeAt]
 /// （**按类型**精确匹配，不能取「最近的那个」）；[maybeOf] 是给**宿主侧 Dart
 /// 消费者**用的常规入口（如测试里模拟依赖者、将来宿主 widget 直接消费 JS
-/// 提供的 VM）。
+/// 提供的模型）。
 class JsChangeNotifierProvider extends InheritedNotifier<JsChangeNotifier> {
   const JsChangeNotifierProvider({
     super.key,
-    required JsChangeNotifier vm,
+    required JsChangeNotifier notifier,
     required super.child,
-  }) : super(notifier: vm);
+  }) : super(notifier: notifier);
 
-  /// 取祖先最近的 VM（**宿主侧 Dart 消费者**用；JS 侧的 context 走
+  /// 取祖先最近的模型镜像（**宿主侧 Dart 消费者**用；JS 侧的 context 走
   /// [jsChangeNotifierOfTypeAt] 按类型精确解析，见 build_context_bridge 的
   /// `context.watch/read` op）。
   static JsChangeNotifier? maybeOf(BuildContext context) => context
@@ -79,16 +79,16 @@ JsChangeNotifier? jsChangeNotifierOfTypeAt(BuildContext context, String type) {
 
 /// 注册 provider 宿主映射（由 js_ui_capabilities.registerAllJsWidgets 聚合调用）。
 void registerProviderWidgets(JsWidgetRegistry r) {
-  // 提供者结点：JS 已把 create/value 解析成 VM，宿主只做映射。
-  // VM 句柄取不到（JS 侧未登记/已释放）时退化为纯透传，不阻断渲染。
+  // 提供者结点：JS 已把 create/value 解析成模型实例，宿主只做映射。
+  // 句柄取不到（JS 侧未登记/已释放）时退化为纯透传，不阻断渲染。
   r.register('ChangeNotifierProvider', (c) {
     final child = c.child() ?? const SizedBox.shrink();
-    final vm = jsChangeNotifierOfProp(c.props['vm']);
-    if (vm == null) return child;
-    return JsChangeNotifierProvider(vm: vm, child: child);
+    final notifier = jsChangeNotifierOfProp(c.props['notifier']);
+    if (notifier == null) return child;
+    return JsChangeNotifierProvider(notifier: notifier, child: child);
   });
 
-  // Consumer：JS 侧决定「哪个 VM、哪段子树」，宿主侧把这段子树包成 Dart 的
+  // Consumer：JS 侧决定「哪个 ChangeNotifier、哪段子树」，宿主侧把这段子树包成 Dart 的
   // 监听边界（notify 只重建该子树，即 P2 的重建粒度）。
   // 边界实现与 ListenableBuilder / ValueListenableBuilder 共用一份——它们对宿主
   // 的要求完全相同，那两个组件的注册在 change_notifier

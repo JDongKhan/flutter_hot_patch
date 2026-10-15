@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot",
-  "buildTime": "2026-10-15T16:20:34.386097",
+  "buildTime": "2026-10-15T16:32:58.504094",
   "resources": {
-    "flutter.js": "3934b51532476c1786dc9f49994aa80a873c5c759065a2b44c6e53e2f26c7e7e",
-    "provider.js": "1afa784ba46e4b1215f6349c8232cabae2cca7eb9bcc6b71f574feeeac64ef61",
+    "flutter.js": "b2c73a5ccb23f81113d39c49a16533e072cfbdbdbab66dc79fa2ad2a8356e8fc",
+    "provider.js": "269a1e9e4ca491a13289455cf3b33a82b75607858f0c1ad7bea5613cd29e4158",
     "app/model/app_models.js": "2a8b5129307548ba4400210b6a8c07bf2160560642386fdb6630283b766a2a0f",
     "app/model/app_data.js": "594a32216fc73c218fd089c63a0bbaef91cc2b281692f789ab7cb6e674052085",
     "app/pages/orders_page.js": "35296b26e34396c5ea88072dcd28c474c06953926ad91ee8d57efa4ff7fd4776",

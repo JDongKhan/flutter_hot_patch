@@ -7,7 +7,7 @@
 //   - 组件注册 [registerListenableWidgets]：ListenableBuilder /
 //     ValueListenableBuilder 的宿主监听边界。
 //
-// 它是「模型类可被订阅」的前提（provider 的 VM、通用作用域的 subscribeListenable
+// 它是「模型类可被订阅」的前提（provider 的模型、通用作用域的 subscribeListenable
 // 都依赖它），故排在其它能力之前注入。
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';

@@ -195,14 +195,14 @@ export class Builder {
   }
 }''';
 
-/// ChangeNotifierProvider：解析 create/value 得到 VM，然后**交给宿主**。
+/// ChangeNotifierProvider：解析 create/value 得到模型实例，然后**交给宿主**。
 ///
 /// JS 侧不做任何 provider 专用记账：本类只负责
-///   ① 造/取 VM（`create` 为类引用时 new 一次，生命周期归本类；实例时复用）；
-///   ② 渲染宿主结点 `ChangeNotifierProvider`，props 带 `{model, vm}`——
-///      宿主据此建 Dart 侧的 provider 映射（通用 VM 镜像 + provider 子树），
+///   ① 造/取模型实例（`create` 为类引用时 new 一次，生命周期归本类；实例时复用）；
+///   ② 渲染宿主结点 `ChangeNotifierProvider`，props 带 `{model, notifier}`——
+///      宿主据此建 Dart 侧的 provider 映射（ChangeNotifier 镜像 + provider 子树），
 ///      `context.watch<T>()` 的 T 就是这里的 `model`（类型名一路传给宿主）。
-/// VM 的真实对象只存在于 JS 端：`vm` 走句柄（`{__handle:id}`）下发。
+/// 模型真实对象只存在于 JS 端：`notifier` 走句柄（`{__handle:id}`）下发。
 const String jsChangeNotifierProviderComponent = '''
 export class ChangeNotifierProvider {
   constructor(props, children) {
@@ -211,15 +211,15 @@ export class ChangeNotifierProvider {
   }
   initState() {
     var p = this.props;
-    var vm = null, owns = false;
+    var notifier = null, owns = false;
     if (p.create !== undefined && p.create !== null) {
-      if (typeof p.create === 'function') { vm = new p.create(); }
-      else { vm = p.create; }
+      if (typeof p.create === 'function') { notifier = new p.create(); }
+      else { notifier = p.create; }
       owns = true;
     } else if (p.value !== undefined && p.value !== null) {
-      vm = p.value;
+      notifier = p.value;
     }
-    this.__value = vm;
+    this.__value = notifier;
     this.__ownsValue = owns;
   }
   build() {
@@ -227,7 +227,7 @@ export class ChangeNotifierProvider {
     // 被 MultiProvider 包裹时由 `__h(type, props, [node])` 放进 children。
     var child = this.props.child != null ? this.props.child
         : (this.children.length ? this.children[0] : null);
-    return __h('ChangeNotifierProvider', { model: this.props.model, vm: this.__value }, [child]);
+    return __h('ChangeNotifierProvider', { model: this.props.model, notifier: this.__value }, [child]);
   }
   dispose() {
     if (this.__ownsValue && this.__value &&
@@ -270,13 +270,13 @@ export class Consumer {
     this.children = children || [];
   }
   build(context) {
-    var vm = context.watch(this.props.model);
+    var notifier = context.watch(this.props.model);
     var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    var child = owner[name].call(owner, context, vm);
-    return __h('Consumer', { model: this.props.model, vm: vm }, [child]);
+    var child = owner[name].call(owner, context, notifier);
+    return __h('Consumer', { model: this.props.model, notifier: notifier }, [child]);
   }
 }''';
 
@@ -311,7 +311,7 @@ export class ListenableBuilder {
     var owner = this.__owner();
     if (!owner) { return null; }
     var child = owner[this.props.builder].call(owner, context);
-    return __h('ListenableBuilder', { vm: owner[this.props.listenable] }, [child]);
+    return __h('ListenableBuilder', { notifier: owner[this.props.listenable] }, [child]);
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -326,7 +326,7 @@ export class ListenableBuilder {
 /// `builder: (context, value, child) => …` 形参语义一致。
 ///
 /// 订阅对象是 ValueNotifier（JS 侧 extends ChangeNotifier，句柄 kind 复用
-/// `vm/ChangeNotifier`），故 `addListener` / 宿主映射与 ListenableBuilder 同一套。
+/// `notifier/ChangeNotifier`），故 `addListener` / 宿主映射与 ListenableBuilder 同一套。
 const String jsValueListenableBuilderComponent = '''
 export class ValueListenableBuilder {
   constructor(props, children) {
@@ -356,7 +356,7 @@ export class ValueListenableBuilder {
     var l = owner[this.props.listenable];
     var value = (l && l.value !== undefined) ? l.value : null;
     var child = owner[this.props.builder].call(owner, context, value);
-    return __h('ValueListenableBuilder', { vm: l }, [child]);
+    return __h('ValueListenableBuilder', { notifier: l }, [child]);
   }
   dispose() {
     if (this.__listenable && this.__listener) {

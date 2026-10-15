@@ -20,23 +20,24 @@ void registerListenableWidgets(JsWidgetRegistry r) {
   r.register('ValueListenableBuilder', (c) => listenableBoundary(c));
 }
 
-/// 把一段 JS 子树包成 Dart 的监听边界：结点 props 的 `vm`（`{__handle:id}`）
-/// 取到通用镜像就订阅它，notify 只重建 `c.child()` 那段子树。
+/// 把一段 JS 子树包成 Dart 的监听边界：结点 props 的 `notifier`
+/// （`{__handle:id}`）取到通用镜像就订阅它，notify 只重建 `c.child()` 那段子树。
 ///
 /// **共用实现**：provider 的 `Consumer` 与这里的两个组件对宿主的要求完全相同
 /// （订阅 + 重建子树），故对外公开、由 provider_bridge 复用一份。
 Widget listenableBoundary(JsRenderContext c) {
   final subtree = c.child() ?? const SizedBox.shrink();
-  final vm = jsChangeNotifierOfProp(c.props['vm']);
-  if (vm == null) return subtree;
+  final notifier = jsChangeNotifierOfProp(c.props['notifier']);
+  if (notifier == null) return subtree;
   return ListenableBuilder(
-    listenable: vm,
+    listenable: notifier,
     builder: (context, child) => child ?? const SizedBox.shrink(),
     child: subtree,
   );
 }
 
-/// 结点 props 里的 VM（JS 侧 `toJSON` 成 `{__handle:id}`）→ Dart 侧的通用镜像。
+/// 结点 props 里的 ChangeNotifier（JS 侧 `toJSON` 成 `{__handle:id}`）→ Dart
+/// 侧的通用镜像。
 JsChangeNotifier? jsChangeNotifierOfProp(Object? prop) {
   if (prop is! Map) return null;
   final id = prop['__handle'];

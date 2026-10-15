@@ -6,7 +6,7 @@
 //
 // 本片段把这件事收敛成**一套**机制：一个真实对象登记为一个**句柄**（id），
 // 对端只持 id，所有操作按 id 转发给拥有端。对象、函数/block、控制器、未来
-// 的 Key / VM / Widget 都只是不同 `kind`，新增能力 = 注册一个 kind 描述符，
+// 的 Key / ChangeNotifier / Widget 都只是不同 `kind`，新增能力 = 注册一个 kind 描述符，
 // 核心文件（本文件 / runtime_source 骨架 / disposeRoot）零改动。
 //
 // id 规则：`js:<kind>#<序号>`（kind 本身可带子类，如 `ctrl/Scroll`）——

@@ -37,7 +37,7 @@ ChangeNotifier.prototype.notifyListeners = function() {
 };
 // Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
 // 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
-// 同时释放跨语言句柄 → 宿主端的通用 VM 镜像一并销毁（1:1 资源）。
+// 同时释放跨语言句柄 → 宿主端的通用镜像一并销毁（1:1 资源）。
 ChangeNotifier.prototype.dispose = function() {
   this._listeners = [];
   if (this.__id != null) {
@@ -45,8 +45,8 @@ ChangeNotifier.prototype.dispose = function() {
     this.__id = null;
   }
 };
-// VM 作为元素 prop 下发时（ChangeNotifierProvider 的 `vm`）只带句柄 id：
-// 真实对象只存在于 JS 端，宿主经句柄取到自己的通用 VM 镜像。
+// 作为元素 prop 下发时（如 ChangeNotifierProvider 的 `notifier`）只带句柄 id：
+// 真实对象只存在于 JS 端，宿主经句柄取到自己的通用镜像。
 ChangeNotifier.prototype.toJSON = function() {
   return { __handle: this.__id };
 };
