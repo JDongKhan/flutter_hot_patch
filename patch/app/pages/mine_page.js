@@ -16,6 +16,7 @@ export class MinePage {
     this._feed = null;
   }
   initState() {
+    console.log("MinePage initState ---");
     this._load();
   }
   async _load() {

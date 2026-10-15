@@ -56,6 +56,7 @@ class _CommunityPageState extends State<CommunityPage> {
   @override
   void initState() {
     super.initState();
+    print("CommunityPage initState ---");
     // 配置与列表并行发，首屏只等一个往返（1s），不串行等两次。
     _load();
     _loadPosts();

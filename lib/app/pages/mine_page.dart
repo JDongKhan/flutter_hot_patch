@@ -43,6 +43,7 @@ class _MinePageState extends State<MinePage> {
   @override
   void initState() {
     super.initState();
+    print("MinePage initState ---");
     _load();
   }
 

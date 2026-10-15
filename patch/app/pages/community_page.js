@@ -24,6 +24,7 @@ export class CommunityPage {
     this._price = "";
   }
   initState() {
+    console.log("CommunityPage initState ---");
     this._load();
     this._loadPosts();
   }

@@ -16,6 +16,7 @@ export class HomePage {
     this._feed = null;
   }
   initState() {
+    console.log("HomePage initState ---");
     this._load();
   }
   async _load() {
