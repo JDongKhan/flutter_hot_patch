@@ -5,14 +5,18 @@
 // （Key / 各 Controller / BuildContext 代理 / NotificationListener），也包括
 // 新引入的三方库（provider / GetX / Riverpod …）——两者机制完全一致。
 //
-// 一个能力在宿主侧的落点无非四类，本模板各留一个可重写钩子：
+// 一个能力在宿主侧的落点无非三类，本模板各留一个可重写钩子：
 //   1. [jsFragments]      —— 需要注入 JS 运行时的片段（同一 IIFE 作用域，
 //                            可调用核心的 `registerScope` / `scopeOf` / `reg` …）；
-//   2. [ensureChannels]   —— 幂等登记本能力用到的跨语言句柄 kind；
-//   3. [registerWidgets]  —— 本能力的宿主侧组件映射（`type` → Flutter widget）；
-//   4. [resolveWatchTarget] —— `context.watch<T>()` / `read<T>()` 下行的宿主
-//                            解析钩子：在**真值 element 树**上按类型名找到可
-//                            订阅对象（同步取值仍留在 JS，这里只决定「订阅谁」）。
+//   2. [ensureChannels]   —— 幂等登记本能力用到的跨语言句柄 kind，以及把本库的
+//                            `context.<op>(...)` 处理注册进核心的通用缝
+//                            （`registerContextOp`，见 build_context_bridge.dart）；
+//   3. [registerWidgets]  —— 本能力的宿主侧组件映射（`type` → Flutter widget）。
+//
+// **本类刻意没有 context 语义的钩子**：`context.watch/read` 是 provider 那类
+// `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁写进 [jsFragments]，
+// 宿主侧经 `registerContextOp` 注册（见 capabilities/provider/context_ops.dart）。
+// 核心不认识具体 op 名。
 //
 // 接入方式（二选一）：
 //   - 内建：在下面的 [_seedBuiltins] 里 `registerJsUiLibrary(...)` 一行；
@@ -27,8 +31,6 @@
 // **边界（务必知晓）**：本模板覆盖的是**运行时/宿主侧**。若新库还要新增 UI
 // 组件类型，其**编译期**翻译（ui_component_generator 的 translator 与
 // `patch/<pkg>.js` 里的 JS 组件类）属于另一条缝，不在本文件范围内。
-import 'package:flutter/widgets.dart';
-
 import '../js_widget_registry.dart';
 import 'build_context/build_context_library.dart';
 import 'change_notifier/change_notifier_library.dart';
@@ -62,18 +64,6 @@ abstract class JsUiLibrary {
 
   /// 注册本库的宿主侧组件映射（`type` 字符串 → 真实 Flutter widget）。
   void registerWidgets(JsWidgetRegistry r) {}
-
-  /// `context.watch<T>()` / `context.read<T>()` 的**宿主侧权威解析**：
-  /// 从该位置的真值 [context] 沿 element 树按类型名 [type] 找到可订阅对象。
-  ///
-  /// 返回 null = 本库不负责这个类型（交给下一个库）；全部库都返回 null 时，
-  /// 核心按「消费点越过了提供者边界」告警。
-  ///
-  /// **为什么返回值是 [Listenable] 而不是库自己的类型**：核心只做一件事——
-  /// 「订阅它、变更时标脏重建」，这与「它是谁」无关（与 Flutter 里
-  /// `context.watch` 只要求 Listenable 一致）。库自己的类型在里面即可，
-  /// 见 ProviderLibrary 的实现。
-  Listenable? resolveWatchTarget(BuildContext context, String type) => null;
 }
 
 /// 已注册的库（按注册顺序；解析时**先注册者优先**）。
@@ -84,7 +74,10 @@ bool _seeded = false;
 /// 注册一个能力（幂等：同 [JsUiLibrary.id] 只保留首个）。
 ///
 /// 可在 App 的 `main()` 里调用（`runApp` 之前），从而**完全不改 hot_patch**。
+/// 会先注入内建能力，保证内建片段**永远排在外部库之前**——外部库的片段可以
+/// 安全引用内建片段里的东西（如给 `JsBuildContext.prototype` 补方法）。
 void registerJsUiLibrary(JsUiLibrary library) {
+  _seedBuiltins();
   for (final l in _libraries) {
     if (l.id == library.id) return;
   }
@@ -117,17 +110,4 @@ void _seedBuiltins() {
   registerJsUiLibrary(const DrawerLibrary());
   // ── 三方库 ──
   registerJsUiLibrary(const ProviderLibrary());
-}
-
-/// 按类型名解析「可订阅对象」：遍历各能力，第一个非 null 即命中。
-///
-/// 同名就近遮蔽由各库自己的解析实现保证（provider 用 `jsType == type` 过滤，
-/// 不取「最近的那个」——见 ProviderLibrary）。
-Listenable? resolveWatchTarget(BuildContext context, String type) {
-  if (context is! Element || !context.mounted) return null;
-  for (final library in jsUiLibraries) {
-    final target = library.resolveWatchTarget(context, type);
-    if (target != null) return target;
-  }
-  return null;
 }

@@ -7,7 +7,7 @@ import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
 import 'capabilities/build_context/build_context_bridge.dart';
-import 'capabilities/handle_registry.dart';
+import 'capabilities/core/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key/key_bridge.dart';
 import 'js_ui_store.dart';

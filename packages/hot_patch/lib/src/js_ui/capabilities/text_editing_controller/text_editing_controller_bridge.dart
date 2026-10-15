@@ -14,7 +14,7 @@ import 'package:flutter/material.dart';
 
 import '../../../json/flutter_from_json.dart';
 import '../../js_widget_registry.dart';
-import '../handle_registry.dart';
+import '../core/handle_registry.dart';
 
 final Map<String, TextEditingController> _jsTextControllers = {};
 final Map<String, Object?> _jsTextHandles = {};

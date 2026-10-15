@@ -23,16 +23,5 @@
 library;
 
 export 'src/services/js_runtime_manager.dart';
-export 'src/utils/hot_patch_log.dart';
-export 'src/json/flutter_from_json.dart';
 export 'src/js_ui/js_ui_widget.dart';
-export 'src/js_ui/js_ui_store.dart';
 export 'src/js_ui/js_widget_registry.dart';
-export 'src/js_ui/runtime_source.dart';
-export 'src/js_ui/capabilities/handle_registry.dart';
-export 'src/js_ui/capabilities/js_ui_library.dart';
-export 'src/js_ui/capabilities/js_ui_capabilities.dart';
-export 'src/js_ui/capabilities/build_context/build_context_bridge.dart';
-export 'src/js_ui/capabilities/provider/provider_bridge.dart';
-export 'src/js_ui/capabilities/provider/vm_bridge.dart';
-export 'src/js_ui/capabilities/drawer/drawer_bridge.dart';

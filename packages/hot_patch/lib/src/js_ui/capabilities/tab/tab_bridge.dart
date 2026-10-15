@@ -21,7 +21,7 @@ import 'package:flutter/scheduler.dart'
 
 import '../../../json/flutter_from_json.dart';
 import '../../js_widget_registry.dart';
-import '../handle_registry.dart';
+import '../core/handle_registry.dart';
 
 // ---------------------------------------------------------------------------
 // TabController 句柄桥

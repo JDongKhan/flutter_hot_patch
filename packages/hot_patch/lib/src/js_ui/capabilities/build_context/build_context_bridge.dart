@@ -15,7 +15,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../utils/hot_patch_log.dart';
-import '../handle_registry.dart';
+import '../core/handle_registry.dart';
 import '../js_ui_library.dart';
 
 /// 页面锚点的结点键：JS 侧根组件（COMP 之上没有宿主结点）的 `this.context`

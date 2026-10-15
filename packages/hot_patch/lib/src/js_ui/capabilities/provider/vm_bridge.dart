@@ -13,7 +13,7 @@
 // notifyListeners 走**双路**派发：本端 `_listeners`（JS 逻辑）+ 本通道（Dart UI）。
 import 'package:flutter/foundation.dart';
 
-import '../handle_registry.dart';
+import '../core/handle_registry.dart';
 
 /// 句柄 id → Dart 侧的通用 VM 镜像（与 JS 对象 1:1）。
 final Map<String, JsVm> _jsVms = {};

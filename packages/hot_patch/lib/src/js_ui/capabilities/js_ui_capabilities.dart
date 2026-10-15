@@ -16,7 +16,7 @@
 // handle_registry_js.dart，刻意不是 JsUiLibrary 子类，理由见其文件头）、能力
 // 模板 js_ui_library.dart、本聚合入口。
 import '../js_widget_registry.dart';
-import 'handle_registry.dart';
+import 'core/handle_registry.dart';
 import 'js_ui_library.dart';
 
 /// 全部能力通道（幂等）：在 JS 组件 mount（new XxxController → host 登记）

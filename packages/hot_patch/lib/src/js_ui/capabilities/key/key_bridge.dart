@@ -17,7 +17,7 @@
 //     端行为，值本体（`__psk`）只是用来区分存储槽。
 import 'package:flutter/widgets.dart';
 
-import '../handle_registry.dart';
+import '../core/handle_registry.dart';
 
 /// 句柄 id → 宿主侧真实 Key（GlobalKey / UniqueKey）。页面销毁时由句柄释放摘除。
 final Map<String, Key> _jsKeys = {};

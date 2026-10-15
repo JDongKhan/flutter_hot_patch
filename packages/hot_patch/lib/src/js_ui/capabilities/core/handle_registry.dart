@@ -25,8 +25,8 @@
 //      可替换价值在此为零。
 import 'dart:convert';
 
-import '../../services/js_runtime_manager.dart';
-import '../../utils/hot_patch_log.dart';
+import '../../../services/js_runtime_manager.dart';
+import '../../../utils/hot_patch_log.dart';
 
 /// 一个 kind 的描述符：三端 hook 均按需提供。
 class JsHandleKind {
