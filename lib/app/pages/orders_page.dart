@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../../base/app_router.dart';
-import '../model/app_data.dart';
 import '../model/app_models.dart';
+import '../service/app_service.dart';
 import 'detail_pages.dart';
 
 /// 订单 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/orders_page.js）。
@@ -11,9 +11,11 @@ import 'detail_pages.dart';
 /// 对应 docs/app-prototype.html 的「订单」：顶部状态条（全部/待付款/待发货/
 /// 待收货/已完成）+ 订单卡列表（订单号 / 状态 / 商品 / 合计 / 操作按钮）。
 ///
-/// 本页纳入连带翻译（`@PatchEntry`）：`.where().toList()` 过滤、`late` 字段
-/// 初始化（`widget.initialStatus`）、集合 for 循环、ListView.separated 的
-/// itemBuilder 局部变量、switch 表达式返回 Color 均已支持。
+/// 数据（状态条 + 订单列表）由 [AppService.fetchOrders] 模拟网络请求取回，
+/// 加载期间显示 loading。
+///
+/// 本页纳入连带翻译（`@PatchEntry`）：`.where().toList()` 过滤、集合 for 循环、
+/// ListView.separated 的 itemBuilder 局部变量、switch 表达式返回 Color 均已支持。
 @PatchEntry()
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key, this.initialStatus});
@@ -26,11 +28,34 @@ class OrdersPage extends StatefulWidget {
 }
 
 class _OrdersPageState extends State<OrdersPage> {
-  late String _status = widget.initialStatus ?? kOrderStatus.first;
+  final AppService _service = AppService();
 
-  List<Order> get _list => _status == kOrderStatus.first
-      ? kOrders
-      : kOrders.where((o) => o.status == _status).toList();
+  /// 接口数据；null = 加载中。
+  OrderFeed? _feed;
+
+  /// 当前选中的状态；接口回来后落到「全部」（或 `widget.initialStatus`）。
+  String _status = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final OrderFeed feed = await _service.fetchOrders();
+    setState(() {
+      _feed = feed;
+      _status = widget.initialStatus ?? feed.statuses.first;
+    });
+  }
+
+  List<Order> _list(OrderFeed feed) {
+    if (_status == feed.statuses.first) {
+      return feed.orders;
+    }
+    return feed.orders.where((o) => o.status == _status).toList();
+  }
 
   Color _statusColor(String status) => switch (status) {
     '待付款' => kPrice,
@@ -40,7 +65,11 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final list = _list;
+    final feed = _feed;
+    if (feed == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final list = _list(feed);
     return Column(
       // 状态条的白色底必须横贯整屏。Column 默认按子结点自身宽度居中排布，
       // `Container(color: white)` 会缩成状态条那么宽，"白底没铺满"。stretch
@@ -58,7 +87,7 @@ class _OrdersPageState extends State<OrdersPage> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    for (final s in kOrderStatus)
+                    for (final s in feed.statuses)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: GestureDetector(

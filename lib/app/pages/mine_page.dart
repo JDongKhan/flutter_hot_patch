@@ -3,7 +3,8 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../../base/app_router.dart';
 import '../../base/web_view.dart';
-import '../model/app_data.dart';
+import '../model/app_models.dart';
+import '../service/app_service.dart';
 import 'detail_pages.dart';
 
 /// 我的 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/mine_page.js）。
@@ -15,10 +16,18 @@ import 'detail_pages.dart';
 /// 本页用了翻译器覆盖不到的构造（`Navigator.push(MaterialPageRoute(...))`、
 /// 方法体 tear-off 回调），相关跳转统一收敛到 [AppRouter] 的 `@HostInjected`
 /// 通道（与 JS 侧同一条通路）。
+///
+/// 头像 / 订单统计 / 功能菜单由 [AppService.fetchMine] 模拟网络请求取回，
+/// 加载期间显示 loading。
 @PatchEntry()
-class MinePage extends StatelessWidget {
+class MinePage extends StatefulWidget {
   const MinePage({super.key});
 
+  @override
+  State<MinePage> createState() => _MinePageState();
+}
+
+class _MinePageState extends State<MinePage> {
   static const List<Color> _menuTints = [
     Color(0xFFE8F2FF),
     Color(0xFFFFF3E0),
@@ -26,8 +35,25 @@ class MinePage extends StatelessWidget {
     Color(0xFFE9F7EF),
   ];
 
-  void _openMenu(int i) {
-    final m = kMineMenu[i];
+  final AppService _service = AppService();
+
+  /// 接口数据；null = 加载中。
+  MineFeed? _feed;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final MineFeed feed = await _service.fetchMine();
+    setState(() {
+      _feed = feed;
+    });
+  }
+
+  void _openMenu(MenuEntry m) {
     if (m.screen == 'orders') {
       AppRouter.openOrders();
     } else if (m.screen == 'showcase') {
@@ -40,6 +66,10 @@ class MinePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final feed = _feed;
+    if (feed == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -61,7 +91,7 @@ class MinePage extends StatelessWidget {
                 children: [
                   ClipOval(
                     child: Image.network(
-                      kAvatarImg,
+                      feed.avatar,
                       width: 58,
                       height: 58,
                       fit: BoxFit.cover,
@@ -126,7 +156,7 @@ class MinePage extends StatelessWidget {
             ),
             child: Row(
               children: [
-                for (final s in kMineStats)
+                for (final s in feed.stats)
                   Expanded(
                     child: GestureDetector(
                       onTap: () => AppRouter.openOrders(),
@@ -165,7 +195,7 @@ class MinePage extends StatelessWidget {
           ),
           child: Column(
             children: [
-              for (var i = 0; i < kMineMenu.length; i++) ...[
+              for (var i = 0; i < feed.menu.length; i++) ...[
                 if (i > 0)
                   const Divider(
                     height: 1,
@@ -173,7 +203,7 @@ class MinePage extends StatelessWidget {
                     color: Color(0xFFF0F2F6),
                   ),
                 GestureDetector(
-                  onTap: () => _openMenu(i),
+                  onTap: () => _openMenu(feed.menu[i]),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
                     child: Row(
@@ -187,14 +217,14 @@ class MinePage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(9),
                           ),
                           child: Text(
-                            kMineMenu[i].emoji,
+                            feed.menu[i].emoji,
                             style: const TextStyle(fontSize: 15),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            kMineMenu[i].title,
+                            feed.menu[i].title,
                             style: const TextStyle(fontSize: 14),
                           ),
                         ),

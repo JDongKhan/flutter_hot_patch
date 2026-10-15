@@ -41,7 +41,7 @@ class _AppShellState extends State<AppShell> {
         index: _index,
         children: [
           // 首页：有 JS 产物（连带翻译），外壳产物里是类引用，由 JS 运行时直接
-          // new 出来；数据用构造参数的默认值（app_data.dart 的顶层 const）。
+          // new 出来；数据由 HomePage 自己经 AppService 模拟网络请求取回。
           const HomePage(),
           const CommunityPage(),
           const OrdersPage(),

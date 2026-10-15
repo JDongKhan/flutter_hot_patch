@@ -2,24 +2,34 @@
 // 由 hot_patch_generator 从 lib/app/pages/community_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { AppService } from '../service/app_service.js';
+import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { kBrand } from 'detail_pages.js';
-import { kCommunityTabs, kDists, kPostTypes, kPosts, kPriceRanges, kResources, kSorts } from '../model/app_data.js';
 import { ListView, __h } from '../../flutter.js';
 
 // 组件 CommunityPage
 export class CommunityPage {
   constructor() {
-    this._tab = kCommunityTabs[0];
+    this._service = new AppService({});
+    this._feed = null;
     this._filterOpen = false;
-    this._sort = kSorts[0];
-    this._type = kPostTypes[0];
-    this._dist = kDists[0];
-    this._price = kPriceRanges[0];
+    this._tab = "";
+    this._sort = "";
+    this._type = "";
+    this._dist = "";
+    this._price = "";
   }
-  get _visiblePosts() {
-    var list = kPosts.filter((p) => { return ((this._type == kPostTypes[0]) || (p.type == this._type)); });
+  initState() {
+    this._load();
+  }
+  async _load() {
+    var feed = await this._service.fetchCommunity();
+    this.setState(function(){ this._feed = feed; this._tab = feed.tabs[0]; this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
+  }
+  _visiblePosts(feed) {
+    var list = feed.posts.filter((p) => { return ((this._type == feed.postTypes[0]) || (p.type == this._type)); });
     switch (this._sort) {
       case "最新":
         list = [...list].reverse();
@@ -34,10 +44,20 @@ export class CommunityPage {
     this.setState(function(){ this._filterOpen = (!this._filterOpen); });
   }
   _resetFilter() {
-    this.setState(function(){ this._sort = kSorts[0]; this._type = kPostTypes[0]; this._dist = kDists[0]; this._price = kPriceRanges[0]; });
+    var feed = this._feed;
+    if ((feed == null)) {
+      return;
+    }
+    this.setState(function(){ this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
   }
   build(context) {
     console.log("-----" + __str(this._filterOpen));
+    var feed = this._feed;
+    if ((feed == null)) {
+      return __h('Center', {}, [
+          __h('CircularProgressIndicator', {})
+        ]);
+    }
     return __h('Column', {}, [
         __h('Container', {
             "color": '#FFFFFF'
@@ -54,7 +74,7 @@ export class CommunityPage {
                     }
                   }, [
                     __h('Row', {}, [
-                        ...(() => { var out = []; for (let t of kCommunityTabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _tab = t)" + ":" + String(t), () => { this.setState(() => { this._tab = t; }); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "data": t, "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
+                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _tab = t)" + ":" + String(t), () => { this.setState(() => { this._tab = t; }); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "data": t, "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
                         __h('Spacer', {}),
                         __h('GestureDetector', {
                             "event": this.__bind("_app_host_.invoke(\"toast\", [\"发布新动态（演示）\"])")
@@ -93,7 +113,7 @@ export class CommunityPage {
                   "bottom": 0.0
                 },
                 "builder": "_listViewBuilder0",
-                "itemCount": kResources.length,
+                "itemCount": this._feed.resources.length,
                 "separatorBuilder": "_listViewBuilderSeparator1"
               })
           ]),
@@ -110,7 +130,7 @@ export class CommunityPage {
             }
           }, [
             __h('Row', {}, [
-                ...(() => { var out = []; for (let s of kSorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _sort = s)" + ":" + String(s), () => { this.setState(() => { this._sort = s; }); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": s, "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
+                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _sort = s)" + ":" + String(s), () => { this.setState(() => { this._sort = s; }); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": s, "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
                 __h('Spacer', {}),
                 __h('GestureDetector', {
                     "event": this.__bind("_toggleFilter")
@@ -156,7 +176,8 @@ export class CommunityPage {
                 "resetFilter": (...__a) => this._resetFilter(...__a),
                 "openFilter": this._filterOpen,
                 "toggleFilter": (...__a) => this._toggleFilter(...__a),
-                "list": this._visiblePosts,
+                "feed": this._feed,
+                "list": this._visiblePosts(this._feed),
                 "sort": this._sort,
                 "type": this._type,
                 "dist": this._dist,
@@ -168,8 +189,8 @@ export class CommunityPage {
   }
   _listViewBuilder0(context, i) {
       return __h(_ResourceCard, {
-        "resource": kResources[i],
-        "onTap": () => { return _app_host_.invoke("openResource", [kResources[i].id]); }
+        "resource": this._feed.resources[i],
+        "onTap": () => { return _app_host_.invoke("openResource", [this._feed.resources[i].id]); }
       });
   }
   _listViewBuilderSeparator1(context, _) {
@@ -186,6 +207,7 @@ export class _ListContent {
   }
   __applyProps(args) {
     this.list = (args && args.list !== undefined) ? args.list : [];
+    this.feed = (args && args.feed !== undefined) ? args.feed : null;
     this.openFilter = (args && args.openFilter !== undefined) ? args.openFilter : false;
     this.sort = (args && args.sort !== undefined) ? args.sort : '';
     this.type = (args && args.type !== undefined) ? args.type : '';
@@ -215,7 +237,7 @@ export class _ListContent {
           }, [
             ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "data": "没有符合条件的帖子，试试放宽筛选条件", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) ])]); } return out; })())
           ]),
-        ...(this.openFilter ? [__h('Positioned', { "left": 0, "top": 0, "right": 0, "bottom": 0 }, [ __h('GestureDetector', { "event": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "top": 0, "right": 0 }, [ __h(_FilterPanel, { "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
+        ...(this.openFilter ? [__h('Positioned', { "left": 0, "top": 0, "right": 0, "bottom": 0 }, [ __h('GestureDetector', { "event": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "top": 0, "right": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
       ]);
   }
 }
@@ -226,6 +248,7 @@ export class _FilterPanel {
     this.__applyProps(args);
   }
   __applyProps(args) {
+    this.feed = (args && args.feed !== undefined) ? args.feed : null;
     this.sort = (args && args.sort !== undefined) ? args.sort : '';
     this.type = (args && args.type !== undefined) ? args.type : '';
     this.dist = (args && args.dist !== undefined) ? args.dist : '';
@@ -296,19 +319,19 @@ export class _FilterPanel {
             __h('Column', {
                 "crossAxisAlignment": "start"
               }, [
-                this._group("排序方式", "sort", kSorts, this.sort),
+                this._group("排序方式", "sort", this.feed.sorts, this.sort),
                 __h('SizedBox', {
                     "height": 16
                   }),
-                this._group("内容类型", "type", kPostTypes, this.type),
+                this._group("内容类型", "type", this.feed.postTypes, this.type),
                 __h('SizedBox', {
                     "height": 16
                   }),
-                this._group("距离范围", "dist", kDists, this.dist),
+                this._group("距离范围", "dist", this.feed.dists, this.dist),
                 __h('SizedBox', {
                     "height": 16
                   }),
-                this._group("价格区间", "price", kPriceRanges, this.price),
+                this._group("价格区间", "price", this.feed.priceRanges, this.price),
                 __h('SizedBox', {
                     "height": 18
                   }),

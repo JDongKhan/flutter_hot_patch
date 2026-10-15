@@ -33,8 +33,10 @@ import '../utils/hot_patch_log.dart';
 ///   sendMessage('_app_bridge_', JSON.stringify({ ch: 'jsuiCommit', data }))
 ///
 /// 其中 `data` 固定为 `{id, args}`。JS 侧对外只有**一个**出口
-/// `_app_host_.invoke(channel, args)`：它把 `{id, args}` 交给宿主，宿主实现后用
-/// `_app_host_.resolve(id, value)` 回填 Promise。框架内建通道（增量补丁
+///   `_app_host_.invoke(channel, args)`：它把 `{id, args}` 交给宿主，宿主实现后用
+/// `_app_host_.resolve(id, value)` 回填 Promise、实现抛错用
+/// `_app_host_.reject(id, message)` 把异常抛回调用者（**宿主必定结算**：
+/// 通道未注册也在 [_dispatch] 里回填 null，不留下永久悬空的 Promise）。框架内建通道（增量补丁
 /// `jsuiCommit`、日志 `log`、native 通道）与业务 @HostInjected 方法
 /// 共用这一张表。
 ///
@@ -76,8 +78,9 @@ class JsRuntimeManager {
   /// 与任何具名形参重名，判定无歧义。
   static const String hostPositionalKey = '@args';
 
-  /// 所有活跃 manager（static 跟踪）：[registerHostMethod] 的返回值回填
-  /// （`_app_host_.resolve`）需要对每个 runtime 求值一次。
+  /// 所有活跃 manager（static 跟踪）：宿主对 JS 侧 pending 的结算
+  /// （`_app_host_.resolve` / `reject`，见 [_settleHost]）需要对每个 runtime
+  /// 求值一次。
   static final Set<JsRuntimeManager> _instances = {};
 
   // ---------------------------------------------------------------------
@@ -98,7 +101,8 @@ class JsRuntimeManager {
   /// 宿主实现 [impl]：收到 JS 的 `{id, args}` 后按
   /// `Function.apply(impl, 位置实参, 具名实参)` 调用——Dart 调用语义完整还原，
   /// 位置/具名实参**个数不限**，未传的参数走实现自身的默认值，返回值类型也不限。
-  /// 之后把返回值经 `_app_host_.resolve(id, value)` 回填 JS 的 Promise。
+  /// 之后把返回值经 `_app_host_.resolve(id, value)` 回填 JS 的 Promise；
+  /// 实现抛错则经 `_app_host_.reject(id, message)` 把异常抛回 JS 调用者。
   ///
   /// 全局一份；通道名即 @HostInjected 注解里的名称（缺省为方法名），或框架
   /// 内建通道名。只写处理器表——桥通道在 manager 构造时已订阅。
@@ -115,25 +119,41 @@ class JsRuntimeManager {
       final map = args is Map ? args : const {};
       final id = map['id']?.toString();
       final (positional, named) = _hostCallArgs(map['args']);
-      Object? value;
       try {
-        value = await Function.apply(impl, positional, named);
+        final value = await Function.apply(impl, positional, named);
+        _settleHost(id, value: value);
       } catch (e, s) {
         // 不静默：实现调用失败若悄悄回填 null，JS 侧只看到「结果是 null」，
         // 完全不知道宿主侧压根没调成功（具名参数不匹配就是这样被吞掉的）。
+        // 现在把异常原样抛回 JS 调用者（reject → await 处抛出，可被 JS 自己的
+        // try/catch 接住）；完整堆栈仍留在宿主日志里。
         HotPatchLog.log(
           'registerHostMethod("$channel") 调用宿主实现失败: $e\n$s',
         );
-        value = null;
-      }
-      if (id == null || id.isEmpty) return;
-      // resolve 挂在 JS 全局（_app_host_），对每个活跃 runtime 求值一次：
-      // 持有该 id 的 runtime 回填 Promise，其余为 no-op。
-      final code = '_app_host_.resolve("$id", ${jsonEncode(value)});';
-      for (final m in _instances.toList()) {
-        m._eval(code, '_app_host_.resolve');
+        _settleHost(id, error: '$e');
       }
     };
+  }
+
+  /// 结算 JS 侧 Promise（`_app_host_.resolve` / `_app_host_.reject`）。
+  ///
+  /// 对每个活跃 runtime 求值一次：持有该 id 的 runtime 生效，其余为 no-op
+  /// （JS 侧按 id 查不到 pending 即直接返回）。
+  ///
+  /// 宿主**必须**二选一结算——`invoke` 一次就在 JS 侧建了一条 pending，
+  /// 既不 resolve 也不 reject 会让 Promise 永久悬空、条目永久滞留（见 [host]）。
+  /// [error] 非空即走 reject 路径；[id] 缺失（如内建 `send` 通道带 `args`
+  /// 不带 id）时无事可做，直接返回。
+  static void _settleHost(String? id, {Object? value, String? error}) {
+    if (id == null || id.isEmpty) return;
+    final reject = error != null;
+    final code = reject
+        ? '_app_host_.reject("$id", ${jsonEncode(error)});'
+        : '_app_host_.resolve("$id", ${jsonEncode(value)});';
+    final where = reject ? '_app_host_.reject' : '_app_host_.resolve';
+    for (final m in _instances.toList()) {
+      m._eval(code, where);
+    }
   }
 
   /// JS 宿主调用的参数载荷 → (`位置实参`, `具名实参`)。
@@ -432,11 +452,24 @@ $out
   /// `ch` 定位通道；`data` 交给对应处理器（[registerHostMethod] 的包装按
   /// `{id, args}` 还原 Dart 调用语义）。因为处理器表是 static 全局唯一的，
   /// 无论消息路由到哪个 manager 的 runtime，都能找到正确处理器。
+  ///
+  /// **未注册通道必须在这里回填**：JS 侧 `_app_host_.invoke` 已经为该 id 建好
+  /// 一条 pending，丢弃相当于既不 resolve 也不 reject——Promise 永久悬空、
+  /// 条目永久滞留在 JS 的表里（宿主侧也没有第二处能认领这个 id）。按「方法
+  /// 不存在」处理：留一条日志 + 回填 null 收尾。
   void _dispatch(dynamic raw) {
     if (raw is! Map) return;
     final channel = raw['ch']?.toString() ?? '';
     if (channel.isEmpty) return;
-    globalMessageHandlers[channel]?.call(raw['data']);
+    final handler = globalMessageHandlers[channel];
+    if (handler == null) {
+      final data = raw['data'];
+      final id = data is Map ? data['id']?.toString() : null;
+      HotPatchLog.log('未注册的宿主通道 "$channel"（id=${id ?? '-'}）：回填 null 收尾');
+      _settleHost(id, value: null);
+      return;
+    }
+    handler(raw['data']);
   }
 }
 

@@ -56,7 +56,8 @@ JsUiWidget(
 统一走「宿主方法」：JS 侧唯一出口 `_app_host_.invoke(channel, args)`（返回 Promise，
 可用 `await`），宿主侧唯一入口 `JsRuntimeManager.registerHostMethod(channel, impl)`。
 JS 传来的 `{id, args}` 按 Dart 调用语义（位置/具名实参、默认值）还原后执行，
-返回值经 `_app_host_.resolve` 回填 Promise。
+返回值经 `_app_host_.resolve` 回填 Promise；宿主实现抛错则经 `_app_host_.reject`
+把异常抛回 JS 调用者；通道未注册也会回填 `null` 收尾（不留悬空 Promise）。
 
 业务方法用 `@HostInjected()` 注解，由生成器自动收集并注册；框架内建通道
 （`log` / `nativeToast` / `jsuiCommit`）在 `JsUiWidget` 启动时自动注册。

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../../base/app_router.dart';
-import '../model/app_data.dart';
 import '../model/app_models.dart';
+import '../service/app_service.dart';
 import 'detail_pages.dart';
 
 /// 社区 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/community_page.js）。
@@ -18,6 +18,9 @@ import 'detail_pages.dart';
 ///
 /// 本页与「订单/我的」一样纳入连带翻译（`@PatchEntry`）：数据过滤
 /// （`.where().toList()` + `switch` 排序）与集合 for-if 展开均已支持。
+///
+/// 双 tab、筛选项配置、资源与帖子全部来自 [AppService.fetchCommunity]
+/// 一次模拟网络请求，加载期间显示 loading。
 @PatchEntry()
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
@@ -27,19 +30,41 @@ class CommunityPage extends StatefulWidget {
 }
 
 class _CommunityPageState extends State<CommunityPage> {
-  String _tab = kCommunityTabs.first;
+  final AppService _service = AppService();
+
+  /// 接口数据；null = 加载中。
+  CommunityFeed? _feed;
   bool _filterOpen = false;
 
-  // 筛选条件（与原型 state.filters 对应）。
-  String _sort = kSorts.first;
-  String _type = kPostTypes.first;
-  String _dist = kDists.first;
-  String _price = kPriceRanges.first;
+  // 筛选条件（与原型 state.filters 对应）；接口回来后落到各自列表首项。
+  String _tab = '';
+  String _sort = '';
+  String _type = '';
+  String _dist = '';
+  String _price = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final CommunityFeed feed = await _service.fetchCommunity();
+    setState(() {
+      _feed = feed;
+      _tab = feed.tabs.first;
+      _sort = feed.sorts.first;
+      _type = feed.postTypes.first;
+      _dist = feed.dists.first;
+      _price = feed.priceRanges.first;
+    });
+  }
 
   /// 按「内容类型 + 排序方式」过滤列表（距离/价格在原型的示例数据里无对应字段，
   /// 仅作为可选条件参与面板交互）。
-  List<Post> get _visiblePosts {
-    var list = kPosts.where((p) => _type == kPostTypes.first || p.type == _type).toList();
+  List<Post> _visiblePosts(CommunityFeed feed) {
+    var list = feed.posts.where((p) => _type == feed.postTypes.first || p.type == _type).toList();
     switch (_sort) {
       case '最新':
         list = list.reversed.toList();
@@ -56,17 +81,23 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   void _resetFilter() {
+    final feed = _feed;
+    if (feed == null) return;
     setState(() {
-      _sort = kSorts.first;
-      _type = kPostTypes.first;
-      _dist = kDists.first;
-      _price = kPriceRanges.first;
+      _sort = feed.sorts.first;
+      _type = feed.postTypes.first;
+      _dist = feed.dists.first;
+      _price = feed.priceRanges.first;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     print("-----$_filterOpen");
+    final feed = _feed;
+    if (feed == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Column(
       children: [
         // 顶部双 tab（广场 / 推荐）
@@ -78,7 +109,7 @@ class _CommunityPageState extends State<CommunityPage> {
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
               child: Row(
                 children: [
-                  for (final t in kCommunityTabs)
+                  for (final t in feed.tabs)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: GestureDetector(
@@ -122,10 +153,10 @@ class _CommunityPageState extends State<CommunityPage> {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: kResources.length,
+            itemCount: feed.resources.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, i) =>
-                _ResourceCard(resource: kResources[i], onTap: () => AppRouter.openResource(kResources[i].id)),
+                _ResourceCard(resource: feed.resources[i], onTap: () => AppRouter.openResource(feed.resources[i].id)),
           ),
         ),
         const SizedBox(height: 12),
@@ -135,7 +166,7 @@ class _CommunityPageState extends State<CommunityPage> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Row(
             children: [
-              for (final s in kSorts)
+              for (final s in feed.sorts)
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: GestureDetector(
@@ -192,7 +223,8 @@ class _CommunityPageState extends State<CommunityPage> {
             resetFilter: _resetFilter,
             openFilter: _filterOpen,
             toggleFilter: _toggleFilter,
-            list: _visiblePosts,
+            feed: feed,
+            list: _visiblePosts(feed),
             sort: _sort,
             type: _type,
             dist: _dist,
@@ -218,6 +250,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
 class _ListContent extends StatefulWidget {
   final List<Post> list;
+  final CommunityFeed feed;
   final bool openFilter;
   final String sort;
   final String type;
@@ -228,6 +261,7 @@ class _ListContent extends StatefulWidget {
   final VoidCallback toggleFilter;
   const _ListContent({
     required this.list,
+    required this.feed,
     this.openFilter = false,
     required this.sort,
     required this.type,
@@ -289,6 +323,7 @@ class _ListContentState extends State<_ListContent> {
             right: 0,
             top: 0,
             child: _FilterPanel(
+              feed: widget.feed,
               sort: widget.sort,
               type: widget.type,
               dist: widget.dist,
@@ -445,6 +480,7 @@ class _PostCard extends StatelessWidget {
 /// 顶部下拉筛选面板：四组条件 chips + 重置 / 查看结果。
 class _FilterPanel extends StatefulWidget {
   const _FilterPanel({
+    required this.feed,
     required this.sort,
     required this.type,
     required this.dist,
@@ -454,6 +490,8 @@ class _FilterPanel extends StatefulWidget {
     required this.onApply,
   });
 
+  /// 筛选项配置（排序方式/内容类型/距离范围/价格区间）随接口一起下发。
+  final CommunityFeed feed;
   final String sort;
   final String type;
   final String dist;
@@ -553,13 +591,13 @@ class _FilterPanelState extends State<_FilterPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _group('排序方式', 'sort', kSorts, widget.sort),
+            _group('排序方式', 'sort', widget.feed.sorts, widget.sort),
             const SizedBox(height: 16),
-            _group('内容类型', 'type', kPostTypes, widget.type),
+            _group('内容类型', 'type', widget.feed.postTypes, widget.type),
             const SizedBox(height: 16),
-            _group('距离范围', 'dist', kDists, widget.dist),
+            _group('距离范围', 'dist', widget.feed.dists, widget.dist),
             const SizedBox(height: 16),
-            _group('价格区间', 'price', kPriceRanges, widget.price),
+            _group('价格区间', 'price', widget.feed.priceRanges, widget.price),
             const SizedBox(height: 18),
             Row(
               children: [

@@ -90,6 +90,80 @@ export class Order {
   }
 }
 
+// 模型 HomeFeed
+export class HomeFeed {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.banners = (args && args.banners !== undefined) ? args.banners : [];
+    this.grid = (args && args.grid !== undefined) ? args.grid : [];
+    this.spots = (args && args.spots !== undefined) ? args.spots : [];
+    this.adImg = (args && args.adImg !== undefined) ? args.adImg : '';
+  }
+}
+
+// 模型 CommunityFeed
+export class CommunityFeed {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.tabs = (args && args.tabs !== undefined) ? args.tabs : [];
+    this.sorts = (args && args.sorts !== undefined) ? args.sorts : [];
+    this.postTypes = (args && args.postTypes !== undefined) ? args.postTypes : [];
+    this.dists = (args && args.dists !== undefined) ? args.dists : [];
+    this.priceRanges = (args && args.priceRanges !== undefined) ? args.priceRanges : [];
+    this.resources = (args && args.resources !== undefined) ? args.resources : [];
+    this.posts = (args && args.posts !== undefined) ? args.posts : [];
+  }
+}
+
+// 模型 OrderFeed
+export class OrderFeed {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.statuses = (args && args.statuses !== undefined) ? args.statuses : [];
+    this.orders = (args && args.orders !== undefined) ? args.orders : [];
+  }
+}
+
+// 模型 MineFeed
+export class MineFeed {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.avatar = (args && args.avatar !== undefined) ? args.avatar : '';
+    this.stats = (args && args.stats !== undefined) ? args.stats : [];
+    this.menu = (args && args.menu !== undefined) ? args.menu : [];
+  }
+}
+
+// 模型 SearchFeed
+export class SearchFeed {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.hot = (args && args.hot !== undefined) ? args.hot : [];
+    this.guesses = (args && args.guesses !== undefined) ? args.guesses : [];
+  }
+}
+
+// 模型 ResourceFeed
+export class ResourceFeed {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.resource = (args && args.resource !== undefined) ? args.resource : null;
+    this.related = (args && args.related !== undefined) ? args.related : [];
+  }
+}
+
 // 模型 MenuEntry
 export class MenuEntry {
   constructor(args) {

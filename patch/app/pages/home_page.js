@@ -2,24 +2,37 @@
 // 由 hot_patch_generator 从 lib/app/pages/home_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { AppService } from '../service/app_service.js';
+import { HomeFeed } from '../model/app_models.js';
 import { HomeBanner } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
-import { kAdImg, kBanners, kGrid, kSpots } from '../model/app_data.js';
 import { SliverGrid, __h } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {
-  constructor(args) {
-    this.__applyProps(args);
+  constructor() {
+    this._service = new AppService({});
+    this._feed = null;
   }
-  __applyProps(args) {
-    this.banners = (args && args.banners !== undefined) ? args.banners : kBanners;
-    this.grid = (args && args.grid !== undefined) ? args.grid : kGrid;
-    this.spots = (args && args.spots !== undefined) ? args.spots : kSpots;
-    this.adImg = (args && args.adImg !== undefined) ? args.adImg : kAdImg;
+  initState() {
+    this._load();
+  }
+  async _load() {
+    var feed = await this._service.fetchHome();
+    this.setState(function(){ this._feed = feed; });
   }
   build(context) {
+    var feed = this._feed;
+    if ((feed == null)) {
+      return __h('Center', {}, [
+          __h('CircularProgressIndicator', {})
+        ]);
+    }
+    var banners = feed.banners;
+    var grid = feed.grid;
+    var spots = feed.spots;
+    var adImg = feed.adImg;
     return __h('Container', {
         "color": '#fff4f5f7'
       }, [
@@ -36,7 +49,7 @@ export class HomePage {
                         "height": 150
                       }, [
                         __h('PageView', {}, [
-                            ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": this.banners[i] })]); } return out; })()
+                            ...(() => { var out = []; for (let i = 0; (i < banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": banners[i] })]); } return out; })()
                           ])
                       ]),
                     __h('SizedBox', {
@@ -45,7 +58,7 @@ export class HomePage {
                     __h('Row', {
                         "mainAxisAlignment": "center"
                       }, [
-                        ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
+                        ...(() => { var out = []; for (let i = 0; (i < banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
                       ]),
                     __h('SizedBox', {
                         "height": 12
@@ -78,7 +91,7 @@ export class HomePage {
                             "crossAxisSpacing": 6,
                             "mainAxisExtent": 84
                           }, [
-                            ...(() => { var out = []; for (let i = 0; (i < this.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this.grid[i] })]); } return out; })()
+                            ...(() => { var out = []; for (let i = 0; (i < grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": grid[i] })]); } return out; })()
                           ])
                       ]),
                     __h('SizedBox', {
@@ -93,7 +106,7 @@ export class HomePage {
                         }
                       }, [
                         __h(PromoCard, {
-                            "img": this.adImg
+                            "img": adImg
                           })
                       ]),
                     __h('SizedBox', {
@@ -154,7 +167,7 @@ export class HomePage {
               }, [
                 __h(SliverGrid, {
                     "builder": "_sliverBuilder0",
-                    "childCount": this.spots.length,
+                    "childCount": spots.length,
                     "maxCrossAxisExtent": 300,
                     "mainAxisSpacing": 10,
                     "crossAxisSpacing": 10,
@@ -171,7 +184,7 @@ export class HomePage {
   }
   _sliverBuilder0(context, index) {
       return __h(SpotCard, {
-        "spot": this.spots[index]
+        "spot": spots[index]
       });
   }
 }

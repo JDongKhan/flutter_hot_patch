@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
-import '../app/model/app_data.dart';
 import '../app/model/app_models.dart';
 import '../app/pages/detail_pages.dart';
 import '../app/pages/orders_page.dart';
+import '../app/service/app_service.dart';
 import '../components/widget_showcase.dart';
 import '../main.dart';
 
@@ -21,6 +21,10 @@ import '../main.dart';
 class AppRouter {
   const AppRouter._();
 
+  /// 详情数据统一走 [AppService]（模拟网络请求）；宿主侧是普通 Dart 调用，
+  /// JS 页面的点击经 `@HostInjected` 通道回到这里执行同一条代码路径。
+  static const AppService _service = AppService();
+
   static NavigatorState? get _navigator =>
       JsRuntimeManager.navigatorKey?.currentState;
 
@@ -28,34 +32,39 @@ class AppRouter {
     _navigator?.push(MaterialPageRoute(builder: (_) => page));
   }
 
-  /// 打开搜索页。
+  /// 打开搜索页（热搜词 + 猜你想去随接口下发）。
   @HostInjected()
   static Future<void> openSearch() async {
-    _push(const SearchPage());
+    final SearchFeed feed = await _service.fetchSearch();
+    _push(SearchPage(hot: feed.hot, guesses: feed.guesses));
   }
 
   /// 打开景点详情页（按 id 定位，找不到时回退首个）。
   @HostInjected()
   static Future<void> openSpot(String id) async {
-    _push(SpotDetailPage(spot: _spotOf(id)));
+    final Spot spot = await _service.fetchSpot(id);
+    _push(SpotDetailPage(spot: spot));
   }
 
   /// 打开帖子详情页。
   @HostInjected()
   static Future<void> openPost(String id) async {
-    _push(PostDetailPage(post: _postOf(id)));
+    final Post post = await _service.fetchPost(id);
+    _push(PostDetailPage(post: post));
   }
 
-  /// 打开资源专题页。
+  /// 打开资源专题页（专题 + 相关推荐随接口下发）。
   @HostInjected()
   static Future<void> openResource(String id) async {
-    _push(ResourceDetailPage(resource: _resourceOf(id)));
+    final ResourceFeed feed = await _service.fetchResource(id);
+    _push(ResourceDetailPage(resource: feed.resource, related: feed.related));
   }
 
   /// 打开订单详情页。
   @HostInjected()
   static Future<void> openOrder(String no) async {
-    _push(OrderDetailPage(order: _orderOf(no)));
+    final Order order = await _service.fetchOrder(no);
+    _push(OrderDetailPage(order: order));
   }
 
   /// 返回上一页。
@@ -102,33 +111,5 @@ class AppRouter {
   static Future<void> toast(String msg) async {
     final ctx = JsRuntimeManager.navigatorKey?.currentContext;
     if (ctx != null) appToast(ctx, msg);
-  }
-
-  static Spot _spotOf(String id) {
-    for (final s in kSpots) {
-      if (s.id == id) return s;
-    }
-    return kSpots.first;
-  }
-
-  static Post _postOf(String id) {
-    for (final p in kPosts) {
-      if (p.id == id) return p;
-    }
-    return kPosts.first;
-  }
-
-  static Resource _resourceOf(String id) {
-    for (final r in kResources) {
-      if (r.id == id) return r;
-    }
-    return kResources.first;
-  }
-
-  static Order _orderOf(String no) {
-    for (final o in kOrders) {
-      if (o.no == no) return o;
-    }
-    return kOrders.first;
   }
 }

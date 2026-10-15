@@ -2,34 +2,54 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hot/base/app_router.dart';
 import 'package:flutter_hot/base/web_view.dart';
 
-import '../model/app_data.dart';
 import '../model/app_models.dart';
+import '../service/app_service.dart';
 
-/// App 首页（对应 docs/app-prototype.html 的「首页」tab）——**普通原生页面**。
+/// App 首页（对应 docs/app-prototype.html 的「首页」tab）。
 ///
-/// 数据来自 `lib/app/model/app_data.dart` 的顶层 const，构造参数带同值默认值：
-/// 既能 `const HomePage()` 直接构造（外壳 `AppShell` 里就是这么用的，宿主做
-/// 原生注入时也不用传参），也能显式换一份数据（`HomePage(spots: mySpots)`）。
+/// 数据不再由构造参数注入，而是由 [AppService.fetchHome] **模拟一次网络请求**
+/// 取回：请求期间显示 loading，回来后 setState 出内容。原生与 JS 两条通路写法
+/// 完全一致（service 内部走的就是 `@HostInjected` 的宿主通道）。
 ///
-/// 首页本身**不是** `@PatchEntry` 组件：热更的载体上移到了四 tab 外壳
-/// `AppShell`（lib/app/app.dart）。外壳被翻译成 JS 后，首页由宿主经
-/// `nativeComponents` 原生注入，因此本文件不产生任何 JS 产物。
-class HomePage extends StatelessWidget {
-  const HomePage({
-    super.key,
-    this.banners = kBanners,
-    this.grid = kGrid,
-    this.spots = kSpots,
-    this.adImg = kAdImg,
-  });
+/// 首页不是 `@PatchEntry` 根类：热更载体是四 tab 外壳 `AppShell`
+/// （lib/app/app.dart），首页沿 import 链被连带翻译，产物
+/// `patch/app/pages/home_page.js`。
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
-  final List<HomeBanner> banners;
-  final List<GridEntry> grid;
-  final List<Spot> spots;
-  final String adImg;
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final AppService _service = AppService();
+
+  /// 接口数据；null = 加载中。
+  HomeFeed? _feed;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final HomeFeed feed = await _service.fetchHome();
+    setState(() {
+      _feed = feed;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final feed = _feed;
+    if (feed == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final banners = feed.banners;
+    final grid = feed.grid;
+    final spots = feed.spots;
+    final adImg = feed.adImg;
     return Container(
       color: const Color(0xFFF4F5F7),
       child: CustomScrollView(

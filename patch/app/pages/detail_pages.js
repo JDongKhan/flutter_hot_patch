@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/app/pages/detail_pages.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { kAvatarImg, kBanners, kHotSearch, kPosts, kSpots } from '../model/app_data.js';
+import { kAvatarImg, kBanners } from '../service/app_data.js';
 import { __h } from '../../flutter.js';
 
 export const kBrand = '#ff0e7afb';

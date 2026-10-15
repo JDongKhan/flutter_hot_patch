@@ -5,7 +5,7 @@
 ///   - 顶层常量：每个 const 各出一条 `export const X = <值>;`，组件产物
 ///     import 后按名引用（`kBanners`），与 Dart 侧写法一一对应。
 ///
-/// 只声明顶层常量、没有任何类的数据文件（如 `lib/app/model/app_data.dart`）
+/// 只声明顶层常量、没有任何类的数据文件（如 `lib/app/service/app_data.dart`）
 /// 也产出同名 JS 产物，组件产物才能 import 到这些值。
 library;
 

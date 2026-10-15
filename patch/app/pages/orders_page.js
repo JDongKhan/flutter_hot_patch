@@ -2,23 +2,36 @@
 // 由 hot_patch_generator 从 lib/app/pages/orders_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { AppService } from '../service/app_service.js';
+import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { kOrderStatus, kOrders } from '../model/app_data.js';
 import { ListView, __h } from '../../flutter.js';
 
 // 组件 OrdersPage
 export class OrdersPage {
   constructor(args) {
     this.__applyProps(args);
-    this._status = (this.initialStatus ?? kOrderStatus[0]);
+    this._service = new AppService({});
+    this._feed = null;
+    this._status = "";
   }
   __applyProps(args) {
     this.initialStatus = (args && args.initialStatus !== undefined) ? args.initialStatus : null;
   }
-  get _list() {
-    return ((this._status == kOrderStatus[0]) ? kOrders : kOrders.filter((o) => { return (o.status == this._status); }));
+  initState() {
+    this._load();
+  }
+  async _load() {
+    var feed = await this._service.fetchOrders();
+    this.setState(function(){ this._feed = feed; this._status = (this.initialStatus ?? feed.statuses[0]); });
+  }
+  _list(feed) {
+    if ((this._status == feed.statuses[0])) {
+      return feed.orders;
+    }
+    return feed.orders.filter((o) => { return (o.status == this._status); });
   }
   _statusColor(status) {
     return (() => { switch (status) {
@@ -28,7 +41,13 @@ export class OrdersPage {
 } })();
   }
   build(context) {
-    var list = this._list;
+    var feed = this._feed;
+    if ((feed == null)) {
+      return __h('Center', {}, [
+          __h('CircularProgressIndicator', {})
+        ]);
+    }
+    var list = this._list(feed);
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -50,19 +69,19 @@ export class OrdersPage {
                         "scrollDirection": "horizontal"
                       }, [
                         __h('Row', {}, [
-                            ...(() => { var out = []; for (let s of kOrderStatus) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _status = s)" + ":" + String(s), () => { this.setState(() => { this._status = s; }); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "data": s, "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })()
+                            ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _status = s)" + ":" + String(s), () => { this.setState(() => { this._status = s; }); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "data": s, "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })()
                           ])
                       ])
                   ])
               ])
           ]),
         __h('Expanded', {}, [
-            ((this._list.length === 0) ? __h('Center', {}, [ __h('Text', { "data": "该状态下暂无订单", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ]) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "builder": "_listViewBuilder0", "itemCount": this._list.length, "separatorBuilder": "_listViewBuilderSeparator1" }))
+            ((this._list(feed).length === 0) ? __h('Center', {}, [ __h('Text', { "data": "该状态下暂无订单", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ]) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "builder": "_listViewBuilder0", "itemCount": this._list(feed).length, "separatorBuilder": "_listViewBuilderSeparator1" }))
           ])
       ]);
   }
   _listViewBuilder0(context, i) {
-      var o = this._list[i];
+      var o = this._list(feed)[i];
       return __h(_OrderCard, {
         "order": o,
         "statusColor": this._statusColor(o.status),

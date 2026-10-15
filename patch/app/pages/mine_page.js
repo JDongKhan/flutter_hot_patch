@@ -2,7 +2,8 @@
 // 由 hot_patch_generator 从 lib/app/pages/mine_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { kAvatarImg, kMineMenu, kMineStats } from '../model/app_data.js';
+import { AppService } from '../service/app_service.js';
+import { MineFeed } from '../model/app_models.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { __h } from '../../flutter.js';
 
@@ -11,9 +12,17 @@ const _menuTints = ['#ffe8f2ff', '#fffff3e0', '#ffeef0f4', '#ffe9f7ef'];
 // 组件 MinePage
 export class MinePage {
   constructor() {
+    this._service = new AppService({});
+    this._feed = null;
   }
-  _openMenu(i) {
-    var m = kMineMenu[i];
+  initState() {
+    this._load();
+  }
+  async _load() {
+    var feed = await this._service.fetchMine();
+    this.setState(function(){ this._feed = feed; });
+  }
+  _openMenu(m) {
     if ((m.screen == "orders")) {
       _app_host_.invoke("openOrders", []);
     } else {
@@ -25,6 +34,12 @@ export class MinePage {
     }
   }
   build(context) {
+    var feed = this._feed;
+    if ((feed == null)) {
+      return __h('Center', {}, [
+          __h('CircularProgressIndicator', {})
+        ]);
+    }
     return __h('ListView', {}, [
         __h('Container', {
             "padding": {
@@ -54,7 +69,7 @@ export class MinePage {
                     __h('Row', {}, [
                         __h('ClipOval', {
                             "child": __h('Image', {
-                                "source": kAvatarImg,
+                                "source": this._feed.avatar,
                                 "width": 58,
                                 "height": 58,
                                 "fit": "cover"
@@ -129,7 +144,7 @@ export class MinePage {
                 }
               }, [
                 __h('Row', {}, [
-                    ...(() => { var out = []; for (let s of kMineStats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "event": this.__bindFn("() => AppRouter.openOrders()" + ":" + String(s), () => { _app_host_.invoke("openOrders", []); }) }, [ __h('Column', {}, [ __h('Text', { "data": s[1], "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' } }), __h('SizedBox', { "height": 3 }), __h('Text', { "data": s[0], "style": { "fontSize": 11.5, "color": '#ff8b909a' } }) ]) ]) ])]); } return out; })()
+                    ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "event": this.__bindFn("() => AppRouter.openOrders()" + ":" + String(s), () => { _app_host_.invoke("openOrders", []); }) }, [ __h('Column', {}, [ __h('Text', { "data": s[1], "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' } }), __h('SizedBox', { "height": 3 }), __h('Text', { "data": s[0], "style": { "fontSize": 11.5, "color": '#ff8b909a' } }) ]) ]) ])]); } return out; })()
                   ])
               ])
           }),
@@ -148,7 +163,7 @@ export class MinePage {
             }
           }, [
             __h('Column', {}, [
-                ...(() => { var out = []; for (let i = 0; (i < kMineMenu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [__h('Divider', { "height": 1, "indent": 56, "color": '#fff0f2f6' })] : []), __h('GestureDetector', { "event": this.__bindFn("() => _openMenu(i)" + ":" + String(i), () => { this._openMenu(i); }) }, [ __h('Padding', { "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 } }, [ __h('Row', {}, [ __h('Container', { "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } } }, [ __h('Text', { "data": kMineMenu[i].emoji, "style": { "fontSize": 15 } }) ]), __h('SizedBox', { "width": 12 }), __h('Expanded', {}, [ __h('Text', { "data": kMineMenu[i].title, "style": { "fontSize": 14 } }) ]), __h('Icon', { "icon": "chevron_right", "size": 18, "color": '#ffc3c8d2' }) ]) ]) ])]); } return out; })()
+                ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [__h('Divider', { "height": 1, "indent": 56, "color": '#fff0f2f6' })] : []), __h('GestureDetector', { "event": this.__bindFn("() => _openMenu(feed.menu[i])" + ":" + String(i), () => { this._openMenu(this._feed.menu[i]); }) }, [ __h('Padding', { "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 } }, [ __h('Row', {}, [ __h('Container', { "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } } }, [ __h('Text', { "data": this._feed.menu[i].emoji, "style": { "fontSize": 15 } }) ]), __h('SizedBox', { "width": 12 }), __h('Expanded', {}, [ __h('Text', { "data": this._feed.menu[i].title, "style": { "fontSize": 14 } }) ]), __h('Icon', { "icon": "chevron_right", "size": 18, "color": '#ffc3c8d2' }) ]) ]) ])]); } return out; })()
               ])
           ]),
         __h('Padding', {

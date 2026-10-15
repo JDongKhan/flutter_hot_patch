@@ -169,7 +169,7 @@ class ComponentBuilder implements Builder {
       }
     }
     if (roots.isEmpty && sameFileSingletonInfos.isEmpty) {
-      // 纯数据文件（如 lib/app/model/app_data.dart）：文件里没有任何可翻译的类，
+      // 纯数据文件（如 lib/app/service/app_data.dart）：文件里没有任何可翻译的类，
       // 只有顶层常量 → 产出「顶层常量」产物（`export const kBanners = [...]`），
       // 组件产物才能 import 到这些值（与类产物同一个文件级产物路径）。
       if (!_hasOwnTopLevelConst(parsed.unit)) return;

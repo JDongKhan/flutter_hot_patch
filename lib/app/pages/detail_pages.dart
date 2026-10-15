@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../base/app_router.dart';
-import '../model/app_data.dart';
 import '../model/app_models.dart';
+import '../service/app_data.dart';
 
 /// App 二级页集合（常规 Flutter 页面，无 @PatchEntry 注解）。
 ///
 /// 首页 `@PatchEntry` 组件的跳转入口统一经宿主路由
 /// （lib/base/app_router.dart）推入这些页面；其余 tab 直接 Navigator.push。
+///
+/// 页面数据由宿主路由经 [AppService] 模拟网络请求取回后**经构造参数传入**
+/// （帖子/景点/订单/专题详情、搜索页热搜与猜你想去、专题页相关推荐），
+/// 因此这里的页面本身不做异步加载；只有 `kAvatarImg` / `kBanners` 这类
+/// **纯展示用图片地址**直接从模拟数据源读（无 @PatchEntry，不参与翻译）。
 
 const Color kBrand = Color(0xFF0E7AFB);
 const Color kPrice = Color(0xFFFF5A36);
@@ -212,7 +217,11 @@ class MiniButton extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  const SearchPage({super.key, required this.hot, required this.guesses});
+
+  /// 热搜词 / 猜你想去（`AppRouter.openSearch` 经 AppService 取回后传入）。
+  final List<String> hot;
+  final List<Spot> guesses;
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -233,7 +242,7 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final guesses = kSpots.reversed.toList();
+    final guesses = widget.guesses.reversed.toList();
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F8),
       body: Column(
@@ -295,7 +304,7 @@ class _SearchPageState extends State<SearchPage> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          for (final k in kHotSearch)
+                          for (final k in widget.hot)
                             GestureDetector(
                               onTap: () => _go(k),
                               child: Container(
@@ -852,13 +861,20 @@ class PostDetailPage extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class ResourceDetailPage extends StatelessWidget {
-  const ResourceDetailPage({super.key, required this.resource});
+  const ResourceDetailPage({
+    super.key,
+    required this.resource,
+    required this.related,
+  });
 
   final Resource resource;
 
+  /// 相关推荐（`AppRouter.openResource` 经 AppService 取回后传入）。
+  final List<Post> related;
+
   @override
   Widget build(BuildContext context) {
-    final items = kPosts.take(3).toList();
+    final items = related.take(3).toList();
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F8),
       body: Column(

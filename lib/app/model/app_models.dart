@@ -111,6 +111,79 @@ class Order {
   });
 }
 
+/// 首页接口返回：banner + 九宫格 + 景点推荐 + 广告位（一次请求拿全，见 AppService）。
+class HomeFeed {
+  final List<HomeBanner> banners;
+  final List<GridEntry> grid;
+  final List<Spot> spots;
+  final String adImg;
+
+  const HomeFeed({
+    required this.banners,
+    required this.grid,
+    required this.spots,
+    required this.adImg,
+  });
+}
+
+/// 社区接口返回：双 tab + 筛选项配置 + 横向资源 + 帖子列表。
+class CommunityFeed {
+  final List<String> tabs;
+  final List<String> sorts;
+  final List<String> postTypes;
+  final List<String> dists;
+  final List<String> priceRanges;
+  final List<Resource> resources;
+  final List<Post> posts;
+
+  const CommunityFeed({
+    required this.tabs,
+    required this.sorts,
+    required this.postTypes,
+    required this.dists,
+    required this.priceRanges,
+    required this.resources,
+    required this.posts,
+  });
+}
+
+/// 订单接口返回：状态筛选条 + 订单列表。
+class OrderFeed {
+  final List<String> statuses;
+  final List<Order> orders;
+
+  const OrderFeed({required this.statuses, required this.orders});
+}
+
+/// 我的接口返回：头像 + 订单统计 + 功能菜单。
+class MineFeed {
+  final String avatar;
+  final List<List<String>> stats;
+  final List<MenuEntry> menu;
+
+  const MineFeed({
+    required this.avatar,
+    required this.stats,
+    required this.menu,
+  });
+}
+
+/// 搜索接口返回：热搜词 + 猜你想去。
+class SearchFeed {
+  final List<String> hot;
+  final List<Spot> guesses;
+
+  const SearchFeed({required this.hot, required this.guesses});
+}
+
+/// 资源专题接口返回：专题本身 + 相关推荐。
+class ResourceFeed {
+  final Resource resource;
+  final List<Post> related;
+
+  const ResourceFeed({required this.resource, required this.related});
+}
+
 /// 我的页菜单项。
 class MenuEntry {
   final String emoji;

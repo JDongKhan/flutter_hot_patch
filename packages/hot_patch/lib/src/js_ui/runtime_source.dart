@@ -8,7 +8,8 @@
 ///     取值在 JS 内同步完成；同时向宿主发同名 op，由宿主在真值 BuildContext 上
 ///     登记依赖（宿主侧的权威校验）；
 ///   - bridge：出方向只有一个对外入口 `_app_host_.invoke(channel, args)`——
-///     JS 发起调用，宿主实现后用 `_app_host_.resolve(id, value)` 回填 Promise。
+///     JS 发起调用，宿主**必定**回填：成功用 `_app_host_.resolve(id, value)`，
+///     宿主实现抛错用 `_app_host_.reject(id, message)`（JS 侧 await 处抛出）。
 ///     增量补丁 `jsuiCommit`、日志 `log`、native 通道、@HostInjected 方法
 ///     全部复用这一个入口（内部统一打到单桥通道 `_app_bridge_`，消息体 `ch`
 ///     字段标示目标通道，宿主一次订阅、二次分发）。
@@ -39,7 +40,7 @@
 /// | 【1b】 | 跨语言句柄注册表（`reg` / `release` / `call` / `handleOp`） | 全体共用（新增能力只注册 kind） |
 /// | 【1c】 | Dart 标准库 → JS 内建补齐（`Array.prototype.clear` 等） | 全体共用（生成器看不到接收者类型，同名方法无法在编译期区分） |
 /// | 【2】 | 出方向桥（emit / commit / send → `sendMessage`） | 全体共用 |
-/// | 【3】 | 宿主桥 `_app_host_`（`invoke` / `resolve`，唯一对外出口） | @HostInjected 专用 |
+/// | 【3】 | 宿主桥 `_app_host_`（`invoke` / `resolve` / `reject`，唯一对外出口） | @HostInjected 专用 |
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
 /// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
 /// | 【6】 | 组件基类（`setState` / `__bind`） | mini-react（生成器产物的能力袋） |
@@ -259,10 +260,10 @@ const String _jsUiEmit = r'''
 
 ''';
 
-/// 宿主桥｜_app_host_.invoke / resolve（唯一对外出口）【3】。
+/// 宿主桥｜_app_host_.invoke / resolve / reject（唯一对外出口）【3】。
 const String _jsUiHostBridge = r'''
-  // ===== 【3】宿主桥｜_app_host_.invoke / resolve（唯一对外出口）======
-  // JS 发起调用，宿主实现后回填结果
+  // ===== 【3】宿主桥｜_app_host_.invoke / resolve / reject（唯一对外出口）======
+  // JS 发起调用，宿主**必定**结算 Promise（成功回填 / 失败抛回）
   // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
   // `_app_host_.invoke("getUserName", [a, b])`（参数载荷按形态给：纯位置→数组、
   // 纯具名→对象、混合→对象 + "@args" 键装位置实参）：本函数返回 Promise，
@@ -274,15 +275,32 @@ const String _jsUiHostBridge = r'''
   function host(channel, args) {
     hostSeq += 1;
     var id = 'host' + hostSeq;
-    var p = new Promise(function (resolve) { hostPending[id] = resolve; });
+    var p = new Promise(function (resolve, reject) {
+      hostPending[id] = { resolve: resolve, reject: reject };
+    });
     send(channel, { id: id, args: args || [] });
     return p;
   }
-  function resolveHost(id, value) {
-    var r = hostPending[id];
-    if (!r) { return; }
+  // 结算并**摘除**条目：先删后调，保证一条 pending 只结算一次；成功/失败两条
+  // 路径都必须走这里——宿主侧不会「既不 resolve 也不 reject」（未注册通道由
+  // 宿主回填 null，实现抛错由宿主 reject），所以表里不会留下永久滞留的条目。
+  function settleHost(id) {
+    var h = hostPending[id];
+    if (!h) { return null; }
     delete hostPending[id];
-    r(value);
+    return h;
+  }
+  function resolveHost(id, value) {
+    var h = settleHost(id);
+    if (!h) { return; }
+    h.resolve(value);
+  }
+  // 宿主实现失败：把错误原样抛给 JS 调用者（`await _app_host_.invoke(...)`
+  // 处抛出，落进 JS 自己的 try/catch），而不是伪装成「结果是 null」。
+  function rejectHost(id, message) {
+    var h = settleHost(id);
+    if (!h) { return; }
+    h.reject(new Error(message));
   }
 
 ''';
@@ -382,9 +400,10 @@ const String _jsUiRuntimeSkeletonTail = r'''
   };
 
   G.__jsui = api;
-  // JS→宿主唯一出口（宿主桥）：`invoke` 发起调用、`resolve` 回填 Promise。
-  // 与 `__jsui`（页面挂载/事件回传等运行入口）分开，语义单一。
-  G._app_host_ = { invoke: host, resolve: resolveHost };
+  // JS→宿主唯一出口（宿主桥）：`invoke` 发起调用，宿主**必定**结算——
+  // 成功 `resolve`，实现抛错 `reject`。与 `__jsui`（页面挂载/事件回传等运行
+  // 入口）分开，语义单一。
+  G._app_host_ = { invoke: host, resolve: resolveHost, reject: rejectHost };
   // 模块表 `__modules` 由同一 IIFE 首段（_jsUiEnvVars）创建（挂 G），
   // 此处只登记 core，不再自带守卫。
   G.__modules['js_ui/core'] = api;

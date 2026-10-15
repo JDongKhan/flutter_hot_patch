@@ -1,8 +1,8 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/app/model/app_data.dart 自动生成
+// 由 hot_patch_generator 从 lib/app/service/app_data.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { GridEntry, HomeBanner, MenuEntry, Order, Post, Resource, Spot } from 'app_models.js';
+import { GridEntry, HomeBanner, MenuEntry, Order, Post, Resource, Spot } from '../model/app_models.js';
 
 const _img = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image";
 export const kAvatarImg = _img + "?prompt=portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar&image_size=square";

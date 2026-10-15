@@ -1,10 +1,16 @@
-/// App 全量示例数据（与 docs/app-prototype.html 同一套）。
+/// App 全量示例数据（与 docs/app-prototype.html 同一套）——**模拟后端的数据源**。
 ///
-/// 以 **顶层 const** 存放：[HomePage] 通过构造参数接收（组件本身不内嵌数据，
-/// 保证翻译产物里没有跨文件静态引用）；其余原生页面直接读取。
+/// 相当于真实项目里的「假接口返回体」：业务页面**不直接读它**，一律经
+/// [AppService]（lib/app/service/app_service.dart）以「模拟网络请求」的方式取。
+/// 唯一例外是 `kAvatarImg` / `kBanners` 这类**纯展示用图片地址**：它们被
+/// detail_pages.dart 的评论头像、WebView 演示页直接引用（那些页面不走接口、
+/// 也不参与翻译），不属于「业务数据」。
+///
+/// 以 **顶层 const** 存放：翻译器会把本文件产成 `app_data.js`，
+/// `app_service.js` 跨文件 `import` 复用（组件/普通类共用同一套 import 规则）。
 library;
 
-import 'app_models.dart';
+import '../model/app_models.dart';
 
 const String _img = 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image';
 
