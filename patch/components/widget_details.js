@@ -2173,9 +2173,8 @@ export class KeyTile {
 export class KeyDetail {
   constructor() {
     this._names = ["A", "B", "C", "D"];
-    this._rows = [[1, 1], [2, 2]];
-    this._rowsCopy = [[1, 1], [2, 2]];
-    this._sameRef = true;
+    this._stableObj = [1];
+    this._rebuildSeq = 0;
     this._uniqueSeq = 0;
     this._storeA = true;
     this._targetKey = new GlobalKey();
@@ -2212,21 +2211,23 @@ export class KeyDetail {
         ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": this._names[i] + "（无 key）" })]); } return out; })()
       ]);
   }
-  _flipRef() {
-    this.setState(function(){ this._sameRef = (!this._sameRef); });
+  _rebuildParent() {
+    this.setState(function(){ this._rebuildSeq += 1; });
   }
   _objectKeyRows() {
-    if (this._sameRef) {
-      return __h('Column', {
-          "crossAxisAlignment": "stretch"
-        }, [
-          ...(() => { var out = []; for (let i = 0; (i < this._rows.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": "行" + (i + 1) + " · 同一对象引用", "key": new ObjectKey(this._rows[i]) })]); } return out; })()
-        ]);
-    }
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
-        ...(() => { var out = []; for (let i = 0; (i < this._rowsCopy.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": "行" + (i + 1) + " · 等值新对象", "key": new ObjectKey(this._rowsCopy[i]) })]); } return out; })()
+        __h(KeyTile, {
+            "index": 0,
+            "label": "A · ObjectKey(字段实例) · 父级已重建 " + this._rebuildSeq + " 次",
+            "key": new ObjectKey(this._stableObj)
+          }),
+        __h(KeyTile, {
+            "index": 1,
+            "label": "B · ObjectKey(每帧新造 [1]) · 父级已重建 " + this._rebuildSeq + " 次",
+            "key": new ObjectKey([1])
+          })
       ]);
   }
   _bumpUnique() {
@@ -2387,7 +2388,7 @@ export class KeyDetail {
                 "height": 4
               }),
             __h('Text', {
-                "data": "行 key 包的是 _rows 里的对象引用：跨帧同一实例 → 状态保留；" + "换成等值但不同身份的 _rowsCopy → 视为新行，状态重建。",
+                "data": "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。",
                 "style": {
                   "fontSize": 12,
                   "color": '#9E9E9E'
@@ -2400,11 +2401,31 @@ export class KeyDetail {
             __h('SizedBox', {
                 "height": 8
               }),
+            __h('Text', {
+                "data": "操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。" + "选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。",
+                "style": {
+                  "fontSize": 12,
+                  "color": '#9E9E9E'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 6
+              }),
+            __h('Text', {
+                "data": "补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。" + "本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），" + "所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。",
+                "style": {
+                  "fontSize": 11,
+                  "color": '#9E9E9E'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 8
+              }),
             __h('Row', {}, [
                 __h('Button', {
                     "kind": "text",
-                    "label": (this._sameRef ? "换成等值的新对象" : "换回原对象"),
-                    "event": this.__bind("_flipRef")
+                    "label": "父级重建（setState 一次）",
+                    "event": this.__bind("_rebuildParent")
                   })
               ])
           ])

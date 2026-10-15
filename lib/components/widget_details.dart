@@ -1580,17 +1580,11 @@ class _KeyDetailState extends State<KeyDetail> {
   final List<String> _names = ['A', 'B', 'C', 'D'];
 
   // ---- ObjectKey：按对象身份相等 ----
-  /// 对象引用（每次 build 都是同一批实例 → key 稳定）。
-  final List<List<int>> _rows = [
-    [1, 1],
-    [2, 2],
-  ];
-  /// 等值但**不同身份**的另一批对象（切过去即「新行」）。
-  final List<List<int>> _rowsCopy = [
-    [1, 1],
-    [2, 2],
-  ];
-  bool _sameRef = true;
+  /// **同一个实例**：字段初始化时建一次，之后每次 build 拿到的都是它 → key 稳定。
+  final List<int> _stableObj = [1];
+  /// 父级重建次数：只用来证明「父级确实重建了」（两行的 label 都会跟着变），
+  /// 而两行的计数表现却相反——差异只可能来自 key 的身份是否稳定。
+  int _rebuildSeq = 0;
 
   // ---- UniqueKey：每次都是新身份（强制重建）----
   int _uniqueSeq = 0;
@@ -1637,25 +1631,18 @@ class _KeyDetailState extends State<KeyDetail> {
 
   // ===== 卡片 2：ObjectKey =====
 
-  void _flipRef() {
-    setState(() => _sameRef = !_sameRef);
+  void _rebuildParent() {
+    setState(() => _rebuildSeq++);
   }
 
   Widget _objectKeyRows() {
-    if (_sameRef) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < _rows.length; i++)
-            KeyTile(key: ObjectKey(_rows[i]), index: i, label: '行${i + 1} · 同一对象引用'),
-        ],
-      );
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var i = 0; i < _rowsCopy.length; i++)
-          KeyTile(key: ObjectKey(_rowsCopy[i]), index: i, label: '行${i + 1} · 等值新对象'),
+        // A：key 包的是**字段里的那个实例**——跨帧恒定，身份稳定。
+        KeyTile(key: ObjectKey(_stableObj), index: 0, label: 'A · ObjectKey(字段实例) · 父级已重建 $_rebuildSeq 次'),
+        // B：key 每次 build 都包一个**新造的** [1]——值一样，身份不同。
+        KeyTile(key: ObjectKey([1]), index: 1, label: 'B · ObjectKey(每帧新造 [1]) · 父级已重建 $_rebuildSeq 次'),
       ],
     );
   }
@@ -1786,19 +1773,31 @@ class _KeyDetailState extends State<KeyDetail> {
           ),
           const SizedBox(height: 4),
           const Text(
-            '行 key 包的是 _rows 里的对象引用：跨帧同一实例 → 状态保留；'
-            '换成等值但不同身份的 _rowsCopy → 视为新行，状态重建。',
+            'ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。'
+            'A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；'
+            'B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。'
+            '注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 8),
           _objectKeyRows(),
           const SizedBox(height: 8),
+          const Text(
+            '操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。'
+            '选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。'
+            '本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），'
+            '所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。',
+            style: TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
-              TextButton(
-                onPressed: _flipRef,
-                child: Text(_sameRef ? '换成等值的新对象' : '换回原对象'),
-              ),
+              TextButton(onPressed: _rebuildParent, child: const Text('父级重建（setState 一次）')),
             ],
           ),
         ],
