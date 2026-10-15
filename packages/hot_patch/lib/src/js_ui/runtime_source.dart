@@ -59,7 +59,7 @@ import 'package:flutter/foundation.dart'
 // 片段由自己的 [JsUiLibrary.jsFragments] 提供，[jsUiRuntimeSource] 遍历注册表
 // 拼接（见 capabilities/js_ui_library.dart 的 _seedBuiltins）。
 // 本文件只保留**骨架地基**片段：
-//       capabilities/handle_registry_js.dart → 跨语言句柄注册表（必须先于一切能力）
+//       capabilities/core/handle_registry_js.dart → 跨语言句柄注册表（必须先于一切能力）
 import 'capabilities/core/handle_registry_js.dart';
 import 'capabilities/js_ui_library.dart';
 import 'js/mini_react_js.dart';
