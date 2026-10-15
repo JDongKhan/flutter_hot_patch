@@ -83,7 +83,11 @@ TopLevelConstResolver buildTopLevelConstResolver(
     // 与顶层常量一样要参与表达式翻译（`_steps.length`、`_menuTints[i % …]`），
     // 产物顶部同样内联为模块级 `const _x = …`。私有名不可能跨文件引用，故只在
     // 同文件收集；跨文件同名常量不冲突。
+    //
+    // @PatchIgnore 类跳过：该类整体不产出 JS（不翻译、不注册），它的私有 static
+    // const 没有任何产物内引用点；照收会让被忽略类的常量经这条旁路漏进产物。
     for (final c in u.declarations.whereType<ClassDeclaration>()) {
+      if (findAnnotation(c.metadata, 'PatchIgnore') != null) continue;
       for (final m in c.members.whereType<FieldDeclaration>()) {
         if (!m.isStatic || !m.fields.isConst) continue;
         for (final v in m.fields.variables) {

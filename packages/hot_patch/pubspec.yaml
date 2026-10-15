@@ -16,3 +16,6 @@ dependencies:
   path_provider: ^2.1.4
   # URL → 本地唯一路径哈希（sha256，避免截断碰撞）
   crypto: ^3.0.3
+  # easy_refresh 能力（下拉刷新容器）的宿主桥接依赖：见
+  # lib/src/js_ui/capabilities/easy_refresh/。
+  easy_refresh: ^3.4.0

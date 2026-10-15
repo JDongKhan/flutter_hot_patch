@@ -11,8 +11,9 @@ import 'detail_pages.dart';
 /// 对应 docs/app-prototype.html 的「订单」：顶部状态条（全部/待付款/待发货/
 /// 待收货/已完成）+ 订单卡列表（订单号 / 状态 / 商品 / 合计 / 操作按钮）。
 ///
-/// 数据（状态条 + 订单列表）由 [AppService.fetchOrders] 模拟网络请求取回，
-/// 加载期间显示 loading。
+/// 数据走两个模拟接口：状态条由 [AppService.fetchOrders] 取，订单列表由
+/// [AppService.fetchOrderList] 取。首屏两个请求**并行**发出（列表先用空状态
+/// 参数请求，等价「全部」），此后点状态即按该状态重新请求一次列表。
 ///
 /// 本页纳入连带翻译（`@PatchEntry`）：`.where().toList()` 过滤、集合 for 循环、
 /// ListView.separated 的 itemBuilder 局部变量、switch 表达式返回 Color 均已支持。
@@ -30,16 +31,24 @@ class OrdersPage extends StatefulWidget {
 class _OrdersPageState extends State<OrdersPage> {
   final AppService _service = AppService();
 
-  /// 接口数据；null = 加载中。
+  /// 配置（状态条）；null = 加载中。
   OrderFeed? _feed;
 
-  /// 当前选中的状态；接口回来后落到「全部」（或 `widget.initialStatus`）。
+  /// 列表接口返回；null = 列表加载中。
+  List<Order>? _orders;
+
+  /// 列表请求进行中（切状态后重新请求时贴进度条）。
+  bool _listLoading = false;
+
+  /// 当前选中的状态；空串 = 还没定（等价首项「全部」）。
   String _status = '';
 
   @override
   void initState() {
     super.initState();
+    // 配置与列表并行发，首屏只等一个往返（1s），不串行等两次。
     _load();
+    _loadOrders();
   }
 
   Future<void> _load() async {
@@ -48,19 +57,26 @@ class _OrdersPageState extends State<OrdersPage> {
       _feed = feed;
       _status = widget.initialStatus ?? feed.statuses.first;
     });
+    // 带具体状态跳进来时，首屏那次「空参数（=全部）」的结果不对口，按状态重发。
+    if (widget.initialStatus != null) {
+      await _loadOrders();
+    }
   }
 
-  /// 按状态过滤订单列表。
-  ///
-  /// 写成 **getter**（而不是 `build` 里的局部变量 / 带参方法）是刻意的：
-  /// ListView 的 itemBuilder 会被抽取成实例方法，方法体里只认「成员」（字段 /
-  /// getter / 方法），不认 build 的自由局部变量——`feed` 传进去会在 JS 侧变成
-  /// 未定义（`ReferenceError: Can't find variable: feed`）。
-  List<Order> get _visibleOrders {
-    if (_status == _feed!.statuses.first) {
-      return _feed!.orders;
-    }
-    return _feed!.orders.where((o) => o.status == _status).toList();
+  /// 列表接口：按当前状态取回订单列表。
+  Future<void> _loadOrders() async {
+    setState(() => _listLoading = true);
+    final List<Order> orders = await _service.fetchOrderList(_status);
+    setState(() {
+      _orders = orders;
+      _listLoading = false;
+    });
+  }
+
+  /// 点状态：先切高亮，再按新状态请求列表。
+  void _pickStatus(String status) {
+    setState(() => _status = status);
+    _loadOrders();
   }
 
   Color _statusColor(String status) => switch (status) {
@@ -74,7 +90,6 @@ class _OrdersPageState extends State<OrdersPage> {
     if (_feed == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    final list = _visibleOrders;
     return Column(
       // 状态条的白色底必须横贯整屏。Column 默认按子结点自身宽度居中排布，
       // `Container(color: white)` 会缩成状态条那么宽，"白底没铺满"。stretch
@@ -96,7 +111,7 @@ class _OrdersPageState extends State<OrdersPage> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: GestureDetector(
-                          onTap: () => setState(() => _status = s),
+                          onTap: () => _pickStatus(s),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 13,
@@ -129,8 +144,12 @@ class _OrdersPageState extends State<OrdersPage> {
             ),
           ),
         ),
+        // 列表请求中：贴一条细进度条（列表接口的加载反馈）
+        if (_listLoading) const LinearProgressIndicator(minHeight: 2),
         Expanded(
-          child: list.isEmpty
+          child: _orders == null
+              ? const Center(child: CircularProgressIndicator())
+              : _orders!.isEmpty
               ? const Center(
                   child: Text(
                     '该状态下暂无订单',
@@ -139,10 +158,10 @@ class _OrdersPageState extends State<OrdersPage> {
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-                  itemCount: list.length,
+                  itemCount: _orders!.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
-                    final o = list[i];
+                    final o = _orders![i];
                     return _OrderCard(
                       order: o,
                       statusColor: _statusColor(o.status),

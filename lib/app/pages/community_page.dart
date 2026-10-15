@@ -16,11 +16,14 @@ import 'detail_pages.dart';
 /// 布局自然决定（紧贴筛选条下沿），不做 GlobalKey/RenderBox 实测——实测在
 /// JS 侧无法表达（`currentContext` / `localToGlobal` 都是宿主专有 API）。
 ///
-/// 本页与「订单/我的」一样纳入连带翻译（`@PatchEntry`）：数据过滤
-/// （`.where().toList()` + `switch` 排序）与集合 for-if 展开均已支持。
+/// 本页与「订单/我的」一样纳入连带翻译（`@PatchEntry`）：集合 for-if 展开、
+/// 条件表达式、事件闭包（`__bindFn`）、按 key 分派的 `switch` 均已支持；
+/// 过滤与排序搬到了 service（模拟后端按参数返回列表）。
 ///
-/// 双 tab、筛选项配置、资源与帖子全部来自 [AppService.fetchCommunity]
-/// 一次模拟网络请求，加载期间显示 loading。
+/// 数据走两个模拟接口：双 tab / 筛选项 / 横向资源由 [AppService.fetchCommunity]
+/// 取，帖子列表由 [AppService.fetchPostList] 取。首屏两个请求**并行**发出
+/// （列表先用空参数请求，等价「全部 + 综合」），此后改任一筛选条件都按新参数
+/// 重新请求一次列表，请求期间列表区贴一条细进度条。
 @PatchEntry()
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
@@ -32,11 +35,18 @@ class CommunityPage extends StatefulWidget {
 class _CommunityPageState extends State<CommunityPage> {
   final AppService _service = AppService();
 
-  /// 接口数据；null = 加载中。
+  /// 配置（双 tab / 筛选项 / 横向资源）；null = 加载中。
   CommunityFeed? _feed;
+
+  /// 列表接口返回；null = 列表加载中。
+  List<Post>? _posts;
+
+  /// 列表请求进行中（改筛选后重新请求时贴进度条）。
+  bool _listLoading = false;
+
   bool _filterOpen = false;
 
-  // 筛选条件（与原型 state.filters 对应）；接口回来后落到各自列表首项。
+  // 筛选条件（与原型 state.filters 对应）；配置回来后落到各自列表首项。
   String _tab = '';
   String _sort = '';
   String _type = '';
@@ -46,7 +56,9 @@ class _CommunityPageState extends State<CommunityPage> {
   @override
   void initState() {
     super.initState();
+    // 配置与列表并行发，首屏只等一个往返（1s），不串行等两次。
     _load();
+    _loadPosts();
   }
 
   Future<void> _load() async {
@@ -61,17 +73,45 @@ class _CommunityPageState extends State<CommunityPage> {
     });
   }
 
-  /// 按「内容类型 + 排序方式」过滤列表（距离/价格在原型的示例数据里无对应字段，
-  /// 仅作为可选条件参与面板交互）。
-  List<Post> _visiblePosts(CommunityFeed feed) {
-    var list = feed.posts.where((p) => _type == feed.postTypes.first || p.type == _type).toList();
-    switch (_sort) {
-      case '最新':
-        list = list.reversed.toList();
-      case '最热':
-        list = list.toList()..sort((a, b) => b.like.compareTo(a.like));
-    }
-    return list;
+  /// 列表接口：按当前筛选条件取回帖子列表。
+  ///
+  /// 过滤 / 排序在「服务端」做（[AppService.fetchPostList]），页面不碰数据。
+  Future<void> _loadPosts() async {
+    setState(() => _listLoading = true);
+    final List<Post> posts = await _service.fetchPostList(
+      _tab,
+      _sort,
+      _type,
+      _dist,
+      _price,
+    );
+    setState(() {
+      _posts = posts;
+      _listLoading = false;
+    });
+  }
+
+  /// 切双 tab：换一份列表，重新请求。
+  void _selectTab(String tab) {
+    setState(() => _tab = tab);
+    _loadPosts();
+  }
+
+  /// 面板里改任一筛选项：按新条件重新请求列表（这就是「筛选条件随请求下发」）。
+  void _selectFilter(String key, String value) {
+    setState(() {
+      switch (key) {
+        case 'sort':
+          _sort = value;
+        case 'type':
+          _type = value;
+        case 'dist':
+          _dist = value;
+        case 'price':
+          _price = value;
+      }
+    });
+    _loadPosts();
   }
 
   /// 打开/关闭筛选面板。面板位置由布局决定（见 [build] 的列表区 Stack），
@@ -89,6 +129,7 @@ class _CommunityPageState extends State<CommunityPage> {
       _dist = feed.dists.first;
       _price = feed.priceRanges.first;
     });
+    _loadPosts();
   }
 
   @override
@@ -113,19 +154,28 @@ class _CommunityPageState extends State<CommunityPage> {
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: GestureDetector(
-                        onTap: () => setState(() => _tab = t),
+                        onTap: () => _selectTab(t),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 15,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: _tab == t ? const Color(0xFFE8F2FF) : const Color(0xFFF3F5F8),
+                            color: _tab == t
+                                ? const Color(0xFFE8F2FF)
+                                : const Color(0xFFF3F5F8),
                             borderRadius: BorderRadius.circular(15),
                           ),
                           child: Text(
                             t,
                             style: TextStyle(
                               fontSize: 13.5,
-                              fontWeight: _tab == t ? FontWeight.w700 : FontWeight.w500,
-                              color: _tab == t ? kBrand : const Color(0xFF5C6270),
+                              fontWeight: _tab == t
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: _tab == t
+                                  ? kBrand
+                                  : const Color(0xFF5C6270),
                             ),
                           ),
                         ),
@@ -137,8 +187,15 @@ class _CommunityPageState extends State<CommunityPage> {
                     child: Container(
                       width: 32,
                       height: 32,
-                      decoration: const BoxDecoration(color: Color(0xFFF3F5F8), shape: BoxShape.circle),
-                      child: const Icon(Icons.edit, size: 16, color: Color(0xFF5C6270)),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF3F5F8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        size: 16,
+                        color: Color(0xFF5C6270),
+                      ),
                     ),
                   ),
                 ],
@@ -155,8 +212,10 @@ class _CommunityPageState extends State<CommunityPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: feed.resources.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, i) =>
-                _ResourceCard(resource: feed.resources[i], onTap: () => AppRouter.openResource(feed.resources[i].id)),
+            itemBuilder: (context, i) => _ResourceCard(
+              resource: feed.resources[i],
+              onTap: () => AppRouter.openResource(feed.resources[i].id),
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -170,18 +229,25 @@ class _CommunityPageState extends State<CommunityPage> {
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: GestureDetector(
-                    onTap: () => setState(() => _sort = s),
+                    onTap: () => _selectFilter('sort', s),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
-                        color: _sort == s ? const Color(0xFFE8F2FF) : const Color(0xFFF3F5F8),
+                        color: _sort == s
+                            ? const Color(0xFFE8F2FF)
+                            : const Color(0xFFF3F5F8),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Text(
                         s,
                         style: TextStyle(
                           fontSize: 12.5,
-                          fontWeight: _sort == s ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: _sort == s
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: _sort == s ? kBrand : const Color(0xFF5C6270),
                         ),
                       ),
@@ -192,9 +258,14 @@ class _CommunityPageState extends State<CommunityPage> {
               GestureDetector(
                 onTap: _toggleFilter,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
-                    color: _filterOpen ? const Color(0xFFE8F2FF) : const Color(0xFFF3F5F8),
+                    color: _filterOpen
+                        ? const Color(0xFFE8F2FF)
+                        : const Color(0xFFF3F5F8),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
@@ -208,7 +279,11 @@ class _CommunityPageState extends State<CommunityPage> {
                         ),
                       ),
                       const SizedBox(width: 3),
-                      Icon(Icons.tune, size: 14, color: _filterOpen ? kBrand : const Color(0xFF5C6270)),
+                      Icon(
+                        Icons.tune,
+                        size: 14,
+                        color: _filterOpen ? kBrand : const Color(0xFF5C6270),
+                      ),
                     ],
                   ),
                 ),
@@ -216,32 +291,25 @@ class _CommunityPageState extends State<CommunityPage> {
             ],
           ),
         ),
+        // 列表请求中：贴一条细进度条（列表接口的加载反馈）
+        if (_listLoading) const LinearProgressIndicator(minHeight: 2),
         // 列表 + 下拉筛选面板：面板顶 = 列表区 Stack 顶部（即筛选条下沿），
         // 位置由布局决定，不需要任何测量。
         Expanded(
-          child: _ListContent(
-            resetFilter: _resetFilter,
-            openFilter: _filterOpen,
-            toggleFilter: _toggleFilter,
-            feed: feed,
-            list: _visiblePosts(feed),
-            sort: _sort,
-            type: _type,
-            dist: _dist,
-            price: _price,
-            onSelectFilter: (key, value) => setState(() {
-              switch (key) {
-                case 'sort':
-                  _sort = value;
-                case 'type':
-                  _type = value;
-                case 'dist':
-                  _dist = value;
-                case 'price':
-                  _price = value;
-              }
-            }),
-          ),
+          child: _posts == null
+              ? const Center(child: CircularProgressIndicator())
+              : _ListContent(
+                  resetFilter: _resetFilter,
+                  openFilter: _filterOpen,
+                  toggleFilter: _toggleFilter,
+                  feed: feed,
+                  list: _posts!,
+                  sort: _sort,
+                  type: _type,
+                  dist: _dist,
+                  price: _price,
+                  onSelectFilter: _selectFilter,
+                ),
         ),
       ],
     );
@@ -299,14 +367,20 @@ class _ListContentState extends State<_ListContent> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 60),
                 child: Center(
-                  child: Text('没有符合条件的帖子，试试放宽筛选条件', style: TextStyle(fontSize: 13, color: Color(0xFF98A0AC))),
+                  child: Text(
+                    '没有符合条件的帖子，试试放宽筛选条件',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF98A0AC)),
+                  ),
                 ),
               )
             else
               for (final p in posts)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                  child: _PostCard(post: p, onTap: () => AppRouter.openPost(p.id)),
+                  child: _PostCard(
+                    post: p,
+                    onTap: () => AppRouter.openPost(p.id),
+                  ),
                 ),
           ],
         ),
@@ -353,7 +427,10 @@ class _ResourceCard extends StatelessWidget {
       child: Container(
         width: 156,
         clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -363,7 +440,8 @@ class _ResourceCard extends StatelessWidget {
               child: Image.network(
                 resource.img,
                 fit: BoxFit.cover,
-                errorBuilder: (_, e, s) => Container(height: 68, color: const Color(0xFFE8EBF0)),
+                errorBuilder: (_, e, s) =>
+                    Container(height: 68, color: const Color(0xFFE8EBF0)),
               ),
             ),
             Padding(
@@ -375,14 +453,20 @@ class _ResourceCard extends StatelessWidget {
                     resource.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     resource.sub,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF98A0AC)),
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: Color(0xFF98A0AC),
+                    ),
                   ),
                 ],
               ),
@@ -401,7 +485,8 @@ class _PostCard extends StatelessWidget {
   final Post post;
   final VoidCallback onTap;
 
-  static String _likeText(int n) => n > 999 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
+  static String _likeText(int n) =>
+      n > 999 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
 
   @override
   Widget build(BuildContext context) {
@@ -409,7 +494,10 @@ class _PostCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -420,7 +508,11 @@ class _PostCard extends StatelessWidget {
                 width: 92,
                 height: 92,
                 fit: BoxFit.cover,
-                errorBuilder: (_, e, s) => Container(width: 92, height: 92, color: const Color(0xFFE8EBF0)),
+                errorBuilder: (_, e, s) => Container(
+                  width: 92,
+                  height: 92,
+                  color: const Color(0xFFE8EBF0),
+                ),
               ),
             ),
             const SizedBox(width: 11),
@@ -434,7 +526,10 @@ class _PostCard extends StatelessWidget {
                       post.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 5),
                     Expanded(
@@ -442,28 +537,54 @@ class _PostCard extends StatelessWidget {
                         post.sub,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF8B909A), height: 1.5),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF8B909A),
+                          height: 1.5,
+                        ),
                       ),
                     ),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF3F5F8),
                             borderRadius: BorderRadius.circular(5),
                           ),
-                          child: Text(post.type, style: const TextStyle(fontSize: 10, color: Color(0xFF5C6270))),
+                          child: Text(
+                            post.type,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF5C6270),
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           '${post.author} · ${post.time}',
-                          style: const TextStyle(fontSize: 10.5, color: Color(0xFFA3A9B4)),
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: Color(0xFFA3A9B4),
+                          ),
                         ),
                         const Spacer(),
-                        const Icon(Icons.favorite_border, size: 13, color: Color(0xFFA3A9B4)),
+                        const Icon(
+                          Icons.favorite_border,
+                          size: 13,
+                          color: Color(0xFFA3A9B4),
+                        ),
                         const SizedBox(width: 3),
-                        Text(_likeText(post.like), style: const TextStyle(fontSize: 10.5, color: Color(0xFFA3A9B4))),
+                        Text(
+                          _likeText(post.like),
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: Color(0xFFA3A9B4),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -549,7 +670,11 @@ class _FilterPanelState extends State<_FilterPanel> {
           padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             title,
-            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF171A21)),
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF171A21),
+            ),
           ),
         ),
         Wrap(
@@ -560,7 +685,10 @@ class _FilterPanelState extends State<_FilterPanel> {
               GestureDetector(
                 onTap: () => widget.onPick(key, v),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: current == v ? kBrand : const Color(0xFFF3F5F8),
                     borderRadius: BorderRadius.circular(14),
@@ -570,7 +698,9 @@ class _FilterPanelState extends State<_FilterPanel> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: current == v ? Colors.white : const Color(0xFF5C6270),
+                      color: current == v
+                          ? Colors.white
+                          : const Color(0xFF5C6270),
                     ),
                   ),
                 ),
@@ -613,7 +743,11 @@ class _FilterPanelState extends State<_FilterPanel> {
                       ),
                       child: const Text(
                         '重置',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF5C6270)),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF5C6270),
+                        ),
                       ),
                     ),
                   ),
@@ -625,10 +759,17 @@ class _FilterPanelState extends State<_FilterPanel> {
                     child: Container(
                       height: 42,
                       alignment: Alignment.center,
-                      decoration: BoxDecoration(color: kBrand, borderRadius: BorderRadius.circular(21)),
+                      decoration: BoxDecoration(
+                        color: kBrand,
+                        borderRadius: BorderRadius.circular(21),
+                      ),
                       child: const Text(
                         '查看结果',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),

@@ -126,7 +126,10 @@ class HomeFeed {
   });
 }
 
-/// 社区接口返回：双 tab + 筛选项配置 + 横向资源 + 帖子列表。
+/// 社区「配置」接口返回：双 tab + 筛选项配置 + 横向资源。
+///
+/// 帖子列表**不在**这里——它是列表自己的接口（[AppService.fetchPostList]），
+/// 筛选条件变化时按参数重新请求，与配置接口并行发出。
 class CommunityFeed {
   final List<String> tabs;
   final List<String> sorts;
@@ -134,7 +137,6 @@ class CommunityFeed {
   final List<String> dists;
   final List<String> priceRanges;
   final List<Resource> resources;
-  final List<Post> posts;
 
   const CommunityFeed({
     required this.tabs,
@@ -143,16 +145,16 @@ class CommunityFeed {
     required this.dists,
     required this.priceRanges,
     required this.resources,
-    required this.posts,
   });
 }
 
-/// 订单接口返回：状态筛选条 + 订单列表。
+/// 订单「配置」接口返回：状态筛选条。
+///
+/// 订单列表同样是列表自己的接口（[AppService.fetchOrderList]），切状态时重新请求。
 class OrderFeed {
   final List<String> statuses;
-  final List<Order> orders;
 
-  const OrderFeed({required this.statuses, required this.orders});
+  const OrderFeed({required this.statuses});
 }
 
 /// 我的接口返回：头像 + 订单统计 + 功能菜单。

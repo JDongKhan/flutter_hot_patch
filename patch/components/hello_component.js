@@ -43,7 +43,7 @@ export class HelloCard {
   }
   async loadUser() {
     var name = await _app_host_.invoke("getUserName", []);
-    var userMap = await _app_host_.invoke("post", {"params": {"name": name}});
+    var userMap = await _app_host_.invoke("post", {"url": "hello", "params": {"name": name}});
     console.log("用户信息:" + __str(userMap["code"]));
     await new Promise(function(r){ setTimeout(r, 1000); });
     this.setState(() => { this._user = new User({name: "Alice", age: 18}); });

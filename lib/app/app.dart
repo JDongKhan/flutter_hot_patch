@@ -9,9 +9,13 @@ import 'pages/orders_page.dart';
 
 /// App 四 tab 外壳（对应 docs/app-prototype.html 的整体框架）——**热更载体**。
 ///
-/// 本类标了 `@PatchEntry()`，会被翻译成 `patch/app/app.js`：整壳（tab 切换状态
-/// `_index`、[IndexedStack]、[BottomNavigationBar]）都跑在 JS 运行时里，出问题
+/// 本类标了 `@PatchEntry()`，会被翻译成 `patch/app/app.js`：整壳（[TabController]
+/// 驱动的切页状态、[TabBarView]、[BottomNavigationBar]）都跑在 JS 运行时里，出问题
 /// 直接下发补丁即可热修整壳布局。
+///
+/// 切页用 [TabBarView]（PageView 的懒加载语义）：只构建当前 tab，没进入过的
+/// tab 不会 build —— 这正是替代 [IndexedStack] 的原因，后者一次性建满四页。
+/// 代价是切走再回来会重建（页面状态不保留），由各 tab 页自己的数据请求承担。
 ///
 /// 依赖的 widget 类会**连带翻译**：`HomePage`（及其同文件的
 /// HomeHeader/BannerSlide/GridCell/SpotCard/PromoCard）已是 `patch/app/pages/
@@ -27,18 +31,43 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell>
+    with SingleTickerProviderStateMixin {
+  /// 四 tab 的 TabController：JS 侧代理类忽略 vsync，length 随句柄下发宿主建
+  /// 真实 controller（见 capabilities/tab），[TabBarView] 与底部导航共用同一个。
+  late final TabController _tab = TabController(length: 4, vsync: this);
+
+  /// 当前页镜像（由 controller 监听同步），供 [BottomNavigationBar] 高亮。
   int _index = 0;
 
-  void _openTab(int index) => setState(() => _index = index);
+  @override
+  void initState() {
+    super.initState();
+    _tab.addListener(() {
+      setState(() => _index = _tab.index);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  void _openTab(int index) {
+    setState(() => _index = index);
+    _tab.animateTo(index);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F7),
-      // IndexedStack 保留各 tab 状态（滚动位置、筛选面板等）。
-      body: IndexedStack(
-        index: _index,
+      // TabBarView 只构建当前 tab（懒加载）；禁用左右滑动，保持「只由底部
+      // 导航切 tab」的原语义，避免与页内横向滚动（首页 banner）抢手势。
+      body: TabBarView(
+        controller: _tab,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
           // 首页：有 JS 产物（连带翻译），外壳产物里是类引用，由 JS 运行时直接
           // new 出来；数据由 HomePage 自己经 AppService 模拟网络请求取回。
@@ -77,6 +106,7 @@ class _AppShellState extends State<AppShell> {
 /// 直接 new）；其余三个 tab 页标了 `@PatchIgnore`、没有 JS 产物，翻译器
 /// 把它们产出为 `Component` 占位结点 → 这里用 [nativeComponents] 把同名原生页面
 /// 注进去。
+@PatchIgnore()
 class AppShellJsPage extends StatelessWidget {
   const AppShellJsPage({super.key});
 

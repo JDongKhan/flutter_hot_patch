@@ -128,16 +128,19 @@ const String miniReactComponentBaseSource = r'''
     var self = this;
     var anchor = building || this; // 绑定时的 context 位置（见上）
     // 两种事件形态，触发即执行：裸方法名（`_incA`）→ 调实例方法；其余整体
-    // 作为调用表达式求值（`this.context.read("T").inc()`）。二者都无返回值语义。
+    // 作为调用表达式求值（`this.context.read("T").inc()`）。**原样返回被调方法的
+    // 返回值**：普通事件（点击 / 输入）由 invoke 丢弃返回值，语义不变；而
+    // 「可等待事件」（EasyRefresh 的 onRefresh，见 capabilities/easy_refresh）
+    // 靠这个返回值拿到 JS 侧的 Promise，await 完成后才回传宿主。
     var isName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expr);
     var run = isName
       // 方法名形态：句柄收到的参数数组用 apply 摊开成位置实参（支持 N 参事件）。
       ? function (args) {
           var m = self[expr];
-          if (typeof m === 'function') { m.apply(self, args); }
+          if (typeof m === 'function') { return m.apply(self, args); }
         }
       : function () {
-          new Function('return (' + expr + ');').call(self);
+          return new Function('return (' + expr + ');').call(self);
         };
     var handle = fn(function () {
       // 还原绑定时的构建位置：表达式若含 `this.context.watch/read`，按当时的
@@ -145,7 +148,7 @@ const String miniReactComponentBaseSource = r'''
       // 事件位置实参在 `arguments` 里（invoke 已摊开），原样交给 run 转发。
       var prev = building;
       building = anchor;
-      try { run(arguments); }
+      try { return run(arguments); }
       catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
       finally { building = prev; }
     });
@@ -170,7 +173,8 @@ const String miniReactComponentBaseSource = r'''
       var prev = building;
       building = anchor;
       // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
-      try { handle.__run.apply(handle, arguments); }
+      // 返回值同 __bind：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
+      try { return handle.__run.apply(handle, arguments); }
       catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
       finally { building = prev; }
     });

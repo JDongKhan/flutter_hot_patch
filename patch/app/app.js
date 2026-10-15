@@ -8,20 +8,27 @@ import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
 import { __h } from '../flutter.js';
 
-const _zip = "http://127.0.0.1:8765/patch/patch.zip";
-
 // 组件 AppShell
 export class AppShell {
   constructor() {
+    this._tab = new TabController({length: 4, vsync: this});
     this._index = 0;
+  }
+  initState() {
+    this._tab.addListener(() => { this.setState(() => { this._index = this._tab.index; }); });
+  }
+  dispose() {
+    this._tab.dispose();
   }
   _openTab(index) {
     this.setState(() => { this._index = index; });
+    this._tab.animateTo(index);
   }
   build(context) {
     return __h('Scaffold', {
-        "body": __h('IndexedStack', {
-            "index": this._index
+        "body": __h('TabBarView', {
+            "controller": this._tab,
+            "physics": "NeverScrollableScrollPhysics"
           }, [
             __h(HomePage, {}),
             __h(CommunityPage, {}),

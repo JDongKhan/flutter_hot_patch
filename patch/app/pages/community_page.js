@@ -14,6 +14,8 @@ export class CommunityPage {
   constructor() {
     this._service = new AppService({});
     this._feed = null;
+    this._posts = null;
+    this._listLoading = false;
     this._filterOpen = false;
     this._tab = "";
     this._sort = "";
@@ -23,22 +25,24 @@ export class CommunityPage {
   }
   initState() {
     this._load();
+    this._loadPosts();
   }
   async _load() {
     var feed = await this._service.fetchCommunity();
     this.setState(() => { this._feed = feed; this._tab = feed.tabs[0]; this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
   }
-  _visiblePosts(feed) {
-    var list = feed.posts.filter((p) => { return ((this._type == feed.postTypes[0]) || (p.type == this._type)); });
-    switch (this._sort) {
-      case "最新":
-        list = [...list].reverse();
-      break;
-      case "最热":
-        list = (() => { const _t = list; _t.sort((a, b) => { return (b.like - a.like); }); return _t; })();
-      break;
-    }
-    return list;
+  async _loadPosts() {
+    this.setState(() => { this._listLoading = true; });
+    var posts = await this._service.fetchPostList(this._tab, this._sort, this._type, this._dist, this._price);
+    this.setState(() => { this._posts = posts; this._listLoading = false; });
+  }
+  _selectTab(tab) {
+    this.setState(() => { this._tab = tab; });
+    this._loadPosts();
+  }
+  _selectFilter(key, value) {
+    this.setState(() => { switch (key) {   case "sort":     this._sort = value;   break;   case "type":     this._type = value;   break;   case "dist":     this._dist = value;   break;   case "price":     this._price = value;   break; } });
+    this._loadPosts();
   }
   _toggleFilter() {
     this.setState(() => { this._filterOpen = (!this._filterOpen); });
@@ -49,6 +53,7 @@ export class CommunityPage {
       return;
     }
     this.setState(() => { this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
+    this._loadPosts();
   }
   build(context) {
     console.log("-----" + __str(this._filterOpen));
@@ -74,7 +79,7 @@ export class CommunityPage {
                     }
                   }, [
                     __h('Row', {}, [
-                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _tab = t)" + ":" + String(t), () => { this.setState(() => { this._tab = t; }); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "data": t, "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
+                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => _selectTab(t)" + ":" + String(t), () => { this._selectTab(t); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "data": t, "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
                         __h('Spacer', {}),
                         __h('GestureDetector', {
                             "event": this.__bind("_app_host_.invoke(\"toast\", [\"发布新动态（演示）\"])")
@@ -130,7 +135,7 @@ export class CommunityPage {
             }
           }, [
             __h('Row', {}, [
-                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => setState(() => _sort = s)" + ":" + String(s), () => { this.setState(() => { this._sort = s; }); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": s, "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
+                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => _selectFilter('sort', s)" + ":" + String(s), () => { this._selectFilter("sort", s); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": s, "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
                 __h('Spacer', {}),
                 __h('GestureDetector', {
                     "event": this.__bind("_toggleFilter")
@@ -171,19 +176,9 @@ export class CommunityPage {
                   ])
               ])
           ]),
+        ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
         __h('Expanded', {}, [
-            __h(_ListContent, {
-                "resetFilter": (...__a) => this._resetFilter(...__a),
-                "openFilter": this._filterOpen,
-                "toggleFilter": (...__a) => this._toggleFilter(...__a),
-                "feed": this._feed,
-                "list": this._visiblePosts(this._feed),
-                "sort": this._sort,
-                "type": this._type,
-                "dist": this._dist,
-                "price": this._price,
-                "onSelectFilter": (key, value) => { this.setState(() => { switch (key) {   case "sort":     this._sort = value;   break;   case "type":     this._type = value;   break;   case "dist":     this._dist = value;   break;   case "price":     this._price = value;   break; } }); }
-              })
+            ((this._posts == null) ? __h('Center', {}, [ __h('CircularProgressIndicator', {}) ]) : __h(_ListContent, { "resetFilter": (...__a) => this._resetFilter(...__a), "openFilter": this._filterOpen, "toggleFilter": (...__a) => this._toggleFilter(...__a), "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) }))
           ])
       ]);
   }

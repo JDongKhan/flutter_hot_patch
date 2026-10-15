@@ -9,7 +9,7 @@ export class NetworkVm extends ChangeNotifier {
     super();
   }
   async loadUserInfo(params) {
-    var data = await _app_host_.invoke("post", {"params": params});
+    var data = await _app_host_.invoke("post", {"url": "loadUserInfo", "params": params});
     console.log("获取数据:" + __str(data));
     return data;
   }

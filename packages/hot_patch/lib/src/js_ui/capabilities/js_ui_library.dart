@@ -35,6 +35,7 @@ import '../js_widget_registry.dart';
 import 'build_context/build_context_library.dart';
 import 'change_notifier/change_notifier_library.dart';
 import 'drawer/drawer_library.dart';
+import 'easy_refresh/easy_refresh_library.dart';
 import 'key/key_library.dart';
 import 'notification_listener/notification_listener_library.dart';
 import 'provider/provider_library.dart';
@@ -109,5 +110,6 @@ void _seedBuiltins() {
   registerJsUiLibrary(const NotificationListenerLibrary());
   registerJsUiLibrary(const DrawerLibrary());
   // ── 三方库 ──
+  registerJsUiLibrary(const EasyRefreshLibrary());
   registerJsUiLibrary(const ProviderLibrary());
 }

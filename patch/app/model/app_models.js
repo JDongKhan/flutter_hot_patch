@@ -115,7 +115,6 @@ export class CommunityFeed {
     this.dists = (args && args.dists !== undefined) ? args.dists : [];
     this.priceRanges = (args && args.priceRanges !== undefined) ? args.priceRanges : [];
     this.resources = (args && args.resources !== undefined) ? args.resources : [];
-    this.posts = (args && args.posts !== undefined) ? args.posts : [];
   }
 }
 
@@ -126,7 +125,6 @@ export class OrderFeed {
   }
   __applyProps(args) {
     this.statuses = (args && args.statuses !== undefined) ? args.statuses : [];
-    this.orders = (args && args.orders !== undefined) ? args.orders : [];
   }
 }
 
