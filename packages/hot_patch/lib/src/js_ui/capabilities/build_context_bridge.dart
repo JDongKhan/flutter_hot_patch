@@ -78,7 +78,12 @@ final Map<String, Map<String, _CtxWatch>> _ctxWatches = {};
 /// 查不到（或类型不匹配）说明 JS 侧解析越过了 provider 边界（消费点被放到了
 /// provider 子树之外），按项目规则出运行时告警而非静默。
 Object? _resolveProviderOp(String id, String op, Map payload) {
-  if (op != 'watch' && op != 'read') return null;
+  if (op != 'watch' && op != 'read')  {
+    HotPatchLog.log(
+      '[jsui] 不支持context.$op()方法 ',
+    );
+    return null;
+  }
   final type = payload['type'];
   if (type is! String || type.isEmpty) return null;
   final context = jsBuildContextOf(id);
