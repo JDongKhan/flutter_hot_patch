@@ -70,10 +70,10 @@ import 'capabilities/js_ui_library.dart';
 import 'capabilities/key/key_js.dart';
 import 'capabilities/scroll_controller/scroll_controller_js.dart';
 import 'capabilities/tab_drawer/tab_controller_js.dart';
+import 'capabilities/change_notifier/change_notifier_js.dart';
 import 'capabilities/text_editing_controller/text_editing_controller_js.dart';
 import 'js/handle_registry_js.dart';
 import 'js/mini_react_js.dart';
-import 'js/change_notifier_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
