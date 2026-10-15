@@ -26,7 +26,7 @@ export class CommunityPage {
   }
   async _load() {
     var feed = await this._service.fetchCommunity();
-    this.setState(function(){ this._feed = feed; this._tab = feed.tabs[0]; this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
+    this.setState(() => { this._feed = feed; this._tab = feed.tabs[0]; this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
   }
   _visiblePosts(feed) {
     var list = feed.posts.filter((p) => { return ((this._type == feed.postTypes[0]) || (p.type == this._type)); });
@@ -41,14 +41,14 @@ export class CommunityPage {
     return list;
   }
   _toggleFilter() {
-    this.setState(function(){ this._filterOpen = (!this._filterOpen); });
+    this.setState(() => { this._filterOpen = (!this._filterOpen); });
   }
   _resetFilter() {
     var feed = this._feed;
     if ((feed == null)) {
       return;
     }
-    this.setState(function(){ this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
+    this.setState(() => { this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
   }
   build(context) {
     console.log("-----" + __str(this._filterOpen));
@@ -182,7 +182,7 @@ export class CommunityPage {
                 "type": this._type,
                 "dist": this._dist,
                 "price": this._price,
-                "onSelectFilter": (key, value) => { this.setState(function(){ switch (key) {   case "sort":     this._sort = value;   break;   case "type":     this._type = value;   break;   case "dist":     this._dist = value;   break;   case "price":     this._price = value;   break; } }); }
+                "onSelectFilter": (key, value) => { this.setState(() => { switch (key) {   case "sort":     this._sort = value;   break;   case "type":     this._type = value;   break;   case "dist":     this._dist = value;   break;   case "price":     this._price = value;   break; } }); }
               })
           ])
       ]);

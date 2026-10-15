@@ -11,7 +11,7 @@ export class TextDetail {
     this._count = 0;
   }
   bump() {
-    this.setState(function(){ this._count += 1; });
+    this.setState(() => { this._count += 1; });
   }
   build(context) {
     return __h('Column', {
@@ -92,7 +92,7 @@ export class ButtonDetail {
     this._pressed = 0;
   }
   onTap() {
-    this.setState(function(){ this._pressed += 1; });
+    this.setState(() => { this._pressed += 1; });
   }
   build(context) {
     return __h('Column', {
@@ -754,13 +754,13 @@ export class ScrollDetail {
     this._scrollController = new ScrollController();
   }
   initState() {
-    this._scrollController.addListener(() => { this.setState(function(){ this._ctrlOffset = this._scrollController.offset; }); });
+    this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); });
   }
   dispose() {
     this._scrollController.dispose();
   }
   _onListScroll(n) {
-    this.setState(function(){ this._offset = n.metrics.pixels; });
+    this.setState(() => { this._offset = n.metrics.pixels; });
     return false;
   }
   _scrollToEnd() {
@@ -886,7 +886,7 @@ export class SliverDetail {
     this._measureText = "未测量";
   }
   initState() {
-    this._controller.addListener(() => { this.setState(function(){ this._offset = this._controller.offset; }); });
+    this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
   }
   dispose() {
     this._controller.dispose();
@@ -916,10 +916,10 @@ export class SliverDetail {
     }
     var rect = await box.measure();
     if ((rect == null)) {
-      this.setState(function(){ this._measureText = "量不到（未布局）"; });
+      this.setState(() => { this._measureText = "量不到（未布局）"; });
       return;
     }
-    this.setState(function(){ this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
+    this.setState(() => { this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
   }
   build(context) {
     return __h('Scaffold', {
@@ -1261,7 +1261,7 @@ export class GridDetail {
     this._offset = 0;
   }
   initState() {
-    this._controller.addListener(() => { this.setState(function(){ this._offset = this._controller.offset; }); });
+    this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
   }
   dispose() {
     this._controller.dispose();
@@ -1411,7 +1411,7 @@ export class ScaffoldDetail {
     this._navIndex = 0;
   }
   _onNavTap(index) {
-    this.setState(function(){ this._navIndex = index; });
+    this.setState(() => { this._navIndex = index; });
   }
   _onFab() {
   }
@@ -1515,26 +1515,26 @@ export class InputDetail {
   }
   _onControllerChanged() {
     if (!this.__unmounted) {
-      this.setState(function(){ this._text = this._controller.text; });
+      this.setState(() => { this._text = this._controller.text; });
     }
   }
   _onTextChanged(v) {
-    this.setState(function(){ this._text = v; });
+    this.setState(() => { this._text = v; });
   }
   _onChoiceChanged(v) {
-    this.setState(function(){ this._choice = v; });
+    this.setState(() => { this._choice = v; });
   }
   _onDropdownChanged(v) {
-    this.setState(function(){ this._dropdown = v; });
+    this.setState(() => { this._dropdown = v; });
   }
   _onSwitchChanged(v) {
-    this.setState(function(){ this._switchOn = (v ?? false); });
+    this.setState(() => { this._switchOn = (v ?? false); });
   }
   _onCheckChanged(v) {
-    this.setState(function(){ this._checked = v; });
+    this.setState(() => { this._checked = v; });
   }
   _onSliderChanged(v) {
-    this.setState(function(){ this._slider = v; });
+    this.setState(() => { this._slider = v; });
   }
   build(context) {
     return __h('Column', {
@@ -1910,7 +1910,7 @@ export class TabDetail {
     this._index = 0;
   }
   initState() {
-    this._controller.addListener(() => { this.setState(function(){ this._index = this._controller.index; }); });
+    this._controller.addListener(() => { this.setState(() => { this._index = this._controller.index; }); });
   }
   dispose() {
     this._controller.dispose();
@@ -2049,7 +2049,7 @@ export class PageViewDetail {
     this._page = 0;
   }
   _onPageChanged(index) {
-    this.setState(function(){ this._page = index; });
+    this.setState(() => { this._page = index; });
   }
   build(context) {
     return __h('Column', {
@@ -2120,7 +2120,7 @@ export class KeyTile {
     this.label = (args && args.label !== undefined) ? args.label : '';
   }
   bump() {
-    this.setState(function(){ this._count += 1; });
+    this.setState(() => { this._count += 1; });
   }
   build(context) {
     var label = this.label;
@@ -2181,10 +2181,10 @@ export class KeyDetail {
     this._measureText = "未测量";
   }
   _rotateNames() {
-    this.setState(function(){ var head = this._names[0]; this._names.splice(0, 1)[0]; this._names.push(head); });
+    this.setState(() => { var head = this._names[0]; this._names.splice(0, 1)[0]; this._names.push(head); });
   }
   _resetNames() {
-    this.setState(function(){ this._names.clear(); this._names.push("A"); this._names.push("B"); this._names.push("C"); this._names.push("D"); });
+    this.setState(() => { this._names.clear(); this._names.push("A"); this._names.push("B"); this._names.push("C"); this._names.push("D"); });
   }
   _valueKeyRows() {
     return __h('Column', {
@@ -2212,7 +2212,7 @@ export class KeyDetail {
       ]);
   }
   _rebuildParent() {
-    this.setState(function(){ this._rebuildSeq += 1; });
+    this.setState(() => { this._rebuildSeq += 1; });
   }
   _objectKeyRows() {
     return __h('Column', {
@@ -2231,10 +2231,10 @@ export class KeyDetail {
       ]);
   }
   _bumpUnique() {
-    this.setState(function(){ this._uniqueSeq += 1; });
+    this.setState(() => { this._uniqueSeq += 1; });
   }
   _flipStore() {
-    this.setState(function(){ this._storeA = (!this._storeA); });
+    this.setState(() => { this._storeA = (!this._storeA); });
   }
   _storageView() {
     if (this._storeA) {
@@ -2269,10 +2269,10 @@ export class KeyDetail {
     }
     var rect = await box.measure();
     if ((rect == null)) {
-      this.setState(function(){ this._measureText = "量不到（未布局）"; });
+      this.setState(() => { this._measureText = "量不到（未布局）"; });
       return;
     }
-    this.setState(function(){ this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
+    this.setState(() => { this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
   }
   _scrollToTarget() {
     var ctx = this._targetKey.currentContext;
@@ -2697,16 +2697,16 @@ export class DrawerDetail {
     this._picked = (-1);
   }
   _pickOrders() {
-    this.setState(function(){ this._picked = 0; });
+    this.setState(() => { this._picked = 0; });
   }
   _pickFavorites() {
-    this.setState(function(){ this._picked = 1; });
+    this.setState(() => { this._picked = 1; });
   }
   _pickSettings() {
-    this.setState(function(){ this._picked = 2; });
+    this.setState(() => { this._picked = 2; });
   }
   _pickHelp() {
-    this.setState(function(){ this._picked = 3; });
+    this.setState(() => { this._picked = 3; });
   }
   build(context) {
     return __h('Scaffold', {

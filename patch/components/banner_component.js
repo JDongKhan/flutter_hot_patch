@@ -14,7 +14,7 @@ export class BannerCard {
     this._views = 5;
   }
   bump() {
-    this.setState(function(){ this._views += 1; });
+    this.setState(() => { this._views += 1; });
   }
   build(context) {
     return __h('Column', {}, [

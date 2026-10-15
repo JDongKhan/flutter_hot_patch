@@ -20,7 +20,7 @@ export class MinePage {
   }
   async _load() {
     var feed = await this._service.fetchMine();
-    this.setState(function(){ this._feed = feed; });
+    this.setState(() => { this._feed = feed; });
   }
   _openMenu(m) {
     if ((m.screen == "orders")) {

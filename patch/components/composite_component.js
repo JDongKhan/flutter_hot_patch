@@ -11,7 +11,7 @@ export class DashboardCard {
     this._ticks = 0;
   }
   tick() {
-    this.setState(function(){ this._ticks += 1; });
+    this.setState(() => { this._ticks += 1; });
   }
   build(context) {
     return __h('Column', {}, [

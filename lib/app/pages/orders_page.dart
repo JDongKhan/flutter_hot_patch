@@ -50,11 +50,17 @@ class _OrdersPageState extends State<OrdersPage> {
     });
   }
 
-  List<Order> _list(OrderFeed feed) {
-    if (_status == feed.statuses.first) {
-      return feed.orders;
+  /// 按状态过滤订单列表。
+  ///
+  /// 写成 **getter**（而不是 `build` 里的局部变量 / 带参方法）是刻意的：
+  /// ListView 的 itemBuilder 会被抽取成实例方法，方法体里只认「成员」（字段 /
+  /// getter / 方法），不认 build 的自由局部变量——`feed` 传进去会在 JS 侧变成
+  /// 未定义（`ReferenceError: Can't find variable: feed`）。
+  List<Order> get _visibleOrders {
+    if (_status == _feed!.statuses.first) {
+      return _feed!.orders;
     }
-    return feed.orders.where((o) => o.status == _status).toList();
+    return _feed!.orders.where((o) => o.status == _status).toList();
   }
 
   Color _statusColor(String status) => switch (status) {
@@ -65,11 +71,10 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    final feed = _feed;
-    if (feed == null) {
+    if (_feed == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    final list = _list(feed);
+    final list = _visibleOrders;
     return Column(
       // 状态条的白色底必须横贯整屏。Column 默认按子结点自身宽度居中排布，
       // `Container(color: white)` 会缩成状态条那么宽，"白底没铺满"。stretch
@@ -87,7 +92,7 @@ class _OrdersPageState extends State<OrdersPage> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    for (final s in feed.statuses)
+                    for (final s in _feed!.statuses)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: GestureDetector(

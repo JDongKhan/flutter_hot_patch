@@ -999,11 +999,11 @@ String hostArgsJs(List<String> positional, List<String> named) {
       '${named.join(', ')}}';
 }
 
-/// 闭包参数 → JS 函数表达式：`() {...}` → `function(){ ... }`、
-/// `(v) => expr` → `function(v){ return <expr>; }`。
+/// 闭包参数 → JS 函数表达式：`() {...}` → `() => { ... }`、
+/// `(v) => expr` → `(v) => { return <expr>; }`（一律箭头函数）。
 ///
 /// 闭包体逐语句翻译，其中 `setState(() {...})` 展开为
-/// `this.setState(function(){ ... })`（与组件方法体里的 setState 同构）。
+/// `this.setState(() => { ... })`（与组件方法体里的 setState 同构）。
 String? closureToJs(
   FunctionExpression fn,
   FieldScope scope,
@@ -1176,7 +1176,7 @@ String? methodCallExprJs(
   for (final a in args) {
     // 闭包参数（addListener(() {...}) / TextButton(onPressed: () => ...) 等）：
     // 翻译成 JS 函数表达式，匿名天然支持——不合成方法名、无重名问题。
-    // 闭包体逐语句翻译，setState(...) 展开为 this.setState(function(){...})。
+    // 闭包体逐语句翻译，setState(...) 展开为 this.setState(() => {...})。
     if (a is FunctionExpression) {
       final fnJs = closureToJs(a, scope, classes);
       if (fnJs == null) return null;
@@ -1689,7 +1689,7 @@ String? _switchExpressionJs(
   return '(() => { switch ($subj) {\n${arms.join('\n')}\n} })()';
 }
 
-/// 一条表达式语句 → JS：`setState(...)` 展开为 `this.setState(function(){...})`，
+/// 一条表达式语句 → JS：`setState(...)` 展开为 `this.setState(() => {...})`，
 /// 其余走 [exprStmtToJs]（赋值 / 自增 / `_model.inc()` 对象方法调用等）。
 String? _bodyExprStmtJs(
   Expression e,
@@ -1706,8 +1706,15 @@ String? _bodyExprStmtJs(
   return exprStmtToJs(e, scope, classes);
 }
 
-/// `setState(() => _x++)` → `this.setState(function(){ this._x += 1; });`
+/// `setState(() => _x++)` → `this.setState(() => { this._x += 1; });`
 /// （回调体逐语句翻译，与 Dart 原封同构）。
+///
+/// 回调**必须是箭头函数**（与 [closureToJs] 的口径一致）：`this` 词法绑定到
+/// 定义该回调的组件方法，也就是组件实例，正是 Dart 闭包捕获 `this` 的语义。
+/// 若产出 `function(){}`，回调里的 `this` 就取决于调用方是否 `.call(this)`——
+/// 运行时 `setState` 恰好会 `.call(this)` 兜住，但这是一层**隐式约定**：任何
+/// 不走该入口的调用路径（被抽成实例方法后由宿主按别的形式调用等）都会让回调
+/// 里的 `this._x` 变成 undefined，表现为「状态静默不更新」。
 String _setStateJs(
   FunctionExpression fn,
   FieldScope scope,
@@ -1720,11 +1727,11 @@ String _setStateJs(
   } else if (body is BlockFunctionBody) {
     inner = translateStmtList(body.block.statements, scope, classes, null);
   }
-  // 回调体保持内联（`function(){ ... }`），把多行折回单行。
+  // 回调体保持内联（`() => { ... }`），把多行折回单行。
   inner = inner.replaceAll('\n', ' ');
   return inner.isEmpty
-      ? 'this.setState(function(){});'
-      : 'this.setState(function(){ $inner });';
+      ? 'this.setState(() => {});'
+      : 'this.setState(() => { $inner });';
 }
 
 /// 翻译一个类的方法体 → JS。**组件与普通类共用这一条**：字段表 = 类自身实例

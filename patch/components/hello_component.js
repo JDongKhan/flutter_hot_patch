@@ -39,17 +39,17 @@ export class HelloCard {
   }
   inc() {
     console.debug("inc: count=" + __str(this._count));
-    this.setState(function(){ this._count += 1; });
+    this.setState(() => { this._count += 1; });
   }
   async loadUser() {
     var name = await _app_host_.invoke("getUserName", []);
     var userMap = await _app_host_.invoke("post", {"params": {"name": name}});
     console.log("用户信息:" + __str(userMap["code"]));
     await new Promise(function(r){ setTimeout(r, 1000); });
-    this.setState(function(){ this._user = new User({name: "Alice", age: 18}); });
+    this.setState(() => { this._user = new User({name: "Alice", age: 18}); });
   }
   reset() {
-    this.setState(function(){ this._count = 0; });
+    this.setState(() => { this._count = 0; });
   }
   showNative() {
     _app_host_.invoke("nativeToast", { message: "Hello from native (JS-driven)" });

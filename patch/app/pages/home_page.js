@@ -20,7 +20,7 @@ export class HomePage {
   }
   async _load() {
     var feed = await this._service.fetchHome();
-    this.setState(function(){ this._feed = feed; });
+    this.setState(() => { this._feed = feed; });
   }
   build(context) {
     var feed = this._feed;
@@ -29,10 +29,6 @@ export class HomePage {
           __h('CircularProgressIndicator', {})
         ]);
     }
-    var banners = feed.banners;
-    var grid = feed.grid;
-    var spots = feed.spots;
-    var adImg = feed.adImg;
     return __h('Container', {
         "color": '#fff4f5f7'
       }, [
@@ -49,7 +45,7 @@ export class HomePage {
                         "height": 150
                       }, [
                         __h('PageView', {}, [
-                            ...(() => { var out = []; for (let i = 0; (i < banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": banners[i] })]); } return out; })()
+                            ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": this._feed.banners[i] })]); } return out; })()
                           ])
                       ]),
                     __h('SizedBox', {
@@ -58,7 +54,7 @@ export class HomePage {
                     __h('Row', {
                         "mainAxisAlignment": "center"
                       }, [
-                        ...(() => { var out = []; for (let i = 0; (i < banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
+                        ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
                       ]),
                     __h('SizedBox', {
                         "height": 12
@@ -91,7 +87,7 @@ export class HomePage {
                             "crossAxisSpacing": 6,
                             "mainAxisExtent": 84
                           }, [
-                            ...(() => { var out = []; for (let i = 0; (i < grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": grid[i] })]); } return out; })()
+                            ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this._feed.grid[i] })]); } return out; })()
                           ])
                       ]),
                     __h('SizedBox', {
@@ -106,7 +102,7 @@ export class HomePage {
                         }
                       }, [
                         __h(PromoCard, {
-                            "img": adImg
+                            "img": this._feed.adImg
                           })
                       ]),
                     __h('SizedBox', {
@@ -167,7 +163,7 @@ export class HomePage {
               }, [
                 __h(SliverGrid, {
                     "builder": "_sliverBuilder0",
-                    "childCount": spots.length,
+                    "childCount": this._feed.spots.length,
                     "maxCrossAxisExtent": 300,
                     "mainAxisSpacing": 10,
                     "crossAxisSpacing": 10,
@@ -184,7 +180,7 @@ export class HomePage {
   }
   _sliverBuilder0(context, index) {
       return __h(SpotCard, {
-        "spot": spots[index]
+        "spot": this._feed.spots[index]
       });
   }
 }

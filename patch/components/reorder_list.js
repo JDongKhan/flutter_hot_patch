@@ -11,10 +11,10 @@ export class ReorderListDemo {
   }
   _onReorder(oldIndex, newIndex) {
     console.log(__str(oldIndex) + " - " + __str(newIndex));
-    this.setState(function(){ var item = this._items.splice(oldIndex, 1)[0]; var target = ((newIndex > oldIndex) ? (newIndex - 1) : newIndex); this._items.splice(target, 0, item); });
+    this.setState(() => { var item = this._items.splice(oldIndex, 1)[0]; var target = ((newIndex > oldIndex) ? (newIndex - 1) : newIndex); this._items.splice(target, 0, item); });
   }
   _add() {
-    this.setState(function(){ this._items.push("城市 " + (this._items.length + 1)); });
+    this.setState(() => { this._items.push("城市 " + (this._items.length + 1)); });
   }
   build(context) {
     return __h('Column', {
