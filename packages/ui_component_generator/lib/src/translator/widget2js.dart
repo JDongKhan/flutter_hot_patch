@@ -113,11 +113,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 与 [builderTrees] 同步的方法名（`_lbBuilderN` / `_consumerBuilderN`）。
   final List<String> builderNames = [];
 
-  /// 与 [builderTrees] 同步的形参名（null = 无参；Consumer 为 value）。
+  /// 与 [builderTrees] 同步的**形参声明**（Dart 闭包签名逐字对应，如
+  /// `context, index` / `context, value`——`context` 是 Dart
+  /// `build(BuildContext context)` 那个形参，被委托方法因此天然看得见它）。
   final List<String?> builderParams = [];
 
   /// 与 [builderTrees] 同步的「方法体前置语句」（JS 源码，如 Builder 闭包
-  /// 块体里的 `var model = this.watch('MyModel');`）。
+  /// 块体里的 `var model = context.watch('MyModel');`）。
   final List<String> builderPreludes = [];
 
   WidgetTranslateContext({

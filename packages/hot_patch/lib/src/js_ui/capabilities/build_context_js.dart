@@ -11,8 +11,10 @@
 //                  就是调 Dart 端 context」。
 //
 // 代理由运行时在 build 时**传入**（`inst.build(ctx)`，对应 Dart 的
-// `build(BuildContext context)` 签名），并缓存为 `this.context`：事件/延迟
-// 作用域里形参不可见，`this.context` 是同一对象的同步可达路径。
+// `build(BuildContext context)` 签名）；`this.context` 是同一条同步可达路径
+// （事件/延迟作用域里形参不可见），但按**执行位置**解析：`building` 非空时取
+// 它的代理——被委托的 builder 方法（`this` 是 owner）因此拿到**被委托组件**的
+// 代理，与 Dart 里闭包捕获 `context` 形参同语义（见 mini-react【6】的 augment）。
 //
 // 唯一的例外（同步约束，设计内）：`watch`/`read` 的**取值**必须同步（渲染期
 // `model.count` 要直接读），而 JS→宿主只有异步桥，故值在本端按**类型名**沿
@@ -75,7 +77,9 @@ const String buildContextJsSource = r'''
     return value == null ? undefined : value;
   };
 
-  // 组件实例 → 代理（每个实例一个，缓存；build 传参与 `this.context` 同一对象）。
+  // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，
+  // build 形参与 `this.context` 是同一个对象：前者由 buildOf 传入 `contextOf(inst)`，
+  // 后者由 getter 传 `building`，而 `buildOf` 期间 `building === inst`。
   function contextOf(inst) {
     if (inst.__ctx == null) { inst.__ctx = buildContextOf(inst); }
     return inst.__ctx;

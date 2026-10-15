@@ -4,7 +4,9 @@
 ///   - element：`Text({...})` 返回的不可变描述对象；
 ///   - component/state：状态、setState、build 都在 JS；
 ///   - reconciler：重建 -> 对比 -> 产出 patch ops；
-///   - context/provider：纯 JS 的作用域查找 + 订阅，宿主完全不感知；
+///   - 作用域/context：按**类型名**向上查找 + 订阅（不关心类型是模型还是别的），
+///     取值在 JS 内同步完成；同时向宿主发同名 op，由宿主在真值 BuildContext 上
+///     登记依赖（宿主侧的权威校验）；
 ///   - bridge：出方向只有一个对外入口 `__jsui.host(channel, args)`——
 ///     JS 发起调用，宿主实现后用 `__jsui.resolve(id, value)` 回填 Promise。
 ///     增量补丁 `jsuiCommit`、日志 `log`、native 通道、@HostInjected 方法
@@ -46,7 +48,7 @@
 /// | 【9】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
 /// | 【10】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
 ///
-/// 跨分区交叉点用行内 `[provider]` / `[mini-react]` 标注，便于判断
+/// 跨分区交叉点用行内 `[ctx]` / `[mini-react]` 标注，便于判断
 /// 「这段代码是为哪个设计写的」。
 library;
 
@@ -187,10 +189,10 @@ const String _jsUiGlobalsTail = r'''
   var pageHandles = {};
   // 正在 mount/patch/flush 的根；emit / 结点归属都读它。
   var activeRoot = null;
-  // 正在构建的元素（build 执行期）——`context` 的锚点。watch/read 据此
-  // 定位 provider 并订阅（与 Dart 的 BuildContext 语义一致：按**位置**而非
-  // 「谁定义了这个方法」）。委托型组件（Builder/Consumer）把 builder 方法
-  // 以 owner 为 this 调用时，锚点仍是它们自身的结点。
+  // 正在构建的元素（build 执行期）——`context` 的锚点。`context.watch/read` 据此
+  // 定位**作用域**（按类型名向上找，见【7】）并订阅（与 Dart 的 BuildContext
+  // 语义一致：按**位置**而非「谁定义了这个方法」）。委托型组件（Builder/Consumer）
+  // 把 builder 方法以 owner 为 this 调用时，锚点仍是它们自身的结点。
   var building = null;
 
   // id 统一规则：`<端>:<种类>/<子类>#<序号>`（子类可省），序号全局单调仅用于
@@ -397,12 +399,9 @@ const String _jsUiRuntimeSkeletonTail = r'''
 })();
 ''';
 
-/// UI 运行时源码 = 骨架 + 各能力 JS 片段拼接（能力片段见 capabilities/*_js.dart）。
-/// 顺序：骨架头部 → 滚动控制器 → 文本控制器 → 骨架尾部（同一 IIFE 作用域，
-/// 片段间靠函数提升/后声明互相引用，与拆分前语义一致）。
-/// UI 运行时源码 = 骨架各分区 + 各能力 JS 片段拼接（片段见上；同一 IIFE
-/// 作用域，片段间靠函数提升/后声明互相引用，与拆分前语义一致）。
-/// js_ui 运行时骨架（IIFE），由 [ensureJsUiRuntime] 注入。
+/// js_ui 运行时源码 = 骨架各分区 + 各能力 JS 片段拼接（IIFE），由
+/// [ensureJsUiRuntime] 注入。所有片段在**同一 IIFE 作用域**，片段间靠函数
+/// 提升 / 后声明互相引用，与拆分前语义一致。
 /// 环境全局（模块表 / 标志 / console）并入 [_jsUiGlobals]；ChangeNotifier
 /// 基类经 [changeNotifierSource] 拼接（均在 IIFE 内定义、挂 G 暴露给产物）。
 String jsUiRuntimeSource() => [
@@ -413,7 +412,7 @@ String jsUiRuntimeSource() => [
   miniReactElementSource,
   miniReactReconcilerUtilsSource,
   miniReactComponentBaseSource,
-  miniReactProviderSource,
+  miniReactScopeSource,
   miniReactSchedulerSource,
   miniReactReconcilerSource,
   _jsUiApi,

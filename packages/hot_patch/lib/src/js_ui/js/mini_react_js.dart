@@ -104,9 +104,8 @@ const String miniReactComponentBaseSource = r'''
 
   // ===== 【6】mini-react｜组件基类（生成器产物的能力袋）===============
   // 生成器产物**不** extends 本类：`augment` 把这些方法拷到实例上。
-  // setState / __bind 属于 mini-react；provider 的上下文（watch/read）与
-  // BuildContext 代理见【10.7】（调用面是 `context.watch/read`，与 Dart 一致，
-  // 不在实例上挂 `this.watch`）。
+  // setState / __bind 属于 mini-react；上下文（`context.watch/read`）与
+  // BuildContext 代理见【10.7】（调用面与 Dart 一致，不在实例上挂 `this.watch`）。
   function Component(props) { this.props = props || {}; }
   Component.prototype.setState = function (mutate) {
     if (typeof mutate === 'function') { mutate.call(this); }
@@ -184,7 +183,7 @@ const String miniReactComponentBaseSource = r'''
 ''';
 
 /// 作用域｜按**类型名**向上查找 + 消费者侧订阅（scopeOf / subscribeListenable）【7】。
-const String miniReactProviderSource = r'''
+const String miniReactScopeSource = r'''
 
   // ===== 【7】作用域｜按类型名向上查找 + 消费者侧订阅 ==================
   // **与 Flutter 的 InheritedWidget 同语义**：宿主结点用 `__provides`
@@ -226,7 +225,7 @@ const String miniReactProviderSource = r'''
   }
 
   // 订阅：给 [value] 挂一个「把 [anchor] 标脏」的监听。订阅由**消费者自己持有**
-  // （提供者不记账），台账记在消费者侧 `__vmSubs`，卸载时精确退订。
+  // （提供者不记账），台账记在消费者侧 `__subs`，卸载时精确退订。
   // 按值身份去重：重建会再次 watch，但不会重复挂监听。
   // 这条通路复用的是原生 ChangeNotifier API（不是 provider 私有记账）：
   // notify 时把订阅位置标脏 → 重建 → 下发 patch → 宿主结点重建，UI 才真正更新。
@@ -236,7 +235,7 @@ const String miniReactProviderSource = r'''
   // 也合法，只是没有本端订阅可言）。
   function subscribeListenable(anchor, value) {
     if (!value || typeof value.addListener !== 'function') { return; }
-    var mine = anchor.__vmSubs || (anchor.__vmSubs = []);
+    var mine = anchor.__subs || (anchor.__subs = []);
     for (var i = 0; i < mine.length; i++) {
       if (mine[i].value === value) { return; }
     }
@@ -250,7 +249,7 @@ const String miniReactProviderSource = r'''
 
   // 卸载时按消费者自己记录的台账精确退订。
   function unsubscribeAll(inst) {
-    var mine = inst.__vmSubs;
+    var mine = inst.__subs;
     if (!mine) { return; }
     for (var i = 0; i < mine.length; i++) {
       var value = mine[i].value;
@@ -258,7 +257,7 @@ const String miniReactProviderSource = r'''
         value.removeListener(mine[i].listener);
       }
     }
-    inst.__vmSubs = null;
+    inst.__subs = null;
   }
 
 ''';
@@ -293,7 +292,7 @@ const String miniReactSchedulerSource = r'''
           inst.__dirty = false;
           if (inst.__unmounted) { continue; }
           root.ops = [];
-          // provider 依赖变更（__depDirty）走这里：与 Flutter 一致，
+          // 作用域依赖变更（__depDirty）走这里：与 Flutter 一致，
           // 先 didChangeDependencies 再 build；setState 触发的重建不调。
           if (inst.__depDirty) {
             inst.__depDirty = false;
@@ -318,7 +317,7 @@ const String miniReactReconcilerSource = r'''
   // ===== 【9】mini-react｜reconciler 主流程（mount / patch / unmount）==
   // 普通类组件（生成器产物不 extends Component）挂载基类能力：
   //   [mini-react] props / setState / __bind（构建期事件句柄）
-  //   [ctx]        context（BuildContext 代理 —— build 传参的同一对象）
+  //   [ctx]        context（BuildContext 代理 —— build 传参 / `this.context`）
   // 对 extends Component 的类重复赋值无害。
   function augment(inst) {
     if (inst.props === undefined || inst.props === null) {
@@ -547,7 +546,7 @@ const String miniReactReconcilerSource = r'''
       if (typeof inst.dispose === 'function') {
         try { inst.dispose(); } catch (e) {}
       }
-      // [scope] 从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 `__vmSubs`）。
+      // [scope] 从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 `__subs`）。
       unsubscribeAll(inst);
       // [ctx] 释放 BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有
       // 真实记录（句柄→结点），纯本端删除会让宿主那条记录留到页面销毁。
