@@ -1,13 +1,15 @@
-// ===== 三方库接入模板（基座唯一的扩展缝）=====
+// ===== 能力接入模板（基座唯一的扩展缝）=====
 //
-// **设计初衷**：让「支持一个新三方库（provider / GetX / Riverpod …）」的全部
-// 改动**收敛在一个子类里**，hot_patch 的核心文件从此不再变动。
+// **设计初衷**：让「支持一个新能力」的全部改动**收敛在一个子类里**，
+// hot_patch 的核心文件从此不再变动。这里的「能力」既包括 Flutter 等价物
+// （Key / 各 Controller / BuildContext 代理 / NotificationListener），也包括
+// 新引入的三方库（provider / GetX / Riverpod …）——两者机制完全一致。
 //
-// 一个库在宿主侧的落点无非四类，本模板各留一个可重写钩子：
+// 一个能力在宿主侧的落点无非四类，本模板各留一个可重写钩子：
 //   1. [jsFragments]      —— 需要注入 JS 运行时的片段（同一 IIFE 作用域，
 //                            可调用核心的 `registerScope` / `scopeOf` / `reg` …）；
-//   2. [ensureChannels]   —— 幂等登记本库用到的跨语言句柄 kind；
-//   3. [registerWidgets]  —— 本库的宿主侧组件映射（`type` → Flutter widget）；
+//   2. [ensureChannels]   —— 幂等登记本能力用到的跨语言句柄 kind；
+//   3. [registerWidgets]  —— 本能力的宿主侧组件映射（`type` → Flutter widget）；
 //   4. [resolveWatchTarget] —— `context.watch<T>()` / `read<T>()` 下行的宿主
 //                            解析钩子：在**真值 element 树**上按类型名找到可
 //                            订阅对象（同步取值仍留在 JS，这里只决定「订阅谁」）。
@@ -17,15 +19,27 @@
 //   - 完全不动 hot_patch：在 App 自己的 `main()`（`runApp` 之前）调
 //     `registerJsUiLibrary(GetxLibrary())` 即可。
 //
+// **不进模板的地基**（核心本体，不属于任何可插拔能力）：
+//   - `ensureHandleChannels()`：句柄注册表本身，必须先于一切能力就绪；
+//   - `registerBuiltinJsWidgets(r)`：Text/Column 等 Flutter 基础视觉组件；
+//   - JS 骨架（mini-react / emit / host 桥）：见 runtime_source.dart。
+//
 // **边界（务必知晓）**：本模板覆盖的是**运行时/宿主侧**。若新库还要新增 UI
 // 组件类型，其**编译期**翻译（ui_component_generator 的 translator 与
 // `patch/<pkg>.js` 里的 JS 组件类）属于另一条缝，不在本文件范围内。
 import 'package:flutter/widgets.dart';
 
 import '../js_widget_registry.dart';
+import 'build_context/build_context_library.dart';
+import 'change_notifier/change_notifier_library.dart';
+import 'key/key_library.dart';
+import 'notification_listener/notification_listener_library.dart';
 import 'provider/provider_library.dart';
+import 'scroll_controller/scroll_controller_library.dart';
+import 'tab_drawer/tab_drawer_library.dart';
+import 'text_editing_controller/text_editing_controller_library.dart';
 
-/// 三方库在宿主的接入模板：**新增一个库 = 继承本类 + 注册**。
+/// 能力在宿主的接入模板：**新增一个能力 = 继承本类 + 注册**。
 ///
 /// 所有钩子都有空实现，子类只重写真正需要的那些；核心不 import 任何具体库。
 abstract class JsUiLibrary {
@@ -66,7 +80,7 @@ final List<JsUiLibrary> _libraries = [];
 
 bool _seeded = false;
 
-/// 注册一个三方库（幂等：同 [JsUiLibrary.id] 只保留首个）。
+/// 注册一个能力（幂等：同 [JsUiLibrary.id] 只保留首个）。
 ///
 /// 可在 App 的 `main()` 里调用（`runApp` 之前），从而**完全不改 hot_patch**。
 void registerJsUiLibrary(JsUiLibrary library) {
@@ -76,21 +90,34 @@ void registerJsUiLibrary(JsUiLibrary library) {
   _libraries.add(library);
 }
 
-/// 全部已注册库。首次访问时注入内建库——惰性求值，避免 [jsUiRuntimeSource]
+/// 全部已注册能力。首次访问时注入内建能力——惰性求值，避免 [jsUiRuntimeSource]
 /// 在 `ensureJsUiCapabilities` 之前被调用时拿到空清单。
 List<JsUiLibrary> get jsUiLibraries {
   _seedBuiltins();
   return List.unmodifiable(_libraries);
 }
 
-/// 内建库清单：**新增内建库只改这一行**（外部库走 App 侧 register，不动本文件）。
+/// 内建能力清单：**新增内建能力只改这里一行**（外部库走 App 侧 register，
+/// 不动本文件）。
+///
+/// **注册顺序 = JS 片段拼接顺序**（先内建基础能力、后三方库，三方库可依赖
+/// 前面的能力），也是 `ensureChannels` / `registerWidgets` 的遍历顺序。
 void _seedBuiltins() {
   if (_seeded) return;
   _seeded = true;
+  registerJsUiLibrary(const ChangeNotifierLibrary());
+  registerJsUiLibrary(const ScrollControllerLibrary());
+  registerJsUiLibrary(const TextEditingControllerLibrary());
+  registerJsUiLibrary(const TabDrawerLibrary());
+  registerJsUiLibrary(const KeyLibrary());
+  registerJsUiLibrary(const BuildContextLibrary());
+  // 纯宿主侧能力（无片段、无通道），位置不影响产物，列在此处便于对照。
+  registerJsUiLibrary(const NotificationListenerLibrary());
+  // ── 三方库 ──
   registerJsUiLibrary(const ProviderLibrary());
 }
 
-/// 按类型名解析「可订阅对象」：遍历各库，第一个非 null 即命中。
+/// 按类型名解析「可订阅对象」：遍历各能力，第一个非 null 即命中。
 ///
 /// 同名就近遮蔽由各库自己的解析实现保证（provider 用 `jsType == type` 过滤，
 /// 不取「最近的那个」——见 ProviderLibrary）。

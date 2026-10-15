@@ -147,10 +147,10 @@ class JsWidgetRegistry {
 /// 只覆盖「JS 侧组件用到的、Flutter 侧真实存在的」类型；未注册的类型渲染为
 /// 错误占位（便于定位缺失的翻译），而不是静默空白。
 ///
-/// 状态类 widget 分两处：
-///   - provider 三件套（ChangeNotifierProvider / Consumer / ListenableBuilder）
-///     属于**三方库**，不在此注册——由 provider 的 JsUiLibrary 子类注册
-///     （见 capabilities/provider/provider_library.dart）；本核心文件不 import 它；
+/// 除基础视觉组件外的 widget 分两处：
+///   - 各能力/三方库的组件（provider 三件套、TextField、ListView、TabBar、
+///     NotificationListener …）**不在此注册**——由各自的 JsUiLibrary 子类注册
+///     （见 capabilities/<能力>/<能力>_library.dart）；本核心文件不 import 它们；
 ///   - Builder **不在这里**：它是无状态委托，纯 JS 逻辑，宿主零感知。
 void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('Text', (c) => Text(

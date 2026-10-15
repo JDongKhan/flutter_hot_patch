@@ -374,11 +374,11 @@ void main() {
       unregisterJsBuildContext('w1');
     });
 
-    // 三方库模板的自证：把「新引入一个库（provider/GetX/…）」压缩成
-    // 「写一个 JsUiLibrary 子类 + register」——核心三个聚合入口
+    // 能力模板的自证：把「新引入一个能力（内建等价物或 provider/GetX/… 三方库）」
+    // 压缩成「写一个 JsUiLibrary 子类 + register」——核心三个聚合入口
     // （jsUiRuntimeSource / ensureJsUiCapabilities / registerAllJsWidgets）
     // 与类型解析入口（resolveWatchTarget）**不改一行**就把它接上。
-    group('三方库模板：继承 + register 即被核心消费（核心零改动）', () {
+    group('能力模板：继承 + register 即被核心消费（核心零改动）', () {
       // 句柄通道的宿主入口（与 provider group 同形）。
       void handle(Map<String, Object?> body) {
         ensureJsUiCapabilities();
@@ -387,6 +387,36 @@ void main() {
           'args': [body],
         });
       }
+
+      test('内建能力全部经模板注册（防漏注册哨兵）', () {
+        ensureJsUiCapabilities();
+        // 内建能力（Flutter 等价物 + provider）都在同一张注册表里 ——
+        // 聚合文件不再逐个列出能力名，故用哨兵钉住「一个都不能漏」。
+        expect(jsUiLibraries.map((l) => l.id), containsAll(<String>[
+          'change-notifier',
+          'scroll-controller',
+          'text-editing-controller',
+          'tab-drawer',
+          'key',
+          'build-context',
+          'notification-listener',
+          'provider',
+        ]));
+
+        // 五类能力的组件映射都经「遍历注册表」到达，外加核心地基的基础组件。
+        final registry = JsWidgetRegistry();
+        registerAllJsWidgets(registry);
+        for (final type in const [
+          'TextField', // text_editing_controller
+          'ListView', // scroll_controller
+          'TabBarView', // tab_drawer
+          'NotificationListener', // notification_listener
+          'ChangeNotifierProvider', // provider
+          'Text', // 核心地基 registerBuiltinJsWidgets
+        ]) {
+          expect(registry.has(type), isTrue, reason: '缺失组件映射: $type');
+        }
+      });
 
       test('四个钩子被核心聚合入口消费：片段 / 通道 / 组件', () {
         // 注册表是全局的（测试间累积），故每个 Fake 用**独有**的提供类型，

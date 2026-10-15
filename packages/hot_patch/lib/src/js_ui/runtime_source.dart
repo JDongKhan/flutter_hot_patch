@@ -55,23 +55,12 @@ library;
 import 'package:flutter/foundation.dart'
     show kDebugMode, kReleaseMode, defaultTargetPlatform, TargetPlatform;
 
-// 能力 JS 片段（各能力文件内聚，runtime_source 拼接注入）：
-//   - 核心片段（Flutter 等价物，固定在 [jsUiRuntimeSource] 列表里）：
-//       capabilities/scroll_controller/scroll_controller_js.dart → ScrollController 代理类
-//       capabilities/text_editing_controller/text_editing_controller_js.dart → TextEditingController 代理类
-//       capabilities/tab_drawer/tab_controller_js.dart → TabController 代理类
-//       capabilities/key/key_js.dart                → ValueKey/ObjectKey/UniqueKey/GlobalKey 代理类
-//       capabilities/build_context/build_context_js.dart → BuildContext 代理（`this.context`）
-//       js/handle_registry_js.dart                  → 跨语言句柄注册表（通用层地基）
-//   - 三方库片段：**不在此 import**，由各库的 [JsUiLibrary.jsFragments] 提供
-//     （见 capabilities/js_ui_library.dart；provider 见 capabilities/provider/）。
-import 'capabilities/build_context/build_context_js.dart';
+// 能力 JS 片段**不在此 import**：各能力（Flutter 等价物与三方库一视同仁）的
+// 片段由自己的 [JsUiLibrary.jsFragments] 提供，[jsUiRuntimeSource] 遍历注册表
+// 拼接（见 capabilities/js_ui_library.dart 的 _seedBuiltins）。
+// 本文件只保留**骨架地基**片段：
+//       js/handle_registry_js.dart → 跨语言句柄注册表（必须先于一切能力）
 import 'capabilities/js_ui_library.dart';
-import 'capabilities/key/key_js.dart';
-import 'capabilities/scroll_controller/scroll_controller_js.dart';
-import 'capabilities/tab_drawer/tab_controller_js.dart';
-import 'capabilities/change_notifier/change_notifier_js.dart';
-import 'capabilities/text_editing_controller/text_editing_controller_js.dart';
 import 'js/handle_registry_js.dart';
 import 'js/mini_react_js.dart';
 
@@ -405,11 +394,11 @@ const String _jsUiRuntimeSkeletonTail = r'''
 /// [ensureJsUiRuntime] 注入。所有片段在**同一 IIFE 作用域**，片段间靠函数
 /// 提升 / 后声明互相引用，与拆分前语义一致。
 ///
-/// 核心与三方库的接缝即 [jsUiLibraries]：新增一个库（provider / GetX / …）只
-/// 需在自己的 [JsUiLibrary] 子类里声明 [JsUiLibrary.jsFragments]，**本文件不再
-/// 变动**（列出的核心片段是 Flutter 等价物，不属于三方库）。
-/// 环境全局（模块表 / 标志 / console）并入 [_jsUiGlobals]；ChangeNotifier
-/// 基类经 [changeNotifierSource] 拼接（均在 IIFE 内定义、挂 G 暴露给产物）。
+/// 核心与能力的接缝即 [jsUiLibraries]：任何能力（Flutter 等价物 Key /
+/// 各 Controller / BuildContext 代理，或三方库 provider / GetX / …）只需在
+/// 自己的 [JsUiLibrary] 子类里声明 [JsUiLibrary.jsFragments]，**本文件不再
+/// 变动**；本文件只保留骨架地基（句柄注册表必须先于一切能力）。
+/// 环境全局（模块表 / 标志 / console）并入 [_jsUiGlobals]。
 String jsUiRuntimeSource() => [
   _jsUiGlobals(),
   _jsUiEmit,
@@ -422,13 +411,8 @@ String jsUiRuntimeSource() => [
   miniReactSchedulerSource,
   miniReactReconcilerSource,
   _jsUiApi,
-  changeNotifierSource,
-  scrollControllerJsSource,
-  textEditingControllerJsSource,
-  tabControllerJsSource,
-  keyJsSource,
-  buildContextJsSource,
-  // 三方库片段：位于核心之后（可安全调用核心函数）、IIFE 收尾之前。
+  // 各能力/三方库片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
+  // 顺序 = capabilities/js_ui_library.dart 的注册顺序。
   for (final library in jsUiLibraries) ...library.jsFragments,
   _jsUiRuntimeSkeletonTail,
 ].join('\n');
