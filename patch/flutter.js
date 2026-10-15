@@ -21,12 +21,12 @@ export class Builder {
     this.props = props || {};
     this.children = children || [];
   }
-  build() {
+  build(context) {
     var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    return owner[name].call(owner);
+    return owner[name].call(owner, context);
   }
 }
 
@@ -41,7 +41,7 @@ export class GridView {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
@@ -52,8 +52,8 @@ export class GridView {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
+      out.push(owner[this.props.builder].call(owner, context, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
     // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
     // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
@@ -72,7 +72,7 @@ export class ListView {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
@@ -83,8 +83,8 @@ export class ListView {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
+      out.push(owner[this.props.builder].call(owner, context, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
     // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
     // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
@@ -114,10 +114,10 @@ export class ListenableBuilder {
       l.addListener(this.__listener);
     }
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var child = owner[this.props.builder].call(owner);
+    var child = owner[this.props.builder].call(owner, context);
     return __h('ListenableBuilder', { vm: owner[this.props.listenable] }, [child]);
   }
   dispose() {
@@ -138,7 +138,7 @@ export class SliverFillViewport {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
@@ -149,8 +149,8 @@ export class SliverFillViewport {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
+      out.push(owner[this.props.builder].call(owner, context, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
     // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
     // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
@@ -169,7 +169,7 @@ export class SliverFixedExtentList {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
@@ -180,8 +180,8 @@ export class SliverFixedExtentList {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
+      out.push(owner[this.props.builder].call(owner, context, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
     // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
     // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
@@ -200,7 +200,7 @@ export class SliverGrid {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
@@ -211,8 +211,8 @@ export class SliverGrid {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
+      out.push(owner[this.props.builder].call(owner, context, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
     // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
     // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
@@ -231,7 +231,7 @@ export class SliverList {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
@@ -242,8 +242,8 @@ export class SliverList {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
+      out.push(owner[this.props.builder].call(owner, context, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
     // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
     // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。

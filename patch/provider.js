@@ -43,13 +43,13 @@ export class Consumer {
     this.props = props || {};
     this.children = children || [];
   }
-  build() {
-    var vm = this.watch(this.props.model);
+  build(context) {
+    var vm = context.watch(this.props.model);
     var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    var child = owner[name].call(owner, vm);
+    var child = owner[name].call(owner, context, vm);
     return __h('Consumer', { model: this.props.model, vm: vm }, [child]);
   }
 }

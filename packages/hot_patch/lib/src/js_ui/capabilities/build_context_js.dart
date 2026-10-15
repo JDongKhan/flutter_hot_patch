@@ -86,9 +86,4 @@ const String buildContextJsSource = r'''
     var root = activeRoot || inst.__root;
     return new JsBuildContext(inst, root ? 'page:' + root.key : null);
   }
-
-  // 顶层暴露给**产物模块**（flutter.js / provider.js 等独立模块里的组件类要
-  // 按 Dart 签名把 context 传给被委托的 builder 方法，如
-  // `owner[_builderN].call(owner, __ctxOf(this), index)`）。
-  G.__ctxOf = contextOf;
 ''';

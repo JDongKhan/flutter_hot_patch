@@ -852,7 +852,7 @@ export class ScrollDetail {
           ])
       ]);
   }
-  _listViewBuilder0(index) {
+  _listViewBuilder0(context, index) {
       return __h('ListTile', {
         "title": "builder item " + index,
         "leading": __h('Icon', {
@@ -860,7 +860,7 @@ export class ScrollDetail {
           })
       });
   }
-  _listViewBuilder1(index) {
+  _listViewBuilder1(context, index) {
       return __h('ListTile', {
         "title": "separated item " + index,
         "leading": __h('Icon', {
@@ -870,7 +870,7 @@ export class ScrollDetail {
         "dense": true
       });
   }
-  _listViewBuilderSeparator2(index) {
+  _listViewBuilderSeparator2(context, index) {
       return __h('Divider', {
         "height": 1
       });
@@ -1199,7 +1199,7 @@ export class SliverDetail {
           })
       });
   }
-  _sliverListBuilder0(index) {
+  _sliverListBuilder0(context, index) {
       return __h('ListTile', {
         "title": "builder item " + index,
         "subtitle": "index * 10 = " + (index * 10),
@@ -1209,7 +1209,7 @@ export class SliverDetail {
           })
       });
   }
-  _sliverListBuilder1(index) {
+  _sliverListBuilder1(context, index) {
       return __h('ListTile', {
         "title": "separated item " + index,
         "leading": __h('Icon', {
@@ -1219,12 +1219,12 @@ export class SliverDetail {
         "dense": true
       });
   }
-  _sliverListBuilderSeparator2(index) {
+  _sliverListBuilderSeparator2(context, index) {
       return __h('Divider', {
         "height": 1
       });
   }
-  _sliverBuilder3(index) {
+  _sliverBuilder3(context, index) {
       return __h('ListTile', {
         "title": "fixed item " + index,
         "leading": __h('Icon', {
@@ -1234,7 +1234,7 @@ export class SliverDetail {
         "dense": true
       });
   }
-  _sliverGridBuilder4(index) {
+  _sliverGridBuilder4(context, index) {
       return __h('Container', {
         "alignment": "center",
         "decoration": {
@@ -1367,7 +1367,7 @@ export class GridDetail {
           })
       });
   }
-  _gridViewBuilder0(index) {
+  _gridViewBuilder0(context, index) {
       return __h('Container', {
         "alignment": "center",
         "decoration": {
@@ -1385,7 +1385,7 @@ export class GridDetail {
           })
       ]);
   }
-  _gridViewBuilder1(index) {
+  _gridViewBuilder1(context, index) {
       return __h('Container', {
         "alignment": "center",
         "decoration": {
@@ -1827,7 +1827,7 @@ export class NotifierCard {
   dispose() {
     this._model.dispose();
   }
-  _lbBuilder0() {
+  _lbBuilder0(context) {
       return __h('Text', {
         "data": "count = " + this._model.count,
         "style": {

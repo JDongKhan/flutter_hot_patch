@@ -1056,8 +1056,8 @@ List<CollectionElement>? _sliverListDelegateChildren(Expression? delegate) {
 /// `$prefix$idx(context, index)` 实例方法（builderTrees 机制），返回方法名。
 ///
 /// **形参与 Dart 闭包签名一一对应**（context 不再剔除）：JS 侧由被委托的
-/// 代理类按 Dart 签名传自身结点上的 BuildContext 代理
-/// （`owner[name].call(owner, __ctxOf(this), index)`，见 builderProxySource）。
+/// 代理类把 **build 收到的 context 形参**原样传下来
+/// （`owner[name].call(owner, context, index)`，见 builderProxySource）。
 ///
 /// 两种体形态都支持：
 ///   - 箭头体 `(context, i) => _Card(...)`：表达式即子树；
@@ -2011,8 +2011,8 @@ class SliderTranslator extends WidgetTranslator {
 ///
 /// 闭包返回的子树抽到组件方法 `_lbBuilderN(context)`（ctx.builderTrees 收集），节点
 /// props 只引用 `listenable`（模型成员名）与 `builder`（方法名）。JS 侧
-/// ListenableBuilder 组件类调用时传自身结点上的 BuildContext 代理
-/// （`owner[props.builder].call(owner, __ctxOf(this))`），模型 notify 后重新调用
+/// ListenableBuilder 组件类调用时把 **build 收到的 context 形参**原样传下去
+/// （`owner[props.builder].call(owner, context)`），模型 notify 后重新调用
 /// `_lbBuilderN()` 拿到最新子树，做「仅此节点」的局部重建（不全量 setState）。
 class ListenableBuilderTranslator extends WidgetTranslator {
   const ListenableBuilderTranslator();
@@ -2066,8 +2066,8 @@ class ListenableBuilderTranslator extends WidgetTranslator {
 ///
 /// 闭包返回的子树抽到组件方法 `_builderN(context)`（与 ListenableBuilder 同机制，
 /// 但无订阅——Builder 本身无 listenable；watch 的订阅由 watch 内部处理）。
-/// JS 侧 Builder 组件类调用时传**它自己结点上的** BuildContext 代理
-/// （`owner[_builderN].call(owner, __ctxOf(this))`，见 widget_module_builder），
+/// JS 侧 Builder 组件类调用时把 **build 收到的 context 形参**原样传下去
+/// （`owner[_builderN].call(owner, context)`，见 widget_module_builder），
 /// 与 Dart 的 `Builder(builder: (context) => …)` 形参语义一致。
 /// 块体闭包支持：return 前允许局部变量声明（`final model = ...` → 方法体
 /// 前置 `var model = ...;`）与日志语句（debugPrint/print → console 方法）。
@@ -2296,7 +2296,7 @@ class ConsumerTranslator extends WidgetTranslator {
           'Consumer.builder 需要 (context, value[, child]) 参数');
     }
     // 闭包第一个形参是 BuildContext：按 Dart 签名收下（JS 侧 Consumer 组件类
-    // 调用时传自身结点上的代理：`owner[name].call(owner, __ctxOf(this), vm)`）。
+    // 调用时把 build 的 context 形参传下来：`owner[name].call(owner, context, vm)`）。
     final rawCtx = params.isEmpty ? null : params[0].name?.lexeme;
     final ctxName = (rawCtx == null || rawCtx == '_') ? 'context' : rawCtx;
     ctx.addLocal(ctxName);

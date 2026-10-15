@@ -38,8 +38,8 @@ export class WatchDemo {
           ])
       ]);
   }
-  _builder0() {
-      var model = this.watch("CounterVm");
+  _builder0(context) {
+      var model = context.watch("CounterVm");
       return __h('Column', {
         "mainAxisSize": "min"
       }, [
@@ -63,7 +63,7 @@ export class WatchDemo {
             __h('Button', {
                 "kind": "elevated",
                 "label": "+1",
-                "event": this.__bind("this.read(\"CounterVm\").inc()")
+                "event": this.__bind("this.context.read(\"CounterVm\").inc()")
               }),
             __h('SizedBox', {
                 "width": 12
@@ -71,7 +71,7 @@ export class WatchDemo {
             __h('Button', {
                 "kind": "elevated",
                 "label": "Reset",
-                "event": this.__bind("this.read(\"CounterVm\").reset()")
+                "event": this.__bind("this.context.read(\"CounterVm\").reset()")
               })
           ])
       ]);
@@ -83,9 +83,9 @@ export class WatchCountLabel {
   constructor() {
   }
   build(context) {
-    var model = this.watch("CounterVm");
+    var model = context.watch("CounterVm");
     return __h('Text', {
-        "data": "another State: count = " + this.watch("CounterVm").count,
+        "data": "another State: count = " + model.count,
         "style": {
           "fontSize": 16,
           "color": '#2196F3'

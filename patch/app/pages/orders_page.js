@@ -61,7 +61,7 @@ export class OrdersPage {
           ])
       ]);
   }
-  _listViewBuilder0(i) {
+  _listViewBuilder0(context, i) {
       var o = this._list[i];
       return __h(_OrderCard, {
         "order": o,
@@ -69,7 +69,7 @@ export class OrdersPage {
         "onOpen": () => { return __jsui.host("openOrder", [o.no]); }
       });
   }
-  _listViewBuilderSeparator1(_) {
+  _listViewBuilderSeparator1(context, _) {
       return __h('SizedBox', {
         "height": 10
       });

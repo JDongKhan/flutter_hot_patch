@@ -134,10 +134,10 @@ export class ProviderCard {
   dispose() {
     this._modelB.dispose();
   }
-  _consumerBuilder0(value) {
+  _consumerBuilder0(context, value) {
       return this._buildBadge();
   }
-  _consumerBuilder1(value) {
+  _consumerBuilder1(context, value) {
       return __h('Text', {
         "data": "加载用户信息：",
         "style": {
@@ -147,7 +147,7 @@ export class ProviderCard {
         }
       });
   }
-  _consumerBuilder2(value) {
+  _consumerBuilder2(context, value) {
       return __h('Text', {
         "data": "B = " + value.count,
         "style": {

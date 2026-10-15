@@ -119,7 +119,11 @@ export function __h(type, props, children) {
 /// 的 `__owner()` 向上找拥有者方法机制一致。
 ///
 /// 只在 builder 形态下被渲染层引用（普通 children/delegate 形态直接是宿主节点
-/// `__h('SliverList', ...)`），因此 build() 无需再判形态。
+/// `__h('SliverList', ...)`），因此 build 无需再判形态。
+///
+/// 被委托方法的第一个实参是 **build 的 `context` 形参**（运行时统一
+/// `inst.build(contextOf(inst))` 传入，锚点就是本代理组件自身的结点，与 Dart 侧
+/// `ListView.builder(itemBuilder: (context, i) => …)` 的形参同源），无需再自行查找。
 String builderProxySource(String type) {
   return '''
 export class $type {
@@ -133,7 +137,7 @@ export class $type {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
     var out = [];
@@ -144,8 +148,8 @@ export class $type {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, __ctxOf(this), i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, __ctxOf(this), i)); }
+      out.push(owner[this.props.builder].call(owner, context, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
     // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
     // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
@@ -172,21 +176,21 @@ const Map<String, String> logicWidgetSources = {
 };
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
-/// （`_builderN(context)`，含 `var model = this.context.watch(...)` 前置语句）拿子树。
-/// 传入的 context 是**本组件自己的**代理（`__ctxOf(this)`），与 Dart 侧
-/// `Builder(builder: (context) => …)` 的形参一致。
+/// （`_builderN(context)`，含 `var model = context.watch(...)` 前置语句）拿子树。
+/// 传下去的 context 就是 **build 收到的形参**（本组件自身的 BuildContext 代理，
+/// 与 Dart 侧 `Builder(builder: (context) => …)` 的形参一致）。
 const String jsBuilderComponent = '''
 export class Builder {
   constructor(props, children) {
     this.props = props || {};
     this.children = children || [];
   }
-  build() {
+  build(context) {
     var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    return owner[name].call(owner, __ctxOf(this));
+    return owner[name].call(owner, context);
   }
 }''';
 
@@ -262,13 +266,13 @@ export class Consumer {
     this.props = props || {};
     this.children = children || [];
   }
-  build() {
-    var vm = this.context.watch(this.props.model);
+  build(context) {
+    var vm = context.watch(this.props.model);
     var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    var child = owner[name].call(owner, __ctxOf(this), vm);
+    var child = owner[name].call(owner, context, vm);
     return __h('Consumer', { model: this.props.model, vm: vm }, [child]);
   }
 }''';
@@ -300,10 +304,10 @@ export class ListenableBuilder {
       l.addListener(this.__listener);
     }
   }
-  build() {
+  build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var child = owner[this.props.builder].call(owner, __ctxOf(this));
+    var child = owner[this.props.builder].call(owner, context);
     return __h('ListenableBuilder', { vm: owner[this.props.listenable] }, [child]);
   }
   dispose() {

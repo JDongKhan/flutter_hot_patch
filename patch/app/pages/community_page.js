@@ -166,13 +166,13 @@ export class CommunityPage {
           ])
       ]);
   }
-  _listViewBuilder0(i) {
+  _listViewBuilder0(context, i) {
       return __h(_ResourceCard, {
         "resource": kResources[i],
         "onTap": () => { return __jsui.host("openResource", [kResources[i].id]); }
       });
   }
-  _listViewBuilderSeparator1(_) {
+  _listViewBuilderSeparator1(context, _) {
       return __h('SizedBox', {
         "width": 10
       });

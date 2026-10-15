@@ -169,7 +169,7 @@ export class HomePage {
           ])
       ]);
   }
-  _sliverBuilder0(index) {
+  _sliverBuilder0(context, index) {
       return __h(SpotCard, {
         "spot": this.spots[index]
       });
