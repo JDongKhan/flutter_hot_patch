@@ -769,12 +769,14 @@ String? _listLiteralJs(
 
 /// 支持翻译的 Key 类名（Dart 的 Key 家族里在 JS 侧有同名代理类的部分）。
 /// Key 是**值**：JS 用同名类实例承载，跨桥 toJSON 成 `{__vkey:…}` / `{__okey:…}`
-/// / `{__handle:…}`（见 hot_patch capabilities/key_js.dart、key_bridge.dart）。
+/// / `{__psk:…}` / `{__handle:…}`（见 hot_patch capabilities/key_js.dart、
+/// key_bridge.dart）。
 /// 宿主与 JS 共用这**一条**表达式路径——widget 的 key 参数、模型字段初值、
 /// 集合元素都经过 [rhsToJs]，故支持范围只在这里维护。
 const Set<String> keyClassNames = {
   'ValueKey',
   'ObjectKey',
+  'PageStorageKey',
   'UniqueKey',
   'GlobalKey',
 };

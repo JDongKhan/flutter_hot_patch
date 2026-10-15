@@ -1502,6 +1502,444 @@ class _PageViewDetailState extends State<PageViewDetail> {
 }
 
 // ---------------------------------------------------------------------------
+// Key 家族详情（页面级，仅 JS 热更版展示）
+// ---------------------------------------------------------------------------
+//
+// Key 的五类语义各一个「看得见」的用例（全部落在同一个列表页）：
+//   ValueKey       —— 列表按**值**匹配。轮换顺序后，带 key 的行连状态一起搬家；
+//                     不带 key 的列表按位置匹配，状态留在位置上（经典对照实验）。
+//   ObjectKey      —— 按**对象身份**相等。同一批对象引用跨帧稳定（状态保留）；
+//                     换成等值的新对象即被视为「新行」（状态重建）。
+//   UniqueKey      —— 每次 build 都是新身份，等于强制重建该子树。
+//   PageStorageKey —— 值相等，额外让宿主把滚动位置存进 PageStorage（切走再切回）。
+//   GlobalKey      —— 身份跨帧稳定；宿主据此拿真实 BuildContext / RenderObject
+//                     （本页演示「取位置 + 尺寸」与「滚动定位」，位置只在宿主算）。
+
+/// 列表行：状态**只有** `_count` 一个字段——正因如此，key 校准的作用可以直接
+/// 量出来：计数跟着「行」还是跟着「位置」。
+///
+/// label 由父级按当前顺序给出（key 里也是同一个值），这样换序后一眼就能看出
+/// 状态到底留在了行上还是位置上了。
+@UIComponent('KeyTile')
+class KeyTile extends StatefulWidget {
+  const KeyTile({super.key, required this.index, required this.label});
+
+  /// 行在列表里的位置（仅用于展示）。
+  final int index;
+
+  /// 行标签（ValueKey 场景下与该行 key 的值同源）。
+  final String label;
+
+  @override
+  State<KeyTile> createState() => _KeyTileState();
+}
+
+class _KeyTileState extends State<KeyTile> {
+  int _count = 0;
+
+  void bump() {
+    setState(() => _count++);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = widget.label;
+    final caption = '$label · 计数 $_count';
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: Text(caption, style: const TextStyle(fontSize: 13))),
+          TextButton(onPressed: bump, child: const Text('+1')),
+        ],
+      ),
+    );
+  }
+}
+
+/// Key 家族全员用例页（仅 JS 热更版展示：GlobalKey 的量测必须由宿主端算）。
+@UIComponent('KeyDetail')
+class KeyDetail extends StatefulWidget {
+  const KeyDetail({super.key});
+
+  @override
+  State<KeyDetail> createState() => _KeyDetailState();
+}
+
+class _KeyDetailState extends State<KeyDetail> {
+  // ---- ValueKey：列表按值匹配 ----
+  final List<String> _names = ['A', 'B', 'C', 'D'];
+
+  // ---- ObjectKey：按对象身份相等 ----
+  /// 对象引用（每次 build 都是同一批实例 → key 稳定）。
+  final List<List<int>> _rows = [
+    [1, 1],
+    [2, 2],
+  ];
+  /// 等值但**不同身份**的另一批对象（切过去即「新行」）。
+  final List<List<int>> _rowsCopy = [
+    [1, 1],
+    [2, 2],
+  ];
+  bool _sameRef = true;
+
+  // ---- UniqueKey：每次都是新身份（强制重建）----
+  int _uniqueSeq = 0;
+
+  // ---- PageStorageKey：滚动位置持久化 ----
+  bool _storeA = true;
+
+  // ---- GlobalKey：宿主端量测 + 定位 ----
+  final GlobalKey _targetKey = GlobalKey();
+  String _measureText = '未测量';
+
+  // ===== 卡片 1：ValueKey vs 无 key =====
+
+  void _rotateNames() {
+    setState(() {
+      final head = _names[0];
+      _names.removeAt(0);
+      _names.add(head);
+    });
+  }
+
+  void _resetNames() {
+    setState(() {
+      _names.clear();
+      _names.add('A');
+      _names.add('B');
+      _names.add('C');
+      _names.add('D');
+    });
+  }
+
+  Widget _valueKeyRows() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('① 带 key：key: ValueKey(name)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+        for (var i = 0; i < _names.length; i++) KeyTile(key: ValueKey(_names[i]), index: i, label: '${_names[i]}（key）'),
+        const SizedBox(height: 10),
+        const Text('② 不带 key：按位置匹配', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+        for (var i = 0; i < _names.length; i++) KeyTile(index: i, label: '${_names[i]}（无 key）'),
+      ],
+    );
+  }
+
+  // ===== 卡片 2：ObjectKey =====
+
+  void _flipRef() {
+    setState(() => _sameRef = !_sameRef);
+  }
+
+  Widget _objectKeyRows() {
+    if (_sameRef) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < _rows.length; i++)
+            KeyTile(key: ObjectKey(_rows[i]), index: i, label: '行${i + 1} · 同一对象引用'),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < _rowsCopy.length; i++)
+          KeyTile(key: ObjectKey(_rowsCopy[i]), index: i, label: '行${i + 1} · 等值新对象'),
+      ],
+    );
+  }
+
+  // ===== 卡片 3：UniqueKey =====
+
+  void _bumpUnique() {
+    setState(() => _uniqueSeq++);
+  }
+
+  // ===== 卡片 4：PageStorageKey =====
+
+  void _flipStore() {
+    setState(() => _storeA = !_storeA);
+  }
+
+  Widget _storageView() {
+    if (_storeA) {
+      return SizedBox(
+        height: 150,
+        child: ListView(
+          key: const PageStorageKey('key-page-a'),
+          children: [
+            for (var i = 0; i < 12; i++) ListTile(dense: true, title: Text('A 行 $i')),
+          ],
+        ),
+      );
+    }
+    return SizedBox(
+      height: 150,
+      child: ListView(
+        key: const PageStorageKey('key-page-b'),
+        children: [
+          for (var i = 0; i < 12; i++) ListTile(dense: true, title: Text('B 行 $i')),
+        ],
+      ),
+    );
+  }
+
+  // ===== 卡片 5：GlobalKey =====
+
+  /// 用 GlobalKey 取目标盒子的位置与尺寸。
+  ///
+  /// 与 SliverDetail 里同款链路：`currentContext → findRenderObject` 拿到
+  /// 「RenderObject 代理」再测——`measure` 挂在代上（GlobalKey 本身没有）。
+  /// `dynamic` 中转在这一跳（原生返回 RenderObject、没有 measure()）。
+  Future<void> _measureTarget() async {
+    final ctx = _targetKey.currentContext;
+    if (ctx == null) {
+      return;
+    }
+    final dynamic box = ctx.findRenderObject();
+    if (box == null) {
+      return;
+    }
+    final dynamic rect = await box.measure();
+    if (rect == null) {
+      setState(() => _measureText = '量不到（未布局）');
+      return;
+    }
+    setState(() {
+      _measureText = 'x=${rect.dx.toStringAsFixed(1)} y=${rect.dy.toStringAsFixed(1)}'
+          ' · ${rect.width.toStringAsFixed(0)} × ${rect.height.toStringAsFixed(0)}';
+    });
+  }
+
+  void _scrollToTarget() {
+    final ctx = _targetKey.currentContext;
+    if (ctx == null) {
+      return;
+    }
+    final target = ctx.findRenderObject();
+    if (target == null) {
+      return;
+    }
+    target.showOnScreen();
+  }
+
+  // ===== 页面装配 =====
+
+  // 卡片外壳直接写在每个 `_cardXxx()` 里：生成器只支持**无参已声明方法**在
+  // widget 位置内联（`_valueKeyRows()` 可以），带实参的 helper 方法无法翻译
+  // （会整张卡片降级成占位结点），故不做 `_card(title, desc, child)` 这种共用壳。
+  Widget _cardValueKey() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'ValueKey · 列表按值匹配',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——'
+            'reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          _valueKeyRows(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              TextButton(onPressed: _rotateNames, child: const Text('轮换顺序（A→末尾）')),
+              const SizedBox(width: 8),
+              TextButton(onPressed: _resetNames, child: const Text('重置')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cardObjectKey() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'ObjectKey · 按对象身份相等',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '行 key 包的是 _rows 里的对象引用：跨帧同一实例 → 状态保留；'
+            '换成等值但不同身份的 _rowsCopy → 视为新行，状态重建。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          _objectKeyRows(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              TextButton(
+                onPressed: _flipRef,
+                child: Text(_sameRef ? '换成等值的新对象' : '换回原对象'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cardUniqueKey() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'UniqueKey · 每次都是新身份',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），'
+            '整棵子树重建、内部计数归零。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          KeyTile(key: UniqueKey(), index: 0, label: '唯一身份行 #$_uniqueSeq'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              TextButton(onPressed: _bumpUnique, child: const Text('重建（setState 一次）')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cardStorageKey() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'PageStorageKey · 滚动位置持久化',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。'
+            '值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          _storageView(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              TextButton(
+                onPressed: _flipStore,
+                child: Text(_storeA ? '切到 B 列表' : '切回 A 列表'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cardGlobalKey() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'GlobalKey · 宿主端量测 / 定位',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：'
+            '位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            key: _targetKey,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(6)),
+            child: const Text('目标盒子（GlobalKey 挂在这里）', style: TextStyle(fontSize: 13)),
+          ),
+          const SizedBox(height: 8),
+          Text('测量：$_measureText', style: const TextStyle(fontSize: 13, color: Colors.teal)),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              TextButton(onPressed: _measureTarget, child: const Text('测量位置与尺寸')),
+              const SizedBox(width: 8),
+              TextButton(onPressed: _scrollToTarget, child: const Text('定位（showOnScreen）')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: const Text('Key 家族 · 全部用例'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+      ),
+      body: ListView(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: Text(
+              '每一张卡片一种 key 的语义；「计数」是 KeyTile 的内部 State，'
+              '用它来观察状态是跟着行走还是跟着位置走。',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ),
+          _cardValueKey(),
+          _cardObjectKey(),
+          _cardUniqueKey(),
+          _cardStorageKey(),
+          _cardGlobalKey(),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Drawer 详情（页面级，仅 JS 热更版展示）
 // ---------------------------------------------------------------------------
 

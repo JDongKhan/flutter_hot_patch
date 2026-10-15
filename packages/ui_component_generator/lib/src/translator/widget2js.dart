@@ -277,6 +277,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     } else {
       json['props'] = <String, dynamic>{'key': js};
     }
+    // 结点上另记一份 `json['key']`：**组件的**两条渲染路径（有产物
+    // `__h(X, props)` / 无产物 `__h("Component", props)`）取的是 `json['key']`
+    // （见 _renderComponentCall / _renderJsImpl），只写 props['key'] 会让挂在
+    // 组件结点上的 key 静默丢失（宿主结点读 props['key']，故宿主不受影响）。
+    // 两处值同源，读哪一份都一样。
+    json['key'] = js;
   }
 
   /// children 列表项翻译：Expression → 节点 Map；IfElement / ForElement →

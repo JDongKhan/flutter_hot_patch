@@ -6,11 +6,14 @@
 // **签名**比较（见 patchChildren 的 keySig），宿主按序列化形态还原真实 Flutter
 // Key（见 capabilities/key_bridge.dart）。
 //
-// 四类语义（与 Flutter 对齐）：
+// 五类语义（与 Flutter 对齐）：
 //   - ValueKey ：按**值**相等。纯值 codec、不登记句柄；跨桥 `{__vkey:value}`，
 //     值本身是对象时退化为 `{__vtok:token}`（对象无跨语言同一性）；宿主现造
 //     ValueKey（Flutter 的 ValueKey 相等即值相等，无需映射表——否则每次 build
 //     新实例会让表无限增长）。签名：原始值 `v:<typeof>:<值>`，对象按身份。
+//   - PageStorageKey：值相等，但宿主造**真实** PageStorageKey（滚动位置持久化
+//     是宿主端行为）。codec 与 ValueKey 同构、另加 `__psk` 标记；签名前缀 `p:`，
+//     故同值的 ValueKey 与 PageStorageKey 不等（对齐 Dart 的 runtimeType 相等）。
 //   - ObjectKey：按**被包裹对象的身份**相等（Dart `identical(value, other.value)`）。
 //     身份 token 由 WeakMap + 序号给出（原始值没有身份，退化为值 string）；
 //     跨桥 `{__okey:token}`——跨语言保持不了对象同一性，用 token 等价复现
@@ -54,6 +57,18 @@ const String keyJsSource = r'''
   // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
   function ObjectKey(value) { this.__okey = objectToken(value); }
   ObjectKey.prototype.toJSON = function () { return { __okey: this.__okey }; };
+
+  // PageStorageKey：Dart 侧 `extends ValueKey`（按**值**相等），但宿主必须造
+  // **真实** PageStorageKey——它的意义是滚动位置按 key 存进 PageStorage bucket，
+  // 那是宿主端行为（JS 侧只有一个值本体）。故 codec 与 ValueKey 同构另加 `__psk`
+  // 标记：宿主据此造 PageStorageKey 而非 ValueKey，keySig 前缀 `p:` 使它与
+  // 同值的 ValueKey 不等（与 Dart 的 runtimeType 参与相等一致）。
+  function PageStorageKey(value) {
+    this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
+        ? { __vtok: objectToken(value) }
+        : value;
+  }
+  PageStorageKey.prototype.toJSON = function () { return { __psk: this.__psk }; };
 
   // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
   defineHandleKind('key/Global', {});
@@ -106,6 +121,15 @@ const String keyJsSource = r'''
   function keySig(k) {
     if (k == null) { return null; }
     if (Object.prototype.hasOwnProperty.call(k, '__vkey')) { return 'v:' + keyValueSig(k.__vkey); }
+    // PageStorageKey：同值也与 ValueKey 不等（`p:` 前缀），对象值同 ValueKey 走 token。
+    if (Object.prototype.hasOwnProperty.call(k, '__psk')) {
+      var pv = k.__psk;
+      if (pv !== null && typeof pv === 'object' &&
+          Object.prototype.hasOwnProperty.call(pv, '__vtok')) {
+        return 'p:' + pv.__vtok;
+      }
+      return 'p:' + keyValueSig(pv);
+    }
     if (Object.prototype.hasOwnProperty.call(k, '__okey')) { return 'o:' + k.__okey; }
     var hid = k.__id != null ? k.__id : k.__handle;
     if (hid != null) { return 'h:' + hid; }
@@ -114,6 +138,7 @@ const String keyJsSource = r'''
 
   G.ValueKey = ValueKey;
   G.ObjectKey = ObjectKey;
+  G.PageStorageKey = PageStorageKey;
   G.UniqueKey = UniqueKey;
   G.GlobalKey = GlobalKey;
 ''';

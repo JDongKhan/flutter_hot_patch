@@ -2109,6 +2109,567 @@ export class PageViewDetail {
   }
 }
 
+// 组件 KeyTile
+export class KeyTile {
+  constructor(args) {
+    this.__applyProps(args);
+    this._count = 0;
+  }
+  __applyProps(args) {
+    this.index = (args && args.index !== undefined) ? args.index : 0;
+    this.label = (args && args.label !== undefined) ? args.label : '';
+  }
+  bump() {
+    this.setState(function(){ this._count += 1; });
+  }
+  build() {
+    var label = this.label;
+    var caption = label + " · 计数 " + this._count;
+    return __h('Container', {
+        "padding": {
+          "left": 10.0,
+          "top": 2.0,
+          "right": 10.0,
+          "bottom": 2.0
+        },
+        "margin": {
+          "left": 0.0,
+          "top": 2.0,
+          "right": 0.0,
+          "bottom": 2.0
+        },
+        "decoration": {
+          "color": '#FFFFFF',
+          "borderRadius": {
+            "radius": 6.0
+          },
+          "border": {
+            "all": {
+              "color": '@Colors.grey.shade300'
+            }
+          }
+        }
+      }, [
+        __h('Row', {}, [
+            __h('Expanded', {}, [
+                __h('Text', {
+                    "data": caption,
+                    "style": {
+                      "fontSize": 13
+                    }
+                  })
+              ]),
+            __h('Button', {
+                "kind": "text",
+                "label": "+1",
+                "event": this.__bind("bump")
+              })
+          ])
+      ]);
+  }
+}
+
+// 组件 KeyDetail
+export class KeyDetail {
+  constructor() {
+    this._names = ["A", "B", "C", "D"];
+    this._rows = [[1, 1], [2, 2]];
+    this._rowsCopy = [[1, 1], [2, 2]];
+    this._sameRef = true;
+    this._uniqueSeq = 0;
+    this._storeA = true;
+    this._targetKey = new GlobalKey();
+    this._measureText = "未测量";
+  }
+  _rotateNames() {
+    this.setState(function(){ var head = this._names[0]; this._names.splice(0, 1)[0]; this._names.push(head); });
+  }
+  _resetNames() {
+    this.setState(function(){ this._names.clear(); this._names.push("A"); this._names.push("B"); this._names.push("C"); this._names.push("D"); });
+  }
+  _valueKeyRows() {
+    return __h('Column', {
+        "crossAxisAlignment": "stretch"
+      }, [
+        __h('Text', {
+            "data": "① 带 key：key: ValueKey(name)",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          }),
+        ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": this._names[i] + "（key）", "key": new ValueKey(this._names[i]) })]); } return out; })(),
+        __h('SizedBox', {
+            "height": 10
+          }),
+        __h('Text', {
+            "data": "② 不带 key：按位置匹配",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          }),
+        ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": this._names[i] + "（无 key）" })]); } return out; })()
+      ]);
+  }
+  _flipRef() {
+    this.setState(function(){ this._sameRef = (!this._sameRef); });
+  }
+  _objectKeyRows() {
+    if (this._sameRef) {
+      return __h('Column', {
+          "crossAxisAlignment": "stretch"
+        }, [
+          ...(() => { var out = []; for (let i = 0; (i < this._rows.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": "行" + (i + 1) + " · 同一对象引用", "key": new ObjectKey(this._rows[i]) })]); } return out; })()
+        ]);
+    }
+    return __h('Column', {
+        "crossAxisAlignment": "stretch"
+      }, [
+        ...(() => { var out = []; for (let i = 0; (i < this._rowsCopy.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": "行" + (i + 1) + " · 等值新对象", "key": new ObjectKey(this._rowsCopy[i]) })]); } return out; })()
+      ]);
+  }
+  _bumpUnique() {
+    this.setState(function(){ this._uniqueSeq += 1; });
+  }
+  _flipStore() {
+    this.setState(function(){ this._storeA = (!this._storeA); });
+  }
+  _storageView() {
+    if (this._storeA) {
+      return __h('SizedBox', {
+          "height": 150
+        }, [
+          __h('ListView', {
+              "key": new PageStorageKey("key-page-a")
+            }, [
+              ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "A 行 " + i, "dense": true })]); } return out; })()
+            ])
+        ]);
+    }
+    return __h('SizedBox', {
+        "height": 150
+      }, [
+        __h('ListView', {
+            "key": new PageStorageKey("key-page-b")
+          }, [
+            ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "title": "B 行 " + i, "dense": true })]); } return out; })()
+          ])
+      ]);
+  }
+  async _measureTarget() {
+    var ctx = this._targetKey.currentContext;
+    if ((ctx == null)) {
+      return;
+    }
+    var box = ctx.findRenderObject();
+    if ((box == null)) {
+      return;
+    }
+    var rect = await box.measure();
+    if ((rect == null)) {
+      this.setState(function(){ this._measureText = "量不到（未布局）"; });
+      return;
+    }
+    this.setState(function(){ this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
+  }
+  _scrollToTarget() {
+    var ctx = this._targetKey.currentContext;
+    if ((ctx == null)) {
+      return;
+    }
+    var target = ctx.findRenderObject();
+    if ((target == null)) {
+      return;
+    }
+    target.showOnScreen();
+  }
+  _cardValueKey() {
+    return __h('Container', {
+        "padding": {
+          "left": 12.0,
+          "top": 12.0,
+          "right": 12.0,
+          "bottom": 12.0
+        },
+        "margin": {
+          "left": 12.0,
+          "top": 6.0,
+          "right": 12.0,
+          "bottom": 6.0
+        },
+        "decoration": {
+          "color": '@Colors.grey.shade100',
+          "borderRadius": {
+            "radius": 10.0
+          }
+        }
+      }, [
+        __h('Column', {
+            "crossAxisAlignment": "stretch"
+          }, [
+            __h('Text', {
+                "data": "ValueKey · 列表按值匹配",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": '#673AB7'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 4
+              }),
+            __h('Text', {
+                "data": "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。",
+                "style": {
+                  "fontSize": 12,
+                  "color": '#9E9E9E'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            this._valueKeyRows(),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            __h('Row', {}, [
+                __h('Button', {
+                    "kind": "text",
+                    "label": "轮换顺序（A→末尾）",
+                    "event": this.__bind("_rotateNames")
+                  }),
+                __h('SizedBox', {
+                    "width": 8
+                  }),
+                __h('Button', {
+                    "kind": "text",
+                    "label": "重置",
+                    "event": this.__bind("_resetNames")
+                  })
+              ])
+          ])
+      ]);
+  }
+  _cardObjectKey() {
+    return __h('Container', {
+        "padding": {
+          "left": 12.0,
+          "top": 12.0,
+          "right": 12.0,
+          "bottom": 12.0
+        },
+        "margin": {
+          "left": 12.0,
+          "top": 6.0,
+          "right": 12.0,
+          "bottom": 6.0
+        },
+        "decoration": {
+          "color": '@Colors.grey.shade100',
+          "borderRadius": {
+            "radius": 10.0
+          }
+        }
+      }, [
+        __h('Column', {
+            "crossAxisAlignment": "stretch"
+          }, [
+            __h('Text', {
+                "data": "ObjectKey · 按对象身份相等",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": '#673AB7'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 4
+              }),
+            __h('Text', {
+                "data": "行 key 包的是 _rows 里的对象引用：跨帧同一实例 → 状态保留；" + "换成等值但不同身份的 _rowsCopy → 视为新行，状态重建。",
+                "style": {
+                  "fontSize": 12,
+                  "color": '#9E9E9E'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            this._objectKeyRows(),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            __h('Row', {}, [
+                __h('Button', {
+                    "kind": "text",
+                    "label": (this._sameRef ? "换成等值的新对象" : "换回原对象"),
+                    "event": this.__bind("_flipRef")
+                  })
+              ])
+          ])
+      ]);
+  }
+  _cardUniqueKey() {
+    return __h('Container', {
+        "padding": {
+          "left": 12.0,
+          "top": 12.0,
+          "right": 12.0,
+          "bottom": 12.0
+        },
+        "margin": {
+          "left": 12.0,
+          "top": 6.0,
+          "right": 12.0,
+          "bottom": 6.0
+        },
+        "decoration": {
+          "color": '@Colors.grey.shade100',
+          "borderRadius": {
+            "radius": 10.0
+          }
+        }
+      }, [
+        __h('Column', {
+            "crossAxisAlignment": "stretch"
+          }, [
+            __h('Text', {
+                "data": "UniqueKey · 每次都是新身份",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": '#673AB7'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 4
+              }),
+            __h('Text', {
+                "data": "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。",
+                "style": {
+                  "fontSize": 12,
+                  "color": '#9E9E9E'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            __h(KeyTile, {
+                "index": 0,
+                "label": "唯一身份行 #" + this._uniqueSeq,
+                "key": new UniqueKey()
+              }),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            __h('Row', {}, [
+                __h('Button', {
+                    "kind": "text",
+                    "label": "重建（setState 一次）",
+                    "event": this.__bind("_bumpUnique")
+                  })
+              ])
+          ])
+      ]);
+  }
+  _cardStorageKey() {
+    return __h('Container', {
+        "padding": {
+          "left": 12.0,
+          "top": 12.0,
+          "right": 12.0,
+          "bottom": 12.0
+        },
+        "margin": {
+          "left": 12.0,
+          "top": 6.0,
+          "right": 12.0,
+          "bottom": 6.0
+        },
+        "decoration": {
+          "color": '@Colors.grey.shade100',
+          "borderRadius": {
+            "radius": 10.0
+          }
+        }
+      }, [
+        __h('Column', {
+            "crossAxisAlignment": "stretch"
+          }, [
+            __h('Text', {
+                "data": "PageStorageKey · 滚动位置持久化",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": '#673AB7'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 4
+              }),
+            __h('Text', {
+                "data": "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。",
+                "style": {
+                  "fontSize": 12,
+                  "color": '#9E9E9E'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            this._storageView(),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            __h('Row', {}, [
+                __h('Button', {
+                    "kind": "text",
+                    "label": (this._storeA ? "切到 B 列表" : "切回 A 列表"),
+                    "event": this.__bind("_flipStore")
+                  })
+              ])
+          ])
+      ]);
+  }
+  _cardGlobalKey() {
+    return __h('Container', {
+        "padding": {
+          "left": 12.0,
+          "top": 12.0,
+          "right": 12.0,
+          "bottom": 12.0
+        },
+        "margin": {
+          "left": 12.0,
+          "top": 6.0,
+          "right": 12.0,
+          "bottom": 6.0
+        },
+        "decoration": {
+          "color": '@Colors.grey.shade100',
+          "borderRadius": {
+            "radius": 10.0
+          }
+        }
+      }, [
+        __h('Column', {
+            "crossAxisAlignment": "stretch"
+          }, [
+            __h('Text', {
+                "data": "GlobalKey · 宿主端量测 / 定位",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": '#673AB7'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 4
+              }),
+            __h('Text', {
+                "data": "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。",
+                "style": {
+                  "fontSize": 12,
+                  "color": '#9E9E9E'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            __h('Container', {
+                "padding": {
+                  "left": 10.0,
+                  "top": 10.0,
+                  "right": 10.0,
+                  "bottom": 10.0
+                },
+                "decoration": {
+                  "color": '@Colors.teal.shade50',
+                  "borderRadius": {
+                    "radius": 6.0
+                  }
+                },
+                "key": this._targetKey
+              }, [
+                __h('Text', {
+                    "data": "目标盒子（GlobalKey 挂在这里）",
+                    "style": {
+                      "fontSize": 13
+                    }
+                  })
+              ]),
+            __h('SizedBox', {
+                "height": 8
+              }),
+            __h('Text', {
+                "data": "测量：" + this._measureText,
+                "style": {
+                  "fontSize": 13,
+                  "color": '#009688'
+                }
+              }),
+            __h('SizedBox', {
+                "height": 4
+              }),
+            __h('Row', {}, [
+                __h('Button', {
+                    "kind": "text",
+                    "label": "测量位置与尺寸",
+                    "event": this.__bind("_measureTarget")
+                  }),
+                __h('SizedBox', {
+                    "width": 8
+                  }),
+                __h('Button', {
+                    "kind": "text",
+                    "label": "定位（showOnScreen）",
+                    "event": this.__bind("_scrollToTarget")
+                  })
+              ])
+          ])
+      ]);
+  }
+  build() {
+    return __h('Scaffold', {
+        "appBar": __h('AppBar', {
+            "title": __h('Text', {
+                "data": "Key 家族 · 全部用例"
+              }),
+            "backgroundColor": '#673AB7',
+            "foregroundColor": '#FFFFFF'
+          }),
+        "body": __h('ListView', {}, [
+            __h('Padding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 12.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                }
+              }, [
+                __h('Text', {
+                    "data": "每一张卡片一种 key 的语义；「计数」是 KeyTile 的内部 State，" + "用它来观察状态是跟着行走还是跟着位置走。",
+                    "style": {
+                      "fontSize": 12,
+                      "color": '#9E9E9E'
+                    }
+                  })
+              ]),
+            this._cardValueKey(),
+            this._cardObjectKey(),
+            this._cardUniqueKey(),
+            this._cardStorageKey(),
+            this._cardGlobalKey(),
+            __h('SizedBox', {
+                "height": 24
+              })
+          ]),
+        "backgroundColor": '@Colors.grey.shade50'
+      });
+  }
+}
+
 // 组件 DrawerDetail
 export class DrawerDetail {
   constructor() {

@@ -9,10 +9,12 @@
 //     通用通道 `jsHandle` 的 create 落到本文件描述符 → 创建**真实** GlobalKey() /
 //     UniqueKey() 并按句柄 id 复用（GlobalKey 身份跨帧稳定）；scope=page，页面
 //     销毁随句柄释放（onRelease 摘除映射）。
-//   - ValueKey / ObjectKey：不登记句柄（纯值），宿主按值现造——
+//   - ValueKey / ObjectKey / PageStorageKey：不登记句柄（纯值），宿主按值现造——
 //     Flutter 的 ValueKey 相等即**值**相等，无需映射表（否则每次 build 都造新
 //     实例，表会无限增长）；ObjectKey 跨语言保不住对象同一性，用身份 token 的
-//     字符串等价复现（同一对象 token 相同、不同对象不同）。
+//     字符串等价复现（同一对象 token 相同、不同对象不同）；PageStorageKey 同样
+//     是值相等，但宿主造的是**真实** PageStorageKey——它的滚动位置持久化是宿主
+//     端行为，值本体（`__psk`）只是用来区分存储槽。
 import 'package:flutter/widgets.dart';
 
 import 'handle_registry.dart';
@@ -83,6 +85,13 @@ Key? jsKeyOf(Object? prop) {
   // Dart 的 `==` 对 Map/List 即同一性一致），这里用 token 串等价复现。
   final vtok = prop['__vtok'];
   if (vtok != null) return ValueKey<String>('vo:$vtok');
+  // PageStorageKey：值相等，但必须造**真实** PageStorageKey（滚动位置按 key
+  // 存进 PageStorage bucket，是宿主端行为）；对象值同 ValueKey 走身份 token。
+  if (prop.containsKey('__psk')) {
+    final pv = prop['__psk'];
+    final value = (pv is Map && pv['__vtok'] != null) ? 'po:${pv['__vtok']}' : pv;
+    return PageStorageKey<Object?>(value);
+  }
   if (prop.containsKey('__vkey')) return ValueKey<Object?>(prop['__vkey']);
   final okey = prop['__okey'];
   // ObjectKey：身份 token 串等价复现（Dart 侧 identical 语义，见文件头）。

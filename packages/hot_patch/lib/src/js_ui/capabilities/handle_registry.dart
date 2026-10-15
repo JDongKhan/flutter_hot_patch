@@ -89,7 +89,9 @@ void ensureHandleChannels() {
 void releaseHandleLocal(String id) {
   _handlePageById.remove(id);
   final kind = _handleKindById.remove(id);
-  if (kind != null) _handleKinds[kind]?.onRelease?.call(id);
+  if (kind != null) {
+    _handleKinds[kind]?.onRelease?.call(id);
+  }
 }
 
 /// 页面兜底：释放该页登记的全部句柄（含通知 JS 释放对端句柄）。

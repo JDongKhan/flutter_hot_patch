@@ -22,6 +22,13 @@ class WidgetShowcase extends StatelessWidget {
     _Group('图片图标', [_Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail')]),
     _Group('容器装饰', [_Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail')]),
     _Group('列表滚动', [_Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail')]),
+    _Group('Key 家族', [
+      _Entry(
+        'Key / ValueKey / ObjectKey / UniqueKey / PageStorageKey / GlobalKey',
+        '列表匹配 / 对象身份 / 强制重建 / 滚动位置持久化 / 宿主端量测（仅 JS 热更版）',
+        'KeyDetail',
+      ),
+    ]),
     _Group('Sliver 滚动', [
       _Entry('CustomScrollView', 'Sliver 全家桶整页（仅 JS 热更版）', 'SliverDetail'),
       _Entry('GridView', 'GridView 懒加载验证（仅 JS 热更版）', 'GridDetail'),
@@ -65,6 +72,7 @@ class WidgetShowcase extends StatelessWidget {
                     fullPage: e.component == 'ScaffoldDetail' ||
                         e.component == 'SliverDetail' ||
                         e.component == 'GridDetail' ||
+                        e.component == 'KeyDetail' ||
                         e.component == 'DrawerDetail',
                   ),
                 ),
@@ -116,6 +124,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ScrollDetail' => const ScrollDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
+      'KeyDetail' => const KeyDetail(),
       'ScaffoldDetail' => const ScaffoldDetail(),
       'DrawerDetail' => const DrawerDetail(),
       'TabDetail' => const TabDetail(),
