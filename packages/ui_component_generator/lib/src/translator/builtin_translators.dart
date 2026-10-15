@@ -523,7 +523,7 @@ class ScaffoldTranslator extends WidgetTranslator {
       props['bottomNavigationBar'] = ctx.translate(bottomNav);
     }
     // drawer / endDrawer 同为 element prop：接进真实 Scaffold 后 AppBar 自动
-    // 出现汉堡按钮，开抽屉原生可用（关闭见 tab_drawer_bridge 的抽屉作用域）。
+    // 出现汉堡按钮，开抽屉原生可用（关闭见 drawer_bridge 的抽屉作用域）。
     final drawer = ctx.namedArg(node.args, 'drawer');
     if (drawer != null) props['drawer'] = ctx.translate(drawer);
     final endDrawer = ctx.namedArg(node.args, 'endDrawer');
@@ -2954,7 +2954,7 @@ class DropdownMenuItemTranslator extends WidgetTranslator {
 //   - 显式 `controller:`（Dart 侧 TabController）→ 与 ScrollController 同款
 //     id-bridge：产物透传 `this._tabController`，跨桥序列化为
 //     `{__jsuiTabController: id, length, initialIndex}`，宿主按 id 取/建真实
-//     TabController 并挂到 TabBar / TabBarView（见 tab_drawer_bridge）。
+//     TabController 并挂到 TabBar / TabBarView（见 tab_bridge）。
 // ===========================================================================
 
 /// DefaultTabController：length / initialIndex（值 props）+ child（element）。

@@ -503,7 +503,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       floatingActionButton: c.propChild('floatingActionButton'),
       bottomNavigationBar: c.propChild('bottomNavigationBar'),
       // drawer / endDrawer 接进真实 Scaffold：AppBar 自动出现汉堡按钮，
-      // 开启原生可用；关闭走 tab_drawer_bridge 的抽屉作用域。
+      // 开启原生可用；关闭走 capabilities/drawer/drawer_bridge.dart 的抽屉作用域。
       drawer: c.propChild('drawer'),
       endDrawer: c.propChild('endDrawer'),
       drawerScrimColor: colorFromJson(c.props['drawerScrimColor']),

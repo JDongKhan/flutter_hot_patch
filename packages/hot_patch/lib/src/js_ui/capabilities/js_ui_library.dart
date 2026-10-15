@@ -32,11 +32,12 @@ import 'package:flutter/widgets.dart';
 import '../js_widget_registry.dart';
 import 'build_context/build_context_library.dart';
 import 'change_notifier/change_notifier_library.dart';
+import 'drawer/drawer_library.dart';
 import 'key/key_library.dart';
 import 'notification_listener/notification_listener_library.dart';
 import 'provider/provider_library.dart';
 import 'scroll_controller/scroll_controller_library.dart';
-import 'tab_drawer/tab_drawer_library.dart';
+import 'tab/tab_library.dart';
 import 'text_editing_controller/text_editing_controller_library.dart';
 
 /// 能力在宿主的接入模板：**新增一个能力 = 继承本类 + 注册**。
@@ -108,11 +109,12 @@ void _seedBuiltins() {
   registerJsUiLibrary(const ChangeNotifierLibrary());
   registerJsUiLibrary(const ScrollControllerLibrary());
   registerJsUiLibrary(const TextEditingControllerLibrary());
-  registerJsUiLibrary(const TabDrawerLibrary());
+  registerJsUiLibrary(const TabLibrary());
   registerJsUiLibrary(const KeyLibrary());
   registerJsUiLibrary(const BuildContextLibrary());
   // 纯宿主侧能力（无片段、无通道），位置不影响产物，列在此处便于对照。
   registerJsUiLibrary(const NotificationListenerLibrary());
+  registerJsUiLibrary(const DrawerLibrary());
   // ── 三方库 ──
   registerJsUiLibrary(const ProviderLibrary());
 }

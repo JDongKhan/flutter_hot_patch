@@ -35,4 +35,4 @@ export 'src/js_ui/capabilities/js_ui_capabilities.dart';
 export 'src/js_ui/capabilities/build_context/build_context_bridge.dart';
 export 'src/js_ui/capabilities/provider/provider_bridge.dart';
 export 'src/js_ui/capabilities/provider/vm_bridge.dart';
-export 'src/js_ui/capabilities/tab_drawer/tab_drawer_bridge.dart';
+export 'src/js_ui/capabilities/drawer/drawer_bridge.dart';

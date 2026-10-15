@@ -396,7 +396,8 @@ void main() {
           'change-notifier',
           'scroll-controller',
           'text-editing-controller',
-          'tab-drawer',
+          'tab',
+          'drawer',
           'key',
           'build-context',
           'notification-listener',
@@ -409,7 +410,8 @@ void main() {
         for (final type in const [
           'TextField', // text_editing_controller
           'ListView', // scroll_controller
-          'TabBarView', // tab_drawer
+          'TabBarView', // tab
+          'Drawer', // drawer
           'NotificationListener', // notification_listener
           'ChangeNotifierProvider', // provider
           'Text', // 核心地基 registerBuiltinJsWidgets
