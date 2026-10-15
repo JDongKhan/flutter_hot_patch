@@ -373,6 +373,92 @@ void main() {
       handle({'id': idB, 'op': 'release'});
       unregisterJsBuildContext('w1');
     });
+
+    // 三方库模板的自证：把「新引入一个库（provider/GetX/…）」压缩成
+    // 「写一个 JsUiLibrary 子类 + register」——核心三个聚合入口
+    // （jsUiRuntimeSource / ensureJsUiCapabilities / registerAllJsWidgets）
+    // 与类型解析入口（resolveWatchTarget）**不改一行**就把它接上。
+    group('三方库模板：继承 + register 即被核心消费（核心零改动）', () {
+      // 句柄通道的宿主入口（与 provider group 同形）。
+      void handle(Map<String, Object?> body) {
+        ensureJsUiCapabilities();
+        JsRuntimeManager.globalMessageHandlers['jsHandle']!({
+          'id': '',
+          'args': [body],
+        });
+      }
+
+      test('四个钩子被核心聚合入口消费：片段 / 通道 / 组件', () {
+        // 注册表是全局的（测试间累积），故每个 Fake 用**独有**的提供类型，
+        // 避免先注册者抢先命中 `resolveWatchTarget`（见下个用例）。
+        final fake = _FakeLibrary('fakeHooks', watchType: 'HooksOnlyModel');
+        registerJsUiLibrary(fake);
+        // 幂等：同 id 重复注册只保留首个（第二份不被驱动）。
+        final duplicate = _FakeLibrary('fakeHooks', watchType: 'HooksOnlyModel');
+        registerJsUiLibrary(duplicate);
+        expect(jsUiLibraries.where((l) => l.id == 'fakeHooks'), hasLength(1));
+
+        // ② ensureChannels ← ensureJsUiCapabilities 聚合（核心文件不改）
+        ensureJsUiCapabilities();
+        expect(fake.channelsEnsured, isTrue);
+
+        // ③ registerWidgets ← registerAllJsWidgets 聚合（核心文件不改）
+        final registry = JsWidgetRegistry();
+        registerAllJsWidgets(registry);
+        expect(fake.widgetsRegistered, isTrue);
+        expect(registry.has('FakeBox'), isTrue);
+
+        // ① jsFragments ← jsUiRuntimeSource 拼接（核心文件不改）
+        expect(fake.jsFragments, isNotEmpty);
+        expect(jsUiRuntimeSource(), contains('__fakeLibraryMarker'));
+        // 真实案例：内建 provider 库的片段走的是同一条缝。
+        expect(jsUiRuntimeSource(),
+            contains("registerScope('ChangeNotifierProvider'"));
+
+        // 未注册的副本什么都没被触发（证明 id 去重 + 只驱动注册表）
+        expect(duplicate.channelsEnsured, isFalse);
+        expect(duplicate.widgetsRegistered, isFalse);
+      });
+
+      testWidgets('④ resolveWatchTarget：核心按类型解析并订阅（不经过 provider 的知识）',
+          (tester) async {
+        final fake = _FakeLibrary('fakeWatch');
+        registerJsUiLibrary(fake);
+        ensureJsUiCapabilities();
+
+        var builds = 0;
+        late BuildContext nodeCtx;
+        await tester.pumpWidget(MaterialApp(
+          home: Builder(builder: (c) {
+            nodeCtx = c;
+            builds++;
+            return const SizedBox.shrink();
+          }),
+        ));
+        registerJsBuildContext('f1', nodeCtx);
+
+        const ctxId = 'js:ctx/BuildContext#fake1';
+        handle({
+          'id': ctxId,
+          'op': 'create',
+          'kind': 'ctx/BuildContext',
+          'meta': {'node': 'f1'},
+        });
+        builds = 0;
+        // JS 侧 context.watch<FakeModel>()：核心遍历各库解析，命中模板子类。
+        handle({'id': ctxId, 'op': 'watch', 'type': 'FakeModel'});
+        expect(fake.notifier.addCount, 1,
+            reason: '核心应已按类型解析并订阅模板子类提供的对象');
+
+        // 模板子类解析出的 Listenable notify → 该结点重建（核心不认识 FakeModel）。
+        fake.notifier.notifyListeners();
+        await tester.pump();
+        expect(builds, 1);
+
+        handle({'id': ctxId, 'op': 'release'});
+        unregisterJsBuildContext('f1');
+      });
+    });
   });
 
   test('宿主翻译层：JsWidgetRegistry 构造 Text/Column/Button', () {
@@ -429,4 +515,50 @@ Widget _ctx(
     nativeComponents: const {},
     invoke: invoke ?? (_, [args = const []]) {},
   ));
+}
+
+/// 「新引入一个三方库」的最小样板：一个 [JsUiLibrary] 子类，四个钩子各留一个
+/// 可观测的痕迹，用来证明核心**不改一行**就能把它接上（对标 GetX 之类的接入）。
+class _FakeLibrary extends JsUiLibrary {
+  _FakeLibrary(this.id, {this.watchType = 'FakeModel'});
+
+  @override
+  final String id;
+
+  /// 本库负责解析的提供类型（`context.watch<T>` 的 T）。
+  final String watchType;
+
+  bool channelsEnsured = false;
+  bool widgetsRegistered = false;
+
+  /// 本库对外提供的作用域对象（模拟 VM/Store）。
+  final FakeListenable notifier = FakeListenable();
+
+  @override
+  List<String> get jsFragments => const ['var __fakeLibraryMarker = 1;'];
+
+  @override
+  void ensureChannels() => channelsEnsured = true;
+
+  @override
+  void registerWidgets(JsWidgetRegistry r) {
+    widgetsRegistered = true;
+    r.register('FakeBox', (c) => const SizedBox.shrink());
+  }
+
+  @override
+  Listenable? resolveWatchTarget(BuildContext context, String type) =>
+      type == watchType ? notifier : null;
+}
+
+/// 模板子类解析出的「可订阅对象」（核心只当它是 Listenable）。
+class FakeListenable extends ChangeNotifier {
+  /// 被订阅次数（`hasListeners` 是 protected，测试里用公开计数替代）。
+  int addCount = 0;
+
+  @override
+  void addListener(VoidCallback listener) {
+    addCount++;
+    super.addListener(listener);
+  }
 }

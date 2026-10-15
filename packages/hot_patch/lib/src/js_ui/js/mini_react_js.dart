@@ -193,8 +193,8 @@ const String miniReactScopeSource = r'''
   //
   // 「谁提供什么」由**各能力自己**注册（[registerScope]）；reconciler 只在
   // mount/patch 时把结点 props 交给对应 publisher 折算成 `__provides`，核心
-  // 零业务知识（与「新增能力 = 注册描述符」同构）。provider 包的注册见
-  // capabilities/provider_js.dart。
+  // 零业务知识（与「新增能力 = 注册描述符」同构）。三方库的注册见
+  // capabilities/js_ui_library.dart（provider 是其中一族）。
   var scopePublishers = {};
 
   // 注册：宿主 widget 类型 → `props => {类型名: 值}`（返回空 = 不提供）。

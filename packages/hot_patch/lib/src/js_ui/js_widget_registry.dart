@@ -149,7 +149,8 @@ class JsWidgetRegistry {
 ///
 /// 状态类 widget 分两处：
 ///   - provider 三件套（ChangeNotifierProvider / Consumer / ListenableBuilder）
-///     由 capabilities/provider_bridge.dart 注册（宿主侧 provider 映射）；
+///     属于**三方库**，不在此注册——由 provider 的 JsUiLibrary 子类注册
+///     （见 capabilities/provider/provider_library.dart）；本核心文件不 import 它；
 ///   - Builder **不在这里**：它是无状态委托，纯 JS 逻辑，宿主零感知。
 void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('Text', (c) => Text(

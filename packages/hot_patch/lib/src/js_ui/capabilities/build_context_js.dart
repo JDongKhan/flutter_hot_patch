@@ -19,8 +19,8 @@
 // 唯一的例外（同步约束，设计内）：`watch`/`read` 的**取值**必须同步（渲染期
 // `model.count` 要直接读），而 JS→宿主只有异步桥，故值在本端按**类型名**沿
 // `__parent` 从最近的作用域结点取（通用机制，见 mini-react【7】的 `scopeOf`；
-// provider 的作用域声明见 capabilities/provider_js.dart）；同时照常向宿主发
-// 同名 op，由宿主在**真实 BuildContext** 上登记依赖 / 订阅（Dart 语义照落）。
+// 各三方库的作用域声明见其 JsUiLibrary 子类，如 capabilities/provider/）。
+// 同时照常向宿主发同名 op，由宿主在**真实 BuildContext** 上登记依赖 / 订阅。
 const String buildContextJsSource = r'''
   // ===== 【10.7】BuildContext 代理（`context.watch/read/…`）===============
   defineHandleKind('ctx/BuildContext', {});

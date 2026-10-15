@@ -43,7 +43,7 @@
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
 /// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
 /// | 【6】 | 组件基类（`setState` / `__bind`） | mini-react（生成器产物的能力袋） |
-/// | 【7】 | 作用域｜按类型名向上查找 + 消费者订阅（`registerScope` / `scopeOf` / `subscribeListenable`） | 通用机制（provider 等按类型注册，见 capabilities/provider_js.dart） |
+/// | 【7】 | 作用域｜按类型名向上查找 + 消费者订阅（`registerScope` / `scopeOf` / `subscribeListenable`） | 通用机制（三方库按类型注册，见 capabilities/js_ui_library.dart） |
 /// | 【8】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
 /// | 【9】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
 /// | 【10】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
@@ -56,15 +56,17 @@ import 'package:flutter/foundation.dart'
     show kDebugMode, kReleaseMode, defaultTargetPlatform, TargetPlatform;
 
 // 能力 JS 片段（各能力文件内聚，runtime_source 拼接注入）：
-//   - capabilities/scroll_controller_js.dart      → ScrollController 代理类
-//   - capabilities/text_editing_controller_js.dart → TextEditingController 代理类
-//   - capabilities/tab_controller_js.dart         → TabController 代理类
-//   - capabilities/key_js.dart                    → ValueKey/ObjectKey/UniqueKey/GlobalKey 代理类
-//   - capabilities/build_context_js.dart          → BuildContext 代理（`this.context`）
-//   - capabilities/provider_js.dart               → provider 包的作用域声明（registerScope）
-//   - js/handle_registry_js.dart                  → 跨语言句柄注册表（通用层地基）
+//   - 核心片段（Flutter 等价物，固定在 [jsUiRuntimeSource] 列表里）：
+//       capabilities/scroll_controller_js.dart      → ScrollController 代理类
+//       capabilities/text_editing_controller_js.dart → TextEditingController 代理类
+//       capabilities/tab_controller_js.dart         → TabController 代理类
+//       capabilities/key_js.dart                    → ValueKey/ObjectKey/UniqueKey/GlobalKey 代理类
+//       capabilities/build_context_js.dart          → BuildContext 代理（`this.context`）
+//       js/handle_registry_js.dart                  → 跨语言句柄注册表（通用层地基）
+//   - 三方库片段：**不在此 import**，由各库的 [JsUiLibrary.jsFragments] 提供
+//     （见 capabilities/js_ui_library.dart；provider 见 capabilities/provider/）。
 import 'capabilities/build_context_js.dart';
-import 'capabilities/provider_js.dart';
+import 'capabilities/js_ui_library.dart';
 import 'capabilities/key_js.dart';
 import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/tab_controller_js.dart';
@@ -399,9 +401,13 @@ const String _jsUiRuntimeSkeletonTail = r'''
 })();
 ''';
 
-/// js_ui 运行时源码 = 骨架各分区 + 各能力 JS 片段拼接（IIFE），由
+/// js_ui 运行时源码 = 核心骨架各分区 + **各三方库注入片段**拼接（IIFE），由
 /// [ensureJsUiRuntime] 注入。所有片段在**同一 IIFE 作用域**，片段间靠函数
 /// 提升 / 后声明互相引用，与拆分前语义一致。
+///
+/// 核心与三方库的接缝即 [jsUiLibraries]：新增一个库（provider / GetX / …）只
+/// 需在自己的 [JsUiLibrary] 子类里声明 [JsUiLibrary.jsFragments]，**本文件不再
+/// 变动**（列出的核心片段是 Flutter 等价物，不属于三方库）。
 /// 环境全局（模块表 / 标志 / console）并入 [_jsUiGlobals]；ChangeNotifier
 /// 基类经 [changeNotifierSource] 拼接（均在 IIFE 内定义、挂 G 暴露给产物）。
 String jsUiRuntimeSource() => [
@@ -422,7 +428,8 @@ String jsUiRuntimeSource() => [
   tabControllerJsSource,
   keyJsSource,
   buildContextJsSource,
-  providerJsSource,
+  // 三方库片段：位于核心之后（可安全调用核心函数）、IIFE 收尾之前。
+  for (final library in jsUiLibraries) ...library.jsFragments,
   _jsUiRuntimeSkeletonTail,
 ].join('\n');
 

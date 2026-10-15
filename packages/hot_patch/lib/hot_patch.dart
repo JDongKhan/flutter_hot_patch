@@ -7,9 +7,13 @@
 ///
 /// 渲染入口是 [JsUiWidget]（宿主）+ JS 侧 `__jsui` 运行时（element /
 /// component / reconciler / context / commit 协议）；**状态语义的宿主映射**
-/// （provider 三件套）在 Dart 侧（见 src/js_ui/capabilities/provider_bridge.dart），
-/// JS 侧只提供 VM 本体与订阅，宿主只做「JS 结点 → Flutter widget」映射
+/// 由各三方库的 `JsUiLibrary` 子类提供（见 [JsUiLibrary]），JS 侧只提供 VM
+/// 本体与订阅，宿主只做「JS 结点 → Flutter widget」映射
 /// （[JsWidgetRegistry]）+ 增量补丁应用（[JsUiStore]）。
+///
+/// **接入一个三方库（provider / GetX / …）**：继承 [JsUiLibrary] 重写需要的
+/// 钩子，再 `registerJsUiLibrary(...)`（内建库见 capabilities/js_ui_library.dart；
+/// 也可在 App 的 `main()` 里注册，从而完全不改本包）。宿主核心文件零改动。
 ///
 /// JS→原生能力统一走「宿主方法」：JS 侧唯一出口 `__jsui.host`，宿主侧唯一
 /// 入口 [JsRuntimeManager.registerHostMethod]（业务方法用 @HostInjected 注解
@@ -22,9 +26,11 @@ export 'src/json/flutter_from_json.dart';
 export 'src/js_ui/js_ui_widget.dart';
 export 'src/js_ui/js_ui_store.dart';
 export 'src/js_ui/js_widget_registry.dart';
+export 'src/js_ui/runtime_source.dart';
 export 'src/js_ui/capabilities/handle_registry.dart';
+export 'src/js_ui/capabilities/js_ui_library.dart';
 export 'src/js_ui/capabilities/js_ui_capabilities.dart';
 export 'src/js_ui/capabilities/build_context_bridge.dart';
-export 'src/js_ui/capabilities/provider_bridge.dart';
-export 'src/js_ui/capabilities/vm_bridge.dart';
+export 'src/js_ui/capabilities/provider/provider_bridge.dart';
+export 'src/js_ui/capabilities/provider/vm_bridge.dart';
 export 'src/js_ui/capabilities/tab_drawer_bridge.dart';

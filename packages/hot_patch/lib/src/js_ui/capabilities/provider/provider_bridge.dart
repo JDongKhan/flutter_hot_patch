@@ -4,21 +4,24 @@
 //   - JS 端 `ChangeNotifierProvider` 只负责造/取 VM，然后把宿主结点
 //     `ChangeNotifierProvider {model, vm}` 交给宿主（见 ui_component_generator
 //     的 widget_module_builder）——JS 侧没有 provider 专用记账，只在结点上按
-//     **类型名**声明作用域（`__provides`，注册见 capabilities/provider_js.dart）；
+//     **类型名**声明作用域（`__provides`，注册见 provider_js.dart）；
 //   - JS 端 `context.watch<T>()` 只是「按**类型名**沿 `__parent` 向上取最近作用域
 //     的值」+ 用原生 `addListener` 订阅（UI 更新仍由 JS 侧重建产生，
 //     这是同步取值约束决定的、无法消除的一步）。
 //
 // 宿主侧映射的职责：把 JS 下发的 `{model, vm 句柄}` 还原成真实的 Dart
-// provider 子树——VM 是 capabilities/vm_bridge.dart 的**通用镜像**（不认识业务
+// provider 子树——VM 是 vm_bridge.dart 的**通用镜像**（不认识业务
 // 类，只记 JS 端类型 + 转发 notify）。
+//
+// **本文件属于三方库层**（provider 的接入实现，见 provider_library.dart），核心
+// 不 import 它：核心只通过 JsUiLibrary.resolveWatchTarget 按类型名取「可订阅对象」。
 //
 // **刻意不依赖 `provider` 包**：宿主映射用 Flutter 内建的 InheritedNotifier
 // 实现等价语义，基座不绑定第三方版本；将来若要换成真正的 `provider`，只需把
 // 下面三个 renderer 的实现替换掉，扩展点（宿主 type 名）不变。
 import 'package:flutter/widgets.dart';
 
-import '../js_widget_registry.dart';
+import '../../js_widget_registry.dart';
 import 'vm_bridge.dart';
 
 /// 宿主侧 `ChangeNotifierProvider` 的映射实现。
