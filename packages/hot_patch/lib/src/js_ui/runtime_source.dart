@@ -35,6 +35,7 @@
 /// | --- | --- | --- |
 /// | 【1】 | 全局状态与工具（id 序号、结点标记、页面根表） | 全体共用 |
 /// | 【1b】 | 跨语言句柄注册表（`reg` / `release` / `call` / `handleOp`） | 全体共用（新增能力只注册 kind） |
+/// | 【1c】 | Dart 标准库 → JS 内建补齐（`Array.prototype.clear` 等） | 全体共用（生成器看不到接收者类型，同名方法无法在编译期区分） |
 /// | 【2】 | 出方向桥（emit / commit / send → `sendMessage`） | 全体共用 |
 /// | 【3】 | 宿主注入 `__jsui.host` / `resolve`（唯一对外出口） | @HostInjected 专用 |
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
@@ -198,6 +199,40 @@ const String _jsUiGlobalsTail = r'''
 
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
+
+  // ===== 【1c】Dart 标准库 → JS 内建补齐 ==============================
+  // 【项目规则】凡是「翻译产物里调用的方法名，而在原生 JS 对应类型上不存在」的，
+  // 一律**在本节给 JS 内建补一个同名同义的方法**，产物保持原样调用——不在生成器
+  // 里做名字映射、也不改单源去绕开。
+  // 为什么放在运行时而不是生成器：生成器不带类型解析，只看得到**方法名**，而
+  // Dart 的方法名与别的类的同名方法经常撞车（`clear` 既是 `List.clear()`，也是
+  // TextEditingController.clear()，见 capabilities/text_editing_controller_js.dart）。
+  // 若在生成器里按名字映射成 `xs.length = 0`，控制器那次 clear 会被**静默改错**
+  // （清不掉输入框、还平白多一个 length 属性）——比报错更难发现。补齐到具体的内建
+  // 原型上则天然按**接收者类型**分发：挂 Array.prototype 只影响数组，别处同名方法
+  // 分毫不动，且生成器零改动。
+  // 新增补齐项的三个硬要求：
+  //   1) 挂在**最具体的**内建原型上（如 Array.prototype），不得挂 Object.prototype；
+  //   2) 定义成**不可枚举**（enumerable:false），否则会污染 for...in / Object.keys /
+  //      JSON.stringify（序列化 props 时会凭空多出字段）；
+  //   3) 带存在性守卫（`typeof X !== 'function'`），引擎/宿主自带时以自带为准，
+  //      且可重复注入不覆盖（运行时可能被重新求值）。
+  // 注意：本节属**运行时 Dart 代码**，改动随 App 一起注入——热更/热重启不生效，
+  // 必须完全重启 App。
+  //   - Array.prototype.clear()：Dart `List.clear()` 的**原地**清空（保持数组
+  //     实例，故 `final` 列表也能清；返回 void）。数组在 JS 侧就是 List。
+  // 已知缺口（未补）：Dart `Map` 字面量在 JS 侧是**普通对象**（不是 Map 实例），
+  // 故 `Map.clear()` 无处可挂（挂 Object.prototype 影响面过大），需要时得按
+  // 「字段类型是 Map」在翻译层分发；Dart `Set` 字面量翻成 `new Set([...])`，
+  // JS Set 自带 clear()，无需处理。
+  if (typeof Array.prototype.clear !== 'function') {
+    Object.defineProperty(Array.prototype, 'clear', {
+      value: function () { this.length = 0; },
+      writable: true,
+      enumerable: false,
+      configurable: true
+    });
+  }
 
 ''';
 

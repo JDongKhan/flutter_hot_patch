@@ -1080,7 +1080,8 @@ String? methodCallExprJs(
       if (t == null || o == null) return null;
       return '($t - $o)';
     }
-    // 就地增删（List 在 JS 侧就是数组）：
+    // 就地增删（List 在 JS 侧就是数组），**方法名两边都有、语义也一致**，故在此
+    // 只做「形参 → 内建 API」的改写（点名映射）：
     //   `xs.add(v)`      → `xs.push(v)`
     //   `xs.removeAt(i)` → `xs.splice(i, 1)[0]`（返回被删元素，供重排复用）
     //   `xs.insert(i, v)`→ `xs.splice(i, 0, v)`
@@ -1104,6 +1105,16 @@ String? methodCallExprJs(
       if (t == null || i == null || v == null) return null;
       return '$t.splice($i, 0, $v)';
     }
+    // 【项目规则】Dart 方法「在原生 JS 对应类型上不存在」的，**不在本层做名字映射**，
+    // 而是由 JS 运行时给该内建补一个同名同义的方法（补齐点见 hot_patch 的
+    // packages/hot_patch/lib/src/js_ui/runtime_source.dart【1c】，产物原样调用）。
+    // 本函数只看得到**方法名**、拿不到接收者类型（生成器不带 resolution），而 Dart
+    // 方法名与别的类的同名方法经常撞车——`clear` 既是 `List.clear()`，也是
+    // `TextEditingController.clear()`（本仓库 lib/components/widget_details.dart 的
+    // 「清空输入」按钮就在用）。按名字映射成 `length = 0` 会把控制器那次 clear 静默
+    // 改错；补齐到 Array.prototype 则天然按接收者类型分发，别处同名方法分毫不动。
+    // 上面那组 `add`/`removeAt`/`insert` 属**另一类**：内建已有对应 API、只是名字/
+    // 形参不同，才由本层点名改写。
   }
   final args = e.argumentList.arguments;
   final argJs = <String>[]; // 普通调用：位置化扁平（JS 无具名参数）

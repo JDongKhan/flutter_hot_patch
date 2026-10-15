@@ -1574,6 +1574,9 @@ class KeyDetail extends StatefulWidget {
 
 class _KeyDetailState extends State<KeyDetail> {
   // ---- ValueKey：列表按值匹配 ----
+  /// 行标签序列。`final` + `clear()` 是 Dart 的惯用写法：clear 是**原地**清空
+  /// （保持同一数组实例），JS 侧的 `Array.prototype.clear` 由运行时补齐
+  /// （见 hot_patch runtime_source.dart【1c】），故产物原样调用即可。
   final List<String> _names = ['A', 'B', 'C', 'D'];
 
   // ---- ObjectKey：按对象身份相等 ----
