@@ -55,7 +55,12 @@ Future<void> _runAwaitableEvent(Object? handler) {
   JsRuntimeManager.instance.evaluate(
     '__jsuiAwaitRun(${jsonEncode(id)}, ${jsonEncode(token)});',
   );
-  return completer.future;
+  // 兜底超时：JS 运行时被销毁 / 句柄在任务中释放时回传永不到达，指示器不能
+  // 永远转圈，也不能让条目滞留在 _pendingTasks。
+  return completer.future.timeout(
+    const Duration(seconds: 30),
+    onTimeout: () => _pendingTasks.remove(token),
+  );
 }
 
 /// EasyRefresh 桥接组件（对应注册 key 'EasyRefresh'）。

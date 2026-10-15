@@ -13,9 +13,11 @@ import 'pages/orders_page.dart';
 /// 驱动的切页状态、[TabBarView]、[BottomNavigationBar]）都跑在 JS 运行时里，出问题
 /// 直接下发补丁即可热修整壳布局。
 ///
-/// 切页用 [TabBarView]（PageView 的懒加载语义）：只构建当前 tab，没进入过的
-/// tab 不会 build —— 这正是替代 [IndexedStack] 的原因，后者一次性建满四页。
-/// 代价是切走再回来会重建（页面状态不保留），由各 tab 页自己的数据请求承担。
+/// 切页用 [TabBarView]：宿主侧天然只有当前页会被 inflate；但 JS 侧（MiniReact）
+/// 的挂载是**一次性递归整棵 children**（`mount` 会构造实例并跑 initState/build），
+/// 所以四个 tab 页的 initState 与请求在首帧仍会全跑。JS 侧的懒加载需要基座的
+/// 「延迟挂载」能力（宿主 `_JsNode` 被 inflate 时反向驱动 JS 按需挂载），
+/// 本壳不再用业务层占位去模拟。
 ///
 /// 依赖的 widget 类会**连带翻译**：`HomePage`（及其同文件的
 /// HomeHeader/BannerSlide/GridCell/SpotCard/PromoCard）已是 `patch/app/pages/
@@ -63,8 +65,8 @@ class _AppShellState extends State<AppShell>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F7),
-      // TabBarView 只构建当前 tab（懒加载）；禁用左右滑动，保持「只由底部
-      // 导航切 tab」的原语义，避免与页内横向滚动（首页 banner）抢手势。
+      // 禁用左右滑动，保持「只由底部导航切 tab」的原语义，避免与页内横向滚动
+      //（首页 banner）抢手势。
       body: TabBarView(
         controller: _tab,
         physics: const NeverScrollableScrollPhysics(),
