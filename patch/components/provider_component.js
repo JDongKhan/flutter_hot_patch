@@ -22,7 +22,7 @@ export class ProviderCard {
   _loadUser() {
     this._modelB.loadUserInfo({"h": 1});
   }
-  build() {
+  build(context) {
     return __h('Card', {}, [
         __h('Padding', {
             "padding": {

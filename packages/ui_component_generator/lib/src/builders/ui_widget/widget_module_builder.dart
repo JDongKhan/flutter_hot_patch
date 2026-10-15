@@ -144,8 +144,8 @@ export class $type {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, i)); }
+      out.push(owner[this.props.builder].call(owner, __ctxOf(this), i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, __ctxOf(this), i)); }
     }
     // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
     // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
@@ -160,7 +160,7 @@ export class $type {
 /// 因此元素写成 `__h(<类名>, props, children)`（类引用，由本模块 export），
 /// 运行时 `new` 该组件类并按组件路径挂载，由组件 `build()` 自行消费 props
 /// （provider 提供/消费 VM、Builder 委托拥有者方法返回子树）。运行时会给普通
-/// 类实例补挂 `props/setState/watch/read/__watch/__read/__bind`
+/// 类实例补挂 `props/setState/context/__bind`
 /// （见 js_ui/runtime_source.dart）。键集合与 js_widget_defs 的
 /// `logicWidgetTypes` 一致。
 const Map<String, String> logicWidgetSources = {
@@ -172,7 +172,9 @@ const Map<String, String> logicWidgetSources = {
 };
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
-/// （`_builderN()`，含 `var model = this.__watch(...)` 前置语句）拿子树。
+/// （`_builderN(context)`，含 `var model = this.context.watch(...)` 前置语句）拿子树。
+/// 传入的 context 是**本组件自己的**代理（`__ctxOf(this)`），与 Dart 侧
+/// `Builder(builder: (context) => …)` 的形参一致。
 const String jsBuilderComponent = '''
 export class Builder {
   constructor(props, children) {
@@ -184,16 +186,18 @@ export class Builder {
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    return owner[name].call(owner);
+    return owner[name].call(owner, __ctxOf(this));
   }
 }''';
 
-/// ChangeNotifierProvider：把 create/value 解析出的 VM 挂成「提供者结点」
-/// （`__provides[model]` + `__value`）。provider 是**纯值结点：不监听、不
-/// 记账**——订阅由消费者（`watch`）自己给 VM 挂监听并持有台账，notify 时只
-/// 标记该订阅位置重建，作用域最小。生命周期与原生一致：`create` 语义下
-/// provider 拥有 VM（类引用时 provider 内 new，实例时直接复用），卸载时
-/// dispose；`value` 语义下不拥有、不释放。
+/// ChangeNotifierProvider：解析 create/value 得到 VM，然后**交给宿主**。
+///
+/// JS 侧不做任何 provider 记账（无 `__provides`）：本类只负责
+///   ① 造/取 VM（`create` 为类引用时 new 一次，生命周期归本类；实例时复用）；
+///   ② 渲染宿主结点 `ChangeNotifierProvider`，props 带 `{model, vm}`——
+///      宿主据此建 Dart 侧的 provider 映射（通用 VM 镜像 + provider 子树），
+///      `context.watch<T>()` 的 T 就是这里的 `model`（类型名一路传给宿主）。
+/// VM 的真实对象只存在于 JS 端：`vm` 走句柄（`{__handle:id}`）下发。
 const String jsChangeNotifierProviderComponent = '''
 export class ChangeNotifierProvider {
   constructor(props, children) {
@@ -212,14 +216,13 @@ export class ChangeNotifierProvider {
     }
     this.__value = vm;
     this.__ownsValue = owns;
-    this.__provides = {};
-    this.__provides[p.model] = this;
   }
   build() {
     // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；
     // 被 MultiProvider 包裹时由 `__h(type, props, [node])` 放进 children。
-    if (this.props.child != null) { return this.props.child; }
-    return this.children.length ? this.children[0] : null;
+    var child = this.props.child != null ? this.props.child
+        : (this.children.length ? this.children[0] : null);
+    return __h('ChangeNotifierProvider', { model: this.props.model, vm: this.__value }, [child]);
   }
   dispose() {
     if (this.__ownsValue && this.__value &&
@@ -247,8 +250,12 @@ export class MultiProvider {
   }
 }''';
 
-/// Consumer：消费 VM——沿祖先找提供者取 VM 并订阅（watch），再调用拥有者
-/// 组件上的 `props.builder` 方法（`_consumerBuilderN(value)`）渲染局部子树。
+/// Consumer：消费 VM——沿祖先找最近 provider 的 VM 并订阅（watch），再调用拥有者
+/// 组件上的 `props.builder` 方法（`_consumerBuilderN(context, value)`）渲染局部子树。
+///
+/// 本类仍必须订阅 VM：UI 的真正更新来自 **JS 侧重建**（VM notify → 标脏该位置
+/// → 重读 `model.count` → 下发 patch）。宿主侧同时把这段子树映射成 Dart 的
+/// 监听边界（`Consumer` 宿主结点），使 Dart 侧的 provider 子树也能刷新（P2）。
 const String jsConsumerComponent = '''
 export class Consumer {
   constructor(props, children) {
@@ -256,18 +263,20 @@ export class Consumer {
     this.children = children || [];
   }
   build() {
-    var vm = this.watch(this.props.model);
+    var vm = this.context.watch(this.props.model);
     var name = this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    return owner[name].call(owner, vm);
+    var child = owner[name].call(owner, __ctxOf(this), vm);
+    return __h('Consumer', { model: this.props.model, vm: vm }, [child]);
   }
 }''';
 
 /// ListenableBuilder：局部重建——订阅 `listenable`（拥有者组件上的模型字段），
 /// 模型 notify 时仅重建本结点子树（`setState` 只标记本结点 dirty）。
 /// 子树抽在拥有者组件的 `props.builder` 方法（`_lbBuilderN()`）里。
+/// 与 Consumer 同理：JS 订阅是 UI 更新源，宿主映射只提供 Dart 侧边界。
 const String jsListenableBuilderComponent = '''
 export class ListenableBuilder {
   constructor(props, children) {
@@ -294,7 +303,8 @@ export class ListenableBuilder {
   build() {
     var owner = this.__owner();
     if (!owner) { return null; }
-    return owner[this.props.builder].call(owner);
+    var child = owner[this.props.builder].call(owner, __ctxOf(this));
+    return __h('ListenableBuilder', { vm: owner[this.props.listenable] }, [child]);
   }
   dispose() {
     if (this.__listenable && this.__listener) {

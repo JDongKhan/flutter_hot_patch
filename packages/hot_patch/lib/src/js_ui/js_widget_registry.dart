@@ -4,8 +4,8 @@ import '../json/flutter_from_json.dart';
 import '../utils/hot_patch_log.dart';
 
 /// 不需要动宿主；只有引入 Flutter 侧不存在的**视觉** widget 才注册一条。
-class JsBuildContext {
-  JsBuildContext({
+class JsRenderContext {
+  JsRenderContext({
     required this.props,
     required this.children,
     required this.childTypes,
@@ -25,7 +25,7 @@ class JsBuildContext {
   /// 与 [children] 一一对应的子结点数据（type/props/propChildren），
   /// 用于 BottomNavigationBarItem / DropdownMenuItem 这类「非 Widget
   /// 数据载体」子结点——父 renderer 直接读数据组装，不走 widget 包装。
-  final List<JsBuildContext> childContexts;
+  final List<JsRenderContext> childContexts;
 
   /// 值为 element 的 props（如 ListTile.leading / ClipRRect.child）：
   /// prop 名 -> 已构建好的子 widget。
@@ -128,7 +128,7 @@ class JsBuildContext {
   }
 }
 
-typedef JsWidgetBuilder = Widget Function(JsBuildContext c);
+typedef JsWidgetBuilder = Widget Function(JsRenderContext c);
 
 
 /// `type -> Flutter widget` 注册表（宿主唯一扩展点）。
@@ -147,8 +147,10 @@ class JsWidgetRegistry {
 /// 只覆盖「JS 侧组件用到的、Flutter 侧真实存在的」类型；未注册的类型渲染为
 /// 错误占位（便于定位缺失的翻译），而不是静默空白。
 ///
-/// 状态类 widget（provider / Builder / ListenableBuilder）**不在这里**：
-/// 它们由 JS 侧逻辑组件承担，宿主零感知。
+/// 状态类 widget 分两处：
+///   - provider 三件套（ChangeNotifierProvider / Consumer / ListenableBuilder）
+///     由 capabilities/provider_bridge.dart 注册（宿主侧 provider 映射）；
+///   - Builder **不在这里**：它是无状态委托，纯 JS 逻辑，宿主零感知。
 void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('Text', (c) => Text(
         c.str('data') ?? '',

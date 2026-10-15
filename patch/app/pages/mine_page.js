@@ -24,7 +24,7 @@ export class MinePage {
       }
     }
   }
-  build() {
+  build(context) {
     return __h('ListView', {}, [
         __h('Container', {
             "padding": {
@@ -249,7 +249,7 @@ export class _DevRow {
     this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : '';
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
-  build() {
+  build(context) {
     return __h('GestureDetector', {
         "event": this.__bind("this.onTap()"),
         "behavior": "opaque"

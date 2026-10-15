@@ -9,12 +9,15 @@
 // 桥接组件 + 组件注册，全部内聚；Dart 侧 ensureXxxChannels + registerXxxWidgets
 // 在此聚合，JS 侧片段由 runtime_source 拼接（见 capabilities/*_js.dart）。
 import '../js_widget_registry.dart';
+import 'build_context_bridge.dart';
 import 'handle_registry.dart';
 import 'key_bridge.dart';
 import 'notification_listener_bridge.dart';
+import 'provider_bridge.dart';
 import 'scroll_controller_bridge.dart';
 import 'tab_drawer_bridge.dart';
 import 'text_editing_controller_bridge.dart';
+import 'vm_bridge.dart';
 
 /// 全部能力通道（幂等）：在 JS 组件 mount（new XxxController → host 登记）
 /// 前调用。JsUiWidget 启动时调用一次。
@@ -24,6 +27,10 @@ void ensureJsUiCapabilities() {
   ensureScrollControllerChannels();
   ensureTextEditingControllerChannels();
   ensureTabControllerChannels();
+  // BuildContext 代理（JS `this.context` → 宿主真值 BuildContext）
+  ensureBuildContextChannels();
+  // JS VM（ChangeNotifier）→ 宿主通用镜像（Dart 侧 provider 子树的通知源）
+  ensureVmChannels();
 }
 
 /// 全部组件注册 = 核心注册（js_widget_registry）+ 各能力域注册。
@@ -33,4 +40,6 @@ void registerAllJsWidgets(JsWidgetRegistry r) {
   registerTextWidgets(r);
   registerNotificationWidgets(r);
   registerTabDrawerWidgets(r);
+  // provider 宿主映射（ChangeNotifierProvider / Consumer / ListenableBuilder）
+  registerProviderWidgets(r);
 }

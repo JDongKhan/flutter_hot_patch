@@ -160,26 +160,20 @@ class ClassInfo {
 
 /// 方法形参 → JS 形参名列表（解 DefaultFormalParameter 包裹）。
 ///
-/// 过滤掉 JS 无对应物的形参类型（`BuildContext`：JS 侧没有 context 概念，
-/// 组件回调由运行时按需传值）。组件与普通类共用这一处——新增「要过滤的形参
-/// 类型」只改这里，组件/模型同时生效。
+/// **一一对应**：Dart 是什么形参，JS 就是什么形参（形参名、顺序、个数完全一致），
+/// 不做任何类型剔除——`BuildContext` 也有对应物（运行时以最近宿主祖先结点为锚
+/// 的代理，生成器把裸 `context` 译成 `this.context`，见 exprToJs）。
+/// 组件与普通类共用这一处。
 List<String> jsMethodParams(MethodDeclaration m) {
   final out = <String>[];
   for (final p in m.parameters?.parameters ?? const <FormalParameter>[]) {
     final inner = p is DefaultFormalParameter ? p.parameter : p;
     final name = inner.name?.lexeme;
     if (name == null || name.isEmpty) continue;
-    if (inner is SimpleFormalParameter &&
-        _noJsParamTypes.contains(eraseType(inner.type?.toSource()))) {
-      continue;
-    }
     out.add(name);
   }
   return out;
 }
-
-/// JS 侧无对应物、需从方法签名中剔除的形参类型。
-const Set<String> _noJsParamTypes = {'BuildContext'};
 
 /// 方法是否 `void`：返回类型为 `void`（箭头体译为语句，不产生 `return`）。
 bool isVoidReturn(MethodDeclaration m) {
@@ -1017,9 +1011,14 @@ String? methodCallExprJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
-  // `context.watch<T>()` / `context.read<T>()`（provider 包）→ 运行时挂载的
-  // 实例方法：__watch（取最近模型 + 订阅局部刷新）/ __read（仅取，不订阅）。
-  // 类型参数即模型类名（__lookupProvider 按 key+model 找最近实例）。
+  // `context.watch<T>()` / `context.read<T>()`（provider 包）→ **调用面与 Dart
+  // 完全一致**：`context.watch("T")`，`context` 是运行时传入 build 的
+  // BuildContext 代理（见 hot_patch 的 capabilities/build_context_js.dart）。
+  // 类型实参 `T` 原样传给 JS——本端按类型名沿 `__parent` 找最近的 provider
+  // 宿主结点，同时把类型名发给宿主（Dart 端通用 VM 记着它）。
+  // receiver 走 [exprToJs] 而非硬编码：构建作用域里就是形参 `context`；
+  // 事件等**延迟作用域**里形参不可见，由作用域别名解析成 `this.context`
+  // （同一代理，见 WidgetTranslateContext._dataScope）。
   final tgt = e.target;
   if (tgt is Identifier && tgt.name == 'context') {
     final name = e.methodName.name;
@@ -1028,8 +1027,8 @@ String? methodCallExprJs(
       final ta = e.typeArguments?.arguments;
       if (ta != null && ta.length == 1 && ta.first is NamedType) {
         final model = (ta.first as NamedType).name2.lexeme;
-        final method = name == 'watch' ? '__watch' : '__read';
-        return 'this.$method(${jsString(model)})';
+        final recv = exprToJs(tgt, scope, classes) ?? 'context';
+        return '$recv.$name(${jsString(model)})';
       }
       return null;
     }

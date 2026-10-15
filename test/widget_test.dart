@@ -160,6 +160,122 @@ void main() {
     });
   });
 
+  group('provider 下沉 Dart（宿主映射）', () {
+    // 句柄通道的宿主入口：与 JS 侧 `host('jsHandle', [body])` 的下发载荷同形。
+    void handle(Map<String, Object?> body) {
+      ensureJsUiCapabilities();
+      JsRuntimeManager.globalMessageHandlers['jsHandle']!({
+        'id': '',
+        'args': [body],
+      });
+    }
+
+    test('VM 通用镜像：create 记 JS 类型 / notify 转通知 / release 销毁', () {
+      const id = 'js:vm/ChangeNotifier#1';
+      handle({
+        'id': id,
+        'op': 'create',
+        'kind': 'vm/ChangeNotifier',
+        'meta': {'type': 'CounterVm'},
+      });
+      final vm = jsVmOf(id)!;
+      // P1：Dart 通用 VM 记下 JS 端的类名（context.watch<T>() 的 T）
+      expect(vm.jsType, 'CounterVm');
+
+      var notified = 0;
+      vm.addListener(() => notified++);
+      // JS 侧 notifyListeners 的第二路：镜像转发给 Dart 侧订阅者
+      handle({'id': id, 'op': 'notify'});
+      expect(notified, 1);
+
+      handle({'id': id, 'op': 'release'});
+      expect(jsVmOf(id), isNull);
+    });
+
+    testWidgets('ChangeNotifierProvider 映射为 Dart 侧 provider 子树', (tester) async {
+      const id = 'js:vm/ChangeNotifier#2';
+      handle({
+        'id': id,
+        'op': 'create',
+        'kind': 'vm/ChangeNotifier',
+        'meta': {'type': 'CounterVm'},
+      });
+      final registry = JsWidgetRegistry();
+      registerAllJsWidgets(registry);
+
+      var dartBuilds = 0;
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(
+          builder: (_) => _ctx(
+            registry,
+            'ChangeNotifierProvider',
+            {
+              'model': 'CounterVm',
+              'vm': {'__handle': id},
+            },
+            children: [
+              Builder(builder: (c) {
+                dartBuilds++;
+                final vm = JsVmProvider.maybeOf(c);
+                return Text('vm=${vm?.jsType}',
+                    textDirection: TextDirection.ltr);
+              }),
+            ],
+          ),
+        ),
+      ));
+      expect(dartBuilds, 1);
+      expect(find.text('vm=CounterVm'), findsOneWidget);
+
+      // JS 侧 notify → Dart 侧依赖者重建（P2：provider 子树粒度）
+      handle({'id': id, 'op': 'notify'});
+      await tester.pump();
+      expect(dartBuilds, 2);
+
+      // Consumer / ListenableBuilder 同样映射成监听边界（同一 VM 实例）
+      final consumer = _ctx(
+        registry,
+        'Consumer',
+        {
+          'model': 'CounterVm',
+          'vm': {'__handle': id},
+        },
+        children: const [Text('x')],
+      );
+      expect(consumer, isA<ListenableBuilder>());
+      expect((consumer as ListenableBuilder).listenable, same(jsVmOf(id)));
+
+      handle({'id': id, 'op': 'release'});
+    });
+
+    testWidgets('BuildContext 代理：按结点 id / 句柄 id 反查宿主真值', (tester) async {
+      late BuildContext nodeCtx;
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(builder: (c) {
+          nodeCtx = c;
+          return const SizedBox.shrink();
+        }),
+      ));
+      // 宿主结点 build 期间登记（_JsNodeState 的真实行为）
+      registerJsBuildContext('n1', nodeCtx);
+
+      const id = 'js:ctx/BuildContext#1';
+      handle({
+        'id': id,
+        'op': 'create',
+        'kind': 'ctx/BuildContext',
+        'meta': {'node': 'n1'},
+      });
+      expect(jsBuildContextOfNode('n1'), same(nodeCtx));
+      expect(jsBuildContextOf(id), same(nodeCtx));
+
+      handle({'id': id, 'op': 'release'});
+      expect(jsBuildContextOf(id), isNull);
+      unregisterJsBuildContext('n1');
+      expect(jsBuildContextOfNode('n1'), isNull);
+    });
+  });
+
   test('宿主翻译层：JsWidgetRegistry 构造 Text/Column/Button', () {
     final registry = JsWidgetRegistry();
     registerBuiltinJsWidgets(registry);
@@ -205,7 +321,7 @@ Widget _ctx(
   void Function(Object? handler, [List<Object?> args])? invoke,
 }) {
   final builder = registry.lookup(type)!;
-  return builder(JsBuildContext(
+  return builder(JsRenderContext(
     props: props,
     children: children,
     childTypes: childTypes,

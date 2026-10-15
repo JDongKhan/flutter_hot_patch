@@ -18,7 +18,7 @@ export class AppShell {
   _openTab(index) {
     this.setState(function(){ this._index = index; });
   }
-  build() {
+  build(context) {
     return __h('Scaffold', {
         "body": __h('IndexedStack', {
             "index": this._index

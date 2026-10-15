@@ -117,7 +117,8 @@ export class ListenableBuilder {
   build() {
     var owner = this.__owner();
     if (!owner) { return null; }
-    return owner[this.props.builder].call(owner);
+    var child = owner[this.props.builder].call(owner);
+    return __h('ListenableBuilder', { vm: owner[this.props.listenable] }, [child]);
   }
   dispose() {
     if (this.__listenable && this.__listener) {

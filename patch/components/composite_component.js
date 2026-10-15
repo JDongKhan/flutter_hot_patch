@@ -13,7 +13,7 @@ export class DashboardCard {
   tick() {
     this.setState(function(){ this._ticks += 1; });
   }
-  build() {
+  build(context) {
     return __h('Column', {}, [
         __h('Text', {
             "data": "Dashboard (JS)",
@@ -65,7 +65,7 @@ export class LabeledDivider {
   __applyProps(args) {
     this.text = (args && args.text !== undefined) ? args.text : '';
   }
-  build() {
+  build(context) {
     return __h('Text', {
         "data": "★ " + this.text + " ★",
         "style": {

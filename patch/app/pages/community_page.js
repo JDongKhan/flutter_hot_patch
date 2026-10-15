@@ -36,7 +36,7 @@ export class CommunityPage {
   _resetFilter() {
     this.setState(function(){ this._sort = kSorts[0]; this._type = kPostTypes[0]; this._dist = kDists[0]; this._price = kPriceRanges[0]; });
   }
-  build() {
+  build(context) {
     console.log("-----" + __str(this._filterOpen));
     return __h('Column', {}, [
         __h('Container', {
@@ -201,7 +201,7 @@ export class _ListContent {
       console.log("--1");
     }
   }
-  build() {
+  build(context) {
     var posts = this.list;
     var filterOpen = this.openFilter;
     return __h('Stack', {}, [
@@ -281,7 +281,7 @@ export class _FilterPanel {
           ])
       ]);
   }
-  build() {
+  build(context) {
     return __h('Material', {
         "color": '#FFFFFF',
         "elevation": 8,
@@ -385,7 +385,7 @@ export class _PostCard {
   _likeText(n) {
     return ((n > 999) ? ((n / 1000)).toFixed(1) + "k" : n);
   }
-  build() {
+  build(context) {
     return __h('GestureDetector', {
         "event": this.__bind("this.onTap()")
       }, [
@@ -516,7 +516,7 @@ export class _ResourceCard {
     this.resource = (args && args.resource !== undefined) ? args.resource : null;
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
-  build() {
+  build(context) {
     return __h('GestureDetector', {
         "event": this.__bind("this.onTap()")
       }, [

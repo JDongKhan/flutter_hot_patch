@@ -117,7 +117,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   final List<String?> builderParams = [];
 
   /// 与 [builderTrees] 同步的「方法体前置语句」（JS 源码，如 Builder 闭包
-  /// 块体里的 `var model = this.__watch('MyModel');`）。
+  /// 块体里的 `var model = this.watch('MyModel');`）。
   final List<String> builderPreludes = [];
 
   WidgetTranslateContext({
@@ -462,7 +462,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 
   /// Builder 闭包局部变量 → 模型类型（`final model = context.watch<T>()`）。
   /// 事件表达式（`() => model.inc()`，局部变量不在回传作用域内）据此翻译成
-  /// `this.__read("T").inc()`——两条运行时都在实例上挂了 `__read`，不依赖
+  /// `this.read("T").inc()`——两条运行时都在实例上挂了 `read`，不依赖
   /// 局部作用域即可回传执行。
   final Map<String, String> _localModels = {};
   void addLocalModel(String name, String modelType) => _localModels[name] = modelType;
@@ -723,19 +723,20 @@ class WidgetTranslateContext implements WidgetExprRenderer {
             _hostEventJs(target, inner.methodName.name, inner.argumentList);
         if (hostCall != null) return hostCall;
         // 局部变量 receiver：`model.inc()` → 事件表达式中局部变量已不在
-        // 作用域，模型局部（context.watch<T>()）改用 `this.__read('T')`；
+        // 作用域，模型局部（context.watch<T>()）改用 `this.context.read('T')`；
         // 其余局部变量原样保留（`model.inc()`，闭包内 var 已声明）。
         if (target is Identifier && _locals.contains(target.name)) {
           final modelType = _localModels[target.name];
-          final recv =
-              modelType != null ? 'this.__read(${jsString(modelType)})' : target.name;
+          final recv = modelType != null
+              ? 'this.context.read(${jsString(modelType)})'
+              : target.name;
           return '$recv.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList)})';
         }
         // context.read<T>().reset() 链式：先翻译 receiver（jsDataExpr →
-        // this.__read('T')），再拼方法调用。
+        // this.context.read('T')），再拼方法调用。
         if (target is MethodInvocation) {
-          final recv = jsDataExpr(target);
+          final recv = jsDataExpr(target, _eventScope());
           return '$recv.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList)})';
         }
@@ -816,14 +817,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (fn is! FunctionExpression) {
       throw const FormatException('setState 需要函数实参');
     }
-    final scope = FieldScope(
-      propByField: propByField,
-      params: {..._loopVars, ..._locals, ..._methodParams},
-      methods: {...actionByMethod.keys, ...methodNames},
-      hostMethods: hostMethods,
-      globalConsts: globalConsts,
-      localAliases: _localAliases,
-    );
+    final scope = _eventScope();
     final body = fn.body;
     String bodyJs;
     if (body is ExpressionFunctionBody) {
@@ -863,17 +857,16 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   }
 
   /// 事件参数列表翻译：逐参数走 [jsDataExpr]（字符串/字段/局部变量/字面量）。
+  ///
+  /// 作用域用 [_eventScope]：实参里的 `context` 照常翻译成 `this.context`
+  /// （实例上的同一代理），形参与调用点一一对应，不做任何剔除。
   String _eventArgsJs(ArgumentList args) {
     final out = <String>[];
     for (final a in args.arguments) {
-      // `BuildContext` 实参（约定名 context）：JS 侧方法签名已剔除（见
-      // jsMethodParams），调用点也要同步跳过——否则 `() => _openMenu(context, i)`
-      // 会因 context 翻译不出来整条事件丢弃。
-      if (a is Identifier && a.name == 'context') continue;
       if (a is NamedExpression) {
-        out.add(jsDataExpr(a.expression));
+        out.add(jsDataExpr(a.expression, _eventScope()));
       } else {
-        out.add(jsDataExpr(a));
+        out.add(jsDataExpr(a, _eventScope()));
       }
     }
     return out.join(', ');
@@ -897,12 +890,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final pos = <String>[];
     final named = <String>[];
     for (final a in args.arguments) {
-      // BuildContext 实参（约定名 context）：JS 侧无对应值，跳过（同 [_eventArgsJs]）。
-      if (a is Identifier && a.name == 'context') continue;
+      // 形参与调用点一一对应，不做任何剔除（`context` → `this.context`，
+      // 见 [_eventScope]：事件串在隔离作用域求值，看不见 build 形参）。
       if (a is NamedExpression) {
-        named.add('${jsString(a.name.label.name)}: ${jsDataExpr(a.expression)}');
+        named.add(
+            '${jsString(a.name.label.name)}: ${jsDataExpr(a.expression, _eventScope())}');
       } else {
-        pos.add(jsDataExpr(a));
+        pos.add(jsDataExpr(a, _eventScope()));
       }
     }
     return '__jsui.host(${jsString(channel)}, ${hostArgsJs(pos, named)})';
@@ -942,8 +936,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 语句翻译共用同一套语法支持——新增语法只改那一处），只是把作用域换成
   /// 组件侧：状态字段（[propByField]）+ 循环变量 + build 局部变量 + 组件方法。
   /// 无法翻译即抛错（组件数据绑定不允许静默丢表达式）。
-  String jsDataExpr(Expression e) {
-    final js = rhsToJs(e, _dataScope(), const {});
+  ///
+  /// [scope] 可覆盖默认的组件数据作用域：事件路径传 [_eventScope]，把 `context`
+  /// 落到实例上的同一代理 `this.context`（事件串在运行时隔离求值，看不见 build
+  /// 形参，裸 `context` 必然 ReferenceError）。
+  String jsDataExpr(Expression e, [FieldScope? scope]) {
+    final js = rhsToJs(e, scope ?? _dataScope(), const {});
     if (js == null) {
       throw FormatException(
           '文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
@@ -971,6 +969,29 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         globalConsts: globalConsts,
         localAliases: _localAliases,
       );
+
+  /// 事件表达式作用域：在 [_dataScope] 基础上把 `context` 从形参表**剔除**、
+  /// 改挂别名 `context → this.context`。
+  ///
+  /// 缘由：事件串由运行时用隔离函数求值（`new Function`），build 形参 / 方法
+  /// 局部变量在点击时都不可见——裸 `context` 落到那里必然是 ReferenceError。
+  /// 实例上的 `context` 与 build 传参是**同一代理对象**（见【10.7】），故改走
+  /// `this.context` 即可保持「调用面与 Dart 一致」。
+  /// [FieldScope.fieldRef] 的顺序是形参优先，因此这里必须同时把 `context`
+  /// 移出 `params`，别名才会生效（否则渲染期翻译出的 `context.watch` 会占位）。
+  FieldScope _eventScope() {
+    final base = _dataScope();
+    return FieldScope(
+      propByField: base.propByField,
+      instanceFields: base.instanceFields,
+      params: {...base.params}..remove('context'),
+      methods: base.methods,
+      hostMethods: base.hostMethods,
+      globalConsts: base.globalConsts,
+      localVars: base.localVars,
+      localAliases: {...base.localAliases, 'context': 'this.context'},
+    );
+  }
 
   /// 组件参数位置上的「函数值」翻译：返回 null = 不是函数形态。
   ///

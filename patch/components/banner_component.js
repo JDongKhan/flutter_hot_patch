@@ -16,7 +16,7 @@ export class BannerCard {
   bump() {
     this.setState(function(){ this._views += 1; });
   }
-  build() {
+  build(context) {
     return __h('Column', {}, [
         __h('Text', {
             "data": "Banner from another file",

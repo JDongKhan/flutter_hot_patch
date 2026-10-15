@@ -1053,7 +1053,11 @@ List<CollectionElement>? _sliverListDelegateChildren(Expression? delegate) {
 }
 
 /// 统一的 builder 闭包 → 组件方法抽取：`(context, index[, child])` 闭包抽成
-/// `$prefix$idx(index)` 实例方法（builderTrees 机制），返回方法名。
+/// `$prefix$idx(context, index)` 实例方法（builderTrees 机制），返回方法名。
+///
+/// **形参与 Dart 闭包签名一一对应**（context 不再剔除）：JS 侧由被委托的
+/// 代理类按 Dart 签名传自身结点上的 BuildContext 代理
+/// （`owner[name].call(owner, __ctxOf(this), index)`，见 builderProxySource）。
 ///
 /// 两种体形态都支持：
 ///   - 箭头体 `(context, i) => _Card(...)`：表达式即子树；
@@ -1063,9 +1067,15 @@ List<CollectionElement>? _sliverListDelegateChildren(Expression? delegate) {
 String? _extractBuilderMethod(
     WidgetTranslateContext ctx, FunctionExpression builder, String prefix) {
   final params = builder.parameters?.parameters ?? const <FormalParameter>[];
-  // (context, index[, child]) —— index 是第二个参数（Consumer 同款约定）。
+  // (context, index[, child]) —— context 是第一个参数（与 Dart 闭包一致）。
+  // Dart 通配符 `_` / 缺名在 JS 里落成 `context`（Dart 侧本就无法引用 `_`）。
+  final rawCtxName = params.isEmpty ? null : params[0].name?.lexeme;
+  final contextName =
+      (rawCtxName == null || rawCtxName == '_') ? 'context' : rawCtxName;
+  // index 是第二个参数（Consumer 同款约定）。
   final indexName = params.length >= 2 ? params[1].name?.lexeme : null;
   if (indexName == null) return null;
+  ctx.addLocal(contextName);
   ctx.addLocal(indexName);
   Expression? retExpr;
   final preludes = <String>[];
@@ -1096,7 +1106,7 @@ String? _extractBuilderMethod(
   ctx.builderTrees.add(subtree);
   final idx = ctx.builderTrees.length - 1;
   ctx.builderNames.add('$prefix$idx');
-  ctx.builderParams.add(indexName);
+  ctx.builderParams.add('$contextName, $indexName');
   ctx.builderPreludes.add(preludes.isEmpty ? '' : preludes.join(' '));
   return '$prefix$idx';
 }
@@ -1999,9 +2009,10 @@ class SliderTranslator extends WidgetTranslator {
 
 /// ListenableBuilder：`ListenableBuilder(listenable: _model, builder: (c,_) => Text(...))`。
 ///
-/// 闭包返回的子树抽到组件方法 `_lbBuilderN()`（ctx.builderTrees 收集），节点
-/// props 只引用 `listenable`（模型成员名）与 `builder`（方法名）。运行时把
-/// builder 包装为 Flutter ListenableBuilder，模型 notify 后重新调用
+/// 闭包返回的子树抽到组件方法 `_lbBuilderN(context)`（ctx.builderTrees 收集），节点
+/// props 只引用 `listenable`（模型成员名）与 `builder`（方法名）。JS 侧
+/// ListenableBuilder 组件类调用时传自身结点上的 BuildContext 代理
+/// （`owner[props.builder].call(owner, __ctxOf(this))`），模型 notify 后重新调用
 /// `_lbBuilderN()` 拿到最新子树，做「仅此节点」的局部重建（不全量 setState）。
 class ListenableBuilderTranslator extends WidgetTranslator {
   const ListenableBuilderTranslator();
@@ -2021,6 +2032,13 @@ class ListenableBuilderTranslator extends WidgetTranslator {
     if (inner == null) {
       throw FormatException('ListenableBuilder.builder 需为返回 widget 的闭包');
     }
+    // 闭包形参（BuildContext）按 Dart 签名收下（同 Builder）。
+    final lbParams = builderFn is FunctionExpression
+        ? (builderFn.parameters?.parameters ?? const <FormalParameter>[])
+        : const <FormalParameter>[];
+    final rawCtx = lbParams.isEmpty ? null : lbParams[0].name?.lexeme;
+    final ctxName = (rawCtx == null || rawCtx == '_') ? 'context' : rawCtx;
+    ctx.addLocal(ctxName);
     // 目前 listenable 限定为模型状态字段（如 `_model`），运行时取成员名。
     if (listenable is! Identifier) {
       throw FormatException('ListenableBuilder.listenable 需为模型状态字段（如 _model）');
@@ -2031,7 +2049,7 @@ class ListenableBuilderTranslator extends WidgetTranslator {
     ctx.builderTrees.add(subtree);
     final idx = ctx.builderTrees.length - 1;
     ctx.builderNames.add('_lbBuilder$idx');
-    ctx.builderParams.add(null);
+    ctx.builderParams.add(ctxName);
     return {
       'type': ctx.jsString('ListenableBuilder'),
       'props': {
@@ -2043,11 +2061,14 @@ class ListenableBuilderTranslator extends WidgetTranslator {
 }
 
 /// Builder：`Builder(builder: (context) => ...)` —— 多一层 context 作用域，
-/// 闭包内 `context.watch<T>()` / `context.read<T>()` 可用（翻译成
-/// `this.__watch('T')` / `this.__read('T')`，运行时挂载在实例上）。
+/// 闭包内 `context.watch<T>()` / `context.read<T>()` 可用（**调用面与 Dart 完全
+/// 一致**：翻译成 `context.watch('T')`，`context` 即闭包形参本身）。
 ///
-/// 闭包返回的子树抽到组件方法 `_builderN()`（与 ListenableBuilder 同机制，
-/// 但无订阅——Builder 本身无 listenable；watch 订阅由 __watch 内部处理）。
+/// 闭包返回的子树抽到组件方法 `_builderN(context)`（与 ListenableBuilder 同机制，
+/// 但无订阅——Builder 本身无 listenable；watch 的订阅由 watch 内部处理）。
+/// JS 侧 Builder 组件类调用时传**它自己结点上的** BuildContext 代理
+/// （`owner[_builderN].call(owner, __ctxOf(this))`，见 widget_module_builder），
+/// 与 Dart 的 `Builder(builder: (context) => …)` 形参语义一致。
 /// 块体闭包支持：return 前允许局部变量声明（`final model = ...` → 方法体
 /// 前置 `var model = ...;`）与日志语句（debugPrint/print → console 方法）。
 class BuilderTranslator extends WidgetTranslator {
@@ -2062,6 +2083,12 @@ class BuilderTranslator extends WidgetTranslator {
     if (builderFn is! FunctionExpression) {
       throw FormatException('Builder 需要 builder 闭包');
     }
+    // 闭包形参（BuildContext）注册为局部变量：子树里的 `context.watch/read`
+    // 原样翻译（形参在作用域内，与 Dart 写法一字不差）。
+    final bParams = builderFn.parameters?.parameters ?? const <FormalParameter>[];
+    final rawCtx = bParams.isEmpty ? null : bParams[0].name?.lexeme;
+    final ctxName = (rawCtx == null || rawCtx == '_') ? 'context' : rawCtx;
+    ctx.addLocal(ctxName);
     final body = builderFn.body;
     Expression? retExpr;
     final preludes = <String>[];
@@ -2077,7 +2104,7 @@ class BuilderTranslator extends WidgetTranslator {
           for (final v in st.variables.variables) {
             ctx.addLocal(v.name.lexeme);
             // `final model = context.watch<T>()`：登记局部 → 模型类型，
-            // 事件表达式（`() => model.inc()`）据此翻译成 this.__read('T')。
+            // 事件表达式（`() => model.inc()`）据此翻译成 this.read('T')。
             final mt = _contextModelTypeOf(v.initializer);
             if (mt != null) ctx.addLocalModel(v.name.lexeme, mt);
             final js = v.initializer == null
@@ -2106,7 +2133,7 @@ class BuilderTranslator extends WidgetTranslator {
     ctx.builderTrees.add(subtree);
     final idx = ctx.builderTrees.length - 1;
     ctx.builderNames.add('_builder$idx');
-    ctx.builderParams.add(null);
+    ctx.builderParams.add(ctxName);
     ctx.builderPreludes.add(preludes.isEmpty ? '' : preludes.join(' '));
     return {
       'type': ctx.jsString('Builder'),
@@ -2268,6 +2295,11 @@ class ConsumerTranslator extends WidgetTranslator {
       throw FormatException(
           'Consumer.builder 需要 (context, value[, child]) 参数');
     }
+    // 闭包第一个形参是 BuildContext：按 Dart 签名收下（JS 侧 Consumer 组件类
+    // 调用时传自身结点上的代理：`owner[name].call(owner, __ctxOf(this), vm)`）。
+    final rawCtx = params.isEmpty ? null : params[0].name?.lexeme;
+    final ctxName = (rawCtx == null || rawCtx == '_') ? 'context' : rawCtx;
+    ctx.addLocal(ctxName);
     final inner = ctx.functionInner(builderRaw);
     if (inner == null) {
       throw FormatException('Consumer.builder 闭包需返回 widget');
@@ -2278,7 +2310,7 @@ class ConsumerTranslator extends WidgetTranslator {
     ctx.builderTrees.add(subtree);
     final idx = ctx.builderTrees.length - 1;
     ctx.builderNames.add('_consumerBuilder$idx');
-    ctx.builderParams.add(valueName);
+    ctx.builderParams.add('$ctxName, $valueName');
     return {
       'type': ctx.jsString(type),
       'props': {

@@ -104,29 +104,13 @@ const String miniReactComponentBaseSource = r'''
 
   // ===== 【6】mini-react｜组件基类（生成器产物的能力袋）===============
   // 生成器产物**不** extends 本类：`augment` 把这些方法拷到实例上。
-  // setState / __bind 属于 mini-react；中间的 watch / read 属于 provider
-  // （见行内【7】标注）。
+  // setState / __bind 属于 mini-react；provider 的上下文（watch/read）与
+  // BuildContext 代理见【10.7】（调用面是 `context.watch/read`，与 Dart 一致，
+  // 不在实例上挂 `this.watch`）。
   function Component(props) { this.props = props || {}; }
   Component.prototype.setState = function (mutate) {
     if (typeof mutate === 'function') { mutate.call(this); }
     markDirty(this);
-  };
-  // ── 【7】provider｜取值 + 订阅（插入在组件基类中，供 this.watch/read）──
-  // 取最近 provider 的**值**并订阅（值变更 -> 重构建该位置的结点）。
-  // 锚点是**当前构建的元素**（`building`），即订阅者自己：provider 只是纯值
-  // 结点，不感知订阅（与 Dart context.watch 一致——按位置取最近 provider，
-  // 依赖由该 BuildContext 持有，而非 provider 记账）。
-  Component.prototype.watch = function (type) {
-    var anchor = building || this;
-    var node = findProvider(anchor, type);
-    if (!node) { return undefined; }
-    subscribeVm(anchor, node, node.__value);
-    return node.__value;
-  };
-  // 只读不订阅（同样按当前构建位置向上取最近 provider）。
-  Component.prototype.read = function (type) {
-    var node = findProvider(building || this, type);
-    return node ? node.__value : undefined;
   };
   // ── 回到【6】mini-react｜事件句柄（__bind）────────────────────────────
   // 事件句柄：在**构建期**把事件表达式绑定到当前组件实例（Dart tear-off 语义）。
@@ -135,7 +119,7 @@ const String miniReactComponentBaseSource = r'''
   // `.call(owner)` 的场景）。句柄随 props 传下去（`{__fn:id, __ev:原表达式}`），
   // 宿主点击时经 invoke(id) 回来；因为绑定信息挂在 props 上，包装型组件
   // （MultiProvider 透传 child）也不会把它弄丢。
-  //   句柄执行时会还原**绑定时的构建位置**：事件表达式里的 `this.__read/__watch`
+  //   句柄执行时会还原**绑定时的构建位置**：事件表达式里的 `this.context.watch/read`
   //   按定义该表达式时的 context 位置解析（而非点击时的 `this`）。
   //   按 (实例, 表达式) 缓存：重建产出同一句柄 → props 稳定（增量补丁仍生效）；
   //   卸载时统一释放（markUnmounted）。
@@ -145,7 +129,7 @@ const String miniReactComponentBaseSource = r'''
     var self = this;
     var anchor = building || this; // 绑定时的 context 位置（见上）
     // 两种事件形态，触发即执行：裸方法名（`_incA`）→ 调实例方法；其余整体
-    // 作为调用表达式求值（`this.__read("T").inc()`）。二者都无返回值语义。
+    // 作为调用表达式求值（`this.context.read("T").inc()`）。二者都无返回值语义。
     var isName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expr);
     var run = isName
       // 方法名形态：句柄收到的参数数组用 apply 摊开成位置实参（支持 N 参事件）。
@@ -157,7 +141,7 @@ const String miniReactComponentBaseSource = r'''
           new Function('return (' + expr + ');').call(self);
         };
     var handle = fn(function () {
-      // 还原绑定时的构建位置：表达式若含 `this.__read/__watch`，按当时的
+      // 还原绑定时的构建位置：表达式若含 `this.context.watch/read`，按当时的
       // context 位置解析（点击时无 build 上下文，`building` 为 null）。
       // 事件位置实参在 `arguments` 里（invoke 已摊开），原样交给 run 转发。
       var prev = building;
@@ -199,18 +183,20 @@ const String miniReactComponentBaseSource = r'''
 
 ''';
 
-/// provider｜向上查找 + 消费者侧订阅台账（watch / read / findProvider）【7】。
+/// provider｜向上查找 VM + 消费者侧订阅（watch / read / findVm）【7】。
 const String miniReactProviderSource = r'''
 
-  // ===== 【7】provider｜向上查找 + 消费者侧订阅台账 =====================
-  // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的 provider —— 与 Dart
+  // ===== 【7】provider｜向上查找 VM + 消费者侧订阅 =====================
+  // JS 侧**没有 provider 专用机制**：provider 就是宿主结点 `ChangeNotifierProvider`
+  // （type 字符串），其 props 带 { model: 类型名, vm: VM 实例 }。
+  // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的 VM —— 与 Dart
   // `context.read/watch` 的向上查找一致，取不到返回 null（不猜、不回退）。
-  function findProvider(inst, type) {
+  // 必须是同步取值：渲染期 `model.count` 直接读，不能经异步桥回宿主。
+  function findVm(inst, type) {
     var p = inst.__parent;
     while (p) {
-      if (p.__provides && Object.prototype.hasOwnProperty.call(p.__provides, type)) {
-        return p.__provides[type];
-      }
+      var pr = p.__props;
+      if (pr && pr.model === type) { return pr.vm; }
       p = p.__parent;
     }
     return null;
@@ -218,14 +204,17 @@ const String miniReactProviderSource = r'''
 
   // 订阅：给 [vm] 挂一个「把 [anchor] 标脏」的监听。订阅由**消费者自己持有**
   // （provider 不记账），台账记在消费者侧 `__vmSubs`，卸载时精确退订。
-  // 按 provider 结点去重：重建会再次 watch，但不会重复挂监听。
-  function subscribeVm(anchor, node, vm) {
+  // 按 VM 身份去重：重建会再次 watch，但不会重复挂监听。
+  // 这条通路是 JS 侧**唯一保留**的 provider 残留，且复用的是原生
+  // ChangeNotifier API（不是 provider 私有记账）：VM notify 时把订阅位置标脏
+  // → 重建 → 下发 patch → 宿主结点重建，UI 才真正更新。
+  function subscribeVm(anchor, vm) {
     if (!vm || typeof vm.addListener !== 'function') { return; }
     var mine = anchor.__vmSubs || (anchor.__vmSubs = []);
     for (var i = 0; i < mine.length; i++) {
-      if (mine[i].node === node) { return; }
+      if (mine[i].vm === vm) { return; }
     }
-    var entry = { node: node, vm: vm };
+    var entry = { vm: vm };
     // 依赖变更必须区别于 setState：标记 __depDirty，flush 时据此在 build 前
     // 补一次 didChangeDependencies（对应 Flutter 的 InheritedWidget 变更语义）。
     entry.listener = function () { anchor.__depDirty = true; markDirty(anchor); };
@@ -303,30 +292,34 @@ const String miniReactReconcilerSource = r'''
   // ===== 【9】mini-react｜reconciler 主流程（mount / patch / unmount）==
   // 普通类组件（生成器产物不 extends Component）挂载基类能力：
   //   [mini-react] props / setState / __bind（构建期事件句柄）
-  //   [provider]   watch / read（含生成器产物使用的下划线别名
-  //                `this.__watch(...)` / `this.__read(...)`）
+  //   [ctx]        context（BuildContext 代理 —— build 传参的同一对象）
   // 对 extends Component 的类重复赋值无害。
   function augment(inst) {
     if (inst.props === undefined || inst.props === null) {
       inst.props = inst.__el ? inst.__el.props : {};
     }
     inst.setState = Component.prototype.setState;
-    inst.watch = Component.prototype.watch;
-    inst.read = Component.prototype.read;
-    inst.__watch = Component.prototype.watch;
-    inst.__read = Component.prototype.read;
     inst.__bind = Component.prototype.__bind;
     inst.__bindFn = Component.prototype.__bindFn;
+    // 与 Dart 一致：`context` 既是 build 形参、也是实例上可访问的同一对象。
+    // 事件/延迟作用域里形参不可见，`this.context` 是同步可达路径；两者恒等
+    // （同一个代理实例，见 capabilities/build_context_js.dart 的 contextOf）。
+    // 惰性：不用 context 的组件不建代理、不建跨语言句柄。
+    Object.defineProperty(inst, 'context', {
+      configurable: true,
+      get: function () { return contextOf(this); }
+    });
   }
 
-  // 在 [inst] 的 build 执行期间把 `building` 指向它 —— watch/read 与事件绑定
-  // 据此拿到「当前构建位置」作为 context 锚点。building 只在同步的 build 调用
-  // 内有效，退出即还原（委托型组件的 builder 方法在 build 调用栈内执行，
-  // 因此锚点仍是该委托组件自身的结点）。
+  // 在 [inst] 的 build 执行期间把 `building` 指向它 —— 事件绑定据此拿到
+  // 「当前构建位置」。building 只在同步的 build 调用内有效，退出即还原
+  // （委托型组件的 builder 方法在 build 调用栈内执行，故锚点仍是该结点）。
+  //
+  // 按 Dart 签名把 BuildContext 代理**传进去**：`build(context)`。
   function buildOf(inst) {
     var prev = building;
     building = inst;
-    try { return inst.build(); } finally { building = prev; }
+    try { return inst.build(contextOf(inst)); } finally { building = prev; }
   }
 
   function mount(el, parent, slot) {
@@ -520,6 +513,13 @@ const String miniReactReconcilerSource = r'''
       }
       // [provider] 从各 VM 的监听表里摘掉自己（订阅登记在消费者侧 `__vmSubs`）。
       unsubscribeAll(inst);
+      // [ctx] 释放 BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有
+      // 真实记录（句柄→结点），纯本端删除会让宿主那条记录留到页面销毁。
+      // 与页面兜底 releasePageHandles 幂等（先删者胜，第二次是空操作）。
+      if (inst.__ctx != null && inst.__ctx.__id != null) {
+        releaseHandle(inst.__ctx.__id);
+        inst.__ctx = null;
+      }
       // [mini-react] 释放构建期登记的（实例, 表达式）事件句柄，避免句柄泄漏。
       var bag = inst.__bound;
       if (bag) {

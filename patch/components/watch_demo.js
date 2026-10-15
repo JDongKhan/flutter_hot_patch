@@ -10,7 +10,7 @@ import { ChangeNotifierProvider } from '../provider.js';
 export class WatchDemo {
   constructor() {
   }
-  build() {
+  build(context) {
     return __h('Card', {}, [
         __h('Padding', {
             "padding": {
@@ -39,7 +39,7 @@ export class WatchDemo {
       ]);
   }
   _builder0() {
-      var model = this.__watch("CounterVm");
+      var model = this.watch("CounterVm");
       return __h('Column', {
         "mainAxisSize": "min"
       }, [
@@ -63,7 +63,7 @@ export class WatchDemo {
             __h('Button', {
                 "kind": "elevated",
                 "label": "+1",
-                "event": this.__bind("this.__read(\"CounterVm\").inc()")
+                "event": this.__bind("this.read(\"CounterVm\").inc()")
               }),
             __h('SizedBox', {
                 "width": 12
@@ -71,7 +71,7 @@ export class WatchDemo {
             __h('Button', {
                 "kind": "elevated",
                 "label": "Reset",
-                "event": this.__bind("this.__read(\"CounterVm\").reset()")
+                "event": this.__bind("this.read(\"CounterVm\").reset()")
               })
           ])
       ]);
@@ -82,10 +82,10 @@ export class WatchDemo {
 export class WatchCountLabel {
   constructor() {
   }
-  build() {
-    var model = this.__watch("CounterVm");
+  build(context) {
+    var model = this.watch("CounterVm");
     return __h('Text', {
-        "data": "another State: count = " + this.__watch("CounterVm").count,
+        "data": "another State: count = " + this.watch("CounterVm").count,
         "style": {
           "fontSize": 16,
           "color": '#2196F3'

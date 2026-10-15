@@ -22,14 +22,13 @@ export class ChangeNotifierProvider {
     }
     this.__value = vm;
     this.__ownsValue = owns;
-    this.__provides = {};
-    this.__provides[p.model] = this;
   }
   build() {
     // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；
     // 被 MultiProvider 包裹时由 `__h(type, props, [node])` 放进 children。
-    if (this.props.child != null) { return this.props.child; }
-    return this.children.length ? this.children[0] : null;
+    var child = this.props.child != null ? this.props.child
+        : (this.children.length ? this.children[0] : null);
+    return __h('ChangeNotifierProvider', { model: this.props.model, vm: this.__value }, [child]);
   }
   dispose() {
     if (this.__ownsValue && this.__value &&
@@ -50,7 +49,8 @@ export class Consumer {
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
-    return owner[name].call(owner, vm);
+    var child = owner[name].call(owner, vm);
+    return __h('Consumer', { model: this.props.model, vm: vm }, [child]);
   }
 }
 

@@ -41,7 +41,7 @@
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
 /// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
 /// | 【6】 | 组件基类（`setState` / `__bind`） | mini-react（生成器产物的能力袋） |
-/// | 【7】 | provider 取值与订阅（`watch` / `read` / `findProvider`） | provider 模式专用 |
+/// | 【7】 | provider 取值与订阅（`watch` / `read` / `findVm` / `subscribeVm`） | provider 模式专用 |
 /// | 【8】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
 /// | 【9】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
 /// | 【10】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
@@ -58,7 +58,9 @@ import 'package:flutter/foundation.dart'
 //   - capabilities/text_editing_controller_js.dart → TextEditingController 代理类
 //   - capabilities/tab_controller_js.dart         → TabController 代理类
 //   - capabilities/key_js.dart                    → ValueKey/ObjectKey/UniqueKey/GlobalKey 代理类
+//   - capabilities/build_context_js.dart          → BuildContext 代理（`this.context`）
 //   - js/handle_registry_js.dart                  → 跨语言句柄注册表（通用层地基）
+import 'capabilities/build_context_js.dart';
 import 'capabilities/key_js.dart';
 import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/tab_controller_js.dart';
@@ -296,7 +298,7 @@ const String _jsUiHostBridge = r'''
 
 /// mini-react｜组件基类（setState / __bind，生成器产物的能力袋）【6】。
 
-/// provider｜向上查找 + 消费者侧订阅台账（watch / read / findProvider）【7】。
+/// provider｜向上查找 VM + 消费者侧订阅（watch / read / findVm）【7】。
 
 /// mini-react｜调度（markDirty → flush 批处理）【8】。
 
@@ -418,6 +420,7 @@ String jsUiRuntimeSource() => [
   textEditingControllerJsSource,
   tabControllerJsSource,
   keyJsSource,
+  buildContextJsSource,
   _jsUiRuntimeSkeletonTail,
 ].join('\n');
 

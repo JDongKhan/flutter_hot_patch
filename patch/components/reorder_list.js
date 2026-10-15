@@ -16,7 +16,7 @@ export class ReorderListDemo {
   _add() {
     this.setState(function(){ this._items.push("城市 " + (this._items.length + 1)); });
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "mainAxisSize": "min"
       }, [

@@ -6,6 +6,7 @@ import '../services/builtin_host_methods.dart';
 import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
+import 'capabilities/build_context_bridge.dart';
 import 'capabilities/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key_bridge.dart';
@@ -208,6 +209,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 页面级兜底：本页登记的跨语言句柄在当前页面销毁时统一释放（正常路径下
     // JS 的 disposeRoot 已逐个通知到本端，此处为空操作；异常路径兜底）。
     releasePageHandles(_pageKey);
+    // 注销页面锚点（根组件的 `this.context` 用它反查真值 BuildContext）。
+    unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
     jsUiPageStores.remove(_pageKey);
     super.dispose();
@@ -215,6 +218,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // 页面锚点：根组件（COMP 之上没有宿主结点）的 `this.context` 代理按
+    // `page:<pageKey>` 反查 —— 见 capabilities/build_context_js.dart。
+    registerJsBuildContext(jsBuildContextPageAnchor(_pageKey), context);
     if (_error != null) {
       return _JsLoadErrorView(message: _error!, onRetry: _retry);
     }
@@ -423,6 +429,7 @@ class _JsNodeState extends State<_JsNode> {
   @override
   void dispose() {
     widget.store.unbind(widget.id, _rebuild);
+    unregisterJsBuildContext(widget.id);
     super.dispose();
   }
 
@@ -435,9 +442,14 @@ class _JsNodeState extends State<_JsNode> {
     final node = widget.store.nodes[widget.id];
     if (node == null) return const SizedBox.shrink();
 
+    // JS 组件的 `this.context` 代理按**最近宿主祖先结点 id** 反查真实
+    // BuildContext（见 capabilities/build_context_bridge.dart）：在此登记/
+    // 刷新，dispose 注销——这就是「element 级 scope」。
+    registerJsBuildContext(widget.id, context);
+
     final children = <Widget>[];
     final childTypes = <String>[];
-    final childContexts = <JsBuildContext>[];
+    final childContexts = <JsRenderContext>[];
     for (final childId in node.childIds) {
       final childNode = widget.store.nodes[childId];
       final childType = childNode?.type ?? '';
@@ -446,7 +458,7 @@ class _JsNodeState extends State<_JsNode> {
       // 数据载体型子结点（BottomNavigationBarItem / DropdownMenuItem 等
       // 非 Widget 类型）：父 renderer 直接读其 props/propChildren 组装。
       childContexts.add(
-        JsBuildContext(
+        JsRenderContext(
           props: childNode?.props ?? const {},
           children: const [],
           childTypes: const [],
@@ -470,7 +482,7 @@ class _JsNodeState extends State<_JsNode> {
     if (builder == null) return buildMissingJsWidget(node.type, children);
 
     return builder(
-      JsBuildContext(
+      JsRenderContext(
         props: node.props,
         children: children,
         childTypes: childTypes,

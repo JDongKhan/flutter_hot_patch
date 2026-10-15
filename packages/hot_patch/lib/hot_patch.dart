@@ -6,8 +6,9 @@
 /// 加载 JS 补丁渲染组件、由 JS 驱动逻辑。
 ///
 /// 渲染入口是 [JsUiWidget]（宿主）+ JS 侧 `__jsui` 运行时（element /
-/// component / reconciler / context / commit 协议）；状态语义（provider /
-/// setState 等）全部在 JS 侧实现，宿主只做「JS 结点 → Flutter widget」映射
+/// component / reconciler / context / commit 协议）；**状态语义的宿主映射**
+/// （provider 三件套）在 Dart 侧（见 src/js_ui/capabilities/provider_bridge.dart），
+/// JS 侧只提供 VM 本体与订阅，宿主只做「JS 结点 → Flutter widget」映射
 /// （[JsWidgetRegistry]）+ 增量补丁应用（[JsUiStore]）。
 ///
 /// JS→原生能力统一走「宿主方法」：JS 侧唯一出口 `__jsui.host`，宿主侧唯一
@@ -21,4 +22,9 @@ export 'src/json/flutter_from_json.dart';
 export 'src/js_ui/js_ui_widget.dart';
 export 'src/js_ui/js_ui_store.dart';
 export 'src/js_ui/js_widget_registry.dart';
+export 'src/js_ui/capabilities/handle_registry.dart';
+export 'src/js_ui/capabilities/js_ui_capabilities.dart';
+export 'src/js_ui/capabilities/build_context_bridge.dart';
+export 'src/js_ui/capabilities/provider_bridge.dart';
+export 'src/js_ui/capabilities/vm_bridge.dart';
 export 'src/js_ui/capabilities/tab_drawer_bridge.dart';

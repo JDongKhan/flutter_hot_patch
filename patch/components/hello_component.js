@@ -54,7 +54,7 @@ export class HelloCard {
   showNative() {
     __jsui.host("nativeToast", { message: "Hello from native (JS-driven)" });
   }
-  build() {
+  build(context) {
     var isAdult = ((this._user != null) && (this._user.age >= 18));
     var debugActive = kDebugMode;
     var android = Platform.isAndroid;

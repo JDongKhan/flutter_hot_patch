@@ -27,7 +27,7 @@ export class OrdersPage {
     default: return kBrand;
 } })();
   }
-  build() {
+  build(context) {
     var list = this._list;
     return __h('Column', {
         "crossAxisAlignment": "stretch"
@@ -86,7 +86,7 @@ export class _OrderCard {
     this.statusColor = (args && args.statusColor !== undefined) ? args.statusColor : null;
     this.onOpen = (args && args.onOpen !== undefined) ? args.onOpen : null;
   }
-  build() {
+  build(context) {
     var pending = (this.order.status == "待付款");
     return __h('GestureDetector', {
         "event": this.__bind("this.onOpen()")

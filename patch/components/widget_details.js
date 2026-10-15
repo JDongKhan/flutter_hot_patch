@@ -13,7 +13,7 @@ export class TextDetail {
   bump() {
     this.setState(function(){ this._count += 1; });
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -94,7 +94,7 @@ export class ButtonDetail {
   onTap() {
     this.setState(function(){ this._pressed += 1; });
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -203,7 +203,7 @@ export class ButtonDetail {
 export class LayoutDetail {
   constructor() {
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -484,7 +484,7 @@ export class LayoutDetail {
 export class ImageDetail {
   constructor() {
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -557,7 +557,7 @@ export class ImageDetail {
 export class ContainerDetail {
   constructor() {
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -766,7 +766,7 @@ export class ScrollDetail {
   _scrollToEnd() {
     this._scrollController.jumpTo(this._scrollController.position.maxScrollExtent);
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -921,7 +921,7 @@ export class SliverDetail {
     }
     this.setState(function(){ this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
   }
-  build() {
+  build(context) {
     return __h('Scaffold', {
         "body": __h('CustomScrollView', {
             "controller": this._controller,
@@ -1269,7 +1269,7 @@ export class GridDetail {
   _jumpBottom() {
     this._controller.jumpTo(this._controller.position.maxScrollExtent);
   }
-  build() {
+  build(context) {
     return __h('Scaffold', {
         "appBar": __h('AppBar', {
             "title": __h('Text', {
@@ -1415,7 +1415,7 @@ export class ScaffoldDetail {
   }
   _onFab() {
   }
-  build() {
+  build(context) {
     return __h('Scaffold', {
         "appBar": __h('AppBar', {
             "title": __h('Text', {
@@ -1536,7 +1536,7 @@ export class InputDetail {
   _onSliderChanged(v) {
     this.setState(function(){ this._slider = v; });
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -1711,7 +1711,7 @@ export class ProgressDetail {
   constructor() {
     this._progress = 0.65;
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -1783,7 +1783,7 @@ export class NotifierCard {
   _reset() {
     this._model.reset();
   }
-  build() {
+  build(context) {
     return __h('Card', {}, [
         __h('Padding', {
             "padding": {
@@ -1848,7 +1848,7 @@ export class StatelessCard {
     this.subtitle = (args && args.subtitle !== undefined) ? args.subtitle : "";
     this.badge = (args && args.badge !== undefined) ? args.badge : "NEW";
   }
-  build() {
+  build(context) {
     return __h('Card', {
         "margin": {
           "left": 12.0,
@@ -1918,7 +1918,7 @@ export class TabDetail {
   _next() {
     this._controller.animateTo((((this._index + 1)) % 3));
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -2051,7 +2051,7 @@ export class PageViewDetail {
   _onPageChanged(index) {
     this.setState(function(){ this._page = index; });
   }
-  build() {
+  build(context) {
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
@@ -2122,7 +2122,7 @@ export class KeyTile {
   bump() {
     this.setState(function(){ this._count += 1; });
   }
-  build() {
+  build(context) {
     var label = this.label;
     var caption = label + " · 计数 " + this._count;
     return __h('Container', {
@@ -2651,7 +2651,7 @@ export class KeyDetail {
           ])
       ]);
   }
-  build() {
+  build(context) {
     return __h('Scaffold', {
         "appBar": __h('AppBar', {
             "title": __h('Text', {
@@ -2708,7 +2708,7 @@ export class DrawerDetail {
   _pickHelp() {
     this.setState(function(){ this._picked = 3; });
   }
-  build() {
+  build(context) {
     return __h('Scaffold', {
         "appBar": __h('AppBar', {
             "title": __h('Text', {

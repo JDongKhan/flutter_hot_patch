@@ -19,7 +19,7 @@ export class MiniButton {
     this.primary = (args && args.primary !== undefined) ? args.primary : false;
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
-  build() {
+  build(context) {
     return __h('GestureDetector', {
         "event": this.__bind("this.onTap()")
       }, [

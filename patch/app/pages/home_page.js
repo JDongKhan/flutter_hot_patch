@@ -19,7 +19,7 @@ export class HomePage {
     this.spots = (args && args.spots !== undefined) ? args.spots : kSpots;
     this.adImg = (args && args.adImg !== undefined) ? args.adImg : kAdImg;
   }
-  build() {
+  build(context) {
     return __h('Container', {
         "color": '#fff4f5f7'
       }, [
@@ -189,7 +189,7 @@ export class HomeHeader {
   openLocation() {
     __jsui.host("toast", ["定位：上海市 · 点击切换城市"]);
   }
-  build() {
+  build(context) {
     return __h('Container', {
         "padding": {
           "left": 16.0,
@@ -349,7 +349,7 @@ export class BannerSlide {
   open() {
     __jsui.host("toast", [this.banner.title]);
   }
-  build() {
+  build(context) {
     return __h('Padding', {
         "padding": {
           "left": 12.0,
@@ -428,7 +428,7 @@ export class GridCell {
   open() {
     __jsui.host("toast", [this.entry.title + " 频道"]);
   }
-  build() {
+  build(context) {
     return __h('InkWell', {
         "event": this.__bind("open")
       }, [
@@ -467,7 +467,7 @@ export class SpotCard {
   open() {
     __jsui.host("openSpot", [this.spot.id]);
   }
-  build() {
+  build(context) {
     return __h('InkWell', {
         "event": this.__bind("open")
       }, [
@@ -604,7 +604,7 @@ export class PromoCard {
   open() {
     __jsui.host("open", ["https://flutter.dev", "活动详情"]);
   }
-  build() {
+  build(context) {
     return __h('InkWell', {
         "event": this.__bind("open")
       }, [

@@ -9,8 +9,8 @@ import '../model/counter_vm.dart';
 ///   只重建调用 watch 的那个位置），与原生 watch 语义一致；
 /// - `context.read<T>()`：仅取实例，不订阅（按钮回调里用）。
 ///
-/// 生成器把两者分别翻译成 `this.__watch('CounterModel')` /
-/// `this.__read('CounterModel')`，运行时挂载在 JS 实例上。
+/// 生成器把两者分别翻译成 `this.watch('CounterVm')` /
+/// `this.read('CounterVm')`（类型名原样传给 JS），运行时挂载在 JS 实例上。
 ///
 /// provider 下挂**两处 watch 消费者**，验证 watch 换位置仍然正确：
 ///   1. `Builder` + `context.watch`：builder 方法定义在 WatchDemo 上，

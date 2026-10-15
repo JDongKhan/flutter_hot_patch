@@ -157,7 +157,7 @@ class _JsScrollControllerViewState extends State<_JsScrollControllerView> {
 /// SliverGridDelegateWithMaxCrossAxisExtent，否则
 /// SliverGridDelegateWithFixedCrossAxisCount（crossAxisCount 缺省 1 兜底；
 /// 间距 0/比例 1.0 即 Flutter 默认）。SliverGrid 与 GridView 共用。
-SliverGridDelegate _gridDelegateFromJson(JsBuildContext c) {
+SliverGridDelegate _gridDelegateFromJson(JsRenderContext c) {
   final maxExtent = c.num_('maxCrossAxisExtent');
   if (maxExtent != null) {
     return SliverGridDelegateWithMaxCrossAxisExtent(
@@ -180,7 +180,7 @@ SliverGridDelegate _gridDelegateFromJson(JsBuildContext c) {
 /// sliver delegate 还原（**delegate 形态**：`SliverChildBuilderDelegate` 源写法）：
 /// 有 `childCount` → `SliverChildBuilderDelegate`（代理类已按 childCount 展开
 /// children）；否则 → `SliverChildListDelegate`。四个 sliver 组件共用。
-SliverChildDelegate _sliverDelegate(JsBuildContext c) {
+SliverChildDelegate _sliverDelegate(JsRenderContext c) {
   final count = c.int_('childCount');
   if (c.str('builder') == null || count == null) {
     return SliverChildListDelegate(c.children);
@@ -194,7 +194,7 @@ SliverChildDelegate _sliverDelegate(JsBuildContext c) {
 
 /// builder 形态的计数：命名构造（`.builder`/`.separated`）用 `itemCount`，
 /// delegate 形态用 `childCount`；都缺省时退回已展开的子节点数。
-int _builderCount(JsBuildContext c, int fallback) =>
+int _builderCount(JsRenderContext c, int fallback) =>
     c.int_('itemCount') ?? c.int_('childCount') ?? fallback;
 
 /// 第 [i] 个子节点（越界给占位，避免宿主在 JS 补丁未到齐时越界崩溃）。
