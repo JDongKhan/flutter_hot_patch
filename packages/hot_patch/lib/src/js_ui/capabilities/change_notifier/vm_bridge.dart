@@ -1,6 +1,6 @@
 // ===== 能力：JS VM（ChangeNotifier）通用镜像 =====
 //
-// 与 capabilities/../../js/js/change_notifier_js.dart **对称**：模型的真实对象
+// 与 capabilities/change_notifier/change_notifier_js.dart **对称**：模型的真实对象
 // 只存在于 JS 端（`class CounterVm extends ChangeNotifier`），宿主侧按句柄 id
 // 持一个**通用** ChangeNotifier 镜像——它不认识任何具体业务类，只做两件事：
 //   1. **记下它的 JS 端类型**（meta.type，即 JS 侧类名）——`context.watch<T>()`

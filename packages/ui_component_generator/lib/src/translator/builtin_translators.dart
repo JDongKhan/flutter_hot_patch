@@ -103,6 +103,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const DrawerHeaderTranslator())
     // 响应式（SDK 类，见 dart2js.sdkSuperClassMap 配套的 ChangeNotifier）
     ..register(const ListenableBuilderTranslator())
+    ..register(const ValueListenableBuilderTranslator())
     // Builder：多一层 context 作用域（闭包内 context.watch/read 可用）
     ..register(const BuilderTranslator())
     // provider 包：ChangeNotifierProvider / Consumer / MultiProvider
@@ -2055,6 +2056,69 @@ class ListenableBuilderTranslator extends WidgetTranslator {
       'props': {
         'listenable': ctx.jsString(listenableRef),
         'builder': ctx.jsString('_lbBuilder$idx'),
+      },
+    };
+  }
+}
+
+/// ValueListenableBuilder：`ValueListenableBuilder\<int\>(valueListenable:
+/// _count, builder: (context, value, child) => Text('\$value'))`。
+///
+/// 与 [ListenableBuilderTranslator] 同机制（同一宿主监听边界），差别只在
+/// builder 闭包的第二个形参 `value`：JS 侧 ValueListenableBuilder 组件类在
+/// `build` 时把 `owner[props.listenable].value` 一并传下去
+/// （`owner[props.builder].call(owner, context, value)`），故这里把该形参也
+/// 注册为局部变量，子树里 `value` 原样翻译。闭包第三个形参 `child`（预构建
+/// 子树透传）**不支持**（运行时不会传）：写作 `(context, value, child)` 且子树
+/// 引用 `child` 时，`child` 不是已知局部变量 → 构建期告警，而非静默译成
+/// `undefined`（与 ListenableBuilder 口径一致）。
+///
+/// 产物 props 与 ListenableBuilder 完全一致 `{listenable, builder}`——宿主侧
+/// 两类组件共用同一个监听边界（见 hot_patch 的 listenable_builder_bridge.dart）。
+class ValueListenableBuilderTranslator extends WidgetTranslator {
+  const ValueListenableBuilderTranslator();
+
+  @override
+  String get type => 'ValueListenableBuilder';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final listenable = ctx.namedArg(node.args, 'valueListenable');
+    final builderFn = ctx.namedArg(node.args, 'builder');
+    if (listenable == null || builderFn == null) {
+      throw FormatException(
+          'ValueListenableBuilder 需要 valueListenable 与 builder');
+    }
+    if (listenable is! Identifier) {
+      throw FormatException(
+          'ValueListenableBuilder.valueListenable 需为模型状态字段（如 _count）');
+    }
+    Expression? inner;
+    if (builderFn is FunctionExpression) inner = ctx.functionInner(builderFn);
+    if (inner == null) {
+      throw FormatException('ValueListenableBuilder.builder 需为返回 widget 的闭包');
+    }
+    // 闭包形参 (context, value)：两者注册为局部变量，子树里原样引用。
+    final params = builderFn is FunctionExpression
+        ? (builderFn.parameters?.parameters ?? const <FormalParameter>[])
+        : const <FormalParameter>[];
+    final rawCtx = params.isEmpty ? null : params[0].name?.lexeme;
+    final ctxName = (rawCtx == null || rawCtx == '_') ? 'context' : rawCtx;
+    ctx.addLocal(ctxName);
+    final valueName = params.length >= 2 ? params[1].name?.lexeme : 'value';
+    ctx.addLocal(valueName ?? 'value');
+
+    final listenableRef = ctx.propOf(listenable);
+    final subtree = ctx.translate(inner);
+    ctx.builderTrees.add(subtree);
+    final idx = ctx.builderTrees.length - 1;
+    ctx.builderNames.add('_vlbBuilder$idx');
+    ctx.builderParams.add('$ctxName, ${valueName ?? 'value'}');
+    return {
+      'type': ctx.jsString(type),
+      'props': {
+        'listenable': ctx.jsString(listenableRef),
+        'builder': ctx.jsString('_vlbBuilder$idx'),
       },
     };
   }

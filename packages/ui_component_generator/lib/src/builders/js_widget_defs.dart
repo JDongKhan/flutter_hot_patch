@@ -43,6 +43,7 @@ const Set<String> logicWidgetTypes = {
   'MultiProvider',
   'Consumer',
   'ListenableBuilder',
+  'ValueListenableBuilder',
 };
 
 /// 「元素 type 是 JS 类」的 widget 类型集合 = 有 JS 类的类型（唯一事实源：

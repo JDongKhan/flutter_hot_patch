@@ -6,22 +6,23 @@
 // js_ui_capabilities / build_context_bridge / js_ui_widget / mini_react /
 // handle_registry）零改动。
 //
-// 四个落点在本库的对应关系：
+// 落点在本库的对应关系：
 //   jsFragments     → provider_js.dart：作用域声明（`registerScope`）+ context 扩展
 //                     方法（`JsBuildContext.prototype.watch/read`，对齐 Dart 的
 //                     `extension BuildContextX on BuildContext`）
-//   ensureChannels  → vm_bridge.dart：JS 的 ChangeNotifier 实例 → 宿主通用镜像；
-//                     另经 `registerContextOp`（context_ops.dart）把 watch/read 的
-//                     宿主处理注册进核心的通用分发缝
-//   registerWidgets → provider_bridge.dart：三个组件类型的宿主映射
+//   ensureChannels  → context_ops.dart：经核心的通用缝 `registerContextOp` 把
+//                     watch/read 的宿主处理注册进去
+//   registerWidgets → provider_bridge.dart：ChangeNotifierProvider / Consumer
+//
+// 注意依赖方向：provider **依赖** change_notifier（VM 通用镜像、Listenable
+// 监听边界都在那里），反之不成立。
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
 import 'context_ops.dart';
 import 'provider_bridge.dart';
 import 'provider_js.dart';
-import 'vm_bridge.dart';
 
-/// provider（`ChangeNotifierProvider` / `Consumer` / `ListenableBuilder`）接入。
+/// provider（`ChangeNotifierProvider` / `Consumer`）接入。
 class ProviderLibrary extends JsUiLibrary {
   const ProviderLibrary();
 
@@ -33,9 +34,9 @@ class ProviderLibrary extends JsUiLibrary {
 
   @override
   void ensureChannels() {
-    ensureVmChannels();
     // `context.watch/read` 属 provider（对齐 `extension BuildContextX`）：
     // JS 侧方法补丁见 provider_js.dart，宿主侧处理在此注册。
+    // VM 句柄通道（vm/ChangeNotifier）归 change_notifier 能力。
     ensureProviderContextOps();
   }
 

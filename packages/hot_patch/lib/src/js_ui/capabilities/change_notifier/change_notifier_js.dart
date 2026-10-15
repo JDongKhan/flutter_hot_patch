@@ -53,4 +53,31 @@ ChangeNotifier.prototype.toJSON = function() {
 
 // 顶层暴露：产物（模块 evaluate）里 `class X extends ChangeNotifier` 经
 // globalThis 裸引用解析（与顶层 var 语义等价）。
-G.ChangeNotifier = ChangeNotifier;''';
+G.ChangeNotifier = ChangeNotifier;
+
+// ValueNotifier<T>：单值版 ChangeNotifier（`ValueNotifier<int>(0)`）。
+//
+// **不属于本基类的句柄 kind**：构造时经 ChangeNotifier 登记 `vm/ChangeNotifier`，
+// meta.type 由 `constructor.name` 自动取成 'ValueNotifier'，宿主镜像仍是通用
+// JsVm（无需新 kind，见 vm_bridge.dart）。
+//
+// `value` 用 defineProperty 的 get/set 实现，setter 里 **=== 守卫**是
+// `ValueListenableBuilder`「值不变不重建」语义的唯一来源：相同即 return，
+// 不同才赋值并 notifyListeners()（与 Dart ValueNotifier 一致）。
+function ValueNotifier(value) {
+  ChangeNotifier.call(this);
+  this._value = value;
+}
+ValueNotifier.prototype = Object.create(ChangeNotifier.prototype);
+ValueNotifier.prototype.constructor = ValueNotifier;
+Object.defineProperty(ValueNotifier.prototype, 'value', {
+  configurable: true,
+  enumerable: false,
+  get: function () { return this._value; },
+  set: function (v) {
+    if (this._value === v) { return; }
+    this._value = v;
+    this.notifyListeners();
+  },
+});
+G.ValueNotifier = ValueNotifier;''';

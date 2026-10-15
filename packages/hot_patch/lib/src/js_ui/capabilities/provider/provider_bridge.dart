@@ -1,4 +1,4 @@
-// ===== 能力：provider 宿主映射（ChangeNotifierProvider / Consumer / ListenableBuilder）=====
+// ===== 能力：provider 宿主映射（ChangeNotifierProvider / Consumer）=====
 //
 // provider 的**状态与订阅**全部下沉到 Dart 侧：
 //   - JS 端 `ChangeNotifierProvider` 只负责造/取 VM，然后把宿主结点
@@ -23,7 +23,8 @@
 import 'package:flutter/widgets.dart';
 
 import '../../js_widget_registry.dart';
-import 'vm_bridge.dart';
+import '../change_notifier/listenable_builder_bridge.dart';
+import '../change_notifier/vm_bridge.dart';
 
 /// 宿主侧 `ChangeNotifierProvider` 的映射实现。
 ///
@@ -80,26 +81,10 @@ void registerProviderWidgets(JsWidgetRegistry r) {
     return JsVmProvider(vm: vm, child: child);
   });
 
-  // Consumer / ListenableBuilder：JS 侧决定「哪个 VM、哪段子树」，宿主侧把这段
-  // 子树包成 Dart 的监听边界（notify 只重建该子树，即 P2 的重建粒度）。
-  r.register('Consumer', (c) => _listenBoundary(c));
-  r.register('ListenableBuilder', (c) => _listenBoundary(c));
-}
-
-Widget _listenBoundary(JsRenderContext c) {
-  final subtree = c.child() ?? const SizedBox.shrink();
-  final vm = jsVmOfProp(c.props['vm']);
-  if (vm == null) return subtree;
-  return ListenableBuilder(
-    listenable: vm,
-    builder: (context, child) => child ?? const SizedBox.shrink(),
-    child: subtree,
-  );
-}
-
-/// 结点 props 里的 VM（JS 侧 `toJSON` 成 `{__handle:id}`）→ Dart 侧的通用镜像。
-JsVm? jsVmOfProp(Object? prop) {
-  if (prop is! Map) return null;
-  final id = prop['__handle'];
-  return id is String ? jsVmOf(id) : null;
+  // Consumer：JS 侧决定「哪个 VM、哪段子树」，宿主侧把这段子树包成 Dart 的
+  // 监听边界（notify 只重建该子树，即 P2 的重建粒度）。
+  // 边界实现与 ListenableBuilder / ValueListenableBuilder 共用一份——它们对宿主
+  // 的要求完全相同，那两个组件的注册在 change_notifier
+  // （见 listenable_builder_bridge.dart）。
+  r.register('Consumer', (c) => listenableBoundary(c));
 }

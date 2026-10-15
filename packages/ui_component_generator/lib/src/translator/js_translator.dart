@@ -320,11 +320,20 @@ class FieldScope {
 // ===========================================================================
 
 /// 由 [ClassInfo.superType] 查 JS 基类名；未登记返回 null。
-String? sdkBaseName(ClassInfo info) => sdkSuperClassMap[info.superType];
+///
+/// **必须剥泛型实参**：`class X extends ValueNotifier<int>` 的 superType 是
+/// `ValueNotifier<int>`（AST `toSource()` 原样），直接查表必然落空 → 基类不写、
+/// 继承来的方法全部译不出来。
+String? sdkBaseName(ClassInfo info) {
+  final t = info.superType;
+  if (t == null) return null;
+  return sdkSuperClassMap[t.split('<').first.trim()];
+}
 
 /// Dart 基类名 → JS 基类名（运行时注入同名类）。
 const Map<String, String> sdkSuperClassMap = {
   'ChangeNotifier': 'ChangeNotifier',
+  'ValueNotifier': 'ValueNotifier',
 };
 
 // ---------------------------------------------------------------------------
@@ -644,6 +653,10 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // InstanceCreationExpression 分支：那支对非模型类返回 null 后直接返回。
   final keyJs = keyCtorJs(e, scope, classes);
   if (keyJs != null) return keyJs;
+  // SDK 值对象构造（`ValueNotifier<int>(0)`）：同样必须早于下面的
+  // InstanceCreationExpression 分支（那支对非模型类返回 null 后直接返回）。
+  final sdkValJs = sdkValueCtorJs(e, scope, classes);
+  if (sdkValJs != null) return sdkValJs;
   // PrefixedIdentifier（`a.b`）不是单纯字段名，交给 exprToJs 的属性分支；
   // 若走下面的 Identifier 分支会用整串名字查字段而必然失败。
   if (e is PrefixedIdentifier) return exprToJs(e, scope, classes);
@@ -811,6 +824,46 @@ String? keyCtorJs(
   }
   return 'new $name(${parts.join(', ')})';
 }
+
+/// SDK 值对象构造表达式（`ValueNotifier<int>(0)`）→ JS `new ValueNotifier(0)`；
+/// 非本类返回 null。
+///
+/// 与 [keyCtorJs] 同款：**丢弃泛型实参**、裸引用运行时注入的同名类（见
+/// hot_patch 的 change_notifier_js.dart 里 `G.ValueNotifier`）。
+String? sdkValueCtorJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  String? name;
+  List<Expression> args = const [];
+  if (e is InstanceCreationExpression) {
+    final n = e.constructorName.type.name2.lexeme;
+    if (sdkValueClassNames.contains(n)) {
+      name = n;
+      args = e.argumentList.arguments.toList();
+    }
+  } else if (e is MethodInvocation && e.target == null) {
+    final n = e.methodName.name;
+    if (sdkValueClassNames.contains(n)) {
+      name = n;
+      args = e.argumentList.arguments.toList();
+    }
+  }
+  if (name == null) return null;
+  final parts = <String>[];
+  for (final a in args) {
+    final v = rhsToJs(a is NamedExpression ? a.expression : a, scope, classes);
+    if (v == null) return null;
+    parts.add(v);
+  }
+  return 'new $name(${parts.join(', ')})';
+}
+
+/// 运行时注入了同名 JS 类的 SDK 值对象（构造时直接裸引用 `new Xxx(...)`）。
+const Set<String> sdkValueClassNames = {
+  'ValueNotifier',
+};
 
 /// 模型构造调用 → JS：`new User({name:..., age:...})`。
 /// 位置参数按类实例字段声明顺序映射；命名参数按 label。
@@ -1182,9 +1235,23 @@ String? methodCallExprJs(
   return null;
 }
 
+/// `<字段>.<属性>`（PrefixedIdentifier）→ JS 引用串（`this._count.value`）。
+///
+/// 用于 SDK 值对象（`ValueNotifier<int>` 等）的典型用法：字段本身走
+/// [FieldScope.fieldRef]（→ `this._count` / 局部变量名），属性部分原样拼接
+/// （JS 侧同名属性 / get 访问器）。LHS 不是「本 scope 可解析字段」时返回 null，
+/// 交由调用方丢弃（保持「不可翻译不静默错译」的纪律）。
+String? _prefixedFieldRef(Expression e, FieldScope scope) {
+  if (e is! PrefixedIdentifier) return null;
+  final base = scope.fieldRef(e.prefix.name);
+  if (base == null) return null;
+  return '$base.${e.identifier.name}';
+}
+
 /// 一条表达式语句 → JS 语句（带分号）。
 ///
 /// 支持：`_x++ / _x-- / ++_x / --_x`（字段→this）、赋值 `_x = rhs / _x op= rhs`、
+/// 字段属性赋值/自增 `_x.y = rhs` / `_x.y++`（[`_prefixedFieldRef`]）、
 /// 方法调用（对象方法 / 白名单裸调）。不可翻译返回 null（由调用方丢弃）。
 String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
   // _x++ / ++_x / _x--
@@ -1211,6 +1278,25 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
       if (rhs != null) return '$ref ${e.operator.lexeme} $rhs;';
     }
     return null;
+  }
+  // 字段的属性赋值 / 自增（`_count.value = 5`、`_count.value++`）：
+  // SDK 值对象（ValueNotifier / Listenable 代理类）的典型用法，LHS 是
+  // PrefixedIdentifier（`<字段>.<属性>`）。字段部分走 fieldRef（→ `this._count`），
+  // 属性部分原样保留（JS 侧同名属性/访问器，如 ValueNotifier.prototype.value）。
+  if (e is AssignmentExpression && _prefixedFieldRef(e.leftHandSide, scope) != null) {
+    final lhs = _prefixedFieldRef(e.leftHandSide, scope)!;
+    final rhs = rhsToJs(e.rightHandSide, scope, classes);
+    if (rhs != null) return '$lhs ${e.operator.lexeme} $rhs;';
+    return null;
+  }
+  if ((e is PostfixExpression || e is PrefixExpression)) {
+    final operand = e is PostfixExpression ? e.operand : (e as PrefixExpression).operand;
+    final lhs = _prefixedFieldRef(operand, scope);
+    if (lhs != null) {
+      final op = e is PostfixExpression ? e.operator : (e as PrefixExpression).operator;
+      final delta = op.type.name == 'PLUS_PLUS' ? '1' : '-1';
+      return '$lhs += $delta;';
+    }
   }
   // 独立语句 `await <expr>;`：await 的翻译统一在 rhsToJs 里。
   if (e is AwaitExpression) {

@@ -250,3 +250,40 @@ export class SliverList {
     return __h('SliverList', this.props, out);
   }
 }
+
+export class ValueListenableBuilder {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  initState() {
+    var owner = this.__owner();
+    if (!owner) { return; }
+    var l = owner[this.props.listenable];
+    if (l && typeof l.addListener === 'function') {
+      var self = this;
+      this.__listenable = l;
+      this.__listener = function () { self.setState(function () {}); };
+      l.addListener(this.__listener);
+    }
+  }
+  build(context) {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var l = owner[this.props.listenable];
+    var value = (l && l.value !== undefined) ? l.value : null;
+    var child = owner[this.props.builder].call(owner, context, value);
+    return __h('ValueListenableBuilder', { vm: l }, [child]);
+  }
+  dispose() {
+    if (this.__listenable && this.__listener) {
+      this.__listenable.removeListener(this.__listener);
+    }
+  }
+}

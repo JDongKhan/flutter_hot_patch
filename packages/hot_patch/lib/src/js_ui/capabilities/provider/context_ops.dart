@@ -15,8 +15,8 @@ import 'package:flutter/widgets.dart';
 
 import '../../../utils/hot_patch_log.dart';
 import '../build_context/build_context_bridge.dart';
+import '../change_notifier/vm_bridge.dart';
 import 'provider_bridge.dart';
-import 'vm_bridge.dart';
 
 /// 一个「按类型订阅」的登记项：按类型解析出的可订阅对象 + 它到该结点 element
 /// 的监听回调。

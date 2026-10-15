@@ -173,6 +173,7 @@ const Map<String, String> logicWidgetSources = {
   'MultiProvider': jsMultiProviderComponent,
   'Consumer': jsConsumerComponent,
   'ListenableBuilder': jsListenableBuilderComponent,
+  'ValueListenableBuilder': jsValueListenableBuilderComponent,
 };
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
@@ -311,6 +312,51 @@ export class ListenableBuilder {
     if (!owner) { return null; }
     var child = owner[this.props.builder].call(owner, context);
     return __h('ListenableBuilder', { vm: owner[this.props.listenable] }, [child]);
+  }
+  dispose() {
+    if (this.__listenable && this.__listener) {
+      this.__listenable.removeListener(this.__listener);
+    }
+  }
+}''';
+
+/// ValueListenableBuilder：与 ListenableBuilder 完全同构（同一订阅/局部重建
+/// 机制），只多一步——把 `listenable.value` 作为 builder 的第二个实参传下去
+/// （`owner[props.builder].call(owner, context, value)`），与 Dart 的
+/// `builder: (context, value, child) => …` 形参语义一致。
+///
+/// 订阅对象是 ValueNotifier（JS 侧 extends ChangeNotifier，句柄 kind 复用
+/// `vm/ChangeNotifier`），故 `addListener` / 宿主映射与 ListenableBuilder 同一套。
+const String jsValueListenableBuilderComponent = '''
+export class ValueListenableBuilder {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  initState() {
+    var owner = this.__owner();
+    if (!owner) { return; }
+    var l = owner[this.props.listenable];
+    if (l && typeof l.addListener === 'function') {
+      var self = this;
+      this.__listenable = l;
+      this.__listener = function () { self.setState(function () {}); };
+      l.addListener(this.__listener);
+    }
+  }
+  build(context) {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var l = owner[this.props.listenable];
+    var value = (l && l.value !== undefined) ? l.value : null;
+    var child = owner[this.props.builder].call(owner, context, value);
+    return __h('ValueListenableBuilder', { vm: l }, [child]);
   }
   dispose() {
     if (this.__listenable && this.__listener) {
