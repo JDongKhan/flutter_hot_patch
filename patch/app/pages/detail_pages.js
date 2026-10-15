@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 ui_component_generator 从 lib/app/pages/detail_pages.dart 自动生成
+// 由 hot_patch_generator 从 lib/app/pages/detail_pages.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { kAvatarImg, kBanners, kHotSearch, kPosts, kSpots } from '../model/app_data.js';

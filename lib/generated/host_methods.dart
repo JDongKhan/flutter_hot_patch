@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 //
-// 由 ui_component_generator 的 hostRegisterBuilder 扫描全包
+// 由 hot_patch_generator 的 hostRegisterBuilder 扫描全包
 // `@HostInjected` 方法生成。用法（main() 里调用一次）：
 //
 //   registerHostMethods();

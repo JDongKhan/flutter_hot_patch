@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../model/counter_vm.dart';
 
 /// 常用组件详情页集合（widget_showcase 列表页点击进入）。
 ///
-/// 每个详情组件都是 @UIComponent 注解组件：同一份代码
+/// 每个详情组件都是 @PatchEntry 注解组件：同一份代码
 ///   - 原生：直接当正常 StatefulWidget 用（widget_showcase 里 new 使用）；
 ///   - JS 热更：build_runner 翻译成 widget_details.js，
 ///     WidgetDetailPage 用 JsUiWidget 加载，原生 vs JS 同屏对比。
@@ -29,7 +29,7 @@ import '../model/counter_vm.dart';
 // Text 详情
 // ---------------------------------------------------------------------------
 
-@UIComponent('TextDetail')
+@PatchEntry('TextDetail')
 class TextDetail extends StatefulWidget {
   const TextDetail({super.key});
 
@@ -88,7 +88,7 @@ class _TextDetailState extends State<TextDetail> {
 // Button 详情
 // ---------------------------------------------------------------------------
 
-@UIComponent('ButtonDetail')
+@PatchEntry('ButtonDetail')
 class ButtonDetail extends StatefulWidget {
   const ButtonDetail({super.key});
 
@@ -158,7 +158,7 @@ class _ButtonDetailState extends State<ButtonDetail> {
 // Layout 详情
 // ---------------------------------------------------------------------------
 
-@UIComponent('LayoutDetail')
+@PatchEntry('LayoutDetail')
 class LayoutDetail extends StatefulWidget {
   const LayoutDetail({super.key});
 
@@ -289,7 +289,7 @@ class _LayoutDetailState extends State<LayoutDetail> {
 // Image / Icon 详情
 // ---------------------------------------------------------------------------
 
-@UIComponent('ImageDetail')
+@PatchEntry('ImageDetail')
 class ImageDetail extends StatefulWidget {
   const ImageDetail({super.key});
 
@@ -334,7 +334,7 @@ class _ImageDetailState extends State<ImageDetail> {
 // Container 详情
 // ---------------------------------------------------------------------------
 
-@UIComponent('ContainerDetail')
+@PatchEntry('ContainerDetail')
 class ContainerDetail extends StatefulWidget {
   const ContainerDetail({super.key});
 
@@ -414,7 +414,7 @@ class _ContainerDetailState extends State<ContainerDetail> {
 // Scroll 详情
 // ---------------------------------------------------------------------------
 
-@UIComponent('ScrollDetail')
+@PatchEntry('ScrollDetail')
 class ScrollDetail extends StatefulWidget {
   const ScrollDetail({super.key});
 
@@ -546,7 +546,7 @@ class _ScrollDetailState extends State<ScrollDetail> {
 /// CustomScrollView 完整页面 demo：SliverAppBar（导航）+ SliverToBoxAdapter
 /// （普通盒子）+ SliverPadding + SliverList（列表）+ SliverGrid（九宫格）+
 /// SliverFillRemaining（底部），外加 controller 监听滚动与 FAB「跳到底」。
-@UIComponent('SliverDetail')
+@PatchEntry('SliverDetail')
 class SliverDetail extends StatefulWidget {
   const SliverDetail({super.key});
 
@@ -837,7 +837,7 @@ class _SliverDetailState extends State<SliverDetail> {
 // Grid 详情（GridView 懒加载验证，仅 JS 热更版展示）
 // ---------------------------------------------------------------------------
 
-@UIComponent('GridDetail')
+@PatchEntry('GridDetail')
 class GridDetail extends StatefulWidget {
   const GridDetail({super.key});
 
@@ -949,7 +949,7 @@ class _GridDetailState extends State<GridDetail> {
 // Scaffold 详情（页面级，仅 JS 热更版展示）
 // ---------------------------------------------------------------------------
 
-@UIComponent('ScaffoldDetail')
+@PatchEntry('ScaffoldDetail')
 class ScaffoldDetail extends StatefulWidget {
   const ScaffoldDetail({super.key});
 
@@ -1022,7 +1022,7 @@ class _ScaffoldDetailState extends State<ScaffoldDetail> {
 // Input 详情（TextField / Radio / DropdownButton / Switch / Checkbox / Slider）
 // ---------------------------------------------------------------------------
 
-@UIComponent('InputDetail')
+@PatchEntry('InputDetail')
 class InputDetail extends StatefulWidget {
   const InputDetail({super.key});
 
@@ -1179,7 +1179,7 @@ class _InputDetailState extends State<InputDetail> {
 // Progress 详情（指示器）
 // ---------------------------------------------------------------------------
 
-@UIComponent('ProgressDetail')
+@PatchEntry('ProgressDetail')
 class ProgressDetail extends StatefulWidget {
   const ProgressDetail({super.key});
 
@@ -1238,7 +1238,7 @@ class _ProgressDetailState extends State<ProgressDetail> {
 /// JS 热更：CounterModel 翻译成 JS class（带 addListener/notifyListeners），
 /// ListenableBuilder 翻译成 {type: ListenableBuilder, listenable: _model,
 /// builder: _lbBuilder0} 节点，运行时挂 JS 监听，notify → 局部重建。
-@UIComponent('NotifierCard')
+@PatchEntry('NotifierCard')
 class NotifierCard extends StatefulWidget {
   const NotifierCard({super.key});
 
@@ -1291,7 +1291,7 @@ class _NotifierCardState extends State<NotifierCard> {
 /// （生成器自动识别：有 createState 用 State 类承载 build，否则用 widget
 /// 类自身）。构造参数（title / subtitle / badge）→ JS constructor(args)，
 /// 由 JsUiWidget.props 传入。
-@UIComponent('StatelessCard')
+@PatchEntry('StatelessCard')
 class StatelessCard extends StatelessWidget {
   const StatelessCard({super.key, required this.title, this.subtitle = '', this.badge = 'NEW'});
 
@@ -1337,7 +1337,7 @@ class StatelessCard extends StatelessWidget {
 ///   2) 显式 TabController——JS 侧 `new TabController({length: 3, vsync: this})`
 ///      与宿主真实 TabController 按 id 绑定（同 ScrollController 模式）：
 ///      用户点 tab 经 invoke 回传页码更新 index，按钮经 animateTo 驱动宿主切页。
-@UIComponent('TabDetail')
+@PatchEntry('TabDetail')
 class TabDetail extends StatefulWidget {
   const TabDetail({super.key});
 
@@ -1446,7 +1446,7 @@ class _TabDetailState extends State<TabDetail> with SingleTickerProviderStateMix
 
 /// PageView 详情：分页切换 + 指示点。页切换经 onPageChanged 回传页码
 /// （值事件），JS 侧据此更新指示点。
-@UIComponent('PageViewDetail')
+@PatchEntry('PageViewDetail')
 class PageViewDetail extends StatefulWidget {
   const PageViewDetail({super.key});
 
@@ -1520,7 +1520,7 @@ class _PageViewDetailState extends State<PageViewDetail> {
 ///
 /// label 由父级按当前顺序给出（key 里也是同一个值），这样换序后一眼就能看出
 /// 状态到底留在了行上还是位置上了。
-@UIComponent('KeyTile')
+@PatchEntry('KeyTile')
 class KeyTile extends StatefulWidget {
   const KeyTile({super.key, required this.index, required this.label});
 
@@ -1564,7 +1564,7 @@ class _KeyTileState extends State<KeyTile> {
 }
 
 /// Key 家族全员用例页（仅 JS 热更版展示：GlobalKey 的量测必须由宿主端算）。
-@UIComponent('KeyDetail')
+@PatchEntry('KeyDetail')
 class KeyDetail extends StatefulWidget {
   const KeyDetail({super.key});
 
@@ -1947,7 +1947,7 @@ class _KeyDetailState extends State<KeyDetail> {
 
 /// Drawer / endDrawer 详情：drawer 接进真实 Scaffold 后 AppBar 左侧自动出现
 /// 汉堡按钮，右侧为 endDrawer 入口；点菜单项回写选中项。
-@UIComponent('DrawerDetail')
+@PatchEntry('DrawerDetail')
 class DrawerDetail extends StatefulWidget {
   const DrawerDetail({super.key});
 

@@ -4,9 +4,9 @@ import '../../base/app_router.dart';
 import '../model/app_data.dart';
 import '../model/app_models.dart';
 
-/// App 二级页集合（常规 Flutter 页面，无 @UIComponent 注解）。
+/// App 二级页集合（常规 Flutter 页面，无 @PatchEntry 注解）。
 ///
-/// 首页 `@UIComponent` 组件的跳转入口统一经宿主路由
+/// 首页 `@PatchEntry` 组件的跳转入口统一经宿主路由
 /// （lib/base/app_router.dart）推入这些页面；其余 tab 直接 Navigator.push。
 
 const Color kBrand = Color(0xFF0E7AFB);

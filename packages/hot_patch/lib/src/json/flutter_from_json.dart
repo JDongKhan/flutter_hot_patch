@@ -4,7 +4,7 @@ import '../utils/hot_patch_log.dart';
 // ===========================================================================
 // JSON → Flutter 对象的 fromJson 工具集（运行时侧）
 //
-// 与 ui_component_generator 的 style_translators.dart 对称：
+// 与 hot_patch_generator 的 style_translators.dart 对称：
 //   生成器：TextStyle/ButtonStyle/Colors/FontWeight … → JSON
 //   运行时：同一份 JSON → 真实 Flutter 对象
 //
@@ -279,7 +279,7 @@ Color? colorFromJson(Object? v) {
 }
 
 // ---------------------------------------------------------------------------
-// 布局/内容类 fromJson（与 ui_component_generator 的 style_translators 对称）
+// 布局/内容类 fromJson（与 hot_patch_generator 的 style_translators 对称）
 // ---------------------------------------------------------------------------
 
 /// JSON → EdgeInsets（{left,top,right,bottom}；缺省 0）。

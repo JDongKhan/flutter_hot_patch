@@ -2,24 +2,24 @@
 
 ## Context（为什么做）
 
-flutter 热更新项目（`/Users/jd/Documents/Developer/flutter_hot`），生成器 `ui_component_generator` 把 `@UIComponent` 组件静态翻译成 JS 产物。当前有一个错误的架构倾向：**按类「用途」分流处理**——value object（User，`_collectModels` 扫 `User(...)` 构造）走一个路径、静态单例（PanelColors，`_isSingletonClass`）走另一个路径、挂在 State 字段的对象（`CounterModel _model`）完全不转（被当「不可翻译对象字段」跳过）。
+flutter 热更新项目（`/Users/jd/Documents/Developer/flutter_hot`），生成器 `hot_patch_generator` 把 `@PatchEntry` 组件静态翻译成 JS 产物。当前有一个错误的架构倾向：**按类「用途」分流处理**——value object（User，`_collectModels` 扫 `User(...)` 构造）走一个路径、静态单例（PanelColors，`_isSingletonClass`）走另一个路径、挂在 State 字段的对象（`CounterModel _model`）完全不转（被当「不可翻译对象字段」跳过）。
 
-用户明确纠偏：**User、静态单例、CounterModel 是同一类问题**。不做 Dart 类→JS 类时不要关心类是用来干啥的，只按「如何声明 + 如何被 State 字段/构建/方法引用」处理。故在 `ui_component_generator` 下封装**统一「Dart 类 → JS 类」处理器**，并端到端让 `lib/components/listenable_demo.dart` 可生成不崩的 JS、`_model` 持久、CounterModel 方法体非空、ListenableBuilder 子树被翻译、notifyListeners 触发局部重建。
+用户明确纠偏：**User、静态单例、CounterModel 是同一类问题**。不做 Dart 类→JS 类时不要关心类是用来干啥的，只按「如何声明 + 如何被 State 字段/构建/方法引用」处理。故在 `hot_patch_generator` 下封装**统一「Dart 类 → JS 类」处理器**，并端到端让 `lib/components/listenable_demo.dart` 可生成不崩的 JS、`_model` 持久、CounterModel 方法体非空、ListenableBuilder 子树被翻译、notifyListeners 触发局部重建。
 
 物理前提已确认：运行时 `HotPatchWidgetState._boot` 对同一 JS 实例（`__instances[key]`）创建一次、`rebuild()` 反复调其 `build()`，故 State 字段 `_model` 跨 build 天然持久。generator 只是从不翻译它。
 
 ## 现状根因（已核实）
 
-1. `listenable_demo.component.js` L5 bad import：`importResolver`/`_resolveImportProduct` 的 `package:` 分支只跳过 `package:flutter/`，把 SDK 未注册类 `ListenableBuilder` 兜底成跨文件组件，误 import 不存在的 `../ui_component.component.js`。
+1. `listenable_demo.component.js` L5 bad import：`importResolver`/`_resolveImportProduct` 的 `package:` 分支只跳过 `package:flutter/`，把 SDK 未注册类 `ListenableBuilder` 兜底成跨文件组件，误 import 不存在的 `../hot_patch_annotations.component.js`。
 2. `_inc()/_reset()` 空方法体：`_collectModels` 只扫方法体/build 的 `InstanceCreationExpression`，不扫**字段初始化器** `CounterModel _model = CounterModel()`；`_model` 字段非 basic 非 model 被 skip；`_translateStateExpr` 对 `_model.inc()`（对象方法调用）返回 null 被丢。
 3. `ListenableBuilder` 子树丢失：走 Component 兜底只输出 `{"component":"ListenableBuilder"}`，builder 回调 `Text('n = ${_model.n}')` 整体丢。
 
 ## 核心文件
 
-- `packages/ui_component_generator/lib/class_translator.dart`（**新增**，统一处理器）
-- `packages/ui_component_generator/lib/builder.dart`（类发现 / 字段 / 方法 / 产物组装接入）
-- `packages/ui_component_generator/lib/widget_translator.dart`（`FieldScope` 抽象、LB 计数/收集）
-- `packages/ui_component_generator/lib/builtin_translators.dart`（`ListenableBuilderTranslator`）
+- `packages/hot_patch_generator/lib/class_translator.dart`（**新增**，统一处理器）
+- `packages/hot_patch_generator/lib/builder.dart`（类发现 / 字段 / 方法 / 产物组装接入）
+- `packages/hot_patch_generator/lib/widget_translator.dart`（`FieldScope` 抽象、LB 计数/收集）
+- `packages/hot_patch_generator/lib/builtin_translators.dart`（`ListenableBuilderTranslator`）
 - `packages/hot_patch/lib/src/services/js_runtime_manager.dart`（注入 `NotifierBase`）
 - `packages/hot_patch/lib/src/widgets/widget_renderer.dart` / `builtin_renderers.dart`（`registerLb` 透传 + `_JsListenableBuilder`）
 - `packages/hot_patch/lib/src/hot_patch_widget.dart`（`registerLb/rebuildLb` + `lbNotify` 内部服务）
@@ -47,7 +47,7 @@ flutter 热更新项目（`/Users/jd/Documents/Developer/flutter_hot`），生�
   ```
 
 ### 3. 类发现统一（builder.dart，替换 `_collectModels` + 单例两路）
-- 设 `_ClassIndex`：解析「同文件非 private 非 @UIComponent 非 widget 类」+「import 文件里类」→ 全部 `DartClassInfo`，得 `Map<类名, DartClassInfo>`。
+- 设 `_ClassIndex`：解析「同文件非 private 非 @PatchEntry 非 widget 类」+「import 文件里类」→ 全部 `DartClassInfo`，得 `Map<类名, DartClassInfo>`。
 - 发现（用户已选 State 为主 + 构造兜底，并集）：
   - 第一来源：State/嵌套组件**实例字段**声明类型命中 index（`User?` 去 `?`）→ 进模型/单例集。
   - 第二来源：方法体+build 树 `InstanceCreationExpression` 构造名命中 index → 进模型集（保 hello 的 `User(...)` 链路）。
@@ -68,7 +68,7 @@ flutter 热更新项目（`/Users/jd/Documents/Developer/flutter_hot`），生�
   _lbBuilder0(){ return { "type":"Text", "props":{ "data":"n = "+this._model.n } }; }
   ```
   `build()` 首行前置 `this._wireListenables();`。
-- importResolver 护栏：`_resolveImportProduct` 的 `package:` 分支追加跳过 `package:ui_component/` 与 `package:ui_component_generator/`；更稳的语义修复为「解析文件里无同名 export class 的名字返回 null（走 native 注入）」。
+- importResolver 护栏：`_resolveImportProduct` 的 `package:` 分支追加跳过 `package:hot_patch_annotations/` 与 `package:hot_patch_generator/`；更稳的语义修复为「解析文件里无同名 export class 的名字返回 null（走 native 注入）」。
 
 ### 5. 运行时局部重建（hot_patch 侧）
 - `widget_renderer.dart`：`WidgetRenderContext` 加可选 `registerLb(int id, void Function(Object?) cb)?` 并透传。
@@ -82,7 +82,7 @@ flutter 热更新项目（`/Users/jd/Documents/Developer/flutter_hot`），生�
 ## 预期产物要点
 
 **listenable_demo.component.js**：
-- 顶部**无** `import { ListenableBuilder } from '../ui_component.component.js';`。
+- 顶部**无** `import { ListenableBuilder } from '../hot_patch_annotations.component.js';`。
 - inline `class CounterModel extends NotifierBase`，`constructor(args){ super(); this._n=0; }`、`get n(){return this._n;}`、`inc(){ this._n+=1; this.notifyListeners(); }`、`reset(){...}` 非空。
 - `ListenableDemo`: `constructor(){ this._model = new CounterModel({}); }`、`_inc(){ this._model.inc(); }`、`_reset(){ this._model.reset(); }`。
 - `_lbBuilder0(){... data:"n = "+this._model.n }`、`_wireListenables(){...}`、`build(){ this._wireListenables(); return {... "children": this._lbBuilder0()["children"] ...}; }`。

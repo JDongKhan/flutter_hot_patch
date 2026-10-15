@@ -674,7 +674,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       ));
 
   // Component：无 JS 产物的组件节点（无注解的 lib 普通 widget /
-  // @UIComponentIgnore）→ 宿主 nativeComponents 原生注入；未注册给可见占位。
+  // @PatchIgnore）→ 宿主 nativeComponents 原生注入；未注册给可见占位。
   r.register('Component', (c) {
     final name = c.str('component') ?? '';
     final native = c.nativeComponents[name];

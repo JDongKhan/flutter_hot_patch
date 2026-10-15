@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../model/counter_vm.dart';
 
@@ -20,7 +20,7 @@ import '../model/counter_vm.dart';
 ///      但订阅锚点是 Builder 自身（按**构建位置**，不按方法定义处）；
 ///   2. `WatchCountLabel`：独立 StatefulWidget，在自己的 State.build 里
 ///      watch —— 锚点是它自己，notify 只重建它。两者互不影响。
-@UIComponent('WatchDemo')
+@PatchEntry('WatchDemo')
 class WatchDemo extends StatefulWidget {
   const WatchDemo({super.key});
 
@@ -88,7 +88,7 @@ class _WatchDemoState extends State<WatchDemo> {
 /// 本组件是独立的自定义 StatefulWidget，位于 provider 子树内；在**自己的
 /// State.build** 里调用 `context.watch<CounterModel>()`。订阅锚点应是本组件
 /// 自身（而非定义 watch 的 WatchDemo），模型 notify 时只重建本组件。
-@UIComponent('WatchCountLabel')
+@PatchEntry('WatchCountLabel')
 class WatchCountLabel extends StatefulWidget {
   const WatchCountLabel({super.key});
 

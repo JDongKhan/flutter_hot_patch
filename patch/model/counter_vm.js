@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 ui_component_generator 从 lib/model/counter_vm.dart 自动生成
+// 由 hot_patch_generator 从 lib/model/counter_vm.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from '../components/banner_component.js';

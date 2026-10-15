@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../app/model/app_data.dart';
 import '../app/model/app_models.dart';
@@ -9,7 +9,7 @@ import '../app/pages/orders_page.dart';
 import '../components/widget_showcase.dart';
 import '../main.dart';
 
-/// 宿主路由能力：`@UIComponent` 首页的所有点击入口都走这里。
+/// 宿主路由能力：`@PatchEntry` 首页的所有点击入口都走这里。
 ///
 /// 设计要点（与 [Network] / [WebView] 同一套 @HostInjected 机制）：
 /// - **原生直接可用**：这些就是普通 static 方法，首页原生渲染时同步执行；

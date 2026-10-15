@@ -13,8 +13,8 @@ dependencies:
   provider: ^6.1.2
   hot_patch:
     path: packages/hot_patch
-  ui_component:
-    path: packages/ui_component
+  hot_patch_annotations:
+    path: packages/hot_patch_annotations
 
 dev_dependencies:
   flutter_test:
@@ -22,8 +22,8 @@ dev_dependencies:
   flutter_driver:
     sdk: flutter
   build_runner: ^2.4.13
-  ui_component_generator:
-    path: packages/ui_component_generator
+  hot_patch_generator:
+    path: packages/hot_patch_generator
   flutter_lints: ^6.0.0
 
 flutter:

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import 'banner_component.dart';
 
 /// 复合组件演示：build() 里使用**其他自定义 widget**。
 ///
 /// 两种形态：
-///   1. `BannerCard()` —— 有 @UIComponent 注解：JS 版递归渲染为
+///   1. `BannerCard()` —— 有 @PatchEntry 注解：JS 版递归渲染为
 ///      Component 节点（运行时 new 嵌套实例 + 事件回流），原生版直接嵌组件。
 ///   2. `_LabeledDivider()` —— 无注解的 lib 自定义 widget：原生版直接使用；
 ///      JS 版渲染为 Component 占位提示（__components 无该组件注册）。
-@UIComponent('DashboardCard')
+@PatchEntry('DashboardCard')
 class DashboardCard extends StatefulWidget {
   const DashboardCard({super.key});
 
@@ -59,10 +59,10 @@ class _DashboardCardState extends State<DashboardCard> {
 }
 
 /// 私有组件（_ 开头）：默认生成器递归翻译成 JS 注册进同一产物。
-/// 这里标 @UIComponentIgnore 演示「不参与连带转换」：生成器跳过
+/// 这里标 @PatchIgnore 演示「不参与连带转换」：生成器跳过
 /// 翻译（产物里无该 JS 类），build 树保持 Component 节点，运行时
 /// 由业务方原生注入（nativeComponents）渲染。
-@UIComponentIgnore()
+@PatchIgnore()
 class _LabeledDivider extends StatelessWidget {
   const _LabeledDivider({required this.text});
 

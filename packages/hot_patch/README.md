@@ -32,7 +32,7 @@ JsUiWidget(
 | 参数 | 说明 |
 | --- | --- |
 | `jsAsset` | 补丁入口 JS（asset 路径或 http(s) zip） |
-| `component` | 入口模块里注册的组件类名（即 `@UIComponent` 的 `name`） |
+| `component` | 入口模块里注册的组件类名（即 `@PatchEntry` 的 `name`） |
 | `props` | 传给组件构造的 props |
 | `nativeComponents` | 无 JS 产物的组件（Component 节点）的原生注入：组件名 → 构造。运行时**不 import 业务类**，由业务方在这里注册 |
 | `sharedManager` | 共享运行时；多组件共用一个引擎时传入 |
@@ -81,8 +81,8 @@ HotPatchLog.enabled = false; // 生产环境一行关闭（默认 kDebugMode）
 
 | 包 | 作用 |
 | --- | --- |
-| `ui_component` | 注解 |
-| `ui_component_generator` | 构建期把注解组件静态翻译为 JS 模块（dev_dependency） |
+| `hot_patch_annotations` | 注解 |
+| `hot_patch_generator` | 构建期把注解组件静态翻译为 JS 模块（dev_dependency） |
 | `hot_patch` | 本包：运行时加载 JS 补丁渲染组件，由 JS 驱动逻辑 |
 
 ## License

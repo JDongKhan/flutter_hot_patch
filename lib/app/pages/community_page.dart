@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../../base/app_router.dart';
 import '../model/app_data.dart';
 import '../model/app_models.dart';
 import 'detail_pages.dart';
 
-/// 社区 tab（`@UIComponent` → 连带翻译，产物 patch/app/pages/community_page.js）。
+/// 社区 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/community_page.js）。
 ///
 /// 对应 docs/app-prototype.html 的「社区」：广场/推荐双 tab + 横向资源推荐
 /// + 排序快捷条 + 「筛选」下拉面板（从顶部展开，面板内四组条件：排序方式 /
@@ -16,9 +16,9 @@ import 'detail_pages.dart';
 /// 布局自然决定（紧贴筛选条下沿），不做 GlobalKey/RenderBox 实测——实测在
 /// JS 侧无法表达（`currentContext` / `localToGlobal` 都是宿主专有 API）。
 ///
-/// 本页与「订单/我的」一样纳入连带翻译（`@UIComponent`）：数据过滤
+/// 本页与「订单/我的」一样纳入连带翻译（`@PatchEntry`）：数据过滤
 /// （`.where().toList()` + `switch` 排序）与集合 for-if 展开均已支持。
-@UIComponent()
+@PatchEntry()
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
 

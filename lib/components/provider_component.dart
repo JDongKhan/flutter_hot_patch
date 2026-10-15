@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../model/counter_vm.dart';
 import '../model/network_vm.dart';
@@ -16,7 +16,7 @@ import '../model/network_vm.dart';
 /// 逆序包裹成嵌套 provider 结点，Consumer 沿祖先链取「最近」VM 并订阅 ——
 /// 与原生 MultiProvider 的嵌套 Provider.of 语义一致。VM notify → 仅该
 /// Consumer 结点局部重建。
-@UIComponent('ProviderCard')
+@PatchEntry('ProviderCard')
 class ProviderCard extends StatefulWidget {
   const ProviderCard({super.key});
 

@@ -206,7 +206,7 @@ class RemoteAssetLoader {
   }
 
   /// 扫描本地根目录下的 .js，找声明了 [component] 类的那个
-  /// （生成器产物类名 = @UIComponent 注解 name，匹配 `class <name>`）。
+  /// （生成器产物类名 = @PatchEntry 注解 name，匹配 `class <name>`）。
   /// 返回 zip 内相对路径；未找到返回 null。
   static String? _findComponentFile(String root, String component) {
     final dir = Directory(root);

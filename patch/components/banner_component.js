@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 ui_component_generator 从 lib/components/banner_component.dart 自动生成
+// 由 hot_patch_generator 从 lib/components/banner_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { PanelColors } from 'hello_component.js';

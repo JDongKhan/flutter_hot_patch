@@ -15,7 +15,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../utils/hot_patch_log.dart';
 import '../build_context/build_context_bridge.dart';
-import '../change_notifier/vm_bridge.dart';
+import '../change_notifier/change_notifier_bridge.dart';
 import 'provider_bridge.dart';
 
 /// 一个「按类型订阅」的登记项：按类型解析出的可订阅对象 + 它到该结点 element
@@ -65,7 +65,7 @@ Object? _resolveWatchOp(String ctxId, String op, Map payload) {
   final context = jsBuildContextOf(ctxId);
   // 结点尚未登记 / 已卸载（构建时序或卸载竞态）：静默跳过。
   if (context == null) return null;
-  final target = jsVmOfTypeAt(context, type);
+  final target = jsChangeNotifierOfTypeAt(context, type);
   if (target == null) {
     // 只在**本端也没找到**时告警：否则是宿主侧本就没有该作用域的镜像
     // （将来 JS-only 的作用域族），属正常情形，不该报错。
@@ -84,10 +84,10 @@ Object? _resolveWatchOp(String ctxId, String op, Map payload) {
 
 /// 让该位置（ctx 句柄 id 对应的 `_JsNode` element）**按类型精确订阅**。
 ///
-/// 订阅挂的是 [jsVmOfTypeAt] 按类型解析出的那个 VM——不是「最近的那个提供者」
-/// （里层嵌套了别的类型时会订错），也不是 props 里顺手拿到的那个。被订阅者
+/// 订阅挂的是 [jsChangeNotifierOfTypeAt] 按类型解析出的那个 VM——不是「最近的那个
+/// 提供者」（里层嵌套了别的类型时会订错），也不是 props 里顺手拿到的那个。被订阅者
 /// notify → 该 element 标脏 → 重建（重建时重新读 JS 已补丁后的值）。
-void _subscribeNode(String ctxId, String type, JsVm target) {
+void _subscribeNode(String ctxId, String type, JsChangeNotifier target) {
   final subs = _ctxWatches[ctxId] ??= <String, _CtxWatch>{};
   // 同一类型已订阅同一个对象：重建重发 op，直接返回（不叠监听器）。
   if (subs[type]?.listenable == target) return;

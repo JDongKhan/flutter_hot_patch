@@ -7,16 +7,16 @@
 const String changeNotifierSource = r'''
 // ChangeNotifier 基类（IIFE 骨架内定义，挂 G 供产物继承）。
 //
-// **职责只有一件事：提供 VM 本体**。addListener / removeListener 保留在 JS
+// **职责只有一件事：提供模型本体**。addListener / removeListener 保留在 JS
 // 侧（JS 自身逻辑要订阅模型），notifyListeners 双路派发：
 //   ① 本端 `_listeners`（JS 侧逻辑 / JS 侧消费者重建）；
-//   ② 跨语言 `handleOp(__id, 'notify')`（通知 Dart 端**通用 VM 镜像**，
-//      驱动 Dart 侧 ChangeNotifierProvider 子树刷新）。
-// 构造时登记句柄（kind=vm/ChangeNotifier），meta.type = JS 端类名 —— Dart 端的
-// 通用 VM 据此「记下它的 JS 端类型」（context.watch<T>() 的类型一路传到这里）。
+//   ② 跨语言 `handleOp(__id, 'notify')`（通知 Dart 端**通用镜像**
+//      JsChangeNotifier，驱动 Dart 侧 ChangeNotifierProvider 子树刷新）。
+// 构造时登记句柄（kind=notifier/ChangeNotifier），meta.type = JS 端类名 —— Dart 端的
+// 通用镜像据此「记下它的 JS 端类型」（context.watch<T>() 的类型一路传到这里）。
 function ChangeNotifier() {
   this._listeners = [];
-  this.__id = reg(this, 'vm/ChangeNotifier', {
+  this.__id = reg(this, 'notifier/ChangeNotifier', {
     meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
   });
 }
@@ -57,9 +57,9 @@ G.ChangeNotifier = ChangeNotifier;
 
 // ValueNotifier<T>：单值版 ChangeNotifier（`ValueNotifier<int>(0)`）。
 //
-// **不属于本基类的句柄 kind**：构造时经 ChangeNotifier 登记 `vm/ChangeNotifier`，
+// **不属于本基类的句柄 kind**：构造时经 ChangeNotifier 登记 `notifier/ChangeNotifier`，
 // meta.type 由 `constructor.name` 自动取成 'ValueNotifier'，宿主镜像仍是通用
-// JsVm（无需新 kind，见 vm_bridge.dart）。
+// JsChangeNotifier（无需新 kind，见 change_notifier_bridge.dart）。
 //
 // `value` 用 defineProperty 的 get/set 实现，setter 里 **=== 守卫**是
 // `ValueListenableBuilder`「值不变不重建」语义的唯一来源：相同即 return，

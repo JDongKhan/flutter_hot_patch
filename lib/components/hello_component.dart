@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hot/base/account_center.dart';
 import 'package:flutter_hot/base/network.dart';
 import 'dart:io';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'package:flutter_hot/model/user.dart';
 
 /// 本文件演示两个能力：
@@ -12,17 +12,17 @@ import 'package:flutter_hot/model/user.dart';
 ///      同一产物（const PanelColors = {...}），build 里 `PanelColors.background`
 ///      直接翻译成 JS 表达式引用，无需 import 独立产物。
 ///
-/// 注解仅 @UIComponent() 一个类级注解（name 可省略，缺省取类名），其余全量生成：
+/// 注解仅 @PatchEntry() 一个类级注解（name 可省略，缺省取类名），其余全量生成：
 ///   - 所有非 static 基础类型字段 → JS 属性（一比一，_count → _count）
 ///   - 所有非生命周期方法 → JS 方法（一比一，inc → inc）
 ///   - SnackBar 形式的方法 → 自动 native 通道（nativeToast）
 ///   - build() 原封不动翻译成 JS build()
 ///
-/// 构建期由 ui_component_generator 静态翻译出：
+/// 构建期由 hot_patch_generator 静态翻译出：
 ///   hello_component.js（注册 HelloCard）
 /// 线上出 bug 时，运行时把组件切换为 JsUiWidget 加载 JS 版本即可热修复，
 /// 组件本体永远保持可正常使用。
-@UIComponent('HelloCard')
+@PatchEntry('HelloCard')
 class HelloCard extends StatefulWidget {
   const HelloCard({super.key});
 

@@ -71,7 +71,7 @@ class JsRuntimeManager {
 
   /// 宿主注入「位置 + 具名」混合调用时，承载**位置实参**的哨兵键。
   ///
-  /// 协议常量：由生成器 `ui_component_generator` 产出（其 `hostPositionalKey`
+  /// 协议常量：由生成器 `hot_patch_generator` 产出（其 `hostPositionalKey`
   /// 是同一个值），运行时在这里解析。`@` 不是合法的 Dart 标识符字符，故不会
   /// 与任何具名形参重名，判定无歧义。
   static const String hostPositionalKey = '@args';

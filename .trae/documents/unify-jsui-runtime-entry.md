@@ -21,7 +21,7 @@
 |---|---|---|
 | 1 | JS 侧全局单例 `rootInst`/`pageKey`/`providerByType` | 同屏多 `JsUiWidget` 串台（`_TwinTest`/`_RuntimeGroupTest`/WidgetShowcase 详情） |
 | 2 | (B) 缺 ~14 个宿主 type | WidgetShowcase 各详情页红占位 |
-| 3 | (B) 不认 `type:"Component"` | 嵌套 `@UIComponent` / `nativeComponents` 全失效（DashboardCard 等） |
+| 3 | (B) 不认 `type:"Component"` | 嵌套 `@PatchEntry` / `nativeComponents` 全失效（DashboardCard 等） |
 | 4 | props 里含「element 值」（`ListTile.leading/trailing`、`ClipRRect.child`） | (B) 的扁平 patch store 无法重建这些子树 |
 
 ---
@@ -30,7 +30,7 @@
 
 ### 步骤 1：生成器——嵌套组件产出构造调用
 
-文件：`packages/ui_component_generator/lib/widget_translator.dart`、`lib/builder.dart`
+文件：`packages/hot_patch_generator/lib/widget_translator.dart`、`lib/builder.dart`
 
 - `widget_translator.dart:241` 当前 `if (type == 'Component') return jsLiteral(json, depth);`。改为：**当 `emitConstructorCalls` 且该组件名有 JS 产物（`importResolver?.call(name) != null`）时**，渲染成构造调用 `__h(Name, {…args}, [])`（复用现有构造调用/`_renderValue` 逻辑）；否则维持 `jsLiteral`（走宿主 `nativeComponents`）。
 - 修复既有缺陷 `_resolveImportProduct`（`builder.dart:1247-1278`）：现在只返回**第一条**相对 import，多 import 文件会给出错误产物 → 构造调用取到 `undefined`。改为**按类名解析**：先扫描各 import 源文件收集 `类名 → 产物路径` 映射，`importResolver(name)` 查表返回。
@@ -91,7 +91,7 @@
 - 文件：`packages/hot_patch/lib/src/hot_patch_widget.dart`、`lib/src/widgets/widget_renderer.dart`、`lib/src/widgets/builtin_renderers.dart`（`widgets/` 目录随之清空）。
 - 符号：`HotPatchWidget`、`RenderNode`、`WidgetRenderContext`、`WidgetRenderer`、`WidgetRendererRegistry`、`lbRefreshCallbacks`、`_SetStateService`、`_LbNotifyService`、`_LbWatchService`、`JsRuntimeManager.resolveComponentAsset` + `_componentIndex`。
 - barrel `packages/hot_patch/lib/hot_patch.dart`：移除 `src/widgets/builtin_renderers.dart`、`src/hot_patch_widget.dart`、`src/widgets/widget_renderer.dart` 三条 export。
-- 顺手更新仍提及旧概念的注释（`ui_component/annotations.dart`、`native_service.dart`、`builtin_services.dart`、`widget_translator.dart`）。
+- 顺手更新仍提及旧概念的注释（`hot_patch_annotations/annotations.dart`、`native_service.dart`、`builtin_services.dart`、`widget_translator.dart`）。
 
 ### 步骤 8：测试
 
@@ -140,8 +140,8 @@
 - `packages/hot_patch/lib/src/js_ui/js_ui_store.dart`
 - `packages/hot_patch/lib/src/js_ui/js_widget_registry.dart`
 - `packages/hot_patch/lib/src/js_ui/js_ui_widget.dart`
-- `packages/ui_component_generator/lib/widget_translator.dart`
-- `packages/ui_component_generator/lib/builder.dart`
+- `packages/hot_patch_generator/lib/widget_translator.dart`
+- `packages/hot_patch_generator/lib/builder.dart`
 - `packages/hot_patch/lib/hot_patch.dart`
 - `lib/main.dart`、`lib/components/widget_showcase.dart`
 - `test/widget_test.dart`

@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../../base/app_router.dart';
 import '../model/app_data.dart';
 import '../model/app_models.dart';
 import 'detail_pages.dart';
 
-/// 订单 tab（`@UIComponent` → 连带翻译，产物 patch/app/pages/orders_page.js）。
+/// 订单 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/orders_page.js）。
 ///
 /// 对应 docs/app-prototype.html 的「订单」：顶部状态条（全部/待付款/待发货/
 /// 待收货/已完成）+ 订单卡列表（订单号 / 状态 / 商品 / 合计 / 操作按钮）。
 ///
-/// 本页纳入连带翻译（`@UIComponent`）：`.where().toList()` 过滤、`late` 字段
+/// 本页纳入连带翻译（`@PatchEntry`）：`.where().toList()` 过滤、`late` 字段
 /// 初始化（`widget.initialStatus`）、集合 for 循环、ListView.separated 的
 /// itemBuilder 局部变量、switch 表达式返回 Color 均已支持。
-@UIComponent()
+@PatchEntry()
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key, this.initialStatus});
 

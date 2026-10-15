@@ -1,4 +1,4 @@
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// @author jd
 

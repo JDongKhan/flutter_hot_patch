@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import 'pages/community_page.dart';
 import 'pages/home_page.dart';
@@ -9,17 +9,17 @@ import 'pages/orders_page.dart';
 
 /// App 四 tab 外壳（对应 docs/app-prototype.html 的整体框架）——**热更载体**。
 ///
-/// 本类标了 `@UIComponent()`，会被翻译成 `patch/app/app.js`：整壳（tab 切换状态
+/// 本类标了 `@PatchEntry()`，会被翻译成 `patch/app/app.js`：整壳（tab 切换状态
 /// `_index`、[IndexedStack]、[BottomNavigationBar]）都跑在 JS 运行时里，出问题
 /// 直接下发补丁即可热修整壳布局。
 ///
 /// 依赖的 widget 类会**连带翻译**：`HomePage`（及其同文件的
 /// HomeHeader/BannerSlide/GridCell/SpotCard/PromoCard）已是 `patch/app/pages/
 /// home_page.js` 里的 JS 类，外壳产物直接 `import` 后 `new` 出来。
-/// 其余三个 tab 页用了翻译器覆盖不到的构造，标了 `@UIComponentIgnore()`
+/// 其余三个 tab 页用了翻译器覆盖不到的构造，标了 `@PatchIgnore()`
 /// 显式退出翻译 → 在外壳产物里保持 `Component` 占位结点，由宿主经
 /// `JsUiWidget.nativeComponents` 原生注入（见 [AppShellJsPage]）。
-@UIComponent()
+@PatchEntry()
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -74,7 +74,7 @@ class _AppShellState extends State<AppShell> {
 /// 「完整 App · JS 热更」入口：整个四 tab 外壳由 JS 补丁渲染。
 ///
 /// 外壳（`patch/app/app.js`）里 [HomePage] 是**类引用**（有 JS 产物，JS 运行时
-/// 直接 new）；其余三个 tab 页标了 `@UIComponentIgnore`、没有 JS 产物，翻译器
+/// 直接 new）；其余三个 tab 页标了 `@PatchIgnore`、没有 JS 产物，翻译器
 /// 把它们产出为 `Component` 占位结点 → 这里用 [nativeComponents] 把同名原生页面
 /// 注进去。
 class AppShellJsPage extends StatelessWidget {
@@ -94,7 +94,7 @@ class AppShellJsPage extends StatelessWidget {
       // 右上角显示补丁打包时间（来自 patch/manifest.json，纯展示、不吃手势）。
       showBuildTime: true,
       // nativeComponents: {
-      //   // 三个 @UIComponentIgnore 的 tab 页：原生注入（HomePage 有 JS 产物，
+      //   // 三个 @PatchIgnore 的 tab 页：原生注入（HomePage 有 JS 产物，
       //   // 不需要在这里注册）。
       //   'CommunityPage': (args) => const CommunityPage(),
       //   'OrdersPage': (args) => const OrdersPage(),

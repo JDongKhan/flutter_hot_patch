@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 import 'widget_details.dart';
 
-/// 常用组件导航列表页（普通页面，无 @UIComponent 注解）：
+/// 常用组件导航列表页（普通页面，无 @PatchEntry 注解）：
 /// 分组列出 Flutter 常用组件，点击条目进入对应详情页。
-/// 详情页是 @UIComponent 注解组件（widget_details.dart），同一份代码
+/// 详情页是 @PatchEntry 注解组件（widget_details.dart），同一份代码
 /// 原生可直接用、也可由 JsUiWidget 加载 JS 产物热更（原生 vs JS 同屏）。
 class WidgetShowcase extends StatelessWidget {
   const WidgetShowcase({super.key});
@@ -102,7 +102,7 @@ class _Entry {
 class WidgetDetailPage extends StatelessWidget {
   const WidgetDetailPage({super.key, required this.component, this.fullPage = false});
 
-  /// 详情组件名（widget_details.dart 里的 @UIComponent 类名）。
+  /// 详情组件名（widget_details.dart 里的 @PatchEntry 类名）。
   final String component;
 
   /// 页面级组件（Scaffold 等）不比对，直接 JS 热更版全屏展示。

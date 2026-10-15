@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// ReorderableListView（长按拖拽重排）demo。
 ///
@@ -10,7 +10,7 @@ import 'package:ui_component/ui_component.dart';
 ///
 /// 重排算法用 `removeAt + insert`（生成器翻译为 JS 数组的
 /// `splice(i,1)[0]` 与 `splice(i,0,v)`）；`add` 翻译为 `push`。
-@UIComponent('ReorderListDemo')
+@PatchEntry('ReorderListDemo')
 class ReorderListDemo extends StatefulWidget {
   const ReorderListDemo({super.key});
 

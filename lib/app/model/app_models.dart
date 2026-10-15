@@ -2,7 +2,7 @@
 ///
 /// 全部模型只使用 **可翻译的基础类型**（String / int / bool / List<String>），
 /// 不含 Color / DateTime 等无 JS 等价物的对象字段——这些模型会被首页
-/// `@UIComponent` 组件依赖，随组件一起翻译进 JS 产物
+/// `@PatchEntry` 组件依赖，随组件一起翻译进 JS 产物
 /// （lib/app/pages/home_page.dart → patch/app/pages/home_page.js）。
 ///
 /// 颜色、装饰等纯展示常量留在 widget 代码里以字面量书写，不进模型。

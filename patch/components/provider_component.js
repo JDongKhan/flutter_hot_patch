@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 ui_component_generator 从 lib/components/provider_component.dart 自动生成
+// 由 hot_patch_generator 从 lib/components/provider_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';

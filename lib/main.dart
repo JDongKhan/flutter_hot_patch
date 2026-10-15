@@ -92,7 +92,7 @@ class DemoListPage extends StatelessWidget {
           jsAsset: _patchUrl('DashboardCard', 'components/composite_component.js'),
           // 嵌套组件（BannerCard）与公开 widget（LabeledDivider）都由生成器
           // 连带翻译进同一产物（JS 类引用），运行时直接 new，使用方无需声明依赖。
-          // 只有标了 @UIComponentIgnore 的私有组件走原生注入：
+          // 只有标了 @PatchIgnore 的私有组件走原生注入：
           //（私有类跨库不可见，注册等价的原生实现）：
           nativeComponents: {
             '_LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? ''),

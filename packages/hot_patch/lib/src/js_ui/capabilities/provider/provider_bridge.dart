@@ -2,7 +2,7 @@
 //
 // provider 的**状态与订阅**全部下沉到 Dart 侧：
 //   - JS 端 `ChangeNotifierProvider` 只负责造/取 VM，然后把宿主结点
-//     `ChangeNotifierProvider {model, vm}` 交给宿主（见 ui_component_generator
+//     `ChangeNotifierProvider {model, vm}` 交给宿主（见 hot_patch_generator
 //     的 widget_module_builder）——JS 侧没有 provider 专用记账，只在结点上按
 //     **类型名**声明作用域（`__provides`，注册见 provider_js.dart）；
 //   - JS 端 `context.watch<T>()` 只是「按**类型名**沿 `__parent` 向上取最近作用域
@@ -10,12 +10,12 @@
 //     这是同步取值约束决定的、无法消除的一步）。
 //
 // 宿主侧映射的职责：把 JS 下发的 `{model, vm 句柄}` 还原成真实的 Dart
-// provider 子树——VM 是 vm_bridge.dart 的**通用镜像**（不认识业务
+// provider 子树——VM 是 change_notifier_bridge.dart 的**通用镜像**（不认识业务
 // 类，只记 JS 端类型 + 转发 notify）。
 //
 // **本文件属于三方库层**（provider 的接入实现，见 provider_library.dart），核心
 // 不 import 它：核心把 `context.watch/read` 的 op 分发给本库注册的处理器
-// （见 context_ops.dart），再经 [jsVmOfTypeAt] 按类型名取出「可订阅对象」。
+// （见 context_ops.dart），再经 [jsChangeNotifierOfTypeAt] 按类型名取出「可订阅对象」。
 //
 // **刻意不依赖 `provider` 包**：宿主映射用 Flutter 内建的 InheritedNotifier
 // 实现等价语义，基座不绑定第三方版本；将来若要换成真正的 `provider`，只需把
@@ -23,8 +23,8 @@
 import 'package:flutter/widgets.dart';
 
 import '../../js_widget_registry.dart';
+import '../change_notifier/change_notifier_bridge.dart';
 import '../change_notifier/listenable_builder_bridge.dart';
-import '../change_notifier/vm_bridge.dart';
 
 /// 宿主侧 `ChangeNotifierProvider` 的映射实现。
 ///
@@ -32,36 +32,43 @@ import '../change_notifier/vm_bridge.dart';
 /// provider 包的 `ChangeNotifierProvider`（提供者结点 + 依赖通知）。Dart 侧的
 /// 消费者用 [maybeOf] 建立依赖，VM notify 时只重建该子树。
 ///
-/// 生产链路上 JS 的 `context.watch<T>()` 走的是 [jsVmOfTypeAt]（**按类型**精确
-/// 匹配，不能取「最近的那个」）；[maybeOf] 是给**宿主侧 Dart 消费者**用的
-/// 常规入口（如测试里模拟依赖者、将来宿主 widget 直接消费 JS 提供的 VM）。
-class JsVmProvider extends InheritedNotifier<JsVm> {
-  const JsVmProvider({super.key, required JsVm vm, required super.child})
-      : super(notifier: vm);
+/// 生产链路上 JS 的 `context.watch<T>()` 走的是 [jsChangeNotifierOfTypeAt]
+/// （**按类型**精确匹配，不能取「最近的那个」）；[maybeOf] 是给**宿主侧 Dart
+/// 消费者**用的常规入口（如测试里模拟依赖者、将来宿主 widget 直接消费 JS
+/// 提供的 VM）。
+class JsChangeNotifierProvider extends InheritedNotifier<JsChangeNotifier> {
+  const JsChangeNotifierProvider({
+    super.key,
+    required JsChangeNotifier vm,
+    required super.child,
+  }) : super(notifier: vm);
 
   /// 取祖先最近的 VM（**宿主侧 Dart 消费者**用；JS 侧的 context 走
-  /// [jsVmOfTypeAt] 按类型精确解析，见 build_context_bridge 的 `context.watch/read` op）。
-  static JsVm? maybeOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<JsVmProvider>()?.notifier;
+  /// [jsChangeNotifierOfTypeAt] 按类型精确解析，见 build_context_bridge 的
+  /// `context.watch/read` op）。
+  static JsChangeNotifier? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<JsChangeNotifierProvider>()
+      ?.notifier;
 }
 
 /// 在**真实 element 树**上按 JS 端类型名找 provider。
 ///
 /// JS 侧 `context.watch<T>()` / `context.read<T>()` 把 `T` 传下来后，Dart 侧据此
 /// 做**权威查找**：从该位置的 `BuildContext` 沿祖先链上溯，取第一个
-/// `jsType == type` 的 [JsVmProvider]（Dart 侧通用镜像的 `jsType` 记的就是 JS
-/// 端类名，见 vm_bridge.dart）。找不到返回 null —— 说明 JS 侧解析出的位置不在
-/// 该类型 provider 的子树内（消费点被放到了 provider 之外）。
+/// `jsType == type` 的 [JsChangeNotifierProvider]（Dart 侧通用镜像的 `jsType`
+/// 记的就是 JS 端类名，见 change_notifier_bridge.dart）。找不到返回 null ——
+/// 说明 JS 侧解析出的位置不在该类型 provider 的子树内（消费点被放到了 provider
+/// 之外）。
 ///
-/// 为什么不用 [JsVmProvider.maybeOf]：它只能取「最近的那个」provider，嵌套了
-/// 多个不同类型的 provider 时，`watch<A>` 需要的未必是最近的那个，故必须按
-/// `jsType` 过滤——与 JS 侧的判据一字不差。
-JsVm? jsVmOfTypeAt(BuildContext context, String type) {
+/// 为什么不用 [JsChangeNotifierProvider.maybeOf]：它只能取「最近的那个」
+/// provider，嵌套了多个不同类型的 provider 时，`watch<A>` 需要的未必是最近的
+/// 那个，故必须按 `jsType` 过滤——与 JS 侧的判据一字不差。
+JsChangeNotifier? jsChangeNotifierOfTypeAt(BuildContext context, String type) {
   if (context is! Element || !context.mounted) return null;
-  JsVm? found;
+  JsChangeNotifier? found;
   context.visitAncestorElements((element) {
     final widget = element.widget;
-    if (widget is JsVmProvider && widget.notifier?.jsType == type) {
+    if (widget is JsChangeNotifierProvider && widget.notifier?.jsType == type) {
       found = widget.notifier;
       return false;
     }
@@ -76,9 +83,9 @@ void registerProviderWidgets(JsWidgetRegistry r) {
   // VM 句柄取不到（JS 侧未登记/已释放）时退化为纯透传，不阻断渲染。
   r.register('ChangeNotifierProvider', (c) {
     final child = c.child() ?? const SizedBox.shrink();
-    final vm = jsVmOfProp(c.props['vm']);
+    final vm = jsChangeNotifierOfProp(c.props['vm']);
     if (vm == null) return child;
-    return JsVmProvider(vm: vm, child: child);
+    return JsChangeNotifierProvider(vm: vm, child: child);
   });
 
   // Consumer：JS 侧决定「哪个 VM、哪段子树」，宿主侧把这段子树包成 Dart 的

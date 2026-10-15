@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// package 模块（package: flutter）：由 ui_component_generator 生成
+// package 模块（package: flutter）：由 hot_patch_generator 生成
 // 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件
 
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../../base/app_router.dart';
 import '../../base/web_view.dart';
 import '../model/app_data.dart';
 import 'detail_pages.dart';
 
-/// 我的 tab（`@UIComponent` → 连带翻译，产物 patch/app/pages/mine_page.js）。
+/// 我的 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/mine_page.js）。
 ///
 /// 对应 docs/app-prototype.html 的「我的」：渐变个人信息头（点击进登录页）
 /// + 订单统计四项 + 功能菜单 + 退出登录。末尾额外挂两项**开发者入口**：
@@ -15,7 +15,7 @@ import 'detail_pages.dart';
 /// 本页用了翻译器覆盖不到的构造（`Navigator.push(MaterialPageRoute(...))`、
 /// 方法体 tear-off 回调），相关跳转统一收敛到 [AppRouter] 的 `@HostInjected`
 /// 通道（与 JS 侧同一条通路）。
-@UIComponent()
+@PatchEntry()
 class MinePage extends StatelessWidget {
   const MinePage({super.key});
 

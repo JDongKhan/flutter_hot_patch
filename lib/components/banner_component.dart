@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ui_component/ui_component.dart';
+import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import 'hello_component.dart';
 
@@ -8,7 +8,7 @@ import 'hello_component.dart';
 ///   banner_component.js
 /// 运行时与 HelloCard 共享同一个 __components 注册表。
 /// 注解不传 name：组件名直接取类名（BannerCard）。
-@UIComponent()
+@PatchEntry()
 class BannerCard extends StatefulWidget {
   const BannerCard({super.key});
 

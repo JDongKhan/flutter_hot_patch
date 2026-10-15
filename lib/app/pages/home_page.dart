@@ -11,7 +11,7 @@ import '../model/app_models.dart';
 /// 既能 `const HomePage()` 直接构造（外壳 `AppShell` 里就是这么用的，宿主做
 /// 原生注入时也不用传参），也能显式换一份数据（`HomePage(spots: mySpots)`）。
 ///
-/// 首页本身**不是** `@UIComponent` 组件：热更的载体上移到了四 tab 外壳
+/// 首页本身**不是** `@PatchEntry` 组件：热更的载体上移到了四 tab 外壳
 /// `AppShell`（lib/app/app.dart）。外壳被翻译成 JS 后，首页由宿主经
 /// `nativeComponents` 原生注入，因此本文件不产生任何 JS 产物。
 class HomePage extends StatelessWidget {
