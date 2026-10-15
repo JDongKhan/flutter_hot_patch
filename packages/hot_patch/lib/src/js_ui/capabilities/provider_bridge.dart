@@ -29,9 +29,35 @@ class JsVmProvider extends InheritedNotifier<JsVm> {
   const JsVmProvider({super.key, required JsVm vm, required super.child})
       : super(notifier: vm);
 
-  /// 取祖先最近的 VM（Dart 侧消费者用；JS 侧 consumer 走 findVm，不经过这里）。
+  /// 取祖先最近的 VM（Dart 侧消费者用；JS 侧 consumer 走自己的作用域解析，
+  /// 见 build_context_bridge 的 `context.watch/read` op）。
   static JsVm? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<JsVmProvider>()?.notifier;
+}
+
+/// 在**真实 element 树**上按 JS 端类型名找 provider。
+///
+/// JS 侧 `context.watch<T>()` / `context.read<T>()` 把 `T` 传下来后，Dart 侧据此
+/// 做**权威查找**：从该位置的 `BuildContext` 沿祖先链上溯，取第一个
+/// `jsType == type` 的 [JsVmProvider]（Dart 侧通用镜像的 `jsType` 记的就是 JS
+/// 端类名，见 vm_bridge.dart）。找不到返回 null —— 说明 JS 侧解析出的位置不在
+/// 该类型 provider 的子树内（消费点被放到了 provider 之外）。
+///
+/// 为什么不用 [JsVmProvider.maybeOf]：它只能取「最近的那个」provider，嵌套了
+/// 多个不同类型的 provider 时，`watch<A>` 需要的未必是最近的那个，故必须按
+/// `jsType` 过滤——与 JS 侧的判据一字不差。
+JsVm? jsVmOfTypeAt(BuildContext context, String type) {
+  if (context is! Element || !context.mounted) return null;
+  JsVm? found;
+  context.visitAncestorElements((element) {
+    final widget = element.widget;
+    if (widget is JsVmProvider && widget.notifier?.jsType == type) {
+      found = widget.notifier;
+      return false;
+    }
+    return true;
+  });
+  return found;
 }
 
 /// 注册 provider 宿主映射（由 js_ui_capabilities.registerAllJsWidgets 聚合调用）。

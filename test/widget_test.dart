@@ -274,6 +274,105 @@ void main() {
       unregisterJsBuildContext('n1');
       expect(jsBuildContextOfNode('n1'), isNull);
     });
+
+    testWidgets('context.watch op：Dart 按「指定 type」订阅，不订最近的 provider',
+        (tester) async {
+      const idA = 'js:vm/ChangeNotifier#wA';
+      const idB = 'js:vm/ChangeNotifier#wB';
+      handle({
+        'id': idA,
+        'op': 'create',
+        'kind': 'vm/ChangeNotifier',
+        'meta': {'type': 'VmA'},
+      });
+      handle({
+        'id': idB,
+        'op': 'create',
+        'kind': 'vm/ChangeNotifier',
+        'meta': {'type': 'VmB'},
+      });
+      final registry = JsWidgetRegistry();
+      registerAllJsWidgets(registry);
+
+      var builds = 0;
+      late BuildContext nodeCtx;
+      // 外层 VmA、内层 VmB，消费点在最内层：**最近的** provider 是 VmB，
+      // 而 watch 的是 VmA —— 订阅必须按 `jsType == T` 过滤，不能顺手订最近的。
+      await tester.pumpWidget(MaterialApp(
+        home: _ctx(
+          registry,
+          'ChangeNotifierProvider',
+          {
+            'model': 'VmA',
+            'vm': {'__handle': idA},
+          },
+          children: [
+            _ctx(
+              registry,
+              'ChangeNotifierProvider',
+              {
+                'model': 'VmB',
+                'vm': {'__handle': idB},
+              },
+              children: [
+                Builder(builder: (c) {
+                  nodeCtx = c;
+                  builds++;
+                  return const SizedBox.shrink();
+                }),
+              ],
+            ),
+          ],
+        ),
+      ));
+      registerJsBuildContext('w1', nodeCtx);
+
+      const ctxId = 'js:ctx/BuildContext#w1';
+      handle({
+        'id': ctxId,
+        'op': 'create',
+        'kind': 'ctx/BuildContext',
+        'meta': {'node': 'w1'},
+      });
+      builds = 0;
+      // JS 侧 context.watch<VmA>()：Dart 侧按类型解析到 VmA 的镜像并订阅。
+      handle({'id': ctxId, 'op': 'watch', 'type': 'VmA'});
+
+      // 最近的 provider（VmB）notify：订的不是它 → 不重建。
+      handle({'id': idB, 'op': 'notify'});
+      await tester.pump();
+      expect(builds, 0);
+
+      // 被 watch 的 VmA notify → 该结点重建。
+      handle({'id': idA, 'op': 'notify'});
+      await tester.pump();
+      expect(builds, 1);
+
+      // 句柄释放 → 订阅摘除（不再随 notify 重建）。
+      handle({'id': ctxId, 'op': 'release'});
+      handle({'id': idA, 'op': 'notify'});
+      await tester.pump();
+      expect(builds, 1);
+
+      // read 只取值、不建依赖（对齐 Dart/provider 语义）：新句柄 read 后 notify
+      // 仍不重建（此时已无任何 watch 订阅）。
+      const ctx2 = 'js:ctx/BuildContext#w2';
+      handle({
+        'id': ctx2,
+        'op': 'create',
+        'kind': 'ctx/BuildContext',
+        'meta': {'node': 'w1'},
+      });
+      handle({'id': ctx2, 'op': 'read', 'type': 'VmA'});
+      handle({'id': idA, 'op': 'notify'});
+      await tester.pump();
+      expect(builds, 1);
+      handle({'id': ctx2, 'op': 'release'});
+
+      handle({'id': idA, 'op': 'release'});
+      handle({'id': idB, 'op': 'release'});
+      unregisterJsBuildContext('w1');
+    });
   });
 
   test('宿主翻译层：JsWidgetRegistry 构造 Text/Column/Button', () {
