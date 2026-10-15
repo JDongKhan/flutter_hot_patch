@@ -330,7 +330,13 @@ const String _jsUiApi = r'''
 
   function newRoot(pageKey) {
     return {
-      key: pageKey, inst: null, dirty: [], flushing: false, ops: null
+      // `mounting`：根组件挂载进行中。此刻 `root.ops` 正被 mountRoot 累积整棵树
+      // 的 create/insert，而 flush 会**重置并消耗**同一份 ops（`root.ops = []`
+      // 后 commit 把它置 null），既丢掉尚未下发的结点、又让随后的根 op 被 emit
+      // 静默丢弃（宿主收不到根 → 页面停在加载态）。故挂载期间的 setState 只入
+      // dirty 队列，挂载收尾后统一 flush（见【8】markDirty 与 mountRoot）。
+      key: pageKey, inst: null, dirty: [], flushing: false,
+      mounting: false, ops: null
     };
   }
 
@@ -347,6 +353,7 @@ const String _jsUiApi = r'''
     roots[pageKey] = root;
     var prev = activeRoot;
     activeRoot = root;
+    root.mounting = true;
     try {
       root.ops = [];
       root.inst = mount(h(C, parse(propsJson), null), null, null);
@@ -354,8 +361,13 @@ const String _jsUiApi = r'''
       emit({ op: 'root', id: hostIdOf(root.inst) });
       commit(root);
     } finally {
+      root.mounting = false;
       activeRoot = prev;
     }
+    // 挂载期间累积的 setState（如子组件 initState 里 `setState(() => _loading = true)`）
+    // 在这里补一次 flush：根补丁已下发，实例与结点都在，走的正是 patch 增量重建，
+    // 与 Flutter「initState 里 setState → 首帧后再重建」语义一致。
+    if (root.dirty.length) { flush(root); }
     return true;
   }
 

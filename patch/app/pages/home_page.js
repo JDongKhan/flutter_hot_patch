@@ -36,150 +36,153 @@ export class HomePage {
     return __h('Container', {
         "color": '#fff4f5f7'
       }, [
-        __h('CustomScrollView', {}, [
-            __h('SliverToBoxAdapter', {}, [
-                __h('Column', {
-                    "crossAxisAlignment": "stretch"
-                  }, [
-                    __h(HomeHeader, {}),
-                    __h('SizedBox', {
-                        "height": 12
-                      }),
-                    __h('SizedBox', {
-                        "height": 150
+        __h('EasyRefresh', {
+            "child": __h('CustomScrollView', {}, [
+                __h('SliverToBoxAdapter', {}, [
+                    __h('Column', {
+                        "crossAxisAlignment": "stretch"
                       }, [
-                        __h('PageView', {}, [
-                            ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": this._feed.banners[i] })]); } return out; })()
-                          ])
-                      ]),
-                    __h('SizedBox', {
-                        "height": 10
-                      }),
-                    __h('Row', {
-                        "mainAxisAlignment": "center"
-                      }, [
-                        ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
-                      ]),
-                    __h('SizedBox', {
-                        "height": 12
-                      }),
-                    __h('Container', {
-                        "padding": {
-                          "left": 0.0,
-                          "top": 12.0,
-                          "right": 0.0,
-                          "bottom": 12.0
-                        },
-                        "margin": {
-                          "left": 12.0,
-                          "top": 0.0,
-                          "right": 12.0,
-                          "bottom": 0.0
-                        },
-                        "decoration": {
-                          "color": '#ffffffff',
-                          "borderRadius": {
-                            "radius": 14.0
-                          }
-                        }
-                      }, [
-                        __h('GridView', {
-                            "shrinkWrap": true,
-                            "physics": "NeverScrollableScrollPhysics",
-                            "maxCrossAxisExtent": 150,
-                            "mainAxisSpacing": 6,
-                            "crossAxisSpacing": 6,
-                            "mainAxisExtent": 84
+                        __h(HomeHeader, {}),
+                        __h('SizedBox', {
+                            "height": 12
+                          }),
+                        __h('SizedBox', {
+                            "height": 150
                           }, [
-                            ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this._feed.grid[i] })]); } return out; })()
-                          ])
-                      ]),
-                    __h('SizedBox', {
-                        "height": 12
-                      }),
-                    __h('Container', {
-                        "margin": {
-                          "left": 12.0,
-                          "top": 0.0,
-                          "right": 12.0,
-                          "bottom": 0.0
-                        }
-                      }, [
-                        __h(PromoCard, {
-                            "img": this._feed.adImg
-                          })
-                      ]),
-                    __h('SizedBox', {
-                        "height": 16
-                      }),
-                    __h('Padding', {
-                        "padding": {
-                          "left": 14.0,
-                          "top": 0.0,
-                          "right": 14.0,
-                          "bottom": 0.0
-                        }
-                      }, [
-                        __h('Row', {}, [
-                            __h('Container', {
-                                "width": 4,
-                                "height": 16,
-                                "decoration": {
-                                  "color": '#ff0e7afb',
-                                  "borderRadius": {
-                                    "radius": 2.0
-                                  }
-                                }
-                              }),
-                            __h('SizedBox', {
-                                "width": 8
-                              }),
-                            __h('Text', {
-                                "data": "景点推荐",
-                                "style": {
-                                  "fontSize": 17,
-                                  "fontWeight": "w700",
-                                  "color": '#ff1f2430'
-                                }
-                              }),
-                            __h('Spacer', {}),
-                            __h('Text', {
-                                "data": "为你精选",
-                                "style": {
-                                  "fontSize": 12,
-                                  "color": '#ff8a909e'
-                                }
+                            __h('PageView', {}, [
+                                ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": this._feed.banners[i] })]); } return out; })()
+                              ])
+                          ]),
+                        __h('SizedBox', {
+                            "height": 10
+                          }),
+                        __h('Row', {
+                            "mainAxisAlignment": "center"
+                          }, [
+                            ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
+                          ]),
+                        __h('SizedBox', {
+                            "height": 12
+                          }),
+                        __h('Container', {
+                            "padding": {
+                              "left": 0.0,
+                              "top": 12.0,
+                              "right": 0.0,
+                              "bottom": 12.0
+                            },
+                            "margin": {
+                              "left": 12.0,
+                              "top": 0.0,
+                              "right": 12.0,
+                              "bottom": 0.0
+                            },
+                            "decoration": {
+                              "color": '#ffffffff',
+                              "borderRadius": {
+                                "radius": 14.0
+                              }
+                            }
+                          }, [
+                            __h('GridView', {
+                                "shrinkWrap": true,
+                                "physics": "NeverScrollableScrollPhysics",
+                                "maxCrossAxisExtent": 150,
+                                "mainAxisSpacing": 6,
+                                "crossAxisSpacing": 6,
+                                "mainAxisExtent": 84
+                              }, [
+                                ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this._feed.grid[i] })]); } return out; })()
+                              ])
+                          ]),
+                        __h('SizedBox', {
+                            "height": 12
+                          }),
+                        __h('Container', {
+                            "margin": {
+                              "left": 12.0,
+                              "top": 0.0,
+                              "right": 12.0,
+                              "bottom": 0.0
+                            }
+                          }, [
+                            __h(PromoCard, {
+                                "img": this._feed.adImg
                               })
-                          ])
-                      ]),
+                          ]),
+                        __h('SizedBox', {
+                            "height": 16
+                          }),
+                        __h('Padding', {
+                            "padding": {
+                              "left": 14.0,
+                              "top": 0.0,
+                              "right": 14.0,
+                              "bottom": 0.0
+                            }
+                          }, [
+                            __h('Row', {}, [
+                                __h('Container', {
+                                    "width": 4,
+                                    "height": 16,
+                                    "decoration": {
+                                      "color": '#ff0e7afb',
+                                      "borderRadius": {
+                                        "radius": 2.0
+                                      }
+                                    }
+                                  }),
+                                __h('SizedBox', {
+                                    "width": 8
+                                  }),
+                                __h('Text', {
+                                    "data": "景点推荐",
+                                    "style": {
+                                      "fontSize": 17,
+                                      "fontWeight": "w700",
+                                      "color": '#ff1f2430'
+                                    }
+                                  }),
+                                __h('Spacer', {}),
+                                __h('Text', {
+                                    "data": "为你精选",
+                                    "style": {
+                                      "fontSize": 12,
+                                      "color": '#ff8a909e'
+                                    }
+                                  })
+                              ])
+                          ]),
+                        __h('SizedBox', {
+                            "height": 10
+                          })
+                      ])
+                  ]),
+                __h('SliverPadding', {
+                    "padding": {
+                      "left": 12.0,
+                      "top": 0.0,
+                      "right": 12.0,
+                      "bottom": 0.0
+                    }
+                  }, [
+                    __h(SliverGrid, {
+                        "builder": "_sliverBuilder0",
+                        "childCount": this._feed.spots.length,
+                        "maxCrossAxisExtent": 300,
+                        "mainAxisSpacing": 10,
+                        "crossAxisSpacing": 10,
+                        "mainAxisExtent": 190
+                      })
+                  ]),
+                __h('SliverToBoxAdapter', {}, [
                     __h('SizedBox', {
-                        "height": 10
+                        "height": 20
                       })
                   ])
               ]),
-            __h('SliverPadding', {
-                "padding": {
-                  "left": 12.0,
-                  "top": 0.0,
-                  "right": 12.0,
-                  "bottom": 0.0
-                }
-              }, [
-                __h(SliverGrid, {
-                    "builder": "_sliverBuilder0",
-                    "childCount": this._feed.spots.length,
-                    "maxCrossAxisExtent": 300,
-                    "mainAxisSpacing": 10,
-                    "crossAxisSpacing": 10,
-                    "mainAxisExtent": 190
-                  })
-              ]),
-            __h('SliverToBoxAdapter', {}, [
-                __h('SizedBox', {
-                    "height": 20
-                  })
-              ])
-          ])
+            "onRefresh": this.__bind("_load")
+          })
       ]);
   }
   _sliverBuilder0(context, index) {

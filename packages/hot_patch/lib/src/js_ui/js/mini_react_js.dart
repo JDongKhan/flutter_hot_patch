@@ -272,13 +272,18 @@ const String miniReactSchedulerSource = r'''
   // ===== 【8】mini-react｜调度（dirty → flush 批处理）==================
   // collected dirty -> 重建子树 -> 一次 commit。
   // 触发源有两处：mini-react 的 setState、作用域订阅回调（见【7】`subscribeListenable`）。
+  //
+  // **挂载中不 flush**：`root.mounting` 期间 `root.ops` 归 mountRoot 累积（整棵树的
+  // create/insert），而 flush 会重置并消耗同一份 ops —— 未下发的结点连同根 op 一起
+  // 丢，宿主收不到根、页面永远停在加载态。setState 在 initState / 构造里是合法写法
+  // （Flutter 也是首帧后再重建），故这里只入 dirty 队列，mountRoot 收尾时再 flush。
   function markDirty(inst) {
     if (!inst || inst.__unmounted || inst.__dirty) { return; }
     var root = inst.__root;
     if (!root) { return; }
     inst.__dirty = true;
     root.dirty.push(inst);
-    if (!root.flushing) {
+    if (!root.flushing && !root.mounting) {
       root.flushing = true;
       try { flush(root); } finally { root.flushing = false; }
     }

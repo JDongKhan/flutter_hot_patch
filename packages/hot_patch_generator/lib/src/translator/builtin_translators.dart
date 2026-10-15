@@ -109,7 +109,9 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     // provider 包：ChangeNotifierProvider / Consumer / MultiProvider
     ..register(const ChangeNotifierProviderTranslator())
     ..register(const ConsumerTranslator())
-    ..register(const MultiProviderTranslator());
+    ..register(const MultiProviderTranslator())
+    // easy_refresh 包：下拉刷新 / 上拉加载容器
+    ..register(const EasyRefreshTranslator());
   // 嵌套组件兜底：build 树里未注册的自定义 widget → Component 节点
   // （不参与 Map 注册，由 registry.fallback 持有；组件需 UpperCamel 才兜底）
   registry.registerFallback(const ComponentTranslator());
@@ -3247,6 +3249,48 @@ class DrawerHeaderTranslator extends WidgetTranslator {
       'type': ctx.jsString('DrawerHeader'),
       if (props.isNotEmpty) 'props': props,
       'children': child == null ? const [] : [ctx.translate(child)],
+    };
+  }
+}
+
+// ===========================================================================
+// easy_refresh 包：下拉刷新 / 上拉加载容器
+// ===========================================================================
+
+/// EasyRefresh（三方包 flutter_easy_refresh）：下拉刷新 / 上拉加载容器。
+///
+/// 只翻译「宿主能还原的那部分语义」：
+///   - child：被包裹的单个滚动视图（「值为 element 的 prop」，宿主 propChild 直取）；
+///   - onRefresh / onLoad：事件句柄。二者是**可等待事件**——宿主触发 JS 方法后要
+///     等它真正结束才收起指示器，故走 capabilities/easy_refresh 的
+///     `__jsuiAwaitRun`（宿主发起 → JS await → 回传 token）而不是普通 invoke；
+///   - refreshOnStart：挂载即刷新一次（bool 字面量）。
+///
+/// 不翻译的部分：指示器样式（Header / Footer / NotRefreshHeader…）与
+/// EasyRefreshController —— JS 侧没有等价物，且属视觉/命令式细节，宿主统一用
+/// 包内默认 ClassicHeader / ClassicFooter（见 easy_refresh_bridge.dart 的注释）。
+class EasyRefreshTranslator extends WidgetTranslator {
+  const EasyRefreshTranslator();
+
+  @override
+  String get type => 'EasyRefresh';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    final props = <String, dynamic>{};
+    final child = ctx.namedArg(node.args, 'child') ?? ctx.nonNamedArg(node.args);
+    if (child == null) throw FormatException('EasyRefresh 缺少 child');
+    props['child'] = ctx.translate(child);
+    final onRefresh = ctx.namedArg(node.args, 'onRefresh');
+    if (onRefresh != null) props['onRefresh'] = ctx.eventHandle(onRefresh);
+    final onLoad = ctx.namedArg(node.args, 'onLoad');
+    if (onLoad != null) props['onLoad'] = ctx.eventHandle(onLoad);
+    final refreshOnStart = boolLiteralJs(ctx.namedArg(node.args, 'refreshOnStart'));
+    if (refreshOnStart != null) props['refreshOnStart'] = refreshOnStart;
+    return {
+      'type': ctx.jsString('EasyRefresh'),
+      'props': props,
+      'children': const [],
     };
   }
 }
