@@ -14,7 +14,8 @@
 // 类，只记 JS 端类型 + 转发 notify）。
 //
 // **本文件属于三方库层**（provider 的接入实现，见 provider_library.dart），核心
-// 不 import 它：核心只通过 JsUiLibrary.resolveWatchTarget 按类型名取「可订阅对象」。
+// 不 import 它：核心把 `context.watch/read` 的 op 分发给本库注册的处理器
+// （见 context_ops.dart），再经 [jsVmOfTypeAt] 按类型名取出「可订阅对象」。
 //
 // **刻意不依赖 `provider` 包**：宿主映射用 Flutter 内建的 InheritedNotifier
 // 实现等价语义，基座不绑定第三方版本；将来若要换成真正的 `provider`，只需把

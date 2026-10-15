@@ -377,7 +377,7 @@ const String _jsUiRuntimeSkeletonTail = r'''
     host: host,
     resolve: resolveHost,
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
-    // （见 capabilities/handle_registry.dart）。
+    // （见 capabilities/core/handle_registry.dart）。
     reg: reg,
     release: releaseFromHost,
     call: callHandle

@@ -2,7 +2,7 @@
 //
 // 一个能力 = 描述符 + 通道 + 桥接组件 + 组件注册，全部内聚在本文件。
 //
-// 句柄桥（通用层，见 capabilities/handle_registry.dart）：
+// 句柄桥（通用层，见 capabilities/core/handle_registry.dart）：
 //   JS 侧 `new TextEditingController()` 经 `reg(obj, 'ctrl/Text', {meta:{fn}})`
 //   登记，通用通道 `jsHandle` 的 create 落到本文件的 `ctrl/Text` 描述符 →
 //   创建宿主真实 controller 并登记输入回传句柄；TextField(controller:

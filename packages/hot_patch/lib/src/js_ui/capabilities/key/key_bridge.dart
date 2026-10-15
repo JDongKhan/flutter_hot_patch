@@ -4,7 +4,7 @@
 // 的代理类产出，随 props 序列化下发（`{__vkey:…}` / `{__okey:…}` / `{__handle:…}`），
 // 宿主在渲染结点时还原成真实 Flutter Key（见 js_ui_widget 的 _JsNodeState）。
 //
-// 与 ScrollController 共用同一套通用句柄层（capabilities/handle_registry.dart）：
+// 与 ScrollController 共用同一套通用句柄层（capabilities/core/handle_registry.dart）：
 //   - GlobalKey / UniqueKey：JS 侧 `reg(this, 'key/Global'|'key/Unique')` 登记，
 //     通用通道 `jsHandle` 的 create 落到本文件描述符 → 创建**真实** GlobalKey() /
 //     UniqueKey() 并按句柄 id 复用（GlobalKey 身份跨帧稳定）；scope=page，页面

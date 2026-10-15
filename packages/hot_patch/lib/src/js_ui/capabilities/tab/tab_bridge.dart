@@ -10,7 +10,7 @@
 //       1) 不传 → 由祖先 DefaultTabController 提供（官方惯用法
 //          `DefaultTabController(length:n, child: Column([TabBar, Expanded(TabBarView)]))`）；
 //       2) 显式传 TabController → 走本文件的 TabController 句柄桥（与
-//          ScrollController 同款，通用层见 capabilities/handle_registry.dart）：
+//          ScrollController 同款，通用层见 capabilities/core/handle_registry.dart）：
 //          JS 实例跨桥序列化为 `{__handle: id, length, initialIndex}`，宿主按 id
 //          取/建真实 TabController 并挂到 TabBar / TabBarView；用户点 tab 经
 //          invoke 回传页码给 JS 实例，JS 侧 `index= / animateTo()` 走通用 op
