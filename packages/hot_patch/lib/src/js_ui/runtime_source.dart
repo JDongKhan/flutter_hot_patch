@@ -41,7 +41,7 @@
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
 /// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
 /// | 【6】 | 组件基类（`setState` / `__bind`） | mini-react（生成器产物的能力袋） |
-/// | 【7】 | provider 取值与订阅（`watch` / `read` / `findVm` / `subscribeVm`） | provider 模式专用 |
+/// | 【7】 | 作用域｜按类型名向上查找 + 消费者订阅（`registerScope` / `scopeOf` / `subscribeListenable`） | 通用机制（provider 等按类型注册，见 capabilities/provider_js.dart） |
 /// | 【8】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
 /// | 【9】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
 /// | 【10】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
@@ -59,8 +59,10 @@ import 'package:flutter/foundation.dart'
 //   - capabilities/tab_controller_js.dart         → TabController 代理类
 //   - capabilities/key_js.dart                    → ValueKey/ObjectKey/UniqueKey/GlobalKey 代理类
 //   - capabilities/build_context_js.dart          → BuildContext 代理（`this.context`）
+//   - capabilities/provider_js.dart               → provider 包的作用域声明（registerScope）
 //   - js/handle_registry_js.dart                  → 跨语言句柄注册表（通用层地基）
 import 'capabilities/build_context_js.dart';
+import 'capabilities/provider_js.dart';
 import 'capabilities/key_js.dart';
 import 'capabilities/scroll_controller_js.dart';
 import 'capabilities/tab_controller_js.dart';
@@ -298,7 +300,7 @@ const String _jsUiHostBridge = r'''
 
 /// mini-react｜组件基类（setState / __bind，生成器产物的能力袋）【6】。
 
-/// provider｜向上查找 VM + 消费者侧订阅（watch / read / findVm）【7】。
+/// 作用域｜按类型名向上查找 + 消费者侧订阅（registerScope / scopeOf）【7】。
 
 /// mini-react｜调度（markDirty → flush 批处理）【8】。
 
@@ -421,6 +423,7 @@ String jsUiRuntimeSource() => [
   tabControllerJsSource,
   keyJsSource,
   buildContextJsSource,
+  providerJsSource,
   _jsUiRuntimeSkeletonTail,
 ].join('\n');
 

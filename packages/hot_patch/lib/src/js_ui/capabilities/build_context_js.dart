@@ -15,9 +15,10 @@
 // 作用域里形参不可见，`this.context` 是同一对象的同步可达路径。
 //
 // 唯一的例外（同步约束，设计内）：`watch`/`read` 的**取值**必须同步（渲染期
-// `model.count` 要直接读），而 JS→宿主只有异步桥，故 VM 实例在本端沿 `__parent`
-// 取（provider 宿主结点带 vm 实例）；同时照常向宿主发同名 op，由宿主在**真实
-// BuildContext** 上登记依赖（Dart 语义照落）。
+// `model.count` 要直接读），而 JS→宿主只有异步桥，故值在本端按**类型名**沿
+// `__parent` 从最近的作用域结点取（通用机制，见 mini-react【7】的 `scopeOf`；
+// provider 的作用域声明见 capabilities/provider_js.dart）；同时照常向宿主发
+// 同名 op，由宿主在**真实 BuildContext** 上登记依赖 / 订阅（Dart 语义照落）。
 const String buildContextJsSource = r'''
   // ===== 【10.7】BuildContext 代理（`context.watch/read/…`）===============
   defineHandleKind('ctx/BuildContext', {});
@@ -51,21 +52,27 @@ const String buildContextJsSource = r'''
     } catch (e) {}
   };
 
-  // `context.watch<T>()`：取最近 provider 的实例并订阅（模型 notify 时只重建
-  // 调用 watch 的那个位置）。取值同步（见文件头），依赖登记交给宿主。
+  // `context.watch<T>()`：取最近提供 [type] 的值并订阅（notify 时只重建调用
+  // watch 的那个位置）。取值同步（见文件头）；依赖登记交给宿主。
+  //
+  // 查找走核心的通用作用域机制（`scopeOf`，只认类型名），本方法不关心 T 是
+  // 模型还是别的什么；「值是否可订阅」由 `subscribeListenable` 鸭子判型。
   JsBuildContext.prototype.watch = function (type) {
-    var vm = findVm(this.__anchor, type);
-    if (vm == null) { this.__host('watch', { type: type }); return undefined; }
-    subscribeVm(this.__anchor, vm);
-    this.__host('watch', { type: type });
-    return vm;
+    var value = scopeOf(this.__anchor, type);
+    // 把本端查找结果一并告知宿主：宿主据此区分「消费点在 provider 子树之外」
+    // （真错误，宿主会告警）与「宿主侧本就没有该作用域的镜像」（正常，静默）。
+    var payload = { type: type, found: value != null };
+    this.__host('watch', payload);
+    if (value == null) { return undefined; }
+    subscribeListenable(this.__anchor, value);
+    return value;
   };
 
   // `context.read<T>()`：仅取实例，不订阅（按钮回调里的合法用法）。
   JsBuildContext.prototype.read = function (type) {
-    this.__host('read', { type: type });
-    var vm = findVm(this.__anchor, type);
-    return vm == null ? undefined : vm;
+    var value = scopeOf(this.__anchor, type);
+    this.__host('read', { type: type, found: value != null });
+    return value == null ? undefined : value;
   };
 
   // 组件实例 → 代理（每个实例一个，缓存；build 传参与 `this.context` 同一对象）。

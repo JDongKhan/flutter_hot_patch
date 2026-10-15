@@ -196,7 +196,7 @@ export class Builder {
 
 /// ChangeNotifierProvider：解析 create/value 得到 VM，然后**交给宿主**。
 ///
-/// JS 侧不做任何 provider 记账（无 `__provides`）：本类只负责
+/// JS 侧不做任何 provider 专用记账：本类只负责
 ///   ① 造/取 VM（`create` 为类引用时 new 一次，生命周期归本类；实例时复用）；
 ///   ② 渲染宿主结点 `ChangeNotifierProvider`，props 带 `{model, vm}`——
 ///      宿主据此建 Dart 侧的 provider 映射（通用 VM 镜像 + provider 子树），

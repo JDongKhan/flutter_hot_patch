@@ -804,4 +804,5 @@ const Map<String, IconData> _icons = {
   'tune': Icons.tune,
   'widgets_outlined': Icons.widgets_outlined,
   'compare_arrows': Icons.compare_arrows,
+  'drag_handle': Icons.drag_handle,
 };

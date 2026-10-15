@@ -183,42 +183,68 @@ const String miniReactComponentBaseSource = r'''
 
 ''';
 
-/// provider｜向上查找 VM + 消费者侧订阅（watch / read / findVm）【7】。
+/// 作用域｜按**类型名**向上查找 + 消费者侧订阅（scopeOf / subscribeListenable）【7】。
 const String miniReactProviderSource = r'''
 
-  // ===== 【7】provider｜向上查找 VM + 消费者侧订阅 =====================
-  // JS 侧**没有 provider 专用机制**：provider 就是宿主结点 `ChangeNotifierProvider`
-  // （type 字符串），其 props 带 { model: 类型名, vm: VM 实例 }。
-  // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的 VM —— 与 Dart
-  // `context.read/watch` 的向上查找一致，取不到返回 null（不猜、不回退）。
+  // ===== 【7】作用域｜按类型名向上查找 + 消费者侧订阅 ==================
+  // **与 Flutter 的 InheritedWidget 同语义**：宿主结点用 `__provides`
+  // （类型名 → 值）声明自己对外提供的作用域；查找**只认类型名**，不关心这个
+  // 类型是模型、控制器还是别的什么 —— 正如 Dart 侧
+  // `dependOnInheritedWidgetOfExactType<T>()` 不关心 T 是干嘛的。
+  //
+  // 「谁提供什么」由**各能力自己**注册（[registerScope]）；reconciler 只在
+  // mount/patch 时把结点 props 交给对应 publisher 折算成 `__provides`，核心
+  // 零业务知识（与「新增能力 = 注册描述符」同构）。provider 包的注册见
+  // capabilities/provider_js.dart。
+  var scopePublishers = {};
+
+  // 注册：宿主 widget 类型 → `props => {类型名: 值}`（返回空 = 不提供）。
+  function registerScope(hostType, publish) {
+    scopePublishers[hostType] = publish;
+  }
+
+  // mount/patch 时调用：把该宿主结点的 props 折算进 `__provides`。
+  // 每次 patch 都重放（props 变了、或 publisher 换了实例，如 create 重跑）。
+  function applyScope(inst, props) {
+    var publish = scopePublishers[inst.__type];
+    if (!publish) { return; }
+    var provided = publish(props || {});
+    inst.__provides = (provided && Object.keys(provided).length) ? provided : null;
+  }
+
+  // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的**值**（同名就近遮蔽）。
   // 必须是同步取值：渲染期 `model.count` 直接读，不能经异步桥回宿主。
-  function findVm(inst, type) {
+  // 取不到返回 null（不猜、不回退）。
+  function scopeOf(inst, type) {
     var p = inst.__parent;
     while (p) {
-      var pr = p.__props;
-      if (pr && pr.model === type) { return pr.vm; }
+      var pr = p.__provides;
+      if (pr && Object.prototype.hasOwnProperty.call(pr, type)) { return pr[type]; }
       p = p.__parent;
     }
     return null;
   }
 
-  // 订阅：给 [vm] 挂一个「把 [anchor] 标脏」的监听。订阅由**消费者自己持有**
-  // （provider 不记账），台账记在消费者侧 `__vmSubs`，卸载时精确退订。
-  // 按 VM 身份去重：重建会再次 watch，但不会重复挂监听。
-  // 这条通路是 JS 侧**唯一保留**的 provider 残留，且复用的是原生
-  // ChangeNotifier API（不是 provider 私有记账）：VM notify 时把订阅位置标脏
-  // → 重建 → 下发 patch → 宿主结点重建，UI 才真正更新。
-  function subscribeVm(anchor, vm) {
-    if (!vm || typeof vm.addListener !== 'function') { return; }
+  // 订阅：给 [value] 挂一个「把 [anchor] 标脏」的监听。订阅由**消费者自己持有**
+  // （提供者不记账），台账记在消费者侧 `__vmSubs`，卸载时精确退订。
+  // 按值身份去重：重建会再次 watch，但不会重复挂监听。
+  // 这条通路复用的是原生 ChangeNotifier API（不是 provider 私有记账）：
+  // notify 时把订阅位置标脏 → 重建 → 下发 patch → 宿主结点重建，UI 才真正更新。
+  //
+  // **鸭子判型**：值是不是可监听是**值自己的事**——「找到值之后怎么用」属于
+  // 调用方，与查找机制无关（与 Flutter 一致：watch 一个纯数据 InheritedWidget
+  // 也合法，只是没有本端订阅可言）。
+  function subscribeListenable(anchor, value) {
+    if (!value || typeof value.addListener !== 'function') { return; }
     var mine = anchor.__vmSubs || (anchor.__vmSubs = []);
     for (var i = 0; i < mine.length; i++) {
-      if (mine[i].vm === vm) { return; }
+      if (mine[i].value === value) { return; }
     }
-    var entry = { vm: vm };
+    var entry = { value: value };
     // 依赖变更必须区别于 setState：标记 __depDirty，flush 时据此在 build 前
     // 补一次 didChangeDependencies（对应 Flutter 的 InheritedWidget 变更语义）。
     entry.listener = function () { anchor.__depDirty = true; markDirty(anchor); };
-    vm.addListener(entry.listener);
+    value.addListener(entry.listener);
     mine.push(entry);
   }
 
@@ -227,9 +253,9 @@ const String miniReactProviderSource = r'''
     var mine = inst.__vmSubs;
     if (!mine) { return; }
     for (var i = 0; i < mine.length; i++) {
-      var vm = mine[i].vm;
-      if (vm && typeof vm.removeListener === 'function') {
-        vm.removeListener(mine[i].listener);
+      var value = mine[i].value;
+      if (value && typeof value.removeListener === 'function') {
+        value.removeListener(mine[i].listener);
       }
     }
     inst.__vmSubs = null;
@@ -336,6 +362,8 @@ const String miniReactReconcilerSource = r'''
         __k: HOST, __id: nodeId(el.type), __type: el.type, __root: rootFor(parent),
         __props: el.props, __children: [], __parent: parent
       };
+      // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【7】）。
+      applyScope(hi, el.props);
       emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
       if (slot && slot.hostParentId) {
         emit({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
@@ -392,6 +420,8 @@ const String miniReactReconcilerSource = r'''
         emit({ op: 'props', id: oldInst.__id, props: el.props });
       }
       oldInst.__props = el.props;
+      // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
+      applyScope(oldInst, el.props);
       patchChildren(oldInst, el.children);
       mountPropChildren(oldInst, oldProps, el.props || {});
       return oldInst;
@@ -517,7 +547,7 @@ const String miniReactReconcilerSource = r'''
       if (typeof inst.dispose === 'function') {
         try { inst.dispose(); } catch (e) {}
       }
-      // [provider] 从各 VM 的监听表里摘掉自己（订阅登记在消费者侧 `__vmSubs`）。
+      // [scope] 从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 `__vmSubs`）。
       unsubscribeAll(inst);
       // [ctx] 释放 BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有
       // 真实记录（句柄→结点），纯本端删除会让宿主那条记录留到页面销毁。

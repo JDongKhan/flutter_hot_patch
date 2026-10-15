@@ -86,10 +86,14 @@ Object? _resolveProviderOp(String id, String op, Map payload) {
   if (context == null) return null;
   final vm = jsVmOfTypeAt(context, type);
   if (vm == null) {
-    HotPatchLog.log(
-      '[jsui] context.$op("$type") 在宿主真值 context 上找不到该类型的 provider'
-      '（结点 $id；消费点可能在 provider 子树之外）',
-    );
+    // 只在**本端也没找到**时告警：否则是宿主侧本就没有该作用域的镜像
+    // （将来 JS-only 的作用域族），属正常情形，不该报错。
+    if (payload['found'] != true) {
+      HotPatchLog.log(
+        '[jsui] context.$op("$type") 在宿主真值 context 上找不到该类型的 provider'
+        '（结点 $id；消费点可能在 provider 子树之外）',
+      );
+    }
     return null;
   }
   // read 不建依赖（对齐 Flutter/provider 语义：read 只取值、不随 notify 重建）。

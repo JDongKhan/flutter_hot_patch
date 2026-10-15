@@ -3,9 +3,10 @@
 // provider 的**状态与订阅**全部下沉到 Dart 侧：
 //   - JS 端 `ChangeNotifierProvider` 只负责造/取 VM，然后把宿主结点
 //     `ChangeNotifierProvider {model, vm}` 交给宿主（见 ui_component_generator
-//     的 widget_module_builder）——JS 侧不再有 `__provides` 之类的提供者记账；
-//   - JS 端 `context.watch<T>()` 只是「沿 `__parent` 找最近的 provider 宿主结点
-//     取 VM 实例」+ 用原生 `vm.addListener` 订阅（UI 更新仍由 JS 侧重建产生，
+//     的 widget_module_builder）——JS 侧没有 provider 专用记账，只在结点上按
+//     **类型名**声明作用域（`__provides`，注册见 capabilities/provider_js.dart）；
+//   - JS 端 `context.watch<T>()` 只是「按**类型名**沿 `__parent` 向上取最近作用域
+//     的值」+ 用原生 `addListener` 订阅（UI 更新仍由 JS 侧重建产生，
 //     这是同步取值约束决定的、无法消除的一步）。
 //
 // 宿主侧映射的职责：把 JS 下发的 `{model, vm 句柄}` 还原成真实的 Dart
