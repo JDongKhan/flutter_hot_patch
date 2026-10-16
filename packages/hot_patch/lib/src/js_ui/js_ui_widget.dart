@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/builtin_host_methods.dart';
@@ -10,6 +11,7 @@ import 'capabilities/build_context/build_context_bridge.dart';
 import 'capabilities/core/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key/key_bridge.dart';
+import 'js_leak_snapshot.dart';
 import 'js_ui_store.dart';
 import 'js_widget_registry.dart';
 
@@ -94,6 +96,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
   /// 所加载补丁的打包时间（包根 `manifest.json` 的 `buildTime`）；无清单为 null。
   String? _buildTime;
 
+  /// 页面进入前的 JS 泄漏基线快照（仅 debug；dispose 时取第二次做 diff）。
+  JsLeakSnapshot? _leakBaseline;
+
   @override
   void initState() {
     super.initState();
@@ -115,6 +120,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
     ensureJsUiCapabilities();
     // jsuiCommit 补丁按页面 key 路由：登记本页 store（key 由 JS 补丁带下来）。
     jsUiPageStores[_pageKey] = _store;
+    // 泄漏观测基线：进入前取一次（仅 debug），dispose 清理后再取一次做 diff。
+    if (kDebugMode) _leakBaseline = JsLeakSnapshot.capture();
     _boot();
   }
 
@@ -209,6 +216,11 @@ class JsUiWidgetState extends State<JsUiWidget> {
     unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
     jsUiPageStores.remove(_pageKey);
+    // 泄漏观测：清理全部完成后取第二次快照，与进入前基线 diff，残留即打印
+    //（含 JS 端对象构造名）。仅 debug 构建启用。
+    if (kDebugMode) {
+      JsLeakSnapshot.capture()?.reportLeaks(_pageKey, _leakBaseline);
+    }
     super.dispose();
   }
 

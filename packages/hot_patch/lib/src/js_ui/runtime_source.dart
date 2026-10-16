@@ -397,6 +397,27 @@ const String _jsUiApi = r'''
 /// UI 运行时骨架尾部（TextEditingController 片段后到 IIFE 闭包结束）。
 const String _jsUiRuntimeSkeletonTail = r'''
 
+  // 泄漏观测（宿主侧 debug 工具用）：导出运行时自维护的三张表——页面根表
+  // roots、句柄表 handles、页面句柄索引 pageHandles。JS 堆无法直接枚举，
+  // 但页面级对象（组件实例 / 控制器代理 / 函数闭包 / 监听器）全部经这三张
+  // 表可达：表清干净，其余对象失去引用自然可被 GC；表里有残留就是真泄漏。
+  // 宿主在页面进入前 / 销毁后各取一次做 diff（见 js_leak_snapshot.dart）。
+  function leakSnapshot() {
+    var hs = [];
+    for (var id in handles) {
+      var h = handles[id];
+      var t = h.obj === null ? 'null' : typeof h.obj;
+      var ctor = (t === 'object' || t === 'function') && h.obj && h.obj.constructor
+        ? (h.obj.constructor.name || t) : t;
+      hs.push({ id: id, kind: h.kind, scope: h.scope, key: h.key, obj: ctor });
+    }
+    var ph = {};
+    for (var pk in pageHandles) { ph[pk] = pageHandles[pk].length; }
+    var rs = [];
+    for (var rk in roots) { rs.push(rk); }
+    return JSON.stringify({ handles: hs, pageHandles: ph, roots: rs });
+  }
+
   var api = {
     h: h,
     fn: fn,
@@ -404,6 +425,7 @@ const String _jsUiRuntimeSkeletonTail = r'''
     Component: Component,
     mount: mountRoot,
     dispose: disposeRoot,
+    leakSnapshot: leakSnapshot,
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
     // （见 capabilities/core/handle_registry.dart）。
     reg: reg,

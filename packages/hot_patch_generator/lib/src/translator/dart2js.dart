@@ -161,15 +161,10 @@ String fieldTypeName(FieldDeclaration member, VariableDeclaration variable) {
 /// 只按名字递归翻译依赖组件、并按 ClassInfo.sourceFile 决定同文件内联还是跨
 /// 文件 import。基础类型与 widget 构造名由调用方与类表求交后自然丢弃
 /// （类表里只有真正的 Dart 类）。
-///
-/// [methods]：限定扫描的方法集（组件路径传过滤后的可翻译方法）；缺省扫描全部。
-Set<String> referencedClassNames(
-  ClassDeclaration decl, {
-  List<MethodDeclaration>? methods,
-}) {
+Set<String> referencedClassNames(ClassDeclaration decl) {
   final names = <String>{};
   final collector = _CtorNameCollector();
-  for (final m in methods ?? decl.members.whereType<MethodDeclaration>()) {
+  for (final m in decl.members.whereType<MethodDeclaration>()) {
     m.body.accept(collector);
   }
   names.addAll(collector.names);
