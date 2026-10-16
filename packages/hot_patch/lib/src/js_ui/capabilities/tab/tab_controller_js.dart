@@ -76,4 +76,10 @@ const String tabControllerJsSource = r'''
     this.__notifyIndex();
   };
   G.TabController = TabController;
+
+  // TabBarView 登记为**懒容器**：它的 children 不随容器一起挂载，宿主真的 inflate
+  // 到某个槽位时才挂载该子页（见 reconciler 的 lazyChildHosts / lazyMount）——
+  // 这是「TabBarView 的懒加载」在 JS 侧的落点；否则一次切 TabBarView 就会把全部
+  // 子页的 initState（连带网络请求）都跑掉。
+  registerLazyChildHost('TabBarView');
 ''';

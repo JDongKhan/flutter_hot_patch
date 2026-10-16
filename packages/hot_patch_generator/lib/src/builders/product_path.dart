@@ -50,7 +50,7 @@ String relativeProduct(String from, String to) {
 /// JS 产物，因此跨文件引用可以直接 import，无需再让使用方逐个补注解。**不按
 /// 方法名判断**（build / buildText / 任何返回 widget 的方法一律等价）。
 ///
-/// 不产出产物的类（拿不到 JS，运行时走宿主 nativeComponents 原生注入）：
+/// 不产出产物的类（拿不到 JS，运行时走宿主 registerNativeComponent 注册的原生实现）：
 ///   - 私有类：私有名不可能出现在别的文件里，不进表；
 ///   - **@PatchIgnore**：显式「不参与连带转换」；
 ///   - **@HostInjected**：方法实现留在 Dart，调用点被翻译为 `_app_host_.invoke`。

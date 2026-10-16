@@ -19,12 +19,14 @@ import 'pages/orders_page.dart';
 /// 「延迟挂载」能力（宿主 `_JsNode` 被 inflate 时反向驱动 JS 按需挂载），
 /// 本壳不再用业务层占位去模拟。
 ///
-/// 依赖的 widget 类会**连带翻译**：`HomePage`（及其同文件的
-/// HomeHeader/BannerSlide/GridCell/SpotCard/PromoCard）已是 `patch/app/pages/
-/// home_page.js` 里的 JS 类，外壳产物直接 `import` 后 `new` 出来。
-/// 其余三个 tab 页用了翻译器覆盖不到的构造，标了 `@PatchIgnore()`
-/// 显式退出翻译 → 在外壳产物里保持 `Component` 占位结点，由宿主经
-/// `JsUiWidget.nativeComponents` 原生注入（见 [AppShellJsPage]）。
+/// 依赖的 widget 类会**连带翻译**：四个 tab 页（及 HomePage 同文件的
+/// HomeHeader/BannerSlide/GridCell/SpotCard/PromoCard 等）都是各自
+/// `patch/app/pages/*.js` 里的 JS 类，外壳产物直接 `import` 后 `new` 出来。
+///
+/// 若某个 tab 页标了 `@PatchIgnore()` 显式退出翻译，它在产物里保持
+/// `Component` 占位结点，需由业务方在 `main()` 里用全局的
+/// `registerNativeComponent(名字, 构造)` 注入原生实现——不随 `JsUiWidget`
+/// 实例透传（见 [AppShellJsPage]）。
 @PatchEntry()
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -104,10 +106,10 @@ class _AppShellState extends State<AppShell>
 
 /// 「完整 App · JS 热更」入口：整个四 tab 外壳由 JS 补丁渲染。
 ///
-/// 外壳（`patch/app/app.js`）里 [HomePage] 是**类引用**（有 JS 产物，JS 运行时
-/// 直接 new）；其余三个 tab 页标了 `@PatchIgnore`、没有 JS 产物，翻译器
-/// 把它们产出为 `Component` 占位结点 → 这里用 [nativeComponents] 把同名原生页面
-/// 注进去。
+/// 外壳（`patch/app/app.js`）里四个 tab 页都是**类引用**（各有 JS 产物，JS 运行时
+/// 直接 new），无需宿主注入任何原生组件。若某页改用 `@PatchIgnore` 退出翻译，
+/// 翻译器会把它产出为 `Component` 占位结点，此时在 `main()` 里用全局的
+/// `registerNativeComponent('XxxPage', (args) => ...)` 注入原生实现即可。
 @PatchIgnore()
 class AppShellJsPage extends StatelessWidget {
   const AppShellJsPage({super.key});
@@ -125,14 +127,6 @@ class AppShellJsPage extends StatelessWidget {
       jsAsset: _jsAsset,
       // 右上角显示补丁打包时间（来自 patch/manifest.json，纯展示、不吃手势）。
       showBuildTime: true,
-      // nativeComponents: {
-      //   // 三个 @PatchIgnore 的 tab 页：原生注入（HomePage 有 JS 产物，
-      //   // 不需要在这里注册）。
-      //   'CommunityPage': (args) => const CommunityPage(),
-      //   'OrdersPage': (args) => const OrdersPage(),
-      //   // JS 侧拿不到 _openTab（构建期已告警跳过），这里注入默认形态。
-      //   'MinePage': (args) => const MinePage(),
-      // },
     );
   }
 }

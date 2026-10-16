@@ -42,7 +42,7 @@ class _DashboardCardState extends State<DashboardCard> {
         // 私有组件（_ 开头）：生成器递归翻译成 JS 注册进同一产物
         const _LabeledDivider(text: 'private widget'),
         const SizedBox(height: 8),
-        // 非私有组件：原生直接可用；JS 版运行时由 nativeComponents 注入
+        // 非私有组件：原生直接可用；JS 版运行时由 registerNativeComponent 注入
         const LabeledDivider(text: 'public widget'),
         const SizedBox(height: 12),
         ElevatedButton(
@@ -61,7 +61,7 @@ class _DashboardCardState extends State<DashboardCard> {
 /// 私有组件（_ 开头）：默认生成器递归翻译成 JS 注册进同一产物。
 /// 这里标 @PatchIgnore 演示「不参与连带转换」：生成器跳过
 /// 翻译（产物里无该 JS 类），build 树保持 Component 节点，运行时
-/// 由业务方原生注入（nativeComponents）渲染。
+/// 由业务方在 `main()` 里注册原生实现（registerNativeComponent）渲染。
 @PatchIgnore()
 class _LabeledDivider extends StatelessWidget {
   const _LabeledDivider({required this.text});
@@ -79,7 +79,7 @@ class _LabeledDivider extends StatelessWidget {
   }
 }
 
-/// 非私有组件：原生直接可用；JS 场景运行时由 nativeComponents
+/// 非私有组件：原生直接可用；JS 场景运行时由 registerNativeComponent
 /// 注入 Flutter widget（hot_patch 包不 import 业务类）。
 class LabeledDivider extends StatelessWidget {
   const LabeledDivider({super.key, required this.text});

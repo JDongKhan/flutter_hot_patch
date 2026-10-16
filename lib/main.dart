@@ -15,6 +15,14 @@ void main() {
   // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
   // 调一次即可，无需手写每条通道。
   registerHostMethods();
+  // 无 JS 产物的组件（产物里的 `Component` 占位结点）的原生实现：**全局一次注册**
+  // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 registerHostMethods
+  // 一致——runApp 之前。重复注册同名会覆盖（覆盖时告警），故不要放进 build()。
+  //   DashboardCard 产物里 `_LabeledDivider` 私有类跨库不可见，注册公开的同名实现。
+  registerNativeComponent(
+    '_LabeledDivider',
+    (args) => LabeledDivider(text: args['text'] as String? ?? ''),
+  );
   // 入口是 Demo 列表页，其中的两条「完整 App」入口分别渲染**原生外壳**与
   // **JS 热更外壳**（AppShell，见 lib/app/app.dart）。
   runApp(const HotDemoApp());
@@ -71,7 +79,7 @@ class DemoListPage extends StatelessWidget {
     _DemoEntry('完整 App · 原生', '四 tab 外壳（AppShell）原生渲染：首页 / 社区 / 订单 / 我的', const AppShell(), hasAppBar: false),
     _DemoEntry(
       '完整 App · JS 热更',
-      'AppShell 由 JS 补丁渲染，四个 tab 页面由宿主 nativeComponents 原生注入',
+      'AppShell 整壳由 JS 补丁渲染，四个 tab 页面也是 JS 产物（连带翻译）',
       const AppShellJsPage(),
       hasAppBar: false,
     ),
@@ -92,11 +100,8 @@ class DemoListPage extends StatelessWidget {
           jsAsset: _patchUrl('DashboardCard', 'components/composite_component.js'),
           // 嵌套组件（BannerCard）与公开 widget（LabeledDivider）都由生成器
           // 连带翻译进同一产物（JS 类引用），运行时直接 new，使用方无需声明依赖。
-          // 只有标了 @PatchIgnore 的私有组件走原生注入：
-          //（私有类跨库不可见，注册等价的原生实现）：
-          nativeComponents: {
-            '_LabeledDivider': (args) => LabeledDivider(text: args['text'] as String? ?? ''),
-          },
+          // 只有标了 @PatchIgnore 的私有组件走原生注入（私有类跨库不可见），
+          // 其等价实现见 main() 里的 registerNativeComponent。
         ),
       ),
     ),

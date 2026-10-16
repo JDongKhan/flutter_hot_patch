@@ -324,6 +324,77 @@ const String miniReactSchedulerSource = r'''
 const String miniReactReconcilerSource = r'''
 
   // ===== 【9】mini-react｜reconciler 主流程（mount / patch / unmount）==
+  //
+  // 「懒容器 + 延迟子结点」：容器的 children 不随容器一起挂载，而是等**宿主**
+  // 真的 inflate 到那个槽位时才挂载 —— 即 initState 由 `_JsNodeState` 的生命周期
+  // 驱动。MiniReact 的挂载是一次性全树遍历，做不到层层按需；而「哪个子结点可见」
+  // 的真值只在宿主侧（Flutter 的 element inflation）。所以这里只留一个**普通**
+  // 零尺寸占位结点（复用 SizedBox 类型：不新增 widget 类型、产物形态零改动），
+  // 真实子元素先挂在占位实例的 `__deferred` 上；宿主 inflate 到占位结点时经
+  // `__lazyFn`（事件句柄同款 invoke 通道）回调 lazyMount，才真正 mount
+  //（构造 + initState + build，顺序与 Flutter 一致）并把占位换成真实结点。
+  //
+  // 能力接入只要一行：懒容器类型在自己的能力片段里 registerLazyChildHost(name)。
+  var lazyChildHosts = {};
+  function registerLazyChildHost(type) { lazyChildHosts[type] = true; }
+
+  // 宿主结点索引（id → 结点实例）：只为「宿主上报 inflate」的反查用（懒槽位）。
+  var hostNodes = {};
+
+  // 宿主回调句柄：runtime 级常驻（scope=local 且不同步宿主——宿主只拿它的 id 走
+  // 事件 invoke 通道回调，本端不需要留镜像）。
+  var lazyMountFn = fn(function (id) { lazyMount(id); });
+
+  // 懒槽位占位结点：普通宿主结点（SizedBox 0x0）+ `__lazy` 数据标记 + 回调句柄；
+  // 真实子元素先存在 `__deferred`，本帧不挂载。
+  function newLazySlot(parent, childEl, slot) {
+    var hi = {
+      __k: HOST, __id: nodeId('SizedBox'), __type: 'SizedBox',
+      __root: rootFor(parent),
+      __props: { width: 0, height: 0, __lazy: true, __lazyFn: lazyMountFn },
+      __children: [], __parent: parent, __slot: slot,
+      __deferred: childEl, __childIdx: slot ? slot.index : 0
+    };
+    hostNodes[hi.__id] = hi;
+    emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
+    if (slot && slot.hostParentId) {
+      emit({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
+    }
+    return hi;
+  }
+
+  // 宿主 inflate 到懒槽位 → 真正挂载它的子元素（幂等：只对还没挂载过的占位生效）。
+  // ops 纪律与 mountRoot 一致：挂载期间 `root.ops` 归本次挂载累积，挂载期间的
+  // setState 只入 dirty 队列，收尾再 flush（见【8】）。
+  function lazyMount(placeholderId) {
+    var ph = hostNodes[placeholderId];
+    if (!ph || !ph.__deferred) { return false; }
+    var el = ph.__deferred;
+    ph.__deferred = null;
+    var root = ph.__root || rootFor(ph.__parent);
+    if (!root) { return false; }
+    var prev = activeRoot;
+    activeRoot = root;
+    root.mounting = true;
+    root.ops = [];
+    try {
+      var inst = mount(el, ph.__parent, ph.__slot);
+      // 占位换成真实结点：remove 排在本子树 create/insert 之后，父结点 childIds
+      // 的下标序列保持不变（原文位置由真实结点顶上）。
+      unmount(ph);
+      commit(root);
+    } finally {
+      root.mounting = false;
+      activeRoot = prev;
+    }
+    if (ph.__parent && ph.__parent.__children[ph.__childIdx] === ph) {
+      ph.__parent.__children[ph.__childIdx] = inst;
+    }
+    // 挂载期间累积的 setState（如 initState 里同步 setState）补一次 flush。
+    if (root.dirty.length) { flush(root); }
+    return true;
+  }
+
   // 普通类组件（生成器产物不 extends Component）挂载基类能力：
   //   [mini-react] props / setState / __bind（构建期事件句柄）
   //   [ctx]        context（BuildContext 代理 —— build 传参 / `this.context`）
@@ -372,13 +443,22 @@ const String miniReactReconcilerSource = r'''
       };
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【7】）。
       applyScope(hi, el.props);
+      hostNodes[hi.__id] = hi;
       emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
       if (slot && slot.hostParentId) {
         emit({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
       }
       var idx = 0;
+      // 懒容器（如 TabBarView）的 children 先只下发零尺寸占位（见 newLazySlot）：
+      // 真实子树等宿主 inflate 到该槽位时回调再挂，否则「一次切 TabBarView」就把
+      // 全部子页的 initState / 请求都跑掉了。
+      var lazyChildren = lazyChildHosts[hi.__type];
       for (var i = 0; i < el.children.length; i++) {
-        var c = mount(el.children[i], hi, { hostParentId: hi.__id, index: idx });
+        var cel = el.children[i];
+        if (cel == null || cel === false) { continue; }
+        var c = lazyChildren
+            ? newLazySlot(hi, cel, { hostParentId: hi.__id, index: idx })
+            : mount(cel, hi, { hostParentId: hi.__id, index: idx });
         if (c) { hi.__children.push(c); idx += 1; }
       }
       // 值为 element 的 props（如 Scaffold.body / AppBar.title）：单独挂载，
@@ -488,6 +568,18 @@ const String miniReactReconcilerSource = r'''
       }
       if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
 
+      // 懒槽位还没被宿主 inflate 过（`__deferred` 仍挂着子元素）→ 只把「待挂载的
+      // 子元素」换成最新的，**绝不能**在这里把它挂载出来，否则重建（外壳每次切
+      // tab 都会整树 patch）会把懒加载整个破坏掉。
+      if (matched && matched.__deferred && lazyChildHosts[parentHost.__type]) {
+        matched.__deferred = el;
+        matched.__childIdx = hostIdx;
+        matched.__slot = { hostParentId: parentHost.__id, index: hostIdx };
+        next.push(matched);
+        hostIdx += 1;
+        continue;
+      }
+
       var inst = patch(matched, el, parentHost, { hostParentId: parentHost.__id, index: hostIdx });
       if (inst) {
         // 复用的结点位置变化 -> 下发 move（新建的自带 insert）。
@@ -544,6 +636,7 @@ const String miniReactReconcilerSource = r'''
     if (!inst) { return; }
     inst.__unmounted = true;
     if (inst.__k === HOST) {
+      delete hostNodes[inst.__id];
       for (var i = 0; i < inst.__children.length; i++) { markUnmounted(inst.__children[i]); }
       var pcs = inst.__propsChildren;
       if (pcs) { for (var pk in pcs) { markUnmounted(pcs[pk]); } }

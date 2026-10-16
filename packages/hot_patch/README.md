@@ -34,7 +34,6 @@ JsUiWidget(
 | `jsAsset` | 补丁入口 JS（asset 路径或 http(s) zip） |
 | `component` | 入口模块里注册的组件类名（即 `@PatchEntry` 的 `name`） |
 | `props` | 传给组件构造的 props |
-| `nativeComponents` | 无 JS 产物的组件（Component 节点）的原生注入：组件名 → 构造。运行时**不 import 业务类**，由业务方在这里注册 |
 | `sharedManager` | 共享运行时；多组件共用一个引擎时传入 |
 | `entryPath` | 网络补丁包（zip）内入口 .js 的相对路径；不传则按 `component` 反查 |
 | `registry` | 宿主 widget 翻译注册表；`null` 用内置集合 |

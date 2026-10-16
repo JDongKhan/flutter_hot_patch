@@ -562,13 +562,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       //   - 该组件名有 JS 产物（importResolver 命中）→ 渲染成类引用元素
       //     `__h(X, {...args})`，与组件产物契约一致（运行时递归挂载 JS 组件）；
       //   - 无产物（无注解的 lib 普通 widget / @PatchIgnore）→
-      //     `__h("Component", {...})` 占位，运行时由宿主 nativeComponents
-      //     原生注入或占位。
+      //     `__h("Component", {...})` 占位，运行时由宿主注册的原生实现
+      //     （registerNativeComponent）注入或占位。
       if (type == 'Component') {
         final call = _renderComponentCall(json, depth);
         if (call != null) return call;
-        // 无 JS 产物（无注解的 lib widget / @PatchIgnore）：运行时由宿主
-        // nativeComponents 原生注入。仍经 __h 归一成与其它结点同形状的元素，
+        // 无 JS 产物（无注解的 lib widget / @PatchIgnore）：运行时由宿主注册的
+        // 原生实现（registerNativeComponent）注入。仍经 __h 归一成同形状的元素，
         // 保证运行时统一按 el.children 挂载（不再有裸字面量特例）。
         final props = _propsWithKey(json['props'], json['key']);
         final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
@@ -633,7 +633,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// Component 节点的渲染：命中 JS 产物时输出 `__h(X, {...args})`（X 是组件
   /// 产物的类引用，需 import；args 复用 [jsLiteral]，与其它元素同一值渲染
   /// 规则）；无产物（importResolver 返回 null）→ 返回 null，调用方回退
-  /// `__h("Component", ...)` 占位（运行时走宿主 nativeComponents 原生注入）。
+  /// `__h("Component", ...)` 占位（运行时走宿主注册的原生实现）。
   String? _renderComponentCall(Map<String, dynamic> json, int depth) {
     final props = json['props'];
     if (props is! Map) return null;
@@ -1278,7 +1278,7 @@ class WidgetTranslatorRegistry {
 /// Component 节点（{ type: 'Component', props: { component, args? } }）。
 /// 有注解的组件由生成器直接产出 JS 工厂调用（自动 import 其产物）；本兜底
 /// 节点只承载**无 JS 产物**的组件（无注解的 lib 普通 widget）→ 运行时经
-/// nativeComponents 原生注入或占位。
+/// 宿主注册的原生实现（registerNativeComponent）注入或占位。
 class ComponentTranslator extends WidgetTranslator {
   const ComponentTranslator();
 
@@ -1350,7 +1350,7 @@ class ComponentTranslator extends WidgetTranslator {
       // ignore: avoid_print - 构建期提示
       print('[hot_patch_generator] 组件参数 ${e.toSource()} 不是数据表达式，'
           '已跳过（JS 侧无法传递方法/函数引用）；'
-          '如需该行为请用 JsUiWidget.nativeComponents 注入原生实现');
+          '如需该行为请用 registerNativeComponent 注册原生实现');
       return null;
     }
   }

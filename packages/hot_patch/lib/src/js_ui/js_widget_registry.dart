@@ -11,7 +11,6 @@ class JsRenderContext {
     required this.childTypes,
     required this.childContexts,
     required this.propChildren,
-    required this.nativeComponents,
     required this.invoke,
   });
 
@@ -30,11 +29,6 @@ class JsRenderContext {
   /// 值为 element 的 props（如 ListTile.leading / ClipRRect.child）：
   /// prop 名 -> 已构建好的子 widget。
   final Map<String, Widget> propChildren;
-
-  /// 非私有/无注解组件（Component 节点）的原生注入表：组件名 -> 构造。
-  /// 运行时（hot_patch 包）不 import 业务类，由业务方注册。
-  final Map<String, Widget Function(Map<String, dynamic> args)>
-      nativeComponents;
 
   /// 把事件句柄（`{'__fn': id}`）回传到 JS 侧执行。
   final void Function(Object? handler, [List<Object?> args]) invoke;
@@ -126,6 +120,33 @@ class JsRenderContext {
     final v = props[key];
     return v is Map ? v.cast<String, dynamic>() : null;
   }
+}
+
+// ===== 全局原生组件注入表 =====
+
+/// 「无 JS 产物组件」（产物里的 `Component` 结点）的原生实现：组件名 → 构造。
+///
+/// **进程内全局一份**：同一 App 的所有 `JsUiWidget` 实例、所有 `Component`
+/// 结点共用同一张表，不再随 widget 参数逐层透传。运行时（hot_patch 包）不
+/// import 任何业务类，实现由业务方在 `main()` 里注册（与 [registerHostMethods]
+/// 同一个位置，须在 `runApp` 之前）。
+final Map<String, Widget Function(Map<String, dynamic> args)> _nativeComponents =
+    {};
+
+/// 注册一个「无 JS 产物组件」的原生实现（如生成器对 `@PatchIgnore` /
+/// 无注解私有组件产出的 `Component` 占位结点）。
+///
+/// **重复注册**：后注册覆盖先注册（Map 语义，幂等、不抛错）——同一实现在
+/// 多处重复注册无副作用；但两个**不同实现**注册同一名字会静默覆盖，故这里
+/// 在覆盖时打一条日志。约定：注册只在启动时做一次，不要在 `build()` 里调。
+void registerNativeComponent(
+  String name,
+  Widget Function(Map<String, dynamic> args) build,
+) {
+  if (_nativeComponents.containsKey(name)) {
+    HotPatchLog.log('js_ui: 原生组件 "$name" 重复注册，后者覆盖前者');
+  }
+  _nativeComponents[name] = build;
 }
 
 typedef JsWidgetBuilder = Widget Function(JsRenderContext c);
@@ -674,10 +695,10 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       ));
 
   // Component：无 JS 产物的组件节点（无注解的 lib 普通 widget /
-  // @PatchIgnore）→ 宿主 nativeComponents 原生注入；未注册给可见占位。
+  // @PatchIgnore）→ 全局注入表里的原生实现；未注册给可见占位。
   r.register('Component', (c) {
     final name = c.str('component') ?? '';
-    final native = c.nativeComponents[name];
+    final native = _nativeComponents[name];
     if (native != null) return native(c.map('args') ?? const {});
     return buildMissingJsWidget(name, c.children);
   });

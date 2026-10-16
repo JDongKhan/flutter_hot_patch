@@ -40,7 +40,6 @@ class JsUiWidget extends StatefulWidget {
     super.key,
     required this.jsAsset,
     this.props = const {},
-    this.nativeComponents = const {},
     this.sharedManager,
     this.localRoot,
     this.registry,
@@ -55,10 +54,6 @@ class JsUiWidget extends StatefulWidget {
 
   /// 传给组件构造的 props（如 `MyStatelessCard(title: ...)` 的 {title: ...}）。
   final Map<String, dynamic> props;
-
-  /// 无 JS 产物的组件（Component 节点）的原生注入：组件名 → 构造。
-  /// 运行时（hot_patch 包）不 import 业务类，由业务方注册。
-  final Map<String, Widget Function(Map<String, dynamic> args)> nativeComponents;
 
   /// 共享运行时；多组件共用一个引擎时传入。
   final JsRuntimeManager? sharedManager;
@@ -240,7 +235,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
       store: _store,
       id: _rootId!,
       registry: _registry,
-      nativeComponents: widget.nativeComponents,
       invoke: _invoke,
     );
     final buildTime = _buildTime;
@@ -392,14 +386,12 @@ class _JsNode extends StatefulWidget {
     required this.store,
     required this.id,
     required this.registry,
-    required this.nativeComponents,
     required this.invoke,
   });
 
   final JsUiStore store;
   final String id;
   final JsWidgetRegistry registry;
-  final Map<String, Widget Function(Map<String, dynamic> args)> nativeComponents;
 
   /// 事件回传：`(handler, args)`——handler 是运行时登记的句柄，args 为参数数组。
   final void Function(Object? handler, [List<Object?> args]) invoke;
@@ -413,6 +405,24 @@ class _JsNodeState extends State<_JsNode> {
   void initState() {
     super.initState();
     widget.store.bind(widget.id, _rebuild);
+    _mountIfLazy();
+  }
+
+  /// 懒槽位（props 带 `__lazy` 的占位结点，见 JS 侧 registerLazyChildHost /
+  /// lazyMount）：**本结点的 Element 被真正 inflate 时**才回调 JS 去挂载它待挂载
+  /// 的真实子树——这就是「initState 由 _JsNode 生命周期驱动」的落点：宿主没
+  /// inflate 到的槽位（TabBarView 离屏子页），JS 侧永远不挂载、initState 不跑。
+  ///
+  /// - post-frame 触发：回调会经 commit 回来 setState 重建本结点，不能在 build 期做；
+  /// - 通道复用事件回传（`__lazyFn` 是 JS 侧登记的句柄 id，args = [本结点 id]），
+  ///   不新增任何桥接面。
+  void _mountIfLazy() {
+    final node = widget.store.nodes[widget.id];
+    if (node == null || node.props['__lazy'] != true) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.invoke(node.props['__lazyFn'], [widget.id]);
+    });
   }
 
   /// 结点 key 现在可能来自 JS 声明（见 [_JsNodeState._node]）：同一 key 下
@@ -468,7 +478,6 @@ class _JsNodeState extends State<_JsNode> {
             for (final e in childNode?.propChildIds.entries ?? const <MapEntry<String, String>>[])
               e.key: _node(e.value),
           },
-          nativeComponents: widget.nativeComponents,
           invoke: widget.invoke,
         ),
       );
@@ -489,7 +498,6 @@ class _JsNodeState extends State<_JsNode> {
         childTypes: childTypes,
         childContexts: childContexts,
         propChildren: propChildren,
-        nativeComponents: widget.nativeComponents,
         invoke: widget.invoke,
       ),
     );
@@ -506,7 +514,6 @@ class _JsNodeState extends State<_JsNode> {
       store: widget.store,
       id: id,
       registry: widget.registry,
-      nativeComponents: widget.nativeComponents,
       invoke: widget.invoke,
     );
   }

@@ -69,8 +69,8 @@ class _CounterState extends State<Counter> {
 会被生成器**连带翻译**成 JS 类注册进同一产物。标上本注解后：
 
 - 生成器跳过该组件（不生成 JS 类、不注册）；
-- build 树里引用它的位置保持 Component 节点（无 import），运行时由原生注入渲染
-  （`JsUiWidget.nativeComponents`）。
+- build 树里引用它的位置保持 Component 节点（无 import），运行时由业务方在
+  `main()` 里注册的原生实现渲染（`registerNativeComponent(名字, 构造)`）。
 
 适用场景：组件逻辑复杂 / 含原生依赖，不适合翻译成 JS，希望线上热更时始终使用原生实现。
 
