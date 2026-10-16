@@ -102,6 +102,11 @@ class ClassInfo {
   final List<ClassMethod> methods; // 含 getter
   final Set<String> ctorParams; // this.x 构造形参名
 
+  /// 构造形参默认值（`this.banners = kBanners`）：字段名 → 默认值表达式。
+  /// 建模期（classInfoOf）随构造参数一并收集；翻译期作为字段初值的兜底
+  ///（JS 侧漏传 props 时用它，而不是类型默认值 `[]`/`''`）。
+  final Map<String, Expression> ctorDefaults;
+
   /// 是否为 @PatchEntry 组件（仅用于产物注释标注，不参与结构分叉）。
   final bool isComponent;
 
@@ -139,6 +144,7 @@ class ClassInfo {
     required this.staticFields,
     required this.methods,
     this.ctorParams = const {},
+    this.ctorDefaults = const {},
     this.isComponent = false,
     this.builders = const [],
     this.builderNames = const [],

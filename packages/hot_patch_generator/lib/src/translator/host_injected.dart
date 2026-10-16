@@ -15,9 +15,6 @@
 /// 宿主侧用 `Function.apply(impl, 位置, 具名)` 还原，故任意形参与返回类型都成立。
 library;
 
-import 'dart:io';
-
-import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
 import 'source_index.dart';
@@ -104,8 +101,8 @@ bool classHasHostInjectedMethod(ClassDeclaration d) {
 /// 顶层函数挂在空串 key 下（`'' → {函数名 → 通道名}`）。
 ///
 /// 扫描本文件 + import 源文件（调用点能写出来，就必然 import 得到）——跨文件
-/// 声明要读源文件，这是本函数直接用 dart:io 的原因（与类表扫描同一做法）；
-/// 只有 [HostMethodDecl.usable] 的声明进表，与注册清单用同一个判定。
+/// 声明要读源文件，统一经 [parseUnitFile] 缓存解析（与类表扫描共享同一份
+/// AST）；只有 [HostMethodDecl.usable] 的声明进表，与注册清单用同一个判定。
 ///
 /// 调用方是 [translateClass]（翻译任一方法体前），结果挂在
 /// [ClassInfo.hostMethods] 上供方法体翻译把调用点整体替换为
@@ -124,9 +121,9 @@ Map<String, Map<String, String>> buildHostMethods(
 
   scan(unit);
   for (final file in resolveImportFiles(unit, sourcePath)) {
-    final f = File(file);
-    if (!f.existsSync()) continue;
-    scan(parseString(content: f.readAsStringSync()).unit);
+    final importUnit = parseUnitFile(file);
+    if (importUnit == null) continue;
+    scan(importUnit);
   }
   return out;
 }

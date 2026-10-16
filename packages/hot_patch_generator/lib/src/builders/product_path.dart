@@ -4,9 +4,6 @@
 /// `patch/a/b.js`，直接镜像 lib 路径、文件名与源文件同名），不预设固定目录名。
 library;
 
-import 'dart:io';
-
-import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
 import '../translator/host_injected.dart';
@@ -63,10 +60,9 @@ Map<String, String> resolveImportedComponentProducts(
 ) {
   final out = <String, String>{};
   for (final file in resolveImportFiles(unit, sourcePath)) {
-    final f = File(file);
-    if (!f.existsSync()) continue;
-    final parsed = parseString(content: f.readAsStringSync());
-    for (final decl in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+    final importUnit = parseUnitFile(file);
+    if (importUnit == null) continue;
+    for (final decl in importUnit.declarations.whereType<ClassDeclaration>()) {
       final name = decl.name.lexeme;
       if (name.startsWith('_') || decl.abstractKeyword != null) continue;
       if (!isWidgetClassDecl(decl)) continue;

@@ -108,39 +108,20 @@ ClassInfo translateClass(
     }
   }
 
-  // 构造参数：widget 类（普通类即自身）构造函数的 this.xxx 命名形参——
-  // `required this.x` 在无 resolution 下是 DefaultFormalParameter 包裹
-  // FieldFormalParameter，需要解包。带默认值（`this.banners = kBanners`）的
-  // 一并记下：这就是 JS 实例属性的兜底初值（JS 侧漏传 props 时用它，而不是
-  // 类型默认值 `[]`/`''`）。
-  final ctorArgs = <String>{};
-  final ctorDefaults = <String, Expression>{};
-  for (final m in widgetClass.members) {
-    if (m is ConstructorDeclaration) {
-      for (final param in m.parameters.parameters) {
-        final inner = param is DefaultFormalParameter ? param.parameter : param;
-        if (inner is FieldFormalParameter) {
-          ctorArgs.add(inner.name.lexeme);
-          if (param is DefaultFormalParameter && param.defaultValue != null) {
-            ctorDefaults[inner.name.lexeme] = param.defaultValue!;
-          }
-        }
-      }
-    }
-  }
-
-  // 方法收集：getter 保留（渲染为 get 访问器），setter 跳过。私有 static
-  // 方法按**实例方法**翻译（`_PostCard._likeText(n)` 这类同文件私有工具）：JS
-  // 侧就是原型方法，类内裸调用 `_likeText(x)` 落成 `this._likeText(x)`。
-  // 公开 static 方法不翻译（无 JS 等价物，跨文件引用会给不出正确语义）。
-  // build 与其它返回 widget 的方法一视同仁，不做「是不是 build」的判断。
-  final methods = <MethodDeclaration>[
-    for (final m in hostClass.members)
-      if (m is MethodDeclaration &&
-          !m.isSetter &&
-          (!m.isStatic || m.name.lexeme.startsWith('_')))
-        m,
-  ];
+  // 结构建模唯一入口 classInfoOf：构造参数（含形参默认值）、实例字段
+  //（fieldTypeName 推断、声明序）、方法（getter 保留、setter 跳过、
+  // 私有 static 按实例方法收）都来自它，本函数只做翻译增强（可翻译性
+  // 过滤 / 初值预渲染 / 方法体翻译 / native 通道识别）。
+  // StatefulWidget 场景：widget 类出构造参数与参数字段，State 类出方法与
+  // 状态字段。build 与其它返回 widget 的方法一视同仁，不做「是不是 build」的判断。
+  final widgetInfo =
+      classInfoOf(widgetClass, sourcePath, includePrivateStaticMethods: true);
+  final hostInfo = identical(hostClass, widgetClass)
+      ? widgetInfo
+      : classInfoOf(hostClass, sourcePath, includePrivateStaticMethods: true);
+  final ctorArgs = widgetInfo.ctorParams;
+  final ctorDefaults = widgetInfo.ctorDefaults;
+  final methods = hostInfo.methods;
 
   // 依赖发现：字段类型 + 方法体构造调用（referencedClassNames）∩ 全量类表。
   // 类表同时包含组件与普通类——普通类方法体里构造自定义组件（如
@@ -164,25 +145,22 @@ ClassInfo translateClass(
   // `OrdersPage.initialStatus`）与 State 类字段合并——运行时 `new Type(props)`
   // 把 widget 属性作为 args 传入，二者在 JS 侧就是同一个类的实例属性；State 内
   // 的 `widget.x` 因此能解析成 `this.x`（见 js_translator 的 widget 分支）。
-  final fieldDecls = <(FieldDeclaration, VariableDeclaration)>[];
+  // classInfoOf 产出未过滤、声明序的实例字段，这里只合并去重（widget 字段
+  // 优先）；可翻译性过滤与初值预渲染在下循环。
+  final fieldDecls = <ClassField>[];
   final seenField = <String>{};
-  for (final cls in [if (stateClassName != null) widgetClass, hostClass]) {
-    for (final member in cls.members) {
-      if (member is! FieldDeclaration || member.isStatic) continue;
-      for (final variable in member.fields.variables) {
-        if (seenField.add(variable.name.lexeme)) {
-          fieldDecls.add((member, variable));
-        }
-      }
+  for (final info in [if (stateClassName != null) widgetInfo, hostInfo]) {
+    for (final f in info.instanceFields) {
+      if (seenField.add(f.name)) fieldDecls.add(f);
     }
   }
   // 字段名全集：字段初始化器可能引用其它字段（`widget.x` → `this.x`），
   // 解析初值的作用域需先知道全部字段名（propByField 在下循环里才逐步填充）。
-  final fieldNames = {for (final (_, v) in fieldDecls) v.name.lexeme};
-  for (final (member, variable) in fieldDecls) {
+  final fieldNames = {for (final f in fieldDecls) f.name};
+  for (final field in fieldDecls) {
     {
-      final fieldName = variable.name.lexeme;
-      final typeName = fieldTypeName(member, variable);
+      final fieldName = field.name;
+      final typeName = field.typeName;
       final erased = eraseType(typeName);
       final isBasic = isBasicType(typeName) || _valueSdkTypes.contains(erased);
       final jsRuntime = _jsRuntimeTypes.contains(erased);
@@ -194,7 +172,7 @@ ClassInfo translateClass(
         );
         continue;
       }
-      final init = variable.initializer;
+      final init = field.initializer;
       // 初值来源：字段初始化器，否则构造形参默认值（`this.x = <默认值>`）。
       // 两者都走同一条通用表达式翻译（顶层常量 / 集合字面量 / 模型构造都支持）。
       final defaultExpr = ctorDefaults[fieldName];
@@ -258,17 +236,17 @@ ClassInfo translateClass(
     propByField: propByField,
     actionByMethod: {
       for (final m in methods)
-        if (!m.isGetter) m.name.lexeme: m.name.lexeme,
+        if (!m.isGetter) m.name: m.name,
     },
     // 本类全部实例方法 / getter 名（含非动作方法）：数据表达式里的裸调用
     // （`Text(_likeText(post.like))`）与 setState/事件体里的 this.xxx(...) 都
     // 依赖它解析为本类方法，而不只限于注册为动作的方法。
-    methodNames: {for (final m in methods) m.name.lexeme},
+    methodNames: {for (final m in methods) m.name},
     // getter 名（`_visiblePosts`）：JS 类里是 `get` 访问器，作为函数值传参时
     // 必须按值读，不能包装成调用（见 [WidgetTranslateContext.getterNames]）。
     getterNames: {
       for (final m in methods)
-        if (m.isGetter) m.name.lexeme,
+        if (m.isGetter) m.name,
     },
     sourcePath: sourcePath,
     importResolver: importResolver,
@@ -279,25 +257,20 @@ ClassInfo translateClass(
     delegateClassWidgets: delegateClassWidgets,
   );
 
-  // 方法声明：getter 只保留 body（渲染期走 get 访问器）；普通方法带上形参 /
-  // 返回类型判定；方法体是 SnackBar 形式时识别为 native 通道（nativeToast）。
-  ClassMethod buildMethod(MethodDeclaration m, {String? bodyJs}) {
-    if (m.isGetter) {
-      return ClassMethod(
-        name: m.name.lexeme,
-        params: const [],
-        isGetter: true,
-        body: m.body,
-      );
-    }
-    final msg = _snackMessage(m.body, parseCtx);
+  // 方法增强：classInfoOf 已建好结构（形参 / async / void / 返回 widget
+  // 判定），这里只叠加翻译产物——预渲染方法体 [bodyJs] 与 native 通道识别
+  //（方法体是 SnackBar 形式时整体改译 nativeToast）。getter 无增强，直接透传。
+  ClassMethod buildMethod(ClassMethod cm, {String? bodyJs}) {
+    if (cm.isGetter) return cm;
+    final body = cm.body;
+    final msg = body == null ? null : _snackMessage(body, parseCtx);
     return ClassMethod(
-      name: m.name.lexeme,
-      params: jsMethodParams(m),
-      isAsync: m.body.isAsynchronous,
-      isVoid: isVoidReturn(m),
-      returnsWidget: returnsWidgetOf(m),
-      body: m.body,
+      name: cm.name,
+      params: cm.params,
+      isAsync: cm.isAsync,
+      isVoid: cm.isVoid,
+      returnsWidget: cm.returnsWidget,
+      body: cm.body,
       bodyJs: bodyJs,
       nativeChannel: msg != null ? 'nativeToast' : null,
       nativeMessage: msg,

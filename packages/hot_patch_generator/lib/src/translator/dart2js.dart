@@ -28,10 +28,22 @@ import 'js_translator.dart';
 // 怎么算」，只按名字递归翻译 / 决定同文件内联还是跨文件 import。
 // ===========================================================================
 
-/// 提取 ClassDeclaration → ClassInfo（统一入口）。
+/// 提取 ClassDeclaration → ClassInfo（结构建模**唯一入口**）。
 ///
-/// getter/setter 只保留 getter；static 方法不翻译（Dart static 方法无 JS
-/// 等价物，通常业务不用）；构造收集 this.x 形参名。
+/// 类表（buildClassTable）与翻译入口（translateClass）都从这里取结构，
+/// 差异只靠参数显式化，不再有第二套「构造参数 / 字段 / 方法」行走：
+///
+///   - 构造：收集 this.x 形参名（DefaultFormalParameter 解包），带默认值的
+///     一并记入 [ClassInfo.ctorDefaults]（JS 实例属性的兜底初值）。
+///   - 字段：类型经 [fieldTypeName] 推断（无类型注解时从初始化器构造名推回），
+///     **未过滤、按声明序**（模型构造的位置参数映射依赖此，见
+///     modelCtorFromPartsJs）；可翻译性过滤与初值预渲染是翻译期的增强。
+///   - 方法：getter 保留（渲染为 get 访问器），setter 跳过；static 方法
+///     默认不翻译（Dart static 无 JS 等价物），[includePrivateStaticMethods]
+///     为 true 时**私有 static 按实例方法收**（`_PostCard._likeText(n)` 这类
+///     同文件私有工具：JS 侧就是原型方法，类内裸调用 `_likeText(x)` 落成
+///     `this._likeText(x)`）。
+///
 /// [dependencies]：本类引用到的其它类名（由 [referencedClassNames] 与类表求交）。
 /// [isComponent]：该类是 widget/组件类（@PatchEntry 或 Stateful/Stateless/
 /// State 子类）——类表据此把它与普通模型类区分开（组件不作为模型内联、组件
@@ -41,29 +53,36 @@ ClassInfo classInfoOf(
   String sourceFile, {
   Set<String> dependencies = const {},
   bool isComponent = false,
+  bool includePrivateStaticMethods = false,
 }) {
   final instanceFields = <ClassField>[];
   final staticFields = <ClassField>[];
   final methods = <ClassMethod>[];
   final ctorParams = <String>{};
+  final ctorDefaults = <String, Expression>{};
 
-  // 构造器 this.x 形参（DefaultFormalParameter 解包）
+  // 构造器 this.x 形参（DefaultFormalParameter 解包）；带默认值
+  //（`this.banners = kBanners`）的一并记下，供翻译期做字段兜底初值。
   for (final m in decl.members) {
     if (m is ConstructorDeclaration) {
       for (final p in m.parameters.parameters) {
         final inner = p is DefaultFormalParameter ? p.parameter : p;
-        if (inner is FieldFormalParameter) ctorParams.add(inner.name.lexeme);
+        if (inner is FieldFormalParameter) {
+          ctorParams.add(inner.name.lexeme);
+          if (p is DefaultFormalParameter && p.defaultValue != null) {
+            ctorDefaults[inner.name.lexeme] = p.defaultValue!;
+          }
+        }
       }
     }
   }
 
   for (final m in decl.members) {
     if (m is FieldDeclaration) {
-      final typeName = m.fields.type?.toSource() ?? 'dynamic';
       for (final v in m.fields.variables) {
         final f = ClassField(
           name: v.name.lexeme,
-          typeName: typeName,
+          typeName: fieldTypeName(m, v),
           initializer: v.initializer,
           isStatic: m.isStatic,
         );
@@ -81,8 +100,11 @@ ClassInfo classInfoOf(
           isGetter: true,
           body: m.body,
         ));
-      } else if (m.isSetter || m.isStatic) {
-        // static 方法 / setter：暂不翻译
+      } else if (m.isSetter ||
+          (m.isStatic &&
+              !(includePrivateStaticMethods &&
+                  m.name.lexeme.startsWith('_')))) {
+        // setter / static 方法不翻译（参数放开时私有 static 按实例方法收）
       } else {
         methods.add(ClassMethod(
           name: m.name.lexeme,
@@ -108,6 +130,7 @@ ClassInfo classInfoOf(
     staticFields: staticFields,
     methods: methods,
     ctorParams: ctorParams,
+    ctorDefaults: ctorDefaults,
     isComponent: isComponent,
     dependencies: dependencies,
   );

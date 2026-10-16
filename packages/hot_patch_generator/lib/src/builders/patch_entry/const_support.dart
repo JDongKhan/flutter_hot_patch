@@ -9,9 +9,6 @@
 /// 也产出同名 JS 产物，组件产物才能 import 到这些值。
 library;
 
-import 'dart:io';
-
-import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
@@ -103,11 +100,10 @@ TopLevelConstResolver buildTopLevelConstResolver(
 
   add(unit, sourcePath, sameFile: true);
   for (final file in resolveImportFiles(unit, sourcePath)) {
-    final f = File(file);
-    if (!f.existsSync()) continue;
-    final parsed = parseString(content: f.readAsStringSync());
-    add(parsed.unit, file, sameFile: false);
-    foreignUnits.add((parsed.unit, file));
+    final importUnit = parseUnitFile(file);
+    if (importUnit == null) continue;
+    add(importUnit, file, sameFile: false);
+    foreignUnits.add((importUnit, file));
   }
 
   // 翻译跨文件常量时补齐「声明文件自身的可见类」：跨文件 const 的值可能引用

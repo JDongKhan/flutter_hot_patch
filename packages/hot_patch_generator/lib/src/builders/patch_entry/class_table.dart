@@ -3,9 +3,6 @@
 /// 标记）。翻译只有一个入口（translateClass）在这张表里按名字解析依赖。
 library;
 
-import 'dart:io';
-
-import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
 import '../../translator/dart2js.dart';
@@ -38,10 +35,9 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
     addFile(d, sourcePath);
   }
   for (final file in resolveImportFiles(unit, sourcePath)) {
-    final f = File(file);
-    if (!f.existsSync()) continue;
-    final parsed = parseString(content: f.readAsStringSync());
-    for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+    final importUnit = parseUnitFile(file);
+    if (importUnit == null) continue;
+    for (final d in importUnit.declarations.whereType<ClassDeclaration>()) {
       addFile(d, file);
     }
   }

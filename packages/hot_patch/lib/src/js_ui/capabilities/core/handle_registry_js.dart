@@ -142,4 +142,61 @@ const String handleRegistryJsSource = r'''
     return host('jsHandle', [body]);
   }
 
+  // ===== 【1c】控制器代理三件套基座（ctrl/* 能力共用）====================
+  // Scroll/Tab/Text 的 JS 代理类同构：__listeners 数组、内部回传句柄
+  // （meta.fn 交宿主回传）、句柄登记（scope=page）、release 清理、dispose、
+  // toJSON、__notify。本工厂收敛这套样板；能力只写差异：
+  //   init(self, ...)   ：构造体（镜像字段），实参透传（如 Tab 的 opts）；
+  //   onHost(self, p)   ：宿主回传 → 更新镜像 + __notify（缺省则无回传句柄）；
+  //   extraJSON(self)   ：toJSON 附加字段（如 Tab 的 length/initialIndex）。
+  // ChangeNotifier 刻意不用本工厂：它是用户模型基类（无回传句柄、
+  // notifyListeners 是公开 API、双路派发），见 change_notifier_js.dart。
+  function defineController(kind, spec) {
+    spec = spec || {};
+    defineHandleKind(kind, {
+      release: function (h) {
+        var c = h.obj;
+        if (!c) { return; }
+        // 内部回传句柄是框架实现（用户无从释放），随本控制器一并释放。
+        if (c.__hostFn) { releaseHandle(c.__hostFn.__fn, false); c.__hostFn = null; }
+        c.__listeners = [];
+      }
+    });
+    var Ctor = function () {
+      this.__listeners = [];
+      if (spec.init) { spec.init.apply(this, arguments); }
+      if (spec.onHost) {
+        var self = this;
+        this.__hostFn = fn(function (p) { spec.onHost(self, p); });
+      }
+      // 登记为句柄（scope=page）：自动同步宿主 onCreate（meta 携带回传句柄供
+      // 宿主回传）；页面退出时 disposeRoot 兜底释放。
+      this.__id = reg(this, kind, { meta: this.__hostFn ? { fn: this.__hostFn } : null });
+    };
+    Ctor.prototype.addListener = function (f) {
+      if (typeof f === 'function') { this.__listeners.push(f); }
+    };
+    Ctor.prototype.removeListener = function (f) {
+      var i = this.__listeners.indexOf(f);
+      if (i >= 0) { this.__listeners.splice(i, 1); }
+    };
+    Ctor.prototype.__notify = function () {
+      var fs = this.__listeners;
+      for (var i = 0; i < fs.length; i++) { fs[i](); }
+    };
+    Ctor.prototype.dispose = function () {
+      releaseHandle(this.__id);
+      this.__id = null;
+    };
+    Ctor.prototype.toJSON = function () {
+      var out = { __handle: this.__id };
+      if (spec.extraJSON) {
+        var extra = spec.extraJSON(this);
+        if (extra) { for (var k in extra) { out[k] = extra[k]; } }
+      }
+      return out;
+    };
+    return Ctor;
+  }
+
 ''';

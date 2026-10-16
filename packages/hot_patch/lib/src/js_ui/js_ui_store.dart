@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../utils/hot_patch_log.dart';
+
 /// 宿主侧的一个渲染结点：JS 对象树被 flatten 后的单位。
 ///
 /// [props] 是 JS 侧原样下发的 Map（含事件句柄 `{'__fn': id}`）；
@@ -100,6 +102,10 @@ class JsUiStore {
           _removeSubtree(id);
           touched.remove(id);
           touched.addAll(parents);
+        default:
+          // 未知 op：JS 侧下发了宿主不认识的指令。静默丢弃会让 JS 状态与
+          // 宿主渲染悄悄分叉（与「未注册组件」同性质）——必须留痕。
+          HotPatchLog.log('js_ui: unknown op "${raw['op']}" dropped');
       }
     }
     for (final id in touched) {

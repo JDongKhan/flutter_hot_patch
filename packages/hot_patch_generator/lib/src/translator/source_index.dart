@@ -5,7 +5,34 @@
 /// 实现，避免各自重复解析。产物路径推导等构建层逻辑也复用同一份。
 library;
 
+import 'dart:io';
+
+import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+
+/// lib 相对路径 → (mtime, CompilationUnit) 进程级备忘。
+///
+/// 一个组件文件的翻译里，类表（class_table）、@HostInjected 扫描
+/// （host_injected）、跨文件常量（const_support）、静态单例
+/// （singleton_support）、产物路径（product_path）会对**同一份** import 源
+/// 文件各自 parseString——多组件构建时是 O(组件数 × 扫描器数 × import数）
+/// 的重复解析。这里统一按路径缓存，消除重复。
+///
+/// mtime 兜底 watch 模式的正确性：源文件变更后修改时间变化，缓存自动失效
+/// （AST 本身不可变，同一份内容可安全共享）。
+final Map<String, (DateTime, CompilationUnit)> _unitFileCache = {};
+
+/// 按 lib 相对路径解析 Dart 源文件（带缓存）；文件不存在返回 null。
+CompilationUnit? parseUnitFile(String path) {
+  final f = File(path);
+  if (!f.existsSync()) return null;
+  final mtime = f.lastModifiedSync();
+  final cached = _unitFileCache[path];
+  if (cached != null && cached.$1 == mtime) return cached.$2;
+  final unit = parseString(content: f.readAsStringSync()).unit;
+  _unitFileCache[path] = (mtime, unit);
+  return unit;
+}
 
 /// 在注解列表里按**简单名**查找注解（支持 `@Foo` 与 `@a.Foo` 两种写法）。
 Annotation? findAnnotation(List<Annotation> metadata, String simpleName) {

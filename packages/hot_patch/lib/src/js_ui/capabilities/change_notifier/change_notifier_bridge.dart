@@ -13,12 +13,7 @@
 // **双路**派发：本端 `_listeners`（JS 逻辑）+ 本通道（Dart UI）。
 import 'package:flutter/foundation.dart';
 
-import '../core/handle_registry.dart';
-
-/// 句柄 id → Dart 侧的通用镜像（与 JS 对象 1:1）。
-final Map<String, JsChangeNotifier> _jsChangeNotifiers = {};
-
-bool _changeNotifierKindRegistered = false;
+import '../core/controller_bridge.dart';
 
 /// JS 侧 ChangeNotifier 实例在宿主侧的**通用**镜像。
 ///
@@ -41,37 +36,34 @@ class JsChangeNotifier extends ChangeNotifier {
   String toString() => 'JsChangeNotifier($jsType, $jsHandle)';
 }
 
-/// 幂等注册 ChangeNotifier 句柄 kind（由各能力的 `ensureChannels()` 聚合调用，
-/// 见 change_notifier_library.dart）。
+/// ChangeNotifier 镜像桥（通用层见 capabilities/core/controller_bridge.dart）：
+/// 只用 controllers 一张表——无回传句柄 / Host（镜像被 Dart 侧订阅，方向与
+/// 控制器相反：JS notify → 宿主镜像 notifyListeners → Dart 子树刷新）。
 ///
 /// 句柄 kind 字符串 `notifier/ChangeNotifier` 是**双端协议**（JS 片段
 /// change_notifier_js.dart 里 `reg(this, 'notifier/ChangeNotifier', …)` 与之
 /// 配对），改动须两端同时改并重产 patch。
-void ensureChangeNotifierChannels() {
-  if (_changeNotifierKindRegistered) return;
-  _changeNotifierKindRegistered = true;
-  registerHandleKind('notifier/ChangeNotifier', JsHandleKind(
-    onCreate: (id, meta) {
-      final type = (meta is Map ? meta['type'] : null);
-      _jsChangeNotifiers[id] = JsChangeNotifier(
-        type is String && type.isNotEmpty ? type : 'ChangeNotifier',
-        id,
-      );
-    },
-    onOp: (id, op, payload) {
-      if (op == 'notify') {
-        // JS 侧 notifyListeners 的第二路：镜像转发给 Dart 侧订阅者。
-        // 已被释放（页面卸载竞态）时静默丢弃。
-        _jsChangeNotifiers[id]?.notifyFromJs();
-      }
-      return null;
-    },
-    onRelease: (id) {
-      final notifier = _jsChangeNotifiers.remove(id);
-      notifier?.dispose();
-    },
-  ));
-}
+final JsControllerBridge<JsChangeNotifier> _notifierBridge =
+    JsControllerBridge<JsChangeNotifier>(
+  kind: 'notifier/ChangeNotifier',
+  create: (id, meta) {
+    final type = meta is Map ? meta['type'] : null;
+    return JsChangeNotifier(
+      type is String && type.isNotEmpty ? type : 'ChangeNotifier',
+      id,
+    );
+  },
+  onOp: (notifier, op, payload) {
+    // JS 侧 notifyListeners 的第二路：镜像转发给 Dart 侧订阅者。
+    // 已被释放（页面卸载竞态）时通用层按 id 解不出镜像，静默丢弃。
+    if (op == 'notify') notifier.notifyFromJs();
+    return null;
+  },
+);
+
+/// 幂等注册 ChangeNotifier 句柄 kind（由各能力的 `ensureChannels()` 聚合调用，
+/// 见 change_notifier_library.dart）。
+void ensureChangeNotifierChannels() => _notifierBridge.ensure();
 
 /// 按句柄 id 取 Dart 侧通用镜像；未登记/已释放返回 null。
-JsChangeNotifier? jsChangeNotifierOf(String id) => _jsChangeNotifiers[id];
+JsChangeNotifier? jsChangeNotifierOf(String id) => _notifierBridge.controllers[id];

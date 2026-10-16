@@ -2,9 +2,9 @@
 //
 // 一个能力 = 描述符 + 通道 + 桥接组件 + 组件注册，全部内聚在本文件。
 //
-// 句柄桥（通用层，见 capabilities/core/handle_registry.dart）：
+// 句柄桥（通用层，见 capabilities/core/controller_bridge.dart）：
 //   JS 侧 `new TextEditingController()` 经 `reg(obj, 'ctrl/Text', {meta:{fn}})`
-//   登记，通用通道 `jsHandle` 的 create 落到本文件的 `ctrl/Text` 描述符 →
+//   登记，通用通道 `jsHandle` 的 create 落到本桥的 `ctrl/Text` 描述符 →
 //   创建宿主真实 controller 并登记输入回传句柄；TextField(controller:
 //   {__handle: id}) 渲染时宿主按 id 取真实 controller 作为受控输入，用户输入经
 //   textFn 回传 JS 实例镜像（更新 text + 触发其 listeners）。
@@ -14,59 +14,35 @@ import 'package:flutter/material.dart';
 
 import '../../../json/flutter_from_json.dart';
 import '../../js_widget_registry.dart';
-import '../core/handle_registry.dart';
+import '../core/controller_bridge.dart';
 
-final Map<String, TextEditingController> _jsTextControllers = {};
-final Map<String, Object?> _jsTextHandles = {};
-
-bool _textKindRegistered = false;
+/// TextEditingController 句柄桥：创建/回传句柄登记/释放全走通用层，这里
+/// 只留 set text / clear / setSelection 的 op 分派。
+final JsControllerBridge<TextEditingController> _textBridge =
+    JsControllerBridge<TextEditingController>(
+  kind: 'ctrl/Text',
+  create: (_, _) => TextEditingController(),
+  onOp: (c, op, payload) {
+    if (op == 'set') {
+      if (payload['name'] == 'text') c.text = payload['value']?.toString() ?? '';
+    } else if (op == 'call') {
+      final method = payload['method']?.toString() ?? '';
+      final args = payload['args'] is List ? payload['args'] as List : const [];
+      if (method == 'clear') {
+        c.clear();
+      } else if (method == 'setSelection') {
+        final b = args.isNotEmpty && args[0] is num ? (args[0] as num).toInt() : 0;
+        final e = args.length > 1 && args[1] is num ? (args[1] as num).toInt() : b;
+        c.selection = TextSelection(baseOffset: b, extentOffset: e);
+      }
+    }
+    return null;
+  },
+);
 
 /// 幂等注册 TextEditingController 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities
 /// 聚合调用，与 ensureScrollControllerChannels 并列）。
-void ensureTextEditingControllerChannels() {
-  if (_textKindRegistered) return;
-  _textKindRegistered = true;
-  registerHandleKind('ctrl/Text', JsHandleKind(
-    onCreate: (id, meta) {
-      // putIfAbsent：与 ctrl/Scroll 同款——同一句柄 id 只对应一个真实对象
-      // （重复 create 时复用，不产生第二个 controller 泄漏）。
-      _jsTextControllers.putIfAbsent(id, () => TextEditingController());
-      _jsTextHandles[id] = meta is Map ? meta['fn'] : null;
-    },
-    onOp: (id, op, payload) {
-      final c = _jsTextControllers[id];
-      if (c == null) return null;
-      if (op == 'set') {
-        if (payload['name'] == 'text') c.text = payload['value']?.toString() ?? '';
-      } else if (op == 'call') {
-        final method = payload['method']?.toString() ?? '';
-        final args = payload['args'] is List ? payload['args'] as List : const [];
-        if (method == 'clear') {
-          c.clear();
-        } else if (method == 'setSelection') {
-          final b = args.isNotEmpty && args[0] is num ? (args[0] as num).toInt() : 0;
-          final e = args.length > 1 && args[1] is num ? (args[1] as num).toInt() : b;
-          c.selection = TextSelection(baseOffset: b, extentOffset: e);
-        }
-      }
-      return null;
-    },
-    onRelease: (id) {
-      _jsTextControllers.remove(id)?.dispose();
-      _jsTextHandles.remove(id);
-    },
-  ));
-}
-
-/// 从 props 的 controller 取值里解析 JS TextEditingController 句柄 id。
-/// JS 侧实例跨桥经 toJSON 序列化为 `{__handle: 'js:ctrl/Text#N'}`。
-String? textEditingControllerIdOf(Object? prop) {
-  if (prop is Map) {
-    final id = prop['__handle'];
-    if (id is String) return id;
-  }
-  return null;
-}
+void ensureTextEditingControllerChannels() => _textBridge.ensure();
 
 /// 文本能力域组件注册。
 void registerTextWidgets(JsWidgetRegistry r) {
@@ -74,14 +50,14 @@ void registerTextWidgets(JsWidgetRegistry r) {
     // controller 是 JS TextEditingController 句柄 → 受控模式：用桥接表中
     // 的真实 controller，用户输入经 textFn 回传 JS 实例镜像（更新 text +
     // 触发其 listeners），同时照常触发 onChanged 事件。
-    final tecId = textEditingControllerIdOf(c.props['controller']);
-    final external = tecId != null ? _jsTextControllers[tecId] : null;
+    final tecId = JsControllerBridge.idOf(c.props['controller']);
+    final external = tecId != null ? _textBridge.controllers[tecId] : null;
     return _JsTextField(
       controller: external,
       onControllerText: external == null
           ? null
           : (v) {
-              final h = tecId != null ? _jsTextHandles[tecId] : null;
+              final h = tecId != null ? _textBridge.fnHandles[tecId] : null;
               if (h != null) c.invoke(h, [v]);
             },
       value: c.str('value'),

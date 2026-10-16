@@ -4,9 +4,6 @@
 /// 非私有 static 字段；产物渲染为 `export const X = {...}`，供其它产物 import。
 library;
 
-import 'dart:io';
-
-import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
 import '../../translator/host_injected.dart';
@@ -69,10 +66,9 @@ SingletonResolver buildSingletonResolver(
   }
   // 跨文件 static 单例类：独立产物 + import
   for (final file in resolveImportFiles(unit, sourcePath)) {
-    final f = File(file);
-    if (!f.existsSync()) continue;
-    final parsed = parseString(content: f.readAsStringSync());
-    for (final decl in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+    final importUnit = parseUnitFile(file);
+    if (importUnit == null) continue;
+    for (final decl in importUnit.declarations.whereType<ClassDeclaration>()) {
       if (!_isSingletonClass(decl)) continue;
       resolver.add(decl.name.lexeme, _publicStaticFieldNames(decl), file);
     }

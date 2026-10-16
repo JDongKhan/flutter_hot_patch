@@ -4,60 +4,33 @@ const String tabControllerJsSource = r'''
   // ===== 【10.7】TabController 代理类（对应 Flutter 官方 TabController）===
   // 生成器把 Dart 侧 `late final TabController _c = TabController(length: 3, vsync: this)`
   // 翻译成 `this._c = new TabController({length: 3, vsync: this})`（vsync 由本代理
-  // 类忽略），实例与宿主侧真实 TabController 按**句柄 id** 绑定（通用层，见
-  // 【1b】句柄注册表）：
-  //   - 构造：登记 kind=ctrl/Tab 句柄（scope=page），登记 index 转发句柄（宿主用户
-  //     点 tab / 动画结束经 invoke 回传页码），真实实例由宿主在渲染 TabBar /
-  //     TabBarView 时按 id 取/建（length 随句柄下发）；
-  //   - index：本地镜像（宿主回传更新），setter 立即设置宿主 index；
-  //   - animateTo(i)：宿主 controller.animateTo（带动画）；
-  //   - addListener/removeListener：闭包直接登记（匿名闭包天然支持）；
-  //   - dispose：通用 releaseHandle（释放内部句柄 + 通知宿主释放真实 controller）。
-  // 跨桥序列化：toJSON 输出 `{__handle: id, length, initialIndex}`——宿主据此取/建
-  // 真实 controller（见 capabilities/tab/tab_bridge.dart）。
-  defineHandleKind('ctrl/Tab', {
-    release: function (h) {
-      var tc = h.obj;
-      if (!tc) { return; }
-      if (tc.__indexFn) { releaseHandle(tc.__indexFn.__fn, false); tc.__indexFn = null; }
-      tc.__listeners = [];
-    }
+  // 类忽略），实例与宿主侧真实 TabController 按**句柄 id** 绑定。
+  // 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
+  // 工厂 defineController 提供（见【1c】）；本类只写差异：
+  //   - length/__index：本地镜像（宿主回传 index 更新）；真实实例由宿主在渲染
+  //     TabBar / TabBarView 时按 id 取/建（length 随句柄下发，见 extraJSON）；
+  //   - index setter：立即设置宿主 index 并通知监听者；
+  //   - animateTo(i)：宿主 controller.animateTo（带动画）。
+  var TabController = defineController('ctrl/Tab', {
+    init: function (opts) {
+      opts = opts || {};
+      this.length = (typeof opts.length === 'number') ? opts.length : 0;
+      this.__index = (typeof opts.initialIndex === 'number') ? opts.initialIndex : 0;
+    },
+    // 宿主回传（用户点 tab / animateTo 动画结束）→ 更新镜像 + 触发 listeners。
+    onHost: function (self, i) {
+      if (typeof i !== 'number') { return; }
+      self.__index = i;
+      self.__notify();
+    },
+    // 跨桥序列化：`{__handle: id, length, initialIndex}`——宿主据此取/建真实
+    // controller（见 capabilities/tab/tab_bridge.dart）。
+    extraJSON: function (self) {
+      return { length: self.length, initialIndex: self.__index };
+    },
   });
-  function TabController(opts) {
-    opts = opts || {};
-    this.__listeners = [];
-    this.length = (typeof opts.length === 'number') ? opts.length : 0;
-    this.__index = (typeof opts.initialIndex === 'number') ? opts.initialIndex : 0;
-    var self = this;
-    this.__indexFn = fn(function (i) { self.__onIndex(i); });
-    // 登记为句柄（scope=page）：自动同步宿主 onCreate（meta 携带 index 转发
-    // 句柄）；页面退出时 disposeRoot 兜底释放。
-    this.__id = reg(this, 'ctrl/Tab', { meta: { fn: this.__indexFn } });
-  }
-  TabController.prototype.addListener = function (f) {
-    if (typeof f === 'function') { this.__listeners.push(f); }
-  };
-  TabController.prototype.removeListener = function (f) {
-    var i = this.__listeners.indexOf(f);
-    if (i >= 0) { this.__listeners.splice(i, 1); }
-  };
   TabController.prototype.animateTo = function (index) {
     if (this.__id != null) { handleOp(this.__id, 'call', { method: 'animateTo', args: [index] }); }
-  };
-  TabController.prototype.dispose = function () {
-    releaseHandle(this.__id);
-    this.__id = null;
-  };
-  TabController.prototype.toJSON = function () {
-    return {
-      __handle: this.__id,
-      length: this.length,
-      initialIndex: this.__index
-    };
-  };
-  TabController.prototype.__notifyIndex = function () {
-    var fs = this.__listeners;
-    for (var i = 0; i < fs.length; i++) { fs[i](); }
   };
   Object.defineProperty(TabController.prototype, 'index', {
     get: function () { return this.__index; },
@@ -66,15 +39,9 @@ const String tabControllerJsSource = r'''
       if (this.__id != null) { handleOp(this.__id, 'set', { name: 'index', value: this.__index }); }
       // 与 Dart 语义一致：直接设置 index 立即通知监听者（宿主回传会再通知一次，
       // 幂等，setState 重复触发无副作用）。
-      this.__notifyIndex();
+      this.__notify();
     }
   });
-  // 宿主回传（用户点 tab / animateTo 动画结束）→ 更新镜像 + 触发 listeners。
-  TabController.prototype.__onIndex = function (i) {
-    if (typeof i !== 'number') { return; }
-    this.__index = i;
-    this.__notifyIndex();
-  };
   G.TabController = TabController;
 
   // TabBarView 是**懒容器**（子页被 SliverFillViewport 强制成整屏，零尺寸占位
