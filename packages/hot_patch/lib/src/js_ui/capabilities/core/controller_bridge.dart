@@ -8,6 +8,7 @@
 //
 // fnHandles / attached 仅 Host 类控制器（Scroll/Tab/Text）使用；镜像类
 // （ChangeNotifier）只用 controllers——其 meta 无 fn，登记为 null，无害。
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'handle_registry.dart';
@@ -70,6 +71,12 @@ class JsControllerBridge<T extends ChangeNotifier> {
             attached.remove(id);
           },
         ));
+    // 泄漏观测探针（仅 debug 登记；见 js_leak_snapshot.dart）。
+    if (kDebugMode) {
+      dartHandleTableProbes['$_kind.controllers'] = () => controllers.length;
+      dartHandleTableProbes['$_kind.fnHandles'] = () => fnHandles.length;
+      dartHandleTableProbes['$_kind.attached'] = () => attached.length;
+    }
   }
 
   /// 从 props 的 controller 取值里解析句柄 id：JS 实例跨桥经 toJSON

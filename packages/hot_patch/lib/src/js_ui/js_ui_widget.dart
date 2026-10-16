@@ -121,7 +121,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // jsuiCommit 补丁按页面 key 路由：登记本页 store（key 由 JS 补丁带下来）。
     jsUiPageStores[_pageKey] = _store;
     // 泄漏观测基线：进入前取一次（仅 debug），dispose 清理后再取一次做 diff。
-    if (kDebugMode) _leakBaseline = JsLeakSnapshot.capture();
+    if (kDebugMode) _leakBaseline = JsLeakSnapshot.capture(_pageKey);
     _boot();
   }
 
@@ -219,7 +219,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 泄漏观测：清理全部完成后取第二次快照，与进入前基线 diff，残留即打印
     //（含 JS 端对象构造名）。仅 debug 构建启用。
     if (kDebugMode) {
-      JsLeakSnapshot.capture()?.reportLeaks(_pageKey, _leakBaseline);
+      JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
     }
     super.dispose();
   }

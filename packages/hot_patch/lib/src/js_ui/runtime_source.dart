@@ -394,14 +394,14 @@ const String _jsUiApi = r'''
 
 ''';
 
-/// UI 运行时骨架尾部（TextEditingController 片段后到 IIFE 闭包结束）。
-const String _jsUiRuntimeSkeletonTail = r'''
+/// 泄漏观测函数（**仅 debug 构建拼入**，release 产物里不存在这段代码）：
+/// 导出运行时自维护的三张表——页面根表 roots、句柄表 handles、页面句柄索引
+/// pageHandles。JS 堆无法直接枚举，但页面级对象（组件实例 / 控制器代理 /
+/// 函数闭包 / 监听器）全部经这三张表可达：表清干净，其余对象失去引用自然
+/// 可被 GC；表里有残留就是真泄漏。
+/// 宿主在页面进入前 / 销毁后各取一次做 diff（见 js_leak_snapshot.dart）。
+const String _jsUiLeakSnapshotFn = r'''
 
-  // 泄漏观测（宿主侧 debug 工具用）：导出运行时自维护的三张表——页面根表
-  // roots、句柄表 handles、页面句柄索引 pageHandles。JS 堆无法直接枚举，
-  // 但页面级对象（组件实例 / 控制器代理 / 函数闭包 / 监听器）全部经这三张
-  // 表可达：表清干净，其余对象失去引用自然可被 GC；表里有残留就是真泄漏。
-  // 宿主在页面进入前 / 销毁后各取一次做 diff（见 js_leak_snapshot.dart）。
   function leakSnapshot() {
     var hs = [];
     for (var id in handles) {
@@ -417,6 +417,14 @@ const String _jsUiRuntimeSkeletonTail = r'''
     for (var rk in roots) { rs.push(rk); }
     return JSON.stringify({ handles: hs, pageHandles: ph, roots: rs });
   }
+''';
+
+/// 泄漏观测的 api 成员（**仅 debug 构建拼入**；release 无此成员，宿主侧
+/// `capture()` 的 typeof 守卫会拿到 "null" 静默跳过——双端同一构建标志）。
+const String _jsUiLeakApiMember = '    leakSnapshot: leakSnapshot,\n';
+
+/// UI 运行时骨架尾部·前段（TextEditingController 片段后到 api 对象开口）。
+const String _jsUiRuntimeSkeletonTailHead = r'''
 
   var api = {
     h: h,
@@ -425,7 +433,10 @@ const String _jsUiRuntimeSkeletonTail = r'''
     Component: Component,
     mount: mountRoot,
     dispose: disposeRoot,
-    leakSnapshot: leakSnapshot,
+''';
+
+/// UI 运行时骨架尾部·后段（api 收尾到 IIFE 闭包结束）。
+const String _jsUiRuntimeSkeletonTailEnd = r'''
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
     // （见 capabilities/core/handle_registry.dart）。
     reg: reg,
@@ -471,7 +482,12 @@ String jsUiRuntimeSource() => [
   // 懒容器类型注册（Dart 侧能力声明折算）：必须在骨架之后再执行（用到
   // reconciler 里的 registerLazyChildHost），且在任何 mount 之前（幂等）。
   jsUiLazyChildHostRegistrations(),
-  _jsUiRuntimeSkeletonTail,
+  // 泄漏观测仅 debug 拼入：release 产物不含 leakSnapshot 函数与 api 成员，
+  // 线上逻辑零增量（宿主侧调用点同样是 kDebugMode 门控，双端一致）。
+  if (kDebugMode) _jsUiLeakSnapshotFn,
+  _jsUiRuntimeSkeletonTailHead,
+  if (kDebugMode) _jsUiLeakApiMember,
+  _jsUiRuntimeSkeletonTailEnd,
 ].join('\n');
 
 

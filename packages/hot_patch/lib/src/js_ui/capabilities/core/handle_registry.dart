@@ -128,3 +128,21 @@ void _evalJs(String code) {
     HotPatchLog.log('jsHandle eval failed: ${r.stringResult} | code: $code');
   }
 }
+
+// ===== debug 泄漏观测（仅 js_leak_snapshot.dart 读取；release 探针表恒空） =====
+
+/// 句柄相关 Dart 表的规模探针：key 为表名（如 'ctrl/Scroll.controllers'），
+/// value 返回当前条目数。各能力在 ensure* 时按 kDebugMode 登记——release
+/// 构建本表恒空、无任何回调被注册，线上零开销。
+final dartHandleTableProbes = <String, int Function()>{};
+
+/// 本注册表（路由 + 页面索引）的快照。[pageKey]：顺带统计该页在页面索引里
+/// 的条目数（页面 dispose 兜底回收后应为 0，非 0 即泄漏）。
+Map<String, Object?> dartHandleRegistrySnapshot(String pageKey) {
+  return {
+    'routing': _handleKindById.length,
+    'pageIndex': _handlePageById.length,
+    'pageHandles': _handlePageById.values.where((k) => k == pageKey).length,
+    'ids': Set<String>.of(_handleKindById.keys),
+  };
+}

@@ -15,6 +15,7 @@
 //     字符串等价复现（同一对象 token 相同、不同对象不同）；PageStorageKey 同样
 //     是值相等，但宿主造的是**真实** PageStorageKey——它的滚动位置持久化是宿主
 //     端行为，值本体（`__psk`）只是用来区分存储槽。
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../core/handle_registry.dart';
@@ -70,6 +71,10 @@ void ensureKeyChannels() {
     onCreate: (id, meta) => _jsKeys.putIfAbsent(id, () => UniqueKey()),
     onRelease: (id) => _jsKeys.remove(id),
   ));
+  // 泄漏观测探针（仅 debug 登记；见 js_leak_snapshot.dart）。
+  if (kDebugMode) {
+    dartHandleTableProbes['key/Global+Unique'] = () => _jsKeys.length;
+  }
 }
 
 String? _labelOf(Object? meta) {

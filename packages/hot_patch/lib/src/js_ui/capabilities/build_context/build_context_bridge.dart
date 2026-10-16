@@ -22,6 +22,7 @@
 // Navigator / 三方 context 扩展全都要真值），而 JS→宿主只有异步桥，取值语义
 // 无法在 JS 内闭环。因此这类调用走 **@HostInjected 编译期类型化适配**：
 // 编译期知道 T 是什么，运行时按本文件的映射取宿主真值。
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../utils/hot_patch_log.dart';
@@ -86,6 +87,13 @@ void ensureBuildContextChannels() {
       }
     },
   ));
+  // 泄漏观测探针（仅 debug 登记；见 js_leak_snapshot.dart）。nodeContexts
+  // 持有宿主 Element 树引用，泄漏即整棵子树无法回收，重点观测。
+  if (kDebugMode) {
+    dartHandleTableProbes['ctx/BuildContext.handles'] = () => _ctxHandleNode.length;
+    dartHandleTableProbes['ctx/BuildContext.nodeContexts'] =
+        () => _jsBuildContexts.length;
+  }
 }
 
 /// 把 `context.<op>(...)` 分发给注册者；未注册的 op 按项目规则告警而非静默。
