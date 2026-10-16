@@ -334,9 +334,31 @@ const String miniReactReconcilerSource = r'''
   // `__lazyFn`（事件句柄同款 invoke 通道）回调 lazyMount，才真正 mount
   //（构造 + initState + build，顺序与 Flutter 一致）并把占位换成真实结点。
   //
-  // 能力接入只要一行：懒容器类型在自己的能力片段里 registerLazyChildHost(name)。
+  // 懒容器类型表：type -> true（无条件懒）| props 键名数组（带这些键之一才懒）。
+  // 名单**不写在 JS 侧**：由 Dart 侧能力声明（JsUiLibrary.lazyChildHostTypes）
+  // 折算成 `registerLazyChildHost(...)` 顶层语句，随运行时骨架一次性注入
+  //（见 capabilities/js_ui_library.dart 的 jsUiLazyChildHostRegistrations）。
   var lazyChildHosts = {};
-  function registerLazyChildHost(type) { lazyChildHosts[type] = true; }
+
+  // 注册一个懒容器类型。propKeys 为空 = 无条件懒（如 PageView/TabBarView：
+  // 子项被 SliverFillViewport 强制成整屏）；非空 = 只有该结点 props 带其中
+  // 任一键时才懒（如 ListView 只在带 itemExtent 时懒 —— 那时子项尺寸才被
+  // 容器强制，零尺寸占位才布局中性；不带 itemExtent 的 ListView 子项尺寸按
+  // 内容量出，零尺寸占位会让视口把全部 item 判可见，懒加载反而失效）。
+  function registerLazyChildHost(type, propKeys) {
+    lazyChildHosts[type] = (propKeys && propKeys.length) ? propKeys : true;
+  }
+
+  // 该宿主结点的 children 是否延迟挂载（按 type + props 判定）。
+  function lazyChildOf(type, props) {
+    var rule = lazyChildHosts[type];
+    if (rule === true) { return true; }
+    if (!rule) { return false; }
+    for (var i = 0; i < rule.length; i++) {
+      if (props && props[rule[i]] !== undefined) { return true; }
+    }
+    return false;
+  }
 
   // 宿主结点索引（id → 结点实例）：只为「宿主上报 inflate」的反查用（懒槽位）。
   var hostNodes = {};
@@ -452,7 +474,7 @@ const String miniReactReconcilerSource = r'''
       // 懒容器（如 TabBarView）的 children 先只下发零尺寸占位（见 newLazySlot）：
       // 真实子树等宿主 inflate 到该槽位时回调再挂，否则「一次切 TabBarView」就把
       // 全部子页的 initState / 请求都跑掉了。
-      var lazyChildren = lazyChildHosts[hi.__type];
+      var lazyChildren = lazyChildOf(hi.__type, hi.__props);
       for (var i = 0; i < el.children.length; i++) {
         var cel = el.children[i];
         if (cel == null || cel === false) { continue; }
@@ -571,7 +593,7 @@ const String miniReactReconcilerSource = r'''
       // 懒槽位还没被宿主 inflate 过（`__deferred` 仍挂着子元素）→ 只把「待挂载的
       // 子元素」换成最新的，**绝不能**在这里把它挂载出来，否则重建（外壳每次切
       // tab 都会整树 patch）会把懒加载整个破坏掉。
-      if (matched && matched.__deferred && lazyChildHosts[parentHost.__type]) {
+      if (matched && matched.__deferred && lazyChildOf(parentHost.__type, parentHost.__props)) {
         matched.__deferred = el;
         matched.__childIdx = hostIdx;
         matched.__slot = { hostParentId: parentHost.__id, index: hostIdx };
