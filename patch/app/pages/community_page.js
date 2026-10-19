@@ -56,6 +56,9 @@ export class CommunityPage {
     this.setState(() => { this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
     this._loadPosts();
   }
+  get wantKeepAlive() {
+    return true;
+  }
   build(context) {
     console.log("-----" + __str(this._filterOpen));
     var feed = this._feed;

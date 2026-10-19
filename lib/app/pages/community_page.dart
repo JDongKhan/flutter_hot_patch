@@ -32,7 +32,9 @@ class CommunityPage extends StatefulWidget {
   State<CommunityPage> createState() => _CommunityPageState();
 }
 
-class _CommunityPageState extends State<CommunityPage> {
+// keepalive 语义同 HomePage：原生与 JS 两侧切 tab 均保持实例。
+class _CommunityPageState extends State<CommunityPage>
+    with AutomaticKeepAliveClientMixin {
   final AppService _service = AppService();
 
   /// 配置（双 tab / 筛选项 / 横向资源）；null = 加载中。
@@ -134,7 +136,11 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     print("-----$_filterOpen");
     final feed = _feed;
     if (feed == null) {

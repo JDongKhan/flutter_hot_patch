@@ -22,7 +22,11 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+// 混入 AutomaticKeepAliveClientMixin 且 wantKeepAlive => true：原生侧本页随
+// TabBarView 切走不销毁；JS 侧经 mini_react keepAliveOf 识别后把
+// `__keepAlive` 下发宿主，宿主 _JsNodeState 同步保持 element——两侧实例
+// 都常驻，切 tab 不重跑 initState/请求。
+class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin {
   final AppService _service = AppService();
 
   /// 接口数据；null = 加载中。
@@ -43,7 +47,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final feed = _feed;
     if (feed == null) {
       return const Center(child: CircularProgressIndicator());

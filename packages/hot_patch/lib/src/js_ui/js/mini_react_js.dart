@@ -367,6 +367,19 @@ const String miniReactReconcilerSource = r'''
   // 事件 invoke 通道回调，本端不需要留镜像）。
   var lazyMountFn = fn(function (id) { lazyMount(id); });
 
+  // 子元素的「保持实例」声明：Dart 源里 State 混入 AutomaticKeepAliveClientMixin
+  // 并覆盖 `wantKeepAlive => true`，翻译后落在组件类原型的 get 访问器上
+  //（`with` 子句与 build 里的 `super.build(context)` 均被翻译器忽略/跳过，
+  // 产物形态零改动）。以原型为 this 求值 getter：典型体 `return true` 不引用
+  // 实例字段，可安全求值；读不到 / 抛错 / 返回非 true 一律按「不保持」。
+  function keepAliveOf(el) {
+    var t = el && el.type;
+    if (typeof t !== 'function') { return false; }
+    var d = Object.getOwnPropertyDescriptor(t.prototype, 'wantKeepAlive');
+    if (!d || typeof d.get !== 'function') { return false; }
+    try { return d.get.call(t.prototype) === true; } catch (e) { return false; }
+  }
+
   // 懒槽位占位结点：普通宿主结点（SizedBox 0x0）+ `__lazy` 数据标记 + 回调句柄；
   // 真实子元素先存在 `__deferred`，本帧不挂载。
   function newLazySlot(parent, childEl, slot) {
@@ -401,6 +414,21 @@ const String miniReactReconcilerSource = r'''
     root.ops = [];
     try {
       var inst = mount(el, ph.__parent, ph.__slot);
+      // 「保持实例」标记：随本批 ops 把 `__keepAlive: true` 下发到真实宿主根
+      // 结点（下发副本、不改 JS 侧 __props——否则后续 patch 会因旧 props 多
+      // 这个键而每次都重发 props op）；宿主 _JsNodeState 据此挂
+      // AutomaticKeepAliveClientMixin，切走再切回不重建 element、不重跑
+      // initState，与 JS 侧「实例常驻」对齐。
+      if (inst && keepAliveOf(el)) {
+        var hr = inst;
+        while (hr && hr.__k === COMP) { hr = hr.__child; }
+        if (hr && hr.__k === HOST) {
+          var kp = {};
+          for (var kk in hr.__props) { kp[kk] = hr.__props[kk]; }
+          kp.__keepAlive = true;
+          emit({ op: 'props', id: hr.__id, props: kp });
+        }
+      }
       // 占位换成真实结点：remove 排在本子树 create/insert 之后，父结点 childIds
       // 的下标序列保持不变（原文位置由真实结点顶上）。
       unmount(ph);

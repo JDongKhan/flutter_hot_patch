@@ -392,6 +392,13 @@ class _BuildTimeBadge extends StatelessWidget {
 /// 只做一件事：按 `id` 从 [JsUiStore] 取结点 → 查注册表得到真实 Flutter
 /// widget → 递归拼子结点 + prop 子结点。结点被 patch 触碰时由 store 回调
 /// 触发重建；未被触碰的结点（相同 id + 相同 key）由 Flutter 复用，状态不丢。
+///
+/// 「保持实例」：结点 props 带 `__keepAlive: true` 时（JS 侧懒容器子页的
+/// 组件声明了 `wantKeepAlive => true`，见 mini_react 的 keepAliveOf /
+/// lazyMount），本 State 经 [AutomaticKeepAliveClientMixin] 挂进 keepalive
+/// 桶——被 PageView/TabBarView 切走再切回时不重建 element、不重跑
+/// initState，与 JS 侧「实例常驻」对齐；无 keepalive 祖先时通知自然落空，
+/// 行为与不加 mixin 完全一致。
 class _JsNode extends StatefulWidget {
   const _JsNode({
     super.key,
@@ -412,9 +419,19 @@ class _JsNode extends StatefulWidget {
   State<_JsNode> createState() => _JsNodeState();
 }
 
-class _JsNodeState extends State<_JsNode> {
+class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
+  /// 「保持实例」闩：仅在 initState 时从结点 props 读取一次并锁定。锁定后
+  /// 即使后续 patch 把 `__keepAlive` 从 props 里刷掉也不再释放（与 Flutter
+  /// 原生语义一致：wantKeepAlive 在 State 生命周期内是稳定声明）。
+  bool _keepAlive = false;
+
+  @override
+  bool get wantKeepAlive => _keepAlive;
+
   @override
   void initState() {
+    // 必须先于 super.initState() 赋值：mixin 的 initState 会读 wantKeepAlive。
+    _keepAlive = widget.store.nodes[widget.id]?.props['__keepAlive'] == true;
     super.initState();
     widget.store.bind(widget.id, _rebuild);
     _mountIfLazy();
@@ -462,6 +479,8 @@ class _JsNodeState extends State<_JsNode> {
 
   @override
   Widget build(BuildContext context) {
+    // AutomaticKeepAliveClientMixin 要求：按本结点「保持实例」闩登记/刷新。
+    super.build(context);
     final node = widget.store.nodes[widget.id];
     if (node == null) return const SizedBox.shrink();
 

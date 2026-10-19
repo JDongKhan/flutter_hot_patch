@@ -23,6 +23,9 @@ export class HomePage {
     var feed = await this._service.fetchHome();
     this.setState(() => { this._feed = feed; });
   }
+  get wantKeepAlive() {
+    return true;
+  }
   build(context) {
     var feed = this._feed;
     if ((feed == null)) {

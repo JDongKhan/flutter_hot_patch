@@ -27,7 +27,8 @@ class MinePage extends StatefulWidget {
   State<MinePage> createState() => _MinePageState();
 }
 
-class _MinePageState extends State<MinePage> {
+// keepalive 语义同 HomePage：原生与 JS 两侧切 tab 均保持实例。
+class _MinePageState extends State<MinePage> with AutomaticKeepAliveClientMixin {
   static const List<Color> _menuTints = [
     Color(0xFFE8F2FF),
     Color(0xFFFFF3E0),
@@ -66,7 +67,11 @@ class _MinePageState extends State<MinePage> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final feed = _feed;
     if (feed == null) {
       return const Center(child: CircularProgressIndicator());
