@@ -30,7 +30,7 @@ class HelloCard extends StatefulWidget {
   State<HelloCard> createState() => _HelloCardState();
 }
 
-class _HelloCardState extends State<HelloCard> {
+class _HelloCardState extends State<HelloCard> with TestMixin {
   // 无注解：自动成为 JS 属性 `_count`
   int _count = 0;
 
@@ -162,4 +162,14 @@ class PanelColors {
   static Color adult = const Color(0xFF4CAF50); // 成人态按钮色（绿色）
   static const Color primary = Color(0xFF6750A4);
   static const String tagline = 'demo';
+}
+
+
+mixin TestMixin<T extends StatefulWidget> on State<T> {
+
+  @override
+  void initState() {
+    print("--混入代码");
+    super.initState();
+  }
 }
