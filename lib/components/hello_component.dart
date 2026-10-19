@@ -83,7 +83,7 @@ class _HelloCardState extends State<HelloCard> with TestMixin {
   // setState 里构造 User（模型）→ new User({name, age})
   Future<void> loadUser() async {
     String? name = await AccountCenter.getUserName();
-    Map userMap = await Network.post(url: "hello",params: {"name": name});
+    Map userMap = await Network.post(url: "hello", params: {"name": name});
     print("用户信息:${userMap["code"]}");
     await Future.delayed(const Duration(seconds: 1));
     setState(() {
@@ -164,12 +164,14 @@ class PanelColors {
   static const String tagline = 'demo';
 }
 
-
 mixin TestMixin<T extends StatefulWidget> on State<T> {
-
   @override
   void initState() {
-    print("--混入代码");
+    testLog();
     super.initState();
+  }
+
+  void testLog() {
+    print("--混入代码");
   }
 }
