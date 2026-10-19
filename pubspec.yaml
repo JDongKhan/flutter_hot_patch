@@ -14,6 +14,9 @@ dependencies:
   # 下拉刷新（easy_refresh 能力）：宿主侧桥接见
   # hot_patch/lib/src/js_ui/capabilities/easy_refresh/。
   easy_refresh: ^3.4.0
+  # 磁盘缓存网络图（cached_network_image 能力）：宿主侧桥接见
+  # hot_patch/lib/src/js_ui/capabilities/cached_network_image/。
+  cached_network_image: ^3.4.1
   hot_patch:
     path: packages/hot_patch
   hot_patch_annotations:

@@ -506,6 +506,23 @@ export class ImageDetail {
             "height": 12
           }),
         __h('Text', {
+            "data": "CachedNetworkImage · 磁盘缓存网络图",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold"
+            }
+          }),
+        __h('ClipRRect', {
+            "child": __h('CachedNetworkImage', {
+                "source": "https://picsum.photos/seed/hotpatchcache/400/160",
+                "height": 120,
+                "fit": "cover"
+              })
+          }),
+        __h('SizedBox', {
+            "height": 12
+          }),
+        __h('Text', {
             "data": "Icon / CircleAvatar",
             "style": {
               "fontSize": 16,

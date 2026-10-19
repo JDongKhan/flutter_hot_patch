@@ -35,6 +35,7 @@ import 'dart:convert';
 
 import '../js_widget_registry.dart';
 import 'build_context/build_context_library.dart';
+import 'cached_network_image/cached_network_image_library.dart';
 import 'change_notifier/change_notifier_library.dart';
 import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
@@ -151,5 +152,6 @@ void _seedBuiltins() {
   registerJsUiLibrary(const DrawerLibrary());
   // ── 三方库 ──
   registerJsUiLibrary(const EasyRefreshLibrary());
+  registerJsUiLibrary(const CachedNetworkImageLibrary());
   registerJsUiLibrary(const ProviderLibrary());
 }

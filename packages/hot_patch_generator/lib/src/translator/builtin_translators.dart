@@ -74,6 +74,7 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     // 内容
     ..register(const IconTranslator())
     ..register(const ImageTranslator())
+    ..register(const CachedNetworkImageTranslator())
     ..register(const CircleAvatarTranslator())
     ..register(const CircularProgressIndicatorTranslator())
     ..register(const LinearProgressIndicatorTranslator())
@@ -1815,6 +1816,45 @@ class ImageTranslator extends WidgetTranslator {
     final repeat = imageRepeatToJson(ctx.namedArg(node.args, 'repeat'));
     if (repeat != null) props['repeat'] = repeat;
     return {'type': ctx.jsString('Image'), 'props': props};
+  }
+}
+
+/// CachedNetworkImage（三方包 cached_network_image）：带磁盘缓存的网络图。
+///
+/// 与 [ImageTranslator] 同形，只把必填的 `imageUrl` 翻译成 `source`（宿主桥接
+/// 据此还原 imageUrl），另支持 width/height/fit/alignment/color/colorBlendMode。
+///
+/// 不翻译的部分：`placeholder` / `errorWidget`（包内均为 builder 闭包，非
+/// Widget）、缓存策略（cacheManager / cacheKey / httpHeaders / maxWidthDiskCache
+/// 等）与 fade 动画参数——均属视觉/命令式细节，宿主统一用包内默认行为。
+class CachedNetworkImageTranslator extends WidgetTranslator {
+  const CachedNetworkImageTranslator();
+
+  @override
+  String get type => 'CachedNetworkImage';
+
+  @override
+  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
+    // CachedNetworkImage(imageUrl: 'https://…')：imageUrl 是必填参数。
+    final source = imageSourceToJson(
+      ctx.namedArg(node.args, 'imageUrl') ?? ctx.nonNamedArg(node.args),
+      ctx,
+    );
+    if (source == null) throw FormatException('CachedNetworkImage 需要 imageUrl');
+    final props = <String, dynamic>{'source': source};
+    for (final name in ['width', 'height']) {
+      final v = numLiteralJs(ctx.namedArg(node.args, name));
+      if (v != null) props[name] = v;
+    }
+    final fit = boxFitToJson(ctx.namedArg(node.args, 'fit'));
+    if (fit != null) props['fit'] = fit;
+    final align = alignmentToJson(ctx.namedArg(node.args, 'alignment'), ctx);
+    if (align != null) props['alignment'] = align;
+    final color = colorToJson(ctx.namedArg(node.args, 'color'), ctx);
+    if (color != null) props['color'] = color;
+    final blend = blendModeToJson(ctx.namedArg(node.args, 'colorBlendMode'));
+    if (blend != null) props['colorBlendMode'] = blend;
+    return {'type': ctx.jsString('CachedNetworkImage'), 'props': props};
   }
 }
 

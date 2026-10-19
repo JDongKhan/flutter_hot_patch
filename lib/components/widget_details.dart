@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
@@ -307,6 +308,16 @@ class _ImageDetailState extends State<ImageDetail> {
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Image.network('https://picsum.photos/seed/hotpatch/400/160', height: 120, fit: BoxFit.cover),
+        ),
+        const SizedBox(height: 12),
+        const Text('CachedNetworkImage · 磁盘缓存网络图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: CachedNetworkImage(
+            imageUrl: 'https://picsum.photos/seed/hotpatchcache/400/160',
+            height: 120,
+            fit: BoxFit.cover,
+          ),
         ),
         const SizedBox(height: 12),
         const Text('Icon / CircleAvatar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

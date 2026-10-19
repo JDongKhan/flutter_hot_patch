@@ -19,3 +19,6 @@ dependencies:
   # easy_refresh 能力（下拉刷新容器）的宿主桥接依赖：见
   # lib/src/js_ui/capabilities/easy_refresh/。
   easy_refresh: ^3.4.0
+  # cached_network_image 能力（磁盘缓存网络图）的宿主桥接依赖：见
+  # lib/src/js_ui/capabilities/cached_network_image/。
+  cached_network_image: ^3.4.1
