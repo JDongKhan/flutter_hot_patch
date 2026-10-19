@@ -30,7 +30,8 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+# 示例 App 迁到 example/ 后仍按任意目录匹配构建产物
+**/build/
 /coverage/
 
 # Symbolication related
@@ -40,6 +41,6 @@ app.*.symbols
 app.*.map.json
 
 # Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+**/android/app/debug
+**/android/app/profile
+**/android/app/release

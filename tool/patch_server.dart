@@ -1,13 +1,14 @@
 /// patch 静态文件服务。
 ///
-/// 把项目根 `patch/` 目录暴露为 http 静态资源，供 demo 里的 JsUiWidget
-/// 通过 `http://127.0.0.1:8765/patch/...` 加载（散 .js 与 patch.zip 都可访问）。
+/// 把示例 App 根 `example/patch/` 目录暴露为 http 静态资源，供 demo 里的
+/// JsUiWidget 通过 `http://127.0.0.1:8765/patch/...` 加载（散 .js 与 patch.zip
+/// 都可访问）。示例 App 位于 example/，其 build_runner 产物落在 example/patch/。
 ///
-/// 启动：`dart run tool/patch_server.dart`（建议用 tool/start_patch_server.sh，
+/// 启动：在仓库根 `dart run tool/patch_server.dart`（建议用 start_patch_server.sh，
 /// 它会先杀旧进程再打包并启动）。
 ///
 /// 路由规则：
-///   GET /patch/<相对路径>  → 返回 patch/ 下对应文件（Content-Type 按后缀识别）
+///   GET /patch/<相对路径>  → 返回 example/patch/ 下对应文件（Content-Type 按后缀识别）
 ///   GET /                 → 列目录（调试用）
 library;
 
@@ -16,8 +17,8 @@ import 'dart:io';
 const String _host = '127.0.0.1';
 const int _port = 8765;
 
-/// patch/ 根目录（脚本所在目录的上一级）。
-final Directory _patchRoot = Directory('${Directory.current.path}/patch');
+/// 示例 App 的 patch 产物目录（相对启动时的仓库根）。
+final Directory _patchRoot = Directory('${Directory.current.path}/example/patch');
 
 const Map<String, String> _mime = {
   '.js': 'application/javascript; charset=utf-8',
@@ -33,7 +34,7 @@ const Map<String, String> _mime = {
 Future<void> main(List<String> args) async {
   if (!_patchRoot.existsSync()) {
     stderr.writeln('[patch_server] patch 目录不存在：${_patchRoot.path}');
-    stderr.writeln('先跑 `dart run build_runner build --delete-conflicting-outputs` 生成产物。');
+    stderr.writeln('先在 example/ 跑 `dart run build_runner build --delete-conflicting-outputs` 生成产物。');
     exit(1);
   }
 

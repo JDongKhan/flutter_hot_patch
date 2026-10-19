@@ -1,7 +1,7 @@
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hot/base/app_router.dart';
-import 'package:flutter_hot/base/web_view.dart';
+import 'package:flutter_hot_example/base/app_router.dart';
+import 'package:flutter_hot_example/base/web_view.dart';
 
 import '../model/app_models.dart';
 import '../service/app_service.dart';

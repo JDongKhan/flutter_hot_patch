@@ -1,6 +1,8 @@
 name: hot_patch
 description: Flutter 热更新运行时：加载构建期生成的 JS 补丁渲染组件、由 JS 驱动逻辑，渲染仍在原生 Flutter 侧。
 version: 0.1.0
+# 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
+resolution: workspace
 # 发布前填写（pub.dev 会展示，用于溯源；缺失只会有警告）：
 # repository: https://github.com/<your-org>/flutter_hot
 
