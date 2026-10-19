@@ -57,7 +57,7 @@ export class CommunityPage {
     this._loadPosts();
   }
   get wantKeepAlive() {
-    return true;
+    return false;
   }
   build(context) {
     console.log("-----" + __str(this._filterOpen));

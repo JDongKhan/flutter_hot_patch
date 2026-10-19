@@ -136,7 +136,7 @@ class _CommunityPageState extends State<CommunityPage>
   }
 
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => false;
 
   @override
   Widget build(BuildContext context) {
