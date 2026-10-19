@@ -43,7 +43,6 @@ class JsUiWidget extends StatefulWidget {
     required this.jsAsset,
     this.props = const {},
     this.sharedManager,
-    this.localRoot,
     this.showBuildTime = false,
   });
 
@@ -58,9 +57,6 @@ class JsUiWidget extends StatefulWidget {
 
   /// 共享运行时；多组件共用一个引擎时传入。
   final JsRuntimeManager? sharedManager;
-
-  /// 嵌套组件透传的本地补丁根目录（网络补丁解压后的本地根）。
-  final String? localRoot;
 
   /// 调试开关：在**右上角**显示所加载补丁的打包时间（取自包根 `manifest.json`
   /// 的 `buildTime`，由 build_runner 产出、随 zip 分发）。
@@ -82,7 +78,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
 
   /// 实际加载的入口模块（网络补丁解压后为 zip 内虚拟路径）。
   late String _entryJsAsset;
-  String? _localRoot;
 
   String? _rootId;
   String? _error;
@@ -135,7 +130,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
       // 网络补丁包：http(s):// → 下载 zip 解压到本地根；入口改为包内虚拟路径，
       // 其余（递归 import / 实例化 / 相对路径）与 asset 场景一致。
       var entry = realAsset;
-      String? localRoot = widget.localRoot;
+      // localRoot 只由「网络包解压」产生：asset 场景为 null（直接按 asset 读）。
+      String? localRoot;
       if (RemoteAssetLoader.isRemote(realAsset)) {
         final bundle = await RemoteAssetLoader.load(realAsset, component: component, entryPath: entryPath);
         if (bundle == null) {
@@ -151,8 +147,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
         localRoot = bundle.localRoot;
       }
       _entryJsAsset = entry;
-      _localRoot = localRoot;
-      await _manager.loadModule(_entryJsAsset, localRoot: _localRoot);
+      await _manager.loadModule(_entryJsAsset, localRoot: localRoot);
       // 挂载必须用 evaluateOrThrow：JS 侧 `component not found`（典型是 patch.zip
       // 陈旧 / 组件名拼错）时 evaluate 只记日志，root 永不下发 → 页面一直转圈。
       // 抛出来才能落进下面的 catch，进错误兜底视图。
