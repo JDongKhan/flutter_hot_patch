@@ -29,11 +29,8 @@ export class DashboardCard {
         __h('SizedBox', {
             "height": 12
           }),
-        __h("Component", {
-            "component": "_LabeledDivider",
-            "args": {
-              "text": "private widget"
-            }
+        __h("_LabeledDivider", {
+            "text": "private widget"
           }, null),
         __h('SizedBox', {
             "height": 8

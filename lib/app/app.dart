@@ -23,8 +23,8 @@ import 'pages/orders_page.dart';
 /// HomeHeader/BannerSlide/GridCell/SpotCard/PromoCard 等）都是各自
 /// `patch/app/pages/*.js` 里的 JS 类，外壳产物直接 `import` 后 `new` 出来。
 ///
-/// 若某个 tab 页标了 `@PatchIgnore()` 显式退出翻译，它在产物里保持
-/// `Component` 占位结点，需由业务方在 `main()` 里用全局的
+/// 若某个 tab 页标了 `@PatchIgnore()` 显式退出翻译，它在产物里保留**其类型名**
+/// 作元素 type（未注册 → 运行时走默认 builder），需由业务方在 `main()` 里用全局的
 /// `registerNativeComponent(名字, 构造)` 注入原生实现——不随 `JsUiWidget`
 /// 实例透传（见 [AppShellJsPage]）。
 @PatchEntry()
@@ -108,7 +108,7 @@ class _AppShellState extends State<AppShell>
 ///
 /// 外壳（`patch/app/app.js`）里四个 tab 页都是**类引用**（各有 JS 产物，JS 运行时
 /// 直接 new），无需宿主注入任何原生组件。若某页改用 `@PatchIgnore` 退出翻译，
-/// 翻译器会把它产出为 `Component` 占位结点，此时在 `main()` 里用全局的
+/// 翻译器会把它产出为**保留其类型名**的结点（未注册），此时在 `main()` 里用全局的
 /// `registerNativeComponent('XxxPage', (args) => ...)` 注入原生实现即可。
 @PatchIgnore()
 class AppShellJsPage extends StatelessWidget {

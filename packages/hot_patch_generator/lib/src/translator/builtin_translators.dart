@@ -113,9 +113,11 @@ void registerBuiltinTranslators(WidgetTranslatorRegistry registry) {
     ..register(const MultiProviderTranslator())
     // easy_refresh 包：下拉刷新 / 上拉加载容器
     ..register(const EasyRefreshTranslator());
-  // 嵌套组件兜底：build 树里未注册的自定义 widget → Component 节点
-  // （不参与 Map 注册，由 registry.fallback 持有；组件需 UpperCamel 才兜底）
-  registry.registerFallback(const ComponentTranslator());
+  // 未注册的 widget 兜底：build 树里没有对应 translator 的自定义/第三方
+  // widget → 保留**具体类型名**作元素 type 的通用结点（不参与 Map 注册，
+  // 由 registry.fallback 持有；需 UpperCamel 才兜底）。运行时 JsWidgetRegistry
+  // lookup 未命中 → 默认 builder（原生注入 / 占位）。
+  registry.registerFallback(const UnregisteredWidgetTranslator());
 }
 
 /// Column / Row 共用逻辑：容器节点，递归翻译 children + 对齐参数。

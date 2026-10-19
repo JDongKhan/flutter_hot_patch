@@ -53,7 +53,7 @@ String relativeProduct(String from, String to) {
 ///   - **@HostInjected**：方法实现留在 Dart，调用点被翻译为 `_app_host_.invoke`。
 ///
 /// 按**类名**绑定（而非「第一条 import」），多 import 文件不会串台；命中即让
-/// build 树里的 Component 节点渲染成类引用元素并 import 该产物。
+/// build 树里的组件结点渲染成类引用元素并 import 该产物。
 Map<String, String> resolveImportedComponentProducts(
   CompilationUnit unit,
   String sourcePath,

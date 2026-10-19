@@ -6,6 +6,7 @@ import '../utils/hot_patch_log.dart';
 /// 不需要动宿主；只有引入 Flutter 侧不存在的**视觉** widget 才注册一条。
 class JsRenderContext {
   JsRenderContext({
+    required this.type,
     required this.props,
     required this.children,
     required this.childTypes,
@@ -13,6 +14,10 @@ class JsRenderContext {
     required this.propChildren,
     required this.invoke,
   });
+
+  /// 本结点的元素 type（宿主 widget 类型名 / 未注册组件的具体类型名）。
+  /// 供默认 builder 识别「这是哪个未注册组件」，按名走原生注入或占位。
+  final String type;
 
   final Map<String, dynamic> props;
   final List<Widget> children;
@@ -134,7 +139,7 @@ final Map<String, Widget Function(Map<String, dynamic> args)> _nativeComponents 
     {};
 
 /// 注册一个「无 JS 产物组件」的原生实现（如生成器对 `@PatchIgnore` /
-/// 无注解私有组件产出的 `Component` 占位结点）。
+/// 无注解私有组件产出的「保留具体类型名」结点）。
 ///
 /// **重复注册**：后注册覆盖先注册（Map 语义，幂等、不抛错）——同一实现在
 /// 多处重复注册无副作用；但两个**不同实现**注册同一名字会静默覆盖，故这里
@@ -151,12 +156,38 @@ void registerNativeComponent(
 
 typedef JsWidgetBuilder = Widget Function(JsRenderContext c);
 
+/// 未注册类型元素的**默认 builder**（[JsWidgetRegistry] 的兜底）：
+/// 按元素 type（= 具体组件名）查全局原生注入实现，命中则由其渲染；
+/// 否则给出可见占位（便于定位缺失的翻译/注入）。
+///
+/// 产物里的元素 type 始终是「具体类型名」，故这里不需要任何「Component」
+/// 哨兵类型——「未注册」只表现为 [JsWidgetRegistry.lookup] 未命中。
+Widget _unknownWidgetBuilder(JsRenderContext c) {
+  final native = _nativeComponents[c.type];
+  if (native != null) return native(c.props);
+  return buildMissingJsWidget(c.type, c.children);
+}
+
 
 /// `type -> Flutter widget` 注册表（宿主唯一扩展点）。
 class JsWidgetRegistry {
   final Map<String, JsWidgetBuilder> _builders = {};
 
+  /// lookup 未命中时的默认 builder（未注册组件的兜底）。
+  ///
+  /// 关键设计：**产物里的元素 type 永远是「具体类型名」**（生成器不再把不认识
+  /// 的组件降级成统一的 'Component' 占位）。因此「某个类型没注册」只表现为
+  /// [lookup] 返回 null —— 走本默认 builder：宿主按类型名找 `registerNativeComponent`
+  /// 注入的原生实现，找不到再给可见占位。这样之后补上该类型的宿主 builder
+  /// （或生成器 translator）时，**同一份产物无需重新生成、协议不变**。
+  JsWidgetBuilder? _fallback = _unknownWidgetBuilder;
+
   void register(String type, JsWidgetBuilder builder) => _builders[type] = builder;
+
+  /// 设置 lookup 未命中时的默认 builder（见 [_fallback]）。
+  void registerFallback(JsWidgetBuilder builder) => _fallback = builder;
+
+  JsWidgetBuilder? get fallback => _fallback;
 
   bool has(String type) => _builders.containsKey(type);
 
@@ -694,14 +725,9 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         child: Text(c.str('label') ?? ''),
       ));
 
-  // Component：无 JS 产物的组件节点（无注解的 lib 普通 widget /
-  // @PatchIgnore）→ 全局注入表里的原生实现；未注册给可见占位。
-  r.register('Component', (c) {
-    final name = c.str('component') ?? '';
-    final native = _nativeComponents[name];
-    if (native != null) return native(c.map('args') ?? const {});
-    return buildMissingJsWidget(name, c.children);
-  });
+  // 未注册类型不在**这里**注册：产物里的元素 type 始终是「具体类型名」，未命中
+  // lookup 时统一走 registry 的默认 builder（见 [JsWidgetRegistry._fallback] /
+  // `_unknownWidgetBuilder`）——按类型名找原生注入实现或占位。
 }
 
 /// AppBar 插槽适配器：把 JS 节点（JsUiWidget 包装）适配为
@@ -730,7 +756,7 @@ class _JsBottomNavItem extends StatelessWidget {
   Widget build(BuildContext context) => item.icon;
 }
 
-/// 迁移中的 JS 组件引用了宿主未注册的类型时，给出可见占位。
+/// 元素 type 未注册（既无宿主 builder、也无原生注入实现）时，给出可见占位。
 Widget buildMissingJsWidget(String type, List<Widget> children) {
   HotPatchLog.log('js_ui: 未注册的宿主 widget 类型 "$type"');
   return Container(

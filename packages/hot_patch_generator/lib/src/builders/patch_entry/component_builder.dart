@@ -105,7 +105,7 @@ class ComponentBuilder implements Builder {
         resolveImportedComponentProducts(parsed.unit, inputId.path);
     String? importResolver(String name) {
       // @PatchIgnore：显式「不参与连带转换」的类 → null
-      // （保持 Component 节点，运行时原生注入）。
+      // （产物保留其类型名结点，运行时默认 builder 原生注入）。
       if (isIgnoredClass(parsed.unit, name)) return null;
       if (parsedNames.contains(name)) return ownName;
       final abs = importProducts[name];
@@ -222,7 +222,7 @@ class ComponentBuilder implements Builder {
     //   - 同文件**有产物**的组件（@PatchEntry / 私有 _Xxx）→ 翻译进同一产物；
     //   - 同文件普通类（模型/共享类）→ 翻译为产物内可见的 inline class；
     //   - @PatchIgnore / 无注解公共组件（importResolver 返回 null）→
-    //     保持 Component 节点，运行时原生注入，不产出 JS 类；
+    //     产物保留其类型名结点，运行时原生注入，不产出 JS 类；
     //   - 跨文件依赖 → 不翻译，后面统一生成 import。
     // 普通类里引用到的类与组件走同一套递归（dependencies 是翻译期统一收集的）。
     final inlineClasses = <String, ClassInfo>{};

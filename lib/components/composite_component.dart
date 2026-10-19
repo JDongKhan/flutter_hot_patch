@@ -60,8 +60,8 @@ class _DashboardCardState extends State<DashboardCard> {
 
 /// 私有组件（_ 开头）：默认生成器递归翻译成 JS 注册进同一产物。
 /// 这里标 @PatchIgnore 演示「不参与连带转换」：生成器跳过
-/// 翻译（产物里无该 JS 类），build 树保持 Component 节点，运行时
-/// 由业务方在 `main()` 里注册原生实现（registerNativeComponent）渲染。
+/// 翻译（产物里无该 JS 类），build 树保留 `_LabeledDivider` 类型名结点（未注册），
+/// 运行时由业务方在 `main()` 里注册原生实现（registerNativeComponent）渲染。
 @PatchIgnore()
 class _LabeledDivider extends StatelessWidget {
   const _LabeledDivider({required this.text});

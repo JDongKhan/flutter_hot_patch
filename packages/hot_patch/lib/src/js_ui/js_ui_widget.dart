@@ -482,6 +482,7 @@ class _JsNodeState extends State<_JsNode> {
       // 非 Widget 类型）：父 renderer 直接读其 props/propChildren 组装。
       childContexts.add(
         JsRenderContext(
+          type: childType,
           props: childNode?.props ?? const {},
           children: const [],
           childTypes: const [],
@@ -500,11 +501,14 @@ class _JsNodeState extends State<_JsNode> {
       propChildren[entry.key] = _node(entry.value);
     }
 
-    final builder = widget.registry.lookup(node.type);
+    // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
+    // lookup 未命中走 registry 的默认 builder（原生注入 / 占位）。
+    final builder = widget.registry.lookup(node.type) ?? widget.registry.fallback;
     if (builder == null) return buildMissingJsWidget(node.type, children);
 
     return builder(
       JsRenderContext(
+        type: node.type,
         props: node.props,
         children: children,
         childTypes: childTypes,
