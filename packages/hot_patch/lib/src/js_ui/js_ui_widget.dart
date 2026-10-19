@@ -44,7 +44,6 @@ class JsUiWidget extends StatefulWidget {
     this.props = const {},
     this.sharedManager,
     this.localRoot,
-    this.registry,
     this.showBuildTime = false,
   });
 
@@ -63,9 +62,6 @@ class JsUiWidget extends StatefulWidget {
   /// 嵌套组件透传的本地补丁根目录（网络补丁解压后的本地根）。
   final String? localRoot;
 
-  /// 宿主 widget 翻译注册表；null 用内置集合。
-  final JsWidgetRegistry? registry;
-
   /// 调试开关：在**右上角**显示所加载补丁的打包时间（取自包根 `manifest.json`
   /// 的 `buildTime`，由 build_runner 产出、随 zip 分发）。
   ///
@@ -81,7 +77,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
   static int _seq = 0;
 
   late final JsRuntimeManager _manager;
-  late final JsWidgetRegistry _registry;
   final JsUiStore _store = JsUiStore();
   final String _pageKey = 'jsui_${_seq++}';
 
@@ -103,12 +98,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
   void initState() {
     super.initState();
     _manager = widget.sharedManager ?? JsRuntimeManager.instance;
-    _registry = widget.registry ?? JsWidgetRegistry();
-    if (widget.registry == null) {
-      // 核心注册 + 各能力域注册（滚动/文本/通知…），见 js_ui_capabilities。
-      registerAllJsWidgets(_registry);
-    }
-    // 框架内建宿主方法（log / nativeToast / jsuiCommit）：全局一次。
+    // 宿主 widget 注册表是**进程内单例**（懒建一次性注册全部内建/能力/三方库
+    // 组件，见 js_ui_capabilities 的 jsWidgetRegistry）——不需要、也不由外部传入。
     registerBuiltinHostMethods();
     _store.onRoot = (id) {
       _rootId = id;
@@ -246,7 +237,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
     final content = _JsNode(
       store: _store,
       id: _rootId!,
-      registry: _registry,
       invoke: _invoke,
     );
     final buildTime = _buildTime;
@@ -397,13 +387,11 @@ class _JsNode extends StatefulWidget {
     super.key,
     required this.store,
     required this.id,
-    required this.registry,
     required this.invoke,
   });
 
   final JsUiStore store;
   final String id;
-  final JsWidgetRegistry registry;
 
   /// 事件回传：`(handler, args)`——handler 是运行时登记的句柄，args 为参数数组。
   final void Function(Object? handler, [List<Object?> args]) invoke;
@@ -502,8 +490,8 @@ class _JsNodeState extends State<_JsNode> {
     }
 
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
-    // lookup 未命中走 registry 的默认 builder（原生注入 / 占位）。
-    final builder = widget.registry.lookup(node.type) ?? widget.registry.fallback;
+    // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
+    final builder = jsWidgetRegistry.lookup(node.type) ?? jsWidgetRegistry.fallback;
     if (builder == null) return buildMissingJsWidget(node.type, children);
 
     return builder(
@@ -529,7 +517,6 @@ class _JsNodeState extends State<_JsNode> {
       key: declared ?? ValueKey(id),
       store: widget.store,
       id: id,
-      registry: widget.registry,
       invoke: widget.invoke,
     );
   }

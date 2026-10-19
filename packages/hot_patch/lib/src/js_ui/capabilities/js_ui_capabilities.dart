@@ -1,9 +1,9 @@
 // ===== 宿主能力聚合入口 =====
 //
-// js_ui_widget 只依赖本文件两个函数。**本文件是「能力」与核心的唯一接缝**：
-// 除两块地基（通用句柄层、Flutter 基础视觉组件）显式登记外，其余**所有能力**
-// ——无论 Flutter 等价物（Key / 各 Controller / BuildContext 代理 /
-// NotificationListener）还是三方库（provider / GetX / …）——统一由
+// js_ui_widget 只依赖本文件两个函数 + 一个注册表单例访问器。**本文件是「能力」
+// 与核心的唯一接缝**：除两块地基（通用句柄层、Flutter 基础视觉组件）显式登记外，
+// 其余**所有能力**——无论 Flutter 等价物（Key / 各 Controller / BuildContext
+// 代理 / NotificationListener）还是三方库（provider / GetX / …）——统一由
 // capabilities/js_ui_library.dart 的注册表驱动，机制完全一致。
 //
 // 因此「新增一个能力」= 建目录 + 写一个 JsUiLibrary 子类 + 在 _seedBuiltins
@@ -39,3 +39,26 @@ void registerAllJsWidgets(JsWidgetRegistry r) {
     library.registerWidgets(r);
   }
 }
+
+/// 宿主 widget 注册表**进程内单例**：所有 [JsUiWidget] 实例共用同一张
+/// `type → Flutter widget` 表，不再按实例重复注册（原实现每个实例都 new 一份
+/// 并把近百条 builder 重注册一遍）。
+///
+/// 安全性：注册表内容只是「类型名 → builder」——builder 均为**无状态纯函数**
+/// （只读传入的 `JsRenderContext`，不持有任何实例状态），故进程内共享完全等价。
+/// 这与 `registerNativeComponent`（原生注入表）本就是全局一份同因。
+///
+/// **懒建**：首次访问时构建并**一次性**注册全部内建/能力/三方库组件；因此
+/// `registerJsUiLibrary(...)` 必须在首个 [JsUiWidget] 构造前调用（约定：App 的
+/// `main()` 里、`runApp` 之前，与 `registerHostMethods` / `registerNativeComponent`
+/// 同一位置）。
+final JsWidgetRegistry _jsWidgetRegistry = _createJsWidgetRegistry();
+
+JsWidgetRegistry _createJsWidgetRegistry() {
+  final registry = JsWidgetRegistry();
+  registerAllJsWidgets(registry);
+  return registry;
+}
+
+/// 全局唯一的宿主 widget 注册表（见 [_jsWidgetRegistry]）。
+JsWidgetRegistry get jsWidgetRegistry => _jsWidgetRegistry;
