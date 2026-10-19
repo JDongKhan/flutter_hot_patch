@@ -1,0 +1,16 @@
+name: flutter_hot
+description: "Flutter 注解组件热更框架的 monorepo 根包：聚合 hot_patch 运行时 / 生成器 / 注解与示例 App。"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+# Dart Pub Workspace：以下目录与根包共享同一份依赖解析、同一个 pubspec.lock
+# 与同一个 .dart_tool/（各成员 pubspec 需声明 resolution: workspace）。
+# 根包自身不含 Dart 源码，只作工作区聚合；示例 App 见 example/。
+workspace:
+  - packages/hot_patch_annotations
+  - packages/hot_patch_generator
+  - packages/hot_patch
+  - example
