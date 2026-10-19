@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'dart2js.dart';
 import 'host_injected.dart';
 import 'js_translator.dart';
+import 'source_index.dart';
 import 'widget2js.dart';
 
 // ===========================================================================
@@ -114,11 +115,19 @@ ClassInfo translateClass(
   // 过滤 / 初值预渲染 / 方法体翻译 / native 通道识别）。
   // StatefulWidget 场景：widget 类出构造参数与参数字段，State 类出方法与
   // 状态字段。build 与其它返回 widget 的方法一视同仁，不做「是不是 build」的判断。
-  final widgetInfo =
-      classInfoOf(widgetClass, sourcePath, includePrivateStaticMethods: true);
+  //
+  // mixin：解析 hostClass（State 类 / 普通类自身）的 with 子句并传入建模，
+  // 字段/方法按线性化合并、super 语句落成 mixin 方法调用（见 classInfoOf）。
+  final mixins = resolveMixinDecls(hostClass, unit, sourcePath);
+  final widgetInfo = classInfoOf(widgetClass, sourcePath,
+      includePrivateStaticMethods: true,
+      // 普通类（无 State 分离）时 widgetClass 就是 hostClass：mixin 必须挂进
+      // widgetInfo，否则 hostInfo 复用 widgetInfo 时 mixin 成员整批丢失。
+      mixins: identical(hostClass, widgetClass) ? mixins : const []);
   final hostInfo = identical(hostClass, widgetClass)
       ? widgetInfo
-      : classInfoOf(hostClass, sourcePath, includePrivateStaticMethods: true);
+      : classInfoOf(hostClass, sourcePath,
+          includePrivateStaticMethods: true, mixins: mixins);
   final ctorArgs = widgetInfo.ctorParams;
   final ctorDefaults = widgetInfo.ctorDefaults;
   final methods = hostInfo.methods;
@@ -129,7 +138,7 @@ ClassInfo translateClass(
   // 已注册 WidgetTranslator 的类型（宿主 widget / 受控 JS 类）由 translator
   // 接管，不能再当模型类。
   final used = <String, ClassInfo>{};
-  for (final name in referencedClassNames(hostClass)) {
+  for (final name in referencedClassNames(hostClass, mixins: mixins)) {
     final info = classTable[name];
     if (info == null) continue;
     if (registry.registeredTypes.contains(name)) continue;
@@ -223,6 +232,7 @@ ClassInfo translateClass(
         name: fieldName,
         typeName: typeName,
         jsInitial: initial,
+        mixinOrigin: field.mixinOrigin,
       ));
       propByField[fieldName] = fieldName;
     }
@@ -274,6 +284,8 @@ ClassInfo translateClass(
       bodyJs: bodyJs,
       nativeChannel: msg != null ? 'nativeToast' : null,
       nativeMessage: msg,
+      superMap: cm.superMap,
+      mixinOrigin: cm.mixinOrigin,
     );
   }
 

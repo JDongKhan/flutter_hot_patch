@@ -32,12 +32,17 @@ class ClassField {
   final Expression? initializer; // 无初始化则 null
   final bool isStatic;
   final String? jsInitial; // 预渲染 JS 初始值（非 null 时优先于 initializer）
+
+  /// 来源 mixin 名（线性化展开进本类的成员）；null = 类自身声明。
+  /// 仅用于产物分组注释（mixin 成员集中尾部、按来源分隔），不影响翻译。
+  final String? mixinOrigin;
   const ClassField({
     required this.name,
     required this.typeName,
     this.initializer,
     this.isStatic = false,
     this.jsInitial,
+    this.mixinOrigin,
   });
 }
 
@@ -71,6 +76,16 @@ class ClassMethod {
   /// `_app_host_.invoke("通道名", {...})`，[nativeMessage] 是已译好的消息 JS 表达式。
   final String? nativeChannel;
   final String? nativeMessage;
+
+  /// super 调用映射（mixin 线性化展开的产物）：`super.foo()` 语句里 super 的
+  /// 方法名 → 链上下一个实现的 JS 方法名（如 `initState` → `_m$TestMixin$initState`）。
+  /// 查不到 = 链上无更多实现（基类无 JS 等价物），super 语句按原策略忽略。
+  /// 空表 = 本类无 mixin，完全走原路径。
+  final Map<String, String> superMap;
+
+  /// 来源 mixin 名（线性化展开进本类的方法）；null = 类自身声明。
+  /// 仅用于产物分组注释（mixin 成员集中尾部、按来源分隔），不影响翻译。
+  final String? mixinOrigin;
   const ClassMethod({
     required this.name,
     required this.params,
@@ -82,6 +97,8 @@ class ClassMethod {
     this.bodyJs,
     this.nativeChannel,
     this.nativeMessage,
+    this.superMap = const {},
+    this.mixinOrigin,
   });
 }
 
@@ -247,6 +264,12 @@ class FieldScope {
   /// Function.apply 调实现）。
   final Map<String, Map<String, String>> hostMethods;
 
+  /// 当前方法的 super 调用映射（来自 [ClassMethod.superMap]）：`super.foo()` →
+  /// `this.<target>()`。随方法体翻译入口（[translateClassMethodBody]）一次性
+  /// 挂进作用域，语句翻译（translateStmtList）据此把 super 语句落成 mixin
+  /// 方法调用；空表 = 无 mixin，super 语句按原策略忽略。
+  final Map<String, String> superMap;
+
   /// 局部变量别名：`final list = _list;` → `list → this._list`。
   /// 抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用被捕获的
   /// 局部变量时必须落到真实字段引用，否则是未定义的自由变量。
@@ -275,6 +298,7 @@ class FieldScope {
           localVars: localVars,
           globalConsts: globalConsts,
           hostMethods: hostMethods,
+          superMap: superMap,
           localAliases: declAliases,
         );
 
@@ -284,6 +308,7 @@ class FieldScope {
     this.params = const {},
     this.methods = const {},
     this.hostMethods = const {},
+    this.superMap = const {},
     Map<String, String>? localAliases,
     Map<String, String>? declAliases,
     Set<String>? localVars,
@@ -305,6 +330,7 @@ class FieldScope {
         localVars: localVars,
         globalConsts: globalConsts,
         hostMethods: hostMethods,
+        superMap: superMap,
         localAliases: localAliases,
         // 同一个别名表实例：派生作用域里登记的别名，母作用域后续声明同样可见
         // （闭包体内的 `final x = _feed.spots;` 也算链式别名）。
@@ -1436,8 +1462,32 @@ String translateStmtList(
   for (final s in stmts) {
     if (s is ExpressionStatement) {
       final e = s.expression;
-      // super.initState() 等 super 调用：JS 无 super 语义，忽略。
-      if (e is MethodInvocation && e.target is SuperExpression) continue;
+      // super 调用：查当前方法的 superMap（mixin 线性化展开后链上下一个实现）。
+      // 命中 → `this._m$Mixin$m(...)`；未命中 → 基类无 JS 等价物，忽略（原行为）。
+      if (e is MethodInvocation && e.target is SuperExpression) {
+        final target = scope.superMap[e.methodName.name];
+        if (target == null) continue;
+        final argsJs = <String>[];
+        var ok = true;
+        for (final a in e.argumentList.arguments) {
+          final inner = a is NamedExpression ? a.expression : a;
+          final v = inner is FunctionExpression
+              ? closureToJs(inner, scope, classes)
+              : rhsToJs(inner, scope, classes);
+          if (v == null) {
+            ok = false;
+            break;
+          }
+          argsJs.add(v);
+        }
+        if (!ok) {
+          log.warning('[hot_patch_generator] super 调用实参无法翻译，已在 JS '
+              '产物中丢弃：${e.toSource()}');
+          continue;
+        }
+        out.add('$ind' 'this.$target(${argsJs.join(', ')});');
+        continue;
+      }
       final t = _bodyExprStmtJs(e, scope, classes);
       if (t != null) {
         out.add('$ind$t');
@@ -1834,6 +1884,7 @@ String translateClassMethodBody(
     },
     hostMethods: hostMethods,
     globalConsts: globalConsts,
+    superMap: m.superMap,
   );
   // 方法形参同步登记进 widget 层（方法体期间），使返回的 widget 树里
   // `Text(title)` 这类形参引用可解析；翻译结束即恢复，不污染同类其它方法。

@@ -30,7 +30,7 @@ class HelloCard extends StatefulWidget {
   State<HelloCard> createState() => _HelloCardState();
 }
 
-class _HelloCardState extends State<HelloCard> with TestMixin {
+class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
   // 无注解：自动成为 JS 属性 `_count`
   int _count = 0;
 
@@ -172,6 +172,17 @@ mixin TestMixin<T extends StatefulWidget> on State<T> {
   }
 
   void testLog() {
-    print("--混入代码");
+    print("--混入代码 1");
+  }
+}
+mixin TestMixin2<T extends StatefulWidget> on State<T> {
+  @override
+  void initState() {
+    testLog();
+    super.initState();
+  }
+
+  void testLog() {
+    print("--混入代码 2");
   }
 }

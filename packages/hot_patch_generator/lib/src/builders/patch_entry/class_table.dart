@@ -20,38 +20,46 @@ import '../../translator/source_index.dart';
 Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) {
   // 两阶段：先收集类声明，再据**全量类名表**求每个类的依赖
   // （referencedClassNames 统一在 dart2js 层，builder 不自行计算）。
-  final decls = <String, (ClassDeclaration, String, bool)>{};
-  void addFile(ClassDeclaration d, String file) {
+  // 值里的 CompilationUnit 是类的声明单元（本类 / 所在 import 文件）——
+  // 解析 with 子句的 mixin 声明需要它（resolveMixinDecls）。
+  final decls = <String, (ClassDeclaration, String, bool, CompilationUnit)>{};
+  void addFile(ClassDeclaration d, String file, CompilationUnit from) {
     final name = d.name.lexeme;
     if (name.startsWith('_') || decls.containsKey(name)) return;
     if (d.abstractKeyword != null) return;
     // @HostInjected 类：方法实现留在 Dart，不产出 JS（调用点被翻译为
     // _app_host_.invoke，见 buildHostMethods 与 js_translator.methodCallExprJs）。
     if (classHasHostInjectedMethod(d)) return;
-    decls[name] = (d, file, isWidgetClassDecl(d));
+    decls[name] = (d, file, isWidgetClassDecl(d), from);
   }
 
   for (final d in unit.declarations.whereType<ClassDeclaration>()) {
-    addFile(d, sourcePath);
+    addFile(d, sourcePath, unit);
   }
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final importUnit = parseUnitFile(file);
     if (importUnit == null) continue;
     for (final d in importUnit.declarations.whereType<ClassDeclaration>()) {
-      addFile(d, file);
+      addFile(d, file, importUnit);
     }
   }
 
   final names = decls.keys.toSet();
-  return {
-    for (final e in decls.entries)
-      e.key: classInfoOf(
-        e.value.$1,
-        e.value.$2,
-        isComponent: e.value.$3,
-        dependencies: referencedClassNames(e.value.$1).intersection(names),
-      ),
-  };
+  final out = <String, ClassInfo>{};
+  for (final e in decls.entries) {
+    // 普通类同样可能 with mixin：成员合并与依赖发现都按线性化展开，
+    // 与组件 State 类同一条路径。
+    final mixins = resolveMixinDecls(e.value.$1, e.value.$4, e.value.$2);
+    out[e.key] = classInfoOf(
+      e.value.$1,
+      e.value.$2,
+      isComponent: e.value.$3,
+      mixins: mixins,
+      dependencies:
+          referencedClassNames(e.value.$1, mixins: mixins).intersection(names),
+    );
+  }
+  return out;
 }
 
 /// 类是否为 widget / 组件类：带 @PatchEntry 注解，或继承

@@ -57,6 +57,38 @@ bool isIgnoredClass(CompilationUnit unit, String className) {
   return false;
 }
 
+/// 解析类 `with` 子句的 mixin 声明：同文件优先，其次 import 文件（与类表
+/// 同一套文件解析与缓存）。返回顺序保持 `with A, B` 的书写顺序（**前者
+/// 线性化优先级低**），找不到声明的名字直接跳过（无声丢弃会导致 mixin
+/// 方法静默缺失，调用方按需告警）。
+///
+/// 泛型实参与 `on` 约束不校验：本层只有 parseString 语法树（无 resolution），
+/// JS 侧类型已擦除，成员合并即可（见 classInfoOf 的 mixins 参数）。
+List<MixinDeclaration> resolveMixinDecls(
+  ClassDeclaration decl,
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  final wc = decl.withClause;
+  if (wc == null) return const [];
+  final byName = <String, MixinDeclaration>{};
+  void collect(CompilationUnit u) {
+    for (final d in u.declarations.whereType<MixinDeclaration>()) {
+      byName.putIfAbsent(d.name.lexeme, () => d);
+    }
+  }
+
+  collect(unit);
+  for (final file in resolveImportFiles(unit, sourcePath)) {
+    final u = parseUnitFile(file);
+    if (u != null) collect(u);
+  }
+  return [
+    for (final t in wc.mixinTypes)
+      if (byName.containsKey(t.name2.lexeme)) byName[t.name2.lexeme]!,
+  ];
+}
+
 /// 组件文件的业务 import → lib 相对 dart 路径列表。
 /// 相对导入优先；package: 跳过 dart:/flutter 与注解包（hot_patch_annotations / generator）。
 List<String> resolveImportFiles(CompilationUnit unit, String sourcePath) {

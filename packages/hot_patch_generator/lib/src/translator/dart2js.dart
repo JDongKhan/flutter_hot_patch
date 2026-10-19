@@ -48,12 +48,20 @@ import 'js_translator.dart';
 /// [isComponent]：该类是 widget/组件类（@PatchEntry 或 Stateful/Stateless/
 /// State 子类）——类表据此把它与普通模型类区分开（组件不作为模型内联、组件
 /// 类型字段不当模型构造翻译）。
+///
+/// [mixins]：类 `with` 子句解析出的 mixin 声明（见 resolveMixinDecls，按书写
+/// 顺序，前者优先级低）。按 Dart 线性化规则合并进字段/方法：
+/// **类自身 > 后写的 mixin > 前写的 mixin**——同名字段/方法高优先级占原名，
+/// 被覆盖的 mixin 方法改名 `_m$<Mixin>$<name>` 保留，并给每个方法挂
+/// [ClassMethod.superMap]（`super.foo()` → 链上下一个实现的 JS 名），语句翻译
+/// 据此把 super 语句落成 mixin 方法调用，链尾（基类）无 JS 等价物照旧忽略。
 ClassInfo classInfoOf(
   ClassDeclaration decl,
   String sourceFile, {
   Set<String> dependencies = const {},
   bool isComponent = false,
   bool includePrivateStaticMethods = false,
+  List<MixinDeclaration> mixins = const [],
 }) {
   final instanceFields = <ClassField>[];
   final staticFields = <ClassField>[];
@@ -77,6 +85,43 @@ ClassInfo classInfoOf(
     }
   }
 
+  // MethodDeclaration → ClassMethod 的同一口径（类自身与 mixin 成员共用）：
+  // getter 保留为 get 访问器；setter 跳过；static 默认跳过（参数放开时
+  // 私有 static 按实例方法收）。
+  ClassMethod? methodOf(
+    MethodDeclaration m, {
+    String? nameOverride,
+    Map<String, String> superMap = const {},
+    String? mixinOrigin,
+  }) {
+    if (m.isGetter) {
+      return ClassMethod(
+        name: nameOverride ?? m.name.lexeme,
+        params: const [],
+        isGetter: true,
+        body: m.body,
+        superMap: superMap,
+        mixinOrigin: mixinOrigin,
+      );
+    }
+    if (m.isSetter ||
+        (m.isStatic &&
+            !(includePrivateStaticMethods &&
+                m.name.lexeme.startsWith('_')))) {
+      return null;
+    }
+    return ClassMethod(
+      name: nameOverride ?? m.name.lexeme,
+      params: jsMethodParams(m),
+      isAsync: m.body.isAsynchronous,
+      isVoid: isVoidReturn(m),
+      returnsWidget: returnsWidgetOf(m),
+      body: m.body,
+      superMap: superMap,
+      mixinOrigin: mixinOrigin,
+    );
+  }
+
   for (final m in decl.members) {
     if (m is FieldDeclaration) {
       for (final v in m.fields.variables) {
@@ -93,27 +138,91 @@ ClassInfo classInfoOf(
         }
       }
     } else if (m is MethodDeclaration) {
-      if (m.isGetter) {
-        methods.add(ClassMethod(
-          name: m.name.lexeme,
-          params: const [],
-          isGetter: true,
+      final cm = methodOf(m);
+      if (cm != null) methods.add(cm);
+    }
+  }
+
+  // --- mixin 线性化合并 -----------------------------------------------------
+  // ordered：优先级从高到低（with 书写顺序反转）。先完成全部方法的 JS 命名
+  //（高优先级占原名、低优先级改名保留），再据此给每个方法算 superMap。
+  if (mixins.isNotEmpty) {
+    final ordered = mixins.reversed.toList();
+    final taken = <String>{for (final m in methods) m.name};
+    final jsNames = <MixinDeclaration, Map<String, String>>{};
+    for (final mx in ordered) {
+      final table = <String, String>{};
+      for (final member in mx.members.whereType<MethodDeclaration>()) {
+        if (methodOf(member) == null) continue; // setter/static 口径一致
+        final name = member.name.lexeme;
+        table[name] = taken.add(name) ? name : '_m\$${mx.name.lexeme}\$$name';
+      }
+      jsNames[mx] = table;
+    }
+
+    // 链上（比某位置更低优先级的全部 mixin）各方法的第一个实现。
+    Map<String, String> superMapOf(Iterable<MixinDeclaration> lower) {
+      final map = <String, String>{};
+      for (final mx in lower) {
+        for (final e in jsNames[mx]!.entries) {
+          map.putIfAbsent(e.key, () => e.value);
+        }
+      }
+      return map;
+    }
+
+    // 类自身方法：super 链 = 全部 mixin（高 → 低取第一个实现）。
+    final classSuper = superMapOf(ordered);
+    if (classSuper.isNotEmpty) {
+      for (var i = 0; i < methods.length; i++) {
+        final m = methods[i];
+        methods[i] = ClassMethod(
+          name: m.name,
+          params: m.params,
+          isAsync: m.isAsync,
+          isGetter: m.isGetter,
+          isVoid: m.isVoid,
+          returnsWidget: m.returnsWidget,
           body: m.body,
-        ));
-      } else if (m.isSetter ||
-          (m.isStatic &&
-              !(includePrivateStaticMethods &&
-                  m.name.lexeme.startsWith('_')))) {
-        // setter / static 方法不翻译（参数放开时私有 static 按实例方法收）
-      } else {
-        methods.add(ClassMethod(
-          name: m.name.lexeme,
-          params: jsMethodParams(m),
-          isAsync: m.body.isAsynchronous,
-          isVoid: isVoidReturn(m),
-          returnsWidget: returnsWidgetOf(m),
-          body: m.body,
-        ));
+          bodyJs: m.bodyJs,
+          nativeChannel: m.nativeChannel,
+          nativeMessage: m.nativeMessage,
+          superMap: classSuper,
+          mixinOrigin: m.mixinOrigin,
+        );
+      }
+    }
+
+    // mixin 实例字段：高优先级先收，同名去重（类自身字段已先入列）。
+    final seenFields = {for (final f in instanceFields) f.name};
+    for (final mx in ordered) {
+      for (final member in mx.members.whereType<FieldDeclaration>()) {
+        if (member.isStatic) continue;
+        for (final v in member.fields.variables) {
+          if (seenFields.add(v.name.lexeme)) {
+            instanceFields.add(ClassField(
+              name: v.name.lexeme,
+              typeName: fieldTypeName(member, v),
+              initializer: v.initializer,
+              mixinOrigin: mx.name.lexeme,
+            ));
+          }
+        }
+      }
+    }
+
+    // mixin 方法：super 链 = 比它低优先级的其余 mixin。
+    for (var i = 0; i < ordered.length; i++) {
+      final mx = ordered[i];
+      final superMap = superMapOf(ordered.sublist(i + 1));
+      for (final member in mx.members.whereType<MethodDeclaration>()) {
+        final cm = methodOf(
+          member,
+          nameOverride: jsNames[mx]![member.name.lexeme],
+          superMap: superMap,
+          mixinOrigin: mx.name.lexeme,
+        );
+        if (cm != null) methods.add(cm);
       }
     }
   }
@@ -161,20 +270,34 @@ String fieldTypeName(FieldDeclaration member, VariableDeclaration variable) {
 /// 只按名字递归翻译依赖组件、并按 ClassInfo.sourceFile 决定同文件内联还是跨
 /// 文件 import。基础类型与 widget 构造名由调用方与类表求交后自然丢弃
 /// （类表里只有真正的 Dart 类）。
-Set<String> referencedClassNames(ClassDeclaration decl) {
+///
+/// [mixins]：本类合并的 mixin 声明（见 classInfoOf）——mixin 的字段类型与
+/// 方法体构造调用同样是本类的依赖，漏扫会让「只在 mixin 里引用的模型类」
+/// 不被连带翻译。
+Set<String> referencedClassNames(
+  ClassDeclaration decl, {
+  List<MixinDeclaration> mixins = const [],
+}) {
   final names = <String>{};
   final collector = _CtorNameCollector();
-  for (final m in decl.members.whereType<MethodDeclaration>()) {
-    m.body.accept(collector);
-  }
-  names.addAll(collector.names);
-  for (final member in decl.members.whereType<FieldDeclaration>()) {
-    if (member.isStatic) continue;
-    for (final v in member.fields.variables) {
-      final t = eraseType(fieldTypeName(member, v));
-      if (!isBasicType(t) && t.isNotEmpty) names.add(t);
+  void scanMembers(List<ClassMember> members) {
+    for (final m in members.whereType<MethodDeclaration>()) {
+      m.body.accept(collector);
+    }
+    for (final member in members.whereType<FieldDeclaration>()) {
+      if (member.isStatic) continue;
+      for (final v in member.fields.variables) {
+        final t = eraseType(fieldTypeName(member, v));
+        if (!isBasicType(t) && t.isNotEmpty) names.add(t);
+      }
     }
   }
+
+  scanMembers(decl.members);
+  for (final mx in mixins) {
+    scanMembers(mx.members);
+  }
+  names.addAll(collector.names);
   return names;
 }
 
@@ -253,8 +376,17 @@ String renderClassDecl(
   b.write(info.ctorParams.isEmpty ? '  constructor() {\n' : '  constructor(args) {\n');
   if (base != null) b.write('    super();\n');
   if (info.ctorParams.isNotEmpty) b.write('    this.__applyProps(args);\n');
+  // mixin 来源的字段集中尾部、按来源注释分隔（类自身字段在前，注释只标
+  // mixin 段），定位问题时一眼分清「类自己的状态 / 混入的状态」。
+  String? lastFieldOrigin;
   for (final f in info.instanceFields) {
     if (info.ctorParams.contains(f.name)) continue;
+    if (f.mixinOrigin != lastFieldOrigin) {
+      if (f.mixinOrigin != null) {
+        b.write('    // ---- mixin ${f.mixinOrigin} ----\n');
+      }
+      lastFieldOrigin = f.mixinOrigin;
+    }
     b.write('    this.${f.name} = ${_fieldDefaultJs(f)};\n');
   }
   b.write('  }\n');
@@ -277,7 +409,15 @@ String renderClassDecl(
   // 变量 / 集合过滤 / switch 等语句时，必须走完整语句翻译——旧实现只取单条
   // `return <expr>` 再用 exprToJs 翻译，块体 getter（`get _list`）会静默产出
   // `return null`，运行时 `list.length` 直接崩。
+  // mixin 来源的方法集中尾部（classInfoOf 合并时已排好序）、按来源注释分隔。
+  String? lastMethodOrigin;
   for (final m in info.methods) {
+    if (m.mixinOrigin != lastMethodOrigin) {
+      if (m.mixinOrigin != null) {
+        b.write('  // ---- mixin ${m.mixinOrigin} ----\n');
+      }
+      lastMethodOrigin = m.mixinOrigin;
+    }
     final fn = m.isAsync ? 'async ' : '';
     // 方法体多行可读：语句各自成行、按方法体深度缩进（翻译器已带缩进），
     // 大括号独占行。

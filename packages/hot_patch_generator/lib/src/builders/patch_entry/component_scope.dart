@@ -169,9 +169,13 @@ Map<String, Set<String>> _neededClasses(
     final (decl, file) = queue.removeLast();
     final unit = units[file];
     if (unit == null) continue;
-    // StatefulWidget 的字段 / 方法分布在 widget 类与 State 类两处，合并扫描。
+    // StatefulWidget 的字段 / 方法分布在 widget 类与 State 类两处，合并扫描；
+    // mixin 成员的引用同样计入（与类表 / 翻译入口同一线性化口径）。
     for (final cls in classAndStateDecls(decl, unit)) {
-      for (final name in referencedClassNames(cls)) {
+      for (final name in referencedClassNames(
+        cls,
+        mixins: resolveMixinDecls(cls, unit, file),
+      )) {
         markVisible(file, name);
       }
     }

@@ -20,6 +20,7 @@ export class HelloCard {
     this._user = null;
   }
   initState() {
+    this._m$TestMixin2$initState();
     console.debug("[HelloCard] initState");
   }
   didChangeDependencies() {
@@ -117,6 +118,21 @@ export class HelloCard {
               })
           ])
       ]);
+  }
+  // ---- mixin TestMixin2 ----
+  _m$TestMixin2$initState() {
+    this.testLog();
+    this._m$TestMixin$initState();
+  }
+  testLog() {
+    console.log("--混入代码 2");
+  }
+  // ---- mixin TestMixin ----
+  _m$TestMixin$initState() {
+    this.testLog();
+  }
+  _m$TestMixin$testLog() {
+    console.log("--混入代码 1");
   }
 }
 
