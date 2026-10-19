@@ -50,9 +50,6 @@ export class OrdersPage {
     default: return kBrand;
 } })();
   }
-  get wantKeepAlive() {
-    return true;
-  }
   build(context) {
     if ((this._feed == null)) {
       return __h('Center', {}, [

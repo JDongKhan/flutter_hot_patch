@@ -366,20 +366,6 @@ const String miniReactReconcilerSource = r'''
   // 宿主回调句柄：runtime 级常驻（scope=local 且不同步宿主——宿主只拿它的 id 走
   // 事件 invoke 通道回调，本端不需要留镜像）。
   var lazyMountFn = fn(function (id) { lazyMount(id); });
-  var lazyResetFn = fn(function (id) { lazyReset(id); });
-
-  // 子元素的「保持实例」声明：Dart 源里 State 混入 AutomaticKeepAliveClientMixin
-  // 并覆盖 `wantKeepAlive => true`，翻译后落在组件类原型的 get 访问器上
-  //（`with` 子句与 build 里的 `super.build(context)` 均被翻译器忽略/跳过，
-  // 产物形态零改动）。以原型为 this 求值 getter：典型体 `return true` 不引用
-  // 实例字段，可安全求值；读不到 / 抛错 / 返回非 true 一律按「不保持」。
-  function keepAliveOf(el) {
-    var t = el && el.type;
-    if (typeof t !== 'function') { return false; }
-    var d = Object.getOwnPropertyDescriptor(t.prototype, 'wantKeepAlive');
-    if (!d || typeof d.get !== 'function') { return false; }
-    try { return d.get.call(t.prototype) === true; } catch (e) { return false; }
-  }
 
   // 懒槽位占位结点：普通宿主结点（SizedBox 0x0）+ `__lazy` 数据标记 + 回调句柄；
   // 真实子元素先存在 `__deferred`，本帧不挂载。
@@ -415,29 +401,6 @@ const String miniReactReconcilerSource = r'''
     root.ops = [];
     try {
       var inst = mount(el, ph.__parent, ph.__slot);
-      // 「保持实例」标记：组件类子元素随本批 ops 把**显式** `__keepAlive`
-      // （true/false）下发到真实宿主根结点（下发副本、不改 JS 侧 __props——
-      // 否则后续 patch 会因旧 props 多这个键而每次都重发 props op）。true →
-      // 宿主 _JsNodeState 挂 AutomaticKeepAliveClientMixin，切走再切回不重建
-      // element；false → 附带 `__resetFn`，宿主销毁该 element 时回调
-      // lazyReset 把本 JS 子树一并卸载并放回懒占位（下次 inflate 重新挂载）。
-      // 两侧对齐 Flutter 原生语义：wantKeepAlive => true 保持实例，否则每次
-      // 切换重建。宿主类（字符串 type）子元素没有 JS 实例状态，不下发标记。
-      if (inst && typeof el.type === 'function') {
-        var ka = keepAliveOf(el);
-        var hr = inst;
-        while (hr && hr.__k === COMP) { hr = hr.__child; }
-        if (hr && hr.__k === HOST) {
-          var kp = {};
-          for (var kk in hr.__props) { kp[kk] = hr.__props[kk]; }
-          kp.__keepAlive = ka;
-          if (!ka) { kp.__resetFn = lazyResetFn; }
-          if (typeof kDebugMode !== 'undefined' && kDebugMode) {
-            console.log('[lazyMount] ' + hr.__id + ' __keepAlive=' + ka);
-          }
-          emit({ op: 'props', id: hr.__id, props: kp });
-        }
-      }
       // 占位换成真实结点：remove 排在本子树 create/insert 之后，父结点 childIds
       // 的下标序列保持不变（原文位置由真实结点顶上）。
       unmount(ph);
@@ -451,51 +414,6 @@ const String miniReactReconcilerSource = r'''
     }
     // 挂载期间累积的 setState（如 initState 里同步 setState）补一次 flush。
     if (root.dirty.length) { flush(root); }
-    return true;
-  }
-
-  // 宿主销毁了「不保持」的懒子页 element（`__keepAlive: false` 经 `__resetFn`
-  // 回调到这里）：把对应**组件**子树真正卸载（跑 deactivate/dispose、退订、
-  // 释放句柄），并在原槽位放回懒占位——下次宿主 inflate 时重新 lazyMount，
-  // 与 Flutter 原生「每次切换重建实例」对齐。幂等：页面销毁后、JS 侧已卸载
-  // 或结点被 patch 挪走等场景一律空操作。
-  function lazyReset(id) {
-    var hi = hostNodes[id];
-    if (!hi || hi.__k !== HOST) { return false; }
-    // 沿 __parent 走到懒容器的直属实例（下发标记时已保证宿主根以上是纯组件链）。
-    var comp = hi;
-    while (comp.__parent && comp.__parent.__k === COMP) { comp = comp.__parent; }
-    var container = comp.__parent;
-    if (comp.__k !== COMP || !comp.__el) { return false; }
-    if (!container || container.__k !== HOST) { return false; }
-    var idx = -1;
-    for (var i = 0; i < container.__children.length; i++) {
-      if (container.__children[i] === comp) { idx = i; break; }
-    }
-    if (idx < 0) { return false; }
-    var root = comp.__root || rootFor(container);
-    if (!root) { return false; }
-    if (typeof kDebugMode !== 'undefined' && kDebugMode) {
-      console.log('[lazyReset] unmount ' + id + ' → lazy slot at index ' + idx);
-    }
-    var prev = activeRoot;
-    activeRoot = root;
-    root.mounting = true;
-    root.ops = [];
-    try {
-      // ops 纪律与 lazyMount 一致：先 remove 旧子树，再 create/insert 新占位
-      // （同 index 顶上，父结点 childIds 下标序列不变）。
-      var el = comp.__el;
-      unmount(comp);
-      var slot = { hostParentId: container.__id, index: idx };
-      var nph = newLazySlot(container, el, slot);
-      nph.__childIdx = idx;
-      container.__children[idx] = nph;
-      commit(root);
-    } finally {
-      root.mounting = false;
-      activeRoot = prev;
-    }
     return true;
   }
 

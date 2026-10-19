@@ -28,9 +28,7 @@ class OrdersPage extends StatefulWidget {
   State<OrdersPage> createState() => _OrdersPageState();
 }
 
-// keepalive 语义同 HomePage：原生与 JS 两侧切 tab 均保持实例。
-class _OrdersPageState extends State<OrdersPage>
-    with AutomaticKeepAliveClientMixin {
+class _OrdersPageState extends State<OrdersPage> {
   final AppService _service = AppService();
 
   /// 配置（状态条）；null = 加载中。
@@ -89,11 +87,7 @@ class _OrdersPageState extends State<OrdersPage>
   };
 
   @override
-  bool get wantKeepAlive => true;
-
-  @override
   Widget build(BuildContext context) {
-    super.build(context);
     if (_feed == null) {
       return const Center(child: CircularProgressIndicator());
     }

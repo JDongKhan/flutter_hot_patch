@@ -34,9 +34,6 @@ export class MinePage {
       }
     }
   }
-  get wantKeepAlive() {
-    return true;
-  }
   build(context) {
     var feed = this._feed;
     if ((feed == null)) {

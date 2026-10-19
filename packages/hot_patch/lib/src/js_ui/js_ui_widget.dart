@@ -392,16 +392,6 @@ class _BuildTimeBadge extends StatelessWidget {
 /// 只做一件事：按 `id` 从 [JsUiStore] 取结点 → 查注册表得到真实 Flutter
 /// widget → 递归拼子结点 + prop 子结点。结点被 patch 触碰时由 store 回调
 /// 触发重建；未被触碰的结点（相同 id + 相同 key）由 Flutter 复用，状态不丢。
-///
-/// 「保持实例」：懒容器子页的组件声明了 `wantKeepAlive` 时（Dart 源即 State
-/// 混入 AutomaticKeepAliveClientMixin，见 mini_react 的 keepAliveOf /
-/// lazyMount），宿主根结点 props 带显式 `__keepAlive` 标记——
-///   - `true`：本 State 经 [AutomaticKeepAliveClientMixin] 挂进 keepalive
-///     桶，切走再切回不重建 element、不重跑 initState，与 JS 侧实例常驻对齐；
-///   - `false`：element 随切换销毁，并经 `__resetFn` 回调 JS 一并卸载子树、
-///     原槽位放回懒占位，下次 inflate 重新挂载——两侧都「每次切换重建」。
-/// 无标记（宿主类子元素）时 mixin 空转，行为与不加完全一致；无 keepalive
-/// 祖先时通知自然落空，无副作用。
 class _JsNode extends StatefulWidget {
   const _JsNode({
     super.key,
@@ -422,36 +412,12 @@ class _JsNode extends StatefulWidget {
   State<_JsNode> createState() => _JsNodeState();
 }
 
-class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
-  /// 「保持实例」闩：仅在 initState 时从结点 props 读取一次并锁定。锁定后
-  /// 即使后续 patch 把 `__keepAlive` 从 props 里刷掉也不再释放（与 Flutter
-  /// 原生语义一致：wantKeepAlive 在 State 生命周期内是稳定声明）。
-  bool _keepAlive = false;
-
-  /// 「不保持」懒子页的 JS 复位回调：结点 props 显式 `__keepAlive: false`
-  /// 时随附的 `__resetFn` 句柄（见 mini_react 的 lazyReset）。本 element 被
-  /// 销毁时回调 JS 卸载对应子树并在原槽位放回懒占位——下次 inflate 重新
-  /// 挂载（构造 + initState），与 Flutter 原生「每次切换重建实例」对齐。
-  Object? _resetFn;
-
-  @override
-  bool get wantKeepAlive => _keepAlive;
-
+class _JsNodeState extends State<_JsNode> {
   @override
   void initState() {
-    // 必须先于 super.initState() 赋值：mixin 的 initState 会读 wantKeepAlive。
-    _readKeepAliveFlags();
     super.initState();
     widget.store.bind(widget.id, _rebuild);
     _mountIfLazy();
-  }
-
-  /// 从结点 props 读取 keepalive 三态标记（true 保持 / false 不保持+复位 /
-  /// 缺省不干预）。
-  void _readKeepAliveFlags() {
-    final props = widget.store.nodes[widget.id]?.props;
-    _keepAlive = props?['__keepAlive'] == true;
-    _resetFn = props?['__keepAlive'] == false ? (props?['__resetFn']) : null;
   }
 
   /// 懒槽位（props 带 `__lazy` 的占位结点，见 JS 侧 registerLazyChildHost /
@@ -480,23 +446,11 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
     if (oldWidget.id != widget.id || !identical(oldWidget.store, widget.store)) {
       oldWidget.store.unbind(oldWidget.id, _rebuild);
       widget.store.bind(widget.id, _rebuild);
-      // 结点 id 变了，keepalive 三态标记按新结点重读。
-      _readKeepAliveFlags();
     }
   }
 
   @override
   void dispose() {
-    // 「不保持」的懒子页被销毁（切 tab / 页面退出）：通知 JS 卸载子树并放回
-    // 懒占位。幂等——页面销毁走 disposeRoot、JS 侧已卸载、结点被 patch 挪走
-    // 等场景下 JS 侧均为空操作。
-    final reset = _resetFn;
-    if (reset != null) {
-      if (kDebugMode) {
-        HotPatchLog.log('js_ui: __keepAlive=false dispose → lazyReset ${widget.id}');
-      }
-      widget.invoke(reset, [widget.id]);
-    }
     widget.store.unbind(widget.id, _rebuild);
     unregisterJsBuildContext(widget.id);
     super.dispose();
@@ -508,8 +462,6 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
 
   @override
   Widget build(BuildContext context) {
-    // AutomaticKeepAliveClientMixin 要求：按本结点「保持实例」闩登记/刷新。
-    super.build(context);
     final node = widget.store.nodes[widget.id];
     if (node == null) return const SizedBox.shrink();
 

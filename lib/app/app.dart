@@ -13,12 +13,11 @@ import 'pages/orders_page.dart';
 /// 驱动的切页状态、[TabBarView]、[BottomNavigationBar]）都跑在 JS 运行时里，出问题
 /// 直接下发补丁即可热修整壳布局。
 ///
-/// 切页用 [TabBarView]：子页走基座「延迟挂载」（宿主 `_JsNode` 被 inflate 时
-/// 反向驱动 JS 按需挂载，首帧只跑当前页的 initState/请求）；子页 State 混入
-/// [AutomaticKeepAliveClientMixin] 且 `wantKeepAlive => true` 时，JS 侧把
-/// `__keepAlive` 下发宿主，宿主同步保持 element——两侧实例都常驻，切走再
-/// 切回不重建、不重跑 initState（见 mini_react 的 keepAliveOf/lazyMount 与
-/// `_JsNodeState` 的 keepalive 闩）。
+/// 切页用 [TabBarView]：宿主侧天然只有当前页会被 inflate；但 JS 侧（MiniReact）
+/// 的挂载是**一次性递归整棵 children**（`mount` 会构造实例并跑 initState/build），
+/// 所以四个 tab 页的 initState 与请求在首帧仍会全跑。JS 侧的懒加载需要基座的
+/// 「延迟挂载」能力（宿主 `_JsNode` 被 inflate 时反向驱动 JS 按需挂载），
+/// 本壳不再用业务层占位去模拟。
 ///
 /// 依赖的 widget 类会**连带翻译**：四个 tab 页（及 HomePage 同文件的
 /// HomeHeader/BannerSlide/GridCell/SpotCard/PromoCard 等）都是各自
