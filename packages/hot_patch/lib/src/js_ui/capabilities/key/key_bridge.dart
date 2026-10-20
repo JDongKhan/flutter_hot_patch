@@ -43,6 +43,7 @@ void ensureKeyChannels() {
         id: id,
         kind: 'key/Global',
         owner: 'key/Global.onCreate',
+        weak: false,
         pageKey: pageKey,
         create: () => GlobalKey(debugLabel: _labelOf(meta)),
       );
@@ -85,6 +86,7 @@ void ensureKeyChannels() {
       id: id,
       kind: 'key/Unique',
       owner: 'key/Unique.onCreate',
+      weak: false,
       pageKey: pageKey,
       create: () => UniqueKey(),
     ),

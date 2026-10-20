@@ -26,6 +26,13 @@
 //        （懒槽位 / 跨父搬移）Dart 侧只有本缓存 + JS 句柄；弱化会让重挂时拿不到
 //        同一实例 → 退化 `ValueKey(结点 id)` → 该子树 State 丢失。
 //      - JS↔Dart 的纯映射值（如 ctx 句柄 → 结点 id）：没有任何 widget 持有它。
+//
+// | 桶 / kind | 对象 | Dart 侧真实持有者 | 强度 |
+// | --- | --- | --- | --- |
+// | `ctx/node` | BuildContext（Element） | element tree（父→子强引用链） | 弱 |
+// | `ctx/handle` | 结点 id（纯映射） | 无——只有本缓存 | 强 |
+// | `key` | GlobalKey / UniqueKey | 挂载期 element 的 `widget.key`；离树期只有本缓存 + JS 句柄 | 强 |
+// | `ctrl/*`、`notifier/*` | ChangeNotifier 真实实例 | attach 后宿主 State；create→attach 窗口与卸载后只有本缓存 | 强 |
 import 'package:flutter/foundation.dart';
 
 import '../../../utils/hot_patch_log.dart';
@@ -55,6 +62,7 @@ class JsBinding<T extends Object> {
     required this.kind,
     required this.owner,
     required this.weak,
+    required this.quiet,
     required this.pageKey,
     required T? value,
     Map<String, Object?>? meta,
@@ -74,6 +82,12 @@ class JsBinding<T extends Object> {
 
   /// 引用强度（见文件头判定），登记后不再改变。
   final bool weak;
+
+  /// 是否**静音**（登记与释放都不打逐条日志，[JsBindingCache.dump] 与泄漏明细里
+  /// 仍然可见）。给「纯索引 / 纯映射」类条目用——它们每页每结点一条（如
+  /// `ctx/node` 的结点→BuildContext），量大且没有跨页风险，逐条打只会刷屏；
+  /// 资源类条目（控制器 / Key / 句柄）保持可逐条追踪。
+  final bool quiet;
 
   final DateTime createdAt;
 
@@ -104,23 +118,28 @@ class JsBinding<T extends Object> {
   }
 
   /// 一条绑定的可读摘要（日志与 [JsBindingCache.dump] 共用）。
+  ///
+  /// 形如：`js:node/Text#43 | Text | page=jsui_2 | 弱·存活 | 17s | by=_JsNodeState.build`
+  /// —— 依次是「哪个 id / 什么对象 / 属于哪个页面（无页归属=global）/ 引用强度与
+  /// 存活 / 已登记多久 / 谁登记的」。结点类条目取 `meta['type']`（结点类型）而不是
+  /// 无信息量的 `StatefulElement`；kind 不在行内重复（桶名与 `by` 来源里已经体现）。
   String describe() {
     final t = target;
-    final age = DateTime.now().difference(createdAt).inSeconds;
-    return '$id | kind=$kind | scope=$scope'
-        '${pageKey != null ? ' | page=$pageKey' : ''}'
+    final what = (meta['type'] as String?) ?? (t == null ? '-' : '${t.runtimeType}');
+    return '$id | $what | ${pageKey != null ? 'page=$pageKey' : 'global'}'
         ' | ${weak ? (t == null ? '弱·已回收' : '弱·存活') : '强'}'
-        ' | ${t == null ? '-' : t.runtimeType} | age=${age}s | owner=$owner';
+        ' | ${DateTime.now().difference(createdAt).inSeconds}s | by=$owner';
   }
 }
 
 /// 跨语言绑定的**唯一**缓存：所有绑定条目都在这里，别的文件不再各自持有全局表。
 ///
-/// 用法（各能力只拿一个桶名）：
+/// 用法（各能力只拿一个桶名；`weak` 必填，见下方判定）：
 /// ```dart
 /// const _bucket = 'ctrl/Scroll';
 /// JsBindingCache.instance.putIfAbsent<ScrollController>(
-///   bucket: _bucket, id: id, kind: _bucket, owner: 'scroll.onCreate', create: ...);
+///   bucket: _bucket, id: id, kind: _bucket, owner: 'scroll.onCreate',
+///   weak: false, create: ...);
 /// JsBindingCache.instance.target<ScrollController>(_bucket, id);
 /// ```
 class JsBindingCache {
@@ -132,6 +151,9 @@ class JsBindingCache {
   /// 桶名 → (id → 条目)。桶内类型由登记它的能力决定（Dart 泛型协变，故这里用
   /// `JsBinding<Object>` 收口；取值走 [entry] 的类型化查询 + 运行时断言）。
   final Map<String, Map<String, JsBinding<Object>>> _buckets = {};
+
+  /// debug：pageKey → 本页新登记过的条目累计数（只服务页面退出时的那条汇总日志）。
+  final Map<String, int> _pageTally = {};
 
   /// 取一条绑定（未登记 / 类型不符返回 null）。
   JsBinding<T>? entry<T extends Object>(String bucket, String id) {
@@ -148,14 +170,18 @@ class JsBindingCache {
 
   /// 登记 / 更新一条绑定（**就地更新**：已有条目保留 meta 与 createdAt，只换对象
   /// 与归属）。用于「每次 build 都要刷新」的锚点类绑定。
+  ///
+  /// [weak] **必填**：引用强度是决定「会不会泄漏」的关键轴，不给默认值——每个
+  /// 登记点显式声明，读代码与排查时一眼看出这里是不是真持有者（判定见文件头）。
   JsBinding<T> put<T extends Object>({
     required String bucket,
     required String id,
     required String kind,
     required T value,
     required String owner,
+    required bool weak,
+    bool quiet = false,
     String? pageKey,
-    bool weak = false,
     Map<String, Object?>? meta,
   }) {
     final existing = entry<T>(bucket, id);
@@ -166,10 +192,11 @@ class JsBindingCache {
       return existing;
     }
     final created = JsBinding<T>._(
-      id: id, kind: kind, owner: owner, weak: weak, pageKey: pageKey,
-      value: value, meta: meta,
+      id: id, kind: kind, owner: owner, weak: weak, quiet: quiet,
+      pageKey: pageKey, value: value, meta: meta,
     );
     (_buckets[bucket] ??= <String, JsBinding<Object>>{})[id] = created;
+    _tally(created);
     _logPut(created);
     return created;
   }
@@ -179,14 +206,17 @@ class JsBindingCache {
   ///
   /// 这就是「create 消息与首帧渲染到达顺序不定，哪端先建都复用同一实例」的落点：
   /// 宿主先建 → 这里回填 meta/归属；JS 先建 → 这里走 [create]。
+  ///
+  /// [weak] **必填**（同 [put]）。
   JsBinding<T> putIfAbsent<T extends Object>({
     required String bucket,
     required String id,
     required String kind,
     required String owner,
+    required bool weak,
+    bool quiet = false,
     T Function()? create,
     String? pageKey,
-    bool weak = false,
     Map<String, Object?>? meta,
   }) {
     final existing = entry<T>(bucket, id);
@@ -197,10 +227,11 @@ class JsBindingCache {
       return existing;
     }
     final created = JsBinding<T>._(
-      id: id, kind: kind, owner: owner, weak: weak, pageKey: pageKey,
-      value: create?.call(), meta: meta,
+      id: id, kind: kind, owner: owner, weak: weak, quiet: quiet,
+      pageKey: pageKey, value: create?.call(), meta: meta,
     );
     (_buckets[bucket] ??= <String, JsBinding<Object>>{})[id] = created;
+    _tally(created);
     _logPut(created);
     return created;
   }
@@ -211,7 +242,7 @@ class JsBindingCache {
     final e = b?.remove(id);
     if (e == null) return;
     if (b!.isEmpty) _buckets.remove(bucket);
-    if (kDebugMode) HotPatchLog.log('[binding] - ${e.describe()}');
+    if (kDebugMode && !e.quiet) HotPatchLog.log('[binding] - ${e.describe()}');
   }
 
   /// 某个桶里的全部绑定（同桶同类型，取用方自行按需断言）。
@@ -240,6 +271,16 @@ class JsBindingCache {
       .expand((m) => m.values)
       .where((e) => e.pageKey == pageKey);
 
+  /// 本页**新登记过**的条目累计数（只数首次登记，重建覆盖不计）。
+  ///
+  /// 用途：逐条日志对索引类条目是静音的，页面退出只打一条汇总——本页登记了多少条、
+  /// 残留多少条，由此给出分母（精确残余以 [pageCounts] 为准）。
+  /// 宿主先建、create 后到的条目按首次登记时的 pageKey 计入（此时可能还没归属）。
+  int pageTally(String pageKey) => _pageTally[pageKey] ?? 0;
+
+  /// 回收某页的累计计数（页面泄漏检查打完汇总后调用，防表无界增长）。
+  void clearPageTally(String pageKey) => _pageTally.remove(pageKey);
+
   /// 全部绑定的全景文本（按桶分组）：排查时一次看全，不用挨个表找。
   String dump() {
     final total = _buckets.values.fold(0, (a, m) => a + m.length);
@@ -259,6 +300,13 @@ class JsBindingCache {
   }
 
   void _logPut(JsBinding<Object> e) {
-    if (kDebugMode) HotPatchLog.log('[binding] + ${e.describe()}');
+    if (kDebugMode && !e.quiet) HotPatchLog.log('[binding] + ${e.describe()}');
+  }
+
+  /// 记一笔「本页新登记了这条」（仅 debug；详见 [pageTally]）。
+  void _tally(JsBinding<Object> e) {
+    final page = e.pageKey;
+    if (!kDebugMode || page == null) return;
+    _pageTally[page] = (_pageTally[page] ?? 0) + 1;
   }
 }

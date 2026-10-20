@@ -406,10 +406,7 @@ const String _jsUiLeakSnapshotFn = r'''
     var hs = [];
     for (var id in handles) {
       var h = handles[id];
-      var t = h.obj === null ? 'null' : typeof h.obj;
-      var ctor = (t === 'object' || t === 'function') && h.obj && h.obj.constructor
-        ? (h.obj.constructor.name || t) : t;
-      hs.push({ id: id, kind: h.kind, scope: h.scope, key: h.key, obj: ctor });
+      hs.push({ id: id, kind: h.kind, scope: h.scope, key: h.key, obj: ctorNameOf(h) });
     }
     var ph = {};
     for (var pk in pageHandles) { ph[pk] = pageHandles[pk].length; }
@@ -428,11 +425,8 @@ const String _jsUiLeakSnapshotFn = r'''
     for (var id in handles) {
       var h = handles[id];
       byKind[h.kind] = (byKind[h.kind] || 0) + 1;
-      var t = h.obj === null ? 'null' : typeof h.obj;
-      var ctor = (t === 'object' || t === 'function') && h.obj && h.obj.constructor
-        ? (h.obj.constructor.name || t) : t;
-      lines.push(h.kind + ' ' + id + ' scope=' + h.scope
-        + (h.key ? ' page=' + h.key : '') + ' obj=' + ctor);
+      lines.push(h.kind + ' ' + id + ' obj=' + ctorNameOf(h)
+        + (h.key ? ' page=' + h.key : ' scope=' + h.scope));
     }
     var kinds = [];
     for (var k in byKind) { kinds.push(k + '×' + byKind[k]); }

@@ -46,6 +46,30 @@ const String handleRegistryJsSource = r'''
     return 'js:' + kind + '#' + handleSeq;
   }
 
+  // 句柄摘要里的「是什么对象」：构造名优先（日志与泄漏/缓存全景共用同一套取法）。
+  function ctorNameOf(h) {
+    var t = h.obj === null ? 'null' : typeof h.obj;
+    if (h.obj && (t === 'object' || t === 'function') && h.obj.constructor) {
+      return h.obj.constructor.name || t;
+    }
+    return t;
+  }
+
+  // 登记留痕（仅 debug；console.debug 自身按 G.kDebugMode 门控）。
+  // `local` 是纯本端句柄（构建期事件闭包——`fn(...)` 就走这条），每页几十条、随
+  // 组件卸载即释放、不跨页也不跨端，故不打日志（否则日志被它刷满）；其余句柄
+  // 都是跨语言资源，逐条留痕：`kind id obj=构造名 page=所属页面`。
+  function traceReg(h) {
+    if (h.scope === 'local') { return; }
+    console.debug('[binding] + ' + h.kind + ' ' + h.id + ' obj=' + ctorNameOf(h)
+      + (h.key ? ' page=' + h.key : ' scope=global'));
+  }
+  function traceRelease(h) {
+    if (h.scope === 'local') { return; }
+    console.debug('[binding] - ' + h.kind + ' ' + h.id + ' obj=' + ctorNameOf(h)
+      + (h.key ? ' page=' + h.key : ' scope=global'));
+  }
+
   // 登记一个 JS 侧真实对象/函数为句柄，返回 id。scope 缺省 page（绑定当前
   // 页面）；activeRoot 缺失导致无法定位页面时退化为 global，避免「登记了却
   // 永不释放」。
@@ -69,10 +93,8 @@ const String handleRegistryJsSource = r'''
     if (scope === 'page') {
       (pageHandles[key] || (pageHandles[key] = [])).push(id);
     }
-    // 登记留痕（仅 debug：console.debug 自身按 G.kDebugMode 门控）——JS 端
-    // 唯一的对象缓存就是 handles，全景见 __jsui.cacheDump / leakSnapshot。
-    console.debug('[binding] + ' + kind + ' ' + id + ' scope=' + scope
-      + (key ? ' page=' + key : ''));
+    // 登记留痕（仅 debug；`local` 的纯本端句柄不记——见 traceReg）。
+    traceReg(handles[id]);
     // 自动同步宿主：宿主侧同名 kind 描述符的 onCreate 据此创建真实对象
     // （scope=local 的纯本端句柄——如事件闭包——传 sync:false 不同步）。
     // pageKey 一并下发：宿主侧据此登记「句柄→页面」，页面销毁时做本端兜底回收。
@@ -90,9 +112,8 @@ const String handleRegistryJsSource = r'''
     var h = handles[id];
     if (!h) { return; }
     delete handles[id];
-    // 释放留痕（仅 debug，同上）。
-    console.debug('[binding] - ' + h.kind + ' ' + id + ' scope=' + h.scope
-      + (h.key ? ' page=' + h.key : ''));
+    // 释放留痕（仅 debug；`local` 不记，同 traceReg）。
+    traceRelease(h);
     if (h.obj) { try { handleOwnerIdx.delete(h.obj); } catch (e) {} }
     if (h.scope === 'page' && h.key && pageHandles[h.key]) {
       var arr = pageHandles[h.key];

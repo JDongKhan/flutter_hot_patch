@@ -144,15 +144,19 @@ class JsLeakSnapshot {
       }
     }
     // ---- 汇总 ----
+    final tally = JsBindingCache.instance.pageTally(pageKey);
+    JsBindingCache.instance.clearPageTally(pageKey);
     if (leaks.isEmpty) {
       HotPatchLog.log(
         'leak-check $pageKey: clean（JS 句柄 ${handles.length}，根 ${roots.length}；'
-        'Dart 表 ${dartTables.values.fold(0, (a, b) => a + b)} 项）',
+        'Dart 表 ${dartTables.values.fold(0, (a, b) => a + b)} 项；'
+        'binding 本页登记 $tally 条已全清）',
       );
       return;
     }
     HotPatchLog.log(
-      'leak-check $pageKey: ${leaks.length} 项残留\n  ${leaks.join('\n  ')}',
+      'leak-check $pageKey: ${leaks.length} 项残留（binding 本页登记 $tally 条）'
+      '\n  ${leaks.join('\n  ')}',
     );
   }
 

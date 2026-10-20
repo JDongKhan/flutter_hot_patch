@@ -58,11 +58,13 @@ class JsControllerBridge<T extends ChangeNotifier> {
           onCreate: (id, meta, pageKey) {
             final create = _create;
             // 回传句柄一并记进同一条目（cached 的 create 重发幂等）。
+            // 强引用：JS 侧句柄才是这些对象的寿命驱动者（见 binding_cache.dart）。
             _cache.putIfAbsent<T>(
               bucket: _kind,
               id: id,
               kind: _kind,
               owner: '$_kind.onCreate',
+              weak: false,
               pageKey: pageKey,
               create: create == null ? null : () => create(id, meta),
               meta: {'fn': meta is Map ? meta['fn'] : null},
@@ -92,6 +94,7 @@ class JsControllerBridge<T extends ChangeNotifier> {
             id: id,
             kind: _kind,
             owner: '$_kind.host',
+            weak: false,
             create: create,
           )
           .target!;

@@ -4,9 +4,11 @@
 // 一个代理，真实 BuildContext 只存在于宿主。
 //
 // 两端靠 **nodeId** 对齐：JS 侧代理记「最近宿主祖先结点 id」，宿主侧
-// `_JsNodeState` 在 build 期间登记 `nodeId -> BuildContext`、dispose 时注销。
-// 该表存的是**弱引用**（Element 的所有权在框架的 element tree，这里只是索引，
-// 不该钉住子树——见 [_jsBuildContexts]）。
+// `_JsNodeState` 在 build 期间登记 `nodeId -> BuildContext`、element 卸载时注销。
+// 该映射存在**绑定缓存**的 [JsBindingBuckets.ctxNode] 桶里且是**弱引用**：
+// BuildContext 本体就是那个 Element——由 `State.context` 指向，State 由 Element
+// 持有，Element 又由 element tree 的父→子引用链强持有（根 element 由 BuildOwner
+// 持有），故真实持有者在框架、缓存只是索引，不该钉住子树（详见下方桶注释）。
 // 句柄（kind=ctx/BuildContext）只是让「句柄 id → nodeId」可查——即
 // [jsBuildContextOf]。
 //
@@ -87,12 +89,14 @@ void ensureBuildContextChannels() {
     onCreate: (id, meta, pageKey) {
       final node = meta is Map ? meta['node'] : null;
       if (node is String && node.isNotEmpty) {
-        // 纯映射值（句柄 id → 结点 id），强引用登记（见文件头）。
+        // 纯映射值（句柄 id → 结点 id）：没有任何 widget 持有它，只有本缓存持有
+        // → 强引用（见文件头）。
         JsBindingCache.instance.put<String>(
           bucket: JsBindingBuckets.ctxHandle,
           id: id,
           kind: _ctxKind,
           value: node,
+          weak: false,
           pageKey: pageKey,
           owner: 'ctx/BuildContext.onCreate',
         );
@@ -122,16 +126,29 @@ Object? _dispatchContextOp(String id, String op, Map payload) {
 /// 登记/更新某个宿主结点的 BuildContext（_JsNodeState 在 build 期间调用）。
 ///
 /// 弱引用（见文件头）+ 就地覆盖：同一结点重建时刷新为新的 BuildContext（Element
-/// 复用则其实同一个对象）。[pageKey] 随条目一起记下，供泄漏观测按页归属统计。
-void registerJsBuildContext(String nodeId, BuildContext context, String pageKey) {
+/// 复用则其实同一个对象）。[type] 是结点类型，[owner] 是登记来源——两者只进条目
+/// 的元数据，供 [JsBindingCache.dump] 与泄漏明细把这一条说人话（否则只看到一个
+/// `StatefulElement`，认不出是哪个结点）。
+///
+/// **静音**：这是「每页每结点一条、无跨页风险」的索引类条目，登记/释放都不打逐条
+/// 日志（否则一页几十行刷屏）；本页登记与残留的总数仍由页面退出时的汇总给出。
+void registerJsBuildContext(
+  String nodeId,
+  BuildContext context,
+  String pageKey, {
+  required String type,
+  String owner = '_JsNodeState.build',
+}) {
   JsBindingCache.instance.put<BuildContext>(
     bucket: JsBindingBuckets.ctxNode,
     id: nodeId,
     kind: _ctxKind,
     value: context,
     weak: true,
+    quiet: true,
     pageKey: pageKey,
-    owner: '_JsNodeState.build',
+    owner: owner,
+    meta: {'type': type},
   );
 }
 

@@ -211,7 +211,14 @@ class JsUiWidgetState extends State<JsUiWidget> {
   Widget build(BuildContext context) {
     // 页面锚点：根组件（COMP 之上没有宿主结点）的 `this.context` 代理按
     // `page:<pageKey>` 反查 —— 见 capabilities/build_context/build_context_js.dart。
-    registerJsBuildContext(jsBuildContextPageAnchor(_pageKey), context, _pageKey);
+    registerJsBuildContext(
+      jsBuildContextPageAnchor(_pageKey),
+      context,
+      _pageKey,
+      // 页面锚点不是某个结点，锚在承载 JsUiWidget 的那个 element 上。
+      type: 'page',
+      owner: 'JsUiWidgetState.build',
+    );
     if (_error != null) {
       return _JsLoadErrorView(message: _error!, onRetry: _retry);
     }
@@ -469,7 +476,7 @@ class _JsNodeState extends State<_JsNode> {
     // BuildContext（见 capabilities/build_context/build_context_bridge.dart）：在此登记/
     // 刷新，element 卸载时连同历史 id 一并注销（见 [_anchorIds]）——这就是
     // 「element 级 scope」。
-    registerJsBuildContext(widget.id, context, widget.pageKey);
+    registerJsBuildContext(widget.id, context, widget.pageKey, type: node.type);
     _anchorIds.add(widget.id);
 
     final children = <Widget>[];
