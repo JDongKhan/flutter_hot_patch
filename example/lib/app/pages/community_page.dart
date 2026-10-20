@@ -135,7 +135,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
   @override
   Widget build(BuildContext context) {
-    print("-----$_filterOpen");
+    print("-----filterOpen $_filterOpen");
     final feed = _feed;
     if (feed == null) {
       return const Center(child: CircularProgressIndicator());
@@ -349,9 +349,9 @@ class _ListContentState extends State<_ListContent> {
   @override
   void didUpdateWidget(covariant _ListContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    print("--0：$oldWidget");
+    print("--didUpdateWidget 0：$oldWidget");
     if (widget.list.length != oldWidget.list.length) {
-      print("--1");
+      print("-- didUpdateWidget 1");
     }
   }
 
