@@ -55,7 +55,7 @@ class _AppSubContentState extends State<AppSubContent> with SingleTickerProvider
   late final TabController _tab = TabController(length: 4, vsync: this);
 
   /// 当前页镜像（由 controller 监听同步），供 [BottomNavigationBar] 高亮。
-  int _index = 0;
+  int _index = 1;
 
   @override
   void initState() {
