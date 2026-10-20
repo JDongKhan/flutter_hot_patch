@@ -1,4 +1,4 @@
-# flutter_hot
+# flutter_hot_patch
 
 「注解组件 → JS 热更」框架的 monorepo（Dart **pub workspace**）。
 

@@ -1,3 +1,8 @@
+## 0.1.1
+
+- README 补充 `@HostInjected`（宿主注入）使用手册：标注位置限制、通道名规则、
+  调用点翻译形态、参数载荷与 `@args` 协议、Promise 结算语义、`registerHostMethods()` 注册流程。
+
 ## 0.1.0
 
 - 首个版本。
