@@ -21,16 +21,16 @@ export class MiniButton {
   }
   build(context) {
     return __h('GestureDetector', {
-        "event": this.__bind("this.onTap()")
+        "onTap": this.__bind("this.onTap()")
       }, [
         __h('Container', {
-            "height": 32,
             "padding": {
               "left": 14.0,
               "top": 0.0,
               "right": 14.0,
               "bottom": 0.0
             },
+            "height": 32,
             "alignment": "center",
             "decoration": {
               "color": (this.primary ? kBrand : '#FFFFFF'),
@@ -45,11 +45,13 @@ export class MiniButton {
             }
           }, [
             __h('Text', {
-                "data": this.label,
                 "style": {
                   "fontSize": 12,
                   "color": (this.primary ? '#FFFFFF' : '#ff4d5462')
-                }
+                },
+                "$pos": [
+                  this.label
+                ]
               })
           ])
       ]);

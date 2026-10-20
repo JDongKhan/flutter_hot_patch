@@ -35,10 +35,16 @@ export class HomePage {
     var spots = this._feed.spots;
     var adImg = this._feed.adImg;
     return __h('Container', {
-        "color": '#fff4f5f7'
+        "color": __h('Color', {
+            "$pos": [
+              4294243831
+            ]
+          })
       }, [
         __h('EasyRefresh', {
-            "child": __h('CustomScrollView', {}, [
+            "onRefresh": this.__bind("_load")
+          }, [
+            __h('CustomScrollView', {}, [
                 __h('SliverToBoxAdapter', {}, [
                     __h('Column', {
                         "crossAxisAlignment": "stretch"
@@ -60,23 +66,23 @@ export class HomePage {
                         __h('Row', {
                             "mainAxisAlignment": "center"
                           }, [
-                            ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "width": 6, "height": 6, "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
+                            ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "width": 6, "height": 6, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
                           ]),
                         __h('SizedBox', {
                             "height": 12
                           }),
                         __h('Container', {
-                            "padding": {
-                              "left": 0.0,
-                              "top": 12.0,
-                              "right": 0.0,
-                              "bottom": 12.0
-                            },
                             "margin": {
                               "left": 12.0,
                               "top": 0.0,
                               "right": 12.0,
                               "bottom": 0.0
+                            },
+                            "padding": {
+                              "left": 0.0,
+                              "top": 12.0,
+                              "right": 0.0,
+                              "bottom": 12.0
                             },
                             "decoration": {
                               "color": '#ffffffff',
@@ -86,12 +92,14 @@ export class HomePage {
                             }
                           }, [
                             __h('GridView', {
+                                "gridDelegate": __h('SliverGridDelegateWithMaxCrossAxisExtent', {
+                                    "maxCrossAxisExtent": 150,
+                                    "mainAxisSpacing": 6,
+                                    "crossAxisSpacing": 6,
+                                    "mainAxisExtent": 84
+                                  }),
                                 "shrinkWrap": true,
-                                "physics": "NeverScrollableScrollPhysics",
-                                "maxCrossAxisExtent": 150,
-                                "mainAxisSpacing": 6,
-                                "crossAxisSpacing": 6,
-                                "mainAxisExtent": 84
+                                "physics": "NeverScrollableScrollPhysics"
                               }, [
                                 ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this._feed.grid[i] })]); } return out; })()
                               ])
@@ -137,20 +145,24 @@ export class HomePage {
                                     "width": 8
                                   }),
                                 __h('Text', {
-                                    "data": "景点推荐",
                                     "style": {
                                       "fontSize": 17,
                                       "fontWeight": "w700",
                                       "color": '#ff1f2430'
-                                    }
+                                    },
+                                    "$pos": [
+                                      "景点推荐"
+                                    ]
                                   }),
                                 __h('Spacer', {}),
                                 __h('Text', {
-                                    "data": "为你精选",
                                     "style": {
                                       "fontSize": 12,
                                       "color": '#ff8a909e'
-                                    }
+                                    },
+                                    "$pos": [
+                                      "为你精选"
+                                    ]
                                   })
                               ])
                           ]),
@@ -168,12 +180,14 @@ export class HomePage {
                     }
                   }, [
                     __h(SliverGrid, {
-                        "builder": "_sliverBuilder0",
-                        "childCount": this._feed.spots.length,
-                        "maxCrossAxisExtent": 300,
-                        "mainAxisSpacing": 10,
-                        "crossAxisSpacing": 10,
-                        "mainAxisExtent": 190
+                        "gridDelegate": __h('SliverGridDelegateWithMaxCrossAxisExtent', {
+                            "maxCrossAxisExtent": 300,
+                            "mainAxisSpacing": 10,
+                            "crossAxisSpacing": 10,
+                            "mainAxisExtent": 190
+                          }),
+                        "builder": "_builder0",
+                        "childCount": this._feed.spots.length
                       })
                   ]),
                 __h('SliverToBoxAdapter', {}, [
@@ -181,12 +195,11 @@ export class HomePage {
                         "height": 20
                       })
                   ])
-              ]),
-            "onRefresh": this.__bind("_load")
-          })
+              ])
+          ])
       ]);
   }
-  _sliverBuilder0(context, index) {
+  _builder0(context, index) {
       return __h(SpotCard, {
         "spot": this._feed.spots[index]
       });
@@ -234,35 +247,52 @@ export class HomeHeader {
               }, [
                 __h('Row', {}, [
                     __h('InkWell', {
-                        "event": this.__bind("openLocation")
+                        "onTap": this.__bind("openLocation")
                       }, [
                         __h('Row', {}, [
                             __h('Icon', {
-                                "icon": "location_on",
+                                "color": __h('Color', {
+                                    "$pos": [
+                                      4294967295
+                                    ]
+                                  }),
                                 "size": 18,
-                                "color": '#ffffffff'
+                                "$pos": [
+                                  "location_on"
+                                ]
                               }),
                             __h('SizedBox', {
                                 "width": 2
                               }),
                             __h('Text', {
-                                "data": "上海",
                                 "style": {
                                   "color": '#ffffffff',
                                   "fontSize": 15,
                                   "fontWeight": "w600"
-                                }
+                                },
+                                "$pos": [
+                                  "上海"
+                                ]
                               }),
                             __h('Icon', {
-                                "icon": "keyboard_arrow_down",
+                                "color": __h('Color', {
+                                    "$pos": [
+                                      4294967295
+                                    ]
+                                  }),
                                 "size": 18,
-                                "color": '#ffffffff'
+                                "$pos": [
+                                  "keyboard_arrow_down"
+                                ]
                               })
                           ])
                       ]),
                     __h('Spacer', {}),
                     __h('InkWell', {
-                        "event": this.__bind("openMessages")
+                        "onTap": this.__bind("openMessages"),
+                        "borderRadius": {
+                          "radius": 18.0
+                        }
                       }, [
                         __h('Stack', {}, [
                             __h('Padding', {
@@ -274,14 +304,20 @@ export class HomeHeader {
                                 }
                               }, [
                                 __h('Icon', {
-                                    "icon": "notifications",
+                                    "color": __h('Color', {
+                                        "$pos": [
+                                          4294967295
+                                        ]
+                                      }),
                                     "size": 24,
-                                    "color": '#ffffffff'
+                                    "$pos": [
+                                      "notifications"
+                                    ]
                                   })
                               ]),
                             __h('Positioned', {
-                                "top": 3,
-                                "right": 3
+                                "right": 3,
+                                "top": 3
                               }, [
                                 __h('DecoratedBox', {
                                     "decoration": {
@@ -292,8 +328,8 @@ export class HomeHeader {
                                     }
                                   }, [
                                     __h('SizedBox', {
-                                        "height": 8,
-                                        "width": 8
+                                        "width": 8,
+                                        "height": 8
                                       })
                                   ])
                               ])
@@ -304,7 +340,10 @@ export class HomeHeader {
                     "height": 12
                   }),
                 __h('InkWell', {
-                    "event": this.__bind("openSearch")
+                    "onTap": this.__bind("openSearch"),
+                    "borderRadius": {
+                      "radius": 20.0
+                    }
                   }, [
                     __h('Container', {
                         "height": 42,
@@ -323,28 +362,38 @@ export class HomeHeader {
                       }, [
                         __h('Row', {}, [
                             __h('Icon', {
-                                "icon": "search",
+                                "color": __h('Color', {
+                                    "$pos": [
+                                      4288323756
+                                    ]
+                                  }),
                                 "size": 20,
-                                "color": '#ff9aa0ac'
+                                "$pos": [
+                                  "search"
+                                ]
                               }),
                             __h('SizedBox', {
                                 "width": 6
                               }),
                             __h('Text', {
-                                "data": "搜索目的地 / 关键词",
                                 "style": {
                                   "fontSize": 14,
                                   "color": '#ff9aa0ac'
-                                }
+                                },
+                                "$pos": [
+                                  "搜索目的地 / 关键词"
+                                ]
                               }),
                             __h('Spacer', {}),
                             __h('Text', {
-                                "data": "搜索",
                                 "style": {
                                   "fontSize": 13,
                                   "color": '#ff0e7afb',
                                   "fontWeight": "w600"
-                                }
+                                },
+                                "$pos": [
+                                  "搜索"
+                                ]
                               })
                           ])
                       ])
@@ -376,15 +425,24 @@ export class BannerSlide {
         }
       }, [
         __h('InkWell', {
-            "event": this.__bind("open")
+            "onTap": this.__bind("open"),
+            "borderRadius": {
+              "radius": 14.0
+            }
           }, [
             __h('ClipRRect', {
-                "child": __h('Stack', {
+                "borderRadius": {
+                  "radius": 14.0
+                }
+              }, [
+                __h('Stack', {
                     "fit": "expand"
                   }, [
                     __h('Image', {
-                        "source": this.banner.img,
-                        "fit": "cover"
+                        "fit": "cover",
+                        "$pos": [
+                          this.banner.img
+                        ]
                       }),
                     __h('Container', {
                         "decoration": {
@@ -408,27 +466,31 @@ export class BannerSlide {
                             "crossAxisAlignment": "start"
                           }, [
                             __h('Text', {
-                                "data": this.banner.title,
                                 "style": {
                                   "color": '#ffffffff',
                                   "fontSize": 17,
                                   "fontWeight": "w700"
-                                }
+                                },
+                                "$pos": [
+                                  this.banner.title
+                                ]
                               }),
                             __h('SizedBox', {
                                 "height": 4
                               }),
                             __h('Text', {
-                                "data": this.banner.sub,
                                 "style": {
                                   "color": '#e6ffffff',
                                   "fontSize": 12
-                                }
+                                },
+                                "$pos": [
+                                  this.banner.sub
+                                ]
                               })
                           ])
                       ])
                   ])
-              })
+              ])
           ])
       ]);
   }
@@ -447,26 +509,30 @@ export class GridCell {
   }
   build(context) {
     return __h('InkWell', {
-        "event": this.__bind("open")
+        "onTap": this.__bind("open")
       }, [
         __h('Column', {
             "mainAxisAlignment": "center"
           }, [
             __h('Text', {
-                "data": this.entry.emoji,
                 "style": {
                   "fontSize": 22
-                }
+                },
+                "$pos": [
+                  this.entry.emoji
+                ]
               }),
             __h('SizedBox', {
                 "height": 6
               }),
             __h('Text', {
-                "data": this.entry.title,
                 "style": {
                   "fontSize": 12,
                   "color": '#ff4d5462'
-                }
+                },
+                "$pos": [
+                  this.entry.title
+                ]
               })
           ])
       ]);
@@ -486,7 +552,10 @@ export class SpotCard {
   }
   build(context) {
     return __h('InkWell', {
-        "event": this.__bind("open")
+        "onTap": this.__bind("open"),
+        "borderRadius": {
+          "radius": 14.0
+        }
       }, [
         __h('Container', {
             "decoration": {
@@ -507,8 +576,10 @@ export class SpotCard {
                         "fit": "expand"
                       }, [
                         __h('Image', {
-                            "source": this.spot.img,
-                            "fit": "cover"
+                            "fit": "cover",
+                            "$pos": [
+                              this.spot.img
+                            ]
                           }),
                         __h('Positioned', {
                             "left": 8,
@@ -529,12 +600,14 @@ export class SpotCard {
                                 }
                               }, [
                                 __h('Text', {
-                                    "data": this.spot.tag,
                                     "style": {
                                       "color": '#ffffffff',
                                       "fontSize": 10,
                                       "fontWeight": "w600"
-                                    }
+                                    },
+                                    "$pos": [
+                                      this.spot.tag
+                                    ]
                                   })
                               ])
                           ])
@@ -552,54 +625,64 @@ export class SpotCard {
                         "crossAxisAlignment": "start"
                       }, [
                         __h('Text', {
-                            "data": this.spot.title,
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "w600",
                               "color": '#ff1f2430'
                             },
-                            "maxLines": 1,
-                            "overflow": "ellipsis"
+                            "$pos": [
+                              this.spot.title
+                            ]
                           }),
                         __h('SizedBox', {
                             "height": 4
                           }),
                         __h('Text', {
-                            "data": this.spot.sub,
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
                             "style": {
                               "fontSize": 11,
                               "color": '#ff8a909e'
                             },
-                            "maxLines": 1,
-                            "overflow": "ellipsis"
+                            "$pos": [
+                              this.spot.sub
+                            ]
                           }),
                         __h('SizedBox', {
                             "height": 8
                           }),
                         __h('Row', {}, [
                             __h('Text', {
-                                "data": "¥",
                                 "style": {
                                   "fontSize": 11,
                                   "color": '#ffff5a36',
                                   "fontWeight": "w700"
-                                }
+                                },
+                                "$pos": [
+                                  "¥"
+                                ]
                               }),
                             __h('Text', {
-                                "data": this.spot.price,
                                 "style": {
                                   "fontSize": 17,
                                   "color": '#ffff5a36',
                                   "fontWeight": "w700"
-                                }
+                                },
+                                "$pos": [
+                                  this.spot.price
+                                ]
                               }),
                             __h('Spacer', {}),
                             __h('Text', {
-                                "data": this.spot.sold,
                                 "style": {
                                   "fontSize": 10,
                                   "color": '#ff9aa0ac'
-                                }
+                                },
+                                "$pos": [
+                                  this.spot.sold
+                                ]
                               })
                           ])
                       ])
@@ -623,18 +706,27 @@ export class PromoCard {
   }
   build(context) {
     return __h('InkWell', {
-        "event": this.__bind("open")
+        "onTap": this.__bind("open"),
+        "borderRadius": {
+          "radius": 14.0
+        }
       }, [
         __h('SizedBox', {
             "height": 96
           }, [
             __h('ClipRRect', {
-                "child": __h('Stack', {
+                "borderRadius": {
+                  "radius": 14.0
+                }
+              }, [
+                __h('Stack', {
                     "fit": "expand"
                   }, [
                     __h('Image', {
-                        "source": this.img,
-                        "fit": "cover"
+                        "fit": "cover",
+                        "$pos": [
+                          this.img
+                        ]
                       }),
                     __h('Positioned', {
                         "left": 16,
@@ -644,12 +736,14 @@ export class PromoCard {
                             "crossAxisAlignment": "start"
                           }, [
                             __h('Text', {
-                                "data": "热气球季 · 限时特惠",
                                 "style": {
                                   "color": '#ffffffff',
                                   "fontSize": 16,
                                   "fontWeight": "w700"
-                                }
+                                },
+                                "$pos": [
+                                  "热气球季 · 限时特惠"
+                                ]
                               }),
                             __h('SizedBox', {
                                 "height": 6
@@ -669,18 +763,20 @@ export class PromoCard {
                                 }
                               }, [
                                 __h('Text', {
-                                    "data": "立即查看 >",
                                     "style": {
                                       "fontSize": 11,
                                       "color": '#ff0e7afb',
                                       "fontWeight": "w600"
-                                    }
+                                    },
+                                    "$pos": [
+                                      "立即查看 >"
+                                    ]
                                   })
                               ])
                           ])
                       ])
                   ])
-              })
+              ])
           ])
       ]);
   }

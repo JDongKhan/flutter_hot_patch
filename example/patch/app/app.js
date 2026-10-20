@@ -35,6 +35,11 @@ export class AppSubContent {
   }
   build(context) {
     return __h('Scaffold', {
+        "backgroundColor": __h('Color', {
+            "$pos": [
+              4294243831
+            ]
+          }),
         "body": __h('TabBarView', {
             "controller": this._tab,
             "physics": "NeverScrollableScrollPhysics"
@@ -44,38 +49,58 @@ export class AppSubContent {
             __h(OrdersPage, {}),
             __h(MinePage, {})
           ]),
-        "backgroundColor": '#fff4f5f7',
         "bottomNavigationBar": __h('BottomNavigationBar', {
             "currentIndex": this._index,
-            "event": this.__bind("_openTab"),
-            "selectedItemColor": '#ff0e7afb',
-            "unselectedItemColor": '#ff98a0ac'
-          }, [
-            __h('BottomNavigationBarItem', {
-                "icon": __h('Icon', {
-                    "icon": "home"
-                  }),
-                "label": "首页"
+            "onTap": this.__bind("_openTab"),
+            "type": BottomNavigationBarType.fixed,
+            "backgroundColor": '#FFFFFF',
+            "selectedItemColor": __h('Color', {
+                "$pos": [
+                  4279139067
+                ]
               }),
-            __h('BottomNavigationBarItem', {
-                "icon": __h('Icon', {
-                    "icon": "article"
-                  }),
-                "label": "社区"
+            "unselectedItemColor": __h('Color', {
+                "$pos": [
+                  4288192684
+                ]
               }),
-            __h('BottomNavigationBarItem', {
-                "icon": __h('Icon', {
-                    "icon": "shopping_cart"
-                  }),
-                "label": "订单"
-              }),
-            __h('BottomNavigationBarItem', {
-                "icon": __h('Icon', {
-                    "icon": "person"
-                  }),
-                "label": "我的"
-              })
-          ])
+            "selectedFontSize": 11,
+            "unselectedFontSize": 11,
+            "items": [
+              __h('BottomNavigationBarItem', {
+                  "icon": __h('Icon', {
+                      "$pos": [
+                        "home"
+                      ]
+                    }),
+                  "label": "首页"
+                }),
+              __h('BottomNavigationBarItem', {
+                  "icon": __h('Icon', {
+                      "$pos": [
+                        "article"
+                      ]
+                    }),
+                  "label": "社区"
+                }),
+              __h('BottomNavigationBarItem', {
+                  "icon": __h('Icon', {
+                      "$pos": [
+                        "shopping_cart"
+                      ]
+                    }),
+                  "label": "订单"
+                }),
+              __h('BottomNavigationBarItem', {
+                  "icon": __h('Icon', {
+                      "$pos": [
+                        "person"
+                      ]
+                    }),
+                  "label": "我的"
+                })
+            ]
+          })
       });
   }
 }

@@ -16,22 +16,26 @@ export class DashboardCard {
   build(context) {
     return __h('Column', {}, [
         __h('Text', {
-            "data": "Dashboard (JS)",
             "style": {
               "fontSize": 22,
               "fontWeight": "w600"
-            }
+            },
+            "$pos": [
+              "Dashboard (JS)"
+            ]
           }),
         __h('Text', {
-            "data": "ticks = " + this._ticks
+            "$pos": [
+              "ticks = " + this._ticks
+            ]
           }),
         __h(BannerCard, {}),
         __h('SizedBox', {
             "height": 12
           }),
-        __h("_LabeledDivider", {
+        __h('_LabeledDivider', {
             "text": "private widget"
-          }, null),
+          }),
         __h('SizedBox', {
             "height": 8
           }),
@@ -41,15 +45,19 @@ export class DashboardCard {
         __h('SizedBox', {
             "height": 12
           }),
-        __h('Button', {
-            "kind": "elevated",
-            "label": "Tick",
-            "event": this.__bind("tick"),
+        __h('ElevatedButton', {
+            "onPressed": this.__bind("tick"),
             "style": {
               "backgroundColor": '#FF9800',
               "foregroundColor": '#FFFFFF'
             }
-          })
+          }, [
+            __h('Text', {
+                "$pos": [
+                  "Tick"
+                ]
+              })
+          ])
       ]);
   }
 }
@@ -64,11 +72,13 @@ export class LabeledDivider {
   }
   build(context) {
     return __h('Text', {
-        "data": "★ " + this.text + " ★",
         "style": {
           "fontSize": 12,
           "color": '#607D8B'
-        }
+        },
+        "$pos": [
+          "★ " + this.text + " ★"
+        ]
       });
   }
 }

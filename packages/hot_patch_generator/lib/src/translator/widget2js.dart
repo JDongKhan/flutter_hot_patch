@@ -2,7 +2,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart' show log;
 
+import '../builders/js_widget_defs.dart';
 import 'js_translator.dart';
+import 'widget_json.dart';
 
 // ===========================================================================
 // widget2js：widget → JS（build 树的翻译与渲染）
@@ -10,18 +12,15 @@ import 'js_translator.dart';
 // widget 在 JS 端没有等价物，需专门翻译：
 //   - build 树解析：WidgetNode / WidgetTranslateContext（表达式 → 中立描述）
 //   - 中立描述 → JS：`__h(type, props, children)` 构造调用树
-//   - 策略扩展点：WidgetTranslator / WidgetTranslatorRegistry /
-//     UnregisteredWidgetTranslator（未注册 widget 兜底）
+//   - 统一翻译入口：widget_json.dart（widgetToJson）+ value_forms.dart（autoValue）
 //   - 静态单例引用：SingletonResolver
 // [WidgetTranslateContext] 实现 js_translator 的 [WidgetExprRenderer]，供
 // 「Dart 类 → JS」在方法体里渲染返回的 widget。
 //
-// 策略扩展点：新增/自定义 widget 时不动 ComponentBuilder 的核心代码。
-// 扩展一个 widget 只需要两步：
-//   1. 实现 WidgetTranslator（type + toJson）
-//   2. 注册：registry.register(MyTranslator())
-// 核心代码（注解解析、状态/动作提取、产物组装）只与
-// WidgetTranslateContext / WidgetTranslatorRegistry 交互。
+// 扩展方式：**没有** per-widget 的翻译类。任意 widget（内建 / 自定义 / 三方）
+// 都走同一条路径——按**通用参数名**（child / children / slivers / tabs / on* /
+// delegate）与**值的形态**（字面量 / 构造 / 静态工厂 / 常量引用 / 列表 / 闭包）
+// 分派，接入新组件零实现。
 // ===========================================================================
 
 /// 一个 widget 构造节点的中立表示（build() 树解析的中间产物）。
@@ -56,7 +55,6 @@ class WidgetNode {
 /// translator 通过 [translate] 递归子节点、通过 [renderJs] 递归渲染子节点，
 /// 通过 [jsDataExpr]/[eventOf]/[propOf] 等 helper 解析参数。
 class WidgetTranslateContext implements WidgetExprRenderer {
-  final WidgetTranslatorRegistry registry;
   final Map<String, String> propByField;
   final Map<String, String> actionByMethod;
   final String sourcePath;
@@ -126,7 +124,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   final List<String> builderPreludes = [];
 
   WidgetTranslateContext({
-    required this.registry,
     required this.propByField,
     required this.actionByMethod,
     required this.sourcePath,
@@ -157,7 +154,10 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   bool usesJsClass(String type, Map<String, dynamic>? props) {
     if (!jsClassWidgets.contains(type)) return false;
     if (!delegateClassWidgets.contains(type)) return true;
-    return props != null && props.containsKey('builder');
+    // builder 形态：参数名按通用约定（`builder` / `itemBuilder` /
+    // `separatorBuilder` … 即以 Builder 结尾）。
+    return props != null &&
+        props.keys.any((k) => k == 'builder' || k.endsWith('Builder'));
   }
 
   /// 记录一个被兜底为「保留具体类型名结点」的自定义组件名。
@@ -206,43 +206,24 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     // 静态工厂的 receiver 是类名，必然命中；实例方法/字段的 receiver 不会命中。
     final (ctor, _) = ctorOf(e);
     if (ctor == null) return _exprAsElement(e);
-    final translator = registry.lookup(ctor);
-    if (translator != null) {
-      final node = _toNode(e);
-      final json = translator.toJson(node, this);
-      // `key:` 是**跨所有 widget 的通用参数**（Key 是值不是结点），各 translator
-      // 不单独处理；此处统一注入 props['key']（见 [_applyKeyProp]）。
-      _applyKeyProp(json, node);
-      return json;
+    // 组件构造的构造名是**类名**（`Image.network(...)` / `Transform.translate(...)`
+    // 这类命名构造与静态工厂都归一到类名）；实例方法调用（`_model.build()`、
+    // `context.read<T>()`）与命中动作表的裸调用都是普通表达式。判据只看名字
+    // 形态，与 widget 类型无关。
+    if (e is MethodInvocation) {
+      if (actionByMethod.containsKey(ctor)) return _exprAsElement(e);
+      if (!_isClassName(ctor)) return _exprAsElement(e);
     }
-    // 未注册：带 receiver 的调用是实例方法（类构造的静态工厂已被 translator 命中）。
-    if (e is MethodInvocation && e.target != null) return _exprAsElement(e);
-    // 无 receiver 的裸调用：本组件自己的实例方法（`_buildText()` 返回 widget）
-    // 按 JS 方法调用翻译（`this._buildText()`），与 build 同一条路径。
-    if (e is MethodInvocation && actionByMethod.containsKey(ctor)) {
-      return _exprAsElement(e);
-    }
-    // 未注册的类构造：兜底翻译（需注册 fallback = UnregisteredWidgetTranslator），
-    // **保留具体类型名**做元素 type（不降级成统一的 'Component'）。这样之后为它
-    // 补上 translator / 宿主 builder 时，同一份产物无需重新生成、协议不变。
-    final fb = registry.fallback;
-    if (fb != null && _isUpperCamel(ctor)) {
-      collectDependency(ctor);
-      final node = _toNode(e);
-      final json = fb.toJson(node, this);
-      // 兜底组件结点同样要带上 `key:`（元素级参数，见 [_applyKeyProp]）：
-      // 渲染成 `__h(X, {…, key})` / `__h("X", {…, key})`——两条路径的 key 都
-      // 落在元素 props 上。
-      _applyKeyProp(json, node);
-      return json;
-    }
-    // 无 receiver 的裸调用仍未命中：也按普通 JS 表达式翻译（返回 widget 的
-    // 实例方法，只是不在动作表里）。
-    if (e is MethodInvocation) return _exprAsElement(e);
-    throw FormatException(
-        'hot_patch_generator: 不支持的组件 "$ctor"，'
-        '请实现并注册对应的 WidgetTranslator（当前已注册: '
-        '${registry.registeredTypes.join('/')}）');
+    // 统一翻译：任意构造 → 结点（不查注册表、不区分内建/自定义）。未识别的
+    // 自定义与三方组件同样产出「保留具体类型名」的结点，运行时按需原生注入
+    // （registerNativeComponent）或给出可见占位。
+    collectDependency(ctor);
+    final node = _toNode(e);
+    final json = widgetToJson(node, this);
+    // `key:` 是跨所有 widget 的通用参数（Key 是值不是结点），此处统一注入
+    // props['key']（见 [_applyKeyProp]）。
+    _applyKeyProp(json, node);
+    return json;
   }
 
   /// widget 位置上的「非构造表达式」→ JS 表达式字符串（运行时求值即元素）：
@@ -530,8 +511,17 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   final Map<String, String> _localModels = {};
   void addLocalModel(String name, String modelType) => _localModels[name] = modelType;
 
-  static bool _isUpperCamel(String name) =>
-      name.isNotEmpty && name[0] == name[0].toUpperCase();
+  /// 名字是否形如**类名**：跳过前导下划线后首字母大写。
+  ///
+  /// `Image` / `_OrderCard`（私有组件类）是类名；`_model` / `context` / `build`
+  /// 是实例成员。用于区分「组件构造」与「实例方法调用」，与 widget 类型无关。
+  static bool _isClassName(String name) {
+    var n = name;
+    while (n.startsWith('_')) {
+      n = n.substring(1);
+    }
+    return n.isNotEmpty && n[0] == n[0].toUpperCase();
+  }
 
   /// 渲染一个已翻译的中立节点为统一元素构造 `__h(type, props, children)`。
   ///
@@ -557,27 +547,20 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     }
     usedNodeHelper = true; // 渲染元素 → 产物必须 import 结点工厂 __h
     final type = _semanticType(json['type']);
-    final translator = registry.lookupJson(type);
-    if (translator == null) {
-      // 未注册类型（第三方 / 自定义 widget）：**保留具体类型名**，不降级成统一
-      // 的 'Component' —— 这样之后为它补上 translator（编译期）或宿主 builder
-      // （运行期）时，同一份产物无需重新生成、协议不变。
-      //   - 该名字有 JS 产物（importResolver 命中，如 @PatchEntry 嵌套组件 / 同
-      //     文件私有组件）→ 类引用元素 `__h(X, {...})`，运行时递归挂载 JS 组件；
-      //   - 无产物（无注解的 lib 普通 widget / @PatchIgnore）→ `__h("X", {...})`，
-      //     运行时 JsWidgetRegistry 未命中 → 默认 builder（宿主
-      //     registerNativeComponent 注入的原生实现，否则给出可见占位）。
-      final props = _propsWithKey(json['props'], json['key']);
-      final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
-      if (importResolver?.call(type) != null) return '__h($type, $propsJs)';
-      return '__h("$type", $propsJs, null)';
-    }
     final props = json['props'];
-    // 元素 type 用类引用（有 JS 逻辑）还是类型名字符串（宿主 widget）：前者
-    // 需要 import 该类的 widget 模块，后者是字符串字面量、零 import。
-    final asClass = usesJsClass(type, props is Map<String, dynamic> ? props : null);
-    if (asClass) {
-      (usedWidgetPackages[translator.packageName] ??= <String>{}).add(type);
+    final propsMap = props is Map<String, dynamic> ? props : null;
+    // 元素 type 用**类引用**还是**类型名字符串**：
+    //   - 该类型有 JS 产物（importResolver 命中：@PatchEntry 嵌套组件、同文件
+    //     私有组件）→ 类引用 `__h(X, …)`，运行时递归挂载 JS 组件；
+    //   - 该类型在 JS 侧有类（[jsClassWidgetTypes] 的逻辑组件 / sliver builder
+    //     代理，且确实带 builder 形态）→ 类引用，并登记其 package 模块以便 import；
+    //   - 其余（宿主 widget 与无产物的自定义组件）→ 字符串类型名 `__h("X", …)`，
+    //     运行时注册表未命中则走默认 builder（宿主 registerNativeComponent 注入的
+    //     原生实现，否则给出可见占位）。
+    final productType = importResolver?.call(type);
+    final asClass = productType != null || usesJsClass(type, propsMap);
+    if (productType == null && asClass) {
+      (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
     }
     return _renderCall(type, json, depth, asClass: asClass);
   }
@@ -646,8 +629,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 归一为 target 名（'Image'），与注册表 {Image: ImageTranslator} 匹配。
   (String?, List<Expression>) ctorOf(Expression e) {
     if (e is InstanceCreationExpression) {
+      // 带 `const` 的命名构造（`const EdgeInsets.all(8)`）在 AST 里把
+      // `EdgeInsets.all` **整体**放进 `constructorName.type`，`name2` 只取最后
+      // 一段（'all'）。这里取**类型名**：从右往左取第一个类名形态的段
+      // （`EdgeInsets.all` → 'EdgeInsets'；`material.Padding` → 'Padding'）。
       return (
-        e.constructorName.type.name2.lexeme,
+        _typeNameOf(e.constructorName.type.toSource()),
         e.argumentList.arguments.toList(),
       );
     }
@@ -659,6 +646,23 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       return (e.methodName.name, e.argumentList.arguments.toList());
     }
     return (null, const []);
+  }
+
+  /// 构造名源码 → **类型名**：`EdgeInsets.all` → 'EdgeInsets'；
+  /// `material.Padding` → 'Padding'；`Padding` → 'Padding'。
+  static String _typeNameOf(String ctorSource) {
+    final parts = ctorSource.split('.');
+    for (var i = parts.length - 1; i >= 0; i--) {
+      final seg = _stripGenerics(parts[i]);
+      if (_isClassName(seg)) return seg;
+    }
+    return _stripGenerics(parts.last);
+  }
+
+  /// 去掉类型实参：`ChangeNotifierProvider<NetworkVm>` → 'ChangeNotifierProvider'。
+  static String _stripGenerics(String s) {
+    final lt = s.indexOf('<');
+    return lt >= 0 ? s.substring(0, lt) : s;
   }
 
   Expression? namedArg(List<Expression> args, String name) {
@@ -1181,170 +1185,6 @@ void _warnDegrade(String what, String source, Object err) {
   // ignore: avoid_print - 构建期日志
   print('[hot_patch_generator] $what 无法翻译，已降级为占位结点：'
       '$source（$err）');
-}
-
-/// ===========================================================================
-/// 策略抽象类：一个 widget 类型族的「widget → JSON 描述」
-///
-/// - [types]：处理的源码 widget 构造名（如 {'Text'} 或 {'Column','Row'}）
-/// - [jsonTypes]：产物 JSON 里的节点 type 名（默认与 [types] 相同；
-///   如 ElevatedButton 的产物节点叫 'Button' 时覆写）
-/// - [toJson]：AST 节点 → 中立 JSON 描述（渲染层据此输出 JS 构造调用）
-/// ===========================================================================
-abstract class WidgetTranslator {
-  const WidgetTranslator();
-
-  /// 本 translator 对应的**单一**源码 widget 构造名（如 'Text' / 'Column'）。
-  /// 一个 type 一个实现；共用逻辑用继承（基类 + 子类覆写 type）。
-  String get type;
-
-  /// 本 translator 产物 JSON 中使用的节点 type 名集合（默认与 [type] 相同；
-  /// 如三种按钮产物统一叫 'Button'）。
-  Set<String> get jsonTypes => {type};
-
-  /// 该 widget 所属的「包」（决定生成器把 JS widget 模块放到哪个目录）。
-  /// 默认 'flutter'（Flutter SDK / material / widgets）；三方包覆写，
-  /// 如 provider 包的 ChangeNotifierProvider → 'provider'。
-  String get packageName => 'flutter';
-
-  /// 把 [node] 翻译成 JSON 描述（type/props/children）。
-  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx);
-}
-
-/// ===========================================================================
-/// 管理类：注册 / 分发 translator
-///
-/// ComponentBuilder 持有一个 registry；运行时按 widget 构造名查 translator。
-/// 扩展新 widget = 写一个 WidgetTranslator 并 register，核心代码零改动。
-/// ===========================================================================
-class WidgetTranslatorRegistry {
-  /// 源码构造名 → translator（Map 直查，O(1)；组件几千个也不退化）。
-  final Map<String, WidgetTranslator> _translators = {};
-
-  /// 产物 JSON 节点 type → translator（renderJs 分发用，同样 O(1)）。
-  final Map<String, WidgetTranslator> _jsonIndex = {};
-
-  /// 兜底 translator（如 UnregisteredWidgetTranslator）：lookup 未命中时由
-  /// WidgetTranslateContext.translate 显式判定后使用（仅 UpperCamel 组件）。
-  WidgetTranslator? _fallback;
-
-  /// 注册一个 translator（同 type 覆盖旧的，后注册者优先）。
-  void register(WidgetTranslator translator) {
-    _translators[translator.type] = translator;
-    for (final jsonType in translator.jsonTypes) {
-      _jsonIndex[jsonType] = translator;
-    }
-  }
-
-  /// 设置兜底 translator（未注册的自定义/第三方组件 → 保留具体类型名的通用结点）。
-  void registerFallback(WidgetTranslator translator) {
-    _fallback = translator;
-  }
-
-  /// 兜底 translator。
-  WidgetTranslator? get fallback => _fallback;
-
-  /// 按源码 widget 构造名查找 translator；未注册返回 null。
-  WidgetTranslator? lookup(String type) => _translators[type];
-
-  /// 按产物 JSON 节点 type 查找 translator；未注册返回 null。
-  WidgetTranslator? lookupJson(String type) => _jsonIndex[type];
-
-  /// 当前已注册的源码类型集合（用于报错信息）。
-  Set<String> get registeredTypes => _translators.keys.toSet();
-}
-
-
-/// 未注册 widget 的兜底翻译：build 树里出现没有 translator 的自定义/第三方
-/// widget 时，产出**保留其具体构造名**作元素 type 的通用结点
-/// （`{ type: <构造名>, props: <构造实参> }`）。
-///
-/// **为什么保留具体类型名（而不是统一成 'Component'）**：类型识别是「逐步补齐」
-/// 的——今天不认识的 widget，明天可能补上 translator（编译期）或宿主 builder
-/// （运行期）。若产物固定写成 'Component' 占位，补齐后必须重新生成全部产物、
-/// 且协议断裂；保留真实类型名后，补齐只影响宿主/生成器两侧的实现，**同一份产物
-/// 无需重出**（见 [WidgetTranslateContext.renderJs] 的未注册分支与运行时的
-/// `JsWidgetRegistry` 默认 builder）。
-///
-/// 有 JS 产物的组件（@PatchEntry 嵌套组件 / 同文件私有组件）渲染成类引用元素
-/// `__h(X, {...})`（自动 import 其产物）；无产物的（无注解的 lib 普通 widget /
-/// @PatchIgnore）渲染成 `__h("X", {...})`，运行时 lookup 未命中 → 默认 builder
-/// （宿主 `registerNativeComponent` 注入的原生实现，否则可见占位）。
-///
-/// 构造实参**按 Dart 形参名原样保留**（不做归一化重命名）——这样后续为其注册
-/// 宿主 builder 时，builder 直接按原始参数名读取即可，产物协议保持不变。
-class UnregisteredWidgetTranslator extends WidgetTranslator {
-  const UnregisteredWidgetTranslator();
-
-  /// 兜底 translator 不参与 Map 注册（[WidgetTranslatorRegistry.registerFallback]
-  /// 持有），type 取哨兵值仅满足抽象约束——真实元素 type 由 [toJson] 逐结点填入。
-  @override
-  String get type => 'UnregisteredWidget';
-
-  @override
-  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    // 构造参数 → 值契约（叶子值一律为 JS 表达式字符串）：字面量经 jsDataExpr
-    // 得到带引号的字符串/数字/布尔，运行时 jsonEncode 即得原值。
-    //
-    // 非字面量参数（`BannerSlide(banner: banners[i])` / `SpotCard(spot: spots[index])`）
-    // 同样要翻译成 JS 表达式（`this.banners[i]`）——否则列表里的嵌套组件参数会被
-    // 整批丢掉，退化成 `__h(X, {})`（子组件拿不到数据）。
-    final args = <String, dynamic>{};
-    for (final entry in node.namedArgs.entries) {
-      // `children: [...]`（自定义组件的子结点列表，如 `_BottomBar(children: [...])`）：
-      // 整表按元素翻译成 JS 数组（`args.children`），生成类构造函数正是读
-      // `args.children`（见 class_translator 的字段契约）——与 `children: someList`
-      // 的 spread 形态在运行时等价。逐项走 [translateElement]，if/for/spread 照常展开。
-      if (entry.key == 'children' && entry.value is ListLiteral) {
-        args['children'] = [
-          for (final c in (entry.value as ListLiteral).elements)
-            ctx.translateElement(c),
-        ];
-        continue;
-      }
-      // `key:` 由 [WidgetTranslateContext._applyKeyProp] 统一提到元素 props.key
-      // （Key 是元素级参数，不是组件构造实参），此处跳过避免重复下发。
-      if (entry.key == 'key') continue;
-      final js = _argJs(entry.value, ctx);
-      if (js != null) args[entry.key] = js;
-    }
-    // 元素 type = 具体构造名（jsString 产出带引号的 JS 字符串字面量，由渲染层
-    // 剥引号后作为元素 type 使用）。
-    return {
-      'type': ctx.jsString(node.type),
-      'props': args,
-    };
-  }
-
-  /// 构造实参 → JS 表达式（null = 该参数丢弃）。
-  ///
-  /// 一律走组件侧数据表达式翻译（与文本插值/事件参数同一套语法支持）：
-  /// 字面量、字段引用、下标、循环变量、局部变量、三目都能落成 JS 表达式。
-  /// 翻译不了的参数出声提示（不静默丢），并跳过该参数。
-  static Object? _argJs(Expression e, WidgetTranslateContext ctx) {
-    if (e is NullLiteral) return null;
-    // 函数形态实参（`onTap: () => ...` / `onReset: _resetFilter` / `onTap: onTap`）：
-    // 先按函数值翻译，避免被当成普通数据表达式（tear-off 会丢 this）。
-    final fn = ctx.functionJs(e);
-    if (fn != null) return fn;
-    try {
-      return ctx.jsDataExpr(e);
-    } catch (_) {
-      // 非数据形态：还可能是**元素**（`trailing: Icon(...)` / `child: Column(...)`）
-      // ——按结点翻译，渲染层产出元素构造，运行时子组件按元素使用。
-      try {
-        return ctx.translate(e);
-      } catch (_) {}
-      // 组件参数只接受「数据 / 函数 / 元素」三种形态。其余（如原生宿主对象）
-      // 在 JS 侧没有等价物，属**预期内**的跳过，不是产物错误——因此不透出
-      // 底层异常细节。
-      // ignore: avoid_print - 构建期提示
-      print('[hot_patch_generator] 组件参数 ${e.toSource()} 不是数据表达式，'
-          '已跳过（JS 侧无法传递方法/函数引用）；'
-          '如需该行为请用 registerNativeComponent 注册原生实现');
-      return null;
-    }
-  }
 }
 
 /// 跨文件「静态单例类」解析器（如 theme/panel_colors.dart 的 MyColors）。

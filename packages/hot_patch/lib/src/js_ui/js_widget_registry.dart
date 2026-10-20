@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../json/flutter_from_json.dart';
 import '../utils/hot_patch_log.dart';
+import 'capabilities/js_ui_capabilities.dart';
 
 /// 不需要动宿主；只有引入 Flutter 侧不存在的**视觉** widget 才注册一条。
 class JsRenderContext {
@@ -125,6 +126,124 @@ class JsRenderContext {
     final v = props[key];
     return v is Map ? v.cast<String, dynamic>() : null;
   }
+
+  // ---------------------------------------------------------------------------
+  // 新产物：位置实参（`$pos`）与 props 里的元素描述
+  // ---------------------------------------------------------------------------
+
+  /// 位置实参：`props['$pos']` 是 JS 数组（按声明顺序）。
+  /// 如 `Text('你好')` → `$pos: ['你好']`、`Icon(Icons.star)` → `$pos: ['star']`。
+  dynamic pos(int i) {
+    final list = props[r'$pos'];
+    if (list is List && i < list.length) return list[i];
+    return null;
+  }
+
+  /// 位置实参转字符串（缺省空串），供 Text/Image 这类首个位置实参是字符串的组件。
+  String posText([int i = 0]) => '${pos(i) ?? ''}';
+
+  /// props 里的值可能是**元素描述的具名实参**（`{type, props, children}`）。
+  /// 生成器把 `ButtonStyle(...)`/`InputDecoration(...)` 这类「构造形态的值」
+  /// 也译成了元素结点，此处取它的内层 props。
+  Map<String, dynamic>? elementProps(Object? raw) {
+    if (raw is! Map) return null;
+    final inner = raw['props'];
+    if (raw['type'] != null && inner is Map) {
+      return inner.cast<String, dynamic>();
+    }
+    return raw.cast<String, dynamic>();
+  }
+
+  /// 样式 map：值可能是 JSON map（`TextStyle(...)`），也可能是元素结点
+  /// （`ElevatedButton.styleFrom(...)` 被当成构造 → `{type, props}`）——后者取内层 props。
+  Map<String, dynamic>? styleMap(String key) => elementProps(props[key]);
+
+  /// 单个元素描述（props 里值为 element 的键，或数组里的一项）→ widget。
+  Widget? element(Object? raw) => buildJsElement(raw, invoke);
+
+  /// 元素描述数组（`AppBar.actions` / `BottomNavigationBar.items` /
+  /// `MultiProvider.providers` 等）→ widget 列表（空项跳过）。
+  List<Widget> elementList(Object? raw) {
+    if (raw is! List) return const [];
+    final out = <Widget>[];
+    for (final e in raw) {
+      final w = buildJsElement(e, invoke);
+      if (w != null) out.add(w);
+    }
+    return out;
+  }
+}
+
+/// 把产物里的**元素描述**（`{type, props, children}`）渲染成 widget。
+///
+/// 用途：props 里的元素**数组**（`AppBar.actions` / `BottomNavigationBar.items`
+/// / `DropdownButton.items`）——JS 侧只把「单个 element prop」挂成 propChild
+/// （见 mini_react 的 mountPropChildren），数组项需宿主自行递归渲染。
+Widget? buildJsElement(
+  Object? raw,
+  void Function(Object? handler, [List<Object?> args]) invoke,
+) {
+  if (raw is! Map) return null;
+  final type = raw['type'];
+  if (type is! String || type.isEmpty) return null;
+  final props = raw['props'] is Map
+      ? (raw['props'] as Map).cast<String, dynamic>()
+      : <String, dynamic>{};
+  final rawChildren =
+      raw['children'] is List ? raw['children'] as List : const <Object?>[];
+
+  final children = <Widget>[];
+  final childTypes = <String>[];
+  final childContexts = <JsRenderContext>[];
+  for (final ch in rawChildren) {
+    children.add(buildJsElement(ch, invoke) ?? const SizedBox.shrink());
+    childTypes.add(ch is Map ? '${ch['type']}' : '');
+    childContexts.add(_descriptorContext(ch, invoke));
+  }
+
+  final propChildren = <String, Widget>{};
+  for (final e in props.entries) {
+    final w = buildJsElement(e.value, invoke);
+    if (w != null) propChildren[e.key] = w;
+  }
+
+  final builder = jsWidgetRegistry.lookup(type) ?? jsWidgetRegistry.fallback;
+  if (builder == null) return buildMissingJsWidget(type, children);
+  return builder(JsRenderContext(
+    type: type,
+    props: props,
+    children: children,
+    childTypes: childTypes,
+    childContexts: childContexts,
+    propChildren: propChildren,
+    invoke: invoke,
+  ));
+}
+
+/// 元素描述 → 仅含数据（type/props/propChildren）的上下文：供
+/// `BottomNavigationBarItem` / `DropdownMenuItem` 这类**非 Widget 数据载体**
+/// 子结点由父 renderer 直接读数据组装。
+JsRenderContext _descriptorContext(
+  Object? raw,
+  void Function(Object? handler, [List<Object?> args]) invoke,
+) {
+  final props = raw is Map && raw['props'] is Map
+      ? (raw['props'] as Map).cast<String, dynamic>()
+      : <String, dynamic>{};
+  final propChildren = <String, Widget>{};
+  for (final e in props.entries) {
+    final w = buildJsElement(e.value, invoke);
+    if (w != null) propChildren[e.key] = w;
+  }
+  return JsRenderContext(
+    type: raw is Map ? '${raw['type']}' : '',
+    props: props,
+    children: const [],
+    childTypes: const [],
+    childContexts: const [],
+    propChildren: propChildren,
+    invoke: invoke,
+  );
 }
 
 // ===== 全局原生组件注入表 =====
@@ -189,9 +308,17 @@ class JsWidgetRegistry {
 
   JsWidgetBuilder? get fallback => _fallback;
 
-  bool has(String type) => _builders.containsKey(type);
+  bool has(String type) => lookup(type) != null;
 
-  JsWidgetBuilder? lookup(String type) => _builders[type];
+  /// 产物里的 type 可能带泛型实参（`ChangeNotifierProvider<NetworkVm>`）——
+  /// 按**基础类型名**查表（`<...>` 之前的段）。
+  JsWidgetBuilder? lookup(String type) =>
+      _builders[type] ?? _builders[_baseType(type)];
+
+  static String _baseType(String type) {
+    final i = type.indexOf('<');
+    return i < 0 ? type : type.substring(0, i);
+  }
 }
 
 /// 注册内置的宿主 widget 翻译。
@@ -206,7 +333,7 @@ class JsWidgetRegistry {
 ///   - Builder **不在这里**：它是无状态委托，纯 JS 逻辑，宿主零感知。
 void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('Text', (c) => Text(
-        c.str('data') ?? '',
+        c.posText(),
         style: textStyleFromJson(c.map('style')),
         textAlign: textAlignFromJson(c.props['textAlign']),
         overflow: overflowFromJson(c.props['overflow']),
@@ -326,19 +453,19 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       borderRadius:
           radius == null ? BorderRadius.zero : BorderRadius.all(Radius.circular(radius)),
       clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
-      child: c.propChild('child'),
+      child: c.child(),
     );
   });
 
   r.register('ClipOval', (c) => ClipOval(
         clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
-        child: c.propChild('child'),
+        child: c.child(),
       ));
 
   r.register('Material', (c) => Material(
         color: colorFromJson(c.props['color']),
         elevation: c.num_('elevation') ?? 0,
-        child: c.propChild('child'),
+        child: c.child(),
       ));
 
   // Transform.translate：位移（props.offset = {dx, dy}）+ child。
@@ -348,7 +475,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     final dy = (offset['dy'] as num?)?.toDouble() ?? 0;
     return Transform.translate(
       offset: Offset(dx, dy),
-      child: c.propChild('child'),
+      child: c.child(),
     );
   });
 
@@ -363,13 +490,14 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       ));
 
   r.register('Icon', (c) => Icon(
-        iconFromJson(c.props['icon']),
+        iconFromJson(c.pos(0)),
         size: c.num_('size'),
         color: colorFromJson(c.props['color']),
       ));
 
+  // `Image.network('url')` / `Image.asset('a.png')`：网址/资源名是首个位置实参。
   r.register('Image', (c) {
-    final source = c.str('source') ?? '';
+    final source = c.posText();
     final width = c.num_('width');
     final height = c.num_('height');
     final fit = boxFitFromJson(c.props['fit']);
@@ -423,9 +551,10 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
 
   r.register('Spacer', (c) => Spacer(flex: c.int_('flex') ?? 1));
 
+  // label 现在是结点（props['label']），运行时用 propChild 取。
   r.register('Chip', (c) => Chip(
-        label: Text(c.str('label') ?? '',
-            style: textStyleFromJson(c.map('labelStyle'))),
+        label: c.propChild('label') ?? const SizedBox.shrink(),
+        labelStyle: textStyleFromJson(c.map('labelStyle')),
         avatar: c.propChild('avatar'),
         deleteIcon: c.propChild('deleteIcon'),
         onDeleted: c.on('onDeleted'),
@@ -439,15 +568,14 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         elevation: c.num_('elevation'),
       ));
 
+  // title / subtitle / leading / trailing 都是结点（props 里的 element prop）。
   r.register('ListTile', (c) {
-    final title = c.str('title');
-    final subtitle = c.str('subtitle');
     return ListTile(
-      title: title == null ? null : Text(title),
-      subtitle: subtitle == null ? null : Text(subtitle),
+      title: c.propChild('title'),
+      subtitle: c.propChild('subtitle'),
       leading: c.propChild('leading'),
       trailing: c.propChild('trailing'),
-      onTap: c.on('event'),
+      onTap: c.on('onTap'),
       onLongPress: c.on('onLongPress'),
       tileColor: colorFromJson(c.props['tileColor']),
       iconColor: colorFromJson(c.props['iconColor']),
@@ -460,38 +588,38 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
+  // 四种按钮各自独立注册：type 就是构造名原样，事件键 `onPressed`，文案在
+  // children 里的 Text（不再是 label prop）。`onPressed` 缺失 = 禁用。
+  // style 值可能是 JSON map（`ButtonStyle(...)`），也可能是元素结点
+  // （`XxxButton.styleFrom(...)` 被当成构造）→ styleMap 两种情况都取。
   r.register('ElevatedButton', (c) => ElevatedButton(
         onPressed: c.on('onPressed'),
-        style: buttonStyleFromJson(c.map('style')),
+        style: buttonStyleFromJson(c.styleMap('style')),
         child: c.childOrEmpty,
       ));
 
   r.register('TextButton', (c) => TextButton(
         onPressed: c.on('onPressed'),
-        style: buttonStyleFromJson(c.map('style')),
+        style: buttonStyleFromJson(c.styleMap('style')),
         child: c.childOrEmpty,
       ));
 
-  // Button：生成器把 ElevatedButton/FilledButton/TextButton/OutlinedButton
-  // 统一译为 `{type:'Button', props:{kind, label, event}}`，event 是运行时事件
-  // 句柄（或 null 表示禁用）→ 点击经宿主把句柄 id 回传 JS 侧执行。
-  r.register('Button', (c) {
-    final style = buttonStyleFromJson(c.map('style'));
-    final label = Text(c.str('label') ?? '');
-    final onPressed = c.on('event');
-    return switch (c.str('kind')) {
-      'text' => TextButton(onPressed: onPressed, style: style, child: label),
-      'outlined' =>
-        OutlinedButton(onPressed: onPressed, style: style, child: label),
-      'filled' => FilledButton(onPressed: onPressed, style: style, child: label),
-      _ => ElevatedButton(onPressed: onPressed, style: style, child: label),
-    };
-  });
+  r.register('FilledButton', (c) => FilledButton(
+        onPressed: c.on('onPressed'),
+        style: buttonStyleFromJson(c.styleMap('style')),
+        child: c.childOrEmpty,
+      ));
+
+  r.register('OutlinedButton', (c) => OutlinedButton(
+        onPressed: c.on('onPressed'),
+        style: buttonStyleFromJson(c.styleMap('style')),
+        child: c.childOrEmpty,
+      ));
 
   r.register('InkWell', (c) {
     final radius = c.num_('borderRadius');
     return InkWell(
-      onTap: c.on('event'),
+      onTap: c.on('onTap'),
       onLongPress: c.on('onLongPress'),
       onDoubleTap: c.on('onDoubleTap'),
       borderRadius: radius == null ? null : BorderRadius.circular(radius),
@@ -504,7 +632,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register(
       'GestureDetector',
       (c) => GestureDetector(
-            onTap: c.on('event'),
+            onTap: c.on('onTap'),
             onLongPress: c.on('onLongPress'),
             onDoubleTap: c.on('onDoubleTap'),
             behavior: hitTestBehaviorFromJson(c.props['behavior']),
@@ -513,7 +641,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
 
   r.register('Switch', (c) => Switch(
         value: c.bool_('value') ?? false,
-        onChanged: c.on1<bool?>('event'),
+        onChanged: c.on1<bool?>('onChanged'),
         // 协议键仍叫 activeColor（生成器侧），Flutter 新版改名为 activeThumbColor
         activeThumbColor: colorFromJson(c.props['activeColor']),
         activeTrackColor: colorFromJson(c.props['activeTrackColor']),
@@ -524,7 +652,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('Checkbox', (c) => Checkbox(
         value: c.bool_('value'),
         tristate: c.bool_('tristate') ?? false,
-        onChanged: c.on1<bool?>('event'),
+        onChanged: c.on1<bool?>('onChanged'),
         activeColor: colorFromJson(c.props['activeColor']),
         checkColor: colorFromJson(c.props['checkColor']),
       ));
@@ -537,7 +665,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         label: c.str('label'),
         activeColor: colorFromJson(c.props['activeColor']),
         inactiveColor: colorFromJson(c.props['inactiveColor']),
-        onChanged: c.on1<double>('event'),
+        onChanged: c.on1<double>('onChanged'),
       ));
 
   // Scaffold：appBar / body / floatingActionButton / bottomNavigationBar
@@ -562,19 +690,28 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
-  // AppBar：title / leading 是「值为 element 的 prop」（propChild），
-  // actions 全部进 children（生成器把 actions 追加为子节点）。
-  r.register('AppBar', (c) => AppBar(
-        leading: c.propChild('leading'),
-        title: c.propChild('title'),
-        actions: c.children.isEmpty ? null : c.children,
-        backgroundColor: colorFromJson(c.props['backgroundColor']),
-        foregroundColor: colorFromJson(c.props['foregroundColor']),
-        elevation: c.num_('elevation'),
-        toolbarHeight: c.num_('toolbarHeight'),
-        centerTitle: c.bool_('centerTitle'),
-        titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
-      ));
+  // AppBar：title / leading / flexibleSpace 是「值为 element 的 prop」（propChild），
+  // actions 是 props 里的结点数组（不再进 children）。
+  r.register('AppBar', (c) {
+    // title / leading / flexibleSpace 是「值为 element 的 prop」（propChild）；
+    // actions 是 props 里的**元素数组**（不再是 children）→ 宿主自行渲染。
+    final actions = <Widget>[
+      ...c.elementList(c.props['actions']),
+      ...c.children,
+    ];
+    return AppBar(
+      leading: c.propChild('leading'),
+      title: c.propChild('title'),
+      flexibleSpace: c.propChild('flexibleSpace'),
+      actions: actions.isEmpty ? null : actions,
+      backgroundColor: colorFromJson(c.props['backgroundColor']),
+      foregroundColor: colorFromJson(c.props['foregroundColor']),
+      elevation: c.num_('elevation'),
+      toolbarHeight: c.num_('toolbarHeight'),
+      centerTitle: c.bool_('centerTitle'),
+      titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
+    );
+  });
 
   // ---------------------------------------------------------------------
   // 布局 / 装饰补充
@@ -642,7 +779,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
 
   r.register('IconButton', (c) => IconButton(
         icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
-        onPressed: c.on('event'),
+        onPressed: c.on('onPressed'),
         color: colorFromJson(c.props['color']),
         iconSize: c.num_('iconSize'),
         tooltip: c.str('tooltip'),
@@ -651,38 +788,40 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('FloatingActionButton', (c) => FloatingActionButton(
         // onPressed 缺省必须为 null：Flutter 默认 null = 禁用（灰色不可点）；
         // `() {}` 会变成可点但无动作，与原生语义不一致。
-        onPressed: c.on('event'),
+        onPressed: c.on('onPressed'),
         backgroundColor: colorFromJson(c.props['backgroundColor']),
         foregroundColor: colorFromJson(c.props['foregroundColor']),
         mini: c.bool_('mini') ?? false,
         tooltip: c.str('tooltip'),
         elevation: c.num_('elevation'),
-        child: c.propChild('child'),
+        child: c.child(),
       ));
 
   r.register('BottomNavigationBar', (c) {
-    // BottomNavigationBarItem 非 Widget：从 childContexts 读数据直接组装，
-    // c.children 里对应的占位结点不渲染。
+    // items 是 props 里的**元素数组**（不再是子结点）：非 Widget 数据载体
+    // BottomNavigationBarItem，宿主逐个从元素描述里读数据组装。
     final items = <BottomNavigationBarItem>[];
-    for (var i = 0; i < c.childContexts.length; i++) {
-      if (c.childTypes[i] != 'BottomNavigationBarItem') continue;
-      final item = c.childContexts[i];
+    for (final raw in c.props['items'] as List? ?? const []) {
+      final p = c.elementProps(raw);
+      if (p == null) continue;
       items.add(BottomNavigationBarItem(
-        icon: item.propChild('icon') ?? const Icon(Icons.error_outline),
-        label: item.str('label'),
+        icon: c.element(p['icon']) ?? const Icon(Icons.error_outline),
+        activeIcon: c.element(p['activeIcon']),
+        label: p['label'] == null ? null : '${p['label']}',
+        tooltip: p['tooltip'] == null ? null : '${p['tooltip']}',
       ));
     }
     return BottomNavigationBar(
       items: items,
       currentIndex: c.int_('currentIndex') ?? 0,
-      onTap: c.on1<int>('event'),
+      onTap: c.on1<int>('onTap'),
       selectedItemColor: colorFromJson(c.props['selectedItemColor']),
       unselectedItemColor: colorFromJson(c.props['unselectedItemColor']),
     );
   });
 
   // BottomNavigationBarItem 非 Widget（见 BottomNavigationBar renderer，
-  // 从 childContexts 组装）；若被单独挂载则退回显示 icon。
+  // 从 props.items 的元素描述组装）；若被单独挂载则退回显示 icon。
   r.register('BottomNavigationBarItem', (c) => _JsBottomNavItem(
         BottomNavigationBarItem(
           icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
@@ -695,34 +834,39 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
         // ignore: deprecated_member_use
         groupValue: c.props['groupValue'],
         // ignore: deprecated_member_use
-        onChanged: c.on1<dynamic>('event'),
+        onChanged: c.on1<dynamic>('onChanged'),
         activeColor: colorFromJson(c.props['activeColor']),
       ));
 
   r.register('DropdownButton', (c) {
-    // DropdownMenuItem 同上：从 childContexts 读 value/label 组装。
+    // items 是 props 里的元素数组：DropdownMenuItem 的 value 在内层 props，
+    // 展示子结点在该元素的 children 里（生成器把 child 展开为子结点）。
     final items = <DropdownMenuItem<dynamic>>[];
-    for (var i = 0; i < c.childContexts.length; i++) {
-      if (c.childTypes[i] != 'DropdownMenuItem') continue;
-      final item = c.childContexts[i];
+    for (final raw in c.props['items'] as List? ?? const []) {
+      final p = c.elementProps(raw);
+      if (p == null) continue;
+      final kids = raw is Map && raw['children'] is List
+          ? raw['children'] as List
+          : const [];
+      final child = c.element(p['child']) ??
+          (kids.isEmpty ? null : c.element(kids.first));
       items.add(DropdownMenuItem<dynamic>(
-        value: item.props['value'],
-        child: Text(item.str('label') ?? ''),
+        value: p['value'],
+        child: child ?? const SizedBox.shrink(),
       ));
     }
-    final hint = c.str('hint');
     return DropdownButton<dynamic>(
       value: c.props['value'],
       items: items,
-      onChanged: c.on1<dynamic>('event'),
-      hint: hint == null ? null : Text(hint),
+      onChanged: c.on1<dynamic>('onChanged'),
+      hint: c.propChild('hint'),
       isExpanded: c.bool_('isExpanded') ?? false,
     );
   });
 
   r.register('DropdownMenuItem', (c) => DropdownMenuItem<dynamic>(
         value: c.props['value'],
-        child: Text(c.str('label') ?? ''),
+        child: c.childOrEmpty,
       ));
 
   // 未注册类型不在**这里**注册：产物里的元素 type 始终是「具体类型名」，未命中

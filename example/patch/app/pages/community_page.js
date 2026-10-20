@@ -80,10 +80,10 @@ export class CommunityPage {
                     }
                   }, [
                     __h('Row', {}, [
-                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => _selectTab(t)" + ":" + String(t), () => { this._selectTab(t); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "data": t, "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
+                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _selectTab(t)" + ":" + String(t), () => { this._selectTab(t); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') }, "$pos": [ t ] }) ]) ]) ])]); } return out; })(),
                         __h('Spacer', {}),
                         __h('GestureDetector', {
-                            "event": this.__bind("_app_host_.invoke(\"toast\", [\"发布新动态（演示）\"])")
+                            "onTap": this.__bind("_app_host_.invoke(\"toast\", [\"发布新动态（演示）\"])")
                           }, [
                             __h('Container', {
                                 "width": 32,
@@ -94,9 +94,15 @@ export class CommunityPage {
                                 }
                               }, [
                                 __h('Icon', {
-                                    "icon": "edit",
                                     "size": 16,
-                                    "color": '#ff5c6270'
+                                    "color": __h('Color', {
+                                        "$pos": [
+                                          4284244592
+                                        ]
+                                      }),
+                                    "$pos": [
+                                      "edit"
+                                    ]
                                   })
                               ])
                           ])
@@ -118,9 +124,9 @@ export class CommunityPage {
                   "right": 12.0,
                   "bottom": 0.0
                 },
-                "builder": "_listViewBuilder0",
                 "itemCount": this._feed.resources.length,
-                "separatorBuilder": "_listViewBuilderSeparator1"
+                "separatorBuilder": "_separatorBuilder0",
+                "itemBuilder": "_itemBuilder1"
               })
           ]),
         __h('SizedBox', {
@@ -136,10 +142,10 @@ export class CommunityPage {
             }
           }, [
             __h('Row', {}, [
-                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "event": this.__bindFn("() => _selectFilter('sort', s)" + ":" + String(s), () => { this._selectFilter("sort", s); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": s, "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') } }) ]) ]) ])]); } return out; })(),
+                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _selectFilter('sort', s)" + ":" + String(s), () => { this._selectFilter("sort", s); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') }, "$pos": [ s ] }) ]) ]) ])]); } return out; })(),
                 __h('Spacer', {}),
                 __h('GestureDetector', {
-                    "event": this.__bind("_toggleFilter")
+                    "onTap": this.__bind("_toggleFilter")
                   }, [
                     __h('Container', {
                         "padding": {
@@ -157,20 +163,24 @@ export class CommunityPage {
                       }, [
                         __h('Row', {}, [
                             __h('Text', {
-                                "data": "筛选",
                                 "style": {
                                   "fontSize": 12.5,
                                   "fontWeight": "w600",
                                   "color": (this._filterOpen ? kBrand : '#ff5c6270')
-                                }
+                                },
+                                "$pos": [
+                                  "筛选"
+                                ]
                               }),
                             __h('SizedBox', {
                                 "width": 3
                               }),
                             __h('Icon', {
-                                "icon": "tune",
                                 "size": 14,
-                                "color": (this._filterOpen ? kBrand : '#ff5c6270')
+                                "color": (this._filterOpen ? kBrand : '#ff5c6270'),
+                                "$pos": [
+                                  "tune"
+                                ]
                               })
                           ])
                       ])
@@ -179,19 +189,19 @@ export class CommunityPage {
           ]),
         ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
         __h('Expanded', {}, [
-            ((this._posts == null) ? __h('Center', {}, [ __h('CircularProgressIndicator', {}) ]) : __h(_ListContent, { "resetFilter": (...__a) => this._resetFilter(...__a), "openFilter": this._filterOpen, "toggleFilter": (...__a) => this._toggleFilter(...__a), "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) }))
+            ((this._posts == null) ? __h('Center', {}, [ __h('CircularProgressIndicator', {}) ]) : __h(_ListContent, { "resetFilter": this._resetFilter, "openFilter": this._filterOpen, "toggleFilter": this._toggleFilter, "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": this.__bind("_selectFilter") }))
           ])
       ]);
   }
-  _listViewBuilder0(context, i) {
-      return __h(_ResourceCard, {
-        "resource": this._feed.resources[i],
-        "onTap": () => { return _app_host_.invoke("openResource", [this._feed.resources[i].id]); }
-      });
-  }
-  _listViewBuilderSeparator1(context, _) {
+  _separatorBuilder0(context, _) {
       return __h('SizedBox', {
         "width": 10
+      });
+  }
+  _itemBuilder1(context, i) {
+      return __h(_ResourceCard, {
+        "resource": this._feed.resources[i],
+        "onTap": this.__bind("_app_host_.invoke(\"openResource\", [this._feed.resources[i].id])")
       });
   }
 }
@@ -231,9 +241,9 @@ export class _ListContent {
               "bottom": 20.0
             }
           }, [
-            ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "data": "没有符合条件的帖子，试试放宽筛选条件", "style": { "fontSize": 13, "color": '#ff98a0ac' } }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) ])]); } return out; })())
+            ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "$pos": [ "没有符合条件的帖子，试试放宽筛选条件" ] }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": this.__bindFn("() => AppRouter.openPost(p.id)" + ":" + String(p), () => { _app_host_.invoke("openPost", [p.id]); }) }) ])]); } return out; })())
           ]),
-        ...(this.openFilter ? [__h('Positioned', { "left": 0, "top": 0, "right": 0, "bottom": 0 }, [ __h('GestureDetector', { "event": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "top": 0, "right": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
+        ...(this.openFilter ? [__h('Positioned', {}, [ __h('GestureDetector', { "onTap": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": __h('Color', { "$pos": [ 1711276032 ] }) }) ]) ]), __h('Positioned', { "left": 0, "right": 0, "top": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.__bind("this.onSelectFilter()"), "onReset": this.__bind("this.resetFilter()"), "onApply": this.__bind("this.toggleFilter()") }) ])] : [])
       ]);
   }
 }
@@ -284,27 +294,30 @@ export class _FilterPanel {
             }
           }, [
             __h('Text', {
-                "data": title,
                 "style": {
                   "fontSize": 12.5,
                   "fontWeight": "w700",
                   "color": '#ff171a21'
-                }
+                },
+                "$pos": [
+                  title
+                ]
               })
           ]),
         __h('Wrap', {
             "spacing": 8,
             "runSpacing": 8
           }, [
-            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "event": this.__bindFn("() => widget.onPick(key, v)" + ":" + String(v), () => { this.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "data": v, "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') } }) ]) ])]); } return out; })()
+            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "onTap": this.__bindFn("() => widget.onPick(key, v)" + ":" + String(v), () => { this.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') }, "$pos": [ v ] }) ]) ])]); } return out; })()
           ])
       ]);
   }
   build(context) {
     return __h('Material', {
         "color": '#FFFFFF',
-        "elevation": 8,
-        "child": __h('Padding', {
+        "elevation": 8
+      }, [
+        __h('Padding', {
             "padding": {
               "left": 16.0,
               "top": 16.0,
@@ -334,7 +347,7 @@ export class _FilterPanel {
                 __h('Row', {}, [
                     __h('Expanded', {}, [
                         __h('GestureDetector', {
-                            "event": this.__bind("this.onReset()")
+                            "onTap": this.__bind("this.onReset()")
                           }, [
                             __h('Container', {
                                 "height": 42,
@@ -347,12 +360,14 @@ export class _FilterPanel {
                                 }
                               }, [
                                 __h('Text', {
-                                    "data": "重置",
                                     "style": {
                                       "fontSize": 14,
                                       "fontWeight": "w600",
                                       "color": '#ff5c6270'
-                                    }
+                                    },
+                                    "$pos": [
+                                      "重置"
+                                    ]
                                   })
                               ])
                           ])
@@ -362,7 +377,7 @@ export class _FilterPanel {
                       }),
                     __h('Expanded', {}, [
                         __h('GestureDetector', {
-                            "event": this.__bind("this.onApply()")
+                            "onTap": this.__bind("this.onApply()")
                           }, [
                             __h('Container', {
                                 "height": 42,
@@ -375,12 +390,14 @@ export class _FilterPanel {
                                 }
                               }, [
                                 __h('Text', {
-                                    "data": "查看结果",
                                     "style": {
                                       "fontSize": 14,
                                       "fontWeight": "w600",
                                       "color": '#FFFFFF'
-                                    }
+                                    },
+                                    "$pos": [
+                                      "查看结果"
+                                    ]
                                   })
                               ])
                           ])
@@ -388,7 +405,7 @@ export class _FilterPanel {
                   ])
               ])
           ])
-      });
+      ]);
   }
 }
 
@@ -406,7 +423,7 @@ export class _PostCard {
   }
   build(context) {
     return __h('GestureDetector', {
-        "event": this.__bind("this.onTap()")
+        "onTap": this.__bind("this.onTap()")
       }, [
         __h('Container', {
             "padding": {
@@ -426,13 +443,20 @@ export class _PostCard {
                 "crossAxisAlignment": "start"
               }, [
                 __h('ClipRRect', {
-                    "child": __h('Image', {
-                        "source": this.post.img,
+                    "borderRadius": {
+                      "radius": 10.0
+                    }
+                  }, [
+                    __h('Image', {
                         "width": 92,
                         "height": 92,
-                        "fit": "cover"
+                        "fit": "cover",
+                        "errorBuilder": "_errorBuilder0",
+                        "$pos": [
+                          this.post.img
+                        ]
                       })
-                  }),
+                  ]),
                 __h('SizedBox', {
                     "width": 11
                   }),
@@ -444,27 +468,31 @@ export class _PostCard {
                             "crossAxisAlignment": "start"
                           }, [
                             __h('Text', {
-                                "data": this.post.title,
+                                "maxLines": 1,
+                                "overflow": "ellipsis",
                                 "style": {
                                   "fontSize": 14.5,
                                   "fontWeight": "w600"
                                 },
-                                "maxLines": 1,
-                                "overflow": "ellipsis"
+                                "$pos": [
+                                  this.post.title
+                                ]
                               }),
                             __h('SizedBox', {
                                 "height": 5
                               }),
                             __h('Expanded', {}, [
                                 __h('Text', {
-                                    "data": this.post.sub,
+                                    "maxLines": 2,
+                                    "overflow": "ellipsis",
                                     "style": {
                                       "fontSize": 11.5,
                                       "color": '#ff8b909a',
                                       "height": 1.5
                                     },
-                                    "maxLines": 2,
-                                    "overflow": "ellipsis"
+                                    "$pos": [
+                                      this.post.sub
+                                    ]
                                   })
                               ]),
                             __h('Row', {}, [
@@ -483,38 +511,50 @@ export class _PostCard {
                                     }
                                   }, [
                                     __h('Text', {
-                                        "data": this.post.type,
                                         "style": {
                                           "fontSize": 10,
                                           "color": '#ff5c6270'
-                                        }
+                                        },
+                                        "$pos": [
+                                          this.post.type
+                                        ]
                                       })
                                   ]),
                                 __h('SizedBox', {
                                     "width": 6
                                   }),
                                 __h('Text', {
-                                    "data": this.post.author + " · " + this.post.time,
                                     "style": {
                                       "fontSize": 10.5,
                                       "color": '#ffa3a9b4'
-                                    }
+                                    },
+                                    "$pos": [
+                                      this.post.author + " · " + this.post.time
+                                    ]
                                   }),
                                 __h('Spacer', {}),
                                 __h('Icon', {
-                                    "icon": "favorite_border",
                                     "size": 13,
-                                    "color": '#ffa3a9b4'
+                                    "color": __h('Color', {
+                                        "$pos": [
+                                          4288915892
+                                        ]
+                                      }),
+                                    "$pos": [
+                                      "favorite_border"
+                                    ]
                                   }),
                                 __h('SizedBox', {
                                     "width": 3
                                   }),
                                 __h('Text', {
-                                    "data": this._likeText(this.post.like),
                                     "style": {
                                       "fontSize": 10.5,
                                       "color": '#ffa3a9b4'
-                                    }
+                                    },
+                                    "$pos": [
+                                      this._likeText(this.post.like)
+                                    ]
                                   })
                               ])
                           ])
@@ -523,6 +563,17 @@ export class _PostCard {
               ])
           ])
       ]);
+  }
+  _errorBuilder0(context, e) {
+      return __h('Container', {
+        "width": 92,
+        "height": 92,
+        "color": __h('Color', {
+            "$pos": [
+              4293454832
+            ]
+          })
+      });
   }
 }
 
@@ -537,17 +588,17 @@ export class _ResourceCard {
   }
   build(context) {
     return __h('GestureDetector', {
-        "event": this.__bind("this.onTap()")
+        "onTap": this.__bind("this.onTap()")
       }, [
         __h('Container', {
             "width": 156,
+            "clipBehavior": "antiAlias",
             "decoration": {
               "color": '#FFFFFF',
               "borderRadius": {
                 "radius": 14.0
               }
-            },
-            "clipBehavior": "antiAlias"
+            }
           }, [
             __h('Column', {
                 "crossAxisAlignment": "start"
@@ -556,8 +607,11 @@ export class _ResourceCard {
                     "height": 68
                   }, [
                     __h('Image', {
-                        "source": this.resource.img,
-                        "fit": "cover"
+                        "fit": "cover",
+                        "errorBuilder": "_errorBuilder0",
+                        "$pos": [
+                          this.resource.img
+                        ]
                       })
                   ]),
                 __h('Padding', {
@@ -572,31 +626,45 @@ export class _ResourceCard {
                         "crossAxisAlignment": "start"
                       }, [
                         __h('Text', {
-                            "data": this.resource.title,
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
                             "style": {
                               "fontSize": 12.5,
                               "fontWeight": "w600"
                             },
-                            "maxLines": 1,
-                            "overflow": "ellipsis"
+                            "$pos": [
+                              this.resource.title
+                            ]
                           }),
                         __h('SizedBox', {
                             "height": 2
                           }),
                         __h('Text', {
-                            "data": this.resource.sub,
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
                             "style": {
                               "fontSize": 10.5,
                               "color": '#ff98a0ac'
                             },
-                            "maxLines": 1,
-                            "overflow": "ellipsis"
+                            "$pos": [
+                              this.resource.sub
+                            ]
                           })
                       ])
                   ])
               ])
           ])
       ]);
+  }
+  _errorBuilder0(context, e) {
+      return __h('Container', {
+        "height": 68,
+        "color": __h('Color', {
+            "$pos": [
+              4293454832
+            ]
+          })
+      });
   }
 }
 

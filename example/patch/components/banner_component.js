@@ -19,20 +19,28 @@ export class BannerCard {
   build(context) {
     return __h('Column', {}, [
         __h('Text', {
-            "data": "Banner from another file",
             "style": {
               "fontSize": 20,
               "color": PanelColors.background
-            }
+            },
+            "$pos": [
+              "Banner from another file"
+            ]
           }),
         __h('Text', {
-            "data": "views = " + this._views
+            "$pos": [
+              "views = " + this._views
+            ]
           }),
-        __h('Button', {
-            "kind": "elevated",
-            "label": "Bump",
-            "event": this.__bind("bump")
-          })
+        __h('ElevatedButton', {
+            "onPressed": this.__bind("bump")
+          }, [
+            __h('Text', {
+                "$pos": [
+                  "Bump"
+                ]
+              })
+          ])
       ]);
   }
 }

@@ -134,7 +134,7 @@ void registerTabWidgets(JsWidgetRegistry r) {
           unselectedLabelStyle: textStyleFromJson(c.map('unselectedLabelStyle')),
           tabAlignment: tabAlignmentFromJson(c.props['tabAlignment']),
           physics: scrollPhysicsFromJson(c.props['physics']),
-          onTap: c.on1<int>('event'),
+          onTap: c.on1<int>('onTap'),
         );
     final handle = tabControllerHandleOf(c.props['controller']);
     if (handle == null) return build(null);
@@ -143,7 +143,8 @@ void registerTabWidgets(JsWidgetRegistry r) {
 
   // Tab：child 优先，其次 icon+text，最后 text（三者至少其一，生成器已保证）。
   r.register('Tab', (c) {
-    final child = c.propChild('child');
+    // `child:` 是子结点参数 → 进 children；props 里的 child 兜底兼容。
+    final child = c.child() ?? c.propChild('child');
     if (child != null) return Tab(child: child);
     final icon = c.propChild('icon');
     final text = c.str('text');

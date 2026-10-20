@@ -107,12 +107,16 @@ SliverGridDelegate _gridDelegateFromJson(JsRenderContext c) {
   );
 }
 
+/// builder 形态的方法名：委托形态（`SliverChildBuilderDelegate(builder:)`）产出的键是
+/// `builder`；命名构造 `.builder` / `.separated` 产出的键是参数名 `itemBuilder`。
+String? _builderMethod(JsRenderContext c) => c.str('builder') ?? c.str('itemBuilder');
+
 /// sliver delegate 还原（**delegate 形态**：`SliverChildBuilderDelegate` 源写法）：
 /// 有 `childCount` → `SliverChildBuilderDelegate`（代理类已按 childCount 展开
 /// children）；否则 → `SliverChildListDelegate`。四个 sliver 组件共用。
 SliverChildDelegate _sliverDelegate(JsRenderContext c) {
   final count = c.int_('childCount');
-  if (c.str('builder') == null || count == null) {
+  if (_builderMethod(c) == null || count == null) {
     return SliverChildListDelegate(c.children);
   }
   final children = c.children;
@@ -153,7 +157,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     // `.separated`（另带 separatorBuilder）——builder 形态一律还原 Flutter
     // 原生命名构造，不用 `ListView(children: [...])` 顶替。
     final children = c.children;
-    final builder = c.str('builder');
+    final builder = _builderMethod(c);
     final separator = c.str('separatorBuilder');
 
     Widget build(ScrollController? controller) {
@@ -215,7 +219,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register('ReorderableListView', (c) {
     return ReorderableListView(
       // onReorder 非空：无句柄时给空实现，避免拖拽结束抛断言。
-      onReorder: c.on2<int, int>('event') ?? (_, _) {},
+      onReorder: c.on2<int, int>('onReorder') ?? (_, _) {},
       scrollDirection:
           axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
       padding: nullableEdgeInsets(c.map('padding')),
@@ -239,7 +243,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final shrinkWrap = c.bool_('shrinkWrap') ?? false;
     final physics = scrollPhysicsFromJson(c.props['physics']);
     final children = c.children;
-    final isBuilder = c.str('builder') != null;
+    final isBuilder = _builderMethod(c) != null;
     final itemCount = _builderCount(c, children.length);
 
     Widget build(ScrollController? controller) => isBuilder
@@ -306,7 +310,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // `SliverChildBuilderDelegate` 形态（只有 childCount）还原
   // `SliverChildBuilderDelegate`；ListDelegate 形态还原 `SliverChildListDelegate`。
   r.register('SliverList', (c) {
-    final builder = c.str('builder');
+    final builder = _builderMethod(c);
     if (builder == null) return SliverList(delegate: _sliverDelegate(c));
     final children = c.children;
     final separator = c.str('separatorBuilder');
@@ -336,7 +340,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // `.builder` 命名构造还原 `SliverGrid.builder`，其余走 delegate 还原。
   r.register('SliverGrid', (c) {
     final gridDelegate = _gridDelegateFromJson(c);
-    if (c.str('builder') != null && c.int_('itemCount') != null) {
+    if (_builderMethod(c) != null && c.int_('itemCount') != null) {
       return SliverGrid.builder(
         gridDelegate: gridDelegate,
         itemCount: c.int_('itemCount'),
@@ -346,25 +350,32 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     return SliverGrid(gridDelegate: gridDelegate, delegate: _sliverDelegate(c));
   });
 
-  // SliverAppBar：与 AppBar 同款（title/leading 是 element-prop、actions 是
-  // children）+ sliver 专属 pinned/floating/snap/expandedHeight
+  // SliverAppBar：与 AppBar 同款（title/leading/flexibleSpace 是 element-prop、
+  // actions 是 props 里的结点数组）+ sliver 专属 pinned/floating/snap/expandedHeight
   // （缺省 false/false/false/null，即 Flutter 默认）。
-  r.register('SliverAppBar', (c) => SliverAppBar(
-        leading: c.propChild('leading'),
-        title: c.propChild('title'),
-        actions: c.children.isEmpty ? null : c.children,
-        backgroundColor: colorFromJson(c.props['backgroundColor']),
-        foregroundColor: colorFromJson(c.props['foregroundColor']),
-        elevation: c.num_('elevation'),
-        // toolbarHeight 缺省为 Flutter 默认 kToolbarHeight（SDK 非空参数）。
-        toolbarHeight: c.num_('toolbarHeight') ?? kToolbarHeight,
-        centerTitle: c.bool_('centerTitle'),
-        titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
-        pinned: c.bool_('pinned') ?? false,
-        floating: c.bool_('floating') ?? false,
-        snap: c.bool_('snap') ?? false,
-        expandedHeight: c.num_('expandedHeight'),
-      ));
+  r.register('SliverAppBar', (c) {
+    final actions = <Widget>[
+      ...c.elementList(c.props['actions']),
+      ...c.children,
+    ];
+    return SliverAppBar(
+      leading: c.propChild('leading'),
+      title: c.propChild('title'),
+      flexibleSpace: c.propChild('flexibleSpace'),
+      actions: actions.isEmpty ? null : actions,
+      backgroundColor: colorFromJson(c.props['backgroundColor']),
+      foregroundColor: colorFromJson(c.props['foregroundColor']),
+      elevation: c.num_('elevation'),
+      // toolbarHeight 缺省为 Flutter 默认 kToolbarHeight（SDK 非空参数）。
+      toolbarHeight: c.num_('toolbarHeight') ?? kToolbarHeight,
+      centerTitle: c.bool_('centerTitle'),
+      titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
+      pinned: c.bool_('pinned') ?? false,
+      floating: c.bool_('floating') ?? false,
+      snap: c.bool_('snap') ?? false,
+      expandedHeight: c.num_('expandedHeight'),
+    );
+  });
 
   // SliverPadding：padding + 单个 sliver（命名参数 sliver 翻译为子节点）。
   r.register('SliverPadding', (c) => SliverPadding(
@@ -475,7 +486,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         reverse: c.bool_('reverse') ?? false,
         pageSnapping: c.bool_('pageSnapping') ?? true,
         physics: scrollPhysicsFromJson(c.props['physics']),
-        onPageChanged: c.on1<int>('event'),
+        onPageChanged: c.on1<int>('onPageChanged'),
         children: c.children,
       ));
 }

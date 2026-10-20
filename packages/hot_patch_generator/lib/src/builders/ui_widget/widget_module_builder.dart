@@ -7,22 +7,15 @@ import 'dart:async';
 
 import 'package:build/build.dart';
 
-import '../../translator/builtin_translators.dart';
-import '../../translator/widget2js.dart';
-
 import '../js_widget_defs.dart';
 import '../product_path.dart';
 
-/// 已注册 widget 类型 → (package → {type})：由 translator 注册表推导，
-/// 作为 package 模块产物清单（每个包一个文件）的唯一来源。
+/// 有 JS 类的类型 → (package → {type})：由静态登记推导（[jsClassWidgetTypes]
+/// 与 [widgetPackageOf]），作为 package 模块产物清单（每个包一个文件）的唯一来源。
 Map<String, Set<String>> registeredWidgetPackages() {
-  final registry = WidgetTranslatorRegistry();
-  registerBuiltinTranslators(registry);
   final out = <String, Set<String>>{};
-  for (final t in registry.registeredTypes) {
-    final tr = registry.lookup(t);
-    if (tr == null) continue;
-    (out[tr.packageName] ??= <String>{}).addAll(tr.jsonTypes);
+  for (final t in jsClassWidgetTypes) {
+    (out[widgetPackageOf(t)] ??= <String>{}).add(t);
   }
   return out;
 }

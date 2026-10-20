@@ -51,3 +51,57 @@ const Set<String> logicWidgetTypes = {
 /// 类型名字符串；宿主 widget 不在其中，零 import。
 Set<String> get jsClassWidgetTypes =>
     {...builderFormTypes, ...logicWidgetTypes};
+
+/// 类型 → package 模块：决定该类型的 JS 工厂/类落在哪个 `patch/<package>.js`
+/// （未登记的类型一律归基础包 [nodeHelperPackage]）。
+///
+/// 这份登记替代了原先「由 translator 的 `packageName` 推导」的做法——它是**产物
+/// 组织信息**（哪个模块持有该类型的 JS 类），与翻译策略无关。
+const Map<String, String> widgetPackages = {
+  // provider 三件套：状态处理逻辑自成一个模块 patch/provider.js。
+  'ChangeNotifierProvider': 'provider',
+  'Consumer': 'provider',
+  'MultiProvider': 'provider',
+};
+
+/// 类型的 package 归属（默认 [nodeHelperPackage]）。
+String widgetPackageOf(String type) => widgetPackages[type] ?? nodeHelperPackage;
+
+/// 宿主侧「内建 widget」类型名登记（= 运行时 `JsWidgetRegistry` 注册表的镜像）。
+///
+/// 用途：翻译期区分「内建 widget」与「业务类」——字段类型判定与依赖扫描遇到
+/// 内建 widget 时不再当模型类处理（它们由宿主 / JS 类渲染，没有可翻译的类体）。
+/// 这份登记替代了原先由 translator 注册表推导的做法。
+///
+/// **同步维护**：新增内建组件时，运行时（`js_widget_registry.dart` 与各
+/// `capabilities/*/**.dart` 的 `r.register(...)`）与本表两侧都要加。
+const Set<String> builtinWidgetTypes = {
+  // 基础视觉 / 布局
+  'Text', 'Column', 'Row', 'Stack', 'IndexedStack', 'Wrap', 'Container',
+  'Padding', 'Center', 'Align', 'SizedBox', 'Expanded', 'Flexible',
+  'Positioned', 'Spacer', 'ClipRRect', 'ClipOval', 'Material', 'Transform',
+  'Card', 'Icon', 'Image', 'CircleAvatar', 'Divider', 'Chip', 'ListTile',
+  'SafeArea', 'Opacity', 'ConstrainedBox', 'AspectRatio',
+  'FractionallySizedBox', 'DecoratedBox', 'CircularProgressIndicator',
+  'LinearProgressIndicator', 'Drawer', 'DrawerHeader',
+  // 按钮 / 交互
+  'ElevatedButton', 'TextButton', 'FilledButton', 'OutlinedButton',
+  'IconButton', 'FloatingActionButton', 'InkWell', 'GestureDetector',
+  'Switch', 'Checkbox', 'Slider', 'Radio', 'DropdownButton',
+  'DropdownMenuItem', 'BottomNavigationBar', 'BottomNavigationBarItem',
+  // 页面骨架
+  'Scaffold', 'AppBar',
+  // Tab 家族
+  'DefaultTabController', 'TabBar', 'Tab', 'TabBarView',
+  // 滚动 / sliver 家族
+  'ListView', 'GridView', 'ReorderableListView', 'CustomScrollView',
+  'SliverList', 'SliverGrid', 'SliverAppBar', 'SliverPadding',
+  'SliverToBoxAdapter', 'SliverFillRemaining', 'SliverFixedExtentList',
+  'SliverFillViewport', 'SliverOpacity', 'SliverOffstage',
+  'SliverIgnorePointer', 'SliverSafeArea', 'SliverVisibility',
+  'SingleChildScrollView', 'PageView', 'NotificationListener',
+  // 逻辑组件（JS 类）与能力包
+  'Builder', 'ChangeNotifierProvider', 'Consumer', 'MultiProvider',
+  'ListenableBuilder', 'ValueListenableBuilder', 'TextField',
+  'CachedNetworkImage', 'EasyRefresh',
+};

@@ -11,7 +11,6 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 
-import '../../translator/builtin_translators.dart';
 import '../../translator/class_translator.dart';
 import '../../translator/dart2js.dart';
 import '../../translator/js_translator.dart';
@@ -50,11 +49,9 @@ import 'singleton_support.dart';
 /// 「StatefulWidget → 合并同文件 State 类」这一次分叉，组件与普通类的字段 /
 /// 方法 / 依赖 / widget 树全部同一条路径。
 ///
-/// 「某个 widget 怎么翻译成 JSON/JS」是策略，由 WidgetTranslator 实现：
-///   - 抽象类与注册表见 widget2js.dart
-///   - 内置 Column/Row/Text/ElevatedButton 见 builtin_translators.dart
-///   - 新增/自定义 widget = 写一个 WidgetTranslator 并 register，
-///     核心代码零改动。
+/// 「widget 怎么翻译成 JSON/JS」只有一条**统一路径**（见 translator/widget_json.dart）：
+/// 判断依据是**值的形态**与**通用参数名**，不看 widget 类型——内建、自定义、
+/// 三方组件同一套规则，接入新组件零实现、无需注册表。
 class ComponentBuilder implements Builder {
   const ComponentBuilder();
 
@@ -79,10 +76,6 @@ class ComponentBuilder implements Builder {
       throwIfDiagnostics: false,
       path: inputId.path,
     );
-
-    // 策略注册表：目前注册内置 widget；业务方可在此扩展自定义 translator。
-    final registry = WidgetTranslatorRegistry();
-    registerBuiltinTranslators(registry);
 
     // 组件名 → 依赖产物 jsAsset 路径。规则：
     //   本文件类（注解组件 / public 或私有 widget 类）→ 本文件产物（同产物注册）；
@@ -207,7 +200,6 @@ class ComponentBuilder implements Builder {
         decl,
         parsed.unit,
         inputId.path,
-        registry: registry,
         classTable: classTable,
         importResolver: importResolver,
         singletons: singletons,
@@ -254,7 +246,6 @@ class ComponentBuilder implements Builder {
         decl,
         parsed.unit,
         inputId.path,
-        registry: registry,
         classTable: classTable,
         importResolver: importResolver,
         singletons: singletons,
@@ -352,7 +343,6 @@ class ComponentBuilder implements Builder {
       jsOutput,
       _renderJsProduct(
         inputId.path,
-        registry: registry,
         exportedClasses: exportedClasses,
         inlineClasses: inlineClasses.values.toList(),
         singletons: sameFileSingletonInfos,
@@ -385,7 +375,6 @@ class ComponentBuilder implements Builder {
 /// 「组件渲染 / 模型渲染」两条分支——新增类结构能力只改这一处。
 String _renderJsProduct(
   String sourcePath, {
-  required WidgetTranslatorRegistry registry,
   required List<ClassInfo> exportedClasses,
   List<ClassInfo> inlineClasses = const [],
   List<ClassInfo> singletons = const [],
@@ -415,7 +404,6 @@ String _renderJsProduct(
   // 统一翻译上下文：所有类共用（组件动作、模型方法同一套）。方法体里
   // `return Container(...)` 走 widget 树翻译路径。
   final ctx = WidgetTranslateContext(
-    registry: registry,
     propByField: const {},
     actionByMethod: const {},
     sourcePath: sourcePath,

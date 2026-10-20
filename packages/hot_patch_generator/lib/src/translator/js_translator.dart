@@ -378,8 +378,8 @@ class FieldScope {
 //   - 类方法体裸调白名单自动加上基类能力方法（如 ChangeNotifier 的
 //     notifyListeners）
 //
-// 后续新增 SDK 支持 = 往这张表加一行 +（如需要）在运行时注册对应基类 + 在
-// builtin_translators.dart 登记对应 widget 翻译策略。
+// 后续新增 SDK 支持 = 往这张表加一行 +（如需要）在运行时注册对应基类。
+// widget 翻译不走 per-widget 实现：统一入口见 widget_json.dart / value_forms.dart。
 // ===========================================================================
 
 /// 由 [ClassInfo.superType] 查 JS 基类名；未登记返回 null。

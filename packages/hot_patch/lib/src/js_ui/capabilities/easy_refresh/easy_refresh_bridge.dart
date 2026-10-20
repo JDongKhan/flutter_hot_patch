@@ -112,9 +112,8 @@ void registerEasyRefreshWidgets(JsWidgetRegistry r) {
       onRefresh: c.props['onRefresh'],
       onLoad: c.props['onLoad'],
       refreshOnStart: c.bool_('refreshOnStart') ?? false,
-      // child 是「值为 element 的 prop」（生成器把命名参数翻译进 props）：
-      // 宿主 propChild 直取，不需要它出现在 children 里。
-      child: c.propChild('child') ?? const SizedBox.shrink(),
+      // `child:` 统一进 children（生成器的子结点约定）→ 取第一个子结点。
+      child: c.childOrEmpty,
     ),
   );
 }

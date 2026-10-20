@@ -360,6 +360,42 @@ const String miniReactReconcilerSource = r'''
     return false;
   }
 
+  // 命名构造 `.builder` / `.separated` 的滚动视图：生成器只在**委托形态**
+  // （`delegate: SliverChildBuilderDelegate(...)`，props 键 `builder`）下用 JS 代理类
+  // 展开子结点；`.builder` 命名构造产出的是参数名键（`itemBuilder` / `itemCount` /
+  // `separatorBuilder`）且**不展开** children。这里按同样的「沿 `__parent` 找拥有者
+  // 方法」语义补上展开（与 flutter.js 的代理类一字不差），children 已有内容时原样
+  // 返回（不重复展开、与生成器将来改回代理类兼容）。
+  var builderHostTypes = {
+    ListView: 1, GridView: 1, SliverList: 1, SliverGrid: 1,
+    SliverFixedExtentList: 1, SliverFillViewport: 1
+  };
+  function expandBuilderChildren(el, parent) {
+    var kids = el.children || [];
+    if (kids.length || !builderHostTypes[el.type]) { return kids; }
+    var p = el.props || {};
+    var name = p.itemBuilder || p.builder;
+    if (typeof name !== 'string') { return kids; }
+    var n = p.itemCount !== undefined ? p.itemCount
+        : (p.childCount !== undefined ? p.childCount : 0);
+    if (typeof n !== 'number' || n <= 0) { return kids; }
+    var owner = parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    if (!owner) { return kids; }
+    var sep = p.separatorBuilder;
+    // 传给 builder 的 `context` 形参 = 拥有者组件的代理（它是**构建单位**：有
+    // build 方法、能被订阅标脏重建；宿主结点不是构建单位，不能当订阅锚点）。
+    var ctx = contextOf(owner);
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      out.push(owner[name].call(owner, ctx, i));
+      if (typeof sep === 'string' && i < n - 1) {
+        out.push(owner[sep].call(owner, ctx, i));
+      }
+    }
+    return out;
+  }
+
   // 宿主结点索引（id → 结点实例）：只为「宿主上报 inflate」的反查用（懒槽位）。
   var hostNodes = {};
 
@@ -475,8 +511,9 @@ const String miniReactReconcilerSource = r'''
       // 真实子树等宿主 inflate 到该槽位时回调再挂，否则「一次切 TabBarView」就把
       // 全部子页的 initState / 请求都跑掉了。
       var lazyChildren = lazyChildOf(hi.__type, hi.__props);
-      for (var i = 0; i < el.children.length; i++) {
-        var cel = el.children[i];
+      var kids = expandBuilderChildren(el, hi);
+      for (var i = 0; i < kids.length; i++) {
+        var cel = kids[i];
         if (cel == null || cel === false) { continue; }
         var c = lazyChildren
             ? newLazySlot(hi, cel, { hostParentId: hi.__id, index: idx })
@@ -532,7 +569,7 @@ const String miniReactReconcilerSource = r'''
       oldInst.__props = el.props;
       // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
       applyScope(oldInst, el.props);
-      patchChildren(oldInst, el.children);
+      patchChildren(oldInst, expandBuilderChildren(el, oldInst));
       mountPropChildren(oldInst, oldProps, el.props || {});
       return oldInst;
     }

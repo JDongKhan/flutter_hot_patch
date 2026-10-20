@@ -4,6 +4,7 @@ import 'dart2js.dart';
 import 'host_injected.dart';
 import 'js_translator.dart';
 import 'source_index.dart';
+import '../builders/js_widget_defs.dart';
 import 'widget2js.dart';
 
 // ===========================================================================
@@ -79,7 +80,6 @@ ClassInfo translateClass(
   ClassDeclaration decl,
   CompilationUnit unit,
   String sourcePath, {
-  required WidgetTranslatorRegistry registry,
   required Map<String, ClassInfo> classTable,
   required String? Function(String name) importResolver,
   SingletonResolver? singletons,
@@ -135,13 +135,12 @@ ClassInfo translateClass(
   // 依赖发现：字段类型 + 方法体构造调用（referencedClassNames）∩ 全量类表。
   // 类表同时包含组件与普通类——普通类方法体里构造自定义组件（如
   // CounterVm.buildText() → BannerCard()）与组件 build 里构造模型走同一套。
-  // 已注册 WidgetTranslator 的类型（宿主 widget / 受控 JS 类）由 translator
-  // 接管，不能再当模型类。
+  // 内建 widget（宿主渲染 / JS 类）由统一翻译路径接管，不能再当模型类。
   final used = <String, ClassInfo>{};
   for (final name in referencedClassNames(hostClass, mixins: mixins)) {
     final info = classTable[name];
     if (info == null) continue;
-    if (registry.registeredTypes.contains(name)) continue;
+    if (builtinWidgetTypes.contains(name)) continue;
     used[name] = info;
   }
 
@@ -173,7 +172,7 @@ ClassInfo translateClass(
       final erased = eraseType(typeName);
       final isBasic = isBasicType(typeName) || _valueSdkTypes.contains(erased);
       final jsRuntime = _jsRuntimeTypes.contains(erased);
-      if (!_fieldTranslatable(typeName, classTable, registry.registeredTypes)) {
+      if (!_fieldTranslatable(typeName, classTable, builtinWidgetTypes)) {
         // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
         // ignore: avoid_print - 构建期日志
         print(
@@ -242,7 +241,6 @@ ClassInfo translateClass(
   // ——widget 层据此解析标识符（`_count` → `this._count`）、区分本类实例
   // 方法与嵌套组件构造、事件绑定（`__bind`）。普通类与组件同一个上下文。
   final parseCtx = WidgetTranslateContext(
-    registry: registry,
     propByField: propByField,
     actionByMethod: {
       for (final m in methods)

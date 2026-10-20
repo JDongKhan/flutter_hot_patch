@@ -22,7 +22,8 @@ import '../../js_widget_registry.dart';
 void registerCachedNetworkImageWidgets(JsWidgetRegistry r) {
   r.register('CachedNetworkImage', (c) {
     return CachedNetworkImage(
-      imageUrl: c.str('source') ?? '',
+      // 具名参数名原样下发（`CachedNetworkImage(imageUrl: …)` → props.imageUrl）。
+      imageUrl: c.str('imageUrl') ?? c.str('source') ?? '',
       width: c.num_('width'),
       height: c.num_('height'),
       fit: boxFitFromJson(c.props['fit']),

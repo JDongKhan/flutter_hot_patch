@@ -52,6 +52,9 @@ void registerTextWidgets(JsWidgetRegistry r) {
     // 触发其 listeners），同时照常触发 onChanged 事件。
     final tecId = JsControllerBridge.idOf(c.props['controller']);
     final external = tecId != null ? _textBridge.controllerAt(tecId) : null;
+    // decoration 现在是元素结点（`InputDecoration(...)` 被当构造翻译）→
+    // 取它的内层 props 读 hintText / labelText。
+    final deco = c.elementProps(c.props['decoration']);
     return _JsTextField(
       controller: external,
       onControllerText: external == null
@@ -61,9 +64,9 @@ void registerTextWidgets(JsWidgetRegistry r) {
               if (h != null) c.invoke(h, [v]);
             },
       value: c.str('value'),
-      onChanged: c.on1<String>('event'),
-      hintText: c.str('hintText'),
-      labelText: c.str('labelText'),
+      onChanged: c.on1<String>('onChanged'),
+      hintText: deco?['hintText'] == null ? null : '${deco?['hintText']}',
+      labelText: deco?['labelText'] == null ? null : '${deco?['labelText']}',
       obscureText: c.bool_('obscureText') ?? false,
       enabled: c.bool_('enabled'),
       keyboardType: textInputTypeFromJson(c.props['keyboardType']),

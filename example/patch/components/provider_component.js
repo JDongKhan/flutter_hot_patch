@@ -35,74 +35,91 @@ export class ProviderCard {
             __h(MultiProvider, {
                 "providers": [
                   __h(ChangeNotifierProvider, {
-                      "model": "CounterVm",
-                      "create": this._modelA
+                      "create": this._modelA,
+                      "model": "CounterVm"
                     }),
                   __h(ChangeNotifierProvider, {
-                      "model": "NetworkVm",
-                      "value": this._modelB
+                      "value": this._modelB,
+                      "model": "NetworkVm"
                     })
-                ],
-                "child": __h('Column', {
+                ]
+              }, [
+                __h('Column', {
                     "mainAxisSize": "min"
                   }, [
                     this._buildText(),
                     this._modelA.buildText(),
                     __h(Consumer, {
-                        "model": "CounterVm",
-                        "builder": "_consumerBuilder0"
+                        "builder": "_builder0",
+                        "model": "CounterVm"
                       }),
                     __h('Text', {
-                        "data": "MultiProvider · 两个模型各自局部重建"
+                        "$pos": [
+                          "MultiProvider · 两个模型各自局部重建"
+                        ]
                       }),
                     __h('SizedBox', {
                         "height": 8
                       }),
                     __h(Consumer, {
-                        "model": "NetworkVm",
-                        "builder": "_consumerBuilder1"
+                        "builder": "_builder1",
+                        "model": "NetworkVm"
                       }),
                     __h('Row', {
                         "mainAxisAlignment": "center"
                       }, [
-                        __h('Button', {
-                            "kind": "elevated",
-                            "label": "加载用户信息",
-                            "event": this.__bind("_loadUser")
-                          })
+                        __h('ElevatedButton', {
+                            "onPressed": this.__bind("_loadUser")
+                          }, [
+                            __h('Text', {
+                                "$pos": [
+                                  "加载用户信息"
+                                ]
+                              })
+                          ])
                       ]),
                     __h('SizedBox', {
                         "height": 8
                       }),
                     __h(Consumer, {
-                        "model": "CounterVm",
-                        "builder": "_consumerBuilder2"
+                        "builder": "_builder2",
+                        "model": "CounterVm"
                       }),
                     __h('Row', {
                         "mainAxisAlignment": "center"
                       }, [
-                        __h('Button', {
-                            "kind": "elevated",
-                            "label": "B +1",
-                            "event": this.__bind("_incA")
-                          }),
+                        __h('ElevatedButton', {
+                            "onPressed": this.__bind("_incA")
+                          }, [
+                            __h('Text', {
+                                "$pos": [
+                                  "B +1"
+                                ]
+                              })
+                          ]),
                         __h('SizedBox', {
                             "width": 12
                           }),
-                        __h('Button', {
-                            "kind": "elevated",
-                            "label": "B Reset",
-                            "event": this.__bind("_resetA")
-                          })
+                        __h('ElevatedButton', {
+                            "onPressed": this.__bind("_resetA")
+                          }, [
+                            __h('Text', {
+                                "$pos": [
+                                  "B Reset"
+                                ]
+                              })
+                          ])
                       ])
                   ])
-              })
+              ])
           ])
       ]);
   }
   _buildText() {
     return __h('Text', {
-        "data": "test 1"
+        "$pos": [
+          "test 1"
+        ]
       });
   }
   _buildBadge() {
@@ -128,33 +145,39 @@ export class ProviderCard {
       dots = dots + "·";
     }
     return __h('Text', {
-        "data": label + dots
+        "$pos": [
+          label + dots
+        ]
       });
   }
   dispose() {
     this._modelB.dispose();
   }
-  _consumerBuilder0(context, value) {
+  _builder0(context, value) {
       return this._buildBadge();
   }
-  _consumerBuilder1(context, value) {
+  _builder1(context, value) {
       return __h('Text', {
-        "data": "加载用户信息：",
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",
           "color": '#2196F3'
-        }
+        },
+        "$pos": [
+          "加载用户信息："
+        ]
       });
   }
-  _consumerBuilder2(context, value) {
+  _builder2(context, value) {
       return __h('Text', {
-        "data": "B = " + value.count,
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",
           "color": '#4CAF50'
-        }
+        },
+        "$pos": [
+          "B = " + value.count
+        ]
       });
   }
 }
