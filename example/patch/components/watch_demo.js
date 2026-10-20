@@ -21,6 +21,7 @@ export class WatchDemo {
             }
           }, [
             __h(ChangeNotifierProvider, {
+                "create": CounterVm,
                 "model": "CounterVm"
               }, [
                 __h('Column', {

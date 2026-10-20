@@ -1,8 +1,8 @@
 {
   "name": "flutter_hot_example",
-  "buildTime": "2026-10-20T19:39:34.623651",
+  "buildTime": "2026-10-20T20:01:06.904341",
   "resources": {
-    "flutter.js": "9fbd5091c0e4e95264409857c95c0a25c666262589cd322aa72b6459480ed570",
+    "flutter.js": "3ad1d7a602e330d264eb11df93afbfbda78f8f7e51b978caaeaf8ffa2abadf41",
     "provider.js": "269a1e9e4ca491a13289455cf3b33a82b75607858f0c1ad7bea5613cd29e4158",
     "app/model/app_models.js": "8bfd6c50e6670aabc043e33d634a71f89a7ac41d16ceee84d41d9801a42d61c5",
     "app/service/app_data.js": "a795e91a40ed5423b1204f46310ade0fd175c7ac5b2f81fbe52051aa49b9fade",
@@ -12,13 +12,13 @@
     "app/pages/home_page.js": "de3153fe81faa0256fdb1ca7447b90970b866f316f850f0dc4956a4688fe9066",
     "app/pages/mine_page.js": "6b2357904b2507005108835691b08992e5b71d47832266f2f0dca45596de5369",
     "app/pages/detail_pages.js": "9d8ad348c40859933e49112bc7591c764534a70ec841f6c0d22692a6102d20f4",
-    "app/app.js": "cc53118295beffa703a8dfa292672556bf1dabbc5e3aa318c74adba5912524f6",
+    "app/app.js": "ce1f1d6475171e46a170fd9e7cb28e42b71229036190864f0668dc0fff7d966f",
     "components/widget_details.js": "6c90b86b890b02c92af5a22690e76c47d7c93e5022a88bafd5c3d456e3bb2c8a",
     "components/provider_component.js": "1fb1ac5253d419659d55a23aa337495ffc8864b38b8e9f463420d38c83e2080f",
     "components/banner_component.js": "ed0447c7e80e09264173f2ac1c2d66179a25fd3abf7655cbcb2ab77d430b76f2",
     "components/composite_component.js": "fdd7e5725db0f81bae61bab1e5a9ba25f419f7164d48e78e7bded9a9feb8ec83",
     "components/hello_component.js": "a13ccad6263abafa1f9ea5d8301ca65167bce8b7bc4d9841f64b98e0adfd03d8",
-    "components/watch_demo.js": "453926fe67dc0822d94c28a98f36b395c19195b3cc705bcc67c1d454a43ca0b3",
+    "components/watch_demo.js": "b59266f23917cec129d79719b1b968daaaf49e394f0d1c1659d2c0e8f4e78271",
     "model/user.js": "ab8c8036baf1abf5b77011450304fce02eef9b4b7ef7b9af278fce23e7db9063",
     "model/network_vm.js": "9c390ef9c440b3a7498bc6bc23b808ea90a76d9307fcf1df91b27973013011c7",
     "model/counter_vm.js": "601fb66c8e3c382b8267c4e24f3135e86c68ba6a27f4ef2511d3e64a65505abd"

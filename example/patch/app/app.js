@@ -48,7 +48,7 @@ export class AppSubContent {
         "bottomNavigationBar": __h('BottomNavigationBar', {
             "currentIndex": this._index,
             "onTap": this.__bind("_openTab"),
-            "type": BottomNavigationBarType.fixed,
+            "type": "fixed",
             "backgroundColor": '#FFFFFF',
             "selectedItemColor": '#ff0e7afb',
             "unselectedItemColor": '#ff98a0ac',

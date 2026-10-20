@@ -253,10 +253,11 @@ export class Consumer {
   }
 }''';
 
-/// ListenableBuilder：局部重建——订阅 `listenable`（拥有者组件上的模型字段），
-/// 模型 notify 时仅重建本结点子树（`setState` 只标记本结点 dirty）。
-/// 子树抽在拥有者组件的 `props.builder` 方法（`_lbBuilderN()`）里。
-/// 与 Consumer 同理：JS 订阅是 UI 更新源，宿主映射只提供 Dart 侧边界。
+/// ListenableBuilder：局部重建——订阅 `listenable`（**产物下发的是 listenable
+/// 实例本身**，如 `this._model`，不是字段名）、模型 notify 时仅重建本结点子树
+/// （`setState` 只标记本结点 dirty）。子树抽在拥有者组件的 `props.builder`
+/// 方法（`_lbBuilderN()`）里。与 Consumer 同理：JS 订阅是 UI 更新源，宿主映射
+/// 只提供 Dart 侧边界。
 const String jsListenableBuilderComponent = '''
 export class ListenableBuilder {
   constructor(props, children) {
@@ -270,9 +271,7 @@ export class ListenableBuilder {
     return owner;
   }
   initState() {
-    var owner = this.__owner();
-    if (!owner) { return; }
-    var l = owner[this.props.listenable];
+    var l = this.props.listenable;
     if (l && typeof l.addListener === 'function') {
       var self = this;
       this.__listenable = l;
@@ -284,7 +283,7 @@ export class ListenableBuilder {
     var owner = this.__owner();
     if (!owner) { return null; }
     var child = owner[this.props.builder].call(owner, context);
-    return __h('ListenableBuilder', { notifier: owner[this.props.listenable] }, [child]);
+    return __h('ListenableBuilder', { notifier: this.props.listenable }, [child]);
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -313,9 +312,7 @@ export class ValueListenableBuilder {
     return owner;
   }
   initState() {
-    var owner = this.__owner();
-    if (!owner) { return; }
-    var l = owner[this.props.listenable];
+    var l = this.props.listenable;
     if (l && typeof l.addListener === 'function') {
       var self = this;
       this.__listenable = l;
@@ -326,7 +323,7 @@ export class ValueListenableBuilder {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var l = owner[this.props.listenable];
+    var l = this.props.listenable;
     var value = (l && l.value !== undefined) ? l.value : null;
     var child = owner[this.props.builder].call(owner, context, value);
     return __h('ValueListenableBuilder', { notifier: l }, [child]);
