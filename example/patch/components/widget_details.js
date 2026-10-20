@@ -22,18 +22,14 @@ export class TextDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "基础文案 + TextStyle"
-            ]
+            "data": "基础文案 + TextStyle"
           }),
         __h('Text', {
             "style": {
               "color": '#2196F3',
               "fontSize": 16
             },
-            "$pos": [
-              "普通文本，count = " + this._count + "（状态插值）"
-            ]
+            "data": "普通文本，count = " + this._count + "（状态插值）"
           }),
         __h('SizedBox', {
             "height": 6
@@ -41,9 +37,7 @@ export class TextDetail {
         __h('Text', {
             "maxLines": 1,
             "overflow": "ellipsis",
-            "$pos": [
-              "maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示"
-            ]
+            "data": "maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示"
           }),
         __h('SizedBox', {
             "height": 6
@@ -52,9 +46,7 @@ export class TextDetail {
             "textScaler": {
               "linear": 1.6
             },
-            "$pos": [
-              "textScaler.linear(1.6) 放大"
-            ]
+            "data": "textScaler.linear(1.6) 放大"
           }),
         __h('SizedBox', {
             "height": 6
@@ -66,9 +58,7 @@ export class TextDetail {
               "decorationColor": '#FF9800',
               "decorationStyle": "wavy"
             },
-            "$pos": [
-              "textAlign 居中"
-            ]
+            "data": "textAlign 居中"
           }),
         __h('SizedBox', {
             "height": 6
@@ -82,9 +72,7 @@ export class TextDetail {
               "letterSpacing": 1,
               "backgroundColor": '#ffffe082'
             },
-            "$pos": [
-              "softWrap=false 不换行测试"
-            ]
+            "data": "softWrap=false 不换行测试"
           }),
         __h('SizedBox', {
             "height": 6
@@ -93,9 +81,7 @@ export class TextDetail {
             "onPressed": this.__bind("bump")
           }, [
             __h('Text', {
-                "$pos": [
-                  "Bump count"
-                ]
+                "data": "Bump count"
               })
           ])
       ]);
@@ -119,9 +105,7 @@ export class ButtonDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "点击次数 = " + this._pressed
-            ]
+            "data": "点击次数 = " + this._pressed
           }),
         __h('SizedBox', {
             "height": 8
@@ -155,9 +139,7 @@ export class ButtonDetail {
             }
           }, [
             __h('Text', {
-                "$pos": [
-                  "Elevated · Styled"
-                ]
+                "data": "Elevated · Styled"
               })
           ]),
         __h('SizedBox', {
@@ -184,9 +166,7 @@ export class ButtonDetail {
             }
           }, [
             __h('Text', {
-                "$pos": [
-                  "TextButton"
-                ]
+                "data": "TextButton"
               })
           ]),
         __h('SizedBox', {
@@ -213,9 +193,7 @@ export class ButtonDetail {
             }
           }, [
             __h('Text', {
-                "$pos": [
-                  "OutlinedButton"
-                ]
+                "data": "OutlinedButton"
               })
           ]),
         __h('SizedBox', {
@@ -223,9 +201,7 @@ export class ButtonDetail {
           }),
         __h('ElevatedButton', {}, [
             __h('Text', {
-                "$pos": [
-                  "Disabled"
-                ]
+                "data": "Disabled"
               })
           ])
       ]);
@@ -245,9 +221,7 @@ export class LayoutDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Row + Expanded / Flexible / Spacer"
-            ]
+            "data": "Row + Expanded / Flexible / Spacer"
           }),
         __h('Row', {}, [
             __h('Expanded', {
@@ -264,9 +238,7 @@ export class LayoutDetail {
                   }, [
                     __h('Text', {
                         "textAlign": "center",
-                        "$pos": [
-                          "A"
-                        ]
+                        "data": "A"
                       })
                   ])
               ]),
@@ -287,9 +259,7 @@ export class LayoutDetail {
                   }, [
                     __h('Text', {
                         "textAlign": "center",
-                        "$pos": [
-                          "B（flex=2）"
-                        ]
+                        "data": "B（flex=2）"
                       })
                   ])
               ])
@@ -302,9 +272,7 @@ export class LayoutDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Center / Align / Padding / SizedBox"
-            ]
+            "data": "Center / Align / Padding / SizedBox"
           }),
         __h('Center', {}, [
             __h('Container', {
@@ -317,9 +285,7 @@ export class LayoutDetail {
                 }
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "Center 居中"
-                    ]
+                    "data": "Center 居中"
                   })
               ])
           ]),
@@ -339,9 +305,7 @@ export class LayoutDetail {
                 }
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "Align centerLeft"
-                    ]
+                    "data": "Align centerLeft"
                   })
               ])
           ]),
@@ -357,9 +321,7 @@ export class LayoutDetail {
             }
           }, [
             __h('Text', {
-                "$pos": [
-                  "Padding 包裹文案"
-                ]
+                "data": "Padding 包裹文案"
               })
           ]),
         __h('SizedBox', {
@@ -370,9 +332,7 @@ export class LayoutDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Stack + Positioned"
-            ]
+            "data": "Stack + Positioned"
           }),
         __h('SizedBox', {
             "height": 100
@@ -384,16 +344,16 @@ export class LayoutDetail {
                 __h('Container', {
                     "color": '@Colors.grey.shade200'
                   }),
-                __h('Positioned', {}, [
+                __h('Positioned', {
+                    "factory": "fill"
+                  }, [
                     __h('Center', {}, [
                         __h('Text', {
                             "style": {
                               "color": '#FFFFFF',
                               "fontWeight": "bold"
                             },
-                            "$pos": [
-                              "FILL"
-                            ]
+                            "data": "FILL"
                           })
                       ])
                   ]),
@@ -402,9 +362,7 @@ export class LayoutDetail {
                     "top": 12
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "TL"
-                        ]
+                        "data": "TL"
                       })
                   ]),
                 __h('Positioned', {
@@ -412,9 +370,7 @@ export class LayoutDetail {
                     "bottom": 12
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "BR"
-                        ]
+                        "data": "BR"
                       })
                   ])
               ])
@@ -427,9 +383,7 @@ export class LayoutDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Wrap · 自动换行"
-            ]
+            "data": "Wrap · 自动换行"
           }),
         __h('Wrap', {
             "direction": "horizontal",
@@ -439,7 +393,7 @@ export class LayoutDetail {
             "runAlignment": "center",
             "crossAxisAlignment": "center"
           }, [
-            ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": __h('Text', { "$pos": [ "chip " + i ] }), "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
+            ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": __h('Text', { "data": "chip " + i }), "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
           ]),
         __h('SizedBox', {
             "height": 12
@@ -449,9 +403,7 @@ export class LayoutDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox"
-            ]
+            "data": "Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox"
           }),
         __h('Opacity', {
             "opacity": 0.5
@@ -466,9 +418,7 @@ export class LayoutDetail {
                 }
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "50% 透明"
-                    ]
+                    "data": "50% 透明"
                   })
               ])
           ]),
@@ -491,9 +441,7 @@ export class LayoutDetail {
                 }
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "ConstrainedBox 宽度 120-200"
-                    ]
+                    "data": "ConstrainedBox 宽度 120-200"
                   })
               ])
           ]),
@@ -508,9 +456,7 @@ export class LayoutDetail {
                 "alignment": "center"
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "16:9 比例"
-                    ]
+                    "data": "16:9 比例"
                   })
               ])
           ]),
@@ -532,9 +478,7 @@ export class LayoutDetail {
               }, [
                 __h('Text', {
                     "textAlign": "center",
-                    "$pos": [
-                      "60% 宽度"
-                    ]
+                    "data": "60% 宽度"
                   })
               ])
           ])
@@ -555,9 +499,7 @@ export class ImageDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Image · 网络图片"
-            ]
+            "data": "Image · 网络图片"
           }),
         __h('ClipRRect', {
             "borderRadius": {
@@ -567,9 +509,8 @@ export class ImageDetail {
             __h('Image', {
                 "height": 120,
                 "fit": "cover",
-                "$pos": [
-                  "https://picsum.photos/seed/hotpatch/400/160"
-                ]
+                "factory": "network",
+                "src": "https://picsum.photos/seed/hotpatch/400/160"
               })
           ]),
         __h('SizedBox', {
@@ -580,9 +521,7 @@ export class ImageDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "CachedNetworkImage · 磁盘缓存网络图"
-            ]
+            "data": "CachedNetworkImage · 磁盘缓存网络图"
           }),
         __h('ClipRRect', {
             "borderRadius": {
@@ -603,17 +542,13 @@ export class ImageDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Icon / CircleAvatar"
-            ]
+            "data": "Icon / CircleAvatar"
           }),
         __h('Row', {}, [
             __h('Icon', {
                 "color": '#FFC107',
                 "size": 28,
-                "$pos": [
-                  "star"
-                ]
+                "icon": "star"
               }),
             __h('SizedBox', {
                 "width": 12
@@ -621,9 +556,7 @@ export class ImageDetail {
             __h('Icon', {
                 "color": '#2196F3',
                 "size": 28,
-                "$pos": [
-                  "home"
-                ]
+                "icon": "home"
               }),
             __h('SizedBox', {
                 "width": 12
@@ -631,9 +564,7 @@ export class ImageDetail {
             __h('Icon', {
                 "color": '#F44336',
                 "size": 28,
-                "$pos": [
-                  "favorite"
-                ]
+                "icon": "favorite"
               }),
             __h('SizedBox', {
                 "width": 12
@@ -646,9 +577,7 @@ export class ImageDetail {
                     "style": {
                       "color": '#FFFFFF'
                     },
-                    "$pos": [
-                      "AV"
-                    ]
+                    "data": "AV"
                   })
               ])
           ])
@@ -669,9 +598,7 @@ export class ContainerDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Container · 颜色/圆角/Padding"
-            ]
+            "data": "Container · 颜色/圆角/Padding"
           }),
         __h('Container', {
             "padding": {
@@ -691,9 +618,7 @@ export class ContainerDetail {
                 "style": {
                   "color": '#FFFFFF'
                 },
-                "$pos": [
-                  "容器内容（teal 圆角）"
-                ]
+                "data": "容器内容（teal 圆角）"
               })
           ]),
         __h('SizedBox', {
@@ -704,9 +629,7 @@ export class ContainerDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Container · 边框 + 阴影 + 渐变"
-            ]
+            "data": "Container · 边框 + 阴影 + 渐变"
           }),
         __h('Container', {
             "padding": {
@@ -749,9 +672,7 @@ export class ContainerDetail {
                 "style": {
                   "color": '#FFFFFF'
                 },
-                "$pos": [
-                  "渐变 + 边框 + 阴影"
-                ]
+                "data": "渐变 + 边框 + 阴影"
               })
           ]),
         __h('SizedBox', {
@@ -762,9 +683,7 @@ export class ContainerDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "DecoratedBox · 纯装饰"
-            ]
+            "data": "DecoratedBox · 纯装饰"
           }),
         __h('DecoratedBox', {
             "decoration": {
@@ -789,9 +708,7 @@ export class ContainerDetail {
                 }
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "DecoratedBox 内容"
-                    ]
+                    "data": "DecoratedBox 内容"
                   })
               ])
           ]),
@@ -803,9 +720,7 @@ export class ContainerDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Card · shape / clipBehavior"
-            ]
+            "data": "Card · shape / clipBehavior"
           }),
         __h('Card', {
             "elevation": 4,
@@ -831,9 +746,7 @@ export class ContainerDetail {
                 }
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "圆角卡片 + 描边 + 阴影"
-                    ]
+                    "data": "圆角卡片 + 描边 + 阴影"
                   })
               ])
           ]),
@@ -849,9 +762,7 @@ export class ContainerDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "SizedBox · 尺寸约束"
-            ]
+            "data": "SizedBox · 尺寸约束"
           }),
         __h('Container', {
             "width": 120,
@@ -860,9 +771,7 @@ export class ContainerDetail {
             "color": '@Colors.blueGrey.shade100'
           }, [
             __h('Text', {
-                "$pos": [
-                  "固定 120×48"
-                ]
+                "data": "固定 120×48"
               })
           ])
       ]);
@@ -898,9 +807,7 @@ export class ScrollDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "ListView.builder · 懒构建列表（offset: " + this._offset + "）"
-            ]
+            "data": "ListView.builder · 懒构建列表（offset: " + this._offset + "）"
           }),
         __h('NotificationListener', {
             "onNotification": this.__bind("_onListScroll"),
@@ -919,7 +826,8 @@ export class ScrollDetail {
                     "itemExtent": 56,
                     "physics": "BouncingScrollPhysics",
                     "itemCount": 5,
-                    "itemBuilder": "_itemBuilder0"
+                    "itemBuilder": "_itemBuilder0",
+                    "factory": "builder"
                   })
               ])
           ]),
@@ -931,9 +839,7 @@ export class ScrollDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "ListView.separated · 分隔列表"
-            ]
+            "data": "ListView.separated · 分隔列表"
           }),
         __h('SizedBox', {
             "height": 140
@@ -947,7 +853,8 @@ export class ScrollDetail {
                 },
                 "itemCount": 6,
                 "separatorBuilder": "_separatorBuilder1",
-                "itemBuilder": "_itemBuilder2"
+                "itemBuilder": "_itemBuilder2",
+                "factory": "separated"
               })
           ]),
         __h('SizedBox', {
@@ -958,9 +865,7 @@ export class ScrollDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "SingleChildScrollView · 长内容滚动（ctrl offset: " + this._ctrlOffset + "）"
-            ]
+            "data": "SingleChildScrollView · 长内容滚动（ctrl offset: " + this._ctrlOffset + "）"
           }),
         __h('SingleChildScrollView', {
             "controller": this._scrollController,
@@ -968,7 +873,7 @@ export class ScrollDetail {
             "physics": "ClampingScrollPhysics"
           }, [
             __h('Row', {}, [
-                ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": __h('Text', { "$pos": [ "横向 " + i ] }) }) ])]); } return out; })()
+                ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": __h('Text', { "data": "横向 " + i }) }) ])]); } return out; })()
               ])
           ]),
         __h('Align', {
@@ -978,9 +883,7 @@ export class ScrollDetail {
                 "onPressed": this.__bind("_scrollToEnd")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "横向 · 跳到底"
-                    ]
+                    "data": "横向 · 跳到底"
                   })
               ])
           ])
@@ -989,14 +892,10 @@ export class ScrollDetail {
   _itemBuilder0(context, index) {
       return __h('ListTile', {
         "leading": __h('Icon', {
-            "$pos": [
-              "list"
-            ]
+            "icon": "list"
           }),
         "title": __h('Text', {
-            "$pos": [
-              "builder item " + index
-            ]
+            "data": "builder item " + index
           })
       });
   }
@@ -1010,14 +909,10 @@ export class ScrollDetail {
         "dense": true,
         "leading": __h('Icon', {
             "color": '@Colors.teal.shade300',
-            "$pos": [
-              "arrow_right"
-            ]
+            "icon": "arrow_right"
           }),
         "title": __h('Text', {
-            "$pos": [
-              "separated item " + index
-            ]
+            "data": "separated item " + index
           })
       });
   }
@@ -1075,9 +970,7 @@ export class SliverDetail {
           }, [
             __h('SliverAppBar', {
                 "title": __h('Text', {
-                    "$pos": [
-                      "SliverAppBar 导航 · offset " + this._offset.toFixed(0)
-                    ]
+                    "data": "SliverAppBar 导航 · offset " + this._offset.toFixed(0)
                   }),
                 "backgroundColor": '#673AB7',
                 "foregroundColor": '#FFFFFF',
@@ -1086,18 +979,14 @@ export class SliverDetail {
                 "actions": [
                   __h('IconButton', {
                       "icon": __h('Icon', {
-                          "$pos": [
-                            "center_focus_strong"
-                          ]
+                          "icon": "center_focus_strong"
                         }),
                       "tooltip": "定位到「固定高度」分区",
                       "onPressed": this.__bind("_scrollToFixed")
                     }),
                   __h('IconButton', {
                       "icon": __h('Icon', {
-                          "$pos": [
-                            "straighten"
-                          ]
+                          "icon": "straighten"
                         }),
                       "tooltip": "测量「固定高度」分区的位置与尺寸",
                       "onPressed": this.__bind("_measureFixed")
@@ -1130,9 +1019,7 @@ export class SliverDetail {
                           "fontSize": 14,
                           "fontWeight": "bold"
                         },
-                        "$pos": [
-                          "CustomScrollView 整页 · SliverToBoxAdapter 盒子"
-                        ]
+                        "data": "CustomScrollView 整页 · SliverToBoxAdapter 盒子"
                       })
                   ])
               ]),
@@ -1162,9 +1049,7 @@ export class SliverDetail {
                           "fontSize": 13,
                           "color": '#009688'
                         },
-                        "$pos": [
-                          "GlobalKey 测量：「固定高度」分区 " + this._measureText
-                        ]
+                        "data": "GlobalKey 测量：「固定高度」分区 " + this._measureText
                       })
                   ])
               ]),
@@ -1177,7 +1062,7 @@ export class SliverDetail {
                 }
               }, [
                 __h('SliverList', {}, [
-                    ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "leading": __h('Icon', { "color": '#673AB7', "$pos": [ "list" ] }), "title": __h('Text', { "$pos": [ "SliverList item " + i ] }), "trailing": __h('Icon', { "$pos": [ "chevron_right" ] }) })]); } return out; })()
+                    ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "leading": __h('Icon', { "color": '#673AB7', "icon": "list" }), "title": __h('Text', { "data": "SliverList item " + i }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
                   ])
               ]),
             __h('SliverPadding', {
@@ -1194,9 +1079,7 @@ export class SliverDetail {
                           "fontSize": 14,
                           "fontWeight": "bold"
                         },
-                        "$pos": [
-                          "SliverList.builder · 懒构建列表"
-                        ]
+                        "data": "SliverList.builder · 懒构建列表"
                       })
                   ])
               ]),
@@ -1210,7 +1093,8 @@ export class SliverDetail {
               }, [
                 __h(SliverList, {
                     "itemCount": 8,
-                    "itemBuilder": "_itemBuilder0"
+                    "itemBuilder": "_itemBuilder0",
+                    "factory": "builder"
                   })
               ]),
             __h('SliverPadding', {
@@ -1227,9 +1111,7 @@ export class SliverDetail {
                           "fontSize": 14,
                           "fontWeight": "bold"
                         },
-                        "$pos": [
-                          "SliverList.separated · 分隔列表"
-                        ]
+                        "data": "SliverList.separated · 分隔列表"
                       })
                   ])
               ]),
@@ -1244,7 +1126,8 @@ export class SliverDetail {
                 __h(SliverList, {
                     "itemCount": 5,
                     "itemBuilder": "_itemBuilder1",
-                    "separatorBuilder": "_separatorBuilder2"
+                    "separatorBuilder": "_separatorBuilder2",
+                    "factory": "separated"
                   })
               ]),
             __h('SliverPadding', {
@@ -1276,9 +1159,7 @@ export class SliverDetail {
                               "fontSize": 14,
                               "fontWeight": "bold"
                             },
-                            "$pos": [
-                              "SliverFixedExtentList · 固定高度"
-                            ]
+                            "data": "SliverFixedExtentList · 固定高度"
                           })
                       ])
                   ])
@@ -1311,9 +1192,7 @@ export class SliverDetail {
                           "fontSize": 14,
                           "fontWeight": "bold"
                         },
-                        "$pos": [
-                          "SliverOpacity + SliverGrid.builder · MaxCrossAxisExtent 九宫格"
-                        ]
+                        "data": "SliverOpacity + SliverGrid.builder · MaxCrossAxisExtent 九宫格"
                       })
                   ])
               ]),
@@ -1329,14 +1208,15 @@ export class SliverDetail {
                     }
                   }, [
                     __h(SliverGrid, {
-                        "gridDelegate": __h('SliverGridDelegateWithMaxCrossAxisExtent', {
-                            "maxCrossAxisExtent": 140,
-                            "mainAxisSpacing": 8,
-                            "crossAxisSpacing": 8,
-                            "childAspectRatio": 1
-                          }),
+                        "gridDelegate": {
+                          "maxCrossAxisExtent": 140,
+                          "mainAxisSpacing": 8,
+                          "crossAxisSpacing": 8,
+                          "childAspectRatio": 1
+                        },
                         "itemCount": 9,
-                        "itemBuilder": "_itemBuilder4"
+                        "itemBuilder": "_itemBuilder4",
+                        "factory": "builder"
                       })
                   ])
               ]),
@@ -1349,9 +1229,7 @@ export class SliverDetail {
                             "style": {
                               "color": '#9E9E9E'
                             },
-                            "$pos": [
-                              "底部 · SliverSafeArea + SliverFillRemaining"
-                            ]
+                            "data": "底部 · SliverSafeArea + SliverFillRemaining"
                           })
                       ])
                   ])
@@ -1364,9 +1242,7 @@ export class SliverDetail {
             "tooltip": "跳到底"
           }, [
             __h('Icon', {
-                "$pos": [
-                  "arrow_downward"
-                ]
+                "icon": "arrow_downward"
               })
           ])
       });
@@ -1375,19 +1251,13 @@ export class SliverDetail {
       return __h('ListTile', {
         "leading": __h('Icon', {
             "color": '@Colors.orange.shade700',
-            "$pos": [
-              "build"
-            ]
+            "icon": "build"
           }),
         "title": __h('Text', {
-            "$pos": [
-              "builder item " + index
-            ]
+            "data": "builder item " + index
           }),
         "subtitle": __h('Text', {
-            "$pos": [
-              "index * 10 = " + (index * 10)
-            ]
+            "data": "index * 10 = " + (index * 10)
           })
       });
   }
@@ -1396,14 +1266,10 @@ export class SliverDetail {
         "dense": true,
         "leading": __h('Icon', {
             "color": '#673AB7',
-            "$pos": [
-              "arrow_right"
-            ]
+            "icon": "arrow_right"
           }),
         "title": __h('Text', {
-            "$pos": [
-              "separated item " + index
-            ]
+            "data": "separated item " + index
           })
       });
   }
@@ -1417,14 +1283,10 @@ export class SliverDetail {
         "dense": true,
         "leading": __h('Icon', {
             "color": '#009688',
-            "$pos": [
-              "height"
-            ]
+            "icon": "height"
           }),
         "title": __h('Text', {
-            "$pos": [
-              "fixed item " + index
-            ]
+            "data": "fixed item " + index
           })
       });
   }
@@ -1442,9 +1304,7 @@ export class SliverDetail {
             "style": {
               "fontWeight": "bold"
             },
-            "$pos": [
-              "格 " + index
-            ]
+            "data": "格 " + index
           })
       ]);
   }
@@ -1470,9 +1330,7 @@ export class GridDetail {
         "backgroundColor": '@Colors.grey.shade50',
         "appBar": __h('AppBar', {
             "title": __h('Text', {
-                "$pos": [
-                  "GridView 懒加载验证"
-                ]
+                "data": "GridView 懒加载验证"
               }),
             "backgroundColor": '#009688',
             "foregroundColor": '#FFFFFF'
@@ -1484,9 +1342,7 @@ export class GridDetail {
             "tooltip": "跳到底"
           }, [
             __h('Icon', {
-                "$pos": [
-                  "arrow_downward"
-                ]
+                "icon": "arrow_downward"
               })
           ]),
         "body": __h('Column', {
@@ -1505,9 +1361,7 @@ export class GridDetail {
                       "fontSize": 13,
                       "color": '#9E9E9E'
                     },
-                    "$pos": [
-                      "controller offset: " + this._offset.toFixed(1)
-                    ]
+                    "data": "controller offset: " + this._offset.toFixed(1)
                   })
               ]),
             __h('Padding', {
@@ -1523,9 +1377,7 @@ export class GridDetail {
                       "fontSize": 14,
                       "fontWeight": "bold"
                     },
-                    "$pos": [
-                      "GridView.builder · 固定 3 列 · 30 项（懒加载）"
-                    ]
+                    "data": "GridView.builder · 固定 3 列 · 30 项（懒加载）"
                   })
               ]),
             __h('Expanded', {
@@ -1533,14 +1385,15 @@ export class GridDetail {
               }, [
                 __h(GridView, {
                     "controller": this._controller,
-                    "gridDelegate": __h('SliverGridDelegateWithFixedCrossAxisCount', {
-                        "crossAxisCount": 3,
-                        "mainAxisSpacing": 8,
-                        "crossAxisSpacing": 8,
-                        "childAspectRatio": 1
-                      }),
+                    "gridDelegate": {
+                      "crossAxisCount": 3,
+                      "mainAxisSpacing": 8,
+                      "crossAxisSpacing": 8,
+                      "childAspectRatio": 1
+                    },
                     "itemCount": 30,
-                    "itemBuilder": "_itemBuilder0"
+                    "itemBuilder": "_itemBuilder0",
+                    "factory": "builder"
                   })
               ]),
             __h('Padding', {
@@ -1556,23 +1409,22 @@ export class GridDetail {
                       "fontSize": 14,
                       "fontWeight": "bold"
                     },
-                    "$pos": [
-                      "GridView.builder · MaxCrossAxisExtent 120 · 20 项（懒加载）"
-                    ]
+                    "data": "GridView.builder · MaxCrossAxisExtent 120 · 20 项（懒加载）"
                   })
               ]),
             __h('Expanded', {
                 "flex": 4
               }, [
                 __h(GridView, {
-                    "gridDelegate": __h('SliverGridDelegateWithMaxCrossAxisExtent', {
-                        "maxCrossAxisExtent": 120,
-                        "mainAxisSpacing": 8,
-                        "crossAxisSpacing": 8,
-                        "childAspectRatio": 1
-                      }),
+                    "gridDelegate": {
+                      "maxCrossAxisExtent": 120,
+                      "mainAxisSpacing": 8,
+                      "crossAxisSpacing": 8,
+                      "childAspectRatio": 1
+                    },
                     "itemCount": 20,
-                    "itemBuilder": "_itemBuilder1"
+                    "itemBuilder": "_itemBuilder1",
+                    "factory": "builder"
                   })
               ])
           ])
@@ -1592,9 +1444,7 @@ export class GridDetail {
             "style": {
               "fontWeight": "bold"
             },
-            "$pos": [
-              "格 " + index
-            ]
+            "data": "格 " + index
           })
       ]);
   }
@@ -1612,9 +1462,7 @@ export class GridDetail {
             "style": {
               "fontWeight": "bold"
             },
-            "$pos": [
-              "项 " + index
-            ]
+            "data": "项 " + index
           })
       ]);
   }
@@ -1635,14 +1483,10 @@ export class ScaffoldDetail {
         "backgroundColor": '@Colors.grey.shade50',
         "appBar": __h('AppBar', {
             "leading": __h('Icon', {
-                "$pos": [
-                  "menu"
-                ]
+                "icon": "menu"
               }),
             "title": __h('Text', {
-                "$pos": [
-                  "Scaffold / AppBar / FAB / BottomNav"
-                ]
+                "data": "Scaffold / AppBar / FAB / BottomNav"
               }),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF',
@@ -1652,9 +1496,7 @@ export class ScaffoldDetail {
             "actions": [
               __h('Icon', {
                   "color": '#FFFFFF',
-                  "$pos": [
-                    "search"
-                  ]
+                  "icon": "search"
                 }),
               __h('SizedBox', {
                   "width": 16
@@ -1669,22 +1511,16 @@ export class ScaffoldDetail {
                     __h('Icon', {
                         "size": 48,
                         "color": '#673AB7',
-                        "$pos": [
-                          "extension"
-                        ]
+                        "icon": "extension"
                       }),
                     __h('SizedBox', {
                         "height": 12
                       }),
                     __h('Text', {
-                        "$pos": [
-                          "页面骨架组件演示"
-                        ]
+                        "data": "页面骨架组件演示"
                       }),
                     __h('Text', {
-                        "$pos": [
-                          "BottomNav 选中：" + this._navIndex
-                        ]
+                        "data": "BottomNav 选中：" + this._navIndex
                       })
                   ])
               ])
@@ -1696,9 +1532,7 @@ export class ScaffoldDetail {
             "tooltip": "添加"
           }, [
             __h('Icon', {
-                "$pos": [
-                  "add"
-                ]
+                "icon": "add"
               })
           ]),
         "bottomNavigationBar": __h('BottomNavigationBar', {
@@ -1709,25 +1543,19 @@ export class ScaffoldDetail {
             "items": [
               __h('BottomNavigationBarItem', {
                   "icon": __h('Icon', {
-                      "$pos": [
-                        "home"
-                      ]
+                      "icon": "home"
                     }),
                   "label": "首页"
                 }),
               __h('BottomNavigationBarItem', {
                   "icon": __h('Icon', {
-                      "$pos": [
-                        "search"
-                      ]
+                      "icon": "search"
                     }),
                   "label": "搜索"
                 }),
               __h('BottomNavigationBarItem', {
                   "icon": __h('Icon', {
-                      "$pos": [
-                        "person"
-                      ]
+                      "icon": "person"
                     }),
                   "label": "我的"
                 })
@@ -1783,9 +1611,7 @@ export class InputDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "TextField"
-            ]
+            "data": "TextField"
           }),
         __h('TextField', {
             "controller": this._controller,
@@ -1807,18 +1633,14 @@ export class InputDetail {
               "fontSize": 14,
               "color": '#9E9E9E'
             },
-            "$pos": [
-              "输入内容：" + this._text
-            ]
+            "data": "输入内容：" + this._text
           }),
         __h('Text', {
             "style": {
               "fontSize": 14,
               "color": '#673AB7'
             },
-            "$pos": [
-              "controller.text：" + this._controller.text
-            ]
+            "data": "controller.text：" + this._controller.text
           }),
         __h('SizedBox', {
             "height": 8
@@ -1830,9 +1652,7 @@ export class InputDetail {
                 "onPressed": this.__bind("this._controller.clear()")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "清空输入"
-                    ]
+                    "data": "清空输入"
                   })
               ])
           ]),
@@ -1844,9 +1664,7 @@ export class InputDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "Radio 单选"
-            ]
+            "data": "Radio 单选"
           }),
         __h('Row', {}, [
             __h('Radio', {
@@ -1856,9 +1674,7 @@ export class InputDetail {
                 "activeColor": '#673AB7'
               }),
             __h('Text', {
-                "$pos": [
-                  "选项 A"
-                ]
+                "data": "选项 A"
               }),
             __h('Radio', {
                 "value": "B",
@@ -1867,9 +1683,7 @@ export class InputDetail {
                 "activeColor": '#673AB7'
               }),
             __h('Text', {
-                "$pos": [
-                  "选项 B"
-                ]
+                "data": "选项 B"
               })
           ]),
         __h('Text', {
@@ -1877,9 +1691,7 @@ export class InputDetail {
               "fontSize": 14,
               "color": '#9E9E9E'
             },
-            "$pos": [
-              "当前选择：" + this._choice
-            ]
+            "data": "当前选择：" + this._choice
           }),
         __h('SizedBox', {
             "height": 12
@@ -1889,9 +1701,7 @@ export class InputDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "DropdownButton"
-            ]
+            "data": "DropdownButton"
           }),
         __h('DropdownButton', {
             "value": this._dropdown,
@@ -1902,27 +1712,21 @@ export class InputDetail {
                   "value": "苹果"
                 }, [
                   __h('Text', {
-                      "$pos": [
-                        "苹果"
-                      ]
+                      "data": "苹果"
                     })
                 ]),
               __h('DropdownMenuItem', {
                   "value": "香蕉"
                 }, [
                   __h('Text', {
-                      "$pos": [
-                        "香蕉"
-                      ]
+                      "data": "香蕉"
                     })
                 ]),
               __h('DropdownMenuItem', {
                   "value": "橙子"
                 }, [
                   __h('Text', {
-                      "$pos": [
-                        "橙子"
-                      ]
+                      "data": "橙子"
                     })
                 ])
             ]
@@ -1943,9 +1747,7 @@ export class InputDetail {
                 "width": 8
               }),
             __h('Text', {
-                "$pos": [
-                  "Switch：" + (this._switchOn ? "开" : "关")
-                ]
+                "data": "Switch：" + (this._switchOn ? "开" : "关")
               })
           ]),
         __h('Row', {}, [
@@ -1959,9 +1761,7 @@ export class InputDetail {
                 "width": 8
               }),
             __h('Text', {
-                "$pos": [
-                  "Checkbox：" + (this._checked ?? false)
-                ]
+                "data": "Checkbox：" + (this._checked ?? false)
               })
           ]),
         __h('SizedBox', {
@@ -1971,9 +1771,7 @@ export class InputDetail {
             "style": {
               "fontSize": 14
             },
-            "$pos": [
-              "Slider 值：" + this._slider
-            ]
+            "data": "Slider 值：" + this._slider
           }),
         __h('Slider', {
             "value": this._slider,
@@ -2003,9 +1801,7 @@ export class ProgressDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "CircularProgressIndicator"
-            ]
+            "data": "CircularProgressIndicator"
           }),
         __h('SizedBox', {
             "height": 8
@@ -2030,9 +1826,7 @@ export class ProgressDetail {
               "fontSize": 16,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "LinearProgressIndicator"
-            ]
+            "data": "LinearProgressIndicator"
           }),
         __h('SizedBox', {
             "height": 8
@@ -2055,9 +1849,7 @@ export class ProgressDetail {
               "fontSize": 14,
               "color": '#9E9E9E'
             },
-            "$pos": [
-              "进度值：" + this._progress
-            ]
+            "data": "进度值：" + this._progress
           })
       ]);
   }
@@ -2101,9 +1893,7 @@ export class NotifierCard {
                         "onPressed": this.__bind("_inc")
                       }, [
                         __h('Text', {
-                            "$pos": [
-                              "+1"
-                            ]
+                            "data": "+1"
                           })
                       ]),
                     __h('SizedBox', {
@@ -2113,9 +1903,7 @@ export class NotifierCard {
                         "onPressed": this.__bind("_reset")
                       }, [
                         __h('Text', {
-                            "$pos": [
-                              "Reset"
-                            ]
+                            "data": "Reset"
                           })
                       ])
                   ])
@@ -2132,9 +1920,7 @@ export class NotifierCard {
           "fontSize": 24,
           "fontWeight": "bold"
         },
-        "$pos": [
-          "count = " + this._model.count
-        ]
+        "data": "count = " + this._model.count
       });
   }
 }
@@ -2173,9 +1959,7 @@ export class StatelessCard {
                 __h('Row', {}, [
                     __h('Icon', {
                         "color": '#009688',
-                        "$pos": [
-                          "article"
-                        ]
+                        "icon": "article"
                       }),
                     __h('SizedBox', {
                         "width": 8
@@ -2186,9 +1970,7 @@ export class StatelessCard {
                               "fontSize": 18,
                               "fontWeight": "bold"
                             },
-                            "$pos": [
-                              this.badge + " · " + this.title
-                            ]
+                            "data": this.badge + " · " + this.title
                           })
                       ])
                   ]),
@@ -2200,9 +1982,7 @@ export class StatelessCard {
                       "fontSize": 14,
                       "color": '#9E9E9E'
                     },
-                    "$pos": [
-                      this.subtitle
-                    ]
+                    "data": this.subtitle
                   })
               ])
           ])
@@ -2234,9 +2014,7 @@ export class TabDetail {
               "fontSize": 15,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "DefaultTabController · 官方惯用法（controller 由祖先提供）"
-            ]
+            "data": "DefaultTabController · 官方惯用法（controller 由祖先提供）"
           }),
         __h('SizedBox', {
             "height": 6
@@ -2268,23 +2046,17 @@ export class TabDetail {
                         __h('TabBarView', {}, [
                             __h('Center', {}, [
                                 __h('Text', {
-                                    "$pos": [
-                                      "TabBarView · 广场"
-                                    ]
+                                    "data": "TabBarView · 广场"
                                   })
                               ]),
                             __h('Center', {}, [
                                 __h('Text', {
-                                    "$pos": [
-                                      "TabBarView · 推荐"
-                                    ]
+                                    "data": "TabBarView · 推荐"
                                   })
                               ]),
                             __h('Center', {}, [
                                 __h('Text', {
-                                    "$pos": [
-                                      "TabBarView · 关注"
-                                    ]
+                                    "data": "TabBarView · 关注"
                                   })
                               ])
                           ])
@@ -2300,9 +2072,7 @@ export class TabDetail {
               "fontSize": 15,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "显式 TabController · index = " + this._index
-            ]
+            "data": "显式 TabController · index = " + this._index
           }),
         __h('SizedBox', {
             "height": 6
@@ -2330,23 +2100,17 @@ export class TabDetail {
                       }, [
                         __h('Center', {}, [
                             __h('Text', {
-                                "$pos": [
-                                  "第 1 页（index 0）"
-                                ]
+                                "data": "第 1 页（index 0）"
                               })
                           ]),
                         __h('Center', {}, [
                             __h('Text', {
-                                "$pos": [
-                                  "第 2 页（index 1）"
-                                ]
+                                "data": "第 2 页（index 1）"
                               })
                           ]),
                         __h('Center', {}, [
                             __h('Text', {
-                                "$pos": [
-                                  "第 3 页（index 2）"
-                                ]
+                                "data": "第 3 页（index 2）"
                               })
                           ])
                       ])
@@ -2360,9 +2124,7 @@ export class TabDetail {
                 "onPressed": this.__bind("_next")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "下一 tab · controller.animateTo"
-                    ]
+                    "data": "下一 tab · controller.animateTo"
                   })
               ])
           ])
@@ -2387,9 +2149,7 @@ export class PageViewDetail {
               "fontSize": 15,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "PageView · 当前第 " + (this._page + 1) + " / 3 页"
-            ]
+            "data": "PageView · 当前第 " + (this._page + 1) + " / 3 页"
           }),
         __h('SizedBox', {
             "height": 6
@@ -2405,9 +2165,7 @@ export class PageViewDetail {
                     "alignment": "center"
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "第 1 页"
-                        ]
+                        "data": "第 1 页"
                       })
                   ]),
                 __h('Container', {
@@ -2415,9 +2173,7 @@ export class PageViewDetail {
                     "alignment": "center"
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "第 2 页"
-                        ]
+                        "data": "第 2 页"
                       })
                   ]),
                 __h('Container', {
@@ -2425,9 +2181,7 @@ export class PageViewDetail {
                     "alignment": "center"
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "第 3 页"
-                        ]
+                        "data": "第 3 页"
                       })
                   ])
               ])
@@ -2491,18 +2245,14 @@ export class KeyTile {
                     "style": {
                       "fontSize": 13
                     },
-                    "$pos": [
-                      caption
-                    ]
+                    "data": caption
                   })
               ]),
             __h('TextButton', {
                 "onPressed": this.__bind("bump")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "+1"
-                    ]
+                    "data": "+1"
                   })
               ])
           ])
@@ -2536,9 +2286,7 @@ export class KeyDetail {
               "fontSize": 13,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "① 带 key：key: ValueKey(name)"
-            ]
+            "data": "① 带 key：key: ValueKey(name)"
           }),
         ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "key": new ValueKey(this._names[i]), "index": i, "label": this._names[i] + "（key）" })]); } return out; })(),
         __h('SizedBox', {
@@ -2549,9 +2297,7 @@ export class KeyDetail {
               "fontSize": 13,
               "fontWeight": "bold"
             },
-            "$pos": [
-              "② 不带 key：按位置匹配"
-            ]
+            "data": "② 不带 key：按位置匹配"
           }),
         ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": this._names[i] + "（无 key）" })]); } return out; })()
       ]);
@@ -2589,7 +2335,7 @@ export class KeyDetail {
           __h('ListView', {
               "key": new PageStorageKey("key-page-a")
             }, [
-              ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "$pos": [ "A 行 " + i ] }) })]); } return out; })()
+              ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "data": "A 行 " + i }) })]); } return out; })()
             ])
         ]);
     }
@@ -2599,7 +2345,7 @@ export class KeyDetail {
         __h('ListView', {
             "key": new PageStorageKey("key-page-b")
           }, [
-            ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "$pos": [ "B 行 " + i ] }) })]); } return out; })()
+            ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "data": "B 行 " + i }) })]); } return out; })()
           ])
       ]);
   }
@@ -2660,9 +2406,7 @@ export class KeyDetail {
                   "fontWeight": "bold",
                   "color": '#673AB7'
                 },
-                "$pos": [
-                  "ValueKey · 列表按值匹配"
-                ]
+                "data": "ValueKey · 列表按值匹配"
               }),
             __h('SizedBox', {
                 "height": 4
@@ -2672,9 +2416,7 @@ export class KeyDetail {
                   "fontSize": 12,
                   "color": '#9E9E9E'
                 },
-                "$pos": [
-                  "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。"
-                ]
+                "data": "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。"
               }),
             __h('SizedBox', {
                 "height": 8
@@ -2688,9 +2430,7 @@ export class KeyDetail {
                     "onPressed": this.__bind("_rotateNames")
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "轮换顺序（A→末尾）"
-                        ]
+                        "data": "轮换顺序（A→末尾）"
                       })
                   ]),
                 __h('SizedBox', {
@@ -2700,9 +2440,7 @@ export class KeyDetail {
                     "onPressed": this.__bind("_resetNames")
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "重置"
-                        ]
+                        "data": "重置"
                       })
                   ])
               ])
@@ -2739,9 +2477,7 @@ export class KeyDetail {
                   "fontWeight": "bold",
                   "color": '#673AB7'
                 },
-                "$pos": [
-                  "ObjectKey · 按对象身份相等"
-                ]
+                "data": "ObjectKey · 按对象身份相等"
               }),
             __h('SizedBox', {
                 "height": 4
@@ -2751,9 +2487,7 @@ export class KeyDetail {
                   "fontSize": 12,
                   "color": '#9E9E9E'
                 },
-                "$pos": [
-                  "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。"
-                ]
+                "data": "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。"
               }),
             __h('SizedBox', {
                 "height": 8
@@ -2767,9 +2501,7 @@ export class KeyDetail {
                   "fontSize": 12,
                   "color": '#9E9E9E'
                 },
-                "$pos": [
-                  "操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。" + "选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。"
-                ]
+                "data": "操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。" + "选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。"
               }),
             __h('SizedBox', {
                 "height": 6
@@ -2779,9 +2511,7 @@ export class KeyDetail {
                   "fontSize": 11,
                   "color": '#9E9E9E'
                 },
-                "$pos": [
-                  "补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。" + "本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），" + "所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。"
-                ]
+                "data": "补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。" + "本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），" + "所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。"
               }),
             __h('SizedBox', {
                 "height": 8
@@ -2791,9 +2521,7 @@ export class KeyDetail {
                     "onPressed": this.__bind("_rebuildParent")
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "父级重建（setState 一次）"
-                        ]
+                        "data": "父级重建（setState 一次）"
                       })
                   ])
               ])
@@ -2830,9 +2558,7 @@ export class KeyDetail {
                   "fontWeight": "bold",
                   "color": '#673AB7'
                 },
-                "$pos": [
-                  "UniqueKey · 每次都是新身份"
-                ]
+                "data": "UniqueKey · 每次都是新身份"
               }),
             __h('SizedBox', {
                 "height": 4
@@ -2842,9 +2568,7 @@ export class KeyDetail {
                   "fontSize": 12,
                   "color": '#9E9E9E'
                 },
-                "$pos": [
-                  "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。"
-                ]
+                "data": "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。"
               }),
             __h('SizedBox', {
                 "height": 8
@@ -2862,9 +2586,7 @@ export class KeyDetail {
                     "onPressed": this.__bind("_bumpUnique")
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "重建（setState 一次）"
-                        ]
+                        "data": "重建（setState 一次）"
                       })
                   ])
               ])
@@ -2901,9 +2623,7 @@ export class KeyDetail {
                   "fontWeight": "bold",
                   "color": '#673AB7'
                 },
-                "$pos": [
-                  "PageStorageKey · 滚动位置持久化"
-                ]
+                "data": "PageStorageKey · 滚动位置持久化"
               }),
             __h('SizedBox', {
                 "height": 4
@@ -2913,9 +2633,7 @@ export class KeyDetail {
                   "fontSize": 12,
                   "color": '#9E9E9E'
                 },
-                "$pos": [
-                  "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。"
-                ]
+                "data": "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。"
               }),
             __h('SizedBox', {
                 "height": 8
@@ -2929,9 +2647,7 @@ export class KeyDetail {
                     "onPressed": this.__bind("_flipStore")
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          (this._storeA ? "切到 B 列表" : "切回 A 列表")
-                        ]
+                        "data": (this._storeA ? "切到 B 列表" : "切回 A 列表")
                       })
                   ])
               ])
@@ -2968,9 +2684,7 @@ export class KeyDetail {
                   "fontWeight": "bold",
                   "color": '#673AB7'
                 },
-                "$pos": [
-                  "GlobalKey · 宿主端量测 / 定位"
-                ]
+                "data": "GlobalKey · 宿主端量测 / 定位"
               }),
             __h('SizedBox', {
                 "height": 4
@@ -2980,9 +2694,7 @@ export class KeyDetail {
                   "fontSize": 12,
                   "color": '#9E9E9E'
                 },
-                "$pos": [
-                  "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。"
-                ]
+                "data": "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。"
               }),
             __h('SizedBox', {
                 "height": 8
@@ -3006,9 +2718,7 @@ export class KeyDetail {
                     "style": {
                       "fontSize": 13
                     },
-                    "$pos": [
-                      "目标盒子（GlobalKey 挂在这里）"
-                    ]
+                    "data": "目标盒子（GlobalKey 挂在这里）"
                   })
               ]),
             __h('SizedBox', {
@@ -3019,9 +2729,7 @@ export class KeyDetail {
                   "fontSize": 13,
                   "color": '#009688'
                 },
-                "$pos": [
-                  "测量：" + this._measureText
-                ]
+                "data": "测量：" + this._measureText
               }),
             __h('SizedBox', {
                 "height": 4
@@ -3031,9 +2739,7 @@ export class KeyDetail {
                     "onPressed": this.__bind("_measureTarget")
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "测量位置与尺寸"
-                        ]
+                        "data": "测量位置与尺寸"
                       })
                   ]),
                 __h('SizedBox', {
@@ -3043,9 +2749,7 @@ export class KeyDetail {
                     "onPressed": this.__bind("_scrollToTarget")
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "定位（showOnScreen）"
-                        ]
+                        "data": "定位（showOnScreen）"
                       })
                   ])
               ])
@@ -3057,9 +2761,7 @@ export class KeyDetail {
         "backgroundColor": '@Colors.grey.shade50',
         "appBar": __h('AppBar', {
             "title": __h('Text', {
-                "$pos": [
-                  "Key 家族 · 全部用例"
-                ]
+                "data": "Key 家族 · 全部用例"
               }),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF'
@@ -3078,9 +2780,7 @@ export class KeyDetail {
                       "fontSize": 12,
                       "color": '#9E9E9E'
                     },
-                    "$pos": [
-                      "每一张卡片一种 key 的语义；「计数」是 KeyTile 的内部 State，" + "用它来观察状态是跟着行走还是跟着位置走。"
-                    ]
+                    "data": "每一张卡片一种 key 的语义；「计数」是 KeyTile 的内部 State，" + "用它来观察状态是跟着行走还是跟着位置走。"
                   })
               ]),
             this._cardValueKey(),
@@ -3118,9 +2818,7 @@ export class DrawerDetail {
         "backgroundColor": '@Colors.grey.shade50',
         "appBar": __h('AppBar', {
             "title": __h('Text', {
-                "$pos": [
-                  "Drawer / endDrawer"
-                ]
+                "data": "Drawer / endDrawer"
               }),
             "backgroundColor": '#3F51B5',
             "foregroundColor": '#FFFFFF'
@@ -3140,35 +2838,25 @@ export class DrawerDetail {
                               "color": '#FFFFFF',
                               "fontSize": 20
                             },
-                            "$pos": [
-                              "左侧抽屉"
-                            ]
+                            "data": "左侧抽屉"
                           })
                       ])
                   ]),
                 __h('ListTile', {
                     "leading": __h('Icon', {
-                        "$pos": [
-                          "receipt_long"
-                        ]
+                        "icon": "receipt_long"
                       }),
                     "title": __h('Text', {
-                        "$pos": [
-                          "我的订单"
-                        ]
+                        "data": "我的订单"
                       }),
                     "onTap": this.__bind("_pickOrders")
                   }),
                 __h('ListTile', {
                     "leading": __h('Icon', {
-                        "$pos": [
-                          "favorite_border"
-                        ]
+                        "icon": "favorite_border"
                       }),
                     "title": __h('Text', {
-                        "$pos": [
-                          "我的收藏"
-                        ]
+                        "data": "我的收藏"
                       }),
                     "onTap": this.__bind("_pickFavorites")
                   })
@@ -3189,35 +2877,25 @@ export class DrawerDetail {
                               "color": '#FFFFFF',
                               "fontSize": 20
                             },
-                            "$pos": [
-                              "右侧抽屉"
-                            ]
+                            "data": "右侧抽屉"
                           })
                       ])
                   ]),
                 __h('ListTile', {
                     "leading": __h('Icon', {
-                        "$pos": [
-                          "settings"
-                        ]
+                        "icon": "settings"
                       }),
                     "title": __h('Text', {
-                        "$pos": [
-                          "设置"
-                        ]
+                        "data": "设置"
                       }),
                     "onTap": this.__bind("_pickSettings")
                   }),
                 __h('ListTile', {
                     "leading": __h('Icon', {
-                        "$pos": [
-                          "help_outline"
-                        ]
+                        "icon": "help_outline"
                       }),
                     "title": __h('Text', {
-                        "$pos": [
-                          "帮助与关于"
-                        ]
+                        "data": "帮助与关于"
                       }),
                     "onTap": this.__bind("_pickHelp")
                   })
@@ -3230,25 +2908,19 @@ export class DrawerDetail {
                 __h('Icon', {
                     "size": 48,
                     "color": '#3F51B5',
-                    "$pos": [
-                      "menu_open"
-                    ]
+                    "icon": "menu_open"
                   }),
                 __h('SizedBox', {
                     "height": 12
                   }),
                 __h('Text', {
-                    "$pos": [
-                      "AppBar 左侧为汉堡按钮，右侧为 endDrawer 入口"
-                    ]
+                    "data": "AppBar 左侧为汉堡按钮，右侧为 endDrawer 入口"
                   }),
                 __h('SizedBox', {
                     "height": 8
                   }),
                 __h('Text', {
-                    "$pos": [
-                      ((this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked)
-                    ]
+                    "data": ((this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked)
                   })
               ])
           ])
@@ -3287,18 +2959,14 @@ export class ReorderListDetail {
                           "fontSize": 13,
                           "color": '#9E9E9E'
                         },
-                        "$pos": [
-                          "长按拖拽调整顺序（onReorder 双参事件）"
-                        ]
+                        "data": "长按拖拽调整顺序（onReorder 双参事件）"
                       })
                   ]),
                 __h('ElevatedButton', {
                     "onPressed": this.__bind("_add")
                   }, [
                     __h('Text', {
-                        "$pos": [
-                          "添加"
-                        ]
+                        "data": "添加"
                       })
                   ])
               ])
@@ -3315,7 +2983,7 @@ export class ReorderListDetail {
                   "bottom": 0.0
                 }
               }, [
-                ...(() => { var out = []; for (let item of this._items) { out.push.apply(out, [__h('Card', { "key": new ValueKey(item) }, [ __h('ListTile', { "leading": __h('Icon', { "$pos": [ "drag_handle" ] }), "title": __h('Text', { "$pos": [ item ] }) }) ])]); } return out; })()
+                ...(() => { var out = []; for (let item of this._items) { out.push.apply(out, [__h('Card', { "key": new ValueKey(item) }, [ __h('ListTile', { "leading": __h('Icon', { "icon": "drag_handle" }), "title": __h('Text', { "data": item }) }) ])]); } return out; })()
               ])
           ])
       ]);

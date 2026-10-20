@@ -6,16 +6,22 @@
 ///
 /// 组装规则（全局唯一约定）：
 ///   - `type` = 构造名**原样**（不做任何归一，如四种按钮各自用真实类型名）；
+///   - `factory` = 命名构造 / 静态工厂名（`ListView.builder` → `builder`、
+///     `Image.network` → `network`、`ChangeNotifierProvider.value` → `value`）——
+///     同类型的不同工厂产物**同 type、不同 factory**，运行时据此选工厂；
 ///   - `child:` → `children`；`children:`/`slivers:`/`tabs:` → 展开进 children；
 ///   - `delegate:` → sliver 子结点提供者（见 [sliverDelegateResult]）；
 ///   - `on*` → 事件句柄（键名就是参数名，不改名）；
-///   - 位置实参 → `props['$pos']`（JS 数组，运行时按位取）；
+///   - 位置实参 → 按 Flutter 声明的**形参名**（`Text('hi')` → `data`，见
+///     [widgetPositionalArgNames]）；未登记的类型退回 `props['$pos']`（JS 数组，
+///     运行时按位取）；
 ///   - 其余具名实参 → `props[参数名]`，值按形态翻译（翻译不出来则丢弃该键）；
 ///   - `key:` 由渲染层统一注入（见 `WidgetTranslateContext._applyKeyProp`）。
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
+import '../builders/js_widget_defs.dart';
 import 'value_forms.dart';
 import 'widget2js.dart';
 
@@ -28,8 +34,17 @@ const Set<String> _listArgs = {'children', 'slivers', 'tabs'};
 /// 子结点提供者参数：`delegate:`。
 const Set<String> _delegateArgs = {'delegate'};
 
-/// 位置实参在 props 里的键名（值为 JS 数组）：运行时按位取。
+/// 位置实参的 props 键名（值为 JS 数组，按位取）：**只用于**表
+/// [widgetPositionalArgNames] 未登记的类型兜底（见 [widgetToJson]）。
 const String positionalPropsKey = r'$pos';
+
+/// 命名构造 / 静态工厂名的 props 键（值为带引号的 JS 字符串）。
+///
+/// 键名固定，运行时据此**按类型 + 工厂名**挑选原生/JS 工厂：`ListView.builder`
+/// → `{factory: 'builder', itemBuilder: …}`、`ListView.separated` → `separated`、
+/// `Image.network` → `network`、`ChangeNotifierProvider.value` → `value`。
+/// 普通构造（`Text(...)` / `Padding(...)`）不带该键。
+const String factoryPropsKey = 'factory';
 
 /// 任意 widget 构造 → 产物结点描述。
 Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
@@ -72,7 +87,24 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     props[name] = autoValue(value, ctx, name: name);
   }
 
-  if (positional.isNotEmpty) props[positionalPropsKey] = positional;
+  // 命名构造 / 静态工厂名（`ListView.builder` / `Image.network` / `Provider.value`）
+  // → `props.factory`：产物自解释，运行时按「类型 + 工厂名」选工厂，不再靠
+  // props 有没有某个键来猜。
+  final factory = factoryNameOf(node.expr);
+  if (factory != null) props[factoryPropsKey] = ctx.jsString(factory);
+
+  // 位置实参：优先按 Flutter 声明的**形参名**下发（`Text('hi')` → `data`）；
+  // 未登记的类型退回下标数组 `$pos`（运行时按位取）——未识别组件照样能翻。
+  if (positional.isNotEmpty) {
+    final names = positionalArgNames(node.type, factory);
+    if (names != null && names.length >= positional.length) {
+      for (var i = 0; i < positional.length; i++) {
+        props[names[i]] = positional[i];
+      }
+    } else {
+      props[positionalPropsKey] = positional;
+    }
+  }
 
   // 构造的类型实参（`Consumer<NetworkVm>(...)` / `ChangeNotifierProvider<T>`）
   // → `model` prop：provider 的 watch/read/notifier 语义需要模型类名。
@@ -84,6 +116,30 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     'props': nonNull(props),
     'children': children,
   };
+}
+
+/// 命名构造 / 静态工厂名；普通构造返回 null。
+///
+///   - `InstanceCreationExpression`（带 const）：`constructorName.name`；
+///   - `MethodInvocation` **带 receiver**（静态工厂 `Image.network(...)` /
+///     `Positioned.fill(...)`）→ 方法名；
+///   - `MethodInvocation` 无 receiver（parseString 下无 const 的 `Foo(...)`）→
+///     方法名就是类型名，不是工厂，返回 null。
+String? factoryNameOf(Expression? e) {
+  if (e is InstanceCreationExpression) return e.constructorName.name?.name;
+  if (e is MethodInvocation) {
+    return e.target is Identifier ? e.methodName.name : null;
+  }
+  return null;
+}
+
+/// 位置实参的形参名：先查「类型.命名构造」再查「类型」，未登记返回 null。
+List<String>? positionalArgNames(String type, String? factory) {
+  if (factory != null) {
+    final byFactory = widgetPositionalArgNames['$type.$factory'];
+    if (byFactory != null) return byFactory;
+  }
+  return widgetPositionalArgNames[type];
 }
 
 /// 构造的第一个类型实参名（`Consumer<NetworkVm>(...)` → 'NetworkVm'）。

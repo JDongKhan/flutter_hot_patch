@@ -96,49 +96,32 @@ The output must correspond to the Dart source **one-to-one**; this is the core c
 
 ### Extension: adding widget support
 
-"How a given widget is translated into JS" is a policy implemented by `WidgetTranslator`
-(one translator per source widget constructor name):
+There is **no per-widget translator**: every widget — built-in, custom or third-party — goes through the
+single translation path (`lib/src/translator/widget_json.dart`), which dispatches on
 
-```dart
-class MyWidgetTranslator extends WidgetTranslator {
-  const MyWidgetTranslator();
+- **generic parameter names**: `child` / `children` / `slivers` / `tabs` / `on*` / `delegate`;
+- **value shapes** (`lib/src/translator/value_forms.dart`): literals, constructors, static factories,
+  constant references (enums / colors / icons), lists, closures — structured styles are converted by the
+  `xxxToJson` helpers in `style_translators.dart`.
 
-  /// The single source widget constructor name this translator handles.
-  @override
-  String get type => 'MyWidget';
+Supporting a new widget therefore needs **no code**. Two opt-in tables in
+`lib/src/builders/js_widget_defs.dart` only tune the *output shape*:
 
-  /// Node `type` names used in the produced JSON (defaults to `{type}`;
-  /// override when several widgets all produce the same node type, e.g. 'Button').
-  @override
-  Set<String> get jsonTypes => {'MyWidget'};
+| Table | Purpose |
+|---|---|
+| `widgetPositionalArgNames` | positional arguments go into props under **Flutter's own parameter name** (`Text('hi')` → `{data: 'hi'}`, `Image.network(url)` → `{src: url}`); unlisted types fall back to `props['$pos']` (index array; the host reads it by position) |
+| `builtinWidgetTypes` | mirror of the host's `JsWidgetRegistry` keys (tells built-in widgets apart from business classes) |
 
-  /// The package this widget belongs to (decides which package-level JS module
-  /// the factory goes into; defaults to 'flutter').
-  @override
-  String get packageName => 'flutter';
+Named constructors / static factories keep their name in the output, so the runtime can select the exact
+factory per type: `ListView.builder` → `{factory: 'builder', itemBuilder: …}`,
+`ListView.separated` → `{factory: 'separated', itemBuilder: …, separatorBuilder: …}`,
+`Image.network` → `{factory: 'network', src: …}`, `ChangeNotifierProvider.value` →
+`{factory: 'value', …}`. Callbacks, sizes and counts always keep their Dart parameter names
+(`itemBuilder` / `separatorBuilder` / `itemCount`).
 
-  /// Translate the AST node into a neutral JSON description (type/props/children).
-  @override
-  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    return {
-      'type': 'MyWidget',
-      'props': {'label': ctx.jsDataExpr(ctx.namedArg(node.args, 'label')!)},
-      // Recurse into children through ctx.translate(...) / ctx.renderJs(...).
-    };
-  }
-}
-```
-
-Built-in policies are registered in the generator's own table
-(`lib/src/translator/builtin_translators.dart`, wired by `registerBuiltinTranslators`), so adding a new widget
-today means adding the translator class there plus one `register` line — the Builder core
-(`ComponentBuilder` / `WidgetModuleBuilder`) needs no change. Note that `WidgetTranslatorRegistry` is
-constructed inside those builders and cannot be injected from a consumer package, so widget support is
-extended in the generator source rather than from business code.
-
-Widgets without a translator are not dropped silently: a fallback translator keeps their **concrete type
-name** in the output, and at runtime the host resolves it via `registerNativeComponent(name, build)` — so
-business code needs no translator for those cases.
+Widgets with no host renderer are not dropped silently: the output keeps their **concrete type name**, and
+at runtime the host resolves it via `registerNativeComponent(name, build)` — business code needs no
+translation code for those cases.
 
 ### Code structure
 
@@ -266,46 +249,29 @@ targets:
 
 ### 扩展：新增 widget 支持
 
-「某个 widget 怎么翻译成 JS」是策略，由 `WidgetTranslator` 实现
-（一个源码 widget 构造名对应一个 translator）：
+**没有 per-widget 的 translator**：内建、自定义、三方组件全部走同一条翻译路径
+（`lib/src/translator/widget_json.dart`），分派依据只有两项：
 
-```dart
-class MyWidgetTranslator extends WidgetTranslator {
-  const MyWidgetTranslator();
+- **通用参数名**：`child` / `children` / `slivers` / `tabs` / `on*` / `delegate`；
+- **值的形态**（`lib/src/translator/value_forms.dart`）：字面量、构造、静态工厂、常量引用
+  （枚举 / 颜色 / 图标）、列表、闭包——结构化样式由 `style_translators.dart` 的 `xxxToJson` 转换。
 
-  /// 本 translator 处理的**单一**源码 widget 构造名。
-  @override
-  String get type => 'MyWidget';
+因此接入新 widget **零实现**。`lib/src/builders/js_widget_defs.dart` 里两张可选登记表只调
+**产物形态**：
 
-  /// 产物 JSON 里的节点 type 名集合（默认 `{type}`；
-  /// 多种 widget 统一产出同一节点名时覆写，如都叫 'Button'）。
-  @override
-  Set<String> get jsonTypes => {'MyWidget'};
+| 表 | 用途 |
+|---|---|
+| `widgetPositionalArgNames` | 位置实参按 **Flutter 自己声明的形参名**下发（`Text('hi')` → `{data: 'hi'}`、`Image.network(url)` → `{src: url}`）；未登记的类型退回 `props['$pos']`（下标数组，运行时按位取） |
+| `builtinWidgetTypes` | 宿主 `JsWidgetRegistry` 注册键的镜像（用于区分内建 widget 与业务类） |
 
-  /// 该 widget 所属的包（决定工厂进哪个 package 级 JS 模块；默认 'flutter'）。
-  @override
-  String get packageName => 'flutter';
+命名构造 / 静态工厂的名字会保留在产物里，运行时据此**按类型选工厂**：`ListView.builder` →
+`{factory: 'builder', itemBuilder: …}`、`ListView.separated` → `{factory: 'separated', itemBuilder: …,
+separatorBuilder: …}`、`Image.network` → `{factory: 'network', src: …}`、
+`ChangeNotifierProvider.value` → `{factory: 'value', …}`。回调 / 尺寸 / 计数一律保留 Dart 形参名
+（`itemBuilder` / `separatorBuilder` / `itemCount`）。
 
-  /// 把 AST 结点翻译成中立 JSON 描述（type/props/children）。
-  @override
-  Map<String, dynamic> toJson(WidgetNode node, WidgetTranslateContext ctx) {
-    return {
-      'type': 'MyWidget',
-      'props': {'label': ctx.jsDataExpr(ctx.namedArg(node.args, 'label')!)},
-      // 子结点经 ctx.translate(...) / ctx.renderJs(...) 递归。
-    };
-  }
-}
-```
-
-内置策略注册在生成器自带的表里（`lib/src/translator/builtin_translators.dart`，
-由 `registerBuiltinTranslators` 统一注册），因此新增一个 widget 支持 = 在那里加
-translator 类 + `register` 一行，Builder 核心（`ComponentBuilder` /
-`WidgetModuleBuilder`）无需改动。注意 `WidgetTranslatorRegistry` 由这两个 builder
-内部构造，**使用方无法从业务包注入自定义 translator**——widget 支持在生成器源码里扩展。
-
-没有 translator 的 widget 不会被丢弃：兜底 translator 会在产物里**保留其具体类型名**，
-运行时由宿主 `registerNativeComponent(name, build)` 解析——这类场景业务代码无需任何 translator。
+宿主没有对应 renderer 的 widget 不会被静默丢弃：产物保留其**具体类型名**，运行时由宿主
+`registerNativeComponent(name, build)` 解析——这类场景业务代码无需任何翻译代码。
 
 ### 代码结构
 

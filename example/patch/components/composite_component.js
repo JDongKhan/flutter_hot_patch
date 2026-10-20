@@ -20,14 +20,10 @@ export class DashboardCard {
               "fontSize": 22,
               "fontWeight": "w600"
             },
-            "$pos": [
-              "Dashboard (JS)"
-            ]
+            "data": "Dashboard (JS)"
           }),
         __h('Text', {
-            "$pos": [
-              "ticks = " + this._ticks
-            ]
+            "data": "ticks = " + this._ticks
           }),
         __h(BannerCard, {}),
         __h('SizedBox', {
@@ -53,9 +49,7 @@ export class DashboardCard {
             }
           }, [
             __h('Text', {
-                "$pos": [
-                  "Tick"
-                ]
+                "data": "Tick"
               })
           ])
       ]);
@@ -76,9 +70,7 @@ export class LabeledDivider {
           "fontSize": 12,
           "color": '#607D8B'
         },
-        "$pos": [
-          "★ " + this.text + " ★"
-        ]
+        "data": "★ " + this.text + " ★"
       });
   }
 }

@@ -234,6 +234,32 @@ const String _jsUiGlobalsTail = r'''
       configurable: true
     });
   }
+  //   - Number.prototype：Dart `num` 的方法在 JS 里**没有同名成员**
+  //     （`(x * 100).round()` 直接抛 "is not a function"，整个组件挂载失败、
+  //     页面只显示加载失败占位）。生成器按 Dart 写法一比一产出，故在数字原型上
+  //     按**同名同义**补齐（与 Dart 语义一致：truncate/toInt 向零取整，
+  //     字符串化/取整返回新值不改变接收者）。
+  var numPatches = {
+    round: function () { return Math.round(this); },
+    floor: function () { return Math.floor(this); },
+    ceil: function () { return Math.ceil(this); },
+    abs: function () { return Math.abs(this); },
+    truncate: function () { return Math.trunc(this); },
+    toInt: function () { return Math.trunc(this); },
+    toDouble: function () { return this; },
+    toStringAsFixed: function (digits) { return this.toFixed(digits); },
+    clamp: function (lo, hi) { return Math.min(Math.max(this, lo), hi); }
+  };
+  for (var numKey in numPatches) {
+    if (typeof Number.prototype[numKey] !== 'function') {
+      Object.defineProperty(Number.prototype, numKey, {
+        value: numPatches[numKey],
+        writable: true,
+        enumerable: false,
+        configurable: true
+      });
+    }
+  }
 
 ''';
 

@@ -443,6 +443,39 @@ Map<String, dynamic>? edgeInsetsToJson(
   return map;
 }
 
+/// SliverGridDelegateWithFixedCrossAxisCount / ...WithMaxCrossAxisExtent → JSON。
+///
+/// `gridDelegate:` 是**结构化值**（不是子结点）：不转 JSON 就会落进「类名构造 →
+/// 子结点」分支，产物变成 `__h('SliverGridDelegateWith…', …)` 结点，运行时
+/// `_gridDelegateFromJson` 读不到 crossAxisCount / maxCrossAxisExtent（GridView /
+/// SliverGrid 退化成单列）。返回 null 表示不可翻译/未提供。
+Map<String, dynamic>? gridDelegateToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  if (ctor != 'SliverGridDelegateWithFixedCrossAxisCount' &&
+      ctor != 'SliverGridDelegateWithMaxCrossAxisExtent') {
+    return null;
+  }
+  final map = <String, dynamic>{};
+  for (final a in args) {
+    if (a is! NamedExpression) continue;
+    switch (a.name.label.name) {
+      case 'crossAxisCount':
+      case 'maxCrossAxisExtent':
+      case 'mainAxisSpacing':
+      case 'crossAxisSpacing':
+      case 'childAspectRatio':
+      case 'mainAxisExtent':
+        final n = numLiteralJs(a.expression);
+        if (n != null) map[a.name.label.name] = n;
+    }
+  }
+  return map.isEmpty ? null : map;
+}
+
 /// Alignment.center/topLeft/... → '"center"' 等（运行时 alignmentFromJson）。
 String? alignmentToJson(Expression? expr, WidgetTranslateContext ctx) {
   if (expr == null) return null;

@@ -49,9 +49,7 @@ export class MiniButton {
                   "fontSize": 12,
                   "color": (this.primary ? '#FFFFFF' : '#ff4d5462')
                 },
-                "$pos": [
-                  this.label
-                ]
+                "data": this.label
               })
           ])
       ]);

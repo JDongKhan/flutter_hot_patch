@@ -154,9 +154,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   bool usesJsClass(String type, Map<String, dynamic>? props) {
     if (!jsClassWidgets.contains(type)) return false;
     if (!delegateClassWidgets.contains(type)) return true;
-    // builder 形态：参数名按通用约定（`builder` / `itemBuilder` /
-    // `separatorBuilder` … 即以 Builder 结尾）。
-    return props != null &&
+    if (props == null) return false;
+    // 命名构造 `.builder` / `.separated`（产物带 `factory`，回调是参数名
+    // `itemBuilder` / `separatorBuilder` / `builder`）与 `delegate:` 的
+    // BuilderDelegate 形态（带 `builder` + `childCount`）→ 走 JS 代理类循环调用
+    // 拥有者方法展开子树；普通 `children:` / ListDelegate 形态直接是宿主节点。
+    return props.containsKey(factoryPropsKey) ||
         props.keys.any((k) => k == 'builder' || k.endsWith('Builder'));
   }
 

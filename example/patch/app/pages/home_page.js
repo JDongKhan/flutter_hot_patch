@@ -35,11 +35,7 @@ export class HomePage {
     var spots = this._feed.spots;
     var adImg = this._feed.adImg;
     return __h('Container', {
-        "color": __h('Color', {
-            "$pos": [
-              4294243831
-            ]
-          })
+        "color": '#fff4f5f7'
       }, [
         __h('EasyRefresh', {
             "onRefresh": this.__bind("_load")
@@ -92,12 +88,12 @@ export class HomePage {
                             }
                           }, [
                             __h('GridView', {
-                                "gridDelegate": __h('SliverGridDelegateWithMaxCrossAxisExtent', {
-                                    "maxCrossAxisExtent": 150,
-                                    "mainAxisSpacing": 6,
-                                    "crossAxisSpacing": 6,
-                                    "mainAxisExtent": 84
-                                  }),
+                                "gridDelegate": {
+                                  "maxCrossAxisExtent": 150,
+                                  "mainAxisSpacing": 6,
+                                  "crossAxisSpacing": 6,
+                                  "mainAxisExtent": 84
+                                },
                                 "shrinkWrap": true,
                                 "physics": "NeverScrollableScrollPhysics"
                               }, [
@@ -150,9 +146,7 @@ export class HomePage {
                                       "fontWeight": "w700",
                                       "color": '#ff1f2430'
                                     },
-                                    "$pos": [
-                                      "景点推荐"
-                                    ]
+                                    "data": "景点推荐"
                                   }),
                                 __h('Spacer', {}),
                                 __h('Text', {
@@ -160,9 +154,7 @@ export class HomePage {
                                       "fontSize": 12,
                                       "color": '#ff8a909e'
                                     },
-                                    "$pos": [
-                                      "为你精选"
-                                    ]
+                                    "data": "为你精选"
                                   })
                               ])
                           ]),
@@ -180,12 +172,12 @@ export class HomePage {
                     }
                   }, [
                     __h(SliverGrid, {
-                        "gridDelegate": __h('SliverGridDelegateWithMaxCrossAxisExtent', {
-                            "maxCrossAxisExtent": 300,
-                            "mainAxisSpacing": 10,
-                            "crossAxisSpacing": 10,
-                            "mainAxisExtent": 190
-                          }),
+                        "gridDelegate": {
+                          "maxCrossAxisExtent": 300,
+                          "mainAxisSpacing": 10,
+                          "crossAxisSpacing": 10,
+                          "mainAxisExtent": 190
+                        },
                         "builder": "_builder0",
                         "childCount": this._feed.spots.length
                       })
@@ -251,15 +243,9 @@ export class HomeHeader {
                       }, [
                         __h('Row', {}, [
                             __h('Icon', {
-                                "color": __h('Color', {
-                                    "$pos": [
-                                      4294967295
-                                    ]
-                                  }),
+                                "color": '#ffffffff',
                                 "size": 18,
-                                "$pos": [
-                                  "location_on"
-                                ]
+                                "icon": "location_on"
                               }),
                             __h('SizedBox', {
                                 "width": 2
@@ -270,20 +256,12 @@ export class HomeHeader {
                                   "fontSize": 15,
                                   "fontWeight": "w600"
                                 },
-                                "$pos": [
-                                  "上海"
-                                ]
+                                "data": "上海"
                               }),
                             __h('Icon', {
-                                "color": __h('Color', {
-                                    "$pos": [
-                                      4294967295
-                                    ]
-                                  }),
+                                "color": '#ffffffff',
                                 "size": 18,
-                                "$pos": [
-                                  "keyboard_arrow_down"
-                                ]
+                                "icon": "keyboard_arrow_down"
                               })
                           ])
                       ]),
@@ -304,15 +282,9 @@ export class HomeHeader {
                                 }
                               }, [
                                 __h('Icon', {
-                                    "color": __h('Color', {
-                                        "$pos": [
-                                          4294967295
-                                        ]
-                                      }),
+                                    "color": '#ffffffff',
                                     "size": 24,
-                                    "$pos": [
-                                      "notifications"
-                                    ]
+                                    "icon": "notifications"
                                   })
                               ]),
                             __h('Positioned', {
@@ -362,15 +334,9 @@ export class HomeHeader {
                       }, [
                         __h('Row', {}, [
                             __h('Icon', {
-                                "color": __h('Color', {
-                                    "$pos": [
-                                      4288323756
-                                    ]
-                                  }),
+                                "color": '#ff9aa0ac',
                                 "size": 20,
-                                "$pos": [
-                                  "search"
-                                ]
+                                "icon": "search"
                               }),
                             __h('SizedBox', {
                                 "width": 6
@@ -380,9 +346,7 @@ export class HomeHeader {
                                   "fontSize": 14,
                                   "color": '#ff9aa0ac'
                                 },
-                                "$pos": [
-                                  "搜索目的地 / 关键词"
-                                ]
+                                "data": "搜索目的地 / 关键词"
                               }),
                             __h('Spacer', {}),
                             __h('Text', {
@@ -391,9 +355,7 @@ export class HomeHeader {
                                   "color": '#ff0e7afb',
                                   "fontWeight": "w600"
                                 },
-                                "$pos": [
-                                  "搜索"
-                                ]
+                                "data": "搜索"
                               })
                           ])
                       ])
@@ -440,9 +402,8 @@ export class BannerSlide {
                   }, [
                     __h('Image', {
                         "fit": "cover",
-                        "$pos": [
-                          this.banner.img
-                        ]
+                        "factory": "network",
+                        "src": this.banner.img
                       }),
                     __h('Container', {
                         "decoration": {
@@ -471,9 +432,7 @@ export class BannerSlide {
                                   "fontSize": 17,
                                   "fontWeight": "w700"
                                 },
-                                "$pos": [
-                                  this.banner.title
-                                ]
+                                "data": this.banner.title
                               }),
                             __h('SizedBox', {
                                 "height": 4
@@ -483,9 +442,7 @@ export class BannerSlide {
                                   "color": '#e6ffffff',
                                   "fontSize": 12
                                 },
-                                "$pos": [
-                                  this.banner.sub
-                                ]
+                                "data": this.banner.sub
                               })
                           ])
                       ])
@@ -518,9 +475,7 @@ export class GridCell {
                 "style": {
                   "fontSize": 22
                 },
-                "$pos": [
-                  this.entry.emoji
-                ]
+                "data": this.entry.emoji
               }),
             __h('SizedBox', {
                 "height": 6
@@ -530,9 +485,7 @@ export class GridCell {
                   "fontSize": 12,
                   "color": '#ff4d5462'
                 },
-                "$pos": [
-                  this.entry.title
-                ]
+                "data": this.entry.title
               })
           ])
       ]);
@@ -577,9 +530,8 @@ export class SpotCard {
                       }, [
                         __h('Image', {
                             "fit": "cover",
-                            "$pos": [
-                              this.spot.img
-                            ]
+                            "factory": "network",
+                            "src": this.spot.img
                           }),
                         __h('Positioned', {
                             "left": 8,
@@ -605,9 +557,7 @@ export class SpotCard {
                                       "fontSize": 10,
                                       "fontWeight": "w600"
                                     },
-                                    "$pos": [
-                                      this.spot.tag
-                                    ]
+                                    "data": this.spot.tag
                                   })
                               ])
                           ])
@@ -632,9 +582,7 @@ export class SpotCard {
                               "fontWeight": "w600",
                               "color": '#ff1f2430'
                             },
-                            "$pos": [
-                              this.spot.title
-                            ]
+                            "data": this.spot.title
                           }),
                         __h('SizedBox', {
                             "height": 4
@@ -646,9 +594,7 @@ export class SpotCard {
                               "fontSize": 11,
                               "color": '#ff8a909e'
                             },
-                            "$pos": [
-                              this.spot.sub
-                            ]
+                            "data": this.spot.sub
                           }),
                         __h('SizedBox', {
                             "height": 8
@@ -660,9 +606,7 @@ export class SpotCard {
                                   "color": '#ffff5a36',
                                   "fontWeight": "w700"
                                 },
-                                "$pos": [
-                                  "¥"
-                                ]
+                                "data": "¥"
                               }),
                             __h('Text', {
                                 "style": {
@@ -670,9 +614,7 @@ export class SpotCard {
                                   "color": '#ffff5a36',
                                   "fontWeight": "w700"
                                 },
-                                "$pos": [
-                                  this.spot.price
-                                ]
+                                "data": this.spot.price
                               }),
                             __h('Spacer', {}),
                             __h('Text', {
@@ -680,9 +622,7 @@ export class SpotCard {
                                   "fontSize": 10,
                                   "color": '#ff9aa0ac'
                                 },
-                                "$pos": [
-                                  this.spot.sold
-                                ]
+                                "data": this.spot.sold
                               })
                           ])
                       ])
@@ -724,9 +664,8 @@ export class PromoCard {
                   }, [
                     __h('Image', {
                         "fit": "cover",
-                        "$pos": [
-                          this.img
-                        ]
+                        "factory": "network",
+                        "src": this.img
                       }),
                     __h('Positioned', {
                         "left": 16,
@@ -741,9 +680,7 @@ export class PromoCard {
                                   "fontSize": 16,
                                   "fontWeight": "w700"
                                 },
-                                "$pos": [
-                                  "热气球季 · 限时特惠"
-                                ]
+                                "data": "热气球季 · 限时特惠"
                               }),
                             __h('SizedBox', {
                                 "height": 6
@@ -768,9 +705,7 @@ export class PromoCard {
                                       "color": '#ff0e7afb',
                                       "fontWeight": "w600"
                                     },
-                                    "$pos": [
-                                      "立即查看 >"
-                                    ]
+                                    "data": "立即查看 >"
                                   })
                               ])
                           ])

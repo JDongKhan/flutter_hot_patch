@@ -105,3 +105,27 @@ const Set<String> builtinWidgetTypes = {
   'ListenableBuilder', 'ValueListenableBuilder', 'TextField',
   'CachedNetworkImage', 'EasyRefresh',
 };
+
+/// 「构造名 → 位置实参的 Flutter 形参名」登记（运行时读取键名的镜像）。
+///
+/// 统一翻译把位置实参按**Flutter 自己声明的形参名**放进 props，产物自解释：
+/// `Text('你好')` → `{data: '你好'}`、`Icon(Icons.star)` → `{icon: 'star'}`，
+/// 而不是不透明的下标数组。键是**构造名**（`类型名` 或 `类型名.命名构造名`，
+/// 后者优先，如 `Image.network` 的位置实参是 `src`、`Image.asset` 的是 `name`）。
+///
+/// 生成器只有语法树（无类型解析），拿不到任意 widget 的形参名，故取本表；未登记
+/// 的类型退回 `$pos`（下标数组，运行时按位取，见 `JsRenderContext.pos`）——
+/// **新增未识别组件零实现即可翻译**，登记只是让产物更可读。
+///
+/// **同步维护**：与运行时各 renderer 读取的键名一致（`js_widget_registry.dart`）。
+const Map<String, List<String>> widgetPositionalArgNames = {
+  'Text': ['data'],
+  // Text.rich 的首个位置实参是 InlineSpan（富文本，运行时暂不支持）。
+  'Text.rich': ['textSpan'],
+  'Icon': ['icon'],
+  'Image': ['image'],
+  'Image.network': ['src'],
+  'Image.asset': ['name'],
+  'Image.file': ['file'],
+  'Image.memory': ['bytes'],
+};

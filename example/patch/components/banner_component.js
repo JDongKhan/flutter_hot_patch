@@ -23,22 +23,16 @@ export class BannerCard {
               "fontSize": 20,
               "color": PanelColors.background
             },
-            "$pos": [
-              "Banner from another file"
-            ]
+            "data": "Banner from another file"
           }),
         __h('Text', {
-            "$pos": [
-              "views = " + this._views
-            ]
+            "data": "views = " + this._views
           }),
         __h('ElevatedButton', {
             "onPressed": this.__bind("bump")
           }, [
             __h('Text', {
-                "$pos": [
-                  "Bump"
-                ]
+                "data": "Bump"
               })
           ])
       ]);

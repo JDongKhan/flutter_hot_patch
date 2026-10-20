@@ -80,7 +80,7 @@ export class CommunityPage {
                     }
                   }, [
                     __h('Row', {}, [
-                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _selectTab(t)" + ":" + String(t), () => { this._selectTab(t); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') }, "$pos": [ t ] }) ]) ]) ])]); } return out; })(),
+                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _selectTab(t)" + ":" + String(t), () => { this._selectTab(t); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') }, "data": t }) ]) ]) ])]); } return out; })(),
                         __h('Spacer', {}),
                         __h('GestureDetector', {
                             "onTap": this.__bind("_app_host_.invoke(\"toast\", [\"发布新动态（演示）\"])")
@@ -95,14 +95,8 @@ export class CommunityPage {
                               }, [
                                 __h('Icon', {
                                     "size": 16,
-                                    "color": __h('Color', {
-                                        "$pos": [
-                                          4284244592
-                                        ]
-                                      }),
-                                    "$pos": [
-                                      "edit"
-                                    ]
+                                    "color": '#ff5c6270',
+                                    "icon": "edit"
                                   })
                               ])
                           ])
@@ -126,7 +120,8 @@ export class CommunityPage {
                 },
                 "itemCount": this._feed.resources.length,
                 "separatorBuilder": "_separatorBuilder0",
-                "itemBuilder": "_itemBuilder1"
+                "itemBuilder": "_itemBuilder1",
+                "factory": "separated"
               })
           ]),
         __h('SizedBox', {
@@ -142,7 +137,7 @@ export class CommunityPage {
             }
           }, [
             __h('Row', {}, [
-                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _selectFilter('sort', s)" + ":" + String(s), () => { this._selectFilter("sort", s); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') }, "$pos": [ s ] }) ]) ]) ])]); } return out; })(),
+                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _selectFilter('sort', s)" + ":" + String(s), () => { this._selectFilter("sort", s); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') }, "data": s }) ]) ]) ])]); } return out; })(),
                 __h('Spacer', {}),
                 __h('GestureDetector', {
                     "onTap": this.__bind("_toggleFilter")
@@ -168,9 +163,7 @@ export class CommunityPage {
                                   "fontWeight": "w600",
                                   "color": (this._filterOpen ? kBrand : '#ff5c6270')
                                 },
-                                "$pos": [
-                                  "筛选"
-                                ]
+                                "data": "筛选"
                               }),
                             __h('SizedBox', {
                                 "width": 3
@@ -178,9 +171,7 @@ export class CommunityPage {
                             __h('Icon', {
                                 "size": 14,
                                 "color": (this._filterOpen ? kBrand : '#ff5c6270'),
-                                "$pos": [
-                                  "tune"
-                                ]
+                                "icon": "tune"
                               })
                           ])
                       ])
@@ -241,9 +232,9 @@ export class _ListContent {
               "bottom": 20.0
             }
           }, [
-            ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "$pos": [ "没有符合条件的帖子，试试放宽筛选条件" ] }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": this.__bindFn("() => AppRouter.openPost(p.id)" + ":" + String(p), () => { _app_host_.invoke("openPost", [p.id]); }) }) ])]); } return out; })())
+            ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": this.__bindFn("() => AppRouter.openPost(p.id)" + ":" + String(p), () => { _app_host_.invoke("openPost", [p.id]); }) }) ])]); } return out; })())
           ]),
-        ...(this.openFilter ? [__h('Positioned', {}, [ __h('GestureDetector', { "onTap": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": __h('Color', { "$pos": [ 1711276032 ] }) }) ]) ]), __h('Positioned', { "left": 0, "right": 0, "top": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.__bind("this.onSelectFilter()"), "onReset": this.__bind("this.resetFilter()"), "onApply": this.__bind("this.toggleFilter()") }) ])] : [])
+        ...(this.openFilter ? [__h('Positioned', { "factory": "fill" }, [ __h('GestureDetector', { "onTap": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "right": 0, "top": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.__bind("this.onSelectFilter()"), "onReset": this.__bind("this.resetFilter()"), "onApply": this.__bind("this.toggleFilter()") }) ])] : [])
       ]);
   }
 }
@@ -299,16 +290,14 @@ export class _FilterPanel {
                   "fontWeight": "w700",
                   "color": '#ff171a21'
                 },
-                "$pos": [
-                  title
-                ]
+                "data": title
               })
           ]),
         __h('Wrap', {
             "spacing": 8,
             "runSpacing": 8
           }, [
-            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "onTap": this.__bindFn("() => widget.onPick(key, v)" + ":" + String(v), () => { this.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') }, "$pos": [ v ] }) ]) ])]); } return out; })()
+            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "onTap": this.__bindFn("() => widget.onPick(key, v)" + ":" + String(v), () => { this.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') }, "data": v }) ]) ])]); } return out; })()
           ])
       ]);
   }
@@ -365,9 +354,7 @@ export class _FilterPanel {
                                       "fontWeight": "w600",
                                       "color": '#ff5c6270'
                                     },
-                                    "$pos": [
-                                      "重置"
-                                    ]
+                                    "data": "重置"
                                   })
                               ])
                           ])
@@ -395,9 +382,7 @@ export class _FilterPanel {
                                       "fontWeight": "w600",
                                       "color": '#FFFFFF'
                                     },
-                                    "$pos": [
-                                      "查看结果"
-                                    ]
+                                    "data": "查看结果"
                                   })
                               ])
                           ])
@@ -452,9 +437,8 @@ export class _PostCard {
                         "height": 92,
                         "fit": "cover",
                         "errorBuilder": "_errorBuilder0",
-                        "$pos": [
-                          this.post.img
-                        ]
+                        "factory": "network",
+                        "src": this.post.img
                       })
                   ]),
                 __h('SizedBox', {
@@ -474,9 +458,7 @@ export class _PostCard {
                                   "fontSize": 14.5,
                                   "fontWeight": "w600"
                                 },
-                                "$pos": [
-                                  this.post.title
-                                ]
+                                "data": this.post.title
                               }),
                             __h('SizedBox', {
                                 "height": 5
@@ -490,9 +472,7 @@ export class _PostCard {
                                       "color": '#ff8b909a',
                                       "height": 1.5
                                     },
-                                    "$pos": [
-                                      this.post.sub
-                                    ]
+                                    "data": this.post.sub
                                   })
                               ]),
                             __h('Row', {}, [
@@ -515,9 +495,7 @@ export class _PostCard {
                                           "fontSize": 10,
                                           "color": '#ff5c6270'
                                         },
-                                        "$pos": [
-                                          this.post.type
-                                        ]
+                                        "data": this.post.type
                                       })
                                   ]),
                                 __h('SizedBox', {
@@ -528,21 +506,13 @@ export class _PostCard {
                                       "fontSize": 10.5,
                                       "color": '#ffa3a9b4'
                                     },
-                                    "$pos": [
-                                      this.post.author + " · " + this.post.time
-                                    ]
+                                    "data": this.post.author + " · " + this.post.time
                                   }),
                                 __h('Spacer', {}),
                                 __h('Icon', {
                                     "size": 13,
-                                    "color": __h('Color', {
-                                        "$pos": [
-                                          4288915892
-                                        ]
-                                      }),
-                                    "$pos": [
-                                      "favorite_border"
-                                    ]
+                                    "color": '#ffa3a9b4',
+                                    "icon": "favorite_border"
                                   }),
                                 __h('SizedBox', {
                                     "width": 3
@@ -552,9 +522,7 @@ export class _PostCard {
                                       "fontSize": 10.5,
                                       "color": '#ffa3a9b4'
                                     },
-                                    "$pos": [
-                                      this._likeText(this.post.like)
-                                    ]
+                                    "data": this._likeText(this.post.like)
                                   })
                               ])
                           ])
@@ -568,11 +536,7 @@ export class _PostCard {
       return __h('Container', {
         "width": 92,
         "height": 92,
-        "color": __h('Color', {
-            "$pos": [
-              4293454832
-            ]
-          })
+        "color": '#ffe8ebf0'
       });
   }
 }
@@ -609,9 +573,8 @@ export class _ResourceCard {
                     __h('Image', {
                         "fit": "cover",
                         "errorBuilder": "_errorBuilder0",
-                        "$pos": [
-                          this.resource.img
-                        ]
+                        "factory": "network",
+                        "src": this.resource.img
                       })
                   ]),
                 __h('Padding', {
@@ -632,9 +595,7 @@ export class _ResourceCard {
                               "fontSize": 12.5,
                               "fontWeight": "w600"
                             },
-                            "$pos": [
-                              this.resource.title
-                            ]
+                            "data": this.resource.title
                           }),
                         __h('SizedBox', {
                             "height": 2
@@ -646,9 +607,7 @@ export class _ResourceCard {
                               "fontSize": 10.5,
                               "color": '#ff98a0ac'
                             },
-                            "$pos": [
-                              this.resource.sub
-                            ]
+                            "data": this.resource.sub
                           })
                       ])
                   ])
@@ -659,11 +618,7 @@ export class _ResourceCard {
   _errorBuilder0(context, e) {
       return __h('Container', {
         "height": 68,
-        "color": __h('Color', {
-            "$pos": [
-              4293454832
-            ]
-          })
+        "color": '#ffe8ebf0'
       });
   }
 }

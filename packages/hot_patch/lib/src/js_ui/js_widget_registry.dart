@@ -128,11 +128,13 @@ class JsRenderContext {
   }
 
   // ---------------------------------------------------------------------------
-  // 新产物：位置实参（`$pos`）与 props 里的元素描述
+  // 位置实参：统一翻译默认按 Flutter 形参名下发（`Text('hi')` → `{data: 'hi'}`），
+  // 只有**未登记形参名**的类型才退回下标数组 `props['$pos']`（见生成器
+  // `js_widget_defs.dart` 的 `widgetPositionalArgNames`）。
   // ---------------------------------------------------------------------------
 
-  /// 位置实参：`props['$pos']` 是 JS 数组（按声明顺序）。
-  /// 如 `Text('你好')` → `$pos: ['你好']`、`Icon(Icons.star)` → `$pos: ['star']`。
+  /// 位置实参兜底：`props['$pos']` 是 JS 数组（按声明顺序）。
+  /// 如 `Foo('x')` → `$pos: ['x']`。
   dynamic pos(int i) {
     final list = props[r'$pos'];
     if (list is List && i < list.length) return list[i];
@@ -333,7 +335,9 @@ class JsWidgetRegistry {
 ///   - Builder **不在这里**：它是无状态委托，纯 JS 逻辑，宿主零感知。
 void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register('Text', (c) => Text(
-        c.posText(),
+        // `data` 是 Flutter `Text` 的首个位置形参名（`Text('你好')`）；
+        // 未登记形参名的类型才走 `$pos[0]` 兜底。
+        c.str('data') ?? c.posText(),
         style: textStyleFromJson(c.map('style')),
         textAlign: textAlignFromJson(c.props['textAlign']),
         overflow: overflowFromJson(c.props['overflow']),
@@ -490,14 +494,21 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       ));
 
   r.register('Icon', (c) => Icon(
-        iconFromJson(c.pos(0)),
+        // `icon` 是 Flutter `Icon` 的首个位置形参名（`Icon(Icons.star)`）。
+        iconFromJson(c.props['icon'] ?? c.pos(0)),
         size: c.num_('size'),
         color: colorFromJson(c.props['color']),
       ));
 
-  // `Image.network('url')` / `Image.asset('a.png')`：网址/资源名是首个位置实参。
+  // `Image.network('url')` / `Image.asset('a.png')`：工厂名（`props.factory`）
+  // 决定构造哪个原生工厂，位置实参名随之不同（`Image.network` → `src`、
+  // `Image.asset` → `name`、`Image(...)` → `image`）。
   r.register('Image', (c) {
-    final source = c.posText();
+    final factory = c.str('factory');
+    final source = c.str('src') ??
+        c.str('name') ??
+        c.str('image') ??
+        c.posText();
     final width = c.num_('width');
     final height = c.num_('height');
     final fit = boxFitFromJson(c.props['fit']);
@@ -505,7 +516,10 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     final blend = blendModeFromJson(c.props['colorBlendMode']);
     final align = alignmentFromJson(c.props['alignment']) ?? Alignment.center;
     final repeat = imageRepeatFromJson(c.props['repeat']) ?? ImageRepeat.noRepeat;
-    return source.startsWith('http')
+    // 工厂名优先；缺失（旧产物 / 未登记）时退回按网址前缀判断。
+    final isNetwork =
+        factory == 'network' || (factory == null && source.startsWith('http'));
+    return isNetwork
         ? Image.network(source,
             width: width,
             height: height,

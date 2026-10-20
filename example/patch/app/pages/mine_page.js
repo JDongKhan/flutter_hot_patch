@@ -81,9 +81,8 @@ export class MinePage {
                                 "height": 58,
                                 "fit": "cover",
                                 "errorBuilder": "_errorBuilder0",
-                                "$pos": [
-                                  this._feed.avatar
-                                ]
+                                "factory": "network",
+                                "src": this._feed.avatar
                               })
                           ]),
                         __h('SizedBox', {
@@ -99,9 +98,7 @@ export class MinePage {
                                       "fontWeight": "w700",
                                       "color": '#FFFFFF'
                                     },
-                                    "$pos": [
-                                      "旅行家小七"
-                                    ]
+                                    "data": "旅行家小七"
                                   }),
                                 __h('SizedBox', {
                                     "height": 4
@@ -111,9 +108,7 @@ export class MinePage {
                                       "fontSize": 12,
                                       "color": '#ccffffff'
                                     },
-                                    "$pos": [
-                                      "138****8888"
-                                    ]
+                                    "data": "138****8888"
                                   }),
                                 __h('SizedBox', {
                                     "height": 6
@@ -123,29 +118,22 @@ export class MinePage {
                                       "fontSize": 11,
                                       "color": '#b3ffffff'
                                     },
-                                    "$pos": [
-                                      "点击头像可跳转登录页 ›"
-                                    ]
+                                    "data": "点击头像可跳转登录页 ›"
                                   })
                               ])
                           ]),
                         __h('Icon', {
-                            "color": __h('Color', {
-                                "$pos": [
-                                  3439329279
-                                ]
-                              }),
+                            "color": '#ccffffff',
                             "size": 20,
-                            "$pos": [
-                              "chevron_right"
-                            ]
+                            "icon": "chevron_right"
                           })
                       ])
                   ])
               ])
           ]),
         __h('Transform', {
-            "offset": { "dx": 0, "dy": (-12) }
+            "offset": { "dx": 0, "dy": (-12) },
+            "factory": "translate"
           }, [
             __h('Container', {
                 "margin": {
@@ -168,7 +156,7 @@ export class MinePage {
                 }
               }, [
                 __h('Row', {}, [
-                    ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "onTap": this.__bindFn("() => AppRouter.openOrders()" + ":" + String(s), () => { _app_host_.invoke("openOrders", []); }) }, [ __h('Column', {}, [ __h('Text', { "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "$pos": [ s[1] ] }), __h('SizedBox', { "height": 3 }), __h('Text', { "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "$pos": [ s[0] ] }) ]) ]) ])]); } return out; })()
+                    ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "onTap": this.__bindFn("() => AppRouter.openOrders()" + ":" + String(s), () => { _app_host_.invoke("openOrders", []); }) }, [ __h('Column', {}, [ __h('Text', { "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), __h('SizedBox', { "height": 3 }), __h('Text', { "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ]) ]) ])]); } return out; })()
                   ])
               ])
           ]),
@@ -187,7 +175,7 @@ export class MinePage {
             }
           }, [
             __h('Column', {}, [
-                ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [__h('Divider', { "height": 1, "indent": 56, "color": __h('Color', { "$pos": [ 4293980918 ] }) })] : []), __h('GestureDetector', { "onTap": this.__bindFn("() => _openMenu(feed.menu[i])" + ":" + String(i), () => { this._openMenu(this._feed.menu[i]); }) }, [ __h('Padding', { "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 } }, [ __h('Row', {}, [ __h('Container', { "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } } }, [ __h('Text', { "style": { "fontSize": 15 }, "$pos": [ this._feed.menu[i].emoji ] }) ]), __h('SizedBox', { "width": 12 }), __h('Expanded', {}, [ __h('Text', { "style": { "fontSize": 14 }, "$pos": [ this._feed.menu[i].title ] }) ]), __h('Icon', { "size": 18, "color": __h('Color', { "$pos": [ 4291021010 ] }), "$pos": [ "chevron_right" ] }) ]) ]) ])]); } return out; })()
+                ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [__h('Divider', { "height": 1, "indent": 56, "color": '#fff0f2f6' })] : []), __h('GestureDetector', { "onTap": this.__bindFn("() => _openMenu(feed.menu[i])" + ":" + String(i), () => { this._openMenu(this._feed.menu[i]); }) }, [ __h('Padding', { "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 } }, [ __h('Row', {}, [ __h('Container', { "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } } }, [ __h('Text', { "style": { "fontSize": 15 }, "data": this._feed.menu[i].emoji }) ]), __h('SizedBox', { "width": 12 }), __h('Expanded', {}, [ __h('Text', { "style": { "fontSize": 14 }, "data": this._feed.menu[i].title }) ]), __h('Icon', { "size": 18, "color": '#ffc3c8d2', "icon": "chevron_right" }) ]) ]) ])]); } return out; })()
               ])
           ]),
         __h('Padding', {
@@ -217,9 +205,7 @@ export class MinePage {
                           "fontWeight": "w600",
                           "color": kPrice
                         },
-                        "$pos": [
-                          "退出登录"
-                        ]
+                        "data": "退出登录"
                       })
                   ])
               ])
@@ -238,9 +224,7 @@ export class MinePage {
                   "fontWeight": "w700",
                   "color": '#ff98a0ac'
                 },
-                "$pos": [
-                  "开发者"
-                ]
+                "data": "开发者"
               })
           ]),
         __h('Container', {
@@ -267,11 +251,7 @@ export class MinePage {
                 __h('Divider', {
                     "height": 1,
                     "indent": 56,
-                    "color": __h('Color', {
-                        "$pos": [
-                          4293980918
-                        ]
-                      })
+                    "color": '#fff0f2f6'
                   }),
                 __h(_DevRow, {
                     "icon": "compare_arrows",
@@ -287,11 +267,7 @@ export class MinePage {
       return __h('Container', {
         "width": 58,
         "height": 58,
-        "color": __h('Color', {
-            "$pos": [
-              872415231
-            ]
-          })
+        "color": '#33ffffff'
       });
   }
 }
@@ -335,9 +311,7 @@ export class _DevRow {
                     __h('Icon', {
                         "size": 16,
                         "color": kBrand,
-                        "$pos": [
-                          this.icon
-                        ]
+                        "icon": this.icon
                       })
                   ]),
                 __h('SizedBox', {
@@ -351,9 +325,7 @@ export class _DevRow {
                             "style": {
                               "fontSize": 14
                             },
-                            "$pos": [
-                              this.title
-                            ]
+                            "data": this.title
                           }),
                         __h('SizedBox', {
                             "height": 3
@@ -365,22 +337,14 @@ export class _DevRow {
                               "fontSize": 11,
                               "color": '#ff98a0ac'
                             },
-                            "$pos": [
-                              this.subtitle
-                            ]
+                            "data": this.subtitle
                           })
                       ])
                   ]),
                 __h('Icon', {
                     "size": 18,
-                    "color": __h('Color', {
-                        "$pos": [
-                          4291021010
-                        ]
-                      }),
-                    "$pos": [
-                      "chevron_right"
-                    ]
+                    "color": '#ffc3c8d2',
+                    "icon": "chevron_right"
                   })
               ])
           ])

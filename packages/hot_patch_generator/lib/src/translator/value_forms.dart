@@ -62,6 +62,16 @@ final Map<String, ValueConverter> _ctorConverters = {
   'TextStyle': (e, c) => textStyleToJson(e, c),
   'ButtonStyle': (e, c) => buttonStyleToJson(e, c),
   'TextScaler': (e, c) => textScalerToJson(e),
+  // 网格代理（`gridDelegate:` 的值形态）→ JSON 值，运行时读 crossAxisCount /
+  // maxCrossAxisExtent；不转就会变成结点，网格退化成单列。
+  'SliverGridDelegateWithFixedCrossAxisCount': (e, c) =>
+      gridDelegateToJson(e, c),
+  'SliverGridDelegateWithMaxCrossAxisExtent': (e, c) =>
+      gridDelegateToJson(e, c),
+  // 颜色：`Color(0xFF...)` / `Color.fromARGB(...)` → '#rrggbb'。
+  // 必须走结构化转换：否则会落进「类名构造 → 子结点」分支，产物变成
+  // `__h('Color', …)` 结点，运行时 `colorFromJson` 只认字符串 → 颜色整条丢失。
+  'Color': (e, c) => colorToJson(e, c),
   // 滚动物理（含子类构造，如 `NeverScrollableScrollPhysics()`）
   'NeverScrollableScrollPhysics': (e, c) => scrollPhysicsToJson(e),
   'AlwaysScrollableScrollPhysics': (e, c) => scrollPhysicsToJson(e),

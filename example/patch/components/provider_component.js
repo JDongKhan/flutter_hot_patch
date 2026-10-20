@@ -40,6 +40,7 @@ export class ProviderCard {
                     }),
                   __h(ChangeNotifierProvider, {
                       "value": this._modelB,
+                      "factory": "value",
                       "model": "NetworkVm"
                     })
                 ]
@@ -54,9 +55,7 @@ export class ProviderCard {
                         "model": "CounterVm"
                       }),
                     __h('Text', {
-                        "$pos": [
-                          "MultiProvider · 两个模型各自局部重建"
-                        ]
+                        "data": "MultiProvider · 两个模型各自局部重建"
                       }),
                     __h('SizedBox', {
                         "height": 8
@@ -72,9 +71,7 @@ export class ProviderCard {
                             "onPressed": this.__bind("_loadUser")
                           }, [
                             __h('Text', {
-                                "$pos": [
-                                  "加载用户信息"
-                                ]
+                                "data": "加载用户信息"
                               })
                           ])
                       ]),
@@ -92,9 +89,7 @@ export class ProviderCard {
                             "onPressed": this.__bind("_incA")
                           }, [
                             __h('Text', {
-                                "$pos": [
-                                  "B +1"
-                                ]
+                                "data": "B +1"
                               })
                           ]),
                         __h('SizedBox', {
@@ -104,9 +99,7 @@ export class ProviderCard {
                             "onPressed": this.__bind("_resetA")
                           }, [
                             __h('Text', {
-                                "$pos": [
-                                  "B Reset"
-                                ]
+                                "data": "B Reset"
                               })
                           ])
                       ])
@@ -117,9 +110,7 @@ export class ProviderCard {
   }
   _buildText() {
     return __h('Text', {
-        "$pos": [
-          "test 1"
-        ]
+        "data": "test 1"
       });
   }
   _buildBadge() {
@@ -145,9 +136,7 @@ export class ProviderCard {
       dots = dots + "·";
     }
     return __h('Text', {
-        "$pos": [
-          label + dots
-        ]
+        "data": label + dots
       });
   }
   dispose() {
@@ -163,9 +152,7 @@ export class ProviderCard {
           "fontWeight": "bold",
           "color": '#2196F3'
         },
-        "$pos": [
-          "加载用户信息："
-        ]
+        "data": "加载用户信息："
       });
   }
   _builder2(context, value) {
@@ -175,9 +162,7 @@ export class ProviderCard {
           "fontWeight": "bold",
           "color": '#4CAF50'
         },
-        "$pos": [
-          "B = " + value.count
-        ]
+        "data": "B = " + value.count
       });
   }
 }

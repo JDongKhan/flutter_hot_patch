@@ -77,7 +77,7 @@ export class OrdersPage {
                         "scrollDirection": "horizontal"
                       }, [
                         __h('Row', {}, [
-                            ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _pickStatus(s)" + ":" + String(s), () => { this._pickStatus(s); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "$pos": [ s ] }) ]) ]) ])]); } return out; })()
+                            ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _pickStatus(s)" + ":" + String(s), () => { this._pickStatus(s); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "data": s }) ]) ]) ])]); } return out; })()
                           ])
                       ])
                   ])
@@ -85,7 +85,7 @@ export class OrdersPage {
           ]),
         ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
         __h('Expanded', {}, [
-            ((this._orders == null) ? __h('Center', {}, [ __h('CircularProgressIndicator', {}) ]) : ((this._orders.length === 0) ? __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "$pos": [ "该状态下暂无订单" ] }) ]) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1" })))
+            ((this._orders == null) ? __h('Center', {}, [ __h('CircularProgressIndicator', {}) ]) : ((this._orders.length === 0) ? __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "该状态下暂无订单" }) ]) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1", "factory": "separated" })))
           ])
       ]);
   }
@@ -142,9 +142,7 @@ export class _OrderCard {
                               "fontSize": 12,
                               "color": '#ff8b909a'
                             },
-                            "$pos": [
-                              "订单号 " + this.order.no
-                            ]
+                            "data": "订单号 " + this.order.no
                           }),
                         __h('Spacer', {}),
                         __h('Text', {
@@ -152,19 +150,13 @@ export class _OrderCard {
                               "fontSize": 12.5,
                               "fontWeight": "w700"
                             },
-                            "$pos": [
-                              this.order.status
-                            ]
+                            "data": this.order.status
                           })
                       ])
                   ]),
                 __h('Divider', {
                     "height": 1,
-                    "color": __h('Color', {
-                        "$pos": [
-                          4293980918
-                        ]
-                      })
+                    "color": '#fff0f2f6'
                   }),
                 __h('Padding', {
                     "padding": {
@@ -187,9 +179,8 @@ export class _OrderCard {
                                 "height": 66,
                                 "fit": "cover",
                                 "errorBuilder": "_errorBuilder0",
-                                "$pos": [
-                                  this.order.img
-                                ]
+                                "factory": "network",
+                                "src": this.order.img
                               })
                           ]),
                         __h('SizedBox', {
@@ -206,9 +197,7 @@ export class _OrderCard {
                                       "fontSize": 14,
                                       "fontWeight": "w600"
                                     },
-                                    "$pos": [
-                                      this.order.title
-                                    ]
+                                    "data": this.order.title
                                   }),
                                 __h('SizedBox', {
                                     "height": 5
@@ -220,9 +209,7 @@ export class _OrderCard {
                                       "fontSize": 11.5,
                                       "color": '#ff8b909a'
                                     },
-                                    "$pos": [
-                                      this.order.spec
-                                    ]
+                                    "data": this.order.spec
                                   }),
                                 __h('SizedBox', {
                                     "height": 6
@@ -232,9 +219,7 @@ export class _OrderCard {
                                       "fontSize": 11,
                                       "color": '#ffa3a9b4'
                                     },
-                                    "$pos": [
-                                      "×1"
-                                    ]
+                                    "data": "×1"
                                   })
                               ])
                           ])
@@ -242,11 +227,7 @@ export class _OrderCard {
                   ]),
                 __h('Divider', {
                     "height": 1,
-                    "color": __h('Color', {
-                        "$pos": [
-                          4293980918
-                        ]
-                      })
+                    "color": '#fff0f2f6'
                   }),
                 __h('Padding', {
                     "padding": {
@@ -262,9 +243,7 @@ export class _OrderCard {
                               "fontSize": 12.5,
                               "color": '#ff5c6270'
                             },
-                            "$pos": [
-                              "合计 "
-                            ]
+                            "data": "合计 "
                           }),
                         __h('Text', {
                             "style": {
@@ -272,9 +251,7 @@ export class _OrderCard {
                               "fontWeight": "w700",
                               "color": kPrice
                             },
-                            "$pos": [
-                              "￥" + this.order.price
-                            ]
+                            "data": "￥" + this.order.price
                           }),
                         __h('Spacer', {}),
                         ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": this.__bind("_app_host_.invoke(\"toast\", [\"已取消订单 \" + this.order.no + \"（演示）\"])") }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.__bind("this.onOpen()") })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.__bind("this.onOpen()") })])
@@ -288,11 +265,7 @@ export class _OrderCard {
       return __h('Container', {
         "width": 66,
         "height": 66,
-        "color": __h('Color', {
-            "$pos": [
-              4293454832
-            ]
-          })
+        "color": '#ffe8ebf0'
       });
   }
 }

@@ -44,9 +44,7 @@ export class WatchDemo {
         "mainAxisSize": "min"
       }, [
         __h('Text', {
-            "$pos": [
-              "context.watch<CounterModel>"
-            ]
+            "data": "context.watch<CounterModel>"
           }),
         __h('Text', {
             "style": {
@@ -54,9 +52,7 @@ export class WatchDemo {
               "fontWeight": "bold",
               "color": '#FF5722'
             },
-            "$pos": [
-              "count = " + model.count
-            ]
+            "data": "count = " + model.count
           }),
         __h('SizedBox', {
             "height": 8
@@ -68,9 +64,7 @@ export class WatchDemo {
                 "onPressed": this.__bind("model.inc()")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "+1"
-                    ]
+                    "data": "+1"
                   })
               ]),
             __h('SizedBox', {
@@ -80,9 +74,7 @@ export class WatchDemo {
                 "onPressed": this.__bind("this.context.read(\"CounterVm\").reset()")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "Reset"
-                    ]
+                    "data": "Reset"
                   })
               ])
           ])
@@ -101,9 +93,7 @@ export class WatchCountLabel {
           "fontSize": 16,
           "color": '#2196F3'
         },
-        "$pos": [
-          "another State: count = " + model.count
-        ]
+        "data": "another State: count = " + model.count
       });
   }
 }

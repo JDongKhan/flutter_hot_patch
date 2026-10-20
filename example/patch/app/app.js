@@ -35,11 +35,7 @@ export class AppSubContent {
   }
   build(context) {
     return __h('Scaffold', {
-        "backgroundColor": __h('Color', {
-            "$pos": [
-              4294243831
-            ]
-          }),
+        "backgroundColor": '#fff4f5f7',
         "body": __h('TabBarView', {
             "controller": this._tab,
             "physics": "NeverScrollableScrollPhysics"
@@ -54,48 +50,32 @@ export class AppSubContent {
             "onTap": this.__bind("_openTab"),
             "type": BottomNavigationBarType.fixed,
             "backgroundColor": '#FFFFFF',
-            "selectedItemColor": __h('Color', {
-                "$pos": [
-                  4279139067
-                ]
-              }),
-            "unselectedItemColor": __h('Color', {
-                "$pos": [
-                  4288192684
-                ]
-              }),
+            "selectedItemColor": '#ff0e7afb',
+            "unselectedItemColor": '#ff98a0ac',
             "selectedFontSize": 11,
             "unselectedFontSize": 11,
             "items": [
               __h('BottomNavigationBarItem', {
                   "icon": __h('Icon', {
-                      "$pos": [
-                        "home"
-                      ]
+                      "icon": "home"
                     }),
                   "label": "首页"
                 }),
               __h('BottomNavigationBarItem', {
                   "icon": __h('Icon', {
-                      "$pos": [
-                        "article"
-                      ]
+                      "icon": "article"
                     }),
                   "label": "社区"
                 }),
               __h('BottomNavigationBarItem', {
                   "icon": __h('Icon', {
-                      "$pos": [
-                        "shopping_cart"
-                      ]
+                      "icon": "shopping_cart"
                     }),
                   "label": "订单"
                 }),
               __h('BottomNavigationBarItem', {
                   "icon": __h('Icon', {
-                      "$pos": [
-                        "person"
-                      ]
+                      "icon": "person"
                     }),
                   "label": "我的"
                 })

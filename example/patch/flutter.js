@@ -36,7 +36,7 @@ export class GridView {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.builder;
+    var name = this.props.itemBuilder || this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -44,6 +44,7 @@ export class GridView {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
+    var name = this.props.itemBuilder || this.props.builder;
     var out = [];
     // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
@@ -52,11 +53,11 @@ export class GridView {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, context, i));
+      out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
-    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
+    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
     return __h('GridView', this.props, out);
   }
 }
@@ -67,7 +68,7 @@ export class ListView {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.builder;
+    var name = this.props.itemBuilder || this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -75,6 +76,7 @@ export class ListView {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
+    var name = this.props.itemBuilder || this.props.builder;
     var out = [];
     // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
@@ -83,11 +85,11 @@ export class ListView {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, context, i));
+      out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
-    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
+    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
     return __h('ListView', this.props, out);
   }
 }
@@ -133,7 +135,7 @@ export class SliverFillViewport {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.builder;
+    var name = this.props.itemBuilder || this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -141,6 +143,7 @@ export class SliverFillViewport {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
+    var name = this.props.itemBuilder || this.props.builder;
     var out = [];
     // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
@@ -149,11 +152,11 @@ export class SliverFillViewport {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, context, i));
+      out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
-    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
+    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
     return __h('SliverFillViewport', this.props, out);
   }
 }
@@ -164,7 +167,7 @@ export class SliverFixedExtentList {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.builder;
+    var name = this.props.itemBuilder || this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -172,6 +175,7 @@ export class SliverFixedExtentList {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
+    var name = this.props.itemBuilder || this.props.builder;
     var out = [];
     // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
@@ -180,11 +184,11 @@ export class SliverFixedExtentList {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, context, i));
+      out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
-    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
+    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
     return __h('SliverFixedExtentList', this.props, out);
   }
 }
@@ -195,7 +199,7 @@ export class SliverGrid {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.builder;
+    var name = this.props.itemBuilder || this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -203,6 +207,7 @@ export class SliverGrid {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
+    var name = this.props.itemBuilder || this.props.builder;
     var out = [];
     // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
@@ -211,11 +216,11 @@ export class SliverGrid {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, context, i));
+      out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
-    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
+    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
     return __h('SliverGrid', this.props, out);
   }
 }
@@ -226,7 +231,7 @@ export class SliverList {
     this.children = children || [];
   }
   __owner() {
-    var name = this.props.builder;
+    var name = this.props.itemBuilder || this.props.builder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -234,6 +239,7 @@ export class SliverList {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
+    var name = this.props.itemBuilder || this.props.builder;
     var out = [];
     // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
     var n = this.props.childCount !== undefined
@@ -242,11 +248,11 @@ export class SliverList {
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
-      out.push(owner[this.props.builder].call(owner, context, i));
+      out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 builder/separatorBuilder/childCount/itemCount）：宿主据
-    // `builder` 判定 builder 形态，并据此还原 Flutter 原生命名构造。
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
+    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
     return __h('SliverList', this.props, out);
   }
 }

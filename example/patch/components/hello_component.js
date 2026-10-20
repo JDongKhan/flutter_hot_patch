@@ -71,38 +71,26 @@ export class HelloCard {
               "fontWeight": "bold",
               "color": '#2196F3'
             },
-            "$pos": [
-              "Hello from JS logic 4"
-            ]
+            "data": "Hello from JS logic 4"
           }),
         __h('Text', {
-            "$pos": [
-              "count = " + this._count
-            ]
+            "data": "count = " + this._count
           }),
         __h('Text', {
-            "$pos": [
-              "阶段：" + stage
-            ]
+            "data": "阶段：" + stage
           }),
         __h('Text', {
-            "$pos": [
-              "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
-            ]
+            "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
           }),
         __h('Text', {
-            "$pos": [
-              "age: " + ((this._user == null ? null : this._user.age) ?? "-")
-            ]
+            "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
           }),
         __h('Text', {
-            "$pos": [
-              ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
-            ]
+            "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
           }),
-        ...((this._count > 0) ? [__h('Text', { "$pos": [ "当前 count 是正数（if 条件渲染）" ] })] : []),
-        ...((this._user != null) ? [__h('Text', { "$pos": [ "用户已加载（if + else 渲染）" ] })] : [__h('Text', { "$pos": [ "用户未加载，点 Load User" ] })]),
-        ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "$pos": [ "循环第 " + i + " 个" ] })]); } return out; })(),
+        ...((this._count > 0) ? [__h('Text', { "data": "当前 count 是正数（if 条件渲染）" })] : []),
+        ...((this._user != null) ? [__h('Text', { "data": "用户已加载（if + else 渲染）" })] : [__h('Text', { "data": "用户未加载，点 Load User" })]),
+        ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + i + " 个" })]); } return out; })(),
         __h('Row', {}, [
             __h('ElevatedButton', {
                 "onPressed": this.__bind("inc"),
@@ -112,36 +100,28 @@ export class HelloCard {
                 }
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "+1"
-                    ]
+                    "data": "+1"
                   })
               ]),
             __h('ElevatedButton', {
                 "onPressed": this.__bind("this.reset()")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "Reset"
-                    ]
+                    "data": "Reset"
                   })
               ]),
             __h('ElevatedButton', {
                 "onPressed": this.__bind("showNative")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "Native"
-                    ]
+                    "data": "Native"
                   })
               ]),
             __h('ElevatedButton', {
                 "onPressed": this.__bind("loadUser")
               }, [
                 __h('Text', {
-                    "$pos": [
-                      "Load User"
-                    ]
+                    "data": "Load User"
                   })
               ])
           ])
