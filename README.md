@@ -28,4 +28,14 @@ bash start_patch_server.sh
 cd example && flutter run
 ```
 
-架构与设计契约见 [docs/项目架构文档.md](docs/项目架构文档.md)。
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| [使用手册](docs/使用手册.md) | 接入五步、注解速查、构建配置、运行时接入、本地联调、常见问题 |
+| [项目架构文档](docs/项目架构文档.md) | 核心设计定律、架构总览、核心机制、设计红线、扩展指引、关键文件索引 |
+| [组件支持文档](docs/组件支持文档.md) | 组件支持矩阵、样式/值/事件协议、通用翻译能力、已知限制、JS 引擎能力基线 |
+| [app-prototype.html](docs/app-prototype.html) | 示例 App 原型（HTML） |
+| [hot_patch_annotations](packages/hot_patch_annotations/README.md) | 注解包：`@PatchEntry` / `@PatchIgnore` |
+| [hot_patch_generator](packages/hot_patch_generator/README.md) | 生成器：种子文件、产物布局、翻译设计原则、新增 widget 支持 |
+| [hot_patch](packages/hot_patch/README.md) | 运行时：补丁加载、宿主能力桥、日志 |
