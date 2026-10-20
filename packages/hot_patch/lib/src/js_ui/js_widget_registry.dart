@@ -129,9 +129,9 @@ class JsRenderContext {
 
 // ===== 全局原生组件注入表 =====
 
-/// 「无 JS 产物组件」（产物里的 `Component` 结点）的原生实现：组件名 → 构造。
+/// 「无 JS 产物组件」（产物里保留具体类型名、无 JS 类的结点）的原生实现：组件名 → 构造。
 ///
-/// **进程内全局一份**：同一 App 的所有 `JsUiWidget` 实例、所有 `Component`
+/// **进程内全局一份**：同一 App 的所有 `JsUiWidget` 实例、所有「无 JS 产物」
 /// 结点共用同一张表，不再随 widget 参数逐层透传。运行时（hot_patch 包）不
 /// import 任何业务类，实现由业务方在 `main()` 里注册（与 [registerHostMethods]
 /// 同一个位置，须在 `runApp` 之前）。

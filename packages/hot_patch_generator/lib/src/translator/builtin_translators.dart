@@ -6,9 +6,11 @@ import 'widget2js.dart';
 
 /// 内置 widget 策略：把常见 Flutter widget 注册进 [WidgetTranslatorRegistry]。
 ///
-/// 新增内置 widget = 在这里加一个 translator 类 + register 一行；
-/// 自定义 widget = 在业务代码里实现 WidgetTranslator 并 register，
-/// ComponentBuilder 核心逻辑无需改动。
+/// 新增内置 widget = 在这里加一个 translator 类 + register 一行，
+/// ComponentBuilder / WidgetModuleBuilder 核心逻辑无需改动。
+/// registry 由这两个 builder 内部构造，使用方无法注入自定义 translator；
+/// 未注册的自定义/三方组件由兜底 translator 保留具体类型名输出，
+/// 运行时经宿主 `registerNativeComponent` 注入原生实现。
 ///
 /// 值约定：toJson 的 props 叶子值一律是 **JS 表达式字符串**（字符串字面量
 /// 用 `ctx.jsString()` 带引号、数字/布尔/表达式原样），由渲染层统一输出为
