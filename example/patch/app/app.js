@@ -11,6 +11,15 @@ import { __h } from '../flutter.js';
 // 组件 AppShell
 export class AppShell {
   constructor() {
+  }
+  build(context) {
+    return __h(AppSubContent, {});
+  }
+}
+
+// 组件 AppSubContent
+export class AppSubContent {
+  constructor() {
     this._tab = new TabController({length: 4, vsync: this});
     this._index = 0;
   }

@@ -35,8 +35,21 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell>
-    with SingleTickerProviderStateMixin {
+class _AppShellState extends State<AppShell> {
+  @override
+  Widget build(BuildContext context) {
+    return AppSubContent();
+  }
+}
+
+class AppSubContent extends StatefulWidget {
+  const AppSubContent({super.key});
+
+  @override
+  State<AppSubContent> createState() => _AppSubContentState();
+}
+
+class _AppSubContentState extends State<AppSubContent> with SingleTickerProviderStateMixin {
   /// 四 tab 的 TabController：JS 侧代理类忽略 vsync，length 随句柄下发宿主建
   /// 真实 controller（见 capabilities/tab），[TabBarView] 与底部导航共用同一个。
   late final TabController _tab = TabController(length: 4, vsync: this);
@@ -118,8 +131,7 @@ class AppShellJsPage extends StatelessWidget {
   static const String _zip = 'http://127.0.0.1:8765/patch/patch.zip';
 
   /// 补丁 URL：组件名 + 入口路径都走 query（与 DemoListPage 的写法一致）。
-  static final String _jsAsset =
-      '$_zip?component=AppShell&entry=${Uri.encodeComponent('app/app.js')}';
+  static final String _jsAsset = '$_zip?component=AppShell&entry=${Uri.encodeComponent('app/app.js')}';
 
   @override
   Widget build(BuildContext context) {
