@@ -9,7 +9,7 @@
 | `packages/hot_patch_annotations` | 声明式注解（`@PatchEntry` / `@PatchIgnore` / `@HostInjected`） |
 | `packages/hot_patch_generator` | 编译期：Dart widget → JS 翻译与产物组装（build_runner builders） |
 | `packages/hot_patch` | 运行期：JS 运行时 + 宿主渲染 + 能力桥 |
-| `example/` | 示例 App：原生 vs JS 热更对比 Demo（业务 Dart 单源在 `example/lib/`，产物在 `example/patch/`） |
+| `example/` | 示例 App：原生 vs JS 热更对比 Demo（业务 Dart 单源在 `example/lib/`，生成的 JS 产物在 [example/patch/](example/patch/)） |
 | `tool/patch_server.dart`、`start_patch_server.sh` | 本地 patch 静态服务（服务于 `example/patch/`） |
 
 根 `pubspec.yaml` 是 workspace 根，各成员 pubspec 声明 `resolution: workspace`，

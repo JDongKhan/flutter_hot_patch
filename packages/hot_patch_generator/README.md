@@ -1,12 +1,172 @@
 # hot_patch_generator
 
+[English](#english) | [简体中文](#简体中文)
+
+## English
+
+Translates Flutter widgets annotated with `@PatchEntry` **statically** into JS modules at build time, so the
+`hot_patch` runtime can hot-patch and render them.
+
+It parses sources statically with `analyzer`, **never executes any Dart code**, and requires no changes to the
+component: the translated class stays a completely ordinary Flutter widget.
+
+### Installation
+
+```yaml
+dev_dependencies:
+  hot_patch_generator: ^0.1.0
+  build_runner: ^2.4.13
+```
+
+Then run this at the project root:
+
+```sh
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### Output
+
+The `patch/` output directory **mirrors** the `lib/` source paths one-to-one, and file names match the Dart
+source file names:
+
+| Source | Output | Notes |
+| --- | --- | --- |
+| `lib/components/counter.dart` | `patch/components/counter.js` | Component output containing `@PatchEntry` |
+| `lib/model/user.dart` | `patch/model/user.js` | Plain classes / static singletons (`export class` / `export const`) |
+| (package-root pseudo asset `$package$`) | `patch/flutter.js`, `patch/provider.js` | Widget factory modules, **one file per package** |
+| (package-root pseudo asset `$package$`) | `patch/manifest.json` | Patch manifest: basic info + build time + content hash of every JS asset |
+
+- Splitting is driven by **file content** (not by directory): contains `@PatchEntry` → component output;
+  contains only plain classes (non-private, non-abstract, non-component) → model/singleton output; neither →
+  no output.
+- Package-level modules (`patch/<package>.js`) and the manifest hang off the package-root pseudo asset
+  `$package$`: the input is the whole package and the output path is static, so **users need no seed file and
+  no configuration** — just depend on this package and run `build_runner`.
+- `patch/flutter.js` contains the shared node factory `__h` and every Flutter widget factory; other package
+  modules and component outputs all `import { __h }` from it.
+
+Browse the JS actually generated for the example app online:
+[example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch).
+
+> Note: Flutter's directory asset declaration is **not recursive**, so every output path must be declared
+> explicitly in `pubspec.yaml` under `assets:` (per directory or per file).
+
+### Configuration
+
+`ui_widget` (package modules) and `patch_entry` (component/model outputs) **read no options**. The options of
+the remaining two builders are all optional and work out of the box:
+
+```yaml
+targets:
+  $default:
+    builders:
+      # Target runtime of the host-injection registration output
+      # (lib/generated/host_methods.dart); only override when swapping in another runtime.
+      hot_patch_generator:ui_host_register:
+        options:
+          register_import: "package:<runtime>/<runtime>.dart"
+          register_call: "<Runtime>.registerHostMethod"
+      # Basic info in patch/manifest.json; by default the package name / no version.
+      hot_patch_generator:ui_patch_manifest:
+        options:
+          name: my_app
+          version: 1.2.3
+```
+
+### Translation design principles
+
+The output must correspond to the Dart source **one-to-one**; this is the core constraint of the framework:
+
+1. **Every legal Dart construct must be statically translatable.** When you meet an unknown syntax form, add a
+   proper translation branch (mapped one-to-one onto equivalent JS in the shared expression/statement/class
+   rendering paths of `dart2js.dart`). **Never degrade, never fall back to a generic node, never ask users to
+   change their Dart to fit the framework.** All translation has a single implementation shared by components
+   and plain classes.
+2. **No temporary workarounds.** When something fails, do not bypass it in the demo with temporary fields or
+   shim layers (e.g. adding a mirror trigger field just because setState has no diff); the JS output must map
+   line-by-line onto the Dart source — fix the translation path itself.
+3. **Capabilities are isolated per file.** When adding a runtime capability (e.g. ScrollController /
+   TextEditingController id-bridge), put it on the host side as a separate file under
+   `hot_patch/lib/src/js_ui/capabilities/` and **do not touch the `js_widget_registry` / `js_ui_widget` core**;
+   JS runtime fragments are split into named strings per capability and assembled by `runtime_source.dart`.
+4. **Defaults match Flutter 100%.** When the host renders, nullable properties stay `null` by default; never
+   default them to `0` / `EdgeInsets.zero` etc. and override Flutter theme defaults.
+5. **Registration keys match class names.** The key in the host's `r.register('X', ...)` must have the same name
+   as the type string in the JS output; no aliases.
+
+### Extension: adding widget support
+
+"How a given widget is translated into JS" is a policy implemented by `WidgetTranslator`:
+
+```dart
+class MyWidgetTranslator extends WidgetTranslator {
+  const MyWidgetTranslator();
+
+  @override
+  Set<String> get types => {'MyWidget'};
+
+  @override
+  Map<String, Object?> toJson(Expression e, WidgetTranslateContext ctx) { ... }
+}
+```
+
+Just `register` it in `WidgetTranslatorRegistry`; the core code needs no change. Built-in policies live in
+`lib/src/translator/builtin_translators.dart` (Column / Row / Text / Scaffold / the provider family, etc.).
+
+### Code structure
+
+This package is organised by function (under `lib/src/`), with acyclic one-way dependencies:
+
+| Directory / file | Role |
+| --- | --- |
+| `lib/builder.dart` | **Public entry**: the four builder factory functions for `build.yaml` |
+| `lib/src/translator/` | Translation core: Dart AST → JS (single entry `translateClass`) |
+| `lib/src/builders/` | build_runner Builder implementations and output assembly |
+
+```
+translator/  ←  builders/  ←  builder.dart
+```
+
+In `lib/src/translator/`: `js_translator` (shared language layer) · `dart2js` (class declarations) ·
+`widget2js` (widget trees) · `class_translator` (single entry) · `source_index` (annotation detection /
+imported source parsing) · `host_injected` (@HostInjected channel table, scanned by the translation layer) ·
+`style_translators` · `builtin_translators` (built-in widget policies).
+
+`lib/src/builders/` is split per builder:
+
+- `patch_entry/`: `component_builder` (collects the root classes of the file and calls `translateClass`
+  uniformly, then assembles the result into a same-named JS output) · `class_table` · `singleton_support`
+- `ui_widget/`: `widget_module_builder` (package module output + the JS class sources of every logic
+  component/sliver proxy; used only by this builder)
+- `ui_host_register/`: `host_register_builder` (host-side registration list generation; the detection rules for
+  @HostInjected live in `translator/host_injected.dart`)
+- `ui_patch_manifest/`: `patch_manifest_builder` (produces `patch/manifest.json`; thanks to
+  `required_inputs: [".js"]` it is scheduled after `patch_entry` / `ui_widget`, and uses
+  `findAssets('patch/**.js')` to list every JS output and hash each one)
+- at the root: shared output foundations for all builders — `product_path` · `js_widget_defs`
+  (`nodeHelperPackage` / `packageModulePath` / the set of widget types that have JS classes)
+
+Other packages of the framework:
+
+| Package | Role |
+| --- | --- |
+| `hot_patch_annotations` | Declarative annotations |
+| `hot_patch_generator` | **This package**: `build.yaml` + factory entry + translation/build implementation |
+| `hot_patch` | Runtime: loads and renders JS patch components, driven by JS |
+
+Users only need to depend on `hot_patch_generator` in `dev_dependencies`.
+
+---
+
+## 简体中文
+
 构建期把带 `@PatchEntry` 注解的 Flutter widget **静态翻译**为 JS 模块，
 供 `hot_patch` 运行时热更渲染。
 
 全程使用 `analyzer` 静态解析源码，**不执行任何 Dart 代码**，也不要求组件做任何改造：
 被翻译的类始终是一个完全正常的 Flutter widget。
 
-## 安装
+### 安装
 
 ```yaml
 dev_dependencies:
@@ -20,7 +180,7 @@ dev_dependencies:
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-## 产物
+### 产物
 
 产物目录 `patch/` 与 `lib/` 源码路径**一一对应**，文件名与 Dart 源文件同名：
 
@@ -39,10 +199,13 @@ dart run build_runner build --delete-conflicting-outputs
 - `patch/flutter.js` 内含共享结点工厂 `__h` 与全部 flutter widget 工厂；
   其它包模块与组件产物统一从它 `import { __h }`。
 
+示例 App 的实际产物（生成的 JS 文件）可在线查看：
+[example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch)。
+
 > 注意：Flutter 的目录 asset 声明**不递归**，需在 `pubspec.yaml` 的 `assets:`
 > 里逐目录（或逐文件）显式声明产物路径。
 
-## 配置
+### 配置
 
 `ui_widget`（package 模块）与 `patch_entry`（组件/模型产物）**不读任何 options**。
 其余两个 builder 的选项均为可选，缺省即开箱可用：
@@ -64,7 +227,7 @@ targets:
           version: 1.2.3
 ```
 
-## 翻译设计原则
+### 翻译设计原则
 
 翻译产物必须与 Dart 源码**一比一对应**，这是本框架的核心约束：
 
@@ -74,7 +237,7 @@ targets:
 4. **默认值与 Flutter 百分百一致**。宿主渲染时 nullable 属性缺省保持 `null`，不得默认成 `0` / `EdgeInsets.zero` 等覆盖 Flutter 主题默认。
 5. **注册 key 与类名一致**。宿主 `r.register('X', ...)` 的 key 与产物 JS 里的 type 字符串保持同名，不另起别名。
 
-## 扩展：新增 widget 支持
+### 扩展：新增 widget 支持
 
 「某个 widget 怎么翻译成 JS」是策略，由 `WidgetTranslator` 实现：
 
@@ -94,7 +257,7 @@ class MyWidgetTranslator extends WidgetTranslator {
 内置策略见 `lib/src/translator/builtin_translators.dart`
 （Column / Row / Text / Scaffold / provider 系列等）。
 
-## 代码结构
+### 代码结构
 
 本包按功能分目录组织（`lib/src/` 下），依赖单向无环：
 

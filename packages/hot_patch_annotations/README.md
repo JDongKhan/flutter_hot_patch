@@ -59,7 +59,8 @@ of the same name, which the `hot_patch` runtime loads and renders through `JsUiW
 Marks a class as a dynamically shippable UI component.
 
 - `name`: the component name, **optional**; when omitted (`@PatchEntry()`) the component name is the
-  **class name**. At runtime, `JsUiWidget(component: <name>)` instantiates the JS version.
+  **class name**. At runtime the name is passed to `JsUiWidget` through the `component` query parameter of
+  `jsAsset` (e.g. `jsAsset: 'assets/patch/components/counter.js?component=Counter'`).
 - Hot patching works on the **whole widget**; there are no field- or method-level annotations. The
   generator collects everything by default:
   - all non-static fields → JS state (`_count` → `count`)
@@ -154,6 +155,9 @@ JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
 Typical use case: most of a component should be hot-patchable, but some capability (network, routing,
 WebView, a native SDK) can only run on the host.
 
+Browse the JS actually generated for the example app online:
+[example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch).
+
 ### Related packages
 
 | Package | Role |
@@ -220,7 +224,8 @@ class _CounterState extends State<Counter> {
 标记一个类为可动态下发的 UI 组件。
 
 - `name`：组件名，**可省略**；不传（写 `@PatchEntry()`）时组件名即**类名**。
-  运行时用 `JsUiWidget(component: 组件名)` 实例化 JS 版本。
+  运行时通过 `JsUiWidget` 的 `jsAsset` query 参数传入
+  （如 `jsAsset: 'assets/patch/components/counter.js?component=Counter'`）。
 - 热更基于**整个 widget**，不做字段/方法级标注。生成器默认全量收集：
   - 所有非 static 字段 → JS 状态（`_count` → `count`）
   - 所有方法（除 build / 生命周期）→ JS 事件方法（构建期以 `this.__bind` 绑定）
@@ -302,6 +307,9 @@ JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
 ```
 
 适用场景：组件大部分逻辑要热更，但涉及的能力（网络 / 路由 / WebView / 原生 SDK）只能由宿主执行。
+
+示例 App 的实际产物（生成的 JS 文件）可在线查看：
+[example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch)。
 
 ### 相关包
 

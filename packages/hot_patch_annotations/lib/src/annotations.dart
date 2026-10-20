@@ -2,7 +2,8 @@
 ///
 /// 生成器（hot_patch_generator）据此把该组件翻译为同名的 JS 模块：
 ///   - [name]：组件名，**可省略**；不传时即**类名**（JS 类名与 Dart 类名
-///     始终一致，客户端用 `JsUiWidget(component: 类名)` 实例化 JS 版本）
+///     始终一致，客户端通过 `JsUiWidget` 的 jsAsset query
+///     `?component=类名` 实例化 JS 版本）
 ///
 /// 热更是**基于整个 widget** 的，不做字段/方法级标注：
 /// 生成器默认全量收集——
