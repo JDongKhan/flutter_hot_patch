@@ -26,8 +26,8 @@ import 'js_widget_registry.dart';
 /// 宿主只额外做两件事：把 `type` 映射成 widget、把作用域（context）查询落到
 /// 真值 BuildContext 上做权威校验/订阅。故宿主代码不随状态库增加而改动。
 ///
-/// 每个实例按 `pageKey` 在共享 JS 运行时里隔离自己的根（结点树 / 作用域 /
-/// 订阅 / 脏队列），同屏多实例、多 runtime 分组都互不影响。
+/// 每个实例按 `pageKey` 在全局共享 JS 运行时（[JsRuntimeManager.instance]）里
+/// 隔离自己的根（结点树 / 作用域 / 订阅 / 脏队列），同屏多实例互不影响。
 ///
 /// 用法（组件名与入口都通过 URL query 传入，方便运营配置）：
 /// ```dart
@@ -42,7 +42,6 @@ class JsUiWidget extends StatefulWidget {
     super.key,
     required this.jsAsset,
     this.props = const {},
-    this.sharedManager,
     this.showBuildTime = false,
   });
 
@@ -54,9 +53,6 @@ class JsUiWidget extends StatefulWidget {
 
   /// 传给组件构造的 props（如 `MyStatelessCard(title: ...)` 的 {title: ...}）。
   final Map<String, dynamic> props;
-
-  /// 共享运行时；多组件共用一个引擎时传入。
-  final JsRuntimeManager? sharedManager;
 
   /// 调试开关：在**右上角**显示所加载补丁的打包时间（取自包根 `manifest.json`
   /// 的 `buildTime`，由 build_runner 产出、随 zip 分发）。
@@ -92,7 +88,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
   @override
   void initState() {
     super.initState();
-    _manager = widget.sharedManager ?? JsRuntimeManager.instance;
+    // 运行时是全局单例（所有实例共用一个 JS 引擎），不支持从外部注入。
+    _manager = JsRuntimeManager.instance;
     // 宿主 widget 注册表是**进程内单例**（懒建一次性注册全部内建/能力/三方库
     // 组件，见 js_ui_capabilities 的 jsWidgetRegistry）——不需要、也不由外部传入。
     registerBuiltinHostMethods();

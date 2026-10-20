@@ -34,7 +34,6 @@ JsUiWidget(
 | `jsAsset` | 补丁入口 JS（asset 路径或 http(s) zip） |
 | `component` | 入口模块里注册的组件类名（即 `@PatchEntry` 的 `name`） |
 | `props` | 传给组件构造的 props |
-| `sharedManager` | 共享运行时；多组件共用一个引擎时传入 |
 | `entryPath` | 网络补丁包（zip）内入口 .js 的相对路径；不传则按 `component` 反查 |
 | `registry` | 宿主 widget 翻译注册表；`null` 用内置集合 |
 
@@ -47,8 +46,9 @@ JsUiWidget(
   因此宿主代码不随状态库增加而改动——宿主**不理解任何状态语义**。
 - **宿主只做两件事**：JS 结点 → Flutter widget 映射（`JsWidgetRegistry`）、
   增量补丁应用（`JsUiStore`）。
-- **多实例隔离**：每个 `JsUiWidget` 实例按 `pageKey` 在共享 JS 运行时里隔离自己的根
-  （结点树 / provider / 订阅 / 脏队列），同屏多实例、多 runtime 分组都互不影响。
+- **多实例隔离**：运行时是全局单例（`JsRuntimeManager.instance`，所有实例共用一个引擎，
+  不从外部注入）；每个 `JsUiWidget` 实例按 `pageKey` 在其中隔离自己的根
+  （结点树 / provider / 订阅 / 脏队列），同屏多实例互不影响。
 
 ## 扩展：JS → 原生能力
 
