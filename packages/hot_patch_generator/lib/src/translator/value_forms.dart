@@ -373,6 +373,10 @@ String? extractBuilderMethod(
             preludes.add('var ${v.name.lexeme};');
             continue;
           }
+          // `final model = context.watch<MyModel>()`：只登记为 builder 局部名
+          // （`addBuilderLocal` 已做）。子树里若出现 `() => model.inc()`，事件
+          // 句柄会因「引用了构建期局部名」改走**构建期闭包**，闭包与本方法同
+          // 作用域、直接捕获 `model`——不做 read("T") 之类的改写。
           ctx.warnCapturedLocals(init);
           preludes.add('var ${v.name.lexeme} = ${ctx.jsDataExpr(init)};');
         }

@@ -62,7 +62,7 @@ export class WatchDemo {
             "mainAxisAlignment": "center"
           }, [
             __h('ElevatedButton', {
-                "onPressed": this.__bind("model.inc()")
+                "onPressed": this.__bindFn("() => model.inc()", () => { model.inc(); })
               }, [
                 __h('Text', {
                     "data": "+1"

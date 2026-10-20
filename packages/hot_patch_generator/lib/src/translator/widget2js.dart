@@ -507,13 +507,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     }
   }
 
-  /// Builder 闭包局部变量 → 模型类型（`final model = context.watch<T>()`）。
-  /// 事件表达式（`() => model.inc()`，局部变量不在回传作用域内）据此翻译成
-  /// `this.context.read("T").inc()`——`read` 挂在 **context 代理**上（与 Dart
-  /// 调用面一致），事件按绑定位置取到同一个代理，不依赖局部作用域即可回传执行。
-  final Map<String, String> _localModels = {};
-  void addLocalModel(String name, String modelType) => _localModels[name] = modelType;
-
   /// 名字是否形如**类名**：跳过前导下划线后首字母大写。
   ///
   /// `Image` / `_OrderCard`（私有组件类）是类名；`_model` / `context` / `build`
@@ -772,15 +765,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         final hostCall =
             _hostEventJs(target, inner.methodName.name, inner.argumentList);
         if (hostCall != null) return hostCall;
-        // 局部变量 receiver：`model.inc()` → 事件表达式中局部变量已不在
-        // 作用域，模型局部（context.watch<T>()）改用 `this.context.read('T')`；
-        // 其余局部变量原样保留（`model.inc()`，闭包内 var 已声明）。
+        // 局部变量 receiver（`model.inc()`，model 是 builder 里的
+        // `final model = context.watch<T>()`）：**原样保留局部名**，由
+        // [eventHandle] 判定命中「构建期局部名」后改用**构建期闭包**注册
+        // （`__bindFn(key, () => { model.inc(); })`）——闭包在同一个方法里创建，
+        // 天然捕获该局部变量，与 Dart 闭包语义一致。不做任何 read("T") 改写。
         if (target is Identifier && _locals.contains(target.name)) {
-          final modelType = _localModels[target.name];
-          final recv = modelType != null
-              ? 'this.context.read(${jsString(modelType)})'
-              : target.name;
-          return '$recv.${inner.methodName.name}'
+          return '${target.name}.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList)})';
         }
         // context.read<T>().reset() 链式：先翻译 receiver（jsDataExpr →
@@ -831,19 +822,27 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
   }
 
-  /// 事件「构建期句柄」：把事件表达式包成 `this.__bind("表达式")`。
+  /// 事件「构建期句柄」。
   ///
-  /// 这是事件回传的唯一注入方式：`this` 是 build 作用域的组件实例（也就是
-  /// **定义该事件方法/表达式归属的组件**），运行时据此登记句柄并按（实例,
-  /// 表达式）缓存——重建产出同一句柄（props 稳定、增量补丁仍生效），宿主
-  /// 点击只回传 `{__fn:id}`。相比运行时按裸方法名沿组件链启发式查找，绑定
-  /// 信息在构建期就确定，语义与 Dart tear-off 一致，且不依赖运行时树形状。
+  /// 两种注入方式（都产出 `{__fn:id}` 句柄交给宿主 / 子组件去 invoke，函数本身
+  /// 不能跨语言边界，只能传 id）：
+  ///   - `this.__bind("表达式")`：**字符串**方案，点击时在隔离作用域求值；
+  ///   - `this.__bindFn(key, () => { 表达式; })`：**构建期闭包**方案，闭包在
+  ///     build（或抽出的 builder 方法）里创建，天然捕获当时的局部变量/循环
+  ///     变量——与 Dart 闭包同语义。
+  ///
+  /// 只要表达式引用了「点击时看不见的构建期局部名」（`_eventCapturesBuildLocals`），
+  /// 就必须走闭包方案：字符串方案在点击时求值，`ReferenceError` 会被求值层吞掉，
+  /// 表现为「点了没反应」。这正是 Dart `onPressed: () => model.inc()` 里
+  /// `model` 是 builder 局部变量时的情形。
+  ///
+  /// 否则走字符串方案：方法引用（`_inc`）按名调用、位置实参用 `apply` 摊开
+  /// （多参事件天然支持），`this.context.read("T")` 这类表达式按**绑定时的构建
+  /// 位置**解析——都不依赖局部作用域。
   String eventHandle(Expression e) {
     try {
       final exprJs = eventExpr(e);
-      // 事件表达式引用了「构建期才存在的名字」（循环变量）：字符串方案在点击时
-      // 才求值、拿不到它们，必须用构建期闭包 `__bindFn` 注册（见 mini_react_js）。
-      if (_loopVars.isNotEmpty) {
+      if (_eventCapturesBuildLocals(e)) {
         return 'this.__bindFn(${_bindKeyExpr(e)}, () => { $exprJs; })';
       }
       return 'this.__bind(${jsString(exprJs)})';
@@ -855,6 +854,36 @@ class WidgetTranslateContext implements WidgetExprRenderer {
           '${e.toSource()}（$err）');
       return 'this.__bind("__noop")';
     }
+  }
+
+  /// 事件表达式是否引用了「点击时看不见的构建期局部名」：循环变量 / build 局部
+  /// 变量（含 builder 抽出的方法里的前置语句局部）/ 方法体局部变量——且该名字
+  /// 折算不成字段引用、方法、getter、顶层常量、宿主方法（那些都已是 `this.*`
+  /// 或全局，字符串方案能解析）。
+  ///
+  /// 命中 → 必须用构建期闭包（[eventHandle]）；`context` / `widget` 在事件作用域
+  /// 里已由 `_eventScope` 改写成 `this.context` / `this.*`，不算命中。
+  bool _eventCapturesBuildLocals(Expression e) {
+    final used = <String>{};
+    e.accept(_SimpleIdentifierCollector(used));
+    for (final name in used) {
+      if (name == 'context' || name == 'this' || name == 'widget') continue;
+      if (_localAliases.containsKey(name) ||
+          propByField.containsKey(name) ||
+          methodNames.contains(name) ||
+          getterNames.contains(name) ||
+          globalConsts.contains(name) ||
+          hostMethods.containsKey(name)) {
+        continue;
+      }
+      if (_locals.contains(name) ||
+          _loopVars.contains(name) ||
+          _methodParams.contains(name) ||
+          _methodBodyLocals.contains(name)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// `setState(() {...})` / `setState(() => _x = v)` → `this.setState(() => {...})`。

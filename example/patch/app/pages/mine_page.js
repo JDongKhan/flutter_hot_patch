@@ -156,7 +156,7 @@ export class MinePage {
                 }
               }, [
                 __h('Row', {}, [
-                    ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "onTap": this.__bindFn("() => AppRouter.openOrders()" + ":" + String(s), () => { _app_host_.invoke("openOrders", []); }) }, [ __h('Column', {}, [ __h('Text', { "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), __h('SizedBox', { "height": 3 }), __h('Text', { "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ]) ]) ])]); } return out; })()
+                    ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "onTap": this.__bind("_app_host_.invoke(\"openOrders\", [])") }, [ __h('Column', {}, [ __h('Text', { "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), __h('SizedBox', { "height": 3 }), __h('Text', { "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ]) ]) ])]); } return out; })()
                   ])
               ])
           ]),
