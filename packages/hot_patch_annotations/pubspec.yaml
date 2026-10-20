@@ -1,5 +1,5 @@
 name: hot_patch_annotations
-description: Declarative annotations that mark an ordinary Flutter widget as a dynamically shippable UI component. Build-time metadata only; no runtime behavior change.
+description: "Declarative annotations that mark an ordinary Flutter widget as a dynamically shippable UI component. Build-time metadata only; no runtime behavior change."
 version: 0.1.2
 # 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
 resolution: workspace

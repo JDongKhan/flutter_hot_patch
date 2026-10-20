@@ -1,5 +1,5 @@
 name: hot_patch
-description: Flutter hot update runtime: loads build-time generated JS patch modules to render components and drive logic in JS, while rendering still happens on native Flutter.
+description: "Flutter hot update runtime: loads build-time generated JS patch modules to render components and drive logic in JS, while rendering still happens on native Flutter."
 version: 0.1.1
 # 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
 resolution: workspace
