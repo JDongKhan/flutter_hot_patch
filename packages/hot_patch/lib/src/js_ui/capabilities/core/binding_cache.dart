@@ -128,7 +128,9 @@ class JsBinding<T extends Object> {
     final t = target;
     final what =
         (meta['type'] as String?) ?? (t == null ? _kindName : '${t.runtimeType}');
-    final where = pageKey != null ? '页面=$pageKey' : '全局';
+    final where = pageKey != null
+        ? '页面=${JsBindingCache.instance.pageLabel(pageKey!)}'
+        : '全局';
     final hold = weak ? (t == null ? '弱引用·已回收' : '弱引用·存活') : '强引用';
     final age = DateTime.now().difference(createdAt).inSeconds;
     return '$id（$what）· $where · $hold · 存活 ${age}s · 登记=$owner';
@@ -289,6 +291,35 @@ class JsBindingCache {
 
   /// 回收某页的累计计数（页面泄漏检查打完汇总后调用，防表无界增长）。
   void clearPageTally(String pageKey) => _pageTally.remove(pageKey);
+
+  // ---- 页面名（人类可读；仅日志显示用）----
+  //
+  // 与 [pageTally] 同款「按页登记、按页注销」：JsUiWidget 在 initState 登记、
+  // 在 dispose 打完本页最后一条日志之后注销。**不注销就会无界增长**——本表按
+  // 「进入过的页面数」累积，正是 leak-check 要盯的那类残留。
+  // 仅 debug 登记：release 下这些名字没有任何读者（逐条 `[binding]` 与
+  // leak-check 都只在 debug 打），故 release 里本表恒为空。
+
+  /// pageKey → 页面名（`jsui_0` → `HelloCard`）。日志里因此打
+  /// 「页面=HelloCard（jsui_0）」而不是裸 id。
+  final Map<String, String> _pageNames = {};
+
+  /// 登记页面名（幂等覆盖；pageKey 全局递增唯一，同一 key 不会重复登记）。
+  /// 调用方须在页面销毁时 [unregisterPage]，否则本表无界增长。
+  void registerPage(String pageKey, String name) {
+    if (!kDebugMode) return;
+    _pageNames[pageKey] = name;
+  }
+
+  /// 页面销毁时注销页面名（与 [registerPage] 配对，条目不跨页面生命周期残留）。
+  void unregisterPage(String pageKey) => _pageNames.remove(pageKey);
+
+  /// 页面名的日志显示：已登记 → `HelloCard（jsui_0）`（人类名在前、id 保留在后，
+  /// 同组件多实例仍可区分）；未登记 → 原样返回 pageKey。
+  String pageLabel(String pageKey) {
+    final name = _pageNames[pageKey];
+    return name == null ? pageKey : '$name（$pageKey）';
+  }
 
   /// 全部绑定的全景文本（按桶分组）：排查时一次看全，不用挨个表找。
   String dump() {

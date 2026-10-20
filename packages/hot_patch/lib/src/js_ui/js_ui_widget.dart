@@ -8,6 +8,7 @@ import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
 import 'capabilities/build_context/build_context_bridge.dart';
+import 'capabilities/core/binding_cache.dart';
 import 'capabilities/core/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key/key_bridge.dart';
@@ -72,6 +73,14 @@ class JsUiWidgetState extends State<JsUiWidget> {
   final JsUiStore _store = JsUiStore();
   final String _pageKey = 'jsui_${_seq++}';
 
+  /// 页面的人类可读名（日志显示用）：入口组件类名，取自 jsAsset 的
+  /// `?component=`（如 `HelloCard`）；解析不到时退化为 asset 路径本身。
+  /// 只用于打日志，不参与任何路由/隔离（隔离始终按 [_pageKey]）。
+  late final String _pageName = () {
+    final name = Uri.parse(widget.jsAsset).queryParameters['component'];
+    return (name == null || name.isEmpty) ? widget.jsAsset : name;
+  }();
+
   /// 实际加载的入口模块（网络补丁解压后为 zip 内虚拟路径）。
   late String _entryJsAsset;
 
@@ -103,6 +112,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
     ensureJsUiCapabilities();
     // jsuiCommit 补丁按页面 key 路由：登记本页 store（key 由 JS 补丁带下来）。
     jsUiPageStores[_pageKey] = _store;
+    // 页面名登记（仅日志显示）：让 `[binding] + …` 与 `leak-check …` 里的 jsui_N
+    // 显示成组件类名，而不是人类看不懂的 id。
+    JsBindingCache.instance.registerPage(_pageKey, _pageName);
     // 泄漏观测基线：进入前取一次（仅 debug），dispose 清理后再取一次做 diff。
     if (kDebugMode) _leakBaseline = JsLeakSnapshot.capture(_pageKey);
     _boot();
@@ -210,6 +222,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
     if (kDebugMode) {
       JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
     }
+    // 页面名登记随之注销（与 jsUiPageStores 的按页清理同款）——放在 reportLeaks
+    // 之后，保证本页最后一条日志仍然显示组件类名；不注销该表会无界增长。
+    JsBindingCache.instance.unregisterPage(_pageKey);
     super.dispose();
   }
 
