@@ -13,24 +13,6 @@ import '../../translator/widget2js.dart';
 import '../js_widget_defs.dart';
 import '../product_path.dart';
 
-/// widget 模块 builder 的**种子输入默认路径**（构建期固定文件，不含运行时代码）。
-///
-/// build_runner 的输出名必须在 buildExtensions 里静态声明，无法按构建期发现
-/// 的类型动态命名，因此把「全部 package 模块产物」挂在本文件下，包清单由
-/// [registeredWidgetPackages] 静态推导。
-///
-/// 该路径可由使用方 `build.yaml` 的 `options: { seed_file: ... }` 覆盖
-/// （见 [seedPathFrom]）；使用方**必须**在包内提供该种子文件。
-const String defaultSeedPath = 'lib/js_widgets.dart';
-
-/// 从 builder options 读取种子输入路径：`options: { seed_file: <path> }`，
-/// 缺省或非法值回退 [defaultSeedPath]。
-String seedPathFrom(BuilderOptions options) {
-  final value = options.config['seed_file'];
-  if (value is String && value.isNotEmpty) return value;
-  return defaultSeedPath;
-}
-
 /// 已注册 widget 类型 → (package → {type})：由 translator 注册表推导，
 /// 作为 package 模块产物清单（每个包一个文件）的唯一来源。
 Map<String, Set<String>> registeredWidgetPackages() {
@@ -49,17 +31,11 @@ Map<String, Set<String>> registeredWidgetPackages() {
 /// 一个共享 JS 模块 `patch/<package>.js`（工厂函数 + 逻辑组件类，全局唯一
 /// 一份，消除各组件产物里内联同类工厂函数造成的重复与文件爆炸）。
 ///
-/// 输出挂在种子输入 [seedPath] 下（默认 [defaultSeedPath]，可由使用方
-/// `build.yaml` 的 `options: { seed_file: ... }` 覆盖）；输出名从
+/// 输出挂在包根伪资产 `$package$` 下（与 `ui_host_register` / `ui_patch_manifest`
+/// 同款输入：整包一个输入，输出路径静态、无需任何种子文件）；输出名从
 /// [registeredWidgetPackages] 静态推导，构建时按包名渲染整包即可。
-///
-/// **使用方必须提供该种子文件**——本 builder 无降级路径，缺少种子输入即
-/// 不产出任何 package 模块，组件产物的 import 会因此悬空。
 class WidgetModuleBuilder implements Builder {
-  const WidgetModuleBuilder({this.seedPath = defaultSeedPath});
-
-  /// 种子输入路径（见 [defaultSeedPath]），可由 builder options 覆盖。
-  final String seedPath;
+  const WidgetModuleBuilder();
 
   @override
   Map<String, List<String>> get buildExtensions {
@@ -70,7 +46,8 @@ class WidgetModuleBuilder implements Builder {
     }.toList()
       ..sort();
     return {
-      '^$seedPath': [for (final p in pkgs) packageModulePath(p)],
+      // `$package$`：整包伪资产，输入一个包、产出该包的全部 package 模块。
+      r'$package$': [for (final p in pkgs) packageModulePath(p)],
     };
   }
 

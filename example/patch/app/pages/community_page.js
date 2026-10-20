@@ -57,7 +57,7 @@ export class CommunityPage {
     this._loadPosts();
   }
   build(context) {
-    console.log("-----" + __str(this._filterOpen));
+    console.log("-----filterOpen " + __str(this._filterOpen));
     var feed = this._feed;
     if ((feed == null)) {
       return __h('Center', {}, [
@@ -214,9 +214,9 @@ export class _ListContent {
     this.toggleFilter = (args && args.toggleFilter !== undefined) ? args.toggleFilter : null;
   }
   didUpdateWidget(oldWidget) {
-    console.log("--0：" + __str(oldWidget));
+    console.log("--didUpdateWidget 0：" + __str(oldWidget));
     if ((this.list.length != oldWidget.list.length)) {
-      console.log("--1");
+      console.log("-- didUpdateWidget 1");
     }
   }
   build(context) {

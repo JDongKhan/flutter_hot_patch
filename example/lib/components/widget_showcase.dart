@@ -21,7 +21,10 @@ class WidgetShowcase extends StatelessWidget {
     ]),
     _Group('图片图标', [_Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail')]),
     _Group('容器装饰', [_Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail')]),
-    _Group('列表滚动', [_Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail')]),
+    _Group('列表滚动', [
+      _Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail'),
+      _Entry('ReorderableListView', '长按拖拽重排：onReorder 双参事件，重排 / 添加列表项', 'ReorderListDetail'),
+    ]),
     _Group('Key 家族', [
       _Entry(
         'Key / ValueKey / ObjectKey / UniqueKey / PageStorageKey / GlobalKey',
@@ -122,6 +125,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ImageDetail' => const ImageDetail(),
       'ContainerDetail' => const ContainerDetail(),
       'ScrollDetail' => const ScrollDetail(),
+      'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
       'KeyDetail' => const KeyDetail(),

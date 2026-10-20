@@ -37,5 +37,5 @@ cd example && flutter run
 | [组件支持文档](docs/组件支持文档.md) | 组件支持矩阵、样式/值/事件协议、通用翻译能力、已知限制、JS 引擎能力基线 |
 | [app-prototype.html](docs/app-prototype.html) | 示例 App 原型（HTML） |
 | [hot_patch_annotations](packages/hot_patch_annotations/README.md) | 注解包：`@PatchEntry` / `@PatchIgnore` |
-| [hot_patch_generator](packages/hot_patch_generator/README.md) | 生成器：种子文件、产物布局、翻译设计原则、新增 widget 支持 |
+| [hot_patch_generator](packages/hot_patch_generator/README.md) | 生成器：产物布局、配置项、翻译设计原则、新增 widget 支持 |
 | [hot_patch](packages/hot_patch/README.md) | 运行时：补丁加载、宿主能力桥、日志 |

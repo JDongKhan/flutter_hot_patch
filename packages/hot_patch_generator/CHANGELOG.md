@@ -8,4 +8,4 @@
   `patch/provider.js`），共享结点工厂 `__h` 全局只定义一次。
 - 事件绑定在构建期注入，归属与 Dart tear-off 语义一致。
 - 内置 widget 策略注册表；新增 / 自定义 widget 只需实现 `WidgetTranslator` 并注册，核心代码零改动。
-- 种子文件路径（默认 `lib/js_widgets.dart`）可通过 `options.seed_file` 覆盖。
+- package 级模块与 patch 清单都挂在包根伪资产 `$package$` 下，使用方无需种子文件或额外配置。

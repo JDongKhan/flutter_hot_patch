@@ -20,21 +20,6 @@ dev_dependencies:
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-## 必需的种子文件
-
-`build_runner` 要求 builder 的输出路径在 `build_extensions` 里**静态声明**，
-无法按构建期「发现的类型」动态命名文件。因此本生成器需要一个**种子输入文件**
-来挂载包级模块产物：
-
-```dart
-// lib/js_widgets.dart
-// 本文件无需任何内容，只作为 build_runner 的输出声明载体。
-```
-
-- 默认路径：`lib/js_widgets.dart`
-- 这是**必需项**：没有它，`patch/<package>.js` 这类包级模块不会被产出。
-- 可通过 `build.yaml` 的 `options.seed_file` 覆盖（见下）。
-
 ## 产物
 
 产物目录 `patch/` 与 `lib/` 源码路径**一一对应**，文件名与 Dart 源文件同名：
@@ -43,11 +28,14 @@ dart run build_runner build --delete-conflicting-outputs
 | --- | --- | --- |
 | `lib/components/counter.dart` | `patch/components/counter.js` | 含 `@PatchEntry` 的组件产物 |
 | `lib/model/user.dart` | `patch/model/user.js` | 普通类 / 静态单例（`export class` / `export const`） |
-| `lib/js_widgets.dart`（种子） | `patch/flutter.js`、`patch/provider.js` | **每个 package 一个文件**的 widget 工厂模块 |
-| （包根伪资产，无种子） | `patch/manifest.json` | patch 清单：基本信息 + 打包时间 + 各 JS 资源的内容 hash |
+| （包根伪资产 `$package$`） | `patch/flutter.js`、`patch/provider.js` | **每个 package 一个文件**的 widget 工厂模块 |
+| （包根伪资产 `$package$`） | `patch/manifest.json` | patch 清单：基本信息 + 打包时间 + 各 JS 资源的内容 hash |
 
 - 按**文件内容**分流（与目录无关）：含 `@PatchEntry` → 组件产物；仅含普通类
   （非私有、非抽象、非组件）→ 模型/单例产物；都没有 → 不产出。
+- package 级模块（`patch/<package>.js`）与清单都挂在包根伪资产 `$package$` 下：
+  输入是整包、输出路径静态，**使用方无需任何种子文件或配置**——依赖本包并跑
+  `build_runner` 即可产出。
 - `patch/flutter.js` 内含共享结点工厂 `__h` 与全部 flutter widget 工厂；
   其它包模块与组件产物统一从它 `import { __h }`。
 
@@ -56,15 +44,24 @@ dart run build_runner build --delete-conflicting-outputs
 
 ## 配置
 
-在**使用方**的 `build.yaml` 里可以覆盖种子文件路径（只有 `ui_widget` 读这个选项）：
+`ui_widget`（package 模块）与 `patch_entry`（组件/模型产物）**不读任何 options**。
+其余两个 builder 的选项均为可选，缺省即开箱可用：
 
 ```yaml
 targets:
   $default:
     builders:
-      hot_patch_generator:ui_widget:
+      # 宿主注入注册产物（lib/generated/host_methods.dart）的目标运行时；
+      # 仅当换用别的运行时实现时才需要覆盖。
+      hot_patch_generator:ui_host_register:
         options:
-          seed_file: lib/my_seed.dart
+          register_import: "package:<runtime>/<runtime>.dart"
+          register_call: "<Runtime>.registerHostMethod"
+      # patch/manifest.json 里的基本信息；缺省取包名 / 省略版本。
+      hot_patch_generator:ui_patch_manifest:
+        options:
+          name: my_app
+          version: 1.2.3
 ```
 
 ## 翻译设计原则

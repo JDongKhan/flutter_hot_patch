@@ -23,11 +23,9 @@ Builder componentBuilder(BuilderOptions _) => const ComponentBuilder();
 
 /// package 模块 builder 工厂：`ui_widget`。
 ///
-/// 每个 package → 一个共享 JS 模块 `patch/<package>.js`；种子输入路径可由
-/// `build.yaml` 的 `options: { seed_file: ... }` 覆盖（默认 `lib/js_widgets.dart`，
-/// 是必需项）。
-Builder widgetModuleBuilder(BuilderOptions options) =>
-    WidgetModuleBuilder(seedPath: seedPathFrom(options));
+/// 每个 package → 一个共享 JS 模块 `patch/<package>.js`；产物清单由 translator
+/// 注册表静态推导，挂在包根伪资产 `$package$` 下，使用方无需任何种子文件或配置。
+Builder widgetModuleBuilder(BuilderOptions _) => const WidgetModuleBuilder();
 
 /// 宿主注入注册 builder 工厂：`ui_host_register`。
 ///
