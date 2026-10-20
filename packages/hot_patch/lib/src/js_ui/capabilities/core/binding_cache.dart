@@ -119,16 +119,25 @@ class JsBinding<T extends Object> {
 
   /// 一条绑定的可读摘要（日志与 [JsBindingCache.dump] 共用）。
   ///
-  /// 形如：`js:node/Text#43 | Text | page=jsui_2 | 弱·存活 | 17s | by=_JsNodeState.build`
-  /// —— 依次是「哪个 id / 什么对象 / 属于哪个页面（无页归属=global）/ 引用强度与
-  /// 存活 / 已登记多久 / 谁登记的」。结点类条目取 `meta['type']`（结点类型）而不是
-  /// 无信息量的 `StatefulElement`；kind 不在行内重复（桶名与 `by` 来源里已经体现）。
+  /// 形如：`js:node/Text#43（Text）· 页面=jsui_2 · 弱引用·存活 · 存活 17s · 登记=结点构建`
+  /// —— 依次是「哪个 id（什么对象）· 属于哪个页面（无页归属=全局）· 引用强度与存活 ·
+  /// 已登记多久 · 谁登记的」。类型优先取 `meta['type']`（结点类型 / 控制器类名），
+  /// 其次真实对象的 [Object.runtimeType]，最后按 kind 归名——故「对象尚未创建」的
+  /// 条目（如 TabController 的真实对象由宿主随句柄参数创建）不会打出无意义的 `-`。
   String describe() {
     final t = target;
-    final what = (meta['type'] as String?) ?? (t == null ? '-' : '${t.runtimeType}');
-    return '$id | $what | ${pageKey != null ? 'page=$pageKey' : 'global'}'
-        ' | ${weak ? (t == null ? '弱·已回收' : '弱·存活') : '强'}'
-        ' | ${DateTime.now().difference(createdAt).inSeconds}s | by=$owner';
+    final what =
+        (meta['type'] as String?) ?? (t == null ? _kindName : '${t.runtimeType}');
+    final where = pageKey != null ? '页面=$pageKey' : '全局';
+    final hold = weak ? (t == null ? '弱引用·已回收' : '弱引用·存活') : '强引用';
+    final age = DateTime.now().difference(createdAt).inSeconds;
+    return '$id（$what）· $where · $hold · 存活 ${age}s · 登记=$owner';
+  }
+
+  /// kind 的短名（`ctrl/Tab` → `Tab`）：无法判定类型时的兜底显示名。
+  String get _kindName {
+    final i = kind.indexOf('/');
+    return i >= 0 ? kind.substring(i + 1) : kind;
   }
 }
 

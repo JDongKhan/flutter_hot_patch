@@ -73,9 +73,24 @@ JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
 
 ## 日志
 
+包内所有输出走唯一出口 `HotPatchLog`（级别：`debug` / `info` / `warn` / `error`）。
+本地打印与上报**彼此独立**——注册 `sink` 即可统一接入日志平台：
+
 ```dart
-HotPatchLog.enabled = false; // 生产环境一行关闭（默认 kDebugMode）
+HotPatchLog.sink = (r) => MyLogPlatform.upload(
+      level: r.level.name,
+      message: r.message,
+      error: r.error,
+      stack: r.stackTrace,
+      time: r.time,
+    );
+HotPatchLog.minSinkLevel = HotPatchLevel.warn; // 默认：只上报 warn/error
+HotPatchLog.enabled = false; // 只关本地打印（默认 kDebugMode），不影响上报
 ```
+
+JS 产物里的 `console.*` 也桥到同一出口且带级别（`error` / `warn` / `info` / `debug`，
+宿主侧带 `[js-log] ` 前缀）。完整级别说明与典型来源见
+[使用手册 §4.3](../../docs/使用手册.md)。
 
 ## 相关包
 

@@ -63,11 +63,15 @@ class JsControllerBridge<T extends ChangeNotifier> {
               bucket: _kind,
               id: id,
               kind: _kind,
-              owner: '$_kind.onCreate',
+              // 登记方与类型名都给人看：日志里呈现为
+              // `js:ctrl/Tab#11（TabController）· 页面=jsui_2 · 强引用 · … · 登记=控制器创建`。
+              // 注意 TabController 这类真实对象由 Host 随句柄参数创建，此刻尚不存在，
+              // 故类型名只能取自泛型 T，不能等实例的 runtimeType。
+              owner: '控制器创建',
               weak: false,
               pageKey: pageKey,
               create: create == null ? null : () => create(id, meta),
-              meta: {'fn': meta is Map ? meta['fn'] : null},
+              meta: {'fn': meta is Map ? meta['fn'] : null, 'type': T.toString()},
             );
           },
           onOp: (id, op, payload) {
@@ -93,7 +97,7 @@ class JsControllerBridge<T extends ChangeNotifier> {
             bucket: _kind,
             id: id,
             kind: _kind,
-            owner: '$_kind.host',
+            owner: '宿主创建',
             weak: false,
             create: create,
           )
