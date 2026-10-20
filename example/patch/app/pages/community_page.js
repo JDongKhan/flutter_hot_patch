@@ -180,7 +180,7 @@ export class CommunityPage {
           ]),
         ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
         __h('Expanded', {}, [
-            ((this._posts == null) ? __h('Center', {}, [ __h('CircularProgressIndicator', {}) ]) : __h(_ListContent, { "resetFilter": this._resetFilter, "openFilter": this._filterOpen, "toggleFilter": this._toggleFilter, "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": this.__bind("_selectFilter") }))
+            ((this._posts == null) ? __h('Center', {}, [ __h('CircularProgressIndicator', {}) ]) : __h(_ListContent, { "resetFilter": this._resetFilter, "openFilter": this._filterOpen, "toggleFilter": this._toggleFilter, "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) }))
           ])
       ]);
   }
@@ -192,7 +192,7 @@ export class CommunityPage {
   _itemBuilder1(context, i) {
       return __h(_ResourceCard, {
         "resource": this._feed.resources[i],
-        "onTap": this.__bind("_app_host_.invoke(\"openResource\", [this._feed.resources[i].id])")
+        "onTap": () => { return _app_host_.invoke("openResource", [this._feed.resources[i].id]); }
       });
   }
 }
@@ -232,9 +232,9 @@ export class _ListContent {
               "bottom": 20.0
             }
           }, [
-            ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": this.__bindFn("() => AppRouter.openPost(p.id)" + ":" + String(p), () => { _app_host_.invoke("openPost", [p.id]); }) }) ])]); } return out; })())
+            ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) ])]); } return out; })())
           ]),
-        ...(this.openFilter ? [__h('Positioned', { "factory": "fill" }, [ __h('GestureDetector', { "onTap": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "right": 0, "top": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.__bind("this.onSelectFilter()"), "onReset": this.__bind("this.resetFilter()"), "onApply": this.__bind("this.toggleFilter()") }) ])] : [])
+        ...(this.openFilter ? [__h('Positioned', { "factory": "fill" }, [ __h('GestureDetector', { "onTap": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "right": 0, "top": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
       ]);
   }
 }

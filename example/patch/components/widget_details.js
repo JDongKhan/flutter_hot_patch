@@ -228,7 +228,7 @@ export class LayoutDetail {
                 "flex": 1
               }, [
                 __h('Container', {
-                    "color": '@Colors.blue.shade100',
+                    "color": '#BBDEFB',
                     "padding": {
                       "left": 8.0,
                       "top": 8.0,
@@ -249,7 +249,7 @@ export class LayoutDetail {
                 "flex": 2
               }, [
                 __h('Container', {
-                    "color": '@Colors.green.shade100',
+                    "color": '#C8E6C9',
                     "padding": {
                       "left": 8.0,
                       "top": 8.0,
@@ -276,7 +276,7 @@ export class LayoutDetail {
           }),
         __h('Center', {}, [
             __h('Container', {
-                "color": '@Colors.amber.shade100',
+                "color": '#FFECB3',
                 "padding": {
                   "left": 12.0,
                   "top": 12.0,
@@ -296,7 +296,7 @@ export class LayoutDetail {
             "alignment": "centerLeft"
           }, [
             __h('Container', {
-                "color": '@Colors.purple.shade50',
+                "color": '#F3E5F5',
                 "padding": {
                   "left": 8.0,
                   "top": 8.0,
@@ -342,7 +342,7 @@ export class LayoutDetail {
                 "clipBehavior": "hardEdge"
               }, [
                 __h('Container', {
-                    "color": '@Colors.grey.shade200'
+                    "color": '#EEEEEE'
                   }),
                 __h('Positioned', {
                     "factory": "fill"
@@ -393,7 +393,7 @@ export class LayoutDetail {
             "runAlignment": "center",
             "crossAxisAlignment": "center"
           }, [
-            ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": __h('Text', { "data": "chip " + i }), "backgroundColor": '@Colors.teal.shade50' })]); } return out; })()
+            ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": __h('Text', { "data": "chip " + i }), "backgroundColor": '#E0F2F1' })]); } return out; })()
           ]),
         __h('SizedBox', {
             "height": 12
@@ -432,7 +432,7 @@ export class LayoutDetail {
             }
           }, [
             __h('Container', {
-                "color": '@Colors.orange.shade100',
+                "color": '#FFE0B2',
                 "padding": {
                   "left": 8.0,
                   "top": 8.0,
@@ -452,7 +452,7 @@ export class LayoutDetail {
             "aspectRatio": 1.78
           }, [
             __h('Container', {
-                "color": '@Colors.indigo.shade100',
+                "color": '#C5CAE9',
                 "alignment": "center"
               }, [
                 __h('Text', {
@@ -468,7 +468,7 @@ export class LayoutDetail {
             "alignment": "center"
           }, [
             __h('Container', {
-                "color": '@Colors.pink.shade100',
+                "color": '#F8BBD0',
                 "padding": {
                   "left": 8.0,
                   "top": 8.0,
@@ -687,7 +687,7 @@ export class ContainerDetail {
           }),
         __h('DecoratedBox', {
             "decoration": {
-              "color": '@Colors.amber.shade100',
+              "color": '#FFECB3',
               "border": {
                 "all": {
                   "color": '#FFC107',
@@ -768,7 +768,7 @@ export class ContainerDetail {
             "width": 120,
             "height": 48,
             "alignment": "center",
-            "color": '@Colors.blueGrey.shade100'
+            "color": '#CFD8DC'
           }, [
             __h('Text', {
                 "data": "固定 120×48"
@@ -908,7 +908,7 @@ export class ScrollDetail {
       return __h('ListTile', {
         "dense": true,
         "leading": __h('Icon', {
-            "color": '@Colors.teal.shade300',
+            "color": '#4DB6AC',
             "icon": "arrow_right"
           }),
         "title": __h('Text', {
@@ -1008,7 +1008,7 @@ export class SliverDetail {
                       "bottom": 16.0
                     },
                     "decoration": {
-                      "color": '@Colors.deepPurple.shade50',
+                      "color": '#EDE7F6',
                       "borderRadius": {
                         "radius": 12.0
                       }
@@ -1038,7 +1038,7 @@ export class SliverDetail {
                       "bottom": 10.0
                     },
                     "decoration": {
-                      "color": '@Colors.teal.shade50',
+                      "color": '#E0F2F1',
                       "borderRadius": {
                         "radius": 8.0
                       }
@@ -1148,7 +1148,7 @@ export class SliverDetail {
                           "bottom": 8.0
                         },
                         "decoration": {
-                          "color": '@Colors.teal.shade50',
+                          "color": '#E0F2F1',
                           "borderRadius": {
                             "radius": 6.0
                           }
@@ -1250,7 +1250,7 @@ export class SliverDetail {
   _itemBuilder0(context, index) {
       return __h('ListTile', {
         "leading": __h('Icon', {
-            "color": '@Colors.orange.shade700',
+            "color": '#F57C00',
             "icon": "build"
           }),
         "title": __h('Text', {
@@ -1293,7 +1293,7 @@ export class SliverDetail {
   _itemBuilder4(context, index) {
       return __h('Container', {
         "decoration": {
-          "color": '@Colors.teal.shade100',
+          "color": '#B2DFDB',
           "borderRadius": {
             "radius": 8.0
           }
@@ -1327,7 +1327,7 @@ export class GridDetail {
   }
   build(context) {
     return __h('Scaffold', {
-        "backgroundColor": '@Colors.grey.shade50',
+        "backgroundColor": '#FAFAFA',
         "appBar": __h('AppBar', {
             "title": __h('Text', {
                 "data": "GridView 懒加载验证"
@@ -1433,7 +1433,7 @@ export class GridDetail {
   _itemBuilder0(context, index) {
       return __h('Container', {
         "decoration": {
-          "color": '@Colors.teal.shade100',
+          "color": '#B2DFDB',
           "borderRadius": {
             "radius": 8.0
           }
@@ -1451,7 +1451,7 @@ export class GridDetail {
   _itemBuilder1(context, index) {
       return __h('Container', {
         "decoration": {
-          "color": '@Colors.orange.shade100',
+          "color": '#FFE0B2',
           "borderRadius": {
             "radius": 8.0
           }
@@ -1480,7 +1480,7 @@ export class ScaffoldDetail {
   }
   build(context) {
     return __h('Scaffold', {
-        "backgroundColor": '@Colors.grey.shade50',
+        "backgroundColor": '#FAFAFA',
         "appBar": __h('AppBar', {
             "leading": __h('Icon', {
                 "icon": "menu"
@@ -1741,7 +1741,7 @@ export class InputDetail {
                 "activeColor": '#FFFFFF',
                 "activeTrackColor": '#673AB7',
                 "inactiveThumbColor": '#9E9E9E',
-                "inactiveTrackColor": '@Colors.grey.shade300'
+                "inactiveTrackColor": '#E0E0E0'
               }),
             __h('SizedBox', {
                 "width": 8
@@ -1780,7 +1780,7 @@ export class InputDetail {
             "divisions": 10,
             "label": ((this._slider * 100)).round() + "%",
             "activeColor": '#673AB7',
-            "inactiveColor": '@Colors.grey.shade300',
+            "inactiveColor": '#E0E0E0',
             "onChanged": this.__bind("_onSliderChanged")
           })
       ]);
@@ -1810,7 +1810,7 @@ export class ProgressDetail {
             __h('CircularProgressIndicator', {
                 "value": this._progress,
                 "color": '#673AB7',
-                "backgroundColor": '@Colors.deepPurple.shade50',
+                "backgroundColor": '#EDE7F6',
                 "strokeWidth": 6
               }),
             __h('SizedBox', {
@@ -1834,7 +1834,7 @@ export class ProgressDetail {
         __h('LinearProgressIndicator', {
             "value": this._progress,
             "color": '#673AB7',
-            "backgroundColor": '@Colors.deepPurple.shade50',
+            "backgroundColor": '#EDE7F6',
             "minHeight": 8
           }),
         __h('SizedBox', {
@@ -2161,7 +2161,7 @@ export class PageViewDetail {
                 "onPageChanged": this.__bind("_onPageChanged")
               }, [
                 __h('Container', {
-                    "color": '@Colors.deepPurple.shade100',
+                    "color": '#D1C4E9',
                     "alignment": "center"
                   }, [
                     __h('Text', {
@@ -2169,7 +2169,7 @@ export class PageViewDetail {
                       })
                   ]),
                 __h('Container', {
-                    "color": '@Colors.teal.shade100',
+                    "color": '#B2DFDB',
                     "alignment": "center"
                   }, [
                     __h('Text', {
@@ -2177,7 +2177,7 @@ export class PageViewDetail {
                       })
                   ]),
                 __h('Container', {
-                    "color": '@Colors.orange.shade100',
+                    "color": '#FFE0B2',
                     "alignment": "center"
                   }, [
                     __h('Text', {
@@ -2234,7 +2234,7 @@ export class KeyTile {
           },
           "border": {
             "all": {
-              "color": '@Colors.grey.shade300'
+              "color": '#E0E0E0'
             }
           }
         }
@@ -2391,7 +2391,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '@Colors.grey.shade100',
+          "color": '#F5F5F5',
           "borderRadius": {
             "radius": 10.0
           }
@@ -2462,7 +2462,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '@Colors.grey.shade100',
+          "color": '#F5F5F5',
           "borderRadius": {
             "radius": 10.0
           }
@@ -2543,7 +2543,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '@Colors.grey.shade100',
+          "color": '#F5F5F5',
           "borderRadius": {
             "radius": 10.0
           }
@@ -2608,7 +2608,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '@Colors.grey.shade100',
+          "color": '#F5F5F5',
           "borderRadius": {
             "radius": 10.0
           }
@@ -2669,7 +2669,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '@Colors.grey.shade100',
+          "color": '#F5F5F5',
           "borderRadius": {
             "radius": 10.0
           }
@@ -2708,7 +2708,7 @@ export class KeyDetail {
                   "bottom": 10.0
                 },
                 "decoration": {
-                  "color": '@Colors.teal.shade50',
+                  "color": '#E0F2F1',
                   "borderRadius": {
                     "radius": 6.0
                   }
@@ -2758,7 +2758,7 @@ export class KeyDetail {
   }
   build(context) {
     return __h('Scaffold', {
-        "backgroundColor": '@Colors.grey.shade50',
+        "backgroundColor": '#FAFAFA',
         "appBar": __h('AppBar', {
             "title": __h('Text', {
                 "data": "Key 家族 · 全部用例"
@@ -2815,7 +2815,7 @@ export class DrawerDetail {
   }
   build(context) {
     return __h('Scaffold', {
-        "backgroundColor": '@Colors.grey.shade50',
+        "backgroundColor": '#FAFAFA',
         "appBar": __h('AppBar', {
             "title": __h('Text', {
                 "data": "Drawer / endDrawer"

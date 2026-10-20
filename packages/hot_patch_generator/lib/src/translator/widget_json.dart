@@ -80,6 +80,20 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
       continue;
     }
     if (_isEventArg(name)) {
+      // `on*` 回调有两种消费方，按**目标类型**分派：
+      //   - 宿主 widget（`ElevatedButton.onPressed` / `InkWell.onTap`…）：宿主
+      //     只认 `{__fn:id}` 句柄，点击时经 invoke 回传 JS 执行 → 下发**事件句柄**；
+      //   - 组件（自定义 / 私有 / `@PatchEntry` 子组件 —— 元素是 JS 类引用，
+      //     props 留在 JS 侧）：子组件把回调**当函数直接调**（`this.onPick(k, v)`），
+      //     故下发**可调用 JS 值**（方法 tear-off 包成绑定 this 的箭头闭包）。
+      //     下发句柄会出现 `TypeError: this.onPick is not a function`。
+      if (!builtinWidgetTypes.contains(node.type)) {
+        final fn = _functionOrNull(ctx, value);
+        if (fn != null) {
+          props[name] = fn;
+          continue;
+        }
+      }
       final h = _eventOrNull(ctx, value);
       if (h != null) props[name] = h;
       continue;
@@ -162,6 +176,19 @@ String? _eventOrNull(WidgetTranslateContext ctx, Expression e) {
   if (e is NullLiteral) return null;
   try {
     return ctx.eventHandle(e);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 组件参数位置上的「函数值」翻译（可调用 JS 表达式）；不是函数形态返回 null。
+///
+/// 组件（JS 类）会把这类参数**当函数调用**，因此裸方法名不能下发成句柄
+/// （见 [widgetToJson] 的 `on*` 分支）。
+String? _functionOrNull(WidgetTranslateContext ctx, Expression e) {
+  if (e is NullLiteral) return null;
+  try {
+    return ctx.functionJs(e);
   } catch (_) {
     return null;
   }

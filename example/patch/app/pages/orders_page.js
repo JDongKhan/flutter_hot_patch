@@ -99,7 +99,7 @@ export class OrdersPage {
       return __h(_OrderCard, {
         "order": o,
         "statusColor": this._statusColor(o.status),
-        "onOpen": this.__bind("_app_host_.invoke(\"openOrder\", [o.no])")
+        "onOpen": () => { return _app_host_.invoke("openOrder", [o.no]); }
       });
   }
 }
@@ -254,7 +254,7 @@ export class _OrderCard {
                             "data": "￥" + this.order.price
                           }),
                         __h('Spacer', {}),
-                        ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": this.__bind("_app_host_.invoke(\"toast\", [\"已取消订单 \" + this.order.no + \"（演示）\"])") }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.__bind("this.onOpen()") })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.__bind("this.onOpen()") })])
+                        ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.onOpen })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.onOpen })])
                       ])
                   ])
               ])

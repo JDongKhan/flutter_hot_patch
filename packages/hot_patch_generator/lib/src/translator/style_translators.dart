@@ -216,10 +216,15 @@ String? translateColor(Expression e, WidgetTranslateContext ctx) {
     if (hex != null) return "'#$hex'";
     return null;
   }
-  // Colors.blue.shade100 等 MaterialColor 变体：产物放 '@Colors.blue.shade100'
-  // 标记，运行时用 Flutter 官方 Colors 常量解析（值永不漂移）。
+  // Colors.blue.shade100 等 MaterialColor 变体：**编译期**按 Material 色板表
+  // 算成 '#RRGGBB'（见 [materialShadeHex]），产物里不再有 '@Colors…' 标记。
   if (owner != null && owner.startsWith('Colors.')) {
-    return "'@$owner.$name'";
+    final shade = shadeIndex(name ?? '');
+    if (shade != null) {
+      final hex = materialShadeHex(owner.substring('Colors.'.length), shade);
+      if (hex != null) return "'#$hex'";
+    }
+    return null;
   }
   // 跨文件静态单例类字段引用（MyColors.background）→ JS 表达式
   final singleton = ctx.singletons?.staticRef(e);
