@@ -1,6 +1,6 @@
 name: hot_patch_generator
-description: 读取 @PatchEntry注解，把 Flutter widget 静态翻译为与源文件同名的 JS 模块（包级 widget 工厂 + 组件类），供 hot_patch 运行时热更渲染。
-version: 0.1.0
+description: Build-time generator that statically translates @PatchEntry-annotated Flutter widgets into matching JS modules (widget factories + component classes) for the hot_patch runtime.
+version: 0.1.1
 # 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
 resolution: workspace
 # pub.dev 溯源信息。

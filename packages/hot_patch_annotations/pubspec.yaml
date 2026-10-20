@@ -1,6 +1,6 @@
 name: hot_patch_annotations
-description: 声明式注解：标记一个普通 Flutter widget 为「可动态下发的 UI 组件」。注解仅为构建期元数据，不影响组件正常运行。
-version: 0.1.1
+description: Declarative annotations that mark an ordinary Flutter widget as a dynamically shippable UI component. Build-time metadata only; no runtime behavior change.
+version: 0.1.2
 # 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
 resolution: workspace
 # pub.dev 溯源信息。

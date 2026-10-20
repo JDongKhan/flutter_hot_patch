@@ -1,23 +1,144 @@
 # hot_patch
 
-热更新运行时：加载构建期生成的 JS 补丁，**由 JS 驱动逻辑**，渲染仍发生在原生 Flutter 侧。
+[English](#english) | [简体中文](#简体中文)
 
-面向「线上出 bug → 运行时切到 JS 补丁修复，无需发版」的场景。组件不需要做任何改造：
-被热更的类始终是一个完全正常的 Flutter widget，出问题时才加载它的 JS 版本。
+## English
 
-## 安装
+Hot update runtime: it loads build-time generated JS patches, where **JS drives the logic**, while rendering
+still happens on the native Flutter side.
+
+It targets the "bug in production → switch to a JS patch at runtime, no release needed" scenario. Components
+need no changes at all: the hot-patched class stays a completely ordinary Flutter widget and its JS version is
+loaded only when something goes wrong.
+
+### Installation
 
 ```yaml
 dependencies:
   hot_patch: ^0.1.0
 ```
 
-## 使用
+### Usage
 
 ```dart
 JsUiWidget(
-  jsAsset: 'assets/components/counter.js',
-  component: 'Counter',
+  // The component name and the entry are both passed as query parameters
+  // (convenient for operations configuration).
+  jsAsset: 'assets/patch/components/counter.js?component=Counter',
+)
+```
+
+`jsAsset` accepts three kinds of patch source:
+
+- `assets/...`: a bundled asset;
+- `http(s)://...zip`: a network patch bundle, downloaded and unzipped, then loaded through the same logic as
+  an asset;
+- another already-loaded module inside the same JS runtime.
+
+#### Main parameters
+
+| Parameter | Description |
+| --- | --- |
+| `jsAsset` | Patch entry JS (asset path, or `http(s)` zip), **required**; it carries the query `?component=<name>` (**required**, the component class name registered by the entry module) and optionally `&entry=<path/to.js>` (entry `.js` inside a network zip; when omitted it is resolved from `component`) |
+| `props` | Props passed to the component constructor |
+| `showBuildTime` | Debug flag: shows the patch build time in the top-right corner (from `buildTime` in `manifest.json`); it does not participate in hit testing |
+
+The component name is not a constructor parameter — it is read from the `?component=` query of `jsAsset`, and
+the query is stripped before the zip/asset is actually fetched. The host widget registry is an in-process
+singleton and cannot be injected from outside.
+
+The generated JS of the example app can be browsed online:
+[example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch).
+
+### Architecture
+
+- **Render entry**: [`JsUiWidget`] (host) plus the JS-side `__jsui` runtime
+  (element / component / reconciler / context / commit protocol).
+- **All state semantics live in JS**: provider / setState / any state library is implemented in JS and is
+  ultimately reduced to "JS rebuilds a subtree → a patch is dispatched → the host rebuilds the affected nodes".
+  Host code therefore never changes as state libraries are added — the host **understands no state semantics**.
+- **The host does exactly two things**: map JS nodes to Flutter widgets (`JsWidgetRegistry`) and apply
+  incremental patches (`JsUiStore`).
+- **Per-instance isolation**: the runtime is a global singleton (`JsRuntimeManager.instance`; all instances
+  share one engine and it cannot be injected from outside); every `JsUiWidget` instance isolates its own root
+  (node tree / provider / subscriptions / dirty queue) inside it by `pageKey`, so multiple instances on screen
+  do not affect each other.
+
+### Extension: JS → native capabilities
+
+Everything goes through a "host method": on the JS side the only exit is `_app_host_.invoke(channel, args)`
+(returns a Promise, usable with `await`); on the host side the only entry is
+`JsRuntimeManager.registerHostMethod(channel, impl)`. The `{id, args}` sent from JS is restored to Dart call
+semantics (positional/named arguments, defaults) before execution, and the return value is written back to the
+Promise through `_app_host_.resolve`; if the host implementation throws, the error is rethrown to the JS caller
+through `_app_host_.reject`; an unregistered channel also resolves with `null`, leaving no dangling Promise.
+
+Business methods are annotated with `@HostInjected()` and collected and registered by the generator
+automatically; the framework's built-in channels (`log` / `nativeToast` / `jsuiCommit`) are registered
+automatically when `JsUiWidget` starts.
+
+```dart
+@HostInjected()
+static String greet(String name) => 'Hi, $name';
+```
+
+```dart
+// Or register an arbitrary channel manually
+JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
+```
+
+### Logging
+
+All output of this package goes through the single exit `HotPatchLog`
+(levels: `debug` / `info` / `warn` / `error`). Local printing and reporting are **independent of each other** —
+register a `sink` to pipe everything into your logging platform:
+
+```dart
+HotPatchLog.sink = (r) => MyLogPlatform.upload(
+      level: r.level.name,
+      message: r.message,
+      error: r.error,
+      stack: r.stackTrace,
+      time: r.time,
+    );
+HotPatchLog.minSinkLevel = HotPatchLevel.warn; // default: only warn/error are reported
+HotPatchLog.enabled = false; // only turns off local printing (default kDebugMode); reporting is unaffected
+```
+
+`console.*` inside the JS output is bridged to the same exit with levels (`error` / `warn` / `info` / `debug`;
+the host prefixes them with `[js-log] `). For the full level description and typical sources see
+[使用手册 §4.3](../../docs/使用手册.md).
+
+### Related packages
+
+| Package | Role |
+| --- | --- |
+| `hot_patch_annotations` | Annotations |
+| `hot_patch_generator` | Translates annotated components into JS modules at build time (dev_dependency) |
+| `hot_patch` | This package: loads and renders JS patch components at runtime, driven by JS |
+
+---
+
+## 简体中文
+
+热更新运行时：加载构建期生成的 JS 补丁，**由 JS 驱动逻辑**，渲染仍发生在原生 Flutter 侧。
+
+面向「线上出 bug → 运行时切到 JS 补丁修复，无需发版」的场景。组件不需要做任何改造：
+被热更的类始终是一个完全正常的 Flutter widget，出问题时才加载它的 JS 版本。
+
+### 安装
+
+```yaml
+dependencies:
+  hot_patch: ^0.1.0
+```
+
+### 使用
+
+```dart
+JsUiWidget(
+  // 组件名与入口都走 query 参数（方便运营配置）
+  jsAsset: 'assets/patch/components/counter.js?component=Counter',
 )
 ```
 
@@ -27,17 +148,21 @@ JsUiWidget(
 - `http(s)://...zip`：网络补丁包，下载解压后走与 asset 一致的加载逻辑；
 - 同一 JS 运行时里的其它已加载模块。
 
-### 主要参数
+#### 主要参数
 
 | 参数 | 说明 |
 | --- | --- |
-| `jsAsset` | 补丁入口 JS（asset 路径或 http(s) zip） |
-| `component` | 入口模块里注册的组件类名（即 `@PatchEntry` 的 `name`） |
+| `jsAsset` | 补丁入口 JS（asset 路径或 `http(s)` zip），**必填**；可带 query `?component=<组件名>`（**必填**，入口模块里注册的组件类名），以及可选的 `&entry=<path/to.js>`（网络 zip 内入口 `.js` 的相对路径，不传则按 `component` 反查） |
 | `props` | 传给组件构造的 props |
-| `entryPath` | 网络补丁包（zip）内入口 .js 的相对路径；不传则按 `component` 反查 |
-| `registry` | 宿主 widget 翻译注册表；`null` 用内置集合 |
+| `showBuildTime` | 调试开关：右上角显示补丁打包时间（取自 `manifest.json` 的 `buildTime`），不参与命中测试 |
 
-## 架构
+组件名**不是构造参数**，而是从 `jsAsset` 的 `?component=` query 读取，且请求 zip / asset 前会剥离 query。
+宿主 widget 注册表是进程内单例，不从外部注入。
+
+示例 App 的实际产物（生成的 JS 文件）可在线查看：
+[example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch)。
+
+### 架构
 
 - **渲染入口**：[`JsUiWidget`]（宿主）+ JS 侧的 `__jsui` 运行时
   （element / component / reconciler / context / commit 协议）。
@@ -50,7 +175,7 @@ JsUiWidget(
   不从外部注入）；每个 `JsUiWidget` 实例按 `pageKey` 在其中隔离自己的根
   （结点树 / provider / 订阅 / 脏队列），同屏多实例互不影响。
 
-## 扩展：JS → 原生能力
+### 扩展：JS → 原生能力
 
 统一走「宿主方法」：JS 侧唯一出口 `_app_host_.invoke(channel, args)`（返回 Promise，
 可用 `await`），宿主侧唯一入口 `JsRuntimeManager.registerHostMethod(channel, impl)`。
@@ -71,7 +196,7 @@ static String greet(String name) => 'Hi, $name';
 JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
 ```
 
-## 日志
+### 日志
 
 包内所有输出走唯一出口 `HotPatchLog`（级别：`debug` / `info` / `warn` / `error`）。
 本地打印与上报**彼此独立**——注册 `sink` 即可统一接入日志平台：
@@ -92,7 +217,7 @@ JS 产物里的 `console.*` 也桥到同一出口且带级别（`error` / `warn`
 宿主侧带 `[js-log] ` 前缀）。完整级别说明与典型来源见
 [使用手册 §4.3](../../docs/使用手册.md)。
 
-## 相关包
+### 相关包
 
 | 包 | 作用 |
 | --- | --- |

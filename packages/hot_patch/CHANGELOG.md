@@ -1,3 +1,9 @@
+## 0.1.1
+
+- 补充 `repository` 字段，修复 pana 仓库校验失败导致的 pub.dev 页面无 GitHub 地址。
+- `description` 改为英文，满足 pub.dev 对英文描述的要求（中文描述会被 pana 扣分）。
+- README 提供中英双语，顶部可切换。
+
 ## 0.1.0
 
 - 首个版本。
