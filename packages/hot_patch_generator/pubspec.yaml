@@ -3,8 +3,8 @@ description: 读取 @PatchEntry注解，把 Flutter widget 静态翻译为与源
 version: 0.1.0
 # 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
 resolution: workspace
-# 发布前填写（pub.dev 会展示，用于溯源；缺失只会有警告）：
-# repository: https://github.com/<your-org>/flutter_hot
+# pub.dev 溯源信息。
+repository: https://github.com/JDongKhan/flutter_hot_patch
 
 environment:
   sdk: ^3.11.5

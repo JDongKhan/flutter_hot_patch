@@ -74,6 +74,69 @@ class _CounterState extends State<Counter> {
 
 适用场景：组件逻辑复杂 / 含原生依赖，不适合翻译成 JS，希望线上热更时始终使用原生实现。
 
+### `@HostInjected()` / `@HostInjected(name)`
+
+标记一个 **static 方法（或顶层函数）**为「宿主注入」（Host Injected）能力，让它在
+JS 组件（`@PatchEntry`）的方法体里可以被调用。
+
+这类方法的实现**留在 Dart 侧**（可访问缓存、网络、路由、WebView 等原生能力），
+**不翻译成 JS、不产出任何 JS 产物**；生成器只在遇到调用点时，把**调用点**换成宿主通道调用：
+
+```dart
+// Dart 源码：实现留在宿主侧，照旧可直接调用
+class AccountCenter {
+  @HostInjected()                          // 通道名缺省 = 方法名 'getUserName'
+  static Future<String> getUserName() async => '22';
+}
+
+class Network {
+  @HostInjected()
+  static Future<Map> post({required String url, dynamic params}) async {
+    return {'data': params, 'code': 200};
+  }
+}
+```
+
+```js
+// 翻译产物（JS 侧）：调用点被整体替换
+// AccountCenter.getUserName()   →  _app_host_.invoke("getUserName", [])
+// Network.post(url: u, params: p) →  _app_host_.invoke("post", {"url": u, "params": p})
+```
+
+要点：
+
+- `name`：消息**通道名**，**可省略**；不传（写 `@HostInjected()`）时通道名即**方法名**。
+- **只有 static 方法 / 顶层函数可用**。实例方法的 receiver 在 JS 侧是 JS 对象、回不到宿主
+  实例，私有声明又跨库不可见——这两类标了注解也不生效。
+- **参数载荷按实参形态给**：纯位置 → 数组；纯具名 → 对象；混合 → 对象 + `"@args"` 键装位置
+  实参。宿主侧按 `Function.apply(fn, 位置实参, 具名实参)` 还原 Dart 调用语义，因此位置/具名
+  实参个数不限、未传参数走实现自身的默认值，返回值类型也不限。
+- 调用返回 **Promise，可 `await`**；宿主实现抛错时异常抛回 JS 调用者；通道未注册也会回填
+  `null` 收尾，不留悬空 Promise。
+- 依赖扫描遇到 `@HostInjected` 类会**直接断链**，不会连带把它翻译进产物。
+
+宿主侧注册由 `hot_patch_generator` 自动完成：它扫描全包的 `@HostInjected` 方法，把注册调用
+集中生成到一个 Dart 文件 `lib/generated/host_methods.dart`，业务在 `main()` 里调用一次即可：
+
+```dart
+import 'package:my_app/generated/host_methods.dart';
+
+void main() {
+  registerHostMethods();          // 注册本包全部 @HostInjected 通道
+  runApp(const MyApp());
+}
+```
+
+注册目标默认指向配套运行时 `package:hot_patch/hot_patch.dart` 的
+`JsRuntimeManager.registerHostMethod(channel, fn)`，**无需任何配置**；仅当换用别的运行时实现时
+才在自己的 `build.yaml` 里用 `register_import` / `register_call` 覆盖。也可以手动注册任意通道：
+
+```dart
+JsRuntimeManager.registerHostMethod('myChannel', (String a) => ...);
+```
+
+适用场景：组件大部分逻辑要热更，但涉及的能力（网络 / 路由 / WebView / 原生 SDK）只能由宿主执行。
+
 ## 相关包
 
 | 包 | 作用 |
