@@ -66,4 +66,4 @@ final JsControllerBridge<JsChangeNotifier> _notifierBridge =
 void ensureChangeNotifierChannels() => _notifierBridge.ensure();
 
 /// 按句柄 id 取 Dart 侧通用镜像；未登记/已释放返回 null。
-JsChangeNotifier? jsChangeNotifierOf(String id) => _notifierBridge.controllers[id];
+JsChangeNotifier? jsChangeNotifierOf(String id) => _notifierBridge.controllerAt(id);

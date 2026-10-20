@@ -69,6 +69,10 @@ const String handleRegistryJsSource = r'''
     if (scope === 'page') {
       (pageHandles[key] || (pageHandles[key] = [])).push(id);
     }
+    // 登记留痕（仅 debug：console.debug 自身按 G.kDebugMode 门控）——JS 端
+    // 唯一的对象缓存就是 handles，全景见 __jsui.cacheDump / leakSnapshot。
+    console.debug('[binding] + ' + kind + ' ' + id + ' scope=' + scope
+      + (key ? ' page=' + key : ''));
     // 自动同步宿主：宿主侧同名 kind 描述符的 onCreate 据此创建真实对象
     // （scope=local 的纯本端句柄——如事件闭包——传 sync:false 不同步）。
     // pageKey 一并下发：宿主侧据此登记「句柄→页面」，页面销毁时做本端兜底回收。
@@ -86,6 +90,9 @@ const String handleRegistryJsSource = r'''
     var h = handles[id];
     if (!h) { return; }
     delete handles[id];
+    // 释放留痕（仅 debug，同上）。
+    console.debug('[binding] - ' + h.kind + ' ' + id + ' scope=' + h.scope
+      + (h.key ? ' page=' + h.key : ''));
     if (h.obj) { try { handleOwnerIdx.delete(h.obj); } catch (e) {} }
     if (h.scope === 'page' && h.key && pageHandles[h.key]) {
       var arr = pageHandles[h.key];

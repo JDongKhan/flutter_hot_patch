@@ -199,12 +199,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
     unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
     jsUiPageStores.remove(_pageKey);
-    // 泄漏观测：清理全部完成后取第二次快照与本页归属判定，残留即打印
+    // 泄漏观测：清理全部完成后取第二次快照做本页归属判定，残留即打印
     //（含 JS 端对象构造名）。仅 debug 构建启用。
     if (kDebugMode) {
       JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
-      // 泄漏检查已完（本页归属已用完），回收句柄归属登记防表无界增长。
-      dropDebugPageOwnership(_pageKey);
     }
     super.dispose();
   }
@@ -401,6 +399,16 @@ class _JsNode extends StatefulWidget {
 }
 
 class _JsNodeState extends State<_JsNode> {
+  /// 本 State 曾登记过 BuildContext 锚点的全部结点 id。
+  ///
+  /// 同一 key 下 JS 侧重建 host 结点时结点 id 会变、Flutter 复用本 State（见
+  /// [didUpdateWidget]），而 JS 侧组件的 `this.context` 代理**缓存了它建立时的
+  /// 那个 id**（见 build_context_js.dart 的 buildContextOf）——旧 id 必须继续能
+  /// 查到同一个 element，否则那些组件的 watch/read 会查不到真值而静默失效。
+  /// 故注销不能在 id 变化时做，只能在 element 真正卸载（dispose）时按这段历史
+  /// 一次性做：既不误伤活代理，也不留下永久的簿记残留（残留会被泄漏探针当泄漏报）。
+  final Set<String> _anchorIds = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -440,7 +448,11 @@ class _JsNodeState extends State<_JsNode> {
   @override
   void dispose() {
     widget.store.unbind(widget.id, _rebuild);
-    unregisterJsBuildContext(widget.id);
+    // 注销本 element 曾用过的全部结点 id（见 [_anchorIds]：id 变化时必须继续
+    // 可查，卸载时一次清干净）。
+    for (final id in _anchorIds) {
+      unregisterJsBuildContext(id);
+    }
     super.dispose();
   }
 
@@ -455,8 +467,10 @@ class _JsNodeState extends State<_JsNode> {
 
     // JS 组件的 `this.context` 代理按**最近宿主祖先结点 id** 反查真实
     // BuildContext（见 capabilities/build_context/build_context_bridge.dart）：在此登记/
-    // 刷新，dispose 注销——这就是「element 级 scope」。
+    // 刷新，element 卸载时连同历史 id 一并注销（见 [_anchorIds]）——这就是
+    // 「element 级 scope」。
     registerJsBuildContext(widget.id, context, widget.pageKey);
+    _anchorIds.add(widget.id);
 
     final children = <Widget>[];
     final childTypes = <String>[];

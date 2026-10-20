@@ -5,6 +5,8 @@
 //
 // 两端靠 **nodeId** 对齐：JS 侧代理记「最近宿主祖先结点 id」，宿主侧
 // `_JsNodeState` 在 build 期间登记 `nodeId -> BuildContext`、dispose 时注销。
+// 该表存的是**弱引用**（Element 的所有权在框架的 element tree，这里只是索引，
+// 不该钉住子树——见 [_jsBuildContexts]）。
 // 句柄（kind=ctx/BuildContext）只是让「句柄 id → nodeId」可查——即
 // [jsBuildContextOf]。
 //
@@ -22,29 +24,32 @@
 // Navigator / 三方 context 扩展全都要真值），而 JS→宿主只有异步桥，取值语义
 // 无法在 JS 内闭环。因此这类调用走 **@HostInjected 编译期类型化适配**：
 // 编译期知道 T 是什么，运行时按本文件的映射取宿主真值。
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../utils/hot_patch_log.dart';
+import '../core/binding_cache.dart';
 import '../core/handle_registry.dart';
 
 /// 页面锚点的结点键：JS 侧根组件（COMP 之上没有宿主结点）的 `this.context`
 /// 代理用它反查页面级 BuildContext（两端必须一致）。
 String jsBuildContextPageAnchor(String pageKey) => 'page:$pageKey';
 
-/// nodeId → 该宿主结点 build 期间的 BuildContext。
+/// 本能力的两类绑定都存在**绑定缓存**里（见 binding_cache.dart），各占一个桶：
 ///
-/// 由 _JsNodeState 在 build / didChangeDependencies 登记、dispose 注销；同一
-/// 结点重建时覆盖为新的 BuildContext（Element 复用则其实同一个对象）。
-final Map<String, BuildContext> _jsBuildContexts = {};
-
-/// debug：nodeId → 所属页面（极小的泄漏观测归属表，与 [_jsBuildContexts] 同增
-/// 同减）。结点 id 是全局唯一的，不带页面信息；同屏多实例时只有按归属过滤才能
-/// 把「本页结点销毁后仍留在表里」与「兄弟页面的活结点」区分开。
-final Map<String, String> _ctxNodePage = {};
-
-/// 句柄 id → nodeId（JS 侧代理登记时下发）。
-final Map<String, String> _ctxHandleNode = {};
+///   - [JsBindingBuckets.ctxHandle]：ctx 句柄 id → 结点 id。**纯映射值、强引用**
+///     （没有任何 widget 持有它，只有本缓存持有——见缓存文件头的判定 2）。
+///   - [JsBindingBuckets.ctxNode]：结点 id → 当前 BuildContext。**弱引用**：真实
+///     所有权在框架（Element 由 element tree 的父→子强持有），这里只是「结点 id
+///     → 当前 context」的查表索引。若为强引用，一次漏掉的注销就会把**整棵 Element
+///     子树**钉住无法回收；弱引用把漏删的后果降级为一条死键（几十字节字符串），
+///     子树照常回收。结点挂在树上时 deref 必然拿得到，语义不变。
+///
+/// 一个 element 的**每个历史结点 id 都要登记**：JS 侧代理缓存的是它建立时的那个
+/// id，同 key 下结点 id 变化时旧 id 仍要能查到同一个 element，故只能在 element
+/// 卸载时按整段历史统一注销（见 _JsNodeState 的 `_anchorIds`），不能在 id 变化时清。
+///
+/// 条目自带 pageKey（登记时给出），故泄漏观测不需要任何额外的归属表。
+const String _ctxKind = 'ctx/BuildContext';
 
 /// 一个 `context.<op>(...)` 的宿主处理器（由各库注册，核心只负责分发）。
 ///
@@ -78,29 +83,30 @@ bool _ctxKindRegistered = false;
 void ensureBuildContextChannels() {
   if (_ctxKindRegistered) return;
   _ctxKindRegistered = true;
-  registerHandleKind('ctx/BuildContext', JsHandleKind(
-    onCreate: (id, meta) {
+  registerHandleKind(_ctxKind, JsHandleKind(
+    onCreate: (id, meta, pageKey) {
       final node = meta is Map ? meta['node'] : null;
-      if (node is String && node.isNotEmpty) _ctxHandleNode[id] = node;
+      if (node is String && node.isNotEmpty) {
+        // 纯映射值（句柄 id → 结点 id），强引用登记（见文件头）。
+        JsBindingCache.instance.put<String>(
+          bucket: JsBindingBuckets.ctxHandle,
+          id: id,
+          kind: _ctxKind,
+          value: node,
+          pageKey: pageKey,
+          owner: 'ctx/BuildContext.onCreate',
+        );
+      }
     },
     onOp: (id, op, payload) => _dispatchContextOp(id, op, payload),
     onRelease: (id) {
-      _ctxHandleNode.remove(id);
+      JsBindingCache.instance.remove(JsBindingBuckets.ctxHandle, id);
       // 扇出给各库，清理它们在这个位置上挂的资源（如 provider 的订阅）。
       for (final handler in _contextOps.values) {
         handler.onRelease?.call(id);
       }
     },
   ));
-  // 泄漏观测探针（仅 debug 登记；见 js_leak_snapshot.dart）。nodeContexts
-  // 持有宿主 Element 树引用，泄漏即整棵子树无法回收，重点观测——按 nodeId 归属
-  // 过滤，只数本页登记过的结点（兄弟实例的活结点不参与统计）。
-  if (kDebugMode) {
-    dartHandleTableProbes['ctx/BuildContext.handles'] =
-        (pageKey) => debugPageOwnedCount(_ctxHandleNode.keys, pageKey);
-    dartHandleTableProbes['ctx/BuildContext.nodeContexts'] = (pageKey) =>
-        _jsBuildContexts.keys.where((n) => _ctxNodePage[n] == pageKey).length;
-  }
 }
 
 /// 把 `context.<op>(...)` 分发给注册者；未注册的 op 按项目规则告警而非静默。
@@ -115,24 +121,35 @@ Object? _dispatchContextOp(String id, String op, Map payload) {
 
 /// 登记/更新某个宿主结点的 BuildContext（_JsNodeState 在 build 期间调用）。
 ///
-/// [pageKey] 只用于 debug 泄漏观测的归属登记（探针按页统计，见
-/// js_leak_snapshot.dart）；release 下不写入任何额外状态。
+/// 弱引用（见文件头）+ 就地覆盖：同一结点重建时刷新为新的 BuildContext（Element
+/// 复用则其实同一个对象）。[pageKey] 随条目一起记下，供泄漏观测按页归属统计。
 void registerJsBuildContext(String nodeId, BuildContext context, String pageKey) {
-  _jsBuildContexts[nodeId] = context;
-  if (kDebugMode) _ctxNodePage[nodeId] = pageKey;
+  JsBindingCache.instance.put<BuildContext>(
+    bucket: JsBindingBuckets.ctxNode,
+    id: nodeId,
+    kind: _ctxKind,
+    value: context,
+    weak: true,
+    pageKey: pageKey,
+    owner: '_JsNodeState.build',
+  );
 }
 
 /// 注销某个宿主结点（_JsNodeState.dispose）。
+///
+/// 注销后 deref 只会拿到已回收的目标（返回 null）；即便漏了一次注销，被钉住的
+/// 也只是这条簿记键，不再是整棵 Element 子树。
 void unregisterJsBuildContext(String nodeId) {
-  _jsBuildContexts.remove(nodeId);
-  _ctxNodePage.remove(nodeId);
+  JsBindingCache.instance.remove(JsBindingBuckets.ctxNode, nodeId);
 }
 
-/// 按结点 id 取宿主真值 BuildContext（结点已卸载返回 null）。
-BuildContext? jsBuildContextOfNode(String nodeId) => _jsBuildContexts[nodeId];
+/// 按结点 id 取宿主真值 BuildContext（结点未登记 / 已卸载 / 目标已被回收返回 null）。
+BuildContext? jsBuildContextOfNode(String nodeId) =>
+    JsBindingCache.instance.target<BuildContext>(JsBindingBuckets.ctxNode, nodeId);
 
 /// 按 JS 侧 `this.context` 代理的句柄 id 取宿主真值 BuildContext。
 BuildContext? jsBuildContextOf(String handleId) {
-  final node = _ctxHandleNode[handleId];
-  return node == null ? null : _jsBuildContexts[node];
+  final node =
+      JsBindingCache.instance.target<String>(JsBindingBuckets.ctxHandle, handleId);
+  return node == null ? null : jsBuildContextOfNode(node);
 }

@@ -1,20 +1,25 @@
 // 控制器句柄桥通用层（宿主侧）：ScrollController / TabController /
 // TextEditingController / ChangeNotifier 镜像四个能力的同构样板收敛于此。
 //
-// 一个控制器桥 = 三张表（controller / 回传句柄 / attach 去重）+ kind 描述符
-// 组装（onCreate putIfAbsent、onOp 分派、onRelease 释放）+ `__handle` 解析。
-// 各能力只留差异：create（真实对象构造，可拿 meta）、onOp（方法分派）、
-// Host 的 forward（回传载荷）。
+// 一个控制器桥 = kind 描述符组装（onCreate putIfAbsent、onOp 分派、onRelease
+// 释放）+ `__handle` 解析；**对象本体与它的绑定信息全部寄存在绑定缓存里**
+// （桶名 = 本桥的 kind，见 binding_cache.dart）——不再各占「controller / 回传
+// 句柄 / attach 去重」三张全局表。各能力只留差异：create（真实对象构造，可拿
+// meta）、onOp（方法分派）、Host 的 forward（回传载荷）。
 //
-// fnHandles / attached 仅 Host 类控制器（Scroll/Tab/Text）使用；镜像类
-// （ChangeNotifier）只用 controllers——其 meta 无 fn，登记为 null，无害。
-import 'package:flutter/foundation.dart';
+// 回传句柄（meta.fn）与 attach 去重标记只对 Host 类控制器（Scroll/Tab/Text）
+// 有意义；镜像类（ChangeNotifier）的 meta.fn 为 null，无害。
 import 'package:flutter/widgets.dart';
 
+import 'binding_cache.dart';
 import 'handle_registry.dart';
 
 /// 控制器句柄桥（[T] 为宿主侧真实对象）。由能力文件的 `ensureXxxChannels()`
 /// 调 [ensure] 幂等完成 kind 注册。
+///
+/// **引用强度：强引用**（见 binding_cache.dart 的判定 2）——JS 侧句柄才是这些
+/// 对象的寿命驱动者，未收到 release 前 Dart 侧唯一持有者就是本缓存，弱化会让
+/// 「JS 还持着句柄、对象却被 GC」成为非确定性失效。
 class JsControllerBridge<T extends ChangeNotifier> {
   JsControllerBridge({
     required String kind,
@@ -32,18 +37,14 @@ class JsControllerBridge<T extends ChangeNotifier> {
         _create = create,
         _onOp = onOp;
 
+  /// 本桥的存储桶名 = 句柄 kind（`ctrl/Scroll` / `ctrl/Tab` / `ctrl/Text` /
+  /// `notifier/ChangeNotifier`）：新增控制器能力照旧只注册一个 kind 即自动获得
+  /// 统一缓存、统一日志与页面兜底回收。
   final String _kind;
   final T Function(String id, Object? meta)? _create;
   final Object? Function(T controller, String op, Map payload) _onOp;
 
-  /// 句柄 id → 真实 controller。
-  final Map<String, T> controllers = {};
-
-  /// 句柄 id → 回传句柄（meta.fn，Host 挂 listener 时经它 invoke 回 JS 镜像）。
-  final Map<String, Object?> fnHandles = {};
-
-  /// 已挂转发的句柄 id（多视图共享同一 controller 时不重复回传）。
-  final Set<String> attached = {};
+  JsBindingCache get _cache => JsBindingCache.instance;
 
   bool _registered = false;
 
@@ -54,32 +55,58 @@ class JsControllerBridge<T extends ChangeNotifier> {
     registerHandleKind(
         _kind,
         JsHandleKind(
-          onCreate: (id, meta) {
+          onCreate: (id, meta, pageKey) {
             final create = _create;
-            if (create != null) {
-              controllers.putIfAbsent(id, () => create(id, meta));
-            }
-            fnHandles[id] = meta is Map ? meta['fn'] : null;
+            // 回传句柄一并记进同一条目（cached 的 create 重发幂等）。
+            _cache.putIfAbsent<T>(
+              bucket: _kind,
+              id: id,
+              kind: _kind,
+              owner: '$_kind.onCreate',
+              pageKey: pageKey,
+              create: create == null ? null : () => create(id, meta),
+              meta: {'fn': meta is Map ? meta['fn'] : null},
+            );
           },
           onOp: (id, op, payload) {
-            final c = controllers[id];
+            final c = controllerAt(id);
             return c == null ? null : _onOp(c, op, payload);
           },
           onRelease: (id) {
-            controllers.remove(id)?.dispose();
-            fnHandles.remove(id);
-            attached.remove(id);
+            final c = controllerAt(id);
+            _cache.remove(_kind, id);
+            c?.dispose();
           },
         ));
-    // 泄漏观测探针（仅 debug 登记；按本页归属过滤，见 js_leak_snapshot.dart）。
-    if (kDebugMode) {
-      dartHandleTableProbes['$_kind.controllers'] =
-          (pageKey) => debugPageOwnedCount(controllers.keys, pageKey);
-      dartHandleTableProbes['$_kind.fnHandles'] =
-          (pageKey) => debugPageOwnedCount(fnHandles.keys, pageKey);
-      dartHandleTableProbes['$_kind.attached'] =
-          (pageKey) => debugPageOwnedCount(attached, pageKey);
-    }
+  }
+
+  /// 取真实 controller（未登记 / 已释放返回 null）。
+  T? controllerAt(String id) => _cache.target<T>(_kind, id);
+
+  /// 取/建真实 controller（Host 侧兜底创建：与 onCreate 复用同一实例）。
+  T controllerOf(String id, T Function() create) =>
+      controllerAt(id) ??
+      _cache
+          .putIfAbsent<T>(
+            bucket: _kind,
+            id: id,
+            kind: _kind,
+            owner: '$_kind.host',
+            create: create,
+          )
+          .target!;
+
+  /// 回传句柄 id（`meta.fn`）：Host 挂 listener 时经它 invoke 回 JS 镜像。
+  Object? fnHandleOf(String id) => _cache.entry<T>(_kind, id)?.meta['fn'];
+
+  /// 首次 attach 返回 true（同一 id 只挂一次转发——多视图共享同一 controller
+  /// 时不重复回传）；回传句柄尚未到达（JS 的 create 未到）也返回 false。
+  bool markAttachedOnFirst(String id) {
+    final e = _cache.entry<T>(_kind, id);
+    if (e == null || e.meta['fn'] == null) return false;
+    if (e.meta['attached'] == true) return false;
+    e.meta['attached'] = true;
+    return true;
   }
 
   /// 从 props 的 controller 取值里解析句柄 id：JS 实例跨桥经 toJSON
@@ -128,22 +155,20 @@ class JsControllerHost<T extends ChangeNotifier> extends StatefulWidget {
 
 class _JsControllerHostState<T extends ChangeNotifier>
     extends State<JsControllerHost<T>> {
-  late final T _controller =
-      widget.bridge.controllers.putIfAbsent(widget.id, widget.create);
+  late final T _controller = widget.bridge.controllerOf(widget.id, widget.create);
 
   @override
   void initState() {
     super.initState();
     // 同一 id 只挂一次转发（多视图共享同一 controller 时不重复回传）。
-    if (widget.bridge.fnHandles[widget.id] != null &&
-        widget.bridge.attached.add(widget.id)) {
+    if (widget.bridge.markAttachedOnFirst(widget.id)) {
       _controller.addListener(_forward);
       WidgetsBinding.instance.addPostFrameCallback((_) => _forward());
     }
   }
 
   void _forward() {
-    final handler = widget.bridge.fnHandles[widget.id];
+    final handler = widget.bridge.fnHandleOf(widget.id);
     if (handler == null) return;
     widget.forward(_controller, handler);
   }

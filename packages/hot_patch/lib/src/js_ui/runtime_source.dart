@@ -394,12 +394,12 @@ const String _jsUiApi = r'''
 
 ''';
 
-/// 泄漏观测函数（**仅 debug 构建拼入**，release 产物里不存在这段代码）：
+/// 泄漏观测 / 缓存全景函数（**仅 debug 构建拼入**，release 产物里没有这段）：
 /// 导出运行时自维护的三张表——页面根表 roots、句柄表 handles、页面句柄索引
 /// pageHandles。JS 堆无法直接枚举，但页面级对象（组件实例 / 控制器代理 /
 /// 函数闭包 / 监听器）全部经这三张表可达：表清干净，其余对象失去引用自然
-/// 可被 GC；表里有残留就是真泄漏。
-/// 宿主在页面进入前 / 销毁后各取一次做 diff（见 js_leak_snapshot.dart）。
+/// 可被 GC；表里有残留就是真泄漏。宿主在页面销毁后取一次做判定（见
+/// js_leak_snapshot.dart）；[cacheDump] 则是排查用的全量清单。
 const String _jsUiLeakSnapshotFn = r'''
 
   function leakSnapshot() {
@@ -417,11 +417,40 @@ const String _jsUiLeakSnapshotFn = r'''
     for (var rk in roots) { rs.push(rk); }
     return JSON.stringify({ handles: hs, pageHandles: ph, roots: rs });
   }
+
+  // 宿主侧调试入口用的**缓存全景**（仅 debug）：`handles` 是 JS 端唯一的对象
+  // 缓存（函数 / 控制器 / Key / ChangeNotifier / ctx 句柄都在这一张表里，kind 只是
+  // 条目上的标签）——这里按 kind 汇总条目数 + 逐条列出 id/scope/key/构造名，外加
+  // 页面句柄索引与页面根表，一眼看全 JS 端持有什么（见 JsLeakSnapshot.logJsCache）。
+  function cacheDump() {
+    var byKind = {};
+    var lines = [];
+    for (var id in handles) {
+      var h = handles[id];
+      byKind[h.kind] = (byKind[h.kind] || 0) + 1;
+      var t = h.obj === null ? 'null' : typeof h.obj;
+      var ctor = (t === 'object' || t === 'function') && h.obj && h.obj.constructor
+        ? (h.obj.constructor.name || t) : t;
+      lines.push(h.kind + ' ' + id + ' scope=' + h.scope
+        + (h.key ? ' page=' + h.key : '') + ' obj=' + ctor);
+    }
+    var kinds = [];
+    for (var k in byKind) { kinds.push(k + '×' + byKind[k]); }
+    var ph = [];
+    for (var pk in pageHandles) { ph.push(pk + '×' + pageHandles[pk].length); }
+    var rs = [];
+    for (var rk in roots) { rs.push(rk); }
+    return 'js binding cache: ' + lines.length + ' 条（' + kinds.join(', ') + '）'
+      + '\n  pageHandles: ' + (ph.length ? ph.join(', ') : '-')
+      + '\n  roots: ' + (rs.length ? rs.join(', ') : '-')
+      + (lines.length ? '\n  ' + lines.join('\n  ') : '');
+  }
 ''';
 
 /// 泄漏观测的 api 成员（**仅 debug 构建拼入**；release 无此成员，宿主侧
 /// `capture()` 的 typeof 守卫会拿到 "null" 静默跳过——双端同一构建标志）。
-const String _jsUiLeakApiMember = '    leakSnapshot: leakSnapshot,\n';
+const String _jsUiLeakApiMember =
+    '    leakSnapshot: leakSnapshot,\n    cacheDump: cacheDump,\n';
 
 /// UI 运行时骨架尾部·前段（TextEditingController 片段后到 api 对象开口）。
 const String _jsUiRuntimeSkeletonTailHead = r'''

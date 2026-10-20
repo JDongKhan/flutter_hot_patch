@@ -15,13 +15,18 @@
 //     字符串等价复现（同一对象 token 相同、不同对象不同）；PageStorageKey 同样
 //     是值相等，但宿主造的是**真实** PageStorageKey——它的滚动位置持久化是宿主
 //     端行为，值本体（`__psk`）只是用来区分存储槽。
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../core/binding_cache.dart';
 import '../core/handle_registry.dart';
 
-/// 句柄 id → 宿主侧真实 Key（GlobalKey / UniqueKey）。页面销毁时由句柄释放摘除。
-final Map<String, Key> _jsKeys = {};
+/// Key 句柄的存储桶：句柄 id → 宿主侧真实 Key（GlobalKey / UniqueKey）。统一登记
+/// 在绑定缓存里，页面销毁时由句柄释放摘除（见 binding_cache.dart 的「唯一缓存」）。
+///
+/// 引用强度：**强引用**——挂载期虽由 element 的 `widget.key` 持有，但离树期间
+/// （懒槽位 / 跨父搬移）Dart 侧只有本缓存 + JS 句柄持有；弱化会让重挂时拿不到
+/// 同一实例，[jsKeyOf] 退化成 `ValueKey(结点 id)` → 该子树 State 丢失。
+const String _keyBucket = JsBindingBuckets.key;
 
 bool _keyKindRegistered = false;
 
@@ -30,10 +35,17 @@ void ensureKeyChannels() {
   if (_keyKindRegistered) return;
   _keyKindRegistered = true;
   registerHandleKind('key/Global', JsHandleKind(
-    onCreate: (id, meta) {
+    onCreate: (id, meta, pageKey) {
       // putIfAbsent：create 消息与首帧渲染（props 里的 key）到达顺序不定，
       // 同一句柄 id 必须始终对应同一个 GlobalKey 实例（换实例即丢 State）。
-      _jsKeys.putIfAbsent(id, () => GlobalKey(debugLabel: _labelOf(meta)));
+      JsBindingCache.instance.putIfAbsent<Key>(
+        bucket: _keyBucket,
+        id: id,
+        kind: 'key/Global',
+        owner: 'key/Global.onCreate',
+        pageKey: pageKey,
+        create: () => GlobalKey(debugLabel: _labelOf(meta)),
+      );
     },
     onOp: (id, op, payload) {
       // 「取位置 / 取尺寸」只能在宿主做：BuildContext / RenderObject 是宿主端概念，
@@ -44,7 +56,7 @@ void ensureKeyChannels() {
       //   - `box.measure()`：RenderBox 的 `size` 与 `localToGlobal(Offset.zero)`
       //     都是同步属性，宿主算完回填（返回值经通道回填 JS Promise，见
       //     JsRuntimeManager.registerHostMethod）。
-      final key = _jsKeys[id];
+      final key = JsBindingCache.instance.target<Key>(_keyBucket, id);
       if (key is! GlobalKey) return null;
       final ro = key.currentContext?.findRenderObject();
       if (op == 'showOnScreen') {
@@ -65,17 +77,19 @@ void ensureKeyChannels() {
       }
       return null;
     },
-    onRelease: (id) => _jsKeys.remove(id),
+    onRelease: (id) => JsBindingCache.instance.remove(_keyBucket, id),
   ));
   registerHandleKind('key/Unique', JsHandleKind(
-    onCreate: (id, meta) => _jsKeys.putIfAbsent(id, () => UniqueKey()),
-    onRelease: (id) => _jsKeys.remove(id),
+    onCreate: (id, meta, pageKey) => JsBindingCache.instance.putIfAbsent<Key>(
+      bucket: _keyBucket,
+      id: id,
+      kind: 'key/Unique',
+      owner: 'key/Unique.onCreate',
+      pageKey: pageKey,
+      create: () => UniqueKey(),
+    ),
+    onRelease: (id) => JsBindingCache.instance.remove(_keyBucket, id),
   ));
-  // 泄漏观测探针（仅 debug 登记；按本页归属过滤，见 js_leak_snapshot.dart）。
-  if (kDebugMode) {
-    dartHandleTableProbes['key/Global+Unique'] =
-        (pageKey) => debugPageOwnedCount(_jsKeys.keys, pageKey);
-  }
 }
 
 String? _labelOf(Object? meta) {
@@ -103,6 +117,6 @@ Key? jsKeyOf(Object? prop) {
   // ObjectKey：身份 token 串等价复现（Dart 侧 identical 语义，见文件头）。
   if (okey != null) return ValueKey<String>('ok:$okey');
   final handle = prop['__handle'];
-  if (handle is String) return _jsKeys[handle];
+  if (handle is String) return JsBindingCache.instance.target<Key>(_keyBucket, handle);
   return null;
 }

@@ -51,13 +51,13 @@ void registerTextWidgets(JsWidgetRegistry r) {
     // 的真实 controller，用户输入经 textFn 回传 JS 实例镜像（更新 text +
     // 触发其 listeners），同时照常触发 onChanged 事件。
     final tecId = JsControllerBridge.idOf(c.props['controller']);
-    final external = tecId != null ? _textBridge.controllers[tecId] : null;
+    final external = tecId != null ? _textBridge.controllerAt(tecId) : null;
     return _JsTextField(
       controller: external,
       onControllerText: external == null
           ? null
           : (v) {
-              final h = tecId != null ? _textBridge.fnHandles[tecId] : null;
+              final h = tecId != null ? _textBridge.fnHandleOf(tecId) : null;
               if (h != null) c.invoke(h, [v]);
             },
       value: c.str('value'),
