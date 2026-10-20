@@ -151,20 +151,23 @@ G.__str = function (v) { return __fmt(v, []); };
 // 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
 // 故 Promise 一定被回填、不会悬挂。
 G.console = (typeof G.console === 'undefined') ? {} : G.console;
-function __log(args) {
+function __log(level, args) {
   if (typeof G._app_host_ !== 'undefined' && G._app_host_.invoke) {
     var text = '';
     for (var i = 0; i < args.length; i++) {
       text += (i ? ' ' : '') + __fmt(args[i], []);
     }
-    G._app_host_.invoke('log', [text]);
+    // 级别一并带给宿主（位置实参 [level, text]）：console.warn/error 在宿主侧
+    // 就是 warn/error 级，可直接进统一上报出口；未知级别按 info 处理（见
+    // builtin_host_methods.dart 的 _log）。
+    G._app_host_.invoke('log', [level, text]);
   }
 }
-G.console.debug = function() { if (G.kDebugMode) { __log(arguments); } };
-G.console.info = function() { __log(arguments); };
-G.console.log = function() { __log(arguments); };
-G.console.warn = function() { __log(arguments); };
-G.console.error = function() { __log(arguments); }
+G.console.debug = function() { if (G.kDebugMode) { __log('debug', arguments); } };
+G.console.info = function() { __log('info', arguments); };
+G.console.log = function() { __log('info', arguments); };
+G.console.warn = function() { __log('warn', arguments); };
+G.console.error = function() { __log('error', arguments); }
 ''';
 /// 静态尾部：骨架状态与工具（原 _jsUiGlobals 其余）。
 const String _jsUiGlobalsTail = r'''

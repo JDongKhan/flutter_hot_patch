@@ -28,15 +28,25 @@ void registerBuiltinHostMethods() {
   JsRuntimeManager.registerHostMethod('jsuiCommit', _commit);
 }
 
-/// `log`：JS console 桥 → HotPatchLog。
-void _log(Object? message) => HotPatchLog.log('[js-log] $message');
+/// `log`：JS console 桥 → HotPatchLog。级别由 JS 侧一并传来（见 runtime_source
+/// 的 `G.console`：debug / log·info / warn / error），未知级别按 info 处理——
+/// 这样 JS 侧 `console.error` 在宿主就是 error 级，能直接进统一上报出口。
+void _log(String? level, Object? message) =>
+    HotPatchLog.emit(_levelOf(level), '[js-log] $message');
+
+HotPatchLevel _levelOf(String? name) => switch (name) {
+      'debug' => HotPatchLevel.debug,
+      'warn' => HotPatchLevel.warn,
+      'error' => HotPatchLevel.error,
+      _ => HotPatchLevel.info,
+    };
 
 /// `nativeToast`：弹原生 SnackBar。context 由 [JsRuntimeManager.navigatorKey]
 /// 提供（全局服务，与页面无关）。
 void _nativeToast({String? message}) {
   final ctx = JsRuntimeManager.navigatorKey?.currentContext;
   if (ctx == null || !ctx.mounted) {
-    HotPatchLog.log(
+    HotPatchLog.warn(
       'nativeToast ignored: navigatorKey not configured / context not ready',
     );
     return;

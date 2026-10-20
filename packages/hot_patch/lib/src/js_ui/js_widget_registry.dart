@@ -149,7 +149,7 @@ void registerNativeComponent(
   Widget Function(Map<String, dynamic> args) build,
 ) {
   if (_nativeComponents.containsKey(name)) {
-    HotPatchLog.log('js_ui: 原生组件 "$name" 重复注册，后者覆盖前者');
+    HotPatchLog.warn('js_ui: 原生组件 "$name" 重复注册，后者覆盖前者');
   }
   _nativeComponents[name] = build;
 }
@@ -758,7 +758,7 @@ class _JsBottomNavItem extends StatelessWidget {
 
 /// 元素 type 未注册（既无宿主 builder、也无原生注入实现）时，给出可见占位。
 Widget buildMissingJsWidget(String type, List<Widget> children) {
-  HotPatchLog.log('js_ui: 未注册的宿主 widget 类型 "$type"');
+  HotPatchLog.error('js_ui: 未注册的宿主 widget 类型 "$type"');
   return Container(
     padding: const EdgeInsets.all(4),
     color: const Color(0x22FF0000),

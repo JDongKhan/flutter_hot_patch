@@ -127,10 +127,10 @@ class RemoteAssetLoader {
             return cached;
           }
           // 本地缓存损坏（文件丢失/空文件）→  fallthrough 到 200 重新下载。
-          HotPatchLog.log('remote bundle cache corrupted, re-downloading: $url');
+          HotPatchLog.warn('remote bundle cache corrupted, re-downloading: $url');
         }
         if (response.statusCode != HttpStatus.ok) {
-          HotPatchLog.log('remote asset HTTP ${response.statusCode}: $url');
+          HotPatchLog.error('remote asset HTTP ${response.statusCode}: $url');
           // 非 200 且本地有旧缓存 → 降级回退用旧缓存。
           return _fallback(root, url, existing, 'HTTP ${response.statusCode}');
         }
@@ -145,7 +145,7 @@ class RemoteAssetLoader {
         if (bytes.length < 4 ||
             bytes[0] != 0x50 ||
             bytes[1] != 0x4B) {
-          HotPatchLog.log('remote asset is not a zip: $url');
+          HotPatchLog.error('remote asset is not a zip: $url');
           return _fallback(root, url, existing, 'bad zip');
         }
         final archive = ZipDecoder().decodeBytes(bytes);
@@ -165,7 +165,7 @@ class RemoteAssetLoader {
           // 入口：entryPath 直达 / 按组件名反查（在临时目录上验证）。
           final entry = _resolveEntry(tmp.path, component, entryPath);
           if (entry == null) {
-            HotPatchLog.log(
+            HotPatchLog.error(
                 'remote asset zip entry not found ($entryPath / $component): $url');
             tmp.deleteSync(recursive: true);
             return _fallback(root, url, existing, 'entry not found');
@@ -192,7 +192,7 @@ class RemoteAssetLoader {
         client.close(force: true);
       }
     } catch (e) {
-      HotPatchLog.log('remote asset load failed: $url -> $e');
+      HotPatchLog.error('remote asset load failed: $url -> $e', error: e);
       // 网络异常（含超时 / 坏 zip / 解压失败）时回退本地旧缓存（有且完整才用）。
       try {
         final root = await localRootFor(url);
@@ -221,7 +221,7 @@ class RemoteAssetLoader {
     if (entry == null) return null;
     final cached = _cachedBundle(root, entry);
     if (cached != null) {
-      HotPatchLog.log('remote asset fallback to cached ($reason): $url -> $entry');
+      HotPatchLog.warn('remote asset fallback to cached ($reason): $url -> $entry');
     }
     return cached;
   }

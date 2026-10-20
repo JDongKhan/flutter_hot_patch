@@ -724,7 +724,7 @@ IconData iconFromJson(Object? v) {
   final name = v is String ? v : '';
   final icon = _icons[name];
   if (icon == null) {
-    HotPatchLog.log('iconFromJson: 未注册的 Icons.$name，回退 Icons.circle');
+    HotPatchLog.warn('iconFromJson: 未注册的 Icons.$name，回退 Icons.circle');
     return Icons.circle;
   }
   return icon;

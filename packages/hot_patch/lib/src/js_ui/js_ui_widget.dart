@@ -145,6 +145,12 @@ class JsUiWidgetState extends State<JsUiWidget> {
       }
       _entryJsAsset = entry;
       await _manager.loadModule(_entryJsAsset, localRoot: localRoot);
+      // 模块加载**汇总成一条**：连带依赖常有几十个（model/xxx.js、flutter.js…），
+      // 逐条打印会把进入页面的日志刷满。顺序即加载顺序（依赖先于自身）。
+      final loaded = _manager.drainLoadedModules();
+      if (loaded.isNotEmpty) {
+        HotPatchLog.log('模块加载完成（${loaded.length} 个）：${loaded.join(', ')}');
+      }
       // 挂载必须用 evaluateOrThrow：JS 侧 `component not found`（典型是 patch.zip
       // 陈旧 / 组件名拼错）时 evaluate 只记日志，root 永不下发 → 页面一直转圈。
       // 抛出来才能落进下面的 catch，进错误兜底视图。
@@ -156,7 +162,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       );
       if (mounted && _loading) setState(() => _loading = false);
     } catch (e) {
-      HotPatchLog.log('js_ui boot failed: $e');
+      HotPatchLog.error('js_ui boot failed: $e', error: e);
       if (!mounted) return;
       setState(() {
         _error = '$e';

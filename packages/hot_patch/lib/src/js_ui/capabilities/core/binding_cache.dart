@@ -242,7 +242,7 @@ class JsBindingCache {
     final e = b?.remove(id);
     if (e == null) return;
     if (b!.isEmpty) _buckets.remove(bucket);
-    if (kDebugMode && !e.quiet) HotPatchLog.log('[binding] - ${e.describe()}');
+    if (kDebugMode && !e.quiet) HotPatchLog.debug('[binding] - ${e.describe()}');
   }
 
   /// 某个桶里的全部绑定（同桶同类型，取用方自行按需断言）。

@@ -71,7 +71,7 @@ Object? _resolveWatchOp(String ctxId, String op, Map payload) {
     // 只在**本端也没找到**时告警：否则是宿主侧本就没有该作用域的镜像
     // （将来 JS-only 的作用域族），属正常情形，不该报错。
     if (payload['found'] != true) {
-      HotPatchLog.log(
+      HotPatchLog.warn(
         '[jsui] context.$op("$type") 在宿主真值 context 上找不到该类型的提供者'
         '（结点 $ctxId；消费点可能在 provider 子树之外）',
       );

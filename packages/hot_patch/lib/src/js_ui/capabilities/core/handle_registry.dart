@@ -128,7 +128,7 @@ void releasePageHandles(String pageKey) {
 void _evalJs(String code) {
   final r = JsRuntimeManager.instance.evaluate(code);
   if (r.isError) {
-    HotPatchLog.log('jsHandle eval failed: ${r.stringResult} | code: $code');
+    HotPatchLog.error('jsHandle eval failed: ${r.stringResult} | code: $code');
   }
 }
 

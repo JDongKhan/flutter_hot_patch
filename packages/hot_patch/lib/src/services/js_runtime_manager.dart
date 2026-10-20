@@ -128,8 +128,10 @@ class JsRuntimeManager {
         // 完全不知道宿主侧压根没调成功（具名参数不匹配就是这样被吞掉的）。
         // 现在把异常原样抛回 JS 调用者（reject → await 处抛出，可被 JS 自己的
         // try/catch 接住）；完整堆栈仍留在宿主日志里。
-        HotPatchLog.log(
-          'registerHostMethod("$channel") 调用宿主实现失败: $e\n$s',
+        HotPatchLog.error(
+          'registerHostMethod("$channel") 调用宿主实现失败: $e',
+          error: e,
+          stackTrace: s,
         );
         _settleHost(id, error: '$e');
       }
@@ -248,7 +250,7 @@ class JsRuntimeManager {
       final preview = code.replaceAll('\n', ' ').trim();
       final brief =
           preview.length > 80 ? '${preview.substring(0, 80)}…' : preview;
-      HotPatchLog.log(
+      HotPatchLog.error(
         'JS eval failed [$where]: ${result.stringResult} | code: $brief',
       );
     }
@@ -339,13 +341,16 @@ class JsRuntimeManager {
       if (evalResult.isError ||
           text.startsWith('ERROR:') ||
           text.contains('\nERROR:')) {
-        HotPatchLog.log('module eval failed: $jsAsset: $text');
+        HotPatchLog.error('module eval failed: $jsAsset: $text');
         // evaluate 把异常序列化进返回值 → 视为加载失败，不进
         // _loadedModules，下次可重试。
         throw StateError('module evaluate failed: $text');
       }
       _loadedModules.add(jsAsset);
-      HotPatchLog.log('module loaded: $jsAsset');
+      // 不逐条打日志：一个页面连带依赖可能有几十个模块（model/xxx.js、flutter.js…），
+      // 逐条会把「进入页面」的日志刷满。只记进本批次清单，由页面加载流程结束时
+      // 一次性取走汇总（见 [drainLoadedModules]）。
+      _loadedInBatch.add(jsAsset);
       _settleModule(jsAsset, completer);
     } catch (e, s) {
       // 读文件 / 依赖加载 / 求值任一失败：owner 与全部等待者一起拿到该异常
@@ -469,6 +474,20 @@ $out
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
 
+  /// 最近一批新加载成功的模块路径（顺序即加载顺序：依赖先于自身）。
+  ///
+  /// 只记录、不打印——页面进入时可能连带几十个模块，逐条日志会把其它信息淹没。
+  /// 由页面加载流程在结束时 [drainLoadedModules] 取走并汇总成一条；多实例共用同一
+  /// manager 时先取走的那个实例会带上全部（模块本身幂等，不会重复计入）。
+  final List<String> _loadedInBatch = [];
+
+  /// 取走并清空「本批次已加载模块」清单（调用方负责汇总成一条日志）。
+  List<String> drainLoadedModules() {
+    final out = List<String>.of(_loadedInBatch);
+    _loadedInBatch.clear();
+    return out;
+  }
+
   /// 清除所有已加载模块缓存（远程 zip 更新后调用，强制下次重新 evaluate）。
   /// 同时清空 JS 侧 `__modules` 表——依赖模块（flutter.js / provider.js 等）
   /// 下次也会重新加载，避免拿到旧类引用。
@@ -478,6 +497,8 @@ $out
   /// 空断言）；保留后等待者仍等这次加载完成，且不会重复 evaluate 同一产物。
   void invalidateModules() {
     _loadedModules.clear();
+    // 清单一并清空：清缓存后重新加载的那批，重新累计到下一个批次汇总里。
+    _loadedInBatch.clear();
     // 清空 JS 侧模块注册表：下次 import 解构时 __modules['path'] 为空，
     // loadModule 会重新执行该模块代码并重新注册。
     _eval('''
@@ -513,7 +534,7 @@ $out
     if (handler == null) {
       final data = raw['data'];
       final id = data is Map ? data['id']?.toString() : null;
-      HotPatchLog.log('未注册的宿主通道 "$channel"（id=${id ?? '-'}）：回填 null 收尾');
+      HotPatchLog.warn('未注册的宿主通道 "$channel"（id=${id ?? '-'}）：回填 null 收尾');
       _settleHost(id, value: null);
       return;
     }

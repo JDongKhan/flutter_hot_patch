@@ -154,7 +154,7 @@ class JsLeakSnapshot {
       );
       return;
     }
-    HotPatchLog.log(
+    HotPatchLog.warn(
       'leak-check $pageKey: ${leaks.length} 项残留（binding 本页登记 $tally 条）'
       '\n  ${leaks.join('\n  ')}',
     );
