@@ -25,6 +25,8 @@
 //      可替换价值在此为零。
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import '../../../services/js_runtime_manager.dart';
 import '../../../utils/hot_patch_log.dart';
 
@@ -78,7 +80,12 @@ void ensureHandleChannels() {
         final kind = payload['kind']?.toString() ?? '';
         final pageKey = payload['pageKey']?.toString();
         _handleKindById[id] = kind;
-        if (pageKey != null && pageKey.isNotEmpty) _handlePageById[id] = pageKey;
+        if (pageKey != null && pageKey.isNotEmpty) {
+          _handlePageById[id] = pageKey;
+          // 泄漏观测归属（仅 debug）：页面销毁后要能把「释放跑了、但某张镜像表
+          // 没清」的残留归因到本页。
+          if (kDebugMode) _debugHandlePage[id] = pageKey;
+        }
         _handleKinds[kind]?.onCreate?.call(id, payload['meta']);
         break;
       case 'release':
@@ -131,18 +138,47 @@ void _evalJs(String code) {
 
 // ===== debug 泄漏观测（仅 js_leak_snapshot.dart 读取；release 探针表恒空） =====
 
-/// 句柄相关 Dart 表的规模探针：key 为表名（如 'ctrl/Scroll.controllers'），
-/// value 返回当前条目数。各能力在 ensure* 时按 kDebugMode 登记——release
-/// 构建本表恒空、无任何回调被注册，线上零开销。
-final dartHandleTableProbes = <String, int Function()>{};
+/// debug：句柄 id → 登记它的页面（仅 scope=page 的句柄，见 jsHandle create 的
+/// pageKey）。
+///
+/// **刻意不在 release 时清理**：泄漏检查发生在 `releasePageHandles` **之后**，
+/// 此刻还要能把「释放跑了、但某张镜像表漏清」的残留归因到本页（否则这类 bug
+/// 反而会被静默漏检）；页面泄漏检查结束由 [dropDebugPageOwnership] 统一回收。
+final Map<String, String> _debugHandlePage = {};
 
-/// 本注册表（路由 + 页面索引）的快照。[pageKey]：顺带统计该页在页面索引里
-/// 的条目数（页面 dispose 兜底回收后应为 0，非 0 即泄漏）。
+/// debug 探针辅助：统计 [keys] 中属于 [pageKey] 的条目数。
+int debugPageOwnedCount(Iterable<String> keys, String pageKey) {
+  var n = 0;
+  for (final k in keys) {
+    if (_debugHandlePage[k] == pageKey) n += 1;
+  }
+  return n;
+}
+
+/// debug：回收某页的句柄归属登记（页面泄漏检查完成后调用，防表无界增长）。
+void dropDebugPageOwnership(String pageKey) {
+  _debugHandlePage.removeWhere((_, page) => page == pageKey);
+}
+
+/// 句柄相关 Dart 表的「本页残留」探针：key 为表名，value 接收 pageKey、返回
+/// **本页登记过且当前仍在该表里**的条目数。各能力在 ensure* 时按 kDebugMode
+/// 登记——release 构建本表恒空、无任何回调被注册，线上零开销。
+///
+/// **为什么必须带 pageKey**：这些镜像表都是**进程内全局表**（按句柄/结点 id
+/// 索引，与页面无关）。同屏多实例时，表规模天然被兄弟页面活着的对象撑大；拿
+/// 全局计数做「进入前 / 销毁后」差分，会把兄弟实例的活对象误判成本页泄漏。
+/// 按归属统计后判据变成「本页登记的对象在页面销毁后仍留在表里」，跨实例正交。
+final dartHandleTableProbes = <String, int Function(String pageKey)>{};
+
+/// 本注册表（路由 + 页面索引）的**本页**快照。[pageKey]：只统计本页登记过的
+/// 句柄——页面 dispose 兜底回收后两项都应为空。
 Map<String, Object?> dartHandleRegistrySnapshot(String pageKey) {
   return {
-    'routing': _handleKindById.length,
-    'pageIndex': _handlePageById.length,
+    // 本页仍在页面索引里的句柄数（release 未跑到才有残留）。
     'pageHandles': _handlePageById.values.where((k) => k == pageKey).length,
-    'ids': Set<String>.of(_handleKindById.keys),
+    // 仍在路由表里的本页句柄 id（非空即残留；逐条报出便于定位具体对象）。
+    'ids': Set<String>.of(
+      _handleKindById.keys.where((id) => _debugHandlePage[id] == pageKey),
+    ),
   };
 }

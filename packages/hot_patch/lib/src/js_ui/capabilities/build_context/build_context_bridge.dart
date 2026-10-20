@@ -38,6 +38,11 @@ String jsBuildContextPageAnchor(String pageKey) => 'page:$pageKey';
 /// 结点重建时覆盖为新的 BuildContext（Element 复用则其实同一个对象）。
 final Map<String, BuildContext> _jsBuildContexts = {};
 
+/// debug：nodeId → 所属页面（极小的泄漏观测归属表，与 [_jsBuildContexts] 同增
+/// 同减）。结点 id 是全局唯一的，不带页面信息；同屏多实例时只有按归属过滤才能
+/// 把「本页结点销毁后仍留在表里」与「兄弟页面的活结点」区分开。
+final Map<String, String> _ctxNodePage = {};
+
 /// 句柄 id → nodeId（JS 侧代理登记时下发）。
 final Map<String, String> _ctxHandleNode = {};
 
@@ -88,11 +93,13 @@ void ensureBuildContextChannels() {
     },
   ));
   // 泄漏观测探针（仅 debug 登记；见 js_leak_snapshot.dart）。nodeContexts
-  // 持有宿主 Element 树引用，泄漏即整棵子树无法回收，重点观测。
+  // 持有宿主 Element 树引用，泄漏即整棵子树无法回收，重点观测——按 nodeId 归属
+  // 过滤，只数本页登记过的结点（兄弟实例的活结点不参与统计）。
   if (kDebugMode) {
-    dartHandleTableProbes['ctx/BuildContext.handles'] = () => _ctxHandleNode.length;
-    dartHandleTableProbes['ctx/BuildContext.nodeContexts'] =
-        () => _jsBuildContexts.length;
+    dartHandleTableProbes['ctx/BuildContext.handles'] =
+        (pageKey) => debugPageOwnedCount(_ctxHandleNode.keys, pageKey);
+    dartHandleTableProbes['ctx/BuildContext.nodeContexts'] = (pageKey) =>
+        _jsBuildContexts.keys.where((n) => _ctxNodePage[n] == pageKey).length;
   }
 }
 
@@ -107,13 +114,18 @@ Object? _dispatchContextOp(String id, String op, Map payload) {
 }
 
 /// 登记/更新某个宿主结点的 BuildContext（_JsNodeState 在 build 期间调用）。
-void registerJsBuildContext(String nodeId, BuildContext context) {
+///
+/// [pageKey] 只用于 debug 泄漏观测的归属登记（探针按页统计，见
+/// js_leak_snapshot.dart）；release 下不写入任何额外状态。
+void registerJsBuildContext(String nodeId, BuildContext context, String pageKey) {
   _jsBuildContexts[nodeId] = context;
+  if (kDebugMode) _ctxNodePage[nodeId] = pageKey;
 }
 
 /// 注销某个宿主结点（_JsNodeState.dispose）。
 void unregisterJsBuildContext(String nodeId) {
   _jsBuildContexts.remove(nodeId);
+  _ctxNodePage.remove(nodeId);
 }
 
 /// 按结点 id 取宿主真值 BuildContext（结点已卸载返回 null）。

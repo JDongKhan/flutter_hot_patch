@@ -199,10 +199,12 @@ class JsUiWidgetState extends State<JsUiWidget> {
     unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
     jsUiPageStores.remove(_pageKey);
-    // 泄漏观测：清理全部完成后取第二次快照，与进入前基线 diff，残留即打印
+    // 泄漏观测：清理全部完成后取第二次快照与本页归属判定，残留即打印
     //（含 JS 端对象构造名）。仅 debug 构建启用。
     if (kDebugMode) {
       JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
+      // 泄漏检查已完（本页归属已用完），回收句柄归属登记防表无界增长。
+      dropDebugPageOwnership(_pageKey);
     }
     super.dispose();
   }
@@ -211,7 +213,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
   Widget build(BuildContext context) {
     // 页面锚点：根组件（COMP 之上没有宿主结点）的 `this.context` 代理按
     // `page:<pageKey>` 反查 —— 见 capabilities/build_context/build_context_js.dart。
-    registerJsBuildContext(jsBuildContextPageAnchor(_pageKey), context);
+    registerJsBuildContext(jsBuildContextPageAnchor(_pageKey), context, _pageKey);
     if (_error != null) {
       return _JsLoadErrorView(message: _error!, onRetry: _retry);
     }
@@ -230,6 +232,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       store: _store,
       id: _rootId!,
       invoke: _invoke,
+      pageKey: _pageKey,
     );
     final buildTime = _buildTime;
     if (!widget.showBuildTime || buildTime == null) return content;
@@ -380,10 +383,15 @@ class _JsNode extends StatefulWidget {
     required this.store,
     required this.id,
     required this.invoke,
+    required this.pageKey,
   });
 
   final JsUiStore store;
   final String id;
+
+  /// 本结点所属页面。BuildContext 锚点登记时一并下发，供 debug 泄漏观测按页
+  /// 归属统计（见 capabilities/build_context/build_context_bridge.dart）。
+  final String pageKey;
 
   /// 事件回传：`(handler, args)`——handler 是运行时登记的句柄，args 为参数数组。
   final void Function(Object? handler, [List<Object?> args]) invoke;
@@ -448,7 +456,7 @@ class _JsNodeState extends State<_JsNode> {
     // JS 组件的 `this.context` 代理按**最近宿主祖先结点 id** 反查真实
     // BuildContext（见 capabilities/build_context/build_context_bridge.dart）：在此登记/
     // 刷新，dispose 注销——这就是「element 级 scope」。
-    registerJsBuildContext(widget.id, context);
+    registerJsBuildContext(widget.id, context, widget.pageKey);
 
     final children = <Widget>[];
     final childTypes = <String>[];
@@ -510,6 +518,7 @@ class _JsNodeState extends State<_JsNode> {
       store: widget.store,
       id: id,
       invoke: widget.invoke,
+      pageKey: widget.pageKey,
     );
   }
 }

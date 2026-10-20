@@ -71,11 +71,14 @@ class JsControllerBridge<T extends ChangeNotifier> {
             attached.remove(id);
           },
         ));
-    // 泄漏观测探针（仅 debug 登记；见 js_leak_snapshot.dart）。
+    // 泄漏观测探针（仅 debug 登记；按本页归属过滤，见 js_leak_snapshot.dart）。
     if (kDebugMode) {
-      dartHandleTableProbes['$_kind.controllers'] = () => controllers.length;
-      dartHandleTableProbes['$_kind.fnHandles'] = () => fnHandles.length;
-      dartHandleTableProbes['$_kind.attached'] = () => attached.length;
+      dartHandleTableProbes['$_kind.controllers'] =
+          (pageKey) => debugPageOwnedCount(controllers.keys, pageKey);
+      dartHandleTableProbes['$_kind.fnHandles'] =
+          (pageKey) => debugPageOwnedCount(fnHandles.keys, pageKey);
+      dartHandleTableProbes['$_kind.attached'] =
+          (pageKey) => debugPageOwnedCount(attached, pageKey);
     }
   }
 

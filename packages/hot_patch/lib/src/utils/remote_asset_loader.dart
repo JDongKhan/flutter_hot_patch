@@ -78,6 +78,17 @@ class RemoteAssetLoader {
     return '${doc.path}/hot_patch/$hash';
   }
 
+  /// 清除本地**全部**补丁缓存：删除 `<document>/hot_patch/` 整棵目录
+  /// （各 URL 的解压产物与协商缓存记录 `_last_modified.txt`）。
+  ///
+  /// 调试用：清掉后本地无缓存 → 下次加载不带 `If-Modified-Since` 直接重新
+  /// 下载 zip（服务端 200 → fresh 更新），从而强制拉到最新产物。
+  static Future<void> clearCache() async {
+    final doc = await getApplicationDocumentsDirectory();
+    final dir = Directory('${doc.path}/hot_patch');
+    if (dir.existsSync()) dir.deleteSync(recursive: true);
+  }
+
   /// 加载网络补丁包。
   ///
   /// [entryPath]：zip 内入口 .js 的相对路径（如

@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_js/flutter_js.dart';
 
 import '../utils/js_asset_resolver.dart';
+import '../utils/remote_asset_loader.dart';
 import '../js_ui/runtime_source.dart';
 import '../utils/hot_patch_log.dart';
 
@@ -133,6 +134,21 @@ class JsRuntimeManager {
         _settleHost(id, error: '$e');
       }
     };
+  }
+
+  /// 调试用：清除本地补丁缓存并重置模块缓存。
+  ///
+  ///   - 磁盘：删除 `<document>/hot_patch/` 下**全部** URL 的解压产物（含
+  ///     协商缓存记录），下次加载重新下载 zip（见 [RemoteAssetLoader.clearCache]）；
+  ///   - 内存：清空所有活跃 runtime 的已加载模块表与 JS 侧 `__modules`
+  ///     （见 [invalidateModules]），强制重新 evaluate 最新产物。
+  ///
+  /// 清除后重新进入热更页面即拉取最新产物；已在屏上的 JS 页面需重进才刷新。
+  static Future<void> clearCache() async {
+    await RemoteAssetLoader.clearCache();
+    for (final m in _instances.toList()) {
+      m.invalidateModules();
+    }
   }
 
   /// 结算 JS 侧 Promise（`_app_host_.resolve` / `_app_host_.reject`）。
@@ -276,33 +292,44 @@ class JsRuntimeManager {
     if (_loadedModules.contains(jsAsset)) {
       return;
     }
-    // 加载中（防依赖环 + 防并发竞争）→ 等待首个加载完成后再继续。
-    // 同屏多个 JsUiWidget 用同一 manager 时，会并发调用 loadModule，
-    // 若直接 return，后续 widget 的 __jsui.mount 在模块注册前执行 →
+    // 加载中（防依赖环 + 防并发竞争）→ 复用首个加载的 completer，等它完成
+    // 后再继续。同屏多个 JsUiWidget 用同一 manager 时，会并发调用 loadModule，
+    // 若直接 return，后续 widget 的 __jsui.mount 会在模块注册前执行 →
     // 找不到组件 → _rootId 为 null → 一直显示进度条。
-    if (_loadingModules.contains(jsAsset)) {
-      return _loadingCompleters[jsAsset]!.future;
+    //
+    // 「加载中」只由 [_loadingCompleters] 是否含该 key 表达；owner 用**本地
+    // 变量**持有自己的 completer，结算前用 identical 校验仍归自己所有。
+    // **不能**复读 `_loadingCompleters[jsAsset]!`：远程包 fresh 时双实例各自
+    // 调一次 invalidateModules、同 key 也会被另一个 owner 覆盖，复读 + 空断言
+    // 会在并发首屏炸「Null check operator used on a null value」。
+    final inflight = _loadingCompleters[jsAsset];
+    if (inflight != null) {
+      return inflight.future;
     }
-    _loadingModules.add(jsAsset);
-    _loadingCompleters[jsAsset] = Completer<void>();
-    // 网络补丁包：localRoot（URL 哈希本地唯一根目录）+ 虚拟路径拼出本地
-    // 文件，存在即读本地，不存在回退内置 asset（rootBundle）。不维护任何
-    // 映射表——文件系统即索引，与 asset 场景共用同一套相对 import 逻辑。
-    final source = await _readModule(jsAsset, localRoot);
-    final base = jsAsset.substring(0, jsAsset.lastIndexOf('/') + 1);
-
-    // 1) 递归加载 import 依赖（相对路径，以当前模块目录为基准）
-    for (final (_, rel) in _parseImports(source)) {
-      final dep = JsAssetResolver.resolve(base, rel);
-      await loadModule(dep, localRoot: localRoot);
-    }
-
-    // 2) 模块产物求值前确保运行时骨架（含环境全局 __modules / 标志 /
-    //    console / ChangeNotifier）已注入 —— 幂等。
-    ensureJsUiRuntime();
-
-    // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）后求值
+    final completer = Completer<void>();
+    _loadingCompleters[jsAsset] = completer;
+    // 无等待者时带错误的 Future 会报「未捕获异常」；挂忽略监听消除该噪声，
+    // 各等待者仍从自己拿到的 `inflight.future` 收到同一错误。
+    completer.future.ignore();
     try {
+      // 网络补丁包：localRoot（URL 哈希本地唯一根目录）+ 虚拟路径拼出本地
+      // 文件，存在即读本地，不存在回退内置 asset（rootBundle）。不维护任何
+      // 映射表——文件系统即索引，与 asset 场景共用同一套相对 import 逻辑。
+      final source = await _readModule(jsAsset, localRoot);
+      final base = jsAsset.substring(0, jsAsset.lastIndexOf('/') + 1);
+
+      // 1) 递归加载 import 依赖（相对路径，以当前模块目录为基准）
+      for (final (_, rel) in _parseImports(source)) {
+        final dep = JsAssetResolver.resolve(base, rel);
+        await loadModule(dep, localRoot: localRoot);
+      }
+
+      // 2) 模块产物求值前确保运行时骨架（含环境全局 __modules / 标志 /
+      //    console / ChangeNotifier）已注入 —— 幂等。
+      ensureJsUiRuntime();
+
+      // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）
+      //    后求值
       final processed = _preprocessModule(source, jsAsset, base);
       final evalResult = _runtime.evaluate(processed);
       // 模块被包进 IIFE，完成值恒为 undefined（真正的作用是 __modules
@@ -319,13 +346,33 @@ class JsRuntimeManager {
       }
       _loadedModules.add(jsAsset);
       HotPatchLog.log('module loaded: $jsAsset');
-      _loadingCompleters[jsAsset]!.complete();
-    } catch (e) {
-      _loadingCompleters[jsAsset]!.completeError(e);
+      _settleModule(jsAsset, completer);
+    } catch (e, s) {
+      // 读文件 / 依赖加载 / 求值任一失败：owner 与全部等待者一起拿到该异常
+      // （可重试），不把等待者永久悬空。
+      _settleModule(jsAsset, completer, error: e, stackTrace: s);
       rethrow;
-    } finally {
-      _loadingModules.remove(jsAsset);
-      _loadingCompleters.remove(jsAsset);
+    }
+  }
+
+  /// 结算本 owner 的模块加载（成功 / 失败统一走这里）。
+  ///
+  /// 只有表里那条**仍是本次登记的 completer** 时才摘除并结算：被
+  /// [invalidateModules] 清理、或被另一个 owner 覆盖时静默返回——既不误结算
+  /// 他人，也不对已被摘除的条目做空断言。
+  void _settleModule(
+    String jsAsset,
+    Completer<void> completer, {
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    if (!identical(_loadingCompleters[jsAsset], completer)) return;
+    _loadingCompleters.remove(jsAsset);
+    if (completer.isCompleted) return;
+    if (error != null) {
+      completer.completeError(error, stackTrace);
+    } else {
+      completer.complete();
     }
   }
 
@@ -421,15 +468,16 @@ $out
 
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
-  final Set<String> _loadingModules = {};
 
   /// 清除所有已加载模块缓存（远程 zip 更新后调用，强制下次重新 evaluate）。
   /// 同时清空 JS 侧 `__modules` 表——依赖模块（flutter.js / provider.js 等）
   /// 下次也会重新加载，避免拿到旧类引用。
+  ///
+  /// **不清 [_loadingCompleters]**：in-flight 加载各由自己的 owner 用本地
+  /// completer 持有，清表会让等待者失去结算对象（旧实现即由此在并发首屏炸
+  /// 空断言）；保留后等待者仍等这次加载完成，且不会重复 evaluate 同一产物。
   void invalidateModules() {
     _loadedModules.clear();
-    _loadingModules.clear();
-    _loadingCompleters.clear();
     // 清空 JS 侧模块注册表：下次 import 解构时 __modules['path'] 为空，
     // loadModule 会重新执行该模块代码并重新注册。
     _eval('''

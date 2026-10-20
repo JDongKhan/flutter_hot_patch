@@ -131,10 +131,29 @@ class DemoListPage extends StatelessWidget {
     _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),
   ];
 
+  /// 清除补丁缓存（调试入口）：删本地解压产物 + 重置运行时模块缓存。
+  /// 清完重新进入热更页面即拉取最新产物（见 [JsRuntimeManager.clearCache]）。
+  Future<void> _clearCache(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await JsRuntimeManager.clearCache();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('已清除补丁缓存，重新进入热更页面即拉取最新产物')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('注解组件 → JS 热修复 Demo')),
+      appBar: AppBar(
+        title: const Text('注解组件 → JS 热修复 Demo'),
+        actions: [
+          IconButton(
+            tooltip: '清除补丁缓存',
+            icon: const Icon(Icons.cleaning_services_outlined),
+            onPressed: () => _clearCache(context),
+          ),
+        ],
+      ),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: _demos.length,

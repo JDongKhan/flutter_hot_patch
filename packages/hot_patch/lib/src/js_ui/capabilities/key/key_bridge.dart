@@ -71,9 +71,10 @@ void ensureKeyChannels() {
     onCreate: (id, meta) => _jsKeys.putIfAbsent(id, () => UniqueKey()),
     onRelease: (id) => _jsKeys.remove(id),
   ));
-  // 泄漏观测探针（仅 debug 登记；见 js_leak_snapshot.dart）。
+  // 泄漏观测探针（仅 debug 登记；按本页归属过滤，见 js_leak_snapshot.dart）。
   if (kDebugMode) {
-    dartHandleTableProbes['key/Global+Unique'] = () => _jsKeys.length;
+    dartHandleTableProbes['key/Global+Unique'] =
+        (pageKey) => debugPageOwnedCount(_jsKeys.keys, pageKey);
   }
 }
 
