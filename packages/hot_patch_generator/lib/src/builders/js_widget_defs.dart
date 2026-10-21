@@ -22,17 +22,22 @@ const String nodeHelperPackage = 'flutter';
 /// 维护，也天然只保留一份实现。
 String packageModulePath(String package) => 'patch/$package.js';
 
-/// 有 **builder/factory 写法**的滚动视图与 sliver 组件（`.builder` /
-/// `.separated`：产物带 `builder` 时走内联代理类展开子树，宿主据此还原
-/// 原生命名构造；普通 children / delegate 形态走宿主节点）。
+/// 有 **builder 命名构造**（`.builder` / `.separated`）的组件类型。
+///
+/// 只登记「构造名本身就是 builder 形态」的类型：产物带 `factory` 时走生成的
+/// JS 代理类循环调用拥有者方法展开子树，宿主据此还原原生命名构造；普通构造
+/// 与 `delegate:` 形态都是宿主节点，由 delegate 描述消费，不经过代理类。
+///
+/// 这份表是**产物组织信息**（决定 `patch/<package>.js` 里生成哪些代理类），
+/// 不是运行时行为白名单：运行时只看产物里的 `factory` / `__delegate` 协议，
+/// 不再按类型名判断。新增带 `.builder` 的滚动容器时在此登记即可。
 const Set<String> builderFormTypes = {
   'ListView',
   'GridView',
   'ReorderableListView',
   'SliverList',
   'SliverGrid',
-  'SliverFixedExtentList',
-  'SliverFillViewport',
+  'PageView',
 };
 
 /// 「逻辑 widget」类型名：状态/订阅逻辑必须跑在 JS 里的 widget（provider 提供/

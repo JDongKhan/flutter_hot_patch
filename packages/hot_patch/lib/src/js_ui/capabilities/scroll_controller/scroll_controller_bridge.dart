@@ -198,29 +198,26 @@ SliverGridDelegate _gridDelegateFromJson(JsRenderContext c) {
   );
 }
 
-/// builder 形态的方法名：统一翻译**按 Dart 形参名**下发道具——命名构造
-/// `.builder` / `.separated` 的回调是 `itemBuilder`；`delegate:
-/// SliverChildBuilderDelegate(...)` 形态的是 `builder`。
-String? _builderMethod(JsRenderContext c) {
-  final direct = c.str('itemBuilder') ?? c.str('builder');
-  if (direct != null) return direct;
-  // delegate 形态：builder 方法名在 children['delegate'] 的描述里。
-  final del = c.children['delegate'];
-  if (del is Map) {
-    final b = del['builder'];
-    if (b != null) return '$b';
-  }
-  return null;
+/// 命名构造 builder 形态：产物显式写下 `props.factory`（`builder` / `separated`）。
+/// 回调名 / 计数只由 Flutter 该命名构造自己的形参约定决定，不做跨类型猜测。
+bool _isNamedBuilderForm(JsRenderContext c) {
+  final f = c.str('factory');
+  return f == 'builder' || f == 'separated';
 }
 
-/// `.separated` 形态：产物协议以命名构造名（`props.factory === 'separated'`）为准，
-/// 兼容旧产物/兜底看「是否带了分隔项回调 `separatorBuilder`」。
-bool _isSeparated(JsRenderContext c) =>
-    c.str('factory') == 'separated' || c.str('separatorBuilder') != null;
+/// delegate builder 形态：生成器把 `SliverChildBuilderDelegate(...)` 译成
+/// `children.delegate = {__delegate: 'builder', builder, childCount}`。
+bool _isDelegateBuilderForm(JsRenderContext c) {
+  final del = c.children['delegate'];
+  return del is Map && del['__delegate'] == 'builder';
+}
 
-/// sliver delegate 还原（**delegate 形态**：`SliverChildBuilderDelegate` 源写法）：
-/// 有 `childCount` → `SliverChildBuilderDelegate`（代理类已按 childCount 展开
-/// children）；否则 → `SliverChildListDelegate`。四个 sliver 组件共用。
+/// `.separated` 形态：命名构造名即协议（`props.factory === 'separated'`）。
+bool _isSeparated(JsRenderContext c) => c.str('factory') == 'separated';
+
+/// sliver delegate 还原：delegate 描述里的 builder 形态 →
+/// `SliverChildBuilderDelegate`（子结点已按 childCount 展开）；否则 →
+/// `SliverChildListDelegate`。四个 sliver 组件共用。
 SliverChildDelegate _sliverDelegate(JsRenderContext c) {
   final del = c.children['delegate'];
   // ListDelegate 形态：delegate 的列表在 children['delegate']。
@@ -228,28 +225,23 @@ SliverChildDelegate _sliverDelegate(JsRenderContext c) {
     return SliverChildListDelegate(del);
   }
   final children = _flatChildren(c, 'children');
-  // BuilderDelegate 形态：childCount 在 delegate 描述里，展开结果在 __items。
-  final count = _builderCount(c, children.length);
-  if (_builderMethod(c) != null) {
+  if (_isDelegateBuilderForm(c)) {
     return SliverChildBuilderDelegate(
       (_, i) => _childAt(children, i),
-      childCount: count,
+      childCount: _builderCount(c, children.length),
     );
   }
   return SliverChildListDelegate(children);
 }
 
-/// builder 形态的计数：命名构造（`.builder`/`.separated`）用 `itemCount`，
-/// delegate 形态用 `childCount`；都缺省时退回已展开的子节点数。
+/// builder 形态的计数：delegate 描述的 `childCount` 优先；命名构造用
+/// `itemCount`；都缺省时退回已展开的子节点数。
 int _builderCount(JsRenderContext c, int fallback) {
-  final direct = c.int_('itemCount') ?? c.int_('childCount');
-  if (direct != null) return direct;
   final del = c.children['delegate'];
-  if (del is Map) {
-    final n = del['childCount'];
-    if (n is num) return n.toInt();
+  if (del is Map && del['childCount'] is num) {
+    return (del['childCount'] as num).toInt();
   }
-  return fallback;
+  return c.int_('itemCount') ?? fallback;
 }
 
 /// 第 [i] 个子节点（越界给占位，避免宿主在 JS 补丁未到齐时越界崩溃）。
@@ -257,10 +249,11 @@ Widget _childAt(List<Widget> children, int i) =>
     i < children.length ? children[i] : const SizedBox.shrink();
 
 /// 普通 children 形态读 Dart 形参名（`children` / `slivers`）；builder 代理
-/// 展开结果走内部键 `__items`。两者只有一个非空，按优先级合并。
+/// 展开结果走内部键 `__items`。`__items` 存在即权威（0 项也是合法的展开结果，
+/// 不能因为为空就回退到普通 children）。
 List<Widget> _flatChildren(JsRenderContext c, String key) {
   final expanded = c.children['__items'];
-  if (expanded is List<Widget> && expanded.isNotEmpty) return expanded;
+  if (expanded is List<Widget>) return expanded;
   final own = c.children[key];
   return own is List<Widget> ? own : const [];
 }
@@ -288,7 +281,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     // `.separated`（额外带 separatorBuilder，且 factory='separated'）——builder
     // 形态一律还原 Flutter 原生命名构造，不用 `ListView(children: [...])` 顶替。
     final children = _flatChildren(c, 'children');
-    final builder = _builderMethod(c);
+    final builder = _isNamedBuilderForm(c);
     final isSeparated = _isSeparated(c);
 
     Widget build(ScrollController? controller) {
@@ -298,7 +291,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final padding = nullableEdgeInsets(c.map('padding'));
       final physics = scrollPhysicsFromJson(c.props['physics']);
       final itemExtent = c.num_('itemExtent');
-      if (builder == null) {
+      if (!builder) {
         return ListView(
           controller: controller,
           // shrinkWrap 缺省保持 Flutter 默认（false）——与原生渲染一致。
@@ -355,7 +348,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   //   - controller：Flutter 的形参名是 `scrollController`（不是 ListView 的
   //     `controller`），走与 ListView 同一套 `_scrollControllerHost` 桥接。
   r.register('ReorderableListView', (c) {
-    final isBuilder = _builderMethod(c) != null;
+    final isBuilder = _isNamedBuilderForm(c);
     final children = _flatChildren(c, 'children');
 
     Widget build(ScrollController? controller) {
@@ -408,7 +401,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final shrinkWrap = c.bool_('shrinkWrap') ?? false;
     final physics = scrollPhysicsFromJson(c.props['physics']);
     final children = _flatChildren(c, 'children');
-    final isBuilder = _builderMethod(c) != null;
+    final isBuilder = _isNamedBuilderForm(c);
     final itemCount = _builderCount(c, children.length);
 
     Widget build(ScrollController? controller) => isBuilder
@@ -476,9 +469,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // `SliverChildBuilderDelegate` 形态（只有 childCount）还原
   // `SliverChildBuilderDelegate`；ListDelegate 形态还原 `SliverChildListDelegate`。
   r.register('SliverList', (c) {
-    final builder = _builderMethod(c);
-    if (builder == null) return SliverList(delegate: _sliverDelegate(c));
-    final children = ((c.children['__items'] as List<Widget>?) ?? const []);
+    // 非命名构造（delegate 形态）直接还原 delegate：BuilderDelegate 由
+    // `children.delegate` 描述还原，ListDelegate 由 delegate 列表还原。
+    if (!_isNamedBuilderForm(c)) return SliverList(delegate: _sliverDelegate(c));
+    final children = (c.children['__items'] as List<Widget>?) ?? const [];
     if (_isSeparated(c)) {
       final split = _splitSeparated(children);
       return SliverList.separated(
@@ -487,15 +481,10 @@ void registerScrollWidgets(JsWidgetRegistry r) {
         separatorBuilder: (_, i) => _childAt(split.separators, i),
       );
     }
-    // 命名构造 `.builder`（产物带 factory='builder'，且有 itemCount）才还原
-    // `SliverList.builder`；delegate 形态回到 SliverChildBuilderDelegate。
-    if (c.str('factory') == 'builder' || c.int_('itemCount') != null) {
-      return SliverList.builder(
-        itemCount: _builderCount(c, children.length),
-        itemBuilder: (_, i) => _childAt(children, i),
-      );
-    }
-    return SliverList(delegate: _sliverDelegate(c));
+    return SliverList.builder(
+      itemCount: _builderCount(c, children.length),
+      itemBuilder: (_, i) => _childAt(children, i),
+    );
   });
 
   // SliverGrid：gridDelegate 支持两种——
@@ -505,11 +494,12 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // `.builder` 命名构造还原 `SliverGrid.builder`，其余走 delegate 还原。
   r.register('SliverGrid', (c) {
     final gridDelegate = _gridDelegateFromJson(c);
-    if (_builderMethod(c) != null && c.int_('itemCount') != null) {
+    if (_isNamedBuilderForm(c)) {
+      final children = (c.children['__items'] as List<Widget>?) ?? const [];
       return SliverGrid.builder(
         gridDelegate: gridDelegate,
-        itemCount: c.int_('itemCount'),
-        itemBuilder: (_, i) => _childAt(((c.children['__items'] as List<Widget>?) ?? const []), i),
+        itemCount: _builderCount(c, children.length),
+        itemBuilder: (_, i) => _childAt(children, i),
       );
     }
     return SliverGrid(gridDelegate: gridDelegate, delegate: _sliverDelegate(c));
@@ -672,7 +662,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // nextPage / previousPage），否则由 PageView 内部自建。
   r.register('PageView', (c) {
     final children = _flatChildren(c, 'children');
-    final builder = _builderMethod(c);
+    final builder = _isNamedBuilderForm(c);
     final count = _builderCount(c, children.length);
 
     Widget build(PageController? controller) {
@@ -682,7 +672,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final pageSnapping = c.bool_('pageSnapping') ?? true;
       final physics = scrollPhysicsFromJson(c.props['physics']);
       final onPageChanged = c.on1<int>('onPageChanged');
-      if (builder != null) {
+      if (builder) {
         return PageView.builder(
           controller: controller,
           scrollDirection: direction,

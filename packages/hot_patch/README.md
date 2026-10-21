@@ -15,7 +15,7 @@ loaded only when something goes wrong.
 
 ```yaml
 dependencies:
-  hot_patch: ^0.1.0
+  hot_patch: ^0.2.1
 ```
 
 ### Usage
@@ -63,6 +63,9 @@ The generated JS of the example app can be browsed online:
   share one engine and it cannot be injected from outside); every `JsUiWidget` instance isolates its own root
   (node tree / provider / subscriptions / dirty queue) inside it by `pageKey`, so multiple instances on screen
   do not affect each other.
+- **Rendering extension points**: `registerNativeComponent(type, build)` for native widget implementations and
+  `registerJsDataCarrierType(type)` for non-widget data carriers (custom nav items / dropdown items) — both are
+  global, one-time registrations before `runApp`.
 
 ### Extension: JS → native capabilities
 
@@ -130,7 +133,7 @@ the host prefixes them with `[js-log] `). For the full level description and typ
 
 ```yaml
 dependencies:
-  hot_patch: ^0.1.0
+  hot_patch: ^0.2.1
 ```
 
 ### 使用
@@ -174,6 +177,9 @@ JsUiWidget(
 - **多实例隔离**：运行时是全局单例（`JsRuntimeManager.instance`，所有实例共用一个引擎，
   不从外部注入）；每个 `JsUiWidget` 实例按 `pageKey` 在其中隔离自己的根
   （结点树 / provider / 订阅 / 脏队列），同屏多实例互不影响。
+- **渲染扩展点**：`registerNativeComponent(type, build)` 注册原生 widget 实现；
+  `registerJsDataCarrierType(type)` 注册非 Widget 数据载体（自定义导航项 / 下拉项）。
+  两者都是全局一次性注册，放在 `runApp` 之前。
 
 ### 扩展：JS → 原生能力
 

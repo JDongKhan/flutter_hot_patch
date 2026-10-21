@@ -56,14 +56,14 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     if (name == 'key') continue;
 
     if (_isEventArg(name)) {
-      // `on*` 回调有两种消费方，按**目标类型**分派：
-      //   - 宿主 widget（`ElevatedButton.onPressed` / `InkWell.onTap`…）：宿主
-      //     只认 `{__fn:id}` 句柄，点击时经 invoke 回传 JS 执行 → 下发**事件句柄**；
-      //   - 组件（自定义 / 私有 / `@PatchEntry` 子组件 —— 元素是 JS 类引用，
+      // `on*` 回调有两种消费方，按**目标是否 JS 侧组件**分派（不看内建类型表）：
+      //   - JS 侧组件（自定义 / 私有 / `@PatchEntry` 子组件 —— 元素是 JS 类引用，
       //     props 留在 JS 侧）：子组件把回调**当函数直接调**（`this.onPick(k, v)`），
       //     故下发**可调用 JS 值**（方法 tear-off 包成绑定 this 的箭头闭包）。
-      //     下发句柄会出现 `TypeError: this.onPick is not a function`。
-      if (!builtinWidgetTypes.contains(node.type)) {
+      //     下发句柄会出现 `TypeError: this.onPick is not a function`；
+      //   - 宿主 widget（`ElevatedButton.onPressed` / `InkWell.onTap`…）：宿主
+      //     只认 `{__fn:id}` 句柄，点击时经 invoke 回传 JS 执行 → 下发**事件句柄**。
+      if (_isJsSideWidget(ctx, node.type)) {
         final fn = _functionOrNull(ctx, value);
         if (fn != null) {
           props[name] = fn;
@@ -150,6 +150,21 @@ String? firstTypeArgOf(Expression? e) {
 
 /// 事件参数：`on*` 前缀（`onPressed` / `onChanged` / `onTap` / `onReorder` …）。
 bool _isEventArg(String name) => name.length > 2 && name.startsWith('on');
+
+/// 该结点的 `on*` 回调是否由 **JS 侧代码直接调用**（而不是交给宿主）。
+///
+/// 判据只看产物归属与最终消费方，与「内建/自定义」无关：
+///   - 业务组件有 JS 产物 → JS 侧直接调用，下发可调用闭包；
+///   - 逻辑组件（Builder / Consumer …）→ JS 类内部消费；
+///   - builder 代理类型（ListView / PageView / ReorderableListView …）→ 代理类
+///     只负责展开子结点，props **原样透传给宿主节点**，回调仍由宿主消费，
+///     必须下发事件句柄；
+///   - 其余宿主/原生类型 → 事件句柄。
+bool _isJsSideWidget(WidgetTranslateContext ctx, String type) {
+  if (ctx.importResolver?.call(type) != null) return true;
+  if (!ctx.jsClassWidgets.contains(type)) return false;
+  return !ctx.delegateClassWidgets.contains(type);
+}
 
 String? _eventOrNull(WidgetTranslateContext ctx, Expression e) {
   // `onXxx: null` 是「禁用」语义（如 `onPressed: null`），不入产物。

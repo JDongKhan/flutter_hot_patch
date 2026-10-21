@@ -112,19 +112,16 @@ export function __h(type, props) {
   return { type: type, props: data, children: slots, element: true };
 }''';
 
-/// builder/factory 形态（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
-/// 源码（类名 = Dart 类型名）：道具**按 Dart 形参名**下发（统一翻译不改名），
-/// 故回调方法名取 `props.itemBuilder`（命名构造的一致参数名；`delegate:
-/// SliverChildBuilderDelegate(...)` 形态的是 `props.builder`）、分隔项方法名取
-/// `props.separatorBuilder`、计数键为 `itemCount`（命名构造）或 `childCount`
-/// （delegate 形态）；`props.factory` 是命名构造名（`builder` / `separated`），
-/// 原样透传给宿主供其还原原生构造。build 时循环调用收集子树，包回同名的宿主
-/// 节点——children 交给宿主按原生 `ListView.builder` / `SliverList.builder` /
-/// `GridView.builder` / `SliverChildBuilderDelegate` 还原。与 ListenableBuilder
-/// 的 `__owner()` 向上找拥有者方法机制一致。
+/// builder 命名构造（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
+/// 源码（类名 = Dart 类型名）：产物显式带 `props.factory`（`builder` /
+/// `separated`），回调按 Flutter 该命名构造的形参名下发——`itemBuilder`、
+/// `separatorBuilder`、`itemCount`。`delegate:` 形态不经过本类（直接是宿主节点，
+/// 由 `children.delegate` 描述消费）。
 ///
-/// 只在 builder 形态下被渲染层引用（普通 children/delegate 形态直接是宿主节点
-/// `__h('SliverList', ...)`），因此 build 无需再判形态。
+/// build 时循环调用拥有者方法收集子树，包回同名宿主节点；展开结果走内部键
+/// `__items`，由 `__h` 归入 `children` 对象，宿主 renderer 按序取用。
+///
+/// 只在命名构造 builder 形态下被渲染层引用，因此 build 无需再判形态。
 ///
 /// 被委托方法的第一个实参是 **build 的 `context` 形参**（运行时统一
 /// `inst.build(contextOf(inst))` 传入，锚点就是本代理组件自身的结点，与 Dart 侧
@@ -136,7 +133,7 @@ export class $type {
     this.props = props || {};
   }
   __owner() {
-    var name = this.props.itemBuilder || this.props.builder;
+    var name = this.props.itemBuilder;
     var owner = this.__parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     return owner;
@@ -144,21 +141,18 @@ export class $type {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var name = this.props.itemBuilder || this.props.builder;
+    var name = this.props.itemBuilder;
     var out = [];
-    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
-    var n = this.props.childCount !== undefined
-        ? this.props.childCount
-        : (this.props.itemCount || 0);
+    var n = this.props.itemCount || 0;
     // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
     var sep = this.props.separatorBuilder;
     for (var i = 0; i < n; i++) {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
     // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    // children 对象，宿主 renderer 按序取用。
     var p = {};
     for (var k in this.props) { p[k] = this.props[k]; }
     p.__items = out;
@@ -413,9 +407,9 @@ String renderPackageModule(String package, Set<String> types) {
         ..writeln(logic);
       continue;
     }
-    // Sliver builder 代理：`SliverList({builder, childCount})` 形态
-    // 走本类（build 时循环调用拥有者方法收集子树）；普通形态由渲染层直接
-    // 产出宿主节点（`__h('SliverList', ...)`），不经过本类。
+    // builder 命名构造代理（`.builder` / `.separated`）：元素 type 是类引用，
+    // build 时循环调用拥有者方法收集子树；普通构造与 `delegate:` 形态由渲染层
+    // 直接产出宿主节点（`__h('SliverList', ...)`），不经过本类。
     if (builderFormTypes.contains(t)) {
       b
         ..writeln()

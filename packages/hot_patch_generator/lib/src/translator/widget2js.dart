@@ -38,9 +38,7 @@ class WidgetNode {
   /// 原始表达式（InstanceCreationExpression 等，取类型参数等用）。
   final Expression? expr;
 
-  final String? factory;
-
-  WidgetNode(this.type, this.args, {this.factory, this.expr})
+  WidgetNode(this.type, this.args, {this.expr})
     : positionalArgs = [
         for (final a in args)
           if (a is! NamedExpression) a,
@@ -156,12 +154,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (!jsClassWidgets.contains(type)) return false;
     if (!delegateClassWidgets.contains(type)) return true;
     if (props == null) return false;
-    // 命名构造 `.builder` / `.separated`（产物带 `factory`，回调是参数名
-    // `itemBuilder` / `separatorBuilder` / `builder`）与 `delegate:` 的
-    // BuilderDelegate 形态（带 `builder` + `childCount`）→ 走 JS 代理类循环调用
-    // 拥有者方法展开子树；普通 `children:` / ListDelegate 形态直接是宿主节点。
-    return props.containsKey(factoryPropsKey) ||
-        props.keys.any((k) => k == 'builder' || k.endsWith('Builder'));
+    // 判定只看产物里**显式写下的工厂名**（`factory`），不看属性名：
+    // 命名构造 `.builder` / `.separated` → 走生成的 JS 代理类循环调用拥有者
+    // 方法展开子树；普通构造（含 `GridView.count` / `.extent`）与 `delegate:`
+    // 形态直接是宿主节点，由宿主按 delegate / 平铺参数消费。
+    final factory = _semanticType(props[factoryPropsKey]);
+    return factory == 'builder' || factory == 'separated';
   }
 
   /// 记录一个被兜底为「保留具体类型名结点」的自定义组件名。
@@ -216,7 +214,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     // 形态，与 widget 类型无关。
     if (e is MethodInvocation) {
       if (actionByMethod.containsKey(ctor)) return _exprAsElement(e);
-      if (!_isClassName(ctor)) return _exprAsElement(e);
+      if (!isClassName(ctor)) return _exprAsElement(e);
     }
     // 统一翻译：任意构造 → 结点（不查注册表、不区分内建/自定义）。未识别的
     // 自定义与三方组件同样产出「保留具体类型名」的结点，运行时按需原生注入
@@ -520,18 +518,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     }
   }
 
-  /// 名字是否形如**类名**：跳过前导下划线后首字母大写。
-  ///
-  /// `Image` / `_OrderCard`（私有组件类）是类名；`_model` / `context` / `build`
-  /// 是实例成员。用于区分「组件构造」与「实例方法调用」，与 widget 类型无关。
-  static bool _isClassName(String name) {
-    var n = name;
-    while (n.startsWith('_')) {
-      n = n.substring(1);
-    }
-    return n.isNotEmpty && n[0] == n[0].toUpperCase();
-  }
-
   /// 渲染一个已翻译的中立节点为统一元素构造 `__h(type, props)`。
   ///
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
@@ -652,7 +638,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final parts = ctorSource.split('.');
     for (var i = parts.length - 1; i >= 0; i--) {
       final seg = _stripGenerics(parts[i]);
-      if (_isClassName(seg)) return seg;
+      if (isClassName(seg)) return seg;
     }
     return _stripGenerics(parts.last);
   }
@@ -682,35 +668,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       if (a is! NamedExpression) return a;
     }
     return null;
-  }
-
-  /// children / slivers / tabs 等列表参数 → **已翻译的**JS 数组项（节点 Map /
-  /// JS 表达式字符串），渲染层逐项 [jsLiteral]。
-  ///
-  ///   - `children: [...]` 字面量 → 逐元素 [translateElement]（if/for/spread 由它
-  ///     统一展开成 JS spread 表达式）；
-  ///   - `children: someList`（字段 / 局部变量，如 `Row(children: children)`）→
-  ///     单个 `...<expr>` spread 项，运行时把该数组展开进对应的 props 数组。
-  List<Object?> listArg(List<Expression> args, String name, String ctor) {
-    final e = namedArg(args, name);
-    if (e is ListLiteral) {
-      return [for (final c in e.elements) translateElement(c)];
-    }
-    if (e != null) {
-      try {
-        return ['...${jsDataExpr(e)}'];
-      } catch (err) {
-        throw FormatException('$ctor 的 $name 无法翻译：${e.toSource()}（$err）');
-      }
-    }
-    throw FormatException('$ctor 缺少 $name 列表');
-  }
-
-  /// 字段名（`_count`）→ 状态名（`count`）
-  String propOf(Identifier id) {
-    final prop = propByField[id.name];
-    if (prop != null) return prop;
-    throw FormatException('"${id.name}" 不是组件状态字段（@PatchEntry 组件的实例字段）');
   }
 
   /// 方法名 → 事件名
@@ -1083,34 +1040,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return '_app_host_.invoke(${jsString(channel)}, ${hostArgsJs(pos, named)})';
   }
 
-  /// BorderRadius.all(Radius.circular(n)) / BorderRadius.circular(n) → 数字字符串。
-  String? borderRadiusExpr(Expression e) {
-    final (ctor, args) = ctorOf(e);
-    if (ctor != 'all' && ctor != 'circular') return null;
-    for (final a in args) {
-      final n = _radiusNum(a);
-      if (n != null) return n;
-    }
-    return null;
-  }
-
-  String? _radiusNum(Expression e) {
-    final direct = numLiteralJs(e);
-    if (direct != null) return direct;
-    final (ctor, args) = ctorOf(e);
-    if (ctor != 'circular') return null;
-    for (final a in args) {
-      final n = numLiteralJs(a);
-      if (n != null) return n;
-    }
-    return null;
-  }
-
-  /// 状态字段引用或字面量 → JS 表达式
-  /// （Switch value / Slider value 等「绑定状态或常量」的场景）。
-  /// 与数据表达式共用同一套翻译（一个地方支持新语法，处处生效）。
-  String propExpr(Expression e) => jsDataExpr(e);
-
   /// 数据表达式 → JS 表达式。
   ///
   /// 委托给**唯一**的表达式翻译器 [rhsToJs]（组件数据表达式与模型方法体、
@@ -1285,12 +1214,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (ctor == null) {
       throw FormatException('不支持的 UI 表达式: ${e.toSource()}');
     }
-    return WidgetNode(
-      ctor,
-      args,
-      factory: e is MethodInvocation ? e.methodName.name : null,
-      expr: e,
-    );
+    return WidgetNode(ctor, args, expr: e);
   }
 }
 
@@ -1318,6 +1242,19 @@ void _warnDegrade(String what, String source, Object err) {
     '[hot_patch_generator] $what 无法翻译，已降级为占位结点：'
     '$source（$err）',
   );
+}
+
+/// 名字是否形如**类名**：跳过前导下划线后首字母大写。
+///
+/// `Image` / `_OrderCard`（私有组件类）是类名；`_model` / `context` / `build`
+/// 是实例成员。用于区分「组件构造」与「实例方法调用」等语法形态，与 widget
+/// 类型无关。翻译层多处共用这一份判定（不得各自复制）。
+bool isClassName(String name) {
+  var n = name;
+  while (n.startsWith('_')) {
+    n = n.substring(1);
+  }
+  return n.isNotEmpty && n[0] == n[0].toUpperCase();
 }
 
 /// 跨文件「静态单例类」解析器（如 theme/panel_colors.dart 的 MyColors）。

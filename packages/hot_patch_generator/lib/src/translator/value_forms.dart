@@ -232,7 +232,7 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
     } else if (_valueCtors.contains(ctor)) {
       // 数据对象构造（Size / Duration / Controller / Notifier…）→ 构造调用表达式。
       return _jsExprOrNull(e, ctx);
-    } else if (_isClassName(ctor)) {
+    } else if (isClassName(ctor)) {
       // 构造名是**类名**且不属于已知值类型 → 值是**子结点**（`leading: Icon(...)`、
       // `title: Text(...)`、`sliver: SliverList(...)`、嵌套组件 `_OrderCard(...)`）
       // → 交结点翻译。是否被运行时当作结点消费由运行时决定（`propChild`）。
@@ -257,7 +257,7 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
       // `Owner.name` → 运行时 ReferenceError，整个组件挂载失败、页面只剩
       // 「加载失败」占位。
       final member = staticMemberOf(e);
-      if (member != null && _isClassName(owner) && !member.startsWith('_')) {
+      if (member != null && isClassName(owner) && !member.startsWith('_')) {
         return ctx.jsString(member);
       }
     }
@@ -279,7 +279,7 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
 /// 类引用而不是实例。构造里的实参不下发（运行时按默认构造）——与旧口径一致。
 String? _classRefOf(Expression expr, WidgetTranslateContext ctx) {
   final (ctor, _) = ctx.ctorOf(expr);
-  if (ctor == null || !_isClassName(ctor)) return null;
+  if (ctor == null || !isClassName(ctor)) return null;
   // 登记依赖：确保该类（跨文件模型类）被翻译并 import 进本产物。
   ctx.collectDependency(ctor);
   return ctor;
@@ -351,11 +351,11 @@ String? _branchJs(Expression e, WidgetTranslateContext ctx) {
 /// 表达式是否是 **widget 构造**（普通构造 / 命名构造 / 静态工厂）。
 ///
 /// `ListView.separated(...)` 的 `ctorOf` 返回方法名 `separated`，不是类名；
-/// 之前只查 `_isClassName(ctor)` 会漏掉它，导致三目分支里的列表整体丢失。
+/// 之前只查类名形态会漏掉它，导致三目分支里的列表整体丢失。
 bool _isWidgetExpr(Expression e, WidgetTranslateContext ctx) {
   final (ctor, _) = ctx.ctorOf(e);
   if (ctor == null) return false;
-  if (_isClassName(ctor) &&
+  if (isClassName(ctor) &&
       !_valueCtors.contains(ctor) &&
       !_ctorConverters.containsKey(ctor)) {
     return true;
@@ -363,7 +363,7 @@ bool _isWidgetExpr(Expression e, WidgetTranslateContext ctx) {
   // 命名构造 / 静态工厂：receiver 是类名（`ListView.separated` / `Image.network`）。
   if (e is MethodInvocation && e.target is Identifier) {
     final recv = (e.target as Identifier).name;
-    if (_isClassName(recv) &&
+    if (isClassName(recv) &&
         !_valueCtors.contains(recv) &&
         !_ctorConverters.containsKey(recv)) {
       return true;
@@ -373,8 +373,12 @@ bool _isWidgetExpr(Expression e, WidgetTranslateContext ctx) {
 }
 
 /// 参数名是否是「builder 语义」的闭包（返回 widget 的回调）：`builder` /
-/// `itemBuilder` / `separatorBuilder` / `delegate` 等。这是通用约定，
-/// 与 widget 类型无关。
+/// `itemBuilder` / `separatorBuilder` / `pageBuilder` …
+///
+/// 这是**语言级翻译协议**（Flutter 全生态一致的命名约定），不是某个组件的
+/// 特判：生成器只有语法树、没有类型解析，无法从闭包签名可靠判断返回类型，
+/// 因此以命名约定区分「返回 widget 的回调」与「返回值/工厂的闭包」。所有
+/// 组件（内建、自定义、三方）共用这一条规则，新增组件无需登记。
 bool _isBuilderArg(String? name) =>
     name != null && (name == 'builder' || name.endsWith('Builder'));
 
@@ -406,16 +410,6 @@ const Set<String> _valueCtors = {
   'PageStorageKey',
   'UniqueKey',
 };
-
-/// 名字是否形如**类名**：跳过前导下划线后首字母大写（`Icon` / `_OrderCard`
-/// 是类名；`_model` / `context` 是实例成员）。
-bool _isClassName(String name) {
-  var n = name;
-  while (n.startsWith('_')) {
-    n = n.substring(1);
-  }
-  return n.isNotEmpty && n[0] == n[0].toUpperCase();
-}
 
 /// `Owner.name` 形态的 owner 名（`Colors.red` → `'Colors'`）；否则 null。
 String? staticRefOwner(Expression e) {
@@ -509,8 +503,7 @@ String? extractBuilderMethod(
   ctx.builderTrees.add(subtree);
   final idx = ctx.builderTrees.length - 1;
   ctx.builderNames.add('$prefix$idx');
-  ctx.builderParams.add(
-      [contextName, if (indexName != null) indexName].join(', '));
+  ctx.builderParams.add([contextName, ?indexName].join(', '));
   ctx.builderPreludes.add(preludes.isEmpty ? '' : preludes.join(' '));
   return '$prefix$idx';
 }

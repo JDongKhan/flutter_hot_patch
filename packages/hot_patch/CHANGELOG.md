@@ -1,3 +1,13 @@
+## 0.2.1
+
+**builder 形态判定统一为产物协议（只改运行时 Dart，需完全重启 App 生效）。**
+
+- **删除 builder 类型白名单**：`mini_react` 不再按 `ListView` / `GridView` / `PageView` 等类型名决定是否展开子结点，只消费产物里的两个显式协议——命名构造代理类写入的 `children.__items`，以及 `delegate` 描述的 `{__delegate: 'builder', builder, childCount}`。自定义滚动容器沿用同一协议即可，无需改运行时。
+- **滚动 / sliver renderer 按协议判定**：`ListView` / `GridView` / `ReorderableListView` / `SliverList` / `SliverGrid` / `PageView` 只读 `props.factory`（`builder` / `separated`）与 delegate 描述，不再按 `itemBuilder` / `builder` 等属性名猜测形态；计数按形态取 `itemCount`（命名构造）或 delegate 的 `childCount`。
+- **槽位解析单点实现**：`buildJsElement` 与数据载体上下文共用 `_childrenFromSlots`，并删除旧形状兜底（children 为裸数组、元素混在 props 里）；协议以 `element: true` + `children` Map 为准。
+- **数据载体可注册**：新增 `registerJsDataCarrierType(type)` / `isJsDataCarrierType(type)`，业务自定义导航项 / 下拉项等类型无需改框架源码。
+- **空 builder 结果按权威处理**：`__items` 存在但为 0 项时不再回退到普通 children。
+
 ## 0.2.0
 
 **适配生成器 0.2.0 的新产物协议；另有一项需随 App 重新构建才生效的运行时补齐。**

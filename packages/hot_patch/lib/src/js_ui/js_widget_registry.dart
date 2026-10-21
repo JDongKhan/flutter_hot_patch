@@ -5,14 +5,29 @@ import '../utils/hot_patch_log.dart';
 import 'capabilities/js_ui_capabilities.dart';
 
 /// 非 Widget 数据载体类型：它们在产物里也是 element 形态，但宿主 renderer
-/// 只读数据（type/props/propChildren）组装，不能当 Widget 挂载。
-const Set<String> dataCarrierTypes = {
+/// 只读数据（type/props/children）组装，不能当 Widget 挂载。
+///
+/// 这是一张**可注册表**：内置类型在此登记；业务 / 三方自定义的条目类型
+/// （自定义导航项、下拉项、装饰配置等）在 `runApp` 前调用
+/// [registerJsDataCarrierType] 登记即可，无需改框架源码。与
+/// [registerNativeComponent] 同属「类型 → 消费方式」的公开扩展点。
+final Set<String> _dataCarrierTypes = <String>{
   'BottomNavigationBarItem',
   'DropdownMenuItem',
   // InputDecoration 是值对象（不是 Widget），TextField renderer 只读它的
   // hintText / labelText 等 props。
   'InputDecoration',
 };
+
+/// 登记一个「非 Widget 数据载体」类型。
+///
+/// 数据载体与 Widget 的区别只在**消费方式**：同为 element 描述，Widget 由
+/// 宿主挂载成子树，数据载体直接以 [JsRenderContext] 交给父 renderer 读字段。
+/// 幂等，重复登记无副作用。
+void registerJsDataCarrierType(String type) => _dataCarrierTypes.add(type);
+
+/// 该类型是否登记为非 Widget 数据载体（类型表驱动，不做类型名硬编码判断）。
+bool isJsDataCarrierType(String type) => _dataCarrierTypes.contains(type);
 
 /// 不需要动宿主；只有引入 Flutter 侧不存在的**视觉** widget 才注册一条。
 class JsRenderContext {
@@ -160,72 +175,7 @@ Widget? buildJsElement(
   final props = raw['props'] is Map
       ? (raw['props'] as Map).cast<String, dynamic>()
       : <String, dynamic>{};
-  final rawSlots = raw['children'];
-
-  final children = <String, Object?>{};
-
-  void addList(String key, Object? value) {
-    final widgets = <Widget>[];
-    final contexts = <JsRenderContext>[];
-    var dataCarrier = false;
-    if (value is List) {
-      for (final ch in value) {
-        final w = buildJsElement(ch, invoke);
-        if (w != null) widgets.add(w);
-        final ctx = _descriptorContext(ch, invoke);
-        contexts.add(ctx);
-        if (dataCarrierTypes.contains(ctx.type)) dataCarrier = true;
-      }
-    }
-    children[key] = dataCarrier ? contexts : widgets;
-  }
-
-  if (rawSlots is Map) {
-    for (final entry in rawSlots.entries) {
-      final key = '${entry.key}';
-      final v = entry.value;
-      if (key == '__items' && v is List) {
-        final items = <Widget>[];
-        for (final ch in v) {
-          items.add(buildJsElement(ch, invoke) ?? const SizedBox.shrink());
-        }
-        children['__items'] = items;
-        continue;
-      }
-      if (v is List) {
-        addList(key, v);
-        continue;
-      }
-      if (v is Map && v['__delegate'] != null) {
-        if (v['__delegate'] == 'list') {
-          addList(key, v['children']);
-        } else {
-          children[key] = v;
-        }
-        continue;
-      }
-      if (v is Map && v['element'] == true) {
-        final ctx = _descriptorContext(v, invoke);
-        children[key] = dataCarrierTypes.contains(ctx.type)
-            ? ctx
-            : buildJsElement(v, invoke);
-      }
-    }
-  } else if (rawSlots is List) {
-    final items = <Widget>[];
-    for (final ch in rawSlots) {
-      items.add(buildJsElement(ch, invoke) ?? const SizedBox.shrink());
-    }
-    children['__items'] = items;
-  }
-
-  // 旧形状（元素值仍在 props 里）兜底。
-  if (rawSlots is! Map) {
-    for (final e in props.entries) {
-      final w = buildJsElement(e.value, invoke);
-      if (w != null) children[e.key] = w;
-    }
-  }
+  final children = _childrenFromSlots(raw['children'], invoke);
 
   final builder = jsWidgetRegistry.lookup(type) ?? jsWidgetRegistry.fallback;
   if (builder == null) {
@@ -244,7 +194,71 @@ Widget? buildJsElement(
   );
 }
 
-/// 元素描述 → 仅含数据（type/props/propChildren）的上下文：供
+/// 解析元素 `children` 槽位协议 → 按 Dart 实参原名索引的槽位表。
+///
+/// 协议唯一（由产物里的 `__h` 产出）：
+///   - `__items`：builder 代理类展开结果（有序子结点）；
+///   - 数组：widget / 数据载体列表；
+///   - `{__delegate: 'list' | 'builder', …}`：delegate 描述；
+///   - `{element: true}`：单个 widget / 数据载体。
+///
+/// 不支持旧形状（children 是裸数组、元素混在 props 里）——产物以最新协议为准，
+/// 形状不合法时宁可丢 slot 也不猜。
+Map<String, Object?> _childrenFromSlots(
+  Object? rawSlots,
+  void Function(Object? handler, [List<Object?> args]) invoke,
+) {
+  final children = <String, Object?>{};
+  if (rawSlots is! Map) return children;
+
+  void addList(String key, Object? value) {
+    final widgets = <Widget>[];
+    final contexts = <JsRenderContext>[];
+    var dataCarrier = false;
+    if (value is List) {
+      for (final ch in value) {
+        final w = buildJsElement(ch, invoke);
+        if (w != null) widgets.add(w);
+        final ctx = _descriptorContext(ch, invoke);
+        contexts.add(ctx);
+        if (isJsDataCarrierType(ctx.type)) dataCarrier = true;
+      }
+    }
+    children[key] = dataCarrier ? contexts : widgets;
+  }
+
+  for (final entry in rawSlots.entries) {
+    final key = '${entry.key}';
+    final v = entry.value;
+    if (key == '__items' && v is List) {
+      children['__items'] = [
+        for (final ch in v) buildJsElement(ch, invoke) ?? const SizedBox.shrink(),
+      ];
+      continue;
+    }
+    if (v is List) {
+      addList(key, v);
+      continue;
+    }
+    if (v is Map && v['__delegate'] != null) {
+      if (v['__delegate'] == 'list') {
+        addList(key, v['children']);
+      } else {
+        children[key] = v;
+      }
+      continue;
+    }
+    if (v is Map && v['element'] == true) {
+      final ctx = _descriptorContext(v, invoke);
+      children[key] = isJsDataCarrierType(ctx.type)
+          ? ctx
+          : buildJsElement(v, invoke);
+    }
+  }
+  return children;
+}
+
+/// 元素描述 → 仅含数据（type/props/children）的上下文：供
 /// `BottomNavigationBarItem` / `DropdownMenuItem` 这类**非 Widget 数据载体**
 /// 子结点由父 renderer 直接读数据组装。
 JsRenderContext _descriptorContext(
@@ -254,47 +268,10 @@ JsRenderContext _descriptorContext(
   final props = raw is Map && raw['props'] is Map
       ? (raw['props'] as Map).cast<String, dynamic>()
       : <String, dynamic>{};
-  final children = <String, Object?>{};
-  final slots = raw is Map ? raw['children'] : null;
-  if (slots is Map) {
-    for (final e in slots.entries) {
-      final key = '${e.key}';
-      final v = e.value;
-      if (v is List) {
-        final widgets = <Widget>[];
-        for (final ch in v) {
-          final w = buildJsElement(ch, invoke);
-          if (w != null) widgets.add(w);
-        }
-        children[key] = widgets;
-      } else if (v is Map && v['__delegate'] == 'list') {
-        final widgets = <Widget>[];
-        final list = v['children'];
-        if (list is List) {
-          for (final ch in list) {
-            final w = buildJsElement(ch, invoke);
-            if (w != null) widgets.add(w);
-          }
-        }
-        children[key] = widgets;
-      } else if (v is Map && v['__delegate'] != null) {
-        children[key] = v;
-      } else if (v is Map && v['element'] == true) {
-        final w = buildJsElement(v, invoke);
-        if (w != null) children[key] = w;
-      }
-    }
-  } else {
-    // 旧形状兜底：元素值仍在 props 里。
-    for (final e in props.entries) {
-      final w = buildJsElement(e.value, invoke);
-      if (w != null) children[e.key] = w;
-    }
-  }
   return JsRenderContext(
     type: raw is Map ? '${raw['type']}' : '',
     props: props,
-    children: children,
+    children: _childrenFromSlots(raw is Map ? raw['children'] : null, invoke),
     invoke: invoke,
   );
 }
