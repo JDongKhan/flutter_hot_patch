@@ -54,9 +54,57 @@ _scrollBridge = JsControllerBridge<ScrollController>(
   },
 );
 
+/// PageController 句柄桥：与 ScrollController 同一套通用层，只多
+/// jumpToPage / animateToPage / nextPage / previousPage 的方法分派。
+final JsControllerBridge<PageController> _pageBridge =
+    JsControllerBridge<PageController>(
+  kind: 'ctrl/Page',
+  // 真实 PageController 由 Host 带 initialPage / viewportFraction 创建
+  // （与 TabController 同模式）；此处不能预创建默认实例，否则 Host 的
+  // putIfAbsent 会复用它而丢掉构造参数。
+  onOp: (c, op, payload) {
+    if (op == 'call') {
+      final method = payload['method']?.toString() ?? '';
+      final args = payload['args'] is List ? payload['args'] as List : const [];
+      const curves = <String, Curve>{
+        'linear': Curves.linear,
+        'easeOut': Curves.easeOut,
+        'easeIn': Curves.easeIn,
+        'easeInOut': Curves.easeInOut,
+      };
+      final ms = args.length > 1 && args[1] is num
+          ? (args[1] as num).toInt()
+          : 300;
+      final curve = args.length > 2
+          ? curves[args[2]?.toString()] ?? Curves.easeOut
+          : Curves.easeOut;
+      final page = args.isNotEmpty && args[0] is num
+          ? (args[0] as num).toInt()
+          : 0;
+      if (method == 'jumpToPage') {
+        c.jumpToPage(page);
+      } else if (method == 'animateToPage') {
+        c.animateToPage(
+          page,
+          duration: Duration(milliseconds: ms),
+          curve: curve,
+        );
+      } else if (method == 'nextPage') {
+        c.nextPage(duration: Duration(milliseconds: ms), curve: curve);
+      } else if (method == 'previousPage') {
+        c.previousPage(duration: Duration(milliseconds: ms), curve: curve);
+      }
+    }
+    return null;
+  },
+);
+
 /// 幂等注册 ScrollController 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities
 /// 聚合调用）。
-void ensureScrollControllerChannels() => _scrollBridge.ensure();
+void ensureScrollControllerChannels() {
+  _scrollBridge.ensure();
+  _pageBridge.ensure();
+}
 
 /// controller 句柄 → 桥接 Host（ListView / GridView / CustomScrollView /
 /// SingleChildScrollView 共用）：按 id 取/建真实 controller，滚动经 invoke
@@ -85,6 +133,31 @@ Widget _scrollControllerHost(
   },
   buildChild: build,
 );
+
+Widget _pageControllerHost(
+  JsRenderContext c,
+  String id,
+  int initialPage,
+  double viewportFraction,
+  Widget Function(PageController controller) build,
+) =>
+    JsControllerHost<PageController>(
+      bridge: _pageBridge,
+      id: id,
+      create: () => PageController(
+        initialPage: initialPage,
+        viewportFraction: viewportFraction,
+      ),
+      forward: (controller, handler) {
+        if (!controller.hasClients) return;
+        final page = controller.page;
+        if (page == null) return;
+        c.invoke(handler, [
+          {'page': page, 'initialPage': initialPage},
+        ]);
+      },
+      buildChild: build,
+    );
 
 /// 从 props 还原 SliverGridDelegate：含 `maxCrossAxisExtent` →
 /// SliverGridDelegateWithMaxCrossAxisExtent，否则
@@ -594,19 +667,55 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     );
   });
 
-  // PageView：`controller` 传 null（译者不下发显式 controller，无需 PageController
-  // 桥）→ PageView 内部自建 PageController。页切换经 onPageChanged 回传
-  // 页码（值事件），JS 侧据此更新指示点。
-  r.register(
-    'PageView',
-    (c) => PageView(
-      scrollDirection:
-          axisFromJson(c.props['scrollDirection']) ?? Axis.horizontal,
-      reverse: c.bool_('reverse') ?? false,
-      pageSnapping: c.bool_('pageSnapping') ?? true,
-      physics: scrollPhysicsFromJson(c.props['physics']),
-      onPageChanged: c.on1<int>('onPageChanged'),
-      children: ((c.children['__items'] as List<Widget>?) ?? const []),
-    ),
-  );
+  // PageView：普通 children / `.builder`（itemBuilder + itemCount）；controller
+  // 是 JS PageController 句柄时走 id-bridge（jumpToPage / animateToPage /
+  // nextPage / previousPage），否则由 PageView 内部自建。
+  r.register('PageView', (c) {
+    final children = _flatChildren(c, 'children');
+    final builder = _builderMethod(c);
+    final count = _builderCount(c, children.length);
+
+    Widget build(PageController? controller) {
+      final direction =
+          axisFromJson(c.props['scrollDirection']) ?? Axis.horizontal;
+      final reverse = c.bool_('reverse') ?? false;
+      final pageSnapping = c.bool_('pageSnapping') ?? true;
+      final physics = scrollPhysicsFromJson(c.props['physics']);
+      final onPageChanged = c.on1<int>('onPageChanged');
+      if (builder != null) {
+        return PageView.builder(
+          controller: controller,
+          scrollDirection: direction,
+          reverse: reverse,
+          pageSnapping: pageSnapping,
+          physics: physics,
+          onPageChanged: onPageChanged,
+          itemCount: count,
+          itemBuilder: (_, i) => _childAt(children, i),
+        );
+      }
+      return PageView(
+        controller: controller,
+        scrollDirection: direction,
+        reverse: reverse,
+        pageSnapping: pageSnapping,
+        physics: physics,
+        onPageChanged: onPageChanged,
+        children: children,
+      );
+    }
+
+    final pcId = JsControllerBridge.idOf(c.props['controller']);
+    if (pcId != null) {
+      final raw = c.props['controller'];
+      final initial = raw is Map && raw['initialPage'] is num
+          ? (raw['initialPage'] as num).toInt()
+          : 0;
+      final fraction = raw is Map && raw['viewportFraction'] is num
+          ? (raw['viewportFraction'] as num).toDouble()
+          : 1.0;
+      return _pageControllerHost(c, pcId, initial, fraction, build);
+    }
+    return build(null);
+  });
 }

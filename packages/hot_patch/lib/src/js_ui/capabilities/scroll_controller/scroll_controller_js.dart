@@ -54,4 +54,50 @@ const String scrollControllerJsSource = r'''
     get: function () { return this.__id != null; }
   });
   G.ScrollController = ScrollController;
+
+  // ===== PageController 代理类（对应 Flutter 官方 PageController）=====
+  // 与 ScrollController 同一套句柄层；镜像字段只有 page / initialPage。
+  // 构造参数（initialPage / viewportFraction）随 toJSON 的 extraJSON 下发，
+  // 宿主 PageView renderer 据此创建真实 PageController。
+  var PageController = defineController('ctrl/Page', {
+    init: function (opts) {
+      var o = opts || {};
+      this.initialPage = (o.initialPage != null) ? o.initialPage : 0;
+      this.page = this.initialPage;
+      this.viewportFraction = (o.viewportFraction != null) ? o.viewportFraction : 1.0;
+    },
+    onHost: function (self, p) {
+      if (p && p.page != null) { self.page = p.page; }
+      self.__notify();
+    },
+    extraJSON: function (self) {
+      return {
+        initialPage: self.initialPage,
+        viewportFraction: self.viewportFraction
+      };
+    }
+  });
+  PageController.prototype.jumpToPage = function (page) {
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'jumpToPage', args: [page] }); }
+  };
+  PageController.prototype.animateToPage = function (page, opts) {
+    if (this.__id == null) { return; }
+    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
+    var curve = (opts && opts.curve) ? opts.curve : 'easeOut';
+    handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, ms, curve] });
+  };
+  PageController.prototype.nextPage = function (opts) {
+    if (this.__id == null) { return; }
+    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
+    handleOp(this.__id, 'call', { method: 'nextPage', args: [ms] });
+  };
+  PageController.prototype.previousPage = function (opts) {
+    if (this.__id == null) { return; }
+    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
+    handleOp(this.__id, 'call', { method: 'previousPage', args: [ms] });
+  };
+  Object.defineProperty(PageController.prototype, 'hasClients', {
+    get: function () { return this.__id != null; }
+  });
+  G.PageController = PageController;
 ''';

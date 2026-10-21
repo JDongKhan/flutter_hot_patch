@@ -350,7 +350,11 @@ const String miniReactReconcilerSource = r'''
   // 返回（不重复展开、与生成器将来改回代理类兼容）。
   var builderHostTypes = {
     ListView: 1, GridView: 1, SliverList: 1, SliverGrid: 1,
-    SliverFixedExtentList: 1, SliverFillViewport: 1
+    SliverFixedExtentList: 1, SliverFillViewport: 1,
+    // `.builder` 命名构造没有 JS 代理类，但 itemBuilder 仍需在宿主侧展开：
+    // 否则 itemCount > children.length，`_childAt` 越界返回无 key 占位，
+    // ReorderableListView 会直接断言 "Every item must have a key"。
+    ReorderableListView: 1, PageView: 1
   };
   function expandBuilderChildren(el, parent) {
     if (!builderHostTypes[el.type]) { return []; }
