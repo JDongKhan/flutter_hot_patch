@@ -57,7 +57,7 @@ export class CommunityPage {
     this._loadPosts();
   }
   build(context) {
-    console.log("-----filterOpen " + __str(this._filterOpen));
+    console.log("CommunityPage build : filterOpen=" + __str(this._filterOpen));
     var feed = this._feed;
     if ((feed == null)) {
       return __h('Center', {}, [

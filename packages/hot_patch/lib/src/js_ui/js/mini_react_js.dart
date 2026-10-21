@@ -136,8 +136,10 @@ const String miniReactComponentBaseSource = r'''
     }
     return String(v);
   }
-  // [siteId] 是编译期位点号（同一个 on* 位点每次构建都相同）；[captures] 是该
-  // 闭包引用的构建期局部值。两者共同决定句柄 id 的复用。
+  // [siteId] 是编译期位点号（同一个 on* 位点每次构建都相同）。它只要求
+  // **同一个组件类内**唯一：句柄缓存挂在实例自己的 `__boundFn` 上，不同实例
+  // （不同页面 / 同一页面多次挂载 / 不同组件）各有一份，编号从 0 重复也不会
+  // 互相覆盖。[captures] 是该闭包引用的构建期局部值，两者共同决定句柄复用。
   Component.prototype.__bindFn = function (siteId, captures, f) {
     var bag = this.__boundFn || (this.__boundFn = {});
     var key = siteId + '|';

@@ -135,7 +135,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
   @override
   Widget build(BuildContext context) {
-    print("-----filterOpen $_filterOpen");
+    print("CommunityPage build : filterOpen=$_filterOpen");
     final feed = _feed;
     if (feed == null) {
       return const Center(child: CircularProgressIndicator());
