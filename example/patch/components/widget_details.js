@@ -78,7 +78,7 @@ export class TextDetail {
             "height": 6
           }),
         __h('TextButton', {
-            "onPressed": this.__bind("bump")
+            "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a))
           }, [
             __h('Text', {
                 "data": "Bump count"
@@ -111,7 +111,7 @@ export class ButtonDetail {
             "height": 8
           }),
         __h('ElevatedButton', {
-            "onPressed": this.__bind("onTap"),
+            "onPressed": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
             "style": {
               "minimumSize": {
                 "width": 180,
@@ -146,7 +146,7 @@ export class ButtonDetail {
             "height": 8
           }),
         __h('TextButton', {
-            "onPressed": this.__bind("onTap"),
+            "onPressed": this.__bindFn(1, [], (...__a) => this.onTap(...__a)),
             "style": {
               "minimumSize": {
                 "width": 120,
@@ -173,7 +173,7 @@ export class ButtonDetail {
             "height": 8
           }),
         __h('OutlinedButton', {
-            "onPressed": this.__bind("onTap"),
+            "onPressed": this.__bindFn(2, [], (...__a) => this.onTap(...__a)),
             "style": {
               "side": {
                 "color": '#FF9800',
@@ -810,7 +810,7 @@ export class ScrollDetail {
             "data": "ListView.builder · 懒构建列表（offset: " + this._offset + "）"
           }),
         __h('NotificationListener', {
-            "onNotification": this.__bind("_onListScroll"),
+            "onNotification": this.__bindFn(0, [], (...__a) => this._onListScroll(...__a)),
             "model": "ScrollNotification"
           }, [
             __h('SizedBox', {
@@ -880,7 +880,7 @@ export class ScrollDetail {
             "alignment": "centerLeft"
           }, [
             __h('TextButton', {
-                "onPressed": this.__bind("_scrollToEnd")
+                "onPressed": this.__bindFn(1, [], (...__a) => this._scrollToEnd(...__a))
               }, [
                 __h('Text', {
                     "data": "横向 · 跳到底"
@@ -982,14 +982,14 @@ export class SliverDetail {
                           "icon": "center_focus_strong"
                         }),
                       "tooltip": "定位到「固定高度」分区",
-                      "onPressed": this.__bind("_scrollToFixed")
+                      "onPressed": this.__bindFn(0, [], (...__a) => this._scrollToFixed(...__a))
                     }),
                   __h('IconButton', {
                       "icon": __h('Icon', {
                           "icon": "straighten"
                         }),
                       "tooltip": "测量「固定高度」分区的位置与尺寸",
-                      "onPressed": this.__bind("_measureFixed")
+                      "onPressed": this.__bindFn(1, [], (...__a) => this._measureFixed(...__a))
                     })
                 ]
               }),
@@ -1236,7 +1236,7 @@ export class SliverDetail {
               ])
           ]),
         "floatingActionButton": __h('FloatingActionButton', {
-            "onPressed": this.__bind("_scrollToEnd"),
+            "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF',
             "tooltip": "跳到底"
@@ -1336,7 +1336,7 @@ export class GridDetail {
             "foregroundColor": '#FFFFFF'
           }),
         "floatingActionButton": __h('FloatingActionButton', {
-            "onPressed": this.__bind("_jumpBottom"),
+            "onPressed": this.__bindFn(0, [], (...__a) => this._jumpBottom(...__a)),
             "backgroundColor": '#009688',
             "foregroundColor": '#FFFFFF',
             "tooltip": "跳到底"
@@ -1526,7 +1526,7 @@ export class ScaffoldDetail {
               ])
           ]),
         "floatingActionButton": __h('FloatingActionButton', {
-            "onPressed": this.__bind("_onFab"),
+            "onPressed": this.__bindFn(0, [], (...__a) => this._onFab(...__a)),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF',
             "tooltip": "添加"
@@ -1537,7 +1537,7 @@ export class ScaffoldDetail {
           ]),
         "bottomNavigationBar": __h('BottomNavigationBar', {
             "currentIndex": this._navIndex,
-            "onTap": this.__bind("_onNavTap"),
+            "onTap": this.__bindFn(1, [], (...__a) => this._onNavTap(...__a)),
             "selectedItemColor": '#673AB7',
             "unselectedItemColor": '#9E9E9E',
             "items": [
@@ -1615,7 +1615,7 @@ export class InputDetail {
           }),
         __h('TextField', {
             "controller": this._controller,
-            "onChanged": this.__bind("_onTextChanged"),
+            "onChanged": this.__bindFn(0, [], (...__a) => this._onTextChanged(...__a)),
             "decoration": __h('InputDecoration', {
                 "hintText": "请输入文本",
                 "labelText": "用户名"
@@ -1649,7 +1649,7 @@ export class InputDetail {
             "alignment": "centerLeft"
           }, [
             __h('FilledButton', {
-                "onPressed": this.__bind("this._controller.clear()")
+                "onPressed": this.__bindFn(1, [], () => this._controller.clear())
               }, [
                 __h('Text', {
                     "data": "清空输入"
@@ -1670,7 +1670,7 @@ export class InputDetail {
             __h('Radio', {
                 "value": "A",
                 "groupValue": this._choice,
-                "onChanged": this.__bind("_onChoiceChanged"),
+                "onChanged": this.__bindFn(2, [], (...__a) => this._onChoiceChanged(...__a)),
                 "activeColor": '#673AB7'
               }),
             __h('Text', {
@@ -1679,7 +1679,7 @@ export class InputDetail {
             __h('Radio', {
                 "value": "B",
                 "groupValue": this._choice,
-                "onChanged": this.__bind("_onChoiceChanged"),
+                "onChanged": this.__bindFn(3, [], (...__a) => this._onChoiceChanged(...__a)),
                 "activeColor": '#673AB7'
               }),
             __h('Text', {
@@ -1706,7 +1706,7 @@ export class InputDetail {
         __h('DropdownButton', {
             "value": this._dropdown,
             "isExpanded": true,
-            "onChanged": this.__bind("_onDropdownChanged"),
+            "onChanged": this.__bindFn(4, [], (...__a) => this._onDropdownChanged(...__a)),
             "items": [
               __h('DropdownMenuItem', {
                   "value": "苹果"
@@ -1737,7 +1737,7 @@ export class InputDetail {
         __h('Row', {}, [
             __h('Switch', {
                 "value": this._switchOn,
-                "onChanged": this.__bind("_onSwitchChanged"),
+                "onChanged": this.__bindFn(5, [], (...__a) => this._onSwitchChanged(...__a)),
                 "activeColor": '#FFFFFF',
                 "activeTrackColor": '#673AB7',
                 "inactiveThumbColor": '#9E9E9E',
@@ -1753,7 +1753,7 @@ export class InputDetail {
         __h('Row', {}, [
             __h('Checkbox', {
                 "value": this._checked,
-                "onChanged": this.__bind("_onCheckChanged"),
+                "onChanged": this.__bindFn(6, [], (...__a) => this._onCheckChanged(...__a)),
                 "activeColor": '#673AB7',
                 "checkColor": '#FFFFFF'
               }),
@@ -1781,7 +1781,7 @@ export class InputDetail {
             "label": ((this._slider * 100)).round() + "%",
             "activeColor": '#673AB7',
             "inactiveColor": '#E0E0E0',
-            "onChanged": this.__bind("_onSliderChanged")
+            "onChanged": this.__bindFn(7, [], (...__a) => this._onSliderChanged(...__a))
           })
       ]);
   }
@@ -1890,7 +1890,7 @@ export class NotifierCard {
                     "mainAxisAlignment": "center"
                   }, [
                     __h('ElevatedButton', {
-                        "onPressed": this.__bind("_inc")
+                        "onPressed": this.__bindFn(0, [], (...__a) => this._inc(...__a))
                       }, [
                         __h('Text', {
                             "data": "+1"
@@ -1900,7 +1900,7 @@ export class NotifierCard {
                         "width": 12
                       }),
                     __h('ElevatedButton', {
-                        "onPressed": this.__bind("_reset")
+                        "onPressed": this.__bindFn(1, [], (...__a) => this._reset(...__a))
                       }, [
                         __h('Text', {
                             "data": "Reset"
@@ -2121,7 +2121,7 @@ export class TabDetail {
             "alignment": "centerLeft"
           }, [
             __h('TextButton', {
-                "onPressed": this.__bind("_next")
+                "onPressed": this.__bindFn(0, [], (...__a) => this._next(...__a))
               }, [
                 __h('Text', {
                     "data": "下一 tab · controller.animateTo"
@@ -2158,7 +2158,7 @@ export class PageViewDetail {
             "height": 150
           }, [
             __h('PageView', {
-                "onPageChanged": this.__bind("_onPageChanged")
+                "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a))
               }, [
                 __h('Container', {
                     "color": '#D1C4E9',
@@ -2249,7 +2249,7 @@ export class KeyTile {
                   })
               ]),
             __h('TextButton', {
-                "onPressed": this.__bind("bump")
+                "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a))
               }, [
                 __h('Text', {
                     "data": "+1"
@@ -2427,7 +2427,7 @@ export class KeyDetail {
               }),
             __h('Row', {}, [
                 __h('TextButton', {
-                    "onPressed": this.__bind("_rotateNames")
+                    "onPressed": this.__bindFn(0, [], (...__a) => this._rotateNames(...__a))
                   }, [
                     __h('Text', {
                         "data": "轮换顺序（A→末尾）"
@@ -2437,7 +2437,7 @@ export class KeyDetail {
                     "width": 8
                   }),
                 __h('TextButton', {
-                    "onPressed": this.__bind("_resetNames")
+                    "onPressed": this.__bindFn(1, [], (...__a) => this._resetNames(...__a))
                   }, [
                     __h('Text', {
                         "data": "重置"
@@ -2518,7 +2518,7 @@ export class KeyDetail {
               }),
             __h('Row', {}, [
                 __h('TextButton', {
-                    "onPressed": this.__bind("_rebuildParent")
+                    "onPressed": this.__bindFn(2, [], (...__a) => this._rebuildParent(...__a))
                   }, [
                     __h('Text', {
                         "data": "父级重建（setState 一次）"
@@ -2583,7 +2583,7 @@ export class KeyDetail {
               }),
             __h('Row', {}, [
                 __h('TextButton', {
-                    "onPressed": this.__bind("_bumpUnique")
+                    "onPressed": this.__bindFn(3, [], (...__a) => this._bumpUnique(...__a))
                   }, [
                     __h('Text', {
                         "data": "重建（setState 一次）"
@@ -2644,7 +2644,7 @@ export class KeyDetail {
               }),
             __h('Row', {}, [
                 __h('TextButton', {
-                    "onPressed": this.__bind("_flipStore")
+                    "onPressed": this.__bindFn(4, [], (...__a) => this._flipStore(...__a))
                   }, [
                     __h('Text', {
                         "data": (this._storeA ? "切到 B 列表" : "切回 A 列表")
@@ -2736,7 +2736,7 @@ export class KeyDetail {
               }),
             __h('Row', {}, [
                 __h('TextButton', {
-                    "onPressed": this.__bind("_measureTarget")
+                    "onPressed": this.__bindFn(5, [], (...__a) => this._measureTarget(...__a))
                   }, [
                     __h('Text', {
                         "data": "测量位置与尺寸"
@@ -2746,7 +2746,7 @@ export class KeyDetail {
                     "width": 8
                   }),
                 __h('TextButton', {
-                    "onPressed": this.__bind("_scrollToTarget")
+                    "onPressed": this.__bindFn(6, [], (...__a) => this._scrollToTarget(...__a))
                   }, [
                     __h('Text', {
                         "data": "定位（showOnScreen）"
@@ -2849,7 +2849,7 @@ export class DrawerDetail {
                     "title": __h('Text', {
                         "data": "我的订单"
                       }),
-                    "onTap": this.__bind("_pickOrders")
+                    "onTap": this.__bindFn(0, [], (...__a) => this._pickOrders(...__a))
                   }),
                 __h('ListTile', {
                     "leading": __h('Icon', {
@@ -2858,7 +2858,7 @@ export class DrawerDetail {
                     "title": __h('Text', {
                         "data": "我的收藏"
                       }),
-                    "onTap": this.__bind("_pickFavorites")
+                    "onTap": this.__bindFn(1, [], (...__a) => this._pickFavorites(...__a))
                   })
               ])
           ]),
@@ -2888,7 +2888,7 @@ export class DrawerDetail {
                     "title": __h('Text', {
                         "data": "设置"
                       }),
-                    "onTap": this.__bind("_pickSettings")
+                    "onTap": this.__bindFn(2, [], (...__a) => this._pickSettings(...__a))
                   }),
                 __h('ListTile', {
                     "leading": __h('Icon', {
@@ -2897,7 +2897,7 @@ export class DrawerDetail {
                     "title": __h('Text', {
                         "data": "帮助与关于"
                       }),
-                    "onTap": this.__bind("_pickHelp")
+                    "onTap": this.__bindFn(3, [], (...__a) => this._pickHelp(...__a))
                   })
               ])
           ]),
@@ -2963,7 +2963,7 @@ export class ReorderListDetail {
                       })
                   ]),
                 __h('ElevatedButton', {
-                    "onPressed": this.__bind("_add")
+                    "onPressed": this.__bindFn(0, [], (...__a) => this._add(...__a))
                   }, [
                     __h('Text', {
                         "data": "添加"
@@ -2975,7 +2975,7 @@ export class ReorderListDetail {
             "height": 320
           }, [
             __h('ReorderableListView', {
-                "onReorder": this.__bind("_onReorder"),
+                "onReorder": this.__bindFn(1, [], (...__a) => this._onReorder(...__a)),
                 "padding": {
                   "left": 12.0,
                   "top": 0.0,

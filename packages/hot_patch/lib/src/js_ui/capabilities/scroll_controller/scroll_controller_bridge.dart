@@ -17,8 +17,8 @@ import '../core/controller_bridge.dart';
 
 /// ScrollController 句柄桥：创建/回传句柄登记/释放全走通用层（见
 /// controller_bridge.dart），这里只留 jumpTo/animateTo 的 op 分派。
-final JsControllerBridge<ScrollController> _scrollBridge =
-    JsControllerBridge<ScrollController>(
+final JsControllerBridge<ScrollController>
+_scrollBridge = JsControllerBridge<ScrollController>(
   kind: 'ctrl/Scroll',
   create: (_, _) => ScrollController(),
   onOp: (c, op, payload) {
@@ -27,11 +27,15 @@ final JsControllerBridge<ScrollController> _scrollBridge =
       final args = payload['args'] is List ? payload['args'] as List : const [];
       if (method == 'jumpTo') {
         c.jumpTo(
-            args.isNotEmpty && args[0] is num ? (args[0] as num).toDouble() : 0);
+          args.isNotEmpty && args[0] is num ? (args[0] as num).toDouble() : 0,
+        );
       } else if (method == 'animateTo') {
-        final offset =
-            args.isNotEmpty && args[0] is num ? (args[0] as num).toDouble() : 0.0;
-        final ms = args.length > 1 && args[1] is num ? (args[1] as num).toInt() : 300;
+        final offset = args.isNotEmpty && args[0] is num
+            ? (args[0] as num).toDouble()
+            : 0.0;
+        final ms = args.length > 1 && args[1] is num
+            ? (args[1] as num).toInt()
+            : 300;
         final name = args.length > 2 ? args[2]?.toString() : null;
         const curves = <String, Curve>{
           'linear': Curves.linear,
@@ -64,24 +68,23 @@ Widget _scrollControllerHost(
   JsRenderContext c,
   String id,
   Widget Function(ScrollController controller) build,
-) =>
-    JsControllerHost<ScrollController>(
-      bridge: _scrollBridge,
-      id: id,
-      create: ScrollController.new,
-      forward: (controller, handler) {
-        if (!controller.hasClients) return;
-        c.invoke(handler, [
-          {
-            'pixels': controller.offset,
-            'maxScrollExtent': controller.position.maxScrollExtent,
-            'viewportDimension': controller.position.viewportDimension,
-            'extentAfter': controller.position.extentAfter,
-          }
-        ]);
+) => JsControllerHost<ScrollController>(
+  bridge: _scrollBridge,
+  id: id,
+  create: ScrollController.new,
+  forward: (controller, handler) {
+    if (!controller.hasClients) return;
+    c.invoke(handler, [
+      {
+        'pixels': controller.offset,
+        'maxScrollExtent': controller.position.maxScrollExtent,
+        'viewportDimension': controller.position.viewportDimension,
+        'extentAfter': controller.position.extentAfter,
       },
-      buildChild: build,
-    );
+    ]);
+  },
+  buildChild: build,
+);
 
 /// 从 props 还原 SliverGridDelegate：含 `maxCrossAxisExtent` →
 /// SliverGridDelegateWithMaxCrossAxisExtent，否则
@@ -125,7 +128,8 @@ SliverGridDelegate _gridDelegateFromJson(JsRenderContext c) {
 /// builder 形态的方法名：统一翻译**按 Dart 形参名**下发道具——命名构造
 /// `.builder` / `.separated` 的回调是 `itemBuilder`；`delegate:
 /// SliverChildBuilderDelegate(...)` 形态的是 `builder`。
-String? _builderMethod(JsRenderContext c) => c.str('itemBuilder') ?? c.str('builder');
+String? _builderMethod(JsRenderContext c) =>
+    c.str('itemBuilder') ?? c.str('builder');
 
 /// `.separated` 形态：产物协议以命名构造名（`props.factory === 'separated'`）为准，
 /// 兼容旧产物/兜底看「是否带了分隔项回调 `separatorBuilder`」。
@@ -160,7 +164,8 @@ Widget _childAt(List<Widget> children, int i) =>
 /// 宿主按奇偶拆回 items / separators 两组，分别喂给原生 `.separated` 的两个
 /// builder（满足 Flutter「itemCount 为 item 数」的语义）。
 ({List<Widget> items, List<Widget> separators}) _splitSeparated(
-    List<Widget> children) {
+  List<Widget> children,
+) {
   final items = <Widget>[];
   final separators = <Widget>[];
   for (var i = 0; i < children.length; i++) {
@@ -235,7 +240,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
 
   // ReorderableListView：长按拖拽重排。事件 onReorder 是**双参**回调
   // `(int oldIndex, int newIndex)`，用 `on2` 还原——宿主把 `[oldIndex, newIndex]`
-  // 参数数组回传，JS 侧 __bind 的 wrapper 摊开成位置实参（多参事件 ABI）。
+  // 参数数组回传，JS 侧 __bindFn 的 wrapper 摊开成位置实参（多参事件 ABI）。
   // children 为 JS 运行时下发的子结点，各自自带 ValueKey，满足 key 断言。
   r.register('ReorderableListView', (c) {
     return ReorderableListView(
@@ -319,7 +324,8 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       );
     }
     return CustomScrollView(
-      scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+      scrollDirection:
+          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
       physics: scrollPhysicsFromJson(c.props['physics']),
       reverse: c.bool_('reverse') ?? false,
       shrinkWrap: c.bool_('shrinkWrap') ?? false,
@@ -398,71 +404,97 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   });
 
   // SliverPadding：padding + 单个 sliver（命名参数 sliver 翻译为子节点）。
-  r.register('SliverPadding', (c) => SliverPadding(
-        padding: edgeInsetsFromJson(c.map('padding')),
-        sliver: c.childOrEmpty,
-      ));
+  r.register(
+    'SliverPadding',
+    (c) => SliverPadding(
+      padding: edgeInsetsFromJson(c.map('padding')),
+      sliver: c.childOrEmpty,
+    ),
+  );
 
   // SliverToBoxAdapter：普通 widget 包装成 sliver。
-  r.register('SliverToBoxAdapter', (c) => SliverToBoxAdapter(
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'SliverToBoxAdapter',
+    (c) => SliverToBoxAdapter(child: c.childOrEmpty),
+  );
 
   // SliverFillRemaining：child + hasScrollBody（缺省 true）/fillOverscroll
   // （缺省 false），即 Flutter 默认。
-  r.register('SliverFillRemaining', (c) => SliverFillRemaining(
-        hasScrollBody: c.bool_('hasScrollBody') ?? true,
-        fillOverscroll: c.bool_('fillOverscroll') ?? false,
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'SliverFillRemaining',
+    (c) => SliverFillRemaining(
+      hasScrollBody: c.bool_('hasScrollBody') ?? true,
+      fillOverscroll: c.bool_('fillOverscroll') ?? false,
+      child: c.childOrEmpty,
+    ),
+  );
 
   // SliverFixedExtentList：delegate（.builder → 原生 SliverChildBuilderDelegate，
   // 否则 SliverChildListDelegate）+ itemExtent（必填，缺失按 0 兜底暴露问题）。
-  r.register('SliverFixedExtentList', (c) => SliverFixedExtentList(
-        delegate: _sliverDelegate(c),
-        itemExtent: c.num_('itemExtent') ?? 0,
-      ));
+  r.register(
+    'SliverFixedExtentList',
+    (c) => SliverFixedExtentList(
+      delegate: _sliverDelegate(c),
+      itemExtent: c.num_('itemExtent') ?? 0,
+    ),
+  );
 
   // SliverFillViewport：delegate（同上分流）+ viewportFraction（缺省 1.0，
   // Flutter 默认）。
-  r.register('SliverFillViewport', (c) => SliverFillViewport(
-        delegate: _sliverDelegate(c),
-        viewportFraction: c.num_('viewportFraction') ?? 1,
-      ));
+  r.register(
+    'SliverFillViewport',
+    (c) => SliverFillViewport(
+      delegate: _sliverDelegate(c),
+      viewportFraction: c.num_('viewportFraction') ?? 1,
+    ),
+  );
 
   // SliverOpacity / SliverOffstage / SliverIgnorePointer：必填属性缺省按
   // Flutter 组件同名默认兜底（opacity 1 / offstage false / ignoring false）。
-  r.register('SliverOpacity', (c) => SliverOpacity(
-        opacity: c.num_('opacity') ?? 1,
-        sliver: c.childOrEmpty,
-      ));
+  r.register(
+    'SliverOpacity',
+    (c) =>
+        SliverOpacity(opacity: c.num_('opacity') ?? 1, sliver: c.childOrEmpty),
+  );
 
-  r.register('SliverOffstage', (c) => SliverOffstage(
-        offstage: c.bool_('offstage') ?? false,
-        sliver: c.childOrEmpty,
-      ));
+  r.register(
+    'SliverOffstage',
+    (c) => SliverOffstage(
+      offstage: c.bool_('offstage') ?? false,
+      sliver: c.childOrEmpty,
+    ),
+  );
 
-  r.register('SliverIgnorePointer', (c) => SliverIgnorePointer(
-        ignoring: c.bool_('ignoring') ?? false,
-        sliver: c.childOrEmpty,
-      ));
+  r.register(
+    'SliverIgnorePointer',
+    (c) => SliverIgnorePointer(
+      ignoring: c.bool_('ignoring') ?? false,
+      sliver: c.childOrEmpty,
+    ),
+  );
 
   // SliverSafeArea：left/top/right/bottom 缺省 true（Flutter 默认）。
-  r.register('SliverSafeArea', (c) => SliverSafeArea(
-        left: c.bool_('left') ?? true,
-        top: c.bool_('top') ?? true,
-        right: c.bool_('right') ?? true,
-        bottom: c.bool_('bottom') ?? true,
-        sliver: c.childOrEmpty,
-      ));
+  r.register(
+    'SliverSafeArea',
+    (c) => SliverSafeArea(
+      left: c.bool_('left') ?? true,
+      top: c.bool_('top') ?? true,
+      right: c.bool_('right') ?? true,
+      bottom: c.bool_('bottom') ?? true,
+      sliver: c.childOrEmpty,
+    ),
+  );
 
   // SliverVisibility：visible 缺省 true（与 Visibility 同默认），
   // maintainState 缺省 false（Flutter 默认）。
-  r.register('SliverVisibility', (c) => SliverVisibility(
-        visible: c.bool_('visible') ?? true,
-        maintainState: c.bool_('maintainState') ?? false,
-        sliver: c.childOrEmpty,
-      ));
+  r.register(
+    'SliverVisibility',
+    (c) => SliverVisibility(
+      visible: c.bool_('visible') ?? true,
+      maintainState: c.bool_('maintainState') ?? false,
+      sliver: c.childOrEmpty,
+    ),
+  );
 
   // SingleChildScrollView：controller 是 JS ScrollController 实例的序列化句柄
   // （{__handle: 'js:ctrl/Scroll#N'}）时走 _scrollControllerHost 桥接（按 id
@@ -489,7 +521,8 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       );
     }
     return SingleChildScrollView(
-      scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
+      scrollDirection:
+          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
       padding: nullableEdgeInsets(c.map('padding')),
       physics: scrollPhysicsFromJson(c.props['physics']),
       reverse: c.bool_('reverse') ?? false,
@@ -500,13 +533,16 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // PageView：`controller` 传 null（译者不下发显式 controller，无需 PageController
   // 桥）→ PageView 内部自建 PageController。页切换经 onPageChanged 回传
   // 页码（值事件），JS 侧据此更新指示点。
-  r.register('PageView', (c) => PageView(
-        scrollDirection:
-            axisFromJson(c.props['scrollDirection']) ?? Axis.horizontal,
-        reverse: c.bool_('reverse') ?? false,
-        pageSnapping: c.bool_('pageSnapping') ?? true,
-        physics: scrollPhysicsFromJson(c.props['physics']),
-        onPageChanged: c.on1<int>('onPageChanged'),
-        children: c.children,
-      ));
+  r.register(
+    'PageView',
+    (c) => PageView(
+      scrollDirection:
+          axisFromJson(c.props['scrollDirection']) ?? Axis.horizontal,
+      reverse: c.bool_('reverse') ?? false,
+      pageSnapping: c.bool_('pageSnapping') ?? true,
+      physics: scrollPhysicsFromJson(c.props['physics']),
+      onPageChanged: c.on1<int>('onPageChanged'),
+      children: c.children,
+    ),
+  );
 }

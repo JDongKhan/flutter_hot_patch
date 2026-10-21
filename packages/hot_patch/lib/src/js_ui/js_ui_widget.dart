@@ -142,7 +142,11 @@ class JsUiWidgetState extends State<JsUiWidget> {
       // localRoot 只由「网络包解压」产生：asset 场景为 null（直接按 asset 读）。
       String? localRoot;
       if (RemoteAssetLoader.isRemote(realAsset)) {
-        final bundle = await RemoteAssetLoader.load(realAsset, component: component, entryPath: entryPath);
+        final bundle = await RemoteAssetLoader.load(
+          realAsset,
+          component: component,
+          entryPath: entryPath,
+        );
         if (bundle == null) {
           throw StateError('远程补丁加载失败（需 http(s):// zip）：$realAsset');
         }
@@ -189,7 +193,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
   /// 绑到产出该结点的组件实例，绑定信息随 props 传下来）→ `invoke`。
   ///
   /// [args] 是**参数数组**：0 参事件 `[]`、onChanged `[v]`、多参事件 `[a,b]`…；
-  /// JS 侧句柄（__bind/__bindFn 生成的 wrapper）对它 apply 摊开成位置实参，
+  /// JS 侧句柄（__bindFn 生成的 wrapper）对它 apply 摊开成位置实参，
   /// 故任意形参个数的事件共用同一条通路。
   void _invoke(Object? handler, [List<Object?> args = const []]) {
     if (handler is! Map) {
@@ -204,12 +208,16 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // args 双重编码：内层把数组变成 JSON 文本，外层再包成 JS 字符串字面量；
     // JS 侧 invoke 对字符串参数做一次 JSON.parse 还原为数组。单层编码会把
     // 字符串 payload 解析失败置 null。
-    _manager.evaluate('__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(args))});');
+    _manager.evaluate(
+      '__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(args))});',
+    );
   }
 
   @override
   void dispose() {
-    _manager.evaluate('if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});');
+    _manager.evaluate(
+      'if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});',
+    );
     // 页面级兜底：本页登记的跨语言句柄在当前页面销毁时统一释放（正常路径下
     // JS 的 disposeRoot 已逐个通知到本端，此处为空操作；异常路径兜底）。
     releasePageHandles(_pageKey);
@@ -326,13 +334,17 @@ class _JsLoadErrorView extends StatelessWidget {
                 Text(
                   'JS 组件加载失败',
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '页面补丁资源不可用，请确认资源已打包或重新下发。',
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Container(
@@ -391,7 +403,11 @@ class _BuildTimeBadge extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(color: Colors.white, fontSize: 10, height: 1.2),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            height: 1.2,
+          ),
         ),
       ),
     );
@@ -467,7 +483,8 @@ class _JsNodeState extends State<_JsNode> {
   @override
   void didUpdateWidget(covariant _JsNode oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.id != widget.id || !identical(oldWidget.store, widget.store)) {
+    if (oldWidget.id != widget.id ||
+        !identical(oldWidget.store, widget.store)) {
       oldWidget.store.unbind(oldWidget.id, _rebuild);
       widget.store.bind(widget.id, _rebuild);
     }
@@ -518,7 +535,9 @@ class _JsNodeState extends State<_JsNode> {
           childTypes: const [],
           childContexts: const [],
           propChildren: {
-            for (final e in childNode?.propChildIds.entries ?? const <MapEntry<String, String>>[])
+            for (final e
+                in childNode?.propChildIds.entries ??
+                    const <MapEntry<String, String>>[])
               e.key: _node(e.value),
           },
           invoke: widget.invoke,
@@ -533,7 +552,8 @@ class _JsNodeState extends State<_JsNode> {
 
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
     // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
-    final builder = jsWidgetRegistry.lookup(node.type) ?? jsWidgetRegistry.fallback;
+    final builder =
+        jsWidgetRegistry.lookup(node.type) ?? jsWidgetRegistry.fallback;
     if (builder == null) return buildMissingJsWidget(node.type, children);
 
     return builder(

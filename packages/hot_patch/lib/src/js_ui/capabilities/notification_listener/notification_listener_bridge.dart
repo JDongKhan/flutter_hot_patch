@@ -15,7 +15,7 @@ import '../../js_widget_registry.dart';
 ///
 /// JS 侧写法：
 /// ```js
-/// NotificationListener({ onNotification: this.__bind("_onScroll") }, [ ... ])
+/// NotificationListener({ onNotification: this.__bindFn(5, [], (n) => this._onScroll(n)) }, [ ... ])
 /// ```
 /// 滚动时宿主经 invoke 回传 `{type, metrics:{pixels, maxScrollExtent,
 /// extentAfter, viewportDimension, axisDirection}}`，JS 事件方法形参（如 n）
@@ -49,16 +49,18 @@ class _NotificationListenerState extends State<_NotificationListener> {
           // payload 形状对齐 Dart ScrollNotification（metrics 对象 + type 名），
           // JS 事件方法体里的 `n.metrics.pixels` / `n.metrics.extentAfter`
           // 由生成器原样翻译后可直接读取。
-          widget.invoke(handler, [{
-            'type': n.runtimeType.toString(),
-            'metrics': {
-              'pixels': n.metrics.pixels,
-              'maxScrollExtent': n.metrics.maxScrollExtent,
-              'extentAfter': n.metrics.extentAfter,
-              'viewportDimension': n.metrics.viewportDimension,
-              'axisDirection': n.metrics.axisDirection.name,
+          widget.invoke(handler, [
+            {
+              'type': n.runtimeType.toString(),
+              'metrics': {
+                'pixels': n.metrics.pixels,
+                'maxScrollExtent': n.metrics.maxScrollExtent,
+                'extentAfter': n.metrics.extentAfter,
+                'viewportDimension': n.metrics.viewportDimension,
+                'axisDirection': n.metrics.axisDirection.name,
+              },
             },
-          }]);
+          ]);
         }
         // 不拦截：返回 false 让通知继续向上冒泡，外部其它监听不受影响。
         return false;
@@ -70,9 +72,12 @@ class _NotificationListenerState extends State<_NotificationListener> {
 
 /// 通知能力域组件注册。
 void registerNotificationWidgets(JsWidgetRegistry r) {
-  r.register('NotificationListener', (c) => _NotificationListener(
-        onNotification: c.props['onNotification'],
-        invoke: c.invoke,
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'NotificationListener',
+    (c) => _NotificationListener(
+      onNotification: c.props['onNotification'],
+      invoke: c.invoke,
+      child: c.childOrEmpty,
+    ),
+  );
 }

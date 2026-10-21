@@ -29,7 +29,7 @@ export class BannerCard {
             "data": "views = " + this._views
           }),
         __h('ElevatedButton', {
-            "onPressed": this.__bind("bump")
+            "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a))
           }, [
             __h('Text', {
                 "data": "Bump"

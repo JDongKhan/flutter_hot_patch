@@ -62,7 +62,7 @@ export class WatchDemo {
             "mainAxisAlignment": "center"
           }, [
             __h('ElevatedButton', {
-                "onPressed": this.__bindFn("() => model.inc()", () => { model.inc(); })
+                "onPressed": this.__bindFn(0, [model], () => model.inc())
               }, [
                 __h('Text', {
                     "data": "+1"
@@ -72,7 +72,7 @@ export class WatchDemo {
                 "width": 12
               }),
             __h('ElevatedButton', {
-                "onPressed": this.__bind("this.context.read(\"CounterVm\").reset()")
+                "onPressed": this.__bindFn(1, [], () => { this.context.read("CounterVm").reset(); })
               }, [
                 __h('Text', {
                     "data": "Reset"

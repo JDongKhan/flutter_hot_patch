@@ -72,7 +72,7 @@ export class MinePage {
                 "bottom": false
               }, [
                 __h('GestureDetector', {
-                    "onTap": this.__bind("_app_host_.invoke(\"openLogin\", [])")
+                    "onTap": this.__bindFn(0, [], () => _app_host_.invoke("openLogin", []))
                   }, [
                     __h('Row', {}, [
                         __h('ClipOval', {}, [
@@ -156,7 +156,7 @@ export class MinePage {
                 }
               }, [
                 __h('Row', {}, [
-                    ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "onTap": this.__bind("_app_host_.invoke(\"openOrders\", [])") }, [ __h('Column', {}, [ __h('Text', { "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), __h('SizedBox', { "height": 3 }), __h('Text', { "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ]) ]) ])]); } return out; })()
+                    ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "onTap": this.__bindFn(1, [], () => _app_host_.invoke("openOrders", [])) }, [ __h('Column', {}, [ __h('Text', { "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), __h('SizedBox', { "height": 3 }), __h('Text', { "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ]) ]) ])]); } return out; })()
                   ])
               ])
           ]),
@@ -175,7 +175,7 @@ export class MinePage {
             }
           }, [
             __h('Column', {}, [
-                ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [__h('Divider', { "height": 1, "indent": 56, "color": '#fff0f2f6' })] : []), __h('GestureDetector', { "onTap": this.__bindFn("() => _openMenu(feed.menu[i])" + ":" + String(i), () => { this._openMenu(this._feed.menu[i]); }) }, [ __h('Padding', { "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 } }, [ __h('Row', {}, [ __h('Container', { "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } } }, [ __h('Text', { "style": { "fontSize": 15 }, "data": this._feed.menu[i].emoji }) ]), __h('SizedBox', { "width": 12 }), __h('Expanded', {}, [ __h('Text', { "style": { "fontSize": 14 }, "data": this._feed.menu[i].title }) ]), __h('Icon', { "size": 18, "color": '#ffc3c8d2', "icon": "chevron_right" }) ]) ]) ])]); } return out; })()
+                ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [__h('Divider', { "height": 1, "indent": 56, "color": '#fff0f2f6' })] : []), __h('GestureDetector', { "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])) }, [ __h('Padding', { "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 } }, [ __h('Row', {}, [ __h('Container', { "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } } }, [ __h('Text', { "style": { "fontSize": 15 }, "data": this._feed.menu[i].emoji }) ]), __h('SizedBox', { "width": 12 }), __h('Expanded', {}, [ __h('Text', { "style": { "fontSize": 14 }, "data": this._feed.menu[i].title }) ]), __h('Icon', { "size": 18, "color": '#ffc3c8d2', "icon": "chevron_right" }) ]) ]) ])]); } return out; })()
               ])
           ]),
         __h('Padding', {
@@ -187,7 +187,7 @@ export class MinePage {
             }
           }, [
             __h('GestureDetector', {
-                "onTap": this.__bind("_app_host_.invoke(\"toast\", [\"已退出登录（演示）\"])")
+                "onTap": this.__bindFn(3, [], () => _app_host_.invoke("toast", ["已退出登录（演示）"]))
               }, [
                 __h('Container', {
                     "height": 46,
@@ -285,7 +285,7 @@ export class _DevRow {
   }
   build(context) {
     return __h('GestureDetector', {
-        "onTap": this.__bind("this.onTap()"),
+        "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
         "behavior": "opaque"
       }, [
         __h('Padding', {

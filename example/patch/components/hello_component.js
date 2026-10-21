@@ -93,7 +93,7 @@ export class HelloCard {
         ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + i + " 个" })]); } return out; })(),
         __h('Row', {}, [
             __h('ElevatedButton', {
-                "onPressed": this.__bind("inc"),
+                "onPressed": this.__bindFn(0, [], (...__a) => this.inc(...__a)),
                 "style": {
                   "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
                   "foregroundColor": '#FFFFFF'
@@ -104,21 +104,21 @@ export class HelloCard {
                   })
               ]),
             __h('ElevatedButton', {
-                "onPressed": this.__bind("this.reset()")
+                "onPressed": this.__bindFn(1, [], () => this.reset())
               }, [
                 __h('Text', {
                     "data": "Reset"
                   })
               ]),
             __h('ElevatedButton', {
-                "onPressed": this.__bind("showNative")
+                "onPressed": this.__bindFn(2, [], (...__a) => this.showNative(...__a))
               }, [
                 __h('Text', {
                     "data": "Native"
                   })
               ]),
             __h('ElevatedButton', {
-                "onPressed": this.__bind("loadUser")
+                "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a))
               }, [
                 __h('Text', {
                     "data": "Load User"

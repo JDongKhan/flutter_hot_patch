@@ -2,7 +2,7 @@
 //
 // 与 runtime_source.dart 的骨架入口/桥（【1】~【3】、【10】+尾部）拼接后
 // 注入同一 IIFE：这里定义 element 描述、reconciler（mount/patch/unmount）、
-// 组件基类（setState/__bind）、作用域（按类型名）查找与订阅、脏调度批处理。
+// 组件基类（setState/__bindFn）、作用域（按类型名）查找与订阅、脏调度批处理。
 // 新增框架级机制（如 fiber、portals）改本文件；新增业务能力桥接
 // （controller 等）仍走 capabilities/，两边互不干扰。
 //
@@ -14,7 +14,6 @@
 //   （activate 需「重挂载/reparent」场景，mini-react 无此能力，故不派发。）
 //
 // 分区与 runtime_source.dart 导航表一致（【4】~【9】）。
-
 
 /// mini-react｜element 与事件句柄（h / fn / invoke）【4】。
 const String miniReactElementSource = r'''
@@ -29,7 +28,7 @@ const String miniReactElementSource = r'''
   }
 
   // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local：由拥有者
-  // 代码显式释放，如构建期 __bind 随组件卸载释放，见【1b】句柄注册表）。
+  // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【1b】句柄注册表）。
   // 宿主侧回调用 invoke 触发。
   function fn(f) {
     var id = reg(f, 'fn', { scope: 'local', sync: false });
@@ -38,9 +37,9 @@ const String miniReactElementSource = r'''
 
   // 事件回传载荷统一为**参数数组**（Dart 侧 `_invoke(handler, args)` 的 args）：
   // 0 参事件 `[]`、onChanged `[v]`、多参事件 `[a,b]`…。句柄是普通位置函数——
-  // 能力桥 `fn(function(t){…})` 按真实形参直接收下；__bind/__bindFn 生成的
-  // wrapper 用 `arguments` 汇总任意个数再摊开调用目标方法。故 0/1/N 参事件共用
-  // 同一条通路，新增多参事件无需改这里。
+  // 能力桥 `fn(function(t){…})` 按真实形参直接收下；__bindFn 生成的 wrapper
+  // 用 `arguments` 汇总任意个数再摊开转发给生成器产出的箭头闭包。故 0/1/N 参
+  // 事件共用同一条通路，新增多参事件无需改这里。
   function invoke(id, args) {
     var h = handles[id];
     var f = h && h.obj;
@@ -99,73 +98,54 @@ const String miniReactReconcilerUtilsSource = r'''
 
 ''';
 
-/// mini-react｜组件基类（setState / __bind，生成器产物的能力袋）【6】。
+/// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【6】。
 const String miniReactComponentBaseSource = r'''
 
   // ===== 【6】mini-react｜组件基类（生成器产物的能力袋）===============
   // 生成器产物**不** extends 本类：`augment` 把这些方法拷到实例上。
-  // setState / __bind 属于 mini-react；上下文（`context.watch/read`）与
+  // setState / __bindFn 属于 mini-react；上下文（`context.watch/read`）与
   // BuildContext 代理见【10.7】（调用面与 Dart 一致，不在实例上挂 `this.watch`）。
   function Component(props) { this.props = props || {}; }
   Component.prototype.setState = function (mutate) {
     if (typeof mutate === 'function') { mutate.call(this); }
     markDirty(this);
   };
-  // ── 回到【6】mini-react｜事件句柄（__bind）────────────────────────────
-  // 事件句柄：在**构建期**把事件表达式绑定到当前组件实例（Dart tear-off 语义）。
-  // 生成器产出 `this.__bind("_incA")`——`this` 正是 build 作用域里的组件实例，
-  // 也就是**定义该事件方法的组件**（含 Consumer/Builder 把 builder 方法
-  // `.call(owner)` 的场景）。句柄随 props 传下去（`{__fn:id, __ev:原表达式}`），
-  // 宿主点击时经 invoke(id) 回来；因为绑定信息挂在 props 上，包装型组件
-  // （MultiProvider 透传 child）也不会把它弄丢。
-  //   句柄执行时会还原**绑定时的构建位置**：事件表达式里的 `this.context.watch/read`
-  //   按定义该表达式时的 context 位置解析（而非点击时的 `this`）。
-  //   按 (实例, 表达式) 缓存：重建产出同一句柄 → props 稳定（增量补丁仍生效）；
-  //   卸载时统一释放（markUnmounted）。
-  Component.prototype.__bind = function (expr) {
-    var bag = this.__bound || (this.__bound = {});
-    if (bag[expr]) { return bag[expr]; }
-    var self = this;
-    var anchor = building || this; // 绑定时的 context 位置（见上）
-    // 两种事件形态，触发即执行：裸方法名（`_incA`）→ 调实例方法；其余整体
-    // 作为调用表达式求值（`this.context.read("T").inc()`）。**原样返回被调方法的
-    // 返回值**：普通事件（点击 / 输入）由 invoke 丢弃返回值，语义不变；而
-    // 「可等待事件」（EasyRefresh 的 onRefresh，见 capabilities/easy_refresh）
-    // 靠这个返回值拿到 JS 侧的 Promise，await 完成后才回传宿主。
-    var isName = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(expr);
-    var run = isName
-      // 方法名形态：句柄收到的参数数组用 apply 摊开成位置实参（支持 N 参事件）。
-      ? function (args) {
-          var m = self[expr];
-          if (typeof m === 'function') { return m.apply(self, args); }
-        }
-      : function () {
-          return new Function('return (' + expr + ');').call(self);
-        };
-    var handle = fn(function () {
-      // 还原绑定时的构建位置：表达式若含 `this.context.watch/read`，按当时的
-      // context 位置解析（点击时无 build 上下文，`building` 为 null）。
-      // 事件位置实参在 `arguments` 里（invoke 已摊开），原样交给 run 转发。
-      var prev = building;
-      building = anchor;
-      try { return run(arguments); }
-      catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
-      finally { building = prev; }
-    });
-    handle.__ev = expr; // 便于调试：句柄带上原表达式
-    bag[expr] = handle;
-    return handle;
-  };
-  // 构建期**闭包**句柄：与 __bind 语义相同（绑定到构建时的组件实例 / 构建
-  // 位置），但接受真实 JS 函数而非表达式字符串——用于事件表达式引用了
-  // 「构建期才存在的名字」（循环变量、build 局部变量）的场景：字符串方案在
-  // 点击时求值，拿不到这些名字（如 `for (final s in kSorts) onTap: () =>
-  // setState(() => _sort = s)`）。
-  //   按 [key] 缓存：同一 (实例, key) 重复构建复用同一句柄 id（props 稳定，
-  //   增量补丁不失效），只是把内部执行的闭包换成最新的（新捕获值）。
-  //   key 由生成器按「表达式源码 + 当前循环变量值」拼出，故每次迭代互不串味。
-  Component.prototype.__bindFn = function (key, f) {
+  // ── 回到【6】mini-react｜事件句柄（__bindFn）─────────────────────────
+  // 事件句柄：生成器把事件统一翻译成**构建期箭头闭包**，在此登记成句柄。
+  // `this` 正是 build 作用域里的组件实例，也就是**定义该事件的组件**（含
+  // Consumer/Builder 把 builder 方法 `.call(owner)` 的场景）。句柄随 props
+  // 传下去（`{__fn:id}`），宿主点击时经 invoke(id) 回来；因为句柄信息挂在
+  // props 上，包装型组件（MultiProvider 透传 child）也不会把它弄丢。
+  //   句柄执行时会还原**绑定时的构建位置**：闭包里的 `this.context.watch/read`
+  //   按定义闭包时的 context 位置解析（而非点击时的 `this`）。
+  //   按 (位点号, 捕获值) 缓存：重建产出同一句柄 → props 稳定（增量补丁仍生效）；
+  //   循环项捕获到不同值时各自独立（回调不互相覆盖）；卸载时统一释放。
+  //
+  // 捕获值的身份判定：对象 / 函数按**引用身份**（同一个对象每次重建仍是同一个
+  // → key 稳定），原始值按 String。WeakMap 自动回收，不延长捕获对象寿命。
+  var __capIds = typeof WeakMap === 'function' ? new WeakMap() : null;
+  var __capSeq = 0;
+  function capKey(v) {
+    if (v === null || v === undefined) { return ''; }
+    var t = typeof v;
+    if (t === 'object' || t === 'function') {
+      if (!__capIds) { return String(v); }
+      var id = __capIds.get(v);
+      if (!id) { id = ++__capSeq; __capIds.set(v, id); }
+      return '#' + id;
+    }
+    return String(v);
+  }
+  // [siteId] 是编译期位点号（同一个 on* 位点每次构建都相同）；[captures] 是该
+  // 闭包引用的构建期局部值。两者共同决定句柄 id 的复用。
+  Component.prototype.__bindFn = function (siteId, captures, f) {
     var bag = this.__boundFn || (this.__boundFn = {});
+    var key = siteId + '|';
+    if (captures && captures.length) {
+      var ks = [];
+      for (var i = 0; i < captures.length; i++) { ks.push(capKey(captures[i])); }
+      key += ks.join(',');
+    }
     var handle = bag[key];
     if (handle) { handle.__run = f; return handle; }
     var anchor = building || this;
@@ -173,7 +153,7 @@ const String miniReactComponentBaseSource = r'''
       var prev = building;
       building = anchor;
       // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
-      // 返回值同 __bind：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
+      // 返回值保留：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
       try { return handle.__run.apply(handle, arguments); }
       catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
       finally { building = prev; }
@@ -454,7 +434,7 @@ const String miniReactReconcilerSource = r'''
   }
 
   // 普通类组件（生成器产物不 extends Component）挂载基类能力：
-  //   [mini-react] props / setState / __bind（构建期事件句柄）
+  //   [mini-react] props / setState / __bindFn（构建期事件句柄）
   //   [ctx]        context（BuildContext 代理 —— build 传参 / `this.context`）
   // 对 extends Component 的类重复赋值无害。
   function augment(inst) {
@@ -462,7 +442,6 @@ const String miniReactReconcilerSource = r'''
       inst.props = inst.__el ? inst.__el.props : {};
     }
     inst.setState = Component.prototype.setState;
-    inst.__bind = Component.prototype.__bind;
     inst.__bindFn = Component.prototype.__bindFn;
     // 与 Dart 一致：`context` 既是 build 形参、也是实例上可访问的同一对象。
     // 事件/延迟作用域里形参不可见，`this.context` 是同步可达路径。
@@ -716,13 +695,7 @@ const String miniReactReconcilerSource = r'''
         releaseHandle(inst.__ctx.__id);
         inst.__ctx = null;
       }
-      // [mini-react] 释放构建期登记的（实例, 表达式）事件句柄，避免句柄泄漏。
-      var bag = inst.__bound;
-      if (bag) {
-        for (var k in bag) { releaseHandle(bag[k].__fn, false); }
-        inst.__bound = null;
-      }
-      // 同理解放 __bindFn 登记的构建期闭包句柄。
+      // [mini-react] 释放构建期登记的 (位点号, 捕获值) 事件句柄，避免句柄泄漏。
       var bagFn = inst.__boundFn;
       if (bagFn) {
         for (var k in bagFn) { releaseHandle(bagFn[k].__fn, false); }

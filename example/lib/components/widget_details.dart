@@ -2049,7 +2049,7 @@ class _DrawerDetailState extends State<DrawerDetail> {
 ///
 /// 重点验证**多参事件**链路：`onReorder: (oldIndex, newIndex)` 是双参回调，
 /// 生成器把回调表达式绑成句柄写进 `props.event`，宿主侧用 `on2<int,int>`
-/// 还原，经统一「参数数组」ABI 回传 → JS 侧 `__bind` 的 wrapper 用 apply
+/// 还原，经统一「参数数组」ABI 回传 → JS 侧 `__bindFn` 的 wrapper 用 apply
 /// 摊开成两个位置实参 → `_onReorder(oldIndex, newIndex)`。
 ///
 /// 重排算法用 `removeAt + insert`（生成器翻译为 JS 数组的

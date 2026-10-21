@@ -77,7 +77,7 @@ export class OrdersPage {
                         "scrollDirection": "horizontal"
                       }, [
                         __h('Row', {}, [
-                            ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _pickStatus(s)" + ":" + String(s), () => { this._pickStatus(s); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "data": s }) ]) ]) ])]); } return out; })()
+                            ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "data": s }) ]) ]) ])]); } return out; })()
                           ])
                       ])
                   ])
@@ -117,7 +117,7 @@ export class _OrderCard {
   build(context) {
     var pending = (this.order.status == "待付款");
     return __h('GestureDetector', {
-        "onTap": this.__bind("this.onOpen()")
+        "onTap": this.__bindFn(0, [], (...__a) => this.onOpen(...__a))
       }, [
         __h('Container', {
             "decoration": {

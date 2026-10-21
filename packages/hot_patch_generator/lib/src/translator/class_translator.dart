@@ -239,7 +239,7 @@ ClassInfo translateClass(
 
   // 翻译上下文：实例字段表（propByField）+ 实例方法名表（actionByMethod）
   // ——widget 层据此解析标识符（`_count` → `this._count`）、区分本类实例
-  // 方法与嵌套组件构造、事件绑定（`__bind`）。普通类与组件同一个上下文。
+  // 方法与嵌套组件构造、事件绑定（`__bindFn`）。普通类与组件同一个上下文。
   final parseCtx = WidgetTranslateContext(
     propByField: propByField,
     actionByMethod: {

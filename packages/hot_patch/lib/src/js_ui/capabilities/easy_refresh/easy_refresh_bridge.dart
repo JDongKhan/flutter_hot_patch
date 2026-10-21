@@ -67,7 +67,7 @@ Future<void> _runAwaitableEvent(Object? handler) {
 ///
 /// JS 侧写法：
 /// ```js
-/// __h('EasyRefresh', { onRefresh: this.__bind("_load"), child: __h('CustomScrollView', ...) })
+/// __h('EasyRefresh', { onRefresh: this.__bindFn(3, [], () => this._load()), child: __h('CustomScrollView', ...) })
 /// ```
 /// 用户下拉 → 宿主触发 JS `_load()` → JS 侧 await 其 Promise → 回传完成 →
 /// 指示器收起。onRefresh / onLoad 为 null 时对应方向禁用（包的

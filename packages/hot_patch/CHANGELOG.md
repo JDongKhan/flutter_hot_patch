@@ -6,6 +6,7 @@
 - **列表 / 网格按 `props.factory` 判定形态**：读 `itemBuilder` / `separatorBuilder` / `itemCount` / `childCount`，还原 `ListView.builder` / `.separated`、`SliverList.*`、`GridView.builder`（此前 JS 侧 `ListView.builder` / `.separated` 会整块空白）；`gridDelegate` 改读 JSON 值（同时兼容平铺 props，GridView 不再退化成单列）。
 - **ListenableBuilder / ValueListenableBuilder** 改为订阅 `props.listenable`（产物下发的是 listenable **实例本身**，不再是字段名）——修复 notify 不重建、`+1` 点了没反应。
 - **组件（JS 类）的 `on*` 参数是可直接调用的闭包**，无需再做句柄转换。
+- **事件句柄统一为构建期箭头闭包**：`__bindFn(siteId, captures, f)` 替代 `__bind(expr)`（字符串求值路径已删除）。句柄按「编译期位点号 + 捕获值」复用（对象 / 函数按引用身份比较），重建后句柄 id 稳定、循环项不串味；可等待事件（`EasyRefresh.onRefresh`）仍原样返回 Promise。
 - **删除 `@Colors.*.shade*` 标记解析与 MaterialColor 常量表**：颜色统一 `#RRGGBB` / `#AARRGGBB`（色值已在生成器编译期算好）。
 - **补齐 `Number.prototype` 的 Dart `num` 同名方法**（`round` / `floor` / `ceil` / `abs` / `truncate` / `toInt` / `toDouble` / `toStringAsFixed` / `clamp`）：Dart 写法原样翻译出 `(x * 100).round()` 后不再因 "is not a function" 让整页挂载失败。**该项属运行时 Dart 代码，需完全重启 App 才生效。**
 

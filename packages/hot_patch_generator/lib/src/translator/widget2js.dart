@@ -40,14 +40,14 @@ class WidgetNode {
   final String? factory;
 
   WidgetNode(this.type, this.args, {this.factory, this.expr})
-      : positionalArgs = [
-          for (final a in args)
-            if (a is! NamedExpression) a,
-        ],
-        namedArgs = {
-          for (final a in args)
-            if (a is NamedExpression) a.name.label.name: a.expression,
-        };
+    : positionalArgs = [
+        for (final a in args)
+          if (a is! NamedExpression) a,
+      ],
+      namedArgs = {
+        for (final a in args)
+          if (a is NamedExpression) a.name.label.name: a.expression,
+      };
 }
 
 /// 翻译上下文：持有注册表与组件元数据，并向 translator 提供通用解析能力。
@@ -236,8 +236,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       return jsDataExpr(e);
     } catch (err) {
       throw FormatException(
-          'hot_patch_generator: widget 位置的表达式无法翻译：'
-          '${e.toSource()}（$err）');
+        'hot_patch_generator: widget 位置的表达式无法翻译：'
+        '${e.toSource()}（$err）',
+      );
     }
   }
 
@@ -299,7 +300,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   String _ifAsArray(IfElement e) {
     final cond = jsDataExpr(e.expression);
     final thenJs = _collectionArrayJs(e.thenElement);
-    final elseJs = e.elseElement == null ? '[]' : _collectionArrayJs(e.elseElement!);
+    final elseJs = e.elseElement == null
+        ? '[]'
+        : _collectionArrayJs(e.elseElement!);
     return '($cond ? $thenJs : $elseJs)';
   }
 
@@ -322,15 +325,21 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         final varList = vars.isEmpty
             ? ''
             : 'let ${vars.map((v) => '${v.name.lexeme} = ${v.initializer == null ? '0' : jsDataExpr(v.initializer!)}').join(', ')}';
-        final condJs = parts.condition == null ? '' : jsDataExpr(parts.condition!);
+        final condJs = parts.condition == null
+            ? ''
+            : jsDataExpr(parts.condition!);
         final incJs = parts.updaters.isEmpty
             ? ''
             : parts.updaters.map((u) => jsDataExpr(u)).join(', ');
         head = 'for ($varList; $condJs; $incJs)';
       } else if (parts is ForPartsWithExpression) {
         // 无声明：`for (i = 0; i < n; i++)`（变量需为已收集的状态字段）
-        final initJs = parts.initialization == null ? '' : jsDataExpr(parts.initialization!);
-        final condJs = parts.condition == null ? '' : jsDataExpr(parts.condition!);
+        final initJs = parts.initialization == null
+            ? ''
+            : jsDataExpr(parts.initialization!);
+        final condJs = parts.condition == null
+            ? ''
+            : jsDataExpr(parts.condition!);
         final incJs = parts.updaters.isEmpty
             ? ''
             : parts.updaters.map((u) => jsDataExpr(u)).join(', ');
@@ -469,11 +478,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
           globalConsts.contains(name)) {
         continue;
       }
-      log.warning('[hot_patch_generator] $sourcePath: "$name" 被懒加载 builder '
-          '捕获，却折算不成字段引用（字段 / getter / 顶层常量）：抽取成实例方法'
-          '后 JS 侧是未定义自由变量（运行时 ReferenceError，页面会停在 loading）。'
-          '请把该值放到字段 / getter 上，或改用「字段派生的 final 局部」'
-          '（如 `final spots = _feed.spots;`）。');
+      log.warning(
+        '[hot_patch_generator] $sourcePath: "$name" 被懒加载 builder '
+        '捕获，却折算不成字段引用（字段 / getter / 顶层常量）：抽取成实例方法'
+        '后 JS 侧是未定义自由变量（运行时 ReferenceError，页面会停在 loading）。'
+        '请把该值放到字段 / getter 上，或改用「字段派生的 final 局部」'
+        '（如 `final spots = _feed.spots;`）。',
+      );
     }
   }
 
@@ -481,7 +492,8 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 懒加载 builder 引用该名字时，必须落成真实字段引用（见 [jsDataExpr]）。
   final Map<String, String> _localAliases = {};
   @override
-  void registerLocalAlias(String name, String jsExpr) => _localAliases[name] = jsExpr;
+  void registerLocalAlias(String name, String jsExpr) =>
+      _localAliases[name] = jsExpr;
 
   /// 当前正在翻译的方法形参（`withMethodParams` 期间有效）。
   final Set<String> _methodParams = {};
@@ -663,7 +675,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 
   Expression? namedArg(List<Expression> args, String name) {
     for (final a in args) {
-      if (a is NamedExpression && a.name.label.name == name) return a.expression;
+      if (a is NamedExpression && a.name.label.name == name) {
+        return a.expression;
+      }
     }
     return null;
   }
@@ -724,14 +738,19 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 非 `widget.` 前缀（或非简单 `x.y`）返回 null。
   String? widgetMemberName(Expression? e) =>
       e is PrefixedIdentifier && e.prefix.name == 'widget'
-          ? e.identifier.name
-          : null;
+      ? e.identifier.name
+      : null;
 
-  /// 事件参数解析：`onTap: _tap` / `onTap: () => _tap()` → 组件方法名；
+  /// 事件参数解析：`onTap: _tap` / `onTap: () => _tap()` → 组件方法调用；
   /// 带 receiver 的调用（Builder 闭包局部变量 `model.inc()`、
   /// `context.read<T>().reset()` 链式）→ 翻译为 JS 方法调用表达式
   /// （一比一，不查动作表——方法/属性全量生成，无需标注）。
-  String eventExpr(Expression e) {
+  ///
+  /// [scope] 缺省为事件作用域 [_eventScope]；事件闭包的**形参**（`(v) => ...`
+  /// 里的 `v`）由调用方经 [FieldScope.withParams] 并入后传入，保证实参里的
+  /// 形参名原样落成 JS 标识符。
+  String eventExpr(Expression e, [FieldScope? scope]) {
+    final activeScope = scope ?? _eventScope();
     if (e is Identifier) {
       // `widget.<name>`（State 里引用 widget 自身的字段/方法，如
       // `onReset: widget.onReset`）：合并类里就是实例成员，调它即可。
@@ -755,31 +774,35 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         // （Dart 的 State.setState 由框架提供）。翻译成 `this.setState(<closure>)`，
         // 运行时基类已提供 setState（见 mini_react_js）。
         if (inner.target == null && inner.methodName.name == 'setState') {
-          return _setStateCallJs(inner);
+          return _setStateCallJs(inner, activeScope);
         }
         final target = inner.target;
         // @HostInjected 调用（`AppRouter.pop()` / `AppRouter.toast('x')`）：事件
         // 表达式与方法体翻译共用同一份通道表，整体换成 `_app_host_.invoke(通道, 载荷)`。
         // 少了这一步，事件串里的 `this.AppRouter.pop()` 在运行时只是对一个不存在
         // 属性的访问（抛错被运行时吞掉），点击静默失效。
-        final hostCall =
-            _hostEventJs(target, inner.methodName.name, inner.argumentList);
+        final hostCall = _hostEventJs(
+          target,
+          inner.methodName.name,
+          inner.argumentList,
+          activeScope,
+        );
         if (hostCall != null) return hostCall;
         // 局部变量 receiver（`model.inc()`，model 是 builder 里的
-        // `final model = context.watch<T>()`）：**原样保留局部名**，由
-        // [eventHandle] 判定命中「构建期局部名」后改用**构建期闭包**注册
-        // （`__bindFn(key, () => { model.inc(); })`）——闭包在同一个方法里创建，
-        // 天然捕获该局部变量，与 Dart 闭包语义一致。不做任何 read("T") 改写。
+        // `final model = context.watch<T>()`）：保留局部名，由 [_eventFnJs]
+        // 生成的**构建期箭头闭包**天然捕获它（与 Dart 闭包同语义）。
+        // 有别名（`final list = _list;`）的局部落成真实字段引用。
         if (target is Identifier && _locals.contains(target.name)) {
-          return '${target.name}.${inner.methodName.name}'
-              '(${_eventArgsJs(inner.argumentList)})';
+          final recv = activeScope.fieldRef(target.name) ?? target.name;
+          return '$recv.${inner.methodName.name}'
+              '(${_eventArgsJs(inner.argumentList, activeScope)})';
         }
         // context.read<T>().reset() 链式：先翻译 receiver（jsDataExpr →
         // this.context.read('T')），再拼方法调用。
         if (target is MethodInvocation) {
-          final recv = jsDataExpr(target, _eventScope());
+          final recv = jsDataExpr(target, activeScope);
           return '$recv.${inner.methodName.name}'
-              '(${_eventArgsJs(inner.argumentList)})';
+              '(${_eventArgsJs(inner.argumentList, activeScope)})';
         }
         // `widget.onPick(key, v)`（`() => widget.onPick(key, v)`）：调用 widget
         // 自身成员——合并类里就是实例方法/字段回调，落成 `this.onPick(key, v)`。
@@ -787,7 +810,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         // ——`widget` 在 JS 侧根本没有这个字段，点击直接抛错失效。
         if (target is Identifier && target.name == 'widget') {
           final wm = inner.methodName.name;
-          final args = _eventArgsJs(inner.argumentList);
+          final args = _eventArgsJs(inner.argumentList, activeScope);
           final prop = propByField[wm];
           if (prop != null) return 'this.$prop($args)';
           if (methodNames.contains(wm)) return 'this.$wm($args)';
@@ -798,23 +821,29 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         // 不查动作表（实例方法全量生成，与 Dart 写法一致）。
         if (target is Identifier) {
           return 'this.${target.name}.${inner.methodName.name}'
-              '(${_eventArgsJs(inner.argumentList)})';
+              '(${_eventArgsJs(inner.argumentList, activeScope)})';
         }
         // 无 receiver 的裸调用 `_openMenu(context, i)` / `_go(text)`：本组件实例
         // 方法 → `this.<name>(<args>)`。必须保留「调用 + 实参」形态：只回方法名会
         // 让闭包体变成 `() => { _openMenu; }`（引用而非调用，点击无任何反应）。
         final method = inner.methodName.name;
         // 顶层 @HostInjected 函数（无 receiver，如 `toast('x')`）→ 宿主通道。
-        final topHost = _hostEventJs(null, method, inner.argumentList);
+        final topHost = _hostEventJs(
+          null,
+          method,
+          inner.argumentList,
+          activeScope,
+        );
         if (topHost != null) return topHost;
-        if (actionByMethod.containsKey(method) || methodNames.contains(method)) {
-          return 'this.$method(${_eventArgsJs(inner.argumentList)})';
+        if (actionByMethod.containsKey(method) ||
+            methodNames.contains(method)) {
+          return 'this.$method(${_eventArgsJs(inner.argumentList, activeScope)})';
         }
         // 字段型回调用法（`() => onPick(key, v)` / `_FilterPanel` 里的分组循环）：
         // 字段存的是父组件传进来的函数，调它即 `this.<prop>(<args>)`。
         final prop = propByField[method];
         if (prop != null) {
-          return 'this.$prop(${_eventArgsJs(inner.argumentList)})';
+          return 'this.$prop(${_eventArgsJs(inner.argumentList, activeScope)})';
         }
         return eventOf(method);
       }
@@ -822,52 +851,134 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
   }
 
-  /// 事件「构建期句柄」。
+  /// 事件的**编译期位点号**：产物是静态源码，同一个 `on*` 位点每次构建都是
+  /// 同一个号；不同位点必不相同。运行时以「位点号 + 捕获值」复用句柄 id，
+  /// 从而重建后 props 稳定、增量补丁不失效，同时循环项之间互不串味。
+  int _eventSite = 0;
+
+  /// 事件「构建期句柄」：统一产出构建期**箭头闭包**，由运行时登记成句柄
+  /// （`{__fn:id}`，函数不能跨语言传递，只能传 id）。
   ///
-  /// 两种注入方式（都产出 `{__fn:id}` 句柄交给宿主 / 子组件去 invoke，函数本身
-  /// 不能跨语言边界，只能传 id）：
-  ///   - `this.__bind("表达式")`：**字符串**方案，点击时在隔离作用域求值；
-  ///   - `this.__bindFn(key, () => { 表达式; })`：**构建期闭包**方案，闭包在
-  ///     build（或抽出的 builder 方法）里创建，天然捕获当时的局部变量/循环
-  ///     变量——与 Dart 闭包同语义。
+  ///     this.__bindFn(17, [i], (...__a) => this._open(i, ...__a))
+  ///     this.__bindFn(18, [], () => model.inc())
+  ///     this.__bindFn(19, [], (v) => this.setState(() => { this._v = v; }))
   ///
-  /// 只要表达式引用了「点击时看不见的构建期局部名」（`_eventCapturesBuildLocals`），
-  /// 就必须走闭包方案：字符串方案在点击时求值，`ReferenceError` 会被求值层吞掉，
-  /// 表现为「点了没反应」。这正是 Dart `onPressed: () => model.inc()` 里
-  /// `model` 是 builder 局部变量时的情形。
+  /// 闭包在 build（或抽出的 builder 方法）里创建，天然捕获当时的局部变量 /
+  /// 循环变量——与 Dart 闭包同语义，不存在「点击时求值看不见构建期名字」的
+  /// 问题（这正是过去 `__bind` 字符串方案会静默失效的场景）。
   ///
-  /// 否则走字符串方案：方法引用（`_inc`）按名调用、位置实参用 `apply` 摊开
-  /// （多参事件天然支持），`this.context.read("T")` 这类表达式按**绑定时的构建
-  /// 位置**解析——都不依赖局部作用域。
+  /// 第二个实参是**捕获值列表**：捕获到不同值的循环项必须拿到不同句柄
+  /// （否则点任意行都执行最后一行的回调）。
   String eventHandle(Expression e) {
+    final site = _eventSite++;
     try {
-      final exprJs = eventExpr(e);
-      if (_eventCapturesBuildLocals(e)) {
-        return 'this.__bindFn(${_bindKeyExpr(e)}, () => { $exprJs; })';
-      }
-      return 'this.__bind(${jsString(exprJs)})';
+      final captures = _eventCaptures(e);
+      final fnJs = _eventFnJs(e);
+      return 'this.__bindFn($site, [${captures.join(', ')}], $fnJs)';
     } catch (err) {
       // 单个事件翻译失败不该炸掉整棵 build 树（放大器缺陷）：降级为「空操作
-      // 句柄」，其余结点照常翻译（运行时 `__noop` 不命中实例方法 → 什么都不做）。
+      // 句柄」，其余结点照常翻译。
       // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 事件处理无法翻译，已降级为空操作：'
-          '${e.toSource()}（$err）');
-      return 'this.__bind("__noop")';
+      print(
+        '[hot_patch_generator] 事件处理无法翻译，已降级为空操作：'
+        '${e.toSource()}（$err）',
+      );
+      return 'this.__bindFn($site, [], () => {})';
     }
   }
 
-  /// 事件表达式是否引用了「点击时看不见的构建期局部名」：循环变量 / build 局部
-  /// 变量（含 builder 抽出的方法里的前置语句局部）/ 方法体局部变量——且该名字
-  /// 折算不成字段引用、方法、getter、顶层常量、宿主方法（那些都已是 `this.*`
-  /// 或全局，字符串方案能解析）。
+  /// 事件表达式 → JS 箭头函数源码（参数按 Dart 闭包签名逐字对应）。
+  String _eventFnJs(Expression e) {
+    if (e is FunctionExpression) {
+      final params = _closureParamNames(e);
+      final base = _eventScope();
+      final scope = params.isEmpty ? base : base.withParams(params);
+      final pjs = params.join(', ');
+      final body = e.body;
+      if (body is ExpressionFunctionBody) {
+        // 表达式体在 Dart 里就是事件调用本身：箭头体直接返回，保留返回值
+        // （可等待事件 EasyRefresh.onRefresh 靠它拿到 JS 侧 Promise）。
+        try {
+          return '($pjs) => ${eventExpr(e, scope)}';
+        } catch (_) {
+          // 非调用形态（赋值 / 自增等）退回语句翻译。
+          final stmt = closureBodyStmtJs(body.expression, scope, const {});
+          if (stmt == null) rethrow;
+          return '($pjs) => { $stmt }';
+        }
+      }
+      if (body is BlockFunctionBody) {
+        final stmts = translateStmtList(
+          body.block.statements,
+          scope,
+          const {},
+          null,
+        );
+        if (stmts.trim().isEmpty) {
+          throw const FormatException('事件闭包块体为空');
+        }
+        return '($pjs) => { ${stmts.trim()} }';
+      }
+      throw const FormatException('不支持的事件闭包体');
+    }
+    // 方法 / 字段 / widget 成员引用（`onTap: _tap` / `onTap: widget.onTap` /
+    // `onTap: onTap`）：触发时把实参原样转发（多参事件 onChanged / onReorder）。
+    final ref = _eventRef(e);
+    if (ref != null) return '(...__a) => $ref(...__a)';
+    // 其余表达式形态：整体求值，无参。
+    return '(...__a) => (${eventExpr(e)})';
+  }
+
+  /// 事件表达式里的闭包形参名（`(v) => ...` 的 `v`）。
+  List<String> _closureParamNames(FunctionExpression fn) {
+    final out = <String>[];
+    for (final p in fn.parameters?.parameters ?? const <FormalParameter>[]) {
+      final name = p is DefaultFormalParameter
+          ? p.parameter.name?.lexeme
+          : p.name?.lexeme;
+      if (name != null && name.isNotEmpty) out.add(name);
+    }
+    return out;
+  }
+
+  /// 「可调用引用」形态（`onTap: _tap` / `widget.onTap` / 字段回调 `onTap`）
+  /// → JS 成员引用 `this.<name>`；非引用形态返回 null。
+  String? _eventRef(Expression e) {
+    final String name;
+    if (e is SimpleIdentifier) {
+      name = e.name;
+    } else {
+      final wm = widgetMemberName(e);
+      if (wm == null) return null;
+      name = wm;
+    }
+    final prop = propByField[name];
+    if (prop != null) return 'this.$prop';
+    if (methodNames.contains(name)) return 'this.$name';
+    final event = actionByMethod[name];
+    if (event != null) return 'this.$event';
+    return null;
+  }
+
+  /// 事件表达式引用的**构建期局部名**（循环变量 / build 局部 / 方法形参 /
+  /// 方法体局部）——运行时按这些值区分句柄：
   ///
-  /// 命中 → 必须用构建期闭包（[eventHandle]）；`context` / `widget` 在事件作用域
-  /// 里已由 `_eventScope` 改写成 `this.context` / `this.*`，不算命中。
-  bool _eventCapturesBuildLocals(Expression e) {
+  ///   - 同一位点每次重建捕获到同一组值 → key 不变 → 句柄 id 不变（props 稳定）；
+  ///   - 循环里捕获到不同值 → key 不同 → 各自独立句柄（回调不互相覆盖）。
+  ///
+  /// 能折算成字段引用 / 方法 / getter / 顶层常量 / 宿主方法的名字（`this.*`
+  /// 或全局）不算捕获；`context` / `widget` 由 [_eventScope] 改写成 `this.*`。
+  /// 事件闭包自己的形参（`(v) => ...` 的 `v`）也不捕获——它们在闭包内部遮蔽。
+  List<String> _eventCaptures(Expression e) {
     final used = <String>{};
     e.accept(_SimpleIdentifierCollector(used));
+    final closureParams = e is FunctionExpression
+        ? _closureParamNames(e).toSet()
+        : const <String>{};
+    final out = <String>[];
     for (final name in used) {
       if (name == 'context' || name == 'this' || name == 'widget') continue;
+      if (closureParams.contains(name)) continue;
       if (_localAliases.containsKey(name) ||
           propByField.containsKey(name) ||
           methodNames.contains(name) ||
@@ -880,23 +991,22 @@ class WidgetTranslateContext implements WidgetExprRenderer {
           _loopVars.contains(name) ||
           _methodParams.contains(name) ||
           _methodBodyLocals.contains(name)) {
-        return true;
+        out.add(name);
       }
     }
-    return false;
+    return out;
   }
 
   /// `setState(() {...})` / `setState(() => _x = v)` → `this.setState(() => {...})`。
   ///
   /// 闭包体走统一的语句/表达式翻译（状态字段 → `this.<field>`，与普通方法体
   /// 同一套作用域），翻译失败即抛错，由 [eventHandle] 统一降级为空操作。
-  String _setStateCallJs(MethodInvocation call) {
+  String _setStateCallJs(MethodInvocation call, FieldScope scope) {
     final args = call.argumentList.arguments;
     final fn = args.isNotEmpty ? args.first : null;
     if (fn is! FunctionExpression) {
       throw const FormatException('setState 需要函数实参');
     }
-    final scope = _eventScope();
     final body = fn.body;
     String bodyJs;
     if (body is ExpressionFunctionBody) {
@@ -909,43 +1019,38 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         final v = exprToJs(body.expression, scope, const {});
         if (v == null) {
           throw FormatException(
-              'setState 闭包体无法翻译：${body.expression.toSource()}');
+            'setState 闭包体无法翻译：${body.expression.toSource()}',
+          );
         }
         bodyJs = '  $v;';
       }
     } else if (body is BlockFunctionBody) {
-      bodyJs = translateStmtList(body.block.statements, scope, const {}, null,
-          depth: 1, returnsWidget: false);
+      bodyJs = translateStmtList(
+        body.block.statements,
+        scope,
+        const {},
+        null,
+        depth: 1,
+        returnsWidget: false,
+      );
     } else {
       throw const FormatException('不支持的 setState 闭包体');
     }
     return 'this.setState(() => {\n$bodyJs\n})';
   }
 
-  /// 构建期句柄 key：表达式源码 + 当前全部循环变量的运行期值。
-  ///
-  /// 循环变量在字符串方案里根本拿不到（点击时才求值），故走 `__bindFn` 闭包
-  /// 分支；而闭包分支按 key 缓存句柄，key 必须「同一次迭代稳定、不同迭代不同」
-  /// ——所以把循环变量的值拼进去。
-  String _bindKeyExpr(Expression e) {
-    final parts = <String>[jsString(e.toSource())];
-    for (final v in _loopVars) {
-      parts.add('String($v)');
-    }
-    return parts.join(' + ":" + ');
-  }
-
   /// 事件参数列表翻译：逐参数走 [jsDataExpr]（字符串/字段/局部变量/字面量）。
   ///
-  /// 作用域用 [_eventScope]：实参里的 `context` 照常翻译成 `this.context`
-  /// （运行时按**执行位置**解析到对应代理），形参与调用点一一对应，不做剔除。
-  String _eventArgsJs(ArgumentList args) {
+  /// 作用域用 [_eventScope]（或调方传入的事件闭包作用域）：实参里的 `context`
+  /// 照常翻译成 `this.context`（运行时按**执行位置**解析到对应代理），形参与
+  /// 调用点一一对应，不做剔除。
+  String _eventArgsJs(ArgumentList args, FieldScope scope) {
     final out = <String>[];
     for (final a in args.arguments) {
       if (a is NamedExpression) {
-        out.add(jsDataExpr(a.expression, _eventScope()));
+        out.add(jsDataExpr(a.expression, scope));
       } else {
-        out.add(jsDataExpr(a, _eventScope()));
+        out.add(jsDataExpr(a, scope));
       }
     }
     return out.join(', ');
@@ -956,7 +1061,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// [target] 是 @HostInjected 类名（`AppRouter`）或 null（顶层宿主函数）；
   /// 通道表 [hostMethods] 与方法体翻译共用同一份数据，未命中返回 null。
   /// 位置 / 具名实参分开传，宿主侧用 `Function.apply` 还原 Dart 调用语义。
-  String? _hostEventJs(Expression? target, String method, ArgumentList args) {
+  String? _hostEventJs(
+    Expression? target,
+    String method,
+    ArgumentList args,
+    FieldScope scope,
+  ) {
     final String? channel;
     if (target is Identifier) {
       channel = hostMethods[target.name]?[method];
@@ -970,12 +1080,14 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final named = <String>[];
     for (final a in args.arguments) {
       // 形参与调用点一一对应，不做任何剔除（`context` → `this.context`，
-      // 见 [_eventScope]：事件串在隔离作用域求值，看不见 build 形参）。
+      // 见 [_eventScope]：事件闭包里按执行位置解析）。
       if (a is NamedExpression) {
         named.add(
-            '${jsString(a.name.label.name)}: ${jsDataExpr(a.expression, _eventScope())}');
+          '${jsString(a.name.label.name)}: '
+          '${jsDataExpr(a.expression, scope)}',
+        );
       } else {
-        pos.add(jsDataExpr(a, _eventScope()));
+        pos.add(jsDataExpr(a, scope));
       }
     }
     return '_app_host_.invoke(${jsString(channel)}, ${hostArgsJs(pos, named)})';
@@ -1023,8 +1135,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   String jsDataExpr(Expression e, [FieldScope? scope]) {
     final js = rhsToJs(e, scope ?? _dataScope(), const {});
     if (js == null) {
-      throw FormatException(
-          '文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
+      throw FormatException('文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
     }
     return js;
   }
@@ -1037,25 +1148,24 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// [FieldScope.fieldRef] 先查形参，若不剔除就会把 `list` 原样透传成未定义的
   /// 自由变量（懒加载 builder 抽成实例方法后尤其致命）。
   FieldScope _dataScope() => FieldScope(
-        propByField: propByField,
-        params: {
-          ..._loopVars,
-          ..._methodParams,
-          for (final l in _locals)
-            if (!_localAliases.containsKey(l)) l,
-        },
-        methods: {...actionByMethod.keys, ...methodNames},
-        hostMethods: hostMethods,
-        globalConsts: globalConsts,
-        localAliases: _localAliases,
-      );
+    propByField: propByField,
+    params: {
+      ..._loopVars,
+      ..._methodParams,
+      for (final l in _locals)
+        if (!_localAliases.containsKey(l)) l,
+    },
+    methods: {...actionByMethod.keys, ...methodNames},
+    hostMethods: hostMethods,
+    globalConsts: globalConsts,
+    localAliases: _localAliases,
+  );
 
   /// 事件表达式作用域：在 [_dataScope] 基础上把 `context` 从形参表**剔除**、
   /// 改挂别名 `context → this.context`。
   ///
-  /// 缘由：事件串由运行时用隔离函数求值（`new Function`），build 形参 / 方法
-  /// 局部变量在点击时都不可见——裸 `context` 落到那里必然是 ReferenceError。
-  /// 运行时 `this.context` 按**绑定时的执行位置**解析（见【10.7】与
+  /// 缘由：事件闭包由运行时在点击时调用，Dart 的 build 形参 `context` 不是
+  /// 闭包形参；运行时 `this.context` 按**绑定时的执行位置**解析（见【10.7】与
   /// `augment` 的 context getter）：被委托的 builder 方法里取的是**被委托组件**
   /// 的代理（位于 provider 子树之内），与 Dart 闭包捕获 `context` 形参同语义；
   /// 组件自身作用域里则是 build 传参的同一代理。故改走 `this.context` 即可保持
@@ -1089,8 +1199,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (e is Identifier) {
       // `widget.<name>`：State 里转发 widget 自身成员，合并类里就是实例成员；
       // 非 `widget.` 前缀的 `a.b` 不支持（返回 null，交给数据表达式分支）。
-      final name =
-          e is PrefixedIdentifier ? widgetMemberName(e) : e.name;
+      final name = e is PrefixedIdentifier ? widgetMemberName(e) : e.name;
       if (name == null) return null;
       // getter（`list: _visiblePosts`）：JS 侧是 `get` 访问器，按值读即可；
       // 包装成调用会传出去一个函数，子组件拿到空数据。
@@ -1215,8 +1324,10 @@ String _placeholderJs() => "__h('SizedBox', {})";
 /// 构建期降级告警：出声（不静默丢代码），但不再抛错连累兄弟结点。
 void _warnDegrade(String what, String source, Object err) {
   // ignore: avoid_print - 构建期日志
-  print('[hot_patch_generator] $what 无法翻译，已降级为占位结点：'
-      '$source（$err）');
+  print(
+    '[hot_patch_generator] $what 无法翻译，已降级为占位结点：'
+    '$source（$err）',
+  );
 }
 
 /// 跨文件「静态单例类」解析器（如 theme/panel_colors.dart 的 MyColors）。
@@ -1237,7 +1348,11 @@ class SingletonResolver {
   /// 翻译过程中实际被引用的单例类（→ 产物 import）。
   final Set<String> used = {};
 
-  void add(String className, Set<String> publicStaticFields, String sourceFile) {
+  void add(
+    String className,
+    Set<String> publicStaticFields,
+    String sourceFile,
+  ) {
     _fields[className] = publicStaticFields;
     _sourceFile[className] = sourceFile;
   }

@@ -39,7 +39,8 @@ class JsRenderContext {
   /// 把事件句柄（`{'__fn': id}`）回传到 JS 侧执行。
   final void Function(Object? handler, [List<Object?> args]) invoke;
 
-  Widget? child([int index = 0]) => index < children.length ? children[index] : null;
+  Widget? child([int index = 0]) =>
+      index < children.length ? children[index] : null;
 
   /// 要求子 widget 非空时使用（Expanded / 按钮的 child 等）。
   Widget get childOrEmpty => child() ?? const SizedBox.shrink();
@@ -62,7 +63,7 @@ class JsRenderContext {
   /// 事件回传统一按**参数数组**下发，`on`/`on1`…`on4` 只是按回调形参个数
   /// 糖化：`on` = 0 参（onTap/onPressed），`on1` = 1 参（onChanged…），
   /// `on2`/`on3`/`on4` = 2/3/4 参（onReorder、onPopInvokedWithResult…）。
-  /// 每个 renderer 按事件真实签名选对应糖即可，JS 侧 __bind/__bindFn 无需改动。
+  /// 每个 renderer 按事件真实签名选对应糖即可，JS 侧 __bindFn 无需改动。
   VoidCallback? on(String key) {
     final handler = props[key];
     if (handler == null) {
@@ -191,8 +192,9 @@ Widget? buildJsElement(
   final props = raw['props'] is Map
       ? (raw['props'] as Map).cast<String, dynamic>()
       : <String, dynamic>{};
-  final rawChildren =
-      raw['children'] is List ? raw['children'] as List : const <Object?>[];
+  final rawChildren = raw['children'] is List
+      ? raw['children'] as List
+      : const <Object?>[];
 
   final children = <Widget>[];
   final childTypes = <String>[];
@@ -211,15 +213,17 @@ Widget? buildJsElement(
 
   final builder = jsWidgetRegistry.lookup(type) ?? jsWidgetRegistry.fallback;
   if (builder == null) return buildMissingJsWidget(type, children);
-  return builder(JsRenderContext(
-    type: type,
-    props: props,
-    children: children,
-    childTypes: childTypes,
-    childContexts: childContexts,
-    propChildren: propChildren,
-    invoke: invoke,
-  ));
+  return builder(
+    JsRenderContext(
+      type: type,
+      props: props,
+      children: children,
+      childTypes: childTypes,
+      childContexts: childContexts,
+      propChildren: propChildren,
+      invoke: invoke,
+    ),
+  );
 }
 
 /// 元素描述 → 仅含数据（type/props/propChildren）的上下文：供
@@ -256,8 +260,8 @@ JsRenderContext _descriptorContext(
 /// 结点共用同一张表，不再随 widget 参数逐层透传。运行时（hot_patch 包）不
 /// import 任何业务类，实现由业务方在 `main()` 里注册（与 [registerHostMethods]
 /// 同一个位置，须在 `runApp` 之前）。
-final Map<String, Widget Function(Map<String, dynamic> args)> _nativeComponents =
-    {};
+final Map<String, Widget Function(Map<String, dynamic> args)>
+_nativeComponents = {};
 
 /// 注册一个「无 JS 产物组件」的原生实现（如生成器对 `@PatchIgnore` /
 /// 无注解私有组件产出的「保留具体类型名」结点）。
@@ -289,7 +293,6 @@ Widget _unknownWidgetBuilder(JsRenderContext c) {
   return buildMissingJsWidget(c.type, c.children);
 }
 
-
 /// `type -> Flutter widget` 注册表（宿主唯一扩展点）。
 class JsWidgetRegistry {
   final Map<String, JsWidgetBuilder> _builders = {};
@@ -303,7 +306,8 @@ class JsWidgetRegistry {
   /// （或生成器 translator）时，**同一份产物无需重新生成、协议不变**。
   JsWidgetBuilder? _fallback = _unknownWidgetBuilder;
 
-  void register(String type, JsWidgetBuilder builder) => _builders[type] = builder;
+  void register(String type, JsWidgetBuilder builder) =>
+      _builders[type] = builder;
 
   /// 设置 lookup 未命中时的默认 builder（见 [_fallback]）。
   void registerFallback(JsWidgetBuilder builder) => _fallback = builder;
@@ -334,63 +338,95 @@ class JsWidgetRegistry {
 ///     （见 capabilities/<能力>/<能力>_library.dart）；本核心文件不 import 它们；
 ///   - Builder **不在这里**：它是无状态委托，纯 JS 逻辑，宿主零感知。
 void registerBuiltinJsWidgets(JsWidgetRegistry r) {
-  r.register('Text', (c) => Text(
-        // `data` 是 Flutter `Text` 的首个位置形参名（`Text('你好')`）；
-        // 未登记形参名的类型才走 `$pos[0]` 兜底。
-        c.str('data') ?? c.posText(),
-        style: textStyleFromJson(c.map('style')),
-        textAlign: textAlignFromJson(c.props['textAlign']),
-        overflow: overflowFromJson(c.props['overflow']),
-        maxLines: c.int_('maxLines'),
-        softWrap: c.bool_('softWrap'),
-        textDirection: textDirectionFromJson(c.props['textDirection']),
-        textScaler: textScalerFromJson(c.props['textScaler']),
-        semanticsLabel: c.str('semanticsLabel'),
-      ));
+  r.register(
+    'Text',
+    (c) => Text(
+      // `data` 是 Flutter `Text` 的首个位置形参名（`Text('你好')`）；
+      // 未登记形参名的类型才走 `$pos[0]` 兜底。
+      c.str('data') ?? c.posText(),
+      style: textStyleFromJson(c.map('style')),
+      textAlign: textAlignFromJson(c.props['textAlign']),
+      overflow: overflowFromJson(c.props['overflow']),
+      maxLines: c.int_('maxLines'),
+      softWrap: c.bool_('softWrap'),
+      textDirection: textDirectionFromJson(c.props['textDirection']),
+      textScaler: textScalerFromJson(c.props['textScaler']),
+      semanticsLabel: c.str('semanticsLabel'),
+    ),
+  );
 
-  r.register('Column', (c) => Column(
-        mainAxisAlignment: mainAxisAlignmentFromJson(c.props['mainAxisAlignment']) ?? MainAxisAlignment.start,
-        crossAxisAlignment: crossAxisAlignmentFromJson(c.props['crossAxisAlignment']) ?? CrossAxisAlignment.center,
-        mainAxisSize: mainAxisSizeFromJson(c.props['mainAxisSize']) ?? MainAxisSize.max,
-        children: c.children,
-      ));
+  r.register(
+    'Column',
+    (c) => Column(
+      mainAxisAlignment:
+          mainAxisAlignmentFromJson(c.props['mainAxisAlignment']) ??
+          MainAxisAlignment.start,
+      crossAxisAlignment:
+          crossAxisAlignmentFromJson(c.props['crossAxisAlignment']) ??
+          CrossAxisAlignment.center,
+      mainAxisSize:
+          mainAxisSizeFromJson(c.props['mainAxisSize']) ?? MainAxisSize.max,
+      children: c.children,
+    ),
+  );
 
-  r.register('Row', (c) => Row(
-        mainAxisAlignment: mainAxisAlignmentFromJson(c.props['mainAxisAlignment']) ?? MainAxisAlignment.start,
-        crossAxisAlignment: crossAxisAlignmentFromJson(c.props['crossAxisAlignment']) ?? CrossAxisAlignment.center,
-        mainAxisSize: mainAxisSizeFromJson(c.props['mainAxisSize']) ?? MainAxisSize.max,
-        children: c.children,
-      ));
+  r.register(
+    'Row',
+    (c) => Row(
+      mainAxisAlignment:
+          mainAxisAlignmentFromJson(c.props['mainAxisAlignment']) ??
+          MainAxisAlignment.start,
+      crossAxisAlignment:
+          crossAxisAlignmentFromJson(c.props['crossAxisAlignment']) ??
+          CrossAxisAlignment.center,
+      mainAxisSize:
+          mainAxisSizeFromJson(c.props['mainAxisSize']) ?? MainAxisSize.max,
+      children: c.children,
+    ),
+  );
 
-  r.register('Stack', (c) => Stack(
-        alignment: alignmentFromJson(c.props['alignment']) ?? AlignmentDirectional.topStart,
-        fit: stackFitFromJson(c.props['fit']) ?? StackFit.loose,
-        clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.hardEdge,
-        children: c.children,
-      ));
+  r.register(
+    'Stack',
+    (c) => Stack(
+      alignment:
+          alignmentFromJson(c.props['alignment']) ??
+          AlignmentDirectional.topStart,
+      fit: stackFitFromJson(c.props['fit']) ?? StackFit.loose,
+      clipBehavior:
+          clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.hardEdge,
+      children: c.children,
+    ),
+  );
 
-  r.register('IndexedStack', (c) => IndexedStack(
-        // index 是状态字段（`this._index`），切换后只重下发 props、子结点原位复用，
-        // 因此各 tab 页的状态（滚动位置、输入内容）都能保留。
-        index: c.int_('index') ?? 0,
-        alignment: alignmentFromJson(c.props['alignment']) ??
-            AlignmentDirectional.topStart,
-        children: c.children,
-      ));
+  r.register(
+    'IndexedStack',
+    (c) => IndexedStack(
+      // index 是状态字段（`this._index`），切换后只重下发 props、子结点原位复用，
+      // 因此各 tab 页的状态（滚动位置、输入内容）都能保留。
+      index: c.int_('index') ?? 0,
+      alignment:
+          alignmentFromJson(c.props['alignment']) ??
+          AlignmentDirectional.topStart,
+      children: c.children,
+    ),
+  );
 
-  r.register('Wrap', (c) => Wrap(
-        direction: axisFromJson(c.props['direction']) ?? Axis.horizontal,
-        spacing: c.num_('spacing') ?? 0,
-        runSpacing: c.num_('runSpacing') ?? 0,
-        alignment: wrapAlignmentFromJson(c.props['alignment']) ?? WrapAlignment.start,
-        runAlignment:
-            wrapAlignmentFromJson(c.props['runAlignment']) ?? WrapAlignment.start,
-        crossAxisAlignment: wrapCrossAlignmentFromJson(
-                c.props['crossAxisAlignment']) ??
-            WrapCrossAlignment.start,
-        children: c.children,
-      ));
-
+  r.register(
+    'Wrap',
+    (c) => Wrap(
+      direction: axisFromJson(c.props['direction']) ?? Axis.horizontal,
+      spacing: c.num_('spacing') ?? 0,
+      runSpacing: c.num_('runSpacing') ?? 0,
+      alignment:
+          wrapAlignmentFromJson(c.props['alignment']) ?? WrapAlignment.start,
+      runAlignment:
+          wrapAlignmentFromJson(c.props['runAlignment']) ?? WrapAlignment.start,
+      crossAxisAlignment:
+          wrapCrossAlignmentFromJson(c.props['crossAxisAlignment']) ??
+          WrapCrossAlignment.start,
+      children: c.children,
+    ),
+  );
 
   r.register('Container', (c) {
     final deco = boxDecorationFromJson(c.map('decoration'));
@@ -413,129 +449,156 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
-  r.register('Padding', (c) => Padding(
-        padding: edgeInsetsFromJson(c.map('padding')),
-        child: c.child(),
-      ));
+  r.register(
+    'Padding',
+    (c) => Padding(
+      padding: edgeInsetsFromJson(c.map('padding')),
+      child: c.child(),
+    ),
+  );
 
   r.register('Center', (c) => Center(child: c.child()));
 
-  r.register('Align', (c) => Align(
-        alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
-        child: c.child(),
-      ));
+  r.register(
+    'Align',
+    (c) => Align(
+      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+      child: c.child(),
+    ),
+  );
 
-  r.register('SizedBox', (c) => SizedBox(
-        width: c.num_('width'),
-        height: c.num_('height'),
-        child: c.child(),
-      ));
+  r.register(
+    'SizedBox',
+    (c) => SizedBox(
+      width: c.num_('width'),
+      height: c.num_('height'),
+      child: c.child(),
+    ),
+  );
 
-  r.register('Expanded', (c) => Expanded(
-        flex: c.int_('flex') ?? 1,
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'Expanded',
+    (c) => Expanded(flex: c.int_('flex') ?? 1, child: c.childOrEmpty),
+  );
 
-  r.register('Flexible', (c) => Flexible(
-        flex: c.int_('flex') ?? 1,
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'Flexible',
+    (c) => Flexible(flex: c.int_('flex') ?? 1, child: c.childOrEmpty),
+  );
 
-  r.register('Positioned', (c) => Positioned(
-        left: c.num_('left'),
-        top: c.num_('top'),
-        right: c.num_('right'),
-        bottom: c.num_('bottom'),
-        width: c.num_('width'),
-        height: c.num_('height'),
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'Positioned',
+    (c) => Positioned(
+      left: c.num_('left'),
+      top: c.num_('top'),
+      right: c.num_('right'),
+      bottom: c.num_('bottom'),
+      width: c.num_('width'),
+      height: c.num_('height'),
+      child: c.childOrEmpty,
+    ),
+  );
 
   r.register('ClipRRect', (c) {
     final radius = c.num_('borderRadius');
     return ClipRRect(
-      borderRadius:
-          radius == null ? BorderRadius.zero : BorderRadius.all(Radius.circular(radius)),
-      clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
+      borderRadius: radius == null
+          ? BorderRadius.zero
+          : BorderRadius.all(Radius.circular(radius)),
+      clipBehavior:
+          clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
       child: c.child(),
     );
   });
 
-  r.register('ClipOval', (c) => ClipOval(
-        clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
-        child: c.child(),
-      ));
+  r.register(
+    'ClipOval',
+    (c) => ClipOval(
+      clipBehavior:
+          clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
+      child: c.child(),
+    ),
+  );
 
-  r.register('Material', (c) => Material(
-        color: colorFromJson(c.props['color']),
-        elevation: c.num_('elevation') ?? 0,
-        child: c.child(),
-      ));
+  r.register(
+    'Material',
+    (c) => Material(
+      color: colorFromJson(c.props['color']),
+      elevation: c.num_('elevation') ?? 0,
+      child: c.child(),
+    ),
+  );
 
   // Transform.translate：位移（props.offset = {dx, dy}）+ child。
   r.register('Transform', (c) {
     final offset = c.map('offset') ?? const <String, dynamic>{};
     final dx = (offset['dx'] as num?)?.toDouble() ?? 0;
     final dy = (offset['dy'] as num?)?.toDouble() ?? 0;
-    return Transform.translate(
-      offset: Offset(dx, dy),
-      child: c.child(),
-    );
+    return Transform.translate(offset: Offset(dx, dy), child: c.child());
   });
 
-  r.register('Card', (c) => Card(
-        elevation: c.num_('elevation'),
-        margin: edgeInsetsFromJson(c.map('margin')),
-        color: colorFromJson(c.props['color']),
-        shape: shapeFromJson(c.props['shape']),
-        clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']),
-        shadowColor: colorFromJson(c.props['shadowColor']),
-        child: c.child(),
-      ));
+  r.register(
+    'Card',
+    (c) => Card(
+      elevation: c.num_('elevation'),
+      margin: edgeInsetsFromJson(c.map('margin')),
+      color: colorFromJson(c.props['color']),
+      shape: shapeFromJson(c.props['shape']),
+      clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']),
+      shadowColor: colorFromJson(c.props['shadowColor']),
+      child: c.child(),
+    ),
+  );
 
-  r.register('Icon', (c) => Icon(
-        // `icon` 是 Flutter `Icon` 的首个位置形参名（`Icon(Icons.star)`）。
-        iconFromJson(c.props['icon'] ?? c.pos(0)),
-        size: c.num_('size'),
-        color: colorFromJson(c.props['color']),
-      ));
+  r.register(
+    'Icon',
+    (c) => Icon(
+      // `icon` 是 Flutter `Icon` 的首个位置形参名（`Icon(Icons.star)`）。
+      iconFromJson(c.props['icon'] ?? c.pos(0)),
+      size: c.num_('size'),
+      color: colorFromJson(c.props['color']),
+    ),
+  );
 
   // `Image.network('url')` / `Image.asset('a.png')`：工厂名（`props.factory`）
   // 决定构造哪个原生工厂，位置实参名随之不同（`Image.network` → `src`、
   // `Image.asset` → `name`、`Image(...)` → `image`）。
   r.register('Image', (c) {
     final factory = c.str('factory');
-    final source = c.str('src') ??
-        c.str('name') ??
-        c.str('image') ??
-        c.posText();
+    final source =
+        c.str('src') ?? c.str('name') ?? c.str('image') ?? c.posText();
     final width = c.num_('width');
     final height = c.num_('height');
     final fit = boxFitFromJson(c.props['fit']);
     final color = colorFromJson(c.props['color']);
     final blend = blendModeFromJson(c.props['colorBlendMode']);
     final align = alignmentFromJson(c.props['alignment']) ?? Alignment.center;
-    final repeat = imageRepeatFromJson(c.props['repeat']) ?? ImageRepeat.noRepeat;
+    final repeat =
+        imageRepeatFromJson(c.props['repeat']) ?? ImageRepeat.noRepeat;
     // 工厂名优先；缺失（旧产物 / 未登记）时退回按网址前缀判断。
     final isNetwork =
         factory == 'network' || (factory == null && source.startsWith('http'));
     return isNetwork
-        ? Image.network(source,
+        ? Image.network(
+            source,
             width: width,
             height: height,
             fit: fit,
             color: color,
             colorBlendMode: blend,
             alignment: align,
-            repeat: repeat)
-        : Image.asset(source,
+            repeat: repeat,
+          )
+        : Image.asset(
+            source,
             width: width,
             height: height,
             fit: fit,
             color: color,
             colorBlendMode: blend,
             alignment: align,
-            repeat: repeat);
+            repeat: repeat,
+          );
   });
 
   r.register('CircleAvatar', (c) {
@@ -549,38 +612,45 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       backgroundImage: bgImage == null
           ? null
           : (bgImage.startsWith('http')
-              ? NetworkImage(bgImage)
-              : AssetImage(bgImage)) as ImageProvider,
+                    ? NetworkImage(bgImage)
+                    : AssetImage(bgImage))
+                as ImageProvider,
       child: c.child(),
     );
   });
 
-  r.register('Divider', (c) => Divider(
-        height: c.num_('height'),
-        thickness: c.num_('thickness'),
-        indent: c.num_('indent'),
-        endIndent: c.num_('endIndent'),
-        color: colorFromJson(c.props['color']),
-      ));
+  r.register(
+    'Divider',
+    (c) => Divider(
+      height: c.num_('height'),
+      thickness: c.num_('thickness'),
+      indent: c.num_('indent'),
+      endIndent: c.num_('endIndent'),
+      color: colorFromJson(c.props['color']),
+    ),
+  );
 
   r.register('Spacer', (c) => Spacer(flex: c.int_('flex') ?? 1));
 
   // label 现在是结点（props['label']），运行时用 propChild 取。
-  r.register('Chip', (c) => Chip(
-        label: c.propChild('label') ?? const SizedBox.shrink(),
-        labelStyle: textStyleFromJson(c.map('labelStyle')),
-        avatar: c.propChild('avatar'),
-        deleteIcon: c.propChild('deleteIcon'),
-        onDeleted: c.on('onDeleted'),
-        backgroundColor: colorFromJson(c.props['backgroundColor']),
-        // padding 缺省必须为 null：否则 EdgeInsets.zero 会覆盖 Chip 默认
-        // EdgeInsets.all(8.0)，JS 侧每个 chip 窄 16px（8 个 = 128px），
-        // 与原生渲染/滚动范围不一致。
-        padding: nullableEdgeInsets(c.map('padding')),
-        side: borderSideFromJson(c.props['side']),
-        shape: shapeFromJson(c.props['shape']),
-        elevation: c.num_('elevation'),
-      ));
+  r.register(
+    'Chip',
+    (c) => Chip(
+      label: c.propChild('label') ?? const SizedBox.shrink(),
+      labelStyle: textStyleFromJson(c.map('labelStyle')),
+      avatar: c.propChild('avatar'),
+      deleteIcon: c.propChild('deleteIcon'),
+      onDeleted: c.on('onDeleted'),
+      backgroundColor: colorFromJson(c.props['backgroundColor']),
+      // padding 缺省必须为 null：否则 EdgeInsets.zero 会覆盖 Chip 默认
+      // EdgeInsets.all(8.0)，JS 侧每个 chip 窄 16px（8 个 = 128px），
+      // 与原生渲染/滚动范围不一致。
+      padding: nullableEdgeInsets(c.map('padding')),
+      side: borderSideFromJson(c.props['side']),
+      shape: shapeFromJson(c.props['shape']),
+      elevation: c.num_('elevation'),
+    ),
+  );
 
   // title / subtitle / leading / trailing 都是结点（props 里的 element prop）。
   r.register('ListTile', (c) {
@@ -606,29 +676,41 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   // children 里的 Text（不再是 label prop）。`onPressed` 缺失 = 禁用。
   // style 值可能是 JSON map（`ButtonStyle(...)`），也可能是元素结点
   // （`XxxButton.styleFrom(...)` 被当成构造）→ styleMap 两种情况都取。
-  r.register('ElevatedButton', (c) => ElevatedButton(
-        onPressed: c.on('onPressed'),
-        style: buttonStyleFromJson(c.styleMap('style')),
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'ElevatedButton',
+    (c) => ElevatedButton(
+      onPressed: c.on('onPressed'),
+      style: buttonStyleFromJson(c.styleMap('style')),
+      child: c.childOrEmpty,
+    ),
+  );
 
-  r.register('TextButton', (c) => TextButton(
-        onPressed: c.on('onPressed'),
-        style: buttonStyleFromJson(c.styleMap('style')),
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'TextButton',
+    (c) => TextButton(
+      onPressed: c.on('onPressed'),
+      style: buttonStyleFromJson(c.styleMap('style')),
+      child: c.childOrEmpty,
+    ),
+  );
 
-  r.register('FilledButton', (c) => FilledButton(
-        onPressed: c.on('onPressed'),
-        style: buttonStyleFromJson(c.styleMap('style')),
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'FilledButton',
+    (c) => FilledButton(
+      onPressed: c.on('onPressed'),
+      style: buttonStyleFromJson(c.styleMap('style')),
+      child: c.childOrEmpty,
+    ),
+  );
 
-  r.register('OutlinedButton', (c) => OutlinedButton(
-        onPressed: c.on('onPressed'),
-        style: buttonStyleFromJson(c.styleMap('style')),
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'OutlinedButton',
+    (c) => OutlinedButton(
+      onPressed: c.on('onPressed'),
+      style: buttonStyleFromJson(c.styleMap('style')),
+      child: c.childOrEmpty,
+    ),
+  );
 
   r.register('InkWell', (c) {
     final radius = c.num_('borderRadius');
@@ -644,43 +726,53 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   });
 
   r.register(
-      'GestureDetector',
-      (c) => GestureDetector(
-            onTap: c.on('onTap'),
-            onLongPress: c.on('onLongPress'),
-            onDoubleTap: c.on('onDoubleTap'),
-            behavior: hitTestBehaviorFromJson(c.props['behavior']),
-            child: c.child(),
-          ));
+    'GestureDetector',
+    (c) => GestureDetector(
+      onTap: c.on('onTap'),
+      onLongPress: c.on('onLongPress'),
+      onDoubleTap: c.on('onDoubleTap'),
+      behavior: hitTestBehaviorFromJson(c.props['behavior']),
+      child: c.child(),
+    ),
+  );
 
-  r.register('Switch', (c) => Switch(
-        value: c.bool_('value') ?? false,
-        onChanged: c.on1<bool?>('onChanged'),
-        // 协议键仍叫 activeColor（生成器侧），Flutter 新版改名为 activeThumbColor
-        activeThumbColor: colorFromJson(c.props['activeColor']),
-        activeTrackColor: colorFromJson(c.props['activeTrackColor']),
-        inactiveThumbColor: colorFromJson(c.props['inactiveThumbColor']),
-        inactiveTrackColor: colorFromJson(c.props['inactiveTrackColor']),
-      ));
+  r.register(
+    'Switch',
+    (c) => Switch(
+      value: c.bool_('value') ?? false,
+      onChanged: c.on1<bool?>('onChanged'),
+      // 协议键仍叫 activeColor（生成器侧），Flutter 新版改名为 activeThumbColor
+      activeThumbColor: colorFromJson(c.props['activeColor']),
+      activeTrackColor: colorFromJson(c.props['activeTrackColor']),
+      inactiveThumbColor: colorFromJson(c.props['inactiveThumbColor']),
+      inactiveTrackColor: colorFromJson(c.props['inactiveTrackColor']),
+    ),
+  );
 
-  r.register('Checkbox', (c) => Checkbox(
-        value: c.bool_('value'),
-        tristate: c.bool_('tristate') ?? false,
-        onChanged: c.on1<bool?>('onChanged'),
-        activeColor: colorFromJson(c.props['activeColor']),
-        checkColor: colorFromJson(c.props['checkColor']),
-      ));
+  r.register(
+    'Checkbox',
+    (c) => Checkbox(
+      value: c.bool_('value'),
+      tristate: c.bool_('tristate') ?? false,
+      onChanged: c.on1<bool?>('onChanged'),
+      activeColor: colorFromJson(c.props['activeColor']),
+      checkColor: colorFromJson(c.props['checkColor']),
+    ),
+  );
 
-  r.register('Slider', (c) => Slider(
-        value: c.num_('value') ?? 0,
-        min: c.num_('min') ?? 0,
-        max: c.num_('max') ?? 1,
-        divisions: c.int_('divisions'),
-        label: c.str('label'),
-        activeColor: colorFromJson(c.props['activeColor']),
-        inactiveColor: colorFromJson(c.props['inactiveColor']),
-        onChanged: c.on1<double>('onChanged'),
-      ));
+  r.register(
+    'Slider',
+    (c) => Slider(
+      value: c.num_('value') ?? 0,
+      min: c.num_('min') ?? 0,
+      max: c.num_('max') ?? 1,
+      divisions: c.int_('divisions'),
+      label: c.str('label'),
+      activeColor: colorFromJson(c.props['activeColor']),
+      inactiveColor: colorFromJson(c.props['inactiveColor']),
+      onChanged: c.on1<double>('onChanged'),
+    ),
+  );
 
   // Scaffold：appBar / body / floatingActionButton / bottomNavigationBar
   // 都是「值为 element 的 prop」（生成器把命名参数翻译进 props，产物
@@ -731,85 +823,110 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   // 布局 / 装饰补充
   // ---------------------------------------------------------------------
 
-  r.register('SafeArea', (c) => SafeArea(
-        left: c.bool_('left') ?? true,
-        top: c.bool_('top') ?? true,
-        right: c.bool_('right') ?? true,
-        bottom: c.bool_('bottom') ?? true,
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'SafeArea',
+    (c) => SafeArea(
+      left: c.bool_('left') ?? true,
+      top: c.bool_('top') ?? true,
+      right: c.bool_('right') ?? true,
+      bottom: c.bool_('bottom') ?? true,
+      child: c.childOrEmpty,
+    ),
+  );
 
-  r.register('Opacity', (c) => Opacity(
-        opacity: c.num_('opacity') ?? 1,
-        child: c.child(),
-      ));
+  r.register(
+    'Opacity',
+    (c) => Opacity(opacity: c.num_('opacity') ?? 1, child: c.child()),
+  );
 
-  r.register('ConstrainedBox', (c) => ConstrainedBox(
-        constraints:
-            boxConstraintsFromJson(c.map('constraints')) ?? const BoxConstraints(),
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'ConstrainedBox',
+    (c) => ConstrainedBox(
+      constraints:
+          boxConstraintsFromJson(c.map('constraints')) ??
+          const BoxConstraints(),
+      child: c.childOrEmpty,
+    ),
+  );
 
-  r.register('AspectRatio', (c) => AspectRatio(
-        aspectRatio: c.num_('aspectRatio') ?? 1,
-        child: c.child(),
-      ));
+  r.register(
+    'AspectRatio',
+    (c) =>
+        AspectRatio(aspectRatio: c.num_('aspectRatio') ?? 1, child: c.child()),
+  );
 
-  r.register('FractionallySizedBox', (c) => FractionallySizedBox(
-        widthFactor: c.num_('widthFactor'),
-        heightFactor: c.num_('heightFactor'),
-        alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
-        child: c.child(),
-      ));
+  r.register(
+    'FractionallySizedBox',
+    (c) => FractionallySizedBox(
+      widthFactor: c.num_('widthFactor'),
+      heightFactor: c.num_('heightFactor'),
+      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+      child: c.child(),
+    ),
+  );
 
-  r.register('DecoratedBox', (c) => DecoratedBox(
-        decoration:
-            boxDecorationFromJson(c.map('decoration')) ?? const BoxDecoration(),
-        child: c.child(),
-      ));
+  r.register(
+    'DecoratedBox',
+    (c) => DecoratedBox(
+      decoration:
+          boxDecorationFromJson(c.map('decoration')) ?? const BoxDecoration(),
+      child: c.child(),
+    ),
+  );
 
   // ---------------------------------------------------------------------
   // 指示器
   // ---------------------------------------------------------------------
 
-  r.register('CircularProgressIndicator', (c) => CircularProgressIndicator(
-        value: c.num_('value'),
-        color: colorFromJson(c.props['color']),
-        backgroundColor: colorFromJson(c.props['backgroundColor']),
-        strokeWidth: c.num_('strokeWidth') ?? 4.0,
-      ));
+  r.register(
+    'CircularProgressIndicator',
+    (c) => CircularProgressIndicator(
+      value: c.num_('value'),
+      color: colorFromJson(c.props['color']),
+      backgroundColor: colorFromJson(c.props['backgroundColor']),
+      strokeWidth: c.num_('strokeWidth') ?? 4.0,
+    ),
+  );
 
-  r.register('LinearProgressIndicator', (c) => LinearProgressIndicator(
-        value: c.num_('value'),
-        color: colorFromJson(c.props['color']),
-        backgroundColor: colorFromJson(c.props['backgroundColor']),
-        minHeight: c.num_('minHeight'),
-      ));
+  r.register(
+    'LinearProgressIndicator',
+    (c) => LinearProgressIndicator(
+      value: c.num_('value'),
+      color: colorFromJson(c.props['color']),
+      backgroundColor: colorFromJson(c.props['backgroundColor']),
+      minHeight: c.num_('minHeight'),
+    ),
+  );
 
   // ---------------------------------------------------------------------
   // 输入 / 导航
   // ---------------------------------------------------------------------
 
+  r.register(
+    'IconButton',
+    (c) => IconButton(
+      icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
+      onPressed: c.on('onPressed'),
+      color: colorFromJson(c.props['color']),
+      iconSize: c.num_('iconSize'),
+      tooltip: c.str('tooltip'),
+    ),
+  );
 
-  r.register('IconButton', (c) => IconButton(
-        icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
-        onPressed: c.on('onPressed'),
-        color: colorFromJson(c.props['color']),
-        iconSize: c.num_('iconSize'),
-        tooltip: c.str('tooltip'),
-      ));
-
-  r.register('FloatingActionButton', (c) => FloatingActionButton(
-        // onPressed 缺省必须为 null：Flutter 默认 null = 禁用（灰色不可点）；
-        // `() {}` 会变成可点但无动作，与原生语义不一致。
-        onPressed: c.on('onPressed'),
-        backgroundColor: colorFromJson(c.props['backgroundColor']),
-        foregroundColor: colorFromJson(c.props['foregroundColor']),
-        mini: c.bool_('mini') ?? false,
-        tooltip: c.str('tooltip'),
-        elevation: c.num_('elevation'),
-        child: c.child(),
-      ));
+  r.register(
+    'FloatingActionButton',
+    (c) => FloatingActionButton(
+      // onPressed 缺省必须为 null：Flutter 默认 null = 禁用（灰色不可点）；
+      // `() {}` 会变成可点但无动作，与原生语义不一致。
+      onPressed: c.on('onPressed'),
+      backgroundColor: colorFromJson(c.props['backgroundColor']),
+      foregroundColor: colorFromJson(c.props['foregroundColor']),
+      mini: c.bool_('mini') ?? false,
+      tooltip: c.str('tooltip'),
+      elevation: c.num_('elevation'),
+      child: c.child(),
+    ),
+  );
 
   r.register('BottomNavigationBar', (c) {
     // items 是 props 里的**元素数组**（不再是子结点）：非 Widget 数据载体
@@ -818,12 +935,14 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     for (final raw in c.props['items'] as List? ?? const []) {
       final p = c.elementProps(raw);
       if (p == null) continue;
-      items.add(BottomNavigationBarItem(
-        icon: c.element(p['icon']) ?? const Icon(Icons.error_outline),
-        activeIcon: c.element(p['activeIcon']),
-        label: p['label'] == null ? null : '${p['label']}',
-        tooltip: p['tooltip'] == null ? null : '${p['tooltip']}',
-      ));
+      items.add(
+        BottomNavigationBarItem(
+          icon: c.element(p['icon']) ?? const Icon(Icons.error_outline),
+          activeIcon: c.element(p['activeIcon']),
+          label: p['label'] == null ? null : '${p['label']}',
+          tooltip: p['tooltip'] == null ? null : '${p['tooltip']}',
+        ),
+      );
     }
     return BottomNavigationBar(
       items: items,
@@ -836,21 +955,27 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
 
   // BottomNavigationBarItem 非 Widget（见 BottomNavigationBar renderer，
   // 从 props.items 的元素描述组装）；若被单独挂载则退回显示 icon。
-  r.register('BottomNavigationBarItem', (c) => _JsBottomNavItem(
-        BottomNavigationBarItem(
-          icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
-          label: c.str('label'),
-        ),
-      ));
+  r.register(
+    'BottomNavigationBarItem',
+    (c) => _JsBottomNavItem(
+      BottomNavigationBarItem(
+        icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
+        label: c.str('label'),
+      ),
+    ),
+  );
 
-  r.register('Radio', (c) => Radio<dynamic>(
-        value: c.props['value'],
-        // ignore: deprecated_member_use
-        groupValue: c.props['groupValue'],
-        // ignore: deprecated_member_use
-        onChanged: c.on1<dynamic>('onChanged'),
-        activeColor: colorFromJson(c.props['activeColor']),
-      ));
+  r.register(
+    'Radio',
+    (c) => Radio<dynamic>(
+      value: c.props['value'],
+      // ignore: deprecated_member_use
+      groupValue: c.props['groupValue'],
+      // ignore: deprecated_member_use
+      onChanged: c.on1<dynamic>('onChanged'),
+      activeColor: colorFromJson(c.props['activeColor']),
+    ),
+  );
 
   r.register('DropdownButton', (c) {
     // items 是 props 里的元素数组：DropdownMenuItem 的 value 在内层 props，
@@ -862,12 +987,15 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       final kids = raw is Map && raw['children'] is List
           ? raw['children'] as List
           : const [];
-      final child = c.element(p['child']) ??
+      final child =
+          c.element(p['child']) ??
           (kids.isEmpty ? null : c.element(kids.first));
-      items.add(DropdownMenuItem<dynamic>(
-        value: p['value'],
-        child: child ?? const SizedBox.shrink(),
-      ));
+      items.add(
+        DropdownMenuItem<dynamic>(
+          value: p['value'],
+          child: child ?? const SizedBox.shrink(),
+        ),
+      );
     }
     return DropdownButton<dynamic>(
       value: c.props['value'],
@@ -878,10 +1006,13 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
-  r.register('DropdownMenuItem', (c) => DropdownMenuItem<dynamic>(
-        value: c.props['value'],
-        child: c.childOrEmpty,
-      ));
+  r.register(
+    'DropdownMenuItem',
+    (c) => DropdownMenuItem<dynamic>(
+      value: c.props['value'],
+      child: c.childOrEmpty,
+    ),
+  );
 
   // 未注册类型不在**这里**注册：产物里的元素 type 始终是「具体类型名」，未命中
   // lookup 时统一走 registry 的默认 builder（见 [JsWidgetRegistry._fallback] /
@@ -924,7 +1055,10 @@ Widget buildMissingJsWidget(String type, List<Widget> children) {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('<missing widget: $type>', style: const TextStyle(fontSize: 11, color: Color(0xFFB00020))),
+        Text(
+          '<missing widget: $type>',
+          style: const TextStyle(fontSize: 11, color: Color(0xFFB00020)),
+        ),
         ...children,
       ],
     ),

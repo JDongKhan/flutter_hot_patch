@@ -80,10 +80,10 @@ export class CommunityPage {
                     }
                   }, [
                     __h('Row', {}, [
-                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _selectTab(t)" + ":" + String(t), () => { this._selectTab(t); }) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') }, "data": t }) ]) ]) ])]); } return out; })(),
+                        ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn(0, [t], () => this._selectTab(t)) }, [ __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') }, "data": t }) ]) ]) ])]); } return out; })(),
                         __h('Spacer', {}),
                         __h('GestureDetector', {
-                            "onTap": this.__bind("_app_host_.invoke(\"toast\", [\"发布新动态（演示）\"])")
+                            "onTap": this.__bindFn(1, [], () => _app_host_.invoke("toast", ["发布新动态（演示）"]))
                           }, [
                             __h('Container', {
                                 "width": 32,
@@ -137,10 +137,10 @@ export class CommunityPage {
             }
           }, [
             __h('Row', {}, [
-                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn("() => _selectFilter('sort', s)" + ":" + String(s), () => { this._selectFilter("sort", s); }) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') }, "data": s }) ]) ]) ])]); } return out; })(),
+                ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)) }, [ __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') }, "data": s }) ]) ]) ])]); } return out; })(),
                 __h('Spacer', {}),
                 __h('GestureDetector', {
-                    "onTap": this.__bind("_toggleFilter")
+                    "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a))
                   }, [
                     __h('Container', {
                         "padding": {
@@ -234,7 +234,7 @@ export class _ListContent {
           }, [
             ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 } }, [ __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) ]) ])] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 } }, [ __h(_PostCard, { "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) ])]); } return out; })())
           ]),
-        ...(this.openFilter ? [__h('Positioned', { "factory": "fill" }, [ __h('GestureDetector', { "onTap": this.__bind("this.toggleFilter()") }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "right": 0, "top": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
+        ...(this.openFilter ? [__h('Positioned', { "factory": "fill" }, [ __h('GestureDetector', { "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)) }, [ __h('Container', { "color": '#66000000' }) ]) ]), __h('Positioned', { "left": 0, "right": 0, "top": 0 }, [ __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) ])] : [])
       ]);
   }
 }
@@ -297,7 +297,7 @@ export class _FilterPanel {
             "spacing": 8,
             "runSpacing": 8
           }, [
-            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "onTap": this.__bindFn("() => widget.onPick(key, v)" + ":" + String(v), () => { this.onPick(key, v); }) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') }, "data": v }) ]) ])]); } return out; })()
+            ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "onTap": this.__bindFn(0, [key, v], () => this.onPick(key, v)) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } } }, [ __h('Text', { "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') }, "data": v }) ]) ])]); } return out; })()
           ])
       ]);
   }
@@ -336,7 +336,7 @@ export class _FilterPanel {
                 __h('Row', {}, [
                     __h('Expanded', {}, [
                         __h('GestureDetector', {
-                            "onTap": this.__bind("this.onReset()")
+                            "onTap": this.__bindFn(1, [], (...__a) => this.onReset(...__a))
                           }, [
                             __h('Container', {
                                 "height": 42,
@@ -364,7 +364,7 @@ export class _FilterPanel {
                       }),
                     __h('Expanded', {}, [
                         __h('GestureDetector', {
-                            "onTap": this.__bind("this.onApply()")
+                            "onTap": this.__bindFn(2, [], (...__a) => this.onApply(...__a))
                           }, [
                             __h('Container', {
                                 "height": 42,
@@ -408,7 +408,7 @@ export class _PostCard {
   }
   build(context) {
     return __h('GestureDetector', {
-        "onTap": this.__bind("this.onTap()")
+        "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a))
       }, [
         __h('Container', {
             "padding": {
@@ -552,7 +552,7 @@ export class _ResourceCard {
   }
   build(context) {
     return __h('GestureDetector', {
-        "onTap": this.__bind("this.onTap()")
+        "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a))
       }, [
         __h('Container', {
             "width": 156,

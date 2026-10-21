@@ -21,7 +21,7 @@ export class MiniButton {
   }
   build(context) {
     return __h('GestureDetector', {
-        "onTap": this.__bind("this.onTap()")
+        "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a))
       }, [
         __h('Container', {
             "padding": {

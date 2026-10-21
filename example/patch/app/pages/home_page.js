@@ -38,7 +38,7 @@ export class HomePage {
         "color": '#fff4f5f7'
       }, [
         __h('EasyRefresh', {
-            "onRefresh": this.__bind("_load")
+            "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a))
           }, [
             __h('CustomScrollView', {}, [
                 __h('SliverToBoxAdapter', {}, [
@@ -239,7 +239,7 @@ export class HomeHeader {
               }, [
                 __h('Row', {}, [
                     __h('InkWell', {
-                        "onTap": this.__bind("openLocation")
+                        "onTap": this.__bindFn(0, [], (...__a) => this.openLocation(...__a))
                       }, [
                         __h('Row', {}, [
                             __h('Icon', {
@@ -267,7 +267,7 @@ export class HomeHeader {
                       ]),
                     __h('Spacer', {}),
                     __h('InkWell', {
-                        "onTap": this.__bind("openMessages"),
+                        "onTap": this.__bindFn(1, [], (...__a) => this.openMessages(...__a)),
                         "borderRadius": {
                           "radius": 18.0
                         }
@@ -312,7 +312,7 @@ export class HomeHeader {
                     "height": 12
                   }),
                 __h('InkWell', {
-                    "onTap": this.__bind("openSearch"),
+                    "onTap": this.__bindFn(2, [], (...__a) => this.openSearch(...__a)),
                     "borderRadius": {
                       "radius": 20.0
                     }
@@ -387,7 +387,7 @@ export class BannerSlide {
         }
       }, [
         __h('InkWell', {
-            "onTap": this.__bind("open"),
+            "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
             "borderRadius": {
               "radius": 14.0
             }
@@ -466,7 +466,7 @@ export class GridCell {
   }
   build(context) {
     return __h('InkWell', {
-        "onTap": this.__bind("open")
+        "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a))
       }, [
         __h('Column', {
             "mainAxisAlignment": "center"
@@ -505,7 +505,7 @@ export class SpotCard {
   }
   build(context) {
     return __h('InkWell', {
-        "onTap": this.__bind("open"),
+        "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
         "borderRadius": {
           "radius": 14.0
         }
@@ -646,7 +646,7 @@ export class PromoCard {
   }
   build(context) {
     return __h('InkWell', {
-        "onTap": this.__bind("open"),
+        "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
         "borderRadius": {
           "radius": 14.0
         }

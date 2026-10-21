@@ -68,7 +68,7 @@ export class ProviderCard {
                         "mainAxisAlignment": "center"
                       }, [
                         __h('ElevatedButton', {
-                            "onPressed": this.__bind("_loadUser")
+                            "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a))
                           }, [
                             __h('Text', {
                                 "data": "加载用户信息"
@@ -86,7 +86,7 @@ export class ProviderCard {
                         "mainAxisAlignment": "center"
                       }, [
                         __h('ElevatedButton', {
-                            "onPressed": this.__bind("_incA")
+                            "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a))
                           }, [
                             __h('Text', {
                                 "data": "B +1"
@@ -96,7 +96,7 @@ export class ProviderCard {
                             "width": 12
                           }),
                         __h('ElevatedButton', {
-                            "onPressed": this.__bind("_resetA")
+                            "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a))
                           }, [
                             __h('Text', {
                                 "data": "B Reset"

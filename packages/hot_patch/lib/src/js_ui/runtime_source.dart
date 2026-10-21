@@ -21,8 +21,8 @@
 /// **多根**：同一 JS 运行时里可并存多个页面，每个页面按 `pageKey` 隔离自己
 /// 的结点树、订阅、脏队列与出方向 ops（互不订阅、互不重建）。宿主
 /// 每次 `mount`/`dispose` 都显式带 `pageKey`；事件在**构建期**由生成器产出
-/// `this.__bind("方法/表达式")` 绑定到产出该结点的组件实例（Dart tear-off 语义），
-/// 宿主点击只回传句柄 id，无任何运行时树形状启发。
+/// `this.__bindFn(位点号, [捕获值], 箭头闭包)` 绑定到产出该结点的组件实例
+/// （Dart 闭包语义），宿主点击只回传句柄 id，无任何运行时树形状启发。
 ///
 /// 本文件集中维护 JS 侧**框架代码**，由 JsRuntimeManager 单入口注入（幂等）：
 ///   - [jsUiRuntimeSource]：UI 运行时骨架（IIFE）——环境全局（模块表
@@ -43,7 +43,7 @@
 /// | 【3】 | 宿主桥 `_app_host_`（`invoke` / `resolve` / `reject`，唯一对外出口） | @HostInjected 专用 |
 /// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
 /// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
-/// | 【6】 | 组件基类（`setState` / `__bind`） | mini-react（生成器产物的能力袋） |
+/// | 【6】 | 组件基类（`setState` / `__bindFn`） | mini-react（生成器产物的能力袋） |
 /// | 【7】 | 作用域｜按类型名向上查找 + 消费者订阅（`registerScope` / `scopeOf` / `subscribeListenable`） | 通用机制（三方库按类型注册，见 capabilities/js_ui_library.dart） |
 /// | 【8】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
 /// | 【9】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
@@ -82,6 +82,7 @@ const String _jsUiGlobalsHead = r'''
     : Function('return this')();
   if (G.__jsui) { return; }
 ''';
+
 /// env 标志（插值生成）：模块表 / 编译平台标志 / console 桥。
 /// 直接引用 Flutter 全局 [kDebugMode] / [kReleaseMode] / [defaultTargetPlatform]，
 /// 不再经参数传递。
@@ -169,6 +170,7 @@ G.console.log = function() { __log('info', arguments); };
 G.console.warn = function() { __log('warn', arguments); };
 G.console.error = function() { __log('error', arguments); }
 ''';
+
 /// 静态尾部：骨架状态与工具（原 _jsUiGlobals 其余）。
 const String _jsUiGlobalsTail = r'''
 
@@ -338,7 +340,7 @@ const String _jsUiHostBridge = r'''
 
 /// mini-react｜reconciler 工具（eq / keyOf / hostIdOf / rootFor）【5】。
 
-/// mini-react｜组件基类（setState / __bind，生成器产物的能力袋）【6】。
+/// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【6】。
 
 /// 作用域｜按类型名向上查找 + 消费者侧订阅（registerScope / scopeOf）【7】。
 
@@ -541,7 +543,6 @@ String jsUiRuntimeSource() => [
   if (kDebugMode) _jsUiLeakApiMember,
   _jsUiRuntimeSkeletonTailEnd,
 ].join('\n');
-
 
 /// 运行时环境全局源码（依赖 Dart 侧注入的编译/平台标志，故为函数式生成）。
 ///

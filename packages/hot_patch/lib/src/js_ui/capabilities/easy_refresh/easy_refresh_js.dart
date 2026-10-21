@@ -12,8 +12,8 @@
 // 返回值，完成后再经**唯一 JS→宿主出口** `_app_host_.invoke`（host）回传 token，
 // 宿主据此结算对应 Completer（见 easy_refresh_bridge.dart）。
 //
-// 事件句柄能返回 Promise，靠的是 `__bind` / `__bindFn` 生成的 wrapper 原样返回
-// 内部调用结果（见 js/mini_react_js.dart）；Dart 的 async 方法在 JS 侧就是
+// 事件句柄能返回 Promise，靠的是 `__bindFn` 生成的 wrapper 原样返回箭头闭包
+// 的结果（见 js/mini_react_js.dart）；Dart 的 async 方法在 JS 侧就是
 // async 函数，返回 Promise。
 const String easyRefreshJsSource = r'''
   // ===== 【11】EasyRefresh｜宿主发起 + JS 异步完成 =====================

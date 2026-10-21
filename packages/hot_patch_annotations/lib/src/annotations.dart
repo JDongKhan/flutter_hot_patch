@@ -8,7 +8,7 @@
 /// 热更是**基于整个 widget** 的，不做字段/方法级标注：
 /// 生成器默认全量收集——
 ///   所有非 static 字段 → JS 状态 __state（_count → count）
-///   所有方法（除 build/生命周期）→ JS 事件方法（构建期以 this.__bind 绑定）
+///   所有方法（除 build/生命周期）→ JS 事件方法（构建期以 this.__bindFn 绑定）
 ///   build()           → JS 渲染入口（原封不动翻译为 build 函数）
 ///   SnackBar 形式的方法 → 自动识别为 native 通道（_app_host_.invoke）
 ///

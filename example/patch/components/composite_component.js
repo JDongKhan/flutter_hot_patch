@@ -42,7 +42,7 @@ export class DashboardCard {
             "height": 12
           }),
         __h('ElevatedButton', {
-            "onPressed": this.__bind("tick"),
+            "onPressed": this.__bindFn(0, [], (...__a) => this.tick(...__a)),
             "style": {
               "backgroundColor": '#FF9800',
               "foregroundColor": '#FFFFFF'
