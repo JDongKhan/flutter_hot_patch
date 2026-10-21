@@ -21,34 +21,36 @@ export class MiniButton {
   }
   build(context) {
     return __h('GestureDetector', {
-        "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a))
-      }, __h('Container', {
-          "padding": {
-            "left": 14.0,
-            "top": 0.0,
-            "right": 14.0,
-            "bottom": 0.0
-          },
-          "height": 32,
-          "alignment": "center",
-          "decoration": {
-            "color": (this.primary ? kBrand : '#FFFFFF'),
-            "borderRadius": {
-              "radius": 14.0
+        "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
+        "child": __h('Container', {
+            "padding": {
+              "left": 14.0,
+              "top": 0.0,
+              "right": 14.0,
+              "bottom": 0.0
             },
-            "border": {
-              "all": {
-                "color": (this.primary ? kBrand : '#ffdfe4ec')
+            "height": 32,
+            "alignment": "center",
+            "decoration": {
+              "color": (this.primary ? kBrand : '#FFFFFF'),
+              "borderRadius": {
+                "radius": 14.0
+              },
+              "border": {
+                "all": {
+                  "color": (this.primary ? kBrand : '#ffdfe4ec')
+                }
               }
-            }
-          }
-        }, __h('Text', {
-            "style": {
-              "fontSize": 12,
-              "color": (this.primary ? '#FFFFFF' : '#ff4d5462')
             },
-            "data": this.label
-          })));
+            "child": __h('Text', {
+                "style": {
+                  "fontSize": 12,
+                  "color": (this.primary ? '#FFFFFF' : '#ff4d5462')
+                },
+                "data": this.label
+              })
+          })
+      });
   }
 }
 

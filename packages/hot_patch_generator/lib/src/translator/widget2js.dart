@@ -11,16 +11,17 @@ import 'widget_json.dart';
 //
 // widget 在 JS 端没有等价物，需专门翻译：
 //   - build 树解析：WidgetNode / WidgetTranslateContext（表达式 → 中立描述）
-//   - 中立描述 → JS：`__h(type, props, children)` 构造调用树
+//   - 中立描述 → JS：`__h(type, props)` 构造调用树（实参按原名进 props，
+//     元素工厂在运行时按元素 type 拆结构子结点，见 widget_module_builder 的 __h）
 //   - 统一翻译入口：widget_json.dart（widgetToJson）+ value_forms.dart（autoValue）
 //   - 静态单例引用：SingletonResolver
 // [WidgetTranslateContext] 实现 js_translator 的 [WidgetExprRenderer]，供
 // 「Dart 类 → JS」在方法体里渲染返回的 widget。
 //
 // 扩展方式：**没有** per-widget 的翻译类。任意 widget（内建 / 自定义 / 三方）
-// 都走同一条路径——按**通用参数名**（child / children / slivers / tabs / on* /
-// delegate）与**值的形态**（字面量 / 构造 / 静态工厂 / 常量引用 / 列表 / 闭包）
-// 分派，接入新组件零实现。
+// 都走同一条路径——按实参名约定（on* 事件 / delegate 子结点提供者 / 位置形参名）
+// 与**值的形态**（字面量 / 构造 / 静态工厂 / 常量引用 / 列表 / 闭包）分派，
+// 接入新组件零实现。
 // ===========================================================================
 
 /// 一个 widget 构造节点的中立表示（build() 树解析的中间产物）。
@@ -192,8 +193,8 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (e is ConditionalExpression) {
       // widget 位置三目：每支都是**单个**元素（`child: cond ? A : B`）。
       // 绝不能走 [_collectionArrayJs]——那产出的是「元素数组」，用在单子位置
-      // 会变成 children 里的嵌套数组（`[ (cond ? [A] : [B]) ]`），运行时
-      // `mount` 拿到数组 → `el.type` undefined → `new el.type` 抛错。
+      // 会变成 props.child 里的嵌套数组（`[ (cond ? [A] : [B]) ]`），元素工厂
+      // 抽 children 时 `mount` 拿到数组 → `el.type` undefined → `new el.type` 抛错。
       final cond = jsDataExpr(e.condition);
       final thenJs = _elementExprJs(e.thenExpression);
       final elseJs = _elementExprJs(e.elseExpression);
@@ -408,7 +409,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///
   /// 与 [_elementJs] 的分工：后者输入是「集合元素」（数组语义，可带 spread），
   /// 本方法输入是「元素本身」（如 `child: cond ? A : B` 的单支、单子组件的
-  /// 实参）——绝不能产出数组字面量，否则会变成 children 里的嵌套数组。
+  /// 实参）——绝不能产出数组字面量，否则会变成 props.child 里的嵌套数组。
   String _elementExprJs(Expression e) {
     final t = translate(e);
     return t is String ? t : renderJs(t, 2);
@@ -531,7 +532,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return n.isNotEmpty && n[0] == n[0].toUpperCase();
   }
 
-  /// 渲染一个已翻译的中立节点为统一元素构造 `__h(type, props, children)`。
+  /// 渲染一个已翻译的中立节点为统一元素构造 `__h(type, props)`。
   ///
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
   /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
@@ -587,14 +588,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return out;
   }
 
-  /// 把已翻译的 JSON 节点渲染成统一元素构造：`__h(<type>, {...}[, children])`。
+  /// 把已翻译的 JSON 节点渲染成统一元素构造：`__h(<type>, {...})`。
   ///
   /// JS 没有「factory」这层包装：元素 type 直接是类（有 JS 逻辑的类型，[asClass]
-  /// 为 true）或宿主 widget 类型名字符串。`props` 为空 → `{}`；`children` 为空 →
-  /// 省略第三参（`__h` 归一为 `[]`）；只有**一个**静态子结点时直接作为第三参
-  /// （`__h` 会把非数组归一成 `[child]`），`child:` 因此不再多套一层数组。
-  /// 嵌套子节点（children、以及 ListTile.leading 这类「props 里的节点」）同样
-  /// 递归成元素构造。
+  /// 为 true）或宿主 widget 类型名字符串。所有 Dart 实参都按原名进 props——
+  /// `child` / `children` / `slivers` / `tabs` 也在 props 里，由元素工厂 `__h`
+  /// 在**运行时按元素类型**拆分：宿主类型抽成 `element.children`，JS 组件类型
+  /// 原样保留给 `__applyProps`。因此这里不再传第三参，也不再区分单子/多子。
   String _renderCall(
     String type,
     Map<String, dynamic> json,
@@ -602,25 +602,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     required bool asClass,
   }) {
     final props = _propsWithKey(json['props'], json['key']);
-    final children = json['children'];
     final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
     final typeArg = asClass ? type : "'$type'";
-    final b = StringBuffer()
-      ..write('__h(')
-      ..write(typeArg)
-      ..write(', ')
-      ..write(propsJs);
-    if (children is List && children.isNotEmpty) {
-      b.write(', ');
-      // 单个子结点直接传元素，运行时 __h 会归一成 [child]；只有多结点或
-      // `...spread`（可能展开成 0~N 个）才保持数组字面量。
-      final only = children.length == 1 ? children.first : null;
-      final singleNode = only is Map ||
-          (only is String && !only.startsWith('...'));
-      b.write(jsLiteral(singleNode ? only : children, depth + 1));
-    }
-    b.write(')');
-    return b.toString();
+    return '__h($typeArg, $propsJs)';
   }
 
   /// 剥离 JS 字符串字面量引号（`"Column"` → `Column`）；非字面量原样返回。
@@ -700,13 +684,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return null;
   }
 
-  /// children / slivers 等列表参数 → **已翻译的**JS 数组项（节点 Map / JS 表达式
-  /// 字符串），渲染层逐项 [jsLiteral]。
+  /// children / slivers / tabs 等列表参数 → **已翻译的**JS 数组项（节点 Map /
+  /// JS 表达式字符串），渲染层逐项 [jsLiteral]。
   ///
   ///   - `children: [...]` 字面量 → 逐元素 [translateElement]（if/for/spread 由它
   ///     统一展开成 JS spread 表达式）；
   ///   - `children: someList`（字段 / 局部变量，如 `Row(children: children)`）→
-  ///     单个 `...<expr>` spread 项，运行时把该数组展开进 children。
+  ///     单个 `...<expr>` spread 项，运行时把该数组展开进对应的 props 数组。
   List<Object?> listArg(List<Expression> args, String name, String ctor) {
     final e = namedArg(args, name);
     if (e is ListLiteral) {
@@ -1273,15 +1257,15 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 不能用「含 `type` 键」当判据：组件构造里 `Foo(type: _type)` 这类实参名就叫
   /// `type`，会把整个 props Map 误判成节点（读出的 `type` 是 JS 表达式而非类型名，
   /// 查表落空后整条结点降级）。节点 Map 由 translator 产出，特征明确：
-  ///   - 键只有 `type` / `props` / `children` / `key` 四种（`key` 是元素级 Key，
-  ///     由 [WidgetTranslateContext._applyKeyProp] 注入，渲染时并入 props）；
+  ///   - 键只有 `type` / `props` / `key`（`key` 是元素级 Key，由
+  ///     [WidgetTranslateContext._applyKeyProp] 注入，渲染时并入 props）；
   ///   - `type` 的值是 [jsString] 产出的**带引号字符串字面量**（类型名），
   ///     而不是 `this._type` 这类运行时表达式。
   static bool _isNodeMap(Map value) {
     final t = value['type'];
     if (t is! String || !t.startsWith('"')) return false;
     return value.keys.every(
-      (k) => k == 'type' || k == 'props' || k == 'children' || k == 'key',
+      (k) => k == 'type' || k == 'props' || k == 'key',
     );
   }
 

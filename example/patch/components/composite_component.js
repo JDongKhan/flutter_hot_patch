@@ -14,43 +14,46 @@ export class DashboardCard {
     this.setState(() => { this._ticks += 1; });
   }
   build(context) {
-    return __h('Column', {}, [
-        __h('Text', {
-            "style": {
-              "fontSize": 22,
-              "fontWeight": "w600"
-            },
-            "data": "Dashboard (JS)"
-          }),
-        __h('Text', {
-            "data": "ticks = " + this._ticks
-          }),
-        __h(BannerCard, {}),
-        __h('SizedBox', {
-            "height": 12
-          }),
-        __h('_LabeledDivider', {
-            "text": "private widget"
-          }),
-        __h('SizedBox', {
-            "height": 8
-          }),
-        __h(LabeledDivider, {
-            "text": "public widget"
-          }),
-        __h('SizedBox', {
-            "height": 12
-          }),
-        __h('ElevatedButton', {
-            "onPressed": this.__bindFn(0, [], (...__a) => this.tick(...__a)),
-            "style": {
-              "backgroundColor": '#FF9800',
-              "foregroundColor": '#FFFFFF'
-            }
-          }, __h('Text', {
-              "data": "Tick"
-            }))
-      ]);
+    return __h('Column', {
+        "children": [
+          __h('Text', {
+              "style": {
+                "fontSize": 22,
+                "fontWeight": "w600"
+              },
+              "data": "Dashboard (JS)"
+            }),
+          __h('Text', {
+              "data": "ticks = " + this._ticks
+            }),
+          __h(BannerCard, {}),
+          __h('SizedBox', {
+              "height": 12
+            }),
+          __h('_LabeledDivider', {
+              "text": "private widget"
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h(LabeledDivider, {
+              "text": "public widget"
+            }),
+          __h('SizedBox', {
+              "height": 12
+            }),
+          __h('ElevatedButton', {
+              "onPressed": this.__bindFn(0, [], (...__a) => this.tick(...__a)),
+              "style": {
+                "backgroundColor": '#FF9800',
+                "foregroundColor": '#FFFFFF'
+              },
+              "child": __h('Text', {
+                  "data": "Tick"
+                })
+            })
+        ]
+      });
   }
 }
 

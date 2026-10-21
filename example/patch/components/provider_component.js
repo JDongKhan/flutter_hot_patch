@@ -23,76 +23,88 @@ export class ProviderCard {
     this._modelB.loadUserInfo({"h": 1});
   }
   build(context) {
-    return __h('Card', {}, __h('Padding', {
-          "padding": {
-            "left": 16.0,
-            "top": 16.0,
-            "right": 16.0,
-            "bottom": 16.0
-          }
-        }, __h(MultiProvider, {
-            "providers": [
-              __h(ChangeNotifierProvider, {
-                  "create": this._modelA,
-                  "model": "CounterVm"
-                }),
-              __h(ChangeNotifierProvider, {
-                  "value": this._modelB,
-                  "factory": "value",
-                  "model": "NetworkVm"
-                })
-            ]
-          }, __h('Column', {
-              "mainAxisSize": "min"
-            }, [
-              this._buildText(),
-              this._modelA.buildText(),
-              __h(Consumer, {
-                  "builder": "_builder0",
-                  "model": "CounterVm"
-                }),
-              __h('Text', {
-                  "data": "MultiProvider · 两个模型各自局部重建"
-                }),
-              __h('SizedBox', {
-                  "height": 8
-                }),
-              __h(Consumer, {
-                  "builder": "_builder1",
-                  "model": "NetworkVm"
-                }),
-              __h('Row', {
-                  "mainAxisAlignment": "center"
-                }, __h('ElevatedButton', {
-                    "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a))
-                  }, __h('Text', {
-                      "data": "加载用户信息"
-                    }))),
-              __h('SizedBox', {
-                  "height": 8
-                }),
-              __h(Consumer, {
-                  "builder": "_builder2",
-                  "model": "CounterVm"
-                }),
-              __h('Row', {
-                  "mainAxisAlignment": "center"
-                }, [
-                  __h('ElevatedButton', {
-                      "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a))
-                    }, __h('Text', {
-                        "data": "B +1"
-                      })),
-                  __h('SizedBox', {
-                      "width": 12
+    return __h('Card', {
+        "child": __h('Padding', {
+            "padding": {
+              "left": 16.0,
+              "top": 16.0,
+              "right": 16.0,
+              "bottom": 16.0
+            },
+            "child": __h(MultiProvider, {
+                "providers": [
+                  __h(ChangeNotifierProvider, {
+                      "create": this._modelA,
+                      "model": "CounterVm"
                     }),
-                  __h('ElevatedButton', {
-                      "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a))
-                    }, __h('Text', {
-                        "data": "B Reset"
-                      }))
-                ])
-            ]))));
+                  __h(ChangeNotifierProvider, {
+                      "value": this._modelB,
+                      "factory": "value",
+                      "model": "NetworkVm"
+                    })
+                ],
+                "child": __h('Column', {
+                    "mainAxisSize": "min",
+                    "children": [
+                      this._buildText(),
+                      this._modelA.buildText(),
+                      __h(Consumer, {
+                          "builder": "_builder0",
+                          "model": "CounterVm"
+                        }),
+                      __h('Text', {
+                          "data": "MultiProvider · 两个模型各自局部重建"
+                        }),
+                      __h('SizedBox', {
+                          "height": 8
+                        }),
+                      __h(Consumer, {
+                          "builder": "_builder1",
+                          "model": "NetworkVm"
+                        }),
+                      __h('Row', {
+                          "mainAxisAlignment": "center",
+                          "children": [
+                            __h('ElevatedButton', {
+                                "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a)),
+                                "child": __h('Text', {
+                                    "data": "加载用户信息"
+                                  })
+                              })
+                          ]
+                        }),
+                      __h('SizedBox', {
+                          "height": 8
+                        }),
+                      __h(Consumer, {
+                          "builder": "_builder2",
+                          "model": "CounterVm"
+                        }),
+                      __h('Row', {
+                          "mainAxisAlignment": "center",
+                          "children": [
+                            __h('ElevatedButton', {
+                                "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a)),
+                                "child": __h('Text', {
+                                    "data": "B +1"
+                                  })
+                              }),
+                            __h('SizedBox', {
+                                "width": 12
+                              }),
+                            __h('ElevatedButton', {
+                                "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a)),
+                                "child": __h('Text', {
+                                    "data": "B Reset"
+                                  })
+                              })
+                          ]
+                        })
+                    ]
+                  })
+              })
+          })
+      });
   }
   _buildText() {
     return __h('Text', {

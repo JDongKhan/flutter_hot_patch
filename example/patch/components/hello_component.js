@@ -64,60 +64,68 @@ export class HelloCard {
     case 0: return "起步";
     default: return "推进中";
 } })();
-    return __h('Column', {}, [
-        __h('Text', {
-            "style": {
-              "fontSize": 24,
-              "fontWeight": "bold",
-              "color": '#2196F3'
-            },
-            "data": "Hello from JS logic 4"
-          }),
-        __h('Text', {
-            "data": "count = " + this._count
-          }),
-        __h('Text', {
-            "data": "阶段：" + stage
-          }),
-        __h('Text', {
-            "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
-          }),
-        __h('Text', {
-            "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
-          }),
-        __h('Text', {
-            "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
-          }),
-        ...((this._count > 0) ? [__h('Text', { "data": "当前 count 是正数（if 条件渲染）" })] : []),
-        ...((this._user != null) ? [__h('Text', { "data": "用户已加载（if + else 渲染）" })] : [__h('Text', { "data": "用户未加载，点 Load User" })]),
-        ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + i + " 个" })]); } return out; })(),
-        __h('Row', {}, [
-            __h('ElevatedButton', {
-                "onPressed": this.__bindFn(0, [], (...__a) => this.inc(...__a)),
-                "style": {
-                  "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
-                  "foregroundColor": '#FFFFFF'
-                }
-              }, __h('Text', {
-                  "data": "+1"
-                })),
-            __h('ElevatedButton', {
-                "onPressed": this.__bindFn(1, [], () => this.reset())
-              }, __h('Text', {
-                  "data": "Reset"
-                })),
-            __h('ElevatedButton', {
-                "onPressed": this.__bindFn(2, [], (...__a) => this.showNative(...__a))
-              }, __h('Text', {
-                  "data": "Native"
-                })),
-            __h('ElevatedButton', {
-                "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a))
-              }, __h('Text', {
-                  "data": "Load User"
-                }))
-          ])
-      ]);
+    return __h('Column', {
+        "children": [
+          __h('Text', {
+              "style": {
+                "fontSize": 24,
+                "fontWeight": "bold",
+                "color": '#2196F3'
+              },
+              "data": "Hello from JS logic 4"
+            }),
+          __h('Text', {
+              "data": "count = " + this._count
+            }),
+          __h('Text', {
+              "data": "阶段：" + stage
+            }),
+          __h('Text', {
+              "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
+            }),
+          __h('Text', {
+              "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
+            }),
+          __h('Text', {
+              "data": ((this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1")
+            }),
+          ...((this._count > 0) ? [__h('Text', { "data": "当前 count 是正数（if 条件渲染）" })] : []),
+          ...((this._user != null) ? [__h('Text', { "data": "用户已加载（if + else 渲染）" })] : [__h('Text', { "data": "用户未加载，点 Load User" })]),
+          ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + i + " 个" })]); } return out; })(),
+          __h('Row', {
+              "children": [
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(0, [], (...__a) => this.inc(...__a)),
+                    "style": {
+                      "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
+                      "foregroundColor": '#FFFFFF'
+                    },
+                    "child": __h('Text', {
+                        "data": "+1"
+                      })
+                  }),
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(1, [], () => this.reset()),
+                    "child": __h('Text', {
+                        "data": "Reset"
+                      })
+                  }),
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(2, [], (...__a) => this.showNative(...__a)),
+                    "child": __h('Text', {
+                        "data": "Native"
+                      })
+                  }),
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a)),
+                    "child": __h('Text', {
+                        "data": "Load User"
+                      })
+                  })
+              ]
+            })
+        ]
+      });
   }
   // ---- mixin TestMixin2 ----
   _m$TestMixin2$initState() {

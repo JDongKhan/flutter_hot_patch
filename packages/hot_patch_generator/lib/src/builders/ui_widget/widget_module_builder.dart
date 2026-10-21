@@ -61,21 +61,50 @@ class WidgetModuleBuilder implements Builder {
   }
 }
 
-/// 共享结点工厂源码：`export function __h(...)`，归一化 props/children，
-/// 返回 {type, props, children} 元素描述（与 JSON 字面量树同形状）。它是
-/// [nodeHelperPackage] 包模块的一部分，全局只有这一处定义。
+/// 共享结点工厂源码：`export function __h(type, props, children)`，把翻译层
+/// 按原名下发的 props 拆成 `{type, props, children}` 元素描述（与 JSON 字面量
+/// 树同形状）。它是 [nodeHelperPackage] 包模块的一部分，全局只有这一处定义。
+///
+/// 拆分规则**按元素 type 区分**（不看 Dart 实参名是否等于某个 widget 的语义）：
+///   - `type` 是字符串（宿主 widget）：把标准结构键 `child` / `children` /
+///     `sliver` / `slivers` / `tabs` 抽成 `element.children`，并从下发给宿主的
+///     props 中剥离——子树只走 children 通道，不重复塞进 props JSON；
+///   - `type` 是函数（JS 组件类）：props **原样保留**，`child` / `children` /
+///     `content` 等构造参数都能被 `__applyProps` 派生；children 只作为构造
+///     第二参的兼容值（包模块的 `this.children`）。
+/// 具名插槽（`body` / `title` / `leading` / `actions` …）不是结构键，一律留在
+/// props，由运行时 `propsChild` 挂载、宿主 renderer 用 `propChild` 读取。
 const String jsNodeHelperSource = '''
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
-// 归一化 props/children，返回 {type, props, children} 元素描述，供运行时按
-// type 映射 Flutter widget 或组件类。
+// 翻译层把 Dart 实参按原名放进 props；这里按元素 type 拆分结构子结点。
+const __STRUCTURAL_CHILD_KEYS = ['child', 'children', 'sliver', 'slivers', 'tabs'];
 export function __h(type, props, children) {
-  return {
-    type: type,
-    props: props || {},
-    children: children == null
-        ? []
-        : (Array.isArray(children) ? children : [children]),
-  };
+  var p = props || {};
+  var ch = children;
+  if (ch == null) {
+    ch = [];
+    for (var i = 0; i < __STRUCTURAL_CHILD_KEYS.length; i++) {
+      var v = p[__STRUCTURAL_CHILD_KEYS[i]];
+      if (v == null) { continue; }
+      if (Array.isArray(v)) {
+        for (var j = 0; j < v.length; j++) { ch.push(v[j]); }
+      } else {
+        ch.push(v);
+      }
+    }
+  } else if (!Array.isArray(ch)) {
+    ch = [ch];
+  }
+  // 宿主 widget：结构子结点不进 props（children 通道已承载完整子树）。
+  // JS 组件类：props 必须保留，__applyProps 靠它派生构造参数字段。
+  if (typeof type === 'string') {
+    var q = {};
+    for (var k in p) {
+      if (__STRUCTURAL_CHILD_KEYS.indexOf(k) < 0) { q[k] = p[k]; }
+    }
+    p = q;
+  }
+  return { type: type, props: p, children: ch };
 }''';
 
 /// builder/factory 形态（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类

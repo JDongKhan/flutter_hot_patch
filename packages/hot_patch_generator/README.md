@@ -99,7 +99,10 @@ The output must correspond to the Dart source **one-to-one**; this is the core c
 There is **no per-widget translator**: every widget — built-in, custom or third-party — goes through the
 single translation path (`lib/src/translator/widget_json.dart`), which dispatches on
 
-- **generic parameter names**: `child` / `children` / `slivers` / `tabs` / `on*` / `delegate`;
+- **argument-name conventions**: `on*` events, `delegate` child providers, positional parameter names;
+  `child` / `children` / `slivers` / `tabs` are **ordinary named props** and are split by the element
+  factory `__h` at runtime based on the element `type` (host string types → `element.children`; JS component
+  classes → props are kept for `__applyProps`);
 - **value shapes** (`lib/src/translator/value_forms.dart`): literals, constructors, static factories,
   constant references (enums / colors / icons), lists, closures — structured styles are converted by the
   `xxxToJson` helpers in `style_translators.dart`.
@@ -253,7 +256,10 @@ targets:
 **没有 per-widget 的 translator**：内建、自定义、三方组件全部走同一条翻译路径
 （`lib/src/translator/widget_json.dart`），分派依据只有两项：
 
-- **通用参数名**：`child` / `children` / `slivers` / `tabs` / `on*` / `delegate`；
+- **实参名约定**：`on*` 事件、`delegate` 子结点提供者、位置实参的 Flutter 形参名；
+  `child` / `children` / `slivers` / `tabs` 都是**普通具名 props**，由元素工厂 `__h` 在运行时
+  按元素 `type` 拆分（宿主字符串类型 → `element.children`；JS 组件类 → props 原样保留给
+  `__applyProps`）；
 - **值的形态**（`lib/src/translator/value_forms.dart`）：字面量、构造、静态工厂、常量引用
   （枚举 / 颜色 / 图标）、列表、闭包——结构化样式由 `style_translators.dart` 的 `xxxToJson` 转换。
 

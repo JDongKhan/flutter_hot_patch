@@ -17,23 +17,26 @@ export class BannerCard {
     this.setState(() => { this._views += 1; });
   }
   build(context) {
-    return __h('Column', {}, [
-        __h('Text', {
-            "style": {
-              "fontSize": 20,
-              "color": PanelColors.background
-            },
-            "data": "Banner from another file"
-          }),
-        __h('Text', {
-            "data": "views = " + this._views
-          }),
-        __h('ElevatedButton', {
-            "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a))
-          }, __h('Text', {
-              "data": "Bump"
-            }))
-      ]);
+    return __h('Column', {
+        "children": [
+          __h('Text', {
+              "style": {
+                "fontSize": 20,
+                "color": PanelColors.background
+              },
+              "data": "Banner from another file"
+            }),
+          __h('Text', {
+              "data": "views = " + this._views
+            }),
+          __h('ElevatedButton', {
+              "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a)),
+              "child": __h('Text', {
+                  "data": "Bump"
+                })
+            })
+        ]
+      });
   }
 }
 

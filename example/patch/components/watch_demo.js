@@ -11,65 +11,74 @@ export class WatchDemo {
   constructor() {
   }
   build(context) {
-    return __h('Card', {}, __h('Padding', {
-          "padding": {
-            "left": 16.0,
-            "top": 16.0,
-            "right": 16.0,
-            "bottom": 16.0
-          }
-        }, __h(ChangeNotifierProvider, {
-            "create": CounterVm,
-            "model": "CounterVm"
-          }, __h('Column', {
-              "mainAxisSize": "min"
-            }, [
-              __h(Builder, {
-                  "builder": "_builder0"
-                }),
-              __h('SizedBox', {
-                  "height": 12
-                }),
-              __h(WatchCountLabel, {})
-            ]))));
+    return __h('Card', {
+        "child": __h('Padding', {
+            "padding": {
+              "left": 16.0,
+              "top": 16.0,
+              "right": 16.0,
+              "bottom": 16.0
+            },
+            "child": __h(ChangeNotifierProvider, {
+                "create": CounterVm,
+                "child": __h('Column', {
+                    "mainAxisSize": "min",
+                    "children": [
+                      __h(Builder, {
+                          "builder": "_builder0"
+                        }),
+                      __h('SizedBox', {
+                          "height": 12
+                        }),
+                      __h(WatchCountLabel, {})
+                    ]
+                  }),
+                "model": "CounterVm"
+              })
+          })
+      });
   }
   _builder0(context) {
       var model = context.watch("CounterVm");
       return __h('Column', {
-        "mainAxisSize": "min"
-      }, [
-        __h('Text', {
-            "data": "context.watch<CounterModel>"
-          }),
-        __h('Text', {
-            "style": {
-              "fontSize": 22,
-              "fontWeight": "bold",
-              "color": '#FF5722'
-            },
-            "data": "count = " + model.count
-          }),
-        __h('SizedBox', {
-            "height": 8
-          }),
-        __h('Row', {
-            "mainAxisAlignment": "center"
-          }, [
-            __h('ElevatedButton', {
-                "onPressed": this.__bindFn(0, [model], () => model.inc())
-              }, __h('Text', {
-                  "data": "+1"
-                })),
-            __h('SizedBox', {
-                "width": 12
-              }),
-            __h('ElevatedButton', {
-                "onPressed": this.__bindFn(1, [], () => { this.context.read("CounterVm").reset(); })
-              }, __h('Text', {
-                  "data": "Reset"
-                }))
-          ])
-      ]);
+        "mainAxisSize": "min",
+        "children": [
+          __h('Text', {
+              "data": "context.watch<CounterModel>"
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 22,
+                "fontWeight": "bold",
+                "color": '#FF5722'
+              },
+              "data": "count = " + model.count
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Row', {
+              "mainAxisAlignment": "center",
+              "children": [
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(0, [model], () => model.inc()),
+                    "child": __h('Text', {
+                        "data": "+1"
+                      })
+                  }),
+                __h('SizedBox', {
+                    "width": 12
+                  }),
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(1, [], () => { this.context.read("CounterVm").reset(); }),
+                    "child": __h('Text', {
+                        "data": "Reset"
+                      })
+                  })
+              ]
+            })
+        ]
+      });
   }
 }
 

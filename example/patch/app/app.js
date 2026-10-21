@@ -38,13 +38,14 @@ export class AppSubContent {
         "backgroundColor": '#fff4f5f7',
         "body": __h('TabBarView', {
             "controller": this._tab,
-            "physics": "NeverScrollableScrollPhysics"
-          }, [
-            __h(HomePage, {}),
-            __h(CommunityPage, {}),
-            __h(OrdersPage, {}),
-            __h(MinePage, {})
-          ]),
+            "physics": "NeverScrollableScrollPhysics",
+            "children": [
+              __h(HomePage, {}),
+              __h(CommunityPage, {}),
+              __h(OrdersPage, {}),
+              __h(MinePage, {})
+            ]
+          }),
         "bottomNavigationBar": __h('BottomNavigationBar', {
             "currentIndex": this._index,
             "onTap": this.__bindFn(0, [], (...__a) => this._openTab(...__a)),

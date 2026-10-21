@@ -3,16 +3,35 @@
 // 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件
 
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
-// 归一化 props/children，返回 {type, props, children} 元素描述，供运行时按
-// type 映射 Flutter widget 或组件类。
+// 翻译层把 Dart 实参按原名放进 props；这里按元素 type 拆分结构子结点。
+const __STRUCTURAL_CHILD_KEYS = ['child', 'children', 'sliver', 'slivers', 'tabs'];
 export function __h(type, props, children) {
-  return {
-    type: type,
-    props: props || {},
-    children: children == null
-        ? []
-        : (Array.isArray(children) ? children : [children]),
-  };
+  var p = props || {};
+  var ch = children;
+  if (ch == null) {
+    ch = [];
+    for (var i = 0; i < __STRUCTURAL_CHILD_KEYS.length; i++) {
+      var v = p[__STRUCTURAL_CHILD_KEYS[i]];
+      if (v == null) { continue; }
+      if (Array.isArray(v)) {
+        for (var j = 0; j < v.length; j++) { ch.push(v[j]); }
+      } else {
+        ch.push(v);
+      }
+    }
+  } else if (!Array.isArray(ch)) {
+    ch = [ch];
+  }
+  // 宿主 widget：结构子结点不进 props（children 通道已承载完整子树）。
+  // JS 组件类：props 必须保留，__applyProps 靠它派生构造参数字段。
+  if (typeof type === 'string') {
+    var q = {};
+    for (var k in p) {
+      if (__STRUCTURAL_CHILD_KEYS.indexOf(k) < 0) { q[k] = p[k]; }
+    }
+    p = q;
+  }
+  return { type: type, props: p, children: ch };
 }
 
 

@@ -9,8 +9,12 @@
 ///   - `factory` = 命名构造 / 静态工厂名（`ListView.builder` → `builder`、
 ///     `Image.network` → `network`、`ChangeNotifierProvider.value` → `value`）——
 ///     同类型的不同工厂产物**同 type、不同 factory**，运行时据此选工厂；
-///   - `child:` → `children`；`children:`/`slivers:`/`tabs:` → 展开进 children；
-///   - `delegate:` → sliver 子结点提供者（见 [sliverDelegateResult]）；
+///   - `child:` / `children:` / `slivers:` / `tabs:` 等**按 Dart 实参原名**进
+///     `props`（不再拆成独立的 children 通道）；元素工厂 `__h` 再按元素类型
+///     把宿主的 `child`/`children`/`slivers`/`tabs` 抽成 `element.children`，
+///     而 JS 组件的构造参数原样留在 props 里供 `__applyProps` 派生字段；
+///   - `delegate:` → sliver 子结点提供者（ListDelegate → `props.children`，
+///     BuilderDelegate → `props.builder` / `childCount`，见 [sliverDelegateResult]）；
 ///   - `on*` → 事件句柄（键名就是参数名，不改名）；
 ///   - 位置实参 → 按 Flutter 声明的**形参名**（`Text('hi')` → `data`，见
 ///     [widgetPositionalArgNames]）；未登记的类型出声告警并丢弃，不再有下标
@@ -26,10 +30,11 @@ import '../builders/js_widget_defs.dart';
 import 'value_forms.dart';
 import 'widget2js.dart';
 
-/// 单子参数：值 → `children`（`child` / `sliver` 都是「单个子结点」语义）。
+/// 单子参数：值按**原名**进 `props`（`child` / `sliver` 都是「单个子结点」语义，
+/// 由元素工厂 `__h` 在宿主类型上抽成 `element.children`）。
 const Set<String> _childArgs = {'child', 'sliver'};
 
-/// 列表参数：值 → 展开进 `children`。
+/// 列表参数：值按**原名**进 `props`（同样由 `__h` 按元素类型拆分）。
 const Set<String> _listArgs = {'children', 'slivers', 'tabs'};
 
 /// 子结点提供者参数：`delegate:`。
@@ -46,7 +51,6 @@ const String factoryPropsKey = 'factory';
 /// 任意 widget 构造 → 产物结点描述。
 Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
   final props = <String, dynamic>{};
-  final children = <Object?>[];
   final positional = <Object?>[];
 
   for (final arg in node.args) {
@@ -62,23 +66,24 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     // 当作子结点/值重复翻译。
     if (name == 'key') continue;
 
-    // delegate 是「子结点提供者」：ListDelegate → children；
-    // BuilderDelegate → builder/childCount props（不认识的形态走普通值翻译）。
+    // delegate 是「子结点提供者」：ListDelegate → props.children（结构子结点
+    // 列表，由 __h 抽取）；BuilderDelegate → builder/childCount props（不认识的
+    // 形态走普通值翻译）。
     if (_delegateArgs.contains(name)) {
       final r = sliverDelegateResult(value, ctx);
       if (r != null) {
-        children.addAll(r.children);
+        if (r.children.isNotEmpty) props['children'] = r.children;
         props.addAll(r.builder);
         continue;
       }
     }
     if (_childArgs.contains(name)) {
       final n = ctx.translate(value);
-      if (n != null) children.add(n);
+      if (n != null) props[name] = n;
       continue;
     }
     if (_listArgs.contains(name)) {
-      children.addAll(_listOrEmpty(node, ctx, name));
+      props[name] = _listOrEmpty(node, ctx, name);
       continue;
     }
     if (_isEventArg(name)) {
@@ -135,7 +140,6 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
   return {
     'type': ctx.jsString(node.type),
     'props': nonNull(props),
-    'children': children,
   };
 }
 
