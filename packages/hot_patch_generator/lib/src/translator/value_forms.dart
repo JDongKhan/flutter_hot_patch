@@ -202,6 +202,15 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
     return null;
   }
 
+  // 方法 tear-off / 回调透传：`resetFilter: _resetFilter`、
+  // `toggleFilter: widget.toggleFilter`。Dart 里 tear-off 自带接收者；JS 裸
+  // 方法引用会在子组件调用时丢 this（表现为：点遮罩调到的 toggleFilter 实际
+  // 绑在子组件上，父级 `_filterOpen` 不变、弹框关不掉）。必须生成绑定闭包。
+  if (e is Identifier) {
+    final fn = ctx.functionJs(e);
+    if (fn != null) return fn;
+  }
+
   // 静态工厂（`ElevatedButton.styleFrom(...)` 等）：按**方法名**识别——它们的
   // 构造名被归一成 receiver 类名（'ElevatedButton'），无法据此判断是样式值。
   if (e is MethodInvocation) {

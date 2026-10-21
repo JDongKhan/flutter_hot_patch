@@ -178,7 +178,7 @@ export class CommunityPage {
             }),
           ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
           __h('Expanded', {
-              "child": (this._posts == null) ? __h('Center', { "child": __h('CircularProgressIndicator', {}) }) : __h(_ListContent, { "resetFilter": this._resetFilter, "openFilter": this._filterOpen, "toggleFilter": this._toggleFilter, "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) })
+              "child": (this._posts == null) ? __h('Center', { "child": __h('CircularProgressIndicator', {}) }) : __h(_ListContent, { "resetFilter": (...__a) => this._resetFilter(...__a), "openFilter": this._filterOpen, "toggleFilter": (...__a) => this._toggleFilter(...__a), "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) })
             })
         ]
       });
