@@ -328,18 +328,48 @@ Object? _delegateValue(Expression e, WidgetTranslateContext ctx) {
 /// 其余按标量直通。渲染不出来返回 null。
 String? _branchJs(Expression e, WidgetTranslateContext ctx) {
   if (e is NullLiteral) return 'null';
+  // 嵌套三目：`a ? b : c ? d : e` 必须逐层展开，不能整体丢给标量表达式
+  // （内层 widget 构造会退化成裸 JS 函数调用，最终整条 child 丢失）。
+  if (e is ConditionalExpression) {
+    final cond = _jsExprOrNull(e.condition, ctx);
+    if (cond == null) return null;
+    final a = _branchJs(e.thenExpression, ctx);
+    final b = _branchJs(e.elseExpression, ctx);
+    if (a == null || b == null) return null;
+    return '$cond ? $a : $b';
+  }
   if (e is ListLiteral) {
     final items = [for (final el in e.elements) ctx.translateElement(el)];
     return '[${items.map((v) => ctx.renderJs(v, 0)).join(', ')}]';
   }
-  final (ctor, _) = ctx.ctorOf(e);
-  if (ctor != null &&
-      _isClassName(ctor) &&
-      !_valueCtors.contains(ctor) &&
-      !_ctorConverters.containsKey(ctor)) {
+  if (_isWidgetExpr(e, ctx)) {
     return ctx.renderJs(ctx.translate(e), 0);
   }
   return _jsExprOrNull(e, ctx);
+}
+
+/// 表达式是否是 **widget 构造**（普通构造 / 命名构造 / 静态工厂）。
+///
+/// `ListView.separated(...)` 的 `ctorOf` 返回方法名 `separated`，不是类名；
+/// 之前只查 `_isClassName(ctor)` 会漏掉它，导致三目分支里的列表整体丢失。
+bool _isWidgetExpr(Expression e, WidgetTranslateContext ctx) {
+  final (ctor, _) = ctx.ctorOf(e);
+  if (ctor == null) return false;
+  if (_isClassName(ctor) &&
+      !_valueCtors.contains(ctor) &&
+      !_ctorConverters.containsKey(ctor)) {
+    return true;
+  }
+  // 命名构造 / 静态工厂：receiver 是类名（`ListView.separated` / `Image.network`）。
+  if (e is MethodInvocation && e.target is Identifier) {
+    final recv = (e.target as Identifier).name;
+    if (_isClassName(recv) &&
+        !_valueCtors.contains(recv) &&
+        !_ctorConverters.containsKey(recv)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /// 参数名是否是「builder 语义」的闭包（返回 widget 的回调）：`builder` /
