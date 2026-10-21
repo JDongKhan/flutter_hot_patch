@@ -49,7 +49,7 @@ export class ProviderCard {
                       this._buildText(),
                       this._modelA.buildText(),
                       __h(Consumer, {
-                          "builder": "_builder0",
+                          "builder": this._buildBadge(),
                           "model": "CounterVm"
                         }),
                       __h('Text', {
@@ -59,7 +59,7 @@ export class ProviderCard {
                           "height": 8
                         }),
                       __h(Consumer, {
-                          "builder": "_builder1",
+                          "builder": "_builder0",
                           "model": "NetworkVm"
                         }),
                       __h('Row', {
@@ -77,7 +77,7 @@ export class ProviderCard {
                           "height": 8
                         }),
                       __h(Consumer, {
-                          "builder": "_builder2",
+                          "builder": "_builder1",
                           "model": "CounterVm"
                         }),
                       __h('Row', {
@@ -141,9 +141,6 @@ export class ProviderCard {
     this._modelB.dispose();
   }
   _builder0(context, value) {
-      return this._buildBadge();
-  }
-  _builder1(context, value) {
       return __h('Text', {
         "style": {
           "fontSize": 22,
@@ -153,7 +150,7 @@ export class ProviderCard {
         "data": "加载用户信息："
       });
   }
-  _builder2(context, value) {
+  _builder1(context, value) {
       return __h('Text', {
         "style": {
           "fontSize": 22,

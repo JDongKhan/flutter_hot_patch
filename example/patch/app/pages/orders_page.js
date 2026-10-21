@@ -175,7 +175,7 @@ export class _OrderCard {
                                     "width": 66,
                                     "height": 66,
                                     "fit": "cover",
-                                    "errorBuilder": "_errorBuilder0",
+                                    "errorBuilder": (_, e, s) => __h('Container', { "width": 66, "height": 66, "color": '#ffe8ebf0' }),
                                     "factory": "network",
                                     "src": this.order.img
                                   })
@@ -260,13 +260,6 @@ export class _OrderCard {
                 ]
               })
           })
-      });
-  }
-  _errorBuilder0(context, e) {
-      return __h('Container', {
-        "width": 66,
-        "height": 66,
-        "color": '#ffe8ebf0'
       });
   }
 }

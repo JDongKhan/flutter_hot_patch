@@ -342,40 +342,27 @@ const String miniReactReconcilerSource = r'''
     return false;
   }
 
-  // 命名构造 `.builder` / `.separated` 的滚动视图：生成器只在**委托形态**
-  // （`delegate: SliverChildBuilderDelegate(...)`，props 键 `builder`）下用 JS 代理类
-  // 展开子结点；`.builder` 命名构造产出的是参数名键（`itemBuilder` / `itemCount` /
-  // `separatorBuilder`）且**不展开** children。这里按同样的「沿 `__parent` 找拥有者
-  // 方法」语义补上展开（与 flutter.js 的代理类一字不差），children 已有内容时原样
-  // 返回（不重复展开、与生成器将来改回代理类兼容）。
-  var builderHostTypes = {
-    ListView: 1, GridView: 1, SliverList: 1, SliverGrid: 1,
-    SliverFixedExtentList: 1, SliverFillViewport: 1,
-    // `.builder` 命名构造没有 JS 代理类，但 itemBuilder 仍需在宿主侧展开：
-    // 否则 itemCount > children.length，`_childAt` 越界返回无 key 占位，
-    // ReorderableListView 会直接断言 "Every item must have a key"。
-    ReorderableListView: 1, PageView: 1
-  };
+  // builder 展开：**不按组件类型、也不按属性名**判定，只看产物里已给出的形态——
+  //   1) 代理类（生成器的 builderFormTypes，如 `ListView.builder` /
+  //      `PageView.builder` / `SliverList.builder`）已在 children.__items 写好
+  //      展开结果，直接取用；
+  //   2) 委托形态：`delegate: SliverChildBuilderDelegate(...)` 由生成器译成
+  //      `{__delegate: 'builder', builder, childCount}` 放进 children.delegate，
+  //      按该描述展开。任何带这种 delegate 的宿主都适用，无需类型白名单；
+  //      以后新增自定义滚动容器只要沿用 Flutter 的 delegate 写法即可。
   function expandBuilderChildren(el, parent) {
-    if (!builderHostTypes[el.type]) { return []; }
-    // 代理类（生成的 builder 组件）已把展开结果写进内部键 __items，
-    // 由 __h 归入 children 对象；有就直接用，不再重复展开。
     var slots = el.children || {};
     var pre = slots.__items;
-    if (Array.isArray(pre) && pre.length) { return pre; }
-    var p = el.props || {};
+    if (Array.isArray(pre)) { return pre; }
     var del = slots.delegate;
-    var delBuilder = (del && del.__delegate === 'builder') ? del.builder : null;
-    var name = p.itemBuilder || p.builder || delBuilder;
+    if (!del || del.__delegate !== 'builder') { return []; }
+    var name = del.builder;
     if (typeof name !== 'string') { return []; }
-    var n = p.itemCount !== undefined ? p.itemCount
-        : (p.childCount !== undefined ? p.childCount
-        : (del && del.childCount !== undefined ? del.childCount : 0));
+    var n = del.childCount !== undefined ? del.childCount : 0;
     if (typeof n !== 'number' || n <= 0) { return []; }
     var owner = parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return []; }
-    var sep = p.separatorBuilder;
     // 传给 builder 的 `context` 形参 = 拥有者组件的代理（它是**构建单位**：有
     // build 方法、能被订阅标脏重建；宿主结点不是构建单位，不能当订阅锚点）。
     var ctx = contextOf(owner);
@@ -385,9 +372,6 @@ const String miniReactReconcilerSource = r'''
     withOwner(owner, function () {
       for (var i = 0; i < n; i++) {
         out.push(owner[name].call(owner, ctx, i));
-        if (typeof sep === 'string' && i < n - 1) {
-          out.push(owner[sep].call(owner, ctx, i));
-        }
       }
     });
     return out;

@@ -74,7 +74,12 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
       if (h != null) props[name] = h;
       continue;
     }
-    props[name] = autoValue(value, ctx, name: name);
+    props[name] = autoValue(
+      value,
+      ctx,
+      name: name,
+      methodConsumer: _isMethodNameConsumer(ctx, node),
+    );
   }
 
   // 命名构造 / 静态工厂名（`ListView.builder` / `Image.network` / `Provider.value`）
@@ -110,6 +115,24 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     'type': ctx.jsString(node.type),
     'props': nonNull(props),
   };
+}
+
+/// 该结点在运行时是否**按方法名**消费 widget 回调（builder 语义）。
+///
+/// 由**接收方类型**决定，与实参名无关：
+///   - 框架 JS 类（`Builder` / `Consumer` / `ListenableBuilder` …，见
+///     [WidgetTranslateContext.jsClassWidgets]）在自己的 JS 实现里按
+///     `owner[props.builder]` 取方法；
+///   - builder 形态代理（`ListView.builder` 等：在 delegateClassWidgets 且带
+///     `factory`）循环调用拥有者方法展开子树。
+/// 其余接收方（宿主 widget、用户自定义组件）把回调当**可调用函数**，必须下发
+/// 闭包——用户组件会像 Dart 那样直接 `this.renderer(context, i)` 调用。
+bool _isMethodNameConsumer(WidgetTranslateContext ctx, WidgetNode node) {
+  final factory = factoryNameOf(node.expr);
+  return ctx.usesJsClass(
+    node.type,
+    factory == null ? null : {factoryPropsKey: 'factory'},
+  );
 }
 
 /// 命名构造 / 静态工厂名；普通构造返回 null。

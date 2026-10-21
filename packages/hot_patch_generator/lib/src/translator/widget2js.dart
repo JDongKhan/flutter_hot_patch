@@ -156,12 +156,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (!jsClassWidgets.contains(type)) return false;
     if (!delegateClassWidgets.contains(type)) return true;
     if (props == null) return false;
-    // 命名构造 `.builder` / `.separated`（产物带 `factory`，回调是参数名
-    // `itemBuilder` / `separatorBuilder` / `builder`）与 `delegate:` 的
-    // BuilderDelegate 形态（带 `builder` + `childCount`）→ 走 JS 代理类循环调用
-    // 拥有者方法展开子树；普通 `children:` / ListDelegate 形态直接是宿主节点。
-    return props.containsKey(factoryPropsKey) ||
-        props.keys.any((k) => k == 'builder' || k.endsWith('Builder'));
+    // 判定只看**产物里显式写下的工厂名**（`factory`），不看属性名：
+    // 命名构造 `.builder` / `.separated` → 走 JS 代理类循环调用拥有者方法展开
+    // 子树；普通 `children:` / `delegate:`（含 ListDelegate 与 BuilderDelegate）
+    // 形态直接是宿主节点，由宿主/运行时按 delegate 描述消费。
+    return props.containsKey(factoryPropsKey);
   }
 
   /// 记录一个被兜底为「保留具体类型名结点」的自定义组件名。

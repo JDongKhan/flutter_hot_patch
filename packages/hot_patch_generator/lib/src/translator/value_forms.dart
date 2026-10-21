@@ -13,6 +13,7 @@
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/type.dart';
 
 import 'style_translators.dart';
 import 'widget2js.dart';
@@ -155,7 +156,12 @@ Object? _zeroRadius(Expression e, WidgetTranslateContext c, String source) {
 ///   3. 常量引用（`Owner.name`）→ [_constRefConverters]；
 ///   4. `ListLiteral` → 元素列表（逐项交给调用方的结点翻译）；
 ///   5. 其余 → 表达式直通（[WidgetTranslateContext.jsDataExpr]）。
-Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
+Object? autoValue(
+  Expression e,
+  WidgetTranslateContext ctx, {
+  String? name,
+  bool methodConsumer = false,
+}) {
   if (e is NullLiteral) return null;
 
   // sliver 子结点提供者：按**构造类型**识别（与参数名无关）。
@@ -176,17 +182,26 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
     return '$cond ? $a : $b';
   }
 
-  // 闭包：按**通用参数名约定**区分语义（约定与 widget 类型无关）——
-  //   `builder` / `xxxBuilder`（返回 widget 的回调，如 ListView.builder 的
-  //     itemBuilder、Builder 的 builder）→ 抽成组件方法，props 值 = 方法名，
-  //     运行时按名调用；
-  //   其余闭包（返回**值**，如 provider 的 `create: (_) => _modelA`）→
-  //     内联闭包体的 JS 表达式；闭包体是**类构造**（`(_) => MyModel()`）时
-  //     下发类引用（见 [_classRefOf]），由运行时决定何时 new 一次。
+  // 闭包：按**接收方的消费方式** + **闭包返回类型**决定形态，与参数名无关：
+  //   - 接收方按方法名调用（[methodConsumer]：框架逻辑 widget、builder 代理）
+  //     且闭包返回 widget → 抽成组件方法，props 值 = 方法名；
+  //   - 其余接收方把回调当**可调用函数**（宿主 widget、用户自定义组件）→
+  //     下发箭头闭包，用户组件可像 Dart 一样直接调用；
+  //   - 返回**值**的闭包（provider 的 `create: (_) => _modelA`）→ 闭包体是
+  //     类构造时下发类引用（见 [_classRefOf]），其余内联为值表达式。
   if (e is FunctionExpression) {
-    if (_isBuilderArg(name)) {
-      final m = extractBuilderMethod(ctx, e, '_$name');
-      return m == null ? null : ctx.jsString(m);
+    if (methodConsumer && _returnsWidget(e.body, ctx)) {
+      final m = extractBuilderMethod(ctx, e, '_${name ?? 'builder'}');
+      if (m != null) return ctx.jsString(m);
+      _warnUnsupported('${name ?? '闭包'}: ${e.toSource()}');
+      return null;
+    }
+    if (_returnsWidget(e.body, ctx)) {
+      // 接收方按普通函数调用该回调：下发**可调用箭头闭包**（闭包体里的 widget
+      // 子树编译成 `__h(...)` 表达式），与 Dart 中「回调返回 widget」语义一致。
+      final closure = _widgetClosureJs(e, ctx);
+      if (closure == null) _warnUnsupported('${name ?? '闭包'}: ${e.toSource()}');
+      return closure;
     }
     final body = e.body;
     if (body is ExpressionFunctionBody) {
@@ -372,11 +387,90 @@ bool _isWidgetExpr(Expression e, WidgetTranslateContext ctx) {
   return false;
 }
 
-/// 参数名是否是「builder 语义」的闭包（返回 widget 的回调）：`builder` /
-/// `itemBuilder` / `separatorBuilder` / `delegate` 等。这是通用约定，
-/// 与 widget 类型无关。
-bool _isBuilderArg(String? name) =>
-    name != null && (name == 'builder' || name.endsWith('Builder'));
+/// 闭包体是否**返回 widget**（builder 回调）：优先看表达式静态类型是否为
+/// `Widget` 子类（通用、与参数名无关，自定义名称同样识别）；类型信息缺失时
+/// 退回「表达式形态是 widget 构造」的判断。
+bool _returnsWidget(FunctionBody body, WidgetTranslateContext ctx) {
+  bool isWidget(Expression? e) {
+    if (e == null) return false;
+    if (_isWidgetTyped(e)) return true;
+    if (e is ConditionalExpression) {
+      return isWidget(e.thenExpression) || isWidget(e.elseExpression);
+    }
+    return _isWidgetExpr(e, ctx);
+  }
+
+  if (body is ExpressionFunctionBody) return isWidget(body.expression);
+  if (body is BlockFunctionBody) {
+    for (final st in body.block.statements) {
+      if (st is ReturnStatement && isWidget(st.expression)) return true;
+    }
+  }
+  return false;
+}
+
+/// 表达式静态类型是否是 `Widget` 的子类型。
+///
+/// 走分析器已解析的类型（`staticType` + `allSupertypes`），因此
+/// `(ctx, i) => _buildItem(i)`、条件表达式等**间接返回 widget** 的写法也能识别。
+bool _isWidgetTyped(Expression e) {
+  final t = e.staticType;
+  if (t is! InterfaceType) return false;
+  // ignore: experimental_member_use - analyzer 7 的元素模型迁移期接口
+  final el = t.element3;
+  if (el.displayName == 'Widget') return true;
+  // ignore: experimental_member_use
+  return el.allSupertypes.any((s) => s.element3.displayName == 'Widget');
+}
+
+/// 把「返回 widget 的闭包」翻译成**可调用箭头闭包**（供宿主 widget / 用户自定义
+/// 组件自己调用，与 Dart 语义一致）。
+///
+/// 形参名逐字保留；块体里只有「局部变量声明 + return」被支持（前置语句内联进
+/// 闭包体），其余语句形态返回 null 并出声告警。
+String? _widgetClosureJs(FunctionExpression fn, WidgetTranslateContext ctx) {
+  final params = fn.parameters?.parameters ?? const <FormalParameter>[];
+  final names = <String>[];
+  for (final p in params) {
+    if (p is! SimpleFormalParameter) return null;
+    final n = p.name?.lexeme;
+    if (n == null) return null;
+    names.add(n);
+    // 闭包形参在闭包体内是可见的局部名（`(context, i) => Text('$i')`）。
+    ctx.addBuilderLocal(n);
+  }
+  Expression? ret;
+  final preludes = <String>[];
+  final body = fn.body;
+  if (body is ExpressionFunctionBody) {
+    ret = body.expression;
+  } else if (body is BlockFunctionBody) {
+    for (final st in body.block.statements) {
+      if (st is ReturnStatement) {
+        ret = st.expression;
+        continue;
+      }
+      if (st is VariableDeclarationStatement) {
+        for (final v in st.variables.variables) {
+          ctx.addBuilderLocal(v.name.lexeme);
+          final init = v.initializer;
+          preludes.add(
+            init == null
+                ? 'var ${v.name.lexeme};'
+                : 'var ${v.name.lexeme} = ${ctx.jsDataExpr(init)};',
+          );
+        }
+        continue;
+      }
+      return null;
+    }
+  }
+  if (ret == null) return null;
+  final subtree = ctx.renderJs(ctx.translate(ret), 0);
+  final head = '(${names.join(', ')})';
+  if (preludes.isEmpty) return '$head => $subtree';
+  return '$head => { ${preludes.join(' ')} return $subtree; }';
+}
 
 /// 静态工厂方法名 → 结构化样式转换器（`Xxx.styleFrom(...)` 这类：值是样式对象，
 /// 不能按「类名构造 → 子结点」处理）。
