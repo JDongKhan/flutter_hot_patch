@@ -8,6 +8,8 @@
 - **组件（JS 类）的 `on*` 参数是可直接调用的闭包**，无需再做句柄转换。
 - **事件句柄统一为构建期箭头闭包**：`__bindFn(siteId, captures, f)` 替代 `__bind(expr)`（字符串求值路径已删除）。句柄按「编译期位点号 + 捕获值」复用（对象 / 函数按引用身份比较），重建后句柄 id 稳定、循环项不串味；可等待事件（`EasyRefresh.onRefresh`）仍原样返回 Promise。
 - **句柄归属对齐 Flutter 生命周期**：控制器 / Key 等句柄随**持有它的组件实例**释放——构造期（字段初始化）、`initState`、`build`、事件执行期创建的句柄记入实例 `__owns`，组件从树上摘除时整份释放并通知宿主 dispose 真实对象；无组件归属的仍随页面释放。全局 `handles` 表保留为 id 反查入口，`invoke(id)` 协议不变。
+- **`Card` 缺省 margin 走 Flutter 默认**：产物未写 `margin` 时不再传 `EdgeInsets.zero`（此前会抹平 Card 默认的 `EdgeInsets.all(4)`，列表项之间没有间隙）。
+- **`ReorderableListView` 支持 `scrollController` 与 `.builder`**：controller 走与 ListView 相同的滚动控制器桥接；`.builder`（itemBuilder + itemCount）还原 Flutter 原生 `ReorderableListView.builder`，按已展开子结点取项。
 - **删除 `@Colors.*.shade*` 标记解析与 MaterialColor 常量表**：颜色统一 `#RRGGBB` / `#AARRGGBB`（色值已在生成器编译期算好）。
 - **补齐 `Number.prototype` 的 Dart `num` 同名方法**（`round` / `floor` / `ceil` / `abs` / `truncate` / `toInt` / `toDouble` / `toStringAsFixed` / `clamp`）：Dart 写法原样翻译出 `(x * 100).round()` 后不再因 "is not a function" 让整页挂载失败。**该项属运行时 Dart 代码，需完全重启 App 才生效。**
 

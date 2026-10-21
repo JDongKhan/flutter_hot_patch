@@ -242,17 +242,51 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // `(int oldIndex, int newIndex)`，用 `on2` 还原——宿主把 `[oldIndex, newIndex]`
   // 参数数组回传，JS 侧 __bindFn 的 wrapper 摊开成位置实参（多参事件 ABI）。
   // children 为 JS 运行时下发的子结点，各自自带 ValueKey，满足 key 断言。
+  //
+  // 形态与其他滚动视图一致：
+  //   - 普通构造：children 直接进 children；
+  //   - `.builder`：代理类已按 itemCount 展开子结点，宿主还原
+  //     `ReorderableListView.builder`（itemBuilder 按下标取已展开的结点）；
+  //   - controller：Flutter 的形参名是 `scrollController`（不是 ListView 的
+  //     `controller`），走与 ListView 同一套 `_scrollControllerHost` 桥接。
   r.register('ReorderableListView', (c) {
-    return ReorderableListView(
+    final isBuilder = _builderMethod(c) != null;
+    final children = c.children;
+
+    Widget build(ScrollController? controller) {
       // onReorder 非空：无句柄时给空实现，避免拖拽结束抛断言。
-      onReorder: c.on2<int, int>('onReorder') ?? (_, _) {},
-      scrollDirection:
-          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
-      padding: nullableEdgeInsets(c.map('padding')),
-      shrinkWrap: c.bool_('shrinkWrap') ?? false,
-      physics: scrollPhysicsFromJson(c.props['physics']),
-      children: c.children,
-    );
+      final onReorder = c.on2<int, int>('onReorder') ?? (_, _) {};
+      final scrollDirection =
+          axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
+      final padding = nullableEdgeInsets(c.map('padding'));
+      final shrinkWrap = c.bool_('shrinkWrap') ?? false;
+      final physics = scrollPhysicsFromJson(c.props['physics']);
+      if (isBuilder) {
+        return ReorderableListView.builder(
+          scrollController: controller,
+          onReorder: onReorder,
+          itemCount: _builderCount(c, children.length),
+          itemBuilder: (_, i) => _childAt(children, i),
+          scrollDirection: scrollDirection,
+          padding: padding,
+          shrinkWrap: shrinkWrap,
+          physics: physics,
+        );
+      }
+      return ReorderableListView(
+        scrollController: controller,
+        onReorder: onReorder,
+        scrollDirection: scrollDirection,
+        padding: padding,
+        shrinkWrap: shrinkWrap,
+        physics: physics,
+        children: children,
+      );
+    }
+
+    final scId = JsControllerBridge.idOf(c.props['scrollController']);
+    if (scId != null) return _scrollControllerHost(c, scId, build);
+    return build(null);
   });
 
   // GridView：普通构造 / .builder（懒加载）/ .count / .extent。gridDelegate 按

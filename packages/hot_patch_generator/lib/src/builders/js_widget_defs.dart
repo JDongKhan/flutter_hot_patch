@@ -28,6 +28,7 @@ String packageModulePath(String package) => 'patch/$package.js';
 const Set<String> builderFormTypes = {
   'ListView',
   'GridView',
+  'ReorderableListView',
   'SliverList',
   'SliverGrid',
   'SliverFixedExtentList',
@@ -49,8 +50,10 @@ const Set<String> logicWidgetTypes = {
 /// 「元素 type 是 JS 类」的 widget 类型集合 = 有 JS 类的类型（唯一事实源：
 /// 逻辑 widget 表 + builder 代理表）。渲染层据此决定元素 type 用类引用还是
 /// 类型名字符串；宿主 widget 不在其中，零 import。
-Set<String> get jsClassWidgetTypes =>
-    {...builderFormTypes, ...logicWidgetTypes};
+Set<String> get jsClassWidgetTypes => {
+  ...builderFormTypes,
+  ...logicWidgetTypes,
+};
 
 /// 类型 → package 模块：决定该类型的 JS 工厂/类落在哪个 `patch/<package>.js`
 /// （未登记的类型一律归基础包 [nodeHelperPackage]）。
@@ -65,7 +68,8 @@ const Map<String, String> widgetPackages = {
 };
 
 /// 类型的 package 归属（默认 [nodeHelperPackage]）。
-String widgetPackageOf(String type) => widgetPackages[type] ?? nodeHelperPackage;
+String widgetPackageOf(String type) =>
+    widgetPackages[type] ?? nodeHelperPackage;
 
 /// 宿主侧「内建 widget」类型名登记（= 运行时 `JsWidgetRegistry` 注册表的镜像）。
 ///

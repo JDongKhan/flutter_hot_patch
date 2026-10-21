@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { GridView, ListView, ListenableBuilder, SliverFixedExtentList, SliverGrid, SliverList, __h } from '../flutter.js';
+import { GridView, ListView, ListenableBuilder, ReorderableListView, SliverFixedExtentList, SliverGrid, SliverList, __h } from '../flutter.js';
 
 // 组件 TextDetail
 export class TextDetail {
@@ -2932,6 +2932,7 @@ export class DrawerDetail {
 export class ReorderListDetail {
   constructor() {
     this._items = ["北京", "上海", "广州", "深圳", "杭州", "成都"];
+    this._controller = new ScrollController();
   }
   _onReorder(oldIndex, newIndex) {
     console.log(__str(oldIndex) + " - " + __str(newIndex));
@@ -2974,18 +2975,38 @@ export class ReorderListDetail {
         __h('SizedBox', {
             "height": 320
           }, [
-            __h('ReorderableListView', {
+            __h(ReorderableListView, {
+                "scrollController": this._controller,
                 "onReorder": this.__bindFn(1, [], (...__a) => this._onReorder(...__a)),
                 "padding": {
                   "left": 12.0,
                   "top": 0.0,
                   "right": 12.0,
                   "bottom": 0.0
-                }
-              }, [
-                ...(() => { var out = []; for (let item of this._items) { out.push.apply(out, [__h('Card', { "key": new ValueKey(item) }, [ __h('ListTile', { "leading": __h('Icon', { "icon": "drag_handle" }), "title": __h('Text', { "data": item }) }) ])]); } return out; })()
-              ])
+                },
+                "itemCount": this._items.length,
+                "itemBuilder": "_itemBuilder0",
+                "factory": "builder"
+              })
           ])
+      ]);
+  }
+  dispose() {
+    this._controller.dispose();
+  }
+  _itemBuilder0(context, index) {
+      var item = this._items[index];
+      return __h('Card', {
+        "key": new ValueKey(item)
+      }, [
+        __h('ListTile', {
+            "leading": __h('Icon', {
+                "icon": "drag_handle"
+              }),
+            "title": __h('Text', {
+                "data": item
+              })
+          })
       ]);
   }
 }

@@ -61,7 +61,12 @@ export class MultiProvider {
   }
   build() {
     var provs = this.props.providers || [];
-    var node = this.props.child;
+    // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；
+    // 作为普通元素挂载时子结点在 `children[0]`（生成器把 MultiProvider 的
+    // `child:` 翻译成元素 children）。漏掉后者会把 providers 包在 undefined
+    // 外面，整段子树静默消失（Card 只剩空壳，控制台无异常）。
+    var node = this.props.child != null ? this.props.child
+        : (this.children.length ? this.children[0] : null);
     for (var i = provs.length - 1; i >= 0; i--) {
       node = __h(provs[i].type, provs[i].props, [node]);
     }

@@ -541,7 +541,9 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     'Card',
     (c) => Card(
       elevation: c.num_('elevation'),
-      margin: edgeInsetsFromJson(c.map('margin')),
+      // 缺省必须是 null（走 Card 主题默认 EdgeInsets.all(4)）——`edgeInsetsFromJson`
+      // 对 null 返回 zero，会把 item 之间的默认间隙抹平（原生 vs JS 并排可见）。
+      margin: nullableEdgeInsets(c.map('margin')),
       color: colorFromJson(c.props['color']),
       shape: shapeFromJson(c.props['shape']),
       clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']),

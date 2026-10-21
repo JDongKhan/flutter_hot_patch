@@ -50,10 +50,20 @@ class _TextDetailState extends State<TextDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('基础文案 + TextStyle', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        Text('普通文本，count = $_count（状态插值）', style: const TextStyle(color: Colors.blue, fontSize: 16)),
+        const Text(
+          '基础文案 + TextStyle',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          '普通文本，count = $_count（状态插值）',
+          style: const TextStyle(color: Colors.blue, fontSize: 16),
+        ),
         const SizedBox(height: 6),
-        Text('maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示', maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(
+          'maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         const SizedBox(height: 6),
         Text('textScaler.linear(1.6) 放大', textScaler: TextScaler.linear(1.6)),
         const SizedBox(height: 6),
@@ -109,7 +119,10 @@ class _ButtonDetailState extends State<ButtonDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('点击次数 = $_pressed', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          '点击次数 = $_pressed',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         ElevatedButton(
           onPressed: onTap,
@@ -119,7 +132,11 @@ class _ButtonDetailState extends State<ButtonDetail> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             elevation: 6,
             shadowColor: Colors.deepPurple,
-            textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2),
+            textStyle: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
             backgroundColor: Colors.teal,
             foregroundColor: Colors.white,
           ),
@@ -142,7 +159,9 @@ class _ButtonDetailState extends State<ButtonDetail> {
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: Colors.orange, width: 2),
             minimumSize: const Size(120, 40),
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(20)),
+            ),
             foregroundColor: Colors.deepOrange,
           ),
           child: const Text('OutlinedButton'),
@@ -173,7 +192,10 @@ class _LayoutDetailState extends State<LayoutDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Row + Expanded / Flexible / Spacer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Row + Expanded / Flexible / Spacer',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Row(
           children: [
             Expanded(
@@ -196,7 +218,10 @@ class _LayoutDetailState extends State<LayoutDetail> {
           ],
         ),
         const SizedBox(height: 12),
-        const Text('Center / Align / Padding / SizedBox', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Center / Align / Padding / SizedBox',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Center(
           child: Container(
             color: Colors.amber.shade100,
@@ -214,9 +239,15 @@ class _LayoutDetailState extends State<LayoutDetail> {
           ),
         ),
         const SizedBox(height: 8),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), child: const Text('Padding 包裹文案')),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: const Text('Padding 包裹文案'),
+        ),
         const SizedBox(height: 12),
-        const Text('Stack + Positioned', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Stack + Positioned',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         SizedBox(
           height: 100,
           child: Stack(
@@ -228,7 +259,10 @@ class _LayoutDetailState extends State<LayoutDetail> {
                 child: Center(
                   child: Text(
                     'FILL',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -238,7 +272,10 @@ class _LayoutDetailState extends State<LayoutDetail> {
           ),
         ),
         const SizedBox(height: 12),
-        const Text('Wrap · 自动换行', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Wrap · 自动换行',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Wrap(
           direction: Axis.horizontal,
           spacing: 8,
@@ -246,7 +283,13 @@ class _LayoutDetailState extends State<LayoutDetail> {
           alignment: WrapAlignment.start,
           runAlignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [for (var i = 1; i <= 5; i++) Chip(label: Text('chip $i'), backgroundColor: Colors.teal.shade50)],
+          children: [
+            for (var i = 1; i <= 5; i++)
+              Chip(
+                label: Text('chip $i'),
+                backgroundColor: Colors.teal.shade50,
+              ),
+          ],
         ),
         const SizedBox(height: 12),
         const Text(
@@ -255,7 +298,11 @@ class _LayoutDetailState extends State<LayoutDetail> {
         ),
         Opacity(
           opacity: 0.5,
-          child: Container(color: Colors.red, padding: const EdgeInsets.all(8), child: const Text('50% 透明')),
+          child: Container(
+            color: Colors.red,
+            padding: const EdgeInsets.all(8),
+            child: const Text('50% 透明'),
+          ),
         ),
         const SizedBox(height: 8),
         ConstrainedBox(
@@ -269,7 +316,11 @@ class _LayoutDetailState extends State<LayoutDetail> {
         const SizedBox(height: 8),
         AspectRatio(
           aspectRatio: 1.78,
-          child: Container(color: Colors.indigo.shade100, alignment: Alignment.center, child: const Text('16:9 比例')),
+          child: Container(
+            color: Colors.indigo.shade100,
+            alignment: Alignment.center,
+            child: const Text('16:9 比例'),
+          ),
         ),
         const SizedBox(height: 8),
         FractionallySizedBox(
@@ -304,13 +355,23 @@ class _ImageDetailState extends State<ImageDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Image · 网络图片', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Image · 网络图片',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.network('https://picsum.photos/seed/hotpatch/400/160', height: 120, fit: BoxFit.cover),
+          child: Image.network(
+            'https://picsum.photos/seed/hotpatch/400/160',
+            height: 120,
+            fit: BoxFit.cover,
+          ),
         ),
         const SizedBox(height: 12),
-        const Text('CachedNetworkImage · 磁盘缓存网络图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'CachedNetworkImage · 磁盘缓存网络图',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: CachedNetworkImage(
@@ -320,7 +381,10 @@ class _ImageDetailState extends State<ImageDetail> {
           ),
         ),
         const SizedBox(height: 12),
-        const Text('Icon / CircleAvatar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Icon / CircleAvatar',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Row(
           children: [
             const Icon(Icons.star, color: Colors.amber, size: 28),
@@ -359,14 +423,26 @@ class _ContainerDetailState extends State<ContainerDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Container · 颜色/圆角/Padding', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Container · 颜色/圆角/Padding',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: const BoxDecoration(color: Colors.teal, borderRadius: BorderRadius.all(Radius.circular(12))),
-          child: const Text('容器内容（teal 圆角）', style: TextStyle(color: Colors.white)),
+          decoration: const BoxDecoration(
+            color: Colors.teal,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          child: const Text(
+            '容器内容（teal 圆角）',
+            style: TextStyle(color: Colors.white),
+          ),
         ),
         const SizedBox(height: 12),
-        const Text('Container · 边框 + 阴影 + 渐变', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Container · 边框 + 阴影 + 渐变',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -378,23 +454,40 @@ class _ContainerDetailState extends State<ContainerDetail> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white, width: 2),
             boxShadow: const [
-              BoxShadow(color: Color(0x66000000), offset: Offset(0, 4), blurRadius: 12, spreadRadius: 1),
+              BoxShadow(
+                color: Color(0x66000000),
+                offset: Offset(0, 4),
+                blurRadius: 12,
+                spreadRadius: 1,
+              ),
             ],
           ),
-          child: const Text('渐变 + 边框 + 阴影', style: TextStyle(color: Colors.white)),
+          child: const Text(
+            '渐变 + 边框 + 阴影',
+            style: TextStyle(color: Colors.white),
+          ),
         ),
         const SizedBox(height: 12),
-        const Text('DecoratedBox · 纯装饰', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'DecoratedBox · 纯装饰',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         DecoratedBox(
           decoration: BoxDecoration(
             color: Colors.amber.shade100,
             border: Border.all(color: Colors.amber, width: 2),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Padding(padding: EdgeInsets.all(12), child: Text('DecoratedBox 内容')),
+          child: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('DecoratedBox 内容'),
+          ),
         ),
         const SizedBox(height: 12),
-        const Text('Card · shape / clipBehavior', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Card · shape / clipBehavior',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Card(
           elevation: 4,
           shadowColor: Colors.deepPurple,
@@ -403,12 +496,18 @@ class _ContainerDetailState extends State<ContainerDetail> {
             side: const BorderSide(color: Colors.deepPurple, width: 1),
           ),
           clipBehavior: Clip.antiAlias,
-          child: const Padding(padding: EdgeInsets.all(16), child: Text('圆角卡片 + 描边 + 阴影')),
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('圆角卡片 + 描边 + 阴影'),
+          ),
         ),
         const SizedBox(height: 12),
         const Divider(),
         const SizedBox(height: 12),
-        const Text('SizedBox · 尺寸约束', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'SizedBox · 尺寸约束',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Container(
           width: 120,
           height: 48,
@@ -487,7 +586,10 @@ class _ScrollDetailState extends State<ScrollDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('ListView.builder · 懒构建列表（offset: $_offset）', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          'ListView.builder · 懒构建列表（offset: $_offset）',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         NotificationListener<ScrollNotification>(
           onNotification: _onListScroll,
           child: SizedBox(
@@ -543,7 +645,10 @@ class _ScrollDetailState extends State<ScrollDetail> {
         ),
         Align(
           alignment: Alignment.centerLeft,
-          child: TextButton(onPressed: _scrollToEnd, child: const Text('横向 · 跳到底')),
+          child: TextButton(
+            onPressed: _scrollToEnd,
+            child: const Text('横向 · 跳到底'),
+          ),
         ),
       ],
     );
@@ -650,7 +755,8 @@ class _SliverDetailState extends State<SliverDetail> {
       return;
     }
     setState(() {
-      _measureText = 'x=${rect.dx.toStringAsFixed(1)} y=${rect.dy.toStringAsFixed(1)}'
+      _measureText =
+          'x=${rect.dx.toStringAsFixed(1)} y=${rect.dy.toStringAsFixed(1)}'
           ' · ${rect.width.toStringAsFixed(0)} × ${rect.height.toStringAsFixed(0)}';
     });
   }
@@ -663,7 +769,9 @@ class _SliverDetailState extends State<SliverDetail> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            title: Text('SliverAppBar 导航 · offset ${_offset.toStringAsFixed(0)}'),
+            title: Text(
+              'SliverAppBar 导航 · offset ${_offset.toStringAsFixed(0)}',
+            ),
             backgroundColor: Colors.deepPurple,
             foregroundColor: Colors.white,
             pinned: true,
@@ -687,7 +795,10 @@ class _SliverDetailState extends State<SliverDetail> {
             child: Container(
               margin: const EdgeInsets.all(12),
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: const Text(
                 'CustomScrollView 整页 · SliverToBoxAdapter 盒子',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
@@ -699,7 +810,10 @@ class _SliverDetailState extends State<SliverDetail> {
             child: Container(
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: Colors.teal.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Text(
                 'GlobalKey 测量：「固定高度」分区 $_measureText',
                 style: const TextStyle(fontSize: 13, color: Colors.teal),
@@ -724,7 +838,10 @@ class _SliverDetailState extends State<SliverDetail> {
             sliver: SliverToBoxAdapter(
               child: Text(
                 'SliverList.builder · 懒构建列表',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -744,7 +861,10 @@ class _SliverDetailState extends State<SliverDetail> {
             sliver: SliverToBoxAdapter(
               child: Text(
                 'SliverList.separated · 分隔列表',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -754,7 +874,10 @@ class _SliverDetailState extends State<SliverDetail> {
               itemCount: 5,
               itemBuilder: (context, index) => ListTile(
                 dense: true,
-                leading: const Icon(Icons.arrow_right, color: Colors.deepPurple),
+                leading: const Icon(
+                  Icons.arrow_right,
+                  color: Colors.deepPurple,
+                ),
                 title: Text('separated item $index'),
               ),
               separatorBuilder: (context, index) => const Divider(height: 1),
@@ -768,14 +891,20 @@ class _SliverDetailState extends State<SliverDetail> {
               // RenderBox 才有（sliver 是 RenderSliver）。
               child: Container(
                 key: _fixedKey,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.teal.shade50,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   'SliverFixedExtentList · 固定高度',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -799,7 +928,10 @@ class _SliverDetailState extends State<SliverDetail> {
             sliver: SliverToBoxAdapter(
               child: Text(
                 'SliverOpacity + SliverGrid.builder · MaxCrossAxisExtent 九宫格',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -816,9 +948,15 @@ class _SliverDetailState extends State<SliverDetail> {
                 ),
                 itemCount: 9,
                 itemBuilder: (context, index) => Container(
-                  decoration: BoxDecoration(color: Colors.teal.shade100, borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   alignment: Alignment.center,
-                  child: Text('格 $index', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    '格 $index',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
@@ -827,7 +965,10 @@ class _SliverDetailState extends State<SliverDetail> {
             sliver: SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
-                child: Text('底部 · SliverSafeArea + SliverFillRemaining', style: const TextStyle(color: Colors.grey)),
+                child: Text(
+                  '底部 · SliverSafeArea + SliverFillRemaining',
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ),
             ),
           ),
@@ -883,7 +1024,11 @@ class _GridDetailState extends State<GridDetail> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(title: const Text('GridView 懒加载验证'), backgroundColor: Colors.teal, foregroundColor: Colors.white),
+      appBar: AppBar(
+        title: const Text('GridView 懒加载验证'),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _jumpBottom,
         backgroundColor: Colors.teal,
@@ -920,9 +1065,15 @@ class _GridDetailState extends State<GridDetail> {
               ),
               itemCount: 30,
               itemBuilder: (context, index) => Container(
-                decoration: BoxDecoration(color: Colors.teal.shade100, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 alignment: Alignment.center,
-                child: Text('格 $index', style: const TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(
+                  '格 $index',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),
@@ -944,9 +1095,15 @@ class _GridDetailState extends State<GridDetail> {
               ),
               itemCount: 20,
               itemBuilder: (context, index) => Container(
-                decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 alignment: Alignment.center,
-                child: Text('项 $index', style: const TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(
+                  '项 $index',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),
@@ -1094,42 +1251,76 @@ class _InputDetailState extends State<InputDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('TextField', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'TextField',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         TextField(
           controller: _controller,
           onChanged: _onTextChanged,
-          decoration: const InputDecoration(hintText: '请输入文本', labelText: '用户名'),
+          decoration: const InputDecoration(
+            hintText: '请输入文本',
+            labelText: '用户名',
+          ),
           maxLines: 1,
           style: const TextStyle(fontSize: 16),
         ),
         const SizedBox(height: 4),
-        Text('输入内容：$_text', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        Text(
+          '输入内容：$_text',
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
         // 验证 JS 侧读 controller.text 镜像（经 __onHostText 回传），
         // 插值写法与 Dart 侧源码一比一。
-        Text('controller.text：${_controller.text}', style: const TextStyle(fontSize: 14, color: Colors.deepPurple)),
+        Text(
+          'controller.text：${_controller.text}',
+          style: const TextStyle(fontSize: 14, color: Colors.deepPurple),
+        ),
         const SizedBox(height: 8),
         // 验证 JS 侧写 controller（clear() → host 通道清空宿主真实 controller）。
         Align(
           alignment: Alignment.centerLeft,
-          child: FilledButton(onPressed: () => _controller.clear(), child: const Text('清空输入')),
+          child: FilledButton(
+            onPressed: () => _controller.clear(),
+            child: const Text('清空输入'),
+          ),
         ),
         const SizedBox(height: 12),
-        const Text('Radio 单选', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'Radio 单选',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Row(
           children: [
             // Radio groupValue/onChanged 已废弃（RadioGroup 方案暂无 translator），
             // demo 先用旧 API 验证协议。
             // ignore: deprecated_member_use
-            Radio(value: 'A', groupValue: _choice, onChanged: _onChoiceChanged, activeColor: Colors.deepPurple),
+            Radio(
+              value: 'A',
+              groupValue: _choice,
+              onChanged: _onChoiceChanged,
+              activeColor: Colors.deepPurple,
+            ),
             const Text('选项 A'),
             // ignore: deprecated_member_use
-            Radio(value: 'B', groupValue: _choice, onChanged: _onChoiceChanged, activeColor: Colors.deepPurple),
+            Radio(
+              value: 'B',
+              groupValue: _choice,
+              onChanged: _onChoiceChanged,
+              activeColor: Colors.deepPurple,
+            ),
             const Text('选项 B'),
           ],
         ),
-        Text('当前选择：$_choice', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        Text(
+          '当前选择：$_choice',
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
         const SizedBox(height: 12),
-        const Text('DropdownButton', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'DropdownButton',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         DropdownButton(
           value: _dropdown,
           isExpanded: true,
@@ -1206,7 +1397,10 @@ class _ProgressDetailState extends State<ProgressDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('CircularProgressIndicator', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'CircularProgressIndicator',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -1221,7 +1415,10 @@ class _ProgressDetailState extends State<ProgressDetail> {
           ],
         ),
         const SizedBox(height: 16),
-        const Text('LinearProgressIndicator', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text(
+          'LinearProgressIndicator',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: _progress,
@@ -1232,7 +1429,10 @@ class _ProgressDetailState extends State<ProgressDetail> {
         const SizedBox(height: 4),
         const LinearProgressIndicator(),
         const SizedBox(height: 8),
-        Text('进度值：$_progress', style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        Text(
+          '进度值：$_progress',
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
       ],
     );
   }
@@ -1273,8 +1473,13 @@ class _NotifierCardState extends State<NotifierCard> {
           children: [
             ListenableBuilder(
               listenable: _model,
-              builder: (context, _) =>
-                  Text('count = ${_model.count}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              builder: (context, _) => Text(
+                'count = ${_model.count}',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -1304,7 +1509,12 @@ class _NotifierCardState extends State<NotifierCard> {
 /// 由 JsUiWidget.props 传入。
 @PatchEntry('StatelessCard')
 class StatelessCard extends StatelessWidget {
-  const StatelessCard({super.key, required this.title, this.subtitle = '', this.badge = 'NEW'});
+  const StatelessCard({
+    super.key,
+    required this.title,
+    this.subtitle = '',
+    this.badge = 'NEW',
+  });
 
   final String title;
   final String subtitle;
@@ -1325,12 +1535,21 @@ class StatelessCard extends StatelessWidget {
                 const Icon(Icons.article, color: Colors.teal),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('$badge · $title', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    '$badge · $title',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
             const Divider(height: 24),
-            Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
           ],
         ),
       ),
@@ -1356,7 +1575,8 @@ class TabDetail extends StatefulWidget {
   State<TabDetail> createState() => _TabDetailState();
 }
 
-class _TabDetailState extends State<TabDetail> with SingleTickerProviderStateMixin {
+class _TabDetailState extends State<TabDetail>
+    with SingleTickerProviderStateMixin {
   /// 显式 TabController（vsync 由 JS 代理类忽略，length/initialIndex 下发宿主建实例）。
   late final TabController _controller = TabController(length: 3, vsync: this);
 
@@ -1403,7 +1623,11 @@ class _TabDetailState extends State<TabDetail> with SingleTickerProviderStateMix
                   indicatorColor: Colors.deepPurple,
                   labelColor: Colors.deepPurple,
                   unselectedLabelColor: Colors.grey,
-                  tabs: const [Tab(text: '广场'), Tab(text: '推荐'), Tab(text: '关注')],
+                  tabs: const [
+                    Tab(text: '广场'),
+                    Tab(text: '推荐'),
+                    Tab(text: '关注'),
+                  ],
                 ),
                 Expanded(
                   child: TabBarView(
@@ -1419,7 +1643,10 @@ class _TabDetailState extends State<TabDetail> with SingleTickerProviderStateMix
           ),
         ),
         const SizedBox(height: 14),
-        Text('显式 TabController · index = $_index', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(
+          '显式 TabController · index = $_index',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 6),
         SizedBox(
           height: 170,
@@ -1427,7 +1654,11 @@ class _TabDetailState extends State<TabDetail> with SingleTickerProviderStateMix
             children: [
               TabBar(
                 controller: _controller,
-                tabs: const [Tab(text: '首页'), Tab(text: '社区'), Tab(text: '我的')],
+                tabs: const [
+                  Tab(text: '首页'),
+                  Tab(text: '社区'),
+                  Tab(text: '我的'),
+                ],
               ),
               Expanded(
                 child: TabBarView(
@@ -1444,7 +1675,10 @@ class _TabDetailState extends State<TabDetail> with SingleTickerProviderStateMix
         ),
         Align(
           alignment: Alignment.centerLeft,
-          child: TextButton(onPressed: _next, child: const Text('下一 tab · controller.animateTo')),
+          child: TextButton(
+            onPressed: _next,
+            child: const Text('下一 tab · controller.animateTo'),
+          ),
         ),
       ],
     );
@@ -1478,16 +1712,31 @@ class _PageViewDetailState extends State<PageViewDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('PageView · 当前第 ${_page + 1} / 3 页', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(
+          'PageView · 当前第 ${_page + 1} / 3 页',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 6),
         SizedBox(
           height: 150,
           child: PageView(
             onPageChanged: _onPageChanged,
             children: [
-              Container(color: Colors.deepPurple.shade100, alignment: Alignment.center, child: const Text('第 1 页')),
-              Container(color: Colors.teal.shade100, alignment: Alignment.center, child: const Text('第 2 页')),
-              Container(color: Colors.orange.shade100, alignment: Alignment.center, child: const Text('第 3 页')),
+              Container(
+                color: Colors.deepPurple.shade100,
+                alignment: Alignment.center,
+                child: const Text('第 1 页'),
+              ),
+              Container(
+                color: Colors.teal.shade100,
+                alignment: Alignment.center,
+                child: const Text('第 2 页'),
+              ),
+              Container(
+                color: Colors.orange.shade100,
+                alignment: Alignment.center,
+                child: const Text('第 3 页'),
+              ),
             ],
           ),
         ),
@@ -1502,7 +1751,9 @@ class _PageViewDetailState extends State<PageViewDetail> {
                 margin: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: i == _page ? Colors.deepPurple : const Color(0xFFBDBDBD),
+                  color: i == _page
+                      ? Colors.deepPurple
+                      : const Color(0xFFBDBDBD),
                 ),
               ),
           ],
@@ -1593,6 +1844,7 @@ class _KeyDetailState extends State<KeyDetail> {
   // ---- ObjectKey：按对象身份相等 ----
   /// **同一个实例**：字段初始化时建一次，之后每次 build 拿到的都是它 → key 稳定。
   final List<int> _stableObj = [1];
+
   /// 父级重建次数：只用来证明「父级确实重建了」（两行的 label 都会跟着变），
   /// 而两行的计数表现却相反——差异只可能来自 key 的身份是否稳定。
   int _rebuildSeq = 0;
@@ -1631,11 +1883,23 @@ class _KeyDetailState extends State<KeyDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('① 带 key：key: ValueKey(name)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-        for (var i = 0; i < _names.length; i++) KeyTile(key: ValueKey(_names[i]), index: i, label: '${_names[i]}（key）'),
+        const Text(
+          '① 带 key：key: ValueKey(name)',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+        ),
+        for (var i = 0; i < _names.length; i++)
+          KeyTile(
+            key: ValueKey(_names[i]),
+            index: i,
+            label: '${_names[i]}（key）',
+          ),
         const SizedBox(height: 10),
-        const Text('② 不带 key：按位置匹配', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-        for (var i = 0; i < _names.length; i++) KeyTile(index: i, label: '${_names[i]}（无 key）'),
+        const Text(
+          '② 不带 key：按位置匹配',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+        ),
+        for (var i = 0; i < _names.length; i++)
+          KeyTile(index: i, label: '${_names[i]}（无 key）'),
       ],
     );
   }
@@ -1651,9 +1915,17 @@ class _KeyDetailState extends State<KeyDetail> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // A：key 包的是**字段里的那个实例**——跨帧恒定，身份稳定。
-        KeyTile(key: ObjectKey(_stableObj), index: 0, label: 'A · ObjectKey(字段实例) · 父级已重建 $_rebuildSeq 次'),
+        KeyTile(
+          key: ObjectKey(_stableObj),
+          index: 0,
+          label: 'A · ObjectKey(字段实例) · 父级已重建 $_rebuildSeq 次',
+        ),
         // B：key 每次 build 都包一个**新造的** [1]——值一样，身份不同。
-        KeyTile(key: ObjectKey([1]), index: 1, label: 'B · ObjectKey(每帧新造 [1]) · 父级已重建 $_rebuildSeq 次'),
+        KeyTile(
+          key: ObjectKey([1]),
+          index: 1,
+          label: 'B · ObjectKey(每帧新造 [1]) · 父级已重建 $_rebuildSeq 次',
+        ),
       ],
     );
   }
@@ -1677,7 +1949,8 @@ class _KeyDetailState extends State<KeyDetail> {
         child: ListView(
           key: const PageStorageKey('key-page-a'),
           children: [
-            for (var i = 0; i < 12; i++) ListTile(dense: true, title: Text('A 行 $i')),
+            for (var i = 0; i < 12; i++)
+              ListTile(dense: true, title: Text('A 行 $i')),
           ],
         ),
       );
@@ -1687,7 +1960,8 @@ class _KeyDetailState extends State<KeyDetail> {
       child: ListView(
         key: const PageStorageKey('key-page-b'),
         children: [
-          for (var i = 0; i < 12; i++) ListTile(dense: true, title: Text('B 行 $i')),
+          for (var i = 0; i < 12; i++)
+            ListTile(dense: true, title: Text('B 行 $i')),
         ],
       ),
     );
@@ -1715,7 +1989,8 @@ class _KeyDetailState extends State<KeyDetail> {
       return;
     }
     setState(() {
-      _measureText = 'x=${rect.dx.toStringAsFixed(1)} y=${rect.dy.toStringAsFixed(1)}'
+      _measureText =
+          'x=${rect.dx.toStringAsFixed(1)} y=${rect.dy.toStringAsFixed(1)}'
           ' · ${rect.width.toStringAsFixed(0)} × ${rect.height.toStringAsFixed(0)}';
     });
   }
@@ -1741,13 +2016,20 @@ class _KeyDetailState extends State<KeyDetail> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             'ValueKey · 列表按值匹配',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -1760,7 +2042,10 @@ class _KeyDetailState extends State<KeyDetail> {
           const SizedBox(height: 8),
           Row(
             children: [
-              TextButton(onPressed: _rotateNames, child: const Text('轮换顺序（A→末尾）')),
+              TextButton(
+                onPressed: _rotateNames,
+                child: const Text('轮换顺序（A→末尾）'),
+              ),
               const SizedBox(width: 8),
               TextButton(onPressed: _resetNames, child: const Text('重置')),
             ],
@@ -1774,13 +2059,20 @@ class _KeyDetailState extends State<KeyDetail> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             'ObjectKey · 按对象身份相等',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -1808,7 +2100,10 @@ class _KeyDetailState extends State<KeyDetail> {
           const SizedBox(height: 8),
           Row(
             children: [
-              TextButton(onPressed: _rebuildParent, child: const Text('父级重建（setState 一次）')),
+              TextButton(
+                onPressed: _rebuildParent,
+                child: const Text('父级重建（setState 一次）'),
+              ),
             ],
           ),
         ],
@@ -1820,13 +2115,20 @@ class _KeyDetailState extends State<KeyDetail> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             'UniqueKey · 每次都是新身份',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -1839,7 +2141,10 @@ class _KeyDetailState extends State<KeyDetail> {
           const SizedBox(height: 8),
           Row(
             children: [
-              TextButton(onPressed: _bumpUnique, child: const Text('重建（setState 一次）')),
+              TextButton(
+                onPressed: _bumpUnique,
+                child: const Text('重建（setState 一次）'),
+              ),
             ],
           ),
         ],
@@ -1851,13 +2156,20 @@ class _KeyDetailState extends State<KeyDetail> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             'PageStorageKey · 滚动位置持久化',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -1885,13 +2197,20 @@ class _KeyDetailState extends State<KeyDetail> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             'GlobalKey · 宿主端量测 / 定位',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
           ),
           const SizedBox(height: 4),
           const Text(
@@ -1903,17 +2222,32 @@ class _KeyDetailState extends State<KeyDetail> {
           Container(
             key: _targetKey,
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: Colors.teal.shade50, borderRadius: BorderRadius.circular(6)),
-            child: const Text('目标盒子（GlobalKey 挂在这里）', style: TextStyle(fontSize: 13)),
+            decoration: BoxDecoration(
+              color: Colors.teal.shade50,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Text(
+              '目标盒子（GlobalKey 挂在这里）',
+              style: TextStyle(fontSize: 13),
+            ),
           ),
           const SizedBox(height: 8),
-          Text('测量：$_measureText', style: const TextStyle(fontSize: 13, color: Colors.teal)),
+          Text(
+            '测量：$_measureText',
+            style: const TextStyle(fontSize: 13, color: Colors.teal),
+          ),
           const SizedBox(height: 4),
           Row(
             children: [
-              TextButton(onPressed: _measureTarget, child: const Text('测量位置与尺寸')),
+              TextButton(
+                onPressed: _measureTarget,
+                child: const Text('测量位置与尺寸'),
+              ),
               const SizedBox(width: 8),
-              TextButton(onPressed: _scrollToTarget, child: const Text('定位（showOnScreen）')),
+              TextButton(
+                onPressed: _scrollToTarget,
+                child: const Text('定位（showOnScreen）'),
+              ),
             ],
           ),
         ],
@@ -2002,11 +2336,22 @@ class _DrawerDetailState extends State<DrawerDetail> {
               decoration: const BoxDecoration(color: Colors.indigo),
               child: const Align(
                 alignment: Alignment.bottomLeft,
-                child: Text('左侧抽屉', style: TextStyle(color: Colors.white, fontSize: 20)),
+                child: Text(
+                  '左侧抽屉',
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
               ),
             ),
-            ListTile(leading: const Icon(Icons.receipt_long), title: const Text('我的订单'), onTap: _pickOrders),
-            ListTile(leading: const Icon(Icons.favorite_border), title: const Text('我的收藏'), onTap: _pickFavorites),
+            ListTile(
+              leading: const Icon(Icons.receipt_long),
+              title: const Text('我的订单'),
+              onTap: _pickOrders,
+            ),
+            ListTile(
+              leading: const Icon(Icons.favorite_border),
+              title: const Text('我的收藏'),
+              onTap: _pickFavorites,
+            ),
           ],
         ),
       ),
@@ -2017,11 +2362,22 @@ class _DrawerDetailState extends State<DrawerDetail> {
               decoration: const BoxDecoration(color: Colors.teal),
               child: const Align(
                 alignment: Alignment.bottomLeft,
-                child: Text('右侧抽屉', style: TextStyle(color: Colors.white, fontSize: 20)),
+                child: Text(
+                  '右侧抽屉',
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
               ),
             ),
-            ListTile(leading: const Icon(Icons.settings), title: const Text('设置'), onTap: _pickSettings),
-            ListTile(leading: const Icon(Icons.help_outline), title: const Text('帮助与关于'), onTap: _pickHelp),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('设置'),
+              onTap: _pickSettings,
+            ),
+            ListTile(
+              leading: const Icon(Icons.help_outline),
+              title: const Text('帮助与关于'),
+              onTap: _pickHelp,
+            ),
           ],
         ),
       ),
@@ -2054,6 +2410,10 @@ class _DrawerDetailState extends State<DrawerDetail> {
 ///
 /// 重排算法用 `removeAt + insert`（生成器翻译为 JS 数组的
 /// `splice(i,1)[0]` 与 `splice(i,0,v)`）；`add` 翻译为 `push`。
+///
+/// 同时覆盖滚动视图的两种通用形态：`.builder` 命名构造（itemBuilder +
+/// itemCount）与 `scrollController` 参数（与 ListView 的 `controller` 对齐，
+/// ReorderableListView 的形参名就叫 `scrollController`）。
 @PatchEntry('ReorderListDetail')
 class ReorderListDetail extends StatefulWidget {
   const ReorderListDetail({super.key});
@@ -2064,6 +2424,7 @@ class ReorderListDetail extends StatefulWidget {
 
 class _ReorderListDetailState extends State<ReorderListDetail> {
   final List<String> _items = ['北京', '上海', '广州', '深圳', '杭州', '成都'];
+  final ScrollController _controller = ScrollController();
 
   /// 双参事件：拖拽结束后 Flutter 回传 (oldIndex, newIndex)。
   void _onReorder(int oldIndex, int newIndex) {
@@ -2106,22 +2467,30 @@ class _ReorderListDetailState extends State<ReorderListDetail> {
         // 不能依赖父级给出有界高度，故这里自带一个高度盒。
         SizedBox(
           height: 320,
-          child: ReorderableListView(
+          child: ReorderableListView.builder(
+            scrollController: _controller,
             onReorder: _onReorder,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            children: [
-              for (final item in _items)
-                Card(
-                  key: ValueKey(item),
-                  child: ListTile(
-                    leading: const Icon(Icons.drag_handle),
-                    title: Text(item),
-                  ),
+            itemCount: _items.length,
+            itemBuilder: (context, index) {
+              final item = _items[index];
+              return Card(
+                key: ValueKey(item),
+                child: ListTile(
+                  leading: const Icon(Icons.drag_handle),
+                  title: Text(item),
                 ),
-            ],
+              );
+            },
           ),
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }

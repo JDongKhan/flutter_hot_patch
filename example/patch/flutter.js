@@ -127,6 +127,38 @@ export class ListenableBuilder {
   }
 }
 
+export class ReorderableListView {
+  constructor(props, children) {
+    this.props = props || {};
+    this.children = children || [];
+  }
+  __owner() {
+    var name = this.props.itemBuilder || this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  build(context) {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var name = this.props.itemBuilder || this.props.builder;
+    var out = [];
+    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
+    var n = this.props.childCount !== undefined
+        ? this.props.childCount
+        : (this.props.itemCount || 0);
+    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
+    var sep = this.props.separatorBuilder;
+    for (var i = 0; i < n; i++) {
+      out.push(owner[name].call(owner, context, i));
+      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
+    }
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
+    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
+    return __h('ReorderableListView', this.props, out);
+  }
+}
+
 export class SliverFillViewport {
   constructor(props, children) {
     this.props = props || {};
