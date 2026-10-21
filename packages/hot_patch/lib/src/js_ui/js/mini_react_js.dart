@@ -746,8 +746,7 @@ const String miniReactReconcilerSource = r'''
       var inst = patch(matched, el, parentHost, null, {
         key: slotKey,
         index: slotIndex,
-        parentId: parentHost.__id,
-        oldRoot: matched ? hostIdOf(matched) : null
+        parentId: parentHost.__id
       });
       if (inst) { next.push(inst); }
     }
