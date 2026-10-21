@@ -303,7 +303,7 @@ class JsWidgetRegistry {
   /// 的组件降级成统一的 'Component' 占位）。因此「某个类型没注册」只表现为
   /// [lookup] 返回 null —— 走本默认 builder：宿主按类型名找 `registerNativeComponent`
   /// 注入的原生实现，找不到再给可见占位。这样之后补上该类型的宿主 builder
-  /// （或生成器 translator）时，**同一份产物无需重新生成、协议不变**。
+  /// 或原生实现时，**同一份产物无需重新生成、协议不变**。
   JsWidgetBuilder? _fallback = _unknownWidgetBuilder;
 
   void register(String type, JsWidgetBuilder builder) =>

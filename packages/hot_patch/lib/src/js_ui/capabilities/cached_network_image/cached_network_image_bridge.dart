@@ -11,7 +11,7 @@
 //
 // 不还原的部分：placeholder / errorWidget（包内均为 builder 闭包，非 Widget）、
 // 缓存策略（cacheManager / cacheKey / httpHeaders …）与 fade 参数——均属视觉/
-// 命令式细节，统一用包内默认行为（见 CachedNetworkImageTranslator 注释）。
+// 命令式细节，统一用包内默认行为（生成器只下发 imageUrl → source）。
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/widgets.dart';
 

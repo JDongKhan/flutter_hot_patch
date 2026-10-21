@@ -17,8 +17,8 @@ builders:
   # 逻辑组件）。这类产物是 package 级（与 lib 源码目录无关），故直接落在 patch 根下；
   # 输出名无法按构建期发现的类型动态生成，故挂在包根伪资产 $package$ 下——
   # 与 ui_host_register / ui_patch_manifest 同款输入（整包一个输入、输出路径静态，
-  # 无需任何种子文件）；包清单/类型清单由 builder 的 buildExtensions getter
-  # 从 translator 注册表静态推导。
+  # 无需任何种子文件）；包清单/类型清单由 builder 的 registeredWidgetPackages()
+  # 静态推导。
   ui_widget:
     import: "package:hot_patch_generator/builder.dart"
     builder_factories: ["widgetModuleBuilder"]

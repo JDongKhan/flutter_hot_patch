@@ -1292,7 +1292,7 @@ class _InputDetailState extends State<InputDetail> {
         ),
         Row(
           children: [
-            // Radio groupValue/onChanged 已废弃（RadioGroup 方案暂无 translator），
+            // Radio groupValue/onChanged 已废弃（RadioGroup 暂未支持），
             // demo 先用旧 API 验证协议。
             // ignore: deprecated_member_use
             Radio(

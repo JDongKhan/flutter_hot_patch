@@ -1,7 +1,11 @@
+## 0.1.4
+
+- 清理过时文档：移除已不存在的 `@UIProp` 引用（注解集始终只有 `@PatchEntry` / `@PatchIgnore` / `@HostInjected`，状态字段由生成器全量收集，无需字段级注解）。
+
 ## 0.1.3
 
 - 本次**无 API / 行为变更**：注解集、生成器契约与 0.1.2 完全一致。
-- 与 `hot_patch_generator` 0.2.0、`hot_patch` 0.2.0 同版本线发版（这一版的重点在生成器的「统一翻译」重构与产物协议变更，`@PatchEntry` / `@UIProp` / `@HostInjected` 等注解用法不受影响）。
+- 与 `hot_patch_generator` 0.2.0、`hot_patch` 0.2.0 同版本线发版（这一版的重点在生成器的「统一翻译」重构与产物协议变更，`@PatchEntry` / `@HostInjected` 等注解用法不受影响）。
 
 ## 0.1.2
 

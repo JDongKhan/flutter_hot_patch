@@ -720,7 +720,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   String propOf(Identifier id) {
     final prop = propByField[id.name];
     if (prop != null) return prop;
-    throw FormatException('"${id.name}" 不是 @UIProp 状态字段');
+    throw FormatException('"${id.name}" 不是组件状态字段（@PatchEntry 组件的实例字段）');
   }
 
   /// 方法名 → 事件名

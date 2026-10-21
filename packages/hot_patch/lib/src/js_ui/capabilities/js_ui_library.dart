@@ -29,8 +29,9 @@
 //   - JS 骨架（mini-react / emit / host 桥）：见 runtime_source.dart。
 //
 // **边界（务必知晓）**：本模板覆盖的是**运行时/宿主侧**。若新库还要新增 UI
-// 组件类型，其**编译期**翻译（ui_component_generator 的 translator 与
-// `patch/<pkg>.js` 里的 JS 组件类）属于另一条缝，不在本文件范围内。
+// 组件类型，其**编译期**翻译（hot_patch_generator 的统一翻译入口
+// widget_json.dart / value_forms.dart 与 `patch/<pkg>.js` 里的 JS 组件类）
+// 属于另一条缝，不在本文件范围内。
 import 'dart:convert';
 
 import '../js_widget_registry.dart';
