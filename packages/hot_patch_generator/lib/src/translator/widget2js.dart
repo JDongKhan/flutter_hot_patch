@@ -587,12 +587,14 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return out;
   }
 
-  /// 把已翻译的 JSON 节点渲染成统一元素构造：`__h(<type>, {...}, [...])`。
+  /// 把已翻译的 JSON 节点渲染成统一元素构造：`__h(<type>, {...}[, children])`。
   ///
   /// JS 没有「factory」这层包装：元素 type 直接是类（有 JS 逻辑的类型，[asClass]
   /// 为 true）或宿主 widget 类型名字符串。`props` 为空 → `{}`；`children` 为空 →
-  /// 省略第三参（`__h` 归一为 `[]`）。嵌套子节点（children、以及
-  /// ListTile.leading 这类「props 里的节点」）同样递归成元素构造。
+  /// 省略第三参（`__h` 归一为 `[]`）；只有**一个**静态子结点时直接作为第三参
+  /// （`__h` 会把非数组归一成 `[child]`），`child:` 因此不再多套一层数组。
+  /// 嵌套子节点（children、以及 ListTile.leading 这类「props 里的节点」）同样
+  /// 递归成元素构造。
   String _renderCall(
     String type,
     Map<String, dynamic> json,
@@ -609,9 +611,13 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       ..write(', ')
       ..write(propsJs);
     if (children is List && children.isNotEmpty) {
-      b
-        ..write(', ')
-        ..write(jsLiteral(children, depth + 1));
+      b.write(', ');
+      // 单个子结点直接传元素，运行时 __h 会归一成 [child]；只有多结点或
+      // `...spread`（可能展开成 0~N 个）才保持数组字面量。
+      final only = children.length == 1 ? children.first : null;
+      final singleNode = only is Map ||
+          (only is String && !only.startsWith('...'));
+      b.write(jsLiteral(singleNode ? only : children, depth + 1));
     }
     b.write(')');
     return b.toString();

@@ -47,11 +47,9 @@ export class DashboardCard {
               "backgroundColor": '#FF9800',
               "foregroundColor": '#FFFFFF'
             }
-          }, [
-            __h('Text', {
-                "data": "Tick"
-              })
-          ])
+          }, __h('Text', {
+              "data": "Tick"
+            }))
       ]);
   }
 }

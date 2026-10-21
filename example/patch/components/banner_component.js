@@ -30,11 +30,9 @@ export class BannerCard {
           }),
         __h('ElevatedButton', {
             "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a))
-          }, [
-            __h('Text', {
-                "data": "Bump"
-              })
-          ])
+          }, __h('Text', {
+              "data": "Bump"
+            }))
       ]);
   }
 }

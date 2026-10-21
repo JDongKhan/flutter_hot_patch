@@ -98,32 +98,24 @@ export class HelloCard {
                   "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
                   "foregroundColor": '#FFFFFF'
                 }
-              }, [
-                __h('Text', {
-                    "data": "+1"
-                  })
-              ]),
+              }, __h('Text', {
+                  "data": "+1"
+                })),
             __h('ElevatedButton', {
                 "onPressed": this.__bindFn(1, [], () => this.reset())
-              }, [
-                __h('Text', {
-                    "data": "Reset"
-                  })
-              ]),
+              }, __h('Text', {
+                  "data": "Reset"
+                })),
             __h('ElevatedButton', {
                 "onPressed": this.__bindFn(2, [], (...__a) => this.showNative(...__a))
-              }, [
-                __h('Text', {
-                    "data": "Native"
-                  })
-              ]),
+              }, __h('Text', {
+                  "data": "Native"
+                })),
             __h('ElevatedButton', {
                 "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a))
-              }, [
-                __h('Text', {
-                    "data": "Load User"
-                  })
-              ])
+              }, __h('Text', {
+                  "data": "Load User"
+                }))
           ])
       ]);
   }

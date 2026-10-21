@@ -37,9 +37,7 @@ export class MinePage {
   build(context) {
     var feed = this._feed;
     if ((feed == null)) {
-      return __h('Center', {}, [
-          __h('CircularProgressIndicator', {})
-        ]);
+      return __h('Center', {}, __h('CircularProgressIndicator', {}));
     }
     return __h('ListView', {
         "padding": {
@@ -67,99 +65,85 @@ export class MinePage {
                 "end": "bottomRight"
               }
             }
-          }, [
-            __h('SafeArea', {
-                "bottom": false
-              }, [
-                __h('GestureDetector', {
-                    "onTap": this.__bindFn(0, [], () => _app_host_.invoke("openLogin", []))
-                  }, [
-                    __h('Row', {}, [
-                        __h('ClipOval', {}, [
-                            __h('Image', {
-                                "width": 58,
-                                "height": 58,
-                                "fit": "cover",
-                                "errorBuilder": "_errorBuilder0",
-                                "factory": "network",
-                                "src": this._feed.avatar
-                              })
-                          ]),
-                        __h('SizedBox', {
-                            "width": 13
+          }, __h('SafeArea', {
+              "bottom": false
+            }, __h('GestureDetector', {
+                "onTap": this.__bindFn(0, [], () => _app_host_.invoke("openLogin", []))
+              }, __h('Row', {}, [
+                  __h('ClipOval', {}, __h('Image', {
+                        "width": 58,
+                        "height": 58,
+                        "fit": "cover",
+                        "errorBuilder": "_errorBuilder0",
+                        "factory": "network",
+                        "src": this._feed.avatar
+                      })),
+                  __h('SizedBox', {
+                      "width": 13
+                    }),
+                  __h('Expanded', {}, __h('Column', {
+                        "crossAxisAlignment": "start"
+                      }, [
+                        __h('Text', {
+                            "style": {
+                              "fontSize": 17.5,
+                              "fontWeight": "w700",
+                              "color": '#FFFFFF'
+                            },
+                            "data": "旅行家小七"
                           }),
-                        __h('Expanded', {}, [
-                            __h('Column', {
-                                "crossAxisAlignment": "start"
-                              }, [
-                                __h('Text', {
-                                    "style": {
-                                      "fontSize": 17.5,
-                                      "fontWeight": "w700",
-                                      "color": '#FFFFFF'
-                                    },
-                                    "data": "旅行家小七"
-                                  }),
-                                __h('SizedBox', {
-                                    "height": 4
-                                  }),
-                                __h('Text', {
-                                    "style": {
-                                      "fontSize": 12,
-                                      "color": '#ccffffff'
-                                    },
-                                    "data": "138****8888"
-                                  }),
-                                __h('SizedBox', {
-                                    "height": 6
-                                  }),
-                                __h('Text', {
-                                    "style": {
-                                      "fontSize": 11,
-                                      "color": '#b3ffffff'
-                                    },
-                                    "data": "点击头像可跳转登录页 ›"
-                                  })
-                              ])
-                          ]),
-                        __h('Icon', {
-                            "color": '#ccffffff',
-                            "size": 20,
-                            "icon": "chevron_right"
+                        __h('SizedBox', {
+                            "height": 4
+                          }),
+                        __h('Text', {
+                            "style": {
+                              "fontSize": 12,
+                              "color": '#ccffffff'
+                            },
+                            "data": "138****8888"
+                          }),
+                        __h('SizedBox', {
+                            "height": 6
+                          }),
+                        __h('Text', {
+                            "style": {
+                              "fontSize": 11,
+                              "color": '#b3ffffff'
+                            },
+                            "data": "点击头像可跳转登录页 ›"
                           })
-                      ])
-                  ])
-              ])
-          ]),
+                      ])),
+                  __h('Icon', {
+                      "color": '#ccffffff',
+                      "size": 20,
+                      "icon": "chevron_right"
+                    })
+                ])))),
         __h('Transform', {
             "offset": { "dx": 0, "dy": (-12) },
             "factory": "translate"
-          }, [
-            __h('Container', {
-                "margin": {
-                  "left": 12.0,
-                  "top": 0.0,
-                  "right": 12.0,
-                  "bottom": 0.0
-                },
-                "padding": {
-                  "left": 0.0,
-                  "top": 14.0,
-                  "right": 0.0,
-                  "bottom": 14.0
-                },
-                "decoration": {
-                  "color": '#FFFFFF',
-                  "borderRadius": {
-                    "radius": 14.0
-                  }
+          }, __h('Container', {
+              "margin": {
+                "left": 12.0,
+                "top": 0.0,
+                "right": 12.0,
+                "bottom": 0.0
+              },
+              "padding": {
+                "left": 0.0,
+                "top": 14.0,
+                "right": 0.0,
+                "bottom": 14.0
+              },
+              "decoration": {
+                "color": '#FFFFFF',
+                "borderRadius": {
+                  "radius": 14.0
                 }
-              }, [
-                __h('Row', {}, [
-                    ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, [ __h('GestureDetector', { "onTap": this.__bindFn(1, [], () => _app_host_.invoke("openOrders", [])) }, [ __h('Column', {}, [ __h('Text', { "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), __h('SizedBox', { "height": 3 }), __h('Text', { "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ]) ]) ])]); } return out; })()
-                  ])
-              ])
-          ]),
+              }
+            }, __h('Row', {}, [
+                ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [__h('Expanded', {}, __h('GestureDetector', { "onTap": this.__bindFn(1, [], () => _app_host_.invoke("openOrders", [])) }, __h('Column', {}, [ __h('Text', { "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), __h('SizedBox', { "height": 3 }), __h('Text', { "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ])))]); } return out; })()
+              ]))),
         __h('Container', {
             "margin": {
               "left": 12.0,
@@ -173,11 +157,9 @@ export class MinePage {
                 "radius": 14.0
               }
             }
-          }, [
-            __h('Column', {}, [
-                ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [__h('Divider', { "height": 1, "indent": 56, "color": '#fff0f2f6' })] : []), __h('GestureDetector', { "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])) }, [ __h('Padding', { "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 } }, [ __h('Row', {}, [ __h('Container', { "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } } }, [ __h('Text', { "style": { "fontSize": 15 }, "data": this._feed.menu[i].emoji }) ]), __h('SizedBox', { "width": 12 }), __h('Expanded', {}, [ __h('Text', { "style": { "fontSize": 14 }, "data": this._feed.menu[i].title }) ]), __h('Icon', { "size": 18, "color": '#ffc3c8d2', "icon": "chevron_right" }) ]) ]) ])]); } return out; })()
-              ])
-          ]),
+          }, __h('Column', {}, [
+              ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [__h('Divider', { "height": 1, "indent": 56, "color": '#fff0f2f6' })] : []), __h('GestureDetector', { "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])) }, __h('Padding', { "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 } }, __h('Row', {}, [ __h('Container', { "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } } }, __h('Text', { "style": { "fontSize": 15 }, "data": this._feed.menu[i].emoji })), __h('SizedBox', { "width": 12 }), __h('Expanded', {}, __h('Text', { "style": { "fontSize": 14 }, "data": this._feed.menu[i].title })), __h('Icon', { "size": 18, "color": '#ffc3c8d2', "icon": "chevron_right" }) ])))]); } return out; })()
+            ])),
         __h('Padding', {
             "padding": {
               "left": 12.0,
@@ -185,31 +167,25 @@ export class MinePage {
               "right": 12.0,
               "bottom": 20.0
             }
-          }, [
-            __h('GestureDetector', {
-                "onTap": this.__bindFn(3, [], () => _app_host_.invoke("toast", ["已退出登录（演示）"]))
-              }, [
-                __h('Container', {
-                    "height": 46,
-                    "alignment": "center",
-                    "decoration": {
-                      "color": '#FFFFFF',
-                      "borderRadius": {
-                        "radius": 14.0
-                      }
-                    }
-                  }, [
-                    __h('Text', {
-                        "style": {
-                          "fontSize": 14,
-                          "fontWeight": "w600",
-                          "color": kPrice
-                        },
-                        "data": "退出登录"
-                      })
-                  ])
-              ])
-          ]),
+          }, __h('GestureDetector', {
+              "onTap": this.__bindFn(3, [], () => _app_host_.invoke("toast", ["已退出登录（演示）"]))
+            }, __h('Container', {
+                "height": 46,
+                "alignment": "center",
+                "decoration": {
+                  "color": '#FFFFFF',
+                  "borderRadius": {
+                    "radius": 14.0
+                  }
+                }
+              }, __h('Text', {
+                  "style": {
+                    "fontSize": 14,
+                    "fontWeight": "w600",
+                    "color": kPrice
+                  },
+                  "data": "退出登录"
+                })))),
         __h('Padding', {
             "padding": {
               "left": 18.0,
@@ -217,16 +193,14 @@ export class MinePage {
               "right": 18.0,
               "bottom": 8.0
             }
-          }, [
-            __h('Text', {
-                "style": {
-                  "fontSize": 12.5,
-                  "fontWeight": "w700",
-                  "color": '#ff98a0ac'
-                },
-                "data": "开发者"
-              })
-          ]),
+          }, __h('Text', {
+              "style": {
+                "fontSize": 12.5,
+                "fontWeight": "w700",
+                "color": '#ff98a0ac'
+              },
+              "data": "开发者"
+            })),
         __h('Container', {
             "margin": {
               "left": 12.0,
@@ -240,27 +214,25 @@ export class MinePage {
                 "radius": 14.0
               }
             }
-          }, [
-            __h('Column', {}, [
-                __h(_DevRow, {
-                    "icon": "widgets_outlined",
-                    "title": "组件案例",
-                    "subtitle": "常用组件 原生 ↔ JS 同屏对比",
-                    "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
-                  }),
-                __h('Divider', {
-                    "height": 1,
-                    "indent": 56,
-                    "color": '#fff0f2f6'
-                  }),
-                __h(_DevRow, {
-                    "icon": "compare_arrows",
-                    "title": "热更 Demo 列表",
-                    "subtitle": "HelloCard / ProviderCard / WatchDemo 等对比",
-                    "onTap": () => { return _app_host_.invoke("openDemoList", []); }
-                  })
-              ])
-          ])
+          }, __h('Column', {}, [
+              __h(_DevRow, {
+                  "icon": "widgets_outlined",
+                  "title": "组件案例",
+                  "subtitle": "常用组件 原生 ↔ JS 同屏对比",
+                  "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
+                }),
+              __h('Divider', {
+                  "height": 1,
+                  "indent": 56,
+                  "color": '#fff0f2f6'
+                }),
+              __h(_DevRow, {
+                  "icon": "compare_arrows",
+                  "title": "热更 Demo 列表",
+                  "subtitle": "HelloCard / ProviderCard / WatchDemo 等对比",
+                  "onTap": () => { return _app_host_.invoke("openDemoList", []); }
+                })
+            ]))
       ]);
   }
   _errorBuilder0(context, e) {
@@ -287,68 +259,60 @@ export class _DevRow {
     return __h('GestureDetector', {
         "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
         "behavior": "opaque"
-      }, [
-        __h('Padding', {
-            "padding": {
-              "left": 14.0,
-              "top": 12.0,
-              "right": 12.0,
-              "bottom": 12.0
-            }
-          }, [
-            __h('Row', {}, [
-                __h('Container', {
-                    "width": 30,
-                    "height": 30,
-                    "alignment": "center",
-                    "decoration": {
-                      "color": '#ffe8f2ff',
-                      "borderRadius": {
-                        "radius": 9.0
-                      }
-                    }
-                  }, [
-                    __h('Icon', {
-                        "size": 16,
-                        "color": kBrand,
-                        "icon": this.icon
-                      })
-                  ]),
-                __h('SizedBox', {
-                    "width": 12
-                  }),
-                __h('Expanded', {}, [
-                    __h('Column', {
-                        "crossAxisAlignment": "start"
-                      }, [
-                        __h('Text', {
-                            "style": {
-                              "fontSize": 14
-                            },
-                            "data": this.title
-                          }),
-                        __h('SizedBox', {
-                            "height": 3
-                          }),
-                        __h('Text', {
-                            "maxLines": 1,
-                            "overflow": "ellipsis",
-                            "style": {
-                              "fontSize": 11,
-                              "color": '#ff98a0ac'
-                            },
-                            "data": this.subtitle
-                          })
-                      ])
-                  ]),
-                __h('Icon', {
-                    "size": 18,
-                    "color": '#ffc3c8d2',
-                    "icon": "chevron_right"
-                  })
-              ])
-          ])
-      ]);
+      }, __h('Padding', {
+          "padding": {
+            "left": 14.0,
+            "top": 12.0,
+            "right": 12.0,
+            "bottom": 12.0
+          }
+        }, __h('Row', {}, [
+            __h('Container', {
+                "width": 30,
+                "height": 30,
+                "alignment": "center",
+                "decoration": {
+                  "color": '#ffe8f2ff',
+                  "borderRadius": {
+                    "radius": 9.0
+                  }
+                }
+              }, __h('Icon', {
+                  "size": 16,
+                  "color": kBrand,
+                  "icon": this.icon
+                })),
+            __h('SizedBox', {
+                "width": 12
+              }),
+            __h('Expanded', {}, __h('Column', {
+                  "crossAxisAlignment": "start"
+                }, [
+                  __h('Text', {
+                      "style": {
+                        "fontSize": 14
+                      },
+                      "data": this.title
+                    }),
+                  __h('SizedBox', {
+                      "height": 3
+                    }),
+                  __h('Text', {
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "style": {
+                        "fontSize": 11,
+                        "color": '#ff98a0ac'
+                      },
+                      "data": this.subtitle
+                    })
+                ])),
+            __h('Icon', {
+                "size": 18,
+                "color": '#ffc3c8d2',
+                "icon": "chevron_right"
+              })
+          ])));
   }
 }
 

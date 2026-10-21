@@ -79,11 +79,9 @@ export class TextDetail {
           }),
         __h('TextButton', {
             "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a))
-          }, [
-            __h('Text', {
-                "data": "Bump count"
-              })
-          ])
+          }, __h('Text', {
+              "data": "Bump count"
+            }))
       ]);
   }
 }
@@ -137,11 +135,9 @@ export class ButtonDetail {
               "backgroundColor": '#009688',
               "foregroundColor": '#FFFFFF'
             }
-          }, [
-            __h('Text', {
-                "data": "Elevated · Styled"
-              })
-          ]),
+          }, __h('Text', {
+              "data": "Elevated · Styled"
+            })),
         __h('SizedBox', {
             "height": 8
           }),
@@ -164,11 +160,9 @@ export class ButtonDetail {
               },
               "foregroundColor": '#3F51B5'
             }
-          }, [
-            __h('Text', {
-                "data": "TextButton"
-              })
-          ]),
+          }, __h('Text', {
+              "data": "TextButton"
+            })),
         __h('SizedBox', {
             "height": 8
           }),
@@ -191,19 +185,15 @@ export class ButtonDetail {
               },
               "foregroundColor": '#FF5722'
             }
-          }, [
-            __h('Text', {
-                "data": "OutlinedButton"
-              })
-          ]),
+          }, __h('Text', {
+              "data": "OutlinedButton"
+            })),
         __h('SizedBox', {
             "height": 8
           }),
-        __h('ElevatedButton', {}, [
-            __h('Text', {
-                "data": "Disabled"
-              })
-          ])
+        __h('ElevatedButton', {}, __h('Text', {
+              "data": "Disabled"
+            }))
       ]);
   }
 }
@@ -226,43 +216,35 @@ export class LayoutDetail {
         __h('Row', {}, [
             __h('Expanded', {
                 "flex": 1
-              }, [
-                __h('Container', {
-                    "color": '#BBDEFB',
-                    "padding": {
-                      "left": 8.0,
-                      "top": 8.0,
-                      "right": 8.0,
-                      "bottom": 8.0
-                    }
-                  }, [
-                    __h('Text', {
-                        "textAlign": "center",
-                        "data": "A"
-                      })
-                  ])
-              ]),
+              }, __h('Container', {
+                  "color": '#BBDEFB',
+                  "padding": {
+                    "left": 8.0,
+                    "top": 8.0,
+                    "right": 8.0,
+                    "bottom": 8.0
+                  }
+                }, __h('Text', {
+                    "textAlign": "center",
+                    "data": "A"
+                  }))),
             __h('Spacer', {
                 "flex": 1
               }),
             __h('Expanded', {
                 "flex": 2
-              }, [
-                __h('Container', {
-                    "color": '#C8E6C9',
-                    "padding": {
-                      "left": 8.0,
-                      "top": 8.0,
-                      "right": 8.0,
-                      "bottom": 8.0
-                    }
-                  }, [
-                    __h('Text', {
-                        "textAlign": "center",
-                        "data": "B（flex=2）"
-                      })
-                  ])
-              ])
+              }, __h('Container', {
+                  "color": '#C8E6C9',
+                  "padding": {
+                    "left": 8.0,
+                    "top": 8.0,
+                    "right": 8.0,
+                    "bottom": 8.0
+                  }
+                }, __h('Text', {
+                    "textAlign": "center",
+                    "data": "B（flex=2）"
+                  })))
           ]),
         __h('SizedBox', {
             "height": 12
@@ -274,41 +256,33 @@ export class LayoutDetail {
             },
             "data": "Center / Align / Padding / SizedBox"
           }),
-        __h('Center', {}, [
-            __h('Container', {
-                "color": '#FFECB3',
-                "padding": {
-                  "left": 12.0,
-                  "top": 12.0,
-                  "right": 12.0,
-                  "bottom": 12.0
-                }
-              }, [
-                __h('Text', {
-                    "data": "Center 居中"
-                  })
-              ])
-          ]),
+        __h('Center', {}, __h('Container', {
+              "color": '#FFECB3',
+              "padding": {
+                "left": 12.0,
+                "top": 12.0,
+                "right": 12.0,
+                "bottom": 12.0
+              }
+            }, __h('Text', {
+                "data": "Center 居中"
+              }))),
         __h('SizedBox', {
             "height": 8
           }),
         __h('Align', {
             "alignment": "centerLeft"
-          }, [
-            __h('Container', {
-                "color": '#F3E5F5',
-                "padding": {
-                  "left": 8.0,
-                  "top": 8.0,
-                  "right": 8.0,
-                  "bottom": 8.0
-                }
-              }, [
-                __h('Text', {
-                    "data": "Align centerLeft"
-                  })
-              ])
-          ]),
+          }, __h('Container', {
+              "color": '#F3E5F5',
+              "padding": {
+                "left": 8.0,
+                "top": 8.0,
+                "right": 8.0,
+                "bottom": 8.0
+              }
+            }, __h('Text', {
+                "data": "Align centerLeft"
+              }))),
         __h('SizedBox', {
             "height": 8
           }),
@@ -319,11 +293,9 @@ export class LayoutDetail {
               "right": 8.0,
               "bottom": 4.0
             }
-          }, [
-            __h('Text', {
-                "data": "Padding 包裹文案"
-              })
-          ]),
+          }, __h('Text', {
+              "data": "Padding 包裹文案"
+            })),
         __h('SizedBox', {
             "height": 12
           }),
@@ -336,45 +308,35 @@ export class LayoutDetail {
           }),
         __h('SizedBox', {
             "height": 100
-          }, [
-            __h('Stack', {
-                "fit": "expand",
-                "clipBehavior": "hardEdge"
-              }, [
-                __h('Container', {
-                    "color": '#EEEEEE'
-                  }),
-                __h('Positioned', {
-                    "factory": "fill"
-                  }, [
-                    __h('Center', {}, [
-                        __h('Text', {
-                            "style": {
-                              "color": '#FFFFFF',
-                              "fontWeight": "bold"
-                            },
-                            "data": "FILL"
-                          })
-                      ])
-                  ]),
-                __h('Positioned', {
-                    "left": 12,
-                    "top": 12
-                  }, [
-                    __h('Text', {
-                        "data": "TL"
-                      })
-                  ]),
-                __h('Positioned', {
-                    "right": 12,
-                    "bottom": 12
-                  }, [
-                    __h('Text', {
-                        "data": "BR"
-                      })
-                  ])
-              ])
-          ]),
+          }, __h('Stack', {
+              "fit": "expand",
+              "clipBehavior": "hardEdge"
+            }, [
+              __h('Container', {
+                  "color": '#EEEEEE'
+                }),
+              __h('Positioned', {
+                  "factory": "fill"
+                }, __h('Center', {}, __h('Text', {
+                      "style": {
+                        "color": '#FFFFFF',
+                        "fontWeight": "bold"
+                      },
+                      "data": "FILL"
+                    }))),
+              __h('Positioned', {
+                  "left": 12,
+                  "top": 12
+                }, __h('Text', {
+                    "data": "TL"
+                  })),
+              __h('Positioned', {
+                  "right": 12,
+                  "bottom": 12
+                }, __h('Text', {
+                    "data": "BR"
+                  }))
+            ])),
         __h('SizedBox', {
             "height": 12
           }),
@@ -407,21 +369,17 @@ export class LayoutDetail {
           }),
         __h('Opacity', {
             "opacity": 0.5
-          }, [
-            __h('Container', {
-                "color": '#F44336',
-                "padding": {
-                  "left": 8.0,
-                  "top": 8.0,
-                  "right": 8.0,
-                  "bottom": 8.0
-                }
-              }, [
-                __h('Text', {
-                    "data": "50% 透明"
-                  })
-              ])
-          ]),
+          }, __h('Container', {
+              "color": '#F44336',
+              "padding": {
+                "left": 8.0,
+                "top": 8.0,
+                "right": 8.0,
+                "bottom": 8.0
+              }
+            }, __h('Text', {
+                "data": "50% 透明"
+              }))),
         __h('SizedBox', {
             "height": 8
           }),
@@ -430,58 +388,46 @@ export class LayoutDetail {
               "minWidth": 120,
               "maxWidth": 200
             }
-          }, [
-            __h('Container', {
-                "color": '#FFE0B2',
-                "padding": {
-                  "left": 8.0,
-                  "top": 8.0,
-                  "right": 8.0,
-                  "bottom": 8.0
-                }
-              }, [
-                __h('Text', {
-                    "data": "ConstrainedBox 宽度 120-200"
-                  })
-              ])
-          ]),
+          }, __h('Container', {
+              "color": '#FFE0B2',
+              "padding": {
+                "left": 8.0,
+                "top": 8.0,
+                "right": 8.0,
+                "bottom": 8.0
+              }
+            }, __h('Text', {
+                "data": "ConstrainedBox 宽度 120-200"
+              }))),
         __h('SizedBox', {
             "height": 8
           }),
         __h('AspectRatio', {
             "aspectRatio": 1.78
-          }, [
-            __h('Container', {
-                "color": '#C5CAE9',
-                "alignment": "center"
-              }, [
-                __h('Text', {
-                    "data": "16:9 比例"
-                  })
-              ])
-          ]),
+          }, __h('Container', {
+              "color": '#C5CAE9',
+              "alignment": "center"
+            }, __h('Text', {
+                "data": "16:9 比例"
+              }))),
         __h('SizedBox', {
             "height": 8
           }),
         __h('FractionallySizedBox', {
             "widthFactor": 0.6,
             "alignment": "center"
-          }, [
-            __h('Container', {
-                "color": '#F8BBD0',
-                "padding": {
-                  "left": 8.0,
-                  "top": 8.0,
-                  "right": 8.0,
-                  "bottom": 8.0
-                }
-              }, [
-                __h('Text', {
-                    "textAlign": "center",
-                    "data": "60% 宽度"
-                  })
-              ])
-          ])
+          }, __h('Container', {
+              "color": '#F8BBD0',
+              "padding": {
+                "left": 8.0,
+                "top": 8.0,
+                "right": 8.0,
+                "bottom": 8.0
+              }
+            }, __h('Text', {
+                "textAlign": "center",
+                "data": "60% 宽度"
+              })))
       ]);
   }
 }
@@ -505,14 +451,12 @@ export class ImageDetail {
             "borderRadius": {
               "radius": 12.0
             }
-          }, [
-            __h('Image', {
-                "height": 120,
-                "fit": "cover",
-                "factory": "network",
-                "src": "https://picsum.photos/seed/hotpatch/400/160"
-              })
-          ]),
+          }, __h('Image', {
+              "height": 120,
+              "fit": "cover",
+              "factory": "network",
+              "src": "https://picsum.photos/seed/hotpatch/400/160"
+            })),
         __h('SizedBox', {
             "height": 12
           }),
@@ -527,13 +471,11 @@ export class ImageDetail {
             "borderRadius": {
               "radius": 12.0
             }
-          }, [
-            __h('CachedNetworkImage', {
-                "imageUrl": "https://picsum.photos/seed/hotpatchcache/400/160",
-                "height": 120,
-                "fit": "cover"
-              })
-          ]),
+          }, __h('CachedNetworkImage', {
+              "imageUrl": "https://picsum.photos/seed/hotpatchcache/400/160",
+              "height": 120,
+              "fit": "cover"
+            })),
         __h('SizedBox', {
             "height": 12
           }),
@@ -572,14 +514,12 @@ export class ImageDetail {
             __h('CircleAvatar', {
                 "radius": 20,
                 "backgroundColor": '#009688'
-              }, [
-                __h('Text', {
-                    "style": {
-                      "color": '#FFFFFF'
-                    },
-                    "data": "AV"
-                  })
-              ])
+              }, __h('Text', {
+                  "style": {
+                    "color": '#FFFFFF'
+                  },
+                  "data": "AV"
+                }))
           ])
       ]);
   }
@@ -613,14 +553,12 @@ export class ContainerDetail {
                 "radius": 12.0
               }
             }
-          }, [
-            __h('Text', {
-                "style": {
-                  "color": '#FFFFFF'
-                },
-                "data": "容器内容（teal 圆角）"
-              })
-          ]),
+          }, __h('Text', {
+              "style": {
+                "color": '#FFFFFF'
+              },
+              "data": "容器内容（teal 圆角）"
+            })),
         __h('SizedBox', {
             "height": 12
           }),
@@ -667,14 +605,12 @@ export class ContainerDetail {
                 }
               ]
             }
-          }, [
-            __h('Text', {
-                "style": {
-                  "color": '#FFFFFF'
-                },
-                "data": "渐变 + 边框 + 阴影"
-              })
-          ]),
+          }, __h('Text', {
+              "style": {
+                "color": '#FFFFFF'
+              },
+              "data": "渐变 + 边框 + 阴影"
+            })),
         __h('SizedBox', {
             "height": 12
           }),
@@ -698,20 +634,16 @@ export class ContainerDetail {
                 "radius": 8.0
               }
             }
-          }, [
-            __h('Padding', {
-                "padding": {
-                  "left": 12.0,
-                  "top": 12.0,
-                  "right": 12.0,
-                  "bottom": 12.0
-                }
-              }, [
-                __h('Text', {
-                    "data": "DecoratedBox 内容"
-                  })
-              ])
-          ]),
+          }, __h('Padding', {
+              "padding": {
+                "left": 12.0,
+                "top": 12.0,
+                "right": 12.0,
+                "bottom": 12.0
+              }
+            }, __h('Text', {
+                "data": "DecoratedBox 内容"
+              }))),
         __h('SizedBox', {
             "height": 12
           }),
@@ -736,20 +668,16 @@ export class ContainerDetail {
               }
             },
             "clipBehavior": "antiAlias"
-          }, [
-            __h('Padding', {
-                "padding": {
-                  "left": 16.0,
-                  "top": 16.0,
-                  "right": 16.0,
-                  "bottom": 16.0
-                }
-              }, [
-                __h('Text', {
-                    "data": "圆角卡片 + 描边 + 阴影"
-                  })
-              ])
-          ]),
+          }, __h('Padding', {
+              "padding": {
+                "left": 16.0,
+                "top": 16.0,
+                "right": 16.0,
+                "bottom": 16.0
+              }
+            }, __h('Text', {
+                "data": "圆角卡片 + 描边 + 阴影"
+              }))),
         __h('SizedBox', {
             "height": 12
           }),
@@ -769,11 +697,9 @@ export class ContainerDetail {
             "height": 48,
             "alignment": "center",
             "color": '#CFD8DC'
-          }, [
-            __h('Text', {
-                "data": "固定 120×48"
-              })
-          ])
+          }, __h('Text', {
+              "data": "固定 120×48"
+            }))
       ]);
   }
 }
@@ -812,25 +738,21 @@ export class ScrollDetail {
         __h('NotificationListener', {
             "onNotification": this.__bindFn(0, [], (...__a) => this._onListScroll(...__a)),
             "model": "ScrollNotification"
-          }, [
-            __h('SizedBox', {
-                "height": 160
-              }, [
-                __h(ListView, {
-                    "padding": {
-                      "left": 8.0,
-                      "top": 8.0,
-                      "right": 8.0,
-                      "bottom": 8.0
-                    },
-                    "itemExtent": 56,
-                    "physics": "BouncingScrollPhysics",
-                    "itemCount": 5,
-                    "itemBuilder": "_itemBuilder0",
-                    "factory": "builder"
-                  })
-              ])
-          ]),
+          }, __h('SizedBox', {
+              "height": 160
+            }, __h(ListView, {
+                "padding": {
+                  "left": 8.0,
+                  "top": 8.0,
+                  "right": 8.0,
+                  "bottom": 8.0
+                },
+                "itemExtent": 56,
+                "physics": "BouncingScrollPhysics",
+                "itemCount": 5,
+                "itemBuilder": "_itemBuilder0",
+                "factory": "builder"
+              }))),
         __h('SizedBox', {
             "height": 12
           }),
@@ -843,20 +765,18 @@ export class ScrollDetail {
           }),
         __h('SizedBox', {
             "height": 140
-          }, [
-            __h(ListView, {
-                "padding": {
-                  "left": 8.0,
-                  "top": 8.0,
-                  "right": 8.0,
-                  "bottom": 8.0
-                },
-                "itemCount": 6,
-                "separatorBuilder": "_separatorBuilder1",
-                "itemBuilder": "_itemBuilder2",
-                "factory": "separated"
-              })
-          ]),
+          }, __h(ListView, {
+              "padding": {
+                "left": 8.0,
+                "top": 8.0,
+                "right": 8.0,
+                "bottom": 8.0
+              },
+              "itemCount": 6,
+              "separatorBuilder": "_separatorBuilder1",
+              "itemBuilder": "_itemBuilder2",
+              "factory": "separated"
+            })),
         __h('SizedBox', {
             "height": 12
           }),
@@ -871,22 +791,16 @@ export class ScrollDetail {
             "controller": this._scrollController,
             "scrollDirection": "horizontal",
             "physics": "ClampingScrollPhysics"
-          }, [
-            __h('Row', {}, [
-                ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, [ __h('Chip', { "label": __h('Text', { "data": "横向 " + i }) }) ])]); } return out; })()
-              ])
-          ]),
+          }, __h('Row', {}, [
+              ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 } }, __h('Chip', { "label": __h('Text', { "data": "横向 " + i }) }))]); } return out; })()
+            ])),
         __h('Align', {
             "alignment": "centerLeft"
-          }, [
-            __h('TextButton', {
-                "onPressed": this.__bindFn(1, [], (...__a) => this._scrollToEnd(...__a))
-              }, [
-                __h('Text', {
-                    "data": "横向 · 跳到底"
-                  })
-              ])
-          ])
+          }, __h('TextButton', {
+              "onPressed": this.__bindFn(1, [], (...__a) => this._scrollToEnd(...__a))
+            }, __h('Text', {
+                "data": "横向 · 跳到底"
+              })))
       ]);
   }
   _itemBuilder0(context, index) {
@@ -993,66 +907,149 @@ export class SliverDetail {
                     })
                 ]
               }),
-            __h('SliverToBoxAdapter', {}, [
-                __h('Container', {
-                    "margin": {
-                      "left": 12.0,
-                      "top": 12.0,
-                      "right": 12.0,
-                      "bottom": 12.0
-                    },
-                    "padding": {
-                      "left": 16.0,
-                      "top": 16.0,
-                      "right": 16.0,
-                      "bottom": 16.0
-                    },
-                    "decoration": {
-                      "color": '#EDE7F6',
-                      "borderRadius": {
-                        "radius": 12.0
-                      }
+            __h('SliverToBoxAdapter', {}, __h('Container', {
+                  "margin": {
+                    "left": 12.0,
+                    "top": 12.0,
+                    "right": 12.0,
+                    "bottom": 12.0
+                  },
+                  "padding": {
+                    "left": 16.0,
+                    "top": 16.0,
+                    "right": 16.0,
+                    "bottom": 16.0
+                  },
+                  "decoration": {
+                    "color": '#EDE7F6',
+                    "borderRadius": {
+                      "radius": 12.0
                     }
-                  }, [
-                    __h('Text', {
-                        "style": {
-                          "fontSize": 14,
-                          "fontWeight": "bold"
-                        },
-                        "data": "CustomScrollView 整页 · SliverToBoxAdapter 盒子"
-                      })
-                  ])
-              ]),
-            __h('SliverToBoxAdapter', {}, [
-                __h('Container', {
-                    "margin": {
-                      "left": 12.0,
-                      "top": 0.0,
-                      "right": 12.0,
-                      "bottom": 4.0
+                  }
+                }, __h('Text', {
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "bold"
                     },
+                    "data": "CustomScrollView 整页 · SliverToBoxAdapter 盒子"
+                  }))),
+            __h('SliverToBoxAdapter', {}, __h('Container', {
+                  "margin": {
+                    "left": 12.0,
+                    "top": 0.0,
+                    "right": 12.0,
+                    "bottom": 4.0
+                  },
+                  "padding": {
+                    "left": 10.0,
+                    "top": 10.0,
+                    "right": 10.0,
+                    "bottom": 10.0
+                  },
+                  "decoration": {
+                    "color": '#E0F2F1',
+                    "borderRadius": {
+                      "radius": 8.0
+                    }
+                  }
+                }, __h('Text', {
+                    "style": {
+                      "fontSize": 13,
+                      "color": '#009688'
+                    },
+                    "data": "GlobalKey 测量：「固定高度」分区 " + this._measureText
+                  }))),
+            __h('SliverPadding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 0.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                }
+              }, __h('SliverList', {}, [
+                  ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "leading": __h('Icon', { "color": '#673AB7', "icon": "list" }), "title": __h('Text', { "data": "SliverList item " + i }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
+                ])),
+            __h('SliverPadding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 8.0,
+                  "right": 12.0,
+                  "bottom": 8.0
+                }
+              }, __h('SliverToBoxAdapter', {}, __h('Text', {
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "bold"
+                    },
+                    "data": "SliverList.builder · 懒构建列表"
+                  }))),
+            __h('SliverPadding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 0.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                }
+              }, __h(SliverList, {
+                  "itemCount": 8,
+                  "itemBuilder": "_itemBuilder0",
+                  "factory": "builder"
+                })),
+            __h('SliverPadding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 8.0,
+                  "right": 12.0,
+                  "bottom": 8.0
+                }
+              }, __h('SliverToBoxAdapter', {}, __h('Text', {
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "bold"
+                    },
+                    "data": "SliverList.separated · 分隔列表"
+                  }))),
+            __h('SliverPadding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 0.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                }
+              }, __h(SliverList, {
+                  "itemCount": 5,
+                  "itemBuilder": "_itemBuilder1",
+                  "separatorBuilder": "_separatorBuilder2",
+                  "factory": "separated"
+                })),
+            __h('SliverPadding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 8.0,
+                  "right": 12.0,
+                  "bottom": 8.0
+                }
+              }, __h('SliverToBoxAdapter', {}, __h('Container', {
+                    "key": this._fixedKey,
                     "padding": {
                       "left": 10.0,
-                      "top": 10.0,
+                      "top": 8.0,
                       "right": 10.0,
-                      "bottom": 10.0
+                      "bottom": 8.0
                     },
                     "decoration": {
                       "color": '#E0F2F1',
                       "borderRadius": {
-                        "radius": 8.0
+                        "radius": 6.0
                       }
                     }
-                  }, [
-                    __h('Text', {
-                        "style": {
-                          "fontSize": 13,
-                          "color": '#009688'
-                        },
-                        "data": "GlobalKey 测量：「固定高度」分区 " + this._measureText
-                      })
-                  ])
-              ]),
+                  }, __h('Text', {
+                      "style": {
+                        "fontSize": 14,
+                        "fontWeight": "bold"
+                      },
+                      "data": "SliverFixedExtentList · 固定高度"
+                    })))),
             __h('SliverPadding', {
                 "padding": {
                   "left": 12.0,
@@ -1060,11 +1057,11 @@ export class SliverDetail {
                   "right": 12.0,
                   "bottom": 0.0
                 }
-              }, [
-                __h('SliverList', {}, [
-                    ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "leading": __h('Icon', { "color": '#673AB7', "icon": "list" }), "title": __h('Text', { "data": "SliverList item " + i }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
-                  ])
-              ]),
+              }, __h(SliverFixedExtentList, {
+                  "itemExtent": 44,
+                  "builder": "_builder3",
+                  "childCount": 6
+                })),
             __h('SliverPadding', {
                 "padding": {
                   "left": 12.0,
@@ -1072,179 +1069,50 @@ export class SliverDetail {
                   "right": 12.0,
                   "bottom": 8.0
                 }
-              }, [
-                __h('SliverToBoxAdapter', {}, [
-                    __h('Text', {
-                        "style": {
-                          "fontSize": 14,
-                          "fontWeight": "bold"
-                        },
-                        "data": "SliverList.builder · 懒构建列表"
-                      })
-                  ])
-              ]),
-            __h('SliverPadding', {
-                "padding": {
-                  "left": 12.0,
-                  "top": 0.0,
-                  "right": 12.0,
-                  "bottom": 0.0
-                }
-              }, [
-                __h(SliverList, {
-                    "itemCount": 8,
-                    "itemBuilder": "_itemBuilder0",
-                    "factory": "builder"
-                  })
-              ]),
-            __h('SliverPadding', {
-                "padding": {
-                  "left": 12.0,
-                  "top": 8.0,
-                  "right": 12.0,
-                  "bottom": 8.0
-                }
-              }, [
-                __h('SliverToBoxAdapter', {}, [
-                    __h('Text', {
-                        "style": {
-                          "fontSize": 14,
-                          "fontWeight": "bold"
-                        },
-                        "data": "SliverList.separated · 分隔列表"
-                      })
-                  ])
-              ]),
-            __h('SliverPadding', {
-                "padding": {
-                  "left": 12.0,
-                  "top": 0.0,
-                  "right": 12.0,
-                  "bottom": 0.0
-                }
-              }, [
-                __h(SliverList, {
-                    "itemCount": 5,
-                    "itemBuilder": "_itemBuilder1",
-                    "separatorBuilder": "_separatorBuilder2",
-                    "factory": "separated"
-                  })
-              ]),
-            __h('SliverPadding', {
-                "padding": {
-                  "left": 12.0,
-                  "top": 8.0,
-                  "right": 12.0,
-                  "bottom": 8.0
-                }
-              }, [
-                __h('SliverToBoxAdapter', {}, [
-                    __h('Container', {
-                        "key": this._fixedKey,
-                        "padding": {
-                          "left": 10.0,
-                          "top": 8.0,
-                          "right": 10.0,
-                          "bottom": 8.0
-                        },
-                        "decoration": {
-                          "color": '#E0F2F1',
-                          "borderRadius": {
-                            "radius": 6.0
-                          }
-                        }
-                      }, [
-                        __h('Text', {
-                            "style": {
-                              "fontSize": 14,
-                              "fontWeight": "bold"
-                            },
-                            "data": "SliverFixedExtentList · 固定高度"
-                          })
-                      ])
-                  ])
-              ]),
-            __h('SliverPadding', {
-                "padding": {
-                  "left": 12.0,
-                  "top": 0.0,
-                  "right": 12.0,
-                  "bottom": 0.0
-                }
-              }, [
-                __h(SliverFixedExtentList, {
-                    "itemExtent": 44,
-                    "builder": "_builder3",
-                    "childCount": 6
-                  })
-              ]),
-            __h('SliverPadding', {
-                "padding": {
-                  "left": 12.0,
-                  "top": 8.0,
-                  "right": 12.0,
-                  "bottom": 8.0
-                }
-              }, [
-                __h('SliverToBoxAdapter', {}, [
-                    __h('Text', {
-                        "style": {
-                          "fontSize": 14,
-                          "fontWeight": "bold"
-                        },
-                        "data": "SliverOpacity + SliverGrid.builder · MaxCrossAxisExtent 九宫格"
-                      })
-                  ])
-              ]),
+              }, __h('SliverToBoxAdapter', {}, __h('Text', {
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "bold"
+                    },
+                    "data": "SliverOpacity + SliverGrid.builder · MaxCrossAxisExtent 九宫格"
+                  }))),
             __h('SliverOpacity', {
                 "opacity": 0.6
-              }, [
-                __h('SliverPadding', {
-                    "padding": {
-                      "left": 12.0,
-                      "top": 0.0,
-                      "right": 12.0,
-                      "bottom": 0.0
-                    }
-                  }, [
-                    __h(SliverGrid, {
-                        "gridDelegate": {
-                          "maxCrossAxisExtent": 140,
-                          "mainAxisSpacing": 8,
-                          "crossAxisSpacing": 8,
-                          "childAspectRatio": 1
-                        },
-                        "itemCount": 9,
-                        "itemBuilder": "_itemBuilder4",
-                        "factory": "builder"
-                      })
-                  ])
-              ]),
-            __h('SliverSafeArea', {}, [
-                __h('SliverFillRemaining', {
-                    "hasScrollBody": false
-                  }, [
-                    __h('Center', {}, [
-                        __h('Text', {
-                            "style": {
-                              "color": '#9E9E9E'
-                            },
-                            "data": "底部 · SliverSafeArea + SliverFillRemaining"
-                          })
-                      ])
-                  ])
-              ])
+              }, __h('SliverPadding', {
+                  "padding": {
+                    "left": 12.0,
+                    "top": 0.0,
+                    "right": 12.0,
+                    "bottom": 0.0
+                  }
+                }, __h(SliverGrid, {
+                    "gridDelegate": {
+                      "maxCrossAxisExtent": 140,
+                      "mainAxisSpacing": 8,
+                      "crossAxisSpacing": 8,
+                      "childAspectRatio": 1
+                    },
+                    "itemCount": 9,
+                    "itemBuilder": "_itemBuilder4",
+                    "factory": "builder"
+                  }))),
+            __h('SliverSafeArea', {}, __h('SliverFillRemaining', {
+                  "hasScrollBody": false
+                }, __h('Center', {}, __h('Text', {
+                      "style": {
+                        "color": '#9E9E9E'
+                      },
+                      "data": "底部 · SliverSafeArea + SliverFillRemaining"
+                    }))))
           ]),
         "floatingActionButton": __h('FloatingActionButton', {
             "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF',
             "tooltip": "跳到底"
-          }, [
-            __h('Icon', {
-                "icon": "arrow_downward"
-              })
-          ])
+          }, __h('Icon', {
+              "icon": "arrow_downward"
+            }))
       });
   }
   _itemBuilder0(context, index) {
@@ -1299,14 +1167,12 @@ export class SliverDetail {
           }
         },
         "alignment": "center"
-      }, [
-        __h('Text', {
-            "style": {
-              "fontWeight": "bold"
-            },
-            "data": "格 " + index
-          })
-      ]);
+      }, __h('Text', {
+          "style": {
+            "fontWeight": "bold"
+          },
+          "data": "格 " + index
+        }));
   }
 }
 
@@ -1340,11 +1206,9 @@ export class GridDetail {
             "backgroundColor": '#009688',
             "foregroundColor": '#FFFFFF',
             "tooltip": "跳到底"
-          }, [
-            __h('Icon', {
-                "icon": "arrow_downward"
-              })
-          ]),
+          }, __h('Icon', {
+              "icon": "arrow_downward"
+            })),
         "body": __h('Column', {
             "crossAxisAlignment": "stretch"
           }, [
@@ -1355,15 +1219,13 @@ export class GridDetail {
                   "right": 12.0,
                   "bottom": 12.0
                 }
-              }, [
-                __h('Text', {
-                    "style": {
-                      "fontSize": 13,
-                      "color": '#9E9E9E'
-                    },
-                    "data": "controller offset: " + this._offset.toFixed(1)
-                  })
-              ]),
+              }, __h('Text', {
+                  "style": {
+                    "fontSize": 13,
+                    "color": '#9E9E9E'
+                  },
+                  "data": "controller offset: " + this._offset.toFixed(1)
+                })),
             __h('Padding', {
                 "padding": {
                   "left": 12.0,
@@ -1371,31 +1233,27 @@ export class GridDetail {
                   "right": 12.0,
                   "bottom": 0.0
                 }
-              }, [
-                __h('Text', {
-                    "style": {
-                      "fontSize": 14,
-                      "fontWeight": "bold"
-                    },
-                    "data": "GridView.builder · 固定 3 列 · 30 项（懒加载）"
-                  })
-              ]),
+              }, __h('Text', {
+                  "style": {
+                    "fontSize": 14,
+                    "fontWeight": "bold"
+                  },
+                  "data": "GridView.builder · 固定 3 列 · 30 项（懒加载）"
+                })),
             __h('Expanded', {
                 "flex": 5
-              }, [
-                __h(GridView, {
-                    "controller": this._controller,
-                    "gridDelegate": {
-                      "crossAxisCount": 3,
-                      "mainAxisSpacing": 8,
-                      "crossAxisSpacing": 8,
-                      "childAspectRatio": 1
-                    },
-                    "itemCount": 30,
-                    "itemBuilder": "_itemBuilder0",
-                    "factory": "builder"
-                  })
-              ]),
+              }, __h(GridView, {
+                  "controller": this._controller,
+                  "gridDelegate": {
+                    "crossAxisCount": 3,
+                    "mainAxisSpacing": 8,
+                    "crossAxisSpacing": 8,
+                    "childAspectRatio": 1
+                  },
+                  "itemCount": 30,
+                  "itemBuilder": "_itemBuilder0",
+                  "factory": "builder"
+                })),
             __h('Padding', {
                 "padding": {
                   "left": 12.0,
@@ -1403,30 +1261,26 @@ export class GridDetail {
                   "right": 12.0,
                   "bottom": 8.0
                 }
-              }, [
-                __h('Text', {
-                    "style": {
-                      "fontSize": 14,
-                      "fontWeight": "bold"
-                    },
-                    "data": "GridView.builder · MaxCrossAxisExtent 120 · 20 项（懒加载）"
-                  })
-              ]),
+              }, __h('Text', {
+                  "style": {
+                    "fontSize": 14,
+                    "fontWeight": "bold"
+                  },
+                  "data": "GridView.builder · MaxCrossAxisExtent 120 · 20 项（懒加载）"
+                })),
             __h('Expanded', {
                 "flex": 4
-              }, [
-                __h(GridView, {
-                    "gridDelegate": {
-                      "maxCrossAxisExtent": 120,
-                      "mainAxisSpacing": 8,
-                      "crossAxisSpacing": 8,
-                      "childAspectRatio": 1
-                    },
-                    "itemCount": 20,
-                    "itemBuilder": "_itemBuilder1",
-                    "factory": "builder"
-                  })
-              ])
+              }, __h(GridView, {
+                  "gridDelegate": {
+                    "maxCrossAxisExtent": 120,
+                    "mainAxisSpacing": 8,
+                    "crossAxisSpacing": 8,
+                    "childAspectRatio": 1
+                  },
+                  "itemCount": 20,
+                  "itemBuilder": "_itemBuilder1",
+                  "factory": "builder"
+                }))
           ])
       });
   }
@@ -1439,14 +1293,12 @@ export class GridDetail {
           }
         },
         "alignment": "center"
-      }, [
-        __h('Text', {
-            "style": {
-              "fontWeight": "bold"
-            },
-            "data": "格 " + index
-          })
-      ]);
+      }, __h('Text', {
+          "style": {
+            "fontWeight": "bold"
+          },
+          "data": "格 " + index
+        }));
   }
   _itemBuilder1(context, index) {
       return __h('Container', {
@@ -1457,14 +1309,12 @@ export class GridDetail {
           }
         },
         "alignment": "center"
-      }, [
-        __h('Text', {
-            "style": {
-              "fontWeight": "bold"
-            },
-            "data": "项 " + index
-          })
-      ]);
+      }, __h('Text', {
+          "style": {
+            "fontWeight": "bold"
+          },
+          "data": "项 " + index
+        }));
   }
 }
 
@@ -1503,38 +1353,32 @@ export class ScaffoldDetail {
                 })
             ]
           }),
-        "body": __h('SafeArea', {}, [
-            __h('Center', {}, [
-                __h('Column', {
-                    "mainAxisAlignment": "center"
-                  }, [
-                    __h('Icon', {
-                        "size": 48,
-                        "color": '#673AB7',
-                        "icon": "extension"
-                      }),
-                    __h('SizedBox', {
-                        "height": 12
-                      }),
-                    __h('Text', {
-                        "data": "页面骨架组件演示"
-                      }),
-                    __h('Text', {
-                        "data": "BottomNav 选中：" + this._navIndex
-                      })
-                  ])
-              ])
-          ]),
+        "body": __h('SafeArea', {}, __h('Center', {}, __h('Column', {
+                "mainAxisAlignment": "center"
+              }, [
+                __h('Icon', {
+                    "size": 48,
+                    "color": '#673AB7',
+                    "icon": "extension"
+                  }),
+                __h('SizedBox', {
+                    "height": 12
+                  }),
+                __h('Text', {
+                    "data": "页面骨架组件演示"
+                  }),
+                __h('Text', {
+                    "data": "BottomNav 选中：" + this._navIndex
+                  })
+              ]))),
         "floatingActionButton": __h('FloatingActionButton', {
             "onPressed": this.__bindFn(0, [], (...__a) => this._onFab(...__a)),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF',
             "tooltip": "添加"
-          }, [
-            __h('Icon', {
-                "icon": "add"
-              })
-          ]),
+          }, __h('Icon', {
+              "icon": "add"
+            })),
         "bottomNavigationBar": __h('BottomNavigationBar', {
             "currentIndex": this._navIndex,
             "onTap": this.__bindFn(1, [], (...__a) => this._onNavTap(...__a)),
@@ -1647,15 +1491,11 @@ export class InputDetail {
           }),
         __h('Align', {
             "alignment": "centerLeft"
-          }, [
-            __h('FilledButton', {
-                "onPressed": this.__bindFn(1, [], () => this._controller.clear())
-              }, [
-                __h('Text', {
-                    "data": "清空输入"
-                  })
-              ])
-          ]),
+          }, __h('FilledButton', {
+              "onPressed": this.__bindFn(1, [], () => this._controller.clear())
+            }, __h('Text', {
+                "data": "清空输入"
+              }))),
         __h('SizedBox', {
             "height": 12
           }),
@@ -1710,25 +1550,19 @@ export class InputDetail {
             "items": [
               __h('DropdownMenuItem', {
                   "value": "苹果"
-                }, [
-                  __h('Text', {
-                      "data": "苹果"
-                    })
-                ]),
+                }, __h('Text', {
+                    "data": "苹果"
+                  })),
               __h('DropdownMenuItem', {
                   "value": "香蕉"
-                }, [
-                  __h('Text', {
-                      "data": "香蕉"
-                    })
-                ]),
+                }, __h('Text', {
+                    "data": "香蕉"
+                  })),
               __h('DropdownMenuItem', {
                   "value": "橙子"
-                }, [
-                  __h('Text', {
-                      "data": "橙子"
-                    })
-                ])
+                }, __h('Text', {
+                    "data": "橙子"
+                  }))
             ]
           }),
         __h('SizedBox', {
@@ -1867,49 +1701,41 @@ export class NotifierCard {
     this._model.reset();
   }
   build(context) {
-    return __h('Card', {}, [
-        __h('Padding', {
-            "padding": {
-              "left": 16.0,
-              "top": 16.0,
-              "right": 16.0,
-              "bottom": 16.0
-            }
+    return __h('Card', {}, __h('Padding', {
+          "padding": {
+            "left": 16.0,
+            "top": 16.0,
+            "right": 16.0,
+            "bottom": 16.0
+          }
+        }, __h('Column', {
+            "mainAxisSize": "min"
           }, [
-            __h('Column', {
-                "mainAxisSize": "min"
+            __h(ListenableBuilder, {
+                "listenable": this._model,
+                "builder": "_builder0"
+              }),
+            __h('SizedBox', {
+                "height": 12
+              }),
+            __h('Row', {
+                "mainAxisAlignment": "center"
               }, [
-                __h(ListenableBuilder, {
-                    "listenable": this._model,
-                    "builder": "_builder0"
-                  }),
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(0, [], (...__a) => this._inc(...__a))
+                  }, __h('Text', {
+                      "data": "+1"
+                    })),
                 __h('SizedBox', {
-                    "height": 12
+                    "width": 12
                   }),
-                __h('Row', {
-                    "mainAxisAlignment": "center"
-                  }, [
-                    __h('ElevatedButton', {
-                        "onPressed": this.__bindFn(0, [], (...__a) => this._inc(...__a))
-                      }, [
-                        __h('Text', {
-                            "data": "+1"
-                          })
-                      ]),
-                    __h('SizedBox', {
-                        "width": 12
-                      }),
-                    __h('ElevatedButton', {
-                        "onPressed": this.__bindFn(1, [], (...__a) => this._reset(...__a))
-                      }, [
-                        __h('Text', {
-                            "data": "Reset"
-                          })
-                      ])
-                  ])
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(1, [], (...__a) => this._reset(...__a))
+                  }, __h('Text', {
+                      "data": "Reset"
+                    }))
               ])
-          ])
-      ]);
+          ])));
   }
   dispose() {
     this._model.dispose();
@@ -1943,50 +1769,44 @@ export class StatelessCard {
           "right": 12.0,
           "bottom": 12.0
         }
-      }, [
-        __h('Padding', {
-            "padding": {
-              "left": 16.0,
-              "top": 16.0,
-              "right": 16.0,
-              "bottom": 16.0
-            }
+      }, __h('Padding', {
+          "padding": {
+            "left": 16.0,
+            "top": 16.0,
+            "right": 16.0,
+            "bottom": 16.0
+          }
+        }, __h('Column', {
+            "mainAxisSize": "min",
+            "crossAxisAlignment": "start"
           }, [
-            __h('Column', {
-                "mainAxisSize": "min",
-                "crossAxisAlignment": "start"
-              }, [
-                __h('Row', {}, [
-                    __h('Icon', {
-                        "color": '#009688',
-                        "icon": "article"
-                      }),
-                    __h('SizedBox', {
-                        "width": 8
-                      }),
-                    __h('Expanded', {}, [
-                        __h('Text', {
-                            "style": {
-                              "fontSize": 18,
-                              "fontWeight": "bold"
-                            },
-                            "data": this.badge + " · " + this.title
-                          })
-                      ])
-                  ]),
-                __h('Divider', {
-                    "height": 24
+            __h('Row', {}, [
+                __h('Icon', {
+                    "color": '#009688',
+                    "icon": "article"
                   }),
-                __h('Text', {
-                    "style": {
-                      "fontSize": 14,
-                      "color": '#9E9E9E'
-                    },
-                    "data": this.subtitle
-                  })
-              ])
-          ])
-      ]);
+                __h('SizedBox', {
+                    "width": 8
+                  }),
+                __h('Expanded', {}, __h('Text', {
+                      "style": {
+                        "fontSize": 18,
+                        "fontWeight": "bold"
+                      },
+                      "data": this.badge + " · " + this.title
+                    }))
+              ]),
+            __h('Divider', {
+                "height": 24
+              }),
+            __h('Text', {
+                "style": {
+                  "fontSize": 14,
+                  "color": '#9E9E9E'
+                },
+                "data": this.subtitle
+              })
+          ])));
   }
 }
 
@@ -2021,49 +1841,37 @@ export class TabDetail {
           }),
         __h('SizedBox', {
             "height": 180
-          }, [
-            __h('DefaultTabController', {
-                "length": 3
-              }, [
-                __h('Column', {}, [
-                    __h('TabBar', {
-                        "isScrollable": true,
-                        "indicatorColor": '#673AB7',
-                        "labelColor": '#673AB7',
-                        "unselectedLabelColor": '#9E9E9E'
-                      }, [
-                        __h('Tab', {
-                            "text": "广场"
-                          }),
-                        __h('Tab', {
-                            "text": "推荐"
-                          }),
-                        __h('Tab', {
-                            "text": "关注"
-                          })
-                      ]),
-                    __h('Expanded', {}, [
-                        __h('TabBarView', {}, [
-                            __h('Center', {}, [
-                                __h('Text', {
-                                    "data": "TabBarView · 广场"
-                                  })
-                              ]),
-                            __h('Center', {}, [
-                                __h('Text', {
-                                    "data": "TabBarView · 推荐"
-                                  })
-                              ]),
-                            __h('Center', {}, [
-                                __h('Text', {
-                                    "data": "TabBarView · 关注"
-                                  })
-                              ])
-                          ])
-                      ])
-                  ])
-              ])
-          ]),
+          }, __h('DefaultTabController', {
+              "length": 3
+            }, __h('Column', {}, [
+                __h('TabBar', {
+                    "isScrollable": true,
+                    "indicatorColor": '#673AB7',
+                    "labelColor": '#673AB7',
+                    "unselectedLabelColor": '#9E9E9E'
+                  }, [
+                    __h('Tab', {
+                        "text": "广场"
+                      }),
+                    __h('Tab', {
+                        "text": "推荐"
+                      }),
+                    __h('Tab', {
+                        "text": "关注"
+                      })
+                  ]),
+                __h('Expanded', {}, __h('TabBarView', {}, [
+                      __h('Center', {}, __h('Text', {
+                            "data": "TabBarView · 广场"
+                          })),
+                      __h('Center', {}, __h('Text', {
+                            "data": "TabBarView · 推荐"
+                          })),
+                      __h('Center', {}, __h('Text', {
+                            "data": "TabBarView · 关注"
+                          }))
+                    ]))
+              ]))),
         __h('SizedBox', {
             "height": 14
           }),
@@ -2079,55 +1887,41 @@ export class TabDetail {
           }),
         __h('SizedBox', {
             "height": 170
-          }, [
-            __h('Column', {}, [
-                __h('TabBar', {
+          }, __h('Column', {}, [
+              __h('TabBar', {
+                  "controller": this._controller
+                }, [
+                  __h('Tab', {
+                      "text": "首页"
+                    }),
+                  __h('Tab', {
+                      "text": "社区"
+                    }),
+                  __h('Tab', {
+                      "text": "我的"
+                    })
+                ]),
+              __h('Expanded', {}, __h('TabBarView', {
                     "controller": this._controller
                   }, [
-                    __h('Tab', {
-                        "text": "首页"
-                      }),
-                    __h('Tab', {
-                        "text": "社区"
-                      }),
-                    __h('Tab', {
-                        "text": "我的"
-                      })
-                  ]),
-                __h('Expanded', {}, [
-                    __h('TabBarView', {
-                        "controller": this._controller
-                      }, [
-                        __h('Center', {}, [
-                            __h('Text', {
-                                "data": "第 1 页（index 0）"
-                              })
-                          ]),
-                        __h('Center', {}, [
-                            __h('Text', {
-                                "data": "第 2 页（index 1）"
-                              })
-                          ]),
-                        __h('Center', {}, [
-                            __h('Text', {
-                                "data": "第 3 页（index 2）"
-                              })
-                          ])
-                      ])
-                  ])
-              ])
-          ]),
+                    __h('Center', {}, __h('Text', {
+                          "data": "第 1 页（index 0）"
+                        })),
+                    __h('Center', {}, __h('Text', {
+                          "data": "第 2 页（index 1）"
+                        })),
+                    __h('Center', {}, __h('Text', {
+                          "data": "第 3 页（index 2）"
+                        }))
+                  ]))
+            ])),
         __h('Align', {
             "alignment": "centerLeft"
-          }, [
-            __h('TextButton', {
-                "onPressed": this.__bindFn(0, [], (...__a) => this._next(...__a))
-              }, [
-                __h('Text', {
-                    "data": "下一 tab · controller.animateTo"
-                  })
-              ])
-          ])
+          }, __h('TextButton', {
+              "onPressed": this.__bindFn(0, [], (...__a) => this._next(...__a))
+            }, __h('Text', {
+                "data": "下一 tab · controller.animateTo"
+              })))
       ]);
   }
 }
@@ -2156,36 +1950,28 @@ export class PageViewDetail {
           }),
         __h('SizedBox', {
             "height": 150
-          }, [
-            __h('PageView', {
-                "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a))
-              }, [
-                __h('Container', {
-                    "color": '#D1C4E9',
-                    "alignment": "center"
-                  }, [
-                    __h('Text', {
-                        "data": "第 1 页"
-                      })
-                  ]),
-                __h('Container', {
-                    "color": '#B2DFDB',
-                    "alignment": "center"
-                  }, [
-                    __h('Text', {
-                        "data": "第 2 页"
-                      })
-                  ]),
-                __h('Container', {
-                    "color": '#FFE0B2',
-                    "alignment": "center"
-                  }, [
-                    __h('Text', {
-                        "data": "第 3 页"
-                      })
-                  ])
-              ])
-          ]),
+          }, __h('PageView', {
+              "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a))
+            }, [
+              __h('Container', {
+                  "color": '#D1C4E9',
+                  "alignment": "center"
+                }, __h('Text', {
+                    "data": "第 1 页"
+                  })),
+              __h('Container', {
+                  "color": '#B2DFDB',
+                  "alignment": "center"
+                }, __h('Text', {
+                    "data": "第 2 页"
+                  })),
+              __h('Container', {
+                  "color": '#FFE0B2',
+                  "alignment": "center"
+                }, __h('Text', {
+                    "data": "第 3 页"
+                  }))
+            ])),
         __h('SizedBox', {
             "height": 10
           }),
@@ -2238,25 +2024,19 @@ export class KeyTile {
             }
           }
         }
-      }, [
-        __h('Row', {}, [
-            __h('Expanded', {}, [
-                __h('Text', {
-                    "style": {
-                      "fontSize": 13
-                    },
-                    "data": caption
-                  })
-              ]),
-            __h('TextButton', {
-                "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a))
-              }, [
-                __h('Text', {
-                    "data": "+1"
-                  })
-              ])
-          ])
-      ]);
+      }, __h('Row', {}, [
+          __h('Expanded', {}, __h('Text', {
+                "style": {
+                  "fontSize": 13
+                },
+                "data": caption
+              })),
+          __h('TextButton', {
+              "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a))
+            }, __h('Text', {
+                "data": "+1"
+              }))
+        ]));
   }
 }
 
@@ -2331,23 +2111,19 @@ export class KeyDetail {
     if (this._storeA) {
       return __h('SizedBox', {
           "height": 150
-        }, [
-          __h('ListView', {
-              "key": new PageStorageKey("key-page-a")
-            }, [
-              ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "data": "A 行 " + i }) })]); } return out; })()
-            ])
-        ]);
+        }, __h('ListView', {
+            "key": new PageStorageKey("key-page-a")
+          }, [
+            ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "data": "A 行 " + i }) })]); } return out; })()
+          ]));
     }
     return __h('SizedBox', {
         "height": 150
-      }, [
-        __h('ListView', {
-            "key": new PageStorageKey("key-page-b")
-          }, [
-            ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "data": "B 行 " + i }) })]); } return out; })()
-          ])
-      ]);
+      }, __h('ListView', {
+          "key": new PageStorageKey("key-page-b")
+        }, [
+          ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "data": "B 行 " + i }) })]); } return out; })()
+        ]));
   }
   async _measureTarget() {
     var ctx = this._targetKey.currentContext;
@@ -2396,56 +2172,50 @@ export class KeyDetail {
             "radius": 10.0
           }
         }
-      }, [
-        __h('Column', {
-            "crossAxisAlignment": "stretch"
-          }, [
-            __h('Text', {
-                "style": {
-                  "fontSize": 15,
-                  "fontWeight": "bold",
-                  "color": '#673AB7'
-                },
-                "data": "ValueKey · 列表按值匹配"
-              }),
-            __h('SizedBox', {
-                "height": 4
-              }),
-            __h('Text', {
-                "style": {
-                  "fontSize": 12,
-                  "color": '#9E9E9E'
-                },
-                "data": "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。"
-              }),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            this._valueKeyRows(),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            __h('Row', {}, [
-                __h('TextButton', {
-                    "onPressed": this.__bindFn(0, [], (...__a) => this._rotateNames(...__a))
-                  }, [
-                    __h('Text', {
-                        "data": "轮换顺序（A→末尾）"
-                      })
-                  ]),
-                __h('SizedBox', {
-                    "width": 8
-                  }),
-                __h('TextButton', {
-                    "onPressed": this.__bindFn(1, [], (...__a) => this._resetNames(...__a))
-                  }, [
-                    __h('Text', {
-                        "data": "重置"
-                      })
-                  ])
-              ])
-          ])
-      ]);
+      }, __h('Column', {
+          "crossAxisAlignment": "stretch"
+        }, [
+          __h('Text', {
+              "style": {
+                "fontSize": 15,
+                "fontWeight": "bold",
+                "color": '#673AB7'
+              },
+              "data": "ValueKey · 列表按值匹配"
+            }),
+          __h('SizedBox', {
+              "height": 4
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 12,
+                "color": '#9E9E9E'
+              },
+              "data": "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。"
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          this._valueKeyRows(),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Row', {}, [
+              __h('TextButton', {
+                  "onPressed": this.__bindFn(0, [], (...__a) => this._rotateNames(...__a))
+                }, __h('Text', {
+                    "data": "轮换顺序（A→末尾）"
+                  })),
+              __h('SizedBox', {
+                  "width": 8
+                }),
+              __h('TextButton', {
+                  "onPressed": this.__bindFn(1, [], (...__a) => this._resetNames(...__a))
+                }, __h('Text', {
+                    "data": "重置"
+                  }))
+            ])
+        ]));
   }
   _cardObjectKey() {
     return __h('Container', {
@@ -2467,66 +2237,60 @@ export class KeyDetail {
             "radius": 10.0
           }
         }
-      }, [
-        __h('Column', {
-            "crossAxisAlignment": "stretch"
-          }, [
-            __h('Text', {
-                "style": {
-                  "fontSize": 15,
-                  "fontWeight": "bold",
-                  "color": '#673AB7'
-                },
-                "data": "ObjectKey · 按对象身份相等"
-              }),
-            __h('SizedBox', {
-                "height": 4
-              }),
-            __h('Text', {
-                "style": {
-                  "fontSize": 12,
-                  "color": '#9E9E9E'
-                },
-                "data": "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。"
-              }),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            this._objectKeyRows(),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            __h('Text', {
-                "style": {
-                  "fontSize": 12,
-                  "color": '#9E9E9E'
-                },
-                "data": "操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。" + "选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。"
-              }),
-            __h('SizedBox', {
-                "height": 6
-              }),
-            __h('Text', {
-                "style": {
-                  "fontSize": 11,
-                  "color": '#9E9E9E'
-                },
-                "data": "补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。" + "本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），" + "所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。"
-              }),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            __h('Row', {}, [
-                __h('TextButton', {
-                    "onPressed": this.__bindFn(2, [], (...__a) => this._rebuildParent(...__a))
-                  }, [
-                    __h('Text', {
-                        "data": "父级重建（setState 一次）"
-                      })
-                  ])
-              ])
-          ])
-      ]);
+      }, __h('Column', {
+          "crossAxisAlignment": "stretch"
+        }, [
+          __h('Text', {
+              "style": {
+                "fontSize": 15,
+                "fontWeight": "bold",
+                "color": '#673AB7'
+              },
+              "data": "ObjectKey · 按对象身份相等"
+            }),
+          __h('SizedBox', {
+              "height": 4
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 12,
+                "color": '#9E9E9E'
+              },
+              "data": "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。"
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          this._objectKeyRows(),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 12,
+                "color": '#9E9E9E'
+              },
+              "data": "操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。" + "选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。"
+            }),
+          __h('SizedBox', {
+              "height": 6
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 11,
+                "color": '#9E9E9E'
+              },
+              "data": "补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。" + "本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），" + "所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。"
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Row', {}, __h('TextButton', {
+                "onPressed": this.__bindFn(2, [], (...__a) => this._rebuildParent(...__a))
+              }, __h('Text', {
+                  "data": "父级重建（setState 一次）"
+                })))
+        ]));
   }
   _cardUniqueKey() {
     return __h('Container', {
@@ -2548,50 +2312,44 @@ export class KeyDetail {
             "radius": 10.0
           }
         }
-      }, [
-        __h('Column', {
-            "crossAxisAlignment": "stretch"
-          }, [
-            __h('Text', {
-                "style": {
-                  "fontSize": 15,
-                  "fontWeight": "bold",
-                  "color": '#673AB7'
-                },
-                "data": "UniqueKey · 每次都是新身份"
-              }),
-            __h('SizedBox', {
-                "height": 4
-              }),
-            __h('Text', {
-                "style": {
-                  "fontSize": 12,
-                  "color": '#9E9E9E'
-                },
-                "data": "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。"
-              }),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            __h(KeyTile, {
-                "key": new UniqueKey(),
-                "index": 0,
-                "label": "唯一身份行 #" + this._uniqueSeq
-              }),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            __h('Row', {}, [
-                __h('TextButton', {
-                    "onPressed": this.__bindFn(3, [], (...__a) => this._bumpUnique(...__a))
-                  }, [
-                    __h('Text', {
-                        "data": "重建（setState 一次）"
-                      })
-                  ])
-              ])
-          ])
-      ]);
+      }, __h('Column', {
+          "crossAxisAlignment": "stretch"
+        }, [
+          __h('Text', {
+              "style": {
+                "fontSize": 15,
+                "fontWeight": "bold",
+                "color": '#673AB7'
+              },
+              "data": "UniqueKey · 每次都是新身份"
+            }),
+          __h('SizedBox', {
+              "height": 4
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 12,
+                "color": '#9E9E9E'
+              },
+              "data": "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。"
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h(KeyTile, {
+              "key": new UniqueKey(),
+              "index": 0,
+              "label": "唯一身份行 #" + this._uniqueSeq
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Row', {}, __h('TextButton', {
+                "onPressed": this.__bindFn(3, [], (...__a) => this._bumpUnique(...__a))
+              }, __h('Text', {
+                  "data": "重建（setState 一次）"
+                })))
+        ]));
   }
   _cardStorageKey() {
     return __h('Container', {
@@ -2613,46 +2371,40 @@ export class KeyDetail {
             "radius": 10.0
           }
         }
-      }, [
-        __h('Column', {
-            "crossAxisAlignment": "stretch"
-          }, [
-            __h('Text', {
-                "style": {
-                  "fontSize": 15,
-                  "fontWeight": "bold",
-                  "color": '#673AB7'
-                },
-                "data": "PageStorageKey · 滚动位置持久化"
-              }),
-            __h('SizedBox', {
-                "height": 4
-              }),
-            __h('Text', {
-                "style": {
-                  "fontSize": 12,
-                  "color": '#9E9E9E'
-                },
-                "data": "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。"
-              }),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            this._storageView(),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            __h('Row', {}, [
-                __h('TextButton', {
-                    "onPressed": this.__bindFn(4, [], (...__a) => this._flipStore(...__a))
-                  }, [
-                    __h('Text', {
-                        "data": (this._storeA ? "切到 B 列表" : "切回 A 列表")
-                      })
-                  ])
-              ])
-          ])
-      ]);
+      }, __h('Column', {
+          "crossAxisAlignment": "stretch"
+        }, [
+          __h('Text', {
+              "style": {
+                "fontSize": 15,
+                "fontWeight": "bold",
+                "color": '#673AB7'
+              },
+              "data": "PageStorageKey · 滚动位置持久化"
+            }),
+          __h('SizedBox', {
+              "height": 4
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 12,
+                "color": '#9E9E9E'
+              },
+              "data": "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。"
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          this._storageView(),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Row', {}, __h('TextButton', {
+                "onPressed": this.__bindFn(4, [], (...__a) => this._flipStore(...__a))
+              }, __h('Text', {
+                  "data": (this._storeA ? "切到 B 列表" : "切回 A 列表")
+                })))
+        ]));
   }
   _cardGlobalKey() {
     return __h('Container', {
@@ -2674,87 +2426,79 @@ export class KeyDetail {
             "radius": 10.0
           }
         }
-      }, [
-        __h('Column', {
-            "crossAxisAlignment": "stretch"
-          }, [
-            __h('Text', {
-                "style": {
-                  "fontSize": 15,
-                  "fontWeight": "bold",
-                  "color": '#673AB7'
-                },
-                "data": "GlobalKey · 宿主端量测 / 定位"
-              }),
-            __h('SizedBox', {
-                "height": 4
-              }),
-            __h('Text', {
-                "style": {
-                  "fontSize": 12,
-                  "color": '#9E9E9E'
-                },
-                "data": "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。"
-              }),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            __h('Container', {
-                "key": this._targetKey,
-                "padding": {
-                  "left": 10.0,
-                  "top": 10.0,
-                  "right": 10.0,
-                  "bottom": 10.0
-                },
-                "decoration": {
-                  "color": '#E0F2F1',
-                  "borderRadius": {
-                    "radius": 6.0
-                  }
+      }, __h('Column', {
+          "crossAxisAlignment": "stretch"
+        }, [
+          __h('Text', {
+              "style": {
+                "fontSize": 15,
+                "fontWeight": "bold",
+                "color": '#673AB7'
+              },
+              "data": "GlobalKey · 宿主端量测 / 定位"
+            }),
+          __h('SizedBox', {
+              "height": 4
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 12,
+                "color": '#9E9E9E'
+              },
+              "data": "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。"
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Container', {
+              "key": this._targetKey,
+              "padding": {
+                "left": 10.0,
+                "top": 10.0,
+                "right": 10.0,
+                "bottom": 10.0
+              },
+              "decoration": {
+                "color": '#E0F2F1',
+                "borderRadius": {
+                  "radius": 6.0
                 }
-              }, [
-                __h('Text', {
-                    "style": {
-                      "fontSize": 13
-                    },
-                    "data": "目标盒子（GlobalKey 挂在这里）"
-                  })
-              ]),
-            __h('SizedBox', {
-                "height": 8
-              }),
-            __h('Text', {
+              }
+            }, __h('Text', {
                 "style": {
-                  "fontSize": 13,
-                  "color": '#009688'
+                  "fontSize": 13
                 },
-                "data": "测量：" + this._measureText
-              }),
-            __h('SizedBox', {
-                "height": 4
-              }),
-            __h('Row', {}, [
-                __h('TextButton', {
-                    "onPressed": this.__bindFn(5, [], (...__a) => this._measureTarget(...__a))
-                  }, [
-                    __h('Text', {
-                        "data": "测量位置与尺寸"
-                      })
-                  ]),
-                __h('SizedBox', {
-                    "width": 8
-                  }),
-                __h('TextButton', {
-                    "onPressed": this.__bindFn(6, [], (...__a) => this._scrollToTarget(...__a))
-                  }, [
-                    __h('Text', {
-                        "data": "定位（showOnScreen）"
-                      })
-                  ])
-              ])
-          ])
-      ]);
+                "data": "目标盒子（GlobalKey 挂在这里）"
+              })),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Text', {
+              "style": {
+                "fontSize": 13,
+                "color": '#009688'
+              },
+              "data": "测量：" + this._measureText
+            }),
+          __h('SizedBox', {
+              "height": 4
+            }),
+          __h('Row', {}, [
+              __h('TextButton', {
+                  "onPressed": this.__bindFn(5, [], (...__a) => this._measureTarget(...__a))
+                }, __h('Text', {
+                    "data": "测量位置与尺寸"
+                  })),
+              __h('SizedBox', {
+                  "width": 8
+                }),
+              __h('TextButton', {
+                  "onPressed": this.__bindFn(6, [], (...__a) => this._scrollToTarget(...__a))
+                }, __h('Text', {
+                    "data": "定位（showOnScreen）"
+                  }))
+            ])
+        ]));
   }
   build(context) {
     return __h('Scaffold', {
@@ -2774,15 +2518,13 @@ export class KeyDetail {
                   "right": 12.0,
                   "bottom": 0.0
                 }
-              }, [
-                __h('Text', {
-                    "style": {
-                      "fontSize": 12,
-                      "color": '#9E9E9E'
-                    },
-                    "data": "每一张卡片一种 key 的语义；「计数」是 KeyTile 的内部 State，" + "用它来观察状态是跟着行走还是跟着位置走。"
-                  })
-              ]),
+              }, __h('Text', {
+                  "style": {
+                    "fontSize": 12,
+                    "color": '#9E9E9E'
+                  },
+                  "data": "每一张卡片一种 key 的语义；「计数」是 KeyTile 的内部 State，" + "用它来观察状态是跟着行走还是跟着位置走。"
+                })),
             this._cardValueKey(),
             this._cardObjectKey(),
             this._cardUniqueKey(),
@@ -2823,107 +2565,93 @@ export class DrawerDetail {
             "backgroundColor": '#3F51B5',
             "foregroundColor": '#FFFFFF'
           }),
-        "drawer": __h('Drawer', {}, [
-            __h('ListView', {}, [
-                __h('DrawerHeader', {
-                    "decoration": {
-                      "color": '#3F51B5'
-                    }
-                  }, [
-                    __h('Align', {
-                        "alignment": "bottomLeft"
-                      }, [
-                        __h('Text', {
-                            "style": {
-                              "color": '#FFFFFF',
-                              "fontSize": 20
-                            },
-                            "data": "左侧抽屉"
-                          })
-                      ])
-                  ]),
-                __h('ListTile', {
-                    "leading": __h('Icon', {
-                        "icon": "receipt_long"
-                      }),
-                    "title": __h('Text', {
-                        "data": "我的订单"
-                      }),
-                    "onTap": this.__bindFn(0, [], (...__a) => this._pickOrders(...__a))
-                  }),
-                __h('ListTile', {
-                    "leading": __h('Icon', {
-                        "icon": "favorite_border"
-                      }),
-                    "title": __h('Text', {
-                        "data": "我的收藏"
-                      }),
-                    "onTap": this.__bindFn(1, [], (...__a) => this._pickFavorites(...__a))
-                  })
-              ])
-          ]),
-        "endDrawer": __h('Drawer', {}, [
-            __h('ListView', {}, [
-                __h('DrawerHeader', {
-                    "decoration": {
-                      "color": '#009688'
-                    }
-                  }, [
-                    __h('Align', {
-                        "alignment": "bottomLeft"
-                      }, [
-                        __h('Text', {
-                            "style": {
-                              "color": '#FFFFFF',
-                              "fontSize": 20
-                            },
-                            "data": "右侧抽屉"
-                          })
-                      ])
-                  ]),
-                __h('ListTile', {
-                    "leading": __h('Icon', {
-                        "icon": "settings"
-                      }),
-                    "title": __h('Text', {
-                        "data": "设置"
-                      }),
-                    "onTap": this.__bindFn(2, [], (...__a) => this._pickSettings(...__a))
-                  }),
-                __h('ListTile', {
-                    "leading": __h('Icon', {
-                        "icon": "help_outline"
-                      }),
-                    "title": __h('Text', {
-                        "data": "帮助与关于"
-                      }),
-                    "onTap": this.__bindFn(3, [], (...__a) => this._pickHelp(...__a))
-                  })
-              ])
-          ]),
-        "body": __h('Center', {}, [
-            __h('Column', {
-                "mainAxisAlignment": "center"
-              }, [
-                __h('Icon', {
-                    "size": 48,
-                    "color": '#3F51B5',
-                    "icon": "menu_open"
-                  }),
-                __h('SizedBox', {
-                    "height": 12
-                  }),
-                __h('Text', {
-                    "data": "AppBar 左侧为汉堡按钮，右侧为 endDrawer 入口"
-                  }),
-                __h('SizedBox', {
-                    "height": 8
-                  }),
-                __h('Text', {
-                    "data": ((this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked)
-                  })
-              ])
-          ])
+        "drawer": __h('Drawer', {}, __h('ListView', {}, [
+              __h('DrawerHeader', {
+                  "decoration": {
+                    "color": '#3F51B5'
+                  }
+                }, __h('Align', {
+                    "alignment": "bottomLeft"
+                  }, __h('Text', {
+                      "style": {
+                        "color": '#FFFFFF',
+                        "fontSize": 20
+                      },
+                      "data": "左侧抽屉"
+                    }))),
+              __h('ListTile', {
+                  "leading": __h('Icon', {
+                      "icon": "receipt_long"
+                    }),
+                  "title": __h('Text', {
+                      "data": "我的订单"
+                    }),
+                  "onTap": this.__bindFn(0, [], (...__a) => this._pickOrders(...__a))
+                }),
+              __h('ListTile', {
+                  "leading": __h('Icon', {
+                      "icon": "favorite_border"
+                    }),
+                  "title": __h('Text', {
+                      "data": "我的收藏"
+                    }),
+                  "onTap": this.__bindFn(1, [], (...__a) => this._pickFavorites(...__a))
+                })
+            ])),
+        "endDrawer": __h('Drawer', {}, __h('ListView', {}, [
+              __h('DrawerHeader', {
+                  "decoration": {
+                    "color": '#009688'
+                  }
+                }, __h('Align', {
+                    "alignment": "bottomLeft"
+                  }, __h('Text', {
+                      "style": {
+                        "color": '#FFFFFF',
+                        "fontSize": 20
+                      },
+                      "data": "右侧抽屉"
+                    }))),
+              __h('ListTile', {
+                  "leading": __h('Icon', {
+                      "icon": "settings"
+                    }),
+                  "title": __h('Text', {
+                      "data": "设置"
+                    }),
+                  "onTap": this.__bindFn(2, [], (...__a) => this._pickSettings(...__a))
+                }),
+              __h('ListTile', {
+                  "leading": __h('Icon', {
+                      "icon": "help_outline"
+                    }),
+                  "title": __h('Text', {
+                      "data": "帮助与关于"
+                    }),
+                  "onTap": this.__bindFn(3, [], (...__a) => this._pickHelp(...__a))
+                })
+            ])),
+        "body": __h('Center', {}, __h('Column', {
+              "mainAxisAlignment": "center"
+            }, [
+              __h('Icon', {
+                  "size": 48,
+                  "color": '#3F51B5',
+                  "icon": "menu_open"
+                }),
+              __h('SizedBox', {
+                  "height": 12
+                }),
+              __h('Text', {
+                  "data": "AppBar 左侧为汉堡按钮，右侧为 endDrawer 入口"
+                }),
+              __h('SizedBox', {
+                  "height": 8
+                }),
+              __h('Text', {
+                  "data": ((this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked)
+                })
+            ]))
       });
   }
 }
@@ -2952,43 +2680,35 @@ export class ReorderListDetail {
               "right": 12.0,
               "bottom": 12.0
             }
-          }, [
-            __h('Row', {}, [
-                __h('Expanded', {}, [
-                    __h('Text', {
-                        "style": {
-                          "fontSize": 13,
-                          "color": '#9E9E9E'
-                        },
-                        "data": "长按拖拽调整顺序（onReorder 双参事件）"
-                      })
-                  ]),
-                __h('ElevatedButton', {
-                    "onPressed": this.__bindFn(0, [], (...__a) => this._add(...__a))
-                  }, [
-                    __h('Text', {
-                        "data": "添加"
-                      })
-                  ])
-              ])
-          ]),
+          }, __h('Row', {}, [
+              __h('Expanded', {}, __h('Text', {
+                    "style": {
+                      "fontSize": 13,
+                      "color": '#9E9E9E'
+                    },
+                    "data": "长按拖拽调整顺序（onReorder 双参事件）"
+                  })),
+              __h('ElevatedButton', {
+                  "onPressed": this.__bindFn(0, [], (...__a) => this._add(...__a))
+                }, __h('Text', {
+                    "data": "添加"
+                  }))
+            ])),
         __h('SizedBox', {
             "height": 320
-          }, [
-            __h(ReorderableListView, {
-                "scrollController": this._controller,
-                "onReorder": this.__bindFn(1, [], (...__a) => this._onReorder(...__a)),
-                "padding": {
-                  "left": 12.0,
-                  "top": 0.0,
-                  "right": 12.0,
-                  "bottom": 0.0
-                },
-                "itemCount": this._items.length,
-                "itemBuilder": "_itemBuilder0",
-                "factory": "builder"
-              })
-          ])
+          }, __h(ReorderableListView, {
+              "scrollController": this._controller,
+              "onReorder": this.__bindFn(1, [], (...__a) => this._onReorder(...__a)),
+              "padding": {
+                "left": 12.0,
+                "top": 0.0,
+                "right": 12.0,
+                "bottom": 0.0
+              },
+              "itemCount": this._items.length,
+              "itemBuilder": "_itemBuilder0",
+              "factory": "builder"
+            }))
       ]);
   }
   dispose() {
@@ -2998,16 +2718,14 @@ export class ReorderListDetail {
       var item = this._items[index];
       return __h('Card', {
         "key": new ValueKey(item)
-      }, [
-        __h('ListTile', {
-            "leading": __h('Icon', {
-                "icon": "drag_handle"
-              }),
-            "title": __h('Text', {
-                "data": item
-              })
-          })
-      ]);
+      }, __h('ListTile', {
+          "leading": __h('Icon', {
+              "icon": "drag_handle"
+            }),
+          "title": __h('Text', {
+              "data": item
+            })
+        }));
   }
 }
 

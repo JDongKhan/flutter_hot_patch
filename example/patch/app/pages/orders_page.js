@@ -52,41 +52,29 @@ export class OrdersPage {
   }
   build(context) {
     if ((this._feed == null)) {
-      return __h('Center', {}, [
-          __h('CircularProgressIndicator', {})
-        ]);
+      return __h('Center', {}, __h('CircularProgressIndicator', {}));
     }
     return __h('Column', {
         "crossAxisAlignment": "stretch"
       }, [
         __h('Container', {
             "color": '#FFFFFF'
-          }, [
-            __h('SafeArea', {
-                "bottom": false
-              }, [
-                __h('Padding', {
-                    "padding": {
-                      "left": 8.0,
-                      "top": 6.0,
-                      "right": 8.0,
-                      "bottom": 10.0
-                    }
-                  }, [
-                    __h('SingleChildScrollView', {
-                        "scrollDirection": "horizontal"
-                      }, [
-                        __h('Row', {}, [
-                            ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 } }, [ __h('GestureDetector', { "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)) }, [ __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } } }, [ __h('Text', { "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "data": s }) ]) ]) ])]); } return out; })()
-                          ])
-                      ])
-                  ])
-              ])
-          ]),
+          }, __h('SafeArea', {
+              "bottom": false
+            }, __h('Padding', {
+                "padding": {
+                  "left": 8.0,
+                  "top": 6.0,
+                  "right": 8.0,
+                  "bottom": 10.0
+                }
+              }, __h('SingleChildScrollView', {
+                  "scrollDirection": "horizontal"
+                }, __h('Row', {}, [
+                    ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 } }, __h('GestureDetector', { "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)) }, __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } } }, __h('Text', { "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "data": s }))))]); } return out; })()
+                  ]))))),
         ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
-        __h('Expanded', {}, [
-            ((this._orders == null) ? __h('Center', {}, [ __h('CircularProgressIndicator', {}) ]) : ((this._orders.length === 0) ? __h('Center', {}, [ __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "该状态下暂无订单" }) ]) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1", "factory": "separated" })))
-          ])
+        __h('Expanded', {}, ((this._orders == null) ? __h('Center', {}, __h('CircularProgressIndicator', {})) : ((this._orders.length === 0) ? __h('Center', {}, __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "该状态下暂无订单" })) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1", "factory": "separated" }))))
       ]);
   }
   _separatorBuilder0(context, _) {
@@ -118,148 +106,134 @@ export class _OrderCard {
     var pending = (this.order.status == "待付款");
     return __h('GestureDetector', {
         "onTap": this.__bindFn(0, [], (...__a) => this.onOpen(...__a))
-      }, [
-        __h('Container', {
-            "decoration": {
-              "color": '#FFFFFF',
-              "borderRadius": {
-                "radius": 14.0
-              }
+      }, __h('Container', {
+          "decoration": {
+            "color": '#FFFFFF',
+            "borderRadius": {
+              "radius": 14.0
             }
-          }, [
-            __h('Column', {}, [
-                __h('Padding', {
-                    "padding": {
-                      "left": 14.0,
-                      "top": 12.0,
-                      "right": 14.0,
-                      "bottom": 10.0
-                    }
-                  }, [
-                    __h('Row', {}, [
-                        __h('Text', {
-                            "style": {
-                              "fontSize": 12,
-                              "color": '#ff8b909a'
-                            },
-                            "data": "订单号 " + this.order.no
-                          }),
-                        __h('Spacer', {}),
-                        __h('Text', {
-                            "style": {
-                              "fontSize": 12.5,
-                              "fontWeight": "w700"
-                            },
-                            "data": this.order.status
-                          })
-                      ])
-                  ]),
-                __h('Divider', {
-                    "height": 1,
-                    "color": '#fff0f2f6'
-                  }),
-                __h('Padding', {
-                    "padding": {
-                      "left": 12.0,
-                      "top": 12.0,
-                      "right": 12.0,
-                      "bottom": 12.0
-                    }
-                  }, [
-                    __h('Row', {
+          }
+        }, __h('Column', {}, [
+            __h('Padding', {
+                "padding": {
+                  "left": 14.0,
+                  "top": 12.0,
+                  "right": 14.0,
+                  "bottom": 10.0
+                }
+              }, __h('Row', {}, [
+                  __h('Text', {
+                      "style": {
+                        "fontSize": 12,
+                        "color": '#ff8b909a'
+                      },
+                      "data": "订单号 " + this.order.no
+                    }),
+                  __h('Spacer', {}),
+                  __h('Text', {
+                      "style": {
+                        "fontSize": 12.5,
+                        "fontWeight": "w700"
+                      },
+                      "data": this.order.status
+                    })
+                ])),
+            __h('Divider', {
+                "height": 1,
+                "color": '#fff0f2f6'
+              }),
+            __h('Padding', {
+                "padding": {
+                  "left": 12.0,
+                  "top": 12.0,
+                  "right": 12.0,
+                  "bottom": 12.0
+                }
+              }, __h('Row', {
+                  "crossAxisAlignment": "start"
+                }, [
+                  __h('ClipRRect', {
+                      "borderRadius": {
+                        "radius": 10.0
+                      }
+                    }, __h('Image', {
+                        "width": 66,
+                        "height": 66,
+                        "fit": "cover",
+                        "errorBuilder": "_errorBuilder0",
+                        "factory": "network",
+                        "src": this.order.img
+                      })),
+                  __h('SizedBox', {
+                      "width": 11
+                    }),
+                  __h('Expanded', {}, __h('Column', {
                         "crossAxisAlignment": "start"
                       }, [
-                        __h('ClipRRect', {
-                            "borderRadius": {
-                              "radius": 10.0
-                            }
-                          }, [
-                            __h('Image', {
-                                "width": 66,
-                                "height": 66,
-                                "fit": "cover",
-                                "errorBuilder": "_errorBuilder0",
-                                "factory": "network",
-                                "src": this.order.img
-                              })
-                          ]),
+                        __h('Text', {
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
+                            "style": {
+                              "fontSize": 14,
+                              "fontWeight": "w600"
+                            },
+                            "data": this.order.title
+                          }),
                         __h('SizedBox', {
-                            "width": 11
+                            "height": 5
                           }),
-                        __h('Expanded', {}, [
-                            __h('Column', {
-                                "crossAxisAlignment": "start"
-                              }, [
-                                __h('Text', {
-                                    "maxLines": 1,
-                                    "overflow": "ellipsis",
-                                    "style": {
-                                      "fontSize": 14,
-                                      "fontWeight": "w600"
-                                    },
-                                    "data": this.order.title
-                                  }),
-                                __h('SizedBox', {
-                                    "height": 5
-                                  }),
-                                __h('Text', {
-                                    "maxLines": 1,
-                                    "overflow": "ellipsis",
-                                    "style": {
-                                      "fontSize": 11.5,
-                                      "color": '#ff8b909a'
-                                    },
-                                    "data": this.order.spec
-                                  }),
-                                __h('SizedBox', {
-                                    "height": 6
-                                  }),
-                                __h('Text', {
-                                    "style": {
-                                      "fontSize": 11,
-                                      "color": '#ffa3a9b4'
-                                    },
-                                    "data": "×1"
-                                  })
-                              ])
-                          ])
-                      ])
-                  ]),
-                __h('Divider', {
-                    "height": 1,
-                    "color": '#fff0f2f6'
-                  }),
-                __h('Padding', {
-                    "padding": {
-                      "left": 14.0,
-                      "top": 10.0,
-                      "right": 12.0,
-                      "bottom": 12.0
-                    }
-                  }, [
-                    __h('Row', {}, [
                         __h('Text', {
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
                             "style": {
-                              "fontSize": 12.5,
-                              "color": '#ff5c6270'
+                              "fontSize": 11.5,
+                              "color": '#ff8b909a'
                             },
-                            "data": "合计 "
+                            "data": this.order.spec
+                          }),
+                        __h('SizedBox', {
+                            "height": 6
                           }),
                         __h('Text', {
                             "style": {
-                              "fontSize": 16,
-                              "fontWeight": "w700",
-                              "color": kPrice
+                              "fontSize": 11,
+                              "color": '#ffa3a9b4'
                             },
-                            "data": "￥" + this.order.price
-                          }),
-                        __h('Spacer', {}),
-                        ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.onOpen })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.onOpen })])
-                      ])
-                  ])
-              ])
-          ])
-      ]);
+                            "data": "×1"
+                          })
+                      ]))
+                ])),
+            __h('Divider', {
+                "height": 1,
+                "color": '#fff0f2f6'
+              }),
+            __h('Padding', {
+                "padding": {
+                  "left": 14.0,
+                  "top": 10.0,
+                  "right": 12.0,
+                  "bottom": 12.0
+                }
+              }, __h('Row', {}, [
+                  __h('Text', {
+                      "style": {
+                        "fontSize": 12.5,
+                        "color": '#ff5c6270'
+                      },
+                      "data": "合计 "
+                    }),
+                  __h('Text', {
+                      "style": {
+                        "fontSize": 16,
+                        "fontWeight": "w700",
+                        "color": kPrice
+                      },
+                      "data": "￥" + this.order.price
+                    }),
+                  __h('Spacer', {}),
+                  ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.onOpen })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.onOpen })])
+                ]))
+          ])));
   }
   _errorBuilder0(context, e) {
       return __h('Container', {

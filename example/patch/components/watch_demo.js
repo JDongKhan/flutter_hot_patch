@@ -11,33 +11,27 @@ export class WatchDemo {
   constructor() {
   }
   build(context) {
-    return __h('Card', {}, [
-        __h('Padding', {
-            "padding": {
-              "left": 16.0,
-              "top": 16.0,
-              "right": 16.0,
-              "bottom": 16.0
-            }
-          }, [
-            __h(ChangeNotifierProvider, {
-                "create": CounterVm,
-                "model": "CounterVm"
-              }, [
-                __h('Column', {
-                    "mainAxisSize": "min"
-                  }, [
-                    __h(Builder, {
-                        "builder": "_builder0"
-                      }),
-                    __h('SizedBox', {
-                        "height": 12
-                      }),
-                    __h(WatchCountLabel, {})
-                  ])
-              ])
-          ])
-      ]);
+    return __h('Card', {}, __h('Padding', {
+          "padding": {
+            "left": 16.0,
+            "top": 16.0,
+            "right": 16.0,
+            "bottom": 16.0
+          }
+        }, __h(ChangeNotifierProvider, {
+            "create": CounterVm,
+            "model": "CounterVm"
+          }, __h('Column', {
+              "mainAxisSize": "min"
+            }, [
+              __h(Builder, {
+                  "builder": "_builder0"
+                }),
+              __h('SizedBox', {
+                  "height": 12
+                }),
+              __h(WatchCountLabel, {})
+            ]))));
   }
   _builder0(context) {
       var model = context.watch("CounterVm");
@@ -63,21 +57,17 @@ export class WatchDemo {
           }, [
             __h('ElevatedButton', {
                 "onPressed": this.__bindFn(0, [model], () => model.inc())
-              }, [
-                __h('Text', {
-                    "data": "+1"
-                  })
-              ]),
+              }, __h('Text', {
+                  "data": "+1"
+                })),
             __h('SizedBox', {
                 "width": 12
               }),
             __h('ElevatedButton', {
                 "onPressed": this.__bindFn(1, [], () => { this.context.read("CounterVm").reset(); })
-              }, [
-                __h('Text', {
-                    "data": "Reset"
-                  })
-              ])
+              }, __h('Text', {
+                  "data": "Reset"
+                }))
           ])
       ]);
   }
