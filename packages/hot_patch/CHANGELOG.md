@@ -1,3 +1,14 @@
+## 0.2.0
+
+**适配生成器 0.2.0 的新产物协议；另有一项需随 App 重新构建才生效的运行时补齐。**
+
+- **位置实参按形参名读取**：`Text` 读 `data`、`Icon` 读 `icon`、`Image` 读 `src` / `name` / `image`（由 `props.factory` 决定用 `Image.network` 还是 `Image.asset`）；`$pos` 仅作未登记类型的兜底。
+- **列表 / 网格按 `props.factory` 判定形态**：读 `itemBuilder` / `separatorBuilder` / `itemCount` / `childCount`，还原 `ListView.builder` / `.separated`、`SliverList.*`、`GridView.builder`（此前 JS 侧 `ListView.builder` / `.separated` 会整块空白）；`gridDelegate` 改读 JSON 值（同时兼容平铺 props，GridView 不再退化成单列）。
+- **ListenableBuilder / ValueListenableBuilder** 改为订阅 `props.listenable`（产物下发的是 listenable **实例本身**，不再是字段名）——修复 notify 不重建、`+1` 点了没反应。
+- **组件（JS 类）的 `on*` 参数是可直接调用的闭包**，无需再做句柄转换。
+- **删除 `@Colors.*.shade*` 标记解析与 MaterialColor 常量表**：颜色统一 `#RRGGBB` / `#AARRGGBB`（色值已在生成器编译期算好）。
+- **补齐 `Number.prototype` 的 Dart `num` 同名方法**（`round` / `floor` / `ceil` / `abs` / `truncate` / `toInt` / `toDouble` / `toStringAsFixed` / `clamp`）：Dart 写法原样翻译出 `(x * 100).round()` 后不再因 "is not a function" 让整页挂载失败。**该项属运行时 Dart 代码，需完全重启 App 才生效。**
+
 ## 0.1.1
 
 - 补充 `repository` 字段，修复 pana 仓库校验失败导致的 pub.dev 页面无 GitHub 地址。

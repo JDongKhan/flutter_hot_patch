@@ -138,9 +138,10 @@ translator/  ←  builders/  ←  builder.dart
 ```
 
 In `lib/src/translator/`: `js_translator` (shared language layer) · `dart2js` (class declarations) ·
-`widget2js` (widget trees) · `class_translator` (single entry) · `source_index` (annotation detection /
-imported source parsing) · `host_injected` (@HostInjected channel table, scanned by the translation layer) ·
-`style_translators` · `builtin_translators` (built-in widget policies).
+`widget2js` (widget trees) · `widget_json` (the single unified widget entry `widgetToJson`) ·
+`value_forms` (value-shape dispatch `autoValue`) · `class_translator` (single entry) ·
+`source_index` (annotation detection / imported source parsing) · `host_injected` (@HostInjected channel
+table, scanned by the translation layer) · `style_translators` (structured style values).
 
 `lib/src/builders/` is split per builder:
 
@@ -288,10 +289,10 @@ translator/  ←  builders/  ←  builder.dart
 ```
 
 `lib/src/translator/`：`js_translator`（公共语言层）· `dart2js`（类声明）·
-`widget2js`（widget 树）· `class_translator`（唯一入口）·
-`source_index`（注解识别 / import 源文件解析）·
-`host_injected`（@HostInjected 通道表，翻译层自扫）·
-`style_translators` · `builtin_translators`（内置 widget 策略）。
+`widget2js`（widget 树）· `widget_json`（统一翻译入口 `widgetToJson`）·
+`value_forms`（值形态分派 `autoValue`）· `class_translator`（唯一入口）·
+`source_index`（注解识别 / import 源解析）· `host_injected`（@HostInjected 通道表，
+由翻译层扫描）· `style_translators`（结构化样式值）。
 
 `lib/src/builders/` 按 builder 再分目录：
 

@@ -64,7 +64,8 @@ Marks a class as a dynamically shippable UI component.
 - Hot patching works on the **whole widget**; there are no field- or method-level annotations. The
   generator collects everything by default:
   - all non-static fields → JS state (`_count` → `count`)
-  - all methods (except `build` / lifecycle) → JS event methods (bound to `this.__bind` at build time)
+  - all methods (except `build` / lifecycle) → JS methods that event handles bind to (`this.__bind` for a
+    method reference / expression, `this.__bindFn` when the expression captures build-time locals)
   - `build()` → the JS render entry point
   - SnackBar-style methods → automatically recognized as a native channel (`sendMessage`)
 
@@ -228,7 +229,8 @@ class _CounterState extends State<Counter> {
   （如 `jsAsset: 'assets/patch/components/counter.js?component=Counter'`）。
 - 热更基于**整个 widget**，不做字段/方法级标注。生成器默认全量收集：
   - 所有非 static 字段 → JS 状态（`_count` → `count`）
-  - 所有方法（除 build / 生命周期）→ JS 事件方法（构建期以 `this.__bind` 绑定）
+  - 所有方法（除 build / 生命周期）→ 由事件句柄绑定的 JS 方法（方法引用 / 表达式用
+    `this.__bind`，表达式捕获了构建期局部变量时用 `this.__bindFn`）
   - `build()` → JS 渲染入口
   - SnackBar 形式的方法 → 自动识别为原生通道（`sendMessage`）
 

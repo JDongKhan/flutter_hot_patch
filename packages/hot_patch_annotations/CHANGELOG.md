@@ -1,3 +1,8 @@
+## 0.1.3
+
+- 本次**无 API / 行为变更**：注解集、生成器契约与 0.1.2 完全一致。
+- 与 `hot_patch_generator` 0.2.0、`hot_patch` 0.2.0 同版本线发版（这一版的重点在生成器的「统一翻译」重构与产物协议变更，`@PatchEntry` / `@UIProp` / `@HostInjected` 等注解用法不受影响）。
+
 ## 0.1.2
 
 - `description` 改为英文，满足 pub.dev 对英文描述的要求（中文描述会被 pana 扣分）。
