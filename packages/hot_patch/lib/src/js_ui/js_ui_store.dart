@@ -142,6 +142,20 @@ class JsUiStore {
           if (parent == null || key == null) break;
           parent.propData.remove(key);
           touched.add(raw['parent'] as String);
+        case 'propsChildAt':
+          // 组件渲染根变化：只替换列表中的一个位置（父 slot 列表位置不变）。
+          final parent = nodes[raw['parent']];
+          final key = raw['key'] as String?;
+          final childId = raw['childId'] as String?;
+          if (parent == null || key == null || childId == null) break;
+          final list = parent.propChildLists[key];
+          final i = raw['index'] is num ? (raw['index'] as num).toInt() : -1;
+          if (list == null || i < 0 || i >= list.length) break;
+          final oldId = list[i];
+          if (oldId != childId) _parents?.remove(oldId);
+          list[i] = childId;
+          _parents?[childId] = raw['parent'] as String;
+          touched.add(raw['parent'] as String);
         case 'remove':
           final id = raw['id'] as String?;
           if (id == null) break;
@@ -220,18 +234,14 @@ class JsUiStore {
       if (parent != null) {
         parent.childIds.remove(id);
         parent.propChildIds.removeWhere((_, childId) => childId == id);
-        for (final ids in parent.propChildLists.values) {
-          ids.remove(id);
-        }
+        // propChildLists 保留墓碑位置：slot 子项是组件渲染根，根变化时由
+        // propsChildAt 原位替换；这里直接删会让列表塌缩（TabBarView 曾因此变 0）。
       }
       return;
     }
     for (final node in nodes.values) {
       node.childIds.remove(id);
       node.propChildIds.removeWhere((_, childId) => childId == id);
-      for (final ids in node.propChildLists.values) {
-        ids.remove(id);
-      }
     }
   }
 

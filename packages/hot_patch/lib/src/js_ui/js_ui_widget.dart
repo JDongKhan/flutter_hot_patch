@@ -544,6 +544,7 @@ class _JsNodeState extends State<_JsNode> {
       children[entry.key] = entry.value;
     }
 
+
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
     // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
     final builder =

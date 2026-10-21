@@ -291,7 +291,7 @@ const String miniReactSchedulerSource = r'''
               inst.didChangeDependencies();
             }
           }
-          inst.__child = patch(inst.__child, buildOf(inst), inst, inst.__slot);
+          inst.__child = patchComponentChild(inst);
           commit(root);
         }
       }
@@ -560,12 +560,16 @@ const String miniReactReconcilerSource = r'''
     return ci;
   }
 
-  function patch(oldInst, el, parent, slot) {
+  function patch(oldInst, el, parent, slot, propSlot) {
     if (el == null || el === false) {
       if (oldInst) { unmount(oldInst); }
       return null;
     }
-    if (!oldInst) { return mount(el, parent, slot); }
+    if (!oldInst) {
+      var mi = mount(el, parent, slot);
+      if (mi && propSlot) { mi.__propSlot = propSlot; }
+      return mi;
+    }
 
     var newIsHost = (typeof el.type === 'string');
     var oldIsHost = (oldInst.__k === HOST);
@@ -613,8 +617,26 @@ const String miniReactReconcilerSource = r'''
     } finally {
       building = prevBuilding;
     }
-    oldInst.__child = patch(oldInst.__child, buildOf(oldInst), oldInst, oldInst.__slot);
+    // 记住父级 slot 位置：组件内部 setState 重建走 flush 的
+    // patchComponentChild，也要靠它把「渲染根 id 变化」回报给父 slot。
+    if (propSlot) { oldInst.__propSlot = propSlot; }
+    patchComponentChild(oldInst);
     return oldInst;
+  }
+
+  /// 组件 build 出新子树，并在渲染根 id 变化时回报父 slot（propsChildAt）。
+  function patchComponentChild(inst) {
+    var oldRoot = hostIdOf(inst);
+    inst.__child = patch(inst.__child, buildOf(inst), inst, inst.__slot);
+    var slot = inst.__propSlot;
+    var newRoot = hostIdOf(inst);
+    if (slot && newRoot !== oldRoot) {
+      emit({
+        op: 'propsChildAt', parent: slot.parentId, key: slot.key,
+        index: slot.index, childId: newRoot
+      });
+    }
+    return inst.__child;
   }
 
   function patchChildren(parentHost, newEls) {
@@ -694,7 +716,7 @@ const String miniReactReconcilerSource = r'''
 
   // 列表型 slot 的 keyed diff：复用已有实例，新键挂载，缺失卸载。
   // 不向宿主发 insert/move（宿主按 propsChildren 整表替换）。
-  function patchSlotList(parentHost, oldList, newEls) {
+  function patchSlotList(parentHost, oldList, newEls, slotKey) {
     var remaining = oldList.slice();
     var keyedOld = {};
     var i, j;
@@ -720,7 +742,13 @@ const String miniReactReconcilerSource = r'''
         }
       }
       if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
-      var inst = patch(matched, el, parentHost, null);
+      var slotIndex = next.length;
+      var inst = patch(matched, el, parentHost, null, {
+        key: slotKey,
+        index: slotIndex,
+        parentId: parentHost.__id,
+        oldRoot: matched ? hostIdOf(matched) : null
+      });
       if (inst) { next.push(inst); }
     }
     for (i = 0; i < remaining.length; i++) {
@@ -754,7 +782,7 @@ const String miniReactReconcilerSource = r'''
         continue;
       }
       if (isElementList(v)) {
-        var arr = patchSlotList(hostInst, oldL[k] || [], v);
+        var arr = patchSlotList(hostInst, oldL[k] || [], v, k);
         nextL[k] = arr;
         emit({
           op: 'propsChildren', parent: hostInst.__id, key: k,
@@ -766,7 +794,7 @@ const String miniReactReconcilerSource = r'''
       }
       if (v != null && typeof v === 'object' && v.__delegate) {
         if (v.__delegate === 'list') {
-          var arr2 = patchSlotList(hostInst, oldL[k] || [], v.children || []);
+          var arr2 = patchSlotList(hostInst, oldL[k] || [], v.children || [], k);
           nextL[k] = arr2;
           emit({
             op: 'propsChildren', parent: hostInst.__id, key: k,

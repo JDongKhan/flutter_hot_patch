@@ -80,7 +80,10 @@ Future<void> _handle(HttpRequest request) async {
         modUtc.year, modUtc.month, modUtc.day,
         modUtc.hour, modUtc.minute, modUtc.second,
       );
-      if (!modifiedSec.isAfter(since)) {
+      // 只有文件**严格更旧**才 304：mtime 与 If-Modified-Since 都只到秒，
+      // 同一秒内重新打包 zip 时用 isAfter 会误判为未变、让 App 继续用旧产物。
+      // 宁可同秒返回 200 重新下载，也不能把新补丁当旧缓存复用。
+      if (modifiedSec.isBefore(since)) {
         request.response.statusCode = HttpStatus.notModified;
         request.response.headers.set('Last-Modified', HttpDate.format(modified));
         await request.response.close();

@@ -545,7 +545,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     'SliverPadding',
     (c) => SliverPadding(
       padding: edgeInsetsFromJson(c.map('padding')),
-      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+      sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -591,14 +591,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register(
     'SliverOpacity',
     (c) =>
-        SliverOpacity(opacity: c.num_('opacity') ?? 1, sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
+        SliverOpacity(opacity: c.num_('opacity') ?? 1, sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink())),
   );
 
   r.register(
     'SliverOffstage',
     (c) => SliverOffstage(
       offstage: c.bool_('offstage') ?? false,
-      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+      sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -606,7 +606,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     'SliverIgnorePointer',
     (c) => SliverIgnorePointer(
       ignoring: c.bool_('ignoring') ?? false,
-      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+      sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -618,7 +618,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       top: c.bool_('top') ?? true,
       right: c.bool_('right') ?? true,
       bottom: c.bool_('bottom') ?? true,
-      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+      sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -629,7 +629,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     (c) => SliverVisibility(
       visible: c.bool_('visible') ?? true,
       maintainState: c.bool_('maintainState') ?? false,
-      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+      sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
