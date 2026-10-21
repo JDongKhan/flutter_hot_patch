@@ -369,12 +369,16 @@ const String miniReactReconcilerSource = r'''
     // build 方法、能被订阅标脏重建；宿主结点不是构建单位，不能当订阅锚点）。
     var ctx = contextOf(owner);
     var out = [];
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, ctx, i));
-      if (typeof sep === 'string' && i < n - 1) {
-        out.push(owner[sep].call(owner, ctx, i));
+    // 委托调用期间 owner 锚点指向方法体所在的组件实例：builder 里创建的
+    // 控制器 / Key 归属它（`building` 在这里可能是宿主结点或已还原）。
+    withOwner(owner, function () {
+      for (var i = 0; i < n; i++) {
+        out.push(owner[name].call(owner, ctx, i));
+        if (typeof sep === 'string' && i < n - 1) {
+          out.push(owner[sep].call(owner, ctx, i));
+        }
       }
-    }
+    });
     return out;
   }
 
@@ -508,9 +512,19 @@ const String miniReactReconcilerSource = r'''
       return hi;
     }
 
-    var ci = new el.type(el.props, el.children);
+    var ownFrame = beginConstruct();
+    var ci;
+    try {
+      ci = new el.type(el.props, el.children);
+    } catch (e) {
+      endConstruct(null, ownFrame);
+      throw e;
+    }
     ci.__k = COMP;
     ci.__id = compId(el.type);
+    // 构造期（字段初始化）里登记的控制器 / Key 句柄归属本实例：此刻 `ci` 才存在，
+    // 故构造期间先暂存、新对象返回后再回填（见 handle_registry_js 的 beginConstruct）。
+    endConstruct(ci, ownFrame);
     ci.__el = el;
     ci.__parent = parent;
     ci.__slot = slot;
@@ -519,8 +533,16 @@ const String miniReactReconcilerSource = r'''
     // 生命周期与 Flutter 对齐：initState → didChangeDependencies → build。
     // （后续「依赖变更」走 flush 的 __depDirty，「父级重建」走 patch 的
     //  didUpdateWidget，见【8】/【9】。）
-    if (typeof ci.initState === 'function') { ci.initState(); }
-    if (typeof ci.didChangeDependencies === 'function') { ci.didChangeDependencies(); }
+    // initState 期间也把构建锚点指向本实例：此时 `this.context` 与新建句柄的
+    // 归属都应以本组件为准（过去 building 只在 buildOf 里设置，initState 看到的是父级）。
+    var prevBuilding = building;
+    building = ci;
+    try {
+      if (typeof ci.initState === 'function') { ci.initState(); }
+      if (typeof ci.didChangeDependencies === 'function') { ci.didChangeDependencies(); }
+    } finally {
+      building = prevBuilding;
+    }
     ci.__child = mount(buildOf(ci), ci, slot);
     return ci;
   }
@@ -569,8 +591,15 @@ const String miniReactReconcilerSource = r'''
     if (typeof oldInst.__applyProps === 'function') {
       oldInst.__applyProps(el.props);
     }
-    if (typeof oldInst.didUpdateWidget === 'function') {
-      oldInst.didUpdateWidget(oldWidget);
+    // didUpdateWidget 期间把构建锚点指向本实例（新建句柄的归属 / this.context）。
+    var prevBuilding = building;
+    building = oldInst;
+    try {
+      if (typeof oldInst.didUpdateWidget === 'function') {
+        oldInst.didUpdateWidget(oldWidget);
+      }
+    } finally {
+      building = prevBuilding;
     }
     oldInst.__child = patch(oldInst.__child, buildOf(oldInst), oldInst, oldInst.__slot);
     return oldInst;
@@ -682,11 +711,18 @@ const String miniReactReconcilerSource = r'''
       if (pcs) { for (var pk in pcs) { markUnmounted(pcs[pk]); } }
     } else {
       // 与 Flutter 一致：从树上摘除时先 deactivate、再最终 dispose。
-      if (typeof inst.deactivate === 'function') {
-        try { inst.deactivate(); } catch (e) {}
-      }
-      if (typeof inst.dispose === 'function') {
-        try { inst.dispose(); } catch (e) {}
+      // 生命周期期间把构建锚点指向本实例（`this.context` / 新建句柄归属）。
+      var prevBuilding = building;
+      building = inst;
+      try {
+        if (typeof inst.deactivate === 'function') {
+          try { inst.deactivate(); } catch (e) {}
+        }
+        if (typeof inst.dispose === 'function') {
+          try { inst.dispose(); } catch (e) {}
+        }
+      } finally {
+        building = prevBuilding;
       }
       // [scope] 从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 `__subs`）。
       unsubscribeAll(inst);
@@ -704,6 +740,10 @@ const String miniReactReconcilerSource = r'''
         inst.__boundFn = null;
       }
       markUnmounted(inst.__child);
+      // [owner] 释放该实例持有的句柄（控制器 / Key 等）：先递归卸载子树，再
+      // 整份释放——与 Dart 的 State.dispose 顺序一致。`dispose()` 里显式释放
+      // 过的句柄已被移出 `__owns`，这里幂等跳过。
+      releaseOwnerHandles(inst);
     }
   }
 

@@ -13,9 +13,16 @@
 // 序号全局单调仅用于唯一化，kind 用于一眼看懂是什么对象。
 //
 // scope：
-//   - page   ：随页面释放（登记时绑 activeRoot.key，disposeRoot 统一回收）；
-//   - global ：跨页面常驻，不随页面释放；
+//   - instance：随**持有它的组件实例**释放（构造期 / initState / build 里创建的
+//               控制器、Key 等；实例从树上摘除时整份释放，与 Dart 的
+//               State.dispose 语义一致）；
+//   - page   ：随页面释放（登记时绑 activeRoot.key，disposeRoot 统一回收；
+//               无组件归属的兜底）；
+//   - global ：跨页面常驻，不随页面释放（静态字段 / 模块级单例）；
 //   - local  ：由拥有者自己的代码显式释放（如构建期事件句柄，随组件卸载释放）。
+//
+// 归属只决定**释放时机**，不影响 id 反查：`handles` 仍是全局表，宿主只持 id
+// 也能找到对象（组件卸载时、`dispose()` 里显式释放时都没有页面上下文）。
 //
 // 释放语义（拥有端为准 + 页面兜底）：任一端 release 都会通知对端一并释放
 // （1:1 资源两端必须同时消失）；重复 release 幂等，不会形成通知回环。
@@ -61,29 +68,53 @@ const String handleRegistryJsSource = r'''
   // 异步桥还要多套一层 `[js-log]` 前缀，反而更难读。JS 端的全景视图另由
   // `__jsui.cacheDump()`（debug）与泄漏快照汇总给出，ctorNameOf 仍供它们使用。
 
-  // 登记一个 JS 侧真实对象/函数为句柄，返回 id。scope 缺省 page（绑定当前
-  // 页面）；activeRoot 缺失导致无法定位页面时退化为 global，避免「登记了却
-  // 永不释放」。
+  // 登记一个 JS 侧真实对象/函数为句柄，返回 id。
+  //
+  // 归属优先级（scope 未显式指定时）：
+  //   1. 组件**构造中**（`new el.type(...)` 期间）：记入最内层构造帧，返回后由
+  //      endConstruct 回填到该组件实例——字段初始化里的
+  //      `this._controller = new ScrollController()` 正是这个时机；
+  //   2. 委托调用期间（withOwner）：归属方法体所在的类实例；
+  //   3. `building` 是组件结点（initState / build / 事件执行期）：直接归属它；
+  //   4. 其余（模块级 / 静态字段）：随页面；无 activeRoot 时退化为 global。
+  //
+  // 显式 `opts.scope`（'local' / 'page' / 'global'）优先，事件闭包等仍按原语义。
   function reg(obj, kind, opts) {
     if (obj === null || obj === undefined) { return null; }
     var exist = handleOwnerIdx.get(obj);
     if (exist && handles[exist]) { return exist; }
     opts = opts || {};
-    var scope = opts.scope || 'page';
-    var key = null;
+    var explicit = opts.scope;
+    var owner = opts.owner || null;
+    var pending = false;
+    if (!explicit && !owner) {
+      if (constructFrames.length) {
+        pending = true; // 归属最内层构造中的组件（见 beginConstruct/endConstruct）
+      } else if (ownerAnchor) {
+        // 委托调用期间（不是 build 锚点）：资源属于方法体所在的类实例
+        owner = ownerAnchor;
+      } else if (building && building.__k === COMP) {
+        owner = building;
+      }
+    }
+    var pageKey = (activeRoot && activeRoot.key) || null;
+    var scope = explicit || ((owner || pending) ? 'instance' : 'page');
+    var key = pageKey; // 诊断 / 宿主侧页面兜底都用它
     if (scope === 'page') {
-      key = opts.key || (activeRoot && activeRoot.key) || null;
+      key = opts.key || pageKey || null;
       if (key === null) { scope = 'global'; }
     }
     var id = newHandleId(kind);
     handles[id] = {
       id: id, kind: kind, scope: scope, key: key, obj: obj,
-      meta: opts.meta || null
+      meta: opts.meta || null, owner: null
     };
     handleOwnerIdx.set(obj, id);
     if (scope === 'page') {
       (pageHandles[key] || (pageHandles[key] = [])).push(id);
     }
+    if (owner) { attachOwner(id, owner); }
+    if (pending) { constructFrames[constructFrames.length - 1].push(id); }
     // 自动同步宿主：宿主侧同名 kind 描述符的 onCreate 据此创建真实对象
     // （scope=local 的纯本端句柄——如事件闭包——传 sync:false 不同步）。
     // pageKey 一并下发：宿主侧据此登记「句柄→页面」，页面销毁时做本端兜底回收。
@@ -95,6 +126,55 @@ const String handleRegistryJsSource = r'''
     return id;
   }
 
+  // ── 组件实例归属（owner）────────────────────────────────────────────
+  // 每个组件实例一份 `__owns`（id 数组），实例卸载时整份释放。物理存储仍在
+  // 全局 `handles`，这里只是「释放时机」的索引。
+  var constructFrames = []; // 组件构造帧栈：每帧收集该次 new 期间登记的句柄 id
+  // 显式归属锚点：委托调用（`owner[name].call(owner, ...)`）期间指向方法体
+  // 所在的类实例——`building` 此时是被委托组件，不能用它判断资源归属。
+  var ownerAnchor = null;
+
+  function withOwner(inst, fn) {
+    var prev = ownerAnchor;
+    ownerAnchor = inst;
+    try { return fn(); } finally { ownerAnchor = prev; }
+  }
+
+  function attachOwner(id, inst) {
+    var h = handles[id];
+    if (!h || !inst) { return; }
+    h.owner = inst;
+    (inst.__owns || (inst.__owns = [])).push(id);
+  }
+
+  // 组件实例构造开始：返回本帧（mount 里紧贴 `new el.type(...)` 使用）。
+  function beginConstruct() {
+    var frame = [];
+    constructFrames.push(frame);
+    return frame;
+  }
+
+  // 构造结束：把本帧登记的句柄回填给新实例（构造抛错时 inst 传 null，
+  // 这些句柄没有归属者，直接释放，避免两端残留）。
+  function endConstruct(inst, frame) {
+    var i = constructFrames.lastIndexOf(frame);
+    if (i >= 0) { constructFrames.splice(i, 1); }
+    if (!frame) { return; }
+    if (!inst) {
+      for (var k = 0; k < frame.length; k++) { releaseHandle(frame[k]); }
+      return;
+    }
+    for (var j = 0; j < frame.length; j++) { attachOwner(frame[j], inst); }
+  }
+
+  // 实例卸载：释放它持有的全部句柄（`dispose()` 里已显式释放过的幂等跳过）。
+  function releaseOwnerHandles(inst) {
+    if (!inst || !inst.__owns) { return; }
+    var snapshot = inst.__owns.slice();
+    inst.__owns = null;
+    for (var i = 0; i < snapshot.length; i++) { releaseHandle(snapshot[i]); }
+  }
+
   // 释放一个句柄（本端）。幂等：不存在即返回（不回环——对端释放时本地已删，
   // 不再二次通知）。notify=false 用于纯本端句柄（如构建期事件句柄）。
   function releaseHandle(id, notify) {
@@ -102,6 +182,12 @@ const String handleRegistryJsSource = r'''
     if (!h) { return; }
     delete handles[id];
     if (h.obj) { try { handleOwnerIdx.delete(h.obj); } catch (e) {} }
+    // 从所属组件实例的索引里摘除（实例卸载时 __owns 已置 null，跳过）。
+    if (h.owner && h.owner.__owns) {
+      var owns = h.owner.__owns;
+      var oi = owns.indexOf(id);
+      if (oi >= 0) { owns.splice(oi, 1); }
+    }
     if (h.scope === 'page' && h.key && pageHandles[h.key]) {
       var arr = pageHandles[h.key];
       var i = arr.indexOf(id);
