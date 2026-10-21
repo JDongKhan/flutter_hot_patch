@@ -433,7 +433,7 @@ export class _PostCard {
                           "width": 92,
                           "height": 92,
                           "fit": "cover",
-                          "errorBuilder": (_, e, s) => __h('Container', { "width": 92, "height": 92, "color": '#ffe8ebf0' }),
+                          "errorBuilder": "_errorBuilder0",
                           "factory": "network",
                           "src": this.post.img
                         })
@@ -531,6 +531,13 @@ export class _PostCard {
           })
       });
   }
+  _errorBuilder0(context, e) {
+      return __h('Container', {
+        "width": 92,
+        "height": 92,
+        "color": '#ffe8ebf0'
+      });
+  }
 }
 
 // 组件 _ResourceCard
@@ -561,7 +568,7 @@ export class _ResourceCard {
                       "height": 68,
                       "child": __h('Image', {
                           "fit": "cover",
-                          "errorBuilder": (_, e, s) => __h('Container', { "height": 68, "color": '#ffe8ebf0' }),
+                          "errorBuilder": "_errorBuilder0",
                           "factory": "network",
                           "src": this.resource.img
                         })
@@ -603,6 +610,12 @@ export class _ResourceCard {
                 ]
               })
           })
+      });
+  }
+  _errorBuilder0(context, e) {
+      return __h('Container', {
+        "height": 68,
+        "color": '#ffe8ebf0'
       });
   }
 }

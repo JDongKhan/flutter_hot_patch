@@ -153,41 +153,6 @@ export class ListenableBuilder {
   }
 }
 
-export class PageView {
-  constructor(props) {
-    this.props = props || {};
-  }
-  __owner() {
-    var name = this.props.itemBuilder || this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
-  }
-  build(context) {
-    var owner = this.__owner();
-    if (!owner) { return null; }
-    var name = this.props.itemBuilder || this.props.builder;
-    var out = [];
-    // 计数键兼容两种写法：命名构造的 itemCount / delegate 形态的 childCount。
-    var n = this.props.childCount !== undefined
-        ? this.props.childCount
-        : (this.props.itemCount || 0);
-    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
-    var sep = this.props.separatorBuilder;
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, context, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
-    }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
-    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 用 propChildList('__items') 取。
-    var p = {};
-    for (var k in this.props) { p[k] = this.props[k]; }
-    p.__items = out;
-    return __h('PageView', p);
-  }
-}
-
 export class ReorderableListView {
   constructor(props) {
     this.props = props || {};

@@ -33,9 +33,6 @@ const Set<String> builderFormTypes = {
   'SliverGrid',
   'SliverFixedExtentList',
   'SliverFillViewport',
-  // PageView.builder 与上面同一套代理机制；`PageController` 由宿主桥接，
-  // 运行时不需要单独的 PageView 类型特判。
-  'PageView',
 };
 
 /// 「逻辑 widget」类型名：状态/订阅逻辑必须跑在 JS 里的 widget（provider 提供/

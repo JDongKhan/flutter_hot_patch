@@ -525,7 +525,7 @@ class _JsNodeState extends State<_JsNode> {
     // 单值 widget slot：按 Dart 实参原名索引。
     for (final entry in node.propChildIds.entries) {
       final childType = widget.store.nodes[entry.value]?.type ?? '';
-      children[entry.key] = isJsDataCarrierType(childType)
+      children[entry.key] = dataCarrierTypes.contains(childType)
           ? _dataContext(entry.value)
           : _node(entry.value);
     }
@@ -533,7 +533,7 @@ class _JsNodeState extends State<_JsNode> {
     for (final entry in node.propChildLists.entries) {
       final ids = entry.value;
       final isData = ids.any(
-        (id) => isJsDataCarrierType(widget.store.nodes[id]?.type ?? ''),
+        (id) => dataCarrierTypes.contains(widget.store.nodes[id]?.type),
       );
       children[entry.key] = isData
           ? [for (final id in ids) _dataContext(id)]

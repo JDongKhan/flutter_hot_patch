@@ -20,12 +20,12 @@ export class WatchDemo {
               "bottom": 16.0
             },
             "child": __h(ChangeNotifierProvider, {
-                "create": "_create0",
+                "create": CounterVm,
                 "child": __h('Column', {
                     "mainAxisSize": "min",
                     "children": [
                       __h(Builder, {
-                          "builder": "_builder1"
+                          "builder": "_builder0"
                         }),
                       __h('SizedBox', {
                           "height": 12
@@ -38,10 +38,7 @@ export class WatchDemo {
           })
       });
   }
-  _create0(context) {
-      return __h('CounterVm', {});
-  }
-  _builder1(context) {
+  _builder0(context) {
       var model = context.watch("CounterVm");
       return __h('Column', {
         "mainAxisSize": "min",

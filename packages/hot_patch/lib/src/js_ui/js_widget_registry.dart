@@ -5,28 +5,14 @@ import '../utils/hot_patch_log.dart';
 import 'capabilities/js_ui_capabilities.dart';
 
 /// 非 Widget 数据载体类型：它们在产物里也是 element 形态，但宿主 renderer
-/// 只读数据（type/props/children）组装，不能当 Widget 挂载。
-///
-/// 这是一张**可注册表**：内置类型在此登记；业务 / 三方自定义的条目类型
-/// （自定义导航项、下拉项、装饰配置等）在 `runApp` 前调用
-/// [registerJsDataCarrierType] 登记即可，无需改框架代码。
-final Set<String> _dataCarrierTypes = <String>{
+/// 只读数据（type/props/propChildren）组装，不能当 Widget 挂载。
+const Set<String> dataCarrierTypes = {
   'BottomNavigationBarItem',
   'DropdownMenuItem',
   // InputDecoration 是值对象（不是 Widget），TextField renderer 只读它的
   // hintText / labelText 等 props。
   'InputDecoration',
 };
-
-/// 登记一个「非 Widget 数据载体」类型。
-///
-/// 数据载体与 Widget 的区别只在**消费方式**：同为 element 描述，Widget 由宿主
-/// 挂载成子树，数据载体直接以 [JsRenderContext] 交给父 renderer 读字段。
-/// 幂等，重复登记无副作用。
-void registerJsDataCarrierType(String type) => _dataCarrierTypes.add(type);
-
-/// 该类型是否登记为非 Widget 数据载体（类型表驱动，不做类型名硬编码判断）。
-bool isJsDataCarrierType(String type) => _dataCarrierTypes.contains(type);
 
 /// 不需要动宿主；只有引入 Flutter 侧不存在的**视觉** widget 才注册一条。
 class JsRenderContext {
@@ -188,7 +174,7 @@ Widget? buildJsElement(
         if (w != null) widgets.add(w);
         final ctx = _descriptorContext(ch, invoke);
         contexts.add(ctx);
-        if (isJsDataCarrierType(ctx.type)) dataCarrier = true;
+        if (dataCarrierTypes.contains(ctx.type)) dataCarrier = true;
       }
     }
     children[key] = dataCarrier ? contexts : widgets;
@@ -220,10 +206,24 @@ Widget? buildJsElement(
       }
       if (v is Map && v['element'] == true) {
         final ctx = _descriptorContext(v, invoke);
-        children[key] = isJsDataCarrierType(ctx.type)
+        children[key] = dataCarrierTypes.contains(ctx.type)
             ? ctx
             : buildJsElement(v, invoke);
       }
+    }
+  } else if (rawSlots is List) {
+    final items = <Widget>[];
+    for (final ch in rawSlots) {
+      items.add(buildJsElement(ch, invoke) ?? const SizedBox.shrink());
+    }
+    children['__items'] = items;
+  }
+
+  // 旧形状（元素值仍在 props 里）兜底。
+  if (rawSlots is! Map) {
+    for (final e in props.entries) {
+      final w = buildJsElement(e.value, invoke);
+      if (w != null) children[e.key] = w;
     }
   }
 
@@ -283,6 +283,12 @@ JsRenderContext _descriptorContext(
         final w = buildJsElement(v, invoke);
         if (w != null) children[key] = w;
       }
+    }
+  } else {
+    // 旧形状兜底：元素值仍在 props 里。
+    for (final e in props.entries) {
+      final w = buildJsElement(e.value, invoke);
+      if (w != null) children[e.key] = w;
     }
   }
   return JsRenderContext(

@@ -78,7 +78,7 @@ export class MinePage {
                                     "width": 58,
                                     "height": 58,
                                     "fit": "cover",
-                                    "errorBuilder": (_, e, s) => __h('Container', { "width": 58, "height": 58, "color": '#33ffffff' }),
+                                    "errorBuilder": "_errorBuilder0",
                                     "factory": "network",
                                     "src": this._feed.avatar
                                   })
@@ -260,6 +260,13 @@ export class MinePage {
                 })
             })
         ]
+      });
+  }
+  _errorBuilder0(context, e) {
+      return __h('Container', {
+        "width": 58,
+        "height": 58,
+        "color": '#33ffffff'
       });
   }
 }
