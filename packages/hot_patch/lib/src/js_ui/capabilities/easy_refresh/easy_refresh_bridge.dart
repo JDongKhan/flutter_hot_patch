@@ -113,7 +113,7 @@ void registerEasyRefreshWidgets(JsWidgetRegistry r) {
       onLoad: c.props['onLoad'],
       refreshOnStart: c.bool_('refreshOnStart') ?? false,
       // `child:` 统一进 children（生成器的子结点约定）→ 取第一个子结点。
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 }

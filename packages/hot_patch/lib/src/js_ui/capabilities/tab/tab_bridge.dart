@@ -108,9 +108,9 @@ Widget _tabControllerHost(
 void registerTabWidgets(JsWidgetRegistry r) {
   // DefaultTabController：为子树提供 TabController（length 缺省退回子节点数）。
   r.register('DefaultTabController', (c) => DefaultTabController(
-        length: c.int_('length') ?? c.children.length,
+        length: c.int_('length') ?? 1,
         initialIndex: c.int_('initialIndex') ?? 0,
-        child: c.childOrEmpty,
+        child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
       ));
 
   // TabBar：tabs 进 children（Tab 已注册为宿主 widget）。controller 是 JS
@@ -119,7 +119,7 @@ void registerTabWidgets(JsWidgetRegistry r) {
   r.register('TabBar', (c) {
     Widget build(TabController? controller) => TabBar(
           controller: controller,
-          tabs: c.children,
+          tabs: ((c.children['tabs'] as List<Widget>?) ?? const []),
           isScrollable: c.bool_('isScrollable') ?? false,
           padding: nullableEdgeInsets(c.map('padding')),
           indicatorColor: colorFromJson(c.props['indicatorColor']),
@@ -144,9 +144,9 @@ void registerTabWidgets(JsWidgetRegistry r) {
   // Tab：child 优先，其次 icon+text，最后 text（三者至少其一，生成器已保证）。
   r.register('Tab', (c) {
     // `child:` 是子结点参数 → 进 children；props 里的 child 兜底兼容。
-    final child = c.child() ?? c.propChild('child');
+    final child = (c.children['child'] as Widget?);
     if (child != null) return Tab(child: child);
-    final icon = c.propChild('icon');
+    final icon = (c.children['icon'] as Widget?);
     final text = c.str('text');
     if (icon != null) return Tab(icon: icon, text: text);
     return Tab(text: text);
@@ -159,7 +159,7 @@ void registerTabWidgets(JsWidgetRegistry r) {
           controller: controller,
           physics: scrollPhysicsFromJson(c.props['physics']),
           viewportFraction: c.num_('viewportFraction') ?? 1.0,
-          children: c.children,
+          children: ((c.children['children'] as List<Widget>?) ?? const []),
         );
     final handle = tabControllerHandleOf(c.props['controller']);
     if (handle == null) return build(null);

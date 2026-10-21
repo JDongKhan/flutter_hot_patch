@@ -61,50 +61,55 @@ class WidgetModuleBuilder implements Builder {
   }
 }
 
-/// 共享结点工厂源码：`export function __h(type, props, children)`，把翻译层
-/// 按原名下发的 props 拆成 `{type, props, children}` 元素描述（与 JSON 字面量
-/// 树同形状）。它是 [nodeHelperPackage] 包模块的一部分，全局只有这一处定义。
+/// 共享结点工厂源码：`export function __h(type, props)`，把翻译层按原名下发的
+/// props 拆成 `{type, props, children, element}`：
 ///
-/// 拆分规则**按元素 type 区分**（不看 Dart 实参名是否等于某个 widget 的语义）：
-///   - `type` 是字符串（宿主 widget）：把标准结构键 `child` / `children` /
-///     `sliver` / `slivers` / `tabs` 抽成 `element.children`，并从下发给宿主的
-///     props 中剥离——子树只走 children 通道，不重复塞进 props JSON；
-///   - `type` 是函数（JS 组件类）：props **原样保留**，`child` / `children` /
-///     `content` 等构造参数都能被 `__applyProps` 派生；children 只作为构造
-///     第二参的兼容值（包模块的 `this.children`）。
-/// 具名插槽（`body` / `title` / `leading` / `actions` …）不是结构键，一律留在
-/// props，由运行时 `propsChild` 挂载、宿主 renderer 用 `propChild` 读取。
+///   - 每个元素对象都带 **`element: true`** 标记（`__h` 统一加）——这是唯一
+///     可靠的 widget 判据，不再靠 `{type, props}` 形状猜测；
+///   - 值是元素（`element === true`）或「元素数组」→ 移入 `children` 对象，
+///     key 与 props 原名**完全一致**（`child` / `content` / `top` / `body` /
+///     `items` 走同一条路径，不再有固定键表）；
+///   - `delegate` 产物（`{__delegate:'list'|'builder', …}`）也移入 `children`，
+///     **不参与 props**；运行时按 `__delegate` 形态消费；
+///   - `ListView.builder` 展开结果走内部键 `__items`（同样进 children）；
+///   - 其余值留在 `props`；
+///   - `type` 是函数（JS 组件类）时 props **原样保留**——`__applyProps` 靠它
+///     派生构造参数字段。JS 组件内部 build 再调用 `__h('X', props)` 时，
+///     宿主类型才做拆分。
 const String jsNodeHelperSource = '''
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
-// 翻译层把 Dart 实参按原名放进 props；这里按元素 type 拆分结构子结点。
-const __STRUCTURAL_CHILD_KEYS = ['child', 'children', 'sliver', 'slivers', 'tabs'];
-export function __h(type, props, children) {
+// 元素对象统一由本函数产出，带 element: true 标记；props 值是否是 widget
+// 只看这个标记，不做形状猜测。
+function __isElement(v) {
+  return v != null && typeof v === 'object' && v.element === true;
+}
+function __isElementList(v) {
+  if (!Array.isArray(v) || v.length === 0) { return false; }
+  for (var i = 0; i < v.length; i++) {
+    if (v[i] != null && !__isElement(v[i])) { return false; }
+  }
+  return true;
+}
+export function __h(type, props) {
   var p = props || {};
-  var ch = children;
-  if (ch == null) {
-    ch = [];
-    for (var i = 0; i < __STRUCTURAL_CHILD_KEYS.length; i++) {
-      var v = p[__STRUCTURAL_CHILD_KEYS[i]];
-      if (v == null) { continue; }
-      if (Array.isArray(v)) {
-        for (var j = 0; j < v.length; j++) { ch.push(v[j]); }
-      } else {
-        ch.push(v);
-      }
-    }
-  } else if (!Array.isArray(ch)) {
-    ch = [ch];
+  // JS 组件类：props 原样保留，__applyProps 靠它派生构造参数字段。
+  if (typeof type !== 'string') {
+    return { type: type, props: p, children: {}, element: true };
   }
-  // 宿主 widget：结构子结点不进 props（children 通道已承载完整子树）。
-  // JS 组件类：props 必须保留，__applyProps 靠它派生构造参数字段。
-  if (typeof type === 'string') {
-    var q = {};
-    for (var k in p) {
-      if (__STRUCTURAL_CHILD_KEYS.indexOf(k) < 0) { q[k] = p[k]; }
+  var data = {}, slots = {};
+  for (var k in p) {
+    if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
+    var v = p[k];
+    if (__isElement(v)) { slots[k] = v; continue; }
+    if (__isElementList(v)) { slots[k] = v; continue; }
+    // delegate 两种形态都进 children，不参与 props。
+    if (v != null && typeof v === 'object' && v.__delegate) {
+      slots[k] = v;
+      continue;
     }
-    p = q;
+    data[k] = v;
   }
-  return { type: type, props: p, children: ch };
+  return { type: type, props: data, children: slots, element: true };
 }''';
 
 /// builder/factory 形态（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
@@ -127,9 +132,8 @@ export function __h(type, props, children) {
 String builderProxySource(String type) {
   return '''
 export class $type {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.itemBuilder || this.props.builder;
@@ -152,9 +156,13 @@ export class $type {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
-    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
-    return __h('$type', this.props, out);
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
+    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    var p = {};
+    for (var k in this.props) { p[k] = this.props[k]; }
+    p.__items = out;
+    return __h('$type', p);
   }
 }''';
 }
@@ -183,9 +191,8 @@ const Map<String, String> logicWidgetSources = {
 /// 与 Dart 侧 `Builder(builder: (context) => …)` 的形参一致）。
 const String jsBuilderComponent = '''
 export class Builder {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   build(context) {
     var name = this.props.builder;
@@ -206,9 +213,8 @@ export class Builder {
 /// 模型真实对象只存在于 JS 端：`notifier` 走句柄（`{__handle:id}`）下发。
 const String jsChangeNotifierProviderComponent = '''
 export class ChangeNotifierProvider {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   initState() {
     var p = this.props;
@@ -224,11 +230,11 @@ export class ChangeNotifierProvider {
     this.__ownsValue = owns;
   }
   build() {
-    // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；
-    // 被 MultiProvider 包裹时由 `__h(type, props, [node])` 放进 children。
-    var child = this.props.child != null ? this.props.child
-        : (this.children.length ? this.children[0] : null);
-    return __h('ChangeNotifierProvider', { model: this.props.model, notifier: this.__value }, [child]);
+    return __h('ChangeNotifierProvider', {
+      model: this.props.model,
+      notifier: this.__value,
+      child: this.props.child
+    });
   }
   dispose() {
     if (this.__ownsValue && this.__value &&
@@ -242,20 +248,17 @@ export class ChangeNotifierProvider {
 /// providers[0] 最外层，最后一个最内层（离 child 最近），与原生一致。
 const String jsMultiProviderComponent = '''
 export class MultiProvider {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   build() {
     var provs = this.props.providers || [];
-    // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；
-    // 作为普通元素挂载时子结点在 `children[0]`（生成器把 MultiProvider 的
-    // `child:` 翻译成元素 children）。漏掉后者会把 providers 包在 undefined
-    // 外面，整段子树静默消失（Card 只剩空壳，控制台无异常）。
-    var node = this.props.child != null ? this.props.child
-        : (this.children.length ? this.children[0] : null);
+    var node = this.props.child;
     for (var i = provs.length - 1; i >= 0; i--) {
-      node = __h(provs[i].type, provs[i].props, [node]);
+      var p = {};
+      for (var k in provs[i].props) { p[k] = provs[i].props[k]; }
+      p.child = node;
+      node = __h(provs[i].type, p);
     }
     return node;
   }
@@ -271,9 +274,8 @@ export class MultiProvider {
 /// 监听边界（`Consumer` 宿主结点），使 Dart 侧的 provider 子树也能刷新（P2）。
 const String jsConsumerComponent = '''
 export class Consumer {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   build(context) {
     var notifier = context.watch(this.props.model);
@@ -282,7 +284,11 @@ export class Consumer {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
     var child = owner[name].call(owner, context, notifier);
-    return __h('Consumer', { model: this.props.model, notifier: notifier }, [child]);
+    return __h('Consumer', {
+      model: this.props.model,
+      notifier: notifier,
+      child: child
+    });
   }
 }''';
 
@@ -293,9 +299,8 @@ export class Consumer {
 /// 只提供 Dart 侧边界。
 const String jsListenableBuilderComponent = '''
 export class ListenableBuilder {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.builder;
@@ -316,7 +321,7 @@ export class ListenableBuilder {
     var owner = this.__owner();
     if (!owner) { return null; }
     var child = owner[this.props.builder].call(owner, context);
-    return __h('ListenableBuilder', { notifier: this.props.listenable }, [child]);
+    return __h('ListenableBuilder', { notifier: this.props.listenable, child: child });
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -334,9 +339,8 @@ export class ListenableBuilder {
 /// `notifier/ChangeNotifier`），故 `addListener` / 宿主映射与 ListenableBuilder 同一套。
 const String jsValueListenableBuilderComponent = '''
 export class ValueListenableBuilder {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.builder;
@@ -359,7 +363,7 @@ export class ValueListenableBuilder {
     var l = this.props.listenable;
     var value = (l && l.value !== undefined) ? l.value : null;
     var child = owner[this.props.builder].call(owner, context, value);
-    return __h('ValueListenableBuilder', { notifier: l }, [child]);
+    return __h('ValueListenableBuilder', { notifier: l, child: child });
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -372,7 +376,7 @@ export class ValueListenableBuilder {
 /// （逻辑组件：provider 状态处理 / Builder 委托；sliver builder 代理）。
 ///
 /// 宿主 widget（Text/Column/...）**不产出任何代码**：它们的元素 type 就是类型名
-/// 字符串（`__h('Text', {...}, [...])`），由宿主注册表映射成 Flutter widget；
+/// 字符串（`__h('Text', {...})`），由宿主注册表映射成 Flutter widget；
 /// 本模块只在有 JS 逻辑时才有存在意义。
 ///
 /// 一个 package 一个文件（文件名即包名）。共用元素工厂 `__h` 只在其宿主包

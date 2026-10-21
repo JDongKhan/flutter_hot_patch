@@ -517,55 +517,71 @@ class _JsNodeState extends State<_JsNode> {
     registerJsBuildContext(widget.id, context, widget.pageKey, type: node.type);
     _anchorIds.add(widget.id);
 
-    final children = <Widget>[];
-    final childTypes = <String>[];
-    final childContexts = <JsRenderContext>[];
-    for (final childId in node.childIds) {
-      final childNode = widget.store.nodes[childId];
-      final childType = childNode?.type ?? '';
-      childTypes.add(childType);
-      children.add(_node(childId));
-      // 数据载体型子结点（BottomNavigationBarItem / DropdownMenuItem 等
-      // 非 Widget 类型）：父 renderer 直接读其 props/propChildren 组装。
-      childContexts.add(
-        JsRenderContext(
-          type: childType,
-          props: childNode?.props ?? const {},
-          children: const [],
-          childTypes: const [],
-          childContexts: const [],
-          propChildren: {
-            for (final e
-                in childNode?.propChildIds.entries ??
-                    const <MapEntry<String, String>>[])
-              e.key: _node(e.value),
-          },
-          invoke: widget.invoke,
-        ),
-      );
+    final children = <String, Object?>{};
+    // builder 展开结果（内部键 __items）：有序 widget 列表。
+    if (node.childIds.isNotEmpty) {
+      children['__items'] = [for (final id in node.childIds) _node(id)];
     }
-
-    final propChildren = <String, Widget>{};
+    // 单值 widget slot：按 Dart 实参原名索引。
     for (final entry in node.propChildIds.entries) {
-      propChildren[entry.key] = _node(entry.value);
+      final childType = widget.store.nodes[entry.value]?.type ?? '';
+      children[entry.key] = dataCarrierTypes.contains(childType)
+          ? _dataContext(entry.value)
+          : _node(entry.value);
+    }
+    // 数组 widget slot；数据载体数组给数据上下文，不构建 Widget。
+    for (final entry in node.propChildLists.entries) {
+      final ids = entry.value;
+      final isData = ids.any(
+        (id) => dataCarrierTypes.contains(widget.store.nodes[id]?.type),
+      );
+      children[entry.key] = isData
+          ? [for (final id in ids) _dataContext(id)]
+          : [for (final id in ids) _node(id)];
+    }
+    // delegate 等非 Widget slot 描述。
+    for (final entry in node.propData.entries) {
+      children[entry.key] = entry.value;
     }
 
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
     // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
     final builder =
         jsWidgetRegistry.lookup(node.type) ?? jsWidgetRegistry.fallback;
-    if (builder == null) return buildMissingJsWidget(node.type, children);
+    final items = (children['__items'] as List<Widget>?) ?? const <Widget>[];
+    if (builder == null) return buildMissingJsWidget(node.type, items);
 
     return builder(
       JsRenderContext(
         type: node.type,
         props: node.props,
         children: children,
-        childTypes: childTypes,
-        childContexts: childContexts,
-        propChildren: propChildren,
         invoke: widget.invoke,
       ),
+    );
+  }
+
+  /// 子结点数据上下文：只含 type/props/children，不构建 Widget。
+  /// 供数据载体（items 等）由父 renderer 直接读数据组装。
+  JsRenderContext _dataContext(String id) {
+    final n = widget.store.nodes[id];
+    final children = <String, Object?>{};
+    for (final entry in n?.propChildIds.entries ??
+        const <MapEntry<String, String>>[]) {
+      children[entry.key] = _node(entry.value);
+    }
+    for (final entry in n?.propChildLists.entries ??
+        const <MapEntry<String, List<String>>>[]) {
+      children[entry.key] = [for (final c in entry.value) _node(c)];
+    }
+    for (final entry in n?.propData.entries ?? const <MapEntry<String, dynamic>>[]) {
+      children[entry.key] = entry.value;
+    }
+    return JsRenderContext(
+      type: n?.type ?? '',
+      props: n?.props ?? const {},
+      children: children,
+      invoke: widget.invoke,
     );
   }
 

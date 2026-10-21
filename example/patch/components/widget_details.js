@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { GridView, ListView, ListenableBuilder, ReorderableListView, SliverFixedExtentList, SliverGrid, SliverList, __h } from '../flutter.js';
+import { GridView, ListView, ListenableBuilder, ReorderableListView, SliverGrid, SliverList, __h } from '../flutter.js';
 
 // 组件 TextDetail
 export class TextDetail {
@@ -1033,9 +1033,12 @@ export class SliverDetail {
                     "bottom": 0.0
                   },
                   "sliver": __h('SliverList', {
-                      "children": [
-                        ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "leading": __h('Icon', { "color": '#673AB7', "icon": "list" }), "title": __h('Text', { "data": "SliverList item " + i }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
-                      ]
+                      "delegate": {
+                        "__delegate": "list",
+                        "children": [
+                          ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "leading": __h('Icon', { "color": '#673AB7', "icon": "list" }), "title": __h('Text', { "data": "SliverList item " + i }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
+                        ]
+                      }
                     })
                 }),
               __h('SliverPadding', {
@@ -1138,10 +1141,13 @@ export class SliverDetail {
                     "right": 12.0,
                     "bottom": 0.0
                   },
-                  "sliver": __h(SliverFixedExtentList, {
+                  "sliver": __h('SliverFixedExtentList', {
                       "itemExtent": 44,
-                      "builder": "_builder3",
-                      "childCount": 6
+                      "delegate": {
+                        "__delegate": "builder",
+                        "builder": "_builder3",
+                        "childCount": 6
+                      }
                     })
                 }),
               __h('SliverPadding', {
@@ -2613,7 +2619,7 @@ export class KeyDetail {
                     __h('TextButton', {
                         "onPressed": this.__bindFn(4, [], (...__a) => this._flipStore(...__a)),
                         "child": __h('Text', {
-                            "data": (this._storeA ? "切到 B 列表" : "切回 A 列表")
+                            "data": this._storeA ? "切到 B 列表" : "切回 A 列表"
                           })
                       })
                   ]
@@ -2888,7 +2894,7 @@ export class DrawerDetail {
                       "height": 8
                     }),
                   __h('Text', {
-                      "data": ((this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked)
+                      "data": (this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked
                     })
                 ]
               })

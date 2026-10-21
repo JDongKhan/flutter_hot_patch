@@ -6,9 +6,8 @@ import { __h } from 'flutter.js';
 
 
 export class ChangeNotifierProvider {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   initState() {
     var p = this.props;
@@ -24,11 +23,11 @@ export class ChangeNotifierProvider {
     this.__ownsValue = owns;
   }
   build() {
-    // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；
-    // 被 MultiProvider 包裹时由 `__h(type, props, [node])` 放进 children。
-    var child = this.props.child != null ? this.props.child
-        : (this.children.length ? this.children[0] : null);
-    return __h('ChangeNotifierProvider', { model: this.props.model, notifier: this.__value }, [child]);
+    return __h('ChangeNotifierProvider', {
+      model: this.props.model,
+      notifier: this.__value,
+      child: this.props.child
+    });
   }
   dispose() {
     if (this.__ownsValue && this.__value &&
@@ -39,9 +38,8 @@ export class ChangeNotifierProvider {
 }
 
 export class Consumer {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   build(context) {
     var notifier = context.watch(this.props.model);
@@ -50,25 +48,26 @@ export class Consumer {
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
     if (!owner) { return null; }
     var child = owner[name].call(owner, context, notifier);
-    return __h('Consumer', { model: this.props.model, notifier: notifier }, [child]);
+    return __h('Consumer', {
+      model: this.props.model,
+      notifier: notifier,
+      child: child
+    });
   }
 }
 
 export class MultiProvider {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   build() {
     var provs = this.props.providers || [];
-    // child 两种传入方式：直接使用时是 `props.child`（命名参数翻译成 prop）；
-    // 作为普通元素挂载时子结点在 `children[0]`（生成器把 MultiProvider 的
-    // `child:` 翻译成元素 children）。漏掉后者会把 providers 包在 undefined
-    // 外面，整段子树静默消失（Card 只剩空壳，控制台无异常）。
-    var node = this.props.child != null ? this.props.child
-        : (this.children.length ? this.children[0] : null);
+    var node = this.props.child;
     for (var i = provs.length - 1; i >= 0; i--) {
-      node = __h(provs[i].type, provs[i].props, [node]);
+      var p = {};
+      for (var k in provs[i].props) { p[k] = provs[i].props[k]; }
+      p.child = node;
+      node = __h(provs[i].type, p);
     }
     return node;
   }

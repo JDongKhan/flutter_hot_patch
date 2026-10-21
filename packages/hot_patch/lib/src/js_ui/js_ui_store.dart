@@ -13,9 +13,17 @@ class JsUiNode {
   Map<String, dynamic> props;
   final List<String> childIds = [];
 
-  /// 值为 element 的 props（如 ListTile.leading / ClipRRect.child）：
+  /// 值为 element 的 props（如 ListTile.leading / Scaffold.body）：
   /// prop 名 -> 子结点 id。宿主据此把对应 prop 渲染成 widget。
   final Map<String, String> propChildIds = {};
+
+  /// 值为 element 数组的 props（如 AppBar.actions / ListView.children）：
+  /// prop 名 -> 子结点 id 列表。
+  final Map<String, List<String>> propChildLists = {};
+
+  /// delegate 等非 Widget 的 slot 描述（如 SliverChildBuilderDelegate 的
+  /// `{__delegate:'builder', builder, childCount}`）：prop 名 -> 原始值。
+  final Map<String, dynamic> propData = {};
 }
 
 /// 结点仓库 + 补丁应用器。
@@ -107,6 +115,33 @@ class JsUiStore {
           final removed = parent.propChildIds.remove(key);
           if (removed != null) _parents?.remove(removed);
           touched.add(raw['parent'] as String);
+        case 'propsChildren':
+          final parent = nodes[raw['parent']];
+          final key = raw['key'] as String?;
+          if (parent == null || key == null) break;
+          final ids = <String>[
+            for (final id in (raw['childIds'] as List? ?? const [])) '$id',
+          ];
+          for (final old in parent.propChildLists[key] ?? const <String>[]) {
+            _parents?.remove(old);
+          }
+          parent.propChildLists[key] = ids;
+          for (final id in ids) {
+            _parents?[id] = raw['parent'] as String;
+          }
+          touched.add(raw['parent'] as String);
+        case 'propsData':
+          final parent = nodes[raw['parent']];
+          final key = raw['key'] as String?;
+          if (parent == null || key == null) break;
+          parent.propData[key] = raw['value'];
+          touched.add(raw['parent'] as String);
+        case 'propsDataRemove':
+          final parent = nodes[raw['parent']];
+          final key = raw['key'] as String?;
+          if (parent == null || key == null) break;
+          parent.propData.remove(key);
+          touched.add(raw['parent'] as String);
         case 'remove':
           final id = raw['id'] as String?;
           if (id == null) break;
@@ -121,7 +156,10 @@ class JsUiStore {
             else
               for (final entry in nodes.entries)
                 if (entry.value.childIds.contains(id) ||
-                    entry.value.propChildIds.containsValue(id))
+                    entry.value.propChildIds.containsValue(id) ||
+                    entry.value.propChildLists.values.any(
+                      (ids) => ids.contains(id),
+                    ))
                   entry.key,
           ];
           _unlink(id);
@@ -152,6 +190,11 @@ class JsUiStore {
           built[c] = e.key;
         }
         e.value.propChildIds.forEach((_, c) => built[c] = e.key);
+        for (final ids in e.value.propChildLists.values) {
+          for (final c in ids) {
+            built[c] = e.key;
+          }
+        }
       }
       _parents = built;
     } else if (idx != null && nodes.length < _parentIndexThreshold) {
@@ -177,12 +220,18 @@ class JsUiStore {
       if (parent != null) {
         parent.childIds.remove(id);
         parent.propChildIds.removeWhere((_, childId) => childId == id);
+        for (final ids in parent.propChildLists.values) {
+          ids.remove(id);
+        }
       }
       return;
     }
     for (final node in nodes.values) {
       node.childIds.remove(id);
       node.propChildIds.removeWhere((_, childId) => childId == id);
+      for (final ids in node.propChildLists.values) {
+        ids.remove(id);
+      }
     }
   }
 
@@ -193,6 +242,11 @@ class JsUiStore {
     }
     for (final child in node?.propChildIds.values ?? const <String>[]) {
       _removeSubtree(child);
+    }
+    for (final ids in node?.propChildLists.values ?? const <List<String>>[]) {
+      for (final child in ids) {
+        _removeSubtree(child);
+      }
     }
     _parents?.remove(id);
     nodes.remove(id);

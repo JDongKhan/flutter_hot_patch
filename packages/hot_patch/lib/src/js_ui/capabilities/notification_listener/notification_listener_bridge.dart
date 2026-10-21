@@ -77,7 +77,7 @@ void registerNotificationWidgets(JsWidgetRegistry r) {
     (c) => _NotificationListener(
       onNotification: c.props['onNotification'],
       invoke: c.invoke,
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 }

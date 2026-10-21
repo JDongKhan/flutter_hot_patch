@@ -7,7 +7,7 @@ import { HomeFeed } from '../model/app_models.js';
 import { HomeBanner } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
-import { SliverGrid, __h } from '../../flutter.js';
+import { __h } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {
@@ -172,15 +172,18 @@ export class HomePage {
                         "right": 12.0,
                         "bottom": 0.0
                       },
-                      "sliver": __h(SliverGrid, {
+                      "sliver": __h('SliverGrid', {
                           "gridDelegate": {
                             "maxCrossAxisExtent": 300,
                             "mainAxisSpacing": 10,
                             "crossAxisSpacing": 10,
                             "mainAxisExtent": 190
                           },
-                          "builder": "_builder0",
-                          "childCount": this._feed.spots.length
+                          "delegate": {
+                            "__delegate": "builder",
+                            "builder": "_builder0",
+                            "childCount": this._feed.spots.length
+                          }
                         })
                     }),
                   __h('SliverToBoxAdapter', {

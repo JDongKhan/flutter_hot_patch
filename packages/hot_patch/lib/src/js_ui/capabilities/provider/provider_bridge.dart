@@ -82,7 +82,7 @@ void registerProviderWidgets(JsWidgetRegistry r) {
   // 提供者结点：JS 已把 create/value 解析成模型实例，宿主只做映射。
   // 句柄取不到（JS 侧未登记/已释放）时退化为纯透传，不阻断渲染。
   r.register('ChangeNotifierProvider', (c) {
-    final child = c.child() ?? const SizedBox.shrink();
+    final child = (c.children['child'] as Widget?) ?? const SizedBox.shrink();
     final notifier = jsChangeNotifierOfProp(c.props['notifier']);
     if (notifier == null) return child;
     return JsChangeNotifierProvider(notifier: notifier, child: child);

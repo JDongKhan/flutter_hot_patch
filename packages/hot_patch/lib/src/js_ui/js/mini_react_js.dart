@@ -353,17 +353,24 @@ const String miniReactReconcilerSource = r'''
     SliverFixedExtentList: 1, SliverFillViewport: 1
   };
   function expandBuilderChildren(el, parent) {
-    var kids = el.children || [];
-    if (kids.length || !builderHostTypes[el.type]) { return kids; }
+    if (!builderHostTypes[el.type]) { return []; }
+    // 代理类（生成的 builder 组件）已把展开结果写进内部键 __items，
+    // 由 __h 归入 children 对象；有就直接用，不再重复展开。
+    var slots = el.children || {};
+    var pre = slots.__items;
+    if (Array.isArray(pre) && pre.length) { return pre; }
     var p = el.props || {};
-    var name = p.itemBuilder || p.builder;
-    if (typeof name !== 'string') { return kids; }
+    var del = slots.delegate;
+    var delBuilder = (del && del.__delegate === 'builder') ? del.builder : null;
+    var name = p.itemBuilder || p.builder || delBuilder;
+    if (typeof name !== 'string') { return []; }
     var n = p.itemCount !== undefined ? p.itemCount
-        : (p.childCount !== undefined ? p.childCount : 0);
-    if (typeof n !== 'number' || n <= 0) { return kids; }
+        : (p.childCount !== undefined ? p.childCount
+        : (del && del.childCount !== undefined ? del.childCount : 0));
+    if (typeof n !== 'number' || n <= 0) { return []; }
     var owner = parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    if (!owner) { return kids; }
+    if (!owner) { return []; }
     var sep = p.separatorBuilder;
     // 传给 builder 的 `context` 形参 = 拥有者组件的代理（它是**构建单位**：有
     // build 方法、能被订阅标脏重建；宿主结点不是构建单位，不能当订阅锚点）。
@@ -505,10 +512,12 @@ const String miniReactReconcilerSource = r'''
             : mount(cel, hi, { hostParentId: hi.__id, index: idx });
         if (c) { hi.__children.push(c); idx += 1; }
       }
-      // 值为 element 的 props（如 Scaffold.body / AppBar.title）：单独挂载，
-      // 不入 children 列表，另发 propsChild 让宿主挂到对应 prop 上。
+      // props 里的 widget（单值 / 数组）与 delegate：单独挂载，不入 flatten
+      // 列表，各自按 prop 名缓存（Scaffold.body / AppBar.actions 等）。
       hi.__propsChildren = {};
-      mountPropChildren(hi, null, el.props || {});
+      hi.__propsChildrenList = {};
+      hi.__propsData = {};
+      patchPropSlots(hi, el.children || {});
       return hi;
     }
 
@@ -573,7 +582,7 @@ const String miniReactReconcilerSource = r'''
       // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
       applyScope(oldInst, el.props);
       patchChildren(oldInst, expandBuilderChildren(el, oldInst));
-      mountPropChildren(oldInst, oldProps, el.props || {});
+      patchPropSlots(oldInst, el.children || {});
       return oldInst;
     }
 
@@ -584,7 +593,6 @@ const String miniReactReconcilerSource = r'''
     var oldWidget = oldInst.props;
     oldInst.__el = el;
     oldInst.props = el.props;
-    oldInst.children = el.children;
     // props 变更 → 重新派生「构造参数字段」。生成器产物把 `this.x = args.x` 的
     // 参数↔字段映射放在 `__applyProps` 里；复用实例不会重跑构造函数，若不在此
     // 同步一次，子组件会一直拿着旧 props 派生的字段（如列表项不随排序刷新）。
@@ -666,32 +674,127 @@ const String miniReactReconcilerSource = r'''
     parentHost.__children = next;
   }
 
-  // 值为 element 的 props：新旧对比后复用/新建/移除，逐个下发 propsChild op。
+  // props 里的 slot：值可能是单个元素、元素数组，或 delegate 描述
+  // （`{__delegate:'list'|'builder', …}`）。元素判据是 __h 统一加的
+  // `element: true` 标记，不做 `{type, props}` 形状猜测。
   function isElement(v) {
-    return v != null && typeof v === 'object' && v.type != null;
+    return v != null && typeof v === 'object' && v.element === true;
+  }
+  function isElementList(v) {
+    if (!Array.isArray(v) || v.length === 0) { return false; }
+    for (var i = 0; i < v.length; i++) {
+      if (v[i] != null && !isElement(v[i])) { return false; }
+    }
+    return true;
   }
 
-  function mountPropChildren(hostInst, oldProps, newProps) {
-    var old = hostInst.__propsChildren || {};
-    var next = {};
-    for (var k in newProps) {
-      var pv = newProps[k];
-      if (!isElement(pv)) { continue; }
-      var prev = old[k] || null;
-      var inst = patch(prev, pv, hostInst, null);
-      if (!inst) { continue; }
-      next[k] = inst;
-      if (!prev) {
-        emit({ op: 'propsChild', parent: hostInst.__id, key: k, childId: hostIdOf(inst) });
+  // 列表型 slot 的 keyed diff：复用已有实例，新键挂载，缺失卸载。
+  // 不向宿主发 insert/move（宿主按 propsChildren 整表替换）。
+  function patchSlotList(parentHost, oldList, newEls) {
+    var remaining = oldList.slice();
+    var keyedOld = {};
+    var i, j;
+    for (i = 0; i < oldList.length; i++) {
+      var k = keySig(keyOf(oldList[i]));
+      if (k != null) { keyedOld[k] = oldList[i]; }
+    }
+    var next = [];
+    for (j = 0; j < newEls.length; j++) {
+      var el = newEls[j];
+      if (el == null || el === false) { continue; }
+      var ek = keySig(el.props ? el.props.key : null);
+      var matched = null;
+      if (ek != null && keyedOld[ek]) {
+        matched = keyedOld[ek];
+        keyedOld[ek] = null;
+      } else if (ek == null) {
+        for (i = 0; i < remaining.length; i++) {
+          if (remaining[i] && keySig(keyOf(remaining[i])) == null) {
+            matched = remaining[i];
+            break;
+          }
+        }
+      }
+      if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
+      var inst = patch(matched, el, parentHost, null);
+      if (inst) { next.push(inst); }
+    }
+    for (i = 0; i < remaining.length; i++) {
+      if (remaining[i]) { unmount(remaining[i]); }
+    }
+    return next;
+  }
+
+  function patchPropSlots(hostInst, newSlots) {
+    var oldS = hostInst.__propsChildren || {};
+    var oldL = hostInst.__propsChildrenList || {};
+    var oldD = hostInst.__propsData || {};
+    var nextS = {}, nextL = {}, nextD = {};
+    var i, k;
+    for (k in newSlots) {
+      if (k === '__items') { continue; }
+      if (!Object.prototype.hasOwnProperty.call(newSlots, k)) { continue; }
+      var v = newSlots[k];
+      if (isElement(v)) {
+        var prev = oldS[k] || null;
+        var inst = patch(prev, v, hostInst, null);
+        if (inst) {
+          nextS[k] = inst;
+          emit({ op: 'propsChild', parent: hostInst.__id, key: k, childId: hostIdOf(inst) });
+        }
+        if (oldL[k]) {
+          for (i = 0; i < oldL[k].length; i++) { unmount(oldL[k][i]); }
+          emit({ op: 'propsChildren', parent: hostInst.__id, key: k, childIds: [] });
+        }
+        if (oldD[k]) { emit({ op: 'propsDataRemove', parent: hostInst.__id, key: k }); }
+        continue;
+      }
+      if (isElementList(v)) {
+        var arr = patchSlotList(hostInst, oldL[k] || [], v);
+        nextL[k] = arr;
+        emit({
+          op: 'propsChildren', parent: hostInst.__id, key: k,
+          childIds: arr.map(hostIdOf)
+        });
+        if (oldS[k]) { unmount(oldS[k]); emit({ op: 'propsChildRemove', parent: hostInst.__id, key: k }); }
+        if (oldD[k]) { emit({ op: 'propsDataRemove', parent: hostInst.__id, key: k }); }
+        continue;
+      }
+      if (v != null && typeof v === 'object' && v.__delegate) {
+        if (v.__delegate === 'list') {
+          var arr2 = patchSlotList(hostInst, oldL[k] || [], v.children || []);
+          nextL[k] = arr2;
+          emit({
+            op: 'propsChildren', parent: hostInst.__id, key: k,
+            childIds: arr2.map(hostIdOf)
+          });
+          nextD[k] = { __delegate: 'list' };
+        } else {
+          nextD[k] = v;
+          emit({ op: 'propsData', parent: hostInst.__id, key: k, value: v });
+        }
+        if (oldS[k]) { unmount(oldS[k]); emit({ op: 'propsChildRemove', parent: hostInst.__id, key: k }); }
+        continue;
       }
     }
-    for (var k2 in old) {
-      if (!Object.prototype.hasOwnProperty.call(next, k2)) {
-        unmount(old[k2]);
-        emit({ op: 'propsChildRemove', parent: hostInst.__id, key: k2 });
+    for (k in oldS) {
+      if (!nextS[k]) {
+        unmount(oldS[k]);
+        emit({ op: 'propsChildRemove', parent: hostInst.__id, key: k });
       }
     }
-    hostInst.__propsChildren = next;
+    for (k in oldL) {
+      if (!nextL[k]) {
+        for (i = 0; i < oldL[k].length; i++) { unmount(oldL[k][i]); }
+        emit({ op: 'propsChildren', parent: hostInst.__id, key: k, childIds: [] });
+      }
+    }
+    for (k in oldD) {
+      if (!nextD[k]) { emit({ op: 'propsDataRemove', parent: hostInst.__id, key: k }); }
+    }
+    hostInst.__propsChildren = nextS;
+    hostInst.__propsChildrenList = nextL;
+    hostInst.__propsData = nextD;
   }
 
   function unmount(inst) {
@@ -709,6 +812,12 @@ const String miniReactReconcilerSource = r'''
       for (var i = 0; i < inst.__children.length; i++) { markUnmounted(inst.__children[i]); }
       var pcs = inst.__propsChildren;
       if (pcs) { for (var pk in pcs) { markUnmounted(pcs[pk]); } }
+      var pcl = inst.__propsChildrenList;
+      if (pcl) {
+        for (var lk in pcl) {
+          for (var li = 0; li < pcl[lk].length; li++) { markUnmounted(pcl[lk][li]); }
+        }
+      }
     } else {
       // 与 Flutter 一致：从树上摘除时先 deactivate、再最终 dispose。
       // 生命周期期间把构建锚点指向本实例（`this.context` / 新建句柄归属）。

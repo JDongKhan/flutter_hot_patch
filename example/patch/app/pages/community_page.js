@@ -166,7 +166,7 @@ export class CommunityPage {
                                     }),
                                   __h('Icon', {
                                       "size": 14,
-                                      "color": (this._filterOpen ? kBrand : '#ff5c6270'),
+                                      "color": this._filterOpen ? kBrand : '#ff5c6270',
                                       "icon": "tune"
                                     })
                                 ]
@@ -178,7 +178,7 @@ export class CommunityPage {
             }),
           ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
           __h('Expanded', {
-              "child": ((this._posts == null) ? __h('Center', { "child": __h('CircularProgressIndicator', {}) }) : __h(_ListContent, { "resetFilter": this._resetFilter, "openFilter": this._filterOpen, "toggleFilter": this._toggleFilter, "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) }))
+              "child": (this._posts == null) ? __h('Center', { "child": __h('CircularProgressIndicator', {}) }) : __h(_ListContent, { "resetFilter": this._resetFilter, "openFilter": this._filterOpen, "toggleFilter": this._toggleFilter, "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) })
             })
         ]
       });

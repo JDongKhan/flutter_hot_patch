@@ -3,42 +3,44 @@
 // 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件
 
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
-// 翻译层把 Dart 实参按原名放进 props；这里按元素 type 拆分结构子结点。
-const __STRUCTURAL_CHILD_KEYS = ['child', 'children', 'sliver', 'slivers', 'tabs'];
-export function __h(type, props, children) {
+// 元素对象统一由本函数产出，带 element: true 标记；props 值是否是 widget
+// 只看这个标记，不做形状猜测。
+function __isElement(v) {
+  return v != null && typeof v === 'object' && v.element === true;
+}
+function __isElementList(v) {
+  if (!Array.isArray(v) || v.length === 0) { return false; }
+  for (var i = 0; i < v.length; i++) {
+    if (v[i] != null && !__isElement(v[i])) { return false; }
+  }
+  return true;
+}
+export function __h(type, props) {
   var p = props || {};
-  var ch = children;
-  if (ch == null) {
-    ch = [];
-    for (var i = 0; i < __STRUCTURAL_CHILD_KEYS.length; i++) {
-      var v = p[__STRUCTURAL_CHILD_KEYS[i]];
-      if (v == null) { continue; }
-      if (Array.isArray(v)) {
-        for (var j = 0; j < v.length; j++) { ch.push(v[j]); }
-      } else {
-        ch.push(v);
-      }
-    }
-  } else if (!Array.isArray(ch)) {
-    ch = [ch];
+  // JS 组件类：props 原样保留，__applyProps 靠它派生构造参数字段。
+  if (typeof type !== 'string') {
+    return { type: type, props: p, children: {}, element: true };
   }
-  // 宿主 widget：结构子结点不进 props（children 通道已承载完整子树）。
-  // JS 组件类：props 必须保留，__applyProps 靠它派生构造参数字段。
-  if (typeof type === 'string') {
-    var q = {};
-    for (var k in p) {
-      if (__STRUCTURAL_CHILD_KEYS.indexOf(k) < 0) { q[k] = p[k]; }
+  var data = {}, slots = {};
+  for (var k in p) {
+    if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
+    var v = p[k];
+    if (__isElement(v)) { slots[k] = v; continue; }
+    if (__isElementList(v)) { slots[k] = v; continue; }
+    // delegate 两种形态都进 children，不参与 props。
+    if (v != null && typeof v === 'object' && v.__delegate) {
+      slots[k] = v;
+      continue;
     }
-    p = q;
+    data[k] = v;
   }
-  return { type: type, props: p, children: ch };
+  return { type: type, props: data, children: slots, element: true };
 }
 
 
 export class Builder {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   build(context) {
     var name = this.props.builder;
@@ -50,9 +52,8 @@ export class Builder {
 }
 
 export class GridView {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.itemBuilder || this.props.builder;
@@ -75,16 +76,19 @@ export class GridView {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
-    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
-    return __h('GridView', this.props, out);
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
+    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    var p = {};
+    for (var k in this.props) { p[k] = this.props[k]; }
+    p.__items = out;
+    return __h('GridView', p);
   }
 }
 
 export class ListView {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.itemBuilder || this.props.builder;
@@ -107,16 +111,19 @@ export class ListView {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
-    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
-    return __h('ListView', this.props, out);
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
+    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    var p = {};
+    for (var k in this.props) { p[k] = this.props[k]; }
+    p.__items = out;
+    return __h('ListView', p);
   }
 }
 
 export class ListenableBuilder {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.builder;
@@ -137,7 +144,7 @@ export class ListenableBuilder {
     var owner = this.__owner();
     if (!owner) { return null; }
     var child = owner[this.props.builder].call(owner, context);
-    return __h('ListenableBuilder', { notifier: this.props.listenable }, [child]);
+    return __h('ListenableBuilder', { notifier: this.props.listenable, child: child });
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -147,9 +154,8 @@ export class ListenableBuilder {
 }
 
 export class ReorderableListView {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.itemBuilder || this.props.builder;
@@ -172,16 +178,19 @@ export class ReorderableListView {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
-    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
-    return __h('ReorderableListView', this.props, out);
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
+    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    var p = {};
+    for (var k in this.props) { p[k] = this.props[k]; }
+    p.__items = out;
+    return __h('ReorderableListView', p);
   }
 }
 
 export class SliverFillViewport {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.itemBuilder || this.props.builder;
@@ -204,16 +213,19 @@ export class SliverFillViewport {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
-    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
-    return __h('SliverFillViewport', this.props, out);
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
+    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    var p = {};
+    for (var k in this.props) { p[k] = this.props[k]; }
+    p.__items = out;
+    return __h('SliverFillViewport', p);
   }
 }
 
 export class SliverFixedExtentList {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.itemBuilder || this.props.builder;
@@ -236,16 +248,19 @@ export class SliverFixedExtentList {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
-    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
-    return __h('SliverFixedExtentList', this.props, out);
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
+    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    var p = {};
+    for (var k in this.props) { p[k] = this.props[k]; }
+    p.__items = out;
+    return __h('SliverFixedExtentList', p);
   }
 }
 
 export class SliverGrid {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.itemBuilder || this.props.builder;
@@ -268,16 +283,19 @@ export class SliverGrid {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
-    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
-    return __h('SliverGrid', this.props, out);
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
+    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    var p = {};
+    for (var k in this.props) { p[k] = this.props[k]; }
+    p.__items = out;
+    return __h('SliverGrid', p);
   }
 }
 
 export class SliverList {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.itemBuilder || this.props.builder;
@@ -300,16 +318,19 @@ export class SliverList {
       out.push(owner[name].call(owner, context, i));
       if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
     }
-    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）：
-    // 宿主据回调键判定 builder 形态，据 factory 还原 Flutter 原生命名构造。
-    return __h('SliverList', this.props, out);
+    // props 原样透传（含 itemBuilder/separatorBuilder/childCount/itemCount/factory）；
+    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
+    // children 对象，宿主 renderer 用 propChildList('__items') 取。
+    var p = {};
+    for (var k in this.props) { p[k] = this.props[k]; }
+    p.__items = out;
+    return __h('SliverList', p);
   }
 }
 
 export class ValueListenableBuilder {
-  constructor(props, children) {
+  constructor(props) {
     this.props = props || {};
-    this.children = children || [];
   }
   __owner() {
     var name = this.props.builder;
@@ -332,7 +353,7 @@ export class ValueListenableBuilder {
     var l = this.props.listenable;
     var value = (l && l.value !== undefined) ? l.value : null;
     var child = owner[this.props.builder].call(owner, context, value);
-    return __h('ValueListenableBuilder', { notifier: l }, [child]);
+    return __h('ValueListenableBuilder', { notifier: l, child: child });
   }
   dispose() {
     if (this.__listenable && this.__listener) {

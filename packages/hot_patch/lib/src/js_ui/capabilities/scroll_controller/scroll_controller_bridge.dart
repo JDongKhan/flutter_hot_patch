@@ -128,8 +128,17 @@ SliverGridDelegate _gridDelegateFromJson(JsRenderContext c) {
 /// builder 形态的方法名：统一翻译**按 Dart 形参名**下发道具——命名构造
 /// `.builder` / `.separated` 的回调是 `itemBuilder`；`delegate:
 /// SliverChildBuilderDelegate(...)` 形态的是 `builder`。
-String? _builderMethod(JsRenderContext c) =>
-    c.str('itemBuilder') ?? c.str('builder');
+String? _builderMethod(JsRenderContext c) {
+  final direct = c.str('itemBuilder') ?? c.str('builder');
+  if (direct != null) return direct;
+  // delegate 形态：builder 方法名在 children['delegate'] 的描述里。
+  final del = c.children['delegate'];
+  if (del is Map) {
+    final b = del['builder'];
+    if (b != null) return '$b';
+  }
+  return null;
+}
 
 /// `.separated` 形态：产物协议以命名构造名（`props.factory === 'separated'`）为准，
 /// 兼容旧产物/兜底看「是否带了分隔项回调 `separatorBuilder`」。
@@ -140,25 +149,48 @@ bool _isSeparated(JsRenderContext c) =>
 /// 有 `childCount` → `SliverChildBuilderDelegate`（代理类已按 childCount 展开
 /// children）；否则 → `SliverChildListDelegate`。四个 sliver 组件共用。
 SliverChildDelegate _sliverDelegate(JsRenderContext c) {
-  final count = c.int_('childCount');
-  if (_builderMethod(c) == null || count == null) {
-    return SliverChildListDelegate(c.children);
+  final del = c.children['delegate'];
+  // ListDelegate 形态：delegate 的列表在 children['delegate']。
+  if (del is List<Widget>) {
+    return SliverChildListDelegate(del);
   }
-  final children = c.children;
-  return SliverChildBuilderDelegate(
-    (_, i) => _childAt(children, i),
-    childCount: count,
-  );
+  final children = _flatChildren(c, 'children');
+  // BuilderDelegate 形态：childCount 在 delegate 描述里，展开结果在 __items。
+  final count = _builderCount(c, children.length);
+  if (_builderMethod(c) != null) {
+    return SliverChildBuilderDelegate(
+      (_, i) => _childAt(children, i),
+      childCount: count,
+    );
+  }
+  return SliverChildListDelegate(children);
 }
 
 /// builder 形态的计数：命名构造（`.builder`/`.separated`）用 `itemCount`，
 /// delegate 形态用 `childCount`；都缺省时退回已展开的子节点数。
-int _builderCount(JsRenderContext c, int fallback) =>
-    c.int_('itemCount') ?? c.int_('childCount') ?? fallback;
+int _builderCount(JsRenderContext c, int fallback) {
+  final direct = c.int_('itemCount') ?? c.int_('childCount');
+  if (direct != null) return direct;
+  final del = c.children['delegate'];
+  if (del is Map) {
+    final n = del['childCount'];
+    if (n is num) return n.toInt();
+  }
+  return fallback;
+}
 
 /// 第 [i] 个子节点（越界给占位，避免宿主在 JS 补丁未到齐时越界崩溃）。
 Widget _childAt(List<Widget> children, int i) =>
     i < children.length ? children[i] : const SizedBox.shrink();
+
+/// 普通 children 形态读 Dart 形参名（`children` / `slivers`）；builder 代理
+/// 展开结果走内部键 `__items`。两者只有一个非空，按优先级合并。
+List<Widget> _flatChildren(JsRenderContext c, String key) {
+  final expanded = c.children['__items'];
+  if (expanded is List<Widget> && expanded.isNotEmpty) return expanded;
+  final own = c.children[key];
+  return own is List<Widget> ? own : const [];
+}
 
 /// `.separated` 形态：代理类已按 `[item, sep, item, sep, ...]` 交替展开，
 /// 宿主按奇偶拆回 items / separators 两组，分别喂给原生 `.separated` 的两个
@@ -182,7 +214,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     // 三种形态：普通 children / `.builder`（props 带 itemBuilder+itemCount）/
     // `.separated`（额外带 separatorBuilder，且 factory='separated'）——builder
     // 形态一律还原 Flutter 原生命名构造，不用 `ListView(children: [...])` 顶替。
-    final children = c.children;
+    final children = _flatChildren(c, 'children');
     final builder = _builderMethod(c);
     final isSeparated = _isSeparated(c);
 
@@ -251,7 +283,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   //     `controller`），走与 ListView 同一套 `_scrollControllerHost` 桥接。
   r.register('ReorderableListView', (c) {
     final isBuilder = _builderMethod(c) != null;
-    final children = c.children;
+    final children = _flatChildren(c, 'children');
 
     Widget build(ScrollController? controller) {
       // onReorder 非空：无句柄时给空实现，避免拖拽结束抛断言。
@@ -302,7 +334,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     final padding = nullableEdgeInsets(c.map('padding'));
     final shrinkWrap = c.bool_('shrinkWrap') ?? false;
     final physics = scrollPhysicsFromJson(c.props['physics']);
-    final children = c.children;
+    final children = _flatChildren(c, 'children');
     final isBuilder = _builderMethod(c) != null;
     final itemCount = _builderCount(c, children.length);
 
@@ -343,7 +375,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       final physics = scrollPhysicsFromJson(c.props['physics']);
       final reverse = c.bool_('reverse') ?? false;
       final shrinkWrap = c.bool_('shrinkWrap') ?? false;
-      final slivers = c.children;
+      final slivers = _flatChildren(c, 'slivers');
       return _scrollControllerHost(
         c,
         scId,
@@ -363,7 +395,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       physics: scrollPhysicsFromJson(c.props['physics']),
       reverse: c.bool_('reverse') ?? false,
       shrinkWrap: c.bool_('shrinkWrap') ?? false,
-      slivers: c.children,
+      slivers: _flatChildren(c, 'slivers'),
     );
   });
 
@@ -373,7 +405,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register('SliverList', (c) {
     final builder = _builderMethod(c);
     if (builder == null) return SliverList(delegate: _sliverDelegate(c));
-    final children = c.children;
+    final children = ((c.children['__items'] as List<Widget>?) ?? const []);
     if (_isSeparated(c)) {
       final split = _splitSeparated(children);
       return SliverList.separated(
@@ -404,7 +436,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       return SliverGrid.builder(
         gridDelegate: gridDelegate,
         itemCount: c.int_('itemCount'),
-        itemBuilder: (_, i) => _childAt(c.children, i),
+        itemBuilder: (_, i) => _childAt(((c.children['__items'] as List<Widget>?) ?? const []), i),
       );
     }
     return SliverGrid(gridDelegate: gridDelegate, delegate: _sliverDelegate(c));
@@ -414,14 +446,12 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // actions 是 props 里的结点数组）+ sliver 专属 pinned/floating/snap/expandedHeight
   // （缺省 false/false/false/null，即 Flutter 默认）。
   r.register('SliverAppBar', (c) {
-    final actions = <Widget>[
-      ...c.elementList(c.props['actions']),
-      ...c.children,
-    ];
+    final actions =
+        (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
     return SliverAppBar(
-      leading: c.propChild('leading'),
-      title: c.propChild('title'),
-      flexibleSpace: c.propChild('flexibleSpace'),
+      leading: (c.children['leading'] as Widget?),
+      title: (c.children['title'] as Widget?),
+      flexibleSpace: (c.children['flexibleSpace'] as Widget?),
       actions: actions.isEmpty ? null : actions,
       backgroundColor: colorFromJson(c.props['backgroundColor']),
       foregroundColor: colorFromJson(c.props['foregroundColor']),
@@ -442,14 +472,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     'SliverPadding',
     (c) => SliverPadding(
       padding: edgeInsetsFromJson(c.map('padding')),
-      sliver: c.childOrEmpty,
+      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
   // SliverToBoxAdapter：普通 widget 包装成 sliver。
   r.register(
     'SliverToBoxAdapter',
-    (c) => SliverToBoxAdapter(child: c.childOrEmpty),
+    (c) => SliverToBoxAdapter(child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
   );
 
   // SliverFillRemaining：child + hasScrollBody（缺省 true）/fillOverscroll
@@ -459,7 +489,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     (c) => SliverFillRemaining(
       hasScrollBody: c.bool_('hasScrollBody') ?? true,
       fillOverscroll: c.bool_('fillOverscroll') ?? false,
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -488,14 +518,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register(
     'SliverOpacity',
     (c) =>
-        SliverOpacity(opacity: c.num_('opacity') ?? 1, sliver: c.childOrEmpty),
+        SliverOpacity(opacity: c.num_('opacity') ?? 1, sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
   );
 
   r.register(
     'SliverOffstage',
     (c) => SliverOffstage(
       offstage: c.bool_('offstage') ?? false,
-      sliver: c.childOrEmpty,
+      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -503,7 +533,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     'SliverIgnorePointer',
     (c) => SliverIgnorePointer(
       ignoring: c.bool_('ignoring') ?? false,
-      sliver: c.childOrEmpty,
+      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -515,7 +545,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       top: c.bool_('top') ?? true,
       right: c.bool_('right') ?? true,
       bottom: c.bool_('bottom') ?? true,
-      sliver: c.childOrEmpty,
+      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -526,7 +556,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     (c) => SliverVisibility(
       visible: c.bool_('visible') ?? true,
       maintainState: c.bool_('maintainState') ?? false,
-      sliver: c.childOrEmpty,
+      sliver: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -541,7 +571,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
           axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
       final physics = scrollPhysicsFromJson(c.props['physics']);
       final reverse = c.bool_('reverse') ?? false;
-      final child = c.child();
+      final child = (c.children['child'] as Widget?);
       return _scrollControllerHost(
         c,
         scId,
@@ -560,7 +590,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       padding: nullableEdgeInsets(c.map('padding')),
       physics: scrollPhysicsFromJson(c.props['physics']),
       reverse: c.bool_('reverse') ?? false,
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     );
   });
 
@@ -576,7 +606,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
       pageSnapping: c.bool_('pageSnapping') ?? true,
       physics: scrollPhysicsFromJson(c.props['physics']),
       onPageChanged: c.on1<int>('onPageChanged'),
-      children: c.children,
+      children: ((c.children['__items'] as List<Widget>?) ?? const []),
     ),
   );
 }

@@ -4,15 +4,22 @@ import '../json/flutter_from_json.dart';
 import '../utils/hot_patch_log.dart';
 import 'capabilities/js_ui_capabilities.dart';
 
+/// 非 Widget 数据载体类型：它们在产物里也是 element 形态，但宿主 renderer
+/// 只读数据（type/props/propChildren）组装，不能当 Widget 挂载。
+const Set<String> dataCarrierTypes = {
+  'BottomNavigationBarItem',
+  'DropdownMenuItem',
+  // InputDecoration 是值对象（不是 Widget），TextField renderer 只读它的
+  // hintText / labelText 等 props。
+  'InputDecoration',
+};
+
 /// 不需要动宿主；只有引入 Flutter 侧不存在的**视觉** widget 才注册一条。
 class JsRenderContext {
   JsRenderContext({
     required this.type,
     required this.props,
     required this.children,
-    required this.childTypes,
-    required this.childContexts,
-    required this.propChildren,
     required this.invoke,
   });
 
@@ -20,43 +27,22 @@ class JsRenderContext {
   /// 供默认 builder 识别「这是哪个未注册组件」，按名走原生注入或占位。
   final String type;
 
+  /// 普通值 props（不含 widget：widget 已在 `children` 里）。
   final Map<String, dynamic> props;
-  final List<Widget> children;
 
-  /// 与 [children] 一一对应的宿主 type（用于 Scaffold 这类需要按类型
-  /// 区分插槽的容器；JS 只能下发 element，无法在 props 里塞 widget）。
-  final List<String> childTypes;
-
-  /// 与 [children] 一一对应的子结点数据（type/props/propChildren），
-  /// 用于 BottomNavigationBarItem / DropdownMenuItem 这类「非 Widget
-  /// 数据载体」子结点——父 renderer 直接读数据组装，不走 widget 包装。
-  final List<JsRenderContext> childContexts;
-
-  /// 值为 element 的 props（如 ListTile.leading / ClipRRect.child）：
-  /// prop 名 -> 已构建好的子 widget。
-  final Map<String, Widget> propChildren;
+  /// 按 **Dart 实参原名** 索引的 slot，框架不认任何固定字段名：
+  ///   - 单个 widget → `Widget`
+  ///   - widget 数组 → `List<Widget>`
+  ///   - 数据载体数组（`BottomNavigationBarItem` 等）→ `List<JsRenderContext>`
+  ///   - delegate → `Map`（`{__delegate: 'list' | 'builder', …}`）
+  ///   - `__items`（builder 展开结果）→ `List<Widget>`
+  ///
+  /// 取值方直接 `c.children['body'] as Widget?` /
+  /// `c.children['children'] as List<Widget>?`，key 由 renderer 自己决定。
+  final Map<String, Object?> children;
 
   /// 把事件句柄（`{'__fn': id}`）回传到 JS 侧执行。
   final void Function(Object? handler, [List<Object?> args]) invoke;
-
-  Widget? child([int index = 0]) =>
-      index < children.length ? children[index] : null;
-
-  /// 要求子 widget 非空时使用（Expanded / 按钮的 child 等）。
-  Widget get childOrEmpty => child() ?? const SizedBox.shrink();
-
-  /// 按子结点 type 取第一个匹配的子 widget。
-  Widget? childOfType(String type) {
-    for (var i = 0; i < childTypes.length; i++) {
-      if (childTypes[i] == type) return children[i];
-    }
-    return null;
-  }
-
-  bool hasChildOfType(String type) => childTypes.contains(type);
-
-  /// 取「值为 element 的 prop」对应的子 widget（如 ListTile.leading）。
-  Widget? propChild(String key) => propChildren[key];
 
   /// 把 props 上的事件字段（句柄）绑成 Flutter 回调；无句柄（null）时为 null。
   ///
@@ -160,11 +146,10 @@ class JsRenderContext {
   }
 }
 
-/// 把产物里的**元素描述**（`{type, props, children}`）渲染成 widget。
+/// 把产物里的**元素描述**（`{type, props, children, element}`）渲染成 widget。
 ///
-/// 用途：props 里的元素**数组**（`AppBar.actions` / `BottomNavigationBar.items`
-/// / `DropdownButton.items`）——JS 侧只把「单个 element prop」挂成 propChild
-/// （见 mini_react 的 mountPropChildren），数组项需宿主自行递归渲染。
+/// 用途：`__items`（builder 展开结果）/ 数据载体上下文等需要宿主自行递归渲染
+/// 的场景；具名 slot 已由 JS 侧挂载，宿主直接走 `propChild` / `propChildList`。
 Widget? buildJsElement(
   Object? raw,
   void Function(Object? handler, [List<Object?> args]) invoke,
@@ -175,35 +160,85 @@ Widget? buildJsElement(
   final props = raw['props'] is Map
       ? (raw['props'] as Map).cast<String, dynamic>()
       : <String, dynamic>{};
-  final rawChildren = raw['children'] is List
-      ? raw['children'] as List
-      : const <Object?>[];
+  final rawSlots = raw['children'];
 
-  final children = <Widget>[];
-  final childTypes = <String>[];
-  final childContexts = <JsRenderContext>[];
-  for (final ch in rawChildren) {
-    children.add(buildJsElement(ch, invoke) ?? const SizedBox.shrink());
-    childTypes.add(ch is Map ? '${ch['type']}' : '');
-    childContexts.add(_descriptorContext(ch, invoke));
+  final children = <String, Object?>{};
+
+  void addList(String key, Object? value) {
+    final widgets = <Widget>[];
+    final contexts = <JsRenderContext>[];
+    var dataCarrier = false;
+    if (value is List) {
+      for (final ch in value) {
+        final w = buildJsElement(ch, invoke);
+        if (w != null) widgets.add(w);
+        final ctx = _descriptorContext(ch, invoke);
+        contexts.add(ctx);
+        if (dataCarrierTypes.contains(ctx.type)) dataCarrier = true;
+      }
+    }
+    children[key] = dataCarrier ? contexts : widgets;
   }
 
-  final propChildren = <String, Widget>{};
-  for (final e in props.entries) {
-    final w = buildJsElement(e.value, invoke);
-    if (w != null) propChildren[e.key] = w;
+  if (rawSlots is Map) {
+    for (final entry in rawSlots.entries) {
+      final key = '${entry.key}';
+      final v = entry.value;
+      if (key == '__items' && v is List) {
+        final items = <Widget>[];
+        for (final ch in v) {
+          items.add(buildJsElement(ch, invoke) ?? const SizedBox.shrink());
+        }
+        children['__items'] = items;
+        continue;
+      }
+      if (v is List) {
+        addList(key, v);
+        continue;
+      }
+      if (v is Map && v['__delegate'] != null) {
+        if (v['__delegate'] == 'list') {
+          addList(key, v['children']);
+        } else {
+          children[key] = v;
+        }
+        continue;
+      }
+      if (v is Map && v['element'] == true) {
+        final ctx = _descriptorContext(v, invoke);
+        children[key] = dataCarrierTypes.contains(ctx.type)
+            ? ctx
+            : buildJsElement(v, invoke);
+      }
+    }
+  } else if (rawSlots is List) {
+    final items = <Widget>[];
+    for (final ch in rawSlots) {
+      items.add(buildJsElement(ch, invoke) ?? const SizedBox.shrink());
+    }
+    children['__items'] = items;
+  }
+
+  // 旧形状（元素值仍在 props 里）兜底。
+  if (rawSlots is! Map) {
+    for (final e in props.entries) {
+      final w = buildJsElement(e.value, invoke);
+      if (w != null) children[e.key] = w;
+    }
   }
 
   final builder = jsWidgetRegistry.lookup(type) ?? jsWidgetRegistry.fallback;
-  if (builder == null) return buildMissingJsWidget(type, children);
+  if (builder == null) {
+    return buildMissingJsWidget(
+      type,
+      (children['__items'] as List<Widget>?) ?? const [],
+    );
+  }
   return builder(
     JsRenderContext(
       type: type,
       props: props,
       children: children,
-      childTypes: childTypes,
-      childContexts: childContexts,
-      propChildren: propChildren,
       invoke: invoke,
     ),
   );
@@ -219,18 +254,47 @@ JsRenderContext _descriptorContext(
   final props = raw is Map && raw['props'] is Map
       ? (raw['props'] as Map).cast<String, dynamic>()
       : <String, dynamic>{};
-  final propChildren = <String, Widget>{};
-  for (final e in props.entries) {
-    final w = buildJsElement(e.value, invoke);
-    if (w != null) propChildren[e.key] = w;
+  final children = <String, Object?>{};
+  final slots = raw is Map ? raw['children'] : null;
+  if (slots is Map) {
+    for (final e in slots.entries) {
+      final key = '${e.key}';
+      final v = e.value;
+      if (v is List) {
+        final widgets = <Widget>[];
+        for (final ch in v) {
+          final w = buildJsElement(ch, invoke);
+          if (w != null) widgets.add(w);
+        }
+        children[key] = widgets;
+      } else if (v is Map && v['__delegate'] == 'list') {
+        final widgets = <Widget>[];
+        final list = v['children'];
+        if (list is List) {
+          for (final ch in list) {
+            final w = buildJsElement(ch, invoke);
+            if (w != null) widgets.add(w);
+          }
+        }
+        children[key] = widgets;
+      } else if (v is Map && v['__delegate'] != null) {
+        children[key] = v;
+      } else if (v is Map && v['element'] == true) {
+        final w = buildJsElement(v, invoke);
+        if (w != null) children[key] = w;
+      }
+    }
+  } else {
+    // 旧形状兜底：元素值仍在 props 里。
+    for (final e in props.entries) {
+      final w = buildJsElement(e.value, invoke);
+      if (w != null) children[e.key] = w;
+    }
   }
   return JsRenderContext(
     type: raw is Map ? '${raw['type']}' : '',
     props: props,
-    children: const [],
-    childTypes: const [],
-    childContexts: const [],
-    propChildren: propChildren,
+    children: children,
     invoke: invoke,
   );
 }
@@ -273,7 +337,7 @@ typedef JsWidgetBuilder = Widget Function(JsRenderContext c);
 Widget _unknownWidgetBuilder(JsRenderContext c) {
   final native = _nativeComponents[c.type];
   if (native != null) return native(c.props);
-  return buildMissingJsWidget(c.type, c.children);
+  return buildMissingJsWidget(c.type, ((c.children['__items'] as List<Widget>?) ?? const []));
 }
 
 /// `type -> Flutter widget` 注册表（宿主唯一扩展点）。
@@ -348,7 +412,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
           CrossAxisAlignment.center,
       mainAxisSize:
           mainAxisSizeFromJson(c.props['mainAxisSize']) ?? MainAxisSize.max,
-      children: c.children,
+      children: ((c.children['children'] as List<Widget>?) ?? const []),
     ),
   );
 
@@ -363,7 +427,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
           CrossAxisAlignment.center,
       mainAxisSize:
           mainAxisSizeFromJson(c.props['mainAxisSize']) ?? MainAxisSize.max,
-      children: c.children,
+      children: ((c.children['children'] as List<Widget>?) ?? const []),
     ),
   );
 
@@ -376,7 +440,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       fit: stackFitFromJson(c.props['fit']) ?? StackFit.loose,
       clipBehavior:
           clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.hardEdge,
-      children: c.children,
+      children: ((c.children['children'] as List<Widget>?) ?? const []),
     ),
   );
 
@@ -389,7 +453,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       alignment:
           alignmentFromJson(c.props['alignment']) ??
           AlignmentDirectional.topStart,
-      children: c.children,
+      children: ((c.children['children'] as List<Widget>?) ?? const []),
     ),
   );
 
@@ -406,7 +470,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       crossAxisAlignment:
           wrapCrossAlignmentFromJson(c.props['crossAxisAlignment']) ??
           WrapCrossAlignment.start,
-      children: c.children,
+      children: ((c.children['children'] as List<Widget>?) ?? const []),
     ),
   );
 
@@ -427,7 +491,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       alignment: alignmentFromJson(c.props['alignment']),
       constraints: boxConstraintsFromJson(c.map('constraints')),
       clipBehavior: clip,
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     );
   });
 
@@ -435,17 +499,17 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     'Padding',
     (c) => Padding(
       padding: edgeInsetsFromJson(c.map('padding')),
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
-  r.register('Center', (c) => Center(child: c.child()));
+  r.register('Center', (c) => Center(child: (c.children['child'] as Widget?)));
 
   r.register(
     'Align',
     (c) => Align(
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
@@ -454,18 +518,18 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => SizedBox(
       width: c.num_('width'),
       height: c.num_('height'),
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
   r.register(
     'Expanded',
-    (c) => Expanded(flex: c.int_('flex') ?? 1, child: c.childOrEmpty),
+    (c) => Expanded(flex: c.int_('flex') ?? 1, child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
   );
 
   r.register(
     'Flexible',
-    (c) => Flexible(flex: c.int_('flex') ?? 1, child: c.childOrEmpty),
+    (c) => Flexible(flex: c.int_('flex') ?? 1, child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
   );
 
   r.register(
@@ -477,7 +541,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       bottom: c.num_('bottom'),
       width: c.num_('width'),
       height: c.num_('height'),
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -489,7 +553,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
           : BorderRadius.all(Radius.circular(radius)),
       clipBehavior:
           clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     );
   });
 
@@ -498,7 +562,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => ClipOval(
       clipBehavior:
           clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.antiAlias,
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
@@ -507,7 +571,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => Material(
       color: colorFromJson(c.props['color']),
       elevation: c.num_('elevation') ?? 0,
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
@@ -516,7 +580,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     final offset = c.map('offset') ?? const <String, dynamic>{};
     final dx = (offset['dx'] as num?)?.toDouble() ?? 0;
     final dy = (offset['dy'] as num?)?.toDouble() ?? 0;
-    return Transform.translate(offset: Offset(dx, dy), child: c.child());
+    return Transform.translate(offset: Offset(dx, dy), child: (c.children['child'] as Widget?));
   });
 
   r.register(
@@ -530,7 +594,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       shape: shapeFromJson(c.props['shape']),
       clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']),
       shadowColor: colorFromJson(c.props['shadowColor']),
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
@@ -598,7 +662,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
                     ? NetworkImage(bgImage)
                     : AssetImage(bgImage))
                 as ImageProvider,
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     );
   });
 
@@ -619,10 +683,10 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register(
     'Chip',
     (c) => Chip(
-      label: c.propChild('label') ?? const SizedBox.shrink(),
+      label: (c.children['label'] as Widget?) ?? const SizedBox.shrink(),
       labelStyle: textStyleFromJson(c.map('labelStyle')),
-      avatar: c.propChild('avatar'),
-      deleteIcon: c.propChild('deleteIcon'),
+      avatar: (c.children['avatar'] as Widget?),
+      deleteIcon: (c.children['deleteIcon'] as Widget?),
       onDeleted: c.on('onDeleted'),
       backgroundColor: colorFromJson(c.props['backgroundColor']),
       // padding 缺省必须为 null：否则 EdgeInsets.zero 会覆盖 Chip 默认
@@ -638,10 +702,10 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   // title / subtitle / leading / trailing 都是结点（props 里的 element prop）。
   r.register('ListTile', (c) {
     return ListTile(
-      title: c.propChild('title'),
-      subtitle: c.propChild('subtitle'),
-      leading: c.propChild('leading'),
-      trailing: c.propChild('trailing'),
+      title: (c.children['title'] as Widget?),
+      subtitle: (c.children['subtitle'] as Widget?),
+      leading: (c.children['leading'] as Widget?),
+      trailing: (c.children['trailing'] as Widget?),
       onTap: c.on('onTap'),
       onLongPress: c.on('onLongPress'),
       tileColor: colorFromJson(c.props['tileColor']),
@@ -664,7 +728,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => ElevatedButton(
       onPressed: c.on('onPressed'),
       style: buttonStyleFromJson(c.styleMap('style')),
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -673,7 +737,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => TextButton(
       onPressed: c.on('onPressed'),
       style: buttonStyleFromJson(c.styleMap('style')),
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -682,7 +746,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => FilledButton(
       onPressed: c.on('onPressed'),
       style: buttonStyleFromJson(c.styleMap('style')),
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -691,7 +755,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => OutlinedButton(
       onPressed: c.on('onPressed'),
       style: buttonStyleFromJson(c.styleMap('style')),
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
@@ -704,7 +768,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       borderRadius: radius == null ? null : BorderRadius.circular(radius),
       splashColor: colorFromJson(c.props['splashColor']),
       highlightColor: colorFromJson(c.props['highlightColor']),
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     );
   });
 
@@ -715,7 +779,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       onLongPress: c.on('onLongPress'),
       onDoubleTap: c.on('onDoubleTap'),
       behavior: hitTestBehaviorFromJson(c.props['behavior']),
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
@@ -764,34 +828,30 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   // _JsAppBarAdaptor 适配 PreferredSizeWidget（JS 节点是 JsUiWidget 包装，
   // 非原生 AppBar 实例）。
   r.register('Scaffold', (c) {
-    final appBar = c.propChild('appBar');
+    final appBar = (c.children['appBar'] as Widget?);
     return Scaffold(
       backgroundColor: colorFromJson(c.props['backgroundColor']),
       appBar: appBar == null ? null : _JsAppBarAdaptor(appBar),
-      body: c.propChild('body'),
-      floatingActionButton: c.propChild('floatingActionButton'),
-      bottomNavigationBar: c.propChild('bottomNavigationBar'),
+      body: (c.children['body'] as Widget?),
+      floatingActionButton: (c.children['floatingActionButton'] as Widget?),
+      bottomNavigationBar: (c.children['bottomNavigationBar'] as Widget?),
       // drawer / endDrawer 接进真实 Scaffold：AppBar 自动出现汉堡按钮，
       // 开启原生可用；关闭走 capabilities/drawer/drawer_bridge.dart 的抽屉作用域。
-      drawer: c.propChild('drawer'),
-      endDrawer: c.propChild('endDrawer'),
+      drawer: (c.children['drawer'] as Widget?),
+      endDrawer: (c.children['endDrawer'] as Widget?),
       drawerScrimColor: colorFromJson(c.props['drawerScrimColor']),
     );
   });
 
-  // AppBar：title / leading / flexibleSpace 是「值为 element 的 prop」（propChild），
-  // actions 是 props 里的结点数组（不再进 children）。
+  // AppBar：title / leading / flexibleSpace / actions 都按 Dart 形参原名从
+  // children 取（actions 是数组 slot）。
   r.register('AppBar', (c) {
-    // title / leading / flexibleSpace 是「值为 element 的 prop」（propChild）；
-    // actions 是 props 里的**元素数组**（不再是 children）→ 宿主自行渲染。
-    final actions = <Widget>[
-      ...c.elementList(c.props['actions']),
-      ...c.children,
-    ];
+    final actions =
+        (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
     return AppBar(
-      leading: c.propChild('leading'),
-      title: c.propChild('title'),
-      flexibleSpace: c.propChild('flexibleSpace'),
+      leading: (c.children['leading'] as Widget?),
+      title: (c.children['title'] as Widget?),
+      flexibleSpace: (c.children['flexibleSpace'] as Widget?),
       actions: actions.isEmpty ? null : actions,
       backgroundColor: colorFromJson(c.props['backgroundColor']),
       foregroundColor: colorFromJson(c.props['foregroundColor']),
@@ -813,13 +873,13 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       top: c.bool_('top') ?? true,
       right: c.bool_('right') ?? true,
       bottom: c.bool_('bottom') ?? true,
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
   r.register(
     'Opacity',
-    (c) => Opacity(opacity: c.num_('opacity') ?? 1, child: c.child()),
+    (c) => Opacity(opacity: c.num_('opacity') ?? 1, child: (c.children['child'] as Widget?)),
   );
 
   r.register(
@@ -828,14 +888,14 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       constraints:
           boxConstraintsFromJson(c.map('constraints')) ??
           const BoxConstraints(),
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 
   r.register(
     'AspectRatio',
     (c) =>
-        AspectRatio(aspectRatio: c.num_('aspectRatio') ?? 1, child: c.child()),
+        AspectRatio(aspectRatio: c.num_('aspectRatio') ?? 1, child: (c.children['child'] as Widget?)),
   );
 
   r.register(
@@ -844,7 +904,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       widthFactor: c.num_('widthFactor'),
       heightFactor: c.num_('heightFactor'),
       alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
@@ -853,7 +913,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => DecoratedBox(
       decoration:
           boxDecorationFromJson(c.map('decoration')) ?? const BoxDecoration(),
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
@@ -888,7 +948,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register(
     'IconButton',
     (c) => IconButton(
-      icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
+      icon: (c.children['icon'] as Widget?) ?? const Icon(Icons.error_outline),
       onPressed: c.on('onPressed'),
       color: colorFromJson(c.props['color']),
       iconSize: c.num_('iconSize'),
@@ -907,21 +967,23 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       mini: c.bool_('mini') ?? false,
       tooltip: c.str('tooltip'),
       elevation: c.num_('elevation'),
-      child: c.child(),
+      child: (c.children['child'] as Widget?),
     ),
   );
 
   r.register('BottomNavigationBar', (c) {
-    // items 是 props 里的**元素数组**（不再是子结点）：非 Widget 数据载体
-    // BottomNavigationBarItem，宿主逐个从元素描述里读数据组装。
+    // items 是数据载体数组：从 children['items'] 的上下文读数据组装，
+    // 不把 BottomNavigationBarItem 当 Widget 挂载。
     final items = <BottomNavigationBarItem>[];
-    for (final raw in c.props['items'] as List? ?? const []) {
-      final p = c.elementProps(raw);
-      if (p == null) continue;
+    final raws =
+        (c.children['items'] as List<JsRenderContext>?) ?? const [];
+    for (final raw in raws) {
+      final p = raw.props;
       items.add(
         BottomNavigationBarItem(
-          icon: c.element(p['icon']) ?? const Icon(Icons.error_outline),
-          activeIcon: c.element(p['activeIcon']),
+          icon: (raw.children['icon'] as Widget?) ??
+              const Icon(Icons.error_outline),
+          activeIcon: raw.children['activeIcon'] as Widget?,
           label: p['label'] == null ? null : '${p['label']}',
           tooltip: p['tooltip'] == null ? null : '${p['tooltip']}',
         ),
@@ -942,7 +1004,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     'BottomNavigationBarItem',
     (c) => _JsBottomNavItem(
       BottomNavigationBarItem(
-        icon: c.propChild('icon') ?? const Icon(Icons.error_outline),
+        icon: (c.children['icon'] as Widget?) ?? const Icon(Icons.error_outline),
         label: c.str('label'),
       ),
     ),
@@ -961,18 +1023,13 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   );
 
   r.register('DropdownButton', (c) {
-    // items 是 props 里的元素数组：DropdownMenuItem 的 value 在内层 props，
-    // 展示子结点在该元素的 children 里（生成器把 child 展开为子结点）。
+    // items 是数据载体数组：从 children['items'] 的上下文读 value 与 child。
     final items = <DropdownMenuItem<dynamic>>[];
-    for (final raw in c.props['items'] as List? ?? const []) {
-      final p = c.elementProps(raw);
-      if (p == null) continue;
-      final kids = raw is Map && raw['children'] is List
-          ? raw['children'] as List
-          : const [];
-      final child =
-          c.element(p['child']) ??
-          (kids.isEmpty ? null : c.element(kids.first));
+    final raws =
+        (c.children['items'] as List<JsRenderContext>?) ?? const [];
+    for (final raw in raws) {
+      final p = raw.props;
+      final child = raw.children['child'] as Widget?;
       items.add(
         DropdownMenuItem<dynamic>(
           value: p['value'],
@@ -984,7 +1041,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       value: c.props['value'],
       items: items,
       onChanged: c.on1<dynamic>('onChanged'),
-      hint: c.propChild('hint'),
+      hint: c.children['hint'] as Widget?,
       isExpanded: c.bool_('isExpanded') ?? false,
     );
   });
@@ -993,7 +1050,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     'DropdownMenuItem',
     (c) => DropdownMenuItem<dynamic>(
       value: c.props['value'],
-      child: c.childOrEmpty,
+      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );
 

@@ -52,9 +52,9 @@ void registerTextWidgets(JsWidgetRegistry r) {
     // 触发其 listeners），同时照常触发 onChanged 事件。
     final tecId = JsControllerBridge.idOf(c.props['controller']);
     final external = tecId != null ? _textBridge.controllerAt(tecId) : null;
-    // decoration 现在是元素结点（`InputDecoration(...)` 被当构造翻译）→
-    // 取它的内层 props 读 hintText / labelText。
-    final deco = c.elementProps(c.props['decoration']);
+    // decoration 是值对象（InputDecoration）的数据上下文：只读它的 props。
+    final decoCtx = c.children['decoration'];
+    final deco = decoCtx is JsRenderContext ? decoCtx.props : null;
     return _JsTextField(
       controller: external,
       onControllerText: external == null

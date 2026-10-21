@@ -86,7 +86,7 @@ void registerDrawerWidgets(JsWidgetRegistry r) {
           elevation: c.num_('elevation'),
           shape: shapeFromJson(c.props['shape']),
           width: c.num_('width'),
-          child: c.child(),
+          child: (c.children['child'] as Widget?),
         ),
       ));
 
@@ -98,6 +98,6 @@ void registerDrawerWidgets(JsWidgetRegistry r) {
             const EdgeInsets.fromLTRB(16, 16, 16, 8),
         margin: nullableEdgeInsets(c.map('margin')) ??
             const EdgeInsets.only(bottom: 8),
-        child: c.child() ?? const SizedBox.shrink(),
+        child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
       ));
 }

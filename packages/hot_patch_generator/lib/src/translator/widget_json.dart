@@ -1,25 +1,24 @@
-/// 统一翻译入口：任意 widget 构造 → `{type, props, children}`。
+/// 统一翻译入口：任意 widget 构造 → `{type, props}`。
 ///
-/// 只有这一条路径。判断依据是**值的形态**（见 [autoValue]）与**通用参数名**
-/// （`child` / `children`·`slivers`·`tabs` / `on*` / `delegate`），**不看 widget
-/// 类型**——所以内建、自定义、三方组件用同一套规则翻译，接入新组件零实现。
+/// 只有这一条路径。判断依据是**值的形态**（见 [autoValue]），**不按属性名、
+/// 不看 widget 类型**——所以内建、自定义、三方组件用同一套规则翻译，接入新
+/// 组件零实现；`content` / `top` / `bottom` 这类自定义名称与 `child` /
+/// `children` 走完全相同的路径。
 ///
 /// 组装规则（全局唯一约定）：
 ///   - `type` = 构造名**原样**（不做任何归一，如四种按钮各自用真实类型名）；
 ///   - `factory` = 命名构造 / 静态工厂名（`ListView.builder` → `builder`、
 ///     `Image.network` → `network`、`ChangeNotifierProvider.value` → `value`）——
 ///     同类型的不同工厂产物**同 type、不同 factory**，运行时据此选工厂；
-///   - `child:` / `children:` / `slivers:` / `tabs:` 等**按 Dart 实参原名**进
-///     `props`（不再拆成独立的 children 通道）；元素工厂 `__h` 再按元素类型
-///     把宿主的 `child`/`children`/`slivers`/`tabs` 抽成 `element.children`，
-///     而 JS 组件的构造参数原样留在 props 里供 `__applyProps` 派生字段；
-///   - `delegate:` → sliver 子结点提供者（ListDelegate → `props.children`，
-///     BuilderDelegate → `props.builder` / `childCount`，见 [sliverDelegateResult]）；
+///   - 所有具名实参**按原名**放进 `props`，值按形态翻译：widget 构造 → 元素
+///     结点、widget 列表 → 元素数组、样式/枚举 → 结构化值；
+///   - 元素工厂 `__h` 再按**显式标记**（`element: true`，由 `__h` 给每个元素
+///     统一加）把 widget 值归入按原名作 key 的 `children` 对象，运行时从对象
+///     按 prop 名取；
+///   - `delegate:` 按构造**类型**转换后放进 `children`，不进 props；
 ///   - `on*` → 事件句柄（键名就是参数名，不改名）；
 ///   - 位置实参 → 按 Flutter 声明的**形参名**（`Text('hi')` → `data`，见
-///     [widgetPositionalArgNames]）；未登记的类型出声告警并丢弃，不再有下标
-///     数组兜底；
-///   - 其余具名实参 → `props[参数名]`，值按形态翻译（翻译不出来则丢弃该键）；
+///     [widgetPositionalArgNames]）；未登记的类型出声告警并丢弃；
 ///   - `key:` 由渲染层统一注入（见 `WidgetTranslateContext._applyKeyProp`）。
 library;
 
@@ -29,16 +28,6 @@ import 'package:build/build.dart' show log;
 import '../builders/js_widget_defs.dart';
 import 'value_forms.dart';
 import 'widget2js.dart';
-
-/// 单子参数：值按**原名**进 `props`（`child` / `sliver` 都是「单个子结点」语义，
-/// 由元素工厂 `__h` 在宿主类型上抽成 `element.children`）。
-const Set<String> _childArgs = {'child', 'sliver'};
-
-/// 列表参数：值按**原名**进 `props`（同样由 `__h` 按元素类型拆分）。
-const Set<String> _listArgs = {'children', 'slivers', 'tabs'};
-
-/// 子结点提供者参数：`delegate:`。
-const Set<String> _delegateArgs = {'delegate'};
 
 /// 命名构造 / 静态工厂名的 props 键（值为带引号的 JS 字符串）。
 ///
@@ -66,26 +55,6 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     // 当作子结点/值重复翻译。
     if (name == 'key') continue;
 
-    // delegate 是「子结点提供者」：ListDelegate → props.children（结构子结点
-    // 列表，由 __h 抽取）；BuilderDelegate → builder/childCount props（不认识的
-    // 形态走普通值翻译）。
-    if (_delegateArgs.contains(name)) {
-      final r = sliverDelegateResult(value, ctx);
-      if (r != null) {
-        if (r.children.isNotEmpty) props['children'] = r.children;
-        props.addAll(r.builder);
-        continue;
-      }
-    }
-    if (_childArgs.contains(name)) {
-      final n = ctx.translate(value);
-      if (n != null) props[name] = n;
-      continue;
-    }
-    if (_listArgs.contains(name)) {
-      props[name] = _listOrEmpty(node, ctx, name);
-      continue;
-    }
     if (_isEventArg(name)) {
       // `on*` 回调有两种消费方，按**目标类型**分派：
       //   - 宿主 widget（`ElevatedButton.onPressed` / `InkWell.onTap`…）：宿主
@@ -205,58 +174,3 @@ String? _functionOrNull(WidgetTranslateContext ctx, Expression e) {
   }
 }
 
-List<Object?> _listOrEmpty(
-  WidgetNode node,
-  WidgetTranslateContext ctx,
-  String name,
-) {
-  try {
-    return ctx.listArg(node.args, name, node.type);
-  } catch (_) {
-    return const [];
-  }
-}
-
-/// sliver 的 `delegate:` → `(children, builder props)`：
-///   - `SliverChildListDelegate([...])` → 直接展开 children；
-///   - `SliverChildBuilderDelegate((context, index) => ..., childCount: n)` →
-///     闭包抽成组件方法，产出 `{'builder': <方法名>, 'childCount': <jsExpr>}`。
-///
-/// 两种都不匹配 → null（调用方按普通值形态继续翻译）。
-({List<Object?> children, Map<String, dynamic> builder})? sliverDelegateResult(
-  Expression? delegate,
-  WidgetTranslateContext ctx,
-) {
-  if (delegate == null) return null;
-  final (ctor, args) = ctx.ctorOf(delegate);
-
-  if (ctor == 'SliverChildListDelegate') {
-    final first = ctx.nonNamedArg(args);
-    if (first is ListLiteral) {
-      return (
-        children: [
-          for (final e in first.elements) ctx.translateElement(e),
-        ],
-        builder: const {},
-      );
-    }
-    return null;
-  }
-
-  if (ctor == 'SliverChildBuilderDelegate') {
-    final builderRaw = ctx.namedArg(args, 'builder') ?? ctx.nonNamedArg(args);
-    final childCount = ctx.namedArg(args, 'childCount');
-    if (builderRaw is! FunctionExpression || childCount == null) return null;
-    final method = extractBuilderMethod(ctx, builderRaw, '_builder');
-    if (method == null) return null;
-    return (
-      children: const [],
-      builder: {
-        'builder': ctx.jsString(method),
-        'childCount': ctx.jsDataExpr(childCount),
-      },
-    );
-  }
-
-  return null;
-}

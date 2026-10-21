@@ -158,6 +158,24 @@ Object? _zeroRadius(Expression e, WidgetTranslateContext c, String source) {
 Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
   if (e is NullLiteral) return null;
 
+  // sliver 子结点提供者：按**构造类型**识别（与参数名无关）。
+  //   - `SliverChildListDelegate([...])` → 元素数组；
+  //   - `SliverChildBuilderDelegate((c, i) => ..., childCount: n)` → 方法名 + 计数。
+  // 产物不是元素（没有 `element: true` 标记），由元素工厂归入 children。
+  final delegate = _delegateValue(e, ctx);
+  if (delegate != null) return delegate;
+
+  // 条件表达式：先按标量翻译；分支是 widget / widget 列表时改走元素翻译，
+  // 产物是运行时求值的 JS 三元（`flag ? __h(...) : null`）。
+  if (e is ConditionalExpression) {
+    final cond = _jsExprOrNull(e.condition, ctx);
+    if (cond == null) return null;
+    final a = _branchJs(e.thenExpression, ctx);
+    final b = _branchJs(e.elseExpression, ctx);
+    if (a == null || b == null) return null;
+    return '$cond ? $a : $b';
+  }
+
   // 闭包：按**通用参数名约定**区分语义（约定与 widget 类型无关）——
   //   `builder` / `xxxBuilder`（返回 widget 的回调，如 ListView.builder 的
   //     itemBuilder、Builder 的 builder）→ 抽成组件方法，props 值 = 方法名，
@@ -256,6 +274,63 @@ String? _classRefOf(Expression expr, WidgetTranslateContext ctx) {
   // 登记依赖：确保该类（跨文件模型类）被翻译并 import 进本产物。
   ctx.collectDependency(ctor);
   return ctor;
+}
+
+/// sliver 子结点提供者：按**构造类型**识别，与实参名无关。
+///
+/// 产物形态（均不带 `element: true`，由 `__h` 归入 children 对象）：
+///   - `{__delegate: 'list', children: [元素…]}`；
+///   - `{__delegate: 'builder', builder: '<方法名>', childCount: <jsExpr>}`。
+///
+/// 两种都不匹配 → null（调用方按普通值形态继续翻译）。
+Object? _delegateValue(Expression e, WidgetTranslateContext ctx) {
+  final (ctor, args) = ctx.ctorOf(e);
+
+  if (ctor == 'SliverChildListDelegate') {
+    final first = ctx.nonNamedArg(args);
+    if (first is ListLiteral) {
+      return {
+        '__delegate': ctx.jsString('list'),
+        'children': [
+          for (final el in first.elements) ctx.translateElement(el),
+        ],
+      };
+    }
+    return null;
+  }
+
+  if (ctor == 'SliverChildBuilderDelegate') {
+    final builderRaw = ctx.namedArg(args, 'builder') ?? ctx.nonNamedArg(args);
+    final childCount = ctx.namedArg(args, 'childCount');
+    if (builderRaw is! FunctionExpression || childCount == null) return null;
+    final method = extractBuilderMethod(ctx, builderRaw, '_builder');
+    if (method == null) return null;
+    return {
+      '__delegate': ctx.jsString('builder'),
+      'builder': ctx.jsString(method),
+      'childCount': ctx.jsDataExpr(childCount),
+    };
+  }
+
+  return null;
+}
+
+/// 条件表达式单个分支 → JS 源码：widget 构造走元素渲染，列表逐项渲染，
+/// 其余按标量直通。渲染不出来返回 null。
+String? _branchJs(Expression e, WidgetTranslateContext ctx) {
+  if (e is NullLiteral) return 'null';
+  if (e is ListLiteral) {
+    final items = [for (final el in e.elements) ctx.translateElement(el)];
+    return '[${items.map((v) => ctx.renderJs(v, 0)).join(', ')}]';
+  }
+  final (ctor, _) = ctx.ctorOf(e);
+  if (ctor != null &&
+      _isClassName(ctor) &&
+      !_valueCtors.contains(ctor) &&
+      !_ctorConverters.containsKey(ctor)) {
+    return ctx.renderJs(ctx.translate(e), 0);
+  }
+  return _jsExprOrNull(e, ctx);
 }
 
 /// 参数名是否是「builder 语义」的闭包（返回 widget 的回调）：`builder` /
