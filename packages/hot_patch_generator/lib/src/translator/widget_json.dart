@@ -13,13 +13,14 @@
 ///   - `delegate:` → sliver 子结点提供者（见 [sliverDelegateResult]）；
 ///   - `on*` → 事件句柄（键名就是参数名，不改名）；
 ///   - 位置实参 → 按 Flutter 声明的**形参名**（`Text('hi')` → `data`，见
-///     [widgetPositionalArgNames]）；未登记的类型退回 `props['$pos']`（JS 数组，
-///     运行时按位取）；
+///     [widgetPositionalArgNames]）；未登记的类型出声告警并丢弃，不再有下标
+///     数组兜底；
 ///   - 其余具名实参 → `props[参数名]`，值按形态翻译（翻译不出来则丢弃该键）；
 ///   - `key:` 由渲染层统一注入（见 `WidgetTranslateContext._applyKeyProp`）。
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:build/build.dart' show log;
 
 import '../builders/js_widget_defs.dart';
 import 'value_forms.dart';
@@ -33,10 +34,6 @@ const Set<String> _listArgs = {'children', 'slivers', 'tabs'};
 
 /// 子结点提供者参数：`delegate:`。
 const Set<String> _delegateArgs = {'delegate'};
-
-/// 位置实参的 props 键名（值为 JS 数组，按位取）：**只用于**表
-/// [widgetPositionalArgNames] 未登记的类型兜底（见 [widgetToJson]）。
-const String positionalPropsKey = r'$pos';
 
 /// 命名构造 / 静态工厂名的 props 键（值为带引号的 JS 字符串）。
 ///
@@ -59,6 +56,11 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     }
     final name = arg.name.label.name;
     final value = arg.expression;
+
+    // `key:` 是元素级参数，由渲染层统一注入 props['key']（见
+    // [WidgetTranslateContext._applyKeyProp]）；这里跳过，避免把 Key 构造
+    // 当作子结点/值重复翻译。
+    if (name == 'key') continue;
 
     // delegate 是「子结点提供者」：ListDelegate → children；
     // BuilderDelegate → builder/childCount props（不认识的形态走普通值翻译）。
@@ -107,8 +109,9 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
   final factory = factoryNameOf(node.expr);
   if (factory != null) props[factoryPropsKey] = ctx.jsString(factory);
 
-  // 位置实参：优先按 Flutter 声明的**形参名**下发（`Text('hi')` → `data`）；
-  // 未登记的类型退回下标数组 `$pos`（运行时按位取）——未识别组件照样能翻。
+  // 位置实参：按 Flutter 声明的**形参名**下发（`Text('hi')` → `data`）。
+  // 未登记的类型没有可靠形参名，禁止伪造下标键（`$pos`）——出声告警并丢弃，
+  // 促使在 [widgetPositionalArgNames] 补齐登记。
   if (positional.isNotEmpty) {
     final names = positionalArgNames(node.type, factory);
     if (names != null && names.length >= positional.length) {
@@ -116,7 +119,11 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
         props[names[i]] = positional[i];
       }
     } else {
-      props[positionalPropsKey] = positional;
+      log.warning(
+        '[hot_patch_generator] ${ctx.sourcePath}: ${node.type} 的位置实参'
+        '未登记形参名（widgetPositionalArgNames），已丢弃；'
+        '请在 js_widget_defs.dart 登记该构造的位置形参名。',
+      );
     }
   }
 

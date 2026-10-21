@@ -1,5 +1,7 @@
 ## 0.2.1
 
+- 单子结点产物去掉多余数组：`child:` 只有一个静态子结点时直接写成 `__h(type, props, child)`，由运行时 `__h` 归一成 `[child]`；多结点与 `...spread` 仍保持数组。
+- 删除位置实参的下标键兜底：不再生成 `props['$pos']`；未在 `widgetPositionalArgNames` 登记形参名的类型遇到位置实参时，构建期告警并丢弃，避免出现没有语义的下标约定。
 - 清理过时文档与提示语：翻译失败提示中的 `@UIProp` 残留改为「组件状态字段（@PatchEntry 组件的实例字段）」；`build.yaml` 里对已删除 translator 注册表的引用改为 `registeredWidgetPackages()`。
 
 ## 0.2.0

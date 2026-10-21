@@ -128,23 +128,6 @@ class JsRenderContext {
     return v is Map ? v.cast<String, dynamic>() : null;
   }
 
-  // ---------------------------------------------------------------------------
-  // 位置实参：统一翻译默认按 Flutter 形参名下发（`Text('hi')` → `{data: 'hi'}`），
-  // 只有**未登记形参名**的类型才退回下标数组 `props['$pos']`（见生成器
-  // `js_widget_defs.dart` 的 `widgetPositionalArgNames`）。
-  // ---------------------------------------------------------------------------
-
-  /// 位置实参兜底：`props['$pos']` 是 JS 数组（按声明顺序）。
-  /// 如 `Foo('x')` → `$pos: ['x']`。
-  dynamic pos(int i) {
-    final list = props[r'$pos'];
-    if (list is List && i < list.length) return list[i];
-    return null;
-  }
-
-  /// 位置实参转字符串（缺省空串），供 Text/Image 这类首个位置实参是字符串的组件。
-  String posText([int i = 0]) => '${pos(i) ?? ''}';
-
   /// props 里的值可能是**元素描述的具名实参**（`{type, props, children}`）。
   /// 生成器把 `ButtonStyle(...)`/`InputDecoration(...)` 这类「构造形态的值」
   /// 也译成了元素结点，此处取它的内层 props。
@@ -341,9 +324,8 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   r.register(
     'Text',
     (c) => Text(
-      // `data` 是 Flutter `Text` 的首个位置形参名（`Text('你好')`）；
-      // 未登记形参名的类型才走 `$pos[0]` 兜底。
-      c.str('data') ?? c.posText(),
+      // `data` 是 Flutter `Text` 的首个位置形参名（`Text('你好')`）。
+      c.str('data') ?? '',
       style: textStyleFromJson(c.map('style')),
       textAlign: textAlignFromJson(c.props['textAlign']),
       overflow: overflowFromJson(c.props['overflow']),
@@ -556,7 +538,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     'Icon',
     (c) => Icon(
       // `icon` 是 Flutter `Icon` 的首个位置形参名（`Icon(Icons.star)`）。
-      iconFromJson(c.props['icon'] ?? c.pos(0)),
+      iconFromJson(c.props['icon']),
       size: c.num_('size'),
       color: colorFromJson(c.props['color']),
     ),
@@ -567,8 +549,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   // `Image.asset` → `name`、`Image(...)` → `image`）。
   r.register('Image', (c) {
     final factory = c.str('factory');
-    final source =
-        c.str('src') ?? c.str('name') ?? c.str('image') ?? c.posText();
+    final source = c.str('src') ?? c.str('name') ?? c.str('image') ?? '';
     final width = c.num_('width');
     final height = c.num_('height');
     final fit = boxFitFromJson(c.props['fit']);

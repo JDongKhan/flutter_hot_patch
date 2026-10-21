@@ -118,8 +118,8 @@ const Set<String> builtinWidgetTypes = {
 /// 后者优先，如 `Image.network` 的位置实参是 `src`、`Image.asset` 的是 `name`）。
 ///
 /// 生成器只有语法树（无类型解析），拿不到任意 widget 的形参名，故取本表；未登记
-/// 的类型退回 `$pos`（下标数组，运行时按位取，见 `JsRenderContext.pos`）——
-/// **新增未识别组件零实现即可翻译**，登记只是让产物更可读。
+/// 的类型遇到位置实参时**构建期告警并丢弃**（不再有 `$pos` 下标数组兜底）。
+/// 新增带位置实参的组件时，必须在此登记其形参名。
 ///
 /// **同步维护**：与运行时各 renderer 读取的键名一致（`js_widget_registry.dart`）。
 const Map<String, List<String>> widgetPositionalArgNames = {

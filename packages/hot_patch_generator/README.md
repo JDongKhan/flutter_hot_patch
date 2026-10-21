@@ -109,7 +109,7 @@ Supporting a new widget therefore needs **no code**. Two opt-in tables in
 
 | Table | Purpose |
 |---|---|
-| `widgetPositionalArgNames` | positional arguments go into props under **Flutter's own parameter name** (`Text('hi')` → `{data: 'hi'}`, `Image.network(url)` → `{src: url}`); unlisted types fall back to `props['$pos']` (index array; the host reads it by position) |
+| `widgetPositionalArgNames` | positional arguments go into props under **Flutter's own parameter name** (`Text('hi')` → `{data: 'hi'}`, `Image.network(url)` → `{src: url}`); unlisted types with positional arguments produce a build warning and are dropped (no `$pos` index fallback) |
 | `builtinWidgetTypes` | mirror of the host's `JsWidgetRegistry` keys (tells built-in widgets apart from business classes) |
 
 Named constructors / static factories keep their name in the output, so the runtime can select the exact
@@ -262,7 +262,7 @@ targets:
 
 | 表 | 用途 |
 |---|---|
-| `widgetPositionalArgNames` | 位置实参按 **Flutter 自己声明的形参名**下发（`Text('hi')` → `{data: 'hi'}`、`Image.network(url)` → `{src: url}`）；未登记的类型退回 `props['$pos']`（下标数组，运行时按位取） |
+| `widgetPositionalArgNames` | 位置实参按 **Flutter 自己声明的形参名**下发（`Text('hi')` → `{data: 'hi'}`、`Image.network(url)` → `{src: url}`）；未登记的类型遇到位置实参时构建期告警并丢弃（不再有 `$pos` 下标兜底） |
 | `builtinWidgetTypes` | 宿主 `JsWidgetRegistry` 注册键的镜像（用于区分内建 widget 与业务类） |
 
 命名构造 / 静态工厂的名字会保留在产物里，运行时据此**按类型选工厂**：`ListView.builder` →
