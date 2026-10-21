@@ -1030,7 +1030,6 @@ export class SliverDetail {
                   "bottom": 8.0
                 }
               }, __h('SliverToBoxAdapter', {}, __h('Container', {
-                    "key": this._fixedKey,
                     "padding": {
                       "left": 10.0,
                       "top": 8.0,
@@ -1042,7 +1041,8 @@ export class SliverDetail {
                       "borderRadius": {
                         "radius": 6.0
                       }
-                    }
+                    },
+                    "key": this._fixedKey
                   }, __h('Text', {
                       "style": {
                         "fontSize": 14,
@@ -2068,7 +2068,7 @@ export class KeyDetail {
             },
             "data": "① 带 key：key: ValueKey(name)"
           }),
-        ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "key": new ValueKey(this._names[i]), "index": i, "label": this._names[i] + "（key）" })]); } return out; })(),
+        ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": this._names[i] + "（key）", "key": new ValueKey(this._names[i]) })]); } return out; })(),
         __h('SizedBox', {
             "height": 10
           }),
@@ -2090,14 +2090,14 @@ export class KeyDetail {
         "crossAxisAlignment": "stretch"
       }, [
         __h(KeyTile, {
-            "key": new ObjectKey(this._stableObj),
             "index": 0,
-            "label": "A · ObjectKey(字段实例) · 父级已重建 " + this._rebuildSeq + " 次"
+            "label": "A · ObjectKey(字段实例) · 父级已重建 " + this._rebuildSeq + " 次",
+            "key": new ObjectKey(this._stableObj)
           }),
         __h(KeyTile, {
-            "key": new ObjectKey([1]),
             "index": 1,
-            "label": "B · ObjectKey(每帧新造 [1]) · 父级已重建 " + this._rebuildSeq + " 次"
+            "label": "B · ObjectKey(每帧新造 [1]) · 父级已重建 " + this._rebuildSeq + " 次",
+            "key": new ObjectKey([1])
           })
       ]);
   }
@@ -2337,9 +2337,9 @@ export class KeyDetail {
               "height": 8
             }),
           __h(KeyTile, {
-              "key": new UniqueKey(),
               "index": 0,
-              "label": "唯一身份行 #" + this._uniqueSeq
+              "label": "唯一身份行 #" + this._uniqueSeq,
+              "key": new UniqueKey()
             }),
           __h('SizedBox', {
               "height": 8
@@ -2451,7 +2451,6 @@ export class KeyDetail {
               "height": 8
             }),
           __h('Container', {
-              "key": this._targetKey,
               "padding": {
                 "left": 10.0,
                 "top": 10.0,
@@ -2463,7 +2462,8 @@ export class KeyDetail {
                 "borderRadius": {
                   "radius": 6.0
                 }
-              }
+              },
+              "key": this._targetKey
             }, __h('Text', {
                 "style": {
                   "fontSize": 13

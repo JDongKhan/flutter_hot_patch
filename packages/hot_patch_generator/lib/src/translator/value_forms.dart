@@ -289,6 +289,7 @@ const Set<String> _valueCtors = {
   'GlobalKey',
   'ValueKey',
   'ObjectKey',
+  'PageStorageKey',
   'UniqueKey',
 };
 
