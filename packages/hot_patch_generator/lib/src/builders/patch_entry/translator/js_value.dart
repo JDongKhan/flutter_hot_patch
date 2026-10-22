@@ -456,6 +456,12 @@ abstract class WidgetExprRenderer {
   /// 中立描述 → JS 源码（构造调用树）。
   String renderJs(Object? node, int depth);
 
+  /// 把「局部 widget 值」翻译成 JS 元素源码（字段 / 局部变量 / 列表 / 三目）。
+  ///
+  /// 不是可识别的 widget 构造时返回 null，调用方回退到通用值翻译
+  /// （模型构造、标量、普通集合等），避免把 `User()` 误当元素。
+  String? widgetValueJs(Expression e, int depth);
+
   /// 方法体内声明的局部变量（`final isAdult = ...;`）→ 登记进 widget 层局部表。
   /// 方法体翻译与 widget 渲染必须共用同一份标识符作用域，否则返回的 widget
   /// 树里引用局部变量时会解析失败。

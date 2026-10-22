@@ -278,25 +278,35 @@ JsRenderContext _descriptorContext(
 
 // ===== 全局原生组件注入表 =====
 
-/// 「无 JS 产物组件」（产物里保留具体类型名、无 JS 类的结点）的原生实现：组件名 → 构造。
+/// 「无 JS 产物组件」（产物里保留具体类型名、无 JS 类的结点）的原生实现。
+///
+/// 回调收到完整的 [JsRenderContext]：`props` 是普通属性，`children` 是按
+/// Dart 实参原名索引的子树 slot（`child` / `children` / `actions` …），
+/// `invoke` 可把事件句柄回传到 JS。因此原生注入实现可以像正常 Flutter
+/// 组件一样渲染子组件，不再只有 props。
 ///
 /// **进程内全局一份**：同一 App 的所有 `JsUiWidget` 实例、所有「无 JS 产物」
 /// 结点共用同一张表，不再随 widget 参数逐层透传。运行时（hot_patch 包）不
 /// import 任何业务类，实现由业务方在 `main()` 里注册（与 [registerHostMethods]
 /// 同一个位置，须在 `runApp` 之前）。
-final Map<String, Widget Function(Map<String, dynamic> args)>
-_nativeComponents = {};
+final Map<String, JsWidgetBuilder> _nativeComponents = {};
 
 /// 注册一个「无 JS 产物组件」的原生实现（如生成器对 `@PatchIgnore` /
 /// 无注解私有组件产出的「保留具体类型名」结点）。
 ///
+/// 回调参数是 [JsRenderContext]：`c.props` / `c.children` / `c.invoke`。
+/// 例如：
+/// ```dart
+/// registerNativeComponent('_LabeledDivider', (c) => LabeledDivider(
+///   text: c.str('text') ?? '',
+///   child: c.children['child'] as Widget?,
+/// ));
+/// ```
+///
 /// **重复注册**：后注册覆盖先注册（Map 语义，幂等、不抛错）——同一实现在
 /// 多处重复注册无副作用；但两个**不同实现**注册同一名字会静默覆盖，故这里
 /// 在覆盖时打一条日志。约定：注册只在启动时做一次，不要在 `build()` 里调。
-void registerNativeComponent(
-  String name,
-  Widget Function(Map<String, dynamic> args) build,
-) {
+void registerNativeComponent(String name, JsWidgetBuilder build) {
   if (_nativeComponents.containsKey(name)) {
     HotPatchLog.warn('js_ui: 原生组件 "$name" 重复注册，后者覆盖前者');
   }
@@ -313,7 +323,7 @@ typedef JsWidgetBuilder = Widget Function(JsRenderContext c);
 /// 哨兵类型——「未注册」只表现为 [JsWidgetRegistry.lookup] 未命中。
 Widget _unknownWidgetBuilder(JsRenderContext c) {
   final native = _nativeComponents[c.type];
-  if (native != null) return native(c.props);
+  if (native != null) return native(c);
   return buildMissingJsWidget(c.type, ((c.children['__items'] as List<Widget>?) ?? const []));
 }
 

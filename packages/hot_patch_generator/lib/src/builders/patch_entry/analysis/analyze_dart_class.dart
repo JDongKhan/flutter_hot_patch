@@ -565,6 +565,13 @@ ClassInfo translateClass(
     }
   }
 
+  // 类表里所有 widget 类名（isComponent）：用于区分「局部/字段 widget 值」
+  // 与「模型构造」，避免把 `User()` 误当元素。
+  final widgetClassNames = <String>{
+    for (final e in classTable.entries)
+      if (e.value.isComponent) e.key,
+  };
+
   // 翻译上下文：实例字段表（propByField）+ 实例方法名表（actionByMethod）
   // ——widget 层据此解析标识符（`_count` → `this._count`）、区分本类实例
   // 方法与嵌套组件构造、事件绑定（`__bindFn`）。普通类与组件同一个上下文。
@@ -591,7 +598,28 @@ ClassInfo translateClass(
     hostMethods: hostMethods,
     jsClassWidgets: jsClassWidgets,
     delegateClassWidgets: delegateClassWidgets,
+    widgetClassNames: widgetClassNames,
   );
+
+  // 字段初始化器里的 widget 值（`Widget _w = Text();` / `final w = Text();`）：
+  // 上面按「值表达式」翻译会失败（裸 Text() 不是模型构造），这里用 widget
+  // 上下文补译，保证字段持有真正的元素对象；非 widget 字段保持原值。
+  for (var i = 0; i < instanceFields.length; i++) {
+    final f = instanceFields[i];
+    final init = f.initializer;
+    if (init == null) continue;
+    final widgetJs = parseCtx.widgetValueJs(init, 2);
+    if (widgetJs == null) continue;
+    instanceFields[i] = ClassField(
+      name: f.name,
+      typeName: f.typeName,
+      initializer: f.initializer,
+      isStatic: f.isStatic,
+      jsInitial: widgetJs,
+      mixinOrigin: f.mixinOrigin,
+    );
+  }
+
 
   // 方法增强：classInfoOf 已建好结构（形参 / async / void / 返回 widget
   // 判定），这里只叠加翻译产物——预渲染方法体 [bodyJs] 与 native 通道识别

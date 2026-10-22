@@ -135,7 +135,64 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     this.hostMethods = const {},
     this.jsClassWidgets = const {},
     this.delegateClassWidgets = const {},
+    this.widgetClassNames = const {},
   });
+
+  /// 本文件 / import 可见的 **widget 类**（classTable 里 isComponent 的类）。
+  /// 用于区分「局部 widget 变量初始化」与「模型构造」——没有它就只能按
+  /// 大小写猜，`User()` 会被误当成元素。
+  final Set<String> widgetClassNames;
+
+  /// 局部 widget 值 → JS 元素源码；不是可识别 widget 构造返回 null。
+  ///
+  /// 覆盖三种形态：
+  ///   - 单个构造：`Text()` / `const Center(...)` / `Image.network(...)`；
+  ///   - 三目：两支都是 widget（或 null）；
+  ///   - 列表：元素逐个是 widget。
+  ///
+  /// 调用方（局部变量 / 字段初始化 / builder 前置语句）在返回 null 时回退到
+  /// 通用值翻译，因此模型构造、标量、普通集合不受影响。
+  @override
+  String? widgetValueJs(Expression e, int depth) {
+    try {
+      if (e is ListLiteral) {
+        if (e.elements.isEmpty) return null;
+        final items = <String>[];
+        for (final el in e.elements) {
+          if (el is! Expression) return null;
+          final item = widgetValueJs(el, depth);
+          if (item == null) return null;
+          items.add(item);
+        }
+        return '[${items.join(', ')}]';
+      }
+      if (e is NullLiteral) return 'null';
+      if (e is ConditionalExpression) {
+        final a = widgetValueJs(e.thenExpression, depth);
+        final b = widgetValueJs(e.elseExpression, depth);
+        if (a == null || b == null) return null;
+        return '(${jsDataExpr(e.condition)} ? $a : $b)';
+      }
+      if (!_isWidgetValueExpr(e)) return null;
+      return renderJs(translate(e), depth);
+    } catch (_) {
+      // 不是可翻译的 widget 值：交给调用方回退值翻译（不在这里降级成占位）。
+      return null;
+    }
+  }
+
+  bool _isWidgetValueExpr(Expression e) {
+    final (ctor, _) = ctorOf(e);
+    if (ctor == null) return false;
+    if (e is MethodInvocation) {
+      // 本类方法调用 / 小写开头函数不是 widget 构造。
+      if (actionByMethod.containsKey(ctor)) return false;
+      if (!isClassName(ctor)) return false;
+    }
+    return builtinWidgetTypes.contains(ctor) ||
+        jsClassWidgets.contains(ctor) ||
+        widgetClassNames.contains(ctor);
+  }
 
   /// 有 JS 类实现的 widget 类型（组件、逻辑 widget、builder 代理）。
   /// 由生成器注入（builder 的模板表是唯一事实源）。
@@ -285,7 +342,10 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       if (e is ForElement) return '...${_forAsArray(e)}';
       // `...<list>` 展开（`...[Positioned.fill(...), Positioned(...)]`）：把内层
       // 元素数组原样展开进 children（`...[a, b]` ≡ `a, b`）。
-      if (e is SpreadElement) return '...${_collectionArrayJs(e.expression)}';
+      // 注意传 [e] 而不是 `e.expression`：_collectionArrayJs 对 SpreadElement
+      // 负责产出「被展开的数组表达式」，否则 `...items` 会被写成 `...[items]`
+      // （多包一层数组，children 被运行时判为非元素列表，整列变空）。
+      if (e is SpreadElement) return '...${_collectionArrayJs(e)}';
       throw FormatException('不支持的 collection element: ${e.toSource()}');
     } catch (err) {
       // 单个集合元素（如 `...[...]` spread）无法翻译：降级为占位结点，
@@ -383,15 +443,18 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     // `...<list>` / `...<field>`：展开内层元素。
     //   - 内层是**列表字面量**（widget 列表）：逐元素走 [translateElement]
     //     渲染成元素数组（`...[Positioned(...), Positioned(...)]`）。
-    //   - 其余（运行时数组字段）：`[...<expr>]` 运行时展开。
+    //   - 其余（运行时数组字段 / 局部变量 / 方法返回）：数组表达式本身就是被
+    //     展开的内容，直接返回，不再包一层。
     if (e is SpreadElement) {
       final inner = e.expression;
       if (inner is ListLiteral) {
         final items = inner.elements.map(_elementJs).join(', ');
         return '[$items]';
       }
+      // 运行时数组（字段 / 局部变量 / 方法返回）：数组本身就是被展开的内容，
+      // 不能再包一层 `[...x]`，否则调用方再拼 `...` 会变成 `...[x]`。
       final t = translate(inner);
-      return '[...${t is String ? t : renderJs(t, 2)}]';
+      return t is String ? t : renderJs(t, 2);
     }
     throw FormatException('不支持的 collection element: ${e.toSource()}');
   }

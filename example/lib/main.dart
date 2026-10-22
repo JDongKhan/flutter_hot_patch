@@ -7,6 +7,7 @@ import 'components/hello_component.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
 import 'components/widget_showcase.dart';
+import 'components/widget_details.dart';
 import 'generated/host_methods.dart';
 
 void main() {
@@ -18,9 +19,13 @@ void main() {
   // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 registerHostMethods
   // 一致——runApp 之前。重复注册同名会覆盖（覆盖时告警），故不要放进 build()。
   //   DashboardCard 产物里 `_LabeledDivider` 私有类跨库不可见，注册公开的同名实现。
+  //   回调收到完整 JsRenderContext：props + children slot + invoke。
   registerNativeComponent(
     '_LabeledDivider',
-    (args) => LabeledDivider(text: args['text'] as String? ?? ''),
+    (c) => LabeledDivider(
+      text: c.str('text') ?? '',
+      child: c.children['child'] as Widget?,
+    ),
   );
   // 入口是 Demo 列表页，其中的两条「完整 App」入口分别渲染**原生外壳**与
   // **JS 热更外壳**（AppShell，见 lib/app/app.dart）。
@@ -132,6 +137,16 @@ class DemoListPage extends StatelessWidget {
       'Props 更新 · JS 热更',
       '宿主重建 JsUiWidget 并传入新 props：JS 侧 __applyProps + 重建',
       _PropsUpdateDemo(),
+    ),
+    _DemoEntry(
+      'TestWidget · 局部 widget 变量',
+      'Text text = Text(); final items = [Text(), Text()]; 局部变量与列表按元素翻译',
+      _CompareTest(
+        native: const TestWidget(),
+        js: JsUiWidget(
+          jsAsset: _patchUrl('TestWidget', 'components/widget_details.js'),
+        ),
+      ),
     ),
     _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),
   ];

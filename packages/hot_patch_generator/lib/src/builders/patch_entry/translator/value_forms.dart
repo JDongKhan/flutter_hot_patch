@@ -487,7 +487,12 @@ String? extractBuilderMethod(
           // 句柄会因「引用了构建期局部名」改走**构建期闭包**，闭包与本方法同
           // 作用域、直接捕获 `model`——不做 read("T") 之类的改写。
           ctx.warnCapturedLocals(init);
-          preludes.add('var ${v.name.lexeme} = ${ctx.jsDataExpr(init)};');
+          // 块体里的 `final w = Text();`：同样可能是 widget 值，先走 widget
+          // 翻译（`var w = __h('Text', {})`），非 widget 再回退值翻译。
+          final widgetInit = ctx.widgetValueJs(init, 0);
+          preludes.add(
+            'var ${v.name.lexeme} = ${widgetInit ?? ctx.jsDataExpr(init)};',
+          );
         }
         continue;
       }

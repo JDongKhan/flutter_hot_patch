@@ -3029,3 +3029,40 @@ export class ReorderListDetail {
   }
 }
 
+// 组件 TestWidget
+export class TestWidget {
+  constructor() {
+  }
+  build(context) {
+    var text = __h('Text', {
+          "data": "局部变量 widget"
+        });
+    var card = __h(StatelessCard, {
+          "title": "局部自定义组件",
+          "subtitle": "StatelessCard 变量",
+          "badge": "VAR"
+        });
+    var items = [__h('Text', {
+          "data": "列表项 A"
+        }), __h('Text', {
+          "data": "列表项 B"
+        })];
+    return __h('Center', {
+        "child": __h('Column', {
+            "mainAxisSize": "min",
+            "children": [
+              text,
+              __h('SizedBox', {
+                  "height": 8
+                }),
+              card,
+              __h('SizedBox', {
+                  "height": 8
+                }),
+              ...items
+            ]
+          })
+      });
+  }
+}
+

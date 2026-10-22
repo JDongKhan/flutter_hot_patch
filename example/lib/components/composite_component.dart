@@ -39,10 +39,14 @@ class _DashboardCardState extends State<DashboardCard> {
         // 有注解的自定义组件：JS 版递归渲染 BannerCard（含其自身状态）
         const BannerCard(),
         const SizedBox(height: 12),
-        // 私有组件（_ 开头）：生成器递归翻译成 JS 注册进同一产物
-        const _LabeledDivider(text: 'private widget'),
+        // 私有组件（_ 开头）：@PatchIgnore 退出翻译，运行时由原生注入实现渲染；
+        // 它的 child slot 会原样传给 registerNativeComponent 的 JsRenderContext。
+        const _LabeledDivider(
+          text: 'private widget',
+          child: Text('native child slot'),
+        ),
         const SizedBox(height: 8),
-        // 非私有组件：原生直接可用；JS 版运行时由 registerNativeComponent 注入
+        // 非私有组件：同文件 public widget，会被生成器连带翻译成 JS 类。
         const LabeledDivider(text: 'public widget'),
         const SizedBox(height: 12),
         ElevatedButton(
@@ -64,9 +68,12 @@ class _DashboardCardState extends State<DashboardCard> {
 /// 运行时由业务方在 `main()` 里注册原生实现（registerNativeComponent）渲染。
 @PatchIgnore()
 class _LabeledDivider extends StatelessWidget {
-  const _LabeledDivider({required this.text});
+  const _LabeledDivider({required this.text, this.child});
 
   final String text;
+
+  /// 子组件 slot：验证 registerNativeComponent 能拿到 children。
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
@@ -74,23 +81,35 @@ class _LabeledDivider extends StatelessWidget {
       children: [
         Text('— $text —', style: const TextStyle(fontSize: 12)),
         const SizedBox(height: 4),
+        // ignore: use_null_aware_elements - 生成器当前只支持 if-element 形式
+        if (child != null) child!,
       ],
     );
   }
 }
 
-/// 非私有组件：原生直接可用；JS 场景运行时由 registerNativeComponent
-/// 注入 Flutter widget（hot_patch 包不 import 业务类）。
+/// 非私有组件：同文件 public widget，JS 侧会被连带翻译成 JS 类；
+/// `_LabeledDivider` 的原生注册实现也复用它来渲染。
 class LabeledDivider extends StatelessWidget {
-  const LabeledDivider({super.key, required this.text});
+  const LabeledDivider({super.key, required this.text, this.child});
 
   final String text;
 
+  /// 原生注入实现渲染的 child slot（JS 侧翻译时同样作为子结点）。
+  final Widget? child;
+
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '★ $text ★',
-      style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '★ $text ★',
+          style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+        ),
+        // ignore: use_null_aware_elements - 生成器当前只支持 if-element 形式
+        if (child != null) child!,
+      ],
     );
   }
 }

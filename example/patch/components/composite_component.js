@@ -31,7 +31,10 @@ export class DashboardCard {
               "height": 12
             }),
           __h('_LabeledDivider', {
-              "text": "private widget"
+              "text": "private widget",
+              "child": __h('Text', {
+                  "data": "native child slot"
+                })
             }),
           __h('SizedBox', {
               "height": 8
@@ -64,14 +67,21 @@ export class LabeledDivider {
   }
   __applyProps(args) {
     this.text = (args && args.text !== undefined) ? args.text : '';
+    this.child = (args && args.child !== undefined) ? args.child : null;
   }
   build(context) {
-    return __h('Text', {
-        "style": {
-          "fontSize": 12,
-          "color": '#607D8B'
-        },
-        "data": "★ " + this.text + " ★"
+    return __h('Column', {
+        "mainAxisSize": "min",
+        "children": [
+          __h('Text', {
+              "style": {
+                "fontSize": 12,
+                "color": '#607D8B'
+              },
+              "data": "★ " + this.text + " ★"
+            }),
+          ...((this.child != null) ? [this.child] : [])
+        ]
       });
   }
 }

@@ -134,9 +134,9 @@ factory per type: `ListView.builder` → `{factory: 'builder', itemBuilder: …}
 (`itemBuilder` / `separatorBuilder` / `itemCount`).
 
 Widgets with no host renderer are not dropped silently: the output keeps their **concrete type name**, and
-at runtime the host resolves it via `registerNativeComponent(name, build)`. That fallback currently receives
-only `props` (not `children` / slot widgets), so it is suitable for prop-driven widgets, not for containers
-or builder-style widgets.
+at runtime the host resolves it via `registerNativeComponent(name, build)`. The callback receives the full
+`JsRenderContext` (`props` + `children` slots + `invoke`), so native implementations can render child widgets
+and forward events.
 
 ### Code structure
 
@@ -304,8 +304,8 @@ separatorBuilder: …}`、`Image.network` → `{factory: 'network', src: …}`�
 （`itemBuilder` / `separatorBuilder` / `itemCount`）。
 
 宿主没有对应 renderer 的 widget 不会被静默丢弃：产物保留其**具体类型名**，运行时由宿主
-`registerNativeComponent(name, build)` 解析。该兜底当前只接收 `props`（不接收 `children` / slot
-子树），因此适用于纯属性驱动的 widget，不适用于容器或 builder 型 widget。
+`registerNativeComponent(name, build)` 解析。回调收到完整的 `JsRenderContext`
+（`props` + `children` slot + `invoke`），原生实现可以渲染子组件并把事件回传到 JS。
 
 ### 代码结构
 

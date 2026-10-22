@@ -122,7 +122,7 @@ class _AppSubContentState extends State<AppSubContent> with SingleTickerProvider
 /// 外壳（`patch/app/app.js`）里四个 tab 页都是**类引用**（各有 JS 产物，JS 运行时
 /// 直接 new），无需宿主注入任何原生组件。若某页改用 `@PatchIgnore` 退出翻译，
 /// 翻译器会把它产出为**保留其类型名**的结点（未注册），此时在 `main()` 里用全局的
-/// `registerNativeComponent('XxxPage', (args) => ...)` 注入原生实现即可。
+/// `registerNativeComponent('XxxPage', (c) => ...)` 注入原生实现即可。
 @PatchIgnore()
 class AppShellJsPage extends StatelessWidget {
   const AppShellJsPage({super.key});
