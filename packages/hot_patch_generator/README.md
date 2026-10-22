@@ -80,12 +80,12 @@ targets:
 The output must correspond to the Dart source **one-to-one**; this is the core constraint of the framework:
 
 1. **Legal Dart constructs should be statically translated, not worked around.** When you meet an unknown
-   syntax form, add a proper translation branch (mapped one-to-one onto equivalent JS in the shared
-   expression/statement/class rendering paths of `dart2js.dart`) instead of asking users to change their Dart
-   to fit the framework. Current uncovered forms are reported at build time and degrade to a placeholder
-   node; that placeholder is a diagnostic fallback, **not** the intended long-term behavior (see "Known
-   limitations" in the component-support doc). All translation has a single implementation shared by
-   components and plain classes.
+   syntax form, add a proper translation branch (mapped one-to-one onto equivalent JS — expression/statement
+   translation lives in `translator/js_translator.dart`, class rendering in `translator/dart2js.dart`) instead
+   of asking users to change their Dart to fit the framework. Current uncovered forms are reported at build
+   time and degrade to a placeholder node; that placeholder is a diagnostic fallback, **not** the intended
+   long-term behavior (see "Known limitations" in the component-support doc). All translation has a single
+   implementation shared by components and plain classes.
 2. **No temporary workarounds.** When something fails, do not bypass it in the demo with temporary fields or
    shim layers (e.g. adding a mirror trigger field just because setState has no diff); the JS output must map
    line-by-line onto the Dart source — fix the translation path itself.
@@ -266,7 +266,7 @@ targets:
 
 翻译产物必须与 Dart 源码**一比一对应**，这是本框架的核心约束：
 
-1. **Dart 合法写法应被静态翻译，而不是绕开**。遇到不认识的语法形态，补正式翻译分支（在 `dart2js.dart` 的表达式/语句/类渲染等统一翻译路径上一比一映射成等价 JS），**不要求用户改 Dart 写法来适配框架**。当前未覆盖的写法会在构建期告警并降级为占位结点；占位是**诊断兜底，不是长期方案**（见组件支持文档「已知限制」）。所有翻译只有一处实现，组件与普通类共用。
+1. **Dart 合法写法应被静态翻译，而不是绕开**。遇到不认识的语法形态，补正式翻译分支（表达式/语句翻译在 `translator/js_translator.dart`，类声明渲染在 `translator/dart2js.dart`，都一比一映射成等价 JS），**不要求用户改 Dart 写法来适配框架**。当前未覆盖的写法会在构建期告警并降级为占位结点；占位是**诊断兜底，不是长期方案**（见组件支持文档「已知限制」）。所有翻译只有一处实现，组件与普通类共用。
 2. **禁止临时方案**。报错时不得在 demo 里加临时字段/中间层绕过（如为规避 setState 无 diff 而加的镜像触发字段）；产物 JS 应与 Dart 写法逐行对应，修就修翻译路径本身。
 3. **能力按文件隔离**。新增运行时能力（如 ScrollController / TextEditingController id-bridge）时，宿主侧按能力放 `hot_patch/lib/src/js_ui/capabilities/` 独立文件，**不动 `js_widget_registry` / `js_ui_widget` 核心**；JS 运行时片段按能力拆命名字符串、由 `runtime_source.dart` 拼接。
 4. **默认值与 Flutter 百分百一致**。宿主渲染时 nullable 属性缺省保持 `null`，不得默认成 `0` / `EdgeInsets.zero` 等覆盖 Flutter 主题默认。
