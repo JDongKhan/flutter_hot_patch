@@ -69,3 +69,62 @@
 - 每项实现完成后，在提交说明或对话中给出验证命令与结果；负责人验证通过后再开始下一项。
 - 已完成项保留记录，不删除，便于回溯改动顺序。
 - **异常 / 未支持场景必须有日志**：任何翻译失败、分支未覆盖、类型无法识别、运行时异常都至少输出一条 `warn` / `error` 日志，禁止静默返回、静默丢弃或空实现吞掉。新增代码评审时必须检查这一条。
+
+## 4. widget-class 协议重构（进行中）
+
+> 目标：不再让生成器判断「这个类是不是 widget」。所有有 JS 类的构造统一翻译成
+> `new X({...})`；`__h` 下沉到 `flutter.js` 的宿主包装类内部；局部变量 / 字段 /
+> 列表 / 三目不再需要 widget 特判。
+>
+> 分支：`feature/widget-class-protocol`
+> 起点：`5f3b5ac`（任务 9、局部 widget 变量、spread 修复已提交）
+
+### 4.1 运行时协议（向后兼容，先做）
+
+- 新增 `__element(type, props)`：组件类 element 描述（`{type, props, children, element:true}`）。
+- `__h(type, props)`：`type` 是函数时返回 `__element(type, props)`，**不再实例化**。
+- `mini-react.mount` 实例化组件时传内部 token（`new el.type(props, children, '__jsui_internal__')`）。
+- 生成的组件 / 逻辑组件 / builder 代理类构造函数支持双模：
+  - 无内部 token → `return __element(ThisClass, args)`（用户代码构造得到 element）；
+  - 有内部 token → 正常初始化实例（reconciler 挂载）。
+- 旧产物（构造函数忽略额外参数、仍返回实例）保持可用。
+
+**验收**：现有 demo 全部页面行为不变；新增 TestWidget 不再空白。
+
+### 4.2 宿主包装类生成
+
+- `widget_module_builder` 为 `builtinWidgetTypes` 中所有宿主类型生成包装类：
+  `class Text { constructor(props) { return __h('Text', props); } }`。
+- 数据载体类型（`BottomNavigationBarItem` / `DropdownMenuItem` / `InputDecoration`）同样生成包装类。
+- builder 命名构造类型生成双模代理类：普通构造 → `__h('X', props)`；`.builder/.separated` → 代理实例。
+- `flutter.js` 导出全部宿主包装类。
+
+**验收**：`flutter.js` 能直接 `new Text({data:'x'})` 得到 element；现有产物不受影响。
+
+### 4.3 翻译器统一发射 `new`
+
+- 有 JS 类的类型（宿主包装 / 组件 / 逻辑组件 / 代理）一律 `new Type(props)`；
+  无 JS 类的原生注入类型保留 `__h('Type', props)` 兜底。
+- 宿主类型纳入 `usedWidgetPackages`，组件产物从 `flutter.js` import 对应类。
+- 删除 `widgetValueJs` / `_isWidgetValueExpr` 的局部变量特判，局部变量 / 字段 / 列表 / 三目
+  统一走类构造翻译。
+- 位置实参形参名、factory 名、事件分流规则保持不变。
+
+**验收**：TestWidget 的 `Text text = Text()`、`StatelessCard card = ...`、`...items` 产物
+均为 `new`；页面与原生一致。
+
+### 4.4 清理与文档
+
+- 删除不再使用的 widget 判定表/分支；更新架构文档、组件文档、README。
+- 版本协议说明：新旧产物兼容边界、旧产物回退路径。
+- 全量 demo 验证 + 构建产物对比。
+
+### 4.5 已知风险
+
+| 风险 | 处理 |
+|---|---|
+| 自定义组件构造对象上的字段访问（`card.title`） | element 描述只带 props；必要时用 Proxy 或文档声明限制 |
+| builder 代理双模构造 | 代理类按 `props.factory` 分流；保留现有 `build()` 展开逻辑 |
+| 数据载体 / InputDecoration | 生成包装类，保持宿主 renderer 读取方式不变 |
+| const widget 身份 | 仍按 props/key diff，不依赖对象身份 |
+| 旧产物兼容 | `__h` 函数类型只返回描述；旧类忽略内部 token 仍按实例工作 |
