@@ -441,6 +441,32 @@ const String _jsUiApi = r'''
     delete roots[pageKey];
   }
 
+  // 宿主侧 props 更新（Dart JsUiWidget.didUpdateWidget → 这里），与 Flutter
+  // 「父级重建」语义对齐：替换根实例 props → 重跑 __applyProps（构造参数
+  // 派生的字段）→ 回调 didUpdateWidget(oldWidget) → 标脏重建。
+  // 根尚未 mount / 已 dispose 时返回 false（不静默：Dart 侧会按返回值记日志）。
+  function updateRootProps(pageKey, propsJson) {
+    var root = roots[pageKey];
+    if (!root || !root.inst) { return false; }
+    var inst = root.inst;
+    var next = parse(propsJson);
+    var prev = inst.props || {};
+    inst.props = next;
+    if (inst.__el) { inst.__el.props = next; }
+    if (typeof inst.__applyProps === 'function') { inst.__applyProps(next); }
+    var prevBuilding = building;
+    building = inst;
+    try {
+      if (typeof inst.didUpdateWidget === 'function') {
+        inst.didUpdateWidget(prev);
+      }
+    } finally {
+      building = prevBuilding;
+    }
+    markDirty(inst);
+    return true;
+  }
+
 ''';
 
 /// 泄漏观测 / 缓存全景函数（**仅 debug 构建拼入**，release 产物里没有这段）：
@@ -505,6 +531,7 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
     Component: Component,
     mount: mountRoot,
     dispose: disposeRoot,
+    updateProps: updateRootProps,
 ''';
 
 /// UI 运行时骨架尾部·后段（api 收尾到 IIFE 闭包结束）。

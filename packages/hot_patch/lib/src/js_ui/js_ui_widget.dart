@@ -88,6 +88,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
   String? _error;
   bool _loading = true;
 
+  /// JS 侧根是否已经 mount 成功。props 更新只在 mount 之后下发；
+  /// 首次 mount 会读取调用时刻最新的 `widget.props`。
+  bool _jsMounted = false;
+
   /// 所加载补丁的打包时间（包根 `manifest.json` 的 `buildTime`）；无清单为 null。
   String? _buildTime;
 
@@ -176,6 +180,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
         '${jsonEncode(jsonEncode(widget.props))});',
         where: 'mount',
       );
+      _jsMounted = true;
       if (mounted && _loading) setState(() => _loading = false);
     } catch (e) {
       HotPatchLog.error('js_ui boot failed: $e', error: e);
@@ -184,6 +189,30 @@ class JsUiWidgetState extends State<JsUiWidget> {
         _error = '$e';
         _loading = false;
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant JsUiWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // jsAsset 变更需要重走加载/挂载流程，当前不做热切换；出声而不是静默忽略。
+    if (oldWidget.jsAsset != widget.jsAsset) {
+      HotPatchLog.warn(
+        'JsUiWidget: jsAsset 变更当前不支持热切换（需重建 widget）：'
+        '${oldWidget.jsAsset} -> ${widget.jsAsset}',
+      );
+      return;
+    }
+    // 首次 mount 尚未完成时无需下发：mount 会读取此刻最新的 widget.props。
+    if (!_jsMounted) return;
+    try {
+      _manager.evaluate(
+        '__jsui.updateProps(${jsonEncode(_pageKey)}, '
+        '${jsonEncode(jsonEncode(widget.props))});',
+      );
+    } catch (e, s) {
+      HotPatchLog.error('js_ui updateProps failed: $e',
+          error: e, stackTrace: s);
     }
   }
 
@@ -215,6 +244,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
 
   @override
   void dispose() {
+    _jsMounted = false;
     _manager.evaluate(
       'if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});',
     );
@@ -298,6 +328,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
       _error = null;
       _loading = true;
       _rootId = null;
+      _jsMounted = false;
     });
     _boot();
   }

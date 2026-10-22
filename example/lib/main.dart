@@ -128,6 +128,11 @@ class DemoListPage extends StatelessWidget {
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
       _TwinTest(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'), label: 'HelloCard'),
     ),
+    _DemoEntry(
+      'Props 更新 · JS 热更',
+      '宿主重建 JsUiWidget 并传入新 props：JS 侧 __applyProps + 重建',
+      _PropsUpdateDemo(),
+    ),
     _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),
   ];
 
@@ -228,6 +233,53 @@ class _CompareTest extends StatelessWidget {
           js,
         ],
       ),
+    );
+  }
+}
+
+/// props 更新演示：宿主 State 每次重建都会给 JsUiWidget 传新的 props。
+/// JS 侧由 `__jsui.updateProps` 更新根实例 props、重跑 `__applyProps` 并重建。
+class _PropsUpdateDemo extends StatefulWidget {
+  const _PropsUpdateDemo();
+
+  @override
+  State<_PropsUpdateDemo> createState() => _PropsUpdateDemoState();
+}
+
+class _PropsUpdateDemoState extends State<_PropsUpdateDemo> {
+  int _revision = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              ElevatedButton(
+                onPressed: () => setState(() => _revision++),
+                child: Text('宿主更新 props（第 $_revision 次）'),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('点击后 JsUiWidget 收到新 props，JS 侧更新字段并重建'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: JsUiWidget(
+            jsAsset: _patchUrl('StatelessCard', 'components/widget_details.js'),
+            props: {
+              'title': 'Props 更新 #$_revision',
+              'subtitle': '宿主重建 JsUiWidget，新 props 已下发到 JS',
+              'badge': 'R$_revision',
+            },
+          ),
+        ),
+      ],
     );
   }
 }
