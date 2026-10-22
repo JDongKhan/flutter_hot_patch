@@ -30,7 +30,7 @@ export class CommunityPage {
   }
   async _load() {
     var feed = await this._service.fetchCommunity();
-    this.setState(() => { this._feed = feed; this._tab = feed.tabs[0]; this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
+    this.setState(() => { this._feed = feed; this._tab = feed.tabs.first; this._sort = feed.sorts.first; this._type = feed.postTypes.first; this._dist = feed.dists.first; this._price = feed.priceRanges.first; });
   }
   async _loadPosts() {
     this.setState(() => { this._listLoading = true; });
@@ -53,7 +53,7 @@ export class CommunityPage {
     if ((feed == null)) {
       return;
     }
-    this.setState(() => { this._sort = feed.sorts[0]; this._type = feed.postTypes[0]; this._dist = feed.dists[0]; this._price = feed.priceRanges[0]; });
+    this.setState(() => { this._sort = feed.sorts.first; this._type = feed.postTypes.first; this._dist = feed.dists.first; this._price = feed.priceRanges.first; });
     this._loadPosts();
   }
   build(context) {
@@ -232,7 +232,7 @@ export class _ListContent {
                 "bottom": 20.0
               },
               "children": [
-                ...((this.list.length === 0) ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 }, "child": __h('Center', { "child": __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) }) })] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 }, "child": __h(_PostCard, { "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) })]); } return out; })())
+                ...(this.list.isEmpty ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 }, "child": __h('Center', { "child": __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) }) })] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 }, "child": __h(_PostCard, { "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) })]); } return out; })())
               ]
             }),
           ...(this.openFilter ? [__h('Positioned', { "child": __h('GestureDetector', { "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)), "child": __h('Container', { "color": '#66000000' }) }), "factory": "fill" }), __h('Positioned', { "left": 0, "right": 0, "top": 0, "child": __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) })] : [])
@@ -404,7 +404,7 @@ export class _PostCard {
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
   _likeText(n) {
-    return ((n > 999) ? ((n / 1000)).toFixed(1) + "k" : n);
+    return ((n > 999) ? ((n / 1000)).toStringAsFixed(1) + "k" : n);
   }
   build(context) {
     return __h('GestureDetector', {

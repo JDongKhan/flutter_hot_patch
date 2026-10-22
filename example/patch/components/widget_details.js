@@ -934,7 +934,7 @@ export class SliverDetail {
       this.setState(() => { this._measureText = "量不到（未布局）"; });
       return;
     }
-    this.setState(() => { this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
+    this.setState(() => { this._measureText = "x=" + rect.dx.toStringAsFixed(1) + " y=" + rect.dy.toStringAsFixed(1) + " · " + rect.width.toStringAsFixed(0) + " × " + rect.height.toStringAsFixed(0); });
   }
   build(context) {
     return __h('Scaffold', {
@@ -944,7 +944,7 @@ export class SliverDetail {
             "slivers": [
               __h('SliverAppBar', {
                   "title": __h('Text', {
-                      "data": "SliverAppBar 导航 · offset " + this._offset.toFixed(0)
+                      "data": "SliverAppBar 导航 · offset " + this._offset.toStringAsFixed(0)
                     }),
                   "backgroundColor": '#673AB7',
                   "foregroundColor": '#FFFFFF',
@@ -1326,7 +1326,7 @@ export class GridDetail {
                         "fontSize": 13,
                         "color": '#9E9E9E'
                       },
-                      "data": "controller offset: " + this._offset.toFixed(1)
+                      "data": "controller offset: " + this._offset.toStringAsFixed(1)
                     })
                 }),
               __h('Padding', {
@@ -2285,10 +2285,10 @@ export class KeyDetail {
     this._measureText = "未测量";
   }
   _rotateNames() {
-    this.setState(() => { var head = this._names[0]; this._names.splice(0, 1)[0]; this._names.push(head); });
+    this.setState(() => { var head = this._names[0]; this._names.removeAt(0); this._names.add(head); });
   }
   _resetNames() {
-    this.setState(() => { this._names.clear(); this._names.push("A"); this._names.push("B"); this._names.push("C"); this._names.push("D"); });
+    this.setState(() => { this._names.clear(); this._names.add("A"); this._names.add("B"); this._names.add("C"); this._names.add("D"); });
   }
   _valueKeyRows() {
     return __h('Column', {
@@ -2378,7 +2378,7 @@ export class KeyDetail {
       this.setState(() => { this._measureText = "量不到（未布局）"; });
       return;
     }
-    this.setState(() => { this._measureText = "x=" + rect.dx.toFixed(1) + " y=" + rect.dy.toFixed(1) + " · " + rect.width.toFixed(0) + " × " + rect.height.toFixed(0); });
+    this.setState(() => { this._measureText = "x=" + rect.dx.toStringAsFixed(1) + " y=" + rect.dy.toStringAsFixed(1) + " · " + rect.width.toStringAsFixed(0) + " × " + rect.height.toStringAsFixed(0); });
   }
   _scrollToTarget() {
     var ctx = this._targetKey.currentContext;
@@ -2955,10 +2955,10 @@ export class ReorderListDetail {
   }
   _onReorder(oldIndex, newIndex) {
     console.log(__str(oldIndex) + " - " + __str(newIndex));
-    this.setState(() => { var item = this._items.splice(oldIndex, 1)[0]; var target = ((newIndex > oldIndex) ? (newIndex - 1) : newIndex); this._items.splice(target, 0, item); });
+    this.setState(() => { var item = this._items.removeAt(oldIndex); var target = ((newIndex > oldIndex) ? (newIndex - 1) : newIndex); this._items.insert(target, item); });
   }
   _add() {
-    this.setState(() => { this._items.push("城市 " + (this._items.length + 1)); });
+    this.setState(() => { this._items.add("城市 " + (this._items.length + 1)); });
   }
   build(context) {
     return __h('Column', {

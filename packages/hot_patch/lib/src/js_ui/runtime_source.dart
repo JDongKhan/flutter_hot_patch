@@ -241,6 +241,68 @@ const String _jsUiGlobalsTail = r'''
       configurable: true
     });
   }
+  //   - Array / String 的 Dart 同名成员：生成器不再按名字改写（`first` /
+  //     `where` / `add` / `removeAt` / `insert` / `toList` / `isEmpty` … 原样
+  //     产出），由本节按接收者类型补齐同名同义实现。全部不可枚举 + 存在性守卫，
+  //     避免污染 for...in / Object.keys / JSON.stringify。
+  function __defineProtoMember(proto, name, fn) {
+    if (typeof proto[name] !== 'function') {
+      Object.defineProperty(proto, name, {
+        value: fn,
+        writable: true,
+        enumerable: false,
+        configurable: true
+      });
+    }
+  }
+  function __defineProtoGetter(proto, name, getter) {
+    if (!Object.getOwnPropertyDescriptor(proto, name)) {
+      Object.defineProperty(proto, name, {
+        get: getter,
+        enumerable: false,
+        configurable: true
+      });
+    }
+  }
+  __defineProtoGetter(Array.prototype, 'first', function () { return this[0]; });
+  __defineProtoGetter(Array.prototype, 'last', function () {
+    return this[this.length - 1];
+  });
+  __defineProtoGetter(Array.prototype, 'isEmpty', function () {
+    return this.length === 0;
+  });
+  __defineProtoGetter(Array.prototype, 'isNotEmpty', function () {
+    return this.length > 0;
+  });
+  __defineProtoGetter(Array.prototype, 'reversed', function () {
+    return this.slice().reverse();
+  });
+  __defineProtoMember(Array.prototype, 'where', function (predicate) {
+    return this.filter(predicate);
+  });
+  // Dart List.toList() 返回新列表；这里保持数组实例（与既有产物行为一致），
+  // 后续链式调用 / 原地修改语义不变。
+  __defineProtoMember(Array.prototype, 'toList', function () { return this; });
+  __defineProtoMember(Array.prototype, 'add', function (value) {
+    this.push(value);
+  });
+  __defineProtoMember(Array.prototype, 'removeAt', function (index) {
+    return this.splice(index, 1)[0];
+  });
+  __defineProtoMember(Array.prototype, 'insert', function (index, value) {
+    this.splice(index, 0, value);
+  });
+  __defineProtoGetter(String.prototype, 'isEmpty', function () {
+    return this.length === 0;
+  });
+  __defineProtoGetter(String.prototype, 'isNotEmpty', function () {
+    return this.length > 0;
+  });
+  var __compareTo = function (other) {
+    return this < other ? -1 : (this > other ? 1 : 0);
+  };
+  __defineProtoMember(Number.prototype, 'compareTo', __compareTo);
+  __defineProtoMember(String.prototype, 'compareTo', __compareTo);
   //   - Number.prototype：Dart `num` 的方法在 JS 里**没有同名成员**
   //     （`(x * 100).round()` 直接抛 "is not a function"，整个组件挂载失败、
   //     页面只显示加载失败占位）。生成器按 Dart 写法一比一产出，故在数字原型上

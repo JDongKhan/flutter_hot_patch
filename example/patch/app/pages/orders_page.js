@@ -29,7 +29,7 @@ export class OrdersPage {
   }
   async _load() {
     var feed = await this._service.fetchOrders();
-    this.setState(() => { this._feed = feed; this._status = (this.initialStatus ?? feed.statuses[0]); });
+    this.setState(() => { this._feed = feed; this._status = (this.initialStatus ?? feed.statuses.first); });
     if ((this.initialStatus != null)) {
       await this._loadOrders();
     }
@@ -83,7 +83,7 @@ export class OrdersPage {
             }),
           ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
           __h('Expanded', {
-              "child": (this._orders == null) ? __h('Center', { "child": __h('CircularProgressIndicator', {}) }) : (this._orders.length === 0) ? __h('Center', { "child": __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "该状态下暂无订单" }) }) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1", "factory": "separated" })
+              "child": (this._orders == null) ? __h('Center', { "child": __h('CircularProgressIndicator', {}) }) : this._orders.isEmpty ? __h('Center', { "child": __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "该状态下暂无订单" }) }) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1", "factory": "separated" })
             })
         ]
       });

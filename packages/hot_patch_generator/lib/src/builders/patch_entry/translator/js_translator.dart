@@ -26,22 +26,10 @@ import 'js_value.dart';
 // 表达式 / 语句翻译（以 FieldScope + 已知类表为键）
 // ---------------------------------------------------------------------------
 
-/// List/Iterable 的属性 → JS 数组等价写法。
-///
-/// JS 数组没有 `first` / `last` / `isEmpty`（Dart 有），一比一透传会在运行时
-/// 得到 `undefined`。按 JS 数组语义改写：`xs.first` → `xs[0]`、
-/// `xs.last` → `xs[xs.length - 1]`、`xs.isEmpty` → `(xs.length === 0)`。
-/// 其余属性（`length` 等 JS 同名）返回 null，调用方按原样透传。
-String? _listPropJs(String base, String prop) => switch (prop) {
-      'first' => '$base[0]',
-      'last' => '$base[$base.length - 1]',
-      'isEmpty' => '($base.length === 0)',
-      'isNotEmpty' => '($base.length > 0)',
-      // `list.reversed` → 反转副本（Dart 返回 Iterable；后续 `.toList()` 已被
-      // 去掉、数组语义一致）。
-      'reversed' => '[...$base].reverse()',
-      _ => null,
-    };
+// Dart 集合 / 字符串 / 数字的同名成员（`first` / `where` / `add` / `compareTo` …）
+// **不在生成器做名字映射**：生成器看不到接收者类型，按名字改写会把同名业务方法
+// 静默改错。统一原样产出 `x.first` / `x.where(...)` / `x.add(...)`，由运行时
+//【1c】节给 Array / Number / String 内建原型补同名同义成员，按接收者类型分发。
 
 /// 读位置表达式 → JS 表达式（this._model.n / this._model / 字面量 / 形参）。
 String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
@@ -89,8 +77,6 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       base = e.prefix.name;
     }
     if (base == null) return null;
-    final lp = _listPropJs(base, e.identifier.name);
-    if (lp != null) return lp;
     return '$base.${e.identifier.name}';
   }
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被字面量分支
@@ -215,8 +201,6 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (op == '?.') {
       return '($t == null ? null : $t.${e.propertyName.name})';
     }
-    final lp = _listPropJs(t, e.propertyName.name);
-    if (lp != null) return lp;
     return '$t.${e.propertyName.name}';
   }
   // 下标访问 `a[b]`（如 `userMap["code"]`）：JS 的方括号语法一一对应。
@@ -817,88 +801,11 @@ String? methodCallExprJs(
       return null;
     }
   }
-  // Dart `num.toStringAsFixed(n)` → JS `toFixed(n)`（插值格式化数字常用）。
-  // 组件数据表达式与模型方法体共用这一处翻译。
-  if (e.methodName.name == 'toStringAsFixed' &&
-      e.target != null &&
-      e.argumentList.arguments.length == 1) {
-    final t = exprToJs(e.target!, scope, classes);
-    final a = exprToJs(e.argumentList.arguments.first, scope, classes);
-    if (t != null && a != null) return '$t.toFixed($a)';
-    return null;
-  }
-  // Dart 集合 API → JS 数组 API（List/Iterable 在 JS 侧就是数组）：
-  //   `xs.where(f)` → `xs.filter(f)`；`xs.where(f).toList()` → `xs.filter(f)`；
-  //   `xs.toList()` → `xs`（数组本身即 List，无需拷贝）。
-  // 缺这一条，订单页 `kOrders.where((o) => ...).toList()` 这类过滤整条失败。
-  if (e.target != null) {
-    final collName = e.methodName.name;
-    if (collName == 'toList' && e.argumentList.arguments.isEmpty) {
-      return exprToJs(e.target!, scope, classes);
-    }
-    if (collName == 'where' && e.argumentList.arguments.length == 1) {
-      final t = exprToJs(e.target!, scope, classes);
-      if (t == null) return null;
-      final fn = e.argumentList.arguments.first;
-      if (fn is! FunctionExpression) return null;
-      final fnJs = closureToJs(fn, scope, classes);
-      if (fnJs == null) return null;
-      return '$t.filter($fnJs)';
-    }
-    // `list.sort((a, b) => …)` → 就地排序（JS Array.sort 同位，返回值仍为数组）；
-    // Dart 的 `..sort()` 级联见 [exprToJs] 的 CascadeExpression 分支。
-    if (collName == 'sort' && e.argumentList.arguments.length == 1) {
-      final t = exprToJs(e.target!, scope, classes);
-      if (t == null) return null;
-      final fn = e.argumentList.arguments.first;
-      if (fn is! FunctionExpression) return null;
-      final fnJs = closureToJs(fn, scope, classes);
-      if (fnJs == null) return null;
-      return '$t.sort($fnJs)';
-    }
-    // `b.like.compareTo(a.like)` → `(b.like - a.like)`（数值比较；用于排序比较器）。
-    if (collName == 'compareTo' && e.argumentList.arguments.length == 1) {
-      final t = exprToJs(e.target!, scope, classes);
-      final o = exprToJs(e.argumentList.arguments.first, scope, classes);
-      if (t == null || o == null) return null;
-      return '($t - $o)';
-    }
-    // 就地增删（List 在 JS 侧就是数组），**方法名两边都有、语义也一致**，故在此
-    // 只做「形参 → 内建 API」的改写（点名映射）：
-    //   `xs.add(v)`      → `xs.push(v)`
-    //   `xs.removeAt(i)` → `xs.splice(i, 1)[0]`（返回被删元素，供重排复用）
-    //   `xs.insert(i, v)`→ `xs.splice(i, 0, v)`
-    // ReorderableListView 的 onReorder 重排惯用法（removeAt + insert）依赖这组。
-    if (collName == 'add' && e.argumentList.arguments.length == 1) {
-      final t = exprToJs(e.target!, scope, classes);
-      final v = exprToJs(e.argumentList.arguments.first, scope, classes);
-      if (t == null || v == null) return null;
-      return '$t.push($v)';
-    }
-    if (collName == 'removeAt' && e.argumentList.arguments.length == 1) {
-      final t = exprToJs(e.target!, scope, classes);
-      final i = exprToJs(e.argumentList.arguments.first, scope, classes);
-      if (t == null || i == null) return null;
-      return '$t.splice($i, 1)[0]';
-    }
-    if (collName == 'insert' && e.argumentList.arguments.length == 2) {
-      final t = exprToJs(e.target!, scope, classes);
-      final i = exprToJs(e.argumentList.arguments[0], scope, classes);
-      final v = exprToJs(e.argumentList.arguments[1], scope, classes);
-      if (t == null || i == null || v == null) return null;
-      return '$t.splice($i, 0, $v)';
-    }
-    // 【项目规则】Dart 方法「在原生 JS 对应类型上不存在」的，**不在本层做名字映射**，
-    // 而是由 JS 运行时给该内建补一个同名同义的方法（补齐点见 hot_patch 的
-    // packages/hot_patch/lib/src/js_ui/runtime_source.dart【1c】，产物原样调用）。
-    // 本函数只看得到**方法名**、拿不到接收者类型（生成器不带 resolution），而 Dart
-    // 方法名与别的类的同名方法经常撞车——`clear` 既是 `List.clear()`，也是
-    // `TextEditingController.clear()`（本仓库 lib/components/widget_details.dart 的
-    // 「清空输入」按钮就在用）。按名字映射成 `length = 0` 会把控制器那次 clear 静默
-    // 改错；补齐到 Array.prototype 则天然按接收者类型分发，别处同名方法分毫不动。
-    // 上面那组 `add`/`removeAt`/`insert` 属**另一类**：内建已有对应 API、只是名字/
-    // 形参不同，才由本层点名改写。
-  }
+  // Dart 集合 / num 的成员与 JS 内建同名同义（`first` / `where` / `add` /
+  // `removeAt` / `insert` / `toList` / `compareTo` / `toStringAsFixed` …）：
+  // 生成器**不做任何名字映射**，统一走下面的通用调用路径原样产出
+  // `xs.where(...)` / `xs.add(...)` / `a.compareTo(b)`，由运行时【1c】节给
+  // Array / Number / String 内建原型补同名同义成员，按接收者类型分发。
   final args = e.argumentList.arguments;
   final argJs = <String>[]; // 普通调用：位置化扁平（JS 无具名参数）
   final posJs = <String>[]; // 宿主注入：位置实参

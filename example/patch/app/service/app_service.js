@@ -65,22 +65,22 @@ export class AppService {
     return this._orderOf(no);
   }
   _postListOf(sort, type) {
-    var list = (((type.length === 0) || (type == kPostTypes[0])) ? kPosts : kPosts.filter((p) => { return (p.type == type); }));
+    var list = ((type.isEmpty || (type == kPostTypes.first)) ? kPosts : kPosts.where((p) => { return (p.type == type); }).toList());
     switch (sort) {
       case "最新":
-        list = [...list].reverse();
+        list = list.reversed.toList();
       break;
       case "最热":
-        list = (() => { const _t = list; _t.sort((a, b) => { return (b.like - a.like); }); return _t; })();
+        list = (() => { const _t = list.toList(); _t.sort((a, b) => { return b.like.compareTo(a.like); }); return _t; })();
       break;
     }
     return list;
   }
   _orderListOf(status) {
-    if (((status.length === 0) || (status == kOrderStatus[0]))) {
+    if ((status.isEmpty || (status == kOrderStatus.first))) {
       return kOrders;
     }
-    return kOrders.filter((o) => { return (o.status == status); });
+    return kOrders.where((o) => { return (o.status == status); }).toList();
   }
   _spotOf(id) {
     for (let s of kSpots) {
@@ -88,7 +88,7 @@ export class AppService {
         return s;
       }
     }
-    return kSpots[0];
+    return kSpots.first;
   }
   _postOf(id) {
     for (let p of kPosts) {
@@ -96,7 +96,7 @@ export class AppService {
         return p;
       }
     }
-    return kPosts[0];
+    return kPosts.first;
   }
   _orderOf(no) {
     for (let o of kOrders) {
@@ -104,7 +104,7 @@ export class AppService {
         return o;
       }
     }
-    return kOrders[0];
+    return kOrders.first;
   }
   _resourceOf(id) {
     for (let r of kResources) {
@@ -112,7 +112,7 @@ export class AppService {
         return r;
       }
     }
-    return kResources[0];
+    return kResources.first;
   }
 }
 

@@ -30,7 +30,7 @@ export class MinePage {
       if ((m.screen == "showcase")) {
         _app_host_.invoke("openWidgetShowcase", []);
       } else {
-        _app_host_.invoke("open", ["https://flutter.dev", ((m.arg.length === 0) ? m.title : m.arg)]);
+        _app_host_.invoke("open", ["https://flutter.dev", (m.arg.isEmpty ? m.title : m.arg)]);
       }
     }
   }
