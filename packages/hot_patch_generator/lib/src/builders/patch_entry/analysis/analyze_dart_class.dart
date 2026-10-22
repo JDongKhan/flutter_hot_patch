@@ -12,7 +12,6 @@ library;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
-import '../../shared/js_widget_defs.dart';
 import '../class_info.dart';
 import '../../shared/host_injected.dart';
 import '../translator/js_translator.dart';
@@ -467,7 +466,6 @@ ClassInfo translateClass(
   for (final name in referencedClassNames(hostClass, mixins: mixins)) {
     final info = classTable[name];
     if (info == null) continue;
-    if (builtinWidgetTypes.contains(name)) continue;
     used[name] = info;
   }
 
@@ -499,7 +497,7 @@ ClassInfo translateClass(
       final erased = eraseType(typeName);
       final isBasic = isBasicType(typeName) || _valueSdkTypes.contains(erased);
       final jsRuntime = jsRuntimeClassNames.contains(erased);
-      if (!_fieldTranslatable(typeName, classTable, builtinWidgetTypes)) {
+      if (!_fieldTranslatable(typeName, classTable)) {
         // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
         // ignore: avoid_print - 构建期日志
         print(
@@ -813,21 +811,22 @@ const Set<String> _valueSdkTypes = {'Color', 'IconData', 'ValueNotifier'};
 /// 字段类型是否可翻译（进 JS 实例属性）：
 ///   - 基础类型（int/double/num/String/bool/dynamic）；
 ///   - JS 运行时同名代理类（ScrollController / TextEditingController / …）；
-///   - 已登记**非组件**类（模型，如 `Spot`）；
+///   - 类表里能解析到的类（组件 / 模型）：字段持元素或普通对象；
 ///   - 有 JS 运行时对应物的 SDK 类型（Color / IconData / ValueNotifier）；
 ///   - 函数值类型（VoidCallback / `void Function(...)`）——事件回调字段；
-///   - 元素值类型（`Widget` / `List<Widget>` / 已登记 widget 类型）——JS 侧
-///     元素是普通对象，可持有 / 转发；
+///   - 元素值类型（`Widget` / `List<Widget>`）——JS 侧元素是普通对象；
 ///   - 泛型容器按**类型实参**递归判定：`List<Spot>` / `Map<String, int>` /
-///     `List<Widget>` 可翻译，`Key?` 不可翻译。
+///     `List<Widget>` 可翻译，`Key?` 不可翻译；
+///   - **解析不到的类型**（如 `package:flutter` 的 `Text` / `Column`，或三方类型）：
+///     按宿主 Widget 值处理并输出构建期告警——字段判定不再依赖
+///     `builtinWidgetTypes` 白名单。
 bool _fieldTranslatable(
   String typeName,
   Map<String, ClassInfo> classTable,
-  Set<String> widgetTypes,
 ) {
   final t = typeName.trim();
   if (t.endsWith('?')) {
-    return _fieldTranslatable(t.substring(0, t.length - 1), classTable, widgetTypes);
+    return _fieldTranslatable(t.substring(0, t.length - 1), classTable);
   }
   if (isBasicType(t)) return true;
   final lt = t.indexOf('<');
@@ -844,7 +843,7 @@ bool _fieldTranslatable(
     if (!_containerTypes.contains(base)) return false;
     final args = _typeArgs(t.substring(lt + 1, t.length - 1));
     return args.isNotEmpty &&
-        args.every((a) => _fieldTranslatable(a, classTable, widgetTypes));
+        args.every((a) => _fieldTranslatable(a, classTable));
   }
   if (t.isEmpty) return false;
   if (jsRuntimeClassNames.contains(t)) return true;
@@ -853,11 +852,17 @@ bool _fieldTranslatable(
   if (keyClassNames.contains(t)) return true;
   // 有 JS 值形态的 SDK 类型（Color → '#aarrggbb'、IconData → 图标名）。
   if (_valueSdkTypes.contains(t)) return true;
-  // 元素值字段（Widget / 已登记 widget 类型 / 自定义组件）：JS 侧元素是普通
-  // 对象，持有与转发都成立（`child` / `trailing` / `Row(children: children)`）。
-  if (_widgetValueTypes.contains(t) || widgetTypes.contains(t)) return true;
-  final cls = classTable[t];
-  return cls != null;
+  // 元素值字段（`Widget` / `PreferredSizeWidget`）：字段持元素对象。
+  if (_widgetValueTypes.contains(t)) return true;
+  // 类表里能解析到的类（组件 / 模型）。
+  if (classTable.containsKey(t)) return true;
+  // 解析不到的其余类型：按宿主 Widget 值处理，并出声（避免静默误判）。
+  // ignore: avoid_print - 构建期日志
+  print(
+    '[hot_patch_generator] 字段类型 $t 无法从本地源码解析，'
+    '按宿主 Widget 值处理（组件 / 三方类型请确认其 JS 侧有同名类）',
+  );
+  return true;
 }
 
 /// 拆分泛型类型实参（按顶层逗号，忽略嵌套尖括号里的逗号）。

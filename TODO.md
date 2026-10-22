@@ -17,8 +17,8 @@
 | 6 | `JsUiWidget` 支持 `props` 更新 | 小~中 | 已完成 | P1-10 | 父组件重建传入新 props，JS 字段与 UI 同步 |
 | 7 | `PageController` / 构造类字段补齐 | 中 | 已完成 | P0-5 / P1-17 | PageView 外部 controller 可创建、可跳页 |
 | 8 | 移除方法名映射，改为 JS 原型注入 | 中 | 已完成 | P1-8 | `where/add/removeAt/insert/toList/compareTo/first/last` 原样翻译并通过 demo |
-| 9 | `registerNativeComponent` 支持 children / slots | 中 | 待验证 | P0-4 | 未注册容器组件的子树不再丢失 |
-| 10 | `builtinWidgetTypes` 改为直接父类判定 | 中 | 待开始 | P1-9 | 删除表后 demo 产物与页面表现一致 |
+| 9 | `registerNativeComponent` 支持 children / slots | 中 | 已完成 | P0-4 | 未注册容器组件的子树不再丢失（5f3b5ac） |
+| 10 | `builtinWidgetTypes` 改为直接父类判定 | 中 | 已完成 | P1-9 | 字段 / 依赖判定移除白名单后 demo 产物 JS 无变化（仅 manifest 时间戳） |
 
 ## 2. 详细 TODO
 
@@ -42,15 +42,17 @@
 - **影响**：翻译层全部文件，需单独立项，不并入本轮小步改造。
 - **前置**：先完成本轮 P0 修复，避免迁移期间行为漂移。
 
-### 2.3 `builtinWidgetTypes` 改为直接父类判定（任务 10 / 评审 P1-9）
+### 2.3 `builtinWidgetTypes` 改为直接父类判定（任务 10 / 评审 P1-9，已完成）
 
 - **已确认口径**：只识别直接 `extends StatefulWidget / StatelessWidget / State`；**不处理**自定义 `MyBaseWidget` 的情况；resolved AST 迁移另列 TODO。
-- **方案**：
-  - 能解析到声明的类：按直接父类判定是否 Widget；
-  - 完全解析不到的类型（如 `package:flutter` 提供的 `Text` / `Column`）：按宿主 Widget 值处理；
-  - 对“解析不到但又不确定是否为 Widget”的类型增加构建期告警，避免静默误判。
-- **风险**：未知类型可能被误当成 Widget 值，需要告警兜底。
-- **验收**：删除 `builtinWidgetTypes` 后，现有 demo 的字段类型判定、依赖扫描与产物输出保持一致。
+- **已完成**：
+  - 字段可翻译性（`_fieldTranslatable`）不再接收 widget 类型表：类表能解析到的类直接放行；
+    解析不到的类型（如 `package:flutter` 的 `Text` / `Column`、三方类型）按宿主 Widget 值
+    处理，并输出构建期告警；
+  - 依赖发现中的 `builtinWidgetTypes` 过滤已删除（类表本身只含本地可解析类）；
+  - `builtinWidgetTypes` 仅保留为**宿主类型登记表**：决定 `flutter.js` 生成哪些宿主包装类、
+    产物 import 哪些类名（协议重构后仍必需）。
+- **验收**：重新生成后 `example/patch` 的 JS 产物与改动前逐字一致（仅 manifest 时间戳 / zip 元数据变化）。
 
 ### 2.4 暂缓项（本轮不做）
 
@@ -114,11 +116,19 @@
 **验收**：现有 demo 页面行为不变；TestWidget 的 `Text text = Text()`、
 `StatelessCard card = …`、`...items` 均为 `new` 且渲染正常。
 
-### 4.4 清理与文档
+### 4.4 清理与文档（已完成）
 
-- 删除不再使用的 widget 判定表/分支；更新架构文档、组件文档、README。
-- 版本协议说明：新旧产物兼容边界、旧产物回退路径。
-- 全量 demo 验证 + 构建产物对比。
+- 删除局部值路径的 widget 白名单（`widgetClassNames` / `_isWidgetValueExpr`），改为仅排除
+  模型类与值对象。
+- 更新架构文档、组件支持文档、使用手册与生成器 README（中英文）：产物协议改为
+  `new Type(props)`、宿主包装类、`__asElement` 归一化。
+- 版本协议兼容边界：
+  - **旧产物在新运行时下可用**：`__h('X', props)` 仍产出元素描述；旧组件类忽略多余实参，
+    构造即实例，`__asElement` 按原型 `build` 归一化；
+  - **新产物需要新运行时 / 新 `flutter.js`**：产物会 `import` 宿主包装类与 `__asElement`，
+    旧运行时缺少这些导出；补丁包按整包更新，不存在新旧混载；
+  - 无 JS 类的类型（无产物自定义组件 / 原生注入）继续走 `__h('X', props)` 兜底。
+- 全量 demo 验证：TestWidget、Provider、PageView、列表页、详情页均由用户手动确认。
 
 ### 4.5 已知风险
 

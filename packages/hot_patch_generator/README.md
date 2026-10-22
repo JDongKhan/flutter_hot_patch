@@ -33,7 +33,7 @@ source file names:
 | --- | --- | --- |
 | `lib/components/counter.dart` | `patch/components/counter.js` | Component output containing `@PatchEntry` |
 | `lib/model/user.dart` | `patch/model/user.js` | Plain classes / static singletons (`export class` / `export const`) |
-| (package-root pseudo asset `$package$`) | `patch/flutter.js`, `patch/provider.js` | Package modules: shared node factory `__h` plus JS logic-component / builder-proxy classes, **one file per package** (host widgets need no factory — their element type is a plain type-name string) |
+| (package-root pseudo asset `$package$`) | `patch/flutter.js`, `patch/provider.js` | Package modules: shared node factory `__h` / instance normalizer `__asElement` plus host-widget wrapper classes and JS logic-component / builder-proxy classes, **one file per package** |
 | (package-root pseudo asset `$package$`) | `patch/manifest.json` | Patch manifest: basic info + build time + content hash of every JS asset |
 
 - Splitting is driven by **file content + reference reachability** (not by directory): a file containing
@@ -43,9 +43,11 @@ source file names:
 - Package-level modules (`patch/<package>.js`) and the manifest hang off the package-root pseudo asset
   `$package$`: the input is the whole package and the output path is static, so **users need no seed file and
   no configuration** — just depend on this package and run `build_runner`.
-- `patch/flutter.js` defines the shared node factory `__h`; other package modules and component outputs
-  `import { __h }` from it. Host widgets (`Text`, `Column`, …) have **no JS factory** — their output keeps
-  the concrete type name, which the host maps through `JsWidgetRegistry`.
+- `patch/flutter.js` defines the shared node factory `__h` and generates **same-named wrapper classes**
+  for host widgets (`Text`, `Column`, …) and data carriers (`InputDecoration`). Component outputs emit
+  `new Text({...})`; the wrapper returns `__h('Text', {...})` internally. Other modules import the classes
+  they use (plus `__h` for the no-JS-class fallback). Component instances created with `new X(props)` are
+  normalized to element descriptors by `__asElement` when consumed as children.
 
 Browse the JS actually generated for the example app online:
 [example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch).
@@ -103,12 +105,17 @@ The output must correspond to the Dart source **one-to-one**; this is the core c
 There is **no per-widget translator**: every widget — built-in, custom or third-party — goes through the
 single translation path (`lib/src/builders/patch_entry/translator/widget_json.dart`), which dispatches on
 
-- **argument-name conventions**: `on*` events, `delegate` child providers, positional parameter names,
-  and the `builder / *Builder` callback naming convention;
-  `child` / `children` / `slivers` / `tabs` are **ordinary named props** and are split by the element
-  factory `__h` at runtime by **value shape** — element values / element arrays / delegate descriptors are
-  moved into `children` under their original names, regardless of the key name; JS component classes keep
-  their props for `__applyProps`;
+- **output protocol**: build trees are emitted as `new Type(props)`. Host widgets / data carriers use the
+  wrapper classes exported by `flutter.js`; custom components, logic components and builder proxies use
+  the classes exported by their own outputs. All Dart arguments go into props under their original names;
+  `child` / `children` / `slivers` / `tabs` are **ordinary named props** and are split by `__h` at runtime
+  by **value shape** — element values / element arrays / delegate descriptors are moved into `children`
+  under their original names, regardless of the key name;
+- **construct-as-instance + normalize-on-consume**: generated classes follow plain-class semantics
+  (`new X(props)` yields an instance). When a parent consumes it as a child, `__asElement` converts it to
+  an element descriptor — the check is "prototype has `build`", no type-name table, no `toJson`, no
+  internal token. Translation therefore no longer asks "is this class a widget"; it only excludes known
+  model classes and value objects;
 - **value shapes** (`lib/src/builders/patch_entry/translator/value_forms.dart`): literals, constructors, static factories,
   constant references (enums / colors / icons), lists, closures — structured styles are converted by the
   `xxxToJson` helpers in `style_translators.dart`.
@@ -120,7 +127,7 @@ three opt-in tables in `lib/src/builders/shared/js_widget_defs.dart` additionall
 | Table | Purpose |
 |---|---|
 | `widgetPositionalArgNames` | positional arguments go into props under **Flutter's own parameter name** (`Text('hi')` → `{data: 'hi'}`, `Image.network(url)` → `{src: url}`); unlisted types with positional arguments produce a build warning and are dropped (no `$pos` index fallback) |
-| `builtinWidgetTypes` | mirror of the host's `JsWidgetRegistry` keys (tells built-in widgets apart from business classes) |
+| `builtinWidgetTypes` | mirror of the host's `JsWidgetRegistry` keys; drives which host-wrapper classes are generated in `flutter.js` and which class names component outputs import |
 | `builderFormTypes` | types with `.builder` / `.separated` named constructors; a JS proxy class is generated for them (the runtime only consumes the `factory` / `__delegate` protocol, never a type whitelist) |
 
 Adding a visual widget therefore touches two sides: the host renderer, and — when the output shape differs —
@@ -221,7 +228,7 @@ dart run build_runner build --delete-conflicting-outputs
 | --- | --- | --- |
 | `lib/components/counter.dart` | `patch/components/counter.js` | 含 `@PatchEntry` 的组件产物 |
 | `lib/model/user.dart` | `patch/model/user.js` | 普通类 / 静态单例（`export class` / `export const`） |
-| （包根伪资产 `$package$`） | `patch/flutter.js`、`patch/provider.js` | package 模块：共享结点工厂 `__h` + JS 逻辑组件 / builder 代理类，**每个 package 一个文件**（宿主 widget 没有工厂——元素 type 就是类型名字符串） |
+| （包根伪资产 `$package$`） | `patch/flutter.js`、`patch/provider.js` | package 模块：共享结点工厂 `__h` / 实例归一化 `__asElement` + 宿主 widget 包装类 + JS 逻辑组件 / builder 代理类，**每个 package 一个文件** |
 | （包根伪资产 `$package$`） | `patch/manifest.json` | patch 清单：基本信息 + 打包时间 + 各 JS 资源的内容 hash |
 
 - 按**文件内容 + 引用可达性**分流（与目录无关）：含 `@PatchEntry` 的文件是根文件，产出这些组件；
@@ -230,9 +237,10 @@ dart run build_runner build --delete-conflicting-outputs
 - package 级模块（`patch/<package>.js`）与清单都挂在包根伪资产 `$package$` 下：
   输入是整包、输出路径静态，**使用方无需任何种子文件或配置**——依赖本包并跑
   `build_runner` 即可产出。
-- `patch/flutter.js` 定义共享结点工厂 `__h`；其它包模块与组件产物统一从它
-  `import { __h }`。宿主 widget（`Text`、`Column` 等）**没有 JS 工厂**——产物保留
-  具体类型名，由宿主 `JsWidgetRegistry` 映射。
+- `patch/flutter.js` 定义共享结点工厂 `__h`，并为主机 widget（`Text`、`Column` …）与数据载体
+  （`InputDecoration`）生成**同名包装类**：组件产物统一写 `new Text({...})`，包装类内部返回
+  `__h('Text', {...})`。其它模块按需 import 用到的类（无 JS 类的类型兜底用 `__h`）。用户代码
+  `new X(props)` 得到的组件实例，在以子结点被消费时由 `__asElement` 折算成元素描述。
 
 示例 App 的实际产物（生成的 JS 文件）可在线查看：
 [example/patch/](https://github.com/JDongKhan/flutter_hot_patch/tree/main/example/patch)。
@@ -277,10 +285,13 @@ targets:
 **没有 per-widget 的 translator**：内建、自定义、三方组件全部走同一条翻译路径
 （`lib/src/builders/patch_entry/translator/widget_json.dart`），分派依据只有两项：
 
-- **实参名约定**：`on*` 事件、`delegate` 子结点提供者、位置实参的 Flutter 形参名、
-  `builder / *Builder` 回调命名约定；`child` / `children` / `slivers` / `tabs` 都是
-  **普通具名 props**，由元素工厂 `__h` 在运行时按**值形态**拆分——元素值 / 元素数组 /
-  delegate 描述按原名移入 `children`，与键名无关；JS 组件类保留 props 给 `__applyProps`；
+- **产物协议**：build 树统一发射 `new Type(props)`。宿主 widget / 数据载体用 `flutter.js` 导出的
+  同名包装类；自定义组件、逻辑组件与 builder 代理用各自产物导出的类。所有 Dart 实参按原名进
+  props；`child` / `children` / `slivers` / `tabs` 都是**普通具名 props**，由 `__h` 在运行时按
+  **值形态**拆分——元素值 / 元素数组 / delegate 描述按原名移入 `children`，与键名无关；
+- **构造即实例 + 消费时归一化**：生成类按普通类语义构造（`new X(props)` 即实例）；父级把它当
+  子结点消费时由 `__asElement` 折算成元素描述——判据是原型上有没有 `build`，不查类型名表、
+  不需要 `toJson` / 内部 token。翻译层因此不再判断“这个类是不是 widget”，只排除已知模型类与值对象；
 - **值的形态**（`lib/src/builders/patch_entry/translator/value_forms.dart`）：字面量、构造、静态工厂、常量引用
   （枚举 / 颜色 / 图标）、列表、闭包——结构化样式由 `style_translators.dart` 的 `xxxToJson` 转换。
 
