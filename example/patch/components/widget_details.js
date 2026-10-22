@@ -2106,9 +2106,26 @@ export class TabDetail {
 export class PageViewDetail {
   constructor() {
     this._page = 0;
+    this._pageController = new PageController({initialPage: 0});
   }
   _onPageChanged(index) {
     this.setState(() => { this._page = index; });
+  }
+  _prevPage() {
+    if ((this._page > 0)) {
+      this._pageController.jumpToPage((this._page - 1));
+    }
+  }
+  _nextPage() {
+    if ((this._page < 2)) {
+      this._pageController.jumpToPage((this._page + 1));
+    }
+  }
+  _jumpToLast() {
+    this._pageController.jumpToPage(2);
+  }
+  dispose() {
+    this._pageController.dispose();
   }
   build(context) {
     return __h('Column', {
@@ -2127,6 +2144,7 @@ export class PageViewDetail {
           __h('SizedBox', {
               "height": 150,
               "child": __h('PageView', {
+                  "controller": this._pageController,
                   "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a)),
                   "children": [
                     __h('Container', {
@@ -2160,6 +2178,32 @@ export class PageViewDetail {
               "mainAxisAlignment": "center",
               "children": [
                 ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Container', { "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
+              ]
+            }),
+          __h('SizedBox', {
+              "height": 8
+            }),
+          __h('Row', {
+              "mainAxisAlignment": "center",
+              "children": [
+                __h('TextButton', {
+                    "onPressed": this.__bindFn(1, [], (...__a) => this._prevPage(...__a)),
+                    "child": __h('Text', {
+                        "data": "上一页"
+                      })
+                  }),
+                __h('TextButton', {
+                    "onPressed": this.__bindFn(2, [], (...__a) => this._nextPage(...__a)),
+                    "child": __h('Text', {
+                        "data": "下一页"
+                      })
+                  }),
+                __h('TextButton', {
+                    "onPressed": this.__bindFn(3, [], (...__a) => this._jumpToLast(...__a)),
+                    "child": __h('Text', {
+                        "data": "跳到第 3 页"
+                      })
+                  })
               ]
             })
         ]

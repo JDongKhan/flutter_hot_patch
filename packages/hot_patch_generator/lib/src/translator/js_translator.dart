@@ -725,6 +725,10 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // InstanceCreationExpression 分支（那支对非模型类返回 null 后直接返回）。
   final sdkValJs = sdkValueCtorJs(e, scope, classes);
   if (sdkValJs != null) return sdkValJs;
+  // 运行时同名代理类（ScrollController / PageController / TabController …）：
+  // 内联构造与字段构造共用这一条路径，统一产出 `new Xxx({...})`。
+  final runtimeCtor = jsRuntimeCtorJs(e, scope, classes);
+  if (runtimeCtor != null) return runtimeCtor;
   // Dart 内置异常构造（`StateError('...')` 等）：Dart 的异常类在 JS 侧没有
   // 同名构造，统一落成 `new Error(message)`；`throw` 语句据此可直接翻译。
   final errJs = _dartErrorCtorJs(e, scope, classes);
@@ -936,6 +940,50 @@ String? sdkValueCtorJs(
 const Set<String> sdkValueClassNames = {
   'ValueNotifier',
 };
+
+/// JS 运行时同名代理类（控制器）：字段可持有、构造产 `new Xxx({...})`。
+///
+/// 与 hot_patch `capabilities/` 里的 JS 代理类对称；代理类自行取用/忽略
+/// Dart 专属参数（如 TabController 的 `vsync`）。
+const Set<String> jsRuntimeClassNames = {
+  'ScrollController',
+  'PageController',
+  'TextEditingController',
+  'TabController',
+};
+
+/// 运行时同名代理类构造 → JS：`new Xxx({命名实参...})`；非本类返回 null。
+///
+/// 代理类只接受**具名实参**（其语义面由 JS 侧定义）；位置实参无法安全映射，
+/// 出声告警后跳过，避免静默吞掉构造参数。
+String? jsRuntimeCtorJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  String? name;
+  List<Expression> args = const [];
+  if (e is InstanceCreationExpression) {
+    name = e.constructorName.type.name2.lexeme;
+    args = e.argumentList.arguments.toList();
+  } else if (e is MethodInvocation && e.target == null) {
+    // 无 resolution 的 parseString 下 `PageController(...)` 是 MethodInvocation。
+    name = e.methodName.name;
+    args = e.argumentList.arguments.toList();
+  }
+  if (name == null || !jsRuntimeClassNames.contains(name)) return null;
+  final entries = <String>[];
+  for (final a in args) {
+    if (a is! NamedExpression) {
+      log.warning('[hot_patch_generator] $name 的位置实参未翻译'
+          '（代理类只接受具名参数）：${a.toSource()}');
+      continue;
+    }
+    final v = rhsToJs(a.expression, scope, classes);
+    if (v != null) entries.add('${a.name.label.name}: $v');
+  }
+  return entries.isEmpty ? 'new $name()' : 'new $name({${entries.join(', ')}})';
+}
 
 /// Dart 内置异常构造名：JS 侧统一译成 `new Error(message)`。
 ///

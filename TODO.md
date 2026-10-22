@@ -12,10 +12,10 @@
 | 1 | `jsString` 转义修复并合并重复实现 | 小 | 已完成 | P0-1 / P1-重复实现 | `dart analyze` + 转义用例输出 |
 | 2 | 跨包 import 解析标注 TODO | 小 | 已完成 | P1-12 | 注释 / 文档，无行为变化 |
 | 3 | 远程 zip：路径穿越校验 + 大小上限 | 小 | 已完成 | P0-7 | 构造含 `../` 与超大条目的 zip，确认被拒绝并回退旧缓存 |
-| 4 | `translateStmtList` 未覆盖语句告警 + `try/catch/throw/assert` 基础翻译 | 小~中 | 待验证 | P0-2 | HelloCard 的 Try/Catch 按钮可执行并输出日志；剩余未覆盖语句仍有构建期告警 |
-| 5 | `eq` 深比较深度改为可配置 / 足够深 | 小 | 待验证 | P1-11 | 深层嵌套 props 变更能触发 patch |
-| 6 | `JsUiWidget` 支持 `props` 更新 | 小~中 | 待验证 | P1-10 | 父组件重建传入新 props，JS 字段与 UI 同步 |
-| 7 | `PageController` / 构造类字段补齐 | 中 | 待开始 | P0-5 / P1-17 | PageView 外部 controller 可创建、可跳页 |
+| 4 | `translateStmtList` 未覆盖语句告警 + `try/catch/throw/assert` 基础翻译 | 小~中 | 已完成 | P0-2 | HelloCard 的 Try/Catch 按钮可执行并输出日志；剩余未覆盖语句仍有构建期告警 |
+| 5 | `eq` 深比较深度改为可配置 / 足够深 | 小 | 已完成 | P1-11 | 深层嵌套 props 变更能触发 patch |
+| 6 | `JsUiWidget` 支持 `props` 更新 | 小~中 | 已完成 | P1-10 | 父组件重建传入新 props，JS 字段与 UI 同步 |
+| 7 | `PageController` / 构造类字段补齐 | 中 | 已完成 | P0-5 / P1-17 | PageView 外部 controller 可创建、可跳页 |
 | 8 | 移除方法名映射，改为 JS 原型注入 | 中 | 待开始 | P1-8 | `where/add/removeAt/insert/toList/compareTo/first/last` 原样翻译并通过 demo |
 | 9 | `registerNativeComponent` 支持 children / slots | 中 | 待开始 | P0-4 | 未注册容器组件的子树不再丢失 |
 | 10 | `builtinWidgetTypes` 改为直接父类判定 | 中 | 待开始 | P1-9 | 删除表后 demo 产物与页面表现一致 |
