@@ -45,6 +45,34 @@ class RemoteAssetLoader {
   /// 挂起会让启动永久卡在加载页。
   static const Duration _timeout = Duration(seconds: 15);
 
+  /// 下载 zip 的**压缩体积**上限：超限直接拒绝并回退旧缓存，避免超大包
+  /// 占满内存 / 磁盘。
+  static const int _maxDownloadBytes = 50 * 1024 * 1024;
+
+  /// 解压后的**总大小**上限：防 zip bomb（压缩比可任意大，只看下载体积不够）。
+  static const int _maxUncompressedBytes = 100 * 1024 * 1024;
+
+  /// zip 条目数量上限：防大量小文件拖垮解压与后续递归扫描。
+  static const int _maxArchiveEntries = 10000;
+
+  /// zip 条目名是否安全（防 zip-slip）。
+  ///
+  /// 只接受普通相对路径：拒绝绝对路径、盘符（`C:`）、反斜杠、空段与
+  /// `.` / `..`。任何一条命中即整个包判为非法，回退旧缓存而不是部分解压。
+  static bool _isSafeZipEntryName(String name) {
+    if (name.isEmpty || name.startsWith('/') || name.contains('\\')) {
+      return false;
+    }
+    // 盘符前缀（`C:` / `c:`）一律拒绝。
+    final c0 = name.codeUnitAt(0);
+    final isLetter = (c0 >= 0x41 && c0 <= 0x5A) || (c0 >= 0x61 && c0 <= 0x7A);
+    if (name.length >= 2 && isLetter && name[1] == ':') return false;
+    for (final seg in name.split('/')) {
+      if (seg.isEmpty || seg == '.' || seg == '..') return false;
+    }
+    return true;
+  }
+
   /// 组包并读取包根清单里的打包时间（`manifest.json` 由 build_runner 产出、
   /// 随 zip 分发；缺失/解析失败一律返回 null，不影响加载）。
   static RemoteAssetBundle _bundle(String entry, String root, {bool fresh = false}) =>
@@ -138,8 +166,22 @@ class RemoteAssetLoader {
         // 3. 200：zip 有更新。先读完响应体并校验 zip 格式，解压到同级临时
         // 目录、验证入口存在，最后 rename 原子替换旧目录——任何一步失败，
         // 旧缓存完好无损，可直接回退。
+        final declaredLength = response.contentLength;
+        if (declaredLength > _maxDownloadBytes) {
+          HotPatchLog.error(
+              'remote asset too large ($declaredLength bytes): $url');
+          return _fallback(root, url, existing, 'too large');
+        }
         final builder = BytesBuilder(copy: false);
-        await response.forEach((chunk) => builder.add(chunk)).timeout(_timeout);
+        var received = 0;
+        await response.forEach((chunk) {
+          received += chunk.length;
+          if (received > _maxDownloadBytes) {
+            throw StateError(
+                'remote zip exceeds $_maxDownloadBytes bytes: $url');
+          }
+          builder.add(chunk);
+        }).timeout(_timeout);
         final bytes = builder.takeBytes();
         // 格式校验：必须是 zip（PK 魔数 0x50 0x4B）
         if (bytes.length < 4 ||
@@ -155,9 +197,24 @@ class RemoteAssetLoader {
         if (tmp.existsSync()) tmp.deleteSync(recursive: true);
         tmp.createSync(recursive: true);
         try {
+          var entryCount = 0;
+          var uncompressedBytes = 0;
           for (final file in archive) {
             if (!file.isFile) continue;
+            entryCount += 1;
+            if (entryCount > _maxArchiveEntries) {
+              throw StateError(
+                  'remote zip has more than $_maxArchiveEntries entries: $url');
+            }
             final rel = file.name;
+            if (!_isSafeZipEntryName(rel)) {
+              throw StateError('unsafe zip entry "$rel": $url');
+            }
+            uncompressedBytes += file.size;
+            if (uncompressedBytes > _maxUncompressedBytes) {
+              throw StateError(
+                  'remote zip expands beyond $_maxUncompressedBytes bytes: $url');
+            }
             final target = File('${tmp.path}/$rel');
             target.parent.createSync(recursive: true);
             target.writeAsBytesSync(file.content as Uint8List);

@@ -49,6 +49,7 @@ bash publish_packages.sh --dry-run
 | [使用手册](docs/使用手册.md) | 接入四步、注解速查、构建配置、运行时接入、本地联调、常见问题 |
 | [项目架构文档](docs/项目架构文档.md) | 核心设计定律、架构总览、核心机制、设计红线、扩展指引、关键文件索引 |
 | [组件支持文档](docs/组件支持文档.md) | 组件支持矩阵、样式/值/事件协议、通用翻译能力、已知限制、JS 引擎能力基线 |
+| [TODO.md](TODO.md) | 待办任务、实施顺序、详细 TODO 与暂缓项 |
 | [app-prototype.html](docs/app-prototype.html) | 示例 App 原型（HTML） |
 | [hot_patch_annotations](packages/hot_patch_annotations/README.md) | 注解包：`@PatchEntry` / `@PatchIgnore` |
 | [hot_patch_generator](packages/hot_patch_generator/README.md) | 生成器：产物布局、配置项、翻译设计原则、新增 widget 支持 |

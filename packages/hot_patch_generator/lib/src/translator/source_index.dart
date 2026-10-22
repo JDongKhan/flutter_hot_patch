@@ -106,6 +106,7 @@ List<String> resolveImportFiles(CompilationUnit unit, String sourcePath) {
       continue;
     }
     if (uri.startsWith('package:')) {
+      // TODO(cross-package-import): 见 TODO.md「2.1 跨包 import 解析」。
       final idx = uri.indexOf('/');
       if (idx <= 0 || idx >= uri.length - 1) continue;
       final rel = uri.substring(idx + 1);
