@@ -57,14 +57,29 @@ const String miniReactElementSource = r'''
 
 ''';
 
+/// props 深比较的最大递归深度（编译期配置）。
+///
+/// 原实现固定 `4`：超过 4 层的嵌套 props（如 style → decoration → gradient →
+/// colors 这类结构）变化会被判为相等，导致 patch 不下发、UI 不刷新。
+/// 这里提高到 32 并把入口改为函数，深度只在 Dart 常量一处维护。
+const int jsUiMaxPropDiffDepth = 32;
+
 /// mini-react｜reconciler 工具（eq / keyOf / hostIdOf / rootFor）【5】。
-const String miniReactReconcilerUtilsSource = r'''
+String miniReactReconcilerUtilsSource() =>
+    _miniReactReconcilerUtilsSource.replaceFirst(
+      '__EQ_MAX_DEPTH__',
+      '$jsUiMaxPropDiffDepth',
+    );
+
+const String _miniReactReconcilerUtilsSource = r'''
 
   // ===== 【5】mini-react｜reconciler 工具 ==============================
   // 深比较（用于避免每次重建都下发 props）；下面紧邻的 keyOf / hostIdOf /
   // rootFor 同属本分区。
+  var EQ_MAX_DEPTH = __EQ_MAX_DEPTH__;
   function eq(a, b, depth) {
     if (a === b) { return true; }
+    if (depth === undefined || depth === null) { depth = EQ_MAX_DEPTH; }
     if (depth <= 0) { return false; }
     if (typeof a !== typeof b) { return false; }
     if (a === null || b === null || typeof a !== 'object') { return false; }
@@ -566,7 +581,7 @@ const String miniReactReconcilerSource = r'''
 
     if (oldIsHost) {
       var oldProps = oldInst.__props;
-      if (!eq(oldProps, el.props, 4)) {
+      if (!eq(oldProps, el.props)) {
         emit({ op: 'props', id: oldInst.__id, props: el.props });
       }
       oldInst.__props = el.props;

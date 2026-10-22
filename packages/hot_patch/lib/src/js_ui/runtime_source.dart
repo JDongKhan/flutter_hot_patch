@@ -542,7 +542,7 @@ String jsUiRuntimeSource() => [
   _jsUiHostBridge,
   handleRegistryJsSource,
   miniReactElementSource,
-  miniReactReconcilerUtilsSource,
+  miniReactReconcilerUtilsSource(),
   miniReactComponentBaseSource,
   miniReactScopeSource,
   miniReactSchedulerSource,
