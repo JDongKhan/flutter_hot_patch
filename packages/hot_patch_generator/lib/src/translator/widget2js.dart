@@ -4,6 +4,7 @@ import 'package:build/build.dart' show log;
 
 import '../builders/js_widget_defs.dart';
 import 'js_translator.dart';
+import 'js_value.dart';
 import 'widget_json.dart';
 
 // ===========================================================================

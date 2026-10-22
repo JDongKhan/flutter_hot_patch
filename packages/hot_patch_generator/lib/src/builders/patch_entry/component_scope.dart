@@ -28,8 +28,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 
-import '../../translator/class_translator.dart';
-import '../../translator/dart2js.dart';
+import '../../translator/analyze_dart_class.dart';
 import '../../translator/host_injected.dart';
 import '../../translator/source_index.dart';
 

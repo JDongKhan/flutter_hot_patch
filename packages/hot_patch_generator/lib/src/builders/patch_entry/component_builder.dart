@@ -11,9 +11,9 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 
-import '../../translator/class_translator.dart';
+import '../../translator/analyze_dart_class.dart';
+import '../../translator/class_info.dart';
 import '../../translator/dart2js.dart';
-import '../../translator/js_translator.dart';
 import '../../translator/source_index.dart';
 import '../../translator/widget2js.dart';
 
@@ -45,7 +45,7 @@ import 'singleton_support.dart';
 ///   - 按 ClassInfo.dependencies 递归：同文件类内联、跨文件类生成 import；
 ///   - 组装并写出产物（package 模块由 WidgetModuleBuilder 另出）。
 ///
-/// 翻译只有一个入口（class_translator.translateClass）：内部仅判断
+/// 翻译只有一个入口（analyze_dart_class.translateClass）：内部仅判断
 /// 「StatefulWidget → 合并同文件 State 类」这一次分叉，组件与普通类的字段 /
 /// 方法 / 依赖 / widget 树全部同一条路径。
 ///
@@ -108,7 +108,7 @@ class ComponentBuilder implements Builder {
 
     // 全量「类表」：同文件 + 跨文件 import 的所有 Dart 类（公共、非抽象、
     // 非 @HostInjected），组件 / widget 类打 isComponent 标记、普通类与静态
-    // 单例不打标。翻译只按名字在这张表里解析依赖（见 class_translator.dart）。
+    // 单例不打标。翻译只按名字在这张表里解析依赖（见 analyze_dart_class.dart）。
     final classTable = buildClassTable(parsed.unit, inputId.path);
 
     // 跨文件「静态单例类」映射：照旧，供 build 树里 `MyColors.x` 静态引用
@@ -346,7 +346,6 @@ class ComponentBuilder implements Builder {
         exportedClasses: exportedClasses,
         inlineClasses: inlineClasses.values.toList(),
         singletons: sameFileSingletonInfos,
-        classes: classTable,
         consts: constResolver.sameFile,
         globalConsts: globalConsts,
         dependencyImports: dedupedImports,
@@ -369,16 +368,14 @@ class ComponentBuilder implements Builder {
 ///   - [consts]：本文件顶层常量（名字 → 已译 JS 值）→ `export const X = ...;`
 ///     内联在产物顶部，`_` 开头的私有名不 export；[globalConsts] 为全部可见常量名
 ///     （同文件 + import 文件），供方法体内的常量引用解析。
-/// 所有类统一由 [dart2js] 渲染、统一带 [WidgetExprRenderer] 上下文：方法体里
-/// `return Container(...)` 一律走 widget 翻译路径（普通类里返回 widget 的方法
-/// 同样生效），用到的 widget 类型统一收集成 package import。因此没有
-/// 「组件渲染 / 模型渲染」两条分支——新增类结构能力只改这一处。
+/// 所有类统一由 [dart2js] 渲染：字段初值、方法体、getter、builder 子树都已由
+/// [translateClass] 在收集阶段译好，因此没有「组件渲染 / 模型渲染」两条分支——
+/// 新增类结构能力只改收集层与渲染层各一处。
 String _renderJsProduct(
   String sourcePath, {
   required List<ClassInfo> exportedClasses,
   List<ClassInfo> inlineClasses = const [],
   List<ClassInfo> singletons = const [],
-  Map<String, ClassInfo> classes = const {},
   Map<String, String> consts = const {},
   Set<String> globalConsts = const {},
   List<String> dependencyImports = const [],
@@ -401,8 +398,8 @@ String _renderJsProduct(
     head.writeln(line);
   }
 
-  // 统一翻译上下文：所有类共用（组件动作、模型方法同一套）。方法体里
-  // `return Container(...)` 走 widget 树翻译路径。
+  // 单例字段值渲染上下文：静态单例类由类表直接建模（未走 translateClass），
+  // 其字段初值在产物组装时求值（颜色 / 字面量 / 同文件模型构造）。
   final ctx = WidgetTranslateContext(
     propByField: const {},
     actionByMethod: const {},
@@ -434,11 +431,7 @@ String _renderJsProduct(
     b
       ..writeln()
       ..writeln('// 模型 ${cls.name}（同文件，仅本产物内可见）')
-      ..writeln(dart2js(cls,
-          exported: false,
-          classes: classes,
-          widgetCtx: ctx));
-    _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
+      ..writeln(dart2js(cls, exported: false));
   }
 
   // 静态单例类：`export const X = {...}`（运行时按 export 名收集并注册进
@@ -461,13 +454,7 @@ String _renderJsProduct(
     b
       ..writeln()
       ..writeln('// ${cls.isComponent ? '组件' : '模型'} ${cls.name}')
-      ..writeln(dart2js(
-        cls,
-        exported: true,
-        classes: classes,
-        widgetCtx: ctx,
-      ));
-    _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
+      ..writeln(dart2js(cls, exported: true));
   }
 
   // 按 package 拼装模块 import：只 import **有 JS 类的类型**（`Builder` /
@@ -480,8 +467,7 @@ String _renderJsProduct(
   }
   // 结点工厂 `__h`：产物里有元素树（组件 build 树 / 方法体里返回 widget）
   // 才需要，并入其宿主 package（flutter）那一条；纯模型产物不产生多余 import。
-  // 组件方法体在生成期译好（标志经 [extraUsedNodeHelper] 带出），内联模型则
-  // 由渲染期 [ctx] 收集，两者取「或」。
+  // 方法体与 builder 子树的 `__h` 用量都在收集阶段登记（[ClassInfo.usedNodeHelper]）。
   if (extraUsedNodeHelper || ctx.usedNodeHelper || usedWidgets.isNotEmpty) {
     (importsByPackage[nodeHelperPackage] ??= <String>{}).add('__h');
   }

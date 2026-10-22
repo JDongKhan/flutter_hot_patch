@@ -12,7 +12,9 @@ library;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
+import '../../translator/class_info.dart';
 import '../../translator/js_translator.dart';
+import '../../translator/js_value.dart';
 import '../../translator/source_index.dart';
 import 'class_table.dart';
 

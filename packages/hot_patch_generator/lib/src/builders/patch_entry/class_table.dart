@@ -5,9 +5,10 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../../translator/dart2js.dart';
+import '../../translator/analyze_dart_class.dart';
+import '../../translator/class_info.dart';
 import '../../translator/host_injected.dart';
-import '../../translator/js_translator.dart';
+import '../../translator/js_value.dart';
 import '../../translator/source_index.dart';
 
 /// 全量「类表」：把一个文件（同文件 + 跨文件 import）的全部公共 Dart 类

@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
-import 'js_translator.dart';
+import 'js_value.dart';
 import 'widget2js.dart';
 
 // ===========================================================================

@@ -1,11 +1,374 @@
-import 'package:analyzer/dart/ast/ast.dart';
+/// 收集入口：Dart AST → 完整可渲染的 [ClassInfo]。
+///
+/// 本文件是「先收集、后渲染」的唯一收集层：
+///   - classInfoOf：结构建模（字段 / 方法 / 构造参数 / mixin 线性化）；
+///   - translateClass：在结构之上完成字段初值、方法体、getter、builder 子树与
+///     依赖的预翻译，产出的 ClassInfo 可直接交给 dart2js；
+///   - StatefulWidget 与 State 的合并发生在本层（收集期的特殊处理）。
+///
+/// 翻译只发生一次：渲染层不再遍历 AST，也不接收任何翻译上下文。
+library;
 
-import 'dart2js.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+
+import '../builders/js_widget_defs.dart';
+import 'class_info.dart';
 import 'host_injected.dart';
 import 'js_translator.dart';
+import 'js_value.dart';
 import 'source_index.dart';
-import '../builders/js_widget_defs.dart';
 import 'widget2js.dart';
+
+/// 方法形参 → JS 形参名列表（解 DefaultFormalParameter 包裹）。
+///
+/// **一一对应**：Dart 是什么形参，JS 就是什么形参（形参名、顺序、个数完全一致），
+/// 不做任何类型剔除——`BuildContext` 也有对应物（运行时以最近宿主祖先结点为锚
+/// 的代理，由 build 传参）。形参名在作用域内保持裸引用；仅事件等延迟作用域因
+/// 看不见形参，才由作用域别名译成 `this.context`（见 WidgetTranslateContext._eventScope）。
+/// 组件与普通类共用这一处。
+List<String> jsMethodParams(MethodDeclaration m) {
+  final out = <String>[];
+  for (final p in m.parameters?.parameters ?? const <FormalParameter>[]) {
+    final inner = p is DefaultFormalParameter ? p.parameter : p;
+    final name = inner.name?.lexeme;
+    if (name == null || name.isEmpty) continue;
+    out.add(name);
+  }
+  return out;
+}
+
+/// 方法是否 `void`：返回类型为 `void`（箭头体译为语句，不产生 `return`）。
+bool isVoidReturn(MethodDeclaration m) {
+  final t = m.returnType?.toSource().trim();
+  return t == 'void';
+}
+
+/// 方法返回值是否为 widget：显式返回类型里出现 `Widget`（`Widget` / `Widget?` /
+/// `Future<Widget>` / `XxxWidget`）即视为 widget 方法，`return Text(...)` 走
+/// widget 树渲染；返回模型等数据类型的普通方法（`User makeUser()`）按普通表达
+/// 式翻译，不会被误判成组件占位节点。无显式返回类型时按 widget 处理（保守）。
+bool returnsWidgetOf(MethodDeclaration m) {
+  final t = m.returnType?.toSource().trim() ?? '';
+  if (t.isEmpty) return true;
+  return t.contains('Widget');
+}
+
+// ===========================================================================
+// 建模层：Dart 类 → ClassInfo（含依赖发现）
+//
+// 组件（@PatchEntry widget）与普通类（模型 / 状态类 / 静态单例）都是 Dart 类，
+// 走**同一处**建模：字段、方法、构造参数，以及**依赖发现**（本类引用到的其它
+// 类名）都在这里求出来挂在 ClassInfo.dependencies 上。builder 不再关心「依赖
+// 怎么算」，只按名字递归翻译 / 决定同文件内联还是跨文件 import。
+// ===========================================================================
+
+/// 提取 ClassDeclaration → ClassInfo（结构建模**唯一入口**）。
+///
+/// 类表（buildClassTable）与翻译入口（translateClass）都从这里取结构，
+/// 差异只靠参数显式化，不再有第二套「构造参数 / 字段 / 方法」行走：
+///
+///   - 构造：收集 this.x 形参名（DefaultFormalParameter 解包），带默认值的
+///     一并记入 [ClassInfo.ctorDefaults]（JS 实例属性的兜底初值）。
+///   - 字段：类型经 [fieldTypeName] 推断（无类型注解时从初始化器构造名推回），
+///     **未过滤、按声明序**（模型构造的位置参数映射依赖此，见
+///     modelCtorFromPartsJs）；可翻译性过滤与初值预渲染是翻译期的增强。
+///   - 方法：getter 保留（渲染为 get 访问器），setter 跳过；static 方法
+///     默认不翻译（Dart static 无 JS 等价物），[includePrivateStaticMethods]
+///     为 true 时**私有 static 按实例方法收**（`_PostCard._likeText(n)` 这类
+///     同文件私有工具：JS 侧就是原型方法，类内裸调用 `_likeText(x)` 落成
+///     `this._likeText(x)`）。
+///
+/// [dependencies]：本类引用到的其它类名（由 [referencedClassNames] 与类表求交）。
+/// [isComponent]：该类是 widget/组件类（@PatchEntry 或 Stateful/Stateless/
+/// State 子类）——类表据此把它与普通模型类区分开（组件不作为模型内联、组件
+/// 类型字段不当模型构造翻译）。
+///
+/// [mixins]：类 `with` 子句解析出的 mixin 声明（见 resolveMixinDecls，按书写
+/// 顺序，前者优先级低）。按 Dart 线性化规则合并进字段/方法：
+/// **类自身 > 后写的 mixin > 前写的 mixin**——同名字段/方法高优先级占原名，
+/// 被覆盖的 mixin 方法改名 `_m$<Mixin>$<name>` 保留，并给每个方法挂
+/// [ClassMethod.superMap]（`super.foo()` → 链上下一个实现的 JS 名），语句翻译
+/// 据此把 super 语句落成 mixin 方法调用，链尾（基类）无 JS 等价物照旧忽略。
+ClassInfo classInfoOf(
+  ClassDeclaration decl,
+  String sourceFile, {
+  Set<String> dependencies = const {},
+  bool isComponent = false,
+  bool includePrivateStaticMethods = false,
+  List<MixinDeclaration> mixins = const [],
+}) {
+  final instanceFields = <ClassField>[];
+  final staticFields = <ClassField>[];
+  final methods = <ClassMethod>[];
+  final ctorParams = <String>{};
+  final ctorDefaults = <String, Expression>{};
+
+  // 构造器 this.x 形参（DefaultFormalParameter 解包）；带默认值
+  //（`this.banners = kBanners`）的一并记下，供翻译期做字段兜底初值。
+  for (final m in decl.members) {
+    if (m is ConstructorDeclaration) {
+      for (final p in m.parameters.parameters) {
+        final inner = p is DefaultFormalParameter ? p.parameter : p;
+        if (inner is FieldFormalParameter) {
+          ctorParams.add(inner.name.lexeme);
+          if (p is DefaultFormalParameter && p.defaultValue != null) {
+            ctorDefaults[inner.name.lexeme] = p.defaultValue!;
+          }
+        }
+      }
+    }
+  }
+
+  // MethodDeclaration → ClassMethod 的同一口径（类自身与 mixin 成员共用）：
+  // getter 保留为 get 访问器；setter 跳过；static 默认跳过（参数放开时
+  // 私有 static 按实例方法收）。
+  ClassMethod? methodOf(
+    MethodDeclaration m, {
+    String? nameOverride,
+    Map<String, String> superMap = const {},
+    String? mixinOrigin,
+  }) {
+    if (m.isGetter) {
+      return ClassMethod(
+        name: nameOverride ?? m.name.lexeme,
+        params: const [],
+        isGetter: true,
+        body: m.body,
+        superMap: superMap,
+        mixinOrigin: mixinOrigin,
+      );
+    }
+    if (m.isSetter ||
+        (m.isStatic &&
+            !(includePrivateStaticMethods &&
+                m.name.lexeme.startsWith('_')))) {
+      return null;
+    }
+    return ClassMethod(
+      name: nameOverride ?? m.name.lexeme,
+      params: jsMethodParams(m),
+      isAsync: m.body.isAsynchronous,
+      isVoid: isVoidReturn(m),
+      returnsWidget: returnsWidgetOf(m),
+      body: m.body,
+      superMap: superMap,
+      mixinOrigin: mixinOrigin,
+    );
+  }
+
+  for (final m in decl.members) {
+    if (m is FieldDeclaration) {
+      for (final v in m.fields.variables) {
+        final f = ClassField(
+          name: v.name.lexeme,
+          typeName: fieldTypeName(m, v),
+          initializer: v.initializer,
+          isStatic: m.isStatic,
+        );
+        if (m.isStatic) {
+          staticFields.add(f);
+        } else {
+          instanceFields.add(f);
+        }
+      }
+    } else if (m is MethodDeclaration) {
+      final cm = methodOf(m);
+      if (cm != null) methods.add(cm);
+    }
+  }
+
+  // --- mixin 线性化合并 -----------------------------------------------------
+  // ordered：优先级从高到低（with 书写顺序反转）。先完成全部方法的 JS 命名
+  //（高优先级占原名、低优先级改名保留），再据此给每个方法算 superMap。
+  if (mixins.isNotEmpty) {
+    final ordered = mixins.reversed.toList();
+    final taken = <String>{for (final m in methods) m.name};
+    final jsNames = <MixinDeclaration, Map<String, String>>{};
+    for (final mx in ordered) {
+      final table = <String, String>{};
+      for (final member in mx.members.whereType<MethodDeclaration>()) {
+        if (methodOf(member) == null) continue; // setter/static 口径一致
+        final name = member.name.lexeme;
+        table[name] = taken.add(name) ? name : '_m\$${mx.name.lexeme}\$$name';
+      }
+      jsNames[mx] = table;
+    }
+
+    // 链上（比某位置更低优先级的全部 mixin）各方法的第一个实现。
+    Map<String, String> superMapOf(Iterable<MixinDeclaration> lower) {
+      final map = <String, String>{};
+      for (final mx in lower) {
+        for (final e in jsNames[mx]!.entries) {
+          map.putIfAbsent(e.key, () => e.value);
+        }
+      }
+      return map;
+    }
+
+    // 类自身方法：super 链 = 全部 mixin（高 → 低取第一个实现）。
+    final classSuper = superMapOf(ordered);
+    if (classSuper.isNotEmpty) {
+      for (var i = 0; i < methods.length; i++) {
+        final m = methods[i];
+        methods[i] = ClassMethod(
+          name: m.name,
+          params: m.params,
+          isAsync: m.isAsync,
+          isGetter: m.isGetter,
+          isVoid: m.isVoid,
+          returnsWidget: m.returnsWidget,
+          body: m.body,
+          bodyJs: m.bodyJs,
+          nativeChannel: m.nativeChannel,
+          nativeMessage: m.nativeMessage,
+          superMap: classSuper,
+          mixinOrigin: m.mixinOrigin,
+        );
+      }
+    }
+
+    // mixin 实例字段：高优先级先收，同名去重（类自身字段已先入列）。
+    final seenFields = {for (final f in instanceFields) f.name};
+    for (final mx in ordered) {
+      for (final member in mx.members.whereType<FieldDeclaration>()) {
+        if (member.isStatic) continue;
+        for (final v in member.fields.variables) {
+          if (seenFields.add(v.name.lexeme)) {
+            instanceFields.add(ClassField(
+              name: v.name.lexeme,
+              typeName: fieldTypeName(member, v),
+              initializer: v.initializer,
+              mixinOrigin: mx.name.lexeme,
+            ));
+          }
+        }
+      }
+    }
+
+    // mixin 方法：super 链 = 比它低优先级的其余 mixin。
+    for (var i = 0; i < ordered.length; i++) {
+      final mx = ordered[i];
+      final superMap = superMapOf(ordered.sublist(i + 1));
+      for (final member in mx.members.whereType<MethodDeclaration>()) {
+        final cm = methodOf(
+          member,
+          nameOverride: jsNames[mx]![member.name.lexeme],
+          superMap: superMap,
+          mixinOrigin: mx.name.lexeme,
+        );
+        if (cm != null) methods.add(cm);
+      }
+    }
+  }
+
+  String? superType;
+  final ext = decl.extendsClause;
+  if (ext != null) superType = ext.superclass.toSource();
+
+  return ClassInfo(
+    name: decl.name.lexeme,
+    sourceFile: sourceFile,
+    superType: superType,
+    instanceFields: instanceFields,
+    staticFields: staticFields,
+    methods: methods,
+    ctorParams: ctorParams,
+    ctorDefaults: ctorDefaults,
+    isComponent: isComponent,
+    dependencies: dependencies,
+  );
+}
+
+/// 字段类型：优先显式类型注解；无注解时从初始化器推断
+/// （`final _model = MyModel();` 在无 resolution 解析下 type 为 null，
+/// 会退化成 dynamic 被当基础类型，需从构造名推回 MyModel）。
+String fieldTypeName(FieldDeclaration member, VariableDeclaration variable) {
+  final t = member.fields.type?.toSource();
+  if (t != null && t.isNotEmpty) return t;
+  final init = variable.initializer;
+  if (init is InstanceCreationExpression) {
+    return init.constructorName.type.name2.lexeme;
+  }
+  if (init is MethodInvocation &&
+      init.target == null &&
+      init.typeArguments == null) {
+    final n = init.methodName.name;
+    if (n.isNotEmpty && n[0] == n[0].toUpperCase()) return n;
+  }
+  return 'dynamic';
+}
+
+/// 一个类引用到的其它类名：**实例字段类型** + **方法体内构造调用** 的并集。
+///
+/// 依赖发现是「类 → ClassInfo」这一层的产物：组件与普通类共用同一处，builder
+/// 只按名字递归翻译依赖组件、并按 ClassInfo.sourceFile 决定同文件内联还是跨
+/// 文件 import。基础类型与 widget 构造名由调用方与类表求交后自然丢弃
+/// （类表里只有真正的 Dart 类）。
+///
+/// [mixins]：本类合并的 mixin 声明（见 classInfoOf）——mixin 的字段类型与
+/// 方法体构造调用同样是本类的依赖，漏扫会让「只在 mixin 里引用的模型类」
+/// 不被连带翻译。
+Set<String> referencedClassNames(
+  ClassDeclaration decl, {
+  List<MixinDeclaration> mixins = const [],
+}) {
+  final names = <String>{};
+  final collector = _CtorNameCollector();
+  void scanMembers(List<ClassMember> members) {
+    for (final m in members.whereType<MethodDeclaration>()) {
+      m.body.accept(collector);
+    }
+    for (final member in members.whereType<FieldDeclaration>()) {
+      if (member.isStatic) continue;
+      for (final v in member.fields.variables) {
+        final t = eraseType(fieldTypeName(member, v));
+        if (!isBasicType(t) && t.isNotEmpty) names.add(t);
+      }
+    }
+  }
+
+  scanMembers(decl.members);
+  for (final mx in mixins) {
+    scanMembers(mx.members);
+  }
+  names.addAll(collector.names);
+  return names;
+}
+
+/// 任意表达式里构造调用的类名集合（顶层常量初始化器用：
+/// `const List<Spot> kSpots = [...]` 里被构造出来的模型类必须跟着常量一起产出）。
+/// 与 [referencedClassNames] 共用同一个收集器，口径一致。
+Set<String> ctorClassNames(Expression? expression) {
+  if (expression == null) return const {};
+  final collector = _CtorNameCollector();
+  expression.accept(collector);
+  return collector.names;
+}
+
+/// 收集表达式树里全部类型构造调用名（与类发现共用：字段类型 + 构造调用）。
+class _CtorNameCollector extends RecursiveAstVisitor<void> {
+  final names = <String>{};
+
+  @override
+  void visitInstanceCreationExpression(InstanceCreationExpression node) {
+    names.add(node.constructorName.type.name2.lexeme);
+    super.visitInstanceCreationExpression(node);
+  }
+
+  /// 无 `new`/`const` 的构造调用（parseString 下是 MethodInvocation）：
+  /// `MyModel()` / `(_) => MyModel()` 里的模型构造。仅收 UpperCamel 且无
+  /// target/泛型的形态（与 [fieldTypeName] 同启发式），widget 构造（Text/Column
+  /// 等）也会被收进来，但与类表求交后自然丢弃。
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.target == null && node.typeArguments == null) {
+      final n = node.methodName.name;
+      if (n.isNotEmpty && n[0] == n[0].toUpperCase()) names.add(n);
+    }
+    super.visitMethodInvocation(node);
+  }
+}
 
 // ===========================================================================
 // 统一入口：Dart 类 → ClassInfo（方法体已预渲染为 JS）
@@ -232,9 +595,21 @@ ClassInfo translateClass(
 
   // 方法增强：classInfoOf 已建好结构（形参 / async / void / 返回 widget
   // 判定），这里只叠加翻译产物——预渲染方法体 [bodyJs] 与 native 通道识别
-  //（方法体是 SnackBar 形式时整体改译 nativeToast）。getter 无增强，直接透传。
+  //（方法体是 SnackBar 形式时整体改译 nativeToast）。getter 也在这里译好，
+  // 渲染层不再需要回读 AST。
   ClassMethod buildMethod(ClassMethod cm, {String? bodyJs}) {
-    if (cm.isGetter) return cm;
+    if (cm.isGetter) {
+      // getter 也要带上收集期译好的方法体（渲染层不再回读 AST）。
+      return ClassMethod(
+        name: cm.name,
+        params: cm.params,
+        isGetter: true,
+        body: cm.body,
+        bodyJs: bodyJs,
+        superMap: cm.superMap,
+        mixinOrigin: cm.mixinOrigin,
+      );
+    }
     final body = cm.body;
     final msg = body == null ? null : _snackMessage(body, parseCtx);
     return ClassMethod(
@@ -275,13 +650,18 @@ ClassInfo translateClass(
     for (final m in methods)
       buildMethod(
         m,
-        bodyJs: m.isGetter
-            ? null
-            : translateClassMethodBody(proto, buildMethod(m), used,
-                hostMethods: hostMethods,
-                widgetCtx: parseCtx,
-                globalConsts: globalConsts),
+        bodyJs: translateClassMethodBody(proto, buildMethod(m), used,
+            hostMethods: hostMethods,
+            widgetCtx: parseCtx,
+            globalConsts: globalConsts),
       ),
+  ];
+
+  // builder 子树同样在收集期渲染成 JS：渲染层只按名拼装，不再持有
+  // WidgetTranslateContext。渲染过程会顺带登记用到的 widget 类型 / `__h`，
+  // 因此必须在读取 usedWidgetPackages / usedNodeHelper 之前完成。
+  final builderBodies = <String>[
+    for (final tree in parseCtx.builderTrees) parseCtx.renderJs(tree, 2),
   ];
 
   return ClassInfo(
@@ -294,7 +674,7 @@ ClassInfo translateClass(
     ctorParams: proto.ctorParams,
     isComponent: isComponent,
     hostMethods: hostMethods,
-    builders: parseCtx.builderTrees,
+    builderBodies: builderBodies,
     builderNames: parseCtx.builderNames,
     builderParams: parseCtx.builderParams,
     builderPreludes: parseCtx.builderPreludes,

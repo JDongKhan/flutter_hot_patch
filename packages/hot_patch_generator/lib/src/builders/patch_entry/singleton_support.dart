@@ -7,7 +7,7 @@ library;
 import 'package:analyzer/dart/ast/ast.dart';
 
 import '../../translator/host_injected.dart';
-import '../../translator/js_translator.dart';
+import '../../translator/js_value.dart';
 import '../../translator/source_index.dart';
 import '../../translator/style_translators.dart';
 import '../../translator/widget2js.dart';
