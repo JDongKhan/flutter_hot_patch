@@ -613,10 +613,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final propsMap = props is Map<String, dynamic> ? props : null;
     // 元素 type 用**类构造**还是**类型名字符串兜底**：
     //   - 该类型有 JS 产物（importResolver 命中：@PatchEntry 嵌套组件、同文件
-    //     私有组件）→ `new X(props)`（X 由产物 export）；
+    //     私有组件）→ `new X(props)`；实例随元素一起下发，mount 直接复用；
     //   - 该类型在 JS 侧有类（逻辑组件 / builder 命名构造代理）→ `new X(props)`；
-    //   - 宿主 widget / 值对象：flutter.js 生成了同名包装类 → `new X(props)`，
-    //     包装类内部 `__h('X', props)`；
+    //   - 宿主 widget / 值对象：flutter.js 生成了同名包装类 → `new X(props)`；
     //   - 其余（无产物的自定义组件）→ `__h('X', props)` 兜底，运行时原生注入或占位。
     final productType = importResolver?.call(type);
     final asClass = productType != null || usesJsClass(type, propsMap);

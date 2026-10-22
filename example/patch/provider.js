@@ -64,14 +64,20 @@ export class MultiProvider {
     var provs = this.props.providers || [];
     var node = this.props.child;
     for (var i = provs.length - 1; i >= 0; i--) {
-      // providers 项可能是元素描述，也可能是用户直接 new 出来的组件实例
-      // （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})`
-      // 不经过 __h）——统一折算后再取 type / props。
+      // providers 项是翻译层 `new ChangeNotifierProvider(...)` 产出的实例
+      // （元素携带 inst）——注入 child 后**复用同一个实例**，不再 new 第二次。
       var prov = __asElement(provs[i]);
       var p = {};
       for (var k in prov.props) { p[k] = prov.props[k]; }
       p.child = node;
-      node = __h(prov.type, p);
+      if (prov.inst) {
+        prov.inst.props = p;
+        node = {
+          type: prov.type, props: p, children: {}, element: true, inst: prov.inst
+        };
+      } else {
+        node = __h(prov.type, p);
+      }
     }
     return node;
   }

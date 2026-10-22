@@ -38,12 +38,10 @@ String renderClassDecl(
   // 运行时在 patch 的复用路径上会再调一次 `__applyProps(el.props)` 同步字段
   // （见 mini_react_js 的 patch）。
   //
-  // 参数先于其它字段派生：Dart 里 `this.x` 形参在构造体开头即已可用，状态字段
-  // 可能依赖它（如 `_status = widget.initialStatus ?? kOrderStatus.first`）。
-  // 组件类与普通类同样是「构造即实例」：`new CommunityPage({...})` 得到组件
-  // 实例；渲染层在消费它时统一折算成元素描述（见 flutter.js `__asElement`），
-  // 因此构造函数里不需要任何内部 token / 双模分支。
-  // 组件实例必须保留 props（归一化时据此还原元素 props）：首行落 `this.props`。
+  // 组件类与普通类同样是「构造即实例」：字段初始化照常写在构造里。
+  // 翻译层发射 `new X(props)`，元素携带该实例；reconciler mount **直接复用**
+  // 这个实例（不再 `new` 第二次），patch 复用旧实例、丢弃重建产生的新实例。
+  // 组件实例必须保留 props（patch 复用实例时据此同步最新值）。
   if (info.isComponent) {
     b.write('  constructor(args) {\n');
     b.write('    this.props = args || {};\n');
@@ -52,19 +50,7 @@ String renderClassDecl(
   }
   if (base != null) b.write('    super();\n');
   if (info.ctorParams.isNotEmpty) b.write('    this.__applyProps(args);\n');
-  // mixin 来源的字段集中尾部、按来源注释分隔（类自身字段在前，注释只标
-  // mixin 段），定位问题时一眼分清「类自己的状态 / 混入的状态」。
-  String? lastFieldOrigin;
-  for (final f in info.instanceFields) {
-    if (info.ctorParams.contains(f.name)) continue;
-    if (f.mixinOrigin != lastFieldOrigin) {
-      if (f.mixinOrigin != null) {
-        b.write('    // ---- mixin ${f.mixinOrigin} ----\n');
-      }
-      lastFieldOrigin = f.mixinOrigin;
-    }
-    b.write('    this.${f.name} = ${_fieldDefaultJs(f)};\n');
-  }
+  _writeFieldAssignments(b, info);
   b.write('  }\n');
 
   // 构造参数 → 实例字段的唯一映射：构造函数首行调用；实例被 patch 复用
@@ -134,6 +120,22 @@ String renderClassDecl(
 
   b.write('}');
   return b.toString();
+}
+
+/// 非构造参数字段的赋值语句（组件与普通类构造函数共用）。
+/// mixin 来源的字段集中尾部、按来源注释分隔（类自身字段在前）。
+void _writeFieldAssignments(StringBuffer b, ClassInfo info) {
+  String? lastFieldOrigin;
+  for (final f in info.instanceFields) {
+    if (info.ctorParams.contains(f.name)) continue;
+    if (f.mixinOrigin != lastFieldOrigin) {
+      if (f.mixinOrigin != null) {
+        b.write('    // ---- mixin ${f.mixinOrigin} ----\n');
+      }
+      lastFieldOrigin = f.mixinOrigin;
+    }
+    b.write('    this.${f.name} = ${_fieldDefaultJs(f)};\n');
+  }
 }
 
 /// 实例字段的 JS 默认值：翻译期预渲染好的 [ClassField.jsInitial] 优先，

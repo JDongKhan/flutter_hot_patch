@@ -15,7 +15,7 @@ loaded only when something goes wrong.
 
 ```yaml
 dependencies:
-  hot_patch: ^0.2.1
+  hot_patch: ^0.2.2
 ```
 
 ### Usage
@@ -135,7 +135,7 @@ the host prefixes them with `[js-log] `). For the full level description and typ
 
 ```yaml
 dependencies:
-  hot_patch: ^0.2.1
+  hot_patch: ^0.2.2
 ```
 
 ### 使用

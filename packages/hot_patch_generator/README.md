@@ -14,7 +14,7 @@ component: the translated class stays a completely ordinary Flutter widget.
 
 ```yaml
 dev_dependencies:
-  hot_patch_generator: ^0.2.2
+  hot_patch_generator: ^0.2.3
   build_runner: ^2.4.13
 ```
 
@@ -210,7 +210,7 @@ Users only need to depend on `hot_patch_generator` in `dev_dependencies`.
 
 ```yaml
 dev_dependencies:
-  hot_patch_generator: ^0.2.2
+  hot_patch_generator: ^0.2.3
   build_runner: ^2.4.13
 ```
 

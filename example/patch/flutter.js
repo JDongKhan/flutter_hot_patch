@@ -18,12 +18,15 @@ function __isElementList(v) {
 // 组件实例 → 元素描述：生成类与普通类一样「构造即实例」（`new CommunityPage(...)`
 // 得到实例），父级把它当子结点消费时在这里统一折算。判定只看原型上有没有
 // build（组件类的语言级特征），不查类型名表、不需要 toJson / 特殊标记。
+// `inst` 随元素携带：reconciler mount 直接复用它（不再 new 第二次）。
 export function __asElement(v) {
   if (v == null || typeof v !== 'object' || v.element === true) { return v; }
   var C = v.constructor;
   if (typeof C === 'function' && C.prototype &&
       typeof C.prototype.build === 'function') {
-    return { type: C, props: v.props || {}, children: {}, element: true };
+    return {
+      type: C, props: v.props || {}, children: {}, element: true, inst: v
+    };
   }
   return v;
 }

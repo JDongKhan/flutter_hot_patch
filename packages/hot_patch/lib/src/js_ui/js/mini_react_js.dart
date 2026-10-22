@@ -28,14 +28,16 @@ const String miniReactElementSource = r'''
   }
 
   // 组件实例 → 元素描述：生成类与普通类一样「构造即实例」，父级把它当子结点
-  // 消费时在这里统一折算（与 flutter.js 的 __asElement 同一协议，产物侧与
-  // 运行时各持一份，互不依赖）。判定只看原型有没有 build，不查类型名。
+  // 消费时在这里统一折算（与 flutter.js 的 __asElement 同一协议）。
+  // `inst` 随元素一起携带：mount 直接复用该实例，**不再 new 第二次**。
   function asElement(v) {
     if (v == null || typeof v !== 'object' || v.element === true) { return v; }
     var C = v.constructor;
     if (typeof C === 'function' && C.prototype &&
         typeof C.prototype.build === 'function') {
-      return { type: C, props: v.props || {}, children: {}, element: true };
+      return {
+        type: C, props: v.props || {}, children: {}, element: true, inst: v
+      };
     }
     return v;
   }
@@ -445,8 +447,8 @@ const String miniReactReconcilerSource = r'''
     root.ops = [];
     try {
       var inst = mount(el, ph.__parent, ph.__slot);
-      // 占位换成真实结点：remove 排在本子树 create/insert 之后，父结点 childIds
-      // 的下标序列保持不变（原文位置由真实结点顶上）。
+      // 占位换成真实结点：remove 排在本子树 create 之后；父结点 childIds 的
+      // 下标序列保持不变（原文位置由真实结点顶上）。
       unmount(ph);
       commit(root);
     } finally {
@@ -540,7 +542,9 @@ const String miniReactReconcilerSource = r'''
     var ownFrame = beginConstruct();
     var ci;
     try {
-      ci = new el.type(el.props, el.children);
+      // 翻译层已经构造好的实例随元素下发（`el.inst`）→ 直接复用，不再 new
+      // 第二次；通过 `__h(X, props)` 创建的元素没有实例，才在这里构造。
+      ci = el.inst || new el.type(el.props, el.children);
     } catch (e) {
       endConstruct(null, ownFrame);
       throw e;

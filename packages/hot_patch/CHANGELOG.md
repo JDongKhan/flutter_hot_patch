@@ -1,3 +1,13 @@
+## 0.2.2
+
+**widget-class 协议：构造即实例 + 消费时归一化（需与生成器 0.2.3 配套）。**
+
+- **新增 `__asElement` 归一化**：生成类与普通类一样「构造即实例」（`new CommunityPage(props)` 得到实例）；当它以子结点被消费时，`__h` / `mount` / `patch` 入口统一把实例折算成元素描述（`{type, props, children, element: true}`）。判据只看原型上有没有 `build`，不查类型名表、不需要 `toJson` / 内部 token。
+- **`__h(type, props)` 不再实例化组件**：函数类型只返回元素描述；真正实例化仍只由 reconciler 的 `mount` 完成。
+- **mount 复用元素携带的实例**：翻译层 `new X(props)` 产出的实例随元素下发（`el.inst`），reconciler mount 直接复用、**不再 new 第二次**；patch 复用旧实例保持状态，丢弃重建产生的新实例。构造函数里的字段初始化恢复原样。
+- **props 值与数组同样归一化**：`child` / `children` / `providers` 等任意原名 prop 里的组件实例（含数组逐项）都会被折算，自定义键名不特殊处理。
+- **兼容旧产物**：旧产物里的 `__h('X', props)` 与组件类构造继续按原语义工作；新产物会 `import` 生成器 0.2.3 产出的宿主包装类与 `__asElement`，需整包更新补丁。
+
 ## 0.2.1
 
 **builder 形态判定统一为产物协议（只改运行时 Dart，需完全重启 App 生效）。**

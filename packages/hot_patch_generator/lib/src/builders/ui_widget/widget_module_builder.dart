@@ -98,12 +98,15 @@ function __isElementList(v) {
 // 组件实例 → 元素描述：生成类与普通类一样「构造即实例」（`new CommunityPage(...)`
 // 得到实例），父级把它当子结点消费时在这里统一折算。判定只看原型上有没有
 // build（组件类的语言级特征），不查类型名表、不需要 toJson / 特殊标记。
+// `inst` 随元素携带：reconciler mount 直接复用它（不再 new 第二次）。
 export function __asElement(v) {
   if (v == null || typeof v !== 'object' || v.element === true) { return v; }
   var C = v.constructor;
   if (typeof C === 'function' && C.prototype &&
       typeof C.prototype.build === 'function') {
-    return { type: C, props: v.props || {}, children: {}, element: true };
+    return {
+      type: C, props: v.props || {}, children: {}, element: true, inst: v
+    };
   }
   return v;
 }
@@ -300,14 +303,20 @@ export class MultiProvider {
     var provs = this.props.providers || [];
     var node = this.props.child;
     for (var i = provs.length - 1; i >= 0; i--) {
-      // providers 项可能是元素描述，也可能是用户直接 new 出来的组件实例
-      // （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})`
-      // 不经过 __h）——统一折算后再取 type / props。
+      // providers 项是翻译层 `new ChangeNotifierProvider(...)` 产出的实例
+      // （元素携带 inst）——注入 child 后**复用同一个实例**，不再 new 第二次。
       var prov = __asElement(provs[i]);
       var p = {};
       for (var k in prov.props) { p[k] = prov.props[k]; }
       p.child = node;
-      node = __h(prov.type, p);
+      if (prov.inst) {
+        prov.inst.props = p;
+        node = {
+          type: prov.type, props: p, children: {}, element: true, inst: prov.inst
+        };
+      } else {
+        node = __h(prov.type, p);
+      }
     }
     return node;
   }
