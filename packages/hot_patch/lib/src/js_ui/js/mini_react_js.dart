@@ -27,6 +27,19 @@ const String miniReactElementSource = r'''
     return { type: type, props: props || {}, children: ch };
   }
 
+  // 组件实例 → 元素描述：生成类与普通类一样「构造即实例」，父级把它当子结点
+  // 消费时在这里统一折算（与 flutter.js 的 __asElement 同一协议，产物侧与
+  // 运行时各持一份，互不依赖）。判定只看原型有没有 build，不查类型名。
+  function asElement(v) {
+    if (v == null || typeof v !== 'object' || v.element === true) { return v; }
+    var C = v.constructor;
+    if (typeof C === 'function' && C.prototype &&
+        typeof C.prototype.build === 'function') {
+      return { type: C, props: v.props || {}, children: {}, element: true };
+    }
+    return v;
+  }
+
   // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local：由拥有者
   // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【1b】句柄注册表）。
   // 宿主侧回调用 invoke 触发。
@@ -486,6 +499,7 @@ const String miniReactReconcilerSource = r'''
   }
 
   function mount(el, parent, slot) {
+    el = asElement(el);
     if (el == null || el === false) { return null; }
 
     if (typeof el.type === 'string') {
@@ -559,6 +573,7 @@ const String miniReactReconcilerSource = r'''
   }
 
   function patch(oldInst, el, parent, slot, propSlot) {
+    el = asElement(el);
     if (el == null || el === false) {
       if (oldInst) { unmount(oldInst); }
       return null;

@@ -3,55 +3,56 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { GridView, ListView, ListenableBuilder, ReorderableListView, SliverGrid, SliverList, __h } from '../flutter.js';
+import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, CachedNetworkImage, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, DefaultTabController, Divider, Drawer, DrawerHeader, DropdownButton, DropdownMenuItem, ElevatedButton, Expanded, FilledButton, FloatingActionButton, FractionallySizedBox, GridView, Icon, IconButton, Image, InputDecoration, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, OutlinedButton, Padding, Positioned, Radio, ReorderableListView, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Tab, TabBar, TabBarView, Text, TextButton, TextField, Wrap, __h } from '../flutter.js';
 
 // 组件 TextDetail
 export class TextDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._count = 0;
   }
   bump() {
     this.setState(() => { this._count += 1; });
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "基础文案 + TextStyle"
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "color": '#2196F3',
                 "fontSize": 16
               },
               "data": "普通文本，count = " + this._count + "（状态插值）"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 6
             }),
-          __h('Text', {
+          new Text({
               "maxLines": 1,
               "overflow": "ellipsis",
               "data": "maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 6
             }),
-          __h('Text', {
+          new Text({
               "textScaler": {
                 "linear": 1.6
               },
               "data": "textScaler.linear(1.6) 放大"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 6
             }),
-          __h('Text', {
+          new Text({
               "textAlign": "center",
               "style": {
                 "decoration": "underline",
@@ -60,10 +61,10 @@ export class TextDetail {
               },
               "data": "textAlign 居中,He said \"hi\""
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 6
             }),
-          __h('Text', {
+          new Text({
               "softWrap": false,
               "style": {
                 "fontSize": 12,
@@ -74,12 +75,12 @@ export class TextDetail {
               },
               "data": "softWrap=false 不换行测试"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 6
             }),
-          __h('TextButton', {
+          new TextButton({
               "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a)),
-              "child": __h('Text', {
+              "child": new Text({
                   "data": "Bump count"
                 })
             })
@@ -90,27 +91,28 @@ export class TextDetail {
 
 // 组件 ButtonDetail
 export class ButtonDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._pressed = 0;
   }
   onTap() {
     this.setState(() => { this._pressed += 1; });
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "点击次数 = " + this._pressed
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('ElevatedButton', {
+          new ElevatedButton({
               "onPressed": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
               "style": {
                 "minimumSize": {
@@ -137,14 +139,14 @@ export class ButtonDetail {
                 "backgroundColor": '#009688',
                 "foregroundColor": '#FFFFFF'
               },
-              "child": __h('Text', {
+              "child": new Text({
                   "data": "Elevated · Styled"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('TextButton', {
+          new TextButton({
               "onPressed": this.__bindFn(1, [], (...__a) => this.onTap(...__a)),
               "style": {
                 "minimumSize": {
@@ -163,14 +165,14 @@ export class ButtonDetail {
                 },
                 "foregroundColor": '#3F51B5'
               },
-              "child": __h('Text', {
+              "child": new Text({
                   "data": "TextButton"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('OutlinedButton', {
+          new OutlinedButton({
               "onPressed": this.__bindFn(2, [], (...__a) => this.onTap(...__a)),
               "style": {
                 "side": {
@@ -189,15 +191,15 @@ export class ButtonDetail {
                 },
                 "foregroundColor": '#FF5722'
               },
-              "child": __h('Text', {
+              "child": new Text({
                   "data": "OutlinedButton"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('ElevatedButton', {
-              "child": __h('Text', {
+          new ElevatedButton({
+              "child": new Text({
                   "data": "Disabled"
                 })
             })
@@ -208,24 +210,25 @@ export class ButtonDetail {
 
 // 组件 LayoutDetail
 export class LayoutDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Row + Expanded / Flexible / Spacer"
             }),
-          __h('Row', {
+          new Row({
               "children": [
-                __h('Expanded', {
+                new Expanded({
                     "flex": 1,
-                    "child": __h('Container', {
+                    "child": new Container({
                         "color": '#BBDEFB',
                         "padding": {
                           "left": 8.0,
@@ -233,18 +236,18 @@ export class LayoutDetail {
                           "right": 8.0,
                           "bottom": 8.0
                         },
-                        "child": __h('Text', {
+                        "child": new Text({
                             "textAlign": "center",
                             "data": "A"
                           })
                       })
                   }),
-                __h('Spacer', {
+                new Spacer({
                     "flex": 1
                   }),
-                __h('Expanded', {
+                new Expanded({
                     "flex": 2,
-                    "child": __h('Container', {
+                    "child": new Container({
                         "color": '#C8E6C9',
                         "padding": {
                           "left": 8.0,
@@ -252,7 +255,7 @@ export class LayoutDetail {
                           "right": 8.0,
                           "bottom": 8.0
                         },
-                        "child": __h('Text', {
+                        "child": new Text({
                             "textAlign": "center",
                             "data": "B（flex=2）"
                           })
@@ -260,18 +263,18 @@ export class LayoutDetail {
                   })
               ]
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Center / Align / Padding / SizedBox"
             }),
-          __h('Center', {
-              "child": __h('Container', {
+          new Center({
+              "child": new Container({
                   "color": '#FFECB3',
                   "padding": {
                     "left": 12.0,
@@ -279,17 +282,17 @@ export class LayoutDetail {
                     "right": 12.0,
                     "bottom": 12.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "Center 居中"
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('Align', {
+          new Align({
               "alignment": "centerLeft",
-              "child": __h('Container', {
+              "child": new Container({
                   "color": '#F3E5F5',
                   "padding": {
                     "left": 8.0,
@@ -297,47 +300,47 @@ export class LayoutDetail {
                     "right": 8.0,
                     "bottom": 8.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "Align centerLeft"
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('Padding', {
+          new Padding({
               "padding": {
                 "left": 8.0,
                 "top": 4.0,
                 "right": 8.0,
                 "bottom": 4.0
               },
-              "child": __h('Text', {
+              "child": new Text({
                   "data": "Padding 包裹文案"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Stack + Positioned"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 100,
-              "child": __h('Stack', {
+              "child": new Stack({
                   "fit": "expand",
                   "clipBehavior": "hardEdge",
                   "children": [
-                    __h('Container', {
+                    new Container({
                         "color": '#EEEEEE'
                       }),
-                    __h('Positioned', {
-                        "child": __h('Center', {
-                            "child": __h('Text', {
+                    new Positioned({
+                        "child": new Center({
+                            "child": new Text({
                                 "style": {
                                   "color": '#FFFFFF',
                                   "fontWeight": "bold"
@@ -347,34 +350,34 @@ export class LayoutDetail {
                           }),
                         "factory": "fill"
                       }),
-                    __h('Positioned', {
+                    new Positioned({
                         "left": 12,
                         "top": 12,
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "TL"
                           })
                       }),
-                    __h('Positioned', {
+                    new Positioned({
                         "right": 12,
                         "bottom": 12,
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "BR"
                           })
                       })
                   ]
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Wrap · 自动换行"
             }),
-          __h('Wrap', {
+          new Wrap({
               "direction": "horizontal",
               "spacing": 8,
               "runSpacing": 8,
@@ -382,22 +385,22 @@ export class LayoutDetail {
               "runAlignment": "center",
               "crossAxisAlignment": "center",
               "children": [
-                ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('Chip', { "label": __h('Text', { "data": "chip " + i }), "backgroundColor": '#E0F2F1' })]); } return out; })()
+                ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new Chip({ "label": new Text({ "data": "chip " + i }), "backgroundColor": '#E0F2F1' })]); } return out; })()
               ]
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox"
             }),
-          __h('Opacity', {
+          new Opacity({
               "opacity": 0.5,
-              "child": __h('Container', {
+              "child": new Container({
                   "color": '#F44336',
                   "padding": {
                     "left": 8.0,
@@ -405,20 +408,20 @@ export class LayoutDetail {
                     "right": 8.0,
                     "bottom": 8.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "50% 透明"
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('ConstrainedBox', {
+          new ConstrainedBox({
               "constraints": {
                 "minWidth": 120,
                 "maxWidth": 200
               },
-              "child": __h('Container', {
+              "child": new Container({
                   "color": '#FFE0B2',
                   "padding": {
                     "left": 8.0,
@@ -426,31 +429,31 @@ export class LayoutDetail {
                     "right": 8.0,
                     "bottom": 8.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "ConstrainedBox 宽度 120-200"
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('AspectRatio', {
+          new AspectRatio({
               "aspectRatio": 1.78,
-              "child": __h('Container', {
+              "child": new Container({
                   "color": '#C5CAE9',
                   "alignment": "center",
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "16:9 比例"
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('FractionallySizedBox', {
+          new FractionallySizedBox({
               "widthFactor": 0.6,
               "alignment": "center",
-              "child": __h('Container', {
+              "child": new Container({
                   "color": '#F8BBD0',
                   "padding": {
                     "left": 8.0,
@@ -458,7 +461,7 @@ export class LayoutDetail {
                     "right": 8.0,
                     "bottom": 8.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "textAlign": "center",
                       "data": "60% 宽度"
                     })
@@ -471,90 +474,91 @@ export class LayoutDetail {
 
 // 组件 ImageDetail
 export class ImageDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Image · 网络图片"
             }),
-          __h('ClipRRect', {
+          new ClipRRect({
               "borderRadius": {
                 "radius": 12.0
               },
-              "child": __h('Image', {
+              "child": new Image({
                   "height": 120,
                   "fit": "cover",
                   "factory": "network",
                   "src": "https://picsum.photos/seed/hotpatch/400/160"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "CachedNetworkImage · 磁盘缓存网络图"
             }),
-          __h('ClipRRect', {
+          new ClipRRect({
               "borderRadius": {
                 "radius": 12.0
               },
-              "child": __h('CachedNetworkImage', {
+              "child": new CachedNetworkImage({
                   "imageUrl": "https://picsum.photos/seed/hotpatchcache/400/160",
                   "height": 120,
                   "fit": "cover"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Icon / CircleAvatar"
             }),
-          __h('Row', {
+          new Row({
               "children": [
-                __h('Icon', {
+                new Icon({
                     "color": '#FFC107',
                     "size": 28,
                     "icon": "star"
                   }),
-                __h('SizedBox', {
+                new SizedBox({
                     "width": 12
                   }),
-                __h('Icon', {
+                new Icon({
                     "color": '#2196F3',
                     "size": 28,
                     "icon": "home"
                   }),
-                __h('SizedBox', {
+                new SizedBox({
                     "width": 12
                   }),
-                __h('Icon', {
+                new Icon({
                     "color": '#F44336',
                     "size": 28,
                     "icon": "favorite"
                   }),
-                __h('SizedBox', {
+                new SizedBox({
                     "width": 12
                   }),
-                __h('CircleAvatar', {
+                new CircleAvatar({
                     "radius": 20,
                     "backgroundColor": '#009688',
-                    "child": __h('Text', {
+                    "child": new Text({
                         "style": {
                           "color": '#FFFFFF'
                         },
@@ -570,20 +574,21 @@ export class ImageDetail {
 
 // 组件 ContainerDetail
 export class ContainerDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Container · 颜色/圆角/Padding"
             }),
-          __h('Container', {
+          new Container({
               "padding": {
                 "left": 16.0,
                 "top": 16.0,
@@ -596,24 +601,24 @@ export class ContainerDetail {
                   "radius": 12.0
                 }
               },
-              "child": __h('Text', {
+              "child": new Text({
                   "style": {
                     "color": '#FFFFFF'
                   },
                   "data": "容器内容（teal 圆角）"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Container · 边框 + 阴影 + 渐变"
             }),
-          __h('Container', {
+          new Container({
               "padding": {
                 "left": 16.0,
                 "top": 16.0,
@@ -649,24 +654,24 @@ export class ContainerDetail {
                   }
                 ]
               },
-              "child": __h('Text', {
+              "child": new Text({
                   "style": {
                     "color": '#FFFFFF'
                   },
                   "data": "渐变 + 边框 + 阴影"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "DecoratedBox · 纯装饰"
             }),
-          __h('DecoratedBox', {
+          new DecoratedBox({
               "decoration": {
                 "color": '#FFECB3',
                 "border": {
@@ -679,29 +684,29 @@ export class ContainerDetail {
                   "radius": 8.0
                 }
               },
-              "child": __h('Padding', {
+              "child": new Padding({
                   "padding": {
                     "left": 12.0,
                     "top": 12.0,
                     "right": 12.0,
                     "bottom": 12.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "DecoratedBox 内容"
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Card · shape / clipBehavior"
             }),
-          __h('Card', {
+          new Card({
               "elevation": 4,
               "shadowColor": '#673AB7',
               "shape": {
@@ -715,38 +720,38 @@ export class ContainerDetail {
                 }
               },
               "clipBehavior": "antiAlias",
-              "child": __h('Padding', {
+              "child": new Padding({
                   "padding": {
                     "left": 16.0,
                     "top": 16.0,
                     "right": 16.0,
                     "bottom": 16.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "圆角卡片 + 描边 + 阴影"
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Divider', {}),
-          __h('SizedBox', {
+          new Divider({}),
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "SizedBox · 尺寸约束"
             }),
-          __h('Container', {
+          new Container({
               "width": 120,
               "height": 48,
               "alignment": "center",
               "color": '#CFD8DC',
-              "child": __h('Text', {
+              "child": new Text({
                   "data": "固定 120×48"
                 })
             })
@@ -757,7 +762,8 @@ export class ContainerDetail {
 
 // 组件 ScrollDetail
 export class ScrollDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._offset = 0;
     this._ctrlOffset = 0;
     this._scrollController = new ScrollController();
@@ -776,21 +782,21 @@ export class ScrollDetail {
     this._scrollController.jumpTo(this._scrollController.position.maxScrollExtent);
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "ListView.builder · 懒构建列表（offset: " + this._offset + "）"
             }),
-          __h('NotificationListener', {
+          new NotificationListener({
               "onNotification": this.__bindFn(0, [], (...__a) => this._onListScroll(...__a)),
-              "child": __h('SizedBox', {
+              "child": new SizedBox({
                   "height": 160,
-                  "child": __h(ListView, {
+                  "child": new ListView({
                       "padding": {
                         "left": 8.0,
                         "top": 8.0,
@@ -806,19 +812,19 @@ export class ScrollDetail {
                 }),
               "model": "ScrollNotification"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "ListView.separated · 分隔列表"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 140,
-              "child": __h(ListView, {
+              "child": new ListView({
                   "padding": {
                     "left": 8.0,
                     "top": 8.0,
@@ -831,31 +837,31 @@ export class ScrollDetail {
                   "factory": "separated"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "SingleChildScrollView · 长内容滚动（ctrl offset: " + this._ctrlOffset + "）"
             }),
-          __h('SingleChildScrollView', {
+          new SingleChildScrollView({
               "controller": this._scrollController,
               "scrollDirection": "horizontal",
               "physics": "ClampingScrollPhysics",
-              "child": __h('Row', {
+              "child": new Row({
                   "children": [
-                    ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "child": __h('Chip', { "label": __h('Text', { "data": "横向 " + i }) }) })]); } return out; })()
+                    ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [new Padding({ "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "child": new Chip({ "label": new Text({ "data": "横向 " + i }) }) })]); } return out; })()
                   ]
                 })
             }),
-          __h('Align', {
+          new Align({
               "alignment": "centerLeft",
-              "child": __h('TextButton', {
+              "child": new TextButton({
                   "onPressed": this.__bindFn(1, [], (...__a) => this._scrollToEnd(...__a)),
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "横向 · 跳到底"
                     })
                 })
@@ -864,28 +870,28 @@ export class ScrollDetail {
       });
   }
   _itemBuilder0(context, index) {
-      return __h('ListTile', {
-        "leading": __h('Icon', {
+      return new ListTile({
+        "leading": new Icon({
             "icon": "list"
           }),
-        "title": __h('Text', {
+        "title": new Text({
             "data": "builder item " + index
           })
       });
   }
   _separatorBuilder1(context, index) {
-      return __h('Divider', {
+      return new Divider({
         "height": 1
       });
   }
   _itemBuilder2(context, index) {
-      return __h('ListTile', {
+      return new ListTile({
         "dense": true,
-        "leading": __h('Icon', {
+        "leading": new Icon({
             "color": '#4DB6AC',
             "icon": "arrow_right"
           }),
-        "title": __h('Text', {
+        "title": new Text({
             "data": "separated item " + index
           })
       });
@@ -894,7 +900,8 @@ export class ScrollDetail {
 
 // 组件 SliverDetail
 export class SliverDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._controller = new ScrollController();
     this._offset = 0;
     this._fixedKey = new GlobalKey();
@@ -937,13 +944,13 @@ export class SliverDetail {
     this.setState(() => { this._measureText = "x=" + rect.dx.toStringAsFixed(1) + " y=" + rect.dy.toStringAsFixed(1) + " · " + rect.width.toStringAsFixed(0) + " × " + rect.height.toStringAsFixed(0); });
   }
   build(context) {
-    return __h('Scaffold', {
-        "body": __h('CustomScrollView', {
+    return new Scaffold({
+        "body": new CustomScrollView({
             "controller": this._controller,
             "physics": "BouncingScrollPhysics",
             "slivers": [
-              __h('SliverAppBar', {
-                  "title": __h('Text', {
+              new SliverAppBar({
+                  "title": new Text({
                       "data": "SliverAppBar 导航 · offset " + this._offset.toStringAsFixed(0)
                     }),
                   "backgroundColor": '#673AB7',
@@ -951,15 +958,15 @@ export class SliverDetail {
                   "pinned": true,
                   "floating": true,
                   "actions": [
-                    __h('IconButton', {
-                        "icon": __h('Icon', {
+                    new IconButton({
+                        "icon": new Icon({
                             "icon": "center_focus_strong"
                           }),
                         "tooltip": "定位到「固定高度」分区",
                         "onPressed": this.__bindFn(0, [], (...__a) => this._scrollToFixed(...__a))
                       }),
-                    __h('IconButton', {
-                        "icon": __h('Icon', {
+                    new IconButton({
+                        "icon": new Icon({
                             "icon": "straighten"
                           }),
                         "tooltip": "测量「固定高度」分区的位置与尺寸",
@@ -967,8 +974,8 @@ export class SliverDetail {
                       })
                   ]
                 }),
-              __h('SliverToBoxAdapter', {
-                  "child": __h('Container', {
+              new SliverToBoxAdapter({
+                  "child": new Container({
                       "margin": {
                         "left": 12.0,
                         "top": 12.0,
@@ -987,7 +994,7 @@ export class SliverDetail {
                           "radius": 12.0
                         }
                       },
-                      "child": __h('Text', {
+                      "child": new Text({
                           "style": {
                             "fontSize": 14,
                             "fontWeight": "bold"
@@ -996,8 +1003,8 @@ export class SliverDetail {
                         })
                     })
                 }),
-              __h('SliverToBoxAdapter', {
-                  "child": __h('Container', {
+              new SliverToBoxAdapter({
+                  "child": new Container({
                       "margin": {
                         "left": 12.0,
                         "top": 0.0,
@@ -1016,7 +1023,7 @@ export class SliverDetail {
                           "radius": 8.0
                         }
                       },
-                      "child": __h('Text', {
+                      "child": new Text({
                           "style": {
                             "fontSize": 13,
                             "color": '#009688'
@@ -1025,7 +1032,7 @@ export class SliverDetail {
                         })
                     })
                 }),
-              __h('SliverPadding', {
+              new SliverPadding({
                   "padding": {
                     "left": 12.0,
                     "top": 0.0,
@@ -1036,20 +1043,20 @@ export class SliverDetail {
                       "delegate": {
                         "__delegate": "list",
                         "children": [
-                          ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [__h('ListTile', { "leading": __h('Icon', { "color": '#673AB7', "icon": "list" }), "title": __h('Text', { "data": "SliverList item " + i }), "trailing": __h('Icon', { "icon": "chevron_right" }) })]); } return out; })()
+                          ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new ListTile({ "leading": new Icon({ "color": '#673AB7', "icon": "list" }), "title": new Text({ "data": "SliverList item " + i }), "trailing": new Icon({ "icon": "chevron_right" }) })]); } return out; })()
                         ]
                       }
                     })
                 }),
-              __h('SliverPadding', {
+              new SliverPadding({
                   "padding": {
                     "left": 12.0,
                     "top": 8.0,
                     "right": 12.0,
                     "bottom": 8.0
                   },
-                  "sliver": __h('SliverToBoxAdapter', {
-                      "child": __h('Text', {
+                  "sliver": new SliverToBoxAdapter({
+                      "child": new Text({
                           "style": {
                             "fontSize": 14,
                             "fontWeight": "bold"
@@ -1058,28 +1065,28 @@ export class SliverDetail {
                         })
                     })
                 }),
-              __h('SliverPadding', {
+              new SliverPadding({
                   "padding": {
                     "left": 12.0,
                     "top": 0.0,
                     "right": 12.0,
                     "bottom": 0.0
                   },
-                  "sliver": __h(SliverList, {
+                  "sliver": new SliverList({
                       "itemCount": 8,
                       "itemBuilder": "_itemBuilder0",
                       "factory": "builder"
                     })
                 }),
-              __h('SliverPadding', {
+              new SliverPadding({
                   "padding": {
                     "left": 12.0,
                     "top": 8.0,
                     "right": 12.0,
                     "bottom": 8.0
                   },
-                  "sliver": __h('SliverToBoxAdapter', {
-                      "child": __h('Text', {
+                  "sliver": new SliverToBoxAdapter({
+                      "child": new Text({
                           "style": {
                             "fontSize": 14,
                             "fontWeight": "bold"
@@ -1088,29 +1095,29 @@ export class SliverDetail {
                         })
                     })
                 }),
-              __h('SliverPadding', {
+              new SliverPadding({
                   "padding": {
                     "left": 12.0,
                     "top": 0.0,
                     "right": 12.0,
                     "bottom": 0.0
                   },
-                  "sliver": __h(SliverList, {
+                  "sliver": new SliverList({
                       "itemCount": 5,
                       "itemBuilder": "_itemBuilder1",
                       "separatorBuilder": "_separatorBuilder2",
                       "factory": "separated"
                     })
                 }),
-              __h('SliverPadding', {
+              new SliverPadding({
                   "padding": {
                     "left": 12.0,
                     "top": 8.0,
                     "right": 12.0,
                     "bottom": 8.0
                   },
-                  "sliver": __h('SliverToBoxAdapter', {
-                      "child": __h('Container', {
+                  "sliver": new SliverToBoxAdapter({
+                      "child": new Container({
                           "padding": {
                             "left": 10.0,
                             "top": 8.0,
@@ -1123,7 +1130,7 @@ export class SliverDetail {
                               "radius": 6.0
                             }
                           },
-                          "child": __h('Text', {
+                          "child": new Text({
                               "style": {
                                 "fontSize": 14,
                                 "fontWeight": "bold"
@@ -1134,14 +1141,14 @@ export class SliverDetail {
                         })
                     })
                 }),
-              __h('SliverPadding', {
+              new SliverPadding({
                   "padding": {
                     "left": 12.0,
                     "top": 0.0,
                     "right": 12.0,
                     "bottom": 0.0
                   },
-                  "sliver": __h('SliverFixedExtentList', {
+                  "sliver": new SliverFixedExtentList({
                       "itemExtent": 44,
                       "delegate": {
                         "__delegate": "builder",
@@ -1150,15 +1157,15 @@ export class SliverDetail {
                       }
                     })
                 }),
-              __h('SliverPadding', {
+              new SliverPadding({
                   "padding": {
                     "left": 12.0,
                     "top": 8.0,
                     "right": 12.0,
                     "bottom": 8.0
                   },
-                  "sliver": __h('SliverToBoxAdapter', {
-                      "child": __h('Text', {
+                  "sliver": new SliverToBoxAdapter({
+                      "child": new Text({
                           "style": {
                             "fontSize": 14,
                             "fontWeight": "bold"
@@ -1167,16 +1174,16 @@ export class SliverDetail {
                         })
                     })
                 }),
-              __h('SliverOpacity', {
+              new SliverOpacity({
                   "opacity": 0.6,
-                  "sliver": __h('SliverPadding', {
+                  "sliver": new SliverPadding({
                       "padding": {
                         "left": 12.0,
                         "top": 0.0,
                         "right": 12.0,
                         "bottom": 0.0
                       },
-                      "sliver": __h(SliverGrid, {
+                      "sliver": new SliverGrid({
                           "gridDelegate": {
                             "maxCrossAxisExtent": 140,
                             "mainAxisSpacing": 8,
@@ -1189,11 +1196,11 @@ export class SliverDetail {
                         })
                     })
                 }),
-              __h('SliverSafeArea', {
-                  "sliver": __h('SliverFillRemaining', {
+              new SliverSafeArea({
+                  "sliver": new SliverFillRemaining({
                       "hasScrollBody": false,
-                      "child": __h('Center', {
-                          "child": __h('Text', {
+                      "child": new Center({
+                          "child": new Text({
                               "style": {
                                 "color": '#9E9E9E'
                               },
@@ -1204,62 +1211,62 @@ export class SliverDetail {
                 })
             ]
           }),
-        "floatingActionButton": __h('FloatingActionButton', {
+        "floatingActionButton": new FloatingActionButton({
             "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF',
             "tooltip": "跳到底",
-            "child": __h('Icon', {
+            "child": new Icon({
                 "icon": "arrow_downward"
               })
           })
       });
   }
   _itemBuilder0(context, index) {
-      return __h('ListTile', {
-        "leading": __h('Icon', {
+      return new ListTile({
+        "leading": new Icon({
             "color": '#F57C00',
             "icon": "build"
           }),
-        "title": __h('Text', {
+        "title": new Text({
             "data": "builder item " + index
           }),
-        "subtitle": __h('Text', {
+        "subtitle": new Text({
             "data": "index * 10 = " + (index * 10)
           })
       });
   }
   _itemBuilder1(context, index) {
-      return __h('ListTile', {
+      return new ListTile({
         "dense": true,
-        "leading": __h('Icon', {
+        "leading": new Icon({
             "color": '#673AB7',
             "icon": "arrow_right"
           }),
-        "title": __h('Text', {
+        "title": new Text({
             "data": "separated item " + index
           })
       });
   }
   _separatorBuilder2(context, index) {
-      return __h('Divider', {
+      return new Divider({
         "height": 1
       });
   }
   _builder3(context, index) {
-      return __h('ListTile', {
+      return new ListTile({
         "dense": true,
-        "leading": __h('Icon', {
+        "leading": new Icon({
             "color": '#009688',
             "icon": "height"
           }),
-        "title": __h('Text', {
+        "title": new Text({
             "data": "fixed item " + index
           })
       });
   }
   _itemBuilder4(context, index) {
-      return __h('Container', {
+      return new Container({
         "decoration": {
           "color": '#B2DFDB',
           "borderRadius": {
@@ -1267,7 +1274,7 @@ export class SliverDetail {
           }
         },
         "alignment": "center",
-        "child": __h('Text', {
+        "child": new Text({
             "style": {
               "fontWeight": "bold"
             },
@@ -1279,7 +1286,8 @@ export class SliverDetail {
 
 // 组件 GridDetail
 export class GridDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._controller = new ScrollController();
     this._offset = 0;
   }
@@ -1293,35 +1301,35 @@ export class GridDetail {
     this._controller.jumpTo(this._controller.position.maxScrollExtent);
   }
   build(context) {
-    return __h('Scaffold', {
+    return new Scaffold({
         "backgroundColor": '#FAFAFA',
-        "appBar": __h('AppBar', {
-            "title": __h('Text', {
+        "appBar": new AppBar({
+            "title": new Text({
                 "data": "GridView 懒加载验证"
               }),
             "backgroundColor": '#009688',
             "foregroundColor": '#FFFFFF'
           }),
-        "floatingActionButton": __h('FloatingActionButton', {
+        "floatingActionButton": new FloatingActionButton({
             "onPressed": this.__bindFn(0, [], (...__a) => this._jumpBottom(...__a)),
             "backgroundColor": '#009688',
             "foregroundColor": '#FFFFFF',
             "tooltip": "跳到底",
-            "child": __h('Icon', {
+            "child": new Icon({
                 "icon": "arrow_downward"
               })
           }),
-        "body": __h('Column', {
+        "body": new Column({
             "crossAxisAlignment": "stretch",
             "children": [
-              __h('Padding', {
+              new Padding({
                   "padding": {
                     "left": 12.0,
                     "top": 12.0,
                     "right": 12.0,
                     "bottom": 12.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "style": {
                         "fontSize": 13,
                         "color": '#9E9E9E'
@@ -1329,14 +1337,14 @@ export class GridDetail {
                       "data": "controller offset: " + this._offset.toStringAsFixed(1)
                     })
                 }),
-              __h('Padding', {
+              new Padding({
                   "padding": {
                     "left": 12.0,
                     "top": 0.0,
                     "right": 12.0,
                     "bottom": 0.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "style": {
                         "fontSize": 14,
                         "fontWeight": "bold"
@@ -1344,9 +1352,9 @@ export class GridDetail {
                       "data": "GridView.builder · 固定 3 列 · 30 项（懒加载）"
                     })
                 }),
-              __h('Expanded', {
+              new Expanded({
                   "flex": 5,
-                  "child": __h(GridView, {
+                  "child": new GridView({
                       "controller": this._controller,
                       "gridDelegate": {
                         "crossAxisCount": 3,
@@ -1359,14 +1367,14 @@ export class GridDetail {
                       "factory": "builder"
                     })
                 }),
-              __h('Padding', {
+              new Padding({
                   "padding": {
                     "left": 12.0,
                     "top": 8.0,
                     "right": 12.0,
                     "bottom": 8.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "style": {
                         "fontSize": 14,
                         "fontWeight": "bold"
@@ -1374,9 +1382,9 @@ export class GridDetail {
                       "data": "GridView.builder · MaxCrossAxisExtent 120 · 20 项（懒加载）"
                     })
                 }),
-              __h('Expanded', {
+              new Expanded({
                   "flex": 4,
-                  "child": __h(GridView, {
+                  "child": new GridView({
                       "gridDelegate": {
                         "maxCrossAxisExtent": 120,
                         "mainAxisSpacing": 8,
@@ -1393,7 +1401,7 @@ export class GridDetail {
       });
   }
   _itemBuilder0(context, index) {
-      return __h('Container', {
+      return new Container({
         "decoration": {
           "color": '#B2DFDB',
           "borderRadius": {
@@ -1401,7 +1409,7 @@ export class GridDetail {
           }
         },
         "alignment": "center",
-        "child": __h('Text', {
+        "child": new Text({
             "style": {
               "fontWeight": "bold"
             },
@@ -1410,7 +1418,7 @@ export class GridDetail {
       });
   }
   _itemBuilder1(context, index) {
-      return __h('Container', {
+      return new Container({
         "decoration": {
           "color": '#FFE0B2',
           "borderRadius": {
@@ -1418,7 +1426,7 @@ export class GridDetail {
           }
         },
         "alignment": "center",
-        "child": __h('Text', {
+        "child": new Text({
             "style": {
               "fontWeight": "bold"
             },
@@ -1430,7 +1438,8 @@ export class GridDetail {
 
 // 组件 ScaffoldDetail
 export class ScaffoldDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._navIndex = 0;
   }
   _onNavTap(index) {
@@ -1439,13 +1448,13 @@ export class ScaffoldDetail {
   _onFab() {
   }
   build(context) {
-    return __h('Scaffold', {
+    return new Scaffold({
         "backgroundColor": '#FAFAFA',
-        "appBar": __h('AppBar', {
-            "leading": __h('Icon', {
+        "appBar": new AppBar({
+            "leading": new Icon({
                 "icon": "menu"
               }),
-            "title": __h('Text', {
+            "title": new Text({
                 "data": "Scaffold / AppBar / FAB / BottomNav"
               }),
             "backgroundColor": '#673AB7',
@@ -1454,67 +1463,67 @@ export class ScaffoldDetail {
             "centerTitle": true,
             "toolbarHeight": 56,
             "actions": [
-              __h('Icon', {
+              new Icon({
                   "color": '#FFFFFF',
                   "icon": "search"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "width": 16
                 })
             ]
           }),
-        "body": __h('SafeArea', {
-            "child": __h('Center', {
-                "child": __h('Column', {
+        "body": new SafeArea({
+            "child": new Center({
+                "child": new Column({
                     "mainAxisAlignment": "center",
                     "children": [
-                      __h('Icon', {
+                      new Icon({
                           "size": 48,
                           "color": '#673AB7',
                           "icon": "extension"
                         }),
-                      __h('SizedBox', {
+                      new SizedBox({
                           "height": 12
                         }),
-                      __h('Text', {
+                      new Text({
                           "data": "页面骨架组件演示"
                         }),
-                      __h('Text', {
+                      new Text({
                           "data": "BottomNav 选中：" + this._navIndex
                         })
                     ]
                   })
               })
           }),
-        "floatingActionButton": __h('FloatingActionButton', {
+        "floatingActionButton": new FloatingActionButton({
             "onPressed": this.__bindFn(0, [], (...__a) => this._onFab(...__a)),
             "backgroundColor": '#673AB7',
             "foregroundColor": '#FFFFFF',
             "tooltip": "添加",
-            "child": __h('Icon', {
+            "child": new Icon({
                 "icon": "add"
               })
           }),
-        "bottomNavigationBar": __h('BottomNavigationBar', {
+        "bottomNavigationBar": new BottomNavigationBar({
             "currentIndex": this._navIndex,
             "onTap": this.__bindFn(1, [], (...__a) => this._onNavTap(...__a)),
             "selectedItemColor": '#673AB7',
             "unselectedItemColor": '#9E9E9E',
             "items": [
-              __h('BottomNavigationBarItem', {
-                  "icon": __h('Icon', {
+              new BottomNavigationBarItem({
+                  "icon": new Icon({
                       "icon": "home"
                     }),
                   "label": "首页"
                 }),
-              __h('BottomNavigationBarItem', {
-                  "icon": __h('Icon', {
+              new BottomNavigationBarItem({
+                  "icon": new Icon({
                       "icon": "search"
                     }),
                   "label": "搜索"
                 }),
-              __h('BottomNavigationBarItem', {
-                  "icon": __h('Icon', {
+              new BottomNavigationBarItem({
+                  "icon": new Icon({
                       "icon": "person"
                     }),
                   "label": "我的"
@@ -1527,7 +1536,8 @@ export class ScaffoldDetail {
 
 // 组件 InputDetail
 export class InputDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._controller = new TextEditingController();
     this._text = "";
     this._choice = "A";
@@ -1563,20 +1573,20 @@ export class InputDetail {
     this.setState(() => { this._slider = v; });
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "TextField"
             }),
-          __h('TextField', {
+          new TextField({
               "controller": this._controller,
               "onChanged": this.__bindFn(0, [], (...__a) => this._onTextChanged(...__a)),
-              "decoration": __h('InputDecoration', {
+              "decoration": new InputDecoration({
                   "hintText": "请输入文本",
                   "labelText": "用户名"
                 }),
@@ -1585,115 +1595,115 @@ export class InputDetail {
                 "fontSize": 16
               }
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 4
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 14,
                 "color": '#9E9E9E'
               },
               "data": "输入内容：" + this._text
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 14,
                 "color": '#673AB7'
               },
               "data": "controller.text：" + this._controller.text
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('Align', {
+          new Align({
               "alignment": "centerLeft",
-              "child": __h('FilledButton', {
+              "child": new FilledButton({
                   "onPressed": this.__bindFn(1, [], () => this._controller.clear()),
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "清空输入"
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "Radio 单选"
             }),
-          __h('Row', {
+          new Row({
               "children": [
-                __h('Radio', {
+                new Radio({
                     "value": "A",
                     "groupValue": this._choice,
                     "onChanged": this.__bindFn(2, [], (...__a) => this._onChoiceChanged(...__a)),
                     "activeColor": '#673AB7'
                   }),
-                __h('Text', {
+                new Text({
                     "data": "选项 A"
                   }),
-                __h('Radio', {
+                new Radio({
                     "value": "B",
                     "groupValue": this._choice,
                     "onChanged": this.__bindFn(3, [], (...__a) => this._onChoiceChanged(...__a)),
                     "activeColor": '#673AB7'
                   }),
-                __h('Text', {
+                new Text({
                     "data": "选项 B"
                   })
               ]
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 14,
                 "color": '#9E9E9E'
               },
               "data": "当前选择：" + this._choice
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "DropdownButton"
             }),
-          __h('DropdownButton', {
+          new DropdownButton({
               "value": this._dropdown,
               "isExpanded": true,
               "onChanged": this.__bindFn(4, [], (...__a) => this._onDropdownChanged(...__a)),
               "items": [
-                __h('DropdownMenuItem', {
+                new DropdownMenuItem({
                     "value": "苹果",
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "苹果"
                       })
                   }),
-                __h('DropdownMenuItem', {
+                new DropdownMenuItem({
                     "value": "香蕉",
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "香蕉"
                       })
                   }),
-                __h('DropdownMenuItem', {
+                new DropdownMenuItem({
                     "value": "橙子",
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "橙子"
                       })
                   })
               ]
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Row', {
+          new Row({
               "children": [
-                __h('Switch', {
+                new Switch({
                     "value": this._switchOn,
                     "onChanged": this.__bindFn(5, [], (...__a) => this._onSwitchChanged(...__a)),
                     "activeColor": '#FFFFFF',
@@ -1701,40 +1711,40 @@ export class InputDetail {
                     "inactiveThumbColor": '#9E9E9E',
                     "inactiveTrackColor": '#E0E0E0'
                   }),
-                __h('SizedBox', {
+                new SizedBox({
                     "width": 8
                   }),
-                __h('Text', {
+                new Text({
                     "data": "Switch：" + (this._switchOn ? "开" : "关")
                   })
               ]
             }),
-          __h('Row', {
+          new Row({
               "children": [
-                __h('Checkbox', {
+                new Checkbox({
                     "value": this._checked,
                     "onChanged": this.__bindFn(6, [], (...__a) => this._onCheckChanged(...__a)),
                     "activeColor": '#673AB7',
                     "checkColor": '#FFFFFF'
                   }),
-                __h('SizedBox', {
+                new SizedBox({
                     "width": 8
                   }),
-                __h('Text', {
+                new Text({
                     "data": "Checkbox：" + (this._checked ?? false)
                   })
               ]
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 14
               },
               "data": "Slider 值：" + this._slider
             }),
-          __h('Slider', {
+          new Slider({
               "value": this._slider,
               "min": 0,
               "max": 1,
@@ -1751,64 +1761,65 @@ export class InputDetail {
 
 // 组件 ProgressDetail
 export class ProgressDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._progress = 0.65;
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "CircularProgressIndicator"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('Row', {
+          new Row({
               "children": [
-                __h('CircularProgressIndicator', {
+                new CircularProgressIndicator({
                     "value": this._progress,
                     "color": '#673AB7',
                     "backgroundColor": '#EDE7F6',
                     "strokeWidth": 6
                   }),
-                __h('SizedBox', {
+                new SizedBox({
                     "width": 24
                   }),
-                __h('CircularProgressIndicator', {})
+                new CircularProgressIndicator({})
               ]
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 16
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               },
               "data": "LinearProgressIndicator"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('LinearProgressIndicator', {
+          new LinearProgressIndicator({
               "value": this._progress,
               "color": '#673AB7',
               "backgroundColor": '#EDE7F6',
               "minHeight": 8
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 4
             }),
-          __h('LinearProgressIndicator', {}),
-          __h('SizedBox', {
+          new LinearProgressIndicator({}),
+          new SizedBox({
               "height": 8
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 14,
                 "color": '#9E9E9E'
@@ -1822,7 +1833,8 @@ export class ProgressDetail {
 
 // 组件 NotifierCard
 export class NotifierCard {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._model = new CounterVm({});
   }
   _inc() {
@@ -1832,39 +1844,39 @@ export class NotifierCard {
     this._model.reset();
   }
   build(context) {
-    return __h('Card', {
-        "child": __h('Padding', {
+    return new Card({
+        "child": new Padding({
             "padding": {
               "left": 16.0,
               "top": 16.0,
               "right": 16.0,
               "bottom": 16.0
             },
-            "child": __h('Column', {
+            "child": new Column({
                 "mainAxisSize": "min",
                 "children": [
-                  __h(ListenableBuilder, {
+                  new ListenableBuilder({
                       "listenable": this._model,
                       "builder": "_builder0"
                     }),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 12
                     }),
-                  __h('Row', {
+                  new Row({
                       "mainAxisAlignment": "center",
                       "children": [
-                        __h('ElevatedButton', {
+                        new ElevatedButton({
                             "onPressed": this.__bindFn(0, [], (...__a) => this._inc(...__a)),
-                            "child": __h('Text', {
+                            "child": new Text({
                                 "data": "+1"
                               })
                           }),
-                        __h('SizedBox', {
+                        new SizedBox({
                             "width": 12
                           }),
-                        __h('ElevatedButton', {
+                        new ElevatedButton({
                             "onPressed": this.__bindFn(1, [], (...__a) => this._reset(...__a)),
-                            "child": __h('Text', {
+                            "child": new Text({
                                 "data": "Reset"
                               })
                           })
@@ -1879,7 +1891,7 @@ export class NotifierCard {
     this._model.dispose();
   }
   _builder0(context, _) {
-      return __h('Text', {
+      return new Text({
         "style": {
           "fontSize": 24,
           "fontWeight": "bold"
@@ -1892,6 +1904,7 @@ export class NotifierCard {
 // 组件 StatelessCard
 export class StatelessCard {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -1900,35 +1913,35 @@ export class StatelessCard {
     this.badge = (args && args.badge !== undefined) ? args.badge : "NEW";
   }
   build(context) {
-    return __h('Card', {
+    return new Card({
         "margin": {
           "left": 12.0,
           "top": 12.0,
           "right": 12.0,
           "bottom": 12.0
         },
-        "child": __h('Padding', {
+        "child": new Padding({
             "padding": {
               "left": 16.0,
               "top": 16.0,
               "right": 16.0,
               "bottom": 16.0
             },
-            "child": __h('Column', {
+            "child": new Column({
                 "mainAxisSize": "min",
                 "crossAxisAlignment": "start",
                 "children": [
-                  __h('Row', {
+                  new Row({
                       "children": [
-                        __h('Icon', {
+                        new Icon({
                             "color": '#009688',
                             "icon": "article"
                           }),
-                        __h('SizedBox', {
+                        new SizedBox({
                             "width": 8
                           }),
-                        __h('Expanded', {
-                            "child": __h('Text', {
+                        new Expanded({
+                            "child": new Text({
                                 "style": {
                                   "fontSize": 18,
                                   "fontWeight": "bold"
@@ -1938,10 +1951,10 @@ export class StatelessCard {
                           })
                       ]
                     }),
-                  __h('Divider', {
+                  new Divider({
                       "height": 24
                     }),
-                  __h('Text', {
+                  new Text({
                       "style": {
                         "fontSize": 14,
                         "color": '#9E9E9E'
@@ -1957,7 +1970,8 @@ export class StatelessCard {
 
 // 组件 TabDetail
 export class TabDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._controller = new TabController({length: 3, vsync: this});
     this._index = 0;
   }
@@ -1971,57 +1985,57 @@ export class TabDetail {
     this._controller.animateTo((((this._index + 1)) % 3));
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 15,
                 "fontWeight": "bold"
               },
               "data": "DefaultTabController · 官方惯用法（controller 由祖先提供）"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 6
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 180,
-              "child": __h('DefaultTabController', {
+              "child": new DefaultTabController({
                   "length": 3,
-                  "child": __h('Column', {
+                  "child": new Column({
                       "children": [
-                        __h('TabBar', {
+                        new TabBar({
                             "isScrollable": true,
                             "indicatorColor": '#673AB7',
                             "labelColor": '#673AB7',
                             "unselectedLabelColor": '#9E9E9E',
                             "tabs": [
-                              __h('Tab', {
+                              new Tab({
                                   "text": "广场"
                                 }),
-                              __h('Tab', {
+                              new Tab({
                                   "text": "推荐"
                                 }),
-                              __h('Tab', {
+                              new Tab({
                                   "text": "关注"
                                 })
                             ]
                           }),
-                        __h('Expanded', {
-                            "child": __h('TabBarView', {
+                        new Expanded({
+                            "child": new TabBarView({
                                 "children": [
-                                  __h('Center', {
-                                      "child": __h('Text', {
+                                  new Center({
+                                      "child": new Text({
                                           "data": "TabBarView · 广场"
                                         })
                                     }),
-                                  __h('Center', {
-                                      "child": __h('Text', {
+                                  new Center({
+                                      "child": new Text({
                                           "data": "TabBarView · 推荐"
                                         })
                                     }),
-                                  __h('Center', {
-                                      "child": __h('Text', {
+                                  new Center({
+                                      "child": new Text({
                                           "data": "TabBarView · 关注"
                                         })
                                     })
@@ -2032,53 +2046,53 @@ export class TabDetail {
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 14
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 15,
                 "fontWeight": "bold"
               },
               "data": "显式 TabController · index = " + this._index
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 6
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 170,
-              "child": __h('Column', {
+              "child": new Column({
                   "children": [
-                    __h('TabBar', {
+                    new TabBar({
                         "controller": this._controller,
                         "tabs": [
-                          __h('Tab', {
+                          new Tab({
                               "text": "首页"
                             }),
-                          __h('Tab', {
+                          new Tab({
                               "text": "社区"
                             }),
-                          __h('Tab', {
+                          new Tab({
                               "text": "我的"
                             })
                         ]
                       }),
-                    __h('Expanded', {
-                        "child": __h('TabBarView', {
+                    new Expanded({
+                        "child": new TabBarView({
                             "controller": this._controller,
                             "children": [
-                              __h('Center', {
-                                  "child": __h('Text', {
+                              new Center({
+                                  "child": new Text({
                                       "data": "第 1 页（index 0）"
                                     })
                                 }),
-                              __h('Center', {
-                                  "child": __h('Text', {
+                              new Center({
+                                  "child": new Text({
                                       "data": "第 2 页（index 1）"
                                     })
                                 }),
-                              __h('Center', {
-                                  "child": __h('Text', {
+                              new Center({
+                                  "child": new Text({
                                       "data": "第 3 页（index 2）"
                                     })
                                 })
@@ -2088,11 +2102,11 @@ export class TabDetail {
                   ]
                 })
             }),
-          __h('Align', {
+          new Align({
               "alignment": "centerLeft",
-              "child": __h('TextButton', {
+              "child": new TextButton({
                   "onPressed": this.__bindFn(0, [], (...__a) => this._next(...__a)),
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "下一 tab · controller.animateTo"
                     })
                 })
@@ -2104,7 +2118,8 @@ export class TabDetail {
 
 // 组件 PageViewDetail
 export class PageViewDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._page = 0;
     this._pageController = new PageController({initialPage: 0});
   }
@@ -2128,79 +2143,79 @@ export class PageViewDetail {
     this._pageController.dispose();
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 15,
                 "fontWeight": "bold"
               },
               "data": "PageView · 当前第 " + (this._page + 1) + " / 3 页"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 6
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 150,
               "child": __h('PageView', {
                   "controller": this._pageController,
                   "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a)),
                   "children": [
-                    __h('Container', {
+                    new Container({
                         "color": '#D1C4E9',
                         "alignment": "center",
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "第 1 页"
                           })
                       }),
-                    __h('Container', {
+                    new Container({
                         "color": '#B2DFDB',
                         "alignment": "center",
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "第 2 页"
                           })
                       }),
-                    __h('Container', {
+                    new Container({
                         "color": '#FFE0B2',
                         "alignment": "center",
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "第 3 页"
                           })
                       })
                   ]
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 10
             }),
-          __h('Row', {
+          new Row({
               "mainAxisAlignment": "center",
               "children": [
-                ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Container', { "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
+                ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Container({ "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
               ]
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h('Row', {
+          new Row({
               "mainAxisAlignment": "center",
               "children": [
-                __h('TextButton', {
+                new TextButton({
                     "onPressed": this.__bindFn(1, [], (...__a) => this._prevPage(...__a)),
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "上一页"
                       })
                   }),
-                __h('TextButton', {
+                new TextButton({
                     "onPressed": this.__bindFn(2, [], (...__a) => this._nextPage(...__a)),
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "下一页"
                       })
                   }),
-                __h('TextButton', {
+                new TextButton({
                     "onPressed": this.__bindFn(3, [], (...__a) => this._jumpToLast(...__a)),
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "跳到第 3 页"
                       })
                   })
@@ -2214,6 +2229,7 @@ export class PageViewDetail {
 // 组件 KeyTile
 export class KeyTile {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
     this._count = 0;
   }
@@ -2227,7 +2243,7 @@ export class KeyTile {
   build(context) {
     var label = this.label;
     var caption = label + " · 计数 " + this._count;
-    return __h('Container', {
+    return new Container({
         "margin": {
           "left": 0.0,
           "top": 2.0,
@@ -2251,19 +2267,19 @@ export class KeyTile {
             }
           }
         },
-        "child": __h('Row', {
+        "child": new Row({
             "children": [
-              __h('Expanded', {
-                  "child": __h('Text', {
+              new Expanded({
+                  "child": new Text({
                       "style": {
                         "fontSize": 13
                       },
                       "data": caption
                     })
                 }),
-              __h('TextButton', {
+              new TextButton({
                   "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a)),
-                  "child": __h('Text', {
+                  "child": new Text({
                       "data": "+1"
                     })
                 })
@@ -2275,7 +2291,8 @@ export class KeyTile {
 
 // 组件 KeyDetail
 export class KeyDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._names = ["A", "B", "C", "D"];
     this._stableObj = [1];
     this._rebuildSeq = 0;
@@ -2291,28 +2308,28 @@ export class KeyDetail {
     this.setState(() => { this._names.clear(); this._names.add("A"); this._names.add("B"); this._names.add("C"); this._names.add("D"); });
   }
   _valueKeyRows() {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 13,
                 "fontWeight": "bold"
               },
               "data": "① 带 key：key: ValueKey(name)"
             }),
-          ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": this._names[i] + "（key）", "key": new ValueKey(this._names[i]) })]); } return out; })(),
-          __h('SizedBox', {
+          ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [new KeyTile({ "index": i, "label": this._names[i] + "（key）", "key": new ValueKey(this._names[i]) })]); } return out; })(),
+          new SizedBox({
               "height": 10
             }),
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 13,
                 "fontWeight": "bold"
               },
               "data": "② 不带 key：按位置匹配"
             }),
-          ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [__h(KeyTile, { "index": i, "label": this._names[i] + "（无 key）" })]); } return out; })()
+          ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [new KeyTile({ "index": i, "label": this._names[i] + "（无 key）" })]); } return out; })()
         ]
       });
   }
@@ -2320,15 +2337,15 @@ export class KeyDetail {
     this.setState(() => { this._rebuildSeq += 1; });
   }
   _objectKeyRows() {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h(KeyTile, {
+          new KeyTile({
               "index": 0,
               "label": "A · ObjectKey(字段实例) · 父级已重建 " + this._rebuildSeq + " 次",
               "key": new ObjectKey(this._stableObj)
             }),
-          __h(KeyTile, {
+          new KeyTile({
               "index": 1,
               "label": "B · ObjectKey(每帧新造 [1]) · 父级已重建 " + this._rebuildSeq + " 次",
               "key": new ObjectKey([1])
@@ -2344,21 +2361,21 @@ export class KeyDetail {
   }
   _storageView() {
     if (this._storeA) {
-      return __h('SizedBox', {
+      return new SizedBox({
           "height": 150,
           "child": __h('ListView', {
               "children": [
-                ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "data": "A 行 " + i }) })]); } return out; })()
+                ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [new ListTile({ "dense": true, "title": new Text({ "data": "A 行 " + i }) })]); } return out; })()
               ],
               "key": new PageStorageKey("key-page-a")
             })
         });
     }
-    return __h('SizedBox', {
+    return new SizedBox({
         "height": 150,
         "child": __h('ListView', {
             "children": [
-              ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [__h('ListTile', { "dense": true, "title": __h('Text', { "data": "B 行 " + i }) })]); } return out; })()
+              ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [new ListTile({ "dense": true, "title": new Text({ "data": "B 行 " + i }) })]); } return out; })()
             ],
             "key": new PageStorageKey("key-page-b")
           })
@@ -2392,7 +2409,7 @@ export class KeyDetail {
     target.showOnScreen();
   }
   _cardValueKey() {
-    return __h('Container', {
+    return new Container({
         "margin": {
           "left": 12.0,
           "top": 6.0,
@@ -2411,10 +2428,10 @@ export class KeyDetail {
             "radius": 10.0
           }
         },
-        "child": __h('Column', {
+        "child": new Column({
             "crossAxisAlignment": "stretch",
             "children": [
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 15,
                     "fontWeight": "bold",
@@ -2422,37 +2439,37 @@ export class KeyDetail {
                   },
                   "data": "ValueKey · 列表按值匹配"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 4
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 12,
                     "color": '#9E9E9E'
                   },
                   "data": "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
               this._valueKeyRows(),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
-              __h('Row', {
+              new Row({
                   "children": [
-                    __h('TextButton', {
+                    new TextButton({
                         "onPressed": this.__bindFn(0, [], (...__a) => this._rotateNames(...__a)),
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "轮换顺序（A→末尾）"
                           })
                       }),
-                    __h('SizedBox', {
+                    new SizedBox({
                         "width": 8
                       }),
-                    __h('TextButton', {
+                    new TextButton({
                         "onPressed": this.__bindFn(1, [], (...__a) => this._resetNames(...__a)),
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "重置"
                           })
                       })
@@ -2463,7 +2480,7 @@ export class KeyDetail {
       });
   }
   _cardObjectKey() {
-    return __h('Container', {
+    return new Container({
         "margin": {
           "left": 12.0,
           "top": 6.0,
@@ -2482,10 +2499,10 @@ export class KeyDetail {
             "radius": 10.0
           }
         },
-        "child": __h('Column', {
+        "child": new Column({
             "crossAxisAlignment": "stretch",
             "children": [
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 15,
                     "fontWeight": "bold",
@@ -2493,48 +2510,48 @@ export class KeyDetail {
                   },
                   "data": "ObjectKey · 按对象身份相等"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 4
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 12,
                     "color": '#9E9E9E'
                   },
                   "data": "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
               this._objectKeyRows(),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 12,
                     "color": '#9E9E9E'
                   },
                   "data": "操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。" + "选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 6
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 11,
                     "color": '#9E9E9E'
                   },
                   "data": "补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。" + "本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），" + "所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
-              __h('Row', {
+              new Row({
                   "children": [
-                    __h('TextButton', {
+                    new TextButton({
                         "onPressed": this.__bindFn(2, [], (...__a) => this._rebuildParent(...__a)),
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "父级重建（setState 一次）"
                           })
                       })
@@ -2545,7 +2562,7 @@ export class KeyDetail {
       });
   }
   _cardUniqueKey() {
-    return __h('Container', {
+    return new Container({
         "margin": {
           "left": 12.0,
           "top": 6.0,
@@ -2564,10 +2581,10 @@ export class KeyDetail {
             "radius": 10.0
           }
         },
-        "child": __h('Column', {
+        "child": new Column({
             "crossAxisAlignment": "stretch",
             "children": [
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 15,
                     "fontWeight": "bold",
@@ -2575,32 +2592,32 @@ export class KeyDetail {
                   },
                   "data": "UniqueKey · 每次都是新身份"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 4
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 12,
                     "color": '#9E9E9E'
                   },
                   "data": "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
-              __h(KeyTile, {
+              new KeyTile({
                   "index": 0,
                   "label": "唯一身份行 #" + this._uniqueSeq,
                   "key": new UniqueKey()
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
-              __h('Row', {
+              new Row({
                   "children": [
-                    __h('TextButton', {
+                    new TextButton({
                         "onPressed": this.__bindFn(3, [], (...__a) => this._bumpUnique(...__a)),
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "重建（setState 一次）"
                           })
                       })
@@ -2611,7 +2628,7 @@ export class KeyDetail {
       });
   }
   _cardStorageKey() {
-    return __h('Container', {
+    return new Container({
         "margin": {
           "left": 12.0,
           "top": 6.0,
@@ -2630,10 +2647,10 @@ export class KeyDetail {
             "radius": 10.0
           }
         },
-        "child": __h('Column', {
+        "child": new Column({
             "crossAxisAlignment": "stretch",
             "children": [
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 15,
                     "fontWeight": "bold",
@@ -2641,28 +2658,28 @@ export class KeyDetail {
                   },
                   "data": "PageStorageKey · 滚动位置持久化"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 4
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 12,
                     "color": '#9E9E9E'
                   },
                   "data": "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
               this._storageView(),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
-              __h('Row', {
+              new Row({
                   "children": [
-                    __h('TextButton', {
+                    new TextButton({
                         "onPressed": this.__bindFn(4, [], (...__a) => this._flipStore(...__a)),
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": this._storeA ? "切到 B 列表" : "切回 A 列表"
                           })
                       })
@@ -2673,7 +2690,7 @@ export class KeyDetail {
       });
   }
   _cardGlobalKey() {
-    return __h('Container', {
+    return new Container({
         "margin": {
           "left": 12.0,
           "top": 6.0,
@@ -2692,10 +2709,10 @@ export class KeyDetail {
             "radius": 10.0
           }
         },
-        "child": __h('Column', {
+        "child": new Column({
             "crossAxisAlignment": "stretch",
             "children": [
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 15,
                     "fontWeight": "bold",
@@ -2703,20 +2720,20 @@ export class KeyDetail {
                   },
                   "data": "GlobalKey · 宿主端量测 / 定位"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 4
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 12,
                     "color": '#9E9E9E'
                   },
                   "data": "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。"
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
-              __h('Container', {
+              new Container({
                   "padding": {
                     "left": 10.0,
                     "top": 10.0,
@@ -2729,7 +2746,7 @@ export class KeyDetail {
                       "radius": 6.0
                     }
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "style": {
                         "fontSize": 13
                       },
@@ -2737,33 +2754,33 @@ export class KeyDetail {
                     }),
                   "key": this._targetKey
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 13,
                     "color": '#009688'
                   },
                   "data": "测量：" + this._measureText
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 4
                 }),
-              __h('Row', {
+              new Row({
                   "children": [
-                    __h('TextButton', {
+                    new TextButton({
                         "onPressed": this.__bindFn(5, [], (...__a) => this._measureTarget(...__a)),
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "测量位置与尺寸"
                           })
                       }),
-                    __h('SizedBox', {
+                    new SizedBox({
                         "width": 8
                       }),
-                    __h('TextButton', {
+                    new TextButton({
                         "onPressed": this.__bindFn(6, [], (...__a) => this._scrollToTarget(...__a)),
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "定位（showOnScreen）"
                           })
                       })
@@ -2774,10 +2791,10 @@ export class KeyDetail {
       });
   }
   build(context) {
-    return __h('Scaffold', {
+    return new Scaffold({
         "backgroundColor": '#FAFAFA',
-        "appBar": __h('AppBar', {
-            "title": __h('Text', {
+        "appBar": new AppBar({
+            "title": new Text({
                 "data": "Key 家族 · 全部用例"
               }),
             "backgroundColor": '#673AB7',
@@ -2785,14 +2802,14 @@ export class KeyDetail {
           }),
         "body": __h('ListView', {
             "children": [
-              __h('Padding', {
+              new Padding({
                   "padding": {
                     "left": 12.0,
                     "top": 12.0,
                     "right": 12.0,
                     "bottom": 0.0
                   },
-                  "child": __h('Text', {
+                  "child": new Text({
                       "style": {
                         "fontSize": 12,
                         "color": '#9E9E9E'
@@ -2805,7 +2822,7 @@ export class KeyDetail {
               this._cardUniqueKey(),
               this._cardStorageKey(),
               this._cardGlobalKey(),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 24
                 })
             ]
@@ -2816,7 +2833,8 @@ export class KeyDetail {
 
 // 组件 DrawerDetail
 export class DrawerDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._picked = (-1);
   }
   _pickOrders() {
@@ -2832,25 +2850,25 @@ export class DrawerDetail {
     this.setState(() => { this._picked = 3; });
   }
   build(context) {
-    return __h('Scaffold', {
+    return new Scaffold({
         "backgroundColor": '#FAFAFA',
-        "appBar": __h('AppBar', {
-            "title": __h('Text', {
+        "appBar": new AppBar({
+            "title": new Text({
                 "data": "Drawer / endDrawer"
               }),
             "backgroundColor": '#3F51B5',
             "foregroundColor": '#FFFFFF'
           }),
-        "drawer": __h('Drawer', {
+        "drawer": new Drawer({
             "child": __h('ListView', {
                 "children": [
-                  __h('DrawerHeader', {
+                  new DrawerHeader({
                       "decoration": {
                         "color": '#3F51B5'
                       },
-                      "child": __h('Align', {
+                      "child": new Align({
                           "alignment": "bottomLeft",
-                          "child": __h('Text', {
+                          "child": new Text({
                               "style": {
                                 "color": '#FFFFFF',
                                 "fontSize": 20
@@ -2859,20 +2877,20 @@ export class DrawerDetail {
                             })
                         })
                     }),
-                  __h('ListTile', {
-                      "leading": __h('Icon', {
+                  new ListTile({
+                      "leading": new Icon({
                           "icon": "receipt_long"
                         }),
-                      "title": __h('Text', {
+                      "title": new Text({
                           "data": "我的订单"
                         }),
                       "onTap": this.__bindFn(0, [], (...__a) => this._pickOrders(...__a))
                     }),
-                  __h('ListTile', {
-                      "leading": __h('Icon', {
+                  new ListTile({
+                      "leading": new Icon({
                           "icon": "favorite_border"
                         }),
-                      "title": __h('Text', {
+                      "title": new Text({
                           "data": "我的收藏"
                         }),
                       "onTap": this.__bindFn(1, [], (...__a) => this._pickFavorites(...__a))
@@ -2880,16 +2898,16 @@ export class DrawerDetail {
                 ]
               })
           }),
-        "endDrawer": __h('Drawer', {
+        "endDrawer": new Drawer({
             "child": __h('ListView', {
                 "children": [
-                  __h('DrawerHeader', {
+                  new DrawerHeader({
                       "decoration": {
                         "color": '#009688'
                       },
-                      "child": __h('Align', {
+                      "child": new Align({
                           "alignment": "bottomLeft",
-                          "child": __h('Text', {
+                          "child": new Text({
                               "style": {
                                 "color": '#FFFFFF',
                                 "fontSize": 20
@@ -2898,20 +2916,20 @@ export class DrawerDetail {
                             })
                         })
                     }),
-                  __h('ListTile', {
-                      "leading": __h('Icon', {
+                  new ListTile({
+                      "leading": new Icon({
                           "icon": "settings"
                         }),
-                      "title": __h('Text', {
+                      "title": new Text({
                           "data": "设置"
                         }),
                       "onTap": this.__bindFn(2, [], (...__a) => this._pickSettings(...__a))
                     }),
-                  __h('ListTile', {
-                      "leading": __h('Icon', {
+                  new ListTile({
+                      "leading": new Icon({
                           "icon": "help_outline"
                         }),
-                      "title": __h('Text', {
+                      "title": new Text({
                           "data": "帮助与关于"
                         }),
                       "onTap": this.__bindFn(3, [], (...__a) => this._pickHelp(...__a))
@@ -2919,25 +2937,25 @@ export class DrawerDetail {
                 ]
               })
           }),
-        "body": __h('Center', {
-            "child": __h('Column', {
+        "body": new Center({
+            "child": new Column({
                 "mainAxisAlignment": "center",
                 "children": [
-                  __h('Icon', {
+                  new Icon({
                       "size": 48,
                       "color": '#3F51B5',
                       "icon": "menu_open"
                     }),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 12
                     }),
-                  __h('Text', {
+                  new Text({
                       "data": "AppBar 左侧为汉堡按钮，右侧为 endDrawer 入口"
                     }),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 8
                     }),
-                  __h('Text', {
+                  new Text({
                       "data": (this._picked < 0) ? "尚未选择菜单项" : "选中菜单项 #" + this._picked
                     })
                 ]
@@ -2949,7 +2967,8 @@ export class DrawerDetail {
 
 // 组件 ReorderListDetail
 export class ReorderListDetail {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._items = ["北京", "上海", "广州", "深圳", "杭州", "成都"];
     this._controller = new ScrollController();
   }
@@ -2961,20 +2980,20 @@ export class ReorderListDetail {
     this.setState(() => { this._items.add("城市 " + (this._items.length + 1)); });
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "mainAxisSize": "min",
         "children": [
-          __h('Padding', {
+          new Padding({
               "padding": {
                 "left": 12.0,
                 "top": 12.0,
                 "right": 12.0,
                 "bottom": 12.0
               },
-              "child": __h('Row', {
+              "child": new Row({
                   "children": [
-                    __h('Expanded', {
-                        "child": __h('Text', {
+                    new Expanded({
+                        "child": new Text({
                             "style": {
                               "fontSize": 13,
                               "color": '#9E9E9E'
@@ -2982,18 +3001,18 @@ export class ReorderListDetail {
                             "data": "长按拖拽调整顺序（onReorder 双参事件）"
                           })
                       }),
-                    __h('ElevatedButton', {
+                    new ElevatedButton({
                         "onPressed": this.__bindFn(0, [], (...__a) => this._add(...__a)),
-                        "child": __h('Text', {
+                        "child": new Text({
                             "data": "添加"
                           })
                       })
                   ]
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 320,
-              "child": __h(ReorderableListView, {
+              "child": new ReorderableListView({
                   "scrollController": this._controller,
                   "onReorder": this.__bindFn(1, [], (...__a) => this._onReorder(...__a)),
                   "padding": {
@@ -3015,12 +3034,12 @@ export class ReorderListDetail {
   }
   _itemBuilder0(context, index) {
       var item = this._items[index];
-      return __h('Card', {
-        "child": __h('ListTile', {
-            "leading": __h('Icon', {
+      return new Card({
+        "child": new ListTile({
+            "leading": new Icon({
                 "icon": "drag_handle"
               }),
-            "title": __h('Text', {
+            "title": new Text({
                 "data": item
               })
           }),
@@ -3031,32 +3050,33 @@ export class ReorderListDetail {
 
 // 组件 TestWidget
 export class TestWidget {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
   }
   build(context) {
-    var text = __h('Text', {
+    var text = new Text({
           "data": "局部变量 widget"
         });
-    var card = __h(StatelessCard, {
+    var card = new StatelessCard({
           "title": "局部自定义组件",
           "subtitle": "StatelessCard 变量",
           "badge": "VAR"
         });
-    var items = [__h('Text', {
+    var items = [new Text({
           "data": "列表项 A"
-        }), __h('Text', {
+        }), new Text({
           "data": "列表项 B"
         })];
-    return __h('Center', {
-        "child": __h('Column', {
+    return new Center({
+        "child": new Column({
             "mainAxisSize": "min",
             "children": [
               text,
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
               card,
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 8
                 }),
               ...items

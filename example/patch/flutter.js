@@ -15,16 +15,53 @@ function __isElementList(v) {
   }
   return true;
 }
-export function __h(type, props) {
-  var p = props || {};
-  // JS 组件类：props 原样保留，__applyProps 靠它派生构造参数字段。
-  if (typeof type !== 'string') {
-    return { type: type, props: p, children: {}, element: true };
+// 组件实例 → 元素描述：生成类与普通类一样「构造即实例」（`new CommunityPage(...)`
+// 得到实例），父级把它当子结点消费时在这里统一折算。判定只看原型上有没有
+// build（组件类的语言级特征），不查类型名表、不需要 toJson / 特殊标记。
+export function __asElement(v) {
+  if (v == null || typeof v !== 'object' || v.element === true) { return v; }
+  var C = v.constructor;
+  if (typeof C === 'function' && C.prototype &&
+      typeof C.prototype.build === 'function') {
+    return { type: C, props: v.props || {}, children: {}, element: true };
   }
+  return v;
+}
+// 数组逐项归一化（只复制命中项，普通值数组保持原引用）。
+export function __asElementList(v) {
+  if (!Array.isArray(v)) { return v; }
+  var out = null;
+  for (var i = 0; i < v.length; i++) {
+    var w = __asElement(v[i]);
+    if (w !== v[i]) {
+      if (!out) { out = v.slice(); }
+      out[i] = w;
+    }
+  }
+  return out || v;
+}
+// 组件元素描述：`type` 是 JS 类引用，props 值里的组件实例同样折算成元素
+// （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})` 这类
+// 直接构造、不经过 __h 的路径也保持一致）。真正的实例化只由 mount 完成。
+export function __element(type, props) {
+  var p = props || {};
+  var out = {};
+  for (var k in p) {
+    if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
+    out[k] = __asElementList(__asElement(p[k]));
+  }
+  return { type: type, props: out, children: {}, element: true };
+}
+export function __h(type, props) {
+  // JS 组件类：只产出元素描述，不在此实例化。
+  if (typeof type !== 'string') {
+    return __element(type, props);
+  }
+  var p = props || {};
   var data = {}, slots = {};
   for (var k in p) {
     if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    var v = p[k];
+    var v = __asElementList(__asElement(p[k]));
     if (__isElement(v)) { slots[k] = v; continue; }
     if (__isElementList(v)) { slots[k] = v; continue; }
     // delegate 两种形态都进 children，不参与 props。
@@ -37,6 +74,462 @@ export function __h(type, props) {
   return { type: type, props: data, children: slots, element: true };
 }
 
+
+export class Align {
+  constructor(props) {
+    return __h('Align', props);
+  }
+}
+
+export class AppBar {
+  constructor(props) {
+    return __h('AppBar', props);
+  }
+}
+
+export class AspectRatio {
+  constructor(props) {
+    return __h('AspectRatio', props);
+  }
+}
+
+export class BottomNavigationBar {
+  constructor(props) {
+    return __h('BottomNavigationBar', props);
+  }
+}
+
+export class BottomNavigationBarItem {
+  constructor(props) {
+    return __h('BottomNavigationBarItem', props);
+  }
+}
+
+export class CachedNetworkImage {
+  constructor(props) {
+    return __h('CachedNetworkImage', props);
+  }
+}
+
+export class Card {
+  constructor(props) {
+    return __h('Card', props);
+  }
+}
+
+export class Center {
+  constructor(props) {
+    return __h('Center', props);
+  }
+}
+
+export class Checkbox {
+  constructor(props) {
+    return __h('Checkbox', props);
+  }
+}
+
+export class Chip {
+  constructor(props) {
+    return __h('Chip', props);
+  }
+}
+
+export class CircleAvatar {
+  constructor(props) {
+    return __h('CircleAvatar', props);
+  }
+}
+
+export class CircularProgressIndicator {
+  constructor(props) {
+    return __h('CircularProgressIndicator', props);
+  }
+}
+
+export class ClipOval {
+  constructor(props) {
+    return __h('ClipOval', props);
+  }
+}
+
+export class ClipRRect {
+  constructor(props) {
+    return __h('ClipRRect', props);
+  }
+}
+
+export class Column {
+  constructor(props) {
+    return __h('Column', props);
+  }
+}
+
+export class ConstrainedBox {
+  constructor(props) {
+    return __h('ConstrainedBox', props);
+  }
+}
+
+export class Container {
+  constructor(props) {
+    return __h('Container', props);
+  }
+}
+
+export class CustomScrollView {
+  constructor(props) {
+    return __h('CustomScrollView', props);
+  }
+}
+
+export class DecoratedBox {
+  constructor(props) {
+    return __h('DecoratedBox', props);
+  }
+}
+
+export class DefaultTabController {
+  constructor(props) {
+    return __h('DefaultTabController', props);
+  }
+}
+
+export class Divider {
+  constructor(props) {
+    return __h('Divider', props);
+  }
+}
+
+export class Drawer {
+  constructor(props) {
+    return __h('Drawer', props);
+  }
+}
+
+export class DrawerHeader {
+  constructor(props) {
+    return __h('DrawerHeader', props);
+  }
+}
+
+export class DropdownButton {
+  constructor(props) {
+    return __h('DropdownButton', props);
+  }
+}
+
+export class DropdownMenuItem {
+  constructor(props) {
+    return __h('DropdownMenuItem', props);
+  }
+}
+
+export class EasyRefresh {
+  constructor(props) {
+    return __h('EasyRefresh', props);
+  }
+}
+
+export class ElevatedButton {
+  constructor(props) {
+    return __h('ElevatedButton', props);
+  }
+}
+
+export class Expanded {
+  constructor(props) {
+    return __h('Expanded', props);
+  }
+}
+
+export class FilledButton {
+  constructor(props) {
+    return __h('FilledButton', props);
+  }
+}
+
+export class Flexible {
+  constructor(props) {
+    return __h('Flexible', props);
+  }
+}
+
+export class FloatingActionButton {
+  constructor(props) {
+    return __h('FloatingActionButton', props);
+  }
+}
+
+export class FractionallySizedBox {
+  constructor(props) {
+    return __h('FractionallySizedBox', props);
+  }
+}
+
+export class GestureDetector {
+  constructor(props) {
+    return __h('GestureDetector', props);
+  }
+}
+
+export class Icon {
+  constructor(props) {
+    return __h('Icon', props);
+  }
+}
+
+export class IconButton {
+  constructor(props) {
+    return __h('IconButton', props);
+  }
+}
+
+export class Image {
+  constructor(props) {
+    return __h('Image', props);
+  }
+}
+
+export class IndexedStack {
+  constructor(props) {
+    return __h('IndexedStack', props);
+  }
+}
+
+export class InkWell {
+  constructor(props) {
+    return __h('InkWell', props);
+  }
+}
+
+export class InputDecoration {
+  constructor(props) {
+    return __h('InputDecoration', props);
+  }
+}
+
+export class LinearProgressIndicator {
+  constructor(props) {
+    return __h('LinearProgressIndicator', props);
+  }
+}
+
+export class ListTile {
+  constructor(props) {
+    return __h('ListTile', props);
+  }
+}
+
+export class Material {
+  constructor(props) {
+    return __h('Material', props);
+  }
+}
+
+export class NotificationListener {
+  constructor(props) {
+    return __h('NotificationListener', props);
+  }
+}
+
+export class Opacity {
+  constructor(props) {
+    return __h('Opacity', props);
+  }
+}
+
+export class OutlinedButton {
+  constructor(props) {
+    return __h('OutlinedButton', props);
+  }
+}
+
+export class Padding {
+  constructor(props) {
+    return __h('Padding', props);
+  }
+}
+
+export class Positioned {
+  constructor(props) {
+    return __h('Positioned', props);
+  }
+}
+
+export class Radio {
+  constructor(props) {
+    return __h('Radio', props);
+  }
+}
+
+export class Row {
+  constructor(props) {
+    return __h('Row', props);
+  }
+}
+
+export class SafeArea {
+  constructor(props) {
+    return __h('SafeArea', props);
+  }
+}
+
+export class Scaffold {
+  constructor(props) {
+    return __h('Scaffold', props);
+  }
+}
+
+export class SingleChildScrollView {
+  constructor(props) {
+    return __h('SingleChildScrollView', props);
+  }
+}
+
+export class SizedBox {
+  constructor(props) {
+    return __h('SizedBox', props);
+  }
+}
+
+export class Slider {
+  constructor(props) {
+    return __h('Slider', props);
+  }
+}
+
+export class SliverAppBar {
+  constructor(props) {
+    return __h('SliverAppBar', props);
+  }
+}
+
+export class SliverFillRemaining {
+  constructor(props) {
+    return __h('SliverFillRemaining', props);
+  }
+}
+
+export class SliverFillViewport {
+  constructor(props) {
+    return __h('SliverFillViewport', props);
+  }
+}
+
+export class SliverFixedExtentList {
+  constructor(props) {
+    return __h('SliverFixedExtentList', props);
+  }
+}
+
+export class SliverIgnorePointer {
+  constructor(props) {
+    return __h('SliverIgnorePointer', props);
+  }
+}
+
+export class SliverOffstage {
+  constructor(props) {
+    return __h('SliverOffstage', props);
+  }
+}
+
+export class SliverOpacity {
+  constructor(props) {
+    return __h('SliverOpacity', props);
+  }
+}
+
+export class SliverPadding {
+  constructor(props) {
+    return __h('SliverPadding', props);
+  }
+}
+
+export class SliverSafeArea {
+  constructor(props) {
+    return __h('SliverSafeArea', props);
+  }
+}
+
+export class SliverToBoxAdapter {
+  constructor(props) {
+    return __h('SliverToBoxAdapter', props);
+  }
+}
+
+export class SliverVisibility {
+  constructor(props) {
+    return __h('SliverVisibility', props);
+  }
+}
+
+export class Spacer {
+  constructor(props) {
+    return __h('Spacer', props);
+  }
+}
+
+export class Stack {
+  constructor(props) {
+    return __h('Stack', props);
+  }
+}
+
+export class Switch {
+  constructor(props) {
+    return __h('Switch', props);
+  }
+}
+
+export class Tab {
+  constructor(props) {
+    return __h('Tab', props);
+  }
+}
+
+export class TabBar {
+  constructor(props) {
+    return __h('TabBar', props);
+  }
+}
+
+export class TabBarView {
+  constructor(props) {
+    return __h('TabBarView', props);
+  }
+}
+
+export class Text {
+  constructor(props) {
+    return __h('Text', props);
+  }
+}
+
+export class TextButton {
+  constructor(props) {
+    return __h('TextButton', props);
+  }
+}
+
+export class TextField {
+  constructor(props) {
+    return __h('TextField', props);
+  }
+}
+
+export class Transform {
+  constructor(props) {
+    return __h('Transform', props);
+  }
+}
+
+export class Wrap {
+  constructor(props) {
+    return __h('Wrap', props);
+  }
+}
 
 export class Builder {
   constructor(props) {

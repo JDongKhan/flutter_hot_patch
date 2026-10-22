@@ -115,6 +115,22 @@ const Set<String> builtinWidgetTypes = {
   'CachedNetworkImage', 'EasyRefresh',
 };
 
+/// 非 Widget 的「值对象」构造类型（元素描述由父 renderer 以 JsRenderContext
+/// 消费，不作为子树挂载）。与运行时 `js_widget_registry.dart` 的
+/// `_dataCarrierTypes` **同步维护**。
+const Set<String> jsDataCarrierTypes = {'InputDecoration'};
+
+/// 需要在 flutter.js 生成**宿主包装类**的类型：宿主 widget + 非 Widget 值对象，
+/// 排除已有 JS 类的类型（逻辑组件 / builder 代理，它们的类由各自 package 模块
+/// 产出，类名不能重复）。
+///
+/// 包装类让翻译层把所有 widget 构造统一写成 `new Text({...})`，宿主包装类
+/// 在构造里直接 `return __h('Text', props)`，产物不再出现 `__h('Text', ...)`。
+Set<String> get hostWrapperTypes => {
+  ...builtinWidgetTypes.where((t) => !jsClassWidgetTypes.contains(t)),
+  ...jsDataCarrierTypes,
+};
+
 /// 「构造名 → 位置实参的 Flutter 形参名」登记（运行时读取键名的镜像）。
 ///
 /// 统一翻译把位置实参按**Flutter 自己声明的形参名**放进 props，产物自解释：

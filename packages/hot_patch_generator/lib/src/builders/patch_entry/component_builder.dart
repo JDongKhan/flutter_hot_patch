@@ -465,10 +465,10 @@ String _renderJsProduct(
   for (final entry in usedWidgets.entries) {
     (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
   }
-  // 结点工厂 `__h`：产物里有元素树（组件 build 树 / 方法体里返回 widget）
-  // 才需要，并入其宿主 package（flutter）那一条；纯模型产物不产生多余 import。
-  // 方法体与 builder 子树的 `__h` 用量都在收集阶段登记（[ClassInfo.usedNodeHelper]）。
-  if (extraUsedNodeHelper || ctx.usedNodeHelper || usedWidgets.isNotEmpty) {
+  // 结点工厂 `__h`：只有「无 JS 类的类型」才需要兜底 `__h('X', …)`（占位结点
+  // 也用 `__h('SizedBox', {})`）。有 JS 类的类型统一 `new X(props)`——宿主包装
+  // 类与组件类由 `importsByPackage` 按 package 模块 / 产物 import。
+  if (extraUsedNodeHelper || ctx.usedNodeHelper) {
     (importsByPackage[nodeHelperPackage] ??= <String>{}).add('__h');
   }
   final ownProduct = productPath(sourcePath);

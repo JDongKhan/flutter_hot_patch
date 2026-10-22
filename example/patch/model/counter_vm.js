@@ -3,7 +3,6 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from '../components/banner_component.js';
-import { __h } from '../flutter.js';
 
 // 模型 CounterVm
 export class CounterVm extends ChangeNotifier {
@@ -31,7 +30,7 @@ export class CounterVm extends ChangeNotifier {
     return "22";
   }
   buildText() {
-    return __h(BannerCard, {});
+    return new BannerCard({});
   }
 }
 

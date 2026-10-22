@@ -6,20 +6,22 @@ import { HomePage } from 'pages/home_page.js';
 import { CommunityPage } from 'pages/community_page.js';
 import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
-import { __h } from '../flutter.js';
+import { BottomNavigationBar, BottomNavigationBarItem, Icon, Scaffold, TabBarView } from '../flutter.js';
 
 // 组件 AppShell
 export class AppShell {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
   }
   build(context) {
-    return __h(AppSubContent, {});
+    return new AppSubContent({});
   }
 }
 
 // 组件 AppSubContent
 export class AppSubContent {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._tab = new TabController({length: 4, vsync: this});
     this._index = 0;
   }
@@ -34,19 +36,19 @@ export class AppSubContent {
     this._tab.animateTo(index);
   }
   build(context) {
-    return __h('Scaffold', {
+    return new Scaffold({
         "backgroundColor": '#fff4f5f7',
-        "body": __h('TabBarView', {
+        "body": new TabBarView({
             "controller": this._tab,
             "physics": "NeverScrollableScrollPhysics",
             "children": [
-              __h(HomePage, {}),
-              __h(CommunityPage, {}),
-              __h(OrdersPage, {}),
-              __h(MinePage, {})
+              new HomePage({}),
+              new CommunityPage({}),
+              new OrdersPage({}),
+              new MinePage({})
             ]
           }),
-        "bottomNavigationBar": __h('BottomNavigationBar', {
+        "bottomNavigationBar": new BottomNavigationBar({
             "currentIndex": this._index,
             "onTap": this.__bindFn(0, [], (...__a) => this._openTab(...__a)),
             "type": "fixed",
@@ -56,26 +58,26 @@ export class AppSubContent {
             "selectedFontSize": 11,
             "unselectedFontSize": 11,
             "items": [
-              __h('BottomNavigationBarItem', {
-                  "icon": __h('Icon', {
+              new BottomNavigationBarItem({
+                  "icon": new Icon({
                       "icon": "home"
                     }),
                   "label": "首页"
                 }),
-              __h('BottomNavigationBarItem', {
-                  "icon": __h('Icon', {
+              new BottomNavigationBarItem({
+                  "icon": new Icon({
                       "icon": "article"
                     }),
                   "label": "社区"
                 }),
-              __h('BottomNavigationBarItem', {
-                  "icon": __h('Icon', {
+              new BottomNavigationBarItem({
+                  "icon": new Icon({
                       "icon": "shopping_cart"
                     }),
                   "label": "订单"
                 }),
-              __h('BottomNavigationBarItem', {
-                  "icon": __h('Icon', {
+              new BottomNavigationBarItem({
+                  "icon": new Icon({
                       "icon": "person"
                     }),
                   "label": "我的"

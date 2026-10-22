@@ -565,11 +565,11 @@ ClassInfo translateClass(
     }
   }
 
-  // 类表里所有 widget 类名（isComponent）：用于区分「局部/字段 widget 值」
-  // 与「模型构造」，避免把 `User()` 误当元素。
-  final widgetClassNames = <String>{
+  // 类表里的普通类（模型）名：值位置上的构造只排除这些类与值对象，其余类
+  // 构造一律按组件元素翻译——不再维护「哪些类型是 widget」的白名单。
+  final modelClassNames = <String>{
     for (final e in classTable.entries)
-      if (e.value.isComponent) e.key,
+      if (!e.value.isComponent) e.key,
   };
 
   // 翻译上下文：实例字段表（propByField）+ 实例方法名表（actionByMethod）
@@ -598,7 +598,7 @@ ClassInfo translateClass(
     hostMethods: hostMethods,
     jsClassWidgets: jsClassWidgets,
     delegateClassWidgets: delegateClassWidgets,
-    widgetClassNames: widgetClassNames,
+    modelClassNames: modelClassNames,
   );
 
   // 字段初始化器里的 widget 值（`Widget _w = Text();` / `final w = Text();`）：

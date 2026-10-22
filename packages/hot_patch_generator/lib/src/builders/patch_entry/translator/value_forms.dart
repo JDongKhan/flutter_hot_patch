@@ -382,6 +382,12 @@ bool _isWidgetExpr(Expression e, WidgetTranslateContext ctx) {
 bool _isBuilderArg(String? name) =>
     name != null && (name == 'builder' || name.endsWith('Builder'));
 
+/// 该构造名是否由**值翻译**处理（值对象 / 控制器 / Key / 结构化样式），而不是
+/// 元素构造。widget2js 的局部值翻译用这条唯一判据排除「模型类 + 值对象」，
+/// 其余类构造一律按组件构造——不再维护「哪些类型是 widget」的白名单。
+bool isValueCtorName(String name) =>
+    _valueCtors.contains(name) || _ctorConverters.containsKey(name);
+
 /// 静态工厂方法名 → 结构化样式转换器（`Xxx.styleFrom(...)` 这类：值是样式对象，
 /// 不能按「类名构造 → 子结点」处理）。
 final Map<String, ValueConverter> _factoryConverters = {

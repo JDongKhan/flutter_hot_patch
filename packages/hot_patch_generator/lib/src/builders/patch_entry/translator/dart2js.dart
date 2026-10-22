@@ -40,7 +40,16 @@ String renderClassDecl(
   //
   // 参数先于其它字段派生：Dart 里 `this.x` 形参在构造体开头即已可用，状态字段
   // 可能依赖它（如 `_status = widget.initialStatus ?? kOrderStatus.first`）。
-  b.write(info.ctorParams.isEmpty ? '  constructor() {\n' : '  constructor(args) {\n');
+  // 组件类与普通类同样是「构造即实例」：`new CommunityPage({...})` 得到组件
+  // 实例；渲染层在消费它时统一折算成元素描述（见 flutter.js `__asElement`），
+  // 因此构造函数里不需要任何内部 token / 双模分支。
+  // 组件实例必须保留 props（归一化时据此还原元素 props）：首行落 `this.props`。
+  if (info.isComponent) {
+    b.write('  constructor(args) {\n');
+    b.write('    this.props = args || {};\n');
+  } else {
+    b.write(info.ctorParams.isEmpty ? '  constructor() {\n' : '  constructor(args) {\n');
+  }
   if (base != null) b.write('    super();\n');
   if (info.ctorParams.isNotEmpty) b.write('    this.__applyProps(args);\n');
   // mixin 来源的字段集中尾部、按来源注释分隔（类自身字段在前，注释只标

@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { User } from '../model/user.js';
-import { __h } from '../flutter.js';
+import { Column, ElevatedButton, Row, Text } from '../flutter.js';
 
 // 静态单例类 PanelColors
 export const PanelColors = {
@@ -15,7 +15,8 @@ export const PanelColors = {
 
 // 组件 HelloCard
 export class HelloCard {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._count = 0;
     this._user = null;
   }
@@ -78,9 +79,9 @@ export class HelloCard {
     case 0: return "起步";
     default: return "推进中";
 } })();
-    return __h('Column', {
+    return new Column({
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 24,
                 "fontWeight": "bold",
@@ -88,57 +89,57 @@ export class HelloCard {
               },
               "data": "Hello from JS logic 4"
             }),
-          __h('Text', {
+          new Text({
               "data": "count = " + this._count
             }),
-          __h('Text', {
+          new Text({
               "data": "阶段：" + stage
             }),
-          __h('Text', {
+          new Text({
               "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
             }),
-          __h('Text', {
+          new Text({
               "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
             }),
-          __h('Text', {
+          new Text({
               "data": (this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1"
             }),
-          ...((this._count > 0) ? [__h('Text', { "data": "当前 count 是正数（if 条件渲染）" })] : []),
-          ...((this._user != null) ? [__h('Text', { "data": "用户已加载（if + else 渲染）" })] : [__h('Text', { "data": "用户未加载，点 Load User" })]),
-          ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [__h('Text', { "data": "循环第 " + i + " 个" })]); } return out; })(),
-          __h('Row', {
+          ...((this._count > 0) ? [new Text({ "data": "当前 count 是正数（if 条件渲染）" })] : []),
+          ...((this._user != null) ? [new Text({ "data": "用户已加载（if + else 渲染）" })] : [new Text({ "data": "用户未加载，点 Load User" })]),
+          ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Text({ "data": "循环第 " + i + " 个" })]); } return out; })(),
+          new Row({
               "children": [
-                __h('ElevatedButton', {
+                new ElevatedButton({
                     "onPressed": this.__bindFn(0, [], (...__a) => this.inc(...__a)),
                     "style": {
                       "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
                       "foregroundColor": '#FFFFFF'
                     },
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "+1"
                       })
                   }),
-                __h('ElevatedButton', {
+                new ElevatedButton({
                     "onPressed": this.__bindFn(1, [], () => this.reset()),
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "Reset"
                       })
                   }),
-                __h('ElevatedButton', {
+                new ElevatedButton({
                     "onPressed": this.__bindFn(2, [], (...__a) => this.showNative(...__a)),
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "Native"
                       })
                   }),
-                __h('ElevatedButton', {
+                new ElevatedButton({
                     "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a)),
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "Load User"
                       })
                   }),
-                __h('ElevatedButton', {
+                new ElevatedButton({
                     "onPressed": this.__bindFn(4, [], (...__a) => this.demoTryCatchAssert(...__a)),
-                    "child": __h('Text', {
+                    "child": new Text({
                         "data": "Try/Catch"
                       })
                   })

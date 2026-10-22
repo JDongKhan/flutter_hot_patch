@@ -64,8 +64,13 @@ class WidgetModuleBuilder implements Builder {
 /// 共享结点工厂源码：`export function __h(type, props)`，把翻译层按原名下发的
 /// props 拆成 `{type, props, children, element}`：
 ///
-///   - 每个元素对象都带 **`element: true`** 标记（`__h` 统一加）——这是唯一
-///     可靠的 widget 判据，不再靠 `{type, props}` 形状猜测；
+///   - 组件类（`typeof type === 'function'`）走 [__element]：props 保留，**不实例化**；
+///     真正实例化只由 reconciler 的 mount 完成。
+///   - 用户代码 `new CommunityPage(props)` 按普通类语义得到**组件实例**；父级把
+///     它当子结点消费时由 [__asElement] 折算成元素描述（`build` 原型方法判定，
+///     不做类型名猜测）。宿主包装类（`new Text(props)`）在构造里直接调用 `__h`。
+///   - 每个元素对象都带 **`element: true`** 标记（`__h` / `__element` 统一加）
+///     ——这是唯一可靠的 widget 判据，不再靠 `{type, props}` 形状猜测；
 ///   - 值是元素（`element === true`）或「元素数组」→ 移入 `children` 对象，
 ///     key 与 props 原名**完全一致**（`child` / `content` / `top` / `body` /
 ///     `items` 走同一条路径，不再有固定键表）；
@@ -90,16 +95,53 @@ function __isElementList(v) {
   }
   return true;
 }
-export function __h(type, props) {
-  var p = props || {};
-  // JS 组件类：props 原样保留，__applyProps 靠它派生构造参数字段。
-  if (typeof type !== 'string') {
-    return { type: type, props: p, children: {}, element: true };
+// 组件实例 → 元素描述：生成类与普通类一样「构造即实例」（`new CommunityPage(...)`
+// 得到实例），父级把它当子结点消费时在这里统一折算。判定只看原型上有没有
+// build（组件类的语言级特征），不查类型名表、不需要 toJson / 特殊标记。
+export function __asElement(v) {
+  if (v == null || typeof v !== 'object' || v.element === true) { return v; }
+  var C = v.constructor;
+  if (typeof C === 'function' && C.prototype &&
+      typeof C.prototype.build === 'function') {
+    return { type: C, props: v.props || {}, children: {}, element: true };
   }
+  return v;
+}
+// 数组逐项归一化（只复制命中项，普通值数组保持原引用）。
+export function __asElementList(v) {
+  if (!Array.isArray(v)) { return v; }
+  var out = null;
+  for (var i = 0; i < v.length; i++) {
+    var w = __asElement(v[i]);
+    if (w !== v[i]) {
+      if (!out) { out = v.slice(); }
+      out[i] = w;
+    }
+  }
+  return out || v;
+}
+// 组件元素描述：`type` 是 JS 类引用，props 值里的组件实例同样折算成元素
+// （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})` 这类
+// 直接构造、不经过 __h 的路径也保持一致）。真正的实例化只由 mount 完成。
+export function __element(type, props) {
+  var p = props || {};
+  var out = {};
+  for (var k in p) {
+    if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
+    out[k] = __asElementList(__asElement(p[k]));
+  }
+  return { type: type, props: out, children: {}, element: true };
+}
+export function __h(type, props) {
+  // JS 组件类：只产出元素描述，不在此实例化。
+  if (typeof type !== 'string') {
+    return __element(type, props);
+  }
+  var p = props || {};
   var data = {}, slots = {};
   for (var k in p) {
     if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    var v = p[k];
+    var v = __asElementList(__asElement(p[k]));
     if (__isElement(v)) { slots[k] = v; continue; }
     if (__isElementList(v)) { slots[k] = v; continue; }
     // delegate 两种形态都进 children，不参与 props。
@@ -110,6 +152,15 @@ export function __h(type, props) {
     data[k] = v;
   }
   return { type: type, props: data, children: slots, element: true };
+}''';
+
+/// 宿主包装类源码：类名 = 宿主类型名，构造即产出元素描述（type 仍是**字符串**）。
+/// 宿主结点的实例化由宿主注册表完成，reconciler 从不 `new` 这个类。
+String hostWrapperSource(String type) => '''
+export class $type {
+  constructor(props) {
+    return __h('$type', props);
+  }
 }''';
 
 /// builder 命名构造（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
@@ -249,10 +300,14 @@ export class MultiProvider {
     var provs = this.props.providers || [];
     var node = this.props.child;
     for (var i = provs.length - 1; i >= 0; i--) {
+      // providers 项可能是元素描述，也可能是用户直接 new 出来的组件实例
+      // （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})`
+      // 不经过 __h）——统一折算后再取 type / props。
+      var prov = __asElement(provs[i]);
       var p = {};
-      for (var k in provs[i].props) { p[k] = provs[i].props[k]; }
+      for (var k in prov.props) { p[k] = prov.props[k]; }
       p.child = node;
-      node = __h(provs[i].type, p);
+      node = __h(prov.type, p);
     }
     return node;
   }
@@ -373,8 +428,9 @@ export class ValueListenableBuilder {
 /// 字符串（`__h('Text', {...})`），由宿主注册表映射成 Flutter widget；
 /// 本模块只在有 JS 逻辑时才有存在意义。
 ///
-/// 一个 package 一个文件（文件名即包名）。共用元素工厂 `__h` 只在其宿主包
-/// （[nodeHelperPackage]）里定义一次，其它包从 `<host>.js` 相对 import。
+/// 一个 package 一个文件（文件名即包名）。共用元素工厂 `__h` / 归一化
+/// `__asElement` 只在其宿主包（[nodeHelperPackage]）里定义一次，其它包从
+/// `<host>.js` 相对 import。
 /// 产物自包含（不依赖运行时 `__jsui`），宿主既有渲染路径与 JS 运行时都能
 /// 消费同一份产物。
 String renderPackageModule(String package, Set<String> types) {
@@ -388,13 +444,20 @@ String renderPackageModule(String package, Set<String> types) {
     b
       ..writeln(jsNodeHelperSource)
       ..writeln();
+    // 宿主包装类：`new Text({...})` → `__h('Text', {...})`。翻译层因此可以对
+    // 所有 widget 构造统一发射 `new Type(props)`，产物里不再出现 `__h('X', …)`。
+    for (final t in hostWrapperTypes.toList()..sort()) {
+      b
+        ..writeln()
+        ..writeln(hostWrapperSource(t));
+    }
   } else {
     final nodeRel = relativeProduct(
       packageModulePath(package),
       packageModulePath(nodeHelperPackage),
     );
     b
-      ..writeln("import { __h } from '$nodeRel';")
+      ..writeln("import { __h, __asElement } from '$nodeRel';")
       ..writeln();
   }
   for (final t in sorted) {

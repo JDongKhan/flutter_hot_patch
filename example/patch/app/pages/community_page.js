@@ -7,11 +7,12 @@ import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { kBrand } from 'detail_pages.js';
-import { ListView, __h } from '../../flutter.js';
+import { Center, CircularProgressIndicator, ClipRRect, Column, Container, Expanded, GestureDetector, Icon, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, Wrap, __h } from '../../flutter.js';
 
 // 组件 CommunityPage
 export class CommunityPage {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._service = new AppService({});
     this._feed = null;
     this._posts = null;
@@ -60,37 +61,37 @@ export class CommunityPage {
     console.log("CommunityPage build : filterOpen=" + __str(this._filterOpen));
     var feed = this._feed;
     if ((feed == null)) {
-      return __h('Center', {
-          "child": __h('CircularProgressIndicator', {})
+      return new Center({
+          "child": new CircularProgressIndicator({})
         });
     }
-    return __h('Column', {
+    return new Column({
         "children": [
-          __h('Container', {
+          new Container({
               "color": '#FFFFFF',
-              "child": __h('SafeArea', {
+              "child": new SafeArea({
                   "bottom": false,
-                  "child": __h('Padding', {
+                  "child": new Padding({
                       "padding": {
                         "left": 12.0,
                         "top": 4.0,
                         "right": 12.0,
                         "bottom": 10.0
                       },
-                      "child": __h('Row', {
+                      "child": new Row({
                           "children": [
-                            ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 }, "child": __h('GestureDetector', { "onTap": this.__bindFn(0, [t], () => this._selectTab(t)), "child": __h('Container', { "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } }, "child": __h('Text', { "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') }, "data": t }) }) }) })]); } return out; })(),
-                            __h('Spacer', {}),
-                            __h('GestureDetector', {
+                            ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [new Padding({ "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 }, "child": new GestureDetector({ "onTap": this.__bindFn(0, [t], () => this._selectTab(t)), "child": new Container({ "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } }, "child": new Text({ "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') }, "data": t }) }) }) })]); } return out; })(),
+                            new Spacer({}),
+                            new GestureDetector({
                                 "onTap": this.__bindFn(1, [], () => _app_host_.invoke("toast", ["发布新动态（演示）"])),
-                                "child": __h('Container', {
+                                "child": new Container({
                                     "width": 32,
                                     "height": 32,
                                     "decoration": {
                                       "color": '#fff3f5f8',
                                       "shape": "circle"
                                     },
-                                    "child": __h('Icon', {
+                                    "child": new Icon({
                                         "size": 16,
                                         "color": '#ff5c6270',
                                         "icon": "edit"
@@ -102,12 +103,12 @@ export class CommunityPage {
                     })
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 10
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 116,
-              "child": __h(ListView, {
+              "child": new ListView({
                   "scrollDirection": "horizontal",
                   "padding": {
                     "left": 12.0,
@@ -121,10 +122,10 @@ export class CommunityPage {
                   "factory": "separated"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('Container', {
+          new Container({
               "color": '#FFFFFF',
               "padding": {
                 "left": 12.0,
@@ -132,13 +133,13 @@ export class CommunityPage {
                 "right": 12.0,
                 "bottom": 8.0
               },
-              "child": __h('Row', {
+              "child": new Row({
                   "children": [
-                    ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [__h('Padding', { "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 }, "child": __h('GestureDetector', { "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)), "child": __h('Container', { "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } }, "child": __h('Text', { "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') }, "data": s }) }) }) })]); } return out; })(),
-                    __h('Spacer', {}),
-                    __h('GestureDetector', {
+                    ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [new Padding({ "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 }, "child": new GestureDetector({ "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)), "child": new Container({ "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } }, "child": new Text({ "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') }, "data": s }) }) }) })]); } return out; })(),
+                    new Spacer({}),
+                    new GestureDetector({
                         "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a)),
-                        "child": __h('Container', {
+                        "child": new Container({
                             "padding": {
                               "left": 11.0,
                               "top": 5.0,
@@ -151,9 +152,9 @@ export class CommunityPage {
                                 "radius": 14.0
                               }
                             },
-                            "child": __h('Row', {
+                            "child": new Row({
                                 "children": [
-                                  __h('Text', {
+                                  new Text({
                                       "style": {
                                         "fontSize": 12.5,
                                         "fontWeight": "w600",
@@ -161,10 +162,10 @@ export class CommunityPage {
                                       },
                                       "data": "筛选"
                                     }),
-                                  __h('SizedBox', {
+                                  new SizedBox({
                                       "width": 3
                                     }),
-                                  __h('Icon', {
+                                  new Icon({
                                       "size": 14,
                                       "color": this._filterOpen ? kBrand : '#ff5c6270',
                                       "icon": "tune"
@@ -176,20 +177,20 @@ export class CommunityPage {
                   ]
                 })
             }),
-          ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
-          __h('Expanded', {
-              "child": (this._posts == null) ? __h('Center', { "child": __h('CircularProgressIndicator', {}) }) : __h(_ListContent, { "resetFilter": (...__a) => this._resetFilter(...__a), "openFilter": this._filterOpen, "toggleFilter": (...__a) => this._toggleFilter(...__a), "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) })
+          ...(this._listLoading ? [new LinearProgressIndicator({ "minHeight": 2 })] : []),
+          new Expanded({
+              "child": (this._posts == null) ? new Center({ "child": new CircularProgressIndicator({}) }) : new _ListContent({ "resetFilter": (...__a) => this._resetFilter(...__a), "openFilter": this._filterOpen, "toggleFilter": (...__a) => this._toggleFilter(...__a), "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) })
             })
         ]
       });
   }
   _separatorBuilder0(context, _) {
-      return __h('SizedBox', {
+      return new SizedBox({
         "width": 10
       });
   }
   _itemBuilder1(context, i) {
-      return __h(_ResourceCard, {
+      return new _ResourceCard({
         "resource": this._feed.resources[i],
         "onTap": () => { return _app_host_.invoke("openResource", [this._feed.resources[i].id]); }
       });
@@ -199,6 +200,7 @@ export class CommunityPage {
 // 组件 _ListContent
 export class _ListContent {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -222,7 +224,7 @@ export class _ListContent {
   build(context) {
     var posts = this.list;
     var filterOpen = this.openFilter;
-    return __h('Stack', {
+    return new Stack({
         "children": [
           __h('ListView', {
               "padding": {
@@ -232,10 +234,10 @@ export class _ListContent {
                 "bottom": 20.0
               },
               "children": [
-                ...(this.list.isEmpty ? [__h('Padding', { "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 }, "child": __h('Center', { "child": __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) }) })] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [__h('Padding', { "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 }, "child": __h(_PostCard, { "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) })]); } return out; })())
+                ...(this.list.isEmpty ? [new Padding({ "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 }, "child": new Center({ "child": new Text({ "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) }) })] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [new Padding({ "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 }, "child": new _PostCard({ "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) })]); } return out; })())
               ]
             }),
-          ...(this.openFilter ? [__h('Positioned', { "child": __h('GestureDetector', { "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)), "child": __h('Container', { "color": '#66000000' }) }), "factory": "fill" }), __h('Positioned', { "left": 0, "right": 0, "top": 0, "child": __h(_FilterPanel, { "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) })] : [])
+          ...(this.openFilter ? [new Positioned({ "child": new GestureDetector({ "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)), "child": new Container({ "color": '#66000000' }) }), "factory": "fill" }), new Positioned({ "left": 0, "right": 0, "top": 0, "child": new _FilterPanel({ "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) })] : [])
         ]
       });
   }
@@ -244,6 +246,7 @@ export class _ListContent {
 // 组件 _FilterPanel
 export class _FilterPanel {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -275,17 +278,17 @@ export class _FilterPanel {
     console.debug("[_FilterPanel] dispose");
   }
   _group(title, key, values, current) {
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "start",
         "children": [
-          __h('Padding', {
+          new Padding({
               "padding": {
                 "left": 0.0,
                 "top": 0.0,
                 "right": 0.0,
                 "bottom": 8.0
               },
-              "child": __h('Text', {
+              "child": new Text({
                   "style": {
                     "fontSize": 12.5,
                     "fontWeight": "w700",
@@ -294,52 +297,52 @@ export class _FilterPanel {
                   "data": title
                 })
             }),
-          __h('Wrap', {
+          new Wrap({
               "spacing": 8,
               "runSpacing": 8,
               "children": [
-                ...(() => { var out = []; for (let v of values) { out.push.apply(out, [__h('GestureDetector', { "onTap": this.__bindFn(0, [key, v], () => this.onPick(key, v)), "child": __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } }, "child": __h('Text', { "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') }, "data": v }) }) })]); } return out; })()
+                ...(() => { var out = []; for (let v of values) { out.push.apply(out, [new GestureDetector({ "onTap": this.__bindFn(0, [key, v], () => this.onPick(key, v)), "child": new Container({ "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((current == v) ? kBrand : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } }, "child": new Text({ "style": { "fontSize": 12, "fontWeight": "w500", "color": ((current == v) ? '#FFFFFF' : '#ff5c6270') }, "data": v }) }) })]); } return out; })()
               ]
             })
         ]
       });
   }
   build(context) {
-    return __h('Material', {
+    return new Material({
         "color": '#FFFFFF',
         "elevation": 8,
-        "child": __h('Padding', {
+        "child": new Padding({
             "padding": {
               "left": 16.0,
               "top": 16.0,
               "right": 16.0,
               "bottom": 14.0
             },
-            "child": __h('Column', {
+            "child": new Column({
                 "crossAxisAlignment": "start",
                 "children": [
                   this._group("排序方式", "sort", this.feed.sorts, this.sort),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 16
                     }),
                   this._group("内容类型", "type", this.feed.postTypes, this.type),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 16
                     }),
                   this._group("距离范围", "dist", this.feed.dists, this.dist),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 16
                     }),
                   this._group("价格区间", "price", this.feed.priceRanges, this.price),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 18
                     }),
-                  __h('Row', {
+                  new Row({
                       "children": [
-                        __h('Expanded', {
-                            "child": __h('GestureDetector', {
+                        new Expanded({
+                            "child": new GestureDetector({
                                 "onTap": this.__bindFn(1, [], (...__a) => this.onReset(...__a)),
-                                "child": __h('Container', {
+                                "child": new Container({
                                     "height": 42,
                                     "alignment": "center",
                                     "decoration": {
@@ -348,7 +351,7 @@ export class _FilterPanel {
                                         "radius": 21.0
                                       }
                                     },
-                                    "child": __h('Text', {
+                                    "child": new Text({
                                         "style": {
                                           "fontSize": 14,
                                           "fontWeight": "w600",
@@ -359,13 +362,13 @@ export class _FilterPanel {
                                   })
                               })
                           }),
-                        __h('SizedBox', {
+                        new SizedBox({
                             "width": 10
                           }),
-                        __h('Expanded', {
-                            "child": __h('GestureDetector', {
+                        new Expanded({
+                            "child": new GestureDetector({
                                 "onTap": this.__bindFn(2, [], (...__a) => this.onApply(...__a)),
-                                "child": __h('Container', {
+                                "child": new Container({
                                     "height": 42,
                                     "alignment": "center",
                                     "decoration": {
@@ -374,7 +377,7 @@ export class _FilterPanel {
                                         "radius": 21.0
                                       }
                                     },
-                                    "child": __h('Text', {
+                                    "child": new Text({
                                         "style": {
                                           "fontSize": 14,
                                           "fontWeight": "w600",
@@ -397,6 +400,7 @@ export class _FilterPanel {
 // 组件 _PostCard
 export class _PostCard {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -407,9 +411,9 @@ export class _PostCard {
     return ((n > 999) ? ((n / 1000)).toStringAsFixed(1) + "k" : n);
   }
   build(context) {
-    return __h('GestureDetector', {
+    return new GestureDetector({
         "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
-        "child": __h('Container', {
+        "child": new Container({
             "padding": {
               "left": 10.0,
               "top": 10.0,
@@ -422,14 +426,14 @@ export class _PostCard {
                 "radius": 14.0
               }
             },
-            "child": __h('Row', {
+            "child": new Row({
                 "crossAxisAlignment": "start",
                 "children": [
-                  __h('ClipRRect', {
+                  new ClipRRect({
                       "borderRadius": {
                         "radius": 10.0
                       },
-                      "child": __h('Image', {
+                      "child": new Image({
                           "width": 92,
                           "height": 92,
                           "fit": "cover",
@@ -438,16 +442,16 @@ export class _PostCard {
                           "src": this.post.img
                         })
                     }),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "width": 11
                     }),
-                  __h('Expanded', {
-                      "child": __h('SizedBox', {
+                  new Expanded({
+                      "child": new SizedBox({
                           "height": 92,
-                          "child": __h('Column', {
+                          "child": new Column({
                               "crossAxisAlignment": "start",
                               "children": [
-                                __h('Text', {
+                                new Text({
                                     "maxLines": 1,
                                     "overflow": "ellipsis",
                                     "style": {
@@ -456,11 +460,11 @@ export class _PostCard {
                                     },
                                     "data": this.post.title
                                   }),
-                                __h('SizedBox', {
+                                new SizedBox({
                                     "height": 5
                                   }),
-                                __h('Expanded', {
-                                    "child": __h('Text', {
+                                new Expanded({
+                                    "child": new Text({
                                         "maxLines": 2,
                                         "overflow": "ellipsis",
                                         "style": {
@@ -471,9 +475,9 @@ export class _PostCard {
                                         "data": this.post.sub
                                       })
                                   }),
-                                __h('Row', {
+                                new Row({
                                     "children": [
-                                      __h('Container', {
+                                      new Container({
                                           "padding": {
                                             "left": 5.0,
                                             "top": 1.0,
@@ -486,7 +490,7 @@ export class _PostCard {
                                               "radius": 5.0
                                             }
                                           },
-                                          "child": __h('Text', {
+                                          "child": new Text({
                                               "style": {
                                                 "fontSize": 10,
                                                 "color": '#ff5c6270'
@@ -494,26 +498,26 @@ export class _PostCard {
                                               "data": this.post.type
                                             })
                                         }),
-                                      __h('SizedBox', {
+                                      new SizedBox({
                                           "width": 6
                                         }),
-                                      __h('Text', {
+                                      new Text({
                                           "style": {
                                             "fontSize": 10.5,
                                             "color": '#ffa3a9b4'
                                           },
                                           "data": this.post.author + " · " + this.post.time
                                         }),
-                                      __h('Spacer', {}),
-                                      __h('Icon', {
+                                      new Spacer({}),
+                                      new Icon({
                                           "size": 13,
                                           "color": '#ffa3a9b4',
                                           "icon": "favorite_border"
                                         }),
-                                      __h('SizedBox', {
+                                      new SizedBox({
                                           "width": 3
                                         }),
-                                      __h('Text', {
+                                      new Text({
                                           "style": {
                                             "fontSize": 10.5,
                                             "color": '#ffa3a9b4'
@@ -532,7 +536,7 @@ export class _PostCard {
       });
   }
   _errorBuilder0(context, e) {
-      return __h('Container', {
+      return new Container({
         "width": 92,
         "height": 92,
         "color": '#ffe8ebf0'
@@ -543,6 +547,7 @@ export class _PostCard {
 // 组件 _ResourceCard
 export class _ResourceCard {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -550,9 +555,9 @@ export class _ResourceCard {
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
   build(context) {
-    return __h('GestureDetector', {
+    return new GestureDetector({
         "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
-        "child": __h('Container', {
+        "child": new Container({
             "width": 156,
             "clipBehavior": "antiAlias",
             "decoration": {
@@ -561,29 +566,29 @@ export class _ResourceCard {
                 "radius": 14.0
               }
             },
-            "child": __h('Column', {
+            "child": new Column({
                 "crossAxisAlignment": "start",
                 "children": [
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 68,
-                      "child": __h('Image', {
+                      "child": new Image({
                           "fit": "cover",
                           "errorBuilder": "_errorBuilder0",
                           "factory": "network",
                           "src": this.resource.img
                         })
                     }),
-                  __h('Padding', {
+                  new Padding({
                       "padding": {
                         "left": 9.0,
                         "top": 6.0,
                         "right": 9.0,
                         "bottom": 6.0
                       },
-                      "child": __h('Column', {
+                      "child": new Column({
                           "crossAxisAlignment": "start",
                           "children": [
-                            __h('Text', {
+                            new Text({
                                 "maxLines": 1,
                                 "overflow": "ellipsis",
                                 "style": {
@@ -592,10 +597,10 @@ export class _ResourceCard {
                                 },
                                 "data": this.resource.title
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 2
                               }),
-                            __h('Text', {
+                            new Text({
                                 "maxLines": 1,
                                 "overflow": "ellipsis",
                                 "style": {
@@ -613,7 +618,7 @@ export class _ResourceCard {
       });
   }
   _errorBuilder0(context, e) {
-      return __h('Container', {
+      return new Container({
         "height": 68,
         "color": '#ffe8ebf0'
       });

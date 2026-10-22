@@ -72,46 +72,47 @@
 
 ## 4. widget-class 协议重构（进行中）
 
-> 目标：不再让生成器判断「这个类是不是 widget」。所有有 JS 类的构造统一翻译成
+> 目标：不再让生成器判断「这个类是不是 widget」。所有构造统一翻译成
 > `new X({...})`；`__h` 下沉到 `flutter.js` 的宿主包装类内部；局部变量 / 字段 /
 > 列表 / 三目不再需要 widget 特判。
+>
+> 采用方案：**构造即实例 + 消费时归一化**（不做构造函数双模、不生成 XxxElement）。
 >
 > 分支：`feature/widget-class-protocol`
 > 起点：`5f3b5ac`（任务 9、局部 widget 变量、spread 修复已提交）
 
-### 4.1 运行时协议（向后兼容，先做）
+### 4.1 运行时协议
 
-- 新增 `__element(type, props)`：组件类 element 描述（`{type, props, children, element:true}`）。
-- `__h(type, props)`：`type` 是函数时返回 `__element(type, props)`，**不再实例化**。
-- `mini-react.mount` 实例化组件时传内部 token（`new el.type(props, children, '__jsui_internal__')`）。
-- 生成的组件 / 逻辑组件 / builder 代理类构造函数支持双模：
-  - 无内部 token → `return __element(ThisClass, args)`（用户代码构造得到 element）；
-  - 有内部 token → 正常初始化实例（reconciler 挂载）。
-- 旧产物（构造函数忽略额外参数、仍返回实例）保持可用。
+- `__element(type, props)`：组件类元素描述（`{type, props, children, element}`）。
+- `__h(type, props)`：`type` 是函数时返回 `__element(type, props)`，不实例化。
+- `__asElement(v)` / `__asElementList(v)`：组件实例按普通类语义构造后，父级消费
+  时折算成元素描述。判据是原型上有没有 `build`（组件类的语言级特征），
+  **不查类型名表**，也不需要 `toJson` / 内部 token / 特殊标记。
+- `mount` / `patch` 入口、`__h` 的每个 props 值（含数组）都走同一归一化。
+- 生成类构造函数恢复普通语义：`new CommunityPage(props)` 即实例，首行保留
+  `this.props = args`，供归一化还原元素 props。
 
-**验收**：现有 demo 全部页面行为不变；新增 TestWidget 不再空白。
+### 4.2 宿主包装类生成（已完成）
 
-### 4.2 宿主包装类生成
+- `flutter.js` 为 `hostWrapperTypes`（宿主 widget + 数据载体，排除逻辑组件 /
+  builder 代理）生成包装类：`class Text { constructor(props) { return __h('Text', props); } }`。
+- 数据载体 `InputDecoration` 同样生成包装类。
+- builder 命名构造类型（ListView 等）保持真实类，供 `.builder/.separated`
+  挂载；普通构造 / delegate 形态仍由翻译层发 `__h('ListView', ...)` 宿主结点。
 
-- `widget_module_builder` 为 `builtinWidgetTypes` 中所有宿主类型生成包装类：
-  `class Text { constructor(props) { return __h('Text', props); } }`。
-- 数据载体类型（`BottomNavigationBarItem` / `DropdownMenuItem` / `InputDecoration`）同样生成包装类。
-- builder 命名构造类型生成双模代理类：普通构造 → `__h('X', props)`；`.builder/.separated` → 代理实例。
-- `flutter.js` 导出全部宿主包装类。
+### 4.3 翻译器统一发射 `new`（已完成）
 
-**验收**：`flutter.js` 能直接 `new Text({data:'x'})` 得到 element；现有产物不受影响。
-
-### 4.3 翻译器统一发射 `new`
-
-- 有 JS 类的类型（宿主包装 / 组件 / 逻辑组件 / 代理）一律 `new Type(props)`；
-  无 JS 类的原生注入类型保留 `__h('Type', props)` 兜底。
+- 有 JS 类的类型（宿主包装 / 组件 / 逻辑组件 / 代理）→ `new Type(props)`；
+  无 JS 类的原生注入类型 → `__h('Type', props)` 兜底。
 - 宿主类型纳入 `usedWidgetPackages`，组件产物从 `flutter.js` import 对应类。
-- 删除 `widgetValueJs` / `_isWidgetValueExpr` 的局部变量特判，局部变量 / 字段 / 列表 / 三目
-  统一走类构造翻译。
-- 位置实参形参名、factory 名、事件分流规则保持不变。
+- 局部 widget 变量 / 字段 / 列表 / 三目的产物均为 `new`（如
+  `new Text({data: …})`、`new StatelessCard({…})`）。
+- 局部值翻译去掉「是不是 widget」的白名单：只排除已知模型类
+  （classTable 的 `!isComponent`）与值对象 / 结构化样式，其余类构造一律按
+  元素翻译（`_isNodeCtor` + `modelClassNames` + `isValueCtorName`）。
 
-**验收**：TestWidget 的 `Text text = Text()`、`StatelessCard card = ...`、`...items` 产物
-均为 `new`；页面与原生一致。
+**验收**：现有 demo 页面行为不变；TestWidget 的 `Text text = Text()`、
+`StatelessCard card = …`、`...items` 均为 `new` 且渲染正常。
 
 ### 4.4 清理与文档
 
@@ -123,8 +124,9 @@
 
 | 风险 | 处理 |
 |---|---|
-| 自定义组件构造对象上的字段访问（`card.title`） | element 描述只带 props；必要时用 Proxy 或文档声明限制 |
-| builder 代理双模构造 | 代理类按 `props.factory` 分流；保留现有 `build()` 展开逻辑 |
+| 自定义组件的用户代码构造会执行字段初始化（控制器 / Key 句柄） | 构造即实例；重复构造的实例随父级重建被丢弃，句柄由页面销毁兜底回收。后续可评估惰性初始化 |
+| builder 代理类型（ListView 等）无宿主包装类 | 普通构造 / delegate 形态仍发 `__h('ListView', …)` 宿主结点；`.builder/.separated` 才 `new ListView(props)` |
 | 数据载体 / InputDecoration | 生成包装类，保持宿主 renderer 读取方式不变 |
+| 宿主包装类名与本地组件类名同名 | 暂未处理（JS 会重复声明）；命名冲突时需单独约定 |
 | const widget 身份 | 仍按 props/key diff，不依赖对象身份 |
-| 旧产物兼容 | `__h` 函数类型只返回描述；旧类忽略内部 token 仍按实例工作 |
+| 旧产物兼容 | 旧产物里的 `__h(X, props)` / 实例构造继续按原语义工作 |

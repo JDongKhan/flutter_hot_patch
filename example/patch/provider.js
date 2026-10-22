@@ -2,7 +2,7 @@
 // package 模块（package: provider）：由 hot_patch_generator 生成
 // 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件
 
-import { __h } from 'flutter.js';
+import { __h, __asElement } from 'flutter.js';
 
 
 export class ChangeNotifierProvider {
@@ -64,10 +64,14 @@ export class MultiProvider {
     var provs = this.props.providers || [];
     var node = this.props.child;
     for (var i = provs.length - 1; i >= 0; i--) {
+      // providers 项可能是元素描述，也可能是用户直接 new 出来的组件实例
+      // （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})`
+      // 不经过 __h）——统一折算后再取 type / props。
+      var prov = __asElement(provs[i]);
       var p = {};
-      for (var k in provs[i].props) { p[k] = provs[i].props[k]; }
+      for (var k in prov.props) { p[k] = prov.props[k]; }
       p.child = node;
-      node = __h(provs[i].type, p);
+      node = __h(prov.type, p);
     }
     return node;
   }

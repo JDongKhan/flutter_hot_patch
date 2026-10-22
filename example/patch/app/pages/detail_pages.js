@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { kAvatarImg, kBanners } from '../service/app_data.js';
-import { __h } from '../../flutter.js';
+import { Container, GestureDetector, Text } from '../../flutter.js';
 
 export const kBrand = '#ff0e7afb';
 export const kPrice = '#ffff5a36';
@@ -12,6 +12,7 @@ const _steps = ["提交订单", "支付成功", "商家发货", "已完成"];
 // 组件 MiniButton
 export class MiniButton {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -20,9 +21,9 @@ export class MiniButton {
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
   build(context) {
-    return __h('GestureDetector', {
+    return new GestureDetector({
         "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
-        "child": __h('Container', {
+        "child": new Container({
             "padding": {
               "left": 14.0,
               "top": 0.0,
@@ -42,7 +43,7 @@ export class MiniButton {
                 }
               }
             },
-            "child": __h('Text', {
+            "child": new Text({
                 "style": {
                   "fontSize": 12,
                   "color": (this.primary ? '#FFFFFF' : '#ff4d5462')

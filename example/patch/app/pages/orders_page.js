@@ -7,11 +7,12 @@ import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { ListView, __h } from '../../flutter.js';
+import { Center, CircularProgressIndicator, ClipRRect, Column, Container, Divider, Expanded, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text } from '../../flutter.js';
 
 // 组件 OrdersPage
 export class OrdersPage {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
     this._service = new AppService({});
     this._feed = null;
@@ -52,50 +53,50 @@ export class OrdersPage {
   }
   build(context) {
     if ((this._feed == null)) {
-      return __h('Center', {
-          "child": __h('CircularProgressIndicator', {})
+      return new Center({
+          "child": new CircularProgressIndicator({})
         });
     }
-    return __h('Column', {
+    return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          __h('Container', {
+          new Container({
               "color": '#FFFFFF',
-              "child": __h('SafeArea', {
+              "child": new SafeArea({
                   "bottom": false,
-                  "child": __h('Padding', {
+                  "child": new Padding({
                       "padding": {
                         "left": 8.0,
                         "top": 6.0,
                         "right": 8.0,
                         "bottom": 10.0
                       },
-                      "child": __h('SingleChildScrollView', {
+                      "child": new SingleChildScrollView({
                           "scrollDirection": "horizontal",
-                          "child": __h('Row', {
+                          "child": new Row({
                               "children": [
-                                ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [__h('Padding', { "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 }, "child": __h('GestureDetector', { "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)), "child": __h('Container', { "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } }, "child": __h('Text', { "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "data": s }) }) }) })]); } return out; })()
+                                ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [new Padding({ "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 }, "child": new GestureDetector({ "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)), "child": new Container({ "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } }, "child": new Text({ "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "data": s }) }) }) })]); } return out; })()
                               ]
                             })
                         })
                     })
                 })
             }),
-          ...(this._listLoading ? [__h('LinearProgressIndicator', { "minHeight": 2 })] : []),
-          __h('Expanded', {
-              "child": (this._orders == null) ? __h('Center', { "child": __h('CircularProgressIndicator', {}) }) : this._orders.isEmpty ? __h('Center', { "child": __h('Text', { "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "该状态下暂无订单" }) }) : __h(ListView, { "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1", "factory": "separated" })
+          ...(this._listLoading ? [new LinearProgressIndicator({ "minHeight": 2 })] : []),
+          new Expanded({
+              "child": (this._orders == null) ? new Center({ "child": new CircularProgressIndicator({}) }) : this._orders.isEmpty ? new Center({ "child": new Text({ "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "该状态下暂无订单" }) }) : new ListView({ "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1", "factory": "separated" })
             })
         ]
       });
   }
   _separatorBuilder0(context, _) {
-      return __h('SizedBox', {
+      return new SizedBox({
         "height": 10
       });
   }
   _itemBuilder1(context, i) {
       var o = this._orders[i];
-      return __h(_OrderCard, {
+      return new _OrderCard({
         "order": o,
         "statusColor": this._statusColor(o.status),
         "onOpen": () => { return _app_host_.invoke("openOrder", [o.no]); }
@@ -106,6 +107,7 @@ export class OrdersPage {
 // 组件 _OrderCard
 export class _OrderCard {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -115,35 +117,35 @@ export class _OrderCard {
   }
   build(context) {
     var pending = (this.order.status == "待付款");
-    return __h('GestureDetector', {
+    return new GestureDetector({
         "onTap": this.__bindFn(0, [], (...__a) => this.onOpen(...__a)),
-        "child": __h('Container', {
+        "child": new Container({
             "decoration": {
               "color": '#FFFFFF',
               "borderRadius": {
                 "radius": 14.0
               }
             },
-            "child": __h('Column', {
+            "child": new Column({
                 "children": [
-                  __h('Padding', {
+                  new Padding({
                       "padding": {
                         "left": 14.0,
                         "top": 12.0,
                         "right": 14.0,
                         "bottom": 10.0
                       },
-                      "child": __h('Row', {
+                      "child": new Row({
                           "children": [
-                            __h('Text', {
+                            new Text({
                                 "style": {
                                   "fontSize": 12,
                                   "color": '#ff8b909a'
                                 },
                                 "data": "订单号 " + this.order.no
                               }),
-                            __h('Spacer', {}),
-                            __h('Text', {
+                            new Spacer({}),
+                            new Text({
                                 "style": {
                                   "fontSize": 12.5,
                                   "fontWeight": "w700"
@@ -153,25 +155,25 @@ export class _OrderCard {
                           ]
                         })
                     }),
-                  __h('Divider', {
+                  new Divider({
                       "height": 1,
                       "color": '#fff0f2f6'
                     }),
-                  __h('Padding', {
+                  new Padding({
                       "padding": {
                         "left": 12.0,
                         "top": 12.0,
                         "right": 12.0,
                         "bottom": 12.0
                       },
-                      "child": __h('Row', {
+                      "child": new Row({
                           "crossAxisAlignment": "start",
                           "children": [
-                            __h('ClipRRect', {
+                            new ClipRRect({
                                 "borderRadius": {
                                   "radius": 10.0
                                 },
-                                "child": __h('Image', {
+                                "child": new Image({
                                     "width": 66,
                                     "height": 66,
                                     "fit": "cover",
@@ -180,14 +182,14 @@ export class _OrderCard {
                                     "src": this.order.img
                                   })
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "width": 11
                               }),
-                            __h('Expanded', {
-                                "child": __h('Column', {
+                            new Expanded({
+                                "child": new Column({
                                     "crossAxisAlignment": "start",
                                     "children": [
-                                      __h('Text', {
+                                      new Text({
                                           "maxLines": 1,
                                           "overflow": "ellipsis",
                                           "style": {
@@ -196,10 +198,10 @@ export class _OrderCard {
                                           },
                                           "data": this.order.title
                                         }),
-                                      __h('SizedBox', {
+                                      new SizedBox({
                                           "height": 5
                                         }),
-                                      __h('Text', {
+                                      new Text({
                                           "maxLines": 1,
                                           "overflow": "ellipsis",
                                           "style": {
@@ -208,10 +210,10 @@ export class _OrderCard {
                                           },
                                           "data": this.order.spec
                                         }),
-                                      __h('SizedBox', {
+                                      new SizedBox({
                                           "height": 6
                                         }),
-                                      __h('Text', {
+                                      new Text({
                                           "style": {
                                             "fontSize": 11,
                                             "color": '#ffa3a9b4'
@@ -224,27 +226,27 @@ export class _OrderCard {
                           ]
                         })
                     }),
-                  __h('Divider', {
+                  new Divider({
                       "height": 1,
                       "color": '#fff0f2f6'
                     }),
-                  __h('Padding', {
+                  new Padding({
                       "padding": {
                         "left": 14.0,
                         "top": 10.0,
                         "right": 12.0,
                         "bottom": 12.0
                       },
-                      "child": __h('Row', {
+                      "child": new Row({
                           "children": [
-                            __h('Text', {
+                            new Text({
                                 "style": {
                                   "fontSize": 12.5,
                                   "color": '#ff5c6270'
                                 },
                                 "data": "合计 "
                               }),
-                            __h('Text', {
+                            new Text({
                                 "style": {
                                   "fontSize": 16,
                                   "fontWeight": "w700",
@@ -252,8 +254,8 @@ export class _OrderCard {
                                 },
                                 "data": "￥" + this.order.price
                               }),
-                            __h('Spacer', {}),
-                            ...(pending ? [__h(MiniButton, { "label": "取消", "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), __h('SizedBox', { "width": 8 }), __h(MiniButton, { "label": "去支付", "primary": true, "onTap": this.onOpen })] : [__h(MiniButton, { "label": "查看详情", "onTap": this.onOpen })])
+                            new Spacer({}),
+                            ...(pending ? [new MiniButton({ "label": "取消", "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), new SizedBox({ "width": 8 }), new MiniButton({ "label": "去支付", "primary": true, "onTap": this.onOpen })] : [new MiniButton({ "label": "查看详情", "onTap": this.onOpen })])
                           ]
                         })
                     })
@@ -263,7 +265,7 @@ export class _OrderCard {
       });
   }
   _errorBuilder0(context, e) {
-      return __h('Container', {
+      return new Container({
         "width": 66,
         "height": 66,
         "color": '#ffe8ebf0'

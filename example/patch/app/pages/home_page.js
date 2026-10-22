@@ -7,11 +7,12 @@ import { HomeFeed } from '../model/app_models.js';
 import { HomeBanner } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
-import { __h } from '../../flutter.js';
+import { Center, CircularProgressIndicator, ClipRRect, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, Icon, Image, InkWell, Padding, Positioned, Row, SafeArea, SizedBox, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text, __h } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._service = new AppService({});
     this._feed = null;
   }
@@ -26,49 +27,49 @@ export class HomePage {
   build(context) {
     var feed = this._feed;
     if ((feed == null)) {
-      return __h('Center', {
-          "child": __h('CircularProgressIndicator', {})
+      return new Center({
+          "child": new CircularProgressIndicator({})
         });
     }
     var banners = this._feed.banners;
     var grid = this._feed.grid;
     var spots = this._feed.spots;
     var adImg = this._feed.adImg;
-    return __h('Container', {
+    return new Container({
         "color": '#fff4f5f7',
-        "child": __h('EasyRefresh', {
+        "child": new EasyRefresh({
             "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a)),
-            "child": __h('CustomScrollView', {
+            "child": new CustomScrollView({
                 "slivers": [
-                  __h('SliverToBoxAdapter', {
-                      "child": __h('Column', {
+                  new SliverToBoxAdapter({
+                      "child": new Column({
                           "crossAxisAlignment": "stretch",
                           "children": [
-                            __h(HomeHeader, {}),
-                            __h('SizedBox', {
+                            new HomeHeader({}),
+                            new SizedBox({
                                 "height": 12
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 150,
                                 "child": __h('PageView', {
                                     "children": [
-                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h(BannerSlide, { "banner": this._feed.banners[i] })]); } return out; })()
+                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({ "banner": this._feed.banners[i] })]); } return out; })()
                                     ]
                                   })
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 10
                               }),
-                            __h('Row', {
+                            new Row({
                                 "mainAxisAlignment": "center",
                                 "children": [
-                                  ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [__h('Container', { "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "width": 6, "height": 6, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
+                                  ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new Container({ "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "width": 6, "height": 6, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
                                 ]
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 12
                               }),
-                            __h('Container', {
+                            new Container({
                                 "margin": {
                                   "left": 12.0,
                                   "top": 0.0,
@@ -97,37 +98,37 @@ export class HomePage {
                                     "shrinkWrap": true,
                                     "physics": "NeverScrollableScrollPhysics",
                                     "children": [
-                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [__h(GridCell, { "entry": this._feed.grid[i] })]); } return out; })()
+                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({ "entry": this._feed.grid[i] })]); } return out; })()
                                     ]
                                   })
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 12
                               }),
-                            __h('Container', {
+                            new Container({
                                 "margin": {
                                   "left": 12.0,
                                   "top": 0.0,
                                   "right": 12.0,
                                   "bottom": 0.0
                                 },
-                                "child": __h(PromoCard, {
+                                "child": new PromoCard({
                                     "img": this._feed.adImg
                                   })
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 16
                               }),
-                            __h('Padding', {
+                            new Padding({
                                 "padding": {
                                   "left": 14.0,
                                   "top": 0.0,
                                   "right": 14.0,
                                   "bottom": 0.0
                                 },
-                                "child": __h('Row', {
+                                "child": new Row({
                                     "children": [
-                                      __h('Container', {
+                                      new Container({
                                           "width": 4,
                                           "height": 16,
                                           "decoration": {
@@ -137,10 +138,10 @@ export class HomePage {
                                             }
                                           }
                                         }),
-                                      __h('SizedBox', {
+                                      new SizedBox({
                                           "width": 8
                                         }),
-                                      __h('Text', {
+                                      new Text({
                                           "style": {
                                             "fontSize": 17,
                                             "fontWeight": "w700",
@@ -148,8 +149,8 @@ export class HomePage {
                                           },
                                           "data": "景点推荐"
                                         }),
-                                      __h('Spacer', {}),
-                                      __h('Text', {
+                                      new Spacer({}),
+                                      new Text({
                                           "style": {
                                             "fontSize": 12,
                                             "color": '#ff8a909e'
@@ -159,13 +160,13 @@ export class HomePage {
                                     ]
                                   })
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 10
                               })
                           ]
                         })
                     }),
-                  __h('SliverPadding', {
+                  new SliverPadding({
                       "padding": {
                         "left": 12.0,
                         "top": 0.0,
@@ -186,8 +187,8 @@ export class HomePage {
                           }
                         })
                     }),
-                  __h('SliverToBoxAdapter', {
-                      "child": __h('SizedBox', {
+                  new SliverToBoxAdapter({
+                      "child": new SizedBox({
                           "height": 20
                         })
                     })
@@ -197,7 +198,7 @@ export class HomePage {
       });
   }
   _builder0(context, index) {
-      return __h(SpotCard, {
+      return new SpotCard({
         "spot": this._feed.spots[index]
       });
   }
@@ -205,7 +206,8 @@ export class HomePage {
 
 // 组件 HomeHeader
 export class HomeHeader {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
   }
   openSearch() {
     _app_host_.invoke("openSearch", []);
@@ -217,7 +219,7 @@ export class HomeHeader {
     _app_host_.invoke("toast", ["定位：上海市 · 点击切换城市"]);
   }
   build(context) {
-    return __h('Container', {
+    return new Container({
         "padding": {
           "left": 16.0,
           "top": 14.0,
@@ -235,26 +237,26 @@ export class HomeHeader {
             "end": "bottomRight"
           }
         },
-        "child": __h('SafeArea', {
+        "child": new SafeArea({
             "bottom": false,
-            "child": __h('Column', {
+            "child": new Column({
                 "crossAxisAlignment": "start",
                 "children": [
-                  __h('Row', {
+                  new Row({
                       "children": [
-                        __h('InkWell', {
+                        new InkWell({
                             "onTap": this.__bindFn(0, [], (...__a) => this.openLocation(...__a)),
-                            "child": __h('Row', {
+                            "child": new Row({
                                 "children": [
-                                  __h('Icon', {
+                                  new Icon({
                                       "color": '#ffffffff',
                                       "size": 18,
                                       "icon": "location_on"
                                     }),
-                                  __h('SizedBox', {
+                                  new SizedBox({
                                       "width": 2
                                     }),
-                                  __h('Text', {
+                                  new Text({
                                       "style": {
                                         "color": '#ffffffff',
                                         "fontSize": 15,
@@ -262,7 +264,7 @@ export class HomeHeader {
                                       },
                                       "data": "上海"
                                     }),
-                                  __h('Icon', {
+                                  new Icon({
                                       "color": '#ffffffff',
                                       "size": 18,
                                       "icon": "keyboard_arrow_down"
@@ -270,38 +272,38 @@ export class HomeHeader {
                                 ]
                               })
                           }),
-                        __h('Spacer', {}),
-                        __h('InkWell', {
+                        new Spacer({}),
+                        new InkWell({
                             "onTap": this.__bindFn(1, [], (...__a) => this.openMessages(...__a)),
                             "borderRadius": {
                               "radius": 18.0
                             },
-                            "child": __h('Stack', {
+                            "child": new Stack({
                                 "children": [
-                                  __h('Padding', {
+                                  new Padding({
                                       "padding": {
                                         "left": 4.0,
                                         "top": 4.0,
                                         "right": 4.0,
                                         "bottom": 4.0
                                       },
-                                      "child": __h('Icon', {
+                                      "child": new Icon({
                                           "color": '#ffffffff',
                                           "size": 24,
                                           "icon": "notifications"
                                         })
                                     }),
-                                  __h('Positioned', {
+                                  new Positioned({
                                       "right": 3,
                                       "top": 3,
-                                      "child": __h('DecoratedBox', {
+                                      "child": new DecoratedBox({
                                           "decoration": {
                                             "color": '#ffff5a36',
                                             "borderRadius": {
                                               "radius": 4.0
                                             }
                                           },
-                                          "child": __h('SizedBox', {
+                                          "child": new SizedBox({
                                               "width": 8,
                                               "height": 8
                                             })
@@ -312,15 +314,15 @@ export class HomeHeader {
                           })
                       ]
                     }),
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 12
                     }),
-                  __h('InkWell', {
+                  new InkWell({
                       "onTap": this.__bindFn(2, [], (...__a) => this.openSearch(...__a)),
                       "borderRadius": {
                         "radius": 20.0
                       },
-                      "child": __h('Container', {
+                      "child": new Container({
                           "height": 42,
                           "padding": {
                             "left": 14.0,
@@ -334,25 +336,25 @@ export class HomeHeader {
                               "radius": 21.0
                             }
                           },
-                          "child": __h('Row', {
+                          "child": new Row({
                               "children": [
-                                __h('Icon', {
+                                new Icon({
                                     "color": '#ff9aa0ac',
                                     "size": 20,
                                     "icon": "search"
                                   }),
-                                __h('SizedBox', {
+                                new SizedBox({
                                     "width": 6
                                   }),
-                                __h('Text', {
+                                new Text({
                                     "style": {
                                       "fontSize": 14,
                                       "color": '#ff9aa0ac'
                                     },
                                     "data": "搜索目的地 / 关键词"
                                   }),
-                                __h('Spacer', {}),
-                                __h('Text', {
+                                new Spacer({}),
+                                new Text({
                                     "style": {
                                       "fontSize": 13,
                                       "color": '#ff0e7afb',
@@ -374,6 +376,7 @@ export class HomeHeader {
 // 组件 BannerSlide
 export class BannerSlide {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -383,31 +386,31 @@ export class BannerSlide {
     _app_host_.invoke("toast", [this.banner.title]);
   }
   build(context) {
-    return __h('Padding', {
+    return new Padding({
         "padding": {
           "left": 12.0,
           "top": 0.0,
           "right": 12.0,
           "bottom": 0.0
         },
-        "child": __h('InkWell', {
+        "child": new InkWell({
             "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
             "borderRadius": {
               "radius": 14.0
             },
-            "child": __h('ClipRRect', {
+            "child": new ClipRRect({
                 "borderRadius": {
                   "radius": 14.0
                 },
-                "child": __h('Stack', {
+                "child": new Stack({
                     "fit": "expand",
                     "children": [
-                      __h('Image', {
+                      new Image({
                           "fit": "cover",
                           "factory": "network",
                           "src": this.banner.img
                         }),
-                      __h('Container', {
+                      new Container({
                           "decoration": {
                             "gradient": {
                               "kind": "linear",
@@ -420,14 +423,14 @@ export class BannerSlide {
                             }
                           }
                         }),
-                      __h('Positioned', {
+                      new Positioned({
                           "left": 14,
                           "right": 14,
                           "bottom": 14,
-                          "child": __h('Column', {
+                          "child": new Column({
                               "crossAxisAlignment": "start",
                               "children": [
-                                __h('Text', {
+                                new Text({
                                     "style": {
                                       "color": '#ffffffff',
                                       "fontSize": 17,
@@ -435,10 +438,10 @@ export class BannerSlide {
                                     },
                                     "data": this.banner.title
                                   }),
-                                __h('SizedBox', {
+                                new SizedBox({
                                     "height": 4
                                   }),
-                                __h('Text', {
+                                new Text({
                                     "style": {
                                       "color": '#e6ffffff',
                                       "fontSize": 12
@@ -459,6 +462,7 @@ export class BannerSlide {
 // 组件 GridCell
 export class GridCell {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -468,21 +472,21 @@ export class GridCell {
     _app_host_.invoke("toast", [this.entry.title + " 频道"]);
   }
   build(context) {
-    return __h('InkWell', {
+    return new InkWell({
         "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
-        "child": __h('Column', {
+        "child": new Column({
             "mainAxisAlignment": "center",
             "children": [
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 22
                   },
                   "data": this.entry.emoji
                 }),
-              __h('SizedBox', {
+              new SizedBox({
                   "height": 6
                 }),
-              __h('Text', {
+              new Text({
                   "style": {
                     "fontSize": 12,
                     "color": '#ff4d5462'
@@ -498,6 +502,7 @@ export class GridCell {
 // 组件 SpotCard
 export class SpotCard {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -507,12 +512,12 @@ export class SpotCard {
     _app_host_.invoke("openSpot", [this.spot.id]);
   }
   build(context) {
-    return __h('InkWell', {
+    return new InkWell({
         "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
         "borderRadius": {
           "radius": 14.0
         },
-        "child": __h('Container', {
+        "child": new Container({
             "decoration": {
               "color": '#ffffffff',
               "borderRadius": {
@@ -520,23 +525,23 @@ export class SpotCard {
               }
             },
             "clipBehavior": "antiAlias",
-            "child": __h('Column', {
+            "child": new Column({
                 "crossAxisAlignment": "start",
                 "children": [
-                  __h('SizedBox', {
+                  new SizedBox({
                       "height": 96,
-                      "child": __h('Stack', {
+                      "child": new Stack({
                           "fit": "expand",
                           "children": [
-                            __h('Image', {
+                            new Image({
                                 "fit": "cover",
                                 "factory": "network",
                                 "src": this.spot.img
                               }),
-                            __h('Positioned', {
+                            new Positioned({
                                 "left": 8,
                                 "top": 8,
-                                "child": __h('Container', {
+                                "child": new Container({
                                     "padding": {
                                       "left": 6.0,
                                       "top": 2.0,
@@ -549,7 +554,7 @@ export class SpotCard {
                                         "radius": 6.0
                                       }
                                     },
-                                    "child": __h('Text', {
+                                    "child": new Text({
                                         "style": {
                                           "color": '#ffffffff',
                                           "fontSize": 10,
@@ -562,17 +567,17 @@ export class SpotCard {
                           ]
                         })
                     }),
-                  __h('Padding', {
+                  new Padding({
                       "padding": {
                         "left": 10.0,
                         "top": 8.0,
                         "right": 10.0,
                         "bottom": 10.0
                       },
-                      "child": __h('Column', {
+                      "child": new Column({
                           "crossAxisAlignment": "start",
                           "children": [
-                            __h('Text', {
+                            new Text({
                                 "maxLines": 1,
                                 "overflow": "ellipsis",
                                 "style": {
@@ -582,10 +587,10 @@ export class SpotCard {
                                 },
                                 "data": this.spot.title
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 4
                               }),
-                            __h('Text', {
+                            new Text({
                                 "maxLines": 1,
                                 "overflow": "ellipsis",
                                 "style": {
@@ -594,12 +599,12 @@ export class SpotCard {
                                 },
                                 "data": this.spot.sub
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "height": 8
                               }),
-                            __h('Row', {
+                            new Row({
                                 "children": [
-                                  __h('Text', {
+                                  new Text({
                                       "style": {
                                         "fontSize": 11,
                                         "color": '#ffff5a36',
@@ -607,7 +612,7 @@ export class SpotCard {
                                       },
                                       "data": "¥"
                                     }),
-                                  __h('Text', {
+                                  new Text({
                                       "style": {
                                         "fontSize": 17,
                                         "color": '#ffff5a36',
@@ -615,8 +620,8 @@ export class SpotCard {
                                       },
                                       "data": this.spot.price
                                     }),
-                                  __h('Spacer', {}),
-                                  __h('Text', {
+                                  new Spacer({}),
+                                  new Text({
                                       "style": {
                                         "fontSize": 10,
                                         "color": '#ff9aa0ac'
@@ -638,6 +643,7 @@ export class SpotCard {
 // 组件 PromoCard
 export class PromoCard {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -647,32 +653,32 @@ export class PromoCard {
     _app_host_.invoke("open", ["https://flutter.dev", "活动详情"]);
   }
   build(context) {
-    return __h('InkWell', {
+    return new InkWell({
         "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
         "borderRadius": {
           "radius": 14.0
         },
-        "child": __h('SizedBox', {
+        "child": new SizedBox({
             "height": 96,
-            "child": __h('ClipRRect', {
+            "child": new ClipRRect({
                 "borderRadius": {
                   "radius": 14.0
                 },
-                "child": __h('Stack', {
+                "child": new Stack({
                     "fit": "expand",
                     "children": [
-                      __h('Image', {
+                      new Image({
                           "fit": "cover",
                           "factory": "network",
                           "src": this.img
                         }),
-                      __h('Positioned', {
+                      new Positioned({
                           "left": 16,
                           "top": 22,
-                          "child": __h('Column', {
+                          "child": new Column({
                               "crossAxisAlignment": "start",
                               "children": [
-                                __h('Text', {
+                                new Text({
                                     "style": {
                                       "color": '#ffffffff',
                                       "fontSize": 16,
@@ -680,10 +686,10 @@ export class PromoCard {
                                     },
                                     "data": "热气球季 · 限时特惠"
                                   }),
-                                __h('SizedBox', {
+                                new SizedBox({
                                     "height": 6
                                   }),
-                                __h('Container', {
+                                new Container({
                                     "padding": {
                                       "left": 10.0,
                                       "top": 4.0,
@@ -696,7 +702,7 @@ export class PromoCard {
                                         "radius": 12.0
                                       }
                                     },
-                                    "child": __h('Text', {
+                                    "child": new Text({
                                         "style": {
                                           "fontSize": 11,
                                           "color": '#ff0e7afb',

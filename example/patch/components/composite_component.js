@@ -3,55 +3,56 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.js';
-import { __h } from '../flutter.js';
+import { Column, ElevatedButton, SizedBox, Text, __h } from '../flutter.js';
 
 // 组件 DashboardCard
 export class DashboardCard {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._ticks = 0;
   }
   tick() {
     this.setState(() => { this._ticks += 1; });
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 22,
                 "fontWeight": "w600"
               },
               "data": "Dashboard (JS)"
             }),
-          __h('Text', {
+          new Text({
               "data": "ticks = " + this._ticks
             }),
-          __h(BannerCard, {}),
-          __h('SizedBox', {
+          new BannerCard({}),
+          new SizedBox({
               "height": 12
             }),
           __h('_LabeledDivider', {
               "text": "private widget",
-              "child": __h('Text', {
+              "child": new Text({
                   "data": "native child slot"
                 })
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 8
             }),
-          __h(LabeledDivider, {
+          new LabeledDivider({
               "text": "public widget"
             }),
-          __h('SizedBox', {
+          new SizedBox({
               "height": 12
             }),
-          __h('ElevatedButton', {
+          new ElevatedButton({
               "onPressed": this.__bindFn(0, [], (...__a) => this.tick(...__a)),
               "style": {
                 "backgroundColor": '#FF9800',
                 "foregroundColor": '#FFFFFF'
               },
-              "child": __h('Text', {
+              "child": new Text({
                   "data": "Tick"
                 })
             })
@@ -63,6 +64,7 @@ export class DashboardCard {
 // 组件 LabeledDivider
 export class LabeledDivider {
   constructor(args) {
+    this.props = args || {};
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -70,10 +72,10 @@ export class LabeledDivider {
     this.child = (args && args.child !== undefined) ? args.child : null;
   }
   build(context) {
-    return __h('Column', {
+    return new Column({
         "mainAxisSize": "min",
         "children": [
-          __h('Text', {
+          new Text({
               "style": {
                 "fontSize": 12,
                 "color": '#607D8B'

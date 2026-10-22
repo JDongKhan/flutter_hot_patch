@@ -4,12 +4,13 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
+import { Card, Column, ElevatedButton, Padding, Row, SizedBox, Text } from '../flutter.js';
 import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
-import { __h } from '../flutter.js';
 
 // 组件 ProviderCard
 export class ProviderCard {
-  constructor() {
+  constructor(args) {
+    this.props = args || {};
     this._modelA = new CounterVm({});
     this._modelB = new NetworkVm({});
   }
@@ -23,78 +24,78 @@ export class ProviderCard {
     this._modelB.loadUserInfo({"h": 1});
   }
   build(context) {
-    return __h('Card', {
-        "child": __h('Padding', {
+    return new Card({
+        "child": new Padding({
             "padding": {
               "left": 16.0,
               "top": 16.0,
               "right": 16.0,
               "bottom": 16.0
             },
-            "child": __h(MultiProvider, {
+            "child": new MultiProvider({
                 "providers": [
-                  __h(ChangeNotifierProvider, {
+                  new ChangeNotifierProvider({
                       "create": this._modelA,
                       "model": "CounterVm"
                     }),
-                  __h(ChangeNotifierProvider, {
+                  new ChangeNotifierProvider({
                       "value": this._modelB,
                       "factory": "value",
                       "model": "NetworkVm"
                     })
                 ],
-                "child": __h('Column', {
+                "child": new Column({
                     "mainAxisSize": "min",
                     "children": [
                       this._buildText(),
                       this._modelA.buildText(),
-                      __h(Consumer, {
+                      new Consumer({
                           "builder": "_builder0",
                           "model": "CounterVm"
                         }),
-                      __h('Text', {
+                      new Text({
                           "data": "MultiProvider · 两个模型各自局部重建"
                         }),
-                      __h('SizedBox', {
+                      new SizedBox({
                           "height": 8
                         }),
-                      __h(Consumer, {
+                      new Consumer({
                           "builder": "_builder1",
                           "model": "NetworkVm"
                         }),
-                      __h('Row', {
+                      new Row({
                           "mainAxisAlignment": "center",
                           "children": [
-                            __h('ElevatedButton', {
+                            new ElevatedButton({
                                 "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a)),
-                                "child": __h('Text', {
+                                "child": new Text({
                                     "data": "加载用户信息"
                                   })
                               })
                           ]
                         }),
-                      __h('SizedBox', {
+                      new SizedBox({
                           "height": 8
                         }),
-                      __h(Consumer, {
+                      new Consumer({
                           "builder": "_builder2",
                           "model": "CounterVm"
                         }),
-                      __h('Row', {
+                      new Row({
                           "mainAxisAlignment": "center",
                           "children": [
-                            __h('ElevatedButton', {
+                            new ElevatedButton({
                                 "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a)),
-                                "child": __h('Text', {
+                                "child": new Text({
                                     "data": "B +1"
                                   })
                               }),
-                            __h('SizedBox', {
+                            new SizedBox({
                                 "width": 12
                               }),
-                            __h('ElevatedButton', {
+                            new ElevatedButton({
                                 "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a)),
-                                "child": __h('Text', {
+                                "child": new Text({
                                     "data": "B Reset"
                                   })
                               })
@@ -107,7 +108,7 @@ export class ProviderCard {
       });
   }
   _buildText() {
-    return __h('Text', {
+    return new Text({
         "data": "test 1"
       });
   }
@@ -133,7 +134,7 @@ export class ProviderCard {
     for (let i = 0; (i < this._modelA.count); (i++)) {
       dots = dots + "·";
     }
-    return __h('Text', {
+    return new Text({
         "data": label + dots
       });
   }
@@ -144,7 +145,7 @@ export class ProviderCard {
       return this._buildBadge();
   }
   _builder1(context, value) {
-      return __h('Text', {
+      return new Text({
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",
@@ -154,7 +155,7 @@ export class ProviderCard {
       });
   }
   _builder2(context, value) {
-      return __h('Text', {
+      return new Text({
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",

@@ -5,6 +5,7 @@ import 'package:build/build.dart' show log;
 import '../../shared/js_widget_defs.dart';
 import 'js_translator.dart';
 import 'js_value.dart';
+import 'value_forms.dart';
 import 'widget_json.dart';
 
 // ===========================================================================
@@ -135,15 +136,15 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     this.hostMethods = const {},
     this.jsClassWidgets = const {},
     this.delegateClassWidgets = const {},
-    this.widgetClassNames = const {},
+    this.modelClassNames = const {},
   });
 
-  /// 本文件 / import 可见的 **widget 类**（classTable 里 isComponent 的类）。
-  /// 用于区分「局部 widget 变量初始化」与「模型构造」——没有它就只能按
-  /// 大小写猜，`User()` 会被误当成元素。
-  final Set<String> widgetClassNames;
+  /// 本文件 / import 可见的**普通类（模型）**名（classTable 里 !isComponent）。
+  /// 值位置上的构造只排除这些类与值对象，其余一律按组件构造翻译——不再维护
+  /// 「哪些类型是 widget」的白名单。
+  final Set<String> modelClassNames;
 
-  /// 局部 widget 值 → JS 元素源码；不是可识别 widget 构造返回 null。
+  /// 局部 widget 值 → JS 元素源码；不是可识别构造返回 null。
   ///
   /// 覆盖三种形态：
   ///   - 单个构造：`Text()` / `const Center(...)` / `Image.network(...)`；
@@ -173,25 +174,27 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         if (a == null || b == null) return null;
         return '(${jsDataExpr(e.condition)} ? $a : $b)';
       }
-      if (!_isWidgetValueExpr(e)) return null;
+      if (!_isNodeCtor(e)) return null;
       return renderJs(translate(e), depth);
     } catch (_) {
-      // 不是可翻译的 widget 值：交给调用方回退值翻译（不在这里降级成占位）。
+      // 不是可翻译的组件值：交给调用方回退值翻译（不在这里降级成占位）。
       return null;
     }
   }
 
-  bool _isWidgetValueExpr(Expression e) {
+  /// 构造表达式是否按**元素**翻译：只排除「已知模型类」与「值对象 / 结构化
+  /// 样式」，其余类构造一律按组件处理（不再判断它是不是 widget）。
+  bool _isNodeCtor(Expression e) {
     final (ctor, _) = ctorOf(e);
     if (ctor == null) return false;
     if (e is MethodInvocation) {
-      // 本类方法调用 / 小写开头函数不是 widget 构造。
+      // 本类方法调用 / 小写开头函数不是组件构造。
       if (actionByMethod.containsKey(ctor)) return false;
       if (!isClassName(ctor)) return false;
     }
-    return builtinWidgetTypes.contains(ctor) ||
-        jsClassWidgets.contains(ctor) ||
-        widgetClassNames.contains(ctor);
+    if (modelClassNames.contains(ctor)) return false;
+    if (isValueCtorName(ctor)) return false;
+    return true;
   }
 
   /// 有 JS 类实现的 widget 类型（组件、逻辑 widget、builder 代理）。
@@ -595,6 +598,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       return _renderJsImpl(json, depth);
     } catch (err) {
       _warnDegrade('结点', json.toString(), err);
+      usedNodeHelper = true; // 占位结点用 __h('SizedBox', {})
       return _placeholderJs();
     }
   }
@@ -604,24 +608,36 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (json is! Map<String, dynamic>) {
       throw FormatException('无法渲染的节点: $json');
     }
-    usedNodeHelper = true; // 渲染元素 → 产物必须 import 结点工厂 __h
     final type = _semanticType(json['type']);
     final props = json['props'];
     final propsMap = props is Map<String, dynamic> ? props : null;
-    // 元素 type 用**类引用**还是**类型名字符串**：
+    // 元素 type 用**类构造**还是**类型名字符串兜底**：
     //   - 该类型有 JS 产物（importResolver 命中：@PatchEntry 嵌套组件、同文件
-    //     私有组件）→ 类引用 `__h(X, …)`，运行时递归挂载 JS 组件；
-    //   - 该类型在 JS 侧有类（[jsClassWidgetTypes] 的逻辑组件 / sliver builder
-    //     代理，且确实带 builder 形态）→ 类引用，并登记其 package 模块以便 import；
-    //   - 其余（宿主 widget 与无产物的自定义组件）→ 字符串类型名 `__h("X", …)`，
-    //     运行时注册表未命中则走默认 builder（宿主 registerNativeComponent 注入的
-    //     原生实现，否则给出可见占位）。
+    //     私有组件）→ `new X(props)`（X 由产物 export）；
+    //   - 该类型在 JS 侧有类（逻辑组件 / builder 命名构造代理）→ `new X(props)`；
+    //   - 宿主 widget / 值对象：flutter.js 生成了同名包装类 → `new X(props)`，
+    //     包装类内部 `__h('X', props)`；
+    //   - 其余（无产物的自定义组件）→ `__h('X', props)` 兜底，运行时原生注入或占位。
     final productType = importResolver?.call(type);
     final asClass = productType != null || usesJsClass(type, propsMap);
+    // builder 代理类型（ListView 等）只在 `.builder/.separated` 形态走类；普通
+    // 构造与 `delegate:` 形态仍是宿主字符串结点（宿主持久化时按平铺参数 /
+    // delegate 消费），因此它们没有宿主包装类。
+    final asHostWrapper = !asClass && hostWrapperTypes.contains(type);
     if (productType == null && asClass) {
       (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
+    } else if (asHostWrapper) {
+      (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(type);
+    } else if (productType == null) {
+      usedNodeHelper = true; // 无 JS 类的类型：保留 __h('Type', …) 兜底
     }
-    return _renderCall(type, json, depth, asClass: asClass);
+    return _renderCall(
+      type,
+      json,
+      depth,
+      asClass: asClass,
+      asHostWrapper: asHostWrapper,
+    );
   }
 
   /// 结点级的 `key` 并入元素 props：Key 是**元素级参数**（见
@@ -638,23 +654,26 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return out;
   }
 
-  /// 把已翻译的 JSON 节点渲染成统一元素构造：`__h(<type>, {...})`。
+  /// 把已翻译的 JSON 节点渲染成构造表达式：`new X({...})`（有 JS 类）或
+  /// `__h('X', {...})`（无 JS 类，原生注入兜底）。
   ///
-  /// JS 没有「factory」这层包装：元素 type 直接是类（有 JS 逻辑的类型，[asClass]
-  /// 为 true）或宿主 widget 类型名字符串。所有 Dart 实参都按原名进 props——
-  /// `child` / `children` / `slivers` / `tabs` 也在 props 里，由元素工厂 `__h`
-  /// 在**运行时按元素类型**拆分：宿主类型抽成 `element.children`，JS 组件类型
-  /// 原样保留给 `__applyProps`。因此这里不再传第三参，也不再区分单子/多子。
+  /// 所有 Dart 实参都按原名进 props——`child` / `children` / `slivers` / `tabs`
+  /// 也在 props 里，由元素工厂 `__h` 在**运行时按元素类型**拆分：宿主类型抽成
+  /// `element.children`，JS 组件类型保留给 `__applyProps`。因此这里不传第三参，
+  /// 也不区分单子/多子。
   String _renderCall(
     String type,
     Map<String, dynamic> json,
     int depth, {
     required bool asClass,
+    required bool asHostWrapper,
   }) {
     final props = _propsWithKey(json['props'], json['key']);
     final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
-    final typeArg = asClass ? type : "'$type'";
-    return '__h($typeArg, $propsJs)';
+    if (asClass || asHostWrapper) {
+      return 'new $type($propsJs)';
+    }
+    return "__h('$type', $propsJs)";
   }
 
   /// 剥离 JS 字符串字面量引号（`"Column"` → `Column`）；非字面量原样返回。
