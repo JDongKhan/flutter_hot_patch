@@ -12,13 +12,13 @@ library;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
-import '../builders/js_widget_defs.dart';
-import 'class_info.dart';
-import 'host_injected.dart';
-import 'js_translator.dart';
-import 'js_value.dart';
-import 'source_index.dart';
-import 'widget2js.dart';
+import '../../shared/js_widget_defs.dart';
+import '../class_info.dart';
+import '../../shared/host_injected.dart';
+import '../translator/js_translator.dart';
+import '../translator/js_value.dart';
+import '../../shared/source_index.dart';
+import '../translator/widget2js.dart';
 
 /// 方法形参 → JS 形参名列表（解 DefaultFormalParameter 包裹）。
 ///

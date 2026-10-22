@@ -28,9 +28,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 
-import '../../translator/analyze_dart_class.dart';
-import '../../translator/host_injected.dart';
-import '../../translator/source_index.dart';
+import 'analyze_dart_class.dart';
+import '../../shared/host_injected.dart';
+import '../../shared/source_index.dart';
 
 /// 包内全部 Dart 源码（与 host_register builder 同一扫描口径）。
 final Glob _libDartSources = Glob('lib/**.dart');

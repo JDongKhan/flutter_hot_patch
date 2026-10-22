@@ -11,18 +11,18 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 
-import '../../translator/analyze_dart_class.dart';
-import '../../translator/class_info.dart';
-import '../../translator/dart2js.dart';
-import '../../translator/source_index.dart';
-import '../../translator/widget2js.dart';
-
-import '../js_widget_defs.dart';
-import '../product_path.dart';
-import 'class_table.dart';
-import 'component_scope.dart';
-import 'const_support.dart';
-import 'singleton_support.dart';
+import 'analysis/analyze_dart_class.dart';
+import 'analysis/class_table.dart';
+import 'analysis/component_scope.dart';
+import 'analysis/const_support.dart';
+import 'analysis/imported_components.dart';
+import 'analysis/singleton_support.dart';
+import 'class_info.dart';
+import 'translator/dart2js.dart';
+import 'translator/widget2js.dart';
+import '../shared/js_widget_defs.dart';
+import '../shared/paths.dart';
+import '../shared/source_index.dart';
 
 /// 把 lib/ 下的 Dart 源文件翻译为**同名** JS 产物（`lib/a/b.dart` → `patch/a/b.js`）：
 /// 文件名与 Dart 源文件一一对应，不区分组件/模型，也不预设目录结构——源码

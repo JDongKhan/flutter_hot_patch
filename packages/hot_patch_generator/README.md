@@ -101,7 +101,7 @@ The output must correspond to the Dart source **one-to-one**; this is the core c
 ### Extension: adding widget support
 
 There is **no per-widget translator**: every widget — built-in, custom or third-party — goes through the
-single translation path (`lib/src/translator/widget_json.dart`), which dispatches on
+single translation path (`lib/src/builders/patch_entry/translator/widget_json.dart`), which dispatches on
 
 - **argument-name conventions**: `on*` events, `delegate` child providers, positional parameter names,
   and the `builder / *Builder` callback naming convention;
@@ -109,13 +109,13 @@ single translation path (`lib/src/translator/widget_json.dart`), which dispatche
   factory `__h` at runtime by **value shape** — element values / element arrays / delegate descriptors are
   moved into `children` under their original names, regardless of the key name; JS component classes keep
   their props for `__applyProps`;
-- **value shapes** (`lib/src/translator/value_forms.dart`): literals, constructors, static factories,
+- **value shapes** (`lib/src/builders/patch_entry/translator/value_forms.dart`): literals, constructors, static factories,
   constant references (enums / colors / icons), lists, closures — structured styles are converted by the
   `xxxToJson` helpers in `style_translators.dart`.
 
 The translation path itself needs **no per-widget code**. Supporting a new widget still requires a host
 renderer (`JsWidgetRegistry` or a capability library) because the Flutter widget has to be reconstructed;
-three opt-in tables in `lib/src/builders/js_widget_defs.dart` additionally tune the *output shape*:
+three opt-in tables in `lib/src/builders/shared/js_widget_defs.dart` additionally tune the *output shape*:
 
 | Table | Purpose |
 |---|---|
@@ -145,32 +145,39 @@ This package is organised by function (under `lib/src/`), with acyclic one-way d
 | Directory / file | Role |
 | --- | --- |
 | `lib/builder.dart` | **Public entry**: the four builder factory functions for `build.yaml` |
-| `lib/src/translator/` | Translation core: Dart AST → JS (single entry `translateClass`) |
-| `lib/src/builders/` | build_runner Builder implementations and output assembly |
+| `lib/src/builders/shared/` | Foundations shared by more than one builder |
+| `lib/src/builders/patch_entry/` | The complete `componentBuilder` chain: collection (`analysis/`) + translation (`translator/`) + output assembly |
+| `lib/src/builders/ui_widget/`, `ui_host_register/`, `ui_patch_manifest/` | One directory per builder |
 
 ```
-translator/  ←  builders/  ←  builder.dart
+shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 ```
 
-In `lib/src/translator/`: `js_translator` (shared language layer) · `dart2js` (class declarations) ·
-`widget2js` (widget trees) · `widget_json` (the single unified widget entry `widgetToJson`) ·
-`value_forms` (value-shape dispatch `autoValue`) · `class_translator` (single entry) ·
-`source_index` (annotation detection / imported source parsing) · `host_injected` (@HostInjected channel
-table, scanned by the translation layer) · `style_translators` (structured style values).
+`builders/shared/`: `source_index` (annotation detection / imported source parsing) · `host_injected`
+(@HostInjected channel table) · `js_widget_defs` (`nodeHelperPackage` / `packageModulePath` / widget type
+tables) · `paths` (output path derivation).
 
-`lib/src/builders/` is split per builder:
+`builders/patch_entry/` — only used by `componentBuilder`:
 
-- `patch_entry/`: `component_builder` (collects the root classes of the file and calls `translateClass`
-  uniformly, then assembles the result into a same-named JS output) · `class_table` · `singleton_support`
+- `component_builder`: collects the root classes of the file, calls `translateClass` uniformly, then
+  assembles the result into a same-named JS output;
+- `class_info`: the neutral class model shared by collection and translation;
+- `analysis/`: `analyze_dart_class` (the single collection entry) · `class_table` · `component_scope` ·
+  `const_support` · `singleton_support` · `imported_components`;
+- `translator/`: `js_translator` (shared language layer) · `js_value` (shared value tools) · `dart2js`
+  (class declarations) · `widget2js` (widget trees) · `widget_json` (the single unified widget entry
+  `widgetToJson`) · `value_forms` (value-shape dispatch `autoValue`) · `style_translators` (structured
+  style values).
+
+The other builders are self-contained:
+
 - `ui_widget/`: `widget_module_builder` (package module output + the JS class sources of every logic
   component/sliver proxy; used only by this builder)
 - `ui_host_register/`: `host_register_builder` (host-side registration list generation; the detection rules for
-  @HostInjected live in `translator/host_injected.dart`)
+  @HostInjected live in `builders/shared/host_injected.dart`)
 - `ui_patch_manifest/`: `patch_manifest_builder` (produces `patch/manifest.json`; thanks to
   `required_inputs: [".js"]` it is scheduled after `patch_entry` / `ui_widget`, and uses
   `findAssets('patch/**.js')` to list every JS output and hash each one)
-- at the root: shared output foundations for all builders — `product_path` · `js_widget_defs`
-  (`nodeHelperPackage` / `packageModulePath` / the set of widget types that have JS classes)
 
 Other packages of the framework:
 
@@ -268,18 +275,18 @@ targets:
 ### 扩展：新增 widget 支持
 
 **没有 per-widget 的 translator**：内建、自定义、三方组件全部走同一条翻译路径
-（`lib/src/translator/widget_json.dart`），分派依据只有两项：
+（`lib/src/builders/patch_entry/translator/widget_json.dart`），分派依据只有两项：
 
 - **实参名约定**：`on*` 事件、`delegate` 子结点提供者、位置实参的 Flutter 形参名、
   `builder / *Builder` 回调命名约定；`child` / `children` / `slivers` / `tabs` 都是
   **普通具名 props**，由元素工厂 `__h` 在运行时按**值形态**拆分——元素值 / 元素数组 /
   delegate 描述按原名移入 `children`，与键名无关；JS 组件类保留 props 给 `__applyProps`；
-- **值的形态**（`lib/src/translator/value_forms.dart`）：字面量、构造、静态工厂、常量引用
+- **值的形态**（`lib/src/builders/patch_entry/translator/value_forms.dart`）：字面量、构造、静态工厂、常量引用
   （枚举 / 颜色 / 图标）、列表、闭包——结构化样式由 `style_translators.dart` 的 `xxxToJson` 转换。
 
 翻译路径本身**无需 per-widget 代码**，但宿主侧仍需为该 widget 注册 renderer
 （`JsWidgetRegistry` 或能力库），因为 Flutter widget 必须被重新构造；
-若产物形态不同，还要调整 `lib/src/builders/js_widget_defs.dart` 的登记表：
+若产物形态不同，还要调整 `lib/src/builders/shared/js_widget_defs.dart` 的登记表：
 
 | 表 | 用途 |
 |---|---|
@@ -307,34 +314,36 @@ separatorBuilder: …}`、`Image.network` → `{factory: 'network', src: …}`�
 | 目录 / 文件 | 作用 |
 | --- | --- |
 | `lib/builder.dart` | **对外入口**：`build.yaml` 的四个 builder 工厂函数 |
-| `lib/src/translator/` | 翻译内核：Dart AST → JS（唯一入口 `translateClass`） |
-| `lib/src/builders/` | build_runner Builder 实现与产物组装 |
+| `lib/src/builders/shared/` | 多 builder 共用的基础 |
+| `lib/src/builders/patch_entry/` | `componentBuilder` 全链路：收集（`analysis/`）+ 翻译（`translator/`）+ 产物组装 |
+| `lib/src/builders/ui_widget/`、`ui_host_register/`、`ui_patch_manifest/` | 每个 builder 一个目录 |
 
 ```
-translator/  ←  builders/  ←  builder.dart
+shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 ```
 
-`lib/src/translator/`：`js_translator`（公共语言层）· `dart2js`（类声明）·
-`widget2js`（widget 树）· `widget_json`（统一翻译入口 `widgetToJson`）·
-`value_forms`（值形态分派 `autoValue`）· `class_translator`（唯一入口）·
-`source_index`（注解识别 / import 源解析）· `host_injected`（@HostInjected 通道表，
-由翻译层扫描）· `style_translators`（结构化样式值）。
+`builders/shared/`：`source_index`（注解识别 / import 源解析）· `host_injected`（@HostInjected 通道表）·
+`js_widget_defs`（`nodeHelperPackage` / `packageModulePath` / widget 类型登记表）· `paths`（产物路径推导）。
 
-`lib/src/builders/` 按 builder 再分目录：
+`builders/patch_entry/`——只服务 `componentBuilder`：
 
-- `patch_entry/`：`component_builder`（收集本文件根类并统一调
-  `translateClass`，并把结果拼装为同名 JS 产物）· `class_table` ·
-  `singleton_support`
-- `ui_widget/`：`widget_module_builder`（package 模块产物 + 各逻辑
-  组件/sliver 代理的 JS 类源码，仅本 builder 使用）
-- `ui_host_register/`：`host_register_builder`（宿主侧注册清单生成；
-  @HostInjected 的识别口径在 `translator/host_injected.dart`）
-- `ui_patch_manifest/`：`patch_manifest_builder`（产出 `patch/manifest.json`；
-  靠 `required_inputs: [".js"]` 排到 `patch_entry` / `ui_widget` 之后的阶段，
-  用 `findAssets('patch/**.js')` 列出全部 JS 产物逐个算 hash）
-- 根下为各 builder 共用的产物基础：`product_path` ·
-  `js_widget_defs`（`nodeHelperPackage` / `packageModulePath` /
-  有 JS 类的 widget 类型集合）
+- `component_builder`：收集本文件根类并统一调 `translateClass`，再把结果拼装为同名 JS 产物；
+- `class_info`：收集与翻译共用的中立类模型；
+- `analysis/`：`analyze_dart_class`（唯一收集入口）· `class_table` · `component_scope` ·
+  `const_support` · `singleton_support` · `imported_components`；
+- `translator/`：`js_translator`（公共语言层）· `js_value`（共享值工具）· `dart2js`（类声明）·
+  `widget2js`（widget 树）· `widget_json`（统一翻译入口 `widgetToJson`）· `value_forms`（值形态分派
+  `autoValue`）· `style_translators`（结构化样式值）。
+
+其余 builder 各自独立：
+
+- `ui_widget/`：`widget_module_builder`（package 模块产物 + 各逻辑组件/sliver 代理的 JS 类源码，仅本
+  builder 使用）
+- `ui_host_register/`：`host_register_builder`（宿主侧注册清单生成；@HostInjected 的识别口径在
+  `builders/shared/host_injected.dart`）
+- `ui_patch_manifest/`：`patch_manifest_builder`（产出 `patch/manifest.json`；靠
+  `required_inputs: [".js"]` 排到 `patch_entry` / `ui_widget` 之后的阶段，用
+  `findAssets('patch/**.js')` 列出全部 JS 产物逐个算 hash）
 
 框架的其它包：
 

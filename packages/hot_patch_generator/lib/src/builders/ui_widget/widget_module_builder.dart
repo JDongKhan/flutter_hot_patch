@@ -7,8 +7,8 @@ import 'dart:async';
 
 import 'package:build/build.dart';
 
-import '../js_widget_defs.dart';
-import '../product_path.dart';
+import '../shared/js_widget_defs.dart';
+import '../shared/paths.dart';
 
 /// 有 JS 类的类型 → (package → {type})：由静态登记推导（[jsClassWidgetTypes]
 /// 与 [widgetPackageOf]），作为 package 模块产物清单（每个包一个文件）的唯一来源。

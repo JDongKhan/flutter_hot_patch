@@ -24,10 +24,10 @@
 
 ### 2.1 跨包 import 解析（任务 2）
 
-- **现状**：`resolveImportFiles` 在 `lib/src/translator/source_index.dart` 中，把任意 `package:foo/x.dart` 映射成当前包的 `lib/x.dart`。
+- **现状**：`resolveImportFiles` 在 `lib/src/builders/shared/source_index.dart` 中，把任意 `package:foo/x.dart` 映射成当前包的 `lib/x.dart`。
 - **影响**：跨包共享组件库（如 `package:shared_ui/src/card.dart`）无法进入依赖分析，相关类型只能退回原生注入 / 可见占位。
 - **目标**：读取 `.dart_tool/package_config.json` 的 `rootUri` / `packageUri` 解析真实文件路径；或随 resolved AST 一起解决。
-- **入口**：`packages/hot_patch_generator/lib/src/translator/source_index.dart`。
+- **入口**：`packages/hot_patch_generator/lib/src/builders/shared/source_index.dart`。
 - **验收**：新建一个本地共享 UI 包并在 `example` 中依赖，`@PatchEntry` 组件 import 其组件后能正常产出 JS、运行时无占位。
 - **备注**：在解析能力就位前，不要在该分支做启发式猜测。
 

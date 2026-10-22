@@ -1,8 +1,9 @@
 /// build_runner 工厂入口（build.yaml 的 builder_factories 指向这里）。
 ///
 /// 本文件是**对外入口**：只声明四个 builder 工厂与它们的默认选项；
-/// 实现按功能分目录放在 `lib/src/` 下——`src/builders/`（Builder 实现与
-/// 产物组装）与 `src/translator/`（Dart AST → JS 翻译内核）。
+/// 实现按功能分目录放在 `lib/src/` 下——`src/builders/shared/`（多 builder
+/// 共用基础）、`src/builders/patch_entry/`（componentBuilder 的收集 + 翻译 +
+/// 产物组装全链路）、`src/builders/ui_*/`（其余 builder 各自独立）。
 /// 使用方只需依赖本包，即可通过 build_runner 获得全部产物。
 library;
 

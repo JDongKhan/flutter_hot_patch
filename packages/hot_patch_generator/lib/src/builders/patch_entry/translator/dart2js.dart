@@ -6,7 +6,7 @@ library;
 
 import 'package:build/build.dart' show log;
 
-import 'class_info.dart';
+import '../class_info.dart';
 import 'js_value.dart';
 
 /// 类声明 → JS（export 可选）。含 constructor / 方法 / getter / extends 基类，

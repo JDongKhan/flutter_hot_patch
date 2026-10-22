@@ -6,11 +6,11 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../../translator/host_injected.dart';
-import '../../translator/js_value.dart';
-import '../../translator/source_index.dart';
-import '../../translator/style_translators.dart';
-import '../../translator/widget2js.dart';
+import '../../shared/host_injected.dart';
+import '../translator/js_value.dart';
+import '../../shared/source_index.dart';
+import '../translator/style_translators.dart';
+import '../translator/widget2js.dart';
 
 /// 判断是否「静态单例类」：普通类（无 @PatchEntry、非 private、非抽象）、
 /// 且含至少一个非 private **static** 字段。

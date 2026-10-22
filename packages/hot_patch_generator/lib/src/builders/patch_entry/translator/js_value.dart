@@ -6,7 +6,7 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
-import 'class_info.dart';
+import '../class_info.dart';
 
 /// JS 双引号字符串字面量（唯一实现）。
 ///

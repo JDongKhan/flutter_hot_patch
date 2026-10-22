@@ -12,10 +12,10 @@ library;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
-import '../../translator/class_info.dart';
-import '../../translator/js_translator.dart';
-import '../../translator/js_value.dart';
-import '../../translator/source_index.dart';
+import '../class_info.dart';
+import '../translator/js_translator.dart';
+import '../translator/js_value.dart';
+import '../../shared/source_index.dart';
 import 'class_table.dart';
 
 /// 本文件可见的顶层常量表（值已在解析期翻译为 JS）。

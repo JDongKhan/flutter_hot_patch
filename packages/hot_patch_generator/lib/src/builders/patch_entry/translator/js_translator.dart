@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart' show log;
 
-import 'class_info.dart';
+import '../class_info.dart';
 import 'js_value.dart';
 
 // ===========================================================================

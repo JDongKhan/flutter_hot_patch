@@ -2,7 +2,7 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 
-import '../../translator/host_injected.dart';
+import '../shared/host_injected.dart';
 
 /// 注册目标的默认值：本生成器配套的运行时（hot_patch）自带的注册 API。
 /// 使用方**无需任何配置**即可零配置工作。

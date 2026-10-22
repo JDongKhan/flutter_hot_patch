@@ -5,11 +5,11 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../../translator/analyze_dart_class.dart';
-import '../../translator/class_info.dart';
-import '../../translator/host_injected.dart';
-import '../../translator/js_value.dart';
-import '../../translator/source_index.dart';
+import 'analyze_dart_class.dart';
+import '../class_info.dart';
+import '../translator/js_value.dart';
+import '../../shared/host_injected.dart';
+import '../../shared/source_index.dart';
 
 /// 全量「类表」：把一个文件（同文件 + 跨文件 import）的全部公共 Dart 类
 /// （非私有 / 非抽象 / 非 @HostInjected）收集成 ClassInfo 索引——**包含**
