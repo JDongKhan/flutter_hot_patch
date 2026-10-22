@@ -98,6 +98,22 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
     });
   }
 
+  // try/catch/finally、throw、assert 的翻译演示。
+  void demoTryCatchAssert() {
+    try {
+      if (_count < 0) {
+        throw StateError('count 不能为负数');
+      }
+      debugPrint('try ok: count=$_count');
+    } catch (e) {
+      debugPrint('caught: $e');
+    } finally {
+      debugPrint('finally');
+    }
+    assert(_count >= 0, 'count 不能为负数');
+    debugPrint('assert passed: count=$_count');
+  }
+
   // 无注解：方法体是 SnackBar 形式 → 自动 native 通道 `nativeToast`
   void showNative() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hello from native (JS-driven)')));
@@ -147,6 +163,7 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
             ElevatedButton(onPressed: () => reset(), child: const Text('Reset')),
             ElevatedButton(onPressed: showNative, child: const Text('Native')),
             ElevatedButton(onPressed: loadUser, child: const Text('Load User')),
+            ElevatedButton(onPressed: demoTryCatchAssert, child: const Text('Try/Catch')),
           ],
         ),
       ],

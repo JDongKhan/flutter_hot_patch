@@ -725,6 +725,10 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // InstanceCreationExpression 分支（那支对非模型类返回 null 后直接返回）。
   final sdkValJs = sdkValueCtorJs(e, scope, classes);
   if (sdkValJs != null) return sdkValJs;
+  // Dart 内置异常构造（`StateError('...')` 等）：Dart 的异常类在 JS 侧没有
+  // 同名构造，统一落成 `new Error(message)`；`throw` 语句据此可直接翻译。
+  final errJs = _dartErrorCtorJs(e, scope, classes);
+  if (errJs != null) return errJs;
   // PrefixedIdentifier（`a.b`）不是单纯字段名，交给 exprToJs 的属性分支；
   // 若走下面的 Identifier 分支会用整串名字查字段而必然失败。
   if (e is PrefixedIdentifier) return exprToJs(e, scope, classes);
@@ -932,6 +936,56 @@ String? sdkValueCtorJs(
 const Set<String> sdkValueClassNames = {
   'ValueNotifier',
 };
+
+/// Dart 内置异常构造名：JS 侧统一译成 `new Error(message)`。
+///
+/// 只做**异常对象**的最小映射（消息、类型可区分性不做要求）：Dart 的
+/// `StateError` / `FormatException` 等在 JS 里没有同名类，直接透传会得到
+/// 未定义全局，`throw` / `catch` 整段失效。方法体内 `throw StateError(...)`
+/// 是基础写法，故在此统一落成 `Error`。
+const Set<String> _dartErrorCtors = {
+  'StateError',
+  'ArgumentError',
+  'FormatException',
+  'RangeError',
+  'UnsupportedError',
+  'UnimplementedError',
+  'Exception',
+};
+
+/// Dart 异常构造 → `new Error(<message>)`；非异常构造返回 null。
+///
+/// 消息取具名 `message:` 优先，否则第一个位置实参；都没有则空字符串。
+/// 其他具名参数（如 `ArgumentError.value` 的 `name`）当前忽略。
+String? _dartErrorCtorJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  String? name;
+  List<Expression> args = const [];
+  if (e is InstanceCreationExpression) {
+    name = e.constructorName.type.name2.lexeme;
+    args = e.argumentList.arguments.toList();
+  } else if (e is MethodInvocation && e.target == null) {
+    name = e.methodName.name;
+    args = e.argumentList.arguments.toList();
+  }
+  if (name == null || !_dartErrorCtors.contains(name)) return null;
+  Expression? namedMessage;
+  Expression? positionalMessage;
+  for (final a in args) {
+    if (a is NamedExpression) {
+      if (a.name.label.name == 'message') namedMessage = a.expression;
+    } else {
+      positionalMessage ??= a;
+    }
+  }
+  final message = namedMessage ?? positionalMessage;
+  final msgJs = message == null ? '""' : rhsToJs(message, scope, classes);
+  if (msgJs == null) return null;
+  return 'new Error($msgJs)';
+}
 
 /// 模型构造调用 → JS：`new User({name:..., age:...})`。
 /// 位置参数按类实例字段声明顺序映射；命名参数按 label。
@@ -1329,6 +1383,12 @@ bool _isPlainIdentifier(Expression e) => e is Identifier && e is! PrefixedIdenti
 /// 字段属性赋值/自增 `_x.y = rhs` / `_x.y++`（[`_prefixedFieldRef`]）、
 /// 方法调用（对象方法 / 白名单裸调）。不可翻译返回 null（由调用方丢弃）。
 String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+  // `throw <expr>;`：Dart 的 throw 在 AST 里是 ThrowExpression（包在
+  // ExpressionStatement 里），JS 的 throw 是语句，这里直接产出 `throw ...;`。
+  if (e is ThrowExpression) {
+    final v = rhsToJs(e.expression, scope, classes);
+    return v == null ? null : 'throw $v;';
+  }
   // _x++ / ++_x / _x--
   if (e is PostfixExpression && _isPlainIdentifier(e.operand)) {
     final ref = scope.fieldRef((e.operand as Identifier).name);
@@ -1633,6 +1693,48 @@ String translateStmtList(
       out.add('${ind}break;');
     } else if (s is ContinueStatement) {
       out.add('${ind}continue;');
+    } else if (s is AssertStatement) {
+      // Dart `assert(condition, [message])` → JS 原样调用 `assert(...)`；
+      // 函数本体由运行时【1c】节注入（debug 门控 + 失败抛 Error），
+      // 生成器不改写语义，保持与 Dart 源码一比一。
+      final condJs = exprToJs(s.condition, scope, classes);
+      if (condJs == null) {
+        log.warning('[hot_patch_generator] assert 条件无法翻译，已在 JS 产物'
+            '中跳过：${s.toSource()}');
+        continue;
+      }
+      String? msgJs;
+      final message = s.message;
+      if (message != null) {
+        msgJs = rhsToJs(message, scope, classes);
+        if (msgJs == null) {
+          log.warning('[hot_patch_generator] assert 消息无法翻译，已在 JS 产物'
+              '中跳过：${s.toSource()}');
+          continue;
+        }
+      }
+      out.add('$ind' 'assert($condJs${msgJs == null ? '' : ', $msgJs'});');
+    } else if (s is TryStatement) {
+      final js =
+          _tryStatementJs(s, scope, classes, widgetCtx, depth, returnsWidget);
+      if (js == null) {
+        log.warning('[hot_patch_generator] try 语句无法翻译，已在 JS 产物中'
+            '跳过：${s.toSource()}');
+      } else {
+        out.add(js);
+      }
+    } else if (s is EmptyStatement) {
+      // 空语句没有语义，跳过不需要告警。
+    } else if (s is Block) {
+      // 裸块语句：作用域语义在 JS 侧由 `{}` 保留，逐条递归即可。
+      out.add('$ind{\n'
+          '${translateStmtList(s.statements, scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+          '$ind}');
+    } else {
+      // 兜底：任何未覆盖的语句都必须出声，禁止静默丢代码。
+      // 典型：try/catch、throw、assert、局部函数、pattern 声明、label 等。
+      log.warning('[hot_patch_generator] 不支持的语句类型 ${s.runtimeType}，'
+          '已在 JS 产物中跳过：${s.toSource()}');
     }
   }
   return out.join('\n');
@@ -1711,6 +1813,85 @@ String? _forStatementJs(
   final bodyJs = translateStmtList(_bodyStmts(s.body), scope, classes, widgetCtx,
       depth: depth + 1, returnsWidget: returnsWidget);
   return '$ind$header {\n$bodyJs\n$ind}';
+}
+
+/// `try { ... } catch (e) { ... } finally { ... }` → JS 同构。
+///
+/// 当前支持范围（基础功能）：
+///   - 无 `on` 类型的 `catch (e)` / `catch (e, s)`：完整翻译；`s` 绑定
+///     `e.stack`（JS 没有独立的 StackTrace 对象）；
+///   - `finally`：完整翻译；
+///   - 带 `on Type` 或多个 catch 子句：按 catch-all 近似，并输出构建期告警
+///     （不做类型过滤，避免没有类型解析时误判）。
+///
+/// 返回 null 表示结构非法（既无 catch 也无 finally），由调用方告警。
+String? _tryStatementJs(
+  TryStatement s,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+  WidgetExprRenderer? widgetCtx,
+  int depth,
+  bool returnsWidget,
+) {
+  final ind = '  ' * depth;
+  final catches = s.catchClauses;
+  final finallyBlock = s.finallyBlock;
+  if (catches.isEmpty && finallyBlock == null) return null;
+
+  final bodyJs = translateStmtList(
+    s.body.statements,
+    scope,
+    classes,
+    widgetCtx,
+    depth: depth + 1,
+    returnsWidget: returnsWidget,
+  );
+
+  var catchPart = '';
+  if (catches.isNotEmpty) {
+    final clause = catches.first;
+    if (catches.length > 1) {
+      log.warning('[hot_patch_generator] try 含 ${catches.length} 个 catch '
+          '子句，当前只翻译第一个，其余已跳过：${s.toSource()}');
+    }
+    if (clause.exceptionType != null) {
+      log.warning('[hot_patch_generator] catch 的 on 类型过滤尚未实现，'
+          '已按 catch-all 翻译：${clause.exceptionType!.toSource()}');
+    }
+    final exName = clause.exceptionParameter?.name.lexeme ?? '__error';
+    final stackName = clause.stackTraceParameter?.name.lexeme;
+    final catchScope = stackName == null
+        ? scope.withParams([exName])
+        : scope.withParams([exName, stackName]);
+    var catchBody = translateStmtList(
+      clause.body.statements,
+      catchScope,
+      classes,
+      widgetCtx,
+      depth: depth + 1,
+      returnsWidget: returnsWidget,
+    );
+    if (stackName != null) {
+      catchBody =
+          '$ind  var $stackName = $exName && $exName.stack;\n$catchBody';
+    }
+    catchPart = ' catch ($exName) {\n$catchBody\n$ind}';
+  }
+
+  var finallyPart = '';
+  if (finallyBlock != null) {
+    final finBody = translateStmtList(
+      finallyBlock.statements,
+      scope,
+      classes,
+      widgetCtx,
+      depth: depth + 1,
+      returnsWidget: returnsWidget,
+    );
+    finallyPart = ' finally {\n$finBody\n$ind}';
+  }
+
+  return '${ind}try {\n$bodyJs\n$ind}$catchPart$finallyPart';
 }
 
 /// switch 语句 → JS switch。仅支持常量 case（analyzer 把常量 case 也解析为

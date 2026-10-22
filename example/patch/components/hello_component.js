@@ -52,6 +52,20 @@ export class HelloCard {
   reset() {
     this.setState(() => { this._count = 0; });
   }
+  demoTryCatchAssert() {
+    try {
+      if ((this._count < 0)) {
+        throw new Error("count 不能为负数");
+      }
+      console.debug("try ok: count=" + __str(this._count));
+    } catch (e) {
+      console.debug("caught: " + __str(e));
+    } finally {
+      console.debug("finally");
+    }
+    assert((this._count >= 0), "count 不能为负数");
+    console.debug("assert passed: count=" + __str(this._count));
+  }
   showNative() {
     _app_host_.invoke("nativeToast", { message: "Hello from native (JS-driven)" });
   }
@@ -120,6 +134,12 @@ export class HelloCard {
                     "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a)),
                     "child": __h('Text', {
                         "data": "Load User"
+                      })
+                  }),
+                __h('ElevatedButton', {
+                    "onPressed": this.__bindFn(4, [], (...__a) => this.demoTryCatchAssert(...__a)),
+                    "child": __h('Text', {
+                        "data": "Try/Catch"
                       })
                   })
               ]

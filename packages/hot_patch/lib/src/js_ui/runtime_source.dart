@@ -127,6 +127,11 @@ function __fmt(v, stack) {
   var t = typeof v;
   if (t === 'function') return '[Function ' + (v.name || 'anonymous') + ']';
   if (t !== 'object') return String(v);
+  // Error 的 message / name 是原型上的非枚举属性，直接按 own keys 展开只会得到
+  // `{}`——异常日志必须可读，故单独按 name + message 输出。
+  if (v instanceof Error) {
+    return (v.name || 'Error') + (v.message ? ': ' + v.message : '');
+  }
   if (stack.indexOf(v) >= 0) return '[Circular]';
   var next = stack.concat([v]);
   if (Array.isArray(v)) {
@@ -261,6 +266,19 @@ const String _jsUiGlobalsTail = r'''
         configurable: true
       });
     }
+  }
+
+  //   - G.assert：Dart `assert(condition, [message])` 的运行时补齐。
+  //     生成器产物原样调用 `assert(cond, msg)`（一比一翻译），这里按 Dart 语义
+  //     实现：只在 debug 模式校验，失败抛出 Error；message 支持字符串或返回
+  //     字符串的函数（与 Dart assert 的第二参数形态一致）。
+  if (typeof G.assert !== 'function') {
+    G.assert = function (condition, message) {
+      if (!G.kDebugMode) { return; }
+      if (condition) { return; }
+      var msg = (typeof message === 'function') ? message() : message;
+      throw new Error(msg == null ? 'Assertion failed' : msg);
+    };
   }
 
 ''';
