@@ -14,7 +14,7 @@ component: the translated class stays a completely ordinary Flutter widget.
 
 ```yaml
 dev_dependencies:
-  hot_patch_generator: ^0.1.0
+  hot_patch_generator: ^0.2.2
   build_runner: ^2.4.13
 ```
 
@@ -99,21 +99,24 @@ The output must correspond to the Dart source **one-to-one**; this is the core c
 There is **no per-widget translator**: every widget — built-in, custom or third-party — goes through the
 single translation path (`lib/src/translator/widget_json.dart`), which dispatches on
 
-- **argument-name conventions**: `on*` events, `delegate` child providers, positional parameter names;
+- **argument-name conventions**: `on*` events, `delegate` child providers, positional parameter names,
+  and the `builder / *Builder` callback naming convention;
   `child` / `children` / `slivers` / `tabs` are **ordinary named props** and are split by the element
-  factory `__h` at runtime based on the element `type` (host string types → `element.children`; JS component
-  classes → props are kept for `__applyProps`);
+  factory `__h` at runtime by **value shape** — element values / element arrays / delegate descriptors are
+  moved into `children` under their original names, regardless of the key name; JS component classes keep
+  their props for `__applyProps`;
 - **value shapes** (`lib/src/translator/value_forms.dart`): literals, constructors, static factories,
   constant references (enums / colors / icons), lists, closures — structured styles are converted by the
   `xxxToJson` helpers in `style_translators.dart`.
 
-Supporting a new widget therefore needs **no code**. Two opt-in tables in
+Supporting a new widget therefore needs **no code**. Three opt-in tables in
 `lib/src/builders/js_widget_defs.dart` only tune the *output shape*:
 
 | Table | Purpose |
 |---|---|
 | `widgetPositionalArgNames` | positional arguments go into props under **Flutter's own parameter name** (`Text('hi')` → `{data: 'hi'}`, `Image.network(url)` → `{src: url}`); unlisted types with positional arguments produce a build warning and are dropped (no `$pos` index fallback) |
 | `builtinWidgetTypes` | mirror of the host's `JsWidgetRegistry` keys (tells built-in widgets apart from business classes) |
+| `builderFormTypes` | types with `.builder` / `.separated` named constructors; a JS proxy class is generated for them (the runtime only consumes the `factory` / `__delegate` protocol, never a type whitelist) |
 
 Named constructors / static factories keep their name in the output, so the runtime can select the exact
 factory per type: `ListView.builder` → `{factory: 'builder', itemBuilder: …}`,
@@ -184,7 +187,7 @@ Users only need to depend on `hot_patch_generator` in `dev_dependencies`.
 
 ```yaml
 dev_dependencies:
-  hot_patch_generator: ^0.1.0
+  hot_patch_generator: ^0.2.2
   build_runner: ^2.4.13
 ```
 
@@ -256,20 +259,21 @@ targets:
 **没有 per-widget 的 translator**：内建、自定义、三方组件全部走同一条翻译路径
 （`lib/src/translator/widget_json.dart`），分派依据只有两项：
 
-- **实参名约定**：`on*` 事件、`delegate` 子结点提供者、位置实参的 Flutter 形参名；
-  `child` / `children` / `slivers` / `tabs` 都是**普通具名 props**，由元素工厂 `__h` 在运行时
-  按元素 `type` 拆分（宿主字符串类型 → `element.children`；JS 组件类 → props 原样保留给
-  `__applyProps`）；
+- **实参名约定**：`on*` 事件、`delegate` 子结点提供者、位置实参的 Flutter 形参名、
+  `builder / *Builder` 回调命名约定；`child` / `children` / `slivers` / `tabs` 都是
+  **普通具名 props**，由元素工厂 `__h` 在运行时按**值形态**拆分——元素值 / 元素数组 /
+  delegate 描述按原名移入 `children`，与键名无关；JS 组件类保留 props 给 `__applyProps`；
 - **值的形态**（`lib/src/translator/value_forms.dart`）：字面量、构造、静态工厂、常量引用
   （枚举 / 颜色 / 图标）、列表、闭包——结构化样式由 `style_translators.dart` 的 `xxxToJson` 转换。
 
-因此接入新 widget **零实现**。`lib/src/builders/js_widget_defs.dart` 里两张可选登记表只调
+因此接入新 widget **零实现**。`lib/src/builders/js_widget_defs.dart` 里三张可选登记表只调
 **产物形态**：
 
 | 表 | 用途 |
 |---|---|
 | `widgetPositionalArgNames` | 位置实参按 **Flutter 自己声明的形参名**下发（`Text('hi')` → `{data: 'hi'}`、`Image.network(url)` → `{src: url}`）；未登记的类型遇到位置实参时构建期告警并丢弃（不再有 `$pos` 下标兜底） |
 | `builtinWidgetTypes` | 宿主 `JsWidgetRegistry` 注册键的镜像（用于区分内建 widget 与业务类） |
+| `builderFormTypes` | 有 `.builder` / `.separated` 命名构造的类型；为它们生成 JS 代理类（运行时只认 `factory` / `__delegate` 协议，不再有类型白名单） |
 
 命名构造 / 静态工厂的名字会保留在产物里，运行时据此**按类型选工厂**：`ListView.builder` →
 `{factory: 'builder', itemBuilder: …}`、`ListView.separated` → `{factory: 'separated', itemBuilder: …,

@@ -1,3 +1,7 @@
+## 0.1.5
+
+- 文档同步：README 中的版本引用更新到当前发布线；与 `hot_patch` 0.2.1 / `hot_patch_generator` 0.2.2 同批发布。注解集与行为无变化。
+
 ## 0.1.4
 
 - 清理过时文档：移除已不存在的 `@UIProp` 引用（注解集始终只有 `@PatchEntry` / `@PatchIgnore` / `@HostInjected`，状态字段由生成器全量收集，无需字段级注解）。

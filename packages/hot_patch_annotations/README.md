@@ -14,7 +14,7 @@ runtime loads the matching JS version as a hot fix, with no app release needed.
 
 ```yaml
 dependencies:
-  hot_patch_annotations: ^0.1.0
+  hot_patch_annotations: ^0.1.5
 ```
 
 ### Usage
@@ -181,7 +181,7 @@ Browse the JS actually generated for the example app online:
 
 ```yaml
 dependencies:
-  hot_patch_annotations: ^0.1.0
+  hot_patch_annotations: ^0.1.5
 ```
 
 ### 使用
