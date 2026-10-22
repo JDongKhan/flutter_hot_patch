@@ -28,6 +28,20 @@ bash start_patch_server.sh
 cd example && flutter run
 ```
 
+## 发布
+
+```bash
+# 预检并发布三个包（已发布的版本自动跳过）
+bash publish_packages.sh
+
+# 只做发布预检，不上传
+bash publish_packages.sh --dry-run
+```
+
+脚本固定使用 `PUB_HOSTED_URL=https://pub.dev`：本机默认的 `pub.flutter-io.cn`
+是只读镜像，不能直接上传（会报 `Authentication failed`）；发布到 pub.dev 后
+镜像会自动同步。凭证失效时先执行 `dart pub login`。
+
 ## 文档
 
 | 文档 | 内容 |
