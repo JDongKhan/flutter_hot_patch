@@ -2070,15 +2070,37 @@ String? colorLiteralJs(Expression e) {
   return null;
 }
 
-/// JS 双引号字符串字面量。
-String jsString(String s) {
-  final escaped = s
-      .replaceAll(r'\', r'\\')
-      .replaceAll('"', r'"')
-      .replaceAll('\n', r'\n')
-      .replaceAll('\r', r'\r')
-      .replaceAll('\t', r'\t');
-  return '"$escaped"';
+/// JS 双引号字符串字面量（唯一实现）。
+///
+/// 反斜杠、双引号、换行 / 回车 / 制表符以及所有 C0 控制字符都必须转义：
+/// Dart 单引号字符串里可以自由出现 `"`（如 `Text('He said "hi"')`），
+/// 漏转义会直接产出非法 JS，导致整个模块求值失败。
+String jsString(String s) => jsStringLiteral(s);
+
+/// 字符串值 → JS 双引号字面量（供 [jsString] 与 widget2js 共用，禁止再写第二份）。
+String jsStringLiteral(String s) {
+  final b = StringBuffer('"');
+  for (final code in s.runes) {
+    final escaped = switch (code) {
+      0x5C => r'\\',
+      0x22 => r'\"',
+      0x08 => r'\b',
+      0x0C => r'\f',
+      0x0A => r'\n',
+      0x0D => r'\r',
+      0x09 => r'\t',
+      _ => null,
+    };
+    if (escaped != null) {
+      b.write(escaped);
+    } else if (code < 0x20) {
+      b.write('\\u${code.toRadixString(16).padLeft(4, '0')}');
+    } else {
+      b.writeCharCode(code);
+    }
+  }
+  b.write('"');
+  return b.toString();
 }
 
 /// `kDebugMode` / `kReleaseMode` → 运行时注入同名全局（见 js_runtime_manager

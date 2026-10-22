@@ -58,7 +58,7 @@ export class TextDetail {
                 "decorationColor": '#FF9800',
                 "decorationStyle": "wavy"
               },
-              "data": "textAlign 居中"
+              "data": "textAlign 居中,He said \"hi\""
             }),
           __h('SizedBox', {
               "height": 6

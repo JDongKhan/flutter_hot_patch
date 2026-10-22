@@ -1198,16 +1198,8 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     );
   }
 
-  /// 生成 JS 双引号字符串字面量
-  String jsString(String s) {
-    final escaped = s
-        .replaceAll(r'\', r'\\')
-        .replaceAll('"', r'\"')
-        .replaceAll('\n', r'\n')
-        .replaceAll('\r', r'\r')
-        .replaceAll('\t', r'\t');
-    return '"$escaped"';
-  }
+  /// 生成 JS 双引号字符串字面量（委托 [jsStringLiteral]，与 js_translator 共用唯一实现）。
+  String jsString(String s) => jsStringLiteral(s);
 
   WidgetNode _toNode(Expression e) {
     final (ctor, args) = ctorOf(e);

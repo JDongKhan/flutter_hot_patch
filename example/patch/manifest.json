@@ -1,6 +1,6 @@
 {
   "name": "flutter_hot_example",
-  "buildTime": "2026-10-21T20:39:56.264268",
+  "buildTime": "2026-10-22T09:56:38.886638",
   "resources": {
     "flutter.js": "a13111bd957ac0c731e4a8d0a8f05748c5316061a048d4e2676605757325c4eb",
     "provider.js": "4f94600b0ec1d0604ea661ab792ebc3c94221ffaa05a115c52f3f789c42121e2",
@@ -13,7 +13,7 @@
     "app/pages/mine_page.js": "ff26e4f4d3584671299da78cf7f4a13dd4de89e107fdda99bab47f30b98b2340",
     "app/pages/detail_pages.js": "15b8125636423fe54f5f9b7ca30311bd76c4a992ac255c567313ff333ca4d1d3",
     "app/app.js": "6549ff02daea6be89a8504c50c139aaa123609b6ba37213f789d79278ef08361",
-    "components/widget_details.js": "f47896ba99f80c3b0c65289789377c018c27bd0403839c30216873af21c15d1c",
+    "components/widget_details.js": "0a8ad96fdaafb0e581e3009005d5115d23f582aa524c293da4bf633f52da2640",
     "components/provider_component.js": "0d5d12ee5795ecad7a573f5d4536880d373b87e894a9b3ff9ff0df33b095856b",
     "components/banner_component.js": "913d0f09161b767a84fafaa5bf1c35ad95180da7b3eeaec6eaa82e18f3e62319",
     "components/composite_component.js": "02379e185d543863261cf892e55b8819aacb07c4c14ee62c32f5be73b4617a39",

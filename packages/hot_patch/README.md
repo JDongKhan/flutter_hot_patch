@@ -62,7 +62,9 @@ The generated JS of the example app can be browsed online:
 - **Per-instance isolation**: the runtime is a global singleton (`JsRuntimeManager.instance`; all instances
   share one engine and it cannot be injected from outside); every `JsUiWidget` instance isolates its own root
   (node tree / provider / subscriptions / dirty queue) inside it by `pageKey`, so multiple instances on screen
-  do not affect each other.
+  do not affect each other. Note that the **module registry (`__modules`) is runtime-global**: a fresh remote
+  bundle invalidates loaded modules for every page, so two pages must not depend on different versions of the
+  same module path.
 - **Rendering extension points**: `registerNativeComponent(type, build)` for native widget implementations and
   `registerJsDataCarrierType(type)` for non-widget data carriers (custom nav items / dropdown items) — both are
   global, one-time registrations before `runApp`.
@@ -176,7 +178,9 @@ JsUiWidget(
   增量补丁应用（`JsUiStore`）。
 - **多实例隔离**：运行时是全局单例（`JsRuntimeManager.instance`，所有实例共用一个引擎，
   不从外部注入）；每个 `JsUiWidget` 实例按 `pageKey` 在其中隔离自己的根
-  （结点树 / provider / 订阅 / 脏队列），同屏多实例互不影响。
+  （结点树 / provider / 订阅 / 脏队列），同屏多实例互不影响。注意：**模块注册表
+  `__modules` 是运行时全局的**——任一远程包 fresh 会清空全部页面已加载的模块，因此
+  两个页面不能依赖同一模块路径的不同版本。
 - **渲染扩展点**：`registerNativeComponent(type, build)` 注册原生 widget 实现；
   `registerJsDataCarrierType(type)` 注册非 Widget 数据载体（自定义导航项 / 下拉项）。
   两者都是全局一次性注册，放在 `runApp` 之前。

@@ -63,12 +63,13 @@ Marks a class as a dynamically shippable UI component.
   `jsAsset` (e.g. `jsAsset: 'assets/patch/components/counter.js?component=Counter'`).
 - Hot patching works on the **whole widget**; there are no field- or method-level annotations. The
   generator collects everything by default:
-  - all non-static fields → JS state (`_count` → `count`)
+  - all non-static fields → JS instance state (the field name is kept as-is: `_count` → `_count`)
   - all methods (except `build` / lifecycle) → JS methods that events invoke
     (`this.__bindFn(siteId, captures, arrowClosure)` — every event is translated to a build-time arrow
     closure, so it captures build locals exactly like a Dart closure)
   - `build()` → the JS render entry point
-  - SnackBar-style methods → automatically recognized as a native channel (`sendMessage`)
+  - SnackBar-style methods → automatically recognized as a native channel
+    (`_app_host_.invoke('nativeToast', {message})`)
 
 #### `@PatchIgnore()`
 
@@ -229,11 +230,12 @@ class _CounterState extends State<Counter> {
   运行时通过 `JsUiWidget` 的 `jsAsset` query 参数传入
   （如 `jsAsset: 'assets/patch/components/counter.js?component=Counter'`）。
 - 热更基于**整个 widget**，不做字段/方法级标注。生成器默认全量收集：
-  - 所有非 static 字段 → JS 状态（`_count` → `count`）
+  - 所有非 static 字段 → JS 实例状态（字段名原样保留：`_count` → `_count`）
   - 所有方法（除 build / 生命周期）→ 由事件触发的 JS 方法（事件统一翻译为构建期箭头闭包，
     `this.__bindFn(位点号, 捕获值, 箭头闭包)`，捕获构建期局部变量的语义与 Dart 闭包一致）
   - `build()` → JS 渲染入口
-  - SnackBar 形式的方法 → 自动识别为原生通道（`sendMessage`）
+  - SnackBar 形式的方法 → 自动识别为原生通道
+    （`_app_host_.invoke('nativeToast', {message})`）
 
 #### `@PatchIgnore()`
 
