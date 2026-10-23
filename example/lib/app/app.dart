@@ -59,6 +59,7 @@ class _AppSubContentState extends State<AppSubContent> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+    print("--AppSubContent initState");
     _tab.addListener(() {
       setState(() => _index = _tab.index);
     });
@@ -76,7 +77,14 @@ class _AppSubContentState extends State<AppSubContent> with SingleTickerProvider
   }
 
   @override
+  void didUpdateWidget(covariant AppSubContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print("--AppSubContent didUpdateWidget");
+  }
+
+  @override
   Widget build(BuildContext context) {
+    print("--AppSubContent build");
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F7),
       // 禁用左右滑动，保持「只由底部导航切 tab」的原语义，避免与页内横向滚动
