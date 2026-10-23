@@ -510,6 +510,51 @@ const String miniReactReconcilerSource = r'''
   // 宿主结点索引（id → 结点实例）：只为「宿主上报 inflate」的反查用（懒槽位）。
   var hostNodes = {};
 
+  // 挂载事务帧：记录本次尝试新增的宿主结点与组件实例，失败时**按帧**精确回滚
+  // （见 lazyMount 的 catch）。不能按 `__root` 清扫——那是整页根，会误伤同页
+  // 其他已挂载的子树（整页回滚是 mountRoot 的 abortRoot，二者不要混用）。
+  // 只在 lazyMount 期间非空：正常挂载路径只多一次 length 判断。
+  var mountFrames = [];
+  function beginMountFrame() {
+    var frame = { nodes: [], insts: [] };
+    mountFrames.push(frame);
+    return frame;
+  }
+  function endMountFrame(frame) {
+    var i = mountFrames.lastIndexOf(frame);
+    if (i >= 0) { mountFrames.splice(i, 1); }
+  }
+  function trackNode(id) {
+    if (mountFrames.length) {
+      mountFrames[mountFrames.length - 1].nodes.push(id);
+    }
+  }
+  function trackInst(inst) {
+    if (mountFrames.length) {
+      mountFrames[mountFrames.length - 1].insts.push(inst);
+    }
+  }
+
+  // 回滚一个挂载事务帧：逆序 teardown 本次挂载的组件实例（markUnmounted 会递归
+  // 释放 `__owns` / `__ctx` / `__boundFn` 句柄、退订并删掉已挂树的宿主结点），
+  // 再补齐「父结点 mount 尚未返回、因而没进任何 `__children`」的宿主结点 id。
+  // 宿主侧此时 commit 未发生（create/insert 随丢弃的 ops 一起没下发），故不需要
+  // 发 remove；占位结点的 `__deferred` / props 都未改动，下次 inflate 可重试。
+  function rollbackMountFrame(frame) {
+    var i;
+    for (i = frame.insts.length - 1; i >= 0; i--) {
+      var inst = frame.insts[i];
+      if (inst && !inst.__unmounted) { markUnmounted(inst); }
+    }
+    for (i = 0; i < frame.nodes.length; i++) {
+      var node = hostNodes[frame.nodes[i]];
+      if (node) {
+        delete hostNodes[frame.nodes[i]];
+        node.__unmounted = true;
+      }
+    }
+  }
+
   // 宿主回调句柄：runtime 级常驻（scope=local 且不同步宿主——宿主只拿它的 id 走
   // 事件 invoke 通道回调，本端不需要留镜像）。
   //   - lazyMount：宿主 element **inflate**（首次布局到该槽位）；
@@ -545,6 +590,7 @@ const String miniReactReconcilerSource = r'''
       __lazySlot: true
     };
     hostNodes[hi.__id] = hi;
+    trackNode(hi.__id);
     emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
     if (slot && slot.kind === 'children' && slot.hostParentId) {
       emit({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
@@ -676,6 +722,8 @@ const String miniReactReconcilerSource = r'''
     activeRoot = root;
     root.mounting = true;
     root.ops = [];
+    var frame = beginMountFrame();
+    var ok = true;
     try {
       // 真实子树的父结点是**占位结点**（宿主侧同样的父子关系），作用域链 /
       // BuildContext 锚点与「直接挂在容器下」一致。
@@ -700,13 +748,28 @@ const String miniReactReconcilerSource = r'''
       emit({ op: 'props', id: ph.__id, props: ph.__props });
       emit({ op: 'propsChild', parent: ph.__id, key: 'child', childId: ph.__mountedRootId });
       commit(root);
+    } catch (e) {
+      // 本次尝试失败：commit 未发生，宿主侧没有半棵树（create/insert 随 ops 一起
+      // 丢弃），故不需要发 remove；只回滚 JS 侧**本次新增**的结点与句柄。
+      // 占位的 `__deferred` / `__deferMake` / props 都没改过（props 在挂载成功后
+      // 才 emit），宿主下次 inflate 仍会回调到这里重试。
+      ok = false;
+      rollbackMountFrame(frame);
+      root.ops = null;
+      if (typeof console !== 'undefined' && console.error) {
+        console.error('jsui: lazy slot mount failed, placeholder=' +
+          placeholderId + ': ' + e);
+      }
     } finally {
+      endMountFrame(frame);
       root.mounting = false;
       activeRoot = prev;
     }
     // 挂载期间累积的 setState（如 initState 里同步 setState）补一次 flush。
+    // 失败路径里本次实例已被回滚标成 __unmounted，flush 的 `continue` 会跳过；
+    // 不能清 root.dirty —— 其中可能还有同页其他组件已入队的重建。
     if (root.dirty.length) { flushNow(root); }
-    return true;
+    return ok;
   }
 
   // 宿主 element dispose（ListView 回收离屏项 / 页面销毁）→ 卸载已挂载的子树，
@@ -799,6 +862,7 @@ const String miniReactReconcilerSource = r'''
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【7】）。
       applyScope(hi, el.props);
       hostNodes[hi.__id] = hi;
+      trackNode(hi.__id);
       emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
       if (slot && slot.hostParentId) {
         emit({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
@@ -849,6 +913,9 @@ const String miniReactReconcilerSource = r'''
     // 构造期（字段初始化）里登记的控制器 / Key 句柄归属本实例：此刻 `ci` 才存在，
     // 故构造期间先暂存、新对象返回后再回填（见 handle_registry_js 的 beginConstruct）。
     endConstruct(ci, ownFrame);
+    // 记入挂载事务帧（若有）：构造已成功、控制器等句柄已归属本实例，之后
+    // initState / didChangeDependencies / build 任何一步抛错都要按帧回收。
+    trackInst(ci);
     ci.__el = el;
     ci.__parent = parent;
     ci.__slot = slot;
@@ -1201,7 +1268,9 @@ const String miniReactReconcilerSource = r'''
   }
 
   function markUnmounted(inst) {
-    if (!inst) { return; }
+    // 幂等：同一结点可能经「自身 + 祖先递归」两条路径到达（事务帧回滚时逆序
+    // teardown 尤其如此）。不拦会 `dispose()` 执行两遍、句柄二次释放。
+    if (!inst || inst.__unmounted) { return; }
     inst.__unmounted = true;
     if (inst.__k === HOST) {
       delete hostNodes[inst.__id];
