@@ -863,7 +863,12 @@ const String miniReactReconcilerSource = r'''
       }
 
       // 新增的子结点同样先落成懒槽位，避免「父级重建新增离屏项」时提前挂载。
-      if (!matched && lazy) {
+      // 容器从「非懒」切到「懒」（如 ListView 动态加/去 itemExtent）时，旧子结点
+      // 不是懒槽位、宿主 dispose 时不会回传 `__lazyOffFn` → 必须换成懒槽位，
+      // 否则该子项会永远挂在 JS 树里。与 Flutter「delegate 形态改变 → 子项重建」
+      // 一致。
+      if (lazy) {
+        if (matched) { unmount(matched); }
         next.push(newLazySlot(parentHost, src, {
           kind: 'children', hostParentId: parentHost.__id, index: hostIdx
         }));
@@ -938,8 +943,13 @@ const String miniReactReconcilerSource = r'''
       }
       if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
       var slotIndex = next.length;
-      if (lazy && (!matched || matched.__lazySlot)) {
-        var ph = matched;
+      if (lazy) {
+        var ph = matched && matched.__lazySlot ? matched : null;
+        if (matched && !ph) {
+          // 同 patchChildren：容器切到懒态时旧子结点必须换成懒槽位，否则宿主
+          // dispose 时不会回调 `__lazyOffFn`，JS 子树永久驻留。
+          unmount(matched);
+        }
         if (!ph) {
           ph = newLazySlot(parentHost, { el: el }, { kind: 'prop' });
         } else {
