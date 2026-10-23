@@ -183,7 +183,7 @@ const String _jsUiGlobalsTail = r'''
   var idSeq = 0;
   var HOST = 1, COMP = 2;
 
-  // pageKey -> { key, inst, dirty, flushing, ops }
+  // pageKey -> { key, inst, dirty, flushing, flushPending, mounting, ops }
   var roots = {};
   // pageKey -> 句柄 id[]：本页面（scope=page）登记的全部跨语言句柄（控制器 /
   // 函数 / 未来的 Key / 对象…）。页面退出时由 disposeRoot 统一释放——新增能力
@@ -447,7 +447,7 @@ const String _jsUiApi = r'''
       // 静默丢弃（宿主收不到根 → 页面停在加载态）。故挂载期间的 setState 只入
       // dirty 队列，挂载收尾后统一 flush（见【8】markDirty 与 mountRoot）。
       key: pageKey, inst: null, dirty: [], flushing: false,
-      mounting: false, ops: null
+      flushPending: false, mounting: false, ops: null
     };
   }
 
@@ -478,7 +478,7 @@ const String _jsUiApi = r'''
     // 挂载期间累积的 setState（如子组件 initState 里 `setState(() => _loading = true)`）
     // 在这里补一次 flush：根补丁已下发，实例与结点都在，走的正是 patch 增量重建，
     // 与 Flutter「initState 里 setState → 首帧后再重建」语义一致。
-    if (root.dirty.length) { flush(root); }
+    if (root.dirty.length) { flushNow(root); }
     return true;
   }
 
@@ -594,6 +594,9 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
     mount: mountRoot,
     dispose: disposeRoot,
     updateProps: updateRootProps,
+    // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
+    // （setState 只标脏，见【8】markDirty / requestFlush）。
+    flushPending: flushPending,
 ''';
 
 /// UI 运行时骨架尾部·后段（api 收尾到 IIFE 闭包结束）。

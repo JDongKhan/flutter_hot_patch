@@ -22,15 +22,15 @@ export class CommonListItem {
   }
   didUpdateWidget(oldWidget) {
     this._updateCount += 1;
-    console.log("listItem didUpdateWidget- " + __str(this.index));
+    console.log("listItem didUpdateWidget- " + __str(this.index) + " -" + __str(this._updateCount));
   }
   build(context) {
     return new Text({
         "style": {
-          "color": _listItemPalette[(((this.salt + this._updateCount)) % _listItemPalette.length)],
+          "color": _listItemPalette[(((this.index + this.salt)) % _listItemPalette.length)],
           "fontWeight": "w600"
         },
-        "data": "builder item " + this.index
+        "data": "builder item " + this.index + " · u" + this._updateCount
       });
   }
 }

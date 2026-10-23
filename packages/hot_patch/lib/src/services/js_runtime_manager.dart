@@ -138,6 +138,19 @@ class JsRuntimeManager {
     };
   }
 
+  /// 帧级 flush：宿主 begin frame 阶段驱动所有活跃 runtime 执行 JS 侧待处理
+  /// 重建（`__jsui.flushPending`）。JS 的 setState 只标脏，宿主每帧统一执行一次，
+  /// 同一帧内多次 setState 合并为一次 build（与 Flutter 的 setState 语义一致）。
+  /// 请求入口见 builtin_host_methods 的 `jsuiRequestFrame`。
+  static void flushJsUiPending() {
+    for (final m in _instances.toList()) {
+      m.evaluate(
+        'if (typeof __jsui !== "undefined" && __jsui.flushPending) '
+        '__jsui.flushPending();',
+      );
+    }
+  }
+
   /// 调试用：清除本地补丁缓存并重置模块缓存。
   ///
   ///   - 磁盘：删除 `<document>/hot_patch/` 下**全部** URL 的解压产物（含

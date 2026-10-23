@@ -554,8 +554,8 @@ class _ScrollDetailState extends State<ScrollDetail> {
   final ScrollController _scrollController = ScrollController();
 
   /// ListView.builder 的「真实变化」验证信号：点「列表换色」时自增。
-  /// 它参与 itemBuilder 的产出，父级重建但 salt 不变时 item 元素完全一致，
-  /// 运行时据此短路；滚动只改 _offset，不会让 item 重建。
+  /// 它参与 itemBuilder 的产出（决定 item 颜色）；滚动只改 _offset，颜色不变，
+  /// 但已挂载项仍会随父级重建每帧收到 didUpdateWidget（与原生一致）。
   int _listSalt = 0;
 
   @override

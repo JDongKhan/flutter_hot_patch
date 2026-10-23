@@ -27,7 +27,7 @@ class CommonListItem extends StatefulWidget {
 }
 
 class _CommonListItemState extends State<CommonListItem> {
-  /// 本实例被父级更新的次数。滚动过程中若短路生效，这个值不应增长。
+  /// 本实例被父级更新的次数。滚动时父级每帧重建，已挂载项会持续 +1（与原生一致）。
   int _updateCount = 0;
 
   @override
@@ -40,17 +40,21 @@ class _CommonListItemState extends State<CommonListItem> {
   void didUpdateWidget(covariant CommonListItem oldWidget) {
     super.didUpdateWidget(oldWidget);
     _updateCount += 1;
-    print("listItem didUpdateWidget- ${widget.index}");
+    print("listItem didUpdateWidget- ${widget.index} -$_updateCount");
   }
 
   @override
   Widget build(BuildContext context) {
-    // 颜色只由「真实更新次数」和父级 salt 决定：滚动时两者都不变 →
-    // 颜色不动；点「列表换色」/ item 被重新构建 → 颜色才变。
+    // 颜色只由「真实数据」决定（下标基色 + 父级 salt），**不含更新次数**：
+    //   - 符合预期：滚动不会真实改变 item 内容 → 两边颜色都不变；
+    //   - 点「列表换色」→ salt 变 → 两边同时换色（真实更新行为一致）。
+    // 文本里的 `uN` 是诊断计数器：本实例被父级更新过几次。
+    //   - 滚动时父级每帧重建，已挂载项每帧 +1（原生与 JS 侧语义一致）；
+    //   - 滚出缓存被销毁、滚回来是新实例，uN 从 0 重新开始。
     return Text(
-      'builder item ${widget.index}',
+      'builder item ${widget.index} · u$_updateCount',
       style: TextStyle(
-        color: _listItemPalette[(widget.salt + _updateCount) % _listItemPalette.length],
+        color: _listItemPalette[(widget.index + widget.salt) % _listItemPalette.length],
         fontWeight: FontWeight.w600,
       ),
     );

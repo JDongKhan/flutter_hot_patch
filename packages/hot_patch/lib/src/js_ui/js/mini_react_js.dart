@@ -108,43 +108,6 @@ const String _miniReactReconcilerUtilsSource = r'''
     return true;
   }
 
-  // 元素树深比较：用于懒槽位「真正变化才 patch」的短路。
-  // 与 eq 的差别只有两点：元素上的 `inst` 是运行时携带的实例（含 __parent /
-  // __id 等簿记，永远不同）必须忽略；`type` 按引用比较（同一 JS 类）。
-  // props / children 里的普通值仍走 eq；children 里的嵌套元素递归本函数。
-  function elementEq(a, b, depth) {
-    if (a === b) { return true; }
-    if (depth === undefined || depth === null) { depth = EQ_MAX_DEPTH; }
-    if (depth <= 0) { return false; }
-    var aEl = a != null && typeof a === 'object' && a.element === true;
-    var bEl = b != null && typeof b === 'object' && b.element === true;
-    if (aEl || bEl) {
-      if (!aEl || !bEl) { return false; }
-      if (a.type !== b.type) { return false; }
-      if ((a.lazyChildren === true) !== (b.lazyChildren === true)) { return false; }
-      return eq(a.props, b.props, depth - 1) &&
-        elementEq(a.children, b.children, depth - 1);
-    }
-    if (Array.isArray(a) || Array.isArray(b)) {
-      if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
-        return false;
-      }
-      for (var i = 0; i < a.length; i++) {
-        if (!elementEq(a[i], b[i], depth - 1)) { return false; }
-      }
-      return true;
-    }
-    if (a == null || b == null || typeof a !== 'object' || typeof b !== 'object') {
-      return a === b;
-    }
-    var ka = Object.keys(a), kb = Object.keys(b);
-    if (ka.length !== kb.length) { return false; }
-    for (var j = 0; j < ka.length; j++) {
-      if (!elementEq(a[ka[j]], b[ka[j]], depth - 1)) { return false; }
-    }
-    return true;
-  }
-
   // 结点声明的 key（**值**，不是结点）：ValueKey / ObjectKey 实例、GlobalKey /
   // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【10.6】），
   // 不在此处做归一——`keyOf` 只负责取。
@@ -326,16 +289,54 @@ const String miniReactSchedulerSource = r'''
   // create/insert），而 flush 会重置并消耗同一份 ops —— 未下发的结点连同根 op 一起
   // 丢，宿主收不到根、页面永远停在加载态。setState 在 initState / 构造里是合法写法
   // （Flutter 也是首帧后再重建），故这里只入 dirty 队列，mountRoot 收尾时再 flush。
+  //
+  // **按帧合并（与 Flutter 的 setState 语义一致）**：setState 只标脏，真正的
+  // rebuild 由宿主在每帧 begin frame 调 `api.flushPending()` 统一执行。同一帧内
+  // 收到多少个 setState（例如滚动通知逐条回传）都只 build 一次；此前是每次
+  // setState 同步 flush，滚动时 JS 的重建次数等于通知数，是原生的数倍。
+  // 没有宿主桥（命令行 / 测试 harness）时退化为同步 flush，保持原行为。
   function markDirty(inst) {
     if (!inst || inst.__unmounted || inst.__dirty) { return; }
     var root = inst.__root;
     if (!root) { return; }
     inst.__dirty = true;
     root.dirty.push(inst);
-    if (!root.flushing && !root.mounting) {
-      root.flushing = true;
-      try { flush(root); } finally { root.flushing = false; }
+    if (root.flushing || root.mounting) { return; }
+    requestFlush(root);
+  }
+
+  // 请求宿主在下一帧统一 flush。同一帧内多次 setState 只请求一次。
+  function requestFlush(root) {
+    if (root.flushPending) { return; }
+    root.flushPending = true;
+    // 有宿主桥才交给它调度；否则（无 sendMessage 的纯 JS 环境）同步兜底。
+    if (typeof sendMessage === 'function' &&
+        typeof G._app_host_ !== 'undefined' && G._app_host_ &&
+        G._app_host_.invoke) {
+      G._app_host_.invoke('jsuiRequestFrame', []);
+      return;
     }
+    flushNow(root);
+  }
+
+  // 立即 flush：挂载收尾（mountRoot / lazyMount / lazyUnmount）与无宿主兜底用。
+  function flushNow(root) {
+    if (!root || root.flushing || root.mounting) { return; }
+    root.flushPending = false;
+    root.flushing = true;
+    try { flush(root); } finally { root.flushing = false; }
+  }
+
+  // 宿主每帧 begin frame 调用：跑掉所有页面根累积的重建（帧级批处理入口）。
+  function flushPending() {
+    for (var key in roots) {
+      var root = roots[key];
+      if (!root || !root.flushPending || root.flushing || root.mounting) {
+        continue;
+      }
+      flushNow(root);
+    }
+    return true;
   }
 
   function flush(root) {
@@ -547,16 +548,10 @@ const String miniReactReconcilerSource = r'''
       }
       return ph;
     }
-    // **真正变化才 patch**：父级每次重建都会让懒槽位重新执行 itemBuilder（这是
-    // 必需的——builder 可能读 owner 的最新状态），但产出元素与该槽位上次渲染的
-    // 元素完全一致时，渲染结果必然不变，直接短路：组件不进 didUpdateWidget /
-    // build，也不产生任何宿主 op。滚动等高频重建下这是主要开销来源。
-    // （原生 Flutter 在 delegate 变化时会全量重建已挂载项；这里是语义等价的
-    // 短路，不改变 builder 的执行时机与结果。）
-    if (ph.__mountedEl && elementEq(ph.__mountedEl, el)) {
-      return ph;
-    }
-    ph.__mountedEl = el;
+    // 与原生 Flutter 对齐：父级每次重建都会重新执行 itemBuilder，并把产出的新
+    // 元素 patch 到已挂载的子树上——组件照常进 didUpdateWidget / build。
+    // **不能**按「产出元素与上次相同」短路：那会吞掉 didUpdateWidget 的副作用，
+    // 与原生语义不一致（ListView.builder 的 delegate 每次重建都会 update 已挂载项）。
     var oldRoot = ph.__mountedRootId;
     ph.__mountedChild = patch(ph.__mountedChild, el, ph, null);
     // 复用 / 新建的组件实例都要记住自己的父 slot：组件内部 setState 换掉渲染
@@ -601,7 +596,6 @@ const String miniReactReconcilerSource = r'''
       // BuildContext 锚点与「直接挂在容器下」一致。
       var inst = mount(el, ph, null);
       ph.__mountedChild = inst;
-      ph.__mountedEl = el;
       ph.__mountedRootId = hostIdOf(inst);
       ph.__propsChildren = ph.__propsChildren || {};
       ph.__propsChildren['child'] = inst;
@@ -623,7 +617,7 @@ const String miniReactReconcilerSource = r'''
       activeRoot = prev;
     }
     // 挂载期间累积的 setState（如 initState 里同步 setState）补一次 flush。
-    if (root.dirty.length) { flush(root); }
+    if (root.dirty.length) { flushNow(root); }
     return true;
   }
 
@@ -637,7 +631,6 @@ const String miniReactReconcilerSource = r'''
     if (!root) { return false; }
     var inst = ph.__mountedChild;
     ph.__mountedChild = null;
-    ph.__mountedEl = null;
     ph.__mountedRootId = null;
     if (ph.__propsChildren) { delete ph.__propsChildren['child']; }
     var prev = activeRoot;
@@ -654,7 +647,7 @@ const String miniReactReconcilerSource = r'''
       root.mounting = false;
       activeRoot = prev;
     }
-    if (root.dirty.length) { flush(root); }
+    if (root.dirty.length) { flushNow(root); }
     return true;
   }
 
