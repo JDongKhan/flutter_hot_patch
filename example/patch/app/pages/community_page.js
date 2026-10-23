@@ -61,9 +61,9 @@ export class CommunityPage {
     console.log("CommunityPage build : filterOpen=" + __str(this._filterOpen));
     var feed = this._feed;
     if ((feed == null)) {
-      return new Center({
+      return (this.__k0 || (this.__k0 = new Center({
           "child": new CircularProgressIndicator({})
-        });
+        })));
     }
     return new Column({
         "children": [
@@ -81,7 +81,7 @@ export class CommunityPage {
                       "child": new Row({
                           "children": [
                             ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [new Padding({ "padding": { "left": 0.0, "top": 0.0, "right": 8.0, "bottom": 0.0 }, "child": new GestureDetector({ "onTap": this.__bindFn(0, [t], () => this._selectTab(t)), "child": new Container({ "padding": { "left": 15.0, "top": 6.0, "right": 15.0, "bottom": 6.0 }, "decoration": { "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 15.0 } }, "child": new Text({ "style": { "fontSize": 13.5, "color": ((this._tab == t) ? kBrand : '#ff5c6270') }, "data": t }) }) }) })]); } return out; })(),
-                            new Spacer({}),
+                            (this.__k2 || (this.__k2 = new Spacer({}))),
                             new GestureDetector({
                                 "onTap": this.__bindFn(1, [], () => _app_host_.invoke("toast", ["发布新动态（演示）"])),
                                 "child": new Container({
@@ -91,11 +91,11 @@ export class CommunityPage {
                                       "color": '#fff3f5f8',
                                       "shape": "circle"
                                     },
-                                    "child": new Icon({
-                                        "size": 16,
+                                    "child": (this.__k3 || (this.__k3 = new Icon({
                                         "color": '#ff5c6270',
-                                        "icon": "edit"
-                                      })
+                                        "icon": "edit",
+                                        "size": 16
+                                      })))
                                   })
                               })
                           ]
@@ -103,9 +103,9 @@ export class CommunityPage {
                     })
                 })
             }),
-          new SizedBox({
+          (this.__k4 || (this.__k4 = new SizedBox({
               "height": 10
-            }),
+            }))),
           new SizedBox({
               "height": 116,
               "child": new ListView({
@@ -122,9 +122,9 @@ export class CommunityPage {
                   "factory": "separated"
                 })
             }),
-          new SizedBox({
+          (this.__k5 || (this.__k5 = new SizedBox({
               "height": 12
-            }),
+            }))),
           new Container({
               "color": '#FFFFFF',
               "padding": {
@@ -136,7 +136,7 @@ export class CommunityPage {
               "child": new Row({
                   "children": [
                     ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [new Padding({ "padding": { "left": 0.0, "top": 0.0, "right": 6.0, "bottom": 0.0 }, "child": new GestureDetector({ "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)), "child": new Container({ "padding": { "left": 12.0, "top": 5.0, "right": 12.0, "bottom": 5.0 }, "decoration": { "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'), "borderRadius": { "radius": 14.0 } }, "child": new Text({ "style": { "fontSize": 12.5, "color": ((this._sort == s) ? kBrand : '#ff5c6270') }, "data": s }) }) }) })]); } return out; })(),
-                    new Spacer({}),
+                    (this.__k2 || (this.__k2 = new Spacer({}))),
                     new GestureDetector({
                         "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a)),
                         "child": new Container({
@@ -162,9 +162,9 @@ export class CommunityPage {
                                       },
                                       "data": "筛选"
                                     }),
-                                  new SizedBox({
+                                  (this.__k6 || (this.__k6 = new SizedBox({
                                       "width": 3
-                                    }),
+                                    }))),
                                   new Icon({
                                       "size": 14,
                                       "color": this._filterOpen ? kBrand : '#ff5c6270',
@@ -177,9 +177,9 @@ export class CommunityPage {
                   ]
                 })
             }),
-          ...(this._listLoading ? [new LinearProgressIndicator({ "minHeight": 2 })] : []),
+          ...(this._listLoading ? [(this.__k1 || (this.__k1 = new LinearProgressIndicator({ "minHeight": 2 })))] : []),
           new Expanded({
-              "child": (this._posts == null) ? new Center({ "child": new CircularProgressIndicator({}) }) : new _ListContent({ "resetFilter": (...__a) => this._resetFilter(...__a), "openFilter": this._filterOpen, "toggleFilter": (...__a) => this._toggleFilter(...__a), "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) })
+              "child": (this._posts == null) ? (this.__k0 || (this.__k0 = new Center({ "child": new CircularProgressIndicator({}) }))) : new _ListContent({ "resetFilter": (...__a) => this._resetFilter(...__a), "openFilter": this._filterOpen, "toggleFilter": (...__a) => this._toggleFilter(...__a), "feed": this._feed, "list": this._posts, "sort": this._sort, "type": this._type, "dist": this._dist, "price": this._price, "onSelectFilter": (...__a) => this._selectFilter(...__a) })
             })
         ]
       });
@@ -188,9 +188,9 @@ export class CommunityPage {
     return true;
   }
   _separatorBuilder0(context, _) {
-      return new SizedBox({
+      return (this.__k7 || (this.__k7 = new SizedBox({
         "width": 10
-      });
+      })));
   }
   _itemBuilder1(context, i) {
       return new _ResourceCard({
@@ -237,7 +237,7 @@ export class _ListContent {
                 "bottom": 20.0
               },
               "children": [
-                ...(this.list.isEmpty ? [new Padding({ "padding": { "left": 0.0, "top": 60.0, "right": 0.0, "bottom": 60.0 }, "child": new Center({ "child": new Text({ "style": { "fontSize": 13, "color": '#ff98a0ac' }, "data": "没有符合条件的帖子，试试放宽筛选条件" }) }) })] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [new Padding({ "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 }, "child": new _PostCard({ "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) })]); } return out; })())
+                ...(this.list.isEmpty ? [(this.__k0 || (this.__k0 = new Padding({ "child": new Center({ "child": new Text({ "data": "没有符合条件的帖子，试试放宽筛选条件", "style": { "color": '#ff98a0ac', "fontSize": 13 } }) }), "padding": { "bottom": 60.0, "left": 0.0, "right": 0.0, "top": 60.0 } })))] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [new Padding({ "padding": { "left": 12.0, "top": 0.0, "right": 12.0, "bottom": 10.0 }, "child": new _PostCard({ "post": p, "onTap": () => { return _app_host_.invoke("openPost", [p.id]); } }) })]); } return out; })())
               ]
             }),
           ...(this.openFilter ? [new Positioned({ "child": new GestureDetector({ "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)), "child": new Container({ "color": '#66000000' }) }), "factory": "fill" }), new Positioned({ "left": 0, "right": 0, "top": 0, "child": new _FilterPanel({ "feed": this.feed, "sort": this.sort, "type": this.type, "dist": this.dist, "price": this.price, "onPick": this.onSelectFilter, "onReset": this.resetFilter, "onApply": this.toggleFilter }) })] : [])
@@ -325,21 +325,21 @@ export class _FilterPanel {
                 "crossAxisAlignment": "start",
                 "children": [
                   this._group("排序方式", "sort", this.feed.sorts, this.sort),
-                  new SizedBox({
+                  (this.__k0 || (this.__k0 = new SizedBox({
                       "height": 16
-                    }),
+                    }))),
                   this._group("内容类型", "type", this.feed.postTypes, this.type),
-                  new SizedBox({
+                  (this.__k0 || (this.__k0 = new SizedBox({
                       "height": 16
-                    }),
+                    }))),
                   this._group("距离范围", "dist", this.feed.dists, this.dist),
-                  new SizedBox({
+                  (this.__k0 || (this.__k0 = new SizedBox({
                       "height": 16
-                    }),
+                    }))),
                   this._group("价格区间", "price", this.feed.priceRanges, this.price),
-                  new SizedBox({
+                  (this.__k1 || (this.__k1 = new SizedBox({
                       "height": 18
-                    }),
+                    }))),
                   new Row({
                       "children": [
                         new Expanded({
@@ -354,20 +354,20 @@ export class _FilterPanel {
                                         "radius": 21.0
                                       }
                                     },
-                                    "child": new Text({
+                                    "child": (this.__k2 || (this.__k2 = new Text({
+                                        "data": "重置",
                                         "style": {
+                                          "color": '#ff5c6270',
                                           "fontSize": 14,
-                                          "fontWeight": "w600",
-                                          "color": '#ff5c6270'
-                                        },
-                                        "data": "重置"
-                                      })
+                                          "fontWeight": "w600"
+                                        }
+                                      })))
                                   })
                               })
                           }),
-                        new SizedBox({
+                        (this.__k3 || (this.__k3 = new SizedBox({
                             "width": 10
-                          }),
+                          }))),
                         new Expanded({
                             "child": new GestureDetector({
                                 "onTap": this.__bindFn(2, [], (...__a) => this.onApply(...__a)),
@@ -380,14 +380,14 @@ export class _FilterPanel {
                                         "radius": 21.0
                                       }
                                     },
-                                    "child": new Text({
+                                    "child": (this.__k4 || (this.__k4 = new Text({
+                                        "data": "查看结果",
                                         "style": {
+                                          "color": '#FFFFFF',
                                           "fontSize": 14,
-                                          "fontWeight": "w600",
-                                          "color": '#FFFFFF'
-                                        },
-                                        "data": "查看结果"
-                                      })
+                                          "fontWeight": "w600"
+                                        }
+                                      })))
                                   })
                               })
                           })
@@ -445,9 +445,9 @@ export class _PostCard {
                           "src": this.post.img
                         })
                     }),
-                  new SizedBox({
+                  (this.__k0 || (this.__k0 = new SizedBox({
                       "width": 11
-                    }),
+                    }))),
                   new Expanded({
                       "child": new SizedBox({
                           "height": 92,
@@ -463,9 +463,9 @@ export class _PostCard {
                                     },
                                     "data": this.post.title
                                   }),
-                                new SizedBox({
+                                (this.__k1 || (this.__k1 = new SizedBox({
                                     "height": 5
-                                  }),
+                                  }))),
                                 new Expanded({
                                     "child": new Text({
                                         "maxLines": 2,
@@ -501,9 +501,9 @@ export class _PostCard {
                                               "data": this.post.type
                                             })
                                         }),
-                                      new SizedBox({
+                                      (this.__k2 || (this.__k2 = new SizedBox({
                                           "width": 6
-                                        }),
+                                        }))),
                                       new Text({
                                           "style": {
                                             "fontSize": 10.5,
@@ -511,15 +511,15 @@ export class _PostCard {
                                           },
                                           "data": this.post.author + " · " + this.post.time
                                         }),
-                                      new Spacer({}),
-                                      new Icon({
-                                          "size": 13,
+                                      (this.__k3 || (this.__k3 = new Spacer({}))),
+                                      (this.__k4 || (this.__k4 = new Icon({
                                           "color": '#ffa3a9b4',
-                                          "icon": "favorite_border"
-                                        }),
-                                      new SizedBox({
+                                          "icon": "favorite_border",
+                                          "size": 13
+                                        }))),
+                                      (this.__k5 || (this.__k5 = new SizedBox({
                                           "width": 3
-                                        }),
+                                        }))),
                                       new Text({
                                           "style": {
                                             "fontSize": 10.5,
@@ -600,9 +600,9 @@ export class _ResourceCard {
                                 },
                                 "data": this.resource.title
                               }),
-                            new SizedBox({
+                            (this.__k0 || (this.__k0 = new SizedBox({
                                 "height": 2
-                              }),
+                              }))),
                             new Text({
                                 "maxLines": 1,
                                 "overflow": "ellipsis",

@@ -31,9 +31,9 @@ export class HomePage {
     console.log("--HomePage build");
     var feed = this._feed;
     if ((feed == null)) {
-      return new Center({
+      return (this.__k0 || (this.__k0 = new Center({
           "child": new CircularProgressIndicator({})
-        });
+        })));
     }
     var banners = this._feed.banners;
     var grid = this._feed.grid;
@@ -49,10 +49,10 @@ export class HomePage {
                       "child": new Column({
                           "crossAxisAlignment": "stretch",
                           "children": [
-                            new HomeHeader({}),
-                            new SizedBox({
+                            (this.__k1 || (this.__k1 = new HomeHeader({}))),
+                            (this.__k2 || (this.__k2 = new SizedBox({
                                 "height": 12
-                              }),
+                              }))),
                             new SizedBox({
                                 "height": 150,
                                 "child": __h('PageView', {
@@ -61,18 +61,18 @@ export class HomePage {
                                     ]
                                   })
                               }),
-                            new SizedBox({
+                            (this.__k3 || (this.__k3 = new SizedBox({
                                 "height": 10
-                              }),
+                              }))),
                             new Row({
                                 "mainAxisAlignment": "center",
                                 "children": [
                                   ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new Container({ "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "width": 6, "height": 6, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
                                 ]
                               }),
-                            new SizedBox({
+                            (this.__k2 || (this.__k2 = new SizedBox({
                                 "height": 12
-                              }),
+                              }))),
                             new Container({
                                 "margin": {
                                   "left": 12.0,
@@ -106,9 +106,9 @@ export class HomePage {
                                     ]
                                   })
                               }),
-                            new SizedBox({
+                            (this.__k2 || (this.__k2 = new SizedBox({
                                 "height": 12
-                              }),
+                              }))),
                             new Container({
                                 "margin": {
                                   "left": 12.0,
@@ -120,9 +120,9 @@ export class HomePage {
                                     "img": this._feed.adImg
                                   })
                               }),
-                            new SizedBox({
+                            (this.__k4 || (this.__k4 = new SizedBox({
                                 "height": 16
-                              }),
+                              }))),
                             new Padding({
                                 "padding": {
                                   "left": 14.0,
@@ -142,31 +142,31 @@ export class HomePage {
                                             }
                                           }
                                         }),
-                                      new SizedBox({
+                                      (this.__k5 || (this.__k5 = new SizedBox({
                                           "width": 8
-                                        }),
-                                      new Text({
+                                        }))),
+                                      (this.__k6 || (this.__k6 = new Text({
+                                          "data": "景点推荐",
                                           "style": {
+                                            "color": '#ff1f2430',
                                             "fontSize": 17,
-                                            "fontWeight": "w700",
-                                            "color": '#ff1f2430'
-                                          },
-                                          "data": "景点推荐"
-                                        }),
-                                      new Spacer({}),
-                                      new Text({
+                                            "fontWeight": "w700"
+                                          }
+                                        }))),
+                                      (this.__k7 || (this.__k7 = new Spacer({}))),
+                                      (this.__k8 || (this.__k8 = new Text({
+                                          "data": "为你精选",
                                           "style": {
-                                            "fontSize": 12,
-                                            "color": '#ff8a909e'
-                                          },
-                                          "data": "为你精选"
-                                        })
+                                            "color": '#ff8a909e',
+                                            "fontSize": 12
+                                          }
+                                        })))
                                     ]
                                   })
                               }),
-                            new SizedBox({
+                            (this.__k3 || (this.__k3 = new SizedBox({
                                 "height": 10
-                              })
+                              })))
                           ]
                         })
                     }),
@@ -191,11 +191,11 @@ export class HomePage {
                           }
                         })
                     }),
-                  new SliverToBoxAdapter({
+                  (this.__k9 || (this.__k9 = new SliverToBoxAdapter({
                       "child": new SizedBox({
                           "height": 20
                         })
-                    })
+                    })))
                 ]
               })
           })
@@ -250,77 +250,77 @@ export class HomeHeader {
                       "children": [
                         new InkWell({
                             "onTap": this.__bindFn(0, [], (...__a) => this.openLocation(...__a)),
-                            "child": new Row({
+                            "child": (this.__k0 || (this.__k0 = new Row({
                                 "children": [
                                   new Icon({
                                       "color": '#ffffffff',
-                                      "size": 18,
-                                      "icon": "location_on"
+                                      "icon": "location_on",
+                                      "size": 18
                                     }),
                                   new SizedBox({
                                       "width": 2
                                     }),
                                   new Text({
+                                      "data": "上海",
                                       "style": {
                                         "color": '#ffffffff',
                                         "fontSize": 15,
                                         "fontWeight": "w600"
-                                      },
-                                      "data": "上海"
+                                      }
                                     }),
                                   new Icon({
                                       "color": '#ffffffff',
-                                      "size": 18,
-                                      "icon": "keyboard_arrow_down"
+                                      "icon": "keyboard_arrow_down",
+                                      "size": 18
                                     })
                                 ]
-                              })
+                              })))
                           }),
-                        new Spacer({}),
+                        (this.__k1 || (this.__k1 = new Spacer({}))),
                         new InkWell({
                             "onTap": this.__bindFn(1, [], (...__a) => this.openMessages(...__a)),
                             "borderRadius": {
                               "radius": 18.0
                             },
-                            "child": new Stack({
+                            "child": (this.__k2 || (this.__k2 = new Stack({
                                 "children": [
                                   new Padding({
-                                      "padding": {
-                                        "left": 4.0,
-                                        "top": 4.0,
-                                        "right": 4.0,
-                                        "bottom": 4.0
-                                      },
                                       "child": new Icon({
                                           "color": '#ffffffff',
-                                          "size": 24,
-                                          "icon": "notifications"
-                                        })
+                                          "icon": "notifications",
+                                          "size": 24
+                                        }),
+                                      "padding": {
+                                        "bottom": 4.0,
+                                        "left": 4.0,
+                                        "right": 4.0,
+                                        "top": 4.0
+                                      }
                                     }),
                                   new Positioned({
-                                      "right": 3,
-                                      "top": 3,
                                       "child": new DecoratedBox({
+                                          "child": new SizedBox({
+                                              "height": 8,
+                                              "width": 8
+                                            }),
                                           "decoration": {
-                                            "color": '#ffff5a36',
                                             "borderRadius": {
                                               "radius": 4.0
-                                            }
-                                          },
-                                          "child": new SizedBox({
-                                              "width": 8,
-                                              "height": 8
-                                            })
-                                        })
+                                            },
+                                            "color": '#ffff5a36'
+                                          }
+                                        }),
+                                      "right": 3,
+                                      "top": 3
                                     })
                                 ]
-                              })
+                              })))
                           })
                       ]
                     }),
-                  new SizedBox({
+                  (this.__k3 || (this.__k3 = new SizedBox({
                       "height": 12
-                    }),
+                    }))),
                   new InkWell({
                       "onTap": this.__bindFn(2, [], (...__a) => this.openSearch(...__a)),
                       "borderRadius": {
@@ -340,34 +340,34 @@ export class HomeHeader {
                               "radius": 21.0
                             }
                           },
-                          "child": new Row({
+                          "child": (this.__k4 || (this.__k4 = new Row({
                               "children": [
                                 new Icon({
                                     "color": '#ff9aa0ac',
-                                    "size": 20,
-                                    "icon": "search"
+                                    "icon": "search",
+                                    "size": 20
                                   }),
                                 new SizedBox({
                                     "width": 6
                                   }),
                                 new Text({
+                                    "data": "搜索目的地 / 关键词",
                                     "style": {
-                                      "fontSize": 14,
-                                      "color": '#ff9aa0ac'
-                                    },
-                                    "data": "搜索目的地 / 关键词"
+                                      "color": '#ff9aa0ac',
+                                      "fontSize": 14
+                                    }
                                   }),
                                 new Spacer({}),
                                 new Text({
+                                    "data": "搜索",
                                     "style": {
-                                      "fontSize": 13,
                                       "color": '#ff0e7afb',
+                                      "fontSize": 13,
                                       "fontWeight": "w600"
-                                    },
-                                    "data": "搜索"
+                                    }
                                   })
                               ]
-                            })
+                            })))
                         })
                     })
                 ]
@@ -442,9 +442,9 @@ export class BannerSlide {
                                     },
                                     "data": this.banner.title
                                   }),
-                                new SizedBox({
+                                (this.__k0 || (this.__k0 = new SizedBox({
                                     "height": 4
-                                  }),
+                                  }))),
                                 new Text({
                                     "style": {
                                       "color": '#e6ffffff',
@@ -487,9 +487,9 @@ export class GridCell {
                   },
                   "data": this.entry.emoji
                 }),
-              new SizedBox({
+              (this.__k0 || (this.__k0 = new SizedBox({
                   "height": 6
-                }),
+                }))),
               new Text({
                   "style": {
                     "fontSize": 12,
@@ -591,9 +591,9 @@ export class SpotCard {
                                 },
                                 "data": this.spot.title
                               }),
-                            new SizedBox({
+                            (this.__k0 || (this.__k0 = new SizedBox({
                                 "height": 4
-                              }),
+                              }))),
                             new Text({
                                 "maxLines": 1,
                                 "overflow": "ellipsis",
@@ -603,19 +603,19 @@ export class SpotCard {
                                 },
                                 "data": this.spot.sub
                               }),
-                            new SizedBox({
+                            (this.__k1 || (this.__k1 = new SizedBox({
                                 "height": 8
-                              }),
+                              }))),
                             new Row({
                                 "children": [
-                                  new Text({
+                                  (this.__k2 || (this.__k2 = new Text({
+                                      "data": "¥",
                                       "style": {
-                                        "fontSize": 11,
                                         "color": '#ffff5a36',
+                                        "fontSize": 11,
                                         "fontWeight": "w700"
-                                      },
-                                      "data": "¥"
-                                    }),
+                                      }
+                                    }))),
                                   new Text({
                                       "style": {
                                         "fontSize": 17,
@@ -624,7 +624,7 @@ export class SpotCard {
                                       },
                                       "data": this.spot.price
                                     }),
-                                  new Spacer({}),
+                                  (this.__k3 || (this.__k3 = new Spacer({}))),
                                   new Text({
                                       "style": {
                                         "fontSize": 10,
@@ -682,17 +682,17 @@ export class PromoCard {
                           "child": new Column({
                               "crossAxisAlignment": "start",
                               "children": [
-                                new Text({
+                                (this.__k0 || (this.__k0 = new Text({
+                                    "data": "热气球季 · 限时特惠",
                                     "style": {
                                       "color": '#ffffffff',
                                       "fontSize": 16,
                                       "fontWeight": "w700"
-                                    },
-                                    "data": "热气球季 · 限时特惠"
-                                  }),
-                                new SizedBox({
+                                    }
+                                  }))),
+                                (this.__k1 || (this.__k1 = new SizedBox({
                                     "height": 6
-                                  }),
+                                  }))),
                                 new Container({
                                     "padding": {
                                       "left": 10.0,
@@ -706,14 +706,14 @@ export class PromoCard {
                                         "radius": 12.0
                                       }
                                     },
-                                    "child": new Text({
+                                    "child": (this.__k2 || (this.__k2 = new Text({
+                                        "data": "立即查看 >",
                                         "style": {
-                                          "fontSize": 11,
                                           "color": '#ff0e7afb',
+                                          "fontSize": 11,
                                           "fontWeight": "w600"
-                                        },
-                                        "data": "立即查看 >"
-                                      })
+                                        }
+                                      })))
                                   })
                               ]
                             })

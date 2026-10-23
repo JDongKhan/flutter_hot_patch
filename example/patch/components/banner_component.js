@@ -32,9 +32,9 @@ export class BannerCard {
             }),
           new ElevatedButton({
               "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a)),
-              "child": new Text({
+              "child": (this.__k0 || (this.__k0 = new Text({
                   "data": "Bump"
-                })
+                })))
             })
         ]
       });

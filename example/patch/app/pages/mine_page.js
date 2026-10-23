@@ -38,9 +38,9 @@ export class MinePage {
   build(context) {
     var feed = this._feed;
     if ((feed == null)) {
-      return new Center({
+      return (this.__k0 || (this.__k0 = new Center({
           "child": new CircularProgressIndicator({})
-        });
+        })));
     }
     return __h('ListView', {
         "padding": {
@@ -84,49 +84,49 @@ export class MinePage {
                                     "src": this._feed.avatar
                                   })
                               }),
-                            new SizedBox({
+                            (this.__k5 || (this.__k5 = new SizedBox({
                                 "width": 13
-                              }),
-                            new Expanded({
+                              }))),
+                            (this.__k6 || (this.__k6 = new Expanded({
                                 "child": new Column({
-                                    "crossAxisAlignment": "start",
                                     "children": [
                                       new Text({
+                                          "data": "旅行家小七",
                                           "style": {
+                                            "color": '#FFFFFF',
                                             "fontSize": 17.5,
-                                            "fontWeight": "w700",
-                                            "color": '#FFFFFF'
-                                          },
-                                          "data": "旅行家小七"
+                                            "fontWeight": "w700"
+                                          }
                                         }),
                                       new SizedBox({
                                           "height": 4
                                         }),
                                       new Text({
+                                          "data": "138****8888",
                                           "style": {
-                                            "fontSize": 12,
-                                            "color": '#ccffffff'
-                                          },
-                                          "data": "138****8888"
+                                            "color": '#ccffffff',
+                                            "fontSize": 12
+                                          }
                                         }),
                                       new SizedBox({
                                           "height": 6
                                         }),
                                       new Text({
+                                          "data": "点击头像可跳转登录页 ›",
                                           "style": {
-                                            "fontSize": 11,
-                                            "color": '#b3ffffff'
-                                          },
-                                          "data": "点击头像可跳转登录页 ›"
+                                            "color": '#b3ffffff',
+                                            "fontSize": 11
+                                          }
                                         })
-                                    ]
+                                    ],
+                                    "crossAxisAlignment": "start"
                                   })
-                              }),
-                            new Icon({
+                              }))),
+                            (this.__k7 || (this.__k7 = new Icon({
                                 "color": '#ccffffff',
-                                "size": 20,
-                                "icon": "chevron_right"
-                              })
+                                "icon": "chevron_right",
+                                "size": 20
+                              })))
                           ]
                         })
                     })
@@ -155,7 +155,7 @@ export class MinePage {
                   },
                   "child": new Row({
                       "children": [
-                        ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [new Expanded({ "child": new GestureDetector({ "onTap": this.__bindFn(1, [], () => _app_host_.invoke("openOrders", [])), "child": new Column({ "children": [ new Text({ "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), new SizedBox({ "height": 3 }), new Text({ "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ] }) }) })]); } return out; })()
+                        ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [new Expanded({ "child": new GestureDetector({ "onTap": this.__bindFn(1, [], () => _app_host_.invoke("openOrders", [])), "child": new Column({ "children": [ new Text({ "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), (this.__k1 || (this.__k1 = new SizedBox({ "height": 3 }))), new Text({ "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ] }) }) })]); } return out; })()
                       ]
                     })
                 }),
@@ -176,7 +176,7 @@ export class MinePage {
               },
               "child": new Column({
                   "children": [
-                    ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [new Divider({ "height": 1, "indent": 56, "color": '#fff0f2f6' })] : []), new GestureDetector({ "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])), "child": new Padding({ "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 }, "child": new Row({ "children": [ new Container({ "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } }, "child": new Text({ "style": { "fontSize": 15 }, "data": this._feed.menu[i].emoji }) }), new SizedBox({ "width": 12 }), new Expanded({ "child": new Text({ "style": { "fontSize": 14 }, "data": this._feed.menu[i].title }) }), new Icon({ "size": 18, "color": '#ffc3c8d2', "icon": "chevron_right" }) ] }) }) })]); } return out; })()
+                    ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [(this.__k2 || (this.__k2 = new Divider({ "color": '#fff0f2f6', "height": 1, "indent": 56 })))] : []), new GestureDetector({ "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])), "child": new Padding({ "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 }, "child": new Row({ "children": [ new Container({ "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } }, "child": new Text({ "style": { "fontSize": 15 }, "data": this._feed.menu[i].emoji }) }), (this.__k3 || (this.__k3 = new SizedBox({ "width": 12 }))), new Expanded({ "child": new Text({ "style": { "fontSize": 14 }, "data": this._feed.menu[i].title }) }), (this.__k4 || (this.__k4 = new Icon({ "color": '#ffc3c8d2', "icon": "chevron_right", "size": 18 }))) ] }) }) })]); } return out; })()
                   ]
                 })
             }),
@@ -198,33 +198,33 @@ export class MinePage {
                           "radius": 14.0
                         }
                       },
-                      "child": new Text({
+                      "child": (this.__k8 || (this.__k8 = new Text({
+                          "data": "退出登录",
                           "style": {
+                            "color": kPrice,
                             "fontSize": 14,
-                            "fontWeight": "w600",
-                            "color": kPrice
-                          },
-                          "data": "退出登录"
-                        })
+                            "fontWeight": "w600"
+                          }
+                        })))
                     })
                 })
             }),
-          new Padding({
-              "padding": {
-                "left": 18.0,
-                "top": 4.0,
-                "right": 18.0,
-                "bottom": 8.0
-              },
+          (this.__k9 || (this.__k9 = new Padding({
               "child": new Text({
+                  "data": "开发者",
                   "style": {
+                    "color": '#ff98a0ac',
                     "fontSize": 12.5,
-                    "fontWeight": "w700",
-                    "color": '#ff98a0ac'
-                  },
-                  "data": "开发者"
-                })
-            }),
+                    "fontWeight": "w700"
+                  }
+                }),
+              "padding": {
+                "bottom": 8.0,
+                "left": 18.0,
+                "right": 18.0,
+                "top": 4.0
+              }
+            }))),
           new Container({
               "margin": {
                 "left": 12.0,
@@ -246,11 +246,11 @@ export class MinePage {
                         "subtitle": "常用组件 原生 ↔ JS 同屏对比",
                         "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
                       }),
-                    new Divider({
+                    (this.__k2 || (this.__k2 = new Divider({
+                        "color": '#fff0f2f6',
                         "height": 1,
-                        "indent": 56,
-                        "color": '#fff0f2f6'
-                      }),
+                        "indent": 56
+                      }))),
                     new _DevRow({
                         "icon": "compare_arrows",
                         "title": "热更 Demo 列表",
@@ -313,9 +313,9 @@ export class _DevRow {
                           "icon": this.icon
                         })
                     }),
-                  new SizedBox({
+                  (this.__k0 || (this.__k0 = new SizedBox({
                       "width": 12
-                    }),
+                    }))),
                   new Expanded({
                       "child": new Column({
                           "crossAxisAlignment": "start",
@@ -326,9 +326,9 @@ export class _DevRow {
                                 },
                                 "data": this.title
                               }),
-                            new SizedBox({
+                            (this.__k1 || (this.__k1 = new SizedBox({
                                 "height": 3
-                              }),
+                              }))),
                             new Text({
                                 "maxLines": 1,
                                 "overflow": "ellipsis",
@@ -341,11 +341,11 @@ export class _DevRow {
                           ]
                         })
                     }),
-                  new Icon({
-                      "size": 18,
+                  (this.__k2 || (this.__k2 = new Icon({
                       "color": '#ffc3c8d2',
-                      "icon": "chevron_right"
-                    })
+                      "icon": "chevron_right",
+                      "size": 18
+                    })))
                 ]
               })
           })

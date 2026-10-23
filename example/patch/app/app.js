@@ -47,10 +47,10 @@ export class AppSubContent {
             "controller": this._tab,
             "physics": "NeverScrollableScrollPhysics",
             "children": [
-              new HomePage({}),
-              new CommunityPage({}),
-              new OrdersPage({}),
-              new MinePage({})
+              (this.__k0 || (this.__k0 = new HomePage({}))),
+              (this.__k1 || (this.__k1 = new CommunityPage({}))),
+              (this.__k2 || (this.__k2 = new OrdersPage({}))),
+              (this.__k3 || (this.__k3 = new MinePage({})))
             ]
           }),
         "bottomNavigationBar": new BottomNavigationBar({

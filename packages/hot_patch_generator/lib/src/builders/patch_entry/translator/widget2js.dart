@@ -51,6 +51,19 @@ class WidgetNode {
       };
 }
 
+/// const 构造的缓存键分配器：给每个 const 站点分配本类内递增的短编号
+/// （`0`、`1`…），生成代码用 `this.__k<编号>` 保存该站点构造出的实例。
+///
+/// 为什么按「实例」缓存而不是模块级：const 实例的生命周期应与使用它的组件
+/// 实例一致——组件卸载（页面退出）后缓存随实例一起被 GC，不需要手动释放；
+/// 而同一实例内的多次 build 仍拿到同一对象，父级重建时可按引用短路。
+class ConstKeyAllocator {
+  final Map<String, int> _byValue = {};
+  int _seq = 0;
+
+  int idFor(String canonicalCall) => _byValue.putIfAbsent(canonicalCall, () => _seq++);
+}
+
 /// 翻译上下文：持有注册表与组件元数据，并向 translator 提供通用解析能力。
 ///
 /// translator 通过 [translate] 递归子节点、通过 [renderJs] 递归渲染子节点，
@@ -107,6 +120,14 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 纯模型产物（无任何元素）不产生多余 import。
   bool usedNodeHelper = false;
 
+  /// 是否产出过 `const` 元素缓存（产物头部需 `var __const = {};`）。
+  /// const 缓存键的分配器：每个类一份（编号只在该类的 `this` 上做字段名，
+  /// 因此不需要跨类唯一）。
+  final ConstKeyAllocator? constKeyAllocator;
+  final ConstKeyAllocator _localConstKeys = ConstKeyAllocator();
+
+  ConstKeyAllocator get constKeys => constKeyAllocator ?? _localConstKeys;
+
   /// ListenableBuilder 等「builder 闭包」翻译：闭包返回的子树抽到组件方法
   /// `_lbBuilderN()`，运行时时模型 notify 后重新调用拿到最新子树做局部重建。
   /// 收集顺序即 `_lbBuilder${index}` 命名序号。
@@ -137,6 +158,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     this.jsClassWidgets = const {},
     this.delegateClassWidgets = const {},
     this.modelClassNames = const {},
+    this.constKeyAllocator,
   });
 
   /// 本文件 / import 可见的**普通类（模型）**名（classTable 里 !isComponent）。
@@ -286,6 +308,17 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     // `key:` 是跨所有 widget 的通用参数（Key 是值不是结点），此处统一注入
     // props['key']（见 [_applyKeyProp]）。
     _applyKeyProp(json, node);
+    // 显式 `const` 构造（`const HomePage()` / `const SizedBox(...)`）：Dart 会把
+    // 它们规范化成同一 Widget 实例，父级重建时原生 `updateChild` 按引用短路。
+    // 产物若每次 build 都 `new` 一次，就会把 const 子组件误判成“新 widget”，
+    // 白跑一次 didUpdateWidget + build，故标记后由 [_renderCall] 做站点缓存。
+    if (e is InstanceCreationExpression && e.isConst) {
+      json['__constSite'] = true;
+      // const 值的同一性只看「类型 + 实参值」，与命名实参的书写顺序无关：
+      // `const SizedBox(width: 8, height: 12)` 与 `(height: 12, width: 8)` 在
+      // Dart 里是同一个实例。产物按排序后的键渲染，缓存 key 因此也与顺序无关。
+      json['props'] = _constCanonical(json['props']);
+    }
     return json;
   }
 
@@ -653,6 +686,23 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return out;
   }
 
+  /// const 值的规范化：Map 按键名排序（值递归），List 保持原序（子元素顺序有语义）。
+  /// 只用于生成期，输出仍是等价的对象字面量，只是键序确定。
+  static Object? _constCanonical(Object? v) {
+    if (v is Map) {
+      final keys = v.keys.map((k) => '$k').toList()..sort();
+      final out = <String, dynamic>{};
+      for (final k in keys) {
+        out[k] = _constCanonical(v[k]);
+      }
+      return out;
+    }
+    if (v is List) {
+      return v.map(_constCanonical).toList();
+    }
+    return v;
+  }
+
   /// 把已翻译的 JSON 节点渲染成构造表达式：`new X({...})`（有 JS 类）或
   /// `__h('X', {...})`（无 JS 类，原生注入兜底）。
   ///
@@ -670,9 +720,120 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final props = _propsWithKey(json['props'], json['key']);
     final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
     if (asClass || asHostWrapper) {
-      return 'new $type($propsJs)';
+      return _constCached(json, 'new $type($propsJs)');
     }
-    return "__h('$type', $propsJs)";
+    return _constCached(json, "__h('$type', $propsJs)");
+  }
+
+  /// const 构造的站点级懒缓存：同一处 `const X(...)` 每次 build 复用同一实例，
+  /// 与 Dart 的 const 规范化一致（运行时再按实例缓存元素，见 `asElement`）。
+  ///
+  /// 缓存挂在**组件实例自身**（`this.__k<编号>`），不是模块全局：
+  ///   - 生命周期与组件实例一致——页面退出 / 组件卸载后随实例一起被 GC，
+  ///     无需手动释放，也不会像模块级缓存那样活到热更；
+  ///   - 同一实例内的多次 build 仍拿到同一对象，父级重建可短路；
+  ///   - 字段名按类内编号分配，不稳定编码进 key，产物更干净。
+  ///
+  /// JS 的 `const` 关键字解决不了这个问题：它只是「绑定不可重新赋值」，函数体
+  /// 每次执行都会重新求出新对象，JS 没有 Dart 那样的 const 规范化。
+  String _constCached(Map<String, dynamic> json, String call) {
+    if (json['__constSite'] != true) { return call; }
+    final id = constKeys.idFor(_stripNew(_compactJsExpr(call)));
+    return '(this.__k$id || (this.__k$id = $call))';
+  }
+
+  /// 去掉 key 里的 `new` 关键字（含嵌套层）：`new Center({...new X()})` →
+  /// `Center({...X()})`。同一 const 值靠「类型 + 实参」已能唯一区分，`new` 只是噪音。
+  /// 按字符串/模板字面量边界扫描，不改动任何字面量内部内容。
+  static String _stripNew(String s) {
+    final out = StringBuffer();
+    var quote = '';
+    var i = 0;
+    while (i < s.length) {
+      final ch = s[i];
+      if (quote.isNotEmpty) {
+        out.write(ch);
+        if (ch == r'\' && i + 1 < s.length) {
+          out.write(s[i + 1]);
+          i += 2;
+          continue;
+        }
+        if (ch == quote) { quote = ''; }
+        i += 1;
+        continue;
+      }
+      if (ch == '"' || ch == "'" || ch == '`') {
+        quote = ch;
+        out.write(ch);
+        i += 1;
+        continue;
+      }
+      final isWordStart = i == 0 || !_identChar(s[i - 1]);
+      if (isWordStart &&
+          s.startsWith('new ', i) &&
+          i + 4 < s.length &&
+          _identChar(s[i + 4]) &&
+          s[i + 4] != r'$') {
+        i += 4;
+        continue;
+      }
+      out.write(ch);
+      i += 1;
+    }
+    return out.toString();
+  }
+
+  /// 压掉 JS 表达式里的换行与多余空格，只保留标识符之间必需的单个空格。
+  /// 字符串 / 模板字面量内部原样保留（不改变任何字面量内容）。
+  static String _compactJsExpr(String s) {
+    final out = StringBuffer();
+    var quote = '';
+    var pendingSpace = false;
+    var last = '';
+    void emit(String c) {
+      out.write(c);
+      last = c;
+    }
+
+    for (var i = 0; i < s.length; i++) {
+      final ch = s[i];
+      if (quote.isNotEmpty) {
+        emit(ch);
+        if (ch == r'\' && i + 1 < s.length) {
+          emit(s[i + 1]);
+          i += 1;
+        } else if (ch == quote) {
+          quote = '';
+        }
+        continue;
+      }
+      if (ch == '"' || ch == "'" || ch == '`') {
+        if (pendingSpace && _identChar(last) && _identChar(ch)) { emit(' '); }
+        pendingSpace = false;
+        quote = ch;
+        emit(ch);
+        continue;
+      }
+      if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') {
+        pendingSpace = true;
+        continue;
+      }
+      if (pendingSpace && _identChar(last) && _identChar(ch)) { emit(' '); }
+      pendingSpace = false;
+      emit(ch);
+    }
+    return out.toString();
+  }
+
+  /// 只有「两侧都是标识符字符」时才需要一个空格（如 `new` 与 `Text`），
+  /// 其余标点相邻一律贴合，避免产物里出现 `[ `、`, ` 这类噪音。
+  static bool _identChar(String c) {
+    if (c.isEmpty) { return false; }
+    final u = c.codeUnitAt(0);
+    return (u >= 0x30 && u <= 0x39) ||
+        (u >= 0x41 && u <= 0x5A) ||
+        (u >= 0x61 && u <= 0x7A) ||
+        c == '_' || c == r'$';
   }
 
   /// 剥离 JS 字符串字面量引号（`"Column"` → `Column`）；非字面量原样返回。
@@ -1269,14 +1430,16 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// `type`，会把整个 props Map 误判成节点（读出的 `type` 是 JS 表达式而非类型名，
   /// 查表落空后整条结点降级）。节点 Map 由 translator 产出，特征明确：
   ///   - 键只有 `type` / `props` / `key`（`key` 是元素级 Key，由
-  ///     [WidgetTranslateContext._applyKeyProp] 注入，渲染时并入 props）；
+  ///     [WidgetTranslateContext._applyKeyProp] 注入，渲染时并入 props），
+  ///     以及生成期标记 `__constSite`（`const` 构造的站点缓存标记，渲染时消费）。
+  ///
   ///   - `type` 的值是 [jsString] 产出的**带引号字符串字面量**（类型名），
   ///     而不是 `this._type` 这类运行时表达式。
   static bool _isNodeMap(Map value) {
     final t = value['type'];
     if (t is! String || !t.startsWith('"')) return false;
     return value.keys.every(
-      (k) => k == 'type' || k == 'props' || k == 'key',
+      (k) => k == 'type' || k == 'props' || k == 'key' || k == '__constSite',
     );
   }
 

@@ -28,10 +28,10 @@ export class WatchDemo {
                       new Builder({
                           "builder": "_builder0"
                         }),
-                      new SizedBox({
+                      (this.__k0 || (this.__k0 = new SizedBox({
                           "height": 12
-                        }),
-                      new WatchCountLabel({})
+                        }))),
+                      (this.__k1 || (this.__k1 = new WatchCountLabel({})))
                     ]
                   }),
                 "model": "CounterVm"
@@ -44,9 +44,9 @@ export class WatchDemo {
       return new Column({
         "mainAxisSize": "min",
         "children": [
-          new Text({
+          (this.__k2 || (this.__k2 = new Text({
               "data": "context.watch<CounterModel>"
-            }),
+            }))),
           new Text({
               "style": {
                 "fontSize": 22,
@@ -55,26 +55,26 @@ export class WatchDemo {
               },
               "data": "count = " + model.count
             }),
-          new SizedBox({
+          (this.__k3 || (this.__k3 = new SizedBox({
               "height": 8
-            }),
+            }))),
           new Row({
               "mainAxisAlignment": "center",
               "children": [
                 new ElevatedButton({
                     "onPressed": this.__bindFn(0, [model], () => model.inc()),
-                    "child": new Text({
+                    "child": (this.__k4 || (this.__k4 = new Text({
                         "data": "+1"
-                      })
+                      })))
                   }),
-                new SizedBox({
+                (this.__k5 || (this.__k5 = new SizedBox({
                     "width": 12
-                  }),
+                  }))),
                 new ElevatedButton({
                     "onPressed": this.__bindFn(1, [], () => { this.context.read("CounterVm").reset(); }),
-                    "child": new Text({
+                    "child": (this.__k6 || (this.__k6 = new Text({
                         "data": "Reset"
-                      })
+                      })))
                   })
               ]
             })

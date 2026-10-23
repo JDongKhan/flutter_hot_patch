@@ -27,34 +27,34 @@ export class DashboardCard {
           new Text({
               "data": "ticks = " + this._ticks
             }),
-          new BannerCard({}),
-          new SizedBox({
+          (this.__k0 || (this.__k0 = new BannerCard({}))),
+          (this.__k1 || (this.__k1 = new SizedBox({
               "height": 12
-            }),
-          __h('_LabeledDivider', {
-              "text": "private widget",
+            }))),
+          (this.__k2 || (this.__k2 = __h('_LabeledDivider', {
               "child": new Text({
                   "data": "native child slot"
-                })
-            }),
-          new SizedBox({
+                }),
+              "text": "private widget"
+            }))),
+          (this.__k3 || (this.__k3 = new SizedBox({
               "height": 8
-            }),
-          new LabeledDivider({
+            }))),
+          (this.__k4 || (this.__k4 = new LabeledDivider({
               "text": "public widget"
-            }),
-          new SizedBox({
+            }))),
+          (this.__k1 || (this.__k1 = new SizedBox({
               "height": 12
-            }),
+            }))),
           new ElevatedButton({
               "onPressed": this.__bindFn(0, [], (...__a) => this.tick(...__a)),
               "style": {
                 "backgroundColor": '#FF9800',
                 "foregroundColor": '#FFFFFF'
               },
-              "child": new Text({
+              "child": (this.__k5 || (this.__k5 = new Text({
                   "data": "Tick"
-                })
+                })))
             })
         ]
       });

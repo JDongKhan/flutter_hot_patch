@@ -53,12 +53,12 @@ export class ProviderCard {
                           "builder": "_builder0",
                           "model": "CounterVm"
                         }),
-                      new Text({
+                      (this.__k0 || (this.__k0 = new Text({
                           "data": "MultiProvider · 两个模型各自局部重建"
-                        }),
-                      new SizedBox({
+                        }))),
+                      (this.__k1 || (this.__k1 = new SizedBox({
                           "height": 8
-                        }),
+                        }))),
                       new Consumer({
                           "builder": "_builder1",
                           "model": "NetworkVm"
@@ -68,15 +68,15 @@ export class ProviderCard {
                           "children": [
                             new ElevatedButton({
                                 "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a)),
-                                "child": new Text({
+                                "child": (this.__k2 || (this.__k2 = new Text({
                                     "data": "加载用户信息"
-                                  })
+                                  })))
                               })
                           ]
                         }),
-                      new SizedBox({
+                      (this.__k1 || (this.__k1 = new SizedBox({
                           "height": 8
-                        }),
+                        }))),
                       new Consumer({
                           "builder": "_builder2",
                           "model": "CounterVm"
@@ -86,18 +86,18 @@ export class ProviderCard {
                           "children": [
                             new ElevatedButton({
                                 "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a)),
-                                "child": new Text({
+                                "child": (this.__k3 || (this.__k3 = new Text({
                                     "data": "B +1"
-                                  })
+                                  })))
                               }),
-                            new SizedBox({
+                            (this.__k4 || (this.__k4 = new SizedBox({
                                 "width": 12
-                              }),
+                              }))),
                             new ElevatedButton({
                                 "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a)),
-                                "child": new Text({
+                                "child": (this.__k5 || (this.__k5 = new Text({
                                     "data": "B Reset"
-                                  })
+                                  })))
                               })
                           ]
                         })

@@ -114,14 +114,19 @@ function __isElementList(v) {
 // 得到实例），父级把它当子结点消费时在这里统一折算。判定只看原型上有没有
 // build（组件类的语言级特征），不查类型名表、不需要 toJson / 特殊标记。
 // `inst` 随元素携带：reconciler mount 直接复用它（不再 new 第二次）。
+// 同一实例 → 同一元素描述：Dart「const 规范化」在 JS 侧的对应物（const 构造
+// 经 `__const` 缓存后实例唯一），reconciler 据此按引用短路子树更新。
 export function __asElement(v) {
   if (v == null || typeof v !== 'object' || v.element === true) { return v; }
   var C = v.constructor;
   if (typeof C === 'function' && C.prototype &&
       typeof C.prototype.build === 'function') {
-    return {
+    if (v.__elCache) { return v.__elCache; }
+    var e = {
       type: C, props: v.props || {}, children: {}, element: true, inst: v
     };
+    v.__elCache = e;
+    return e;
   }
   return v;
 }

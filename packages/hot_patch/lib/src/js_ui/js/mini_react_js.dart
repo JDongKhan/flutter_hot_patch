@@ -35,9 +35,15 @@ const String miniReactElementSource = r'''
     var C = v.constructor;
     if (typeof C === 'function' && C.prototype &&
         typeof C.prototype.build === 'function') {
-      return {
+      // 同一 Widget 实例 → 同一元素描述：Dart「const 规范化」在 JS 侧的对应物。
+      // 生成器把 `const X(...)` 的产物 hoist 成同一实例后，靠这层缓存让每次
+      // 折算都得到同一个元素对象，patch 才能像原生 `updateChild` 那样按引用短路。
+      if (v.__elCache) { return v.__elCache; }
+      var e = {
         type: C, props: v.props || {}, children: {}, element: true, inst: v
       };
+      v.__elCache = e;
+      return e;
     }
     return v;
   }
@@ -707,8 +713,9 @@ const String miniReactReconcilerSource = r'''
     }
     // 与原生 Flutter 对齐：父级每次重建都会重新执行 itemBuilder，并把产出的新
     // 元素 patch 到已挂载的子树上——组件照常进 didUpdateWidget / build。
-    // **不能**按「产出元素与上次相同」短路：那会吞掉 didUpdateWidget 的副作用，
-    // 与原生语义不一致（ListView.builder 的 delegate 每次重建都会 update 已挂载项）。
+    // **不能**按「产出元素内容相同」短路：那会吞掉 didUpdateWidget 的副作用。
+    // 例外只有引用相同（`const` 构造的同一实例，见 patch 的 `__el` 判等），
+    // 此时与原生 `Element.updateChild` 的 `child.widget == newWidget` 一致。
     var oldRoot = ph.__mountedRootId;
     ph.__mountedChild = patch(ph.__mountedChild, el, ph, null);
     // 复用 / 新建的组件实例都要记住自己的父 slot：组件内部 setState 换掉渲染
@@ -886,7 +893,7 @@ const String miniReactReconcilerSource = r'''
     if (typeof el.type === 'string') {
       var hi = {
         __k: HOST, __id: nodeId(el.type), __type: el.type, __root: rootFor(parent),
-        __props: el.props, __children: [], __parent: parent
+        __props: el.props, __children: [], __parent: parent, __el: el
       };
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【7】）。
       applyScope(hi, el.props);
@@ -946,6 +953,8 @@ const String miniReactReconcilerSource = r'''
     // initState / didChangeDependencies / build 任何一步抛错都要按帧回收。
     trackInst(ci);
     ci.__el = el;
+    // 让「父级直接把实例当子结点传入」的折算也拿到同一份元素（见 asElement）。
+    ci.__elCache = el;
     ci.__parent = parent;
     ci.__slot = slot;
     ci.__root = rootFor(parent);
@@ -979,6 +988,18 @@ const String miniReactReconcilerSource = r'''
       return mi;
     }
 
+    // 对齐 Flutter `Element.updateChild` 的 `child.widget == newWidget` 短路：
+    // 两种情况命中短路：
+    //   1. 元素本身完全相同（`__el` 就是同一个对象，asElement 缓存命中）；
+    //   2. 底层实例完全相同（`el.inst` 就是同一个 const 缓存实例，覆盖 __asElement
+    //      每次折算得到新元素对象但实例还是同一个的场景，如懒容器 children 数组）；
+    // 只认引用相等，绝不做 props 值比较——非 const 子组件即使 props 完全相同，
+    // 父级重建时也必须走 didUpdateWidget（见 patchLazySlot 的约定）。
+    if (oldInst.__el === el || (el.inst && el.inst === oldInst)) {
+      if (propSlot) { oldInst.__propSlot = propSlot; }
+      return oldInst;
+    }
+
     var newIsHost = (typeof el.type === 'string');
     var oldIsHost = (oldInst.__k === HOST);
     var sameType = oldIsHost
@@ -995,6 +1016,7 @@ const String miniReactReconcilerSource = r'''
         emit({ op: 'props', id: oldInst.__id, props: el.props });
       }
       oldInst.__props = el.props;
+      oldInst.__el = el;
       // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
       applyScope(oldInst, el.props);
       // 子项来源按新元素声明的懒标记生成：懒容器下 builder 形态只带延迟工厂，
@@ -1011,6 +1033,9 @@ const String miniReactReconcilerSource = r'''
     // didUpdateWidget，最后 build——顺序与 Flutter 完全一致。
     var oldWidget = oldInst.props;
     oldInst.__el = el;
+    // 实例侧的折算缓存同步到最新元素：父级若再次直接把该实例当子结点传入，
+    // asElement 必须拿到 props 与实例一致的那份描述。
+    oldInst.__elCache = el;
     oldInst.props = el.props;
     // props 变更 → 重新派生「构造参数字段」。生成器产物把 `this.x = args.x` 的
     // 参数↔字段映射放在 `__applyProps` 里；复用实例不会重跑构造函数，若不在此

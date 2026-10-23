@@ -131,6 +131,7 @@ class ClassInfo {
   /// 方法体里是否用到结点工厂 `__h`（决定产物是否 import `__h`）。
   final bool usedNodeHelper;
 
+
   /// 本文件 `@HostInjected` 声明的通道表（类名 → {方法名 → 通道名}；顶层函数
   /// 挂在空串 key 下）。由收集阶段自行扫好挂在模型上，方法体翻译据此把调用点
   /// 整体换成 `_app_host_.invoke(通道, 载荷)`——组件与普通类同一份数据、
