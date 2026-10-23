@@ -471,6 +471,13 @@ const String _jsUiApi = r'''
       // 末位下发根结点 id，宿主据此挂载 _JsNode。
       emit({ op: 'root', id: hostIdOf(root.inst) });
       commit(root);
+    } catch (e) {
+      // 失败即整页回滚：本次 commit 未发生（宿主侧没有半棵树），但 JS 侧已创建
+      // 的宿主结点索引与已同步过去的句柄会随每次重试累积——只进不出。
+      // 见 abortRoot（按 __root / pageKey 归属清扫，不能走 unmount(root.inst)：
+      // 抛错时 root.inst 还没赋值）。
+      abortRoot(root);
+      throw e;
     } finally {
       root.mounting = false;
       activeRoot = prev;

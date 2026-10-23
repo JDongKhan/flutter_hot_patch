@@ -297,6 +297,18 @@ const String miniReactSchedulerSource = r'''
   // 没有宿主桥（命令行 / 测试 harness）时退化为同步 flush，保持原行为。
   function markDirty(inst) {
     if (!inst || inst.__unmounted || inst.__dirty) { return; }
+    // build 期对自己 setState 是错误写法：Flutter 原生在此直接断言（
+    // "setState() or markNeedsBuild() called during build"）。若不拦截，flush
+    // 的 while 会「置 __dirty=false → build 内再入队 → 再 build」无限循环，
+    // 整个 JS 线程卡死且没有任何日志。这里出声并跳过。
+    // 只挡「自己正在 build」：祖先/子结点互相标脏不受影响（原生同样放行）。
+    if (inst.__building) {
+      if (typeof console !== 'undefined' && console.error) {
+        console.error('jsui: setState during build ignored (' +
+          compName(inst.constructor) + ')');
+      }
+      return;
+    }
     var root = inst.__root;
     if (!root) { return; }
     inst.__dirty = true;
@@ -350,17 +362,32 @@ const String miniReactSchedulerSource = r'''
           var inst = batch[i];
           inst.__dirty = false;
           if (inst.__unmounted) { continue; }
+          // 单条重建失败不连坐同批其余组件（与 Flutter「一个子树建错出
+          // ErrorWidget、兄弟照常构建」对齐）：本批已由 root.dirty 整体接管
+          // 并清空，异常若冲出 for 循环，后面那些组件的 __dirty 仍是 true 却
+          // 已不在队列里，markDirty 会因 __dirty 早退 → 它们将永不重建。
           root.ops = [];
-          // 作用域依赖变更（__depDirty）走这里：与 Flutter 一致，
-          // 先 didChangeDependencies 再 build；setState 触发的重建不调。
-          if (inst.__depDirty) {
-            inst.__depDirty = false;
-            if (typeof inst.didChangeDependencies === 'function') {
-              inst.didChangeDependencies();
+          try {
+            // 作用域依赖变更（__depDirty）走这里：与 Flutter 一致，
+            // 先 didChangeDependencies 再 build；setState 触发的重建不调。
+            if (inst.__depDirty) {
+              inst.__depDirty = false;
+              if (typeof inst.didChangeDependencies === 'function') {
+                inst.didChangeDependencies();
+              }
+            }
+            inst.__child = patchComponentChild(inst);
+            commit(root);
+          } catch (e) {
+            // 丢弃本次未 commit 的增量：宿主只接受整批 commit，半棵树不下发，
+            // 避免 JS 树与宿主渲染在中途状态上分叉。该实例保持 __dirty=false，
+            // 下次 setState / 订阅通知会重新重建。
+            root.ops = null;
+            if (typeof console !== 'undefined' && console.error) {
+              console.error('jsui: rebuild failed (' +
+                compName(inst.constructor) + '): ' + e);
             }
           }
-          inst.__child = patchComponentChild(inst);
-          commit(root);
         }
       }
     } finally {
@@ -752,7 +779,12 @@ const String miniReactReconcilerSource = r'''
   function buildOf(inst) {
     var prev = building;
     building = inst;
-    try { return inst.build(contextOf(inst)); } finally { building = prev; }
+    // `__building` 标记「本实例正处在 build 执行期」，供 markDirty 拦截 build 内
+    // setState（见【8】）。**不能用锚点 `building` 代替**：initState /
+    // didUpdateWidget 期间锚点也指向本实例，那两个阶段 setState 是合法写法。
+    inst.__building = true;
+    try { return inst.build(contextOf(inst)); }
+    finally { inst.__building = false; building = prev; }
   }
 
   function mount(el, parent, slot) {
@@ -802,7 +834,10 @@ const String miniReactReconcilerSource = r'''
       // 第二次；通过 `__h(X, props)` 创建的元素没有实例，才在这里构造。
       // 已卸载（dispose 过）的实例不得复用：懒槽位被宿主回收后，滚回来时元素
       // 仍带着上次那份实例引用，复用会拿到已 release 的控制器/句柄。
-      ci = (el.inst && !el.inst.__unmounted)
+      // 已挂在树上的实例同样不得复用：Dart 允许同一 Widget 实例出现在两个槽位
+      // （每处各自 new 一个 State），`__asElementList` 会为同一实例产出两个元素；
+      // 复用会让第二处覆盖 `__parent/__slot`、状态串位，第一处子树在 JS 侧失联。
+      ci = (el.inst && !el.inst.__unmounted && !el.inst.__parent)
           ? el.inst
           : new el.type(el.props, el.children);
     } catch (e) {
@@ -911,6 +946,17 @@ const String miniReactReconcilerSource = r'''
     var slot = inst.__propSlot;
     var newRoot = hostIdOf(inst);
     if (slot && newRoot !== oldRoot) {
+      if (newRoot == null) {
+        // build 返回空只可能来自产物缺陷：Dart 的 `Widget build()` 必返回
+        // Widget，生成器对无法翻译的 widget 位置也会降级成 SizedBox 占位。
+        // 宿主侧 propsChildAt 的 childId 为空无法落位（会被丢弃，数组槽位因此
+        // 留一个空位），这里必须出声，不静默。
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('jsui: component render root is empty after build (' +
+            compName(inst.constructor) + ')');
+        }
+        return inst.__child;
+      }
       emit({
         op: 'propsChildAt', parent: slot.parentId, key: slot.key,
         index: slot.index, childId: newRoot
@@ -1204,6 +1250,38 @@ const String miniReactReconcilerSource = r'''
       // 过的句柄已被移出 `__owns`，这里幂等跳过。
       releaseOwnerHandles(inst);
     }
+  }
+
+  // 整页挂载失败的回滚（mountRoot 的 catch 调用）。此刻 `root.inst` **尚未赋值**
+  // （mount 的返回值还没落到根上），半棵子树不可达，不能走 unmount；只能按归属
+  // 清扫：宿主结点看 `__root`，句柄看 `key === pageKey`（挂载期登记的一切句柄：
+  // page 作用域 / 事件闭包 / 实例持有的控制器、Key、ctx）或 `owner.__root`
+  // （兜底：判据不依赖 reg 时 activeRoot 是否已就位）。
+  function abortRoot(root) {
+    var pageKey = root.key;
+    var seen = {}, list = [], i;
+    for (var id in hostNodes) {
+      var node = hostNodes[id];
+      if (node && node.__root === root) { delete hostNodes[id]; }
+    }
+    var arr = pageHandles[pageKey] || [];
+    for (i = 0; i < arr.length; i++) { seen[arr[i]] = 1; list.push(arr[i]); }
+    for (var hid in handles) {
+      if (seen[hid]) { continue; }
+      var h = handles[hid];
+      if (!h) { continue; }
+      if (h.key === pageKey || (h.owner && h.owner.__root === root)) {
+        seen[hid] = 1;
+        list.push(hid);
+      }
+    }
+    // 逐条释放会同步通知宿主摘掉对端镜像记录；重复释放幂等。
+    for (i = 0; i < list.length; i++) { releaseHandle(list[i]); }
+    root.ops = null;
+    root.dirty = [];
+    root.flushPending = false;
+    root.inst = null;
+    delete roots[pageKey];
   }
 
 ''';
