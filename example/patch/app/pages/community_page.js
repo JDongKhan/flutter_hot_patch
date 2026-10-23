@@ -184,6 +184,9 @@ export class CommunityPage {
         ]
       });
   }
+  get wantKeepAlive() {
+    return true;
+  }
   _separatorBuilder0(context, _) {
       return new SizedBox({
         "width": 10

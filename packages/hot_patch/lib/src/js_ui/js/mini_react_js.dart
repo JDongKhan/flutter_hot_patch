@@ -490,6 +490,9 @@ const String miniReactReconcilerSource = r'''
   //     与 Flutter 同寿：离屏项的 State 被销毁，滚回来再 initState 重新构建。
   //     没有这条通知，JS 侧挂过的 item 会永远活着（滚到底后每次重建都在 patch
   //     全量 item），列表越长越糟。
+  //     宿主侧在 dispose（finalizeTree 的 lockState 内）不直接回调，而是延后到
+  //     post-frame 再发——本方法会同步 commit 回来重建**存活**的父结点，
+  //     锁定期 setState 会触发框架断言（见 _JsNodeState._unmountIfLazy）。
   var lazyMountFn = fn(function (id) { lazyMount(id); });
   var lazyUnmountFn = fn(function (id) { lazyUnmount(id); });
 

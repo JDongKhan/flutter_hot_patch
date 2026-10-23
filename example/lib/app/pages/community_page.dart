@@ -32,7 +32,7 @@ class CommunityPage extends StatefulWidget {
   State<CommunityPage> createState() => _CommunityPageState();
 }
 
-class _CommunityPageState extends State<CommunityPage> {
+class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveClientMixin {
   final AppService _service = AppService();
 
   /// 配置（双 tab / 筛选项 / 横向资源）；null = 加载中。
@@ -315,6 +315,9 @@ class _CommunityPageState extends State<CommunityPage> {
       ],
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class _ListContent extends StatefulWidget {

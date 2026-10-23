@@ -515,17 +515,26 @@ class _JsNodeState extends State<_JsNode> {
   /// 的 item 会永远留在 JS 树里——每次父级重建都要 patch 全量 item（didUpdateWidget
   /// 刷屏、列表越长越重）。与 Flutter 一致：离屏项 State 销毁，滚回来再 initState。
   ///
-  /// 注意：调用方是 element dispose 阶段，JS 侧只摘除本槽位子树（作用域在已销毁
-  /// 的结点上），不会触发其他存活结点的 setState。
+  /// **必须延后到帧末再通知 JS**：本方法在 element dispose 链路里被调用，而
+  /// dispose 发生在 `BuildOwner.finalizeTree` 的 `lockState` 作用域内（框架锁定）。
+  /// JS 的 `lazyUnmount` 会同步 commit 补丁回来，`_JsNode` 收到补丁后 setState
+  /// 重建**仍存活的父结点**（如 TabBarView 的容器），在锁定期调用必然触发
+  /// `setState() or markNeedsBuild() called when widget tree was locked`。
+  /// post-frame 回调在本帧 drawFrame/finalizeTree 之后执行，锁已解除。
   void _unmountIfLazy() {
     final node = widget.store.nodes[widget.id];
     if (node == null || node.props['__lazy'] != true) return;
-    try {
-      widget.invoke(node.props['__lazyOffFn'], [widget.id]);
-    } catch (e, s) {
-      HotPatchLog.error('js_ui lazy unmount failed: $e',
-          error: e, stackTrace: s);
-    }
+    final invoke = widget.invoke;
+    final lazyOffFn = node.props['__lazyOffFn'];
+    final nodeId = widget.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        invoke(lazyOffFn, [nodeId]);
+      } catch (e, s) {
+        HotPatchLog.error('js_ui lazy unmount failed: $e',
+            error: e, stackTrace: s);
+      }
+    });
   }
 
   /// 结点 key 现在可能来自 JS 声明（见 [_JsNodeState._node]）：同一 key 下
