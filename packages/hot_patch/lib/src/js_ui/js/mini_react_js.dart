@@ -377,6 +377,19 @@ const String miniReactSchedulerSource = r'''
               }
             }
             inst.__child = patchComponentChild(inst);
+            // 组件自身重建（setState → flush）不经过父级 patchLazySlot：动态
+            // wantKeepAlive（`bool get wantKeepAlive => _flag`）的变化必须在这里
+            // 补一次同步，否则宿主侧保活声明会停留在旧值。
+            // 读的是业务 getter，异常只记日志：不能让它把本次**已成功**的重建
+            // 补丁一起丢进下面的 catch。
+            try {
+              syncEnclosingKeepAlive(inst);
+            } catch (e2) {
+              if (typeof console !== 'undefined' && console.error) {
+                console.error('jsui: keepAlive sync failed (' +
+                  compName(inst.constructor) + '): ' + e2);
+              }
+            }
             commit(root);
           } catch (e) {
             // 丢弃本次未 commit 的增量：宿主只接受整批 commit，半棵树不下发，
@@ -658,6 +671,21 @@ const String miniReactReconcilerSource = r'''
     emit({ op: 'props', id: ph.__id, props: ph.__props });
   }
 
+  // 组件自身重建（setState → flush）后，把变更同步给**最近的**懒槽位：
+  // 与 Flutter 一致，保活声明的生效范围是「最近的 AutomaticKeepAlive 祖先」，
+  // 所以向上找第一个 `__lazySlot` 占位结点即可（不越级影响外层槽位）。
+  // 没有懒槽位祖先（如页面根组件）时什么也不做。
+  function syncEnclosingKeepAlive(inst) {
+    var p = inst;
+    while (p) {
+      if (p.__lazySlot) {
+        syncKeepAlive(p);
+        return;
+      }
+      p = p.__parent;
+    }
+  }
+
   // 父级重建时更新一个**已存在**的懒槽位（幂等，绝不在这里做首次挂载）：
   // 未挂载的只替换来源；已挂载的把新元素 patch 到真实子树上，渲染根 id 变化
   // 时更新占位结点的 `child` slot（与 propsChildAt 同语义）。
@@ -694,7 +722,8 @@ const String miniReactReconcilerSource = r'''
       ph.__propsChildren['child'] = ph.__mountedChild;
       emit({ op: 'propsChild', parent: ph.__id, key: 'child', childId: newRoot });
     }
-    // 复用实例时 wantKeepAlive 也可能变化（动态声明）→ 同步给宿主。
+    // 父级重建路径的保活声明同步（组件自身 setState 引起的变化走 flush 的
+    // syncEnclosingKeepAlive，见【8】）。
     syncKeepAlive(ph);
     return ph;
   }
