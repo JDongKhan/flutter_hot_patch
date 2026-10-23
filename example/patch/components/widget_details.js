@@ -3,6 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
+import { CommonListItem } from 'list_item.js';
 import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, CachedNetworkImage, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, DefaultTabController, Divider, Drawer, DrawerHeader, DropdownButton, DropdownMenuItem, ElevatedButton, Expanded, FilledButton, FloatingActionButton, FractionallySizedBox, GridView, Icon, IconButton, Image, InputDecoration, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, Opacity, OutlinedButton, Padding, Positioned, Radio, ReorderableListView, Row, SafeArea, Scaffold, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Tab, TabBar, TabBarView, Text, TextButton, TextField, Wrap, __h } from '../flutter.js';
 
 // 组件 TextDetail
@@ -805,7 +806,7 @@ export class ScrollDetail {
                       },
                       "itemExtent": 56,
                       "physics": "BouncingScrollPhysics",
-                      "itemCount": 5,
+                      "itemCount": 20,
                       "itemBuilder": "_itemBuilder0",
                       "factory": "builder"
                     })
@@ -874,8 +875,8 @@ export class ScrollDetail {
         "leading": new Icon({
             "icon": "list"
           }),
-        "title": new Text({
-            "data": "builder item " + index
+        "title": new CommonListItem({
+            "index": index
           })
       });
   }

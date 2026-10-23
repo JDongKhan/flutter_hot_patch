@@ -63,6 +63,7 @@
 | 构建期 O(N²) 扫描（`componentTranslationScope` 每个文件全包扫描） | 需要构建缓存设计 | 性能专项 |
 | 未支持语法（`try/catch`、`throw`、pattern、extension、标准库 shim 等）完整支持 | 属于翻译内核能力扩展 | 随 resolved AST 或独立批次推进 |
 | 深层 props diff / 高频事件性能 | 需要基准测试 | 性能专项 |
+| 删除 mini-react，改为 Flutter 生命周期驱动渲染（边界 Widget `initState` → JS `build`） | 架构级设想，需先做对照实验拿数据 | 见 `docs/架构设想-生命周期驱动渲染.md` |
 
 ## 3. 维护约定
 
@@ -135,7 +136,7 @@
 | 风险 | 处理 |
 |---|---|
 | 自定义组件的用户代码构造会执行字段初始化（控制器 / Key 句柄） | 已修复二次构造：实例随元素下发（`el.inst`），mount 直接复用、不再 new 第二次；patch 复用旧实例保持状态 |
-| 懒容器声明式子项（`TabBarView(children:)`）一次性挂载全部子页 | **本轮不做**（既有行为，`app.dart` 注释已说明）：宿主 `_JsNode` 的 propsChildAt / 占位挂 child 两种尝试都会导致首帧白屏，已全部回退；需作为独立任务重新设计宿主侧协议，不要并入本次协议重构 |
+| 懒容器声明式子项（`TabBarView(children:)` / `PageView(children:)`）一次性挂载全部子页 | **已修复**：懒容器的 props 数组槽位（`children`）与 builder 子项走同一套懒槽位协议 —— 先下发零尺寸占位，宿主 inflate 时经 `__lazyFn` 回调 `lazyMount`；真实子树挂成占位结点的 `child` slot（占位结点 id/key 不变，父容器无需换位）。配套修复 `propsChildAt`：单值 slot 的旧子被 `remove` 清掉 `propChildIds` 后仍能按 op 重连（此前正是这里导致根类型切换后白屏） |
 | builder 代理类型（ListView 等）无宿主包装类 | 普通构造 / delegate 形态仍发 `__h('ListView', …)` 宿主结点；`.builder/.separated` 才 `new ListView(props)` |
 | 数据载体 / InputDecoration | 生成包装类，保持宿主 renderer 读取方式不变 |
 | 宿主包装类名与本地组件类名同名 | 暂未处理（JS 会重复声明）；命名冲突时需单独约定 |

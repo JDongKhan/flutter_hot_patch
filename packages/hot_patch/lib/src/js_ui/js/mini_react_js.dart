@@ -344,7 +344,17 @@ const String miniReactReconcilerSource = r'''
   // 零尺寸占位结点（复用 SizedBox 类型：不新增 widget 类型、产物形态零改动），
   // 真实子元素先挂在占位实例的 `__deferred` 上；宿主 inflate 到占位结点时经
   // `__lazyFn`（事件句柄同款 invoke 通道）回调 lazyMount，才真正 mount
-  //（构造 + initState + build，顺序与 Flutter 一致）并把占位换成真实结点。
+  //（构造 + initState + build，顺序与 Flutter 一致）。
+  //
+  // 占位结点**永不替换**：真实子树挂成占位结点的 `child` slot（propsChild），
+  // 槽位在父容器里的 id / 位置不变，Flutter element 因而不重建 —— 这是
+  // TabBarView 声明式 children 能保持当前页不白屏的关键（早期「先占位再替换
+  // 结点」的实现会换掉当前页的 element key，整页被重新 inflate 成空白）。
+  //
+  // 懒槽位覆盖两类位置（slot.kind）：
+  //   - children：容器的有序子结点（builder 展开 / `__items`），位置由 insert 下发；
+  //   - prop：props 里的 widget 数组（`TabBarView(children: [...])` /
+  //     `PageView(children: [...])`），位置由 propsChildren 下发。
   //
   // 懒容器类型表：type -> true（无条件懒）| props 键名数组（带这些键之一才懒）。
   // 名单**不写在 JS 侧**：由 Dart 侧能力声明（JsUiLibrary.lazyChildHostTypes）
@@ -416,19 +426,50 @@ const String miniReactReconcilerSource = r'''
   // 懒槽位占位结点：普通宿主结点（SizedBox 0x0）+ `__lazy` 数据标记 + 回调句柄；
   // 真实子元素先存在 `__deferred`，本帧不挂载。
   function newLazySlot(parent, childEl, slot) {
+    // 占位结点沿用子元素的声明式 key：父级重建时按 key 复用槽位，宿主侧
+    // element key 也不会因占位/真实切换而变化。
+    var props = { width: 0, height: 0, __lazy: true, __lazyFn: lazyMountFn };
+    if (childEl && childEl.props && childEl.props.key !== undefined) {
+      props.key = childEl.props.key;
+    }
     var hi = {
       __k: HOST, __id: nodeId('SizedBox'), __type: 'SizedBox',
       __root: rootFor(parent),
-      __props: { width: 0, height: 0, __lazy: true, __lazyFn: lazyMountFn },
+      __props: props,
       __children: [], __parent: parent, __slot: slot,
-      __deferred: childEl, __childIdx: slot ? slot.index : 0
+      __deferred: childEl
     };
     hostNodes[hi.__id] = hi;
     emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
-    if (slot && slot.hostParentId) {
+    if (slot && slot.kind === 'children' && slot.hostParentId) {
       emit({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
     }
     return hi;
+  }
+
+  // 父级重建时更新一个**已存在**的懒槽位（幂等，绝不在这里做首次挂载）：
+  // 未挂载的只替换 `__deferred`；已挂载的把新元素 patch 到真实子树上，渲染根
+  // id 变化时更新占位结点的 `child` slot（与 propsChildAt 同语义）。
+  function patchLazySlot(ph, el) {
+    if (ph.__deferred) {
+      ph.__deferred = el;
+      return ph;
+    }
+    if (!ph.__mountedChild) { return ph; }
+    var oldRoot = ph.__mountedRootId;
+    ph.__mountedChild = patch(ph.__mountedChild, el, ph, null);
+    // 复用 / 新建的组件实例都要记住自己的父 slot：组件内部 setState 换掉渲染
+    // 根时，patchComponentChild 靠它把新根 id 回报给本占位结点。
+    if (ph.__mountedChild && ph.__mountedChild.__k !== HOST) {
+      ph.__mountedChild.__propSlot = { parentId: ph.__id, key: 'child', index: 0 };
+    }
+    var newRoot = hostIdOf(ph.__mountedChild);
+    if (newRoot !== oldRoot) {
+      ph.__mountedRootId = newRoot;
+      ph.__propsChildren['child'] = ph.__mountedChild;
+      emit({ op: 'propsChild', parent: ph.__id, key: 'child', childId: newRoot });
+    }
+    return ph;
   }
 
   // 宿主 inflate 到懒槽位 → 真正挂载它的子元素（幂等：只对还没挂载过的占位生效）。
@@ -446,17 +487,28 @@ const String miniReactReconcilerSource = r'''
     root.mounting = true;
     root.ops = [];
     try {
-      var inst = mount(el, ph.__parent, ph.__slot);
-      // 占位换成真实结点：remove 排在本子树 create 之后；父结点 childIds 的
-      // 下标序列保持不变（原文位置由真实结点顶上）。
-      unmount(ph);
+      // 真实子树的父结点是**占位结点**（宿主侧同样的父子关系），作用域链 /
+      // BuildContext 锚点与「直接挂在容器下」一致。
+      var inst = mount(el, ph, null);
+      ph.__mountedChild = inst;
+      ph.__mountedRootId = hostIdOf(inst);
+      ph.__propsChildren = ph.__propsChildren || {};
+      ph.__propsChildren['child'] = inst;
+      if (inst && inst.__k !== HOST) {
+        inst.__propSlot = { parentId: ph.__id, key: 'child', index: 0 };
+      }
+      // 占位从「零尺寸空隙」变为「透传容器」：去掉尺寸与 __lazy 标记（保留
+      // 声明式 key），真实子树的渲染根挂到 child slot。占位结点本身保留
+      //（id / element key 不变），父容器不需要任何列表换位。
+      var mountedProps = {};
+      if (ph.__props && ph.__props.key !== undefined) { mountedProps.key = ph.__props.key; }
+      ph.__props = mountedProps;
+      emit({ op: 'props', id: ph.__id, props: ph.__props });
+      emit({ op: 'propsChild', parent: ph.__id, key: 'child', childId: ph.__mountedRootId });
       commit(root);
     } finally {
       root.mounting = false;
       activeRoot = prev;
-    }
-    if (ph.__parent && ph.__parent.__children[ph.__childIdx] === ph) {
-      ph.__parent.__children[ph.__childIdx] = inst;
     }
     // 挂载期间累积的 setState（如 initState 里同步 setState）补一次 flush。
     if (root.dirty.length) { flush(root); }
@@ -526,7 +578,7 @@ const String miniReactReconcilerSource = r'''
         var cel = kids[i];
         if (cel == null || cel === false) { continue; }
         var c = lazyChildren
-            ? newLazySlot(hi, cel, { hostParentId: hi.__id, index: idx })
+            ? newLazySlot(hi, cel, { kind: 'children', hostParentId: hi.__id, index: idx })
             : mount(cel, hi, { hostParentId: hi.__id, index: idx });
         if (c) { hi.__children.push(c); idx += 1; }
       }
@@ -688,14 +740,23 @@ const String miniReactReconcilerSource = r'''
       }
       if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
 
-      // 懒槽位还没被宿主 inflate 过（`__deferred` 仍挂着子元素）→ 只把「待挂载的
-      // 子元素」换成最新的，**绝不能**在这里把它挂载出来，否则重建（外壳每次切
+      // 已存在的懒槽位（未挂载的 `__deferred` / 已挂载的 `__mountedChild`）→ 只
+      // 更新子元素，**绝不能**在这里把未挂载的槽位挂出来，否则重建（外壳每次切
       // tab 都会整树 patch）会把懒加载整个破坏掉。
-      if (matched && matched.__deferred && lazyChildOf(parentHost.__type, parentHost.__props)) {
-        matched.__deferred = el;
-        matched.__childIdx = hostIdx;
-        matched.__slot = { hostParentId: parentHost.__id, index: hostIdx };
+      if (matched && lazyChildOf(parentHost.__type, parentHost.__props) &&
+          (matched.__deferred || matched.__mountedChild)) {
+        matched.__slot = { kind: 'children', hostParentId: parentHost.__id, index: hostIdx };
+        patchLazySlot(matched, el);
         next.push(matched);
+        hostIdx += 1;
+        continue;
+      }
+
+      // 新增的子结点同样先落成懒槽位，避免「父级重建新增离屏项」时提前挂载。
+      if (!matched && lazyChildOf(parentHost.__type, parentHost.__props)) {
+        next.push(newLazySlot(parentHost, el, {
+          kind: 'children', hostParentId: parentHost.__id, index: hostIdx
+        }));
         hostIdx += 1;
         continue;
       }
@@ -733,7 +794,10 @@ const String miniReactReconcilerSource = r'''
 
   // 列表型 slot 的 keyed diff：复用已有实例，新键挂载，缺失卸载。
   // 不向宿主发 insert/move（宿主按 propsChildren 整表替换）。
+  // 父结点是懒容器时，**每一项**都先落成懒槽位（未 visit 的子页不挂载）：
+  // 已有槽位只更新 deferred / patch 子树；新项创建占位而不是立刻 mount。
   function patchSlotList(parentHost, oldList, newEls, slotKey) {
+    var lazy = lazyChildOf(parentHost.__type, parentHost.__props);
     var remaining = oldList.slice();
     var keyedOld = {};
     var i, j;
@@ -760,6 +824,20 @@ const String miniReactReconcilerSource = r'''
       }
       if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
       var slotIndex = next.length;
+      var slot = {
+        kind: 'prop', parentHostId: parentHost.__id,
+        key: slotKey, index: slotIndex
+      };
+      if (lazy && (!matched || matched.__deferred || matched.__mountedChild)) {
+        var ph = matched;
+        if (!ph) {
+          ph = newLazySlot(parentHost, el, slot);
+        } else {
+          patchLazySlot(ph, el);
+        }
+        next.push(ph);
+        continue;
+      }
       var inst = patch(matched, el, parentHost, null, {
         key: slotKey,
         index: slotIndex,

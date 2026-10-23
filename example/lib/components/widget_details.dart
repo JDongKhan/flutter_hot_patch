@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import '../model/counter_vm.dart';
+import 'list_item.dart';
 
 /// 常用组件详情页集合（widget_showcase 列表页点击进入）。
 ///
@@ -598,10 +599,10 @@ class _ScrollDetailState extends State<ScrollDetail> {
               padding: const EdgeInsets.all(8),
               itemExtent: 56,
               physics: const BouncingScrollPhysics(),
-              itemCount: 5,
+              itemCount: 20,
               itemBuilder: (context, index) => ListTile(
                 leading: const Icon(Icons.list),
-                title: Text('builder item $index'),
+                title: CommonListItem(index: index),
               ),
             ),
           ),

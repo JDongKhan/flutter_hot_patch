@@ -143,17 +143,31 @@ class JsUiStore {
           parent.propData.remove(key);
           touched.add(raw['parent'] as String);
         case 'propsChildAt':
-          // 组件渲染根变化：只替换列表中的一个位置（父 slot 列表位置不变）。
+          // 组件渲染根变化：只替换 slot 里的一个位置（列表位置不变）。
+          // 两类 slot 共用：数组 slot 按 index 原位替换；单值 slot（懒槽位的
+          // `child`）直接替换该 key —— 懒槽位结点 id 不变，靠这条 op 换真实根。
           final parent = nodes[raw['parent']];
           final key = raw['key'] as String?;
           final childId = raw['childId'] as String?;
           if (parent == null || key == null || childId == null) break;
           final list = parent.propChildLists[key];
-          final i = raw['index'] is num ? (raw['index'] as num).toInt() : -1;
-          if (list == null || i < 0 || i >= list.length) break;
-          final oldId = list[i];
-          if (oldId != childId) _parents?.remove(oldId);
-          list[i] = childId;
+          if (list != null) {
+            final i = raw['index'] is num ? (raw['index'] as num).toInt() : -1;
+            if (i < 0 || i >= list.length) break;
+            final oldId = list[i];
+            if (oldId != childId) _parents?.remove(oldId);
+            list[i] = childId;
+          } else {
+            // 单值 slot（如懒槽位 `child`）：op 本身就是权威绑定，**不能**要求
+            // 旧条目还在 —— 组件换渲染根时先到的 `remove` 会把旧子的
+            // `propChildIds` 条目清掉（`_unlink`），随后这条 propsChildAt 就是
+            // 唯一的重连机会。旧条目存在则顺手摘掉反向索引。
+            final replaced = parent.propChildIds[key];
+            if (replaced != null && replaced != childId) {
+              _parents?.remove(replaced);
+            }
+            parent.propChildIds[key] = childId;
+          }
           _parents?[childId] = raw['parent'] as String;
           touched.add(raw['parent'] as String);
         case 'remove':
