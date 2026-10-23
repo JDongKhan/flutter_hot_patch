@@ -5,6 +5,18 @@
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
 // 元素对象统一由本函数产出，带 element: true 标记；props 值是否是 widget
 // 只看这个标记，不做形状猜测。
+// 懒容器配置（**构建期唯一事实源**：shared/js_widget_defs.dart 的
+// lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
+var __lazyChildHosts = {"TabBarView": true, "PageView": true, "GridView": true, "SliverGrid": true, "SliverFixedExtentList": true, "SliverFillViewport": true, "ListView": ["itemExtent"]};
+function __lazyChildrenOf(type, props) {
+  var rule = __lazyChildHosts[type];
+  if (rule === undefined) { return false; }
+  if (rule === true) { return true; }
+  for (var i = 0; i < rule.length; i++) {
+    if (props && props[rule[i]] !== undefined) { return true; }
+  }
+  return false;
+}
 function __isElement(v) {
   return v != null && typeof v === 'object' && v.element === true;
 }
@@ -67,6 +79,11 @@ export function __h(type, props) {
     var v = __asElementList(__asElement(p[k]));
     if (__isElement(v)) { slots[k] = v; continue; }
     if (__isElementList(v)) { slots[k] = v; continue; }
+    // builder 延迟展开描述（命名构造代理写入）同样进 children，不参与 props。
+    if (k === '__builder' && v != null && typeof v === 'object') {
+      slots[k] = v;
+      continue;
+    }
     // delegate 两种形态都进 children，不参与 props。
     if (v != null && typeof v === 'object' && v.__delegate) {
       slots[k] = v;
@@ -74,7 +91,11 @@ export function __h(type, props) {
     }
     data[k] = v;
   }
-  return { type: type, props: data, children: slots, element: true };
+  var el = { type: type, props: data, children: slots, element: true };
+  // 懒容器标记：由构建期配置决定（见 lazyChildHostTypes），运行时据此决定
+  // 子结点是否延迟到宿主 inflate 时再挂载。
+  if (__lazyChildrenOf(type, p)) { el.lazyChildren = true; }
+  return el;
 }
 
 
@@ -560,21 +581,16 @@ export class GridView {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var name = this.props.itemBuilder;
-    var out = [];
-    var n = this.props.itemCount || 0;
-    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
-    var sep = this.props.separatorBuilder;
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, context, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
-    }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 按序取用。
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
     for (var k in this.props) { p[k] = this.props[k]; }
-    p.__items = out;
+    p.__builder = {
+      item: this.props.itemBuilder,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
     return __h('GridView', p);
   }
 }
@@ -592,21 +608,16 @@ export class ListView {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var name = this.props.itemBuilder;
-    var out = [];
-    var n = this.props.itemCount || 0;
-    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
-    var sep = this.props.separatorBuilder;
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, context, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
-    }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 按序取用。
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
     for (var k in this.props) { p[k] = this.props[k]; }
-    p.__items = out;
+    p.__builder = {
+      item: this.props.itemBuilder,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
     return __h('ListView', p);
   }
 }
@@ -656,21 +667,16 @@ export class PageView {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var name = this.props.itemBuilder;
-    var out = [];
-    var n = this.props.itemCount || 0;
-    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
-    var sep = this.props.separatorBuilder;
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, context, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
-    }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 按序取用。
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
     for (var k in this.props) { p[k] = this.props[k]; }
-    p.__items = out;
+    p.__builder = {
+      item: this.props.itemBuilder,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
     return __h('PageView', p);
   }
 }
@@ -688,21 +694,16 @@ export class ReorderableListView {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var name = this.props.itemBuilder;
-    var out = [];
-    var n = this.props.itemCount || 0;
-    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
-    var sep = this.props.separatorBuilder;
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, context, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
-    }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 按序取用。
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
     for (var k in this.props) { p[k] = this.props[k]; }
-    p.__items = out;
+    p.__builder = {
+      item: this.props.itemBuilder,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
     return __h('ReorderableListView', p);
   }
 }
@@ -720,21 +721,16 @@ export class SliverGrid {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var name = this.props.itemBuilder;
-    var out = [];
-    var n = this.props.itemCount || 0;
-    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
-    var sep = this.props.separatorBuilder;
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, context, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
-    }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 按序取用。
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
     for (var k in this.props) { p[k] = this.props[k]; }
-    p.__items = out;
+    p.__builder = {
+      item: this.props.itemBuilder,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
     return __h('SliverGrid', p);
   }
 }
@@ -752,21 +748,16 @@ export class SliverList {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var name = this.props.itemBuilder;
-    var out = [];
-    var n = this.props.itemCount || 0;
-    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
-    var sep = this.props.separatorBuilder;
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, context, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
-    }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 按序取用。
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
     for (var k in this.props) { p[k] = this.props[k]; }
-    p.__items = out;
+    p.__builder = {
+      item: this.props.itemBuilder,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
     return __h('SliverList', p);
   }
 }

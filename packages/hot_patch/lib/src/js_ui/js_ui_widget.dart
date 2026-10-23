@@ -491,9 +491,9 @@ class _JsNodeState extends State<_JsNode> {
     _mountIfLazy();
   }
 
-  /// 懒槽位（props 带 `__lazy` 的占位结点，见 JS 侧 registerLazyChildHost /
-  /// lazyMount）：**本结点的 Element 被真正 inflate 时**才回调 JS 去挂载它待挂载
-  /// 的真实子树——这就是「initState 由 _JsNode 生命周期驱动」的落点：宿主没
+  /// 懒槽位（props 带 `__lazy` 的占位结点，见 JS 侧 lazyMount）：**本结点的
+  /// Element 被真正 inflate 时**才回调 JS 去挂载它待挂载的真实子树——这就是
+  /// 「initState 由 _JsNode 生命周期驱动」的落点：宿主没
   /// inflate 到的槽位（TabBarView 离屏子页），JS 侧永远不挂载、initState 不跑。
   ///
   /// - post-frame 触发：回调会经 commit 回来 setState 重建本结点，不能在 build 期做；
@@ -506,6 +506,26 @@ class _JsNodeState extends State<_JsNode> {
       if (!mounted) return;
       widget.invoke(node.props['__lazyFn'], [widget.id]);
     });
+  }
+
+  /// 懒槽位的对称生命周期：宿主 element 销毁（ListView 回收离屏项、TabBarView
+  /// 换页、整页退出）时通知 JS 卸载已挂载子树。
+  ///
+  /// 为什么必须有：JS 侧懒槽位只在宿主 **inflate** 时挂载，若销毁不回收，滚过
+  /// 的 item 会永远留在 JS 树里——每次父级重建都要 patch 全量 item（didUpdateWidget
+  /// 刷屏、列表越长越重）。与 Flutter 一致：离屏项 State 销毁，滚回来再 initState。
+  ///
+  /// 注意：调用方是 element dispose 阶段，JS 侧只摘除本槽位子树（作用域在已销毁
+  /// 的结点上），不会触发其他存活结点的 setState。
+  void _unmountIfLazy() {
+    final node = widget.store.nodes[widget.id];
+    if (node == null || node.props['__lazy'] != true) return;
+    try {
+      widget.invoke(node.props['__lazyOffFn'], [widget.id]);
+    } catch (e, s) {
+      HotPatchLog.error('js_ui lazy unmount failed: $e',
+          error: e, stackTrace: s);
+    }
   }
 
   /// 结点 key 现在可能来自 JS 声明（见 [_JsNodeState._node]）：同一 key 下
@@ -523,17 +543,24 @@ class _JsNodeState extends State<_JsNode> {
 
   @override
   void dispose() {
+    // 先置位：dispose 期间 JS 侧回调仍可能重建本结点（emit props /
+    // propsChild 等），此时 element 已 defunct，setState 会触发框架断言。
+    _disposed = true;
     widget.store.unbind(widget.id, _rebuild);
     // 注销本 element 曾用过的全部结点 id（见 [_anchorIds]：id 变化时必须继续
     // 可查，卸载时一次清干净）。
     for (final id in _anchorIds) {
       unregisterJsBuildContext(id);
     }
+    _unmountIfLazy();
     super.dispose();
   }
 
+  bool _disposed = false;
+
   void _rebuild() {
-    if (mounted) setState(() {});
+    if (_disposed || !mounted) return;
+    setState(() {});
   }
 
   @override
@@ -561,7 +588,10 @@ class _JsNodeState extends State<_JsNode> {
           : _node(entry.value);
     }
     // 数组 widget slot；数据载体数组给数据上下文，不构建 Widget。
+    // 同一 key 同时存在单值与列表条目时（prop 形态从列表切到单值时，JS 侧会先
+    // 下发 propsChild、再清空旧列表）以单值为准，避免空列表把刚绑定的 widget 覆盖掉。
     for (final entry in node.propChildLists.entries) {
+      if (node.propChildIds.containsKey(entry.key)) continue;
       final ids = entry.value;
       final isData = ids.any(
         (id) => isJsDataCarrierType(widget.store.nodes[id]?.type ?? ''),

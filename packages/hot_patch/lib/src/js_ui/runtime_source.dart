@@ -640,9 +640,6 @@ String jsUiRuntimeSource() => [
   // 各能力/三方库片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
   // 顺序 = capabilities/js_ui_library.dart 的注册顺序。
   for (final library in jsUiLibraries) ...library.jsFragments,
-  // 懒容器类型注册（Dart 侧能力声明折算）：必须在骨架之后再执行（用到
-  // reconciler 里的 registerLazyChildHost），且在任何 mount 之前（幂等）。
-  jsUiLazyChildHostRegistrations(),
   // 泄漏观测仅 debug 拼入：release 产物不含 leakSnapshot 函数与 api 成员，
   // 线上逻辑零增量（宿主侧调用点同样是 kDebugMode 门控，双端一致）。
   if (kDebugMode) _jsUiLeakSnapshotFn,

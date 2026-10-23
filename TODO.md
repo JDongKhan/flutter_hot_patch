@@ -136,7 +136,7 @@
 | 风险 | 处理 |
 |---|---|
 | 自定义组件的用户代码构造会执行字段初始化（控制器 / Key 句柄） | 已修复二次构造：实例随元素下发（`el.inst`），mount 直接复用、不再 new 第二次；patch 复用旧实例保持状态 |
-| 懒容器声明式子项（`TabBarView(children:)` / `PageView(children:)`）一次性挂载全部子页 | **已修复**：懒容器的 props 数组槽位（`children`）与 builder 子项走同一套懒槽位协议 —— 先下发零尺寸占位，宿主 inflate 时经 `__lazyFn` 回调 `lazyMount`；真实子树挂成占位结点的 `child` slot（占位结点 id/key 不变，父容器无需换位）。配套修复 `propsChildAt`：单值 slot 的旧子被 `remove` 清掉 `propChildIds` 后仍能按 op 重连（此前正是这里导致根类型切换后白屏） |
+| 懒容器声明式子项（`TabBarView(children:)` / `PageView(children:)`）一次性挂载全部子页 | **已修复（2026-10-23 重构）**：懒与否改为**构建期配置**——生成器 `js_widget_defs.dart` 的 `lazyChildHostTypes` 写入 `flutter.js`，`__h` 给元素打 `lazyChildren` 标记；运行时只认元素标记，零类型表。懒槽位协议不变：先下发零尺寸占位，宿主 inflate 时经 `__lazyFn` 回调 `lazyMount`、dispose 时经 `__lazyOffFn` 回调 `lazyUnmount`；真实子树挂成占位结点的 `child` slot（占位 id/key 不变）。builder 形态（`ListView.builder` / `GridView.builder`）在懒容器下**连 itemBuilder 调用也推迟**，宿主 inflate 到该项时才执行 |
 | builder 代理类型（ListView 等）无宿主包装类 | 普通构造 / delegate 形态仍发 `__h('ListView', …)` 宿主结点；`.builder/.separated` 才 `new ListView(props)` |
 | 数据载体 / InputDecoration | 生成包装类，保持宿主 renderer 读取方式不变 |
 | 宿主包装类名与本地组件类名同名 | 暂未处理（JS 会重复声明）；命名冲突时需单独约定 |

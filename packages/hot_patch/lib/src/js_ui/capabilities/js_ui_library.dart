@@ -32,8 +32,6 @@
 // 组件类型，其**编译期**翻译（hot_patch_generator 的统一翻译入口
 // widget_json.dart / value_forms.dart 与 `patch/<pkg>.js` 里的 JS 组件类）
 // 属于另一条缝，不在本文件范围内。
-import 'dart:convert';
-
 import '../js_widget_registry.dart';
 import 'build_context/build_context_library.dart';
 import 'cached_network_image/cached_network_image_library.dart';
@@ -69,27 +67,6 @@ abstract class JsUiLibrary {
 
   /// 注册本库的宿主侧组件映射（`type` 字符串 → 真实 Flutter widget）。
   void registerWidgets(JsWidgetRegistry r) {}
-
-  /// 本库「会懒 inflate 直接子结点」的宿主类型 → 触发它的 props 键
-  /// （空列表 = 无条件懒）。
-  ///
-  /// **为什么只有一部分容器可以懒**：Flutter 侧只有「子项尺寸由容器强制、
-  /// 不由内容决定」的容器，零尺寸占位才会被强制成真实尺寸（布局中性），
-  /// 子项才可以延迟到宿主 inflate 时才挂载（initState 与 Flutter 一致）：
-  ///   - PageView / TabBarView：子项被 `SliverFillViewport` 强制成整屏；
-  ///   - GridView / SliverGrid：子项被格尺寸强制（按 delegate 参数算出）；
-  ///   - SliverFixedExtentList / ListView(itemExtent:)：`itemExtent` 强制。
-  ///
-  /// 按**内容**量尺寸的 ListView（无 itemExtent）/ SliverList /
-  /// ReorderableListView **不在此列**：零尺寸占位会让视口把全部 item 判为
-  /// 可见 → 懒加载反而失效。CustomScrollView 的 sliver 子项 Flutter 本来
-  /// 就全部 inflate，与 JS 侧现状已一致，无需在此声明。
-  ///
-  /// **声明在 Dart 侧**（见 [jsUiLazyChildHostRegistrations]）：折算成
-  /// `registerLazyChildHost(...)` 顶层语句随运行时骨架一次注入 —— JS 侧
-  /// 代码零类型知识、零注册调用。JS 侧只保留「延迟挂载」这一通用原语
-  ///（见 js/mini_react_js.dart 的 lazyChildHosts / lazyMount）。
-  Map<String, List<String>> get lazyChildHostTypes => const {};
 }
 
 /// 已注册的库（按注册顺序；解析时**先注册者优先**）。
@@ -108,23 +85,6 @@ void registerJsUiLibrary(JsUiLibrary library) {
     if (l.id == library.id) return;
   }
   _libraries.add(library);
-}
-
-/// 懒容器类型注册片段：把各能力声明的 [JsUiLibrary.lazyChildHostTypes] 折算成
-/// JS 顶层语句（`registerLazyChildHost(type, propKeys)`），由 [jsUiRuntimeSource]
-/// 拼在骨架之后、任何 `mount` 之前 —— **类型名单在 Dart 侧，JS 侧零注册调用**。
-///
-/// 幂等：同名重复注册只覆盖（`lazyChildHosts` 是 Map，不累积、不报错）；
-/// `registerLazyChildHost` 定义在骨架的 reconciler 片段里（先于本片段执行）。
-String jsUiLazyChildHostRegistrations() {
-  final b = StringBuffer();
-  for (final library in jsUiLibraries) {
-    library.lazyChildHostTypes.forEach((type, propKeys) {
-      final keys = propKeys.isEmpty ? '' : ', ${jsonEncode(propKeys)}';
-      b.writeln('registerLazyChildHost(${jsonEncode(type)}$keys);');
-    });
-  }
-  return b.toString();
 }
 
 /// 全部已注册能力。首次访问时注入内建能力——惰性求值，避免 [jsUiRuntimeSource]

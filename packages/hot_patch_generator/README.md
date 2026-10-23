@@ -304,6 +304,7 @@ targets:
 | `widgetPositionalArgNames` | 位置实参按 **Flutter 自己声明的形参名**下发（`Text('hi')` → `{data: 'hi'}`、`Image.network(url)` → `{src: url}`）；未登记的类型遇到位置实参时构建期告警并丢弃（不再有 `$pos` 下标兜底） |
 | `builtinWidgetTypes` | 宿主 `JsWidgetRegistry` 注册键的镜像（用于区分内建 widget 与业务类） |
 | `builderFormTypes` | 有 `.builder` / `.separated` 命名构造的类型；为它们生成 JS 代理类（运行时只认 `factory` / `__delegate` 协议，不再有类型白名单） |
+| `lazyChildHostTypes` | 懒容器类型 → 触发懒的 props 键（空 = 无条件懒）。生成期写入 `flutter.js` 的 `__h`，给元素打 `lazyChildren` 标记；运行时只认元素标记、不认识类型 —— 新增懒容器（含 carousel_slider 这类三方组件）只改这张表并重出产物，运行时代码零改动 |
 
 因此接入一个**视觉** widget 会触及两侧：宿主 renderer，以及（当产物形态不同时）上面的生成器登记表
 （有位置实参的构造还要登记 `widgetPositionalArgNames`）。

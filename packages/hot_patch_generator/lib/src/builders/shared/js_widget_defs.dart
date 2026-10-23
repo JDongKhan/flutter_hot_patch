@@ -52,6 +52,36 @@ const Set<String> logicWidgetTypes = {
   'ValueListenableBuilder',
 };
 
+/// 懒容器类型 → 触发懒的 props 键（空列表 = 无条件懒）。
+///
+/// **这是懒加载语义的唯一事实源**（构建期配置）：生成器把它写进 `flutter.js`，
+/// 由 `__h` 给元素打 `lazyChildren` 标记；运行时只认元素标记，不认识任何类型，
+/// 也不维护任何类型表 —— 新增懒容器（包括 carousel_slider 这类三方组件）只改
+/// 这里 + 重出产物，运行时代码零改动。
+///
+/// **为什么只有一部分容器可以懒**：Flutter 侧只有「子项尺寸由容器强制、
+/// 不由内容决定」的容器，零尺寸占位才是布局中性的（子项可延迟到宿主 inflate
+/// 时才挂载，initState 与 Flutter 一致）：
+///   - PageView / TabBarView：子项被 `SliverFillViewport` 强制成整屏；
+///   - GridView / SliverGrid：子项被格尺寸强制（按 delegate 参数算出）；
+///   - SliverFixedExtentList / ListView(itemExtent:)：`itemExtent` 强制。
+///
+/// 按**内容**量尺寸的 ListView（无 itemExtent）/ SliverList /
+/// ReorderableListView **不在此列**：零尺寸占位会让视口把全部 item 判为
+/// 可见 → 懒加载反而失效。CustomScrollView 的 sliver 子项 Flutter 本来就
+/// 全部 inflate，无需声明。
+const Map<String, List<String>> lazyChildHostTypes = {
+  'TabBarView': [],
+  'PageView': [],
+  'GridView': [],
+  'SliverGrid': [],
+  'SliverFixedExtentList': [],
+  'SliverFillViewport': [],
+  // 只有带 itemExtent 时才懒（`ListView.separated` 在 SDK 里不接受 itemExtent，
+  // 故该 props 只可能来自普通 / `.builder` 形态）。
+  'ListView': ['itemExtent'],
+};
+
 /// 「元素 type 是 JS 类」的 widget 类型集合 = 有 JS 类的类型（唯一事实源：
 /// 逻辑 widget 表 + builder 代理表）。渲染层据此决定元素 type 用类引用还是
 /// 类型名字符串；宿主 widget 不在其中，零 import。

@@ -356,63 +356,89 @@ const String miniReactReconcilerSource = r'''
   //   - prop：props 里的 widget 数组（`TabBarView(children: [...])` /
   //     `PageView(children: [...])`），位置由 propsChildren 下发。
   //
-  // 懒容器类型表：type -> true（无条件懒）| props 键名数组（带这些键之一才懒）。
-  // 名单**不写在 JS 侧**：由 Dart 侧能力声明（JsUiLibrary.lazyChildHostTypes）
-  // 折算成 `registerLazyChildHost(...)` 顶层语句，随运行时骨架一次性注入
-  //（见 capabilities/js_ui_library.dart 的 jsUiLazyChildHostRegistrations）。
-  var lazyChildHosts = {};
+  // **是否懒由元素自己声明**：`el.lazyChildren === true`，由生成的 `__h`
+  // （flutter.js）按构建期配置打标。运行时**零类型知识**——不认识 PageView /
+  // TabBarView / ListView，也不维护任何类型表；新增懒容器只改生成器配置
+  // （shared/js_widget_defs.dart）并重出产物，运行时代码不动。
 
-  // 注册一个懒容器类型。propKeys 为空 = 无条件懒（如 PageView/TabBarView：
-  // 子项被 SliverFillViewport 强制成整屏）；非空 = 只有该结点 props 带其中
-  // 任一键时才懒（如 ListView 只在带 itemExtent 时懒 —— 那时子项尺寸才被
-  // 容器强制，零尺寸占位才布局中性；不带 itemExtent 的 ListView 子项尺寸按
-  // 内容量出，零尺寸占位会让视口把全部 item 判可见，懒加载反而失效）。
-  function registerLazyChildHost(type, propKeys) {
-    lazyChildHosts[type] = (propKeys && propKeys.length) ? propKeys : true;
-  }
-
-  // 该宿主结点的 children 是否延迟挂载（按 type + props 判定）。
-  function lazyChildOf(type, props) {
-    var rule = lazyChildHosts[type];
-    if (rule === true) { return true; }
-    if (!rule) { return false; }
-    for (var i = 0; i < rule.length; i++) {
-      if (props && props[rule[i]] !== undefined) { return true; }
-    }
-    return false;
-  }
-
-  // builder 子结点展开：只消费产物里的**显式形态协议**，不按类型名、不猜属性名——
-  //   1) 命名构造（`.builder` / `.separated`）由生成的 JS 代理类展开，结果写在
-  //      `children.__items`（内部键，由 __h 归入 children）；
+  // 子项来源：`{el}` = 已创建的 element，`{make}` = 延迟生成（懒容器下的
+  // builder 子项，宿主 inflate 到占位时才调用）。
+  //
+  // builder 只消费产物里的**显式形态协议**，不按类型名、不猜属性名——
+  //   1) 命名构造（`.builder` / `.separated`）由生成的 JS 代理类下发
+  //      `children.__builder = {item, sep, count, ctx}`（内部键，由 __h 归入
+  //      children）；
   //   2) `delegate: SliverChildBuilderDelegate(...)` 由生成器译成
-  //      `{__delegate:'builder', builder, childCount}` 放进 `children.delegate`，
-  //      按该描述展开。
+  //      `{__delegate:'builder', builder, childCount}` 放进 `children.delegate`。
   // 未来新增自定义滚动容器只要沿用上述任一协议即可，运行时无需登记类型。
-  function expandBuilderChildren(el, parent) {
-    var slots = el.children || {};
-    var pre = slots.__items;
-    if (Array.isArray(pre)) { return pre; }
-    var del = slots.delegate;
-    if (!del || del.__delegate !== 'builder') { return []; }
-    var name = del.builder;
-    if (typeof name !== 'string') { return []; }
-    var n = del.childCount !== undefined ? del.childCount : 0;
-    if (typeof n !== 'number' || n <= 0) { return []; }
+  //
+  // **懒容器下绝不在这里调用 builder**：每次展开 N 项会把所有子组件的构造
+  // （控制器 / 监听器）都跑一遍，与 Flutter `ListView.builder` 只构造可见项
+  // 不一致；故每项只带延迟工厂，真正执行推迟到 `lazyMount`。
+  function findOwner(parent, name) {
     var owner = parent;
     while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    if (!owner) { return []; }
-    // 传给 builder 的 `context` 形参 = 拥有者组件的代理（它是**构建单位**：有
-    // build 方法、能被订阅标脏重建；宿主结点不是构建单位，不能当订阅锚点）。
-    var ctx = contextOf(owner);
-    var out = [];
+    return owner || null;
+  }
+
+  function builderSpec(el) {
+    var slots = el.children || {};
+    var b = slots.__builder;
+    if (b && typeof b.item === 'string' && typeof b.count === 'number') {
+      return { item: b.item, sep: b.sep, count: b.count, ctx: b.ctx };
+    }
+    var d = slots.delegate;
+    if (!d || d.__delegate !== 'builder' || typeof d.builder !== 'string') {
+      return null;
+    }
+    var n = d.childCount;
+    if (typeof n !== 'number' || n <= 0) { return null; }
+    return { item: d.builder, sep: null, count: n, ctx: null };
+  }
+
+  // 第 [slotIndex] 个子结点（`.separated` 按 item/separator 交替展开）。
+  // 传给 builder 的 `context` 形参：命名构造优先用代理 build 收到的那个
+  // （与原行为一致），delegate 形态用拥有者组件的代理。
+  function buildItem(owner, spec, slotIndex) {
+    var ctx = spec.ctx || contextOf(owner);
+    var out = null;
     // 委托调用期间 owner 锚点指向方法体所在的组件实例：builder 里创建的
     // 控制器 / Key 归属它（`building` 在这里可能是宿主结点或已还原）。
     withOwner(owner, function () {
-      for (var i = 0; i < n; i++) {
-        out.push(owner[name].call(owner, ctx, i));
+      var sep = spec.sep;
+      if (typeof sep === 'string' && sep && slotIndex % 2 === 1) {
+        out = owner[sep].call(owner, ctx, (slotIndex - 1) / 2);
+      } else {
+        out = owner[spec.item].call(owner, ctx, sep ? slotIndex / 2 : slotIndex);
       }
     });
+    return out;
+  }
+
+  function childSources(el, parent, lazy) {
+    var slots = el.children || {};
+    var pre = slots.__items;
+    var out = [];
+    var i;
+    if (Array.isArray(pre)) {
+      for (i = 0; i < pre.length; i++) { out.push({ el: pre[i] }); }
+      return out;
+    }
+    var spec = builderSpec(el);
+    if (!spec) { return out; }
+    var owner = findOwner(parent, spec.item);
+    if (!owner) { return out; }
+    var total = spec.sep ? Math.max(0, spec.count * 2 - 1) : spec.count;
+    for (i = 0; i < total; i++) {
+      if (lazy) {
+        out.push({ make: (function (idx, ow) {
+          return function () { return buildItem(ow, spec, idx); };
+        })(i, owner) });
+      } else {
+        // 非懒容器：保持原语义，一次性展开全部子结点。
+        out.push({ el: buildItem(owner, spec, i) });
+      }
+    }
     return out;
   }
 
@@ -421,23 +447,34 @@ const String miniReactReconcilerSource = r'''
 
   // 宿主回调句柄：runtime 级常驻（scope=local 且不同步宿主——宿主只拿它的 id 走
   // 事件 invoke 通道回调，本端不需要留镜像）。
+  //   - lazyMount：宿主 element **inflate**（首次布局到该槽位）；
+  //   - lazyUnmount：宿主 element **dispose**（ListView 回收离屏项 / 页面销毁）——
+  //     与 Flutter 同寿：离屏项的 State 被销毁，滚回来再 initState 重新构建。
+  //     没有这条通知，JS 侧挂过的 item 会永远活着（滚到底后每次重建都在 patch
+  //     全量 item），列表越长越糟。
   var lazyMountFn = fn(function (id) { lazyMount(id); });
+  var lazyUnmountFn = fn(function (id) { lazyUnmount(id); });
 
   // 懒槽位占位结点：普通宿主结点（SizedBox 0x0）+ `__lazy` 数据标记 + 回调句柄；
-  // 真实子元素先存在 `__deferred`，本帧不挂载。
-  function newLazySlot(parent, childEl, slot) {
+  // 子元素来源先挂在占位实例上（`src.el` 元素 / `src.make` 延迟工厂），本帧不挂载。
+  function newLazySlot(parent, src, slot) {
     // 占位结点沿用子元素的声明式 key：父级重建时按 key 复用槽位，宿主侧
-    // element key 也不会因占位/真实切换而变化。
-    var props = { width: 0, height: 0, __lazy: true, __lazyFn: lazyMountFn };
-    if (childEl && childEl.props && childEl.props.key !== undefined) {
-      props.key = childEl.props.key;
+    // element key 也不会因占位/真实切换而变化（延迟工厂形态此时拿不到 key）。
+    var props = {
+      width: 0, height: 0, __lazy: true,
+      __lazyFn: lazyMountFn, __lazyOffFn: lazyUnmountFn
+    };
+    if (src && src.el && src.el.props && src.el.props.key !== undefined) {
+      props.key = src.el.props.key;
     }
     var hi = {
       __k: HOST, __id: nodeId('SizedBox'), __type: 'SizedBox',
       __root: rootFor(parent),
       __props: props,
       __children: [], __parent: parent, __slot: slot,
-      __deferred: childEl
+      __deferred: src ? src.el : null,
+      __deferMake: src ? src.make : null,
+      __lazySlot: true
     };
     hostNodes[hi.__id] = hi;
     emit({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
@@ -447,15 +484,32 @@ const String miniReactReconcilerSource = r'''
     return hi;
   }
 
+  // 懒槽位当前的子元素来源 → element（未挂载时按需调用延迟工厂）。
+  function lazyElementOf(src) {
+    if (!src) { return null; }
+    if (src.el !== undefined) { return src.el; }
+    return src.make ? src.make() : null;
+  }
+
   // 父级重建时更新一个**已存在**的懒槽位（幂等，绝不在这里做首次挂载）：
-  // 未挂载的只替换 `__deferred`；已挂载的把新元素 patch 到真实子树上，渲染根
-  // id 变化时更新占位结点的 `child` slot（与 propsChildAt 同语义）。
-  function patchLazySlot(ph, el) {
-    if (ph.__deferred) {
-      ph.__deferred = el;
+  // 未挂载的只替换来源；已挂载的把新元素 patch 到真实子树上，渲染根 id 变化
+  // 时更新占位结点的 `child` slot（与 propsChildAt 同语义）。
+  // 两个分支都刷新来源：宿主 dispose 后槽位要按**最新**来源重新生成（see
+  // lazyUnmount），旧快照会让滚回来的 item 渲染成旧 props。
+  function patchLazySlot(ph, src) {
+    ph.__deferred = src ? src.el : null;
+    ph.__deferMake = src ? src.make : null;
+    if (!ph.__mountedChild) {
       return ph;
     }
-    if (!ph.__mountedChild) { return ph; }
+    var el = lazyElementOf(src);
+    if (el == null || el === false) {
+      // builder 返回空属错误写法（Flutter 侧会直接抛错）：保留已挂载子树并留痕。
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('jsui: lazy slot builder returned empty, keep mounted subtree');
+      }
+      return ph;
+    }
     var oldRoot = ph.__mountedRootId;
     ph.__mountedChild = patch(ph.__mountedChild, el, ph, null);
     // 复用 / 新建的组件实例都要记住自己的父 slot：组件内部 setState 换掉渲染
@@ -477,9 +531,18 @@ const String miniReactReconcilerSource = r'''
   // setState 只入 dirty 队列，收尾再 flush（见【8】）。
   function lazyMount(placeholderId) {
     var ph = hostNodes[placeholderId];
-    if (!ph || !ph.__deferred) { return false; }
+    if (!ph || (!ph.__deferred && !ph.__deferMake)) { return false; }
+    // 延迟工厂（builder 子项）在这里才执行：全树只展开「宿主真正 inflate 到」的那些。
     var el = ph.__deferred;
-    ph.__deferred = null;
+    if (el == null && ph.__deferMake) { el = ph.__deferMake(); }
+    if (el == null || el === false) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('jsui: lazy slot builder returned empty, placeholder=' + placeholderId);
+      }
+      return false;
+    }
+    // 来源**保留**：宿主 dispose（ListView 回收离屏项）后还要按同一来源重建，
+    // 见 lazyUnmount。
     var root = ph.__root || rootFor(ph.__parent);
     if (!root) { return false; }
     var prev = activeRoot;
@@ -497,10 +560,11 @@ const String miniReactReconcilerSource = r'''
       if (inst && inst.__k !== HOST) {
         inst.__propSlot = { parentId: ph.__id, key: 'child', index: 0 };
       }
-      // 占位从「零尺寸空隙」变为「透传容器」：去掉尺寸与 __lazy 标记（保留
-      // 声明式 key），真实子树的渲染根挂到 child slot。占位结点本身保留
+      // 占位从「零尺寸空隙」变为「透传容器」：只去掉尺寸，**保留**懒槽位标记与
+      // 回调句柄——宿主 element 再次 dispose 时要靠 `__lazyOffFn` 反查，重新
+      // inflate 时也要靠 `__lazy` 重新回调 lazyMount。占位结点本身保留
       //（id / element key 不变），父容器不需要任何列表换位。
-      var mountedProps = {};
+      var mountedProps = { __lazy: true, __lazyFn: lazyMountFn, __lazyOffFn: lazyUnmountFn };
       if (ph.__props && ph.__props.key !== undefined) { mountedProps.key = ph.__props.key; }
       ph.__props = mountedProps;
       emit({ op: 'props', id: ph.__id, props: ph.__props });
@@ -511,6 +575,36 @@ const String miniReactReconcilerSource = r'''
       activeRoot = prev;
     }
     // 挂载期间累积的 setState（如 initState 里同步 setState）补一次 flush。
+    if (root.dirty.length) { flush(root); }
+    return true;
+  }
+
+  // 宿主 element dispose（ListView 回收离屏项 / 页面销毁）→ 卸载已挂载的子树，
+  // 槽位本身与来源保留；宿主再次 inflate 时 lazyMount 按来源重新构建（与 Flutter
+  // 「离屏项 State 销毁、滚回再 initState」一致）。幂等：未挂载的槽位直接跳过。
+  function lazyUnmount(placeholderId) {
+    var ph = hostNodes[placeholderId];
+    if (!ph || !ph.__mountedChild) { return false; }
+    var root = ph.__root || rootFor(ph.__parent);
+    if (!root) { return false; }
+    var inst = ph.__mountedChild;
+    ph.__mountedChild = null;
+    ph.__mountedRootId = null;
+    if (ph.__propsChildren) { delete ph.__propsChildren['child']; }
+    var prev = activeRoot;
+    activeRoot = root;
+    root.mounting = true;
+    root.ops = [];
+    try {
+      // unmount 派发 deactivate → dispose，并下发子树 remove；宿主侧的 element
+      // 已随本次 dispose 一起销毁，store 按 remove 递归摘除结点。
+      unmount(inst);
+      emit({ op: 'propsChildRemove', parent: ph.__id, key: 'child' });
+      commit(root);
+    } finally {
+      root.mounting = false;
+      activeRoot = prev;
+    }
     if (root.dirty.length) { flush(root); }
     return true;
   }
@@ -569,17 +663,18 @@ const String miniReactReconcilerSource = r'''
         emit({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
       }
       var idx = 0;
-      // 懒容器（如 TabBarView）的 children 先只下发零尺寸占位（见 newLazySlot）：
-      // 真实子树等宿主 inflate 到该槽位时回调再挂，否则「一次切 TabBarView」就把
-      // 全部子页的 initState / 请求都跑掉了。
-      var lazyChildren = lazyChildOf(hi.__type, hi.__props);
-      var kids = expandBuilderChildren(el, hi);
-      for (var i = 0; i < kids.length; i++) {
-        var cel = kids[i];
-        if (cel == null || cel === false) { continue; }
+      // 懒容器（如 TabBarView / ListView.builder(itemExtent:)）的 children 先只
+      // 下发零尺寸占位（见 newLazySlot）：真实子树等宿主 inflate 到该槽位时
+      // 回调再挂；builder 形态连 itemBuilder 的调用也一并推迟（见 childSources）。
+      // 懒标记来自元素本身（生成的 __h 按构建期配置写入），运行时不做类型判断。
+      var lazyChildren = el.lazyChildren === true;
+      var srcs = childSources(el, hi, lazyChildren);
+      for (var i = 0; i < srcs.length; i++) {
+        var src = srcs[i];
+        if (!lazyChildren && (src.el == null || src.el === false)) { continue; }
         var c = lazyChildren
-            ? newLazySlot(hi, cel, { kind: 'children', hostParentId: hi.__id, index: idx })
-            : mount(cel, hi, { hostParentId: hi.__id, index: idx });
+            ? newLazySlot(hi, src, { kind: 'children', hostParentId: hi.__id, index: idx })
+            : mount(src.el, hi, { hostParentId: hi.__id, index: idx });
         if (c) { hi.__children.push(c); idx += 1; }
       }
       // props 里的 widget（单值 / 数组）与 delegate：单独挂载，不入 flatten
@@ -587,7 +682,7 @@ const String miniReactReconcilerSource = r'''
       hi.__propsChildren = {};
       hi.__propsChildrenList = {};
       hi.__propsData = {};
-      patchPropSlots(hi, el.children || {});
+      patchPropSlots(hi, el.children || {}, lazyChildren);
       return hi;
     }
 
@@ -596,7 +691,11 @@ const String miniReactReconcilerSource = r'''
     try {
       // 翻译层已经构造好的实例随元素下发（`el.inst`）→ 直接复用，不再 new
       // 第二次；通过 `__h(X, props)` 创建的元素没有实例，才在这里构造。
-      ci = el.inst || new el.type(el.props, el.children);
+      // 已卸载（dispose 过）的实例不得复用：懒槽位被宿主回收后，滚回来时元素
+      // 仍带着上次那份实例引用，复用会拿到已 release 的控制器/句柄。
+      ci = (el.inst && !el.inst.__unmounted)
+          ? el.inst
+          : new el.type(el.props, el.children);
     } catch (e) {
       endConstruct(null, ownFrame);
       throw e;
@@ -658,8 +757,11 @@ const String miniReactReconcilerSource = r'''
       oldInst.__props = el.props;
       // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
       applyScope(oldInst, el.props);
-      patchChildren(oldInst, expandBuilderChildren(el, oldInst));
-      patchPropSlots(oldInst, el.children || {});
+      // 子项来源按新元素声明的懒标记生成：懒容器下 builder 形态只带延迟工厂，
+      // 已挂载的槽位由 patchLazySlot 现场调用工厂重建该项。
+      var lazyChildren = el.lazyChildren === true;
+      patchChildren(oldInst, childSources(el, oldInst, lazyChildren), lazyChildren);
+      patchPropSlots(oldInst, el.children || {}, lazyChildren);
       return oldInst;
     }
 
@@ -708,7 +810,9 @@ const String miniReactReconcilerSource = r'''
     return inst.__child;
   }
 
-  function patchChildren(parentHost, newEls) {
+  // [srcs] 是子项来源（见 childSources）：`{el}` 直接元素 / `{make}` 延迟工厂。
+  // [lazy] 来自新元素的 `el.lazyChildren`（运行时不做类型判断）。
+  function patchChildren(parentHost, srcs, lazy) {
     var old = parentHost.__children || [];
     var remaining = old.slice();
     var keyedOld = {};
@@ -723,10 +827,13 @@ const String miniReactReconcilerSource = r'''
 
     var next = [];
     var hostIdx = 0;
-    for (j = 0; j < newEls.length; j++) {
-      var el = newEls[j];
-      if (el == null || el === false) { continue; }
-      var ek = keySig(el.props ? el.props.key : null);
+    for (j = 0; j < srcs.length; j++) {
+      var src = srcs[j];
+      if (!src) { continue; }
+      var el = src.el !== undefined ? src.el : null;
+      // 延迟工厂形态在展开前没有 element（也没有 key），只能按位置匹配。
+      if (src.el !== undefined && (el == null || el === false)) { continue; }
+      var ek = keySig(el && el.props ? el.props.key : null);
       var matched = null;
       if (ek != null && keyedOld[ek]) {
         matched = keyedOld[ek];
@@ -740,28 +847,35 @@ const String miniReactReconcilerSource = r'''
       }
       if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
 
-      // 已存在的懒槽位（未挂载的 `__deferred` / 已挂载的 `__mountedChild`）→ 只
-      // 更新子元素，**绝不能**在这里把未挂载的槽位挂出来，否则重建（外壳每次切
-      // tab 都会整树 patch）会把懒加载整个破坏掉。
-      if (matched && lazyChildOf(parentHost.__type, parentHost.__props) &&
-          (matched.__deferred || matched.__mountedChild)) {
+      // 已存在的懒槽位（未挂载的来源 / 已挂载的 `__mountedChild`）→ 只更新子元素，
+      // **绝不能**在这里把未挂载的槽位挂出来，否则重建（外壳每次切 tab 都会整树
+      // patch）会把懒加载整个破坏掉。
+      if (matched && lazy && matched.__lazySlot) {
         matched.__slot = { kind: 'children', hostParentId: parentHost.__id, index: hostIdx };
-        patchLazySlot(matched, el);
+        patchLazySlot(matched, src);
+        // 懒槽位同样要跟随排序：宿主 `childIds` 的顺序只由 insert/move 决定。
+        if (old.indexOf(matched) !== hostIdx) {
+          emit({ op: 'move', parent: parentHost.__id, id: matched.__id, index: hostIdx });
+        }
         next.push(matched);
         hostIdx += 1;
         continue;
       }
 
       // 新增的子结点同样先落成懒槽位，避免「父级重建新增离屏项」时提前挂载。
-      if (!matched && lazyChildOf(parentHost.__type, parentHost.__props)) {
-        next.push(newLazySlot(parentHost, el, {
+      if (!matched && lazy) {
+        next.push(newLazySlot(parentHost, src, {
           kind: 'children', hostParentId: parentHost.__id, index: hostIdx
         }));
         hostIdx += 1;
         continue;
       }
 
-      var inst = patch(matched, el, parentHost, { hostParentId: parentHost.__id, index: hostIdx });
+      // 非懒容器（或懒容器里已提前挂载的旧结点）：此处必须有 element；
+      // 延迟工厂形态（如容器从 lazy 变为非 lazy）在此现场展开一次。
+      var cel = el !== null ? el : lazyElementOf(src);
+      if (cel == null || cel === false) { continue; }
+      var inst = patch(matched, cel, parentHost, { hostParentId: parentHost.__id, index: hostIdx });
       if (inst) {
         // 复用的结点位置变化 -> 下发 move（新建的自带 insert）。
         if (inst === matched && old.indexOf(inst) !== hostIdx) {
@@ -796,8 +910,8 @@ const String miniReactReconcilerSource = r'''
   // 不向宿主发 insert/move（宿主按 propsChildren 整表替换）。
   // 父结点是懒容器时，**每一项**都先落成懒槽位（未 visit 的子页不挂载）：
   // 已有槽位只更新 deferred / patch 子树；新项创建占位而不是立刻 mount。
-  function patchSlotList(parentHost, oldList, newEls, slotKey) {
-    var lazy = lazyChildOf(parentHost.__type, parentHost.__props);
+  // [lazy] 由所在宿主元素的 `el.lazyChildren` 传入（运行时不做类型判断）。
+  function patchSlotList(parentHost, oldList, newEls, slotKey, lazy) {
     var remaining = oldList.slice();
     var keyedOld = {};
     var i, j;
@@ -824,16 +938,12 @@ const String miniReactReconcilerSource = r'''
       }
       if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
       var slotIndex = next.length;
-      var slot = {
-        kind: 'prop', parentHostId: parentHost.__id,
-        key: slotKey, index: slotIndex
-      };
-      if (lazy && (!matched || matched.__deferred || matched.__mountedChild)) {
+      if (lazy && (!matched || matched.__lazySlot)) {
         var ph = matched;
         if (!ph) {
-          ph = newLazySlot(parentHost, el, slot);
+          ph = newLazySlot(parentHost, { el: el }, { kind: 'prop' });
         } else {
-          patchLazySlot(ph, el);
+          patchLazySlot(ph, { el: el });
         }
         next.push(ph);
         continue;
@@ -851,14 +961,15 @@ const String miniReactReconcilerSource = r'''
     return next;
   }
 
-  function patchPropSlots(hostInst, newSlots) {
+  function patchPropSlots(hostInst, newSlots, lazy) {
     var oldS = hostInst.__propsChildren || {};
     var oldL = hostInst.__propsChildrenList || {};
     var oldD = hostInst.__propsData || {};
     var nextS = {}, nextL = {}, nextD = {};
     var i, k;
     for (k in newSlots) {
-      if (k === '__items') { continue; }
+      // __items / __builder 是 builder 展开协议（子结点走 flatten 列表），不是 prop slot。
+      if (k === '__items' || k === '__builder') { continue; }
       if (!Object.prototype.hasOwnProperty.call(newSlots, k)) { continue; }
       var v = newSlots[k];
       if (isElement(v)) {
@@ -868,27 +979,22 @@ const String miniReactReconcilerSource = r'''
           nextS[k] = inst;
           emit({ op: 'propsChild', parent: hostInst.__id, key: k, childId: hostIdOf(inst) });
         }
-        if (oldL[k]) {
-          for (i = 0; i < oldL[k].length; i++) { unmount(oldL[k][i]); }
-          emit({ op: 'propsChildren', parent: hostInst.__id, key: k, childIds: [] });
-        }
-        if (oldD[k]) { emit({ op: 'propsDataRemove', parent: hostInst.__id, key: k }); }
+        // 本 key 上其他形态的旧绑定（列表 / delegate）由下面的清理循环统一
+        // 卸载并解绑：这里再 unmount 一次会让组件 dispose() 跑两遍。
         continue;
       }
       if (isElementList(v)) {
-        var arr = patchSlotList(hostInst, oldL[k] || [], v, k);
+        var arr = patchSlotList(hostInst, oldL[k] || [], v, k, lazy);
         nextL[k] = arr;
         emit({
           op: 'propsChildren', parent: hostInst.__id, key: k,
           childIds: arr.map(hostIdOf)
         });
-        if (oldS[k]) { unmount(oldS[k]); emit({ op: 'propsChildRemove', parent: hostInst.__id, key: k }); }
-        if (oldD[k]) { emit({ op: 'propsDataRemove', parent: hostInst.__id, key: k }); }
         continue;
       }
       if (v != null && typeof v === 'object' && v.__delegate) {
         if (v.__delegate === 'list') {
-          var arr2 = patchSlotList(hostInst, oldL[k] || [], v.children || [], k);
+          var arr2 = patchSlotList(hostInst, oldL[k] || [], v.children || [], k, lazy);
           nextL[k] = arr2;
           emit({
             op: 'propsChildren', parent: hostInst.__id, key: k,
@@ -899,7 +1005,6 @@ const String miniReactReconcilerSource = r'''
           nextD[k] = v;
           emit({ op: 'propsData', parent: hostInst.__id, key: k, value: v });
         }
-        if (oldS[k]) { unmount(oldS[k]); emit({ op: 'propsChildRemove', parent: hostInst.__id, key: k }); }
         continue;
       }
     }

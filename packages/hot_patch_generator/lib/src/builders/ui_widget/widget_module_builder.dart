@@ -4,6 +4,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:build/build.dart';
 
@@ -76,15 +77,29 @@ class WidgetModuleBuilder implements Builder {
 ///     `items` 走同一条路径，不再有固定键表）；
 ///   - `delegate` 产物（`{__delegate:'list'|'builder', …}`）也移入 `children`，
 ///     **不参与 props**；运行时按 `__delegate` 形态消费；
-///   - `ListView.builder` 展开结果走内部键 `__items`（同样进 children）；
+///   - `ListView.builder` 不再在代理类里展开：代理只写入内部键
+///     `children.__builder = {item, sep, count, ctx}`，由运行时按容器是否懒
+///     决定「立刻调 itemBuilder」还是「宿主 inflate 到该项时再调」；
 ///   - 其余值留在 `props`；
 ///   - `type` 是函数（JS 组件类）时 props **原样保留**——`__applyProps` 靠它
 ///     派生构造参数字段。JS 组件内部 build 再调用 `__h('X', props)` 时，
 ///     宿主类型才做拆分。
-const String jsNodeHelperSource = '''
+String jsNodeHelperSource() => '''
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
 // 元素对象统一由本函数产出，带 element: true 标记；props 值是否是 widget
 // 只看这个标记，不做形状猜测。
+// 懒容器配置（**构建期唯一事实源**：shared/js_widget_defs.dart 的
+// lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
+var __lazyChildHosts = ${lazyChildHostTypesLiteral()};
+function __lazyChildrenOf(type, props) {
+  var rule = __lazyChildHosts[type];
+  if (rule === undefined) { return false; }
+  if (rule === true) { return true; }
+  for (var i = 0; i < rule.length; i++) {
+    if (props && props[rule[i]] !== undefined) { return true; }
+  }
+  return false;
+}
 function __isElement(v) {
   return v != null && typeof v === 'object' && v.element === true;
 }
@@ -147,6 +162,11 @@ export function __h(type, props) {
     var v = __asElementList(__asElement(p[k]));
     if (__isElement(v)) { slots[k] = v; continue; }
     if (__isElementList(v)) { slots[k] = v; continue; }
+    // builder 延迟展开描述（命名构造代理写入）同样进 children，不参与 props。
+    if (k === '__builder' && v != null && typeof v === 'object') {
+      slots[k] = v;
+      continue;
+    }
     // delegate 两种形态都进 children，不参与 props。
     if (v != null && typeof v === 'object' && v.__delegate) {
       slots[k] = v;
@@ -154,8 +174,25 @@ export function __h(type, props) {
     }
     data[k] = v;
   }
-  return { type: type, props: data, children: slots, element: true };
+  var el = { type: type, props: data, children: slots, element: true };
+  // 懒容器标记：由构建期配置决定（见 lazyChildHostTypes），运行时据此决定
+  // 子结点是否延迟到宿主 inflate 时再挂载。
+  if (__lazyChildrenOf(type, p)) { el.lazyChildren = true; }
+  return el;
 }''';
+
+/// 懒容器配置的 JS 字面量：`{ "PageView": true, "ListView": ["itemExtent"] }`。
+/// 空键列表 = 无条件懒（`true`）；非空 = props 带其中任一键时才懒。
+String lazyChildHostTypesLiteral() {
+  final parts = <String>[];
+  lazyChildHostTypes.forEach((type, keys) {
+    final value = keys.isEmpty
+        ? 'true'
+        : '[${keys.map(jsonEncode).join(', ')}]';
+    parts.add('${jsonEncode(type)}: $value');
+  });
+  return '{${parts.join(', ')}}';
+}
 
 /// 宿主包装类源码：类名 = 宿主类型名，构造即产出元素描述（type 仍是**字符串**）。
 /// 宿主结点的实例化由宿主注册表完成，reconciler 从不 `new` 这个类。
@@ -172,14 +209,16 @@ export class $type {
 /// `separatorBuilder`、`itemCount`。`delegate:` 形态不经过本类（直接是宿主节点，
 /// 由 `children.delegate` 描述消费）。
 ///
-/// build 时循环调用拥有者方法收集子树，包回同名宿主节点；展开结果走内部键
-/// `__items`，由 `__h` 归入 `children` 对象，宿主 renderer 按序取用。
-///
-/// 只在命名构造 builder 形态下被渲染层引用，因此 build 无需再判形态。
+/// build 时**不展开**子结点，只写入延迟展开描述
+/// `children.__builder = {item, sep, count, ctx}`：容器是否懒由元素上的
+/// `lazyChildren` 标记决定（生成期按 `lazyChildHostTypes` 打到元素上）。
+/// 懒容器下 `itemBuilder` 推迟到宿主 inflate 到该项时才调用（与 Flutter
+/// `ListView.builder` 只构造可见项一致），非懒容器由运行时立刻按描述展开。
 ///
 /// 被委托方法的第一个实参是 **build 的 `context` 形参**（运行时统一
 /// `inst.build(contextOf(inst))` 传入，锚点就是本代理组件自身的结点，与 Dart 侧
-/// `ListView.builder(itemBuilder: (context, i) => …)` 的形参同源），无需再自行查找。
+/// `ListView.builder(itemBuilder: (context, i) => …)` 的形参同源），随描述一起
+/// 带上，展开时原样传入，保持与原实现一致的上下文语义。
 String builderProxySource(String type) {
   return '''
 export class $type {
@@ -195,21 +234,16 @@ export class $type {
   build(context) {
     var owner = this.__owner();
     if (!owner) { return null; }
-    var name = this.props.itemBuilder;
-    var out = [];
-    var n = this.props.itemCount || 0;
-    // `.separated` 形态：item / separator 首尾交替展开（n 项 → 2n-1 个子节点）。
-    var sep = this.props.separatorBuilder;
-    for (var i = 0; i < n; i++) {
-      out.push(owner[name].call(owner, context, i));
-      if (sep && i < n - 1) { out.push(owner[sep].call(owner, context, i)); }
-    }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开结果走内部键 __items（不是 Flutter 属性名），由 __h 按元素数组归入
-    // children 对象，宿主 renderer 按序取用。
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
     for (var k in this.props) { p[k] = this.props[k]; }
-    p.__items = out;
+    p.__builder = {
+      item: this.props.itemBuilder,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
     return __h('$type', p);
   }
 }''';
@@ -451,7 +485,7 @@ String renderPackageModule(String package, Set<String> types) {
     ..writeln();
   if (package == nodeHelperPackage) {
     b
-      ..writeln(jsNodeHelperSource)
+      ..writeln(jsNodeHelperSource())
       ..writeln();
     // 宿主包装类：`new Text({...})` → `__h('Text', {...})`。翻译层因此可以对
     // 所有 widget 构造统一发射 `new Type(props)`，产物里不再出现 `__h('X', …)`。
