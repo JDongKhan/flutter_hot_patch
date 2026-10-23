@@ -8,7 +8,7 @@ import '../service/app_service.dart';
 
 /// App 首页（对应 docs/app-prototype.html 的「首页」tab）。
 ///
-/// 数据不再由构造参数注入，而是由 [AppService.fetchHome] **模拟一次网络请求**
+/// 数据不再由构造参数注入，而是由 [AppService.fetchHome] 请求本地 mock 接口
 /// 取回：请求期间显示 loading，回来后 setState 出内容。原生与 JS 两条通路写法
 /// 完全一致（service 内部走的就是 `@HostInjected` 的宿主通道）。
 ///

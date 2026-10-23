@@ -1,0 +1,76 @@
+{
+  "banners": [
+    {
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=aerial%20view%20of%20tropical%20island%20beach%20turquoise%20water%20travel%20photography&image_size=landscape_16_9",
+      "title": "海岛季 · 早鸟立减 300",
+      "sub": "10月出行专属优惠"
+    },
+    {
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=snowy%20mountain%20lake%20at%20sunrise%20mirror%20reflection%20travel%20photography&image_size=landscape_16_9",
+      "title": "雪山湖泊 6 日环线",
+      "sub": "含全程住宿与向导"
+    },
+    {
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=ancient%20chinese%20water%20town%20with%20lanterns%20at%20dusk&image_size=landscape_16_9",
+      "title": "江南水乡夜游船票",
+      "sub": "限时 8 折，可随时退"
+    }
+  ],
+  "grid": [
+    { "emoji": "🎫", "title": "门票" },
+    { "emoji": "🏨", "title": "酒店" },
+    { "emoji": "✈️", "title": "机票" },
+    { "emoji": "📖", "title": "攻略" },
+    { "emoji": "🚗", "title": "租车" },
+    { "emoji": "🍜", "title": "美食" },
+    { "emoji": "🎭", "title": "演出" },
+    { "emoji": "⋯", "title": "更多" }
+  ],
+  "spots": [
+    {
+      "id": "s1",
+      "title": "海岛三日游",
+      "sub": "含往返机票 · 4星海景房",
+      "sold": "2.3k 人已订",
+      "tag": "热销",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=tropical%20island%20resort%20beach%20wooden%20bungalow%20clear%20sea&image_size=landscape_4_3",
+      "desc": "湛蓝海水与细软白沙滩，行程含出海浮潜、日落巡航与海鲜大餐，适合情侣与家庭出行。",
+      "price": 1280,
+      "tags": ["含机票", "含2晚酒店", "中文导游", "免费退改"]
+    },
+    {
+      "id": "s2",
+      "title": "古镇自由行",
+      "sub": "慢游水乡 · 精品民宿",
+      "sold": "1.1k 人已订",
+      "tag": "慢游",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=chinese%20ancient%20town%20canal%20stone%20bridge%20old%20houses&image_size=landscape_4_3",
+      "desc": "青石板路、枕水人家。清晨的薄雾与傍晚的灯笼，是这座古镇最好的两个时刻。",
+      "price": 860,
+      "tags": ["含1晚民宿", "含早餐", "可选接驳", "自由行程"]
+    },
+    {
+      "id": "s3",
+      "title": "草原自驾",
+      "sub": "越野穿越 · 5日行程",
+      "sold": "860 人已订",
+      "tag": "自驾",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=vast%20green%20grassland%20winding%20road%20blue%20sky%20road%20trip&image_size=landscape_4_3",
+      "desc": "沿草原天路一路向北，途经牧场、湖泊与白桦林，5天4晚深度穿越。",
+      "price": 1520,
+      "tags": ["含租车", "含油费", "车队领航", "含保险"]
+    },
+    {
+      "id": "s4",
+      "title": "雪乡温泉",
+      "sub": "雪景温泉 · 亲子首选",
+      "sold": "640 人已订",
+      "tag": "温泉",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=snow%20village%20wooden%20houses%20winter%20warm%20lights&image_size=landscape_4_3",
+      "desc": "雪蘑菇屋顶与露天温泉的组合，夜里零下二十度泡汤看星空，是冬天的限定体验。",
+      "price": 1980,
+      "tags": ["含温泉", "含门票", "亲子房", "含接送"]
+    }
+  ],
+  "adImg": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=hot%20air%20balloons%20over%20cappadocia%20at%20sunrise%20wide%20travel%20banner&image_size=landscape_4_3"
+}

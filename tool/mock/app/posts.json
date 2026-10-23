@@ -1,0 +1,64 @@
+{
+  "list": [
+    {
+      "id": "p1",
+      "title": "京郊露营全攻略",
+      "sub": "装备清单、营地选择与避坑指南，新手一次看懂。",
+      "type": "攻略",
+      "author": "山野派",
+      "time": "2 天前",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=camping%20gear%20flat%20lay%20on%20grass%20outdoor%20equipment&image_size=square",
+      "like": 2300
+    },
+    {
+      "id": "p2",
+      "title": "小众古镇自驾路线",
+      "sub": "避开人潮，3 天 2 晚串联 4 个安静的江南小镇。",
+      "type": "游记",
+      "author": "慢行记",
+      "time": "4 天前",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=narrow%20old%20town%20alley%20stone%20steps%20traditional%20houses&image_size=square",
+      "like": 1800
+    },
+    {
+      "id": "p3",
+      "title": "深秋赏叶地图",
+      "sub": "江浙沪最适合看红叶的 12 个地方，附最佳观赏期。",
+      "type": "榜单",
+      "author": "旅拍君",
+      "time": "1 周前",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=autumn%20forest%20path%20with%20red%20leaves&image_size=square",
+      "like": 960
+    },
+    {
+      "id": "p4",
+      "title": "城市周边露营地测评",
+      "sub": "实测 8 个露营地：水电、厕所、风景与性价比。",
+      "type": "攻略",
+      "author": "露营实验室",
+      "time": "3 天前",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=lakeside%20campsite%20tents%20mountains%20morning%20mist&image_size=square",
+      "like": 1420
+    },
+    {
+      "id": "p5",
+      "title": "周末两天一夜怎么玩",
+      "sub": "不用请假也能出发的 6 条短线行程，人均 500 起。",
+      "type": "游记",
+      "author": "周末出发",
+      "time": "5 天前",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=weekend%20road%20trip%20car%20on%20country%20road%20sunny&image_size=square",
+      "like": 1180
+    },
+    {
+      "id": "p6",
+      "title": "江浙沪古镇榜单",
+      "sub": "按人气、美食与夜景综合排名，第一名出人意料。",
+      "type": "榜单",
+      "author": "江南笔记",
+      "time": "6 天前",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=jiangnan%20water%20town%20boat%20at%20dusk%20lanterns&image_size=square",
+      "like": 2040
+    }
+  ]
+}

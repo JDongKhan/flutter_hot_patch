@@ -1,0 +1,40 @@
+{
+  "list": [
+    {
+      "no": "20261013001",
+      "status": "待付款",
+      "title": "海岛三日游 · 2 人",
+      "spec": "2026-10-20 出发 · 含机酒",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=happy%20couple%20on%20tropical%20beach%20vacation&image_size=square",
+      "price": 2560,
+      "step": 0
+    },
+    {
+      "no": "20261012007",
+      "status": "已完成",
+      "title": "古镇自由行 · 1 人",
+      "spec": "2026-09-28 出发 · 含民宿",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=traveler%20walking%20in%20chinese%20ancient%20town%20alley&image_size=square",
+      "price": 860,
+      "step": 3
+    },
+    {
+      "no": "20261011033",
+      "status": "待收货",
+      "title": "草原自驾套餐",
+      "spec": "2026-10-15 出发 · 含租车",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=car%20road%20trip%20on%20grassland%20highway&image_size=square",
+      "price": 1520,
+      "step": 2
+    },
+    {
+      "no": "20261010022",
+      "status": "待发货",
+      "title": "雪乡温泉 · 2 人",
+      "spec": "2026-11-02 出发 · 含温泉",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=snow%20village%20wooden%20houses%20winter%20warm%20lights&image_size=square",
+      "price": 3960,
+      "step": 1
+    }
+  ]
+}

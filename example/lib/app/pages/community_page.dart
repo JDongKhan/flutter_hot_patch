@@ -20,7 +20,7 @@ import 'detail_pages.dart';
 /// 条件表达式、事件闭包（`__bindFn`）、按 key 分派的 `switch` 均已支持；
 /// 过滤与排序搬到了 service（模拟后端按参数返回列表）。
 ///
-/// 数据走两个模拟接口：双 tab / 筛选项 / 横向资源由 [AppService.fetchCommunity]
+/// 数据走两个本地 mock 接口：双 tab / 筛选项 / 横向资源由 [AppService.fetchCommunity]
 /// 取，帖子列表由 [AppService.fetchPostList] 取。首屏两个请求**并行**发出
 /// （列表先用空参数请求，等价「全部 + 综合」），此后改任一筛选条件都按新参数
 /// 重新请求一次列表，请求期间列表区贴一条细进度条。

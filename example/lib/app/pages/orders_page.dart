@@ -11,7 +11,7 @@ import 'detail_pages.dart';
 /// 对应 docs/app-prototype.html 的「订单」：顶部状态条（全部/待付款/待发货/
 /// 待收货/已完成）+ 订单卡列表（订单号 / 状态 / 商品 / 合计 / 操作按钮）。
 ///
-/// 数据走两个模拟接口：状态条由 [AppService.fetchOrders] 取，订单列表由
+/// 数据走两个本地 mock 接口：状态条由 [AppService.fetchOrders] 取，订单列表由
 /// [AppService.fetchOrderList] 取。首屏两个请求**并行**发出（列表先用空状态
 /// 参数请求，等价「全部」），此后点状态即按该状态重新请求一次列表。
 ///

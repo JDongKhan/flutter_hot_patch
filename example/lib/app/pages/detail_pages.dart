@@ -2,17 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../../base/app_router.dart';
 import '../model/app_models.dart';
-import '../service/app_data.dart';
 
 /// App 二级页集合（常规 Flutter 页面，无 @PatchEntry 注解）。
 ///
 /// 首页 `@PatchEntry` 组件的跳转入口统一经宿主路由
 /// （lib/base/app_router.dart）推入这些页面；其余 tab 直接 Navigator.push。
 ///
-/// 页面数据由宿主路由经 [AppService] 模拟网络请求取回后**经构造参数传入**
+/// 页面数据由宿主路由经 [AppService] 请求本地接口取回后**经构造参数传入**
 /// （帖子/景点/订单/专题详情、搜索页热搜与猜你想去、专题页相关推荐），
-/// 因此这里的页面本身不做异步加载；只有 `kAvatarImg` / `kBanners` 这类
-/// **纯展示用图片地址**直接从模拟数据源读（无 @PatchEntry，不参与翻译）。
+/// 因此这里的页面本身不做异步加载；只有下面两张**纯展示用图片**写死在本文件
+/// （无 @PatchEntry，不参与翻译）。
+
+/// 详情页评论头像（纯展示）。
+const String _avatarImg =
+    'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar&image_size=square';
+
+/// WebView 演示页的占位横幅（纯展示）。
+const String _bannerImg =
+    'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=aerial%20view%20of%20tropical%20island%20beach%20turquoise%20water%20travel%20photography&image_size=landscape_16_9';
 
 const Color kBrand = Color(0xFF0E7AFB);
 const Color kPrice = Color(0xFFFF5A36);
@@ -746,7 +753,7 @@ class PostDetailPage extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 19,
-                        backgroundImage: NetworkImage(kAvatarImg),
+                        backgroundImage: NetworkImage(_avatarImg),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1399,7 +1406,7 @@ class WebViewPage extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(
-                          kBanners[0].img,
+                          _bannerImg,
                           height: 130,
                           width: double.infinity,
                           fit: BoxFit.cover,

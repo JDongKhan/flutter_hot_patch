@@ -1,0 +1,27 @@
+{
+  "tabs": ["广场", "推荐"],
+  "sorts": ["综合", "最新", "最热"],
+  "postTypes": ["全部", "攻略", "游记", "榜单"],
+  "dists": ["不限", "1km 内", "5km 内", "20km 内"],
+  "priceRanges": ["不限", "免费", "¥100 以下", "¥100 以上"],
+  "resources": [
+    {
+      "id": "r1",
+      "title": "露营地推荐",
+      "sub": "12 个营地",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=camping%20tent%20in%20forest%20at%20dusk%20warm%20light&image_size=landscape_4_3"
+    },
+    {
+      "id": "r2",
+      "title": "城市漫步路线",
+      "sub": "秋日限定",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=autumn%20city%20street%20walk%20golden%20leaves%20sunlight&image_size=landscape_4_3"
+    },
+    {
+      "id": "r3",
+      "title": "海边日落机位",
+      "sub": "拍照攻略",
+      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=seaside%20lighthouse%20at%20sunset%20waves%20rocks&image_size=landscape_4_3"
+    }
+  ]
+}

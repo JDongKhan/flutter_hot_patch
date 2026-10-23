@@ -2,9 +2,10 @@
 // 由 hot_patch_generator 从 lib/app/pages/detail_pages.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { kAvatarImg, kBanners } from '../service/app_data.js';
 import { Container, GestureDetector, Text } from '../../flutter.js';
 
+const _avatarImg = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar&image_size=square";
+const _bannerImg = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=aerial%20view%20of%20tropical%20island%20beach%20turquoise%20water%20travel%20photography&image_size=landscape_16_9";
 export const kBrand = '#ff0e7afb';
 export const kPrice = '#ffff5a36';
 const _steps = ["提交订单", "支付成功", "商家发货", "已完成"];

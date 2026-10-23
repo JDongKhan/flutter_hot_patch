@@ -86,7 +86,7 @@ class _AppSubContentState extends State<AppSubContent> with SingleTickerProvider
         physics: const NeverScrollableScrollPhysics(),
         children: [
           // 首页：有 JS 产物（连带翻译），外壳产物里是类引用，由 JS 运行时直接
-          // new 出来；数据由 HomePage 自己经 AppService 模拟网络请求取回。
+          // new 出来；数据由 HomePage 自己经 AppService 请求本地 mock 接口取回。
           const HomePage(),
           const CommunityPage(),
           const OrdersPage(),

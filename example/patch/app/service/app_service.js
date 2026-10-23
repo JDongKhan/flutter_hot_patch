@@ -8,111 +8,199 @@ import { OrderFeed } from '../model/app_models.js';
 import { MineFeed } from '../model/app_models.js';
 import { SearchFeed } from '../model/app_models.js';
 import { ResourceFeed } from '../model/app_models.js';
-import { kAdImg, kAvatarImg, kBanners, kCommunityTabs, kDists, kGrid, kHotSearch, kMineMenu, kMineStats, kOrderStatus, kOrders, kPostTypes, kPosts, kPriceRanges, kResources, kSorts, kSpots } from 'app_data.js';
+import { HomeBanner } from '../model/app_models.js';
+import { GridEntry } from '../model/app_models.js';
+import { Spot } from '../model/app_models.js';
+import { Post } from '../model/app_models.js';
+import { Resource } from '../model/app_models.js';
+import { Order } from '../model/app_models.js';
+import { MenuEntry } from '../model/app_models.js';
 
 // 模型 AppService
 export class AppService {
   constructor() {
   }
-  async _request(url, api) {
-    await _app_host_.invoke("post", {"url": url, "params": {"api": api}});
+  async _request(url) {
+    return await _app_host_.invoke("post", {"url": url, "params": {"api": url}});
   }
-  async _requestQuery(api, query) {
-    await _app_host_.invoke("post", {"url": api, "params": {"api": api, "query": query}});
+  async _requestQuery(url, query) {
+    return await _app_host_.invoke("post", {"url": url, "params": {"api": url, "query": query}});
   }
   async fetchHome() {
-    await this._request("/app/home", "/app/home");
-    return new HomeFeed({banners: kBanners, grid: kGrid, spots: kSpots, adImg: kAdImg});
+    var data = await this._request("/app/home");
+    var banners = [];
+    for (let e of data["banners"]) {
+      banners.add(this._banner(e));
+    }
+    var grid = [];
+    for (let e of data["grid"]) {
+      grid.add(this._grid(e));
+    }
+    var spots = [];
+    for (let e of data["spots"]) {
+      spots.add(this._spot(e));
+    }
+    return new HomeFeed({banners: banners, grid: grid, spots: spots, adImg: data["adImg"]});
   }
   async fetchCommunity() {
-    await this._request("/app/community", "/app/community");
-    return new CommunityFeed({tabs: kCommunityTabs, sorts: kSorts, postTypes: kPostTypes, dists: kDists, priceRanges: kPriceRanges, resources: kResources});
+    var data = await this._request("/app/community");
+    var resources = [];
+    for (let e of data["resources"]) {
+      resources.add(this._resource(e));
+    }
+    return new CommunityFeed({tabs: this._strings(data["tabs"]), sorts: this._strings(data["sorts"]), postTypes: this._strings(data["postTypes"]), dists: this._strings(data["dists"]), priceRanges: this._strings(data["priceRanges"]), resources: resources});
   }
   async fetchPostList(tab, sort, type, dist, price) {
-    await this._requestQuery("/app/posts", {"tab": tab, "sort": sort, "type": type, "dist": dist, "price": price});
-    return this._postListOf(sort, type);
+    var data = await this._requestQuery("/app/posts", {"tab": tab, "sort": sort, "type": type, "dist": dist, "price": price});
+    return this._postListOf(this._posts(data["list"]), sort, type);
   }
   async fetchOrders() {
-    await this._request("/app/orders", "/app/orders");
-    return new OrderFeed({statuses: kOrderStatus});
+    var data = await this._request("/app/orders");
+    return new OrderFeed({statuses: this._strings(data["statuses"])});
   }
   async fetchOrderList(status) {
-    await this._requestQuery("/app/orders/list", {"status": status});
-    return this._orderListOf(status);
+    var data = await this._requestQuery("/app/orders/list", {"status": status});
+    return this._orderListOf(this._orders(data["list"]), status);
   }
   async fetchMine() {
-    await this._request("/app/mine", "/app/mine");
-    return new MineFeed({avatar: kAvatarImg, stats: kMineStats, menu: kMineMenu});
+    var data = await this._request("/app/mine");
+    var stats = [];
+    for (let row of data["stats"]) {
+      stats.add(this._strings(row));
+    }
+    var menu = [];
+    for (let e of data["menu"]) {
+      menu.add(this._menu(e));
+    }
+    return new MineFeed({avatar: data["avatar"], stats: stats, menu: menu});
   }
   async fetchSearch() {
-    await this._request("/app/search", "/app/search");
-    return new SearchFeed({hot: kHotSearch, guesses: kSpots});
+    var data = await this._request("/app/search");
+    var home = await this._request("/app/home");
+    return new SearchFeed({hot: this._strings(data["hot"]), guesses: this._spots(home["spots"])});
   }
   async fetchResource(id) {
-    await this._request("/app/resource", "/app/resource");
-    return new ResourceFeed({resource: this._resourceOf(id), related: kPosts});
+    var community = await this._request("/app/community");
+    var posts = await this._request("/app/posts");
+    return new ResourceFeed({resource: this._resourceOf(this._resources(community["resources"]), id), related: this._posts(posts["list"])});
   }
   async fetchSpot(id) {
-    await this._request("/app/spot", "/app/spot");
-    return this._spotOf(id);
+    var data = await this._request("/app/home");
+    return this._spotOf(this._spots(data["spots"]), id);
   }
   async fetchPost(id) {
-    await this._request("/app/post", "/app/post");
-    return this._postOf(id);
+    var data = await this._request("/app/posts");
+    return this._postOf(this._posts(data["list"]), id);
   }
   async fetchOrder(no) {
-    await this._request("/app/order", "/app/order");
-    return this._orderOf(no);
+    var data = await this._request("/app/orders/list");
+    return this._orderOf(this._orders(data["list"]), no);
   }
-  _postListOf(sort, type) {
-    var list = ((type.isEmpty || (type == kPostTypes.first)) ? kPosts : kPosts.where((p) => { return (p.type == type); }).toList());
-    switch (sort) {
-      case "最新":
-        list = list.reversed.toList();
-      break;
-      case "最热":
-        list = (() => { const _t = list.toList(); _t.sort((a, b) => { return b.like.compareTo(a.like); }); return _t; })();
-      break;
+  _strings(raw) {
+    var list = [];
+    for (let v of raw) {
+      list.add(v);
     }
     return list;
   }
-  _orderListOf(status) {
-    if ((status.isEmpty || (status == kOrderStatus.first))) {
-      return kOrders;
+  _spots(raw) {
+    var list = [];
+    for (let e of raw) {
+      list.add(this._spot(e));
     }
-    return kOrders.where((o) => { return (o.status == status); }).toList();
+    return list;
   }
-  _spotOf(id) {
-    for (let s of kSpots) {
+  _posts(raw) {
+    var list = [];
+    for (let e of raw) {
+      list.add(this._post(e));
+    }
+    return list;
+  }
+  _orders(raw) {
+    var list = [];
+    for (let e of raw) {
+      list.add(this._order(e));
+    }
+    return list;
+  }
+  _resources(raw) {
+    var list = [];
+    for (let e of raw) {
+      list.add(this._resource(e));
+    }
+    return list;
+  }
+  _banner(e) {
+    return new HomeBanner({img: e["img"], title: e["title"], sub: e["sub"]});
+  }
+  _grid(e) {
+    return new GridEntry({emoji: e["emoji"], title: e["title"]});
+  }
+  _spot(e) {
+    return new Spot({id: e["id"], title: e["title"], sub: e["sub"], sold: e["sold"], tag: e["tag"], img: e["img"], desc: e["desc"], price: e["price"], tags: this._strings(e["tags"])});
+  }
+  _post(e) {
+    return new Post({id: e["id"], title: e["title"], sub: e["sub"], type: e["type"], author: e["author"], time: e["time"], img: e["img"], like: e["like"]});
+  }
+  _resource(e) {
+    return new Resource({id: e["id"], title: e["title"], sub: e["sub"], img: e["img"]});
+  }
+  _order(e) {
+    return new Order({no: e["no"], status: e["status"], title: e["title"], spec: e["spec"], img: e["img"], price: e["price"], step: e["step"]});
+  }
+  _menu(e) {
+    return new MenuEntry({emoji: e["emoji"], title: e["title"], screen: e["screen"], arg: e["arg"]});
+  }
+  _postListOf(posts, sort, type) {
+    var result = ((type.isEmpty || (type == "全部")) ? posts : posts.where((p) => { return (p.type == type); }).toList());
+    switch (sort) {
+      case "最新":
+        result = result.reversed.toList();
+      break;
+      case "最热":
+        result = (() => { const _t = result.toList(); _t.sort((a, b) => { return b.like.compareTo(a.like); }); return _t; })();
+      break;
+    }
+    return result;
+  }
+  _orderListOf(orders, status) {
+    if ((status.isEmpty || (status == "全部"))) {
+      return orders;
+    }
+    return orders.where((o) => { return (o.status == status); }).toList();
+  }
+  _spotOf(spots, id) {
+    for (let s of spots) {
       if ((s.id == id)) {
         return s;
       }
     }
-    return kSpots.first;
+    return spots.first;
   }
-  _postOf(id) {
-    for (let p of kPosts) {
+  _postOf(posts, id) {
+    for (let p of posts) {
       if ((p.id == id)) {
         return p;
       }
     }
-    return kPosts.first;
+    return posts.first;
   }
-  _orderOf(no) {
-    for (let o of kOrders) {
+  _orderOf(orders, no) {
+    for (let o of orders) {
       if ((o.no == no)) {
         return o;
       }
     }
-    return kOrders.first;
+    return orders.first;
   }
-  _resourceOf(id) {
-    for (let r of kResources) {
+  _resourceOf(resources, id) {
+    for (let r of resources) {
       if ((r.id == id)) {
         return r;
       }
     }
-    return kResources.first;
+    return resources.first;
   }
 }
 

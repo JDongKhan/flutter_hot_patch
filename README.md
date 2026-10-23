@@ -10,7 +10,7 @@
 | `packages/hot_patch_generator` | 编译期：Dart widget → JS 翻译与产物组装（build_runner builders） |
 | `packages/hot_patch` | 运行期：JS 运行时 + 宿主渲染 + 能力桥 |
 | `example/` | 示例 App：原生 vs JS 热更对比 Demo（业务 Dart 单源在 `example/lib/`，生成的 JS 产物在 [example/patch/](example/patch/)） |
-| `tool/patch_server.dart`、`start_patch_server.sh` | 本地 patch 静态服务（服务于 `example/patch/`） |
+| `tool/patch_server.dart`、`tool/server/`、`start_patch_server.sh` | 本地服务：`/patch/*` 静态产物路由 + 普通接口路由（按 URL 路径读 `tool/mock/<路径>.json`） |
 
 根 `pubspec.yaml` 是 workspace 根，各成员 pubspec 声明 `resolution: workspace`，
 全仓共享同一份 `pubspec.lock` 与 `.dart_tool/`。

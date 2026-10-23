@@ -1,55 +1,69 @@
 /// App 数据服务：**app 目录下所有数据的唯一出口**。
 ///
-/// 每个接口都先走一遍 [Network] 的模拟网络通道（lib/base/network.dart，
-/// `@HostInjected` → 原生是 Dart 直调、JS 是宿主 `_app_host_.invoke('post')`），
-/// 拿到「响应」后再返回 [app_data.dart] 里的模拟数据——页面因此和真实 App
-/// 一样，先 loading 再出数据。
+/// 每个接口都直接请求本地 mock 服务（`tool/patch_server.dart`）：
+/// `Network.post` 走 `@HostInjected` 通道，原生侧发真实 http 请求，
+/// JS 侧由宿主代为请求，服务端按 URL 路径返回 `tool/mock/<路径>.json`。
+/// 页面因此和真实 App 一样，先 loading 再出数据。
 ///
 /// 两条硬约束（都来自热更翻译器的能力边界，改这里前先读一遍）：
 /// 1. **必须是实例方法**：翻译器不翻译公开 static 方法（JS 侧无等价物），
 ///    而本类会被首页/社区/订单/我的四个 `@PatchEntry` 页连带翻译进 JS 产物，
 ///    所以页面持 `AppService()` 实例调用；
-/// 2. **首屏的两个接口并行发**：模拟请求有固定延时（1s），列表页拆成
-///    「配置接口（tabs / 筛选项 / 状态条）」+「列表接口（帖子 / 订单）」两个，
-///    首屏**同时**发出（当初串行拆接口会让首屏空等好几秒）；之后列表接口
-///    只在筛选条件变化时按新参数重发一次。
+/// 2. **首屏的两个接口并行发**：列表页拆成「配置接口（tabs / 筛选项 / 状态条）」
+///    +「列表接口（帖子 / 订单）」两个，首屏**同时**发出；之后列表接口只在
+///    筛选条件变化时按新参数重发一次。
 ///
-/// 服务负责「取数据」（含按筛选参数过滤 / 排序，模拟后端行为），页面只负责展示。
+/// 过滤 / 排序仍在本类内完成（页面不碰数据）；服务端只负责按路径返回 json。
 library;
 
 import '../../base/network.dart';
 import '../model/app_models.dart';
-import 'app_data.dart';
 
 class AppService {
   const AppService();
 
-  /// 模拟一次网络往返：宿主侧延时后回一个 200 响应体（响应内容这里用不上）。
-  Future<void> _request(String url, String api) async {
-    await Network.post(url: url, params: {'api': api});
+  /// 请求一个接口，返回响应 json（根节点是对象）。
+  Future<Map> _request(String url) async {
+    return await Network.post(url: url, params: {'api': url});
   }
 
-  /// 带查询参数的模拟请求：列表接口把筛选条件一起发给「后端」。
-  Future<void> _requestQuery(String api, Map<String, String> query) async {
-    await Network.post(url: api, params: {'api': api, 'query': query});
+  /// 带查询参数的请求：列表接口把筛选条件一起发给本地服务。
+  Future<Map> _requestQuery(String url, Map<String, String> query) async {
+    return await Network.post(url: url, params: {'api': url, 'query': query});
   }
 
   /// 首页：banner + 九宫格 + 景点推荐 + 广告位。
   Future<HomeFeed> fetchHome() async {
-    await _request('/app/home','/app/home');
-    return const HomeFeed(banners: kBanners, grid: kGrid, spots: kSpots, adImg: kAdImg);
+    final data = await _request('/app/home');
+    final banners = <HomeBanner>[];
+    for (final e in data['banners']) {
+      banners.add(_banner(e));
+    }
+    final grid = <GridEntry>[];
+    for (final e in data['grid']) {
+      grid.add(_grid(e));
+    }
+    final spots = <Spot>[];
+    for (final e in data['spots']) {
+      spots.add(_spot(e));
+    }
+    return HomeFeed(banners: banners, grid: grid, spots: spots, adImg: data['adImg']);
   }
 
   /// 社区：双 tab + 筛选项配置 + 横向资源推荐（列表见 [fetchPostList]）。
   Future<CommunityFeed> fetchCommunity() async {
-    await _request('/app/community','/app/community');
-    return const CommunityFeed(
-      tabs: kCommunityTabs,
-      sorts: kSorts,
-      postTypes: kPostTypes,
-      dists: kDists,
-      priceRanges: kPriceRanges,
-      resources: kResources,
+    final data = await _request('/app/community');
+    final resources = <Resource>[];
+    for (final e in data['resources']) {
+      resources.add(_resource(e));
+    }
+    return CommunityFeed(
+      tabs: _strings(data['tabs']),
+      sorts: _strings(data['sorts']),
+      postTypes: _strings(data['postTypes']),
+      dists: _strings(data['dists']),
+      priceRanges: _strings(data['priceRanges']),
+      resources: resources,
     );
   }
 
@@ -57,114 +71,238 @@ class AppService {
   ///
   /// 首项（`sorts.first` = 综合 / `postTypes.first` = 全部）与空串等价，
   /// 所以首屏配置还没回来时也能用空参数先发这个请求（见页面的并行首屏）。
-  /// `tab` / `dist` / `price` 原样收下，模拟数据里没有对应字段，不参与过滤
-  /// （与原型一致：它们只是可选条件）。
+  /// `tab` / `dist` / `price` 原样收下，数据里没有对应字段，不参与过滤。
   Future<List<Post>> fetchPostList(String tab, String sort, String type, String dist, String price) async {
-    await _requestQuery('/app/posts', {'tab': tab, 'sort': sort, 'type': type, 'dist': dist, 'price': price});
-    return _postListOf(sort, type);
+    final data = await _requestQuery('/app/posts', {'tab': tab, 'sort': sort, 'type': type, 'dist': dist, 'price': price});
+    return _postListOf(_posts(data['list']), sort, type);
   }
 
   /// 订单：状态筛选条（列表见 [fetchOrderList]）。
   Future<OrderFeed> fetchOrders() async {
-    await _request('/app/orders','/app/orders');
-    return const OrderFeed(statuses: kOrderStatus);
+    final data = await _request('/app/orders');
+    return OrderFeed(statuses: _strings(data['statuses']));
   }
 
   /// 订单列表：**列表自己的接口**，状态随请求参数下发（空串 / 首项「全部」= 不过滤）。
   Future<List<Order>> fetchOrderList(String status) async {
-    await _requestQuery('/app/orders/list', {'status': status});
-    return _orderListOf(status);
+    final data = await _requestQuery('/app/orders/list', {'status': status});
+    return _orderListOf(_orders(data['list']), status);
   }
 
   /// 我的：头像 + 订单统计 + 功能菜单。
   Future<MineFeed> fetchMine() async {
-    await _request('/app/mine','/app/mine');
-    return const MineFeed(avatar: kAvatarImg, stats: kMineStats, menu: kMineMenu);
+    final data = await _request('/app/mine');
+    final stats = <List<String>>[];
+    for (final row in data['stats']) {
+      stats.add(_strings(row));
+    }
+    final menu = <MenuEntry>[];
+    for (final e in data['menu']) {
+      menu.add(_menu(e));
+    }
+    return MineFeed(avatar: data['avatar'], stats: stats, menu: menu);
   }
 
-  /// 搜索页：热搜词 + 猜你想去。
+  /// 搜索页：热搜词 + 猜你想去（猜你想去复用首页景点）。
   Future<SearchFeed> fetchSearch() async {
-    await _request('/app/search','/app/search');
-    return const SearchFeed(hot: kHotSearch, guesses: kSpots);
+    final data = await _request('/app/search');
+    final home = await _request('/app/home');
+    return SearchFeed(hot: _strings(data['hot']), guesses: _spots(home['spots']));
   }
 
-  /// 资源专题页：专题本身 + 相关推荐。
+  /// 资源专题页：专题本身（社区接口）+ 相关推荐（帖子接口）。
   ///
   /// 只被宿主路由 [AppRouter.openResource]（原生侧）调用，不走 JS。
   Future<ResourceFeed> fetchResource(String id) async {
-    await _request('/app/resource','/app/resource');
-    return ResourceFeed(resource: _resourceOf(id), related: kPosts);
+    final community = await _request('/app/community');
+    final posts = await _request('/app/posts');
+    return ResourceFeed(
+      resource: _resourceOf(_resources(community['resources']), id),
+      related: _posts(posts['list']),
+    );
   }
 
   /// 详情页按 id 取数据（宿主路由用，不走 JS）。
   Future<Spot> fetchSpot(String id) async {
-    await _request('/app/spot','/app/spot');
-    return _spotOf(id);
+    final data = await _request('/app/home');
+    return _spotOf(_spots(data['spots']), id);
   }
 
   Future<Post> fetchPost(String id) async {
-    await _request('/app/post','/app/post');
-    return _postOf(id);
+    final data = await _request('/app/posts');
+    return _postOf(_posts(data['list']), id);
   }
 
   Future<Order> fetchOrder(String no) async {
-    await _request('/app/order','/app/order');
-    return _orderOf(no);
+    final data = await _request('/app/orders/list');
+    return _orderOf(_orders(data['list']), no);
   }
 
   // ---------------------------------------------------------------------
-  // 模拟后端：按筛选参数返回列表（过滤 / 排序在「服务端」做，页面不碰数据）
+  // json → 模型（响应字段与服务端 json 一一对应）
+  //
+  // 刻意逐条构造带类型的 List：动态 json 的 `List<dynamic>` 直接赋给
+  // `List<X>` 会在运行时抛类型错误，所以统一经这些辅助方法转换。
+  // ---------------------------------------------------------------------
+
+  List<String> _strings(dynamic raw) {
+    final list = <String>[];
+    for (final v in raw) {
+      list.add(v);
+    }
+    return list;
+  }
+
+  List<Spot> _spots(dynamic raw) {
+    final list = <Spot>[];
+    for (final e in raw) {
+      list.add(_spot(e));
+    }
+    return list;
+  }
+
+  List<Post> _posts(dynamic raw) {
+    final list = <Post>[];
+    for (final e in raw) {
+      list.add(_post(e));
+    }
+    return list;
+  }
+
+  List<Order> _orders(dynamic raw) {
+    final list = <Order>[];
+    for (final e in raw) {
+      list.add(_order(e));
+    }
+    return list;
+  }
+
+  List<Resource> _resources(dynamic raw) {
+    final list = <Resource>[];
+    for (final e in raw) {
+      list.add(_resource(e));
+    }
+    return list;
+  }
+
+  HomeBanner _banner(dynamic e) {
+    return HomeBanner(img: e['img'], title: e['title'], sub: e['sub']);
+  }
+
+  GridEntry _grid(dynamic e) {
+    return GridEntry(emoji: e['emoji'], title: e['title']);
+  }
+
+  Spot _spot(dynamic e) {
+    return Spot(
+      id: e['id'],
+      title: e['title'],
+      sub: e['sub'],
+      sold: e['sold'],
+      tag: e['tag'],
+      img: e['img'],
+      desc: e['desc'],
+      price: e['price'],
+      tags: _strings(e['tags']),
+    );
+  }
+
+  Post _post(dynamic e) {
+    return Post(
+      id: e['id'],
+      title: e['title'],
+      sub: e['sub'],
+      type: e['type'],
+      author: e['author'],
+      time: e['time'],
+      img: e['img'],
+      like: e['like'],
+    );
+  }
+
+  Resource _resource(dynamic e) {
+    return Resource(
+      id: e['id'],
+      title: e['title'],
+      sub: e['sub'],
+      img: e['img'],
+    );
+  }
+
+  Order _order(dynamic e) {
+    return Order(
+      no: e['no'],
+      status: e['status'],
+      title: e['title'],
+      spec: e['spec'],
+      img: e['img'],
+      price: e['price'],
+      step: e['step'],
+    );
+  }
+
+  MenuEntry _menu(dynamic e) {
+    return MenuEntry(
+      emoji: e['emoji'],
+      title: e['title'],
+      screen: e['screen'],
+      arg: e['arg'],
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // 模拟后端：按筛选参数返回列表（过滤 / 排序在 service 做，页面不碰数据）
   // ---------------------------------------------------------------------
 
   /// 帖子列表：按内容类型过滤 + 按排序方式排序。
   ///
   /// 空串与各自首项（`postTypes.first` = 全部 / `sorts.first` = 综合）等价。
-  List<Post> _postListOf(String sort, String type) {
-    var list = type.isEmpty || type == kPostTypes.first ? kPosts : kPosts.where((p) => p.type == type).toList();
+  List<Post> _postListOf(List<Post> posts, String sort, String type) {
+    var result = type.isEmpty || type == '全部' ? posts : posts.where((p) => p.type == type).toList();
     switch (sort) {
       case '最新':
-        list = list.reversed.toList();
+        result = result.reversed.toList();
       case '最热':
-        list = list.toList()..sort((a, b) => b.like.compareTo(a.like));
+        result = result.toList()..sort((a, b) => b.like.compareTo(a.like));
     }
-    return list;
+    return result;
   }
 
   /// 订单列表：按状态过滤（空串 / 首项「全部」= 不过滤）。
-  List<Order> _orderListOf(String status) {
-    if (status.isEmpty || status == kOrderStatus.first) return kOrders;
-    return kOrders.where((o) => o.status == status).toList();
+  List<Order> _orderListOf(List<Order> orders, String status) {
+    if (status.isEmpty || status == '全部') return orders;
+    return orders.where((o) => o.status == status).toList();
   }
 
   // ---------------------------------------------------------------------
   // 按 id 定位（找不到时回退首个，与页面跳转的容错口径一致）
   // ---------------------------------------------------------------------
 
-  Spot _spotOf(String id) {
-    for (final s in kSpots) {
+  Spot _spotOf(List<Spot> spots, String id) {
+    for (final s in spots) {
       if (s.id == id) return s;
     }
-    return kSpots.first;
+    return spots.first;
   }
 
-  Post _postOf(String id) {
-    for (final p in kPosts) {
+  Post _postOf(List<Post> posts, String id) {
+    for (final p in posts) {
       if (p.id == id) return p;
     }
-    return kPosts.first;
+    return posts.first;
   }
 
-  Order _orderOf(String no) {
-    for (final o in kOrders) {
+  Order _orderOf(List<Order> orders, String no) {
+    for (final o in orders) {
       if (o.no == no) return o;
     }
-    return kOrders.first;
+    return orders.first;
   }
 
-  Resource _resourceOf(String id) {
-    for (final r in kResources) {
+  Resource _resourceOf(List<Resource> resources, String id) {
+    for (final r in resources) {
       if (r.id == id) return r;
     }
-    return kResources.first;
+    return resources.first;
   }
 }

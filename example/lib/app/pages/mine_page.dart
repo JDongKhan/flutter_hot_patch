@@ -17,7 +17,7 @@ import 'detail_pages.dart';
 /// 方法体 tear-off 回调），相关跳转统一收敛到 [AppRouter] 的 `@HostInjected`
 /// 通道（与 JS 侧同一条通路）。
 ///
-/// 头像 / 订单统计 / 功能菜单由 [AppService.fetchMine] 模拟网络请求取回，
+/// 头像 / 订单统计 / 功能菜单由 [AppService.fetchMine] 请求本地 mock 接口取回，
 /// 加载期间显示 loading。
 @PatchEntry()
 class MinePage extends StatefulWidget {

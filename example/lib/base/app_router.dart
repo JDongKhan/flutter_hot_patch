@@ -21,7 +21,7 @@ import '../main.dart';
 class AppRouter {
   const AppRouter._();
 
-  /// 详情数据统一走 [AppService]（模拟网络请求）；宿主侧是普通 Dart 调用，
+  /// 详情数据统一走 [AppService]（请求本地 mock 接口）；宿主侧是普通 Dart 调用，
   /// JS 页面的点击经 `@HostInjected` 通道回到这里执行同一条代码路径。
   static const AppService _service = AppService();
 

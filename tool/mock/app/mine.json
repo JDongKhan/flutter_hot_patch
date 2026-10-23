@@ -1,0 +1,15 @@
+{
+  "avatar": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar&image_size=square",
+  "stats": [
+    ["待付款", "1"],
+    ["待收货", "1"],
+    ["收藏", "12"],
+    ["优惠券", "3"]
+  ],
+  "menu": [
+    { "emoji": "📦", "title": "我的订单", "screen": "orders", "arg": "" },
+    { "emoji": "⭐", "title": "我的收藏", "screen": "webview", "arg": "我的收藏" },
+    { "emoji": "⚙️", "title": "设置", "screen": "webview", "arg": "设置" },
+    { "emoji": "❓", "title": "帮助与关于", "screen": "webview", "arg": "帮助与关于" }
+  ]
+}
