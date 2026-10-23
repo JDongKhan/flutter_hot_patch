@@ -135,6 +135,7 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin 契约
     print("CommunityPage build : filterOpen=$_filterOpen");
     final feed = _feed;
     if (feed == null) {

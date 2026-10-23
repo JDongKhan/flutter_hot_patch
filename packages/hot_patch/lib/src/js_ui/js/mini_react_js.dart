@@ -532,6 +532,59 @@ const String miniReactReconcilerSource = r'''
     return src.make ? src.make() : null;
   }
 
+  // 子树内是否有组件声明「保持存活」：与 Flutter 的 KeepAliveNotification 同语义
+  // ——子树中任意 State（AutomaticKeepAliveClientMixin）都能把整棵懒槽位保活。
+  // 只认实例上的 `wantKeepAlive` 布尔声明，运行时不做类型判断。
+  //
+  // **不越过嵌套懒槽位**：内层懒槽位（如页面里的 ListView 子项）的保活声明由它
+  // 自己的占位结点负责（Flutter 里通知也只冒泡到最近的 AutomaticKeepAlive），
+  // 否则内层 item 的声明会把整页错误地保活。
+  function subtreeWantsKeepAlive(inst) {
+    if (!inst) { return false; }
+    if (inst.__k !== HOST) {
+      if (inst.wantKeepAlive === true) { return true; }
+      return subtreeWantsKeepAlive(inst.__child);
+    }
+    if (inst.__lazySlot) { return false; }
+    var i;
+    var cs = inst.__children || [];
+    for (i = 0; i < cs.length; i++) {
+      if (subtreeWantsKeepAlive(cs[i])) { return true; }
+    }
+    var pcs = inst.__propsChildren;
+    if (pcs) {
+      for (var k in pcs) {
+        if (subtreeWantsKeepAlive(pcs[k])) { return true; }
+      }
+    }
+    var pcl = inst.__propsChildrenList;
+    if (pcl) {
+      for (var lk in pcl) {
+        var arr = pcl[lk] || [];
+        for (i = 0; i < arr.length; i++) {
+          if (subtreeWantsKeepAlive(arr[i])) { return true; }
+        }
+      }
+    }
+    return false;
+  }
+
+  // 把当前已挂载子树的 keep-alive 声明同步到占位结点 props（幂等）。
+  // 声明变化必须下发 props op：宿主 _JsNode 收到补丁后重建，build 里
+  // updateKeepAlive() 才会真正注册 / 释放 KeepAlive。
+  function syncKeepAlive(ph) {
+    var wants = subtreeWantsKeepAlive(ph.__mountedChild);
+    var has = !!(ph.__props && ph.__props.__keepAlive);
+    if (wants === has) { return; }
+    ph.__props = ph.__props || {};
+    if (wants) {
+      ph.__props.__keepAlive = true;
+    } else {
+      delete ph.__props.__keepAlive;
+    }
+    emit({ op: 'props', id: ph.__id, props: ph.__props });
+  }
+
   // 父级重建时更新一个**已存在**的懒槽位（幂等，绝不在这里做首次挂载）：
   // 未挂载的只替换来源；已挂载的把新元素 patch 到真实子树上，渲染根 id 变化
   // 时更新占位结点的 `child` slot（与 propsChildAt 同语义）。
@@ -568,6 +621,8 @@ const String miniReactReconcilerSource = r'''
       ph.__propsChildren['child'] = ph.__mountedChild;
       emit({ op: 'propsChild', parent: ph.__id, key: 'child', childId: newRoot });
     }
+    // 复用实例时 wantKeepAlive 也可能变化（动态声明）→ 同步给宿主。
+    syncKeepAlive(ph);
     return ph;
   }
 
@@ -611,6 +666,9 @@ const String miniReactReconcilerSource = r'''
       //（id / element key 不变），父容器不需要任何列表换位。
       var mountedProps = { __lazy: true, __lazyFn: lazyMountFn, __lazyOffFn: lazyUnmountFn };
       if (ph.__props && ph.__props.key !== undefined) { mountedProps.key = ph.__props.key; }
+      // 保活声明随挂载一起下发：宿主 _JsNode 据此注册 KeepAlive，切走 tab 时
+      // element 不被销毁 → 不会回调 lazyUnmount，JS 侧 State 与已加载数据保留。
+      if (subtreeWantsKeepAlive(inst)) { mountedProps.__keepAlive = true; }
       ph.__props = mountedProps;
       emit({ op: 'props', id: ph.__id, props: ph.__props });
       emit({ op: 'propsChild', parent: ph.__id, key: 'child', childId: ph.__mountedRootId });
@@ -641,6 +699,12 @@ const String miniReactReconcilerSource = r'''
     root.mounting = true;
     root.ops = [];
     try {
+      // 已卸载：撤下 keep-alive 声明（下次挂载按新实例重新评估，避免带着旧声明
+      // 让新建 element 在未挂载时就被保活）。
+      if (ph.__props && ph.__props.__keepAlive) {
+        delete ph.__props.__keepAlive;
+        emit({ op: 'props', id: ph.__id, props: ph.__props });
+      }
       // unmount 派发 deactivate → dispose，并下发子树 remove；宿主侧的 element
       // 已随本次 dispose 一起销毁，store 按 remove 递归摘除结点。
       unmount(inst);

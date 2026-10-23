@@ -473,7 +473,7 @@ class _JsNode extends StatefulWidget {
   State<_JsNode> createState() => _JsNodeState();
 }
 
-class _JsNodeState extends State<_JsNode> {
+class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
   /// 本 State 曾登记过 BuildContext 锚点的全部结点 id。
   ///
   /// 同一 key 下 JS 侧重建 host 结点时结点 id 会变、Flutter 复用本 State（见
@@ -572,8 +572,21 @@ class _JsNodeState extends State<_JsNode> {
     setState(() {});
   }
 
+  /// 懒槽位子树声明的「保持存活」来自 JS（`props.__keepAlive`，见 mini-react
+  /// 的 subtreeWantsKeepAlive）：true 时向最近的 AutomaticKeepAlive 祖先注册
+  /// 保活，TabBarView / PageView 切走的子页 element 不再销毁 → 不会回调
+  /// lazyUnmount，JS 侧 State（已加载数据）原样保留。语义与 Flutter 的
+  /// AutomaticKeepAliveClientMixin 一致。
+  @override
+  bool get wantKeepAlive =>
+      widget.store.nodes[widget.id]?.props['__keepAlive'] == true;
+
   @override
   Widget build(BuildContext context) {
+    // 声明可能随 JS patch 变化：每次 build 同步一次（true 注册 / false 释放）。
+    updateKeepAlive();
+    // AutomaticKeepAliveClientMixin 的契约：build 必须调用 super.build（返回值忽略）。
+    super.build(context);
     final node = widget.store.nodes[widget.id];
     if (node == null) return const SizedBox.shrink();
 
