@@ -353,9 +353,9 @@ class _ListContentState extends State<_ListContent> {
   @override
   void didUpdateWidget(covariant _ListContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    print("--didUpdateWidget 0：$oldWidget");
+    print("--_ListContent didUpdateWidget 0");
     if (widget.list.length != oldWidget.list.length) {
-      print("-- didUpdateWidget 1");
+      print("-- _ListContent didUpdateWidget 1");
     }
   }
 

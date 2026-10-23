@@ -34,7 +34,11 @@ class _HomePageState extends State<HomePage> {
     print("HomePage initState ---");
     _load();
   }
-
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print("--HomePage didUpdateWidget 0");
+  }
   Future<void> _load() async {
     final HomeFeed feed = await _service.fetchHome();
     setState(() {
@@ -44,6 +48,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    print("--HomePage build");
     final feed = _feed;
     if (feed == null) {
       return const Center(child: CircularProgressIndicator());

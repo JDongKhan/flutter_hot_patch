@@ -219,9 +219,9 @@ export class _ListContent {
     this.toggleFilter = (args && args.toggleFilter !== undefined) ? args.toggleFilter : null;
   }
   didUpdateWidget(oldWidget) {
-    console.log("--didUpdateWidget 0：" + __str(oldWidget));
+    console.log("--_ListContent didUpdateWidget 0");
     if ((this.list.length != oldWidget.list.length)) {
-      console.log("-- didUpdateWidget 1");
+      console.log("-- _ListContent didUpdateWidget 1");
     }
   }
   build(context) {

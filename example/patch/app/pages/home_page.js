@@ -20,11 +20,15 @@ export class HomePage {
     console.log("HomePage initState ---");
     this._load();
   }
+  didUpdateWidget(oldWidget) {
+    console.log("--HomePage didUpdateWidget 0");
+  }
   async _load() {
     var feed = await this._service.fetchHome();
     this.setState(() => { this._feed = feed; });
   }
   build(context) {
+    console.log("--HomePage build");
     var feed = this._feed;
     if ((feed == null)) {
       return new Center({
