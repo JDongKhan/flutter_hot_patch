@@ -26,6 +26,7 @@ export class AppSubContent {
     this._index = 0;
   }
   initState() {
+    console.log("--AppSubContent initState");
     this._tab.addListener(() => { this.setState(() => { this._index = this._tab.index; }); });
   }
   dispose() {
@@ -35,7 +36,11 @@ export class AppSubContent {
     this.setState(() => { this._index = index; });
     this._tab.animateTo(index);
   }
+  didUpdateWidget(oldWidget) {
+    console.log("--AppSubContent didUpdateWidget");
+  }
   build(context) {
+    console.log("--AppSubContent build");
     return new Scaffold({
         "backgroundColor": '#fff4f5f7',
         "body": new TabBarView({

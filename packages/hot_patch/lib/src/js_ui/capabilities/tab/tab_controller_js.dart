@@ -18,8 +18,11 @@ const String tabControllerJsSource = r'''
       this.__index = (typeof opts.initialIndex === 'number') ? opts.initialIndex : 0;
     },
     // 宿主回传（用户点 tab / animateTo 动画结束）→ 更新镜像 + 触发 listeners。
+    // 值没变就不是状态变化，不能通知：宿主 attach 时会回传一次初始 index，
+    // 若照常 notify，会让监听者（如外壳的 setState）做一次“原地刷新”，
+    // 把已挂载子组件无谓地推进 didUpdateWidget → build。
     onHost: function (self, i) {
-      if (typeof i !== 'number') { return; }
+      if (typeof i !== 'number' || self.__index === i) { return; }
       self.__index = i;
       self.__notify();
     },
@@ -35,10 +38,13 @@ const String tabControllerJsSource = r'''
   Object.defineProperty(TabController.prototype, 'index', {
     get: function () { return this.__index; },
     set: function (v) {
-      this.__index = (typeof v === 'number') ? v : 0;
-      if (this.__id != null) { handleOp(this.__id, 'set', { name: 'index', value: this.__index }); }
-      // 与 Dart 语义一致：直接设置 index 立即通知监听者（宿主回传会再通知一次，
-      // 幂等，setState 重复触发无副作用）。
+      v = (typeof v === 'number') ? v : 0;
+      // 同值：镜像没变化 → 不再下发宿主 op、也不再通知（避免一次假刷新）。
+      if (this.__index === v) { return; }
+      this.__index = v;
+      if (this.__id != null) { handleOp(this.__id, 'set', { name: 'index', value: v }); }
+      // 与 Dart 语义一致：直接设置 index 立即通知监听者（宿主回传同一值时
+      // 会被 onHost 的同值判等吞掉，不会重复通知）。
       this.__notify();
     }
   });
