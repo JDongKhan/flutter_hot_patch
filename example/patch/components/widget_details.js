@@ -768,6 +768,7 @@ export class ScrollDetail {
     this._offset = 0;
     this._ctrlOffset = 0;
     this._scrollController = new ScrollController();
+    this._listSalt = 0;
   }
   initState() {
     this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); });
@@ -812,6 +813,15 @@ export class ScrollDetail {
                     })
                 }),
               "model": "ScrollNotification"
+            }),
+          new Align({
+              "alignment": "centerLeft",
+              "child": new TextButton({
+                  "onPressed": this.__bindFn(1, [], () => this.setState(() => { this._listSalt += 1; })),
+                  "child": new Text({
+                      "data": "列表换色（真实更新）"
+                    })
+                })
             }),
           new SizedBox({
               "height": 12
@@ -861,7 +871,7 @@ export class ScrollDetail {
           new Align({
               "alignment": "centerLeft",
               "child": new TextButton({
-                  "onPressed": this.__bindFn(1, [], (...__a) => this._scrollToEnd(...__a)),
+                  "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
                   "child": new Text({
                       "data": "横向 · 跳到底"
                     })
@@ -876,7 +886,8 @@ export class ScrollDetail {
             "icon": "list"
           }),
         "title": new CommonListItem({
-            "index": index
+            "index": index,
+            "salt": this._listSalt
           })
       });
   }

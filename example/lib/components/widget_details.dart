@@ -548,10 +548,15 @@ class _ScrollDetailState extends State<ScrollDetail> {
   /// 宿主按 id 绑定真实 controller，滚动回传 metrics 镜像后触发该闭包。
   double _ctrlOffset = 0;
 
-  /// 横向滚动视图的 controller（controller 监听 + 按钮「写」能力演示）：
+  /// 横向滚动视图的控制器（controller 监听 + 按钮「写」能力演示）：
   /// 原生侧真实持有；JS 热更侧翻译成 `this._scrollController =
   /// new ScrollController()`（JS 代理实例，方法/属性一比一）。
   final ScrollController _scrollController = ScrollController();
+
+  /// ListView.builder 的「真实变化」验证信号：点「列表换色」时自增。
+  /// 它参与 itemBuilder 的产出，父级重建但 salt 不变时 item 元素完全一致，
+  /// 运行时据此短路；滚动只改 _offset，不会让 item 重建。
+  int _listSalt = 0;
 
   @override
   void initState() {
@@ -602,9 +607,16 @@ class _ScrollDetailState extends State<ScrollDetail> {
               itemCount: 20,
               itemBuilder: (context, index) => ListTile(
                 leading: const Icon(Icons.list),
-                title: CommonListItem(index: index),
+                title: CommonListItem(index: index, salt: _listSalt),
               ),
             ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => setState(() => _listSalt += 1),
+            child: const Text('列表换色（真实更新）'),
           ),
         ),
         const SizedBox(height: 12),
