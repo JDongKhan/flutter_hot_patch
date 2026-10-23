@@ -108,6 +108,43 @@ const String _miniReactReconcilerUtilsSource = r'''
     return true;
   }
 
+  // 元素树深比较：用于懒槽位「真正变化才 patch」的短路。
+  // 与 eq 的差别只有两点：元素上的 `inst` 是运行时携带的实例（含 __parent /
+  // __id 等簿记，永远不同）必须忽略；`type` 按引用比较（同一 JS 类）。
+  // props / children 里的普通值仍走 eq；children 里的嵌套元素递归本函数。
+  function elementEq(a, b, depth) {
+    if (a === b) { return true; }
+    if (depth === undefined || depth === null) { depth = EQ_MAX_DEPTH; }
+    if (depth <= 0) { return false; }
+    var aEl = a != null && typeof a === 'object' && a.element === true;
+    var bEl = b != null && typeof b === 'object' && b.element === true;
+    if (aEl || bEl) {
+      if (!aEl || !bEl) { return false; }
+      if (a.type !== b.type) { return false; }
+      if ((a.lazyChildren === true) !== (b.lazyChildren === true)) { return false; }
+      return eq(a.props, b.props, depth - 1) &&
+        elementEq(a.children, b.children, depth - 1);
+    }
+    if (Array.isArray(a) || Array.isArray(b)) {
+      if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+        return false;
+      }
+      for (var i = 0; i < a.length; i++) {
+        if (!elementEq(a[i], b[i], depth - 1)) { return false; }
+      }
+      return true;
+    }
+    if (a == null || b == null || typeof a !== 'object' || typeof b !== 'object') {
+      return a === b;
+    }
+    var ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) { return false; }
+    for (var j = 0; j < ka.length; j++) {
+      if (!elementEq(a[ka[j]], b[ka[j]], depth - 1)) { return false; }
+    }
+    return true;
+  }
+
   // 结点声明的 key（**值**，不是结点）：ValueKey / ObjectKey 实例、GlobalKey /
   // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【10.6】），
   // 不在此处做归一——`keyOf` 只负责取。
@@ -510,6 +547,16 @@ const String miniReactReconcilerSource = r'''
       }
       return ph;
     }
+    // **真正变化才 patch**：父级每次重建都会让懒槽位重新执行 itemBuilder（这是
+    // 必需的——builder 可能读 owner 的最新状态），但产出元素与该槽位上次渲染的
+    // 元素完全一致时，渲染结果必然不变，直接短路：组件不进 didUpdateWidget /
+    // build，也不产生任何宿主 op。滚动等高频重建下这是主要开销来源。
+    // （原生 Flutter 在 delegate 变化时会全量重建已挂载项；这里是语义等价的
+    // 短路，不改变 builder 的执行时机与结果。）
+    if (ph.__mountedEl && elementEq(ph.__mountedEl, el)) {
+      return ph;
+    }
+    ph.__mountedEl = el;
     var oldRoot = ph.__mountedRootId;
     ph.__mountedChild = patch(ph.__mountedChild, el, ph, null);
     // 复用 / 新建的组件实例都要记住自己的父 slot：组件内部 setState 换掉渲染
@@ -554,6 +601,7 @@ const String miniReactReconcilerSource = r'''
       // BuildContext 锚点与「直接挂在容器下」一致。
       var inst = mount(el, ph, null);
       ph.__mountedChild = inst;
+      ph.__mountedEl = el;
       ph.__mountedRootId = hostIdOf(inst);
       ph.__propsChildren = ph.__propsChildren || {};
       ph.__propsChildren['child'] = inst;
@@ -589,6 +637,7 @@ const String miniReactReconcilerSource = r'''
     if (!root) { return false; }
     var inst = ph.__mountedChild;
     ph.__mountedChild = null;
+    ph.__mountedEl = null;
     ph.__mountedRootId = null;
     if (ph.__propsChildren) { delete ph.__propsChildren['child']; }
     var prev = activeRoot;
