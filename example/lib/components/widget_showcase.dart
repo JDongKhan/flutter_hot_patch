@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
+import 'explicit_animation_detail.dart';
+import 'implicit_animation_detail.dart';
 import 'widget_details.dart';
 
 /// 常用组件导航列表页（普通页面，无 @PatchEntry 注解）：
@@ -48,6 +50,10 @@ class WidgetShowcase extends StatelessWidget {
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
     _Group('状态管理', [_Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard')]),
     _Group('无状态组件', [_Entry('StatelessWidget', '无 State，build 在 widget 类自身，props 走构造参数', 'StatelessCard')]),
+    _Group('动画', [
+      _Entry('隐式动画', 'AnimatedContainer / Opacity / Scale / Rotation / Slide / CrossFade（宿主插值）', 'ImplicitAnimationDetail'),
+      _Entry('显式动画', 'AnimationController + AnimatedBuilder + *Transition（宿主 Ticker 驱动）', 'ExplicitAnimationDetail'),
+    ]),
   ];
 
   @override
@@ -112,9 +118,19 @@ class WidgetDetailPage extends StatelessWidget {
   final bool fullPage;
 
   static const String _jsZip = 'http://127.0.0.1:8765/patch/patch.zip';
-  static const String _jsEntry = 'components/widget_details.js';
 
-  /// 拼接补丁 URL：component 动态、entry 固定，走 query 参数。
+  /// 组件名 → 产物入口（`patch/<源文件镜像路径>.js`）。
+  ///
+  /// 动画 demo 按类拆在独立源文件里，因此入口不再固定为 widget_details.js：
+  /// 产物路径由 build_runner 镜像源码路径生成（见 build.yaml 的 patch_entry）。
+  static const Map<String, String> _jsEntries = {
+    'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
+    'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
+  };
+
+  String get _jsEntry => _jsEntries[component] ?? 'components/widget_details.js';
+
+  /// 拼接补丁 URL：component 动态、entry 按源文件，走 query 参数。
   String get _jsAsset => '$_jsZip?component=$component&entry=${Uri.encodeComponent(_jsEntry)}';
 
   Widget _native() {
@@ -137,6 +153,8 @@ class WidgetDetailPage extends StatelessWidget {
       'ProgressDetail' => const ProgressDetail(),
       'NotifierCard' => const NotifierCard(),
       'StatelessCard' => const StatelessCard(title: 'Hello Stateless', subtitle: '原生直接渲染，无需 State', badge: 'FLUTTER'),
+      'ImplicitAnimationDetail' => const ImplicitAnimationDetail(),
+      'ExplicitAnimationDetail' => const ExplicitAnimationDetail(),
       _ => const Text('未知组件'),
     };
   }

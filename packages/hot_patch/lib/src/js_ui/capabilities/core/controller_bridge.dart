@@ -20,7 +20,9 @@ import 'handle_registry.dart';
 /// **引用强度：强引用**（见 binding_cache.dart 的判定 2）——JS 侧句柄才是这些
 /// 对象的寿命驱动者，未收到 release 前 Dart 侧唯一持有者就是本缓存，弱化会让
 /// 「JS 还持着句柄、对象却被 GC」成为非确定性失效。
-class JsControllerBridge<T extends ChangeNotifier> {
+/// [T] 的约束是 [Listenable]（而非 ChangeNotifier）：AnimationController 也是
+/// Listenable 但**不是** ChangeNotifier，释放时只对 ChangeNotifier 调 dispose。
+class JsControllerBridge<T extends Listenable> {
   JsControllerBridge({
     required String kind,
 
@@ -81,7 +83,10 @@ class JsControllerBridge<T extends ChangeNotifier> {
           onRelease: (id) {
             final c = controllerAt(id);
             _cache.remove(_kind, id);
-            c?.dispose();
+            // AnimationController 等非 ChangeNotifier 的 Listenable 也实现了
+            // dispose（AnimationController 有），按类型判断后统一释放。
+            if (c is ChangeNotifier) c.dispose();
+            if (c is AnimationController) c.dispose();
           },
         ));
   }

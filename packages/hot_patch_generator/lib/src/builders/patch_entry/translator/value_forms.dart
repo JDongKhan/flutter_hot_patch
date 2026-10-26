@@ -409,6 +409,10 @@ const Set<String> _valueCtors = {
   'PageController',
   'TabController',
   'AnimationController',
+  // 动画值对象：`Tween(begin: 0, end: 1)` / `CurvedAnimation(parent: c, curve: …)`
+  // 只在 JS 侧推导 value（宿主按 `{__handle, __curve}` 还原），不是子结点。
+  'Tween',
+  'CurvedAnimation',
   'ValueNotifier',
   'GlobalKey',
   'ValueKey',

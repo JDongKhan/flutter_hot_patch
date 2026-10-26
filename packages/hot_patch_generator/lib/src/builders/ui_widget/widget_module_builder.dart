@@ -270,6 +270,7 @@ const Map<String, String> logicWidgetSources = {
   'Consumer': jsConsumerComponent,
   'ListenableBuilder': jsListenableBuilderComponent,
   'ValueListenableBuilder': jsValueListenableBuilderComponent,
+  'AnimatedBuilder': jsAnimatedBuilderComponent,
 };
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
@@ -465,6 +466,45 @@ export class ValueListenableBuilder {
   dispose() {
     if (this.__listenable && this.__listener) {
       this.__listenable.removeListener(this.__listener);
+    }
+  }
+}''';
+
+/// AnimatedBuilder：与 ListenableBuilder 同一套「订阅 → 局部重建」机制（Animation
+/// 是 Listenable，JS 侧 `AnimationController` 镜像由宿主逐帧回传 value 后
+/// `__notify`），区别只是订阅键是 `animation`：
+///   - 订阅 `props.animation`，动画帧到达时只重建本结点子树；
+///   - builder 形参是 `(context, child)`，子树抽在 `props.builder` 方法里，child
+///     作为独立子结点由宿主映射直传（与 Dart 侧 `child:` 语义一致）。
+const String jsAnimatedBuilderComponent = '''
+export class AnimatedBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  __owner() {
+    var name = this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  initState() {
+    var a = this.props.animation;
+    if (a && typeof a.addListener === 'function') {
+      var self = this;
+      this.__animation = a;
+      this.__listener = function () { self.setState(function () {}); };
+      a.addListener(this.__listener);
+    }
+  }
+  build(context) {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var child = owner[this.props.builder].call(owner, context, this.props.child);
+    return __h('AnimatedBuilder', { child: child });
+  }
+  dispose() {
+    if (this.__animation && this.__listener) {
+      this.__animation.removeListener(this.__listener);
     }
   }
 }''';

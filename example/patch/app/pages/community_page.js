@@ -218,6 +218,9 @@ export class _ListContent {
     this.onSelectFilter = (args && args.onSelectFilter !== undefined) ? args.onSelectFilter : null;
     this.toggleFilter = (args && args.toggleFilter !== undefined) ? args.toggleFilter : null;
   }
+  initState() {
+    console.log("--_ListContent init");
+  }
   didUpdateWidget(oldWidget) {
     console.log("--_ListContent didUpdateWidget 0");
     if ((this.list.length != oldWidget.list.length)) {

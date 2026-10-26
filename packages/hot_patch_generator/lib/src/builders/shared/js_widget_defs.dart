@@ -50,6 +50,8 @@ const Set<String> logicWidgetTypes = {
   'Consumer',
   'ListenableBuilder',
   'ValueListenableBuilder',
+  // 显式动画：JS 侧按 animation 当前 value 展开 builder 子树（局部重建）。
+  'AnimatedBuilder',
 };
 
 /// 懒容器类型 → 触发懒的 props 键（空列表 = 无条件懒）。
@@ -141,8 +143,14 @@ const Set<String> builtinWidgetTypes = {
   'SingleChildScrollView', 'PageView', 'NotificationListener',
   // 逻辑组件（JS 类）与能力包
   'Builder', 'ChangeNotifierProvider', 'Consumer', 'MultiProvider',
-  'ListenableBuilder', 'ValueListenableBuilder', 'TextField',
+  'ListenableBuilder', 'ValueListenableBuilder', 'AnimatedBuilder', 'TextField',
   'CachedNetworkImage', 'EasyRefresh',
+  // 动画（隐式动画 / 过渡动画，宿主映射见 capabilities/animation）
+  'AnimatedContainer', 'AnimatedOpacity', 'AnimatedPadding', 'AnimatedAlign',
+  'AnimatedScale', 'AnimatedRotation', 'AnimatedSlide', 'AnimatedSize',
+  'AnimatedSwitcher', 'AnimatedCrossFade', 'AnimatedDefaultTextStyle',
+  'AnimatedPositioned',
+  'FadeTransition', 'ScaleTransition', 'RotationTransition', 'SizeTransition',
 };
 
 /// 非 Widget 的「值对象」构造类型（元素描述由父 renderer 以 JsRenderContext

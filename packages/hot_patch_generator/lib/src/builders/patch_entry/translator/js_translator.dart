@@ -481,8 +481,14 @@ String? sdkValueCtorJs(
 }
 
 /// 运行时注入了同名 JS 类的 SDK 值对象（构造时直接裸引用 `new Xxx(...)`）。
+///
+/// 这里的是**位置参数**构造（`Size(10, 20)` / `Offset(0, 1)`）：实参按位置摊平，
+/// 与 JS 侧值类构造签名一一对应（见 hot_patch capabilities/core/dart_values_js.dart）。
 const Set<String> sdkValueClassNames = {
   'ValueNotifier',
+  'Size',
+  'Offset',
+  'Radius',
 };
 
 /// JS 运行时同名代理类（控制器）：字段可持有、构造产 `new Xxx({...})`。
@@ -494,6 +500,15 @@ const Set<String> jsRuntimeClassNames = {
   'PageController',
   'TextEditingController',
   'TabController',
+  // Duration：命名实参构造 → JS 值类（capabilities/core/dart_values_js.dart），
+  //   `Duration(milliseconds: n)` → `new Duration({milliseconds: n})`，toJSON 成 `{__duration}`；
+  //   （Size / Offset / Radius 是位置实参，归 sdkValueClassNames。）
+  'Duration',
+  // 动画（capabilities/animation）：
+  //   - AnimationController：真实控制器在宿主（Ticker），JS 侧是镜像 + 句柄；
+  //   - CurvedAnimation：JS 值对象，toJSON 带 `{__handle, __curve}`。
+  'AnimationController',
+  'CurvedAnimation',
 };
 
 /// 运行时同名代理类构造 → JS：`new Xxx({命名实参...})`；非本类返回 null。

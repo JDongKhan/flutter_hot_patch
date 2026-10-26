@@ -685,6 +685,104 @@ IconData iconFromJson(Object? v) {
   return icon;
 }
 
+/// JSON → Duration（动画 / 过渡时长）。
+///
+/// 三种来源都要认：
+///   - JS 运行时 `Duration` 值的 `toJSON` → `{'__duration': 毫秒}`；
+///   - 裸数字（毫秒）——生成器对 `Duration(milliseconds: 300)` 的取值；
+///   - 直接下发毫秒字段的写法（`{'milliseconds': 300}`）。
+Duration? durationFromJson(Object? v) {
+  if (v is num) return Duration(milliseconds: v.round());
+  if (v is String) {
+    final ms = int.tryParse(v);
+    return ms == null ? null : Duration(milliseconds: ms);
+  }
+  if (v is Map) {
+    final ms = v['__duration'] ?? v['milliseconds'];
+    if (ms is num) return Duration(milliseconds: ms.round());
+    if (ms is String) {
+      final parsed = int.tryParse(ms);
+      return parsed == null ? null : Duration(milliseconds: parsed);
+    }
+  }
+  return null;
+}
+
+/// JSON → Offset（`{'dx': 0, 'dy': 1}`）。动画偏移（AnimatedSlide）专用；
+/// 生成器把 `Offset(...)` 译成该 JSON 形态（见 style_translators.offsetExprToJson）。
+Offset? offsetFromJson(Object? v) {
+  if (v is! Map) return null;
+  final dx = v['dx'];
+  final dy = v['dy'];
+  if (dx is num && dy is num) {
+    return Offset(dx.toDouble(), dy.toDouble());
+  }
+  return null;
+}
+
+/// JSON → CrossFadeState（'showFirst' / 'showSecond'，枚举成员名口径）。
+CrossFadeState crossFadeStateFromJson(Object? v) =>
+    v == 'showSecond' ? CrossFadeState.showSecond : CrossFadeState.showFirst;
+
+/// 曲线名 → Curve（`Curves.<name>` 的成员名口径，生成器统一译成字符串）。
+///
+/// 未给 / 未登记都返回 `Curves.linear`（与 `Animated*` 家族的默认曲线一致），
+/// 未登记时出声——不静默丢弃整条曲线配置。
+Curve curveFromJson(Object? v) {
+  if (v is! String) return Curves.linear;
+  final curve = _curves[v];
+  if (curve == null) {
+    HotPatchLog.warn('curveFromJson: 未登记的曲线 "$v"，按 linear 处理');
+    return Curves.linear;
+  }
+  return curve;
+}
+
+/// 常用曲线名表（按需扩展；与 Dart `Curves` 成员同名）。
+const Map<String, Curve> _curves = {
+  'linear': Curves.linear,
+  'ease': Curves.ease,
+  'easeIn': Curves.easeIn,
+  'easeOut': Curves.easeOut,
+  'easeInOut': Curves.easeInOut,
+  'easeInToLinear': Curves.easeInToLinear,
+  'easeInSine': Curves.easeInSine,
+  'easeOutSine': Curves.easeOutSine,
+  'easeInOutSine': Curves.easeInOutSine,
+  'easeInQuad': Curves.easeInQuad,
+  'easeOutQuad': Curves.easeOutQuad,
+  'easeInOutQuad': Curves.easeInOutQuad,
+  'easeInCubic': Curves.easeInCubic,
+  'easeOutCubic': Curves.easeOutCubic,
+  'easeInOutCubic': Curves.easeInOutCubic,
+  'easeInQuart': Curves.easeInQuart,
+  'easeOutQuart': Curves.easeOutQuart,
+  'easeInOutQuart': Curves.easeInOutQuart,
+  'easeInQuint': Curves.easeInQuint,
+  'easeOutQuint': Curves.easeOutQuint,
+  'easeInOutQuint': Curves.easeInOutQuint,
+  'easeInExpo': Curves.easeInExpo,
+  'easeOutExpo': Curves.easeOutExpo,
+  'easeInOutExpo': Curves.easeInOutExpo,
+  'easeInCirc': Curves.easeInCirc,
+  'easeOutCirc': Curves.easeOutCirc,
+  'easeInOutCirc': Curves.easeInOutCirc,
+  'easeInBack': Curves.easeInBack,
+  'easeOutBack': Curves.easeOutBack,
+  'easeInOutBack': Curves.easeInOutBack,
+  'fastOutSlowIn': Curves.fastOutSlowIn,
+  'slowMiddle': Curves.slowMiddle,
+  'bounceIn': Curves.bounceIn,
+  'bounceOut': Curves.bounceOut,
+  'bounceInOut': Curves.bounceInOut,
+  'elasticIn': Curves.elasticIn,
+  'elasticOut': Curves.elasticOut,
+  'elasticInOut': Curves.elasticInOut,
+  'decelerate': Curves.decelerate,
+  'fastLinearToSlowEaseIn': Curves.fastLinearToSlowEaseIn,
+  'fastEaseInToSlowEaseOut': Curves.fastEaseInToSlowEaseOut,
+};
+
 /// 常用 Material Icons 映射表（按需扩展；未命中回退 circle）。
 const Map<String, IconData> _icons = {
   'add': Icons.add,

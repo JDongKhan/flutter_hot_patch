@@ -33,9 +33,11 @@
 // widget_json.dart / value_forms.dart 与 `patch/<pkg>.js` 里的 JS 组件类）
 // 属于另一条缝，不在本文件范围内。
 import '../js_widget_registry.dart';
+import 'animation/animation_library.dart';
 import 'build_context/build_context_library.dart';
 import 'cached_network_image/cached_network_image_library.dart';
 import 'change_notifier/change_notifier_library.dart';
+import 'core/dart_values_library.dart';
 import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
 import 'key/key_library.dart';
@@ -102,7 +104,12 @@ List<JsUiLibrary> get jsUiLibraries {
 void _seedBuiltins() {
   if (_seeded) return;
   _seeded = true;
+  // 公共值类（Duration / Size / Offset / Radius）：跨能力复用，最先注入，
+  // 后面的能力片段（如动画的 `__durationMs`）可直接引用。
+  registerJsUiLibrary(const DartValuesLibrary());
   registerJsUiLibrary(const ChangeNotifierLibrary());
+  // 动画值类 / AnimationController 镜像：显式动画经此逐帧回传 value。
+  registerJsUiLibrary(const AnimationLibrary());
   registerJsUiLibrary(const ScrollControllerLibrary());
   registerJsUiLibrary(const TextEditingControllerLibrary());
   registerJsUiLibrary(const TabLibrary());

@@ -151,6 +151,16 @@ class JsRuntimeManager {
     }
   }
 
+  /// 对所有活跃 runtime 求值一次（宿主侧主动推送，如动画帧回传 value）。
+  ///
+  /// 与 [_settleHost] 同口径：持有目标句柄的 runtime 生效，其余按 id 查不到即
+  /// no-op（见 JS 侧 `__jsui.invoke`），因此调用方无需知道句柄归属哪个 runtime。
+  static void evaluateAll(String code) {
+    for (final m in _instances.toList()) {
+      m.evaluate(code);
+    }
+  }
+
   /// 调试用：清除本地补丁缓存并重置模块缓存。
   ///
   ///   - 磁盘：删除 `<document>/hot_patch/` 下**全部** URL 的解压产物（含

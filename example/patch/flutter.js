@@ -110,6 +110,78 @@ export class Align {
   }
 }
 
+export class AnimatedAlign {
+  constructor(props) {
+    return __h('AnimatedAlign', props);
+  }
+}
+
+export class AnimatedContainer {
+  constructor(props) {
+    return __h('AnimatedContainer', props);
+  }
+}
+
+export class AnimatedCrossFade {
+  constructor(props) {
+    return __h('AnimatedCrossFade', props);
+  }
+}
+
+export class AnimatedDefaultTextStyle {
+  constructor(props) {
+    return __h('AnimatedDefaultTextStyle', props);
+  }
+}
+
+export class AnimatedOpacity {
+  constructor(props) {
+    return __h('AnimatedOpacity', props);
+  }
+}
+
+export class AnimatedPadding {
+  constructor(props) {
+    return __h('AnimatedPadding', props);
+  }
+}
+
+export class AnimatedPositioned {
+  constructor(props) {
+    return __h('AnimatedPositioned', props);
+  }
+}
+
+export class AnimatedRotation {
+  constructor(props) {
+    return __h('AnimatedRotation', props);
+  }
+}
+
+export class AnimatedScale {
+  constructor(props) {
+    return __h('AnimatedScale', props);
+  }
+}
+
+export class AnimatedSize {
+  constructor(props) {
+    return __h('AnimatedSize', props);
+  }
+}
+
+export class AnimatedSlide {
+  constructor(props) {
+    return __h('AnimatedSlide', props);
+  }
+}
+
+export class AnimatedSwitcher {
+  constructor(props) {
+    return __h('AnimatedSwitcher', props);
+  }
+}
+
 export class AppBar {
   constructor(props) {
     return __h('AppBar', props);
@@ -272,6 +344,12 @@ export class Expanded {
   }
 }
 
+export class FadeTransition {
+  constructor(props) {
+    return __h('FadeTransition', props);
+  }
+}
+
 export class FilledButton {
   constructor(props) {
     return __h('FilledButton', props);
@@ -392,6 +470,12 @@ export class Radio {
   }
 }
 
+export class RotationTransition {
+  constructor(props) {
+    return __h('RotationTransition', props);
+  }
+}
+
 export class Row {
   constructor(props) {
     return __h('Row', props);
@@ -410,9 +494,21 @@ export class Scaffold {
   }
 }
 
+export class ScaleTransition {
+  constructor(props) {
+    return __h('ScaleTransition', props);
+  }
+}
+
 export class SingleChildScrollView {
   constructor(props) {
     return __h('SingleChildScrollView', props);
+  }
+}
+
+export class SizeTransition {
+  constructor(props) {
+    return __h('SizeTransition', props);
   }
 }
 
@@ -557,6 +653,38 @@ export class Transform {
 export class Wrap {
   constructor(props) {
     return __h('Wrap', props);
+  }
+}
+
+export class AnimatedBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  __owner() {
+    var name = this.props.builder;
+    var owner = this.__parent;
+    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
+    return owner;
+  }
+  initState() {
+    var a = this.props.animation;
+    if (a && typeof a.addListener === 'function') {
+      var self = this;
+      this.__animation = a;
+      this.__listener = function () { self.setState(function () {}); };
+      a.addListener(this.__listener);
+    }
+  }
+  build(context) {
+    var owner = this.__owner();
+    if (!owner) { return null; }
+    var child = owner[this.props.builder].call(owner, context, this.props.child);
+    return __h('AnimatedBuilder', { child: child });
+  }
+  dispose() {
+    if (this.__animation && this.__listener) {
+      this.__animation.removeListener(this.__listener);
+    }
   }
 }
 
