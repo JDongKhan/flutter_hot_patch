@@ -585,24 +585,8 @@ ClassInfo translateClass(
     modelClassNames: modelClassNames,
   );
 
-  // 字段初始化器里的 widget 值（`Widget _w = Text();` / `final w = Text();`）：
-  // 上面按「值表达式」翻译会失败（裸 Text() 不是模型构造），这里用 widget
-  // 上下文补译，保证字段持有真正的元素对象；非 widget 字段保持原值。
-  for (var i = 0; i < instanceFields.length; i++) {
-    final f = instanceFields[i];
-    final init = f.initializer;
-    if (init == null) continue;
-    final widgetJs = parseCtx.widgetValueJs(init, 2);
-    if (widgetJs == null) continue;
-    instanceFields[i] = ClassField(
-      name: f.name,
-      typeName: f.typeName,
-      initializer: f.initializer,
-      isStatic: f.isStatic,
-      jsInitial: widgetJs,
-      mixinOrigin: f.mixinOrigin,
-    );
-  }
+  // 字段初始化器统一走通用表达式翻译（`new X({...})`）：组件构造由包装类
+  // 产出元素，普通类产出实例，不再需要按类型二次补译。
 
 
   // 方法增强：classInfoOf 已建好结构（形参 / async / void / 返回 widget

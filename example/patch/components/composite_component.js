@@ -27,23 +27,23 @@ export class DashboardCard {
           new Text({
               "data": "ticks = " + this._ticks
             }),
-          (this.__k0 || (this.__k0 = new BannerCard({}))),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k1 || (this.__k1 = new BannerCard({}))),
+          (this.__k2 || (this.__k2 = new SizedBox({
               "height": 12
             }))),
-          (this.__k2 || (this.__k2 = __h('_LabeledDivider', {
+          (this.__k3 || (this.__k3 = __h('_LabeledDivider', {
               "child": new Text({
-                  "data": "native child slot"
-                }),
+                "data": "native child slot"
+              }),
               "text": "private widget"
             }))),
-          (this.__k3 || (this.__k3 = new SizedBox({
+          (this.__k4 || (this.__k4 = new SizedBox({
               "height": 8
             }))),
-          (this.__k4 || (this.__k4 = new LabeledDivider({
+          (this.__k5 || (this.__k5 = new LabeledDivider({
               "text": "public widget"
             }))),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
               "height": 12
             }))),
           new ElevatedButton({
@@ -52,9 +52,9 @@ export class DashboardCard {
                 "backgroundColor": Colors.orange,
                 "foregroundColor": Colors.white
               },
-              "child": (this.__k5 || (this.__k5 = new Text({
-                  "data": "Tick"
-                })))
+              "child": (this.__k0 || (this.__k0 = new Text({
+                "data": "Tick"
+              })))
             })
         ]
       });

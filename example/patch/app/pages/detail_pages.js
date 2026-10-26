@@ -25,33 +25,33 @@ export class MiniButton {
     return new GestureDetector({
         "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
         "child": new Container({
-            "padding": {
-              "left": 14.0,
-              "top": 0.0,
-              "right": 14.0,
-              "bottom": 0.0
+          "padding": {
+            "left": 14.0,
+            "top": 0.0,
+            "right": 14.0,
+            "bottom": 0.0
+          },
+          "height": 32,
+          "alignment": "center",
+          "decoration": {
+            "color": (this.primary ? kBrand : Colors.white),
+            "borderRadius": {
+              "radius": 14.0
             },
-            "height": 32,
-            "alignment": "center",
-            "decoration": {
-              "color": (this.primary ? kBrand : Colors.white),
-              "borderRadius": {
-                "radius": 14.0
-              },
-              "border": {
-                "all": {
-                  "color": (this.primary ? kBrand : new Color({value: 0xFFDFE4EC}))
-                }
+            "border": {
+              "all": {
+                "color": (this.primary ? kBrand : new Color({value: 0xFFDFE4EC}))
               }
+            }
+          },
+          "child": new Text({
+            "style": {
+              "fontSize": 12,
+              "color": (this.primary ? Colors.white : new Color({value: 0xFF4D5462}))
             },
-            "child": new Text({
-                "style": {
-                  "fontSize": 12,
-                  "color": (this.primary ? Colors.white : new Color({value: 0xFF4D5462}))
-                },
-                "data": this.label
-              })
+            "data": this.label
           })
+        })
       });
   }
 }

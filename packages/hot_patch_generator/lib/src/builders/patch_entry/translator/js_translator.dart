@@ -957,16 +957,13 @@ String translateStmtList(
         // 有调用的表达式（GlobalKey.currentContext、List.removeAt）重跑即语义
         // 不同，会把既有产物改坏。链式别名的收益只发生在字段路径上，收窄到它即可。
         final purePath = _fieldPath.hasMatch(v.initializer!.toSource());
-        // 初始化器可能是 widget 值（`Text text = Text();` / `final w = [Text()]`）：
-        // 纯值翻译会把裸构造当模型类，导致声明被丢弃、后续引用变成未定义变量。
-        // 先尝试 widget 层翻译，不是 widget 再回退到通用值翻译。
-        final init =
-            widgetCtx?.widgetValueJs(v.initializer!, depth + 1) ??
-                rhsToJs(
-                  v.initializer!,
-                  purePath ? scope.forInitializer() : scope,
-                  classes,
-                );
+        // 初始化器按通用表达式翻译：`const Text('x')` → `new Text({...})`
+        // （组件包装类构造即产出元素，普通类产出实例，运行时统一归一化）。
+        final init = rhsToJs(
+          v.initializer!,
+          purePath ? scope.forInitializer() : scope,
+          classes,
+        );
         if (init == null) {
           // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
           log.warning('[hot_patch_generator] 局部变量声明无法翻译，已在 JS '

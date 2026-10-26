@@ -124,32 +124,32 @@ export class HelloCard {
                       "foregroundColor": Colors.white
                     },
                     "child": (this.__k0 || (this.__k0 = new Text({
-                        "data": "+1"
-                      })))
+                      "data": "+1"
+                    })))
                   }),
                 new ElevatedButton({
                     "onPressed": this.__bindFn(1, [], () => this.reset()),
                     "child": (this.__k1 || (this.__k1 = new Text({
-                        "data": "Reset"
-                      })))
+                      "data": "Reset"
+                    })))
                   }),
                 new ElevatedButton({
                     "onPressed": this.__bindFn(2, [], (...__a) => this.showNative(...__a)),
                     "child": (this.__k2 || (this.__k2 = new Text({
-                        "data": "Native"
-                      })))
+                      "data": "Native"
+                    })))
                   }),
                 new ElevatedButton({
                     "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a)),
                     "child": (this.__k3 || (this.__k3 = new Text({
-                        "data": "Load User"
-                      })))
+                      "data": "Load User"
+                    })))
                   }),
                 new ElevatedButton({
                     "onPressed": this.__bindFn(4, [], (...__a) => this.demoTryCatchAssert(...__a)),
                     "child": (this.__k4 || (this.__k4 = new Text({
-                        "data": "Try/Catch"
-                      })))
+                      "data": "Try/Catch"
+                    })))
                   })
               ]
             })

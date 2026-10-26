@@ -228,15 +228,12 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
       if (r != null) return r;
       // 命中了表但转换失败：多半是值的写法超出该转换函数的支持范围，出声。
       _warnUnsupported('$ctor(${e.toSource()})');
-    } else if (_valueCtors.contains(ctor)) {
-      // 数据对象构造（Size / Duration / Controller / Notifier…）→ 构造调用表达式。
-      return _jsExprOrNull(e, ctx);
-    } else if (isClassName(ctor)) {
-      // 构造名是**类名**且不属于已知值类型 → 值是**子结点**（`leading: Icon(...)`、
-      // `title: Text(...)`、`sliver: SliverList(...)`、嵌套组件 `_OrderCard(...)`）
-      // → 交结点翻译。是否被运行时当作结点消费由运行时决定（`propChild`）。
-      return ctx.translate(e);
     }
+    // 构造统一按**构造翻译**处理（组件 / 值对象 / 控制器同一套）：
+    // 先走属性管线（builder 闭包抽成方法、集合推导展开、delegate、位置实参
+    // 按源码签名映射），再渲染成 `new X({...})` / `X.b({...})`。
+    // 翻译器不判断它是组件还是普通类——同名 JS 类由运行时注入或包装类承接。
+    return ctx.renderValue(ctx.translate(e), 0);
   } else {
     final owner = staticRefOwner(e);
     if (owner != null) {
@@ -331,48 +328,14 @@ Object? _delegateValue(Expression e, WidgetTranslateContext ctx) {
 /// 其余按标量直通。渲染不出来返回 null。
 String? _branchJs(Expression e, WidgetTranslateContext ctx) {
   if (e is NullLiteral) return 'null';
-  // 嵌套三目：`a ? b : c ? d : e` 必须逐层展开，不能整体丢给标量表达式
-  // （内层 widget 构造会退化成裸 JS 函数调用，最终整条 child 丢失）。
-  if (e is ConditionalExpression) {
-    final cond = _jsExprOrNull(e.condition, ctx);
-    if (cond == null) return null;
-    final a = _branchJs(e.thenExpression, ctx);
-    final b = _branchJs(e.elseExpression, ctx);
-    if (a == null || b == null) return null;
-    return '$cond ? $a : $b';
-  }
   if (e is ListLiteral) {
     final items = [for (final el in e.elements) ctx.translateElement(el)];
     return '[${items.map((v) => ctx.renderJs(v, 0)).join(', ')}]';
   }
-  if (_isWidgetExpr(e, ctx)) {
-    return ctx.renderJs(ctx.translate(e), 0);
-  }
-  return _jsExprOrNull(e, ctx);
-}
-
-/// 表达式是否是 **widget 构造**（普通构造 / 命名构造 / 静态工厂）。
-///
-/// `ListView.separated(...)` 的 `ctorOf` 返回方法名 `separated`，不是类名；
-/// 之前只查类名形态会漏掉它，导致三目分支里的列表整体丢失。
-bool _isWidgetExpr(Expression e, WidgetTranslateContext ctx) {
-  final (ctor, _) = ctx.ctorOf(e);
-  if (ctor == null) return false;
-  if (isClassName(ctor) &&
-      !_valueCtors.contains(ctor) &&
-      !_ctorConverters.containsKey(ctor)) {
-    return true;
-  }
-  // 命名构造 / 静态工厂：receiver 是类名（`ListView.separated` / `Image.network`）。
-  if (e is MethodInvocation && e.target is Identifier) {
-    final recv = (e.target as Identifier).name;
-    if (isClassName(recv) &&
-        !_valueCtors.contains(recv) &&
-        !_ctorConverters.containsKey(recv)) {
-      return true;
-    }
-  }
-  return false;
+  // 其余分支与普通值同一条分派：构造 → `new X({...})`（组件由包装类产出元素），
+  // 标量 / 枚举 / 常量引用 → 表达式。嵌套三目在 autoValue 里递归展开。
+  final v = autoValue(e, ctx);
+  return v is String ? v : null;
 }
 
 /// 参数名是否是「builder 语义」的闭包（返回 widget 的回调）：`builder` /
@@ -385,44 +348,10 @@ bool _isWidgetExpr(Expression e, WidgetTranslateContext ctx) {
 bool _isBuilderArg(String? name) =>
     name != null && (name == 'builder' || name.endsWith('Builder'));
 
-/// 该构造名是否由**值翻译**处理（值对象 / 控制器 / Key / 结构化样式），而不是
-/// 元素构造。widget2js 的局部值翻译用这条唯一判据排除「模型类 + 值对象」，
-/// 其余类构造一律按组件构造——不再维护「哪些类型是 widget」的白名单。
-bool isValueCtorName(String name) =>
-    _valueCtors.contains(name) || _ctorConverters.containsKey(name);
-
 /// 静态工厂方法名 → 结构化样式转换器（`Xxx.styleFrom(...)` 这类：值是样式对象，
 /// 不能按「类名构造 → 子结点」处理）。
 final Map<String, ValueConverter> _factoryConverters = {
   'styleFrom': (e, c) => buttonStyleToJson(e, c),
-};
-
-/// 「数据对象」构造名：值是普通对象（原样产出构造调用表达式），不是子结点。
-/// 与样式表 [_ctorConverters] 互补——表里是**结构化样式**（转 JSON 结构，
-/// 运行时按 `xxxFromJson` 还原），这里是**普通对象**（JS 侧直接 `new`）。
-const Set<String> _valueCtors = {
-  'Size',
-  'Offset',
-  'Duration',
-  'Radius',
-  'IconData',
-  'TextEditingController',
-  'FocusNode',
-  'ScrollController',
-  'PageController',
-  'TabController',
-  'EasyRefreshController',
-  'AnimationController',
-  // 动画值对象：`Tween(begin: 0, end: 1)` / `CurvedAnimation(parent: c, curve: …)`
-  // 只在 JS 侧推导 value（宿主按 `{__handle, __curve}` 还原），不是子结点。
-  'Tween',
-  'CurvedAnimation',
-  'ValueNotifier',
-  'GlobalKey',
-  'ValueKey',
-  'ObjectKey',
-  'PageStorageKey',
-  'UniqueKey',
 };
 
 /// `Owner.name` 形态的 owner 名（`Colors.red` → `'Colors'`）；否则 null。
@@ -501,12 +430,8 @@ String? extractBuilderMethod(
           // 句柄会因「引用了构建期局部名」改走**构建期闭包**，闭包与本方法同
           // 作用域、直接捕获 `model`——不做 read("T") 之类的改写。
           ctx.warnCapturedLocals(init);
-          // 块体里的 `final w = Text();`：同样可能是 widget 值，先走 widget
-          // 翻译（`var w = __h('Text', {})`），非 widget 再回退值翻译。
-          final widgetInit = ctx.widgetValueJs(init, 0);
-          preludes.add(
-            'var ${v.name.lexeme} = ${widgetInit ?? ctx.jsDataExpr(init)};',
-          );
+          // 块体局部初始化：通用表达式翻译（组件构造 → `new X({...})`）。
+          preludes.add('var ${v.name.lexeme} = ${ctx.jsDataExpr(init)};');
         }
         continue;
       }

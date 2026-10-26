@@ -63,55 +63,55 @@ export class OrdersPage {
           new Container({
               "color": Colors.white,
               "child": new SafeArea({
-                  "bottom": false,
-                  "child": new Padding({
-                      "padding": {
-                        "left": 8.0,
-                        "top": 6.0,
-                        "right": 8.0,
-                        "bottom": 10.0
-                      },
-                      "child": new SingleChildScrollView({
-                          "scrollDirection": "horizontal",
-                          "child": new Row({
-                              "children": [
-                                ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [new Padding({
-                                  "padding": {
-                                    "left": 4.0,
-                                    "top": 0.0,
-                                    "right": 4.0,
-                                    "bottom": 0.0
-                                  },
-                                  "child": new GestureDetector({
-                                      "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)),
-                                      "child": new Container({
-                                          "padding": {
-                                            "left": 13.0,
-                                            "top": 6.0,
-                                            "right": 13.0,
-                                            "bottom": 6.0
-                                          },
-                                          "decoration": {
-                                            "color": ((this._status == s) ? new Color({value: 0xFFE8F2FF}) : Colors.white),
-                                            "borderRadius": {
-                                              "radius": 15.0
-                                            }
-                                          },
-                                          "child": new Text({
-                                              "style": {
-                                                "fontSize": 13,
-                                                "color": ((this._status == s) ? kBrand : new Color({value: 0xFF5C6270}))
-                                              },
-                                              "data": s
-                                            })
-                                        })
-                                    })
-                                })]); } return out; })()
-                              ]
+                "bottom": false,
+                "child": new Padding({
+                  "padding": {
+                    "left": 8.0,
+                    "top": 6.0,
+                    "right": 8.0,
+                    "bottom": 10.0
+                  },
+                  "child": new SingleChildScrollView({
+                    "scrollDirection": "horizontal",
+                    "child": new Row({
+                      "children": [
+                        ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [new Padding({
+                          "padding": {
+                            "left": 4.0,
+                            "top": 0.0,
+                            "right": 4.0,
+                            "bottom": 0.0
+                          },
+                          "child": new GestureDetector({
+                            "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)),
+                            "child": new Container({
+                              "padding": {
+                                "left": 13.0,
+                                "top": 6.0,
+                                "right": 13.0,
+                                "bottom": 6.0
+                              },
+                              "decoration": {
+                                "color": ((this._status == s) ? new Color({value: 0xFFE8F2FF}) : Colors.white),
+                                "borderRadius": {
+                                  "radius": 15.0
+                                }
+                              },
+                              "child": new Text({
+                                "style": {
+                                  "fontSize": 13,
+                                  "color": ((this._status == s) ? kBrand : new Color({value: 0xFF5C6270}))
+                                },
+                                "data": s
+                              })
                             })
-                        })
+                          })
+                        })]); } return out; })()
+                      ]
                     })
+                  })
                 })
+              })
             }),
           ...(this._listLoading ? [(this.__k1 || (this.__k1 = new LinearProgressIndicator({
             "minHeight": 2
@@ -121,12 +121,12 @@ export class OrdersPage {
                 "child": new CircularProgressIndicator({})
               }))) : this._orders.isEmpty ? (this.__k2 || (this.__k2 = new Center({
                 "child": new Text({
-                    "data": "该状态下暂无订单",
-                    "style": {
-                      "color": new Color({value: 0xFF98A0AC}),
-                      "fontSize": 13
-                    }
-                  })
+                  "style": {
+                    "fontSize": 13,
+                    "color": new Color({value: 0xFF98A0AC})
+                  },
+                  "data": "该状态下暂无订单"
+                })
               }))) : ListView.separated({
                 "padding": {
                   "left": 12.0,
@@ -173,161 +173,160 @@ export class _OrderCard {
     return new GestureDetector({
         "onTap": this.__bindFn(0, [], (...__a) => this.onOpen(...__a)),
         "child": new Container({
-            "decoration": {
-              "color": Colors.white,
-              "borderRadius": {
-                "radius": 14.0
-              }
-            },
-            "child": new Column({
-                "children": [
-                  new Padding({
-                      "padding": {
-                        "left": 14.0,
-                        "top": 12.0,
-                        "right": 14.0,
-                        "bottom": 10.0
-                      },
-                      "child": new Row({
-                          "children": [
-                            new Text({
-                                "style": {
-                                  "fontSize": 12,
-                                  "color": new Color({value: 0xFF8B909A})
-                                },
-                                "data": "订单号 " + this.order.no
-                              }),
-                            (this.__k1 || (this.__k1 = new Spacer({}))),
-                            new Text({
-                                "style": {
-                                  "fontSize": 12.5,
-                                  "fontWeight": "w700",
-                                  "color": this.statusColor
-                                },
-                                "data": this.order.status
-                              })
-                          ]
+          "decoration": {
+            "color": Colors.white,
+            "borderRadius": {
+              "radius": 14.0
+            }
+          },
+          "child": new Column({
+            "children": [
+              new Padding({
+                  "padding": {
+                    "left": 14.0,
+                    "top": 12.0,
+                    "right": 14.0,
+                    "bottom": 10.0
+                  },
+                  "child": new Row({
+                    "children": [
+                      new Text({
+                          "style": {
+                            "fontSize": 12,
+                            "color": new Color({value: 0xFF8B909A})
+                          },
+                          "data": "订单号 " + this.order.no
+                        }),
+                      (this.__k0 || (this.__k0 = new Spacer({}))),
+                      new Text({
+                          "style": {
+                            "fontSize": 12.5,
+                            "fontWeight": "w700",
+                            "color": this.statusColor
+                          },
+                          "data": this.order.status
                         })
-                    }),
-                  (this.__k2 || (this.__k2 = new Divider({
-                      "color": new Color({value: 0xFFF0F2F6}),
-                      "height": 1
-                    }))),
-                  new Padding({
-                      "padding": {
-                        "left": 12.0,
-                        "top": 12.0,
-                        "right": 12.0,
-                        "bottom": 12.0
-                      },
-                      "child": new Row({
-                          "crossAxisAlignment": "start",
-                          "children": [
-                            new ClipRRect({
-                                "borderRadius": {
-                                  "radius": 10.0
-                                },
-                                "child": new Image({
-                                    "width": 66,
-                                    "height": 66,
-                                    "fit": "cover",
-                                    "errorBuilder": "_errorBuilder0",
-                                    "factory": "network",
-                                    "src": this.order.img
-                                  })
-                              }),
-                            (this.__k3 || (this.__k3 = new SizedBox({
-                                "width": 11
-                              }))),
-                            new Expanded({
-                                "child": new Column({
-                                    "crossAxisAlignment": "start",
-                                    "children": [
-                                      new Text({
-                                          "maxLines": 1,
-                                          "overflow": "ellipsis",
-                                          "style": {
-                                            "fontSize": 14,
-                                            "fontWeight": "w600"
-                                          },
-                                          "data": this.order.title
-                                        }),
-                                      (this.__k4 || (this.__k4 = new SizedBox({
-                                          "height": 5
-                                        }))),
-                                      new Text({
-                                          "maxLines": 1,
-                                          "overflow": "ellipsis",
-                                          "style": {
-                                            "fontSize": 11.5,
-                                            "color": new Color({value: 0xFF8B909A})
-                                          },
-                                          "data": this.order.spec
-                                        }),
-                                      (this.__k5 || (this.__k5 = new SizedBox({
-                                          "height": 6
-                                        }))),
-                                      (this.__k6 || (this.__k6 = new Text({
-                                          "data": "×1",
-                                          "style": {
-                                            "color": new Color({value: 0xFFA3A9B4}),
-                                            "fontSize": 11
-                                          }
-                                        })))
-                                    ]
-                                  })
-                              })
-                          ]
+                    ]
+                  })
+                }),
+              (this.__k7 || (this.__k7 = new Divider({
+                  "color": new Color({value: 0xFFF0F2F6}),
+                  "height": 1
+                }))),
+              new Padding({
+                  "padding": {
+                    "left": 12.0,
+                    "top": 12.0,
+                    "right": 12.0,
+                    "bottom": 12.0
+                  },
+                  "child": new Row({
+                    "crossAxisAlignment": "start",
+                    "children": [
+                      new ClipRRect({
+                          "borderRadius": {
+                            "radius": 10.0
+                          },
+                          "child": Image.network({
+                            "width": 66,
+                            "height": 66,
+                            "fit": "cover",
+                            "errorBuilder": "_errorBuilder0",
+                            "src": this.order.img
+                          })
+                        }),
+                      (this.__k4 || (this.__k4 = new SizedBox({
+                          "width": 11
+                        }))),
+                      new Expanded({
+                          "child": new Column({
+                            "crossAxisAlignment": "start",
+                            "children": [
+                              new Text({
+                                  "maxLines": 1,
+                                  "overflow": "ellipsis",
+                                  "style": {
+                                    "fontSize": 14,
+                                    "fontWeight": "w600"
+                                  },
+                                  "data": this.order.title
+                                }),
+                              (this.__k1 || (this.__k1 = new SizedBox({
+                                  "height": 5
+                                }))),
+                              new Text({
+                                  "maxLines": 1,
+                                  "overflow": "ellipsis",
+                                  "style": {
+                                    "fontSize": 11.5,
+                                    "color": new Color({value: 0xFF8B909A})
+                                  },
+                                  "data": this.order.spec
+                                }),
+                              (this.__k2 || (this.__k2 = new SizedBox({
+                                  "height": 6
+                                }))),
+                              (this.__k3 || (this.__k3 = new Text({
+                                  "data": "×1",
+                                  "style": {
+                                    "color": new Color({value: 0xFFA3A9B4}),
+                                    "fontSize": 11
+                                  }
+                                })))
+                            ]
+                          })
                         })
-                    }),
-                  (this.__k2 || (this.__k2 = new Divider({
-                      "color": new Color({value: 0xFFF0F2F6}),
-                      "height": 1
-                    }))),
-                  new Padding({
-                      "padding": {
-                        "left": 14.0,
-                        "top": 10.0,
-                        "right": 12.0,
-                        "bottom": 12.0
-                      },
-                      "child": new Row({
-                          "children": [
-                            (this.__k7 || (this.__k7 = new Text({
-                                "data": "合计 ",
-                                "style": {
-                                  "color": new Color({value: 0xFF5C6270}),
-                                  "fontSize": 12.5
-                                }
-                              }))),
-                            new Text({
-                                "style": {
-                                  "fontSize": 16,
-                                  "fontWeight": "w700",
-                                  "color": kPrice
-                                },
-                                "data": "￥" + this.order.price
-                              }),
-                            (this.__k1 || (this.__k1 = new Spacer({}))),
-                            ...(pending ? [new MiniButton({
-                              "label": "取消",
-                              "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); }
-                            }), (this.__k0 || (this.__k0 = new SizedBox({
-                              "width": 8
-                            }))), new MiniButton({
-                              "label": "去支付",
-                              "primary": true,
-                              "onTap": this.onOpen
-                            })] : [new MiniButton({
-                              "label": "查看详情",
-                              "onTap": this.onOpen
-                            })])
-                          ]
-                        })
-                    })
-                ]
-              })
+                    ]
+                  })
+                }),
+              (this.__k7 || (this.__k7 = new Divider({
+                  "color": new Color({value: 0xFFF0F2F6}),
+                  "height": 1
+                }))),
+              new Padding({
+                  "padding": {
+                    "left": 14.0,
+                    "top": 10.0,
+                    "right": 12.0,
+                    "bottom": 12.0
+                  },
+                  "child": new Row({
+                    "children": [
+                      (this.__k6 || (this.__k6 = new Text({
+                          "data": "合计 ",
+                          "style": {
+                            "color": new Color({value: 0xFF5C6270}),
+                            "fontSize": 12.5
+                          }
+                        }))),
+                      new Text({
+                          "style": {
+                            "fontSize": 16,
+                            "fontWeight": "w700",
+                            "color": kPrice
+                          },
+                          "data": "￥" + this.order.price
+                        }),
+                      (this.__k0 || (this.__k0 = new Spacer({}))),
+                      ...(pending ? [new MiniButton({
+                        "label": "取消",
+                        "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); }
+                      }), (this.__k5 || (this.__k5 = new SizedBox({
+                        "width": 8
+                      }))), new MiniButton({
+                        "label": "去支付",
+                        "primary": true,
+                        "onTap": this.onOpen
+                      })] : [new MiniButton({
+                        "label": "查看详情",
+                        "onTap": this.onOpen
+                      })])
+                    ]
+                  })
+                })
+            ]
           })
+        })
       });
   }
   _errorBuilder0(context, e) {

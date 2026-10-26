@@ -70,89 +70,89 @@ export class CommunityPage {
           new Container({
               "color": Colors.white,
               "child": new SafeArea({
-                  "bottom": false,
-                  "child": new Padding({
-                      "padding": {
-                        "left": 12.0,
-                        "top": 4.0,
-                        "right": 12.0,
-                        "bottom": 10.0
-                      },
-                      "child": new Row({
-                          "children": [
-                            ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [new Padding({
-                              "padding": {
-                                "left": 0.0,
-                                "top": 0.0,
-                                "right": 8.0,
-                                "bottom": 0.0
+                "bottom": false,
+                "child": new Padding({
+                  "padding": {
+                    "left": 12.0,
+                    "top": 4.0,
+                    "right": 12.0,
+                    "bottom": 10.0
+                  },
+                  "child": new Row({
+                    "children": [
+                      ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [new Padding({
+                        "padding": {
+                          "left": 0.0,
+                          "top": 0.0,
+                          "right": 8.0,
+                          "bottom": 0.0
+                        },
+                        "child": new GestureDetector({
+                          "onTap": this.__bindFn(0, [t], () => this._selectTab(t)),
+                          "child": new Container({
+                            "padding": {
+                              "left": 15.0,
+                              "top": 6.0,
+                              "right": 15.0,
+                              "bottom": 6.0
+                            },
+                            "decoration": {
+                              "color": ((this._tab == t) ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
+                              "borderRadius": {
+                                "radius": 15.0
+                              }
+                            },
+                            "child": new Text({
+                              "style": {
+                                "fontSize": 13.5,
+                                "color": ((this._tab == t) ? kBrand : new Color({value: 0xFF5C6270}))
                               },
-                              "child": new GestureDetector({
-                                  "onTap": this.__bindFn(0, [t], () => this._selectTab(t)),
-                                  "child": new Container({
-                                      "padding": {
-                                        "left": 15.0,
-                                        "top": 6.0,
-                                        "right": 15.0,
-                                        "bottom": 6.0
-                                      },
-                                      "decoration": {
-                                        "color": ((this._tab == t) ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
-                                        "borderRadius": {
-                                          "radius": 15.0
-                                        }
-                                      },
-                                      "child": new Text({
-                                          "style": {
-                                            "fontSize": 13.5,
-                                            "color": ((this._tab == t) ? kBrand : new Color({value: 0xFF5C6270}))
-                                          },
-                                          "data": t
-                                        })
-                                    })
-                                })
-                            })]); } return out; })(),
-                            (this.__k2 || (this.__k2 = new Spacer({}))),
-                            new GestureDetector({
-                                "onTap": this.__bindFn(1, [], () => _app_host_.invoke("toast", ["发布新动态（演示）"])),
-                                "child": new Container({
-                                    "width": 32,
-                                    "height": 32,
-                                    "decoration": {
-                                      "color": new Color({value: 0xFFF3F5F8}),
-                                      "shape": "circle"
-                                    },
-                                    "child": (this.__k3 || (this.__k3 = new Icon({
-                                        "color": new Color({value: 0xFF5C6270}),
-                                        "icon": "edit",
-                                        "size": 16
-                                      })))
-                                  })
-                              })
-                          ]
+                              "data": t
+                            })
+                          })
                         })
-                    })
+                      })]); } return out; })(),
+                      (this.__k2 || (this.__k2 = new Spacer({}))),
+                      new GestureDetector({
+                          "onTap": this.__bindFn(1, [], () => _app_host_.invoke("toast", ["发布新动态（演示）"])),
+                          "child": new Container({
+                            "width": 32,
+                            "height": 32,
+                            "decoration": {
+                              "color": new Color({value: 0xFFF3F5F8}),
+                              "shape": "circle"
+                            },
+                            "child": (this.__k1 || (this.__k1 = new Icon({
+                              "color": new Color({value: 0xFF5C6270}),
+                              "icon": "edit",
+                              "size": 16
+                            })))
+                          })
+                        })
+                    ]
+                  })
                 })
+              })
             }),
-          (this.__k4 || (this.__k4 = new SizedBox({
+          (this.__k5 || (this.__k5 = new SizedBox({
               "height": 10
             }))),
           new SizedBox({
               "height": 116,
               "child": ListView.separated({
-                  "scrollDirection": "horizontal",
-                  "padding": {
-                    "left": 12.0,
-                    "top": 0.0,
-                    "right": 12.0,
-                    "bottom": 0.0
-                  },
-                  "itemCount": this._feed.resources.length,
-                  "separatorBuilder": "_separatorBuilder0",
-                  "itemBuilder": "_itemBuilder1"
-                })
+                "scrollDirection": "horizontal",
+                "padding": {
+                  "left": 12.0,
+                  "top": 0.0,
+                  "right": 12.0,
+                  "bottom": 0.0
+                },
+                "itemCount": this._feed.resources.length,
+                "separatorBuilder": "_separatorBuilder0",
+                "itemBuilder": "_itemBuilder1"
+              })
             }),
-          (this.__k5 || (this.__k5 = new SizedBox({
+          (this.__k6 || (this.__k6 = new SizedBox({
               "height": 12
             }))),
           new Container({
@@ -164,81 +164,81 @@ export class CommunityPage {
                 "bottom": 8.0
               },
               "child": new Row({
-                  "children": [
-                    ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [new Padding({
-                      "padding": {
-                        "left": 0.0,
-                        "top": 0.0,
-                        "right": 6.0,
-                        "bottom": 0.0
-                      },
-                      "child": new GestureDetector({
-                          "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)),
-                          "child": new Container({
-                              "padding": {
-                                "left": 12.0,
-                                "top": 5.0,
-                                "right": 12.0,
-                                "bottom": 5.0
-                              },
-                              "decoration": {
-                                "color": ((this._sort == s) ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
-                                "borderRadius": {
-                                  "radius": 14.0
-                                }
-                              },
-                              "child": new Text({
-                                  "style": {
-                                    "fontSize": 12.5,
-                                    "color": ((this._sort == s) ? kBrand : new Color({value: 0xFF5C6270}))
-                                  },
-                                  "data": s
-                                })
-                            })
+                "children": [
+                  ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [new Padding({
+                    "padding": {
+                      "left": 0.0,
+                      "top": 0.0,
+                      "right": 6.0,
+                      "bottom": 0.0
+                    },
+                    "child": new GestureDetector({
+                      "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)),
+                      "child": new Container({
+                        "padding": {
+                          "left": 12.0,
+                          "top": 5.0,
+                          "right": 12.0,
+                          "bottom": 5.0
+                        },
+                        "decoration": {
+                          "color": ((this._sort == s) ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
+                          "borderRadius": {
+                            "radius": 14.0
+                          }
+                        },
+                        "child": new Text({
+                          "style": {
+                            "fontSize": 12.5,
+                            "color": ((this._sort == s) ? kBrand : new Color({value: 0xFF5C6270}))
+                          },
+                          "data": s
                         })
-                    })]); } return out; })(),
-                    (this.__k2 || (this.__k2 = new Spacer({}))),
-                    new GestureDetector({
-                        "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a)),
-                        "child": new Container({
-                            "padding": {
-                              "left": 11.0,
-                              "top": 5.0,
-                              "right": 11.0,
-                              "bottom": 5.0
-                            },
-                            "decoration": {
-                              "color": (this._filterOpen ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
-                              "borderRadius": {
-                                "radius": 14.0
-                              }
-                            },
-                            "child": new Row({
-                                "children": [
-                                  new Text({
-                                      "style": {
-                                        "fontSize": 12.5,
-                                        "fontWeight": "w600",
-                                        "color": (this._filterOpen ? kBrand : new Color({value: 0xFF5C6270}))
-                                      },
-                                      "data": "筛选"
-                                    }),
-                                  (this.__k6 || (this.__k6 = new SizedBox({
-                                      "width": 3
-                                    }))),
-                                  new Icon({
-                                      "size": 14,
-                                      "color": this._filterOpen ? kBrand : new Color({value: 0xFF5C6270}),
-                                      "icon": "tune"
-                                    })
-                                ]
-                              })
-                          })
                       })
-                  ]
-                })
+                    })
+                  })]); } return out; })(),
+                  (this.__k2 || (this.__k2 = new Spacer({}))),
+                  new GestureDetector({
+                      "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a)),
+                      "child": new Container({
+                        "padding": {
+                          "left": 11.0,
+                          "top": 5.0,
+                          "right": 11.0,
+                          "bottom": 5.0
+                        },
+                        "decoration": {
+                          "color": (this._filterOpen ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
+                          "borderRadius": {
+                            "radius": 14.0
+                          }
+                        },
+                        "child": new Row({
+                          "children": [
+                            new Text({
+                                "style": {
+                                  "fontSize": 12.5,
+                                  "fontWeight": "w600",
+                                  "color": (this._filterOpen ? kBrand : new Color({value: 0xFF5C6270}))
+                                },
+                                "data": "筛选"
+                              }),
+                            (this.__k3 || (this.__k3 = new SizedBox({
+                                "width": 3
+                              }))),
+                            new Icon({
+                                "size": 14,
+                                "color": this._filterOpen ? kBrand : new Color({value: 0xFF5C6270}),
+                                "icon": "tune"
+                              })
+                          ]
+                        })
+                      })
+                    })
+                ]
+              })
             }),
-          ...(this._listLoading ? [(this.__k1 || (this.__k1 = new LinearProgressIndicator({
+          ...(this._listLoading ? [(this.__k4 || (this.__k4 = new LinearProgressIndicator({
             "minHeight": 2
           })))] : []),
           new Expanded({
@@ -318,14 +318,14 @@ export class _ListContent {
               "children": [
                 ...(this.list.isEmpty ? [(this.__k0 || (this.__k0 = new Padding({
                   "child": new Center({
-                      "child": new Text({
-                          "data": "没有符合条件的帖子，试试放宽筛选条件",
-                          "style": {
-                            "color": new Color({value: 0xFF98A0AC}),
-                            "fontSize": 13
-                          }
-                        })
-                    }),
+                    "child": new Text({
+                      "style": {
+                        "fontSize": 13,
+                        "color": new Color({value: 0xFF98A0AC})
+                      },
+                      "data": "没有符合条件的帖子，试试放宽筛选条件"
+                    })
+                  }),
                   "padding": {
                     "bottom": 60.0,
                     "left": 0.0,
@@ -340,34 +340,34 @@ export class _ListContent {
                     "bottom": 10.0
                   },
                   "child": new _PostCard({
-                      "post": p,
-                      "onTap": () => { return _app_host_.invoke("openPost", [p.id]); }
-                    })
+                    "post": p,
+                    "onTap": () => { return _app_host_.invoke("openPost", [p.id]); }
+                  })
                 })]); } return out; })())
               ]
             }),
           ...(this.openFilter ? [new Positioned({
             "child": new GestureDetector({
-                "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)),
-                "child": new Container({
-                    "color": new Color({value: 0x66000000})
-                  })
-              }),
+              "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)),
+              "child": new Container({
+                "color": new Color({value: 0x66000000})
+              })
+            }),
             "factory": "fill"
           }), new Positioned({
             "left": 0,
             "right": 0,
             "top": 0,
             "child": new _FilterPanel({
-                "feed": this.feed,
-                "sort": this.sort,
-                "type": this.type,
-                "dist": this.dist,
-                "price": this.price,
-                "onPick": this.onSelectFilter,
-                "onReset": this.resetFilter,
-                "onApply": this.toggleFilter
-              })
+              "feed": this.feed,
+              "sort": this.sort,
+              "type": this.type,
+              "dist": this.dist,
+              "price": this.price,
+              "onPick": this.onSelectFilter,
+              "onReset": this.resetFilter,
+              "onApply": this.toggleFilter
+            })
           })] : [])
         ]
       });
@@ -420,13 +420,13 @@ export class _FilterPanel {
                 "bottom": 8.0
               },
               "child": new Text({
-                  "style": {
-                    "fontSize": 12.5,
-                    "fontWeight": "w700",
-                    "color": new Color({value: 0xFF171A21})
-                  },
-                  "data": title
-                })
+                "style": {
+                  "fontSize": 12.5,
+                  "fontWeight": "w700",
+                  "color": new Color({value: 0xFF171A21})
+                },
+                "data": title
+              })
             }),
           new Wrap({
               "spacing": 8,
@@ -435,27 +435,27 @@ export class _FilterPanel {
                 ...(() => { var out = []; for (let v of values) { out.push.apply(out, [new GestureDetector({
                   "onTap": this.__bindFn(0, [key, v], () => this.onPick(key, v)),
                   "child": new Container({
-                      "padding": {
-                        "left": 13.0,
-                        "top": 6.0,
-                        "right": 13.0,
-                        "bottom": 6.0
+                    "padding": {
+                      "left": 13.0,
+                      "top": 6.0,
+                      "right": 13.0,
+                      "bottom": 6.0
+                    },
+                    "decoration": {
+                      "color": ((current == v) ? kBrand : new Color({value: 0xFFF3F5F8})),
+                      "borderRadius": {
+                        "radius": 14.0
+                      }
+                    },
+                    "child": new Text({
+                      "style": {
+                        "fontSize": 12,
+                        "fontWeight": "w500",
+                        "color": ((current == v) ? Colors.white : new Color({value: 0xFF5C6270}))
                       },
-                      "decoration": {
-                        "color": ((current == v) ? kBrand : new Color({value: 0xFFF3F5F8})),
-                        "borderRadius": {
-                          "radius": 14.0
-                        }
-                      },
-                      "child": new Text({
-                          "style": {
-                            "fontSize": 12,
-                            "fontWeight": "w500",
-                            "color": ((current == v) ? Colors.white : new Color({value: 0xFF5C6270}))
-                          },
-                          "data": v
-                        })
+                      "data": v
                     })
+                  })
                 })]); } return out; })()
               ]
             })
@@ -467,87 +467,87 @@ export class _FilterPanel {
         "color": Colors.white,
         "elevation": 8,
         "child": new Padding({
-            "padding": {
-              "left": 16.0,
-              "top": 16.0,
-              "right": 16.0,
-              "bottom": 14.0
-            },
-            "child": new Column({
-                "crossAxisAlignment": "start",
-                "children": [
-                  this._group("排序方式", "sort", this.feed.sorts, this.sort),
-                  (this.__k0 || (this.__k0 = new SizedBox({
-                      "height": 16
-                    }))),
-                  this._group("内容类型", "type", this.feed.postTypes, this.type),
-                  (this.__k0 || (this.__k0 = new SizedBox({
-                      "height": 16
-                    }))),
-                  this._group("距离范围", "dist", this.feed.dists, this.dist),
-                  (this.__k0 || (this.__k0 = new SizedBox({
-                      "height": 16
-                    }))),
-                  this._group("价格区间", "price", this.feed.priceRanges, this.price),
-                  (this.__k1 || (this.__k1 = new SizedBox({
-                      "height": 18
-                    }))),
-                  new Row({
-                      "children": [
-                        new Expanded({
-                            "child": new GestureDetector({
-                                "onTap": this.__bindFn(1, [], (...__a) => this.onReset(...__a)),
-                                "child": new Container({
-                                    "height": 42,
-                                    "alignment": "center",
-                                    "decoration": {
-                                      "color": new Color({value: 0xFFF3F5F8}),
-                                      "borderRadius": {
-                                        "radius": 21.0
-                                      }
-                                    },
-                                    "child": (this.__k2 || (this.__k2 = new Text({
-                                        "data": "重置",
-                                        "style": {
-                                          "color": new Color({value: 0xFF5C6270}),
-                                          "fontSize": 14,
-                                          "fontWeight": "w600"
-                                        }
-                                      })))
-                                  })
-                              })
-                          }),
-                        (this.__k3 || (this.__k3 = new SizedBox({
-                            "width": 10
-                          }))),
-                        new Expanded({
-                            "child": new GestureDetector({
-                                "onTap": this.__bindFn(2, [], (...__a) => this.onApply(...__a)),
-                                "child": new Container({
-                                    "height": 42,
-                                    "alignment": "center",
-                                    "decoration": {
-                                      "color": kBrand,
-                                      "borderRadius": {
-                                        "radius": 21.0
-                                      }
-                                    },
-                                    "child": (this.__k4 || (this.__k4 = new Text({
-                                        "data": "查看结果",
-                                        "style": {
-                                          "color": Colors.white,
-                                          "fontSize": 14,
-                                          "fontWeight": "w600"
-                                        }
-                                      })))
-                                  })
-                              })
+          "padding": {
+            "left": 16.0,
+            "top": 16.0,
+            "right": 16.0,
+            "bottom": 14.0
+          },
+          "child": new Column({
+            "crossAxisAlignment": "start",
+            "children": [
+              this._group("排序方式", "sort", this.feed.sorts, this.sort),
+              (this.__k2 || (this.__k2 = new SizedBox({
+                  "height": 16
+                }))),
+              this._group("内容类型", "type", this.feed.postTypes, this.type),
+              (this.__k2 || (this.__k2 = new SizedBox({
+                  "height": 16
+                }))),
+              this._group("距离范围", "dist", this.feed.dists, this.dist),
+              (this.__k2 || (this.__k2 = new SizedBox({
+                  "height": 16
+                }))),
+              this._group("价格区间", "price", this.feed.priceRanges, this.price),
+              (this.__k3 || (this.__k3 = new SizedBox({
+                  "height": 18
+                }))),
+              new Row({
+                  "children": [
+                    new Expanded({
+                        "child": new GestureDetector({
+                          "onTap": this.__bindFn(1, [], (...__a) => this.onReset(...__a)),
+                          "child": new Container({
+                            "height": 42,
+                            "alignment": "center",
+                            "decoration": {
+                              "color": new Color({value: 0xFFF3F5F8}),
+                              "borderRadius": {
+                                "radius": 21.0
+                              }
+                            },
+                            "child": (this.__k0 || (this.__k0 = new Text({
+                              "data": "重置",
+                              "style": {
+                                "color": new Color({value: 0xFF5C6270}),
+                                "fontSize": 14,
+                                "fontWeight": "w600"
+                              }
+                            })))
                           })
-                      ]
-                    })
-                ]
-              })
+                        })
+                      }),
+                    (this.__k4 || (this.__k4 = new SizedBox({
+                        "width": 10
+                      }))),
+                    new Expanded({
+                        "child": new GestureDetector({
+                          "onTap": this.__bindFn(2, [], (...__a) => this.onApply(...__a)),
+                          "child": new Container({
+                            "height": 42,
+                            "alignment": "center",
+                            "decoration": {
+                              "color": kBrand,
+                              "borderRadius": {
+                                "radius": 21.0
+                              }
+                            },
+                            "child": (this.__k1 || (this.__k1 = new Text({
+                              "data": "查看结果",
+                              "style": {
+                                "color": Colors.white,
+                                "fontSize": 14,
+                                "fontWeight": "w600"
+                              }
+                            })))
+                          })
+                        })
+                      })
+                  ]
+                })
+            ]
           })
+        })
       });
   }
 }
@@ -569,125 +569,124 @@ export class _PostCard {
     return new GestureDetector({
         "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
         "child": new Container({
-            "padding": {
-              "left": 10.0,
-              "top": 10.0,
-              "right": 10.0,
-              "bottom": 10.0
-            },
-            "decoration": {
-              "color": Colors.white,
-              "borderRadius": {
-                "radius": 14.0
-              }
-            },
-            "child": new Row({
-                "crossAxisAlignment": "start",
-                "children": [
-                  new ClipRRect({
-                      "borderRadius": {
-                        "radius": 10.0
-                      },
-                      "child": new Image({
-                          "width": 92,
-                          "height": 92,
-                          "fit": "cover",
-                          "errorBuilder": "_errorBuilder0",
-                          "factory": "network",
-                          "src": this.post.img
-                        })
-                    }),
-                  (this.__k0 || (this.__k0 = new SizedBox({
-                      "width": 11
-                    }))),
-                  new Expanded({
-                      "child": new SizedBox({
-                          "height": 92,
-                          "child": new Column({
-                              "crossAxisAlignment": "start",
-                              "children": [
-                                new Text({
-                                    "maxLines": 1,
-                                    "overflow": "ellipsis",
-                                    "style": {
-                                      "fontSize": 14.5,
-                                      "fontWeight": "w600"
-                                    },
-                                    "data": this.post.title
-                                  }),
-                                (this.__k1 || (this.__k1 = new SizedBox({
-                                    "height": 5
-                                  }))),
-                                new Expanded({
-                                    "child": new Text({
-                                        "maxLines": 2,
-                                        "overflow": "ellipsis",
-                                        "style": {
-                                          "fontSize": 11.5,
-                                          "color": new Color({value: 0xFF8B909A}),
-                                          "height": 1.5
-                                        },
-                                        "data": this.post.sub
-                                      })
-                                  }),
-                                new Row({
-                                    "children": [
-                                      new Container({
-                                          "padding": {
-                                            "left": 5.0,
-                                            "top": 1.0,
-                                            "right": 5.0,
-                                            "bottom": 1.0
-                                          },
-                                          "decoration": {
-                                            "color": new Color({value: 0xFFF3F5F8}),
-                                            "borderRadius": {
-                                              "radius": 5.0
-                                            }
-                                          },
-                                          "child": new Text({
-                                              "style": {
-                                                "fontSize": 10,
-                                                "color": new Color({value: 0xFF5C6270})
-                                              },
-                                              "data": this.post.type
-                                            })
-                                        }),
-                                      (this.__k2 || (this.__k2 = new SizedBox({
-                                          "width": 6
-                                        }))),
-                                      new Text({
-                                          "style": {
-                                            "fontSize": 10.5,
-                                            "color": new Color({value: 0xFFA3A9B4})
-                                          },
-                                          "data": this.post.author + " · " + this.post.time
-                                        }),
-                                      (this.__k3 || (this.__k3 = new Spacer({}))),
-                                      (this.__k4 || (this.__k4 = new Icon({
-                                          "color": new Color({value: 0xFFA3A9B4}),
-                                          "icon": "favorite_border",
-                                          "size": 13
-                                        }))),
-                                      (this.__k5 || (this.__k5 = new SizedBox({
-                                          "width": 3
-                                        }))),
-                                      new Text({
-                                          "style": {
-                                            "fontSize": 10.5,
-                                            "color": new Color({value: 0xFFA3A9B4})
-                                          },
-                                          "data": this._likeText(this.post.like)
-                                        })
-                                    ]
-                                  })
-                              ]
+          "padding": {
+            "left": 10.0,
+            "top": 10.0,
+            "right": 10.0,
+            "bottom": 10.0
+          },
+          "decoration": {
+            "color": Colors.white,
+            "borderRadius": {
+              "radius": 14.0
+            }
+          },
+          "child": new Row({
+            "crossAxisAlignment": "start",
+            "children": [
+              new ClipRRect({
+                  "borderRadius": {
+                    "radius": 10.0
+                  },
+                  "child": Image.network({
+                    "width": 92,
+                    "height": 92,
+                    "fit": "cover",
+                    "errorBuilder": "_errorBuilder0",
+                    "src": this.post.img
+                  })
+                }),
+              (this.__k5 || (this.__k5 = new SizedBox({
+                  "width": 11
+                }))),
+              new Expanded({
+                  "child": new SizedBox({
+                    "height": 92,
+                    "child": new Column({
+                      "crossAxisAlignment": "start",
+                      "children": [
+                        new Text({
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
+                            "style": {
+                              "fontSize": 14.5,
+                              "fontWeight": "w600"
+                            },
+                            "data": this.post.title
+                          }),
+                        (this.__k0 || (this.__k0 = new SizedBox({
+                            "height": 5
+                          }))),
+                        new Expanded({
+                            "child": new Text({
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "style": {
+                                "fontSize": 11.5,
+                                "color": new Color({value: 0xFF8B909A}),
+                                "height": 1.5
+                              },
+                              "data": this.post.sub
                             })
-                        })
+                          }),
+                        new Row({
+                            "children": [
+                              new Container({
+                                  "padding": {
+                                    "left": 5.0,
+                                    "top": 1.0,
+                                    "right": 5.0,
+                                    "bottom": 1.0
+                                  },
+                                  "decoration": {
+                                    "color": new Color({value: 0xFFF3F5F8}),
+                                    "borderRadius": {
+                                      "radius": 5.0
+                                    }
+                                  },
+                                  "child": new Text({
+                                    "style": {
+                                      "fontSize": 10,
+                                      "color": new Color({value: 0xFF5C6270})
+                                    },
+                                    "data": this.post.type
+                                  })
+                                }),
+                              (this.__k1 || (this.__k1 = new SizedBox({
+                                  "width": 6
+                                }))),
+                              new Text({
+                                  "style": {
+                                    "fontSize": 10.5,
+                                    "color": new Color({value: 0xFFA3A9B4})
+                                  },
+                                  "data": this.post.author + " · " + this.post.time
+                                }),
+                              (this.__k2 || (this.__k2 = new Spacer({}))),
+                              (this.__k3 || (this.__k3 = new Icon({
+                                  "color": new Color({value: 0xFFA3A9B4}),
+                                  "icon": "favorite_border",
+                                  "size": 13
+                                }))),
+                              (this.__k4 || (this.__k4 = new SizedBox({
+                                  "width": 3
+                                }))),
+                              new Text({
+                                  "style": {
+                                    "fontSize": 10.5,
+                                    "color": new Color({value: 0xFFA3A9B4})
+                                  },
+                                  "data": this._likeText(this.post.like)
+                                })
+                            ]
+                          })
+                      ]
                     })
-                ]
-              })
+                  })
+                })
+            ]
           })
+        })
       });
   }
   _errorBuilder0(context, e) {
@@ -713,63 +712,62 @@ export class _ResourceCard {
     return new GestureDetector({
         "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
         "child": new Container({
-            "width": 156,
-            "clipBehavior": "antiAlias",
-            "decoration": {
-              "color": Colors.white,
-              "borderRadius": {
-                "radius": 14.0
-              }
-            },
-            "child": new Column({
-                "crossAxisAlignment": "start",
-                "children": [
-                  new SizedBox({
-                      "height": 68,
-                      "child": new Image({
-                          "fit": "cover",
-                          "errorBuilder": "_errorBuilder0",
-                          "factory": "network",
-                          "src": this.resource.img
+          "width": 156,
+          "clipBehavior": "antiAlias",
+          "decoration": {
+            "color": Colors.white,
+            "borderRadius": {
+              "radius": 14.0
+            }
+          },
+          "child": new Column({
+            "crossAxisAlignment": "start",
+            "children": [
+              new SizedBox({
+                  "height": 68,
+                  "child": Image.network({
+                    "fit": "cover",
+                    "errorBuilder": "_errorBuilder0",
+                    "src": this.resource.img
+                  })
+                }),
+              new Padding({
+                  "padding": {
+                    "left": 9.0,
+                    "top": 6.0,
+                    "right": 9.0,
+                    "bottom": 6.0
+                  },
+                  "child": new Column({
+                    "crossAxisAlignment": "start",
+                    "children": [
+                      new Text({
+                          "maxLines": 1,
+                          "overflow": "ellipsis",
+                          "style": {
+                            "fontSize": 12.5,
+                            "fontWeight": "w600"
+                          },
+                          "data": this.resource.title
+                        }),
+                      (this.__k0 || (this.__k0 = new SizedBox({
+                          "height": 2
+                        }))),
+                      new Text({
+                          "maxLines": 1,
+                          "overflow": "ellipsis",
+                          "style": {
+                            "fontSize": 10.5,
+                            "color": new Color({value: 0xFF98A0AC})
+                          },
+                          "data": this.resource.sub
                         })
-                    }),
-                  new Padding({
-                      "padding": {
-                        "left": 9.0,
-                        "top": 6.0,
-                        "right": 9.0,
-                        "bottom": 6.0
-                      },
-                      "child": new Column({
-                          "crossAxisAlignment": "start",
-                          "children": [
-                            new Text({
-                                "maxLines": 1,
-                                "overflow": "ellipsis",
-                                "style": {
-                                  "fontSize": 12.5,
-                                  "fontWeight": "w600"
-                                },
-                                "data": this.resource.title
-                              }),
-                            (this.__k0 || (this.__k0 = new SizedBox({
-                                "height": 2
-                              }))),
-                            new Text({
-                                "maxLines": 1,
-                                "overflow": "ellipsis",
-                                "style": {
-                                  "fontSize": 10.5,
-                                  "color": new Color({value: 0xFF98A0AC})
-                                },
-                                "data": this.resource.sub
-                              })
-                          ]
-                        })
-                    })
-                ]
-              })
+                    ]
+                  })
+                })
+            ]
           })
+        })
       });
   }
   _errorBuilder0(context, e) {

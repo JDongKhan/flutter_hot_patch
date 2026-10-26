@@ -5,7 +5,6 @@ import 'package:build/build.dart' show log;
 import '../../shared/js_widget_defs.dart';
 import 'js_translator.dart';
 import 'js_value.dart';
-import 'value_forms.dart';
 import 'widget_json.dart';
 
 // ===========================================================================
@@ -166,58 +165,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 「哪些类型是 widget」的白名单。
   final Set<String> modelClassNames;
 
-  /// 局部 widget 值 → JS 元素源码；不是可识别构造返回 null。
-  ///
-  /// 覆盖三种形态：
-  ///   - 单个构造：`Text()` / `const Center(...)` / `Image.network(...)`；
-  ///   - 三目：两支都是 widget（或 null）；
-  ///   - 列表：元素逐个是 widget。
-  ///
-  /// 调用方（局部变量 / 字段初始化 / builder 前置语句）在返回 null 时回退到
-  /// 通用值翻译，因此模型构造、标量、普通集合不受影响。
-  @override
-  String? widgetValueJs(Expression e, int depth) {
-    try {
-      if (e is ListLiteral) {
-        if (e.elements.isEmpty) return null;
-        final items = <String>[];
-        for (final el in e.elements) {
-          if (el is! Expression) return null;
-          final item = widgetValueJs(el, depth);
-          if (item == null) return null;
-          items.add(item);
-        }
-        return '[${items.join(', ')}]';
-      }
-      if (e is NullLiteral) return 'null';
-      if (e is ConditionalExpression) {
-        final a = widgetValueJs(e.thenExpression, depth);
-        final b = widgetValueJs(e.elseExpression, depth);
-        if (a == null || b == null) return null;
-        return '(${jsDataExpr(e.condition)} ? $a : $b)';
-      }
-      if (!_isNodeCtor(e)) return null;
-      return renderJs(translate(e), depth);
-    } catch (_) {
-      // 不是可翻译的组件值：交给调用方回退值翻译（不在这里降级成占位）。
-      return null;
-    }
-  }
-
-  /// 构造表达式是否按**元素**翻译：只排除「已知模型类」与「值对象 / 结构化
-  /// 样式」，其余类构造一律按组件处理（不再判断它是不是 widget）。
-  bool _isNodeCtor(Expression e) {
-    final (ctor, _) = ctorOf(e);
-    if (ctor == null) return false;
-    if (e is MethodInvocation) {
-      // 本类方法调用 / 小写开头函数不是组件构造。
-      if (actionByMethod.containsKey(ctor)) return false;
-      if (!isClassName(ctor)) return false;
-    }
-    if (modelClassNames.contains(ctor)) return false;
-    if (isValueCtorName(ctor)) return false;
-    return true;
-  }
 
   /// 有 JS 类实现的 widget 类型（组件、逻辑 widget、builder 代理）。
   /// 由生成器注入（builder 的模板表是唯一事实源）。
@@ -634,6 +581,46 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       usedNodeHelper = true; // 占位结点用 __h('SizedBox', {})
       return _placeholderJs();
     }
+  }
+
+  @override
+  String renderValue(Object? json, int depth) {
+    try {
+      return _renderValueImpl(json, depth);
+    } catch (err) {
+      _warnDegrade('值', json.toString(), err);
+      return 'null';
+    }
+  }
+
+  /// 值渲染：无条件产出 **构造调用**（`new X({...})` / `X.b({...})`）。
+  ///
+  /// 与 [renderJs] 的唯一区别是不切「字符串结点」形态——那个形态是宿主
+  /// widget 的兼容写法，属于结点语境；值语境里同名类总是存在的（注入类或
+  /// 包装类），因此不需要兜底。
+  String _renderValueImpl(Object? json, int depth) {
+    if (json is String) return json;
+    if (json is! Map<String, dynamic>) throw FormatException('无法渲染的值: $json');
+    final type = _semanticType(json['type']);
+    final propsMap = json['props'] is Map<String, dynamic>
+        ? json['props'] as Map<String, dynamic>
+        : null;
+    final productType = importResolver?.call(type);
+    final asClass = productType != null || usesJsClass(type, propsMap);
+    if (productType == null && asClass) {
+      (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
+    } else if (productType == null) {
+      // 包装类 / 注入同名类都在共享包模块里（`new X(props)` 承接元素折算）。
+      (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(type);
+    }
+    return _renderCall(
+      type,
+      json,
+      depth,
+      // 值语境一律按类调用：命名构造走包装类上的同名静态方法。
+      asClass: true,
+      asHostWrapper: true,
+    );
   }
 
   String _renderJsImpl(Object? json, int depth) {
