@@ -1,5 +1,5 @@
 {
-  "avatar": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar&image_size=square",
+  "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&q=80",
   "stats": [
     ["待付款", "1"],
     ["待收货", "1"],

@@ -9,19 +9,19 @@
       "id": "r1",
       "title": "露营地推荐",
       "sub": "12 个营地",
-      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=camping%20tent%20in%20forest%20at%20dusk%20warm%20light&image_size=landscape_4_3"
+      "img": "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=900&h=675&fit=crop&q=80"
     },
     {
       "id": "r2",
       "title": "城市漫步路线",
       "sub": "秋日限定",
-      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=autumn%20city%20street%20walk%20golden%20leaves%20sunlight&image_size=landscape_4_3"
+      "img": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=900&h=675&fit=crop&q=80"
     },
     {
       "id": "r3",
       "title": "海边日落机位",
       "sub": "拍照攻略",
-      "img": "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=seaside%20lighthouse%20at%20sunset%20waves%20rocks&image_size=landscape_4_3"
+      "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&h=675&fit=crop&q=80"
     }
   ]
 }

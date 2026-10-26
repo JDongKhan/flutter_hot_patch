@@ -4,8 +4,8 @@
 
 import { Container, GestureDetector, Text } from '../../flutter.js';
 
-const _avatarImg = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar&image_size=square";
-const _bannerImg = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=aerial%20view%20of%20tropical%20island%20beach%20turquoise%20water%20travel%20photography&image_size=landscape_16_9";
+const _avatarImg = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&q=80";
+const _bannerImg = "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1200&h=675&fit=crop&q=80";
 export const kBrand = new Color({value: 0xFF0E7AFB});
 export const kPrice = new Color({value: 0xFFFF5A36});
 const _steps = ["提交订单", "支付成功", "商家发货", "已完成"];

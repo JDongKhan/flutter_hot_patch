@@ -15,11 +15,11 @@ import '../model/app_models.dart';
 
 /// 详情页评论头像（纯展示）。
 const String _avatarImg =
-    'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar&image_size=square';
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&q=80';
 
 /// WebView 演示页的占位横幅（纯展示）。
 const String _bannerImg =
-    'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=aerial%20view%20of%20tropical%20island%20beach%20turquoise%20water%20travel%20photography&image_size=landscape_16_9';
+    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1200&h=675&fit=crop&q=80';
 
 const Color kBrand = Color(0xFF0E7AFB);
 const Color kPrice = Color(0xFFFF5A36);

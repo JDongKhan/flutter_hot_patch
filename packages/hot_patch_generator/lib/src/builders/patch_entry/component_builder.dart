@@ -457,6 +457,10 @@ String _renderJsProduct(
       ..writeln(dart2js(cls, exported: true));
   }
 
+  // 单例字段值渲染用的 [ctx] 也会收集它用到的类型（字段初值里构造的值对象 /
+  // 组件），一并并入总表，否则产物里 `new X(...)` 会缺 import。
+  _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
+
   // 按 package 拼装模块 import：只 import **有 JS 类的类型**（`Builder` /
   // `ChangeNotifierProvider` / sliver 代理等），元素写成 `__h(Builder, ...)`
   // 需要类引用。宿主 widget 的元素 type 是字符串字面量（`__h('Text', ...)`），

@@ -607,10 +607,15 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         : null;
     final productType = importResolver?.call(type);
     final asClass = productType != null || usesJsClass(type, propsMap);
-    if (productType == null && asClass) {
+    // 值语境一律产出 `new X(...)`，所以 X 必须是**已存在的类**，按来源登记 import：
+    //   - 有 JS 类的类型（逻辑组件 / builder 代理，如 `child: PageView(...)`）
+    //     → 各自 package 模块（flutter.js / provider.js）；
+    //   - 宿主包装类与数据载体（`Text` / `InputDecoration` 等，见
+    //     [hostWrapperTypes]）→ flutter.js。
+    // 两类都漏登记，产物里就会出现「Can't find variable: X」。
+    if (productType == null && (asClass || jsClassWidgets.contains(type))) {
       (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
-    } else if (productType == null && hostWidgetTypes().contains(type)) {
-      // 宿主 widget：flutter.js 有同名包装类（`new X(props)` → `__h('X', props)`）。
+    } else if (productType == null && hostWrapperTypes.contains(type)) {
       (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(type);
     }
     // 其余（`Duration` / `CurvedAnimation` / `Offset` 等注入类）是**全局同名类**：
