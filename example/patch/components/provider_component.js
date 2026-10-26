@@ -148,7 +148,7 @@ export class ProviderCard {
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",
-          "color": '#2196F3'
+          "color": Colors.blue
         },
         "data": "加载用户信息："
       });
@@ -158,7 +158,7 @@ export class ProviderCard {
         "style": {
           "fontSize": 22,
           "fontWeight": "bold",
-          "color": '#4CAF50'
+          "color": Colors.green
         },
         "data": "B = " + value.count
       });

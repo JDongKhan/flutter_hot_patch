@@ -7,10 +7,10 @@ import { Column, ElevatedButton, Row, Text } from '../flutter.js';
 
 // 静态单例类 PanelColors
 export const PanelColors = {
-  background: '#ffff0000',
-  adult: '#ff4caf50',
-  primary: '#ff6750a4',
-  tagline: 'demo'
+  background: new Color({value: 0xFFFF0000}),
+  adult: new Color({value: 0xFF4CAF50}),
+  primary: new Color({value: 0xFF6750A4}),
+  tagline: "demo"
 };
 
 // 组件 HelloCard
@@ -85,7 +85,7 @@ export class HelloCard {
               "style": {
                 "fontSize": 24,
                 "fontWeight": "bold",
-                "color": '#2196F3'
+                "color": Colors.blue
               },
               "data": "Hello from JS logic 4"
             }),
@@ -121,7 +121,7 @@ export class HelloCard {
                     "onPressed": this.__bindFn(0, [], (...__a) => this.inc(...__a)),
                     "style": {
                       "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
-                      "foregroundColor": '#FFFFFF'
+                      "foregroundColor": Colors.white
                     },
                     "child": (this.__k0 || (this.__k0 = new Text({
                         "data": "+1"

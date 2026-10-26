@@ -6,8 +6,8 @@ import { Container, GestureDetector, Text } from '../../flutter.js';
 
 const _avatarImg = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=portrait%20of%20a%20smiling%20young%20woman%20traveler%20avatar&image_size=square";
 const _bannerImg = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=aerial%20view%20of%20tropical%20island%20beach%20turquoise%20water%20travel%20photography&image_size=landscape_16_9";
-export const kBrand = '#ff0e7afb';
-export const kPrice = '#ffff5a36';
+export const kBrand = new Color({value: 0xFF0E7AFB});
+export const kPrice = new Color({value: 0xFFFF5A36});
 const _steps = ["提交订单", "支付成功", "商家发货", "已完成"];
 
 // 组件 MiniButton
@@ -34,20 +34,20 @@ export class MiniButton {
             "height": 32,
             "alignment": "center",
             "decoration": {
-              "color": (this.primary ? kBrand : '#FFFFFF'),
+              "color": (this.primary ? kBrand : Colors.white),
               "borderRadius": {
                 "radius": 14.0
               },
               "border": {
                 "all": {
-                  "color": (this.primary ? kBrand : '#ffdfe4ec')
+                  "color": (this.primary ? kBrand : new Color({value: 0xFFDFE4EC}))
                 }
               }
             },
             "child": new Text({
                 "style": {
                   "fontSize": 12,
-                  "color": (this.primary ? '#FFFFFF' : '#ff4d5462')
+                  "color": (this.primary ? Colors.white : new Color({value: 0xFF4D5462}))
                 },
                 "data": this.label
               })

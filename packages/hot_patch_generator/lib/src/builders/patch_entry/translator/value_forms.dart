@@ -14,6 +14,7 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
+import '../../shared/ctor_signatures.dart';
 import 'style_translators.dart';
 import 'widget2js.dart';
 
@@ -82,13 +83,11 @@ final Map<String, ValueConverter> _ctorConverters = {
   'NetworkImage': (e, c) => imageSourceToJson(e, c),
 };
 
-/// 常量引用 owner 名 → 转换器（枚举 / 颜色 / 图标 / 零值常量）。
+/// 常量引用 owner 名 → 转换器（枚举 / 图标 / 零值常量）。
 ///
-/// 键是 `Owner.name` 里的 `Owner`（`Colors.red` → `'Colors'`）。
+/// 键是 `Owner.name` 里的 `Owner`（`Icons.add` → `'Icons'`）。
 final Map<String, ValueConverter> _constRefConverters = {
-  // 颜色 / 图标
-  'Colors': (e, c) => colorToJson(e, c),
-  'Color': (e, c) => colorToJson(e, c),
+  // 图标
   'Icons': (e, c) => iconDataToJson(e),
   // 对齐 / 布局枚举
   'Alignment': (e, c) => alignmentToJson(e, c),
@@ -251,13 +250,17 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
       // 该类的 JS 模块，裸引用即可解析（与 style_translators.translateColor 同口径）。
       final singleton = ctx.singletons?.staticRef(e);
       if (singleton != null) return singleton;
-      // 其余 `Owner.name`：Dart **枚举**（内建或业务自定义）在 JS 侧没有等价物，
-      // 产物协议用**成员名字符串**表示（运行时各 `xxxFromJson` 按名还原，
-      // 如 `BottomNavigationBarType.fixed` → `"fixed"`）。不转就是裸标识符
-      // `Owner.name` → 运行时 ReferenceError，整个组件挂载失败、页面只剩
-      // 「加载失败」占位。
+      // 其余 `Owner.name`：先查源码索引——owner 是**普通类**（`Colors.red` /
+      // 静态常量类）时按 1:1 原样引用（运行时注入同名类 / 全局常量）；
+      // 是 **enum** 时 Dart 枚举在 JS 侧没有等价物，产物协议用**成员名字符串**
+      // 表示（运行时各 `xxxFromJson` 按名还原，如
+      // `BottomNavigationBarType.fixed` → `"fixed"`）。
       final member = staticMemberOf(e);
       if (member != null && isClassName(owner) && !member.startsWith('_')) {
+        final sigs = CtorSignatures.instance;
+        if (sigs != null && sigs.isClass(owner) && !sigs.isEnum(owner)) {
+          return _jsExprOrNull(e, ctx);
+        }
         return ctx.jsString(member);
       }
     }

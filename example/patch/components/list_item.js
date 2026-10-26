@@ -4,7 +4,7 @@
 
 import { Text } from '../flutter.js';
 
-const _listItemPalette = ['#607D8B', '#009688', '#3F51B5', '#FF5722', '#9C27B0', '#795548'];
+const _listItemPalette = [Colors.blueGrey, Colors.teal, Colors.indigo, Colors.deepOrange, Colors.purple, Colors.brown];
 
 // 组件 CommonListItem
 export class CommonListItem {

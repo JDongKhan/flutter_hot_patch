@@ -101,7 +101,7 @@ export class ExplicitAnimationDetail {
                               "height": 60,
                               "alignment": "center",
                               "decoration": {
-                                "color": '#FF9800',
+                                "color": Colors.orange,
                                 "borderRadius": {
                                   "radius": 12.0
                                 }
@@ -109,7 +109,7 @@ export class ExplicitAnimationDetail {
                               "child": (this.__k9 || (this.__k9 = new Text({
                                   "data": "Fade + Scale",
                                   "style": {
-                                    "color": '#FFFFFF'
+                                    "color": Colors.white
                                   }
                                 })))
                             })
@@ -130,7 +130,7 @@ export class ExplicitAnimationDetail {
                           "height": 60,
                           "alignment": "center",
                           "decoration": {
-                            "color": '#3F51B5',
+                            "color": Colors.indigo,
                             "borderRadius": {
                               "radius": 12.0
                             }
@@ -138,7 +138,7 @@ export class ExplicitAnimationDetail {
                           "child": (this.__k11 || (this.__k11 = new Text({
                               "data": "Rotation",
                               "style": {
-                                "color": '#FFFFFF'
+                                "color": Colors.white
                               }
                             })))
                         })
@@ -155,14 +155,14 @@ export class ExplicitAnimationDetail {
               "height": 120,
               "alignment": "center",
               "decoration": {
-                "color": ((this._controller.value < 0.5) ? '#009688' : '#673AB7'),
+                "color": ((this._controller.value < 0.5) ? Colors.teal : Colors.deepPurple),
                 "borderRadius": {
                   "radius": 16.0
                 }
               },
               "child": new Text({
                   "style": {
-                    "color": '#FFFFFF',
+                    "color": Colors.white,
                     "fontSize": 20,
                     "fontWeight": "w700"
                   },

@@ -29,19 +29,19 @@ export class ImplicitAnimationDetail {
           new Center({
               "child": new AnimatedContainer({
                   "duration": new Duration({milliseconds: 500}),
-                  "curve": "easeInOut",
+                  "curve": Curves.easeInOut,
                   "width": this._big ? 220 : 110,
                   "height": this._big ? 120 : 56,
                   "alignment": "center",
                   "decoration": {
-                    "color": (this._big ? '#673AB7' : '#009688'),
+                    "color": (this._big ? Colors.deepPurple : Colors.teal),
                     "borderRadius": {
                       "radius": 20.0
                     }
                   },
                   "child": new Text({
                       "style": {
-                        "color": '#FFFFFF',
+                        "color": Colors.white,
                         "fontWeight": "w700"
                       },
                       "data": this._big ? "BIG" : "small"
@@ -76,13 +76,13 @@ export class ImplicitAnimationDetail {
                 new AnimatedOpacity({
                     "opacity": this._visible ? 1.0 : 0.2,
                     "duration": new Duration({milliseconds: 400}),
-                    "curve": "easeOut",
+                    "curve": Curves.easeOut,
                     "child": new Container({
                         "width": 56,
                         "height": 56,
                         "alignment": "center",
                         "decoration": {
-                          "color": '#FF9800',
+                          "color": Colors.orange,
                           "borderRadius": {
                             "radius": 12.0
                           }
@@ -90,7 +90,7 @@ export class ImplicitAnimationDetail {
                         "child": (this.__k4 || (this.__k4 = new Text({
                             "data": "透明度",
                             "style": {
-                              "color": '#FFFFFF',
+                              "color": Colors.white,
                               "fontSize": 11
                             }
                           })))
@@ -99,13 +99,13 @@ export class ImplicitAnimationDetail {
                 new AnimatedScale({
                     "scale": this._big ? 1.3 : 1.0,
                     "duration": new Duration({milliseconds: 400}),
-                    "curve": "easeInOut",
+                    "curve": Curves.easeInOut,
                     "child": new Container({
                         "width": 56,
                         "height": 56,
                         "alignment": "center",
                         "decoration": {
-                          "color": '#3F51B5',
+                          "color": Colors.indigo,
                           "borderRadius": {
                             "radius": 12.0
                           }
@@ -113,7 +113,7 @@ export class ImplicitAnimationDetail {
                         "child": (this.__k5 || (this.__k5 = new Text({
                             "data": "缩放",
                             "style": {
-                              "color": '#FFFFFF',
+                              "color": Colors.white,
                               "fontSize": 11
                             }
                           })))
@@ -122,13 +122,13 @@ export class ImplicitAnimationDetail {
                 new AnimatedRotation({
                     "turns": this._moved ? 0.25 : 0.0,
                     "duration": new Duration({milliseconds: 400}),
-                    "curve": "easeInOut",
+                    "curve": Curves.easeInOut,
                     "child": new Container({
                         "width": 56,
                         "height": 56,
                         "alignment": "center",
                         "decoration": {
-                          "color": '#E91E63',
+                          "color": Colors.pink,
                           "borderRadius": {
                             "radius": 12.0
                           }
@@ -136,7 +136,7 @@ export class ImplicitAnimationDetail {
                         "child": (this.__k6 || (this.__k6 = new Text({
                             "data": "旋转",
                             "style": {
-                              "color": '#FFFFFF',
+                              "color": Colors.white,
                               "fontSize": 11
                             }
                           })))
@@ -145,13 +145,13 @@ export class ImplicitAnimationDetail {
                 new AnimatedSlide({
                     "offset": this._moved ? new Offset({dx: 0.25, dy: 0}) : new Offset({dx: 0, dy: 0}),
                     "duration": new Duration({milliseconds: 400}),
-                    "curve": "easeInOut",
+                    "curve": Curves.easeInOut,
                     "child": new Container({
                         "width": 56,
                         "height": 56,
                         "alignment": "center",
                         "decoration": {
-                          "color": '#795548',
+                          "color": Colors.brown,
                           "borderRadius": {
                             "radius": 12.0
                           }
@@ -159,7 +159,7 @@ export class ImplicitAnimationDetail {
                         "child": (this.__k7 || (this.__k7 = new Text({
                             "data": "位移",
                             "style": {
-                              "color": '#FFFFFF',
+                              "color": Colors.white,
                               "fontSize": 11
                             }
                           })))
@@ -208,15 +208,15 @@ export class ImplicitAnimationDetail {
           new AnimatedCrossFade({
               "duration": new Duration({milliseconds: 450}),
               "crossFadeState": this._visible ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-              "firstCurve": "easeOut",
-              "secondCurve": "easeIn",
+              "firstCurve": Curves.easeOut,
+              "secondCurve": Curves.easeIn,
               "alignment": "center",
               "firstChild": new Container({
                   "width": 80,
                   "height": 80,
                   "alignment": "center",
                   "decoration": {
-                    "color": '#4CAF50',
+                    "color": Colors.green,
                     "borderRadius": {
                       "radius": 12.0
                     }
@@ -224,7 +224,7 @@ export class ImplicitAnimationDetail {
                   "child": (this.__k9 || (this.__k9 = new Text({
                       "data": "A",
                       "style": {
-                        "color": '#FFFFFF'
+                        "color": Colors.white
                       }
                     })))
                 }),
@@ -233,7 +233,7 @@ export class ImplicitAnimationDetail {
                   "height": 80,
                   "alignment": "center",
                   "decoration": {
-                    "color": '#F44336',
+                    "color": Colors.red,
                     "borderRadius": {
                       "radius": 12.0
                     }
@@ -241,7 +241,7 @@ export class ImplicitAnimationDetail {
                   "child": (this.__k10 || (this.__k10 = new Text({
                       "data": "B",
                       "style": {
-                        "color": '#FFFFFF'
+                        "color": Colors.white
                       }
                     })))
                 })

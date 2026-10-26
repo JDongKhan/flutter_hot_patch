@@ -136,6 +136,9 @@ class CtorSignatures {
   /// 类名 → 候选源文件绝对路径（按包优先级排序；同名类可能存在于多个包）。
   Map<String, List<String>>? _classFiles;
 
+  /// 源码里声明的 enum 名（与类索引同一次扫描建立）。
+  final Set<String> _enumNames = {};
+
   /// 已解析的编译单元缓存（同一文件只读一次）。
   final Map<String, CompilationUnit?> _units = {};
 
@@ -200,6 +203,18 @@ class CtorSignatures {
     return names;
   }
 
+  /// 源码索引：该名字是否是**枚举**（`Colors` 这类静态常量类是 class，不是 enum）。
+  ///
+  /// 翻译层用它区分 `Owner.member` 的两种语义：enum 成员 → 成员名字符串
+  /// （产物协议），普通类的静态常量 → 1:1 原样引用（运行时注入同名类）。
+  bool isEnum(String name) {
+    _ensureIndex();
+    return _enumNames.contains(name);
+  }
+
+  /// 源码索引：该名字是否有 **class** 声明（含 `abstract final class` 等多修饰符）。
+  bool isClass(String name) => _ensureIndex().containsKey(name);
+
   /// 抽单个类的构造签名；[ctorName] 指定的构造不存在时返回 null。
   CtorSignature? _signatureOf(ClassDeclaration decl, String? ctorName) {
     for (final m in decl.members) {
@@ -248,14 +263,27 @@ class CtorSignatures {
           final name = m.group(1);
           if (name != null) index.putIfAbsent(name, () => []).add(entity.path);
         }
+        for (final m in _enumDecl.allMatches(content)) {
+          final name = m.group(1);
+          if (name != null) _enumNames.add(name);
+        }
       }
     }
     return _classFiles = index;
   }
 
-  /// `class Foo` / `abstract class Foo` / `sealed class Foo` 的类名（跳过注释里的）。
-  static final _classDecl =
-      RegExp(r'^[ \t]*(?:abstract|sealed|base|final|interface)?[ \t]*class[ \t]+([A-Za-z_$][\w$]*)', multiLine: true);
+  /// `class Foo` / `abstract class Foo` / `abstract final class Foo` 等的类名
+  /// （跳过注释里的）。修饰符可叠加，故用重复组。
+  static final _classDecl = RegExp(
+    r'^[ \t]*(?:(?:abstract|sealed|base|final|interface|augment)[ \t]+)*class[ \t]+([A-Za-z_$][\w$]*)',
+    multiLine: true,
+  );
+
+  /// `enum Foo` / `sealed enum Foo` 的枚举名（跳过注释里的）。
+  static final _enumDecl = RegExp(
+    r'^[ \t]*(?:(?:sealed)[ \t]+)?enum[ \t]+([A-Za-z_$][\w$]*)',
+    multiLine: true,
+  );
 }
 
 String _join(String a, String b) =>

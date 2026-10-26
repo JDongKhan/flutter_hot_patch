@@ -178,80 +178,24 @@ String? _fontStyleExpr(Expression e) {
   return name == null ? null : '"$name"';
 }
 
-/// Colors.red → '#F44336'；Color(0xFF112233) → '#112233'；Colors.white/black。
-/// 跨文件静态单例类字段引用（MyColors.background）→ JS 表达式
-/// 'MyColors.background'（不带引号，jsLiteral 原样输出）。
+/// 颜色值 → JS 表达式（1:1 透传）。
+///
+/// `Colors.red` / `Colors.red.shade300` / `Color(0xFF112233)` /
+/// `Color.fromARGB(...)` 一律是普通表达式：`Colors` 是本构建期从 SDK
+/// `colors.dart` 自动抽取的全局常量表，`Color` 是运行时注入的同名类。
+/// 跨桥序列化只由 `Color.prototype.toJSON`（`'#AARRGGBB'`）承担，宿主
+/// `colorFromJson` 还原——翻译层不持有任何色值表，SDK 新增颜色零改动。
+///
+/// 跨文件静态单例类字段引用（`MyColors.background`）额外登记 import 依赖。
 String? translateColor(Expression e, WidgetTranslateContext ctx) {
-  // Color(0xFF...)
-  final (ctor, args) = _ctorOfExpr(e);
-  if (ctor == 'Color') {
-    for (final a in args) {
-      if (a is IntegerLiteral) {
-        final v = a.value;
-        if (v == null) return null;
-        final hex = v.toRadixString(16).padLeft(8, '0');
-        return "'#$hex'";
-      }
-      if (a is MethodInvocation && a.methodName.name == 'fromARGB') {
-        // Color.fromARGB(a, r, g, b)
-        final ints = a.argumentList.arguments
-            .whereType<IntegerLiteral>()
-            .map((x) => x.value)
-            .whereType<int>()
-            .toList();
-        if (ints.length == 4) {
-          final hex = ints
-              .map((x) => x.clamp(0, 255).toRadixString(16).padLeft(2, '0'))
-              .join();
-          return "'#$hex'";
-        }
-      }
-    }
-    return null;
-  }
-  // Colors.red（静态引用）：主色板表与通用表达式层共用同一份。
-  final (owner, name) = _staticRef(e);
-  if (owner == 'Colors') {
-    final hex = materialColorHex(name ?? '');
-    if (hex != null) return "'#$hex'";
-    return null;
-  }
-  // Colors.blue.shade100 等 MaterialColor 变体：**编译期**按 Material 色板表
-  // 算成 '#RRGGBB'（见 [materialShadeHex]），产物里不再有 '@Colors…' 标记。
-  if (owner != null && owner.startsWith('Colors.')) {
-    final shade = shadeIndex(name ?? '');
-    if (shade != null) {
-      final hex = materialShadeHex(owner.substring('Colors.'.length), shade);
-      if (hex != null) return "'#$hex'";
-    }
-    return null;
-  }
-  // 跨文件静态单例类字段引用（MyColors.background）→ JS 表达式
   final singleton = ctx.singletons?.staticRef(e);
   if (singleton != null) return singleton;
-  // 三目（isAdult ? MyColors.adult : MyColors.background）→ JS 三目表达式
-  if (e is ConditionalExpression) {
-    final condJs = ctx.jsDataExpr(e.condition);
-    final thenJs = translateColor(e.thenExpression, ctx);
-    final elseJs = translateColor(e.elseExpression, ctx);
-    if (thenJs == null || elseJs == null) return null;
-    return '($condJs ? $thenJs : $elseJs)';
+  try {
+    final js = ctx.jsDataExpr(e);
+    return js == 'null' ? null : js;
+  } catch (_) {
+    return null;
   }
-  // 具名颜色常量（`kBrand` / `kPrice` / `_menuTints`）：常量在产物里已经译成
-  // 色值字符串（同文件内联 / 跨文件 import），直接引用同名 JS 常量即可。
-  if (e is SimpleIdentifier && ctx.globalConsts.contains(e.name)) {
-    return e.name;
-  }
-  // 常量颜色表索引（`_menuTints[i % _menuTints.length]`）：常量表在产物顶部是
-  // 「颜色字符串数组」（值已是色值契约里的字符串），索引取值直接产出 JS 索引
-  // 表达式即可，无需在 JS 侧再翻译颜色。
-  if (e is IndexExpression && e.target is SimpleIdentifier) {
-    final name = (e.target as SimpleIdentifier).name;
-    if (ctx.globalConsts.contains(name)) {
-      return '$name[${ctx.jsDataExpr(e.index)}]';
-    }
-  }
-  return null;
 }
 
 /// WidgetStatePropertyAll(color) 解包（ButtonStyle 里常用）。
@@ -296,8 +240,7 @@ Expression _unwrapWidgetState(Expression e) {
   return (null, const []);
 }
 
-/// Material 主色板（500 档）→ hex 表已收敛到通用表达式层（js_translator.dart
-/// 的 [materialColors]），样式翻译与数据表达式共用同一份，见 [materialColorHex]。
+// 颜色已无任何编译期色表：见 [translateColor]（1:1 透传 + 运行时序列化）。
 
 // ---------------------------------------------------------------------------
 // 新增辅助 toJson（ButtonStyle 扩展 / Text 属性扩展共用）
@@ -610,8 +553,8 @@ String? _radiusValue(Expression e) {
   return null;
 }
 
-/// Colors.xxx / Color(0x...) → JS 字符串字面量（'#RRGGBB' / '#AARRGGBB'）。
-/// 公共包装：widget translator 直接调用；内部实现在 [translateColor]。
+/// 颜色值 → JS 表达式（1:1 透传，见 [translateColor]）。
+/// 公共包装：widget translator 直接调用。
 String? colorToJson(Expression? expr, WidgetTranslateContext ctx) {
   if (expr == null) return null;
   return translateColor(expr, ctx);

@@ -28,7 +28,7 @@ export class TextDetail {
             }))),
           new Text({
               "style": {
-                "color": '#2196F3',
+                "color": Colors.blue,
                 "fontSize": 16
               },
               "data": "普通文本，count = " + this._count + "（状态插值）"
@@ -57,7 +57,7 @@ export class TextDetail {
               "textAlign": "center",
               "style": {
                 "decoration": "underline",
-                "decorationColor": '#FF9800',
+                "decorationColor": Colors.orange,
                 "decorationStyle": "wavy"
               },
               "data": "textAlign 居中,He said \"hi\""
@@ -69,10 +69,10 @@ export class TextDetail {
               "softWrap": false,
               "style": {
                 "fontSize": 12,
-                "color": '#9E9E9E',
+                "color": Colors.grey,
                 "wordSpacing": 2,
                 "letterSpacing": 1,
-                "backgroundColor": '#ffffe082'
+                "backgroundColor": new Color({value: 0xFFFFE082})
               },
               "data": "softWrap=false 不换行测试"
             }),
@@ -131,14 +131,14 @@ export class ButtonDetail {
                   "bottom": 12.0
                 },
                 "elevation": 6,
-                "shadowColor": '#673AB7',
+                "shadowColor": Colors.deepPurple,
                 "textStyle": {
                   "fontSize": 18,
                   "fontWeight": "bold",
                   "letterSpacing": 2
                 },
-                "backgroundColor": '#009688',
-                "foregroundColor": '#FFFFFF'
+                "backgroundColor": Colors.teal,
+                "foregroundColor": Colors.white
               },
               "child": (this.__k1 || (this.__k1 = new Text({
                   "data": "Elevated · Styled"
@@ -164,7 +164,7 @@ export class ButtonDetail {
                   "fontSize": 14,
                   "letterSpacing": 1
                 },
-                "foregroundColor": '#3F51B5'
+                "foregroundColor": Colors.indigo
               },
               "child": (this.__k2 || (this.__k2 = new Text({
                   "data": "TextButton"
@@ -177,7 +177,7 @@ export class ButtonDetail {
               "onPressed": this.__bindFn(2, [], (...__a) => this.onTap(...__a)),
               "style": {
                 "side": {
-                  "color": '#FF9800',
+                  "color": Colors.orange,
                   "width": 2
                 },
                 "minimumSize": {
@@ -190,7 +190,7 @@ export class ButtonDetail {
                     "radius": 20.0
                   }
                 },
-                "foregroundColor": '#FF5722'
+                "foregroundColor": Colors.deepOrange
               },
               "child": (this.__k3 || (this.__k3 = new Text({
                   "data": "OutlinedButton"
@@ -230,7 +230,7 @@ export class LayoutDetail {
                 new Expanded({
                     "flex": 1,
                     "child": new Container({
-                        "color": '#BBDEFB',
+                        "color": Colors.blue.shade100,
                         "padding": {
                           "left": 8.0,
                           "top": 8.0,
@@ -249,7 +249,7 @@ export class LayoutDetail {
                 new Expanded({
                     "flex": 2,
                     "child": new Container({
-                        "color": '#C8E6C9',
+                        "color": Colors.green.shade100,
                         "padding": {
                           "left": 8.0,
                           "top": 8.0,
@@ -276,7 +276,7 @@ export class LayoutDetail {
             }))),
           new Center({
               "child": new Container({
-                  "color": '#FFECB3',
+                  "color": Colors.amber.shade100,
                   "padding": {
                     "left": 12.0,
                     "top": 12.0,
@@ -294,7 +294,7 @@ export class LayoutDetail {
           new Align({
               "alignment": "centerLeft",
               "child": new Container({
-                  "color": '#F3E5F5',
+                  "color": Colors.purple.shade50,
                   "padding": {
                     "left": 8.0,
                     "top": 8.0,
@@ -337,13 +337,13 @@ export class LayoutDetail {
                   "clipBehavior": "hardEdge",
                   "children": [
                     new Container({
-                        "color": '#EEEEEE'
+                        "color": Colors.grey.shade200
                       }),
                     new Positioned({
                         "child": new Center({
                             "child": new Text({
                                 "style": {
-                                  "color": '#FFFFFF',
+                                  "color": Colors.white,
                                   "fontWeight": "bold"
                                 },
                                 "data": "FILL"
@@ -390,7 +390,7 @@ export class LayoutDetail {
                   "label": new Text({
                       "data": "chip " + i
                     }),
-                  "backgroundColor": '#E0F2F1'
+                  "backgroundColor": Colors.teal.shade50
                 })]); } return out; })()
               ]
             }),
@@ -407,7 +407,7 @@ export class LayoutDetail {
           new Opacity({
               "opacity": 0.5,
               "child": new Container({
-                  "color": '#F44336',
+                  "color": Colors.red,
                   "padding": {
                     "left": 8.0,
                     "top": 8.0,
@@ -428,7 +428,7 @@ export class LayoutDetail {
                 "maxWidth": 200
               },
               "child": new Container({
-                  "color": '#FFE0B2',
+                  "color": Colors.orange.shade100,
                   "padding": {
                     "left": 8.0,
                     "top": 8.0,
@@ -446,7 +446,7 @@ export class LayoutDetail {
           new AspectRatio({
               "aspectRatio": 1.78,
               "child": new Container({
-                  "color": '#C5CAE9',
+                  "color": Colors.indigo.shade100,
                   "alignment": "center",
                   "child": (this.__k17 || (this.__k17 = new Text({
                       "data": "16:9 比例"
@@ -460,7 +460,7 @@ export class LayoutDetail {
               "widthFactor": 0.6,
               "alignment": "center",
               "child": new Container({
-                  "color": '#F8BBD0',
+                  "color": Colors.pink.shade100,
                   "padding": {
                     "left": 8.0,
                     "top": 8.0,
@@ -538,7 +538,7 @@ export class ImageDetail {
           new Row({
               "children": [
                 (this.__k4 || (this.__k4 = new Icon({
-                    "color": '#FFC107',
+                    "color": Colors.amber,
                     "icon": "star",
                     "size": 28
                   }))),
@@ -546,7 +546,7 @@ export class ImageDetail {
                     "width": 12
                   }))),
                 (this.__k6 || (this.__k6 = new Icon({
-                    "color": '#2196F3',
+                    "color": Colors.blue,
                     "icon": "home",
                     "size": 28
                   }))),
@@ -554,7 +554,7 @@ export class ImageDetail {
                     "width": 12
                   }))),
                 (this.__k7 || (this.__k7 = new Icon({
-                    "color": '#F44336',
+                    "color": Colors.red,
                     "icon": "favorite",
                     "size": 28
                   }))),
@@ -563,10 +563,10 @@ export class ImageDetail {
                   }))),
                 new CircleAvatar({
                     "radius": 20,
-                    "backgroundColor": '#009688',
+                    "backgroundColor": Colors.teal,
                     "child": new Text({
                         "style": {
-                          "color": '#FFFFFF'
+                          "color": Colors.white
                         },
                         "data": "AV"
                       })
@@ -602,7 +602,7 @@ export class ContainerDetail {
                 "bottom": 16.0
               },
               "decoration": {
-                "color": '#009688',
+                "color": Colors.teal,
                 "borderRadius": {
                   "radius": 12.0
                 }
@@ -610,7 +610,7 @@ export class ContainerDetail {
               "child": (this.__k1 || (this.__k1 = new Text({
                   "data": "容器内容（teal 圆角）",
                   "style": {
-                    "color": '#FFFFFF'
+                    "color": Colors.white
                   }
                 })))
             }),
@@ -635,8 +635,8 @@ export class ContainerDetail {
                 "gradient": {
                   "kind": "linear",
                   "colors": [
-                    '#2196F3',
-                    '#9C27B0'
+                    Colors.blue,
+                    Colors.purple
                   ],
                   "begin": "topLeft",
                   "end": "bottomRight"
@@ -646,13 +646,13 @@ export class ContainerDetail {
                 },
                 "border": {
                   "all": {
-                    "color": '#FFFFFF',
+                    "color": Colors.white,
                     "width": 2
                   }
                 },
                 "boxShadow": [
                   {
-                    "color": '#66000000',
+                    "color": new Color({value: 0x66000000}),
                     "dx": 0,
                     "dy": 4,
                     "blur": 12,
@@ -663,7 +663,7 @@ export class ContainerDetail {
               "child": (this.__k4 || (this.__k4 = new Text({
                   "data": "渐变 + 边框 + 阴影",
                   "style": {
-                    "color": '#FFFFFF'
+                    "color": Colors.white
                   }
                 })))
             }),
@@ -679,10 +679,10 @@ export class ContainerDetail {
             }))),
           new DecoratedBox({
               "decoration": {
-                "color": '#FFECB3',
+                "color": Colors.amber.shade100,
                 "border": {
                   "all": {
-                    "color": '#FFC107',
+                    "color": Colors.amber,
                     "width": 2
                   }
                 },
@@ -714,14 +714,14 @@ export class ContainerDetail {
             }))),
           new Card({
               "elevation": 4,
-              "shadowColor": '#673AB7',
+              "shadowColor": Colors.deepPurple,
               "shape": {
                 "kind": "rounded",
                 "borderRadius": {
                   "radius": 16.0
                 },
                 "side": {
-                  "color": '#673AB7',
+                  "color": Colors.deepPurple,
                   "width": 1
                 }
               },
@@ -756,7 +756,7 @@ export class ContainerDetail {
               "width": 120,
               "height": 48,
               "alignment": "center",
-              "color": '#CFD8DC',
+              "color": Colors.blueGrey.shade100,
               "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "固定 120×48"
                 })))
@@ -917,7 +917,7 @@ export class ScrollDetail {
       return new ListTile({
         "dense": true,
         "leading": new Icon({
-            "color": '#4DB6AC',
+            "color": Colors.teal.shade300,
             "icon": "arrow_right"
           }),
         "title": new Text({
@@ -982,8 +982,8 @@ export class SliverDetail {
                   "title": new Text({
                       "data": "SliverAppBar 导航 · offset " + this._offset.toStringAsFixed(0)
                     }),
-                  "backgroundColor": '#673AB7',
-                  "foregroundColor": '#FFFFFF',
+                  "backgroundColor": Colors.deepPurple,
+                  "foregroundColor": Colors.white,
                   "pinned": true,
                   "floating": true,
                   "actions": [
@@ -1018,7 +1018,7 @@ export class SliverDetail {
                         "bottom": 16.0
                       },
                       "decoration": {
-                        "color": '#EDE7F6',
+                        "color": Colors.deepPurple.shade50,
                         "borderRadius": {
                           "radius": 12.0
                         }
@@ -1047,7 +1047,7 @@ export class SliverDetail {
                         "bottom": 10.0
                       },
                       "decoration": {
-                        "color": '#E0F2F1',
+                        "color": Colors.teal.shade50,
                         "borderRadius": {
                           "radius": 8.0
                         }
@@ -1055,7 +1055,7 @@ export class SliverDetail {
                       "child": new Text({
                           "style": {
                             "fontSize": 13,
-                            "color": '#009688'
+                            "color": Colors.teal
                           },
                           "data": "GlobalKey 测量：「固定高度」分区 " + this._measureText
                         })
@@ -1074,7 +1074,7 @@ export class SliverDetail {
                         "children": [
                           ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new ListTile({
                             "leading": (this.__k0 || (this.__k0 = new Icon({
-                                "color": '#673AB7',
+                                "color": Colors.deepPurple,
                                 "icon": "list"
                               }))),
                             "title": new Text({
@@ -1163,7 +1163,7 @@ export class SliverDetail {
                             "bottom": 8.0
                           },
                           "decoration": {
-                            "color": '#E0F2F1',
+                            "color": Colors.teal.shade50,
                             "borderRadius": {
                               "radius": 6.0
                             }
@@ -1239,7 +1239,7 @@ export class SliverDetail {
                       "child": new Center({
                           "child": new Text({
                               "style": {
-                                "color": '#9E9E9E'
+                                "color": Colors.grey
                               },
                               "data": "底部 · SliverSafeArea + SliverFillRemaining"
                             })
@@ -1250,8 +1250,8 @@ export class SliverDetail {
           }),
         "floatingActionButton": new FloatingActionButton({
             "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
-            "backgroundColor": '#673AB7',
-            "foregroundColor": '#FFFFFF',
+            "backgroundColor": Colors.deepPurple,
+            "foregroundColor": Colors.white,
             "tooltip": "跳到底",
             "child": (this.__k5 || (this.__k5 = new Icon({
                 "icon": "arrow_downward"
@@ -1262,7 +1262,7 @@ export class SliverDetail {
   _itemBuilder0(context, index) {
       return new ListTile({
         "leading": new Icon({
-            "color": '#F57C00',
+            "color": Colors.orange.shade700,
             "icon": "build"
           }),
         "title": new Text({
@@ -1277,7 +1277,7 @@ export class SliverDetail {
       return new ListTile({
         "dense": true,
         "leading": (this.__k6 || (this.__k6 = new Icon({
-            "color": '#673AB7',
+            "color": Colors.deepPurple,
             "icon": "arrow_right"
           }))),
         "title": new Text({
@@ -1294,7 +1294,7 @@ export class SliverDetail {
       return new ListTile({
         "dense": true,
         "leading": (this.__k8 || (this.__k8 = new Icon({
-            "color": '#009688',
+            "color": Colors.teal,
             "icon": "height"
           }))),
         "title": new Text({
@@ -1305,7 +1305,7 @@ export class SliverDetail {
   _itemBuilder4(context, index) {
       return new Container({
         "decoration": {
-          "color": '#B2DFDB',
+          "color": Colors.teal.shade100,
           "borderRadius": {
             "radius": 8.0
           }
@@ -1339,18 +1339,18 @@ export class GridDetail {
   }
   build(context) {
     return new Scaffold({
-        "backgroundColor": '#FAFAFA',
+        "backgroundColor": Colors.grey.shade50,
         "appBar": new AppBar({
             "title": (this.__k0 || (this.__k0 = new Text({
                 "data": "GridView 懒加载验证"
               }))),
-            "backgroundColor": '#009688',
-            "foregroundColor": '#FFFFFF'
+            "backgroundColor": Colors.teal,
+            "foregroundColor": Colors.white
           }),
         "floatingActionButton": new FloatingActionButton({
             "onPressed": this.__bindFn(0, [], (...__a) => this._jumpBottom(...__a)),
-            "backgroundColor": '#009688',
-            "foregroundColor": '#FFFFFF',
+            "backgroundColor": Colors.teal,
+            "foregroundColor": Colors.white,
             "tooltip": "跳到底",
             "child": (this.__k1 || (this.__k1 = new Icon({
                 "icon": "arrow_downward"
@@ -1369,7 +1369,7 @@ export class GridDetail {
                   "child": new Text({
                       "style": {
                         "fontSize": 13,
-                        "color": '#9E9E9E'
+                        "color": Colors.grey
                       },
                       "data": "controller offset: " + this._offset.toStringAsFixed(1)
                     })
@@ -1438,7 +1438,7 @@ export class GridDetail {
   _itemBuilder0(context, index) {
       return new Container({
         "decoration": {
-          "color": '#B2DFDB',
+          "color": Colors.teal.shade100,
           "borderRadius": {
             "radius": 8.0
           }
@@ -1455,7 +1455,7 @@ export class GridDetail {
   _itemBuilder1(context, index) {
       return new Container({
         "decoration": {
-          "color": '#FFE0B2',
+          "color": Colors.orange.shade100,
           "borderRadius": {
             "radius": 8.0
           }
@@ -1484,7 +1484,7 @@ export class ScaffoldDetail {
   }
   build(context) {
     return new Scaffold({
-        "backgroundColor": '#FAFAFA',
+        "backgroundColor": Colors.grey.shade50,
         "appBar": new AppBar({
             "leading": (this.__k0 || (this.__k0 = new Icon({
                 "icon": "menu"
@@ -1492,14 +1492,14 @@ export class ScaffoldDetail {
             "title": (this.__k1 || (this.__k1 = new Text({
                 "data": "Scaffold / AppBar / FAB / BottomNav"
               }))),
-            "backgroundColor": '#673AB7',
-            "foregroundColor": '#FFFFFF',
+            "backgroundColor": Colors.deepPurple,
+            "foregroundColor": Colors.white,
             "elevation": 4,
             "centerTitle": true,
             "toolbarHeight": 56,
             "actions": [
               new Icon({
-                  "color": '#FFFFFF',
+                  "color": Colors.white,
                   "icon": "search"
                 }),
               new SizedBox({
@@ -1513,7 +1513,7 @@ export class ScaffoldDetail {
                     "mainAxisAlignment": "center",
                     "children": [
                       (this.__k2 || (this.__k2 = new Icon({
-                          "color": '#673AB7',
+                          "color": Colors.deepPurple,
                           "icon": "extension",
                           "size": 48
                         }))),
@@ -1532,8 +1532,8 @@ export class ScaffoldDetail {
           }),
         "floatingActionButton": new FloatingActionButton({
             "onPressed": this.__bindFn(0, [], (...__a) => this._onFab(...__a)),
-            "backgroundColor": '#673AB7',
-            "foregroundColor": '#FFFFFF',
+            "backgroundColor": Colors.deepPurple,
+            "foregroundColor": Colors.white,
             "tooltip": "添加",
             "child": (this.__k5 || (this.__k5 = new Icon({
                 "icon": "add"
@@ -1542,8 +1542,8 @@ export class ScaffoldDetail {
         "bottomNavigationBar": new BottomNavigationBar({
             "currentIndex": this._navIndex,
             "onTap": this.__bindFn(1, [], (...__a) => this._onNavTap(...__a)),
-            "selectedItemColor": '#673AB7',
-            "unselectedItemColor": '#9E9E9E',
+            "selectedItemColor": Colors.deepPurple,
+            "unselectedItemColor": Colors.grey,
             "items": [
               new BottomNavigationBarItem({
                   "icon": new Icon({
@@ -1636,14 +1636,14 @@ export class InputDetail {
           new Text({
               "style": {
                 "fontSize": 14,
-                "color": '#9E9E9E'
+                "color": Colors.grey
               },
               "data": "输入内容：" + this._text
             }),
           new Text({
               "style": {
                 "fontSize": 14,
-                "color": '#673AB7'
+                "color": Colors.deepPurple
               },
               "data": "controller.text：" + this._controller.text
             }),
@@ -1675,7 +1675,7 @@ export class InputDetail {
                     "value": "A",
                     "groupValue": this._choice,
                     "onChanged": this.__bindFn(2, [], (...__a) => this._onChoiceChanged(...__a)),
-                    "activeColor": '#673AB7'
+                    "activeColor": Colors.deepPurple
                   }),
                 (this.__k7 || (this.__k7 = new Text({
                     "data": "选项 A"
@@ -1684,7 +1684,7 @@ export class InputDetail {
                     "value": "B",
                     "groupValue": this._choice,
                     "onChanged": this.__bindFn(3, [], (...__a) => this._onChoiceChanged(...__a)),
-                    "activeColor": '#673AB7'
+                    "activeColor": Colors.deepPurple
                   }),
                 (this.__k8 || (this.__k8 = new Text({
                     "data": "选项 B"
@@ -1694,7 +1694,7 @@ export class InputDetail {
           new Text({
               "style": {
                 "fontSize": 14,
-                "color": '#9E9E9E'
+                "color": Colors.grey
               },
               "data": "当前选择：" + this._choice
             }),
@@ -1741,10 +1741,10 @@ export class InputDetail {
                 new Switch({
                     "value": this._switchOn,
                     "onChanged": this.__bindFn(5, [], (...__a) => this._onSwitchChanged(...__a)),
-                    "activeColor": '#FFFFFF',
-                    "activeTrackColor": '#673AB7',
-                    "inactiveThumbColor": '#9E9E9E',
-                    "inactiveTrackColor": '#E0E0E0'
+                    "activeColor": Colors.white,
+                    "activeTrackColor": Colors.deepPurple,
+                    "inactiveThumbColor": Colors.grey,
+                    "inactiveTrackColor": Colors.grey.shade300
                   }),
                 (this.__k10 || (this.__k10 = new SizedBox({
                     "width": 8
@@ -1759,8 +1759,8 @@ export class InputDetail {
                 new Checkbox({
                     "value": this._checked,
                     "onChanged": this.__bindFn(6, [], (...__a) => this._onCheckChanged(...__a)),
-                    "activeColor": '#673AB7',
-                    "checkColor": '#FFFFFF'
+                    "activeColor": Colors.deepPurple,
+                    "checkColor": Colors.white
                   }),
                 (this.__k10 || (this.__k10 = new SizedBox({
                     "width": 8
@@ -1785,8 +1785,8 @@ export class InputDetail {
               "max": 1,
               "divisions": 10,
               "label": ((this._slider * 100)).round() + "%",
-              "activeColor": '#673AB7',
-              "inactiveColor": '#E0E0E0',
+              "activeColor": Colors.deepPurple,
+              "inactiveColor": Colors.grey.shade300,
               "onChanged": this.__bindFn(7, [], (...__a) => this._onSliderChanged(...__a))
             })
         ]
@@ -1818,8 +1818,8 @@ export class ProgressDetail {
               "children": [
                 new CircularProgressIndicator({
                     "value": this._progress,
-                    "color": '#673AB7',
-                    "backgroundColor": '#EDE7F6',
+                    "color": Colors.deepPurple,
+                    "backgroundColor": Colors.deepPurple.shade50,
                     "strokeWidth": 6
                   }),
                 (this.__k2 || (this.__k2 = new SizedBox({
@@ -1843,8 +1843,8 @@ export class ProgressDetail {
             }))),
           new LinearProgressIndicator({
               "value": this._progress,
-              "color": '#673AB7',
-              "backgroundColor": '#EDE7F6',
+              "color": Colors.deepPurple,
+              "backgroundColor": Colors.deepPurple.shade50,
               "minHeight": 8
             }),
           (this.__k6 || (this.__k6 = new SizedBox({
@@ -1857,7 +1857,7 @@ export class ProgressDetail {
           new Text({
               "style": {
                 "fontSize": 14,
-                "color": '#9E9E9E'
+                "color": Colors.grey
               },
               "data": "进度值：" + this._progress
             })
@@ -1969,7 +1969,7 @@ export class StatelessCard {
                   new Row({
                       "children": [
                         (this.__k0 || (this.__k0 = new Icon({
-                            "color": '#009688',
+                            "color": Colors.teal,
                             "icon": "article"
                           }))),
                         (this.__k1 || (this.__k1 = new SizedBox({
@@ -1992,7 +1992,7 @@ export class StatelessCard {
                   new Text({
                       "style": {
                         "fontSize": 14,
-                        "color": '#9E9E9E'
+                        "color": Colors.grey
                       },
                       "data": this.subtitle
                     })
@@ -2041,9 +2041,9 @@ export class TabDetail {
                       "children": [
                         new TabBar({
                             "isScrollable": true,
-                            "indicatorColor": '#673AB7',
-                            "labelColor": '#673AB7',
-                            "unselectedLabelColor": '#9E9E9E',
+                            "indicatorColor": Colors.deepPurple,
+                            "labelColor": Colors.deepPurple,
+                            "unselectedLabelColor": Colors.grey,
                             "tabs": [
                               new Tab({
                                   "text": "广场"
@@ -2198,21 +2198,21 @@ export class PageViewDetail {
                   "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a)),
                   "children": [
                     new Container({
-                        "color": '#D1C4E9',
+                        "color": Colors.deepPurple.shade100,
                         "alignment": "center",
                         "child": (this.__k1 || (this.__k1 = new Text({
                             "data": "第 1 页"
                           })))
                       }),
                     new Container({
-                        "color": '#B2DFDB',
+                        "color": Colors.teal.shade100,
                         "alignment": "center",
                         "child": (this.__k2 || (this.__k2 = new Text({
                             "data": "第 2 页"
                           })))
                       }),
                     new Container({
-                        "color": '#FFE0B2',
+                        "color": Colors.orange.shade100,
                         "alignment": "center",
                         "child": (this.__k3 || (this.__k3 = new Text({
                             "data": "第 3 页"
@@ -2238,7 +2238,7 @@ export class PageViewDetail {
                   },
                   "decoration": {
                     "shape": "circle",
-                    "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd')
+                    "color": ((i == this._page) ? Colors.deepPurple : new Color({value: 0xFFBDBDBD}))
                   }
                 })]); } return out; })()
               ]
@@ -2305,13 +2305,13 @@ export class KeyTile {
           "bottom": 2.0
         },
         "decoration": {
-          "color": '#FFFFFF',
+          "color": Colors.white,
           "borderRadius": {
             "radius": 6.0
           },
           "border": {
             "all": {
-              "color": '#E0E0E0'
+              "color": Colors.grey.shade300
             }
           }
         },
@@ -2488,7 +2488,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '#F5F5F5',
+          "color": Colors.grey.shade100,
           "borderRadius": {
             "radius": 10.0
           }
@@ -2499,7 +2499,7 @@ export class KeyDetail {
               (this.__k3 || (this.__k3 = new Text({
                   "data": "ValueKey · 列表按值匹配",
                   "style": {
-                    "color": '#673AB7',
+                    "color": Colors.deepPurple,
                     "fontSize": 15,
                     "fontWeight": "bold"
                   }
@@ -2510,7 +2510,7 @@ export class KeyDetail {
               (this.__k5 || (this.__k5 = new Text({
                   "data": "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。",
                   "style": {
-                    "color": '#9E9E9E',
+                    "color": Colors.grey,
                     "fontSize": 12
                   }
                 }))),
@@ -2559,7 +2559,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '#F5F5F5',
+          "color": Colors.grey.shade100,
           "borderRadius": {
             "radius": 10.0
           }
@@ -2570,7 +2570,7 @@ export class KeyDetail {
               (this.__k10 || (this.__k10 = new Text({
                   "data": "ObjectKey · 按对象身份相等",
                   "style": {
-                    "color": '#673AB7',
+                    "color": Colors.deepPurple,
                     "fontSize": 15,
                     "fontWeight": "bold"
                   }
@@ -2581,7 +2581,7 @@ export class KeyDetail {
               (this.__k11 || (this.__k11 = new Text({
                   "data": "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。",
                   "style": {
-                    "color": '#9E9E9E',
+                    "color": Colors.grey,
                     "fontSize": 12
                   }
                 }))),
@@ -2595,7 +2595,7 @@ export class KeyDetail {
               (this.__k12 || (this.__k12 = new Text({
                   "data": "操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。" + "选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。",
                   "style": {
-                    "color": '#9E9E9E',
+                    "color": Colors.grey,
                     "fontSize": 12
                   }
                 }))),
@@ -2605,7 +2605,7 @@ export class KeyDetail {
               (this.__k14 || (this.__k14 = new Text({
                   "data": "补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。" + "本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），" + "所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。",
                   "style": {
-                    "color": '#9E9E9E',
+                    "color": Colors.grey,
                     "fontSize": 11
                   }
                 }))),
@@ -2641,7 +2641,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '#F5F5F5',
+          "color": Colors.grey.shade100,
           "borderRadius": {
             "radius": 10.0
           }
@@ -2652,7 +2652,7 @@ export class KeyDetail {
               (this.__k16 || (this.__k16 = new Text({
                   "data": "UniqueKey · 每次都是新身份",
                   "style": {
-                    "color": '#673AB7',
+                    "color": Colors.deepPurple,
                     "fontSize": 15,
                     "fontWeight": "bold"
                   }
@@ -2663,7 +2663,7 @@ export class KeyDetail {
               (this.__k17 || (this.__k17 = new Text({
                   "data": "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。",
                   "style": {
-                    "color": '#9E9E9E',
+                    "color": Colors.grey,
                     "fontSize": 12
                   }
                 }))),
@@ -2707,7 +2707,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '#F5F5F5',
+          "color": Colors.grey.shade100,
           "borderRadius": {
             "radius": 10.0
           }
@@ -2718,7 +2718,7 @@ export class KeyDetail {
               (this.__k19 || (this.__k19 = new Text({
                   "data": "PageStorageKey · 滚动位置持久化",
                   "style": {
-                    "color": '#673AB7',
+                    "color": Colors.deepPurple,
                     "fontSize": 15,
                     "fontWeight": "bold"
                   }
@@ -2729,7 +2729,7 @@ export class KeyDetail {
               (this.__k20 || (this.__k20 = new Text({
                   "data": "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。",
                   "style": {
-                    "color": '#9E9E9E',
+                    "color": Colors.grey,
                     "fontSize": 12
                   }
                 }))),
@@ -2769,7 +2769,7 @@ export class KeyDetail {
           "bottom": 12.0
         },
         "decoration": {
-          "color": '#F5F5F5',
+          "color": Colors.grey.shade100,
           "borderRadius": {
             "radius": 10.0
           }
@@ -2780,7 +2780,7 @@ export class KeyDetail {
               (this.__k21 || (this.__k21 = new Text({
                   "data": "GlobalKey · 宿主端量测 / 定位",
                   "style": {
-                    "color": '#673AB7',
+                    "color": Colors.deepPurple,
                     "fontSize": 15,
                     "fontWeight": "bold"
                   }
@@ -2791,7 +2791,7 @@ export class KeyDetail {
               (this.__k22 || (this.__k22 = new Text({
                   "data": "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。",
                   "style": {
-                    "color": '#9E9E9E',
+                    "color": Colors.grey,
                     "fontSize": 12
                   }
                 }))),
@@ -2806,7 +2806,7 @@ export class KeyDetail {
                     "bottom": 10.0
                   },
                   "decoration": {
-                    "color": '#E0F2F1',
+                    "color": Colors.teal.shade50,
                     "borderRadius": {
                       "radius": 6.0
                     }
@@ -2825,7 +2825,7 @@ export class KeyDetail {
               new Text({
                   "style": {
                     "fontSize": 13,
-                    "color": '#009688'
+                    "color": Colors.teal
                   },
                   "data": "测量：" + this._measureText
                 }),
@@ -2857,13 +2857,13 @@ export class KeyDetail {
   }
   build(context) {
     return new Scaffold({
-        "backgroundColor": '#FAFAFA',
+        "backgroundColor": Colors.grey.shade50,
         "appBar": new AppBar({
             "title": (this.__k26 || (this.__k26 = new Text({
                 "data": "Key 家族 · 全部用例"
               }))),
-            "backgroundColor": '#673AB7',
-            "foregroundColor": '#FFFFFF'
+            "backgroundColor": Colors.deepPurple,
+            "foregroundColor": Colors.white
           }),
         "body": __h('ListView', {
             "children": [
@@ -2871,7 +2871,7 @@ export class KeyDetail {
                   "child": new Text({
                       "data": "每一张卡片一种 key 的语义；「计数」是 KeyTile 的内部 State，" + "用它来观察状态是跟着行走还是跟着位置走。",
                       "style": {
-                        "color": '#9E9E9E',
+                        "color": Colors.grey,
                         "fontSize": 12
                       }
                     }),
@@ -2916,27 +2916,27 @@ export class DrawerDetail {
   }
   build(context) {
     return new Scaffold({
-        "backgroundColor": '#FAFAFA',
+        "backgroundColor": Colors.grey.shade50,
         "appBar": new AppBar({
             "title": (this.__k0 || (this.__k0 = new Text({
                 "data": "Drawer / endDrawer"
               }))),
-            "backgroundColor": '#3F51B5',
-            "foregroundColor": '#FFFFFF'
+            "backgroundColor": Colors.indigo,
+            "foregroundColor": Colors.white
           }),
         "drawer": new Drawer({
             "child": __h('ListView', {
                 "children": [
                   new DrawerHeader({
                       "decoration": {
-                        "color": '#3F51B5'
+                        "color": Colors.indigo
                       },
                       "child": (this.__k1 || (this.__k1 = new Align({
                           "alignment": "bottomLeft",
                           "child": new Text({
                               "data": "左侧抽屉",
                               "style": {
-                                "color": '#FFFFFF',
+                                "color": Colors.white,
                                 "fontSize": 20
                               }
                             })
@@ -2968,14 +2968,14 @@ export class DrawerDetail {
                 "children": [
                   new DrawerHeader({
                       "decoration": {
-                        "color": '#009688'
+                        "color": Colors.teal
                       },
                       "child": (this.__k6 || (this.__k6 = new Align({
                           "alignment": "bottomLeft",
                           "child": new Text({
                               "data": "右侧抽屉",
                               "style": {
-                                "color": '#FFFFFF',
+                                "color": Colors.white,
                                 "fontSize": 20
                               }
                             })
@@ -3007,7 +3007,7 @@ export class DrawerDetail {
                 "mainAxisAlignment": "center",
                 "children": [
                   (this.__k11 || (this.__k11 = new Icon({
-                      "color": '#3F51B5',
+                      "color": Colors.indigo,
                       "icon": "menu_open",
                       "size": 48
                     }))),
@@ -3061,7 +3061,7 @@ export class ReorderListDetail {
                         "child": new Text({
                             "data": "长按拖拽调整顺序（onReorder 双参事件）",
                             "style": {
-                              "color": '#9E9E9E',
+                              "color": Colors.grey,
                               "fontSize": 13
                             }
                           })

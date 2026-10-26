@@ -68,7 +68,7 @@ export class CommunityPage {
     return new Column({
         "children": [
           new Container({
-              "color": '#FFFFFF',
+              "color": Colors.white,
               "child": new SafeArea({
                   "bottom": false,
                   "child": new Padding({
@@ -97,7 +97,7 @@ export class CommunityPage {
                                         "bottom": 6.0
                                       },
                                       "decoration": {
-                                        "color": ((this._tab == t) ? '#ffe8f2ff' : '#fff3f5f8'),
+                                        "color": ((this._tab == t) ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
                                         "borderRadius": {
                                           "radius": 15.0
                                         }
@@ -105,7 +105,7 @@ export class CommunityPage {
                                       "child": new Text({
                                           "style": {
                                             "fontSize": 13.5,
-                                            "color": ((this._tab == t) ? kBrand : '#ff5c6270')
+                                            "color": ((this._tab == t) ? kBrand : new Color({value: 0xFF5C6270}))
                                           },
                                           "data": t
                                         })
@@ -119,11 +119,11 @@ export class CommunityPage {
                                     "width": 32,
                                     "height": 32,
                                     "decoration": {
-                                      "color": '#fff3f5f8',
+                                      "color": new Color({value: 0xFFF3F5F8}),
                                       "shape": "circle"
                                     },
                                     "child": (this.__k3 || (this.__k3 = new Icon({
-                                        "color": '#ff5c6270',
+                                        "color": new Color({value: 0xFF5C6270}),
                                         "icon": "edit",
                                         "size": 16
                                       })))
@@ -156,7 +156,7 @@ export class CommunityPage {
               "height": 12
             }))),
           new Container({
-              "color": '#FFFFFF',
+              "color": Colors.white,
               "padding": {
                 "left": 12.0,
                 "top": 8.0,
@@ -182,7 +182,7 @@ export class CommunityPage {
                                 "bottom": 5.0
                               },
                               "decoration": {
-                                "color": ((this._sort == s) ? '#ffe8f2ff' : '#fff3f5f8'),
+                                "color": ((this._sort == s) ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
                                 "borderRadius": {
                                   "radius": 14.0
                                 }
@@ -190,7 +190,7 @@ export class CommunityPage {
                               "child": new Text({
                                   "style": {
                                     "fontSize": 12.5,
-                                    "color": ((this._sort == s) ? kBrand : '#ff5c6270')
+                                    "color": ((this._sort == s) ? kBrand : new Color({value: 0xFF5C6270}))
                                   },
                                   "data": s
                                 })
@@ -208,7 +208,7 @@ export class CommunityPage {
                               "bottom": 5.0
                             },
                             "decoration": {
-                              "color": (this._filterOpen ? '#ffe8f2ff' : '#fff3f5f8'),
+                              "color": (this._filterOpen ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
                               "borderRadius": {
                                 "radius": 14.0
                               }
@@ -219,7 +219,7 @@ export class CommunityPage {
                                       "style": {
                                         "fontSize": 12.5,
                                         "fontWeight": "w600",
-                                        "color": (this._filterOpen ? kBrand : '#ff5c6270')
+                                        "color": (this._filterOpen ? kBrand : new Color({value: 0xFF5C6270}))
                                       },
                                       "data": "筛选"
                                     }),
@@ -228,7 +228,7 @@ export class CommunityPage {
                                     }))),
                                   new Icon({
                                       "size": 14,
-                                      "color": this._filterOpen ? kBrand : '#ff5c6270',
+                                      "color": this._filterOpen ? kBrand : new Color({value: 0xFF5C6270}),
                                       "icon": "tune"
                                     })
                                 ]
@@ -321,7 +321,7 @@ export class _ListContent {
                       "child": new Text({
                           "data": "没有符合条件的帖子，试试放宽筛选条件",
                           "style": {
-                            "color": '#ff98a0ac',
+                            "color": new Color({value: 0xFF98A0AC}),
                             "fontSize": 13
                           }
                         })
@@ -350,7 +350,7 @@ export class _ListContent {
             "child": new GestureDetector({
                 "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)),
                 "child": new Container({
-                    "color": '#66000000'
+                    "color": new Color({value: 0x66000000})
                   })
               }),
             "factory": "fill"
@@ -423,7 +423,7 @@ export class _FilterPanel {
                   "style": {
                     "fontSize": 12.5,
                     "fontWeight": "w700",
-                    "color": '#ff171a21'
+                    "color": new Color({value: 0xFF171A21})
                   },
                   "data": title
                 })
@@ -442,7 +442,7 @@ export class _FilterPanel {
                         "bottom": 6.0
                       },
                       "decoration": {
-                        "color": ((current == v) ? kBrand : '#fff3f5f8'),
+                        "color": ((current == v) ? kBrand : new Color({value: 0xFFF3F5F8})),
                         "borderRadius": {
                           "radius": 14.0
                         }
@@ -451,7 +451,7 @@ export class _FilterPanel {
                           "style": {
                             "fontSize": 12,
                             "fontWeight": "w500",
-                            "color": ((current == v) ? '#FFFFFF' : '#ff5c6270')
+                            "color": ((current == v) ? Colors.white : new Color({value: 0xFF5C6270}))
                           },
                           "data": v
                         })
@@ -464,7 +464,7 @@ export class _FilterPanel {
   }
   build(context) {
     return new Material({
-        "color": '#FFFFFF',
+        "color": Colors.white,
         "elevation": 8,
         "child": new Padding({
             "padding": {
@@ -501,7 +501,7 @@ export class _FilterPanel {
                                     "height": 42,
                                     "alignment": "center",
                                     "decoration": {
-                                      "color": '#fff3f5f8',
+                                      "color": new Color({value: 0xFFF3F5F8}),
                                       "borderRadius": {
                                         "radius": 21.0
                                       }
@@ -509,7 +509,7 @@ export class _FilterPanel {
                                     "child": (this.__k2 || (this.__k2 = new Text({
                                         "data": "重置",
                                         "style": {
-                                          "color": '#ff5c6270',
+                                          "color": new Color({value: 0xFF5C6270}),
                                           "fontSize": 14,
                                           "fontWeight": "w600"
                                         }
@@ -535,7 +535,7 @@ export class _FilterPanel {
                                     "child": (this.__k4 || (this.__k4 = new Text({
                                         "data": "查看结果",
                                         "style": {
-                                          "color": '#FFFFFF',
+                                          "color": Colors.white,
                                           "fontSize": 14,
                                           "fontWeight": "w600"
                                         }
@@ -576,7 +576,7 @@ export class _PostCard {
               "bottom": 10.0
             },
             "decoration": {
-              "color": '#FFFFFF',
+              "color": Colors.white,
               "borderRadius": {
                 "radius": 14.0
               }
@@ -624,7 +624,7 @@ export class _PostCard {
                                         "overflow": "ellipsis",
                                         "style": {
                                           "fontSize": 11.5,
-                                          "color": '#ff8b909a',
+                                          "color": new Color({value: 0xFF8B909A}),
                                           "height": 1.5
                                         },
                                         "data": this.post.sub
@@ -640,7 +640,7 @@ export class _PostCard {
                                             "bottom": 1.0
                                           },
                                           "decoration": {
-                                            "color": '#fff3f5f8',
+                                            "color": new Color({value: 0xFFF3F5F8}),
                                             "borderRadius": {
                                               "radius": 5.0
                                             }
@@ -648,7 +648,7 @@ export class _PostCard {
                                           "child": new Text({
                                               "style": {
                                                 "fontSize": 10,
-                                                "color": '#ff5c6270'
+                                                "color": new Color({value: 0xFF5C6270})
                                               },
                                               "data": this.post.type
                                             })
@@ -659,13 +659,13 @@ export class _PostCard {
                                       new Text({
                                           "style": {
                                             "fontSize": 10.5,
-                                            "color": '#ffa3a9b4'
+                                            "color": new Color({value: 0xFFA3A9B4})
                                           },
                                           "data": this.post.author + " · " + this.post.time
                                         }),
                                       (this.__k3 || (this.__k3 = new Spacer({}))),
                                       (this.__k4 || (this.__k4 = new Icon({
-                                          "color": '#ffa3a9b4',
+                                          "color": new Color({value: 0xFFA3A9B4}),
                                           "icon": "favorite_border",
                                           "size": 13
                                         }))),
@@ -675,7 +675,7 @@ export class _PostCard {
                                       new Text({
                                           "style": {
                                             "fontSize": 10.5,
-                                            "color": '#ffa3a9b4'
+                                            "color": new Color({value: 0xFFA3A9B4})
                                           },
                                           "data": this._likeText(this.post.like)
                                         })
@@ -694,7 +694,7 @@ export class _PostCard {
       return new Container({
         "width": 92,
         "height": 92,
-        "color": '#ffe8ebf0'
+        "color": new Color({value: 0xFFE8EBF0})
       });
   }
 }
@@ -716,7 +716,7 @@ export class _ResourceCard {
             "width": 156,
             "clipBehavior": "antiAlias",
             "decoration": {
-              "color": '#FFFFFF',
+              "color": Colors.white,
               "borderRadius": {
                 "radius": 14.0
               }
@@ -760,7 +760,7 @@ export class _ResourceCard {
                                 "overflow": "ellipsis",
                                 "style": {
                                   "fontSize": 10.5,
-                                  "color": '#ff98a0ac'
+                                  "color": new Color({value: 0xFF98A0AC})
                                 },
                                 "data": this.resource.sub
                               })
@@ -775,7 +775,7 @@ export class _ResourceCard {
   _errorBuilder0(context, e) {
       return new Container({
         "height": 68,
-        "color": '#ffe8ebf0'
+        "color": new Color({value: 0xFFE8EBF0})
       });
   }
 }

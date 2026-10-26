@@ -34,9 +34,11 @@ import 'js_value.dart';
 
 /// 读位置表达式 → JS 表达式（this._model.n / this._model / 字面量 / 形参）。
 String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
-  // 颜色字面量：任意位置都直接译成 '#aarrggbb'（不再只支持 widget 样式属性）。
-  final color = colorLiteralJs(e);
-  if (color != null) return color;
+  // 构造表达式（`Color(0xFF…)` / `Color.fromARGB(…)` / 任意 `X(…)`）→
+  // `new X({...})`（命名构造 `X.b({...})` 仅在签名表命中时接管）。
+  // 颜色不是特殊形态：`Color` 与其它类一样由运行时注入同名类。
+  final ctorJs = valueCtorJs(e, scope, classes);
+  if (ctorJs != null) return ctorJs;
   // Platform.isAndroid 等（PrefixedIdentifier 是 Identifier 子类，必须先判）
   if (e is PrefixedIdentifier && e.prefix.name == 'Platform') {
     final flag = platformFlagJs(e.identifier.name);
@@ -56,15 +58,6 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     // 不在这里拦下来，会落到下面的「大写开头前缀原样保留」，产出未定义的 JS
     // 全局 `Icons`——作为组件实参（`_DevRow(icon: Icons.x)`）直接运行时崩。
     if (e.prefix.name == 'Icons') return jsString(e.identifier.name);
-    // `Colors.white` → 色值字符串（'#FFFFFF'）。不在这里拦下来会落到下面
-    // 「大写开头前缀原样保留」，产出**未定义全局** `Colors`——组件实参
-    // （`Material(color: Colors.white)`）在 build() 求值对象字面量时即
-    // ReferenceError：事件 setState 触发的重建整棵抛错并被吞掉，表现为
-    // 「点击有反馈但状态永不更新」。
-    if (e.prefix.name == 'Colors') {
-      final hex = materialColorHex(e.identifier.name);
-      if (hex != null) return "'#$hex'";
-    }
     final p = scope.fieldRef(e.prefix.name);
     String? base;
     if (p != null) {
@@ -184,19 +177,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (flag != null) return flag;
   }
   if (e is PropertyAccess && e.target != null) {
-    // `Colors.blue.shade100` / `Colors.greenAccent.shade200` 等 MaterialColor 变体：
-    // **编译期**就按 Material 色板表算成 `'#RRGGBB'`（见 [materialShadeHex]），
-    // 产物里不再出现 `@Colors…` 标记——运行时也不必为色板做分支。
-    final tgt = e.target;
-    if (tgt is PrefixedIdentifier && tgt.prefix.name == 'Colors') {
-      // `Colors.<色名>.shade<N>`：色名可能是 `blue` 或 `blueAccent`（后者在 accent 表）。
-      final shade = shadeIndex(e.propertyName.name);
-      if (shade != null) {
-        final hex = materialShadeHex(tgt.identifier.name, shade);
-        if (hex != null) return "'#$hex'";
-      }
-    }
-    final t = exprToJs(tgt!, scope, classes);
+    final t = exprToJs(e.target!, scope, classes);
     if (t == null) return null;
     final op = e.operator.lexeme;
     if (op == '?.') {
@@ -254,11 +235,6 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   }
   final lit = literalToJs(e);
   if (lit != null) return lit;
-  // 颜色字面量（`Color(0xFF...)` / `Color.fromARGB(...)`）→ '#aarrggbb'。
-  // 必须早于下面的 InstanceCreationExpression 分支：那支对非模型类返回 null
-  // 后直接返回（不再往下走），颜色常量会在那里被吞掉。
-  final color = colorLiteralJs(e);
-  if (color != null) return color;
   // 构造统一翻译（唯一一条规则）：
   //   `A(args)`   → `new A({...})`
   //   `A.b(args)` → `A.b({...})`

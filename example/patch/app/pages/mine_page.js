@@ -7,7 +7,7 @@ import { MineFeed } from '../model/app_models.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Center, CircularProgressIndicator, ClipOval, Column, Container, Divider, Expanded, GestureDetector, Icon, Image, Padding, Row, SafeArea, SizedBox, Text, Transform, __h } from '../../flutter.js';
 
-const _menuTints = ['#ffe8f2ff', '#fffff3e0', '#ffeef0f4', '#ffe9f7ef'];
+const _menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
 
 // 组件 MinePage
 export class MinePage {
@@ -61,8 +61,8 @@ export class MinePage {
                 "gradient": {
                   "kind": "linear",
                   "colors": [
-                    '#ff1e88ff',
-                    '#ff0e7afb'
+                    new Color({value: 0xFF1E88FF}),
+                    new Color({value: 0xFF0E7AFB})
                   ],
                   "begin": "topLeft",
                   "end": "bottomRight"
@@ -93,7 +93,7 @@ export class MinePage {
                                       new Text({
                                           "data": "旅行家小七",
                                           "style": {
-                                            "color": '#FFFFFF',
+                                            "color": Colors.white,
                                             "fontSize": 17.5,
                                             "fontWeight": "w700"
                                           }
@@ -104,7 +104,7 @@ export class MinePage {
                                       new Text({
                                           "data": "138****8888",
                                           "style": {
-                                            "color": '#ccffffff',
+                                            "color": new Color({value: 0xCCFFFFFF}),
                                             "fontSize": 12
                                           }
                                         }),
@@ -114,7 +114,7 @@ export class MinePage {
                                       new Text({
                                           "data": "点击头像可跳转登录页 ›",
                                           "style": {
-                                            "color": '#b3ffffff',
+                                            "color": new Color({value: 0xB3FFFFFF}),
                                             "fontSize": 11
                                           }
                                         })
@@ -123,7 +123,7 @@ export class MinePage {
                                   })
                               }))),
                             (this.__k7 || (this.__k7 = new Icon({
-                                "color": '#ccffffff',
+                                "color": new Color({value: 0xCCFFFFFF}),
                                 "icon": "chevron_right",
                                 "size": 20
                               })))
@@ -148,7 +148,7 @@ export class MinePage {
                     "bottom": 14.0
                   },
                   "decoration": {
-                    "color": '#FFFFFF',
+                    "color": Colors.white,
                     "borderRadius": {
                       "radius": 14.0
                     }
@@ -164,7 +164,7 @@ export class MinePage {
                                         "style": {
                                           "fontSize": 17,
                                           "fontWeight": "w700",
-                                          "color": '#ff171a21'
+                                          "color": new Color({value: 0xFF171A21})
                                         },
                                         "data": s[1]
                                       }),
@@ -174,7 +174,7 @@ export class MinePage {
                                     new Text({
                                         "style": {
                                           "fontSize": 11.5,
-                                          "color": '#ff8b909a'
+                                          "color": new Color({value: 0xFF8B909A})
                                         },
                                         "data": s[0]
                                       })
@@ -195,7 +195,7 @@ export class MinePage {
                 "bottom": 12.0
               },
               "decoration": {
-                "color": '#FFFFFF',
+                "color": Colors.white,
                 "borderRadius": {
                   "radius": 14.0
                 }
@@ -203,7 +203,7 @@ export class MinePage {
               "child": new Column({
                   "children": [
                     ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [(this.__k2 || (this.__k2 = new Divider({
-                      "color": '#fff0f2f6',
+                      "color": new Color({value: 0xFFF0F2F6}),
                       "height": 1,
                       "indent": 56
                     })))] : []), new GestureDetector({
@@ -246,7 +246,7 @@ export class MinePage {
                                       })
                                   }),
                                 (this.__k4 || (this.__k4 = new Icon({
-                                    "color": '#ffc3c8d2',
+                                    "color": new Color({value: 0xFFC3C8D2}),
                                     "icon": "chevron_right",
                                     "size": 18
                                   })))
@@ -270,7 +270,7 @@ export class MinePage {
                       "height": 46,
                       "alignment": "center",
                       "decoration": {
-                        "color": '#FFFFFF',
+                        "color": Colors.white,
                         "borderRadius": {
                           "radius": 14.0
                         }
@@ -290,7 +290,7 @@ export class MinePage {
               "child": new Text({
                   "data": "开发者",
                   "style": {
-                    "color": '#ff98a0ac',
+                    "color": new Color({value: 0xFF98A0AC}),
                     "fontSize": 12.5,
                     "fontWeight": "w700"
                   }
@@ -310,7 +310,7 @@ export class MinePage {
                 "bottom": 24.0
               },
               "decoration": {
-                "color": '#FFFFFF',
+                "color": Colors.white,
                 "borderRadius": {
                   "radius": 14.0
                 }
@@ -324,7 +324,7 @@ export class MinePage {
                         "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
                       }),
                     (this.__k2 || (this.__k2 = new Divider({
-                        "color": '#fff0f2f6',
+                        "color": new Color({value: 0xFFF0F2F6}),
                         "height": 1,
                         "indent": 56
                       }))),
@@ -344,7 +344,7 @@ export class MinePage {
       return new Container({
         "width": 58,
         "height": 58,
-        "color": '#33ffffff'
+        "color": new Color({value: 0x33FFFFFF})
       });
   }
 }
@@ -379,7 +379,7 @@ export class _DevRow {
                       "height": 30,
                       "alignment": "center",
                       "decoration": {
-                        "color": '#ffe8f2ff',
+                        "color": new Color({value: 0xFFE8F2FF}),
                         "borderRadius": {
                           "radius": 9.0
                         }
@@ -411,7 +411,7 @@ export class _DevRow {
                                 "overflow": "ellipsis",
                                 "style": {
                                   "fontSize": 11,
-                                  "color": '#ff98a0ac'
+                                  "color": new Color({value: 0xFF98A0AC})
                                 },
                                 "data": this.subtitle
                               })
@@ -419,7 +419,7 @@ export class _DevRow {
                         })
                     }),
                   (this.__k2 || (this.__k2 = new Icon({
-                      "color": '#ffc3c8d2',
+                      "color": new Color({value: 0xFFC3C8D2}),
                       "icon": "chevron_right",
                       "size": 18
                     })))

@@ -51,7 +51,7 @@ export class WatchDemo {
               "style": {
                 "fontSize": 22,
                 "fontWeight": "bold",
-                "color": '#FF5722'
+                "color": Colors.deepOrange
               },
               "data": "count = " + model.count
             }),
@@ -93,7 +93,7 @@ export class WatchCountLabel {
     return new Text({
         "style": {
           "fontSize": 16,
-          "color": '#2196F3'
+          "color": Colors.blue
         },
         "data": "another State: count = " + model.count
       });

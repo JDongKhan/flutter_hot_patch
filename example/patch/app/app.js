@@ -42,7 +42,7 @@ export class AppSubContent {
   build(context) {
     console.log("--AppSubContent build");
     return new Scaffold({
-        "backgroundColor": '#fff4f5f7',
+        "backgroundColor": new Color({value: 0xFFF4F5F7}),
         "body": new TabBarView({
             "controller": this._tab,
             "physics": "NeverScrollableScrollPhysics",
@@ -57,9 +57,9 @@ export class AppSubContent {
             "currentIndex": this._index,
             "onTap": this.__bindFn(0, [], (...__a) => this._openTab(...__a)),
             "type": "fixed",
-            "backgroundColor": '#FFFFFF',
-            "selectedItemColor": '#ff0e7afb',
-            "unselectedItemColor": '#ff98a0ac',
+            "backgroundColor": Colors.white,
+            "selectedItemColor": new Color({value: 0xFF0E7AFB}),
+            "unselectedItemColor": new Color({value: 0xFF98A0AC}),
             "selectedFontSize": 11,
             "unselectedFontSize": 11,
             "items": [

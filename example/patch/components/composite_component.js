@@ -49,8 +49,8 @@ export class DashboardCard {
           new ElevatedButton({
               "onPressed": this.__bindFn(0, [], (...__a) => this.tick(...__a)),
               "style": {
-                "backgroundColor": '#FF9800',
-                "foregroundColor": '#FFFFFF'
+                "backgroundColor": Colors.orange,
+                "foregroundColor": Colors.white
               },
               "child": (this.__k5 || (this.__k5 = new Text({
                   "data": "Tick"
@@ -78,7 +78,7 @@ export class LabeledDivider {
           new Text({
               "style": {
                 "fontSize": 12,
-                "color": '#607D8B'
+                "color": Colors.blueGrey
               },
               "data": "★ " + this.text + " ★"
             }),

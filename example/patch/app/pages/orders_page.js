@@ -47,7 +47,7 @@ export class OrdersPage {
   _statusColor(status) {
     return (() => { switch (status) {
     case "待付款": return kPrice;
-    case "已完成": return '#ff8b909a';
+    case "已完成": return new Color({value: 0xFF8B909A});
     default: return kBrand;
 } })();
   }
@@ -61,7 +61,7 @@ export class OrdersPage {
         "crossAxisAlignment": "stretch",
         "children": [
           new Container({
-              "color": '#FFFFFF',
+              "color": Colors.white,
               "child": new SafeArea({
                   "bottom": false,
                   "child": new Padding({
@@ -92,7 +92,7 @@ export class OrdersPage {
                                             "bottom": 6.0
                                           },
                                           "decoration": {
-                                            "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'),
+                                            "color": ((this._status == s) ? new Color({value: 0xFFE8F2FF}) : Colors.white),
                                             "borderRadius": {
                                               "radius": 15.0
                                             }
@@ -100,7 +100,7 @@ export class OrdersPage {
                                           "child": new Text({
                                               "style": {
                                                 "fontSize": 13,
-                                                "color": ((this._status == s) ? kBrand : '#ff5c6270')
+                                                "color": ((this._status == s) ? kBrand : new Color({value: 0xFF5C6270}))
                                               },
                                               "data": s
                                             })
@@ -123,7 +123,7 @@ export class OrdersPage {
                 "child": new Text({
                     "data": "该状态下暂无订单",
                     "style": {
-                      "color": '#ff98a0ac',
+                      "color": new Color({value: 0xFF98A0AC}),
                       "fontSize": 13
                     }
                   })
@@ -174,7 +174,7 @@ export class _OrderCard {
         "onTap": this.__bindFn(0, [], (...__a) => this.onOpen(...__a)),
         "child": new Container({
             "decoration": {
-              "color": '#FFFFFF',
+              "color": Colors.white,
               "borderRadius": {
                 "radius": 14.0
               }
@@ -193,7 +193,7 @@ export class _OrderCard {
                             new Text({
                                 "style": {
                                   "fontSize": 12,
-                                  "color": '#ff8b909a'
+                                  "color": new Color({value: 0xFF8B909A})
                                 },
                                 "data": "订单号 " + this.order.no
                               }),
@@ -201,7 +201,8 @@ export class _OrderCard {
                             new Text({
                                 "style": {
                                   "fontSize": 12.5,
-                                  "fontWeight": "w700"
+                                  "fontWeight": "w700",
+                                  "color": this.statusColor
                                 },
                                 "data": this.order.status
                               })
@@ -209,7 +210,7 @@ export class _OrderCard {
                         })
                     }),
                   (this.__k2 || (this.__k2 = new Divider({
-                      "color": '#fff0f2f6',
+                      "color": new Color({value: 0xFFF0F2F6}),
                       "height": 1
                     }))),
                   new Padding({
@@ -259,7 +260,7 @@ export class _OrderCard {
                                           "overflow": "ellipsis",
                                           "style": {
                                             "fontSize": 11.5,
-                                            "color": '#ff8b909a'
+                                            "color": new Color({value: 0xFF8B909A})
                                           },
                                           "data": this.order.spec
                                         }),
@@ -269,7 +270,7 @@ export class _OrderCard {
                                       (this.__k6 || (this.__k6 = new Text({
                                           "data": "×1",
                                           "style": {
-                                            "color": '#ffa3a9b4',
+                                            "color": new Color({value: 0xFFA3A9B4}),
                                             "fontSize": 11
                                           }
                                         })))
@@ -280,7 +281,7 @@ export class _OrderCard {
                         })
                     }),
                   (this.__k2 || (this.__k2 = new Divider({
-                      "color": '#fff0f2f6',
+                      "color": new Color({value: 0xFFF0F2F6}),
                       "height": 1
                     }))),
                   new Padding({
@@ -295,7 +296,7 @@ export class _OrderCard {
                             (this.__k7 || (this.__k7 = new Text({
                                 "data": "合计 ",
                                 "style": {
-                                  "color": '#ff5c6270',
+                                  "color": new Color({value: 0xFF5C6270}),
                                   "fontSize": 12.5
                                 }
                               }))),
@@ -333,7 +334,7 @@ export class _OrderCard {
       return new Container({
         "width": 66,
         "height": 66,
-        "color": '#ffe8ebf0'
+        "color": new Color({value: 0xFFE8EBF0})
       });
   }
 }

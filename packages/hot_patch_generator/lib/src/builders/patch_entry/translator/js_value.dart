@@ -66,7 +66,7 @@ String? literalToJs(Expression? e) {
     return parts.join(' + ');
   }
   if (e is StringLiteral) return jsString(e.stringValue ?? '');
-  if (e is IntegerLiteral) return e.value?.toString();
+  if (e is IntegerLiteral) return intLiteralJs(e);
   if (e is DoubleLiteral) return e.value.toString();
   if (e is BooleanLiteral) return e.value.toString();
   // 一元前缀（`-1` / `+1` / `!done` / `~x`）：不是字面量节点，Dart 与 JS 语义
@@ -83,12 +83,26 @@ String? literalToJs(Expression? e) {
   return null;
 }
 
+/// 整数字面量 → JS 数字：**保留源码写法**（Dart 里写 `0xFF0E7AFB`，产物里
+/// 仍是 `0xFF0E7AFB`；写 `10` 仍是 `10`）。
+///
+/// 这是纯语法规则，与类型无关：颜色、掩码、标志位等常量在产物里一眼可读，
+/// 不必反算十进制；JS 的 `0x…` 与十进制数值完全等价。下划线分隔符去掉，
+/// 不依赖引擎对数值分隔符的支持。
+String? intLiteralJs(Expression e) {
+  if (e is! IntegerLiteral) return null;
+  final v = e.value;
+  if (v == null) return null;
+  final src = e.toSource().replaceAll('_', '');
+  return src.isEmpty ? v.toString() : src;
+}
+
 /// 数字字面量（int/double）→ JS 数字表达式（'12' / '1.5'）；非数字字面量返回 null。
 ///
 /// 值域比 [literalToJs] 窄（只认数字），供「只接受数字」的属性/样式读取——
 /// 样式翻译与 widget 翻译共用这一处，不各自重复一份。
 String? numLiteralJs(Expression? e) {
-  if (e is IntegerLiteral) return e.value?.toString();
+  if (e is IntegerLiteral) return intLiteralJs(e);
   if (e is DoubleLiteral) return '${e.value}';
   // 负数字面量（`-1`）：同样是一元前缀，不认会在样式/属性里静默丢值。
   if (e is PrefixExpression) {
@@ -101,144 +115,6 @@ String? numLiteralJs(Expression? e) {
 /// bool 字面量 → 'true' / 'false'；非 bool 字面量返回 null（见 [numLiteralJs]）。
 String? boolLiteralJs(Expression? e) {
   if (e is BooleanLiteral) return e.value.toString();
-  return null;
-}
-
-/// Material 主色板（500 档）→ hex（不含 #）。放通用表达式层：任意表达式位置
-/// （组件实参、数据绑定、样式属性）都能解析 `Colors.*`，避免某一处漏掉后
-/// 产出未定义的 `Colors` 全局。样式翻译（style_translators）复用同一份表。
-const Map<String, String> materialColors = {
-  'red': 'F44336',
-  'pink': 'E91E63',
-  'purple': '9C27B0',
-  'deepPurple': '673AB7',
-  'indigo': '3F51B5',
-  'blue': '2196F3',
-  'lightBlue': '03A9F4',
-  'cyan': '00BCD4',
-  'teal': '009688',
-  'green': '4CAF50',
-  'lightGreen': '8BC34A',
-  'lime': 'CDDC39',
-  'yellow': 'FFEB3B',
-  'amber': 'FFC107',
-  'orange': 'FF9800',
-  'deepOrange': 'FF5722',
-  'brown': '795548',
-  'grey': '9E9E9E',
-  'blueGrey': '607D8B',
-  'black': '000000',
-  'white': 'FFFFFF',
-};
-
-/// `Colors.<name>` → hex（不含 #）；非主色板名（含 `.shadeNNN` 形态由调用方
-/// 单独处理）返回 null。
-String? materialColorHex(String name) => materialColors[name];
-
-/// Material 色板**各档位**（`Colors.<name>.shade<N>`）→ hex（不含 #）。
-///
-/// **数据来源**：Flutter SDK `packages/flutter/lib/src/material/colors.dart`
-/// 的 Material spec 常量（恒定不变，已按 SDK 版本核对）。生成器在**编译期**
-/// 就把 `Colors.green.shade100` 算成 `'#C8E6C9'`——产物里不再出现
-/// `@Colors.green.shade100` 这类标记，翻译层与运行时都不必再为色板做分支。
-
-const Map<String, Map<int, String>> materialColorShades = {
-  'amber': {50: 'FFF8E1', 100: 'FFECB3', 200: 'FFE082', 300: 'FFD54F', 400: 'FFCA28', 500: 'FFC107', 600: 'FFB300', 700: 'FFA000', 800: 'FF8F00', 900: 'FF6F00'},
-  'blue': {50: 'E3F2FD', 100: 'BBDEFB', 200: '90CAF9', 300: '64B5F6', 400: '42A5F5', 500: '2196F3', 600: '1E88E5', 700: '1976D2', 800: '1565C0', 900: '0D47A1'},
-  'blueGrey': {50: 'ECEFF1', 100: 'CFD8DC', 200: 'B0BEC5', 300: '90A4AE', 400: '78909C', 500: '607D8B', 600: '546E7A', 700: '455A64', 800: '37474F', 900: '263238'},
-  'brown': {50: 'EFEBE9', 100: 'D7CCC8', 200: 'BCAAA4', 300: 'A1887F', 400: '8D6E63', 500: '795548', 600: '6D4C41', 700: '5D4037', 800: '4E342E', 900: '3E2723'},
-  'cyan': {50: 'E0F7FA', 100: 'B2EBF2', 200: '80DEEA', 300: '4DD0E1', 400: '26C6DA', 500: '00BCD4', 600: '00ACC1', 700: '0097A7', 800: '00838F', 900: '006064'},
-  'deepOrange': {50: 'FBE9E7', 100: 'FFCCBC', 200: 'FFAB91', 300: 'FF8A65', 400: 'FF7043', 500: 'FF5722', 600: 'F4511E', 700: 'E64A19', 800: 'D84315', 900: 'BF360C'},
-  'deepPurple': {50: 'EDE7F6', 100: 'D1C4E9', 200: 'B39DDB', 300: '9575CD', 400: '7E57C2', 500: '673AB7', 600: '5E35B1', 700: '512DA8', 800: '4527A0', 900: '311B92'},
-  'green': {50: 'E8F5E9', 100: 'C8E6C9', 200: 'A5D6A7', 300: '81C784', 400: '66BB6A', 500: '4CAF50', 600: '43A047', 700: '388E3C', 800: '2E7D32', 900: '1B5E20'},
-  'grey': {50: 'FAFAFA', 100: 'F5F5F5', 200: 'EEEEEE', 300: 'E0E0E0', 350: 'D6D6D6', 400: 'BDBDBD', 500: '9E9E9E', 600: '757575', 700: '616161', 800: '424242', 850: '303030', 900: '212121'},
-  'indigo': {50: 'E8EAF6', 100: 'C5CAE9', 200: '9FA8DA', 300: '7986CB', 400: '5C6BC0', 500: '3F51B5', 600: '3949AB', 700: '303F9F', 800: '283593', 900: '1A237E'},
-  'lightBlue': {50: 'E1F5FE', 100: 'B3E5FC', 200: '81D4FA', 300: '4FC3F7', 400: '29B6F6', 500: '03A9F4', 600: '039BE5', 700: '0288D1', 800: '0277BD', 900: '01579B'},
-  'lightGreen': {50: 'F1F8E9', 100: 'DCEDC8', 200: 'C5E1A5', 300: 'AED581', 400: '9CCC65', 500: '8BC34A', 600: '7CB342', 700: '689F38', 800: '558B2F', 900: '33691E'},
-  'lime': {50: 'F9FBE7', 100: 'F0F4C3', 200: 'E6EE9C', 300: 'DCE775', 400: 'D4E157', 500: 'CDDC39', 600: 'C0CA33', 700: 'AFB42B', 800: '9E9D24', 900: '827717'},
-  'orange': {50: 'FFF3E0', 100: 'FFE0B2', 200: 'FFCC80', 300: 'FFB74D', 400: 'FFA726', 500: 'FF9800', 600: 'FB8C00', 700: 'F57C00', 800: 'EF6C00', 900: 'E65100'},
-  'pink': {50: 'FCE4EC', 100: 'F8BBD0', 200: 'F48FB1', 300: 'F06292', 400: 'EC407A', 500: 'E91E63', 600: 'D81B60', 700: 'C2185B', 800: 'AD1457', 900: '880E4F'},
-  'purple': {50: 'F3E5F5', 100: 'E1BEE7', 200: 'CE93D8', 300: 'BA68C8', 400: 'AB47BC', 500: '9C27B0', 600: '8E24AA', 700: '7B1FA2', 800: '6A1B9A', 900: '4A148C'},
-  'red': {50: 'FFEBEE', 100: 'FFCDD2', 200: 'EF9A9A', 300: 'E57373', 400: 'EF5350', 500: 'F44336', 600: 'E53935', 700: 'D32F2F', 800: 'C62828', 900: 'B71C1C'},
-  'teal': {50: 'E0F2F1', 100: 'B2DFDB', 200: '80CBC4', 300: '4DB6AC', 400: '26A69A', 500: '009688', 600: '00897B', 700: '00796B', 800: '00695C', 900: '004D40'},
-  'yellow': {50: 'FFFDE7', 100: 'FFF9C4', 200: 'FFF59D', 300: 'FFF176', 400: 'FFEE58', 500: 'FFEB3B', 600: 'FDD835', 700: 'FBC02D', 800: 'F9A825', 900: 'F57F17'},
-};
-
-/// Material **accent** 色板各档位（`Colors.<name>Accent.shade<N>`）→ hex。
-
-const Map<String, Map<int, String>> materialAccentShades = {
-  'amberAccent': {100: 'FFE57F', 200: 'FFD740', 400: 'FFC400', 700: 'FFAB00'},
-  'blueAccent': {100: '82B1FF', 200: '448AFF', 400: '2979FF', 700: '2962FF'},
-  'cyanAccent': {100: '84FFFF', 200: '18FFFF', 400: '00E5FF', 700: '00B8D4'},
-  'deepOrangeAccent': {100: 'FF9E80', 200: 'FF6E40', 400: 'FF3D00', 700: 'DD2C00'},
-  'deepPurpleAccent': {100: 'B388FF', 200: '7C4DFF', 400: '651FFF', 700: '6200EA'},
-  'greenAccent': {100: 'B9F6CA', 200: '69F0AE', 400: '00E676', 700: '00C853'},
-  'indigoAccent': {100: '8C9EFF', 200: '536DFE', 400: '3D5AFE', 700: '304FFE'},
-  'lightBlueAccent': {100: '80D8FF', 200: '40C4FF', 400: '00B0FF', 700: '0091EA'},
-  'lightGreenAccent': {100: 'CCFF90', 200: 'B2FF59', 400: '76FF03', 700: '64DD17'},
-  'limeAccent': {100: 'F4FF81', 200: 'EEFF41', 400: 'C6FF00', 700: 'AEEA00'},
-  'orangeAccent': {100: 'FFD180', 200: 'FFAB40', 400: 'FF9100', 700: 'FF6D00'},
-  'pinkAccent': {100: 'FF80AB', 200: 'FF4081', 400: 'F50057', 700: 'C51162'},
-  'purpleAccent': {100: 'EA80FC', 200: 'E040FB', 400: 'D500F9', 700: 'AA00FF'},
-  'redAccent': {100: 'FF8A80', 200: 'FF5252', 400: 'FF1744', 700: 'D50000'},
-  'tealAccent': {100: 'A7FFEB', 200: '64FFDA', 400: '1DE9B6', 700: '00BFA5'},
-  'yellowAccent': {100: 'FFFF8D', 200: 'FFFF00', 400: 'FFEA00', 700: 'FFD600'},
-};
-
-/// `Colors.<name>.shade<N>` / `Colors.<name>Accent.shade<N>` → hex（不含 #）；
-/// 未登记的色名/档位返回 null。
-String? materialShadeHex(String colorName, int shade) =>
-    (materialColorShades[colorName] ?? materialAccentShades[colorName])?[shade];
-
-/// 色板成员名 → 档位：`shade100` → 100；非 `shade<N>` 形态返回 null。
-int? shadeIndex(String member) {
-  if (!member.startsWith('shade')) return null;
-  return int.tryParse(member.substring(5));
-}
-
-/// `Color(0xAARRGGBB)` / `Color.fromARGB(a, r, g, b)` → JS 颜色字符串
-/// `'#aarrggbb'`（运行时按 '#rrggbb' 解析为 Color，与样式翻译同一契约）。
-///
-/// 放在通用表达式层：任意位置的颜色字面量（顶层常量、模型字段默认值、集合
-/// 元素……）都能翻译，而不只是 widget 的样式属性。
-String? colorLiteralJs(Expression e) {
-  ArgumentList? args;
-  String? ctor;
-  String? named;
-  if (e is InstanceCreationExpression) {
-    ctor = e.constructorName.type.name2.lexeme;
-    named = e.constructorName.name?.name;
-    args = e.argumentList;
-  } else if (e is MethodInvocation && e.target == null) {
-    ctor = e.methodName.name;
-    args = e.argumentList;
-  } else if (e is MethodInvocation && e.target is Identifier) {
-    // `Color.fromARGB(...)`：target 是类名。
-    ctor = (e.target as Identifier).name;
-    named = e.methodName.name;
-    args = e.argumentList;
-  } else {
-    return null;
-  }
-  if (ctor != 'Color') return null;
-  final ints = args.arguments
-      .whereType<IntegerLiteral>()
-      .map((x) => x.value)
-      .whereType<int>()
-      .toList();
-  if (named == 'fromARGB') {
-    if (ints.length != 4) return null;
-    final hex = ints
-        .map((x) => x.clamp(0, 255).toRadixString(16).padLeft(2, '0'))
-        .join();
-    return "'#$hex'";
-  }
-  // `Color(0xAARRGGBB)`：单个整数实参。
-  for (final a in args.arguments) {
-    if (a is IntegerLiteral && a.value != null) {
-      return "'#${a.value!.toRadixString(16).padLeft(8, '0')}'";
-    }
-  }
   return null;
 }
 

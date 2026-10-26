@@ -44,7 +44,7 @@ export class HomePage {
     var spots = this._feed.spots;
     var adImg = this._feed.adImg;
     return new Container({
-        "color": '#fff4f5f7',
+        "color": new Color({value: 0xFFF4F5F7}),
         "child": new EasyRefresh({
             "controller": this._refreshController,
             "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a)),
@@ -86,7 +86,7 @@ export class HomePage {
                                     "width": 6,
                                     "height": 6,
                                     "decoration": {
-                                      "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'),
+                                      "color": ((i == 0) ? new Color({value: 0xFF0E7AFB}) : new Color({value: 0xFFD5D9E0})),
                                       "borderRadius": {
                                         "radius": 3.0
                                       }
@@ -111,7 +111,7 @@ export class HomePage {
                                   "bottom": 12.0
                                 },
                                 "decoration": {
-                                  "color": '#ffffffff',
+                                  "color": new Color({value: 0xFFFFFFFF}),
                                   "borderRadius": {
                                     "radius": 14.0
                                   }
@@ -162,7 +162,7 @@ export class HomePage {
                                           "width": 4,
                                           "height": 16,
                                           "decoration": {
-                                            "color": '#ff0e7afb',
+                                            "color": new Color({value: 0xFF0E7AFB}),
                                             "borderRadius": {
                                               "radius": 2.0
                                             }
@@ -174,7 +174,7 @@ export class HomePage {
                                       (this.__k5 || (this.__k5 = new Text({
                                           "data": "景点推荐",
                                           "style": {
-                                            "color": '#ff1f2430',
+                                            "color": new Color({value: 0xFF1F2430}),
                                             "fontSize": 17,
                                             "fontWeight": "w700"
                                           }
@@ -183,7 +183,7 @@ export class HomePage {
                                       (this.__k7 || (this.__k7 = new Text({
                                           "data": "为你精选",
                                           "style": {
-                                            "color": '#ff8a909e',
+                                            "color": new Color({value: 0xFF8A909E}),
                                             "fontSize": 12
                                           }
                                         })))
@@ -264,8 +264,8 @@ export class HomeHeader {
           "gradient": {
             "kind": "linear",
             "colors": [
-              '#ff1e88ff',
-              '#ff0e7afb'
+              new Color({value: 0xFF1E88FF}),
+              new Color({value: 0xFF0E7AFB})
             ],
             "begin": "topLeft",
             "end": "bottomRight"
@@ -283,7 +283,7 @@ export class HomeHeader {
                             "child": (this.__k0 || (this.__k0 = new Row({
                                 "children": [
                                   new Icon({
-                                      "color": '#ffffffff',
+                                      "color": new Color({value: 0xFFFFFFFF}),
                                       "icon": "location_on",
                                       "size": 18
                                     }),
@@ -293,13 +293,13 @@ export class HomeHeader {
                                   new Text({
                                       "data": "上海",
                                       "style": {
-                                        "color": '#ffffffff',
+                                        "color": new Color({value: 0xFFFFFFFF}),
                                         "fontSize": 15,
                                         "fontWeight": "w600"
                                       }
                                     }),
                                   new Icon({
-                                      "color": '#ffffffff',
+                                      "color": new Color({value: 0xFFFFFFFF}),
                                       "icon": "keyboard_arrow_down",
                                       "size": 18
                                     })
@@ -314,7 +314,7 @@ export class HomeHeader {
                             },
                             "child": (this.__k2 || (this.__k2 = new Padding({
                                 "child": new Icon({
-                                    "color": '#ffffffff',
+                                    "color": new Color({value: 0xFFFFFFFF}),
                                     "icon": "refresh",
                                     "size": 24
                                   }),
@@ -338,7 +338,7 @@ export class HomeHeader {
                                 "children": [
                                   new Padding({
                                       "child": new Icon({
-                                          "color": '#ffffffff',
+                                          "color": new Color({value: 0xFFFFFFFF}),
                                           "icon": "notifications",
                                           "size": 24
                                         }),
@@ -359,7 +359,7 @@ export class HomeHeader {
                                             "borderRadius": {
                                               "radius": 4.0
                                             },
-                                            "color": '#ffff5a36'
+                                            "color": new Color({value: 0xFFFF5A36})
                                           }
                                         }),
                                       "right": 3,
@@ -387,7 +387,7 @@ export class HomeHeader {
                             "bottom": 0.0
                           },
                           "decoration": {
-                            "color": '#ffffffff',
+                            "color": new Color({value: 0xFFFFFFFF}),
                             "borderRadius": {
                               "radius": 21.0
                             }
@@ -395,7 +395,7 @@ export class HomeHeader {
                           "child": (this.__k6 || (this.__k6 = new Row({
                               "children": [
                                 new Icon({
-                                    "color": '#ff9aa0ac',
+                                    "color": new Color({value: 0xFF9AA0AC}),
                                     "icon": "search",
                                     "size": 20
                                   }),
@@ -405,7 +405,7 @@ export class HomeHeader {
                                 new Text({
                                     "data": "搜索目的地 / 关键词",
                                     "style": {
-                                      "color": '#ff9aa0ac',
+                                      "color": new Color({value: 0xFF9AA0AC}),
                                       "fontSize": 14
                                     }
                                   }),
@@ -413,7 +413,7 @@ export class HomeHeader {
                                 new Text({
                                     "data": "搜索",
                                     "style": {
-                                      "color": '#ff0e7afb',
+                                      "color": new Color({value: 0xFF0E7AFB}),
                                       "fontSize": 13,
                                       "fontWeight": "w600"
                                     }
@@ -471,8 +471,8 @@ export class BannerSlide {
                             "gradient": {
                               "kind": "linear",
                               "colors": [
-                                '#00000000',
-                                '#b3000000'
+                                new Color({value: 0x00000000}),
+                                new Color({value: 0xB3000000})
                               ],
                               "begin": "center",
                               "end": "bottomCenter"
@@ -488,7 +488,7 @@ export class BannerSlide {
                               "children": [
                                 new Text({
                                     "style": {
-                                      "color": '#ffffffff',
+                                      "color": new Color({value: 0xFFFFFFFF}),
                                       "fontSize": 17,
                                       "fontWeight": "w700"
                                     },
@@ -499,7 +499,7 @@ export class BannerSlide {
                                   }))),
                                 new Text({
                                     "style": {
-                                      "color": '#e6ffffff',
+                                      "color": new Color({value: 0xE6FFFFFF}),
                                       "fontSize": 12
                                     },
                                     "data": this.banner.sub
@@ -545,7 +545,7 @@ export class GridCell {
               new Text({
                   "style": {
                     "fontSize": 12,
-                    "color": '#ff4d5462'
+                    "color": new Color({value: 0xFF4D5462})
                   },
                   "data": this.entry.title
                 })
@@ -575,7 +575,7 @@ export class SpotCard {
         },
         "child": new Container({
             "decoration": {
-              "color": '#ffffffff',
+              "color": new Color({value: 0xFFFFFFFF}),
               "borderRadius": {
                 "radius": 14.0
               }
@@ -605,14 +605,14 @@ export class SpotCard {
                                       "bottom": 2.0
                                     },
                                     "decoration": {
-                                      "color": '#ffff5a36',
+                                      "color": new Color({value: 0xFFFF5A36}),
                                       "borderRadius": {
                                         "radius": 6.0
                                       }
                                     },
                                     "child": new Text({
                                         "style": {
-                                          "color": '#ffffffff',
+                                          "color": new Color({value: 0xFFFFFFFF}),
                                           "fontSize": 10,
                                           "fontWeight": "w600"
                                         },
@@ -639,7 +639,7 @@ export class SpotCard {
                                 "style": {
                                   "fontSize": 14,
                                   "fontWeight": "w600",
-                                  "color": '#ff1f2430'
+                                  "color": new Color({value: 0xFF1F2430})
                                 },
                                 "data": this.spot.title
                               }),
@@ -651,7 +651,7 @@ export class SpotCard {
                                 "overflow": "ellipsis",
                                 "style": {
                                   "fontSize": 11,
-                                  "color": '#ff8a909e'
+                                  "color": new Color({value: 0xFF8A909E})
                                 },
                                 "data": this.spot.sub
                               }),
@@ -663,7 +663,7 @@ export class SpotCard {
                                   (this.__k2 || (this.__k2 = new Text({
                                       "data": "¥",
                                       "style": {
-                                        "color": '#ffff5a36',
+                                        "color": new Color({value: 0xFFFF5A36}),
                                         "fontSize": 11,
                                         "fontWeight": "w700"
                                       }
@@ -671,7 +671,7 @@ export class SpotCard {
                                   new Text({
                                       "style": {
                                         "fontSize": 17,
-                                        "color": '#ffff5a36',
+                                        "color": new Color({value: 0xFFFF5A36}),
                                         "fontWeight": "w700"
                                       },
                                       "data": this.spot.price
@@ -680,7 +680,7 @@ export class SpotCard {
                                   new Text({
                                       "style": {
                                         "fontSize": 10,
-                                        "color": '#ff9aa0ac'
+                                        "color": new Color({value: 0xFF9AA0AC})
                                       },
                                       "data": this.spot.sold
                                     })
@@ -737,7 +737,7 @@ export class PromoCard {
                                 (this.__k0 || (this.__k0 = new Text({
                                     "data": "热气球季 · 限时特惠",
                                     "style": {
-                                      "color": '#ffffffff',
+                                      "color": new Color({value: 0xFFFFFFFF}),
                                       "fontSize": 16,
                                       "fontWeight": "w700"
                                     }
@@ -753,7 +753,7 @@ export class PromoCard {
                                       "bottom": 4.0
                                     },
                                     "decoration": {
-                                      "color": '#e6ffffff',
+                                      "color": new Color({value: 0xE6FFFFFF}),
                                       "borderRadius": {
                                         "radius": 12.0
                                       }
@@ -761,7 +761,7 @@ export class PromoCard {
                                     "child": (this.__k2 || (this.__k2 = new Text({
                                         "data": "立即查看 >",
                                         "style": {
-                                          "color": '#ff0e7afb',
+                                          "color": new Color({value: 0xFF0E7AFB}),
                                           "fontSize": 11,
                                           "fontWeight": "w600"
                                         }

@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:build/build.dart';
 
+import '../shared/color_constants.dart';
 import '../shared/ctor_signatures.dart';
 import '../shared/js_widget_defs.dart';
 import '../shared/paths.dart';
@@ -559,6 +560,18 @@ String renderPackageModule(String package, Set<String> types) {
       b
         ..writeln()
         ..writeln(hostWrapperSource(t));
+    }
+    // Colors 常量（SDK colors.dart 自动抽取）：`Colors.red` / `Colors.red[400]`
+    // 在 JS 侧原样求值，翻译层不含任何色值表；新增颜色重构建即生效。
+    final colors = colorsJsSource();
+    if (colors != null) {
+      b
+        ..writeln()
+        ..writeln(colors);
+    } else {
+      // ignore: avoid_print - 构建期日志
+      print('[hot_patch_generator] 未能定位 Flutter SDK colors.dart，'
+          'Colors 常量未注入（产物里 Colors.* 会解析失败）');
     }
   } else {
     final nodeRel = relativeProduct(

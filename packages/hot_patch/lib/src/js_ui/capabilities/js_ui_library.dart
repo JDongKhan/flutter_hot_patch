@@ -39,6 +39,7 @@ import 'cached_network_image/cached_network_image_library.dart';
 import 'change_notifier/change_notifier_library.dart';
 import 'core/dart_values_library.dart';
 import 'core/dart_errors_library.dart';
+import 'core/color_library.dart';
 import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
 import 'key/key_library.dart';
@@ -110,6 +111,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const DartValuesLibrary());
   // Dart 内置异常（StateError / ArgumentError / …）：依赖 __posArgs。
   registerJsUiLibrary(const DartErrorsLibrary());
+  // Color 类族（Color / MaterialColor / ColorSwatch）：依赖 __posArgs。
+  registerJsUiLibrary(const ColorLibrary());
   registerJsUiLibrary(const ChangeNotifierLibrary());
   // 动画值类 / AnimationController 镜像：显式动画经此逐帧回传 value。
   registerJsUiLibrary(const AnimationLibrary());
