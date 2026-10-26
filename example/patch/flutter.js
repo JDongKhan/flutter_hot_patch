@@ -820,6 +820,12 @@ export class Builder {
 export class GridView {
   constructor(props) {
     this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
+    if (typeof this.props.itemBuilder !== 'string') {
+      return __h('GridView', this.props);
+    }
   }
   __owner() {
     var name = this.props.itemBuilder;
@@ -828,8 +834,11 @@ export class GridView {
     return owner;
   }
   build(context) {
+    var name = this.props.itemBuilder;
     var owner = this.__owner();
-    if (!owner) { return null; }
+    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
+    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
+    if (typeof name !== 'string' || !owner) { return __h('GridView', this.props); }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
     // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
@@ -853,6 +862,12 @@ export class GridView {
 export class ListView {
   constructor(props) {
     this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
+    if (typeof this.props.itemBuilder !== 'string') {
+      return __h('ListView', this.props);
+    }
   }
   __owner() {
     var name = this.props.itemBuilder;
@@ -861,8 +876,11 @@ export class ListView {
     return owner;
   }
   build(context) {
+    var name = this.props.itemBuilder;
     var owner = this.__owner();
-    if (!owner) { return null; }
+    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
+    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
+    if (typeof name !== 'string' || !owner) { return __h('ListView', this.props); }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
     // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
@@ -916,6 +934,12 @@ export class ListenableBuilder {
 export class PageView {
   constructor(props) {
     this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
+    if (typeof this.props.itemBuilder !== 'string') {
+      return __h('PageView', this.props);
+    }
   }
   __owner() {
     var name = this.props.itemBuilder;
@@ -924,8 +948,11 @@ export class PageView {
     return owner;
   }
   build(context) {
+    var name = this.props.itemBuilder;
     var owner = this.__owner();
-    if (!owner) { return null; }
+    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
+    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
+    if (typeof name !== 'string' || !owner) { return __h('PageView', this.props); }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
     // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
@@ -947,6 +974,12 @@ export class PageView {
 export class ReorderableListView {
   constructor(props) {
     this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
+    if (typeof this.props.itemBuilder !== 'string') {
+      return __h('ReorderableListView', this.props);
+    }
   }
   __owner() {
     var name = this.props.itemBuilder;
@@ -955,8 +988,11 @@ export class ReorderableListView {
     return owner;
   }
   build(context) {
+    var name = this.props.itemBuilder;
     var owner = this.__owner();
-    if (!owner) { return null; }
+    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
+    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
+    if (typeof name !== 'string' || !owner) { return __h('ReorderableListView', this.props); }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
     // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
@@ -977,6 +1013,12 @@ export class ReorderableListView {
 export class SliverGrid {
   constructor(props) {
     this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
+    if (typeof this.props.itemBuilder !== 'string') {
+      return __h('SliverGrid', this.props);
+    }
   }
   __owner() {
     var name = this.props.itemBuilder;
@@ -985,8 +1027,11 @@ export class SliverGrid {
     return owner;
   }
   build(context) {
+    var name = this.props.itemBuilder;
     var owner = this.__owner();
-    if (!owner) { return null; }
+    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
+    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
+    if (typeof name !== 'string' || !owner) { return __h('SliverGrid', this.props); }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
     // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};
@@ -1010,6 +1055,12 @@ export class SliverGrid {
 export class SliverList {
   constructor(props) {
     this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
+    if (typeof this.props.itemBuilder !== 'string') {
+      return __h('SliverList', this.props);
+    }
   }
   __owner() {
     var name = this.props.itemBuilder;
@@ -1018,8 +1069,11 @@ export class SliverList {
     return owner;
   }
   build(context) {
+    var name = this.props.itemBuilder;
     var owner = this.__owner();
-    if (!owner) { return null; }
+    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
+    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
+    if (typeof name !== 'string' || !owner) { return __h('SliverList', this.props); }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
     // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};

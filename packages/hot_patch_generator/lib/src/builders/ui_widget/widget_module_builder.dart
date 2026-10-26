@@ -250,6 +250,12 @@ String builderProxySource(String type) {
 export class $type {
   constructor(props) {
     this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
+    if (typeof this.props.itemBuilder !== 'string') {
+      return __h('$type', this.props);
+    }
   }
   __owner() {
     var name = this.props.itemBuilder;
@@ -258,8 +264,11 @@ export class $type {
     return owner;
   }
   build(context) {
+    var name = this.props.itemBuilder;
     var owner = this.__owner();
-    if (!owner) { return null; }
+    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
+    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
+    if (typeof name !== 'string' || !owner) { return __h('$type', this.props); }
     // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
     // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     var p = {};

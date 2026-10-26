@@ -536,10 +536,16 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // SliverPadding：padding + 单个 sliver（命名参数 sliver 翻译为子节点）。
   r.register(
     'SliverPadding',
-    (c) => SliverPadding(
-      padding: edgeInsetsFromJson(c.map('padding')),
-      sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
-    ),
+    (c) {
+      // ignore: avoid_print
+      print('[dbg] SliverPadding children=${c.children.keys.toList()} '
+          'props=${c.props.keys.toList()} sliver=${c.children['sliver']?.runtimeType}');
+      return SliverPadding(
+        padding: edgeInsetsFromJson(c.map('padding')),
+        sliver:
+            ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
+      );
+    },
   );
 
   // SliverToBoxAdapter：普通 widget 包装成 sliver。
