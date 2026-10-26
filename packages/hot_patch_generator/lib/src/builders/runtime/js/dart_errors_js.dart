@@ -8,7 +8,6 @@
 // 不做类名白名单维护：新增异常类只需在此补一个 G 赋值（JS 侧能力扩展），
 // 翻译器与运行时框架都不改动。
 const String dartErrorsJsSource = r'''
-  // ===== 【0.2】Dart 内置异常 =====
   function __dartErrorCtor(name, positional) {
     var ctor = function (props) {
       props = __posArgs(props, positional);

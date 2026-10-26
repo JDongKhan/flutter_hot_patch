@@ -1,6 +1,6 @@
 // provider 包｜JS 侧「作用域声明」片段（能力内聚，见 capabilities/ 设计规范）。
 //
-// 核心（mini-react【7】）只提供**通用的**「按类型名查作用域」机制
+// 核心（mini-react【8】）只提供**通用的**「按类型名查作用域」机制
 // （`registerScope` / `applyScope` / `scopeOf`），不含任何 provider 知识。
 // 本片段把 provider 包**自己的**知识注册进去：
 //   「ChangeNotifierProvider 宿主结点通过 props.model / props.notifier 对外提供
@@ -18,7 +18,6 @@
 // **依赖顺序**：本片段在 build_context 片段（JsBuildContext 定义处）之后注入，
 // 故可安全给 `JsBuildContext.prototype` 补方法。
 const String providerJsSource = r'''
-  // ===== 【10.8】provider 包｜作用域声明 + context 扩展 =================
   // model   = 类型名（生成器在翻译期写入，源自 `ChangeNotifierProvider<T>` 的 T）；
   // notifier = JS 侧 provider 组件 build 时创建/复用的实例（活对象）。
   registerScope('ChangeNotifierProvider', function (props) {

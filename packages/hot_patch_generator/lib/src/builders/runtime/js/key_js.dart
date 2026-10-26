@@ -27,7 +27,6 @@
 // 判据用**结构**（__vkey / __okey / __id）而非 instanceof——key 可能来自父级
 // props 透传，形态必须与宿主侧 key_bridge 的解析保持一致。
 const String keyJsSource = r'''
-  // ===== 【10.6】Key 代理类（ValueKey / ObjectKey / UniqueKey / GlobalKey）===
   // ObjectKey / ValueKey(对象值) 的身份 token：对象走 WeakMap（不阻止回收），
   // 原始值没有身份，退化为值 string。
   var okeySeq = 0;
@@ -135,7 +134,10 @@ const String keyJsSource = r'''
     if (Object.prototype.hasOwnProperty.call(k, '__okey')) { return 'o:' + k.__okey; }
     var hid = k.__id != null ? k.__id : k.__handle;
     if (hid != null) { return 'h:' + hid; }
-    return 'x:' + String(k);
+    // 兜底：认不出的 key 对象按**引用身份**区分。绝不能 `String(k)` ——
+    // 所有对象都会拼成 "[object Object]" 而互相撞车，导致不同 key 复用同一
+    // 结点（`x:` 前缀保留，表明这是兜底签名）。
+    return 'x:' + objectToken(k);
   }
 
   G.ValueKey = ValueKey;

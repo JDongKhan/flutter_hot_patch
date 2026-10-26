@@ -33,22 +33,22 @@
 ///   - 核心片段拆分：mini-react（mini_react_js.dart）、ChangeNotifier
 ///     （change_notifier_js.dart）、各能力（同目录 `*_js.dart`）。
 ///
-/// **分区导航**（`runtimeJsSource` 内以 `// ===== 【n】` 分隔，按代码顺序）：
+/// **分区导航**（`runtimeJsSource` 内以 `// ===== 【n】` 分隔，编号即代码顺序）：
 ///
 /// | 分区 | 内容 | 属于哪个设计 |
 /// | --- | --- | --- |
-/// | 【1】 | 全局状态与工具（id 序号、结点标记、页面根表） | 全体共用 |
-/// | 【1b】 | 跨语言句柄注册表（`reg` / `release` / `call` / `handleOp`） | 全体共用（新增能力只注册 kind） |
-/// | 【1c】 | Dart 标准库 → JS 内建补齐（`Array.prototype.clear` 等） | 全体共用（生成器看不到接收者类型，同名方法无法在编译期区分） |
+/// | 【1】 | 运行环境 + 全局状态与工具（全局对象 / 模块表 / console 桥 / id 序号 / 页面根表） | 全体共用 |
 /// | 【2】 | 出方向桥（emit / commit / send → `sendMessage`） | 全体共用 |
 /// | 【3】 | 宿主桥 `_app_host_`（`invoke` / `resolve` / `reject`，唯一对外出口） | @HostInjected 专用 |
-/// | 【4】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
-/// | 【5】 | reconciler 工具（`eq` / `keyOf` / `hostIdOf` / `rootFor`） | mini-react |
-/// | 【6】 | 组件基类（`setState` / `__bindFn`） | mini-react（生成器产物的能力袋） |
-/// | 【7】 | 作用域｜按类型名向上查找 + 消费者订阅（`registerScope` / `scopeOf` / `subscribeListenable`） | 通用机制（三方库按类型注册，见 capabilities/js_ui_library.dart） |
-/// | 【8】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
-/// | 【9】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
-/// | 【10】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
+/// | 【4】 | 跨语言句柄注册表（`reg` / `release` / `call` / `handleOp`）+ 控制器三件套基座 | 全体共用（新增能力只注册 kind） |
+/// | 【5】 | element 与事件句柄（`h` / `fn` / `invoke`） | mini-react |
+/// | 【6】 | reconciler 工具（`eq` / `keyOf` / `keyedMatcher` / `rootFor`） | mini-react |
+/// | 【7】 | 组件基类（`setState` / `__bindFn`） | mini-react（生成器产物的能力袋） |
+/// | 【8】 | 作用域｜按类型名向上查找 + 消费者订阅（`registerScope` / `scopeOf` / `subscribeListenable`） | 通用机制（三方库按类型注册，见 capabilities/js_ui_library.dart） |
+/// | 【9】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
+/// | 【10】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
+/// | 【11】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
+/// | 【12】~【25】 | 能力片段（值类 / 异常 / Color / 动画 / 各 Controller / Key / BuildContext / provider …） | 按能力自洽 |
 ///
 /// 跨分区交叉点用行内 `[ctx]` / `[mini-react]` 标注，便于判断
 /// 「这段代码是为哪个设计写的」。
@@ -88,7 +88,8 @@ String _jsUiGlobals(String version) =>
 ///     不丢已挂载状态；
 ///   - 哈希不同（补丁包带了新版 runtime.js）= **继续执行并重建**整个 `__jsui`，
 ///     于是 JS 侧修复对已上线的 App 立即生效，无需发版。
-String _jsUiGlobalsHead(String version) => '''
+String _jsUiGlobalsHead(String version) =>
+    '''
 
 (function () {
   var G = typeof globalThis !== 'undefined'
@@ -101,8 +102,7 @@ String _jsUiGlobalsHead(String version) => '''
 /// env 标志（插值生成）：模块表 / 编译平台标志 / console 桥。
 /// 直接引用 Flutter 全局 [kDebugMode] / [kReleaseMode] / [defaultTargetPlatform]，
 /// 不再经参数传递。
-String _jsUiEnvVars() =>
-    '''
+String _jsUiEnvVars() => '''
 
 
 if (typeof G.__modules === 'undefined') {
@@ -113,14 +113,6 @@ if (typeof G.__modules === 'undefined') {
 // 编译模式与目标平台，构建期（build_runner）无从得知，故不写进产物。
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
 // 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
-// JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
-// 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
-// G.console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
-// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
-// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
-// debug/info/log/warn/error 全部可用且路由到 log 服务。
-// 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
-// 故 Promise 一定被回填、不会悬挂。
 // 值 → 字符串（对象/数组完整展开，循环引用安全）：JS 侧 `String(obj)` 只会
 // 得到 `[object Object]`，日志里看不到任何字段。`__str` 递归展开 own 字段，
 // 函数标成 `[Function name]`、循环引用标成 `[Circular]`（与 JSON.stringify
@@ -157,36 +149,46 @@ G.__str = function (v) { return __fmt(v, []); };
 // 原生日志方法（Dart debugPrint/print 转换产物直接调用）：统一桥到逻辑通道
 // 'log'（宿主 log 处理器 → HotPatchLog）。支持多实参（`console.log(a, b)` 与
 // 浏览器一致，空格分隔），每个实参都走 __fmt 展开。
-// G.console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
+//
+// **release 下全部关闭、零跨桥**：kDebugMode 为 false 时五个级别都是同一个空
+// 函数 —— 一次日志的代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既
+// 看不到也担不起；需要线上诊断请走显式上报通道，不要指望 print。
+//
 // 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
 // `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
-// debug/info/log/warn/error 全部可用且路由到 log 服务。
+// debug/info/log/warn/error 全部可用。
 // 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
-// 故 Promise 一定被回填、不会悬挂。
+// 故 Promise 一定被回填、不会悬挂。`_app_host_` 在本 IIFE 收尾（【25】）赋值，
+// 而 console 只可能被页面代码调用——那时它必然已存在，无需探测。
 G.console = (typeof G.console === 'undefined') ? {} : G.console;
 function __log(level, args) {
-  if (typeof G._app_host_ !== 'undefined' && G._app_host_.invoke) {
-    var text = '';
-    for (var i = 0; i < args.length; i++) {
-      text += (i ? ' ' : '') + __fmt(args[i], []);
-    }
-    // 级别一并带给宿主（位置实参 [level, text]）：console.warn/error 在宿主侧
-    // 就是 warn/error 级，可直接进统一上报出口；未知级别按 info 处理（见
-    // builtin_host_methods.dart 的 _log）。
-    G._app_host_.invoke('log', [level, text]);
+  var text = '';
+  for (var i = 0; i < args.length; i++) {
+    text += (i ? ' ' : '') + __fmt(args[i], []);
   }
+  // 级别一并带给宿主（位置实参 [level, text]）：console.warn/error 在宿主侧
+  // 就是 warn/error 级，可直接进统一上报出口；未知级别按 info 处理（见
+  // builtin_host_methods.dart 的 _log）。
+  G._app_host_.invoke('log', [level, text]);
 }
-G.console.debug = function() { if (G.kDebugMode) { __log('debug', arguments); } };
-G.console.info = function() { __log('info', arguments); };
-G.console.log = function() { __log('info', arguments); };
-G.console.warn = function() { __log('warn', arguments); };
-G.console.error = function() { __log('error', arguments); }
+function __silentLog() {}
+G.console.debug = __silentLog;
+G.console.info = __silentLog;
+G.console.log = __silentLog;
+G.console.warn = __silentLog;
+G.console.error = __silentLog;
+if (G.kDebugMode) {
+  G.console.debug = function () { __log('debug', arguments); };
+  G.console.info = function () { __log('info', arguments); };
+  G.console.log = function () { __log('info', arguments); };
+  G.console.warn = function () { __log('warn', arguments); };
+  G.console.error = function () { __log('error', arguments); };
+}
 ''';
 
 /// 静态尾部：骨架状态与工具（原 _jsUiGlobals 其余）。
 const String _jsUiGlobalsTail = r'''
 
-  // ===== 【1】运行环境｜全局状态与工具 ==================================
   var idSeq = 0;
   var HOST = 1, COMP = 2;
 
@@ -194,12 +196,12 @@ const String _jsUiGlobalsTail = r'''
   var roots = {};
   // pageKey -> 句柄 id[]：本页面（scope=page）登记的全部跨语言句柄（控制器 /
   // 函数 / 未来的 Key / 对象…）。页面退出时由 disposeRoot 统一释放——新增能力
-  // 只要按句柄登记即自动获得页面回收，无需再改 disposeRoot（见【1b】句柄注册表）。
+  // 只要按句柄登记即自动获得页面回收，无需再改 disposeRoot（见【4】句柄注册表）。
   var pageHandles = {};
   // 正在 mount/patch/flush 的根；emit / 结点归属都读它。
   var activeRoot = null;
   // 正在构建的元素（build 执行期）——`context` 的锚点。`context.watch/read` 据此
-  // 定位**作用域**（按类型名向上找，见【7】）并订阅（与 Dart 的 BuildContext
+  // 定位**作用域**（按类型名向上找，见【8】）并订阅（与 Dart 的 BuildContext
   // 语义一致：按**位置**而非「谁定义了这个方法」）。委托型组件（Builder/Consumer）
   // 把 builder 方法以 owner 为 this 调用时，锚点仍是它们自身的结点。
   var building = null;
@@ -208,14 +210,13 @@ const String _jsUiGlobalsTail = r'''
   // 唯一化。带前缀是为了让宿主侧 ValueKey / Flutter DevTools 一眼看出 id 的
   // 归属端（js/dt）与种类（node/comp/ctrl/fn/key…）——调试可读性。
   //   结点：js:node/<Type>#N（宿主结点）/ js:comp/<Name>#N（组件结点）
-  //   句柄：js:ctrl/Scroll#N、js:fn#N、dt:key/Global#N（见【1b】句柄注册表）
+  //   句柄：js:ctrl/Scroll#N、js:fn#N、dt:key/Global#N（见【4】句柄注册表）
   function nodeId(type) { idSeq += 1; return 'js:node/' + type + '#' + idSeq; }
   function compId(type) { idSeq += 1; return 'js:comp/' + compName(type) + '#' + idSeq; }
 
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
 
-  // ===== 【1c】Dart 标准库 → JS 内建补齐 ==============================
   // 【项目规则】凡是「翻译产物里调用的方法名，而在原生 JS 对应类型上不存在」的，
   // 一律**在本节给 JS 内建补一个同名同义的方法**，产物保持原样调用——不在生成器
   // 里做名字映射、也不改单源去绕开。
@@ -354,7 +355,6 @@ const String _jsUiGlobalsTail = r'''
 
 /// 出方向桥｜emit / commit / send → sendMessage（唯一底层发送）【2】。
 const String _jsUiEmit = r'''
-  // ===== 【2】出方向桥｜唯一底层发送（emit / commit / send）============
   // 所有 JS→宿主消息都打到单桥通道 `_app_bridge_`，目标通道名放在消息体
   // `ch` 字段。宿主只订阅该桥通道一次，再按 ch 二次分发。
   // `send` 是运行时**内部**的低层发送（不对外暴露）；对外的唯一入口是
@@ -380,7 +380,6 @@ const String _jsUiEmit = r'''
 
 /// 宿主桥｜_app_host_.invoke / resolve / reject（唯一对外出口）【3】。
 const String _jsUiHostBridge = r'''
-  // ===== 【3】宿主桥｜_app_host_.invoke / resolve / reject（唯一对外出口）======
   // JS 发起调用，宿主**必定**结算 Promise（成功回填 / 失败抛回）
   // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
   // `_app_host_.invoke("getUserName", [a, b])`（参数载荷按形态给：纯位置→数组、
@@ -423,21 +422,20 @@ const String _jsUiHostBridge = r'''
 
 ''';
 
-/// mini-react｜element 与事件句柄（h / fn / invoke）【4】。
+/// mini-react｜element 与事件句柄（h / fn / invoke）【5】。
 
-/// mini-react｜reconciler 工具（eq / keyOf / hostIdOf / rootFor）【5】。
+/// mini-react｜reconciler 工具（eq / keyOf / hostIdOf / rootFor）【6】。
 
-/// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【6】。
+/// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【7】。
 
-/// 作用域｜按类型名向上查找 + 消费者侧订阅（registerScope / scopeOf）【7】。
+/// 作用域｜按类型名向上查找 + 消费者侧订阅（registerScope / scopeOf）【8】。
 
-/// mini-react｜调度（markDirty → flush 批处理）【8】。
+/// mini-react｜调度（markDirty → flush 批处理）【9】。
 
-/// mini-react｜reconciler 主流程（mount / patch / unmount）【9】。
+/// mini-react｜reconciler 主流程（mount / patch / unmount）【10】。
 
-/// 对外入口｜api（Dart 只调 mount / dispose / invoke / host）【10】。
+/// 对外入口｜api（Dart 只调 mount / dispose / invoke / host）【11】。
 const String _jsUiApi = r'''
-  // ===== 【10】对外入口｜api（Dart 只调 mount / dispose / invoke / host）
   function parse(x) {
     if (x == null || x === '') { return {}; }
     if (typeof x === 'string') {
@@ -452,7 +450,7 @@ const String _jsUiApi = r'''
       // 的 create/insert，而 flush 会**重置并消耗**同一份 ops（`root.ops = []`
       // 后 commit 把它置 null），既丢掉尚未下发的结点、又让随后的根 op 被 emit
       // 静默丢弃（宿主收不到根 → 页面停在加载态）。故挂载期间的 setState 只入
-      // dirty 队列，挂载收尾后统一 flush（见【8】markDirty 与 mountRoot）。
+      // dirty 队列，挂载收尾后统一 flush（见【9】markDirty 与 mountRoot）。
       key: pageKey, inst: null, dirty: [], flushing: false,
       flushPending: false, mounting: false, ops: null
     };
@@ -511,7 +509,7 @@ const String _jsUiApi = r'''
     }
     root.inst = null;
     // 页面退出兜底：统一释放本页面登记的**全部**句柄（控制器 / 函数 / Key /
-    // 对象…，见【1b】句柄注册表）——拥有端销毁真实对象，对端丢句柄。组件若已
+    // 对象…，见【4】句柄注册表）——拥有端销毁真实对象，对端丢句柄。组件若已
     // 在自身 dispose() 里释放，这里幂等。
     releasePageHandles(pageKey);
     delete roots[pageKey];
@@ -609,7 +607,7 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
     dispose: disposeRoot,
     updateProps: updateRootProps,
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
-    // （setState 只标脏，见【8】markDirty / requestFlush）。
+    // （setState 只标脏，见【9】markDirty / requestFlush）。
     flushPending: flushPending,
 ''';
 
@@ -653,32 +651,38 @@ String runtimeJsSource() {
   final body = [
     _section('【2】出方向桥（emit / commit）', _jsUiEmit),
     _section('【3】宿主桥 _app_host_', _jsUiHostBridge),
-    _section('【1b】跨语言句柄注册表', handleRegistryJsSource),
-    _section('【4】element 与事件句柄', miniReactElementSource),
-    _section('【5】reconciler 工具', miniReactReconcilerUtilsSource()),
-    _section('【6】组件基类', miniReactComponentBaseSource),
-    _section('【7】作用域与订阅', miniReactScopeSource),
-    _section('【8】调度', miniReactSchedulerSource),
-    _section('【9】reconciler 主流程', miniReactReconcilerSource),
-    _section('【10】对外入口 api', _jsUiApi),
+    _section('【4】跨语言句柄注册表', handleRegistryJsSource),
+    _section('【5】element 与事件句柄', miniReactElementSource),
+    _section('【6】reconciler 工具', miniReactReconcilerUtilsSource()),
+    _section('【7】组件基类', miniReactComponentBaseSource),
+    _section('【8】作用域与订阅', miniReactScopeSource),
+    _section('【9】调度', miniReactSchedulerSource),
+    _section('【10】reconciler 主流程', miniReactReconcilerSource),
+    _section('【11】对外入口 api', _jsUiApi),
     // 各能力片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
-    _section('【11】Dart 值类（Duration / Size / Offset / Radius）', dartValuesJsSource),
-    _section('【12】Dart 异常（StateError / ArgumentError / …）', dartErrorsJsSource),
-    _section('【13】Color 类族（Color / MaterialColor / ColorSwatch）', colorJsSource),
-    _section('【14】ChangeNotifier 基类', changeNotifierSource),
-    _section('【15】动画（Animation / AnimationController）', animationJsSource),
-    _section('【16】ScrollController', scrollControllerJsSource),
-    _section('【17】TextEditingController', textEditingControllerJsSource),
-    _section('【18】TabController', tabControllerJsSource),
-    _section('【19】Key 类族', keyJsSource),
-    _section('【20】BuildContext 代理', buildContextJsSource),
-    _section('【21】EasyRefresh', easyRefreshJsSource),
-    _section('【22】provider', providerJsSource),
+    _section(
+      '【12】Dart 值类（Duration / Size / Offset / Radius）',
+      dartValuesJsSource,
+    ),
+    _section('【13】Dart 异常（StateError / ArgumentError / …）', dartErrorsJsSource),
+    _section(
+      '【14】Color 类族（Color / MaterialColor / ColorSwatch）',
+      colorJsSource,
+    ),
+    _section('【15】ChangeNotifier 基类', changeNotifierSource),
+    _section('【16】动画（Animation / AnimationController）', animationJsSource),
+    _section('【17】ScrollController', scrollControllerJsSource),
+    _section('【18】TextEditingController', textEditingControllerJsSource),
+    _section('【19】TabController', tabControllerJsSource),
+    _section('【20】Key 类族', keyJsSource),
+    _section('【21】BuildContext 代理', buildContextJsSource),
+    _section('【22】EasyRefresh', easyRefreshJsSource),
+    _section('【23】provider', providerJsSource),
     // 泄漏观测：无条件拼入（构建期不知道 App 是 debug 还是 release）。
     // 宿主侧调用点仍由 kDebugMode 门控，release 下这些函数不会被调用，
     // 只占体积、不影响行为。
-    _section('【23】泄漏观测（debug 用）', _jsUiLeakSnapshotFn),
-    _section('【24】api 收尾', _jsUiRuntimeSkeletonTailHead),
+    _section('【24】泄漏观测（debug 用）', _jsUiLeakSnapshotFn),
+    _section('【25】api 收尾', _jsUiRuntimeSkeletonTailHead),
     _jsUiLeakApiMember,
     _jsUiRuntimeSkeletonTailEnd,
   ].join('\n');

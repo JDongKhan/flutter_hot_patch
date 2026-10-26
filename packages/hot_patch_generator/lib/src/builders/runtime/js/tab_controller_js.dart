@@ -1,12 +1,11 @@
 // 由 runtime_js.dart 拆出的 TabController JS 片段（能力内聚，见 capabilities/ 设计规范）。
 // runtime_source 把骨架与各能力片段拼接后注入（同一 IIFE 作用域，片段间靠函数提升互调）。
 const String tabControllerJsSource = r'''
-  // ===== 【10.7】TabController 代理类（对应 Flutter 官方 TabController）===
   // 生成器把 Dart 侧 `late final TabController _c = TabController(length: 3, vsync: this)`
   // 翻译成 `this._c = new TabController({length: 3, vsync: this})`（vsync 由本代理
   // 类忽略），实例与宿主侧真实 TabController 按**句柄 id** 绑定。
   // 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-  // 工厂 defineController 提供（见【1c】）；本类只写差异：
+  // 工厂 defineController 提供（见【4】）；本类只写差异：
   //   - length/__index：本地镜像（宿主回传 index 更新）；真实实例由宿主在渲染
   //     TabBar / TabBarView 时按 id 取/建（length 随句柄下发，见 extraJSON）；
   //   - index setter：立即设置宿主 index 并通知监听者；

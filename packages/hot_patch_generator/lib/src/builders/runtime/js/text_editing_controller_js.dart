@@ -4,7 +4,7 @@ const String textEditingControllerJsSource = r'''
   // TextEditingController：JS 侧代理类，与宿主真实 TextEditingController 按
   // **句柄 id** 绑定（通用层，同 ScrollController 模式）。
   // 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-  // 工厂 defineController 提供（见【1c】）；本类只写差异：
+  // 工厂 defineController 提供（见【4】）；本类只写差异：
   //   - text：本地镜像（宿主经 textFn 回传更新），setter 发 host set 同步宿主；
   //   - selection：本地镜像，setter 发 host setSelection；
   //   - clear()：发 host clear + 清镜像；

@@ -10,7 +10,6 @@
 // Flutter SDK `colors.dart` 自动生成（见 generator 的 color_constants.dart），
 // 这里只提供类，不含任何色值表。
 const String colorJsSource = r'''
-  // ===== 【0.3】Color / MaterialColor / ColorSwatch =====
   function __toHex(v) {
     var n = (v >>> 0).toString(16).toUpperCase();
     while (n.length < 8) { n = '0' + n; }

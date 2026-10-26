@@ -16,7 +16,6 @@
 // 的结果（见 js/mini_react_js.dart）；Dart 的 async 方法在 JS 侧就是
 // async 函数，返回 Promise。
 const String easyRefreshJsSource = r'''
-  // ===== 【11】EasyRefresh｜宿主发起 + JS 异步完成 =====================
   // 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart 的
   // `_runAwaitableEvent`：evaluate 本函数触发一次事件，并等 token 回传。
   // 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__jsui` 同一约定。
@@ -27,9 +26,8 @@ const String easyRefreshJsSource = r'''
       out = (h && typeof h.obj === 'function') ? h.obj() : null;
     } catch (e) {
       // 事件方法同步抛错：按「已完成」收尾——指示器必须收起，不能挂死在转圈。
-      if (typeof console !== 'undefined' && console.error) {
-        console.error(String(e));
-      }
+              console.error(String(e));
+      
     }
     // 完成回传走 host（唯一 JS→宿主出口）；onFulfilled / onRejected 都必须回传，
     // 否则宿主侧那条 pending 永远等不到结算。
@@ -41,8 +39,7 @@ const String easyRefreshJsSource = r'''
     }
   };
 
-  // ===== 【11.1】EasyRefreshController 代理类 =====================
-  // 与 ScrollController 同款句柄层（三件套见【1c】defineController）：JS 实例与
+  // 与 ScrollController 同款句柄层（三件套见【4】defineController）：JS 实例与
   // 宿主真实 EasyRefreshController 按句柄 id 绑定。控制方法把**原始实参数组**
   // 原样下发（`handleOp 'call'`），由宿主按 Dart 形参的类型/顺序还原：
   // 生成器对方法调用的具名实参是位置化扁平（JS 无具名参数），所以这里不臆造

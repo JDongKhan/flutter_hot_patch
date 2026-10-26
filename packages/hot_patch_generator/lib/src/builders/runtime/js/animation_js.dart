@@ -18,9 +18,8 @@
 // value 回传到 JS 镜像 → 触发 listeners（AnimatedBuilder 等 JS 逻辑组件据此
 // 只重建自己的子树）；同时隐式/过渡动画由宿主原生组件自行插值，无需逐帧过桥。
 // 三件套基座（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用工厂
-// defineController 提供（见【1c】），本片段只写差异。
+// defineController 提供（见【4】），本片段只写差异。
 const String animationJsSource = r'''
-  // ===== 【10.9】Curve 名字表（与 Dart `Curves.<name>` 同口径）=====
   // 只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主已完成真实插值）；
   // 宿主侧按同名表还原真实 Curve（见 animation_from_json.curveFromJson）。
   function __animCurveFn(name) {
@@ -33,14 +32,12 @@ const String animationJsSource = r'''
       case 'easeOut': return function (t) { return 1 - (1 - t) * (1 - t); };
       case 'fastOutSlowIn': return function (t) { return t * t * (3 - 2 * t); };
       default:
-        if (typeof console !== 'undefined' && console.warn) {
-          console.warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
-        }
+                  console.warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
+        
         return function (t) { return t; };
     }
   }
 
-  // ===== 【10.9】SDK 常量类镜像（Curves / CrossFadeState）=====
   // 生成器对 `Curves.easeOut` 这类「类名.成员」有两种落点（props 位会翻成
   // 成员名字符串，其它位置原样引用），运行时提供同名对象后两边口径一致。
   // 值一律是**成员名字符串**，宿主按名字查真实曲线 / 枚举（见
@@ -68,7 +65,6 @@ const String animationJsSource = r'''
 
   G.CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
 
-  // ===== 【10.10】Tween / CurvedAnimation（JS 侧值对象）=====
   // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
   // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
   function Tween(opts) {
@@ -116,7 +112,6 @@ const String animationJsSource = r'''
   };
   G.CurvedAnimation = CurvedAnimation;
 
-  // ===== 【10.11】AnimationController 代理类 =====
   // 真实控制器在宿主（Ticker 驱动）；本镜像只保存 value 与时长：
   //   - forward/reverse/repeat/stop/reset → `handleOp('call')`（载荷带 value 与
   //     时长，宿主据此对齐状态后再驱动）；

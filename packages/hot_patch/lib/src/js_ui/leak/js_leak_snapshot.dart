@@ -28,8 +28,9 @@ import '../js_ui_store.dart';
 ///     （退化为 global 的那类「本该是 page」对象），只能与进入前基线比对。
 ///
 /// 用法（JsUiWidget 已接线）：initState 取基线 [capture]，dispose 取第二次
-/// 后调 [reportLeaks]。仅 debug 构建启用（kDebugMode + HotPatchLog 门控，
-/// release 下探针表恒空、JS 产物不含 leakSnapshot），线上零开销。
+/// 后调 [reportLeaks]。仅 debug 构建**调用**（kDebugMode + HotPatchLog 门控）；
+/// `leakSnapshot` 本身在 runtime.js 里恒存在（产物分不出 debug/release），
+/// release 下不被调用即零开销。
 class JsLeakSnapshot {
   JsLeakSnapshot._({
     required this.handles,

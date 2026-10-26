@@ -1,24 +1,23 @@
 // mini-react —— JS 侧 UI 运行时核心（框架核心，独立成文件）。
 //
-// 与 runtime_js.dart 的骨架入口/桥（【1】~【3】、【10】+尾部）拼接后
+// 与 runtime_js.dart 的骨架入口/桥（【1】~【3】、【11】+尾部）拼接后
 // 注入同一 IIFE：这里定义 element 描述、reconciler（mount/patch/unmount）、
 // 组件基类（setState/__bindFn）、作用域（按类型名）查找与订阅、脏调度批处理。
 // 新增框架级机制（如 fiber、portals）改本文件；新增业务能力桥接
 // （controller 等）仍走 capabilities/，两边互不干扰。
 //
 // 组件生命周期与 Flutter 对齐，统一由本文件派发：
-//   initState / didChangeDependencies（首帧）→ mount【9】；
-//   依赖变更 → didChangeDependencies → flush【8】；
-//   父级重建 → didUpdateWidget(oldWidget) → patch【9】；
-//   摘除 → deactivate → dispose → unmount【9】。
+//   initState / didChangeDependencies（首帧）→ mount【10】；
+//   依赖变更 → didChangeDependencies → flush【9】；
+//   父级重建 → didUpdateWidget(oldWidget) → patch【10】；
+//   摘除 → deactivate → dispose → unmount【10】。
 //   （activate 需「重挂载/reparent」场景，mini-react 无此能力，故不派发。）
 //
-// 分区与 runtime_js.dart 导航表一致（【4】~【9】）。
+// 分区与 runtime_js.dart 导航表一致（【5】~【10】）。
 
-/// mini-react｜element 与事件句柄（h / fn / invoke）【4】。
+/// mini-react｜element 与事件句柄（h / fn / invoke）【5】。
 const String miniReactElementSource = r'''
 
-  // ===== 【4】mini-react｜element 与事件句柄（h / fn / invoke）========
   function h(type, props, children) {
     var ch = [];
     if (children != null) {
@@ -49,7 +48,7 @@ const String miniReactElementSource = r'''
   }
 
   // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local：由拥有者
-  // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【1b】句柄注册表）。
+  // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【4】句柄注册表）。
   // 宿主侧回调用 invoke 触发。
   function fn(f) {
     var id = reg(f, 'fn', { scope: 'local', sync: false });
@@ -85,16 +84,12 @@ const String miniReactElementSource = r'''
 /// 这里提高到 32 并把入口改为函数，深度只在 Dart 常量一处维护。
 const int jsUiMaxPropDiffDepth = 32;
 
-/// mini-react｜reconciler 工具（eq / keyOf / hostIdOf / rootFor）【5】。
-String miniReactReconcilerUtilsSource() =>
-    _miniReactReconcilerUtilsSource.replaceFirst(
-      '__EQ_MAX_DEPTH__',
-      '$jsUiMaxPropDiffDepth',
-    );
+/// mini-react｜reconciler 工具（eq / keyOf / hostIdOf / rootFor）【6】。
+String miniReactReconcilerUtilsSource() => _miniReactReconcilerUtilsSource
+    .replaceFirst('__EQ_MAX_DEPTH__', '$jsUiMaxPropDiffDepth');
 
 const String _miniReactReconcilerUtilsSource = r'''
 
-  // ===== 【5】mini-react｜reconciler 工具 ==============================
   // 深比较（用于避免每次重建都下发 props）；下面紧邻的 keyOf / hostIdOf /
   // rootFor 同属本分区。
   var EQ_MAX_DEPTH = __EQ_MAX_DEPTH__;
@@ -106,8 +101,16 @@ const String _miniReactReconcilerUtilsSource = r'''
     if (a === null || b === null || typeof a !== 'object') { return false; }
     var aArr = Array.isArray(a), bArr = Array.isArray(b);
     if (aArr !== bArr) { return false; }
-    var ka = Object.keys(a), kb = Object.keys(b);
-    if (ka.length !== kb.length) { return false; }
+    // 数组先比长度：列表插删是最常见的变化，能在这里短路，不必走进逐项递归。
+    if (aArr && a.length !== b.length) { return false; }
+    // 只分配 a 的键数组；b 的键数用 for-in 计数（原来每层两次 Object.keys，
+    // 深树 patch 时是纯 GC 压力）。
+    var ka = Object.keys(a);
+    var bn = 0;
+    for (var kb in b) {
+      if (Object.prototype.hasOwnProperty.call(b, kb)) { bn += 1; }
+    }
+    if (ka.length !== bn) { return false; }
     for (var i = 0; i < ka.length; i++) {
       if (!eq(a[ka[i]], b[ka[i]], depth - 1)) { return false; }
     }
@@ -115,7 +118,7 @@ const String _miniReactReconcilerUtilsSource = r'''
   }
 
   // 结点声明的 key（**值**，不是结点）：ValueKey / ObjectKey 实例、GlobalKey /
-  // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【10.6】），
+  // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【20】），
   // 不在此处做归一——`keyOf` 只负责取。
   function keyOf(inst) {
     var p = inst.__k === HOST ? inst.__props : (inst.__el && inst.__el.props);
@@ -134,19 +137,18 @@ const String _miniReactReconcilerUtilsSource = r'''
 
 ''';
 
-/// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【6】。
+/// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【7】。
 const String miniReactComponentBaseSource = r'''
 
-  // ===== 【6】mini-react｜组件基类（生成器产物的能力袋）===============
   // 生成器产物**不** extends 本类：`augment` 把这些方法拷到实例上。
   // setState / __bindFn 属于 mini-react；上下文（`context.watch/read`）与
-  // BuildContext 代理见【10.7】（调用面与 Dart 一致，不在实例上挂 `this.watch`）。
+  // BuildContext 代理见【21】（调用面与 Dart 一致，不在实例上挂 `this.watch`）。
   function Component(props) { this.props = props || {}; }
   Component.prototype.setState = function (mutate) {
     if (typeof mutate === 'function') { mutate.call(this); }
     markDirty(this);
   };
-  // ── 回到【6】mini-react｜事件句柄（__bindFn）─────────────────────────
+  // ── 回到【7】mini-react｜事件句柄（__bindFn）─────────────────────────
   // 事件句柄：生成器把事件统一翻译成**构建期箭头闭包**，在此登记成句柄。
   // `this` 正是 build 作用域里的组件实例，也就是**定义该事件的组件**（含
   // Consumer/Builder 把 builder 方法 `.call(owner)` 的场景）。句柄随 props
@@ -158,19 +160,21 @@ const String miniReactComponentBaseSource = r'''
   //   循环项捕获到不同值时各自独立（回调不互相覆盖）；卸载时统一释放。
   //
   // 捕获值的身份判定：对象 / 函数按**引用身份**（同一个对象每次重建仍是同一个
-  // → key 稳定），原始值按 String。WeakMap 自动回收，不延长捕获对象寿命。
-  var __capIds = typeof WeakMap === 'function' ? new WeakMap() : null;
+  // → key 稳定），原始值按 **typeof 前缀 + String**（`1` 与 `'1'`、`null` 与
+  // `undefined` 与 `''` 必须是不同 key，否则不同捕获值的闭包会互相覆盖）。
+  // WeakMap 自动回收，不延长捕获对象寿命。
+  var __capIds = new WeakMap();
   var __capSeq = 0;
   function capKey(v) {
-    if (v === null || v === undefined) { return ''; }
+    if (v === undefined) { return 'undefined'; }
+    if (v === null) { return 'null'; }
     var t = typeof v;
     if (t === 'object' || t === 'function') {
-      if (!__capIds) { return String(v); }
       var id = __capIds.get(v);
       if (!id) { id = ++__capSeq; __capIds.set(v, id); }
-      return '#' + id;
+      return t + '#' + id;
     }
-    return String(v);
+    return t + ':' + String(v);
   }
   // [siteId] 是编译期位点号（同一个 on* 位点每次构建都相同）。它只要求
   // **同一个组件类内**唯一：句柄缓存挂在实例自己的 `__boundFn` 上，不同实例
@@ -193,7 +197,7 @@ const String miniReactComponentBaseSource = r'''
       // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
       // 返回值保留：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
       try { return handle.__run.apply(handle, arguments); }
-      catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
+      catch (e) {  console.error(String(e));  }
       finally { building = prev; }
     });
     handle.__run = f;
@@ -204,10 +208,9 @@ const String miniReactComponentBaseSource = r'''
 
 ''';
 
-/// 作用域｜按**类型名**向上查找 + 消费者侧订阅（scopeOf / subscribeListenable）【7】。
+/// 作用域｜按**类型名**向上查找 + 消费者侧订阅（scopeOf / subscribeListenable）【8】。
 const String miniReactScopeSource = r'''
 
-  // ===== 【7】作用域｜按类型名向上查找 + 消费者侧订阅 ==================
   // **与 Flutter 的 InheritedWidget 同语义**：宿主结点用 `__provides`
   // （类型名 → 值）声明自己对外提供的作用域；查找**只认类型名**，不关心这个
   // 类型是模型、控制器还是别的什么 —— 正如 Dart 侧
@@ -284,12 +287,11 @@ const String miniReactScopeSource = r'''
 
 ''';
 
-/// mini-react｜调度（markDirty → flush 批处理）【8】。
+/// mini-react｜调度（markDirty → flush 批处理）【9】。
 const String miniReactSchedulerSource = r'''
 
-  // ===== 【8】mini-react｜调度（dirty → flush 批处理）==================
   // collected dirty -> 重建子树 -> 一次 commit。
-  // 触发源有两处：mini-react 的 setState、作用域订阅回调（见【7】`subscribeListenable`）。
+  // 触发源有两处：mini-react 的 setState、作用域订阅回调（见【8】`subscribeListenable`）。
   //
   // **挂载中不 flush**：`root.mounting` 期间 `root.ops` 归 mountRoot 累积（整棵树的
   // create/insert），而 flush 会重置并消耗同一份 ops —— 未下发的结点连同根 op 一起
@@ -309,10 +311,9 @@ const String miniReactSchedulerSource = r'''
     // 整个 JS 线程卡死且没有任何日志。这里出声并跳过。
     // 只挡「自己正在 build」：祖先/子结点互相标脏不受影响（原生同样放行）。
     if (inst.__building) {
-      if (typeof console !== 'undefined' && console.error) {
-        console.error('jsui: setState during build ignored (' +
+              console.error('jsui: setState during build ignored (' +
           compName(inst.constructor) + ')');
-      }
+      
       return;
     }
     var root = inst.__root;
@@ -327,10 +328,8 @@ const String miniReactSchedulerSource = r'''
   function requestFlush(root) {
     if (root.flushPending) { return; }
     root.flushPending = true;
-    // 有宿主桥才交给它调度；否则（无 sendMessage 的纯 JS 环境）同步兜底。
-    if (typeof sendMessage === 'function' &&
-        typeof G._app_host_ !== 'undefined' && G._app_host_ &&
-        G._app_host_.invoke) {
+    // 有宿主桥才交给它调度；否则（无 sendMessage 的纯 JS 环境，如单测）同步兜底。
+    if (typeof sendMessage === 'function' && G._app_host_) {
       G._app_host_.invoke('jsuiRequestFrame', []);
       return;
     }
@@ -391,10 +390,9 @@ const String miniReactSchedulerSource = r'''
             try {
               syncEnclosingKeepAlive(inst);
             } catch (e2) {
-              if (typeof console !== 'undefined' && console.error) {
-                console.error('jsui: keepAlive sync failed (' +
+                              console.error('jsui: keepAlive sync failed (' +
                   compName(inst.constructor) + '): ' + e2);
-              }
+              
             }
             commit(root);
           } catch (e) {
@@ -402,10 +400,9 @@ const String miniReactSchedulerSource = r'''
             // 避免 JS 树与宿主渲染在中途状态上分叉。该实例保持 __dirty=false，
             // 下次 setState / 订阅通知会重新重建。
             root.ops = null;
-            if (typeof console !== 'undefined' && console.error) {
-              console.error('jsui: rebuild failed (' +
+                          console.error('jsui: rebuild failed (' +
                 compName(inst.constructor) + '): ' + e);
-            }
+            
           }
         }
       }
@@ -416,10 +413,9 @@ const String miniReactSchedulerSource = r'''
 
 ''';
 
-/// mini-react｜reconciler 主流程（mount / patch / unmount）【9】。
+/// mini-react｜reconciler 主流程（mount / patch / unmount）【10】。
 const String miniReactReconcilerSource = r'''
 
-  // ===== 【9】mini-react｜reconciler 主流程（mount / patch / unmount）==
   //
   // 「懒容器 + 延迟子结点」：容器的 children 不随容器一起挂载，而是等**宿主**
   // 真的 inflate 到那个槽位时才挂载 —— 即 initState 由 `_JsNodeState` 的生命周期
@@ -706,9 +702,8 @@ const String miniReactReconcilerSource = r'''
     var el = lazyElementOf(src);
     if (el == null || el === false) {
       // builder 返回空属错误写法（Flutter 侧会直接抛错）：保留已挂载子树并留痕。
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('jsui: lazy slot builder returned empty, keep mounted subtree');
-      }
+              console.warn('jsui: lazy slot builder returned empty, keep mounted subtree');
+      
       return ph;
     }
     // 与原生 Flutter 对齐：父级每次重建都会重新执行 itemBuilder，并把产出的新
@@ -730,14 +725,14 @@ const String miniReactReconcilerSource = r'''
       emit({ op: 'propsChild', parent: ph.__id, key: 'child', childId: newRoot });
     }
     // 父级重建路径的保活声明同步（组件自身 setState 引起的变化走 flush 的
-    // syncEnclosingKeepAlive，见【8】）。
+    // syncEnclosingKeepAlive，见【9】）。
     syncKeepAlive(ph);
     return ph;
   }
 
   // 宿主 inflate 到懒槽位 → 真正挂载它的子元素（幂等：只对还没挂载过的占位生效）。
   // ops 纪律与 mountRoot 一致：挂载期间 `root.ops` 归本次挂载累积，挂载期间的
-  // setState 只入 dirty 队列，收尾再 flush（见【8】）。
+  // setState 只入 dirty 队列，收尾再 flush（见【9】）。
   function lazyMount(placeholderId) {
     var ph = hostNodes[placeholderId];
     if (!ph || (!ph.__deferred && !ph.__deferMake)) { return false; }
@@ -745,9 +740,8 @@ const String miniReactReconcilerSource = r'''
     var el = ph.__deferred;
     if (el == null && ph.__deferMake) { el = ph.__deferMake(); }
     if (el == null || el === false) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('jsui: lazy slot builder returned empty, placeholder=' + placeholderId);
-      }
+              console.warn('jsui: lazy slot builder returned empty, placeholder=' + placeholderId);
+      
       return false;
     }
     // 来源**保留**：宿主 dispose（ListView 回收离屏项）后还要按同一来源重建，
@@ -792,10 +786,9 @@ const String miniReactReconcilerSource = r'''
       ok = false;
       rollbackMountFrame(frame);
       root.ops = null;
-      if (typeof console !== 'undefined' && console.error) {
-        console.error('jsui: lazy slot mount failed, placeholder=' +
+              console.error('jsui: lazy slot mount failed, placeholder=' +
           placeholderId + ': ' + e);
-      }
+      
     } finally {
       endMountFrame(frame);
       root.mounting = false;
@@ -879,7 +872,7 @@ const String miniReactReconcilerSource = r'''
     var prev = building;
     building = inst;
     // `__building` 标记「本实例正处在 build 执行期」，供 markDirty 拦截 build 内
-    // setState（见【8】）。**不能用锚点 `building` 代替**：initState /
+    // setState（见【9】）。**不能用锚点 `building` 代替**：initState /
     // didUpdateWidget 期间锚点也指向本实例，那两个阶段 setState 是合法写法。
     inst.__building = true;
     try { return inst.build(contextOf(inst)); }
@@ -895,7 +888,7 @@ const String miniReactReconcilerSource = r'''
         __k: HOST, __id: nodeId(el.type), __type: el.type, __root: rootFor(parent),
         __props: el.props, __children: [], __parent: parent, __el: el
       };
-      // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【7】）。
+      // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
       applyScope(hi, el.props);
       hostNodes[hi.__id] = hi;
       trackNode(hi.__id);
@@ -961,7 +954,7 @@ const String miniReactReconcilerSource = r'''
     augment(ci);
     // 生命周期与 Flutter 对齐：initState → didChangeDependencies → build。
     // （后续「依赖变更」走 flush 的 __depDirty，「父级重建」走 patch 的
-    //  didUpdateWidget，见【8】/【9】。）
+    //  didUpdateWidget，见【9】/【10】。）
     // initState 期间也把构建锚点指向本实例：此时 `this.context` 与新建句柄的
     // 归属都应以本组件为准（过去 building 只在 buildOf 里设置，initState 看到的是父级）。
     var prevBuilding = building;
@@ -1072,10 +1065,9 @@ const String miniReactReconcilerSource = r'''
         // Widget，生成器对无法翻译的 widget 位置也会降级成 SizedBox 占位。
         // 宿主侧 propsChildAt 的 childId 为空无法落位（会被丢弃，数组槽位因此
         // 留一个空位），这里必须出声，不静默。
-        if (typeof console !== 'undefined' && console.error) {
-          console.error('jsui: component render root is empty after build (' +
+                  console.error('jsui: component render root is empty after build (' +
             compName(inst.constructor) + ')');
-        }
+        
         return inst.__child;
       }
       emit({
@@ -1086,23 +1078,73 @@ const String miniReactReconcilerSource = r'''
     return inst.__child;
   }
 
+  // 子项 keyed 匹配器（`patchChildren` / `patchSlotList` 共用**唯一一份**实现）。
+  //
+  // 旧实现每个子项都做「线性扫 remaining + splice + indexOf」→ O(n²)：100 项列表
+  // 每次重建约 1 万次比较、100 次数组搬移。这里一次建索引，之后每项 O(1)：
+  //   - 带 key：`keySig` → 实例（同签名只认领一个，重复 key 按新建处理）；
+  //   - 无 key：按旧序游标推进（保持「位置优先」的复用语义）；
+  //   - 位置：`__id` → 旧下标，move 判定不再 `indexOf`。
+  //
+  // `take(ek)` 返回本轮可复用的旧实例（没有则 null）；`leftovers()` 返回未被
+  // 认领的旧实例（调用方负责 unmount）。
+  function keyedMatcher(oldList) {
+    var byKey = {};
+    var unkeyed = [];
+    var posById = {};
+    var consumed = {};
+    var i;
+    for (i = 0; i < oldList.length; i++) {
+      var inst = oldList[i];
+      if (!inst) { continue; }
+      if (inst.__id != null) { posById[inst.__id] = i; }
+      var k = keySig(keyOf(inst));
+      if (k != null) {
+        // 同一签名的 key 只认领一个旧结点：重复 key（Dart 侧本就是错误写法）时
+        // 另一个按新建处理，绝不让同一实例被挂两次（会串坏 __parent/__slot）。
+        if (byKey[k] === undefined) { byKey[k] = inst; }
+      } else {
+        unkeyed.push(inst);
+      }
+    }
+    var cursor = 0;
+    return {
+      take: function (ek) {
+        var m = null;
+        if (ek != null) {
+          m = byKey[ek] || null;
+          byKey[ek] = null;
+        } else {
+          while (cursor < unkeyed.length && !unkeyed[cursor]) { cursor += 1; }
+          m = unkeyed[cursor] || null;
+          if (m) { unkeyed[cursor] = null; }
+        }
+        if (m && m.__id != null) { consumed[m.__id] = true; }
+        return m;
+      },
+      positionOf: function (inst) {
+        var p = inst && inst.__id != null ? posById[inst.__id] : undefined;
+        return p === undefined ? -1 : p;
+      },
+      leftovers: function () {
+        var out = [];
+        for (var n = 0; n < oldList.length; n++) {
+          var it = oldList[n];
+          if (it && !(it.__id != null && consumed[it.__id])) { out.push(it); }
+        }
+        return out;
+      }
+    };
+  }
+
   // [srcs] 是子项来源（见 childSources）：`{el}` 直接元素 / `{make}` 延迟工厂。
   // [lazy] 来自新元素的 `el.lazyChildren`（运行时不做类型判断）。
   function patchChildren(parentHost, srcs, lazy) {
     var old = parentHost.__children || [];
-    var remaining = old.slice();
-    var keyedOld = {};
-    var i, j;
-    // 带 key 的旧结点按**签名**建索引（keySig：ValueKey 按值 / ObjectKey 按身份 /
-    // GlobalKey、UniqueKey 按句柄 id）。绝不能拿 key 对象直接当索引键——对象会被
-    // 隐式 toString 成 "[object Object]"，所有 key 撞成一条。
-    for (i = 0; i < old.length; i++) {
-      var k = keySig(keyOf(old[i]));
-      if (k != null) { keyedOld[k] = old[i]; }
-    }
-
+    var matcher = keyedMatcher(old);
     var next = [];
     var hostIdx = 0;
+    var i, j;
     for (j = 0; j < srcs.length; j++) {
       var src = srcs[j];
       if (!src) { continue; }
@@ -1110,18 +1152,7 @@ const String miniReactReconcilerSource = r'''
       // 延迟工厂形态在展开前没有 element（也没有 key），只能按位置匹配。
       if (src.el !== undefined && (el == null || el === false)) { continue; }
       var ek = keySig(el && el.props ? el.props.key : null);
-      var matched = null;
-      if (ek != null && keyedOld[ek]) {
-        matched = keyedOld[ek];
-        // 同一签名的 key 只认领一个旧结点：重复 key（Dart 侧本就是错误写法）
-        // 时另一个按新建处理，绝不让同一实例被挂两次（会串坏 __parent/__slot）。
-        keyedOld[ek] = null;
-      } else if (ek == null) {
-        for (i = 0; i < remaining.length; i++) {
-          if (remaining[i] && keySig(keyOf(remaining[i])) == null) { matched = remaining[i]; break; }
-        }
-      }
-      if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
+      var matched = matcher.take(ek);
 
       // 已存在的懒槽位（未挂载的来源 / 已挂载的 `__mountedChild`）→ 只更新子元素，
       // **绝不能**在这里把未挂载的槽位挂出来，否则重建（外壳每次切 tab 都会整树
@@ -1130,7 +1161,7 @@ const String miniReactReconcilerSource = r'''
         matched.__slot = { kind: 'children', hostParentId: parentHost.__id, index: hostIdx };
         patchLazySlot(matched, src);
         // 懒槽位同样要跟随排序：宿主 `childIds` 的顺序只由 insert/move 决定。
-        if (old.indexOf(matched) !== hostIdx) {
+        if (matcher.positionOf(matched) !== hostIdx) {
           emit({ op: 'move', parent: parentHost.__id, id: matched.__id, index: hostIdx });
         }
         next.push(matched);
@@ -1159,7 +1190,7 @@ const String miniReactReconcilerSource = r'''
       var inst = patch(matched, cel, parentHost, { hostParentId: parentHost.__id, index: hostIdx });
       if (inst) {
         // 复用的结点位置变化 -> 下发 move（新建的自带 insert）。
-        if (inst === matched && old.indexOf(inst) !== hostIdx) {
+        if (inst === matched && matcher.positionOf(inst) !== hostIdx) {
           emit({ op: 'move', parent: parentHost.__id, id: hostIdOf(inst), index: hostIdx });
         }
         next.push(inst);
@@ -1167,8 +1198,9 @@ const String miniReactReconcilerSource = r'''
       }
     }
 
-    for (i = 0; i < remaining.length; i++) {
-      if (remaining[i]) { unmount(remaining[i]); }
+    var leftovers = matcher.leftovers();
+    for (i = 0; i < leftovers.length; i++) {
+      unmount(leftovers[i]);
     }
     parentHost.__children = next;
   }
@@ -1193,31 +1225,14 @@ const String miniReactReconcilerSource = r'''
   // 已有槽位只更新 deferred / patch 子树；新项创建占位而不是立刻 mount。
   // [lazy] 由所在宿主元素的 `el.lazyChildren` 传入（运行时不做类型判断）。
   function patchSlotList(parentHost, oldList, newEls, slotKey, lazy) {
-    var remaining = oldList.slice();
-    var keyedOld = {};
-    var i, j;
-    for (i = 0; i < oldList.length; i++) {
-      var k = keySig(keyOf(oldList[i]));
-      if (k != null) { keyedOld[k] = oldList[i]; }
-    }
+    var matcher = keyedMatcher(oldList);
     var next = [];
+    var j;
     for (j = 0; j < newEls.length; j++) {
       var el = newEls[j];
       if (el == null || el === false) { continue; }
       var ek = keySig(el.props ? el.props.key : null);
-      var matched = null;
-      if (ek != null && keyedOld[ek]) {
-        matched = keyedOld[ek];
-        keyedOld[ek] = null;
-      } else if (ek == null) {
-        for (i = 0; i < remaining.length; i++) {
-          if (remaining[i] && keySig(keyOf(remaining[i])) == null) {
-            matched = remaining[i];
-            break;
-          }
-        }
-      }
-      if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
+      var matched = matcher.take(ek);
       var slotIndex = next.length;
       if (lazy) {
         var ph = matched && matched.__lazySlot ? matched : null;
@@ -1241,8 +1256,9 @@ const String miniReactReconcilerSource = r'''
       });
       if (inst) { next.push(inst); }
     }
-    for (i = 0; i < remaining.length; i++) {
-      if (remaining[i]) { unmount(remaining[i]); }
+    var leftovers = matcher.leftovers();
+    for (var i = 0; i < leftovers.length; i++) {
+      unmount(leftovers[i]);
     }
     return next;
   }
@@ -1344,10 +1360,22 @@ const String miniReactReconcilerSource = r'''
       building = inst;
       try {
         if (typeof inst.deactivate === 'function') {
-          try { inst.deactivate(); } catch (e) {}
+          // 生命周期异常不能静默吞掉：卸载路径出错的后果是「句柄泄漏 / 监听未摘」，
+          // 线上只能靠这条日志定位（release 下 console 是空函数，无额外开销）。
+          try {
+            inst.deactivate();
+          } catch (e) {
+                          console.error('deactivate failed: ' + (e && e.message ? e.message : String(e)));
+            
+          }
         }
         if (typeof inst.dispose === 'function') {
-          try { inst.dispose(); } catch (e) {}
+          try {
+            inst.dispose();
+          } catch (e) {
+                          console.error('dispose failed: ' + (e && e.message ? e.message : String(e)));
+            
+          }
         }
       } finally {
         building = prevBuilding;

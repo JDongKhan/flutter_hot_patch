@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 2e361af0） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 7a760d94） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '2e361af0') { return; }
-  G.__jsuiVersion = '2e361af0';
+  if (G.__jsui && G.__jsuiVersion === '7a760d94') { return; }
+  G.__jsuiVersion = '7a760d94';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -17,14 +17,6 @@ if (typeof G.__modules === 'undefined') {
 // 编译模式与目标平台，构建期（build_runner）无从得知，故不写进产物。
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
 // 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
-// JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
-// 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
-// G.console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
-// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
-// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
-// debug/info/log/warn/error 全部可用且路由到 log 服务。
-// 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
-// 故 Promise 一定被回填、不会悬挂。
 // 值 → 字符串（对象/数组完整展开，循环引用安全）：JS 侧 `String(obj)` 只会
 // 得到 `[object Object]`，日志里看不到任何字段。`__str` 递归展开 own 字段，
 // 函数标成 `[Function name]`、循环引用标成 `[Circular]`（与 JSON.stringify
@@ -61,32 +53,42 @@ G.__str = function (v) { return __fmt(v, []); };
 // 原生日志方法（Dart debugPrint/print 转换产物直接调用）：统一桥到逻辑通道
 // 'log'（宿主 log 处理器 → HotPatchLog）。支持多实参（`console.log(a, b)` 与
 // 浏览器一致，空格分隔），每个实参都走 __fmt 展开。
-// G.console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
+//
+// **release 下全部关闭、零跨桥**：kDebugMode 为 false 时五个级别都是同一个空
+// 函数 —— 一次日志的代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既
+// 看不到也担不起；需要线上诊断请走显式上报通道，不要指望 print。
+//
 // 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
 // `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
-// debug/info/log/warn/error 全部可用且路由到 log 服务。
+// debug/info/log/warn/error 全部可用。
 // 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
-// 故 Promise 一定被回填、不会悬挂。
+// 故 Promise 一定被回填、不会悬挂。`_app_host_` 在本 IIFE 收尾（【25】）赋值，
+// 而 console 只可能被页面代码调用——那时它必然已存在，无需探测。
 G.console = (typeof G.console === 'undefined') ? {} : G.console;
 function __log(level, args) {
-  if (typeof G._app_host_ !== 'undefined' && G._app_host_.invoke) {
-    var text = '';
-    for (var i = 0; i < args.length; i++) {
-      text += (i ? ' ' : '') + __fmt(args[i], []);
-    }
-    // 级别一并带给宿主（位置实参 [level, text]）：console.warn/error 在宿主侧
-    // 就是 warn/error 级，可直接进统一上报出口；未知级别按 info 处理（见
-    // builtin_host_methods.dart 的 _log）。
-    G._app_host_.invoke('log', [level, text]);
+  var text = '';
+  for (var i = 0; i < args.length; i++) {
+    text += (i ? ' ' : '') + __fmt(args[i], []);
   }
+  // 级别一并带给宿主（位置实参 [level, text]）：console.warn/error 在宿主侧
+  // 就是 warn/error 级，可直接进统一上报出口；未知级别按 info 处理（见
+  // builtin_host_methods.dart 的 _log）。
+  G._app_host_.invoke('log', [level, text]);
 }
-G.console.debug = function() { if (G.kDebugMode) { __log('debug', arguments); } };
-G.console.info = function() { __log('info', arguments); };
-G.console.log = function() { __log('info', arguments); };
-G.console.warn = function() { __log('warn', arguments); };
-G.console.error = function() { __log('error', arguments); }
+function __silentLog() {}
+G.console.debug = __silentLog;
+G.console.info = __silentLog;
+G.console.log = __silentLog;
+G.console.warn = __silentLog;
+G.console.error = __silentLog;
+if (G.kDebugMode) {
+  G.console.debug = function () { __log('debug', arguments); };
+  G.console.info = function () { __log('info', arguments); };
+  G.console.log = function () { __log('info', arguments); };
+  G.console.warn = function () { __log('warn', arguments); };
+  G.console.error = function () { __log('error', arguments); };
+}
 
-  // ===== 【1】运行环境｜全局状态与工具 ==================================
   var idSeq = 0;
   var HOST = 1, COMP = 2;
 
@@ -94,12 +96,12 @@ G.console.error = function() { __log('error', arguments); }
   var roots = {};
   // pageKey -> 句柄 id[]：本页面（scope=page）登记的全部跨语言句柄（控制器 /
   // 函数 / 未来的 Key / 对象…）。页面退出时由 disposeRoot 统一释放——新增能力
-  // 只要按句柄登记即自动获得页面回收，无需再改 disposeRoot（见【1b】句柄注册表）。
+  // 只要按句柄登记即自动获得页面回收，无需再改 disposeRoot（见【4】句柄注册表）。
   var pageHandles = {};
   // 正在 mount/patch/flush 的根；emit / 结点归属都读它。
   var activeRoot = null;
   // 正在构建的元素（build 执行期）——`context` 的锚点。`context.watch/read` 据此
-  // 定位**作用域**（按类型名向上找，见【7】）并订阅（与 Dart 的 BuildContext
+  // 定位**作用域**（按类型名向上找，见【8】）并订阅（与 Dart 的 BuildContext
   // 语义一致：按**位置**而非「谁定义了这个方法」）。委托型组件（Builder/Consumer）
   // 把 builder 方法以 owner 为 this 调用时，锚点仍是它们自身的结点。
   var building = null;
@@ -108,14 +110,13 @@ G.console.error = function() { __log('error', arguments); }
   // 唯一化。带前缀是为了让宿主侧 ValueKey / Flutter DevTools 一眼看出 id 的
   // 归属端（js/dt）与种类（node/comp/ctrl/fn/key…）——调试可读性。
   //   结点：js:node/<Type>#N（宿主结点）/ js:comp/<Name>#N（组件结点）
-  //   句柄：js:ctrl/Scroll#N、js:fn#N、dt:key/Global#N（见【1b】句柄注册表）
+  //   句柄：js:ctrl/Scroll#N、js:fn#N、dt:key/Global#N（见【4】句柄注册表）
   function nodeId(type) { idSeq += 1; return 'js:node/' + type + '#' + idSeq; }
   function compId(type) { idSeq += 1; return 'js:comp/' + compName(type) + '#' + idSeq; }
 
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
 
-  // ===== 【1c】Dart 标准库 → JS 内建补齐 ==============================
   // 【项目规则】凡是「翻译产物里调用的方法名，而在原生 JS 对应类型上不存在」的，
   // 一律**在本节给 JS 内建补一个同名同义的方法**，产物保持原样调用——不在生成器
   // 里做名字映射、也不改单源去绕开。
@@ -252,7 +253,6 @@ G.console.error = function() { __log('error', arguments); }
 
 
 // ===== 【2】出方向桥（emit / commit） =====
-  // ===== 【2】出方向桥｜唯一底层发送（emit / commit / send）============
   // 所有 JS→宿主消息都打到单桥通道 `_app_bridge_`，目标通道名放在消息体
   // `ch` 字段。宿主只订阅该桥通道一次，再按 ch 二次分发。
   // `send` 是运行时**内部**的低层发送（不对外暴露）；对外的唯一入口是
@@ -277,7 +277,6 @@ G.console.error = function() { __log('error', arguments); }
 
 
 // ===== 【3】宿主桥 _app_host_ =====
-  // ===== 【3】宿主桥｜_app_host_.invoke / resolve / reject（唯一对外出口）======
   // JS 发起调用，宿主**必定**结算 Promise（成功回填 / 失败抛回）
   // 生成器把 Dart 的 static 调用 `AccountCenter.getUserName(a, b)` 翻译成
   // `_app_host_.invoke("getUserName", [a, b])`（参数载荷按形态给：纯位置→数组、
@@ -320,8 +319,7 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【1b】跨语言句柄注册表 =====
-  // ===== 【1b】跨语言句柄注册表（通用层地基）===========================
+// ===== 【4】跨语言句柄注册表 =====
   // handleSeq 与 idSeq 相互独立：句柄 id 与结点 id 分属两套命名空间。
   var handleSeq = 0;
   // id -> { id, kind, scope, key, obj, meta }
@@ -505,9 +503,8 @@ G.console.error = function() { __log('error', arguments); }
   function callHandle(id, op, payload) {
     var h = handles[id];
     if (!h) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('jsui: handle not found (released?): ' + id + ' op=' + op);
-      }
+              console.warn('jsui: handle not found (released?): ' + id + ' op=' + op);
+      
       return undefined;
     }
     var o = h.obj;
@@ -530,7 +527,6 @@ G.console.error = function() { __log('error', arguments); }
     return host('jsHandle', [body]);
   }
 
-  // ===== 【1c】控制器代理三件套基座（ctrl/* 能力共用）====================
   // Scroll/Tab/Text 的 JS 代理类同构：__listeners 数组、内部回传句柄
   // （meta.fn 交宿主回传）、句柄登记（scope=page）、release 清理、dispose、
   // toJSON、__notify。本工厂收敛这套样板；能力只写差异：
@@ -599,9 +595,8 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【4】element 与事件句柄 =====
+// ===== 【5】element 与事件句柄 =====
 
-  // ===== 【4】mini-react｜element 与事件句柄（h / fn / invoke）========
   function h(type, props, children) {
     var ch = [];
     if (children != null) {
@@ -632,7 +627,7 @@ G.console.error = function() { __log('error', arguments); }
   }
 
   // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local：由拥有者
-  // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【1b】句柄注册表）。
+  // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【4】句柄注册表）。
   // 宿主侧回调用 invoke 触发。
   function fn(f) {
     var id = reg(f, 'fn', { scope: 'local', sync: false });
@@ -661,9 +656,8 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【5】reconciler 工具 =====
+// ===== 【6】reconciler 工具 =====
 
-  // ===== 【5】mini-react｜reconciler 工具 ==============================
   // 深比较（用于避免每次重建都下发 props）；下面紧邻的 keyOf / hostIdOf /
   // rootFor 同属本分区。
   var EQ_MAX_DEPTH = 32;
@@ -675,8 +669,16 @@ G.console.error = function() { __log('error', arguments); }
     if (a === null || b === null || typeof a !== 'object') { return false; }
     var aArr = Array.isArray(a), bArr = Array.isArray(b);
     if (aArr !== bArr) { return false; }
-    var ka = Object.keys(a), kb = Object.keys(b);
-    if (ka.length !== kb.length) { return false; }
+    // 数组先比长度：列表插删是最常见的变化，能在这里短路，不必走进逐项递归。
+    if (aArr && a.length !== b.length) { return false; }
+    // 只分配 a 的键数组；b 的键数用 for-in 计数（原来每层两次 Object.keys，
+    // 深树 patch 时是纯 GC 压力）。
+    var ka = Object.keys(a);
+    var bn = 0;
+    for (var kb in b) {
+      if (Object.prototype.hasOwnProperty.call(b, kb)) { bn += 1; }
+    }
+    if (ka.length !== bn) { return false; }
     for (var i = 0; i < ka.length; i++) {
       if (!eq(a[ka[i]], b[ka[i]], depth - 1)) { return false; }
     }
@@ -684,7 +686,7 @@ G.console.error = function() { __log('error', arguments); }
   }
 
   // 结点声明的 key（**值**，不是结点）：ValueKey / ObjectKey 实例、GlobalKey /
-  // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【10.6】），
+  // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【20】），
   // 不在此处做归一——`keyOf` 只负责取。
   function keyOf(inst) {
     var p = inst.__k === HOST ? inst.__props : (inst.__el && inst.__el.props);
@@ -703,18 +705,17 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【6】组件基类 =====
+// ===== 【7】组件基类 =====
 
-  // ===== 【6】mini-react｜组件基类（生成器产物的能力袋）===============
   // 生成器产物**不** extends 本类：`augment` 把这些方法拷到实例上。
   // setState / __bindFn 属于 mini-react；上下文（`context.watch/read`）与
-  // BuildContext 代理见【10.7】（调用面与 Dart 一致，不在实例上挂 `this.watch`）。
+  // BuildContext 代理见【21】（调用面与 Dart 一致，不在实例上挂 `this.watch`）。
   function Component(props) { this.props = props || {}; }
   Component.prototype.setState = function (mutate) {
     if (typeof mutate === 'function') { mutate.call(this); }
     markDirty(this);
   };
-  // ── 回到【6】mini-react｜事件句柄（__bindFn）─────────────────────────
+  // ── 回到【7】mini-react｜事件句柄（__bindFn）─────────────────────────
   // 事件句柄：生成器把事件统一翻译成**构建期箭头闭包**，在此登记成句柄。
   // `this` 正是 build 作用域里的组件实例，也就是**定义该事件的组件**（含
   // Consumer/Builder 把 builder 方法 `.call(owner)` 的场景）。句柄随 props
@@ -726,19 +727,21 @@ G.console.error = function() { __log('error', arguments); }
   //   循环项捕获到不同值时各自独立（回调不互相覆盖）；卸载时统一释放。
   //
   // 捕获值的身份判定：对象 / 函数按**引用身份**（同一个对象每次重建仍是同一个
-  // → key 稳定），原始值按 String。WeakMap 自动回收，不延长捕获对象寿命。
-  var __capIds = typeof WeakMap === 'function' ? new WeakMap() : null;
+  // → key 稳定），原始值按 **typeof 前缀 + String**（`1` 与 `'1'`、`null` 与
+  // `undefined` 与 `''` 必须是不同 key，否则不同捕获值的闭包会互相覆盖）。
+  // WeakMap 自动回收，不延长捕获对象寿命。
+  var __capIds = new WeakMap();
   var __capSeq = 0;
   function capKey(v) {
-    if (v === null || v === undefined) { return ''; }
+    if (v === undefined) { return 'undefined'; }
+    if (v === null) { return 'null'; }
     var t = typeof v;
     if (t === 'object' || t === 'function') {
-      if (!__capIds) { return String(v); }
       var id = __capIds.get(v);
       if (!id) { id = ++__capSeq; __capIds.set(v, id); }
-      return '#' + id;
+      return t + '#' + id;
     }
-    return String(v);
+    return t + ':' + String(v);
   }
   // [siteId] 是编译期位点号（同一个 on* 位点每次构建都相同）。它只要求
   // **同一个组件类内**唯一：句柄缓存挂在实例自己的 `__boundFn` 上，不同实例
@@ -761,7 +764,7 @@ G.console.error = function() { __log('error', arguments); }
       // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
       // 返回值保留：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
       try { return handle.__run.apply(handle, arguments); }
-      catch (e) { if (typeof console !== 'undefined' && console.error) { console.error(String(e)); } }
+      catch (e) {  console.error(String(e));  }
       finally { building = prev; }
     });
     handle.__run = f;
@@ -772,9 +775,8 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【7】作用域与订阅 =====
+// ===== 【8】作用域与订阅 =====
 
-  // ===== 【7】作用域｜按类型名向上查找 + 消费者侧订阅 ==================
   // **与 Flutter 的 InheritedWidget 同语义**：宿主结点用 `__provides`
   // （类型名 → 值）声明自己对外提供的作用域；查找**只认类型名**，不关心这个
   // 类型是模型、控制器还是别的什么 —— 正如 Dart 侧
@@ -851,11 +853,10 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【8】调度 =====
+// ===== 【9】调度 =====
 
-  // ===== 【8】mini-react｜调度（dirty → flush 批处理）==================
   // collected dirty -> 重建子树 -> 一次 commit。
-  // 触发源有两处：mini-react 的 setState、作用域订阅回调（见【7】`subscribeListenable`）。
+  // 触发源有两处：mini-react 的 setState、作用域订阅回调（见【8】`subscribeListenable`）。
   //
   // **挂载中不 flush**：`root.mounting` 期间 `root.ops` 归 mountRoot 累积（整棵树的
   // create/insert），而 flush 会重置并消耗同一份 ops —— 未下发的结点连同根 op 一起
@@ -875,10 +876,9 @@ G.console.error = function() { __log('error', arguments); }
     // 整个 JS 线程卡死且没有任何日志。这里出声并跳过。
     // 只挡「自己正在 build」：祖先/子结点互相标脏不受影响（原生同样放行）。
     if (inst.__building) {
-      if (typeof console !== 'undefined' && console.error) {
-        console.error('jsui: setState during build ignored (' +
+              console.error('jsui: setState during build ignored (' +
           compName(inst.constructor) + ')');
-      }
+      
       return;
     }
     var root = inst.__root;
@@ -893,10 +893,8 @@ G.console.error = function() { __log('error', arguments); }
   function requestFlush(root) {
     if (root.flushPending) { return; }
     root.flushPending = true;
-    // 有宿主桥才交给它调度；否则（无 sendMessage 的纯 JS 环境）同步兜底。
-    if (typeof sendMessage === 'function' &&
-        typeof G._app_host_ !== 'undefined' && G._app_host_ &&
-        G._app_host_.invoke) {
+    // 有宿主桥才交给它调度；否则（无 sendMessage 的纯 JS 环境，如单测）同步兜底。
+    if (typeof sendMessage === 'function' && G._app_host_) {
       G._app_host_.invoke('jsuiRequestFrame', []);
       return;
     }
@@ -957,10 +955,9 @@ G.console.error = function() { __log('error', arguments); }
             try {
               syncEnclosingKeepAlive(inst);
             } catch (e2) {
-              if (typeof console !== 'undefined' && console.error) {
-                console.error('jsui: keepAlive sync failed (' +
+                              console.error('jsui: keepAlive sync failed (' +
                   compName(inst.constructor) + '): ' + e2);
-              }
+              
             }
             commit(root);
           } catch (e) {
@@ -968,10 +965,9 @@ G.console.error = function() { __log('error', arguments); }
             // 避免 JS 树与宿主渲染在中途状态上分叉。该实例保持 __dirty=false，
             // 下次 setState / 订阅通知会重新重建。
             root.ops = null;
-            if (typeof console !== 'undefined' && console.error) {
-              console.error('jsui: rebuild failed (' +
+                          console.error('jsui: rebuild failed (' +
                 compName(inst.constructor) + '): ' + e);
-            }
+            
           }
         }
       }
@@ -982,9 +978,8 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【9】reconciler 主流程 =====
+// ===== 【10】reconciler 主流程 =====
 
-  // ===== 【9】mini-react｜reconciler 主流程（mount / patch / unmount）==
   //
   // 「懒容器 + 延迟子结点」：容器的 children 不随容器一起挂载，而是等**宿主**
   // 真的 inflate 到那个槽位时才挂载 —— 即 initState 由 `_JsNodeState` 的生命周期
@@ -1271,9 +1266,8 @@ G.console.error = function() { __log('error', arguments); }
     var el = lazyElementOf(src);
     if (el == null || el === false) {
       // builder 返回空属错误写法（Flutter 侧会直接抛错）：保留已挂载子树并留痕。
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('jsui: lazy slot builder returned empty, keep mounted subtree');
-      }
+              console.warn('jsui: lazy slot builder returned empty, keep mounted subtree');
+      
       return ph;
     }
     // 与原生 Flutter 对齐：父级每次重建都会重新执行 itemBuilder，并把产出的新
@@ -1295,14 +1289,14 @@ G.console.error = function() { __log('error', arguments); }
       emit({ op: 'propsChild', parent: ph.__id, key: 'child', childId: newRoot });
     }
     // 父级重建路径的保活声明同步（组件自身 setState 引起的变化走 flush 的
-    // syncEnclosingKeepAlive，见【8】）。
+    // syncEnclosingKeepAlive，见【9】）。
     syncKeepAlive(ph);
     return ph;
   }
 
   // 宿主 inflate 到懒槽位 → 真正挂载它的子元素（幂等：只对还没挂载过的占位生效）。
   // ops 纪律与 mountRoot 一致：挂载期间 `root.ops` 归本次挂载累积，挂载期间的
-  // setState 只入 dirty 队列，收尾再 flush（见【8】）。
+  // setState 只入 dirty 队列，收尾再 flush（见【9】）。
   function lazyMount(placeholderId) {
     var ph = hostNodes[placeholderId];
     if (!ph || (!ph.__deferred && !ph.__deferMake)) { return false; }
@@ -1310,9 +1304,8 @@ G.console.error = function() { __log('error', arguments); }
     var el = ph.__deferred;
     if (el == null && ph.__deferMake) { el = ph.__deferMake(); }
     if (el == null || el === false) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('jsui: lazy slot builder returned empty, placeholder=' + placeholderId);
-      }
+              console.warn('jsui: lazy slot builder returned empty, placeholder=' + placeholderId);
+      
       return false;
     }
     // 来源**保留**：宿主 dispose（ListView 回收离屏项）后还要按同一来源重建，
@@ -1357,10 +1350,9 @@ G.console.error = function() { __log('error', arguments); }
       ok = false;
       rollbackMountFrame(frame);
       root.ops = null;
-      if (typeof console !== 'undefined' && console.error) {
-        console.error('jsui: lazy slot mount failed, placeholder=' +
+              console.error('jsui: lazy slot mount failed, placeholder=' +
           placeholderId + ': ' + e);
-      }
+      
     } finally {
       endMountFrame(frame);
       root.mounting = false;
@@ -1444,7 +1436,7 @@ G.console.error = function() { __log('error', arguments); }
     var prev = building;
     building = inst;
     // `__building` 标记「本实例正处在 build 执行期」，供 markDirty 拦截 build 内
-    // setState（见【8】）。**不能用锚点 `building` 代替**：initState /
+    // setState（见【9】）。**不能用锚点 `building` 代替**：initState /
     // didUpdateWidget 期间锚点也指向本实例，那两个阶段 setState 是合法写法。
     inst.__building = true;
     try { return inst.build(contextOf(inst)); }
@@ -1460,7 +1452,7 @@ G.console.error = function() { __log('error', arguments); }
         __k: HOST, __id: nodeId(el.type), __type: el.type, __root: rootFor(parent),
         __props: el.props, __children: [], __parent: parent, __el: el
       };
-      // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【7】）。
+      // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
       applyScope(hi, el.props);
       hostNodes[hi.__id] = hi;
       trackNode(hi.__id);
@@ -1526,7 +1518,7 @@ G.console.error = function() { __log('error', arguments); }
     augment(ci);
     // 生命周期与 Flutter 对齐：initState → didChangeDependencies → build。
     // （后续「依赖变更」走 flush 的 __depDirty，「父级重建」走 patch 的
-    //  didUpdateWidget，见【8】/【9】。）
+    //  didUpdateWidget，见【9】/【10】。）
     // initState 期间也把构建锚点指向本实例：此时 `this.context` 与新建句柄的
     // 归属都应以本组件为准（过去 building 只在 buildOf 里设置，initState 看到的是父级）。
     var prevBuilding = building;
@@ -1637,10 +1629,9 @@ G.console.error = function() { __log('error', arguments); }
         // Widget，生成器对无法翻译的 widget 位置也会降级成 SizedBox 占位。
         // 宿主侧 propsChildAt 的 childId 为空无法落位（会被丢弃，数组槽位因此
         // 留一个空位），这里必须出声，不静默。
-        if (typeof console !== 'undefined' && console.error) {
-          console.error('jsui: component render root is empty after build (' +
+                  console.error('jsui: component render root is empty after build (' +
             compName(inst.constructor) + ')');
-        }
+        
         return inst.__child;
       }
       emit({
@@ -1651,23 +1642,73 @@ G.console.error = function() { __log('error', arguments); }
     return inst.__child;
   }
 
+  // 子项 keyed 匹配器（`patchChildren` / `patchSlotList` 共用**唯一一份**实现）。
+  //
+  // 旧实现每个子项都做「线性扫 remaining + splice + indexOf」→ O(n²)：100 项列表
+  // 每次重建约 1 万次比较、100 次数组搬移。这里一次建索引，之后每项 O(1)：
+  //   - 带 key：`keySig` → 实例（同签名只认领一个，重复 key 按新建处理）；
+  //   - 无 key：按旧序游标推进（保持「位置优先」的复用语义）；
+  //   - 位置：`__id` → 旧下标，move 判定不再 `indexOf`。
+  //
+  // `take(ek)` 返回本轮可复用的旧实例（没有则 null）；`leftovers()` 返回未被
+  // 认领的旧实例（调用方负责 unmount）。
+  function keyedMatcher(oldList) {
+    var byKey = {};
+    var unkeyed = [];
+    var posById = {};
+    var consumed = {};
+    var i;
+    for (i = 0; i < oldList.length; i++) {
+      var inst = oldList[i];
+      if (!inst) { continue; }
+      if (inst.__id != null) { posById[inst.__id] = i; }
+      var k = keySig(keyOf(inst));
+      if (k != null) {
+        // 同一签名的 key 只认领一个旧结点：重复 key（Dart 侧本就是错误写法）时
+        // 另一个按新建处理，绝不让同一实例被挂两次（会串坏 __parent/__slot）。
+        if (byKey[k] === undefined) { byKey[k] = inst; }
+      } else {
+        unkeyed.push(inst);
+      }
+    }
+    var cursor = 0;
+    return {
+      take: function (ek) {
+        var m = null;
+        if (ek != null) {
+          m = byKey[ek] || null;
+          byKey[ek] = null;
+        } else {
+          while (cursor < unkeyed.length && !unkeyed[cursor]) { cursor += 1; }
+          m = unkeyed[cursor] || null;
+          if (m) { unkeyed[cursor] = null; }
+        }
+        if (m && m.__id != null) { consumed[m.__id] = true; }
+        return m;
+      },
+      positionOf: function (inst) {
+        var p = inst && inst.__id != null ? posById[inst.__id] : undefined;
+        return p === undefined ? -1 : p;
+      },
+      leftovers: function () {
+        var out = [];
+        for (var n = 0; n < oldList.length; n++) {
+          var it = oldList[n];
+          if (it && !(it.__id != null && consumed[it.__id])) { out.push(it); }
+        }
+        return out;
+      }
+    };
+  }
+
   // [srcs] 是子项来源（见 childSources）：`{el}` 直接元素 / `{make}` 延迟工厂。
   // [lazy] 来自新元素的 `el.lazyChildren`（运行时不做类型判断）。
   function patchChildren(parentHost, srcs, lazy) {
     var old = parentHost.__children || [];
-    var remaining = old.slice();
-    var keyedOld = {};
-    var i, j;
-    // 带 key 的旧结点按**签名**建索引（keySig：ValueKey 按值 / ObjectKey 按身份 /
-    // GlobalKey、UniqueKey 按句柄 id）。绝不能拿 key 对象直接当索引键——对象会被
-    // 隐式 toString 成 "[object Object]"，所有 key 撞成一条。
-    for (i = 0; i < old.length; i++) {
-      var k = keySig(keyOf(old[i]));
-      if (k != null) { keyedOld[k] = old[i]; }
-    }
-
+    var matcher = keyedMatcher(old);
     var next = [];
     var hostIdx = 0;
+    var i, j;
     for (j = 0; j < srcs.length; j++) {
       var src = srcs[j];
       if (!src) { continue; }
@@ -1675,18 +1716,7 @@ G.console.error = function() { __log('error', arguments); }
       // 延迟工厂形态在展开前没有 element（也没有 key），只能按位置匹配。
       if (src.el !== undefined && (el == null || el === false)) { continue; }
       var ek = keySig(el && el.props ? el.props.key : null);
-      var matched = null;
-      if (ek != null && keyedOld[ek]) {
-        matched = keyedOld[ek];
-        // 同一签名的 key 只认领一个旧结点：重复 key（Dart 侧本就是错误写法）
-        // 时另一个按新建处理，绝不让同一实例被挂两次（会串坏 __parent/__slot）。
-        keyedOld[ek] = null;
-      } else if (ek == null) {
-        for (i = 0; i < remaining.length; i++) {
-          if (remaining[i] && keySig(keyOf(remaining[i])) == null) { matched = remaining[i]; break; }
-        }
-      }
-      if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
+      var matched = matcher.take(ek);
 
       // 已存在的懒槽位（未挂载的来源 / 已挂载的 `__mountedChild`）→ 只更新子元素，
       // **绝不能**在这里把未挂载的槽位挂出来，否则重建（外壳每次切 tab 都会整树
@@ -1695,7 +1725,7 @@ G.console.error = function() { __log('error', arguments); }
         matched.__slot = { kind: 'children', hostParentId: parentHost.__id, index: hostIdx };
         patchLazySlot(matched, src);
         // 懒槽位同样要跟随排序：宿主 `childIds` 的顺序只由 insert/move 决定。
-        if (old.indexOf(matched) !== hostIdx) {
+        if (matcher.positionOf(matched) !== hostIdx) {
           emit({ op: 'move', parent: parentHost.__id, id: matched.__id, index: hostIdx });
         }
         next.push(matched);
@@ -1724,7 +1754,7 @@ G.console.error = function() { __log('error', arguments); }
       var inst = patch(matched, cel, parentHost, { hostParentId: parentHost.__id, index: hostIdx });
       if (inst) {
         // 复用的结点位置变化 -> 下发 move（新建的自带 insert）。
-        if (inst === matched && old.indexOf(inst) !== hostIdx) {
+        if (inst === matched && matcher.positionOf(inst) !== hostIdx) {
           emit({ op: 'move', parent: parentHost.__id, id: hostIdOf(inst), index: hostIdx });
         }
         next.push(inst);
@@ -1732,8 +1762,9 @@ G.console.error = function() { __log('error', arguments); }
       }
     }
 
-    for (i = 0; i < remaining.length; i++) {
-      if (remaining[i]) { unmount(remaining[i]); }
+    var leftovers = matcher.leftovers();
+    for (i = 0; i < leftovers.length; i++) {
+      unmount(leftovers[i]);
     }
     parentHost.__children = next;
   }
@@ -1758,31 +1789,14 @@ G.console.error = function() { __log('error', arguments); }
   // 已有槽位只更新 deferred / patch 子树；新项创建占位而不是立刻 mount。
   // [lazy] 由所在宿主元素的 `el.lazyChildren` 传入（运行时不做类型判断）。
   function patchSlotList(parentHost, oldList, newEls, slotKey, lazy) {
-    var remaining = oldList.slice();
-    var keyedOld = {};
-    var i, j;
-    for (i = 0; i < oldList.length; i++) {
-      var k = keySig(keyOf(oldList[i]));
-      if (k != null) { keyedOld[k] = oldList[i]; }
-    }
+    var matcher = keyedMatcher(oldList);
     var next = [];
+    var j;
     for (j = 0; j < newEls.length; j++) {
       var el = newEls[j];
       if (el == null || el === false) { continue; }
       var ek = keySig(el.props ? el.props.key : null);
-      var matched = null;
-      if (ek != null && keyedOld[ek]) {
-        matched = keyedOld[ek];
-        keyedOld[ek] = null;
-      } else if (ek == null) {
-        for (i = 0; i < remaining.length; i++) {
-          if (remaining[i] && keySig(keyOf(remaining[i])) == null) {
-            matched = remaining[i];
-            break;
-          }
-        }
-      }
-      if (matched) { remaining.splice(remaining.indexOf(matched), 1); }
+      var matched = matcher.take(ek);
       var slotIndex = next.length;
       if (lazy) {
         var ph = matched && matched.__lazySlot ? matched : null;
@@ -1806,8 +1820,9 @@ G.console.error = function() { __log('error', arguments); }
       });
       if (inst) { next.push(inst); }
     }
-    for (i = 0; i < remaining.length; i++) {
-      if (remaining[i]) { unmount(remaining[i]); }
+    var leftovers = matcher.leftovers();
+    for (var i = 0; i < leftovers.length; i++) {
+      unmount(leftovers[i]);
     }
     return next;
   }
@@ -1909,10 +1924,22 @@ G.console.error = function() { __log('error', arguments); }
       building = inst;
       try {
         if (typeof inst.deactivate === 'function') {
-          try { inst.deactivate(); } catch (e) {}
+          // 生命周期异常不能静默吞掉：卸载路径出错的后果是「句柄泄漏 / 监听未摘」，
+          // 线上只能靠这条日志定位（release 下 console 是空函数，无额外开销）。
+          try {
+            inst.deactivate();
+          } catch (e) {
+                          console.error('deactivate failed: ' + (e && e.message ? e.message : String(e)));
+            
+          }
         }
         if (typeof inst.dispose === 'function') {
-          try { inst.dispose(); } catch (e) {}
+          try {
+            inst.dispose();
+          } catch (e) {
+                          console.error('dispose failed: ' + (e && e.message ? e.message : String(e)));
+            
+          }
         }
       } finally {
         building = prevBuilding;
@@ -1974,8 +2001,7 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【10】对外入口 api =====
-  // ===== 【10】对外入口｜api（Dart 只调 mount / dispose / invoke / host）
+// ===== 【11】对外入口 api =====
   function parse(x) {
     if (x == null || x === '') { return {}; }
     if (typeof x === 'string') {
@@ -1990,7 +2016,7 @@ G.console.error = function() { __log('error', arguments); }
       // 的 create/insert，而 flush 会**重置并消耗**同一份 ops（`root.ops = []`
       // 后 commit 把它置 null），既丢掉尚未下发的结点、又让随后的根 op 被 emit
       // 静默丢弃（宿主收不到根 → 页面停在加载态）。故挂载期间的 setState 只入
-      // dirty 队列，挂载收尾后统一 flush（见【8】markDirty 与 mountRoot）。
+      // dirty 队列，挂载收尾后统一 flush（见【9】markDirty 与 mountRoot）。
       key: pageKey, inst: null, dirty: [], flushing: false,
       flushPending: false, mounting: false, ops: null
     };
@@ -2049,7 +2075,7 @@ G.console.error = function() { __log('error', arguments); }
     }
     root.inst = null;
     // 页面退出兜底：统一释放本页面登记的**全部**句柄（控制器 / 函数 / Key /
-    // 对象…，见【1b】句柄注册表）——拥有端销毁真实对象，对端丢句柄。组件若已
+    // 对象…，见【4】句柄注册表）——拥有端销毁真实对象，对端丢句柄。组件若已
     // 在自身 dispose() 里释放，这里幂等。
     releasePageHandles(pageKey);
     delete roots[pageKey];
@@ -2083,8 +2109,7 @@ G.console.error = function() { __log('error', arguments); }
 
 
 
-// ===== 【11】Dart 值类（Duration / Size / Offset / Radius） =====
-  // ===== 【0.0】位置实参兜底 =====
+// ===== 【12】Dart 值类（Duration / Size / Offset / Radius） =====
   // 构建期查不到构造签名时，位置实参以 `__pos: [...]` 下发；这里按形参名顺序
   // 展开。任何类都可复用，不含类名判断。
   function __posArgs(props, names) {
@@ -2098,9 +2123,7 @@ G.console.error = function() { __log('error', arguments); }
     }
     return out;
   }
-  G.__posArgs = __posArgs;
 
-  // ===== 【0.1】Dart 值类（Duration / Size / Offset / Radius）=====
   // Duration 产物键是 Dart 的命名实参（milliseconds / seconds / …），换算成
   // 毫秒后经 toJSON 下发；宿主 durationFromJson 只认 `{__duration: ms}` 与裸数字。
   function __durationMs(d) {
@@ -2158,8 +2181,7 @@ G.console.error = function() { __log('error', arguments); }
   G.Radius = Radius;
 
 
-// ===== 【12】Dart 异常（StateError / ArgumentError / …） =====
-  // ===== 【0.2】Dart 内置异常 =====
+// ===== 【13】Dart 异常（StateError / ArgumentError / …） =====
   function __dartErrorCtor(name, positional) {
     var ctor = function (props) {
       props = __posArgs(props, positional);
@@ -2189,8 +2211,7 @@ G.console.error = function() { __log('error', arguments); }
   G.Error = G.Error || __dartErrorCtor('Error', ['message']);
 
 
-// ===== 【13】Color 类族（Color / MaterialColor / ColorSwatch） =====
-  // ===== 【0.3】Color / MaterialColor / ColorSwatch =====
+// ===== 【14】Color 类族（Color / MaterialColor / ColorSwatch） =====
   function __toHex(v) {
     var n = (v >>> 0).toString(16).toUpperCase();
     while (n.length < 8) { n = '0' + n; }
@@ -2294,7 +2315,7 @@ G.console.error = function() { __log('error', arguments); }
   G.ColorSwatch = ColorSwatch;
 
 
-// ===== 【14】ChangeNotifier 基类 =====
+// ===== 【15】ChangeNotifier 基类 =====
 // ChangeNotifier 基类（IIFE 骨架内定义，挂 G 供产物继承）。
 //
 // **职责只有一件事：提供模型本体**。addListener / removeListener 保留在 JS
@@ -2372,8 +2393,7 @@ Object.defineProperty(ValueNotifier.prototype, 'value', {
 });
 G.ValueNotifier = ValueNotifier;
 
-// ===== 【15】动画（Animation / AnimationController） =====
-  // ===== 【10.9】Curve 名字表（与 Dart `Curves.<name>` 同口径）=====
+// ===== 【16】动画（Animation / AnimationController） =====
   // 只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主已完成真实插值）；
   // 宿主侧按同名表还原真实 Curve（见 animation_from_json.curveFromJson）。
   function __animCurveFn(name) {
@@ -2386,14 +2406,12 @@ G.ValueNotifier = ValueNotifier;
       case 'easeOut': return function (t) { return 1 - (1 - t) * (1 - t); };
       case 'fastOutSlowIn': return function (t) { return t * t * (3 - 2 * t); };
       default:
-        if (typeof console !== 'undefined' && console.warn) {
-          console.warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
-        }
+                  console.warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
+        
         return function (t) { return t; };
     }
   }
 
-  // ===== 【10.9】SDK 常量类镜像（Curves / CrossFadeState）=====
   // 生成器对 `Curves.easeOut` 这类「类名.成员」有两种落点（props 位会翻成
   // 成员名字符串，其它位置原样引用），运行时提供同名对象后两边口径一致。
   // 值一律是**成员名字符串**，宿主按名字查真实曲线 / 枚举（见
@@ -2421,7 +2439,6 @@ G.ValueNotifier = ValueNotifier;
 
   G.CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
 
-  // ===== 【10.10】Tween / CurvedAnimation（JS 侧值对象）=====
   // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
   // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
   function Tween(opts) {
@@ -2469,7 +2486,6 @@ G.ValueNotifier = ValueNotifier;
   };
   G.CurvedAnimation = CurvedAnimation;
 
-  // ===== 【10.11】AnimationController 代理类 =====
   // 真实控制器在宿主（Ticker 驱动）；本镜像只保存 value 与时长：
   //   - forward/reverse/repeat/stop/reset → `handleOp('call')`（载荷带 value 与
   //     时长，宿主据此对齐状态后再驱动）；
@@ -2541,13 +2557,12 @@ G.ValueNotifier = ValueNotifier;
   G.AnimationController = AnimationController;
 
 
-// ===== 【16】ScrollController =====
-  // ===== 【10.5】ScrollController 代理类（对应 Flutter 官方 ScrollController）===
+// ===== 【17】ScrollController =====
   // 生成器把 Dart 侧 `final ScrollController _scrollController = ScrollController();`
   // 翻译成 `this._scrollController = new ScrollController()`；实例与宿主侧真实
   // ScrollController 按**句柄 id** 绑定。
   // 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-  // 工厂 defineController 提供（见【1c】）；本类只写差异：
+  // 工厂 defineController 提供（见【4】）；本类只写差异：
   //   - offset / position / hasClients：本地镜像（宿主回传 metrics 更新）；
   //   - jumpTo/animateTo：实例级 host 通道（载荷带 id，多实例互不干扰）；
   //   - addListener/removeListener：JS 闭包直接登记——**匿名闭包天然支持**，
@@ -2643,11 +2658,11 @@ G.ValueNotifier = ValueNotifier;
   G.PageController = PageController;
 
 
-// ===== 【17】TextEditingController =====
+// ===== 【18】TextEditingController =====
   // TextEditingController：JS 侧代理类，与宿主真实 TextEditingController 按
   // **句柄 id** 绑定（通用层，同 ScrollController 模式）。
   // 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-  // 工厂 defineController 提供（见【1c】）；本类只写差异：
+  // 工厂 defineController 提供（见【4】）；本类只写差异：
   //   - text：本地镜像（宿主经 textFn 回传更新），setter 发 host set 同步宿主；
   //   - selection：本地镜像，setter 发 host setSelection；
   //   - clear()：发 host clear + 清镜像；
@@ -2695,13 +2710,12 @@ G.ValueNotifier = ValueNotifier;
   G.TextEditingController = TextEditingController;
 
 
-// ===== 【18】TabController =====
-  // ===== 【10.7】TabController 代理类（对应 Flutter 官方 TabController）===
+// ===== 【19】TabController =====
   // 生成器把 Dart 侧 `late final TabController _c = TabController(length: 3, vsync: this)`
   // 翻译成 `this._c = new TabController({length: 3, vsync: this})`（vsync 由本代理
   // 类忽略），实例与宿主侧真实 TabController 按**句柄 id** 绑定。
   // 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-  // 工厂 defineController 提供（见【1c】）；本类只写差异：
+  // 工厂 defineController 提供（见【4】）；本类只写差异：
   //   - length/__index：本地镜像（宿主回传 index 更新）；真实实例由宿主在渲染
   //     TabBar / TabBarView 时按 id 取/建（length 随句柄下发，见 extraJSON）；
   //   - index setter：立即设置宿主 index 并通知监听者；
@@ -2750,8 +2764,7 @@ G.ValueNotifier = ValueNotifier;
   // 元素打 `lazyChildren` 标记（见 hot_patch_generator 的 shared/js_widget_defs.dart）。
 
 
-// ===== 【19】Key 类族 =====
-  // ===== 【10.6】Key 代理类（ValueKey / ObjectKey / UniqueKey / GlobalKey）===
+// ===== 【20】Key 类族 =====
   // ObjectKey / ValueKey(对象值) 的身份 token：对象走 WeakMap（不阻止回收），
   // 原始值没有身份，退化为值 string。
   var okeySeq = 0;
@@ -2859,7 +2872,10 @@ G.ValueNotifier = ValueNotifier;
     if (Object.prototype.hasOwnProperty.call(k, '__okey')) { return 'o:' + k.__okey; }
     var hid = k.__id != null ? k.__id : k.__handle;
     if (hid != null) { return 'h:' + hid; }
-    return 'x:' + String(k);
+    // 兜底：认不出的 key 对象按**引用身份**区分。绝不能 `String(k)` ——
+    // 所有对象都会拼成 "[object Object]" 而互相撞车，导致不同 key 复用同一
+    // 结点（`x:` 前缀保留，表明这是兜底签名）。
+    return 'x:' + objectToken(k);
   }
 
   G.ValueKey = ValueKey;
@@ -2869,8 +2885,7 @@ G.ValueNotifier = ValueNotifier;
   G.GlobalKey = GlobalKey;
 
 
-// ===== 【20】BuildContext 代理 =====
-  // ===== 【10.7】BuildContext 代理（机制本体）==============================
+// ===== 【21】BuildContext 代理 =====
   defineHandleKind('ctx/BuildContext', {});
 
   function JsBuildContext(anchor, nodeId) {
@@ -2929,8 +2944,7 @@ G.ValueNotifier = ValueNotifier;
   }
 
 
-// ===== 【21】EasyRefresh =====
-  // ===== 【11】EasyRefresh｜宿主发起 + JS 异步完成 =====================
+// ===== 【22】EasyRefresh =====
   // 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart 的
   // `_runAwaitableEvent`：evaluate 本函数触发一次事件，并等 token 回传。
   // 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__jsui` 同一约定。
@@ -2941,9 +2955,8 @@ G.ValueNotifier = ValueNotifier;
       out = (h && typeof h.obj === 'function') ? h.obj() : null;
     } catch (e) {
       // 事件方法同步抛错：按「已完成」收尾——指示器必须收起，不能挂死在转圈。
-      if (typeof console !== 'undefined' && console.error) {
-        console.error(String(e));
-      }
+              console.error(String(e));
+      
     }
     // 完成回传走 host（唯一 JS→宿主出口）；onFulfilled / onRejected 都必须回传，
     // 否则宿主侧那条 pending 永远等不到结算。
@@ -2955,8 +2968,7 @@ G.ValueNotifier = ValueNotifier;
     }
   };
 
-  // ===== 【11.1】EasyRefreshController 代理类 =====================
-  // 与 ScrollController 同款句柄层（三件套见【1c】defineController）：JS 实例与
+  // 与 ScrollController 同款句柄层（三件套见【4】defineController）：JS 实例与
   // 宿主真实 EasyRefreshController 按句柄 id 绑定。控制方法把**原始实参数组**
   // 原样下发（`handleOp 'call'`），由宿主按 Dart 形参的类型/顺序还原：
   // 生成器对方法调用的具名实参是位置化扁平（JS 无具名参数），所以这里不臆造
@@ -3023,8 +3035,7 @@ G.ValueNotifier = ValueNotifier;
   G.EasyRefreshController = EasyRefreshController;
 
 
-// ===== 【22】provider =====
-  // ===== 【10.8】provider 包｜作用域声明 + context 扩展 =================
+// ===== 【23】provider =====
   // model   = 类型名（生成器在翻译期写入，源自 `ChangeNotifierProvider<T>` 的 T）；
   // notifier = JS 侧 provider 组件 build 时创建/复用的实例（活对象）。
   registerScope('ChangeNotifierProvider', function (props) {
@@ -3065,7 +3076,7 @@ G.ValueNotifier = ValueNotifier;
   };
 
 
-// ===== 【23】泄漏观测（debug 用） =====
+// ===== 【24】泄漏观测（debug 用） =====
 
   function leakSnapshot() {
     var hs = [];
@@ -3106,7 +3117,7 @@ G.ValueNotifier = ValueNotifier;
   }
 
 
-// ===== 【24】api 收尾 =====
+// ===== 【25】api 收尾 =====
 
   var api = {
     h: h,
@@ -3117,7 +3128,7 @@ G.ValueNotifier = ValueNotifier;
     dispose: disposeRoot,
     updateProps: updateRootProps,
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
-    // （setState 只标脏，见【8】markDirty / requestFlush）。
+    // （setState 只标脏，见【9】markDirty / requestFlush）。
     flushPending: flushPending,
 
     leakSnapshot: leakSnapshot,

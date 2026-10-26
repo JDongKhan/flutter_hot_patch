@@ -16,7 +16,6 @@
 // 放在 core（而非某个能力目录）的原因：它们是**跨能力的公共值对象**——动画、
 // 布局、手势等模块都可能下发/读取，任何能力都不应独占。
 const String dartValuesJsSource = r'''
-  // ===== 【0.0】位置实参兜底 =====
   // 构建期查不到构造签名时，位置实参以 `__pos: [...]` 下发；这里按形参名顺序
   // 展开。任何类都可复用，不含类名判断。
   function __posArgs(props, names) {
@@ -30,9 +29,7 @@ const String dartValuesJsSource = r'''
     }
     return out;
   }
-  G.__posArgs = __posArgs;
 
-  // ===== 【0.1】Dart 值类（Duration / Size / Offset / Radius）=====
   // Duration 产物键是 Dart 的命名实参（milliseconds / seconds / …），换算成
   // 毫秒后经 toJSON 下发；宿主 durationFromJson 只认 `{__duration: ms}` 与裸数字。
   function __durationMs(d) {

@@ -34,7 +34,6 @@
 //      初始化）；地基必须先于一切能力；
 //   3. 与宿主侧 handle_registry.dart 同因：它是插座，不是插头，永无第二实现。
 const String handleRegistryJsSource = r'''
-  // ===== 【1b】跨语言句柄注册表（通用层地基）===========================
   // handleSeq 与 idSeq 相互独立：句柄 id 与结点 id 分属两套命名空间。
   var handleSeq = 0;
   // id -> { id, kind, scope, key, obj, meta }
@@ -218,9 +217,8 @@ const String handleRegistryJsSource = r'''
   function callHandle(id, op, payload) {
     var h = handles[id];
     if (!h) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('jsui: handle not found (released?): ' + id + ' op=' + op);
-      }
+              console.warn('jsui: handle not found (released?): ' + id + ' op=' + op);
+      
       return undefined;
     }
     var o = h.obj;
@@ -243,7 +241,6 @@ const String handleRegistryJsSource = r'''
     return host('jsHandle', [body]);
   }
 
-  // ===== 【1c】控制器代理三件套基座（ctrl/* 能力共用）====================
   // Scroll/Tab/Text 的 JS 代理类同构：__listeners 数组、内部回传句柄
   // （meta.fn 交宿主回传）、句柄登记（scope=page）、release 清理、dispose、
   // toJSON、__notify。本工厂收敛这套样板；能力只写差异：

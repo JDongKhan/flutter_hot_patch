@@ -1,12 +1,11 @@
 // 由 runtime_js.dart 拆出的 ScrollController JS 片段（能力内聚，见 capabilities/ 设计规范）。
 // runtime_source 把骨架与各能力片段拼接后注入（同一 IIFE 作用域，片段间靠函数提升互调）。
 const String scrollControllerJsSource = r'''
-  // ===== 【10.5】ScrollController 代理类（对应 Flutter 官方 ScrollController）===
   // 生成器把 Dart 侧 `final ScrollController _scrollController = ScrollController();`
   // 翻译成 `this._scrollController = new ScrollController()`；实例与宿主侧真实
   // ScrollController 按**句柄 id** 绑定。
   // 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-  // 工厂 defineController 提供（见【1c】）；本类只写差异：
+  // 工厂 defineController 提供（见【4】）；本类只写差异：
   //   - offset / position / hasClients：本地镜像（宿主回传 metrics 更新）；
   //   - jumpTo/animateTo：实例级 host 通道（载荷带 id，多实例互不干扰）；
   //   - addListener/removeListener：JS 闭包直接登记——**匿名闭包天然支持**，

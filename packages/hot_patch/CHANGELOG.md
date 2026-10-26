@@ -1,7 +1,12 @@
 ## 0.3.0
 
-**新增动画能力：隐式动画 / 显式动画（需与生成器 0.3.0 配套）。**
+**新增动画能力；JS 运行时改为构建期产物（需与生成器 0.3.0 配套）。**
 
+- **JS 运行时迁出运行时包**：mini-react / 句柄表 / 颜色 / 动画 / 各 Controller / Key / BuildContext / provider 等全部 JS 片段改由生成器的 `ui_runtime` builder 产出 `patch/runtime.js`，运行时只负责读取与求值。**JS 侧修复随补丁发布即可生效，不再需要发版 App**；产物按 `// ===== 【n】标题 =====` 分区，便于定位。
+- **`runtime.js` 支持同进程更新**：头部守卫由「已初始化即返回」改为按**内容哈希**判断——补丁包带来新版 runtime.js（哈希变化）时原地重建运行时，同哈希短路不丢状态；`invalidateModules` 同步重置初始化标记，否则新包会被旧标记挡住。
+- **编译期标志改由宿主注入**：`kDebugMode` / `kReleaseMode` / `Platform.isXxx` 在求值 runtime.js 前注入全局，产物里不再烘焙具体值（构建期无从得知 App 的编译模式与平台）。
+- **清单新增 `protocol`（当前 `1.0`）**：远程补丁包加载时校验主版本，与应用不匹配则拒绝挂载并留日志，避免老 App 消费新协议产物时静默错乱；清单缺少该字段的历史产物按兼容处理。
+- **能力库 `jsFragments` 仅服务外部库**：内建能力的 JS 已在 runtime.js 中，该钩子恒为空；App 侧 `registerJsUiLibrary` 注册的片段在 runtime.js 之后独立求值，只能使用全局出口 `__jsui` / `_app_host_`。
 - **隐式动画 / 过渡动画**：宿主注册 `AnimatedContainer` / `AnimatedOpacity` / `AnimatedPadding` / `AnimatedAlign` / `AnimatedScale` / `AnimatedRotation` / `AnimatedSlide` / `AnimatedSize` / `AnimatedSwitcher` / `AnimatedCrossFade` / `AnimatedDefaultTextStyle` / `AnimatedPositioned` 与 `FadeTransition` / `ScaleTransition` / `RotationTransition` / `SizeTransition`；插值仍由 Flutter 原生组件完成，JS 只下发 duration / curve / 目标值。
 - **显式动画**：JS 侧 `AnimationController` 是镜像 + 句柄（`ctrl/Flash`），真实控制器带 Ticker 跑在宿主；`forward` / `reverse` / `repeat` / `stop` / `reset` 经通用句柄操作下发，宿主每帧把 `value` 回传到 JS 镜像，触发 `AnimatedBuilder` 等 JS 逻辑组件只重建自己的子树。
 - **`AnimatedBuilder` 逻辑组件**（JS 类）：订阅 `animation`，`builder` 回调按产物协议抽成组件方法，避免逐帧整页重建。

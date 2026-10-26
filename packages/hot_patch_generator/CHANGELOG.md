@@ -1,8 +1,36 @@
+## 0.3.2
+
+**删除 `runtime.js` 里的无效设计与恒真探测（行为不变）。**
+
+- 删除 `G.__posArgs` 全局导出：该函数只被运行时内部的值类（Color / Duration / Key / 异常）使用，产物与 Dart 侧都不引用它。
+- 删除 13 处 `typeof console !== 'undefined' &&` 与 13 处 `if (console.error/warn)` 真值守卫：`console` 在【1】无条件定义，release 下五个方法都是空函数；守卫恒真，等于白读一层。
+- `__log` 去掉 `_app_host_` 存在性探测：它在 IIFE 收尾赋值，console 只可能被之后的页面代码调用。
+- `capKey` 去掉 `WeakMap` 降级分支：QuickJS 必有 `WeakMap`。
+- `requestFlush` 的三重探测收敛为「有宿主桥 / 无宿主桥（纯 JS 单测）」两条。
+- 修正 `hot_patch` 侧 `js_leak_snapshot.dart` 的过时说明（原写「release 下 JS 产物不含 leakSnapshot」，实际产物对 debug/release 是同一份，靠调用点门控）。
+- **保留**并确认为扩展契约、非死代码：`__jsui.h / fn / reg / Component`（外部能力库的入口，见 `js_ui_library.dart` 的说明）、`sendMessage` 存在性判断（纯 JS 环境兜底）、`Array/String/Number.prototype` 的「已存在则跳过」守卫（同一 JS 上下文重复求值 runtime 时的保护）。
+
+## 0.3.1
+
+**`runtime.js` 性能与可维护性修复（产物协议不变，可与 `hot_patch` 0.3.0 搭配）。**
+
+- **release 下 console 完全静默**：`debug` / `info` / `log` / `warn` / `error` 在 `!kDebugMode` 时全部替换成同一个空函数，**一次都不跨桥**（原实现除 `debug` 外仍会走 `_app_host_.invoke`，每次日志都要格式化 + JSON 编码 + 桥消息 + Promise）。
+- **keyed diff 从 O(n²) 降到 O(n)**：`patchChildren` / `patchSlotList` 的匹配逻辑抽成唯一的 `keyedMatcher`（一次建索引 + 无 key 游标 + `__id` 定位），去掉了逐项线性扫 `remaining`、`splice` 搬移与 `indexOf` 判移动，也消除了两份重复实现。
+- **`eq` 降分配**：每层从两次 `Object.keys` 降为一次（另一侧用 `for-in` 计数），数组先比长度短路。
+- **修 `capKey` 的类型撞车**：原始捕获值改为 `typeof + ':' + String(v)`——数字 `1` 与字符串 `'1'`、`null` / `undefined` / `''` 不再生成同一 key（否则不同捕获值的事件闭包会互相覆盖）。
+- **修 `keySig` 的兜底撞车**：认不出的 key 对象改用引用身份 token，不再 `String(k)`（后者会把所有对象压成 `[object Object]`，导致不同 key 复用同一结点）。
+- **生命周期异常不再静默**：`deactivate` / `dispose` 抛错时记 `console.error`（release 下即空操作）。
+- **文档与注释去重**：删掉各片段内残留的旧分区标题（与产物头部的【n】编号冲突、且 `1b` / `1c` / `10.x` 混排），分区改为严格顺序 1..25；`runtime.js` 顶部同时注明 console 的 release 语义。
+
 ## 0.3.0
 
-**新增动画支持：隐式动画 / 显式动画（运行时需同步升级到 `hot_patch` 0.3.0）。**
+**新增动画支持；JS 运行时改由生成器产出（运行时需同步升级到 `hot_patch` 0.3.0）。**
 
-- **登记动画组件类型**：`builtinWidgetTypes` 追加 `AnimatedContainer` / `AnimatedOpacity` / `AnimatedPadding` / `AnimatedAlign` / `AnimatedScale` / `AnimatedRotation` / `AnimatedSlide` / `AnimatedSize` / `AnimatedSwitcher` / `AnimatedCrossFade` / `AnimatedDefaultTextStyle` / `AnimatedPositioned` / `FadeTransition` / `ScaleTransition` / `RotationTransition` / `SizeTransition`；生成器据此发射宿主包装类。
+- **新增 `ui_runtime` builder**：把 JS 运行时（mini-react / 句柄表 / 各能力片段）拼成**一个** `patch/runtime.js`（分区注释 `// ===== 【n】标题 =====`），运行时包不再内嵌任何 JS——JS 修复只需重出产物，无需发版。产物头部的版本号取内容哈希（FNV-1a），哈希变化即触发运行时原地重建。
+- **宿主类型清单自动抽取**：删除手工维护的 `builtinWidgetTypes` / `jsDataCarrierTypes`，改为构建期扫描 `hot_patch/lib/src/js_ui/**` 的 `r.register('X', …)` 与 `_dataCarrierTypes`——新增宿主组件只改运行时注册一行，生成器零登记、两端不再需要人工同步。
+- **清单新增 `protocol`**：`patchProtocolVersion = '1.0'` 写入 `patch/manifest.json`；主版本变化表示产物与宿主 Dart 的契约（`__h` / `element` / `__delegate` / 句柄信封 / 颜色序列化）有破坏性改动，次版本只做加法。
+- **修复 `PackageSources` 的 `rootUri` 解析基准**：改为相对 `package_config.json` 自身（pub 规范）。此前在工作区里会多退一级，导致依赖包与项目自身的构造签名、类索引全部定位不到。
+- **登记动画组件类型**：宿主类型清单追加 `AnimatedContainer` / `AnimatedOpacity` / `AnimatedPadding` / `AnimatedAlign` / `AnimatedScale` / `AnimatedRotation` / `AnimatedSlide` / `AnimatedSize` / `AnimatedSwitcher` / `AnimatedCrossFade` / `AnimatedDefaultTextStyle` / `AnimatedPositioned` / `FadeTransition` / `ScaleTransition` / `RotationTransition` / `SizeTransition`（现由运行时注册自动派生）。
 - **`AnimatedBuilder` 作为逻辑组件**（`logicWidgetTypes`）：`builder` 闭包抽成组件方法，产物只下发方法名，逐帧重建只发生在该子树。
 - **动画值 / 控制器的翻译**：`Duration` 归入命名实参的 JS 运行时代理（`new Duration({milliseconds: n})`）；`AnimationController` / `CurvedAnimation` 同样按 JS 同名代理类构造；`Tween` / `CurvedAnimation` 作为值对象只在 JS 侧推导 `value`。
 - **枚举成员名口径**：`Curves.easeOut` / `CrossFadeState.showFirst` 继续按成员名字符串下发（与既有枚举翻译一致），运行时按名字还原真实对象。

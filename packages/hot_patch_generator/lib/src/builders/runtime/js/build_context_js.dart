@@ -18,14 +18,13 @@
 // `build(BuildContext context)` 签名）；`this.context` 是同一条同步可达路径
 // （事件/延迟作用域里形参不可见），但按**执行位置**解析：`building` 非空时取
 // 它的代理——被委托的 builder 方法（`this` 是 owner）因此拿到**被委托组件**的
-// 代理，与 Dart 里闭包捕获 `context` 形参同语义（见 mini-react【6】的 augment）。
+// 代理，与 Dart 里闭包捕获 `context` 形参同语义（见 mini-react【7】的 augment）。
 //
 // 同步约束（设计内）：库在自己补的 `watch` 里做的**取值**必须同步（渲染期
 // `model.count` 要直接读），而 JS→宿主只有异步桥，故取值在本端按**类型名**沿
-// `__parent` 从最近的作用域结点取（通用机制，见 mini-react【7】的 `scopeOf`；
+// `__parent` 从最近的作用域结点取（通用机制，见 mini-react【8】的 `scopeOf`；
 // 作用域声明见各三方库的接入文件，如 capabilities/provider/provider_js.dart）。
 const String buildContextJsSource = r'''
-  // ===== 【10.7】BuildContext 代理（机制本体）==============================
   defineHandleKind('ctx/BuildContext', {});
 
   function JsBuildContext(anchor, nodeId) {
