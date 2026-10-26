@@ -1,3 +1,12 @@
+## 0.3.0
+
+**新增动画支持：隐式动画 / 显式动画（运行时需同步升级到 `hot_patch` 0.3.0）。**
+
+- **登记动画组件类型**：`builtinWidgetTypes` 追加 `AnimatedContainer` / `AnimatedOpacity` / `AnimatedPadding` / `AnimatedAlign` / `AnimatedScale` / `AnimatedRotation` / `AnimatedSlide` / `AnimatedSize` / `AnimatedSwitcher` / `AnimatedCrossFade` / `AnimatedDefaultTextStyle` / `AnimatedPositioned` / `FadeTransition` / `ScaleTransition` / `RotationTransition` / `SizeTransition`；生成器据此发射宿主包装类。
+- **`AnimatedBuilder` 作为逻辑组件**（`logicWidgetTypes`）：`builder` 闭包抽成组件方法，产物只下发方法名，逐帧重建只发生在该子树。
+- **动画值 / 控制器的翻译**：`Duration` 归入命名实参的 JS 运行时代理（`new Duration({milliseconds: n})`）；`AnimationController` / `CurvedAnimation` 同样按 JS 同名代理类构造；`Tween` / `CurvedAnimation` 作为值对象只在 JS 侧推导 `value`。
+- **枚举成员名口径**：`Curves.easeOut` / `CrossFadeState.showFirst` 继续按成员名字符串下发（与既有枚举翻译一致），运行时按名字还原真实对象。
+
 ## 0.2.3
 
 **统一 widget 构造协议：宿主包装类 + 翻译统一 `new`（运行时需同步升级到 `hot_patch` 0.2.2）。**

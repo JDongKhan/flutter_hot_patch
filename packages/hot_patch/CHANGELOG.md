@@ -1,3 +1,14 @@
+## 0.3.0
+
+**新增动画能力：隐式动画 / 显式动画（需与生成器 0.3.0 配套）。**
+
+- **隐式动画 / 过渡动画**：宿主注册 `AnimatedContainer` / `AnimatedOpacity` / `AnimatedPadding` / `AnimatedAlign` / `AnimatedScale` / `AnimatedRotation` / `AnimatedSlide` / `AnimatedSize` / `AnimatedSwitcher` / `AnimatedCrossFade` / `AnimatedDefaultTextStyle` / `AnimatedPositioned` 与 `FadeTransition` / `ScaleTransition` / `RotationTransition` / `SizeTransition`；插值仍由 Flutter 原生组件完成，JS 只下发 duration / curve / 目标值。
+- **显式动画**：JS 侧 `AnimationController` 是镜像 + 句柄（`ctrl/Flash`），真实控制器带 Ticker 跑在宿主；`forward` / `reverse` / `repeat` / `stop` / `reset` 经通用句柄操作下发，宿主每帧把 `value` 回传到 JS 镜像，触发 `AnimatedBuilder` 等 JS 逻辑组件只重建自己的子树。
+- **`AnimatedBuilder` 逻辑组件**（JS 类）：订阅 `animation`，`builder` 回调按产物协议抽成组件方法，避免逐帧整页重建。
+- **JS 运行时的动画值 / 代理类**：`Curves`（成员名字符串口径）、`CrossFadeState`、`Tween`、`CurvedAnimation`、`AnimationController`；`CurvedAnimation` / Tween 下发时带 `{__handle, __curve}`，宿主按父控制器 + 同名曲线驱动。
+- **公共值类迁到基础层**：`Duration` / `Size` / `Offset` / `Radius` 从动画能力移到 `capabilities/core`（新增 `DartValuesLibrary`，最先注入），后续任何能力都可直接复用；时长换算统一为 `__durationMs`。
+- **JSON 还原按领域拆分**：原 `src/json/flutter_from_json.dart` 拆分到 `capabilities/core/from_json/`（公共值 / 布局 / 绘制 / 杂项枚举）、`capabilities/base_widget/`（文本样式 / ButtonStyle / IconData）、`capabilities/animation/` 与 `capabilities/tab/`，避免单文件随能力增长而臃肿；`src/json` 目录已删除。
+
 ## 0.2.2
 
 **widget-class 协议：构造即实例 + 消费时归一化（需与生成器 0.2.3 配套）。**
