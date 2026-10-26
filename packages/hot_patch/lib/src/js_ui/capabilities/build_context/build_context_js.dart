@@ -1,4 +1,4 @@
-// 由 runtime_source.dart 拆出的 BuildContext 代理片段（能力内聚，见 capabilities/ 设计规范）。
+// 由 runtime_source_js.dart 拆出的 BuildContext 代理片段（能力内聚，见 capabilities/ 设计规范）。
 //
 // **调用面与 Dart 完全一致**：用户写的 `context.xxx` 里的 `context` 就是本代理。
 // 它与 Dart 侧原生 BuildContext 一一对应，关系（绑定）就建立在这里：

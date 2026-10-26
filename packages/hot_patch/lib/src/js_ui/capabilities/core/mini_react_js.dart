@@ -1,6 +1,6 @@
 // mini-react —— JS 侧 UI 运行时核心（框架核心，独立成文件）。
 //
-// 与 runtime_source.dart 的骨架入口/桥（【1】~【3】、【10】+尾部）拼接后
+// 与 runtime_source_js.dart 的骨架入口/桥（【1】~【3】、【10】+尾部）拼接后
 // 注入同一 IIFE：这里定义 element 描述、reconciler（mount/patch/unmount）、
 // 组件基类（setState/__bindFn）、作用域（按类型名）查找与订阅、脏调度批处理。
 // 新增框架级机制（如 fiber、portals）改本文件；新增业务能力桥接
@@ -13,7 +13,7 @@
 //   摘除 → deactivate → dispose → unmount【9】。
 //   （activate 需「重挂载/reparent」场景，mini-react 无此能力，故不派发。）
 //
-// 分区与 runtime_source.dart 导航表一致（【4】~【9】）。
+// 分区与 runtime_source_js.dart 导航表一致（【4】~【9】）。
 
 /// mini-react｜element 与事件句柄（h / fn / invoke）【4】。
 const String miniReactElementSource = r'''

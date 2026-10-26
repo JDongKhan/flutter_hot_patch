@@ -61,9 +61,9 @@ import 'package:flutter/foundation.dart'
 // 拼接（见 capabilities/js_ui_library.dart 的 _seedBuiltins）。
 // 本文件只保留**骨架地基**片段：
 //       capabilities/core/handle_registry_js.dart → 跨语言句柄注册表（必须先于一切能力）
-import 'capabilities/core/handle_registry_js.dart';
-import 'capabilities/js_ui_library.dart';
-import 'js/mini_react_js.dart';
+import 'handle_registry_js.dart';
+import '../js_ui_library.dart';
+import 'mini_react_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。

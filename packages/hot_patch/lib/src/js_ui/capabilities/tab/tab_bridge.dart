@@ -19,9 +19,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart'
     show Ticker, TickerCallback, TickerProvider;
 
-import '../../../json/flutter_from_json.dart';
 import '../../js_widget_registry.dart';
+import '../base_widget/text_from_json.dart';
 import '../core/controller_bridge.dart';
+import '../core/from_json/dart_values_from_json.dart';
+import '../core/from_json/layout_from_json.dart';
+import '../core/from_json/widget_enum_from_json.dart';
+import 'tab_from_json.dart';
 
 // ---------------------------------------------------------------------------
 // TabController 句柄桥（通用层见 capabilities/core/controller_bridge.dart；

@@ -11,9 +11,12 @@
 //   listeners）。jumpTo / animateTo 走通用 op（call）；dispose 走通用 release。
 import 'package:flutter/material.dart';
 
-import '../../../json/flutter_from_json.dart';
 import '../../js_widget_registry.dart';
+import '../base_widget/text_from_json.dart';
 import '../core/controller_bridge.dart';
+import '../core/from_json/dart_values_from_json.dart';
+import '../core/from_json/layout_from_json.dart';
+import '../core/from_json/widget_enum_from_json.dart';
 
 /// ScrollController 句柄桥：创建/回传句柄登记/释放全走通用层（见
 /// controller_bridge.dart），这里只留 jumpTo/animateTo 的 op 分派。

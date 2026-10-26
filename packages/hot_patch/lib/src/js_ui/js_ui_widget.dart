@@ -12,7 +12,7 @@ import 'capabilities/core/binding_cache.dart';
 import 'capabilities/core/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key/key_bridge.dart';
-import 'js_leak_snapshot.dart';
+import 'leak/js_leak_snapshot.dart';
 import 'js_ui_store.dart';
 import 'js_widget_registry.dart';
 

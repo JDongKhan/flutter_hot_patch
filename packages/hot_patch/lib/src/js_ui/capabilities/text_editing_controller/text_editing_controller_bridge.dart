@@ -12,8 +12,8 @@
 //   TextField 的注册（含受控/非受控分流）随能力内聚于此。
 import 'package:flutter/material.dart';
 
-import '../../../json/flutter_from_json.dart';
 import '../../js_widget_registry.dart';
+import '../base_widget/text_from_json.dart';
 import '../core/controller_bridge.dart';
 
 /// TextEditingController 句柄桥：创建/回传句柄登记/释放全走通用层，这里

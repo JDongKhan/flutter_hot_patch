@@ -16,11 +16,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../../../json/flutter_from_json.dart';
 import '../../../services/js_runtime_manager.dart';
 import '../../../utils/hot_patch_log.dart';
 import '../../js_widget_registry.dart';
+import '../base_widget/text_from_json.dart';
 import '../core/controller_bridge.dart';
+import '../core/from_json/dart_values_from_json.dart';
+import '../core/from_json/layout_from_json.dart';
+import '../core/from_json/painting_from_json.dart';
+import 'animation_from_json.dart';
 
 /// 显式动画的 Ticker 来源：控制器真实对象在宿主侧（见文件头）。
 ///

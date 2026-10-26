@@ -1,4 +1,4 @@
-// 由 runtime_source.dart 拆出的 TabController JS 片段（能力内聚，见 capabilities/ 设计规范）。
+// 由 runtime_source_js.dart 拆出的 TabController JS 片段（能力内聚，见 capabilities/ 设计规范）。
 // runtime_source 把骨架与各能力片段拼接后注入（同一 IIFE 作用域，片段间靠函数提升互调）。
 const String tabControllerJsSource = r'''
   // ===== 【10.7】TabController 代理类（对应 Flutter 官方 TabController）===

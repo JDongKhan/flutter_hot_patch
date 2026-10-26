@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../json/flutter_from_json.dart';
 import '../utils/hot_patch_log.dart';
+import 'capabilities/base_widget/button_from_json.dart';
+import 'capabilities/base_widget/icon_from_json.dart';
+import 'capabilities/base_widget/text_from_json.dart';
+import 'capabilities/core/from_json/dart_values_from_json.dart';
+import 'capabilities/core/from_json/layout_from_json.dart';
+import 'capabilities/core/from_json/painting_from_json.dart';
+import 'capabilities/core/from_json/widget_enum_from_json.dart';
 import 'capabilities/js_ui_capabilities.dart';
 
 /// 非 Widget 数据载体类型：它们在产物里也是 element 形态，但宿主 renderer

@@ -1,4 +1,4 @@
-// 由 runtime_source.dart 拆出的 TextEditingController JS 片段（能力内聚）。
+// 由 runtime_source_js.dart 拆出的 TextEditingController JS 片段（能力内聚）。
 // runtime_source 把骨架与各能力片段拼接后注入（同一 IIFE 作用域）。
 const String textEditingControllerJsSource = r'''
   // TextEditingController：JS 侧代理类，与宿主真实 TextEditingController 按

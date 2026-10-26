@@ -15,8 +15,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../../json/flutter_from_json.dart';
 import '../../js_widget_registry.dart';
+import '../core/from_json/dart_values_from_json.dart';
+import '../core/from_json/layout_from_json.dart';
+import '../core/from_json/widget_enum_from_json.dart';
 
 /// CachedNetworkImage 能力域组件注册。
 void registerCachedNetworkImageWidgets(JsWidgetRegistry r) {

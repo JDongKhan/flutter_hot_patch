@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import '../services/js_runtime_manager.dart';
-import '../utils/hot_patch_log.dart';
-import 'capabilities/core/binding_cache.dart';
-import 'capabilities/core/handle_registry.dart';
-import 'js_ui_store.dart';
+import '../../services/js_runtime_manager.dart';
+import '../../utils/hot_patch_log.dart';
+import '../capabilities/core/binding_cache.dart';
+import '../capabilities/core/handle_registry.dart';
+import '../js_ui_store.dart';
 
 /// 双端泄漏观测（debug 工具）：页面**销毁后**扫一遍双端资源表，本页登记过、
 /// 销毁后却仍留在表里的即残留。**JS 端与 Dart 端同时覆盖**：
