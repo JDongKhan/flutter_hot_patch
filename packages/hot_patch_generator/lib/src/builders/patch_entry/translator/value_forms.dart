@@ -408,6 +408,7 @@ const Set<String> _valueCtors = {
   'ScrollController',
   'PageController',
   'TabController',
+  'EasyRefreshController',
   'AnimationController',
   // 动画值对象：`Tween(begin: 0, end: 1)` / `CurvedAnimation(parent: c, curve: …)`
   // 只在 JS 侧推导 value（宿主按 `{__handle, __curve}` 还原），不是子结点。

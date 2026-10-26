@@ -14,6 +14,7 @@ export class HomePage {
   constructor(args) {
     this.props = args || {};
     this._service = new AppService({});
+    this._refreshController = new EasyRefreshController();
     this._feed = null;
   }
   initState() {
@@ -22,6 +23,9 @@ export class HomePage {
   }
   didUpdateWidget(oldWidget) {
     console.log("--HomePage didUpdateWidget 0");
+  }
+  _refresh() {
+    this._refreshController.callRefresh();
   }
   async _load() {
     var feed = await this._service.fetchHome();
@@ -42,6 +46,7 @@ export class HomePage {
     return new Container({
         "color": '#fff4f5f7',
         "child": new EasyRefresh({
+            "controller": this._refreshController,
             "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a)),
             "child": new CustomScrollView({
                 "slivers": [
@@ -49,8 +54,10 @@ export class HomePage {
                       "child": new Column({
                           "crossAxisAlignment": "stretch",
                           "children": [
-                            (this.__k1 || (this.__k1 = new HomeHeader({}))),
-                            (this.__k2 || (this.__k2 = new SizedBox({
+                            new HomeHeader({
+                                "onRefresh": (...__a) => this._refresh(...__a)
+                              }),
+                            (this.__k1 || (this.__k1 = new SizedBox({
                                 "height": 12
                               }))),
                             new SizedBox({
@@ -61,7 +68,7 @@ export class HomePage {
                                     ]
                                   })
                               }),
-                            (this.__k3 || (this.__k3 = new SizedBox({
+                            (this.__k2 || (this.__k2 = new SizedBox({
                                 "height": 10
                               }))),
                             new Row({
@@ -70,7 +77,7 @@ export class HomePage {
                                   ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new Container({ "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "width": 6, "height": 6, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
                                 ]
                               }),
-                            (this.__k2 || (this.__k2 = new SizedBox({
+                            (this.__k1 || (this.__k1 = new SizedBox({
                                 "height": 12
                               }))),
                             new Container({
@@ -106,7 +113,7 @@ export class HomePage {
                                     ]
                                   })
                               }),
-                            (this.__k2 || (this.__k2 = new SizedBox({
+                            (this.__k1 || (this.__k1 = new SizedBox({
                                 "height": 12
                               }))),
                             new Container({
@@ -120,7 +127,7 @@ export class HomePage {
                                     "img": this._feed.adImg
                                   })
                               }),
-                            (this.__k4 || (this.__k4 = new SizedBox({
+                            (this.__k3 || (this.__k3 = new SizedBox({
                                 "height": 16
                               }))),
                             new Padding({
@@ -142,10 +149,10 @@ export class HomePage {
                                             }
                                           }
                                         }),
-                                      (this.__k5 || (this.__k5 = new SizedBox({
+                                      (this.__k4 || (this.__k4 = new SizedBox({
                                           "width": 8
                                         }))),
-                                      (this.__k6 || (this.__k6 = new Text({
+                                      (this.__k5 || (this.__k5 = new Text({
                                           "data": "景点推荐",
                                           "style": {
                                             "color": '#ff1f2430',
@@ -153,8 +160,8 @@ export class HomePage {
                                             "fontWeight": "w700"
                                           }
                                         }))),
-                                      (this.__k7 || (this.__k7 = new Spacer({}))),
-                                      (this.__k8 || (this.__k8 = new Text({
+                                      (this.__k6 || (this.__k6 = new Spacer({}))),
+                                      (this.__k7 || (this.__k7 = new Text({
                                           "data": "为你精选",
                                           "style": {
                                             "color": '#ff8a909e',
@@ -164,7 +171,7 @@ export class HomePage {
                                     ]
                                   })
                               }),
-                            (this.__k3 || (this.__k3 = new SizedBox({
+                            (this.__k2 || (this.__k2 = new SizedBox({
                                 "height": 10
                               })))
                           ]
@@ -191,7 +198,7 @@ export class HomePage {
                           }
                         })
                     }),
-                  (this.__k9 || (this.__k9 = new SliverToBoxAdapter({
+                  (this.__k8 || (this.__k8 = new SliverToBoxAdapter({
                       "child": new SizedBox({
                           "height": 20
                         })
@@ -212,6 +219,10 @@ export class HomePage {
 export class HomeHeader {
   constructor(args) {
     this.props = args || {};
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.onRefresh = (args && args.onRefresh !== undefined) ? args.onRefresh : null;
   }
   openSearch() {
     _app_host_.invoke("openSearch", []);
@@ -278,11 +289,33 @@ export class HomeHeader {
                           }),
                         (this.__k1 || (this.__k1 = new Spacer({}))),
                         new InkWell({
-                            "onTap": this.__bindFn(1, [], (...__a) => this.openMessages(...__a)),
+                            "onTap": this.__bindFn(1, [], (...__a) => this.onRefresh(...__a)),
                             "borderRadius": {
                               "radius": 18.0
                             },
-                            "child": (this.__k2 || (this.__k2 = new Stack({
+                            "child": (this.__k2 || (this.__k2 = new Padding({
+                                "child": new Icon({
+                                    "color": '#ffffffff',
+                                    "icon": "refresh",
+                                    "size": 24
+                                  }),
+                                "padding": {
+                                  "bottom": 4.0,
+                                  "left": 4.0,
+                                  "right": 4.0,
+                                  "top": 4.0
+                                }
+                              })))
+                          }),
+                        (this.__k3 || (this.__k3 = new SizedBox({
+                            "width": 8
+                          }))),
+                        new InkWell({
+                            "onTap": this.__bindFn(2, [], (...__a) => this.openMessages(...__a)),
+                            "borderRadius": {
+                              "radius": 18.0
+                            },
+                            "child": (this.__k4 || (this.__k4 = new Stack({
                                 "children": [
                                   new Padding({
                                       "child": new Icon({
@@ -318,11 +351,11 @@ export class HomeHeader {
                           })
                       ]
                     }),
-                  (this.__k3 || (this.__k3 = new SizedBox({
+                  (this.__k5 || (this.__k5 = new SizedBox({
                       "height": 12
                     }))),
                   new InkWell({
-                      "onTap": this.__bindFn(2, [], (...__a) => this.openSearch(...__a)),
+                      "onTap": this.__bindFn(3, [], (...__a) => this.openSearch(...__a)),
                       "borderRadius": {
                         "radius": 20.0
                       },
@@ -340,7 +373,7 @@ export class HomeHeader {
                               "radius": 21.0
                             }
                           },
-                          "child": (this.__k4 || (this.__k4 = new Row({
+                          "child": (this.__k6 || (this.__k6 = new Row({
                               "children": [
                                 new Icon({
                                     "color": '#ff9aa0ac',

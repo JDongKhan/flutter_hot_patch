@@ -25,6 +25,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final AppService _service = AppService();
 
+  /// 下拉刷新控制器：JS 侧 `new EasyRefreshController()` 与宿主真实实例按
+  /// 句柄绑定（同 ScrollController 模式），`callRefresh()` 可程序化触发刷新。
+  final EasyRefreshController _refreshController = EasyRefreshController();
+
   /// 接口数据；null = 加载中。
   HomeFeed? _feed;
 
@@ -39,6 +43,12 @@ class _HomePageState extends State<HomePage> {
     super.didUpdateWidget(oldWidget);
     print("--HomePage didUpdateWidget 0");
   }
+
+  /// 头部刷新按钮：走 controller 主动触发（与下拉手势同一条 onRefresh 链路）。
+  void _refresh() {
+    _refreshController.callRefresh();
+  }
+
   Future<void> _load() async {
     final HomeFeed feed = await _service.fetchHome();
     setState(() {
@@ -67,7 +77,10 @@ class _HomePageState extends State<HomePage> {
       // （桥接 Flutter 侧 EasyRefresh）。用户下拉 → 宿主触发 JS 侧 `_load()`
       // → JS 侧 await 完重新请求后指示器才收起；指示器样式用包内默认
       // ClassicHeader，不参与翻译。
+      // controller 与 JS 侧 `new EasyRefreshController()` 按句柄绑定：
+      // 头部刷新按钮 → callRefresh → 宿主真实 controller 带动画拉起指示器。
       child: EasyRefresh(
+        controller: _refreshController,
         onRefresh: _load,
         child: CustomScrollView(
           slivers: [
@@ -75,7 +88,7 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const HomeHeader(),
+                  HomeHeader(onRefresh: _refresh),
                   const SizedBox(height: 12),
                   // 轮播：PageView + BannerSlide（子组件，走 JS 类引用）
                   SizedBox(
@@ -211,7 +224,10 @@ class _HomePageState extends State<HomePage> {
 // 顶部渐变头（定位 + 消息 + 搜索条）
 // ---------------------------------------------------------------------------
 class HomeHeader extends StatelessWidget {
-  const HomeHeader({super.key});
+  const HomeHeader({super.key, required this.onRefresh});
+
+  /// 程序化刷新：宿主真实 EasyRefreshController.callRefresh（JS 侧同款方法）。
+  final VoidCallback onRefresh;
 
   void openSearch() {
     AppRouter.openSearch();
@@ -270,6 +286,21 @@ class HomeHeader extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
+                // 程序化刷新（EasyRefreshController.callRefresh）：与下拉手势
+                // 触发同一条 onRefresh 链路，验证 controller 跨桥可用。
+                InkWell(
+                  onTap: onRefresh,
+                  borderRadius: const BorderRadius.all(Radius.circular(18)),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.refresh,
+                      color: Color(0xFFFFFFFF),
+                      size: 24,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 InkWell(
                   onTap: openMessages,
                   borderRadius: const BorderRadius.all(Radius.circular(18)),

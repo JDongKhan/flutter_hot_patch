@@ -249,7 +249,9 @@ const String handleRegistryJsSource = r'''
   // toJSON、__notify。本工厂收敛这套样板；能力只写差异：
   //   init(self, ...)   ：构造体（镜像字段），实参透传（如 Tab 的 opts）；
   //   onHost(self, p)   ：宿主回传 → 更新镜像 + __notify（缺省则无回传句柄）；
-  //   extraJSON(self)   ：toJSON 附加字段（如 Tab 的 length/initialIndex）。
+  //   extraJSON(self)   ：toJSON 附加字段（如 Tab 的 length/initialIndex）；
+  //   meta(self)        ：随句柄 create 下发给宿主的构造参数（宿主据此创建
+  //                       真实对象，如 EasyRefreshController 的 controlFinish*）。
   // ChangeNotifier 刻意不用本工厂：它是用户模型基类（无回传句柄、
   // notifyListeners 是公开 API、双路派发），见 change_notifier_js.dart。
   function defineController(kind, spec) {
@@ -270,9 +272,17 @@ const String handleRegistryJsSource = r'''
         var self = this;
         this.__hostFn = fn(function (p) { spec.onHost(self, p); });
       }
-      // 登记为句柄（scope=page）：自动同步宿主 onCreate（meta 携带回传句柄供
-      // 宿主回传）；页面退出时 disposeRoot 兜底释放。
-      this.__id = reg(this, kind, { meta: this.__hostFn ? { fn: this.__hostFn } : null });
+      // 登记为句柄（scope=page）：自动同步宿主 onCreate（meta 携带回传句柄与
+      // 能力自带的构造参数，供宿主创建真实对象）；页面退出时 disposeRoot 兜底释放。
+      var meta = this.__hostFn ? { fn: this.__hostFn } : null;
+      if (spec.meta) {
+        var extra = spec.meta(this);
+        if (extra) {
+          meta = meta || {};
+          for (var k in extra) { meta[k] = extra[k]; }
+        }
+      }
+      this.__id = reg(this, kind, { meta: meta });
     };
     Ctor.prototype.addListener = function (f) {
       if (typeof f === 'function') { this.__listeners.push(f); }

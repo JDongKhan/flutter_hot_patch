@@ -40,4 +40,71 @@ const String easyRefreshJsSource = r'''
       done();
     }
   };
+
+  // ===== 【11.1】EasyRefreshController 代理类 =====================
+  // 与 ScrollController 同款句柄层（三件套见【1c】defineController）：JS 实例与
+  // 宿主真实 EasyRefreshController 按句柄 id 绑定。控制方法把**原始实参数组**
+  // 原样下发（`handleOp 'call'`），由宿主按 Dart 形参的类型/顺序还原：
+  // 生成器对方法调用的具名实参是位置化扁平（JS 无具名参数），所以这里不臆造
+  // 形参名，交给宿主按类型判别（数值 → overOffset、Duration 值 → duration、
+  // 曲线名 → curve、布尔 → force）。
+  // 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart。
+  var EasyRefreshController = defineController('ctrl/EasyRefresh', {
+    init: function (opts) {
+      var o = opts || {};
+      this.controlFinishRefresh = !!o.controlFinishRefresh;
+      this.controlFinishLoad = !!o.controlFinishLoad;
+    },
+    // 构造参数随句柄 create 下发：宿主据此创建真实 controller（putIfAbsent——
+    // 创建消息与首帧渲染谁先到都复用同一实例）。
+    meta: function (self) {
+      return {
+        controlFinishRefresh: self.controlFinishRefresh,
+        controlFinishLoad: self.controlFinishLoad
+      };
+    },
+    // 组件渲染时 controller 经 toJSON 跨桥（`{__handle, controlFinish*}`），
+    // Host 在渲染期兜底创建时同样读得到构造参数。
+    extraJSON: function (self) {
+      return {
+        controlFinishRefresh: self.controlFinishRefresh,
+        controlFinishLoad: self.controlFinishLoad
+      };
+    }
+  });
+  EasyRefreshController.prototype.__op = function (method, args) {
+    if (this.__id == null) { return undefined; }
+    return handleOp(this.__id, 'call', { method: method, args: args });
+  };
+  EasyRefreshController.prototype.callRefresh = function () {
+    return this.__op('callRefresh', Array.prototype.slice.call(arguments));
+  };
+  EasyRefreshController.prototype.callLoad = function () {
+    return this.__op('callLoad', Array.prototype.slice.call(arguments));
+  };
+  EasyRefreshController.prototype.openHeaderSecondary = function () {
+    return this.__op('openHeaderSecondary', Array.prototype.slice.call(arguments));
+  };
+  EasyRefreshController.prototype.closeHeaderSecondary = function () {
+    return this.__op('closeHeaderSecondary', Array.prototype.slice.call(arguments));
+  };
+  EasyRefreshController.prototype.openFooterSecondary = function () {
+    return this.__op('openFooterSecondary', Array.prototype.slice.call(arguments));
+  };
+  EasyRefreshController.prototype.closeFooterSecondary = function () {
+    return this.__op('closeFooterSecondary', Array.prototype.slice.call(arguments));
+  };
+  EasyRefreshController.prototype.resetHeader = function () {
+    return this.__op('resetHeader', []);
+  };
+  EasyRefreshController.prototype.resetFooter = function () {
+    return this.__op('resetFooter', []);
+  };
+  EasyRefreshController.prototype.finishRefresh = function () {
+    return this.__op('finishRefresh', Array.prototype.slice.call(arguments));
+  };
+  EasyRefreshController.prototype.finishLoad = function () {
+    return this.__op('finishLoad', Array.prototype.slice.call(arguments));
+  };
+  G.EasyRefreshController = EasyRefreshController;
 ''';

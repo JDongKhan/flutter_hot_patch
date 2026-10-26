@@ -20,9 +20,12 @@ import 'handle_registry.dart';
 /// **引用强度：强引用**（见 binding_cache.dart 的判定 2）——JS 侧句柄才是这些
 /// 对象的寿命驱动者，未收到 release 前 Dart 侧唯一持有者就是本缓存，弱化会让
 /// 「JS 还持着句柄、对象却被 GC」成为非确定性失效。
-/// [T] 的约束是 [Listenable]（而非 ChangeNotifier）：AnimationController 也是
-/// Listenable 但**不是** ChangeNotifier，释放时只对 ChangeNotifier 调 dispose。
-class JsControllerBridge<T extends Listenable> {
+///
+/// [T] 只要求是普通对象：控制器不一定是 [Listenable]（如 EasyRefreshController
+/// 是纯控制类，既非 ChangeNotifier 也非 Listenable）。默认释放语义是
+/// ChangeNotifier / AnimationController 调 dispose；类型不同、需要自己的释放
+/// 逻辑时用 [onRelease] 覆盖。
+class JsControllerBridge<T extends Object> {
   JsControllerBridge({
     required String kind,
 
@@ -35,9 +38,15 @@ class JsControllerBridge<T extends Listenable> {
     /// 实例级 op 分派（call/get/set），controller 已按 id 解出且非空；
     /// id 未登记（已释放/尚未创建）时静默返回 null（与释放竞态共存）。
     required Object? Function(T controller, String op, Map payload) onOp,
+
+    /// 释放钩子：覆盖默认的「ChangeNotifier / AnimationController 调 dispose」。
+    /// 适用于自带 dispose 语义的非 Listenable 控制器（如 EasyRefreshController
+    /// 需要在释放时解绑 EasyRefresh）。
+    void Function(T controller)? onRelease,
   })  : _kind = kind,
         _create = create,
-        _onOp = onOp;
+        _onOp = onOp,
+        _onRelease = onRelease;
 
   /// 本桥的存储桶名 = 句柄 kind（`ctrl/Scroll` / `ctrl/Tab` / `ctrl/Text` /
   /// `notifier/ChangeNotifier`）：新增控制器能力照旧只注册一个 kind 即自动获得
@@ -45,6 +54,7 @@ class JsControllerBridge<T extends Listenable> {
   final String _kind;
   final T Function(String id, Object? meta)? _create;
   final Object? Function(T controller, String op, Map payload) _onOp;
+  final void Function(T controller)? _onRelease;
 
   JsBindingCache get _cache => JsBindingCache.instance;
 
@@ -83,6 +93,12 @@ class JsControllerBridge<T extends Listenable> {
           onRelease: (id) {
             final c = controllerAt(id);
             _cache.remove(_kind, id);
+            if (c == null) return;
+            final release = _onRelease;
+            if (release != null) {
+              release(c);
+              return;
+            }
             // AnimationController 等非 ChangeNotifier 的 Listenable 也实现了
             // dispose（AnimationController 有），按类型判断后统一释放。
             if (c is ChangeNotifier) c.dispose();

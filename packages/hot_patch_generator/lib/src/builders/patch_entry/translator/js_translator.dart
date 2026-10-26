@@ -500,6 +500,9 @@ const Set<String> jsRuntimeClassNames = {
   'PageController',
   'TextEditingController',
   'TabController',
+  // EasyRefresh 控制器：宿主真实实例由句柄层创建（capabilities/easy_refresh），
+  // JS 侧同名代理类承接 callRefresh / finishRefresh 等控制方法。
+  'EasyRefreshController',
   // Duration：命名实参构造 → JS 值类（capabilities/core/dart_values_js.dart），
   //   `Duration(milliseconds: n)` → `new Duration({milliseconds: n})`，toJSON 成 `{__duration}`；
   //   （Size / Offset / Radius 是位置实参，归 sdkValueClassNames。）
