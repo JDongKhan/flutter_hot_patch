@@ -220,6 +220,21 @@ String namedCtorStatics(String type, {Iterable<String> extra = const []}) {
   return b.toString();
 }
 
+/// 逻辑组件的**命名构造静态方法**（`ChangeNotifierProvider.value(props)`）。
+///
+/// 与包装类同一条口径：翻译层对命名构造 1:1 发射（`A.b(...)` → `A.b({...})`），
+/// 构造名从源码自动抽取（[CtorSignatures.ctorNamesOf]），SDK / 依赖包新增命名
+/// 构造后重构建即自动补齐，不需要任何类名或构造名登记。
+String logicCtorStatics(String type) {
+  final names = CtorSignatures.instance?.ctorNamesOf(type) ?? const <String>{};
+  if (names.isEmpty) return '';
+  final b = StringBuffer();
+  for (final n in names.toList()..sort()) {
+    b.writeln('$type.$n = function (props) { return new $type(props); };');
+  }
+  return b.toString();
+}
+
 /// 宿主包装类源码：类名 = 宿主类型名，构造即产出元素描述（type 仍是**字符串**）。
 /// 宿主结点的实例化由宿主注册表完成，reconciler 从不 `new` 这个类。
 String hostWrapperSource(String type) => '''
@@ -598,7 +613,8 @@ String renderPackageModule(String package, Set<String> types) {
     if (logic != null) {
       b
         ..writeln()
-        ..writeln(logic);
+        ..writeln(logic)
+        ..writeln(logicCtorStatics(t));
       continue;
     }
     // builder 命名构造代理（`.builder` / `.separated`）：元素 type 是类引用，

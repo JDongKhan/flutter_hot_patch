@@ -36,6 +36,8 @@ export class ChangeNotifierProvider {
     }
   }
 }
+ChangeNotifierProvider.value = function (props) { return new ChangeNotifierProvider(props); };
+
 
 export class Consumer {
   constructor(props) {
@@ -55,6 +57,7 @@ export class Consumer {
     });
   }
 }
+
 
 export class MultiProvider {
   constructor(props) {
@@ -82,3 +85,4 @@ export class MultiProvider {
     return node;
   }
 }
+

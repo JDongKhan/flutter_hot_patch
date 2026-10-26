@@ -609,10 +609,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final asClass = productType != null || usesJsClass(type, propsMap);
     if (productType == null && asClass) {
       (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
-    } else if (productType == null) {
-      // 包装类 / 注入同名类都在共享包模块里（`new X(props)` 承接元素折算）。
+    } else if (productType == null && builtinWidgetTypes.contains(type)) {
+      // 宿主 widget：flutter.js 有同名包装类（`new X(props)` → `__h('X', props)`）。
       (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(type);
     }
+    // 其余（`Duration` / `CurvedAnimation` / `Offset` 等注入类）是**全局同名类**：
+    // 产物按 1:1 直接 `new X({...})`，不 import（flutter.js 里没有它）。
     return _renderCall(
       type,
       json,
