@@ -261,7 +261,7 @@ export class $type {
 /// 运行时 `new` 该组件类并按组件路径挂载，由组件 `build()` 自行消费 props
 /// （provider 提供/消费 VM、Builder 委托拥有者方法返回子树）。运行时会给普通
 /// 类实例补挂 `props/setState/context/__bindFn`
-/// （见 js_ui/runtime_source_js.dart）。键集合与 js_widget_defs 的
+/// （见 js_ui/runtime_js.dart）。键集合与 js_widget_defs 的
 /// `logicWidgetTypes` 一致。
 const Map<String, String> logicWidgetSources = {
   'Builder': jsBuilderComponent,

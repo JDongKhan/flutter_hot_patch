@@ -1,4 +1,4 @@
-// 由 runtime_source_js.dart 拆出的 Key 代理类 JS 片段（能力内聚，见 capabilities/ 设计规范）。
+// 由 runtime_js.dart 拆出的 Key 代理类 JS 片段（能力内聚，见 capabilities/ 设计规范）。
 //
 // Key 与 Controller 不同：它是**值**（元素 props 里的 `key`），不是结点，也不
 // 绑定到某个宿主 widget。生成器把 Dart 侧 `key: ValueKey(item)` / `key: _formKey`

@@ -8,7 +8,7 @@ import 'package:flutter_js/flutter_js.dart';
 
 import '../utils/js_asset_resolver.dart';
 import '../utils/remote_asset_loader.dart';
-import '../js_ui/capabilities/core/runtime_source_js.dart';
+import '../js_ui/capabilities/core/runtime_js.dart';
 import '../utils/hot_patch_log.dart';
 
 /// JS 运行时管理器：与底层 [JavascriptRuntime] **一对一**。
@@ -282,7 +282,7 @@ class JsRuntimeManager {
 
   /// 确保 js_ui 运行时骨架就位（幂等）。
   ///
-  /// 注入**一块**框架代码（`js_ui/runtime_source_js.dart` 集中维护）：
+  /// 注入**一块**框架代码（`js_ui/runtime_js.dart` 集中维护）：
   /// [jsUiRuntimeSource]（IIFE）——运行环境全局（模块表 `__modules` /
   /// 编译平台标志 / console 桥，挂在 globalThis）+ element/component/
   /// reconciler/context + 能力桥 + ChangeNotifier 基类 + commit 协议。

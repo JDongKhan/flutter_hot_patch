@@ -26,7 +26,7 @@
 // **不进模板的地基**（核心本体，不属于任何可插拔能力）：
 //   - `ensureHandleChannels()`：句柄注册表本身，必须先于一切能力就绪；
 //   - `registerBuiltinJsWidgets(r)`：Text/Column 等 Flutter 基础视觉组件；
-//   - JS 骨架（mini-react / emit / host 桥）：见 runtime_source_js.dart。
+//   - JS 骨架（mini-react / emit / host 桥）：见 runtime_js.dart。
 //
 // **边界（务必知晓）**：本模板覆盖的是**运行时/宿主侧**。若新库还要新增 UI
 // 组件类型，其**编译期**翻译（hot_patch_generator 的统一翻译入口
