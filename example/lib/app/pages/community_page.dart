@@ -350,6 +350,12 @@ class _ListContent extends StatefulWidget {
 }
 
 class _ListContentState extends State<_ListContent> {
+
+
+  void initState() {
+    print("--_ListContent init");
+  }
+
   @override
   void didUpdateWidget(covariant _ListContent oldWidget) {
     super.didUpdateWidget(oldWidget);
