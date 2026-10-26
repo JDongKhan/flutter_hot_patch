@@ -5,7 +5,6 @@
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
 import 'easy_refresh_bridge.dart';
-import 'easy_refresh_js.dart';
 
 /// EasyRefresh（下拉刷新 / 上拉加载容器）能力接入声明。
 class EasyRefreshLibrary extends JsUiLibrary {
@@ -13,9 +12,6 @@ class EasyRefreshLibrary extends JsUiLibrary {
 
   @override
   String get id => 'easy-refresh';
-
-  @override
-  List<String> get jsFragments => const [easyRefreshJsSource];
 
   @override
   void ensureChannels() => ensureEasyRefreshChannels();

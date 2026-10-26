@@ -1,6 +1,5 @@
 // ===== 基础能力：Color 类族（接入声明）=====
 import '../js_ui_library.dart';
-import 'color_js.dart';
 
 /// Color / MaterialColor / ColorSwatch 的同名类注入。
 ///
@@ -12,6 +11,4 @@ class ColorLibrary extends JsUiLibrary {
   @override
   String get id => 'color';
 
-  @override
-  List<String> get jsFragments => const [colorJsSource];
 }

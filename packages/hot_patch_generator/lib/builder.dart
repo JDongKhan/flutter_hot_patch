@@ -10,6 +10,7 @@ library;
 import 'package:build/build.dart';
 
 import 'src/builders/patch_entry/component_builder.dart';
+import 'src/builders/runtime/runtime_builder.dart';
 import 'src/builders/ui_host_register/host_register_builder.dart';
 import 'src/builders/ui_patch_manifest/patch_manifest_builder.dart';
 import 'src/builders/ui_widget/widget_module_builder.dart';
@@ -27,6 +28,13 @@ Builder componentBuilder(BuilderOptions _) => const ComponentBuilder();
 /// 每个 package → 一个共享 JS 模块 `patch/<package>.js`；产物清单由 translator
 /// 注册表静态推导，挂在包根伪资产 `$package$` 下，使用方无需任何种子文件或配置。
 Builder widgetModuleBuilder(BuilderOptions _) => const WidgetModuleBuilder();
+
+/// JS 运行时 builder 工厂：`ui_runtime`。
+///
+/// 把 JS 运行时骨架 + 各能力片段写成 `patch/runtime.js`（构建期产物）。
+/// 运行时 Dart 侧不再内置任何 JS 源码，只从补丁目录读取该文件——JS 修复随
+/// 补丁发布生效，无需发版。本 builder 不读任何 options。
+Builder runtimeJsBuilder(BuilderOptions _) => const RuntimeJsBuilder();
 
 /// 宿主注入注册 builder 工厂：`ui_host_register`。
 ///

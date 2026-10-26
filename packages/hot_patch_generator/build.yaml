@@ -34,6 +34,22 @@ builders:
     auto_apply: dependents
     build_to: source
 
+  # JS 运行时 builder：把运行时骨架（mini-react / 句柄表 / 各能力片段）写成
+  # **一个** patch/runtime.js。区别于 ui_widget：那是「按 package 的组件工厂」，
+  # 这是「与组件无关的框架代码」。产物是普通 JS 文件，随补丁包发布；运行时包
+  # 只负责读取求值——JS 侧修复重出产物即可，不需发版。
+  #
+  # 存量迁移说明：这些 JS 源码原本内嵌在 hot_patch 的 Dart 文件里（启动时
+  # evaluate），Bug 修复必须发版；迁到生成器后与其它产物同生命周期。
+  ui_runtime:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["runtimeJsBuilder"]
+    build_extensions:
+      "$package$":
+        - "patch/runtime.js"
+    auto_apply: dependents
+    build_to: source
+
   # 宿主注入注册 builder：扫描全包 @HostInjected 方法，把 registerHostMethod
   # 的注册调用集中生成到**一个 Dart 文件** lib/generated/host_methods.dart，
   # 使用方在 main() 里调用一次 registerHostMethods() 即可。

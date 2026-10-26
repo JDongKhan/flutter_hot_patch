@@ -20,8 +20,8 @@ import 'core/handle_registry.dart';
 import 'js_ui_library.dart';
 
 /// 全部能力通道（幂等）：在 JS 组件 mount（new XxxController → host 登记）
-/// 前调用。JsUiWidget 启动时调用一次；顺序上必须先于 ensureJsUiRuntime（见
-/// js_runtime_manager.ensureJsUiRuntime），因为 [jsUiRuntimeSource] 要拼各能力片段。
+/// 前调用。JsUiWidget 启动时调用一次，且必须先于 `ensureJsUiRuntime`
+/// （runtime.js 里各能力片段的宿主侧登记依赖这里已注册的 kind / context op）。
 void ensureJsUiCapabilities() {
   // 地基：句柄注册表本身，必须先于一切能力就绪。
   ensureHandleChannels();

@@ -6,7 +6,6 @@
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
 import 'scroll_controller_bridge.dart';
-import 'scroll_controller_js.dart';
 
 /// ScrollController 能力接入声明。
 class ScrollControllerLibrary extends JsUiLibrary {
@@ -14,9 +13,6 @@ class ScrollControllerLibrary extends JsUiLibrary {
 
   @override
   String get id => 'scroll-controller';
-
-  @override
-  List<String> get jsFragments => const [scrollControllerJsSource];
 
   @override
   void ensureChannels() => ensureScrollControllerChannels();

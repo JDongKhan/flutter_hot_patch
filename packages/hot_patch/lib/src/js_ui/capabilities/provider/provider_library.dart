@@ -7,9 +7,10 @@
 // handle_registry）零改动。
 //
 // 落点在本库的对应关系：
-//   jsFragments     → provider_js.dart：作用域声明（`registerScope`）+ context 扩展
-//                     方法（`JsBuildContext.prototype.watch/read`，对齐 Dart 的
-//                     `extension BuildContextX on BuildContext`）
+//   JS 片段         → 生成器 `builders/runtime/js/provider_js.dart`（随
+//                     patch/runtime.js 发布）：作用域声明（`registerScope`）
+//                     + context 扩展方法（`JsBuildContext.prototype.watch/read`，
+//                     对齐 Dart 的 `extension BuildContextX on BuildContext`）
 //   ensureChannels  → context_ops.dart：经核心的通用缝 `registerContextOp` 把
 //                     watch/read 的宿主处理注册进去
 //   registerWidgets → provider_bridge.dart：ChangeNotifierProvider / Consumer
@@ -20,7 +21,6 @@ import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
 import 'context_ops.dart';
 import 'provider_bridge.dart';
-import 'provider_js.dart';
 
 /// provider（`ChangeNotifierProvider` / `Consumer`）接入。
 class ProviderLibrary extends JsUiLibrary {
@@ -28,9 +28,6 @@ class ProviderLibrary extends JsUiLibrary {
 
   @override
   String get id => 'provider';
-
-  @override
-  List<String> get jsFragments => const [providerJsSource];
 
   @override
   void ensureChannels() {

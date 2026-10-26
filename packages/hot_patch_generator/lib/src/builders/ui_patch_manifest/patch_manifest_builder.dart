@@ -18,6 +18,20 @@ import 'package:build/build.dart';
 import 'package:crypto/crypto.dart';
 import 'package:glob/glob.dart';
 
+/// patch 协议版本：**产物 JS 与宿主 Dart 之间的契约版本**（`__h` / 元素
+/// `element: true` / `__delegate` / `factory` / `itemBuilder` / 句柄信封
+/// `{ch,data}` / 颜色 `#AARRGGBB`）。
+///
+/// 规则：
+///   - **主版本**变化 = 破坏性改动（改字段语义 / 删字段），老 App 不能加载新
+///     产物，新 App 也不保证能加载老产物；
+///   - **次版本**只做加法（新增可选字段），老 App 应能忽略未知字段继续工作。
+///
+/// 生成器把它写进 `patch/manifest.json` 的 `protocol` 字段；运行时
+/// （`RemoteAssetLoader`）加载远程包时校验主版本，不匹配就拒绝挂载并在日志里
+/// 出声，避免「产物协议变了但 App 还是老代码」导致的静默错乱。
+const String patchProtocolVersion = '1.0';
+
 /// patch 清单 builder。
 ///
 /// 产物固定在 [outputPath]，挂在包根伪资产 `$package$` 下（与 `ui_host_register`
@@ -75,6 +89,8 @@ class PatchManifestBuilder implements Builder {
     final manifest = <String, Object?>{
       'name': name ?? buildStep.inputId.package,
       if (version != null && version!.isNotEmpty) 'version': version,
+      // 产物协议版本：运行时据此判断老 App 能否消费这份产物（主版本必须一致）。
+      'protocol': patchProtocolVersion,
       'buildTime': DateTime.now().toIso8601String(),
       'resources': resources,
     };

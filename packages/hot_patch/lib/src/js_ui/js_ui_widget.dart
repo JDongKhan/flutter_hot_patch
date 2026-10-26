@@ -126,8 +126,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
 
   Future<void> _boot() async {
     try {
-      // 运行时骨架先就位（`__jsui` + `__modules['js_ui/core']`）。
-      _manager.ensureJsUiRuntime();
+      // 运行时骨架不在这里注入：runtime.js 在补丁包内（需要 localRoot 才知道
+      // 从哪读），由 loadModule 在求值任何模块之前自动加载（见下面 loadModule）。
       // 从 jsAsset URL 解析组件名与入口路径（query 参数，方便运营配置）：
       //   ?component=HelloCard&entry=components/hello.js
       // 实际下载 zip 时剥离 query，只用 path 部分。

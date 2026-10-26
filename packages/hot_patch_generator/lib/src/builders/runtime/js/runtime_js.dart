@@ -24,15 +24,16 @@
 /// `this.__bindFn(位点号, [捕获值], 箭头闭包)` 绑定到产出该结点的组件实例
 /// （Dart 闭包语义），宿主点击只回传句柄 id，无任何运行时树形状启发。
 ///
-/// 本文件集中维护 JS 侧**框架代码**，由 JsRuntimeManager 单入口注入（幂等）：
-///   - [jsUiRuntimeSource]：UI 运行时骨架（IIFE）——环境全局（模块表
-///     `__modules`、编译/平台标志、console 桥，挂 globalThis）+ element/
+/// 本文件集中维护 JS 侧**框架代码**，由生成器的 `ui_runtime` builder 写成
+/// `patch/runtime.js`，运行时包只负责加载（幂等）：
+///   - [runtimeJsSource]：UI 运行时骨架（IIFE）——环境全局（模块表
+///     `__modules`、console 桥，挂 globalThis）+ element/
 ///     component/reconciler/context/订阅 + 能力桥 + ChangeNotifier 基类 +
-///     commit 协议，与组件无关；
+///     commit 协议，与组件无关；编译/平台标志由宿主求值前注入；
 ///   - 核心片段拆分：mini-react（mini_react_js.dart）、ChangeNotifier
-///     （change_notifier_js.dart）、能力桥（capabilities/）。
+///     （change_notifier_js.dart）、各能力（同目录 `*_js.dart`）。
 ///
-/// **分区导航**（`jsUiRuntimeSource` 内以 `// ===== 【n】` 分隔，按代码顺序）：
+/// **分区导航**（`runtimeJsSource` 内以 `// ===== 【n】` 分隔，按代码顺序）：
 ///
 /// | 分区 | 内容 | 属于哪个设计 |
 /// | --- | --- | --- |
@@ -53,34 +54,48 @@
 /// 「这段代码是为哪个设计写的」。
 library;
 
-import 'package:flutter/foundation.dart'
-    show kDebugMode, kReleaseMode, defaultTargetPlatform, TargetPlatform;
-
-// 能力 JS 片段**不在此 import**：各能力（Flutter 等价物与三方库一视同仁）的
-// 片段由自己的 [JsUiLibrary.jsFragments] 提供，[jsUiRuntimeSource] 遍历注册表
-// 拼接（见 capabilities/js_ui_library.dart 的 _seedBuiltins）。
-// 本文件只保留**骨架地基**片段：
-//       capabilities/core/handle_registry_js.dart → 跨语言句柄注册表（必须先于一切能力）
+// 能力 JS 片段全部随本文件迁入生成器（`runtime/js/` 同目录），由
+// [runtimeJsSource] 按**固定顺序**拼接成单个 `patch/runtime.js`。
+// 运行时包（hot_patch）不再持有任何 JS 源码：JS 修复随产物发布即可生效，
+// 不需要发版。
+import 'animation_js.dart';
+import 'build_context_js.dart';
+import 'change_notifier_js.dart';
+import 'color_js.dart';
+import 'dart_errors_js.dart';
+import 'dart_values_js.dart';
+import 'easy_refresh_js.dart';
 import 'handle_registry_js.dart';
-import '../js_ui_library.dart';
+import 'key_js.dart';
 import 'mini_react_js.dart';
+import 'provider_js.dart';
+import 'scroll_controller_js.dart';
+import 'tab_controller_js.dart';
+import 'text_editing_controller_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
 /// IIFE 骨架第一段：全局对象 + 运行环境（模块表 / 编译平台标志 / console
 /// 桥，原 jsRuntimeEnvSource 并入）。环境全局在 IIFE 内挂 G（globalThis），
 /// 产物（模块 evaluate）经全局对象裸引用可见，与顶层 var 语义等价。
-String _jsUiGlobals() => _jsUiGlobalsHead + _jsUiEnvVars() + _jsUiGlobalsTail;
+String _jsUiGlobals(String version) =>
+    _jsUiGlobalsHead(version) + _jsUiEnvVars() + _jsUiGlobalsTail;
 
-/// 静态头部：IIFE 入口 + 全局对象 + 幂等守卫。
-const String _jsUiGlobalsHead = r'''
-
+/// 静态头部：IIFE 入口 + 全局对象 + **按内容哈希的幂等守卫**。
+///
+/// `G.__jsuiVersion` 由本文件内容哈希生成（[runtimeContentVersion]）：
+///   - 哈希相同（同一份产物被重复加载 / 多个 manager）= 短路，不重复初始化、
+///     不丢已挂载状态；
+///   - 哈希不同（补丁包带了新版 runtime.js）= **继续执行并重建**整个 `__jsui`，
+///     于是 JS 侧修复对已上线的 App 立即生效，无需发版。
+String _jsUiGlobalsHead(String version) => '''
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui) { return; }
+  if (G.__jsui && G.__jsuiVersion === '$version') { return; }
+  G.__jsuiVersion = '$version';
 ''';
 
 /// env 标志（插值生成）：模块表 / 编译平台标志 / console 桥。
@@ -93,19 +108,11 @@ String _jsUiEnvVars() =>
 if (typeof G.__modules === 'undefined') {
   G.__modules = {};
 }
-// 编译/运行期标志（Dart kDebugMode/kReleaseMode + 当前平台注入）。
+// 编译/运行期标志（kDebugMode / kReleaseMode / Platform）**由宿主在求值本
+// 文件之前注入**（见 JsRuntimeManager._jsUiEnvSource）：这些值取决于 App 的
+// 编译模式与目标平台，构建期（build_runner）无从得知，故不写进产物。
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
 // 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
-G.kDebugMode = $kDebugMode;
-G.kReleaseMode = $kReleaseMode;
-G.Platform = {
-  isAndroid: ${defaultTargetPlatform == TargetPlatform.android},
-  isIOS: ${defaultTargetPlatform == TargetPlatform.iOS},
-  isMacOS: ${defaultTargetPlatform == TargetPlatform.macOS},
-  isWindows: ${defaultTargetPlatform == TargetPlatform.windows},
-  isLinux: ${defaultTargetPlatform == TargetPlatform.linux},
-  isFuchsia: ${defaultTargetPlatform == TargetPlatform.fuchsia}
-};
 // JS 原生日志方法（Dart debugPrint/print 转换产物直接调用）：
 // 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
 // G.console.debug 语义 = 仅调试输出（受 kDebugMode 控制），其余级别始终输出。
@@ -626,48 +633,75 @@ const String _jsUiRuntimeSkeletonTailEnd = r'''
 })();
 ''';
 
-/// js_ui 运行时源码 = 核心骨架各分区 + **各三方库注入片段**拼接（IIFE），由
-/// [ensureJsUiRuntime] 注入。所有片段在**同一 IIFE 作用域**，片段间靠函数
-/// 提升 / 后声明互相引用，与拆分前语义一致。
+/// js_ui 运行时源码 = 核心骨架各分区 + 各能力片段拼接成**一个 IIFE**，
+/// 由生成器写成 `patch/runtime.js`（构建期产物，随热更包发布）。
 ///
-/// 核心与能力的接缝即 [jsUiLibraries]：任何能力（Flutter 等价物 Key /
-/// 各 Controller / BuildContext 代理，或三方库 provider / GetX / …）只需在
-/// 自己的 [JsUiLibrary] 子类里声明 [JsUiLibrary.jsFragments]，**本文件不再
-/// 变动**；本文件只保留骨架地基（句柄注册表必须先于一切能力）。
-/// 环境全局（模块表 / 标志 / console）并入 [_jsUiGlobals]。
-String jsUiRuntimeSource() => [
-  _jsUiGlobals(),
-  _jsUiEmit,
-  _jsUiHostBridge,
-  handleRegistryJsSource,
-  miniReactElementSource,
-  miniReactReconcilerUtilsSource(),
-  miniReactComponentBaseSource,
-  miniReactScopeSource,
-  miniReactSchedulerSource,
-  miniReactReconcilerSource,
-  _jsUiApi,
-  // 各能力/三方库片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
-  // 顺序 = capabilities/js_ui_library.dart 的注册顺序。
-  for (final library in jsUiLibraries) ...library.jsFragments,
-  // 泄漏观测仅 debug 拼入：release 产物不含 leakSnapshot 函数与 api 成员，
-  // 线上逻辑零增量（宿主侧调用点同样是 kDebugMode 门控，双端一致）。
-  if (kDebugMode) _jsUiLeakSnapshotFn,
-  _jsUiRuntimeSkeletonTailHead,
-  if (kDebugMode) _jsUiLeakApiMember,
-  _jsUiRuntimeSkeletonTailEnd,
-].join('\n');
+/// 运行时包（hot_patch）只负责**加载**它：`JsRuntimeManager.ensureJsUiRuntime`
+/// 从补丁根目录读 `runtime.js` 求值（并把 kDebugMode / Platform 等编译期
+/// 标志先行注入）。因此任何 JS 侧修复都只需重出产物，无需发版。
+///
+/// 所有片段在**同一 IIFE 作用域**，片段间靠函数提升 / 后声明互相引用，与拆分前
+/// 语义一致。拼接顺序 = 原 `_seedBuiltins()` 的注册顺序（值类 → 异常 → Color →
+/// ChangeNotifier → 动画 → 控制器 → Key → BuildContext → 三方库），后面的片段
+/// 可直接引用前面已执行的内容。
+///
+/// 产物体积较大，**每个分区都以 `// ===== 【n】标题 =====` 注释隔开**，便于
+/// 排查线上问题时直接定位到某一段。
+String runtimeJsSource() {
+  // 版本 = 除头部以外的全部内容哈希（头部要写入版本号，不能参与计算）。
+  // 内容一变 → 版本变 → 已上线 App 里的 runtime.js 会被原地重建。
+  final body = [
+    _section('【2】出方向桥（emit / commit）', _jsUiEmit),
+    _section('【3】宿主桥 _app_host_', _jsUiHostBridge),
+    _section('【1b】跨语言句柄注册表', handleRegistryJsSource),
+    _section('【4】element 与事件句柄', miniReactElementSource),
+    _section('【5】reconciler 工具', miniReactReconcilerUtilsSource()),
+    _section('【6】组件基类', miniReactComponentBaseSource),
+    _section('【7】作用域与订阅', miniReactScopeSource),
+    _section('【8】调度', miniReactSchedulerSource),
+    _section('【9】reconciler 主流程', miniReactReconcilerSource),
+    _section('【10】对外入口 api', _jsUiApi),
+    // 各能力片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
+    _section('【11】Dart 值类（Duration / Size / Offset / Radius）', dartValuesJsSource),
+    _section('【12】Dart 异常（StateError / ArgumentError / …）', dartErrorsJsSource),
+    _section('【13】Color 类族（Color / MaterialColor / ColorSwatch）', colorJsSource),
+    _section('【14】ChangeNotifier 基类', changeNotifierSource),
+    _section('【15】动画（Animation / AnimationController）', animationJsSource),
+    _section('【16】ScrollController', scrollControllerJsSource),
+    _section('【17】TextEditingController', textEditingControllerJsSource),
+    _section('【18】TabController', tabControllerJsSource),
+    _section('【19】Key 类族', keyJsSource),
+    _section('【20】BuildContext 代理', buildContextJsSource),
+    _section('【21】EasyRefresh', easyRefreshJsSource),
+    _section('【22】provider', providerJsSource),
+    // 泄漏观测：无条件拼入（构建期不知道 App 是 debug 还是 release）。
+    // 宿主侧调用点仍由 kDebugMode 门控，release 下这些函数不会被调用，
+    // 只占体积、不影响行为。
+    _section('【23】泄漏观测（debug 用）', _jsUiLeakSnapshotFn),
+    _section('【24】api 收尾', _jsUiRuntimeSkeletonTailHead),
+    _jsUiLeakApiMember,
+    _jsUiRuntimeSkeletonTailEnd,
+  ].join('\n');
+  final version = runtimeContentVersion(body);
+  final head = _section(
+    '【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 $version）',
+    _jsUiGlobals(version),
+  );
+  return '$head$body';
+}
 
-/// 运行时环境全局源码（依赖 Dart 侧注入的编译/平台标志，故为函数式生成）。
+/// 运行时内容版本：FNV-1a 32 位哈希（十六进制）。
 ///
-/// 与 [jsUiRuntimeSource] 同源维护：模块加载器（JsRuntimeManager.loadModule）
-/// 依赖这里声明的全局，不再自带一份 JS 文本。
-/// 内容：模块注册表 `__modules`、编译/运行期标志、console 桥、ChangeNotifier
-/// 基类。**顶层书写（不包 IIFE）**：`var` 声明必须落到全局，供后续
-/// `evaluate` 的模块产物（`__modules[...] = ...`）与产物里裸引用的
-/// `kDebugMode` / `Platform` / `console` 可见。重复求值安全（`var`/`function`
-/// 重复声明无副作用），由调用方做一次幂等注入。
-/// 依赖这里声明的全局，不再自带一份 JS 文本。
-/// 内容：模块注册表 `__modules`、编译/运行期标志、console 桥（ChangeNotifier
-/// 基类已拆到 change_notifier_js.dart，不属于 env）。**顶层书写（不包 IIFE）**：
-/// `var` 声明必须落到全局，供后续 `evaluate` 的模块产物（`__modules[...] =
+/// 不依赖 `String.hashCode`（跨 VM 版本不保证稳定）。同一份源码在任意机器 /
+/// 任意次构建得到同一版本号，因此「产物是否变化」的判定是确定的。
+String runtimeContentVersion(String source) {
+  var hash = 0x811c9dc5;
+  for (final unit in source.codeUnits) {
+    hash ^= unit;
+    hash = (hash * 0x01000193) & 0xffffffff;
+  }
+  return hash.toRadixString(16).padLeft(8, '0');
+}
+
+/// 分区注释头：产物里每段 JS 都有可搜索的边界（`// ===== 【n】标题 =====`）。
+String _section(String title, String body) => '\n// ===== $title =====\n$body';

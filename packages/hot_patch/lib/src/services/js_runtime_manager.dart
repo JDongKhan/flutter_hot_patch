@@ -2,13 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kReleaseMode, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_js/flutter_js.dart';
 
 import '../utils/js_asset_resolver.dart';
 import '../utils/remote_asset_loader.dart';
-import '../js_ui/capabilities/core/runtime_js.dart';
+import '../js_ui/capabilities/js_ui_library.dart';
 import '../utils/hot_patch_log.dart';
 
 /// JS 运行时管理器：与底层 [JavascriptRuntime] **一对一**。
@@ -282,17 +284,85 @@ class JsRuntimeManager {
 
   /// 确保 js_ui 运行时骨架就位（幂等）。
   ///
-  /// 注入**一块**框架代码（`js_ui/runtime_js.dart` 集中维护）：
-  /// [jsUiRuntimeSource]（IIFE）——运行环境全局（模块表 `__modules` /
-  /// 编译平台标志 / console 桥，挂在 globalThis）+ element/component/
-  /// reconciler/context + 能力桥 + ChangeNotifier 基类 + commit 协议。
-  /// 与具体组件无关；组件/模型/按 package 生成的 widget 模块仍走 [loadModule]。
-  void ensureJsUiRuntime() {
-    if (!_jsUiInited) {
-      _eval(jsUiRuntimeSource(), 'jsUiRuntimeSource');
-      _jsUiInited = true;
+  /// 注入 JS 运行时：`patch/runtime.js`（**构建期产物**，与组件产物同生命
+  /// 周期）——运行环境全局（模块表 `__modules` / console 桥）+ element/
+  /// component/reconciler/context + 能力桥 + ChangeNotifier 基类 + 各能力
+  /// 片段 + commit 协议。与具体组件无关；组件/模型/按 package 生成的 widget
+  /// 模块仍走 [loadModule]。
+  ///
+  /// JS 源码全部在 `hot_patch_generator`（`builders/runtime/js/**`），由
+  /// `ui_runtime` builder 写成 `patch/runtime.js`：**JS 侧修复重出产物即可，
+  /// 不需要发版 App**。
+  ///
+  /// 幂等：每个 manager 只初始化一次。`runtime.js` 内部另有 `G.__jsui` 守卫，
+  /// 同一 JS 环境（默认实例被多个 manager 共享）重复求值直接返回，不会产生
+  /// 两份运行时状态。
+  Future<void> ensureJsUiRuntime({String? localRoot, String? moduleAsset}) async {
+    if (_jsUiInited) return;
+    // 编译模式 / 平台标志只有 Dart 侧知道（构建期无从得知），故在求值
+    // runtime.js 之前以顶层全局注入，产物里裸引用 `kDebugMode` / `Platform`
+    // 与 Dart 一比一。
+    _eval(_jsUiEnvSource(), 'jsUiEnv');
+    final asset = _runtimeAssetNear(moduleAsset);
+    final source = await _readModule(asset, localRoot);
+    final result = _eval(source, asset);
+    final text = result.stringResult;
+    if (result.isError ||
+        text.startsWith('ERROR:') ||
+        text.contains('\nERROR:')) {
+      throw StateError('$asset evaluate failed: $text');
+    }
+    _jsUiInited = true;
+    _evalExternalLibraryFragments();
+  }
+
+  /// 运行时产物在补丁根目录下的文件名（与 `patch/<package>.js` 同级）。
+  static const String runtimeJsAsset = 'runtime.js';
+
+  /// 运行时产物路径：优先跟随**当前模块所在补丁根目录**。
+  ///
+  /// 组件的入口可能是 `assets/patch/components/x.js`（asset 场景），也可能是
+  /// 网络包解压后的 `components/x.js`（localRoot 场景）。两者向上找到 `patch/`
+  /// 这一层，再把文件名换成 [runtimeJsAsset]——不需要任何配置或映射表。
+  static String _runtimeAssetNear(String? moduleAsset) {
+    if (moduleAsset == null) return runtimeJsAsset;
+    const marker = 'patch/';
+    final i = moduleAsset.lastIndexOf(marker);
+    if (i < 0) return runtimeJsAsset;
+    return '${moduleAsset.substring(0, i + marker.length)}$runtimeJsAsset';
+  }
+
+  /// App 在 `runApp` 前 `registerJsUiLibrary(...)` 注册的**外部能力**片段。
+  ///
+  /// 内建能力的 JS 已随 `runtime.js` 发布（其 `jsFragments` 为空），这里只处理
+  /// 外部库新增的片段。它们无法再访问核心 IIFE 的闭包内部函数（`registerScope`
+  /// 等），只能使用全局出口 `__jsui` / `_app_host_`；需要内核能力的库应改为随
+  /// 补丁发布（写进 `runtime.js`）。
+  void _evalExternalLibraryFragments() {
+    for (final library in jsUiLibraries) {
+      for (final fragment in library.jsFragments) {
+        _eval('(function () {\n$fragment\n})();', 'library:${library.id}');
+      }
     }
   }
+
+  /// 编译期标志：`kDebugMode` / `kReleaseMode` / `Platform.isXxx`，与 Dart
+  /// 产物里的裸引用同名（`globalThis` 属性即全局变量）。
+  String _jsUiEnvSource() => '''
+(function () {
+  var G = typeof globalThis !== 'undefined' ? globalThis : this;
+  G.kDebugMode = $kDebugMode;
+  G.kReleaseMode = $kReleaseMode;
+  G.Platform = {
+    isAndroid: ${defaultTargetPlatform == TargetPlatform.android},
+    isIOS: ${defaultTargetPlatform == TargetPlatform.iOS},
+    isMacOS: ${defaultTargetPlatform == TargetPlatform.macOS},
+    isWindows: ${defaultTargetPlatform == TargetPlatform.windows},
+    isLinux: ${defaultTargetPlatform == TargetPlatform.linux},
+    isFuchsia: ${defaultTargetPlatform == TargetPlatform.fuchsia}
+  };
+})();
+''';
 
   // ---------------------------------------------------------------------
   // 模块加载器（ES module 支持）
@@ -349,9 +419,9 @@ class JsRuntimeManager {
         await loadModule(dep, localRoot: localRoot);
       }
 
-      // 2) 模块产物求值前确保运行时骨架（含环境全局 __modules / 标志 /
-      //    console / ChangeNotifier）已注入 —— 幂等。
-      ensureJsUiRuntime();
+      // 2) 模块产物求值前确保运行时骨架（runtime.js：环境全局 __modules /
+      //    标志 / console / reconciler）已加载 —— 幂等。
+      await ensureJsUiRuntime(localRoot: localRoot, moduleAsset: jsAsset);
 
       // 3) 预处理（export class -> class + 尾部注册；import -> __modules 解构）
       //    后求值
@@ -518,8 +588,14 @@ $out
   /// **不清 [_loadingCompleters]**：in-flight 加载各由自己的 owner 用本地
   /// completer 持有，清表会让等待者失去结算对象（旧实现即由此在并发首屏炸
   /// 空断言）；保留后等待者仍等这次加载完成，且不会重复 evaluate 同一产物。
+  ///
+  /// **重置运行时标记**：新包里可能带**新版 `runtime.js`**（JS 修复随产物发布），
+  /// 下一次 [loadModule] 必须重新求值它。runtime.js 内部按内容哈希判断版本，
+  /// 哈希不同就原地重建整个 `__jsui`（同一进程内生效），哈希相同则短路
+  /// （不重复初始化、不丢状态）。
   void invalidateModules() {
     _loadedModules.clear();
+    _jsUiInited = false;
     // 清单一并清空：清缓存后重新加载的那批，重新累计到下一个批次汇总里。
     _loadedInBatch.clear();
     // 清空 JS 侧模块注册表：下次 import 解构时 __modules['path'] 为空，

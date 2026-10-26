@@ -12,7 +12,6 @@
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
 import 'change_notifier_bridge.dart';
-import 'change_notifier_js.dart';
 import 'listenable_builder_bridge.dart';
 
 /// ChangeNotifier 基类 + 响应式组件的接入声明（provider / 任何状态库的共同地基）。
@@ -21,9 +20,6 @@ class ChangeNotifierLibrary extends JsUiLibrary {
 
   @override
   String get id => 'change-notifier';
-
-  @override
-  List<String> get jsFragments => const [changeNotifierSource];
 
   @override
   void ensureChannels() => ensureChangeNotifierChannels();

@@ -5,7 +5,6 @@
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
 import 'tab_bridge.dart';
-import 'tab_controller_js.dart';
 
 /// Tab 家族能力接入声明。
 class TabLibrary extends JsUiLibrary {
@@ -13,9 +12,6 @@ class TabLibrary extends JsUiLibrary {
 
   @override
   String get id => 'tab';
-
-  @override
-  List<String> get jsFragments => const [tabControllerJsSource];
 
   @override
   void ensureChannels() => ensureTabControllerChannels();

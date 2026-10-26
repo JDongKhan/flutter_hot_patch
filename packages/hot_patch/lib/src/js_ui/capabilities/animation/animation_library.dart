@@ -8,7 +8,6 @@
 import '../../js_widget_registry.dart';
 import '../js_ui_library.dart';
 import 'animation_bridge.dart';
-import 'animation_js.dart';
 
 /// 动画能力接入声明。
 class AnimationLibrary extends JsUiLibrary {
@@ -16,9 +15,6 @@ class AnimationLibrary extends JsUiLibrary {
 
   @override
   String get id => 'animation';
-
-  @override
-  List<String> get jsFragments => const [animationJsSource];
 
   @override
   void ensureChannels() => ensureAnimationChannels();

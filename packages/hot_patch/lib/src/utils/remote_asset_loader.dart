@@ -73,10 +73,45 @@ class RemoteAssetLoader {
     return true;
   }
 
+  /// 宿主支持的 **patch 协议主版本**（对应生成器 `patchProtocolVersion` 的主版本）。
+  ///
+  /// 产物 JS 与宿主 Dart 之间的契约（`__h` / `element` / `__delegate` /
+  /// `factory` / 句柄信封 / 颜色序列化）改到主版本时，本常量与生成器同步 +1；
+  /// 次版本只做加法，老 App 可继续消费未知字段。
+  static const String _supportedProtocolMajor = '1';
+
   /// 组包并读取包根清单里的打包时间（`manifest.json` 由 build_runner 产出、
   /// 随 zip 分发；缺失/解析失败一律返回 null，不影响加载）。
-  static RemoteAssetBundle _bundle(String entry, String root, {bool fresh = false}) =>
-      RemoteAssetBundle(entry, root, fresh: fresh, buildTime: _readBuildTime(root));
+  ///
+  /// 同时校验 `protocol`：**主版本不一致就拒绝**（返回 null）。否则老 App 会
+  /// 拿着不认识的新协议产物静默错乱，比直接失败更难排查。清单里没有该字段
+  /// （历史产物）按兼容处理。
+  static RemoteAssetBundle? _bundle(String entry, String root, {bool fresh = false}) {
+    final protocol = _readProtocol(root);
+    if (protocol != null && _majorOf(protocol) != _supportedProtocolMajor) {
+      HotPatchLog.warn('patch protocol mismatch: bundle=$protocol, '
+          'app=$_supportedProtocolMajor.x — refusing to mount');
+      return null;
+    }
+    return RemoteAssetBundle(entry, root, fresh: fresh, buildTime: _readBuildTime(root));
+  }
+
+  /// 读包根 `manifest.json` 的 `protocol` 字段（如 `"1.0"`）；缺失 / 非法返回 null。
+  static String? _readProtocol(String root) {
+    try {
+      final file = File('$root/manifest.json');
+      if (!file.existsSync()) return null;
+      final decoded = jsonDecode(file.readAsStringSync());
+      if (decoded is! Map) return null;
+      final protocol = decoded['protocol'];
+      return protocol is String && protocol.isNotEmpty ? protocol : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 版本号的主版本段：`"1.3"` → `"1"`，`"1"` → `"1"`。
+  static String _majorOf(String version) => version.split('.').first.trim();
 
   /// 读包根 `manifest.json` 的 `buildTime` 字段；无清单 / 非 JSON / 字段缺失返回 null。
   static String? _readBuildTime(String root) {

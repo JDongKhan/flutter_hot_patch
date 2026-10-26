@@ -34,7 +34,8 @@ source file names:
 | `lib/components/counter.dart` | `patch/components/counter.js` | Component output containing `@PatchEntry` |
 | `lib/model/user.dart` | `patch/model/user.js` | Plain classes / static singletons (`export class` / `export const`) |
 | (package-root pseudo asset `$package$`) | `patch/flutter.js`, `patch/provider.js` | Package modules: shared node factory `__h` / instance normalizer `__asElement` plus host-widget wrapper classes and JS logic-component / builder-proxy classes, **one file per package** |
-| (package-root pseudo asset `$package$`) | `patch/manifest.json` | Patch manifest: basic info + build time + content hash of every JS asset |
+| (package-root pseudo asset `$package$`) | `patch/runtime.js` | The whole JS runtime (mini-react, handle registry, capability fragments) as one file, sections separated by `// ===== 【n】… =====`. Shipped with the patch, so JS fixes never need an app release. Its content hash is baked into `G.__jsuiVersion`; a new hash rebuilds the runtime in place |
+| (package-root pseudo asset `$package$`) | `patch/manifest.json` | Patch manifest: basic info + **artifact protocol version** (`protocol`, e.g. `1.0`) + build time + content hash of every JS asset. The runtime refuses bundles whose protocol **major** differs from what the app supports |
 
 - Splitting is driven by **file content + reference reachability** (not by directory): a file containing
   `@PatchEntry` classes is a root file and emits those components; otherwise only classes actually referenced
@@ -57,8 +58,8 @@ Browse the JS actually generated for the example app online:
 
 ### Configuration
 
-`ui_widget` (package modules) and `patch_entry` (component/model outputs) **read no options**. The options of
-the remaining two builders are all optional and work out of the box:
+`ui_widget` (package modules), `ui_runtime` (the JS runtime) and `patch_entry` (component/model outputs)
+**read no options**. The options of the remaining two builders are all optional and work out of the box:
 
 ```yaml
 targets:
@@ -94,7 +95,7 @@ The output must correspond to the Dart source **one-to-one**; this is the core c
 3. **Capabilities are isolated per file.** When adding a runtime capability (e.g. ScrollController /
    TextEditingController id-bridge), put it on the host side as a separate file under
    `hot_patch/lib/src/js_ui/capabilities/` and **do not touch the `js_widget_registry` / `js_ui_widget` core**;
-   JS runtime fragments are split into named strings per capability and assembled by `runtime_source.dart`.
+   the capability's JS lives in `builders/runtime/js/` here and ships inside `patch/runtime.js`.
 4. **Defaults match Flutter 100%.** When the host renders, nullable properties stay `null` by default; never
    default them to `0` / `EdgeInsets.zero` etc. and override Flutter theme defaults.
 5. **Registration keys match class names.** The key in the host's `r.register('X', ...)` must have the same name
@@ -180,10 +181,13 @@ The other builders are self-contained:
 
 - `ui_widget/`: `widget_module_builder` (package module output + the JS class sources of every logic
   component/sliver proxy; used only by this builder)
+- `runtime/`: `runtime_builder` (emits the whole JS runtime — mini-react, handle registry, capability
+  fragments — as one `patch/runtime.js`; the runtime package only loads it, so JS fixes ship with the patch
+  and never require an app release. Sections are separated by `// ===== 【n】… =====` comments)
 - `ui_host_register/`: `host_register_builder` (host-side registration list generation; the detection rules for
   @HostInjected live in `builders/shared/host_injected.dart`)
 - `ui_patch_manifest/`: `patch_manifest_builder` (produces `patch/manifest.json`; thanks to
-  `required_inputs: [".js"]` it is scheduled after `patch_entry` / `ui_widget`, and uses
+  `required_inputs: [".js"]` it is scheduled after `patch_entry` / `ui_widget` / `ui_runtime`, and uses
   `findAssets('patch/**.js')` to list every JS output and hash each one)
 
 Other packages of the framework:
@@ -229,7 +233,8 @@ dart run build_runner build --delete-conflicting-outputs
 | `lib/components/counter.dart` | `patch/components/counter.js` | 含 `@PatchEntry` 的组件产物 |
 | `lib/model/user.dart` | `patch/model/user.js` | 普通类 / 静态单例（`export class` / `export const`） |
 | （包根伪资产 `$package$`） | `patch/flutter.js`、`patch/provider.js` | package 模块：共享结点工厂 `__h` / 实例归一化 `__asElement` + 宿主 widget 包装类 + JS 逻辑组件 / builder 代理类，**每个 package 一个文件** |
-| （包根伪资产 `$package$`） | `patch/manifest.json` | patch 清单：基本信息 + 打包时间 + 各 JS 资源的内容 hash |
+| （包根伪资产 `$package$`） | `patch/runtime.js` | 整个 JS 运行时（mini-react / 句柄表 / 各能力片段）**一个文件**，分区用 `// ===== 【n】… =====` 注释隔开。随补丁发布，JS 修复无需发版；内容哈希写进 `G.__jsuiVersion`，哈希变化即原地重建运行时 |
+| （包根伪资产 `$package$`） | `patch/manifest.json` | patch 清单：基本信息 + **产物协议版本**（`protocol`，如 `1.0`）+ 打包时间 + 各 JS 资源的内容 hash。运行时拒绝载荷**主版本**与应用不匹配的包 |
 
 - 按**文件内容 + 引用可达性**分流（与目录无关）：含 `@PatchEntry` 的文件是根文件，产出这些组件；
   否则只有**真的被可达类引用到**的类才产出（模型 / 单例产物，`export class` / `export const`）；
@@ -276,7 +281,7 @@ targets:
 
 1. **Dart 合法写法应被静态翻译，而不是绕开**。遇到不认识的语法形态，补正式翻译分支（表达式/语句翻译在 `translator/js_translator.dart`，类声明渲染在 `translator/dart2js.dart`，都一比一映射成等价 JS），**不要求用户改 Dart 写法来适配框架**。当前未覆盖的写法会在构建期告警并降级为占位结点；占位是**诊断兜底，不是长期方案**（见组件支持文档「已知限制」）。所有翻译只有一处实现，组件与普通类共用。
 2. **禁止临时方案**。报错时不得在 demo 里加临时字段/中间层绕过（如为规避 setState 无 diff 而加的镜像触发字段）；产物 JS 应与 Dart 写法逐行对应，修就修翻译路径本身。
-3. **能力按文件隔离**。新增运行时能力（如 ScrollController / TextEditingController id-bridge）时，宿主侧按能力放 `hot_patch/lib/src/js_ui/capabilities/` 独立文件，**不动 `js_widget_registry` / `js_ui_widget` 核心**；JS 运行时片段按能力拆命名字符串、由 `runtime_source.dart` 拼接。
+3. **能力按文件隔离**。新增运行时能力（如 ScrollController / TextEditingController id-bridge）时，宿主侧按能力放 `hot_patch/lib/src/js_ui/capabilities/` 独立文件，**不动 `js_widget_registry` / `js_ui_widget` 核心**；该能力的 JS 放本包 `builders/runtime/js/`，随 `patch/runtime.js` 发布（JS 修复无需发版）。
 4. **默认值与 Flutter 百分百一致**。宿主渲染时 nullable 属性缺省保持 `null`，不得默认成 `0` / `EdgeInsets.zero` 等覆盖 Flutter 主题默认。
 5. **注册 key 与类名一致**。宿主 `r.register('X', ...)` 的 key 与产物 JS 里的 type 字符串保持同名，不另起别名。
 

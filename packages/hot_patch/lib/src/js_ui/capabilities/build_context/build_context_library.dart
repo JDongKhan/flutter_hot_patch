@@ -9,7 +9,6 @@
 // （provider/context_ops.dart）。核心只把 op 分发给注册者。
 import '../js_ui_library.dart';
 import 'build_context_bridge.dart';
-import 'build_context_js.dart';
 
 /// BuildContext 代理能力接入声明。
 class BuildContextLibrary extends JsUiLibrary {
@@ -17,9 +16,6 @@ class BuildContextLibrary extends JsUiLibrary {
 
   @override
   String get id => 'build-context';
-
-  @override
-  List<String> get jsFragments => const [buildContextJsSource];
 
   @override
   void ensureChannels() => ensureBuildContextChannels();

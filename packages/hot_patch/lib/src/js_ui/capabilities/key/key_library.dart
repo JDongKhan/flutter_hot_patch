@@ -5,7 +5,6 @@
 // 专属组件注册（key 由核心在建结点时读取）。
 import '../js_ui_library.dart';
 import 'key_bridge.dart';
-import 'key_js.dart';
 
 /// Key 能力接入声明。
 class KeyLibrary extends JsUiLibrary {
@@ -13,9 +12,6 @@ class KeyLibrary extends JsUiLibrary {
 
   @override
   String get id => 'key';
-
-  @override
-  List<String> get jsFragments => const [keyJsSource];
 
   @override
   void ensureChannels() => ensureKeyChannels();

@@ -6,16 +6,20 @@
 // 新引入的三方库（provider / GetX / Riverpod …）——两者机制完全一致。
 //
 // 一个能力在宿主侧的落点无非三类，本模板各留一个可重写钩子：
-//   1. [jsFragments]      —— 需要注入 JS 运行时的片段（同一 IIFE 作用域，
-//                            可调用核心的 `registerScope` / `scopeOf` / `reg` …）；
+//   1. [jsFragments]      —— 仅**外部库**使用：App 在 runApp 前注册的库，
+//                            片段在 `runtime.js` 之后求值（独立 IIFE，只能
+//                            用全局出口 `__jsui` / `_app_host_`）。内建能力的
+//                            JS 已随 `patch/runtime.js` 发布（生成器
+//                            `builders/runtime/js/**`），内建库的该钩子为空。
 //   2. [ensureChannels]   —— 幂等登记本能力用到的跨语言句柄 kind，以及把本库的
 //                            `context.<op>(...)` 处理注册进核心的通用缝
 //                            （`registerContextOp`，见 build_context_bridge.dart）；
 //   3. [registerWidgets]  —— 本能力的宿主侧组件映射（`type` → Flutter widget）。
 //
 // **本类刻意没有 context 语义的钩子**：`context.watch/read` 是 provider 那类
-// `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁写进 [jsFragments]，
-// 宿主侧经 `registerContextOp` 注册（见 capabilities/provider/context_ops.dart）。
+// `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁随运行时产物
+// 发布（生成器 `builders/runtime/js/provider_js.dart`），宿主侧经
+// `registerContextOp` 注册（见 capabilities/provider/context_ops.dart）。
 // 核心不认识具体 op 名。
 //
 // 接入方式（二选一）：
@@ -58,11 +62,13 @@ abstract class JsUiLibrary {
   /// 库标识（幂等去重键、日志用）。
   String get id;
 
-  /// 注入 JS 运行时的片段：会被拼进**同一个 IIFE**（在核心骨架之后、
-  /// 收尾之前），因此可以直接引用核心里已定义的函数（如 `registerScope`）。
+  /// 注入 JS 运行时的片段：**仅供 App 侧注册的外部库**使用。
   ///
-  /// 注意顺序：片段在 IIFE **执行期**运行，故只能依赖核心中**先于它执行**的
-  /// 顶层语句（函数声明可任意位置，`var x = …` 的赋值必须先发生）。
+  /// 内建能力的 JS 已在构建期拼进 `patch/runtime.js`（生成器
+  /// `builders/runtime/js/**`，随补丁发布，修复无需发版），故内建库都返回空。
+  /// 外部库的片段在 runtime.js 之后以独立 IIFE 求值，**不能**再引用核心闭包
+  /// 内部函数（`registerScope` / `scopeOf` 等，它们不在全局），只能用 `__jsui`
+  /// 与 `_app_host_`；需要核心能力的库应把代码并入运行时产物。
   List<String> get jsFragments => const [];
 
   /// 幂等登记本库的跨语言句柄 kind（宿主侧句柄注册表）。
@@ -91,8 +97,8 @@ void registerJsUiLibrary(JsUiLibrary library) {
   _libraries.add(library);
 }
 
-/// 全部已注册能力。首次访问时注入内建能力——惰性求值，避免 [jsUiRuntimeSource]
-/// 在 `ensureJsUiCapabilities` 之前被调用时拿到空清单。
+/// 全部已注册能力。首次访问时注入内建能力——惰性求值，避免能力表在
+/// `ensureJsUiCapabilities` 之前被调用时拿到空清单。
 List<JsUiLibrary> get jsUiLibraries {
   _seedBuiltins();
   return List.unmodifiable(_libraries);
@@ -101,8 +107,9 @@ List<JsUiLibrary> get jsUiLibraries {
 /// 内建能力清单：**新增内建能力只改这里一行**（外部库走 App 侧 register，
 /// 不动本文件）。
 ///
-/// **注册顺序 = JS 片段拼接顺序**（先内建基础能力、后三方库，三方库可依赖
-/// 前面的能力），也是 `ensureChannels` / `registerWidgets` 的遍历顺序。
+/// 注册顺序 = [ensureChannels] / [registerWidgets] 的遍历顺序。内建能力的
+/// **JS 片段**不在这里——它们已随 `patch/runtime.js` 发布，拼接顺序由生成器
+/// `builders/runtime/js/runtime_js.dart` 的 `runtimeJsSource()` 维护。
 void _seedBuiltins() {
   if (_seeded) return;
   _seeded = true;

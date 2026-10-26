@@ -1,9 +1,11 @@
 {
   "name": "flutter_hot_example",
-  "buildTime": "2026-10-26T18:26:48.697685",
+  "protocol": "1.0",
+  "buildTime": "2026-10-26T19:01:42.313994",
   "resources": {
     "flutter.js": "9b4180302c769b90fb06f009bc801ca5fc17998d12889d05542031dc142771ca",
     "provider.js": "880aab220bb6d07d8f17046b3aa667457e26213c2714c11344fcb936b88963d8",
+    "runtime.js": "bc70b2fab915ebddd79f44b8062b63e92f4c7b0b00454f8ca6c7ebbd13c5869a",
     "app/model/app_models.js": "8bfd6c50e6670aabc043e33d634a71f89a7ac41d16ceee84d41d9801a42d61c5",
     "app/service/app_service.js": "964885720ae66abff740550871f04558251c12caa6211047e5dc4eb11b0673c6",
     "app/pages/orders_page.js": "85ffc50aef74166f2a8194c2705177b838e107acab7753e59bf5bdc0282cb185",
