@@ -609,7 +609,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final asClass = productType != null || usesJsClass(type, propsMap);
     if (productType == null && asClass) {
       (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
-    } else if (productType == null && builtinWidgetTypes.contains(type)) {
+    } else if (productType == null && hostWidgetTypes().contains(type)) {
       // 宿主 widget：flutter.js 有同名包装类（`new X(props)` → `__h('X', props)`）。
       (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(type);
     }

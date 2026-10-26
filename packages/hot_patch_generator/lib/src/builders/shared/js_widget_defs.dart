@@ -9,6 +9,10 @@
 /// 文件里（见 `ui_widget/widget_module_builder.dart`）。
 library;
 
+import 'host_types.dart';
+
+export 'host_types.dart';
+
 /// 共享结点工厂 `__h` 的宿主 package：并入基础包 flutter 的模块
 /// （`patch/flutter.js`）。其它 package 模块与组件产物统一从它
 /// `import { __h }`，使 `__h` 全局只定义一次。
@@ -108,65 +112,17 @@ const Map<String, String> widgetPackages = {
 String widgetPackageOf(String type) =>
     widgetPackages[type] ?? nodeHelperPackage;
 
-/// 宿主侧「内建 widget」类型名登记（= 运行时 `JsWidgetRegistry` 注册表的镜像）。
-///
-/// 用途：翻译期区分「内建 widget」与「业务类」——字段类型判定与依赖扫描遇到
-/// 内建 widget 时不再当模型类处理（它们由宿主 / JS 类渲染，没有可翻译的类体）。
-/// 这份登记替代了原先由 translator 注册表推导的做法。
-///
-/// **同步维护**：新增内建组件时，运行时（`js_widget_registry.dart` 与各
-/// `capabilities/*/**.dart` 的 `r.register(...)`）与本表两侧都要加。
-const Set<String> builtinWidgetTypes = {
-  // 基础视觉 / 布局
-  'Text', 'Column', 'Row', 'Stack', 'IndexedStack', 'Wrap', 'Container',
-  'Padding', 'Center', 'Align', 'SizedBox', 'Expanded', 'Flexible',
-  'Positioned', 'Spacer', 'ClipRRect', 'ClipOval', 'Material', 'Transform',
-  'Card', 'Icon', 'Image', 'CircleAvatar', 'Divider', 'Chip', 'ListTile',
-  'SafeArea', 'Opacity', 'ConstrainedBox', 'AspectRatio',
-  'FractionallySizedBox', 'DecoratedBox', 'CircularProgressIndicator',
-  'LinearProgressIndicator', 'Drawer', 'DrawerHeader',
-  // 按钮 / 交互
-  'ElevatedButton', 'TextButton', 'FilledButton', 'OutlinedButton',
-  'IconButton', 'FloatingActionButton', 'InkWell', 'GestureDetector',
-  'Switch', 'Checkbox', 'Slider', 'Radio', 'DropdownButton',
-  'DropdownMenuItem', 'BottomNavigationBar', 'BottomNavigationBarItem',
-  // 页面骨架
-  'Scaffold', 'AppBar',
-  // Tab 家族
-  'DefaultTabController', 'TabBar', 'Tab', 'TabBarView',
-  // 滚动 / sliver 家族
-  'ListView', 'GridView', 'ReorderableListView', 'CustomScrollView',
-  'SliverList', 'SliverGrid', 'SliverAppBar', 'SliverPadding',
-  'SliverToBoxAdapter', 'SliverFillRemaining', 'SliverFixedExtentList',
-  'SliverFillViewport', 'SliverOpacity', 'SliverOffstage',
-  'SliverIgnorePointer', 'SliverSafeArea', 'SliverVisibility',
-  'SingleChildScrollView', 'PageView', 'NotificationListener',
-  // 逻辑组件（JS 类）与能力包
-  'Builder', 'ChangeNotifierProvider', 'Consumer', 'MultiProvider',
-  'ListenableBuilder', 'ValueListenableBuilder', 'AnimatedBuilder', 'TextField',
-  'CachedNetworkImage', 'EasyRefresh',
-  // 动画（隐式动画 / 过渡动画，宿主映射见 capabilities/animation）
-  'AnimatedContainer', 'AnimatedOpacity', 'AnimatedPadding', 'AnimatedAlign',
-  'AnimatedScale', 'AnimatedRotation', 'AnimatedSlide', 'AnimatedSize',
-  'AnimatedSwitcher', 'AnimatedCrossFade', 'AnimatedDefaultTextStyle',
-  'AnimatedPositioned',
-  'FadeTransition', 'ScaleTransition', 'RotationTransition', 'SizeTransition',
-};
-
-/// 非 Widget 的「值对象」构造类型（元素描述由父 renderer 以 JsRenderContext
-/// 消费，不作为子树挂载）。与运行时 `js_widget_registry.dart` 的
-/// `_dataCarrierTypes` **同步维护**。
-const Set<String> jsDataCarrierTypes = {'InputDecoration'};
-
 /// 需要在 flutter.js 生成**宿主包装类**的类型：宿主 widget + 非 Widget 值对象，
 /// 排除已有 JS 类的类型（逻辑组件 / builder 代理，它们的类由各自 package 模块
 /// 产出，类名不能重复）。
 ///
+/// 宿主 widget / 数据载体清单**从运行时源码自动抽取**（见 `host_types.dart`：
+/// `r.register('X', …)` 与 `_dataCarrierTypes`），生成器不维护任何组件表。
 /// 包装类让翻译层把所有 widget 构造统一写成 `new Text({...})`，宿主包装类
 /// 在构造里直接 `return __h('Text', props)`，产物不再出现 `__h('Text', ...)`。
 Set<String> get hostWrapperTypes => {
-  ...builtinWidgetTypes.where((t) => !jsClassWidgetTypes.contains(t)),
-  ...jsDataCarrierTypes,
+  ...hostWidgetTypes().where((t) => !jsClassWidgetTypes.contains(t)),
+  ...hostDataCarrierTypes(),
 };
 
 /// 已废弃：位置实参的形参名改为从**源码构造签名**自动抽取

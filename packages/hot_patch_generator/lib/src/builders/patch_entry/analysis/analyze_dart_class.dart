@@ -788,8 +788,7 @@ const Set<String> _valueSdkTypes = {'Color', 'IconData', 'ValueNotifier'};
 ///   - 泛型容器按**类型实参**递归判定：`List<Spot>` / `Map<String, int>` /
 ///     `List<Widget>` 可翻译，`Key?` 不可翻译；
 ///   - **解析不到的类型**（如 `package:flutter` 的 `Text` / `Column`，或三方类型）：
-///     按宿主 Widget 值处理并输出构建期告警——字段判定不再依赖
-///     `builtinWidgetTypes` 白名单。
+///     按宿主 Widget 值处理并输出构建期告警——字段判定不做任何类型名单过滤。
 bool _fieldTranslatable(
   String typeName,
   Map<String, ClassInfo> classTable,

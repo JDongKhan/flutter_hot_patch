@@ -127,7 +127,7 @@ three opt-in tables in `lib/src/builders/shared/js_widget_defs.dart` additionall
 | Table | Purpose |
 |---|---|
 | `widgetPositionalArgNames` | positional arguments go into props under **Flutter's own parameter name** (`Text('hi')` → `{data: 'hi'}`, `Image.network(url)` → `{src: url}`); unlisted types with positional arguments produce a build warning and are dropped (no `$pos` index fallback) |
-| `builtinWidgetTypes` | mirror of the host's `JsWidgetRegistry` keys; drives which host-wrapper classes are generated in `flutter.js` and which class names component outputs import |
+| `hostWidgetTypes` / `hostDataCarrierTypes` | extracted at build time from the runtime source (`hot_patch/lib/src/js_ui/**`: `r.register('X', …)` and `_dataCarrierTypes`); drives which host-wrapper classes are generated in `flutter.js` and which class names component outputs import. No hand-maintained list |
 | `builderFormTypes` | types with `.builder` / `.separated` named constructors; a JS proxy class is generated for them (the runtime only consumes the `factory` / `__delegate` protocol, never a type whitelist) |
 
 Adding a visual widget therefore touches two sides: the host renderer, and — when the output shape differs —
@@ -302,7 +302,7 @@ targets:
 | 表 | 用途 |
 |---|---|
 | `widgetPositionalArgNames` | 位置实参按 **Flutter 自己声明的形参名**下发（`Text('hi')` → `{data: 'hi'}`、`Image.network(url)` → `{src: url}`）；未登记的类型遇到位置实参时构建期告警并丢弃（不再有 `$pos` 下标兜底） |
-| `builtinWidgetTypes` | 宿主 `JsWidgetRegistry` 注册键的镜像（用于区分内建 widget 与业务类） |
+| `hostWidgetTypes` / `hostDataCarrierTypes` | 构建期从运行时源码自动抽取（`hot_patch/lib/src/js_ui/**` 的 `r.register('X', …)` 与 `_dataCarrierTypes`）；决定 `flutter.js` 生成哪些宿主包装类、产物 import 哪些类名。生成器不维护组件表 |
 | `builderFormTypes` | 有 `.builder` / `.separated` 命名构造的类型；为它们生成 JS 代理类（运行时只认 `factory` / `__delegate` 协议，不再有类型白名单） |
 | `lazyChildHostTypes` | 懒容器类型 → 触发懒的 props 键（空 = 无条件懒）。生成期写入 `flutter.js` 的 `__h`，给元素打 `lazyChildren` 标记；运行时只认元素标记、不认识类型 —— 新增懒容器（含 carousel_slider 这类三方组件）只改这张表并重出产物，运行时代码零改动 |
 

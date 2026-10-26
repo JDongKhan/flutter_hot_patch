@@ -77,7 +77,10 @@ class PackageSources {
     } on FormatException {
       return null;
     }
-    final base = config.parent.parent.uri; // .dart_tool 的上一级
+    // rootUri 是相对 **package_config.json 自身**解析的 URI 引用（pub 规范）：
+    // 工作区里 `../packages/hot_patch` 相对 `.dart_tool/` 才是仓库根，
+    // 故基准必须是配置文件 URI，而不是它的上级目录。
+    final base = config.uri;
     final roots = <PackageRoot>[];
     var projectName = '';
     for (final p in (json['packages'] as List<dynamic>? ?? const [])) {
