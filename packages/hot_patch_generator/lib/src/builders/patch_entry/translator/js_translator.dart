@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart' show log;
 
 import '../class_info.dart';
+import '../../shared/ctor_signatures.dart';
 import 'js_value.dart';
 
 // ===========================================================================
@@ -258,25 +259,14 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // 后直接返回（不再往下走），颜色常量会在那里被吞掉。
   final color = colorLiteralJs(e);
   if (color != null) return color;
-  // Key 构造（`ValueKey(item)` / `GlobalKey<FormState>()` / `ObjectKey(x)` /
-  // `UniqueKey()`）：Key 是**值**不是结点，宿主/JS 各自有同名代理类（见
-  // hot_patch capabilities/key/key_js.dart），这里一律译成 `new Xxx(...)`（裸引用
-  // 全局类，与 ScrollController 等代理类同款）。必须早于下面的
-  // InstanceCreationExpression 分支：那支对非模型类返回 null 后直接返回。
-  final keyJs = keyCtorJs(e, scope, classes);
-  if (keyJs != null) return keyJs;
-  // SDK 值对象构造（`ValueNotifier<int>(0)`）：同样必须早于下面的
-  // InstanceCreationExpression 分支（那支对非模型类返回 null 后直接返回）。
-  final sdkValJs = sdkValueCtorJs(e, scope, classes);
-  if (sdkValJs != null) return sdkValJs;
-  // 运行时同名代理类（ScrollController / PageController / TabController …）：
-  // 内联构造与字段构造共用这一条路径，统一产出 `new Xxx({...})`。
-  final runtimeCtor = jsRuntimeCtorJs(e, scope, classes);
-  if (runtimeCtor != null) return runtimeCtor;
-  // Dart 内置异常构造（`StateError('...')` 等）：Dart 的异常类在 JS 侧没有
-  // 同名构造，统一落成 `new Error(message)`；`throw` 语句据此可直接翻译。
-  final errJs = _dartErrorCtorJs(e, scope, classes);
-  if (errJs != null) return errJs;
+  // 构造统一翻译（唯一一条规则）：
+  //   `A(args)`   → `new A({...})`
+  //   `A.b(args)` → `A.b({...})`
+  // 位置实参按**源码构造签名**映射成形参名（CtorSignatures 自动抽取，覆盖
+  // 项目类 / SDK / 全部依赖包）。不再维护 Key / 控制器 / 值类 / 异常的类名表：
+  // 这些类由运行时注入同名类（capabilities/ 下），翻译层与运行时都不感知扩展。
+  final ctorJs = valueCtorJs(e, scope, classes);
+  if (ctorJs != null) return ctorJs;
   // PrefixedIdentifier（`a.b`）不是单纯字段名，交给 exprToJs 的属性分支；
   // 若走下面的 Identifier 分支会用整串名字查字段而必然失败。
   if (e is PrefixedIdentifier) return exprToJs(e, scope, classes);
@@ -395,207 +385,83 @@ String? _listLiteralJs(
   return '[${parts.join(', ')}]';
 }
 
-/// 支持翻译的 Key 类名（Dart 的 Key 家族里在 JS 侧有同名代理类的部分）。
-/// Key 是**值**：JS 用同名类实例承载，跨桥 toJSON 成 `{__vkey:…}` / `{__okey:…}`
-/// / `{__psk:…}` / `{__handle:…}`（见 hot_patch capabilities/key/key_js.dart、
-/// key/key_bridge.dart）。
-/// 宿主与 JS 共用这**一条**表达式路径——widget 的 key 参数、模型字段初值、
-/// 集合元素都经过 [rhsToJs]，故支持范围只在这里维护。
-const Set<String> keyClassNames = {
-  'ValueKey',
-  'ObjectKey',
-  'PageStorageKey',
-  'UniqueKey',
-  'GlobalKey',
-};
-
-/// Key 构造表达式 → JS `new Xxx(...)`；非 Key 构造返回 null。
+/// 构造表达式 → JS 构造调用；非构造返回 null。
 ///
-/// 兼容两种 AST 形态：显式 `new`/`const` 是 InstanceCreationExpression；
-/// 无 `new` 的 `GlobalKey<FormState>()`（带类型实参）在无 resolution 的
-/// parseString 下是 MethodInvocation。实参按位置摊平（ValueKey/ObjectKey 取值，
-/// GlobalKey 的 `debugLabel:` 具名实参同样落到唯一位置参）。
-String? keyCtorJs(
+/// 唯一规则（所有类一视同仁，不含任何类名表）：
+/// - `A(args)` → `new A({...})`
+/// - `A.b(args)` → `A.b({...})`（签名表能证明 `A` 有构造 `b` 时才接管，避免
+///   把 `Theme.of(context)` 这类静态方法/普通调用误当构造）
+///
+/// 位置实参用 [CtorSignatures] 从源码签名映射成形参名；签名缺失时落
+/// `__pos` 下标数组并出声告警，由运行时按构造签名展开——不静默丢弃。
+String? valueCtorJs(
   Expression e,
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
-  String? name;
+  String? cls;
+  String? ctorName;
   List<Expression> args = const [];
   if (e is InstanceCreationExpression) {
-    final n = e.constructorName.type.name2.lexeme;
-    if (keyClassNames.contains(n)) {
-      name = n;
-      args = e.argumentList.arguments.toList();
-    }
-  } else if (e is MethodInvocation && e.target == null) {
-    final n = e.methodName.name;
-    if (keyClassNames.contains(n)) {
-      name = n;
-      args = e.argumentList.arguments.toList();
-    }
-  }
-  if (name == null) return null;
-  final parts = <String>[];
-  for (final a in args) {
-    final v = rhsToJs(a is NamedExpression ? a.expression : a, scope, classes);
-    if (v == null) return null;
-    parts.add(v);
-  }
-  return 'new $name(${parts.join(', ')})';
-}
-
-/// SDK 值对象构造表达式（`ValueNotifier<int>(0)`）→ JS `new ValueNotifier(0)`；
-/// 非本类返回 null。
-///
-/// 与 [keyCtorJs] 同款：**丢弃泛型实参**、裸引用运行时注入的同名类（见
-/// hot_patch 的 change_notifier_js.dart 里 `G.ValueNotifier`）。
-String? sdkValueCtorJs(
-  Expression e,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
-  String? name;
-  List<Expression> args = const [];
-  if (e is InstanceCreationExpression) {
-    final n = e.constructorName.type.name2.lexeme;
-    if (sdkValueClassNames.contains(n)) {
-      name = n;
-      args = e.argumentList.arguments.toList();
-    }
-  } else if (e is MethodInvocation && e.target == null) {
-    final n = e.methodName.name;
-    if (sdkValueClassNames.contains(n)) {
-      name = n;
-      args = e.argumentList.arguments.toList();
-    }
-  }
-  if (name == null) return null;
-  final parts = <String>[];
-  for (final a in args) {
-    final v = rhsToJs(a is NamedExpression ? a.expression : a, scope, classes);
-    if (v == null) return null;
-    parts.add(v);
-  }
-  return 'new $name(${parts.join(', ')})';
-}
-
-/// 运行时注入了同名 JS 类的 SDK 值对象（构造时直接裸引用 `new Xxx(...)`）。
-///
-/// 这里的是**位置参数**构造（`Size(10, 20)` / `Offset(0, 1)`）：实参按位置摊平，
-/// 与 JS 侧值类构造签名一一对应（见 hot_patch capabilities/core/dart_values_js.dart）。
-const Set<String> sdkValueClassNames = {
-  'ValueNotifier',
-  'Size',
-  'Offset',
-  'Radius',
-};
-
-/// JS 运行时同名代理类（控制器）：字段可持有、构造产 `new Xxx({...})`。
-///
-/// 与 hot_patch `capabilities/` 里的 JS 代理类对称；代理类自行取用/忽略
-/// Dart 专属参数（如 TabController 的 `vsync`）。
-const Set<String> jsRuntimeClassNames = {
-  'ScrollController',
-  'PageController',
-  'TextEditingController',
-  'TabController',
-  // EasyRefresh 控制器：宿主真实实例由句柄层创建（capabilities/easy_refresh），
-  // JS 侧同名代理类承接 callRefresh / finishRefresh 等控制方法。
-  'EasyRefreshController',
-  // Duration：命名实参构造 → JS 值类（capabilities/core/dart_values_js.dart），
-  //   `Duration(milliseconds: n)` → `new Duration({milliseconds: n})`，toJSON 成 `{__duration}`；
-  //   （Size / Offset / Radius 是位置实参，归 sdkValueClassNames。）
-  'Duration',
-  // 动画（capabilities/animation）：
-  //   - AnimationController：真实控制器在宿主（Ticker），JS 侧是镜像 + 句柄；
-  //   - CurvedAnimation：JS 值对象，toJSON 带 `{__handle, __curve}`。
-  'AnimationController',
-  'CurvedAnimation',
-};
-
-/// 运行时同名代理类构造 → JS：`new Xxx({命名实参...})`；非本类返回 null。
-///
-/// 代理类只接受**具名实参**（其语义面由 JS 侧定义）；位置实参无法安全映射，
-/// 出声告警后跳过，避免静默吞掉构造参数。
-String? jsRuntimeCtorJs(
-  Expression e,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
-  String? name;
-  List<Expression> args = const [];
-  if (e is InstanceCreationExpression) {
-    name = e.constructorName.type.name2.lexeme;
+    final src = e.constructorName.type.toSource();
+    final dot = src.indexOf('.');
+    cls = dot < 0 ? src : src.substring(0, dot);
+    ctorName = dot < 0 ? null : src.substring(dot + 1);
     args = e.argumentList.arguments.toList();
-  } else if (e is MethodInvocation && e.target == null) {
-    // 无 resolution 的 parseString 下 `PageController(...)` 是 MethodInvocation。
-    name = e.methodName.name;
+  } else if (e is MethodInvocation && e.target is SimpleIdentifier) {
+    cls = (e.target! as SimpleIdentifier).name;
+    ctorName = e.methodName.name;
+    args = e.argumentList.arguments.toList();
+  } else if (e is MethodInvocation && e.target == null && e.typeArguments == null) {
+    cls = e.methodName.name;
     args = e.argumentList.arguments.toList();
   }
-  if (name == null || !jsRuntimeClassNames.contains(name)) return null;
+  if (cls == null || !_isClassLikeName(cls)) return null;
+  final posCount = args.where((a) => a is! NamedExpression).length;
+  // 命名形态（`A.b(...)`）只在签名表命中时接管：否则可能是静态方法调用。
+  final signatures = CtorSignatures.instance;
+  final sig = signatures?.of(cls,
+      ctorName: ctorName, positionalCount: posCount);
+  if (ctorName != null && sig == null) return null;
+  final positional = sig?.positional ?? const <String>[];
   final entries = <String>[];
-  for (final a in args) {
-    if (a is! NamedExpression) {
-      log.warning('[hot_patch_generator] $name 的位置实参未翻译'
-          '（代理类只接受具名参数）：${a.toSource()}');
-      continue;
-    }
-    final v = rhsToJs(a.expression, scope, classes);
-    if (v != null) entries.add('${a.name.label.name}: $v');
-  }
-  return entries.isEmpty ? 'new $name()' : 'new $name({${entries.join(', ')}})';
-}
-
-/// Dart 内置异常构造名：JS 侧统一译成 `new Error(message)`。
-///
-/// 只做**异常对象**的最小映射（消息、类型可区分性不做要求）：Dart 的
-/// `StateError` / `FormatException` 等在 JS 里没有同名类，直接透传会得到
-/// 未定义全局，`throw` / `catch` 整段失效。方法体内 `throw StateError(...)`
-/// 是基础写法，故在此统一落成 `Error`。
-const Set<String> _dartErrorCtors = {
-  'StateError',
-  'ArgumentError',
-  'FormatException',
-  'RangeError',
-  'UnsupportedError',
-  'UnimplementedError',
-  'Exception',
-};
-
-/// Dart 异常构造 → `new Error(<message>)`；非异常构造返回 null。
-///
-/// 消息取具名 `message:` 优先，否则第一个位置实参；都没有则空字符串。
-/// 其他具名参数（如 `ArgumentError.value` 的 `name`）当前忽略。
-String? _dartErrorCtorJs(
-  Expression e,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
-  String? name;
-  List<Expression> args = const [];
-  if (e is InstanceCreationExpression) {
-    name = e.constructorName.type.name2.lexeme;
-    args = e.argumentList.arguments.toList();
-  } else if (e is MethodInvocation && e.target == null) {
-    name = e.methodName.name;
-    args = e.argumentList.arguments.toList();
-  }
-  if (name == null || !_dartErrorCtors.contains(name)) return null;
-  Expression? namedMessage;
-  Expression? positionalMessage;
+  final rest = <String>[];
+  var posIndex = 0;
   for (final a in args) {
     if (a is NamedExpression) {
-      if (a.name.label.name == 'message') namedMessage = a.expression;
-    } else {
-      positionalMessage ??= a;
+      final v = rhsToJs(a.expression, scope, classes);
+      if (v == null) return null;
+      entries.add('${a.name.label.name}: $v');
+      continue;
     }
+    final v = rhsToJs(a, scope, classes);
+    if (v == null) return null;
+    if (posIndex < positional.length) {
+      entries.add('${positional[posIndex]}: $v');
+    } else {
+      rest.add(v);
+    }
+    posIndex++;
   }
-  final message = namedMessage ?? positionalMessage;
-  final msgJs = message == null ? '""' : rhsToJs(message, scope, classes);
-  if (msgJs == null) return null;
-  return 'new Error($msgJs)';
+  if (rest.isNotEmpty) {
+    // 签名未知（源码里找不到该类）→ 下标兜底，运行时按构造签名展开。
+    // ignore: avoid_print - 构建期日志
+    print('[hot_patch_generator] 构造 $cls${ctorName == null ? '' : '.$ctorName'} '
+        '的位置实参缺少形参名签名，落 __pos 兜底：${rest.join(', ')}');
+    entries.add('__pos: [${rest.join(', ')}]');
+  }
+  final props = entries.isEmpty ? '' : '{${entries.join(', ')}}';
+  return ctorName == null ? 'new $cls($props)' : '$cls.$ctorName($props)';
 }
+
+/// 类名形态：首字母大写（Dart 语法层唯一可用的判据，与具体类无关）。
+bool _isClassLikeName(String name) {
+  if (name.isEmpty) return false;
+  final c = name.codeUnitAt(0);
+  return c >= 0x41 && c <= 0x5A;
+}
+
+
 
 /// 模型构造调用 → JS：`new User({name:..., age:...})`。
 /// 位置参数按类实例字段声明顺序映射；命名参数按 label。

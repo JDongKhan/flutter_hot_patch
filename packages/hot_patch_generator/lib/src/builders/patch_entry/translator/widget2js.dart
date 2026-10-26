@@ -718,11 +718,30 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     required bool asHostWrapper,
   }) {
     final props = _propsWithKey(json['props'], json['key']);
+    // 命名构造 → 1:1 的 JS 静态方法：`ListView.separated({...})`。构造名由包装类
+    // 上的同名静态方法承接，内部再补 `props.factory` 给宿主选原生工厂。
+    // 宿主字符串 type（没有 JS 类）无法调用静态方法，仍按 props.factory 下发。
+    final factory = props[factoryPropsKey];
+    final factoryName = factory is String ? _literalString(factory) : null;
+    if (asClass && factoryName != null) {
+      final rest = Map<String, dynamic>.of(props)..remove(factoryPropsKey);
+      final restJs = rest.isEmpty ? '{}' : jsLiteral(rest, depth + 1);
+      return _constCached(json, '$type.$factoryName($restJs)');
+    }
     final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
     if (asClass || asHostWrapper) {
       return _constCached(json, 'new $type($propsJs)');
     }
     return _constCached(json, "__h('$type', $propsJs)");
+  }
+
+  /// 产物里工厂名以 JS 字符串字面量存放（`"separated"`）：去掉引号取原名。
+  static String? _literalString(String js) {
+    final s = js.trim();
+    if (s.length < 2) return null;
+    final q = s[0];
+    if ((q != '"' && q != "'") || s[s.length - 1] != q) return null;
+    return s.substring(1, s.length - 1);
   }
 
   /// const 构造的站点级懒缓存：同一处 `const X(...)` 每次 build 复用同一实例，
@@ -1416,12 +1435,37 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       return '[\n$ind2$items\n$ind]';
     }
     // 叶子值 = JS 表达式字符串（已带引号的字符串 / 数字 / 表达式）
-    var s = value?.toString() ?? 'null';
-    if (s.contains('\n')) {
-      // 多行 JS 表达式（if/for spread、IIFE）：压缩为单行，保持树缩进整洁
-      s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final s = value?.toString() ?? 'null';
+    if (!s.contains('\n')) return s;
+    // 多行表达式（三元分支里的子结点、IIFE、节点构造）：**保留换行**，按当前
+    // 缩进重排。压成单行会让 `this.__k2 = new Center({...})` 这类嵌套结点的
+    // props 连成几百字符的一行，产物不可读、问题难定位。
+    return _reindentMultiline(s, depth);
+  }
+
+  /// 把内嵌的多行表达式按 [depth] 重排缩进：
+  /// 去掉各行公共缩进，再统一加上 `2*depth` 个空格；空行保持为空。
+  static String _reindentMultiline(String s, int depth) {
+    final lines = s.split('\n');
+    var minIndent = -1;
+    for (var i = 1; i < lines.length; i++) {
+      final line = lines[i];
+      if (line.trim().isEmpty) continue;
+      final n = line.length - line.trimLeft().length;
+      if (minIndent < 0 || n < minIndent) minIndent = n;
     }
-    return s;
+    if (minIndent < 0) minIndent = 0;
+    final indent = '  ' * depth;
+    final b = StringBuffer(lines.first);
+    for (var i = 1; i < lines.length; i++) {
+      final line = lines[i];
+      if (line.trim().isEmpty) {
+        b.write('\n');
+      } else {
+        b.write('\n$indent${line.substring(minIndent)}');
+      }
+    }
+    return b.toString();
   }
 
   /// 判断一个 Map 是「widget 节点」还是「普通 props / args 容器」。

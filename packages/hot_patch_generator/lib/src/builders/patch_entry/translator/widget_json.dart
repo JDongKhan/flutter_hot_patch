@@ -25,6 +25,7 @@ library;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart' show log;
 
+import '../../shared/ctor_signatures.dart';
 import '../../shared/js_widget_defs.dart';
 import 'value_forms.dart';
 import 'widget2js.dart';
@@ -127,13 +128,14 @@ String? factoryNameOf(Expression? e) {
   return null;
 }
 
-/// 位置实参的形参名：先查「类型.命名构造」再查「类型」，未登记返回 null。
+/// 位置实参的形参名：直接查源码构造签名（[CtorSignatures]）。
+///
+/// 不维护任何类型/构造名表——项目类、SDK、依赖包用同一条路径；SDK 新增带位置
+/// 实参的组件后重构建即生效。签名查不到时返回 null，调用方告警。
 List<String>? positionalArgNames(String type, String? factory) {
-  if (factory != null) {
-    final byFactory = widgetPositionalArgNames['$type.$factory'];
-    if (byFactory != null) return byFactory;
-  }
-  return widgetPositionalArgNames[type];
+  return CtorSignatures.instance
+      ?.of(type, ctorName: factory)
+      ?.positional;
 }
 
 /// 构造的第一个类型实参名（`Consumer<NetworkVm>(...)` → 'NetworkVm'）。

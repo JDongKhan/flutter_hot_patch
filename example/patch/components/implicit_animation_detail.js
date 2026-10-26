@@ -52,7 +52,9 @@ export class ImplicitAnimationDetail {
               "height": 10
             }))),
           new TextButton({
-              "onPressed": this.__bindFn(0, [], () => this.setState(() => { this._big = (!this._big); })),
+              "onPressed": this.__bindFn(0, [], () => this.setState(() => {
+                this._big = (!this._big);
+              })),
               "child": new Text({
                   "data": this._big ? "收缩到 small" : "放大到 BIG"
                 })
@@ -141,7 +143,7 @@ export class ImplicitAnimationDetail {
                       })
                   }),
                 new AnimatedSlide({
-                    "offset": this._moved ? new Offset(0.25, 0) : new Offset(0, 0),
+                    "offset": this._moved ? new Offset({dx: 0.25, dy: 0}) : new Offset({dx: 0, dy: 0}),
                     "duration": new Duration({milliseconds: 400}),
                     "curve": "easeInOut",
                     "child": new Container({
@@ -172,7 +174,9 @@ export class ImplicitAnimationDetail {
               "children": [
                 new Expanded({
                     "child": new TextButton({
-                        "onPressed": this.__bindFn(1, [], () => this.setState(() => { this._visible = (!this._visible); })),
+                        "onPressed": this.__bindFn(1, [], () => this.setState(() => {
+                          this._visible = (!this._visible);
+                        })),
                         "child": new Text({
                             "data": this._visible ? "暗下来" : "亮起来"
                           })
@@ -180,7 +184,9 @@ export class ImplicitAnimationDetail {
                   }),
                 new Expanded({
                     "child": new TextButton({
-                        "onPressed": this.__bindFn(2, [], () => this.setState(() => { this._moved = (!this._moved); })),
+                        "onPressed": this.__bindFn(2, [], () => this.setState(() => {
+                          this._moved = (!this._moved);
+                        })),
                         "child": new Text({
                             "data": this._moved ? "回到原位" : "旋转 + 位移"
                           })
@@ -241,7 +247,9 @@ export class ImplicitAnimationDetail {
                 })
             }),
           new TextButton({
-              "onPressed": this.__bindFn(3, [], () => this.setState(() => { this._visible = (!this._visible); })),
+              "onPressed": this.__bindFn(3, [], () => this.setState(() => {
+                this._visible = (!this._visible);
+              })),
               "child": new Text({
                   "data": this._visible ? "切到 B" : "切回 A"
                 })

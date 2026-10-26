@@ -45,7 +45,7 @@ const String keyJsSource = r'''
   // 实例的**自有字段名 = 序列化字段名**（__vkey）：reconciler 的 keySig 用字段
   // 形态判据，而 props.key 传的是 live 实例（不是 toJSON 产物），两边必须同形。
   // 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
-  function ValueKey(value) { this.__vkey = value; }
+  function ValueKey(props) { this.__vkey = __posArgs(props, ['value']).value; }
   ValueKey.prototype.toJSON = function () {
     var v = this.__vkey;
     if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
@@ -55,7 +55,7 @@ const String keyJsSource = r'''
   };
 
   // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
-  function ObjectKey(value) { this.__okey = objectToken(value); }
+  function ObjectKey(props) { this.__okey = objectToken(__posArgs(props, ['value']).value); }
   ObjectKey.prototype.toJSON = function () { return { __okey: this.__okey }; };
 
   // PageStorageKey：Dart 侧 `extends ValueKey`（按**值**相等），但宿主必须造
@@ -63,7 +63,8 @@ const String keyJsSource = r'''
   // 那是宿主端行为（JS 侧只有一个值本体）。故 codec 与 ValueKey 同构另加 `__psk`
   // 标记：宿主据此造 PageStorageKey 而非 ValueKey，keySig 前缀 `p:` 使它与
   // 同值的 ValueKey 不等（与 Dart 的 runtimeType 参与相等一致）。
-  function PageStorageKey(value) {
+  function PageStorageKey(props) {
+    var value = __posArgs(props, ['value']).value;
     this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
         ? { __vtok: objectToken(value) }
         : value;
@@ -72,7 +73,8 @@ const String keyJsSource = r'''
 
   // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
   defineHandleKind('key/Global', {});
-  function GlobalKey(debugLabel) {
+  function GlobalKey(props) {
+    var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
     this.__id = reg(this, 'key/Global', {
       meta: debugLabel == null ? null : { debugLabel: debugLabel }
     });

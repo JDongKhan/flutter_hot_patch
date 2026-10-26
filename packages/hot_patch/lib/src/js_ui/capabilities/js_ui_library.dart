@@ -38,6 +38,7 @@ import 'build_context/build_context_library.dart';
 import 'cached_network_image/cached_network_image_library.dart';
 import 'change_notifier/change_notifier_library.dart';
 import 'core/dart_values_library.dart';
+import 'core/dart_errors_library.dart';
 import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
 import 'key/key_library.dart';
@@ -107,6 +108,8 @@ void _seedBuiltins() {
   // 公共值类（Duration / Size / Offset / Radius）：跨能力复用，最先注入，
   // 后面的能力片段（如动画的 `__durationMs`）可直接引用。
   registerJsUiLibrary(const DartValuesLibrary());
+  // Dart 内置异常（StateError / ArgumentError / …）：依赖 __posArgs。
+  registerJsUiLibrary(const DartErrorsLibrary());
   registerJsUiLibrary(const ChangeNotifierLibrary());
   // 动画值类 / AnimationController 镜像：显式动画经此逐帧回传 value。
   registerJsUiLibrary(const AnimationLibrary());

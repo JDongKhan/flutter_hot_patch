@@ -11,8 +11,8 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-
 import '../class_info.dart';
+import '../../shared/ctor_signatures.dart';
 import '../../shared/host_injected.dart';
 import '../translator/js_translator.dart';
 import '../translator/js_value.dart';
@@ -496,7 +496,6 @@ ClassInfo translateClass(
       final typeName = field.typeName;
       final erased = eraseType(typeName);
       final isBasic = isBasicType(typeName) || _valueSdkTypes.contains(erased);
-      final jsRuntime = jsRuntimeClassNames.contains(erased);
       if (!_fieldTranslatable(typeName, classTable)) {
         // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
         // ignore: avoid_print - 构建期日志
@@ -524,30 +523,17 @@ ClassInfo translateClass(
                 ? null
                 : rhsToJs(defaultExpr, initScope, used)) ??
             _defaultInitial(typeName);
-      } else if (jsRuntime) {
-        // JS 运行时同名代理类（ScrollController / PageController / …）：
-        // 构造按命名实参透传（代理类自行取用，如 PageController 的 initialPage）。
-        initial = init == null
-            ? 'null'
-            : (jsRuntimeCtorJs(init, initScope, used) ?? 'new $erased()');
       } else {
-        String? ctorJs;
-        if (init is InstanceCreationExpression) {
-          ctorJs = modelCtorToJs(init, initScope, used);
-        } else if (init is MethodInvocation &&
-            init.target == null &&
-            init.typeArguments == null) {
-          // `_model = MyModel()` 在无 resolution 的 parseString 下会被解析成
-          // MethodInvocation（类名即无参构造），统一按模型构造处理。
-          ctorJs = modelCtorFromPartsJs(init.methodName.name,
-              init.argumentList.arguments.toList(), initScope, used);
-        } else if (init == null && defaultExpr != null) {
-          ctorJs = rhsToJs(defaultExpr, initScope, used);
-        }
-        // 无初始化器（如 `List<Spot> spots` 由构造参数注入）→ 类型默认值
-        // （容器→[]/{}），而不是 null：JS 侧漏传 props 时仍能安全遍历。
-        // 有初始化器时按集合/表达式翻译（`final _items = ['a','b']` → `["a","b"]`）；
-        // 翻译不出来（如宿主 widget 引用）才退化为 null。
+        // 统一规则：任何类构造 → `new X({...})`（位置实参按源码签名映射）。
+        // 无初始化器时回退类型默认值（容器→[]/{}），JS 侧漏传 props 仍能安全遍历。
+        final ctorJs = init == null
+            ? (defaultExpr == null
+                ? null
+                : rhsToJs(defaultExpr, initScope, used))
+            : (valueCtorJs(init, initScope, used) ??
+                (init is InstanceCreationExpression
+                    ? modelCtorToJs(init, initScope, used)
+                    : null));
         initial = ctorJs ??
             (init == null
                 ? _defaultInitial(typeName)
@@ -846,10 +832,9 @@ bool _fieldTranslatable(
         args.every((a) => _fieldTranslatable(a, classTable));
   }
   if (t.isEmpty) return false;
-  if (jsRuntimeClassNames.contains(t)) return true;
-  // Key 字段（`final _formKey = GlobalKey<FormState>()` / `ValueKey k`）：
-  // JS 侧有同名代理类（值对象，见 capabilities/key/key_js.dart），可持有/转发。
-  if (keyClassNames.contains(t)) return true;
+  // 源码里能解析到构造的类（SDK / 依赖包 / 项目类）：JS 侧有同名类承载，
+  // 字段可持有/转发。判据只看源码签名，与具体类名无关。
+  if (CtorSignatures.instance?.of(t) != null) return true;
   // 有 JS 值形态的 SDK 类型（Color → '#aarrggbb'、IconData → 图标名）。
   if (_valueSdkTypes.contains(t)) return true;
   // 元素值字段（`Widget` / `PreferredSizeWidget`）：字段持元素对象。

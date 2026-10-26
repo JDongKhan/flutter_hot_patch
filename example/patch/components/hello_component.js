@@ -56,7 +56,7 @@ export class HelloCard {
   demoTryCatchAssert() {
     try {
       if ((this._count < 0)) {
-        throw new Error("count 不能为负数");
+        throw new StateError({message: "count 不能为负数"});
       }
       console.debug("try ok: count=" + __str(this._count));
     } catch (e) {
@@ -104,9 +104,17 @@ export class HelloCard {
           new Text({
               "data": (this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1"
             }),
-          ...((this._count > 0) ? [new Text({ "data": "当前 count 是正数（if 条件渲染）" })] : []),
-          ...((this._user != null) ? [new Text({ "data": "用户已加载（if + else 渲染）" })] : [new Text({ "data": "用户未加载，点 Load User" })]),
-          ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Text({ "data": "循环第 " + i + " 个" })]); } return out; })(),
+          ...((this._count > 0) ? [new Text({
+            "data": "当前 count 是正数（if 条件渲染）"
+          })] : []),
+          ...((this._user != null) ? [new Text({
+            "data": "用户已加载（if + else 渲染）"
+          })] : [new Text({
+            "data": "用户未加载，点 Load User"
+          })]),
+          ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Text({
+            "data": "循环第 " + i + " 个"
+          })]); } return out; })(),
           new Row({
               "children": [
                 new ElevatedButton({

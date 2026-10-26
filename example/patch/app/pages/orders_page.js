@@ -14,7 +14,7 @@ export class OrdersPage {
   constructor(args) {
     this.props = args || {};
     this.__applyProps(args);
-    this._service = new AppService({});
+    this._service = new AppService();
     this._feed = null;
     this._orders = null;
     this._listLoading = false;
@@ -75,16 +75,69 @@ export class OrdersPage {
                           "scrollDirection": "horizontal",
                           "child": new Row({
                               "children": [
-                                ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [new Padding({ "padding": { "left": 4.0, "top": 0.0, "right": 4.0, "bottom": 0.0 }, "child": new GestureDetector({ "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)), "child": new Container({ "padding": { "left": 13.0, "top": 6.0, "right": 13.0, "bottom": 6.0 }, "decoration": { "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'), "borderRadius": { "radius": 15.0 } }, "child": new Text({ "style": { "fontSize": 13, "color": ((this._status == s) ? kBrand : '#ff5c6270') }, "data": s }) }) }) })]); } return out; })()
+                                ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [new Padding({
+                                  "padding": {
+                                    "left": 4.0,
+                                    "top": 0.0,
+                                    "right": 4.0,
+                                    "bottom": 0.0
+                                  },
+                                  "child": new GestureDetector({
+                                      "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)),
+                                      "child": new Container({
+                                          "padding": {
+                                            "left": 13.0,
+                                            "top": 6.0,
+                                            "right": 13.0,
+                                            "bottom": 6.0
+                                          },
+                                          "decoration": {
+                                            "color": ((this._status == s) ? '#ffe8f2ff' : '#FFFFFF'),
+                                            "borderRadius": {
+                                              "radius": 15.0
+                                            }
+                                          },
+                                          "child": new Text({
+                                              "style": {
+                                                "fontSize": 13,
+                                                "color": ((this._status == s) ? kBrand : '#ff5c6270')
+                                              },
+                                              "data": s
+                                            })
+                                        })
+                                    })
+                                })]); } return out; })()
                               ]
                             })
                         })
                     })
                 })
             }),
-          ...(this._listLoading ? [(this.__k1 || (this.__k1 = new LinearProgressIndicator({ "minHeight": 2 })))] : []),
+          ...(this._listLoading ? [(this.__k1 || (this.__k1 = new LinearProgressIndicator({
+            "minHeight": 2
+          })))] : []),
           new Expanded({
-              "child": (this._orders == null) ? (this.__k0 || (this.__k0 = new Center({ "child": new CircularProgressIndicator({}) }))) : this._orders.isEmpty ? (this.__k2 || (this.__k2 = new Center({ "child": new Text({ "data": "该状态下暂无订单", "style": { "color": '#ff98a0ac', "fontSize": 13 } }) }))) : new ListView({ "padding": { "left": 12.0, "top": 12.0, "right": 12.0, "bottom": 20.0 }, "itemCount": this._orders.length, "separatorBuilder": "_separatorBuilder0", "itemBuilder": "_itemBuilder1", "factory": "separated" })
+              "child": (this._orders == null) ? (this.__k0 || (this.__k0 = new Center({
+                "child": new CircularProgressIndicator({})
+              }))) : this._orders.isEmpty ? (this.__k2 || (this.__k2 = new Center({
+                "child": new Text({
+                    "data": "该状态下暂无订单",
+                    "style": {
+                      "color": '#ff98a0ac',
+                      "fontSize": 13
+                    }
+                  })
+              }))) : ListView.separated({
+                "padding": {
+                  "left": 12.0,
+                  "top": 12.0,
+                  "right": 12.0,
+                  "bottom": 20.0
+                },
+                "itemCount": this._orders.length,
+                "separatorBuilder": "_separatorBuilder0",
+                "itemBuilder": "_itemBuilder1"
+              })
             })
         ]
       });
@@ -255,7 +308,19 @@ export class _OrderCard {
                                 "data": "￥" + this.order.price
                               }),
                             (this.__k1 || (this.__k1 = new Spacer({}))),
-                            ...(pending ? [new MiniButton({ "label": "取消", "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); } }), (this.__k0 || (this.__k0 = new SizedBox({ "width": 8 }))), new MiniButton({ "label": "去支付", "primary": true, "onTap": this.onOpen })] : [new MiniButton({ "label": "查看详情", "onTap": this.onOpen })])
+                            ...(pending ? [new MiniButton({
+                              "label": "取消",
+                              "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); }
+                            }), (this.__k0 || (this.__k0 = new SizedBox({
+                              "width": 8
+                            }))), new MiniButton({
+                              "label": "去支付",
+                              "primary": true,
+                              "onTap": this.onOpen
+                            })] : [new MiniButton({
+                              "label": "查看详情",
+                              "onTap": this.onOpen
+                            })])
                           ]
                         })
                     })

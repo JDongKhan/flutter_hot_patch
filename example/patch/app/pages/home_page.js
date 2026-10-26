@@ -13,7 +13,7 @@ import { Center, CircularProgressIndicator, ClipRRect, Column, Container, Custom
 export class HomePage {
   constructor(args) {
     this.props = args || {};
-    this._service = new AppService({});
+    this._service = new AppService();
     this._refreshController = new EasyRefreshController();
     this._feed = null;
   }
@@ -64,7 +64,9 @@ export class HomePage {
                                 "height": 150,
                                 "child": __h('PageView', {
                                     "children": [
-                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({ "banner": this._feed.banners[i] })]); } return out; })()
+                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({
+                                        "banner": this._feed.banners[i]
+                                      })]); } return out; })()
                                     ]
                                   })
                               }),
@@ -74,7 +76,22 @@ export class HomePage {
                             new Row({
                                 "mainAxisAlignment": "center",
                                 "children": [
-                                  ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new Container({ "margin": { "left": 3.0, "top": 0.0, "right": 3.0, "bottom": 0.0 }, "width": 6, "height": 6, "decoration": { "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'), "borderRadius": { "radius": 3.0 } } })]); } return out; })()
+                                  ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new Container({
+                                    "margin": {
+                                      "left": 3.0,
+                                      "top": 0.0,
+                                      "right": 3.0,
+                                      "bottom": 0.0
+                                    },
+                                    "width": 6,
+                                    "height": 6,
+                                    "decoration": {
+                                      "color": ((i == 0) ? '#ff0e7afb' : '#ffd5d9e0'),
+                                      "borderRadius": {
+                                        "radius": 3.0
+                                      }
+                                    }
+                                  })]); } return out; })()
                                 ]
                               }),
                             (this.__k1 || (this.__k1 = new SizedBox({
@@ -109,7 +126,9 @@ export class HomePage {
                                     "shrinkWrap": true,
                                     "physics": "NeverScrollableScrollPhysics",
                                     "children": [
-                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({ "entry": this._feed.grid[i] })]); } return out; })()
+                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({
+                                        "entry": this._feed.grid[i]
+                                      })]); } return out; })()
                                     ]
                                   })
                               }),

@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:build/build.dart';
 
+import '../shared/ctor_signatures.dart';
 import '../shared/js_widget_defs.dart';
 import '../shared/paths.dart';
 
@@ -199,6 +200,25 @@ String lazyChildHostTypesLiteral() {
   return '{${parts.join(', ')}}';
 }
 
+/// 包装类的**命名构造静态方法**（`ListView.separated(props)`）。
+///
+/// 翻译层对命名构造是 1:1 发射（`A.b(...)` → `A.b({...})`），所以 JS 类上必须有
+/// 同名静态方法。构造名从源码自动抽取（[CtorSignatures.ctorNamesOf]），SDK /
+/// 依赖包新增命名构造后重构建即自动补齐，无需登记任何类名或构造名。
+///
+/// 静态方法内部把构造名写成 `props.factory`：宿主渲染仍按「类型 + 工厂名」
+/// 选原生工厂，翻译层与产物形态都不感知这层协议。
+String namedCtorStatics(String type, {Iterable<String> extra = const []}) {
+  final names = <String>{...?CtorSignatures.instance?.ctorNamesOf(type), ...extra};
+  if (names.isEmpty) return '';
+  final b = StringBuffer();
+  for (final n in names.toList()..sort()) {
+    b.writeln('  static $n(props) { '
+        "return new $type(Object.assign({}, props, { factory: '$n' })); }");
+  }
+  return b.toString();
+}
+
 /// 宿主包装类源码：类名 = 宿主类型名，构造即产出元素描述（type 仍是**字符串**）。
 /// 宿主结点的实例化由宿主注册表完成，reconciler 从不 `new` 这个类。
 String hostWrapperSource(String type) => '''
@@ -206,7 +226,7 @@ export class $type {
   constructor(props) {
     return __h('$type', props);
   }
-}''';
+${namedCtorStatics(type)}}''';
 
 /// builder 命名构造（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
 /// 源码（类名 = Dart 类型名）：产物显式带 `props.factory`（`builder` /
@@ -251,6 +271,7 @@ export class $type {
     };
     return __h('$type', p);
   }
+${namedCtorStatics(type, extra: const ['builder', 'separated'])}
 }''';
 }
 

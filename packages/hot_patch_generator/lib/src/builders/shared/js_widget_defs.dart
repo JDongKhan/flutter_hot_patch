@@ -169,26 +169,8 @@ Set<String> get hostWrapperTypes => {
   ...jsDataCarrierTypes,
 };
 
-/// 「构造名 → 位置实参的 Flutter 形参名」登记（运行时读取键名的镜像）。
+/// 已废弃：位置实参的形参名改为从**源码构造签名**自动抽取
+/// （见 `shared/ctor_signatures.dart`），不再维护任何类型/构造名登记表。
 ///
-/// 统一翻译把位置实参按**Flutter 自己声明的形参名**放进 props，产物自解释：
-/// `Text('你好')` → `{data: '你好'}`、`Icon(Icons.star)` → `{icon: 'star'}`，
-/// 而不是不透明的下标数组。键是**构造名**（`类型名` 或 `类型名.命名构造名`，
-/// 后者优先，如 `Image.network` 的位置实参是 `src`、`Image.asset` 的是 `name`）。
-///
-/// 生成器只有语法树（无类型解析），拿不到任意 widget 的形参名，故取本表；未登记
-/// 的类型遇到位置实参时**构建期告警并丢弃**（不再有 `$pos` 下标数组兜底）。
-/// 新增带位置实参的组件时，必须在此登记其形参名。
-///
-/// **同步维护**：与运行时各 renderer 读取的键名一致（`js_widget_registry.dart`）。
-const Map<String, List<String>> widgetPositionalArgNames = {
-  'Text': ['data'],
-  // Text.rich 的首个位置实参是 InlineSpan（富文本，运行时暂不支持）。
-  'Text.rich': ['textSpan'],
-  'Icon': ['icon'],
-  'Image': ['image'],
-  'Image.network': ['src'],
-  'Image.asset': ['name'],
-  'Image.file': ['file'],
-  'Image.memory': ['bytes'],
-};
+/// 保留空表仅为兼容引用；新增组件（含 SDK 新增、依赖包）无需登记。
+const Map<String, List<String>> widgetPositionalArgNames = {};

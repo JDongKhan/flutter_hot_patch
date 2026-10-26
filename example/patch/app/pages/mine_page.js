@@ -13,7 +13,7 @@ const _menuTints = ['#ffe8f2ff', '#fffff3e0', '#ffeef0f4', '#ffe9f7ef'];
 export class MinePage {
   constructor(args) {
     this.props = args || {};
-    this._service = new AppService({});
+    this._service = new AppService();
     this._feed = null;
   }
   initState() {
@@ -155,7 +155,33 @@ export class MinePage {
                   },
                   "child": new Row({
                       "children": [
-                        ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [new Expanded({ "child": new GestureDetector({ "onTap": this.__bindFn(1, [], () => _app_host_.invoke("openOrders", [])), "child": new Column({ "children": [ new Text({ "style": { "fontSize": 17, "fontWeight": "w700", "color": '#ff171a21' }, "data": s[1] }), (this.__k1 || (this.__k1 = new SizedBox({ "height": 3 }))), new Text({ "style": { "fontSize": 11.5, "color": '#ff8b909a' }, "data": s[0] }) ] }) }) })]); } return out; })()
+                        ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [new Expanded({
+                          "child": new GestureDetector({
+                              "onTap": this.__bindFn(1, [], () => _app_host_.invoke("openOrders", [])),
+                              "child": new Column({
+                                  "children": [
+                                    new Text({
+                                        "style": {
+                                          "fontSize": 17,
+                                          "fontWeight": "w700",
+                                          "color": '#ff171a21'
+                                        },
+                                        "data": s[1]
+                                      }),
+                                    (this.__k1 || (this.__k1 = new SizedBox({
+                                        "height": 3
+                                      }))),
+                                    new Text({
+                                        "style": {
+                                          "fontSize": 11.5,
+                                          "color": '#ff8b909a'
+                                        },
+                                        "data": s[0]
+                                      })
+                                  ]
+                                })
+                            })
+                        })]); } return out; })()
                       ]
                     })
                 }),
@@ -176,7 +202,58 @@ export class MinePage {
               },
               "child": new Column({
                   "children": [
-                    ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [(this.__k2 || (this.__k2 = new Divider({ "color": '#fff0f2f6', "height": 1, "indent": 56 })))] : []), new GestureDetector({ "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])), "child": new Padding({ "padding": { "left": 14.0, "top": 12.0, "right": 12.0, "bottom": 12.0 }, "child": new Row({ "children": [ new Container({ "width": 30, "height": 30, "alignment": "center", "decoration": { "color": _menuTints[(i % _menuTints.length)], "borderRadius": { "radius": 9.0 } }, "child": new Text({ "style": { "fontSize": 15 }, "data": this._feed.menu[i].emoji }) }), (this.__k3 || (this.__k3 = new SizedBox({ "width": 12 }))), new Expanded({ "child": new Text({ "style": { "fontSize": 14 }, "data": this._feed.menu[i].title }) }), (this.__k4 || (this.__k4 = new Icon({ "color": '#ffc3c8d2', "icon": "chevron_right", "size": 18 }))) ] }) }) })]); } return out; })()
+                    ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [(this.__k2 || (this.__k2 = new Divider({
+                      "color": '#fff0f2f6',
+                      "height": 1,
+                      "indent": 56
+                    })))] : []), new GestureDetector({
+                      "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])),
+                      "child": new Padding({
+                          "padding": {
+                            "left": 14.0,
+                            "top": 12.0,
+                            "right": 12.0,
+                            "bottom": 12.0
+                          },
+                          "child": new Row({
+                              "children": [
+                                new Container({
+                                    "width": 30,
+                                    "height": 30,
+                                    "alignment": "center",
+                                    "decoration": {
+                                      "color": _menuTints[(i % _menuTints.length)],
+                                      "borderRadius": {
+                                        "radius": 9.0
+                                      }
+                                    },
+                                    "child": new Text({
+                                        "style": {
+                                          "fontSize": 15
+                                        },
+                                        "data": this._feed.menu[i].emoji
+                                      })
+                                  }),
+                                (this.__k3 || (this.__k3 = new SizedBox({
+                                    "width": 12
+                                  }))),
+                                new Expanded({
+                                    "child": new Text({
+                                        "style": {
+                                          "fontSize": 14
+                                        },
+                                        "data": this._feed.menu[i].title
+                                      })
+                                  }),
+                                (this.__k4 || (this.__k4 = new Icon({
+                                    "color": '#ffc3c8d2',
+                                    "icon": "chevron_right",
+                                    "size": 18
+                                  })))
+                              ]
+                            })
+                        })
+                    })]); } return out; })()
                   ]
                 })
             }),

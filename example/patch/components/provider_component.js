@@ -11,8 +11,8 @@ import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js'
 export class ProviderCard {
   constructor(args) {
     this.props = args || {};
-    this._modelA = new CounterVm({});
-    this._modelB = new NetworkVm({});
+    this._modelA = new CounterVm();
+    this._modelB = new NetworkVm();
   }
   _incA() {
     this._modelA.inc();
@@ -38,9 +38,8 @@ export class ProviderCard {
                       "create": this._modelA,
                       "model": "CounterVm"
                     }),
-                  new ChangeNotifierProvider({
+                  ChangeNotifierProvider.value({
                       "value": this._modelB,
-                      "factory": "value",
                       "model": "NetworkVm"
                     })
                 ],

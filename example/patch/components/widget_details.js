@@ -386,7 +386,12 @@ export class LayoutDetail {
               "runAlignment": "center",
               "crossAxisAlignment": "center",
               "children": [
-                ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new Chip({ "label": new Text({ "data": "chip " + i }), "backgroundColor": '#E0F2F1' })]); } return out; })()
+                ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new Chip({
+                  "label": new Text({
+                      "data": "chip " + i
+                    }),
+                  "backgroundColor": '#E0F2F1'
+                })]); } return out; })()
               ]
             }),
           (this.__k4 || (this.__k4 = new SizedBox({
@@ -798,7 +803,7 @@ export class ScrollDetail {
               "onNotification": this.__bindFn(0, [], (...__a) => this._onListScroll(...__a)),
               "child": new SizedBox({
                   "height": 160,
-                  "child": new ListView({
+                  "child": ListView.builder({
                       "padding": {
                         "left": 8.0,
                         "top": 8.0,
@@ -808,8 +813,7 @@ export class ScrollDetail {
                       "itemExtent": 56,
                       "physics": "BouncingScrollPhysics",
                       "itemCount": 20,
-                      "itemBuilder": "_itemBuilder0",
-                      "factory": "builder"
+                      "itemBuilder": "_itemBuilder0"
                     })
                 }),
               "model": "ScrollNotification"
@@ -817,7 +821,9 @@ export class ScrollDetail {
           new Align({
               "alignment": "centerLeft",
               "child": new TextButton({
-                  "onPressed": this.__bindFn(1, [], () => this.setState(() => { this._listSalt += 1; })),
+                  "onPressed": this.__bindFn(1, [], () => this.setState(() => {
+                    this._listSalt += 1;
+                  })),
                   "child": (this.__k0 || (this.__k0 = new Text({
                       "data": "列表换色（真实更新）"
                     })))
@@ -835,7 +841,7 @@ export class ScrollDetail {
             }),
           new SizedBox({
               "height": 140,
-              "child": new ListView({
+              "child": ListView.separated({
                   "padding": {
                     "left": 8.0,
                     "top": 8.0,
@@ -844,8 +850,7 @@ export class ScrollDetail {
                   },
                   "itemCount": 6,
                   "separatorBuilder": "_separatorBuilder1",
-                  "itemBuilder": "_itemBuilder2",
-                  "factory": "separated"
+                  "itemBuilder": "_itemBuilder2"
                 })
             }),
           (this.__k1 || (this.__k1 = new SizedBox({
@@ -864,7 +869,19 @@ export class ScrollDetail {
               "physics": "ClampingScrollPhysics",
               "child": new Row({
                   "children": [
-                    ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [new Padding({ "padding": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "child": new Chip({ "label": new Text({ "data": "横向 " + i }) }) })]); } return out; })()
+                    ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [new Padding({
+                      "padding": {
+                        "left": 4.0,
+                        "top": 4.0,
+                        "right": 4.0,
+                        "bottom": 4.0
+                      },
+                      "child": new Chip({
+                          "label": new Text({
+                              "data": "横向 " + i
+                            })
+                        })
+                    })]); } return out; })()
                   ]
                 })
             }),
@@ -1055,7 +1072,18 @@ export class SliverDetail {
                       "delegate": {
                         "__delegate": "list",
                         "children": [
-                          ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new ListTile({ "leading": (this.__k0 || (this.__k0 = new Icon({ "color": '#673AB7', "icon": "list" }))), "title": new Text({ "data": "SliverList item " + i }), "trailing": (this.__k1 || (this.__k1 = new Icon({ "icon": "chevron_right" }))) })]); } return out; })()
+                          ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new ListTile({
+                            "leading": (this.__k0 || (this.__k0 = new Icon({
+                                "color": '#673AB7',
+                                "icon": "list"
+                              }))),
+                            "title": new Text({
+                                "data": "SliverList item " + i
+                              }),
+                            "trailing": (this.__k1 || (this.__k1 = new Icon({
+                                "icon": "chevron_right"
+                              })))
+                          })]); } return out; })()
                         ]
                       }
                     })
@@ -1084,10 +1112,9 @@ export class SliverDetail {
                     "right": 12.0,
                     "bottom": 0.0
                   },
-                  "sliver": new SliverList({
+                  "sliver": SliverList.builder({
                       "itemCount": 8,
-                      "itemBuilder": "_itemBuilder0",
-                      "factory": "builder"
+                      "itemBuilder": "_itemBuilder0"
                     })
                 }),
               new SliverPadding({
@@ -1114,11 +1141,10 @@ export class SliverDetail {
                     "right": 12.0,
                     "bottom": 0.0
                   },
-                  "sliver": new SliverList({
+                  "sliver": SliverList.separated({
                       "itemCount": 5,
                       "itemBuilder": "_itemBuilder1",
-                      "separatorBuilder": "_separatorBuilder2",
-                      "factory": "separated"
+                      "separatorBuilder": "_separatorBuilder2"
                     })
                 }),
               new SliverPadding({
@@ -1195,7 +1221,7 @@ export class SliverDetail {
                         "right": 12.0,
                         "bottom": 0.0
                       },
-                      "sliver": new SliverGrid({
+                      "sliver": SliverGrid.builder({
                           "gridDelegate": {
                             "maxCrossAxisExtent": 140,
                             "mainAxisSpacing": 8,
@@ -1203,8 +1229,7 @@ export class SliverDetail {
                             "childAspectRatio": 1
                           },
                           "itemCount": 9,
-                          "itemBuilder": "_itemBuilder4",
-                          "factory": "builder"
+                          "itemBuilder": "_itemBuilder4"
                         })
                     })
                 }),
@@ -1366,7 +1391,7 @@ export class GridDetail {
                 }))),
               new Expanded({
                   "flex": 5,
-                  "child": new GridView({
+                  "child": GridView.builder({
                       "controller": this._controller,
                       "gridDelegate": {
                         "crossAxisCount": 3,
@@ -1375,8 +1400,7 @@ export class GridDetail {
                         "childAspectRatio": 1
                       },
                       "itemCount": 30,
-                      "itemBuilder": "_itemBuilder0",
-                      "factory": "builder"
+                      "itemBuilder": "_itemBuilder0"
                     })
                 }),
               (this.__k3 || (this.__k3 = new Padding({
@@ -1396,7 +1420,7 @@ export class GridDetail {
                 }))),
               new Expanded({
                   "flex": 4,
-                  "child": new GridView({
+                  "child": GridView.builder({
                       "gridDelegate": {
                         "maxCrossAxisExtent": 120,
                         "mainAxisSpacing": 8,
@@ -1404,8 +1428,7 @@ export class GridDetail {
                         "childAspectRatio": 1
                       },
                       "itemCount": 20,
-                      "itemBuilder": "_itemBuilder1",
-                      "factory": "builder"
+                      "itemBuilder": "_itemBuilder1"
                     })
                 })
             ]
@@ -1847,7 +1870,7 @@ export class ProgressDetail {
 export class NotifierCard {
   constructor(args) {
     this.props = args || {};
-    this._model = new CounterVm({});
+    this._model = new CounterVm();
   }
   _inc() {
     this._model.inc();
@@ -2204,7 +2227,20 @@ export class PageViewDetail {
           new Row({
               "mainAxisAlignment": "center",
               "children": [
-                ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Container({ "width": 9, "height": 9, "margin": { "left": 4.0, "top": 4.0, "right": 4.0, "bottom": 4.0 }, "decoration": { "shape": "circle", "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd') } })]); } return out; })()
+                ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Container({
+                  "width": 9,
+                  "height": 9,
+                  "margin": {
+                    "left": 4.0,
+                    "top": 4.0,
+                    "right": 4.0,
+                    "bottom": 4.0
+                  },
+                  "decoration": {
+                    "shape": "circle",
+                    "color": ((i == this._page) ? '#673AB7' : '#ffbdbdbd')
+                  }
+                })]); } return out; })()
               ]
             }),
           (this.__k5 || (this.__k5 = new SizedBox({
@@ -2330,7 +2366,11 @@ export class KeyDetail {
                 "fontWeight": "bold"
               }
             }))),
-          ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [new KeyTile({ "index": i, "label": this._names[i] + "（key）", "key": new ValueKey(this._names[i]) })]); } return out; })(),
+          ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [new KeyTile({
+            "index": i,
+            "label": this._names[i] + "（key）",
+            "key": new ValueKey({value: this._names[i]})
+          })]); } return out; })(),
           (this.__k1 || (this.__k1 = new SizedBox({
               "height": 10
             }))),
@@ -2341,7 +2381,10 @@ export class KeyDetail {
                 "fontWeight": "bold"
               }
             }))),
-          ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [new KeyTile({ "index": i, "label": this._names[i] + "（无 key）" })]); } return out; })()
+          ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [new KeyTile({
+            "index": i,
+            "label": this._names[i] + "（无 key）"
+          })]); } return out; })()
         ]
       });
   }
@@ -2355,12 +2398,12 @@ export class KeyDetail {
           new KeyTile({
               "index": 0,
               "label": "A · ObjectKey(字段实例) · 父级已重建 " + this._rebuildSeq + " 次",
-              "key": new ObjectKey(this._stableObj)
+              "key": new ObjectKey({value: this._stableObj})
             }),
           new KeyTile({
               "index": 1,
               "label": "B · ObjectKey(每帧新造 [1]) · 父级已重建 " + this._rebuildSeq + " 次",
-              "key": new ObjectKey([1])
+              "key": new ObjectKey({value: [1]})
             })
         ]
       });
@@ -2377,9 +2420,14 @@ export class KeyDetail {
           "height": 150,
           "child": __h('ListView', {
               "children": [
-                ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [new ListTile({ "dense": true, "title": new Text({ "data": "A 行 " + i }) })]); } return out; })()
+                ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [new ListTile({
+                  "dense": true,
+                  "title": new Text({
+                      "data": "A 行 " + i
+                    })
+                })]); } return out; })()
               ],
-              "key": new PageStorageKey("key-page-a")
+              "key": new PageStorageKey({value: "key-page-a"})
             })
         });
     }
@@ -2387,9 +2435,14 @@ export class KeyDetail {
         "height": 150,
         "child": __h('ListView', {
             "children": [
-              ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [new ListTile({ "dense": true, "title": new Text({ "data": "B 行 " + i }) })]); } return out; })()
+              ...(() => { var out = []; for (let i = 0; (i < 12); (i++)) { out.push.apply(out, [new ListTile({
+                "dense": true,
+                "title": new Text({
+                    "data": "B 行 " + i
+                  })
+              })]); } return out; })()
             ],
-            "key": new PageStorageKey("key-page-b")
+            "key": new PageStorageKey({value: "key-page-b"})
           })
       });
   }
@@ -3024,7 +3077,7 @@ export class ReorderListDetail {
             }),
           new SizedBox({
               "height": 320,
-              "child": new ReorderableListView({
+              "child": ReorderableListView.builder({
                   "scrollController": this._controller,
                   "onReorder": this.__bindFn(1, [], (...__a) => this._onReorder(...__a)),
                   "padding": {
@@ -3034,8 +3087,7 @@ export class ReorderListDetail {
                     "bottom": 0.0
                   },
                   "itemCount": this._items.length,
-                  "itemBuilder": "_itemBuilder0",
-                  "factory": "builder"
+                  "itemBuilder": "_itemBuilder0"
                 })
             })
         ]
@@ -3055,7 +3107,7 @@ export class ReorderListDetail {
                 "data": item
               })
           }),
-        "key": new ValueKey(item)
+        "key": new ValueKey({value: item})
       });
   }
 }
