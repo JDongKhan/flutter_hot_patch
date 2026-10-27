@@ -206,6 +206,14 @@ if (G.kDebugMode) {
   __defineProtoGetter(String.prototype, 'isNotEmpty', function () {
     return this.length > 0;
   });
+  //   - int 的 `isEven` / `isOdd` 是 Dart 的属性（不是方法），JS 数字没有；
+  //     生成器按 Dart 写法一比一产出 `n.isEven`，故按同名同义补 getter。
+  __defineProtoGetter(Number.prototype, 'isEven', function () {
+    return this % 2 === 0;
+  });
+  __defineProtoGetter(Number.prototype, 'isOdd', function () {
+    return this % 2 !== 0;
+  });
   var __compareTo = function (other) {
     return this < other ? -1 : (this > other ? 1 : 0);
   };

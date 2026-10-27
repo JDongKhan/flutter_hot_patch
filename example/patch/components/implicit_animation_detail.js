@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/implicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSlide, Center, Column, Container, Divider, Expanded, Row, SizedBox, Text, TextButton } from '../flutter.js';
+import { AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Center, Column, Container, Divider, Expanded, Row, SizedBox, Text, TextButton } from '../flutter.js';
 
 // 组件 ImplicitAnimationDetail
 export class ImplicitAnimationDetail {
@@ -11,19 +11,22 @@ export class ImplicitAnimationDetail {
     this._big = false;
     this._visible = true;
     this._moved = false;
+    this._sizeExpanded = false;
+    this._slowSize = false;
+    this._switchIndex = 0;
   }
   build(context) {
     return new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          (this.__k9 || (this.__k9 = new Text({
+          (this.__k10 || (this.__k10 = new Text({
               "data": "AnimatedContainer · 尺寸 / 颜色 / 圆角",
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               }
             }))),
-          (this.__k10 || (this.__k10 = new SizedBox({
+          (this.__k11 || (this.__k11 = new SizedBox({
               "height": 10
             }))),
           new Center({
@@ -50,7 +53,7 @@ export class ImplicitAnimationDetail {
                 })
               })
             }),
-          (this.__k10 || (this.__k10 = new SizedBox({
+          (this.__k11 || (this.__k11 = new SizedBox({
               "height": 10
             }))),
           new TextButton({
@@ -61,15 +64,15 @@ export class ImplicitAnimationDetail {
                 "data": this._big ? "收缩到 small" : "放大到 BIG"
               })
             }),
-          (this.__k11 || (this.__k11 = new Divider({}))),
-          (this.__k12 || (this.__k12 = new Text({
+          (this.__k12 || (this.__k12 = new Divider({}))),
+          (this.__k13 || (this.__k13 = new Text({
               "data": "AnimatedOpacity · AnimatedScale · AnimatedRotation · AnimatedSlide",
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               }
             }))),
-          (this.__k10 || (this.__k10 = new SizedBox({
+          (this.__k11 || (this.__k11 = new SizedBox({
               "height": 10
             }))),
           new Row({
@@ -177,7 +180,7 @@ export class ImplicitAnimationDetail {
                   })
               ]
             }),
-          (this.__k10 || (this.__k10 = new SizedBox({
+          (this.__k11 || (this.__k11 = new SizedBox({
               "height": 10
             }))),
           new Row({
@@ -204,15 +207,15 @@ export class ImplicitAnimationDetail {
                   })
               ]
             }),
-          (this.__k11 || (this.__k11 = new Divider({}))),
-          (this.__k13 || (this.__k13 = new Text({
+          (this.__k12 || (this.__k12 = new Divider({}))),
+          (this.__k14 || (this.__k14 = new Text({
               "data": "AnimatedCrossFade · 两子树交叉淡入淡出",
               "style": {
                 "fontSize": 16,
                 "fontWeight": "bold"
               }
             }))),
-          (this.__k10 || (this.__k10 = new SizedBox({
+          (this.__k11 || (this.__k11 = new SizedBox({
               "height": 10
             }))),
           new AnimatedCrossFade({
@@ -265,6 +268,134 @@ export class ImplicitAnimationDetail {
               "child": new Text({
                 "data": this._visible ? "切到 B" : "切回 A"
               })
+            }),
+          (this.__k12 || (this.__k12 = new Divider({}))),
+          (this.__k15 || (this.__k15 = new Text({
+              "data": "AnimatedSize · 子组件尺寸变化时自动补间",
+              "style": {
+                "fontSize": 16,
+                "fontWeight": "bold"
+              }
+            }))),
+          (this.__k11 || (this.__k11 = new SizedBox({
+              "height": 10
+            }))),
+          new Center({
+              "child": new Container({
+                "padding": {
+                  "left": 12.0,
+                  "top": 12.0,
+                  "right": 12.0,
+                  "bottom": 12.0
+                },
+                "decoration": {
+                  "color": Colors.blueGrey.shade50,
+                  "borderRadius": {
+                    "radius": 16.0
+                  },
+                  "border": {
+                    "all": {
+                      "color": Colors.blueGrey.shade200
+                    }
+                  }
+                },
+                "child": new AnimatedSize({
+                  "duration": new Duration({
+                    "milliseconds": this._slowSize ? 1200 : 300
+                  }),
+                  "curve": Curves.easeInOut,
+                  "alignment": "center",
+                  "child": new Container({
+                    "width": this._sizeExpanded ? 240 : 120,
+                    "height": this._sizeExpanded ? 120 : 56,
+                    "alignment": "center",
+                    "decoration": {
+                      "color": (this._sizeExpanded ? Colors.deepPurple : Colors.teal),
+                      "borderRadius": {
+                        "radius": 14.0
+                      }
+                    },
+                    "child": new Text({
+                      "style": {
+                        "color": Colors.white,
+                        "fontWeight": "w600"
+                      },
+                      "data": this._sizeExpanded ? "已展开" : "已收起"
+                    })
+                  })
+                })
+              })
+            }),
+          new Row({
+              "children": [
+                new Expanded({
+                    "child": new TextButton({
+                      "onPressed": this.__bindFn(4, [], () => this.setState(() => {
+                        this._sizeExpanded = (!this._sizeExpanded);
+                      })),
+                      "child": new Text({
+                        "data": this._sizeExpanded ? "收起尺寸" : "展开尺寸"
+                      })
+                    })
+                  }),
+                new Expanded({
+                    "child": new TextButton({
+                      "onPressed": this.__bindFn(5, [], () => this.setState(() => {
+                        this._slowSize = (!this._slowSize);
+                      })),
+                      "child": new Text({
+                        "data": this._slowSize ? "时长切回 300ms" : "时长切到 1200ms"
+                      })
+                    })
+                  })
+              ]
+            }),
+          (this.__k12 || (this.__k12 = new Divider({}))),
+          (this.__k16 || (this.__k16 = new Text({
+              "data": "AnimatedSwitcher · 子组件切换淡入淡出",
+              "style": {
+                "fontSize": 16,
+                "fontWeight": "bold"
+              }
+            }))),
+          (this.__k11 || (this.__k11 = new SizedBox({
+              "height": 10
+            }))),
+          new Center({
+              "child": new AnimatedSwitcher({
+                "duration": (this.__k6 || (this.__k6 = new Duration({
+                  "milliseconds": 450
+                }))),
+                "switchInCurve": Curves.easeOut,
+                "switchOutCurve": Curves.easeIn,
+                "child": new Container({
+                  "width": 160,
+                  "height": 90,
+                  "alignment": "center",
+                  "decoration": {
+                    "color": (this._switchIndex.isEven ? Colors.indigo : Colors.orange),
+                    "borderRadius": {
+                      "radius": 14.0
+                    }
+                  },
+                  "child": new Text({
+                    "style": {
+                      "color": Colors.white,
+                      "fontWeight": "w600"
+                    },
+                    "data": "卡片 " + (this._switchIndex + 1)
+                  }),
+                  "key": new ValueKey({value: this._switchIndex})
+                })
+              })
+            }),
+          new TextButton({
+              "onPressed": this.__bindFn(6, [], () => this.setState(() => {
+                this._switchIndex += 1;
+              })),
+              "child": (this.__k9 || (this.__k9 = new Text({
+                "data": "切换子组件（带 ValueKey）"
+              })))
             })
         ]
       });
