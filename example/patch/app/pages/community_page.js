@@ -596,12 +596,12 @@ export class _PostCard {
                   "borderRadius": {
                     "radius": 10.0
                   },
-                  "child": Image.network({
+                  "child": Image.asset({
                     "width": 92,
                     "height": 92,
                     "fit": "cover",
                     "errorBuilder": "_errorBuilder0",
-                    "src": this.post.img
+                    "name": this.post.img
                   })
                 }),
               (this.__k5 || (this.__k5 = new SizedBox({
@@ -733,10 +733,10 @@ export class _ResourceCard {
             "children": [
               new SizedBox({
                   "height": 68,
-                  "child": Image.network({
+                  "child": Image.asset({
                     "fit": "cover",
                     "errorBuilder": "_errorBuilder0",
-                    "src": this.resource.img
+                    "name": this.resource.img
                   })
                 }),
               new Padding({

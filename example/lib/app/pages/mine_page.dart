@@ -91,7 +91,7 @@ class _MinePageState extends State<MinePage> {
               child: Row(
                 children: [
                   ClipOval(
-                    child: Image.network(
+                    child: Image.asset(
                       feed.avatar,
                       width: 58,
                       height: 58,

@@ -39,3 +39,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # 本地示例图片（替代原先 images.unsplash.com 网络图，避免离线/弱网时加载失败）。
+  assets:
+    - assets/images/

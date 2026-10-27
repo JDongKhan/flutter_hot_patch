@@ -491,8 +491,8 @@ export class SpotCard {
                     "children": [
                       new Image({
                           "fit": "cover",
-                          "factory": "network",
-                          "src": this.spot.img
+                          "factory": "asset",
+                          "name": this.spot.img
                         }),
                       new Positioned({
                           "left": 8,
@@ -625,8 +625,8 @@ export class PromoCard {
               "children": [
                 new Image({
                     "fit": "cover",
-                    "factory": "network",
-                    "src": this.img
+                    "factory": "asset",
+                    "name": this.img
                   }),
                 new Positioned({
                     "left": 16,

@@ -15,11 +15,11 @@ import '../model/app_models.dart';
 
 /// 详情页评论头像（纯展示）。
 const String _avatarImg =
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&q=80';
+    'assets/images/photo-1494790108377-be9c29b29330.jpg';
 
 /// WebView 演示页的占位横幅（纯展示）。
 const String _bannerImg =
-    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1200&h=675&fit=crop&q=80';
+    'assets/images/photo-1519046904884-53103b34b206.jpg';
 
 const Color kBrand = Color(0xFF0E7AFB);
 const Color kPrice = Color(0xFFFF5A36);
@@ -399,7 +399,7 @@ class PostRow extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Image.network(
+            child: Image.asset(
               img,
               width: 86,
               height: 86,
@@ -493,7 +493,7 @@ class SpotDetailPage extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
+                      Image.asset(
                         spot.img,
                         fit: BoxFit.cover,
                         errorBuilder: (_, e, s) =>
@@ -695,7 +695,7 @@ class PostDetailPage extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
+                      Image.asset(
                         post.img,
                         fit: BoxFit.cover,
                         errorBuilder: (_, e, s) =>
@@ -753,7 +753,7 @@ class PostDetailPage extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 19,
-                        backgroundImage: NetworkImage(_avatarImg),
+                        backgroundImage: AssetImage(_avatarImg),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -899,7 +899,7 @@ class ResourceDetailPage extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
+                      Image.asset(
                         resource.img,
                         fit: BoxFit.cover,
                         errorBuilder: (_, e, s) =>
@@ -1046,7 +1046,7 @@ class OrderDetailPage extends StatelessWidget {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
+                            child: Image.asset(
                               order.img,
                               width: 62,
                               height: 62,
@@ -1847,7 +1847,7 @@ class WebViewPage extends StatelessWidget {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
+                        child: Image.asset(
                           _bannerImg,
                           height: 130,
                           width: double.infinity,

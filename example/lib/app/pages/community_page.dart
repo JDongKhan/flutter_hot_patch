@@ -465,7 +465,7 @@ class _ResourceCard extends StatelessWidget {
             SizedBox(
               height: 68,
               width: double.infinity,
-              child: Image.network(
+              child: Image.asset(
                 resource.img,
                 fit: BoxFit.cover,
                 errorBuilder: (_, e, s) =>
@@ -531,7 +531,7 @@ class _PostCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(
+              child: Image.asset(
                 post.img,
                 width: 92,
                 height: 92,

@@ -7,7 +7,7 @@
       "type": "攻略",
       "author": "山野派",
       "time": "2 天前",
-      "img": "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1478131143081-80f7f84ca84d.jpg",
       "like": 2300,
       "tab": "广场"
     },
@@ -18,7 +18,7 @@
       "type": "游记",
       "author": "慢行记",
       "time": "4 天前",
-      "img": "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1523906834658-6e24ef2386f9.jpg",
       "like": 1800,
       "tab": "广场"
     },
@@ -29,7 +29,7 @@
       "type": "榜单",
       "author": "旅拍君",
       "time": "1 周前",
-      "img": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1448375240586-882707db888b.jpg",
       "like": 960,
       "tab": "广场"
     },
@@ -40,7 +40,7 @@
       "type": "攻略",
       "author": "露营实验室",
       "time": "3 天前",
-      "img": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1470770841072-f978cf4d019e.jpg",
       "like": 1420,
       "tab": "广场"
     },
@@ -51,7 +51,7 @@
       "type": "游记",
       "author": "周末出发",
       "time": "5 天前",
-      "img": "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1449965408869-eaa3f722e40d.jpg",
       "like": 1180,
       "tab": "广场"
     },
@@ -62,7 +62,7 @@
       "type": "榜单",
       "author": "江南笔记",
       "time": "6 天前",
-      "img": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1501785888041-af3ef285b470.jpg",
       "like": 2040,
       "tab": "广场"
     },
@@ -73,7 +73,7 @@
       "type": "游记",
       "author": "编辑部",
       "time": "今天",
-      "img": "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1519681393784-d120267933ba.jpg",
       "like": 3120,
       "tab": "推荐"
     },
@@ -84,7 +84,7 @@
       "type": "榜单",
       "author": "遛娃手册",
       "time": "1 天前",
-      "img": "https://images.unsplash.com/photo-1566140967404-b8b3932483f5?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1566140967404-b8b3932483f5.jpg",
       "like": 2760,
       "tab": "推荐"
     },
@@ -95,7 +95,7 @@
       "type": "攻略",
       "author": "独行侠阿远",
       "time": "2 天前",
-      "img": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1464822759023-fed622ff2c3b.jpg",
       "like": 2540,
       "tab": "推荐"
     }

@@ -227,12 +227,12 @@ export class _OrderCard {
                           "borderRadius": {
                             "radius": 10.0
                           },
-                          "child": Image.network({
+                          "child": Image.asset({
                             "width": 66,
                             "height": 66,
                             "fit": "cover",
                             "errorBuilder": "_errorBuilder0",
-                            "src": this.order.img
+                            "name": this.order.img
                           })
                         }),
                       (this.__k4 || (this.__k4 = new SizedBox({

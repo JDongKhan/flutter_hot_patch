@@ -75,12 +75,12 @@ export class MinePage {
                   "child": new Row({
                     "children": [
                       new ClipOval({
-                          "child": Image.network({
+                          "child": Image.asset({
                             "width": 58,
                             "height": 58,
                             "fit": "cover",
                             "errorBuilder": "_errorBuilder0",
-                            "src": this._feed.avatar
+                            "name": this._feed.avatar
                           })
                         }),
                       (this.__k1 || (this.__k1 = new SizedBox({

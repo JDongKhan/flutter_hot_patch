@@ -5,7 +5,7 @@
       "status": "待付款",
       "title": "海岛三日游 · 2 人",
       "spec": "2026-10-20 出发 · 含机酒",
-      "img": "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1499793983690-e29da59ef1c2.jpg",
       "price": 2560,
       "step": 0
     },
@@ -14,7 +14,7 @@
       "status": "已完成",
       "title": "古镇自由行 · 1 人",
       "spec": "2026-09-28 出发 · 含民宿",
-      "img": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1516483638261-f4dbaf036963.jpg",
       "price": 860,
       "step": 3
     },
@@ -23,7 +23,7 @@
       "status": "待收货",
       "title": "草原自驾套餐",
       "spec": "2026-10-15 出发 · 含租车",
-      "img": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1464822759023-fed622ff2c3b.jpg",
       "price": 1520,
       "step": 2
     },
@@ -32,7 +32,7 @@
       "status": "待发货",
       "title": "雪乡温泉 · 2 人",
       "spec": "2026-11-02 出发 · 含温泉",
-      "img": "https://images.unsplash.com/photo-1483664852095-d6cc6870702d?w=400&h=400&fit=crop&q=80",
+      "img": "assets/images/photo-1483664852095-d6cc6870702d.jpg",
       "price": 3960,
       "step": 1
     }

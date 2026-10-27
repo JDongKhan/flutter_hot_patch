@@ -160,8 +160,8 @@ export class BannerSlide {
               "children": [
                 new Image({
                     "fit": "cover",
-                    "factory": "network",
-                    "src": this.banner.img
+                    "factory": "asset",
+                    "name": this.banner.img
                   }),
                 new Container({
                     "decoration": {

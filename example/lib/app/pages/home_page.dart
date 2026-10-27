@@ -435,7 +435,7 @@ class SpotCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(spot.img, fit: BoxFit.cover),
+                  Image.asset(spot.img, fit: BoxFit.cover),
                   Positioned(
                     left: 8,
                     top: 8,
@@ -549,7 +549,7 @@ class PromoCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.network(img, fit: BoxFit.cover),
+              Image.asset(img, fit: BoxFit.cover),
               Positioned(
                 left: 16,
                 top: 22,

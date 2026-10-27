@@ -12,20 +12,20 @@
   "cities": [
     {
       "name": "上海",
-      "adImg": "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=1200&h=675&fit=crop&q=80",
+      "adImg": "assets/images/photo-1530789253388-582c481c54b0.jpg",
       "banners": [
         {
-          "img": "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1519046904884-53103b34b206.jpg",
           "title": "海岛季 · 早鸟立减 300",
           "sub": "10月出行专属优惠"
         },
         {
-          "img": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1470770841072-f978cf4d019e.jpg",
           "title": "雪山湖泊 6 日环线",
           "sub": "含全程住宿与向导"
         },
         {
-          "img": "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1523906834658-6e24ef2386f9.jpg",
           "title": "江南水乡夜游船票",
           "sub": "限时 8 折，可随时退"
         }
@@ -37,7 +37,7 @@
           "sub": "含往返机票 · 4星海景房",
           "sold": "2.3k 人已订",
           "tag": "热销",
-          "img": "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1499793983690-e29da59ef1c2.jpg",
           "desc": "湛蓝海水与细软白沙滩，行程含出海浮潜、日落巡航与海鲜大餐，适合情侣与家庭出行。",
           "price": 1280,
           "tags": ["含机票", "含2晚酒店", "中文导游", "免费退改"]
@@ -48,7 +48,7 @@
           "sub": "慢游水乡 · 精品民宿",
           "sold": "1.1k 人已订",
           "tag": "慢游",
-          "img": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1516483638261-f4dbaf036963.jpg",
           "desc": "青石板路、枕水人家。清晨的薄雾与傍晚的灯笼，是这座古镇最好的两个时刻。",
           "price": 860,
           "tags": ["含1晚民宿", "含早餐", "可选接驳", "自由行程"]
@@ -59,7 +59,7 @@
           "sub": "越野穿越 · 5日行程",
           "sold": "860 人已订",
           "tag": "自驾",
-          "img": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1500530855697-b586d89ba3ee.jpg",
           "desc": "沿草原天路一路向北，途经牧场、湖泊与白桦林，5天4晚深度穿越。",
           "price": 1520,
           "tags": ["含租车", "含油费", "车队领航", "含保险"]
@@ -70,7 +70,7 @@
           "sub": "雪景温泉 · 亲子首选",
           "sold": "640 人已订",
           "tag": "温泉",
-          "img": "https://images.unsplash.com/photo-1483664852095-d6cc6870702d?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1483664852095-d6cc6870702d.jpg",
           "desc": "雪蘑菇屋顶与露天温泉的组合，夜里零下二十度泡汤看星空，是冬天的限定体验。",
           "price": 1980,
           "tags": ["含温泉", "含门票", "亲子房", "含接送"]
@@ -79,20 +79,20 @@
     },
     {
       "name": "北京",
-      "adImg": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=1200&h=675&fit=crop&q=80",
+      "adImg": "assets/images/photo-1508804185872-d7badad00f7d.jpg",
       "banners": [
         {
-          "img": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1508804185872-d7badad00f7d.jpg",
           "title": "故宫深度讲解半日游",
           "sub": "含门票与金牌讲解"
         },
         {
-          "img": "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1547981609-4b6bfe67ca0b.jpg",
           "title": "长城夜游 · 星空专线",
           "sub": "每周五发车，限额 30 人"
         },
         {
-          "img": "https://images.unsplash.com/photo-1519677100203-a0e668c92439?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1519677100203-a0e668c92439.jpg",
           "title": "老北京胡同美食地图",
           "sub": "20 家老字号一次吃遍"
         }
@@ -104,7 +104,7 @@
           "sub": "中轴线 + 东西六宫",
           "sold": "4.6k 人已订",
           "tag": "热门",
-          "img": "https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1584646098378-0874589d76b1.jpg",
           "desc": "由故宫博物院认证讲解员带队，3 小时走完中轴线与东西六宫，含门票免排队入园。",
           "price": 268,
           "tags": ["含门票", "免排队", "专业讲解", "随时退"]
@@ -115,7 +115,7 @@
           "sub": "往返接送 · 索道可选",
           "sold": "2.8k 人已订",
           "tag": "必玩",
-          "img": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1508804185872-d7badad00f7d.jpg",
           "desc": "市区三环内上门接送，慕田峪长城游览 4 小时，索道上下省力，秋季层林尽染。",
           "price": 198,
           "tags": ["含接送", "含门票", "索道可选", "无购物"]
@@ -126,7 +126,7 @@
           "sub": "什刹海 · 8 家老字号",
           "sold": "1.5k 人已订",
           "tag": "美食",
-          "img": "https://images.unsplash.com/photo-1519677100203-a0e668c92439?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1519677100203-a0e668c92439.jpg",
           "desc": "从烟袋斜街走到南锣鼓巷，边走边吃：卤煮、爆肚、豆汁儿与糖葫芦，都是本地人的日常。",
           "price": 158,
           "tags": ["含餐食", "小团 8 人", "本地领队", "含讲解"]
@@ -135,20 +135,20 @@
     },
     {
       "name": "成都",
-      "adImg": "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=1200&h=675&fit=crop&q=80",
+      "adImg": "assets/images/photo-1547981609-4b6bfe67ca0b.jpg",
       "banners": [
         {
-          "img": "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1547981609-4b6bfe67ca0b.jpg",
           "title": "熊猫基地早鸟票",
           "sub": "开园直达 · 免排队"
         },
         {
-          "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1470071459604-3b5ec3a7fe05.jpg",
           "title": "川西环线 4 日游",
           "sub": "雪山 · 草原 · 藏寨"
         },
         {
-          "img": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1514933651103-005eec06c04b.jpg",
           "title": "火锅地图 · 本地人推荐",
           "sub": "12 家排队王"
         }
@@ -160,7 +160,7 @@
           "sub": "早班车 · 开园即入园",
           "sold": "5.2k 人已订",
           "tag": "亲子",
-          "img": "https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1564349683136-77e08dba1ef7.jpg",
           "desc": "7:30 开园就入园，是熊猫最活跃的时段。含往返车与园区讲解，适合带娃出行。",
           "price": 168,
           "tags": ["含往返车", "含门票", "早班车", "亲子友好"]
@@ -171,7 +171,7 @@
           "sub": "一日双景 · 含索道",
           "sold": "1.9k 人已订",
           "tag": "必玩",
-          "img": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1470071459604-3b5ec3a7fe05.jpg",
           "desc": "上午看都江堰水利工程，下午登青城山，含往返车与门票，节奏轻松不赶。",
           "price": 288,
           "tags": ["含门票", "含往返车", "含索道", "无购物"]
@@ -182,7 +182,7 @@
           "sub": "盖碗茶 · 川剧变脸",
           "sold": "1.2k 人已订",
           "tag": "夜间",
-          "img": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1514933651103-005eec06c04b.jpg",
           "desc": "晚上七点开场的川剧变脸，含盖碗茶与小吃拼盘，散场后正好逛宽窄巷子的夜景。",
           "price": 128,
           "tags": ["含演出票", "含茶点", "小剧场", "可改期"]
@@ -191,20 +191,20 @@
     },
     {
       "name": "杭州",
-      "adImg": "https://images.unsplash.com/photo-1598880940080-ff9a2982723c?w=1200&h=675&fit=crop&q=80",
+      "adImg": "assets/images/photo-1598880940080-ff9a2982723c.jpg",
       "banners": [
         {
-          "img": "https://images.unsplash.com/photo-1598880940080-ff9a2982723c?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1598880940080-ff9a2982723c.jpg",
           "title": "西湖游船 · 三潭印月",
           "sub": "含船票与讲解"
         },
         {
-          "img": "https://images.unsplash.com/photo-1545048702-79362596cdc9?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1545048702-79362596cdc9.jpg",
           "title": "龙井茶山徒步",
           "sub": "采茶体验 · 半日往返"
         },
         {
-          "img": "https://images.unsplash.com/photo-1470004914212-05527e49370b?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1470004914212-05527e49370b.jpg",
           "title": "宋城千古情",
           "sub": "VIP 席位立减 80"
         }
@@ -216,7 +216,7 @@
           "sub": "三潭印月 · 含船夫",
           "sold": "3.4k 人已订",
           "tag": "经典",
-          "img": "https://images.unsplash.com/photo-1598880940080-ff9a2982723c?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1598880940080-ff9a2982723c.jpg",
           "desc": "从花港观鱼上船，绕三潭印月一圈，船夫会讲西湖的老故事，傍晚光线最好。",
           "price": 220,
           "tags": ["含船票", "含讲解", "1 小时", "可拼船"]
@@ -227,7 +227,7 @@
           "sub": "采茶炒茶 · 赠茶礼",
           "sold": "1.6k 人已订",
           "tag": "体验",
-          "img": "https://images.unsplash.com/photo-1545048702-79362596cdc9?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1545048702-79362596cdc9.jpg",
           "desc": "跟着茶农上山采一捧明前茶，回作坊看手工炒制，最后带走一小罐自采茶叶。",
           "price": 180,
           "tags": ["含体验", "赠茶礼", "半日", "亲子可参与"]
@@ -238,7 +238,7 @@
           "sub": "VIP 席位 · 含入园",
           "sold": "2.1k 人已订",
           "tag": "演出",
-          "img": "https://images.unsplash.com/photo-1470004914212-05527e49370b?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1470004914212-05527e49370b.jpg",
           "desc": "宋城景区一票通玩，千古情演出可选 VIP 席，提前 40 分钟入场位置更好。",
           "price": 320,
           "tags": ["含入园", "VIP 席位", "可改期", "含演出票"]
@@ -247,20 +247,20 @@
     },
     {
       "name": "西安",
-      "adImg": "https://images.unsplash.com/photo-1599571234909-29ed5d1321d6?w=1200&h=675&fit=crop&q=80",
+      "adImg": "assets/images/photo-1599571234909-29ed5d1321d6.jpg",
       "banners": [
         {
-          "img": "https://images.unsplash.com/photo-1599571234909-29ed5d1321d6?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1599571234909-29ed5d1321d6.jpg",
           "title": "兵马俑深度一日",
           "sub": "含门票 · 专业讲解"
         },
         {
-          "img": "https://images.unsplash.com/photo-1548013146-72479768bada?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1548013146-72479768bada.jpg",
           "title": "城墙骑行 · 落日线",
           "sub": "含单车与夜灯票"
         },
         {
-          "img": "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1552566626-52f8b828add9.jpg",
           "title": "回民街美食通行证",
           "sub": "15 家摊铺一次打卡"
         }
@@ -272,7 +272,7 @@
           "sub": "含门票 · 华清宫",
           "sold": "6.1k 人已订",
           "tag": "必玩",
-          "img": "https://images.unsplash.com/photo-1599571234909-29ed5d1321d6?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1599571234909-29ed5d1321d6.jpg",
           "desc": "一馆二坑三号坑全部走到，讲解员会把每个军阵的排列逻辑讲清楚，返程顺路华清宫。",
           "price": 328,
           "tags": ["含门票", "含讲解", "含往返车", "含午餐"]
@@ -283,7 +283,7 @@
           "sub": "含单车 · 落日观景",
           "sold": "2.4k 人已订",
           "tag": "夜游",
-          "img": "https://images.unsplash.com/photo-1548013146-72479768bada?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1548013146-72479768bada.jpg",
           "desc": "14 公里的完整城墙一圈，傍晚出发边的城墙骑车看落日，天黑后灯笼亮起最好看。",
           "price": 120,
           "tags": ["含单车", "含门票", "2 小时", "可延时"]
@@ -294,7 +294,7 @@
           "sub": "15 家摊铺 · 含小吃",
           "sold": "1.8k 人已订",
           "tag": "美食",
-          "img": "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1552566626-52f8b828add9.jpg",
           "desc": "从北院门走到大皮院，肉夹馍、甑糕、粉蒸肉与柿子饼全都安排上，小团 6 人。",
           "price": 148,
           "tags": ["含小吃", "小团 6 人", "本地领队", "含讲解"]
@@ -303,20 +303,20 @@
     },
     {
       "name": "三亚",
-      "adImg": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=675&fit=crop&q=80",
+      "adImg": "assets/images/photo-1507525428034-b723cf961d3e.jpg",
       "banners": [
         {
-          "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1507525428034-b723cf961d3e.jpg",
           "title": "亚龙湾海景房 · 立减 500",
           "sub": "含双早与沙滩躺椅"
         },
         {
-          "img": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1500375592092-40eb2168fd21.jpg",
           "title": "蜈支洲岛一日",
           "sub": "含往返船票与浮潜"
         },
         {
-          "img": "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=1200&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1519046904884-53103b34b206.jpg",
           "title": "出海落日巡航",
           "sub": "含晚餐与演出"
         }
@@ -328,7 +328,7 @@
           "sub": "含船票 · 全套装备",
           "sold": "3.9k 人已订",
           "tag": "海岛",
-          "img": "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1500375592092-40eb2168fd21.jpg",
           "desc": "中国最好的浮潜水域之一，能见度常年 10 米以上，含往返船票与全套浮潜装备。",
           "price": 460,
           "tags": ["含船票", "含装备", "含教练", "可改期"]
@@ -339,7 +339,7 @@
           "sub": "含晚餐 · 现场演出",
           "sold": "2.2k 人已订",
           "tag": "夜间",
-          "img": "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1519046904884-53103b34b206.jpg",
           "desc": "下午五点出海，看完落日在船上吃海鲜晚餐，返程有现场乐队，适合情侣。",
           "price": 380,
           "tags": ["含晚餐", "含演出", "3 小时", "可改期"]
@@ -350,7 +350,7 @@
           "sub": "含躺椅 · 儿童乐园",
           "sold": "1.7k 人已订",
           "tag": "亲子",
-          "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&h=675&fit=crop&q=80",
+          "img": "assets/images/photo-1507525428034-b723cf961d3e.jpg",
           "desc": "亚龙湾沙质最细的一段，含遮阳躺椅与饮品，旁边就是儿童戏水乐园，带娃很省心。",
           "price": 260,
           "tags": ["含躺椅", "含饮品", "亲子友好", "随时退"]
