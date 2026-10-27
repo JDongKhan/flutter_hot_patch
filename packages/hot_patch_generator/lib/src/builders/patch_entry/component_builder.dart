@@ -20,6 +20,7 @@ import 'analysis/singleton_support.dart';
 import 'class_info.dart';
 import 'translator/dart2js.dart';
 import 'translator/widget2js.dart';
+import '../shared/artifact_protocol.dart';
 import '../shared/js_widget_defs.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
@@ -180,7 +181,8 @@ class ComponentBuilder implements Builder {
         imports: _importLines(importByFile, ownProduct),
       );
       if (text.isEmpty) return;
-      await buildStep.writeAsString(buildStep.allowedOutputs.first, text);
+      await buildStep.writeAsString(
+          buildStep.allowedOutputs.first, withProtocolHeader(text));
       return;
     }
 
@@ -341,7 +343,7 @@ class ComponentBuilder implements Builder {
     final jsOutput = buildStep.allowedOutputs.first;
     await buildStep.writeAsString(
       jsOutput,
-      _renderJsProduct(
+      withProtocolHeader(_renderJsProduct(
         inputId.path,
         exportedClasses: exportedClasses,
         inlineClasses: inlineClasses.values.toList(),
@@ -352,7 +354,7 @@ class ComponentBuilder implements Builder {
         extraUsedWidgets: extraUsedWidgets,
         extraUsedNodeHelper: allTranslated.any((c) => c.usedNodeHelper),
         importResolver: importResolver,
-      ),
+      )),
     );
   }
 }

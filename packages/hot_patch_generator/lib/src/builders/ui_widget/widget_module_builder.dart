@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:build/build.dart';
 
+import '../shared/artifact_protocol.dart';
 import '../shared/color_constants.dart';
 import '../shared/ctor_signatures.dart';
 import '../shared/js_widget_defs.dart';
@@ -58,7 +59,8 @@ class WidgetModuleBuilder implements Builder {
       final pkg = segs[1].substring(0, segs[1].length - '.js'.length);
       await buildStep.writeAsString(
         out,
-        renderPackageModule(pkg, packages[pkg] ?? const <String>{}),
+        withProtocolHeader(
+            renderPackageModule(pkg, packages[pkg] ?? const <String>{})),
       );
     }
   }
