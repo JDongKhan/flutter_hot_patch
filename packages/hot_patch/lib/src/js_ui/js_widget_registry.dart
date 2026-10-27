@@ -574,6 +574,17 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     ),
   );
 
+  // ColorFiltered：`colorFilter` 值走 colorFilterFromJson（mode / matrix /
+  // gamma）；读不出时用「无效果」滤镜，保证子树仍按原样渲染。
+  r.register(
+    'ColorFiltered',
+    (c) => ColorFiltered(
+      colorFilter: colorFilterFromJson(c.props['colorFilter']) ??
+          const ColorFilter.mode(Color(0x00000000), BlendMode.dst),
+      child: (c.children['child'] as Widget?),
+    ),
+  );
+
   r.register(
     'Material',
     (c) => Material(

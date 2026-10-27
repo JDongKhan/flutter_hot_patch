@@ -265,6 +265,12 @@ export class ClipRRect {
   }
 }
 
+export class ColorFiltered {
+  constructor(props) {
+    return __h('ColorFiltered', props);
+  }
+}
+
 export class Column {
   constructor(props) {
     return __h('Column', props);

@@ -746,6 +746,46 @@ Map<String, dynamic>? gradientToJson(
   return map['colors'] == null ? null : map;
 }
 
+/// `ColorFilter.mode(color, blendMode)` / `ColorFilter.matrix(List<double>)` /
+/// ColorFilter.linearToSrgbGamma() / ColorFilter.srgbToLinearGamma() → JSON。
+///
+/// 形态与运行时 `colorFilterFromJson` 对齐：
+///   {kind:'mode', color, blendMode}；
+///   {kind:'matrix', matrix:[20 个 JS 数字]}（矩阵必须是 20 项，否则不翻译）；
+///   {kind:'linearToSrgbGamma'} / {kind:'srgbToLinearGamma'}。
+Map<String, dynamic>? colorFilterToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  final pos = args.whereType<Expression>().toList();
+  switch (ctor) {
+    case 'mode':
+      if (pos.length < 2) return null;
+      final color = translateColor(pos[0], ctx);
+      final blend = blendModeToJson(pos[1]);
+      if (color == null || blend == null) return null;
+      return {'kind': ctx.jsString('mode'), 'color': color, 'blendMode': blend};
+    case 'matrix':
+      if (pos.isEmpty || pos.first is! ListLiteral) return null;
+      final matrix = <String>[];
+      for (final el in (pos.first as ListLiteral).elements) {
+        if (el is! Expression) continue;
+        final n = numLiteralJs(el);
+        if (n == null) return null;
+        matrix.add(n);
+      }
+      if (matrix.length != 20) return null;
+      return {'kind': ctx.jsString('matrix'), 'matrix': matrix};
+    case 'linearToSrgbGamma':
+      return {'kind': ctx.jsString('linearToSrgbGamma')};
+    case 'srgbToLinearGamma':
+      return {'kind': ctx.jsString('srgbToLinearGamma')};
+  }
+  return null;
+}
+
 /// DecorationImage(image: NetworkImage/AssetImage(...), fit:) → {source, fit}。
 Map<String, dynamic>? decorationImageToJson(
   Expression? expr,

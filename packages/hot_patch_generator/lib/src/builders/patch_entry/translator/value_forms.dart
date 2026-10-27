@@ -53,6 +53,8 @@ final Map<String, ValueConverter> _ctorConverters = {
   'RadialGradient': (e, c) => gradientToJson(e, c),
   'SweepGradient': (e, c) => gradientToJson(e, c),
   'DecorationImage': (e, c) => decorationImageToJson(e, c),
+  // 颜色滤镜（ColorFiltered.colorFilter）：{kind:'mode'|'matrix', …}。
+  'ColorFilter': (e, c) => colorFilterToJson(e, c),
   // 形状
   'RoundedRectangleBorder': (e, c) => shapeToJson(e, c),
   'CircleBorder': (e, c) => shapeToJson(e, c),

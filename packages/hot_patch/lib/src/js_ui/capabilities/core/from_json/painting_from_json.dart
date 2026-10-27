@@ -5,6 +5,39 @@ import 'package:flutter/material.dart';
 
 import 'dart_values_from_json.dart';
 import 'layout_from_json.dart';
+import 'widget_enum_from_json.dart';
+
+/// JSON → ColorFilter（{kind:'mode', color, blendMode} /
+/// {kind:'matrix', matrix:[20 个数字]} / {kind:'linearToSrgbGamma'} /
+/// {kind:'srgbToLinearGamma'}）。
+///
+/// 矩阵长度必须为 20（Flutter 侧矩阵滤镜的硬约束），不满足时返回 null，
+/// 由调用方决定降级方式。
+ColorFilter? colorFilterFromJson(Object? v) {
+  if (v is! Map) return null;
+  switch ('${v['kind']}') {
+    case 'mode':
+      final color = colorFromJson(v['color']);
+      final mode = blendModeFromJson(v['blendMode']);
+      if (color == null || mode == null) return null;
+      return ColorFilter.mode(color, mode);
+    case 'matrix':
+      final raw = v['matrix'];
+      if (raw is! List || raw.length != 20) return null;
+      final matrix = <double>[];
+      for (final e in raw) {
+        final n = e is num ? e.toDouble() : double.tryParse('$e');
+        if (n == null) return null;
+        matrix.add(n);
+      }
+      return ColorFilter.matrix(matrix);
+    case 'linearToSrgbGamma':
+      return const ColorFilter.linearToSrgbGamma();
+    case 'srgbToLinearGamma':
+      return const ColorFilter.srgbToLinearGamma();
+  }
+  return null;
+}
 
 /// JSON → BorderSide（{'color':..,'width':..,'style':..}）。
 BorderSide? borderSideFromJson(Object? v) {

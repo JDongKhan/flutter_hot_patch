@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 import 'animated_list_detail.dart';
 import 'automatic_keep_alive_detail.dart';
+import 'color_filtered_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -28,7 +29,10 @@ class WidgetShowcase extends StatelessWidget {
       ),
     ]),
     _Group('图片图标', [_Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail')]),
-    _Group('容器装饰', [_Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail')]),
+    _Group('容器装饰', [
+      _Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail'),
+      _Entry('ColorFiltered', '颜色滤镜：mode(multiply/modulate) 与 20 项矩阵灰度', 'ColorFilteredDetail'),
+    ]),
     _Group('列表滚动', [
       _Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail'),
       _Entry('AnimatedList', '增删补间：GlobalKey.currentState 的 insertItem / removeItem', 'AnimatedListDetail'),
@@ -136,6 +140,7 @@ class WidgetDetailPage extends StatelessWidget {
   static const Map<String, String> _jsEntries = {
     'AnimatedListDetail': 'components/animated_list_detail.js',
     'AutomaticKeepAliveDetail': 'components/automatic_keep_alive_detail.js',
+    'ColorFilteredDetail': 'components/color_filtered_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -157,6 +162,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ScrollDetail' => const ScrollDetail(),
       'AnimatedListDetail' => const AnimatedListDetail(),
       'AutomaticKeepAliveDetail' => const AutomaticKeepAliveDetail(),
+      'ColorFilteredDetail' => const ColorFilteredDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
