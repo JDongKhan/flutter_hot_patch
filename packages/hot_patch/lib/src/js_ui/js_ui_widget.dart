@@ -253,14 +253,21 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 记录进入过页面：只有 mount 成功过才有「进入 / 销毁」两端可比对。
     final wasMounted = _jsMounted;
     _jsMounted = false;
-    // 顺序很关键：**先比对，后兜底**。
+    // 顺序很关键：
     //   1) disposeRoot：只走正常卸载（组件逐实例释放自己持有的句柄）；
-    //   2) 快照比对：此时残留的才是真泄漏，可观测；
-    //   3) sweepPage / dropPageEntries：把本页**全部**残留静默清干净，作为
+    //   2) 宿主自身簿记清理（store / 页面锚点）：这些是 dispose **必定**会摘的
+    //      基础设施，不属于被登记对象的生命周期，先摘掉，避免被当成残留误报；
+    //   3) 快照比对：此时残留的才是真泄漏，可观测；
+    //   4) sweepPage / dropPageEntries：把本页**全部**对象残留静默清干净，作为
     //      「页面退出即释放」的兜底，因此同一页面挂载多少次都不会累积。
     _manager.evaluate(
       'if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});',
     );
+    // 注销页面锚点（根组件的 `this.context` 用它反查真值 BuildContext）：属于
+    // 页面簿记，dispose 后必然失效，先摘除。
+    unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
+    // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
+    jsUiPageStores.remove(_pageKey);
     if (kDebugMode && wasMounted) {
       JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
     }
@@ -275,10 +282,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
     JsBindingCache.instance.dropPageEntries(_pageKey);
     // 页面级兜底：本页登记、但 JS 侧已不存在的跨语言句柄（如 JS 侧先丢引用）。
     releasePageHandles(_pageKey);
-    // 注销页面锚点（根组件的 `this.context` 用它反查真值 BuildContext）。
-    unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
-    // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
-    jsUiPageStores.remove(_pageKey);
     // 页面名登记随之注销（与 jsUiPageStores 的按页清理同款）——放在 reportLeaks
     // 之后，保证本页最后一条日志仍然显示组件类名；不注销该表会无界增长。
     LeakStats.unregisterPage(_pageKey);

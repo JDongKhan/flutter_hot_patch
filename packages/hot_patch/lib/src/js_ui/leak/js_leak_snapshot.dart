@@ -4,7 +4,6 @@ import '../../services/js_runtime_manager.dart';
 import '../../utils/hot_patch_log.dart';
 import '../capabilities/core/binding_cache.dart';
 import '../capabilities/core/handle_registry.dart';
-import '../js_ui_store.dart';
 import 'leak_stats.dart';
 
 /// 双端泄漏观测（debug 工具）：页面**进入**与**销毁**两端各对双端缓存取一次
@@ -113,8 +112,6 @@ class JsLeakSnapshot {
       // 索引里但 JS 已释放的条目属旅程中，不报。
       'handle.pageHandles':
           pageHandleIds.where(handleIds.contains).length,
-      // 本页 store 是否仍在登记表里（页面已摘除；仍在即页面路由未清）。
-      'pageStores': jsUiPageStores.containsKey(pageKey) ? 1 : 0,
       // 绑定缓存：本页登记过、销毁后仍留在缓存里的条目（按桶名统计，桶名即
       // kind / 存储分组，见 binding_cache.dart）。同样排除旅程中条目。
       ...cache.pageCounts(pageKey, liveHandleIds: handleIds),
@@ -244,7 +241,7 @@ class JsLeakSnapshot {
     }
     // ---- Dart 端（条目自带页面归属：兄弟实例活着的对象不参与判定）----
     for (final e in dartTables.entries) {
-      if (e.value > 0) leaks.add('疑似泄漏（Dart 表残留 ${e.value} 项）：${e.key}');
+      if (e.value > 0) leaks.add('疑似泄漏（Dart 表）：${e.key} ×${e.value}');
     }
     if (leaks.isNotEmpty) {
       // 明细：把本页仍留在绑定缓存里的条目逐条列出（id / kind / scope / 存活 /
