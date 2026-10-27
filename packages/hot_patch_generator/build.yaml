@@ -34,6 +34,22 @@ builders:
     auto_apply: dependents
     build_to: source
 
+  # 跨包模块 builder：每个**本地依赖包**（path 依赖 / workspace 成员）→ 一个共享
+  # JS 文件 patch/<package>.js，内容是「被项目组件引用到」的该包类（跨包翻译）。
+  # 与 ui_widget 同款输入（包根伪资产 $package$）与同一套包模块路径约定；差别是
+  # 内容需要「被引用」判定 → 走 componentTranslationScope 扫描，输出清单由
+  # localTranslationPackages() 静态推导（无本地依赖包时零产物）。
+  ui_project_module:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["projectModuleBuilder"]
+    # 同 ui_widget：产物清单由 Builder 实例的 buildExtensions getter 推导，
+    # 这里只填一条占位输入键（build_config 要求非空）。
+    build_extensions:
+      "$package$":
+        - "patch/flutter.js"
+    auto_apply: dependents
+    build_to: source
+
   # JS 运行时 builder：把运行时骨架（mini-react / 句柄表 / 各能力片段）写成
   # **一个** patch/runtime.js。区别于 ui_widget：那是「按 package 的组件工厂」，
   # 这是「与组件无关的框架代码」。产物是普通 JS 文件，随补丁包发布；运行时包

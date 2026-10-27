@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 4bf71d12） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 96acd2c4） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '4bf71d12') { return; }
-  G.__jsuiVersion = '4bf71d12';
+  if (G.__jsui && G.__jsuiVersion === '96acd2c4') { return; }
+  G.__jsuiVersion = '96acd2c4';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -493,6 +493,22 @@ if (G.kDebugMode) {
     var snapshot = arr.slice();
     for (var i = 0; i < snapshot.length; i++) { releaseHandle(snapshot[i]); }
     delete pageHandles[pageKey];
+  }
+
+  // 页面退出兜底（宿主在泄漏比对之后显式调用）：把**本页所属的全部句柄**清干净
+  // ——不只 scope=page，任何 scope（instance / local）只要 key===pageKey 都释放。
+  //
+  // 正常路径上组件卸载已逐实例释放（含 __owns / __boundFn），此处只剩「卸载路径
+  // 整段没跑到」的残渣（如孤儿实例、未走到 unmount 的子树、纯本端 fn 句柄）。
+  // 释放幂等、可重复调用，因此页面挂载/卸载多少次都不会累积。
+  // 放在比对之后调用：泄漏仍能被观测到，兜底只负责「退出即清干净」。
+  function sweepPage(pageKey) {
+    releasePageHandles(pageKey);
+    var ids = [];
+    for (var id in handles) {
+      if (handles[id].key === pageKey) { ids.push(id); }
+    }
+    for (var i = 0; i < ids.length; i++) { releaseHandle(ids[i]); }
   }
 
   // 宿主 → JS：按 id 在**本端**真实对象上执行 op（宿主侧句柄注册表经 evaluate
@@ -2063,6 +2079,8 @@ if (G.kDebugMode) {
   function disposeRoot(pageKey) {
     var root = roots[pageKey];
     if (!root) { return; }
+    // 只做正常卸载：组件 dispose 逐实例释放自己持有的句柄。**不做页面兜底**——
+    // 兜底由宿主在泄漏比对之后显式调用 sweepPage，否则会把泄漏一并抹平。
     var prev = activeRoot;
     activeRoot = root;
     try {
@@ -2074,10 +2092,6 @@ if (G.kDebugMode) {
       activeRoot = prev;
     }
     root.inst = null;
-    // 页面退出兜底：统一释放本页面登记的**全部**句柄（控制器 / 函数 / Key /
-    // 对象…，见【4】句柄注册表）——拥有端销毁真实对象，对端丢句柄。组件若已
-    // 在自身 dispose() 里释放，这里幂等。
-    releasePageHandles(pageKey);
     delete roots[pageKey];
   }
 
@@ -3276,6 +3290,7 @@ G.ValueNotifier = ValueNotifier;
     leakSnapshot: leakSnapshot,
     cacheDump: cacheDump,
     setCacheVerbose: setCacheVerbose,
+    sweepPage: sweepPage,
 
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
     // （见 capabilities/core/handle_registry.dart）。

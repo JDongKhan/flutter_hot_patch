@@ -8,11 +8,11 @@
 /// 找不到源码的类返回 null（调用方按 `__pos` 下标兜底并出声），不静默丢弃。
 library;
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:analyzer/dart/ast/ast.dart';
 
+import 'package_sources.dart';
 import 'source_index.dart';
 
 /// 单个构造的形参签名。
@@ -26,105 +26,6 @@ class CtorSignature {
   final Set<String> named;
 
   static const empty = CtorSignature([], {});
-}
-
-/// 包源码根（一个包名 + lib 目录绝对路径）。
-class PackageRoot {
-  const PackageRoot(this.name, this.libDir);
-
-  final String name;
-  final String libDir;
-}
-
-/// Dart 源码包定位：从 `.dart_tool/package_config.json` 读出所有依赖包的 lib 目录。
-///
-/// build_runner 在项目根运行，故从 [Directory.current] 起向上找 package_config。
-class PackageSources {
-  PackageSources._(this.projectName, this.packages);
-
-  /// 当前项目包名（其 lib 目录在索引里优先级最高，同名类以项目为准）。
-  final String projectName;
-  final List<PackageRoot> packages;
-
-  static PackageSources? locate() {
-    // build_runner 的入口脚本位于 `<项目根>/.dart_tool/build/entrypoint/build.dart`，
-    // 比 `Directory.current` 更可靠（隔离区里 current 可能是临时目录）。
-    final starts = <Directory>[];
-    if (Platform.script.scheme == 'file') {
-      try {
-        starts.add(File.fromUri(Platform.script).parent);
-      } catch (_) {}
-    }
-    starts.add(Directory.current);
-    for (final start in starts) {
-      var dir = start;
-      for (var i = 0; i < 6; i++) {
-        final config = File(_join(dir.path, '.dart_tool/package_config.json'));
-        if (config.existsSync()) {
-          return _read(config, dir.path);
-        }
-        if (dir.parent.path == dir.path) break;
-        dir = dir.parent;
-      }
-    }
-    return null;
-  }
-
-  static PackageSources? _read(File config, String projectRoot) {
-    final Map<String, dynamic> json;
-    try {
-      json = jsonDecode(config.readAsStringSync()) as Map<String, dynamic>;
-    } on FormatException {
-      return null;
-    }
-    // rootUri 是相对 **package_config.json 自身**解析的 URI 引用（pub 规范）：
-    // 工作区里 `../packages/hot_patch` 相对 `.dart_tool/` 才是仓库根，
-    // 故基准必须是配置文件 URI，而不是它的上级目录。
-    final base = config.uri;
-    final roots = <PackageRoot>[];
-    var projectName = '';
-    for (final p in (json['packages'] as List<dynamic>? ?? const [])) {
-      if (p is! Map<String, dynamic>) continue;
-      final name = p['name'] as String? ?? '';
-      final rootUri = p['rootUri'] as String? ?? '';
-      if (name.isEmpty || rootUri.isEmpty) continue;
-      final resolved = base.resolve(rootUri.endsWith('/') ? rootUri : '$rootUri/');
-      if (resolved.scheme != 'file') continue;
-      final root = resolved.toFilePath();
-      roots.add(PackageRoot(name, _join(root, 'lib')));
-    }
-    // Dart SDK 与 dart:ui（sky_engine）：`Size` / `Color` / `StateError` 等核心库
-    // 类型不在 package_config 里，按 SDK 路径补充。它们排最后，同名类以项目 /
-    // flutter 包为准。
-    final exe = File(Platform.resolvedExecutable);
-    final dartSdk = exe.parent.parent.path;
-    roots.add(PackageRoot('dart:core', _join(dartSdk, 'lib')));
-    roots.add(PackageRoot(
-      'dart:ui',
-      _join(dartSdk, '../pkg/sky_engine/lib'),
-    ));
-    // 项目自身：package_config 里通常也在，优先扫描（同名类以项目定义为准）。
-    final pubspec = File(_join(projectRoot, 'pubspec.yaml'));
-    if (pubspec.existsSync()) {
-      for (final line in pubspec.readAsLinesSync()) {
-        if (line.startsWith('name:')) {
-          projectName = line.substring(5).trim();
-          break;
-        }
-      }
-    }
-    roots.sort((a, b) {
-      int rank(PackageRoot r) => r.name == projectName
-          ? 0
-          : r.name == 'flutter'
-              ? 1
-              : r.name.startsWith('dart:')
-                  ? 2
-                  : 3;
-      return rank(a).compareTo(rank(b));
-    });
-    return PackageSources._(projectName, roots);
-  }
 }
 
 /// 构造签名索引（进程内单例，按需建立类名 → 源文件索引）。
@@ -288,6 +189,3 @@ class CtorSignatures {
     multiLine: true,
   );
 }
-
-String _join(String a, String b) =>
-    a.endsWith(Platform.pathSeparator) ? '$a$b' : '$a${Platform.pathSeparator}$b';

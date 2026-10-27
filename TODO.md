@@ -3,7 +3,7 @@
 > 本文件集中维护项目的待办任务、实施顺序与暂缓项。
 > 约定：代码里的 TODO 只保留简短指针，详细说明统一放在本文件；每完成一项在此更新状态，待负责人验证通过后再进入下一项。
 >
-> 最后更新：2026-10-22
+> 最后更新：2026-10-27
 
 ## 1. 当前实施顺序（按改动范围从小到大）
 
@@ -19,17 +19,23 @@
 | 8 | 移除方法名映射，改为 JS 原型注入 | 中 | 已完成 | P1-8 | `where/add/removeAt/insert/toList/compareTo/first/last` 原样翻译并通过 demo |
 | 9 | `registerNativeComponent` 支持 children / slots | 中 | 已完成 | P0-4 | 未注册容器组件的子树不再丢失（5f3b5ac） |
 | 10 | `builtinWidgetTypes` 改为直接父类判定 | 中 | 已完成 | P1-9 | 字段 / 依赖判定移除白名单后 demo 产物 JS 无变化（仅 manifest 时间戳） |
+| 11 | 跨包 import 解析 + 跨包翻译 | 中~大 | 待验证 | P1-12 | 新建 `module/hot_module_base` 并迁移 `Network` / `AccountCenter` / `User`；`host_methods.dart` 跨包注册、组件产物跨包 import、`patch/hot_module_base.js` 产出 |
 
 ## 2. 详细 TODO
 
-### 2.1 跨包 import 解析（任务 2）
+### 2.1 跨包 import 解析（任务 11，待验证）
 
-- **现状**：`resolveImportFiles` 在 `lib/src/builders/shared/source_index.dart` 中，把任意 `package:foo/x.dart` 映射成当前包的 `lib/x.dart`。
-- **影响**：跨包共享组件库（如 `package:shared_ui/src/card.dart`）无法进入依赖分析，相关类型只能退回原生注入 / 可见占位。
-- **目标**：读取 `.dart_tool/package_config.json` 的 `rootUri` / `packageUri` 解析真实文件路径；或随 resolved AST 一起解决。
-- **入口**：`packages/hot_patch_generator/lib/src/builders/shared/source_index.dart`。
-- **验收**：新建一个本地共享 UI 包并在 `example` 中依赖，`@PatchEntry` 组件 import 其组件后能正常产出 JS、运行时无占位。
-- **备注**：在解析能力就位前，不要在该分支做启发式猜测。
+- **原状**：`resolveImportFiles` 把任意 `package:foo/x.dart` 映射成当前包的 `lib/x.dart`，跨包共享组件库无法进入依赖分析。
+- **已实现**（2026-10-27）：
+  - 新增 `shared/package_sources.dart`：从 `.dart_tool/package_config.json` 解析包名 → lib 目录，区分**本地包**（path 依赖 / workspace 成员，`rootUri` 是相对 URI）与三方宿主包（pub cache）；workspace 下「当前包」由构建入口脚本路径反推。
+  - `shared/source_index.dart`：源文件身份分两种——项目内 `lib/...` 与跨包 `package:<pkg>/<rel>`；`export` 转发（barrel）递归展开（import 目标自身不深入，但其 export 要展开）。
+  - `shared/paths.dart`：跨包源文件 → 包模块产物 `patch/<package>.js`（一个本地依赖包一个文件，避免不同包的 `lib/` 结构互相撞名）。
+  - `ui_host_register`：扫描范围扩到「本包 + 沿 import 可达的本地依赖包文件」，跨包条目用 `package:` URI import，实现跨包 `@HostInjected` 注册。
+  - 新增 `patch_entry/project_module_builder.dart`（builder `ui_project_module`）：把本地依赖包里**被项目组件引用到**的类聚合产出为 `patch/<package>.js`，复用 `componentTranslationScope` 做「被引用」判定。
+  - `component_scope`：把跨包依赖文件纳入依赖图（`parseUnitFile` 直接读盘，非本包资产）。
+- **验收**：新建 `module/hot_module_base`，迁移 `Network`（网络请求）、`AccountCenter`（账号能力，均为 `@HostInjected`）与 `User`（普通模型类）；`example` 改为 `package:hot_module_base/...` 引用。产物可见：`host_methods.dart` 跨包 import 并注册 `getUserName` / `post`；`hello_component.js` 内 `import { User } from '../hot_module_base.js'` 且 `_app_host_.invoke("getUserName")` / `("post")` 调用点保持正确；`patch/hot_module_base.js` 含 `export class User`。macOS 端运行无报错。
+- **未覆盖**：本地依赖包里的顶层常量与静态单例类产物（构建期出声）；跨包文件的增量失效未接入 build_runner 依赖图（改动跨包源码后需 `--delete-conflicting-outputs` 或触碰使用方文件）。
+- **入口**：`packages/hot_patch_generator/lib/src/builders/shared/{package_sources,source_index,paths}.dart`、`patch_entry/project_module_builder.dart`、`ui_host_register/host_register_builder.dart`。
 
 ### 2.2 resolved AST 迁移（架构级，暂不排期）
 

@@ -15,7 +15,7 @@ library;
 
 import 'dart:io';
 
-import 'ctor_signatures.dart';
+import 'package_sources.dart';
 
 /// 宿主已注册的 widget 类型（运行时注册表的镜像，构建期从源码抽取）。
 Set<String> hostWidgetTypes() => _HostTypes.instance.widgets;

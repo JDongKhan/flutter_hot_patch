@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/model/user.dart 自动生成
-// 重新生成：dart run build_runner build
+// 跨包模块（package: hot_module_base）：由 hot_patch_generator 生成
+// 本包内被项目组件引用到的类集中于此文件（跨包翻译）
 
 
 // 模型 User
@@ -13,4 +13,3 @@ export class User {
     this.age = (args && args.age !== undefined) ? args.age : 0;
   }
 }
-

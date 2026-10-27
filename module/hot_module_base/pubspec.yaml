@@ -1,0 +1,13 @@
+name: hot_module_base
+description: "示例 App 的模块化基座包：网络请求与通用工具类的独立 Dart 包（验证跨包翻译）。"
+publish_to: 'none'
+version: 1.0.0
+# 属于仓库根的 pub workspace（见根 pubspec.yaml 的 workspace 列表）。
+resolution: workspace
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  hot_patch_annotations:
+    path: ../../packages/hot_patch_annotations

@@ -10,6 +10,24 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
+import 'package_sources.dart';
+
+/// 源文件身份的两种形态：
+///   - `lib/a/b.dart`：**本项目包内**的包相对路径（顶层数字字面量身份）；
+///   - `package:foo/a/b.dart`：**跨包**源文件身份（本地依赖包里的文件），
+///     由 [PackageSources] 经 `.dart_tool/package_config.json` 定位。
+///
+/// 产物路径（[productPath]）与 import 发射都按这两种身份各自推导。
+bool isPackageIdentity(String path) => path.startsWith('package:');
+
+/// `package:foo/x.dart` → 包名；非跨包身份返回 null。
+String? packageNameOf(String path) {
+  if (!isPackageIdentity(path)) return null;
+  final slash = path.indexOf('/');
+  if (slash <= 'package:'.length) return null;
+  return path.substring('package:'.length, slash);
+}
+
 /// lib 相对路径 → (mtime, CompilationUnit) 进程级备忘。
 ///
 /// 一个组件文件的翻译里，类表（class_table）、@HostInjected 扫描
@@ -22,9 +40,20 @@ import 'package:analyzer/dart/ast/ast.dart';
 /// （AST 本身不可变，同一份内容可安全共享）。
 final Map<String, (DateTime, CompilationUnit)> _unitFileCache = {};
 
-/// 按 lib 相对路径解析 Dart 源文件（带缓存）；文件不存在返回 null。
+/// 源文件身份 → 磁盘绝对路径；定位不到返回 null。
+///
+/// 本项目包内身份（`lib/...`）直接用（构建工作目录即包根）；跨包身份
+/// （`package:foo/x.dart`）经 package_config 里的该包 lib 目录解析。
+String? sourceFileOf(String path) {
+  if (!isPackageIdentity(path)) return path;
+  return PackageSources.instance?.fileOfPackageUri(path);
+}
+
+/// 按源文件身份解析 Dart 源文件（带缓存）；文件不存在返回 null。
 CompilationUnit? parseUnitFile(String path) {
-  final f = File(path);
+  final file = sourceFileOf(path);
+  if (file == null) return null;
+  final f = File(file);
   if (!f.existsSync()) return null;
   final mtime = f.lastModifiedSync();
   final cached = _unitFileCache[path];
@@ -89,45 +118,116 @@ List<MixinDeclaration> resolveMixinDecls(
   ];
 }
 
-/// 组件文件的业务 import → lib 相对 dart 路径列表。
-/// 相对导入优先；package: 跳过 dart:/flutter 与注解包（hot_patch_annotations / generator）。
+/// 不参与翻译的框架包：SDK `flutter` 与运行时 / 注解 / 生成器包——它们的类型
+/// 在 JS 侧另有实现（宿主注册表 / 注入类），源码不需要跨包翻译。
+const Set<String> nonTranslatedPackages = {
+  'flutter',
+  'hot_patch',
+  'hot_patch_annotations',
+  'hot_patch_generator',
+};
+
+/// 组件文件的业务 import → 源文件身份列表（见 [isPackageIdentity]）。
+///
+///   - 相对导入 → 本项目包内身份（`lib/...`）；
+///   - `package:<本项目>/...` → 本项目包内身份（同一份文件，身份必须一致）；
+///   - `package:<本地依赖包>/...` → 跨包身份；**本地包**（path 依赖 / workspace
+///     成员）参与跨包翻译；
+///   - 三方宿主包（pub cache）与框架包跳过：其类型在 JS 侧没有等价实现，
+///     仍走宿主注入 / 原生占位（用到又无法解析的类在翻译期由调用方出声）。
+///
+/// `export` 转发（barrel）**递归展开**：barrel 自身没有声明，其可见符号全在
+/// export 目标里；不展开的话「经 barrel 引用的类」在类表 / 可见性表里查不到
+/// （组件产物会照旧翻译出 `new User(...)` 却没有对应的 JS 类与 import）。
+/// import 目标自身不再作为依赖深入（闭包由调用方逐层展开），但它的 export
+/// 转发同样展开——`import 'package:x/x.dart'`（barrel）是最常见的引用方式。
 List<String> resolveImportFiles(CompilationUnit unit, String sourcePath) {
-  final slash = sourcePath.lastIndexOf('/');
-  final dir = slash >= 0 ? sourcePath.substring(0, slash + 1) : '';
   final out = <String>[];
-  for (final d in unit.directives.whereType<ImportDirective>()) {
-    final uri = d.uri.stringValue;
-    if (uri == null) continue;
-    // 精确匹配：'package:flutter/' 才是 SDK 包，'package:my_app/' 是业务包
-    if (uri.startsWith('package:flutter/') ||
-        uri.startsWith('package:hot_patch_annotations/') ||
-        uri.startsWith('package:hot_patch_generator/') ||
-        uri.startsWith('dart:')) {
-      continue;
+  final visited = <String>{};
+  // 已扫描过 export 的文件（防循环 barrel）。
+  final scanned = <String>{};
+  // 加入一个直接依赖（import / export 目标）；与 followExports 相互递归。
+  late final void Function(String target) addTarget;
+
+  // 展开一个文件的 export 转发链：barrel 自身没有声明，其可见符号全在
+  // export 目标里。import 目标的 export 同样要展开（`import` 一个 barrel
+  // 是常见写法，不展开就查不到经 barrel 暴露的类）。
+  void followExports(CompilationUnit u, String path) {
+    if (!scanned.add(path)) return;
+    for (final uri in _directiveUris(u, isExport: true)) {
+      final target = _resolveDirective(uri, path);
+      if (target != null) addTarget(target);
     }
-    if (uri.startsWith('package:')) {
-      // TODO(cross-package-import): 见 TODO.md「2.1 跨包 import 解析」。
-      final idx = uri.indexOf('/');
-      if (idx <= 0 || idx >= uri.length - 1) continue;
-      final rel = uri.substring(idx + 1);
-      if (rel.endsWith('.dart')) out.add('lib/$rel');
-      continue;
-    }
-    final rel = _relativeToLib(uri, dir);
-    if (rel != null && rel.endsWith('.dart')) out.add('lib/$rel');
+  }
+
+  // import 目标：直接依赖，本层不深入（依赖闭包由调用方逐层展开），
+  // 但其 export 转发要展开。
+  addTarget = (target) {
+    if (!visited.add(target)) return;
+    out.add(target);
+    final t = parseUnitFile(target);
+    if (t != null) followExports(t, target);
+  };
+
+  for (final uri in _directiveUris(unit, isExport: false)) {
+    final target = _resolveDirective(uri, sourcePath);
+    if (target != null) addTarget(target);
+  }
+  followExports(unit, sourcePath);
+  return out;
+}
+
+/// 本文件的 import（[isExport] 为 false）或 export（true）目标 URI。
+List<String> _directiveUris(CompilationUnit unit, {required bool isExport}) {
+  final out = <String>[];
+  for (final d in unit.directives) {
+    if (isExport ? d is! ExportDirective : d is! ImportDirective) continue;
+    final uri = (d as NamespaceDirective).uri.stringValue;
+    if (uri != null) out.add(uri);
   }
   return out;
 }
 
-/// 相对导入 uri（'foo.dart' / './foo.dart' / '../x.dart'）→ lib 相对路径。
-String? _relativeToLib(String uri, String dir) {
-  // 目录按 '/' 拆成**逐级** segment，`..` 才能一级一级回退
-  // （否则 'lib/app/pages/' 会整段算作一个 segment，`..` 一次删掉 'app/pages'）。
-  final segments = <String>[];
-  final base = dir.startsWith('lib/') ? dir.substring('lib/'.length) : dir;
-  for (final s in base.split('/')) {
-    if (s.isNotEmpty) segments.add(s);
+/// import / export URI → 源文件身份；不参与翻译的（`dart:` / 框架包 / 三方
+/// 宿主包 / 非法 URI）返回 null。
+String? _resolveDirective(String uri, String sourcePath) {
+  if (uri.startsWith('dart:')) return null;
+  if (uri.startsWith('package:')) {
+    final idx = uri.indexOf('/');
+    if (idx <= 0 || idx >= uri.length - 1) return null;
+    final pkg = uri.substring('package:'.length, idx);
+    if (nonTranslatedPackages.contains(pkg)) return null;
+    final rel = uri.substring(idx + 1);
+    if (!rel.endsWith('.dart')) return null;
+    // 本项目包自身的 `package:` 引用：身份必须与相对导入一致（`lib/...`）。
+    if (pkg == PackageSources.instance?.projectName) return 'lib/$rel';
+    if (PackageSources.instance?.isLocalPackage(pkg) != true) return null;
+    return 'package:$pkg/$rel';
   }
+  return _relativeSource(uri, sourcePath);
+}
+
+/// 相对 URI（`'foo.dart'` / `'./foo.dart'` / `'../x.dart'`）→ 源文件身份。
+///
+/// 本项目包内身份为 `lib/...`，跨包身份为 `package:<pkg>/...`——两者都按
+/// 「目录逐级」回退（`..` 一级一级删，不能把整段目录当一个 segment）。
+String? _relativeSource(String uri, String sourcePath) {
+  var prefix = 'lib/';
+  var rel = sourcePath;
+  if (isPackageIdentity(sourcePath)) {
+    final slash = sourcePath.indexOf('/', 'package:'.length);
+    if (slash <= 0) return null;
+    prefix = sourcePath.substring(0, slash + 1);
+    rel = sourcePath.substring(slash + 1);
+  } else if (rel.startsWith('lib/')) {
+    rel = rel.substring('lib/'.length);
+  }
+  final slash = rel.lastIndexOf('/');
+  final dir = slash >= 0 ? rel.substring(0, slash + 1) : '';
+  final segments = <String>[
+    for (final s in dir.split('/'))
+      if (s.isNotEmpty) s,
+  ];
   for (final part in uri.split('/')) {
     if (part == '.' || part.isEmpty) continue;
     if (part == '..') {
@@ -136,5 +236,6 @@ String? _relativeToLib(String uri, String dir) {
       segments.add(part);
     }
   }
-  return segments.join('/');
+  final path = segments.join('/');
+  return path.endsWith('.dart') ? '$prefix$path' : null;
 }

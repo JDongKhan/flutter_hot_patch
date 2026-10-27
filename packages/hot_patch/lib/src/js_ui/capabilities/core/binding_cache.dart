@@ -273,12 +273,23 @@ class JsBindingCache {
   /// 判据是「本页登记的对象在页面销毁后仍留在缓存里」——不拿全局计数做差分，
   /// 故同屏多实例（兄弟页面的活对象）不会误报；弱引用条目即便目标已被回收，
   /// 只要条目没被 remove 仍然计入（残留本身就是要报的信号：释放路径漏跑了）。
-  Map<String, int> pageCounts(String pageKey) {
+  ///
+  /// [liveHandleIds] 传入 JS 侧销毁瞬间仍存活的句柄 id：宿主 release 消息是异步
+  /// 到达的，「JS 已释放、Dart 侧消息在途」的条目属旅程中，不算泄漏——只有两端
+  /// 都还在的条目才报。`ctx/node` 是宿主自建的 Element 镜像（无对应 JS 句柄），
+  /// 不受该过滤影响。
+  Map<String, int> pageCounts(String pageKey, {Set<String>? liveHandleIds}) {
     final out = <String, int>{};
     for (final e in _buckets.entries) {
       var n = 0;
       for (final b in e.value.values) {
-        if (b.pageKey == pageKey) n += 1;
+        if (b.pageKey != pageKey) continue;
+        if (liveHandleIds != null &&
+            b.bucket != JsBindingBuckets.ctxNode &&
+            !liveHandleIds.contains(b.id)) {
+          continue;
+        }
+        n += 1;
       }
       if (n > 0) out[e.key] = n;
     }
@@ -289,6 +300,22 @@ class JsBindingCache {
   Iterable<JsBinding<Object>> entriesOfPage(String pageKey) => _buckets.values
       .expand((m) => m.values)
       .where((e) => e.pageKey == pageKey);
+
+  /// 泄漏观测后的页面兜底清理：静默摘除**本页登记的全部条目**（跨桶，含
+  /// `ctx/node` 的 Element 镜像；不发 release 消息——对象已由 JS 侧 sweepPage
+  /// 拥有端释放）。页面销毁后调用，返回摘除条数。
+  ///
+  /// 语义就是「页面退出即清干净」：不论本页挂载过几次、卸载路径有没有跑全，
+  /// 只要条目自带本页 pageKey 就会被摘掉，因此不会随进出次数累积。幂等。
+  int dropPageEntries(String pageKey) {
+    var n = 0;
+    for (final entry in _buckets.entries) {
+      final removed = entry.value.length;
+      entry.value.removeWhere((_, b) => b.pageKey == pageKey);
+      n += removed - entry.value.length;
+    }
+    return n;
+  }
 
   /// 当前缓存总量（跨桶条目数）。
   int get totalCount =>

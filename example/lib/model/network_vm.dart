@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
-import '../base/network.dart';
+import 'package:hot_module_base/hot_module_base.dart';
 
 /// @author jd
 class NetworkVm extends ChangeNotifier {

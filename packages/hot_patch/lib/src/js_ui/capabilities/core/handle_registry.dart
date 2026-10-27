@@ -55,7 +55,7 @@ final Map<String, JsHandleKind> _handleKinds = {};
 /// 句柄 id → kind：create 时登记，release 时据此路由到对应描述符。
 final Map<String, String> _handleKindById = {};
 
-/// 句柄 id → pageKey（仅 scope=page 的句柄）：页面销毁时按页兜底回收。
+/// 句柄 id → pageKey（登记时 activeRoot 所属页面）：页面销毁时按页兜底回收。
 final Map<String, String> _handlePageById = {};
 
 /// 注册一个 kind 描述符（幂等覆盖；同名重复注册在 debug 下暴露）。
@@ -141,7 +141,9 @@ void _evalJs(String code) {
 // 每个条目自带 pageKey，故不需要任何额外的归属表）；这里只补一项本注册表专有的
 // 观测量——页面句柄索引是否被兜底回收干净。
 
-/// 本页仍在**页面句柄索引**里的句柄数（`releasePageHandles` 兜底回收后应为 0；
-/// 非 0 说明释放路径整段没跑到，连对象也还在缓存里）。
-int dartPageHandleCount(String pageKey) =>
-    _handlePageById.values.where((k) => k == pageKey).length;
+/// 本页仍在**页面句柄索引**里的句柄 id（观测用：这些 id 若与 JS 侧仍存活的
+/// 句柄取交集非空，说明释放路径整段没跑到，连对象也还在缓存里）。
+List<String> dartPageHandleIds(String pageKey) => [
+      for (final e in _handlePageById.entries)
+        if (e.value == pageKey) e.key,
+    ];

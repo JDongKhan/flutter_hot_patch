@@ -1,8 +1,10 @@
 import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 
 import '../shared/host_injected.dart';
+import '../shared/source_index.dart';
 
 /// 注册目标的默认值：本生成器配套的运行时（hot_patch）自带的注册 API。
 /// 使用方**无需任何配置**即可零配置工作。
@@ -59,39 +61,65 @@ class HostRegisterBuilder implements Builder {
   @override
   Future<void> build(BuildStep buildStep) async {
     final entries = <_HostEntry>[];
+    final queue = <(String, CompilationUnit)>[];
+    final visited = <String>{};
     await for (final id in buildStep.findAssets(_dartSources)) {
       // 跳过自己的产物：它没有注解，读了还会给本步骤凭空添一条自依赖。
       if (id.path == outputPath) continue;
       // readAsString 同时登记依赖：该文件改动会触发本步骤重跑。
       final content = await buildStep.readAsString(id);
-      scanHostMethods(
-        parseString(
-          content: content,
-          throwIfDiagnostics: false,
-          path: id.path,
-        ).unit,
-        (h) {
-          if (!h.usable) {
-            // 与翻译口径一致（都不支持），但不能静默：让使用方看到原因。
-            log.warning('[hot_patch_generator] 跳过 @HostInjected '
-                '${h.targetExpr}（${id.path}）：'
-                '${h.isPrivate ? '私有声明跨库不可见' : '实例方法无法定位宿主实例'}——'
-                '宿主注入只支持 static 方法 / 顶层函数');
-            return;
-          }
-          entries.add(_HostEntry(
-            targetExpr: h.targetExpr,
-            channel: h.channel,
-            sourcePath: id.path,
-          ));
-        },
-      );
+      final unit = parseString(
+        content: content,
+        throwIfDiagnostics: false,
+        path: id.path,
+      ).unit;
+      visited.add(id.path);
+      _scan(unit, id.path, entries);
+      queue.add((id.path, unit));
+    }
+
+    // 跨包（本地依赖包，见 [resolveImportFiles] 的身份约定）：从本包文件的
+    // import 出发逐层解析，把依赖包里声明的 `@HostInjected` 方法一并注册。
+    // 实现留在依赖包，注册点仍然只有这一处；只沿**本地包**展开，三方宿主包与
+    // 框架包不参与（其类型走宿主注册表 / 原生注入）。
+    while (queue.isNotEmpty) {
+      final (path, unit) = queue.removeLast();
+      for (final dep in resolveImportFiles(unit, path)) {
+        if (!isPackageIdentity(dep) || !visited.add(dep)) continue;
+        final depUnit = parseUnitFile(dep);
+        if (depUnit == null) {
+          log.warning('[hot_patch_generator] 无法解析跨包源文件 $dep'
+              '（被 $path 引用）：该文件里的 @HostInjected 不会注册');
+          continue;
+        }
+        _scan(depUnit, dep, entries);
+        queue.add((dep, depUnit));
+      }
     }
 
     await buildStep.writeAsString(
       AssetId(buildStep.inputId.package, outputPath),
       _render(entries),
     );
+  }
+
+  /// 扫描一份源码里的 `@HostInjected` 声明（不支持的目标出声但不静默丢弃）。
+  void _scan(CompilationUnit unit, String sourcePath, List<_HostEntry> entries) {
+    scanHostMethods(unit, (h) {
+      if (!h.usable) {
+        // 与翻译口径一致（都不支持），但不能静默：让使用方看到原因。
+        log.warning('[hot_patch_generator] 跳过 @HostInjected '
+            '${h.targetExpr}（$sourcePath）：'
+            '${h.isPrivate ? '私有声明跨库不可见' : '实例方法无法定位宿主实例'}——'
+            '宿主注入只支持 static 方法 / 顶层函数');
+        return;
+      }
+      entries.add(_HostEntry(
+        targetExpr: h.targetExpr,
+        channel: h.channel,
+        sourcePath: sourcePath,
+      ));
+    });
   }
 
   /// 装配产物：import 运行时库 + 各声明文件，再逐个注册。
@@ -157,8 +185,11 @@ class _HostEntry {
   String get sortKey => '$sourcePath|$targetExpr';
 }
 
-/// 从产物所在目录（`lib/generated/`）指向 [sourcePath] 的相对 import 路径。
+/// 从产物所在目录（`lib/generated/`）指向 [sourcePath] 的 import URI：
+/// 本项目包内的源文件走相对路径；跨包身份（`package:foo/x.dart`）直接用
+/// package URI（跨包文件不在本包 lib 目录下，相对路径无意义）。
 String _relativeImport(String sourcePath) {
+  if (isPackageIdentity(sourcePath)) return sourcePath;
   final from = HostRegisterBuilder.outputPath.split('/')..removeLast();
   final to = sourcePath.split('/');
   var common = 0;

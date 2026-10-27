@@ -209,6 +209,22 @@ const String handleRegistryJsSource = r'''
     delete pageHandles[pageKey];
   }
 
+  // 页面退出兜底（宿主在泄漏比对之后显式调用）：把**本页所属的全部句柄**清干净
+  // ——不只 scope=page，任何 scope（instance / local）只要 key===pageKey 都释放。
+  //
+  // 正常路径上组件卸载已逐实例释放（含 __owns / __boundFn），此处只剩「卸载路径
+  // 整段没跑到」的残渣（如孤儿实例、未走到 unmount 的子树、纯本端 fn 句柄）。
+  // 释放幂等、可重复调用，因此页面挂载/卸载多少次都不会累积。
+  // 放在比对之后调用：泄漏仍能被观测到，兜底只负责「退出即清干净」。
+  function sweepPage(pageKey) {
+    releasePageHandles(pageKey);
+    var ids = [];
+    for (var id in handles) {
+      if (handles[id].key === pageKey) { ids.push(id); }
+    }
+    for (var i = 0; i < ids.length; i++) { releaseHandle(ids[i]); }
+  }
+
   // 宿主 → JS：按 id 在**本端**真实对象上执行 op（宿主侧句柄注册表经 evaluate
   // 调用，见 __jsui.call）。返回结果供宿主回填（Promise 场景）。
   //   invoke：函数句柄调用（args 数组）

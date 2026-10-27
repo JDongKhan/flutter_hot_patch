@@ -43,7 +43,7 @@ typedef TranslationScope = ({
   Map<String, Set<String>> neededClasses,
 });
 
-/// 计算当前包内全部源文件的翻译范围。
+/// 计算当前包内全部源文件（+ 跨包依赖）的翻译范围。
 ///
 /// 每次调用会扫描整包 `lib/**.dart`（`readAsString` 同时登记依赖：被扫描的文件
 /// 改动会触发本步骤重跑），因此调用方应只在确实需要判定时调用——带
@@ -60,12 +60,49 @@ Future<TranslationScope> componentTranslationScope(BuildStep buildStep) async {
       path: id.path,
     ).unit;
   }
+  // 跨包源文件（本地依赖包，见 [resolveImportFiles] 的身份约定）：它们不是本包
+  // 资产，`readAsString` 读不到，直接按 package_config 定位读盘（[parseUnitFile]）。
+  // 一并纳入依赖图后，「经 barrel 引用的跨包模型 / 组件」才能进入类表与可见性表，
+  // 跨包模块（ui_project_module）也正是据此产出 `patch/<package>.js`。
+  for (final file in _crossPackageDeps(units)) {
+    final unit = parseUnitFile(file);
+    if (unit == null) {
+      log.warning('[hot_patch_generator] 无法解析跨包源文件 $file：'
+          '其中的类不会产出（跨包翻译需保证 package_config 里该包可定位）');
+      continue;
+    }
+    units[file] = unit;
+  }
 
   final reachable = _reachableFiles(units);
   return (
     reachableFiles: reachable,
     neededClasses: _neededClasses(units, reachable),
   );
+}
+
+/// 跨包依赖闭包：从项目文件的 import 出发，收集本地依赖包里的源文件身份
+/// （跨包文件自身的 import 继续逐层展开）。
+///
+/// 只收**跨包**文件：项目内文件已由上面的资产扫描读入；三方宿主包与框架包由
+/// [resolveImportFiles] 直接过滤掉（其类型在 JS 侧没有等价实现）。
+Set<String> _crossPackageDeps(Map<String, CompilationUnit> units) {
+  final out = <String>{};
+  final seen = <String>{...units.keys};
+  final queue = <(CompilationUnit, String)>[
+    for (final e in units.entries) (e.value, e.key),
+  ];
+  while (queue.isNotEmpty) {
+    final (unit, path) = queue.removeLast();
+    for (final dep in resolveImportFiles(unit, path)) {
+      if (!seen.add(dep)) continue;
+      if (!isPackageIdentity(dep)) continue; // 项目内文件已读入
+      out.add(dep);
+      final depUnit = parseUnitFile(dep);
+      if (depUnit != null) queue.add((depUnit, dep));
+    }
+  }
+  return out;
 }
 
 /// 文件级可达集合：根文件（有 `@PatchEntry` 类）+ 沿 import 链可达的文件。

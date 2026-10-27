@@ -10,7 +10,7 @@ library;
 
 import 'dart:io';
 
-import 'ctor_signatures.dart';
+import 'package_sources.dart';
 
 /// 当前协议版本（= 生成器包版本，如 `0.3.2`）。
 String get patchProtocolVersion => _protocolVersion ??= _readPackageVersion();

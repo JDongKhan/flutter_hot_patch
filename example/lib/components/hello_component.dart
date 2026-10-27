@@ -1,10 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hot_example/base/account_center.dart';
-import 'package:flutter_hot_example/base/network.dart';
+import 'package:hot_module_base/hot_module_base.dart';
 import 'dart:io';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
-import 'package:flutter_hot_example/model/user.dart';
 
 /// 本文件演示两个能力：
 ///   1. HelloCard —— 一个**完全正常的 Flutter StatefulWidget**（原生可直接用）

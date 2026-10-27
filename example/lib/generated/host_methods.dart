@@ -10,14 +10,13 @@
 
 import 'package:hot_patch/hot_patch.dart';
 
-import '../base/account_center.dart';
 import '../base/app_router.dart';
-import '../base/network.dart';
 import '../base/web_view.dart';
+import 'package:hot_module_base/src/account_center.dart';
+import 'package:hot_module_base/src/network.dart';
 
 /// 注册本包全部 `@HostInjected` 宿主方法（无注解时为空实现）。
 void registerHostMethods() {
-  JsRuntimeManager.registerHostMethod('getUserName', AccountCenter.getUserName);
   JsRuntimeManager.registerHostMethod('openChannel', AppRouter.openChannel);
   JsRuntimeManager.registerHostMethod('openCityPicker', AppRouter.openCityPicker);
   JsRuntimeManager.registerHostMethod('openDemoList', AppRouter.openDemoList);
@@ -32,6 +31,7 @@ void registerHostMethods() {
   JsRuntimeManager.registerHostMethod('openWidgetShowcase', AppRouter.openWidgetShowcase);
   JsRuntimeManager.registerHostMethod('pop', AppRouter.pop);
   JsRuntimeManager.registerHostMethod('toast', AppRouter.toast);
-  JsRuntimeManager.registerHostMethod('post', Network.post);
   JsRuntimeManager.registerHostMethod('open', WebView.open);
+  JsRuntimeManager.registerHostMethod('getUserName', AccountCenter.getUserName);
+  JsRuntimeManager.registerHostMethod('post', Network.post);
 }

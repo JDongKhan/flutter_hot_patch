@@ -19,6 +19,9 @@ dependencies:
   # 磁盘缓存网络图（cached_network_image 能力）：宿主侧桥接见
   # hot_patch/lib/src/js_ui/capabilities/cached_network_image/。
   cached_network_image: ^3.4.1
+  # 模块化基座包（网络请求 / 工具类）：独立 Dart 包，跨包引用用于验证跨包翻译。
+  hot_module_base:
+    path: ../module/hot_module_base
   hot_patch:
     path: ../packages/hot_patch
   hot_patch_annotations:

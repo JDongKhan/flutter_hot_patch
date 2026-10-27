@@ -499,6 +499,8 @@ const String _jsUiApi = r'''
   function disposeRoot(pageKey) {
     var root = roots[pageKey];
     if (!root) { return; }
+    // 只做正常卸载：组件 dispose 逐实例释放自己持有的句柄。**不做页面兜底**——
+    // 兜底由宿主在泄漏比对之后显式调用 sweepPage，否则会把泄漏一并抹平。
     var prev = activeRoot;
     activeRoot = root;
     try {
@@ -510,10 +512,6 @@ const String _jsUiApi = r'''
       activeRoot = prev;
     }
     root.inst = null;
-    // 页面退出兜底：统一释放本页面登记的**全部**句柄（控制器 / 函数 / Key /
-    // 对象…，见【4】句柄注册表）——拥有端销毁真实对象，对端丢句柄。组件若已
-    // 在自身 dispose() 里释放，这里幂等。
-    releasePageHandles(pageKey);
     delete roots[pageKey];
   }
 
@@ -603,7 +601,8 @@ const String _jsUiLeakSnapshotFn = r'''
 const String _jsUiLeakApiMember =
     '    leakSnapshot: leakSnapshot,\n'
     '    cacheDump: cacheDump,\n'
-    '    setCacheVerbose: setCacheVerbose,\n';
+    '    setCacheVerbose: setCacheVerbose,\n'
+    '    sweepPage: sweepPage,\n';
 
 /// UI 运行时骨架尾部·前段（TextEditingController 片段后到 api 对象开口）。
 const String _jsUiRuntimeSkeletonTailHead = r'''

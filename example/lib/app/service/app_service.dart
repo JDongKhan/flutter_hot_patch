@@ -16,7 +16,8 @@
 /// 过滤 / 排序仍在本类内完成（页面不碰数据）；服务端只负责按路径返回 json。
 library;
 
-import '../../base/network.dart';
+import 'package:hot_module_base/hot_module_base.dart';
+
 import '../model/app_models.dart';
 
 class AppService {

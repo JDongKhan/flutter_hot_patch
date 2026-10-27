@@ -15,7 +15,7 @@ void main() {
   // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
   // 调一次即可，无需手写每条通道。
   registerHostMethods();
-  JsRuntimeManager.setVerboseCacheTrace(true);
+  // JsRuntimeManager.setVerboseCacheTrace(true);
   // 无 JS 产物的组件（产物里的 `Component` 占位结点）的原生实现：**全局一次注册**
   // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 registerHostMethods
   // 一致——runApp 之前。重复注册同名会覆盖（覆盖时告警），故不要放进 build()。

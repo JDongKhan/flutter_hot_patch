@@ -1,13 +1,20 @@
 /// 产物路径推导（纯路径函数，无源码分析）：源文件 → JS 产物路径、产物间相对路径。
 ///
-/// 产物路径与 build.yaml 的 build_extensions 保持一致（`lib/a/b.dart` →
-/// `patch/a/b.js`，直接镜像 lib 路径、文件名与源文件同名），不预设固定目录名。
+///   - **本项目包**源文件（`lib/a/b.dart`）→ `patch/a/b.js`：镜像 lib 路径、
+///     文件名与源文件同名，不预设固定目录名，也不区分组件/模型；
+///   - **跨包**源文件（`package:foo/a/b.dart`）→ `patch/foo.js`：一个本地依赖包
+///     的所有被引用类集中在**一个包模块**里（与 [packageModulePath] 同一约定），
+///     避免不同包的 `lib/` 结构互相撞名，也让跨包产物天然只有一份实现。
 library;
 
-/// 源文件路径 → 产物路径（与 build.yaml 的 build_extensions 一致）：
-/// `lib/a/b.dart` → `patch/a/b.js`（**直接镜像 lib 路径、文件名与源文件
-/// 同名**，不预设 `components` 之类固定目录名，也不区分组件/模型）。
+import 'source_index.dart';
+
+/// 源文件身份 → 产物路径（与 build.yaml 的 build_extensions 一致）。
 String productPath(String sourcePath) {
+  if (sourcePath.startsWith('package:')) {
+    final pkg = packageNameOf(sourcePath);
+    return pkg == null ? sourcePath : 'patch/$pkg.js';
+  }
   if (!sourcePath.startsWith('lib/')) return sourcePath;
   final rel = sourcePath.substring('lib/'.length); // a/b.dart
   if (!rel.endsWith('.dart')) return sourcePath;

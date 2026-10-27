@@ -8,6 +8,7 @@ import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
 import 'capabilities/build_context/build_context_bridge.dart';
+import 'capabilities/core/binding_cache.dart';
 import 'capabilities/core/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key/key_bridge.dart';
@@ -252,22 +253,32 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 记录进入过页面：只有 mount 成功过才有「进入 / 销毁」两端可比对。
     final wasMounted = _jsMounted;
     _jsMounted = false;
+    // 顺序很关键：**先比对，后兜底**。
+    //   1) disposeRoot：只走正常卸载（组件逐实例释放自己持有的句柄）；
+    //   2) 快照比对：此时残留的才是真泄漏，可观测；
+    //   3) sweepPage / dropPageEntries：把本页**全部**残留静默清干净，作为
+    //      「页面退出即释放」的兜底，因此同一页面挂载多少次都不会累积。
     _manager.evaluate(
       'if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});',
     );
-    // 页面级兜底：本页登记的跨语言句柄在当前页面销毁时统一释放（正常路径下
-    // JS 的 disposeRoot 已逐个通知到本端，此处为空操作；异常路径兜底）。
+    if (kDebugMode && wasMounted) {
+      JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
+    }
+    // 页面兜底（拥有端在 JS）：按 pageKey 清掉本页全部句柄——任何 scope，
+    // 不只 scope=page。release 幂等，正常已释放的为空操作。
+    _manager.evaluate(
+      'if (typeof __jsui !== "undefined" && __jsui.sweepPage) '
+      '__jsui.sweepPage(${jsonEncode(_pageKey)});',
+    );
+    // 页面兜底（宿主端）：静默摘除本页登记的全部缓存条目（不发 release 消息，
+    // 对象已由 sweepPage 拥有端释放）。
+    JsBindingCache.instance.dropPageEntries(_pageKey);
+    // 页面级兜底：本页登记、但 JS 侧已不存在的跨语言句柄（如 JS 侧先丢引用）。
     releasePageHandles(_pageKey);
     // 注销页面锚点（根组件的 `this.context` 用它反查真值 BuildContext）。
     unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
     jsUiPageStores.remove(_pageKey);
-    // 泄漏观测：清理全部完成后取第二次快照，与进入时的基线比对——两端缓存里
-    // 「进入后新增且未释放」的对象即泄漏（含 JS 端对象构造名）。仅 debug 启用，
-    // 且只对真正 mount 过的页面做（加载失败的页面没有可比对的进入状态）。
-    if (kDebugMode && wasMounted) {
-      JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
-    }
     // 页面名登记随之注销（与 jsUiPageStores 的按页清理同款）——放在 reportLeaks
     // 之后，保证本页最后一条日志仍然显示组件类名；不注销该表会无界增长。
     LeakStats.unregisterPage(_pageKey);

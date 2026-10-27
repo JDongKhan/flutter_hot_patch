@@ -14,3 +14,5 @@ workspace:
   - packages/hot_patch_generator
   - packages/hot_patch
   - example
+  # 示例 App 的模块化基座包（网络请求 / 工具类），用于验证跨包翻译。
+  - module/hot_module_base

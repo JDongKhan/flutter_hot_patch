@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/hello_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { User } from '../model/user.js';
+import { User } from '../hot_module_base.js';
 import { Column, ElevatedButton, Row, Text } from '../flutter.js';
 
 // 静态单例类 PanelColors
