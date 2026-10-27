@@ -26,8 +26,22 @@ import '../key/key_bridge.dart';
 /// 键是真实 GlobalKey，值随每次渲染覆盖；Expando 随 key 一起回收，不额外持有。
 final Expando<List<Widget>> _latestItems = Expando('animatedList.items');
 
+/// 上一次渲染的子项（删除前的列表）。
+///
+/// `removeItem` 可能在 `setState` 重建**之前**也可能在**之后**到达（取决于 JS
+/// 侧调用与宿主 commit 的先后），所以不能固定取某一帧：取「长度较大的那个」
+/// 就是删除前的列表（一次删除只少一项），退场项永远是被删掉的那一项。
+final Expando<List<Widget>> _previousItems = Expando('animatedList.prevItems');
+
 Widget _itemAt(List<Widget> items, int index) =>
     (index >= 0 && index < items.length) ? items[index] : const SizedBox.shrink();
+
+/// 删除前的子项列表（见 [_previousItems] 的说明）。
+List<Widget> _itemsBeforeRemoval(GlobalKey key) {
+  final latest = _latestItems[key] ?? const <Widget>[];
+  final previous = _previousItems[key] ?? const <Widget>[];
+  return latest.length >= previous.length ? latest : previous;
+}
 
 Duration _durationOf(Map<String, Object?> payload) =>
     durationFromJson(payload['duration']) ??
@@ -41,6 +55,8 @@ void registerAnimatedListWidgets(JsWidgetRegistry r) {
     // 真实 widget 用 [hostStateKey] 分配的独立 GlobalKey；`currentState` 解析
     // 会顺着这层映射找到 AnimatedListState（见 key_bridge）。
     final key = hostStateKey(c.props['key']);
+    final previous = _latestItems[key];
+    if (previous != null) _previousItems[key] = previous;
     _latestItems[key] = items;
     return AnimatedList(
       key: key,
@@ -70,14 +86,18 @@ void registerAnimatedListWidgets(JsWidgetRegistry r) {
     return null;
   });
 
-  // `GlobalKey.currentState.removeItem(index, {duration})`：退场 widget 取最近
-  // 一次渲染的第 index 项（与 Dart 侧传 `(context, animation) => item` 同义）。
+  // `GlobalKey.currentState.removeItem(index, builder, {duration})`：退场 widget
+  // 取**删除前**那一帧的第 index 项。
+  //
+  // 已知限制：Dart 传入的退场 `builder` 是闭包，跨语言无法执行，JS 侧只能复用
+  // 「被移除的原项」——因此退场样式与普通项一致（Dart 侧若写了不同的退场样式，
+  // 只有原生版生效）。JS 代理类对该参数会告警一次（见 js_widget_defs.dart）。
   registerKeyStateOp('AnimatedListState.removeItem', (key, payload) {
     final state = key.currentState;
     if (state is! AnimatedListState) return null;
     final index = payload['index'];
     if (index is! num) return null;
-    final items = _latestItems[key] ?? const <Widget>[];
+    final items = _itemsBeforeRemoval(key);
     state.removeItem(
       index.toInt(),
       (context, animation) => _itemAt(items, index.toInt()),

@@ -11,7 +11,9 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 ///     「GlobalKey → AnimatedListState」的真实语义补全；
 ///   - `itemBuilder` 未消费 `animation`（与 Flutter 官方示例里「不写过渡」一致）：
 ///     增删瞬间生效。JS 的 builder 拿不到 Animation 对象，宿主也不额外补插值，
-///     两边口径完全相同。
+///     两边口径完全相同；
+///   - `removeItem` 的退场 `builder` 同理（闭包不可跨语言），JS 版复用「被移除的
+///     原项」，所以这里把它写成与普通项一样的样式，两边视觉一致。
 @PatchEntry('AnimatedListDetail')
 class AnimatedListDetail extends StatefulWidget {
   const AnimatedListDetail({super.key});
@@ -67,6 +69,11 @@ class _AnimatedListDetailState extends State<AnimatedListDetail> {
   }
 
   /// 移除第一项：`removeItem(index, builder, {duration})`。
+  ///
+  /// **退场 `builder` 是 Dart 闭包，JS 版无法执行**（宿主复用「被移除的原项」当
+  /// 退场项）。所以这里刻意写成与 [_itemBuilder] 完全一致的样式（序号固定为被
+  /// 移除项的下标 +1），保证原生版与 JS 版看到同一个退场项；若写成别的样式
+  /// （例如红色 Card），只有原生版会生效，JS 版会打一条告警并回退为原项样式。
   void _removeFirst() {
     if (_items.isEmpty) return;
     final removed = _items.removeAt(0);
@@ -76,8 +83,19 @@ class _AnimatedListDetailState extends State<AnimatedListDetail> {
       0,
       (context, animation) => Card(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        color: Colors.red.shade50,
-        child: ListTile(dense: true, title: Text(removed)),
+        color: Colors.indigo.shade50,
+        child: ListTile(
+          dense: true,
+          leading: CircleAvatar(
+            radius: 12,
+            backgroundColor: Colors.indigo,
+            child: Text(
+              '1',
+              style: const TextStyle(color: Colors.white, fontSize: 11),
+            ),
+          ),
+          title: Text(removed),
+        ),
       ),
       duration: _removeDuration,
     );

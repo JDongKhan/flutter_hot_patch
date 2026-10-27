@@ -1186,9 +1186,13 @@ export class AnimatedListState extends __StateHandle {
   insertItem(index, duration) {
     this.__op('insertItem', { index: index, duration: duration });
   }
-  // 与 Dart 同形（`removeItem(index, builder, {duration})`）：退场 widget 的
-  // builder 由宿主按自己持有的子项快照完成，这里原样接收、只下发 index/duration。
+  // 与 Dart 同形（`removeItem(index, builder, {duration})`）：`builder` 是 Dart
+  // 闭包，跨语言无法执行——宿主复用「被移除的原项」当退场项，这里只告警一次。
   removeItem(index, builder, duration) {
+    if (typeof builder === 'function' && !AnimatedListState.__warnedRemoval) {
+      AnimatedListState.__warnedRemoval = true;
+      console.warn('[AnimatedList] 退场 builder 不可跨语言执行，已回退为「被移除的原项」（样式与普通项一致）');
+    }
     this.__op('removeItem', { index: index, duration: duration });
   }
 }
