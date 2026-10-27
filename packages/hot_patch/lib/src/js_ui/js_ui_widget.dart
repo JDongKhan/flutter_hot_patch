@@ -8,11 +8,11 @@ import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import '../utils/remote_asset_loader.dart';
 import 'capabilities/build_context/build_context_bridge.dart';
-import 'capabilities/core/binding_cache.dart';
 import 'capabilities/core/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key/key_bridge.dart';
 import 'leak/js_leak_snapshot.dart';
+import 'leak/leak_stats.dart';
 import 'js_ui_store.dart';
 import 'js_widget_registry.dart';
 
@@ -95,7 +95,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
   /// 所加载补丁的打包时间（包根 `manifest.json` 的 `buildTime`）；无清单为 null。
   String? _buildTime;
 
-  /// 页面进入前的 JS 泄漏基线快照（仅 debug；dispose 时取第二次做 diff）。
+  /// 页面进入时的双端缓存基线快照（仅 debug；dispose 时取第二次做一致比对）。
+  /// 取在「运行时就绪、模块加载完、组件尚未 mount」这一刻。
   JsLeakSnapshot? _leakBaseline;
 
   @override
@@ -118,9 +119,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     jsUiPageStores[_pageKey] = _store;
     // 页面名登记（仅日志显示）：让 `[binding] + …` 与 `leak-check …` 里的 jsui_N
     // 显示成组件类名，而不是人类看不懂的 id。
-    JsBindingCache.instance.registerPage(_pageKey, _pageName);
-    // 泄漏观测基线：进入前取一次（仅 debug），dispose 清理后再取一次做 diff。
-    if (kDebugMode) _leakBaseline = JsLeakSnapshot.capture(_pageKey);
+    LeakStats.registerPage(_pageKey, _pageName);
     _boot();
   }
 
@@ -170,6 +169,12 @@ class JsUiWidgetState extends State<JsUiWidget> {
       final loaded = _manager.drainLoadedModules();
       if (loaded.isNotEmpty) {
         HotPatchLog.log('模块加载完成（${loaded.length} 个）：${loaded.join(', ')}');
+      }
+      // 泄漏观测基线（仅 debug）：运行时就绪、本页模块已加载完（模块级单例已
+      // 登记），但组件还没 mount——此刻的双端缓存就是「进入时」的基准；dispose
+      // 清理后再取一次做一致性比对（见 js_leak_snapshot.dart）。
+      if (kDebugMode && mounted) {
+        _leakBaseline = JsLeakSnapshot.capture(_pageKey);
       }
       // 挂载必须用 evaluateOrThrow：JS 侧 `component not found`（典型是 patch.zip
       // 陈旧 / 组件名拼错）时 evaluate 只记日志，root 永不下发 → 页面一直转圈。
@@ -244,6 +249,8 @@ class JsUiWidgetState extends State<JsUiWidget> {
 
   @override
   void dispose() {
+    // 记录进入过页面：只有 mount 成功过才有「进入 / 销毁」两端可比对。
+    final wasMounted = _jsMounted;
     _jsMounted = false;
     _manager.evaluate(
       'if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});',
@@ -255,14 +262,15 @@ class JsUiWidgetState extends State<JsUiWidget> {
     unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
     jsUiPageStores.remove(_pageKey);
-    // 泄漏观测：清理全部完成后取第二次快照做本页归属判定，残留即打印
-    //（含 JS 端对象构造名）。仅 debug 构建启用。
-    if (kDebugMode) {
+    // 泄漏观测：清理全部完成后取第二次快照，与进入时的基线比对——两端缓存里
+    // 「进入后新增且未释放」的对象即泄漏（含 JS 端对象构造名）。仅 debug 启用，
+    // 且只对真正 mount 过的页面做（加载失败的页面没有可比对的进入状态）。
+    if (kDebugMode && wasMounted) {
       JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
     }
     // 页面名登记随之注销（与 jsUiPageStores 的按页清理同款）——放在 reportLeaks
     // 之后，保证本页最后一条日志仍然显示组件类名；不注销该表会无界增长。
-    JsBindingCache.instance.unregisterPage(_pageKey);
+    LeakStats.unregisterPage(_pageKey);
     super.dispose();
   }
 

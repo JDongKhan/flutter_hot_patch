@@ -544,12 +544,17 @@ const String _jsUiApi = r'''
 
 ''';
 
-/// 泄漏观测 / 缓存全景函数（**仅 debug 构建拼入**，release 产物里没有这段）：
-/// 导出运行时自维护的三张表——页面根表 roots、句柄表 handles、页面句柄索引
-/// pageHandles。JS 堆无法直接枚举，但页面级对象（组件实例 / 控制器代理 /
-/// 函数闭包 / 监听器）全部经这三张表可达：表清干净，其余对象失去引用自然
-/// 可被 GC；表里有残留就是真泄漏。宿主在页面销毁后取一次做判定（见
-/// js_leak_snapshot.dart）；[cacheDump] 则是排查用的全量清单。
+/// 泄漏观测**切面**：纯只读探针，只导出运行时自维护的三张表——页面根表
+/// roots、句柄表 handles、页面句柄索引 pageHandles。JS 堆无法直接枚举，但页面级
+/// 对象（组件实例 / 控制器代理 / 函数闭包 / 监听器）全部经这三张表可达：表清
+/// 干净，其余对象失去引用自然可被 GC；表里有残留就是真泄漏。宿主在页面进入 /
+/// 销毁两端取快照做比对（见 js_leak_snapshot.dart）；[cacheDump] 则是排查用的
+/// 全量清单。
+///
+/// **切面约束**：本段不挂在 reg / releaseHandle / mount / unmount 等任何业务
+/// 路径上（不计数、不改任何表），业务逻辑完全感知不到它存在；宿主只在 debug
+/// 构建里调用（kDebugMode 门控），release 下这些函数即使被拼入也不会执行。
+/// 之所以无条件拼入：产物分不出 debug/release，体积换「不参与业务」的简单性。
 const String _jsUiLeakSnapshotFn = r'''
 
   function leakSnapshot() {
@@ -591,8 +596,8 @@ const String _jsUiLeakSnapshotFn = r'''
   }
 ''';
 
-/// 泄漏观测的 api 成员（**仅 debug 构建拼入**；release 无此成员，宿主侧
-/// `capture()` 的 typeof 守卫会拿到 "null" 静默跳过——双端同一构建标志）。
+/// 泄漏观测切面的 api 成员：宿主 debug 代码经 `__jsui.leakSnapshot()` 取快照；
+/// release 下无人调用（宿主调用点被 kDebugMode 裁掉）。
 const String _jsUiLeakApiMember =
     '    leakSnapshot: leakSnapshot,\n    cacheDump: cacheDump,\n';
 

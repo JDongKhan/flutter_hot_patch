@@ -58,6 +58,7 @@ abstract final class JsBindingBuckets {
 /// 这一个类型（[JsBindingCache.dump]）。
 class JsBinding<T extends Object> {
   JsBinding._({
+    required this.bucket,
     required this.id,
     required this.kind,
     required this.owner,
@@ -70,6 +71,9 @@ class JsBinding<T extends Object> {
         meta = meta ?? <String, Object?>{},
         _strong = weak ? null : value,
         _weak = (weak && value != null) ? WeakReference<T>(value) : null;
+
+  /// 所属桶（缓存的存储分组，如 `ctrl/Scroll` / `ctx/node`）。
+  final String bucket;
 
   /// 句柄 id（或结点锚点键，如 `page:jsui_3`）。
   final String id;
@@ -128,9 +132,7 @@ class JsBinding<T extends Object> {
     final t = target;
     final what =
         (meta['type'] as String?) ?? (t == null ? _kindName : '${t.runtimeType}');
-    final where = pageKey != null
-        ? '页面=${JsBindingCache.instance.pageLabel(pageKey!)}'
-        : '全局';
+    final where = pageKey == null ? '全局' : '页面=${_pageLabel(pageKey!)}';
     final hold = weak ? (t == null ? '弱引用·已回收' : '弱引用·存活') : '强引用';
     final age = DateTime.now().difference(createdAt).inSeconds;
     return '$id（$what）· $where · $hold · 存活 ${age}s · 登记=$owner';
@@ -141,6 +143,11 @@ class JsBinding<T extends Object> {
     final i = kind.indexOf('/');
     return i >= 0 ? kind.substring(i + 1) : kind;
   }
+
+  /// 页面名的日志显示：由统计切面注入；未装配（release / 未登记）→ 原样。
+  static String _pageLabel(String pageKey) => kDebugMode
+      ? (JsBindingCache.debugPageLabel?.call(pageKey) ?? pageKey)
+      : pageKey;
 }
 
 /// 跨语言绑定的**唯一**缓存：所有绑定条目都在这里，别的文件不再各自持有全局表。
@@ -162,9 +169,6 @@ class JsBindingCache {
   /// 桶名 → (id → 条目)。桶内类型由登记它的能力决定（Dart 泛型协变，故这里用
   /// `JsBinding<Object>` 收口；取值走 [entry] 的类型化查询 + 运行时断言）。
   final Map<String, Map<String, JsBinding<Object>>> _buckets = {};
-
-  /// debug：pageKey → 本页新登记过的条目累计数（只服务页面退出时的那条汇总日志）。
-  final Map<String, int> _pageTally = {};
 
   /// 取一条绑定（未登记 / 类型不符返回 null）。
   JsBinding<T>? entry<T extends Object>(String bucket, String id) {
@@ -203,11 +207,12 @@ class JsBindingCache {
       return existing;
     }
     final created = JsBinding<T>._(
+      bucket: bucket,
       id: id, kind: kind, owner: owner, weak: weak, quiet: quiet,
       pageKey: pageKey, value: value, meta: meta,
     );
     (_buckets[bucket] ??= <String, JsBinding<Object>>{})[id] = created;
-    _tally(created);
+    _notifyStat(created);
     _logPut(created);
     return created;
   }
@@ -238,11 +243,12 @@ class JsBindingCache {
       return existing;
     }
     final created = JsBinding<T>._(
+      bucket: bucket,
       id: id, kind: kind, owner: owner, weak: weak, quiet: quiet,
       pageKey: pageKey, value: create?.call(), meta: meta,
     );
     (_buckets[bucket] ??= <String, JsBinding<Object>>{})[id] = created;
-    _tally(created);
+    _notifyStat(created);
     _logPut(created);
     return created;
   }
@@ -282,44 +288,19 @@ class JsBindingCache {
       .expand((m) => m.values)
       .where((e) => e.pageKey == pageKey);
 
-  /// 本页**新登记过**的条目累计数（只数首次登记，重建覆盖不计）。
+  /// 当前缓存总量（跨桶条目数）。
+  int get totalCount =>
+      _buckets.values.fold(0, (a, m) => a + m.length);
+
+  /// 全部绑定条目（跨桶）。
   ///
-  /// 用途：逐条日志对索引类条目是静音的，页面退出只打一条汇总——本页登记了多少条、
-  /// 残留多少条，由此给出分母（精确残余以 [pageCounts] 为准）。
-  /// 宿主先建、create 后到的条目按首次登记时的 pageKey 计入（此时可能还没归属）。
-  int pageTally(String pageKey) => _pageTally[pageKey] ?? 0;
+  /// 泄漏观测在页面**进入**与**销毁**两端各取一次快照，比对「进入后新增且仍未
+  /// 释放」的条目（见 `js_leak_snapshot.dart`）；本方法提供快照的原始数据。
+  Iterable<JsBinding<Object>> get allEntries =>
+      _buckets.values.expand((m) => m.values);
 
-  /// 回收某页的累计计数（页面泄漏检查打完汇总后调用，防表无界增长）。
-  void clearPageTally(String pageKey) => _pageTally.remove(pageKey);
-
-  // ---- 页面名（人类可读；仅日志显示用）----
-  //
-  // 与 [pageTally] 同款「按页登记、按页注销」：JsUiWidget 在 initState 登记、
-  // 在 dispose 打完本页最后一条日志之后注销。**不注销就会无界增长**——本表按
-  // 「进入过的页面数」累积，正是 leak-check 要盯的那类残留。
-  // 仅 debug 登记：release 下这些名字没有任何读者（逐条 `[binding]` 与
-  // leak-check 都只在 debug 打），故 release 里本表恒为空。
-
-  /// pageKey → 页面名（`jsui_0` → `HelloCard`）。日志里因此打
-  /// 「页面=HelloCard（jsui_0）」而不是裸 id。
-  final Map<String, String> _pageNames = {};
-
-  /// 登记页面名（幂等覆盖；pageKey 全局递增唯一，同一 key 不会重复登记）。
-  /// 调用方须在页面销毁时 [unregisterPage]，否则本表无界增长。
-  void registerPage(String pageKey, String name) {
-    if (!kDebugMode) return;
-    _pageNames[pageKey] = name;
-  }
-
-  /// 页面销毁时注销页面名（与 [registerPage] 配对，条目不跨页面生命周期残留）。
-  void unregisterPage(String pageKey) => _pageNames.remove(pageKey);
-
-  /// 页面名的日志显示：已登记 → `HelloCard（jsui_0）`（人类名在前、id 保留在后，
-  /// 同组件多实例仍可区分）；未登记 → 原样返回 pageKey。
-  String pageLabel(String pageKey) {
-    final name = _pageNames[pageKey];
-    return name == null ? pageKey : '$name（$pageKey）';
-  }
+  /// 本页**新登记过**的条目累计数、页面名——都不在业务缓存里维护，见切面
+  /// `js_ui/leak/leak_stats.dart`。
 
   /// 全部绑定的全景文本（按桶分组）：排查时一次看全，不用挨个表找。
   String dump() {
@@ -343,10 +324,24 @@ class JsBindingCache {
     if (kDebugMode && !e.quiet) HotPatchLog.log('[binding] + ${e.describe()}');
   }
 
-  /// 记一笔「本页新登记了这条」（仅 debug；详见 [pageTally]）。
-  void _tally(JsBinding<Object> e) {
-    final page = e.pageKey;
-    if (!kDebugMode || page == null) return;
-    _pageTally[page] = (_pageTally[page] ?? 0) + 1;
+  /// ---- 统计切面挂载点（debug-only）----
+  ///
+  /// 业务侧只提供挂载点，不携带任何统计状态：
+  ///   - [debugOnRegister]：新登记了一条（只递出页归属）——旁路记账用；
+  ///   - [debugPageLabel]：pageKey → 日志显示名。
+  /// 均由 `leak/leak_stats.dart` 在 debug 构建里装配；release 下恒为 null，且
+  /// `kDebugMode` 是编译期常量，下面两处调用被整段裁剪。
+
+  static void Function(String? pageKey)? debugOnRegister;
+  static String Function(String pageKey)? debugPageLabel;
+
+  /// 通知统计切面。**统计只观测**：任何异常都吞掉，绝不影响绑定登记本身。
+  void _notifyStat(JsBinding<Object> e) {
+    if (!kDebugMode) return;
+    try {
+      debugOnRegister?.call(e.pageKey);
+    } catch (_) {
+      // 切面异常不得影响业务（不重抛、不打日志，避免二次副作用）。
+    }
   }
 }
