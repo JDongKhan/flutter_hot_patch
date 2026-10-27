@@ -267,8 +267,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 页面簿记，dispose 后必然失效，先摘除。
     unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
-    // TEMP-LEAK-TEST: 故意不清 store，验证泄漏检测能否报出
-    // jsUiPageStores.remove(_pageKey);
+    jsUiPageStores.remove(_pageKey);
     if (kDebugMode && wasMounted) {
       JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
     }
