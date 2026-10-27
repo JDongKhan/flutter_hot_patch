@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 import 'animated_list_detail.dart';
+import 'automatic_keep_alive_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -54,7 +55,10 @@ class WidgetShowcase extends StatelessWidget {
     _Group('分页视图', [_Entry('PageView', '分页切换 + 页码回传', 'PageViewDetail')]),
     _Group('表单输入', [_Entry('TextField / Radio / Dropdown', '输入框、单选、下拉、开关、勾选、滑块', 'InputDetail')]),
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
-    _Group('状态管理', [_Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard')]),
+    _Group('状态管理', [
+      _Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard'),
+      _Entry('AutomaticKeepAlive', '切页保活：wantKeepAlive 声明决定离屏 State 是否销毁', 'AutomaticKeepAliveDetail'),
+    ]),
     _Group('无状态组件', [_Entry('StatelessWidget', '无 State，build 在 widget 类自身，props 走构造参数', 'StatelessCard')]),
     _Group('动画', [
       _Entry('隐式动画', 'AnimatedContainer / Opacity / Scale / Rotation / Slide / CrossFade / Size / Switcher（宿主插值）', 'ImplicitAnimationDetail'),
@@ -131,6 +135,7 @@ class WidgetDetailPage extends StatelessWidget {
   /// 产物路径由 build_runner 镜像源码路径生成（见 build.yaml 的 patch_entry）。
   static const Map<String, String> _jsEntries = {
     'AnimatedListDetail': 'components/animated_list_detail.js',
+    'AutomaticKeepAliveDetail': 'components/automatic_keep_alive_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -151,6 +156,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ContainerDetail' => const ContainerDetail(),
       'ScrollDetail' => const ScrollDetail(),
       'AnimatedListDetail' => const AnimatedListDetail(),
+      'AutomaticKeepAliveDetail' => const AutomaticKeepAliveDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
