@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.js';
-import { Column, ElevatedButton, SizedBox, Text } from '../flutter.js';
+import { Column, ElevatedButton, SizedBox, Text, __h } from '../flutter.js';
 
 // 组件 DashboardCard
 export class DashboardCard {
@@ -85,6 +85,13 @@ export class LabeledDivider {
         ...((this.child != null) ? [this.child] : [])
       ]
     });
+  }
+}
+
+// 原生组件包装 _LabeledDivider（@PatchIgnore(isComponent: true)）
+class _LabeledDivider {
+  constructor(props) {
+    return __h('_LabeledDivider', props);
   }
 }
 

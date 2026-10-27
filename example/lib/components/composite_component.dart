@@ -63,10 +63,11 @@ class _DashboardCardState extends State<DashboardCard> {
 }
 
 /// 私有组件（_ 开头）：默认生成器递归翻译成 JS 注册进同一产物。
-/// 这里标 @PatchIgnore 演示「不参与连带转换」：生成器跳过
-/// 翻译（产物里无该 JS 类），build 树保留 `_LabeledDivider` 类型名结点（未注册），
+/// 这里标 `@PatchIgnore(isComponent: true)` 演示「不参与连带转换」：生成器跳过
+/// 该类的翻译（产物里无该 JS 类），但在它自己的源文件产物里生成同名包装类，
+/// 使用方仍按 Dart 一比一 `new _LabeledDivider({...})` 翻译，
 /// 运行时由业务方在 `main()` 里注册原生实现（registerNativeComponent）渲染。
-@PatchIgnore()
+@PatchIgnore(isComponent: true)
 class _LabeledDivider extends StatelessWidget {
   const _LabeledDivider({required this.text, this.child});
 

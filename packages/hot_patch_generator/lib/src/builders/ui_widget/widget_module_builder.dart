@@ -238,8 +238,12 @@ String logicCtorStatics(String type) {
 
 /// 宿主包装类源码：类名 = 宿主类型名，构造即产出元素描述（type 仍是**字符串**）。
 /// 宿主结点的实例化由宿主注册表完成，reconciler 从不 `new` 这个类。
-String hostWrapperSource(String type) => '''
-export class $type {
+///
+/// 同一份源码也用于 `@PatchIgnore(isComponent: true)` 的组件包装类（生成在
+/// 该组件**自己的源文件产物**里）：[exported] 为 false 时生成产物内可见的
+/// `class`（私有类只可能在本产物里使用）。
+String hostWrapperSource(String type, {bool exported = true}) => '''
+${exported ? 'export ' : ''}class $type {
   constructor(props) {
     return __h('$type', props);
   }

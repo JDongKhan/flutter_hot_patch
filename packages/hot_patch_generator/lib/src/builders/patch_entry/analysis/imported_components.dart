@@ -38,7 +38,12 @@ Map<String, String> resolveImportedComponentProducts(
       final name = decl.name.lexeme;
       if (name.startsWith('_') || decl.abstractKeyword != null) continue;
       if (!isWidgetClassDecl(decl)) continue;
-      if (findAnnotation(decl.metadata, 'PatchIgnore') != null) continue;
+      // `@PatchIgnore(isComponent: true)` 的类不翻译，但**声明它的源文件产物**里
+      // 有同名包装类，跨文件引用照常 `new X(...)` + import 该产物。
+      if (findAnnotation(decl.metadata, 'PatchIgnore') != null &&
+          !isIgnoredComponentClass(decl)) {
+        continue;
+      }
       if (classHasHostInjectedMethod(decl)) continue;
       out[name] = productPath(file);
     }

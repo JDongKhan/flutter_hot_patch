@@ -114,11 +114,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// [renderJs] 在此登记，生成器据此按 package 产出 JS widget 模块并 import。
   final Map<String, Set<String>> usedWidgetPackages = {};
 
-  /// 渲染过程中是否产出过元素构造 [`__h`]。生成器据此决定产物是否 import
-  /// 结点工厂：有元素树（组件 build 树 / 方法体里返回 widget）就必须 import；
-  /// 纯模型产物（无任何元素）不产生多余 import。
-  bool usedNodeHelper = false;
-
   /// 是否产出过 `const` 元素缓存（产物头部需 `var __const = {};`）。
   /// const 缓存键的分配器：每个类一份（编号只在该类的 `this` 上做字段名，
   /// 因此不需要跨类唯一）。
@@ -139,6 +134,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     this.hostMethods = const {},
     this.jsClassWidgets = const {},
     this.delegateClassWidgets = const {},
+    this.ignoredTypes = const {},
     this.modelClassNames = const {},
     this.constKeyAllocator,
   });
@@ -157,6 +153,10 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// `GridView(children: [...])`、`SliverList(delegate: ...)` 仍是宿主节点，
   /// `.builder` / `.separated` 形态才需要类来循环调用拥有者方法展开子树）。
   final Set<String> delegateClassWidgets;
+
+  /// 本文件可见的 `@PatchIgnore()`（`isComponent` 非 true）类名：整类不翻译、
+  /// 不产出任何 JS 类，使用方引用它的结点直接降级丢弃（构建期告警）。
+  final Set<String> ignoredTypes;
 
   /// 本节点的元素 type 用 **JS 类引用**还是**类型名字符串**。
   ///
@@ -561,7 +561,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       return _renderJsImpl(json, depth);
     } catch (err) {
       _warnDegrade('结点', json.toString(), err);
-      usedNodeHelper = true; // 占位结点用 __h('SizedBox', {})
+      _registerWidgetImport('SizedBox', productType: null);
       return _placeholderJs();
     }
   }
@@ -580,37 +580,16 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///
   /// 与 [renderJs] 的唯一区别是不切「字符串结点」形态——那个形态是宿主
   /// widget 的兼容写法，属于结点语境；值语境里同名类总是存在的（注入类或
-  /// 包装类），因此不需要兜底。
+  /// 包装类），因此不需要兜底。组件使用方一律 `new X(...)`，不再产出 `__h`。
   String _renderValueImpl(Object? json, int depth) {
     if (json is String) return json;
     if (json is! Map<String, dynamic>) throw FormatException('无法渲染的值: $json');
     final type = _semanticType(json['type']);
-    final propsMap = json['props'] is Map<String, dynamic>
-        ? json['props'] as Map<String, dynamic>
-        : null;
+    _assertTranslatable(type);
     final productType = importResolver?.call(type);
-    final asClass = productType != null || usesJsClass(type, propsMap);
-    // 值语境一律产出 `new X(...)`，所以 X 必须是**已存在的类**，按来源登记 import：
-    //   - 有 JS 类的类型（逻辑组件 / builder 代理，如 `child: PageView(...)`）
-    //     → 各自 package 模块（flutter.js / provider.js）；
-    //   - 宿主包装类与数据载体（`Text` / `InputDecoration` 等，见
-    //     [hostWrapperTypes]）→ flutter.js。
-    // 两类都漏登记，产物里就会出现「Can't find variable: X」。
-    if (productType == null && (asClass || jsClassWidgets.contains(type))) {
-      (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
-    } else if (productType == null && hostWrapperTypes.contains(type)) {
-      (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(type);
-    }
-    // 其余（`Duration` / `CurvedAnimation` / `Offset` 等注入类）是**全局同名类**：
-    // 产物按 1:1 直接 `new X({...})`，不 import（flutter.js 里没有它）。
-    return _renderCall(
-      type,
-      json,
-      depth,
-      // 值语境一律按类调用：命名构造走包装类上的同名静态方法。
-      asClass: true,
-      asHostWrapper: true,
-    );
+    _registerWidgetImport(type, productType: productType);
+    // 值语境一律按类调用：命名构造走包装类上的同名静态方法。
+    return _renderCall(type, json, depth, asClass: true);
   }
 
   String _renderJsImpl(Object? json, int depth) {
@@ -621,32 +600,43 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     final type = _semanticType(json['type']);
     final props = json['props'];
     final propsMap = props is Map<String, dynamic> ? props : null;
-    // 元素 type 用**类构造**还是**类型名字符串兜底**：
+    // 元素 type 一律是**类引用**（组件使用方不再产出 `__h('X', ...)`）：
     //   - 该类型有 JS 产物（importResolver 命中：@PatchEntry 嵌套组件、同文件
     //     私有组件）→ `new X(props)`；实例随元素一起下发，mount 直接复用；
-    //   - 该类型在 JS 侧有类（逻辑组件 / builder 命名构造代理）→ `new X(props)`；
+    //   - 该类型在 JS 侧有类（逻辑组件 / builder 代理，含普通构造形态——代理类
+    //     构造里自行判定没有 builder 时直接产出宿主结点）→ `new X(props)`；
     //   - 宿主 widget / 值对象：flutter.js 生成了同名包装类 → `new X(props)`；
-    //   - 其余（无产物的自定义组件）→ `__h('X', props)` 兜底，运行时原生注入或占位。
+    //   - `@PatchIgnore(isComponent: true)`：声明它的源文件产物里的同名包装类
+    //     → `new X(props)`（与其它有产物的类同一条路径）。
+    _assertTranslatable(type);
     final productType = importResolver?.call(type);
     final asClass = productType != null || usesJsClass(type, propsMap);
-    // builder 代理类型（ListView 等）只在 `.builder/.separated` 形态走类；普通
-    // 构造与 `delegate:` 形态仍是宿主字符串结点（宿主持久化时按平铺参数 /
-    // delegate 消费），因此它们没有宿主包装类。
-    final asHostWrapper = !asClass && hostWrapperTypes.contains(type);
-    if (productType == null && asClass) {
+    _registerWidgetImport(type, productType: productType);
+    return _renderCall(type, json, depth, asClass: asClass);
+  }
+
+  /// 按来源登记 import（漏登记 = 产物里「Can't find variable: X」）。
+  ///
+  ///   - 有产物（[productType] 非空，含同文件）：由类依赖表负责 import，这里跳过；
+  ///   - JS 侧固定类（builder 代理 / 逻辑组件）→ 所属 package 模块；
+  ///   - 宿主包装类 / 数据载体 → `flutter.js`；
+  ///   - 其余（`TextSpan` / `Duration` 等运行时注入的全局同名类）→ 不登记，
+  ///     产物里直接 `new X(...)` 即可。
+  void _registerWidgetImport(String type, {required String? productType}) {
+    if (productType != null) return;
+    if (jsClassWidgets.contains(type)) {
       (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
-    } else if (asHostWrapper) {
+    } else if (hostWrapperTypes.contains(type)) {
       (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(type);
-    } else if (productType == null) {
-      usedNodeHelper = true; // 无 JS 类的类型：保留 __h('Type', …) 兜底
     }
-    return _renderCall(
-      type,
-      json,
-      depth,
-      asClass: asClass,
-      asHostWrapper: asHostWrapper,
-    );
+  }
+
+  /// `@PatchIgnore()`（`isComponent` 非 true）的类整类不翻译：引用它的结点没有
+  /// JS 类可用，直接抛错交给降级路径（丢该结点并告警），不产出半截代码。
+  void _assertTranslatable(String type) {
+    if (ignoredTypes.contains(type)) {
+      throw FormatException('@PatchIgnore 类 $type 未翻译（isComponent != true）');
+    }
   }
 
   /// 结点级的 `key` 并入元素 props：Key 是**元素级参数**（见
@@ -680,8 +670,8 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     return v;
   }
 
-  /// 把已翻译的 JSON 节点渲染成构造表达式：`new X({...})`（有 JS 类）或
-  /// `__h('X', {...})`（无 JS 类，原生注入兜底）。
+  /// 把已翻译的 JSON 节点渲染成构造表达式 `new X({...})`（命名构造为
+  /// `X.factory({...})`）。组件使用方一律 Dart 一比一构造，不再产出 `__h`。
   ///
   /// 所有 Dart 实参都按原名进 props——`child` / `children` / `slivers` / `tabs`
   /// 也在 props 里，由元素工厂 `__h` 在**运行时按元素类型**拆分：宿主类型抽成
@@ -692,12 +682,10 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     Map<String, dynamic> json,
     int depth, {
     required bool asClass,
-    required bool asHostWrapper,
   }) {
     final props = _propsWithKey(json['props'], json['key']);
     // 命名构造 → 1:1 的 JS 静态方法：`ListView.separated({...})`。构造名由包装类
     // 上的同名静态方法承接，内部再补 `props.factory` 给宿主选原生工厂。
-    // 宿主字符串 type（没有 JS 类）无法调用静态方法，仍按 props.factory 下发。
     final factory = props[factoryPropsKey];
     final factoryName = factory is String ? _literalString(factory) : null;
     if (asClass && factoryName != null) {
@@ -706,10 +694,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       return _constCached(json, '$type.$factoryName($restJs)');
     }
     final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
-    if (asClass || asHostWrapper) {
-      return _constCached(json, 'new $type($propsJs)');
-    }
-    return _constCached(json, "__h('$type', $propsJs)");
+    return _constCached(json, 'new $type($propsJs)');
   }
 
   /// 产物里工厂名以 JS 字符串字面量存放（`"separated"`）：去掉引号取原名。
@@ -1487,11 +1472,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 // ---------------------------------------------------------------------------
 
 /// 无法翻译的结点占位（中立描述层）：空的 `SizedBox`，渲染成
-/// `__h('SizedBox', {})`，运行时零尺寸、不产生可见内容。
+/// `new SizedBox({})`，运行时零尺寸、不产生可见内容。
 Map<String, dynamic> _placeholderNodeJson() => {'type': '"SizedBox"'};
 
 /// 无法渲染的结点占位（JS 源码层）：与 [_placeholderNodeJson] 同义。
-String _placeholderJs() => "__h('SizedBox', {})";
+String _placeholderJs() => 'new SizedBox({})';
 
 /// 构建期降级告警：出声（不静默丢代码），但不再抛错连累兄弟结点。
 void _warnDegrade(String what, String source, Object err) {

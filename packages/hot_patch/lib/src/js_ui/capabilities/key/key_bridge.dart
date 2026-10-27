@@ -44,6 +44,27 @@ void registerKeyStateOp(String op, KeyStateOpHandler handler) {
   _stateOps[op] = handler;
 }
 
+/// 「外层 JS 元素 key」→「真正挂到宿主 widget 上的 key」。
+///
+/// Flutter 不允许同一个 GlobalKey 同时挂在两个 widget 上，而 JS 元素的 key 已由
+/// 核心挂到元素结点（`_JsNode`）做身份。需要由 JS 访问 State 的宿主组件（如
+/// AnimatedList）因此**换一把自己的 GlobalKey** 挂在真实 widget 上，并按外层 key
+/// 记住映射；`currentState` 解析时顺着映射找到真实 State。与具体组件无关。
+final Expando<GlobalKey> _stateKeys = Expando<GlobalKey>('hostStateKey');
+
+/// 为某个 JS 元素 key 取（或首次创建）宿主 widget 专用 GlobalKey。
+GlobalKey hostStateKey(Object? jsKey) {
+  final outer = jsKeyOf(jsKey);
+  if (outer is GlobalKey) {
+    return _stateKeys[outer] ??= GlobalKey(debugLabel: 'js.hostState');
+  }
+  return GlobalKey(debugLabel: 'js.hostState');
+}
+
+/// currentState 的实际解析对象：有映射用映射（真实 State 在宿主 widget 上），
+/// 否则就是 key 本身（key 直接挂在带 State 的 widget 上的情形）。
+GlobalKey _stateTarget(GlobalKey key) => _stateKeys[key] ?? key;
+
 bool _keyKindRegistered = false;
 
 /// 幂等注册 Key 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities 聚合调用）。
@@ -79,7 +100,9 @@ void ensureKeyChannels() {
       // 组件，故按 **`Type.method`** 分发（Type 来自 `GlobalKey<T>` 的泛型实参），
       // 同名方法各自挂在自己的类型下，key 层不认任何 State 类型，也不会互相覆盖。
       if (op.startsWith('__state.')) {
-        final state = key.currentState;
+        // State 挂在宿主 widget 上（key 由 [hostStateKey] 另行分配），顺着映射取。
+        final target = _stateTarget(key);
+        final state = target.currentState;
         if (state == null) return null;
         final method = op.substring('__state.'.length);
         // 类型优先取 JS 侧**泛型实参**（`GlobalKey<AnimatedListState>` 的 T）——
@@ -101,10 +124,14 @@ void ensureKeyChannels() {
           print('[hot_patch] [WARN] currentState 未登记的方法：$typeName.$method');
           return null;
         }
-        return handler(key, payload.cast<String, Object?>());
+        // 下发的 key 已经是**真正挂着 State 的那个 key**（见 [hostStateKey]），
+        // 能力实现直接 `key.currentState` 即可。
+        return handler(target, payload.cast<String, Object?>());
       }
       // `__type`：JS 侧按它挑对应组件的 State 代理类（无代理类时退化为通用句柄）。
-      if (op == '__type') return key.currentState?.runtimeType.toString();
+      if (op == '__type') {
+        return _stateTarget(key).currentState?.runtimeType.toString();
+      }
       final ro = key.currentContext?.findRenderObject();
       if (op == 'showOnScreen') {
         ro?.showOnScreen();

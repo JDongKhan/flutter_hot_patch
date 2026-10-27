@@ -24,6 +24,7 @@ import '../shared/js_format.dart';
 import '../shared/js_widget_defs.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
+import '../ui_widget/widget_module_builder.dart' show hostWrapperSource;
 
 /// 把 lib/ 下的 Dart 源文件翻译为**同名** JS 产物（`lib/a/b.dart` → `patch/a/b.js`）：
 /// 文件名与 Dart 源文件一一对应，不区分组件/模型，也不预设目录结构——源码
@@ -80,7 +81,8 @@ class ComponentBuilder implements Builder {
 
     // 组件名 → 依赖产物 jsAsset 路径。规则：
     //   本文件类（注解组件 / public 或私有 widget 类）→ 本文件产物（同产物注册）；
-    //   @PatchIgnore → null（运行时原生注入）；
+    //   @PatchIgnore(isComponent: true) → 声明它的源文件产物（包装类在那里生成）；
+    //   @PatchIgnore()（isComponent 非 true）→ null（整类不翻译）；
     //   跨文件组件 → 从 import directives 推导源文件产物（见
     //   resolveImportedComponentProducts，口径与根类收集一致）。
     // （提前于根类收集构造：translateClass 内部翻译 Component
@@ -89,6 +91,11 @@ class ComponentBuilder implements Builder {
       for (final d in parsed.unit.declarations)
         if (d is ClassDeclaration) d.name.lexeme,
     };
+    // 本文件可见的「整类忽略」类（`@PatchIgnore` 且 isComponent 非 true）：
+    // 使用方引用它们的结点直接丢弃（不产出半截代码）。
+    final ignoredTypes = ignoredClassNamesInScope(parsed.unit, inputId.path);
+    // 本文件声明的 `@PatchIgnore(isComponent: true)` 类：在本产物末尾生成包装类。
+    final wrapperClasses = ignoredComponentClassNames(parsed.unit).toList();
     // 产物采用**相对路径**（相对当前产物所在目录，如 'bar_component.js'）：
     // 未来 JS 产物整体发布（CDN / 包内迁移）时，主产物与依赖产物的相对关系
     // 不变，运行时按当前 jsAsset 的目录解析即可，绝对路径会随部署位置失效。
@@ -98,9 +105,12 @@ class ComponentBuilder implements Builder {
     final importProducts =
         resolveImportedComponentProducts(parsed.unit, inputId.path);
     String? importResolver(String name) {
-      // @PatchIgnore：显式「不参与连带转换」的类 → null
-      // （产物保留其类型名结点，运行时默认 builder 原生注入）。
-      if (isIgnoredClass(parsed.unit, name)) return null;
+      // `@PatchIgnore(isComponent: true)` 的包装类就在**声明它的源文件产物**里；
+      // 其余的 @PatchIgnore（isComponent 非 true）整类不翻译 → null。
+      if (isIgnoredClass(parsed.unit, name) &&
+          !isIgnoredComponentType(parsed.unit, name)) {
+        return null;
+      }
       if (parsedNames.contains(name)) return ownName;
       final abs = importProducts[name];
       if (abs == null) return null;
@@ -162,7 +172,11 @@ class ComponentBuilder implements Builder {
         roots.add((d, info.isComponent));
       }
     }
-    if (roots.isEmpty && sameFileSingletonInfos.isEmpty) {
+    // 没有根类但有 `@PatchIgnore(isComponent: true)` 包装类：仍按常规路径产出
+    // （包装类 + 顶层常量一起写），否则使用方的 `new X(...)` 缺类定义。
+    if (roots.isEmpty &&
+        sameFileSingletonInfos.isEmpty &&
+        wrapperClasses.isEmpty) {
       // 纯数据文件（如 lib/app/service/app_data.dart）：文件里没有任何可翻译的类，
       // 只有顶层常量 → 产出「顶层常量」产物（`export const kBanners = [...]`），
       // 组件产物才能 import 到这些值（与类产物同一个文件级产物路径）。
@@ -206,6 +220,7 @@ class ComponentBuilder implements Builder {
         singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: builderFormTypes,
+        ignoredTypes: ignoredTypes,
         globalConsts: globalConsts,
         isComponent: isComponent,
       ));
@@ -214,7 +229,8 @@ class ComponentBuilder implements Builder {
     // 按依赖关系递归：从根类的 dependencies 做 BFS（组件与普通类同一套）——
     //   - 同文件**有产物**的组件（@PatchEntry / 私有 _Xxx）→ 翻译进同一产物；
     //   - 同文件普通类（模型/共享类）→ 翻译为产物内可见的 inline class；
-    //   - @PatchIgnore / 无注解公共组件（importResolver 返回 null）→
+    //   - `@PatchIgnore(isComponent: true)` → 类本身不翻译（产物里已有包装类）；
+    //   - @PatchIgnore() / 无注解公共组件（importResolver 返回 null）→
     //     产物保留其类型名结点，运行时原生注入，不产出 JS 类；
     //   - 跨文件依赖 → 不翻译，后面统一生成 import。
     // 普通类里引用到的类与组件走同一套递归（dependencies 是翻译期统一收集的）。
@@ -230,6 +246,8 @@ class ComponentBuilder implements Builder {
       if (!parsedNames.contains(dep)) continue; // 跨文件 → import 阶段处理
       // 同文件静态单例类走 const 内联（sameFileSingletonInfos），不按类翻译。
       if (sameFileSingletonNames.contains(dep)) continue;
+      // `@PatchIgnore(isComponent: true)`：类不翻译，产物里是包装类（上面已生成）。
+      if (isIgnoredComponentType(parsed.unit, dep)) continue;
       if (exportedClasses.any((c) => c.name == dep) ||
           inlineClasses.containsKey(dep)) {
         continue;
@@ -252,6 +270,7 @@ class ComponentBuilder implements Builder {
         singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: builderFormTypes,
+        ignoredTypes: ignoredTypes,
         globalConsts: globalConsts,
         isComponent: isWidgetDep,
       );
@@ -351,7 +370,7 @@ class ComponentBuilder implements Builder {
         globalConsts: globalConsts,
         dependencyImports: dedupedImports,
         extraUsedWidgets: extraUsedWidgets,
-        extraUsedNodeHelper: allTranslated.any((c) => c.usedNodeHelper),
+        wrapperClasses: wrapperClasses,
         importResolver: importResolver,
       ),
     );
@@ -381,7 +400,7 @@ String _renderJsProduct(
   Set<String> globalConsts = const {},
   List<String> dependencyImports = const [],
   Map<String, Set<String>> extraUsedWidgets = const {},
-  bool extraUsedNodeHelper = false,
+  List<String> wrapperClasses = const [],
   String? Function(String component)? importResolver,
 }) {
   // 头部（注释 + import 区）：package widget 产物的 import 依赖「实际用到的
@@ -458,6 +477,16 @@ String _renderJsProduct(
       ..writeln(dart2js(cls, exported: true));
   }
 
+  // `@PatchIgnore(isComponent: true)`：类本身不翻译，但在**它自己的源文件产物**
+  // 里生成同名包装类（构造即 `__h('类名', props)`，宿主持久化后由原生实现渲染），
+  // 使用方按 Dart 一比一 `new 类名({...})` 构造。私有类不 export（只在本产物可见）。
+  for (final type in wrapperClasses) {
+    b
+      ..writeln()
+      ..writeln('// 原生组件包装 $type（@PatchIgnore(isComponent: true)）')
+      ..writeln(hostWrapperSource(type, exported: !type.startsWith('_')));
+  }
+
   // 单例字段值渲染用的 [ctx] 也会收集它用到的类型（字段初值里构造的值对象 /
   // 组件），一并并入总表，否则产物里 `new X(...)` 会缺 import。
   _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
@@ -470,10 +499,9 @@ String _renderJsProduct(
   for (final entry in usedWidgets.entries) {
     (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
   }
-  // 结点工厂 `__h`：只有「无 JS 类的类型」才需要兜底 `__h('X', …)`（占位结点
-  // 也用 `__h('SizedBox', {})`）。有 JS 类的类型统一 `new X(props)`——宿主包装
-  // 类与组件类由 `importsByPackage` 按 package 模块 / 产物 import。
-  if (extraUsedNodeHelper || ctx.usedNodeHelper) {
+  // 结点工厂 `__h`：只有本产物的 `@PatchIgnore(isComponent: true)` 包装类需要
+  // （构造即 `__h('类名', props)`）；其它类统一 `new X(props)`。
+  if (wrapperClasses.isNotEmpty) {
     (importsByPackage[nodeHelperPackage] ??= <String>{}).add('__h');
   }
   final ownProduct = productPath(sourcePath);

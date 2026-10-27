@@ -37,13 +37,13 @@ Duration _durationOf(Map<String, Object?> payload) =>
 void registerAnimatedListWidgets(JsWidgetRegistry r) {
   r.register('AnimatedList', (c) {
     final items = (c.children['__items'] as List<Widget>?) ?? const <Widget>[];
-    // key 由核心统一下发到真实 widget（`c.props['key']` 是序列化形态），
-    // 这里取回同一个真实 GlobalKey 用于登记「最近一次的子项快照」。
-    final key = jsKeyOf(c.props['key']);
-    final globalKey = key is GlobalKey ? key : null;
-    if (globalKey != null) _latestItems[globalKey] = items;
+    // 元素的 key 已挂在元素结点（`_JsNode`）上，GlobalKey 不能同时挂两处，故
+    // 真实 widget 用 [hostStateKey] 分配的独立 GlobalKey；`currentState` 解析
+    // 会顺着这层映射找到 AnimatedListState（见 key_bridge）。
+    final key = hostStateKey(c.props['key']);
+    _latestItems[key] = items;
     return AnimatedList(
-      key: globalKey,
+      key: key,
       initialItemCount: items.length,
       scrollDirection: axisFromJson(c.props['scrollDirection']) ?? Axis.vertical,
       reverse: c.bool_('reverse') ?? false,

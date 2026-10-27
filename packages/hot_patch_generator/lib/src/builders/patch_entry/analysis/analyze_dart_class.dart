@@ -411,6 +411,7 @@ ClassInfo translateClass(
   SingletonResolver? singletons,
   Set<String> jsClassWidgets = const {},
   Set<String> delegateClassWidgets = const {},
+  Set<String> ignoredTypes = const {},
   Set<String> globalConsts = const {},
   bool isComponent = false,
 }) {
@@ -582,6 +583,7 @@ ClassInfo translateClass(
     hostMethods: hostMethods,
     jsClassWidgets: jsClassWidgets,
     delegateClassWidgets: delegateClassWidgets,
+    ignoredTypes: ignoredTypes,
     modelClassNames: modelClassNames,
   );
 
@@ -667,7 +669,6 @@ ClassInfo translateClass(
     // 构造调用命中的类（含跨文件组件，如 CounterVm → BannerCard）。
     dependencies: {...parseCtx.dependencies, ...used.keys},
     usedWidgetPackages: parseCtx.usedWidgetPackages,
-    usedNodeHelper: parseCtx.usedNodeHelper,
   );
 }
 

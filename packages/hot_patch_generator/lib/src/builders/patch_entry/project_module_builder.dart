@@ -166,7 +166,6 @@ String renderProjectPackageModule(
   final classInfos = <ClassInfo>[];
   final deps = <String>{};
   final usedWidgets = <String, Set<String>>{};
-  var usedNodeHelper = false;
   for (final e in decls.entries) {
     final (decl, file) = e.value;
     final unit = parseUnitFile(file)!;
@@ -188,6 +187,7 @@ String renderProjectPackageModule(
       singletons: buildSingletonResolver(unit, file),
       jsClassWidgets: jsClassWidgetTypes,
       delegateClassWidgets: builderFormTypes,
+      ignoredTypes: ignoredClassNamesInScope(unit, file),
       globalConsts: consts.names,
       isComponent: table[e.key]?.isComponent ?? false,
     );
@@ -201,7 +201,6 @@ String renderProjectPackageModule(
     info.usedWidgetPackages.forEach((pkg, types) {
       (usedWidgets[pkg] ??= <String>{}).addAll(types);
     });
-    usedNodeHelper = usedNodeHelper || info.usedNodeHelper;
   }
 
   final imports = <String>[
@@ -211,10 +210,6 @@ String renderProjectPackageModule(
   for (final e in usedWidgets.entries) {
     imports.add("import { ${(e.value.toList()..sort()).join(', ')} } from "
         "'${relativeProduct(ownProduct, packageModulePath(e.key))}';");
-  }
-  if (usedNodeHelper) {
-    imports.add("import { __h } from "
-        "'${relativeProduct(ownProduct, packageModulePath(nodeHelperPackage))}';");
   }
   final deduped = <String>[];
   for (final line in imports..sort()) {

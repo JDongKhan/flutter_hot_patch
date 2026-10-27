@@ -26,17 +26,28 @@ class PatchEntry {
 /// 默认情况下，@PatchEntry 组件的 build 里用到的本文件私有组件
 /// （如 `_MyCustomCard`）或无注解公共组件，会被生成器**连带翻译**成
 /// JS 类注册进同一产物。标上本注解后：
-///   - 生成器跳过该组件（不生成 JS 类、不注册）；
-///   - build 树里引用它的位置保留**具体类型名**的结点（无 import、不降级成
-///     统一的 `Component` 占位），运行时由业务方在 `main()` 里注册的原生
-///     实现渲染（`registerNativeComponent(名字, 构造)`）。
+///   - 生成器跳过该组件（不生成该类的翻译产物、不注册）；
+///   - build 树里引用它的位置仍按 Dart 一比一翻译成 `new 类型名({...})`，
+///     `isComponent: true` 时由**声明它的源文件产物**里的同名包装类承接，运行时
+///     由业务方在 `main()` 里注册的原生实现渲染（`registerNativeComponent`）。
 ///
 /// 适用场景：某组件逻辑复杂/含原生依赖、不适合翻译成 JS，希望线上
 /// 热更时始终使用原生实现；或临时下线某个嵌套组件的 JS 版本。
 ///
+/// [isComponent] 决定使用方怎么翻译：
+///   - `true`：不翻译该类，但在声明它的源文件产物里生成同名**包装类**
+///     （`constructor(props) { return __h('类名', props); }`），使用方仍按 Dart
+///     一比一翻译成 `new 类名({...})`，宿主按 `registerNativeComponent` 注册的
+///     原生实现渲染；
+///   - `false`（默认）：整类忽略——不翻译、不生成任何类，使用方引用它的结点
+///     直接丢弃（构建期告警）。
+///
 /// 注解只是构建期元数据，不影响组件正常运行。
 class PatchIgnore {
-  const PatchIgnore();
+  /// 是否为「组件」：true → 生成同名包装类，使用方 `new X(...)`。
+  final bool isComponent;
+
+  const PatchIgnore({this.isComponent = false});
 }
 
 /// 标记一个 **static 方法 / 顶层函数**为「宿主注入」（Host Injected）能力。

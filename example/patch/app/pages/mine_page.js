@@ -5,7 +5,7 @@
 import { AppService } from '../service/app_service.js';
 import { MineFeed } from '../model/app_models.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Center, CircularProgressIndicator, ClipOval, Column, Container, Divider, Expanded, GestureDetector, Icon, Image, Padding, Row, SafeArea, SizedBox, Text, Transform, __h } from '../../flutter.js';
+import { Center, CircularProgressIndicator, ClipOval, Column, Container, Divider, Expanded, GestureDetector, Icon, Image, ListView, Padding, Row, SafeArea, SizedBox, Text, Transform } from '../../flutter.js';
 
 const _menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
 
@@ -42,7 +42,7 @@ export class MinePage {
         "child": new CircularProgressIndicator({})
       })));
     }
-    return __h('ListView', {
+    return new ListView({
       "padding": {
         "left": 0,
         "top": 0,

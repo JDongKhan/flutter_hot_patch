@@ -86,6 +86,63 @@ bool isIgnoredClass(CompilationUnit unit, String className) {
   return false;
 }
 
+/// 类是否带 `@PatchIgnore(isComponent: true)`。
+///
+/// true = 不翻译该类，但在**声明它的源文件产物**里生成同名包装类
+/// （构造即 `__h('类名', props)`），使用方按 Dart 一比一 `new 类名({...})` 构造；
+/// false = 整类忽略（不产出任何 JS 类，引用它的结点直接丢弃）。
+bool isIgnoredComponentClass(ClassDeclaration decl) {
+  final a = findAnnotation(decl.metadata, 'PatchIgnore');
+  if (a == null) return false;
+  final args = a.arguments?.arguments;
+  if (args == null) return false;
+  for (final arg in args) {
+    if (arg is NamedExpression && arg.name.label.name == 'isComponent') {
+      final value = arg.expression;
+      return value is BooleanLiteral && value.value;
+    }
+  }
+  return false;
+}
+
+/// 本文件里名为 [className] 的类是否带 `@PatchIgnore(isComponent: true)`。
+bool isIgnoredComponentType(CompilationUnit unit, String className) {
+  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+    if (d.name.lexeme == className) return isIgnoredComponentClass(d);
+  }
+  return false;
+}
+
+/// 本文件里全部 `@PatchIgnore(isComponent: true)` 的类名（含私有类：包装类
+/// 与使用方在同一产物里解析，类名必须原样一致）。
+Set<String> ignoredComponentClassNames(CompilationUnit unit) => {
+      for (final d in unit.declarations.whereType<ClassDeclaration>())
+        if (isIgnoredComponentClass(d)) d.name.lexeme,
+    };
+
+/// 本文件**可见**（同文件 + import 源文件）的「整类忽略」类名：带 `@PatchIgnore`
+/// 但 `isComponent` 非 true（不产出任何 JS 类，引用它的结点丢弃）。
+///
+/// 跨文件只收 public 类（私有名不可能被别的文件引用）。
+Set<String> ignoredClassNamesInScope(CompilationUnit unit, String sourcePath) {
+  final out = <String>{};
+  void collect(CompilationUnit u, {required bool onlyPublic}) {
+    for (final d in u.declarations.whereType<ClassDeclaration>()) {
+      final name = d.name.lexeme;
+      if (onlyPublic && name.startsWith('_')) continue;
+      if (isIgnoredComponentClass(d)) continue; // isComponent: true 有包装类
+      if (findAnnotation(d.metadata, 'PatchIgnore') != null) out.add(name);
+    }
+  }
+
+  collect(unit, onlyPublic: false);
+  for (final file in resolveImportFiles(unit, sourcePath)) {
+    final importUnit = parseUnitFile(file);
+    if (importUnit != null) collect(importUnit, onlyPublic: true);
+  }
+  return out;
+}
+
 /// 解析类 `with` 子句的 mixin 声明：同文件优先，其次 import 文件（与类表
 /// 同一套文件解析与缓存）。返回顺序保持 `with A, B` 的书写顺序（**前者
 /// 线性化优先级低**），找不到声明的名字直接跳过（无声丢弃会导致 mixin
