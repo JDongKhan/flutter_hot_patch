@@ -51,17 +51,11 @@ void registerAnimatedListWidgets(JsWidgetRegistry r) {
       // JS 侧 itemBuilder 已按 index 预展开成子结点；这里按下标取，越界给占位
       // （末项退场期间 Flutter 会以旧下标回调，越界不能崩）。
       //
-      // 增删补间由**宿主插值**（与隐式动画同口径）：builder 收到的 `animation`
-      // 是宿主 AnimationController，逐帧插值不过桥，JS 只需要给出「第 index 项
-      // 长什么样」。故这里统一包一层 Size + Fade，与 Dart 侧在 itemBuilder 里
-      // 自己写 `SizeTransition(sizeFactor: animation)` 等效。
-      itemBuilder: (context, index, animation) => SizeTransition(
-        sizeFactor: animation,
-        child: FadeTransition(
-          opacity: animation,
-          child: _itemAt(items, index),
-        ),
-      ),
+      // **不加任何过渡包装**：Dart 源码的 itemBuilder 没消费 `animation`，JS 版
+      // 就与原生完全一致（增删瞬间生效）。JS 的 builder 拿不到 Animation 对象
+      // （预展开时只传 ctx 与 index），所以不能在 JS 侧还原 `SizeTransition`；
+      // 需要过渡时先在 Dart 侧支持 animation 下发。
+      itemBuilder: (context, index, animation) => _itemAt(items, index),
     );
   });
 
