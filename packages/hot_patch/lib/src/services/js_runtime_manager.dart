@@ -163,6 +163,29 @@ class JsRuntimeManager {
     }
   }
 
+  /// **详细缓存追踪开关**（debug-only，默认关）：等价于直接设置
+  /// [HotPatchLog.verboseCache]，但会**立刻**把 JS 侧的句柄日志切面装 / 卸，
+  /// 不必等下一次运行时初始化。
+  ///
+  /// 打开后逐条打印双端缓存进出：Dart 侧 `[binding] + / - <条目摘要>`，JS 侧
+  /// `[js-log] [binding] + / - JS <句柄摘要>`，两边摘要都以句柄 id 起头，可直接
+  /// 按 id 对齐。关闭后仅剩包装内的一次布尔短路，不影响任何业务逻辑。
+  static void setVerboseCacheTrace(bool on) {
+    HotPatchLog.verboseCache = on;
+    _applyCacheTrace();
+  }
+
+  /// 把 [HotPatchLog.verboseCache] 推给所有活跃 runtime（未就绪的跳过，下次
+  /// [ensureJsUiRuntime] 完成时会再同步一次）。
+  static void _applyCacheTrace() {
+    if (!kDebugMode) return;
+    final on = HotPatchLog.verboseCache;
+    evaluateAll(
+      'if (typeof __jsui !== "undefined" && __jsui.setCacheVerbose) '
+      '__jsui.setCacheVerbose($on);',
+    );
+  }
+
   /// 调试用：清除本地补丁缓存并重置模块缓存。
   ///
   ///   - 磁盘：删除 `<document>/hot_patch/` 下**全部** URL 的解压产物（含
@@ -314,6 +337,8 @@ class JsRuntimeManager {
     }
     _jsUiInited = true;
     _evalExternalLibraryFragments();
+    // 详细缓存追踪开关可能在运行时就绪前就被打开：这里补一次同步。
+    _applyCacheTrace();
   }
 
   /// 运行时产物在补丁根目录下的文件名（与 `patch/<package>.js` 同级）。

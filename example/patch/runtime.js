@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 41bc3a24） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 4bf71d12） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '41bc3a24') { return; }
-  G.__jsuiVersion = '41bc3a24';
+  if (G.__jsui && G.__jsuiVersion === '4bf71d12') { return; }
+  G.__jsuiVersion = '4bf71d12';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -3215,7 +3215,51 @@ G.ValueNotifier = ValueNotifier;
   }
 
 
-// ===== 【26】api 收尾 =====
+// ===== 【26】缓存详细追踪（debug 用） =====
+  var __cacheTraceOn = false;
+  var __cacheTraceInstalled = false;
+
+  // 一行摘要：id（构造名）· kind · scope · page · 持有者类型。
+  function __cacheTraceLine(h) {
+    var page = h.key || '-';
+    var owner = h.owner ? (h.owner.__name || h.owner.__k || 'inst') : '-';
+    return h.id + '（' + ctorNameOf(h) + '）· kind=' + h.kind
+      + ' · scope=' + h.scope + ' · 页面=' + page + ' · 持有者=' + owner;
+  }
+
+  // 安装切面（幂等）：把全局 reg / releaseHandle 换成「原实现 + 日志」。
+  function __installCacheTrace() {
+    if (__cacheTraceInstalled) { return; }
+    __cacheTraceInstalled = true;
+    var rawReg = reg;
+    reg = function (obj, kind, opts) {
+      // 同一对象重复登记返回同一 id（身份去重）——那种不算「新建」，不打印。
+      var existed = (obj === null || obj === undefined)
+        ? null : handleOwnerIdx.get(obj);
+      var id = rawReg(obj, kind, opts);
+      if (__cacheTraceOn && id && id !== existed && handles[id]) {
+        console.log('[binding] + JS ' + __cacheTraceLine(handles[id]));
+      }
+      return id;
+    };
+    var rawRelease = releaseHandle;
+    releaseHandle = function (id, notify) {
+      var h = __cacheTraceOn ? handles[id] : null;
+      rawRelease(id, notify);
+      // 幂等释放（本地已删）不打印，避免与对端 release 重复刷屏。
+      if (h) { console.log('[binding] - JS ' + __cacheTraceLine(h)); }
+    };
+  }
+
+  // 宿主入口：打开 / 关闭详细追踪。关闭即包装内日志分支短路（只多一次布尔
+  // 判断），不会再安装第二层包装。
+  function setCacheVerbose(on) {
+    __cacheTraceOn = !!on;
+    if (__cacheTraceOn) { __installCacheTrace(); return; }
+  }
+
+
+// ===== 【27】api 收尾 =====
 
   var api = {
     h: h,
@@ -3231,6 +3275,7 @@ G.ValueNotifier = ValueNotifier;
 
     leakSnapshot: leakSnapshot,
     cacheDump: cacheDump,
+    setCacheVerbose: setCacheVerbose,
 
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
     // （见 capabilities/core/handle_registry.dart）。

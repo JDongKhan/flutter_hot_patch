@@ -259,7 +259,9 @@ class JsBindingCache {
     final e = b?.remove(id);
     if (e == null) return;
     if (b!.isEmpty) _buckets.remove(bucket);
-    if (kDebugMode && !e.quiet) HotPatchLog.debug('[binding] - ${e.describe()}');
+    if (kDebugMode && HotPatchLog.verboseCache) {
+      HotPatchLog.debug('[binding] - ${e.describe()}');
+    }
   }
 
   /// 某个桶里的全部绑定（同桶同类型，取用方自行按需断言）。
@@ -321,7 +323,8 @@ class JsBindingCache {
   }
 
   void _logPut(JsBinding<Object> e) {
-    if (kDebugMode && !e.quiet) HotPatchLog.log('[binding] + ${e.describe()}');
+    if (!kDebugMode || !HotPatchLog.verboseCache) return;
+    HotPatchLog.log('[binding] + ${e.describe()}');
   }
 
   /// ---- 统计切面挂载点（debug-only）----

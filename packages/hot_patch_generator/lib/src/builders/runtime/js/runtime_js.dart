@@ -60,6 +60,7 @@ library;
 // 不需要发版。
 import 'animation_js.dart';
 import 'build_context_js.dart';
+import 'cache_trace_js.dart';
 import 'change_notifier_js.dart';
 import 'color_js.dart';
 import 'dart_errors_js.dart';
@@ -596,10 +597,13 @@ const String _jsUiLeakSnapshotFn = r'''
   }
 ''';
 
-/// 泄漏观测切面的 api 成员：宿主 debug 代码经 `__jsui.leakSnapshot()` 取快照；
-/// release 下无人调用（宿主调用点被 kDebugMode 裁掉）。
+/// 泄漏观测 / 缓存追踪切面的 api 成员。宿主 debug 代码经 `__jsui.leakSnapshot()` /
+/// `__jsui.setCacheVerbose(true)` 调用；release 下无人调用（宿主调用点被
+/// kDebugMode 裁掉）。
 const String _jsUiLeakApiMember =
-    '    leakSnapshot: leakSnapshot,\n    cacheDump: cacheDump,\n';
+    '    leakSnapshot: leakSnapshot,\n'
+    '    cacheDump: cacheDump,\n'
+    '    setCacheVerbose: setCacheVerbose,\n';
 
 /// UI 运行时骨架尾部·前段（TextEditingController 片段后到 api 对象开口）。
 const String _jsUiRuntimeSkeletonTailHead = r'''
@@ -689,7 +693,10 @@ String runtimeJsSource() {
     // 宿主侧调用点仍由 kDebugMode 门控，release 下这些函数不会被调用，
     // 只占体积、不影响行为。
     _section('【25】泄漏观测（debug 用）', _jsUiLeakSnapshotFn),
-    _section('【26】api 收尾', _jsUiRuntimeSkeletonTailHead),
+    // 缓存详细追踪切面：同样无条件拼入（分不出 debug/release），默认关闭，
+    // 只有宿主显式 setCacheVerbose(true) 才安装包装。
+    _section('【26】缓存详细追踪（debug 用）', cacheTraceJsSource),
+    _section('【27】api 收尾', _jsUiRuntimeSkeletonTailHead),
     _jsUiLeakApiMember,
     _jsUiRuntimeSkeletonTailEnd,
   ].join('\n');

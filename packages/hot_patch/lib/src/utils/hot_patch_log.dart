@@ -58,6 +58,18 @@ class HotPatchLog {
   /// 本地打印开关：true 输出，false 静默。**不影响** [sink] 上报。
   static bool enabled = kDebugMode;
 
+  /// **详细缓存追踪**开关（默认关；仅 debug 生效）。
+  ///
+  /// 打开后逐条打印双端缓存的登记 / 释放：
+  ///   - Dart 侧：每条绑定进 [JsBindingCache] / 出缓存（含 `quiet` 的索引类条目）；
+  ///   - JS 侧：每个句柄（控制器 / Key / BuildContext 代理 / 事件闭包）的
+  ///     `reg` / `releaseHandle`，经 console 桥以 `[js-log]` 回传。
+  ///
+  /// 置 true 只影响日志：不改变任何缓存行为、不增加额外表。JS 侧切面由
+  /// `JsRuntimeManager.setVerboseCacheTrace(true)` 装配（等价入口，且会立刻
+  /// 通知已就绪的 JS 运行时）；直接赋本字段时，下一次运行时初始化会同步过去。
+  static bool verboseCache = false;
+
   /// 统一上报出口（宿主注册；为空 = 只本地打印）。
   static HotPatchLogSink? sink;
 
