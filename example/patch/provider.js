@@ -45,11 +45,12 @@ export class Consumer {
   }
   build(context) {
     var notifier = context.watch(this.props.model);
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    if (!owner) { return null; }
-    var child = owner[name].call(owner, context, notifier);
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[Consumer] builder 不是闭包');
+      return null;
+    }
+    var child = fn(context, notifier);
     return __h('Consumer', {
       model: this.props.model,
       notifier: notifier,

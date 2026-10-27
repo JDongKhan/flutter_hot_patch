@@ -89,10 +89,7 @@ class ClassMethod {
 ///
 /// 组件（@PatchEntry）与普通类都是 Dart 类，用**完全相同**的模型描述：
 /// 字段、方法（方法体已在收集阶段预渲染）、构造参数。
-/// 组件只是额外带两项数据：
-///   1. [builderBodies]/[builderNames]/… —— 响应式 builder 闭包子方法
-///      （收集时由 widget 层翻译，渲染成 `_lbBuilderN` 实例方法）；
-///   2. [isComponent] —— 仅用于产物注释标注。
+/// 组件只是额外带一项数据：[isComponent] —— 仅用于产物注释标注。
 class ClassInfo {
   final String name;
   final String sourceFile; // dart 源文件路径（用于推导 import/相对产物）
@@ -109,13 +106,6 @@ class ClassInfo {
 
   /// 是否为 @PatchEntry 组件（仅用于产物注释标注，不参与结构分叉）。
   final bool isComponent;
-
-  /// 响应式 builder 闭包子方法（ListenableBuilder/Consumer）：
-  /// 与 [builderNames] 一一对应的已渲染子树 JS 源码。
-  final List<String> builderBodies;
-  final List<String> builderNames;
-  final List<String?> builderParams;
-  final List<String> builderPreludes;
 
   // --- 翻译期发现的依赖信息（组件/普通类同一份模型，builder 据此递归、import）---
 
@@ -148,10 +138,6 @@ class ClassInfo {
     this.ctorParams = const {},
     this.ctorDefaults = const {},
     this.isComponent = false,
-    this.builderBodies = const [],
-    this.builderNames = const [],
-    this.builderParams = const [],
-    this.builderPreludes = const [],
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
     this.usedNodeHelper = false,

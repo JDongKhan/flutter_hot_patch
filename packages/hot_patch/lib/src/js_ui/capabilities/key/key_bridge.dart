@@ -28,6 +28,22 @@ import '../core/handle_registry.dart';
 /// 同一实例，[jsKeyOf] 退化成 `ValueKey(结点 id)` → 该子树 State 丢失。
 const String _keyBucket = JsBindingBuckets.key;
 
+/// `GlobalKey.currentState` 方法的宿主端实现：真实 GlobalKey → 真实 State。
+///
+/// key 层不认任何 State 类型：具体能力（如 AnimatedList）在初始化时按**方法名**
+/// 注册自己的处理函数，key 层只做「句柄 → GlobalKey」的解析与分发。
+typedef KeyStateOpHandler = Object? Function(
+  GlobalKey key,
+  Map<String, Object?> payload,
+);
+
+final Map<String, KeyStateOpHandler> _stateOps = {};
+
+/// 注册 `GlobalKey.currentState.<op>` 的宿主实现（op 与 Dart 侧方法名一致）。
+void registerKeyStateOp(String op, KeyStateOpHandler handler) {
+  _stateOps[op] = handler;
+}
+
 bool _keyKindRegistered = false;
 
 /// 幂等注册 Key 句柄 kind（由 js_ui_capabilities.ensureJsUiCapabilities 聚合调用）。
@@ -59,6 +75,36 @@ void ensureKeyChannels() {
       //     JsRuntimeManager.registerHostMethod）。
       final key = JsBindingCache.instance.target<Key>(_keyBucket, id);
       if (key is! GlobalKey) return null;
+      // `currentState.<op>`：op 形如 `__state.<method>`。State 的方法签名属于具体
+      // 组件，故按 **`Type.method`** 分发（Type 来自 `GlobalKey<T>` 的泛型实参），
+      // 同名方法各自挂在自己的类型下，key 层不认任何 State 类型，也不会互相覆盖。
+      if (op.startsWith('__state.')) {
+        final state = key.currentState;
+        if (state == null) return null;
+        final method = op.substring('__state.'.length);
+        // 类型优先取 JS 侧**泛型实参**（`GlobalKey<AnimatedListState>` 的 T）——
+        // 与 `context.read<T>()` 同一原则：T 是参数，不是猜出来的。没声明泛型时
+        // 才回退 runtimeType（并留痕，提示补上泛型）。
+        final declared = payload['type'];
+        final String typeName;
+        if (declared is String && declared.isNotEmpty) {
+          typeName = declared;
+        } else {
+          typeName = '${state.runtimeType}';
+          // ignore: avoid_print - 运行时日志
+          print('[hot_patch] [WARN] GlobalKey 未声明泛型实参，按 runtimeType 推断：'
+              '$typeName（建议写成 GlobalKey<$typeName>）');
+        }
+        final handler = _stateOps['$typeName.$method'];
+        if (handler == null) {
+          // ignore: avoid_print - 运行时日志
+          print('[hot_patch] [WARN] currentState 未登记的方法：$typeName.$method');
+          return null;
+        }
+        return handler(key, payload.cast<String, Object?>());
+      }
+      // `__type`：JS 侧按它挑对应组件的 State 代理类（无代理类时退化为通用句柄）。
+      if (op == '__type') return key.currentState?.runtimeType.toString();
       final ro = key.currentContext?.findRenderObject();
       if (op == 'showOnScreen') {
         ro?.showOnScreen();

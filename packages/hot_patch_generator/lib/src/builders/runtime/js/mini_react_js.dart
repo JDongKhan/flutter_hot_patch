@@ -455,20 +455,21 @@ const String miniReactReconcilerSource = r'''
   // **懒容器下绝不在这里调用 builder**：每次展开 N 项会把所有子组件的构造
   // （控制器 / 监听器）都跑一遍，与 Flutter `ListView.builder` 只构造可见项
   // 不一致；故每项只带延迟工厂，真正执行推迟到 `lazyMount`。
-  function findOwner(parent, name) {
-    var owner = parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner || null;
+  // builder 回调协议只有**一种形态：闭包（函数）**。方法 tear-off 在构建期统一
+  // 生成绑定闭包（`this` 由词法作用域固定），因此运行时不需要「找拥有者方法」
+  // 这一层——少一条静默失败路径（找不到方法 → 空列表白屏）。
+  function isBuilderFn(v) {
+    return typeof v === 'function';
   }
 
   function builderSpec(el) {
     var slots = el.children || {};
     var b = slots.__builder;
-    if (b && typeof b.item === 'string' && typeof b.count === 'number') {
-      return { item: b.item, sep: b.sep, count: b.count, ctx: b.ctx };
+    if (b && isBuilderFn(b.item) && typeof b.count === 'number') {
+      return { item: b.item, sep: isBuilderFn(b.sep) ? b.sep : null, count: b.count, ctx: b.ctx };
     }
     var d = slots.delegate;
-    if (!d || d.__delegate !== 'builder' || typeof d.builder !== 'string') {
+    if (!d || d.__delegate !== 'builder' || !isBuilderFn(d.builder)) {
       return null;
     }
     var n = d.childCount;
@@ -482,14 +483,14 @@ const String miniReactReconcilerSource = r'''
   function buildItem(owner, spec, slotIndex) {
     var ctx = spec.ctx || contextOf(owner);
     var out = null;
-    // 委托调用期间 owner 锚点指向方法体所在的组件实例：builder 里创建的
+    // 委托调用期间 owner 锚点指向 builder 所属组件实例：builder 里创建的
     // 控制器 / Key 归属它（`building` 在这里可能是宿主结点或已还原）。
     withOwner(owner, function () {
       var sep = spec.sep;
-      if (typeof sep === 'string' && sep && slotIndex % 2 === 1) {
-        out = owner[sep].call(owner, ctx, (slotIndex - 1) / 2);
+      if (sep && slotIndex % 2 === 1) {
+        out = sep(ctx, (slotIndex - 1) / 2);
       } else {
-        out = owner[spec.item].call(owner, ctx, sep ? slotIndex / 2 : slotIndex);
+        out = spec.item(ctx, sep ? slotIndex / 2 : slotIndex);
       }
     });
     return out;
@@ -506,8 +507,8 @@ const String miniReactReconcilerSource = r'''
     }
     var spec = builderSpec(el);
     if (!spec) { return out; }
-    var owner = findOwner(parent, spec.item);
-    if (!owner) { return out; }
+    // 闭包自带接收者，展开时只需要锚点做句柄归属（parent 即拥有者实例）。
+    var owner = parent || null;
     var total = spec.sep ? Math.max(0, spec.count * 2 - 1) : spec.count;
     for (i = 0; i < total; i++) {
       if (lazy) {

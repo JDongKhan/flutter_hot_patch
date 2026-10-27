@@ -79,7 +79,11 @@ export class MinePage {
                       "width": 58,
                       "height": 58,
                       "fit": "cover",
-                      "errorBuilder": "_errorBuilder0",
+                      "errorBuilder": (context, e, s) => new Container({
+                        "width": 58,
+                        "height": 58,
+                        "color": new Color({value: 0x33FFFFFF})
+                      }),
                       "name": this._feed.avatar
                     })
                   }),
@@ -336,13 +340,6 @@ export class MinePage {
           })
         })
       ]
-    });
-  }
-  _errorBuilder0(context, e) {
-    return new Container({
-      "width": 58,
-      "height": 58,
-      "color": new Color({value: 0x33FFFFFF})
     });
   }
 }

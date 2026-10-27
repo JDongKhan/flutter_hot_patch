@@ -10,7 +10,7 @@ import '../class_info.dart';
 import 'js_value.dart';
 
 /// 类声明 → JS（export 可选）。含 constructor / 方法 / getter / extends 基类，
-/// 并数据驱动地追加响应式 builder 子方法（[ClassInfo.builderBodies] 非空）。
+/// 并数据驱动地追加方法。
 ///
 /// 组件与普通类共用这一条渲染路径。方法体、getter、builder 子树都已由
 /// analyze_dart_class 预渲染成 JS 字符串——本函数只负责拼装，不再遍历 AST。
@@ -100,23 +100,8 @@ String renderClassDecl(
     }
   }
 
-  // 响应式 builder 闭包子方法（ListenableBuilder/Consumer）→ 实例方法
-  // `_lbBuilderN()` / `_consumerBuilderN(value)`。运行时时模型 notify 后
-  // 重新调用本方法拿到最新子树（含已求值的 this._model.n / value.count），
-  // 做「仅此节点」的局部重建。方法名与形参由 translator 在翻译期声明。
-  if (info.builderBodies.isNotEmpty) {
-    for (var i = 0; i < info.builderBodies.length; i++) {
-      final name =
-          i < info.builderNames.length ? info.builderNames[i] : '_lbBuilder$i';
-      final param = i < info.builderParams.length ? info.builderParams[i] : null;
-      final prelude =
-          i < info.builderPreludes.length ? info.builderPreludes[i] : '';
-      b.write('  $name(${param ?? ''}) {\n');
-      if (prelude.isNotEmpty) b.write('      $prelude\n');
-      b.write('      return ${info.builderBodies[i]};\n');
-      b.write('  }\n');
-    }
-  }
+  // 响应式 builder（ListenableBuilder/Consumer 等）现在一律以**内联闭包**
+  // 下发（builder 协议唯一形态），因此不再生成实例子方法。
 
   b.write('}');
   return b.toString();

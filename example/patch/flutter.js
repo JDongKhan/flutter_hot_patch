@@ -782,12 +782,6 @@ export class AnimatedBuilder {
   constructor(props) {
     this.props = props || {};
   }
-  __owner() {
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
-  }
   initState() {
     var a = this.props.animation;
     if (a && typeof a.addListener === 'function') {
@@ -798,10 +792,12 @@ export class AnimatedBuilder {
     }
   }
   build(context) {
-    var owner = this.__owner();
-    if (!owner) { return null; }
-    var child = owner[this.props.builder].call(owner, context, this.props.child);
-    return __h('AnimatedBuilder', { child: child });
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[AnimatedBuilder] builder 不是闭包');
+      return null;
+    }
+    return __h('AnimatedBuilder', { child: fn(context, this.props.child) });
   }
   dispose() {
     if (this.__animation && this.__listener) {
@@ -811,16 +807,59 @@ export class AnimatedBuilder {
 }
 
 
+export class AnimatedList {
+  constructor(props) {
+    this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return __h('AnimatedList', this.props);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[AnimatedList] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('AnimatedList', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = {};
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.initialItemCount || 0,
+      ctx: context
+    };
+    return __h('AnimatedList', p);
+  }
+  static builder(props) { return new AnimatedList(Object.assign({}, props, { factory: 'builder' })); }
+  static separated(props) { return new AnimatedList(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
 export class Builder {
   constructor(props) {
     this.props = props || {};
   }
   build(context) {
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    if (!owner) { return null; }
-    return owner[name].call(owner, context);
+    // builder 协议唯一形态：闭包。闭包由组件 build 期生成（箭头函数，this 已绑定）。
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[Builder] builder 不是闭包');
+      return null;
+    }
+    return fn(context);
   }
 }
 
@@ -830,29 +869,31 @@ export class GridView {
     this.props = props || {};
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
-    if (typeof this.props.itemBuilder !== 'string') {
+    if (!this.__hasBuilder()) {
       return __h('GridView', this.props);
     }
   }
-  __owner() {
-    var name = this.props.itemBuilder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
   }
   build(context) {
-    var name = this.props.itemBuilder;
-    var owner = this.__owner();
-    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
-    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
-    if (typeof name !== 'string' || !owner) { return __h('GridView', this.props); }
-    // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[GridView] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('GridView', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = {};
-    for (var k in this.props) { p[k] = this.props[k]; }
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     p.__builder = {
-      item: this.props.itemBuilder,
+      item: item,
       sep: this.props.separatorBuilder || null,
       count: this.props.itemCount || 0,
       ctx: context
@@ -872,29 +913,31 @@ export class ListView {
     this.props = props || {};
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
-    if (typeof this.props.itemBuilder !== 'string') {
+    if (!this.__hasBuilder()) {
       return __h('ListView', this.props);
     }
   }
-  __owner() {
-    var name = this.props.itemBuilder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
   }
   build(context) {
-    var name = this.props.itemBuilder;
-    var owner = this.__owner();
-    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
-    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
-    if (typeof name !== 'string' || !owner) { return __h('ListView', this.props); }
-    // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[ListView] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('ListView', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = {};
-    for (var k in this.props) { p[k] = this.props[k]; }
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     p.__builder = {
-      item: this.props.itemBuilder,
+      item: item,
       sep: this.props.separatorBuilder || null,
       count: this.props.itemCount || 0,
       ctx: context
@@ -911,12 +954,6 @@ export class ListenableBuilder {
   constructor(props) {
     this.props = props || {};
   }
-  __owner() {
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
-  }
   initState() {
     var l = this.props.listenable;
     if (l && typeof l.addListener === 'function') {
@@ -927,10 +964,12 @@ export class ListenableBuilder {
     }
   }
   build(context) {
-    var owner = this.__owner();
-    if (!owner) { return null; }
-    var child = owner[this.props.builder].call(owner, context);
-    return __h('ListenableBuilder', { notifier: this.props.listenable, child: child });
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[ListenableBuilder] builder 不是闭包');
+      return null;
+    }
+    return __h('ListenableBuilder', { notifier: this.props.listenable, child: fn(context) });
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -945,29 +984,31 @@ export class PageView {
     this.props = props || {};
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
-    if (typeof this.props.itemBuilder !== 'string') {
+    if (!this.__hasBuilder()) {
       return __h('PageView', this.props);
     }
   }
-  __owner() {
-    var name = this.props.itemBuilder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
   }
   build(context) {
-    var name = this.props.itemBuilder;
-    var owner = this.__owner();
-    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
-    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
-    if (typeof name !== 'string' || !owner) { return __h('PageView', this.props); }
-    // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[PageView] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('PageView', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = {};
-    for (var k in this.props) { p[k] = this.props[k]; }
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     p.__builder = {
-      item: this.props.itemBuilder,
+      item: item,
       sep: this.props.separatorBuilder || null,
       count: this.props.itemCount || 0,
       ctx: context
@@ -985,29 +1026,31 @@ export class ReorderableListView {
     this.props = props || {};
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
-    if (typeof this.props.itemBuilder !== 'string') {
+    if (!this.__hasBuilder()) {
       return __h('ReorderableListView', this.props);
     }
   }
-  __owner() {
-    var name = this.props.itemBuilder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
   }
   build(context) {
-    var name = this.props.itemBuilder;
-    var owner = this.__owner();
-    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
-    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
-    if (typeof name !== 'string' || !owner) { return __h('ReorderableListView', this.props); }
-    // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[ReorderableListView] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('ReorderableListView', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = {};
-    for (var k in this.props) { p[k] = this.props[k]; }
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     p.__builder = {
-      item: this.props.itemBuilder,
+      item: item,
       sep: this.props.separatorBuilder || null,
       count: this.props.itemCount || 0,
       ctx: context
@@ -1024,29 +1067,31 @@ export class SliverGrid {
     this.props = props || {};
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
-    if (typeof this.props.itemBuilder !== 'string') {
+    if (!this.__hasBuilder()) {
       return __h('SliverGrid', this.props);
     }
   }
-  __owner() {
-    var name = this.props.itemBuilder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
   }
   build(context) {
-    var name = this.props.itemBuilder;
-    var owner = this.__owner();
-    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
-    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
-    if (typeof name !== 'string' || !owner) { return __h('SliverGrid', this.props); }
-    // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[SliverGrid] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('SliverGrid', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = {};
-    for (var k in this.props) { p[k] = this.props[k]; }
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     p.__builder = {
-      item: this.props.itemBuilder,
+      item: item,
       sep: this.props.separatorBuilder || null,
       count: this.props.itemCount || 0,
       ctx: context
@@ -1066,29 +1111,31 @@ export class SliverList {
     this.props = props || {};
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
-    if (typeof this.props.itemBuilder !== 'string') {
+    if (!this.__hasBuilder()) {
       return __h('SliverList', this.props);
     }
   }
-  __owner() {
-    var name = this.props.itemBuilder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
   }
   build(context) {
-    var name = this.props.itemBuilder;
-    var owner = this.__owner();
-    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
-    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
-    if (typeof name !== 'string' || !owner) { return __h('SliverList', this.props); }
-    // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[SliverList] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('SliverList', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = {};
-    for (var k in this.props) { p[k] = this.props[k]; }
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     p.__builder = {
-      item: this.props.itemBuilder,
+      item: item,
       sep: this.props.separatorBuilder || null,
       count: this.props.itemCount || 0,
       ctx: context
@@ -1105,12 +1152,6 @@ export class ValueListenableBuilder {
   constructor(props) {
     this.props = props || {};
   }
-  __owner() {
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
-  }
   initState() {
     var l = this.props.listenable;
     if (l && typeof l.addListener === 'function') {
@@ -1121,12 +1162,17 @@ export class ValueListenableBuilder {
     }
   }
   build(context) {
-    var owner = this.__owner();
-    if (!owner) { return null; }
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[ValueListenableBuilder] builder 不是闭包');
+      return null;
+    }
     var l = this.props.listenable;
     var value = (l && l.value !== undefined) ? l.value : null;
-    var child = owner[this.props.builder].call(owner, context, value);
-    return __h('ValueListenableBuilder', { notifier: l, child: child });
+    return __h('ValueListenableBuilder', {
+      notifier: l,
+      child: fn(context, value, this.props.child)
+    });
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -1135,3 +1181,15 @@ export class ValueListenableBuilder {
   }
 }
 
+
+export class AnimatedListState extends __StateHandle {
+  insertItem(index, duration) {
+    this.__op('insertItem', { index: index, duration: duration });
+  }
+  // 与 Dart 同形（`removeItem(index, builder, {duration})`）：退场 widget 的
+  // builder 由宿主按自己持有的子项快照完成，这里原样接收、只下发 index/duration。
+  removeItem(index, builder, duration) {
+    this.__op('removeItem', { index: index, duration: duration });
+  }
+}
+__registerStateProxy('AnimatedListState', AnimatedListState);

@@ -184,8 +184,7 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
   //     下发类引用（见 [_classRefOf]），由运行时决定何时 new 一次。
   if (e is FunctionExpression) {
     if (_isBuilderArg(name)) {
-      final m = extractBuilderMethod(ctx, e, '_$name');
-      return m == null ? null : ctx.jsString(m);
+      return builderClosureJs(ctx, e);
     }
     final body = e.body;
     if (body is ExpressionFunctionBody) {
@@ -320,11 +319,11 @@ Object? _delegateValue(Expression e, WidgetTranslateContext ctx) {
     final builderRaw = ctx.namedArg(args, 'builder') ?? ctx.nonNamedArg(args);
     final childCount = ctx.namedArg(args, 'childCount');
     if (builderRaw is! FunctionExpression || childCount == null) return null;
-    final method = extractBuilderMethod(ctx, builderRaw, '_builder');
-    if (method == null) return null;
+    final builderJs = builderClosureJs(ctx, builderRaw);
+    if (builderJs == null) return null;
     return {
       '__delegate': ctx.jsString('builder'),
-      'builder': ctx.jsString(method),
+      'builder': builderJs,
       'childCount': ctx.jsDataExpr(childCount),
     };
   }
@@ -390,30 +389,37 @@ String? _jsExprOrNull(Expression e, WidgetTranslateContext ctx) {
   }
 }
 
-/// 把 builder 闭包抽成**组件方法**（沿用 `builderTrees` 机制），返回方法名；
-/// 形态不支持返回 null（调用方丢弃该键并出声）。
+/// builder 闭包 → **内联箭头闭包**（builder 协议唯一的形态）。
 ///
-/// - 形参必须是 `(context, index[, child])`（context 为首参，与 Dart 闭包一致）；
-/// - 箭头体 `(context, i) => _Card(...)`：表达式即子树；
-/// - 块体 `(context, i) { final o = xs[i]; return _Card(...); }`：局部变量声明
-///   抽成方法前置语句，`return` 的表达式作子树。
+/// 不再「抽成实例方法 + 下发方法名」：方法名形态覆盖不了 `itemBuilder:
+/// widget.builder` 这类来自**字段/变量**的函数，而闭包能覆盖全部来源（方法
+/// tear-off 已在 [autoValue] 里包成绑定闭包）。产物里 builder 一律是函数，
+/// 运行时直接调用；函数永不进宿主 props（由代理类摘除）。
 ///
-/// 前缀由**参数名**给出（`itemBuilder` → `_itemBuilder0`），不依赖 widget 类型。
-String? extractBuilderMethod(
+/// - 形参：按名保留（context / index / 其余如 AnimatedList 的 `animation`），
+///   并全部登记为 builder 局部名；
+/// - 箭头体：表达式即子树；
+/// - 块体：局部变量声明作为闭包前置语句，`return` 的表达式作子树。
+String? builderClosureJs(
   WidgetTranslateContext ctx,
   FunctionExpression builder,
-  String prefix,
 ) {
   final params = builder.parameters?.parameters ?? const <FormalParameter>[];
-  final rawCtxName = params.isEmpty ? null : params[0].name?.lexeme;
-  final contextName =
-      (rawCtxName == null || rawCtxName == '_') ? 'context' : rawCtxName;
-  final indexName = params.length >= 2 ? params[1].name?.lexeme : null;
-  // 只要求「至少一个上下文形参」：`builder: (context) => ...`（Builder）与
-  // `itemBuilder: (context, index) => ...`（ListView.builder）都是合法 builder。
   if (params.isEmpty) return null;
-  ctx.addBuilderLocal(contextName);
-  if (indexName != null) ctx.addBuilderLocal(indexName);
+  String nameAt(int i) {
+    final n = params[i].name?.lexeme;
+    if (n != null && n != '_') return n;
+    return switch (i) {
+      0 => 'context',
+      1 => 'index',
+      _ => 'arg$i',
+    };
+  }
+
+  final names = [for (var i = 0; i < params.length; i++) nameAt(i)];
+  for (final n in names) {
+    ctx.addBuilderLocal(n);
+  }
   Expression? retExpr;
   final preludes = <String>[];
   final body = builder.body;
@@ -433,31 +439,24 @@ String? extractBuilderMethod(
             preludes.add('var ${v.name.lexeme};');
             continue;
           }
-          // `final model = context.watch<MyModel>()`：只登记为 builder 局部名
-          // （`addBuilderLocal` 已做）。子树里若出现 `() => model.inc()`，事件
-          // 句柄会因「引用了构建期局部名」改走**构建期闭包**，闭包与本方法同
-          // 作用域、直接捕获 `model`——不做 read("T") 之类的改写。
+          // `final model = context.watch<MyModel>()`：只登记为 builder 局部名。
+          // 子树里若出现 `() => model.inc()`，事件句柄会因「引用了构建期局部名」
+          // 改走**构建期闭包**，闭包与本闭包同作用域、直接捕获 `model`。
           ctx.warnCapturedLocals(init);
-          // 块体局部初始化：通用表达式翻译（组件构造 → `new X({...})`）。
           preludes.add('var ${v.name.lexeme} = ${ctx.jsDataExpr(init)};');
         }
         continue;
       }
-      // 其余语句无法作为「抽取方法」的一部分，整体放弃（保持构建期告警）。
+      // 其余语句无法参与内联闭包，整体放弃（保持构建期告警）。
       return null;
     }
   }
   if (retExpr == null) return null;
-  // 构建期抽查：闭包捕获了折算不成字段引用的局部变量/循环变量时出声告警——
-  // 抽取成实例方法后它们是未定义自由变量（见 warnCapturedLocals）。
   ctx.warnCapturedLocals(retExpr);
-  final subtree = ctx.translate(retExpr);
-  ctx.builderTrees.add(subtree);
-  final idx = ctx.builderTrees.length - 1;
-  ctx.builderNames.add('$prefix$idx');
-  ctx.builderParams.add([contextName, ?indexName].join(', '));
-  ctx.builderPreludes.add(preludes.isEmpty ? '' : preludes.join(' '));
-  return '$prefix$idx';
+  final js = ctx.renderJs(ctx.translate(retExpr), 0);
+  final head = '(${names.join(', ')})';
+  if (body is ExpressionFunctionBody) return '$head => $js';
+  return '$head => {\n${preludes.map((p) => '  $p\n').join()}  return $js;\n}';
 }
 
 /// 构建期告警（不静默）：结构化值没被分派表覆盖时出声，便于补齐分派表。

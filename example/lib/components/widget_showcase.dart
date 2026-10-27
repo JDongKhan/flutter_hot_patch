@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
+import 'animated_list_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -29,6 +30,7 @@ class WidgetShowcase extends StatelessWidget {
     _Group('容器装饰', [_Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail')]),
     _Group('列表滚动', [
       _Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail'),
+      _Entry('AnimatedList', '增删补间：GlobalKey.currentState 的 insertItem / removeItem', 'AnimatedListDetail'),
       _Entry('ReorderableListView', '长按拖拽重排：onReorder 双参事件，重排 / 添加列表项', 'ReorderListDetail'),
     ]),
     _Group('Key 家族', [
@@ -128,6 +130,7 @@ class WidgetDetailPage extends StatelessWidget {
   /// 动画 demo 按类拆在独立源文件里，因此入口不再固定为 widget_details.js：
   /// 产物路径由 build_runner 镜像源码路径生成（见 build.yaml 的 patch_entry）。
   static const Map<String, String> _jsEntries = {
+    'AnimatedListDetail': 'components/animated_list_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -147,6 +150,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ImageDetail' => const ImageDetail(),
       'ContainerDetail' => const ContainerDetail(),
       'ScrollDetail' => const ScrollDetail(),
+      'AnimatedListDetail' => const AnimatedListDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

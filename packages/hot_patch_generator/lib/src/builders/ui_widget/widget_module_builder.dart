@@ -262,37 +262,40 @@ ${namedCtorStatics(type)}}''';
 /// `ListView.builder(itemBuilder: (context, i) => …)` 的形参同源），随描述一起
 /// 带上，展开时原样传入，保持与原实现一致的上下文语义。
 String builderProxySource(String type) {
+  final countKey = builderCountPropKey(type);
   return '''
 export class $type {
   constructor(props) {
     this.props = props || {};
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    // 本代理类只服务「命名构造 + builder 回调」的延迟展开。
-    if (typeof this.props.itemBuilder !== 'string') {
+    if (!this.__hasBuilder()) {
       return __h('$type', this.props);
     }
   }
-  __owner() {
-    var name = this.props.itemBuilder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
   }
   build(context) {
-    var name = this.props.itemBuilder;
-    var owner = this.__owner();
-    // 没有 builder 回调 / 找不到拥有者方法：按普通构造形态交给结点工厂，
-    // 不能返回 null（父级拿到空子结点会退化成 SizedBox.shrink）。
-    if (typeof name !== 'string' || !owner) { return __h('$type', this.props); }
-    // props 原样透传（含 itemBuilder/separatorBuilder/itemCount/factory）；
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[$type] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('$type', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
     var p = {};
-    for (var k in this.props) { p[k] = this.props[k]; }
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
     p.__builder = {
-      item: this.props.itemBuilder,
+      item: item,
       sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
+      count: this.props.$countKey || 0,
       ctx: context
     };
     return __h('$type', p);
@@ -330,11 +333,13 @@ export class Builder {
     this.props = props || {};
   }
   build(context) {
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    if (!owner) { return null; }
-    return owner[name].call(owner, context);
+    // builder 协议唯一形态：闭包。闭包由组件 build 期生成（箭头函数，this 已绑定）。
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[Builder] builder 不是闭包');
+      return null;
+    }
+    return fn(context);
   }
 }''';
 
@@ -424,11 +429,12 @@ export class Consumer {
   }
   build(context) {
     var notifier = context.watch(this.props.model);
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    if (!owner) { return null; }
-    var child = owner[name].call(owner, context, notifier);
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[Consumer] builder 不是闭包');
+      return null;
+    }
+    var child = fn(context, notifier);
     return __h('Consumer', {
       model: this.props.model,
       notifier: notifier,
@@ -447,12 +453,6 @@ export class ListenableBuilder {
   constructor(props) {
     this.props = props || {};
   }
-  __owner() {
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
-  }
   initState() {
     var l = this.props.listenable;
     if (l && typeof l.addListener === 'function') {
@@ -463,10 +463,12 @@ export class ListenableBuilder {
     }
   }
   build(context) {
-    var owner = this.__owner();
-    if (!owner) { return null; }
-    var child = owner[this.props.builder].call(owner, context);
-    return __h('ListenableBuilder', { notifier: this.props.listenable, child: child });
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[ListenableBuilder] builder 不是闭包');
+      return null;
+    }
+    return __h('ListenableBuilder', { notifier: this.props.listenable, child: fn(context) });
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -487,12 +489,6 @@ export class ValueListenableBuilder {
   constructor(props) {
     this.props = props || {};
   }
-  __owner() {
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
-  }
   initState() {
     var l = this.props.listenable;
     if (l && typeof l.addListener === 'function') {
@@ -503,12 +499,17 @@ export class ValueListenableBuilder {
     }
   }
   build(context) {
-    var owner = this.__owner();
-    if (!owner) { return null; }
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[ValueListenableBuilder] builder 不是闭包');
+      return null;
+    }
     var l = this.props.listenable;
     var value = (l && l.value !== undefined) ? l.value : null;
-    var child = owner[this.props.builder].call(owner, context, value);
-    return __h('ValueListenableBuilder', { notifier: l, child: child });
+    return __h('ValueListenableBuilder', {
+      notifier: l,
+      child: fn(context, value, this.props.child)
+    });
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -528,12 +529,6 @@ export class AnimatedBuilder {
   constructor(props) {
     this.props = props || {};
   }
-  __owner() {
-    var name = this.props.builder;
-    var owner = this.__parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner;
-  }
   initState() {
     var a = this.props.animation;
     if (a && typeof a.addListener === 'function') {
@@ -544,10 +539,12 @@ export class AnimatedBuilder {
     }
   }
   build(context) {
-    var owner = this.__owner();
-    if (!owner) { return null; }
-    var child = owner[this.props.builder].call(owner, context, this.props.child);
-    return __h('AnimatedBuilder', { child: child });
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[AnimatedBuilder] builder 不是闭包');
+      return null;
+    }
+    return __h('AnimatedBuilder', { child: fn(context, this.props.child) });
   }
   dispose() {
     if (this.__animation && this.__listener) {
@@ -626,6 +623,15 @@ String renderPackageModule(String package, Set<String> types) {
         ..writeln()
         ..writeln(builderProxySource(t));
     }
+  }
+  // 随组件下发的 State 代理类（`GlobalKey.currentState` 的方法属于具体组件）：
+  // 紧挨该组件的包装类写出，运行时只负责按 runtimeType 取类。
+  for (final t in sorted) {
+    final src = stateProxySources[t];
+    if (src == null) continue;
+    b
+      ..writeln()
+      ..writeln(src);
   }
   return b.toString();
 }

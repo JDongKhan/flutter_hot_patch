@@ -74,6 +74,11 @@ const String keyJsSource = r'''
   defineHandleKind('key/Global', {});
   function GlobalKey(props) {
     var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
+    // 泛型实参由产物下发（`new GlobalKey({typeArguments: ['AnimatedListState']})`）：
+    // Dart 的 `GlobalKey<T>` 在 AOT 是 reified 的，T 就是「currentState 的类型」，
+    // 取值不需要问宿主、也不靠 runtimeType 猜。
+    var ta = (props && props.typeArguments) || [];
+    this.__stateType = ta.length ? ta[0] : null;
     this.__id = reg(this, 'key/Global', {
       meta: debugLabel == null ? null : { debugLabel: debugLabel }
     });
@@ -101,6 +106,36 @@ const String keyJsSource = r'''
   Object.defineProperty(GlobalKey.prototype, 'currentContext', {
     get: function () { return this.__id == null ? null : new KeyRef(this.__id); }
   });
+
+  // GlobalKey.currentState：State 是宿主对象，JS 侧只保留**句柄**。
+  //
+  // 运行时**不认识任何业务方法**（`insertItem` / `removeItem` 这类签名属于具体
+  // 组件）：每个 State 类型的代理类由生成器随该组件一起写进 flutter.js，并在
+  // 加载时用 `__registerStateProxy(type, class)` 登记；类型来自 **GlobalKey<T> 的
+  // 泛型实参**，随产物下发，不靠 runtimeType 猜。没有代理类时退化为通用句柄。
+  function StateHandle(id, type) { this.__key = id; this.__type = type || null; }
+  StateHandle.prototype.__op = function (op, payload) {
+    if (this.__key == null) { return null; }
+    var p = payload || {};
+    // 类型随每次调用下发（来自 GenericKey 的泛型实参）：宿主据此分派到
+    // `Type.method`，不同组件的同名方法互不覆盖。
+    if (this.__type) { p.type = this.__type; }
+    return handleOp(this.__key, '__state.' + op, p);
+  };
+  var __stateProxies = {};
+  function __registerStateProxy(type, cls) { __stateProxies[type] = cls; }
+  Object.defineProperty(GlobalKey.prototype, 'currentState', {
+    get: function () {
+      if (this.__id == null) { return null; }
+      // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
+      // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
+      var type = this.__stateType || handleOp(this.__id, '__type', {});
+      var cls = type ? __stateProxies[type] : null;
+      return cls ? new cls(this.__id, type) : new StateHandle(this.__id, type);
+    }
+  });
+  G.__registerStateProxy = __registerStateProxy;
+  G.__StateHandle = StateHandle;
 
   defineHandleKind('key/Unique', {});
   function UniqueKey() {

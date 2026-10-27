@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 7b9084c3） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 8a0b0576） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '7b9084c3') { return; }
-  G.__jsuiVersion = '7b9084c3';
+  if (G.__jsui && G.__jsuiVersion === '8a0b0576') { return; }
+  G.__jsuiVersion = '8a0b0576';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -1049,20 +1049,21 @@ if (G.kDebugMode) {
   // **懒容器下绝不在这里调用 builder**：每次展开 N 项会把所有子组件的构造
   // （控制器 / 监听器）都跑一遍，与 Flutter `ListView.builder` 只构造可见项
   // 不一致；故每项只带延迟工厂，真正执行推迟到 `lazyMount`。
-  function findOwner(parent, name) {
-    var owner = parent;
-    while (owner && typeof owner[name] !== 'function') { owner = owner.__parent; }
-    return owner || null;
+  // builder 回调协议只有**一种形态：闭包（函数）**。方法 tear-off 在构建期统一
+  // 生成绑定闭包（`this` 由词法作用域固定），因此运行时不需要「找拥有者方法」
+  // 这一层——少一条静默失败路径（找不到方法 → 空列表白屏）。
+  function isBuilderFn(v) {
+    return typeof v === 'function';
   }
 
   function builderSpec(el) {
     var slots = el.children || {};
     var b = slots.__builder;
-    if (b && typeof b.item === 'string' && typeof b.count === 'number') {
-      return { item: b.item, sep: b.sep, count: b.count, ctx: b.ctx };
+    if (b && isBuilderFn(b.item) && typeof b.count === 'number') {
+      return { item: b.item, sep: isBuilderFn(b.sep) ? b.sep : null, count: b.count, ctx: b.ctx };
     }
     var d = slots.delegate;
-    if (!d || d.__delegate !== 'builder' || typeof d.builder !== 'string') {
+    if (!d || d.__delegate !== 'builder' || !isBuilderFn(d.builder)) {
       return null;
     }
     var n = d.childCount;
@@ -1076,14 +1077,14 @@ if (G.kDebugMode) {
   function buildItem(owner, spec, slotIndex) {
     var ctx = spec.ctx || contextOf(owner);
     var out = null;
-    // 委托调用期间 owner 锚点指向方法体所在的组件实例：builder 里创建的
+    // 委托调用期间 owner 锚点指向 builder 所属组件实例：builder 里创建的
     // 控制器 / Key 归属它（`building` 在这里可能是宿主结点或已还原）。
     withOwner(owner, function () {
       var sep = spec.sep;
-      if (typeof sep === 'string' && sep && slotIndex % 2 === 1) {
-        out = owner[sep].call(owner, ctx, (slotIndex - 1) / 2);
+      if (sep && slotIndex % 2 === 1) {
+        out = sep(ctx, (slotIndex - 1) / 2);
       } else {
-        out = owner[spec.item].call(owner, ctx, sep ? slotIndex / 2 : slotIndex);
+        out = spec.item(ctx, sep ? slotIndex / 2 : slotIndex);
       }
     });
     return out;
@@ -1100,8 +1101,8 @@ if (G.kDebugMode) {
     }
     var spec = builderSpec(el);
     if (!spec) { return out; }
-    var owner = findOwner(parent, spec.item);
-    if (!owner) { return out; }
+    // 闭包自带接收者，展开时只需要锚点做句柄归属（parent 即拥有者实例）。
+    var owner = parent || null;
     var total = spec.sep ? Math.max(0, spec.count * 2 - 1) : spec.count;
     for (i = 0; i < total; i++) {
       if (lazy) {
@@ -2876,6 +2877,11 @@ G.ValueNotifier = ValueNotifier;
   defineHandleKind('key/Global', {});
   function GlobalKey(props) {
     var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
+    // 泛型实参由产物下发（`new GlobalKey({typeArguments: ['AnimatedListState']})`）：
+    // Dart 的 `GlobalKey<T>` 在 AOT 是 reified 的，T 就是「currentState 的类型」，
+    // 取值不需要问宿主、也不靠 runtimeType 猜。
+    var ta = (props && props.typeArguments) || [];
+    this.__stateType = ta.length ? ta[0] : null;
     this.__id = reg(this, 'key/Global', {
       meta: debugLabel == null ? null : { debugLabel: debugLabel }
     });
@@ -2903,6 +2909,36 @@ G.ValueNotifier = ValueNotifier;
   Object.defineProperty(GlobalKey.prototype, 'currentContext', {
     get: function () { return this.__id == null ? null : new KeyRef(this.__id); }
   });
+
+  // GlobalKey.currentState：State 是宿主对象，JS 侧只保留**句柄**。
+  //
+  // 运行时**不认识任何业务方法**（`insertItem` / `removeItem` 这类签名属于具体
+  // 组件）：每个 State 类型的代理类由生成器随该组件一起写进 flutter.js，并在
+  // 加载时用 `__registerStateProxy(type, class)` 登记；类型来自 **GlobalKey<T> 的
+  // 泛型实参**，随产物下发，不靠 runtimeType 猜。没有代理类时退化为通用句柄。
+  function StateHandle(id, type) { this.__key = id; this.__type = type || null; }
+  StateHandle.prototype.__op = function (op, payload) {
+    if (this.__key == null) { return null; }
+    var p = payload || {};
+    // 类型随每次调用下发（来自 GenericKey 的泛型实参）：宿主据此分派到
+    // `Type.method`，不同组件的同名方法互不覆盖。
+    if (this.__type) { p.type = this.__type; }
+    return handleOp(this.__key, '__state.' + op, p);
+  };
+  var __stateProxies = {};
+  function __registerStateProxy(type, cls) { __stateProxies[type] = cls; }
+  Object.defineProperty(GlobalKey.prototype, 'currentState', {
+    get: function () {
+      if (this.__id == null) { return null; }
+      // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
+      // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
+      var type = this.__stateType || handleOp(this.__id, '__type', {});
+      var cls = type ? __stateProxies[type] : null;
+      return cls ? new cls(this.__id, type) : new StateHandle(this.__id, type);
+    }
+  });
+  G.__registerStateProxy = __registerStateProxy;
+  G.__StateHandle = StateHandle;
 
   defineHandleKind('key/Unique', {});
   function UniqueKey() {

@@ -653,13 +653,6 @@ ClassInfo translateClass(
       ),
   ];
 
-  // builder 子树同样在收集期渲染成 JS：渲染层只按名拼装，不再持有
-  // WidgetTranslateContext。渲染过程会顺带登记用到的 widget 类型 / `__h`，
-  // 因此必须在读取 usedWidgetPackages / usedNodeHelper 之前完成。
-  final builderBodies = <String>[
-    for (final tree in parseCtx.builderTrees) parseCtx.renderJs(tree, 2),
-  ];
-
   return ClassInfo(
     name: decl.name.lexeme,
     sourceFile: sourcePath,
@@ -670,10 +663,6 @@ ClassInfo translateClass(
     ctorParams: proto.ctorParams,
     isComponent: isComponent,
     hostMethods: hostMethods,
-    builderBodies: builderBodies,
-    builderNames: parseCtx.builderNames,
-    builderParams: parseCtx.builderParams,
-    builderPreludes: parseCtx.builderPreludes,
     // 依赖 = widget 树里的自定义组件（parseCtx 收集）+ 字段类型 / 方法体
     // 构造调用命中的类（含跨文件组件，如 CounterVm → BannerCard）。
     dependencies: {...parseCtx.dependencies, ...used.keys},
@@ -809,10 +798,16 @@ bool _fieldTranslatable(
   // `final ValueNotifier<int> _count = ValueNotifier<int>(0);` 会被整条跳过。
   if (lt >= 0 && t.endsWith('>') && _valueSdkTypes.contains(base)) return true;
   if (lt >= 0 && t.endsWith('>')) {
-    if (!_containerTypes.contains(base)) return false;
-    final args = _typeArgs(t.substring(lt + 1, t.length - 1));
-    return args.isNotEmpty &&
-        args.every((a) => _fieldTranslatable(a, classTable));
+    if (_containerTypes.contains(base)) {
+      final args = _typeArgs(t.substring(lt + 1, t.length - 1));
+      return args.isNotEmpty &&
+          args.every((a) => _fieldTranslatable(a, classTable));
+    }
+    // 非容器泛型（`GlobalKey<AnimatedListState>` / `ValueNotifier<int>` / 自定义
+    // `Foo<T>`）：JS 无泛型，类型实参只是**静态信息**，字段本体是否可持有只看
+    // base 类型。这里递归按 base 判定，等价于把类型实参擦除——与 Dart→JS 的
+    // 类型擦除一致，不做任何类型名单过滤。
+    return _fieldTranslatable(base, classTable);
   }
   if (t.isEmpty) return false;
   // 源码里能解析到构造的类（SDK / 依赖包 / 项目类）：JS 侧有同名类承载，

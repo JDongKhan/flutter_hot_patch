@@ -196,7 +196,9 @@ export class HomePage {
                       },
                       "delegate": {
                         "__delegate": "builder",
-                        "builder": "_builder0",
+                        "builder": (context, index) => new SpotCard({
+                          "spot": this._feed.spots[index]
+                        }),
                         "childCount": this._feed.spots.length
                       }
                     })
@@ -212,11 +214,6 @@ export class HomePage {
           })
         ]
       })
-    });
-  }
-  _builder0(context, index) {
-    return new SpotCard({
-      "spot": this._feed.spots[index]
     });
   }
 }

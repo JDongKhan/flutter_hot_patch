@@ -811,7 +811,15 @@ export class ScrollDetail {
               "itemExtent": 56,
               "physics": "BouncingScrollPhysics",
               "itemCount": 20,
-              "itemBuilder": "_itemBuilder0"
+              "itemBuilder": (context, index) => new ListTile({
+                "leading": (this.__k0 || (this.__k0 = new Icon({
+                  "icon": "list"
+                }))),
+                "title": new CommonListItem({
+                  "index": index,
+                  "salt": this._listSalt
+                })
+              })
             })
           }),
           "model": "ScrollNotification"
@@ -847,8 +855,19 @@ export class ScrollDetail {
               "bottom": 8.0
             },
             "itemCount": 6,
-            "separatorBuilder": "_separatorBuilder1",
-            "itemBuilder": "_itemBuilder2"
+            "separatorBuilder": (context, index) => (this.__k3 || (this.__k3 = new Divider({
+              "height": 1
+            }))),
+            "itemBuilder": (context, index) => new ListTile({
+              "dense": true,
+              "leading": new Icon({
+                "color": Colors.teal.shade300,
+                "icon": "arrow_right"
+              }),
+              "title": new Text({
+                "data": "separated item " + index
+              })
+            })
           })
         }),
         (this.__k2 || (this.__k2 = new SizedBox({
@@ -887,40 +906,12 @@ export class ScrollDetail {
           "alignment": "centerLeft",
           "child": new TextButton({
             "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
-            "child": (this.__k3 || (this.__k3 = new Text({
+            "child": (this.__k4 || (this.__k4 = new Text({
               "data": "横向 · 跳到底"
             })))
           })
         })
       ]
-    });
-  }
-  _itemBuilder0(context, index) {
-    return new ListTile({
-      "leading": (this.__k0 || (this.__k0 = new Icon({
-        "icon": "list"
-      }))),
-      "title": new CommonListItem({
-        "index": index,
-        "salt": this._listSalt
-      })
-    });
-  }
-  _separatorBuilder1(context, index) {
-    return (this.__k4 || (this.__k4 = new Divider({
-      "height": 1
-    })));
-  }
-  _itemBuilder2(context, index) {
-    return new ListTile({
-      "dense": true,
-      "leading": new Icon({
-        "color": Colors.teal.shade300,
-        "icon": "arrow_right"
-      }),
-      "title": new Text({
-        "data": "separated item " + index
-      })
     });
   }
 }
@@ -1112,7 +1103,18 @@ export class SliverDetail {
             },
             "sliver": SliverList.builder({
               "itemCount": 8,
-              "itemBuilder": "_itemBuilder0"
+              "itemBuilder": (context, index) => new ListTile({
+                "leading": new Icon({
+                  "color": Colors.orange.shade700,
+                  "icon": "build"
+                }),
+                "title": new Text({
+                  "data": "builder item " + index
+                }),
+                "subtitle": new Text({
+                  "data": "index * 10 = " + (index * 10)
+                })
+              })
             })
           }),
           new SliverPadding({
@@ -1141,8 +1143,19 @@ export class SliverDetail {
             },
             "sliver": SliverList.separated({
               "itemCount": 5,
-              "itemBuilder": "_itemBuilder1",
-              "separatorBuilder": "_separatorBuilder2"
+              "itemBuilder": (context, index) => new ListTile({
+                "dense": true,
+                "leading": (this.__k5 || (this.__k5 = new Icon({
+                  "color": Colors.deepPurple,
+                  "icon": "arrow_right"
+                }))),
+                "title": new Text({
+                  "data": "separated item " + index
+                })
+              }),
+              "separatorBuilder": (context, index) => (this.__k6 || (this.__k6 = new Divider({
+                "height": 1
+              })))
             })
           }),
           new SliverPadding({
@@ -1188,7 +1201,16 @@ export class SliverDetail {
               "itemExtent": 44,
               "delegate": {
                 "__delegate": "builder",
-                "builder": "_builder3",
+                "builder": (context, index) => new ListTile({
+                  "dense": true,
+                  "leading": (this.__k7 || (this.__k7 = new Icon({
+                    "color": Colors.teal,
+                    "icon": "height"
+                  }))),
+                  "title": new Text({
+                    "data": "fixed item " + index
+                  })
+                }),
                 "childCount": 6
               }
             })
@@ -1227,7 +1249,21 @@ export class SliverDetail {
                   "childAspectRatio": 1
                 },
                 "itemCount": 9,
-                "itemBuilder": "_itemBuilder4"
+                "itemBuilder": (context, index) => new Container({
+                  "decoration": {
+                    "color": Colors.teal.shade100,
+                    "borderRadius": {
+                      "radius": 8.0
+                    }
+                  },
+                  "alignment": "center",
+                  "child": new Text({
+                    "style": {
+                      "fontWeight": "bold"
+                    },
+                    "data": "格 " + index
+                  })
+                })
               })
             })
           }),
@@ -1251,69 +1287,9 @@ export class SliverDetail {
         "backgroundColor": Colors.deepPurple,
         "foregroundColor": Colors.white,
         "tooltip": "跳到底",
-        "child": (this.__k7 || (this.__k7 = new Icon({
+        "child": (this.__k8 || (this.__k8 = new Icon({
           "icon": "arrow_downward"
         })))
-      })
-    });
-  }
-  _itemBuilder0(context, index) {
-    return new ListTile({
-      "leading": new Icon({
-        "color": Colors.orange.shade700,
-        "icon": "build"
-      }),
-      "title": new Text({
-        "data": "builder item " + index
-      }),
-      "subtitle": new Text({
-        "data": "index * 10 = " + (index * 10)
-      })
-    });
-  }
-  _itemBuilder1(context, index) {
-    return new ListTile({
-      "dense": true,
-      "leading": (this.__k5 || (this.__k5 = new Icon({
-        "color": Colors.deepPurple,
-        "icon": "arrow_right"
-      }))),
-      "title": new Text({
-        "data": "separated item " + index
-      })
-    });
-  }
-  _separatorBuilder2(context, index) {
-    return (this.__k8 || (this.__k8 = new Divider({
-      "height": 1
-    })));
-  }
-  _builder3(context, index) {
-    return new ListTile({
-      "dense": true,
-      "leading": (this.__k6 || (this.__k6 = new Icon({
-        "color": Colors.teal,
-        "icon": "height"
-      }))),
-      "title": new Text({
-        "data": "fixed item " + index
-      })
-    });
-  }
-  _itemBuilder4(context, index) {
-    return new Container({
-      "decoration": {
-        "color": Colors.teal.shade100,
-        "borderRadius": {
-          "radius": 8.0
-        }
-      },
-      "alignment": "center",
-      "child": new Text({
-        "style": {
-          "fontWeight": "bold"
-        },
-        "data": "格 " + index
       })
     });
   }
@@ -1398,7 +1374,21 @@ export class GridDetail {
                 "childAspectRatio": 1
               },
               "itemCount": 30,
-              "itemBuilder": "_itemBuilder0"
+              "itemBuilder": (context, index) => new Container({
+                "decoration": {
+                  "color": Colors.teal.shade100,
+                  "borderRadius": {
+                    "radius": 8.0
+                  }
+                },
+                "alignment": "center",
+                "child": new Text({
+                  "style": {
+                    "fontWeight": "bold"
+                  },
+                  "data": "格 " + index
+                })
+              })
             })
           }),
           (this.__k3 || (this.__k3 = new Padding({
@@ -1426,44 +1416,24 @@ export class GridDetail {
                 "childAspectRatio": 1
               },
               "itemCount": 20,
-              "itemBuilder": "_itemBuilder1"
+              "itemBuilder": (context, index) => new Container({
+                "decoration": {
+                  "color": Colors.orange.shade100,
+                  "borderRadius": {
+                    "radius": 8.0
+                  }
+                },
+                "alignment": "center",
+                "child": new Text({
+                  "style": {
+                    "fontWeight": "bold"
+                  },
+                  "data": "项 " + index
+                })
+              })
             })
           })
         ]
-      })
-    });
-  }
-  _itemBuilder0(context, index) {
-    return new Container({
-      "decoration": {
-        "color": Colors.teal.shade100,
-        "borderRadius": {
-          "radius": 8.0
-        }
-      },
-      "alignment": "center",
-      "child": new Text({
-        "style": {
-          "fontWeight": "bold"
-        },
-        "data": "格 " + index
-      })
-    });
-  }
-  _itemBuilder1(context, index) {
-    return new Container({
-      "decoration": {
-        "color": Colors.orange.shade100,
-        "borderRadius": {
-          "radius": 8.0
-        }
-      },
-      "alignment": "center",
-      "child": new Text({
-        "style": {
-          "fontWeight": "bold"
-        },
-        "data": "项 " + index
       })
     });
   }
@@ -1890,7 +1860,13 @@ export class NotifierCard {
           "children": [
             new ListenableBuilder({
               "listenable": this._model,
-              "builder": "_builder0"
+              "builder": (context, index) => new Text({
+                "style": {
+                  "fontSize": 24,
+                  "fontWeight": "bold"
+                },
+                "data": "count = " + this._model.count
+              })
             }),
             (this.__k0 || (this.__k0 = new SizedBox({
               "height": 12
@@ -1922,15 +1898,6 @@ export class NotifierCard {
   }
   dispose() {
     this._model.dispose();
-  }
-  _builder0(context, _) {
-    return new Text({
-      "style": {
-        "fontSize": 24,
-        "fontWeight": "bold"
-      },
-      "data": "count = " + this._model.count
-    });
   }
 }
 
@@ -3085,7 +3052,20 @@ export class ReorderListDetail {
               "bottom": 0.0
             },
             "itemCount": this._items.length,
-            "itemBuilder": "_itemBuilder0"
+            "itemBuilder": (context, index) => {
+              var item = this._items[index];
+              return new Card({
+                "child": new ListTile({
+                  "leading": (this.__k2 || (this.__k2 = new Icon({
+                    "icon": "drag_handle"
+                  }))),
+                  "title": new Text({
+                    "data": item
+                  })
+                }),
+                "key": new ValueKey({value: item})
+              });
+            }
           })
         })
       ]
@@ -3093,20 +3073,6 @@ export class ReorderListDetail {
   }
   dispose() {
     this._controller.dispose();
-  }
-  _itemBuilder0(context, index) {
-    var item = this._items[index];
-    return new Card({
-      "child": new ListTile({
-        "leading": (this.__k2 || (this.__k2 = new Icon({
-          "icon": "drag_handle"
-        }))),
-        "title": new Text({
-          "data": item
-        })
-      }),
-      "key": new ValueKey({value: item})
-    });
   }
 }
 

@@ -29,7 +29,33 @@ export class ExplicitAnimationDetail {
         }))),
         new AnimatedBuilder({
           "animation": this._controller,
-          "builder": "_builder0"
+          "builder": (context, child) => {
+            return new Column({
+              "children": [
+                new Container({
+                  "height": 120,
+                  "alignment": "center",
+                  "decoration": {
+                    "color": ((this._controller.value < 0.5) ? Colors.teal : Colors.deepPurple),
+                    "borderRadius": {
+                      "radius": 16.0
+                    }
+                  },
+                  "child": new Text({
+                    "style": {
+                      "color": Colors.white,
+                      "fontSize": 20,
+                      "fontWeight": "w700"
+                    },
+                    "data": (this._controller.value < 0.5) ? "前半程" : "后半程"
+                  })
+                }),
+                new LinearProgressIndicator({
+                  "value": this._controller.value
+                })
+              ]
+            });
+          }
         }),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 10
@@ -153,33 +179,6 @@ export class ExplicitAnimationDetail {
               })
             })
           })
-        })
-      ]
-    });
-  }
-  _builder0(context, child) {
-    return new Column({
-      "children": [
-        new Container({
-          "height": 120,
-          "alignment": "center",
-          "decoration": {
-            "color": ((this._controller.value < 0.5) ? Colors.teal : Colors.deepPurple),
-            "borderRadius": {
-              "radius": 16.0
-            }
-          },
-          "child": new Text({
-            "style": {
-              "color": Colors.white,
-              "fontSize": 20,
-              "fontWeight": "w700"
-            },
-            "data": (this._controller.value < 0.5) ? "前半程" : "后半程"
-          })
-        }),
-        new LinearProgressIndicator({
-          "value": this._controller.value
         })
       ]
     });

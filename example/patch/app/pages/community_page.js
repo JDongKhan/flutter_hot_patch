@@ -156,11 +156,16 @@ export class CommunityPage {
               "bottom": 0.0
             },
             "itemCount": this._resources.length,
-            "separatorBuilder": "_separatorBuilder0",
-            "itemBuilder": "_itemBuilder1"
+            "separatorBuilder": (context, index) => (this.__k4 || (this.__k4 = new SizedBox({
+              "width": 10
+            }))),
+            "itemBuilder": (context, i) => new _ResourceCard({
+              "resource": this._resources[i],
+              "onTap": () => { return _app_host_.invoke("openResource", [this._resources[i].id]); }
+            })
           })
         }),
-        (this.__k4 || (this.__k4 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 12
         }))),
         new Container({
@@ -231,7 +236,7 @@ export class CommunityPage {
                         },
                         "data": "筛选"
                       }),
-                      (this.__k5 || (this.__k5 = new SizedBox({
+                      (this.__k6 || (this.__k6 = new SizedBox({
                         "width": 3
                       }))),
                       new Icon({
@@ -246,7 +251,7 @@ export class CommunityPage {
             ]
           })
         }),
-        ...(this._listLoading ? [(this.__k6 || (this.__k6 = new LinearProgressIndicator({
+        ...(this._listLoading ? [(this.__k7 || (this.__k7 = new LinearProgressIndicator({
             "minHeight": 2
           })))] : []),
         new Expanded({
@@ -270,17 +275,6 @@ export class CommunityPage {
   }
   get wantKeepAlive() {
     return true;
-  }
-  _separatorBuilder0(context, _) {
-    return (this.__k7 || (this.__k7 = new SizedBox({
-      "width": 10
-    })));
-  }
-  _itemBuilder1(context, i) {
-    return new _ResourceCard({
-      "resource": this._resources[i],
-      "onTap": () => { return _app_host_.invoke("openResource", [this._resources[i].id]); }
-    });
   }
 }
 
@@ -600,7 +594,11 @@ export class _PostCard {
                 "width": 92,
                 "height": 92,
                 "fit": "cover",
-                "errorBuilder": "_errorBuilder0",
+                "errorBuilder": (context, e, s) => new Container({
+                  "width": 92,
+                  "height": 92,
+                  "color": new Color({value: 0xFFE8EBF0})
+                }),
                 "name": this.post.img
               })
             }),
@@ -697,13 +695,6 @@ export class _PostCard {
       })
     });
   }
-  _errorBuilder0(context, e) {
-    return new Container({
-      "width": 92,
-      "height": 92,
-      "color": new Color({value: 0xFFE8EBF0})
-    });
-  }
 }
 
 // 组件 _ResourceCard
@@ -735,7 +726,10 @@ export class _ResourceCard {
               "height": 68,
               "child": Image.asset({
                 "fit": "cover",
-                "errorBuilder": "_errorBuilder0",
+                "errorBuilder": (context, e, s) => new Container({
+                  "height": 68,
+                  "color": new Color({value: 0xFFE8EBF0})
+                }),
                 "name": this.resource.img
               })
             }),
@@ -776,12 +770,6 @@ export class _ResourceCard {
           ]
         })
       })
-    });
-  }
-  _errorBuilder0(context, e) {
-    return new Container({
-      "height": 68,
-      "color": new Color({value: 0xFFE8EBF0})
     });
   }
 }

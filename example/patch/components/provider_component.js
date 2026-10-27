@@ -49,7 +49,7 @@ export class ProviderCard {
               this._buildText(),
               this._modelA.buildText(),
               new Consumer({
-                "builder": "_builder0",
+                "builder": (context, value, child) => this._buildBadge(),
                 "model": "CounterVm"
               }),
               (this.__k0 || (this.__k0 = new Text({
@@ -59,7 +59,14 @@ export class ProviderCard {
                 "height": 8
               }))),
               new Consumer({
-                "builder": "_builder1",
+                "builder": (context, value, child) => new Text({
+                  "style": {
+                    "fontSize": 22,
+                    "fontWeight": "bold",
+                    "color": Colors.blue
+                  },
+                  "data": "加载用户信息："
+                }),
                 "model": "NetworkVm"
               }),
               new Row({
@@ -77,7 +84,14 @@ export class ProviderCard {
                 "height": 8
               }))),
               new Consumer({
-                "builder": "_builder2",
+                "builder": (context, value, child) => new Text({
+                  "style": {
+                    "fontSize": 22,
+                    "fontWeight": "bold",
+                    "color": Colors.green
+                  },
+                  "data": "B = " + value.count
+                }),
                 "model": "CounterVm"
               }),
               new Row({
@@ -139,29 +153,6 @@ export class ProviderCard {
   }
   dispose() {
     this._modelB.dispose();
-  }
-  _builder0(context, value) {
-    return this._buildBadge();
-  }
-  _builder1(context, value) {
-    return new Text({
-      "style": {
-        "fontSize": 22,
-        "fontWeight": "bold",
-        "color": Colors.blue
-      },
-      "data": "加载用户信息："
-    });
-  }
-  _builder2(context, value) {
-    return new Text({
-      "style": {
-        "fontSize": 22,
-        "fontWeight": "bold",
-        "color": Colors.green
-      },
-      "data": "B = " + value.count
-    });
   }
 }
 

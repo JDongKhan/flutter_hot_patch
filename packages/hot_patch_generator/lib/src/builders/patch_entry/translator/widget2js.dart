@@ -127,23 +127,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 
   ConstKeyAllocator get constKeys => constKeyAllocator ?? _localConstKeys;
 
-  /// ListenableBuilder 等「builder 闭包」翻译：闭包返回的子树抽到组件方法
-  /// `_lbBuilderN()`，运行时时模型 notify 后重新调用拿到最新子树做局部重建。
-  /// 收集顺序即 `_lbBuilder${index}` 命名序号。
-  final List<Object?> builderTrees = []; // Map = 节点；String = 三目 JS 表达式
-
-  /// 与 [builderTrees] 同步的方法名（`_lbBuilderN` / `_consumerBuilderN`）。
-  final List<String> builderNames = [];
-
-  /// 与 [builderTrees] 同步的**形参声明**（Dart 闭包签名逐字对应，如
-  /// `context, index` / `context, value`——`context` 是 Dart
-  /// `build(BuildContext context)` 那个形参，被委托方法因此天然看得见它）。
-  final List<String?> builderParams = [];
-
-  /// 与 [builderTrees] 同步的「方法体前置语句」（JS 源码，如 Builder 闭包
-  /// 块体里的 `var model = context.watch('MyModel');`）。
-  final List<String> builderPreludes = [];
-
   WidgetTranslateContext({
     required this.propByField,
     required this.actionByMethod,

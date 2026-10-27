@@ -379,7 +379,11 @@ String? valueCtorJs(
   String? ctorName;
   List<Expression> args = const [];
   if (e is InstanceCreationExpression) {
-    final src = e.constructorName.type.toSource();
+    // 类型实参在 JS 里不存在（Dart→JS 语义即擦除），构造名只取类型实参之前
+    // 的部分：`GlobalKey<AnimatedListState>()` 与 `GlobalKey()` 是同一个类。
+    var src = e.constructorName.type.toSource();
+    final lt = src.indexOf('<');
+    if (lt >= 0) src = src.substring(0, lt).trim();
     final dot = src.indexOf('.');
     cls = dot < 0 ? src : src.substring(0, dot);
     ctorName = dot < 0 ? null : src.substring(dot + 1);
@@ -388,7 +392,9 @@ String? valueCtorJs(
     cls = (e.target! as SimpleIdentifier).name;
     ctorName = e.methodName.name;
     args = e.argumentList.arguments.toList();
-  } else if (e is MethodInvocation && e.target == null && e.typeArguments == null) {
+  } else if (e is MethodInvocation && e.target == null) {
+    // 无 `new` 的构造调用：`GlobalKey()` / `GlobalKey<AnimatedListState>()` ——
+    // 类型实参在 JS 里不存在，一律擦除；非类名（首字母非大写）由下面拦掉。
     cls = e.methodName.name;
     args = e.argumentList.arguments.toList();
   }
@@ -426,8 +432,31 @@ String? valueCtorJs(
         '的位置实参缺少形参名签名，落 __pos 兜底：${rest.join(', ')}');
     entries.add('__pos: [${rest.join(', ')}]');
   }
+  // 类型实参：Dart 泛型在 AOT 是 **reified** 的（运行时真实存在），一比一映射为
+  // `typeArguments`（类型名数组，与 `context.read<T>()` 把 T 当参数下发同一原则）。
+  // 运行时/宿主谁需要谁取（如 `GlobalKey<T>.currentState` 用它确定代理类），
+  // 翻译层不做类型判断、不维护类型名单。无类型实参时不产生该键。
+  final typeArgs = _typeArgsOf(e);
+  if (typeArgs.isNotEmpty) {
+    entries.add(
+      'typeArguments: [${typeArgs.map((t) => "'${t.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'").join(', ')}]',
+    );
+  }
   final props = entries.isEmpty ? '' : '{${entries.join(', ')}}';
   return ctorName == null ? 'new $cls($props)' : '$cls.$ctorName($props)';
+}
+
+/// 构造调用的类型实参名（`GlobalKey<AnimatedListState>()` → ['AnimatedListState']）。
+///
+/// 覆盖三种写法：`const A<T>()`、`A<T>.b()`、`A<T>()`（无 const，parseString 下
+/// 是 MethodInvocation）。嵌套泛型保留源码文本（`List<int>`）。
+List<String> _typeArgsOf(Expression e) {
+  final List<TypeAnnotation>? args = switch (e) {
+    InstanceCreationExpression() => e.constructorName.type.typeArguments?.arguments,
+    MethodInvocation() => e.typeArguments?.arguments,
+    _ => null,
+  };
+  return [for (final a in args ?? const <TypeAnnotation>[]) a.toSource()];
 }
 
 /// 类名形态：首字母大写（Dart 语法层唯一可用的判据，与具体类无关）。

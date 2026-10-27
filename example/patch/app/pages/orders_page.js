@@ -135,24 +135,20 @@ export class OrdersPage {
               "bottom": 20.0
             },
             "itemCount": this._orders.length,
-            "separatorBuilder": "_separatorBuilder0",
-            "itemBuilder": "_itemBuilder1"
+            "separatorBuilder": (context, index) => (this.__k3 || (this.__k3 = new SizedBox({
+              "height": 10
+            }))),
+            "itemBuilder": (context, i) => {
+              var o = this._orders[i];
+              return new _OrderCard({
+                "order": o,
+                "statusColor": this._statusColor(o.status),
+                "onOpen": () => { return _app_host_.invoke("openOrder", [o.no]); }
+              });
+            }
           })
         })
       ]
-    });
-  }
-  _separatorBuilder0(context, _) {
-    return (this.__k3 || (this.__k3 = new SizedBox({
-      "height": 10
-    })));
-  }
-  _itemBuilder1(context, i) {
-    var o = this._orders[i];
-    return new _OrderCard({
-      "order": o,
-      "statusColor": this._statusColor(o.status),
-      "onOpen": () => { return _app_host_.invoke("openOrder", [o.no]); }
     });
   }
 }
@@ -231,7 +227,11 @@ export class _OrderCard {
                       "width": 66,
                       "height": 66,
                       "fit": "cover",
-                      "errorBuilder": "_errorBuilder0",
+                      "errorBuilder": (context, e, s) => new Container({
+                        "width": 66,
+                        "height": 66,
+                        "color": new Color({value: 0xFFE8EBF0})
+                      }),
                       "name": this.order.img
                     })
                   }),
@@ -327,13 +327,6 @@ export class _OrderCard {
           ]
         })
       })
-    });
-  }
-  _errorBuilder0(context, e) {
-    return new Container({
-      "width": 66,
-      "height": 66,
-      "color": new Color({value: 0xFFE8EBF0})
     });
   }
 }

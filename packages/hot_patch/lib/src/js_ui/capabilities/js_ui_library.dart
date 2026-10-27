@@ -37,6 +37,7 @@
 // widget_json.dart / value_forms.dart 与 `patch/<pkg>.js` 里的 JS 组件类）
 // 属于另一条缝，不在本文件范围内。
 import '../js_widget_registry.dart';
+import 'animated_list/animated_list_library.dart';
 import 'animation/animation_library.dart';
 import 'build_context/build_context_library.dart';
 import 'cached_network_image/cached_network_image_library.dart';
@@ -124,6 +125,8 @@ void _seedBuiltins() {
   // 动画值类 / AnimationController 镜像：显式动画经此逐帧回传 value。
   registerJsUiLibrary(const AnimationLibrary());
   registerJsUiLibrary(const ScrollControllerLibrary());
+  // AnimatedList：currentState 命令经 key 桥接的 state op 扩展点接入。
+  registerJsUiLibrary(const AnimatedListLibrary());
   registerJsUiLibrary(const TextEditingControllerLibrary());
   registerJsUiLibrary(const TabLibrary());
   registerJsUiLibrary(const KeyLibrary());

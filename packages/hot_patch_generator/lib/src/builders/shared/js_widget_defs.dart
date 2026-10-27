@@ -42,6 +42,42 @@ const Set<String> builderFormTypes = {
   'SliverList',
   'SliverGrid',
   'PageView',
+  // 普通构造里就带 builder 回调（`AnimatedList(itemBuilder:, initialItemCount:)`）。
+  // 与 ListView.builder 同一协议：闭包在代理类里展开成有序子结点，不进宿主 props。
+  'AnimatedList',
+};
+
+/// builder 形态的「项数」props 键：默认 `itemCount`，Dart 侧形参名不同的类型
+/// 在此登记（`AnimatedList` 是 `initialItemCount`）。
+///
+/// 这是**产物协议配置**（JS 代理展开时读取哪个形参），不是运行时类型表。
+const Map<String, String> builderCountPropKeys = {
+  'AnimatedList': 'initialItemCount',
+};
+
+/// 某类型的「项数」props 键。
+String builderCountPropKey(String type) =>
+    builderCountPropKeys[type] ?? 'itemCount';
+
+/// 随**组件**下发的 State 代理类源码（键 = 宿主类型名，与组件一起写进该包模块）。
+///
+/// `GlobalKey.currentState` 的方法签名属于具体组件（`AnimatedListState.insertItem`
+/// 不是框架通用概念），因此类定义与登记都放在 flutter.js 里、紧挨对应组件，
+/// 运行时只保留通用的 `__StateHandle.__op` 与按 runtimeType 取类的登记表。
+/// 新增同类组件 = 在这里加一段源码，运行时与翻译器都不动。
+const Map<String, String> stateProxySources = {
+  'AnimatedList': '''
+export class AnimatedListState extends __StateHandle {
+  insertItem(index, duration) {
+    this.__op('insertItem', { index: index, duration: duration });
+  }
+  // 与 Dart 同形（`removeItem(index, builder, {duration})`）：退场 widget 的
+  // builder 由宿主按自己持有的子项快照完成，这里原样接收、只下发 index/duration。
+  removeItem(index, builder, duration) {
+    this.__op('removeItem', { index: index, duration: duration });
+  }
+}
+__registerStateProxy('AnimatedListState', AnimatedListState);''',
 };
 
 /// 「逻辑 widget」类型名：状态/订阅逻辑必须跑在 JS 里的 widget（provider 提供/
