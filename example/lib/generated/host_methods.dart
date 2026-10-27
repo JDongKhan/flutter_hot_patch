@@ -18,8 +18,11 @@ import '../base/web_view.dart';
 /// 注册本包全部 `@HostInjected` 宿主方法（无注解时为空实现）。
 void registerHostMethods() {
   JsRuntimeManager.registerHostMethod('getUserName', AccountCenter.getUserName);
+  JsRuntimeManager.registerHostMethod('openChannel', AppRouter.openChannel);
+  JsRuntimeManager.registerHostMethod('openCityPicker', AppRouter.openCityPicker);
   JsRuntimeManager.registerHostMethod('openDemoList', AppRouter.openDemoList);
   JsRuntimeManager.registerHostMethod('openLogin', AppRouter.openLogin);
+  JsRuntimeManager.registerHostMethod('openNotifications', AppRouter.openNotifications);
   JsRuntimeManager.registerHostMethod('openOrder', AppRouter.openOrder);
   JsRuntimeManager.registerHostMethod('openOrders', AppRouter.openOrders);
   JsRuntimeManager.registerHostMethod('openPost', AppRouter.openPost);

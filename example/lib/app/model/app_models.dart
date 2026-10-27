@@ -61,6 +61,9 @@ class Post {
   final String img;
   final int like;
 
+  /// 归属 tab（广场 / 推荐）：列表接口按 tab 过滤时使用。
+  final String tab;
+
   const Post({
     required this.id,
     required this.title,
@@ -70,6 +73,30 @@ class Post {
     required this.time,
     required this.img,
     required this.like,
+    required this.tab,
+  });
+}
+
+/// 通知消息（消息中心列表项）。
+class AppNotice {
+  final String id;
+  final String title;
+  final String content;
+  final String time;
+
+  /// 消息分类（订单 / 活动 / 系统 …），列表里以标签展示。
+  final String type;
+
+  /// 是否未读（未读项标题前带红点）。
+  final bool unread;
+
+  const AppNotice({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.time,
+    required this.type,
+    required this.unread,
   });
 }
 

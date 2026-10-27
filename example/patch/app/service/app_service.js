@@ -12,6 +12,7 @@ import { HomeBanner } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
+import { AppNotice } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { MenuEntry } from '../model/app_models.js';
@@ -52,7 +53,15 @@ export class AppService {
   }
   async fetchPostList(tab, sort, type, dist, price) {
     var data = await this._requestQuery("/app/posts", {"tab": tab, "sort": sort, "type": type, "dist": dist, "price": price});
-    return this._postListOf(this._posts(data["list"]), sort, type);
+    return this._postListOf(this._posts(data["list"]), tab, sort, type);
+  }
+  async fetchNotifications() {
+    var data = await this._request("/app/notifications");
+    var list = [];
+    for (let e of data["list"]) {
+      list.add(this._notice(e));
+    }
+    return list;
   }
   async fetchOrders() {
     var data = await this._request("/app/orders");
@@ -141,7 +150,10 @@ export class AppService {
     return new Spot({id: e["id"], title: e["title"], sub: e["sub"], sold: e["sold"], tag: e["tag"], img: e["img"], desc: e["desc"], price: e["price"], tags: this._strings(e["tags"])});
   }
   _post(e) {
-    return new Post({id: e["id"], title: e["title"], sub: e["sub"], type: e["type"], author: e["author"], time: e["time"], img: e["img"], like: e["like"]});
+    return new Post({id: e["id"], title: e["title"], sub: e["sub"], type: e["type"], author: e["author"], time: e["time"], img: e["img"], like: e["like"], tab: e["tab"]});
+  }
+  _notice(e) {
+    return new AppNotice({id: e["id"], title: e["title"], content: e["content"], time: e["time"], type: e["type"], unread: e["unread"]});
   }
   _resource(e) {
     return new Resource({id: e["id"], title: e["title"], sub: e["sub"], img: e["img"]});
@@ -152,8 +164,9 @@ export class AppService {
   _menu(e) {
     return new MenuEntry({emoji: e["emoji"], title: e["title"], screen: e["screen"], arg: e["arg"]});
   }
-  _postListOf(posts, sort, type) {
-    var result = ((type.isEmpty || (type == "全部")) ? posts : posts.where((p) => { return (p.type == type); }).toList());
+  _postListOf(posts, tab, sort, type) {
+    var result = ((tab.isEmpty || (tab == "广场")) ? posts : posts.where((p) => { return (p.tab == tab); }).toList());
+    result = ((type.isEmpty || (type == "全部")) ? result : result.where((p) => { return (p.type == type); }).toList());
     switch (sort) {
       case "最新":
         result = result.reversed.toList();

@@ -7,7 +7,7 @@ import { HomeFeed } from '../model/app_models.js';
 import { HomeBanner } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
-import { Center, CircularProgressIndicator, ClipRRect, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, GridView, Icon, Image, InkWell, Padding, PageView, Positioned, Row, SafeArea, SizedBox, SliverGrid, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text } from '../../flutter.js';
+import { Center, CircularProgressIndicator, ClipRRect, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, Expanded, GridView, Icon, Image, InkWell, Padding, PageView, Positioned, Row, SafeArea, SizedBox, SliverGrid, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {
@@ -16,10 +16,19 @@ export class HomePage {
     this._service = new AppService();
     this._refreshController = new EasyRefreshController();
     this._feed = null;
+    this._city = "上海";
   }
   initState() {
     console.log("HomePage initState ---");
     this._load();
+  }
+  async _pickCity() {
+    var picked = await _app_host_.invoke("openCityPicker", [this._city]);
+    if ((picked == null)) {
+      return;
+    }
+    this.setState(() => { this._city = picked; });
+    await this._load();
   }
   didUpdateWidget(oldWidget) {
     console.log("--HomePage didUpdateWidget 0");
@@ -45,185 +54,194 @@ export class HomePage {
     var adImg = this._feed.adImg;
     return new Container({
         "color": new Color({value: 0xFFF4F5F7}),
-        "child": new EasyRefresh({
-          "controller": this._refreshController,
-          "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a)),
-          "child": new CustomScrollView({
-            "slivers": [
-              new SliverToBoxAdapter({
-                  "child": new Column({
-                    "crossAxisAlignment": "stretch",
-                    "children": [
-                      new HomeHeader({
-                          "onRefresh": (...__a) => this._refresh(...__a)
-                        }),
-                      (this.__k5 || (this.__k5 = new SizedBox({
-                          "height": 12
-                        }))),
-                      new SizedBox({
-                          "height": 150,
-                          "child": new PageView({
+        "child": new Column({
+          "crossAxisAlignment": "stretch",
+          "children": [
+            new HomeHeader({
+                "city": this._city,
+                "onRefresh": (...__a) => this._refresh(...__a),
+                "onPickCity": (...__a) => this._pickCity(...__a)
+              }),
+            new Expanded({
+                "child": new EasyRefresh({
+                  "controller": this._refreshController,
+                  "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a)),
+                  "child": new CustomScrollView({
+                    "slivers": [
+                      new SliverToBoxAdapter({
+                          "child": new Column({
+                            "crossAxisAlignment": "stretch",
                             "children": [
-                              ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({
-                                "banner": this._feed.banners[i]
-                              })]); } return out; })()
-                            ]
-                          })
-                        }),
-                      (this.__k6 || (this.__k6 = new SizedBox({
-                          "height": 10
-                        }))),
-                      new Row({
-                          "mainAxisAlignment": "center",
-                          "children": [
-                            ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new Container({
-                              "margin": {
-                                "left": 3.0,
-                                "top": 0.0,
-                                "right": 3.0,
-                                "bottom": 0.0
-                              },
-                              "width": 6,
-                              "height": 6,
-                              "decoration": {
-                                "color": ((i == 0) ? new Color({value: 0xFF0E7AFB}) : new Color({value: 0xFFD5D9E0})),
-                                "borderRadius": {
-                                  "radius": 3.0
-                                }
-                              }
-                            })]); } return out; })()
-                          ]
-                        }),
-                      (this.__k5 || (this.__k5 = new SizedBox({
-                          "height": 12
-                        }))),
-                      new Container({
-                          "margin": {
-                            "left": 12.0,
-                            "top": 0.0,
-                            "right": 12.0,
-                            "bottom": 0.0
-                          },
-                          "padding": {
-                            "left": 0.0,
-                            "top": 12.0,
-                            "right": 0.0,
-                            "bottom": 12.0
-                          },
-                          "decoration": {
-                            "color": new Color({value: 0xFFFFFFFF}),
-                            "borderRadius": {
-                              "radius": 14.0
-                            }
-                          },
-                          "child": new GridView({
-                            "gridDelegate": {
-                              "maxCrossAxisExtent": 150,
-                              "mainAxisSpacing": 6,
-                              "crossAxisSpacing": 6,
-                              "mainAxisExtent": 84
-                            },
-                            "shrinkWrap": true,
-                            "physics": "NeverScrollableScrollPhysics",
-                            "children": [
-                              ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({
-                                "entry": this._feed.grid[i]
-                              })]); } return out; })()
-                            ]
-                          })
-                        }),
-                      (this.__k5 || (this.__k5 = new SizedBox({
-                          "height": 12
-                        }))),
-                      new Container({
-                          "margin": {
-                            "left": 12.0,
-                            "top": 0.0,
-                            "right": 12.0,
-                            "bottom": 0.0
-                          },
-                          "child": new PromoCard({
-                            "img": this._feed.adImg
-                          })
-                        }),
-                      (this.__k7 || (this.__k7 = new SizedBox({
-                          "height": 16
-                        }))),
-                      new Padding({
-                          "padding": {
-                            "left": 14.0,
-                            "top": 0.0,
-                            "right": 14.0,
-                            "bottom": 0.0
-                          },
-                          "child": new Row({
-                            "children": [
-                              new Container({
-                                  "width": 4,
-                                  "height": 16,
-                                  "decoration": {
-                                    "color": new Color({value: 0xFF0E7AFB}),
-                                    "borderRadius": {
-                                      "radius": 2.0
-                                    }
-                                  }
+                              (this.__k5 || (this.__k5 = new SizedBox({
+                                  "height": 12
+                                }))),
+                              new SizedBox({
+                                  "height": 150,
+                                  "child": new PageView({
+                                    "children": [
+                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({
+                                        "banner": this._feed.banners[i]
+                                      })]); } return out; })()
+                                    ]
+                                  })
                                 }),
-                              (this.__k1 || (this.__k1 = new SizedBox({
-                                  "width": 8
+                              (this.__k6 || (this.__k6 = new SizedBox({
+                                  "height": 10
                                 }))),
-                              (this.__k2 || (this.__k2 = new Text({
-                                  "data": "景点推荐",
-                                  "style": {
-                                    "color": new Color({value: 0xFF1F2430}),
-                                    "fontSize": 17,
-                                    "fontWeight": "w700"
-                                  }
+                              new Row({
+                                  "mainAxisAlignment": "center",
+                                  "children": [
+                                    ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new Container({
+                                      "margin": {
+                                        "left": 3.0,
+                                        "top": 0.0,
+                                        "right": 3.0,
+                                        "bottom": 0.0
+                                      },
+                                      "width": 6,
+                                      "height": 6,
+                                      "decoration": {
+                                        "color": ((i == 0) ? new Color({value: 0xFF0E7AFB}) : new Color({value: 0xFFD5D9E0})),
+                                        "borderRadius": {
+                                          "radius": 3.0
+                                        }
+                                      }
+                                    })]); } return out; })()
+                                  ]
+                                }),
+                              (this.__k5 || (this.__k5 = new SizedBox({
+                                  "height": 12
                                 }))),
-                              (this.__k3 || (this.__k3 = new Spacer({}))),
-                              (this.__k4 || (this.__k4 = new Text({
-                                  "data": "为你精选",
-                                  "style": {
-                                    "color": new Color({value: 0xFF8A909E}),
-                                    "fontSize": 12
-                                  }
+                              new Container({
+                                  "margin": {
+                                    "left": 12.0,
+                                    "top": 0.0,
+                                    "right": 12.0,
+                                    "bottom": 0.0
+                                  },
+                                  "padding": {
+                                    "left": 0.0,
+                                    "top": 12.0,
+                                    "right": 0.0,
+                                    "bottom": 12.0
+                                  },
+                                  "decoration": {
+                                    "color": new Color({value: 0xFFFFFFFF}),
+                                    "borderRadius": {
+                                      "radius": 14.0
+                                    }
+                                  },
+                                  "child": new GridView({
+                                    "gridDelegate": {
+                                      "maxCrossAxisExtent": 150,
+                                      "mainAxisSpacing": 6,
+                                      "crossAxisSpacing": 6,
+                                      "mainAxisExtent": 84
+                                    },
+                                    "shrinkWrap": true,
+                                    "physics": "NeverScrollableScrollPhysics",
+                                    "children": [
+                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({
+                                        "entry": this._feed.grid[i]
+                                      })]); } return out; })()
+                                    ]
+                                  })
+                                }),
+                              (this.__k5 || (this.__k5 = new SizedBox({
+                                  "height": 12
+                                }))),
+                              new Container({
+                                  "margin": {
+                                    "left": 12.0,
+                                    "top": 0.0,
+                                    "right": 12.0,
+                                    "bottom": 0.0
+                                  },
+                                  "child": new PromoCard({
+                                    "img": this._feed.adImg
+                                  })
+                                }),
+                              (this.__k7 || (this.__k7 = new SizedBox({
+                                  "height": 16
+                                }))),
+                              new Padding({
+                                  "padding": {
+                                    "left": 14.0,
+                                    "top": 0.0,
+                                    "right": 14.0,
+                                    "bottom": 0.0
+                                  },
+                                  "child": new Row({
+                                    "children": [
+                                      new Container({
+                                          "width": 4,
+                                          "height": 16,
+                                          "decoration": {
+                                            "color": new Color({value: 0xFF0E7AFB}),
+                                            "borderRadius": {
+                                              "radius": 2.0
+                                            }
+                                          }
+                                        }),
+                                      (this.__k1 || (this.__k1 = new SizedBox({
+                                          "width": 8
+                                        }))),
+                                      (this.__k2 || (this.__k2 = new Text({
+                                          "data": "景点推荐",
+                                          "style": {
+                                            "color": new Color({value: 0xFF1F2430}),
+                                            "fontSize": 17,
+                                            "fontWeight": "w700"
+                                          }
+                                        }))),
+                                      (this.__k3 || (this.__k3 = new Spacer({}))),
+                                      (this.__k4 || (this.__k4 = new Text({
+                                          "data": "为你精选",
+                                          "style": {
+                                            "color": new Color({value: 0xFF8A909E}),
+                                            "fontSize": 12
+                                          }
+                                        })))
+                                    ]
+                                  })
+                                }),
+                              (this.__k6 || (this.__k6 = new SizedBox({
+                                  "height": 10
                                 })))
                             ]
                           })
                         }),
-                      (this.__k6 || (this.__k6 = new SizedBox({
-                          "height": 10
+                      new SliverPadding({
+                          "padding": {
+                            "left": 12.0,
+                            "top": 0.0,
+                            "right": 12.0,
+                            "bottom": 0.0
+                          },
+                          "sliver": new SliverGrid({
+                            "gridDelegate": {
+                              "maxCrossAxisExtent": 300,
+                              "mainAxisSpacing": 10,
+                              "crossAxisSpacing": 10,
+                              "mainAxisExtent": 190
+                            },
+                            "delegate": {
+                              "__delegate": "builder",
+                              "builder": "_builder0",
+                              "childCount": this._feed.spots.length
+                            }
+                          })
+                        }),
+                      (this.__k8 || (this.__k8 = new SliverToBoxAdapter({
+                          "child": new SizedBox({
+                            "height": 20
+                          })
                         })))
                     ]
                   })
-                }),
-              new SliverPadding({
-                  "padding": {
-                    "left": 12.0,
-                    "top": 0.0,
-                    "right": 12.0,
-                    "bottom": 0.0
-                  },
-                  "sliver": new SliverGrid({
-                    "gridDelegate": {
-                      "maxCrossAxisExtent": 300,
-                      "mainAxisSpacing": 10,
-                      "crossAxisSpacing": 10,
-                      "mainAxisExtent": 190
-                    },
-                    "delegate": {
-                      "__delegate": "builder",
-                      "builder": "_builder0",
-                      "childCount": this._feed.spots.length
-                    }
-                  })
-                }),
-              (this.__k8 || (this.__k8 = new SliverToBoxAdapter({
-                  "child": new SizedBox({
-                    "height": 20
-                  })
-                })))
-            ]
-          })
+                })
+              })
+          ]
         })
       });
   }
@@ -242,15 +260,14 @@ export class HomeHeader {
   }
   __applyProps(args) {
     this.onRefresh = (args && args.onRefresh !== undefined) ? args.onRefresh : null;
+    this.city = (args && args.city !== undefined) ? args.city : '';
+    this.onPickCity = (args && args.onPickCity !== undefined) ? args.onPickCity : null;
   }
   openSearch() {
     _app_host_.invoke("openSearch", []);
   }
   openMessages() {
-    _app_host_.invoke("toast", ["暂无新消息"]);
-  }
-  openLocation() {
-    _app_host_.invoke("toast", ["定位：上海市 · 点击切换城市"]);
+    _app_host_.invoke("openNotifications", []);
   }
   build(context) {
     return new Container({
@@ -279,40 +296,40 @@ export class HomeHeader {
               new Row({
                   "children": [
                     new InkWell({
-                        "onTap": this.__bindFn(0, [], (...__a) => this.openLocation(...__a)),
-                        "child": (this.__k0 || (this.__k0 = new Row({
+                        "onTap": this.__bindFn(0, [], (...__a) => this.onPickCity(...__a)),
+                        "child": new Row({
                           "children": [
-                            new Icon({
+                            (this.__k0 || (this.__k0 = new Icon({
                                 "color": new Color({value: 0xFFFFFFFF}),
                                 "icon": "location_on",
                                 "size": 18
-                              }),
-                            new SizedBox({
+                              }))),
+                            (this.__k1 || (this.__k1 = new SizedBox({
                                 "width": 2
-                              }),
+                              }))),
                             new Text({
-                                "data": "上海",
                                 "style": {
                                   "color": new Color({value: 0xFFFFFFFF}),
                                   "fontSize": 15,
                                   "fontWeight": "w600"
-                                }
+                                },
+                                "data": this.city
                               }),
-                            new Icon({
+                            (this.__k2 || (this.__k2 = new Icon({
                                 "color": new Color({value: 0xFFFFFFFF}),
                                 "icon": "keyboard_arrow_down",
                                 "size": 18
-                              })
+                              })))
                           ]
-                        })))
+                        })
                       }),
-                    (this.__k4 || (this.__k4 = new Spacer({}))),
+                    (this.__k6 || (this.__k6 = new Spacer({}))),
                     new InkWell({
                         "onTap": this.__bindFn(1, [], (...__a) => this.onRefresh(...__a)),
                         "borderRadius": {
                           "radius": 18.0
                         },
-                        "child": (this.__k1 || (this.__k1 = new Padding({
+                        "child": (this.__k3 || (this.__k3 = new Padding({
                           "child": new Icon({
                             "color": new Color({value: 0xFFFFFFFF}),
                             "size": 24,
@@ -326,7 +343,7 @@ export class HomeHeader {
                           }
                         })))
                       }),
-                    (this.__k5 || (this.__k5 = new SizedBox({
+                    (this.__k7 || (this.__k7 = new SizedBox({
                         "width": 8
                       }))),
                     new InkWell({
@@ -334,7 +351,7 @@ export class HomeHeader {
                         "borderRadius": {
                           "radius": 18.0
                         },
-                        "child": (this.__k2 || (this.__k2 = new Stack({
+                        "child": (this.__k4 || (this.__k4 = new Stack({
                           "children": [
                             new Padding({
                                 "child": new Icon({
@@ -370,7 +387,7 @@ export class HomeHeader {
                       })
                   ]
                 }),
-              (this.__k6 || (this.__k6 = new SizedBox({
+              (this.__k8 || (this.__k8 = new SizedBox({
                   "height": 12
                 }))),
               new InkWell({
@@ -392,7 +409,7 @@ export class HomeHeader {
                         "radius": 21.0
                       }
                     },
-                    "child": (this.__k3 || (this.__k3 = new Row({
+                    "child": (this.__k5 || (this.__k5 = new Row({
                       "children": [
                         new Icon({
                             "color": new Color({value: 0xFF9AA0AC}),
@@ -525,7 +542,7 @@ export class GridCell {
     this.entry = (args && args.entry !== undefined) ? args.entry : null;
   }
   open() {
-    _app_host_.invoke("toast", [this.entry.title + " 频道"]);
+    _app_host_.invoke("openChannel", [this.entry.title, this.entry.emoji]);
   }
   build(context) {
     return new InkWell({

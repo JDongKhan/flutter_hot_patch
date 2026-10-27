@@ -1345,6 +1345,458 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 // ---------------------------------------------------------------------------
+// 城市选择器（宿主底部面板）
+// ---------------------------------------------------------------------------
+
+/// 城市选择面板：由 `AppRouter.openCityPicker` 用 `showModalBottomSheet` 弹出，
+/// 点击任一城市即 `pop(城市名)` 返回给调用方（首页据此更新左上角并重新取数）。
+///
+/// 城市列表是宿主侧的静态配置（选择器不走接口，进入即可选）。
+class CityPickerSheet extends StatelessWidget {
+  const CityPickerSheet({super.key, required this.current});
+
+  /// 当前城市名（面板里做高亮）。
+  final String current;
+
+  static const List<String> _cities = [
+    '上海',
+    '北京',
+    '广州',
+    '深圳',
+    '成都',
+    '杭州',
+    '西安',
+    '重庆',
+    '南京',
+    '武汉',
+    '苏州',
+    '厦门',
+    '青岛',
+    '长沙',
+    '昆明',
+    '三亚',
+  ];
+
+  void _pick(BuildContext context, String city) {
+    Navigator.of(context).pop(city);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  '选择城市',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: const Icon(
+                    Icons.close,
+                    size: 20,
+                    color: Color(0xFF8B909A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              '当前定位',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF8B909A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => _pick(context, current),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF3FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.my_location, size: 15, color: kBrand),
+                    const SizedBox(width: 5),
+                    Text(
+                      current,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: kBrand,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '热门城市',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF8B909A),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final c in _cities)
+                  GestureDetector(
+                    onTap: () => _pick(context, c),
+                    child: Container(
+                      width: 76,
+                      height: 38,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: c == current
+                            ? const Color(0xFFEAF3FF)
+                            : const Color(0xFFF3F5F8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        c,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: c == current
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: c == current
+                              ? kBrand
+                              : const Color(0xFF4D5462),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 九宫格频道详情（门票 / 酒店 / 机票 …）
+// ---------------------------------------------------------------------------
+
+/// 频道页的示例条目（纯本地展示数据，按频道标题动态拼装）。
+class _ChannelItem {
+  final String emoji;
+  final String title;
+  final String sub;
+
+  const _ChannelItem(this.emoji, this.title, this.sub);
+}
+
+/// 首页九宫格入口的详情页：顶部渐变头（emoji + 频道名）+ 今日推荐条目。
+///
+/// 由 `AppRouter.openChannel(title, emoji)` 从 JS 页面推入；JS 侧只传两个
+/// 字符串（模型实例不跨桥），页面内容在宿主侧组装。
+class ChannelDetailPage extends StatelessWidget {
+  const ChannelDetailPage({
+    super.key,
+    required this.title,
+    required this.emoji,
+  });
+
+  final String title;
+  final String emoji;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <_ChannelItem>[
+      _ChannelItem('🔥', '$title · 今日热卖', '下单立减，库存实时更新'),
+      _ChannelItem('✨', '$title · 精选榜单', '按口碑与人气综合排序'),
+      _ChannelItem('🎁', '$title · 限时优惠', '本周特惠，先到先得'),
+      _ChannelItem('🧭', '$title · 全部条目', '按距离 / 价格 / 评分筛选'),
+    ];
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F5F8),
+      body: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            child: _TopBar(title: '$title 频道'),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                Container(
+                  margin: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1E88FF), Color(0xFF0E7AFB)],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(emoji, style: const TextStyle(fontSize: 34)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$title 频道',
+                              style: const TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              '聚合$title相关的预订、榜单与优惠',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xE6FFFFFF),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 10),
+                  child: Text(
+                    '频道内容',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                for (final it in items)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                    child: GestureDetector(
+                      onTap: () => AppRouter.toast('${it.title}（演示）'),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              it.emoji,
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    it.title,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    it.sub,
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      color: Color(0xFF8B909A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: Color(0xFFA3A9B4),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          _BottomBar(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => AppRouter.toast('已进入$title全部条目（演示）'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kBrand,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                  ),
+                  child: Text('查看全部$title'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 消息中心（通知列表）
+// ---------------------------------------------------------------------------
+
+/// 通知列表页：由 `AppRouter.openNotifications` 请求 `/app/notifications`
+/// 后推入；未读消息左侧带红点、标题加粗。
+class NotificationsPage extends StatelessWidget {
+  const NotificationsPage({super.key, required this.notices});
+
+  final List<AppNotice> notices;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3F5F8),
+      body: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            child: _TopBar(
+              title: '消息通知',
+              trailing: GestureDetector(
+                onTap: () => AppRouter.toast('已全部标为已读（演示）'),
+                child: const Text(
+                  '全部已读',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: kBrand,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(top: 12, bottom: 24),
+              children: [
+                for (final n in notices)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                    child: GestureDetector(
+                      onTap: () => AppRouter.toast('已读：${n.title}'),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                if (n.unread)
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    margin: const EdgeInsets.only(right: 7),
+                                    decoration: const BoxDecoration(
+                                      color: kPrice,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: Text(
+                                    n.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: n.unread
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
+                                      color: const Color(0xFF1F2430),
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  n.time,
+                                  style: const TextStyle(
+                                    fontSize: 10.5,
+                                    color: Color(0xFFA3A9B4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 7),
+                            Text(
+                              n.content,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                height: 1.6,
+                                color: Color(0xFF5C6270),
+                              ),
+                            ),
+                            const SizedBox(height: 9),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F5F8),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                n.type,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF5C6270),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // WebView 占位页（宿主侧实现，不引 webview_flutter）
 // ---------------------------------------------------------------------------
 

@@ -58,6 +58,22 @@ export class Post {
     this.time = (args && args.time !== undefined) ? args.time : '';
     this.img = (args && args.img !== undefined) ? args.img : '';
     this.like = (args && args.like !== undefined) ? args.like : 0;
+    this.tab = (args && args.tab !== undefined) ? args.tab : '';
+  }
+}
+
+// 模型 AppNotice
+export class AppNotice {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.id = (args && args.id !== undefined) ? args.id : '';
+    this.title = (args && args.title !== undefined) ? args.title : '';
+    this.content = (args && args.content !== undefined) ? args.content : '';
+    this.time = (args && args.time !== undefined) ? args.time : '';
+    this.type = (args && args.type !== undefined) ? args.type : '';
+    this.unread = (args && args.unread !== undefined) ? args.unread : false;
   }
 }
 

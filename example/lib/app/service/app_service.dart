@@ -74,7 +74,17 @@ class AppService {
   /// `tab` / `dist` / `price` 原样收下，数据里没有对应字段，不参与过滤。
   Future<List<Post>> fetchPostList(String tab, String sort, String type, String dist, String price) async {
     final data = await _requestQuery('/app/posts', {'tab': tab, 'sort': sort, 'type': type, 'dist': dist, 'price': price});
-    return _postListOf(_posts(data['list']), sort, type);
+    return _postListOf(_posts(data['list']), tab, sort, type);
+  }
+
+  /// 消息中心：通知列表（未读项在页面里高亮）。
+  Future<List<AppNotice>> fetchNotifications() async {
+    final data = await _request('/app/notifications');
+    final list = <AppNotice>[];
+    for (final e in data['list']) {
+      list.add(_notice(e));
+    }
+    return list;
   }
 
   /// 订单：状态筛选条（列表见 [fetchOrderList]）。
@@ -217,6 +227,18 @@ class AppService {
       time: e['time'],
       img: e['img'],
       like: e['like'],
+      tab: e['tab'],
+    );
+  }
+
+  AppNotice _notice(dynamic e) {
+    return AppNotice(
+      id: e['id'],
+      title: e['title'],
+      content: e['content'],
+      time: e['time'],
+      type: e['type'],
+      unread: e['unread'],
     );
   }
 
@@ -254,11 +276,13 @@ class AppService {
   // 模拟后端：按筛选参数返回列表（过滤 / 排序在 service 做，页面不碰数据）
   // ---------------------------------------------------------------------
 
-  /// 帖子列表：按内容类型过滤 + 按排序方式排序。
+  /// 帖子列表：按 tab 归属过滤 + 按内容类型过滤 + 按排序方式排序。
   ///
-  /// 空串与各自首项（`postTypes.first` = 全部 / `sorts.first` = 综合）等价。
-  List<Post> _postListOf(List<Post> posts, String sort, String type) {
-    var result = type.isEmpty || type == '全部' ? posts : posts.where((p) => p.type == type).toList();
+  /// 「广场」是全部内容的聚合（空串与它等价，首屏并行请求时 tab 还没回来），
+  /// 「推荐」只取接口里标了该 tab 的精选内容——两个 tab 数据不同。
+  List<Post> _postListOf(List<Post> posts, String tab, String sort, String type) {
+    var result = tab.isEmpty || tab == '广场' ? posts : posts.where((p) => p.tab == tab).toList();
+    result = type.isEmpty || type == '全部' ? result : result.where((p) => p.type == type).toList();
     switch (sort) {
       case '最新':
         result = result.reversed.toList();

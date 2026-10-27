@@ -46,6 +46,37 @@ class AppRouter {
     _push(SpotDetailPage(spot: spot));
   }
 
+  /// 唤起城市选择器（底部面板），返回选中的城市名；用户直接关闭面板时返回 null。
+  ///
+  /// 面板是宿主侧 UI（`showModalBottomSheet` 在 JS 侧无等价物），JS 页面只拿
+  /// 返回值：`await AppRouter.openCityPicker(current)` → `_app_host_.invoke(...)`。
+  @HostInjected()
+  static Future<String?> openCityPicker(String current) async {
+    final ctx = JsRuntimeManager.navigatorKey?.currentContext;
+    if (ctx == null) return null;
+    return showModalBottomSheet<String>(
+      context: ctx,
+      backgroundColor: const Color(0xFFFFFFFF),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => CityPickerSheet(current: current),
+    );
+  }
+
+  /// 打开九宫格频道详情页（门票 / 酒店 / 机票 …）。
+  @HostInjected()
+  static Future<void> openChannel(String title, String emoji) async {
+    _push(ChannelDetailPage(title: title, emoji: emoji));
+  }
+
+  /// 打开通知列表页（消息中心，数据走 `/app/notifications`）。
+  @HostInjected()
+  static Future<void> openNotifications() async {
+    final List<AppNotice> notices = await _service.fetchNotifications();
+    _push(NotificationsPage(notices: notices));
+  }
+
   /// 打开帖子详情页。
   @HostInjected()
   static Future<void> openPost(String id) async {

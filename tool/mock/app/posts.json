@@ -8,7 +8,8 @@
       "author": "山野派",
       "time": "2 天前",
       "img": "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=400&h=400&fit=crop&q=80",
-      "like": 2300
+      "like": 2300,
+      "tab": "广场"
     },
     {
       "id": "p2",
@@ -18,7 +19,8 @@
       "author": "慢行记",
       "time": "4 天前",
       "img": "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=400&h=400&fit=crop&q=80",
-      "like": 1800
+      "like": 1800,
+      "tab": "广场"
     },
     {
       "id": "p3",
@@ -28,7 +30,8 @@
       "author": "旅拍君",
       "time": "1 周前",
       "img": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&h=400&fit=crop&q=80",
-      "like": 960
+      "like": 960,
+      "tab": "广场"
     },
     {
       "id": "p4",
@@ -38,7 +41,8 @@
       "author": "露营实验室",
       "time": "3 天前",
       "img": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=400&h=400&fit=crop&q=80",
-      "like": 1420
+      "like": 1420,
+      "tab": "广场"
     },
     {
       "id": "p5",
@@ -48,7 +52,8 @@
       "author": "周末出发",
       "time": "5 天前",
       "img": "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=400&h=400&fit=crop&q=80",
-      "like": 1180
+      "like": 1180,
+      "tab": "广场"
     },
     {
       "id": "p6",
@@ -58,7 +63,41 @@
       "author": "江南笔记",
       "time": "6 天前",
       "img": "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&h=400&fit=crop&q=80",
-      "like": 2040
+      "like": 2040,
+      "tab": "广场"
+    },
+    {
+      "id": "p7",
+      "title": "编辑精选 · 秋日城市散步",
+      "sub": "5 条梧桐街区漫步线，一间咖啡店到下一间的距离。",
+      "type": "游记",
+      "author": "编辑部",
+      "time": "今天",
+      "img": "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=400&fit=crop&q=80",
+      "like": 3120,
+      "tab": "推荐"
+    },
+    {
+      "id": "p8",
+      "title": "本周热议 · 亲子乐园怎么选",
+      "sub": "按身高、票价与排队时长对比 7 家新开乐园。",
+      "type": "榜单",
+      "author": "遛娃手册",
+      "time": "1 天前",
+      "img": "https://images.unsplash.com/photo-1566140967404-b8b3932483f5?w=400&h=400&fit=crop&q=80",
+      "like": 2760,
+      "tab": "推荐"
+    },
+    {
+      "id": "p9",
+      "title": "达人推荐 · 一个人也能走的川西线",
+      "sub": "公共交通可达的高原路线，含高反应对与住宿点位。",
+      "type": "攻略",
+      "author": "独行侠阿远",
+      "time": "2 天前",
+      "img": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=400&fit=crop&q=80",
+      "like": 2540,
+      "tab": "推荐"
     }
   ]
 }
