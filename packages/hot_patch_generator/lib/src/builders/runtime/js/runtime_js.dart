@@ -512,6 +512,10 @@ const String _jsUiApi = r'''
       activeRoot = prev;
     }
     root.inst = null;
+    // 页面退出兜底（scope=page）：这类句柄就是「显式归页面所有」的，页面没了
+    // 即应释放，属正常生命周期而非泄漏。scope=instance/local 的孤儿残留留给
+    // 宿主在泄漏比对之后调用 sweepPage 处理。
+    releasePageHandles(pageKey);
     delete roots[pageKey];
   }
 

@@ -274,22 +274,14 @@ class JsBindingCache {
   /// 故同屏多实例（兄弟页面的活对象）不会误报；弱引用条目即便目标已被回收，
   /// 只要条目没被 remove 仍然计入（残留本身就是要报的信号：释放路径漏跑了）。
   ///
-  /// [liveHandleIds] 传入 JS 侧销毁瞬间仍存活的句柄 id：宿主 release 消息是异步
-  /// 到达的，「JS 已释放、Dart 侧消息在途」的条目属旅程中，不算泄漏——只有两端
-  /// 都还在的条目才报。`ctx/node` 是宿主自建的 Element 镜像（无对应 JS 句柄），
-  /// 不受该过滤影响。
-  Map<String, int> pageCounts(String pageKey, {Set<String>? liveHandleIds}) {
+  /// **不做任何「在途/新近」豁免**：宿主 release 消息在本实现里是同步到达的，
+  /// 一旦出现残留就是真的没清掉，宁可多报也不能漏报。
+  Map<String, int> pageCounts(String pageKey) {
     final out = <String, int>{};
     for (final e in _buckets.entries) {
       var n = 0;
       for (final b in e.value.values) {
-        if (b.pageKey != pageKey) continue;
-        if (liveHandleIds != null &&
-            b.bucket != JsBindingBuckets.ctxNode &&
-            !liveHandleIds.contains(b.id)) {
-          continue;
-        }
-        n += 1;
+        if (b.pageKey == pageKey) n += 1;
       }
       if (n > 0) out[e.key] = n;
     }

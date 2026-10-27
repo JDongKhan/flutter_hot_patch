@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 96acd2c4） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 6860b7c9） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '96acd2c4') { return; }
-  G.__jsuiVersion = '96acd2c4';
+  if (G.__jsui && G.__jsuiVersion === '6860b7c9') { return; }
+  G.__jsuiVersion = '6860b7c9';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -495,18 +495,24 @@ if (G.kDebugMode) {
     delete pageHandles[pageKey];
   }
 
-  // 页面退出兜底（宿主在泄漏比对之后显式调用）：把**本页所属的全部句柄**清干净
-  // ——不只 scope=page，任何 scope（instance / local）只要 key===pageKey 都释放。
+  // 页面退出兜底（宿主在泄漏比对之后显式调用）：清掉**本页所属**的残留句柄。
   //
-  // 正常路径上组件卸载已逐实例释放（含 __owns / __boundFn），此处只剩「卸载路径
-  // 整段没跑到」的残渣（如孤儿实例、未走到 unmount 的子树、纯本端 fn 句柄）。
-  // 释放幂等、可重复调用，因此页面挂载/卸载多少次都不会累积。
-  // 放在比对之后调用：泄漏仍能被观测到，兜底只负责「退出即清干净」。
+  // 判定「属于本页」用句柄自身的 key + 持有者归属：
+  //   - key !== pageKey：别的页的，跳过；
+  //   - 持有者仍挂在**活着的**页面根上（roots[owner.__root.key] 存在）：说明该
+  //     对象被别的活页面共享使用，跳过（避免退出 A 页把 B 页还在用的对象释放掉）；
+  //   - 其余（无持有者、持有者的根已销毁）即本页孤儿，释放。
+  // 正常路径上组件卸载已逐实例释放，这里剩的只是卸载路径没跑到的残渣；释放幂等，
+  // 因此页面挂载/卸载多少次都不会累积。放在比对之后调用，泄漏仍可被观测。
   function sweepPage(pageKey) {
     releasePageHandles(pageKey);
     var ids = [];
     for (var id in handles) {
-      if (handles[id].key === pageKey) { ids.push(id); }
+      var h = handles[id];
+      if (h.key !== pageKey) { continue; }
+      var owner = h.owner;
+      if (owner && owner.__root && roots[owner.__root.key]) { continue; }
+      ids.push(id);
     }
     for (var i = 0; i < ids.length; i++) { releaseHandle(ids[i]); }
   }
@@ -2092,6 +2098,10 @@ if (G.kDebugMode) {
       activeRoot = prev;
     }
     root.inst = null;
+    // 页面退出兜底（scope=page）：这类句柄就是「显式归页面所有」的，页面没了
+    // 即应释放，属正常生命周期而非泄漏。scope=instance/local 的孤儿残留留给
+    // 宿主在泄漏比对之后调用 sweepPage 处理。
+    releasePageHandles(pageKey);
     delete roots[pageKey];
   }
 

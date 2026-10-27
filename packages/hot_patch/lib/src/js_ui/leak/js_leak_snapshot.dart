@@ -4,6 +4,7 @@ import '../../services/js_runtime_manager.dart';
 import '../../utils/hot_patch_log.dart';
 import '../capabilities/core/binding_cache.dart';
 import '../capabilities/core/handle_registry.dart';
+import '../js_ui_store.dart';
 import 'leak_stats.dart';
 
 /// 双端泄漏观测（debug 工具）：页面**进入**与**销毁**两端各对双端缓存取一次
@@ -107,14 +108,14 @@ class JsLeakSnapshot {
     final handleIds = <String>{for (final h in handles) '${h['id']}'};
     final pageHandleIds = dartPageHandleIds(pageKey);
     final dartTables = <String, int>{
-      // 本页仍在页面句柄索引里的句柄数。与 JS 侧仍存活的句柄**取交集**后不为 0
-      // 才算「释放路径没跑到」——宿主收到 release 消息是异步的，销毁瞬间还在
-      // 索引里但 JS 已释放的条目属旅程中，不报。
-      'handle.pageHandles':
-          pageHandleIds.where(handleIds.contains).length,
+      // 本页仍在页面句柄索引里的句柄数：正常 dispose 后应为 0，非 0 即释放
+      // 路径没跑到（不做任何豁免，宁可多报）。
+      'handle.pageHandles': pageHandleIds.length,
+      // 本页 store 是否仍在登记表里：正常 dispose 会摘除，仍在该报。
+      'pageStores': jsUiPageStores.containsKey(pageKey) ? 1 : 0,
       // 绑定缓存：本页登记过、销毁后仍留在缓存里的条目（按桶名统计，桶名即
-      // kind / 存储分组，见 binding_cache.dart）。同样排除旅程中条目。
-      ...cache.pageCounts(pageKey, liveHandleIds: handleIds),
+      // kind / 存储分组，见 binding_cache.dart）。
+      ...cache.pageCounts(pageKey),
     };
     return JsLeakSnapshot._(
       handles: handles,
