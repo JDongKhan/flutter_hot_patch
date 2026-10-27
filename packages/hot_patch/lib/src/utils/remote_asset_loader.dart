@@ -18,7 +18,7 @@ import 'hot_patch_log.dart';
 /// 不存在回退内置 asset——**不需要任何虚拟路径映射表**，文件系统即索引。
 class RemoteAssetBundle {
   const RemoteAssetBundle(this.entryJsAsset, this.localRoot,
-      {this.fresh = false, this.buildTime});
+      {this.fresh = false, this.buildTime, this.protocol});
 
   final String entryJsAsset;
   final String localRoot;
@@ -30,6 +30,13 @@ class RemoteAssetBundle {
   /// 包根 `manifest.json` 里的 `buildTime`（补丁打包时间）；无清单时为 null。
   /// 仅供调试展示（JsUiWidget 的 `showBuildTime`），不影响加载。
   final String? buildTime;
+
+  /// 包根 `manifest.json` 里的 `protocol`（该补丁包自身的产物协议版本，如
+  /// `0.3.2`）；无清单 / 无该字段时为 null。
+  ///
+  /// **按包读取**而不是全局共用一个值：不同来源的补丁包（不同 zip、不同批次
+  /// 打出）版本可以各不相同。
+  final String? protocol;
 }
 
 /// 网络补丁包加载器：`http(s)://` 开头的 jsAsset → 下载 zip → 校验格式 →
@@ -95,10 +102,16 @@ class RemoteAssetLoader {
           'app=$_supportedProtocolMajor.x — refusing to mount');
       return null;
     }
-    return RemoteAssetBundle(entry, root, fresh: fresh, buildTime: _readBuildTime(root));
+    return RemoteAssetBundle(entry, root,
+        fresh: fresh, buildTime: _readBuildTime(root), protocol: protocol);
   }
 
-  /// 读包根 `manifest.json` 的 `protocol` 字段（如 `"1.0"`）；缺失 / 非法返回 null。
+  /// 读包根 `manifest.json` 的 `protocol` 字段（如 `"0.3.2"`）；缺失 / 非法返回 null。
+  ///
+  /// 供调用方按包读取「当前资源对应的版本」：不同 zip / 不同批次打出的包各自
+  /// 独立，版本可以不同。
+  static String? readProtocol(String root) => _readProtocol(root);
+
   static String? _readProtocol(String root) {
     try {
       final file = File('$root/manifest.json');

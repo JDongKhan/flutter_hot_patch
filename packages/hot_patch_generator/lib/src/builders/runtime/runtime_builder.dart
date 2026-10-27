@@ -7,7 +7,6 @@ library;
 
 import 'package:build/build.dart';
 
-import '../shared/artifact_protocol.dart';
 import 'js/runtime_js.dart';
 
 /// 运行时产物路径（补丁根目录，与 `patch/<package>.js` 同级）。
@@ -27,7 +26,7 @@ class RuntimeJsBuilder implements Builder {
   Future<void> build(BuildStep buildStep) async {
     await buildStep.writeAsString(
       AssetId(buildStep.inputId.package, runtimeJsPath),
-      withProtocolHeader(runtimeJsSource()),
+      runtimeJsSource(),
     );
   }
 }

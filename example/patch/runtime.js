@@ -1,4 +1,3 @@
-// @hot_patch protocol: 0.3.2
 
 // ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 41bc3a24） =====
 

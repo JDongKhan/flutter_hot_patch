@@ -305,8 +305,6 @@ class JsRuntimeManager {
     _eval(_jsUiEnvSource(), 'jsUiEnv');
     final asset = _runtimeAssetNear(moduleAsset);
     final source = await _readModule(asset, localRoot);
-    // runtime.js 也是补丁资源，同样登记其自身携带的协议版本。
-    _recordResourceProtocol(asset, source);
     final result = _eval(source, asset);
     final text = result.stringResult;
     if (result.isError ||
@@ -442,8 +440,6 @@ class JsRuntimeManager {
         throw StateError('module evaluate failed: $text');
       }
       _loadedModules.add(jsAsset);
-      // 登记该资源自身携带的协议版本（可能与其他资源不同），供上层按资源读取。
-      _recordResourceProtocol(jsAsset, source);
       // 不逐条打日志：一个页面连带依赖可能有几十个模块（model/xxx.js、flutter.js…），
       // 逐条会把「进入页面」的日志刷满。只记进本批次清单，由页面加载流程结束时
       // 一次性取走汇总（见 [drainLoadedModules]）。
@@ -571,41 +567,6 @@ $out
   /// 宿主侧已加载模块缓存（防重复加载/递归环）。
   final Set<String> _loadedModules = {};
 
-  /// 各资源自身的产物协议版本（解析自 JS 产物首行协议头 `// @hot_patch
-  /// protocol: x.y.z`）。
-  ///
-  /// 按**资源**登记而不是全局共用一个值：同一页面可能混用不同来源（远端 zip、
-  /// 内置 asset 回退）与不同批次打出的产物，版本可以各不相同。这里只负责
-  /// 「当前资源对应哪个版本」的读取，兼容判定由上层决定。
-  final Map<String, String> _resourceProtocols = {};
-
-  /// 单个资源的产物协议版本；该资源未加载 / 老产物无协议头时为 null。
-  String? protocolOf(String jsAsset) => _resourceProtocols[jsAsset];
-
-  /// 已加载资源的协议版本快照（排查「同页混用不同版本资源」用）。
-  Map<String, String> get resourceProtocols => Map.unmodifiable(_resourceProtocols);
-
-  /// 资源首行协议头里的版本；无协议头返回 null。
-  static final RegExp _protocolHeader = RegExp(
-    r'^//\s*@hot_patch\s+protocol:\s*(\S+)\s*$',
-  );
-
-  static String? _readProtocolHeader(String source) {
-    final end = source.indexOf('\n');
-    final firstLine = end < 0 ? source : source.substring(0, end);
-    return _protocolHeader.firstMatch(firstLine)?.group(1);
-  }
-
-  /// 登记资源自身携带的协议版本；无协议头的老产物清掉可能残留的旧值。
-  void _recordResourceProtocol(String jsAsset, String source) {
-    final protocol = _readProtocolHeader(source);
-    if (protocol == null) {
-      _resourceProtocols.remove(jsAsset);
-    } else {
-      _resourceProtocols[jsAsset] = protocol;
-    }
-  }
-
   /// 最近一批新加载成功的模块路径（顺序即加载顺序：依赖先于自身）。
   ///
   /// 只记录、不打印——页面进入时可能连带几十个模块，逐条日志会把其它信息淹没。
@@ -634,8 +595,6 @@ $out
   /// （不重复初始化、不丢状态）。
   void invalidateModules() {
     _loadedModules.clear();
-    // 资源协议版本随模块缓存一起作废：重新加载的那批会按新产物重新登记。
-    _resourceProtocols.clear();
     _jsUiInited = false;
     // 清单一并清空：清缓存后重新加载的那批，重新累计到下一个批次汇总里。
     _loadedInBatch.clear();

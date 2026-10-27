@@ -24,8 +24,9 @@ import '../shared/artifact_protocol.dart';
 /// `element: true` / `__delegate` / `factory` / `itemBuilder` / 句柄信封
 /// `{ch,data}` / 颜色 `#AARRGGBB`）。
 ///
-/// 取值见 [patchProtocolVersion]（= 生成器包版本）：整包写进清单的 `protocol`
-/// 字段，同时写在每份 JS 产物首行协议头里，便于运行时按资源读取。
+/// 取值见 [patchProtocolVersion]（= 生成器包版本），只写进清单的 `protocol`
+/// 字段（一个补丁包一份），**不写进 JS 产物**——JS 带版本号会让翻译器升级时
+/// 无改动文件的 hash 也跟着变，破坏增量更新与缓存。
 ///
 /// 规则：
 ///   - **主版本**变化 = 破坏性改动（改字段语义 / 删字段），老 App 不能加载新

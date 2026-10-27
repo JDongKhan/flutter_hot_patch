@@ -1,4 +1,3 @@
-// @hot_patch protocol: 0.3.2
 // GENERATED CODE - DO NOT EDIT
 // package 模块（package: provider）：由 hot_patch_generator 生成
 // 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件
