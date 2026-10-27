@@ -75,10 +75,12 @@ class RemoteAssetLoader {
 
   /// 宿主支持的 **patch 协议主版本**（对应生成器 `patchProtocolVersion` 的主版本）。
   ///
-  /// 产物 JS 与宿主 Dart 之间的契约（`__h` / `element` / `__delegate` /
-  /// `factory` / 句柄信封 / 颜色序列化）改到主版本时，本常量与生成器同步 +1；
-  /// 次版本只做加法，老 App 可继续消费未知字段。
-  static const String _supportedProtocolMajor = '1';
+  /// `patchProtocolVersion` 直接取生成器包 `pubspec.yaml` 的 `version`，故本常量
+  /// 取与之配套的 [hot_patch] 包版本主版本（当前 `0.3.x` → `0`）。产物 JS 与宿主
+  /// Dart 之间的契约（`__h` / `element` / `__delegate` / `factory` / 句柄信封 /
+  /// 颜色序列化）出现破坏性改动并升主版本时，本常量同步跟到新主版本；次版本 /
+  /// 修订号只做加法，老 App 可继续消费未知字段。
+  static const String _supportedProtocolMajor = '0';
 
   /// 组包并读取包根清单里的打包时间（`manifest.json` 由 build_runner 产出、
   /// 随 zip 分发；缺失/解析失败一律返回 null，不影响加载）。

@@ -13,24 +13,76 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:build/build.dart';
 import 'package:crypto/crypto.dart';
 import 'package:glob/glob.dart';
 
+import '../shared/ctor_signatures.dart';
+
 /// patch 协议版本：**产物 JS 与宿主 Dart 之间的契约版本**（`__h` / 元素
 /// `element: true` / `__delegate` / `factory` / `itemBuilder` / 句柄信封
 /// `{ch,data}` / 颜色 `#AARRGGBB`）。
 ///
+/// 取值直接跟随生成器包版本（`packages/hot_patch_generator/pubspec.yaml` 的
+/// `version`），发布新版即自动同步，无需再单独维护协议号。
+///
 /// 规则：
 ///   - **主版本**变化 = 破坏性改动（改字段语义 / 删字段），老 App 不能加载新
 ///     产物，新 App 也不保证能加载老产物；
-///   - **次版本**只做加法（新增可选字段），老 App 应能忽略未知字段继续工作。
+///   - **次版本 / 修订号**只做加法（新增可选字段），老 App 应能忽略未知字段
+///     继续工作。
 ///
 /// 生成器把它写进 `patch/manifest.json` 的 `protocol` 字段；运行时
 /// （`RemoteAssetLoader`）加载远程包时校验主版本，不匹配就拒绝挂载并在日志里
 /// 出声，避免「产物协议变了但 App 还是老代码」导致的静默错乱。
-const String patchProtocolVersion = '1.0';
+String get patchProtocolVersion => _protocolVersion ??= _readPackageVersion();
+
+String? _protocolVersion;
+
+/// 从生成器包自身的 `pubspec.yaml` 读 `version`。
+///
+/// 生成器包自己的 pubspec 不是输入包的资产（build_runner 读不到别的包的
+/// 文件），故按 `package_config.json` 定位包根后在磁盘上读。
+///
+/// 定位或解析失败直接抛错：协议号缺失会写出无法校验的清单，宁可构建失败也
+/// 不能静默降级。
+String _readPackageVersion() {
+  final sources = PackageSources.locate();
+  String? libDir;
+  for (final pkg in sources?.packages ?? const <PackageRoot>[]) {
+    if (pkg.name == 'hot_patch_generator') {
+      libDir = pkg.libDir;
+      break;
+    }
+  }
+  if (libDir == null) {
+    throw StateError('[hot_patch_generator] 无法从 .dart_tool/package_config.json '
+        '定位生成器包，patch 协议版本（protocol）无从获取。');
+  }
+  final pubspec = File('${File(libDir).parent.path}/pubspec.yaml');
+  final version = _pubspecVersion(pubspec);
+  if (version == null) {
+    throw StateError('[hot_patch_generator] ${pubspec.path} 中未找到 version，'
+        '无法生成 patch 协议版本（protocol）。');
+  }
+  return version;
+}
+
+/// pubspec 顶层 `version:` 字段值（去掉引号）；缺失返回 null。
+String? _pubspecVersion(File pubspec) {
+  if (!pubspec.existsSync()) return null;
+  for (final line in pubspec.readAsLinesSync()) {
+    if (!line.startsWith('version:')) continue;
+    final value = line
+        .substring('version:'.length)
+        .trim()
+        .replaceAll(RegExp(r'''^["']|["']$'''), '');
+    if (value.isNotEmpty) return value;
+  }
+  return null;
+}
 
 /// patch 清单 builder。
 ///
