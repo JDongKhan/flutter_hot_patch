@@ -4,9 +4,12 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 /// 隐式动画演示（`Animated*` 家族）。
 ///
 /// 隐式动画**全部由宿主插值**：Dart 侧只改一个目标值（宽高 / 透明度 / 缩放 /
-/// 旋转 / 位移），Flutter 的 `AnimatedFoo` 内部用真实 `AnimationController`
-/// 从旧值补间到新值。JS 热更侧只下发 `duration` / `curve` / 目标值，逐帧插值
-/// 不过桥，所以这里没有任何显式 controller。
+/// 旋转 / 位移 / 子组件），Flutter 的 `AnimatedFoo` 内部用真实
+/// `AnimationController` 从旧值补间到新值。JS 热更侧只下发 `duration` /
+/// `curve` / 目标值，逐帧插值不过桥，所以这里没有任何显式 controller。
+///
+/// 覆盖：AnimatedContainer / AnimatedOpacity / AnimatedScale / AnimatedRotation
+/// / AnimatedSlide / AnimatedCrossFade / AnimatedSize / AnimatedSwitcher。
 ///
 /// 与 JS 侧约定的值形态：
 ///   - `Duration(milliseconds: n)` → JS `Duration` 值 → 宿主 `durationFromJson`；
@@ -25,6 +28,9 @@ class _ImplicitAnimationDetailState extends State<ImplicitAnimationDetail> {
   bool _big = false;
   bool _visible = true;
   bool _moved = false;
+  bool _sizeExpanded = false;
+  bool _slowSize = false;
+  int _switchIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +210,94 @@ class _ImplicitAnimationDetailState extends State<ImplicitAnimationDetail> {
         TextButton(
           onPressed: () => setState(() => _visible = !_visible),
           child: Text(_visible ? '切到 B' : '切回 A'),
+        ),
+        const Divider(),
+        const Text(
+          'AnimatedSize · 子组件尺寸变化时自动补间',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.blueGrey.shade200),
+            ),
+            child: AnimatedSize(
+              duration: Duration(milliseconds: _slowSize ? 1200 : 300),
+              curve: Curves.easeInOut,
+              alignment: Alignment.center,
+              child: Container(
+                width: _sizeExpanded ? 240 : 120,
+                height: _sizeExpanded ? 120 : 56,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _sizeExpanded ? Colors.deepPurple : Colors.teal,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  _sizeExpanded ? '已展开' : '已收起',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: () =>
+                    setState(() => _sizeExpanded = !_sizeExpanded),
+                child: Text(_sizeExpanded ? '收起尺寸' : '展开尺寸'),
+              ),
+            ),
+            Expanded(
+              child: TextButton(
+                onPressed: () => setState(() => _slowSize = !_slowSize),
+                child: Text(_slowSize ? '时长切回 300ms' : '时长切到 1200ms'),
+              ),
+            ),
+          ],
+        ),
+        const Divider(),
+        const Text(
+          'AnimatedSwitcher · 子组件切换淡入淡出',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Center(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 450),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: Container(
+              key: ValueKey(_switchIndex),
+              width: 160,
+              height: 90,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: _switchIndex.isEven ? Colors.indigo : Colors.orange,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                '卡片 ${_switchIndex + 1}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: () => setState(() => _switchIndex++),
+          child: const Text('切换子组件（带 ValueKey）'),
         ),
       ],
     );
