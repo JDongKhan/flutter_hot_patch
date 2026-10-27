@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
+import 'animated_size_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'widget_details.dart';
@@ -51,6 +52,7 @@ class WidgetShowcase extends StatelessWidget {
     _Group('状态管理', [_Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard')]),
     _Group('无状态组件', [_Entry('StatelessWidget', '无 State，build 在 widget 类自身，props 走构造参数', 'StatelessCard')]),
     _Group('动画', [
+      _Entry('AnimatedSize', '子组件尺寸变化时按 duration / curve 自动补间（宿主插值）', 'AnimatedSizeDetail'),
       _Entry('隐式动画', 'AnimatedContainer / Opacity / Scale / Rotation / Slide / CrossFade（宿主插值）', 'ImplicitAnimationDetail'),
       _Entry('显式动画', 'AnimationController + AnimatedBuilder + *Transition（宿主 Ticker 驱动）', 'ExplicitAnimationDetail'),
     ]),
@@ -124,6 +126,7 @@ class WidgetDetailPage extends StatelessWidget {
   /// 动画 demo 按类拆在独立源文件里，因此入口不再固定为 widget_details.js：
   /// 产物路径由 build_runner 镜像源码路径生成（见 build.yaml 的 patch_entry）。
   static const Map<String, String> _jsEntries = {
+    'AnimatedSizeDetail': 'components/animated_size_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
   };
@@ -155,6 +158,7 @@ class WidgetDetailPage extends StatelessWidget {
       'StatelessCard' => const StatelessCard(title: 'Hello Stateless', subtitle: '原生直接渲染，无需 State', badge: 'FLUTTER'),
       'ImplicitAnimationDetail' => const ImplicitAnimationDetail(),
       'ExplicitAnimationDetail' => const ExplicitAnimationDetail(),
+      'AnimatedSizeDetail' => const AnimatedSizeDetail(),
       _ => const Text('未知组件'),
     };
   }
