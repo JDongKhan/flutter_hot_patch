@@ -31,7 +31,7 @@ export class ChangeNotifierProvider {
   }
   dispose() {
     if (this.__ownsValue && this.__value &&
-        typeof this.__value.dispose === 'function') {
+    typeof this.__value.dispose === 'function') {
       this.__value.dispose();
     }
   }

@@ -188,10 +188,10 @@ export class AppService {
     result = ((type.isEmpty || (type == "全部")) ? result : result.where((p) => { return (p.type == type); }).toList());
     switch (sort) {
       case "最新":
-        result = result.reversed.toList();
+      result = result.reversed.toList();
       break;
       case "最热":
-        result = (() => { const _t = result.toList(); _t.sort((a, b) => { return b.like.compareTo(a.like); }); return _t; })();
+      result = (() => { const _t = result.toList(); _t.sort((a, b) => { return b.like.compareTo(a.like); }); return _t; })();
       break;
     }
     return result;

@@ -4,6 +4,7 @@
 // 键盘类型）。Text / TextField / 按钮文案等基础组件共用，故不放进 core。
 import 'package:flutter/material.dart';
 
+import '../../../utils/hot_patch_log.dart';
 import '../core/from_json/dart_values_from_json.dart';
 
 /// JSON → TextStyle（null / 空 Map → 默认样式）。
@@ -24,6 +25,37 @@ TextStyle textStyleFromJson(Map<String, dynamic>? json) {
     decorationColor: colorFromJson(json['decorationColor']),
     decorationStyle: textDecorationStyleFromJson(json['decorationStyle']),
     decorationThickness: (json['decorationThickness'] as num?)?.toDouble(),
+  );
+}
+
+/// JSON → InlineSpan 树（RichText.text / Text.rich 的富文本子树）。
+///
+/// 产物形态与 `TextSpan` 字段同构：`{text, style, children, semanticsLabel}`，
+/// `children` 递归同构。形态不支持的子节点（如 WidgetSpan / PlaceholderSpan）
+/// 会被跳过并打印告警，避免静默丢内容。
+InlineSpan? textSpanFromJson(Object? v) {
+  if (v == null) return null;
+  if (v is String) return TextSpan(text: v);
+  if (v is! Map) {
+    HotPatchLog.warn('[RichText] 不支持的 InlineSpan 节点已跳过：$v');
+    return null;
+  }
+  final rawChildren = v['children'];
+  final children = <InlineSpan>[];
+  if (rawChildren is List) {
+    for (final child in rawChildren) {
+      final span = textSpanFromJson(child);
+      if (span != null) children.add(span);
+    }
+  }
+  final rawStyle = v['style'];
+  return TextSpan(
+    text: v['text'] as String?,
+    style: textStyleFromJson(
+      rawStyle is Map ? rawStyle.cast<String, dynamic>() : null,
+    ),
+    children: children.isEmpty ? null : children,
+    semanticsLabel: v['semanticsLabel'] as String?,
   );
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
+import 'rich_text_detail.dart';
 import 'widget_details.dart';
 
 /// 常用组件导航列表页（普通页面，无 @PatchEntry 注解）：
@@ -12,7 +13,10 @@ class WidgetShowcase extends StatelessWidget {
   const WidgetShowcase({super.key});
 
   static const List<_Group> groups = [
-    _Group('文本展示', [_Entry('Text', '文案 / TextStyle / 截断 / 对齐 / 装饰', 'TextDetail')]),
+    _Group('文本展示', [
+      _Entry('Text', '文案 / TextStyle / 截断 / 对齐 / 装饰', 'TextDetail'),
+      _Entry('RichText', 'TextSpan 树：嵌套子串、不同样式、maxLines + ellipsis', 'RichTextDetail'),
+    ]),
     _Group('按钮操作', [_Entry('Button', 'Elevated / Text / Outlined + ButtonStyle 全属性', 'ButtonDetail')]),
     _Group('布局', [
       _Entry(
@@ -124,6 +128,7 @@ class WidgetDetailPage extends StatelessWidget {
   /// 动画 demo 按类拆在独立源文件里，因此入口不再固定为 widget_details.js：
   /// 产物路径由 build_runner 镜像源码路径生成（见 build.yaml 的 patch_entry）。
   static const Map<String, String> _jsEntries = {
+    'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
   };
@@ -136,6 +141,7 @@ class WidgetDetailPage extends StatelessWidget {
   Widget _native() {
     return switch (component) {
       'TextDetail' => const TextDetail(),
+      'RichTextDetail' => const RichTextDetail(),
       'ButtonDetail' => const ButtonDetail(),
       'LayoutDetail' => const LayoutDetail(),
       'ImageDetail' => const ImageDetail(),

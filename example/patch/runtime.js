@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 6860b7c9） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 7b9084c3） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '6860b7c9') { return; }
-  G.__jsuiVersion = '6860b7c9';
+  if (G.__jsui && G.__jsuiVersion === '7b9084c3') { return; }
+  G.__jsuiVersion = '7b9084c3';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2211,6 +2211,19 @@ if (G.kDebugMode) {
   Radius.circular = function (props) { return new Radius(props); };
   Radius.prototype.toJSON = function () { return { radius: this.x }; };
   G.Radius = Radius;
+
+  // TextSpan：Dart 富文本子树的值对象（RichText 的 `text`）。产物按统一规则
+  // 发射 `new TextSpan({text, style, children, semanticsLabel})`；这里镜像字段，
+  // 跨桥时由 JSON.stringify 递归序列化成普通对象，宿主 textSpanFromJson 再
+  // 还原成真正的 TextSpan 树。
+  function TextSpan(props) {
+    props = __posArgs(props, ['text']);
+    this.text = props.text;
+    if (props.style != null) { this.style = props.style; }
+    if (props.children != null) { this.children = props.children; }
+    if (props.semanticsLabel != null) { this.semanticsLabel = props.semanticsLabel; }
+  }
+  G.TextSpan = TextSpan;
 
 
 // ===== 【13】Dart 异常（StateError / ArgumentError / …） =====

@@ -42,54 +42,54 @@ export class AppSubContent {
   build(context) {
     console.log("--AppSubContent build");
     return new Scaffold({
-        "backgroundColor": new Color({value: 0xFFF4F5F7}),
-        "body": new TabBarView({
-          "controller": this._tab,
-          "physics": "NeverScrollableScrollPhysics",
-          "children": [
-            (this.__k0 || (this.__k0 = new HomePage({}))),
-            (this.__k1 || (this.__k1 = new CommunityPage({}))),
-            (this.__k2 || (this.__k2 = new OrdersPage({}))),
-            (this.__k3 || (this.__k3 = new MinePage({})))
-          ]
-        }),
-        "bottomNavigationBar": new BottomNavigationBar({
-          "currentIndex": this._index,
-          "onTap": this.__bindFn(0, [], (...__a) => this._openTab(...__a)),
-          "type": "fixed",
-          "backgroundColor": Colors.white,
-          "selectedItemColor": new Color({value: 0xFF0E7AFB}),
-          "unselectedItemColor": new Color({value: 0xFF98A0AC}),
-          "selectedFontSize": 11,
-          "unselectedFontSize": 11,
-          "items": [
-            new BottomNavigationBarItem({
-                "icon": new Icon({
-                  "icon": "home"
-                }),
-                "label": "首页"
-              }),
-            new BottomNavigationBarItem({
-                "icon": new Icon({
-                  "icon": "article"
-                }),
-                "label": "社区"
-              }),
-            new BottomNavigationBarItem({
-                "icon": new Icon({
-                  "icon": "shopping_cart"
-                }),
-                "label": "订单"
-              }),
-            new BottomNavigationBarItem({
-                "icon": new Icon({
-                  "icon": "person"
-                }),
-                "label": "我的"
-              })
-          ]
-        })
-      });
+      "backgroundColor": new Color({value: 0xFFF4F5F7}),
+      "body": new TabBarView({
+        "controller": this._tab,
+        "physics": "NeverScrollableScrollPhysics",
+        "children": [
+          (this.__k0 || (this.__k0 = new HomePage({}))),
+          (this.__k1 || (this.__k1 = new CommunityPage({}))),
+          (this.__k2 || (this.__k2 = new OrdersPage({}))),
+          (this.__k3 || (this.__k3 = new MinePage({})))
+        ]
+      }),
+      "bottomNavigationBar": new BottomNavigationBar({
+        "currentIndex": this._index,
+        "onTap": this.__bindFn(0, [], (...__a) => this._openTab(...__a)),
+        "type": "fixed",
+        "backgroundColor": Colors.white,
+        "selectedItemColor": new Color({value: 0xFF0E7AFB}),
+        "unselectedItemColor": new Color({value: 0xFF98A0AC}),
+        "selectedFontSize": 11,
+        "unselectedFontSize": 11,
+        "items": [
+          new BottomNavigationBarItem({
+            "icon": new Icon({
+              "icon": "home"
+            }),
+            "label": "首页"
+          }),
+          new BottomNavigationBarItem({
+            "icon": new Icon({
+              "icon": "article"
+            }),
+            "label": "社区"
+          }),
+          new BottomNavigationBarItem({
+            "icon": new Icon({
+              "icon": "shopping_cart"
+            }),
+            "label": "订单"
+          }),
+          new BottomNavigationBarItem({
+            "icon": new Icon({
+              "icon": "person"
+            }),
+            "label": "我的"
+          })
+        ]
+      })
+    });
   }
 }
 

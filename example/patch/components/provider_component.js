@@ -25,108 +25,108 @@ export class ProviderCard {
   }
   build(context) {
     return new Card({
-        "child": new Padding({
-          "padding": {
-            "left": 16.0,
-            "top": 16.0,
-            "right": 16.0,
-            "bottom": 16.0
-          },
-          "child": new MultiProvider({
-            "providers": [
-              new ChangeNotifierProvider({
-                  "create": this._modelA,
-                  "model": "CounterVm"
-                }),
-              ChangeNotifierProvider.value({
-                  "value": this._modelB,
-                  "model": "NetworkVm"
-                })
-            ],
-            "child": new Column({
-              "mainAxisSize": "min",
-              "children": [
-                this._buildText(),
-                this._modelA.buildText(),
-                new Consumer({
-                    "builder": "_builder0",
-                    "model": "CounterVm"
-                  }),
-                (this.__k3 || (this.__k3 = new Text({
-                    "data": "MultiProvider · 两个模型各自局部重建"
-                  }))),
-                (this.__k4 || (this.__k4 = new SizedBox({
-                    "height": 8
-                  }))),
-                new Consumer({
-                    "builder": "_builder1",
-                    "model": "NetworkVm"
-                  }),
-                new Row({
-                    "mainAxisAlignment": "center",
-                    "children": [
-                      new ElevatedButton({
-                          "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a)),
-                          "child": (this.__k0 || (this.__k0 = new Text({
-                            "data": "加载用户信息"
-                          })))
-                        })
-                    ]
-                  }),
-                (this.__k4 || (this.__k4 = new SizedBox({
-                    "height": 8
-                  }))),
-                new Consumer({
-                    "builder": "_builder2",
-                    "model": "CounterVm"
-                  }),
-                new Row({
-                    "mainAxisAlignment": "center",
-                    "children": [
-                      new ElevatedButton({
-                          "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a)),
-                          "child": (this.__k1 || (this.__k1 = new Text({
-                            "data": "B +1"
-                          })))
-                        }),
-                      (this.__k5 || (this.__k5 = new SizedBox({
-                          "width": 12
-                        }))),
-                      new ElevatedButton({
-                          "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a)),
-                          "child": (this.__k2 || (this.__k2 = new Text({
-                            "data": "B Reset"
-                          })))
-                        })
-                    ]
-                  })
-              ]
+      "child": new Padding({
+        "padding": {
+          "left": 16.0,
+          "top": 16.0,
+          "right": 16.0,
+          "bottom": 16.0
+        },
+        "child": new MultiProvider({
+          "providers": [
+            new ChangeNotifierProvider({
+              "create": this._modelA,
+              "model": "CounterVm"
+            }),
+            ChangeNotifierProvider.value({
+              "value": this._modelB,
+              "model": "NetworkVm"
             })
+          ],
+          "child": new Column({
+            "mainAxisSize": "min",
+            "children": [
+              this._buildText(),
+              this._modelA.buildText(),
+              new Consumer({
+                "builder": "_builder0",
+                "model": "CounterVm"
+              }),
+              (this.__k0 || (this.__k0 = new Text({
+                "data": "MultiProvider · 两个模型各自局部重建"
+              }))),
+              (this.__k1 || (this.__k1 = new SizedBox({
+                "height": 8
+              }))),
+              new Consumer({
+                "builder": "_builder1",
+                "model": "NetworkVm"
+              }),
+              new Row({
+                "mainAxisAlignment": "center",
+                "children": [
+                  new ElevatedButton({
+                    "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a)),
+                    "child": (this.__k2 || (this.__k2 = new Text({
+                      "data": "加载用户信息"
+                    })))
+                  })
+                ]
+              }),
+              (this.__k1 || (this.__k1 = new SizedBox({
+                "height": 8
+              }))),
+              new Consumer({
+                "builder": "_builder2",
+                "model": "CounterVm"
+              }),
+              new Row({
+                "mainAxisAlignment": "center",
+                "children": [
+                  new ElevatedButton({
+                    "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a)),
+                    "child": (this.__k3 || (this.__k3 = new Text({
+                      "data": "B +1"
+                    })))
+                  }),
+                  (this.__k4 || (this.__k4 = new SizedBox({
+                    "width": 12
+                  }))),
+                  new ElevatedButton({
+                    "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a)),
+                    "child": (this.__k5 || (this.__k5 = new Text({
+                      "data": "B Reset"
+                    })))
+                  })
+                ]
+              })
+            ]
           })
         })
-      });
+      })
+    });
   }
   _buildText() {
     return new Text({
-        "data": "test 1"
-      });
+      "data": "test 1"
+    });
   }
   _buildBadge() {
     var label = "";
     switch (this._modelA.count) {
       case 0:
-        label = "B·零";
-        break;
+      label = "B·零";
+      break;
       case 1:
       case 2:
-        label = "B·少";
-        break;
+      label = "B·少";
+      break;
       case 3:
       case 4:
-        label = "B·多";
-        break;
+      label = "B·多";
+      break;
       default:
-        label = "B·爆表";
+      label = "B·爆表";
       break;
     }
     var dots = "";
@@ -134,34 +134,34 @@ export class ProviderCard {
       dots = dots + "·";
     }
     return new Text({
-        "data": label + dots
-      });
+      "data": label + dots
+    });
   }
   dispose() {
     this._modelB.dispose();
   }
   _builder0(context, value) {
-      return this._buildBadge();
+    return this._buildBadge();
   }
   _builder1(context, value) {
-      return new Text({
-        "style": {
-          "fontSize": 22,
-          "fontWeight": "bold",
-          "color": Colors.blue
-        },
-        "data": "加载用户信息："
-      });
+    return new Text({
+      "style": {
+        "fontSize": 22,
+        "fontWeight": "bold",
+        "color": Colors.blue
+      },
+      "data": "加载用户信息："
+    });
   }
   _builder2(context, value) {
-      return new Text({
-        "style": {
-          "fontSize": 22,
-          "fontWeight": "bold",
-          "color": Colors.green
-        },
-        "data": "B = " + value.count
-      });
+    return new Text({
+      "style": {
+        "fontSize": 22,
+        "fontWeight": "bold",
+        "color": Colors.green
+      },
+      "data": "B = " + value.count
+    });
   }
 }
 

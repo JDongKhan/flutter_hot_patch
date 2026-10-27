@@ -83,46 +83,46 @@ export class BannerCarousel {
       return (this.__k0 || (this.__k0 = new SizedBox({})));
     }
     return new Column({
-        "mainAxisSize": "min",
-        "children": [
-          new SizedBox({
-              "height": _height,
-              "child": new PageView({
-                "controller": this._controller,
-                "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a)),
-                "children": [
-                  ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({
-                    "banner": this.banners[i]
-                  })]); } return out; })()
-                ]
-              })
-            }),
-          (this.__k1 || (this.__k1 = new SizedBox({
-              "height": 10
-            }))),
-          new Row({
-              "mainAxisAlignment": "center",
-              "children": [
-                ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [new Container({
-                  "margin": {
-                    "left": 3.0,
-                    "top": 0.0,
-                    "right": 3.0,
-                    "bottom": 0.0
-                  },
-                  "width": 6,
-                  "height": 6,
-                  "decoration": {
-                    "color": ((i == this._index) ? new Color({value: 0xFF0E7AFB}) : new Color({value: 0xFFD5D9E0})),
-                    "borderRadius": {
-                      "radius": 3.0
+      "mainAxisSize": "min",
+      "children": [
+        new SizedBox({
+          "height": _height,
+          "child": new PageView({
+            "controller": this._controller,
+            "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a)),
+            "children": [
+              ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({
+                      "banner": this.banners[i]
+                    })]); } return out; })()
+            ]
+          })
+        }),
+        (this.__k1 || (this.__k1 = new SizedBox({
+          "height": 10
+        }))),
+        new Row({
+          "mainAxisAlignment": "center",
+          "children": [
+            ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [new Container({
+                    "margin": {
+                      "left": 3.0,
+                      "top": 0.0,
+                      "right": 3.0,
+                      "bottom": 0.0
+                    },
+                    "width": 6,
+                    "height": 6,
+                    "decoration": {
+                      "color": ((i == this._index) ? new Color({value: 0xFF0E7AFB}) : new Color({value: 0xFFD5D9E0})),
+                      "borderRadius": {
+                        "radius": 3.0
+                      }
                     }
-                  }
-                })]); } return out; })()
-              ]
-            })
-        ]
-      });
+                  })]); } return out; })()
+          ]
+        })
+      ]
+    });
   }
 }
 
@@ -140,75 +140,74 @@ export class BannerSlide {
   }
   build(context) {
     return new Padding({
-        "padding": {
-          "left": 12.0,
-          "top": 0.0,
-          "right": 12.0,
-          "bottom": 0.0
+      "padding": {
+        "left": 12.0,
+        "top": 0.0,
+        "right": 12.0,
+        "bottom": 0.0
+      },
+      "child": new InkWell({
+        "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+        "borderRadius": {
+          "radius": 14.0
         },
-        "child": new InkWell({
-          "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+        "child": new ClipRRect({
           "borderRadius": {
             "radius": 14.0
           },
-          "child": new ClipRRect({
-            "borderRadius": {
-              "radius": 14.0
-            },
-            "child": new Stack({
-              "fit": "expand",
-              "children": [
-                new Image({
-                    "fit": "cover",
-                    "factory": "asset",
-                    "name": this.banner.img
-                  }),
-                new Container({
-                    "decoration": {
-                      "gradient": {
-                        "kind": "linear",
-                        "colors": [
-                          new Color({value: 0x00000000}),
-                          new Color({value: 0xB3000000})
-                        ],
-                        "begin": "center",
-                        "end": "bottomCenter"
-                      }
-                    }
-                  }),
-                new Positioned({
-                    "left": 14,
-                    "right": 14,
-                    "bottom": 14,
-                    "child": new Column({
-                      "crossAxisAlignment": "start",
-                      "children": [
-                        new Text({
-                            "style": {
-                              "color": new Color({value: 0xFFFFFFFF}),
-                              "fontSize": 17,
-                              "fontWeight": "w700"
-                            },
-                            "data": this.banner.title
-                          }),
-                        (this.__k0 || (this.__k0 = new SizedBox({
-                            "height": 4
-                          }))),
-                        new Text({
-                            "style": {
-                              "color": new Color({value: 0xE6FFFFFF}),
-                              "fontSize": 12
-                            },
-                            "data": this.banner.sub
-                          })
-                      ]
+          "child": new Stack({
+            "fit": "expand",
+            "children": [
+              Image.asset({
+                "fit": "cover",
+                "name": this.banner.img
+              }),
+              new Container({
+                "decoration": {
+                  "gradient": {
+                    "kind": "linear",
+                    "colors": [
+                      new Color({value: 0x00000000}),
+                      new Color({value: 0xB3000000})
+                    ],
+                    "begin": "center",
+                    "end": "bottomCenter"
+                  }
+                }
+              }),
+              new Positioned({
+                "left": 14,
+                "right": 14,
+                "bottom": 14,
+                "child": new Column({
+                  "crossAxisAlignment": "start",
+                  "children": [
+                    new Text({
+                      "style": {
+                        "color": new Color({value: 0xFFFFFFFF}),
+                        "fontSize": 17,
+                        "fontWeight": "w700"
+                      },
+                      "data": this.banner.title
+                    }),
+                    (this.__k0 || (this.__k0 = new SizedBox({
+                      "height": 4
+                    }))),
+                    new Text({
+                      "style": {
+                        "color": new Color({value: 0xE6FFFFFF}),
+                        "fontSize": 12
+                      },
+                      "data": this.banner.sub
                     })
-                  })
-              ]
-            })
+                  ]
+                })
+              })
+            ]
           })
         })
-      });
+      })
+    });
   }
 }
 

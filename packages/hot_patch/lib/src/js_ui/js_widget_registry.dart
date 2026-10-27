@@ -395,6 +395,21 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   );
 
   r.register(
+    'RichText',
+    (c) => RichText(
+      text: textSpanFromJson(c.props['text']) ?? const TextSpan(),
+      textAlign: textAlignFromJson(c.props['textAlign']) ?? TextAlign.start,
+      textDirection: textDirectionFromJson(c.props['textDirection']),
+      softWrap: c.bool_('softWrap') ?? true,
+      overflow: overflowFromJson(c.props['overflow']) ?? TextOverflow.clip,
+      maxLines: c.int_('maxLines'),
+      textScaler: textScalerFromJson(c.props['textScaler']) ??
+          TextScaler.noScaling,
+      selectionColor: colorFromJson(c.props['selectionColor']),
+    ),
+  );
+
+  r.register(
     'Column',
     (c) => Column(
       mainAxisAlignment:

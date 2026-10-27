@@ -26,12 +26,12 @@ export class CommonListItem {
   }
   build(context) {
     return new Text({
-        "style": {
-          "color": _listItemPalette[(((this.index + this.salt)) % _listItemPalette.length)],
-          "fontWeight": "w600"
-        },
-        "data": "builder item " + this.index + " · u" + this._updateCount
-      });
+      "style": {
+        "color": _listItemPalette[(((this.index + this.salt)) % _listItemPalette.length)],
+        "fontWeight": "w600"
+      },
+      "data": "builder item " + this.index + " · u" + this._updateCount
+    });
   }
 }
 

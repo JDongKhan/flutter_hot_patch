@@ -19,25 +19,25 @@ export class BannerCard {
   }
   build(context) {
     return new Column({
-        "children": [
-          new Text({
-              "style": {
-                "fontSize": 20,
-                "color": PanelColors.background
-              },
-              "data": "Banner from another file"
-            }),
-          new Text({
-              "data": "views = " + this._views
-            }),
-          new ElevatedButton({
-              "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a)),
-              "child": (this.__k0 || (this.__k0 = new Text({
-                "data": "Bump"
-              })))
-            })
-        ]
-      });
+      "children": [
+        new Text({
+          "style": {
+            "fontSize": 20,
+            "color": PanelColors.background
+          },
+          "data": "Banner from another file"
+        }),
+        new Text({
+          "data": "views = " + this._views
+        }),
+        new ElevatedButton({
+          "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a)),
+          "child": (this.__k0 || (this.__k0 = new Text({
+            "data": "Bump"
+          })))
+        })
+      ]
+    });
   }
 }
 

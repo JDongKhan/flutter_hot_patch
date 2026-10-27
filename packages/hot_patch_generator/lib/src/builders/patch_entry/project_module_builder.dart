@@ -24,6 +24,7 @@ library;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 
+import '../shared/js_format.dart';
 import '../shared/js_widget_defs.dart';
 import '../shared/package_sources.dart';
 import '../shared/paths.dart';
@@ -86,7 +87,9 @@ class ProjectModuleBuilder implements Builder {
     for (final e in outputs.entries) {
       await buildStep.writeAsString(
         e.value,
-        renderProjectPackageModule(e.key, scope.neededClasses, ownerOf),
+        canonicalizeJsIndent(
+          renderProjectPackageModule(e.key, scope.neededClasses, ownerOf),
+        ),
       );
     }
   }

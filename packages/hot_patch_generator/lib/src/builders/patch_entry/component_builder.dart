@@ -20,6 +20,7 @@ import 'analysis/singleton_support.dart';
 import 'class_info.dart';
 import 'translator/dart2js.dart';
 import 'translator/widget2js.dart';
+import '../shared/js_format.dart';
 import '../shared/js_widget_defs.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
@@ -486,7 +487,9 @@ String _renderJsProduct(
   }
 
   b.writeln();
-  return head.toString() + b.toString();
+  // 写出前统一重排缩进：产物文本只由括号嵌套决定，翻译层改动不再引发
+  // 无关产物的纯格式 diff。
+  return canonicalizeJsIndent(head.toString() + b.toString());
 }
 
 /// 合并「用到的 widget 类型」：dst[package] ∪= src[package]。

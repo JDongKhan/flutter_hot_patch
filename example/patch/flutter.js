@@ -37,7 +37,7 @@ export function __asElement(v) {
   if (v == null || typeof v !== 'object' || v.element === true) { return v; }
   var C = v.constructor;
   if (typeof C === 'function' && C.prototype &&
-      typeof C.prototype.build === 'function') {
+  typeof C.prototype.build === 'function') {
     if (v.__elCache) { return v.__elCache; }
     var e = {
       type: C, props: v.props || {}, children: {}, element: true, inst: v
@@ -497,6 +497,12 @@ export class Radio {
     return __h('Radio', props);
   }
   static adaptive(props) { return new Radio(Object.assign({}, props, { factory: 'adaptive' })); }
+}
+
+export class RichText {
+  constructor(props) {
+    return __h('RichText', props);
+  }
 }
 
 export class RotationTransition {

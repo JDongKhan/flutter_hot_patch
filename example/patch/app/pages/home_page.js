@@ -45,179 +45,179 @@ export class HomePage {
     var feed = this._feed;
     if ((feed == null)) {
       return (this.__k0 || (this.__k0 = new Center({
-          "child": new CircularProgressIndicator({})
-        })));
+        "child": new CircularProgressIndicator({})
+      })));
     }
     var banners = this._feed.banners;
     var grid = this._feed.grid;
     var spots = this._feed.spots;
     var adImg = this._feed.adImg;
     return new Container({
-        "color": new Color({value: 0xFFF4F5F7}),
-        "child": new Column({
-          "crossAxisAlignment": "stretch",
-          "children": [
-            new HomeHeader({
-                "city": this._city,
-                "onRefresh": (...__a) => this._refresh(...__a),
-                "onPickCity": (...__a) => this._pickCity(...__a)
-              }),
-            new Expanded({
-                "child": new EasyRefresh({
-                  "controller": this._refreshController,
-                  "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a)),
-                  "child": new CustomScrollView({
-                    "slivers": [
-                      new SliverToBoxAdapter({
-                          "child": new Column({
-                            "crossAxisAlignment": "stretch",
-                            "children": [
-                              (this.__k5 || (this.__k5 = new SizedBox({
-                                  "height": 12
-                                }))),
-                              new BannerCarousel({
-                                  "banners": this._feed.banners
-                                }),
-                              (this.__k5 || (this.__k5 = new SizedBox({
-                                  "height": 12
-                                }))),
-                              new Container({
-                                  "margin": {
-                                    "left": 12.0,
-                                    "top": 0.0,
-                                    "right": 12.0,
-                                    "bottom": 0.0
-                                  },
-                                  "padding": {
-                                    "left": 0.0,
-                                    "top": 12.0,
-                                    "right": 0.0,
-                                    "bottom": 12.0
-                                  },
-                                  "decoration": {
-                                    "color": new Color({value: 0xFFFFFFFF}),
-                                    "borderRadius": {
-                                      "radius": 14.0
-                                    }
-                                  },
-                                  "child": new GridView({
-                                    "gridDelegate": {
-                                      "maxCrossAxisExtent": 150,
-                                      "mainAxisSpacing": 6,
-                                      "crossAxisSpacing": 6,
-                                      "mainAxisExtent": 84
-                                    },
-                                    "shrinkWrap": true,
-                                    "physics": "NeverScrollableScrollPhysics",
-                                    "children": [
-                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({
-                                        "entry": this._feed.grid[i]
-                                      })]); } return out; })()
-                                    ]
-                                  })
-                                }),
-                              (this.__k5 || (this.__k5 = new SizedBox({
-                                  "height": 12
-                                }))),
-                              new Container({
-                                  "margin": {
-                                    "left": 12.0,
-                                    "top": 0.0,
-                                    "right": 12.0,
-                                    "bottom": 0.0
-                                  },
-                                  "child": new PromoCard({
-                                    "img": this._feed.adImg
-                                  })
-                                }),
-                              (this.__k6 || (this.__k6 = new SizedBox({
-                                  "height": 16
-                                }))),
-                              new Padding({
-                                  "padding": {
-                                    "left": 14.0,
-                                    "top": 0.0,
-                                    "right": 14.0,
-                                    "bottom": 0.0
-                                  },
-                                  "child": new Row({
-                                    "children": [
-                                      new Container({
-                                          "width": 4,
-                                          "height": 16,
-                                          "decoration": {
-                                            "color": new Color({value: 0xFF0E7AFB}),
-                                            "borderRadius": {
-                                              "radius": 2.0
-                                            }
-                                          }
-                                        }),
-                                      (this.__k1 || (this.__k1 = new SizedBox({
-                                          "width": 8
-                                        }))),
-                                      (this.__k2 || (this.__k2 = new Text({
-                                          "data": "景点推荐",
-                                          "style": {
-                                            "color": new Color({value: 0xFF1F2430}),
-                                            "fontSize": 17,
-                                            "fontWeight": "w700"
-                                          }
-                                        }))),
-                                      (this.__k3 || (this.__k3 = new Spacer({}))),
-                                      (this.__k4 || (this.__k4 = new Text({
-                                          "data": "为你精选",
-                                          "style": {
-                                            "color": new Color({value: 0xFF8A909E}),
-                                            "fontSize": 12
-                                          }
-                                        })))
-                                    ]
-                                  })
-                                }),
-                              (this.__k7 || (this.__k7 = new SizedBox({
-                                  "height": 10
-                                })))
-                            ]
-                          })
+      "color": new Color({value: 0xFFF4F5F7}),
+      "child": new Column({
+        "crossAxisAlignment": "stretch",
+        "children": [
+          new HomeHeader({
+            "city": this._city,
+            "onRefresh": (...__a) => this._refresh(...__a),
+            "onPickCity": (...__a) => this._pickCity(...__a)
+          }),
+          new Expanded({
+            "child": new EasyRefresh({
+              "controller": this._refreshController,
+              "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a)),
+              "child": new CustomScrollView({
+                "slivers": [
+                  new SliverToBoxAdapter({
+                    "child": new Column({
+                      "crossAxisAlignment": "stretch",
+                      "children": [
+                        (this.__k1 || (this.__k1 = new SizedBox({
+                          "height": 12
+                        }))),
+                        new BannerCarousel({
+                          "banners": this._feed.banners
                         }),
-                      new SliverPadding({
-                          "padding": {
+                        (this.__k1 || (this.__k1 = new SizedBox({
+                          "height": 12
+                        }))),
+                        new Container({
+                          "margin": {
                             "left": 12.0,
                             "top": 0.0,
                             "right": 12.0,
                             "bottom": 0.0
                           },
-                          "sliver": new SliverGrid({
-                            "gridDelegate": {
-                              "maxCrossAxisExtent": 300,
-                              "mainAxisSpacing": 10,
-                              "crossAxisSpacing": 10,
-                              "mainAxisExtent": 190
-                            },
-                            "delegate": {
-                              "__delegate": "builder",
-                              "builder": "_builder0",
-                              "childCount": this._feed.spots.length
+                          "padding": {
+                            "left": 0.0,
+                            "top": 12.0,
+                            "right": 0.0,
+                            "bottom": 12.0
+                          },
+                          "decoration": {
+                            "color": new Color({value: 0xFFFFFFFF}),
+                            "borderRadius": {
+                              "radius": 14.0
                             }
+                          },
+                          "child": new GridView({
+                            "gridDelegate": {
+                              "maxCrossAxisExtent": 150,
+                              "mainAxisSpacing": 6,
+                              "crossAxisSpacing": 6,
+                              "mainAxisExtent": 84
+                            },
+                            "shrinkWrap": true,
+                            "physics": "NeverScrollableScrollPhysics",
+                            "children": [
+                              ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({
+                                      "entry": this._feed.grid[i]
+                                    })]); } return out; })()
+                            ]
                           })
                         }),
-                      (this.__k8 || (this.__k8 = new SliverToBoxAdapter({
-                          "child": new SizedBox({
-                            "height": 20
+                        (this.__k1 || (this.__k1 = new SizedBox({
+                          "height": 12
+                        }))),
+                        new Container({
+                          "margin": {
+                            "left": 12.0,
+                            "top": 0.0,
+                            "right": 12.0,
+                            "bottom": 0.0
+                          },
+                          "child": new PromoCard({
+                            "img": this._feed.adImg
                           })
+                        }),
+                        (this.__k2 || (this.__k2 = new SizedBox({
+                          "height": 16
+                        }))),
+                        new Padding({
+                          "padding": {
+                            "left": 14.0,
+                            "top": 0.0,
+                            "right": 14.0,
+                            "bottom": 0.0
+                          },
+                          "child": new Row({
+                            "children": [
+                              new Container({
+                                "width": 4,
+                                "height": 16,
+                                "decoration": {
+                                  "color": new Color({value: 0xFF0E7AFB}),
+                                  "borderRadius": {
+                                    "radius": 2.0
+                                  }
+                                }
+                              }),
+                              (this.__k3 || (this.__k3 = new SizedBox({
+                                "width": 8
+                              }))),
+                              (this.__k4 || (this.__k4 = new Text({
+                                "data": "景点推荐",
+                                "style": {
+                                  "color": new Color({value: 0xFF1F2430}),
+                                  "fontSize": 17,
+                                  "fontWeight": "w700"
+                                }
+                              }))),
+                              (this.__k5 || (this.__k5 = new Spacer({}))),
+                              (this.__k6 || (this.__k6 = new Text({
+                                "data": "为你精选",
+                                "style": {
+                                  "color": new Color({value: 0xFF8A909E}),
+                                  "fontSize": 12
+                                }
+                              })))
+                            ]
+                          })
+                        }),
+                        (this.__k7 || (this.__k7 = new SizedBox({
+                          "height": 10
                         })))
-                    ]
-                  })
-                })
+                      ]
+                    })
+                  }),
+                  new SliverPadding({
+                    "padding": {
+                      "left": 12.0,
+                      "top": 0.0,
+                      "right": 12.0,
+                      "bottom": 0.0
+                    },
+                    "sliver": new SliverGrid({
+                      "gridDelegate": {
+                        "maxCrossAxisExtent": 300,
+                        "mainAxisSpacing": 10,
+                        "crossAxisSpacing": 10,
+                        "mainAxisExtent": 190
+                      },
+                      "delegate": {
+                        "__delegate": "builder",
+                        "builder": "_builder0",
+                        "childCount": this._feed.spots.length
+                      }
+                    })
+                  }),
+                  (this.__k8 || (this.__k8 = new SliverToBoxAdapter({
+                    "child": new SizedBox({
+                      "height": 20
+                    })
+                  })))
+                ]
               })
-          ]
-        })
-      });
+            })
+          })
+        ]
+      })
+    });
   }
   _builder0(context, index) {
-      return new SpotCard({
-        "spot": this._feed.spots[index]
-      });
+    return new SpotCard({
+      "spot": this._feed.spots[index]
+    });
   }
 }
 
@@ -240,178 +240,178 @@ export class HomeHeader {
   }
   build(context) {
     return new Container({
-        "padding": {
-          "left": 16.0,
-          "top": 14.0,
-          "right": 16.0,
-          "bottom": 16.0
-        },
-        "decoration": {
-          "gradient": {
-            "kind": "linear",
-            "colors": [
-              new Color({value: 0xFF1E88FF}),
-              new Color({value: 0xFF0E7AFB})
-            ],
-            "begin": "topLeft",
-            "end": "bottomRight"
-          }
-        },
-        "child": new SafeArea({
-          "bottom": false,
-          "child": new Column({
-            "crossAxisAlignment": "start",
-            "children": [
-              new Row({
-                  "children": [
-                    new InkWell({
-                        "onTap": this.__bindFn(0, [], (...__a) => this.onPickCity(...__a)),
-                        "child": new Row({
-                          "children": [
-                            (this.__k0 || (this.__k0 = new Icon({
-                                "color": new Color({value: 0xFFFFFFFF}),
-                                "icon": "location_on",
-                                "size": 18
-                              }))),
-                            (this.__k1 || (this.__k1 = new SizedBox({
-                                "width": 2
-                              }))),
-                            new Text({
-                                "style": {
-                                  "color": new Color({value: 0xFFFFFFFF}),
-                                  "fontSize": 15,
-                                  "fontWeight": "w600"
-                                },
-                                "data": this.city
-                              }),
-                            (this.__k2 || (this.__k2 = new Icon({
-                                "color": new Color({value: 0xFFFFFFFF}),
-                                "icon": "keyboard_arrow_down",
-                                "size": 18
-                              })))
-                          ]
+      "padding": {
+        "left": 16.0,
+        "top": 14.0,
+        "right": 16.0,
+        "bottom": 16.0
+      },
+      "decoration": {
+        "gradient": {
+          "kind": "linear",
+          "colors": [
+            new Color({value: 0xFF1E88FF}),
+            new Color({value: 0xFF0E7AFB})
+          ],
+          "begin": "topLeft",
+          "end": "bottomRight"
+        }
+      },
+      "child": new SafeArea({
+        "bottom": false,
+        "child": new Column({
+          "crossAxisAlignment": "start",
+          "children": [
+            new Row({
+              "children": [
+                new InkWell({
+                  "onTap": this.__bindFn(0, [], (...__a) => this.onPickCity(...__a)),
+                  "child": new Row({
+                    "children": [
+                      (this.__k0 || (this.__k0 = new Icon({
+                        "color": new Color({value: 0xFFFFFFFF}),
+                        "icon": "location_on",
+                        "size": 18
+                      }))),
+                      (this.__k1 || (this.__k1 = new SizedBox({
+                        "width": 2
+                      }))),
+                      new Text({
+                        "style": {
+                          "color": new Color({value: 0xFFFFFFFF}),
+                          "fontSize": 15,
+                          "fontWeight": "w600"
+                        },
+                        "data": this.city
+                      }),
+                      (this.__k2 || (this.__k2 = new Icon({
+                        "color": new Color({value: 0xFFFFFFFF}),
+                        "icon": "keyboard_arrow_down",
+                        "size": 18
+                      })))
+                    ]
+                  })
+                }),
+                (this.__k3 || (this.__k3 = new Spacer({}))),
+                new InkWell({
+                  "onTap": this.__bindFn(1, [], (...__a) => this.onRefresh(...__a)),
+                  "borderRadius": {
+                    "radius": 18.0
+                  },
+                  "child": (this.__k4 || (this.__k4 = new Padding({
+                    "child": new Icon({
+                      "color": new Color({value: 0xFFFFFFFF}),
+                      "size": 24,
+                      "icon": "refresh"
+                    }),
+                    "padding": {
+                      "bottom": 4.0,
+                      "left": 4.0,
+                      "right": 4.0,
+                      "top": 4.0
+                    }
+                  })))
+                }),
+                (this.__k5 || (this.__k5 = new SizedBox({
+                  "width": 8
+                }))),
+                new InkWell({
+                  "onTap": this.__bindFn(2, [], (...__a) => this.openMessages(...__a)),
+                  "borderRadius": {
+                    "radius": 18.0
+                  },
+                  "child": (this.__k6 || (this.__k6 = new Stack({
+                    "children": [
+                      new Padding({
+                        "padding": {
+                          "left": 4.0,
+                          "top": 4.0,
+                          "right": 4.0,
+                          "bottom": 4.0
+                        },
+                        "child": new Icon({
+                          "color": new Color({value: 0xFFFFFFFF}),
+                          "size": 24,
+                          "icon": "notifications"
                         })
                       }),
-                    (this.__k6 || (this.__k6 = new Spacer({}))),
-                    new InkWell({
-                        "onTap": this.__bindFn(1, [], (...__a) => this.onRefresh(...__a)),
-                        "borderRadius": {
-                          "radius": 18.0
-                        },
-                        "child": (this.__k3 || (this.__k3 = new Padding({
-                          "child": new Icon({
-                            "color": new Color({value: 0xFFFFFFFF}),
-                            "size": 24,
-                            "icon": "refresh"
-                          }),
-                          "padding": {
-                            "bottom": 4.0,
-                            "left": 4.0,
-                            "right": 4.0,
-                            "top": 4.0
-                          }
-                        })))
-                      }),
-                    (this.__k7 || (this.__k7 = new SizedBox({
-                        "width": 8
-                      }))),
-                    new InkWell({
-                        "onTap": this.__bindFn(2, [], (...__a) => this.openMessages(...__a)),
-                        "borderRadius": {
-                          "radius": 18.0
-                        },
-                        "child": (this.__k4 || (this.__k4 = new Stack({
-                          "children": [
-                            new Padding({
-                                "child": new Icon({
-                                  "color": new Color({value: 0xFFFFFFFF}),
-                                  "size": 24,
-                                  "icon": "notifications"
-                                }),
-                                "padding": {
-                                  "bottom": 4.0,
-                                  "left": 4.0,
-                                  "right": 4.0,
-                                  "top": 4.0
-                                }
-                              }),
-                            new Positioned({
-                                "child": new DecoratedBox({
-                                  "decoration": {
-                                    "color": new Color({value: 0xFFFF5A36}),
-                                    "borderRadius": {
-                                      "radius": 4.0
-                                    }
-                                  },
-                                  "child": new SizedBox({
-                                    "width": 8,
-                                    "height": 8
-                                  })
-                                }),
-                                "right": 3,
-                                "top": 3
-                              })
-                          ]
-                        })))
-                      })
-                  ]
-                }),
-              (this.__k8 || (this.__k8 = new SizedBox({
-                  "height": 12
-                }))),
-              new InkWell({
-                  "onTap": this.__bindFn(3, [], (...__a) => this.openSearch(...__a)),
-                  "borderRadius": {
-                    "radius": 20.0
-                  },
-                  "child": new Container({
-                    "height": 42,
-                    "padding": {
-                      "left": 14.0,
-                      "top": 0.0,
-                      "right": 14.0,
-                      "bottom": 0.0
-                    },
-                    "decoration": {
-                      "color": new Color({value: 0xFFFFFFFF}),
-                      "borderRadius": {
-                        "radius": 21.0
-                      }
-                    },
-                    "child": (this.__k5 || (this.__k5 = new Row({
-                      "children": [
-                        new Icon({
-                            "color": new Color({value: 0xFF9AA0AC}),
-                            "icon": "search",
-                            "size": 20
-                          }),
-                        new SizedBox({
-                            "width": 6
-                          }),
-                        new Text({
-                            "data": "搜索目的地 / 关键词",
-                            "style": {
-                              "color": new Color({value: 0xFF9AA0AC}),
-                              "fontSize": 14
+                      new Positioned({
+                        "right": 3,
+                        "top": 3,
+                        "child": new DecoratedBox({
+                          "decoration": {
+                            "color": new Color({value: 0xFFFF5A36}),
+                            "borderRadius": {
+                              "radius": 4.0
                             }
-                          }),
-                        new Spacer({}),
-                        new Text({
-                            "data": "搜索",
-                            "style": {
-                              "color": new Color({value: 0xFF0E7AFB}),
-                              "fontSize": 13,
-                              "fontWeight": "w600"
-                            }
+                          },
+                          "child": new SizedBox({
+                            "width": 8,
+                            "height": 8
                           })
-                      ]
-                    })))
-                  })
+                        })
+                      })
+                    ]
+                  })))
                 })
-            ]
-          })
+              ]
+            }),
+            (this.__k7 || (this.__k7 = new SizedBox({
+              "height": 12
+            }))),
+            new InkWell({
+              "onTap": this.__bindFn(3, [], (...__a) => this.openSearch(...__a)),
+              "borderRadius": {
+                "radius": 20.0
+              },
+              "child": new Container({
+                "height": 42,
+                "padding": {
+                  "left": 14.0,
+                  "top": 0.0,
+                  "right": 14.0,
+                  "bottom": 0.0
+                },
+                "decoration": {
+                  "color": new Color({value: 0xFFFFFFFF}),
+                  "borderRadius": {
+                    "radius": 21.0
+                  }
+                },
+                "child": (this.__k8 || (this.__k8 = new Row({
+                  "children": [
+                    new Icon({
+                      "color": new Color({value: 0xFF9AA0AC}),
+                      "size": 20,
+                      "icon": "search"
+                    }),
+                    new SizedBox({
+                      "width": 6
+                    }),
+                    new Text({
+                      "style": {
+                        "fontSize": 14,
+                        "color": new Color({value: 0xFF9AA0AC})
+                      },
+                      "data": "搜索目的地 / 关键词"
+                    }),
+                    new Spacer({}),
+                    new Text({
+                      "style": {
+                        "fontSize": 13,
+                        "color": new Color({value: 0xFF0E7AFB}),
+                        "fontWeight": "w600"
+                      },
+                      "data": "搜索"
+                    })
+                  ]
+                })))
+              })
+            })
+          ]
         })
-      });
+      })
+    });
   }
 }
 
@@ -429,29 +429,29 @@ export class GridCell {
   }
   build(context) {
     return new InkWell({
-        "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
-        "child": new Column({
-          "mainAxisAlignment": "center",
-          "children": [
-            new Text({
-                "style": {
-                  "fontSize": 22
-                },
-                "data": this.entry.emoji
-              }),
-            (this.__k0 || (this.__k0 = new SizedBox({
-                "height": 6
-              }))),
-            new Text({
-                "style": {
-                  "fontSize": 12,
-                  "color": new Color({value: 0xFF4D5462})
-                },
-                "data": this.entry.title
-              })
-          ]
-        })
-      });
+      "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+      "child": new Column({
+        "mainAxisAlignment": "center",
+        "children": [
+          new Text({
+            "style": {
+              "fontSize": 22
+            },
+            "data": this.entry.emoji
+          }),
+          (this.__k0 || (this.__k0 = new SizedBox({
+            "height": 6
+          }))),
+          new Text({
+            "style": {
+              "fontSize": 12,
+              "color": new Color({value: 0xFF4D5462})
+            },
+            "data": this.entry.title
+          })
+        ]
+      })
+    });
   }
 }
 
@@ -469,130 +469,129 @@ export class SpotCard {
   }
   build(context) {
     return new InkWell({
-        "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
-        "borderRadius": {
-          "radius": 14.0
+      "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+      "borderRadius": {
+        "radius": 14.0
+      },
+      "child": new Container({
+        "decoration": {
+          "color": new Color({value: 0xFFFFFFFF}),
+          "borderRadius": {
+            "radius": 14.0
+          }
         },
-        "child": new Container({
-          "decoration": {
-            "color": new Color({value: 0xFFFFFFFF}),
-            "borderRadius": {
-              "radius": 14.0
-            }
-          },
-          "clipBehavior": "antiAlias",
-          "child": new Column({
-            "crossAxisAlignment": "start",
-            "children": [
-              new SizedBox({
-                  "height": 96,
-                  "child": new Stack({
-                    "fit": "expand",
+        "clipBehavior": "antiAlias",
+        "child": new Column({
+          "crossAxisAlignment": "start",
+          "children": [
+            new SizedBox({
+              "height": 96,
+              "child": new Stack({
+                "fit": "expand",
+                "children": [
+                  Image.asset({
+                    "fit": "cover",
+                    "name": this.spot.img
+                  }),
+                  new Positioned({
+                    "left": 8,
+                    "top": 8,
+                    "child": new Container({
+                      "padding": {
+                        "left": 6.0,
+                        "top": 2.0,
+                        "right": 6.0,
+                        "bottom": 2.0
+                      },
+                      "decoration": {
+                        "color": new Color({value: 0xFFFF5A36}),
+                        "borderRadius": {
+                          "radius": 6.0
+                        }
+                      },
+                      "child": new Text({
+                        "style": {
+                          "color": new Color({value: 0xFFFFFFFF}),
+                          "fontSize": 10,
+                          "fontWeight": "w600"
+                        },
+                        "data": this.spot.tag
+                      })
+                    })
+                  })
+                ]
+              })
+            }),
+            new Padding({
+              "padding": {
+                "left": 10.0,
+                "top": 8.0,
+                "right": 10.0,
+                "bottom": 10.0
+              },
+              "child": new Column({
+                "crossAxisAlignment": "start",
+                "children": [
+                  new Text({
+                    "maxLines": 1,
+                    "overflow": "ellipsis",
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "w600",
+                      "color": new Color({value: 0xFF1F2430})
+                    },
+                    "data": this.spot.title
+                  }),
+                  (this.__k0 || (this.__k0 = new SizedBox({
+                    "height": 4
+                  }))),
+                  new Text({
+                    "maxLines": 1,
+                    "overflow": "ellipsis",
+                    "style": {
+                      "fontSize": 11,
+                      "color": new Color({value: 0xFF8A909E})
+                    },
+                    "data": this.spot.sub
+                  }),
+                  (this.__k1 || (this.__k1 = new SizedBox({
+                    "height": 8
+                  }))),
+                  new Row({
                     "children": [
-                      new Image({
-                          "fit": "cover",
-                          "factory": "asset",
-                          "name": this.spot.img
-                        }),
-                      new Positioned({
-                          "left": 8,
-                          "top": 8,
-                          "child": new Container({
-                            "padding": {
-                              "left": 6.0,
-                              "top": 2.0,
-                              "right": 6.0,
-                              "bottom": 2.0
-                            },
-                            "decoration": {
-                              "color": new Color({value: 0xFFFF5A36}),
-                              "borderRadius": {
-                                "radius": 6.0
-                              }
-                            },
-                            "child": new Text({
-                              "style": {
-                                "color": new Color({value: 0xFFFFFFFF}),
-                                "fontSize": 10,
-                                "fontWeight": "w600"
-                              },
-                              "data": this.spot.tag
-                            })
-                          })
-                        })
+                      (this.__k2 || (this.__k2 = new Text({
+                        "data": "¥",
+                        "style": {
+                          "color": new Color({value: 0xFFFF5A36}),
+                          "fontSize": 11,
+                          "fontWeight": "w700"
+                        }
+                      }))),
+                      new Text({
+                        "style": {
+                          "fontSize": 17,
+                          "color": new Color({value: 0xFFFF5A36}),
+                          "fontWeight": "w700"
+                        },
+                        "data": this.spot.price
+                      }),
+                      (this.__k3 || (this.__k3 = new Spacer({}))),
+                      new Text({
+                        "style": {
+                          "fontSize": 10,
+                          "color": new Color({value: 0xFF9AA0AC})
+                        },
+                        "data": this.spot.sold
+                      })
                     ]
                   })
-                }),
-              new Padding({
-                  "padding": {
-                    "left": 10.0,
-                    "top": 8.0,
-                    "right": 10.0,
-                    "bottom": 10.0
-                  },
-                  "child": new Column({
-                    "crossAxisAlignment": "start",
-                    "children": [
-                      new Text({
-                          "maxLines": 1,
-                          "overflow": "ellipsis",
-                          "style": {
-                            "fontSize": 14,
-                            "fontWeight": "w600",
-                            "color": new Color({value: 0xFF1F2430})
-                          },
-                          "data": this.spot.title
-                        }),
-                      (this.__k0 || (this.__k0 = new SizedBox({
-                          "height": 4
-                        }))),
-                      new Text({
-                          "maxLines": 1,
-                          "overflow": "ellipsis",
-                          "style": {
-                            "fontSize": 11,
-                            "color": new Color({value: 0xFF8A909E})
-                          },
-                          "data": this.spot.sub
-                        }),
-                      (this.__k1 || (this.__k1 = new SizedBox({
-                          "height": 8
-                        }))),
-                      new Row({
-                          "children": [
-                            (this.__k2 || (this.__k2 = new Text({
-                                "data": "¥",
-                                "style": {
-                                  "color": new Color({value: 0xFFFF5A36}),
-                                  "fontSize": 11,
-                                  "fontWeight": "w700"
-                                }
-                              }))),
-                            new Text({
-                                "style": {
-                                  "fontSize": 17,
-                                  "color": new Color({value: 0xFFFF5A36}),
-                                  "fontWeight": "w700"
-                                },
-                                "data": this.spot.price
-                              }),
-                            (this.__k3 || (this.__k3 = new Spacer({}))),
-                            new Text({
-                                "style": {
-                                  "fontSize": 10,
-                                  "color": new Color({value: 0xFF9AA0AC})
-                                },
-                                "data": this.spot.sold
-                              })
-                          ]
-                        })
-                    ]
-                  })
-                })
-            ]
-          })
+                ]
+              })
+            })
+          ]
         })
-      });
+      })
+    });
   }
 }
 
@@ -610,71 +609,70 @@ export class PromoCard {
   }
   build(context) {
     return new InkWell({
-        "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
-        "borderRadius": {
-          "radius": 14.0
-        },
-        "child": new SizedBox({
-          "height": 96,
-          "child": new ClipRRect({
-            "borderRadius": {
-              "radius": 14.0
-            },
-            "child": new Stack({
-              "fit": "expand",
-              "children": [
-                new Image({
-                    "fit": "cover",
-                    "factory": "asset",
-                    "name": this.img
-                  }),
-                new Positioned({
-                    "left": 16,
-                    "top": 22,
-                    "child": new Column({
-                      "crossAxisAlignment": "start",
-                      "children": [
-                        (this.__k1 || (this.__k1 = new Text({
-                            "data": "热气球季 · 限时特惠",
-                            "style": {
-                              "color": new Color({value: 0xFFFFFFFF}),
-                              "fontSize": 16,
-                              "fontWeight": "w700"
-                            }
-                          }))),
-                        (this.__k2 || (this.__k2 = new SizedBox({
-                            "height": 6
-                          }))),
-                        new Container({
-                            "padding": {
-                              "left": 10.0,
-                              "top": 4.0,
-                              "right": 10.0,
-                              "bottom": 4.0
-                            },
-                            "decoration": {
-                              "color": new Color({value: 0xE6FFFFFF}),
-                              "borderRadius": {
-                                "radius": 12.0
-                              }
-                            },
-                            "child": (this.__k0 || (this.__k0 = new Text({
-                              "data": "立即查看 >",
-                              "style": {
-                                "color": new Color({value: 0xFF0E7AFB}),
-                                "fontSize": 11,
-                                "fontWeight": "w600"
-                              }
-                            })))
-                          })
-                      ]
+      "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+      "borderRadius": {
+        "radius": 14.0
+      },
+      "child": new SizedBox({
+        "height": 96,
+        "child": new ClipRRect({
+          "borderRadius": {
+            "radius": 14.0
+          },
+          "child": new Stack({
+            "fit": "expand",
+            "children": [
+              Image.asset({
+                "fit": "cover",
+                "name": this.img
+              }),
+              new Positioned({
+                "left": 16,
+                "top": 22,
+                "child": new Column({
+                  "crossAxisAlignment": "start",
+                  "children": [
+                    (this.__k0 || (this.__k0 = new Text({
+                      "data": "热气球季 · 限时特惠",
+                      "style": {
+                        "color": new Color({value: 0xFFFFFFFF}),
+                        "fontSize": 16,
+                        "fontWeight": "w700"
+                      }
+                    }))),
+                    (this.__k1 || (this.__k1 = new SizedBox({
+                      "height": 6
+                    }))),
+                    new Container({
+                      "padding": {
+                        "left": 10.0,
+                        "top": 4.0,
+                        "right": 10.0,
+                        "bottom": 4.0
+                      },
+                      "decoration": {
+                        "color": new Color({value: 0xE6FFFFFF}),
+                        "borderRadius": {
+                          "radius": 12.0
+                        }
+                      },
+                      "child": (this.__k2 || (this.__k2 = new Text({
+                        "data": "立即查看 >",
+                        "style": {
+                          "color": new Color({value: 0xFF0E7AFB}),
+                          "fontSize": 11,
+                          "fontWeight": "w600"
+                        }
+                      })))
                     })
-                  })
-              ]
-            })
+                  ]
+                })
+              })
+            ]
           })
         })
-      });
+      })
+    });
   }
 }
 

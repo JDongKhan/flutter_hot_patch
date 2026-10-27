@@ -263,10 +263,18 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
     }
   }
 
-  // 列表字面量（`providers: [...]` / `actions: [...]` / `items: [...]`）：
-  // 逐项翻译（元素是 widget 构造则成品结点），整体作为 props 数组下发。
+  // 列表字面量（`providers: [...]` / `actions: [...]` / `children: [...]`）：
+  // 元素与任意值位置的构造**同一套语法翻译**（`new X({...})`）——翻译层不区分
+  // widget 与普通类：宿主包装类的构造内部再 `return __h('X', props)`，值类
+  // （`TextSpan` / `Duration` …）则保持普通对象。仅 if/for/spread 这类集合
+  // 语法仍走元素数组展开（`...(cond ? [a] : [b])`）。
   if (e is ListLiteral) {
-    return [for (final el in e.elements) ctx.translateElement(el)];
+    return [
+      for (final el in e.elements)
+        el is Expression
+            ? ctx.renderValue(ctx.translate(el), 0)
+            : ctx.translateElement(el),
+    ];
   }
 
   return _jsExprOrNull(e, ctx);
