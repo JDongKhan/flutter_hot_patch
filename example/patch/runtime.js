@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 7a760d94） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 41bc3a24） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '7a760d94') { return; }
-  G.__jsuiVersion = '7a760d94';
+  if (G.__jsui && G.__jsuiVersion === '41bc3a24') { return; }
+  G.__jsuiVersion = '41bc3a24';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2569,6 +2569,27 @@ G.ValueNotifier = ValueNotifier;
   //     无需生成器合成方法名，不存在重名问题。
   // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`，宿主据此取/建
   // 真实 controller（见 scroll_controller_bridge.dart）。
+  // 动画实参归一：Dart 的具名实参在 JS 调用里是**位置化扁平**（JS 无具名参数），
+  // 因此 `animateTo(offset, duration: d, curve: c)` 到运行时就是
+  // `(offset, d, c)`；也兼容直接传 options 对象的形态。三种 duration 形态
+  // （Duration 实例 / options.duration 毫秒数 / options.duration 为 Duration）
+  // 与两种 curve 形态（字符串 / options.curve）统一归一。
+  function __animArgs(opts, curveArg) {
+    var ms = 300;
+    var curve = 'easeOut';
+    if (opts != null) {
+      if (typeof opts.inMilliseconds === 'number') {
+        ms = opts.inMilliseconds;
+      } else if (typeof opts.duration === 'number') {
+        ms = opts.duration;
+      } else if (opts.duration && typeof opts.duration.inMilliseconds === 'number') {
+        ms = opts.duration.inMilliseconds;
+      }
+      if (typeof opts.curve === 'string') { curve = opts.curve; }
+    }
+    if (typeof curveArg === 'string') { curve = curveArg; }
+    return { ms: ms, curve: curve };
+  }
   var ScrollController = defineController('ctrl/Scroll', {
     init: function () {
       this.offset = 0;
@@ -2590,11 +2611,10 @@ G.ValueNotifier = ValueNotifier;
   ScrollController.prototype.jumpTo = function (offset) {
     if (this.__id != null) { handleOp(this.__id, 'call', { method: 'jumpTo', args: [offset] }); }
   };
-  ScrollController.prototype.animateTo = function (offset, opts) {
+  ScrollController.prototype.animateTo = function (offset, opts, curveArg) {
     if (this.__id == null) { return; }
-    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
-    var curve = (opts && opts.curve) ? opts.curve : 'easeOut';
-    handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, ms, curve] });
+    var a = __animArgs(opts, curveArg);
+    handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
   };
   Object.defineProperty(ScrollController.prototype, 'position', {
     get: function () {
@@ -2636,21 +2656,20 @@ G.ValueNotifier = ValueNotifier;
   PageController.prototype.jumpToPage = function (page) {
     if (this.__id != null) { handleOp(this.__id, 'call', { method: 'jumpToPage', args: [page] }); }
   };
-  PageController.prototype.animateToPage = function (page, opts) {
+  PageController.prototype.animateToPage = function (page, opts, curveArg) {
     if (this.__id == null) { return; }
-    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
-    var curve = (opts && opts.curve) ? opts.curve : 'easeOut';
-    handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, ms, curve] });
+    var a = __animArgs(opts, curveArg);
+    handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
   };
-  PageController.prototype.nextPage = function (opts) {
+  PageController.prototype.nextPage = function (opts, curveArg) {
     if (this.__id == null) { return; }
-    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
-    handleOp(this.__id, 'call', { method: 'nextPage', args: [ms] });
+    var a = __animArgs(opts, curveArg);
+    handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
   };
-  PageController.prototype.previousPage = function (opts) {
+  PageController.prototype.previousPage = function (opts, curveArg) {
     if (this.__id == null) { return; }
-    var ms = (opts && typeof opts.duration === 'number') ? opts.duration : 300;
-    handleOp(this.__id, 'call', { method: 'previousPage', args: [ms] });
+    var a = __animArgs(opts, curveArg);
+    handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
   };
   Object.defineProperty(PageController.prototype, 'hasClients', {
     get: function () { return this.__id != null; }
@@ -3076,7 +3095,86 @@ G.ValueNotifier = ValueNotifier;
   };
 
 
-// ===== 【24】泄漏观测（debug 用） =====
+// ===== 【24】Timer（Dart Timer 同名注入） =====
+  // 实参归一：正常形态是 `{duration, callback}`；构建期查不到签名时位置实参
+  // 落在 `__pos` 里，由 __posArgs 按形参名展开。容错地再支持一次
+  // 「第一个实参直接就是 Duration 对象」的形态，避免任何调用写法静默失效。
+  function __timerArgs(props, second) {
+    var duration = null;
+    var callback = null;
+    if (props && typeof props.inMilliseconds === 'number') {
+      duration = props;
+      callback = second;
+    } else {
+      var opts = __posArgs(props, ['duration', 'callback']);
+      duration = opts.duration;
+      callback = opts.callback;
+    }
+    var ms = __durationMs(duration);
+    if (ms == null || ms < 0) { ms = 0; }
+    return { ms: ms, callback: callback };
+  }
+
+  function Timer(props) {
+    __timerInit(this, props, false, null);
+  }
+
+  // __timerInit 在所有 Timer 实例间共用（构造与 periodic 两条入口）。
+  function __timerInit(self, props, repeat, second) {
+    var args = __timerArgs(props, second);
+    self._ms = args.ms;
+    self._callback = args.callback;
+    self._repeat = !!repeat;
+    self._active = true;
+    self._cancelled = false;
+    self._handle = null;
+    __timerSchedule(self);
+  }
+
+  function __timerSchedule(self) {
+    if (self._cancelled) { return; }
+    self._handle = setTimeout(function () {
+      self._handle = null;
+      if (self._cancelled) { return; }
+      if (!self._repeat) { self._active = false; }
+      try {
+        if (typeof self._callback === 'function') { self._callback(self); }
+      } catch (e) {
+        console.error('[patch] Timer 回调异常: ' +
+          ((e && e.message) ? e.message : e));
+      }
+      if (self._repeat && !self._cancelled) { __timerSchedule(self); }
+    }, self._ms);
+  }
+
+  Timer.prototype.cancel = function () {
+    this._cancelled = true;
+    this._active = false;
+    if (this._handle != null && typeof clearTimeout === 'function') {
+      try { clearTimeout(this._handle); } catch (e) {}
+    }
+    this._handle = null;
+  };
+
+  Object.defineProperty(Timer.prototype, 'isActive', {
+    get: function () { return !!this._active; }
+  });
+
+  // Timer 不是跨语言句柄：万一被当作值下发，只带状态字段（调试友好，宿主侧无对应还原）。
+  Timer.prototype.toJSON = function () {
+    return { __timer: true, active: !!this._active, repeat: !!this._repeat, ms: this._ms };
+  };
+
+  Timer.periodic = function (props, second) {
+    var t = Object.create(Timer.prototype);
+    __timerInit(t, props, true, second);
+    return t;
+  };
+
+  G.Timer = Timer;
+
+
+// ===== 【25】泄漏观测（debug 用） =====
 
   function leakSnapshot() {
     var hs = [];
@@ -3117,7 +3215,7 @@ G.ValueNotifier = ValueNotifier;
   }
 
 
-// ===== 【25】api 收尾 =====
+// ===== 【26】api 收尾 =====
 
   var api = {
     h: h,

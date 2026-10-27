@@ -16,6 +16,7 @@ export class CommunityPage {
     this._service = new AppService();
     this._feed = null;
     this._posts = null;
+    this._resources = null;
     this._listLoading = false;
     this._filterOpen = false;
     this._tab = "";
@@ -28,6 +29,7 @@ export class CommunityPage {
     console.log("CommunityPage initState ---");
     this._load();
     this._loadPosts();
+    this._loadResources();
   }
   async _load() {
     var feed = await this._service.fetchCommunity();
@@ -38,9 +40,14 @@ export class CommunityPage {
     var posts = await this._service.fetchPostList(this._tab, this._sort, this._type, this._dist, this._price);
     this.setState(() => { this._posts = posts; this._listLoading = false; });
   }
+  async _loadResources() {
+    var resources = await this._service.fetchCommunityResources(this._tab);
+    this.setState(() => { this._resources = resources; });
+  }
   _selectTab(tab) {
     this.setState(() => { this._tab = tab; });
     this._loadPosts();
+    this._loadResources();
   }
   _selectFilter(key, value) {
     this.setState(() => { switch (key) {   case "sort":     this._sort = value;   break;   case "type":     this._type = value;   break;   case "dist":     this._dist = value;   break;   case "price":     this._price = value;   break; } });
@@ -60,7 +67,8 @@ export class CommunityPage {
   build(context) {
     console.log("CommunityPage build : filterOpen=" + __str(this._filterOpen));
     var feed = this._feed;
-    if ((feed == null)) {
+    var resources = this._resources;
+    if (((feed == null) || (resources == null))) {
       return (this.__k0 || (this.__k0 = new Center({
           "child": new CircularProgressIndicator({})
         })));
@@ -147,7 +155,7 @@ export class CommunityPage {
                   "right": 12.0,
                   "bottom": 0.0
                 },
-                "itemCount": this._feed.resources.length,
+                "itemCount": this._resources.length,
                 "separatorBuilder": "_separatorBuilder0",
                 "itemBuilder": "_itemBuilder1"
               })
@@ -270,8 +278,8 @@ export class CommunityPage {
   }
   _itemBuilder1(context, i) {
       return new _ResourceCard({
-        "resource": this._feed.resources[i],
-        "onTap": () => { return _app_host_.invoke("openResource", [this._feed.resources[i].id]); }
+        "resource": this._resources[i],
+        "onTap": () => { return _app_host_.invoke("openResource", [this._resources[i].id]); }
       });
   }
 }

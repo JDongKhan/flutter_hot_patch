@@ -33,10 +33,15 @@ class AppService {
   }
 
   /// 首页：banner + 九宫格 + 景点推荐 + 广告位。
-  Future<HomeFeed> fetchHome() async {
+  ///
+  /// **数据跟着城市走**：接口一次返回所有城市的 banner / 景点 / 广告位，
+  /// 这里按 `city` 取对应城市那一份（城市切换后页面用新城市重发本请求）。
+  /// 城市不在列表里时回退到第一个城市，避免切换后白屏。
+  Future<HomeFeed> fetchHome(String city) async {
     final data = await _request('/app/home');
+    final entry = _cityOf(data['cities'], city);
     final banners = <HomeBanner>[];
-    for (final e in data['banners']) {
+    for (final e in entry['banners']) {
       banners.add(_banner(e));
     }
     final grid = <GridEntry>[];
@@ -44,27 +49,30 @@ class AppService {
       grid.add(_grid(e));
     }
     final spots = <Spot>[];
-    for (final e in data['spots']) {
+    for (final e in entry['spots']) {
       spots.add(_spot(e));
     }
-    return HomeFeed(banners: banners, grid: grid, spots: spots, adImg: data['adImg']);
+    return HomeFeed(banners: banners, grid: grid, spots: spots, adImg: entry['adImg']);
   }
 
-  /// 社区：双 tab + 筛选项配置 + 横向资源推荐（列表见 [fetchPostList]）。
+  /// 社区：双 tab + 筛选项配置（横向资源见 [fetchCommunityResources]）。
   Future<CommunityFeed> fetchCommunity() async {
     final data = await _request('/app/community');
-    final resources = <Resource>[];
-    for (final e in data['resources']) {
-      resources.add(_resource(e));
-    }
     return CommunityFeed(
       tabs: _strings(data['tabs']),
       sorts: _strings(data['sorts']),
       postTypes: _strings(data['postTypes']),
       dists: _strings(data['dists']),
       priceRanges: _strings(data['priceRanges']),
-      resources: resources,
     );
+  }
+
+  /// 社区横向资源横幅：按归属 tab 过滤（广场 = 全部聚合，与帖子列表同口径）。
+  Future<List<Resource>> fetchCommunityResources(String tab) async {
+    final data = await _request('/app/community');
+    final all = _resources(data['resources']);
+    if (tab.isEmpty || tab == '广场') return all;
+    return all.where((r) => r.tab == tab).toList();
   }
 
   /// 社区帖子列表：**列表自己的接口**，筛选条件随请求参数一并下发。
@@ -117,7 +125,8 @@ class AppService {
   Future<SearchFeed> fetchSearch() async {
     final data = await _request('/app/search');
     final home = await _request('/app/home');
-    return SearchFeed(hot: _strings(data['hot']), guesses: _spots(home['spots']));
+    final entry = _cityOf(home['cities'], '');
+    return SearchFeed(hot: _strings(data['hot']), guesses: _spots(entry['spots']));
   }
 
   /// 资源专题页：专题本身（社区接口）+ 相关推荐（帖子接口）。
@@ -132,10 +141,15 @@ class AppService {
     );
   }
 
-  /// 详情页按 id 取数据（宿主路由用，不走 JS）。
+  /// 详情页按 id 取数据（宿主路由用，不走 JS）。景点分散在各城市下，这里全量找。
   Future<Spot> fetchSpot(String id) async {
     final data = await _request('/app/home');
-    return _spotOf(_spots(data['spots']), id);
+    final cities = data['cities'];
+    final all = <Spot>[];
+    for (final c in cities) {
+      all.addAll(_spots(c['spots']));
+    }
+    return _spotOf(all, id);
   }
 
   Future<Post> fetchPost(String id) async {
@@ -248,7 +262,16 @@ class AppService {
       title: e['title'],
       sub: e['sub'],
       img: e['img'],
+      tab: e['tab'],
     );
+  }
+
+  /// 按城市名取接口里该城市那一份数据；空串或不认识的城市回退首个城市。
+  Map _cityOf(dynamic cities, String city) {
+    for (final c in cities) {
+      if (c['name'] == city) return c;
+    }
+    return cities.first;
   }
 
   Order _order(dynamic e) {

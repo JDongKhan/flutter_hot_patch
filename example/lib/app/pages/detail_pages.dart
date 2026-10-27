@@ -1361,19 +1361,9 @@ class CityPickerSheet extends StatelessWidget {
   static const List<String> _cities = [
     '上海',
     '北京',
-    '广州',
-    '深圳',
     '成都',
     '杭州',
     '西安',
-    '重庆',
-    '南京',
-    '武汉',
-    '苏州',
-    '厦门',
-    '青岛',
-    '长沙',
-    '昆明',
     '三亚',
   ];
 

@@ -87,6 +87,7 @@ export class Resource {
     this.title = (args && args.title !== undefined) ? args.title : '';
     this.sub = (args && args.sub !== undefined) ? args.sub : '';
     this.img = (args && args.img !== undefined) ? args.img : '';
+    this.tab = (args && args.tab !== undefined) ? args.tab : '';
   }
 }
 
@@ -130,7 +131,6 @@ export class CommunityFeed {
     this.postTypes = (args && args.postTypes !== undefined) ? args.postTypes : [];
     this.dists = (args && args.dists !== undefined) ? args.dists : [];
     this.priceRanges = (args && args.priceRanges !== undefined) ? args.priceRanges : [];
-    this.resources = (args && args.resources !== undefined) ? args.resources : [];
   }
 }
 

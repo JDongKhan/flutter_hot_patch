@@ -107,11 +107,15 @@ class Resource {
   final String sub;
   final String img;
 
+  /// 归属 tab（广场 / 推荐）：切换 tab 时横幅列表跟着换。
+  final String tab;
+
   const Resource({
     required this.id,
     required this.title,
     required this.sub,
     required this.img,
+    required this.tab,
   });
 }
 
@@ -153,17 +157,16 @@ class HomeFeed {
   });
 }
 
-/// 社区「配置」接口返回：双 tab + 筛选项配置 + 横向资源。
+/// 社区「配置」接口返回：双 tab + 筛选项配置。
 ///
 /// 帖子列表**不在**这里——它是列表自己的接口（[AppService.fetchPostList]），
-/// 筛选条件变化时按参数重新请求，与配置接口并行发出。
+/// 横向资源横幅同理（[AppService.fetchCommunityResources]），随 tab 变化重发。
 class CommunityFeed {
   final List<String> tabs;
   final List<String> sorts;
   final List<String> postTypes;
   final List<String> dists;
   final List<String> priceRanges;
-  final List<Resource> resources;
 
   const CommunityFeed({
     required this.tabs,
@@ -171,7 +174,6 @@ class CommunityFeed {
     required this.postTypes,
     required this.dists,
     required this.priceRanges,
-    required this.resources,
   });
 }
 

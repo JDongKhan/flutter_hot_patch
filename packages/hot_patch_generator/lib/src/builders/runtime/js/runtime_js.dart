@@ -72,6 +72,7 @@ import 'provider_js.dart';
 import 'scroll_controller_js.dart';
 import 'tab_controller_js.dart';
 import 'text_editing_controller_js.dart';
+import 'timer_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
@@ -678,11 +679,12 @@ String runtimeJsSource() {
     _section('【21】BuildContext 代理', buildContextJsSource),
     _section('【22】EasyRefresh', easyRefreshJsSource),
     _section('【23】provider', providerJsSource),
+    _section('【24】Timer（Dart Timer 同名注入）', timerJsSource),
     // 泄漏观测：无条件拼入（构建期不知道 App 是 debug 还是 release）。
     // 宿主侧调用点仍由 kDebugMode 门控，release 下这些函数不会被调用，
     // 只占体积、不影响行为。
-    _section('【24】泄漏观测（debug 用）', _jsUiLeakSnapshotFn),
-    _section('【25】api 收尾', _jsUiRuntimeSkeletonTailHead),
+    _section('【25】泄漏观测（debug 用）', _jsUiLeakSnapshotFn),
+    _section('【26】api 收尾', _jsUiRuntimeSkeletonTailHead),
     _jsUiLeakApiMember,
     _jsUiRuntimeSkeletonTailEnd,
   ].join('\n');

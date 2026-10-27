@@ -5,6 +5,7 @@ import 'package:flutter_hot_example/base/web_view.dart';
 
 import '../model/app_models.dart';
 import '../service/app_service.dart';
+import '../widgets/banner_carousel.dart';
 
 /// App 首页（对应 docs/app-prototype.html 的「首页」tab）。
 ///
@@ -61,7 +62,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _load() async {
-    final HomeFeed feed = await _service.fetchHome();
+    // 城市参与取数：换城市 → 用新城市重发同一个接口 → banner / 广告位 / 景点一起换。
+    final HomeFeed feed = await _service.fetchHome(_city);
     setState(() {
       _feed = feed;
     });
@@ -107,39 +109,9 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const SizedBox(height: 12),
-                        // 轮播：PageView + BannerSlide（子组件，走 JS 类引用）
-                        SizedBox(
-                          height: 150,
-                          child: PageView(
-                            children: [
-                              for (var i = 0; i < banners.length; i++)
-                                BannerSlide(banner: banners[i]),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        // 轮播指示点（静态高亮第 1 个；StatelessWidget 不追踪滑动位置）
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            for (var i = 0; i < banners.length; i++)
-                              Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 3,
-                                ),
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: i == 0
-                                      ? const Color(0xFF0E7AFB)
-                                      : const Color(0xFFD5D9E0),
-                                  borderRadius: const BorderRadius.all(
-                                    Radius.circular(3),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                        // 轮播组件：组件内部自己管 5s 自动翻页 + 指示点跟随，
+                        // 只对外暴露一个 banners 数组（城市切换后整组替换）。
+                        BannerCarousel(banners: banners),
                         const SizedBox(height: 12),
                         // 九宫格入口
                         Container(
@@ -395,74 +367,6 @@ class HomeHeader extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 轮播单页
-// ---------------------------------------------------------------------------
-class BannerSlide extends StatelessWidget {
-  const BannerSlide({super.key, required this.banner});
-
-  final HomeBanner banner;
-
-  void open() {
-    AppRouter.toast(banner.title);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: InkWell(
-        onTap: open,
-        borderRadius: const BorderRadius.all(Radius.circular(14)),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.all(Radius.circular(14)),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.network(banner.img, fit: BoxFit.cover),
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0x00000000), Color(0xB3000000)],
-                    begin: Alignment.center,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 14,
-                right: 14,
-                bottom: 14,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      banner.title,
-                      style: const TextStyle(
-                        color: Color(0xFFFFFFFF),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      banner.sub,
-                      style: const TextStyle(
-                        color: Color(0xE6FFFFFF),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

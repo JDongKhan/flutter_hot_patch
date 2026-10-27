@@ -405,12 +405,12 @@ String? valueCtorJs(
   var posIndex = 0;
   for (final a in args) {
     if (a is NamedExpression) {
-      final v = rhsToJs(a.expression, scope, classes);
+      final v = _ctorArgJs(a.expression, scope, classes);
       if (v == null) return null;
       entries.add('${a.name.label.name}: $v');
       continue;
     }
-    final v = rhsToJs(a, scope, classes);
+    final v = _ctorArgJs(a, scope, classes);
     if (v == null) return null;
     if (posIndex < positional.length) {
       entries.add('${positional[posIndex]}: $v');
@@ -435,6 +435,22 @@ bool _isClassLikeName(String name) {
   if (name.isEmpty) return false;
   final c = name.codeUnitAt(0);
   return c >= 0x41 && c <= 0x5A;
+}
+
+/// 构造实参 → JS：闭包走 [closureToJs]（与普通方法调用 `addListener(() {...})`
+/// 同一口径），其余走 [rhsToJs]。
+///
+/// 构造实参里的闭包在 Dart 里很常见（`Timer.periodic(d, (t) {...})`、
+/// `ValueNotifier(...)` 包装、`XxxModel(onDone: () {...})`）。缺了这一条，
+/// [rhsToJs] 对 FunctionExpression 返回 null，整个构造翻译失败，外层语句被
+/// 丢弃——正是「静默丢代码」的来源。
+String? _ctorArgJs(
+  Expression a,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (a is FunctionExpression) return closureToJs(a, scope, classes);
+  return rhsToJs(a, scope, classes);
 }
 
 

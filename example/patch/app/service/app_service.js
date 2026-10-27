@@ -27,10 +27,11 @@ export class AppService {
   async _requestQuery(url, query) {
     return await _app_host_.invoke("post", {"url": url, "params": {"api": url, "query": query}});
   }
-  async fetchHome() {
+  async fetchHome(city) {
     var data = await this._request("/app/home");
+    var entry = this._cityOf(data["cities"], city);
     var banners = [];
-    for (let e of data["banners"]) {
+    for (let e of entry["banners"]) {
       banners.add(this._banner(e));
     }
     var grid = [];
@@ -38,18 +39,22 @@ export class AppService {
       grid.add(this._grid(e));
     }
     var spots = [];
-    for (let e of data["spots"]) {
+    for (let e of entry["spots"]) {
       spots.add(this._spot(e));
     }
-    return new HomeFeed({banners: banners, grid: grid, spots: spots, adImg: data["adImg"]});
+    return new HomeFeed({banners: banners, grid: grid, spots: spots, adImg: entry["adImg"]});
   }
   async fetchCommunity() {
     var data = await this._request("/app/community");
-    var resources = [];
-    for (let e of data["resources"]) {
-      resources.add(this._resource(e));
+    return new CommunityFeed({tabs: this._strings(data["tabs"]), sorts: this._strings(data["sorts"]), postTypes: this._strings(data["postTypes"]), dists: this._strings(data["dists"]), priceRanges: this._strings(data["priceRanges"])});
+  }
+  async fetchCommunityResources(tab) {
+    var data = await this._request("/app/community");
+    var all = this._resources(data["resources"]);
+    if ((tab.isEmpty || (tab == "广场"))) {
+      return all;
     }
-    return new CommunityFeed({tabs: this._strings(data["tabs"]), sorts: this._strings(data["sorts"]), postTypes: this._strings(data["postTypes"]), dists: this._strings(data["dists"]), priceRanges: this._strings(data["priceRanges"]), resources: resources});
+    return all.where((r) => { return (r.tab == tab); }).toList();
   }
   async fetchPostList(tab, sort, type, dist, price) {
     var data = await this._requestQuery("/app/posts", {"tab": tab, "sort": sort, "type": type, "dist": dist, "price": price});
@@ -86,7 +91,8 @@ export class AppService {
   async fetchSearch() {
     var data = await this._request("/app/search");
     var home = await this._request("/app/home");
-    return new SearchFeed({hot: this._strings(data["hot"]), guesses: this._spots(home["spots"])});
+    var entry = this._cityOf(home["cities"], "");
+    return new SearchFeed({hot: this._strings(data["hot"]), guesses: this._spots(entry["spots"])});
   }
   async fetchResource(id) {
     var community = await this._request("/app/community");
@@ -95,7 +101,12 @@ export class AppService {
   }
   async fetchSpot(id) {
     var data = await this._request("/app/home");
-    return this._spotOf(this._spots(data["spots"]), id);
+    var cities = data["cities"];
+    var all = [];
+    for (let c of cities) {
+      all.addAll(this._spots(c["spots"]));
+    }
+    return this._spotOf(all, id);
   }
   async fetchPost(id) {
     var data = await this._request("/app/posts");
@@ -156,7 +167,15 @@ export class AppService {
     return new AppNotice({id: e["id"], title: e["title"], content: e["content"], time: e["time"], type: e["type"], unread: e["unread"]});
   }
   _resource(e) {
-    return new Resource({id: e["id"], title: e["title"], sub: e["sub"], img: e["img"]});
+    return new Resource({id: e["id"], title: e["title"], sub: e["sub"], img: e["img"], tab: e["tab"]});
+  }
+  _cityOf(cities, city) {
+    for (let c of cities) {
+      if ((c["name"] == city)) {
+        return c;
+      }
+    }
+    return cities.first;
   }
   _order(e) {
     return new Order({no: e["no"], status: e["status"], title: e["title"], spec: e["spec"], img: e["img"], price: e["price"], step: e["step"]});

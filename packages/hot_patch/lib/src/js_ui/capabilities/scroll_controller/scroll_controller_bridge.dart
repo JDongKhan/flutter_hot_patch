@@ -75,12 +75,17 @@ final JsControllerBridge<PageController> _pageBridge =
         'easeIn': Curves.easeIn,
         'easeInOut': Curves.easeInOut,
       };
-      final ms = args.length > 1 && args[1] is num
-          ? (args[1] as num).toInt()
+      // 实参位置按方法各自的口径取：animateToPage = [page, ms, curve]，
+      // nextPage / previousPage = [ms, curve]（切换页不需要 page）。
+      final isPageTurn = method == 'nextPage' || method == 'previousPage';
+      int msAt(int i) => args.length > i && args[i] is num
+          ? (args[i] as num).toInt()
           : 300;
-      final curve = args.length > 2
-          ? curves[args[2]?.toString()] ?? Curves.easeOut
+      Curve curveAt(int i) => args.length > i
+          ? curves[args[i]?.toString()] ?? Curves.easeOut
           : Curves.easeOut;
+      final ms = msAt(isPageTurn ? 0 : 1);
+      final curve = curveAt(isPageTurn ? 1 : 2);
       final page = args.isNotEmpty && args[0] is num
           ? (args[0] as num).toInt()
           : 0;

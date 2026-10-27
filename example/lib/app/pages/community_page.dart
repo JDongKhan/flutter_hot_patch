@@ -20,10 +20,11 @@ import 'detail_pages.dart';
 /// 条件表达式、事件闭包（`__bindFn`）、按 key 分派的 `switch` 均已支持；
 /// 过滤与排序搬到了 service（模拟后端按参数返回列表）。
 ///
-/// 数据走两个本地 mock 接口：双 tab / 筛选项 / 横向资源由 [AppService.fetchCommunity]
-/// 取，帖子列表由 [AppService.fetchPostList] 取。首屏两个请求**并行**发出
-/// （列表先用空参数请求，等价「全部 + 综合」），此后改任一筛选条件都按新参数
-/// 重新请求一次列表，请求期间列表区贴一条细进度条。
+/// 数据走三个本地 mock 接口：双 tab / 筛选项由 [AppService.fetchCommunity]
+/// 取，帖子列表由 [AppService.fetchPostList] 取，横向资源横幅由
+/// [AppService.fetchCommunityResources] 取。首屏三个请求**并行**发出
+/// （列表与横幅先用空参数请求，等价「广场 + 全部 + 综合」），此后切 tab 时
+/// 横幅与列表一起换，改其它筛选条件则只重发列表。
 @PatchEntry()
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
@@ -35,11 +36,14 @@ class CommunityPage extends StatefulWidget {
 class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveClientMixin {
   final AppService _service = AppService();
 
-  /// 配置（双 tab / 筛选项 / 横向资源）；null = 加载中。
+  /// 配置（双 tab / 筛选项）；null = 加载中。
   CommunityFeed? _feed;
 
   /// 列表接口返回；null = 列表加载中。
   List<Post>? _posts;
+
+  /// 横向资源横幅（按 tab 过滤）；null = 加载中。
+  List<Resource>? _resources;
 
   /// 列表请求进行中（改筛选后重新请求时贴进度条）。
   bool _listLoading = false;
@@ -57,9 +61,10 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
   void initState() {
     super.initState();
     print("CommunityPage initState ---");
-    // 配置与列表并行发，首屏只等一个往返（1s），不串行等两次。
+    // 配置、帖子列表、横向资源并行发，首屏只等一个往返（1s），不串行等多次。
     _load();
     _loadPosts();
+    _loadResources();
   }
 
   Future<void> _load() async {
@@ -92,10 +97,21 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
     });
   }
 
-  /// 切双 tab：换一份列表，重新请求。
+  /// 横向资源横幅：同样按当前 tab 取（广场 = 全部聚合）。
+  Future<void> _loadResources() async {
+    final List<Resource> resources = await _service.fetchCommunityResources(
+      _tab,
+    );
+    setState(() {
+      _resources = resources;
+    });
+  }
+
+  /// 切双 tab：横幅与帖子列表**一起换**，两个接口按新 tab 各重发一次。
   void _selectTab(String tab) {
     setState(() => _tab = tab);
     _loadPosts();
+    _loadResources();
   }
 
   /// 面板里改任一筛选项：按新条件重新请求列表（这就是「筛选条件随请求下发」）。
@@ -138,7 +154,8 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
     super.build(context); // AutomaticKeepAliveClientMixin 契约
     print("CommunityPage build : filterOpen=$_filterOpen");
     final feed = _feed;
-    if (feed == null) {
+    final resources = _resources;
+    if (feed == null || resources == null) {
       return const Center(child: CircularProgressIndicator());
     }
     return Column(
@@ -206,17 +223,17 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
           ),
         ),
         const SizedBox(height: 10),
-        // 横向资源推荐
+        // 横向资源推荐（随 tab 变化）
         SizedBox(
           height: 116,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: feed.resources.length,
+            itemCount: resources.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, i) => _ResourceCard(
-              resource: feed.resources[i],
-              onTap: () => AppRouter.openResource(feed.resources[i].id),
+              resource: resources[i],
+              onTap: () => AppRouter.openResource(resources[i].id),
             ),
           ),
         ),

@@ -9,19 +9,43 @@
       "id": "r1",
       "title": "露营地推荐",
       "sub": "12 个营地",
-      "img": "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=900&h=675&fit=crop&q=80"
+      "img": "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=900&h=675&fit=crop&q=80",
+      "tab": "广场"
     },
     {
       "id": "r2",
       "title": "城市漫步路线",
       "sub": "秋日限定",
-      "img": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=900&h=675&fit=crop&q=80"
+      "img": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=900&h=675&fit=crop&q=80",
+      "tab": "广场"
     },
     {
       "id": "r3",
       "title": "海边日落机位",
       "sub": "拍照攻略",
-      "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&h=675&fit=crop&q=80"
+      "img": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900&h=675&fit=crop&q=80",
+      "tab": "广场"
+    },
+    {
+      "id": "r4",
+      "title": "编辑精选 · 秋色地图",
+      "sub": "本周更新",
+      "img": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=900&h=675&fit=crop&q=80",
+      "tab": "推荐"
+    },
+    {
+      "id": "r5",
+      "title": "本周热议 · 亲子乐园",
+      "sub": "7 家新开",
+      "img": "https://images.unsplash.com/photo-1566140967404-b8b3932483f5?w=900&h=675&fit=crop&q=80",
+      "tab": "推荐"
+    },
+    {
+      "id": "r6",
+      "title": "达人推荐 · 川西秘境",
+      "sub": "公共交通可达",
+      "img": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&h=675&fit=crop&q=80",
+      "tab": "推荐"
     }
   ]
 }

@@ -4,10 +4,10 @@
 
 import { AppService } from '../service/app_service.js';
 import { HomeFeed } from '../model/app_models.js';
-import { HomeBanner } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
-import { Center, CircularProgressIndicator, ClipRRect, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, Expanded, GridView, Icon, Image, InkWell, Padding, PageView, Positioned, Row, SafeArea, SizedBox, SliverGrid, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text } from '../../flutter.js';
+import { BannerCarousel } from '../widgets/banner_carousel.js';
+import { Center, CircularProgressIndicator, ClipRRect, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, Expanded, GridView, Icon, Image, InkWell, Padding, Positioned, Row, SafeArea, SizedBox, SliverGrid, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {
@@ -37,7 +37,7 @@ export class HomePage {
     this._refreshController.callRefresh();
   }
   async _load() {
-    var feed = await this._service.fetchHome();
+    var feed = await this._service.fetchHome(this._city);
     this.setState(() => { this._feed = feed; });
   }
   build(context) {
@@ -75,39 +75,8 @@ export class HomePage {
                               (this.__k5 || (this.__k5 = new SizedBox({
                                   "height": 12
                                 }))),
-                              new SizedBox({
-                                  "height": 150,
-                                  "child": new PageView({
-                                    "children": [
-                                      ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({
-                                        "banner": this._feed.banners[i]
-                                      })]); } return out; })()
-                                    ]
-                                  })
-                                }),
-                              (this.__k6 || (this.__k6 = new SizedBox({
-                                  "height": 10
-                                }))),
-                              new Row({
-                                  "mainAxisAlignment": "center",
-                                  "children": [
-                                    ...(() => { var out = []; for (let i = 0; (i < this._feed.banners.length); (i++)) { out.push.apply(out, [new Container({
-                                      "margin": {
-                                        "left": 3.0,
-                                        "top": 0.0,
-                                        "right": 3.0,
-                                        "bottom": 0.0
-                                      },
-                                      "width": 6,
-                                      "height": 6,
-                                      "decoration": {
-                                        "color": ((i == 0) ? new Color({value: 0xFF0E7AFB}) : new Color({value: 0xFFD5D9E0})),
-                                        "borderRadius": {
-                                          "radius": 3.0
-                                        }
-                                      }
-                                    })]); } return out; })()
-                                  ]
+                              new BannerCarousel({
+                                  "banners": this._feed.banners
                                 }),
                               (this.__k5 || (this.__k5 = new SizedBox({
                                   "height": 12
@@ -161,7 +130,7 @@ export class HomePage {
                                     "img": this._feed.adImg
                                   })
                                 }),
-                              (this.__k7 || (this.__k7 = new SizedBox({
+                              (this.__k6 || (this.__k6 = new SizedBox({
                                   "height": 16
                                 }))),
                               new Padding({
@@ -205,7 +174,7 @@ export class HomePage {
                                     ]
                                   })
                                 }),
-                              (this.__k6 || (this.__k6 = new SizedBox({
+                              (this.__k7 || (this.__k7 = new SizedBox({
                                   "height": 10
                                 })))
                             ]
@@ -440,92 +409,6 @@ export class HomeHeader {
                   })
                 })
             ]
-          })
-        })
-      });
-  }
-}
-
-// 组件 BannerSlide
-export class BannerSlide {
-  constructor(args) {
-    this.props = args || {};
-    this.__applyProps(args);
-  }
-  __applyProps(args) {
-    this.banner = (args && args.banner !== undefined) ? args.banner : null;
-  }
-  open() {
-    _app_host_.invoke("toast", [this.banner.title]);
-  }
-  build(context) {
-    return new Padding({
-        "padding": {
-          "left": 12.0,
-          "top": 0.0,
-          "right": 12.0,
-          "bottom": 0.0
-        },
-        "child": new InkWell({
-          "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
-          "borderRadius": {
-            "radius": 14.0
-          },
-          "child": new ClipRRect({
-            "borderRadius": {
-              "radius": 14.0
-            },
-            "child": new Stack({
-              "fit": "expand",
-              "children": [
-                new Image({
-                    "fit": "cover",
-                    "factory": "network",
-                    "src": this.banner.img
-                  }),
-                new Container({
-                    "decoration": {
-                      "gradient": {
-                        "kind": "linear",
-                        "colors": [
-                          new Color({value: 0x00000000}),
-                          new Color({value: 0xB3000000})
-                        ],
-                        "begin": "center",
-                        "end": "bottomCenter"
-                      }
-                    }
-                  }),
-                new Positioned({
-                    "left": 14,
-                    "right": 14,
-                    "bottom": 14,
-                    "child": new Column({
-                      "crossAxisAlignment": "start",
-                      "children": [
-                        new Text({
-                            "style": {
-                              "color": new Color({value: 0xFFFFFFFF}),
-                              "fontSize": 17,
-                              "fontWeight": "w700"
-                            },
-                            "data": this.banner.title
-                          }),
-                        (this.__k0 || (this.__k0 = new SizedBox({
-                            "height": 4
-                          }))),
-                        new Text({
-                            "style": {
-                              "color": new Color({value: 0xE6FFFFFF}),
-                              "fontSize": 12
-                            },
-                            "data": this.banner.sub
-                          })
-                      ]
-                    })
-                  })
-              ]
-            })
           })
         })
       });

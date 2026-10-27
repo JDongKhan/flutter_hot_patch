@@ -9,7 +9,7 @@ const _bannerImg = "https://images.unsplash.com/photo-1519046904884-53103b34b206
 export const kBrand = new Color({value: 0xFF0E7AFB});
 export const kPrice = new Color({value: 0xFFFF5A36});
 const _steps = ["提交订单", "支付成功", "商家发货", "已完成"];
-const _cities = ["上海", "北京", "广州", "深圳", "成都", "杭州", "西安", "重庆", "南京", "武汉", "苏州", "厦门", "青岛", "长沙", "昆明", "三亚"];
+const _cities = ["上海", "北京", "成都", "杭州", "西安", "三亚"];
 
 // 组件 MiniButton
 export class MiniButton {
