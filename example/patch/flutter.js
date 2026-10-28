@@ -533,6 +533,12 @@ export class Padding {
   }
 }
 
+export class PopScope {
+  constructor(props) {
+    return __h('PopScope', props);
+  }
+}
+
 export class Positioned {
   constructor(props) {
     return __h('Positioned', props);

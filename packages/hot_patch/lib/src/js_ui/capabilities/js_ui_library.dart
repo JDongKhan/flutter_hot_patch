@@ -54,6 +54,7 @@ import 'keyboard_listener/keyboard_listener_library.dart';
 import 'layout_builder/layout_builder_library.dart';
 import 'media_query/media_query_library.dart';
 import 'notification_listener/notification_listener_library.dart';
+import 'pop_scope/pop_scope_library.dart';
 import 'provider/provider_library.dart';
 import 'scroll_controller/scroll_controller_library.dart';
 import 'tab/tab_library.dart';
@@ -148,6 +149,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const MediaQueryLibrary());
   // 纯宿主侧能力（无片段、无通道），位置不影响产物，列在此处便于对照。
   registerJsUiLibrary(const NotificationListenerLibrary());
+  // PopScope：拦截返回（宿主 ModalRoute 语义）+ 回调回 JS。
+  registerJsUiLibrary(const PopScopeLibrary());
   registerJsUiLibrary(const DrawerLibrary());
   // ── 三方库 ──
   registerJsUiLibrary(const EasyRefreshLibrary());

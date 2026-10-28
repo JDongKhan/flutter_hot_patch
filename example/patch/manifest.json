@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-28T15:25:31.828519",
+  "buildTime": "2026-10-28T15:42:14.613818",
   "resources": {
-    "flutter.js": "c2b43e9eed972c445a794490c3199c40ef8191f3050d8a86d725f190297f1139",
+    "flutter.js": "10f7299668c48e08154e524e37abb0bae90909c22708342788267edc92803166",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
     "runtime.js": "774a75c5fd2c6f5ff68eba89900af5a6a27a5ff20764b41e255d0d14a39ee059",
     "hot_module_base.js": "b2df62024c440012182e5af5baf1a06a25d1b6c251c729c40210f92a9603a546",
@@ -39,6 +39,7 @@
     "components/watch_demo.js": "b7008490f0613b1b7a12145f6e73eb762e12d7a343a8f8fe873165b2c83363e4",
     "components/image_icon_detail.js": "15e419f66e3cee1a55087607534e828a91c24c0ebc6e815fab5cc61c2be3a846",
     "model/network_vm.js": "9c390ef9c440b3a7498bc6bc23b808ea90a76d9307fcf1df91b27973013011c7",
-    "model/counter_vm.js": "f8bd479498a2d27de5204e8290920f169f9f7981dc8c21e433f2f717c204fc8d"
+    "model/counter_vm.js": "f8bd479498a2d27de5204e8290920f169f9f7981dc8c21e433f2f717c204fc8d",
+    "components/pop_scope_detail.js": "34c3f515f9ef558ad9f49a78b75962ba8d0049713b5543a4d57c37866015c302"
   }
 }
