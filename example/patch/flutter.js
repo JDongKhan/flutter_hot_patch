@@ -1050,6 +1050,21 @@ export class NestedScrollView {
 }
 
 
+export class OrientationBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[OrientationBuilder] builder 不是闭包');
+      return null;
+    }
+    return fn(context, MediaQuery.of(context).orientation);
+  }
+}
+
+
 export class PageView {
   constructor(props) {
     this.props = props || {};

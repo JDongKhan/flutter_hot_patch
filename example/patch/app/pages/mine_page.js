@@ -323,7 +323,9 @@ export class MinePage {
                 "icon": "widgets_outlined",
                 "title": "组件案例",
                 "subtitle": "常用组件 原生 ↔ JS 同屏对比",
-                "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
+                "onTap": () => new AppRouter({
+                  "factory": "openWidgetShowcase"
+                })
               }),
               (this.__k5 || (this.__k5 = new Divider({
                 "color": new Color({value: 0xFFF0F2F6}),
@@ -334,7 +336,9 @@ export class MinePage {
                 "icon": "compare_arrows",
                 "title": "热更 Demo 列表",
                 "subtitle": "HelloCard / ProviderCard / WatchDemo 等对比",
-                "onTap": () => { return _app_host_.invoke("openDemoList", []); }
+                "onTap": () => new AppRouter({
+                  "factory": "openDemoList"
+                })
               })
             ]
           })

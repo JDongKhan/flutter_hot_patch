@@ -790,7 +790,7 @@ Map<String, dynamic>? colorFilterToJson(
 List<Expression>? _floatListElements(Expression? e) {
   if (e is ListLiteral) return e.elements.whereType<Expression>().toList();
   if (e is MethodInvocation && e.methodName.name == 'fromList') {
-    final args = e.argumentList?.arguments ?? const [];
+    final args = e.argumentList.arguments;
     if (args.length == 1 && args.first is ListLiteral) {
       return (args.first as ListLiteral).elements.whereType<Expression>().toList();
     }

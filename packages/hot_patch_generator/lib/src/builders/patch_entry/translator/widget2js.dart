@@ -1278,14 +1278,23 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 必然 ReferenceError）。运行时 `this.context` 按**执行位置**解析——被委托的
   /// builder 方法里取的是**被委托组件**的代理，与 Dart 闭包捕获 `context` 形参同语义。
   String jsDataExpr(Expression e, [FieldScope? scope]) {
-    final prev = widgetArgJsHook;
-    widgetArgJsHook = _argWidgetJs;
-    try {
+    return _withWidgetArgHook(() {
       final js = rhsToJs(e, scope ?? _dataScope(), const {});
       if (js == null) {
         throw FormatException('文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
       }
       return js;
+    });
+  }
+
+  /// 在 [widgetArgJsHook] 生效期内翻译：任意表达式位置的构造（含闭包体内的
+  /// `return Row(...)` / `var x = Container(...)`）都走属性管线，与 children
+  /// 里的子结点同一条路径（属性归一 + 类所在文件登记 import）。
+  T _withWidgetArgHook<T>(T Function() body) {
+    final prev = widgetArgJsHook;
+    widgetArgJsHook = _argWidgetJs;
+    try {
+      return body();
     } finally {
       widgetArgJsHook = prev;
     }
@@ -1390,7 +1399,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///   - 字段型回调透传（`onTap: onTap` / `onReset: widget.onReset`）→ 原样函数值。
   String? functionJs(Expression e) {
     if (e is FunctionExpression) {
-      return closureToJs(e, _dataScope(), const {});
+      // 闭包体里可能 return 组件（`builder: (context, o) { ... return Row(...) }`），
+      // 与 build 树走同一条管线：属性归一 + import 登记。
+      return _withWidgetArgHook(
+        () => closureToJs(e, _dataScope(), const {}, this),
+      );
     }
     if (e is Identifier) {
       // `widget.<name>`：State 里转发 widget 自身成员，合并类里就是实例成员；

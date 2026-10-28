@@ -3,6 +3,7 @@ import 'package:build/build.dart' show log;
 
 import '../class_info.dart';
 import '../../shared/ctor_signatures.dart';
+import '../../shared/runtime_global_types.dart';
 import 'js_value.dart';
 
 // ===========================================================================
@@ -659,8 +660,9 @@ String hostArgsJs(List<String> positional, List<String> named) {
 String? closureToJs(
   FunctionExpression fn,
   FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
+  Map<String, ClassInfo> classes, [
+  WidgetExprRenderer? widgetCtx,
+]) {
   final params = <String>[];
   for (final p in fn.parameters?.parameters ?? const <FormalParameter>[]) {
     final name = p is DefaultFormalParameter
@@ -682,6 +684,11 @@ String? closureToJs(
     // `sort((a, b) => a.compareTo(b))` / `map((e) => e.name)` 这类回调会把
     // 返回值丢掉（谓词恒为 undefined）。先按值翻译并 return；只有值形态翻译
     // 不出来（赋值 `_x = 5`、`setState(...)` 等语句形态）才退回语句翻译。
+    // 组件构造（`(context, o) => Row(...)`）必须先走 widget 管线：属性要按
+    // 组件规则归一（`MainAxisSize.min` → `"min"`、`EdgeInsets` → edges JSON），
+    // 且类所在文件要登记 import，否则产物里是未定义变量。
+    final wv = _widgetExprToJs(widgetCtx, body.expression, 0);
+    if (wv != null) return '($pjs) => $wv';
     final rv = rhsToJs(body.expression, bodyScope, classes);
     if (rv != null) return '($pjs) => { return $rv; }';
     final v = closureBodyStmtJs(body.expression, bodyScope, classes);
@@ -694,7 +701,7 @@ String? closureToJs(
     // `ExpressionStatement`，`onPick: (k, v) { setState(() { switch ... }) }`
     // 这类块体会被静默丢成 `(...) => {}`（筛选面板点选条件无任何反应）。
     final stmts =
-        translateStmtList(body.block.statements, bodyScope, classes, null);
+        translateStmtList(body.block.statements, bodyScope, classes, widgetCtx);
     if (stmts.trim().isEmpty) return null;
     return '($pjs) => { ${stmts.trim()} }';
   }
@@ -804,6 +811,13 @@ String? methodCallExprJs(
   if (target is Identifier) {
     final ref = scope.fieldRef(target.name);
     if (ref != null) return '$ref.${e.methodName.name}($passed)';
+    // 类方法静态调用（`MediaQuery.of(context)` / `Theme.of(context)`）：
+    // receiver 是**类定义在运行时注入里**的类（`G.MediaQuery = …`，见
+    // [runtimeGlobalTypes]），原样产出 `X.m(args)`。判断只看「类定义在哪」，
+    // 与是不是组件无关。
+    if (runtimeGlobalTypes().contains(target.name)) {
+      return '${target.name}.${e.methodName.name}($passed)';
+    }
   }
   final t = exprToJs(target, scope, classes);
   if (t != null) return '$t.${e.methodName.name}($passed)';

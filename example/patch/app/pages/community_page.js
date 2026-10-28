@@ -161,7 +161,9 @@ export class CommunityPage {
             }))),
             "itemBuilder": (context, i) => new _ResourceCard({
               "resource": this._resources[i],
-              "onTap": () => { return _app_host_.invoke("openResource", [this._resources[i].id]); }
+              "onTap": () => new AppRouter({
+                "factory": "openResource"
+              })
             })
           })
         }),
@@ -343,7 +345,9 @@ export class _ListContent {
                     },
                     "child": new _PostCard({
                       "post": p,
-                      "onTap": () => { return _app_host_.invoke("openPost", [p.id]); }
+                      "onTap": () => new AppRouter({
+                        "factory": "openPost"
+                      })
                     })
                   })]); } return out; })())
           ]

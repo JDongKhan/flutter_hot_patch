@@ -451,8 +451,10 @@ String? builderClosureJs(
         }
         continue;
       }
-      // 其余语句无法参与内联闭包，整体放弃（保持构建期告警）。
-      return null;
+      // 其余语句（`if` / `for` / 多分支 `return` …）无法内联进「前置声明 + 单一
+      // return」的形态：交给通用闭包翻译（语句级翻译 + 树里的 return 按组件渲染），
+      // 与类方法体同一套语句翻译器，能力自动对齐。
+      return ctx.functionJs(builder);
     }
   }
   if (retExpr == null) return null;

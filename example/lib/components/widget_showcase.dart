@@ -11,6 +11,7 @@ import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
 import 'keyboard_listener_detail.dart';
 import 'nested_scroll_view_detail.dart';
+import 'orientation_builder_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -66,6 +67,7 @@ class WidgetShowcase extends StatelessWidget {
     _Group('页面骨架', [
       _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
       _Entry('Drawer / endDrawer', '抽屉 + AppBar 汉堡按钮（仅 JS 热更版）', 'DrawerDetail'),
+      _Entry('OrientationBuilder / MediaQuery', '方向与窗口尺寸驱动布局（拉高窗口切 portrait）', 'OrientationBuilderDetail'),
     ]),
     _Group('Tab 切换', [
       _Entry('TabBar / TabBarView', 'DefaultTabController + 显式 TabController 驱动切页', 'TabDetail'),
@@ -169,6 +171,7 @@ class WidgetDetailPage extends StatelessWidget {
     'ImageIconDetail': 'components/image_icon_detail.js',
     'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
+    'OrientationBuilderDetail': 'components/orientation_builder_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -199,6 +202,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ImageIconDetail' => const ImageIconDetail(),
       'KeyboardListenerDetail' => const KeyboardListenerDetail(),
       'NestedScrollViewDetail' => const NestedScrollViewDetail(),
+      'OrientationBuilderDetail' => const OrientationBuilderDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

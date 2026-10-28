@@ -326,6 +326,7 @@ const Map<String, String> logicWidgetSources = {
   'ValueListenableBuilder': jsValueListenableBuilderComponent,
   'AnimatedBuilder': jsAnimatedBuilderComponent,
   'NestedScrollView': jsNestedScrollViewComponent,
+  'OrientationBuilder': jsOrientationBuilderComponent,
 };
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
@@ -371,6 +372,26 @@ export class NestedScrollView {
     var fn = src.headerSliverBuilder;
     p.headerSlivers = typeof fn === 'function' ? (fn(context, false) || []) : [];
     return __h('NestedScrollView', p);
+  }
+}''';
+
+/// OrientationBuilder：`builder(context, orientation)` 必须在 JS 里执行。
+///
+/// 方向来源是 `MediaQuery.of(context).orientation`（JS 侧同步镜像，见运行时
+/// 【18.7】），与 Dart 侧同一事实源：`build` 里读一次即登记依赖，屏幕旋转
+/// 时本组件重建、builder 重新执行一次（而非把两个方向都先展开交给宿主挑）。
+const String jsOrientationBuilderComponent = '''
+export class OrientationBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[OrientationBuilder] builder 不是闭包');
+      return null;
+    }
+    return fn(context, MediaQuery.of(context).orientation);
   }
 }''';
 

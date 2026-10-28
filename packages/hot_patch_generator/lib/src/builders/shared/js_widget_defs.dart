@@ -99,6 +99,9 @@ const Set<String> logicWidgetTypes = {
   // `headerSliverBuilder` 是**返回 sliver 列表的闭包**，跨语言无法执行：
   // JS 侧调用它把头部 slivers 展开成有序子结点，宿主只消费插槽。
   'NestedScrollView',
+  // 方向 builder：`builder(context, orientation)` 在 JS 里执行（方向取自
+  // MediaQuery 同步镜像）。
+  'OrientationBuilder',
 };
 
 /// 懒容器类型 → 触发懒的 props 键（空列表 = 无条件懒）。
