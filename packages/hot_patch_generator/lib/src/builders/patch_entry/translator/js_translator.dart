@@ -926,7 +926,7 @@ String translateMethodBody(
   if (body is ExpressionFunctionBody) {
     final e = body.expression;
     String? t;
-    if (widgetCtx != null && returnsWidget && widgetCtx.isWidgetCtor(e)) {
+    if (widgetCtx != null && returnsWidget && widgetCtx.ctorJsClassFile(e) != null) {
       t = _widgetExprToJs(widgetCtx, e, depth);
     }
     t ??= _bodyExprStmtJs(e, scope, classes);
@@ -1078,7 +1078,7 @@ String translateStmtList(
         continue;
       }
       String? v;
-      if (widgetCtx != null && returnsWidget && widgetCtx.isWidgetCtor(e)) {
+      if (widgetCtx != null && returnsWidget && widgetCtx.ctorJsClassFile(e) != null) {
         v = _widgetExprToJs(widgetCtx, e, depth);
       }
       v ??= rhsToJs(e, scope, classes);

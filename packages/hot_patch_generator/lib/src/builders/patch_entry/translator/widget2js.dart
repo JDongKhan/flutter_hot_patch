@@ -561,7 +561,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       return _renderJsImpl(json, depth);
     } catch (err) {
       _warnDegrade('结点', json.toString(), err);
-      _registerWidgetImport('SizedBox', productType: null);
+      _registerWidgetImport('SizedBox');
       return _placeholderJs();
     }
   }
@@ -586,8 +586,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (json is! Map<String, dynamic>) throw FormatException('无法渲染的值: $json');
     final type = _semanticType(json['type']);
     _assertTranslatable(type);
-    final productType = importResolver?.call(type);
-    _registerWidgetImport(type, productType: productType);
+    _registerWidgetImport(type);
     // 值语境一律按类调用：命名构造走包装类上的同名静态方法。
     return _renderCall(type, json, depth, asClass: true);
   }
@@ -611,24 +610,22 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     _assertTranslatable(type);
     final productType = importResolver?.call(type);
     final asClass = productType != null || usesJsClass(type, propsMap);
-    _registerWidgetImport(type, productType: productType);
+    _registerWidgetImport(type);
     return _renderCall(type, json, depth, asClass: asClass);
   }
 
-  /// 按来源登记 import（漏登记 = 产物里「Can't find variable: X」）。
+  /// 按「类的定义在哪个文件」登记 import（漏登记 = 产物里
+  /// 「Can't find variable: X」）。
   ///
-  ///   - 有产物（[productType] 非空，含同文件）：由类依赖表负责 import，这里跳过；
-  ///   - JS 侧固定类（builder 代理 / 逻辑组件）→ 所属 package 模块；
-  ///   - 宿主包装类 / 数据载体 → `flutter.js`；
-  ///   - 其余（`TextSpan` / `Duration` 等运行时注入的全局同名类）→ 不登记，
-  ///     产物里直接 `new X(...)` 即可。
-  void _registerWidgetImport(String type, {required String? productType}) {
-    if (productType != null) return;
-    if (jsClassWidgets.contains(type)) {
-      (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
-    } else if (hostWrapperTypes.contains(type)) {
-      (usedWidgetPackages[nodeHelperPackage] ??= <String>{}).add(type);
-    }
+  ///   - 项目内类（有产物文件，含同文件）：由类依赖表负责 import，这里跳过；
+  ///   - 类定义在 package 模块（宿主包装类 / 数据载体 / builder 代理 / 逻辑
+  ///     组件）→ 按该类的 package 归属登记；
+  ///   - 类定义由运行时统一注入（`TextSpan` / `Duration` 等全局同名类）→ 无
+  ///     文件可 import，产物里直接 `new X(...)`。
+  void _registerWidgetImport(String type) {
+    if (importResolver?.call(type) != null) return;
+    if (jsClassFileOf(type) == null) return;
+    (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
   }
 
   /// `@PatchIgnore()`（`isComponent` 非 true）的类整类不翻译：引用它的结点没有
@@ -1294,40 +1291,48 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     }
   }
 
-  /// 实参位置的构造表达式 → 组件属性管线（与 children 里的组件同一条路径）。
+  /// 实参位置的构造表达式 → 属性管线（与 children 里的子结点同一条路径）。
   ///
-  /// 只接管「JS 侧会解析成类」的类型（有产物的组件、JS 侧固定类、宿主包装类）；
-  /// 纯数据类（`Duration` / `EdgeInsets` 等）保持通用构造翻译——它们本就由
-  /// 运行时的同名类承接，改走属性管线没有收益反而改变既有形态。
+  /// 只接管「JS 侧有该类定义」的类型（按类所在文件判定：项目内类有产物文件，
+  /// 其余在 package 模块或运行时注入）；没有 JS 类的构造（`Duration` /
+  /// `EdgeInsets` 等）保持通用构造翻译——它们本就由运行时的同名类承接。
   String? _argWidgetJs(Expression e) {
-    if (!isWidgetCtor(e)) return null;
+    if (ctorJsClassFile(e) == null) return null;
     final node = translate(e);
     if (node is! Map || node['type'] == null) return null;
     return renderValue(node, 0);
   }
 
   @override
-  bool isWidgetCtor(Expression e) => _ctorTypeOf(e) != null;
+  String? ctorJsClassFile(Expression e) {
+    final ctor = _ctorNameOf(e);
+    return ctor == null ? null : jsClassFileOf(ctor);
+  }
 
-  /// 构造表达式的**类型名**（`null` = 不是可在 JS 侧解析的构造）。
+  /// 类型的 JS 类定义**来自哪个产物文件**（null = JS 侧没有这个类）。
   ///
-  /// 三种构造形态：`const X(...)` / `X(...)`（无 receiver，parseString 下是
-  /// MethodInvocation）/ `X.b(...)`（receiver 是类名）。只有类型在 JS 侧确实
-  /// 有类才认（有产物的组件、JS 侧固定类、宿主包装类）——纯数据类
-  /// （`Duration` / `EdgeInsets` 等）保持通用构造翻译。
-  String? _ctorTypeOf(Expression e) {
+  /// 只按「类定义在哪」判断，不看它是不是组件——所有类一视同仁：
+  ///   - 项目内类：按**类所在的源文件**解析出该文件的产物（[importResolver]，
+  ///     含同文件类）；
+  ///   - 宿主类型 / 运行时注入类 / 产物组织的代理类：类定义写在各 package
+  ///     模块 `patch/<package>.js`（宿主类型归基础包 flutter）。
+  String? jsClassFileOf(String type) {
+    final product = importResolver?.call(type);
+    if (product != null) return product;
+    if (hostWrapperTypes.contains(type) || jsClassWidgets.contains(type)) {
+      return packageModulePath(widgetPackageOf(type));
+    }
+    return null;
+  }
+
+  /// 构造表达式（`const X(...)` / `X(...)` / `X.b(...)`）的类型名；调用形态
+  /// 不是构造时返回 null。只认语法形态，不判断类型是不是组件。
+  String? _ctorNameOf(Expression e) {
     final isCtor = e is InstanceCreationExpression ||
         (e is MethodInvocation &&
             (e.target == null || e.target is SimpleIdentifier));
     if (!isCtor) return null;
     final (ctor, _) = ctorOf(e);
-    if (ctor == null) return null;
-    final productType = importResolver?.call(ctor);
-    if (productType == null &&
-        !jsClassWidgets.contains(ctor) &&
-        !hostWrapperTypes.contains(ctor)) {
-      return null;
-    }
     return ctor;
   }
 
