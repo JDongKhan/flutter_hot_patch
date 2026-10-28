@@ -143,9 +143,7 @@ export class OrdersPage {
               return new _OrderCard({
                 "order": o,
                 "statusColor": this._statusColor(o.status),
-                "onOpen": () => new AppRouter({
-                  "factory": "openOrder"
-                })
+                "onOpen": () => { return _app_host_.invoke("openOrder", [o.no]); }
               });
             }
           })
@@ -312,9 +310,7 @@ export class _OrderCard {
                   (this.__k0 || (this.__k0 = new Spacer({}))),
                   ...(pending ? [new MiniButton({
                       "label": "取消",
-                      "onTap": () => new AppRouter({
-                        "factory": "toast"
-                      })
+                      "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); }
                     }), (this.__k7 || (this.__k7 = new SizedBox({
                       "width": 8
                     }))), new MiniButton({

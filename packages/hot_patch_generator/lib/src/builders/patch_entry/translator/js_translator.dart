@@ -687,7 +687,16 @@ String? closureToJs(
     // 组件构造（`(context, o) => Row(...)`）必须先走 widget 管线：属性要按
     // 组件规则归一（`MainAxisSize.min` → `"min"`、`EdgeInsets` → edges JSON），
     // 且类所在文件要登记 import，否则产物里是未定义变量。
-    final wv = _widgetExprToJs(widgetCtx, body.expression, 0);
+    //
+    // 但**只有元素构造**才进管线：闭包体同样是值表达式（`where((o) =>
+    // o.status == _status)` / `sort((a, b) => b.like.compareTo(a.like))` /
+    // `() => _items`），这些不是组件、所在的列表也不一定是组件列表。无条件送
+    // 进管线会因「表达式翻不出来」被降级成占位组件（产物里是 `new SizedBox({})`）：
+    // 谓词恒假 → 列表被筛空、比较器恒 0 → 排序失效，且产物里看不出问题。
+    // 判据与 `return` 位置一致：有没有 JS 类定义（[WidgetExprRenderer.ctorJsClassFile]）。
+    final wv = widgetCtx != null && widgetCtx.ctorJsClassFile(body.expression) != null
+        ? _widgetExprToJs(widgetCtx, body.expression, 0)
+        : null;
     if (wv != null) return '($pjs) => $wv';
     final rv = rhsToJs(body.expression, bodyScope, classes);
     if (rv != null) return '($pjs) => { return $rv; }';
