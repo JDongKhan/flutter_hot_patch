@@ -6,6 +6,7 @@ import 'color_filtered_detail.dart';
 import 'dismissible_detail.dart';
 import 'fade_in_image_detail.dart';
 import 'focus_detail.dart';
+import 'hero_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -65,7 +66,10 @@ class WidgetShowcase extends StatelessWidget {
     ]),
     _Group('分页视图', [_Entry('PageView', '分页切换 + 页码回传', 'PageViewDetail')]),
     _Group('表单输入', [_Entry('TextField / Radio / Dropdown', '输入框、单选、下拉、开关、勾选、滑块', 'InputDetail')]),
-    _Group('焦点交互', [_Entry('Focus / FocusNode', 'requestFocus / unfocus、onFocusChange、hasFocus、canRequestFocus', 'FocusDetail')]),
+    _Group('焦点交互', [
+      _Entry('Focus / FocusNode', 'requestFocus / unfocus、onFocusChange、hasFocus、canRequestFocus', 'FocusDetail'),
+      _Entry('Hero', '跨路由共享元素：点卡片飞向目标页，返回时飞回', 'HeroDetail'),
+    ]),
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
     _Group('状态管理', [
       _Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard'),
@@ -152,6 +156,7 @@ class WidgetDetailPage extends StatelessWidget {
     'DismissibleDetail': 'components/dismissible_detail.js',
     'FadeInImageDetail': 'components/fade_in_image_detail.js',
     'FocusDetail': 'components/focus_detail.js',
+    'HeroDetail': 'components/hero_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -177,6 +182,7 @@ class WidgetDetailPage extends StatelessWidget {
       'DismissibleDetail' => const DismissibleDetail(),
       'FadeInImageDetail' => const FadeInImageDetail(),
       'FocusDetail' => const FocusDetail(),
+      'HeroDetail' => const HeroDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
@@ -201,6 +207,8 @@ class WidgetDetailPage extends StatelessWidget {
   Map<String, dynamic> _jsProps() {
     return switch (component) {
       'StatelessCard' => const {'title': 'Hello Stateless', 'subtitle': '原生直接渲染，无需 State', 'badge': 'FLUTTER'},
+      // Hero 两侧必须在同一路由里用**不同 tag**（同 tag 会触发重复 Hero 断言）。
+      'HeroDetail' => const {'tag': 'hero-js', 'label': 'JS 热更 Hero'},
       _ => const {},
     };
   }

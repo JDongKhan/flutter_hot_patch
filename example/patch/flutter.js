@@ -421,6 +421,12 @@ export class GestureDetector {
   }
 }
 
+export class Hero {
+  constructor(props) {
+    return __h('Hero', props);
+  }
+}
+
 export class Icon {
   constructor(props) {
     return __h('Icon', props);

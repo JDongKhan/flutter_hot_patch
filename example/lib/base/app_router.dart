@@ -6,6 +6,7 @@ import '../app/model/app_models.dart';
 import '../app/pages/detail_pages.dart';
 import '../app/pages/orders_page.dart';
 import '../app/service/app_service.dart';
+import '../components/hero_target_page.dart';
 import '../components/widget_showcase.dart';
 import '../main.dart';
 
@@ -30,6 +31,15 @@ class AppRouter {
 
   static void _push(Widget page) {
     _navigator?.push(MaterialPageRoute(builder: (_) => page));
+  }
+
+  /// 打开 Hero 演示的目标页。
+  ///
+  /// [tag] 必须是**来源页那一个 Hero 的 tag**：汉化版与原版各用独立 tag，
+  /// 因为原生 / JS 两栏同处一个路由，同 tag 会触发 Flutter 重复 Hero 断言。
+  @HostInjected()
+  static void openHeroTarget(String tag, String label) {
+    _push(HeroTargetPage(tag: tag, label: label));
   }
 
   /// 打开搜索页（热搜词 + 猜你想去随接口下发）。

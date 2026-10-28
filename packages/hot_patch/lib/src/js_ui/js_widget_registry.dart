@@ -695,6 +695,20 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
+  // `Hero`：跨路由共享元素动画。tag 两端按**同值字符串**配对（Dart 的 tag 是
+  // Object，JS 只能发字符串/数字，字符串是唯一自然可比的形态）；子结点是
+  // 飞行时的 shuttle 本体，宿主直接用。`flightShuttleBuilder` /
+  // `placeholderBuilder` / `createRectTween` 是返回 widget / tween 的闭包，
+  // 跨语言无法执行 → 不映射（走 Flutter 默认实现，与未声明时行为一致）。
+  r.register('Hero', (c) {
+    final tag = c.props['tag'];
+    return Hero(
+      tag: tag ?? '',
+      transitionOnUserGestures: c.bool_('transitionOnUserGestures') ?? false,
+      child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
+    );
+  });
+
   r.register('CircleAvatar', (c) {
     final bgImage = c.str('backgroundImage');
     return CircleAvatar(

@@ -20,6 +20,7 @@ void registerHostMethods() {
   JsRuntimeManager.registerHostMethod('openChannel', AppRouter.openChannel);
   JsRuntimeManager.registerHostMethod('openCityPicker', AppRouter.openCityPicker);
   JsRuntimeManager.registerHostMethod('openDemoList', AppRouter.openDemoList);
+  JsRuntimeManager.registerHostMethod('openHeroTarget', AppRouter.openHeroTarget);
   JsRuntimeManager.registerHostMethod('openLogin', AppRouter.openLogin);
   JsRuntimeManager.registerHostMethod('openNotifications', AppRouter.openNotifications);
   JsRuntimeManager.registerHostMethod('openOrder', AppRouter.openOrder);
