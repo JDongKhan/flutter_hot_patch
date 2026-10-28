@@ -282,6 +282,16 @@ JsRenderContext _descriptorContext(
   );
 }
 
+/// `MaterialType` 枚举名 → 枚举值（缺省 null = Flutter 默认 `canvas`）。
+MaterialType? _materialTypeFromJson(Object? v) => switch ('$v') {
+  'canvas' => MaterialType.canvas,
+  'card' => MaterialType.card,
+  'circle' => MaterialType.circle,
+  'button' => MaterialType.button,
+  'transparency' => MaterialType.transparency,
+  _ => null,
+};
+
 /// 源字符串 → 图片 provider：`FadeInImage.assetNetwork` 的 placeholder 永远是
 /// 资源路径（[forceAsset]），其余按 `http` 前缀判网络 / 资源（与 `Image` 一致）。
 ImageProvider _imageProvider(String source, {bool forceAsset = false}) =>
@@ -590,11 +600,20 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     ),
   );
 
+  // `Material`：除颜色/阴影外，`borderRadius` 是圆角的唯一来源（不写就是直角），
+  // 必须映射；`shape`（ShapeBorder 值对象）跨语言未支持，写 `borderRadius`
+  // 即等价于默认 `MaterialType.canvas` 下的圆角。
   r.register(
     'Material',
     (c) => Material(
+      type: _materialTypeFromJson(c.props['type']) ?? MaterialType.canvas,
       color: colorFromJson(c.props['color']),
       elevation: c.num_('elevation') ?? 0,
+      shadowColor: colorFromJson(c.props['shadowColor']),
+      surfaceTintColor: colorFromJson(c.props['surfaceTintColor']),
+      borderRadius: borderRadiusFromJson(c.map('borderRadius')),
+      borderOnForeground: c.bool_('borderOnForeground') ?? true,
+      clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']) ?? Clip.none,
       child: (c.children['child'] as Widget?),
     ),
   );
