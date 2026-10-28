@@ -1386,6 +1386,12 @@ export class TweenAnimationBuilder {
       }
     };
     ctrl.addListener(this.__tabListener);
+    // 与 Flutter 的 initState 一致：begin != end 时进入即播（如 Tween(0 → 1)
+    // 进场就有动画，onEnd 也会在到位时触发一次）。
+    if (!__tabSame(this.__tabTween.begin, this.__tabTween.end)) {
+      this.__tabEnded = false;
+      ctrl.forward();
+    }
   }
   didUpdateWidget() {
     var p = this.props;
