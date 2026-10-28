@@ -1215,6 +1215,9 @@ export class OverlayEntry {
   }
   get mounted() { return this.__owner != null && !this.__removed; }
   remove() {
+    // 幂等：Dart 对**已移除**的条目在 remove 时断言（`_overlay != null`），
+    // JS 侧改为静默 no-op——重复移除不该把整个事件回调炸掉。
+    if (this.__removed) { return; }
     if (this.__owner) { this.__owner.remove(this); }
   }
   markNeedsBuild() {

@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-28T20:47:13.094274",
+  "buildTime": "2026-10-28T20:53:45.344021",
   "resources": {
-    "flutter.js": "a011aeaa9419907b565f59f507c48d90bdd29542b6eb5b1030b309bd2bbbb051",
+    "flutter.js": "53bf4113ec2d43522fbe6667628d3b1d221fe543e3d8899578137877fcf38cab",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
     "runtime.js": "2c4d98352ef0ce2229f9fe21d4cfa9f8860f8ac1a659fea12e321a5843c6edf1",
     "hot_module_base.js": "b2df62024c440012182e5af5baf1a06a25d1b6c251c729c40210f92a9603a546",
@@ -39,7 +39,7 @@
     "components/rich_text_detail.js": "49e74f26a665e8ed9181b96593c6a2dfee5ff43783b9ba290b98ffaf8ce69257",
     "components/pop_scope_detail.js": "34c3f515f9ef558ad9f49a78b75962ba8d0049713b5543a4d57c37866015c302",
     "components/color_filtered_detail.js": "8bb189232bb65f9f0592cdd3e807d6dbf8385b531964717cb4095d97aa1ccf93",
-    "components/overlay_detail.js": "3299c707598dd8a29cb5e43bfd68cc6081e0a2e279eb0d1111968a92049df1da",
+    "components/overlay_detail.js": "489f995e900f5167dfbb7326aba470a7b11cba05eb957670a17d71cd3df29a9b",
     "components/explicit_animation_detail.js": "1498f4b9d2c405e782851e18575717d60fa1e0d35c6c8801110a85dfbe271c25",
     "components/keyboard_listener_detail.js": "dc28cabc6d33b82251b17cadcf2d76ce524dd3984ada23fcf81d64d1bc2b9cfd",
     "components/spacer_detail.js": "4d3a789b13fa9ffe26e6f3d6dd366d37258416ba0fdf5420c973810a5b576a80",

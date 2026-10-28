@@ -10,7 +10,7 @@ export class OverlayDetail {
     this.props = args || {};
     this._count = 0;
     this._log = "（暂无操作）";
-    this._last = null;
+    this._entries = [];
   }
   build(context) {
     return new Column({
@@ -92,9 +92,8 @@ export class OverlayDetail {
                                     })
                                   })
                                 });
-                                this._last = entry;
-                                var overlay = Overlay.of(this.context);
-                                overlay.insert(entry);
+                                this._entries.add(entry);
+                                Overlay.of(this.context).insert(entry);
                                 this.setState(() => { this._log = "插入第 " + this._count + " 条浮层"; }); }),
                               "child": (this.__k5 || (this.__k5 = new Text({
                                 "data": "插入浮层"
@@ -104,11 +103,11 @@ export class OverlayDetail {
                               "width": 8
                             }))),
                             new OutlinedButton({
-                              "onPressed": this.__bindFn(1, [], () => { var entry = this._last;
+                              "onPressed": this.__bindFn(1, [], () => { var entry = (this._entries.isNotEmpty ? this._entries.removeLast() : null);
                                 if ((entry != null)) {
                                   entry.remove();
                                 }
-                                this.setState(() => { this._log = "移除最近插入的浮层"; }); }),
+                                this.setState(() => { this._log = "移除浮层（剩余 " + this._entries.length + " 层）"; }); }),
                               "child": (this.__k7 || (this.__k7 = new Text({
                                 "data": "移除浮层"
                               })))

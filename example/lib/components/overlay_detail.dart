@@ -22,7 +22,13 @@ class OverlayDetail extends StatefulWidget {
 class _OverlayDetailState extends State<OverlayDetail> {
   int _count = 0;
   String _log = '（暂无操作）';
-  OverlayEntry? _last;
+
+  /// 命令式插入的条目，按插入顺序保存（最后一个在最上层）。
+  ///
+  /// `OverlayEntry.remove()` 对**已移除**的条目在 Dart 里会断言
+  /// （`_overlay != null`），所以移除前必须确认 `mounted`；移除的是栈顶，
+  /// 一次点击移一条，可连续点击逐层移除。
+  final List<OverlayEntry> _entries = [];
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +92,10 @@ class _OverlayDetailState extends State<OverlayDetail> {
                                     ),
                                   ),
                                 );
-                                _last = entry;
-                                final overlay = Overlay.of(context);
-                                overlay.insert(entry);
+                                _entries.add(entry);
+                                // 命令式插入：context 是 Builder 给的 Overlay 后代
+                                // context，取到的是本页这块 Overlay。
+                                Overlay.of(context).insert(entry);
                                 setState(() {
                                   _log = '插入第 $_count 条浮层';
                                 });
@@ -98,12 +105,16 @@ class _OverlayDetailState extends State<OverlayDetail> {
                             const SizedBox(width: 8),
                             OutlinedButton(
                               onPressed: () {
-                                final entry = _last;
+                                // 栈顶是最上面那条；空表时不移除（避免对已移除的
+                                // 条目调用 remove —— Dart 侧会断言）。
+                                final entry = _entries.isNotEmpty
+                                    ? _entries.removeLast()
+                                    : null;
                                 if (entry != null) {
                                   entry.remove();
                                 }
                                 setState(() {
-                                  _log = '移除最近插入的浮层';
+                                  _log = '移除浮层（剩余 ${_entries.length} 层）';
                                 });
                               },
                               child: const Text('移除浮层'),
