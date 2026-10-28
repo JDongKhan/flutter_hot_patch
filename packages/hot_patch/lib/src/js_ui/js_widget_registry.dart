@@ -1157,6 +1157,18 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     ),
   );
 
+  // RadioGroup：把选中值 + 回调提供给**子树内**的 Radio（子级不必再传
+  // `groupValue` / `onChanged`，那两个是被它取代的旧 API）。onChanged 是必填，
+  // JS 侧没给时用空函数兜底，避免整页因一个缺失回调挂掉。
+  r.register(
+    'RadioGroup',
+    (c) => RadioGroup<dynamic>(
+      groupValue: c.props['groupValue'],
+      onChanged: c.on1<dynamic>('onChanged') ?? (dynamic _) {},
+      child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
+    ),
+  );
+
   r.register(
     'Radio',
     (c) => Radio<dynamic>(

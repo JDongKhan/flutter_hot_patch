@@ -15,6 +15,7 @@ import 'nested_scroll_view_detail.dart';
 import 'orientation_builder_detail.dart';
 import 'pop_scope_detail.dart';
 import 'preferred_size_detail.dart';
+import 'radio_group_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -73,6 +74,7 @@ class WidgetShowcase extends StatelessWidget {
       _Entry('OrientationBuilder / MediaQuery', '方向与窗口尺寸驱动布局（拉高窗口切 portrait）', 'OrientationBuilderDetail'),
       _Entry('PopScope', '拦截返回：canPop 开关 + onPopInvokedWithResult 两参回调', 'PopScopeDetail'),
       _Entry('PreferredSize', '自定义顶栏高度：任意子树声明成 PreferredSizeWidget（仅 JS 热更版）', 'PreferredSizeDetail'),
+      _Entry('RadioGroup', '子级 Radio 共用选中值与回调（不再传 groupValue/onChanged）', 'RadioGroupDetail'),
     ]),
     _Group('Tab 切换', [
       _Entry('TabBar / TabBarView', 'DefaultTabController + 显式 TabController 驱动切页', 'TabDetail'),
@@ -180,6 +182,7 @@ class WidgetDetailPage extends StatelessWidget {
     'OrientationBuilderDetail': 'components/orientation_builder_detail.js',
     'PopScopeDetail': 'components/pop_scope_detail.js',
     'PreferredSizeDetail': 'components/preferred_size_detail.js',
+    'RadioGroupDetail': 'components/radio_group_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -216,6 +219,7 @@ class WidgetDetailPage extends StatelessWidget {
       'OrientationBuilderDetail' => const OrientationBuilderDetail(),
       'PopScopeDetail' => const PopScopeDetail(),
       'PreferredSizeDetail' => const PreferredSizeDetail(),
+      'RadioGroupDetail' => const RadioGroupDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

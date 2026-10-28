@@ -562,6 +562,12 @@ export class Radio {
   static adaptive(props) { return new Radio(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
+export class RadioGroup {
+  constructor(props) {
+    return __h('RadioGroup', props);
+  }
+}
+
 export class RichText {
   constructor(props) {
     return __h('RichText', props);
