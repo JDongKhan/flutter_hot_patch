@@ -186,17 +186,19 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   ///
   /// 返回 Map = 普通节点；返回 String = **单元素**位置的 JS 源码，渲染层原样
   /// 内联（widget 位置三目 `cond ? A() : B()` → `(condJs ? A : B)`，每支各是
-  /// **一个**元素，不是数组——见 [_elementExprJs]）。
+  /// **一个**元素，不是数组——见 [_elementExprJs]）；返回 null = 翻译失败。
   ///
-  /// **单个叶子失败不再炸掉整棵 build 树**（放大器缺陷修复）：每次递归调用
-  /// 各自兜底——坏叶子降级为占位结点 + 构建期告警，兄弟结点照常翻译。
+  /// **失败一律返回 null（由调用方丢弃该结点）+ 构建期告警，绝不伪造元素**：
+  /// 早期实现兜底成 `SizedBox()`，结果是产物里出现一个「成功渲染的空盒子」，
+  /// 把「翻译失败」变成看不出来的静默错误（列表被筛空、布局塌陷都源于此）。
+  /// 单个叶子失败仍不影响兄弟结点（每次递归各自兜底），只是该结点不产出。
   @override
   Object? translate(Expression e) {
     try {
       return _translateExpr(e);
     } catch (err) {
       _warnDegrade('widget 表达式', e.toSource(), err);
-      return _placeholderNodeJson();
+      return null;
     }
   }
 
@@ -207,8 +209,9 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       // 会变成 props.child 里的嵌套数组（`[ (cond ? [A] : [B]) ]`），元素工厂
       // 抽 children 时 `mount` 拿到数组 → `el.type` undefined → `new el.type` 抛错。
       final cond = jsDataExpr(e.condition);
-      final thenJs = _elementExprJs(e.thenExpression);
-      final elseJs = _elementExprJs(e.elseExpression);
+      // 分支翻译失败 → 该分支渲染成 `null`（= 没有元素）；魔术占位元素不允许。
+      final thenJs = _elementExprJs(e.thenExpression) ?? 'null';
+      final elseJs = _elementExprJs(e.elseExpression) ?? 'null';
       return '($cond ? $thenJs : $elseJs)';
     }
     // widget 位置上可能是「构造形态」的只有：InstanceCreationExpression
@@ -314,10 +317,10 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       if (e is SpreadElement) return '...${_collectionArrayJs(e)}';
       throw FormatException('不支持的 collection element: ${e.toSource()}');
     } catch (err) {
-      // 单个集合元素（如 `...[...]` spread）无法翻译：降级为占位结点，
-      // 兄弟元素照常翻译（放大器缺陷修复）。
+      // 单个集合元素（如 `...[...]` spread）无法翻译：告警丢弃该元素，
+      // 兄弟元素照常翻译（不伪造元素）。
       _warnDegrade('集合元素', e.toSource(), err);
-      return _placeholderNodeJson();
+      return null;
     }
   }
 
@@ -398,11 +401,15 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   }
 
   /// collection element → JS 数组字面量（元素数组语义；嵌套 if/for 递归展开）。
+  ///
+  /// 翻译/渲染失败的元素**不进入数组**（返回不带该项的数组）：绝不塞占位元素。
   String _collectionArrayJs(CollectionElement e) {
     if (e is Expression) {
       final t = translate(e);
+      if (t == null) return '[]';
       if (t is String) return '[$t]';
-      return '[${renderJs(t, 2)}]';
+      final r = renderJs(t, 2);
+      return r == null ? '[]' : '[$r]';
     }
     if (e is IfElement) return _ifAsArray(e);
     if (e is ForElement) return _forAsArray(e);
@@ -414,22 +421,31 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (e is SpreadElement) {
       final inner = e.expression;
       if (inner is ListLiteral) {
-        final items = inner.elements.map(_elementJs).join(', ');
-        return '[$items]';
+        final items = <String>[];
+        for (final el in inner.elements) {
+          final js = _elementJs(el);
+          if (js != null) items.add(js);
+        }
+        return '[${items.join(', ')}]';
       }
       // 运行时数组（字段 / 局部变量 / 方法返回）：数组本身就是被展开的内容，
       // 不能再包一层 `[...x]`，否则调用方再拼 `...` 会变成 `...[x]`。
       final t = translate(inner);
-      return t is String ? t : renderJs(t, 2);
+      if (t == null) return '[]';
+      if (t is String) return t;
+      return renderJs(t, 2) ?? '[]';
     }
     throw FormatException('不支持的 collection element: ${e.toSource()}');
   }
 
   /// 单个 collection element → JS 数组项源码：String（已是 JS 表达式，含
   /// `...spread` / IIFE / 三目）原样内联，节点 Map 走 [renderJs]。
-  String _elementJs(CollectionElement e) {
+  /// 返回 null = 该项翻译失败，调用方丢弃它（不伪造元素）。
+  String? _elementJs(CollectionElement e) {
     final t = translateElement(e);
-    return t is String ? t : renderJs(t, 2);
+    if (t == null) return null;
+    if (t is String) return t;
+    return renderJs(t, 2);
   }
 
   /// 单个 widget 表达式 → JS 源码（**单元素**语义）：节点 Map 走 [renderJs]，
@@ -438,9 +454,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 与 [_elementJs] 的分工：后者输入是「集合元素」（数组语义，可带 spread），
   /// 本方法输入是「元素本身」（如 `child: cond ? A : B` 的单支、单子组件的
   /// 实参）——绝不能产出数组字面量，否则会变成 props.child 里的嵌套数组。
-  String _elementExprJs(Expression e) {
+  /// 返回 null = 翻译失败（调用方按「没有元素」处理）。
+  String? _elementExprJs(Expression e) {
     final t = translate(e);
-    return t is String ? t : renderJs(t, 2);
+    if (t == null) return null;
+    if (t is String) return t;
+    return renderJs(t, 2);
   }
 
   /// 循环变量作用域：for 循环变量（i 等）在 body 翻译期间遮蔽状态字段查表。
@@ -553,26 +572,30 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
   /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
   ///
-  /// 渲染失败同样兜底为占位结点（放大器缺陷修复）：单个结点渲染异常不影响
-  /// 兄弟结点与上层结点。
+  /// 渲染失败 → 告警并返回 null（调用方丢弃该结点），不伪造元素。
   @override
-  String renderJs(Object? json, int depth) {
+  String? renderJs(Object? json, int depth) {
     try {
       return _renderJsImpl(json, depth);
     } catch (err) {
       _warnDegrade('结点', json.toString(), err);
-      _registerWidgetImport('SizedBox');
-      return _placeholderJs();
+      return null;
     }
   }
 
   @override
-  String renderValue(Object? json, int depth) {
+  String renderValue(Object? json, int depth) =>
+      renderValueOrNull(json, depth) ?? 'null';
+
+  /// 值渲染的可失败版本：翻译/渲不出来的值返回 null，由调用方丢弃该值
+  /// （props 里就是「没有这个值」），不伪造任何对象。
+  @override
+  String? renderValueOrNull(Object? json, int depth) {
     try {
       return _renderValueImpl(json, depth);
     } catch (err) {
       _warnDegrade('值', json.toString(), err);
-      return 'null';
+      return null;
     }
   }
 
@@ -1442,7 +1465,11 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 容器：Map 含 `type` 键 → 视作**节点**，递归 [renderJs] 产出构造调用
   /// （如 `Text(...)`）——props 里嵌套的节点（如 ListTile.leading）据此还原；
   /// 普通 Map/List → 递归容器。
-  String jsLiteral(Object? value, int depth) {
+  String jsLiteral(Object? value, int depth) => _jsLiteral(value, depth) ?? 'null';
+
+  /// [jsLiteral] 的可失败版本：失败（含子结点渲染失败）→ null，
+  /// 容器里据此**丢弃该项/该键**，绝不伪造元素填充。
+  String? _jsLiteral(Object? value, int depth) {
     if (value is Map) {
       if (_isNodeMap(value)) {
         return renderJs(Map<String, dynamic>.from(value), depth);
@@ -1450,20 +1477,30 @@ class WidgetTranslateContext implements WidgetExprRenderer {
       if (value.isEmpty) return '{}';
       final ind = '  ' * depth;
       final ind2 = '  ' * (depth + 1);
-      final entries = value.entries
-          .map((e) => '"${e.key}": ${jsLiteral(e.value, depth + 1)}')
-          .join(',\n$ind2');
-      return '{\n$ind2$entries\n$ind}';
+      final parts = <String>[];
+      for (final e in value.entries) {
+        final v = _jsLiteral(e.value, depth + 1);
+        if (v == null) continue;
+        parts.add('"${e.key}": $v');
+      }
+      if (parts.isEmpty) return '{}';
+      return '{\n$ind2${parts.join(',\n$ind2')}\n$ind}';
     }
     if (value is List) {
-      if (value.isEmpty) return '[]';
       final ind = '  ' * depth;
       final ind2 = '  ' * (depth + 1);
-      final items = value.map((v) => jsLiteral(v, depth + 1)).join(',\n$ind2');
-      return '[\n$ind2$items\n$ind]';
+      final parts = <String>[];
+      for (final v in value) {
+        final s = _jsLiteral(v, depth + 1);
+        if (s == null) continue;
+        parts.add(s);
+      }
+      if (parts.isEmpty) return '[]';
+      return '[\n$ind2${parts.join(',\n$ind2')}\n$ind]';
     }
+    if (value == null) return 'null';
     // 叶子值 = JS 表达式字符串（已带引号的字符串 / 数字 / 表达式）
-    final s = value?.toString() ?? 'null';
+    final s = value.toString();
     if (!s.contains('\n')) return s;
     // 多行表达式（三元分支里的子结点、IIFE、节点构造）：**保留换行**，按当前
     // 缩进重排。压成单行会让 `this.__k2 = new Center({...})` 这类嵌套结点的
@@ -1528,27 +1565,25 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 }
 
 // ---------------------------------------------------------------------------
-// 「放大器缺陷」兜底：单个叶子/结点翻译失败时的降级
+// 单叶子失败的处理：丢弃该结点 + 构建期告警（不伪造元素）
 //
 // 原行为：build() 树里**任意一个叶子表达式**抛 FormatException 会一路冒泡，
 // 最终让 `_widgetExprToJs` 返回 null，整棵 `return Column(...)` 被丢弃 → 页面
 // 退化成空 build。现在把兜底放在每一次 [WidgetTranslateContext.translate] /
-// [translateElement] / [renderJs] 递归调用上：坏叶子只丢自己（降级为占位结点），
-// 兄弟结点与上层结点照常产出，同时打印构建期告警（不静默）。
+// [translateElement] / [renderJs] 递归调用上：坏叶子只丢自己，兄弟结点与上层
+// 结点照常产出，同时打印构建期告警（不静默）。
+//
+// **绝不产出 `SizedBox()` 之类的占位元素**：那会把「翻译失败」伪装成「渲染
+// 成功的空盒子」——`where((o) => ...)` / `sort((a, b) => ...)` 编译成空盒子后
+// 谓词恒假、比较器恒 0，产物里看不出任何异常，属于最坏的一类静默错误。
+// 失败即「没有这个结点」：children 里少一项、单子位置是 null。
 // ---------------------------------------------------------------------------
 
-/// 无法翻译的结点占位（中立描述层）：空的 `SizedBox`，渲染成
-/// `new SizedBox({})`，运行时零尺寸、不产生可见内容。
-Map<String, dynamic> _placeholderNodeJson() => {'type': '"SizedBox"'};
-
-/// 无法渲染的结点占位（JS 源码层）：与 [_placeholderNodeJson] 同义。
-String _placeholderJs() => 'new SizedBox({})';
-
-/// 构建期降级告警：出声（不静默丢代码），但不再抛错连累兄弟结点。
+/// 构建期告警：出声（不静默丢代码），但不再抛错连累兄弟结点。
 void _warnDegrade(String what, String source, Object err) {
   // ignore: avoid_print - 构建期日志
   print(
-    '[hot_patch_generator] $what 无法翻译，已降级为占位结点：'
+    '[hot_patch_generator] $what 无法翻译，已丢弃该结点：'
     '$source（$err）',
   );
 }

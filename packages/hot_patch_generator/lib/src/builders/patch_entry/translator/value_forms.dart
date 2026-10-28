@@ -236,7 +236,10 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
     // 先走属性管线（builder 闭包抽成方法、集合推导展开、delegate、位置实参
     // 按源码签名映射），再渲染成 `new X({...})` / `X.b({...})`。
     // 翻译器不判断它是组件还是普通类——同名 JS 类由运行时注入或包装类承接。
-    return ctx.renderValue(ctx.translate(e), 0);
+    // 翻译/渲染失败 → null（该键由 [nonNull] 丢弃），绝不产出占位值。
+    final node = ctx.translate(e);
+    if (node == null) return null;
+    return ctx.renderValueOrNull(node, 0);
   } else {
     final owner = staticRefOwner(e);
     if (owner != null) {
@@ -272,12 +275,20 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
   // （`TextSpan` / `Duration` …）则保持普通对象。仅 if/for/spread 这类集合
   // 语法仍走元素数组展开（`...(cond ? [a] : [b])`）。
   if (e is ListLiteral) {
-    return [
-      for (final el in e.elements)
-        el is Expression
-            ? ctx.renderValue(ctx.translate(el), 0)
-            : ctx.translateElement(el),
-    ];
+    final items = <Object?>[];
+    for (final el in e.elements) {
+      if (el is Expression) {
+        // 单值翻译/渲染失败 → 该项不产出（不塞 null / 占位值占位）。
+        final node = ctx.translate(el);
+        if (node == null) continue;
+        final js = ctx.renderValueOrNull(node, 0);
+        if (js != null) items.add(js);
+      } else {
+        final t = ctx.translateElement(el);
+        if (t != null) items.add(t);
+      }
+    }
+    return items;
   }
 
   return _jsExprOrNull(e, ctx);
@@ -309,11 +320,14 @@ Object? _delegateValue(Expression e, WidgetTranslateContext ctx) {
   if (ctor == 'SliverChildListDelegate') {
     final first = ctx.nonNamedArg(args);
     if (first is ListLiteral) {
+      final children = <Object?>[];
+      for (final el in first.elements) {
+        final t = ctx.translateElement(el);
+        if (t != null) children.add(t);
+      }
       return {
         '__delegate': ctx.jsString('list'),
-        'children': [
-          for (final el in first.elements) ctx.translateElement(el),
-        ],
+        'children': children,
       };
     }
     return null;
@@ -340,8 +354,14 @@ Object? _delegateValue(Expression e, WidgetTranslateContext ctx) {
 String? _branchJs(Expression e, WidgetTranslateContext ctx) {
   if (e is NullLiteral) return 'null';
   if (e is ListLiteral) {
-    final items = [for (final el in e.elements) ctx.translateElement(el)];
-    return '[${items.map((v) => ctx.renderJs(v, 0)).join(', ')}]';
+    final items = <String>[];
+    for (final el in e.elements) {
+      final v = ctx.translateElement(el);
+      if (v == null) continue;
+      final js = v is String ? v : ctx.renderJs(v, 0);
+      if (js != null) items.add(js);
+    }
+    return '[${items.join(', ')}]';
   }
   // 其余分支与普通值同一条分派：构造 → `new X({...})`（组件由包装类产出元素），
   // 标量 / 枚举 / 常量引用 → 表达式。嵌套三目在 autoValue 里递归展开。
@@ -480,7 +500,13 @@ String? builderClosureJs(
   }
   if (retExpr == null) return null;
   ctx.warnCapturedLocals(retExpr);
-  final js = ctx.renderJs(ctx.translate(retExpr), 0);
+  // 子树翻译/渲染失败 → 整个 builder 闭包不产出（调用方丢该键），绝不产出
+  // `() => null` 之类的假闭包——那会让运行时以为拿到了 builder，实际每次
+  // 调用返回空元素（与 SizedBox 占位同一类静默错误）。
+  final node = ctx.translate(retExpr);
+  if (node == null) return null;
+  final js = ctx.renderJs(node, 0);
+  if (js == null) return null;
   final head = '(${names.join(', ')})';
   if (body is ExpressionFunctionBody) return '$head => $js';
   return '$head => {\n${preludes.map((p) => '  $p\n').join()}  return $js;\n}';

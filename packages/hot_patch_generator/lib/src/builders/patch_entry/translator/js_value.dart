@@ -382,7 +382,12 @@ abstract class WidgetExprRenderer {
   Object? translate(Expression e);
 
   /// 中立描述 → JS 源码（构造调用树）。
-  String renderJs(Object? node, int depth);
+  ///
+  /// 返回 null = 该结点翻译不出来（调用方必须**丢弃**它：children 里少一项、
+  /// 单子位置为 null）。绝不允许实现方伪造占位元素——那会把翻译失败伪装成
+  /// 「渲染成功的空盒子」（`where`/`sort` 的闭包体被换成空盒子后谓词恒假，
+  /// 产物里完全看不出来）。
+  String? renderJs(Object? node, int depth);
 
   /// 中立描述 → 作为**值**的 JS 源码：同样是 `new X({...})`，但不做「元素 /
   /// 宿主字符串结点」的形态切换。
@@ -391,6 +396,10 @@ abstract class WidgetExprRenderer {
   /// 翻译器不判断类型是组件还是普通类：构造一律 1:1 产出构造调用，组件由
   /// 运行时注入的同名类 / 包装类在 `__h` 处折算成元素。
   String renderValue(Object? node, int depth);
+
+  /// [renderValue] 的可失败版本：渲不出来返回 null，调用方据此**丢弃该值**
+  /// （列表里少一项、props 里没有这个键），不伪造任何对象。
+  String? renderValueOrNull(Object? node, int depth);
 
   /// 方法体内声明的局部变量（`final isAdult = ...;`）→ 登记进 widget 层局部表。
   /// 方法体翻译与 widget 渲染必须共用同一份标识符作用域，否则返回的 widget
