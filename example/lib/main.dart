@@ -133,7 +133,7 @@ class DemoListPage extends StatelessWidget {
     _DemoEntry(
       'HelloCard · JS 双实例隔离',
       '同屏两个 JsUiWidget 实例：单 runtime 内按 pageKey 隔离，状态互不共享',
-      _TwinTest(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js'), label: 'HelloCard'),
+      _TwinTest(label: 'HelloCard'),
     ),
     _DemoEntry(
       'Props 更新 · JS 热更',
@@ -305,9 +305,8 @@ class _PropsUpdateDemoState extends State<_PropsUpdateDemo> {
 /// 双实例隔离测试：同屏渲染两个相同组件（单 runtime 内按 pageKey 隔离）。
 /// 验证：点其中一个的按钮，另一个的状态不受影响（roots[pageKey] 隔离）。
 class _TwinTest extends StatelessWidget {
-  const _TwinTest({required this.jsAsset, required this.label});
+  const _TwinTest({required this.label});
 
-  final String jsAsset;
   final String label;
 
   @override
@@ -316,11 +315,11 @@ class _TwinTest extends StatelessWidget {
       children: [
         Text('$label #1', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
-        JsUiWidget(jsAsset: jsAsset),
+        JsUiWidget(jsAsset: _patchUrl('HelloCard', 'components/hello_component.js')),
         const Divider(height: 32),
         Text('$label #2', style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 8),
-        JsUiWidget(jsAsset: jsAsset),
+        JsUiWidget(jsAsset: _patchUrl('RichTextDetail', 'components/rich_text_detail.js')),
       ],
     );
   }

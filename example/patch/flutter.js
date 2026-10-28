@@ -1340,6 +1340,88 @@ export class SliverPersistentHeader {
 }
 
 
+// Duration 可能是 JS 的 Duration 实例，也可能是裸毫秒数。
+function __tabMs(d) {
+  if (d == null) { return null; }
+  if (typeof d === 'number') { return d; }
+  if (typeof d === 'object' && typeof d.inMilliseconds === 'number') {
+    return d.inMilliseconds;
+  }
+  return null;
+}
+
+// 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
+// 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
+function __tabSame(a, b) {
+  if (a === b) { return true; }
+  if (a && b && typeof a.dx === 'number' && typeof b.dx === 'number') {
+    return a.dx === b.dx && a.dy === b.dy;
+  }
+  return false;
+}
+
+export class TweenAnimationBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  initState() {
+    var p = this.props;
+    var self = this;
+    this.__tabTween = p.tween || new Tween({});
+    this.__tabValue = this.__tabTween.begin != null
+    ? this.__tabTween.begin
+    : this.__tabTween.end;
+    var ctrl = new AnimationController({ duration: p.duration, value: 0 });
+    this.__tabCtrl = ctrl;
+    this.__tabCurved = new CurvedAnimation({
+      parent: ctrl,
+      curve: p.curve || 'linear'
+    });
+    this.__tabListener = function () {
+      self.__tabValue = self.__tabTween.lerp(self.__tabCurved.value);
+      self.setState(function () {});
+      if (ctrl.value >= 1 && !self.__tabEnded) {
+        self.__tabEnded = true;
+        __jsuiInvokeFn(self.props.onEnd, []);
+      }
+    };
+    ctrl.addListener(this.__tabListener);
+  }
+  didUpdateWidget() {
+    var p = this.props;
+    var next = p.tween || new Tween({});
+    var prev = this.__tabTween || new Tween({});
+    var ms = __tabMs(p.duration);
+    if (ms != null && ms !== this.__tabCtrl.durationMs) {
+      this.__tabCtrl.durationMs = ms;
+    }
+    // 同一段动画进行中父级重建时，目标没变就继续用原 tween——换成新实例会把
+    // begin 退回源值，正在跑的进度就会跳变。
+    if (!__tabSame(next.end, prev.end)) {
+      next.begin = this.__tabValue;
+      this.__tabTween = next;
+      this.__tabEnded = false;
+      this.__tabCtrl.reset();
+      this.__tabCtrl.forward();
+    }
+  }
+  build(context) {
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[TweenAnimationBuilder] builder 不是闭包');
+      return null;
+    }
+    return fn(context, this.__tabValue, this.props.child);
+  }
+  dispose() {
+    if (this.__tabCtrl) {
+      this.__tabCtrl.removeListener(this.__tabListener);
+      this.__tabCtrl.dispose();
+    }
+  }
+}
+
+
 export class ValueListenableBuilder {
   constructor(props) {
     this.props = props || {};

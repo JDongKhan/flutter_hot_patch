@@ -94,6 +94,9 @@ const Set<String> logicWidgetTypes = {
   'Consumer',
   'ListenableBuilder',
   'ValueListenableBuilder',
+  // 隐式动画：`tween` 变化时从当前值过渡到新 end，动画进度由 JS 侧控制器镜像
+  // 驱动（宿主逐帧回传 value），不需要新增宿主 widget。
+  'TweenAnimationBuilder',
   // 显式动画：JS 侧按 animation 当前 value 展开 builder 子树（局部重建）。
   'AnimatedBuilder',
   // `headerSliverBuilder` 是**返回 sliver 列表的闭包**，跨语言无法执行：

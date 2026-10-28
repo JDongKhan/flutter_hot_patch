@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 3de841c2） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 8c38180c） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '3de841c2') { return; }
-  G.__jsuiVersion = '3de841c2';
+  if (G.__jsui && G.__jsuiVersion === '8c38180c') { return; }
+  G.__jsuiVersion = '8c38180c';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2699,6 +2699,19 @@ G.ValueNotifier = ValueNotifier;
     this.__play('reset', null);
   };
   G.AnimationController = AnimationController;
+
+  // 组件产物调用「回调」的唯一入口。两种形态都要支持：
+  //   - 可调用闭包：组件来自 JS 侧时翻译层下发的是真实函数（`onEnd: _onEnd`）；
+  //   - 构建期句柄 `{__fn: id}`：宿主事件回调的形态，真实函数就登记在**本端**
+  //     句柄表里，本地 invoke 即可，不必绕宿主。
+  G.__jsuiInvokeFn = function (target, args) {
+    args = args || [];
+    if (typeof target === 'function') { return target.apply(null, args); }
+    if (target && typeof target.__fn === 'number') {
+      return callHandle(target.__fn, 'invoke', { args: args });
+    }
+    return undefined;
+  };
 
 
 // ===== 【17】ScrollController =====

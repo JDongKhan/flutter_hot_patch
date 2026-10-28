@@ -21,6 +21,7 @@ import 'sliver_fill_viewport_detail.dart';
 import 'sliver_fill_remaining_detail.dart';
 import 'sliver_persistent_header_detail.dart';
 import 'spacer_detail.dart';
+import 'tween_animation_builder_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -106,6 +107,11 @@ class WidgetShowcase extends StatelessWidget {
     _Group('动画', [
       _Entry('隐式动画', 'AnimatedContainer / Opacity / Scale / Rotation / Slide / CrossFade / Size / Switcher（宿主插值）', 'ImplicitAnimationDetail'),
       _Entry('显式动画', 'AnimationController + AnimatedBuilder + *Transition（宿主 Ticker 驱动）', 'ExplicitAnimationDetail'),
+      _Entry(
+        'TweenAnimationBuilder',
+        '隐式动画：tween 目标变化自动过渡，可切目标/时长/曲线，onEnd 计数',
+        'TweenAnimationBuilderDetail',
+      ),
     ]),
   ];
 
@@ -165,7 +171,9 @@ class _Entry {
 
 /// 详情容器页：原生组件 ↔ JS 热更版本同屏对比。
 /// 页面级组件（fullPage=true）无法同屏，直接展示 JS 热更版。
-class WidgetDetailPage extends StatelessWidget {
+///
+/// 窄屏（手机）默认只显示 JS 热更版，右上角开关可切到原生组件对照。
+class WidgetDetailPage extends StatefulWidget {
   const WidgetDetailPage({super.key, required this.component, this.fullPage = false});
 
   /// 详情组件名（widget_details.dart 里的 @PatchEntry 类名）。
@@ -173,6 +181,14 @@ class WidgetDetailPage extends StatelessWidget {
 
   /// 页面级组件（Scaffold 等）不比对，直接 JS 热更版全屏展示。
   final bool fullPage;
+
+  @override
+  State<WidgetDetailPage> createState() => _WidgetDetailPageState();
+}
+
+class _WidgetDetailPageState extends State<WidgetDetailPage> {
+  /// 窄屏模式下的当前视图：默认 JS 热更版，可切到原生组件对照。
+  bool _narrowShowJs = true;
 
   static const String _jsZip = 'http://127.0.0.1:8765/patch/patch.zip';
 
@@ -201,6 +217,8 @@ class WidgetDetailPage extends StatelessWidget {
     'SliverFillRemainingDetail': 'components/sliver_fill_remaining_detail.js',
     'SliverPersistentHeaderDetail': 'components/sliver_persistent_header_detail.js',
     'SpacerDetail': 'components/spacer_detail.js',
+    'TweenAnimationBuilderDetail':
+        'components/tween_animation_builder_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -209,13 +227,14 @@ class WidgetDetailPage extends StatelessWidget {
     'ExtensionDetail': 'components/grammar_details.js',
   };
 
-  String get _jsEntry => _jsEntries[component] ?? 'components/widget_details.js';
+  String get _jsEntry => _jsEntries[widget.component] ?? 'components/widget_details.js';
 
   /// 拼接补丁 URL：component 动态、entry 按源文件，走 query 参数。
-  String get _jsAsset => '$_jsZip?component=$component&entry=${Uri.encodeComponent(_jsEntry)}';
+  String get _jsAsset =>
+      '$_jsZip?component=${widget.component}&entry=${Uri.encodeComponent(_jsEntry)}';
 
   Widget _native() {
-    return switch (component) {
+    return switch (widget.component) {
       'TextDetail' => const TextDetail(),
       'RichTextDetail' => const RichTextDetail(),
       'ButtonDetail' => const ButtonDetail(),
@@ -243,6 +262,7 @@ class WidgetDetailPage extends StatelessWidget {
       'SliverFillRemainingDetail' => const SliverFillRemainingDetail(),
       'SliverPersistentHeaderDetail' => const SliverPersistentHeaderDetail(),
       'SpacerDetail' => const SpacerDetail(),
+      'TweenAnimationBuilderDetail' => const TweenAnimationBuilderDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
@@ -267,7 +287,7 @@ class WidgetDetailPage extends StatelessWidget {
   /// title/subtitle/badge）需要在此传入；StatefulWidget 的初始状态
   /// 硬编码在 JS 构造函数里，不需要传 props。
   Map<String, dynamic> _jsProps() {
-    return switch (component) {
+    return switch (widget.component) {
       'StatelessCard' => const {'title': 'Hello Stateless', 'subtitle': '原生直接渲染，无需 State', 'badge': 'FLUTTER'},
       // Hero 两侧必须在同一路由里用**不同 tag**（同 tag 会触发重复 Hero 断言）。
       'HeroDetail' => const {'tag': 'hero-js', 'label': 'JS 热更 Hero'},
@@ -281,15 +301,35 @@ class WidgetDetailPage extends StatelessWidget {
       jsAsset: _jsAsset,
       props: _jsProps(),
     );
-    if (fullPage) return js;
+    if (widget.fullPage) return js;
+
+    // 窄屏（手机）默认 JS 热更版，右上角开关切原生组件对照；宽屏始终双栏对比。
+    final narrow = MediaQuery.sizeOf(context).width < 700;
 
     return Scaffold(
-      appBar: AppBar(title: Text(fullPage ? component : '$component · JS 热更')),
+      appBar: AppBar(
+        title: Text(narrow ? widget.component : '${widget.component} · JS 热更'),
+        actions: [
+          if (narrow)
+            TextButton.icon(
+              onPressed: () => setState(() => _narrowShowJs = !_narrowShowJs),
+              icon: Icon(
+                _narrowShowJs ? Icons.construction : Icons.bolt,
+                size: 18,
+              ),
+              label: Text(_narrowShowJs ? 'JS 热更' : '原生组件'),
+            ),
+        ],
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // 只有宽屏才做原生 / JS 双栏对比；手机这类窄屏直接看 JS 热更版。
+          // 只有宽屏才做原生 / JS 双栏对比；手机这类窄屏按开关二选一。
           final wide = constraints.maxWidth >= 700;
-          if (!wide) return SingleChildScrollView(child: js);
+          if (!wide) {
+            return SingleChildScrollView(
+              child: _narrowShowJs ? js : _native(),
+            );
+          }
 
           Column side(String title, Widget child) {
             return Column(

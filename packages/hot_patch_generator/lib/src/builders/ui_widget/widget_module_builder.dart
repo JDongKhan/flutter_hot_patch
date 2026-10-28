@@ -324,6 +324,7 @@ const Map<String, String> logicWidgetSources = {
   'Consumer': jsConsumerComponent,
   'ListenableBuilder': jsListenableBuilderComponent,
   'ValueListenableBuilder': jsValueListenableBuilderComponent,
+  'TweenAnimationBuilder': jsTweenAnimationBuilderComponent,
   'AnimatedBuilder': jsAnimatedBuilderComponent,
   'NestedScrollView': jsNestedScrollViewComponent,
   'LayoutBuilder': jsLayoutBuilderComponent,
@@ -712,6 +713,106 @@ export class AnimatedBuilder {
   dispose() {
     if (this.__animation && this.__listener) {
       this.__animation.removeListener(this.__listener);
+    }
+  }
+}''';
+
+/// TweenAnimationBuilder：**隐式动画**，语义与 Flutter 的
+/// `_TweenAnimationBuilderState` 一一对应：
+///   - 首帧价值显示 `tween.begin`（begin 为 null 时取 end）；begin != end 时
+///     **立刻 forward**（Flutter 的 initState 就是这么做的），begin == end 才
+///     静止在那里；
+///   - `tween.end` 变化 → begin 改成「当前显示值」、进度归零后 forward，所以
+///     动画途中改目标不会跳变；
+///   - 每帧按 `curve` 弯曲进度，再用 `tween.lerp` 求值，只重建本结点子树；
+///   - 进度到 1 调 `onEnd` 一次（对应 Flutter 的 status.isCompleted）。
+///
+/// 动画进度由 JS 侧的 `AnimationController` 镜像驱动（宿主逐帧回传 value，
+/// 与 AnimatedBuilder 同一机制），因此不新增任何宿主 widget。
+const String jsTweenAnimationBuilderComponent = '''
+// Duration 可能是 JS 的 Duration 实例，也可能是裸毫秒数。
+function __tabMs(d) {
+  if (d == null) { return null; }
+  if (typeof d === 'number') { return d; }
+  if (typeof d === 'object' && typeof d.inMilliseconds === 'number') {
+    return d.inMilliseconds;
+  }
+  return null;
+}
+
+// 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
+// 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
+function __tabSame(a, b) {
+  if (a === b) { return true; }
+  if (a && b && typeof a.dx === 'number' && typeof b.dx === 'number') {
+    return a.dx === b.dx && a.dy === b.dy;
+  }
+  return false;
+}
+
+export class TweenAnimationBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  initState() {
+    var p = this.props;
+    var self = this;
+    this.__tabTween = p.tween || new Tween({});
+    this.__tabValue = this.__tabTween.begin != null
+      ? this.__tabTween.begin
+      : this.__tabTween.end;
+    var ctrl = new AnimationController({ duration: p.duration, value: 0 });
+    this.__tabCtrl = ctrl;
+    this.__tabCurved = new CurvedAnimation({
+      parent: ctrl,
+      curve: p.curve || 'linear'
+    });
+    this.__tabListener = function () {
+      self.__tabValue = self.__tabTween.lerp(self.__tabCurved.value);
+      self.setState(function () {});
+      if (ctrl.value >= 1 && !self.__tabEnded) {
+        self.__tabEnded = true;
+        __jsuiInvokeFn(self.props.onEnd, []);
+      }
+    };
+    ctrl.addListener(this.__tabListener);
+    // 与 Flutter 的 initState 一致：begin != end 时进入即播（如 Tween(0 → 1)
+    // 进场就有动画，onEnd 也会在到位时触发一次）。
+    if (!__tabSame(this.__tabTween.begin, this.__tabTween.end)) {
+      this.__tabEnded = false;
+      ctrl.forward();
+    }
+  }
+  didUpdateWidget() {
+    var p = this.props;
+    var next = p.tween || new Tween({});
+    var prev = this.__tabTween || new Tween({});
+    var ms = __tabMs(p.duration);
+    if (ms != null && ms !== this.__tabCtrl.durationMs) {
+      this.__tabCtrl.durationMs = ms;
+    }
+    // 同一段动画进行中父级重建时，目标没变就继续用原 tween——换成新实例会把
+    // begin 退回源值，正在跑的进度就会跳变。
+    if (!__tabSame(next.end, prev.end)) {
+      next.begin = this.__tabValue;
+      this.__tabTween = next;
+      this.__tabEnded = false;
+      this.__tabCtrl.reset();
+      this.__tabCtrl.forward();
+    }
+  }
+  build(context) {
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[TweenAnimationBuilder] builder 不是闭包');
+      return null;
+    }
+    return fn(context, this.__tabValue, this.props.child);
+  }
+  dispose() {
+    if (this.__tabCtrl) {
+      this.__tabCtrl.removeListener(this.__tabListener);
+      this.__tabCtrl.dispose();
     }
   }
 }''';
