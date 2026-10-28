@@ -29,6 +29,9 @@ class _PreferredSizeDetailState extends State<PreferredSizeDetail> {
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(_height),
         child: Container(
+          // preferredSize 只作为**最大高度上限**（Scaffold 里是 ConstrainedBox），
+          // 实际高度取子树自身布局高度——所以子级要显式占满，否则会缩到内容高度。
+          height: _height,
           color: Colors.deepPurple,
           alignment: Alignment.centerLeft,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -46,7 +49,7 @@ class _PreferredSizeDetailState extends State<PreferredSizeDetail> {
           const Text('PreferredSize', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           const Text(
-            'Scaffold.appBar 只接受 PreferredSizeWidget；套一层 PreferredSize 就能让任意子树占用指定高度。拖下面的滑块，顶栏高度随之变化。',
+            'Scaffold.appBar 只接受 PreferredSizeWidget；preferredSize 是**最大高度上限**，容器自身也要占满该高度。拖滑块，顶栏高度随之变化。',
             style: TextStyle(fontSize: 12, color: Colors.black54),
           ),
           const SizedBox(height: 12),

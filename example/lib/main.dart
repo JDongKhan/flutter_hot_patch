@@ -3,6 +3,7 @@ import 'package:hot_patch/hot_patch.dart';
 
 import 'app/app.dart';
 import 'components/composite_component.dart';
+import 'components/grammar_showcase.dart';
 import 'components/hello_component.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
@@ -149,6 +150,7 @@ class DemoListPage extends StatelessWidget {
         ),
       ),
     ),
+    _DemoEntry('基础语法 · 列表', 'Dart mixin / extension：State 扩展日志、String 扩展打印（原生 vs JS 热更）', const GrammarShowcase()),
     _DemoEntry('常用组件 · 列表', '分组列出 Flutter 常用组件，点击进入详情页（原生 vs JS 热更）', const WidgetShowcase()),
   ];
 

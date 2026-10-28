@@ -9,5 +9,7 @@ environment:
   sdk: ^3.11.5
 
 dependencies:
+  flutter:
+    sdk: flutter
   hot_patch_annotations:
     path: ../../packages/hot_patch_annotations

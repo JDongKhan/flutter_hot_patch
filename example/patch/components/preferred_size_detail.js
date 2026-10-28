@@ -18,6 +18,7 @@ export class PreferredSizeDetail {
           "height": this._height
         }),
         "child": new Container({
+          "height": this._height,
           "color": Colors.deepPurple,
           "alignment": "centerLeft",
           "padding": {
@@ -55,7 +56,7 @@ export class PreferredSizeDetail {
             "height": 4
           }))),
           (this.__k2 || (this.__k2 = new Text({
-            "data": "Scaffold.appBar 只接受 PreferredSizeWidget；套一层 PreferredSize 就能让任意子树占用指定高度。拖下面的滑块，顶栏高度随之变化。",
+            "data": "Scaffold.appBar 只接受 PreferredSizeWidget；preferredSize 是**最大高度上限**，容器自身也要占满该高度。拖滑块，顶栏高度随之变化。",
             "style": {
               "color": Colors.black54,
               "fontSize": 12

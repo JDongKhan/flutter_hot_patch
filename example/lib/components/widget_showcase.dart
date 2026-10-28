@@ -6,6 +6,7 @@ import 'color_filtered_detail.dart';
 import 'dismissible_detail.dart';
 import 'fade_in_image_detail.dart';
 import 'focus_detail.dart';
+import 'grammar_details.dart';
 import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
@@ -182,6 +183,9 @@ class WidgetDetailPage extends StatelessWidget {
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
+    // 基础语法 demo（mixin / extension）：同一源文件的组件共用一个产物。
+    'MixinDetail': 'components/grammar_details.js',
+    'ExtensionDetail': 'components/grammar_details.js',
   };
 
   String get _jsEntry => _jsEntries[component] ?? 'components/widget_details.js';
@@ -226,6 +230,8 @@ class WidgetDetailPage extends StatelessWidget {
       'StatelessCard' => const StatelessCard(title: 'Hello Stateless', subtitle: '原生直接渲染，无需 State', badge: 'FLUTTER'),
       'ImplicitAnimationDetail' => const ImplicitAnimationDetail(),
       'ExplicitAnimationDetail' => const ExplicitAnimationDetail(),
+      'MixinDetail' => const MixinDetail(),
+      'ExtensionDetail' => const ExtensionDetail(),
       _ => const Text('未知组件'),
     };
   }
