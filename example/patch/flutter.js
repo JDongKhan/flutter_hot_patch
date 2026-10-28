@@ -1382,7 +1382,7 @@ export class TweenAnimationBuilder {
       self.setState(function () {});
       if (ctrl.value >= 1 && !self.__tabEnded) {
         self.__tabEnded = true;
-        __jsuiInvokeFn(self.props.onEnd, []);
+        __invokeCallback(self.props.onEnd, []);
       }
     };
     ctrl.addListener(this.__tabListener);

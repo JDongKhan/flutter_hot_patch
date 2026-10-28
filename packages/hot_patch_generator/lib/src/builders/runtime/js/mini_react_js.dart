@@ -206,6 +206,27 @@ const String miniReactComponentBaseSource = r'''
     return handle;
   };
 
+  // ── 回调调用（__invokeCallback）─────────────────────────────────────────
+  // `__bindFn` 的**反向操作**：JS 类内部要调一个「回调 prop」时，统一走这里。
+  // 双下划线 = **运行时私有**，只允许生成器产出的 JS 类（逻辑组件）调用，
+  // 组件使用方的业务代码不得直接引用（回调应由组件自身消费，见 AGENTS.md）。
+  // 产物里同一个回调可能是两种形态，取决于翻译层怎么下发：
+  //   - 可调用闭包：回调属于**当前 JS 组件**（`onEnd: _onEnd` 译成方法 tear-off）；
+  //   - 构建期句柄 `{__fn:id}`：回调是宿主事件句柄（`onPressed: () => …`），
+  //     真实函数登记在**本端**句柄表，本地 invoke 即可，不必绕宿主。
+  // 反之，`on*` 回调也可能被整个丢掉（宿主自己消费的事件），此时静默返回
+  // undefined —— 调用方不需要逐处判空/判类型，这正是收敛成单一入口的意义。
+  // 与上面的 `invoke(id, args)` 区分：后者是**宿主回传**（按句柄 id 反查），
+  // 这里拿到的是**回调本身**（函数或句柄引用）。
+  G.__invokeCallback = function (target, args) {
+    args = args || [];
+    if (typeof target === 'function') { return target.apply(null, args); }
+    if (target && typeof target.__fn === 'number') {
+      return callHandle(target.__fn, 'invoke', { args: args });
+    }
+    return undefined;
+  };
+
 ''';
 
 /// 作用域｜按**类型名**向上查找 + 消费者侧订阅（scopeOf / subscribeListenable）【8】。
