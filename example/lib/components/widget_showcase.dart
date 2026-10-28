@@ -283,44 +283,35 @@ class WidgetDetailPage extends StatelessWidget {
     );
     if (fullPage) return js;
 
-    // 大屏（宽度 ≥ 700，桌面/iPad/横屏）左右并排对比；小屏上下堆叠。
-    Column side(String title, Widget child) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: child),
-        ],
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(title: Text('$component · 原生 vs JS 热更')),
+      appBar: AppBar(title: Text(fullPage ? component : '$component · JS 热更')),
       body: LayoutBuilder(
         builder: (context, constraints) {
+          // 只有宽屏才做原生 / JS 双栏对比；手机这类窄屏直接看 JS 热更版。
           final wide = constraints.maxWidth >= 700;
-          final nativeSide = SingleChildScrollView(child: side('原生组件', _native()));
-          final jsSide = SingleChildScrollView(child: side('JS 热更（JsUiWidget）', js));
-          if (wide) {
-            // 左右对比：两列各自独立滚动
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (!wide) return SingleChildScrollView(child: js);
+
+          Column side(String title, Widget child) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: nativeSide),
-                const VerticalDivider(width: 1),
-                Expanded(child: jsSide),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: child),
               ],
             );
           }
-          // 上下堆叠
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [nativeSide, const SizedBox(height: 12), jsSide, const SizedBox(height: 24)],
-            ),
+
+          // 左右对比：两列各自独立滚动
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: SingleChildScrollView(child: side('原生组件', _native()))),
+              const VerticalDivider(width: 1),
+              Expanded(child: SingleChildScrollView(child: side('JS 热更（JsUiWidget）', js))),
+            ],
           );
         },
       ),
