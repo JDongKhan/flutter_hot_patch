@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 9f5c142b） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 2fb2ea36） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '9f5c142b') { return; }
-  G.__jsuiVersion = '9f5c142b';
+  if (G.__jsui && G.__jsuiVersion === '2fb2ea36') { return; }
+  G.__jsuiVersion = '2fb2ea36';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2794,6 +2794,41 @@ G.ValueNotifier = ValueNotifier;
     }
   });
   G.TextEditingController = TextEditingController;
+
+
+// ===== 【18.5】FocusNode =====
+  var FocusNode = defineController('ctrl/Focus', {
+    init: function (opts) {
+      var o = opts || {};
+      this.__hasFocus = false;
+      this.__debugLabel = (o.debugLabel != null) ? String(o.debugLabel) : null;
+      this.__skipTraversal = o.skipTraversal === true;
+      this.__canRequestFocus = o.canRequestFocus !== false;
+      this.__descendantsAreFocusable = o.descendantsAreFocusable !== false;
+    },
+    onHost: function (self, v) {
+      self.__hasFocus = v === true;
+      self.__notify();
+    },
+    meta: function (self) {
+      return {
+        debugLabel: self.__debugLabel,
+        skipTraversal: self.__skipTraversal,
+        canRequestFocus: self.__canRequestFocus,
+        descendantsAreFocusable: self.__descendantsAreFocusable
+      };
+    }
+  });
+  FocusNode.prototype.requestFocus = function () {
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'requestFocus' }); }
+  };
+  FocusNode.prototype.unfocus = function () {
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'unfocus' }); }
+  };
+  Object.defineProperty(FocusNode.prototype, 'hasFocus', {
+    get: function () { return this.__hasFocus === true; }
+  });
+  G.FocusNode = FocusNode;
 
 
 // ===== 【19】TabController =====

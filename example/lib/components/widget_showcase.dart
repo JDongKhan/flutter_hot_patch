@@ -5,6 +5,7 @@ import 'automatic_keep_alive_detail.dart';
 import 'color_filtered_detail.dart';
 import 'dismissible_detail.dart';
 import 'fade_in_image_detail.dart';
+import 'focus_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -64,6 +65,7 @@ class WidgetShowcase extends StatelessWidget {
     ]),
     _Group('分页视图', [_Entry('PageView', '分页切换 + 页码回传', 'PageViewDetail')]),
     _Group('表单输入', [_Entry('TextField / Radio / Dropdown', '输入框、单选、下拉、开关、勾选、滑块', 'InputDetail')]),
+    _Group('焦点交互', [_Entry('Focus / FocusNode', 'requestFocus / unfocus、onFocusChange、hasFocus、canRequestFocus', 'FocusDetail')]),
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
     _Group('状态管理', [
       _Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard'),
@@ -149,6 +151,7 @@ class WidgetDetailPage extends StatelessWidget {
     'ColorFilteredDetail': 'components/color_filtered_detail.js',
     'DismissibleDetail': 'components/dismissible_detail.js',
     'FadeInImageDetail': 'components/fade_in_image_detail.js',
+    'FocusDetail': 'components/focus_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -173,6 +176,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ColorFilteredDetail' => const ColorFilteredDetail(),
       'DismissibleDetail' => const DismissibleDetail(),
       'FadeInImageDetail' => const FadeInImageDetail(),
+      'FocusDetail' => const FocusDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

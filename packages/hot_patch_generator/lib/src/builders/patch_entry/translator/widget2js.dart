@@ -959,11 +959,16 @@ class WidgetTranslateContext implements WidgetExprRenderer {
           activeScope,
         );
         if (hostCall != null) return hostCall;
-        // 局部变量 receiver（`model.inc()`，model 是 builder 里的
-        // `final model = context.watch<T>()`）：保留局部名，由 [_eventFnJs]
-        // 生成的**构建期箭头闭包**天然捕获它（与 Dart 闭包同语义）。
-        // 有别名（`final list = _list;`）的局部落成真实字段引用。
-        if (target is Identifier && _locals.contains(target.name)) {
+        // 局部变量 / 形参 receiver：保留名字，由 [_eventFnJs] 生成的**构建期
+        // 箭头闭包**天然捕获它（与 Dart 闭包同语义）。
+        //   - 局部（`final model = context.watch<T>()` → `model.inc()`）；
+        //   - 形参（`Widget _box(String label, FocusNode node)` 里的
+        //     `node.requestFocus()` / `label.trim()`）：裸标识符是**变量**，
+        //     不是实例字段，绝不能补 `this.`——否则渲染期会读到不存在的字段。
+        //     有别名（`final list = _list;`）的局部落成真实字段引用。
+        if (target is Identifier &&
+            (_locals.contains(target.name) ||
+                activeScope.params.contains(target.name))) {
           final recv = activeScope.fieldRef(target.name) ?? target.name;
           return '$recv.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList, activeScope)})';

@@ -402,6 +402,13 @@ export class FloatingActionButton {
   static small(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'small' })); }
 }
 
+export class Focus {
+  constructor(props) {
+    return __h('Focus', props);
+  }
+  static withExternalFocusNode(props) { return new Focus(Object.assign({}, props, { factory: 'withExternalFocusNode' })); }
+}
+
 export class FractionallySizedBox {
   constructor(props) {
     return __h('FractionallySizedBox', props);

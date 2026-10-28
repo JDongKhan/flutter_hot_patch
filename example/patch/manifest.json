@@ -1,11 +1,11 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-28T09:47:10.576173",
+  "buildTime": "2026-10-28T09:54:44.381303",
   "resources": {
-    "flutter.js": "da9abebb57af00040716ba64ba3685e9500e9f8ce13da099b3ef755c4556f36c",
+    "flutter.js": "19ad9557714c3a8e5cf06d314d68ddc5513311fb2dd6be696573aa5363168a46",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
-    "runtime.js": "2e89ee031f214e17f68cd7476d7652f5148ddfbb5887757a59419a560df7b924",
+    "runtime.js": "40fe686dde4776e0d461ac3754ad246d25a8667f6262ae797cd61ab75d5ec660",
     "hot_module_base.js": "b2df62024c440012182e5af5baf1a06a25d1b6c251c729c40210f92a9603a546",
     "app/model/app_models.js": "77d86c78799f58c67ae90fc8f78d4c506cea45bb46ff73268ec6707176627c72",
     "app/service/app_service.js": "560de89c9ea369f825607262ac45e7afc648ed07bb02c0e42cdb81b6bf1924ff",
@@ -21,8 +21,10 @@
     "components/provider_component.js": "926ec8c82861ff79db7835bdc806c124248ab90068b538080b984b3091bb5c2d",
     "components/banner_component.js": "a32b2e228bbe21b8c3042f3d2b72d16da6388736d52014146c3296f289869594",
     "components/dismissible_detail.js": "17a56b08ce4a710c03c99f1d1c6425aa1bb24c56e395050fe999888b66b0c63f",
+    "components/fade_in_image_detail.js": "966c6b14b99827e824078f6add81f24d14d7e25920dce3afec0db90ec11bc2e3",
     "components/list_item.js": "0a25c62ca00930aa7197fdd45a1e40b5911f2b9d47ab2cc01a13a0a28a9e9b3c",
     "components/composite_component.js": "c08e6ffeb289e9a6ff56ac6b0de8e00430fdc0841ee9fc8da670377ad8252cc0",
+    "components/focus_detail.js": "a93ff2ee41f2a9ec54b58aedc0012bfcca127a5b3b5d70389ce8c22e99602880",
     "components/rich_text_detail.js": "49e74f26a665e8ed9181b96593c6a2dfee5ff43783b9ba290b98ffaf8ce69257",
     "components/color_filtered_detail.js": "8bb189232bb65f9f0592cdd3e807d6dbf8385b531964717cb4095d97aa1ccf93",
     "components/explicit_animation_detail.js": "1498f4b9d2c405e782851e18575717d60fa1e0d35c6c8801110a85dfbe271c25",
@@ -31,7 +33,6 @@
     "components/animated_list_detail.js": "dbeb627fef8fa0ff89e5a5d3503d692738d130cd17c8bcd96f88b7f39ce4c1b6",
     "components/watch_demo.js": "b7008490f0613b1b7a12145f6e73eb762e12d7a343a8f8fe873165b2c83363e4",
     "model/network_vm.js": "9c390ef9c440b3a7498bc6bc23b808ea90a76d9307fcf1df91b27973013011c7",
-    "model/counter_vm.js": "f8bd479498a2d27de5204e8290920f169f9f7981dc8c21e433f2f717c204fc8d",
-    "components/fade_in_image_detail.js": "966c6b14b99827e824078f6add81f24d14d7e25920dce3afec0db90ec11bc2e3"
+    "model/counter_vm.js": "f8bd479498a2d27de5204e8290920f169f9f7981dc8c21e433f2f717c204fc8d"
   }
 }

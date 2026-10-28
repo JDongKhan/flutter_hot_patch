@@ -48,6 +48,7 @@ import 'core/color_library.dart';
 import 'dismissible/dismissible_library.dart';
 import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
+import 'focus/focus_library.dart';
 import 'key/key_library.dart';
 import 'notification_listener/notification_listener_library.dart';
 import 'provider/provider_library.dart';
@@ -131,6 +132,8 @@ void _seedBuiltins() {
   // Dismissible：confirmDismiss 需要 JS→宿主的异步回程通道。
   registerJsUiLibrary(const DismissibleLibrary());
   registerJsUiLibrary(const TextEditingControllerLibrary());
+  // Focus：FocusNode 句柄 + Focus 组件（焦点变化经 Host 回传镜像）。
+  registerJsUiLibrary(const FocusLibrary());
   registerJsUiLibrary(const TabLibrary());
   registerJsUiLibrary(const KeyLibrary());
   registerJsUiLibrary(const BuildContextLibrary());
