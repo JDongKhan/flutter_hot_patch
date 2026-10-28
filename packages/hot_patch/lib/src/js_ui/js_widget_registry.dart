@@ -282,6 +282,11 @@ JsRenderContext _descriptorContext(
   );
 }
 
+/// 源字符串 → 图片 provider：`FadeInImage.assetNetwork` 的 placeholder 永远是
+/// 资源路径（[forceAsset]），其余按 `http` 前缀判网络 / 资源（与 `Image` 一致）。
+ImageProvider _imageProvider(String source, {bool forceAsset = false}) =>
+    (!forceAsset && source.startsWith('http')) ? NetworkImage(source) : AssetImage(source);
+
 // ===== 全局原生组件注入表 =====
 
 /// 「无 JS 产物组件」（产物里保留具体类型名、无 JS 类的结点）的原生实现。
@@ -665,6 +670,29 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
             alignment: align,
             repeat: repeat,
           );
+  });
+
+  // `FadeInImage.assetNetwork(placeholder: 'a.jpg', image: 'https://…')`：
+  // placeholder 是**资源路径**、image 是网址（`factory: 'assetNetwork'`）；
+  // 普通构造 `FadeInImage(placeholder: AssetImage(…), image: NetworkImage(…))`
+  // 两者都是 provider，翻译层已把 provider 归一化成路径/网址字符串，这里按
+  // 前缀还原成原生 provider。
+  r.register('FadeInImage', (c) {
+    final assetNetwork = c.str('factory') == 'assetNetwork';
+    return FadeInImage(
+      placeholder: _imageProvider(c.str('placeholder') ?? '', forceAsset: assetNetwork),
+      image: _imageProvider(c.str('image') ?? ''),
+      fit: boxFitFromJson(c.props['fit']),
+      placeholderFit: boxFitFromJson(c.props['placeholderFit']),
+      fadeInDuration:
+          durationFromJson(c.props['fadeInDuration']) ?? const Duration(milliseconds: 300),
+      fadeOutDuration:
+          durationFromJson(c.props['fadeOutDuration']) ?? const Duration(milliseconds: 300),
+      width: c.num_('width'),
+      height: c.num_('height'),
+      alignment: alignmentFromJson(c.props['alignment']) ?? Alignment.center,
+      repeat: imageRepeatFromJson(c.props['repeat']) ?? ImageRepeat.noRepeat,
+    );
   });
 
   r.register('CircleAvatar', (c) {

@@ -364,6 +364,14 @@ export class Expanded {
   }
 }
 
+export class FadeInImage {
+  constructor(props) {
+    return __h('FadeInImage', props);
+  }
+  static assetNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'assetNetwork' })); }
+  static memoryNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'memoryNetwork' })); }
+}
+
 export class FadeTransition {
   constructor(props) {
     return __h('FadeTransition', props);

@@ -4,6 +4,7 @@ import 'animated_list_detail.dart';
 import 'automatic_keep_alive_detail.dart';
 import 'color_filtered_detail.dart';
 import 'dismissible_detail.dart';
+import 'fade_in_image_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -29,7 +30,10 @@ class WidgetShowcase extends StatelessWidget {
         'LayoutDetail',
       ),
     ]),
-    _Group('图片图标', [_Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail')]),
+    _Group('图片图标', [
+      _Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail'),
+      _Entry('FadeInImage', '占位图 → 目标图淡入（assetNetwork / 普通构造）', 'FadeInImageDetail'),
+    ]),
     _Group('容器装饰', [
       _Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail'),
       _Entry('ColorFiltered', '颜色滤镜：mode(multiply/modulate) 与 20 项矩阵灰度', 'ColorFilteredDetail'),
@@ -144,6 +148,7 @@ class WidgetDetailPage extends StatelessWidget {
     'AutomaticKeepAliveDetail': 'components/automatic_keep_alive_detail.js',
     'ColorFilteredDetail': 'components/color_filtered_detail.js',
     'DismissibleDetail': 'components/dismissible_detail.js',
+    'FadeInImageDetail': 'components/fade_in_image_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -167,6 +172,7 @@ class WidgetDetailPage extends StatelessWidget {
       'AutomaticKeepAliveDetail' => const AutomaticKeepAliveDetail(),
       'ColorFilteredDetail' => const ColorFilteredDetail(),
       'DismissibleDetail' => const DismissibleDetail(),
+      'FadeInImageDetail' => const FadeInImageDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
