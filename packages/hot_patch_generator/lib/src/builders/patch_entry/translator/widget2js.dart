@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart' show log;
 
+import '../../shared/ctor_signatures.dart';
 import '../../shared/js_widget_defs.dart';
 import 'js_translator.dart';
 import 'js_value.dart';
@@ -1315,11 +1316,46 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 里的子结点同一条路径（属性归一 + 类所在文件登记 import）。
   T _withWidgetArgHook<T>(T Function() body) {
     final prev = widgetArgJsHook;
+    final prevClassRef = classRefHook;
     widgetArgJsHook = _argWidgetJs;
+    classRefHook = _classRefJs;
     try {
       return body();
     } finally {
       widgetArgJsHook = prev;
+      classRefHook = prevClassRef;
+    }
+  }
+
+  /// 见 [WidgetExprRenderer.withWidgetValues]：widget 返回值的方法体整体生效。
+  @override
+  T withWidgetValues<T>(T Function() body) => _withWidgetArgHook(body);
+
+  /// 静态成员调用的 receiver 是「类定义在某个产物模块里的类型」时 → 类引用串
+  /// （并登记 import），否则 null（交给通用路径）。
+  ///
+  /// 与 [_argWidgetJs] 同一判据：[jsClassFileOf] 说明这个类型在 JS 侧确有类定义，
+  /// 静态方法（`Overlay.of` / 项目类上的工厂方法）因此可以原样调用；运行时注入
+  /// 的全局类（`MediaQuery` / `Theme`）没有文件归属，返回 null 由原规则承接。
+  String? _classRefJs(String className) {
+    final file = jsClassFileOf(className);
+    if (file == null) return null;
+    if (importResolver?.call(className) == null) _registerWidgetImport(className);
+    return className;
+  }
+
+  /// 在**只装类引用钩子**的环境里翻译一段代码（类的方法体用）。
+  ///
+  /// 方法体里会出现 `Overlay.of(context).insert(entry)` 这类静态调用：receiver
+  /// 是类而非字段/局部变量，通用规则整条判为不可翻译。这里只补「类引用」这一件
+  /// 事，**不安装实参构造钩子**——那会把任意值位置的表达式拖进元素管线。
+  T withClassRefs<T>(T Function() body) {
+    final prev = classRefHook;
+    classRefHook = _classRefJs;
+    try {
+      return body();
+    } finally {
+      classRefHook = prev;
     }
   }
 
@@ -1365,6 +1401,19 @@ class WidgetTranslateContext implements WidgetExprRenderer {
             (e.target == null || e.target is SimpleIdentifier));
     if (!isCtor) return null;
     final (ctor, _) = ctorOf(e);
+    if (ctor == null) return null;
+    final factory = factoryNameOf(e);
+    if (factory == null) return ctor;
+    // `X.foo(...)` 的语法与「命名构造」完全一致，`Overlay.of(context)` 这类
+    // **静态方法**也会命中，被误当成构造（产物成了 `Overlay.of({})` 元素）。
+    // 判据用构造签名索引：只有 `foo` 确实是 X 声明的命名构造才算构造。
+    // 源码索引不可得（类找不到）时保持既有假设，避免对无法索引的类型回归。
+    final sigs = CtorSignatures.instance;
+    if (sigs != null &&
+        sigs.isClass(ctor) &&
+        !sigs.ctorNamesOf(ctor).contains(factory)) {
+      return null;
+    }
     return ctor;
   }
 

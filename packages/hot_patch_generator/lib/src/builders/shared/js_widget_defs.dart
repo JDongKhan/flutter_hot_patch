@@ -111,7 +111,18 @@ const Set<String> logicWidgetTypes = {
   // **布局阶段**同步执行，而 delegate 只存在于 JS——与 LayoutBuilder 同一方案，
   // 把 build 登记成句柄、宿主布局时回调，子树经 patch 回填。
   'SliverPersistentHeader',
+  // Overlay：条目表（initialEntries / insert / remove）与每个
+  // `OverlayEntry.builder` 都是 JS 闭包，宿主无法执行——条目在 JS 侧展开成
+  // 兄弟结点，`Overlay.of(context)` 沿作用域取最近的本实例。
+  'Overlay',
 };
+
+/// 「JS 值类」类型名：**不是 widget**、不产出元素，但构造与静态引用在 JS 侧
+/// 需要真实类（`OverlayEntry`：条目的载体，`builder` 是 JS 闭包）。
+///
+/// 只影响「元素 type 用类引用 / import 登记」这一件事（并进
+/// [jsClassWidgetTypes]）；类源码见 widget_module_builder 的 `valueClassSources`。
+const Set<String> valueClassTypes = {'OverlayEntry'};
 
 /// 懒容器类型 → 触发懒的 props 键（空列表 = 无条件懒）。
 ///
@@ -144,11 +155,12 @@ const Map<String, List<String>> lazyChildHostTypes = {
 };
 
 /// 「元素 type 是 JS 类」的 widget 类型集合 = 有 JS 类的类型（唯一事实源：
-/// 逻辑 widget 表 + builder 代理表）。渲染层据此决定元素 type 用类引用还是
-/// 类型名字符串；宿主 widget 不在其中，零 import。
+/// 逻辑 widget 表 + builder 代理表 + 值类表）。渲染层据此决定元素 type 用类
+/// 引用还是类型名字符串；宿主 widget 不在其中，零 import。
 Set<String> get jsClassWidgetTypes => {
   ...builderFormTypes,
   ...logicWidgetTypes,
+  ...valueClassTypes,
 };
 
 /// 类型 → package 模块：决定该类型的 JS 工厂/类落在哪个 `patch/<package>.js`

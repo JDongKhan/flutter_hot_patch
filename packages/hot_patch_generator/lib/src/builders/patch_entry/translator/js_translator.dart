@@ -494,6 +494,20 @@ typedef WidgetArgJsHook = String? Function(Expression e);
 /// 当前生效的实参钩子（翻译是单线程的，按数据表达式调用期安装/还原）。
 WidgetArgJsHook? widgetArgJsHook;
 
+/// 类引用钩子：静态成员调用（`Overlay.of(context)` / `Alignment.values` 这类
+/// `X.m(...)` 形态）的 receiver 是**模块里确有类定义**的类型时，返回该
+/// 类的 JS 引用串（并负责登记 import）；返回 null 表示「按既有路径处理」。
+///
+/// 为什么需要：`X.of(context)` 的 receiver 是一个**类引用**，而它不是
+/// [runtimeGlobalTypes] 里的运行时注入类（`MediaQuery` 那类），也不是
+/// [FieldScope] 可解析的字段 / 方法 / 局部变量——通用规则会把整条调用判为不可
+/// 翻译。判据只看「这个类型的类定义在哪」（由 widget2js 用类文件解析回答），
+/// 与它是不是组件无关。
+typedef ClassRefHook = String? Function(String className);
+
+/// 当前生效的类引用钩子（由 widget2js 安装；翻译单线程，按调用期安装/还原）。
+ClassRefHook? classRefHook;
+
 bool _isClassLikeName(String name) {
   if (name.isEmpty) return false;
   final c = name.codeUnitAt(0);
@@ -820,6 +834,10 @@ String? methodCallExprJs(
   if (target is Identifier) {
     final ref = scope.fieldRef(target.name);
     if (ref != null) return '$ref.${e.methodName.name}($passed)';
+    // receiver 是「类定义在某个产物模块里的类型」（`Overlay.of(context)` 等）：
+    // 产出 `<类引用>.m(args)`，类引用串由钩子给出（含 import 登记）。
+    final clsRef = classRefHook?.call(target.name);
+    if (clsRef != null) return '$clsRef.${e.methodName.name}($passed)';
     // 类方法静态调用（`MediaQuery.of(context)` / `Theme.of(context)`）：
     // receiver 是**类定义在运行时注入里**的类（`G.MediaQuery = …`，见
     // [runtimeGlobalTypes]），原样产出 `X.m(args)`。判断只看「类定义在哪」，
@@ -1552,15 +1570,25 @@ String translateClassMethodBody(
   );
   // 方法形参同步登记进 widget 层（方法体期间），使返回的 widget 树里
   // `Text(title)` 这类形参引用可解析；翻译结束即恢复，不污染同类其它方法。
-  String run() => translateMethodBody(
-        m.body,
-        scope,
-        classes,
-        widgetCtx: widgetCtx,
-        returnExpressionBody: !m.isVoid,
-        returnsWidget: m.returnsWidget,
-        depth: depth,
-      );
+  //
+  // 返回 widget 的方法（build / `Widget _buildX()`）整段方法体都处在组件语境：
+  // 语句里的构造（`final row = Row(...)`、事件闭包里的 `OverlayEntry(...)`）与
+  // `return` 位置走同一条属性管线，否则只会得到裸 `new X({...})`（缺 import、
+  // 缺 `EdgeInsets` 这类属性归一）。
+  String run() {
+    final body = () => translateMethodBody(
+          m.body,
+          scope,
+          classes,
+          widgetCtx: widgetCtx,
+          returnExpressionBody: !m.isVoid,
+          returnsWidget: m.returnsWidget,
+          depth: depth,
+        );
+    return m.returnsWidget && widgetCtx != null
+        ? widgetCtx.withWidgetValues(body)
+        : body();
+  }
   if (widgetCtx == null || m.params.isEmpty) return run();
   return widgetCtx.withMethodParams(m.params, run);
 }

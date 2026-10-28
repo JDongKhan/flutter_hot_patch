@@ -1137,6 +1137,94 @@ export class OrientationBuilder {
 }
 
 
+export class Overlay {
+  constructor(props) {
+    this.props = props || {};
+    // 条目表：声明式与命令式共用一张表（Dart 侧同样是 _entries）。
+    this.__entries = [];
+    // 作用域声明：本实例即「OverlayState」，子孙 `Overlay.of(context)` 取到它。
+    this.__provides = { OverlayState: this };
+    var init = this.props.initialEntries;
+    if (Array.isArray(init)) {
+      for (var i = 0; i < init.length; i++) { this.__attach(init[i]); }
+    }
+  }
+  // 条目归属：同一个条目被别的 Overlay 占用时先摘除（Dart 语义：一个条目只能
+  // 属于一个 Overlay）；重复 insert 不重复展开。
+  __attach(entry) {
+    if (!entry || entry.__owner === this) { return; }
+    if (entry.__owner) { entry.__owner.remove(entry); }
+    entry.__owner = this;
+    entry.__removed = false;
+    this.__entries.push(entry);
+  }
+  // ── 与 OverlayState 同名同义的命令式 API ────────────────────────────────
+  insert(entry) {
+    this.__attach(entry);
+    this.setState(function () {});
+  }
+  insertAll(entries) {
+    if (Array.isArray(entries)) {
+      for (var i = 0; i < entries.length; i++) { this.__attach(entries[i]); }
+    }
+    this.setState(function () {});
+  }
+  remove(entry) {
+    if (!entry || entry.__owner !== this) { return; }
+    entry.__owner = null;
+    entry.__removed = true;
+    for (var i = 0; i < this.__entries.length; i++) {
+      if (this.__entries[i] === entry) { this.__entries.splice(i, 1); break; }
+    }
+    this.setState(function () {});
+  }
+  markNeedsBuild(entry) {
+    if (entry && entry.__owner === this) { this.setState(function () {}); }
+  }
+  build(context) {
+    var kids = [];
+    for (var i = 0; i < this.__entries.length; i++) {
+      var e = this.__entries[i];
+      if (!e || e.__removed) { continue; }
+      var w = e.__build(context);
+      // 与 Dart 一致：null 条目（builder 返回 null）不占位。
+      if (w != null) { kids.push(w); }
+    }
+    return __h('Stack', { alignment: 'topLeft', fit: 'expand', children: kids });
+  }
+  dispose() {
+    for (var i = 0; i < this.__entries.length; i++) {
+      if (this.__entries[i]) { this.__entries[i].__owner = null; }
+    }
+    this.__entries = [];
+  }
+}
+Overlay.of = function (context) {
+  return __jsuiScopeOf(context, 'OverlayState');
+};
+
+
+export class OverlayEntry {
+  constructor(props) {
+    this.props = props || {};
+    this.builder = this.props.builder;
+    this.opaque = !!this.props.opaque;
+    this.maintainState = this.props.maintainState !== false;
+    this.__owner = null;
+    this.__removed = false;
+  }
+  get mounted() { return this.__owner != null && !this.__removed; }
+  remove() {
+    if (this.__owner) { this.__owner.remove(this); }
+  }
+  markNeedsBuild() {
+    if (this.__owner) { this.__owner.markNeedsBuild(this); }
+  }
+  __build(context) {
+    return typeof this.builder === 'function' ? this.builder(context) : null;
+  }
+}
+
 export class PageView {
   constructor(props) {
     this.props = props || {};

@@ -330,7 +330,122 @@ const Map<String, String> logicWidgetSources = {
   'LayoutBuilder': jsLayoutBuilderComponent,
   'OrientationBuilder': jsOrientationBuilderComponent,
   'SliverPersistentHeader': jsSliverPersistentHeaderComponent,
+  'Overlay': jsOverlayComponent,
 };
+
+/// 值类（**不是 widget**、不产出元素）→ JS 类源码：同样内联在包模块里。
+///
+/// 与 [logicWidgetSources] 的区别只在语义：值类由业务代码 `new` 出来当普通对象
+/// 传递（props 里的载体），元素树里不会出现它的 type。运行时对两者的处理相同
+/// （都是模块导出的普通类，使用方 `new X({...})`）。
+const Map<String, String> valueClassSources = {
+  'OverlayEntry': jsOverlayEntryClass,
+};
+
+/// Overlay：条目表 + `Overlay.of(context)` 的 JS 实现。
+///
+/// 为什么逻辑必须在 JS 侧：`OverlayEntry.builder` 是 JS 闭包，宿主执行不了。
+/// 因此条目在 JS 里逐条展开成**兄弟结点**，宿主只看到 `Stack` 插槽：
+///   - 声明式：`Overlay(initialEntries: [...])` 的条目直接进表；
+///   - 命令式：`Overlay.of(context)` 沿作用域取最近的**本实例**
+///     （构造函数里声明 `__provides`，与宿主结点声明作用域同一套机制），
+///     之后 `insert` / `remove` / `markNeedsBuild` 与 Dart 的 OverlayState 同义。
+///
+/// 语义与 Flutter 对齐：条目按整块区域叠放（`fit: expand` + `topLeft`，与
+/// `_RenderTheater` 相同）；被 `remove()` 过的条目立即退出渲染。
+const String jsOverlayComponent = '''
+export class Overlay {
+  constructor(props) {
+    this.props = props || {};
+    // 条目表：声明式与命令式共用一张表（Dart 侧同样是 _entries）。
+    this.__entries = [];
+    // 作用域声明：本实例即「OverlayState」，子孙 `Overlay.of(context)` 取到它。
+    this.__provides = { OverlayState: this };
+    var init = this.props.initialEntries;
+    if (Array.isArray(init)) {
+      for (var i = 0; i < init.length; i++) { this.__attach(init[i]); }
+    }
+  }
+  // 条目归属：同一个条目被别的 Overlay 占用时先摘除（Dart 语义：一个条目只能
+  // 属于一个 Overlay）；重复 insert 不重复展开。
+  __attach(entry) {
+    if (!entry || entry.__owner === this) { return; }
+    if (entry.__owner) { entry.__owner.remove(entry); }
+    entry.__owner = this;
+    entry.__removed = false;
+    this.__entries.push(entry);
+  }
+  // ── 与 OverlayState 同名同义的命令式 API ────────────────────────────────
+  insert(entry) {
+    this.__attach(entry);
+    this.setState(function () {});
+  }
+  insertAll(entries) {
+    if (Array.isArray(entries)) {
+      for (var i = 0; i < entries.length; i++) { this.__attach(entries[i]); }
+    }
+    this.setState(function () {});
+  }
+  remove(entry) {
+    if (!entry || entry.__owner !== this) { return; }
+    entry.__owner = null;
+    entry.__removed = true;
+    for (var i = 0; i < this.__entries.length; i++) {
+      if (this.__entries[i] === entry) { this.__entries.splice(i, 1); break; }
+    }
+    this.setState(function () {});
+  }
+  markNeedsBuild(entry) {
+    if (entry && entry.__owner === this) { this.setState(function () {}); }
+  }
+  build(context) {
+    var kids = [];
+    for (var i = 0; i < this.__entries.length; i++) {
+      var e = this.__entries[i];
+      if (!e || e.__removed) { continue; }
+      var w = e.__build(context);
+      // 与 Dart 一致：null 条目（builder 返回 null）不占位。
+      if (w != null) { kids.push(w); }
+    }
+    return __h('Stack', { alignment: 'topLeft', fit: 'expand', children: kids });
+  }
+  dispose() {
+    for (var i = 0; i < this.__entries.length; i++) {
+      if (this.__entries[i]) { this.__entries[i].__owner = null; }
+    }
+    this.__entries = [];
+  }
+}
+Overlay.of = function (context) {
+  return __jsuiScopeOf(context, 'OverlayState');
+};''';
+
+/// OverlayEntry：条目的载体（值类，不是元素）。
+///
+/// `builder` / `opaque` / `maintainState` 与 Dart 字段一一对应；`mounted` 是
+/// getter（所在 Overlay 已登记且未移除）；`remove()` / `markNeedsBuild()` 转发给
+/// 所属 Overlay。
+const String jsOverlayEntryClass = '''
+export class OverlayEntry {
+  constructor(props) {
+    this.props = props || {};
+    this.builder = this.props.builder;
+    this.opaque = !!this.props.opaque;
+    this.maintainState = this.props.maintainState !== false;
+    this.__owner = null;
+    this.__removed = false;
+  }
+  get mounted() { return this.__owner != null && !this.__removed; }
+  remove() {
+    if (this.__owner) { this.__owner.remove(this); }
+  }
+  markNeedsBuild() {
+    if (this.__owner) { this.__owner.markNeedsBuild(this); }
+  }
+  __build(context) {
+    return typeof this.builder === 'function' ? this.builder(context) : null;
+  }
+}''';
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
 /// （`_builderN(context)`，含 `var model = context.watch(...)` 前置语句）拿子树。
@@ -879,6 +994,14 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln();
   }
   for (final t in sorted) {
+    // 值类（不是 widget、不产出元素）：只导出普通类，使用方 `new X({...})`。
+    final value = valueClassSources[t];
+    if (value != null) {
+      b
+        ..writeln()
+        ..writeln(value);
+      continue;
+    }
     // 逻辑 widget（provider 状态处理 / Builder 委托）：状态与订阅逻辑全部在
     // JS 侧，本包导出普通类，元素 type 即该类，宿主零感知。
     final logic = logicWidgetSources[t];

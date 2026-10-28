@@ -13,6 +13,7 @@ import 'image_icon_detail.dart';
 import 'keyboard_listener_detail.dart';
 import 'nested_scroll_view_detail.dart';
 import 'orientation_builder_detail.dart';
+import 'overlay_detail.dart';
 import 'pop_scope_detail.dart';
 import 'preferred_size_detail.dart';
 import 'radio_group_detail.dart';
@@ -89,6 +90,7 @@ class WidgetShowcase extends StatelessWidget {
       _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
       _Entry('Drawer / endDrawer', '抽屉 + AppBar 汉堡按钮（仅 JS 热更版）', 'DrawerDetail'),
       _Entry('OrientationBuilder / MediaQuery', '方向与窗口尺寸驱动布局（拉高窗口切 portrait）', 'OrientationBuilderDetail'),
+      _Entry('Overlay / OverlayEntry', '声明式 initialEntries + 命令式 insert / remove 浮层', 'OverlayDetail'),
       _Entry('PopScope', '拦截返回：canPop 开关 + onPopInvokedWithResult 两参回调', 'PopScopeDetail'),
       _Entry('PreferredSize', '自定义顶栏高度：任意子树声明成 PreferredSizeWidget（仅 JS 热更版）', 'PreferredSizeDetail'),
       _Entry('RadioGroup', '子级 Radio 共用选中值与回调（不再传 groupValue/onChanged）', 'RadioGroupDetail'),
@@ -221,6 +223,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
     'OrientationBuilderDetail': 'components/orientation_builder_detail.js',
+    'OverlayDetail': 'components/overlay_detail.js',
     'PopScopeDetail': 'components/pop_scope_detail.js',
     'PreferredSizeDetail': 'components/preferred_size_detail.js',
     'RadioGroupDetail': 'components/radio_group_detail.js',
@@ -269,6 +272,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'KeyboardListenerDetail' => const KeyboardListenerDetail(),
       'NestedScrollViewDetail' => const NestedScrollViewDetail(),
       'OrientationBuilderDetail' => const OrientationBuilderDetail(),
+      'OverlayDetail' => const OverlayDetail(),
       'PopScopeDetail' => const PopScopeDetail(),
       'PreferredSizeDetail' => const PreferredSizeDetail(),
       'RadioGroupDetail' => const RadioGroupDetail(),

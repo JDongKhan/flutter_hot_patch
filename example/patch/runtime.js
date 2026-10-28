@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 3f09c6af） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 66063712） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '3f09c6af') { return; }
-  G.__jsuiVersion = '3f09c6af';
+  if (G.__jsui && G.__jsuiVersion === '66063712') { return; }
+  G.__jsuiVersion = '66063712';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -942,6 +942,16 @@ if (G.kDebugMode) {
     }
     inst.__subs = null;
   }
+
+  // 生成器产出的 JS 类（逻辑组件，如 Overlay）需要「从 context 沿作用域取某类型
+  // 的值」——即 Dart 的 `X.of(context)`。这是**通用出口**，不是某个组件专用 API：
+  // 传进来的 context 是任何 BuildContext 代理（取它的锚点向上找），类型名由调用方
+  // 给（与 `dependOnInheritedWidgetOfExactType<T>` 同构，核心不认识具体类型）。
+  // 取不到返回 null（不猜、不回退），调用方自行决定缺失时的行为。
+  G.__jsuiScopeOf = function (ctx, type) {
+    var anchor = ctx && ctx.__anchor;
+    return anchor ? scopeOf(anchor, type) : null;
+  };
 
 
 

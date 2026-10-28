@@ -3082,19 +3082,29 @@ export class TestWidget {
     this.props = args || {};
   }
   build(context) {
-    var text = new Text({data: "局部变量 widget"});
-    var card = new StatelessCard({title: "局部自定义组件", subtitle: "StatelessCard 变量", badge: "VAR"});
-    var items = [new Text({data: "列表项 A"}), new Text({data: "列表项 B"})];
+    var text = (this.__k0 || (this.__k0 = new Text({
+      "data": "局部变量 widget"
+    })));
+    var card = (this.__k1 || (this.__k1 = new StatelessCard({
+      "badge": "VAR",
+      "subtitle": "StatelessCard 变量",
+      "title": "局部自定义组件"
+    })));
+    var items = [(this.__k2 || (this.__k2 = new Text({
+        "data": "列表项 A"
+      }))), (this.__k3 || (this.__k3 = new Text({
+        "data": "列表项 B"
+      })))];
     return new Center({
       "child": new Column({
         "mainAxisSize": "min",
         "children": [
           text,
-          (this.__k0 || (this.__k0 = new SizedBox({
+          (this.__k4 || (this.__k4 = new SizedBox({
             "height": 8
           }))),
           card,
-          (this.__k0 || (this.__k0 = new SizedBox({
+          (this.__k4 || (this.__k4 = new SizedBox({
             "height": 8
           }))),
           ...items
