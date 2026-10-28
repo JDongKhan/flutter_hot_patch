@@ -642,8 +642,8 @@ export class ListenableBuilder {
 }''';
 
 /// ValueListenableBuilder：与 ListenableBuilder 完全同构（同一订阅/局部重建
-/// 机制），只多一步——把 `listenable.value` 作为 builder 的第二个实参传下去
-/// （`owner[props.builder].call(owner, context, value)`），与 Dart 的
+/// 机制），只多一步——把 `valueListenable.value` 作为 builder 的第二个实参传下去
+/// （`builder(context, value, child)`），与 Dart 的
 /// `builder: (context, value, child) => …` 形参语义一致。
 ///
 /// 订阅对象是 ValueNotifier（JS 侧 extends ChangeNotifier，句柄 kind 复用
@@ -654,10 +654,20 @@ export class ValueListenableBuilder {
     this.props = props || {};
   }
   initState() {
-    var l = this.props.listenable;
+    this.__subscribe(this.props.valueListenable);
+  }
+  didUpdateWidget() {
+    var next = this.props.valueListenable;
+    if (next !== this.__listenable) { this.__subscribe(next); }
+  }
+  __subscribe(l) {
+    if (this.__listenable && this.__listener) {
+      this.__listenable.removeListener(this.__listener);
+    }
+    this.__listenable = l;
+    this.__listener = null;
     if (l && typeof l.addListener === 'function') {
       var self = this;
-      this.__listenable = l;
       this.__listener = function () { self.setState(function () {}); };
       l.addListener(this.__listener);
     }
@@ -668,7 +678,7 @@ export class ValueListenableBuilder {
       console.warn('[ValueListenableBuilder] builder 不是闭包');
       return null;
     }
-    var l = this.props.listenable;
+    var l = this.props.valueListenable;
     var value = (l && l.value !== undefined) ? l.value : null;
     return __h('ValueListenableBuilder', {
       notifier: l,

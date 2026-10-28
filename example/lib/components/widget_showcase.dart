@@ -22,6 +22,7 @@ import 'sliver_fill_remaining_detail.dart';
 import 'sliver_persistent_header_detail.dart';
 import 'spacer_detail.dart';
 import 'tween_animation_builder_detail.dart';
+import 'value_listenable_builder_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -101,6 +102,11 @@ class WidgetShowcase extends StatelessWidget {
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
     _Group('状态管理', [
       _Entry('ChangeNotifier', 'ListenableBuilder 局部重建（跨文件模型 + dispose）', 'NotifierCard'),
+      _Entry(
+        'ValueListenableBuilder',
+        'ValueNotifier 订阅：值变化只重建该子树，赋相同值不重建，可切订阅对象',
+        'ValueListenableBuilderDetail',
+      ),
       _Entry('AutomaticKeepAlive', '切页保活：wantKeepAlive 声明决定离屏 State 是否销毁', 'AutomaticKeepAliveDetail'),
     ]),
     _Group('无状态组件', [_Entry('StatelessWidget', '无 State，build 在 widget 类自身，props 走构造参数', 'StatelessCard')]),
@@ -219,6 +225,8 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'SpacerDetail': 'components/spacer_detail.js',
     'TweenAnimationBuilderDetail':
         'components/tween_animation_builder_detail.js',
+    'ValueListenableBuilderDetail':
+        'components/value_listenable_builder_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -263,6 +271,8 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'SliverPersistentHeaderDetail' => const SliverPersistentHeaderDetail(),
       'SpacerDetail' => const SpacerDetail(),
       'TweenAnimationBuilderDetail' => const TweenAnimationBuilderDetail(),
+      'ValueListenableBuilderDetail' =>
+        const ValueListenableBuilderDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

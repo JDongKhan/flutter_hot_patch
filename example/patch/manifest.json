@@ -1,11 +1,11 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-28T17:09:33.473845",
+  "buildTime": "2026-10-28T17:14:57.457496",
   "resources": {
-    "flutter.js": "546de5cdf36415154d42f6dd91113a93a4f7c3c7abf3546f3e5fae38039dc03c",
+    "flutter.js": "445be9d676cbe6c027a63f570d684baf0f3c3e8705deac01bafe7e14cc657579",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
-    "runtime.js": "95dcff3d31546160a5cdf6bdb2fab37e051bd294196ad9ff0ff76b13ba401d40",
+    "runtime.js": "1a1c0da0dca9f90e3d89a4e1fa7698cbb429372719730c563f4fb6d834229761",
     "hot_module_base.js": "b2df62024c440012182e5af5baf1a06a25d1b6c251c729c40210f92a9603a546",
     "app/model/app_models.js": "77d86c78799f58c67ae90fc8f78d4c506cea45bb46ff73268ec6707176627c72",
     "app/service/app_service.js": "560de89c9ea369f825607262ac45e7afc648ed07bb02c0e42cdb81b6bf1924ff",
@@ -26,6 +26,7 @@
     "components/sliver_fill_remaining_detail.js": "6e19d74fe3f481454e8f09b987b50fbcd949b7110fe00c87b2e257b5aa23d448",
     "components/preferred_size_detail.js": "cadb5bc7f2e8b4eee33492415f084f1f2aad9d91f81e93ff598bc8587b8bfde4",
     "components/dismissible_detail.js": "17a56b08ce4a710c03c99f1d1c6425aa1bb24c56e395050fe999888b66b0c63f",
+    "components/value_listenable_builder_detail.js": "04860def891149792ad72906447f43a049c36760163b4951977d542aa9b999f7",
     "components/fade_in_image_detail.js": "966c6b14b99827e824078f6add81f24d14d7e25920dce3afec0db90ec11bc2e3",
     "components/radio_group_detail.js": "f868cd22fed7d4a05f08a289957029d00a149df6edfd55fa7878e794d5a2d105",
     "components/sliver_persistent_header_detail.js": "8e55e8aaea967204ddb0f486cd3431eef7a1c562020d502e1bb6f99bc5094ff9",

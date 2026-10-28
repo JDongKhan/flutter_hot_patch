@@ -64,9 +64,15 @@ G.ChangeNotifier = ChangeNotifier;
 // `value` 用 defineProperty 的 get/set 实现，setter 里 **=== 守卫**是
 // `ValueListenableBuilder`「值不变不重建」语义的唯一来源：相同即 return，
 // 不同才赋值并 notifyListeners()（与 Dart ValueNotifier 一致）。
-function ValueNotifier(value) {
+//
+// 构造实参与其他 Dart 类一样按**具名 props 对象**下发（Dart 的 `ValueNotifier(this._value)`，
+// 形参名就是 `_value`，见 ctor_signatures），故这里按 `_value` 键取值；
+// 直接传裸值时（手写 / 内部调用）也兼容。
+function ValueNotifier(props) {
   ChangeNotifier.call(this);
-  this._value = value;
+  this._value = (props !== null && typeof props === 'object' && '_value' in props)
+    ? props._value
+    : props;
 }
 ValueNotifier.prototype = Object.create(ChangeNotifier.prototype);
 ValueNotifier.prototype.constructor = ValueNotifier;

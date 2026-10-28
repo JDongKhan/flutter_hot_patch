@@ -1433,10 +1433,20 @@ export class ValueListenableBuilder {
     this.props = props || {};
   }
   initState() {
-    var l = this.props.listenable;
+    this.__subscribe(this.props.valueListenable);
+  }
+  didUpdateWidget() {
+    var next = this.props.valueListenable;
+    if (next !== this.__listenable) { this.__subscribe(next); }
+  }
+  __subscribe(l) {
+    if (this.__listenable && this.__listener) {
+      this.__listenable.removeListener(this.__listener);
+    }
+    this.__listenable = l;
+    this.__listener = null;
     if (l && typeof l.addListener === 'function') {
       var self = this;
-      this.__listenable = l;
       this.__listener = function () { self.setState(function () {}); };
       l.addListener(this.__listener);
     }
@@ -1447,7 +1457,7 @@ export class ValueListenableBuilder {
       console.warn('[ValueListenableBuilder] builder 不是闭包');
       return null;
     }
-    var l = this.props.listenable;
+    var l = this.props.valueListenable;
     var value = (l && l.value !== undefined) ? l.value : null;
     return __h('ValueListenableBuilder', {
       notifier: l,
