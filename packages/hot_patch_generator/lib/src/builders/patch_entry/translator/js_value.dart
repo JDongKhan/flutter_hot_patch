@@ -6,6 +6,8 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
+import '../../shared/js_widget_defs.dart';
+import '../../shared/runtime_global_types.dart';
 import '../class_info.dart';
 
 /// JS 双引号字符串字面量（唯一实现）。
@@ -153,6 +155,46 @@ bool isBasicType(String typeName) {
     'int' || 'double' || 'num' || 'String' || 'bool' || 'dynamic' => true,
     _ => false,
   };
+}
+
+/// `x is T` → JS 类型判别表达式；T 在 JS 侧不可解析时返回 null。
+///
+/// Dart 的运行时类型在 JS 侧没有一一对应的构造（`int` / `double` 同是 number、
+/// List 是数组、Map 是普通对象），因此基础类型按 JS 语义映射，其余按
+/// `instanceof`——但**只对确实存在的类**生效：`instanceof` 遇到未定义的构造会
+/// 抛 ReferenceError，宁可整条表达式不翻译（与其它不可翻译表达式同一策略）。
+///
+/// [knownClasses] 是本次分析可见的项目类名（`ClassInfo` 表）；宿主包装类与
+/// 运行时注入的全局类（`G.X = …`）自动可见，无需登记。
+String? typeTestJs(String typeName, String valueJs, {Set<String> knownClasses = const {}}) {
+  final t = eraseType(typeName);
+  switch (t) {
+    case 'String':
+      return 'typeof $valueJs === "string"';
+    case 'int':
+    case 'double':
+    case 'num':
+      return 'typeof $valueJs === "number"';
+    case 'bool':
+      return 'typeof $valueJs === "boolean"';
+    case 'List':
+    case 'Iterable':
+      return 'Array.isArray($valueJs)';
+    case 'Map':
+      return '($valueJs != null && typeof $valueJs === "object" '
+          '&& !Array.isArray($valueJs))';
+    case 'Function':
+      return 'typeof $valueJs === "function"';
+    case 'Object':
+    case 'dynamic':
+      return '$valueJs != null';
+  }
+  if (knownClasses.contains(t) ||
+      hostWrapperTypes.contains(t) ||
+      runtimeGlobalTypes().contains(t)) {
+    return '$valueJs instanceof $t';
+  }
+  return null;
 }
 
 // ===========================================================================

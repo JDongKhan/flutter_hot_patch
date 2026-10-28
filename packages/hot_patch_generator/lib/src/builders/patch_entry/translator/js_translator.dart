@@ -151,6 +151,19 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   }
   // switch 表达式（Dart 3）→ IIFE + JS switch（JS 无 switch 表达式语法）。
   if (e is SwitchExpression) return _switchExpressionJs(e, scope, classes);
+  // 类型判断 `x is T` / `x is! T`：按 Dart 语义映射成 JS 判别（见 typeTestJs）。
+  // 类型在 JS 侧不可解析时整条不翻译，避免产出 `instanceof <未定义>`。
+  if (e is IsExpression) {
+    final v = exprToJs(e.expression, scope, classes);
+    if (v == null) return null;
+    final test = typeTestJs(
+      e.type.toSource(),
+      v,
+      knownClasses: classes.keys.toSet(),
+    );
+    if (test == null) return null;
+    return e.notOperator == null ? '($test)' : '(!$test)';
+  }
   // `this`（如 `TabController(length: n, vsync: this)`）：JS 侧方法/构造实参里
   // 的 this 就是组件实例，一比一透传；Dart 侧专属的实参（vsync）由 JS 代理类
   // 构造自行忽略。

@@ -9,6 +9,7 @@ import 'focus_detail.dart';
 import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
+import 'keyboard_listener_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -73,6 +74,7 @@ class WidgetShowcase extends StatelessWidget {
       _Entry('Focus / FocusNode', 'requestFocus / unfocus、onFocusChange、hasFocus、canRequestFocus', 'FocusDetail'),
       _Entry('Hero', '跨路由共享元素：点卡片飞向目标页，返回时飞回', 'HeroDetail'),
       _Entry('ImageFiltered', '整棵子树图片滤镜：blur / dilate / matrix / compose', 'ImageFilteredDetail'),
+      _Entry('KeyboardListener', '原始按键事件：KeyDown/Repeat/Up、logicalKey 比较、focusNode', 'KeyboardListenerDetail'),
     ]),
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
     _Group('状态管理', [
@@ -163,6 +165,7 @@ class WidgetDetailPage extends StatelessWidget {
     'HeroDetail': 'components/hero_detail.js',
     'ImageFilteredDetail': 'components/image_filtered_detail.js',
     'ImageIconDetail': 'components/image_icon_detail.js',
+    'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -191,6 +194,7 @@ class WidgetDetailPage extends StatelessWidget {
       'HeroDetail' => const HeroDetail(),
       'ImageFilteredDetail' => const ImageFilteredDetail(),
       'ImageIconDetail' => const ImageIconDetail(),
+      'KeyboardListenerDetail' => const KeyboardListenerDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

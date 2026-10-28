@@ -70,6 +70,7 @@ import 'easy_refresh_js.dart';
 import 'focus_js.dart';
 import 'handle_registry_js.dart';
 import 'key_js.dart';
+import 'keyboard_listener_js.dart';
 import 'mini_react_js.dart';
 import 'provider_js.dart';
 import 'scroll_controller_js.dart';
@@ -719,6 +720,9 @@ String runtimeJsSource() {
     _section('【18】TextEditingController', textEditingControllerJsSource),
     // Focus：FocusNode 代理类（宿主桥见 capabilities/focus/focus_bridge.dart）。
     _section('【18.5】FocusNode', focusJsSource),
+    // KeyboardListener：KeyEvent / LogicalKeyboardKey 镜像 + 宿主按键事件派发
+    // （宿主桥见 capabilities/keyboard_listener/keyboard_listener_bridge.dart）。
+    _section('【18.6】键盘事件（KeyEvent / LogicalKeyboardKey）', keyboardListenerJsSource),
     _section('【19】TabController', tabControllerJsSource),
     _section('【20】Key 类族', keyJsSource),
     _section('【21】BuildContext 代理', buildContextJsSource),

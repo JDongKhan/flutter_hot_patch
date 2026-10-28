@@ -45,6 +45,10 @@ final JsControllerBridge<FocusNode> _focusBridge = JsControllerBridge<FocusNode>
   },
 );
 
+/// FocusNode 句柄桥：需要真实 FocusNode 的其它能力（KeyboardListener 等）
+/// 复用同一条桥，保证「同一 JS 实例 ↔ 同一宿主节点」。
+JsControllerBridge<FocusNode> get focusNodeBridge => _focusBridge;
+
 /// 幂等注册 FocusNode 句柄 kind（由 js_ui_capabilities 聚合调用）。
 void ensureFocusChannels() => _focusBridge.ensure();
 

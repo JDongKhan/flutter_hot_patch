@@ -50,6 +50,7 @@ import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
 import 'focus/focus_library.dart';
 import 'key/key_library.dart';
+import 'keyboard_listener/keyboard_listener_library.dart';
 import 'notification_listener/notification_listener_library.dart';
 import 'provider/provider_library.dart';
 import 'scroll_controller/scroll_controller_library.dart';
@@ -134,6 +135,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const TextEditingControllerLibrary());
   // Focus：FocusNode 句柄 + Focus 组件（焦点变化经 Host 回传镜像）。
   registerJsUiLibrary(const FocusLibrary());
+  // KeyboardListener：复用 FocusNode 句柄，按键事件经 __jsuiKeyEvent 回 JS。
+  registerJsUiLibrary(const KeyboardListenerLibrary());
   registerJsUiLibrary(const TabLibrary());
   registerJsUiLibrary(const KeyLibrary());
   registerJsUiLibrary(const BuildContextLibrary());

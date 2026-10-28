@@ -484,6 +484,12 @@ export class InputDecoration {
   static collapsed(props) { return new InputDecoration(Object.assign({}, props, { factory: 'collapsed' })); }
 }
 
+export class KeyboardListener {
+  constructor(props) {
+    return __h('KeyboardListener', props);
+  }
+}
+
 export class LinearProgressIndicator {
   constructor(props) {
     return __h('LinearProgressIndicator', props);
