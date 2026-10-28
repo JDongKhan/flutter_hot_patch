@@ -926,7 +926,7 @@ String translateMethodBody(
   if (body is ExpressionFunctionBody) {
     final e = body.expression;
     String? t;
-    if (widgetCtx != null && returnsWidget && _isWidgetCtorExpr(e)) {
+    if (widgetCtx != null && returnsWidget && widgetCtx.isWidgetCtor(e)) {
       t = _widgetExprToJs(widgetCtx, e, depth);
     }
     t ??= _bodyExprStmtJs(e, scope, classes);
@@ -1078,7 +1078,7 @@ String translateStmtList(
         continue;
       }
       String? v;
-      if (widgetCtx != null && returnsWidget && _isWidgetCtorExpr(e)) {
+      if (widgetCtx != null && returnsWidget && widgetCtx.isWidgetCtor(e)) {
         v = _widgetExprToJs(widgetCtx, e, depth);
       }
       v ??= rhsToJs(e, scope, classes);
@@ -1541,15 +1541,6 @@ String translateClassMethodBody(
   if (widgetCtx == null || m.params.isEmpty) return run();
   return widgetCtx.withMethodParams(m.params, run);
 }
-
-/// 是否为「widget 构造表达式」：`Text(...)` / `new Text(...)`。
-///
-/// [parseString] 只做语法解析（无符号解析），无 `new` 的类构造在 AST 上是
-/// [MethodInvocation]（target 为 null），因此不能只认 [InstanceCreationExpression]。
-/// 带 target 的调用（`this.x()` / `a.b()`）不是构造，返回 false。
-bool _isWidgetCtorExpr(Expression e) =>
-    e is InstanceCreationExpression ||
-    (e is MethodInvocation && e.target == null);
 
 /// 把一个 Widget 构造表达式（如 `Container(...)`）通过 [WidgetExprRenderer]
 /// （widget2js 层的 WidgetTranslateContext）翻译成 JS 构造调用字符串。

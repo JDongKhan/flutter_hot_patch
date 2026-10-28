@@ -1300,8 +1300,22 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 纯数据类（`Duration` / `EdgeInsets` 等）保持通用构造翻译——它们本就由
   /// 运行时的同名类承接，改走属性管线没有收益反而改变既有形态。
   String? _argWidgetJs(Expression e) {
-    // 三种构造形态：`const X(...)` / `X(...)`（无 receiver，parseString 下是
-    // MethodInvocation）/ `X.b(...)`（receiver 是类名）。
+    if (!isWidgetCtor(e)) return null;
+    final node = translate(e);
+    if (node is! Map || node['type'] == null) return null;
+    return renderValue(node, 0);
+  }
+
+  @override
+  bool isWidgetCtor(Expression e) => _ctorTypeOf(e) != null;
+
+  /// 构造表达式的**类型名**（`null` = 不是可在 JS 侧解析的构造）。
+  ///
+  /// 三种构造形态：`const X(...)` / `X(...)`（无 receiver，parseString 下是
+  /// MethodInvocation）/ `X.b(...)`（receiver 是类名）。只有类型在 JS 侧确实
+  /// 有类才认（有产物的组件、JS 侧固定类、宿主包装类）——纯数据类
+  /// （`Duration` / `EdgeInsets` 等）保持通用构造翻译。
+  String? _ctorTypeOf(Expression e) {
     final isCtor = e is InstanceCreationExpression ||
         (e is MethodInvocation &&
             (e.target == null || e.target is SimpleIdentifier));
@@ -1314,9 +1328,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
         !hostWrapperTypes.contains(ctor)) {
       return null;
     }
-    final node = translate(e);
-    if (node is! Map || node['type'] == null) return null;
-    return renderValue(node, 0);
+    return ctor;
   }
 
   /// 组件侧数据作用域（文本插值 / 数据表达式 / 事件参数 / 闭包共用一份）：

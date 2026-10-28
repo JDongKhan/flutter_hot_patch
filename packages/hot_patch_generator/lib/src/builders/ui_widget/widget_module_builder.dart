@@ -325,6 +325,7 @@ const Map<String, String> logicWidgetSources = {
   'ListenableBuilder': jsListenableBuilderComponent,
   'ValueListenableBuilder': jsValueListenableBuilderComponent,
   'AnimatedBuilder': jsAnimatedBuilderComponent,
+  'NestedScrollView': jsNestedScrollViewComponent,
 };
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
@@ -344,6 +345,32 @@ export class Builder {
       return null;
     }
     return fn(context);
+  }
+}''';
+
+/// NestedScrollView：**头部 slivers 由 JS 侧展开**。
+///
+/// Dart 的 `headerSliverBuilder` 是返回 sliver 列表的闭包，跨语言无法执行；
+/// 因此本类在 build 里调用它（第二参 `innerBoxIsScrolled` 传 false，与 Flutter
+/// 首帧语义一致），把结果与 `body` 一起作为插槽交给宿主结点——宿主只按
+/// `headerSlivers` / `body` 两个键取子树，不感知 builder 的存在。
+const String jsNestedScrollViewComponent = '''
+export class NestedScrollView {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var p = {};
+    var src = this.props;
+    for (var k in src) {
+      if (!Object.prototype.hasOwnProperty.call(src, k)) { continue; }
+      // builder 只在本类里执行，不往宿主 props 里传（函数不能跨语言）。
+      if (k === 'headerSliverBuilder') { continue; }
+      p[k] = src[k];
+    }
+    var fn = src.headerSliverBuilder;
+    p.headerSlivers = typeof fn === 'function' ? (fn(context, false) || []) : [];
+    return __h('NestedScrollView', p);
   }
 }''';
 

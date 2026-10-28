@@ -1030,6 +1030,26 @@ export class ListenableBuilder {
 }
 
 
+export class NestedScrollView {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var p = {};
+    var src = this.props;
+    for (var k in src) {
+      if (!Object.prototype.hasOwnProperty.call(src, k)) { continue; }
+      // builder 只在本类里执行，不往宿主 props 里传（函数不能跨语言）。
+      if (k === 'headerSliverBuilder') { continue; }
+      p[k] = src[k];
+    }
+    var fn = src.headerSliverBuilder;
+    p.headerSlivers = typeof fn === 'function' ? (fn(context, false) || []) : [];
+    return __h('NestedScrollView', p);
+  }
+}
+
+
 export class PageView {
   constructor(props) {
     this.props = props || {};

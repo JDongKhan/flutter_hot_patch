@@ -473,6 +473,33 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     );
   });
 
+  // NestedScrollView：头部 slivers 由 JS 侧组件调用 `headerSliverBuilder`
+  // 展开后经 `headerSlivers` 插槽下发（宿主不感知 builder），`body` 同插槽。
+  // controller 与其它滚动视图同款分流 _scrollControllerHost。
+  r.register('NestedScrollView', (c) {
+    final headers = _flatChildren(c, 'headerSlivers');
+    final body = (c.children['body'] as Widget?) ?? const SizedBox.shrink();
+    final reverse = c.bool_('reverse') ?? false;
+    final floatHeaderSlivers = c.bool_('floatHeaderSlivers') ?? false;
+    final scrollDirection =
+        axisFromJson(c.props['scrollDirection']) ?? Axis.vertical;
+    final physics = scrollPhysicsFromJson(c.props['physics']);
+    final clipBehavior = clipBehaviorFromJson(c.props['clipBehavior']);
+    Widget buildWith(ScrollController? controller) => NestedScrollView(
+          controller: controller,
+          body: body,
+          headerSliverBuilder: (_, __) => headers,
+          reverse: reverse,
+          floatHeaderSlivers: floatHeaderSlivers,
+          scrollDirection: scrollDirection,
+          physics: physics,
+          clipBehavior: clipBehavior ?? Clip.hardEdge,
+        );
+    final scId = JsControllerBridge.idOf(c.props['controller']);
+    if (scId == null) return buildWith(null);
+    return _scrollControllerHost(c, scId, buildWith);
+  });
+
   // SliverList：`.builder`/`.separated` 命名构造还原 Flutter 同名原生构造；
   // `SliverChildBuilderDelegate` 形态（只有 childCount）还原
   // `SliverChildBuilderDelegate`；ListDelegate 形态还原 `SliverChildListDelegate`。

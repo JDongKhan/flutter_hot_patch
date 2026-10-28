@@ -368,6 +368,15 @@ class FieldScope {
 /// `return Container(...)` 这类 widget 构造表达式经此接口交给 widget 层渲染，
 /// 其余表达式仍走本文件的通用翻译。
 abstract class WidgetExprRenderer {
+  /// 是否「组件 / 值对象构造表达式」：`Text(...)`、`const X(...)`、`X.b(...)`，
+  /// 且类型在 JS 侧确实有类（有产物的组件 / 宿主包装类 / 运行时固定类）。
+  ///
+  /// 判断放在 widget 层而不是本文件：只有它知道类型解析与产物归属。方法体里
+  /// `return ListView.builder(...)` 这类命名构造必须命中，否则会落到通用表达式
+  /// 翻译——虽然能产出 `ListView.builder({...})`，但**不会登记产物 import**，
+  /// 运行时是未定义引用。
+  bool isWidgetCtor(Expression e);
+
   /// widget 构造表达式 → 中立描述（Map 节点 / String JS 表达式）。
   Object? translate(Expression e);
 

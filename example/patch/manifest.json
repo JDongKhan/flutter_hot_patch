@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-28T11:01:00.920043",
+  "buildTime": "2026-10-28T11:34:57.844893",
   "resources": {
-    "flutter.js": "93cfdc95d5b2587bea6f30d868e396485c6f7439e0b1777dfc62f8334e018965",
+    "flutter.js": "88e901d94823119be444e4a1e76c07ad0bfe19db9c6d3e511d3ed5bbe11d9838",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
     "runtime.js": "1868990fce37c317addc20030cdd4a64e83122d1d37fd83e969a0e0ff8d898b6",
     "hot_module_base.js": "b2df62024c440012182e5af5baf1a06a25d1b6c251c729c40210f92a9603a546",
@@ -32,6 +32,7 @@
     "components/keyboard_listener_detail.js": "dc28cabc6d33b82251b17cadcf2d76ce524dd3984ada23fcf81d64d1bc2b9cfd",
     "components/implicit_animation_detail.js": "a336adb21b96fea2e1e0664ca332bb09a91d833eaec37fa5e6b38e2486036bae",
     "components/hello_component.js": "fc3b06e9730db38840012d9e5cbdfbbe54f1f04456e5c68d18d58751ca983fc0",
+    "components/nested_scroll_view_detail.js": "5b7f2c67f9c5d4d40c1d1d627f9425b01bd99de2faad141f4e99914468832c68",
     "components/hero_detail.js": "0b657f3c2f3d0575ddf93abd46911583c007eedc3c1199bf2ab82f5c1d397018",
     "components/animated_list_detail.js": "dbeb627fef8fa0ff89e5a5d3503d692738d130cd17c8bcd96f88b7f39ce4c1b6",
     "components/watch_demo.js": "b7008490f0613b1b7a12145f6e73eb762e12d7a343a8f8fe873165b2c83363e4",

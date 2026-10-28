@@ -10,6 +10,7 @@ import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
 import 'keyboard_listener_detail.dart';
+import 'nested_scroll_view_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -60,6 +61,7 @@ class WidgetShowcase extends StatelessWidget {
     _Group('Sliver 滚动', [
       _Entry('CustomScrollView', 'Sliver 全家桶整页（仅 JS 热更版）', 'SliverDetail'),
       _Entry('GridView', 'GridView 懒加载验证（仅 JS 热更版）', 'GridDetail'),
+      _Entry('NestedScrollView', '头部 slivers 与内层 body 联动：pinned 折叠 / floating 浮出', 'NestedScrollViewDetail'),
     ]),
     _Group('页面骨架', [
       _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
@@ -166,6 +168,7 @@ class WidgetDetailPage extends StatelessWidget {
     'ImageFilteredDetail': 'components/image_filtered_detail.js',
     'ImageIconDetail': 'components/image_icon_detail.js',
     'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
+    'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -195,6 +198,7 @@ class WidgetDetailPage extends StatelessWidget {
       'ImageFilteredDetail' => const ImageFilteredDetail(),
       'ImageIconDetail' => const ImageIconDetail(),
       'KeyboardListenerDetail' => const KeyboardListenerDetail(),
+      'NestedScrollViewDetail' => const NestedScrollViewDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

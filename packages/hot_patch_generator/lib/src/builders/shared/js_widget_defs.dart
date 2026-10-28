@@ -96,6 +96,9 @@ const Set<String> logicWidgetTypes = {
   'ValueListenableBuilder',
   // 显式动画：JS 侧按 animation 当前 value 展开 builder 子树（局部重建）。
   'AnimatedBuilder',
+  // `headerSliverBuilder` 是**返回 sliver 列表的闭包**，跨语言无法执行：
+  // JS 侧调用它把头部 slivers 展开成有序子结点，宿主只消费插槽。
+  'NestedScrollView',
 };
 
 /// 懒容器类型 → 触发懒的 props 键（空列表 = 无条件懒）。
