@@ -601,13 +601,14 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     ),
   );
 
-  // SliverFillViewport：delegate（同上分流）+ viewportFraction（缺省 1.0，
-  // Flutter 默认）。
+  // SliverFillViewport：delegate（同上分流）+ viewportFraction（缺省 1.0）/
+  // padEnds（缺省 true），即 Flutter 默认。
   r.register(
     'SliverFillViewport',
     (c) => SliverFillViewport(
       delegate: _sliverDelegate(c),
       viewportFraction: c.num_('viewportFraction') ?? 1,
+      padEnds: c.bool_('padEnds') ?? true,
     ),
   );
 

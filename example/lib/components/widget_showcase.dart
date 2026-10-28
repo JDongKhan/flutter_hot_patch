@@ -17,6 +17,7 @@ import 'pop_scope_detail.dart';
 import 'preferred_size_detail.dart';
 import 'radio_group_detail.dart';
 import 'safe_area_detail.dart';
+import 'sliver_fill_viewport_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -68,6 +69,7 @@ class WidgetShowcase extends StatelessWidget {
       _Entry('CustomScrollView', 'Sliver 全家桶整页（仅 JS 热更版）', 'SliverDetail'),
       _Entry('GridView', 'GridView 懒加载验证（仅 JS 热更版）', 'GridDetail'),
       _Entry('NestedScrollView', '头部 slivers 与内层 body 联动：pinned 折叠 / floating 浮出', 'NestedScrollViewDetail'),
+      _Entry('SliverFillViewport', '每屏占视口 fraction：切 1.0/0.8/0.5，padEnds 对比', 'SliverFillViewportDetail'),
     ]),
     _Group('页面骨架', [
       _Entry('Scaffold / AppBar / Center', '页面级组件（仅 JS 热更版）', 'ScaffoldDetail'),
@@ -128,7 +130,8 @@ class WidgetShowcase extends StatelessWidget {
                         e.component == 'GridDetail' ||
                         e.component == 'KeyDetail' ||
                         e.component == 'DrawerDetail' ||
-                        e.component == 'PreferredSizeDetail',
+                        e.component == 'PreferredSizeDetail' ||
+                        e.component == 'SliverFillViewportDetail',
                   ),
                 ),
               ),
@@ -186,6 +189,7 @@ class WidgetDetailPage extends StatelessWidget {
     'PreferredSizeDetail': 'components/preferred_size_detail.js',
     'RadioGroupDetail': 'components/radio_group_detail.js',
     'SafeAreaDetail': 'components/safe_area_detail.js',
+    'SliverFillViewportDetail': 'components/sliver_fill_viewport_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -224,6 +228,7 @@ class WidgetDetailPage extends StatelessWidget {
       'PreferredSizeDetail' => const PreferredSizeDetail(),
       'RadioGroupDetail' => const RadioGroupDetail(),
       'SafeAreaDetail' => const SafeAreaDetail(),
+      'SliverFillViewportDetail' => const SliverFillViewportDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
