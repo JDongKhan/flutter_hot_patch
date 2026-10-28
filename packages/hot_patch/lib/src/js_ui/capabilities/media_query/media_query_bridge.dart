@@ -16,6 +16,9 @@ import '../../../services/js_runtime_manager.dart';
 
 /// 把当前 `MediaQueryData` 推给 JS（幂等；无变化时 JS 侧直接早退）。
 void pushMediaQueryToJs(BuildContext context) {
+  // 运行时骨架还没求值（首帧早于 patch/runtime.js 加载）时无事可做：
+  // `__jsuiSetMediaQuery` 尚未定义，求值只会报「Can't find variable」。
+  if (!JsRuntimeManager.instance.isJsUiRuntimeReady) return;
   final mq = MediaQuery.of(context);
   final payload = <String, Object?>{
     'size': {'width': mq.size.width, 'height': mq.size.height},

@@ -99,8 +99,10 @@ const Set<String> logicWidgetTypes = {
   // `headerSliverBuilder` 是**返回 sliver 列表的闭包**，跨语言无法执行：
   // JS 侧调用它把头部 slivers 展开成有序子结点，宿主只消费插槽。
   'NestedScrollView',
-  // 方向 builder：`builder(context, orientation)` 在 JS 里执行（方向取自
-  // MediaQuery 同步镜像）。
+  // 父约束 builder：`builder(context, constraints)` 必须在 JS 里执行，而约束由
+  // 宿主在**布局阶段**下发（JS 侧取不到同步约束）。
+  'LayoutBuilder',
+  // 方向 builder：与 Flutter 源码一致，由 LayoutBuilder + 父约束推方向。
   'OrientationBuilder',
 };
 

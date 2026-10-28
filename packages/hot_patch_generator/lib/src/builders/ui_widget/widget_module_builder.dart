@@ -326,6 +326,7 @@ const Map<String, String> logicWidgetSources = {
   'ValueListenableBuilder': jsValueListenableBuilderComponent,
   'AnimatedBuilder': jsAnimatedBuilderComponent,
   'NestedScrollView': jsNestedScrollViewComponent,
+  'LayoutBuilder': jsLayoutBuilderComponent,
   'OrientationBuilder': jsOrientationBuilderComponent,
 };
 
@@ -377,21 +378,74 @@ export class NestedScrollView {
 
 /// OrientationBuilder：`builder(context, orientation)` 必须在 JS 里执行。
 ///
-/// 方向来源是 `MediaQuery.of(context).orientation`（JS 侧同步镜像，见运行时
-/// 【18.7】），与 Dart 侧同一事实源：`build` 里读一次即登记依赖，屏幕旋转
-/// 时本组件重建、builder 重新执行一次（而非把两个方向都先展开交给宿主挑）。
+/// 与 Flutter 源码 1:1——原生实现就是
+/// `LayoutBuilder(builder: (context, c) => builder(context, c.maxWidth > c.maxHeight
+///   ? Orientation.landscape : Orientation.portrait))`，
+/// 这里同样**基于 LayoutBuilder 类**委托，不自己取窗口方向。
 const String jsOrientationBuilderComponent = '''
 export class OrientationBuilder {
   constructor(props) {
     this.props = props || {};
   }
   build(context) {
-    var fn = this.props.builder;
-    if (typeof fn !== 'function') {
+    var builder = this.props.builder;
+    if (typeof builder !== 'function') {
       console.warn('[OrientationBuilder] builder 不是闭包');
       return null;
     }
-    return fn(context, MediaQuery.of(context).orientation);
+    return __h(LayoutBuilder, {
+      'builder': function (context, constraints) {
+        return builder(context, constraints.maxWidth > constraints.maxHeight
+          ? Orientation.landscape
+          : Orientation.portrait);
+      },
+    });
+  }
+}''';
+
+/// LayoutBuilder：`builder(context, constraints)` 在 JS 里执行，约束由宿主下发。
+///
+/// 与 Dart 的关系：Flutter 的 LayoutBuilder 在**布局阶段**执行 builder 决定子树，
+/// 而 builder 闭包只存在于 JS、约束也只有布局阶段才知道。所以本类把 builder
+/// **登记成跨语言句柄**放进宿主结点的 props（`builder`，键名与 Dart 形参一致）；
+/// 宿主用真实 `LayoutBuilder` 承载该结点，布局时 `invoke(句柄, [约束 JSON])`
+/// 回调本类 —— 本类用约束执行 builder，把结果作为子结点下发（patch 增量子树）。
+///
+/// 约束按值去重：宿主每次布局都会回调，同值不重建（避免布局→重建→再布局自激）。
+/// 首帧（还没有约束）子树为空，与 Flutter LayoutBuilder 自身的首帧语义一致。
+const String jsLayoutBuilderComponent = '''
+export class LayoutBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var builder = this.props.builder;
+    if (typeof builder !== 'function') {
+      console.warn('[LayoutBuilder] builder 不是闭包');
+      return null;
+    }
+    var self = this;
+    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
+    // 宿主在布局阶段调用：实参是本结点的**父约束** JSON，不是事件参数。
+    var handle = this.__bindFn(0, [], function (json) {
+      var c = __jsuiBoxConstraints(json);
+      var prev = self.__constraints;
+      if (prev && prev.minWidth === c.minWidth && prev.maxWidth === c.maxWidth &&
+          prev.minHeight === c.minHeight && prev.maxHeight === c.maxHeight) {
+        return;
+      }
+      self.__constraints = c;
+      self.__child = builder(context, c);
+      self.setState(function () {});
+    });
+    var props = { 'builder': handle };
+    if (this.__child != null) {
+      console.log('[LayoutBuilder] child element=' + (this.__child && this.__child.element) +
+        ' keys=' + (this.__child && typeof this.__child === 'object'
+          ? Object.keys(this.__child).join(',') : typeof this.__child));
+      props.child = this.__child;
+    }
+    return __h('LayoutBuilder', props);
   }
 }''';
 

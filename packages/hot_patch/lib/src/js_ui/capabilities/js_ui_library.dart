@@ -51,6 +51,7 @@ import 'easy_refresh/easy_refresh_library.dart';
 import 'focus/focus_library.dart';
 import 'key/key_library.dart';
 import 'keyboard_listener/keyboard_listener_library.dart';
+import 'layout_builder/layout_builder_library.dart';
 import 'notification_listener/notification_listener_library.dart';
 import 'provider/provider_library.dart';
 import 'scroll_controller/scroll_controller_library.dart';
@@ -137,6 +138,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const FocusLibrary());
   // KeyboardListener：复用 FocusNode 句柄，按键事件经 __jsuiKeyEvent 回 JS。
   registerJsUiLibrary(const KeyboardListenerLibrary());
+  // LayoutBuilder：父约束在布局阶段回传 JS（OrientationBuilder 基于它实现）。
+  registerJsUiLibrary(const LayoutBuilderLibrary());
   registerJsUiLibrary(const TabLibrary());
   registerJsUiLibrary(const KeyLibrary());
   registerJsUiLibrary(const BuildContextLibrary());

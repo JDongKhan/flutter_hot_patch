@@ -344,6 +344,12 @@ class JsRuntimeManager {
   /// 运行时产物在补丁根目录下的文件名（与 `patch/<package>.js` 同级）。
   static const String runtimeJsAsset = 'runtime.js';
 
+  /// JS 侧 UI 运行时骨架（`runtime.js`）是否已求值。
+  ///
+  /// 宿主向 JS 推送同步镜像（MediaQuery 等）之前必须确认：首帧可能早于
+  /// `patch/runtime.js` 加载，此时 `__jsui*` 全局还不存在，求值只会报错。
+  bool get isJsUiRuntimeReady => _jsUiInited;
+
   /// 运行时产物路径：优先跟随**当前模块所在补丁根目录**。
   ///
   /// 组件的入口可能是 `assets/patch/components/x.js`（asset 场景），也可能是

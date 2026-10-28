@@ -71,6 +71,7 @@ import 'focus_js.dart';
 import 'handle_registry_js.dart';
 import 'key_js.dart';
 import 'keyboard_listener_js.dart';
+import 'layout_builder_js.dart';
 import 'media_query_js.dart';
 import 'mini_react_js.dart';
 import 'provider_js.dart';
@@ -408,7 +409,27 @@ const String _jsUiEmit = r'''
     root.ops = null;
     if (!list || !list.length) { return; }
     // 补丁按页面 key 路由到对应 JsUiStore（key 放进 args，宿主 handler 解析）。
-    send('jsuiCommit', { args: { key: root.key, ops: list } });
+    try {
+      send('jsuiCommit', { args: { key: root.key, ops: list } });
+    } catch (e) {
+      // 诊断：某条 op 的载荷带循环引用时 JSON.stringify 会整体抛错，这里逐条
+      // 重试并报出**无法序列化的那一 op**（类型 + props 键名），便于定位是谁
+      // 把实例/元素塞进了 props（元素带 `inst`，实例带 `__elCache`，互为环）。
+      for (var di = 0; di < list.length; di++) {
+        try {
+          JSON.stringify(list[di]);
+        } catch (e2) {
+          var bad = list[di];
+          var ks = [];
+          var bp = bad.props || {};
+          for (var bk in bp) { ks.push(bk + ':' + typeof bp[bk]); }
+          console.error('jsui: op not serializable #' + di + ' op=' + bad.op +
+            ' type=' + bad.type + ' id=' + bad.id +
+            ' keys=[' + ks.join(',') + ']: ' + e2);
+        }
+      }
+      throw e;
+    }
   }
 
 ''';
@@ -726,6 +747,8 @@ String runtimeJsSource() {
     _section('【18.6】键盘事件（KeyEvent / LogicalKeyboardKey）', keyboardListenerJsSource),
     // MediaQuery 同步镜像：宿主推 JSON，JS 侧 `MediaQuery.of(context)` 同步读。
     _section('【18.7】MediaQuery 镜像', mediaQueryJsSource),
+    // 父约束下发：LayoutBuilder 逻辑组件的约束由宿主布局阶段推给 JS。
+    _section('【18.8】父约束下发（LayoutBuilder）', layoutBuilderJsSource),
     _section('【19】TabController', tabControllerJsSource),
     _section('【20】Key 类族', keyJsSource),
     _section('【21】BuildContext 代理', buildContextJsSource),

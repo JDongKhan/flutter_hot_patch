@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/orientation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Container, OrientationBuilder, Padding, Row, SizedBox, Text } from '../flutter.js';
+import { Column, Container, LayoutBuilder, OrientationBuilder, Padding, Row, SizedBox, Text } from '../flutter.js';
 
 // 组件 OrientationBuilderDetail
 export class OrientationBuilderDetail {
@@ -144,6 +144,67 @@ export class OrientationBuilderDetail {
                 "data": "landscape：内边距 6"
               })))
             }); }
+        }),
+        (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 10
+        }))),
+        (this.__k9 || (this.__k9 = new Text({
+          "data": "④ LayoutBuilder → 父约束",
+          "style": {
+            "color": Colors.black54,
+            "fontSize": 12
+          }
+        }))),
+        (this.__k5 || (this.__k5 = new SizedBox({
+          "height": 6
+        }))),
+        new LayoutBuilder({
+          "builder": (context, c) => {
+            var wide = (c.maxWidth > 420);
+            var tiles = [this._tile("X", Colors.indigo), this._tile("Y", Colors.pink)];
+            return new Container({
+              "color": Colors.indigo.shade50,
+              "padding": {
+                "left": 8.0,
+                "top": 8.0,
+                "right": 8.0,
+                "bottom": 8.0
+              },
+              "child": new Column({
+                "crossAxisAlignment": "start",
+                "children": [
+                  new Text({
+                    "style": {
+                      "fontSize": 12
+                    },
+                    "data": "maxWidth：" + c.maxWidth.toStringAsFixed(0) + "   " + "maxHeight：" + c.maxHeight.toStringAsFixed(0)
+                  }),
+                  new Text({
+                    "style": {
+                      "fontSize": 12
+                    },
+                    "data": "hasBoundedWidth：" + c.hasBoundedWidth + "   " + "hasBoundedHeight：" + c.hasBoundedHeight
+                  }),
+                  new Text({
+                    "style": {
+                      "fontSize": 12
+                    },
+                    "data": "biggest：" + c.biggest.width.toStringAsFixed(0) + " x " + c.biggest.height.toStringAsFixed(0)
+                  }),
+                  (this.__k5 || (this.__k5 = new SizedBox({
+                    "height": 6
+                  }))),
+                  (wide ? new Row({
+                    "mainAxisSize": "min",
+                    "children": tiles
+                  }) : new Column({
+                    "mainAxisSize": "min",
+                    "children": tiles
+                  }))
+                ]
+              })
+            });
+          }
         })
       ]
     });

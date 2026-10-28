@@ -959,6 +959,42 @@ export class GridView {
 
 }
 
+export class LayoutBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var builder = this.props.builder;
+    if (typeof builder !== 'function') {
+      console.warn('[LayoutBuilder] builder 不是闭包');
+      return null;
+    }
+    var self = this;
+    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
+    // 宿主在布局阶段调用：实参是本结点的**父约束** JSON，不是事件参数。
+    var handle = this.__bindFn(0, [], function (json) {
+      var c = __jsuiBoxConstraints(json);
+      var prev = self.__constraints;
+      if (prev && prev.minWidth === c.minWidth && prev.maxWidth === c.maxWidth &&
+      prev.minHeight === c.minHeight && prev.maxHeight === c.maxHeight) {
+        return;
+      }
+      self.__constraints = c;
+      self.__child = builder(context, c);
+      self.setState(function () {});
+    });
+    var props = { 'builder': handle };
+    if (this.__child != null) {
+      console.log('[LayoutBuilder] child element=' + (this.__child && this.__child.element) +
+      ' keys=' + (this.__child && typeof this.__child === 'object'
+      ? Object.keys(this.__child).join(',') : typeof this.__child));
+      props.child = this.__child;
+    }
+    return __h('LayoutBuilder', props);
+  }
+}
+
+
 export class ListView {
   constructor(props) {
     this.props = props || {};
@@ -1055,12 +1091,18 @@ export class OrientationBuilder {
     this.props = props || {};
   }
   build(context) {
-    var fn = this.props.builder;
-    if (typeof fn !== 'function') {
+    var builder = this.props.builder;
+    if (typeof builder !== 'function') {
       console.warn('[OrientationBuilder] builder 不是闭包');
       return null;
     }
-    return fn(context, MediaQuery.of(context).orientation);
+    return __h(LayoutBuilder, {
+      'builder': function (context, constraints) {
+        return builder(context, constraints.maxWidth > constraints.maxHeight
+        ? Orientation.landscape
+        : Orientation.portrait);
+      },
+    });
   }
 }
 

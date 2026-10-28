@@ -86,6 +86,42 @@ const String dartValuesJsSource = r'''
   Radius.prototype.toJSON = function () { return { radius: this.x }; };
   G.Radius = Radius;
 
+  // BoxConstraints：布局约束值对象（LayoutBuilder 的 builder 第二参）。宿主按
+  // {minWidth, maxWidth, minHeight, maxHeight} 下发，无界维度发 null（JSON 不能
+  // 表达 Infinity），这里还原成 +∞（见【18.8】）。
+  function BoxConstraints(props) {
+    props = __posArgs(props, ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']);
+    this.minWidth = props.minWidth != null ? props.minWidth : 0;
+    this.maxWidth = props.maxWidth != null ? props.maxWidth : Infinity;
+    this.minHeight = props.minHeight != null ? props.minHeight : 0;
+    this.maxHeight = props.maxHeight != null ? props.maxHeight : Infinity;
+  }
+  __defineProtoGetter(BoxConstraints.prototype, 'biggest', function () {
+    return new Size({ width: this.maxWidth, height: this.maxHeight });
+  });
+  __defineProtoGetter(BoxConstraints.prototype, 'smallest', function () {
+    return new Size({ width: this.minWidth, height: this.minHeight });
+  });
+  __defineProtoGetter(BoxConstraints.prototype, 'isTight', function () {
+    return this.minWidth >= this.maxWidth && this.minHeight >= this.maxHeight;
+  });
+  __defineProtoGetter(BoxConstraints.prototype, 'hasBoundedWidth', function () {
+    return this.maxWidth < Infinity;
+  });
+  __defineProtoGetter(BoxConstraints.prototype, 'hasBoundedHeight', function () {
+    return this.maxHeight < Infinity;
+  });
+  // 无界维度回 null：与宿主下发协议同形，保证跨语言往返一致。
+  BoxConstraints.prototype.toJSON = function () {
+    return {
+      minWidth: this.minWidth,
+      maxWidth: this.maxWidth === Infinity ? null : this.maxWidth,
+      minHeight: this.minHeight,
+      maxHeight: this.maxHeight === Infinity ? null : this.maxHeight,
+    };
+  };
+  G.BoxConstraints = BoxConstraints;
+
   // TextSpan：Dart 富文本子树的值对象（RichText 的 `text`）。产物按统一规则
   // 发射 `new TextSpan({text, style, children, semanticsLabel})`；这里镜像字段，
   // 跨桥时由 JSON.stringify 递归序列化成普通对象，宿主 textSpanFromJson 再
