@@ -13,6 +13,7 @@ import 'keyboard_listener_detail.dart';
 import 'nested_scroll_view_detail.dart';
 import 'orientation_builder_detail.dart';
 import 'pop_scope_detail.dart';
+import 'preferred_size_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -70,6 +71,7 @@ class WidgetShowcase extends StatelessWidget {
       _Entry('Drawer / endDrawer', '抽屉 + AppBar 汉堡按钮（仅 JS 热更版）', 'DrawerDetail'),
       _Entry('OrientationBuilder / MediaQuery', '方向与窗口尺寸驱动布局（拉高窗口切 portrait）', 'OrientationBuilderDetail'),
       _Entry('PopScope', '拦截返回：canPop 开关 + onPopInvokedWithResult 两参回调', 'PopScopeDetail'),
+      _Entry('PreferredSize', '自定义顶栏高度：任意子树声明成 PreferredSizeWidget（仅 JS 热更版）', 'PreferredSizeDetail'),
     ]),
     _Group('Tab 切换', [
       _Entry('TabBar / TabBarView', 'DefaultTabController + 显式 TabController 驱动切页', 'TabDetail'),
@@ -120,7 +122,8 @@ class WidgetShowcase extends StatelessWidget {
                         e.component == 'SliverDetail' ||
                         e.component == 'GridDetail' ||
                         e.component == 'KeyDetail' ||
-                        e.component == 'DrawerDetail',
+                        e.component == 'DrawerDetail' ||
+                        e.component == 'PreferredSizeDetail',
                   ),
                 ),
               ),
@@ -175,6 +178,7 @@ class WidgetDetailPage extends StatelessWidget {
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
     'OrientationBuilderDetail': 'components/orientation_builder_detail.js',
     'PopScopeDetail': 'components/pop_scope_detail.js',
+    'PreferredSizeDetail': 'components/preferred_size_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -207,6 +211,7 @@ class WidgetDetailPage extends StatelessWidget {
       'NestedScrollViewDetail' => const NestedScrollViewDetail(),
       'OrientationBuilderDetail' => const OrientationBuilderDetail(),
       'PopScopeDetail' => const PopScopeDetail(),
+      'PreferredSizeDetail' => const PreferredSizeDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

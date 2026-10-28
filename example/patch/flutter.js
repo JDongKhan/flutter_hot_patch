@@ -549,6 +549,12 @@ export class Positioned {
   static fromRelativeRect(props) { return new Positioned(Object.assign({}, props, { factory: 'fromRelativeRect' })); }
 }
 
+export class PreferredSize {
+  constructor(props) {
+    return __h('PreferredSize', props);
+  }
+}
+
 export class Radio {
   constructor(props) {
     return __h('Radio', props);

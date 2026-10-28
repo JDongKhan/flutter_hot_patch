@@ -64,6 +64,27 @@ const String dartValuesJsSource = r'''
   Size.prototype.toJSON = function () {
     return { width: this.width, height: this.height };
   };
+  // Dart `Size` 的命名构造 / 静态常量（产物按统一规则发射 `Size.fromHeight({…})`）。
+  // **无界维度是 +∞**：跨桥时 `JSON.stringify(Infinity)` 得到 null，宿主侧按 ∞
+  // 还原（见 js_widget_registry 的 PreferredSize / layout 约束的 null 约定）。
+  Size.fromHeight = function (props) {
+    props = __posArgs(props, ['height']);
+    return new Size({ width: Infinity, height: props.height });
+  };
+  Size.fromWidth = function (props) {
+    props = __posArgs(props, ['width']);
+    return new Size({ width: props.width, height: Infinity });
+  };
+  Size.square = function (props) {
+    props = __posArgs(props, ['dimension']);
+    return new Size({ width: props.dimension, height: props.dimension });
+  };
+  Size.copy = function (props) {
+    props = __posArgs(props, ['source']);
+    return new Size({ width: props.source.width, height: props.source.height });
+  };
+  Size.zero = { width: 0, height: 0 };
+  Size.infinite = { width: Infinity, height: Infinity };
   G.Size = Size;
 
   function Offset(props) {

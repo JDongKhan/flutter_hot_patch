@@ -794,6 +794,20 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
+  // `PreferredSize(preferredSize: Size(0, 64), child: …)`：把**任意子树**声明成
+  // `PreferredSizeWidget`（Scaffold.appBar / bottomNavigationBar / SliverAppBar 的
+  // flexibleSpace 等位置要求这个类型）。preferredSize 只取 height/width 两个字段，
+  // `Size.fromHeight(h)` 的 width 是 +∞（JSON 里被折叠成 null），按 ∞ 还原。
+  r.register('PreferredSize', (c) {
+    final raw = c.map('preferredSize') ?? const <String, dynamic>{};
+    final w = raw['width'] is num ? (raw['width'] as num).toDouble() : double.infinity;
+    final h = raw['height'] is num ? (raw['height'] as num).toDouble() : kToolbarHeight;
+    return _JsPreferredSize(
+      preferredSize: Size(w, h),
+      child: c.children['child'] as Widget?,
+    );
+  });
+
   r.register(
     'Divider',
     (c) => Divider(
@@ -959,7 +973,12 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     final appBar = (c.children['appBar'] as Widget?);
     return Scaffold(
       backgroundColor: colorFromJson(c.props['backgroundColor']),
-      appBar: appBar == null ? null : _JsAppBarAdaptor(appBar),
+      // appBar 已经是 PreferredSizeWidget（真实 AppBar / PreferredSize 结点）时
+      // 原样使用：PreferredSize 的全部意义就是自定义占位高度，套一层固定
+      // kToolbarHeight 的适配器会把高度改回去。
+      appBar: appBar == null
+          ? null
+          : (appBar is PreferredSizeWidget ? appBar : _JsAppBarAdaptor(appBar)),
       body: (c.children['body'] as Widget?),
       floatingActionButton: (c.children['floatingActionButton'] as Widget?),
       bottomNavigationBar: (c.children['bottomNavigationBar'] as Widget?),
@@ -1200,6 +1219,20 @@ class _JsAppBarAdaptor extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) => child;
+}
+
+/// `PreferredSize` 承载：把 JS 子树声明成 `PreferredSizeWidget`，尺寸由 props
+/// 的 preferredSize 决定（Scaffold.appBar 等位置据此占位）。
+class _JsPreferredSize extends StatelessWidget implements PreferredSizeWidget {
+  const _JsPreferredSize({required this.preferredSize, this.child});
+
+  @override
+  final Size preferredSize;
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) => child ?? const SizedBox.shrink();
 }
 
 /// BottomNavigationBarItem 不是 Widget：宿主侧用它包装 item 数据，
