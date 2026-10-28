@@ -139,8 +139,7 @@ class WidgetShowcase extends StatelessWidget {
                         e.component == 'PreferredSizeDetail' ||
                         e.component == 'SliverFillViewportDetail' ||
                         e.component == 'SliverFillRemainingDetail' ||
-                        e.component == 'SliverPersistentHeaderDetail' ||
-                        e.component == 'SpacerDetail',
+                        e.component == 'SliverPersistentHeaderDetail',
                   ),
                 ),
               ),

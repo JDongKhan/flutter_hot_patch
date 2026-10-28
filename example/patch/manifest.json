@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-28T16:37:32.550818",
+  "buildTime": "2026-10-28T16:40:57.674175",
   "resources": {
     "flutter.js": "97b6f70dc06a3320d38efad57a0a28bca3f0cfeb1f686c9fb20396964da7fb18",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
@@ -48,6 +48,6 @@
     "components/image_icon_detail.js": "15e419f66e3cee1a55087607534e828a91c24c0ebc6e815fab5cc61c2be3a846",
     "model/network_vm.js": "9c390ef9c440b3a7498bc6bc23b808ea90a76d9307fcf1df91b27973013011c7",
     "model/counter_vm.js": "f8bd479498a2d27de5204e8290920f169f9f7981dc8c21e433f2f717c204fc8d",
-    "components/spacer_detail.js": "04fc052c0ecfdb10586fb6c72d42165ae9a529b997c4e468ba6d9ef2975e7bcb"
+    "components/spacer_detail.js": "4d3a789b13fa9ffe26e6f3d6dd366d37258416ba0fdf5420c973810a5b576a80"
   }
 }
