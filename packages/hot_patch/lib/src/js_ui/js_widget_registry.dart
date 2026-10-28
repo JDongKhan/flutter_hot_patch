@@ -1020,6 +1020,13 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       top: c.bool_('top') ?? true,
       right: c.bool_('right') ?? true,
       bottom: c.bool_('bottom') ?? true,
+      // minimum：每边取 max(系统 padding, minimum)——即使系统 padding 为 0
+      // （如 macOS 窗口）也能强制留白，是 SafeArea 唯一可见的效果来源。
+      // 缺省即 EdgeInsets.zero（由 edgeInsetsFromJson 保证）。
+      minimum: edgeInsetsFromJson(c.map('minimum')),
+      // false 时底部用 padding.bottom；true 时改用 viewPadding.bottom
+      // （手势条区域的固定内边距，键盘弹出时不跟随变化）。
+      maintainBottomViewPadding: c.bool_('maintainBottomViewPadding') ?? false,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );

@@ -346,7 +346,28 @@ String? _branchJs(Expression e, WidgetTranslateContext ctx) {
   // 其余分支与普通值同一条分派：构造 → `new X({...})`（组件由包装类产出元素），
   // 标量 / 枚举 / 常量引用 → 表达式。嵌套三目在 autoValue 里递归展开。
   final v = autoValue(e, ctx);
-  return v is String ? v : null;
+  if (v == null) return null;
+  if (v is String) return v;
+  // 结构化值（`EdgeInsets.only(...)` / `BorderRadius.zero` 等转成的 JSON 形态）
+  // 在 props 里不能是 Map——props 的叶子只接受 JS 表达式字符串，Map 会在三目
+  // 里被判为「不可翻译」整键丢弃（SafeArea.minimum 就是这样丢的）。这里把
+  // 该 JSON 直接排成对象字面量：String 叶子本就是 JS 表达式（数字 / `this._x`
+  // / 已带引号的字符串），原样嵌入。
+  if (v is Map || v is List) return _valueSourceOf(v);
+  return v.toString();
+}
+
+/// 结构化值 → JS 源码（Map → 对象字面量、List → 数组、String 叶子原样）。
+String _valueSourceOf(Object? v) {
+  if (v is Map) {
+    if (v.isEmpty) return '{}';
+    final entries = v.entries.map((e) => '"${e.key}": ${_valueSourceOf(e.value)}');
+    return '{${entries.join(', ')}}';
+  }
+  if (v is List) {
+    return '[${v.map(_valueSourceOf).join(', ')}]';
+  }
+  return v?.toString() ?? 'null';
 }
 
 /// 参数名是否是「builder 语义」的闭包（返回 widget 的回调）：`builder` /
