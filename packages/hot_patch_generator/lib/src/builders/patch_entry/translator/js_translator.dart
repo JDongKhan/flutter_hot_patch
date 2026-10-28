@@ -1101,11 +1101,13 @@ String translateStmtList(
         // 进产物（`spots[index]`），被抽进 builder 方法后就是
         // `ReferenceError: Can't find variable: spots`。
         //
-        // 仅限 final / const：别名语义是「按引用重求值」，可重新赋值的变量用它
-        // 会让后续声明拿到旧表达式（`list = other;` 之后再声明就以旧值折算）。
-        if (init.startsWith('this.')) {
+        // 仅限 **纯字段路径**（见 [_fieldPath]）与 final / const：别名语义是
+        // 「按引用重求值」，带调用的初始化器（`this._items.removeAt(0)`）一旦
+        // 登记成别名，builder / 事件闭包里的每次引用都会重跑该调用；可重新赋值
+        // 的变量用它则会让后续声明拿到旧表达式（`list = other;` 之后按旧值折算）。
+        if (purePath && init.startsWith('this.')) {
           widgetCtx?.registerLocalAlias(name, init);
-          if (purePath && (s.variables.isFinal || s.variables.isConst)) {
+          if (s.variables.isFinal || s.variables.isConst) {
             scope.declAliases[name] = init;
           }
         }
@@ -1570,25 +1572,17 @@ String translateClassMethodBody(
   );
   // 方法形参同步登记进 widget 层（方法体期间），使返回的 widget 树里
   // `Text(title)` 这类形参引用可解析；翻译结束即恢复，不污染同类其它方法。
-  //
-  // 返回 widget 的方法（build / `Widget _buildX()`）整段方法体都处在组件语境：
-  // 语句里的构造（`final row = Row(...)`、事件闭包里的 `OverlayEntry(...)`）与
-  // `return` 位置走同一条属性管线，否则只会得到裸 `new X({...})`（缺 import、
-  // 缺 `EdgeInsets` 这类属性归一）。
-  String run() {
-    final body = () => translateMethodBody(
-          m.body,
-          scope,
-          classes,
-          widgetCtx: widgetCtx,
-          returnExpressionBody: !m.isVoid,
-          returnsWidget: m.returnsWidget,
-          depth: depth,
-        );
-    return m.returnsWidget && widgetCtx != null
-        ? widgetCtx.withWidgetValues(body)
-        : body();
-  }
+  // 组件语境（构造走属性管线 / 静态类引用解析）由调用方在**整类方法翻译**上
+  // 统一开启（见 analyze_dart_class），这里不再逐方法判断。
+  String run() => translateMethodBody(
+        m.body,
+        scope,
+        classes,
+        widgetCtx: widgetCtx,
+        returnExpressionBody: !m.isVoid,
+        returnsWidget: m.returnsWidget,
+        depth: depth,
+      );
   if (widgetCtx == null || m.params.isEmpty) return run();
   return widgetCtx.withMethodParams(m.params, run);
 }

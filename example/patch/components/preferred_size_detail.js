@@ -33,7 +33,7 @@ export class PreferredSizeDetail {
                 "color": Colors.white,
                 "fontSize": 16
               },
-              "data": "自定义顶栏 · 高度 " + this._height.toStringAsFixed(0)
+              "data": "自定义顶栏 · 高度 " + label
             })
           })
         })
@@ -69,14 +69,14 @@ export class PreferredSizeDetail {
             "style": {
               "fontSize": 12
             },
-            "data": "preferredSize: Size(∞, " + this._height.toStringAsFixed(0) + ")"
+            "data": "preferredSize: Size(∞, " + label + ")"
           }),
           new Slider({
             "value": this._height,
             "min": 40,
             "max": 120,
             "divisions": 8,
-            "label": this._height.toStringAsFixed(0),
+            "label": label,
             "onChanged": this.__bindFn(0, [], (v) => this.setState(() => {
               this._height = v;
             }))

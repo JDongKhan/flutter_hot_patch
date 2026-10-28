@@ -1302,7 +1302,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 必然 ReferenceError）。运行时 `this.context` 按**执行位置**解析——被委托的
   /// builder 方法里取的是**被委托组件**的代理，与 Dart 闭包捕获 `context` 形参同语义。
   String jsDataExpr(Expression e, [FieldScope? scope]) {
-    return _withWidgetArgHook(() {
+    return withWidgetContext(() {
       final js = rhsToJs(e, scope ?? _dataScope(), const {});
       if (js == null) {
         throw FormatException('文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
@@ -1311,10 +1311,16 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     });
   }
 
-  /// 在 [widgetArgJsHook] 生效期内翻译：任意表达式位置的构造（含闭包体内的
+  /// 在**组件语境**里翻译一段代码：任意表达式位置的构造（含闭包体内的
   /// `return Row(...)` / `var x = Container(...)`）都走属性管线，与 children
-  /// 里的子结点同一条路径（属性归一 + 类所在文件登记 import）。
-  T _withWidgetArgHook<T>(T Function() body) {
+  /// 里的子结点同一条路径（属性归一 + 类所在文件登记 import）；同时静态成员
+  /// 调用（`Overlay.of(context)`）按「receiver 的类定义在哪」解析成类引用。
+  ///
+  /// 翻译器是自由函数 + 单线程，渲染器只能在这段作用域内发布出去（见
+  /// js_translator 的 `widgetArgJsHook` / `classRefHook`）。**唯一入口**：
+  /// 数据表达式、函数值、整个类的方法体都用它，不再按「是不是组件 /
+  /// 是不是返回 widget 的方法」分支。
+  T withWidgetContext<T>(T Function() body) {
     final prev = widgetArgJsHook;
     final prevClassRef = classRefHook;
     widgetArgJsHook = _argWidgetJs;
@@ -1327,10 +1333,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     }
   }
 
-  /// 见 [WidgetExprRenderer.withWidgetValues]：widget 返回值的方法体整体生效。
-  @override
-  T withWidgetValues<T>(T Function() body) => _withWidgetArgHook(body);
-
   /// 静态成员调用的 receiver 是「类定义在某个产物模块里的类型」时 → 类引用串
   /// （并登记 import），否则 null（交给通用路径）。
   ///
@@ -1342,21 +1344,6 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (file == null) return null;
     if (importResolver?.call(className) == null) _registerWidgetImport(className);
     return className;
-  }
-
-  /// 在**只装类引用钩子**的环境里翻译一段代码（类的方法体用）。
-  ///
-  /// 方法体里会出现 `Overlay.of(context).insert(entry)` 这类静态调用：receiver
-  /// 是类而非字段/局部变量，通用规则整条判为不可翻译。这里只补「类引用」这一件
-  /// 事，**不安装实参构造钩子**——那会把任意值位置的表达式拖进元素管线。
-  T withClassRefs<T>(T Function() body) {
-    final prev = classRefHook;
-    classRefHook = _classRefJs;
-    try {
-      return body();
-    } finally {
-      classRefHook = prev;
-    }
   }
 
   /// 实参位置的构造表达式 → 属性管线（与 children 里的子结点同一条路径）。
@@ -1473,7 +1460,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (e is FunctionExpression) {
       // 闭包体里可能 return 组件（`builder: (context, o) { ... return Row(...) }`），
       // 与 build 树走同一条管线：属性归一 + import 登记。
-      return _withWidgetArgHook(
+      return withWidgetContext(
         () => closureToJs(e, _dataScope(), const {}, this),
       );
     }

@@ -401,13 +401,6 @@ abstract class WidgetExprRenderer {
   /// （列表里少一项、props 里没有这个键），不伪造任何对象。
   String? renderValueOrNull(Object? node, int depth);
 
-  /// 在**整个方法体**期间开启「值位置也走组件管线」：widget 返回值的方法
-  /// （build / `Widget _buildX()`）里，任何语句上的构造——`final x = Row(...)`、
-  /// 事件闭包里的 `OverlayEntry(...)`——都与 children 槽位同一条属性管线
-  /// （属性归一 + 类所在文件登记 import）。否则它们只会得到 `new X({...})`
-  /// 裸构造：缺 import、缺属性归一（`EdgeInsets.all` 之类直接炸）。
-  T withWidgetValues<T>(T Function() body);
-
   /// 方法体内声明的局部变量（`final isAdult = ...;`）→ 登记进 widget 层局部表。
   /// 方法体翻译与 widget 渲染必须共用同一份标识符作用域，否则返回的 widget
   /// 树里引用局部变量时会解析失败。

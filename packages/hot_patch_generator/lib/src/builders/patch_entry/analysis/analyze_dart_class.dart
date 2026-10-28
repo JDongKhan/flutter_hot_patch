@@ -644,7 +644,12 @@ ClassInfo translateClass(
   // 逐个方法翻译：唯一的方法体翻译器，组件与普通类、build 与其它方法完全
   // 同一条路径。parseCtx 在过程中收集依赖组件 / 用到的 widget 类型 /
   // 响应式 builder 子方法。
-  final translated = <ClassMethod>[
+  //
+  // 整类方法体都在**组件语境**里翻译：任意表达式位置的 widget 构造走属性管线
+  // （属性归一 + import 登记），静态类引用（`Overlay.of(context)`）按类定义
+  // 所在文件解析。所有类（含普通模型）同一语境——不区分「是不是组件」，
+  // 也不区分「是不是返回 widget 的方法」。
+  final translated = parseCtx.withWidgetContext(() => <ClassMethod>[
     for (final m in methods)
       buildMethod(
         m,
@@ -653,7 +658,7 @@ ClassInfo translateClass(
             widgetCtx: parseCtx,
             globalConsts: globalConsts),
       ),
-  ];
+  ]);
 
   return ClassInfo(
     name: decl.name.lexeme,

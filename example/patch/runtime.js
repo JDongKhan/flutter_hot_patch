@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 66063712） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 2ddfa9bb） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '66063712') { return; }
-  G.__jsuiVersion = '66063712';
+  if (G.__jsui && G.__jsuiVersion === '2ddfa9bb') { return; }
+  G.__jsuiVersion = '2ddfa9bb';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -948,7 +948,7 @@ if (G.kDebugMode) {
   // 传进来的 context 是任何 BuildContext 代理（取它的锚点向上找），类型名由调用方
   // 给（与 `dependOnInheritedWidgetOfExactType<T>` 同构，核心不认识具体类型）。
   // 取不到返回 null（不猜、不回退），调用方自行决定缺失时的行为。
-  G.__jsuiScopeOf = function (ctx, type) {
+  G.__scopeOf = function (ctx, type) {
     var anchor = ctx && ctx.__anchor;
     return anchor ? scopeOf(anchor, type) : null;
   };

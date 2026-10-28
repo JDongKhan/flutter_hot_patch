@@ -417,7 +417,7 @@ export class Overlay {
   }
 }
 Overlay.of = function (context) {
-  return __jsuiScopeOf(context, 'OverlayState');
+  return __scopeOf(context, 'OverlayState');
 };''';
 
 /// OverlayEntry：条目的载体（值类，不是元素）。

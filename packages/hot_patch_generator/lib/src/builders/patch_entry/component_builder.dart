@@ -473,14 +473,8 @@ String _renderJsProduct(
   for (final cls in exportedClasses) {
     b
       ..writeln()
-      ..writeln('// ${cls.isComponent ? '组件' : '模型'} ${cls.name}');
-    // 组件方法体里可能有 `Overlay.of(context)` 这类「receiver 是类」的静态调用：
-    // 只在这一段开启类引用解析（不用实参构造钩子，值位置不受影响）。
-    b.writeln(
-      cls.isComponent
-          ? ctx.withClassRefs(() => dart2js(cls, exported: true))
-          : dart2js(cls, exported: true),
-    );
+      ..writeln('// ${cls.isComponent ? '组件' : '模型'} ${cls.name}')
+      ..writeln(dart2js(cls, exported: true));
   }
 
   // `@PatchIgnore(isComponent: true)`：类本身不翻译，但在**它自己的源文件产物**

@@ -59,7 +59,32 @@ export class AnimatedListDetail {
     var removed = this._items.removeAt(0);
     this.setState(() => {});
     var state = this._listKey.currentState;
-    state.removeItem(0, (context, animation) => { return new Card({margin: EdgeInsets.symmetric({vertical: 4}), color: Colors.indigo.shade50, child: new ListTile({dense: true, leading: new CircleAvatar({radius: 12, backgroundColor: Colors.indigo, child: new Text({data: "1", style: new TextStyle({color: Colors.white, fontSize: 11})})}), title: new Text({data: removed})})}); }, _removeDuration);
+    state.removeItem(0, (context, animation) => { return new Card({
+        "margin": {
+          "left": 0.0,
+          "top": 4.0,
+          "right": 0.0,
+          "bottom": 4.0
+        },
+        "color": Colors.indigo.shade50,
+        "child": new ListTile({
+          "dense": true,
+          "leading": new CircleAvatar({
+            "radius": 12,
+            "backgroundColor": Colors.indigo,
+            "child": new Text({
+              "style": {
+                "color": Colors.white,
+                "fontSize": 11
+              },
+              "data": "1"
+            })
+          }),
+          "title": new Text({
+            "data": removed
+          })
+        })
+      }); }, _removeDuration);
   }
   build(context) {
     return new Column({

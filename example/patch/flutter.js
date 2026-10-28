@@ -1200,7 +1200,7 @@ export class Overlay {
   }
 }
 Overlay.of = function (context) {
-  return __jsuiScopeOf(context, 'OverlayState');
+  return __scopeOf(context, 'OverlayState');
 };
 
 
