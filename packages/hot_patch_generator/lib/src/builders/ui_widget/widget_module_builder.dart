@@ -328,6 +328,7 @@ const Map<String, String> logicWidgetSources = {
   'NestedScrollView': jsNestedScrollViewComponent,
   'LayoutBuilder': jsLayoutBuilderComponent,
   'OrientationBuilder': jsOrientationBuilderComponent,
+  'SliverPersistentHeader': jsSliverPersistentHeaderComponent,
 };
 
 /// Builder：无状态委托组件——调用拥有者组件上的 `props.builder` 方法
@@ -445,6 +446,63 @@ export class LayoutBuilder {
     var props = { 'builder': handle };
     if (this.__lbChild != null) { props.child = this.__lbChild; }
     return __h('LayoutBuilder', props);
+  }
+}''';
+
+/// SliverPersistentHeader：`delegate.build(context, shrinkOffset, overlapsContent)`
+/// 在**布局阶段**同步执行，而 delegate 只存在于 JS。
+///
+/// 与 LayoutBuilder 同一方案：
+///   - `minExtent` / `maxExtent` 是 delegate 的**同步 getter**，在 JS 里直接读，
+///     随 props 下发（header 的高度插值由 Flutter 原生负责，不跨语言）；
+///   - `build` 登记成跨语言句柄（`builder`），宿主在布局阶段把
+///     `{shrinkOffset, overlapsContent}` 交给它；本类执行 delegate.build 后把
+///     子树作为子结点 patch 下发，宿主下一帧用新子树重排。
+///   - 因此滚动过程中**内容**晚一帧跟随（高度不受影响）；首帧子树为空。
+const String jsSliverPersistentHeaderComponent = '''
+export class SliverPersistentHeader {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var delegate = this.props.delegate;
+    if (!delegate || typeof delegate.build !== 'function') {
+      console.warn('[SliverPersistentHeader] delegate.build 不是闭包');
+      return null;
+    }
+    var self = this;
+    // 首帧：宿主要到**布局阶段**才回调句柄，而 pinned 头的 paintExtent 由子级
+    // 实际高度决定（`min(childExtent, …)`），零高占位会触发「layoutExtent 超过
+    // paintExtent」的断言。所以这里先按 (0, false) 展一次——与 Flutter 首次布局
+    // 时 scrollOffset=0 的入参一致，只是把那次调用提前到 build 阶段。
+    if (this.__sphDelegate !== delegate) {
+      this.__sphDelegate = delegate;
+      this.__sphSig = { shrinkOffset: 0, overlaps: false };
+      this.__sphChild = delegate.build(context, 0, false);
+    }
+    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
+    // 宿主在布局阶段调用：实参是 {shrinkOffset, overlapsContent}，不是事件参数。
+    var handle = this.__bindFn(0, [], function (json) {
+      var prev = self.__sphSig;
+      if (prev && prev.shrinkOffset === json.shrinkOffset &&
+          prev.overlaps === json.overlapsContent) {
+        return;
+      }
+      self.__sphSig = { shrinkOffset: json.shrinkOffset, overlaps: json.overlapsContent };
+      // 字段名不能叫 `__child`（reconciler 内部字段，见 LayoutBuilder 处的说明）。
+      self.__sphChild = delegate.build(context, json.shrinkOffset, json.overlapsContent);
+      self.setState(function () {});
+    });
+    var props = {
+      'minExtent': delegate.minExtent,
+      'maxExtent': delegate.maxExtent,
+      'builder': handle
+    };
+    // pinned / floating 原样透传给宿主（默认 false 由宿主兜底）。
+    if (this.props.pinned !== undefined) { props.pinned = this.props.pinned; }
+    if (this.props.floating !== undefined) { props.floating = this.props.floating; }
+    if (this.__sphChild != null) { props.child = this.__sphChild; }
+    return __h('SliverPersistentHeader', props);
   }
 }''';
 

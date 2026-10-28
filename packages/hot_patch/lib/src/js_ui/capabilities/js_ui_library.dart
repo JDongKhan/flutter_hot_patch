@@ -57,6 +57,7 @@ import 'notification_listener/notification_listener_library.dart';
 import 'pop_scope/pop_scope_library.dart';
 import 'provider/provider_library.dart';
 import 'scroll_controller/scroll_controller_library.dart';
+import 'sliver_persistent_header/sliver_persistent_header_library.dart';
 import 'tab/tab_library.dart';
 import 'text_editing_controller/text_editing_controller_library.dart';
 
@@ -142,6 +143,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const KeyboardListenerLibrary());
   // LayoutBuilder：父约束在布局阶段回传 JS（OrientationBuilder 基于它实现）。
   registerJsUiLibrary(const LayoutBuilderLibrary());
+  // SliverPersistentHeader：delegate.build 在布局阶段回传 JS（同 LayoutBuilder）。
+  registerJsUiLibrary(const SliverPersistentHeaderLibrary());
   registerJsUiLibrary(const TabLibrary());
   registerJsUiLibrary(const KeyLibrary());
   registerJsUiLibrary(const BuildContextLibrary());

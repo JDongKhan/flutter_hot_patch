@@ -104,6 +104,10 @@ const Set<String> logicWidgetTypes = {
   'LayoutBuilder',
   // 方向 builder：与 Flutter 源码一致，由 LayoutBuilder + 父约束推方向。
   'OrientationBuilder',
+  // 持久化头部：`delegate.build(context, shrinkOffset, overlapsContent)` 在
+  // **布局阶段**同步执行，而 delegate 只存在于 JS——与 LayoutBuilder 同一方案，
+  // 把 build 登记成句柄、宿主布局时回调，子树经 patch 回填。
+  'SliverPersistentHeader',
 };
 
 /// 懒容器类型 → 触发懒的 props 键（空列表 = 无条件懒）。
