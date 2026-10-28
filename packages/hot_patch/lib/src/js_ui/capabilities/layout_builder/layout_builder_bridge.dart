@@ -20,7 +20,6 @@ void registerLayoutBuilderWidgets(JsWidgetRegistry r) {
   r.register(
     'LayoutBuilder',
     (c) => _JsLayoutBuilder(
-      invoke: c.invoke,
       builder: c.props['builder'],
       child: c.children['child'] as Widget?,
     ),
@@ -30,12 +29,9 @@ void registerLayoutBuilderWidgets(JsWidgetRegistry r) {
 /// 承载 LayoutBuilder：布局阶段把父约束交给 JS 的 builder 句柄。
 class _JsLayoutBuilder extends StatefulWidget {
   const _JsLayoutBuilder({
-    required this.invoke,
     required this.builder,
     required this.child,
   });
-
-  final void Function(Object? handler, [List<Object?> args]) invoke;
 
   /// JS 侧登记的 builder 句柄（`{__fn: id}`）。
   final Object? builder;
@@ -63,7 +59,7 @@ class _JsLayoutBuilderState extends State<_JsLayoutBuilder> {
         ];
         if (!listEquals(sig, _last)) {
           _last = sig;
-          widget.invoke(widget.builder, [
+          invokeJsHandler(widget.builder, [
             <String, double?>{
               'minWidth': sig[0],
               'maxWidth': sig[1],

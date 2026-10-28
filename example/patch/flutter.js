@@ -980,16 +980,15 @@ export class LayoutBuilder {
         return;
       }
       self.__constraints = c;
-      self.__child = builder(context, c);
+      // 字段名不能叫 `__child`：那是 reconciler 记录「本实例挂出的子宿主结点」
+      // 的内部字段（见 mini_react 的 `ci.__child = mount(...)`），mount 之后会
+      // 被覆盖成宿主实例（带 __parent/__el，序列化时成环），props 里再塞它
+      // 就变成循环引用。
+      self.__lbChild = builder(context, c);
       self.setState(function () {});
     });
     var props = { 'builder': handle };
-    if (this.__child != null) {
-      console.log('[LayoutBuilder] child element=' + (this.__child && this.__child.element) +
-      ' keys=' + (this.__child && typeof this.__child === 'object'
-      ? Object.keys(this.__child).join(',') : typeof this.__child));
-      props.child = this.__child;
-    }
+    if (this.__lbChild != null) { props.child = this.__lbChild; }
     return __h('LayoutBuilder', props);
   }
 }

@@ -23,15 +23,11 @@ import '../../js_widget_registry.dart';
 class _NotificationListener extends StatefulWidget {
   const _NotificationListener({
     required this.onNotification,
-    required this.invoke,
     required this.child,
   });
 
   /// JS 侧事件句柄（`{'__fn': id}`）。
   final Object? onNotification;
-
-  /// 宿主 → JS 事件回传（js_ui_widget.dart 的 _invoke）。
-  final void Function(Object? handler, [List<Object?> args]) invoke;
 
   final Widget child;
 
@@ -49,7 +45,7 @@ class _NotificationListenerState extends State<_NotificationListener> {
           // payload 形状对齐 Dart ScrollNotification（metrics 对象 + type 名），
           // JS 事件方法体里的 `n.metrics.pixels` / `n.metrics.extentAfter`
           // 由生成器原样翻译后可直接读取。
-          widget.invoke(handler, [
+          invokeJsHandler(handler, [
             {
               'type': n.runtimeType.toString(),
               'metrics': {
@@ -76,7 +72,6 @@ void registerNotificationWidgets(JsWidgetRegistry r) {
     'NotificationListener',
     (c) => _NotificationListener(
       onNotification: c.props['onNotification'],
-      invoke: c.invoke,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );

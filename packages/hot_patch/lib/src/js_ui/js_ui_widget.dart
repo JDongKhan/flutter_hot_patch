@@ -223,32 +223,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
     }
   }
 
-  /// 宿主 → JS 的事件回传（按钮点击等）。
-  ///
-  /// handler 是运行时登记的句柄 `{'__fn': id}`（生成器在构建期把事件表达式
-  /// 绑到产出该结点的组件实例，绑定信息随 props 传下来）→ `invoke`。
-  ///
-  /// [args] 是**参数数组**：0 参事件 `[]`、onChanged `[v]`、多参事件 `[a,b]`…；
-  /// JS 侧句柄（__bindFn 生成的 wrapper）对它 apply 摊开成位置实参，
-  /// 故任意形参个数的事件共用同一条通路。
-  void _invoke(Object? handler, [List<Object?> args = const []]) {
-    if (handler is! Map) {
-      // handler 形态不对 → 静默丢弃，点了没反应。
-      return;
-    }
-    final id = handler['__fn'];
-    if (id is! String) {
-      // 句柄缺 __fn → 静默丢弃。
-      return;
-    }
-    // args 双重编码：内层把数组变成 JSON 文本，外层再包成 JS 字符串字面量；
-    // JS 侧 invoke 对字符串参数做一次 JSON.parse 还原为数组。单层编码会把
-    // 字符串 payload 解析失败置 null。
-    _manager.evaluate(
-      '__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(args))});',
-    );
-  }
-
   @override
   void dispose() {
     // 记录进入过页面：只有 mount 成功过才有「进入 / 销毁」两端可比对。
@@ -322,7 +296,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
     final content = _JsNode(
       store: _store,
       id: _rootId!,
-      invoke: _invoke,
       pageKey: _pageKey,
     );
     final buildTime = _buildTime;
@@ -482,7 +455,6 @@ class _JsNode extends StatefulWidget {
     super.key,
     required this.store,
     required this.id,
-    required this.invoke,
     required this.pageKey,
   });
 
@@ -492,9 +464,6 @@ class _JsNode extends StatefulWidget {
   /// 本结点所属页面。BuildContext 锚点登记时一并下发，供 debug 泄漏观测按页
   /// 归属统计（见 capabilities/build_context/build_context_bridge.dart）。
   final String pageKey;
-
-  /// 事件回传：`(handler, args)`——handler 是运行时登记的句柄，args 为参数数组。
-  final void Function(Object? handler, [List<Object?> args]) invoke;
 
   @override
   State<_JsNode> createState() => _JsNodeState();
@@ -531,7 +500,7 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
     if (node == null || node.props['__lazy'] != true) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      widget.invoke(node.props['__lazyFn'], [widget.id]);
+      invokeJsHandler(node.props['__lazyFn'], [widget.id]);
     });
   }
 
@@ -551,12 +520,11 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
   void _unmountIfLazy() {
     final node = widget.store.nodes[widget.id];
     if (node == null || node.props['__lazy'] != true) return;
-    final invoke = widget.invoke;
     final lazyOffFn = node.props['__lazyOffFn'];
     final nodeId = widget.id;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        invoke(lazyOffFn, [nodeId]);
+        invokeJsHandler(lazyOffFn, [nodeId]);
       } catch (e, s) {
         HotPatchLog.error('js_ui lazy unmount failed: $e',
             error: e, stackTrace: s);
@@ -667,7 +635,6 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
         type: node.type,
         props: node.props,
         children: children,
-        invoke: widget.invoke,
       ),
     );
   }
@@ -692,7 +659,6 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
       type: n?.type ?? '',
       props: n?.props ?? const {},
       children: children,
-      invoke: widget.invoke,
     );
   }
 
@@ -706,7 +672,6 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
       key: declared ?? ValueKey(id),
       store: widget.store,
       id: id,
-      invoke: widget.invoke,
       pageKey: widget.pageKey,
     );
   }

@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../services/js_runtime_manager.dart';
 import '../utils/hot_patch_log.dart';
 import 'capabilities/base_widget/button_from_json.dart';
 import 'capabilities/base_widget/icon_from_json.dart';
@@ -37,13 +38,43 @@ void registerJsDataCarrierType(String type) => _dataCarrierTypes.add(type);
 /// 该类型是否登记为非 Widget 数据载体（类型表驱动，不做类型名硬编码判断）。
 bool isJsDataCarrierType(String type) => _dataCarrierTypes.contains(type);
 
+/// 宿主 → JS 事件回传（按钮点击、懒槽位挂载/卸载、LayoutBuilder 的 builder
+/// 回调等所有「宿主调 JS 句柄」的唯一出口）。
+///
+/// handler 是运行时登记的句柄 `{'__fn': id}`（生成器在构建期把事件表达式绑到
+/// 产出该结点的组件实例，绑定信息随 props 传下来）。
+///
+/// [args] 是**参数数组**：0 参事件 `[]`、onChanged `[v]`、多参事件 `[a,b]`…；
+/// JS 侧句柄（__bindFn 生成的 wrapper）对它 apply 摊开成位置实参，故任意形参
+/// 个数的事件共用同一条通路。
+///
+/// 放在顶层（而不是挂在每个结点的 State 上传参）的原因：能力实现（各 bridge
+/// 的 renderer）与 [_JsNode] 的生命周期回调都只需要「一个 id + 一组参数」，
+/// 传 `invoke` 闭包只会让每层构造多一个与语义无关的参数。
+void invokeJsHandler(Object? handler, [List<Object?> args = const []]) {
+  if (handler is! Map) {
+    // handler 形态不对 → 静默丢弃，点了没反应。
+    return;
+  }
+  final id = handler['__fn'];
+  if (id is! String) {
+    // 句柄缺 __fn → 静默丢弃。
+    return;
+  }
+  // args 双重编码：内层把数组变成 JSON 文本，外层再包成 JS 字符串字面量；
+  // JS 侧 invoke 对字符串参数做一次 JSON.parse 还原为数组。单层编码会把
+  // 字符串 payload 解析失败置 null。
+  JsRuntimeManager.instance.evaluate(
+    '__jsui.invoke(${jsonEncode(id)}, ${jsonEncode(jsonEncode(args))});',
+  );
+}
+
 /// 不需要动宿主；只有引入 Flutter 侧不存在的**视觉** widget 才注册一条。
 class JsRenderContext {
   JsRenderContext({
     required this.type,
     required this.props,
     required this.children,
-    required this.invoke,
   });
 
   /// 本结点的元素 type（宿主 widget 类型名 / 未注册组件的具体类型名）。
@@ -65,7 +96,8 @@ class JsRenderContext {
   final Map<String, Object?> children;
 
   /// 把事件句柄（`{'__fn': id}`）回传到 JS 侧执行。
-  final void Function(Object? handler, [List<Object?> args]) invoke;
+  void invoke(Object? handler, [List<Object?> args = const []]) =>
+      invokeJsHandler(handler, args);
 
   /// 把 props 上的事件字段（句柄）绑成 Flutter 回调；无句柄（null）时为 null。
   ///
@@ -154,7 +186,7 @@ class JsRenderContext {
   Map<String, dynamic>? styleMap(String key) => elementProps(props[key]);
 
   /// 单个元素描述（props 里值为 element 的键，或数组里的一项）→ widget。
-  Widget? element(Object? raw) => buildJsElement(raw, invoke);
+  Widget? element(Object? raw) => buildJsElement(raw);
 
   /// 元素描述数组（`AppBar.actions` / `BottomNavigationBar.items` /
   /// `MultiProvider.providers` 等）→ widget 列表（空项跳过）。
@@ -162,7 +194,7 @@ class JsRenderContext {
     if (raw is! List) return const [];
     final out = <Widget>[];
     for (final e in raw) {
-      final w = buildJsElement(e, invoke);
+      final w = buildJsElement(e);
       if (w != null) out.add(w);
     }
     return out;
@@ -173,17 +205,14 @@ class JsRenderContext {
 ///
 /// 用途：`__items`（builder 展开结果）/ 数据载体上下文等需要宿主自行递归渲染
 /// 的场景；具名 slot 已由 JS 侧挂载，宿主直接走 `propChild` / `propChildList`。
-Widget? buildJsElement(
-  Object? raw,
-  void Function(Object? handler, [List<Object?> args]) invoke,
-) {
+Widget? buildJsElement(Object? raw) {
   if (raw is! Map) return null;
   final type = raw['type'];
   if (type is! String || type.isEmpty) return null;
   final props = raw['props'] is Map
       ? (raw['props'] as Map).cast<String, dynamic>()
       : <String, dynamic>{};
-  final children = _childrenFromSlots(raw['children'], invoke);
+  final children = _childrenFromSlots(raw['children']);
 
   final builder = jsWidgetRegistry.lookup(type) ?? jsWidgetRegistry.fallback;
   if (builder == null) {
@@ -197,7 +226,6 @@ Widget? buildJsElement(
       type: type,
       props: props,
       children: children,
-      invoke: invoke,
     ),
   );
 }
@@ -212,10 +240,7 @@ Widget? buildJsElement(
 ///
 /// 不支持旧形状（children 是裸数组、元素混在 props 里）——产物以最新协议为准，
 /// 形状不合法时宁可丢 slot 也不猜。
-Map<String, Object?> _childrenFromSlots(
-  Object? rawSlots,
-  void Function(Object? handler, [List<Object?> args]) invoke,
-) {
+Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
   final children = <String, Object?>{};
   if (rawSlots is! Map) return children;
 
@@ -225,9 +250,9 @@ Map<String, Object?> _childrenFromSlots(
     var dataCarrier = false;
     if (value is List) {
       for (final ch in value) {
-        final w = buildJsElement(ch, invoke);
+        final w = buildJsElement(ch);
         if (w != null) widgets.add(w);
-        final ctx = _descriptorContext(ch, invoke);
+        final ctx = _descriptorContext(ch);
         contexts.add(ctx);
         if (isJsDataCarrierType(ctx.type)) dataCarrier = true;
       }
@@ -240,7 +265,7 @@ Map<String, Object?> _childrenFromSlots(
     final v = entry.value;
     if (key == '__items' && v is List) {
       children['__items'] = [
-        for (final ch in v) buildJsElement(ch, invoke) ?? const SizedBox.shrink(),
+        for (final ch in v) buildJsElement(ch) ?? const SizedBox.shrink(),
       ];
       continue;
     }
@@ -257,10 +282,10 @@ Map<String, Object?> _childrenFromSlots(
       continue;
     }
     if (v is Map && v['element'] == true) {
-      final ctx = _descriptorContext(v, invoke);
+      final ctx = _descriptorContext(v);
       children[key] = isJsDataCarrierType(ctx.type)
           ? ctx
-          : buildJsElement(v, invoke);
+          : buildJsElement(v);
     }
   }
   return children;
@@ -269,18 +294,14 @@ Map<String, Object?> _childrenFromSlots(
 /// 元素描述 → 仅含数据（type/props/children）的上下文：供
 /// `BottomNavigationBarItem` / `DropdownMenuItem` 这类**非 Widget 数据载体**
 /// 子结点由父 renderer 直接读数据组装。
-JsRenderContext _descriptorContext(
-  Object? raw,
-  void Function(Object? handler, [List<Object?> args]) invoke,
-) {
+JsRenderContext _descriptorContext(Object? raw) {
   final props = raw is Map && raw['props'] is Map
       ? (raw['props'] as Map).cast<String, dynamic>()
       : <String, dynamic>{};
   return JsRenderContext(
     type: raw is Map ? '${raw['type']}' : '',
     props: props,
-    children: _childrenFromSlots(raw is Map ? raw['children'] : null, invoke),
-    invoke: invoke,
+    children: _childrenFromSlots(raw is Map ? raw['children'] : null),
   );
 }
 
