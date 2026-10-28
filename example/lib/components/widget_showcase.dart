@@ -20,6 +20,7 @@ import 'safe_area_detail.dart';
 import 'sliver_fill_viewport_detail.dart';
 import 'sliver_fill_remaining_detail.dart';
 import 'sliver_persistent_header_detail.dart';
+import 'spacer_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -44,6 +45,7 @@ class WidgetShowcase extends StatelessWidget {
         'Expanded / Flexible / Wrap / Align / Padding / Center / SizedBox',
         'LayoutDetail',
       ),
+      _Entry('Spacer', 'Row/Column 弹性空隙：flex 切 1/2/3，Column 里把按钮顶到底', 'SpacerDetail'),
     ]),
     _Group('图片图标', [
       _Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail'),
@@ -137,7 +139,8 @@ class WidgetShowcase extends StatelessWidget {
                         e.component == 'PreferredSizeDetail' ||
                         e.component == 'SliverFillViewportDetail' ||
                         e.component == 'SliverFillRemainingDetail' ||
-                        e.component == 'SliverPersistentHeaderDetail',
+                        e.component == 'SliverPersistentHeaderDetail' ||
+                        e.component == 'SpacerDetail',
                   ),
                 ),
               ),
@@ -198,6 +201,7 @@ class WidgetDetailPage extends StatelessWidget {
     'SliverFillViewportDetail': 'components/sliver_fill_viewport_detail.js',
     'SliverFillRemainingDetail': 'components/sliver_fill_remaining_detail.js',
     'SliverPersistentHeaderDetail': 'components/sliver_persistent_header_detail.js',
+    'SpacerDetail': 'components/spacer_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -239,6 +243,7 @@ class WidgetDetailPage extends StatelessWidget {
       'SliverFillViewportDetail' => const SliverFillViewportDetail(),
       'SliverFillRemainingDetail' => const SliverFillRemainingDetail(),
       'SliverPersistentHeaderDetail' => const SliverPersistentHeaderDetail(),
+      'SpacerDetail' => const SpacerDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),
