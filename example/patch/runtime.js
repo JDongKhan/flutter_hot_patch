@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 05515829） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 c635945c） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '05515829') { return; }
-  G.__jsuiVersion = '05515829';
+  if (G.__jsui && G.__jsuiVersion === 'c635945c') { return; }
+  G.__jsuiVersion = 'c635945c';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -3004,47 +3004,53 @@ G.ValueNotifier = ValueNotifier;
 
 
 // ===== 【18.7】MediaQuery 镜像 =====
-  // 当前数据（初始为空值对象，避免首帧 before 推送时读崩）。
-  var __jsuiMqData = null;
-  // 上次下发的**原始 JSON 文本**：宿主在页面 build 时都会推一次，用文本比较
-  // 即可廉价判「是否变化」，不必在 JS 里做深比较（宿主构造顺序固定）。
-  var __jsuiMqKey = '';
-  // 依赖者（消费过 `MediaQuery.of` 的组件实例）。
-  var __jsuiMqDeps = [];
+  // ctx 句柄 id -> { data, key, pending, missing, anchor }。
+  var __jsuiMqByCtx = {};
+  // 最近一次解析到的真值：新 ctx 首次读时先读它（同一运行时同一窗口，基本等价），
+  // 避免「先显示 0x0 再校正」的闪一帧。
+  var __jsuiMqLast = null;
+  // 真值到达前的兜底常量（构造一次）：字段齐全，避免读崩。
+  var __jsuiMqFallback = null;
 
   function __jsuiMqEmpty() {
-    return {
-      size: new Size({ width: 0, height: 0 }),
-      padding: { left: 0, top: 0, right: 0, bottom: 0 },
-      viewPadding: { left: 0, top: 0, right: 0, bottom: 0 },
-      viewInsets: { left: 0, top: 0, right: 0, bottom: 0 },
-      devicePixelRatio: 1,
-      textScaleFactor: 1,
-      orientation: Orientation.portrait,
-      platformBrightness: Brightness.light,
-      alwaysUse24HourFormat: false,
-      accessibleNavigation: false,
-      disableAnimations: false,
-      invertColors: false,
-      highContrast: false,
-      boldText: false,
-      navigationMode: NavigationMode.traditional,
-    };
+    if (__jsuiMqFallback == null) {
+      __jsuiMqFallback = __jsuiMqBuild({
+        size: { width: 0, height: 0 },
+        padding: { left: 0, top: 0, right: 0, bottom: 0 },
+        viewPadding: { left: 0, top: 0, right: 0, bottom: 0 },
+        viewInsets: { left: 0, top: 0, right: 0, bottom: 0 },
+        devicePixelRatio: 1,
+        textScaleFactor: 1,
+        orientation: Orientation.portrait,
+        platformBrightness: Brightness.light,
+        alwaysUse24HourFormat: false,
+        accessibleNavigation: false,
+        disableAnimations: false,
+        invertColors: false,
+        highContrast: false,
+        boldText: false,
+        navigationMode: NavigationMode.traditional,
+      });
+    }
+    return __jsuiMqFallback;
   }
 
-  // 宿主推送入口：参数是 MediaQueryData 的 JSON 形态。
-  function __jsuiSetMediaQuery(json) {
-    var key = JSON.stringify(json);
-    if (__jsuiMqData != null && key === __jsuiMqKey) { return; }
-    __jsuiMqKey = key;
+  function __jsuiMqScale(factor) {
+    return { __factor: factor, scale: function (x) { return this.__factor * x; } };
+  }
+
+  // 宿主下发的 JSON → JS 侧 MediaQueryData 同形对象。
+  function __jsuiMqBuild(json) {
     var s = json.size || { width: 0, height: 0 };
-    __jsuiMqData = {
+    var f = json.textScaleFactor != null ? json.textScaleFactor : 1;
+    return {
       size: new Size({ width: s.width, height: s.height }),
       padding: json.padding,
       viewPadding: json.viewPadding,
       viewInsets: json.viewInsets,
       devicePixelRatio: json.devicePixelRatio,
-      textScaleFactor: json.textScaleFactor,
+      textScaleFactor: f,
+      textScaler: __jsuiMqScale(f),
       orientation: json.orientation,
       platformBrightness: json.platformBrightness,
       alwaysUse24HourFormat: json.alwaysUse24HourFormat,
@@ -3055,30 +3061,105 @@ G.ValueNotifier = ValueNotifier;
       boldText: json.boldText,
       navigationMode: json.navigationMode,
     };
-    // 依赖者统一标脏；本帧内重建时会重新登记（未再消费的自然脱落）。
-    var deps = __jsuiMqDeps;
-    __jsuiMqDeps = [];
-    for (var i = 0; i < deps.length; i++) {
-      var d = deps[i];
-      if (!d || d.__unmounted) { continue; }
-      markDirty(d);
-    }
   }
 
-  // 与 Flutter 同形的 `MediaQuery.of(context)`：登记依赖 + 返回当前数据。
-  var MediaQuery = {
-    of: function (context) {
-      var anchor = context && context.__anchor;
-      if (anchor && __jsuiMqDeps.indexOf(anchor) < 0) {
-        __jsuiMqDeps.push(anchor);
+  // 唯一写口：宿主回填 / 变化回推（ctx 句柄 id + MediaQueryData 的 JSON 形态）。
+  // **与缓存不同才标脏**消费它的组件实例（一次真值变化只重建一次）。
+  function __jsuiSetMediaQuery(ctxId, json) {
+    var id = String(ctxId);
+    var e = __jsuiMqByCtx[id];
+    if (!e) {
+      e = __jsuiMqByCtx[id] = {
+        data: null, key: '', pending: false, missing: false, anchor: null
+      };
+    }
+    if (json == null) {
+      // 上方没有 MediaQuery（宿主读不到真值）：标记后不再重试，避免每次 build
+      // 都发一次桥消息。
+      e.missing = true;
+      return;
+    }
+    e.missing = false;
+    var key = JSON.stringify(json);
+    if (e.key === key) { return; }
+    e.key = key;
+    e.data = __jsuiMqBuild(json);
+    __jsuiMqLast = e.data;
+    var a = e.anchor;
+    if (a && a.__unmounted) {
+      // 组件已卸载（句柄即将/已被释放）：丢掉这条缓存，不再标脏。
+      delete __jsuiMqByCtx[id];
+      return;
+    }
+    if (a) { markDirty(a); }
+  }
+
+  // 与 Flutter 同形的 `MediaQuery.of(context)`：同步返回缓存值，**首次**读取时向
+  // 宿主取该位置的真值（之后的变化由宿主按 ctx 句柄回推）。
+  function __jsuiMqOf(context) {
+    var id = null;
+    try { id = context.__handle(); } catch (err) { id = null; }
+    if (id == null) { return __jsuiMqLast || __jsuiMqEmpty(); }
+    var e = __jsuiMqByCtx[id];
+    if (!e) {
+      e = __jsuiMqByCtx[id] = {
+        data: null, key: '', pending: false, missing: false,
+        anchor: context.__anchor
+      };
+    }
+    if (e.data == null && !e.pending && !e.missing) {
+      e.pending = true;
+      try {
+        var p = handleOp(id, 'mediaQuery', null);
+        if (p && typeof p.then === 'function') {
+          p.then(function (json) {
+            e.pending = false;
+            __jsuiSetMediaQuery(id, json);
+          }, function () { e.pending = false; });
+        } else {
+          e.pending = false;
+        }
+      } catch (err2) {
+        e.pending = false;
       }
-      return __jsuiMqData || __jsuiMqEmpty();
+    }
+    return e.data || __jsuiMqLast || __jsuiMqEmpty();
+  }
+
+  // Dart 的静态取值方法：全部是 `__jsuiMqOf(context)` 的取值投影，走同一条代理
+  // （因此同样会向宿主取真值、并由宿主回推后标脏重建）。
+  var MediaQuery = {
+    of: function (context) { return __jsuiMqOf(context); },
+    // `maybeOf` 语义：没有 MediaQuery 祖先时返回 null；这里退化为兜底对象
+    // （字段齐全，读不崩），与 `of` 同源。
+    maybeOf: function (context) { return __jsuiMqOf(context); },
+    sizeOf: function (context) { return __jsuiMqOf(context).size; },
+    paddingOf: function (context) { return __jsuiMqOf(context).padding; },
+    viewPaddingOf: function (context) { return __jsuiMqOf(context).viewPadding; },
+    viewInsetsOf: function (context) { return __jsuiMqOf(context).viewInsets; },
+    devicePixelRatioOf: function (context) {
+      return __jsuiMqOf(context).devicePixelRatio;
     },
-    // `maybeOf` 语义：没有 MediaQuery 祖先时返回 null。镜像里数据总是存在
-    // （宿主一定会推），故等价于 `of`。
-    maybeOf: function (context) {
-      return MediaQuery.of(context);
+    textScalerOf: function (context) { return __jsuiMqOf(context).textScaler; },
+    orientationOf: function (context) { return __jsuiMqOf(context).orientation; },
+    platformBrightnessOf: function (context) {
+      return __jsuiMqOf(context).platformBrightness;
     },
+    navigationModeOf: function (context) {
+      return __jsuiMqOf(context).navigationMode;
+    },
+    alwaysUse24HourFormatOf: function (context) {
+      return __jsuiMqOf(context).alwaysUse24HourFormat;
+    },
+    accessibleNavigationOf: function (context) {
+      return __jsuiMqOf(context).accessibleNavigation;
+    },
+    boldTextOf: function (context) { return __jsuiMqOf(context).boldText; },
+    disableAnimationsOf: function (context) {
+      return __jsuiMqOf(context).disableAnimations;
+    },
+    highContrastOf: function (context) { return __jsuiMqOf(context).highContrast; },
+    invertColorsOf: function (context) { return __jsuiMqOf(context).invertColors; },
   };
 
   // Dart 枚举 / 常量镜像：产物里 `Orientation.portrait` 等是原样引用，

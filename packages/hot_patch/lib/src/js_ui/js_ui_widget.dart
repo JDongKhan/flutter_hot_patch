@@ -12,7 +12,6 @@ import 'capabilities/core/binding_cache.dart';
 import 'capabilities/core/handle_registry.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'capabilities/key/key_bridge.dart';
-import 'capabilities/media_query/media_query_bridge.dart';
 import 'leak/js_leak_snapshot.dart';
 import 'leak/leak_stats.dart';
 import 'js_ui_store.dart';
@@ -275,10 +274,6 @@ class JsUiWidgetState extends State<JsUiWidget> {
       type: 'page',
       owner: 'JsUiWidgetState.build',
     );
-    // MediaQuery 同步镜像：JS 侧没有 MediaQuery 树，`MediaQuery.of(context)`
-    // 读的是宿主推下去的这一份。本 build 依赖 MediaQuery（旋转 / 缩放 / 字号
-    // 变化都会重建这里），因此推送点与数据变化点是同一处。
-    pushMediaQueryToJs(context);
     if (_error != null) {
       return _JsLoadErrorView(message: _error!, onRetry: _retry);
     }

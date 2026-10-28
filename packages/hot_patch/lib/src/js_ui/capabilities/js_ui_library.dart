@@ -52,6 +52,7 @@ import 'focus/focus_library.dart';
 import 'key/key_library.dart';
 import 'keyboard_listener/keyboard_listener_library.dart';
 import 'layout_builder/layout_builder_library.dart';
+import 'media_query/media_query_library.dart';
 import 'notification_listener/notification_listener_library.dart';
 import 'provider/provider_library.dart';
 import 'scroll_controller/scroll_controller_library.dart';
@@ -143,6 +144,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const TabLibrary());
   registerJsUiLibrary(const KeyLibrary());
   registerJsUiLibrary(const BuildContextLibrary());
+  // MediaQuery：`MediaQuery.of/sizeOf/...` 按 ctx 句柄实时对齐 Flutter 真值。
+  registerJsUiLibrary(const MediaQueryLibrary());
   // 纯宿主侧能力（无片段、无通道），位置不影响产物，列在此处便于对照。
   registerJsUiLibrary(const NotificationListenerLibrary());
   registerJsUiLibrary(const DrawerLibrary());
