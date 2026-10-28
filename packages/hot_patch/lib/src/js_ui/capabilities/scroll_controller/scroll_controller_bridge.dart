@@ -648,13 +648,18 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     ),
   );
 
-  // SliverVisibility：visible 缺省 true（与 Visibility 同默认），
-  // maintainState 缺省 false（Flutter 默认）。
+  // SliverVisibility：与盒子版同一组参数（visible / maintain*），另加
+  // replacementSliver。断言链与 Visibility 一致，由调用方保证。
   r.register(
     'SliverVisibility',
     (c) => SliverVisibility(
       visible: c.bool_('visible') ?? true,
       maintainState: c.bool_('maintainState') ?? false,
+      maintainAnimation: c.bool_('maintainAnimation') ?? false,
+      maintainSize: c.bool_('maintainSize') ?? false,
+      maintainSemantics: c.bool_('maintainSemantics') ?? false,
+      maintainInteractivity: c.bool_('maintainInteractivity') ?? false,
+      replacementSliver: (c.children['replacementSliver'] as Widget?) ?? const SliverToBoxAdapter(),
       sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
     ),
   );

@@ -21,6 +21,7 @@ import 'sliver_fill_viewport_detail.dart';
 import 'sliver_fill_remaining_detail.dart';
 import 'sliver_persistent_header_detail.dart';
 import 'spacer_detail.dart';
+import 'visibility_detail.dart';
 import 'tween_animation_builder_detail.dart';
 import 'value_listenable_builder_detail.dart';
 import 'explicit_animation_detail.dart';
@@ -48,6 +49,11 @@ class WidgetShowcase extends StatelessWidget {
         'LayoutDetail',
       ),
       _Entry('Spacer', 'Row/Column 弹性空隙：flex 切 1/2/3，Column 里把按钮顶到底', 'SpacerDetail'),
+      _Entry(
+        'Visibility / Offstage',
+        '显隐控制：不占位 / 占位 / 仍可点 / replacement；Offstage 退出布局',
+        'VisibilityDetail',
+      ),
     ]),
     _Group('图片图标', [
       _Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail'),
@@ -223,6 +229,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'SliverFillRemainingDetail': 'components/sliver_fill_remaining_detail.js',
     'SliverPersistentHeaderDetail': 'components/sliver_persistent_header_detail.js',
     'SpacerDetail': 'components/spacer_detail.js',
+    'VisibilityDetail': 'components/visibility_detail.js',
     'TweenAnimationBuilderDetail':
         'components/tween_animation_builder_detail.js',
     'ValueListenableBuilderDetail':
@@ -270,6 +277,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'SliverFillRemainingDetail' => const SliverFillRemainingDetail(),
       'SliverPersistentHeaderDetail' => const SliverPersistentHeaderDetail(),
       'SpacerDetail' => const SpacerDetail(),
+      'VisibilityDetail' => const VisibilityDetail(),
       'TweenAnimationBuilderDetail' => const TweenAnimationBuilderDetail(),
       'ValueListenableBuilderDetail' =>
         const ValueListenableBuilderDetail(),

@@ -514,6 +514,12 @@ export class NotificationListener {
   }
 }
 
+export class Offstage {
+  constructor(props) {
+    return __h('Offstage', props);
+  }
+}
+
 export class Opacity {
   constructor(props) {
     return __h('Opacity', props);
@@ -773,6 +779,13 @@ export class Transform {
   static rotate(props) { return new Transform(Object.assign({}, props, { factory: 'rotate' })); }
   static scale(props) { return new Transform(Object.assign({}, props, { factory: 'scale' })); }
   static translate(props) { return new Transform(Object.assign({}, props, { factory: 'translate' })); }
+}
+
+export class Visibility {
+  constructor(props) {
+    return __h('Visibility', props);
+  }
+  static maintain(props) { return new Visibility(Object.assign({}, props, { factory: 'maintain' })); }
 }
 
 export class Wrap {

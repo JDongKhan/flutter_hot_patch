@@ -1036,6 +1036,34 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => Opacity(opacity: c.num_('opacity') ?? 1, child: (c.children['child'] as Widget?)),
   );
 
+  // Offstage：offstage=true 时不参与布局/绘制/命中测试（State 保活，Ticker 照跑）。
+  r.register(
+    'Offstage',
+    (c) => Offstage(
+      offstage: c.bool_('offstage') ?? false,
+      child: (c.children['child'] as Widget?),
+    ),
+  );
+
+  // Visibility：盒子版显隐控制，六个 maintain* 与 replacement 全部透传。
+  // Flutter 的断言链（maintainSemantics/maintainInteractivity ⇒ maintainSize
+  // ⇒ maintainAnimation ⇒ maintainState）由**调用方**保证——与原生一致，
+  // 这里不替它「自动补齐」，否则会掩盖写法错误。
+  r.register(
+    'Visibility',
+    (c) => Visibility(
+      visible: c.bool_('visible') ?? true,
+      maintainState: c.bool_('maintainState') ?? false,
+      maintainAnimation: c.bool_('maintainAnimation') ?? false,
+      maintainSize: c.bool_('maintainSize') ?? false,
+      maintainSemantics: c.bool_('maintainSemantics') ?? false,
+      maintainInteractivity: c.bool_('maintainInteractivity') ?? false,
+      maintainFocusability: c.bool_('maintainFocusability') ?? false,
+      replacement: (c.children['replacement'] as Widget?) ?? const SizedBox.shrink(),
+      child: (c.children['child'] as Widget),
+    ),
+  );
+
   r.register(
     'ConstrainedBox',
     (c) => ConstrainedBox(
