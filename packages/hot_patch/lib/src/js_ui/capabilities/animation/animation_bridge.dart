@@ -295,7 +295,7 @@ void registerAnimationWidgets(JsWidgetRegistry r) {
   r.register('AnimatedDefaultTextStyle', (c) {
     final style = textStyleFromJson(c.map('style'));
     return AnimatedDefaultTextStyle(
-      style: style,
+      style: style ?? const TextStyle(),
       duration: _animationDuration(c, 'AnimatedDefaultTextStyle'),
       curve: curveFromJson(c.props['curve']),
       textAlign: textAlignFromJson(c.props['textAlign']),

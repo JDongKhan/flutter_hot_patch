@@ -488,7 +488,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     Widget buildWith(ScrollController? controller) => NestedScrollView(
           controller: controller,
           body: body,
-          headerSliverBuilder: (_, __) => headers,
+          headerSliverBuilder: (_, _) => headers,
           reverse: reverse,
           floatHeaderSlivers: floatHeaderSlivers,
           scrollDirection: scrollDirection,

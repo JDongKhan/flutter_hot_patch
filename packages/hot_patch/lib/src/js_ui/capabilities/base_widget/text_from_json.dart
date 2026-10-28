@@ -7,9 +7,15 @@ import 'package:flutter/material.dart';
 import '../../../utils/hot_patch_log.dart';
 import '../core/from_json/dart_values_from_json.dart';
 
-/// JSON → TextStyle（null / 空 Map → 默认样式）。
-TextStyle textStyleFromJson(Map<String, dynamic>? json) {
-  if (json == null || json.isEmpty) return const TextStyle();
+/// JSON → TextStyle；**缺省返回 null**（缺省 = 没传这个属性，不等于空样式）。
+///
+/// 这层区分很关键：宿主组件里不少 `style` 型形参是 `TextStyle?`，语义是
+/// 「未设置则由主题 / 默认值决定」（`AppBar.titleTextStyle` →
+/// `textTheme.titleLarge`、`TabBar.labelStyle` → 主题默认…）。若把缺省翻译成
+/// `const TextStyle()`，会覆盖掉这些默认值，表现为「颜色丢失、字号变小」。
+/// 需要非空样式的地方由调用方自己 `?? const TextStyle()`。
+TextStyle? textStyleFromJson(Map<String, dynamic>? json) {
+  if (json == null || json.isEmpty) return null;
   return TextStyle(
     fontSize: (json['fontSize'] as num?)?.toDouble(),
     fontWeight: fontWeightFromJson(json['fontWeight']),
