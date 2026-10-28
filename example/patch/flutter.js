@@ -453,6 +453,18 @@ export class Image {
   static network(props) { return new Image(Object.assign({}, props, { factory: 'network' })); }
 }
 
+export class ImageFiltered {
+  constructor(props) {
+    return __h('ImageFiltered', props);
+  }
+}
+
+export class ImageIcon {
+  constructor(props) {
+    return __h('ImageIcon', props);
+  }
+}
+
 export class IndexedStack {
   constructor(props) {
     return __h('IndexedStack', props);

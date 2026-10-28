@@ -55,6 +55,8 @@ final Map<String, ValueConverter> _ctorConverters = {
   'DecorationImage': (e, c) => decorationImageToJson(e, c),
   // 颜色滤镜（ColorFiltered.colorFilter）：{kind:'mode'|'matrix', …}。
   'ColorFilter': (e, c) => colorFilterToJson(e, c),
+  // 图片滤镜（ImageFiltered.imageFilter）：{kind:'blur'|'dilate'|'erode'|'matrix'|'compose', …}。
+  'ImageFilter': (e, c) => imageFilterToJson(e, c),
   // 形状
   'RoundedRectangleBorder': (e, c) => shapeToJson(e, c),
   'CircleBorder': (e, c) => shapeToJson(e, c),

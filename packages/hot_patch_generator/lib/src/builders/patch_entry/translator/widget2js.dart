@@ -1281,11 +1281,42 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 必然 ReferenceError）。运行时 `this.context` 按**执行位置**解析——被委托的
   /// builder 方法里取的是**被委托组件**的代理，与 Dart 闭包捕获 `context` 形参同语义。
   String jsDataExpr(Expression e, [FieldScope? scope]) {
-    final js = rhsToJs(e, scope ?? _dataScope(), const {});
-    if (js == null) {
-      throw FormatException('文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
+    final prev = widgetArgJsHook;
+    widgetArgJsHook = _argWidgetJs;
+    try {
+      final js = rhsToJs(e, scope ?? _dataScope(), const {});
+      if (js == null) {
+        throw FormatException('文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
+      }
+      return js;
+    } finally {
+      widgetArgJsHook = prev;
     }
-    return js;
+  }
+
+  /// 实参位置的构造表达式 → 组件属性管线（与 children 里的组件同一条路径）。
+  ///
+  /// 只接管「JS 侧会解析成类」的类型（有产物的组件、JS 侧固定类、宿主包装类）；
+  /// 纯数据类（`Duration` / `EdgeInsets` 等）保持通用构造翻译——它们本就由
+  /// 运行时的同名类承接，改走属性管线没有收益反而改变既有形态。
+  String? _argWidgetJs(Expression e) {
+    // 三种构造形态：`const X(...)` / `X(...)`（无 receiver，parseString 下是
+    // MethodInvocation）/ `X.b(...)`（receiver 是类名）。
+    final isCtor = e is InstanceCreationExpression ||
+        (e is MethodInvocation &&
+            (e.target == null || e.target is SimpleIdentifier));
+    if (!isCtor) return null;
+    final (ctor, _) = ctorOf(e);
+    if (ctor == null) return null;
+    final productType = importResolver?.call(ctor);
+    if (productType == null &&
+        !jsClassWidgets.contains(ctor) &&
+        !hostWrapperTypes.contains(ctor)) {
+      return null;
+    }
+    final node = translate(e);
+    if (node is! Map || node['type'] == null) return null;
+    return renderValue(node, 0);
   }
 
   /// 组件侧数据作用域（文本插值 / 数据表达式 / 事件参数 / 闭包共用一份）：

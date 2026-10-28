@@ -786,6 +786,107 @@ Map<String, dynamic>? colorFilterToJson(
   return null;
 }
 
+/// 取列表字面量的元素：`[...]` 或 `Float64List.fromList([...])`。
+List<Expression>? _floatListElements(Expression? e) {
+  if (e is ListLiteral) return e.elements.whereType<Expression>().toList();
+  if (e is MethodInvocation && e.methodName.name == 'fromList') {
+    final args = e.argumentList?.arguments ?? const [];
+    if (args.length == 1 && args.first is ListLiteral) {
+      return (args.first as ListLiteral).elements.whereType<Expression>().toList();
+    }
+  }
+  return null;
+}
+
+/// 图片滤镜（`ImageFiltered.imageFilter`）→ 与运行时 `imageFilterFromJson` 对齐：
+///   {kind:'blur', sigmaX, sigmaY, tileMode}；
+///   {kind:'dilate'|'erode', radiusX, radiusY}；
+///   {kind:'matrix', matrix:[16 个 JS 数字]}（4×4，必须是 16 项）；
+///   {kind:'compose', outer, inner}（递归）。
+///
+/// `blur` / `dilate` / `erode` 是**命名构造**（`ImageFilter.blur(sigmaX: 4, …)`），
+/// 因此数值同时兼容位置与具名两种写法（源码里两种都被 Flutter 接受）。
+Map<String, dynamic>? imageFilterToJson(
+  Expression? expr,
+  WidgetTranslateContext ctx,
+) {
+  if (expr == null) return null;
+  final (ctor, args) = _ctorOfExpr(expr);
+  final pos = args.whereType<Expression>().toList();
+
+  /// 取第 [index] 个数值：位置参数优先，其次同名具名参数。
+  double? numArg(String name, int index, {double? fallback}) {
+    if (pos.length > index) {
+      final v = double.tryParse(numLiteralJs(pos[index]) ?? '');
+      if (v != null) return v;
+    }
+    for (final a in args) {
+      if (a is! NamedExpression || a.name.label.name != name) continue;
+      final v = double.tryParse(numLiteralJs(a.expression) ?? '');
+      if (v != null) return v;
+    }
+    return fallback;
+  }
+
+  switch (ctor) {
+    case 'blur':
+      final sx = numArg('sigmaX', 0);
+      final sy = numArg('sigmaY', 1);
+      if (sx == null || sy == null) return null;
+      String? tile;
+      for (final a in args) {
+        if (a is! NamedExpression || a.name.label.name != 'tileMode') continue;
+        tile = enumName(a.expression, 'TileMode');
+      }
+      return {
+        'kind': ctx.jsString('blur'),
+        'sigmaX': sx,
+        'sigmaY': sy,
+        if (tile != null) 'tileMode': ctx.jsString(tile),
+      };
+    case 'dilate':
+    case 'erode':
+      final rx = numArg('radiusX', 0);
+      final ry = numArg('radiusY', 1);
+      if (rx == null || ry == null) return null;
+      return {'kind': ctx.jsString(ctor!), 'radiusX': rx, 'radiusY': ry};
+    case 'matrix':
+      // `ImageFilter.matrix(...)` 的形参类型是 `Float64List`，源码常见写法
+      // `Float64List.fromList([...])`；也兼容直接传字面量列表。
+      final raw = pos.isNotEmpty ? pos.first : null;
+      final elements = _floatListElements(raw);
+      if (elements == null) return null;
+      final matrix = <String>[];
+      for (final el in elements) {
+        final n = numLiteralJs(el);
+        if (n == null) return null;
+        matrix.add(n);
+      }
+      if (matrix.length != 16) return null;
+      return {'kind': ctx.jsString('matrix'), 'matrix': matrix};
+    case 'compose':
+      // `ImageFilter.compose(outer: …, inner: …)`：两参都是具名（Flutter 签名
+      // 即 named），也兼容位置写法。
+      Expression? outer = pos.isNotEmpty ? pos[0] : null;
+      Expression? inner = pos.length > 1 ? pos[1] : null;
+      for (final a in args) {
+        if (a is! NamedExpression) continue;
+        if (a.name.label.name == 'outer') outer = a.expression;
+        if (a.name.label.name == 'inner') inner = a.expression;
+      }
+      if (outer == null || inner == null) return null;
+      final outerJson = imageFilterToJson(outer, ctx);
+      final innerJson = imageFilterToJson(inner, ctx);
+      if (outerJson == null || innerJson == null) return null;
+      return {
+        'kind': ctx.jsString('compose'),
+        'outer': outerJson,
+        'inner': innerJson,
+      };
+  }
+  return null;
+}
+
 /// DecorationImage(image: NetworkImage/AssetImage(...), fit:) → {source, fit}。
 Map<String, dynamic>? decorationImageToJson(
   Expression? expr,

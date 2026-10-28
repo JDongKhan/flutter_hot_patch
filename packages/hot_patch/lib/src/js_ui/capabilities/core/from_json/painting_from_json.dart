@@ -1,11 +1,70 @@
 // ===== JSON → Flutter 绘制类值（跨组件共用）=====
 //
 // 边框 / 圆角 / 阴影 / 渐变 / 装饰 / 形状：容器类组件的视觉参数。
+import 'dart:typed_data';
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import 'dart_values_from_json.dart';
 import 'layout_from_json.dart';
 import 'widget_enum_from_json.dart';
+
+/// JSON → ImageFilter（{kind:'blur', sigmaX, sigmaY, tileMode} /
+/// {kind:'dilate'|'erode', radiusX, radiusY} / {kind:'matrix', matrix:[16 个数字]} /
+/// {kind:'compose', outer, inner}）。
+///
+/// 矩阵长度必须为 16（4×4），不满足时返回 null；[compose] 递归还原内外两层。
+ImageFilter? imageFilterFromJson(Object? v) {
+  if (v is! Map) return null;
+  double? num_(Object? x) {
+    if (x is num) return x.toDouble();
+    return double.tryParse('$x');
+  }
+
+  switch ('${v['kind']}') {
+    case 'blur':
+      final sx = num_(v['sigmaX']);
+      final sy = num_(v['sigmaY']);
+      if (sx == null || sy == null) return null;
+      return ImageFilter.blur(sigmaX: sx, sigmaY: sy, tileMode: _tileModeFromJson(v['tileMode']));
+    case 'dilate':
+      final rx = num_(v['radiusX']);
+      final ry = num_(v['radiusY']);
+      if (rx == null || ry == null) return null;
+      return ImageFilter.dilate(radiusX: rx, radiusY: ry);
+    case 'erode':
+      final rx = num_(v['radiusX']);
+      final ry = num_(v['radiusY']);
+      if (rx == null || ry == null) return null;
+      return ImageFilter.erode(radiusX: rx, radiusY: ry);
+    case 'matrix':
+      final raw = v['matrix'];
+      if (raw is! List || raw.length != 16) return null;
+      final matrix = <double>[];
+      for (final e in raw) {
+        final n = num_(e);
+        if (n == null) return null;
+        matrix.add(n);
+      }
+      return ImageFilter.matrix(Float64List.fromList(matrix));
+    case 'compose':
+      final outer = imageFilterFromJson(v['outer']);
+      final inner = imageFilterFromJson(v['inner']);
+      if (outer == null || inner == null) return null;
+      return ImageFilter.compose(outer: outer, inner: inner);
+  }
+  return null;
+}
+
+/// `TileMode` 枚举名 → 枚举值（缺省 null = Flutter 默认 `clamp`）。
+TileMode? _tileModeFromJson(Object? v) => switch ('$v') {
+  'clamp' => TileMode.clamp,
+  'repeated' => TileMode.repeated,
+  'mirror' => TileMode.mirror,
+  'decal' => TileMode.decal,
+  _ => null,
+};
 
 /// JSON → ColorFilter（{kind:'mode', color, blendMode} /
 /// {kind:'matrix', matrix:[20 个数字]} / {kind:'linearToSrgbGamma'} /

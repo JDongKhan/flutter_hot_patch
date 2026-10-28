@@ -7,6 +7,8 @@ import 'dismissible_detail.dart';
 import 'fade_in_image_detail.dart';
 import 'focus_detail.dart';
 import 'hero_detail.dart';
+import 'image_filtered_detail.dart';
+import 'image_icon_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -34,6 +36,7 @@ class WidgetShowcase extends StatelessWidget {
     ]),
     _Group('图片图标', [
       _Entry('Image / Icon / CircleAvatar', '网络图片、图标、圆形头像', 'ImageDetail'),
+      _Entry('ImageIcon', '图片当图标：size / color(srcIn) / semanticLabel / 与 Icon 对照', 'ImageIconDetail'),
       _Entry('FadeInImage', '占位图 → 目标图淡入（assetNetwork / 普通构造）', 'FadeInImageDetail'),
     ]),
     _Group('容器装饰', [
@@ -69,6 +72,7 @@ class WidgetShowcase extends StatelessWidget {
     _Group('焦点交互', [
       _Entry('Focus / FocusNode', 'requestFocus / unfocus、onFocusChange、hasFocus、canRequestFocus', 'FocusDetail'),
       _Entry('Hero', '跨路由共享元素：点卡片飞向目标页，返回时飞回', 'HeroDetail'),
+      _Entry('ImageFiltered', '整棵子树图片滤镜：blur / dilate / matrix / compose', 'ImageFilteredDetail'),
     ]),
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
     _Group('状态管理', [
@@ -157,6 +161,8 @@ class WidgetDetailPage extends StatelessWidget {
     'FadeInImageDetail': 'components/fade_in_image_detail.js',
     'FocusDetail': 'components/focus_detail.js',
     'HeroDetail': 'components/hero_detail.js',
+    'ImageFilteredDetail': 'components/image_filtered_detail.js',
+    'ImageIconDetail': 'components/image_icon_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -183,6 +189,8 @@ class WidgetDetailPage extends StatelessWidget {
       'FadeInImageDetail' => const FadeInImageDetail(),
       'FocusDetail' => const FocusDetail(),
       'HeroDetail' => const HeroDetail(),
+      'ImageFilteredDetail' => const ImageFilteredDetail(),
+      'ImageIconDetail' => const ImageIconDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

@@ -220,6 +220,12 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
 /// 赋值右侧：字面量 / 形参 / 字段读 / 模型构造 `new X({...})` /
 /// 插值、`??` 等其余形态兜底走 exprToJs。
 String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+  // 组件/值对象出现在**任意表达式位置**（方法实参、三元分支、列表元素）时，
+  // 先交给属性管线（[widgetArgJsHook]，由 widget2js 安装）：子结点槽位与
+  // 值转换器必须与 children 里的组件一致，否则会出现「JS 侧不存在的类调用」
+  // （如 `ImageFilter.blur`）。钩子只接管 JS 侧能解析成类的类型，其余回落。
+  final hooked = widgetArgJsHook?.call(e);
+  if (hooked != null) return hooked;
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被吞成 ""）
   if (e is StringInterpolation) return _logArgJs(e, scope, classes);
   // 相邻字符串字面量拼接（`'a' 'b'`，Dart 语义是**拼接**）同为 StringLiteral 子类，
@@ -459,7 +465,21 @@ List<String> _typeArgsOf(Expression e) {
   return [for (final a in args ?? const <TypeAnnotation>[]) a.toSource()];
 }
 
-/// 类名形态：首字母大写（Dart 语法层唯一可用的判据，与具体类无关）。
+/// 实参位置的「结构化值」钩子：由 widget2js 在求值数据表达式期间安装
+/// （[WidgetTranslateContext.jsDataExpr]）。命中返回 JS 源码时，该实参按
+/// **组件/值对象属性管线**翻译（子结点槽位协议、值转换器、builder 展开全部
+/// 生效）；返回 null 则回落到通用构造翻译。
+///
+/// 必要性：通用构造翻译（[valueCtorJs]）只有签名表，没有属性管线。于是
+/// `helper(ImageFiltered(imageFilter: ImageFilter.blur(...)))` 这种「组件当
+/// 实参」的位置会把 `ImageFilter.blur` 译成 JS 类调用（JS 侧不存在该类），
+/// 子结点也不会拆成槽位。钩子让这类实参与 children 里的组件走**同一条**
+/// 翻译路径，不再有两套产物形态。
+typedef WidgetArgJsHook = String? Function(Expression e);
+
+/// 当前生效的实参钩子（翻译是单线程的，按数据表达式调用期安装/还原）。
+WidgetArgJsHook? widgetArgJsHook;
+
 bool _isClassLikeName(String name) {
   if (name.isEmpty) return false;
   final c = name.codeUnitAt(0);

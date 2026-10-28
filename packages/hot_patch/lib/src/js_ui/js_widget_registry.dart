@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../utils/hot_patch_log.dart';
@@ -600,6 +602,17 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     ),
   );
 
+  // `ImageFiltered`：按 imageFilter 值对象模糊/膨胀/腐蚀/矩阵/组合。
+  // 滤镜缺失（翻译失败）时用零 sigma 模糊兜底——零 sigma 等价于不变形。
+  r.register('ImageFiltered', (c) {
+    return ImageFiltered(
+      imageFilter: imageFilterFromJson(c.props['imageFilter']) ??
+          ImageFilter.blur(sigmaX: 0.0, sigmaY: 0.0),
+      enabled: c.bool_('enabled') ?? true,
+      child: (c.children['child'] as Widget?),
+    );
+  });
+
   // `Material`：除颜色/阴影外，`borderRadius` 是圆角的唯一来源（不写就是直角），
   // 必须映射；`shape`（ShapeBorder 值对象）跨语言未支持，写 `borderRadius`
   // 即等价于默认 `MaterialType.canvas` 下的圆角。
@@ -650,6 +663,19 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       color: colorFromJson(c.props['color']),
     ),
   );
+
+  // `ImageIcon(AssetImage('a.jpg'))`：把**图片**当图标画，尺寸 / 颜色受
+  // IconTheme 影响。与 Image / FadeInImage 同一套 provider 归一化：翻译层把
+  // `AssetImage` / `NetworkImage` 折成路径/网址字符串，宿主按前缀还原 provider。
+  r.register('ImageIcon', (c) {
+    final source = c.str('image') ?? '';
+    return ImageIcon(
+      source.isEmpty ? null : _imageProvider(source),
+      size: c.num_('size'),
+      color: colorFromJson(c.props['color']),
+      semanticLabel: c.str('semanticLabel'),
+    );
+  });
 
   // `Image.network('url')` / `Image.asset('a.png')`：工厂名（`props.factory`）
   // 决定构造哪个原生工厂，位置实参名随之不同（`Image.network` → `src`、

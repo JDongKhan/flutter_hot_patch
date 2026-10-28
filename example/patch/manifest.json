@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-28T10:05:12.856319",
+  "buildTime": "2026-10-28T10:32:26.925729",
   "resources": {
-    "flutter.js": "f8b9aa037d4da32df49e76ff002a5f547f4994cf1ea75ad0b80cebd3407d7b68",
+    "flutter.js": "203b1a788aa6bae564d3f8b15e96b4ba51df03a09257fe6e3a98f3d4973b1935",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
     "runtime.js": "40fe686dde4776e0d461ac3754ad246d25a8667f6262ae797cd61ab75d5ec660",
     "hot_module_base.js": "b2df62024c440012182e5af5baf1a06a25d1b6c251c729c40210f92a9603a546",
@@ -22,6 +22,7 @@
     "components/banner_component.js": "a32b2e228bbe21b8c3042f3d2b72d16da6388736d52014146c3296f289869594",
     "components/dismissible_detail.js": "17a56b08ce4a710c03c99f1d1c6425aa1bb24c56e395050fe999888b66b0c63f",
     "components/fade_in_image_detail.js": "966c6b14b99827e824078f6add81f24d14d7e25920dce3afec0db90ec11bc2e3",
+    "components/image_filtered_detail.js": "d76197bacf7c132ecec588fbb15c32775dcad4c4a536a3f9f5ac878363609579",
     "components/list_item.js": "0a25c62ca00930aa7197fdd45a1e40b5911f2b9d47ab2cc01a13a0a28a9e9b3c",
     "components/composite_component.js": "c08e6ffeb289e9a6ff56ac6b0de8e00430fdc0841ee9fc8da670377ad8252cc0",
     "components/focus_detail.js": "a93ff2ee41f2a9ec54b58aedc0012bfcca127a5b3b5d70389ce8c22e99602880",
@@ -30,10 +31,11 @@
     "components/explicit_animation_detail.js": "1498f4b9d2c405e782851e18575717d60fa1e0d35c6c8801110a85dfbe271c25",
     "components/implicit_animation_detail.js": "a336adb21b96fea2e1e0664ca332bb09a91d833eaec37fa5e6b38e2486036bae",
     "components/hello_component.js": "fc3b06e9730db38840012d9e5cbdfbbe54f1f04456e5c68d18d58751ca983fc0",
+    "components/hero_detail.js": "0b657f3c2f3d0575ddf93abd46911583c007eedc3c1199bf2ab82f5c1d397018",
     "components/animated_list_detail.js": "dbeb627fef8fa0ff89e5a5d3503d692738d130cd17c8bcd96f88b7f39ce4c1b6",
     "components/watch_demo.js": "b7008490f0613b1b7a12145f6e73eb762e12d7a343a8f8fe873165b2c83363e4",
+    "components/image_icon_detail.js": "15e419f66e3cee1a55087607534e828a91c24c0ebc6e815fab5cc61c2be3a846",
     "model/network_vm.js": "9c390ef9c440b3a7498bc6bc23b808ea90a76d9307fcf1df91b27973013011c7",
-    "model/counter_vm.js": "f8bd479498a2d27de5204e8290920f169f9f7981dc8c21e433f2f717c204fc8d",
-    "components/hero_detail.js": "0b657f3c2f3d0575ddf93abd46911583c007eedc3c1199bf2ab82f5c1d397018"
+    "model/counter_vm.js": "f8bd479498a2d27de5204e8290920f169f9f7981dc8c21e433f2f717c204fc8d"
   }
 }
