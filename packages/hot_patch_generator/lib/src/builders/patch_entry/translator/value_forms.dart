@@ -185,7 +185,7 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
   //     内联闭包体的 JS 表达式；闭包体是**类构造**（`(_) => MyModel()`）时
   //     下发类引用（见 [_classRefOf]），由运行时决定何时 new 一次。
   if (e is FunctionExpression) {
-    if (_isBuilderArg(name)) {
+    if (isBuilderArg(name)) {
       return builderClosureJs(ctx, e);
     }
     final body = e.body;
@@ -354,7 +354,7 @@ String? _branchJs(Expression e, WidgetTranslateContext ctx) {
 /// 特判：生成器只有语法树、没有类型解析，无法从闭包签名可靠判断返回类型，
 /// 因此以命名约定区分「返回 widget 的回调」与「返回值/工厂的闭包」。所有
 /// 组件（内建、自定义、三方）共用这一条规则，新增组件无需登记。
-bool _isBuilderArg(String? name) =>
+bool isBuilderArg(String? name) =>
     name != null && (name == 'builder' || name.endsWith('Builder'));
 
 /// 静态工厂方法名 → 结构化样式转换器（`Xxx.styleFrom(...)` 这类：值是样式对象，

@@ -56,8 +56,8 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     // 当作子结点/值重复翻译。
     if (name == 'key') continue;
 
-    if (_isEventArg(name)) {
-      // `on*` 回调有两种消费方，按**目标是否 JS 侧组件**分派（不看内建类型表）：
+    if (_isEventArg(node, name, ctx)) {
+      // 回调有两种消费方，按**目标是否 JS 侧组件**分派（不看内建类型表）：
       //   - JS 侧组件（自定义 / 私有 / `@PatchEntry` 子组件 —— 元素是 JS 类引用，
       //     props 留在 JS 侧）：子组件把回调**当函数直接调**（`this.onPick(k, v)`），
       //     故下发**可调用 JS 值**（方法 tear-off 包成绑定 this 的箭头闭包）。
@@ -150,8 +150,48 @@ String? firstTypeArgOf(Expression? e) {
   return args.first.toSource();
 }
 
-/// 事件参数：`on*` 前缀（`onPressed` / `onChanged` / `onTap` / `onReorder` …）。
-bool _isEventArg(String name) => name.length > 2 && name.startsWith('on');
+/// 具名实参是否是**事件回调**（由消费方在运行时调用）。
+///
+/// 判据 = **消费方 + 形参声明类型**，不含任何组件/属性名清单：
+///
+/// **宿主 widget**（props 要跨语言交给 Dart，函数无法传递，只能传句柄）：
+///   形参声明为函数类型 ⇒ 事件句柄；声明为非函数类型 ⇒ 普通值。于是
+///   `Dismissible.confirmDismiss`（`ConfirmDismissCallback?`）自然落进事件，
+///   而恰好同名、声明为 `bool` 的属性自然落进普通值——接入新组件无需改本文件。
+///
+/// **JS 侧组件**（自定义 / `@PatchEntry` 子组件：props 不出语言，回调就是
+///   可调用闭包）：保持 `on*` 命名约定。这里不能只看类型——`Provider.create`
+///   （`Create<T>`）、`Selector.shouldRebuild` 同样是函数类型，但它们是**值
+///   语义**（惰性工厂 / 谓词，见 value_forms 的 lazy-factory 与 builder 协议），
+///   一律按 `on*` 约定区分，属于应用代码自身约定，也不需要组件清单。
+///
+/// 例外（协议级，先于类型判定）：
+///   - builder 协议参数（`builder` / `itemBuilder` / `pageBuilder` …）永远不是
+///     事件：它们是返回 widget 的闭包，由 delegate 展开子树（[isBuilderArg]）。
+///
+/// 签名或类型不可得（`super.onPressed` 转发、找不到源码）→ 退回 `on*` 命名
+/// 约定，保证既有产物行为不变。
+bool _isEventArg(WidgetNode node, String name, WidgetTranslateContext ctx) {
+  if (isBuilderArg(name)) return false;
+  if (_isJsSideWidget(ctx, node.type)) return _isOnName(name);
+  final sig = CtorSignatures.instance?.of(
+    node.type,
+    ctorName: factoryNameOf(node.expr),
+    positionalCount: _positionalArgCount(node),
+  );
+  if (sig != null) {
+    if (sig.functionParams.contains(name)) return true;
+    if (sig.nonFunctionParams.contains(name)) return false;
+  }
+  return _isOnName(name);
+}
+
+/// Flutter 生态的回调命名约定（`onPressed` / `onChanged` / `onTap` …）。
+bool _isOnName(String name) => name.length > 2 && name.startsWith('on');
+
+/// 调用点的位置实参个数（构造签名按它区分同名类的不同构造）。
+int _positionalArgCount(WidgetNode node) =>
+    node.args.where((a) => a is! NamedExpression).length;
 
 /// 该结点的 `on*` 回调是否由 **JS 侧代码直接调用**（而不是交给宿主）。
 ///

@@ -307,6 +307,12 @@ export class DefaultTabController {
   }
 }
 
+export class Dismissible {
+  constructor(props) {
+    return __h('Dismissible', props);
+  }
+}
+
 export class Divider {
   constructor(props) {
     return __h('Divider', props);

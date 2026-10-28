@@ -65,6 +65,7 @@ import 'change_notifier_js.dart';
 import 'color_js.dart';
 import 'dart_errors_js.dart';
 import 'dart_values_js.dart';
+import 'dismissible_js.dart';
 import 'easy_refresh_js.dart';
 import 'handle_registry_js.dart';
 import 'key_js.dart';
@@ -298,6 +299,27 @@ const String _jsUiGlobalsTail = r'''
   });
   __defineProtoMember(Array.prototype, 'removeAt', function (index) {
     return this.splice(index, 1)[0];
+  });
+  //   - List.remove(value) / removeLast() / removeWhere：Dart 侧极常用
+  //     （`this._items.remove(item)`），缺一个，事件回调就会抛 TypeError，
+  //     `setState` 的 mutator 半途中断、**界面不重建**（典型症状：Dismissible
+  //     已滑走但条目仍在树上，触发 "dismissed ... still part of the tree"）。
+  //     语义按 Dart：remove 删第一个 == value 的元素并返回是否删过。
+  __defineProtoMember(Array.prototype, 'remove', function (value) {
+    var i = this.indexOf(value);
+    if (i < 0) { return false; }
+    this.splice(i, 1);
+    return true;
+  });
+  __defineProtoMember(Array.prototype, 'removeLast', function () {
+    return this.pop();
+  });
+  __defineProtoMember(Array.prototype, 'removeWhere', function (predicate) {
+    var removed = false;
+    for (var i = this.length - 1; i >= 0; i--) {
+      if (predicate(this[i])) { this.splice(i, 1); removed = true; }
+    }
+    return removed;
   });
   __defineProtoMember(Array.prototype, 'insert', function (index, value) {
     this.splice(index, 0, value);
@@ -707,7 +729,10 @@ String runtimeJsSource() {
     // 缓存详细追踪切面：同样无条件拼入（分不出 debug/release），默认关闭，
     // 只有宿主显式 setCacheVerbose(true) 才安装包装。
     _section('【26】缓存详细追踪（debug 用）', cacheTraceJsSource),
-    _section('【27】api 收尾', _jsUiRuntimeSkeletonTailHead),
+    // Dismissible 的 confirmDismiss 异步回程（放最后：依赖 handle 表与 host，
+    // 与能力片段互不干扰）。
+    _section('【27】Dismissible 确认回程', dismissibleJsSource),
+    _section('【28】api 收尾', _jsUiRuntimeSkeletonTailHead),
     _jsUiLeakApiMember,
     _jsUiRuntimeSkeletonTailEnd,
   ].join('\n');

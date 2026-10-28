@@ -45,6 +45,7 @@ import 'change_notifier/change_notifier_library.dart';
 import 'core/dart_values_library.dart';
 import 'core/dart_errors_library.dart';
 import 'core/color_library.dart';
+import 'dismissible/dismissible_library.dart';
 import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
 import 'key/key_library.dart';
@@ -127,6 +128,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const ScrollControllerLibrary());
   // AnimatedList：currentState 命令经 key 桥接的 state op 扩展点接入。
   registerJsUiLibrary(const AnimatedListLibrary());
+  // Dismissible：confirmDismiss 需要 JS→宿主的异步回程通道。
+  registerJsUiLibrary(const DismissibleLibrary());
   registerJsUiLibrary(const TextEditingControllerLibrary());
   registerJsUiLibrary(const TabLibrary());
   registerJsUiLibrary(const KeyLibrary());

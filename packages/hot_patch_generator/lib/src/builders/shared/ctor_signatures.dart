@@ -17,13 +17,32 @@ import 'source_index.dart';
 
 /// 单个构造的形参签名。
 class CtorSignature {
-  const CtorSignature(this.positional, this.named);
+  const CtorSignature(
+    this.positional,
+    this.named, {
+    this.functionParams = const <String>{},
+    this.nonFunctionParams = const <String>{},
+  });
 
   /// 位置形参名，顺序与声明一致（`Text(this.data)` → `['data']`）。
   final List<String> positional;
 
   /// 具名形参名（`{this.style}` → `{'style'}`）。
   final Set<String> named;
+
+  /// 具名形参中**声明类型是函数类型**的名字。
+  ///
+  /// 翻译层据此判定「这个实参是回调还是普通值」——与属性名无关，因此
+  /// `Dismissible.confirmDismiss` 这类不以 `on` 开头的回调无需登记，
+  /// 而恰好同名但声明为 `bool` 的属性也不会被误判成回调。
+  final Set<String> functionParams;
+
+  /// 具名形参中**声明类型明确不是函数**的名字（`bool` / `String` / 数据类…）。
+  ///
+  /// 与 [functionParams] 区分开，是为了保留「类型不可得」这一第三态：
+  /// 两集合都不含的名字（`super.onPressed` 转发、找不到源码）由调用方
+  /// 退回命名约定兜底。
+  final Set<String> nonFunctionParams;
 
   static const empty = CtorSignature([], {});
 }
@@ -39,6 +58,12 @@ class CtorSignatures {
 
   /// 类名 → 候选源文件绝对路径（按包优先级排序；同名类可能存在于多个包）。
   Map<String, List<String>>? _classFiles;
+
+  /// typedef 名 → 候选源文件绝对路径（与 [classFiles] 同一次扫描建立）。
+  Map<String, List<String>>? _typedefFiles;
+
+  /// typedef 名 → 是否函数类型别名（解析结果缓存，每个名字只解析一次）。
+  final Map<String, bool> _typedefIsFunction = {};
 
   /// 源码里声明的 enum 名（与类索引同一次扫描建立）。
   final Set<String> _enumNames = {};
@@ -124,23 +149,109 @@ class CtorSignatures {
     for (final m in decl.members) {
       if (m is! ConstructorDeclaration) continue;
       if (m.name?.lexeme != ctorName) continue;
+      final fieldTypes = _instanceFieldTypes(decl);
       final positional = <String>[];
       final named = <String>{};
+      final functionParams = <String>{};
+      final nonFunctionParams = <String>{};
       for (final p in m.parameters.parameters) {
         final inner = p is DefaultFormalParameter ? p.parameter : p;
         final name = _paramName(inner);
         if (name == null) continue;
         if (p.isNamed) {
           named.add(name);
+          final isFn = _paramIsFunction(inner, fieldTypes);
+          if (isFn == true) functionParams.add(name);
+          if (isFn == false) nonFunctionParams.add(name);
         } else {
           positional.add(name);
         }
       }
-      return CtorSignature(positional, named);
+      return CtorSignature(
+        positional,
+        named,
+        functionParams: functionParams,
+        nonFunctionParams: nonFunctionParams,
+      );
     }
     // 无名构造且没有显式声明：默认构造无参。
     if (ctorName == null) return CtorSignature.empty;
     return null;
+  }
+
+  /// 类里**实例字段**的名字 → 声明类型。
+  ///
+  /// 构造里大量使用 `this.onPressed` 这种**不写类型**的字段形参（Flutter
+  /// 全生态的写法），其类型只在字段声明处；不看这里就只能把回调当普通值。
+  Map<String, TypeAnnotation> _instanceFieldTypes(ClassDeclaration decl) {
+    final out = <String, TypeAnnotation>{};
+    for (final m in decl.members) {
+      if (m is! FieldDeclaration || m.isStatic) continue;
+      final type = m.fields.type;
+      if (type == null) continue;
+      for (final v in m.fields.variables) {
+        out[v.name.lexeme] = type;
+      }
+    }
+    return out;
+  }
+
+  /// 该形参是否**声明为函数类型**；null = 类型不可得（交给命名约定兜底）。
+  ///
+  /// 判定只看类型标注本身（语法），不需要类型解析：
+  ///   - `void Function(T)` 这类 `GenericFunctionType` → 函数；
+  ///   - 裸 `Function` → 函数；
+  ///   - typedef（`VoidCallback` / `ValueChanged<T>` / `ConfirmDismissCallback` …）
+  ///     → 查源码里的 typedef 声明，右侧是函数类型即函数；
+  ///   - 其余具名类型 / 内置类型 → 非函数。
+  bool? _paramIsFunction(
+    FormalParameter p,
+    Map<String, TypeAnnotation> fieldTypes,
+  ) {
+    // 老式「函数形参」写法（`void onDone(int v)`）本身就是函数类型。
+    if (p is FunctionTypedFormalParameter) return true;
+    TypeAnnotation? type;
+    if (p is SimpleFormalParameter) {
+      type = p.type;
+    } else if (p is FieldFormalParameter) {
+      type = p.type ?? fieldTypes[p.name.lexeme];
+    } else if (p is SuperFormalParameter) {
+      type = p.type;
+    }
+    if (type == null) return null;
+    if (type is GenericFunctionType) return true;
+    if (type is NamedType) {
+      final name = type.name2.lexeme;
+      if (name == 'Function') return true;
+      return _isFunctionTypedef(name);
+    }
+    return false;
+  }
+
+  /// 源码里的 typedef 是否是**函数类型别名**。
+  ///
+  /// 只解析该 typedef 所在文件（按需，缓存），不做全局解析——`VoidCallback`
+  /// 这类名字全生态都在用，必须能从源码判定，而不是维护名字表。
+  bool _isFunctionTypedef(String name) {
+    final cached = _typedefIsFunction[name];
+    if (cached != null) return cached;
+    var result = false;
+    _ensureIndex();
+    for (final file in _typedefFiles![name] ?? const <String>[]) {
+      final unit =
+          _units.containsKey(file) ? _units[file] : _units[file] = parseUnitFile(file);
+      if (unit == null) continue;
+      for (final d in unit.declarations) {
+        if (d is GenericTypeAlias && d.name.lexeme == name) {
+          // `typedef X<T> = R Function(…)` 的右侧才是真正的类型。
+          result = d.functionType != null;
+        } else if (d is FunctionTypeAlias && d.name.lexeme == name) {
+          // 老式 `typedef void X(int v);` 本身就是函数类型。
+          result = true;
+        }
+      }
+    }
+    return _typedefIsFunction[name] = result;
   }
 
   String? _paramName(FormalParameter p) {
@@ -155,6 +266,8 @@ class CtorSignatures {
     final existing = _classFiles;
     if (existing != null) return existing;
     final index = <String, List<String>>{};
+    final typedefs = <String, List<String>>{};
+    _typedefFiles = typedefs;
     final sources = _sources;
     if (sources == null) return _classFiles = index;
     for (final root in sources.packages) {
@@ -171,6 +284,10 @@ class CtorSignatures {
           final name = m.group(1);
           if (name != null) _enumNames.add(name);
         }
+        for (final m in _typedefDecl.allMatches(content)) {
+          final name = m.group(1);
+          if (name != null) typedefs.putIfAbsent(name, () => []).add(entity.path);
+        }
       }
     }
     return _classFiles = index;
@@ -186,6 +303,12 @@ class CtorSignatures {
   /// `enum Foo` / `sealed enum Foo` 的枚举名（跳过注释里的）。
   static final _enumDecl = RegExp(
     r'^[ \t]*(?:(?:sealed)[ \t]+)?enum[ \t]+([A-Za-z_$][\w$]*)',
+    multiLine: true,
+  );
+
+  /// `typedef Foo = …` / 老式 `typedef void Foo(…)` 的别名名（跳过注释里的）。
+  static final _typedefDecl = RegExp(
+    r'^[ \t]*(?:(?:abstract|sealed|base|final|interface|augment)[ \t]+)*typedef[ \t]+([A-Za-z_$][\w$]*)',
     multiLine: true,
   );
 }

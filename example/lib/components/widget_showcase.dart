@@ -3,6 +3,7 @@ import 'package:hot_patch/hot_patch.dart';
 import 'animated_list_detail.dart';
 import 'automatic_keep_alive_detail.dart';
 import 'color_filtered_detail.dart';
+import 'dismissible_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
@@ -36,6 +37,7 @@ class WidgetShowcase extends StatelessWidget {
     _Group('列表滚动', [
       _Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail'),
       _Entry('AnimatedList', '增删补间：GlobalKey.currentState 的 insertItem / removeItem', 'AnimatedListDetail'),
+      _Entry('Dismissible', '滑动删除：background / secondaryBackground + confirmDismiss 方向确认', 'DismissibleDetail'),
       _Entry('ReorderableListView', '长按拖拽重排：onReorder 双参事件，重排 / 添加列表项', 'ReorderListDetail'),
     ]),
     _Group('Key 家族', [
@@ -141,6 +143,7 @@ class WidgetDetailPage extends StatelessWidget {
     'AnimatedListDetail': 'components/animated_list_detail.js',
     'AutomaticKeepAliveDetail': 'components/automatic_keep_alive_detail.js',
     'ColorFilteredDetail': 'components/color_filtered_detail.js',
+    'DismissibleDetail': 'components/dismissible_detail.js',
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
@@ -163,6 +166,7 @@ class WidgetDetailPage extends StatelessWidget {
       'AnimatedListDetail' => const AnimatedListDetail(),
       'AutomaticKeepAliveDetail' => const AutomaticKeepAliveDetail(),
       'ColorFilteredDetail' => const ColorFilteredDetail(),
+      'DismissibleDetail' => const DismissibleDetail(),
       'ReorderListDetail' => const ReorderListDetail(),
       'SliverDetail' => const SliverDetail(),
       'GridDetail' => const GridDetail(),

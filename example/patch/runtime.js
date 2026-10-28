@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 8a0b0576） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 9f5c142b） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '8a0b0576') { return; }
-  G.__jsuiVersion = '8a0b0576';
+  if (G.__jsui && G.__jsuiVersion === '9f5c142b') { return; }
+  G.__jsuiVersion = '9f5c142b';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -196,6 +196,27 @@ if (G.kDebugMode) {
   });
   __defineProtoMember(Array.prototype, 'removeAt', function (index) {
     return this.splice(index, 1)[0];
+  });
+  //   - List.remove(value) / removeLast() / removeWhere：Dart 侧极常用
+  //     （`this._items.remove(item)`），缺一个，事件回调就会抛 TypeError，
+  //     `setState` 的 mutator 半途中断、**界面不重建**（典型症状：Dismissible
+  //     已滑走但条目仍在树上，触发 "dismissed ... still part of the tree"）。
+  //     语义按 Dart：remove 删第一个 == value 的元素并返回是否删过。
+  __defineProtoMember(Array.prototype, 'remove', function (value) {
+    var i = this.indexOf(value);
+    if (i < 0) { return false; }
+    this.splice(i, 1);
+    return true;
+  });
+  __defineProtoMember(Array.prototype, 'removeLast', function () {
+    return this.pop();
+  });
+  __defineProtoMember(Array.prototype, 'removeWhere', function (predicate) {
+    var removed = false;
+    for (var i = this.length - 1; i >= 0; i--) {
+      if (predicate(this[i])) { this.splice(i, 1); removed = true; }
+    }
+    return removed;
   });
   __defineProtoMember(Array.prototype, 'insert', function (index, value) {
     this.splice(index, 0, value);
@@ -3340,7 +3361,50 @@ G.ValueNotifier = ValueNotifier;
   }
 
 
-// ===== 【27】api 收尾 =====
+// ===== 【27】Dismissible 确认回程 =====
+  // DismissDirection 枚举镜像：Dart 里 `DismissDirection.endToStart` 是枚举值，
+  // 跨语言只有名字能表达（宿主也按 name 下发/回传），因此 JS 侧的同名常量就是
+  // 名字字符串。这样 `direction == DismissDirection.endToStart` 这种源码级比较
+  // 在 JS 侧**语义不变**（生成器对 props 里的枚举值同样下发名字字符串）。
+  G.DismissDirection = {
+    horizontal: 'horizontal',
+    vertical: 'vertical',
+    startToEnd: 'startToEnd',
+    endToStart: 'endToStart',
+    up: 'up',
+    down: 'down'
+  };
+
+  // 宿主侧桥接见 capabilities/dismissible/dismissible_bridge.dart 的
+  // `_awaitJsValue`：evaluate 本函数触发一次事件，并等 token + 结果回传。
+  // 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__jsuiAwaitRun` 同一约定。
+  G.__jsuiAwaitValue = function (handleId, token, argsJson) {
+    var h = handles[handleId];
+    var args = [];
+    try { args = argsJson ? JSON.parse(argsJson) : []; } catch (e) { args = []; }
+    var out;
+    try {
+      out = (h && typeof h.obj === 'function') ? h.obj.apply(null, args) : null;
+    } catch (e) {
+      // 事件同步抛错：按「已返回 null」收尾，宿主那条 pending 必须有结果。
+      console.error(String(e));
+      host('jsuiAwaitValueDone', [token, 'null']);
+      return;
+    }
+    var done = function (v) {
+      var s = 'null';
+      try { s = JSON.stringify(v === undefined ? null : v); } catch (e) { s = 'null'; }
+      host('jsuiAwaitValueDone', [token, s]);
+    };
+    if (out && typeof out.then === 'function') {
+      out.then(done, function () { done(null); });
+    } else {
+      done(out);
+    }
+  };
+
+
+// ===== 【28】api 收尾 =====
 
   var api = {
     h: h,
