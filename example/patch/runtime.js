@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 2ddfa9bb） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 95f4b271） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '2ddfa9bb') { return; }
-  G.__jsuiVersion = '2ddfa9bb';
+  if (G.__jsui && G.__jsuiVersion === '95f4b271') { return; }
+  G.__jsuiVersion = '95f4b271';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -1105,7 +1105,7 @@ if (G.kDebugMode) {
   // **是否懒由元素自己声明**：`el.lazyChildren === true`，由生成的 `__h`
   // （flutter.js）按构建期配置打标。运行时**零类型知识**——不认识 PageView /
   // TabBarView / ListView，也不维护任何类型表；新增懒容器只改生成器配置
-  // （shared/js_widget_defs.dart）并重出产物，运行时代码不动。
+  // （shared/js_class_defs.dart）并重出产物，运行时代码不动。
 
   // 子项来源：`{el}` = 已创建的 element，`{make}` = 延迟生成（懒容器下的
   // builder 子项，宿主 inflate 到占位时才调用）。
@@ -3350,7 +3350,7 @@ G.ValueNotifier = ValueNotifier;
 
   // TabBarView 是**懒容器**（子页被 SliverFillViewport 强制成整屏，零尺寸占位
   // 布局中性）——不在运行时声明：由生成器配置 lazyChildHostTypes 在 __h 里给
-  // 元素打 `lazyChildren` 标记（见 hot_patch_generator 的 shared/js_widget_defs.dart）。
+  // 元素打 `lazyChildren` 标记（见 hot_patch_generator 的 shared/js_class_defs.dart）。
 
 
 // ===== 【20】Key 类族 =====

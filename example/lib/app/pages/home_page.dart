@@ -78,7 +78,7 @@ class _HomePageState extends State<HomePage> {
     }
     // 字段派生的 final 局部：翻译器会把它们折算成字段别名（`feed.banners`
     // → `this._feed.banners`），因此 SliverGrid 的懒加载 builder 被抽成实例
-    // 方法后照样引用得到（见 js_translator 的链式别名 + widget2js 的
+    // 方法后照样引用得到（见 js_translator 的链式别名 + element2js 的
     // warnCapturedLocals 告警口径）。
     final banners = feed.banners;
     final grid = feed.grid;

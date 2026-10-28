@@ -10,7 +10,7 @@ import '../../shared/host_injected.dart';
 import '../translator/js_value.dart';
 import '../../shared/source_index.dart';
 import '../translator/style_translators.dart';
-import '../translator/widget2js.dart';
+import '../translator/element2js.dart';
 
 /// 判断是否「静态单例类」：普通类（无 @PatchEntry、非 private、非抽象）、
 /// 且含至少一个非 private **static** 字段。
@@ -81,7 +81,7 @@ SingletonResolver buildSingletonResolver(
 /// Color(...) / Colors.xxx（复用颜色求值）、String / int / double / bool
 /// 及简单字面量表达式；求不出（如复杂对象）→ 抛 FormatException，
 /// 让开发者构建期看到错误，而不是静默得到 undefined（与 Dart 语义一致）。
-String singletonFieldValue(Expression? init, WidgetTranslateContext ctx) {
+String singletonFieldValue(Expression? init, ElementTranslateContext ctx) {
   if (init == null) {
     throw FormatException('static 字段缺少初始化表达式，无法翻译');
   }

@@ -51,5 +51,5 @@ const String tabControllerJsSource = r'''
 
   // TabBarView 是**懒容器**（子页被 SliverFillViewport 强制成整屏，零尺寸占位
   // 布局中性）——不在运行时声明：由生成器配置 lazyChildHostTypes 在 __h 里给
-  // 元素打 `lazyChildren` 标记（见 hot_patch_generator 的 shared/js_widget_defs.dart）。
+  // 元素打 `lazyChildren` 标记（见 hot_patch_generator 的 shared/js_class_defs.dart）。
 ''';

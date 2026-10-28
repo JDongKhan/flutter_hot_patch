@@ -17,18 +17,18 @@
 ///     按 prop 名取；
 ///   - `delegate:` 按构造**类型**转换后放进 `children`，不进 props；
 ///   - `on*` → 事件句柄（键名就是参数名，不改名）；
-///   - 位置实参 → 按 Flutter 声明的**形参名**（`Text('hi')` → `data`，见
-///     [widgetPositionalArgNames]）；未登记的类型出声告警并丢弃；
-///   - `key:` 由渲染层统一注入（见 `WidgetTranslateContext._applyKeyProp`）。
+///   - 位置实参 → 按 Flutter 声明的**形参名**（`Text('hi')` → `data`，从源码
+///     构造签名抽取，见 [positionalArgNames]）；查不到的出声告警并丢弃；
+///   - `key:` 由渲染层统一注入（见 `ElementTranslateContext._applyKeyProp`）。
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart' show log;
 
 import '../../shared/ctor_signatures.dart';
-import '../../shared/js_widget_defs.dart';
+import '../../shared/js_class_defs.dart';
 import 'value_forms.dart';
-import 'widget2js.dart';
+import 'element2js.dart';
 
 /// 命名构造 / 静态工厂名的 props 键（值为带引号的 JS 字符串）。
 ///
@@ -39,7 +39,7 @@ import 'widget2js.dart';
 const String factoryPropsKey = 'factory';
 
 /// 任意 widget 构造 → 产物结点描述。
-Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
+Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx) {
   final props = <String, dynamic>{};
   final positional = <Object?>[];
 
@@ -52,7 +52,7 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     final value = arg.expression;
 
     // `key:` 是元素级参数，由渲染层统一注入 props['key']（见
-    // [WidgetTranslateContext._applyKeyProp]）；这里跳过，避免把 Key 构造
+    // [ElementTranslateContext._applyKeyProp]）；这里跳过，避免把 Key 构造
     // 当作子结点/值重复翻译。
     if (name == 'key') continue;
 
@@ -85,8 +85,8 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
   if (factory != null) props[factoryPropsKey] = ctx.jsString(factory);
 
   // 位置实参：按 Flutter 声明的**形参名**下发（`Text('hi')` → `data`）。
-  // 未登记的类型没有可靠形参名，禁止伪造下标键（`$pos`）——出声告警并丢弃，
-  // 促使在 [widgetPositionalArgNames] 补齐登记。
+  // 构造签名查不到时没有可靠形参名，禁止伪造下标键（`$pos`）——出声告警并
+  // 丢弃该结点。
   if (positional.isNotEmpty) {
     final names = positionalArgNames(node.type, factory);
     if (names != null && names.length >= positional.length) {
@@ -96,8 +96,8 @@ Map<String, dynamic> widgetToJson(WidgetNode node, WidgetTranslateContext ctx) {
     } else {
       log.warning(
         '[hot_patch_generator] ${ctx.sourcePath}: ${node.type} 的位置实参'
-        '未登记形参名（widgetPositionalArgNames），已丢弃；'
-        '请在 js_widget_defs.dart 登记该构造的位置形参名。',
+        '未找到构造签名里的形参名，已丢弃；'
+        '请确认该构造的源码可被 ctor_signatures.dart 索引。',
       );
     }
   }
@@ -171,7 +171,7 @@ String? firstTypeArgOf(Expression? e) {
 ///
 /// 签名或类型不可得（`super.onPressed` 转发、找不到源码）→ 退回 `on*` 命名
 /// 约定，保证既有产物行为不变。
-bool _isEventArg(WidgetNode node, String name, WidgetTranslateContext ctx) {
+bool _isEventArg(ElementNode node, String name, ElementTranslateContext ctx) {
   if (isBuilderArg(name)) return false;
   if (_isJsSideWidget(ctx, node.type)) return _isOnName(name);
   final sig = CtorSignatures.instance?.of(
@@ -190,7 +190,7 @@ bool _isEventArg(WidgetNode node, String name, WidgetTranslateContext ctx) {
 bool _isOnName(String name) => name.length > 2 && name.startsWith('on');
 
 /// 调用点的位置实参个数（构造签名按它区分同名类的不同构造）。
-int _positionalArgCount(WidgetNode node) =>
+int _positionalArgCount(ElementNode node) =>
     node.args.where((a) => a is! NamedExpression).length;
 
 /// 该结点的 `on*` 回调是否由 **JS 侧代码直接调用**（而不是交给宿主）。
@@ -202,13 +202,13 @@ int _positionalArgCount(WidgetNode node) =>
 ///     只负责展开子结点，props **原样透传给宿主节点**，回调仍由宿主消费，
 ///     必须下发事件句柄；
 ///   - 其余宿主/原生类型 → 事件句柄。
-bool _isJsSideWidget(WidgetTranslateContext ctx, String type) {
+bool _isJsSideWidget(ElementTranslateContext ctx, String type) {
   if (ctx.importResolver?.call(type) != null) return true;
   if (!ctx.jsClassWidgets.contains(type)) return false;
   return !ctx.delegateClassWidgets.contains(type);
 }
 
-String? _eventOrNull(WidgetTranslateContext ctx, Expression e) {
+String? _eventOrNull(ElementTranslateContext ctx, Expression e) {
   // `onXxx: null` 是「禁用」语义（如 `onPressed: null`），不入产物。
   if (e is NullLiteral) return null;
   try {
@@ -221,8 +221,8 @@ String? _eventOrNull(WidgetTranslateContext ctx, Expression e) {
 /// 组件参数位置上的「函数值」翻译（可调用 JS 表达式）；不是函数形态返回 null。
 ///
 /// 组件（JS 类）会把这类参数**当函数调用**，因此裸方法名不能下发成句柄
-/// （见 [widgetToJson] 的 `on*` 分支）。
-String? _functionOrNull(WidgetTranslateContext ctx, Expression e) {
+/// （见 [elementToJson] 的 `on*` 分支）。
+String? _functionOrNull(ElementTranslateContext ctx, Expression e) {
   if (e is NullLiteral) return null;
   try {
     return ctx.functionJs(e);

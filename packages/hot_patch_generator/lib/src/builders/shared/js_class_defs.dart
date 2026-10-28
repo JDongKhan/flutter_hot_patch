@@ -191,9 +191,3 @@ Set<String> get hostWrapperTypes => {
   ...hostWidgetTypes().where((t) => !jsClassWidgetTypes.contains(t)),
   ...hostDataCarrierTypes(),
 };
-
-/// 已废弃：位置实参的形参名改为从**源码构造签名**自动抽取
-/// （见 `shared/ctor_signatures.dart`），不再维护任何类型/构造名登记表。
-///
-/// 保留空表仅为兼容引用；新增组件（含 SDK 新增、依赖包）无需登记。
-const Map<String, List<String>> widgetPositionalArgNames = {};

@@ -91,7 +91,7 @@ void registerAnimatedListWidgets(JsWidgetRegistry r) {
   //
   // 已知限制：Dart 传入的退场 `builder` 是闭包，跨语言无法执行，JS 侧只能复用
   // 「被移除的原项」——因此退场样式与普通项一致（Dart 侧若写了不同的退场样式，
-  // 只有原生版生效）。JS 代理类对该参数会告警一次（见 js_widget_defs.dart）。
+  // 只有原生版生效）。JS 代理类对该参数会告警一次（见 js_class_defs.dart）。
   registerKeyStateOp('AnimatedListState.removeItem', (key, payload) {
     final state = key.currentState;
     if (state is! AnimatedListState) return null;

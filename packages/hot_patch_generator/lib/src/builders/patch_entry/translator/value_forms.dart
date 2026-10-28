@@ -16,15 +16,15 @@ import 'package:analyzer/dart/ast/ast.dart';
 
 import '../../shared/ctor_signatures.dart';
 import 'style_translators.dart';
-import 'widget2js.dart';
+import 'element2js.dart';
 
 /// 值形态转换器：`值表达式 + 上下文` → 产物值（JS 表达式字符串 / JSON map）。
-typedef ValueConverter = Object? Function(Expression e, WidgetTranslateContext ctx);
+typedef ValueConverter = Object? Function(Expression e, ElementTranslateContext ctx);
 
 /// 去掉空值键（保序）：Dart `null` 与字符串 `'null'`（[TreeShape] 对 NullLiteral
 /// 的产出）都算空。
 ///
-/// 必须做：产物渲染把 Dart `null` 输出成裸 `null`（`widget2js.dart` 的
+/// 必须做：产物渲染把 Dart `null` 输出成裸 `null`（`element2js.dart` 的
 /// `jsLiteral`），且 `usesJsClass` 用 `props.containsKey('builder')` 判定结点
 /// 形态——一个「值为 null 的 builder 键」会让结点从类引用 `__h(ListView,…)`
 /// 变成字符串 `__h('ListView',…)`。
@@ -128,13 +128,13 @@ final Map<String, ValueConverter> _constRefConverters = {
 };
 
 /// 枚举 / 常量引用的兜底：`Owner.value` 里 owner 与 name 都匹配才产出（带引号）。
-Object? _enum(Expression e, WidgetTranslateContext c, String owner) {
+Object? _enum(Expression e, ElementTranslateContext c, String owner) {
   final name = enumName(e, owner);
   return name == null ? null : c.jsString(name);
 }
 
 /// `EdgeInsets.zero` → `{left/top/right/bottom: '0'}`（与 [edgeInsetsToJson] 同格式）。
-Object? _zeroInsets(Expression e, WidgetTranslateContext c, String source) {
+Object? _zeroInsets(Expression e, ElementTranslateContext c, String source) {
   if (e.toSource() != source) return null;
   return {
     'left': '0',
@@ -145,7 +145,7 @@ Object? _zeroInsets(Expression e, WidgetTranslateContext c, String source) {
 }
 
 /// `BorderRadius.zero` → `{radius: '0'}`（与 [borderRadiusToJson] 统一圆角同格式）。
-Object? _zeroRadius(Expression e, WidgetTranslateContext c, String source) {
+Object? _zeroRadius(Expression e, ElementTranslateContext c, String source) {
   if (e.toSource() != source) return null;
   return {'radius': '0'};
 }
@@ -157,8 +157,8 @@ Object? _zeroRadius(Expression e, WidgetTranslateContext c, String source) {
 ///   2. 构造 / 静态工厂（`ctorOf` 归一）→ [_ctorConverters]；
 ///   3. 常量引用（`Owner.name`）→ [_constRefConverters]；
 ///   4. `ListLiteral` → 元素列表（逐项交给调用方的结点翻译）；
-///   5. 其余 → 表达式直通（[WidgetTranslateContext.jsDataExpr]）。
-Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
+///   5. 其余 → 表达式直通（[ElementTranslateContext.jsDataExpr]）。
+Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
   if (e is NullLiteral) return null;
 
   // sliver 子结点提供者：按**构造类型**识别（与参数名无关）。
@@ -299,7 +299,7 @@ Object? autoValue(Expression e, WidgetTranslateContext ctx, {String? name}) {
 ///
 /// 用于「惰性工厂」值（provider 的 `create: (_) => MyModel()`）：产物要下发
 /// 类引用而不是实例。构造里的实参不下发（运行时按默认构造）——与旧口径一致。
-String? _classRefOf(Expression expr, WidgetTranslateContext ctx) {
+String? _classRefOf(Expression expr, ElementTranslateContext ctx) {
   final (ctor, _) = ctx.ctorOf(expr);
   if (ctor == null || !isClassName(ctor)) return null;
   // 登记依赖：确保该类（跨文件模型类）被翻译并 import 进本产物。
@@ -314,7 +314,7 @@ String? _classRefOf(Expression expr, WidgetTranslateContext ctx) {
 ///   - `{__delegate: 'builder', builder: '<方法名>', childCount: <jsExpr>}`。
 ///
 /// 两种都不匹配 → null（调用方按普通值形态继续翻译）。
-Object? _delegateValue(Expression e, WidgetTranslateContext ctx) {
+Object? _delegateValue(Expression e, ElementTranslateContext ctx) {
   final (ctor, args) = ctx.ctorOf(e);
 
   if (ctor == 'SliverChildListDelegate') {
@@ -351,7 +351,7 @@ Object? _delegateValue(Expression e, WidgetTranslateContext ctx) {
 
 /// 条件表达式单个分支 → JS 源码：widget 构造走元素渲染，列表逐项渲染，
 /// 其余按标量直通。渲染不出来返回 null。
-String? _branchJs(Expression e, WidgetTranslateContext ctx) {
+String? _branchJs(Expression e, ElementTranslateContext ctx) {
   if (e is NullLiteral) return 'null';
   if (e is ListLiteral) {
     final items = <String>[];
@@ -425,7 +425,7 @@ String? staticMemberOf(Expression e) {
 }
 
 /// 表达式直通；翻译失败或得到 `'null'` 都算「没有值」。
-String? _jsExprOrNull(Expression e, WidgetTranslateContext ctx) {
+String? _jsExprOrNull(Expression e, ElementTranslateContext ctx) {
   try {
     final js = ctx.jsDataExpr(e);
     return js == 'null' ? null : js;
@@ -446,7 +446,7 @@ String? _jsExprOrNull(Expression e, WidgetTranslateContext ctx) {
 /// - 箭头体：表达式即子树；
 /// - 块体：局部变量声明作为闭包前置语句，`return` 的表达式作子树。
 String? builderClosureJs(
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
   FunctionExpression builder,
 ) {
   final params = builder.parameters?.parameters ?? const <FormalParameter>[];

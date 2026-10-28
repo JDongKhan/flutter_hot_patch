@@ -1,12 +1,12 @@
 /// 共享值工具：字面量、字符串转义、颜色、全局标志、类型判断、作用域。
 ///
 /// 与 widget、类结构无关，由收集层（analyze_dart_class）、渲染层（dart2js）
-/// 与 widget 层（widget2js）共同使用，避免任何一方反向依赖另一方的实现文件。
+/// 与 widget 层（element2js）共同使用，避免任何一方反向依赖另一方的实现文件。
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../../shared/js_widget_defs.dart';
+import '../../shared/js_class_defs.dart';
 import '../../shared/runtime_global_types.dart';
 import '../class_info.dart';
 
@@ -17,7 +17,7 @@ import '../class_info.dart';
 /// 漏转义会直接产出非法 JS，导致整个模块求值失败。
 String jsString(String s) => jsStringLiteral(s);
 
-/// 字符串值 → JS 双引号字面量（供 [jsString] 与 widget2js 共用，禁止再写第二份）。
+/// 字符串值 → JS 双引号字面量（供 [jsString] 与 element2js 共用，禁止再写第二份）。
 String jsStringLiteral(String s) {
   final b = StringBuffer('"');
   for (final code in s.runes) {
@@ -212,7 +212,7 @@ String? typeTestJs(String typeName, String valueJs, {Set<String> knownClasses = 
 //     notifyListeners）
 //
 // 后续新增 SDK 支持 = 往这张表加一行 +（如需要）在运行时注册对应基类。
-// widget 翻译不走 per-widget 实现：统一入口见 widget_json.dart / value_forms.dart。
+// widget 翻译不走 per-widget 实现：统一入口见 element_json.dart / value_forms.dart。
 // ===========================================================================
 
 /// 由 [ClassInfo.superType] 查 JS 基类名；未登记返回 null。
@@ -361,13 +361,13 @@ class FieldScope {
   bool isMethod(String name) => methods.contains(name);
 }
 
-/// 「widget 表达式 / 树 → JS」的渲染接口（由 widget2js 层的
-/// `WidgetTranslateContext` 实现）。
+/// 「构造表达式 → JS 渲染」接口（由 element2js 层的
+/// `ElementTranslateContext` 实现）。
 ///
-/// 放在公共翻译层是为了让「Dart 类 → JS」不反向依赖 widget2js：方法体里
-/// `return Container(...)` 这类 widget 构造表达式经此接口交给 widget 层渲染，
+/// 放在公共翻译层是为了让「Dart 类 → JS」不反向依赖翻译树那一层：方法体里
+/// `return Container(...)` 这类构造表达式经此接口交给渲染层处理，
 /// 其余表达式仍走本文件的通用翻译。
-abstract class WidgetExprRenderer {
+abstract class ExprRenderer {
   /// 构造表达式在 JS 侧的类**来自哪个产物文件**（null = JS 侧没有这个类，
   /// 走通用表达式翻译）。
   ///

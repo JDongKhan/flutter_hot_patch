@@ -3,21 +3,21 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart' show log;
 
 import '../../shared/ctor_signatures.dart';
-import '../../shared/js_widget_defs.dart';
+import '../../shared/js_class_defs.dart';
 import 'js_translator.dart';
 import 'js_value.dart';
-import 'widget_json.dart';
+import 'element_json.dart';
 
 // ===========================================================================
-// widget2js：widget → JS（build 树的翻译与渲染）
+// element2js：widget → JS（build 树的翻译与渲染）
 //
 // widget 在 JS 端没有等价物，需专门翻译：
-//   - build 树解析：WidgetNode / WidgetTranslateContext（表达式 → 中立描述）
+//   - build 树解析：ElementNode / ElementTranslateContext（表达式 → 中立描述）
 //   - 中立描述 → JS：`__h(type, props)` 构造调用树（实参按原名进 props，
 //     元素工厂在运行时按元素 type 拆结构子结点，见 widget_module_builder 的 __h）
-//   - 统一翻译入口：widget_json.dart（widgetToJson）+ value_forms.dart（autoValue）
+//   - 统一翻译入口：element_json.dart（elementToJson）+ value_forms.dart（autoValue）
 //   - 静态单例引用：SingletonResolver
-// [WidgetTranslateContext] 实现 js_translator 的 [WidgetExprRenderer]，供
+// [ElementTranslateContext] 实现 js_translator 的 [ExprRenderer]，供
 // 「Dart 类 → JS」在方法体里渲染返回的 widget。
 //
 // 扩展方式：**没有** per-widget 的翻译类。任意 widget（内建 / 自定义 / 三方）
@@ -31,7 +31,7 @@ import 'widget_json.dart';
 /// 不直接依赖某个具体 widget：type 是构造名（'Column'/'Text'/...）。
 /// [args] 保留原始参数列表（含 NamedExpression，供 ctx 的 namedArg/
 /// positionalArg/listArg 解析）；[positionalArgs]/[namedArgs] 是拆分视图。
-class WidgetNode {
+class ElementNode {
   final String type;
   final List<Expression> args;
   final List<Expression> positionalArgs;
@@ -40,7 +40,7 @@ class WidgetNode {
   /// 原始表达式（InstanceCreationExpression 等，取类型参数等用）。
   final Expression? expr;
 
-  WidgetNode(this.type, this.args, {this.expr})
+  ElementNode(this.type, this.args, {this.expr})
     : positionalArgs = [
         for (final a in args)
           if (a is! NamedExpression) a,
@@ -68,7 +68,7 @@ class ConstKeyAllocator {
 ///
 /// translator 通过 [translate] 递归子节点、通过 [renderJs] 递归渲染子节点，
 /// 通过 [jsDataExpr]/[eventOf]/[propOf] 等 helper 解析参数。
-class WidgetTranslateContext implements WidgetExprRenderer {
+class ElementTranslateContext implements ExprRenderer {
   final Map<String, String> propByField;
   final Map<String, String> actionByMethod;
   final String sourcePath;
@@ -123,7 +123,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 
   ConstKeyAllocator get constKeys => constKeyAllocator ?? _localConstKeys;
 
-  WidgetTranslateContext({
+  ElementTranslateContext({
     required this.propByField,
     required this.actionByMethod,
     required this.sourcePath,
@@ -238,7 +238,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     // （registerNativeComponent）或给出可见占位。
     collectDependency(ctor);
     final node = _toNode(e);
-    final json = widgetToJson(node, this);
+    final json = elementToJson(node, this);
     // `key:` 是跨所有 widget 的通用参数（Key 是值不是结点），此处统一注入
     // props['key']（见 [_applyKeyProp]）。
     _applyKeyProp(json, node);
@@ -278,7 +278,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 产物 props['key'] 存 JS 表达式字符串（`new ValueKey(this._items[i])`），
   /// 运行时随 props 序列化下发，宿主侧还原成真实 Flutter Key（key_bridge）。
   /// key 是**附加**信息：翻译不出来只丢 key（并出声），不拖垮整个结点。
-  void _applyKeyProp(Map<String, dynamic> json, WidgetNode node) {
+  void _applyKeyProp(Map<String, dynamic> json, ElementNode node) {
     final keyExpr = node.namedArgs['key'];
     if (keyExpr == null) return;
     final String js;
@@ -491,7 +491,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     _extractedVisible.add(name);
   }
 
-  /// [WidgetExprRenderer.registerLocal] 实现：方法体翻译器声明局部变量时
+  /// [ExprRenderer.registerLocal] 实现：方法体翻译器声明局部变量时
   /// 同步登记，保证同一方法体里返回的 widget 树能解析这些名字。
   ///
   /// 同时记为「方法体局部变量」：被抽走的 builder 子树里引用了它就必须告警
@@ -547,7 +547,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 当前正在翻译的方法形参（`withMethodParams` 期间有效）。
   final Set<String> _methodParams = {};
 
-  /// [WidgetExprRenderer.withMethodParams] 实现：翻译某方法体期间把形参登记进
+  /// [ExprRenderer.withMethodParams] 实现：翻译某方法体期间把形参登记进
   /// widget 层作用域，结束后恢复（连同本方法产生的局部别名一起回收，避免跨方法串味）。
   @override
   T withMethodParams<T>(Iterable<String> params, T Function() body) {
@@ -661,7 +661,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   }
 
   /// 结点级的 `key` 并入元素 props：Key 是**元素级参数**（见
-  /// [WidgetTranslateContext._applyKeyProp]），渲染时统一落在 `props.key` 上
+  /// [ElementTranslateContext._applyKeyProp]），渲染时统一落在 `props.key` 上
   /// ——运行时 `keyOf` / 宿主 key 桥读的就是它。无 key 时 props 原样复制。
   static Map<String, dynamic> _propsWithKey(Object? props, Object? key) {
     final out = <String, dynamic>{};
@@ -1302,7 +1302,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 必然 ReferenceError）。运行时 `this.context` 按**执行位置**解析——被委托的
   /// builder 方法里取的是**被委托组件**的代理，与 Dart 闭包捕获 `context` 形参同语义。
   String jsDataExpr(Expression e, [FieldScope? scope]) {
-    return withWidgetContext(() {
+    return withExprRenderer(() {
       final js = rhsToJs(e, scope ?? _dataScope(), const {});
       if (js == null) {
         throw FormatException('文本内容只支持字符串/插值/状态字段/模型属性/三目，不支持 ${e.toSource()}');
@@ -1311,24 +1311,24 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     });
   }
 
-  /// 在**组件语境**里翻译一段代码：任意表达式位置的构造（含闭包体内的
-  /// `return Row(...)` / `var x = Container(...)`）都走属性管线，与 children
-  /// 里的子结点同一条路径（属性归一 + 类所在文件登记 import）；同时静态成员
-  /// 调用（`Overlay.of(context)`）按「receiver 的类定义在哪」解析成类引用。
+  /// 把本渲染器发布给表达式翻译器，在这段作用域内翻译代码：任意表达式位置的
+  /// 构造（含闭包体内的 `return Row(...)` / `var x = Container(...)`）都走属性
+  /// 管线，与 children 里的子结点同一条路径（属性归一 + 类所在文件登记
+  /// import）；同时静态成员调用（`Overlay.of(context)`）按「receiver 的类定义
+  /// 在哪」解析成类引用。
   ///
-  /// 翻译器是自由函数 + 单线程，渲染器只能在这段作用域内发布出去（见
-  /// js_translator 的 `widgetArgJsHook` / `classRefHook`）。**唯一入口**：
-  /// 数据表达式、函数值、整个类的方法体都用它，不再按「是不是组件 /
-  /// 是不是返回 widget 的方法」分支。
-  T withWidgetContext<T>(T Function() body) {
-    final prev = widgetArgJsHook;
+  /// 翻译器是自由函数 + 单线程，拿不到渲染器实例，只能在这段作用域内发布出去
+  /// （见 js_translator 的 `constructionHook` / `classRefHook`）。**唯一入口**：
+  /// 数据表达式、函数值、整个类的方法体都用它，不按类角色 / 返回类型分支。
+  T withExprRenderer<T>(T Function() body) {
+    final prev = constructionHook;
     final prevClassRef = classRefHook;
-    widgetArgJsHook = _argWidgetJs;
+    constructionHook = _constructionJs;
     classRefHook = _classRefJs;
     try {
       return body();
     } finally {
-      widgetArgJsHook = prev;
+      constructionHook = prev;
       classRefHook = prevClassRef;
     }
   }
@@ -1336,7 +1336,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 静态成员调用的 receiver 是「类定义在某个产物模块里的类型」时 → 类引用串
   /// （并登记 import），否则 null（交给通用路径）。
   ///
-  /// 与 [_argWidgetJs] 同一判据：[jsClassFileOf] 说明这个类型在 JS 侧确有类定义，
+  /// 与 [_constructionJs] 同一判据：[jsClassFileOf] 说明这个类型在 JS 侧确有类定义，
   /// 静态方法（`Overlay.of` / 项目类上的工厂方法）因此可以原样调用；运行时注入
   /// 的全局类（`MediaQuery` / `Theme`）没有文件归属，返回 null 由原规则承接。
   String? _classRefJs(String className) {
@@ -1351,7 +1351,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 只接管「JS 侧有该类定义」的类型（按类所在文件判定：项目内类有产物文件，
   /// 其余在 package 模块或运行时注入）；没有 JS 类的构造（`Duration` /
   /// `EdgeInsets` 等）保持通用构造翻译——它们本就由运行时的同名类承接。
-  String? _argWidgetJs(Expression e) {
+  String? _constructionJs(Expression e) {
     if (ctorJsClassFile(e) == null) return null;
     final node = translate(e);
     if (node is! Map || node['type'] == null) return null;
@@ -1460,7 +1460,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
     if (e is FunctionExpression) {
       // 闭包体里可能 return 组件（`builder: (context, o) { ... return Row(...) }`），
       // 与 build 树走同一条管线：属性归一 + import 登记。
-      return withWidgetContext(
+      return withExprRenderer(
         () => closureToJs(e, _dataScope(), const {}, this),
       );
     }
@@ -1575,7 +1575,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// `type`，会把整个 props Map 误判成节点（读出的 `type` 是 JS 表达式而非类型名，
   /// 查表落空后整条结点降级）。节点 Map 由 translator 产出，特征明确：
   ///   - 键只有 `type` / `props` / `key`（`key` 是元素级 Key，由
-  ///     [WidgetTranslateContext._applyKeyProp] 注入，渲染时并入 props），
+  ///     [ElementTranslateContext._applyKeyProp] 注入，渲染时并入 props），
   ///     以及生成期标记 `__constSite`（`const` 构造的站点缓存标记，渲染时消费）。
   ///
   ///   - `type` 的值是 [jsString] 产出的**带引号字符串字面量**（类型名），
@@ -1591,12 +1591,12 @@ class WidgetTranslateContext implements WidgetExprRenderer {
   /// 生成 JS 双引号字符串字面量（委托 [jsStringLiteral]，与 js_translator 共用唯一实现）。
   String jsString(String s) => jsStringLiteral(s);
 
-  WidgetNode _toNode(Expression e) {
+  ElementNode _toNode(Expression e) {
     final (ctor, args) = ctorOf(e);
     if (ctor == null) {
       throw FormatException('不支持的 UI 表达式: ${e.toSource()}');
     }
-    return WidgetNode(ctor, args, expr: e);
+    return ElementNode(ctor, args, expr: e);
   }
 }
 
@@ -1605,7 +1605,7 @@ class WidgetTranslateContext implements WidgetExprRenderer {
 //
 // 原行为：build() 树里**任意一个叶子表达式**抛 FormatException 会一路冒泡，
 // 最终让 `_widgetExprToJs` 返回 null，整棵 `return Column(...)` 被丢弃 → 页面
-// 退化成空 build。现在把兜底放在每一次 [WidgetTranslateContext.translate] /
+// 退化成空 build。现在把兜底放在每一次 [ElementTranslateContext.translate] /
 // [translateElement] / [renderJs] 递归调用上：坏叶子只丢自己，兄弟结点与上层
 // 结点照常产出，同时打印构建期告警（不静默）。
 //
@@ -1690,7 +1690,7 @@ class SingletonResolver {
   }
 }
 
-/// 收集表达式里出现的简单标识符名——[WidgetTranslateContext.warnCapturedLocals]
+/// 收集表达式里出现的简单标识符名——[ElementTranslateContext.warnCapturedLocals]
 /// 的构建期抽查用。
 ///
 /// 成员名（`a.b` 里的 `b`）也会被收进来，误报面由「名字必须是**本类**的方法体

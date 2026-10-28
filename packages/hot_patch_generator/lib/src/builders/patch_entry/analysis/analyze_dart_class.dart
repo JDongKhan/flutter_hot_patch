@@ -17,14 +17,14 @@ import '../../shared/host_injected.dart';
 import '../translator/js_translator.dart';
 import '../translator/js_value.dart';
 import '../../shared/source_index.dart';
-import '../translator/widget2js.dart';
+import '../translator/element2js.dart';
 
 /// 方法形参 → JS 形参名列表（解 DefaultFormalParameter 包裹）。
 ///
 /// **一一对应**：Dart 是什么形参，JS 就是什么形参（形参名、顺序、个数完全一致），
 /// 不做任何类型剔除——`BuildContext` 也有对应物（运行时以最近宿主祖先结点为锚
 /// 的代理，由 build 传参）。形参名在作用域内保持裸引用；仅事件等延迟作用域因
-/// 看不见形参，才由作用域别名译成 `this.context`（见 WidgetTranslateContext._eventScope）。
+/// 看不见形参，才由作用域别名译成 `this.context`（见 ElementTranslateContext._eventScope）。
 /// 组件与普通类共用这一处。
 List<String> jsMethodParams(MethodDeclaration m) {
   final out = <String>[];
@@ -560,7 +560,7 @@ ClassInfo translateClass(
   // 翻译上下文：实例字段表（propByField）+ 实例方法名表（actionByMethod）
   // ——widget 层据此解析标识符（`_count` → `this._count`）、区分本类实例
   // 方法与嵌套组件构造、事件绑定（`__bindFn`）。普通类与组件同一个上下文。
-  final parseCtx = WidgetTranslateContext(
+  final parseCtx = ElementTranslateContext(
     propByField: propByField,
     actionByMethod: {
       for (final m in methods)
@@ -571,7 +571,7 @@ ClassInfo translateClass(
     // 依赖它解析为本类方法，而不只限于注册为动作的方法。
     methodNames: {for (final m in methods) m.name},
     // getter 名（`_visiblePosts`）：JS 类里是 `get` 访问器，作为函数值传参时
-    // 必须按值读，不能包装成调用（见 [WidgetTranslateContext.getterNames]）。
+    // 必须按值读，不能包装成调用（见 [ElementTranslateContext.getterNames]）。
     getterNames: {
       for (final m in methods)
         if (m.isGetter) m.name,
@@ -645,17 +645,17 @@ ClassInfo translateClass(
   // 同一条路径。parseCtx 在过程中收集依赖组件 / 用到的 widget 类型 /
   // 响应式 builder 子方法。
   //
-  // 整类方法体都在**组件语境**里翻译：任意表达式位置的 widget 构造走属性管线
-  // （属性归一 + import 登记），静态类引用（`Overlay.of(context)`）按类定义
-  // 所在文件解析。所有类（含普通模型）同一语境——不区分「是不是组件」，
-  // 也不区分「是不是返回 widget 的方法」。
-  final translated = parseCtx.withWidgetContext(() => <ClassMethod>[
+  // 整类方法体都在**表达式渲染器**发布期间翻译：任意表达式位置的构造走属性
+  // 管线（属性归一 + import 登记），静态类引用（`Overlay.of(context)`）按类
+  // 定义所在文件解析。所有类同一路径——不区分「是不是组件」，也不区分
+  // 「是不是返回 widget 的方法」。
+  final translated = parseCtx.withExprRenderer(() => <ClassMethod>[
     for (final m in methods)
       buildMethod(
         m,
         bodyJs: translateClassMethodBody(proto, buildMethod(m), used,
             hostMethods: hostMethods,
-            widgetCtx: parseCtx,
+            renderer: parseCtx,
             globalConsts: globalConsts),
       ),
   ]);
@@ -855,7 +855,7 @@ List<String> _typeArgs(String src) {
 /// 提取 SnackBar 消息字符串：方法体为
 /// `showSnackBar(SnackBar(content: Text('...')))` 时返回消息的 JS 字符串
 /// 字面量（整体方法改译为 nativeToast 宿主通道）；否则 null。
-String? _snackMessage(FunctionBody body, WidgetTranslateContext ctx) {
+String? _snackMessage(FunctionBody body, ElementTranslateContext ctx) {
   Expression? outer;
   if (body is ExpressionFunctionBody) {
     outer = body.expression;

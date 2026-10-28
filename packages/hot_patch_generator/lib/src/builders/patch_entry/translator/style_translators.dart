@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
 import 'js_value.dart';
-import 'widget2js.dart';
+import 'element2js.dart';
 
 // ===========================================================================
 // Flutter 类 → JSON 的 toJson 工具集（生成器侧）
@@ -19,7 +19,7 @@ import 'widget2js.dart';
 /// 返回 null 表示不可翻译/未提供样式。
 Map<String, dynamic>? textStyleToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -83,7 +83,7 @@ Map<String, dynamic>? textStyleToJson(
 /// 返回 null 表示未提供样式。
 Map<String, dynamic>? buttonStyleToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -187,7 +187,7 @@ String? _fontStyleExpr(Expression e) {
 /// `colorFromJson` 还原——翻译层不持有任何色值表，SDK 新增颜色零改动。
 ///
 /// 跨文件静态单例类字段引用（`MyColors.background`）额外登记 import 依赖。
-String? translateColor(Expression e, WidgetTranslateContext ctx) {
+String? translateColor(Expression e, ElementTranslateContext ctx) {
   final singleton = ctx.singletons?.staticRef(e);
   if (singleton != null) return singleton;
   try {
@@ -269,7 +269,7 @@ Map<String, dynamic>? _sizeExpr(Expression e) {
 /// `BorderSide(...)` 与 `Border.all(...)` 字段一致，共用这一处解析。
 Map<String, dynamic> _borderSideProps(
   List<Expression> args,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   final map = <String, dynamic>{};
   for (final a in args) {
@@ -291,7 +291,7 @@ Map<String, dynamic> _borderSideProps(
 }
 
 /// BorderSide(color: ..., width: ..., style: ...) → {'color': c, 'width': n, 'style': s}。
-Map<String, dynamic>? borderSideToJson(Expression e, WidgetTranslateContext ctx) {
+Map<String, dynamic>? borderSideToJson(Expression e, ElementTranslateContext ctx) {
   final (ctor, args) = _ctorOfExpr(e);
   if (ctor != 'BorderSide') return null;
   final map = _borderSideProps(args, ctx);
@@ -334,7 +334,7 @@ Object? textScalerToJson(Expression e) {
 /// 返回 null 表示不可翻译/未提供。
 Map<String, dynamic>? edgeInsetsToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -399,7 +399,7 @@ Map<String, dynamic>? edgeInsetsToJson(
 /// SliverGrid 退化成单列）。返回 null 表示不可翻译/未提供。
 Map<String, dynamic>? gridDelegateToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -425,7 +425,7 @@ Map<String, dynamic>? gridDelegateToJson(
 }
 
 /// Alignment.center/topLeft/... → '"center"' 等（运行时 alignmentFromJson）。
-String? alignmentToJson(Expression? expr, WidgetTranslateContext ctx) {
+String? alignmentToJson(Expression? expr, ElementTranslateContext ctx) {
   if (expr == null) return null;
   final (owner, name) = _staticRef(expr);
   if (owner != 'Alignment' || name == null) return null;
@@ -500,7 +500,7 @@ String? offsetExprToJson(Expression? expr) {
 /// （缺省角 = 0，运行时按边角名组装 BorderRadius.only）。
 Map<String, dynamic>? borderRadiusToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -555,7 +555,7 @@ String? _radiusValue(Expression e) {
 
 /// 颜色值 → JS 表达式（1:1 透传，见 [translateColor]）。
 /// 公共包装：widget translator 直接调用。
-String? colorToJson(Expression? expr, WidgetTranslateContext ctx) {
+String? colorToJson(Expression? expr, ElementTranslateContext ctx) {
   if (expr == null) return null;
   return translateColor(expr, ctx);
 }
@@ -563,7 +563,7 @@ String? colorToJson(Expression? expr, WidgetTranslateContext ctx) {
 /// BoxDecoration(color/borderRadius/border/boxShadow/gradient/shape/image) → JSON。
 Map<String, dynamic>? boxDecorationToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -604,7 +604,7 @@ Map<String, dynamic>? boxDecorationToJson(
 /// 四边统一 → {'all': borderSide}；四边独立 → {'top': ..., 'right': ...}。
 Map<String, dynamic>? borderToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -641,7 +641,7 @@ Map<String, dynamic>? borderToJson(
 /// 元素也支持 BoxShadow 作为 const 构造（InstanceCreationExpression）。
 List<Map<String, dynamic>>? boxShadowListToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr is! ListLiteral) return null;
   final list = <Map<String, dynamic>>[];
@@ -655,7 +655,7 @@ List<Map<String, dynamic>>? boxShadowListToJson(
 
 /// 单个 BoxShadow(color:, offset: Offset(dx, dy), blurRadius:, spreadRadius:,
 /// blurStyle:) → JSON。
-Map<String, dynamic>? boxShadowToJson(Expression e, WidgetTranslateContext ctx) {
+Map<String, dynamic>? boxShadowToJson(Expression e, ElementTranslateContext ctx) {
   final (ctor, args) = _ctorOfExpr(e);
   if (ctor != 'BoxShadow') return null;
   final map = <String, dynamic>{};
@@ -697,7 +697,7 @@ Map<String, dynamic>? boxShadowToJson(Expression e, WidgetTranslateContext ctx) 
 /// 注意用 kind 而不是 type：jsLiteral 把含 type 键的 Map 当 widget 节点渲染。
 Map<String, dynamic>? gradientToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -755,7 +755,7 @@ Map<String, dynamic>? gradientToJson(
 ///   {kind:'linearToSrgbGamma'} / {kind:'srgbToLinearGamma'}。
 Map<String, dynamic>? colorFilterToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -808,7 +808,7 @@ List<Expression>? _floatListElements(Expression? e) {
 /// 因此数值同时兼容位置与具名两种写法（源码里两种都被 Flutter 接受）。
 Map<String, dynamic>? imageFilterToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -890,7 +890,7 @@ Map<String, dynamic>? imageFilterToJson(
 /// DecorationImage(image: NetworkImage/AssetImage(...), fit:) → {source, fit}。
 Map<String, dynamic>? decorationImageToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -915,7 +915,7 @@ Map<String, dynamic>? decorationImageToJson(
 /// BoxConstraints.tightFor(width:, height:) → JSON（值需数字字面量）。
 Map<String, dynamic>? boxConstraintsToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -952,7 +952,7 @@ Map<String, dynamic>? boxConstraintsToJson(
 /// CircleBorder(side:) → {kind:'circle', ...}
 Map<String, dynamic>? shapeToJson(
   Expression? expr,
-  WidgetTranslateContext ctx,
+  ElementTranslateContext ctx,
 ) {
   if (expr == null) return null;
   final (ctor, args) = _ctorOfExpr(expr);
@@ -1081,7 +1081,7 @@ String? scrollPhysicsToJson(Expression? expr) {
 /// 位置参数既可以是字符串字面量，也可以是**任意可翻译表达式**
 /// （`Image.network(spot.img)` / `Image.network('$base/$id')`）——后者输出
 /// 该表达式的 JS 源码，运行时求值即 URL/资源路径。
-String? imageSourceToJson(Expression? expr, WidgetTranslateContext ctx) {
+String? imageSourceToJson(Expression? expr, ElementTranslateContext ctx) {
   if (expr == null) return null;
   // 直接收到路径字符串：Image.network('url') / Image.asset('path') 的位置参数
   if (expr is SimpleStringLiteral) return ctx.jsString(expr.value);
@@ -1112,7 +1112,7 @@ Expression? _firstPositional(List<Expression> args) {
 
 /// 源实参 → JS 值：字面量直接引号包裹；其余表达式交给通用表达式翻译
 /// （翻译不出返回 null，由调用方给出「Image 需要 asset/network 源」的错误）。
-String? _imageSourceArg(Expression e, WidgetTranslateContext ctx) {
+String? _imageSourceArg(Expression e, ElementTranslateContext ctx) {
   if (e is SimpleStringLiteral) return ctx.jsString(e.value);
   try {
     return ctx.jsDataExpr(e);

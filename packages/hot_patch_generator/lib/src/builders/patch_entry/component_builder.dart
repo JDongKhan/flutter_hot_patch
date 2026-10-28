@@ -19,9 +19,9 @@ import 'analysis/imported_components.dart';
 import 'analysis/singleton_support.dart';
 import 'class_info.dart';
 import 'translator/dart2js.dart';
-import 'translator/widget2js.dart';
+import 'translator/element2js.dart';
 import '../shared/js_format.dart';
-import '../shared/js_widget_defs.dart';
+import '../shared/js_class_defs.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
 import '../ui_widget/widget_module_builder.dart' show hostWrapperSource;
@@ -51,7 +51,7 @@ import '../ui_widget/widget_module_builder.dart' show hostWrapperSource;
 /// 「StatefulWidget → 合并同文件 State 类」这一次分叉，组件与普通类的字段 /
 /// 方法 / 依赖 / widget 树全部同一条路径。
 ///
-/// 「widget 怎么翻译成 JSON/JS」只有一条**统一路径**（见 translator/widget_json.dart）：
+/// 「widget 怎么翻译成 JSON/JS」只有一条**统一路径**（见 translator/element_json.dart）：
 /// 判断依据是**值的形态**与**通用参数名**，不看 widget 类型——内建、自定义、
 /// 三方组件同一套规则，接入新组件零实现、无需注册表。
 class ComponentBuilder implements Builder {
@@ -420,7 +420,7 @@ String _renderJsProduct(
 
   // 单例字段值渲染上下文：静态单例类由类表直接建模（未走 translateClass），
   // 其字段初值在产物组装时求值（颜色 / 字面量 / 同文件模型构造）。
-  final ctx = WidgetTranslateContext(
+  final ctx = ElementTranslateContext(
     propByField: const {},
     actionByMethod: const {},
     sourcePath: sourcePath,

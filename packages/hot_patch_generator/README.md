@@ -104,7 +104,7 @@ The output must correspond to the Dart source **one-to-one**; this is the core c
 ### Extension: adding widget support
 
 There is **no per-widget translator**: every widget — built-in, custom or third-party — goes through the
-single translation path (`lib/src/builders/patch_entry/translator/widget_json.dart`), which dispatches on
+single translation path (`lib/src/builders/patch_entry/translator/element_json.dart`), which dispatches on
 
 - **output protocol**: build trees are emitted as `new Type(props)`. Host widgets / data carriers use the
   wrapper classes exported by `flutter.js`; custom components, logic components and builder proxies use
@@ -123,16 +123,19 @@ single translation path (`lib/src/builders/patch_entry/translator/widget_json.da
 
 The translation path itself needs **no per-widget code**. Supporting a new widget still requires a host
 renderer (`JsWidgetRegistry` or a capability library) because the Flutter widget has to be reconstructed;
-three opt-in tables in `lib/src/builders/shared/js_widget_defs.dart` additionally tune the *output shape*:
+three opt-in tables in `lib/src/builders/shared/js_class_defs.dart` additionally tune the *output shape*:
 
 | Table | Purpose |
 |---|---|
-| `widgetPositionalArgNames` | positional arguments go into props under **Flutter's own parameter name** (`Text('hi')` → `{data: 'hi'}`, `Image.network(url)` → `{src: url}`); unlisted types with positional arguments produce a build warning and are dropped (no `$pos` index fallback) |
 | `hostWidgetTypes` / `hostDataCarrierTypes` | extracted at build time from the runtime source (`hot_patch/lib/src/js_ui/**`: `r.register('X', …)` and `_dataCarrierTypes`); drives which host-wrapper classes are generated in `flutter.js` and which class names component outputs import. No hand-maintained list |
 | `builderFormTypes` | types with `.builder` / `.separated` named constructors; a JS proxy class is generated for them (the runtime only consumes the `factory` / `__delegate` protocol, never a type whitelist) |
 
+Positional arguments are resolved from the **source constructor signature** (`shared/ctor_signatures.dart`):
+`Text('hi')` → `{data: 'hi'}`, `Image.network(url)` → `{src: url}`. No per-type table is maintained; when the
+signature cannot be indexed, the node produces a build warning and is dropped (no `$pos` index fallback).
+
 Adding a visual widget therefore touches two sides: the host renderer, and — when the output shape differs —
-the generator tables above (plus `widgetPositionalArgNames` for constructors with positional arguments).
+the generator tables above.
 
 Named constructors / static factories keep their name in the output, so the runtime can select the exact
 factory per type: `ListView.builder` → `{factory: 'builder', itemBuilder: …}`,
@@ -162,7 +165,7 @@ shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 ```
 
 `builders/shared/`: `source_index` (annotation detection / imported source parsing) · `host_injected`
-(@HostInjected channel table) · `js_widget_defs` (`nodeHelperPackage` / `packageModulePath` / widget type
+(@HostInjected channel table) · `js_class_defs` (`nodeHelperPackage` / `packageModulePath` / widget type
 tables) · `paths` (output path derivation).
 
 `builders/patch_entry/` — only used by `componentBuilder`:
@@ -173,8 +176,8 @@ tables) · `paths` (output path derivation).
 - `analysis/`: `analyze_dart_class` (the single collection entry) · `class_table` · `component_scope` ·
   `const_support` · `singleton_support` · `imported_components`;
 - `translator/`: `js_translator` (shared language layer) · `js_value` (shared value tools) · `dart2js`
-  (class declarations) · `widget2js` (widget trees) · `widget_json` (the single unified widget entry
-  `widgetToJson`) · `value_forms` (value-shape dispatch `autoValue`) · `style_translators` (structured
+  (class declarations) · `element2js` (widget trees) · `element_json` (the single unified widget entry
+  `elementToJson`) · `value_forms` (value-shape dispatch `autoValue`) · `style_translators` (structured
   style values).
 
 The other builders are self-contained:
@@ -288,7 +291,7 @@ targets:
 ### 扩展：新增 widget 支持
 
 **没有 per-widget 的 translator**：内建、自定义、三方组件全部走同一条翻译路径
-（`lib/src/builders/patch_entry/translator/widget_json.dart`），分派依据只有两项：
+（`lib/src/builders/patch_entry/translator/element_json.dart`），分派依据只有两项：
 
 - **产物协议**：build 树统一发射 `new Type(props)`。宿主 widget / 数据载体用 `flutter.js` 导出的
   同名包装类；自定义组件、逻辑组件与 builder 代理用各自产物导出的类。所有 Dart 实参按原名进
@@ -302,17 +305,19 @@ targets:
 
 翻译路径本身**无需 per-widget 代码**，但宿主侧仍需为该 widget 注册 renderer
 （`JsWidgetRegistry` 或能力库），因为 Flutter widget 必须被重新构造；
-若产物形态不同，还要调整 `lib/src/builders/shared/js_widget_defs.dart` 的登记表：
+若产物形态不同，还要调整 `lib/src/builders/shared/js_class_defs.dart` 的登记表：
 
 | 表 | 用途 |
 |---|---|
-| `widgetPositionalArgNames` | 位置实参按 **Flutter 自己声明的形参名**下发（`Text('hi')` → `{data: 'hi'}`、`Image.network(url)` → `{src: url}`）；未登记的类型遇到位置实参时构建期告警并丢弃（不再有 `$pos` 下标兜底） |
 | `hostWidgetTypes` / `hostDataCarrierTypes` | 构建期从运行时源码自动抽取（`hot_patch/lib/src/js_ui/**` 的 `r.register('X', …)` 与 `_dataCarrierTypes`）；决定 `flutter.js` 生成哪些宿主包装类、产物 import 哪些类名。生成器不维护组件表 |
 | `builderFormTypes` | 有 `.builder` / `.separated` 命名构造的类型；为它们生成 JS 代理类（运行时只认 `factory` / `__delegate` 协议，不再有类型白名单） |
 | `lazyChildHostTypes` | 懒容器类型 → 触发懒的 props 键（空 = 无条件懒）。生成期写入 `flutter.js` 的 `__h`，给元素打 `lazyChildren` 标记；运行时只认元素标记、不认识类型 —— 新增懒容器（含 carousel_slider 这类三方组件）只改这张表并重出产物，运行时代码零改动 |
 
-因此接入一个**视觉** widget 会触及两侧：宿主 renderer，以及（当产物形态不同时）上面的生成器登记表
-（有位置实参的构造还要登记 `widgetPositionalArgNames`）。
+位置实参按**源码构造签名**自动抽取形参名（`shared/ctor_signatures.dart`）：`Text('hi')` → `{data: 'hi'}`、
+`Image.network(url)` → `{src: url}`。不维护任何按类型的登记表；签名索引不到时构建期告警并丢弃该结点
+（不再有 `$pos` 下标兜底）。
+
+因此接入一个**视觉** widget 会触及两侧：宿主 renderer，以及（当产物形态不同时）上面的生成器登记表。
 
 命名构造 / 静态工厂的名字会保留在产物里，运行时据此**按类型选工厂**：`ListView.builder` →
 `{factory: 'builder', itemBuilder: …}`、`ListView.separated` → `{factory: 'separated', itemBuilder: …,
@@ -340,7 +345,7 @@ shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 ```
 
 `builders/shared/`：`source_index`（注解识别 / import 源解析）· `host_injected`（@HostInjected 通道表）·
-`js_widget_defs`（`nodeHelperPackage` / `packageModulePath` / widget 类型登记表）· `paths`（产物路径推导）。
+`js_class_defs`（`nodeHelperPackage` / `packageModulePath` / widget 类型登记表）· `paths`（产物路径推导）。
 
 `builders/patch_entry/`——只服务 `componentBuilder`：
 
@@ -349,7 +354,7 @@ shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 - `analysis/`：`analyze_dart_class`（唯一收集入口）· `class_table` · `component_scope` ·
   `const_support` · `singleton_support` · `imported_components`；
 - `translator/`：`js_translator`（公共语言层）· `js_value`（共享值工具）· `dart2js`（类声明）·
-  `widget2js`（widget 树）· `widget_json`（统一翻译入口 `widgetToJson`）· `value_forms`（值形态分派
+  `element2js`（widget 树）· `element_json`（统一翻译入口 `elementToJson`）· `value_forms`（值形态分派
   `autoValue`）· `style_translators`（结构化样式值）。
 
 其余 builder 各自独立：

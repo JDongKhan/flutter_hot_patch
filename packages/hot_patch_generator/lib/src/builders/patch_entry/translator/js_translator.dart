@@ -16,12 +16,12 @@ import 'js_value.dart';
 //     exprStmtToJs / translateStmtList / translateMethodBody /
 //     translateClassMethodBody 等表达式与语句翻译。
 //
-// 依赖方向单向、无环：analyze_dart_class / dart2js / widget2js → 本文件。
+// 依赖方向单向、无环：analyze_dart_class / dart2js / element2js → 本文件。
 // 新增一门表达式 / 语句语法只改本文件，各调用方同时生效。
 //
 // 唯一的「向上」缝：方法体里 `return Container(...)` 需要 widget 层参与，
-// 用 js_value.dart 的 [WidgetExprRenderer] 接口解耦——本文件只依赖接口，
-// 由 widget2js 实现。
+// 用 js_value.dart 的 [ExprRenderer] 接口解耦——本文件只依赖接口，
+// 由 element2js 实现。
 // ===========================================================================
 
 // ---------------------------------------------------------------------------
@@ -235,10 +235,10 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
 /// 插值、`??` 等其余形态兜底走 exprToJs。
 String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
   // 组件/值对象出现在**任意表达式位置**（方法实参、三元分支、列表元素）时，
-  // 先交给属性管线（[widgetArgJsHook]，由 widget2js 安装）：子结点槽位与
+  // 先交给属性管线（[constructionHook]，由 element2js 安装）：子结点槽位与
   // 值转换器必须与 children 里的组件一致，否则会出现「JS 侧不存在的类调用」
   // （如 `ImageFilter.blur`）。钩子只接管 JS 侧能解析成类的类型，其余回落。
-  final hooked = widgetArgJsHook?.call(e);
+  final hooked = constructionHook?.call(e);
   if (hooked != null) return hooked;
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被吞成 ""）
   if (e is StringInterpolation) return _logArgJs(e, scope, classes);
@@ -479,20 +479,20 @@ List<String> _typeArgsOf(Expression e) {
   return [for (final a in args ?? const <TypeAnnotation>[]) a.toSource()];
 }
 
-/// 实参位置的「结构化值」钩子：由 widget2js 在求值数据表达式期间安装
-/// （[WidgetTranslateContext.jsDataExpr]）。命中返回 JS 源码时，该实参按
-/// **组件/值对象属性管线**翻译（子结点槽位协议、值转换器、builder 展开全部
-/// 生效）；返回 null 则回落到通用构造翻译。
+/// 构造表达式的「结构化值」钩子：由 element2js 在翻译表达式期间安装
+/// （[ElementTranslateContext.jsDataExpr]）。命中返回 JS 源码时，该构造按
+/// **属性管线**翻译（子结点槽位协议、值转换器、builder 展开全部生效）；
+/// 返回 null 则回落到通用构造翻译。
 ///
 /// 必要性：通用构造翻译（[valueCtorJs]）只有签名表，没有属性管线。于是
-/// `helper(ImageFiltered(imageFilter: ImageFilter.blur(...)))` 这种「组件当
+/// `helper(ImageFiltered(imageFilter: ImageFilter.blur(...)))` 这种「构造当
 /// 实参」的位置会把 `ImageFilter.blur` 译成 JS 类调用（JS 侧不存在该类），
-/// 子结点也不会拆成槽位。钩子让这类实参与 children 里的组件走**同一条**
+/// 子结点也不会拆成槽位。钩子让这类构造与 children 里的结点走**同一条**
 /// 翻译路径，不再有两套产物形态。
-typedef WidgetArgJsHook = String? Function(Expression e);
+typedef ConstructionHook = String? Function(Expression e);
 
-/// 当前生效的实参钩子（翻译是单线程的，按数据表达式调用期安装/还原）。
-WidgetArgJsHook? widgetArgJsHook;
+/// 当前生效的构造钩子（翻译是单线程的，按表达式翻译调用期安装/还原）。
+ConstructionHook? constructionHook;
 
 /// 类引用钩子：静态成员调用（`Overlay.of(context)` / `Alignment.values` 这类
 /// `X.m(...)` 形态）的 receiver 是**模块里确有类定义**的类型时，返回该
@@ -501,11 +501,11 @@ WidgetArgJsHook? widgetArgJsHook;
 /// 为什么需要：`X.of(context)` 的 receiver 是一个**类引用**，而它不是
 /// [runtimeGlobalTypes] 里的运行时注入类（`MediaQuery` 那类），也不是
 /// [FieldScope] 可解析的字段 / 方法 / 局部变量——通用规则会把整条调用判为不可
-/// 翻译。判据只看「这个类型的类定义在哪」（由 widget2js 用类文件解析回答），
+/// 翻译。判据只看「这个类型的类定义在哪」（由 element2js 用类文件解析回答），
 /// 与它是不是组件无关。
 typedef ClassRefHook = String? Function(String className);
 
-/// 当前生效的类引用钩子（由 widget2js 安装；翻译单线程，按调用期安装/还原）。
+/// 当前生效的类引用钩子（由 element2js 安装；翻译单线程，按调用期安装/还原）。
 ClassRefHook? classRefHook;
 
 bool _isClassLikeName(String name) {
@@ -675,7 +675,7 @@ String? closureToJs(
   FunctionExpression fn,
   FieldScope scope,
   Map<String, ClassInfo> classes, [
-  WidgetExprRenderer? widgetCtx,
+  ExprRenderer? renderer,
 ]) {
   final params = <String>[];
   for (final p in fn.parameters?.parameters ?? const <FormalParameter>[]) {
@@ -707,9 +707,9 @@ String? closureToJs(
     // `() => _items`），这些不是组件、所在的列表也不一定是组件列表。无条件送
     // 进管线会因「表达式翻不出来」被降级成占位组件（产物里是 `new SizedBox({})`）：
     // 谓词恒假 → 列表被筛空、比较器恒 0 → 排序失效，且产物里看不出问题。
-    // 判据与 `return` 位置一致：有没有 JS 类定义（[WidgetExprRenderer.ctorJsClassFile]）。
-    final wv = widgetCtx != null && widgetCtx.ctorJsClassFile(body.expression) != null
-        ? _widgetExprToJs(widgetCtx, body.expression, 0)
+    // 判据与 `return` 位置一致：有没有 JS 类定义（[ExprRenderer.ctorJsClassFile]）。
+    final wv = renderer != null && renderer.ctorJsClassFile(body.expression) != null
+        ? _widgetExprToJs(renderer, body.expression, 0)
         : null;
     if (wv != null) return '($pjs) => $wv';
     final rv = rhsToJs(body.expression, bodyScope, classes);
@@ -724,7 +724,7 @@ String? closureToJs(
     // `ExpressionStatement`，`onPick: (k, v) { setState(() { switch ... }) }`
     // 这类块体会被静默丢成 `(...) => {}`（筛选面板点选条件无任何反应）。
     final stmts =
-        translateStmtList(body.block.statements, bodyScope, classes, widgetCtx);
+        translateStmtList(body.block.statements, bodyScope, classes, renderer);
     if (stmts.trim().isEmpty) return null;
     return '($pjs) => { ${stmts.trim()} }';
   }
@@ -754,7 +754,7 @@ String? methodCallExprJs(
   // 宿主结点，同时把类型名发给宿主（Dart 端通用 VM 记着它）。
   // receiver 走 [exprToJs] 而非硬编码：构建作用域里就是形参 `context`；
   // 事件等**延迟作用域**里形参不可见，由作用域别名解析成 `this.context`
-  // （运行时按执行位置解析到对应代理，见 WidgetTranslateContext._eventScope）。
+  // （运行时按执行位置解析到对应代理，见 ElementTranslateContext._eventScope）。
   final tgt = e.target;
   if (tgt is Identifier && tgt.name == 'context') {
     final name = e.methodName.name;
@@ -949,7 +949,7 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
 ///
 /// 参数：
 ///   - [scope]：标识符解析作用域（组件：状态字段→属性；模型：实例字段）。
-///   - [widgetCtx]：可选。传入后，返回 Widget 的表达式（如 `return Container(...)`）
+///   - [renderer]：可选。传入后，返回 Widget 的表达式（如 `return Container(...)`）
 ///     走 widget 树翻译路径。
 ///   - [returnExpressionBody]：箭头体是否包 `return`（Dart 有返回值语义时为真；
 ///     组件动作方法为假，产物与语句一致）。
@@ -957,7 +957,7 @@ String translateMethodBody(
   FunctionBody? body,
   FieldScope scope,
   Map<String, ClassInfo> classes, {
-  WidgetExprRenderer? widgetCtx,
+  ExprRenderer? renderer,
   bool returnExpressionBody = false,
   bool returnsWidget = true,
   int depth = 2,
@@ -967,8 +967,8 @@ String translateMethodBody(
   if (body is ExpressionFunctionBody) {
     final e = body.expression;
     String? t;
-    if (widgetCtx != null && returnsWidget && widgetCtx.ctorJsClassFile(e) != null) {
-      t = _widgetExprToJs(widgetCtx, e, depth);
+    if (renderer != null && returnsWidget && renderer.ctorJsClassFile(e) != null) {
+      t = _widgetExprToJs(renderer, e, depth);
     }
     t ??= _bodyExprStmtJs(e, scope, classes);
     if (t != null) {
@@ -986,7 +986,7 @@ String translateMethodBody(
       }
     }
   } else if (body is BlockFunctionBody) {
-    final r = translateStmtList(body.block.statements, scope, classes, widgetCtx,
+    final r = translateStmtList(body.block.statements, scope, classes, renderer,
         depth: depth, returnsWidget: returnsWidget);
     if (r.isNotEmpty) out.add(r);
   }
@@ -1012,7 +1012,7 @@ String translateStmtList(
   List<Statement> stmts,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-  WidgetExprRenderer? widgetCtx, {
+  ExprRenderer? renderer, {
   int depth = 0,
   bool returnsWidget = true,
 }) {
@@ -1061,7 +1061,7 @@ String translateStmtList(
         final name = v.name.lexeme;
         // 同步登记到 widget 层：方法体里随后 `return Text('$name')` 时，
         // widget 翻译器要用同一份局部变量表解析标识符（与语句翻译同源）。
-        widgetCtx?.registerLocal(name);
+        renderer?.registerLocal(name);
         if (v.initializer == null) {
           out.add('${ind}var $name;');
           scope.localVars.add(name);
@@ -1106,7 +1106,7 @@ String translateStmtList(
         // 登记成别名，builder / 事件闭包里的每次引用都会重跑该调用；可重新赋值
         // 的变量用它则会让后续声明拿到旧表达式（`list = other;` 之后按旧值折算）。
         if (purePath && init.startsWith('this.')) {
-          widgetCtx?.registerLocalAlias(name, init);
+          renderer?.registerLocalAlias(name, init);
           if (s.variables.isFinal || s.variables.isConst) {
             scope.declAliases[name] = init;
           }
@@ -1121,8 +1121,8 @@ String translateStmtList(
         continue;
       }
       String? v;
-      if (widgetCtx != null && returnsWidget && widgetCtx.ctorJsClassFile(e) != null) {
-        v = _widgetExprToJs(widgetCtx, e, depth);
+      if (renderer != null && returnsWidget && renderer.ctorJsClassFile(e) != null) {
+        v = _widgetExprToJs(renderer, e, depth);
       }
       v ??= rhsToJs(e, scope, classes);
       if (v != null) {
@@ -1141,18 +1141,18 @@ String translateStmtList(
       final thenStmts =
           s.thenStatement is Block ? (s.thenStatement as Block).statements : [s.thenStatement];
       var js = '$ind' 'if ($condJs) {\n'
-          '${translateStmtList(thenStmts, scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+          '${translateStmtList(thenStmts, scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
           '$ind}';
       final els = s.elseStatement;
       if (els != null) {
         final elseStmts = els is Block ? els.statements : [els];
         js += ' else {\n'
-            '${translateStmtList(elseStmts, scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+            '${translateStmtList(elseStmts, scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
             '$ind}';
       }
       out.add(js);
     } else if (s is ForStatement) {
-      final js = _forStatementJs(s, scope, classes, widgetCtx, depth, returnsWidget);
+      final js = _forStatementJs(s, scope, classes, renderer, depth, returnsWidget);
       if (js == null) {
         log.warning('[hot_patch_generator] for 语句无法翻译，已在 JS 产物中'
             '丢弃：${s.toSource()}');
@@ -1167,7 +1167,7 @@ String translateStmtList(
         continue;
       }
       out.add('$ind' 'while ($condJs) {\n'
-          '${translateStmtList(_bodyStmts(s.body), scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+          '${translateStmtList(_bodyStmts(s.body), scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
           '$ind}');
     } else if (s is DoStatement) {
       final condJs = exprToJs(s.condition, scope, classes);
@@ -1177,10 +1177,10 @@ String translateStmtList(
         continue;
       }
       out.add('$ind' 'do {\n'
-          '${translateStmtList(_bodyStmts(s.body), scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+          '${translateStmtList(_bodyStmts(s.body), scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
           '$ind} while ($condJs);');
     } else if (s is SwitchStatement) {
-      final js = _switchStatementJs(s, scope, classes, widgetCtx, depth, returnsWidget);
+      final js = _switchStatementJs(s, scope, classes, renderer, depth, returnsWidget);
       if (js == null) {
         log.warning('[hot_patch_generator] switch 语句无法翻译（仅支持常量 '
             'case），已在 JS 产物中丢弃：${s.toSource()}');
@@ -1214,7 +1214,7 @@ String translateStmtList(
       out.add('$ind' 'assert($condJs${msgJs == null ? '' : ', $msgJs'});');
     } else if (s is TryStatement) {
       final js =
-          _tryStatementJs(s, scope, classes, widgetCtx, depth, returnsWidget);
+          _tryStatementJs(s, scope, classes, renderer, depth, returnsWidget);
       if (js == null) {
         log.warning('[hot_patch_generator] try 语句无法翻译，已在 JS 产物中'
             '跳过：${s.toSource()}');
@@ -1226,7 +1226,7 @@ String translateStmtList(
     } else if (s is Block) {
       // 裸块语句：作用域语义在 JS 侧由 `{}` 保留，逐条递归即可。
       out.add('$ind{\n'
-          '${translateStmtList(s.statements, scope, classes, widgetCtx, depth: depth + 1, returnsWidget: returnsWidget)}\n'
+          '${translateStmtList(s.statements, scope, classes, renderer, depth: depth + 1, returnsWidget: returnsWidget)}\n'
           '$ind}');
     } else {
       // 兜底：任何未覆盖的语句都必须出声，禁止静默丢代码。
@@ -1249,7 +1249,7 @@ String? _forStatementJs(
   ForStatement s,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-  WidgetExprRenderer? widgetCtx,
+  ExprRenderer? renderer,
   int depth,
   bool returnsWidget,
 ) {
@@ -1308,7 +1308,7 @@ String? _forStatementJs(
     return null;
   }
   final ind = '  ' * depth;
-  final bodyJs = translateStmtList(_bodyStmts(s.body), scope, classes, widgetCtx,
+  final bodyJs = translateStmtList(_bodyStmts(s.body), scope, classes, renderer,
       depth: depth + 1, returnsWidget: returnsWidget);
   return '$ind$header {\n$bodyJs\n$ind}';
 }
@@ -1327,7 +1327,7 @@ String? _tryStatementJs(
   TryStatement s,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-  WidgetExprRenderer? widgetCtx,
+  ExprRenderer? renderer,
   int depth,
   bool returnsWidget,
 ) {
@@ -1340,7 +1340,7 @@ String? _tryStatementJs(
     s.body.statements,
     scope,
     classes,
-    widgetCtx,
+    renderer,
     depth: depth + 1,
     returnsWidget: returnsWidget,
   );
@@ -1365,7 +1365,7 @@ String? _tryStatementJs(
       clause.body.statements,
       catchScope,
       classes,
-      widgetCtx,
+      renderer,
       depth: depth + 1,
       returnsWidget: returnsWidget,
     );
@@ -1382,7 +1382,7 @@ String? _tryStatementJs(
       finallyBlock.statements,
       scope,
       classes,
-      widgetCtx,
+      renderer,
       depth: depth + 1,
       returnsWidget: returnsWidget,
     );
@@ -1402,7 +1402,7 @@ String? _switchStatementJs(
   SwitchStatement s,
   FieldScope scope,
   Map<String, ClassInfo> classes,
-  WidgetExprRenderer? widgetCtx,
+  ExprRenderer? renderer,
   int depth,
   bool returnsWidget,
 ) {
@@ -1440,7 +1440,7 @@ String? _switchStatementJs(
     }
     lines.add('$caseInd$label');
     for (final st in member.statements) {
-      final js = translateStmtList([st], scope, classes, widgetCtx,
+      final js = translateStmtList([st], scope, classes, renderer,
           depth: depth + 2, returnsWidget: returnsWidget);
       if (js.isEmpty) return null; // 某条语句翻译失败 → 整个 switch 丢弃
       lines.add(js);
@@ -1548,7 +1548,7 @@ String translateClassMethodBody(
   ClassMethod m,
   Map<String, ClassInfo> classes, {
   Map<String, Map<String, String>> hostMethods = const {},
-  WidgetExprRenderer? widgetCtx,
+  ExprRenderer? renderer,
   Set<String> globalConsts = const {},
   int depth = 2,
 }) {
@@ -1578,25 +1578,25 @@ String translateClassMethodBody(
         m.body,
         scope,
         classes,
-        widgetCtx: widgetCtx,
+        renderer: renderer,
         returnExpressionBody: !m.isVoid,
         returnsWidget: m.returnsWidget,
         depth: depth,
       );
-  if (widgetCtx == null || m.params.isEmpty) return run();
-  return widgetCtx.withMethodParams(m.params, run);
+  if (renderer == null || m.params.isEmpty) return run();
+  return renderer.withMethodParams(m.params, run);
 }
 
-/// 把一个 Widget 构造表达式（如 `Container(...)`）通过 [WidgetExprRenderer]
-/// （widget2js 层的 WidgetTranslateContext）翻译成 JS 构造调用字符串。
+/// 把一个 Widget 构造表达式（如 `Container(...)`）通过 [ExprRenderer]
+/// （element2js 层的 ElementTranslateContext）翻译成 JS 构造调用字符串。
 /// 失败返回 null（回退到普通表达式翻译），并出声告警（不静默丢代码）。
 ///
 /// [depth]：该表达式所在语句的缩进深度，widget 树的子节点按此对齐缩进。
-String? _widgetExprToJs(WidgetExprRenderer? widgetCtx, Expression e, int depth) {
-  if (widgetCtx == null) return null;
+String? _widgetExprToJs(ExprRenderer? renderer, Expression e, int depth) {
+  if (renderer == null) return null;
   try {
     // translate(Expression) → JSON Map / String；renderJs(json, depth) → JS
-    return widgetCtx.renderJs(widgetCtx.translate(e), depth);
+    return renderer.renderJs(renderer.translate(e), depth);
   } catch (err) {
     log.warning('[hot_patch_generator] widget 表达式无法翻译，已在 JS 产物中'
         '丢弃：${e.toSource()}（$err）');

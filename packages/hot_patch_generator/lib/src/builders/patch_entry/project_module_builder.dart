@@ -25,7 +25,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
 
 import '../shared/js_format.dart';
-import '../shared/js_widget_defs.dart';
+import '../shared/js_class_defs.dart';
 import '../shared/package_sources.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';

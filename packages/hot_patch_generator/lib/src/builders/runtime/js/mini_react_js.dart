@@ -470,7 +470,7 @@ const String miniReactReconcilerSource = r'''
   // **是否懒由元素自己声明**：`el.lazyChildren === true`，由生成的 `__h`
   // （flutter.js）按构建期配置打标。运行时**零类型知识**——不认识 PageView /
   // TabBarView / ListView，也不维护任何类型表；新增懒容器只改生成器配置
-  // （shared/js_widget_defs.dart）并重出产物，运行时代码不动。
+  // （shared/js_class_defs.dart）并重出产物，运行时代码不动。
 
   // 子项来源：`{el}` = 已创建的 element，`{make}` = 延迟生成（懒容器下的
   // builder 子项，宿主 inflate 到占位时才调用）。

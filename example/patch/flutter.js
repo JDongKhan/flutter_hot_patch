@@ -5,7 +5,7 @@
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
 // 元素对象统一由本函数产出，带 element: true 标记；props 值是否是 widget
 // 只看这个标记，不做形状猜测。
-// 懒容器配置（**构建期唯一事实源**：shared/js_widget_defs.dart 的
+// 懒容器配置（**构建期唯一事实源**：shared/js_class_defs.dart 的
 // lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
 var __lazyChildHosts = {"TabBarView": true, "PageView": true, "GridView": true, "SliverGrid": true, "SliverFixedExtentList": true, "SliverFillViewport": true, "ListView": ["itemExtent"]};
 function __lazyChildrenOf(type, props) {

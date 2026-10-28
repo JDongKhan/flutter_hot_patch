@@ -11,7 +11,7 @@ import 'package:build/build.dart';
 import '../shared/color_constants.dart';
 import '../shared/ctor_signatures.dart';
 import '../shared/js_format.dart';
-import '../shared/js_widget_defs.dart';
+import '../shared/js_class_defs.dart';
 import '../shared/paths.dart';
 
 /// 有 JS 类的类型 → (package → {type})：由静态登记推导（[jsClassWidgetTypes]
@@ -91,7 +91,7 @@ String jsNodeHelperSource() => '''
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
 // 元素对象统一由本函数产出，带 element: true 标记；props 值是否是 widget
 // 只看这个标记，不做形状猜测。
-// 懒容器配置（**构建期唯一事实源**：shared/js_widget_defs.dart 的
+// 懒容器配置（**构建期唯一事实源**：shared/js_class_defs.dart 的
 // lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
 var __lazyChildHosts = ${lazyChildHostTypesLiteral()};
 function __lazyChildrenOf(type, props) {
@@ -315,7 +315,7 @@ ${namedCtorStatics(type, extra: const ['builder', 'separated'])}
 /// 运行时 `new` 该组件类并按组件路径挂载，由组件 `build()` 自行消费 props
 /// （provider 提供/消费 VM、Builder 委托拥有者方法返回子树）。运行时会给普通
 /// 类实例补挂 `props/setState/context/__bindFn`
-/// （见 js_ui/runtime_js.dart）。键集合与 js_widget_defs 的
+/// （见 js_ui/runtime_js.dart）。键集合与 js_class_defs 的
 /// `logicWidgetTypes` 一致。
 const Map<String, String> logicWidgetSources = {
   'Builder': jsBuilderComponent,
