@@ -5,6 +5,6 @@ extension StringLogExtension on String {
   /// 打印当前字符串：`[tag] $this`。
   void logText([String tag = 'StringLogExtension']) {
     // ignore: avoid_print
-    print('[$tag] $this');
+    print('[$tag] $this 依赖库日志');
   }
 }
