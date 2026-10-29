@@ -5,8 +5,8 @@
 
 // 模型 NetworkVm
 export class NetworkVm extends ChangeNotifier {
-  constructor() {
-    super();
+  constructor(args) {
+    super(args);
   }
   async loadUserInfo(params) {
     var data = await _app_host_.invoke("post", {"url": "loadUserInfo", "params": params});
