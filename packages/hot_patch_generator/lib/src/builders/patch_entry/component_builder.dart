@@ -118,6 +118,17 @@ class ComponentBuilder implements Builder {
       return relativeProduct(ownProduct, abs);
     }
 
+    // 类名 → **产物身份**（`patch/a/b.js`）：扩展注册要判断目标是「本产物内」
+    // 还是「另一个产物」（同产物内传裸类名，跨产物才 import）。
+    String? productOf(String name) {
+      if (isIgnoredClass(parsed.unit, name) &&
+          !isIgnoredComponentType(parsed.unit, name)) {
+        return null;
+      }
+      if (parsedNames.contains(name)) return ownProduct;
+      return importProducts[name];
+    }
+
     // 全量「类表」：同文件 + 跨文件 import 的所有 Dart 类（公共、非抽象、
     // 非 @HostInjected），组件 / widget 类打 isComponent 标记、普通类与静态
     // 单例不打标。翻译只按名字在这张表里解析依赖（见 analyze_dart_class.dart）。
@@ -151,8 +162,10 @@ class ComponentBuilder implements Builder {
     //     @PatchIgnore / @HostInjected 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
     // 本文件是否声明了 `extension`：纯扩展文件没有根类，但也必须产出产物
-    // （`__jsExtension(...)` 注册语句就写在声明处），故所有「无根类 → 不产出」
-    // 的早返回都要让位。
+    // （`__jsExtension(...)` 注册语句就写在声明处），故「无根类 → 不产出」的
+    // 早返回要让它让位。是否产出仍由**文件级可达**决定（component_scope 把声明
+    // 扩展的文件视为有产出，因此被 import 的扩展文件一定可达；没人 import 的
+    // 扩展文件在 JS 侧永远不会被加载，不产出）。
     final hasExtensions = hasExtensionDeclaration(parsed.unit);
     final annotated = <ClassDeclaration>[
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>())
@@ -162,7 +175,7 @@ class ComponentBuilder implements Builder {
       roots.addAll([for (final d in annotated) (d, true)]);
     } else {
       final scope = await componentTranslationScope(buildStep);
-      if (!scope.reachableFiles.contains(inputId.path) && !hasExtensions) return;
+      if (!scope.reachableFiles.contains(inputId.path)) return;
       final neededHere = scope.neededClasses[inputId.path] ?? const <String>{};
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
         final name = d.name.lexeme;
@@ -243,6 +256,7 @@ class ComponentBuilder implements Builder {
         ownProduct: ownProduct,
         classTable: classTable,
         importResolver: importResolver,
+        productOf: productOf,
         singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: builderFormTypes,
@@ -383,6 +397,43 @@ class ComponentBuilder implements Builder {
     // 扩展目标类的 import（目标类在别的产物里时，注册语句直接传构造函数）。
     for (final e in extensions) {
       if (e.targetImport != null) dependencyImports.add(e.targetImport!);
+    }
+
+    // 本文件**使用**到的扩展：注册语句在扩展声明文件的产物里，因此那个产物
+    // 必须被加载——Dart 里要用扩展就得 import 声明它的库，这里按同一套 import
+    // 图（含 barrel 的 export 转发）反查声明了 extension 的源文件，import 其扩展
+    // 常量（导入即触发 `__jsExtension(...)`）。
+    //   - 项目文件 → 该文件自身的产物（`patch/a/b.js`）；
+    //   - 本地依赖包 → `patch/extensions/<pkg>.js`（一包一个，按需加载）。
+    //
+    // **只用「用到」的扩展**：import 了扩展文件但整个文件没调用它时，不产生
+    // 任何 import（否则每次加载本模块都要白注册一批原型成员）。判据见
+    // [extensionCallSiteNames] / [identifierNamesIn]——宽松命中，多导入不会漏。
+    final usedIdentifiers = identifierNamesIn(parsed.unit);
+    final extNamesByProduct = <String, Set<String>>{};
+    for (final file in resolveImportFiles(parsed.unit, inputId.path)) {
+      final imported = parseUnitFile(file);
+      if (imported == null) continue;
+      // 扩展声明就在本文件里：产物自己会注册，无需 import 自己。
+      final names = <String>{
+        for (final decl in extensionDeclarations(imported))
+          if (decl.name?.lexeme case final n?
+              when n.isNotEmpty &&
+                  file != inputId.path &&
+                  extensionCallSiteNames(decl).intersection(usedIdentifiers)
+                      .isNotEmpty)
+            n,
+      };
+      if (names.isEmpty) continue;
+      final owner = packageNameOf(file);
+      final product =
+          owner == null ? productPath(file) : extensionModulePath(owner);
+      (extNamesByProduct[product] ??= <String>{}).addAll(names);
+    }
+    for (final e in extNamesByProduct.entries) {
+      final names = e.value.toList()..sort();
+      dependencyImports.add("import { ${names.join(', ')} } from "
+          "'${relativeProduct(ownProduct, e.key)}';");
     }
 
     // 顶层常量：本文件常量内联进产物（见 _renderJsProduct），引用到的跨文件常量

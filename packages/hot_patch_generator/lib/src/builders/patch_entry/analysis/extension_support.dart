@@ -19,6 +19,7 @@
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart' show log;
 
 import '../class_info.dart';
@@ -132,10 +133,66 @@ List<ExtensionDeclaration> extensionDeclarations(CompilationUnit unit) => [
 bool hasExtensionDeclaration(CompilationUnit unit) =>
     extensionDeclarations(unit).isNotEmpty;
 
+/// 一个 extension 在**调用点**会出现的名字（用来判断本文件有没有用到它）。
+///
+///   - 实例成员（方法 / getter / setter）→ 成员名：`'a'.logText()` 里 `logText`
+///     是标识符，与本文件任意标识符同名即视为用到；
+///   - 静态成员 → 扩展名：`ExtName.foo()` 里 `ExtName` 是标识符；
+///   - 扩展名本身也收：`providesX` 之类的成员名可能与扩展名重合。
+///
+/// 判定刻意**偏宽松**（任何同名标识符都算命中，不区分接收者类型——无类型解析
+/// 时无法判定接收者是谁）：误判方向是「多导入一个产物」，代价只是多执行一次
+/// 幂等注册；不会出现「用到却没导入」的漏判。
+Set<String> extensionCallSiteNames(ExtensionDeclaration decl) {
+  final out = <String>{};
+  final name = decl.name?.lexeme;
+  if (name != null && name.isNotEmpty) out.add(name);
+  for (final member in decl.members.whereType<MethodDeclaration>()) {
+    if (member.isStatic) {
+      // 静态成员只能写成 `ExtName.foo()`，调用点出现的是扩展名（上面已收）。
+      continue;
+    }
+    out.add(member.name.lexeme);
+  }
+  return out;
+}
+
+/// 本文件里出现过的全部标识符（宽松「用到」判据，见 [extensionCallSiteNames]）。
+Set<String> identifierNamesIn(CompilationUnit unit) {
+  final collector = _IdentifierCollector();
+  unit.accept(collector);
+  return collector.names;
+}
+
+class _IdentifierCollector extends RecursiveAstVisitor<void> {
+  final Set<String> names = {};
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    names.add(node.name);
+    super.visitSimpleIdentifier(node);
+  }
+
+  @override
+  void visitPrefixedIdentifier(PrefixedIdentifier node) {
+    names.add(node.identifier.name);
+    super.visitPrefixedIdentifier(node);
+  }
+
+  @override
+  void visitPropertyAccess(PropertyAccess node) {
+    names.add(node.propertyName.name);
+    super.visitPropertyAccess(node);
+  }
+}
+
 /// 翻译一个 extension → [ExtensionInfo]；构建期不成立的声明返回 null（已告警）。
 ///
-/// [ownProduct]：本文件的产物路径（`patch/a/b.js`），用于把目标类的产物换算成
-/// 相对 import；[importResolver] 与类翻译共用同一份（本文件 / import 图）。
+/// [ownProduct]：本产物的身份（`patch/a/b.js`），用于判断目标类是否就在**同
+/// 一个产物**里（是 → 直接传裸类名；否 → 从目标产物 import）。
+/// [productOf]：类名 → 该类的**产物身份**（`patch/a/b.js`）；null = 该类在 JS
+/// 侧没有产物。与类翻译共用同一份 import 图口径〔同文件 / import 源文件 /
+/// 本地依赖包的包模块〕。
 ExtensionInfo? translateExtension(
   ExtensionDeclaration decl,
   CompilationUnit unit,
@@ -149,6 +206,7 @@ ExtensionInfo? translateExtension(
   Set<String> ignoredTypes = const {},
   Set<String> globalConsts = const {},
   Set<String> classNamesInUnit = const {},
+  String? Function(String name)? productOf,
 }) {
   final name = decl.name?.lexeme;
   final label = name ?? '<unnamed>';
@@ -210,15 +268,17 @@ ExtensionInfo? translateExtension(
     return null;
   }
 
-  // 目标表达式：能找到 JS 产物 → 直接传构造函数（模块表保证是同一个类）；
+  // 目标表达式：能找到 JS 产物 → 直接传构造函数（同一个模块表保证是同一个类）；
   // 否则传类型名，由运行时按「核心映射 → 私有别名 → G[name]」解析。
   String targetJs;
   String? targetImport;
-  final rel = importResolver(target);
-  if (rel != null) {
+  final targetProduct = productOf?.call(target);
+  if (targetProduct != null) {
     targetJs = target;
-    final ownName = ownProduct.substring(ownProduct.lastIndexOf('/') + 1);
-    if (rel != ownName) targetImport = "import { $target } from '$rel';";
+    if (targetProduct != ownProduct) {
+      targetImport = "import { $target } from "
+          "'${relativeProduct(ownProduct, targetProduct)}';";
+    }
   } else if (jsClassWidgets.contains(target)) {
     // 有 JS 类、但不在本文件 import 图里的框架组件（provider 等）：按 package 模块取类。
     targetJs = target;

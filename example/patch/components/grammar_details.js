@@ -2,6 +2,8 @@
 // 由 hot_patch_generator 从 lib/components/grammar_details.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { TestString1 } from 'extension/e_string.js';
+import { StringLogExtension } from '../extensions/hot_module_base.js';
 import { Column, ElevatedButton, SizedBox, Text } from '../flutter.js';
 
 // 组件 MixinDetail
@@ -69,6 +71,7 @@ export class ExtensionDetail {
   }
   _log() {
     "扩展方法打印的日志".logText("ExtensionDetail");
+    "test".log1();
   }
   build(context) {
     return new Column({

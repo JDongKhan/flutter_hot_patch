@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hot_example/components/extension/e_string.dart';
 import 'package:hot_module_base/hot_module_base.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
@@ -70,6 +71,7 @@ class ExtensionDetail extends StatelessWidget {
   void _log() {
     // 跨包 extension：String 本身没有 logText，由 StringLogExtension 提供。
     '扩展方法打印的日志'.logText('ExtensionDetail');
+    "test".log1();
   }
 
   @override

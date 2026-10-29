@@ -475,11 +475,6 @@ class JsRuntimeManager {
       // 逐条会把「进入页面」的日志刷满。只记进本批次清单，由页面加载流程结束时
       // 一次性取走汇总（见 [drainLoadedModules]）。
       _loadedInBatch.add(jsAsset);
-      // 4) 扩展注册产物（`patch/extensions.js`：本地依赖包里的 Dart extension）。
-      //    放在这里而不是 ensureJsUiRuntime 里：此刻当前模块**已求值并注册**，
-      //    扩展产物若 import 它（扩展成员引用了本模块的类）会命中 _loadedModules
-      //    直接短路，不会与自己形成等待环。首次加载完成即完成，早于任何 mount。
-      await _ensureExtensionsLoaded(jsAsset, localRoot);
       _settleModule(jsAsset, completer);
     } catch (e, s) {
       // 读文件 / 依赖加载 / 求值任一失败：owner 与全部等待者一起拿到该异常
@@ -508,70 +503,6 @@ class JsRuntimeManager {
     } else {
       completer.complete();
     }
-  }
-
-  /// 扩展注册产物在补丁根目录下的文件名（与 `patch/<package>.js` 同级）。
-  ///
-  /// 由生成器的 `ui_extensions` builder 产出：**本地依赖包**里的全部 Dart
-  /// `extension` 声明集中注册（`__jsExtension(...)`），项目自己的扩展随各自
-  /// 源文件产物发射。必须在任何组件 mount 之前求值——扩展方法在 build 树 /
-  /// 事件回调里就是普通成员调用，晚一步就是 `not a function`。
-  static const String extensionsJsAsset = 'extensions.js';
-
-  /// 扩展产物的首次加载（null = 还没加载过）。
-  Future<void>? _extensionsLoading;
-
-  /// 扩展产物加载失败是否已告警（跨进程只出声一次，避免每个页面刷一条）。
-  bool _extensionsWarned = false;
-
-  /// 扩展产物**正在加载中**（它自己连带加载的模块会走进 [loadModule] 第 4 步）。
-  ///
-  /// 这些模块再去等 `_extensionsLoading` 就是等自己 → 死锁。正在加载期间一律
-  /// 直接返回：扩展注册本来就不依赖这些模块的求值结果（它们只是被扩展产物
-  /// import 的类定义），加载完成后成员已经装上。
-  bool _extensionsInFlight = false;
-
-  /// 扩展产物路径：与 [runtimeJsAsset] 同一套「就近取同级」规则。
-  static String _extensionsAssetNear(String? moduleAsset) {
-    if (moduleAsset == null) return extensionsJsAsset;
-    const marker = 'patch/';
-    final i = moduleAsset.lastIndexOf(marker);
-    if (i < 0) return extensionsJsAsset;
-    return '${moduleAsset.substring(0, i + marker.length)}$extensionsJsAsset';
-  }
-
-  /// 确保扩展注册产物已求值（幂等；失败只告警，不阻断页面加载）。
-  ///
-  /// 加载时机见 [loadModule] 第 4 步（首个模块求值完成之后）：此时当前模块
-  /// 已在 `__modules` 里，扩展产物 import 它不会形成等待环。加载器对本模块
-  /// 自身的递归调用直接短路（[extensionsJsAsset] 自己不做这件事）。
-  Future<void> _ensureExtensionsLoaded(String jsAsset, String? localRoot) {
-    final asset = _extensionsAssetNear(jsAsset);
-    if (jsAsset == asset) return Future<void>.value();
-    if (_extensionsInFlight) return Future<void>.value();
-    final loading = _extensionsLoading;
-    if (loading != null) return loading;
-    // 先占位再启动：loadModule 在第一个 await 之前就可能回调到本方法。
-    final completer = Completer<void>();
-    _extensionsLoading = completer.future;
-    () async {
-      _extensionsInFlight = true;
-      try {
-        await loadModule(asset, localRoot: localRoot);
-      } catch (e) {
-        if (!_extensionsWarned) {
-          _extensionsWarned = true;
-          HotPatchLog.warn(
-            '扩展注册产物加载失败（$asset）：$e。'
-            '这些 Dart extension 方法在 JS 侧不可用。',
-          );
-        }
-      } finally {
-        _extensionsInFlight = false;
-        if (!completer.isCompleted) completer.complete();
-      }
-    }();
-    return completer.future;
   }
 
   /// 读取模块源码：网络补丁（[localRoot] 非空）时用「本地根 + 虚拟路径」
@@ -696,11 +627,6 @@ $out
   void invalidateModules() {
     _loadedModules.clear();
     _jsUiInited = false;
-    // 扩展注册产物随模块缓存一起作废：重新加载后要按新包里的扩展定义重新注册
-    // （`__jsExtension` 同 id 再注册会先卸旧成员，热更即自愈）。
-    _extensionsLoading = null;
-    _extensionsWarned = false;
-    _extensionsInFlight = false;
     // 清单一并清空：清缓存后重新加载的那批，重新累计到下一个批次汇总里。
     _loadedInBatch.clear();
     // 清空 JS 侧模块注册表：下次 import 解构时 __modules['path'] 为空，

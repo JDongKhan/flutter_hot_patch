@@ -1,19 +1,21 @@
-/// 扩展注册产物 builder：**本地依赖包**里的 Dart `extension` → `patch/extensions.js`。
+/// 扩展注册产物 builder：**本地依赖包**里的 Dart `extension` →
+/// `patch/extensions/<package>.js`（一包一个）。
 ///
 /// 为什么需要单独一个产物：项目文件由 `componentBuilder` 逐文件翻译，扩展随
 /// **其声明文件的产物**发射；本地依赖包的源码不在构建目标包的输入范围里，
 /// 没人翻译它们。这里用 [PackageSources] 直接扫盘（与 `ui_project_module`
-/// 同一套本地包判定），把包内全部扩展集中注册到一个产物。
+/// 同一套本地包判定），把包内全部扩展集中注册成一个产物。
 ///
-/// 加载时机由运行时保证（`JsRuntimeManager` 在首个模块求值完成、任何 mount
-/// 之前求值本产物），因此本文件只需要**幂等注册**：`id` 用
-/// `<源文件身份>#<扩展名>`，热更时同 id 再注册会先卸旧成员。
+/// **按需加载，不预热**：产物不是启动时统一求值的。项目里哪个文件 import 了
+/// 该包的扩展声明库（Dart 里必须 import 才能用扩展），那个文件的产物就会
+/// `import { ExtName } from '../extensions/<package>.js'`——加载即注册，没用到的
+/// 包一次都不会被求值（真实项目扩展可能很多，预热是纯浪费）。
 ///
-/// 已知限制（构建期出声，不静默降级）：扩展**目标类**若与扩展声明在同一个包里
-/// 的另一个文件，类的 JS 实现只存在于 `patch/<package>.js`（由
-/// `ui_project_module` 按「被组件引用」产出）；扩展注册的却是本产物里内联的
-/// 那一份时，两者不是同一个构造函数。demo 与常见用法（扩展系统类型 / 值类型）
-/// 不受影响。
+/// 注册是幂等的：`id` 用 `<源文件身份>#<扩展名>`，热更时同 id 再注册会先卸旧成员。
+///
+/// 已知限制（构建期出声，不静默降级）：扩展**目标类**若是同包另一个文件里的类，
+/// 该类的 JS 实现在包模块 `patch/<package>.js` 里，且只含「被项目组件引用到」
+/// 的类；未被引用到的类在扩展产物里不可得，注册会跳过。
 library;
 
 import 'dart:io';
@@ -35,66 +37,96 @@ import '../shared/package_sources.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
 
-/// `$package$` 输入 → 唯一产物 `patch/extensions.js`。
-class ExtensionModuleBuilder implements Builder {
-  const ExtensionModuleBuilder();
+/// 声明了 `extension` 的本地依赖包（输出清单据此静态推导；无扩展的包零产物）。
+///
+/// 只做一次进程级扫描：`buildExtensions` 在建图阶段被调用，不能每次都遍历
+/// 所有包的 lib（读文件很便宜但与构建规模成正比）。判据是**语法级**的
+/// `extension` 关键字——注释里出现会多产一个空产物，不影响正确性。
+List<String> localExtensionPackages() => _localExtensionPackages ??= _scanPackages();
 
-  static const String output = 'patch/extensions.js';
+List<String>? _localExtensionPackages;
 
-  @override
-  Map<String, List<String>> get buildExtensions => const {
-        r'$package$': [output],
-      };
+/// 源文件里是否出现 `extension` 声明（快速文本判据，用于包级筛选）。
+final RegExp _extensionDeclRe =
+    RegExp(r'^\s*(?:abstract\s+)?extension\s', multiLine: true);
 
-  @override
-  Future<void> build(BuildStep buildStep) async {
-    await buildStep.writeAsString(
-      buildStep.allowedOutputs.first,
-      canonicalizeJsIndent(renderExtensionsModule()),
-    );
-  }
-}
-
-/// 生成 `patch/extensions.js` 全文（无扩展时也产出，保持产物清单稳定）。
-String renderExtensionsModule() {
-  final b = StringBuffer()
-    ..writeln('// GENERATED CODE - DO NOT EDIT')
-    ..writeln('// Dart extension 注册（本地依赖包）：由 hot_patch_generator 生成')
-    ..writeln('// 项目自身的扩展随各自源文件产物发射；本文件由运行时在首个模块')
-    ..writeln('// 求值完成、任何组件 mount 之前求值，幂等注册。')
-    ..writeln();
-
+List<String> _scanPackages() {
   final sources = PackageSources.instance;
-  if (sources == null) {
-    b.writeln('// 无法定位包信息，跳过。');
-    return b.toString();
-  }
-
-  final imports = <String>{};
-  final bodies = <String>[];
+  if (sources == null) return const [];
+  final out = <String>[];
   for (final pkg in localTranslationPackages()) {
     final root = sources.byName(pkg);
     if (root == null) continue;
     for (final file in _dartFiles(root.libDir)) {
-      final rel = file
-          .substring(root.libDir.length + 1)
-          .replaceAll(Platform.pathSeparator, '/');
-      final identity = 'package:$pkg/$rel';
-      final unit = parseUnitFile(identity);
-      if (unit == null || !hasExtensionDeclaration(unit)) continue;
-
-      final rendered = _renderPackageFile(identity, unit, imports);
-      if (rendered.isNotEmpty) bodies.add(rendered);
+      if (_extensionDeclRe.hasMatch(File(file).readAsStringSync())) {
+        out.add(pkg);
+        break;
+      }
     }
+  }
+  return out;
+}
+
+/// 扩展注册 builder：`$package$` 输入 → 每个有扩展的本地依赖包一个
+/// `patch/extensions/<package>.js`。输出清单由 [localExtensionPackages] 静态
+/// 推导，与 `ui_project_module` 同款（无种子文件）。
+class ExtensionModuleBuilder implements Builder {
+  const ExtensionModuleBuilder();
+
+  @override
+  Map<String, List<String>> get buildExtensions => {
+        r'$package$': [
+          for (final p in localExtensionPackages()) extensionModulePath(p),
+        ],
+      };
+
+  @override
+  Future<void> build(BuildStep buildStep) async {
+    final sources = PackageSources.instance;
+    if (sources == null) return;
+    for (final output in buildStep.allowedOutputs) {
+      // 产物名即包名：`patch/extensions/<package>.js`。
+      final pkg = output.path.substring(
+          'patch/extensions/'.length, output.path.length - '.js'.length);
+      final root = sources.byName(pkg);
+      final text =
+          root == null ? '' : renderPackageExtensions(pkg, root.libDir, output.path);
+      await buildStep.writeAsString(
+        output,
+        canonicalizeJsIndent(text.isEmpty ? _emptyModule(pkg) : text),
+      );
+    }
+  }
+}
+
+String _emptyModule(String pkg) =>
+    '// GENERATED CODE - DO NOT EDIT\n'
+    '// $pkg 里没有 Dart extension，空产物。\n';
+
+/// 一个包的全部扩展 → JS 全文（每个声明文件一段 + 依赖 import）。
+String renderPackageExtensions(String pkg, String libDir, String output) {
+  final b = StringBuffer()
+    ..writeln('// GENERATED CODE - DO NOT EDIT')
+    ..writeln('// Dart extension 注册（package:$pkg）：由 hot_patch_generator 生成')
+    ..writeln('// 使用方 import 本文件即完成注册（`__jsExtension(...)`），无需预热。')
+    ..writeln();
+
+  final imports = <String>{};
+  final bodies = <String>[];
+  for (final file in _dartFiles(libDir)) {
+    final rel =
+        file.substring(libDir.length + 1).replaceAll(Platform.pathSeparator, '/');
+    final identity = 'package:$pkg/$rel';
+    final unit = parseUnitFile(identity);
+    if (unit == null || !hasExtensionDeclaration(unit)) continue;
+    final rendered = _renderFile(identity, unit, output, imports);
+    if (rendered.isNotEmpty) bodies.add(rendered);
   }
 
   for (final line in imports.toList()..sort()) {
     b.writeln(line);
   }
-  if (bodies.isEmpty) {
-    b.writeln('// 本地依赖包里没有 Dart extension，空产物。');
-    return b.toString();
-  }
+  if (bodies.isEmpty) return '';
   for (final body in bodies) {
     b
       ..writeln()
@@ -103,11 +135,12 @@ String renderExtensionsModule() {
   return b.toString();
 }
 
-/// 一个源文件的扩展 + 它们引用到的**同文件**类 → JS 文本（import 行累加到
+/// 一个源文件的扩展 + 它引用到的**同文件**类 → JS 文本（import 行累加到
 /// [imports]，由调用方统一排序写出）。
-String _renderPackageFile(
+String _renderFile(
   String identity,
   CompilationUnit unit,
+  String output,
   Set<String> imports,
 ) {
   final table = buildClassTable(unit, identity);
@@ -117,16 +150,20 @@ String _renderPackageFile(
       d.name.lexeme,
   };
 
-  String? importResolver(String name) {
+  // 类名 → 产物身份：本文件内联（返回本产物）；同包其它文件 → 包模块；
+  // 跨包 / 项目文件 → 其自身产物（本 builder 只处理本地包，正常不会出现）。
+  String? productOf(String name) {
     final info = table[name];
     if (info == null) return null;
-    if (info.sourceFile == identity) return 'extensions.js';
-    final pkg = packageNameOf(info.sourceFile);
-    return pkg == null
-        ? relativeProduct(ExtensionModuleBuilder.output,
-            productPath(info.sourceFile))
-        : relativeProduct(
-            ExtensionModuleBuilder.output, packageModulePath(pkg));
+    if (info.sourceFile == identity) return output;
+    final owner = packageNameOf(info.sourceFile);
+    return owner == null ? productPath(info.sourceFile) : packageModulePath(owner);
+  }
+
+  String? importResolver(String name) {
+    final product = productOf(name);
+    if (product == null) return null;
+    return relativeProduct(output, product);
   }
 
   final infos = <ExtensionInfo>[];
@@ -135,9 +172,10 @@ String _renderPackageFile(
       decl,
       unit,
       identity,
-      ownProduct: ExtensionModuleBuilder.output,
+      ownProduct: output,
       classTable: table,
       importResolver: importResolver,
+      productOf: productOf,
       singletons: buildSingletonResolver(unit, identity),
       jsClassWidgets: jsClassWidgetTypes,
       delegateClassWidgets: builderFormTypes,
@@ -150,41 +188,32 @@ String _renderPackageFile(
     if (info.targetImport != null) imports.add(info.targetImport!);
     for (final dep in info.dependencies) {
       if (localNames.contains(dep)) continue;
-      final rel = importResolver(dep);
-      if (rel != null && rel != 'extensions.js') {
-        imports.add("import { $dep } from '$rel';");
-      }
+      _addClassImport(imports, dep, productOf, output);
     }
-    for (final e in info.usedWidgetPackages.entries) {
-      imports.add("import { ${(e.value.toList()..sort()).join(', ')} } from "
-          "'${relativeProduct(ExtensionModuleBuilder.output, packageModulePath(e.key))}';");
-    }
+    _addWidgetImports(imports, info.usedWidgetPackages, output);
   }
   if (infos.isEmpty) return '';
 
-  // 同文件类：扩展成员体里 `Foo()` 需要一份 JS 类。产物里没有「同文件内联」
-  // 之外的落点（本文件不是任何源文件的镜像产物），故按依赖 BFS 内联。
+  // 同文件类：扩展成员体里 `Foo()` 需要一份 JS 类。本产物不是任何源文件的
+  // 镜像产物，故按依赖闭包内联同文件类。
   final inline = <ClassInfo>[];
   final done = <String>{};
   final queue = <String>[for (final i in infos) ...i.dependencies];
   while (queue.isNotEmpty) {
     final dep = queue.removeLast();
-    if (!done.add(dep)) continue;
-    if (!localNames.contains(dep)) continue;
+    if (!done.add(dep) || !localNames.contains(dep)) continue;
     final decl = unit.declarations
         .whereType<ClassDeclaration>()
         .where((d) => d.name.lexeme == dep)
         .firstOrNull;
     if (decl == null || decl.abstractKeyword != null) continue;
-    if (decl.name.lexeme.startsWith('_')) {
+    if (dep.startsWith('_')) {
       log.warning('[hot_patch_generator] $identity: 扩展引用到私有类 $dep，'
-          '跨文件无法内联，跳过该类的 JS 实现。');
+          '扩展产物里不内联私有类，跳过它的 JS 实现。');
       continue;
     }
     final info = table[dep];
     if (info == null || info.isComponent) {
-      // 组件类的产物由 ui_project_module 产出，本文件不可见：不重复内联一份
-      // （两份构造函数会让扩展注册到错误的那一份上）。
       log.warning('[hot_patch_generator] $identity: 扩展引用到组件类 $dep，'
           '扩展产物里不内联组件，请确认它的实例来自组件产物。');
       continue;
@@ -208,15 +237,9 @@ String _renderPackageFile(
   for (final cls in inline) {
     for (final dep in cls.dependencies) {
       if (localNames.contains(dep)) continue;
-      final rel = importResolver(dep);
-      if (rel != null && rel != 'extensions.js') {
-        imports.add("import { $dep } from '$rel';");
-      }
+      _addClassImport(imports, dep, productOf, output);
     }
-    for (final e in cls.usedWidgetPackages.entries) {
-      imports.add("import { ${(e.value.toList()..sort()).join(', ')} } from "
-          "'${relativeProduct(ExtensionModuleBuilder.output, packageModulePath(e.key))}';");
-    }
+    _addWidgetImports(imports, cls.usedWidgetPackages, output);
   }
 
   final b = StringBuffer();
@@ -233,6 +256,32 @@ String _renderPackageFile(
       ..writeln(info.toJs());
   }
   return b.toString();
+}
+
+/// 跨文件的类依赖 → import 行（同产物内的不 import）。
+void _addClassImport(
+  Set<String> imports,
+  String name,
+  String? Function(String name) productOf,
+  String output,
+) {
+  final product = productOf(name);
+  if (product == null || product == output) return;
+  imports.add(
+      "import { $name } from '${relativeProduct(output, product)}';");
+}
+
+/// 成员体里用到的框架 widget → 各自的包模块 import。
+void _addWidgetImports(
+  Set<String> imports,
+  Map<String, Set<String>> used,
+  String output,
+) {
+  for (final e in used.entries) {
+    final names = (e.value.toList()..sort()).join(', ');
+    imports.add("import { $names } from "
+        "'${relativeProduct(output, packageModulePath(e.key))}';");
+  }
 }
 
 /// 目录下全部 `.dart` 文件（递归、按路径排序，产物稳定可复现）。

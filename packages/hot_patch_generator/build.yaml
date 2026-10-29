@@ -66,16 +66,22 @@ builders:
     auto_apply: dependents
     build_to: source
 
-  # Dart extension 注册 builder：本地依赖包里的 extension → patch/extensions.js。
-  # 项目自己的扩展随各自源文件产物发射（patch_entry），这里只有「构建输入范围
-  # 之外」的本地包（path 依赖 / workspace 成员）。产物由运行时在首个模块求值
-  # 完成、任何 mount 之前求值，幂等注册（同 id 再注册 = 热更自愈）。
+  # Dart extension 注册 builder：本地依赖包里的 extension →
+  # patch/extensions/<package>.js（一包一个，按需加载）。
+  #
+  # **不预热**：项目里哪个文件 import 了该包的扩展声明库，那个文件的产物才
+  # import 对应扩展产物（加载即注册）。真实项目扩展可能很多，启动时全部求值
+  # 是纯浪费。输出清单由 builder 静态扫描本地包推导（没有扩展的包零产物）。
   ui_extensions:
     import: "package:hot_patch_generator/builder.dart"
     builder_factories: ["extensionModuleBuilder"]
+    # 同 ui_widget / ui_project_module：产物清单由 Builder 实例的
+    # buildExtensions getter 推导（`localExtensionPackages()` 静态扫描本地依赖
+    # 包，一包一个 patch/extensions/<package>.js）。这里只填一条占位输入键
+    # （build_config 要求非空），输出列表填什么都不影响产物，勿在此维护清单。
     build_extensions:
       "$package$":
-        - "patch/extensions.js"
+        - "patch/extensions/placeholder.js"
     auto_apply: dependents
     build_to: source
 

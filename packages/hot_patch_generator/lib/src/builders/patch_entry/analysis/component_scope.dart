@@ -237,6 +237,11 @@ bool _hasComponentAnnotation(CompilationUnit unit) => unit.declarations
 ///   - 有 public 且未被 `@PatchIgnore` / `@HostInjected` 标记的类 → 产出；
 ///   - 其余（三个 tab 页这类 `@PatchIgnore` 页、宿主能力门面）→ 不产出。
 bool _isTranslationStop(CompilationUnit unit) {
+  // 声明了 `extension` → 有产出（注册语句就写在声明处），沿它的 import 继续
+  // 深入：扩展成员体里可能用到别的类 / 别的扩展文件。
+  if (unit.declarations.whereType<ExtensionDeclaration>().isNotEmpty) {
+    return false;
+  }
   for (final d in unit.declarations.whereType<ClassDeclaration>()) {
     if (findAnnotation(d.metadata, 'PatchEntry') != null) return false;
     final name = d.name.lexeme;

@@ -1,7 +1,6 @@
 // GENERATED CODE - DO NOT EDIT
-// Dart extension 注册（本地依赖包）：由 hot_patch_generator 生成
-// 项目自身的扩展随各自源文件产物发射；本文件由运行时在首个模块
-// 求值完成、任何组件 mount 之前求值，幂等注册。
+// Dart extension 注册（package:hot_module_base）：由 hot_patch_generator 生成
+// 使用方 import 本文件即完成注册（`__jsExtension(...)`），无需预热。
 
 
 // 扩展 StringLogExtension（package:hot_module_base/src/string_log_extension.dart）
