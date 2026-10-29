@@ -12,6 +12,7 @@
 import 'package:flutter/material.dart';
 
 import '../../js_widget_registry.dart';
+import '../../ui_fallback.dart';
 import '../base_widget/text_from_json.dart';
 import '../core/controller_bridge.dart';
 import '../core/from_json/dart_values_from_json.dart';
@@ -252,9 +253,10 @@ int _builderCount(JsRenderContext c, int fallback) {
   return c.int_('itemCount') ?? fallback;
 }
 
-/// 第 [i] 个子节点（越界给占位，避免宿主在 JS 补丁未到齐时越界崩溃）。
-Widget _childAt(List<Widget> children, int i) =>
-    i < children.length ? children[i] : const SizedBox.shrink();
+/// 第 [i] 个子节点（越界给兜底占位，避免宿主在 JS 补丁未到齐时越界崩溃）。
+Widget _childAt(List<Widget> children, int i) => i < children.length
+    ? children[i]
+    : uiFallback('列表下标 $i 越界（当前 ${children.length} 项）');
 
 /// 普通 children 形态读 Dart 形参名（`children` / `slivers`）；builder 代理
 /// 展开结果走内部键 `__items`。`__items` 存在即权威（0 项也是合法的展开结果，

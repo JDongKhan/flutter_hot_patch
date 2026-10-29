@@ -16,6 +16,7 @@ import 'leak/js_leak_snapshot.dart';
 import 'leak/leak_stats.dart';
 import 'js_ui_store.dart';
 import 'js_widget_registry.dart';
+import 'ui_fallback.dart';
 
 /// JS-UI 页面的宿主入口。
 ///
@@ -416,7 +417,8 @@ class _JsUiContentState extends State<JsUiContent> {
     final rootId = widget.store.rootId;
     if (rootId == null) {
       // 根补丁尚未到达（JS 侧还没 post-frame 挂载）：先占零尺寸，等 onRoot
-      // 触发的重建再换成真实内容。
+      // 触发的重建再换成真实内容。这是**正常时序**（首帧必经），不是兜底，
+      // 故不走 uiFallback（挂载真失败时由面板/页面的 onMountFailed 上报）。
       return const SizedBox.shrink();
     }
     return _JsNode(store: widget.store, id: rootId, pageKey: widget.pageKey);
@@ -672,7 +674,11 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
     // AutomaticKeepAliveClientMixin 的契约：build 必须调用 super.build（返回值忽略）。
     super.build(context);
     final node = widget.store.nodes[widget.id];
-    if (node == null) return const SizedBox.shrink();
+    if (node == null) {
+      return uiFallback(
+        '结点 "${widget.id}" 不在 store.nodes 中（页面 ${widget.pageKey}）',
+      );
+    }
 
     // JS 组件的 `this.context` 代理按**最近宿主祖先结点 id** 反查真实
     // BuildContext（见 capabilities/build_context/build_context_bridge.dart）：在此登记/

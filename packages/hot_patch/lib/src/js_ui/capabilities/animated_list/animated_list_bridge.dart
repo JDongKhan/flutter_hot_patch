@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 
 import '../../js_widget_registry.dart';
+import '../../ui_fallback.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/layout_from_json.dart';
 import '../key/key_bridge.dart';
@@ -33,8 +34,9 @@ final Expando<List<Widget>> _latestItems = Expando('animatedList.items');
 /// 就是删除前的列表（一次删除只少一项），退场项永远是被删掉的那一项。
 final Expando<List<Widget>> _previousItems = Expando('animatedList.prevItems');
 
-Widget _itemAt(List<Widget> items, int index) =>
-    (index >= 0 && index < items.length) ? items[index] : const SizedBox.shrink();
+Widget _itemAt(List<Widget> items, int index) => (index >= 0 && index < items.length)
+    ? items[index]
+    : uiFallback('AnimatedList 下标 $index 越界（当前 ${items.length} 项）');
 
 /// 删除前的子项列表（见 [_previousItems] 的说明）。
 List<Widget> _itemsBeforeRemoval(GlobalKey key) {

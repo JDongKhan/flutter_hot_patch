@@ -13,6 +13,7 @@ import 'capabilities/core/from_json/layout_from_json.dart';
 import 'capabilities/core/from_json/painting_from_json.dart';
 import 'capabilities/core/from_json/widget_enum_from_json.dart';
 import 'capabilities/js_ui_capabilities.dart';
+import 'ui_fallback.dart';
 
 /// 非 Widget 数据载体类型：它们在产物里也是 element 形态，但宿主 renderer
 /// 只读数据（type/props/children）组装，不能当 Widget 挂载。
@@ -190,13 +191,13 @@ class JsRenderContext {
   Widget? element(Object? raw) => buildJsElement(raw);
 
   /// 元素描述数组（`AppBar.actions` / `BottomNavigationBar.items` /
-  /// `MultiProvider.providers` 等）→ widget 列表（空项跳过）。
+  /// `MultiProvider.providers` 等）→ widget 列表（构建失败的项给兜底占位）。
   List<Widget> elementList(Object? raw) {
     if (raw is! List) return const [];
     final out = <Widget>[];
     for (final e in raw) {
       final w = buildJsElement(e);
-      if (w != null) out.add(w);
+      out.add(w ?? uiFallback('元素列表项渲染失败：${_elementTypeLabel(e)}'));
     }
     return out;
   }
@@ -252,7 +253,7 @@ Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
     if (value is List) {
       for (final ch in value) {
         final w = buildJsElement(ch);
-        if (w != null) widgets.add(w);
+        widgets.add(w ?? uiFallback('槽位 "$key" 子元素渲染失败：${_elementTypeLabel(ch)}'));
         final ctx = _descriptorContext(ch);
         contexts.add(ctx);
         if (isJsDataCarrierType(ctx.type)) dataCarrier = true;
@@ -266,7 +267,8 @@ Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
     final v = entry.value;
     if (key == '__items' && v is List) {
       children['__items'] = [
-        for (final ch in v) buildJsElement(ch) ?? const SizedBox.shrink(),
+        for (final ch in v)
+          buildJsElement(ch) ?? uiFallback('子元素渲染失败：${_elementTypeLabel(ch)}'),
       ];
       continue;
     }
@@ -286,10 +288,19 @@ Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
       final ctx = _descriptorContext(v);
       children[key] = isJsDataCarrierType(ctx.type)
           ? ctx
-          : buildJsElement(v);
+          : buildJsElement(v) ?? uiFallback('槽位 "$key" 元素渲染失败：${_elementTypeLabel(v)}');
     }
   }
   return children;
+}
+
+/// 元素描述的类型名（兜底提示用；结构不合法时退化到 runtimeType）。
+String _elementTypeLabel(Object? raw) {
+  if (raw is Map) {
+    final t = raw['type'];
+    if (t is String && t.isNotEmpty) return t;
+  }
+  return '${raw.runtimeType}';
 }
 
 /// 元素描述 → 仅含数据（type/props/children）的上下文：供
@@ -1293,22 +1304,6 @@ class _JsBottomNavItem extends StatelessWidget {
   Widget build(BuildContext context) => item.icon;
 }
 
-/// 元素 type 未注册（既无宿主 builder、也无原生注入实现）时，给出可见占位。
-Widget buildMissingJsWidget(String type, List<Widget> children) {
-  HotPatchLog.error('js_ui: 未注册的宿主 widget 类型 "$type"');
-  return Container(
-    padding: const EdgeInsets.all(4),
-    color: const Color(0x22FF0000),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '<missing widget: $type>',
-          style: const TextStyle(fontSize: 11, color: Color(0xFFB00020)),
-        ),
-        ...children,
-      ],
-    ),
-  );
-}
+/// 元素 type 未注册（既无宿主 builder、也无原生注入实现）时的兜底。
+Widget buildMissingJsWidget(String type, List<Widget> children) =>
+    uiFallback('未注册的宿主 widget 类型 "$type"', children: children);
