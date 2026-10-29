@@ -27,9 +27,11 @@ export class AppService {
   async fetchHome(city) {
     var data = await this._request("/app/home");
     var entry = this._cityOf(data["cities"], city);
+    return HomeFeed.fromJson({"banners": entry["banners"], "grid": data["grid"], "spots": entry["spots"], "adImg": entry["adImg"]});
   }
   async fetchCommunity() {
     var data = await this._request("/app/community");
+    return CommunityFeed.fromJson(data);
   }
   async fetchCommunityResources(tab) {
     var data = await this._request("/app/community");
@@ -47,12 +49,13 @@ export class AppService {
     var data = await this._request("/app/notifications");
     var list = [];
     for (let e of data["list"]) {
-
+      list.add(AppNotice.fromJson(e));
     }
     return list;
   }
   async fetchOrders() {
     var data = await this._request("/app/orders");
+    return OrderFeed.fromJson(data);
   }
   async fetchOrderList(status) {
     var data = await this._requestQuery("/app/orders/list", {"status": status});
@@ -60,15 +63,18 @@ export class AppService {
   }
   async fetchMine() {
     var data = await this._request("/app/mine");
+    return MineFeed.fromJson(data);
   }
   async fetchSearch() {
     var data = await this._request("/app/search");
     var home = await this._request("/app/home");
     var entry = this._cityOf(home["cities"], "");
+    return SearchFeed.fromJson({"hot": data["hot"], "guesses": entry["spots"]});
   }
   async fetchResource(id) {
     var community = await this._request("/app/community");
     var posts = await this._request("/app/posts");
+    return ResourceFeed.fromJson({"resource": this._resourceJsonOf(community["resources"], id), "related": posts["list"]});
   }
   async fetchSpot(id) {
     var data = await this._request("/app/home");
@@ -90,28 +96,28 @@ export class AppService {
   _spots(raw) {
     var list = [];
     for (let e of raw) {
-
+      list.add(Spot.fromJson(e));
     }
     return list;
   }
   _posts(raw) {
     var list = [];
     for (let e of raw) {
-
+      list.add(Post.fromJson(e));
     }
     return list;
   }
   _orders(raw) {
     var list = [];
     for (let e of raw) {
-
+      list.add(Order.fromJson(e));
     }
     return list;
   }
   _resources(raw) {
     var list = [];
     for (let e of raw) {
-
+      list.add(Resource.fromJson(e));
     }
     return list;
   }

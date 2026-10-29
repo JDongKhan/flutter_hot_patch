@@ -33,7 +33,7 @@ export class Spot {
       "img": e["img"],
       "desc": e["desc"],
       "price": e["price"],
-      "tags": this.tags
+      "tags": tags
     });
   }
 }
@@ -205,9 +205,9 @@ export class HomeFeed {
       spots.add(Spot.fromJson(s));
     }
     return new HomeFeed({
-      "banners": this.banners,
-      "grid": this.grid,
-      "spots": this.spots,
+      "banners": banners,
+      "grid": grid,
+      "spots": spots,
       "adImg": e["adImg"]
     });
   }
@@ -247,11 +247,11 @@ export class CommunityFeed {
       priceRanges.add(v);
     }
     return new CommunityFeed({
-      "tabs": this.tabs,
-      "sorts": this.sorts,
-      "postTypes": this.postTypes,
-      "dists": this.dists,
-      "priceRanges": this.priceRanges
+      "tabs": tabs,
+      "sorts": sorts,
+      "postTypes": postTypes,
+      "dists": dists,
+      "priceRanges": priceRanges
     });
   }
 }
@@ -270,7 +270,7 @@ export class OrderFeed {
       statuses.add(v);
     }
     return new OrderFeed({
-      "statuses": this.statuses
+      "statuses": statuses
     });
   }
 }
@@ -300,8 +300,8 @@ export class MineFeed {
     }
     return new MineFeed({
       "avatar": e["avatar"],
-      "stats": this.stats,
-      "menu": this.menu
+      "stats": stats,
+      "menu": menu
     });
   }
 }
@@ -325,8 +325,8 @@ export class SearchFeed {
       guesses.add(Spot.fromJson(s));
     }
     return new SearchFeed({
-      "hot": this.hot,
-      "guesses": this.guesses
+      "hot": hot,
+      "guesses": guesses
     });
   }
 }
@@ -346,8 +346,8 @@ export class ResourceFeed {
       related.add(Post.fromJson(p));
     }
     return new ResourceFeed({
-      "resource": Resource.fromJson({}),
-      "related": this.related
+      "resource": Resource.fromJson(e["resource"]),
+      "related": related
     });
   }
 }

@@ -271,7 +271,7 @@ class CommunityFeed {
     required this.priceRanges,
   });
 
-  static CommunityFeed fromJson(Map<String, dynamic> e) {
+  static CommunityFeed fromJson(Map e) {
     final tabs = <String>[];
     for (final v in e['tabs']) {
       tabs.add(v);
@@ -310,7 +310,7 @@ class OrderFeed {
 
   const OrderFeed({required this.statuses});
 
-  static OrderFeed fromJson(Map<String, dynamic> e) {
+  static OrderFeed fromJson(Map e) {
     final statuses = <String>[];
     for (final v in e['statuses']) {
       statuses.add(v);
@@ -331,7 +331,7 @@ class MineFeed {
     required this.menu,
   });
 
-  static MineFeed fromJson(Map<String, dynamic> e) {
+  static MineFeed fromJson(Map e) {
     final stats = <List<String>>[];
     for (final row in e['stats']) {
       final cells = <String>[];
