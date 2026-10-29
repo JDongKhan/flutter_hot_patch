@@ -564,7 +564,7 @@ export class _PostCard {
     this.post = (args && args.post !== undefined) ? args.post : null;
     this.onTap = (args && args.onTap !== undefined) ? args.onTap : null;
   }
-  _likeText(n) {
+  static _likeText(n) {
     return ((n > 999) ? ((n / 1000)).toStringAsFixed(1) + "k" : n);
   }
   build(context) {
@@ -682,7 +682,7 @@ export class _PostCard {
                             "fontSize": 10.5,
                             "color": new Color({value: 0xFFA3A9B4})
                           },
-                          "data": this._likeText(this.post.like)
+                          "data": _PostCard._likeText(this.post.like)
                         })
                       ]
                     })
