@@ -6,6 +6,7 @@ import { Column, Container, ImageFiltered, Padding, SizedBox, Text } from '../fl
 
 // 组件 ImageFilteredDetail
 export class ImageFilteredDetail {
+  static _gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple, Colors.pinkAccent, Colors.orangeAccent]});
   constructor(args) {
     this.props = args || {};
   }
@@ -129,5 +130,4 @@ export class ImageFilteredDetail {
     });
   }
 }
-ImageFilteredDetail._gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple, Colors.pinkAccent, Colors.orangeAccent]});
 

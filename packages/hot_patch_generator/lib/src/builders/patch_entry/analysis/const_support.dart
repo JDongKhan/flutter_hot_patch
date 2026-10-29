@@ -1,8 +1,8 @@
 /// 顶层常量（数据文件）支持：识别、跨文件解析、数据产物渲染。
 ///
 /// Dart 里「可在 JS 侧共享的数据」有两种来源，本文件负责第二种：
-///   - 类（含纯 static 字段的类）：一律翻译成 JS `class`，静态成员挂在类上
-///     （见 dart2js 的类声明 + 类外后置赋值）；
+///   - 类（含纯 static 字段的类）：一律翻译成 JS `class`，静态成员就写在
+///     类体内（`static f = <init>` / `static m(...)`，见 dart2js 的类声明）；
 ///   - 顶层常量：每个 const 各出一条 `export const X = <值>;`，组件产物
 ///     import 后按名引用（`kBanners`），与 Dart 侧写法一一对应。
 ///
@@ -81,7 +81,7 @@ TopLevelConstResolver buildTopLevelConstResolver(
     if (!sameFile) return;
     // 类的 static 字段**不在这里**收集：Dart 的类一律翻译成 JS `class`，static
     // const 与 static final 一样是类的静态成员（见 analyze_dart_class /
-    // dart2js 的后置赋值）。本文件只负责**顶层**常量（含私有 `_x`）。
+    // dart2js 的类声明）。本文件只负责**顶层**常量（含私有 `_x`）。
   }
 
   add(unit, sourcePath, sameFile: true);

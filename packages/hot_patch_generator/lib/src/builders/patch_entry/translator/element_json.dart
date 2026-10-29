@@ -26,7 +26,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart' show log;
 
 import '../../shared/ctor_signatures.dart';
-import '../../shared/js_class_defs.dart';
 import 'value_forms.dart';
 import 'element2js.dart';
 

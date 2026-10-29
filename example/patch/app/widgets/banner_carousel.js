@@ -7,6 +7,9 @@ import { ClipRRect, Column, Container, Image, InkWell, Padding, PageView, Positi
 
 // 组件 BannerCarousel
 export class BannerCarousel {
+  static _height = 150;
+  static _interval = new Duration({seconds: 5});
+  static _animate = new Duration({milliseconds: 350});
   constructor(args) {
     this.props = args || {};
     this.__applyProps(args);
@@ -121,9 +124,6 @@ export class BannerCarousel {
     });
   }
 }
-BannerCarousel._height = 150;
-BannerCarousel._interval = new Duration({seconds: 5});
-BannerCarousel._animate = new Duration({milliseconds: 350});
 
 // 组件 BannerSlide
 export class BannerSlide {

@@ -30,6 +30,11 @@ String renderClassDecl(
   if (base != null) b.write(' extends $base');
   b.write(' {\n');
 
+  // static 字段 → 类体内 `static f = <init>;`（与 Dart 源码同一形态）。
+  // 求值时机由引擎保证：类定义时按源码声明序初始化，晚于方法定义，故字段
+  // 初始化器里可以引用同类的静态方法。
+  _writeStaticFields(b, info);
+
   // constructor：有无 this.x 构造形参决定形态（组件与普通类同一规则）：
   // 无参 → `constructor()`（JS 侧多传实参无害）；有参 → `constructor(args)`，
   // 构造参数**统一经 `__applyProps(args)` 派生**（构造参数 → 实例字段只有这一处
@@ -114,19 +119,18 @@ String renderClassDecl(
   // 下发（builder 协议唯一形态），因此不再生成实例子方法。
 
   b.write('}');
-  // static 字段 → 类外后置赋值（`X.f = <init>;`）：与 ES 静态类字段语法相比
-  // 这不需要引擎额外特性，求值顺序也明确（类声明之后、本模块内）。
-  // 静态字段之间可以互相引用（`static int b = a + 1`），按源码声明序赋值。
-  if (info.staticFields.isNotEmpty) {
-    b.write('\n');
-    for (final f in info.staticFields) {
-      b.write('${info.name}.${f.name} = ${_fieldDefaultJs(f)};\n');
-    }
-    // 去掉末尾多余换行，保证多类拼接时行距一致。
-    final s = b.toString();
-    return s.substring(0, s.length - 1);
-  }
   return b.toString();
+}
+
+/// 静态字段 → 类体内 `static f = <init>;`。
+///
+/// 与实例字段同一个默认值口径（[ClassField.jsInitial] 已预渲染）：无初始化器
+/// 时发射 `static f;`（Dart 里也等价于 null/零值，JS 侧为 undefined）。
+void _writeStaticFields(StringBuffer b, ClassInfo info) {
+  for (final f in info.staticFields) {
+    final v = f.jsInitial ?? (f.initializer == null ? null : literalToJs(f.initializer));
+    b.write('  static ${f.name}${v == null ? '' : ' = $v'};\n');
+  }
 }
 
 /// 非构造参数字段的赋值语句（组件与普通类构造函数共用）。

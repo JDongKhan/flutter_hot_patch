@@ -567,9 +567,9 @@ ClassInfo translateClass(
     }
   }
 
-  // static 字段：JS 侧挂在类上（`X.f = <init>` 后置赋值），初值与实例字段
-  // 共用同一条求值链（字面量 / 值对象构造 / 通用表达式）。求值作用域只有
-  // static 成员——Dart 的 static 初始化器看不到实例成员。
+  // static 字段：JS 侧是类体内 `static f = <init>`，初值与实例字段共用同一条
+  // 求值链（字面量 / 值对象构造 / 通用表达式）。求值作用域只有 static 成员——
+  // Dart 的 static 初始化器看不到实例成员。
   final staticDecls = <ClassField>[];
   final seenStatic = <String>{};
   for (final info in [if (stateClassName != null) widgetInfo, hostInfo]) {

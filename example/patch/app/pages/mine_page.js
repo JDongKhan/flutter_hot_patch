@@ -10,6 +10,7 @@ import { Center, CircularProgressIndicator, ClipOval, Column, Container, Divider
 
 // 组件 MinePage
 export class MinePage {
+  static _menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
   constructor(args) {
     this.props = args || {};
     this._service = new AppService();
@@ -342,7 +343,6 @@ export class MinePage {
     });
   }
 }
-MinePage._menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
 
 // 组件 _DevRow
 export class _DevRow {

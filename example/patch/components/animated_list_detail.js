@@ -6,6 +6,8 @@ import { AnimatedList, Card, CircleAvatar, Column, Expanded, ListTile, Row, Size
 
 // 组件 AnimatedListDetail
 export class AnimatedListDetail {
+  static _insertDuration = new Duration({milliseconds: 350});
+  static _removeDuration = new Duration({milliseconds: 300});
   constructor(args) {
     this.props = args || {};
     this._listKey = new GlobalKey({typeArguments: ['AnimatedListState']});
@@ -132,6 +134,4 @@ export class AnimatedListDetail {
     });
   }
 }
-AnimatedListDetail._insertDuration = new Duration({milliseconds: 350});
-AnimatedListDetail._removeDuration = new Duration({milliseconds: 300});
 
