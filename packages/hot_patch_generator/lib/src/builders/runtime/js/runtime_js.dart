@@ -70,9 +70,11 @@ import 'dart_errors_js.dart';
 import 'dismissible_js.dart';
 import 'handle_registry_js.dart';
 import 'js_extension_js.dart';
+import 'key_sig_js.dart';
 import 'mini_react_js.dart';
 import 'portal_js.dart';
 import 'provider_js.dart';
+import 'state_handle_js.dart';
 
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
@@ -750,6 +752,11 @@ String runtimeJsSource() {
     // 值类区（Dart 值对象 / Controller 类族）已迁至 flutter.js：runtime.js 只留
     // 语言层与 mini-react 核心。它们需要的那几个核心符号在此交接。
     _section('【11.5】跨模块核心符号（供 flutter.js 值类区）', _jsUiCrossModuleExports),
+    // State 句柄：产物里的 State 代理类 `extends __StateHandle`（模块加载时求值），
+    // 必须早于任何产物模块，故留在核心而非值类区。
+    _section('【11.6】State 句柄（GlobalKey.currentState）', stateHandleJsSource),
+    // Key 签名：reconciler 的 patchChildren 直接用 keySig，故属核心。
+    _section('【11.7】Key 签名（keySig / objectToken）', keySigJsSource),
     // 各能力片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
     _section('【13】Dart 异常（StateError / ArgumentError / …）', dartErrorsJsSource),
     // BuildContext 代理留在核心侧：provider（§23）与 showDialog（§27.6）在

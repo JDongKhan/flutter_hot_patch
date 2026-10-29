@@ -41,25 +41,29 @@ const String dartValuesJsSource = r'''
     }
     return null;
   }
-  function Duration(opts) {
-    opts = __posArgs(opts, ['microseconds', 'milliseconds', 'seconds',
-      'minutes', 'hours', 'days']);
-    var ms = (opts.milliseconds || 0) + (opts.seconds || 0) * 1000 +
-      (opts.minutes || 0) * 60000 + (opts.hours || 0) * 3600000 +
-      (opts.days || 0) * 86400000;
-    ms += (opts.microseconds || 0) / 1000;
-    this.inMilliseconds = Math.round(ms);
-    this.inMicroseconds = Math.round(ms * 1000);
+  export class Duration {
+    constructor(opts) {
+      opts = __posArgs(opts, ['microseconds', 'milliseconds', 'seconds',
+        'minutes', 'hours', 'days']);
+      var ms = (opts.milliseconds || 0) + (opts.seconds || 0) * 1000 +
+        (opts.minutes || 0) * 60000 + (opts.hours || 0) * 3600000 +
+        (opts.days || 0) * 86400000;
+      ms += (opts.microseconds || 0) / 1000;
+      this.inMilliseconds = Math.round(ms);
+      this.inMicroseconds = Math.round(ms * 1000);
+    }
   }
   Duration.prototype.toJSON = function () {
     return { __duration: this.inMilliseconds };
   };
   G.Duration = Duration;
 
-  function Size(props) {
-    props = __posArgs(props, ['width', 'height']);
-    this.width = props.width;
-    this.height = props.height;
+  export class Size {
+    constructor(props) {
+      props = __posArgs(props, ['width', 'height']);
+      this.width = props.width;
+      this.height = props.height;
+    }
   }
   Size.prototype.toJSON = function () {
     return { width: this.width, height: this.height };
@@ -87,10 +91,12 @@ const String dartValuesJsSource = r'''
   Size.infinite = { width: Infinity, height: Infinity };
   G.Size = Size;
 
-  function Offset(props) {
-    props = __posArgs(props, ['dx', 'dy']);
-    this.dx = props.dx != null ? props.dx : 0;
-    this.dy = props.dy != null ? props.dy : 0;
+  export class Offset {
+    constructor(props) {
+      props = __posArgs(props, ['dx', 'dy']);
+      this.dx = props.dx != null ? props.dx : 0;
+      this.dy = props.dy != null ? props.dy : 0;
+    }
   }
   Offset.prototype.toJSON = function () {
     return { dx: this.dx, dy: this.dy };
@@ -103,10 +109,12 @@ const String dartValuesJsSource = r'''
   // 常量对象，但跨桥协议是**成员名**（宿主 alignmentFromJson 只认字符串），
   // 因此静态常量直接就是该字符串——与 Dart 里「同一常量是同一值」的语义一致
   //（比较、传参、判等全部成立）。
-  function Alignment(props) {
-    props = __posArgs(props, ['x', 'y']);
-    this.x = props.x != null ? props.x : 0;
-    this.y = props.y != null ? props.y : 0;
+  export class Alignment {
+    constructor(props) {
+      props = __posArgs(props, ['x', 'y']);
+      this.x = props.x != null ? props.x : 0;
+      this.y = props.y != null ? props.y : 0;
+    }
   }
   Alignment.prototype.toJSON = function () { return { x: this.x, y: this.y }; };
   ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center',
@@ -114,11 +122,13 @@ const String dartValuesJsSource = r'''
   ].forEach(function (n) { Alignment[n] = n; });
   G.Alignment = Alignment;
 
-  function Radius(props) {
-    props = __posArgs(props, ['radius']);
-    var r = props.radius != null ? props.radius : (props.x != null ? props.x : 0);
-    this.x = r;
-    this.y = r;
+  export class Radius {
+    constructor(props) {
+      props = __posArgs(props, ['radius']);
+      var r = props.radius != null ? props.radius : (props.x != null ? props.x : 0);
+      this.x = r;
+      this.y = r;
+    }
   }
   Radius.circular = function (props) { return new Radius(props); };
   Radius.prototype.toJSON = function () { return { radius: this.x }; };
@@ -127,12 +137,14 @@ const String dartValuesJsSource = r'''
   // BoxConstraints：布局约束值对象（LayoutBuilder 的 builder 第二参）。宿主按
   // {minWidth, maxWidth, minHeight, maxHeight} 下发，无界维度发 null（JSON 不能
   // 表达 Infinity），这里还原成 +∞（见【18.8】）。
-  function BoxConstraints(props) {
-    props = __posArgs(props, ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']);
-    this.minWidth = props.minWidth != null ? props.minWidth : 0;
-    this.maxWidth = props.maxWidth != null ? props.maxWidth : Infinity;
-    this.minHeight = props.minHeight != null ? props.minHeight : 0;
-    this.maxHeight = props.maxHeight != null ? props.maxHeight : Infinity;
+  export class BoxConstraints {
+    constructor(props) {
+      props = __posArgs(props, ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']);
+      this.minWidth = props.minWidth != null ? props.minWidth : 0;
+      this.maxWidth = props.maxWidth != null ? props.maxWidth : Infinity;
+      this.minHeight = props.minHeight != null ? props.minHeight : 0;
+      this.maxHeight = props.maxHeight != null ? props.maxHeight : Infinity;
+    }
   }
   __defineProtoGetter(BoxConstraints.prototype, 'biggest', function () {
     return new Size({ width: this.maxWidth, height: this.maxHeight });
@@ -164,12 +176,14 @@ const String dartValuesJsSource = r'''
   // 发射 `new TextSpan({text, style, children, semanticsLabel})`；这里镜像字段，
   // 跨桥时由 JSON.stringify 递归序列化成普通对象，宿主 textSpanFromJson 再
   // 还原成真正的 TextSpan 树。
-  function TextSpan(props) {
-    props = __posArgs(props, ['text']);
-    this.text = props.text;
-    if (props.style != null) { this.style = props.style; }
-    if (props.children != null) { this.children = props.children; }
-    if (props.semanticsLabel != null) { this.semanticsLabel = props.semanticsLabel; }
+  export class TextSpan {
+    constructor(props) {
+      props = __posArgs(props, ['text']);
+      this.text = props.text;
+      if (props.style != null) { this.style = props.style; }
+      if (props.children != null) { this.children = props.children; }
+      if (props.semanticsLabel != null) { this.semanticsLabel = props.semanticsLabel; }
+    }
   }
   G.TextSpan = TextSpan;
 
@@ -206,36 +220,44 @@ const String dartValuesJsSource = r'''
     return json;
   }
 
-  function LinearGradient(props) {
-    var p = __gradientProps(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
-    for (var k in p) { this[k] = p[k]; }
+  export class LinearGradient {
+    constructor(props) {
+      var p = __gradientProps(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
+      for (var k in p) { this[k] = p[k]; }
+    }
   }
   LinearGradient.prototype.toJSON = function () { return __gradientJson('linear', this); };
   G.LinearGradient = LinearGradient;
 
-  function RadialGradient(props) {
-    var p = __gradientProps(props,
-      ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
-    for (var k in p) { this[k] = p[k]; }
+  export class RadialGradient {
+    constructor(props) {
+      var p = __gradientProps(props,
+        ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
+      for (var k in p) { this[k] = p[k]; }
+    }
   }
   RadialGradient.prototype.toJSON = function () { return __gradientJson('radial', this); };
   G.RadialGradient = RadialGradient;
 
-  function SweepGradient(props) {
-    var p = __gradientProps(props,
-      ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
-    for (var k in p) { this[k] = p[k]; }
+  export class SweepGradient {
+    constructor(props) {
+      var p = __gradientProps(props,
+        ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
+      for (var k in p) { this[k] = p[k]; }
+    }
   }
   SweepGradient.prototype.toJSON = function () { return __gradientJson('sweep', this); };
   G.SweepGradient = SweepGradient;
 
   // BoxDecoration：字段名与 Dart 构造具名实参一致，toJSON 直出宿主协议
   //（值为 null 的键不下发——宿主对 null 与缺省同义，少发更干净）。
-  function BoxDecoration(props) {
-    props = __posArgs(props, ['color', 'image', 'border', 'borderRadius',
-      'boxShadow', 'gradient', 'backgroundBlendMode', 'shape']);
-    for (var k in props) {
-      if (props[k] != null) { this[k] = props[k]; }
+  export class BoxDecoration {
+    constructor(props) {
+      props = __posArgs(props, ['color', 'image', 'border', 'borderRadius',
+        'boxShadow', 'gradient', 'backgroundBlendMode', 'shape']);
+      for (var k in props) {
+        if (props[k] != null) { this[k] = props[k]; }
+      }
     }
   }
   BoxDecoration.prototype.toJSON = function () {
@@ -252,7 +274,7 @@ const String dartValuesJsSource = r'''
   // 表达（宿主也按 name 下发/回传），这样源码级比较
   // `direction == DismissDirection.endToStart` 在 JS 侧语义不变。
   // 需要运行时存在「枚举类」的枚举在此登记（只做字符串转换的仍由翻译层下发名字）。
-  class DismissDirection {
+  export class DismissDirection {
     static horizontal = "horizontal";
     static vertical = "vertical";
     static startToEnd = "startToEnd";

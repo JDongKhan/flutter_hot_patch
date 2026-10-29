@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 efaf66da） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 335e765a） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'efaf66da') { return; }
-  G.__jsuiVersion = 'efaf66da';
+  if (G.__jsui && G.__jsuiVersion === '335e765a') { return; }
+  G.__jsuiVersion = '335e765a';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2230,6 +2230,82 @@ if (G.kDebugMode) {
     handleOp: handleOp,
     reg: reg
   };
+
+
+// ===== 【11.6】State 句柄（GlobalKey.currentState） =====
+  // GlobalKey.currentState：State 是宿主对象，JS 侧只保留**句柄**。
+  //
+  // 运行时**不认识任何业务方法**（`insertItem` / `removeItem` 这类签名属于具体
+  // 组件）：每个 State 类型的代理类由生成器随该组件一起写进 flutter.js，并在
+  // 加载时用 `__registerStateProxy(type, class)` 登记；类型来自 **GlobalKey<T> 的
+  // 泛型实参**，随产物下发，不靠 runtimeType 猜。没有代理类时退化为通用句柄。
+  function StateHandle(id, type) { this.__key = id; this.__type = type || null; }
+  StateHandle.prototype.__op = function (op, payload) {
+    if (this.__key == null) { return null; }
+    var p = payload || {};
+    // 类型随每次调用下发（来自 GenericKey 的泛型实参）：宿主据此分派到
+    // `Type.method`，不同组件的同名方法互不覆盖。
+    if (this.__type) { p.type = this.__type; }
+    return handleOp(this.__key, '__state.' + op, p);
+  };
+  var __stateProxies = {};
+  function __registerStateProxy(type, cls) { __stateProxies[type] = cls; }
+  function __stateProxyOf(id, type) {
+    var cls = type ? __stateProxies[type] : null;
+    return cls ? new cls(id, type) : new StateHandle(id, type);
+  }
+  G.__registerStateProxy = __registerStateProxy;
+  G.__StateHandle = StateHandle;
+  G.__stateProxyOf = __stateProxyOf;
+
+
+// ===== 【11.7】Key 签名（keySig / objectToken） =====
+  // ObjectKey / ValueKey(对象值) 的身份 token：对象走 WeakMap（不阻止回收），
+  // 原始值没有身份，退化为值 string。
+  var okeySeq = 0;
+  var okeyIdx = new WeakMap();
+  function objectToken(v) {
+    if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
+      return 'p:' + String(v);
+    }
+    var t = okeyIdx.get(v);
+    if (t == null) { okeySeq += 1; t = 'i:' + okeySeq; okeyIdx.set(v, t); }
+    return t;
+  }
+
+  // 值 → 签名片段（原始值按「类型 + 值」，对象按身份）。
+  function keyValueSig(v) {
+    if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
+      return typeof v + ':' + String(v);
+    }
+    return 'i:' + objectToken(v);
+  }
+
+  // key → 可比较签名；null / undefined（无 key）返回 null。
+  // 形态判据用**自有字段**（`__vkey` / `__okey`）：ValueKey 的值本身可以是
+  // null/undefined，故只能判「有没有这个字段」，不能判它的值。
+  function keySig(k) {
+    if (k == null) { return null; }
+    if (Object.prototype.hasOwnProperty.call(k, '__vkey')) { return 'v:' + keyValueSig(k.__vkey); }
+    // PageStorageKey：同值也与 ValueKey 不等（`p:` 前缀），对象值同 ValueKey 走 token。
+    if (Object.prototype.hasOwnProperty.call(k, '__psk')) {
+      var pv = k.__psk;
+      if (pv !== null && typeof pv === 'object' &&
+          Object.prototype.hasOwnProperty.call(pv, '__vtok')) {
+        return 'p:' + pv.__vtok;
+      }
+      return 'p:' + keyValueSig(pv);
+    }
+    if (Object.prototype.hasOwnProperty.call(k, '__okey')) { return 'o:' + k.__okey; }
+    var hid = k.__id != null ? k.__id : k.__handle;
+    if (hid != null) { return 'h:' + hid; }
+    // 兜底：认不出的 key 对象按**引用身份**区分。绝不能 `String(k)` ——
+    // 所有对象都会拼成 "[object Object]" 而互相撞车，导致不同 key 复用同一
+    // 结点（`x:` 前缀保留，表明这是兜底签名）。
+    return 'x:' + objectToken(k);
+  }
+
+  G.objectToken = objectToken;
 
 
 // ===== 【13】Dart 异常（StateError / ArgumentError / …） =====

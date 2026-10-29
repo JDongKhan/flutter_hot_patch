@@ -1604,25 +1604,29 @@ function __durationMs(d) {
   }
   return null;
 }
-function Duration(opts) {
-  opts = __posArgs(opts, ['microseconds', 'milliseconds', 'seconds',
-    'minutes', 'hours', 'days']);
-  var ms = (opts.milliseconds || 0) + (opts.seconds || 0) * 1000 +
-  (opts.minutes || 0) * 60000 + (opts.hours || 0) * 3600000 +
-  (opts.days || 0) * 86400000;
-  ms += (opts.microseconds || 0) / 1000;
-  this.inMilliseconds = Math.round(ms);
-  this.inMicroseconds = Math.round(ms * 1000);
+export class Duration {
+  constructor(opts) {
+    opts = __posArgs(opts, ['microseconds', 'milliseconds', 'seconds',
+      'minutes', 'hours', 'days']);
+    var ms = (opts.milliseconds || 0) + (opts.seconds || 0) * 1000 +
+    (opts.minutes || 0) * 60000 + (opts.hours || 0) * 3600000 +
+    (opts.days || 0) * 86400000;
+    ms += (opts.microseconds || 0) / 1000;
+    this.inMilliseconds = Math.round(ms);
+    this.inMicroseconds = Math.round(ms * 1000);
+  }
 }
 Duration.prototype.toJSON = function () {
   return { __duration: this.inMilliseconds };
 };
 G.Duration = Duration;
 
-function Size(props) {
-  props = __posArgs(props, ['width', 'height']);
-  this.width = props.width;
-  this.height = props.height;
+export class Size {
+  constructor(props) {
+    props = __posArgs(props, ['width', 'height']);
+    this.width = props.width;
+    this.height = props.height;
+  }
 }
 Size.prototype.toJSON = function () {
   return { width: this.width, height: this.height };
@@ -1650,10 +1654,12 @@ Size.zero = { width: 0, height: 0 };
 Size.infinite = { width: Infinity, height: Infinity };
 G.Size = Size;
 
-function Offset(props) {
-  props = __posArgs(props, ['dx', 'dy']);
-  this.dx = props.dx != null ? props.dx : 0;
-  this.dy = props.dy != null ? props.dy : 0;
+export class Offset {
+  constructor(props) {
+    props = __posArgs(props, ['dx', 'dy']);
+    this.dx = props.dx != null ? props.dx : 0;
+    this.dy = props.dy != null ? props.dy : 0;
+  }
 }
 Offset.prototype.toJSON = function () {
   return { dx: this.dx, dy: this.dy };
@@ -1666,10 +1672,12 @@ G.Offset = Offset;
 // 常量对象，但跨桥协议是**成员名**（宿主 alignmentFromJson 只认字符串），
 // 因此静态常量直接就是该字符串——与 Dart 里「同一常量是同一值」的语义一致
 //（比较、传参、判等全部成立）。
-function Alignment(props) {
-  props = __posArgs(props, ['x', 'y']);
-  this.x = props.x != null ? props.x : 0;
-  this.y = props.y != null ? props.y : 0;
+export class Alignment {
+  constructor(props) {
+    props = __posArgs(props, ['x', 'y']);
+    this.x = props.x != null ? props.x : 0;
+    this.y = props.y != null ? props.y : 0;
+  }
 }
 Alignment.prototype.toJSON = function () { return { x: this.x, y: this.y }; };
 ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center',
@@ -1677,11 +1685,13 @@ Alignment.prototype.toJSON = function () { return { x: this.x, y: this.y }; };
 ].forEach(function (n) { Alignment[n] = n; });
 G.Alignment = Alignment;
 
-function Radius(props) {
-  props = __posArgs(props, ['radius']);
-  var r = props.radius != null ? props.radius : (props.x != null ? props.x : 0);
-  this.x = r;
-  this.y = r;
+export class Radius {
+  constructor(props) {
+    props = __posArgs(props, ['radius']);
+    var r = props.radius != null ? props.radius : (props.x != null ? props.x : 0);
+    this.x = r;
+    this.y = r;
+  }
 }
 Radius.circular = function (props) { return new Radius(props); };
 Radius.prototype.toJSON = function () { return { radius: this.x }; };
@@ -1690,12 +1700,14 @@ G.Radius = Radius;
 // BoxConstraints：布局约束值对象（LayoutBuilder 的 builder 第二参）。宿主按
 // {minWidth, maxWidth, minHeight, maxHeight} 下发，无界维度发 null（JSON 不能
 // 表达 Infinity），这里还原成 +∞（见【18.8】）。
-function BoxConstraints(props) {
-  props = __posArgs(props, ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']);
-  this.minWidth = props.minWidth != null ? props.minWidth : 0;
-  this.maxWidth = props.maxWidth != null ? props.maxWidth : Infinity;
-  this.minHeight = props.minHeight != null ? props.minHeight : 0;
-  this.maxHeight = props.maxHeight != null ? props.maxHeight : Infinity;
+export class BoxConstraints {
+  constructor(props) {
+    props = __posArgs(props, ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']);
+    this.minWidth = props.minWidth != null ? props.minWidth : 0;
+    this.maxWidth = props.maxWidth != null ? props.maxWidth : Infinity;
+    this.minHeight = props.minHeight != null ? props.minHeight : 0;
+    this.maxHeight = props.maxHeight != null ? props.maxHeight : Infinity;
+  }
 }
 __defineProtoGetter(BoxConstraints.prototype, 'biggest', function () {
   return new Size({ width: this.maxWidth, height: this.maxHeight });
@@ -1727,12 +1739,14 @@ G.BoxConstraints = BoxConstraints;
 // 发射 `new TextSpan({text, style, children, semanticsLabel})`；这里镜像字段，
 // 跨桥时由 JSON.stringify 递归序列化成普通对象，宿主 textSpanFromJson 再
 // 还原成真正的 TextSpan 树。
-function TextSpan(props) {
-  props = __posArgs(props, ['text']);
-  this.text = props.text;
-  if (props.style != null) { this.style = props.style; }
-  if (props.children != null) { this.children = props.children; }
-  if (props.semanticsLabel != null) { this.semanticsLabel = props.semanticsLabel; }
+export class TextSpan {
+  constructor(props) {
+    props = __posArgs(props, ['text']);
+    this.text = props.text;
+    if (props.style != null) { this.style = props.style; }
+    if (props.children != null) { this.children = props.children; }
+    if (props.semanticsLabel != null) { this.semanticsLabel = props.semanticsLabel; }
+  }
 }
 G.TextSpan = TextSpan;
 
@@ -1769,36 +1783,44 @@ function __gradientJson(kind, self) {
   return json;
 }
 
-function LinearGradient(props) {
-  var p = __gradientProps(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
-  for (var k in p) { this[k] = p[k]; }
+export class LinearGradient {
+  constructor(props) {
+    var p = __gradientProps(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
+    for (var k in p) { this[k] = p[k]; }
+  }
 }
 LinearGradient.prototype.toJSON = function () { return __gradientJson('linear', this); };
 G.LinearGradient = LinearGradient;
 
-function RadialGradient(props) {
-  var p = __gradientProps(props,
-  ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
-  for (var k in p) { this[k] = p[k]; }
+export class RadialGradient {
+  constructor(props) {
+    var p = __gradientProps(props,
+    ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
+    for (var k in p) { this[k] = p[k]; }
+  }
 }
 RadialGradient.prototype.toJSON = function () { return __gradientJson('radial', this); };
 G.RadialGradient = RadialGradient;
 
-function SweepGradient(props) {
-  var p = __gradientProps(props,
-  ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
-  for (var k in p) { this[k] = p[k]; }
+export class SweepGradient {
+  constructor(props) {
+    var p = __gradientProps(props,
+    ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
+    for (var k in p) { this[k] = p[k]; }
+  }
 }
 SweepGradient.prototype.toJSON = function () { return __gradientJson('sweep', this); };
 G.SweepGradient = SweepGradient;
 
 // BoxDecoration：字段名与 Dart 构造具名实参一致，toJSON 直出宿主协议
 //（值为 null 的键不下发——宿主对 null 与缺省同义，少发更干净）。
-function BoxDecoration(props) {
-  props = __posArgs(props, ['color', 'image', 'border', 'borderRadius',
-    'boxShadow', 'gradient', 'backgroundBlendMode', 'shape']);
-  for (var k in props) {
-    if (props[k] != null) { this[k] = props[k]; }
+export class BoxDecoration {
+  constructor(props) {
+    props = __posArgs(props, ['color', 'image', 'border', 'borderRadius',
+      'boxShadow', 'gradient', 'backgroundBlendMode', 'shape']);
+    for (var k in props) {
+      if (props[k] != null) { this[k] = props[k]; }
+    }
   }
 }
 BoxDecoration.prototype.toJSON = function () {
@@ -1815,7 +1837,7 @@ G.BoxDecoration = BoxDecoration;
 // 表达（宿主也按 name 下发/回传），这样源码级比较
 // `direction == DismissDirection.endToStart` 在 JS 侧语义不变。
 // 需要运行时存在「枚举类」的枚举在此登记（只做字符串转换的仍由翻译层下发名字）。
-class DismissDirection {
+export class DismissDirection {
   static horizontal = "horizontal";
   static vertical = "vertical";
   static startToEnd = "startToEnd";
@@ -1831,9 +1853,11 @@ function __toHex(v) {
   return '#' + n;
 }
 
-function Color(props) {
-  props = __posArgs(props, ['value']);
-  this.value = props.value != null ? (props.value >>> 0) : 0;
+export class Color {
+  constructor(props) {
+    props = __posArgs(props, ['value']);
+    this.value = props.value != null ? (props.value >>> 0) : 0;
+  }
 }
 // 序列化：宿主 colorFromJson 只认 '#RRGGBB' / '#AARRGGBB'。
 Color.prototype.toJSON = function () { return __toHex(this.value); };
@@ -1900,31 +1924,31 @@ function __swatchBase(props) {
   var v = props.value != null ? props.value : props.primary;
   return { value: v, swatch: props.swatch };
 }
-function MaterialColor(props) {
-  var p = __swatchBase(props);
-  Color.call(this, { value: p.value });
-  __swatch(this, p.swatch);
+export class MaterialColor extends Color {
+  constructor(props) {
+    var p = __swatchBase(props);
+    super({ value: p.value });
+    __swatch(this, p.swatch);
+  }
 }
-MaterialColor.prototype = Object.create(Color.prototype);
-MaterialColor.prototype.constructor = MaterialColor;
 G.MaterialColor = MaterialColor;
 
-function MaterialAccentColor(props) {
-  var p = __swatchBase(props);
-  Color.call(this, { value: p.value });
-  __swatch(this, p.swatch);
+export class MaterialAccentColor extends Color {
+  constructor(props) {
+    var p = __swatchBase(props);
+    super({ value: p.value });
+    __swatch(this, p.swatch);
+  }
 }
-MaterialAccentColor.prototype = Object.create(Color.prototype);
-MaterialAccentColor.prototype.constructor = MaterialAccentColor;
 G.MaterialAccentColor = MaterialAccentColor;
 
-function ColorSwatch(props) {
-  var p = __swatchBase(props);
-  Color.call(this, { value: p.value });
-  __swatch(this, p.swatch);
+export class ColorSwatch extends Color {
+  constructor(props) {
+    var p = __swatchBase(props);
+    super({ value: p.value });
+    __swatch(this, p.swatch);
+  }
 }
-ColorSwatch.prototype = Object.create(Color.prototype);
-ColorSwatch.prototype.constructor = ColorSwatch;
 G.ColorSwatch = ColorSwatch;
 
 // ChangeNotifier 基类（IIFE 骨架内定义，挂 G 供产物继承）。
@@ -1936,11 +1960,13 @@ G.ColorSwatch = ColorSwatch;
 //      JsChangeNotifier，驱动 Dart 侧 ChangeNotifierProvider 子树刷新）。
 // 构造时登记句柄（kind=notifier/ChangeNotifier），meta.type = JS 端类名 —— Dart 端的
 // 通用镜像据此「记下它的 JS 端类型」（context.watch<T>() 的类型一路传到这里）。
-function ChangeNotifier() {
-  this._listeners = [];
-  this.__id = reg(this, 'notifier/ChangeNotifier', {
-    meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
-  });
+class ChangeNotifier {
+  constructor() {
+    this._listeners = [];
+    this.__id = reg(this, 'notifier/ChangeNotifier', {
+      meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
+    });
+  }
 }
 ChangeNotifier.prototype.addListener = function(f) {
   this._listeners.push(f);
@@ -1990,14 +2016,14 @@ G.ChangeNotifier = ChangeNotifier;
 // 构造实参与其他 Dart 类一样按**具名 props 对象**下发（Dart 的 `ValueNotifier(this._value)`，
 // 形参名就是 `_value`，见 ctor_signatures），故这里按 `_value` 键取值；
 // 直接传裸值时（手写 / 内部调用）也兼容。
-function ValueNotifier(props) {
-  ChangeNotifier.call(this);
-  this._value = (props !== null && typeof props === 'object' && '_value' in props)
-  ? props._value
-  : props;
+class ValueNotifier extends ChangeNotifier {
+  constructor(props) {
+    super();
+    this._value = (props !== null && typeof props === 'object' && '_value' in props)
+    ? props._value
+    : props;
+  }
 }
-ValueNotifier.prototype = Object.create(ChangeNotifier.prototype);
-ValueNotifier.prototype.constructor = ValueNotifier;
 Object.defineProperty(ValueNotifier.prototype, 'value', {
   configurable: true,
   enumerable: false,
@@ -2056,10 +2082,12 @@ G.CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
 
 // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
 // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
-function Tween(opts) {
-  opts = opts || {};
-  this.begin = opts.begin;
-  this.end = opts.end;
+export class Tween {
+  constructor(opts) {
+    opts = opts || {};
+    this.begin = opts.begin;
+    this.end = opts.end;
+  }
 }
 Tween.prototype.lerp = function (t) {
   var b = this.begin, e = this.end;
@@ -2071,10 +2099,12 @@ Tween.prototype.lerp = function (t) {
 };
 G.Tween = Tween;
 
-function CurvedAnimation(opts) {
-  opts = opts || {};
-  this.parent = opts.parent;
-  this.curve = opts.curve;
+export class CurvedAnimation {
+  constructor(opts) {
+    opts = opts || {};
+    this.parent = opts.parent;
+    this.curve = opts.curve;
+  }
 }
 Object.defineProperty(CurvedAnimation.prototype, 'value', {
   get: function () {
@@ -2429,10 +2459,12 @@ G.LogicalKeyboardKey = LogicalKeyboardKey;
 
 // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
 var __physKeys = {};
-function PhysicalKeyboardKey(props) {
-  props = props || {};
-  this.usbHidUsage = props.usbHidUsage;
-  this.debugName = props.debugName || '';
+export class PhysicalKeyboardKey {
+  constructor(props) {
+    props = props || {};
+    this.usbHidUsage = props.usbHidUsage;
+    this.debugName = props.debugName || '';
+  }
 }
 G.PhysicalKeyboardKey = PhysicalKeyboardKey;
 function __physicalKey(usb, label) {
@@ -2446,28 +2478,31 @@ function __physicalKey(usb, label) {
 
 // KeyEvent：Dart 的 KeyEvent 是抽象基类，按下 / 抬起 / 重复是三个子类，
 // 源码用 `event is KeyDownEvent` 区分——这里生成真子类以保持同一语义。
-function KeyEvent(props) {
-  props = props || {};
-  this.physicalKey = props.physicalKey;
-  this.logicalKey = props.logicalKey;
-  this.character = props.character == null ? null : String(props.character);
-  this.timeStamp = props.timeStamp;
+export class KeyEvent {
+  constructor(props) {
+    props = props || {};
+    this.physicalKey = props.physicalKey;
+    this.logicalKey = props.logicalKey;
+    this.character = props.character == null ? null : String(props.character);
+    this.timeStamp = props.timeStamp;
+  }
 }
 G.KeyEvent = KeyEvent;
 
-var __KEY_EVENT_SUBCLASSES = {
-  down: function KeyDownEvent(props) { KeyEvent.call(this, props); },
-  up: function KeyUpEvent(props) { KeyEvent.call(this, props); },
-  repeat: function KeyRepeatEvent(props) { KeyEvent.call(this, props); }
-};
-for (var __kind in __KEY_EVENT_SUBCLASSES) {
-  var __ctor = __KEY_EVENT_SUBCLASSES[__kind];
-  __ctor.prototype = Object.create(KeyEvent.prototype);
-  __ctor.prototype.constructor = __ctor;
+// 按键事件子类：Dart 侧各自是 KeyEvent 的子类，JS 侧原生 extends（这样
+// `instanceof KeyDownEvent` 与 `instanceof KeyEvent` 同时成立）。
+class KeyDownEvent extends KeyEvent {
+  constructor(props) { super(props); }
 }
-G.KeyDownEvent = __KEY_EVENT_SUBCLASSES.down;
-G.KeyUpEvent = __KEY_EVENT_SUBCLASSES.up;
-G.KeyRepeatEvent = __KEY_EVENT_SUBCLASSES.repeat;
+class KeyUpEvent extends KeyEvent {
+  constructor(props) { super(props); }
+}
+class KeyRepeatEvent extends KeyEvent {
+  constructor(props) { super(props); }
+}
+G.KeyDownEvent = KeyDownEvent;
+G.KeyUpEvent = KeyUpEvent;
+G.KeyRepeatEvent = KeyRepeatEvent;
 
 // 宿主桥接见 capabilities/keyboard_listener/keyboard_listener_bridge.dart：
 // 原生 KeyEvent → JSON（kind / character / keyId / keyLabel / usbHidUsage /
@@ -2772,24 +2807,17 @@ G.TabController = TabController;
 // 布局中性）——不在运行时声明：由生成器配置 lazyChildHostTypes 在 __h 里给
 // 元素打 `lazyChildren` 标记（见 hot_patch_generator 的 shared/js_class_defs.dart）。
 
-// ObjectKey / ValueKey(对象值) 的身份 token：对象走 WeakMap（不阻止回收），
-// 原始值没有身份，退化为值 string。
-var okeySeq = 0;
-var okeyIdx = new WeakMap();
-function objectToken(v) {
-  if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
-    return 'p:' + String(v);
-  }
-  var t = okeyIdx.get(v);
-  if (t == null) { okeySeq += 1; t = 'i:' + okeySeq; okeyIdx.set(v, t); }
-  return t;
-}
+// objectToken / keyValueSig / keySig 属于**运行时核心**（key_sig_js.dart，随
+// runtime.js 先加载）：identity WeakMap 由核心与这里的 Key 类共用。
+const objectToken = G.objectToken;
 
 // ValueKey：按值相等，纯值 codec（不登记句柄）。
 // 实例的**自有字段名 = 序列化字段名**（__vkey）：reconciler 的 keySig 用字段
 // 形态判据，而 props.key 传的是 live 实例（不是 toJSON 产物），两边必须同形。
 // 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
-function ValueKey(props) { this.__vkey = __posArgs(props, ['value']).value; }
+export class ValueKey {
+  constructor(props) { this.__vkey = __posArgs(props, ['value']).value; }
+}
 ValueKey.prototype.toJSON = function () {
   var v = this.__vkey;
   if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
@@ -2799,7 +2827,9 @@ ValueKey.prototype.toJSON = function () {
 };
 
 // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
-function ObjectKey(props) { this.__okey = objectToken(__posArgs(props, ['value']).value); }
+export class ObjectKey {
+  constructor(props) { this.__okey = objectToken(__posArgs(props, ['value']).value); }
+}
 ObjectKey.prototype.toJSON = function () { return { __okey: this.__okey }; };
 
 // PageStorageKey：Dart 侧 `extends ValueKey`（按**值**相等），但宿主必须造
@@ -2807,26 +2837,30 @@ ObjectKey.prototype.toJSON = function () { return { __okey: this.__okey }; };
 // 那是宿主端行为（JS 侧只有一个值本体）。故 codec 与 ValueKey 同构另加 `__psk`
 // 标记：宿主据此造 PageStorageKey 而非 ValueKey，keySig 前缀 `p:` 使它与
 // 同值的 ValueKey 不等（与 Dart 的 runtimeType 参与相等一致）。
-function PageStorageKey(props) {
-  var value = __posArgs(props, ['value']).value;
-  this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
-  ? { __vtok: objectToken(value) }
-  : value;
+export class PageStorageKey {
+  constructor(props) {
+    var value = __posArgs(props, ['value']).value;
+    this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
+    ? { __vtok: objectToken(value) }
+    : value;
+  }
 }
 PageStorageKey.prototype.toJSON = function () { return { __psk: this.__psk }; };
 
 // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
 defineHandleKind('key/Global', {});
-function GlobalKey(props) {
-  var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
-  // 泛型实参由产物下发（`new GlobalKey({typeArguments: ['AnimatedListState']})`）：
-  // Dart 的 `GlobalKey<T>` 在 AOT 是 reified 的，T 就是「currentState 的类型」，
-  // 取值不需要问宿主、也不靠 runtimeType 猜。
-  var ta = (props && props.typeArguments) || [];
-  this.__stateType = ta.length ? ta[0] : null;
-  this.__id = reg(this, 'key/Global', {
-    meta: debugLabel == null ? null : { debugLabel: debugLabel }
-  });
+export class GlobalKey {
+  constructor(props) {
+    var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
+    // 泛型实参由产物下发（`new GlobalKey({typeArguments: ['AnimatedListState']})`）：
+    // Dart 的 `GlobalKey<T>` 在 AOT 是 reified 的，T 就是「currentState 的类型」，
+    // 取值不需要问宿主、也不靠 runtimeType 猜。
+    var ta = (props && props.typeArguments) || [];
+    this.__stateType = ta.length ? ta[0] : null;
+    this.__id = reg(this, 'key/Global', {
+      meta: debugLabel == null ? null : { debugLabel: debugLabel }
+    });
+  }
 }
 GlobalKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
@@ -2839,7 +2873,9 @@ GlobalKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 //   - measure()：Flutter 的 `box.size` / `box.localToGlobal(Offset.zero)` 是
 //     **同步属性**，而 JS→宿主只能异步，故这里返回 Promise（单源侧 `await`
 //     后即为真实值，见 widget_details 的 _measureFixed）。
-function KeyRef(id) { this.__key = id; }
+export class KeyRef {
+  constructor(id) { this.__key = id; }
+}
 KeyRef.prototype.findRenderObject = function () { return new KeyRef(this.__key); };
 KeyRef.prototype.showOnScreen = function () {
   if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
@@ -2852,73 +2888,28 @@ Object.defineProperty(GlobalKey.prototype, 'currentContext', {
   get: function () { return this.__id == null ? null : new KeyRef(this.__id); }
 });
 
-// GlobalKey.currentState：State 是宿主对象，JS 侧只保留**句柄**。
-//
-// 运行时**不认识任何业务方法**（`insertItem` / `removeItem` 这类签名属于具体
-// 组件）：每个 State 类型的代理类由生成器随该组件一起写进 flutter.js，并在
-// 加载时用 `__registerStateProxy(type, class)` 登记；类型来自 **GlobalKey<T> 的
-// 泛型实参**，随产物下发，不靠 runtimeType 猜。没有代理类时退化为通用句柄。
-function StateHandle(id, type) { this.__key = id; this.__type = type || null; }
-StateHandle.prototype.__op = function (op, payload) {
-  if (this.__key == null) { return null; }
-  var p = payload || {};
-  // 类型随每次调用下发（来自 GenericKey 的泛型实参）：宿主据此分派到
-  // `Type.method`，不同组件的同名方法互不覆盖。
-  if (this.__type) { p.type = this.__type; }
-  return handleOp(this.__key, '__state.' + op, p);
-};
-var __stateProxies = {};
-function __registerStateProxy(type, cls) { __stateProxies[type] = cls; }
+// GlobalKey.currentState：StateHandle / __registerStateProxy 属于**运行时核心**
+// （state_handle_js.dart，随 runtime.js 先加载），这里只补 `currentState` getter。
+// 运行时**不认识任何业务方法**：代理类由生成器随组件写进 flutter.js，并用
+// `__registerStateProxy(type, class)` 登记；类型来自 GlobalKey<T> 的泛型实参。
 Object.defineProperty(GlobalKey.prototype, 'currentState', {
   get: function () {
     if (this.__id == null) { return null; }
     // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
     // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
     var type = this.__stateType || handleOp(this.__id, '__type', {});
-    var cls = type ? __stateProxies[type] : null;
-    return cls ? new cls(this.__id, type) : new StateHandle(this.__id, type);
+    return __stateProxyOf(this.__id, type);
   }
 });
-G.__registerStateProxy = __registerStateProxy;
-G.__StateHandle = StateHandle;
 
 defineHandleKind('key/Unique', {});
-function UniqueKey() {
-  this.__id = reg(this, 'key/Unique', {});
+export class UniqueKey {
+  constructor() {
+    this.__id = reg(this, 'key/Unique', {});
+  }
 }
 UniqueKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
-// 值 → 签名片段（原始值按「类型 + 值」，对象按身份）。
-function keyValueSig(v) {
-  if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
-    return typeof v + ':' + String(v);
-  }
-  return 'i:' + objectToken(v);
-}
-
-// key → 可比较签名；null / undefined（无 key）返回 null。
-// 形态判据用**自有字段**（`__vkey` / `__okey`）：ValueKey 的值本身可以是
-// null/undefined，故只能判「有没有这个字段」，不能判它的值。
-function keySig(k) {
-  if (k == null) { return null; }
-  if (Object.prototype.hasOwnProperty.call(k, '__vkey')) { return 'v:' + keyValueSig(k.__vkey); }
-  // PageStorageKey：同值也与 ValueKey 不等（`p:` 前缀），对象值同 ValueKey 走 token。
-  if (Object.prototype.hasOwnProperty.call(k, '__psk')) {
-    var pv = k.__psk;
-    if (pv !== null && typeof pv === 'object' &&
-    Object.prototype.hasOwnProperty.call(pv, '__vtok')) {
-      return 'p:' + pv.__vtok;
-    }
-    return 'p:' + keyValueSig(pv);
-  }
-  if (Object.prototype.hasOwnProperty.call(k, '__okey')) { return 'o:' + k.__okey; }
-  var hid = k.__id != null ? k.__id : k.__handle;
-  if (hid != null) { return 'h:' + hid; }
-  // 兜底：认不出的 key 对象按**引用身份**区分。绝不能 `String(k)` ——
-  // 所有对象都会拼成 "[object Object]" 而互相撞车，导致不同 key 复用同一
-  // 结点（`x:` 前缀保留，表明这是兜底签名）。
-  return 'x:' + objectToken(k);
-}
 
 G.ValueKey = ValueKey;
 G.ObjectKey = ObjectKey;
@@ -3034,8 +3025,10 @@ function __timerArgs(props, second) {
   return { ms: ms, callback: callback };
 }
 
-function Timer(props) {
-  __timerInit(this, props, false, null);
+export class Timer {
+  constructor(props) {
+    __timerInit(this, props, false, null);
+  }
 }
 
 // __timerInit 在所有 Timer 实例间共用（构造与 periodic 两条入口）。
@@ -3097,11 +3090,11 @@ G.Timer = Timer;
 // Dart 侧 `Colors` 是 `class Colors { static const MaterialColor red = … }`，
 // 产物一比一：class + static 字段（不是对象字面量）。`Colors.red[400]`
 // 原样求值，翻译层不含任何色值表，重构建即跟随 SDK。
-function __c(v) { return new Color({ value: v }); }
-function __mc(primary, shades) {
+function __colorsColor(v) { return new Color({ value: v }); }
+function __colorsPalette(primary, shades) {
   const m = new MaterialColor({ primary: primary });
   for (const k in shades) {
-    m[k] = __c(shades[k]);
+    m[k] = __colorsColor(shades[k]);
     m["shade" + k] = m[k];
   }
   if (m["shade500"] === undefined) {
@@ -3110,67 +3103,67 @@ function __mc(primary, shades) {
   }
   return m;
 }
-function __mac(primary, shades) {
+function __colorsAccent(primary, shades) {
   const m = new MaterialAccentColor({ primary: primary });
   for (const k in shades) {
-    m[k] = __c(shades[k]);
+    m[k] = __colorsColor(shades[k]);
     m["shade" + k] = m[k];
   }
   return m;
 }
 export class Colors {
-  static red = __mc(0xFFF44336, {'50': 0xFFFFEBEE, '100': 0xFFFFCDD2, '200': 0xFFEF9A9A, '300': 0xFFE57373, '400': 0xFFEF5350, '500': 0xFFF44336, '600': 0xFFE53935, '700': 0xFFD32F2F, '800': 0xFFC62828, '900': 0xFFB71C1C});
-  static pink = __mc(0xFFE91E63, {'50': 0xFFFCE4EC, '100': 0xFFF8BBD0, '200': 0xFFF48FB1, '300': 0xFFF06292, '400': 0xFFEC407A, '500': 0xFFE91E63, '600': 0xFFD81B60, '700': 0xFFC2185B, '800': 0xFFAD1457, '900': 0xFF880E4F});
-  static purple = __mc(0xFF9C27B0, {'50': 0xFFF3E5F5, '100': 0xFFE1BEE7, '200': 0xFFCE93D8, '300': 0xFFBA68C8, '400': 0xFFAB47BC, '500': 0xFF9C27B0, '600': 0xFF8E24AA, '700': 0xFF7B1FA2, '800': 0xFF6A1B9A, '900': 0xFF4A148C});
-  static deepPurple = __mc(0xFF673AB7, {'50': 0xFFEDE7F6, '100': 0xFFD1C4E9, '200': 0xFFB39DDB, '300': 0xFF9575CD, '400': 0xFF7E57C2, '500': 0xFF673AB7, '600': 0xFF5E35B1, '700': 0xFF512DA8, '800': 0xFF4527A0, '900': 0xFF311B92});
-  static indigo = __mc(0xFF3F51B5, {'50': 0xFFE8EAF6, '100': 0xFFC5CAE9, '200': 0xFF9FA8DA, '300': 0xFF7986CB, '400': 0xFF5C6BC0, '500': 0xFF3F51B5, '600': 0xFF3949AB, '700': 0xFF303F9F, '800': 0xFF283593, '900': 0xFF1A237E});
-  static blue = __mc(0xFF2196F3, {'50': 0xFFE3F2FD, '100': 0xFFBBDEFB, '200': 0xFF90CAF9, '300': 0xFF64B5F6, '400': 0xFF42A5F5, '500': 0xFF2196F3, '600': 0xFF1E88E5, '700': 0xFF1976D2, '800': 0xFF1565C0, '900': 0xFF0D47A1});
-  static lightBlue = __mc(0xFF03A9F4, {'50': 0xFFE1F5FE, '100': 0xFFB3E5FC, '200': 0xFF81D4FA, '300': 0xFF4FC3F7, '400': 0xFF29B6F6, '500': 0xFF03A9F4, '600': 0xFF039BE5, '700': 0xFF0288D1, '800': 0xFF0277BD, '900': 0xFF01579B});
-  static cyan = __mc(0xFF00BCD4, {'50': 0xFFE0F7FA, '100': 0xFFB2EBF2, '200': 0xFF80DEEA, '300': 0xFF4DD0E1, '400': 0xFF26C6DA, '500': 0xFF00BCD4, '600': 0xFF00ACC1, '700': 0xFF0097A7, '800': 0xFF00838F, '900': 0xFF006064});
-  static teal = __mc(0xFF009688, {'50': 0xFFE0F2F1, '100': 0xFFB2DFDB, '200': 0xFF80CBC4, '300': 0xFF4DB6AC, '400': 0xFF26A69A, '500': 0xFF009688, '600': 0xFF00897B, '700': 0xFF00796B, '800': 0xFF00695C, '900': 0xFF004D40});
-  static green = __mc(0xFF4CAF50, {'50': 0xFFE8F5E9, '100': 0xFFC8E6C9, '200': 0xFFA5D6A7, '300': 0xFF81C784, '400': 0xFF66BB6A, '500': 0xFF4CAF50, '600': 0xFF43A047, '700': 0xFF388E3C, '800': 0xFF2E7D32, '900': 0xFF1B5E20});
-  static lightGreen = __mc(0xFF8BC34A, {'50': 0xFFF1F8E9, '100': 0xFFDCEDC8, '200': 0xFFC5E1A5, '300': 0xFFAED581, '400': 0xFF9CCC65, '500': 0xFF8BC34A, '600': 0xFF7CB342, '700': 0xFF689F38, '800': 0xFF558B2F, '900': 0xFF33691E});
-  static lime = __mc(0xFFCDDC39, {'50': 0xFFF9FBE7, '100': 0xFFF0F4C3, '200': 0xFFE6EE9C, '300': 0xFFDCE775, '400': 0xFFD4E157, '500': 0xFFCDDC39, '600': 0xFFC0CA33, '700': 0xFFAFB42B, '800': 0xFF9E9D24, '900': 0xFF827717});
-  static yellow = __mc(0xFFFFEB3B, {'50': 0xFFFFFDE7, '100': 0xFFFFF9C4, '200': 0xFFFFF59D, '300': 0xFFFFF176, '400': 0xFFFFEE58, '500': 0xFFFFEB3B, '600': 0xFFFDD835, '700': 0xFFFBC02D, '800': 0xFFF9A825, '900': 0xFFF57F17});
-  static amber = __mc(0xFFFFC107, {'50': 0xFFFFF8E1, '100': 0xFFFFECB3, '200': 0xFFFFE082, '300': 0xFFFFD54F, '400': 0xFFFFCA28, '500': 0xFFFFC107, '600': 0xFFFFB300, '700': 0xFFFFA000, '800': 0xFFFF8F00, '900': 0xFFFF6F00});
-  static orange = __mc(0xFFFF9800, {'50': 0xFFFFF3E0, '100': 0xFFFFE0B2, '200': 0xFFFFCC80, '300': 0xFFFFB74D, '400': 0xFFFFA726, '500': 0xFFFF9800, '600': 0xFFFB8C00, '700': 0xFFF57C00, '800': 0xFFEF6C00, '900': 0xFFE65100});
-  static deepOrange = __mc(0xFFFF5722, {'50': 0xFFFBE9E7, '100': 0xFFFFCCBC, '200': 0xFFFFAB91, '300': 0xFFFF8A65, '400': 0xFFFF7043, '500': 0xFFFF5722, '600': 0xFFF4511E, '700': 0xFFE64A19, '800': 0xFFD84315, '900': 0xFFBF360C});
-  static brown = __mc(0xFF795548, {'50': 0xFFEFEBE9, '100': 0xFFD7CCC8, '200': 0xFFBCAAA4, '300': 0xFFA1887F, '400': 0xFF8D6E63, '500': 0xFF795548, '600': 0xFF6D4C41, '700': 0xFF5D4037, '800': 0xFF4E342E, '900': 0xFF3E2723});
-  static grey = __mc(0xFF9E9E9E, {'50': 0xFFFAFAFA, '100': 0xFFF5F5F5, '200': 0xFFEEEEEE, '300': 0xFFE0E0E0, '350': 0xFFD6D6D6, '400': 0xFFBDBDBD, '500': 0xFF9E9E9E, '600': 0xFF757575, '700': 0xFF616161, '800': 0xFF424242, '850': 0xFF303030, '900': 0xFF212121});
-  static blueGrey = __mc(0xFF607D8B, {'50': 0xFFECEFF1, '100': 0xFFCFD8DC, '200': 0xFFB0BEC5, '300': 0xFF90A4AE, '400': 0xFF78909C, '500': 0xFF607D8B, '600': 0xFF546E7A, '700': 0xFF455A64, '800': 0xFF37474F, '900': 0xFF263238});
-  static redAccent = __mac(0xFFFF5252, {'100': 0xFFFF8A80, '200': 0xFFFF5252, '400': 0xFFFF1744, '700': 0xFFD50000});
-  static pinkAccent = __mac(0xFFFF4081, {'100': 0xFFFF80AB, '200': 0xFFFF4081, '400': 0xFFF50057, '700': 0xFFC51162});
-  static purpleAccent = __mac(0xFFE040FB, {'100': 0xFFEA80FC, '200': 0xFFE040FB, '400': 0xFFD500F9, '700': 0xFFAA00FF});
-  static deepPurpleAccent = __mac(0xFF7C4DFF, {'100': 0xFFB388FF, '200': 0xFF7C4DFF, '400': 0xFF651FFF, '700': 0xFF6200EA});
-  static indigoAccent = __mac(0xFF536DFE, {'100': 0xFF8C9EFF, '200': 0xFF536DFE, '400': 0xFF3D5AFE, '700': 0xFF304FFE});
-  static blueAccent = __mac(0xFF448AFF, {'100': 0xFF82B1FF, '200': 0xFF448AFF, '400': 0xFF2979FF, '700': 0xFF2962FF});
-  static lightBlueAccent = __mac(0xFF40C4FF, {'100': 0xFF80D8FF, '200': 0xFF40C4FF, '400': 0xFF00B0FF, '700': 0xFF0091EA});
-  static cyanAccent = __mac(0xFF18FFFF, {'100': 0xFF84FFFF, '200': 0xFF18FFFF, '400': 0xFF00E5FF, '700': 0xFF00B8D4});
-  static tealAccent = __mac(0xFF64FFDA, {'100': 0xFFA7FFEB, '200': 0xFF64FFDA, '400': 0xFF1DE9B6, '700': 0xFF00BFA5});
-  static greenAccent = __mac(0xFF69F0AE, {'100': 0xFFB9F6CA, '200': 0xFF69F0AE, '400': 0xFF00E676, '700': 0xFF00C853});
-  static lightGreenAccent = __mac(0xFFB2FF59, {'100': 0xFFCCFF90, '200': 0xFFB2FF59, '400': 0xFF76FF03, '700': 0xFF64DD17});
-  static limeAccent = __mac(0xFFEEFF41, {'100': 0xFFF4FF81, '200': 0xFFEEFF41, '400': 0xFFC6FF00, '700': 0xFFAEEA00});
-  static yellowAccent = __mac(0xFFFFFF00, {'100': 0xFFFFFF8D, '200': 0xFFFFFF00, '400': 0xFFFFEA00, '700': 0xFFFFD600});
-  static amberAccent = __mac(0xFFFFD740, {'100': 0xFFFFE57F, '200': 0xFFFFD740, '400': 0xFFFFC400, '700': 0xFFFFAB00});
-  static orangeAccent = __mac(0xFFFFAB40, {'100': 0xFFFFD180, '200': 0xFFFFAB40, '400': 0xFFFF9100, '700': 0xFFFF6D00});
-  static deepOrangeAccent = __mac(0xFFFF6E40, {'100': 0xFFFF9E80, '200': 0xFFFF6E40, '400': 0xFFFF3D00, '700': 0xFFDD2C00});
-  static transparent = __c(0x00000000);
-  static black = __c(0xFF000000);
-  static black87 = __c(0xDD000000);
-  static black54 = __c(0x8A000000);
-  static black45 = __c(0x73000000);
-  static black38 = __c(0x61000000);
-  static black26 = __c(0x42000000);
-  static black12 = __c(0x1F000000);
-  static white = __c(0xFFFFFFFF);
-  static white70 = __c(0xB3FFFFFF);
-  static white60 = __c(0x99FFFFFF);
-  static white54 = __c(0x8AFFFFFF);
-  static white38 = __c(0x62FFFFFF);
-  static white30 = __c(0x4DFFFFFF);
-  static white24 = __c(0x3DFFFFFF);
-  static white12 = __c(0x1FFFFFFF);
-  static white10 = __c(0x1AFFFFFF);
+  static red = __colorsPalette(0xFFF44336, {'50': 0xFFFFEBEE, '100': 0xFFFFCDD2, '200': 0xFFEF9A9A, '300': 0xFFE57373, '400': 0xFFEF5350, '500': 0xFFF44336, '600': 0xFFE53935, '700': 0xFFD32F2F, '800': 0xFFC62828, '900': 0xFFB71C1C});
+  static pink = __colorsPalette(0xFFE91E63, {'50': 0xFFFCE4EC, '100': 0xFFF8BBD0, '200': 0xFFF48FB1, '300': 0xFFF06292, '400': 0xFFEC407A, '500': 0xFFE91E63, '600': 0xFFD81B60, '700': 0xFFC2185B, '800': 0xFFAD1457, '900': 0xFF880E4F});
+  static purple = __colorsPalette(0xFF9C27B0, {'50': 0xFFF3E5F5, '100': 0xFFE1BEE7, '200': 0xFFCE93D8, '300': 0xFFBA68C8, '400': 0xFFAB47BC, '500': 0xFF9C27B0, '600': 0xFF8E24AA, '700': 0xFF7B1FA2, '800': 0xFF6A1B9A, '900': 0xFF4A148C});
+  static deepPurple = __colorsPalette(0xFF673AB7, {'50': 0xFFEDE7F6, '100': 0xFFD1C4E9, '200': 0xFFB39DDB, '300': 0xFF9575CD, '400': 0xFF7E57C2, '500': 0xFF673AB7, '600': 0xFF5E35B1, '700': 0xFF512DA8, '800': 0xFF4527A0, '900': 0xFF311B92});
+  static indigo = __colorsPalette(0xFF3F51B5, {'50': 0xFFE8EAF6, '100': 0xFFC5CAE9, '200': 0xFF9FA8DA, '300': 0xFF7986CB, '400': 0xFF5C6BC0, '500': 0xFF3F51B5, '600': 0xFF3949AB, '700': 0xFF303F9F, '800': 0xFF283593, '900': 0xFF1A237E});
+  static blue = __colorsPalette(0xFF2196F3, {'50': 0xFFE3F2FD, '100': 0xFFBBDEFB, '200': 0xFF90CAF9, '300': 0xFF64B5F6, '400': 0xFF42A5F5, '500': 0xFF2196F3, '600': 0xFF1E88E5, '700': 0xFF1976D2, '800': 0xFF1565C0, '900': 0xFF0D47A1});
+  static lightBlue = __colorsPalette(0xFF03A9F4, {'50': 0xFFE1F5FE, '100': 0xFFB3E5FC, '200': 0xFF81D4FA, '300': 0xFF4FC3F7, '400': 0xFF29B6F6, '500': 0xFF03A9F4, '600': 0xFF039BE5, '700': 0xFF0288D1, '800': 0xFF0277BD, '900': 0xFF01579B});
+  static cyan = __colorsPalette(0xFF00BCD4, {'50': 0xFFE0F7FA, '100': 0xFFB2EBF2, '200': 0xFF80DEEA, '300': 0xFF4DD0E1, '400': 0xFF26C6DA, '500': 0xFF00BCD4, '600': 0xFF00ACC1, '700': 0xFF0097A7, '800': 0xFF00838F, '900': 0xFF006064});
+  static teal = __colorsPalette(0xFF009688, {'50': 0xFFE0F2F1, '100': 0xFFB2DFDB, '200': 0xFF80CBC4, '300': 0xFF4DB6AC, '400': 0xFF26A69A, '500': 0xFF009688, '600': 0xFF00897B, '700': 0xFF00796B, '800': 0xFF00695C, '900': 0xFF004D40});
+  static green = __colorsPalette(0xFF4CAF50, {'50': 0xFFE8F5E9, '100': 0xFFC8E6C9, '200': 0xFFA5D6A7, '300': 0xFF81C784, '400': 0xFF66BB6A, '500': 0xFF4CAF50, '600': 0xFF43A047, '700': 0xFF388E3C, '800': 0xFF2E7D32, '900': 0xFF1B5E20});
+  static lightGreen = __colorsPalette(0xFF8BC34A, {'50': 0xFFF1F8E9, '100': 0xFFDCEDC8, '200': 0xFFC5E1A5, '300': 0xFFAED581, '400': 0xFF9CCC65, '500': 0xFF8BC34A, '600': 0xFF7CB342, '700': 0xFF689F38, '800': 0xFF558B2F, '900': 0xFF33691E});
+  static lime = __colorsPalette(0xFFCDDC39, {'50': 0xFFF9FBE7, '100': 0xFFF0F4C3, '200': 0xFFE6EE9C, '300': 0xFFDCE775, '400': 0xFFD4E157, '500': 0xFFCDDC39, '600': 0xFFC0CA33, '700': 0xFFAFB42B, '800': 0xFF9E9D24, '900': 0xFF827717});
+  static yellow = __colorsPalette(0xFFFFEB3B, {'50': 0xFFFFFDE7, '100': 0xFFFFF9C4, '200': 0xFFFFF59D, '300': 0xFFFFF176, '400': 0xFFFFEE58, '500': 0xFFFFEB3B, '600': 0xFFFDD835, '700': 0xFFFBC02D, '800': 0xFFF9A825, '900': 0xFFF57F17});
+  static amber = __colorsPalette(0xFFFFC107, {'50': 0xFFFFF8E1, '100': 0xFFFFECB3, '200': 0xFFFFE082, '300': 0xFFFFD54F, '400': 0xFFFFCA28, '500': 0xFFFFC107, '600': 0xFFFFB300, '700': 0xFFFFA000, '800': 0xFFFF8F00, '900': 0xFFFF6F00});
+  static orange = __colorsPalette(0xFFFF9800, {'50': 0xFFFFF3E0, '100': 0xFFFFE0B2, '200': 0xFFFFCC80, '300': 0xFFFFB74D, '400': 0xFFFFA726, '500': 0xFFFF9800, '600': 0xFFFB8C00, '700': 0xFFF57C00, '800': 0xFFEF6C00, '900': 0xFFE65100});
+  static deepOrange = __colorsPalette(0xFFFF5722, {'50': 0xFFFBE9E7, '100': 0xFFFFCCBC, '200': 0xFFFFAB91, '300': 0xFFFF8A65, '400': 0xFFFF7043, '500': 0xFFFF5722, '600': 0xFFF4511E, '700': 0xFFE64A19, '800': 0xFFD84315, '900': 0xFFBF360C});
+  static brown = __colorsPalette(0xFF795548, {'50': 0xFFEFEBE9, '100': 0xFFD7CCC8, '200': 0xFFBCAAA4, '300': 0xFFA1887F, '400': 0xFF8D6E63, '500': 0xFF795548, '600': 0xFF6D4C41, '700': 0xFF5D4037, '800': 0xFF4E342E, '900': 0xFF3E2723});
+  static grey = __colorsPalette(0xFF9E9E9E, {'50': 0xFFFAFAFA, '100': 0xFFF5F5F5, '200': 0xFFEEEEEE, '300': 0xFFE0E0E0, '350': 0xFFD6D6D6, '400': 0xFFBDBDBD, '500': 0xFF9E9E9E, '600': 0xFF757575, '700': 0xFF616161, '800': 0xFF424242, '850': 0xFF303030, '900': 0xFF212121});
+  static blueGrey = __colorsPalette(0xFF607D8B, {'50': 0xFFECEFF1, '100': 0xFFCFD8DC, '200': 0xFFB0BEC5, '300': 0xFF90A4AE, '400': 0xFF78909C, '500': 0xFF607D8B, '600': 0xFF546E7A, '700': 0xFF455A64, '800': 0xFF37474F, '900': 0xFF263238});
+  static redAccent = __colorsAccent(0xFFFF5252, {'100': 0xFFFF8A80, '200': 0xFFFF5252, '400': 0xFFFF1744, '700': 0xFFD50000});
+  static pinkAccent = __colorsAccent(0xFFFF4081, {'100': 0xFFFF80AB, '200': 0xFFFF4081, '400': 0xFFF50057, '700': 0xFFC51162});
+  static purpleAccent = __colorsAccent(0xFFE040FB, {'100': 0xFFEA80FC, '200': 0xFFE040FB, '400': 0xFFD500F9, '700': 0xFFAA00FF});
+  static deepPurpleAccent = __colorsAccent(0xFF7C4DFF, {'100': 0xFFB388FF, '200': 0xFF7C4DFF, '400': 0xFF651FFF, '700': 0xFF6200EA});
+  static indigoAccent = __colorsAccent(0xFF536DFE, {'100': 0xFF8C9EFF, '200': 0xFF536DFE, '400': 0xFF3D5AFE, '700': 0xFF304FFE});
+  static blueAccent = __colorsAccent(0xFF448AFF, {'100': 0xFF82B1FF, '200': 0xFF448AFF, '400': 0xFF2979FF, '700': 0xFF2962FF});
+  static lightBlueAccent = __colorsAccent(0xFF40C4FF, {'100': 0xFF80D8FF, '200': 0xFF40C4FF, '400': 0xFF00B0FF, '700': 0xFF0091EA});
+  static cyanAccent = __colorsAccent(0xFF18FFFF, {'100': 0xFF84FFFF, '200': 0xFF18FFFF, '400': 0xFF00E5FF, '700': 0xFF00B8D4});
+  static tealAccent = __colorsAccent(0xFF64FFDA, {'100': 0xFFA7FFEB, '200': 0xFF64FFDA, '400': 0xFF1DE9B6, '700': 0xFF00BFA5});
+  static greenAccent = __colorsAccent(0xFF69F0AE, {'100': 0xFFB9F6CA, '200': 0xFF69F0AE, '400': 0xFF00E676, '700': 0xFF00C853});
+  static lightGreenAccent = __colorsAccent(0xFFB2FF59, {'100': 0xFFCCFF90, '200': 0xFFB2FF59, '400': 0xFF76FF03, '700': 0xFF64DD17});
+  static limeAccent = __colorsAccent(0xFFEEFF41, {'100': 0xFFF4FF81, '200': 0xFFEEFF41, '400': 0xFFC6FF00, '700': 0xFFAEEA00});
+  static yellowAccent = __colorsAccent(0xFFFFFF00, {'100': 0xFFFFFF8D, '200': 0xFFFFFF00, '400': 0xFFFFEA00, '700': 0xFFFFD600});
+  static amberAccent = __colorsAccent(0xFFFFD740, {'100': 0xFFFFE57F, '200': 0xFFFFD740, '400': 0xFFFFC400, '700': 0xFFFFAB00});
+  static orangeAccent = __colorsAccent(0xFFFFAB40, {'100': 0xFFFFD180, '200': 0xFFFFAB40, '400': 0xFFFF9100, '700': 0xFFFF6D00});
+  static deepOrangeAccent = __colorsAccent(0xFFFF6E40, {'100': 0xFFFF9E80, '200': 0xFFFF6E40, '400': 0xFFFF3D00, '700': 0xFFDD2C00});
+  static transparent = __colorsColor(0x00000000);
+  static black = __colorsColor(0xFF000000);
+  static black87 = __colorsColor(0xDD000000);
+  static black54 = __colorsColor(0x8A000000);
+  static black45 = __colorsColor(0x73000000);
+  static black38 = __colorsColor(0x61000000);
+  static black26 = __colorsColor(0x42000000);
+  static black12 = __colorsColor(0x1F000000);
+  static white = __colorsColor(0xFFFFFFFF);
+  static white70 = __colorsColor(0xB3FFFFFF);
+  static white60 = __colorsColor(0x99FFFFFF);
+  static white54 = __colorsColor(0x8AFFFFFF);
+  static white38 = __colorsColor(0x62FFFFFF);
+  static white30 = __colorsColor(0x4DFFFFFF);
+  static white24 = __colorsColor(0x3DFFFFFF);
+  static white12 = __colorsColor(0x1FFFFFFF);
+  static white10 = __colorsColor(0x1AFFFFFF);
 }
 globalThis.Colors = Colors;
 

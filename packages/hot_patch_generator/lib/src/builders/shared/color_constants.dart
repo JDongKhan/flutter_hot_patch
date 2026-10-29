@@ -62,11 +62,11 @@ String? colorsJsSource() {
     ..writeln('// Dart 侧 `Colors` 是 `class Colors { static const MaterialColor red = … }`，')
     ..writeln('// 产物一比一：class + static 字段（不是对象字面量）。`Colors.red[400]`')
     ..writeln('// 原样求值，翻译层不含任何色值表，重构建即跟随 SDK。')
-    ..writeln('function __c(v) { return new Color({ value: v }); }')
-    ..writeln('function __mc(primary, shades) {')
+    ..writeln('function __colorsColor(v) { return new Color({ value: v }); }')
+    ..writeln('function __colorsPalette(primary, shades) {')
     ..writeln('  const m = new MaterialColor({ primary: primary });')
     ..writeln('  for (const k in shades) {')
-    ..writeln('    m[k] = __c(shades[k]);')
+    ..writeln('    m[k] = __colorsColor(shades[k]);')
     ..writeln('    m["shade" + k] = m[k];')
     ..writeln('  }')
     // SDK 里 500 档写作 `Color(_red500Value)`（常量引用），正则抽不到；它的值
@@ -77,10 +77,10 @@ String? colorsJsSource() {
     ..writeln('  }')
     ..writeln('  return m;')
     ..writeln('}')
-    ..writeln('function __mac(primary, shades) {')
+    ..writeln('function __colorsAccent(primary, shades) {')
     ..writeln('  const m = new MaterialAccentColor({ primary: primary });')
     ..writeln('  for (const k in shades) {')
-    ..writeln('    m[k] = __c(shades[k]);')
+    ..writeln('    m[k] = __colorsColor(shades[k]);')
     ..writeln('    m["shade" + k] = m[k];')
     ..writeln('  }')
     ..writeln('  return m;')
@@ -88,15 +88,15 @@ String? colorsJsSource() {
     ..writeln('export class Colors {');
   final entries = <String>[];
   for (final e in palettes.entries) {
-    entries.add('  static ${e.key} = __mc(${_hex(e.value.primary)}, '
+    entries.add('  static ${e.key} = __colorsPalette(${_hex(e.value.primary)}, '
         '{${_shadesLiteral(e.value.shades)}});');
   }
   for (final e in accents.entries) {
-    entries.add('  static ${e.key} = __mac(${_hex(e.value.primary)}, '
+    entries.add('  static ${e.key} = __colorsAccent(${_hex(e.value.primary)}, '
         '{${_shadesLiteral(e.value.shades)}});');
   }
   for (final e in plain.entries) {
-    entries.add('  static ${e.key} = __c(${_hex(e.value)});');
+    entries.add('  static ${e.key} = __colorsColor(${_hex(e.value)});');
   }
   b
     ..writeln(entries.join('\n'))

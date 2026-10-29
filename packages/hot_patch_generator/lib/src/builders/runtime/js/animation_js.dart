@@ -67,10 +67,12 @@ const String animationJsSource = r'''
 
   // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
   // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
-  function Tween(opts) {
-    opts = opts || {};
-    this.begin = opts.begin;
-    this.end = opts.end;
+  export class Tween {
+    constructor(opts) {
+      opts = opts || {};
+      this.begin = opts.begin;
+      this.end = opts.end;
+    }
   }
   Tween.prototype.lerp = function (t) {
     var b = this.begin, e = this.end;
@@ -82,10 +84,12 @@ const String animationJsSource = r'''
   };
   G.Tween = Tween;
 
-  function CurvedAnimation(opts) {
-    opts = opts || {};
-    this.parent = opts.parent;
-    this.curve = opts.curve;
+  export class CurvedAnimation {
+    constructor(opts) {
+      opts = opts || {};
+      this.parent = opts.parent;
+      this.curve = opts.curve;
+    }
   }
   Object.defineProperty(CurvedAnimation.prototype, 'value', {
     get: function () {

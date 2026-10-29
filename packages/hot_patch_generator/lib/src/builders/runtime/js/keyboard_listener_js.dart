@@ -73,10 +73,12 @@ const String keyboardListenerJsSource = r'''
 
   // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
   var __physKeys = {};
-  function PhysicalKeyboardKey(props) {
-    props = props || {};
-    this.usbHidUsage = props.usbHidUsage;
-    this.debugName = props.debugName || '';
+  export class PhysicalKeyboardKey {
+    constructor(props) {
+      props = props || {};
+      this.usbHidUsage = props.usbHidUsage;
+      this.debugName = props.debugName || '';
+    }
   }
   G.PhysicalKeyboardKey = PhysicalKeyboardKey;
   function __physicalKey(usb, label) {
@@ -90,28 +92,31 @@ const String keyboardListenerJsSource = r'''
 
   // KeyEvent：Dart 的 KeyEvent 是抽象基类，按下 / 抬起 / 重复是三个子类，
   // 源码用 `event is KeyDownEvent` 区分——这里生成真子类以保持同一语义。
-  function KeyEvent(props) {
-    props = props || {};
-    this.physicalKey = props.physicalKey;
-    this.logicalKey = props.logicalKey;
-    this.character = props.character == null ? null : String(props.character);
-    this.timeStamp = props.timeStamp;
+  export class KeyEvent {
+    constructor(props) {
+      props = props || {};
+      this.physicalKey = props.physicalKey;
+      this.logicalKey = props.logicalKey;
+      this.character = props.character == null ? null : String(props.character);
+      this.timeStamp = props.timeStamp;
+    }
   }
   G.KeyEvent = KeyEvent;
 
-  var __KEY_EVENT_SUBCLASSES = {
-    down: function KeyDownEvent(props) { KeyEvent.call(this, props); },
-    up: function KeyUpEvent(props) { KeyEvent.call(this, props); },
-    repeat: function KeyRepeatEvent(props) { KeyEvent.call(this, props); }
-  };
-  for (var __kind in __KEY_EVENT_SUBCLASSES) {
-    var __ctor = __KEY_EVENT_SUBCLASSES[__kind];
-    __ctor.prototype = Object.create(KeyEvent.prototype);
-    __ctor.prototype.constructor = __ctor;
+  // 按键事件子类：Dart 侧各自是 KeyEvent 的子类，JS 侧原生 extends（这样
+  // `instanceof KeyDownEvent` 与 `instanceof KeyEvent` 同时成立）。
+  class KeyDownEvent extends KeyEvent {
+    constructor(props) { super(props); }
   }
-  G.KeyDownEvent = __KEY_EVENT_SUBCLASSES.down;
-  G.KeyUpEvent = __KEY_EVENT_SUBCLASSES.up;
-  G.KeyRepeatEvent = __KEY_EVENT_SUBCLASSES.repeat;
+  class KeyUpEvent extends KeyEvent {
+    constructor(props) { super(props); }
+  }
+  class KeyRepeatEvent extends KeyEvent {
+    constructor(props) { super(props); }
+  }
+  G.KeyDownEvent = KeyDownEvent;
+  G.KeyUpEvent = KeyUpEvent;
+  G.KeyRepeatEvent = KeyRepeatEvent;
 
   // 宿主桥接见 capabilities/keyboard_listener/keyboard_listener_bridge.dart：
   // 原生 KeyEvent → JSON（kind / character / keyId / keyLabel / usbHidUsage /

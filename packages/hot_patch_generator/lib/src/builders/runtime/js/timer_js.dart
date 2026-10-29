@@ -32,8 +32,10 @@ const String timerJsSource = r'''
     return { ms: ms, callback: callback };
   }
 
-  function Timer(props) {
-    __timerInit(this, props, false, null);
+  export class Timer {
+    constructor(props) {
+      __timerInit(this, props, false, null);
+    }
   }
 
   // __timerInit 在所有 Timer 实例间共用（构造与 periodic 两条入口）。

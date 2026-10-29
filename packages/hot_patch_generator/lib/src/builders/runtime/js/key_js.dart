@@ -27,24 +27,17 @@
 // 判据用**结构**（__vkey / __okey / __id）而非 instanceof——key 可能来自父级
 // props 透传，形态必须与宿主侧 key_bridge 的解析保持一致。
 const String keyJsSource = r'''
-  // ObjectKey / ValueKey(对象值) 的身份 token：对象走 WeakMap（不阻止回收），
-  // 原始值没有身份，退化为值 string。
-  var okeySeq = 0;
-  var okeyIdx = new WeakMap();
-  function objectToken(v) {
-    if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
-      return 'p:' + String(v);
-    }
-    var t = okeyIdx.get(v);
-    if (t == null) { okeySeq += 1; t = 'i:' + okeySeq; okeyIdx.set(v, t); }
-    return t;
-  }
+  // objectToken / keyValueSig / keySig 属于**运行时核心**（key_sig_js.dart，随
+  // runtime.js 先加载）：identity WeakMap 由核心与这里的 Key 类共用。
+  const objectToken = G.objectToken;
 
   // ValueKey：按值相等，纯值 codec（不登记句柄）。
   // 实例的**自有字段名 = 序列化字段名**（__vkey）：reconciler 的 keySig 用字段
   // 形态判据，而 props.key 传的是 live 实例（不是 toJSON 产物），两边必须同形。
   // 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
-  function ValueKey(props) { this.__vkey = __posArgs(props, ['value']).value; }
+  export class ValueKey {
+    constructor(props) { this.__vkey = __posArgs(props, ['value']).value; }
+  }
   ValueKey.prototype.toJSON = function () {
     var v = this.__vkey;
     if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
@@ -54,7 +47,9 @@ const String keyJsSource = r'''
   };
 
   // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
-  function ObjectKey(props) { this.__okey = objectToken(__posArgs(props, ['value']).value); }
+  export class ObjectKey {
+    constructor(props) { this.__okey = objectToken(__posArgs(props, ['value']).value); }
+  }
   ObjectKey.prototype.toJSON = function () { return { __okey: this.__okey }; };
 
   // PageStorageKey：Dart 侧 `extends ValueKey`（按**值**相等），但宿主必须造
@@ -62,26 +57,30 @@ const String keyJsSource = r'''
   // 那是宿主端行为（JS 侧只有一个值本体）。故 codec 与 ValueKey 同构另加 `__psk`
   // 标记：宿主据此造 PageStorageKey 而非 ValueKey，keySig 前缀 `p:` 使它与
   // 同值的 ValueKey 不等（与 Dart 的 runtimeType 参与相等一致）。
-  function PageStorageKey(props) {
-    var value = __posArgs(props, ['value']).value;
-    this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
-        ? { __vtok: objectToken(value) }
-        : value;
+  export class PageStorageKey {
+    constructor(props) {
+      var value = __posArgs(props, ['value']).value;
+      this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
+          ? { __vtok: objectToken(value) }
+          : value;
+    }
   }
   PageStorageKey.prototype.toJSON = function () { return { __psk: this.__psk }; };
 
   // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
   defineHandleKind('key/Global', {});
-  function GlobalKey(props) {
-    var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
-    // 泛型实参由产物下发（`new GlobalKey({typeArguments: ['AnimatedListState']})`）：
-    // Dart 的 `GlobalKey<T>` 在 AOT 是 reified 的，T 就是「currentState 的类型」，
-    // 取值不需要问宿主、也不靠 runtimeType 猜。
-    var ta = (props && props.typeArguments) || [];
-    this.__stateType = ta.length ? ta[0] : null;
-    this.__id = reg(this, 'key/Global', {
-      meta: debugLabel == null ? null : { debugLabel: debugLabel }
-    });
+  export class GlobalKey {
+    constructor(props) {
+      var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
+      // 泛型实参由产物下发（`new GlobalKey({typeArguments: ['AnimatedListState']})`）：
+      // Dart 的 `GlobalKey<T>` 在 AOT 是 reified 的，T 就是「currentState 的类型」，
+      // 取值不需要问宿主、也不靠 runtimeType 猜。
+      var ta = (props && props.typeArguments) || [];
+      this.__stateType = ta.length ? ta[0] : null;
+      this.__id = reg(this, 'key/Global', {
+        meta: debugLabel == null ? null : { debugLabel: debugLabel }
+      });
+    }
   }
   GlobalKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
@@ -94,7 +93,9 @@ const String keyJsSource = r'''
   //   - measure()：Flutter 的 `box.size` / `box.localToGlobal(Offset.zero)` 是
   //     **同步属性**，而 JS→宿主只能异步，故这里返回 Promise（单源侧 `await`
   //     后即为真实值，见 widget_details 的 _measureFixed）。
-  function KeyRef(id) { this.__key = id; }
+  export class KeyRef {
+    constructor(id) { this.__key = id; }
+  }
   KeyRef.prototype.findRenderObject = function () { return new KeyRef(this.__key); };
   KeyRef.prototype.showOnScreen = function () {
     if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
@@ -107,73 +108,28 @@ const String keyJsSource = r'''
     get: function () { return this.__id == null ? null : new KeyRef(this.__id); }
   });
 
-  // GlobalKey.currentState：State 是宿主对象，JS 侧只保留**句柄**。
-  //
-  // 运行时**不认识任何业务方法**（`insertItem` / `removeItem` 这类签名属于具体
-  // 组件）：每个 State 类型的代理类由生成器随该组件一起写进 flutter.js，并在
-  // 加载时用 `__registerStateProxy(type, class)` 登记；类型来自 **GlobalKey<T> 的
-  // 泛型实参**，随产物下发，不靠 runtimeType 猜。没有代理类时退化为通用句柄。
-  function StateHandle(id, type) { this.__key = id; this.__type = type || null; }
-  StateHandle.prototype.__op = function (op, payload) {
-    if (this.__key == null) { return null; }
-    var p = payload || {};
-    // 类型随每次调用下发（来自 GenericKey 的泛型实参）：宿主据此分派到
-    // `Type.method`，不同组件的同名方法互不覆盖。
-    if (this.__type) { p.type = this.__type; }
-    return handleOp(this.__key, '__state.' + op, p);
-  };
-  var __stateProxies = {};
-  function __registerStateProxy(type, cls) { __stateProxies[type] = cls; }
+  // GlobalKey.currentState：StateHandle / __registerStateProxy 属于**运行时核心**
+  // （state_handle_js.dart，随 runtime.js 先加载），这里只补 `currentState` getter。
+  // 运行时**不认识任何业务方法**：代理类由生成器随组件写进 flutter.js，并用
+  // `__registerStateProxy(type, class)` 登记；类型来自 GlobalKey<T> 的泛型实参。
   Object.defineProperty(GlobalKey.prototype, 'currentState', {
     get: function () {
       if (this.__id == null) { return null; }
       // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
       // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
       var type = this.__stateType || handleOp(this.__id, '__type', {});
-      var cls = type ? __stateProxies[type] : null;
-      return cls ? new cls(this.__id, type) : new StateHandle(this.__id, type);
+      return __stateProxyOf(this.__id, type);
     }
   });
-  G.__registerStateProxy = __registerStateProxy;
-  G.__StateHandle = StateHandle;
 
   defineHandleKind('key/Unique', {});
-  function UniqueKey() {
-    this.__id = reg(this, 'key/Unique', {});
+  export class UniqueKey {
+    constructor() {
+      this.__id = reg(this, 'key/Unique', {});
+    }
   }
   UniqueKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
-  // 值 → 签名片段（原始值按「类型 + 值」，对象按身份）。
-  function keyValueSig(v) {
-    if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
-      return typeof v + ':' + String(v);
-    }
-    return 'i:' + objectToken(v);
-  }
-
-  // key → 可比较签名；null / undefined（无 key）返回 null。
-  // 形态判据用**自有字段**（`__vkey` / `__okey`）：ValueKey 的值本身可以是
-  // null/undefined，故只能判「有没有这个字段」，不能判它的值。
-  function keySig(k) {
-    if (k == null) { return null; }
-    if (Object.prototype.hasOwnProperty.call(k, '__vkey')) { return 'v:' + keyValueSig(k.__vkey); }
-    // PageStorageKey：同值也与 ValueKey 不等（`p:` 前缀），对象值同 ValueKey 走 token。
-    if (Object.prototype.hasOwnProperty.call(k, '__psk')) {
-      var pv = k.__psk;
-      if (pv !== null && typeof pv === 'object' &&
-          Object.prototype.hasOwnProperty.call(pv, '__vtok')) {
-        return 'p:' + pv.__vtok;
-      }
-      return 'p:' + keyValueSig(pv);
-    }
-    if (Object.prototype.hasOwnProperty.call(k, '__okey')) { return 'o:' + k.__okey; }
-    var hid = k.__id != null ? k.__id : k.__handle;
-    if (hid != null) { return 'h:' + hid; }
-    // 兜底：认不出的 key 对象按**引用身份**区分。绝不能 `String(k)` ——
-    // 所有对象都会拼成 "[object Object]" 而互相撞车，导致不同 key 复用同一
-    // 结点（`x:` 前缀保留，表明这是兜底签名）。
-    return 'x:' + objectToken(k);
-  }
 
   G.ValueKey = ValueKey;
   G.ObjectKey = ObjectKey;

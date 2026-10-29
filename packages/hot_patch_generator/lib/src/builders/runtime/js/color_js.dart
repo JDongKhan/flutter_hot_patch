@@ -16,9 +16,11 @@ const String colorJsSource = r'''
     return '#' + n;
   }
 
-  function Color(props) {
-    props = __posArgs(props, ['value']);
-    this.value = props.value != null ? (props.value >>> 0) : 0;
+  export class Color {
+    constructor(props) {
+      props = __posArgs(props, ['value']);
+      this.value = props.value != null ? (props.value >>> 0) : 0;
+    }
   }
   // 序列化：宿主 colorFromJson 只认 '#RRGGBB' / '#AARRGGBB'。
   Color.prototype.toJSON = function () { return __toHex(this.value); };
@@ -85,30 +87,30 @@ const String colorJsSource = r'''
     var v = props.value != null ? props.value : props.primary;
     return { value: v, swatch: props.swatch };
   }
-  function MaterialColor(props) {
-    var p = __swatchBase(props);
-    Color.call(this, { value: p.value });
-    __swatch(this, p.swatch);
+  export class MaterialColor extends Color {
+    constructor(props) {
+      var p = __swatchBase(props);
+      super({ value: p.value });
+      __swatch(this, p.swatch);
+    }
   }
-  MaterialColor.prototype = Object.create(Color.prototype);
-  MaterialColor.prototype.constructor = MaterialColor;
   G.MaterialColor = MaterialColor;
 
-  function MaterialAccentColor(props) {
-    var p = __swatchBase(props);
-    Color.call(this, { value: p.value });
-    __swatch(this, p.swatch);
+  export class MaterialAccentColor extends Color {
+    constructor(props) {
+      var p = __swatchBase(props);
+      super({ value: p.value });
+      __swatch(this, p.swatch);
+    }
   }
-  MaterialAccentColor.prototype = Object.create(Color.prototype);
-  MaterialAccentColor.prototype.constructor = MaterialAccentColor;
   G.MaterialAccentColor = MaterialAccentColor;
 
-  function ColorSwatch(props) {
-    var p = __swatchBase(props);
-    Color.call(this, { value: p.value });
-    __swatch(this, p.swatch);
+  export class ColorSwatch extends Color {
+    constructor(props) {
+      var p = __swatchBase(props);
+      super({ value: p.value });
+      __swatch(this, p.swatch);
+    }
   }
-  ColorSwatch.prototype = Object.create(Color.prototype);
-  ColorSwatch.prototype.constructor = ColorSwatch;
   G.ColorSwatch = ColorSwatch;
 ''';

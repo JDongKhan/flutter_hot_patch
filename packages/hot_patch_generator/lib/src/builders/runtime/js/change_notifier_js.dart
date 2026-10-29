@@ -14,11 +14,13 @@ const String changeNotifierSource = r'''
 //      JsChangeNotifier，驱动 Dart 侧 ChangeNotifierProvider 子树刷新）。
 // 构造时登记句柄（kind=notifier/ChangeNotifier），meta.type = JS 端类名 —— Dart 端的
 // 通用镜像据此「记下它的 JS 端类型」（context.watch<T>() 的类型一路传到这里）。
-function ChangeNotifier() {
-  this._listeners = [];
-  this.__id = reg(this, 'notifier/ChangeNotifier', {
-    meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
-  });
+class ChangeNotifier {
+  constructor() {
+    this._listeners = [];
+    this.__id = reg(this, 'notifier/ChangeNotifier', {
+      meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
+    });
+  }
 }
 ChangeNotifier.prototype.addListener = function(f) {
   this._listeners.push(f);
@@ -68,14 +70,14 @@ G.ChangeNotifier = ChangeNotifier;
 // 构造实参与其他 Dart 类一样按**具名 props 对象**下发（Dart 的 `ValueNotifier(this._value)`，
 // 形参名就是 `_value`，见 ctor_signatures），故这里按 `_value` 键取值；
 // 直接传裸值时（手写 / 内部调用）也兼容。
-function ValueNotifier(props) {
-  ChangeNotifier.call(this);
-  this._value = (props !== null && typeof props === 'object' && '_value' in props)
-    ? props._value
-    : props;
+class ValueNotifier extends ChangeNotifier {
+  constructor(props) {
+    super();
+    this._value = (props !== null && typeof props === 'object' && '_value' in props)
+      ? props._value
+      : props;
+  }
 }
-ValueNotifier.prototype = Object.create(ChangeNotifier.prototype);
-ValueNotifier.prototype.constructor = ValueNotifier;
 Object.defineProperty(ValueNotifier.prototype, 'value', {
   configurable: true,
   enumerable: false,
