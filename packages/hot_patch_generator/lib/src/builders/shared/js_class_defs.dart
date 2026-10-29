@@ -28,9 +28,10 @@ String packageModulePath(String package) => 'patch/$package.js';
 
 /// 有 **builder 命名构造**（`.builder` / `.separated`）的组件类型。
 ///
-/// 只登记「构造名本身就是 builder 形态」的类型：产物带 `factory` 时走生成的
-/// JS 代理类循环调用拥有者方法展开子树，宿主据此还原原生命名构造；普通构造
-/// 与 `delegate:` 形态都是宿主节点，由 delegate 描述消费，不经过代理类。
+/// 只登记「构造名本身就是 builder 形态」的类型：`.builder` / `.separated` 形态
+/// 走生成的 JS 代理类循环调用拥有者方法展开子树（构造名由代理类的静态方法
+/// 写进 `props.factory`）；普通构造与 `delegate:` 形态都是宿主节点，由 delegate
+/// 描述消费，不经过代理类。
 ///
 /// 这份表是**产物组织信息**（决定 `patch/<package>.js` 里生成哪些代理类），
 /// 不是运行时行为白名单：运行时只看产物里的 `factory` / `__delegate` 协议，

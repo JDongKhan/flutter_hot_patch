@@ -214,7 +214,7 @@ const String styleValuesJsSource = r'''
     constructor(props) {
       props = props || {};
       for (var k in props) {
-        if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+        if (k !== '__pos' && k !== 'factory' && props[k] != null) { this[k] = props[k]; }
       }
     }
     toJSON() {
@@ -260,8 +260,10 @@ const String styleValuesJsSource = r'''
   }
 
   // ----- 图片 ---------------------------------------------------------------
-  // AssetImage / NetworkImage 的跨桥形态就是**源字符串**（宿主 _imageProvider
-  // 按 'http' 前缀区分网络图与资源图）；DecorationImage → {source, fit}。
+  // AssetImage / NetworkImage 的跨桥形态就是**源字符串**（构造名由静态方法写进
+  // `props.factory` 只在元素层起作用，值对象本身不带 factory）；宿主
+  // `_imageProvider` 按 'http' 前缀区分网络图与资源图。DecorationImage →
+  // {source, fit}。
   export class AssetImage {
     constructor(props) {
       props = __posArgs(props, ['assetName']);
@@ -274,6 +276,8 @@ const String styleValuesJsSource = r'''
     constructor(props) {
       props = __posArgs(props, ['url', 'scale', 'headers']);
       this.url = props.url != null ? props.url : __one(props);
+      if (props.scale != null) { this.scale = props.scale; }
+      if (props.headers != null) { this.headers = props.headers; }
     }
     toJSON() { return this.url; }
   }
@@ -426,7 +430,7 @@ const String styleValuesJsSource = r'''
     constructor(props) {
       props = props || {};
       for (var k in props) {
-        if (k !== '__pos' && k !== 'factory' && props[k] != null) { this[k] = props[k]; }
+        if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
       }
     }
     toJSON() {

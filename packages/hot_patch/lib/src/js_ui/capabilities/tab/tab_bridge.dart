@@ -119,27 +119,71 @@ void registerTabWidgets(JsWidgetRegistry r) {
 
   // TabBar：tabs 进 children（Tab 已注册为宿主 widget）。controller 是 JS
   // TabController 句柄时走 id-bridge 包装器；否则传 null（由祖先
-  // DefaultTabController 提供，官方惯用法）。
+  // DefaultTabController 提供，官方惯用法）。`.secondary` 是命名构造（次要
+  // 指示器样式），按 factory 还原。
   r.register('TabBar', (c) {
-    Widget build(TabController? controller) => TabBar(
+    final tabs = (c.children['tabs'] as List<Widget>?) ?? const <Widget>[];
+    final isScrollable = c.bool_('isScrollable') ?? false;
+    final padding = nullableEdgeInsets(c.map('padding'));
+    final indicatorColor = colorFromJson(c.props['indicatorColor']);
+    final indicatorWeight = c.num_('indicatorWeight') ?? 2.0;
+    final indicatorSize = tabBarIndicatorSizeFromJson(c.props['indicatorSize']);
+    final dividerColor = colorFromJson(c.props['dividerColor']);
+    final dividerHeight = c.num_('dividerHeight');
+    final labelColor = colorFromJson(c.props['labelColor']);
+    final labelStyle = textStyleFromJson(c.map('labelStyle'));
+    final labelPadding = nullableEdgeInsets(c.map('labelPadding'));
+    final unselectedLabelColor =
+        colorFromJson(c.props['unselectedLabelColor']);
+    final unselectedLabelStyle =
+        textStyleFromJson(c.map('unselectedLabelStyle'));
+    final tabAlignment = tabAlignmentFromJson(c.props['tabAlignment']);
+    final physics = scrollPhysicsFromJson(c.props['physics']);
+    final onTap = c.on1<int>('onTap');
+
+    Widget build(TabController? controller) {
+      if (c.str('factory') == 'secondary') {
+        return TabBar.secondary(
           controller: controller,
-          tabs: ((c.children['tabs'] as List<Widget>?) ?? const []),
-          isScrollable: c.bool_('isScrollable') ?? false,
-          padding: nullableEdgeInsets(c.map('padding')),
-          indicatorColor: colorFromJson(c.props['indicatorColor']),
-          indicatorWeight: c.num_('indicatorWeight') ?? 2.0,
-          indicatorSize: tabBarIndicatorSizeFromJson(c.props['indicatorSize']),
-          dividerColor: colorFromJson(c.props['dividerColor']),
-          dividerHeight: c.num_('dividerHeight'),
-          labelColor: colorFromJson(c.props['labelColor']),
-          labelStyle: textStyleFromJson(c.map('labelStyle')),
-          labelPadding: nullableEdgeInsets(c.map('labelPadding')),
-          unselectedLabelColor: colorFromJson(c.props['unselectedLabelColor']),
-          unselectedLabelStyle: textStyleFromJson(c.map('unselectedLabelStyle')),
-          tabAlignment: tabAlignmentFromJson(c.props['tabAlignment']),
-          physics: scrollPhysicsFromJson(c.props['physics']),
-          onTap: c.on1<int>('onTap'),
+          tabs: tabs,
+          isScrollable: isScrollable,
+          padding: padding,
+          indicatorColor: indicatorColor,
+          indicatorWeight: indicatorWeight,
+          indicatorSize: indicatorSize,
+          dividerColor: dividerColor,
+          dividerHeight: dividerHeight,
+          labelColor: labelColor,
+          labelStyle: labelStyle,
+          labelPadding: labelPadding,
+          unselectedLabelColor: unselectedLabelColor,
+          unselectedLabelStyle: unselectedLabelStyle,
+          tabAlignment: tabAlignment,
+          physics: physics,
+          onTap: onTap,
         );
+      }
+      return TabBar(
+        controller: controller,
+        tabs: tabs,
+        isScrollable: isScrollable,
+        padding: padding,
+        indicatorColor: indicatorColor,
+        indicatorWeight: indicatorWeight,
+        indicatorSize: indicatorSize,
+        dividerColor: dividerColor,
+        dividerHeight: dividerHeight,
+        labelColor: labelColor,
+        labelStyle: labelStyle,
+        labelPadding: labelPadding,
+        unselectedLabelColor: unselectedLabelColor,
+        unselectedLabelStyle: unselectedLabelStyle,
+        tabAlignment: tabAlignment,
+        physics: physics,
+        onTap: onTap,
+      );
+    }
+
     final handle = tabControllerHandleOf(c.props['controller']);
     if (handle == null) return build(null);
     return _tabControllerHost(c, handle, build);

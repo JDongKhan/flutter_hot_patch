@@ -36,7 +36,7 @@ export class ChangeNotifierProvider {
     }
   }
 }
-ChangeNotifierProvider.value = function (props) { return new ChangeNotifierProvider(props); };
+ChangeNotifierProvider.value = function (props) { return new ChangeNotifierProvider(Object.assign({}, props, { factory: 'value' })); };
 
 
 export class Consumer {

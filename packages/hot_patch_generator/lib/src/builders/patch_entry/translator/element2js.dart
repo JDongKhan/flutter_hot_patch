@@ -170,23 +170,6 @@ class ElementTranslateContext implements ExprRenderer {
   /// 不产出任何 JS 类，使用方引用它的结点直接降级丢弃（构建期告警）。
   final Set<String> ignoredTypes;
 
-  /// 本节点的元素 type 用 **JS 类引用**还是**类型名字符串**。
-  ///
-  /// JS 里没有「factory」这层包装：元素的 type 就是类本身（有 JS 逻辑的类型）
-  /// 或宿主 widget 的类型名（由宿主注册表映射成 Flutter widget）。有 JS 类的
-  /// 类型要 import 类名，宿主类型名是字符串字面量、无需 import。
-  bool usesJsClass(String type, Map<String, dynamic>? props) {
-    if (!jsClassWidgets.contains(type)) return false;
-    if (!delegateClassWidgets.contains(type)) return true;
-    if (props == null) return false;
-    // 判定只看产物里**显式写下的工厂名**（`factory`），不看属性名：
-    // 命名构造 `.builder` / `.separated` → 走生成的 JS 代理类循环调用拥有者
-    // 方法展开子树；普通构造（含 `GridView.count` / `.extent`）与 `delegate:`
-    // 形态直接是宿主节点，由宿主按 delegate / 平铺参数消费。
-    final factory = _semanticType(props[factoryPropsKey]);
-    return factory == 'builder' || factory == 'separated';
-  }
-
   /// 记录一个被兜底为「保留具体类型名结点」的自定义组件名。
   void collectDependency(String name) => dependencies.add(name);
 
@@ -634,8 +617,6 @@ class ElementTranslateContext implements ExprRenderer {
       throw FormatException('无法渲染的节点: $json');
     }
     final type = _semanticType(json['type']);
-    final props = json['props'];
-    final propsMap = props is Map<String, dynamic> ? props : null;
     // 元素 type 一律是**类引用**（组件使用方不再产出 `__h('X', ...)`）：
     //   - 该类型有 JS 产物（importResolver 命中：@PatchEntry 嵌套组件、同文件
     //     私有组件）→ `new X(props)`；实例随元素一起下发，mount 直接复用；
@@ -645,8 +626,9 @@ class ElementTranslateContext implements ExprRenderer {
     //   - `@PatchIgnore(isComponent: true)`：声明它的源文件产物里的同名包装类
     //     → `new X(props)`（与其它有产物的类同一条路径）。
     _assertTranslatable(type);
-    final productType = importResolver?.call(type);
-    final asClass = productType != null || usesJsClass(type, propsMap);
+    // 判据只看「JS 侧有没有这个类」：有类就有同名静态方法（命名构造由
+    // `X.b({...})` 一比一发射，静态方法负责把构造名写进 `props.factory`）。
+    final asClass = jsClassFileOf(type) != null;
     _registerWidgetImport(type);
     return _renderCall(type, json, depth, asClass: asClass);
   }
@@ -718,26 +700,17 @@ class ElementTranslateContext implements ExprRenderer {
     required bool asClass,
   }) {
     final props = _propsWithKey(json['props'], json['key']);
-    // 命名构造 → 1:1 的 JS 静态方法：`ListView.separated({...})`。构造名由包装类
-    // 上的同名静态方法承接，内部再补 `props.factory` 给宿主选原生工厂。
-    final factory = props[factoryPropsKey];
-    final factoryName = factory is String ? _literalString(factory) : null;
-    if (asClass && factoryName != null) {
-      final rest = Map<String, dynamic>.of(props)..remove(factoryPropsKey);
-      final restJs = rest.isEmpty ? '{}' : jsLiteral(rest, depth + 1);
-      return _constCached(json, '$type.$factoryName($restJs)');
+    // 命名构造 → 1:1 的 JS 静态方法：`ListView.separated({...})` / `SizedBox.shrink({...})`。
+    // 构造名是**翻译期事实**（结点顶层 `ctor`），不进 props、不跨语言；语义由
+    // JS 类上的同名静态方法承接（见 flutter.js 的包装类静态方法）。
+    final ctor = json[ctorNodeKey];
+    final ctorName = ctor is String && ctor.isNotEmpty ? ctor : null;
+    if (asClass && ctorName != null) {
+      final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
+      return _constCached(json, '$type.$ctorName($propsJs)');
     }
     final propsJs = props.isNotEmpty ? jsLiteral(props, depth + 1) : '{}';
     return _constCached(json, 'new $type($propsJs)');
-  }
-
-  /// 产物里工厂名以 JS 字符串字面量存放（`"separated"`）：去掉引号取原名。
-  static String? _literalString(String js) {
-    final s = js.trim();
-    if (s.length < 2) return null;
-    final q = s[0];
-    if ((q != '"' && q != "'") || s[s.length - 1] != q) return null;
-    return s.substring(1, s.length - 1);
   }
 
   /// const 构造的站点级懒缓存：同一处 `const X(...)` 每次 build 复用同一实例，
@@ -1625,8 +1598,9 @@ class ElementTranslateContext implements ExprRenderer {
   /// `type`，会把整个 props Map 误判成节点（读出的 `type` 是 JS 表达式而非类型名，
   /// 查表落空后整条结点降级）。节点 Map 由 translator 产出，特征明确：
   ///   - 键只有 `type` / `props` / `key`（`key` 是元素级 Key，由
-  ///     [ElementTranslateContext._applyKeyProp] 注入，渲染时并入 props），
-  ///     以及生成期标记 `__constSite`（`const` 构造的站点缓存标记，渲染时消费）。
+  ///     [ElementTranslateContext._applyKeyProp] 注入，渲染时并入 props）、
+  ///     `ctor`（命名构造名，渲染成 `X.b(...)`）以及生成期标记 `__constSite`
+  ///     （`const` 构造的站点缓存标记，渲染时消费）。
   ///
   ///   - `type` 的值是 [jsString] 产出的**带引号字符串字面量**（类型名），
   ///     而不是 `this._type` 这类运行时表达式。
@@ -1634,7 +1608,12 @@ class ElementTranslateContext implements ExprRenderer {
     final t = value['type'];
     if (t is! String || !t.startsWith('"')) return false;
     return value.keys.every(
-      (k) => k == 'type' || k == 'props' || k == 'key' || k == '__constSite',
+      (k) =>
+          k == 'type' ||
+          k == 'props' ||
+          k == 'key' ||
+          k == ctorNodeKey ||
+          k == '__constSite',
     );
   }
 

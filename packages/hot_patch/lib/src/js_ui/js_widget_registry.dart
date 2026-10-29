@@ -429,21 +429,42 @@ class JsWidgetRegistry {
 ///     （见 capabilities/<能力>/<能力>_library.dart）；本核心文件不 import 它们；
 ///   - Builder **不在这里**：它是无状态委托，纯 JS 逻辑，宿主零感知。
 void registerBuiltinJsWidgets(JsWidgetRegistry r) {
-  r.register(
-    'Text',
-    (c) => Text(
-      // `data` 是 Flutter `Text` 的首个位置形参名（`Text('你好')`）。
+  // Text：`data` 是首个位置形参名（`Text('你好')`）。`Text.rich` 是命名构造，
+  // 文案在 `textSpan` 里（宿主按 `factory` 还原原生构造，否则会渲染成空文本）。
+  r.register('Text', (c) {
+    final style = textStyleFromJson(c.map('style'));
+    final textAlign = textAlignFromJson(c.props['textAlign']);
+    final overflow = overflowFromJson(c.props['overflow']);
+    final maxLines = c.int_('maxLines');
+    final softWrap = c.bool_('softWrap');
+    final textDirection = textDirectionFromJson(c.props['textDirection']);
+    final textScaler = textScalerFromJson(c.props['textScaler']);
+    final semanticsLabel = c.str('semanticsLabel');
+    if (c.str('factory') == 'rich') {
+      return Text.rich(
+        textSpanFromJson(c.props['textSpan']) ?? const TextSpan(),
+        style: style,
+        textAlign: textAlign,
+        overflow: overflow,
+        maxLines: maxLines,
+        softWrap: softWrap,
+        textDirection: textDirection,
+        textScaler: textScaler,
+        semanticsLabel: semanticsLabel,
+      );
+    }
+    return Text(
       c.str('data') ?? '',
-      style: textStyleFromJson(c.map('style')),
-      textAlign: textAlignFromJson(c.props['textAlign']),
-      overflow: overflowFromJson(c.props['overflow']),
-      maxLines: c.int_('maxLines'),
-      softWrap: c.bool_('softWrap'),
-      textDirection: textDirectionFromJson(c.props['textDirection']),
-      textScaler: textScalerFromJson(c.props['textScaler']),
-      semanticsLabel: c.str('semanticsLabel'),
-    ),
-  );
+      style: style,
+      textAlign: textAlign,
+      overflow: overflow,
+      maxLines: maxLines,
+      softWrap: softWrap,
+      textDirection: textDirection,
+      textScaler: textScaler,
+      semanticsLabel: semanticsLabel,
+    );
+  });
 
   r.register(
     'RichText',
@@ -572,14 +593,35 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     ),
   );
 
-  r.register(
-    'SizedBox',
-    (c) => SizedBox(
-      width: c.num_('width'),
-      height: c.num_('height'),
-      child: (c.children['child'] as Widget?),
-    ),
-  );
+  // `SizedBox.shrink` / `.expand` / `.square` / `.fromSize`：`factory` 由 flutter.js
+  // 的静态方法写下，这里还原成对应的原生命名构造（普通构造 `SizedBox(w,h)` 无
+  // factory，走默认分支）。
+  r.register('SizedBox', (c) {
+    final child = c.children['child'] as Widget?;
+    switch (c.str('factory')) {
+      case 'shrink':
+        return SizedBox.shrink(child: child);
+      case 'expand':
+        return SizedBox.expand(child: child);
+      case 'square':
+        return SizedBox.square(dimension: c.num_('dimension'), child: child);
+      case 'fromSize':
+        final size = c.map('size') ?? const <String, dynamic>{};
+        final w = size['width'];
+        final h = size['height'];
+        return SizedBox(
+          width: w is num ? w.toDouble() : null,
+          height: h is num ? h.toDouble() : null,
+          child: child,
+        );
+      default:
+        return SizedBox(
+          width: c.num_('width'),
+          height: c.num_('height'),
+          child: child,
+        );
+    }
+  });
 
   r.register(
     'Expanded',
@@ -591,18 +633,46 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     (c) => Flexible(flex: c.int_('flex') ?? 1, child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink())),
   );
 
-  r.register(
-    'Positioned',
-    (c) => Positioned(
-      left: c.num_('left'),
-      top: c.num_('top'),
-      right: c.num_('right'),
-      bottom: c.num_('bottom'),
-      width: c.num_('width'),
-      height: c.num_('height'),
-      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
-    ),
-  );
+  // Positioned 的命名构造由 `factory` 还原原生命名构造（与 Dart 一比一）：
+  // `.fill` 四边缺省 0；`.directional` 用 start/end + textDirection。
+  // `.fromRect` / `.fromRelativeRect` 需要 Rect / RelativeRect 值对象，JS 侧
+  // 尚无对应值类，暂按普通构造渲染。
+  r.register('Positioned', (c) {
+    final child = (c.children['child'] as Widget?) ?? const SizedBox.shrink();
+    switch (c.str('factory')) {
+      case 'fill':
+        return Positioned.fill(
+          left: c.num_('left') ?? 0,
+          top: c.num_('top') ?? 0,
+          right: c.num_('right') ?? 0,
+          bottom: c.num_('bottom') ?? 0,
+          child: child,
+        );
+      case 'directional':
+        return Positioned.directional(
+          textDirection:
+              textDirectionFromJson(c.props['textDirection']) ??
+              TextDirection.ltr,
+          start: c.num_('start'),
+          top: c.num_('top'),
+          end: c.num_('end'),
+          bottom: c.num_('bottom'),
+          width: c.num_('width'),
+          height: c.num_('height'),
+          child: child,
+        );
+      default:
+        return Positioned(
+          left: c.num_('left'),
+          top: c.num_('top'),
+          right: c.num_('right'),
+          bottom: c.num_('bottom'),
+          width: c.num_('width'),
+          height: c.num_('height'),
+          child: child,
+        );
+    }
+  });
 
   r.register('ClipRRect', (c) {
     final radius = c.num_('borderRadius');
@@ -665,28 +735,91 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     ),
   );
 
-  // Transform.translate：位移（props.offset = {dx, dy}）+ child。
+  // Transform 的命名构造按 `factory` 逐一还原原生构造（与 Dart 一比一）：
+  // `.translate`（offset = {dx, dy}）/ `.rotate`（angle）/ `.scale`（scale /
+  // scaleX / scaleY）/ `.flip`（flipX / flipY）。普通构造 `Transform(transform:)`
+  // 需要 Matrix4 值对象，JS 侧尚无对应值类，暂按 translate 兜底。
   r.register('Transform', (c) {
-    final offset = c.map('offset') ?? const <String, dynamic>{};
-    final dx = (offset['dx'] as num?)?.toDouble() ?? 0;
-    final dy = (offset['dy'] as num?)?.toDouble() ?? 0;
-    return Transform.translate(offset: Offset(dx, dy), child: (c.children['child'] as Widget?));
+    final child = (c.children['child'] as Widget?);
+    final origin = offsetFromJson(c.props['origin']);
+    final alignment = alignmentFromJson(c.props['alignment']);
+    switch (c.str('factory')) {
+      case 'rotate':
+        return Transform.rotate(
+          angle: c.num_('angle') ?? 0,
+          origin: origin,
+          alignment: alignment,
+          child: child,
+        );
+      case 'scale':
+        return Transform.scale(
+          scale: c.num_('scale'),
+          scaleX: c.num_('scaleX'),
+          scaleY: c.num_('scaleY'),
+          origin: origin,
+          alignment: alignment,
+          child: child,
+        );
+      case 'flip':
+        return Transform.flip(
+          flipX: c.bool_('flipX') ?? false,
+          flipY: c.bool_('flipY') ?? false,
+          origin: origin,
+          child: child,
+        );
+      default:
+        final offset = c.map('offset') ?? const <String, dynamic>{};
+        final dx = (offset['dx'] as num?)?.toDouble() ?? 0;
+        final dy = (offset['dy'] as num?)?.toDouble() ?? 0;
+        return Transform.translate(offset: Offset(dx, dy), child: child);
+    }
   });
 
-  r.register(
-    'Card',
-    (c) => Card(
-      elevation: c.num_('elevation'),
-      // 缺省必须是 null（走 Card 主题默认 EdgeInsets.all(4)）——`edgeInsetsFromJson`
-      // 对 null 返回 zero，会把 item 之间的默认间隙抹平（原生 vs JS 并排可见）。
-      margin: nullableEdgeInsets(c.map('margin')),
-      color: colorFromJson(c.props['color']),
-      shape: shapeFromJson(c.props['shape']),
-      clipBehavior: clipBehaviorFromJson(c.props['clipBehavior']),
-      shadowColor: colorFromJson(c.props['shadowColor']),
-      child: (c.children['child'] as Widget?),
-    ),
-  );
+  // Card 的命名构造按 `factory` 还原：`.filled`（surfaceContainerHighest 填充）/
+  // `.outlined`（描边无抬升）；普通构造保持原参数（margin 缺省必须走主题默认）。
+  r.register('Card', (c) {
+    final elevation = c.num_('elevation');
+    final margin = nullableEdgeInsets(c.map('margin'));
+    final color = colorFromJson(c.props['color']);
+    final shape = shapeFromJson(c.props['shape']);
+    final clipBehavior = clipBehaviorFromJson(c.props['clipBehavior']);
+    final shadowColor = colorFromJson(c.props['shadowColor']);
+    final child = (c.children['child'] as Widget?);
+    switch (c.str('factory')) {
+      case 'filled':
+        return Card.filled(
+          elevation: elevation,
+          margin: margin,
+          color: color,
+          shape: shape,
+          clipBehavior: clipBehavior,
+          shadowColor: shadowColor,
+          child: child,
+        );
+      case 'outlined':
+        return Card.outlined(
+          elevation: elevation,
+          margin: margin,
+          color: color,
+          shape: shape,
+          clipBehavior: clipBehavior,
+          shadowColor: shadowColor,
+          child: child,
+        );
+      default:
+        return Card(
+          elevation: elevation,
+          // 缺省必须是 null（走 Card 主题默认 EdgeInsets.all(4)）——`edgeInsetsFromJson`
+          // 对 null 返回 zero，会把 item 之间的默认间隙抹平（原生 vs JS 并排可见）。
+          margin: margin,
+          color: color,
+          shape: shape,
+          clipBehavior: clipBehavior,
+          shadowColor: shadowColor,
+          child: child,
+        );
+    }
+  });
 
   r.register(
     'Icon',
@@ -711,9 +844,9 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     );
   });
 
-  // `Image.network('url')` / `Image.asset('a.png')`：工厂名（`props.factory`）
-  // 决定构造哪个原生工厂，位置实参名随之不同（`Image.network` → `src`、
-  // `Image.asset` → `name`、`Image(...)` → `image`）。
+  // `Image.network('url')` / `Image.asset('a.png')`：工厂名（`props.factory`，
+  // 由 flutter.js 的静态方法写下）决定构造哪个原生工厂，位置实参名随之不同
+  // （`Image.network` → `src`、`Image.asset` → `name`、`Image(...)` → `image`）。
   r.register('Image', (c) {
     final factory = c.str('factory');
     final source = c.str('src') ?? c.str('name') ?? c.str('image') ?? '';
@@ -725,7 +858,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
     final align = alignmentFromJson(c.props['alignment']) ?? Alignment.center;
     final repeat =
         imageRepeatFromJson(c.props['repeat']) ?? ImageRepeat.noRepeat;
-    // 工厂名优先；缺失（旧产物 / 未登记）时退回按网址前缀判断。
+    // 工厂名优先；缺失（未登记构造 / 普通构造）时退回按网址前缀判断。
     final isNetwork =
         factory == 'network' || (factory == null && source.startsWith('http'));
     return isNetwork
@@ -796,12 +929,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
       maxRadius: c.num_('maxRadius'),
       backgroundColor: colorFromJson(c.props['backgroundColor']),
       foregroundColor: colorFromJson(c.props['foregroundColor']),
-      backgroundImage: bgImage == null
-          ? null
-          : (bgImage.startsWith('http')
-                    ? NetworkImage(bgImage)
-                    : AssetImage(bgImage))
-                as ImageProvider,
+      backgroundImage: bgImage == null ? null : _imageProvider(bgImage),
       child: (c.children['child'] as Widget?),
     );
   });
@@ -874,44 +1002,95 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   });
 
   // 四种按钮各自独立注册：type 就是构造名原样，事件键 `onPressed`，文案在
-  // children 里的 Text（不再是 label prop）。`onPressed` 缺失 = 禁用。
-  // style 值可能是 JSON map（`ButtonStyle(...)`），也可能是元素结点
-  // （`XxxButton.styleFrom(...)` 被当成构造）→ styleMap 两种情况都取。
-  r.register(
-    'ElevatedButton',
-    (c) => ElevatedButton(
-      onPressed: c.on('onPressed'),
-      style: buttonStyleFromJson(c.styleMap('style')),
+  // children 里（普通构造 `child`、`.icon` 是 `icon` + `label` 两个 slot）。
+  // `onPressed` 缺失 = 禁用。style 值可能是 JSON map（`ButtonStyle(...)`），
+  // 也可能是元素结点（`XxxButton.styleFrom(...)` 被当成构造）→ styleMap 两种情况都取。
+  r.register('ElevatedButton', (c) {
+    final onPressed = c.on('onPressed');
+    final style = buttonStyleFromJson(c.styleMap('style'));
+    if (c.str('factory') == 'icon') {
+      return ElevatedButton.icon(
+        onPressed: onPressed,
+        style: style,
+        icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
+        label: (c.children['label'] as Widget?) ?? const SizedBox.shrink(),
+      );
+    }
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: style,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
-    ),
-  );
+    );
+  });
 
-  r.register(
-    'TextButton',
-    (c) => TextButton(
-      onPressed: c.on('onPressed'),
-      style: buttonStyleFromJson(c.styleMap('style')),
+  r.register('TextButton', (c) {
+    final onPressed = c.on('onPressed');
+    final style = buttonStyleFromJson(c.styleMap('style'));
+    if (c.str('factory') == 'icon') {
+      return TextButton.icon(
+        onPressed: onPressed,
+        style: style,
+        icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
+        label: (c.children['label'] as Widget?) ?? const SizedBox.shrink(),
+      );
+    }
+    return TextButton(
+      onPressed: onPressed,
+      style: style,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
-    ),
-  );
+    );
+  });
 
-  r.register(
-    'FilledButton',
-    (c) => FilledButton(
-      onPressed: c.on('onPressed'),
-      style: buttonStyleFromJson(c.styleMap('style')),
-      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
-    ),
-  );
+  r.register('FilledButton', (c) {
+    final onPressed = c.on('onPressed');
+    final style = buttonStyleFromJson(c.styleMap('style'));
+    switch (c.str('factory')) {
+      case 'icon':
+        return FilledButton.icon(
+          onPressed: onPressed,
+          style: style,
+          icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
+          label: (c.children['label'] as Widget?) ?? const SizedBox.shrink(),
+        );
+      case 'tonal':
+        return FilledButton.tonal(
+          onPressed: onPressed,
+          style: style,
+          child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+        );
+      case 'tonalIcon':
+        return FilledButton.tonalIcon(
+          onPressed: onPressed,
+          style: style,
+          icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
+          label: (c.children['label'] as Widget?) ?? const SizedBox.shrink(),
+        );
+      default:
+        return FilledButton(
+          onPressed: onPressed,
+          style: style,
+          child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
+        );
+    }
+  });
 
-  r.register(
-    'OutlinedButton',
-    (c) => OutlinedButton(
-      onPressed: c.on('onPressed'),
-      style: buttonStyleFromJson(c.styleMap('style')),
+  r.register('OutlinedButton', (c) {
+    final onPressed = c.on('onPressed');
+    final style = buttonStyleFromJson(c.styleMap('style'));
+    if (c.str('factory') == 'icon') {
+      return OutlinedButton.icon(
+        onPressed: onPressed,
+        style: style,
+        icon: (c.children['icon'] as Widget?) ?? const SizedBox.shrink(),
+        label: (c.children['label'] as Widget?) ?? const SizedBox.shrink(),
+      );
+    }
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: style,
       child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
-    ),
-  );
+    );
+  });
 
   r.register('InkWell', (c) {
     final radius = c.num_('borderRadius');
@@ -1061,20 +1240,29 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   // Flutter 的断言链（maintainSemantics/maintainInteractivity ⇒ maintainSize
   // ⇒ maintainAnimation ⇒ maintainState）由**调用方**保证——与原生一致，
   // 这里不替它「自动补齐」，否则会掩盖写法错误。
-  r.register(
-    'Visibility',
-    (c) => Visibility(
-      visible: c.bool_('visible') ?? true,
+  //
+  // `Visibility.maintain` 是命名构造：它把六个 maintain* 全部置 true（保持占位），
+  // 产物里没有这些字段，故按 `factory` 还原原生构造，不能走普通构造的 false 缺省。
+  r.register('Visibility', (c) {
+    final visible = c.bool_('visible') ?? true;
+    final replacement =
+        (c.children['replacement'] as Widget?) ?? const SizedBox.shrink();
+    final child = (c.children['child'] as Widget);
+    if (c.str('factory') == 'maintain') {
+      return Visibility.maintain(visible: visible, child: child);
+    }
+    return Visibility(
+      visible: visible,
       maintainState: c.bool_('maintainState') ?? false,
       maintainAnimation: c.bool_('maintainAnimation') ?? false,
       maintainSize: c.bool_('maintainSize') ?? false,
       maintainSemantics: c.bool_('maintainSemantics') ?? false,
       maintainInteractivity: c.bool_('maintainInteractivity') ?? false,
       maintainFocusability: c.bool_('maintainFocusability') ?? false,
-      replacement: (c.children['replacement'] as Widget?) ?? const SizedBox.shrink(),
-      child: (c.children['child'] as Widget),
-    ),
-  );
+      replacement: replacement,
+      child: child,
+    );
+  });
 
   r.register(
     'ConstrainedBox',
@@ -1139,31 +1327,103 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
   // 输入 / 导航
   // ---------------------------------------------------------------------
 
-  r.register(
-    'IconButton',
-    (c) => IconButton(
-      icon: (c.children['icon'] as Widget?) ?? const Icon(Icons.error_outline),
-      onPressed: c.on('onPressed'),
-      color: colorFromJson(c.props['color']),
-      iconSize: c.num_('iconSize'),
-      tooltip: c.str('tooltip'),
-    ),
-  );
+  // IconButton：普通构造读 `icon`；`.filled` / `.filledTonal` / `.outlined` 是
+  // 命名构造（容器底色 / 描边不同），宿主按 `factory` 还原原生构造。
+  r.register('IconButton', (c) {
+    final icon = (c.children['icon'] as Widget?) ?? const Icon(Icons.error_outline);
+    final onPressed = c.on('onPressed');
+    final color = colorFromJson(c.props['color']);
+    final iconSize = c.num_('iconSize');
+    final tooltip = c.str('tooltip');
+    switch (c.str('factory')) {
+      case 'filled':
+        return IconButton.filled(
+          onPressed: onPressed,
+          icon: icon,
+          color: color,
+          iconSize: iconSize,
+          tooltip: tooltip,
+        );
+      case 'filledTonal':
+        return IconButton.filledTonal(
+          onPressed: onPressed,
+          icon: icon,
+          color: color,
+          iconSize: iconSize,
+          tooltip: tooltip,
+        );
+      case 'outlined':
+        return IconButton.outlined(
+          onPressed: onPressed,
+          icon: icon,
+          color: color,
+          iconSize: iconSize,
+          tooltip: tooltip,
+        );
+      default:
+        return IconButton(
+          icon: icon,
+          onPressed: onPressed,
+          color: color,
+          iconSize: iconSize,
+          tooltip: tooltip,
+        );
+    }
+  });
 
-  r.register(
-    'FloatingActionButton',
-    (c) => FloatingActionButton(
-      // onPressed 缺省必须为 null：Flutter 默认 null = 禁用（灰色不可点）；
-      // `() {}` 会变成可点但无动作，与原生语义不一致。
-      onPressed: c.on('onPressed'),
-      backgroundColor: colorFromJson(c.props['backgroundColor']),
-      foregroundColor: colorFromJson(c.props['foregroundColor']),
-      mini: c.bool_('mini') ?? false,
-      tooltip: c.str('tooltip'),
-      elevation: c.num_('elevation'),
-      child: (c.children['child'] as Widget?),
-    ),
-  );
+  // FloatingActionButton：普通构造读 `child`；`.large` / `.small` 是尺寸变体
+  // （子结点仍是 child），`.extended` 读 `icon` + `label` 两个 slot——全部按
+  // `factory` 还原原生命名构造。
+  r.register('FloatingActionButton', (c) {
+    // onPressed 缺省必须为 null：Flutter 默认 null = 禁用（灰色不可点）；
+    // `() {}` 会变成可点但无动作，与原生语义不一致。
+    final onPressed = c.on('onPressed');
+    final backgroundColor = colorFromJson(c.props['backgroundColor']);
+    final foregroundColor = colorFromJson(c.props['foregroundColor']);
+    final tooltip = c.str('tooltip');
+    final elevation = c.num_('elevation');
+    switch (c.str('factory')) {
+      case 'extended':
+        return FloatingActionButton.extended(
+          onPressed: onPressed,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          tooltip: tooltip,
+          elevation: elevation,
+          icon: (c.children['icon'] as Widget?),
+          label: (c.children['label'] as Widget?) ??
+              const SizedBox.shrink(),
+        );
+      case 'large':
+        return FloatingActionButton.large(
+          onPressed: onPressed,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          tooltip: tooltip,
+          elevation: elevation,
+          child: (c.children['child'] as Widget?),
+        );
+      case 'small':
+        return FloatingActionButton.small(
+          onPressed: onPressed,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          tooltip: tooltip,
+          elevation: elevation,
+          child: (c.children['child'] as Widget?),
+        );
+      default:
+        return FloatingActionButton(
+          onPressed: onPressed,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          mini: c.bool_('mini') ?? false,
+          tooltip: tooltip,
+          elevation: elevation,
+          child: (c.children['child'] as Widget?),
+        );
+    }
+  });
 
   r.register('BottomNavigationBar', (c) {
     // items 是数据载体数组：从 children['items'] 的上下文读数据组装，

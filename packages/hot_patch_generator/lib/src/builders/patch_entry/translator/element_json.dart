@@ -7,9 +7,11 @@
 ///
 /// 组装规则（全局唯一约定）：
 ///   - `type` = 构造名**原样**（不做任何归一，如四种按钮各自用真实类型名）；
-///   - `factory` = 命名构造 / 静态工厂名（`ListView.builder` → `builder`、
-///     `Image.network` → `network`、`ChangeNotifierProvider.value` → `value`）——
-///     同类型的不同工厂产物**同 type、不同 factory**，运行时据此选工厂；
+///   - 命名构造 / 静态工厂名（`ListView.builder` → `builder`、`Image.network`
+///     → `network`）由渲染层一比一发射成 `X.b(...)`，构造名写在**结点顶层
+///     `ctor` 键**（不进 `props`）。JS 没有 Dart 的命名构造，故由 JS 类上的
+///     同名静态方法把构造名写进 `props.factory`——宿主只认 `props.factory`，
+///     不解析调用形状；
 ///   - 所有具名实参**按原名**放进 `props`，值按形态翻译：widget 构造 → 元素
 ///     结点、widget 列表 → 元素数组、样式/枚举 → 结构化值；
 ///   - 元素工厂 `__h` 再按**显式标记**（`element: true`，由 `__h` 给每个元素
@@ -29,13 +31,12 @@ import '../../shared/ctor_signatures.dart';
 import 'value_forms.dart';
 import 'element2js.dart';
 
-/// 命名构造 / 静态工厂名的 props 键（值为带引号的 JS 字符串）。
+/// 结点上「命名构造 / 静态工厂名」的键（**产物中间态**，不跨语言）。
 ///
-/// 键名固定，运行时据此**按类型 + 工厂名**挑选原生/JS 工厂：`ListView.builder`
-/// → `{factory: 'builder', itemBuilder: …}`、`ListView.separated` → `separated`、
-/// `Image.network` → `network`、`ChangeNotifierProvider.value` → `value`。
-/// 普通构造（`Text(...)` / `Padding(...)`）不带该键。
-const String factoryPropsKey = 'factory';
+/// 只供渲染层把 `A.b(...)` 发射成 `A.b({...})`；它不是元素协议的一部分——
+/// 跨语言的那份是 `props.factory`，由 JS 类上的同名静态方法写入（宿主据此
+/// 选择原生工厂）。
+const String ctorNodeKey = 'ctor';
 
 /// 任意 widget 构造 → 产物结点描述。
 Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx) {
@@ -77,11 +78,9 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
     props[name] = autoValue(value, ctx, name: name);
   }
 
-  // 命名构造 / 静态工厂名（`ListView.builder` / `Image.network` / `Provider.value`）
-  // → `props.factory`：产物自解释，运行时按「类型 + 工厂名」选工厂，不再靠
-  // props 有没有某个键来猜。
+  // 命名构造 / 静态工厂名（`ListView.builder` / `Image.network`）不进 props：
+  // 渲染成 `X.b({...})`，由 JS 类的同名静态方法把构造名写进 `props.factory`。
   final factory = factoryNameOf(node.expr);
-  if (factory != null) props[factoryPropsKey] = ctx.jsString(factory);
 
   // 位置实参：按 Flutter 声明的**形参名**下发（`Text('hi')` → `data`）。
   // 构造签名查不到时没有可靠形参名，禁止伪造下标键（`$pos`）——出声告警并
@@ -109,6 +108,7 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
   return {
     'type': ctx.jsString(node.type),
     'props': nonNull(props),
+    if (factory != null) ctorNodeKey: factory,
   };
 }
 

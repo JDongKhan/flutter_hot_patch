@@ -217,7 +217,8 @@ Gradient? gradientFromJson(Map<String, dynamic>? json) {
   };
 }
 
-/// JSON → DecorationImage（{source, fit}）。
+/// JSON → DecorationImage（{source, fit}）。`source` 是 provider 值的跨桥形态
+/// （源字符串），按 `http` 前缀还原网络图 / 资源图。
 DecorationImage? decorationImageFromJson(Map<String, dynamic>? json) {
   if (json == null) return null;
   final source = json['source'];

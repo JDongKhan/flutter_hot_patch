@@ -79,9 +79,7 @@ export class BannerCarousel {
   build(context) {
     var banners = this.banners;
     if ((banners.length == 0)) {
-      return (this.__k0 || (this.__k0 = new SizedBox({
-        "factory": "shrink"
-      })));
+      return (this.__k0 || (this.__k0 = SizedBox.shrink({})));
     }
     return new Column({
       "mainAxisSize": "min",

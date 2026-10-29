@@ -6,6 +6,7 @@
 - provider 的自有登记（`registerScope('ChangeNotifierProvider')` + `JsBuildContext.prototype.watch/read`）移进它的**包模块** `patch/provider.js`（生成器 `provider_module_js.dart`，由 `widget_module_builder` 的 `_packageModuleEpilogues` 追加）；`context.watch/read` 的对齐结论不变。
 - `showDialog` 系列（dialog / adaptive / general / cupertino / sheet / cupertinoSheet）连同面板独立根机制（`openPanel` / `panelMount` / `panelClosed` / `panelPop` / `panelOf`）与 `Navigator` 移到 `patch/flutter.js`（`dialogs_js.dart` / `navigator_js.dart`），从 `export function` 导出：产物按名 import 后裸调用，与 Dart 一比一。`__jsui.panelMount` / `panelClosed` 由该模块求值时安装（宿主调用点已有存在性守卫）。
 - `G.__core` 交接面补齐：作用域机制、结点归属、独立根 mount/unmount/commit，以及 `building` / `activeRoot` 的访问器（闭包 var 必须实时读写）。
+- **命名构造改为 1:1 发射**：翻译层不再往 `props` 写 `factory`，而是把构造名作为结点中间态（`ctor`）只用于发射 `X.b({...})`（`SizedBox.shrink(...)` / `Image.network(...)` / `ListView.separated(...)` / `ChangeNotifierProvider.value(...)`）。JS 没有 Dart 的命名构造，故 `flutter.js` 的包装类与逻辑组件对每个源码构造名生成**同名静态方法**，由静态方法把构造名写进 `props.factory`——宿主仍只按 `props.factory` 选原生工厂，协议不变。
 
 ## 0.3.2
 

@@ -207,7 +207,8 @@ SliverGridDelegate _gridDelegateFromJson(JsRenderContext c) {
   );
 }
 
-/// 命名构造 builder 形态：产物显式写下 `props.factory`（`builder` / `separated`）。
+/// 命名构造 builder 形态：`props.factory`（`builder` / `separated`，由产物里
+/// `ListView.builder` / `.separated` 的静态方法写下）。
 /// 回调名 / 计数只由 Flutter 该命名构造自己的形参约定决定，不做跨类型猜测。
 bool _isNamedBuilderForm(JsRenderContext c) {
   final f = c.str('factory');
@@ -528,15 +529,40 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   // SliverGridDelegateWithFixedCrossAxisCount（crossAxisCount）与
   // SliverGridDelegateWithMaxCrossAxisExtent（maxCrossAxisExtent），
   // 按 props 是否含 maxCrossAxisExtent 分流；缺省间距 0/比例 1.0 即 Flutter 默认。
-  // `.builder` 命名构造还原 `SliverGrid.builder`，其余走 delegate 还原。
+  // 命名构造按 `factory` 还原：`.builder` / `.separated`（代理类展开，sep 项
+  // 交替排列）与 `.count` / `.extent` / `.list`（平铺 gridDelegate 参数 + children）。
   r.register('SliverGrid', (c) {
     final gridDelegate = _gridDelegateFromJson(c);
     if (_isNamedBuilderForm(c)) {
-      final children = (c.children['__items'] as List<Widget>?) ?? const [];
+      final children = _flatChildren(c, 'children');
+      if (_isSeparated(c)) {
+        // SliverGrid 本身没有 `.separated`（Flutter 只在 GridView 上提供）：
+        // 分隔件作为网格项交替插入，与 GridView.separated 的原生实现相同。
+        final split = _splitSeparated(children);
+        final list = <Widget>[];
+        for (var i = 0; i < split.items.length; i++) {
+          list.add(split.items[i]);
+          if (i < split.separators.length) list.add(split.separators[i]);
+        }
+        return SliverGrid(
+          gridDelegate: gridDelegate,
+          delegate: SliverChildListDelegate(list),
+        );
+      }
       return SliverGrid.builder(
         gridDelegate: gridDelegate,
         itemCount: _builderCount(c, children.length),
         itemBuilder: (_, i) => _childAt(children, i),
+      );
+    }
+    // `.count` / `.extent`：crossAxisCount / maxCrossAxisExtent 等平铺在 props，
+    // `_gridDelegateFromJson` 已读完；子项就是 `children` 列表。
+    // `.list` 与普通构造：delegate 描述还原（list / builder 两种）。
+    final factory = c.str('factory');
+    if (factory == 'count' || factory == 'extent') {
+      return SliverGrid(
+        gridDelegate: gridDelegate,
+        delegate: SliverChildListDelegate(_flatChildren(c, 'children')),
       );
     }
     return SliverGrid(gridDelegate: gridDelegate, delegate: _sliverDelegate(c));
@@ -548,23 +574,67 @@ void registerScrollWidgets(JsWidgetRegistry r) {
   r.register('SliverAppBar', (c) {
     final actions =
         (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
-    return SliverAppBar(
-      leading: (c.children['leading'] as Widget?),
-      title: (c.children['title'] as Widget?),
-      flexibleSpace: (c.children['flexibleSpace'] as Widget?),
-      actions: actions.isEmpty ? null : actions,
-      backgroundColor: colorFromJson(c.props['backgroundColor']),
-      foregroundColor: colorFromJson(c.props['foregroundColor']),
-      elevation: c.num_('elevation'),
-      // toolbarHeight 缺省为 Flutter 默认 kToolbarHeight（SDK 非空参数）。
-      toolbarHeight: c.num_('toolbarHeight') ?? kToolbarHeight,
-      centerTitle: c.bool_('centerTitle'),
-      titleTextStyle: textStyleFromJson(c.map('titleTextStyle')),
-      pinned: c.bool_('pinned') ?? false,
-      floating: c.bool_('floating') ?? false,
-      snap: c.bool_('snap') ?? false,
-      expandedHeight: c.num_('expandedHeight'),
-    );
+    final leading = (c.children['leading'] as Widget?);
+    final title = (c.children['title'] as Widget?);
+    final flexibleSpace = (c.children['flexibleSpace'] as Widget?);
+    final backgroundColor = colorFromJson(c.props['backgroundColor']);
+    final foregroundColor = colorFromJson(c.props['foregroundColor']);
+    final elevation = c.num_('elevation');
+    // toolbarHeight 缺省为 Flutter 默认 kToolbarHeight（SDK 非空参数）。
+    final toolbarHeight = c.num_('toolbarHeight') ?? kToolbarHeight;
+    final centerTitle = c.bool_('centerTitle');
+    final titleTextStyle = textStyleFromJson(c.map('titleTextStyle'));
+    final pinned = c.bool_('pinned') ?? false;
+    final floating = c.bool_('floating') ?? false;
+    final snap = c.bool_('snap') ?? false;
+    final expandedHeight = c.num_('expandedHeight');
+    // `.large` / `.medium` 是命名构造：固定 expandedHeight 与 pinned/floating
+    // 默认值，宿主按 factory 还原原生构造。
+    switch (c.str('factory')) {
+      case 'large':
+        return SliverAppBar.large(
+          leading: leading,
+          title: title,
+          flexibleSpace: flexibleSpace,
+          actions: actions.isEmpty ? null : actions,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          elevation: elevation,
+          expandedHeight: expandedHeight,
+          centerTitle: centerTitle,
+          titleTextStyle: titleTextStyle,
+        );
+      case 'medium':
+        return SliverAppBar.medium(
+          leading: leading,
+          title: title,
+          flexibleSpace: flexibleSpace,
+          actions: actions.isEmpty ? null : actions,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          elevation: elevation,
+          expandedHeight: expandedHeight,
+          centerTitle: centerTitle,
+          titleTextStyle: titleTextStyle,
+        );
+      default:
+        return SliverAppBar(
+          leading: leading,
+          title: title,
+          flexibleSpace: flexibleSpace,
+          actions: actions.isEmpty ? null : actions,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          elevation: elevation,
+          toolbarHeight: toolbarHeight,
+          centerTitle: centerTitle,
+          titleTextStyle: titleTextStyle,
+          pinned: pinned,
+          floating: floating,
+          snap: snap,
+          expandedHeight: expandedHeight,
+        );
+    }
   });
 
   // SliverPadding：padding + 单个 sliver（命名参数 sliver 翻译为子节点）。
@@ -593,15 +663,24 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     ),
   );
 
-  // SliverFixedExtentList：delegate（.builder → 原生 SliverChildBuilderDelegate，
-  // 否则 SliverChildListDelegate）+ itemExtent（必填，缺失按 0 兜底暴露问题）。
-  r.register(
-    'SliverFixedExtentList',
-    (c) => SliverFixedExtentList(
+  // SliverFixedExtentList：delegate（`.builder` → 原生 SliverChildBuilderDelegate，
+  // `.list` / 普通构造 → SliverChildListDelegate）+ itemExtent（必填，缺失按 0
+  // 兜底暴露问题）。`.builder` 命名构造按 factory 还原，保留懒加载。
+  r.register('SliverFixedExtentList', (c) {
+    final itemExtent = c.num_('itemExtent') ?? 0;
+    if (_isNamedBuilderForm(c)) {
+      final children = _flatChildren(c, 'children');
+      return SliverFixedExtentList.builder(
+        itemExtent: itemExtent,
+        itemCount: _builderCount(c, children.length),
+        itemBuilder: (_, i) => _childAt(children, i),
+      );
+    }
+    return SliverFixedExtentList(
       delegate: _sliverDelegate(c),
-      itemExtent: c.num_('itemExtent') ?? 0,
-    ),
-  );
+      itemExtent: itemExtent,
+    );
+  });
 
   // SliverFillViewport：delegate（同上分流）+ viewportFraction（缺省 1.0）/
   // padEnds（缺省 true），即 Flutter 默认。

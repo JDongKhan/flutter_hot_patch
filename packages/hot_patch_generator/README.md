@@ -137,12 +137,15 @@ signature cannot be indexed, the node produces a build warning and is dropped (n
 Adding a visual widget therefore touches two sides: the host renderer, and — when the output shape differs —
 the generator tables above.
 
-Named constructors / static factories keep their name in the output, so the runtime can select the exact
-factory per type: `ListView.builder` → `{factory: 'builder', itemBuilder: …}`,
+Named constructors / static factories are translated **1:1** into a static call — `SizedBox.shrink(p)` →
+`SizedBox.shrink({...})`, `Image.network(p)` → `Image.network({...})`. The constructor name never enters
+`props`; it only lives in the call shape. JS has no named constructors, so each wrapper class on the JS side
+(`flutter.js`) generates a **static method with the same name**, which records the constructor name into
+`props.factory` — that key is the host's only signal for selecting the native factory:
 `ListView.separated` → `{factory: 'separated', itemBuilder: …, separatorBuilder: …}`,
-`Image.network` → `{factory: 'network', src: …}`, `ChangeNotifierProvider.value` →
-`{factory: 'value', …}`. Callbacks, sizes and counts always keep their Dart parameter names
-(`itemBuilder` / `separatorBuilder` / `itemCount`).
+`Image.network` → `{factory: 'network', src: …}`, `ChangeNotifierProvider.value` → `{factory: 'value', …}`.
+Callbacks, sizes and counts always keep their Dart parameter names (`itemBuilder` / `separatorBuilder` /
+`itemCount`).
 
 Widgets with no host renderer are not dropped silently: the output keeps their **concrete type name**, and
 at runtime the host resolves it via `registerNativeComponent(name, build)`. The callback receives the full

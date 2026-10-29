@@ -355,7 +355,7 @@ export class _ListContent {
                   })]); } return out; })())
           ]
         }),
-        ...(this.openFilter ? [new Positioned({
+        ...(this.openFilter ? [Positioned.fill({
             "child": new GestureDetector({
               "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)),
               "child": new Container({
@@ -363,8 +363,7 @@ export class _ListContent {
                   "value": 0x66000000
                 })))
               })
-            }),
-            "factory": "fill"
+            })
           }), new Positioned({
             "left": 0,
             "right": 0,

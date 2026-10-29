@@ -16,9 +16,7 @@ export class AnimatedListDetail {
   }
   _itemBuilder(context, index, animation) {
     if (((index < 0) || (index >= this._items.length))) {
-      return (this.__k0 || (this.__k0 = new SizedBox({
-        "factory": "shrink"
-      })));
+      return (this.__k0 || (this.__k0 = SizedBox.shrink({})));
     }
     return new Card({
       "margin": (this.__k1 || (this.__k1 = EdgeInsets.symmetric({

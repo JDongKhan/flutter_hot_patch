@@ -19,9 +19,7 @@ import 'element2js.dart';
 /// 的产出）都算空。
 ///
 /// 必须做：产物渲染把 Dart `null` 输出成裸 `null`（`element2js.dart` 的
-/// `jsLiteral`），且 `usesJsClass` 用 `props.containsKey('builder')` 判定结点
-/// 形态——一个「值为 null 的 builder 键」会让结点从类引用 `__h(ListView,…)`
-/// 变成字符串 `__h('ListView',…)`。
+/// `jsLiteral`），值为 null 的键会让渲染层把该键当成「实参缺省」处理。
 Map<String, dynamic> nonNull(Map<String, Object?> raw) => {
       for (final e in raw.entries)
         if (e.value != null && e.value != 'null') e.key: e.value,
