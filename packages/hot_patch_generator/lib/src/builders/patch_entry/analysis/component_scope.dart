@@ -199,20 +199,45 @@ Map<String, Set<String>> _neededClasses(
     }
   }
 
+  // 种子 3：可达文件里 extension 的成员引用。扩展的注册语句就写在声明处、
+  // 成员体与类方法体走同一条翻译路径，其中构造 / 字段类型引用到的类必须一并
+  // 产出——否则扩展产物里的 `import { X }` 会指向不存在的模块。
+  // 扩展不能有实例字段，静态字段本身会被译为 JS 静态成员，故一并计入。
+  for (final file in reachableFiles) {
+    final unit = units[file];
+    if (unit == null) continue;
+    for (final ext in unit.declarations.whereType<ExtensionDeclaration>()) {
+      for (final name in referencedClassNamesInMembers(
+        ext.members,
+        includeStaticFields: true,
+      )) {
+        markVisible(file, name);
+      }
+    }
+  }
+
   // 引用闭包：类里引用到的其它类（字段类型 / 方法体构造 / build 树）同样要产出，
   // 有限集（每个类只入队一次），不会无限展开。
   while (queue.isNotEmpty) {
     final (decl, file) = queue.removeLast();
     final unit = units[file];
     if (unit == null) continue;
-    // StatefulWidget 的字段 / 方法分布在 widget 类与 State 类两处，合并扫描；
-    // mixin 成员的引用同样计入（与类表 / 翻译入口同一线性化口径）。
+    // StatefulWidget 的字段 / 方法分布在 widget 类与 State 类两处，合并扫描。
     for (final cls in classAndStateDecls(decl, unit)) {
-      for (final name in referencedClassNames(
-        cls,
-        mixins: resolveMixinDecls(cls, unit, file),
-      )) {
+      for (final name in referencedClassNames(cls)) {
         markVisible(file, name);
+      }
+      // mixin 的成员引用必须按 **mixin 声明所在文件** 的可见表解析：`with A`
+      // 的类看不见 A 所在文件 import 的模型，但 A 的方法体会被线性化进本产物，
+      // 其中的 `new M()` 需要 M 的产物（按本文件的可见表查会漏标）。
+      for (final (mixinDecl, mixinFile) in
+          resolveMixinDeclRefs(cls, unit, file)) {
+        for (final name in referencedClassNamesInMembers(
+          mixinDecl.members,
+          includeStaticFields: true,
+        )) {
+          markVisible(mixinFile, name);
+        }
       }
     }
   }

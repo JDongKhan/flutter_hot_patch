@@ -164,6 +164,48 @@ Set<String> identifierNamesIn(CompilationUnit unit) {
   return collector.names;
 }
 
+/// 本产物**承载的全部代码**里出现过的标识符：本文件（含 extension 成员）
+/// + 被 `with` 的 mixin 成员。
+///
+/// mixin 成员会被线性化进本产物，其方法体里的 `'x'.logText()` 同样要求声明
+/// 该扩展的产物被加载；只扫本文件会漏掉「调用只写在 mixin 里」的场景。
+Set<String> identifierNamesInProduct(CompilationUnit unit, String sourcePath) {
+  final names = identifierNamesIn(unit);
+  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+    for (final (mixinDecl, _) in resolveMixinDeclRefs(d, unit, sourcePath)) {
+      names.addAll(identifierNamesOfMembers(mixinDecl.members));
+    }
+  }
+  return names;
+}
+
+/// 本产物**承载的代码**能看见的源文件集合：本文件 import 图 + 被 `with` 的
+/// mixin 声明文件的 import 图。
+///
+/// mixin 成员被线性化进本产物，写在 mixin 文件里的 `'x'.logText()` 同样需要
+/// 该扩展的产物被加载；只扫本文件的 import 图看不到 mixin 文件 import 的
+/// 扩展声明库（`import` 目标不逐层深入）。
+Set<String> extensionScopeFiles(CompilationUnit unit, String sourcePath) {
+  final files = <String>{...resolveImportFiles(unit, sourcePath)};
+  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+    for (final (_, mixinFile) in resolveMixinDeclRefs(d, unit, sourcePath)) {
+      final mixinUnit = parseUnitFile(mixinFile);
+      if (mixinUnit == null) continue;
+      files.addAll(resolveImportFiles(mixinUnit, mixinFile));
+    }
+  }
+  return files;
+}
+
+/// 任意成员表里出现过的标识符（与 [identifierNamesIn] 同一收集器）。
+Set<String> identifierNamesOfMembers(Iterable<ClassMember> members) {
+  final collector = _IdentifierCollector();
+  for (final m in members) {
+    m.accept(collector);
+  }
+  return collector.names;
+}
+
 class _IdentifierCollector extends RecursiveAstVisitor<void> {
   final Set<String> names = {};
 

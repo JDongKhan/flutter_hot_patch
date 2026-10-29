@@ -105,6 +105,14 @@ class ComponentBuilder implements Builder {
     // 跨文件组件名 → 产物路径（按**类名**精确绑定；见 resolveImportedComponentProducts）。
     final importProducts =
         resolveImportedComponentProducts(parsed.unit, inputId.path);
+
+    // 全量「类表」：同文件 + 跨文件 import 的所有 Dart 类（公共、非抽象、
+    // 非 @HostInjected），组件 / widget 类打 isComponent 标记、普通类与静态
+    // 单例不打标。翻译只按名字在这张表里解析依赖（见 analyze_dart_class.dart）。
+    // 提前于 importResolver 声明：后者要用类表兜底解析「经 mixin 带入」的
+    // 跨文件组件依赖。
+    final classTable = buildClassTable(parsed.unit, inputId.path);
+
     String? importResolver(String name) {
       // `@PatchIgnore(isComponent: true)` 的包装类就在**声明它的源文件产物**里；
       // 其余的 @PatchIgnore（isComponent 非 true）整类不翻译 → null。
@@ -114,8 +122,16 @@ class ComponentBuilder implements Builder {
       }
       if (parsedNames.contains(name)) return ownName;
       final abs = importProducts[name];
-      if (abs == null) return null;
-      return relativeProduct(ownProduct, abs);
+      if (abs != null) return relativeProduct(ownProduct, abs);
+      // 经由 mixin 带入的组件依赖：mixin 声明文件的 import 图不在本文件的
+      // import directives 里（类表已并入，见 buildClassTable），按类表定位
+      // 其声明文件的产物。判据与「有产物」同口径：公共 widget 类 / @PatchEntry
+      // 打 isComponent 标记；@PatchIgnore / @HostInjected 不进类表或被上面拦掉。
+      final info = classTable[name];
+      if (info != null && info.isComponent && info.sourceFile != inputId.path) {
+        return relativeProduct(ownProduct, productPath(info.sourceFile));
+      }
+      return null;
     }
 
     // 类名 → **产物身份**（`patch/a/b.js`）：扩展注册要判断目标是「本产物内」
@@ -128,11 +144,6 @@ class ComponentBuilder implements Builder {
       if (parsedNames.contains(name)) return ownProduct;
       return importProducts[name];
     }
-
-    // 全量「类表」：同文件 + 跨文件 import 的所有 Dart 类（公共、非抽象、
-    // 非 @HostInjected），组件 / widget 类打 isComponent 标记、普通类与静态
-    // 单例不打标。翻译只按名字在这张表里解析依赖（见 analyze_dart_class.dart）。
-    final classTable = buildClassTable(parsed.unit, inputId.path);
 
     // 跨文件「静态单例类」映射：照旧，供 build 树里 `MyColors.x` 静态引用
     // 翻译成 JS 表达式（见 style_translators）。产物渲染统一走
@@ -409,9 +420,10 @@ class ComponentBuilder implements Builder {
     // **只用「用到」的扩展**：import 了扩展文件但整个文件没调用它时，不产生
     // 任何 import（否则每次加载本模块都要白注册一批原型成员）。判据见
     // [extensionCallSiteNames] / [identifierNamesIn]——宽松命中，多导入不会漏。
-    final usedIdentifiers = identifierNamesIn(parsed.unit);
+    final usedIdentifiers =
+        identifierNamesInProduct(parsed.unit, inputId.path);
     final extNamesByProduct = <String, Set<String>>{};
-    for (final file in resolveImportFiles(parsed.unit, inputId.path)) {
+    for (final file in extensionScopeFiles(parsed.unit, inputId.path)) {
       final imported = parseUnitFile(file);
       if (imported == null) continue;
       // 扩展声明就在本文件里：产物自己会注册，无需 import 自己。

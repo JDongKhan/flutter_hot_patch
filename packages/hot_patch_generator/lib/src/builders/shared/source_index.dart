@@ -154,20 +154,33 @@ List<MixinDeclaration> resolveMixinDecls(
   ClassDeclaration decl,
   CompilationUnit unit,
   String sourcePath,
+) =>
+    [for (final e in resolveMixinDeclRefs(decl, unit, sourcePath)) e.$1];
+
+/// 同 [resolveMixinDecls]，但同时给出**mixin 声明所在的文件身份**。
+///
+/// 依赖发现必须按「声明所在文件」解析可见性：`with A` 的类在 `file1`，mixin A
+/// 写在 `file2` 并 import 了模型 `M`——`M` 对 `file1` 不可见，但对 `file2` 可见。
+/// 若按 `file1` 的可见表查 `M` 会漏标，mixin 方法体被线性化进 `file1` 的产物后
+/// `new M()` 就指向未产出的类。
+List<(MixinDeclaration, String)> resolveMixinDeclRefs(
+  ClassDeclaration decl,
+  CompilationUnit unit,
+  String sourcePath,
 ) {
   final wc = decl.withClause;
   if (wc == null) return const [];
-  final byName = <String, MixinDeclaration>{};
-  void collect(CompilationUnit u) {
+  final byName = <String, (MixinDeclaration, String)>{};
+  void collect(CompilationUnit u, String file) {
     for (final d in u.declarations.whereType<MixinDeclaration>()) {
-      byName.putIfAbsent(d.name.lexeme, () => d);
+      byName.putIfAbsent(d.name.lexeme, () => (d, file));
     }
   }
 
-  collect(unit);
+  collect(unit, sourcePath);
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final u = parseUnitFile(file);
-    if (u != null) collect(u);
+    if (u != null) collect(u, file);
   }
   return [
     for (final t in wc.mixinTypes)

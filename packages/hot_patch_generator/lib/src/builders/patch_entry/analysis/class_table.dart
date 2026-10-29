@@ -45,6 +45,41 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
     }
   }
 
+  // 被 `with` 的跨文件 mixin：把 mixin 声明文件（及其 import 图）里的类并入
+  // 类表。mixin 成员会被线性化进本产物，其中引用的类必须能在类表里按名字
+  // 解析依赖并生成 import——只靠本文件的 import 图看不到 mixin 文件 import
+  // 的模型类（`with A` 的类看不见 A 的 import，但 A 的 `new M()` 会进本产物）。
+  // 只随「实际被 with 的 mixin」展开，不做全量 import 图闭包。
+  final seenMixinFiles = <String>{sourcePath};
+  var knownCount = decls.length;
+  while (true) {
+    for (final e in decls.values.toList()) {
+      // StatefulWidget 的 `with` 写在**同文件的私有 State 类**上（私有类不在
+      // 类表里），故必须按 widget + State 合并扫描。
+      final mixinRefs = [
+        for (final cls in classAndStateDecls(e.$1, e.$4))
+          ...resolveMixinDeclRefs(cls, e.$4, e.$2),
+      ];
+      for (final (_, mixinFile) in mixinRefs) {
+        if (!seenMixinFiles.add(mixinFile)) continue;
+        final mixinUnit = parseUnitFile(mixinFile);
+        if (mixinUnit == null) continue;
+        for (final d in mixinUnit.declarations.whereType<ClassDeclaration>()) {
+          addFile(d, mixinFile, mixinUnit);
+        }
+        for (final file in resolveImportFiles(mixinUnit, mixinFile)) {
+          final u = parseUnitFile(file);
+          if (u == null) continue;
+          for (final d in u.declarations.whereType<ClassDeclaration>()) {
+            addFile(d, file, u);
+          }
+        }
+      }
+    }
+    if (decls.length == knownCount) break;
+    knownCount = decls.length;
+  }
+
   final names = decls.keys.toSet();
   final out = <String, ClassInfo>{};
   for (final e in decls.entries) {

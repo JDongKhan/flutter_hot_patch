@@ -312,53 +312,37 @@ Set<String> referencedClassNames(
   ClassDeclaration decl, {
   List<MixinDeclaration> mixins = const [],
 }) {
-  final names = <String>{};
-  final collector = _CtorNameCollector();
-  void scanMembers(List<ClassMember> members) {
-    for (final m in members.whereType<MethodDeclaration>()) {
-      m.body.accept(collector);
-    }
-    for (final member in members.whereType<FieldDeclaration>()) {
-      if (member.isStatic) continue;
-      for (final v in member.fields.variables) {
-        final t = eraseType(fieldTypeName(member, v));
-        if (!isBasicType(t) && t.isNotEmpty) names.add(t);
-      }
-    }
-  }
-
-  scanMembers(decl.members);
+  final names = dependenciesOf(decl);
   for (final mx in mixins) {
-    scanMembers(mx.members);
+    names.addAll(dependenciesOf(mx));
   }
-  names.addAll(collector.names);
   return names;
 }
 
-/// 任意表达式里构造调用的类名集合（顶层常量初始化器用：
-/// `const List<Spot> kSpots = [...]` 里被构造出来的模型类必须跟着常量一起产出）。
-/// 与 [referencedClassNames] 共用同一个收集器，口径一致。
-Set<String> ctorClassNames(Expression? expression) {
-  if (expression == null) return const {};
-  final collector = _CtorNameCollector();
-  expression.accept(collector);
-  return collector.names;
-}
-
-/// 任意 AST 结点里构造调用的类名集合（与 [ctorClassNames] 同一收集器）。
+/// 任意声明节点里出现的**全部类型引用**——依赖发现的唯一收集入口。
 ///
-/// 供「不是类声明」的成员宿主使用（如 extension 的方法体 / 初始化器）——
-/// 依赖发现口径与类完全一致，不为扩展另写一套启发式。
-Set<String> ctorClassNamesIn(Iterable<AstNode?> nodes) {
-  final collector = _CtorNameCollector();
-  for (final n in nodes) {
-    if (n != null) n.accept(collector);
-  }
+/// 以声明为节点整棵子树扫一遍，凡可能让产物产生「对另一个类的运行时引用」的
+/// 位置都收：构造调用（`new X()` / `X()`）、静态成员（`X.fromJson()` /
+/// `X.count`）、类型测试（`x is X`）、类型注解（字段 / 形参 / 返回 / 变量 /
+/// 泛型实参）。整树扫描天然覆盖手写分支容易漏的宿主：构造函数体、初始化列表、
+/// 形参默认值、字段初始化器。
+///
+/// 刻意**宁宽勿漏**：收上来的名字由调用方与类表求交，非项目类（widget、SDK、
+/// 基础类型）自然丢弃。多收一个项目类只是多翻译一个产物；漏收会让产物里的
+/// `import { X }` 指向不存在的模块（编译器依赖图宁可保守）。
+Set<String> dependenciesOf(AstNode node) {
+  final collector = _TypeRefCollector();
+  node.accept(collector);
   return collector.names;
 }
 
-/// 收集表达式树里全部类型构造调用名（与类发现共用：字段类型 + 构造调用）。
-class _CtorNameCollector extends RecursiveAstVisitor<void> {
+/// 任意表达式里引用的类型名（顶层常量初始化器用：
+/// `const List<Spot> kSpots = [...]` 里被构造出来的模型类必须跟着常量一起产出）。
+Set<String> ctorClassNames(Expression? expression) =>
+    expression == null ? const {} : dependenciesOf(expression);
+
+/// 类型引用收集器，见 [dependenciesOf]。
+class _TypeRefCollector extends RecursiveAstVisitor<void> {
   final names = <String>{};
 
   @override
@@ -367,17 +351,50 @@ class _CtorNameCollector extends RecursiveAstVisitor<void> {
     super.visitInstanceCreationExpression(node);
   }
 
-  /// 无 `new`/`const` 的构造调用（parseString 下是 MethodInvocation）：
-  /// `MyModel()` / `(_) => MyModel()` 里的模型构造。仅收 UpperCamel 且无
-  /// target/泛型的形态（与 [fieldTypeName] 同启发式），widget 构造（Text/Column
-  /// 等）也会被收进来，但与类表求交后自然丢弃。
+  /// 无 `new`/`const` 的构造（`MyModel()`）、静态调用（`MyModel.fromJson()`）、
+  /// 静态字段访问（`MyColors.primary`）：无 resolution 时统一按「首字母大写的
+  /// 标识符就是类名」的形态收前缀（与 [fieldTypeName] 同一启发式）。
   @override
   void visitMethodInvocation(MethodInvocation node) {
-    if (node.target == null && node.typeArguments == null) {
-      final n = node.methodName.name;
-      if (n.isNotEmpty && n[0] == n[0].toUpperCase()) names.add(n);
+    final target = node.target;
+    if (target == null && node.typeArguments == null) {
+      _addClassLikeName(node.methodName.name);
+    } else if (target is SimpleIdentifier) {
+      _addClassLikeName(target.name);
     }
     super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitPrefixedIdentifier(PrefixedIdentifier node) {
+    _addClassLikeName(node.prefix.name);
+    super.visitPrefixedIdentifier(node);
+  }
+
+  @override
+  void visitPropertyAccess(PropertyAccess node) {
+    final target = node.target;
+    if (target is SimpleIdentifier) _addClassLikeName(target.name);
+    super.visitPropertyAccess(node);
+  }
+
+  /// `x is T` → JS `x instanceof T`：T 的类定义必须存在。
+  @override
+  void visitIsExpression(IsExpression node) {
+    names.add(eraseType(node.type.toSource()));
+    super.visitIsExpression(node);
+  }
+
+  /// 类型注解：JS 侧多被擦除，但字段初值、`is`、模型构造都按类型名落地——
+  /// 保守收，与类表求交。泛型实参一并收（`List<Spot>` → List + Spot）。
+  @override
+  void visitNamedType(NamedType node) {
+    names.add(eraseType(node.toSource()));
+    super.visitNamedType(node);
+  }
+
+  void _addClassLikeName(String n) {
+    if (n.isNotEmpty && n[0] == n[0].toUpperCase()) names.add(n);
   }
 }
 

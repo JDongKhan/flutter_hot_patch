@@ -8,7 +8,7 @@ export const StringLogExtension = __jsExtension("String", (function () {
   "use strict";
   return {
     logText: function (tag) {
-      console.log("[" + __str(tag) + "] " + __str(this));
+      console.log("[" + __str(tag) + "] " + __str(this) + " 依赖库日志");
     },
   };
 })(), { id: "package:hot_module_base/src/string_log_extension.dart#StringLogExtension" });
