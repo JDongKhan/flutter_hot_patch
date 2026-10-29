@@ -48,39 +48,32 @@
 /// | 【9】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
 /// | 【10】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
 /// | 【11】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
-/// | 【12】~【25】 | 能力片段（值类 / 异常 / Color / 动画 / 各 Controller / Key / BuildContext / provider …） | 按能力自洽 |
+/// | 【11.5】 | 跨模块核心符号（`G.__core`，供 flutter.js 值类区解构） | 跨模块约定 |
+/// | 【13】【21】【23】【25】~【27.6】 | Dart 异常 / BuildContext 代理 / provider / 泄漏观测 / 缓存追踪 / Dismissible / extension / 命令式弹层 | 按能力自洽 |
+///
+/// **值类区不在本文件**：`Duration` / `Size` / `Offset` / `Color` /
+/// `ChangeNotifier` / 各 Controller / `Key` / 动画等「Dart 值对象与控制器镜像」
+/// 已迁至 `patch/flutter.js`（见 widget_module_builder 的值类区），本文件只留
+/// 语言层与 mini-react 核心。它们共用的核心符号经 `G.__core` 交接。
 ///
 /// 跨分区交叉点用行内 `[ctx]` / `[mini-react]` 标注，便于判断
 /// 「这段代码是为哪个设计写的」。
 library;
 
-// 能力 JS 片段全部随本文件迁入生成器（`runtime/js/` 同目录），由
+// 核心 JS 片段随本文件迁入生成器（`runtime/js/` 同目录），由
 // [runtimeJsSource] 按**固定顺序**拼接成单个 `patch/runtime.js`。
 // 运行时包（hot_patch）不再持有任何 JS 源码：JS 修复随产物发布即可生效，
 // 不需要发版。
-import 'animation_js.dart';
 import 'build_context_js.dart';
 import 'cache_trace_js.dart';
-import 'change_notifier_js.dart';
-import 'color_js.dart';
 import 'dart_errors_js.dart';
-import 'dart_values_js.dart';
 import 'dismissible_js.dart';
-import 'easy_refresh_js.dart';
-import 'focus_js.dart';
 import 'handle_registry_js.dart';
 import 'js_extension_js.dart';
-import 'key_js.dart';
-import 'keyboard_listener_js.dart';
-import 'layout_builder_js.dart';
-import 'media_query_js.dart';
 import 'mini_react_js.dart';
 import 'portal_js.dart';
 import 'provider_js.dart';
-import 'scroll_controller_js.dart';
-import 'tab_controller_js.dart';
-import 'text_editing_controller_js.dart';
-import 'timer_js.dart';
+
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
@@ -692,6 +685,20 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
     panelClosed: panelClosed,
 ''';
 
+/// 跨模块核心符号导出面：值类区（flutter.js）运行在独立 ES module 作用域，
+/// 与 runtime 的 IIFE 不共享词法环境。原型补丁、控制器注册、句柄表仍由
+/// runtime 拥有，此处一次性挂到 G，flutter.js 顶部解构取用——与 `__jsui` /
+/// `__modules` 同一约定：**跨模块只走 G**，不假设同一作用域。
+const String _jsUiCrossModuleExports = r'''
+  G.__core = {
+    defineProtoGetter: __defineProtoGetter,
+    defineController: defineController,
+    defineHandleKind: defineHandleKind,
+    handleOp: handleOp,
+    reg: reg
+  };
+''';
+
 /// UI 运行时骨架尾部·后段（api 收尾到 IIFE 闭包结束）。
 const String _jsUiRuntimeSkeletonTailEnd = r'''
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
@@ -740,35 +747,15 @@ String runtimeJsSource() {
     _section('【9】调度', miniReactSchedulerSource),
     _section('【10】reconciler 主流程', miniReactReconcilerSource),
     _section('【11】对外入口 api', _jsUiApi),
+    // 值类区（Dart 值对象 / Controller 类族）已迁至 flutter.js：runtime.js 只留
+    // 语言层与 mini-react 核心。它们需要的那几个核心符号在此交接。
+    _section('【11.5】跨模块核心符号（供 flutter.js 值类区）', _jsUiCrossModuleExports),
     // 各能力片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
-    _section(
-      '【12】Dart 值类（Duration / Size / Offset / Radius）',
-      dartValuesJsSource,
-    ),
     _section('【13】Dart 异常（StateError / ArgumentError / …）', dartErrorsJsSource),
-    _section(
-      '【14】Color 类族（Color / MaterialColor / ColorSwatch）',
-      colorJsSource,
-    ),
-    _section('【15】ChangeNotifier 基类', changeNotifierSource),
-    _section('【16】动画（Animation / AnimationController）', animationJsSource),
-    _section('【17】ScrollController', scrollControllerJsSource),
-    _section('【18】TextEditingController', textEditingControllerJsSource),
-    // Focus：FocusNode 代理类（宿主桥见 capabilities/focus/focus_bridge.dart）。
-    _section('【18.5】FocusNode', focusJsSource),
-    // KeyboardListener：KeyEvent / LogicalKeyboardKey 镜像 + 宿主按键事件派发
-    // （宿主桥见 capabilities/keyboard_listener/keyboard_listener_bridge.dart）。
-    _section('【18.6】键盘事件（KeyEvent / LogicalKeyboardKey）', keyboardListenerJsSource),
-    // MediaQuery 同步镜像：宿主推 JSON，JS 侧 `MediaQuery.of(context)` 同步读。
-    _section('【18.7】MediaQuery 镜像', mediaQueryJsSource),
-    // 父约束下发：LayoutBuilder 逻辑组件的约束由宿主布局阶段推给 JS。
-    _section('【18.8】父约束下发（LayoutBuilder）', layoutBuilderJsSource),
-    _section('【19】TabController', tabControllerJsSource),
-    _section('【20】Key 类族', keyJsSource),
+    // BuildContext 代理留在核心侧：provider（§23）与 showDialog（§27.6）在
+    // 片段顶层就给它的原型补方法，二者必须同一作用域、同序求值。
     _section('【21】BuildContext 代理', buildContextJsSource),
-    _section('【22】EasyRefresh', easyRefreshJsSource),
     _section('【23】provider', providerJsSource),
-    _section('【24】Timer（Dart Timer 同名注入）', timerJsSource),
     // 泄漏观测：无条件拼入（构建期不知道 App 是 debug 还是 release）。
     // 宿主侧调用点仍由 kDebugMode 门控，release 下这些函数不会被调用，
     // 只占体积、不影响行为。

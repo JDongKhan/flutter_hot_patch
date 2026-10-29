@@ -13,6 +13,47 @@ import '../shared/ctor_signatures.dart';
 import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
 import '../shared/paths.dart';
+import '../runtime/js/animation_js.dart';
+import '../runtime/js/change_notifier_js.dart';
+import '../runtime/js/color_js.dart';
+import '../runtime/js/dart_values_js.dart';
+import '../runtime/js/easy_refresh_js.dart';
+import '../runtime/js/focus_js.dart';
+import '../runtime/js/key_js.dart';
+import '../runtime/js/keyboard_listener_js.dart';
+import '../runtime/js/layout_builder_js.dart';
+import '../runtime/js/media_query_js.dart';
+import '../runtime/js/scroll_controller_js.dart';
+import '../runtime/js/tab_controller_js.dart';
+import '../runtime/js/text_editing_controller_js.dart';
+import '../runtime/js/timer_js.dart';
+
+/// Dart 值类区源码（`patch/flutter.js` 尾部，从 runtime.js 迁入）。
+///
+/// 收录标准：**Dart / Flutter 值类型与 Controller 的 JS 镜像**——
+/// `Duration` / `Size` / `Offset` / `EdgeInsets` / `TextStyle` / `Color` /
+/// `ChangeNotifier` / `AnimationController` / 各 Controller / `Key` / `Timer`…
+/// 翻译层对它们一律发射 `new X({...})`（一比一），跨桥靠各自 `toJSON()`。
+///
+/// **拼接顺序有意义**：值类在前（`__posArgs` / `__durationMs` 等工具与基础值类），
+/// 控制器在后（依赖 `G.__core` 的 `defineController` / 句柄表）。片段内的
+/// `function` 声明会提升，故同区内可以前后互引。
+String flutterValueClassesSource() => [
+      dartValuesJsSource,
+      colorJsSource,
+      changeNotifierSource,
+      animationJsSource,
+      scrollControllerJsSource,
+      textEditingControllerJsSource,
+      focusJsSource,
+      keyboardListenerJsSource,
+      mediaQueryJsSource,
+      layoutBuilderJsSource,
+      tabControllerJsSource,
+      keyJsSource,
+      easyRefreshJsSource,
+      timerJsSource,
+    ].join('\n');
 
 /// 有 JS 类的类型 → (package → {type})：由静态登记推导（[jsClassWidgetTypes]
 /// 与 [widgetPackageOf]），作为 package 模块产物清单（每个包一个文件）的唯一来源。
@@ -975,6 +1016,32 @@ String renderPackageModule(String package, Set<String> types) {
         ..writeln()
         ..writeln(hostWrapperSource(t));
     }
+    // ---------------------------------------------------------------------
+    // Dart 值类区（从 runtime.js 迁入）：Dart 值对象与 Controller 的 JS 镜像。
+    //
+    // 判据是「这是不是 Dart 语言 / Flutter 的值类型」，而不是「谁先写的」：
+    // runtime.js 只留语言层与 mini-react 核心（element / reconciler / 调度 /
+    // 作用域 / 桥），这些对象全部是**产物里 `new X({...})` 的落点**，与
+    // `__h` 宿主包装类同属「翻译目标」，因此和宿主包装类放在同一文件。
+    //
+    // **必须排在 Colors 常量之前**：`__mc` 在模块求值期就 `new MaterialColor(...)`，
+    // 而 MaterialColor 的原型（`Object.create(Color.prototype)`）也在本区赋值——
+    // 晚于实例创建就必须让实例挂在旧原型上（丢 toJSON）。
+    //
+    // 与 runtime 的唯一耦合面是 `G.__core`（原型补丁 / 控制器注册 / 句柄表），
+    // 见 runtime_js.dart 的【11.5】——跨模块只走 G，不假设同一 IIFE 作用域。
+    b
+      ..writeln()
+      ..writeln('// ===== Dart 值类（值对象 / Controller / 动画 / Key）=====')
+      ..writeln('// 由 runtime.js 迁入：翻译层对它们一律 `new X({...})`，')
+      ..writeln('// 跨桥经各自 toJSON 输出宿主协议（不在这里做任何 JSON 拍平）。')
+      ..writeln('const G = globalThis;')
+      ..writeln('const {')
+      ..writeln('  defineProtoGetter: __defineProtoGetter,')
+      ..writeln('  defineController, defineHandleKind, handleOp, reg,')
+      ..writeln('} = G.__core;')
+      ..writeln()
+      ..writeln(flutterValueClassesSource());
     // Colors 常量（SDK colors.dart 自动抽取）：`Colors.red` / `Colors.red[400]`
     // 在 JS 侧原样求值，翻译层不含任何色值表；新增颜色重构建即生效。
     final colors = colorsJsSource();
