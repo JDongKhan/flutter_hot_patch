@@ -1521,9 +1521,9 @@ class ElementTranslateContext implements ExprRenderer {
   /// 值约定：toJson 输出的叶子值一律为 **JS 表达式字符串**（字符串字面量
   /// 用 [jsString] 带引号、数字/布尔/表达式原样），这里原样嵌入、不加引号。
   ///
-  /// 容器：Map 含 `type` 键 → 视作**节点**，递归 [renderJs] 产出构造调用
-  /// （如 `Text(...)`）——props 里嵌套的节点（如 ListTile.leading）据此还原；
-  /// 普通 Map/List → 递归容器。
+  /// 容器：带结点标记 [nodeMarkerKey] 的 Map → 视作**结点**，递归 [renderJs]
+  /// 产出构造调用（如 `Text(...)`）——props 里嵌套的节点（如 ListTile.leading）
+  /// 据此还原；普通 Map/List → 递归容器。
   String jsLiteral(Object? value, int depth) => _jsLiteral(value, depth) ?? 'null';
 
   /// [jsLiteral] 的可失败版本：失败（含子结点渲染失败）→ null，
@@ -1592,30 +1592,12 @@ class ElementTranslateContext implements ExprRenderer {
     return b.toString();
   }
 
-  /// 判断一个 Map 是「widget 节点」还是「普通 props / args 容器」。
+  /// 判断一个 Map 是「元素结点」还是「普通 props / args 容器」。
   ///
-  /// 不能用「含 `type` 键」当判据：组件构造里 `Foo(type: _type)` 这类实参名就叫
-  /// `type`，会把整个 props Map 误判成节点（读出的 `type` 是 JS 表达式而非类型名，
-  /// 查表落空后整条结点降级）。节点 Map 由 translator 产出，特征明确：
-  ///   - 键只有 `type` / `props` / `key`（`key` 是元素级 Key，由
-  ///     [ElementTranslateContext._applyKeyProp] 注入，渲染时并入 props）、
-  ///     `ctor`（命名构造名，渲染成 `X.b(...)`）以及生成期标记 `__constSite`
-  ///     （`const` 构造的站点缓存标记，渲染时消费）。
-  ///
-  ///   - `type` 的值是 [jsString] 产出的**带引号字符串字面量**（类型名），
-  ///     而不是 `this._type` 这类运行时表达式。
-  static bool _isNodeMap(Map value) {
-    final t = value['type'];
-    if (t is! String || !t.startsWith('"')) return false;
-    return value.keys.every(
-      (k) =>
-          k == 'type' ||
-          k == 'props' ||
-          k == 'key' ||
-          k == ctorNodeKey ||
-          k == '__constSite',
-    );
-  }
+  /// 判据是结点生产者 [elementToJson] 打的**显式标记** [nodeMarkerKey]——
+  /// 所有类一视同仁，不做任何结构猜测：props 里 `Foo(type: _type)` 这类普通容器
+  /// 与结点同形（都可能有 `type` 键），按键集合 / 引号形态猜必然误判。
+  static bool _isNodeMap(Map value) => value[nodeMarkerKey] == true;
 
   /// 生成 JS 双引号字符串字面量（委托 [jsStringLiteral]，与 js_translator 共用唯一实现）。
   String jsString(String s) => jsStringLiteral(s);

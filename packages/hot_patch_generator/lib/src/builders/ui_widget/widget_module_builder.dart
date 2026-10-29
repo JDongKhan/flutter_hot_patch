@@ -252,21 +252,51 @@ String lazyChildHostTypesLiteral() {
   return '{${parts.join(', ')}}';
 }
 
-/// **静态工厂转发**：`styleFrom` 返回的不是元素而是样式值，转发给对应值类
-/// （与命名构造无关，形态上看也是 `X.b(...)`）。
-const Map<String, String> _wrapperStaticFactories = {'styleFrom': 'ButtonStyle'};
-
-/// 包装类的**命名构造静态方法**（`ListView.separated(props)`）。
+/// JS 侧**镜像值类**名（从 flutter.js 的值类区源码自动抽取 `export class X`）。
 ///
-/// 翻译层对命名构造是 1:1 发射（`A.b(...)` → `A.b({...})`），所以 JS 类上必须有
-/// 同名静态方法。JS 没有 Dart 的命名构造，故由静态方法把构造名写进
-/// `props.factory`——这是**宿主选择原生工厂的唯一依据**（`SizedBox.shrink` /
-/// `Image.network` / `ListView.separated` 都由宿主 renderer 按 `factory` 还原）。
-/// 构造名从源码自动抽取（[CtorSignatures.ctorNamesOf]），SDK / 依赖包新增命名
-/// 构造后重构建即自动补齐，无需登记任何类名或构造名。
+/// 用途：判定「静态工厂的落点」——源码里声明的静态方法**返回类型**是镜像值类
+/// 时（`ElevatedButton.styleFrom` → `ButtonStyle`），JS 侧落点就是构造该值类。
+/// 抽取自产物源码本身，生成器不维护任何类型表。
+Set<String> get mirrorValueClasses => _mirrorValueClasses ??= {
+      for (final m in _exportClassDecl.allMatches(flutterValueClassesSource()))
+        m.group(1)!,
+    };
+Set<String>? _mirrorValueClasses;
+final RegExp _exportClassDecl =
+    RegExp(r'^[ \t]*export class[ \t]+([A-Za-z_$][\w$]*)', multiLine: true);
+
+/// 包装类的**静态方法**（Dart 命名构造 / 静态方法的 1:1 落点）。
+///
+/// 翻译层对命名构造与静态调用都是 1:1 发射（`A.b(...)` → `A.b({...})`），所以
+/// JS 类上必须有同名静态方法：
+///   - **命名构造**（`SizedBox.shrink` / `ListView.separated`）：静态方法把构造名
+///     写进 `props.factory`——这是**宿主选择原生工厂的唯一依据**（宿主 renderer
+///     按 `factory` 还原）。构造名从源码自动抽取（[CtorSignatures.ctorNamesOf]）。
+///   - **静态方法**（`ElevatedButton.styleFrom`）：源码里声明的静态方法若返回
+///     **镜像值类**（[mirrorValueClasses]），落点就是构造该值类
+///     （`static styleFrom(props) { return new ButtonStyle(props); }`）。
+///     返回组件自身、非镜像类型、或形参含 `BuildContext`（`X.of(context)` /
+///     `Divider.createBorderSide(context, …)` 这类运行期上下文查找）、以及私有
+///     静态方法（应用代码不可见）一律不生成。
+///
+/// 两条判据都只来自源码事实，SDK / 依赖包新增构造或静态工厂后重构建即自动补齐，
+/// 无需登记任何类名或方法名。
 String namedCtorStatics(String type, {Iterable<String> extra = const []}) {
-  final names = <String>{...?CtorSignatures.instance?.ctorNamesOf(type), ...extra};
-  final factories = _wrapperStaticFactories;
+  final sigs = CtorSignatures.instance;
+  final names = <String>{...?sigs?.ctorNamesOf(type), ...extra};
+  final factories = <String, String>{};
+  final statics = sigs?.staticMethodsOf(type) ?? const <String, StaticMethodInfo>{};
+  for (final e in statics.entries) {
+    final info = e.value;
+    final ret = info.returnType;
+    if (!e.key.startsWith('_') &&
+        !info.takesContext &&
+        ret != null &&
+        ret != type &&
+        mirrorValueClasses.contains(ret)) {
+      factories[e.key] = ret;
+    }
+  }
   if (names.isEmpty && factories.isEmpty) return '';
   final b = StringBuffer();
   for (final n in names.toList()..sort()) {
@@ -274,7 +304,7 @@ String namedCtorStatics(String type, {Iterable<String> extra = const []}) {
         "return new $type(Object.assign({}, props, { factory: '$n' })); }");
   }
   for (final f in factories.entries) {
-    b.writeln('  static ${f.key}(props) { return ${f.value}.${f.key}(props); }');
+    b.writeln('  static ${f.key}(props) { return new ${f.value}(props); }');
   }
   return b.toString();
 }
@@ -285,16 +315,33 @@ String namedCtorStatics(String type, {Iterable<String> extra = const []}) {
 /// 与包装类同一条口径：翻译层对命名构造 1:1 发射（`A.b(...)` → `A.b({...})`），
 /// 静态方法把构造名写进 `props.factory`，构造名从源码自动抽取
 /// （[CtorSignatures.ctorNamesOf]），SDK / 依赖包新增命名构造后重构建即自动补齐，
-/// 不需要任何类名或构造名登记。
+/// 不需要任何类名或构造名登记。产出的是**类体内**的 `static` 成员
+/// （由 [withClassStatics] 插进类体末尾）。
 String logicCtorStatics(String type) {
   final names = CtorSignatures.instance?.ctorNamesOf(type) ?? const <String>{};
   if (names.isEmpty) return '';
   final b = StringBuffer();
   for (final n in names.toList()..sort()) {
-    b.writeln('$type.$n = function (props) { '
-        "return new $type(Object.assign({}, props, { factory: '$n' })); };");
+    b.writeln('  static $n(props) { '
+        "return new $type(Object.assign({}, props, { factory: '$n' })); }");
   }
   return b.toString();
+}
+
+/// 把类体静态成员 [statics] 插到单类源码 [classSource] 的类体末尾。
+///
+/// 逻辑组件的 JS 源码都是**单个类定义**（[logicWidgetSources]，类体外没有其它
+/// 顶层语句），故最后一个 `}` 即类体闭合；找不到时出声（不静默丢静态方法）。
+String withClassStatics(String classSource, String statics) {
+  if (statics.isEmpty) return classSource;
+  final i = classSource.lastIndexOf('}');
+  if (i < 0) {
+    throw StateError(
+      '[hot_patch_generator] 逻辑组件源码缺少类体闭合花括号：\n$classSource',
+    );
+  }
+  final head = classSource.substring(0, i).trimRight();
+  return '$head\n$statics${classSource.substring(i)}';
 }
 
 /// 宿主包装类源码：类名 = 宿主类型名，构造即产出元素描述（type 仍是**字符串**）。
@@ -1070,8 +1117,7 @@ String renderPackageModule(String package, Set<String> types) {
     if (logic != null) {
       b
         ..writeln()
-        ..writeln(logic)
-        ..writeln(logicCtorStatics(t));
+        ..writeln(withClassStatics(logic, logicCtorStatics(t)));
       continue;
     }
     // builder 命名构造代理（`.builder` / `.separated`）：元素 type 是类引用，

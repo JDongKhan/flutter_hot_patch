@@ -8,6 +8,10 @@
 - `G.__core` 交接面补齐：作用域机制、结点归属、独立根 mount/unmount/commit，以及 `building` / `activeRoot` 的访问器（闭包 var 必须实时读写）。
 - **命名构造改为 1:1 发射**：翻译层不再往 `props` 写 `factory`，而是把构造名作为结点中间态（`ctor`）只用于发射 `X.b({...})`（`SizedBox.shrink(...)` / `Image.network(...)` / `ListView.separated(...)` / `ChangeNotifierProvider.value(...)`）。JS 没有 Dart 的命名构造，故 `flutter.js` 的包装类与逻辑组件对每个源码构造名生成**同名静态方法**，由静态方法把构造名写进 `props.factory`——宿主仍只按 `props.factory` 选原生工厂，协议不变。
 - 宿主补齐此前「静态方法写了 `factory` 但 renderer 没消费」的构造：`SizedBox.shrink/expand/square/fromSize`、`Positioned.fill/directional`、`Transform.rotate/scale/flip`、`Card.filled/outlined`、`Visibility.maintain`、`SliverVisibility.maintain`、`Text.rich`、`IconButton.filled/filledTonal/outlined`、`FloatingActionButton.extended/large/small`、`ElevatedButton/TextButton/OutlinedButton/FilledButton.icon/tonal/tonalIcon`、`Dialog.fullscreen`、`AlertDialog.adaptive`、`TabBar.secondary`、`SliverAppBar.large/medium`、`SliverGrid.count/extent`、`SliverFixedExtentList.builder`。
+- **删除生成器里的静态工厂硬编码表**（原 `_wrapperStaticFactories = {'styleFrom': 'ButtonStyle'}`）：它不按类型生效，会给每个包装类（含 `@PatchIgnore` 的 `_LabeledDivider`）都生成 `static styleFrom`。改为源码事实驱动——`CtorSignatures.staticMethodsOf(type)` 返回**返回类型是镜像值类**的静态方法（`ElevatedButton.styleFrom` → `static styleFrom(props) { return new ButtonStyle(props); }`），并排除形参含 `BuildContext`（`X.of(context)` / `Divider.createBorderSide(context, …)`）与私有方法。
+- 逻辑组件的命名构造静态方法改为**类体内的 `static`**（`ChangeNotifierProvider` 的 `static value(props)`），不再生成类外赋值 `X.name = function…`；`_LabeledDivider` 一类包装类不会再出现无主的静态转发。
+- `TextStyle` / `ButtonStyle` 去掉 `__pos` / `factory` 过滤：二者构造参数全为具名参、无命名构造，产物不可能下发这些协议键，直接按原名拷贝。
+- 结点判定去掉结构猜测（原 `_isNodeMap` 按「`type` 是带引号字符串 + 键集合白名单」猜）：结点 Map 由 `elementToJson` 统一打内部标记 `__node`，渲染层只认标记，props 里 `Foo(type: …)` 这类普通容器不再可能被误判。
 
 ## 0.3.2
 

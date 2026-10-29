@@ -38,6 +38,13 @@ import 'element2js.dart';
 /// 选择原生工厂）。
 const String ctorNodeKey = 'ctor';
 
+/// 结点 Map 的**显式标记键**（产物中间态，不跨语言）。
+///
+/// 结点 Map 只由本文件（[elementToJson]）生产，生产时打上该标记；渲染层据此
+/// 判定「这是元素结点」——不再按键集合 / 引号形态猜测（props 里 `Foo(type: _t)`
+/// 这类普通容器与结点同形，猜测必然误判）。
+const String nodeMarkerKey = '__node';
+
 /// 任意 widget 构造 → 产物结点描述。
 Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx) {
   final props = <String, dynamic>{};
@@ -108,6 +115,7 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
   return {
     'type': ctx.jsString(node.type),
     'props': nonNull(props),
+    nodeMarkerKey: true,
     if (factory != null) ctorNodeKey: factory,
   };
 }

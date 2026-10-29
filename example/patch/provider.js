@@ -35,9 +35,8 @@ export class ChangeNotifierProvider {
       this.__value.dispose();
     }
   }
+  static value(props) { return new ChangeNotifierProvider(Object.assign({}, props, { factory: 'value' })); }
 }
-ChangeNotifierProvider.value = function (props) { return new ChangeNotifierProvider(Object.assign({}, props, { factory: 'value' })); };
-
 
 export class Consumer {
   constructor(props) {
@@ -58,7 +57,6 @@ export class Consumer {
     });
   }
 }
-
 
 export class MultiProvider {
   constructor(props) {
@@ -86,7 +84,6 @@ export class MultiProvider {
     return node;
   }
 }
-
 
 // ===== 本包（provider）自有的运行期登记 =====
 // ── provider 库自有的运行期登记（跟本包的类同一模块，随模块求值生效）──

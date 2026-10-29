@@ -47,6 +47,21 @@ class CtorSignature {
   static const empty = CtorSignature([], {});
 }
 
+/// 单个静态方法的源码事实。
+class StaticMethodInfo {
+  const StaticMethodInfo(this.returnType, {this.takesContext = false});
+
+  /// 返回类型名（非具名类型 / 无返回类型 → null）。
+  final String? returnType;
+
+  /// 形参里是否出现 `BuildContext`。
+  ///
+  /// `X.of(context)` / `X.createBorderSide(context, color)` 这类是**运行期上下文
+  /// 查找**，不是值构造；据此与「值工厂」（`ElevatedButton.styleFrom`）区分。
+  /// 判据是源码形参类型，不按方法名判断。
+  final bool takesContext;
+}
+
 /// 构造签名索引（进程内单例，按需建立类名 → 源文件索引）。
 class CtorSignatures {
   CtorSignatures._(this._sources);
@@ -130,6 +145,54 @@ class CtorSignatures {
       }
     }
     return names;
+  }
+
+  /// 该类在源码里声明的**静态方法**名 → 源码事实（返回类型 / 是否要上下文）。
+  ///
+  /// 只用于「静态工厂落点」判定：`ElevatedButton.styleFrom(...)` 在 Dart 里是
+  /// 静态方法，语法形态与命名构造同形（`X.m(...)`），JS 侧必须有同名静态方法。
+  /// 返回类型决定落点——返回**镜像值类**时，落点就是构造该值类。
+  /// 判据全部来自源码声明，不登记任何类名 / 方法名：SDK 新增同类静态工厂，
+  /// 重构建即自动补齐。
+  Map<String, StaticMethodInfo> staticMethodsOf(String className) {
+    final out = <String, StaticMethodInfo>{};
+    final files = _ensureIndex()[className];
+    if (files == null) return out;
+    for (final file in files) {
+      final unit = _units.containsKey(file)
+          ? _units[file]
+          : _units[file] = parseUnitFile(file);
+      if (unit == null) continue;
+      for (final d in unit.declarations) {
+        if (d is! ClassDeclaration || d.name.lexeme != className) continue;
+        for (final m in d.members) {
+          if (m is! MethodDeclaration || !m.isStatic) continue;
+          if (m.isGetter || m.isSetter) continue;
+          final type = m.returnType;
+          final params = m.parameters?.parameters ?? const <FormalParameter>[];
+          out[m.name.lexeme] = StaticMethodInfo(
+            type is NamedType ? type.name2.lexeme : null,
+            takesContext: _takesContext(params),
+          );
+        }
+      }
+    }
+    return out;
+  }
+
+  /// 形参里是否出现 `BuildContext`（`X.of(context)` 这类上下文查找的判据）。
+  static bool _takesContext(List<FormalParameter> params) {
+    for (final p in params) {
+      final inner = p is DefaultFormalParameter ? p.parameter : p;
+      final TypeAnnotation? type = switch (inner) {
+        SimpleFormalParameter() => inner.type,
+        FieldFormalParameter() => inner.type,
+        SuperFormalParameter() => inner.type,
+        _ => null,
+      };
+      if (type is NamedType && type.name2.lexeme == 'BuildContext') return true;
+    }
+    return false;
   }
 
   /// 源码索引：该名字是否是**枚举**（`Colors` 这类静态常量类是 class，不是 enum）。

@@ -213,8 +213,11 @@ const String styleValuesJsSource = r'''
   export class TextStyle {
     constructor(props) {
       props = props || {};
+      // TextStyle 的构造参数全是具名参（源码里没有位置参、也没有命名构造），
+      // 产物只可能下发 Dart 实参本身，不存在 `__pos` / `factory` 这类协议键，
+      // 因此按原名直接拷贝，不做协议键过滤。
       for (var k in props) {
-        if (k !== '__pos' && k !== 'factory' && props[k] != null) { this[k] = props[k]; }
+        if (props[k] != null) { this[k] = props[k]; }
       }
     }
     toJSON() {
@@ -429,8 +432,9 @@ const String styleValuesJsSource = r'''
   export class ButtonStyle {
     constructor(props) {
       props = props || {};
+      // 与 TextStyle 同理：构造参数全是具名参，直接按原名拷贝。
       for (var k in props) {
-        if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+        if (props[k] != null) { this[k] = props[k]; }
       }
     }
     toJSON() {
@@ -440,7 +444,5 @@ const String styleValuesJsSource = r'''
       }
       return j;
     }
-    // `ElevatedButton.styleFrom(...)` 等静态工厂的落点（由包装类转发）。
-    static styleFrom(props) { return new ButtonStyle(props); }
   }
 ''';

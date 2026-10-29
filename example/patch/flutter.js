@@ -109,56 +109,48 @@ export class AlertDialog {
     return __h('AlertDialog', props);
   }
   static adaptive(props) { return new AlertDialog(Object.assign({}, props, { factory: 'adaptive' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Align {
   constructor(props) {
     return __h('Align', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedAlign {
   constructor(props) {
     return __h('AnimatedAlign', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedContainer {
   constructor(props) {
     return __h('AnimatedContainer', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedCrossFade {
   constructor(props) {
     return __h('AnimatedCrossFade', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedDefaultTextStyle {
   constructor(props) {
     return __h('AnimatedDefaultTextStyle', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedOpacity {
   constructor(props) {
     return __h('AnimatedOpacity', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedPadding {
   constructor(props) {
     return __h('AnimatedPadding', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedPositioned {
@@ -166,77 +158,66 @@ export class AnimatedPositioned {
     return __h('AnimatedPositioned', props);
   }
   static fromRect(props) { return new AnimatedPositioned(Object.assign({}, props, { factory: 'fromRect' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedRotation {
   constructor(props) {
     return __h('AnimatedRotation', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedScale {
   constructor(props) {
     return __h('AnimatedScale', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedSize {
   constructor(props) {
     return __h('AnimatedSize', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedSlide {
   constructor(props) {
     return __h('AnimatedSlide', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedSwitcher {
   constructor(props) {
     return __h('AnimatedSwitcher', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AppBar {
   constructor(props) {
     return __h('AppBar', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AspectRatio {
   constructor(props) {
     return __h('AspectRatio', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class BottomNavigationBar {
   constructor(props) {
     return __h('BottomNavigationBar', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class BottomNavigationBarItem {
   constructor(props) {
     return __h('BottomNavigationBarItem', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CachedNetworkImage {
   constructor(props) {
     return __h('CachedNetworkImage', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Card {
@@ -245,14 +226,12 @@ export class Card {
   }
   static filled(props) { return new Card(Object.assign({}, props, { factory: 'filled' })); }
   static outlined(props) { return new Card(Object.assign({}, props, { factory: 'outlined' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Center {
   constructor(props) {
     return __h('Center', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Checkbox {
@@ -260,21 +239,18 @@ export class Checkbox {
     return __h('Checkbox', props);
   }
   static adaptive(props) { return new Checkbox(Object.assign({}, props, { factory: 'adaptive' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Chip {
   constructor(props) {
     return __h('Chip', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CircleAvatar {
   constructor(props) {
     return __h('CircleAvatar', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CircularProgressIndicator {
@@ -282,98 +258,84 @@ export class CircularProgressIndicator {
     return __h('CircularProgressIndicator', props);
   }
   static adaptive(props) { return new CircularProgressIndicator(Object.assign({}, props, { factory: 'adaptive' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ClipOval {
   constructor(props) {
     return __h('ClipOval', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ClipRRect {
   constructor(props) {
     return __h('ClipRRect', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ColorFiltered {
   constructor(props) {
     return __h('ColorFiltered', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Column {
   constructor(props) {
     return __h('Column', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ConstrainedBox {
   constructor(props) {
     return __h('ConstrainedBox', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Container {
   constructor(props) {
     return __h('Container', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CupertinoActionSheet {
   constructor(props) {
     return __h('CupertinoActionSheet', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CupertinoActionSheetAction {
   constructor(props) {
     return __h('CupertinoActionSheetAction', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CupertinoAlertDialog {
   constructor(props) {
     return __h('CupertinoAlertDialog', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CupertinoDialogAction {
   constructor(props) {
     return __h('CupertinoDialogAction', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CustomScrollView {
   constructor(props) {
     return __h('CustomScrollView', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DecoratedBox {
   constructor(props) {
     return __h('DecoratedBox', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DefaultTabController {
   constructor(props) {
     return __h('DefaultTabController', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Dialog {
@@ -381,35 +343,30 @@ export class Dialog {
     return __h('Dialog', props);
   }
   static fullscreen(props) { return new Dialog(Object.assign({}, props, { factory: 'fullscreen' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Dismissible {
   constructor(props) {
     return __h('Dismissible', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Divider {
   constructor(props) {
     return __h('Divider', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Drawer {
   constructor(props) {
     return __h('Drawer', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DrawerHeader {
   constructor(props) {
     return __h('DrawerHeader', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DropdownButton {
@@ -417,14 +374,12 @@ export class DropdownButton {
     return __h('DropdownButton', props);
   }
   static _formField(props) { return new DropdownButton(Object.assign({}, props, { factory: '_formField' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DropdownMenuItem {
   constructor(props) {
     return __h('DropdownMenuItem', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class EasyRefresh {
@@ -432,7 +387,6 @@ export class EasyRefresh {
     return __h('EasyRefresh', props);
   }
   static builder(props) { return new EasyRefresh(Object.assign({}, props, { factory: 'builder' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ElevatedButton {
@@ -440,14 +394,13 @@ export class ElevatedButton {
     return __h('ElevatedButton', props);
   }
   static icon(props) { return new ElevatedButton(Object.assign({}, props, { factory: 'icon' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
+  static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 export class Expanded {
   constructor(props) {
     return __h('Expanded', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FadeInImage {
@@ -456,14 +409,12 @@ export class FadeInImage {
   }
   static assetNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'assetNetwork' })); }
   static memoryNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'memoryNetwork' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FadeTransition {
   constructor(props) {
     return __h('FadeTransition', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FilledButton {
@@ -473,14 +424,13 @@ export class FilledButton {
   static icon(props) { return new FilledButton(Object.assign({}, props, { factory: 'icon' })); }
   static tonal(props) { return new FilledButton(Object.assign({}, props, { factory: 'tonal' })); }
   static tonalIcon(props) { return new FilledButton(Object.assign({}, props, { factory: 'tonalIcon' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
+  static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 export class Flexible {
   constructor(props) {
     return __h('Flexible', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FloatingActionButton {
@@ -490,7 +440,6 @@ export class FloatingActionButton {
   static extended(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'extended' })); }
   static large(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'large' })); }
   static small(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'small' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Focus {
@@ -498,35 +447,30 @@ export class Focus {
     return __h('Focus', props);
   }
   static withExternalFocusNode(props) { return new Focus(Object.assign({}, props, { factory: 'withExternalFocusNode' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FractionallySizedBox {
   constructor(props) {
     return __h('FractionallySizedBox', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class GestureDetector {
   constructor(props) {
     return __h('GestureDetector', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Hero {
   constructor(props) {
     return __h('Hero', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Icon {
   constructor(props) {
     return __h('Icon', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class IconButton {
@@ -536,7 +480,7 @@ export class IconButton {
   static filled(props) { return new IconButton(Object.assign({}, props, { factory: 'filled' })); }
   static filledTonal(props) { return new IconButton(Object.assign({}, props, { factory: 'filledTonal' })); }
   static outlined(props) { return new IconButton(Object.assign({}, props, { factory: 'outlined' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
+  static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 export class Image {
@@ -548,35 +492,30 @@ export class Image {
   static file(props) { return new Image(Object.assign({}, props, { factory: 'file' })); }
   static memory(props) { return new Image(Object.assign({}, props, { factory: 'memory' })); }
   static network(props) { return new Image(Object.assign({}, props, { factory: 'network' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ImageFiltered {
   constructor(props) {
     return __h('ImageFiltered', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ImageIcon {
   constructor(props) {
     return __h('ImageIcon', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class IndexedStack {
   constructor(props) {
     return __h('IndexedStack', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class InkWell {
   constructor(props) {
     return __h('InkWell', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class InputDecoration {
@@ -584,56 +523,48 @@ export class InputDecoration {
     return __h('InputDecoration', props);
   }
   static collapsed(props) { return new InputDecoration(Object.assign({}, props, { factory: 'collapsed' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class KeyboardListener {
   constructor(props) {
     return __h('KeyboardListener', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class LinearProgressIndicator {
   constructor(props) {
     return __h('LinearProgressIndicator', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ListTile {
   constructor(props) {
     return __h('ListTile', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Material {
   constructor(props) {
     return __h('Material', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class NotificationListener {
   constructor(props) {
     return __h('NotificationListener', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Offstage {
   constructor(props) {
     return __h('Offstage', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Opacity {
   constructor(props) {
     return __h('Opacity', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class OutlinedButton {
@@ -641,21 +572,19 @@ export class OutlinedButton {
     return __h('OutlinedButton', props);
   }
   static icon(props) { return new OutlinedButton(Object.assign({}, props, { factory: 'icon' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
+  static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 export class Padding {
   constructor(props) {
     return __h('Padding', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class PopScope {
   constructor(props) {
     return __h('PopScope', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Positioned {
@@ -666,14 +595,12 @@ export class Positioned {
   static fill(props) { return new Positioned(Object.assign({}, props, { factory: 'fill' })); }
   static fromRect(props) { return new Positioned(Object.assign({}, props, { factory: 'fromRect' })); }
   static fromRelativeRect(props) { return new Positioned(Object.assign({}, props, { factory: 'fromRelativeRect' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class PreferredSize {
   constructor(props) {
     return __h('PreferredSize', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Radio {
@@ -681,77 +608,66 @@ export class Radio {
     return __h('Radio', props);
   }
   static adaptive(props) { return new Radio(Object.assign({}, props, { factory: 'adaptive' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class RadioGroup {
   constructor(props) {
     return __h('RadioGroup', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class RichText {
   constructor(props) {
     return __h('RichText', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class RotationTransition {
   constructor(props) {
     return __h('RotationTransition', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Row {
   constructor(props) {
     return __h('Row', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SafeArea {
   constructor(props) {
     return __h('SafeArea', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Scaffold {
   constructor(props) {
     return __h('Scaffold', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ScaleTransition {
   constructor(props) {
     return __h('ScaleTransition', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SimpleDialog {
   constructor(props) {
     return __h('SimpleDialog', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SingleChildScrollView {
   constructor(props) {
     return __h('SingleChildScrollView', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SizeTransition {
   constructor(props) {
     return __h('SizeTransition', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SizedBox {
@@ -762,7 +678,6 @@ export class SizedBox {
   static fromSize(props) { return new SizedBox(Object.assign({}, props, { factory: 'fromSize' })); }
   static shrink(props) { return new SizedBox(Object.assign({}, props, { factory: 'shrink' })); }
   static square(props) { return new SizedBox(Object.assign({}, props, { factory: 'square' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Slider {
@@ -770,7 +685,6 @@ export class Slider {
     return __h('Slider', props);
   }
   static adaptive(props) { return new Slider(Object.assign({}, props, { factory: 'adaptive' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverAppBar {
@@ -779,21 +693,18 @@ export class SliverAppBar {
   }
   static large(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'large' })); }
   static medium(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'medium' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverFillRemaining {
   constructor(props) {
     return __h('SliverFillRemaining', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverFillViewport {
   constructor(props) {
     return __h('SliverFillViewport', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverFixedExtentList {
@@ -802,49 +713,42 @@ export class SliverFixedExtentList {
   }
   static builder(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'builder' })); }
   static list(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'list' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverIgnorePointer {
   constructor(props) {
     return __h('SliverIgnorePointer', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverOffstage {
   constructor(props) {
     return __h('SliverOffstage', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverOpacity {
   constructor(props) {
     return __h('SliverOpacity', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverPadding {
   constructor(props) {
     return __h('SliverPadding', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverSafeArea {
   constructor(props) {
     return __h('SliverSafeArea', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverToBoxAdapter {
   constructor(props) {
     return __h('SliverToBoxAdapter', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverVisibility {
@@ -852,14 +756,12 @@ export class SliverVisibility {
     return __h('SliverVisibility', props);
   }
   static maintain(props) { return new SliverVisibility(Object.assign({}, props, { factory: 'maintain' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Spacer {
   constructor(props) {
     return __h('Spacer', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Stack {
@@ -867,7 +769,6 @@ export class Stack {
     return __h('Stack', props);
   }
   static _fromJson(props) { return new Stack(Object.assign({}, props, { factory: '_fromJson' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Switch {
@@ -875,14 +776,12 @@ export class Switch {
     return __h('Switch', props);
   }
   static adaptive(props) { return new Switch(Object.assign({}, props, { factory: 'adaptive' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Tab {
   constructor(props) {
     return __h('Tab', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class TabBar {
@@ -890,14 +789,12 @@ export class TabBar {
     return __h('TabBar', props);
   }
   static secondary(props) { return new TabBar(Object.assign({}, props, { factory: 'secondary' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class TabBarView {
   constructor(props) {
     return __h('TabBarView', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Text {
@@ -906,7 +803,6 @@ export class Text {
   }
   static _(props) { return new Text(Object.assign({}, props, { factory: '_' })); }
   static rich(props) { return new Text(Object.assign({}, props, { factory: 'rich' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class TextButton {
@@ -914,14 +810,13 @@ export class TextButton {
     return __h('TextButton', props);
   }
   static icon(props) { return new TextButton(Object.assign({}, props, { factory: 'icon' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
+  static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 export class TextField {
   constructor(props) {
     return __h('TextField', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Transform {
@@ -933,7 +828,6 @@ export class Transform {
   static rotate(props) { return new Transform(Object.assign({}, props, { factory: 'rotate' })); }
   static scale(props) { return new Transform(Object.assign({}, props, { factory: 'scale' })); }
   static translate(props) { return new Transform(Object.assign({}, props, { factory: 'translate' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Visibility {
@@ -941,14 +835,12 @@ export class Visibility {
     return __h('Visibility', props);
   }
   static maintain(props) { return new Visibility(Object.assign({}, props, { factory: 'maintain' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Wrap {
   constructor(props) {
     return __h('Wrap', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedBuilder {
@@ -978,7 +870,6 @@ export class AnimatedBuilder {
     }
   }
 }
-
 
 export class AnimatedList {
   constructor(props) {
@@ -1018,7 +909,6 @@ export class AnimatedList {
   }
   static builder(props) { return new AnimatedList(Object.assign({}, props, { factory: 'builder' })); }
   static separated(props) { return new AnimatedList(Object.assign({}, props, { factory: 'separated' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1036,7 +926,6 @@ export class Builder {
     return fn(context);
   }
 }
-
 
 export class GridView {
   constructor(props) {
@@ -1079,7 +968,6 @@ export class GridView {
   static custom(props) { return new GridView(Object.assign({}, props, { factory: 'custom' })); }
   static extent(props) { return new GridView(Object.assign({}, props, { factory: 'extent' })); }
   static separated(props) { return new GridView(Object.assign({}, props, { factory: 'separated' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1116,7 +1004,6 @@ export class LayoutBuilder {
     return __h('LayoutBuilder', props);
   }
 }
-
 
 export class ListView {
   constructor(props) {
@@ -1157,7 +1044,6 @@ export class ListView {
   static builder(props) { return new ListView(Object.assign({}, props, { factory: 'builder' })); }
   static custom(props) { return new ListView(Object.assign({}, props, { factory: 'custom' })); }
   static separated(props) { return new ListView(Object.assign({}, props, { factory: 'separated' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1189,7 +1075,6 @@ export class ListenableBuilder {
   }
 }
 
-
 export class NestedScrollView {
   constructor(props) {
     this.props = props || {};
@@ -1208,7 +1093,6 @@ export class NestedScrollView {
     return __h('NestedScrollView', p);
   }
 }
-
 
 export class OrientationBuilder {
   constructor(props) {
@@ -1229,7 +1113,6 @@ export class OrientationBuilder {
     });
   }
 }
-
 
 export class Overlay {
   constructor(props) {
@@ -1297,7 +1180,6 @@ Overlay.of = function (context) {
   return __scopeOf(context, 'OverlayState');
 };
 
-
 export class OverlayEntry {
   constructor(props) {
     this.props = props || {};
@@ -1361,7 +1243,6 @@ export class PageView {
   static builder(props) { return new PageView(Object.assign({}, props, { factory: 'builder' })); }
   static custom(props) { return new PageView(Object.assign({}, props, { factory: 'custom' })); }
   static separated(props) { return new PageView(Object.assign({}, props, { factory: 'separated' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1403,7 +1284,6 @@ export class ReorderableListView {
   }
   static builder(props) { return new ReorderableListView(Object.assign({}, props, { factory: 'builder' })); }
   static separated(props) { return new ReorderableListView(Object.assign({}, props, { factory: 'separated' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1448,7 +1328,6 @@ export class SliverGrid {
   static extent(props) { return new SliverGrid(Object.assign({}, props, { factory: 'extent' })); }
   static list(props) { return new SliverGrid(Object.assign({}, props, { factory: 'list' })); }
   static separated(props) { return new SliverGrid(Object.assign({}, props, { factory: 'separated' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1491,7 +1370,6 @@ export class SliverList {
   static builder(props) { return new SliverList(Object.assign({}, props, { factory: 'builder' })); }
   static list(props) { return new SliverList(Object.assign({}, props, { factory: 'list' })); }
   static separated(props) { return new SliverList(Object.assign({}, props, { factory: 'separated' })); }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1540,7 +1418,6 @@ export class SliverPersistentHeader {
     return __h('SliverPersistentHeader', props);
   }
 }
-
 
 // Duration 可能是 JS 的 Duration 实例，也可能是裸毫秒数。
 function __tabMs(d) {
@@ -1629,7 +1506,6 @@ export class TweenAnimationBuilder {
   }
 }
 
-
 export class ValueListenableBuilder {
   constructor(props) {
     this.props = props || {};
@@ -1672,7 +1548,6 @@ export class ValueListenableBuilder {
     }
   }
 }
-
 
 export class AnimatedListState extends __StateHandle {
   insertItem(index, duration) {
@@ -2166,8 +2041,11 @@ export class TextScaler {
 export class TextStyle {
   constructor(props) {
     props = props || {};
+    // TextStyle 的构造参数全是具名参（源码里没有位置参、也没有命名构造），
+    // 产物只可能下发 Dart 实参本身，不存在 `__pos` / `factory` 这类协议键，
+    // 因此按原名直接拷贝，不做协议键过滤。
     for (var k in props) {
-      if (k !== '__pos' && k !== 'factory' && props[k] != null) { this[k] = props[k]; }
+      if (props[k] != null) { this[k] = props[k]; }
     }
   }
   toJSON() {
@@ -2382,8 +2260,9 @@ export class AlwaysScrollableScrollPhysics extends __ScrollPhysics {
 export class ButtonStyle {
   constructor(props) {
     props = props || {};
+    // 与 TextStyle 同理：构造参数全是具名参，直接按原名拷贝。
     for (var k in props) {
-      if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+      if (props[k] != null) { this[k] = props[k]; }
     }
   }
   toJSON() {
@@ -2393,8 +2272,6 @@ export class ButtonStyle {
     }
     return j;
   }
-  // `ElevatedButton.styleFrom(...)` 等静态工厂的落点（由包装类转发）。
-  static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 function __toHex(v) {

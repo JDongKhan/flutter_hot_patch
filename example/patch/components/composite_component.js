@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.js';
-import { ButtonStyle, Colors, Column, ElevatedButton, FontWeight, SizedBox, Text, TextStyle, __h } from '../flutter.js';
+import { Colors, Column, ElevatedButton, FontWeight, SizedBox, Text, TextStyle, __h } from '../flutter.js';
 
 // 组件 DashboardCard
 export class DashboardCard {
@@ -90,6 +90,5 @@ class _LabeledDivider {
   constructor(props) {
     return __h('_LabeledDivider', props);
   }
-  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
