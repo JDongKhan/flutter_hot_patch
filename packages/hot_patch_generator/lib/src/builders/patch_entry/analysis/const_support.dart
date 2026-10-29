@@ -1,7 +1,8 @@
 /// 顶层常量（数据文件）支持：识别、跨文件解析、数据产物渲染。
 ///
-/// 与「静态单例类」（[singleton_support]）并列的第二类共享数据：
-///   - 静态单例类：一个类把若干 static 字段收成一个 `export const X = {...}`；
+/// Dart 里「可在 JS 侧共享的数据」有两种来源，本文件负责第二种：
+///   - 类（含纯 static 字段的类）：一律翻译成 JS `class`，静态成员挂在类上
+///     （见 dart2js 的类声明 + 类外后置赋值）；
 ///   - 顶层常量：每个 const 各出一条 `export const X = <值>;`，组件产物
 ///     import 后按名引用（`kBanners`），与 Dart 侧写法一一对应。
 ///
@@ -78,26 +79,9 @@ TopLevelConstResolver buildTopLevelConstResolver(
       }
     }
     if (!sameFile) return;
-    // 类的**私有 static const** 字段（`static const List<String> _steps = [...]`）：
-    // 与顶层常量一样要参与表达式翻译（`_steps.length`、`_menuTints[i % …]`），
-    // 产物顶部同样内联为模块级 `const _x = …`。私有名不可能跨文件引用，故只在
-    // 同文件收集；跨文件同名常量不冲突。
-    //
-    // @PatchIgnore 类跳过：该类整体不产出 JS（不翻译、不注册），它的私有 static
-    // const 没有任何产物内引用点；照收会让被忽略类的常量经这条旁路漏进产物。
-    for (final c in u.declarations.whereType<ClassDeclaration>()) {
-      if (findAnnotation(c.metadata, 'PatchIgnore') != null) continue;
-      for (final m in c.members.whereType<FieldDeclaration>()) {
-        if (!m.isStatic || !m.fields.isConst) continue;
-        for (final v in m.fields.variables) {
-          final init = v.initializer;
-          final name = v.name.lexeme;
-          if (init == null || !name.startsWith('_')) continue;
-          if (exprs.containsKey(name)) continue;
-          exprs[name] = init;
-        }
-      }
-    }
+    // 类的 static 字段**不在这里**收集：Dart 的类一律翻译成 JS `class`，static
+    // const 与 static final 一样是类的静态成员（见 analyze_dart_class /
+    // dart2js 的后置赋值）。本文件只负责**顶层**常量（含私有 `_x`）。
   }
 
   add(unit, sourcePath, sameFile: true);
