@@ -3,7 +3,7 @@ import 'package:hot_patch/hot_patch.dart';
 
 import 'app/app.dart';
 import 'components/composite_component.dart';
-import 'components/grammar_showcase.dart';
+import 'components/grammar/grammar_showcase.dart';
 import 'components/hello_component.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
