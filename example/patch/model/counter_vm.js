@@ -6,8 +6,8 @@ import { BannerCard } from '../components/banner_component.js';
 
 // 模型 CounterVm
 export class CounterVm extends ChangeNotifier {
-  constructor() {
-    super();
+  constructor(args) {
+    super(args);
     this._count = 0;
   }
   get count() {
