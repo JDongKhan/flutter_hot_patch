@@ -296,6 +296,30 @@ export class Container {
   }
 }
 
+export class CupertinoActionSheet {
+  constructor(props) {
+    return __h('CupertinoActionSheet', props);
+  }
+}
+
+export class CupertinoActionSheetAction {
+  constructor(props) {
+    return __h('CupertinoActionSheetAction', props);
+  }
+}
+
+export class CupertinoAlertDialog {
+  constructor(props) {
+    return __h('CupertinoAlertDialog', props);
+  }
+}
+
+export class CupertinoDialogAction {
+  constructor(props) {
+    return __h('CupertinoDialogAction', props);
+  }
+}
+
 export class CustomScrollView {
   constructor(props) {
     return __h('CustomScrollView', props);

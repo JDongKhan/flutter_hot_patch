@@ -120,6 +120,29 @@ Future<void> _onPanelOpen(Map payload) async {
         useSafeArea: options['useSafeArea'] as bool? ?? false,
         builder: (_) => content,
       );
+    case 'cupertinoSheet':
+      // Cupertino 的模态弹层：路由、动画、安全区都归 Cupertino（与 Material
+      // 的 bottom sheet 不是同一条路由）。barrierColor 在本 API 中非空。
+      route = showCupertinoModalPopup<Object?>(
+        context: ctx,
+        useRootNavigator: useRootNavigator,
+        barrierDismissible: barrierDismissible,
+        barrierColor: barrierColor ?? kCupertinoModalBarrierColor,
+        semanticsDismissible: options['semanticsDismissible'] as bool? ?? false,
+        builder: (_) => content,
+      );
+    case 'adaptive':
+      // iOS / macOS → Cupertino alert，其余平台 → Material dialog，由 Flutter
+      // 按 Theme.platform 自行选择，宿主不重复判断。
+      route = showAdaptiveDialog<Object?>(
+        context: ctx,
+        useRootNavigator: useRootNavigator,
+        barrierDismissible: barrierDismissible,
+        barrierColor: barrierColor,
+        barrierLabel: barrierLabel,
+        useSafeArea: options['useSafeArea'] as bool? ?? true,
+        builder: (_) => content,
+      );
     case 'cupertino':
       route = showCupertinoDialog<Object?>(
         context: ctx,

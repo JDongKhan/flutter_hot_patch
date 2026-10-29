@@ -110,8 +110,8 @@ class WidgetShowcase extends StatelessWidget {
     ]),
     _Group('弹层', [
       _Entry(
-        'showDialog / AlertDialog',
-        '命令式弹层：builder 在 JS 侧建树挂独立根，返回值经 Future 回传',
+        'showDialog / 底部弹层 / Cupertino',
+        '命令式弹层全家桶：builder 在 JS 侧建树挂独立根，返回值经 Future 回传',
         'DialogDetail',
       ),
     ]),

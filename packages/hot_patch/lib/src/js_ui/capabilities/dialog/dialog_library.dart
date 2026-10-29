@@ -1,8 +1,10 @@
 // ===== Dialog 能力：组件注册 =====
 //
-// 弹层内容里最常用的容器组件（AlertDialog / SimpleDialog / Dialog）。
-// 它们只是**普通宿主组件映射**：弹层的挂载/关闭全在 dialog_bridge.dart，
-// 这里不持有任何状态，也不做「这是不是一个弹层」的判断。
+// 弹层内容里最常用的容器组件（AlertDialog / SimpleDialog / Dialog）与
+// Cupertino 侧的弹窗 / 动作面板。它们只是**普通宿主组件映射**：弹层的
+// 挂载/关闭全在 dialog_bridge.dart，这里不持有任何状态，也不做「这是不是
+// 一个弹层」的判断。
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../js_widget_registry.dart';
@@ -70,6 +72,54 @@ void registerDialogWidgets(JsWidgetRegistry r) {
       shape: shapeFromJson(c.props['shape']),
       alignment: alignmentFromJson(c.props['alignment']),
       child: (c.children['child'] as Widget?),
+    );
+  });
+
+  // ── Cupertino 侧 ──
+  // 这些只是普通的宿主 widget 映射：用在 showCupertinoDialog /
+  // showAdaptiveDialog / showCupertinoModalPopup 里，也可以在页面内直接用。
+
+  // CupertinoAlertDialog：title / content 单元素 slot，actions 数组 slot。
+  // insetAnimationDuration / Curve 保持 Flutter 默认（不映射，避免覆盖主题）。
+  r.register('CupertinoAlertDialog', (c) {
+    return CupertinoAlertDialog(
+      title: (c.children['title'] as Widget?),
+      content: (c.children['content'] as Widget?),
+      actions: (c.children['actions'] as List<Widget>?) ?? const <Widget>[],
+    );
+  });
+
+  // CupertinoDialogAction：CupertinoAlertDialog.actions 里的标准按钮。
+  r.register('CupertinoDialogAction', (c) {
+    return CupertinoDialogAction(
+      onPressed: c.on('onPressed'),
+      isDefaultAction: c.bool_('isDefaultAction') ?? false,
+      isDestructiveAction: c.bool_('isDestructiveAction') ?? false,
+      textStyle: textStyleFromJson(c.map('textStyle')),
+      child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
+    );
+  });
+
+  // CupertinoActionSheet：title / message / cancelButton 单元素 slot，
+  // actions 数组 slot（CupertinoActionSheetAction）。
+  r.register('CupertinoActionSheet', (c) {
+    final actions = (c.children['actions'] as List<Widget>?) ?? const <Widget>[];
+    return CupertinoActionSheet(
+      title: (c.children['title'] as Widget?),
+      message: (c.children['message'] as Widget?),
+      actions: actions.isEmpty ? null : actions,
+      cancelButton: (c.children['cancelButton'] as Widget?),
+    );
+  });
+
+  // CupertinoActionSheetAction：onPressed 在 Flutter 侧是必填，JS 没给时按
+  // 空实现兜底（否则整棵弹层树构造成立即抛断言）。
+  r.register('CupertinoActionSheetAction', (c) {
+    return CupertinoActionSheetAction(
+      onPressed: c.on('onPressed') ?? () {},
+      isDefaultAction: c.bool_('isDefaultAction') ?? false,
+      isDestructiveAction: c.bool_('isDestructiveAction') ?? false,
+      child: (c.children['child'] as Widget?) ?? const SizedBox.shrink(),
     );
   });
 }

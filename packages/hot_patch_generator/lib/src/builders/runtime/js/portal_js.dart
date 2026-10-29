@@ -87,10 +87,18 @@ const String portalJsSource = r'''
     // 也不会串台。
     var anchor = new JsBuildContext(caller, callerNode);
     anchor.__panelKey = key;
+    // 建树回调按 Flutter 的原形参名取：`showDialog` / `showModalBottomSheet`
+    // 等用 `builder`，`showGeneralDialog` 用 `pageBuilder`——两者都是「在弹层
+    // 上下文里建一次树」，协议相同，这里不按 API 名特判。
+    var buildFn = typeof options.builder === 'function'
+      ? options.builder
+      : (typeof options.pageBuilder === 'function' ? options.pageBuilder : null);
     var built = null;
-    if (typeof options.builder === 'function') {
-      // 与 Dart 一致：builder 立即执行（在弹层上下文里建树）。
-      built = options.builder(anchor);
+    if (buildFn) {
+      // 与 Dart 一致：建树回调立即执行（在弹层上下文里建树）。
+      // 只传 ctx：`pageBuilder` 的 animation / secondaryAnimation 是宿主侧的
+      // 动画对象，JS 端没有可等价的值（用到的话属于未支持项）。
+      built = buildFn(anchor);
     }
     var el = asElement(built);
     var p = {
@@ -201,10 +209,14 @@ const String portalJsSource = r'''
   // Dart 侧签名（NamedArgument 全部落进 options 对象，由宿主按 kind 还原）：
   //   showDialog<T>({context, builder, barrierDismissible, barrierColor, …})
   G.showDialog = function (options) { return openPanel('dialog', options); };
+  // 自适应：iOS / macOS 走 Cupertino，其余走 Material（宿主调 showAdaptiveDialog）。
+  G.showAdaptiveDialog = function (options) { return openPanel('adaptive', options); };
   G.showGeneralDialog = function (options) { return openPanel('general', options); };
   G.showCupertinoDialog = function (options) { return openPanel('cupertino', options); };
   G.showModalBottomSheet = function (options) { return openPanel('sheet', options); };
-  G.showCupertinoModalPopup = function (options) { return openPanel('sheet', options); };
+  // Cupertino 的模态弹层（通常承载 CupertinoActionSheet）：与 Material 的
+  // showModalBottomSheet 语义不同（路由/动画/安全区归属都是 Cupertino 的）。
+  G.showCupertinoModalPopup = function (options) { return openPanel('cupertinoSheet', options); };
 
   // `Navigator.of(context).pop(v)` / `Navigator.pop(context, v)`：只在弹层内
   // 有意义，实现见 panelPop。挂到 G 后，`x is Navigator` 与 `Navigator.xxx(...)`
