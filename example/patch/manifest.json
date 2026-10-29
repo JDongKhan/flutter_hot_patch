@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-29T10:01:18.272819",
+  "buildTime": "2026-10-29T10:31:12.156932",
   "resources": {
     "flutter.js": "53bf4113ec2d43522fbe6667628d3b1d221fe543e3d8899578137877fcf38cab",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
@@ -20,11 +20,12 @@
     "components/safe_area_detail.js": "28fe31c57c5300247e09523e951f035fd10d704289e2438aefbe59f4031c9ec7",
     "components/widget_details.js": "e7b6b2c8bd8f0f80be22f9b0dca131596a88983a870c4e285569c5706d17ff6e",
     "components/orientation_builder_detail.js": "65a1e353a7c2c250e1899e55ef3ff528432919c015b0e779694a91f486f9fea4",
+    "components/grammar/extension/estrange.js": "c6ec8f1258af46d319a81797d00c934467e1602a70aea410a011a7cca99a22cf",
+    "components/grammar/extension/e_string.js": "a97227ee0072bad4c96151c66f787fdddbd0bf819b48c49d8b7a246f870da8a9",
+    "components/grammar/extension/e_string3.js": "80d0b1ad62ae85c5655ed7f4e4797fe86f010238b4f9956a9874dc8d383fb0ed",
+    "components/grammar/grammar_details.js": "cce192b285354fe8d7d7796ebfa9a313f2eef91a2fa08d980bc99e359be50ee7",
     "components/automatic_keep_alive_detail.js": "3c1bb2e7747120d50471235b14cc528fc51a928a6746a42bb0bfb61ca66e517f",
     "components/tween_animation_builder_detail.js": "2211a37f22cd5d98643cfdd4c2b539a92e4d2009df6e9b151fe15beea92b6527",
-    "components/extension/estrange.js": "a3a1c9250926f9c3e6089fe1eb87fcb9d421683f5df9ba614c1b05539d0f53b0",
-    "components/extension/e_string.js": "4df5394dd9f95eaa355d4fa108129d6bbde576e06bffc8efa86d440d2d3aa417",
-    "components/extension/e_string3.js": "3eddaf16bcea74433640b71ef08b7654ad271499dfe06930d01a2c1aa38fa9dd",
     "components/provider_component.js": "926ec8c82861ff79db7835bdc806c124248ab90068b538080b984b3091bb5c2d",
     "components/banner_component.js": "a32b2e228bbe21b8c3042f3d2b72d16da6388736d52014146c3296f289869594",
     "components/visibility_detail.js": "ed185d1cb81d0ffdb41064840d670c9b847c5425ee1103e55ce48892bd7336aa",
@@ -48,14 +49,13 @@
     "components/keyboard_listener_detail.js": "dc28cabc6d33b82251b17cadcf2d76ce524dd3984ada23fcf81d64d1bc2b9cfd",
     "components/spacer_detail.js": "4d3a789b13fa9ffe26e6f3d6dd366d37258416ba0fdf5420c973810a5b576a80",
     "components/implicit_animation_detail.js": "a336adb21b96fea2e1e0664ca332bb09a91d833eaec37fa5e6b38e2486036bae",
-    "components/grammar_details.js": "1bf684389df2a25b5bc75288e239eb22c2a489f5520939617c3b2cb13747d428",
-    "components/hello_component.js": "fc3b06e9730db38840012d9e5cbdfbbe54f1f04456e5c68d18d58751ca983fc0",
+    "components/hello_component.js": "5e51f49c0c76c19dd4fc747861d8e871f947858e4d9837b4ffe860a39ddffdaf",
     "components/nested_scroll_view_detail.js": "5b7f2c67f9c5d4d40c1d1d627f9425b01bd99de2faad141f4e99914468832c68",
     "components/hero_detail.js": "0b657f3c2f3d0575ddf93abd46911583c007eedc3c1199bf2ab82f5c1d397018",
     "components/animated_list_detail.js": "4bcd0ed2268d1b814e90ba354ea5c14a926f8273fc01816e764af7ef1bd68369",
     "components/watch_demo.js": "b7008490f0613b1b7a12145f6e73eb762e12d7a343a8f8fe873165b2c83363e4",
     "components/image_icon_detail.js": "15e419f66e3cee1a55087607534e828a91c24c0ebc6e815fab5cc61c2be3a846",
-    "model/network_vm.js": "9c390ef9c440b3a7498bc6bc23b808ea90a76d9307fcf1df91b27973013011c7",
-    "model/counter_vm.js": "f8bd479498a2d27de5204e8290920f169f9f7981dc8c21e433f2f717c204fc8d"
+    "model/network_vm.js": "b8049bb28d5bbec2a10d499216f778b395dd315a3f6f1fcf375d8fdf879f9341",
+    "model/counter_vm.js": "03f9bf7fe3b6c8ac74fed267d543d49996460e42864596ecdbb1201bde091439"
   }
 }
