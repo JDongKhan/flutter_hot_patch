@@ -8,8 +8,6 @@ const _avatarImg = "assets/images/photo-1494790108377-be9c29b29330.jpg";
 const _bannerImg = "assets/images/photo-1519046904884-53103b34b206.jpg";
 export const kBrand = new Color({value: 0xFF0E7AFB});
 export const kPrice = new Color({value: 0xFFFF5A36});
-const _steps = ["提交订单", "支付成功", "商家发货", "已完成"];
-const _cities = ["上海", "北京", "成都", "杭州", "西安", "三亚"];
 
 // 组件 MiniButton
 export class MiniButton {
