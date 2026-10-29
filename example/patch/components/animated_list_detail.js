@@ -4,9 +4,6 @@
 
 import { AnimatedList, Card, CircleAvatar, Column, Expanded, ListTile, Row, SizedBox, Text, TextButton } from '../flutter.js';
 
-const _insertDuration = new Duration({milliseconds: 350});
-const _removeDuration = new Duration({milliseconds: 300});
-
 // 组件 AnimatedListDetail
 export class AnimatedListDetail {
   constructor(args) {
@@ -50,7 +47,7 @@ export class AnimatedListDetail {
     var index = this._items.length;
     this.setState(() => { this._items.add("条目 " + (++this._seq)); });
     var state = this._listKey.currentState;
-    state.insertItem(index, _insertDuration);
+    state.insertItem(index, AnimatedListDetail._insertDuration);
   }
   _removeFirst() {
     if (this._items.isEmpty) {
@@ -84,7 +81,7 @@ export class AnimatedListDetail {
             "data": removed
           })
         })
-      }); }, _removeDuration);
+      }); }, AnimatedListDetail._removeDuration);
   }
   build(context) {
     return new Column({
@@ -135,4 +132,6 @@ export class AnimatedListDetail {
     });
   }
 }
+AnimatedListDetail._insertDuration = new Duration({milliseconds: 350});
+AnimatedListDetail._removeDuration = new Duration({milliseconds: 300});
 

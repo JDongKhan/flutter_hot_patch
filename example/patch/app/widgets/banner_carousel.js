@@ -5,10 +5,6 @@
 import { HomeBanner } from '../model/app_models.js';
 import { ClipRRect, Column, Container, Image, InkWell, Padding, PageView, Positioned, Row, SizedBox, Stack, Text } from '../../flutter.js';
 
-const _height = 150;
-const _interval = new Duration({seconds: 5});
-const _animate = new Duration({milliseconds: 350});
-
 // 组件 BannerCarousel
 export class BannerCarousel {
   constructor(args) {
@@ -60,7 +56,7 @@ export class BannerCarousel {
     if ((this.banners.length < 2)) {
       return;
     }
-    this._timer = Timer.periodic({duration: _interval, callback: (timer) => { return this._tick(timer); }});
+    this._timer = Timer.periodic({duration: BannerCarousel._interval, callback: (timer) => { return this._tick(timer); }});
   }
   _tick(timer) {
     if ((this._timer == null)) {
@@ -71,7 +67,7 @@ export class BannerCarousel {
       return;
     }
     var next = (((this._index + 1)) % count);
-    this._controller.animateToPage(next, _animate, Curves.easeOut);
+    this._controller.animateToPage(next, BannerCarousel._animate, Curves.easeOut);
     this.setState(() => { this._index = next; });
   }
   _onPageChanged(index) {
@@ -86,7 +82,7 @@ export class BannerCarousel {
       "mainAxisSize": "min",
       "children": [
         new SizedBox({
-          "height": _height,
+          "height": BannerCarousel._height,
           "child": new PageView({
             "controller": this._controller,
             "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a)),
@@ -125,6 +121,9 @@ export class BannerCarousel {
     });
   }
 }
+BannerCarousel._height = 150;
+BannerCarousel._interval = new Duration({seconds: 5});
+BannerCarousel._animate = new Duration({milliseconds: 350});
 
 // 组件 BannerSlide
 export class BannerSlide {
