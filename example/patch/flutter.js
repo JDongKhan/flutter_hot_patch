@@ -1577,6 +1577,7 @@ const G = globalThis;
 const {
   defineProtoGetter: __defineProtoGetter,
   defineController, defineHandleKind, handleOp, reg,
+  panelPop, panelOf,
 } = G.__core;
 
 // 构建期查不到构造签名时，位置实参以 `__pos: [...]` 下发；这里按形参名顺序
@@ -1615,11 +1616,10 @@ export class Duration {
     this.inMilliseconds = Math.round(ms);
     this.inMicroseconds = Math.round(ms * 1000);
   }
+  toJSON() {
+    return { __duration: this.inMilliseconds };
+  }
 }
-Duration.prototype.toJSON = function () {
-  return { __duration: this.inMilliseconds };
-};
-G.Duration = Duration;
 
 export class Size {
   constructor(props) {
@@ -1627,32 +1627,32 @@ export class Size {
     this.width = props.width;
     this.height = props.height;
   }
+  toJSON() {
+    return { width: this.width, height: this.height };
+  }
+  static fromHeight(props) {
+    props = __posArgs(props, ['height']);
+    return new Size({ width: Infinity, height: props.height });
+  }
+  static fromWidth(props) {
+    props = __posArgs(props, ['width']);
+    return new Size({ width: props.width, height: Infinity });
+  }
+  static square(props) {
+    props = __posArgs(props, ['dimension']);
+    return new Size({ width: props.dimension, height: props.dimension });
+  }
+  static copy(props) {
+    props = __posArgs(props, ['source']);
+    return new Size({ width: props.source.width, height: props.source.height });
+  }
+  /** Dart 的 static const：零尺寸 / 无穷尺寸。 */
+  static zero = new Size({ width: 0, height: 0 });
+  static infinite = new Size({ width: Infinity, height: Infinity });
 }
-Size.prototype.toJSON = function () {
-  return { width: this.width, height: this.height };
-};
 // Dart `Size` 的命名构造 / 静态常量（产物按统一规则发射 `Size.fromHeight({…})`）。
 // **无界维度是 +∞**：跨桥时 `JSON.stringify(Infinity)` 得到 null，宿主侧按 ∞
 // 还原（见 js_widget_registry 的 PreferredSize / layout 约束的 null 约定）。
-Size.fromHeight = function (props) {
-  props = __posArgs(props, ['height']);
-  return new Size({ width: Infinity, height: props.height });
-};
-Size.fromWidth = function (props) {
-  props = __posArgs(props, ['width']);
-  return new Size({ width: props.width, height: Infinity });
-};
-Size.square = function (props) {
-  props = __posArgs(props, ['dimension']);
-  return new Size({ width: props.dimension, height: props.dimension });
-};
-Size.copy = function (props) {
-  props = __posArgs(props, ['source']);
-  return new Size({ width: props.source.width, height: props.source.height });
-};
-Size.zero = { width: 0, height: 0 };
-Size.infinite = { width: Infinity, height: Infinity };
-G.Size = Size;
 
 export class Offset {
   constructor(props) {
@@ -1660,11 +1660,10 @@ export class Offset {
     this.dx = props.dx != null ? props.dx : 0;
     this.dy = props.dy != null ? props.dy : 0;
   }
+  toJSON() {
+    return { dx: this.dx, dy: this.dy };
+  }
 }
-Offset.prototype.toJSON = function () {
-  return { dx: this.dx, dy: this.dy };
-};
-G.Offset = Offset;
 
 // Alignment：产物在**值位置**（LinearGradient 的 begin/end、Container 的
 // alignment 等）可能直接引用 `Alignment.topLeft`（不是所有位置都会经过
@@ -1678,12 +1677,20 @@ export class Alignment {
     this.x = props.x != null ? props.x : 0;
     this.y = props.y != null ? props.y : 0;
   }
+  toJSON() {
+    return { x: this.x, y: this.y };
+  }
+  // 静态常量即成员名字符串：宿主 alignmentFromJson 只认名字。
+  static topLeft = "topLeft";
+  static topCenter = "topCenter";
+  static topRight = "topRight";
+  static centerLeft = "centerLeft";
+  static center = "center";
+  static centerRight = "centerRight";
+  static bottomLeft = "bottomLeft";
+  static bottomCenter = "bottomCenter";
+  static bottomRight = "bottomRight";
 }
-Alignment.prototype.toJSON = function () { return { x: this.x, y: this.y }; };
-['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center',
-  'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight'
-].forEach(function (n) { Alignment[n] = n; });
-G.Alignment = Alignment;
 
 export class Radius {
   constructor(props) {
@@ -1692,10 +1699,11 @@ export class Radius {
     this.x = r;
     this.y = r;
   }
+  toJSON() {
+    return { radius: this.x };
+  }
+  static circular(props) { return new Radius(props); }
 }
-Radius.circular = function (props) { return new Radius(props); };
-Radius.prototype.toJSON = function () { return { radius: this.x }; };
-G.Radius = Radius;
 
 // BoxConstraints：布局约束值对象（LayoutBuilder 的 builder 第二参）。宿主按
 // {minWidth, maxWidth, minHeight, maxHeight} 下发，无界维度发 null（JSON 不能
@@ -1708,32 +1716,21 @@ export class BoxConstraints {
     this.minHeight = props.minHeight != null ? props.minHeight : 0;
     this.maxHeight = props.maxHeight != null ? props.maxHeight : Infinity;
   }
+  get biggest() { return new Size({ width: this.maxWidth, height: this.maxHeight }); }
+  get smallest() { return new Size({ width: this.minWidth, height: this.minHeight }); }
+  get isTight() { return this.minWidth >= this.maxWidth && this.minHeight >= this.maxHeight; }
+  get hasBoundedWidth() { return this.maxWidth < Infinity; }
+  get hasBoundedHeight() { return this.maxHeight < Infinity; }
+  // 无界维度回 null：与宿主下发协议同形，保证跨语言往返一致。
+  toJSON() {
+    return {
+      minWidth: this.minWidth,
+      maxWidth: this.maxWidth === Infinity ? null : this.maxWidth,
+      minHeight: this.minHeight,
+      maxHeight: this.maxHeight === Infinity ? null : this.maxHeight,
+    };
+  }
 }
-__defineProtoGetter(BoxConstraints.prototype, 'biggest', function () {
-  return new Size({ width: this.maxWidth, height: this.maxHeight });
-});
-__defineProtoGetter(BoxConstraints.prototype, 'smallest', function () {
-  return new Size({ width: this.minWidth, height: this.minHeight });
-});
-__defineProtoGetter(BoxConstraints.prototype, 'isTight', function () {
-  return this.minWidth >= this.maxWidth && this.minHeight >= this.maxHeight;
-});
-__defineProtoGetter(BoxConstraints.prototype, 'hasBoundedWidth', function () {
-  return this.maxWidth < Infinity;
-});
-__defineProtoGetter(BoxConstraints.prototype, 'hasBoundedHeight', function () {
-  return this.maxHeight < Infinity;
-});
-// 无界维度回 null：与宿主下发协议同形，保证跨语言往返一致。
-BoxConstraints.prototype.toJSON = function () {
-  return {
-    minWidth: this.minWidth,
-    maxWidth: this.maxWidth === Infinity ? null : this.maxWidth,
-    minHeight: this.minHeight,
-    maxHeight: this.maxHeight === Infinity ? null : this.maxHeight,
-  };
-};
-G.BoxConstraints = BoxConstraints;
 
 // TextSpan：Dart 富文本子树的值对象（RichText 的 `text`）。产物按统一规则
 // 发射 `new TextSpan({text, style, children, semanticsLabel})`；这里镜像字段，
@@ -1748,7 +1745,6 @@ export class TextSpan {
     if (props.semanticsLabel != null) { this.semanticsLabel = props.semanticsLabel; }
   }
 }
-G.TextSpan = TextSpan;
 
 // ---------------------------------------------------------------------------
 // 渐变与装饰：绘制层值对象（`LinearGradient` / `RadialGradient` /
@@ -1788,9 +1784,10 @@ export class LinearGradient {
     var p = __gradientProps(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
     for (var k in p) { this[k] = p[k]; }
   }
+  toJSON() {
+    return __gradientJson('linear', this);
+  }
 }
-LinearGradient.prototype.toJSON = function () { return __gradientJson('linear', this); };
-G.LinearGradient = LinearGradient;
 
 export class RadialGradient {
   constructor(props) {
@@ -1798,9 +1795,10 @@ export class RadialGradient {
     ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
     for (var k in p) { this[k] = p[k]; }
   }
+  toJSON() {
+    return __gradientJson('radial', this);
+  }
 }
-RadialGradient.prototype.toJSON = function () { return __gradientJson('radial', this); };
-G.RadialGradient = RadialGradient;
 
 export class SweepGradient {
   constructor(props) {
@@ -1808,9 +1806,10 @@ export class SweepGradient {
     ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
     for (var k in p) { this[k] = p[k]; }
   }
+  toJSON() {
+    return __gradientJson('sweep', this);
+  }
 }
-SweepGradient.prototype.toJSON = function () { return __gradientJson('sweep', this); };
-G.SweepGradient = SweepGradient;
 
 // BoxDecoration：字段名与 Dart 构造具名实参一致，toJSON 直出宿主协议
 //（值为 null 的键不下发——宿主对 null 与缺省同义，少发更干净）。
@@ -1822,15 +1821,14 @@ export class BoxDecoration {
       if (props[k] != null) { this[k] = props[k]; }
     }
   }
-}
-BoxDecoration.prototype.toJSON = function () {
-  var json = {};
-  for (var k in this) {
-    if (this[k] != null) { json[k] = this[k]; }
+  toJSON() {
+    var json = {};
+    for (var k in this) {
+      if (this[k] != null) { json[k] = this[k]; }
+    }
+    return json;
   }
-  return json;
-};
-G.BoxDecoration = BoxDecoration;
+}
 
 // ----- 枚举镜像 ---------------------------------------------------------
 // Dart 枚举 → JS class + static 字段，值 = 成员名字符串：跨语言只有 name 能
@@ -1845,7 +1843,6 @@ export class DismissDirection {
   static up = "up";
   static down = "down";
 }
-G.DismissDirection = DismissDirection;
 
 function __toHex(v) {
   var n = (v >>> 0).toString(16).toUpperCase();
@@ -1858,59 +1855,62 @@ export class Color {
     props = __posArgs(props, ['value']);
     this.value = props.value != null ? (props.value >>> 0) : 0;
   }
+  withAlpha(a) {
+    return new Color({ value: ((a & 0xFF) << 24) | (this.value & 0x00FFFFFF) });
+  }
+  withOpacity(o) {
+    var a = Math.round(Math.max(0, Math.min(1, o)) * 255);
+    return this.withAlpha(a);
+  }
+  withValues(opts) {
+    opts = __posArgs(opts, []);
+    var a = opts.alpha != null ? Math.round(opts.alpha * 255) : this.alpha;
+    var r = opts.red != null ? opts.red : this.red;
+    var g = opts.green != null ? opts.green : this.green;
+    var b = opts.blue != null ? opts.blue : this.blue;
+    return Color.fromARGB({ a: a, r: r, g: g, b: b });
+  }
+  toJSON() {
+    return __toHex(this.value);
+  }
+  toString() {
+    return __toHex(this.value);
+  }
+  static fromARGB(props) {
+    props = __posArgs(props, ['a', 'r', 'g', 'b']);
+    return new Color({ value: ((props.a & 0xFF) << 24) | ((props.r & 0xFF) << 16) |
+      ((props.g & 0xFF) << 8) | (props.b & 0xFF) });
+  }
+  static fromRGBO(props) {
+    props = __posArgs(props, ['r', 'g', 'b', 'opacity']);
+    var o = props.opacity != null ? props.opacity : 1;
+    return Color.fromARGB({ a: Math.round(o * 255), r: props.r, g: props.g, b: props.b });
+  }
+  static lerp(props) {
+    props = __posArgs(props, ['a', 'b', 't']);
+    var a = props.a || new Color({ value: 0 });
+    var b = props.b || new Color({ value: 0 });
+    var t = props.t == null ? 0.5 : props.t;
+    function mix(x, y) { return Math.round(x + (y - x) * t); }
+    return Color.fromARGB({
+      a: mix(a.alpha, b.alpha), r: mix(a.red, b.red),
+      g: mix(a.green, b.green), b: mix(a.blue, b.blue)
+    });
+  }
+  get alpha() {
+    return (this.value >> 24) & 0xFF;
+  }
+  get red() {
+    return (this.value >> 16) & 0xFF;
+  }
+  get green() {
+    return (this.value >> 8) & 0xFF;
+  }
+  get blue() {
+    return this.value & 0xFF;
+  }
 }
 // 序列化：宿主 colorFromJson 只认 '#RRGGBB' / '#AARRGGBB'。
-Color.prototype.toJSON = function () { return __toHex(this.value); };
-Color.prototype.toString = function () { return __toHex(this.value); };
-Color.prototype.withAlpha = function (a) {
-  return new Color({ value: ((a & 0xFF) << 24) | (this.value & 0x00FFFFFF) });
-};
-Color.prototype.withOpacity = function (o) {
-  var a = Math.round(Math.max(0, Math.min(1, o)) * 255);
-  return this.withAlpha(a);
-};
-Color.prototype.withValues = function (opts) {
-  opts = __posArgs(opts, []);
-  var a = opts.alpha != null ? Math.round(opts.alpha * 255) : this.alpha;
-  var r = opts.red != null ? opts.red : this.red;
-  var g = opts.green != null ? opts.green : this.green;
-  var b = opts.blue != null ? opts.blue : this.blue;
-  return Color.fromARGB({ a: a, r: r, g: g, b: b });
-};
-Object.defineProperty(Color.prototype, 'alpha', {
-  get: function () { return (this.value >> 24) & 0xFF; }
-});
-Object.defineProperty(Color.prototype, 'red', {
-  get: function () { return (this.value >> 16) & 0xFF; }
-});
-Object.defineProperty(Color.prototype, 'green', {
-  get: function () { return (this.value >> 8) & 0xFF; }
-});
-Object.defineProperty(Color.prototype, 'blue', {
-  get: function () { return this.value & 0xFF; }
-});
-Color.fromARGB = function (props) {
-  props = __posArgs(props, ['a', 'r', 'g', 'b']);
-  return new Color({ value: ((props.a & 0xFF) << 24) | ((props.r & 0xFF) << 16) |
-    ((props.g & 0xFF) << 8) | (props.b & 0xFF) });
-};
-Color.fromRGBO = function (props) {
-  props = __posArgs(props, ['r', 'g', 'b', 'opacity']);
-  var o = props.opacity != null ? props.opacity : 1;
-  return Color.fromARGB({ a: Math.round(o * 255), r: props.r, g: props.g, b: props.b });
-};
-Color.lerp = function (props) {
-  props = __posArgs(props, ['a', 'b', 't']);
-  var a = props.a || new Color({ value: 0 });
-  var b = props.b || new Color({ value: 0 });
-  var t = props.t == null ? 0.5 : props.t;
-  function mix(x, y) { return Math.round(x + (y - x) * t); }
-  return Color.fromARGB({
-    a: mix(a.alpha, b.alpha), r: mix(a.red, b.red),
-    g: mix(a.green, b.green), b: mix(a.blue, b.blue)
-  });
-};
-G.Color = Color;
 
 // MaterialColor / MaterialAccentColor / ColorSwatch：值仍是 Color（主色），
 // 额外持各档位。档位同时挂在 `shadeNN` 与数字下标上，故 Dart 的
@@ -1931,7 +1931,6 @@ export class MaterialColor extends Color {
     __swatch(this, p.swatch);
   }
 }
-G.MaterialColor = MaterialColor;
 
 export class MaterialAccentColor extends Color {
   constructor(props) {
@@ -1940,7 +1939,6 @@ export class MaterialAccentColor extends Color {
     __swatch(this, p.swatch);
   }
 }
-G.MaterialAccentColor = MaterialAccentColor;
 
 export class ColorSwatch extends Color {
   constructor(props) {
@@ -1949,9 +1947,8 @@ export class ColorSwatch extends Color {
     __swatch(this, p.swatch);
   }
 }
-G.ColorSwatch = ColorSwatch;
 
-// ChangeNotifier 基类（IIFE 骨架内定义，挂 G 供产物继承）。
+// ChangeNotifier 基类（flutter.js 模块内的 `export class`）。
 //
 // **职责只有一件事：提供模型本体**。addListener / removeListener 保留在 JS
 // 侧（JS 自身逻辑要订阅模型），notifyListeners 双路派发：
@@ -1960,48 +1957,44 @@ G.ColorSwatch = ColorSwatch;
 //      JsChangeNotifier，驱动 Dart 侧 ChangeNotifierProvider 子树刷新）。
 // 构造时登记句柄（kind=notifier/ChangeNotifier），meta.type = JS 端类名 —— Dart 端的
 // 通用镜像据此「记下它的 JS 端类型」（context.watch<T>() 的类型一路传到这里）。
-class ChangeNotifier {
+export class ChangeNotifier {
   constructor() {
     this._listeners = [];
     this.__id = reg(this, 'notifier/ChangeNotifier', {
       meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
     });
   }
+  addListener(f) {
+    this._listeners.push(f);
+  }
+  removeListener(f) {
+    var i = this._listeners.indexOf(f);
+    if (i >= 0) {
+      this._listeners.splice(i, 1);
+    }
+  }
+  notifyListeners() {
+    var ls = this._listeners.slice();
+    for (var i = 0; i < ls.length; i++) { ls[i](); }
+    // 双路之②：JS→宿主只有异步桥，故这里是 fire-and-forget（不阻塞本地派发）。
+    if (this.__id != null) { handleOp(this.__id, 'notify'); }
+  }
+  // Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
+  // 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
+  // 同时释放跨语言句柄 → 宿主端的通用镜像一并销毁（1:1 资源）。
+  // 作为元素 prop 下发时（如 ChangeNotifierProvider 的 `notifier`）只带句柄 id：
+  // 真实对象只存在于 JS 端，宿主经句柄取到自己的通用镜像。
+  dispose() {
+    this._listeners = [];
+    if (this.__id != null) {
+      releaseHandle(this.__id);
+      this.__id = null;
+    }
+  }
+  toJSON() {
+    return { __handle: this.__id };
+  }
 }
-ChangeNotifier.prototype.addListener = function(f) {
-  this._listeners.push(f);
-};
-ChangeNotifier.prototype.removeListener = function(f) {
-  var i = this._listeners.indexOf(f);
-  if (i >= 0) {
-    this._listeners.splice(i, 1);
-  }
-};
-ChangeNotifier.prototype.notifyListeners = function() {
-  var ls = this._listeners.slice();
-  for (var i = 0; i < ls.length; i++) { ls[i](); }
-  // 双路之②：JS→宿主只有异步桥，故这里是 fire-and-forget（不阻塞本地派发）。
-  if (this.__id != null) { handleOp(this.__id, 'notify'); }
-};
-// Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
-// 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
-// 同时释放跨语言句柄 → 宿主端的通用镜像一并销毁（1:1 资源）。
-ChangeNotifier.prototype.dispose = function() {
-  this._listeners = [];
-  if (this.__id != null) {
-    releaseHandle(this.__id);
-    this.__id = null;
-  }
-};
-// 作为元素 prop 下发时（如 ChangeNotifierProvider 的 `notifier`）只带句柄 id：
-// 真实对象只存在于 JS 端，宿主经句柄取到自己的通用镜像。
-ChangeNotifier.prototype.toJSON = function() {
-  return { __handle: this.__id };
-};
-
-// 顶层暴露：产物（模块 evaluate）里 `class X extends ChangeNotifier` 经
-// globalThis 裸引用解析（与顶层 var 语义等价）。
-G.ChangeNotifier = ChangeNotifier;
 
 // ValueNotifier<T>：单值版 ChangeNotifier（`ValueNotifier<int>(0)`）。
 //
@@ -2009,32 +2002,27 @@ G.ChangeNotifier = ChangeNotifier;
 // meta.type 由 `constructor.name` 自动取成 'ValueNotifier'，宿主镜像仍是通用
 // JsChangeNotifier（无需新 kind，见 change_notifier_bridge.dart）。
 //
-// `value` 用 defineProperty 的 get/set 实现，setter 里 **=== 守卫**是
+// `value` 用类内 getter/setter 实现，setter 里 **=== 守卫**是
 // `ValueListenableBuilder`「值不变不重建」语义的唯一来源：相同即 return，
 // 不同才赋值并 notifyListeners()（与 Dart ValueNotifier 一致）。
 //
 // 构造实参与其他 Dart 类一样按**具名 props 对象**下发（Dart 的 `ValueNotifier(this._value)`，
 // 形参名就是 `_value`，见 ctor_signatures），故这里按 `_value` 键取值；
 // 直接传裸值时（手写 / 内部调用）也兼容。
-class ValueNotifier extends ChangeNotifier {
+export class ValueNotifier extends ChangeNotifier {
   constructor(props) {
     super();
     this._value = (props !== null && typeof props === 'object' && '_value' in props)
     ? props._value
     : props;
   }
-}
-Object.defineProperty(ValueNotifier.prototype, 'value', {
-  configurable: true,
-  enumerable: false,
-  get: function () { return this._value; },
-  set: function (v) {
+  get value() { return this._value; }
+  set value(v) {
     if (this._value === v) { return; }
     this._value = v;
     this.notifyListeners();
-  },
-});
-G.ValueNotifier = ValueNotifier;
+  }
+}
 // 只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主已完成真实插值）；
 // 宿主侧按同名表还原真实 Curve（见 animation_from_json.curveFromJson）。
 function __animCurveFn(name) {
@@ -2072,13 +2060,12 @@ var __CURVE_NAMES = [
   'elasticIn', 'elasticOut', 'elasticInOut',
   'fastLinearToSlowEaseIn', 'fastEaseInToSlowEaseOut'
 ];
-var Curves = {};
+export const Curves = {};
 for (var __ci = 0; __ci < __CURVE_NAMES.length; __ci++) {
   Curves[__CURVE_NAMES[__ci]] = __CURVE_NAMES[__ci];
 }
-G.Curves = Curves;
 
-G.CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
+export const CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
 
 // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
 // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
@@ -2088,16 +2075,15 @@ export class Tween {
     this.begin = opts.begin;
     this.end = opts.end;
   }
-}
-Tween.prototype.lerp = function (t) {
-  var b = this.begin, e = this.end;
-  if (typeof b === 'number' && typeof e === 'number') { return b + (e - b) * t; }
-  if (b && e && typeof b.dx === 'number' && typeof e.dx === 'number') {
-    return new Offset(b.dx + (e.dx - b.dx) * t, b.dy + (e.dy - b.dy) * t);
+  lerp(t) {
+    var b = this.begin, e = this.end;
+    if (typeof b === 'number' && typeof e === 'number') { return b + (e - b) * t; }
+    if (b && e && typeof b.dx === 'number' && typeof e.dx === 'number') {
+      return new Offset(b.dx + (e.dx - b.dx) * t, b.dy + (e.dy - b.dy) * t);
+    }
+    return t < 0.5 ? b : e;
   }
-  return t < 0.5 ? b : e;
-};
-G.Tween = Tween;
+}
 
 export class CurvedAnimation {
   constructor(opts) {
@@ -2105,37 +2091,34 @@ export class CurvedAnimation {
     this.parent = opts.parent;
     this.curve = opts.curve;
   }
-}
-Object.defineProperty(CurvedAnimation.prototype, 'value', {
-  get: function () {
+  get value() {
     var t = (this.parent && typeof this.parent.value === 'number') ? this.parent.value : 0;
     return __animCurveFn(this.curve)(t);
   }
-});
-CurvedAnimation.prototype.addListener = function (f) {
-  if (this.parent && typeof this.parent.addListener === 'function') {
-    this.parent.addListener(f);
+  addListener(f) {
+    if (this.parent && typeof this.parent.addListener === 'function') {
+      this.parent.addListener(f);
+    }
   }
-};
-CurvedAnimation.prototype.removeListener = function (f) {
-  if (this.parent && typeof this.parent.removeListener === 'function') {
-    this.parent.removeListener(f);
+  removeListener(f) {
+    if (this.parent && typeof this.parent.removeListener === 'function') {
+      this.parent.removeListener(f);
+    }
   }
-};
-CurvedAnimation.prototype.toJSON = function () {
-  return {
-    __handle: this.parent ? this.parent.__id : null,
-    __curve: this.curve,
-    value: this.value
-  };
-};
-G.CurvedAnimation = CurvedAnimation;
+  toJSON() {
+    return {
+      __handle: this.parent ? this.parent.__id : null,
+      __curve: this.curve,
+      value: this.value
+    };
+  }
+}
 
 // 真实控制器在宿主（Ticker 驱动）；本镜像只保存 value 与时长：
 //   - forward/reverse/repeat/stop/reset → `handleOp('call')`（载荷带 value 与
 //     时长，宿主据此对齐状态后再驱动）；
 //   - 宿主每帧回传 value → onHost 更新镜像 + __notify（JS listeners 据此重建）。
-var AnimationController = defineController('ctrl/Flash', {
+export const AnimationController = defineController('ctrl/Flash', {
   init: function (opts) {
     opts = opts || {};
     this._value = (typeof opts.value === 'number') ? opts.value : 0;
@@ -2199,7 +2182,6 @@ AnimationController.prototype.stop = function () {
 AnimationController.prototype.reset = function () {
   this.__play('reset', null);
 };
-G.AnimationController = AnimationController;
 
 // 生成器把 Dart 侧 `final ScrollController _scrollController = ScrollController();`
 // 翻译成 `this._scrollController = new ScrollController()`；实例与宿主侧真实
@@ -2233,7 +2215,7 @@ function __animArgs(opts, curveArg) {
   if (typeof curveArg === 'string') { curve = curveArg; }
   return { ms: ms, curve: curve };
 }
-var ScrollController = defineController('ctrl/Scroll', {
+export const ScrollController = defineController('ctrl/Scroll', {
   init: function () {
     this.offset = 0;
     this.__maxScrollExtent = 0;
@@ -2272,13 +2254,12 @@ Object.defineProperty(ScrollController.prototype, 'position', {
 Object.defineProperty(ScrollController.prototype, 'hasClients', {
   get: function () { return this.__id != null; }
 });
-G.ScrollController = ScrollController;
 
 // ===== PageController 代理类（对应 Flutter 官方 PageController）=====
 // 与 ScrollController 同一套句柄层；镜像字段只有 page / initialPage。
 // 构造参数（initialPage / viewportFraction）随 toJSON 的 extraJSON 下发，
 // 宿主 PageView renderer 据此创建真实 PageController。
-var PageController = defineController('ctrl/Page', {
+export const PageController = defineController('ctrl/Page', {
   init: function (opts) {
     var o = opts || {};
     this.initialPage = (o.initialPage != null) ? o.initialPage : 0;
@@ -2317,7 +2298,6 @@ PageController.prototype.previousPage = function (opts, curveArg) {
 Object.defineProperty(PageController.prototype, 'hasClients', {
   get: function () { return this.__id != null; }
 });
-G.PageController = PageController;
 
 // TextEditingController：JS 侧代理类，与宿主真实 TextEditingController 按
 // **句柄 id** 绑定（通用层，同 ScrollController 模式）。
@@ -2329,7 +2309,7 @@ G.PageController = PageController;
 //   - TextField(controller: 句柄) 渲染时宿主按 id 取真实实例，用户输入经
 //     textFn 回传 JS 镜像并触发 listeners。
 // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`。
-var TextEditingController = defineController('ctrl/Text', {
+export const TextEditingController = defineController('ctrl/Text', {
   init: function (initial) {
     this.__text =
     (initial && typeof initial.text === 'string') ? initial.text : '';
@@ -2367,9 +2347,8 @@ Object.defineProperty(TextEditingController.prototype, 'selection', {
     }
   }
 });
-G.TextEditingController = TextEditingController;
 
-var FocusNode = defineController('ctrl/Focus', {
+export const FocusNode = defineController('ctrl/Focus', {
   init: function (opts) {
     var o = opts || {};
     this.__hasFocus = false;
@@ -2400,7 +2379,6 @@ FocusNode.prototype.unfocus = function () {
 Object.defineProperty(FocusNode.prototype, 'hasFocus', {
   get: function () { return this.__hasFocus === true; }
 });
-G.FocusNode = FocusNode;
 
 // LogicalKeyboardKey：keyId → 实例（身份去重，常量与事件共用同一张表）。
 var __keyInstances = {};
@@ -2449,13 +2427,12 @@ for (var __c = 0; __c < 26; __c++) {
   var __letter = String.fromCharCode(0x61 + __c).toUpperCase();
   __KEY_CONSTS['key' + __letter] = [0x61 + __c, __letter];
 }
-var LogicalKeyboardKey = {};
+export const LogicalKeyboardKey = {};
 for (var __name in __KEY_CONSTS) {
   __defineProtoGetter(LogicalKeyboardKey, __name, (function (name) {
     return function () { return __logicalKey(__KEY_CONSTS[name][0], __KEY_CONSTS[name][1]); };
   })(__name));
 }
-G.LogicalKeyboardKey = LogicalKeyboardKey;
 
 // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
 var __physKeys = {};
@@ -2466,7 +2443,6 @@ export class PhysicalKeyboardKey {
     this.debugName = props.debugName || '';
   }
 }
-G.PhysicalKeyboardKey = PhysicalKeyboardKey;
 function __physicalKey(usb, label) {
   var k = __physKeys[usb];
   if (!k) {
@@ -2487,22 +2463,18 @@ export class KeyEvent {
     this.timeStamp = props.timeStamp;
   }
 }
-G.KeyEvent = KeyEvent;
 
 // 按键事件子类：Dart 侧各自是 KeyEvent 的子类，JS 侧原生 extends（这样
 // `instanceof KeyDownEvent` 与 `instanceof KeyEvent` 同时成立）。
-class KeyDownEvent extends KeyEvent {
+export class KeyDownEvent extends KeyEvent {
   constructor(props) { super(props); }
 }
-class KeyUpEvent extends KeyEvent {
+export class KeyUpEvent extends KeyEvent {
   constructor(props) { super(props); }
 }
-class KeyRepeatEvent extends KeyEvent {
+export class KeyRepeatEvent extends KeyEvent {
   constructor(props) { super(props); }
 }
-G.KeyDownEvent = KeyDownEvent;
-G.KeyUpEvent = KeyUpEvent;
-G.KeyRepeatEvent = KeyRepeatEvent;
 
 // 宿主桥接见 capabilities/keyboard_listener/keyboard_listener_bridge.dart：
 // 原生 KeyEvent → JSON（kind / character / keyId / keyLabel / usbHidUsage /
@@ -2683,7 +2655,7 @@ function __jsuiMqAspect(context, aspect) {
 }
 
 // Dart 的静态取值方法：每个都按自己的 aspect 代理（取值 + 重建粒度都对齐）。
-var MediaQuery = {
+export const MediaQuery = {
   of: function (context) { return __jsuiMqOf(context); },
   // `maybeOf` 语义：没有 MediaQuery 祖先时返回 null；这里退化为兜底对象
   // （字段齐全，读不崩），与 `of` 同源。
@@ -2733,15 +2705,22 @@ var MediaQuery = {
 
 // Dart 枚举 / 常量镜像：产物里 `Orientation.portrait` 等是原样引用，
 // 值取同一套字符串（宿主 JSON 里也是这套字符串）。
-var Orientation = { portrait: 'portrait', landscape: 'landscape' };
-var Brightness = { dark: 'dark', light: 'light' };
-var NavigationMode = { traditional: 'traditional', directional: 'directional' };
+export const Orientation = { portrait: 'portrait', landscape: 'landscape' };
+export const Brightness = { dark: 'dark', light: 'light' };
+export const NavigationMode = { traditional: 'traditional', directional: 'directional' };
 
-G.MediaQuery = MediaQuery;
-G.Orientation = Orientation;
-G.Brightness = Brightness;
-G.NavigationMode = NavigationMode;
 G.__jsuiSetMediaQuery = __jsuiSetMediaQuery;
+
+export class Navigator {
+  constructor(context) { this.__context = context; }
+  static of(context, opts) { return new Navigator(context); }
+  static maybeOf(context, opts) { return new Navigator(context); }
+  static pop(context, result) { return panelPop(context, result); }
+  static maybePop(context, result) { return panelPop(context, result); }
+  pop(result) { return panelPop(this.__context, result); }
+  maybePop(result) { return panelPop(this.__context, result); }
+  canPop() { return panelOf(this.__context) !== null; }
+}
 
 // 宿主下发的约束 JSON → BoxConstraints。
 // 挂 G：包模块（flutter.js）只能裸引用全局，IIFE 内的局部声明它看不见。
@@ -2764,7 +2743,7 @@ G.__jsuiBoxConstraints = function (json) {
 //     TabBar / TabBarView 时按 id 取/建（length 随句柄下发，见 extraJSON）；
 //   - index setter：立即设置宿主 index 并通知监听者；
 //   - animateTo(i)：宿主 controller.animateTo（带动画）。
-var TabController = defineController('ctrl/Tab', {
+export const TabController = defineController('ctrl/Tab', {
   init: function (opts) {
     opts = opts || {};
     this.length = (typeof opts.length === 'number') ? opts.length : 0;
@@ -2801,7 +2780,6 @@ Object.defineProperty(TabController.prototype, 'index', {
     this.__notify();
   }
 });
-G.TabController = TabController;
 
 // TabBarView 是**懒容器**（子页被 SliverFillViewport 强制成整屏，零尺寸占位
 // 布局中性）——不在运行时声明：由生成器配置 lazyChildHostTypes 在 __h 里给
@@ -2817,20 +2795,22 @@ const objectToken = G.objectToken;
 // 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
 export class ValueKey {
   constructor(props) { this.__vkey = __posArgs(props, ['value']).value; }
-}
-ValueKey.prototype.toJSON = function () {
-  var v = this.__vkey;
-  if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
-    return { __vtok: objectToken(v) };
+  toJSON() {
+    var v = this.__vkey;
+    if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
+      return { __vtok: objectToken(v) };
+    }
+    return { __vkey: v };
   }
-  return { __vkey: v };
-};
+}
 
 // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
 export class ObjectKey {
   constructor(props) { this.__okey = objectToken(__posArgs(props, ['value']).value); }
+  toJSON() {
+    return { __okey: this.__okey };
+  }
 }
-ObjectKey.prototype.toJSON = function () { return { __okey: this.__okey }; };
 
 // PageStorageKey：Dart 侧 `extends ValueKey`（按**值**相等），但宿主必须造
 // **真实** PageStorageKey——它的意义是滚动位置按 key 存进 PageStorage bucket，
@@ -2844,8 +2824,10 @@ export class PageStorageKey {
     ? { __vtok: objectToken(value) }
     : value;
   }
+  toJSON() {
+    return { __psk: this.__psk };
+  }
 }
-PageStorageKey.prototype.toJSON = function () { return { __psk: this.__psk }; };
 
 // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
 defineHandleKind('key/Global', {});
@@ -2861,8 +2843,20 @@ export class GlobalKey {
       meta: debugLabel == null ? null : { debugLabel: debugLabel }
     });
   }
+  toJSON() {
+    return { __handle: this.__id };
+  }
+  get currentContext() {
+    return this.__id == null ? null : new KeyRef(this.__id);
+  }
+  get currentState() {
+    if (this.__id == null) { return null; }
+    // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
+    // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
+    var type = this.__stateType || handleOp(this.__id, '__type', {});
+    return __stateProxyOf(this.__id, type);
+  }
 }
-GlobalKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
 // GlobalKey.currentContext / findRenderObject()：BuildContext 与 RenderObject 是
 // **宿主端**概念——JS 侧既没有真实对象，也没有同步取值的能力（JS→宿主只有异步
@@ -2875,47 +2869,34 @@ GlobalKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 //     后即为真实值，见 widget_details 的 _measureFixed）。
 export class KeyRef {
   constructor(id) { this.__key = id; }
+  showOnScreen() {
+    if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
+  }
+  measure() {
+    if (this.__key == null) { return Promise.resolve(null); }
+    return handleOp(this.__key, 'measure', {});
+  }
+  findRenderObject() {
+    return new KeyRef(this.__key);
+  }
 }
-KeyRef.prototype.findRenderObject = function () { return new KeyRef(this.__key); };
-KeyRef.prototype.showOnScreen = function () {
-  if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
-};
-KeyRef.prototype.measure = function () {
-  if (this.__key == null) { return Promise.resolve(null); }
-  return handleOp(this.__key, 'measure', {});
-};
-Object.defineProperty(GlobalKey.prototype, 'currentContext', {
-  get: function () { return this.__id == null ? null : new KeyRef(this.__id); }
-});
 
 // GlobalKey.currentState：StateHandle / __registerStateProxy 属于**运行时核心**
 // （state_handle_js.dart，随 runtime.js 先加载），这里只补 `currentState` getter。
 // 运行时**不认识任何业务方法**：代理类由生成器随组件写进 flutter.js，并用
 // `__registerStateProxy(type, class)` 登记；类型来自 GlobalKey<T> 的泛型实参。
-Object.defineProperty(GlobalKey.prototype, 'currentState', {
-  get: function () {
-    if (this.__id == null) { return null; }
-    // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
-    // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
-    var type = this.__stateType || handleOp(this.__id, '__type', {});
-    return __stateProxyOf(this.__id, type);
-  }
-});
 
 defineHandleKind('key/Unique', {});
 export class UniqueKey {
   constructor() {
     this.__id = reg(this, 'key/Unique', {});
   }
+  toJSON() {
+    return { __handle: this.__id };
+  }
 }
-UniqueKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
 
-G.ValueKey = ValueKey;
-G.ObjectKey = ObjectKey;
-G.PageStorageKey = PageStorageKey;
-G.UniqueKey = UniqueKey;
-G.GlobalKey = GlobalKey;
 
 // 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart 的
 // `_runAwaitableEvent`：evaluate 本函数触发一次事件，并等 token 回传。
@@ -2947,7 +2928,7 @@ G.__jsuiAwaitRun = function (handleId, token) {
 // 形参名，交给宿主按类型判别（数值 → overOffset、Duration 值 → duration、
 // 曲线名 → curve、布尔 → force）。
 // 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart。
-var EasyRefreshController = defineController('ctrl/EasyRefresh', {
+export const EasyRefreshController = defineController('ctrl/EasyRefresh', {
   init: function (opts) {
     var o = opts || {};
     this.controlFinishRefresh = !!o.controlFinishRefresh;
@@ -3004,7 +2985,6 @@ EasyRefreshController.prototype.finishRefresh = function () {
 EasyRefreshController.prototype.finishLoad = function () {
   return this.__op('finishLoad', Array.prototype.slice.call(arguments));
 };
-G.EasyRefreshController = EasyRefreshController;
 
 // 实参归一：正常形态是 `{duration, callback}`；构建期查不到签名时位置实参
 // 落在 `__pos` 里，由 __posArgs 按形参名展开。容错地再支持一次
@@ -3028,6 +3008,25 @@ function __timerArgs(props, second) {
 export class Timer {
   constructor(props) {
     __timerInit(this, props, false, null);
+  }
+  cancel() {
+    this._cancelled = true;
+    this._active = false;
+    if (this._handle != null && typeof clearTimeout === 'function') {
+      try { clearTimeout(this._handle); } catch (e) {}
+    }
+    this._handle = null;
+  }
+  toJSON() {
+    return { __timer: true, active: !!this._active, repeat: !!this._repeat, ms: this._ms };
+  }
+  static periodic(props, second) {
+    var t = Object.create(Timer.prototype);
+    __timerInit(t, props, true, second);
+    return t;
+  }
+  get isActive() {
+    return !!this._active;
   }
 }
 
@@ -3059,31 +3058,11 @@ function __timerSchedule(self) {
   }, self._ms);
 }
 
-Timer.prototype.cancel = function () {
-  this._cancelled = true;
-  this._active = false;
-  if (this._handle != null && typeof clearTimeout === 'function') {
-    try { clearTimeout(this._handle); } catch (e) {}
-  }
-  this._handle = null;
-};
 
-Object.defineProperty(Timer.prototype, 'isActive', {
-  get: function () { return !!this._active; }
-});
 
 // Timer 不是跨语言句柄：万一被当作值下发，只带状态字段（调试友好，宿主侧无对应还原）。
-Timer.prototype.toJSON = function () {
-  return { __timer: true, active: !!this._active, repeat: !!this._repeat, ms: this._ms };
-};
 
-Timer.periodic = function (props, second) {
-  var t = Object.create(Timer.prototype);
-  __timerInit(t, props, true, second);
-  return t;
-};
 
-G.Timer = Timer;
 
 
 // ===== Colors 常量（由 Flutter SDK colors.dart 自动生成）=====
@@ -3165,5 +3144,4 @@ export class Colors {
   static white12 = __colorsColor(0x1FFFFFFF);
   static white10 = __colorsColor(0x1AFFFFFF);
 }
-globalThis.Colors = Colors;
 

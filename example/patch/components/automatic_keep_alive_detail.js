@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/automatic_keep_alive_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, DefaultTabController, ElevatedButton, Expanded, Padding, SizedBox, Tab, TabBar, TabBarView, Text } from '../flutter.js';
+import { Colors, Column, DefaultTabController, ElevatedButton, Expanded, Padding, SizedBox, Tab, TabBar, TabBarView, Text } from '../flutter.js';
 
 // 组件 AutomaticKeepAliveDetail
 export class AutomaticKeepAliveDetail {

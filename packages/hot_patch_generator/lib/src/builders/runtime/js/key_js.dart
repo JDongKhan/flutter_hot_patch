@@ -37,20 +37,22 @@ const String keyJsSource = r'''
   // 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
   export class ValueKey {
     constructor(props) { this.__vkey = __posArgs(props, ['value']).value; }
-  }
-  ValueKey.prototype.toJSON = function () {
+    toJSON() {
     var v = this.__vkey;
     if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
-      return { __vtok: objectToken(v) };
+  return { __vtok: objectToken(v) };
     }
     return { __vkey: v };
-  };
+    }
+  }
 
   // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
   export class ObjectKey {
     constructor(props) { this.__okey = objectToken(__posArgs(props, ['value']).value); }
+    toJSON() {
+    return { __okey: this.__okey };
+    }
   }
-  ObjectKey.prototype.toJSON = function () { return { __okey: this.__okey }; };
 
   // PageStorageKey：Dart 侧 `extends ValueKey`（按**值**相等），但宿主必须造
   // **真实** PageStorageKey——它的意义是滚动位置按 key 存进 PageStorage bucket，
@@ -64,8 +66,10 @@ const String keyJsSource = r'''
           ? { __vtok: objectToken(value) }
           : value;
     }
+    toJSON() {
+    return { __psk: this.__psk };
+    }
   }
-  PageStorageKey.prototype.toJSON = function () { return { __psk: this.__psk }; };
 
   // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
   defineHandleKind('key/Global', {});
@@ -81,8 +85,20 @@ const String keyJsSource = r'''
         meta: debugLabel == null ? null : { debugLabel: debugLabel }
       });
     }
+    toJSON() {
+    return { __handle: this.__id };
+    }
+    get currentContext() {
+      return this.__id == null ? null : new KeyRef(this.__id);
+    }
+    get currentState() {
+      if (this.__id == null) { return null; }
+      // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
+      // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
+      var type = this.__stateType || handleOp(this.__id, '__type', {});
+      return __stateProxyOf(this.__id, type);
+    }
   }
-  GlobalKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
   // GlobalKey.currentContext / findRenderObject()：BuildContext 与 RenderObject 是
   // **宿主端**概念——JS 侧既没有真实对象，也没有同步取值的能力（JS→宿主只有异步
@@ -95,45 +111,32 @@ const String keyJsSource = r'''
   //     后即为真实值，见 widget_details 的 _measureFixed）。
   export class KeyRef {
     constructor(id) { this.__key = id; }
-  }
-  KeyRef.prototype.findRenderObject = function () { return new KeyRef(this.__key); };
-  KeyRef.prototype.showOnScreen = function () {
+    showOnScreen() {
     if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
-  };
-  KeyRef.prototype.measure = function () {
+    }
+    measure() {
     if (this.__key == null) { return Promise.resolve(null); }
     return handleOp(this.__key, 'measure', {});
-  };
-  Object.defineProperty(GlobalKey.prototype, 'currentContext', {
-    get: function () { return this.__id == null ? null : new KeyRef(this.__id); }
-  });
+    }
+    findRenderObject() {
+    return new KeyRef(this.__key);
+    }
+  }
 
   // GlobalKey.currentState：StateHandle / __registerStateProxy 属于**运行时核心**
   // （state_handle_js.dart，随 runtime.js 先加载），这里只补 `currentState` getter。
   // 运行时**不认识任何业务方法**：代理类由生成器随组件写进 flutter.js，并用
   // `__registerStateProxy(type, class)` 登记；类型来自 GlobalKey<T> 的泛型实参。
-  Object.defineProperty(GlobalKey.prototype, 'currentState', {
-    get: function () {
-      if (this.__id == null) { return null; }
-      // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
-      // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
-      var type = this.__stateType || handleOp(this.__id, '__type', {});
-      return __stateProxyOf(this.__id, type);
-    }
-  });
 
   defineHandleKind('key/Unique', {});
   export class UniqueKey {
     constructor() {
       this.__id = reg(this, 'key/Unique', {});
     }
+    toJSON() {
+    return { __handle: this.__id };
+    }
   }
-  UniqueKey.prototype.toJSON = function () { return { __handle: this.__id }; };
 
 
-  G.ValueKey = ValueKey;
-  G.ObjectKey = ObjectKey;
-  G.PageStorageKey = PageStorageKey;
-  G.UniqueKey = UniqueKey;
-  G.GlobalKey = GlobalKey;
 ''';

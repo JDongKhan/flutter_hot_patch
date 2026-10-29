@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/value_listenable_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Container, Expanded, OutlinedButton, Row, SizedBox, Text, ValueListenableBuilder } from '../flutter.js';
+import { Colors, Column, Container, Expanded, OutlinedButton, Row, SizedBox, Text, ValueListenableBuilder, ValueNotifier } from '../flutter.js';
 
 // 组件 ValueListenableBuilderDetail
 export class ValueListenableBuilderDetail {

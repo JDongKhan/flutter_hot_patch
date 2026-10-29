@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/color_filtered_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { ColorFiltered, Column, Container, SizedBox, Text } from '../flutter.js';
+import { ColorFiltered, Colors, Column, Container, SizedBox, Text } from '../flutter.js';
 
 // 组件 ColorFilteredDetail
 export class ColorFilteredDetail {

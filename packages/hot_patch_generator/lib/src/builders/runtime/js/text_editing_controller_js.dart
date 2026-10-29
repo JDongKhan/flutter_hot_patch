@@ -11,7 +11,7 @@ const String textEditingControllerJsSource = r'''
   //   - TextField(controller: 句柄) 渲染时宿主按 id 取真实实例，用户输入经
   //     textFn 回传 JS 镜像并触发 listeners。
   // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`。
-  var TextEditingController = defineController('ctrl/Text', {
+  export const TextEditingController = defineController('ctrl/Text', {
     init: function (initial) {
       this.__text =
         (initial && typeof initial.text === 'string') ? initial.text : '';
@@ -49,5 +49,4 @@ const String textEditingControllerJsSource = r'''
       }
     }
   });
-  G.TextEditingController = TextEditingController;
 ''';

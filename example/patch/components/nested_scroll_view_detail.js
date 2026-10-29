@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/nested_scroll_view_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { CircleAvatar, Column, Container, ListTile, ListView, NestedScrollView, Padding, SizedBox, SliverAppBar, SliverToBoxAdapter, Text } from '../flutter.js';
+import { CircleAvatar, Colors, Column, Container, ListTile, ListView, NestedScrollView, Padding, SizedBox, SliverAppBar, SliverToBoxAdapter, Text } from '../flutter.js';
 
 // 组件 NestedScrollViewDetail
 export class NestedScrollViewDetail {

@@ -10,7 +10,7 @@ const String tabControllerJsSource = r'''
   //     TabBar / TabBarView 时按 id 取/建（length 随句柄下发，见 extraJSON）；
   //   - index setter：立即设置宿主 index 并通知监听者；
   //   - animateTo(i)：宿主 controller.animateTo（带动画）。
-  var TabController = defineController('ctrl/Tab', {
+  export const TabController = defineController('ctrl/Tab', {
     init: function (opts) {
       opts = opts || {};
       this.length = (typeof opts.length === 'number') ? opts.length : 0;
@@ -47,7 +47,6 @@ const String tabControllerJsSource = r'''
       this.__notify();
     }
   });
-  G.TabController = TabController;
 
   // TabBarView 是**懒容器**（子页被 SliverFillViewport 强制成整屏，零尺寸占位
   // 布局中性）——不在运行时声明：由生成器配置 lazyChildHostTypes 在 __h 里给

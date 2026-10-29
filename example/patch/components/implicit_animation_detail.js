@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/implicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Center, Column, Container, Divider, Expanded, Row, SizedBox, Text, TextButton } from '../flutter.js';
+import { AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Center, Colors, Column, Container, Curves, Divider, Duration, Expanded, Row, SizedBox, Text, TextButton, ValueKey } from '../flutter.js';
 
 // 组件 ImplicitAnimationDetail
 export class ImplicitAnimationDetail {

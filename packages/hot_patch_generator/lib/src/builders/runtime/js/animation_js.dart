@@ -57,13 +57,12 @@ const String animationJsSource = r'''
     'elasticIn', 'elasticOut', 'elasticInOut',
     'fastLinearToSlowEaseIn', 'fastEaseInToSlowEaseOut'
   ];
-  var Curves = {};
+  export const Curves = {};
   for (var __ci = 0; __ci < __CURVE_NAMES.length; __ci++) {
     Curves[__CURVE_NAMES[__ci]] = __CURVE_NAMES[__ci];
   }
-  G.Curves = Curves;
 
-  G.CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
+  export const CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
 
   // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
   // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
@@ -73,16 +72,15 @@ const String animationJsSource = r'''
       this.begin = opts.begin;
       this.end = opts.end;
     }
-  }
-  Tween.prototype.lerp = function (t) {
-    var b = this.begin, e = this.end;
-    if (typeof b === 'number' && typeof e === 'number') { return b + (e - b) * t; }
-    if (b && e && typeof b.dx === 'number' && typeof e.dx === 'number') {
-      return new Offset(b.dx + (e.dx - b.dx) * t, b.dy + (e.dy - b.dy) * t);
+    lerp(t) {
+      var b = this.begin, e = this.end;
+      if (typeof b === 'number' && typeof e === 'number') { return b + (e - b) * t; }
+      if (b && e && typeof b.dx === 'number' && typeof e.dx === 'number') {
+        return new Offset(b.dx + (e.dx - b.dx) * t, b.dy + (e.dy - b.dy) * t);
+      }
+      return t < 0.5 ? b : e;
     }
-    return t < 0.5 ? b : e;
-  };
-  G.Tween = Tween;
+  }
 
   export class CurvedAnimation {
     constructor(opts) {
@@ -90,37 +88,34 @@ const String animationJsSource = r'''
       this.parent = opts.parent;
       this.curve = opts.curve;
     }
-  }
-  Object.defineProperty(CurvedAnimation.prototype, 'value', {
-    get: function () {
+    get value() {
       var t = (this.parent && typeof this.parent.value === 'number') ? this.parent.value : 0;
       return __animCurveFn(this.curve)(t);
     }
-  });
-  CurvedAnimation.prototype.addListener = function (f) {
-    if (this.parent && typeof this.parent.addListener === 'function') {
-      this.parent.addListener(f);
+    addListener(f) {
+      if (this.parent && typeof this.parent.addListener === 'function') {
+        this.parent.addListener(f);
+      }
     }
-  };
-  CurvedAnimation.prototype.removeListener = function (f) {
-    if (this.parent && typeof this.parent.removeListener === 'function') {
-      this.parent.removeListener(f);
+    removeListener(f) {
+      if (this.parent && typeof this.parent.removeListener === 'function') {
+        this.parent.removeListener(f);
+      }
     }
-  };
-  CurvedAnimation.prototype.toJSON = function () {
-    return {
-      __handle: this.parent ? this.parent.__id : null,
-      __curve: this.curve,
-      value: this.value
-    };
-  };
-  G.CurvedAnimation = CurvedAnimation;
+    toJSON() {
+      return {
+        __handle: this.parent ? this.parent.__id : null,
+        __curve: this.curve,
+        value: this.value
+      };
+    }
+  }
 
   // 真实控制器在宿主（Ticker 驱动）；本镜像只保存 value 与时长：
   //   - forward/reverse/repeat/stop/reset → `handleOp('call')`（载荷带 value 与
   //     时长，宿主据此对齐状态后再驱动）；
   //   - 宿主每帧回传 value → onHost 更新镜像 + __notify（JS listeners 据此重建）。
-  var AnimationController = defineController('ctrl/Flash', {
+  export const AnimationController = defineController('ctrl/Flash', {
     init: function (opts) {
       opts = opts || {};
       this._value = (typeof opts.value === 'number') ? opts.value : 0;
@@ -184,5 +179,4 @@ const String animationJsSource = r'''
   AnimationController.prototype.reset = function () {
     this.__play('reset', null);
   };
-  G.AnimationController = AnimationController;
 ''';

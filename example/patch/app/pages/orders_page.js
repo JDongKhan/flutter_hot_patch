@@ -7,7 +7,7 @@ import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Center, CircularProgressIndicator, ClipRRect, Column, Container, Divider, Expanded, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text } from '../../flutter.js';
+import { Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, Divider, Expanded, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text } from '../../flutter.js';
 
 // 组件 OrdersPage
 export class OrdersPage {

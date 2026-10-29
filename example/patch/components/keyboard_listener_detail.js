@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/keyboard_listener_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Container, KeyboardListener, OutlinedButton, Row, SizedBox, Text } from '../flutter.js';
+import { Colors, Column, Container, FocusNode, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, OutlinedButton, Row, SizedBox, Text } from '../flutter.js';
 
 // 组件 KeyboardListenerDetail
 export class KeyboardListenerDetail {

@@ -4,7 +4,7 @@
 
 import { StringLogExtension } from '../../extensions/hot_module_base.js';
 import { TestString1 } from 'extension/e_string.js';
-import { Column, ElevatedButton, SizedBox, Text } from '../../flutter.js';
+import { Colors, Column, ElevatedButton, SizedBox, Text } from '../../flutter.js';
 
 // 模型 Greeting
 export class Greeting {

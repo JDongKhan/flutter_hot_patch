@@ -21,48 +21,38 @@ const String colorJsSource = r'''
       props = __posArgs(props, ['value']);
       this.value = props.value != null ? (props.value >>> 0) : 0;
     }
-  }
-  // 序列化：宿主 colorFromJson 只认 '#RRGGBB' / '#AARRGGBB'。
-  Color.prototype.toJSON = function () { return __toHex(this.value); };
-  Color.prototype.toString = function () { return __toHex(this.value); };
-  Color.prototype.withAlpha = function (a) {
+    withAlpha(a) {
     return new Color({ value: ((a & 0xFF) << 24) | (this.value & 0x00FFFFFF) });
-  };
-  Color.prototype.withOpacity = function (o) {
+    }
+    withOpacity(o) {
     var a = Math.round(Math.max(0, Math.min(1, o)) * 255);
     return this.withAlpha(a);
-  };
-  Color.prototype.withValues = function (opts) {
+    }
+    withValues(opts) {
     opts = __posArgs(opts, []);
     var a = opts.alpha != null ? Math.round(opts.alpha * 255) : this.alpha;
     var r = opts.red != null ? opts.red : this.red;
     var g = opts.green != null ? opts.green : this.green;
     var b = opts.blue != null ? opts.blue : this.blue;
     return Color.fromARGB({ a: a, r: r, g: g, b: b });
-  };
-  Object.defineProperty(Color.prototype, 'alpha', {
-    get: function () { return (this.value >> 24) & 0xFF; }
-  });
-  Object.defineProperty(Color.prototype, 'red', {
-    get: function () { return (this.value >> 16) & 0xFF; }
-  });
-  Object.defineProperty(Color.prototype, 'green', {
-    get: function () { return (this.value >> 8) & 0xFF; }
-  });
-  Object.defineProperty(Color.prototype, 'blue', {
-    get: function () { return this.value & 0xFF; }
-  });
-  Color.fromARGB = function (props) {
+    }
+    toJSON() {
+    return __toHex(this.value);
+    }
+    toString() {
+    return __toHex(this.value);
+    }
+    static fromARGB(props) {
     props = __posArgs(props, ['a', 'r', 'g', 'b']);
     return new Color({ value: ((props.a & 0xFF) << 24) | ((props.r & 0xFF) << 16) |
       ((props.g & 0xFF) << 8) | (props.b & 0xFF) });
-  };
-  Color.fromRGBO = function (props) {
+    }
+    static fromRGBO(props) {
     props = __posArgs(props, ['r', 'g', 'b', 'opacity']);
     var o = props.opacity != null ? props.opacity : 1;
     return Color.fromARGB({ a: Math.round(o * 255), r: props.r, g: props.g, b: props.b });
-  };
-  Color.lerp = function (props) {
+    }
+    static lerp(props) {
     props = __posArgs(props, ['a', 'b', 't']);
     var a = props.a || new Color({ value: 0 });
     var b = props.b || new Color({ value: 0 });
@@ -72,8 +62,21 @@ const String colorJsSource = r'''
       a: mix(a.alpha, b.alpha), r: mix(a.red, b.red),
       g: mix(a.green, b.green), b: mix(a.blue, b.blue)
     });
-  };
-  G.Color = Color;
+    }
+    get alpha() {
+      return (this.value >> 24) & 0xFF;
+    }
+    get red() {
+      return (this.value >> 16) & 0xFF;
+    }
+    get green() {
+      return (this.value >> 8) & 0xFF;
+    }
+    get blue() {
+      return this.value & 0xFF;
+    }
+  }
+  // 序列化：宿主 colorFromJson 只认 '#RRGGBB' / '#AARRGGBB'。
 
   // MaterialColor / MaterialAccentColor / ColorSwatch：值仍是 Color（主色），
   // 额外持各档位。档位同时挂在 `shadeNN` 与数字下标上，故 Dart 的
@@ -94,7 +97,6 @@ const String colorJsSource = r'''
       __swatch(this, p.swatch);
     }
   }
-  G.MaterialColor = MaterialColor;
 
   export class MaterialAccentColor extends Color {
     constructor(props) {
@@ -103,7 +105,6 @@ const String colorJsSource = r'''
       __swatch(this, p.swatch);
     }
   }
-  G.MaterialAccentColor = MaterialAccentColor;
 
   export class ColorSwatch extends Color {
     constructor(props) {
@@ -112,5 +113,4 @@ const String colorJsSource = r'''
       __swatch(this, p.swatch);
     }
   }
-  G.ColorSwatch = ColorSwatch;
 ''';

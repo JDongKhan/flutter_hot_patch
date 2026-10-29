@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/safe_area_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Container, Row, SafeArea, SizedBox, Switch, Text } from '../flutter.js';
+import { Colors, Column, Container, MediaQuery, Row, SafeArea, SizedBox, Switch, Text } from '../flutter.js';
 
 // 组件 SafeAreaDetail
 export class SafeAreaDetail {

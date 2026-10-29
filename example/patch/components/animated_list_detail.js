@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/animated_list_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AnimatedList, Card, CircleAvatar, Column, Expanded, ListTile, Row, SizedBox, Text, TextButton } from '../flutter.js';
+import { AnimatedList, Card, CircleAvatar, Colors, Column, Duration, Expanded, GlobalKey, ListTile, Row, SizedBox, Text, TextButton } from '../flutter.js';
 
 // 组件 AnimatedListDetail
 export class AnimatedListDetail {

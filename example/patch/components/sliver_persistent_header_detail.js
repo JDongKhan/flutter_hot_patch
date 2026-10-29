@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_persistent_header_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AppBar, Column, Container, CustomScrollView, Icon, ListTile, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text } from '../flutter.js';
+import { AppBar, Colors, Column, Container, CustomScrollView, Icon, ListTile, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text } from '../flutter.js';
 
 // 组件 SliverPersistentHeaderDetail
 export class SliverPersistentHeaderDetail {

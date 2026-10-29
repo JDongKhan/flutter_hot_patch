@@ -7,7 +7,7 @@ import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { kBrand } from 'detail_pages.js';
-import { Center, CircularProgressIndicator, ClipRRect, Column, Container, Expanded, GestureDetector, Icon, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, Wrap } from '../../flutter.js';
+import { Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, Expanded, GestureDetector, Icon, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, Wrap } from '../../flutter.js';
 
 // 组件 CommunityPage
 export class CommunityPage {

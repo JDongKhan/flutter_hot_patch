@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/rich_text_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Divider, Expanded, RichText, Row, SizedBox, Text, TextButton } from '../flutter.js';
+import { Colors, Column, Divider, Expanded, RichText, Row, SizedBox, Text, TextButton, TextSpan } from '../flutter.js';
 
 // 组件 RichTextDetail
 export class RichTextDetail {

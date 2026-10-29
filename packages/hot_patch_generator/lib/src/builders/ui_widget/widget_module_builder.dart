@@ -23,6 +23,7 @@ import '../runtime/js/key_js.dart';
 import '../runtime/js/keyboard_listener_js.dart';
 import '../runtime/js/layout_builder_js.dart';
 import '../runtime/js/media_query_js.dart';
+import '../runtime/js/navigator_js.dart';
 import '../runtime/js/scroll_controller_js.dart';
 import '../runtime/js/tab_controller_js.dart';
 import '../runtime/js/text_editing_controller_js.dart';
@@ -48,6 +49,7 @@ String flutterValueClassesSource() => [
       focusJsSource,
       keyboardListenerJsSource,
       mediaQueryJsSource,
+      navigatorJsSource,
       layoutBuilderJsSource,
       tabControllerJsSource,
       keyJsSource,
@@ -1087,6 +1089,7 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln('const {')
       ..writeln('  defineProtoGetter: __defineProtoGetter,')
       ..writeln('  defineController, defineHandleKind, handleOp, reg,')
+      ..writeln('  panelPop, panelOf,')
       ..writeln('} = G.__core;')
       ..writeln()
       ..writeln(flutterValueClassesSource());

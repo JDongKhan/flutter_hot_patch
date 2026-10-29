@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/overlay_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Builder, Column, Container, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Row, SizedBox, Text } from '../flutter.js';
+import { Builder, Colors, Column, Container, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Row, SizedBox, Text } from '../flutter.js';
 
 // 组件 OverlayDetail
 export class OverlayDetail {

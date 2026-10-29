@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/pop_scope_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Container, PopScope, Row, SizedBox, Switch, Text } from '../flutter.js';
+import { Colors, Column, Container, PopScope, Row, SizedBox, Switch, Text } from '../flutter.js';
 
 // 组件 PopScopeDetail
 export class PopScopeDetail {

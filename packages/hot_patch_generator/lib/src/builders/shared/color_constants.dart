@@ -100,9 +100,7 @@ String? colorsJsSource() {
   }
   b
     ..writeln(entries.join('\n'))
-    ..writeln('}')
-    // 组件产物里 `Colors.red` 是裸引用（不带 import），沿用 G 注入约定。
-    ..writeln('globalThis.Colors = Colors;');
+    ..writeln('}');
   return b.toString();
 }
 

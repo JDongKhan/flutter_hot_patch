@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { User } from '../hot_module_base.js';
-import { Column, ElevatedButton, Row, Text } from '../flutter.js';
+import { Color, Colors, Column, ElevatedButton, Row, Text } from '../flutter.js';
 
 // 模型 PanelColors
 export class PanelColors {

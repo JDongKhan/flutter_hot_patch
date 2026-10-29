@@ -218,18 +218,6 @@ const String portalJsSource = r'''
   // showModalBottomSheet 语义不同（路由/动画/安全区归属都是 Cupertino 的）。
   G.showCupertinoModalPopup = function (options) { return openPanel('cupertinoSheet', options); };
 
-  // `Navigator.of(context).pop(v)` / `Navigator.pop(context, v)`：只在弹层内
-  // 有意义，实现见 panelPop。挂到 G 后，`x is Navigator` 与 `Navigator.xxx(...)`
-  // 静态调用都由运行时全局类型表自动接管，生成器无特判。
-  function JsNavigator(context) { this.__context = context; }
-
-  JsNavigator.of = function (context, opts) { return new JsNavigator(context); };
-  JsNavigator.maybeOf = function (context, opts) { return new JsNavigator(context); };
-  JsNavigator.pop = function (context, result) { return panelPop(context, result); };
-  JsNavigator.maybePop = function (context, result) { return panelPop(context, result); };
-  JsNavigator.prototype.pop = function (result) { return panelPop(this.__context, result); };
-  JsNavigator.prototype.maybePop = function (result) { return panelPop(this.__context, result); };
-  JsNavigator.prototype.canPop = function () { return panelOf(this.__context) !== null; };
-
-  G.Navigator = JsNavigator;
+  // `Navigator` 的对外类在 flutter.js 值类区（navigator_js.dart）：它只做
+  // 形状，实际落点是上面的 panelPop / panelOf，经 `G.__core` 交接。
 ''';

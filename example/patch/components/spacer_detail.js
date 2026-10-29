@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/spacer_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Container, ElevatedButton, OutlinedButton, Row, SizedBox, Spacer, Text } from '../flutter.js';
+import { Colors, Column, Container, ElevatedButton, OutlinedButton, Row, SizedBox, Spacer, Text } from '../flutter.js';
 
 // 组件 SpacerDetail
 export class SpacerDetail {

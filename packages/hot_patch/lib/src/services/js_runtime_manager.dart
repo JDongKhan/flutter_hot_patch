@@ -548,16 +548,22 @@ class JsRuntimeManager {
     // export class/const/function -> class/const/function（收集导出名，同名模块去重）。
     // 扩展支持共享单例产物（export const X = {...}，如静态颜色类）与 export function。
     // 分类型替换，避免 'const' 被误换成 'class'。
-    final exportReClass = RegExp(r"^export\s+class\s+(\w+)", multiLine: true);
+    //
+    // 允许行首缩进：产物里的值类区（flutter.js）沿用片段源码的缩进，
+    // `export` 不在第 0 列；只认 `^export` 会把它们漏成非法语法（Unexpected
+    // keyword 'export'）。缩进原样保留，替换只吃关键字。
+    final exportReClass =
+        RegExp(r"^([ \t]*)export\s+class\s+(\w+)", multiLine: true);
     final exportReVar =
-        RegExp(r"^export\s+(const|function)\s+(\w+)", multiLine: true);
+        RegExp(r"^([ \t]*)export\s+(const|function)\s+(\w+)", multiLine: true);
     final exportNames = <String>[
-      for (final m in exportReClass.allMatches(out)) m.group(1)!,
-      for (final m in exportReVar.allMatches(out)) m.group(2)!,
+      for (final m in exportReClass.allMatches(out)) m.group(2)!,
+      for (final m in exportReVar.allMatches(out)) m.group(3)!,
     ];
-    out = out.replaceAllMapped(exportReClass, (m) => 'class ${m.group(1)}');
     out = out.replaceAllMapped(
-        exportReVar, (m) => '${m.group(1)} ${m.group(2)}');
+        exportReClass, (m) => '${m.group(1)}class ${m.group(2)}');
+    out = out.replaceAllMapped(exportReVar,
+        (m) => '${m.group(1)}${m.group(2)} ${m.group(3)}');
 
     // import { A, B } from 'rel' -> const { A, B } = __modules['abs'];
     final importRe = RegExp(

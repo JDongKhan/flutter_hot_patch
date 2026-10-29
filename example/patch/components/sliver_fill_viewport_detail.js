@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_fill_viewport_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AppBar, Center, Column, Container, CustomScrollView, Expanded, OutlinedButton, Row, Scaffold, SizedBox, SliverFillViewport, Text } from '../flutter.js';
+import { AppBar, Center, Colors, Column, Container, CustomScrollView, Expanded, OutlinedButton, Row, Scaffold, SizedBox, SliverFillViewport, Text } from '../flutter.js';
 
 // 组件 SliverFillViewportDetail
 export class SliverFillViewportDetail {

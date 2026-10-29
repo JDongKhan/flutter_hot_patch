@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.js';
-import { Column, ElevatedButton, SizedBox, Text, __h } from '../flutter.js';
+import { Colors, Column, ElevatedButton, SizedBox, Text, __h } from '../flutter.js';
 
 // 组件 DashboardCard
 export class DashboardCard {

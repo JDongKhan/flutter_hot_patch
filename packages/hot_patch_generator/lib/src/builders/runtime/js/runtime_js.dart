@@ -28,10 +28,9 @@
 /// `patch/runtime.js`，运行时包只负责加载（幂等）：
 ///   - [runtimeJsSource]：UI 运行时骨架（IIFE）——环境全局（模块表
 ///     `__modules`、console 桥，挂 globalThis）+ element/
-///     component/reconciler/context/订阅 + 能力桥 + ChangeNotifier 基类 +
-///     commit 协议，与组件无关；编译/平台标志由宿主求值前注入；
-///   - 核心片段拆分：mini-react（mini_react_js.dart）、ChangeNotifier
-///     （change_notifier_js.dart）、各能力（同目录 `*_js.dart`）。
+///     component/reconciler/context/订阅 + 能力桥 + commit 协议，
+///     与组件无关；编译/平台标志由宿主求值前注入；
+///   - 核心片段拆分：mini-react（mini_react_js.dart）、各能力（同目录 `*_js.dart`）。
 ///
 /// **分区导航**（`runtimeJsSource` 内以 `// ===== 【n】` 分隔，编号即代码顺序）：
 ///
@@ -697,7 +696,11 @@ const String _jsUiCrossModuleExports = r'''
     defineController: defineController,
     defineHandleKind: defineHandleKind,
     handleOp: handleOp,
-    reg: reg
+    reg: reg,
+    // 弹层路由的 JS 侧落点（flutter.js 的 Navigator 值类用；portal 在
+    // 【27.6】，函数声明提升，此处引用安全）。
+    panelPop: panelPop,
+    panelOf: panelOf
   };
 ''';
 
@@ -729,9 +732,8 @@ const String _jsUiRuntimeSkeletonTailEnd = r'''
 /// 标志先行注入）。因此任何 JS 侧修复都只需重出产物，无需发版。
 ///
 /// 所有片段在**同一 IIFE 作用域**，片段间靠函数提升 / 后声明互相引用，与拆分前
-/// 语义一致。拼接顺序 = 原 `_seedBuiltins()` 的注册顺序（值类 → 异常 → Color →
-/// ChangeNotifier → 动画 → 控制器 → Key → BuildContext → 三方库），后面的片段
-/// 可直接引用前面已执行的内容。
+/// 语义一致。拼接顺序 = 核心骨架（【2】~【11.7】）→ 能力片段（【13】~【27.6】），
+/// 后面的片段可直接引用前面已执行的内容。值类区不在这里（见 `flutter.js`）。
 ///
 /// 产物体积较大，**每个分区都以 `// ===== 【n】标题 =====` 注释隔开**，便于
 /// 排查线上问题时直接定位到某一段。
@@ -776,7 +778,8 @@ String runtimeJsSource() {
     // Dart extension 注册机制：生成器在扩展声明处发射 `__jsExtension(...)`，
     // 原型成员随产物注册（调用点与 Dart 一对一，无名字映射）。
     _section('【27.5】Dart extension 注册（__jsExtension）', jsExtensionJsSource),
-    // 命令式弹层（showDialog 系列）：独立根 + `G.showDialog` / `G.Navigator`。
+    // 命令式弹层（showDialog 系列）：独立根（`G.showDialog` 注入；`Navigator`
+    // 值类在 flutter.js，经 `G.__core` 取这里的 panelPop / panelOf）。
     // 依赖 reconciler / 根表 / BuildContext 代理，故排在骨架之后收尾之前。
     _section('【27.6】命令式弹层（showDialog 系列）', portalJsSource),
     _section('【28】api 收尾', _jsUiRuntimeSkeletonTailHead),

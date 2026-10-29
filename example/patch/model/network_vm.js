@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/model/network_vm.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { ChangeNotifier } from '../flutter.js';
 
 // 模型 NetworkVm
 export class NetworkVm extends ChangeNotifier {

@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/fade_in_image_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, ClipRRect, Column, FadeInImage, OutlinedButton, SizedBox, Text } from '../flutter.js';
+import { Align, ClipRRect, Colors, Column, Duration, FadeInImage, OutlinedButton, SizedBox, Text } from '../flutter.js';
 
 // 组件 FadeInImageDetail
 export class FadeInImageDetail {

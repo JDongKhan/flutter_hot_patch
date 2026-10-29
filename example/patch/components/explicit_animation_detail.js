@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/explicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AnimatedBuilder, Center, Column, Container, Divider, Expanded, FadeTransition, LinearProgressIndicator, RotationTransition, Row, ScaleTransition, SizedBox, Text, TextButton } from '../flutter.js';
+import { AnimatedBuilder, AnimationController, Center, Colors, Column, Container, CurvedAnimation, Curves, Divider, Duration, Expanded, FadeTransition, LinearProgressIndicator, RotationTransition, Row, ScaleTransition, SizedBox, Text, TextButton } from '../flutter.js';
 
 // 组件 ExplicitAnimationDetail
 export class ExplicitAnimationDetail {

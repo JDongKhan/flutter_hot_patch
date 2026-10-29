@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/hero_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Center, Column, GestureDetector, Hero, Material, SizedBox, Text } from '../flutter.js';
+import { Center, Colors, Column, GestureDetector, Hero, Material, SizedBox, Text } from '../flutter.js';
 
 // 组件 HeroDetail
 export class HeroDetail {

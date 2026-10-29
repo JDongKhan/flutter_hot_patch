@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { HomeBanner } from '../model/app_models.js';
-import { ClipRRect, Column, Container, Image, InkWell, Padding, PageView, Positioned, Row, SizedBox, Stack, Text } from '../../flutter.js';
+import { ClipRRect, Color, Column, Container, Curves, Duration, Image, InkWell, Padding, PageController, PageView, Positioned, Row, SizedBox, Stack, Text, Timer } from '../../flutter.js';
 
 // 组件 BannerCarousel
 export class BannerCarousel {

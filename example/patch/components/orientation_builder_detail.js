@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/orientation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, Container, LayoutBuilder, OrientationBuilder, Padding, Row, SizedBox, Text } from '../flutter.js';
+import { Colors, Column, Container, LayoutBuilder, MediaQuery, Orientation, OrientationBuilder, Padding, Row, SizedBox, Text } from '../flutter.js';
 
 // 组件 OrientationBuilderDetail
 export class OrientationBuilderDetail {

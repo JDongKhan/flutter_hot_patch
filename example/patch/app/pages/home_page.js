@@ -7,7 +7,7 @@ import { HomeFeed } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
 import { BannerCarousel } from '../widgets/banner_carousel.js';
-import { Center, CircularProgressIndicator, ClipRRect, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, Expanded, GridView, Icon, Image, InkWell, Padding, Positioned, Row, SafeArea, SizedBox, SliverGrid, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text } from '../../flutter.js';
+import { Center, CircularProgressIndicator, ClipRRect, Color, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, Expanded, GridView, Icon, Image, InkWell, Padding, Positioned, Row, SafeArea, SizedBox, SliverGrid, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {

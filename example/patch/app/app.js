@@ -6,7 +6,7 @@ import { HomePage } from 'pages/home_page.js';
 import { CommunityPage } from 'pages/community_page.js';
 import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
-import { BottomNavigationBar, BottomNavigationBarItem, Icon, Scaffold, TabBarView } from '../flutter.js';
+import { BottomNavigationBar, BottomNavigationBarItem, Color, Colors, Icon, Scaffold, TabBarView, TabController } from '../flutter.js';
 
 // 组件 AppShell
 export class AppShell {

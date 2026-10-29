@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/list_item.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Text } from '../flutter.js';
+import { Colors, Text } from '../flutter.js';
 
 const _listItemPalette = [Colors.blueGrey, Colors.teal, Colors.indigo, Colors.deepOrange, Colors.purple, Colors.brown];
 

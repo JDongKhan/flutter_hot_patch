@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_fill_remaining_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, AppBar, Center, Column, Container, CustomScrollView, Expanded, OutlinedButton, Row, Scaffold, SizedBox, SliverFillRemaining, SliverToBoxAdapter, Switch, Text } from '../flutter.js';
+import { Align, AppBar, Center, Colors, Column, Container, CustomScrollView, Expanded, OutlinedButton, Row, Scaffold, SizedBox, SliverFillRemaining, SliverToBoxAdapter, Switch, Text } from '../flutter.js';
 
 // 组件 SliverFillRemainingDetail
 export class SliverFillRemainingDetail {

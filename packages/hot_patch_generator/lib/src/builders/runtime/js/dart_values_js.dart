@@ -52,11 +52,10 @@ const String dartValuesJsSource = r'''
       this.inMilliseconds = Math.round(ms);
       this.inMicroseconds = Math.round(ms * 1000);
     }
-  }
-  Duration.prototype.toJSON = function () {
+    toJSON() {
     return { __duration: this.inMilliseconds };
-  };
-  G.Duration = Duration;
+    }
+  }
 
   export class Size {
     constructor(props) {
@@ -64,32 +63,32 @@ const String dartValuesJsSource = r'''
       this.width = props.width;
       this.height = props.height;
     }
-  }
-  Size.prototype.toJSON = function () {
+    toJSON() {
     return { width: this.width, height: this.height };
-  };
+    }
+    static fromHeight(props) {
+    props = __posArgs(props, ['height']);
+    return new Size({ width: Infinity, height: props.height });
+    }
+    static fromWidth(props) {
+    props = __posArgs(props, ['width']);
+    return new Size({ width: props.width, height: Infinity });
+    }
+    static square(props) {
+    props = __posArgs(props, ['dimension']);
+    return new Size({ width: props.dimension, height: props.dimension });
+    }
+    static copy(props) {
+    props = __posArgs(props, ['source']);
+    return new Size({ width: props.source.width, height: props.source.height });
+    }
+    /** Dart 的 static const：零尺寸 / 无穷尺寸。 */
+    static zero = new Size({ width: 0, height: 0 });
+    static infinite = new Size({ width: Infinity, height: Infinity });
+  }
   // Dart `Size` 的命名构造 / 静态常量（产物按统一规则发射 `Size.fromHeight({…})`）。
   // **无界维度是 +∞**：跨桥时 `JSON.stringify(Infinity)` 得到 null，宿主侧按 ∞
   // 还原（见 js_widget_registry 的 PreferredSize / layout 约束的 null 约定）。
-  Size.fromHeight = function (props) {
-    props = __posArgs(props, ['height']);
-    return new Size({ width: Infinity, height: props.height });
-  };
-  Size.fromWidth = function (props) {
-    props = __posArgs(props, ['width']);
-    return new Size({ width: props.width, height: Infinity });
-  };
-  Size.square = function (props) {
-    props = __posArgs(props, ['dimension']);
-    return new Size({ width: props.dimension, height: props.dimension });
-  };
-  Size.copy = function (props) {
-    props = __posArgs(props, ['source']);
-    return new Size({ width: props.source.width, height: props.source.height });
-  };
-  Size.zero = { width: 0, height: 0 };
-  Size.infinite = { width: Infinity, height: Infinity };
-  G.Size = Size;
 
   export class Offset {
     constructor(props) {
@@ -97,11 +96,10 @@ const String dartValuesJsSource = r'''
       this.dx = props.dx != null ? props.dx : 0;
       this.dy = props.dy != null ? props.dy : 0;
     }
-  }
-  Offset.prototype.toJSON = function () {
+    toJSON() {
     return { dx: this.dx, dy: this.dy };
-  };
-  G.Offset = Offset;
+    }
+  }
 
   // Alignment：产物在**值位置**（LinearGradient 的 begin/end、Container 的
   // alignment 等）可能直接引用 `Alignment.topLeft`（不是所有位置都会经过
@@ -115,12 +113,20 @@ const String dartValuesJsSource = r'''
       this.x = props.x != null ? props.x : 0;
       this.y = props.y != null ? props.y : 0;
     }
+    toJSON() {
+      return { x: this.x, y: this.y };
+    }
+    // 静态常量即成员名字符串：宿主 alignmentFromJson 只认名字。
+    static topLeft = "topLeft";
+    static topCenter = "topCenter";
+    static topRight = "topRight";
+    static centerLeft = "centerLeft";
+    static center = "center";
+    static centerRight = "centerRight";
+    static bottomLeft = "bottomLeft";
+    static bottomCenter = "bottomCenter";
+    static bottomRight = "bottomRight";
   }
-  Alignment.prototype.toJSON = function () { return { x: this.x, y: this.y }; };
-  ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center',
-    'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight'
-  ].forEach(function (n) { Alignment[n] = n; });
-  G.Alignment = Alignment;
 
   export class Radius {
     constructor(props) {
@@ -129,10 +135,11 @@ const String dartValuesJsSource = r'''
       this.x = r;
       this.y = r;
     }
+    toJSON() {
+      return { radius: this.x };
+    }
+    static circular(props) { return new Radius(props); }
   }
-  Radius.circular = function (props) { return new Radius(props); };
-  Radius.prototype.toJSON = function () { return { radius: this.x }; };
-  G.Radius = Radius;
 
   // BoxConstraints：布局约束值对象（LayoutBuilder 的 builder 第二参）。宿主按
   // {minWidth, maxWidth, minHeight, maxHeight} 下发，无界维度发 null（JSON 不能
@@ -145,32 +152,21 @@ const String dartValuesJsSource = r'''
       this.minHeight = props.minHeight != null ? props.minHeight : 0;
       this.maxHeight = props.maxHeight != null ? props.maxHeight : Infinity;
     }
+    get biggest() { return new Size({ width: this.maxWidth, height: this.maxHeight }); }
+    get smallest() { return new Size({ width: this.minWidth, height: this.minHeight }); }
+    get isTight() { return this.minWidth >= this.maxWidth && this.minHeight >= this.maxHeight; }
+    get hasBoundedWidth() { return this.maxWidth < Infinity; }
+    get hasBoundedHeight() { return this.maxHeight < Infinity; }
+    // 无界维度回 null：与宿主下发协议同形，保证跨语言往返一致。
+    toJSON() {
+      return {
+        minWidth: this.minWidth,
+        maxWidth: this.maxWidth === Infinity ? null : this.maxWidth,
+        minHeight: this.minHeight,
+        maxHeight: this.maxHeight === Infinity ? null : this.maxHeight,
+      };
+    }
   }
-  __defineProtoGetter(BoxConstraints.prototype, 'biggest', function () {
-    return new Size({ width: this.maxWidth, height: this.maxHeight });
-  });
-  __defineProtoGetter(BoxConstraints.prototype, 'smallest', function () {
-    return new Size({ width: this.minWidth, height: this.minHeight });
-  });
-  __defineProtoGetter(BoxConstraints.prototype, 'isTight', function () {
-    return this.minWidth >= this.maxWidth && this.minHeight >= this.maxHeight;
-  });
-  __defineProtoGetter(BoxConstraints.prototype, 'hasBoundedWidth', function () {
-    return this.maxWidth < Infinity;
-  });
-  __defineProtoGetter(BoxConstraints.prototype, 'hasBoundedHeight', function () {
-    return this.maxHeight < Infinity;
-  });
-  // 无界维度回 null：与宿主下发协议同形，保证跨语言往返一致。
-  BoxConstraints.prototype.toJSON = function () {
-    return {
-      minWidth: this.minWidth,
-      maxWidth: this.maxWidth === Infinity ? null : this.maxWidth,
-      minHeight: this.minHeight,
-      maxHeight: this.maxHeight === Infinity ? null : this.maxHeight,
-    };
-  };
-  G.BoxConstraints = BoxConstraints;
 
   // TextSpan：Dart 富文本子树的值对象（RichText 的 `text`）。产物按统一规则
   // 发射 `new TextSpan({text, style, children, semanticsLabel})`；这里镜像字段，
@@ -185,7 +181,6 @@ const String dartValuesJsSource = r'''
       if (props.semanticsLabel != null) { this.semanticsLabel = props.semanticsLabel; }
     }
   }
-  G.TextSpan = TextSpan;
 
   // ---------------------------------------------------------------------------
   // 渐变与装饰：绘制层值对象（`LinearGradient` / `RadialGradient` /
@@ -225,9 +220,10 @@ const String dartValuesJsSource = r'''
       var p = __gradientProps(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
+    toJSON() {
+    return __gradientJson('linear', this);
+    }
   }
-  LinearGradient.prototype.toJSON = function () { return __gradientJson('linear', this); };
-  G.LinearGradient = LinearGradient;
 
   export class RadialGradient {
     constructor(props) {
@@ -235,9 +231,10 @@ const String dartValuesJsSource = r'''
         ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
+    toJSON() {
+    return __gradientJson('radial', this);
+    }
   }
-  RadialGradient.prototype.toJSON = function () { return __gradientJson('radial', this); };
-  G.RadialGradient = RadialGradient;
 
   export class SweepGradient {
     constructor(props) {
@@ -245,9 +242,10 @@ const String dartValuesJsSource = r'''
         ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
+    toJSON() {
+    return __gradientJson('sweep', this);
+    }
   }
-  SweepGradient.prototype.toJSON = function () { return __gradientJson('sweep', this); };
-  G.SweepGradient = SweepGradient;
 
   // BoxDecoration：字段名与 Dart 构造具名实参一致，toJSON 直出宿主协议
   //（值为 null 的键不下发——宿主对 null 与缺省同义，少发更干净）。
@@ -259,15 +257,14 @@ const String dartValuesJsSource = r'''
         if (props[k] != null) { this[k] = props[k]; }
       }
     }
-  }
-  BoxDecoration.prototype.toJSON = function () {
+    toJSON() {
     var json = {};
     for (var k in this) {
-      if (this[k] != null) { json[k] = this[k]; }
+  if (this[k] != null) { json[k] = this[k]; }
     }
     return json;
-  };
-  G.BoxDecoration = BoxDecoration;
+    }
+  }
 
   // ----- 枚举镜像 ---------------------------------------------------------
   // Dart 枚举 → JS class + static 字段，值 = 成员名字符串：跨语言只有 name 能
@@ -282,5 +279,4 @@ const String dartValuesJsSource = r'''
     static up = "up";
     static down = "down";
   }
-  G.DismissDirection = DismissDirection;
 ''';

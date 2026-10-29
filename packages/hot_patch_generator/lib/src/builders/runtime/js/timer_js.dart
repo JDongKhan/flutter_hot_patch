@@ -36,6 +36,25 @@ const String timerJsSource = r'''
     constructor(props) {
       __timerInit(this, props, false, null);
     }
+    cancel() {
+    this._cancelled = true;
+    this._active = false;
+    if (this._handle != null && typeof clearTimeout === 'function') {
+  try { clearTimeout(this._handle); } catch (e) {}
+    }
+    this._handle = null;
+    }
+    toJSON() {
+    return { __timer: true, active: !!this._active, repeat: !!this._repeat, ms: this._ms };
+    }
+    static periodic(props, second) {
+    var t = Object.create(Timer.prototype);
+    __timerInit(t, props, true, second);
+    return t;
+    }
+    get isActive() {
+      return !!this._active;
+    }
   }
 
   // __timerInit 在所有 Timer 实例间共用（构造与 periodic 两条入口）。
@@ -66,29 +85,9 @@ const String timerJsSource = r'''
     }, self._ms);
   }
 
-  Timer.prototype.cancel = function () {
-    this._cancelled = true;
-    this._active = false;
-    if (this._handle != null && typeof clearTimeout === 'function') {
-      try { clearTimeout(this._handle); } catch (e) {}
-    }
-    this._handle = null;
-  };
 
-  Object.defineProperty(Timer.prototype, 'isActive', {
-    get: function () { return !!this._active; }
-  });
 
   // Timer 不是跨语言句柄：万一被当作值下发，只带状态字段（调试友好，宿主侧无对应还原）。
-  Timer.prototype.toJSON = function () {
-    return { __timer: true, active: !!this._active, repeat: !!this._repeat, ms: this._ms };
-  };
 
-  Timer.periodic = function (props, second) {
-    var t = Object.create(Timer.prototype);
-    __timerInit(t, props, true, second);
-    return t;
-  };
 
-  G.Timer = Timer;
 ''';

@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { Builder, Card, Column, ElevatedButton, Padding, Row, SizedBox, Text } from '../flutter.js';
+import { Builder, Card, Colors, Column, ElevatedButton, Padding, Row, SizedBox, Text } from '../flutter.js';
 import { ChangeNotifierProvider } from '../provider.js';
 
 // 组件 WatchDemo

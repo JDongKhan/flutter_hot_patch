@@ -63,13 +63,12 @@ const String keyboardListenerJsSource = r'''
     var __letter = String.fromCharCode(0x61 + __c).toUpperCase();
     __KEY_CONSTS['key' + __letter] = [0x61 + __c, __letter];
   }
-  var LogicalKeyboardKey = {};
+  export const LogicalKeyboardKey = {};
   for (var __name in __KEY_CONSTS) {
     __defineProtoGetter(LogicalKeyboardKey, __name, (function (name) {
       return function () { return __logicalKey(__KEY_CONSTS[name][0], __KEY_CONSTS[name][1]); };
     })(__name));
   }
-  G.LogicalKeyboardKey = LogicalKeyboardKey;
 
   // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
   var __physKeys = {};
@@ -80,7 +79,6 @@ const String keyboardListenerJsSource = r'''
       this.debugName = props.debugName || '';
     }
   }
-  G.PhysicalKeyboardKey = PhysicalKeyboardKey;
   function __physicalKey(usb, label) {
     var k = __physKeys[usb];
     if (!k) {
@@ -101,22 +99,18 @@ const String keyboardListenerJsSource = r'''
       this.timeStamp = props.timeStamp;
     }
   }
-  G.KeyEvent = KeyEvent;
 
   // 按键事件子类：Dart 侧各自是 KeyEvent 的子类，JS 侧原生 extends（这样
   // `instanceof KeyDownEvent` 与 `instanceof KeyEvent` 同时成立）。
-  class KeyDownEvent extends KeyEvent {
+  export class KeyDownEvent extends KeyEvent {
     constructor(props) { super(props); }
   }
-  class KeyUpEvent extends KeyEvent {
+  export class KeyUpEvent extends KeyEvent {
     constructor(props) { super(props); }
   }
-  class KeyRepeatEvent extends KeyEvent {
+  export class KeyRepeatEvent extends KeyEvent {
     constructor(props) { super(props); }
   }
-  G.KeyDownEvent = KeyDownEvent;
-  G.KeyUpEvent = KeyUpEvent;
-  G.KeyRepeatEvent = KeyRepeatEvent;
 
   // 宿主桥接见 capabilities/keyboard_listener/keyboard_listener_bridge.dart：
   // 原生 KeyEvent → JSON（kind / character / keyId / keyLabel / usbHidUsage /

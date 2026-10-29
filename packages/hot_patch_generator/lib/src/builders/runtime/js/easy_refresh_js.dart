@@ -46,7 +46,7 @@ const String easyRefreshJsSource = r'''
   // 形参名，交给宿主按类型判别（数值 → overOffset、Duration 值 → duration、
   // 曲线名 → curve、布尔 → force）。
   // 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart。
-  var EasyRefreshController = defineController('ctrl/EasyRefresh', {
+  export const EasyRefreshController = defineController('ctrl/EasyRefresh', {
     init: function (opts) {
       var o = opts || {};
       this.controlFinishRefresh = !!o.controlFinishRefresh;
@@ -103,5 +103,4 @@ const String easyRefreshJsSource = r'''
   EasyRefreshController.prototype.finishLoad = function () {
     return this.__op('finishLoad', Array.prototype.slice.call(arguments));
   };
-  G.EasyRefreshController = EasyRefreshController;
 ''';

@@ -33,7 +33,7 @@ const String scrollControllerJsSource = r'''
     if (typeof curveArg === 'string') { curve = curveArg; }
     return { ms: ms, curve: curve };
   }
-  var ScrollController = defineController('ctrl/Scroll', {
+  export const ScrollController = defineController('ctrl/Scroll', {
     init: function () {
       this.offset = 0;
       this.__maxScrollExtent = 0;
@@ -72,13 +72,12 @@ const String scrollControllerJsSource = r'''
   Object.defineProperty(ScrollController.prototype, 'hasClients', {
     get: function () { return this.__id != null; }
   });
-  G.ScrollController = ScrollController;
 
   // ===== PageController 代理类（对应 Flutter 官方 PageController）=====
   // 与 ScrollController 同一套句柄层；镜像字段只有 page / initialPage。
   // 构造参数（initialPage / viewportFraction）随 toJSON 的 extraJSON 下发，
   // 宿主 PageView renderer 据此创建真实 PageController。
-  var PageController = defineController('ctrl/Page', {
+  export const PageController = defineController('ctrl/Page', {
     init: function (opts) {
       var o = opts || {};
       this.initialPage = (o.initialPage != null) ? o.initialPage : 0;
@@ -117,5 +116,4 @@ const String scrollControllerJsSource = r'''
   Object.defineProperty(PageController.prototype, 'hasClients', {
     get: function () { return this.__id != null; }
   });
-  G.PageController = PageController;
 ''';

@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/visibility_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Center, Column, Container, ElevatedButton, Offstage, OutlinedButton, Row, SizedBox, Text, Visibility } from '../flutter.js';
+import { Center, Colors, Column, Container, ElevatedButton, Offstage, OutlinedButton, Row, SizedBox, Text, Visibility } from '../flutter.js';
 
 // 组件 VisibilityDetail
 export class VisibilityDetail {

@@ -22,6 +22,7 @@ import 'translator/dart2js.dart';
 import 'translator/js_value.dart';
 import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
+import '../shared/runtime_global_types.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
 import '../ui_widget/widget_module_builder.dart' show hostWrapperSource;
@@ -565,6 +566,18 @@ String _renderJsProduct(
   // （构造即 `__h('类名', props)`）；其它类统一 `new X(props)`。
   if (wrapperClasses.isNotEmpty) {
     (importsByPackage[nodeHelperPackage] ??= <String>{}).add('__h');
+  }
+  // 运行时值类（`flutter.js` 里 `export class` 的值对象 / 控制器 / 枚举）：
+  // 产物在值位置直接写 `new Color(...)` / `Colors.red` / `MediaQuery.of(...)`，
+  // 这些名字不在 any 组件的 usedWidgets 里（它们不是元素），必须按实际出现的
+  // 名字补 import，否则执行期是未定义全局。
+  final bodyText = b.toString();
+  final usedValues = <String>{
+    for (final name in flutterExportTypes())
+      if (RegExp('\\b${RegExp.escape(name)}\\b').hasMatch(bodyText)) name,
+  };
+  if (usedValues.isNotEmpty) {
+    (importsByPackage[nodeHelperPackage] ??= <String>{}).addAll(usedValues);
   }
   final ownProduct = productPath(sourcePath);
   final importLines = <String>[

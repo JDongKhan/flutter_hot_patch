@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/dialog_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AlertDialog, Column, Container, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, FilledButton, OutlinedButton, Padding, SafeArea, SizedBox, Text, TextButton, Wrap } from '../flutter.js';
+import { AlertDialog, Colors, Column, Container, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, FilledButton, Navigator, OutlinedButton, Padding, SafeArea, SizedBox, Text, TextButton, Wrap } from '../flutter.js';
 
 // 组件 DialogDetail
 export class DialogDetail {

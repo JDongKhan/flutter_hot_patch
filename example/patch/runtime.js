@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 335e765a） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 bac2650f） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '335e765a') { return; }
-  G.__jsuiVersion = '335e765a';
+  if (G.__jsui && G.__jsuiVersion === 'bac2650f') { return; }
+  G.__jsuiVersion = 'bac2650f';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2228,7 +2228,11 @@ if (G.kDebugMode) {
     defineController: defineController,
     defineHandleKind: defineHandleKind,
     handleOp: handleOp,
-    reg: reg
+    reg: reg,
+    // 弹层路由的 JS 侧落点（flutter.js 的 Navigator 值类用；portal 在
+    // 【27.6】，函数声明提升，此处引用安全）。
+    panelPop: panelPop,
+    panelOf: panelOf
   };
 
 
@@ -2870,20 +2874,8 @@ if (G.kDebugMode) {
   // showModalBottomSheet 语义不同（路由/动画/安全区归属都是 Cupertino 的）。
   G.showCupertinoModalPopup = function (options) { return openPanel('cupertinoSheet', options); };
 
-  // `Navigator.of(context).pop(v)` / `Navigator.pop(context, v)`：只在弹层内
-  // 有意义，实现见 panelPop。挂到 G 后，`x is Navigator` 与 `Navigator.xxx(...)`
-  // 静态调用都由运行时全局类型表自动接管，生成器无特判。
-  function JsNavigator(context) { this.__context = context; }
-
-  JsNavigator.of = function (context, opts) { return new JsNavigator(context); };
-  JsNavigator.maybeOf = function (context, opts) { return new JsNavigator(context); };
-  JsNavigator.pop = function (context, result) { return panelPop(context, result); };
-  JsNavigator.maybePop = function (context, result) { return panelPop(context, result); };
-  JsNavigator.prototype.pop = function (result) { return panelPop(this.__context, result); };
-  JsNavigator.prototype.maybePop = function (result) { return panelPop(this.__context, result); };
-  JsNavigator.prototype.canPop = function () { return panelOf(this.__context) !== null; };
-
-  G.Navigator = JsNavigator;
+  // `Navigator` 的对外类在 flutter.js 值类区（navigator_js.dart）：它只做
+  // 形状，实际落点是上面的 panelPop / panelOf，经 `G.__core` 交接。
 
 
 // ===== 【28】api 收尾 =====

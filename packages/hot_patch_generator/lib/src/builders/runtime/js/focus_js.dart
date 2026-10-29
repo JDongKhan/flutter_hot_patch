@@ -10,7 +10,7 @@
 // capabilities/focus/focus_bridge.dart。hasFocus 读**镜像**（不是同步往返），
 // 因此 addListener 回调里读到的值始终与刚触发的变化一致。
 const String focusJsSource = r'''
-  var FocusNode = defineController('ctrl/Focus', {
+  export const FocusNode = defineController('ctrl/Focus', {
     init: function (opts) {
       var o = opts || {};
       this.__hasFocus = false;
@@ -41,5 +41,4 @@ const String focusJsSource = r'''
   Object.defineProperty(FocusNode.prototype, 'hasFocus', {
     get: function () { return this.__hasFocus === true; }
   });
-  G.FocusNode = FocusNode;
 ''';

@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/tween_animation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { ClipRRect, Column, Container, FractionallySizedBox, OutlinedButton, Row, SizedBox, Text, TweenAnimationBuilder } from '../flutter.js';
+import { ClipRRect, Colors, Column, Container, Curves, Duration, FractionallySizedBox, OutlinedButton, Row, SizedBox, Text, Tween, TweenAnimationBuilder } from '../flutter.js';
 
 // 组件 TweenAnimationBuilderDetail
 export class TweenAnimationBuilderDetail {

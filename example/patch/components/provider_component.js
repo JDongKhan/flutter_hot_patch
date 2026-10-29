@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
-import { Card, Column, ElevatedButton, Padding, Row, SizedBox, Text } from '../flutter.js';
+import { Card, Colors, Column, ElevatedButton, Padding, Row, SizedBox, Text } from '../flutter.js';
 import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
 
 // 组件 ProviderCard

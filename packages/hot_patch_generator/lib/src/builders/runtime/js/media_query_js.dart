@@ -185,7 +185,7 @@ const String mediaQueryJsSource = r'''
   }
 
   // Dart 的静态取值方法：每个都按自己的 aspect 代理（取值 + 重建粒度都对齐）。
-  var MediaQuery = {
+  export const MediaQuery = {
     of: function (context) { return __jsuiMqOf(context); },
     // `maybeOf` 语义：没有 MediaQuery 祖先时返回 null；这里退化为兜底对象
     // （字段齐全，读不崩），与 `of` 同源。
@@ -235,13 +235,9 @@ const String mediaQueryJsSource = r'''
 
   // Dart 枚举 / 常量镜像：产物里 `Orientation.portrait` 等是原样引用，
   // 值取同一套字符串（宿主 JSON 里也是这套字符串）。
-  var Orientation = { portrait: 'portrait', landscape: 'landscape' };
-  var Brightness = { dark: 'dark', light: 'light' };
-  var NavigationMode = { traditional: 'traditional', directional: 'directional' };
+  export const Orientation = { portrait: 'portrait', landscape: 'landscape' };
+  export const Brightness = { dark: 'dark', light: 'light' };
+  export const NavigationMode = { traditional: 'traditional', directional: 'directional' };
 
-  G.MediaQuery = MediaQuery;
-  G.Orientation = Orientation;
-  G.Brightness = Brightness;
-  G.NavigationMode = NavigationMode;
   G.__jsuiSetMediaQuery = __jsuiSetMediaQuery;
 ''';
