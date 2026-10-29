@@ -5,10 +5,11 @@
 /// JS 侧由宿主代为请求，服务端按 URL 路径返回 `tool/mock/<路径>.json`。
 /// 页面因此和真实 App 一样，先 loading 再出数据。
 ///
-/// 两条硬约束（都来自热更翻译器的能力边界，改这里前先读一遍）：
-/// 1. **必须是实例方法**：翻译器不翻译公开 static 方法（JS 侧无等价物），
-///    而本类会被首页/社区/订单/我的四个 `@PatchEntry` 页连带翻译进 JS 产物，
-///    所以页面持 `AppService()` 实例调用；
+/// 两条约束（改这里前先读一遍）：
+/// 1. **模型的 json 转换放在模型自己的 `static fromJson`**：Dart 的 static
+///    成员与实例成员同一名字空间，翻译器把静态方法/字段原样发射成 JS 类的
+///    静态成员（`Spot.fromJson(e)` → `Spot.fromJson(e)`），本类只负责「发起
+///    请求 + json 数组 → 模型 List」；
 /// 2. **首屏的两个接口并行发**：列表页拆成「配置接口（tabs / 筛选项 / 状态条）」
 ///    +「列表接口（帖子 / 订单）」两个，首屏**同时**发出；之后列表接口只在
 ///    筛选条件变化时按新参数重发一次。
@@ -41,31 +42,18 @@ class AppService {
   Future<HomeFeed> fetchHome(String city) async {
     final data = await _request('/app/home');
     final entry = _cityOf(data['cities'], city);
-    final banners = <HomeBanner>[];
-    for (final e in entry['banners']) {
-      banners.add(_banner(e));
-    }
-    final grid = <GridEntry>[];
-    for (final e in data['grid']) {
-      grid.add(_grid(e));
-    }
-    final spots = <Spot>[];
-    for (final e in entry['spots']) {
-      spots.add(_spot(e));
-    }
-    return HomeFeed(banners: banners, grid: grid, spots: spots, adImg: entry['adImg']);
+    return HomeFeed.fromJson(<String, dynamic>{
+      'banners': entry['banners'],
+      'grid': data['grid'],
+      'spots': entry['spots'],
+      'adImg': entry['adImg'],
+    });
   }
 
   /// 社区：双 tab + 筛选项配置（横向资源见 [fetchCommunityResources]）。
   Future<CommunityFeed> fetchCommunity() async {
     final data = await _request('/app/community');
-    return CommunityFeed(
-      tabs: _strings(data['tabs']),
-      sorts: _strings(data['sorts']),
-      postTypes: _strings(data['postTypes']),
-      dists: _strings(data['dists']),
-      priceRanges: _strings(data['priceRanges']),
-    );
+    return CommunityFeed.fromJson(data);
   }
 
   /// 社区横向资源横幅：按归属 tab 过滤（广场 = 全部聚合，与帖子列表同口径）。
@@ -91,7 +79,7 @@ class AppService {
     final data = await _request('/app/notifications');
     final list = <AppNotice>[];
     for (final e in data['list']) {
-      list.add(_notice(e));
+      list.add(AppNotice.fromJson(e));
     }
     return list;
   }
@@ -99,7 +87,7 @@ class AppService {
   /// 订单：状态筛选条（列表见 [fetchOrderList]）。
   Future<OrderFeed> fetchOrders() async {
     final data = await _request('/app/orders');
-    return OrderFeed(statuses: _strings(data['statuses']));
+    return OrderFeed.fromJson(data);
   }
 
   /// 订单列表：**列表自己的接口**，状态随请求参数下发（空串 / 首项「全部」= 不过滤）。
@@ -111,15 +99,7 @@ class AppService {
   /// 我的：头像 + 订单统计 + 功能菜单。
   Future<MineFeed> fetchMine() async {
     final data = await _request('/app/mine');
-    final stats = <List<String>>[];
-    for (final row in data['stats']) {
-      stats.add(_strings(row));
-    }
-    final menu = <MenuEntry>[];
-    for (final e in data['menu']) {
-      menu.add(_menu(e));
-    }
-    return MineFeed(avatar: data['avatar'], stats: stats, menu: menu);
+    return MineFeed.fromJson(data);
   }
 
   /// 搜索页：热搜词 + 猜你想去（猜你想去复用首页景点）。
@@ -127,7 +107,10 @@ class AppService {
     final data = await _request('/app/search');
     final home = await _request('/app/home');
     final entry = _cityOf(home['cities'], '');
-    return SearchFeed(hot: _strings(data['hot']), guesses: _spots(entry['spots']));
+    return SearchFeed.fromJson(<String, dynamic>{
+      'hot': data['hot'],
+      'guesses': entry['spots'],
+    });
   }
 
   /// 资源专题页：专题本身（社区接口）+ 相关推荐（帖子接口）。
@@ -136,10 +119,10 @@ class AppService {
   Future<ResourceFeed> fetchResource(String id) async {
     final community = await _request('/app/community');
     final posts = await _request('/app/posts');
-    return ResourceFeed(
-      resource: _resourceOf(_resources(community['resources']), id),
-      related: _posts(posts['list']),
-    );
+    return ResourceFeed.fromJson(<String, dynamic>{
+      'resource': _resourceJsonOf(community['resources'], id),
+      'related': posts['list'],
+    });
   }
 
   /// 详情页按 id 取数据（宿主路由用，不走 JS）。景点分散在各城市下，这里全量找。
@@ -164,24 +147,14 @@ class AppService {
   }
 
   // ---------------------------------------------------------------------
-  // json → 模型（响应字段与服务端 json 一一对应）
-  //
-  // 刻意逐条构造带类型的 List：动态 json 的 `List<dynamic>` 直接赋给
-  // `List<X>` 会在运行时抛类型错误，所以统一经这些辅助方法转换。
+  // json → 模型（转换逻辑在模型自己的 `static fromJson`；这里只做
+  // 「json 数组 → 带类型的 List」，页面拿到的始终是模型对象）
   // ---------------------------------------------------------------------
-
-  List<String> _strings(dynamic raw) {
-    final list = <String>[];
-    for (final v in raw) {
-      list.add(v);
-    }
-    return list;
-  }
 
   List<Spot> _spots(dynamic raw) {
     final list = <Spot>[];
     for (final e in raw) {
-      list.add(_spot(e));
+      list.add(Spot.fromJson(e));
     }
     return list;
   }
@@ -189,7 +162,7 @@ class AppService {
   List<Post> _posts(dynamic raw) {
     final list = <Post>[];
     for (final e in raw) {
-      list.add(_post(e));
+      list.add(Post.fromJson(e));
     }
     return list;
   }
@@ -197,7 +170,7 @@ class AppService {
   List<Order> _orders(dynamic raw) {
     final list = <Order>[];
     for (final e in raw) {
-      list.add(_order(e));
+      list.add(Order.fromJson(e));
     }
     return list;
   }
@@ -205,66 +178,17 @@ class AppService {
   List<Resource> _resources(dynamic raw) {
     final list = <Resource>[];
     for (final e in raw) {
-      list.add(_resource(e));
+      list.add(Resource.fromJson(e));
     }
     return list;
   }
 
-  HomeBanner _banner(dynamic e) {
-    return HomeBanner(img: e['img'], title: e['title'], sub: e['sub']);
-  }
-
-  GridEntry _grid(dynamic e) {
-    return GridEntry(emoji: e['emoji'], title: e['title']);
-  }
-
-  Spot _spot(dynamic e) {
-    return Spot(
-      id: e['id'],
-      title: e['title'],
-      sub: e['sub'],
-      sold: e['sold'],
-      tag: e['tag'],
-      img: e['img'],
-      desc: e['desc'],
-      price: e['price'],
-      tags: _strings(e['tags']),
-    );
-  }
-
-  Post _post(dynamic e) {
-    return Post(
-      id: e['id'],
-      title: e['title'],
-      sub: e['sub'],
-      type: e['type'],
-      author: e['author'],
-      time: e['time'],
-      img: e['img'],
-      like: e['like'],
-      tab: e['tab'],
-    );
-  }
-
-  AppNotice _notice(dynamic e) {
-    return AppNotice(
-      id: e['id'],
-      title: e['title'],
-      content: e['content'],
-      time: e['time'],
-      type: e['type'],
-      unread: e['unread'],
-    );
-  }
-
-  Resource _resource(dynamic e) {
-    return Resource(
-      id: e['id'],
-      title: e['title'],
-      sub: e['sub'],
-      img: e['img'],
-      tab: e['tab'],
-    );
+  /// 按 id 取资源 json（找不到时回退首个，与页面跳转的容错口径一致）。
+  Map _resourceJsonOf(dynamic raw, String id) {
+    for (final r in raw) {
+      if (r['id'] == id) return r;
+    }
+    return raw.first;
   }
 
   /// 按城市名取接口里该城市那一份数据；空串或不认识的城市回退首个城市。
@@ -273,27 +197,6 @@ class AppService {
       if (c['name'] == city) return c;
     }
     return cities.first;
-  }
-
-  Order _order(dynamic e) {
-    return Order(
-      no: e['no'],
-      status: e['status'],
-      title: e['title'],
-      spec: e['spec'],
-      img: e['img'],
-      price: e['price'],
-      step: e['step'],
-    );
-  }
-
-  MenuEntry _menu(dynamic e) {
-    return MenuEntry(
-      emoji: e['emoji'],
-      title: e['title'],
-      screen: e['screen'],
-      arg: e['arg'],
-    );
   }
 
   // ---------------------------------------------------------------------
@@ -345,12 +248,5 @@ class AppService {
       if (o.no == no) return o;
     }
     return orders.first;
-  }
-
-  Resource _resourceOf(List<Resource> resources, String id) {
-    for (final r in resources) {
-      if (r.id == id) return r;
-    }
-    return resources.first;
   }
 }
