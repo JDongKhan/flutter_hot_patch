@@ -23,5 +23,6 @@
 library;
 
 export 'src/services/js_runtime_manager.dart';
+export 'src/js_ui/capabilities/dialog/dialog_api.dart';
 export 'src/js_ui/js_ui_widget.dart';
 export 'src/js_ui/js_widget_registry.dart';
