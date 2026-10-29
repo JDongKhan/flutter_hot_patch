@@ -33,7 +33,6 @@ import 'analysis/analyze_dart_class.dart';
 import 'analysis/class_table.dart';
 import 'analysis/component_scope.dart';
 import 'analysis/const_support.dart';
-import 'analysis/singleton_support.dart';
 import 'class_info.dart';
 import 'translator/dart2js.dart';
 import 'translator/js_value.dart';
@@ -188,7 +187,6 @@ String renderProjectPackageModule(
       file,
       classTable: table,
       importResolver: importResolver,
-      singletons: buildSingletonResolver(unit, file),
       jsClassWidgets: jsClassWidgetTypes,
       delegateClassWidgets: builderFormTypes,
       ignoredTypes: ignoredClassNamesInScope(unit, file),

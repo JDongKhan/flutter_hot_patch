@@ -6,12 +6,13 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// 本文件演示两个能力：
 ///   1. HelloCard —— 一个**完全正常的 Flutter StatefulWidget**（原生可直接用）
-///   2. 同文件静态样式类 —— PanelColors 与本组件同文件，codegen inline 进
-///      同一产物（const PanelColors = {...}），build 里 `PanelColors.background`
-///      直接翻译成 JS 表达式引用，无需 import 独立产物。
+///   2. 同文件的普通类 —— PanelColors 与本组件同文件，和其它类走同一条翻译
+///      路径（JS `class` + 静态成员后置赋值），build 里 `PanelColors.background`
+///      就是普通的类静态引用，无需额外机制。
 ///
 /// 注解仅 @PatchEntry() 一个类级注解（name 可省略，缺省取类名），其余全量生成：
 ///   - 所有非 static 基础类型字段 → JS 属性（一比一，_count → _count）
+///   - static 字段 / 方法 → JS 类的静态成员（`X.f` / `static m(...)`）
 ///   - 所有非生命周期方法 → JS 方法（一比一，inc → inc）
 ///   - SnackBar 形式的方法 → 自动 native 通道（nativeToast）
 ///   - build() 原封不动翻译成 JS build()
@@ -169,9 +170,10 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
   }
 }
 
-/// 同文件静态样式类：与本组件同文件，由 codegen inline 进同一产物
-/// （const PanelColors = {...}），组件 build 里 `PanelColors.xxx` 直接引用，
-/// 不产生独立单例产物、不 import。
+/// 普通 Dart 类（**不是**特殊形态）：和所有类一样翻译成 JS `class`，
+/// 静态成员按 Dart 语义挂在类上（`class PanelColors { … }` + 类外
+/// `PanelColors.background = "#ff0000";`），build 里 `PanelColors.xxx`
+/// 就是普通的 `PanelColors.xxx` 引用。
 class PanelColors {
   static Color background = const Color(0xFFFF0000);
   static Color adult = const Color(0xFF4CAF50); // 成人态按钮色（绿色）
