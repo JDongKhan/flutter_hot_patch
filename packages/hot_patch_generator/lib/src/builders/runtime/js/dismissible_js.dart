@@ -8,18 +8,8 @@
 // 宿主 → JS 的 invoke 是单向的，且 iOS/JavaScriptCore 无法把 JS Promise 交回
 // Dart；于是由 JS 侧 await 事件句柄的返回值，再经唯一 JS→宿主出口回传。
 const String dismissibleJsSource = r'''
-  // DismissDirection 枚举镜像：Dart 里 `DismissDirection.endToStart` 是枚举值，
-  // 跨语言只有名字能表达（宿主也按 name 下发/回传），因此 JS 侧的同名常量就是
-  // 名字字符串。这样 `direction == DismissDirection.endToStart` 这种源码级比较
-  // 在 JS 侧**语义不变**（生成器对 props 里的枚举值同样下发名字字符串）。
-  G.DismissDirection = {
-    horizontal: 'horizontal',
-    vertical: 'vertical',
-    startToEnd: 'startToEnd',
-    endToStart: 'endToStart',
-    up: 'up',
-    down: 'down'
-  };
+  // DismissDirection 枚举镜像已迁至 flutter.js 值类区（class + static 字段，
+  // 与其他 Dart 枚举同一形态），此处只留事件派发。
 
   // 宿主侧桥接见 capabilities/dismissible/dismissible_bridge.dart 的
   // `_awaitJsValue`：evaluate 本函数触发一次事件，并等 token + 结果回传。

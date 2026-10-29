@@ -838,8 +838,740 @@ export class Wrap {
   }
 }
 
-// ===== Dart 值类（值对象 / Controller / 动画 / Key）=====
-// 由 runtime.js 迁入：翻译层对它们一律 `new X({...})`，
+export class AnimatedBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  initState() {
+    var a = this.props.animation;
+    if (a && typeof a.addListener === 'function') {
+      var self = this;
+      this.__animation = a;
+      this.__listener = function () { self.setState(function () {}); };
+      a.addListener(this.__listener);
+    }
+  }
+  build(context) {
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[AnimatedBuilder] builder 不是闭包');
+      return null;
+    }
+    return __h('AnimatedBuilder', { child: fn(context, this.props.child) });
+  }
+  dispose() {
+    if (this.__animation && this.__listener) {
+      this.__animation.removeListener(this.__listener);
+    }
+  }
+}
+
+
+export class AnimatedList {
+  constructor(props) {
+    this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return __h('AnimatedList', this.props);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[AnimatedList] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('AnimatedList', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = {};
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.initialItemCount || 0,
+      ctx: context
+    };
+    return __h('AnimatedList', p);
+  }
+  static builder(props) { return new AnimatedList(Object.assign({}, props, { factory: 'builder' })); }
+  static separated(props) { return new AnimatedList(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
+export class Builder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    // builder 协议唯一形态：闭包。闭包由组件 build 期生成（箭头函数，this 已绑定）。
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[Builder] builder 不是闭包');
+      return null;
+    }
+    return fn(context);
+  }
+}
+
+
+export class GridView {
+  constructor(props) {
+    this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return __h('GridView', this.props);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[GridView] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('GridView', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = {};
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
+    return __h('GridView', p);
+  }
+  static builder(props) { return new GridView(Object.assign({}, props, { factory: 'builder' })); }
+  static count(props) { return new GridView(Object.assign({}, props, { factory: 'count' })); }
+  static custom(props) { return new GridView(Object.assign({}, props, { factory: 'custom' })); }
+  static extent(props) { return new GridView(Object.assign({}, props, { factory: 'extent' })); }
+  static separated(props) { return new GridView(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
+export class LayoutBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var builder = this.props.builder;
+    if (typeof builder !== 'function') {
+      console.warn('[LayoutBuilder] builder 不是闭包');
+      return null;
+    }
+    var self = this;
+    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
+    // 宿主在布局阶段调用：实参是本结点的**父约束** JSON，不是事件参数。
+    var handle = this.__bindFn(0, [], function (json) {
+      var c = __jsuiBoxConstraints(json);
+      var prev = self.__constraints;
+      if (prev && prev.minWidth === c.minWidth && prev.maxWidth === c.maxWidth &&
+      prev.minHeight === c.minHeight && prev.maxHeight === c.maxHeight) {
+        return;
+      }
+      self.__constraints = c;
+      // 字段名不能叫 `__child`：那是 reconciler 记录「本实例挂出的子宿主结点」
+      // 的内部字段（见 mini_react 的 `ci.__child = mount(...)`），mount 之后会
+      // 被覆盖成宿主实例（带 __parent/__el，序列化时成环），props 里再塞它
+      // 就变成循环引用。
+      self.__lbChild = builder(context, c);
+      self.setState(function () {});
+    });
+    var props = { 'builder': handle };
+    if (this.__lbChild != null) { props.child = this.__lbChild; }
+    return __h('LayoutBuilder', props);
+  }
+}
+
+
+export class ListView {
+  constructor(props) {
+    this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return __h('ListView', this.props);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[ListView] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('ListView', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = {};
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
+    return __h('ListView', p);
+  }
+  static builder(props) { return new ListView(Object.assign({}, props, { factory: 'builder' })); }
+  static custom(props) { return new ListView(Object.assign({}, props, { factory: 'custom' })); }
+  static separated(props) { return new ListView(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
+export class ListenableBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  initState() {
+    var l = this.props.listenable;
+    if (l && typeof l.addListener === 'function') {
+      var self = this;
+      this.__listenable = l;
+      this.__listener = function () { self.setState(function () {}); };
+      l.addListener(this.__listener);
+    }
+  }
+  build(context) {
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[ListenableBuilder] builder 不是闭包');
+      return null;
+    }
+    return __h('ListenableBuilder', { notifier: this.props.listenable, child: fn(context) });
+  }
+  dispose() {
+    if (this.__listenable && this.__listener) {
+      this.__listenable.removeListener(this.__listener);
+    }
+  }
+}
+
+
+export class NestedScrollView {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var p = {};
+    var src = this.props;
+    for (var k in src) {
+      if (!Object.prototype.hasOwnProperty.call(src, k)) { continue; }
+      // builder 只在本类里执行，不往宿主 props 里传（函数不能跨语言）。
+      if (k === 'headerSliverBuilder') { continue; }
+      p[k] = src[k];
+    }
+    var fn = src.headerSliverBuilder;
+    p.headerSlivers = typeof fn === 'function' ? (fn(context, false) || []) : [];
+    return __h('NestedScrollView', p);
+  }
+}
+
+
+export class OrientationBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var builder = this.props.builder;
+    if (typeof builder !== 'function') {
+      console.warn('[OrientationBuilder] builder 不是闭包');
+      return null;
+    }
+    return __h(LayoutBuilder, {
+      'builder': function (context, constraints) {
+        return builder(context, constraints.maxWidth > constraints.maxHeight
+        ? Orientation.landscape
+        : Orientation.portrait);
+      },
+    });
+  }
+}
+
+
+export class Overlay {
+  constructor(props) {
+    this.props = props || {};
+    // 条目表：声明式与命令式共用一张表（Dart 侧同样是 _entries）。
+    this.__entries = [];
+    // 作用域声明：本实例即「OverlayState」，子孙 `Overlay.of(context)` 取到它。
+    this.__provides = { OverlayState: this };
+    var init = this.props.initialEntries;
+    if (Array.isArray(init)) {
+      for (var i = 0; i < init.length; i++) { this.__attach(init[i]); }
+    }
+  }
+  // 条目归属：同一个条目被别的 Overlay 占用时先摘除（Dart 语义：一个条目只能
+  // 属于一个 Overlay）；重复 insert 不重复展开。
+  __attach(entry) {
+    if (!entry || entry.__owner === this) { return; }
+    if (entry.__owner) { entry.__owner.remove(entry); }
+    entry.__owner = this;
+    entry.__removed = false;
+    this.__entries.push(entry);
+  }
+  // ── 与 OverlayState 同名同义的命令式 API ────────────────────────────────
+  insert(entry) {
+    this.__attach(entry);
+    this.setState(function () {});
+  }
+  insertAll(entries) {
+    if (Array.isArray(entries)) {
+      for (var i = 0; i < entries.length; i++) { this.__attach(entries[i]); }
+    }
+    this.setState(function () {});
+  }
+  remove(entry) {
+    if (!entry || entry.__owner !== this) { return; }
+    entry.__owner = null;
+    entry.__removed = true;
+    for (var i = 0; i < this.__entries.length; i++) {
+      if (this.__entries[i] === entry) { this.__entries.splice(i, 1); break; }
+    }
+    this.setState(function () {});
+  }
+  markNeedsBuild(entry) {
+    if (entry && entry.__owner === this) { this.setState(function () {}); }
+  }
+  build(context) {
+    var kids = [];
+    for (var i = 0; i < this.__entries.length; i++) {
+      var e = this.__entries[i];
+      if (!e || e.__removed) { continue; }
+      var w = e.__build(context);
+      // 与 Dart 一致：null 条目（builder 返回 null）不占位。
+      if (w != null) { kids.push(w); }
+    }
+    return __h('Stack', { alignment: 'topLeft', fit: 'expand', children: kids });
+  }
+  dispose() {
+    for (var i = 0; i < this.__entries.length; i++) {
+      if (this.__entries[i]) { this.__entries[i].__owner = null; }
+    }
+    this.__entries = [];
+  }
+}
+Overlay.of = function (context) {
+  return __scopeOf(context, 'OverlayState');
+};
+
+
+export class OverlayEntry {
+  constructor(props) {
+    this.props = props || {};
+    this.builder = this.props.builder;
+    this.opaque = !!this.props.opaque;
+    this.maintainState = this.props.maintainState !== false;
+    this.__owner = null;
+    this.__removed = false;
+  }
+  get mounted() { return this.__owner != null && !this.__removed; }
+  remove() {
+    // 幂等：Dart 对**已移除**的条目在 remove 时断言（`_overlay != null`），
+    // JS 侧改为静默 no-op——重复移除不该把整个事件回调炸掉。
+    if (this.__removed) { return; }
+    if (this.__owner) { this.__owner.remove(this); }
+  }
+  markNeedsBuild() {
+    if (this.__owner) { this.__owner.markNeedsBuild(this); }
+  }
+  __build(context) {
+    return typeof this.builder === 'function' ? this.builder(context) : null;
+  }
+}
+
+export class PageView {
+  constructor(props) {
+    this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return __h('PageView', this.props);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[PageView] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('PageView', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = {};
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
+    return __h('PageView', p);
+  }
+  static builder(props) { return new PageView(Object.assign({}, props, { factory: 'builder' })); }
+  static custom(props) { return new PageView(Object.assign({}, props, { factory: 'custom' })); }
+  static separated(props) { return new PageView(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
+export class ReorderableListView {
+  constructor(props) {
+    this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return __h('ReorderableListView', this.props);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[ReorderableListView] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('ReorderableListView', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = {};
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
+    return __h('ReorderableListView', p);
+  }
+  static builder(props) { return new ReorderableListView(Object.assign({}, props, { factory: 'builder' })); }
+  static separated(props) { return new ReorderableListView(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
+export class SliverGrid {
+  constructor(props) {
+    this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return __h('SliverGrid', this.props);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[SliverGrid] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('SliverGrid', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = {};
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
+    return __h('SliverGrid', p);
+  }
+  static builder(props) { return new SliverGrid(Object.assign({}, props, { factory: 'builder' })); }
+  static count(props) { return new SliverGrid(Object.assign({}, props, { factory: 'count' })); }
+  static extent(props) { return new SliverGrid(Object.assign({}, props, { factory: 'extent' })); }
+  static list(props) { return new SliverGrid(Object.assign({}, props, { factory: 'list' })); }
+  static separated(props) { return new SliverGrid(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
+export class SliverList {
+  constructor(props) {
+    this.props = props || {};
+    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
+    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
+    if (!this.__hasBuilder()) {
+      return __h('SliverList', this.props);
+    }
+  }
+  __hasBuilder() {
+    return typeof this.props.itemBuilder === 'function';
+  }
+  build(context) {
+    var item = this.props.itemBuilder;
+    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
+    // 出声后按普通构造渲染（宁可空列表也不静默）。
+    if (!this.__hasBuilder()) {
+      console.warn('[SliverList] itemBuilder 不是闭包，按普通构造渲染');
+      return __h('SliverList', this.props);
+    }
+    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
+    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
+    var p = {};
+    for (var k in this.props) {
+      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
+      p[k] = this.props[k];
+    }
+    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    p.__builder = {
+      item: item,
+      sep: this.props.separatorBuilder || null,
+      count: this.props.itemCount || 0,
+      ctx: context
+    };
+    return __h('SliverList', p);
+  }
+  static builder(props) { return new SliverList(Object.assign({}, props, { factory: 'builder' })); }
+  static list(props) { return new SliverList(Object.assign({}, props, { factory: 'list' })); }
+  static separated(props) { return new SliverList(Object.assign({}, props, { factory: 'separated' })); }
+
+}
+
+export class SliverPersistentHeader {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var delegate = this.props.delegate;
+    if (!delegate || typeof delegate.build !== 'function') {
+      console.warn('[SliverPersistentHeader] delegate.build 不是闭包');
+      return null;
+    }
+    var self = this;
+    // 首帧：宿主要到**布局阶段**才回调句柄，而 pinned 头的 paintExtent 由子级
+    // 实际高度决定（`min(childExtent, …)`），零高占位会触发「layoutExtent 超过
+    // paintExtent」的断言。所以这里先按 (0, false) 展一次——与 Flutter 首次布局
+    // 时 scrollOffset=0 的入参一致，只是把那次调用提前到 build 阶段。
+    if (this.__sphDelegate !== delegate) {
+      this.__sphDelegate = delegate;
+      this.__sphSig = { shrinkOffset: 0, overlaps: false };
+      this.__sphChild = delegate.build(context, 0, false);
+    }
+    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
+    // 宿主在布局阶段调用：实参是 {shrinkOffset, overlapsContent}，不是事件参数。
+    var handle = this.__bindFn(0, [], function (json) {
+      var prev = self.__sphSig;
+      if (prev && prev.shrinkOffset === json.shrinkOffset &&
+      prev.overlaps === json.overlapsContent) {
+        return;
+      }
+      self.__sphSig = { shrinkOffset: json.shrinkOffset, overlaps: json.overlapsContent };
+      // 字段名不能叫 `__child`（reconciler 内部字段，见 LayoutBuilder 处的说明）。
+      self.__sphChild = delegate.build(context, json.shrinkOffset, json.overlapsContent);
+      self.setState(function () {});
+    });
+    var props = {
+      'minExtent': delegate.minExtent,
+      'maxExtent': delegate.maxExtent,
+      'builder': handle
+    };
+    // pinned / floating 原样透传给宿主（默认 false 由宿主兜底）。
+    if (this.props.pinned !== undefined) { props.pinned = this.props.pinned; }
+    if (this.props.floating !== undefined) { props.floating = this.props.floating; }
+    if (this.__sphChild != null) { props.child = this.__sphChild; }
+    return __h('SliverPersistentHeader', props);
+  }
+}
+
+
+// Duration 可能是 JS 的 Duration 实例，也可能是裸毫秒数。
+function __tabMs(d) {
+  if (d == null) { return null; }
+  if (typeof d === 'number') { return d; }
+  if (typeof d === 'object' && typeof d.inMilliseconds === 'number') {
+    return d.inMilliseconds;
+  }
+  return null;
+}
+
+// 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
+// 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
+function __tabSame(a, b) {
+  if (a === b) { return true; }
+  if (a && b && typeof a.dx === 'number' && typeof b.dx === 'number') {
+    return a.dx === b.dx && a.dy === b.dy;
+  }
+  return false;
+}
+
+export class TweenAnimationBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  initState() {
+    var p = this.props;
+    var self = this;
+    this.__tabTween = p.tween || new Tween({});
+    this.__tabValue = this.__tabTween.begin != null
+    ? this.__tabTween.begin
+    : this.__tabTween.end;
+    var ctrl = new AnimationController({ duration: p.duration, value: 0 });
+    this.__tabCtrl = ctrl;
+    this.__tabCurved = new CurvedAnimation({
+      parent: ctrl,
+      curve: p.curve || 'linear'
+    });
+    this.__tabListener = function () {
+      self.__tabValue = self.__tabTween.lerp(self.__tabCurved.value);
+      self.setState(function () {});
+      if (ctrl.value >= 1 && !self.__tabEnded) {
+        self.__tabEnded = true;
+        __invokeCallback(self.props.onEnd, []);
+      }
+    };
+    ctrl.addListener(this.__tabListener);
+    // 与 Flutter 的 initState 一致：begin != end 时进入即播（如 Tween(0 → 1)
+    // 进场就有动画，onEnd 也会在到位时触发一次）。
+    if (!__tabSame(this.__tabTween.begin, this.__tabTween.end)) {
+      this.__tabEnded = false;
+      ctrl.forward();
+    }
+  }
+  didUpdateWidget() {
+    var p = this.props;
+    var next = p.tween || new Tween({});
+    var prev = this.__tabTween || new Tween({});
+    var ms = __tabMs(p.duration);
+    if (ms != null && ms !== this.__tabCtrl.durationMs) {
+      this.__tabCtrl.durationMs = ms;
+    }
+    // 同一段动画进行中父级重建时，目标没变就继续用原 tween——换成新实例会把
+    // begin 退回源值，正在跑的进度就会跳变。
+    if (!__tabSame(next.end, prev.end)) {
+      next.begin = this.__tabValue;
+      this.__tabTween = next;
+      this.__tabEnded = false;
+      this.__tabCtrl.reset();
+      this.__tabCtrl.forward();
+    }
+  }
+  build(context) {
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[TweenAnimationBuilder] builder 不是闭包');
+      return null;
+    }
+    return fn(context, this.__tabValue, this.props.child);
+  }
+  dispose() {
+    if (this.__tabCtrl) {
+      this.__tabCtrl.removeListener(this.__tabListener);
+      this.__tabCtrl.dispose();
+    }
+  }
+}
+
+
+export class ValueListenableBuilder {
+  constructor(props) {
+    this.props = props || {};
+  }
+  initState() {
+    this.__subscribe(this.props.valueListenable);
+  }
+  didUpdateWidget() {
+    var next = this.props.valueListenable;
+    if (next !== this.__listenable) { this.__subscribe(next); }
+  }
+  __subscribe(l) {
+    if (this.__listenable && this.__listener) {
+      this.__listenable.removeListener(this.__listener);
+    }
+    this.__listenable = l;
+    this.__listener = null;
+    if (l && typeof l.addListener === 'function') {
+      var self = this;
+      this.__listener = function () { self.setState(function () {}); };
+      l.addListener(this.__listener);
+    }
+  }
+  build(context) {
+    var fn = this.props.builder;
+    if (typeof fn !== 'function') {
+      console.warn('[ValueListenableBuilder] builder 不是闭包');
+      return null;
+    }
+    var l = this.props.valueListenable;
+    var value = (l && l.value !== undefined) ? l.value : null;
+    return __h('ValueListenableBuilder', {
+      notifier: l,
+      child: fn(context, value, this.props.child)
+    });
+  }
+  dispose() {
+    if (this.__listenable && this.__listener) {
+      this.__listenable.removeListener(this.__listener);
+    }
+  }
+}
+
+
+export class AnimatedListState extends __StateHandle {
+  insertItem(index, duration) {
+    this.__op('insertItem', { index: index, duration: duration });
+  }
+  // 与 Dart 同形（`removeItem(index, builder, {duration})`）：`builder` 是 Dart
+  // 闭包，跨语言无法执行——宿主复用「被移除的原项」当退场项，这里只告警一次。
+  removeItem(index, builder, duration) {
+    if (typeof builder === 'function' && !AnimatedListState.__warnedRemoval) {
+      AnimatedListState.__warnedRemoval = true;
+      console.warn('[AnimatedList] 退场 builder 不可跨语言执行，已回退为「被移除的原项」（样式与普通项一致）');
+    }
+    this.__op('removeItem', { index: index, duration: duration });
+  }
+}
+__registerStateProxy('AnimatedListState', AnimatedListState);
+
+// ===== Dart 值类（值对象 / Controller / 动画 / Key / 枚举）=====
+// 翻译层对它们一律 `new X({...})` / `X.member`；
 // 跨桥经各自 toJSON 输出宿主协议（不在这里做任何 JSON 拍平）。
 const G = globalThis;
 const {
@@ -1077,6 +1809,21 @@ BoxDecoration.prototype.toJSON = function () {
   return json;
 };
 G.BoxDecoration = BoxDecoration;
+
+// ----- 枚举镜像 ---------------------------------------------------------
+// Dart 枚举 → JS class + static 字段，值 = 成员名字符串：跨语言只有 name 能
+// 表达（宿主也按 name 下发/回传），这样源码级比较
+// `direction == DismissDirection.endToStart` 在 JS 侧语义不变。
+// 需要运行时存在「枚举类」的枚举在此登记（只做字符串转换的仍由翻译层下发名字）。
+class DismissDirection {
+  static horizontal = "horizontal";
+  static vertical = "vertical";
+  static startToEnd = "startToEnd";
+  static endToStart = "endToStart";
+  static up = "up";
+  static down = "down";
+}
+G.DismissDirection = DismissDirection;
 
 function __toHex(v) {
   var n = (v >>> 0).toString(16).toUpperCase();
@@ -2347,815 +3094,83 @@ G.Timer = Timer;
 
 
 // ===== Colors 常量（由 Flutter SDK colors.dart 自动生成）=====
-// 全局注入：产物里 `Colors.red` / `Colors.red[400]` 原样求值，
-// 翻译层不含任何色值表。
-globalThis.Colors = (function () {
-  function __c(v) { return new Color({ value: v }); }
-  function __mc(primary, shades) {
-    var m = new MaterialColor({ primary: primary });
-    for (var k in shades) {
-      m[k] = __c(shades[k]);
-      m['shade' + k] = m[k];
-    }
-    if (m['shade500'] === undefined) {
-      m['500'] = m;
-      m['shade500'] = m;
-    }
-    return m;
+// Dart 侧 `Colors` 是 `class Colors { static const MaterialColor red = … }`，
+// 产物一比一：class + static 字段（不是对象字面量）。`Colors.red[400]`
+// 原样求值，翻译层不含任何色值表，重构建即跟随 SDK。
+function __c(v) { return new Color({ value: v }); }
+function __mc(primary, shades) {
+  const m = new MaterialColor({ primary: primary });
+  for (const k in shades) {
+    m[k] = __c(shades[k]);
+    m["shade" + k] = m[k];
   }
-  function __mac(primary, shades) {
-    var m = new MaterialAccentColor({ primary: primary });
-    for (var k in shades) {
-      m[k] = __c(shades[k]);
-      m['shade' + k] = m[k];
-    }
-    return m;
+  if (m["shade500"] === undefined) {
+    m["500"] = m;
+    m["shade500"] = m;
   }
-  return {
-    red: __mc(0xFFF44336, {'50': 0xFFFFEBEE, '100': 0xFFFFCDD2, '200': 0xFFEF9A9A, '300': 0xFFE57373, '400': 0xFFEF5350, '500': 0xFFF44336, '600': 0xFFE53935, '700': 0xFFD32F2F, '800': 0xFFC62828, '900': 0xFFB71C1C}),
-    pink: __mc(0xFFE91E63, {'50': 0xFFFCE4EC, '100': 0xFFF8BBD0, '200': 0xFFF48FB1, '300': 0xFFF06292, '400': 0xFFEC407A, '500': 0xFFE91E63, '600': 0xFFD81B60, '700': 0xFFC2185B, '800': 0xFFAD1457, '900': 0xFF880E4F}),
-    purple: __mc(0xFF9C27B0, {'50': 0xFFF3E5F5, '100': 0xFFE1BEE7, '200': 0xFFCE93D8, '300': 0xFFBA68C8, '400': 0xFFAB47BC, '500': 0xFF9C27B0, '600': 0xFF8E24AA, '700': 0xFF7B1FA2, '800': 0xFF6A1B9A, '900': 0xFF4A148C}),
-    deepPurple: __mc(0xFF673AB7, {'50': 0xFFEDE7F6, '100': 0xFFD1C4E9, '200': 0xFFB39DDB, '300': 0xFF9575CD, '400': 0xFF7E57C2, '500': 0xFF673AB7, '600': 0xFF5E35B1, '700': 0xFF512DA8, '800': 0xFF4527A0, '900': 0xFF311B92}),
-    indigo: __mc(0xFF3F51B5, {'50': 0xFFE8EAF6, '100': 0xFFC5CAE9, '200': 0xFF9FA8DA, '300': 0xFF7986CB, '400': 0xFF5C6BC0, '500': 0xFF3F51B5, '600': 0xFF3949AB, '700': 0xFF303F9F, '800': 0xFF283593, '900': 0xFF1A237E}),
-    blue: __mc(0xFF2196F3, {'50': 0xFFE3F2FD, '100': 0xFFBBDEFB, '200': 0xFF90CAF9, '300': 0xFF64B5F6, '400': 0xFF42A5F5, '500': 0xFF2196F3, '600': 0xFF1E88E5, '700': 0xFF1976D2, '800': 0xFF1565C0, '900': 0xFF0D47A1}),
-    lightBlue: __mc(0xFF03A9F4, {'50': 0xFFE1F5FE, '100': 0xFFB3E5FC, '200': 0xFF81D4FA, '300': 0xFF4FC3F7, '400': 0xFF29B6F6, '500': 0xFF03A9F4, '600': 0xFF039BE5, '700': 0xFF0288D1, '800': 0xFF0277BD, '900': 0xFF01579B}),
-    cyan: __mc(0xFF00BCD4, {'50': 0xFFE0F7FA, '100': 0xFFB2EBF2, '200': 0xFF80DEEA, '300': 0xFF4DD0E1, '400': 0xFF26C6DA, '500': 0xFF00BCD4, '600': 0xFF00ACC1, '700': 0xFF0097A7, '800': 0xFF00838F, '900': 0xFF006064}),
-    teal: __mc(0xFF009688, {'50': 0xFFE0F2F1, '100': 0xFFB2DFDB, '200': 0xFF80CBC4, '300': 0xFF4DB6AC, '400': 0xFF26A69A, '500': 0xFF009688, '600': 0xFF00897B, '700': 0xFF00796B, '800': 0xFF00695C, '900': 0xFF004D40}),
-    green: __mc(0xFF4CAF50, {'50': 0xFFE8F5E9, '100': 0xFFC8E6C9, '200': 0xFFA5D6A7, '300': 0xFF81C784, '400': 0xFF66BB6A, '500': 0xFF4CAF50, '600': 0xFF43A047, '700': 0xFF388E3C, '800': 0xFF2E7D32, '900': 0xFF1B5E20}),
-    lightGreen: __mc(0xFF8BC34A, {'50': 0xFFF1F8E9, '100': 0xFFDCEDC8, '200': 0xFFC5E1A5, '300': 0xFFAED581, '400': 0xFF9CCC65, '500': 0xFF8BC34A, '600': 0xFF7CB342, '700': 0xFF689F38, '800': 0xFF558B2F, '900': 0xFF33691E}),
-    lime: __mc(0xFFCDDC39, {'50': 0xFFF9FBE7, '100': 0xFFF0F4C3, '200': 0xFFE6EE9C, '300': 0xFFDCE775, '400': 0xFFD4E157, '500': 0xFFCDDC39, '600': 0xFFC0CA33, '700': 0xFFAFB42B, '800': 0xFF9E9D24, '900': 0xFF827717}),
-    yellow: __mc(0xFFFFEB3B, {'50': 0xFFFFFDE7, '100': 0xFFFFF9C4, '200': 0xFFFFF59D, '300': 0xFFFFF176, '400': 0xFFFFEE58, '500': 0xFFFFEB3B, '600': 0xFFFDD835, '700': 0xFFFBC02D, '800': 0xFFF9A825, '900': 0xFFF57F17}),
-    amber: __mc(0xFFFFC107, {'50': 0xFFFFF8E1, '100': 0xFFFFECB3, '200': 0xFFFFE082, '300': 0xFFFFD54F, '400': 0xFFFFCA28, '500': 0xFFFFC107, '600': 0xFFFFB300, '700': 0xFFFFA000, '800': 0xFFFF8F00, '900': 0xFFFF6F00}),
-    orange: __mc(0xFFFF9800, {'50': 0xFFFFF3E0, '100': 0xFFFFE0B2, '200': 0xFFFFCC80, '300': 0xFFFFB74D, '400': 0xFFFFA726, '500': 0xFFFF9800, '600': 0xFFFB8C00, '700': 0xFFF57C00, '800': 0xFFEF6C00, '900': 0xFFE65100}),
-    deepOrange: __mc(0xFFFF5722, {'50': 0xFFFBE9E7, '100': 0xFFFFCCBC, '200': 0xFFFFAB91, '300': 0xFFFF8A65, '400': 0xFFFF7043, '500': 0xFFFF5722, '600': 0xFFF4511E, '700': 0xFFE64A19, '800': 0xFFD84315, '900': 0xFFBF360C}),
-    brown: __mc(0xFF795548, {'50': 0xFFEFEBE9, '100': 0xFFD7CCC8, '200': 0xFFBCAAA4, '300': 0xFFA1887F, '400': 0xFF8D6E63, '500': 0xFF795548, '600': 0xFF6D4C41, '700': 0xFF5D4037, '800': 0xFF4E342E, '900': 0xFF3E2723}),
-    grey: __mc(0xFF9E9E9E, {'50': 0xFFFAFAFA, '100': 0xFFF5F5F5, '200': 0xFFEEEEEE, '300': 0xFFE0E0E0, '350': 0xFFD6D6D6, '400': 0xFFBDBDBD, '500': 0xFF9E9E9E, '600': 0xFF757575, '700': 0xFF616161, '800': 0xFF424242, '850': 0xFF303030, '900': 0xFF212121}),
-    blueGrey: __mc(0xFF607D8B, {'50': 0xFFECEFF1, '100': 0xFFCFD8DC, '200': 0xFFB0BEC5, '300': 0xFF90A4AE, '400': 0xFF78909C, '500': 0xFF607D8B, '600': 0xFF546E7A, '700': 0xFF455A64, '800': 0xFF37474F, '900': 0xFF263238}),
-    redAccent: __mac(0xFFFF5252, {'100': 0xFFFF8A80, '200': 0xFFFF5252, '400': 0xFFFF1744, '700': 0xFFD50000}),
-    pinkAccent: __mac(0xFFFF4081, {'100': 0xFFFF80AB, '200': 0xFFFF4081, '400': 0xFFF50057, '700': 0xFFC51162}),
-    purpleAccent: __mac(0xFFE040FB, {'100': 0xFFEA80FC, '200': 0xFFE040FB, '400': 0xFFD500F9, '700': 0xFFAA00FF}),
-    deepPurpleAccent: __mac(0xFF7C4DFF, {'100': 0xFFB388FF, '200': 0xFF7C4DFF, '400': 0xFF651FFF, '700': 0xFF6200EA}),
-    indigoAccent: __mac(0xFF536DFE, {'100': 0xFF8C9EFF, '200': 0xFF536DFE, '400': 0xFF3D5AFE, '700': 0xFF304FFE}),
-    blueAccent: __mac(0xFF448AFF, {'100': 0xFF82B1FF, '200': 0xFF448AFF, '400': 0xFF2979FF, '700': 0xFF2962FF}),
-    lightBlueAccent: __mac(0xFF40C4FF, {'100': 0xFF80D8FF, '200': 0xFF40C4FF, '400': 0xFF00B0FF, '700': 0xFF0091EA}),
-    cyanAccent: __mac(0xFF18FFFF, {'100': 0xFF84FFFF, '200': 0xFF18FFFF, '400': 0xFF00E5FF, '700': 0xFF00B8D4}),
-    tealAccent: __mac(0xFF64FFDA, {'100': 0xFFA7FFEB, '200': 0xFF64FFDA, '400': 0xFF1DE9B6, '700': 0xFF00BFA5}),
-    greenAccent: __mac(0xFF69F0AE, {'100': 0xFFB9F6CA, '200': 0xFF69F0AE, '400': 0xFF00E676, '700': 0xFF00C853}),
-    lightGreenAccent: __mac(0xFFB2FF59, {'100': 0xFFCCFF90, '200': 0xFFB2FF59, '400': 0xFF76FF03, '700': 0xFF64DD17}),
-    limeAccent: __mac(0xFFEEFF41, {'100': 0xFFF4FF81, '200': 0xFFEEFF41, '400': 0xFFC6FF00, '700': 0xFFAEEA00}),
-    yellowAccent: __mac(0xFFFFFF00, {'100': 0xFFFFFF8D, '200': 0xFFFFFF00, '400': 0xFFFFEA00, '700': 0xFFFFD600}),
-    amberAccent: __mac(0xFFFFD740, {'100': 0xFFFFE57F, '200': 0xFFFFD740, '400': 0xFFFFC400, '700': 0xFFFFAB00}),
-    orangeAccent: __mac(0xFFFFAB40, {'100': 0xFFFFD180, '200': 0xFFFFAB40, '400': 0xFFFF9100, '700': 0xFFFF6D00}),
-    deepOrangeAccent: __mac(0xFFFF6E40, {'100': 0xFFFF9E80, '200': 0xFFFF6E40, '400': 0xFFFF3D00, '700': 0xFFDD2C00}),
-    transparent: __c(0x00000000),
-    black: __c(0xFF000000),
-    black87: __c(0xDD000000),
-    black54: __c(0x8A000000),
-    black45: __c(0x73000000),
-    black38: __c(0x61000000),
-    black26: __c(0x42000000),
-    black12: __c(0x1F000000),
-    white: __c(0xFFFFFFFF),
-    white70: __c(0xB3FFFFFF),
-    white60: __c(0x99FFFFFF),
-    white54: __c(0x8AFFFFFF),
-    white38: __c(0x62FFFFFF),
-    white30: __c(0x4DFFFFFF),
-    white24: __c(0x3DFFFFFF),
-    white12: __c(0x1FFFFFFF),
-    white10: __c(0x1AFFFFFF)
-  };
-})();
-
-
-export class AnimatedBuilder {
-  constructor(props) {
-    this.props = props || {};
-  }
-  initState() {
-    var a = this.props.animation;
-    if (a && typeof a.addListener === 'function') {
-      var self = this;
-      this.__animation = a;
-      this.__listener = function () { self.setState(function () {}); };
-      a.addListener(this.__listener);
-    }
-  }
-  build(context) {
-    var fn = this.props.builder;
-    if (typeof fn !== 'function') {
-      console.warn('[AnimatedBuilder] builder 不是闭包');
-      return null;
-    }
-    return __h('AnimatedBuilder', { child: fn(context, this.props.child) });
-  }
-  dispose() {
-    if (this.__animation && this.__listener) {
-      this.__animation.removeListener(this.__listener);
-    }
-  }
+  return m;
 }
-
-
-export class AnimatedList {
-  constructor(props) {
-    this.props = props || {};
-    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
-    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    if (!this.__hasBuilder()) {
-      return __h('AnimatedList', this.props);
-    }
+function __mac(primary, shades) {
+  const m = new MaterialAccentColor({ primary: primary });
+  for (const k in shades) {
+    m[k] = __c(shades[k]);
+    m["shade" + k] = m[k];
   }
-  __hasBuilder() {
-    return typeof this.props.itemBuilder === 'function';
-  }
-  build(context) {
-    var item = this.props.itemBuilder;
-    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
-    // 出声后按普通构造渲染（宁可空列表也不静默）。
-    if (!this.__hasBuilder()) {
-      console.warn('[AnimatedList] itemBuilder 不是闭包，按普通构造渲染');
-      return __h('AnimatedList', this.props);
-    }
-    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
-    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
-    p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.initialItemCount || 0,
-      ctx: context
-    };
-    return __h('AnimatedList', p);
-  }
-  static builder(props) { return new AnimatedList(Object.assign({}, props, { factory: 'builder' })); }
-  static separated(props) { return new AnimatedList(Object.assign({}, props, { factory: 'separated' })); }
-
+  return m;
 }
-
-export class Builder {
-  constructor(props) {
-    this.props = props || {};
-  }
-  build(context) {
-    // builder 协议唯一形态：闭包。闭包由组件 build 期生成（箭头函数，this 已绑定）。
-    var fn = this.props.builder;
-    if (typeof fn !== 'function') {
-      console.warn('[Builder] builder 不是闭包');
-      return null;
-    }
-    return fn(context);
-  }
+export class Colors {
+  static red = __mc(0xFFF44336, {'50': 0xFFFFEBEE, '100': 0xFFFFCDD2, '200': 0xFFEF9A9A, '300': 0xFFE57373, '400': 0xFFEF5350, '500': 0xFFF44336, '600': 0xFFE53935, '700': 0xFFD32F2F, '800': 0xFFC62828, '900': 0xFFB71C1C});
+  static pink = __mc(0xFFE91E63, {'50': 0xFFFCE4EC, '100': 0xFFF8BBD0, '200': 0xFFF48FB1, '300': 0xFFF06292, '400': 0xFFEC407A, '500': 0xFFE91E63, '600': 0xFFD81B60, '700': 0xFFC2185B, '800': 0xFFAD1457, '900': 0xFF880E4F});
+  static purple = __mc(0xFF9C27B0, {'50': 0xFFF3E5F5, '100': 0xFFE1BEE7, '200': 0xFFCE93D8, '300': 0xFFBA68C8, '400': 0xFFAB47BC, '500': 0xFF9C27B0, '600': 0xFF8E24AA, '700': 0xFF7B1FA2, '800': 0xFF6A1B9A, '900': 0xFF4A148C});
+  static deepPurple = __mc(0xFF673AB7, {'50': 0xFFEDE7F6, '100': 0xFFD1C4E9, '200': 0xFFB39DDB, '300': 0xFF9575CD, '400': 0xFF7E57C2, '500': 0xFF673AB7, '600': 0xFF5E35B1, '700': 0xFF512DA8, '800': 0xFF4527A0, '900': 0xFF311B92});
+  static indigo = __mc(0xFF3F51B5, {'50': 0xFFE8EAF6, '100': 0xFFC5CAE9, '200': 0xFF9FA8DA, '300': 0xFF7986CB, '400': 0xFF5C6BC0, '500': 0xFF3F51B5, '600': 0xFF3949AB, '700': 0xFF303F9F, '800': 0xFF283593, '900': 0xFF1A237E});
+  static blue = __mc(0xFF2196F3, {'50': 0xFFE3F2FD, '100': 0xFFBBDEFB, '200': 0xFF90CAF9, '300': 0xFF64B5F6, '400': 0xFF42A5F5, '500': 0xFF2196F3, '600': 0xFF1E88E5, '700': 0xFF1976D2, '800': 0xFF1565C0, '900': 0xFF0D47A1});
+  static lightBlue = __mc(0xFF03A9F4, {'50': 0xFFE1F5FE, '100': 0xFFB3E5FC, '200': 0xFF81D4FA, '300': 0xFF4FC3F7, '400': 0xFF29B6F6, '500': 0xFF03A9F4, '600': 0xFF039BE5, '700': 0xFF0288D1, '800': 0xFF0277BD, '900': 0xFF01579B});
+  static cyan = __mc(0xFF00BCD4, {'50': 0xFFE0F7FA, '100': 0xFFB2EBF2, '200': 0xFF80DEEA, '300': 0xFF4DD0E1, '400': 0xFF26C6DA, '500': 0xFF00BCD4, '600': 0xFF00ACC1, '700': 0xFF0097A7, '800': 0xFF00838F, '900': 0xFF006064});
+  static teal = __mc(0xFF009688, {'50': 0xFFE0F2F1, '100': 0xFFB2DFDB, '200': 0xFF80CBC4, '300': 0xFF4DB6AC, '400': 0xFF26A69A, '500': 0xFF009688, '600': 0xFF00897B, '700': 0xFF00796B, '800': 0xFF00695C, '900': 0xFF004D40});
+  static green = __mc(0xFF4CAF50, {'50': 0xFFE8F5E9, '100': 0xFFC8E6C9, '200': 0xFFA5D6A7, '300': 0xFF81C784, '400': 0xFF66BB6A, '500': 0xFF4CAF50, '600': 0xFF43A047, '700': 0xFF388E3C, '800': 0xFF2E7D32, '900': 0xFF1B5E20});
+  static lightGreen = __mc(0xFF8BC34A, {'50': 0xFFF1F8E9, '100': 0xFFDCEDC8, '200': 0xFFC5E1A5, '300': 0xFFAED581, '400': 0xFF9CCC65, '500': 0xFF8BC34A, '600': 0xFF7CB342, '700': 0xFF689F38, '800': 0xFF558B2F, '900': 0xFF33691E});
+  static lime = __mc(0xFFCDDC39, {'50': 0xFFF9FBE7, '100': 0xFFF0F4C3, '200': 0xFFE6EE9C, '300': 0xFFDCE775, '400': 0xFFD4E157, '500': 0xFFCDDC39, '600': 0xFFC0CA33, '700': 0xFFAFB42B, '800': 0xFF9E9D24, '900': 0xFF827717});
+  static yellow = __mc(0xFFFFEB3B, {'50': 0xFFFFFDE7, '100': 0xFFFFF9C4, '200': 0xFFFFF59D, '300': 0xFFFFF176, '400': 0xFFFFEE58, '500': 0xFFFFEB3B, '600': 0xFFFDD835, '700': 0xFFFBC02D, '800': 0xFFF9A825, '900': 0xFFF57F17});
+  static amber = __mc(0xFFFFC107, {'50': 0xFFFFF8E1, '100': 0xFFFFECB3, '200': 0xFFFFE082, '300': 0xFFFFD54F, '400': 0xFFFFCA28, '500': 0xFFFFC107, '600': 0xFFFFB300, '700': 0xFFFFA000, '800': 0xFFFF8F00, '900': 0xFFFF6F00});
+  static orange = __mc(0xFFFF9800, {'50': 0xFFFFF3E0, '100': 0xFFFFE0B2, '200': 0xFFFFCC80, '300': 0xFFFFB74D, '400': 0xFFFFA726, '500': 0xFFFF9800, '600': 0xFFFB8C00, '700': 0xFFF57C00, '800': 0xFFEF6C00, '900': 0xFFE65100});
+  static deepOrange = __mc(0xFFFF5722, {'50': 0xFFFBE9E7, '100': 0xFFFFCCBC, '200': 0xFFFFAB91, '300': 0xFFFF8A65, '400': 0xFFFF7043, '500': 0xFFFF5722, '600': 0xFFF4511E, '700': 0xFFE64A19, '800': 0xFFD84315, '900': 0xFFBF360C});
+  static brown = __mc(0xFF795548, {'50': 0xFFEFEBE9, '100': 0xFFD7CCC8, '200': 0xFFBCAAA4, '300': 0xFFA1887F, '400': 0xFF8D6E63, '500': 0xFF795548, '600': 0xFF6D4C41, '700': 0xFF5D4037, '800': 0xFF4E342E, '900': 0xFF3E2723});
+  static grey = __mc(0xFF9E9E9E, {'50': 0xFFFAFAFA, '100': 0xFFF5F5F5, '200': 0xFFEEEEEE, '300': 0xFFE0E0E0, '350': 0xFFD6D6D6, '400': 0xFFBDBDBD, '500': 0xFF9E9E9E, '600': 0xFF757575, '700': 0xFF616161, '800': 0xFF424242, '850': 0xFF303030, '900': 0xFF212121});
+  static blueGrey = __mc(0xFF607D8B, {'50': 0xFFECEFF1, '100': 0xFFCFD8DC, '200': 0xFFB0BEC5, '300': 0xFF90A4AE, '400': 0xFF78909C, '500': 0xFF607D8B, '600': 0xFF546E7A, '700': 0xFF455A64, '800': 0xFF37474F, '900': 0xFF263238});
+  static redAccent = __mac(0xFFFF5252, {'100': 0xFFFF8A80, '200': 0xFFFF5252, '400': 0xFFFF1744, '700': 0xFFD50000});
+  static pinkAccent = __mac(0xFFFF4081, {'100': 0xFFFF80AB, '200': 0xFFFF4081, '400': 0xFFF50057, '700': 0xFFC51162});
+  static purpleAccent = __mac(0xFFE040FB, {'100': 0xFFEA80FC, '200': 0xFFE040FB, '400': 0xFFD500F9, '700': 0xFFAA00FF});
+  static deepPurpleAccent = __mac(0xFF7C4DFF, {'100': 0xFFB388FF, '200': 0xFF7C4DFF, '400': 0xFF651FFF, '700': 0xFF6200EA});
+  static indigoAccent = __mac(0xFF536DFE, {'100': 0xFF8C9EFF, '200': 0xFF536DFE, '400': 0xFF3D5AFE, '700': 0xFF304FFE});
+  static blueAccent = __mac(0xFF448AFF, {'100': 0xFF82B1FF, '200': 0xFF448AFF, '400': 0xFF2979FF, '700': 0xFF2962FF});
+  static lightBlueAccent = __mac(0xFF40C4FF, {'100': 0xFF80D8FF, '200': 0xFF40C4FF, '400': 0xFF00B0FF, '700': 0xFF0091EA});
+  static cyanAccent = __mac(0xFF18FFFF, {'100': 0xFF84FFFF, '200': 0xFF18FFFF, '400': 0xFF00E5FF, '700': 0xFF00B8D4});
+  static tealAccent = __mac(0xFF64FFDA, {'100': 0xFFA7FFEB, '200': 0xFF64FFDA, '400': 0xFF1DE9B6, '700': 0xFF00BFA5});
+  static greenAccent = __mac(0xFF69F0AE, {'100': 0xFFB9F6CA, '200': 0xFF69F0AE, '400': 0xFF00E676, '700': 0xFF00C853});
+  static lightGreenAccent = __mac(0xFFB2FF59, {'100': 0xFFCCFF90, '200': 0xFFB2FF59, '400': 0xFF76FF03, '700': 0xFF64DD17});
+  static limeAccent = __mac(0xFFEEFF41, {'100': 0xFFF4FF81, '200': 0xFFEEFF41, '400': 0xFFC6FF00, '700': 0xFFAEEA00});
+  static yellowAccent = __mac(0xFFFFFF00, {'100': 0xFFFFFF8D, '200': 0xFFFFFF00, '400': 0xFFFFEA00, '700': 0xFFFFD600});
+  static amberAccent = __mac(0xFFFFD740, {'100': 0xFFFFE57F, '200': 0xFFFFD740, '400': 0xFFFFC400, '700': 0xFFFFAB00});
+  static orangeAccent = __mac(0xFFFFAB40, {'100': 0xFFFFD180, '200': 0xFFFFAB40, '400': 0xFFFF9100, '700': 0xFFFF6D00});
+  static deepOrangeAccent = __mac(0xFFFF6E40, {'100': 0xFFFF9E80, '200': 0xFFFF6E40, '400': 0xFFFF3D00, '700': 0xFFDD2C00});
+  static transparent = __c(0x00000000);
+  static black = __c(0xFF000000);
+  static black87 = __c(0xDD000000);
+  static black54 = __c(0x8A000000);
+  static black45 = __c(0x73000000);
+  static black38 = __c(0x61000000);
+  static black26 = __c(0x42000000);
+  static black12 = __c(0x1F000000);
+  static white = __c(0xFFFFFFFF);
+  static white70 = __c(0xB3FFFFFF);
+  static white60 = __c(0x99FFFFFF);
+  static white54 = __c(0x8AFFFFFF);
+  static white38 = __c(0x62FFFFFF);
+  static white30 = __c(0x4DFFFFFF);
+  static white24 = __c(0x3DFFFFFF);
+  static white12 = __c(0x1FFFFFFF);
+  static white10 = __c(0x1AFFFFFF);
 }
+globalThis.Colors = Colors;
 
-
-export class GridView {
-  constructor(props) {
-    this.props = props || {};
-    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
-    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    if (!this.__hasBuilder()) {
-      return __h('GridView', this.props);
-    }
-  }
-  __hasBuilder() {
-    return typeof this.props.itemBuilder === 'function';
-  }
-  build(context) {
-    var item = this.props.itemBuilder;
-    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
-    // 出声后按普通构造渲染（宁可空列表也不静默）。
-    if (!this.__hasBuilder()) {
-      console.warn('[GridView] itemBuilder 不是闭包，按普通构造渲染');
-      return __h('GridView', this.props);
-    }
-    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
-    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
-    p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
-      ctx: context
-    };
-    return __h('GridView', p);
-  }
-  static builder(props) { return new GridView(Object.assign({}, props, { factory: 'builder' })); }
-  static count(props) { return new GridView(Object.assign({}, props, { factory: 'count' })); }
-  static custom(props) { return new GridView(Object.assign({}, props, { factory: 'custom' })); }
-  static extent(props) { return new GridView(Object.assign({}, props, { factory: 'extent' })); }
-  static separated(props) { return new GridView(Object.assign({}, props, { factory: 'separated' })); }
-
-}
-
-export class LayoutBuilder {
-  constructor(props) {
-    this.props = props || {};
-  }
-  build(context) {
-    var builder = this.props.builder;
-    if (typeof builder !== 'function') {
-      console.warn('[LayoutBuilder] builder 不是闭包');
-      return null;
-    }
-    var self = this;
-    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
-    // 宿主在布局阶段调用：实参是本结点的**父约束** JSON，不是事件参数。
-    var handle = this.__bindFn(0, [], function (json) {
-      var c = __jsuiBoxConstraints(json);
-      var prev = self.__constraints;
-      if (prev && prev.minWidth === c.minWidth && prev.maxWidth === c.maxWidth &&
-      prev.minHeight === c.minHeight && prev.maxHeight === c.maxHeight) {
-        return;
-      }
-      self.__constraints = c;
-      // 字段名不能叫 `__child`：那是 reconciler 记录「本实例挂出的子宿主结点」
-      // 的内部字段（见 mini_react 的 `ci.__child = mount(...)`），mount 之后会
-      // 被覆盖成宿主实例（带 __parent/__el，序列化时成环），props 里再塞它
-      // 就变成循环引用。
-      self.__lbChild = builder(context, c);
-      self.setState(function () {});
-    });
-    var props = { 'builder': handle };
-    if (this.__lbChild != null) { props.child = this.__lbChild; }
-    return __h('LayoutBuilder', props);
-  }
-}
-
-
-export class ListView {
-  constructor(props) {
-    this.props = props || {};
-    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
-    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    if (!this.__hasBuilder()) {
-      return __h('ListView', this.props);
-    }
-  }
-  __hasBuilder() {
-    return typeof this.props.itemBuilder === 'function';
-  }
-  build(context) {
-    var item = this.props.itemBuilder;
-    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
-    // 出声后按普通构造渲染（宁可空列表也不静默）。
-    if (!this.__hasBuilder()) {
-      console.warn('[ListView] itemBuilder 不是闭包，按普通构造渲染');
-      return __h('ListView', this.props);
-    }
-    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
-    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
-    p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
-      ctx: context
-    };
-    return __h('ListView', p);
-  }
-  static builder(props) { return new ListView(Object.assign({}, props, { factory: 'builder' })); }
-  static custom(props) { return new ListView(Object.assign({}, props, { factory: 'custom' })); }
-  static separated(props) { return new ListView(Object.assign({}, props, { factory: 'separated' })); }
-
-}
-
-export class ListenableBuilder {
-  constructor(props) {
-    this.props = props || {};
-  }
-  initState() {
-    var l = this.props.listenable;
-    if (l && typeof l.addListener === 'function') {
-      var self = this;
-      this.__listenable = l;
-      this.__listener = function () { self.setState(function () {}); };
-      l.addListener(this.__listener);
-    }
-  }
-  build(context) {
-    var fn = this.props.builder;
-    if (typeof fn !== 'function') {
-      console.warn('[ListenableBuilder] builder 不是闭包');
-      return null;
-    }
-    return __h('ListenableBuilder', { notifier: this.props.listenable, child: fn(context) });
-  }
-  dispose() {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
-  }
-}
-
-
-export class NestedScrollView {
-  constructor(props) {
-    this.props = props || {};
-  }
-  build(context) {
-    var p = {};
-    var src = this.props;
-    for (var k in src) {
-      if (!Object.prototype.hasOwnProperty.call(src, k)) { continue; }
-      // builder 只在本类里执行，不往宿主 props 里传（函数不能跨语言）。
-      if (k === 'headerSliverBuilder') { continue; }
-      p[k] = src[k];
-    }
-    var fn = src.headerSliverBuilder;
-    p.headerSlivers = typeof fn === 'function' ? (fn(context, false) || []) : [];
-    return __h('NestedScrollView', p);
-  }
-}
-
-
-export class OrientationBuilder {
-  constructor(props) {
-    this.props = props || {};
-  }
-  build(context) {
-    var builder = this.props.builder;
-    if (typeof builder !== 'function') {
-      console.warn('[OrientationBuilder] builder 不是闭包');
-      return null;
-    }
-    return __h(LayoutBuilder, {
-      'builder': function (context, constraints) {
-        return builder(context, constraints.maxWidth > constraints.maxHeight
-        ? Orientation.landscape
-        : Orientation.portrait);
-      },
-    });
-  }
-}
-
-
-export class Overlay {
-  constructor(props) {
-    this.props = props || {};
-    // 条目表：声明式与命令式共用一张表（Dart 侧同样是 _entries）。
-    this.__entries = [];
-    // 作用域声明：本实例即「OverlayState」，子孙 `Overlay.of(context)` 取到它。
-    this.__provides = { OverlayState: this };
-    var init = this.props.initialEntries;
-    if (Array.isArray(init)) {
-      for (var i = 0; i < init.length; i++) { this.__attach(init[i]); }
-    }
-  }
-  // 条目归属：同一个条目被别的 Overlay 占用时先摘除（Dart 语义：一个条目只能
-  // 属于一个 Overlay）；重复 insert 不重复展开。
-  __attach(entry) {
-    if (!entry || entry.__owner === this) { return; }
-    if (entry.__owner) { entry.__owner.remove(entry); }
-    entry.__owner = this;
-    entry.__removed = false;
-    this.__entries.push(entry);
-  }
-  // ── 与 OverlayState 同名同义的命令式 API ────────────────────────────────
-  insert(entry) {
-    this.__attach(entry);
-    this.setState(function () {});
-  }
-  insertAll(entries) {
-    if (Array.isArray(entries)) {
-      for (var i = 0; i < entries.length; i++) { this.__attach(entries[i]); }
-    }
-    this.setState(function () {});
-  }
-  remove(entry) {
-    if (!entry || entry.__owner !== this) { return; }
-    entry.__owner = null;
-    entry.__removed = true;
-    for (var i = 0; i < this.__entries.length; i++) {
-      if (this.__entries[i] === entry) { this.__entries.splice(i, 1); break; }
-    }
-    this.setState(function () {});
-  }
-  markNeedsBuild(entry) {
-    if (entry && entry.__owner === this) { this.setState(function () {}); }
-  }
-  build(context) {
-    var kids = [];
-    for (var i = 0; i < this.__entries.length; i++) {
-      var e = this.__entries[i];
-      if (!e || e.__removed) { continue; }
-      var w = e.__build(context);
-      // 与 Dart 一致：null 条目（builder 返回 null）不占位。
-      if (w != null) { kids.push(w); }
-    }
-    return __h('Stack', { alignment: 'topLeft', fit: 'expand', children: kids });
-  }
-  dispose() {
-    for (var i = 0; i < this.__entries.length; i++) {
-      if (this.__entries[i]) { this.__entries[i].__owner = null; }
-    }
-    this.__entries = [];
-  }
-}
-Overlay.of = function (context) {
-  return __scopeOf(context, 'OverlayState');
-};
-
-
-export class OverlayEntry {
-  constructor(props) {
-    this.props = props || {};
-    this.builder = this.props.builder;
-    this.opaque = !!this.props.opaque;
-    this.maintainState = this.props.maintainState !== false;
-    this.__owner = null;
-    this.__removed = false;
-  }
-  get mounted() { return this.__owner != null && !this.__removed; }
-  remove() {
-    // 幂等：Dart 对**已移除**的条目在 remove 时断言（`_overlay != null`），
-    // JS 侧改为静默 no-op——重复移除不该把整个事件回调炸掉。
-    if (this.__removed) { return; }
-    if (this.__owner) { this.__owner.remove(this); }
-  }
-  markNeedsBuild() {
-    if (this.__owner) { this.__owner.markNeedsBuild(this); }
-  }
-  __build(context) {
-    return typeof this.builder === 'function' ? this.builder(context) : null;
-  }
-}
-
-export class PageView {
-  constructor(props) {
-    this.props = props || {};
-    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
-    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    if (!this.__hasBuilder()) {
-      return __h('PageView', this.props);
-    }
-  }
-  __hasBuilder() {
-    return typeof this.props.itemBuilder === 'function';
-  }
-  build(context) {
-    var item = this.props.itemBuilder;
-    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
-    // 出声后按普通构造渲染（宁可空列表也不静默）。
-    if (!this.__hasBuilder()) {
-      console.warn('[PageView] itemBuilder 不是闭包，按普通构造渲染');
-      return __h('PageView', this.props);
-    }
-    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
-    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
-    p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
-      ctx: context
-    };
-    return __h('PageView', p);
-  }
-  static builder(props) { return new PageView(Object.assign({}, props, { factory: 'builder' })); }
-  static custom(props) { return new PageView(Object.assign({}, props, { factory: 'custom' })); }
-  static separated(props) { return new PageView(Object.assign({}, props, { factory: 'separated' })); }
-
-}
-
-export class ReorderableListView {
-  constructor(props) {
-    this.props = props || {};
-    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
-    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    if (!this.__hasBuilder()) {
-      return __h('ReorderableListView', this.props);
-    }
-  }
-  __hasBuilder() {
-    return typeof this.props.itemBuilder === 'function';
-  }
-  build(context) {
-    var item = this.props.itemBuilder;
-    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
-    // 出声后按普通构造渲染（宁可空列表也不静默）。
-    if (!this.__hasBuilder()) {
-      console.warn('[ReorderableListView] itemBuilder 不是闭包，按普通构造渲染');
-      return __h('ReorderableListView', this.props);
-    }
-    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
-    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
-    p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
-      ctx: context
-    };
-    return __h('ReorderableListView', p);
-  }
-  static builder(props) { return new ReorderableListView(Object.assign({}, props, { factory: 'builder' })); }
-  static separated(props) { return new ReorderableListView(Object.assign({}, props, { factory: 'separated' })); }
-
-}
-
-export class SliverGrid {
-  constructor(props) {
-    this.props = props || {};
-    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
-    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    if (!this.__hasBuilder()) {
-      return __h('SliverGrid', this.props);
-    }
-  }
-  __hasBuilder() {
-    return typeof this.props.itemBuilder === 'function';
-  }
-  build(context) {
-    var item = this.props.itemBuilder;
-    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
-    // 出声后按普通构造渲染（宁可空列表也不静默）。
-    if (!this.__hasBuilder()) {
-      console.warn('[SliverGrid] itemBuilder 不是闭包，按普通构造渲染');
-      return __h('SliverGrid', this.props);
-    }
-    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
-    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
-    p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
-      ctx: context
-    };
-    return __h('SliverGrid', p);
-  }
-  static builder(props) { return new SliverGrid(Object.assign({}, props, { factory: 'builder' })); }
-  static count(props) { return new SliverGrid(Object.assign({}, props, { factory: 'count' })); }
-  static extent(props) { return new SliverGrid(Object.assign({}, props, { factory: 'extent' })); }
-  static list(props) { return new SliverGrid(Object.assign({}, props, { factory: 'list' })); }
-  static separated(props) { return new SliverGrid(Object.assign({}, props, { factory: 'separated' })); }
-
-}
-
-export class SliverList {
-  constructor(props) {
-    this.props = props || {};
-    // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
-    // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
-    if (!this.__hasBuilder()) {
-      return __h('SliverList', this.props);
-    }
-  }
-  __hasBuilder() {
-    return typeof this.props.itemBuilder === 'function';
-  }
-  build(context) {
-    var item = this.props.itemBuilder;
-    // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
-    // 出声后按普通构造渲染（宁可空列表也不静默）。
-    if (!this.__hasBuilder()) {
-      console.warn('[SliverList] itemBuilder 不是闭包，按普通构造渲染');
-      return __h('SliverList', this.props);
-    }
-    // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
-    // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
-    p.__builder = {
-      item: item,
-      sep: this.props.separatorBuilder || null,
-      count: this.props.itemCount || 0,
-      ctx: context
-    };
-    return __h('SliverList', p);
-  }
-  static builder(props) { return new SliverList(Object.assign({}, props, { factory: 'builder' })); }
-  static list(props) { return new SliverList(Object.assign({}, props, { factory: 'list' })); }
-  static separated(props) { return new SliverList(Object.assign({}, props, { factory: 'separated' })); }
-
-}
-
-export class SliverPersistentHeader {
-  constructor(props) {
-    this.props = props || {};
-  }
-  build(context) {
-    var delegate = this.props.delegate;
-    if (!delegate || typeof delegate.build !== 'function') {
-      console.warn('[SliverPersistentHeader] delegate.build 不是闭包');
-      return null;
-    }
-    var self = this;
-    // 首帧：宿主要到**布局阶段**才回调句柄，而 pinned 头的 paintExtent 由子级
-    // 实际高度决定（`min(childExtent, …)`），零高占位会触发「layoutExtent 超过
-    // paintExtent」的断言。所以这里先按 (0, false) 展一次——与 Flutter 首次布局
-    // 时 scrollOffset=0 的入参一致，只是把那次调用提前到 build 阶段。
-    if (this.__sphDelegate !== delegate) {
-      this.__sphDelegate = delegate;
-      this.__sphSig = { shrinkOffset: 0, overlaps: false };
-      this.__sphChild = delegate.build(context, 0, false);
-    }
-    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
-    // 宿主在布局阶段调用：实参是 {shrinkOffset, overlapsContent}，不是事件参数。
-    var handle = this.__bindFn(0, [], function (json) {
-      var prev = self.__sphSig;
-      if (prev && prev.shrinkOffset === json.shrinkOffset &&
-      prev.overlaps === json.overlapsContent) {
-        return;
-      }
-      self.__sphSig = { shrinkOffset: json.shrinkOffset, overlaps: json.overlapsContent };
-      // 字段名不能叫 `__child`（reconciler 内部字段，见 LayoutBuilder 处的说明）。
-      self.__sphChild = delegate.build(context, json.shrinkOffset, json.overlapsContent);
-      self.setState(function () {});
-    });
-    var props = {
-      'minExtent': delegate.minExtent,
-      'maxExtent': delegate.maxExtent,
-      'builder': handle
-    };
-    // pinned / floating 原样透传给宿主（默认 false 由宿主兜底）。
-    if (this.props.pinned !== undefined) { props.pinned = this.props.pinned; }
-    if (this.props.floating !== undefined) { props.floating = this.props.floating; }
-    if (this.__sphChild != null) { props.child = this.__sphChild; }
-    return __h('SliverPersistentHeader', props);
-  }
-}
-
-
-// Duration 可能是 JS 的 Duration 实例，也可能是裸毫秒数。
-function __tabMs(d) {
-  if (d == null) { return null; }
-  if (typeof d === 'number') { return d; }
-  if (typeof d === 'object' && typeof d.inMilliseconds === 'number') {
-    return d.inMilliseconds;
-  }
-  return null;
-}
-
-// 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
-// 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
-function __tabSame(a, b) {
-  if (a === b) { return true; }
-  if (a && b && typeof a.dx === 'number' && typeof b.dx === 'number') {
-    return a.dx === b.dx && a.dy === b.dy;
-  }
-  return false;
-}
-
-export class TweenAnimationBuilder {
-  constructor(props) {
-    this.props = props || {};
-  }
-  initState() {
-    var p = this.props;
-    var self = this;
-    this.__tabTween = p.tween || new Tween({});
-    this.__tabValue = this.__tabTween.begin != null
-    ? this.__tabTween.begin
-    : this.__tabTween.end;
-    var ctrl = new AnimationController({ duration: p.duration, value: 0 });
-    this.__tabCtrl = ctrl;
-    this.__tabCurved = new CurvedAnimation({
-      parent: ctrl,
-      curve: p.curve || 'linear'
-    });
-    this.__tabListener = function () {
-      self.__tabValue = self.__tabTween.lerp(self.__tabCurved.value);
-      self.setState(function () {});
-      if (ctrl.value >= 1 && !self.__tabEnded) {
-        self.__tabEnded = true;
-        __invokeCallback(self.props.onEnd, []);
-      }
-    };
-    ctrl.addListener(this.__tabListener);
-    // 与 Flutter 的 initState 一致：begin != end 时进入即播（如 Tween(0 → 1)
-    // 进场就有动画，onEnd 也会在到位时触发一次）。
-    if (!__tabSame(this.__tabTween.begin, this.__tabTween.end)) {
-      this.__tabEnded = false;
-      ctrl.forward();
-    }
-  }
-  didUpdateWidget() {
-    var p = this.props;
-    var next = p.tween || new Tween({});
-    var prev = this.__tabTween || new Tween({});
-    var ms = __tabMs(p.duration);
-    if (ms != null && ms !== this.__tabCtrl.durationMs) {
-      this.__tabCtrl.durationMs = ms;
-    }
-    // 同一段动画进行中父级重建时，目标没变就继续用原 tween——换成新实例会把
-    // begin 退回源值，正在跑的进度就会跳变。
-    if (!__tabSame(next.end, prev.end)) {
-      next.begin = this.__tabValue;
-      this.__tabTween = next;
-      this.__tabEnded = false;
-      this.__tabCtrl.reset();
-      this.__tabCtrl.forward();
-    }
-  }
-  build(context) {
-    var fn = this.props.builder;
-    if (typeof fn !== 'function') {
-      console.warn('[TweenAnimationBuilder] builder 不是闭包');
-      return null;
-    }
-    return fn(context, this.__tabValue, this.props.child);
-  }
-  dispose() {
-    if (this.__tabCtrl) {
-      this.__tabCtrl.removeListener(this.__tabListener);
-      this.__tabCtrl.dispose();
-    }
-  }
-}
-
-
-export class ValueListenableBuilder {
-  constructor(props) {
-    this.props = props || {};
-  }
-  initState() {
-    this.__subscribe(this.props.valueListenable);
-  }
-  didUpdateWidget() {
-    var next = this.props.valueListenable;
-    if (next !== this.__listenable) { this.__subscribe(next); }
-  }
-  __subscribe(l) {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
-    this.__listenable = l;
-    this.__listener = null;
-    if (l && typeof l.addListener === 'function') {
-      var self = this;
-      this.__listener = function () { self.setState(function () {}); };
-      l.addListener(this.__listener);
-    }
-  }
-  build(context) {
-    var fn = this.props.builder;
-    if (typeof fn !== 'function') {
-      console.warn('[ValueListenableBuilder] builder 不是闭包');
-      return null;
-    }
-    var l = this.props.valueListenable;
-    var value = (l && l.value !== undefined) ? l.value : null;
-    return __h('ValueListenableBuilder', {
-      notifier: l,
-      child: fn(context, value, this.props.child)
-    });
-  }
-  dispose() {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
-  }
-}
-
-
-export class AnimatedListState extends __StateHandle {
-  insertItem(index, duration) {
-    this.__op('insertItem', { index: index, duration: duration });
-  }
-  // 与 Dart 同形（`removeItem(index, builder, {duration})`）：`builder` 是 Dart
-  // 闭包，跨语言无法执行——宿主复用「被移除的原项」当退场项，这里只告警一次。
-  removeItem(index, builder, duration) {
-    if (typeof builder === 'function' && !AnimatedListState.__warnedRemoval) {
-      AnimatedListState.__warnedRemoval = true;
-      console.warn('[AnimatedList] 退场 builder 不可跨语言执行，已回退为「被移除的原项」（样式与普通项一致）');
-    }
-    this.__op('removeItem', { index: index, duration: duration });
-  }
-}
-__registerStateProxy('AnimatedListState', AnimatedListState);

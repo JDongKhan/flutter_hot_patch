@@ -1016,44 +1016,6 @@ String renderPackageModule(String package, Set<String> types) {
         ..writeln()
         ..writeln(hostWrapperSource(t));
     }
-    // ---------------------------------------------------------------------
-    // Dart 值类区（从 runtime.js 迁入）：Dart 值对象与 Controller 的 JS 镜像。
-    //
-    // 判据是「这是不是 Dart 语言 / Flutter 的值类型」，而不是「谁先写的」：
-    // runtime.js 只留语言层与 mini-react 核心（element / reconciler / 调度 /
-    // 作用域 / 桥），这些对象全部是**产物里 `new X({...})` 的落点**，与
-    // `__h` 宿主包装类同属「翻译目标」，因此和宿主包装类放在同一文件。
-    //
-    // **必须排在 Colors 常量之前**：`__mc` 在模块求值期就 `new MaterialColor(...)`，
-    // 而 MaterialColor 的原型（`Object.create(Color.prototype)`）也在本区赋值——
-    // 晚于实例创建就必须让实例挂在旧原型上（丢 toJSON）。
-    //
-    // 与 runtime 的唯一耦合面是 `G.__core`（原型补丁 / 控制器注册 / 句柄表），
-    // 见 runtime_js.dart 的【11.5】——跨模块只走 G，不假设同一 IIFE 作用域。
-    b
-      ..writeln()
-      ..writeln('// ===== Dart 值类（值对象 / Controller / 动画 / Key）=====')
-      ..writeln('// 由 runtime.js 迁入：翻译层对它们一律 `new X({...})`，')
-      ..writeln('// 跨桥经各自 toJSON 输出宿主协议（不在这里做任何 JSON 拍平）。')
-      ..writeln('const G = globalThis;')
-      ..writeln('const {')
-      ..writeln('  defineProtoGetter: __defineProtoGetter,')
-      ..writeln('  defineController, defineHandleKind, handleOp, reg,')
-      ..writeln('} = G.__core;')
-      ..writeln()
-      ..writeln(flutterValueClassesSource());
-    // Colors 常量（SDK colors.dart 自动抽取）：`Colors.red` / `Colors.red[400]`
-    // 在 JS 侧原样求值，翻译层不含任何色值表；新增颜色重构建即生效。
-    final colors = colorsJsSource();
-    if (colors != null) {
-      b
-        ..writeln()
-        ..writeln(colors);
-    } else {
-      // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 未能定位 Flutter SDK colors.dart，'
-          'Colors 常量未注入（产物里 Colors.* 会解析失败）');
-    }
   } else {
     final nodeRel = relativeProduct(
       packageModulePath(package),
@@ -1099,6 +1061,47 @@ String renderPackageModule(String package, Set<String> types) {
     b
       ..writeln()
       ..writeln(src);
+  }
+  // -----------------------------------------------------------------------
+  // Dart 值类区：**固定在产物最末**（所有 widget / 逻辑组件包装类之后）。
+  //
+  // 分区判据是「这是不是 Dart / Flutter 的值类型」——`Duration` / `Size` /
+  // `Offset` / `Color` / `TextStyle` / `ChangeNotifier` / 各 Controller / `Key` /
+  // 枚举镜像 / `Colors` 常量表。它们是产物里 `new X({...})` 的落点，与上面的
+  // widget 包装类**用途不同**（包装类产出元素描述，值类承载数据），因此单独
+  // 成区并置于末尾：读产物时先看到 UI 结构，再看数据类型。
+  //
+  // 顺序约束（区内）：值类 → 枚举镜像 → Colors。`__mc` 在求值期就
+  // `new MaterialColor(...)`，而 MaterialColor 的原型在值类区赋值——晚于实例
+  // 创建就会丢 toJSON。
+  //
+  // 与 runtime 的唯一耦合面是 `G.__core`（原型补丁 / 控制器注册 / 句柄表），
+  // 见 runtime_js.dart 的【11.5】——跨模块只走 G，不假设同一 IIFE 作用域。
+  if (package == nodeHelperPackage) {
+    b
+      ..writeln()
+      ..writeln('// ===== Dart 值类（值对象 / Controller / 动画 / Key / 枚举）=====')
+      ..writeln('// 翻译层对它们一律 `new X({...})` / `X.member`；')
+      ..writeln('// 跨桥经各自 toJSON 输出宿主协议（不在这里做任何 JSON 拍平）。')
+      ..writeln('const G = globalThis;')
+      ..writeln('const {')
+      ..writeln('  defineProtoGetter: __defineProtoGetter,')
+      ..writeln('  defineController, defineHandleKind, handleOp, reg,')
+      ..writeln('} = G.__core;')
+      ..writeln()
+      ..writeln(flutterValueClassesSource());
+    // Colors 常量（SDK colors.dart 自动抽取）：`Colors.red` / `Colors.red[400]`
+    // 在 JS 侧原样求值，翻译层不含任何色值表；新增颜色重构建即生效。
+    final colors = colorsJsSource();
+    if (colors != null) {
+      b
+        ..writeln()
+        ..writeln(colors);
+    } else {
+      // ignore: avoid_print - 构建期日志
+      print('[hot_patch_generator] 未能定位 Flutter SDK colors.dart，'
+          'Colors 常量未注入（产物里 Colors.* 会解析失败）');
+    }
   }
   return b.toString();
 }

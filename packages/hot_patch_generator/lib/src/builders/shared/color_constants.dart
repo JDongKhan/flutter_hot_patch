@@ -59,49 +59,50 @@ String? colorsJsSource() {
 
   final b = StringBuffer()
     ..writeln('// ===== Colors 常量（由 Flutter SDK colors.dart 自动生成）=====')
-    ..writeln('// 全局注入：产物里 `Colors.red` / `Colors.red[400]` 原样求值，')
-    ..writeln('// 翻译层不含任何色值表。')
-    ..writeln('globalThis.Colors = (function () {')
-    ..writeln('  function __c(v) { return new Color({ value: v }); }')
-    ..writeln('  function __mc(primary, shades) {')
-    ..writeln('    var m = new MaterialColor({ primary: primary });')
-    ..writeln('    for (var k in shades) {')
-    ..writeln("      m[k] = __c(shades[k]);")
-    ..writeln("      m['shade' + k] = m[k];")
-    ..writeln('    }')
+    ..writeln('// Dart 侧 `Colors` 是 `class Colors { static const MaterialColor red = … }`，')
+    ..writeln('// 产物一比一：class + static 字段（不是对象字面量）。`Colors.red[400]`')
+    ..writeln('// 原样求值，翻译层不含任何色值表，重构建即跟随 SDK。')
+    ..writeln('function __c(v) { return new Color({ value: v }); }')
+    ..writeln('function __mc(primary, shades) {')
+    ..writeln('  const m = new MaterialColor({ primary: primary });')
+    ..writeln('  for (const k in shades) {')
+    ..writeln('    m[k] = __c(shades[k]);')
+    ..writeln('    m["shade" + k] = m[k];')
+    ..writeln('  }')
     // SDK 里 500 档写作 `Color(_red500Value)`（常量引用），正则抽不到；它的值
     // 恒等于主色，这里按 Dart 语义补齐 `shade500` / `[500]`。
-    ..writeln("    if (m['shade500'] === undefined) {")
-    ..writeln("      m['500'] = m;")
-    ..writeln("      m['shade500'] = m;")
-    ..writeln('    }')
-    ..writeln('    return m;')
+    ..writeln('  if (m["shade500"] === undefined) {')
+    ..writeln('    m["500"] = m;')
+    ..writeln('    m["shade500"] = m;')
     ..writeln('  }')
-    ..writeln('  function __mac(primary, shades) {')
-    ..writeln('    var m = new MaterialAccentColor({ primary: primary });')
-    ..writeln('    for (var k in shades) {')
-    ..writeln("      m[k] = __c(shades[k]);")
-    ..writeln("      m['shade' + k] = m[k];")
-    ..writeln('    }')
-    ..writeln('    return m;')
+    ..writeln('  return m;')
+    ..writeln('}')
+    ..writeln('function __mac(primary, shades) {')
+    ..writeln('  const m = new MaterialAccentColor({ primary: primary });')
+    ..writeln('  for (const k in shades) {')
+    ..writeln('    m[k] = __c(shades[k]);')
+    ..writeln('    m["shade" + k] = m[k];')
     ..writeln('  }')
-    ..writeln('  return {');
+    ..writeln('  return m;')
+    ..writeln('}')
+    ..writeln('export class Colors {');
   final entries = <String>[];
   for (final e in palettes.entries) {
-    entries.add('    ${e.key}: __mc(${_hex(e.value.primary)}, '
-        '{${_shadesLiteral(e.value.shades)}})');
+    entries.add('  static ${e.key} = __mc(${_hex(e.value.primary)}, '
+        '{${_shadesLiteral(e.value.shades)}});');
   }
   for (final e in accents.entries) {
-    entries.add('    ${e.key}: __mac(${_hex(e.value.primary)}, '
-        '{${_shadesLiteral(e.value.shades)}})');
+    entries.add('  static ${e.key} = __mac(${_hex(e.value.primary)}, '
+        '{${_shadesLiteral(e.value.shades)}});');
   }
   for (final e in plain.entries) {
-    entries.add('    ${e.key}: __c(${_hex(e.value)})');
+    entries.add('  static ${e.key} = __c(${_hex(e.value)});');
   }
   b
-    ..writeln(entries.join(',\n'))
-    ..writeln('  };')
-    ..writeln('})();');
+    ..writeln(entries.join('\n'))
+    ..writeln('}')
+    // 组件产物里 `Colors.red` 是裸引用（不带 import），沿用 G 注入约定。
+    ..writeln('globalThis.Colors = Colors;');
   return b.toString();
 }
 

@@ -246,4 +246,19 @@ const String dartValuesJsSource = r'''
     return json;
   };
   G.BoxDecoration = BoxDecoration;
+
+  // ----- 枚举镜像 ---------------------------------------------------------
+  // Dart 枚举 → JS class + static 字段，值 = 成员名字符串：跨语言只有 name 能
+  // 表达（宿主也按 name 下发/回传），这样源码级比较
+  // `direction == DismissDirection.endToStart` 在 JS 侧语义不变。
+  // 需要运行时存在「枚举类」的枚举在此登记（只做字符串转换的仍由翻译层下发名字）。
+  class DismissDirection {
+    static horizontal = "horizontal";
+    static vertical = "vertical";
+    static startToEnd = "startToEnd";
+    static endToStart = "endToStart";
+    static up = "up";
+    static down = "down";
+  }
+  G.DismissDirection = DismissDirection;
 ''';
