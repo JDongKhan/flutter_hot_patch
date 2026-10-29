@@ -3,19 +3,19 @@
 // 重新生成：dart run build_runner build
 
 import { HomeFeed } from '../model/app_models.js';
-import { CommunityFeed } from '../model/app_models.js';
-import { OrderFeed } from '../model/app_models.js';
-import { MineFeed } from '../model/app_models.js';
-import { SearchFeed } from '../model/app_models.js';
-import { ResourceFeed } from '../model/app_models.js';
 import { HomeBanner } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
+import { CommunityFeed } from '../model/app_models.js';
+import { Resource } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { AppNotice } from '../model/app_models.js';
-import { Resource } from '../model/app_models.js';
+import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
+import { MineFeed } from '../model/app_models.js';
 import { MenuEntry } from '../model/app_models.js';
+import { SearchFeed } from '../model/app_models.js';
+import { ResourceFeed } from '../model/app_models.js';
 
 // 模型 AppService
 export class AppService {

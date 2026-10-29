@@ -171,9 +171,9 @@ Set<String> identifierNamesIn(CompilationUnit unit) {
 /// 该扩展的产物被加载；只扫本文件会漏掉「调用只写在 mixin 里」的场景。
 Set<String> identifierNamesInProduct(CompilationUnit unit, String sourcePath) {
   final names = identifierNamesIn(unit);
-  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+  for (final d in _productHostClasses(unit)) {
     for (final (mixinDecl, _) in resolveMixinDeclRefs(d, unit, sourcePath)) {
-      names.addAll(identifierNamesOfMembers(mixinDecl.members));
+      names.addAll(_identifierNamesOfMembers(mixinDecl.members));
     }
   }
   return names;
@@ -187,7 +187,7 @@ Set<String> identifierNamesInProduct(CompilationUnit unit, String sourcePath) {
 /// 扩展声明库（`import` 目标不逐层深入）。
 Set<String> extensionScopeFiles(CompilationUnit unit, String sourcePath) {
   final files = <String>{...resolveImportFiles(unit, sourcePath)};
-  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+  for (final d in _productHostClasses(unit)) {
     for (final (_, mixinFile) in resolveMixinDeclRefs(d, unit, sourcePath)) {
       final mixinUnit = parseUnitFile(mixinFile);
       if (mixinUnit == null) continue;
@@ -197,8 +197,20 @@ Set<String> extensionScopeFiles(CompilationUnit unit, String sourcePath) {
   return files;
 }
 
+/// 本产物承载代码的宿主类：本文件的公共类 + 其同文件 State 类。
+///
+/// `with` 子句通常写在**私有 State 类**上（`class _XState extends State<X>
+/// with M`），只遍历公共类会看不到它携带的 mixin 成员——而那段代码确实会被
+/// 线性化进本产物。
+Iterable<ClassDeclaration> _productHostClasses(CompilationUnit unit) sync* {
+  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+    if (d.name.lexeme.startsWith('_')) continue;
+    yield* classAndStateDecls(d, unit);
+  }
+}
+
 /// 任意成员表里出现过的标识符（与 [identifierNamesIn] 同一收集器）。
-Set<String> identifierNamesOfMembers(Iterable<ClassMember> members) {
+Set<String> _identifierNamesOfMembers(Iterable<ClassMember> members) {
   final collector = _IdentifierCollector();
   for (final m in members) {
     m.accept(collector);
@@ -344,7 +356,6 @@ ExtensionInfo? translateExtension(
   // 成员建模：与类完全同一口径（getter / setter 都保留，static 另放）。
   final memberMethods = <ClassMethod>[];
   final memberKinds = <String, String>{};
-  final fieldNodes = <AstNode?>[];
   for (final member in decl.members) {
     if (member is MethodDeclaration) {
       if (member.isStatic) continue;
@@ -378,20 +389,16 @@ ExtensionInfo? translateExtension(
           body: member.body,
         ));
       }
-    } else if (member is FieldDeclaration) {
-      fieldNodes.add(member);
     } else if (member is ConstructorDeclaration) {
       log.warning('[hot_patch_generator] $sourcePath: extension $label 里声明了'
           '构造函数（Dart 不允许），已忽略。');
     }
   }
 
-  // 依赖：成员体里的构造调用 + 字段初始化器（与类同一收集器 / 同一口径）。
+  // 依赖：整个扩展声明里出现的类型引用（成员体 / 初始化器 / 字段类型 /
+  // `on` 目标），与类共用同一个收集器——不另写扩展专用的启发式。
   final used = <String, ClassInfo>{};
-  for (final n in ctorClassNamesIn([
-    for (final m in memberMethods) m.body,
-    ...fieldNodes,
-  ])) {
+  for (final n in dependenciesOf(decl)) {
     final info = classTable[n];
     if (info != null) used[n] = info;
   }

@@ -184,58 +184,39 @@ Map<String, Set<String>> _neededClasses(
     }
   }
 
-  // 种子 2：可达文件顶层常量初始化器里构造的模型类。常量在可达文件里一律产出
-  // （见 component_builder 的顶层常量产物路径），其构造出的模型必须跟着产出，
-  // 否则数据产物的 import 会指向不存在的类。
+  // 种子 2：可达文件里「不是类」的承载代码——顶层常量与 extension 的注册语句
+  // 都随产物求值（见 component_builder 的顶层常量产物 / 扩展注册），它们引用
+  // 到的类必须一起产出，否则那些产物里的 import 会指向不存在的模块。
+  // 类声明走下面的引用闭包（种子 1 只标根类，其余按引用逐步发现）。
   for (final file in reachableFiles) {
     final unit = units[file];
     if (unit == null) continue;
-    for (final variable in unit.declarations
-        .whereType<TopLevelVariableDeclaration>()
-        .expand((d) => d.variables.variables)) {
-      for (final name in ctorClassNames(variable.initializer)) {
-        markVisible(file, name);
+    for (final d in unit.declarations) {
+      if (d is TopLevelVariableDeclaration || d is ExtensionDeclaration) {
+        for (final name in dependenciesOf(d)) {
+          markVisible(file, name);
+        }
       }
     }
   }
 
-  // 种子 3：可达文件里 extension 的成员引用。扩展的注册语句就写在声明处、
-  // 成员体与类方法体走同一条翻译路径，其中构造 / 字段类型引用到的类必须一并
-  // 产出——否则扩展产物里的 `import { X }` 会指向不存在的模块。
-  // 扩展不能有实例字段，静态字段本身会被译为 JS 静态成员，故一并计入。
-  for (final file in reachableFiles) {
-    final unit = units[file];
-    if (unit == null) continue;
-    for (final ext in unit.declarations.whereType<ExtensionDeclaration>()) {
-      for (final name in referencedClassNamesInMembers(
-        ext.members,
-        includeStaticFields: true,
-      )) {
-        markVisible(file, name);
-      }
-    }
-  }
-
-  // 引用闭包：类里引用到的其它类（字段类型 / 方法体构造 / build 树）同样要产出，
-  // 有限集（每个类只入队一次），不会无限展开。
+  // 引用闭包：类引用到的其它类（字段类型 / 构造 / 静态调用 / `is`）同样要产出。
+  // 每个类只入队一次，有限集，不会无限展开。
   while (queue.isNotEmpty) {
     final (decl, file) = queue.removeLast();
     final unit = units[file];
     if (unit == null) continue;
     // StatefulWidget 的字段 / 方法分布在 widget 类与 State 类两处，合并扫描。
     for (final cls in classAndStateDecls(decl, unit)) {
-      for (final name in referencedClassNames(cls)) {
+      for (final name in dependenciesOf(cls)) {
         markVisible(file, name);
       }
-      // mixin 的成员引用必须按 **mixin 声明所在文件** 的可见表解析：`with A`
-      // 的类看不见 A 所在文件 import 的模型，但 A 的方法体会被线性化进本产物，
+      // mixin 的引用必须按 **mixin 声明所在文件** 的可见表解析：`with A` 的
+      // 类看不见 A 所在文件 import 的模型，但 A 的成员会被线性化进本产物，
       // 其中的 `new M()` 需要 M 的产物（按本文件的可见表查会漏标）。
       for (final (mixinDecl, mixinFile) in
           resolveMixinDeclRefs(cls, unit, file)) {
-        for (final name in referencedClassNamesInMembers(
-          mixinDecl.members,
-          includeStaticFields: true,
-        )) {
+        for (final name in dependenciesOf(mixinDecl)) {
           markVisible(mixinFile, name);
         }
       }
@@ -244,10 +225,12 @@ Map<String, Set<String>> _neededClasses(
   return needed;
 }
 
-/// 类是否参与翻译与依赖传播：非抽象、非 `@HostInjected`（方法实现留在宿主侧，
-/// 调用点是 `_app_host_.invoke`，不产生 JS 引用）、非 `@PatchIgnore`（原生注入）。
+/// 类是否参与翻译与依赖传播：非抽象、非 `@HostInjected`（类级或方法级——实现
+/// 留在宿主侧，调用点是 `_app_host_.invoke`，不产生 JS 引用）、非 `@PatchIgnore`
+/// （原生注入）。全文件只有这一处判据，文件级 / 符号级共用。
 bool _translatableDecl(ClassDeclaration d) =>
     d.abstractKeyword == null &&
+    findAnnotation(d.metadata, 'HostInjected') == null &&
     !classHasHostInjectedMethod(d) &&
     findAnnotation(d.metadata, 'PatchIgnore') == null;
 
@@ -256,32 +239,16 @@ bool _hasComponentAnnotation(CompilationUnit unit) => unit.declarations
     .whereType<ClassDeclaration>()
     .any((d) => findAnnotation(d.metadata, 'PatchEntry') != null);
 
-/// 本文件**产出为空**（没有任何 public 可翻译类）→ 它的 import 不会被任何 JS
-/// 产物引用，遍历到此为止。判据与 builder 自身的产出条件对齐：
-///   - 有 `@PatchEntry` 类 → 根文件，产出；
-///   - 有 public 且未被 `@PatchIgnore` / `@HostInjected` 标记的类 → 产出；
-///   - 其余（三个 tab 页这类 `@PatchIgnore` 页、宿主能力门面）→ 不产出。
-bool _isTranslationStop(CompilationUnit unit) {
-  // 声明了 `extension` → 有产出（注册语句就写在声明处），沿它的 import 继续
-  // 深入：扩展成员体里可能用到别的类 / 别的扩展文件。
-  if (unit.declarations.whereType<ExtensionDeclaration>().isNotEmpty) {
-    return false;
-  }
-  for (final d in unit.declarations.whereType<ClassDeclaration>()) {
-    if (findAnnotation(d.metadata, 'PatchEntry') != null) return false;
-    final name = d.name.lexeme;
-    if (name.startsWith('_') || d.abstractKeyword != null) continue;
-    if (_isIgnoredOrHostInjected(d)) continue;
-    return false;
-  }
-  return true;
-}
-
-/// 类是否显式退出翻译（`@PatchIgnore`）或只在宿主侧实现
-/// （类级 / 方法级 `@HostInjected`）。
-bool _isIgnoredOrHostInjected(ClassDeclaration d) =>
-    findAnnotation(d.metadata, 'PatchIgnore') != null ||
-    findAnnotation(d.metadata, 'HostInjected') != null ||
-    d.members
-        .whereType<MethodDeclaration>()
-        .any((m) => findAnnotation(m.metadata, 'HostInjected') != null);
+/// 本文件**产出为空**（没有任何会进产物的承载物）→ 它的 import 不会被任何 JS
+/// 产物引用，遍历到此为止。
+///
+/// 判据与 builder 自身的产出条件对齐，复用 [_translatableDecl]（文件级 / 符号级
+/// 同一个类判据，不另写一套）：
+///   - 声明了 `extension` → 注册语句就写在声明处，产出；
+///   - 有公认可翻译的类（含 `@PatchEntry` 根类）→ 产出；
+///   - 其余（`@PatchIgnore` 页、宿主能力门面）→ 不产出。
+bool _isTranslationStop(CompilationUnit unit) =>
+    unit.declarations.whereType<ExtensionDeclaration>().isEmpty &&
+    !unit.declarations
+        .whereType<ClassDeclaration>()
+        .any((d) => !d.name.lexeme.startsWith('_') && _translatableDecl(d));

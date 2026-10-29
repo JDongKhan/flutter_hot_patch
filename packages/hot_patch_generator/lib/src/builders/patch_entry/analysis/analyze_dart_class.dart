@@ -336,11 +336,6 @@ Set<String> dependenciesOf(AstNode node) {
   return collector.names;
 }
 
-/// 任意表达式里引用的类型名（顶层常量初始化器用：
-/// `const List<Spot> kSpots = [...]` 里被构造出来的模型类必须跟着常量一起产出）。
-Set<String> ctorClassNames(Expression? expression) =>
-    expression == null ? const {} : dependenciesOf(expression);
-
 /// 类型引用收集器，见 [dependenciesOf]。
 class _TypeRefCollector extends RecursiveAstVisitor<void> {
   final names = <String>{};

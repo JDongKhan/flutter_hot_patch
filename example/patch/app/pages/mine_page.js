@@ -4,6 +4,7 @@
 
 import { AppService } from '../service/app_service.js';
 import { MineFeed } from '../model/app_models.js';
+import { MenuEntry } from '../model/app_models.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Center, CircularProgressIndicator, ClipOval, Column, Container, Divider, Expanded, GestureDetector, Icon, Image, ListView, Padding, Row, SafeArea, SizedBox, Text, Transform } from '../../flutter.js';
 
