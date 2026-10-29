@@ -820,11 +820,14 @@ String? methodCallExprJs(
     // tear-off 语义 → 箭头包装（this 词法绑定组件实例，与匿名闭包形态一致），
     // 参数透传以便用于带参回调（builder 等）。仅当名字是本组件方法时包装，
     // 状态字段/局部变量照常 rhsToJs。
-    if (a is Identifier && scope.isMethod(a.name)) {
-      final wrap = '(...args) => this.${a.name}(...args)';
-      argJs.add(wrap);
-      posJs.add(wrap);
-      continue;
+    if (a is Identifier) {
+      final ref = scope.methodRef(a.name);
+      if (ref != null) {
+        final wrap = '(...args) => $ref(...args)';
+        argJs.add(wrap);
+        posJs.add(wrap);
+        continue;
+      }
     }
     if (a is NamedExpression) {
       // 具名实参的闭包（`showDialog(context: …, builder: (ctx) => …)`、
@@ -868,8 +871,9 @@ String? methodCallExprJs(
     if (runtimeGlobalFunctions().contains(e.methodName.name)) {
       return '${e.methodName.name}(${globalFnArgsJs(posJs, namedJs)})';
     }
-    if (!scope.isMethod(e.methodName.name)) return null;
-    return 'this.${e.methodName.name}($passed)';
+    final member = scope.methodRef(e.methodName.name);
+    if (member == null) return null;
+    return '$member($passed)';
   }
   if (target is Identifier) {
     final ref = scope.fieldRef(target.name);
@@ -878,6 +882,12 @@ String? methodCallExprJs(
     // 产出 `<类引用>.m(args)`，类引用串由钩子给出（含 import 登记）。
     final clsRef = classRefHook?.call(target.name);
     if (clsRef != null) return '$clsRef.${e.methodName.name}($passed)';
+    // 项目类（模型 / 静态类 / 组件）的静态方法调用（`HomeFeed.fromJson(e)`）：
+    // JS 侧就是同名 class，静态方法挂在类上，1:1 产出 `X.m(args)`。类表的键
+    // 即「本次分析可见的项目类名」，跨文件时 import 已由依赖收集生成。
+    if (classes.containsKey(target.name)) {
+      return '${target.name}.${e.methodName.name}($passed)';
+    }
     // 类方法静态调用（`MediaQuery.of(context)` / `Theme.of(context)`）：
     // receiver 是**类定义在运行时注入里**的类（`G.MediaQuery = …`，见
     // [runtimeGlobalTypes]），原样产出 `X.m(args)`。判断只看「类定义在哪」，
@@ -1615,17 +1625,28 @@ String translateClassMethodBody(
         '_app_host_.invoke(${jsString(channel)}, '
         '{ message: ${m.nativeMessage ?? '""'} });';
   }
+  // 静态成员（Dart 的 static 与实例成员同一名字空间，调用点看不出差别）：
+  // 裸引用落成 `<类名>.<name>`；static 方法体里实例成员不参与解析（Dart 禁）。
+  final staticFieldNames = {for (final f in info.staticFields) f.name};
+  final staticMethodNames = {
+    for (final sm in info.methods)
+      if (sm.isStatic) sm.name,
+  };
+  final instanceMethods = {
+    ...objectMethodNamesOf(info, classes),
+    if (sdkBaseName(info) != null) 'notifyListeners',
+  };
   final scope = FieldScope(
     // 字段与方法都取**继承链视图**：子类方法里 `this.name` 指向父类字段、
     // 裸调用父类方法同样要解析为 `this.foo()`。
-    instanceFields: {
-      for (final f in objectFieldsOf(info, classes)) f.name,
-    },
+    instanceFields: m.isStatic
+        ? const {}
+        : {for (final f in objectFieldsOf(info, classes)) f.name},
     params: m.params.toSet(),
-    methods: {
-      ...objectMethodNamesOf(info, classes),
-      if (sdkBaseName(info) != null) 'notifyListeners',
-    },
+    methods: m.isStatic ? const {} : instanceMethods,
+    className: info.name,
+    staticFields: staticFieldNames,
+    staticMethods: staticMethodNames,
     hostMethods: hostMethods,
     globalConsts: globalConsts,
     superMap: m.superMap,

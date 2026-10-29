@@ -8,8 +8,6 @@ import { MenuEntry } from '../model/app_models.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Center, CircularProgressIndicator, ClipOval, Column, Container, Divider, Expanded, GestureDetector, Icon, Image, ListView, Padding, Row, SafeArea, SizedBox, Text, Transform } from '../../flutter.js';
 
-const _menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
-
 // 组件 MinePage
 export class MinePage {
   constructor(args) {
@@ -225,7 +223,7 @@ export class MinePage {
                               "height": 30,
                               "alignment": "center",
                               "decoration": {
-                                "color": _menuTints[(i % _menuTints.length)],
+                                "color": MinePage._menuTints[(i % MinePage._menuTints.length)],
                                 "borderRadius": {
                                   "radius": 9.0
                                 }
@@ -344,6 +342,7 @@ export class MinePage {
     });
   }
 }
+MinePage._menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
 
 // 组件 _DevRow
 export class _DevRow {

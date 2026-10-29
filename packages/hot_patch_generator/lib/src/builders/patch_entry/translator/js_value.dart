@@ -249,15 +249,19 @@ List<ClassField> objectFieldsOf(
   return out;
 }
 
-/// 沿 `extends` 链展开的方法名（含 getter）：子类可调用父类方法，
-/// 判定「裸调用是 this 方法」时需要完整视图。
+/// 沿 `extends` 链展开的**实例方法**名（含 getter）：裸调用解析用。
+///
+/// 刻意排除 static 方法：Dart 的 static 成员**不随继承传递**，子类里裸调
+/// `foo()` 永远指实例方法；父类的 `static foo()` 只能写成 `Base.foo()`。
 Set<String> objectMethodNamesOf(
   ClassInfo info,
   Map<String, ClassInfo> classTable,
 ) {
   final out = <String>{};
   for (final c in [info, ..._baseChainOf(info, classTable)]) {
-    out.addAll(c.methodNames);
+    for (final m in c.methods) {
+      if (!m.isStatic) out.add(m.name);
+    }
   }
   return out;
 }
@@ -348,6 +352,17 @@ class FieldScope {
   /// 局部变量时必须落到真实字段引用，否则是未定义的自由变量。
   final Map<String, String> localAliases;
 
+  /// 本类 JS 类名（静态成员引用的落点前缀）。null = 不在类方法体里
+  /// （如扩展成员、顶层常量求值），此时静态成员不参与解析。
+  final String? className;
+
+  /// 本类 **static 字段**名：裸引用（`background`）→ `ClassName.background`。
+  /// Dart 的 static 与实例成员在同一名字空间，调用点看不出差别，靠这组集合区分。
+  final Set<String> staticFields;
+
+  /// 本类 **static 方法**名：裸调用（`fromJson(e)`）→ `ClassName.fromJson(e)`。
+  final Set<String> staticMethods;
+
   /// 声明期登记的字段别名表（`final feed = _feed;` → `feed → this._feed`）。
   ///
   /// **只供后续「变量声明的初始化器」折算**（[forInitializer]）——这样才能闭合
@@ -372,6 +387,9 @@ class FieldScope {
           globalConsts: globalConsts,
           hostMethods: hostMethods,
           superMap: superMap,
+          className: className,
+          staticFields: staticFields,
+          staticMethods: staticMethods,
           localAliases: declAliases,
         );
 
@@ -380,6 +398,9 @@ class FieldScope {
     this.instanceFields = const {},
     this.params = const {},
     this.methods = const {},
+    this.className,
+    this.staticFields = const {},
+    this.staticMethods = const {},
     this.hostMethods = const {},
     this.superMap = const {},
     this.hasJsBase = false,
@@ -406,6 +427,9 @@ class FieldScope {
         hostMethods: hostMethods,
         superMap: superMap,
         hasJsBase: hasJsBase,
+        className: className,
+        staticFields: staticFields,
+        staticMethods: staticMethods,
         localAliases: localAliases,
         // 同一个别名表实例：派生作用域里登记的别名，母作用域后续声明同样可见
         // （闭包体内的 `final x = _feed.spots;` 也算链式别名）。
@@ -417,14 +441,18 @@ class FieldScope {
       propByField.containsKey(name) ||
       instanceFields.contains(name) ||
       localAliases.containsKey(name) ||
-      localVars.contains(name);
+      localVars.contains(name) ||
+      staticFields.contains(name);
 
-  /// 字段 Identifier → JS 引用（`this.x`）；形参/局部变量原样返回；未知返回 null。
+  /// 字段 Identifier → JS 引用（`this.x` / `ClassName.x`）；形参/局部变量原样返回；
+  /// 未知返回 null。
   String? fieldRef(String name) {
     if (params.contains(name)) return name;
     final alias = localAliases[name];
     if (alias != null) return alias;
     if (localVars.contains(name)) return name;
+    // static 字段在 JS 侧挂在类上（`ClassName.background`），不是实例成员。
+    if (staticFields.contains(name) && className != null) return '$className.$name';
     final p = propByField[name];
     if (p != null) return 'this.$p';
     if (instanceFields.contains(name)) return 'this.$name';
@@ -436,7 +464,16 @@ class FieldScope {
     return null;
   }
 
-  bool isMethod(String name) => methods.contains(name);
+  /// 方法引用 `m` → JS 成员引用（实例方法 `this.m`、static 方法 `ClassName.m`）；
+  /// 两侧都不命中返回 null。
+  String? methodRef(String name) {
+    if (staticMethods.contains(name) && className != null) return '$className.$name';
+    if (methods.contains(name)) return 'this.$name';
+    return null;
+  }
+
+  bool isMethod(String name) =>
+      methods.contains(name) || staticMethods.contains(name);
 }
 
 /// 「构造表达式 → JS 渲染」接口（由 element2js 层的
@@ -455,6 +492,14 @@ abstract class ExprRenderer {
   /// 通用表达式翻译——虽然能产出 `ListView.builder({...})`，但**不会登记产物
   /// import**，运行时是未定义引用。
   String? ctorJsClassFile(Expression e);
+
+  /// 表达式是否是**构造**（`X(...)` / `X.namedCtor(...)`）。
+  ///
+  /// `X.member(...)` 的语法与命名构造完全一致，只有构造签名索引能区分
+  /// （`Spot.fromJson(e)` 是静态方法、`ListView.builder(...)` 才是构造）。
+  /// 值位置的翻译据此分流：不是构造就按普通表达式翻译，绝不走元素属性管线
+  /// （否则静态方法会被当成元素构造，实参被摊进 props）。
+  bool isConstruction(Expression e);
 
   /// widget 构造表达式 → 中立描述（Map 节点 / String JS 表达式）。
   Object? translate(Expression e);

@@ -6,8 +6,8 @@ import { StringLogExtension } from '../../extensions/hot_module_base.js';
 import { TestString1 } from 'extension/e_string.js';
 import { Column, ElevatedButton, SizedBox, Text } from '../../flutter.js';
 
-// 模型 Greeting（同文件，仅本产物内可见）
-class Greeting {
+// 模型 Greeting
+export class Greeting {
   constructor(args) {
     this.__applyProps(args);
   }
@@ -22,8 +22,8 @@ class Greeting {
   }
 }
 
-// 模型 FancyGreeting（同文件，仅本产物内可见）
-class FancyGreeting extends Greeting {
+// 模型 FancyGreeting
+export class FancyGreeting extends Greeting {
   constructor(args) {
     super(args);
     this.emoji = "✨";

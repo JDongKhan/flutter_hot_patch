@@ -514,26 +514,23 @@ String _renderJsProduct(
       ..write(renderTopLevelConstBody(consts));
   }
 
-  // 本产物内的全部类：inline（不 export）+ 对外类，按**基类在前**排序输出。
-  // `class` 声明有 TDZ（`class A extends B` 在 B 之前求值会 ReferenceError），
-  // 而 Dart 不要求基类先声明，故渲染前做一次稳定拓扑排序——编译期解决，
-  // 运行时不引入任何装配函数。
-  final orderedClasses = orderClassesByBase(
+  // 本产物内的全部类，按**基类在前**排序输出：`class` 声明有 TDZ
+  // （`class A extends B` 在 B 之前求值会 ReferenceError），而 Dart 不要求基类
+  // 先声明，故渲染前做一次稳定拓扑排序——编译期解决，运行时不引入任何装配函数。
+  //
+  // 全部类都 `export`：跨文件引用（`import { PanelColors } from 'hello_component.js'`）
+  // 要求类在声明产物里可见。ES module 的 export 不影响本模块内部语义，同一类
+  // 只会翻译到唯一产物里，不会出现同名冲突。
+  for (final cls in orderClassesByBase(
     [...inlineClasses, ...exportedClasses],
     (c) => baseClassOf?.call(c),
-  );
-  final exportedNames = {for (final c in exportedClasses) c.name};
-  for (final cls in orderedClasses) {
-    final exported = exportedNames.contains(cls.name);
+  )) {
     b
       ..writeln()
-      ..writeln(
-        '// ${cls.isComponent ? '组件' : '模型'} ${cls.name}'
-        '${exported ? '' : '（同文件，仅本产物内可见）'}',
-      )
+      ..writeln('// ${cls.isComponent ? '组件' : '模型'} ${cls.name}')
       ..writeln(dart2js(
         cls,
-        exported: exported,
+        exported: true,
         baseClass: baseClassOf?.call(cls),
       ));
   }

@@ -72,11 +72,9 @@ bool returnsWidgetOf(MethodDeclaration m) {
 ///   - 字段：类型经 [fieldTypeName] 推断（无类型注解时从初始化器构造名推回），
 ///     **未过滤、按声明序**（模型构造的位置参数映射依赖此，见
 ///     modelCtorFromPartsJs）；可翻译性过滤与初值预渲染是翻译期的增强。
-///   - 方法：getter 保留（渲染为 get 访问器），setter 跳过；static 方法
-///     默认不翻译（Dart static 无 JS 等价物），[includePrivateStaticMethods]
-///     为 true 时**私有 static 按实例方法收**（`_PostCard._likeText(n)` 这类
-///     同文件私有工具：JS 侧就是原型方法，类内裸调用 `_likeText(x)` 落成
-///     `this._likeText(x)`）。
+///   - 方法：getter 保留（渲染为 get 访问器），setter 跳过；static 方法带
+///     [ClassMethod.isStatic] 收（JS 侧发射为类的静态成员，裸调用落成
+///     `<类名>.<name>(...)`，与 Dart 的单一名字空间一致）。
 ///
 /// [dependencies]：本类引用到的其它类名（由 [referencedClassNames] 与类表求交）。
 /// [isComponent]：该类是 widget/组件类（@PatchEntry 或 Stateful/Stateless/
@@ -94,7 +92,6 @@ ClassInfo classInfoOf(
   String sourceFile, {
   Set<String> dependencies = const {},
   bool isComponent = false,
-  bool includePrivateStaticMethods = false,
   List<MixinDeclaration> mixins = const [],
 }) {
   final instanceFields = <ClassField>[];
@@ -120,8 +117,7 @@ ClassInfo classInfoOf(
   }
 
   // MethodDeclaration → ClassMethod 的同一口径（类自身与 mixin 成员共用）：
-  // getter 保留为 get 访问器；setter 跳过；static 默认跳过（参数放开时
-  // 私有 static 按实例方法收）。
+  // getter 保留为 get 访问器；setter 跳过；static 保留并打 isStatic 标记。
   ClassMethod? methodOf(
     MethodDeclaration m, {
     String? nameOverride,
@@ -133,21 +129,18 @@ ClassInfo classInfoOf(
         name: nameOverride ?? m.name.lexeme,
         params: const [],
         isGetter: true,
+        isStatic: m.isStatic,
         body: m.body,
         superMap: superMap,
         mixinOrigin: mixinOrigin,
       );
     }
-    if (m.isSetter ||
-        (m.isStatic &&
-            !(includePrivateStaticMethods &&
-                m.name.lexeme.startsWith('_')))) {
-      return null;
-    }
+    if (m.isSetter) return null;
     return ClassMethod(
       name: nameOverride ?? m.name.lexeme,
       params: jsMethodParams(m),
       isAsync: m.body.isAsynchronous,
+      isStatic: m.isStatic,
       isVoid: isVoidReturn(m),
       returnsWidget: returnsWidgetOf(m),
       body: m.body,
@@ -187,7 +180,8 @@ ClassInfo classInfoOf(
     for (final mx in ordered) {
       final table = <String, String>{};
       for (final member in mx.members.whereType<MethodDeclaration>()) {
-        if (methodOf(member) == null) continue; // setter/static 口径一致
+        // setter 不翻译；static 不随 mixin 继承（Dart 语义），不进本类成员表。
+        if (member.isStatic || methodOf(member) == null) continue;
         final name = member.name.lexeme;
         table[name] = taken.add(name) ? name : '_m\$${mx.name.lexeme}\$$name';
       }
@@ -215,6 +209,7 @@ ClassInfo classInfoOf(
           params: m.params,
           isAsync: m.isAsync,
           isGetter: m.isGetter,
+          isStatic: m.isStatic,
           isVoid: m.isVoid,
           returnsWidget: m.returnsWidget,
           body: m.body,
@@ -250,6 +245,7 @@ ClassInfo classInfoOf(
       final mx = ordered[i];
       final superMap = superMapOf(ordered.sublist(i + 1));
       for (final member in mx.members.whereType<MethodDeclaration>()) {
+        if (member.isStatic) continue; // mixin 的 static 不随继承展开
         final cm = methodOf(
           member,
           nameOverride: jsNames[mx]![member.name.lexeme],
@@ -417,7 +413,7 @@ class _TypeRefCollector extends RecursiveAstVisitor<void> {
 /// 参数：
 ///   - [decl]：待翻译类（@PatchEntry widget 类或普通类）。
 ///   - [unit]：所在编译单元（StatefulWidget 合并时在此查找同文件 State 类）。
-///   - [classTable]：全量类表（含组件 / 普通类 / 单例），字段类型与方法体
+///   - [classTable]：全量类表（含组件 / 普通类），字段类型与方法体
 ///     构造调用按名字解析；组件条目标记 [ClassInfo.isComponent]。
 ///   - [importResolver]：自定义组件名 → 依赖产物相对路径（null = 无 JS 产物，
 ///     运行时原生注入）。
@@ -432,7 +428,6 @@ ClassInfo translateClass(
   String sourcePath, {
   required Map<String, ClassInfo> classTable,
   required String? Function(String name) importResolver,
-  SingletonResolver? singletons,
   Set<String> jsClassWidgets = const {},
   Set<String> delegateClassWidgets = const {},
   Set<String> ignoredTypes = const {},
@@ -462,7 +457,7 @@ ClassInfo translateClass(
 
   // 结构建模唯一入口 classInfoOf：构造参数（含形参默认值）、实例字段
   //（fieldTypeName 推断、声明序）、方法（getter 保留、setter 跳过、
-  // 私有 static 按实例方法收）都来自它，本函数只做翻译增强（可翻译性
+  // static 带 isStatic 收）都来自它，本函数只做翻译增强（可翻译性
   // 过滤 / 初值预渲染 / 方法体翻译 / native 通道识别）。
   // StatefulWidget 场景：widget 类出构造参数与参数字段，State 类出方法与
   // 状态字段。build 与其它返回 widget 的方法一视同仁，不做「是不是 build」的判断。
@@ -471,14 +466,12 @@ ClassInfo translateClass(
   // 字段/方法按线性化合并、super 语句落成 mixin 方法调用（见 classInfoOf）。
   final mixins = resolveMixinDecls(hostClass, unit, sourcePath);
   final widgetInfo = classInfoOf(widgetClass, sourcePath,
-      includePrivateStaticMethods: true,
       // 普通类（无 State 分离）时 widgetClass 就是 hostClass：mixin 必须挂进
       // widgetInfo，否则 hostInfo 复用 widgetInfo 时 mixin 成员整批丢失。
       mixins: identical(hostClass, widgetClass) ? mixins : const []);
   final hostInfo = identical(hostClass, widgetClass)
       ? widgetInfo
-      : classInfoOf(hostClass, sourcePath,
-          includePrivateStaticMethods: true, mixins: mixins);
+      : classInfoOf(hostClass, sourcePath, mixins: mixins);
   final ctorArgs = widgetInfo.ctorParams;
   final ctorDefaults = widgetInfo.ctorDefaults;
   final methods = hostInfo.methods;
@@ -574,6 +567,48 @@ ClassInfo translateClass(
     }
   }
 
+  // static 字段：JS 侧挂在类上（`X.f = <init>` 后置赋值），初值与实例字段
+  // 共用同一条求值链（字面量 / 值对象构造 / 通用表达式）。求值作用域只有
+  // static 成员——Dart 的 static 初始化器看不到实例成员。
+  final staticDecls = <ClassField>[];
+  final seenStatic = <String>{};
+  for (final info in [if (stateClassName != null) widgetInfo, hostInfo]) {
+    for (final f in info.staticFields) {
+      if (seenStatic.add(f.name)) staticDecls.add(f);
+    }
+  }
+  final staticNames = {for (final f in staticDecls) f.name};
+  final staticMethods = {
+    for (final m in methods)
+      if (m.isStatic) m.name,
+  };
+  final staticScope = FieldScope(
+    className: decl.name.lexeme,
+    staticFields: staticNames,
+    staticMethods: staticMethods,
+    globalConsts: globalConsts,
+  );
+  final staticFields = <ClassField>[];
+  for (final field in staticDecls) {
+    final typeName = field.typeName;
+    if (!_fieldTranslatable(typeName, classTable)) {
+      // ignore: avoid_print - 构建期日志
+      print('[hot_patch_generator] 跳过静态字段 ${field.name}（类型 $typeName 不可翻译）');
+      continue;
+    }
+    final init = field.initializer;
+    final initial = literalToJs(init) ??
+        (init == null ? null : rhsToJs(init, staticScope, used)) ??
+        (isBasicType(typeName) || _valueSdkTypes.contains(eraseType(typeName))
+            ? _defaultInitial(typeName)
+            : 'null');
+    staticFields.add(ClassField(
+      name: field.name,
+      typeName: typeName,
+      jsInitial: initial,
+    ));
+  }
+
   // 类表里的普通类（模型）名：值位置上的构造只排除这些类与值对象，其余类
   // 构造一律按组件元素翻译——不再维护「哪些类型是 widget」的白名单。
   final modelClassNames = <String>{
@@ -588,12 +623,14 @@ ClassInfo translateClass(
     propByField: propByField,
     actionByMethod: {
       for (final m in methods)
-        if (!m.isGetter) m.name: m.name,
+        if (!m.isGetter && !m.isStatic) m.name: m.name,
     },
-    // 本类全部实例方法 / getter 名（含非动作方法）：数据表达式里的裸调用
-    // （`Text(_likeText(post.like))`）与 setState/事件体里的 this.xxx(...) 都
-    // 依赖它解析为本类方法，而不只限于注册为动作的方法。
-    methodNames: {for (final m in methods) m.name},
+    // 本类全部方法名（含非动作方法）；static 方法单列一张表，裸调用落成
+    // `<类名>.m(...)`（Dart 的 static 与实例成员同一名字空间）。
+    methodNames: {
+      for (final m in methods)
+        if (!m.isStatic) m.name,
+    },
     // getter 名（`_visiblePosts`）：JS 类里是 `get` 访问器，作为函数值传参时
     // 必须按值读，不能包装成调用（见 [ElementTranslateContext.getterNames]）。
     getterNames: {
@@ -602,7 +639,9 @@ ClassInfo translateClass(
     },
     sourcePath: sourcePath,
     importResolver: importResolver,
-    singletons: singletons,
+    className: decl.name.lexeme,
+    staticFieldNames: staticNames,
+    staticMethodNames: staticMethods,
     globalConsts: globalConsts,
     hostMethods: hostMethods,
     jsClassWidgets: jsClassWidgets,
@@ -626,6 +665,7 @@ ClassInfo translateClass(
         name: cm.name,
         params: cm.params,
         isGetter: true,
+        isStatic: cm.isStatic,
         body: cm.body,
         bodyJs: bodyJs,
         superMap: cm.superMap,
@@ -638,6 +678,7 @@ ClassInfo translateClass(
       name: cm.name,
       params: cm.params,
       isAsync: cm.isAsync,
+      isStatic: cm.isStatic,
       isVoid: cm.isVoid,
       returnsWidget: cm.returnsWidget,
       body: cm.body,
@@ -656,7 +697,7 @@ ClassInfo translateClass(
     // extends（如 ChangeNotifier，运行时注入同名 JS 基类）。
     superType: isComponent ? null : decl.extendsClause?.superclass.toSource(),
     instanceFields: instanceFields,
-    staticFields: const [],
+    staticFields: staticFields,
     methods: [for (final m in methods) buildMethod(m)],
     ctorParams: {
       for (final f in instanceFields)
@@ -689,7 +730,7 @@ ClassInfo translateClass(
     sourceFile: sourcePath,
     superType: proto.superType,
     instanceFields: instanceFields,
-    staticFields: const [],
+    staticFields: staticFields,
     methods: translated,
     ctorParams: proto.ctorParams,
     isComponent: isComponent,

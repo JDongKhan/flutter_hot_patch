@@ -4,8 +4,6 @@
 
 import { Column, Container, ImageFiltered, Padding, SizedBox, Text } from '../flutter.js';
 
-const _gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple, Colors.pinkAccent, Colors.orangeAccent]});
-
 // 组件 ImageFilteredDetail
 export class ImageFilteredDetail {
   constructor(args) {
@@ -17,7 +15,7 @@ export class ImageFilteredDetail {
       "height": 100,
       "alignment": "center",
       "decoration": (this.__k0 || (this.__k0 = new BoxDecoration({
-        "gradient": _gradient
+        "gradient": ImageFilteredDetail._gradient
       }))),
       "child": new Text({
         "style": {
@@ -131,4 +129,5 @@ export class ImageFilteredDetail {
     });
   }
 }
+ImageFilteredDetail._gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple, Colors.pinkAccent, Colors.orangeAccent]});
 

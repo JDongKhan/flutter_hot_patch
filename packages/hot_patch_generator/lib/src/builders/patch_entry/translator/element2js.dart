@@ -16,7 +16,8 @@ import 'element_json.dart';
 //   - 中立描述 → JS：`__h(type, props)` 构造调用树（实参按原名进 props，
 //     元素工厂在运行时按元素 type 拆结构子结点，见 widget_module_builder 的 __h）
 //   - 统一翻译入口：element_json.dart（elementToJson）+ value_forms.dart（autoValue）
-//   - 静态单例引用：SingletonResolver
+//   静态成员引用（`MyColors.background` / 类内 `fromJson(...)`）走通用
+//   `类名.成员` 规则，与普通实例成员同一套作用域
 // [ElementTranslateContext] 实现 js_translator 的 [ExprRenderer]，供
 // 「Dart 类 → JS」在方法体里渲染返回的 widget。
 //
@@ -91,11 +92,6 @@ class ElementTranslateContext implements ExprRenderer {
   /// 运行时按 import 递归挂载嵌套组件（使用方无需知道依赖）。
   final String? Function(String component)? importResolver;
 
-  /// 跨文件「静态单例类」解析器：build 树里 `MyColors.background`
-  /// 这类静态引用翻译成 JS 表达式并登记 import 依赖。
-  /// 由生成器从组件文件的 import 源文件解析注入；null = 不启用。
-  final SingletonResolver? singletons;
-
   /// 本文件可见的顶层常量名（同文件 + import 文件）：build 树里 `kBrand` /
   /// `kBanners` 这类引用与字段初值、方法体共用同一份作用域。
   @override
@@ -130,13 +126,15 @@ class ElementTranslateContext implements ExprRenderer {
     this.methodNames = const {},
     this.getterNames = const {},
     this.importResolver,
-    this.singletons,
     this.globalConsts = const {},
     this.hostMethods = const {},
     this.jsClassWidgets = const {},
     this.delegateClassWidgets = const {},
     this.ignoredTypes = const {},
     this.modelClassNames = const {},
+    this.className,
+    this.staticFieldNames = const {},
+    this.staticMethodNames = const {},
     this.constKeyAllocator,
   });
 
@@ -144,6 +142,19 @@ class ElementTranslateContext implements ExprRenderer {
   /// 值位置上的构造只排除这些类与值对象，其余一律按组件构造翻译——不再维护
   /// 「哪些类型是 widget」的白名单。
   final Set<String> modelClassNames;
+
+  /// 当前翻译的类名（静态成员引用 `ClassName.x` 的落点）；null = 不在类里
+  /// （扩展 / 产物级常量求值）。
+  final String? className;
+
+  /// 当前类的 **static 字段** / **static 方法**名：build 树里裸引用静态成员
+  /// （`background` / `fromJson(...)`）时落成 `ClassName.<name>`。
+  final Set<String> staticFieldNames;
+  final Set<String> staticMethodNames;
+
+  /// 名字是否是产物可见的项目类（类表里的非组件类）——`Owner.member` 的
+  /// owner 是它时按类静态成员引用，而不是枚举成员名字符串。
+  bool isProjectClass(String name) => modelClassNames.contains(name);
 
 
   /// 有 JS 类实现的 widget 类型（组件、逻辑 widget、builder 代理）。
@@ -524,6 +535,8 @@ class ElementTranslateContext implements ExprRenderer {
           propByField.containsKey(name) ||
           methodNames.contains(name) ||
           getterNames.contains(name) ||
+          staticFieldNames.contains(name) ||
+          staticMethodNames.contains(name) ||
           globalConsts.contains(name)) {
         continue;
       }
@@ -1032,6 +1045,12 @@ class ElementTranslateContext implements ExprRenderer {
           activeScope,
         );
         if (topHost != null) return topHost;
+        // static 方法（`fromJson(e)` 这类在类内方法体里的裸调用）→ `<类名>.m(...)`，
+        // 与实例方法同一名字空间，调用点看不出差别，靠静态方法表区分。
+        if (staticMethodNames.contains(method) && className != null) {
+          return '$className.$method'
+              '(${_eventArgsJs(inner.argumentList, activeScope)})';
+        }
         if (actionByMethod.containsKey(method) ||
             methodNames.contains(method)) {
           return 'this.$method(${_eventArgsJs(inner.argumentList, activeScope)})';
@@ -1139,7 +1158,8 @@ class ElementTranslateContext implements ExprRenderer {
   }
 
   /// 「可调用引用」形态（`onTap: _tap` / `widget.onTap` / 字段回调 `onTap`）
-  /// → JS 成员引用 `this.<name>`；非引用形态返回 null。
+  /// → JS 成员引用（实例成员 `this.<name>`、静态方法 `<类名>.<name>`）；
+  /// 非引用形态返回 null。
   String? _eventRef(Expression e) {
     final String name;
     if (e is SimpleIdentifier) {
@@ -1148,6 +1168,9 @@ class ElementTranslateContext implements ExprRenderer {
       final wm = widgetMemberName(e);
       if (wm == null) return null;
       name = wm;
+    }
+    if (staticMethodNames.contains(name) && className != null) {
+      return '$className.$name';
     }
     final prop = propByField[name];
     if (prop != null) return 'this.$prop';
@@ -1180,6 +1203,8 @@ class ElementTranslateContext implements ExprRenderer {
           propByField.containsKey(name) ||
           methodNames.contains(name) ||
           getterNames.contains(name) ||
+          staticFieldNames.contains(name) ||
+          staticMethodNames.contains(name) ||
           globalConsts.contains(name) ||
           hostMethods.containsKey(name)) {
         continue;
@@ -1364,6 +1389,12 @@ class ElementTranslateContext implements ExprRenderer {
     return ctor == null ? null : jsClassFileOf(ctor);
   }
 
+  /// 是否确实是构造（判据与 [ctorJsClassFile] 同一个 [_ctorNameOf]）：
+  /// `X.fromJson(...)` 这类**静态方法**在语法上也是 `X.member(...)`，
+  /// 只有构造签名索引能区分，值翻译据此决定是否走元素属性管线。
+  @override
+  bool isConstruction(Expression e) => _ctorNameOf(e) != null;
+
   /// 类型的 JS 类定义**来自哪个产物文件**（null = JS 侧没有这个类）。
   ///
   /// 只按「类定义在哪」判断，不看它是不是组件——所有类一视同仁：
@@ -1420,6 +1451,9 @@ class ElementTranslateContext implements ExprRenderer {
         if (!_localAliases.containsKey(l)) l,
     },
     methods: {...actionByMethod.keys, ...methodNames},
+    className: className,
+    staticFields: staticFieldNames,
+    staticMethods: staticMethodNames,
     hostMethods: hostMethods,
     globalConsts: globalConsts,
     localAliases: _localAliases,
@@ -1443,6 +1477,9 @@ class ElementTranslateContext implements ExprRenderer {
       instanceFields: base.instanceFields,
       params: {...base.params}..remove('context'),
       methods: base.methods,
+      className: base.className,
+      staticFields: base.staticFields,
+      staticMethods: base.staticMethods,
       hostMethods: base.hostMethods,
       globalConsts: base.globalConsts,
       localVars: base.localVars,
@@ -1469,9 +1506,22 @@ class ElementTranslateContext implements ExprRenderer {
       // 非 `widget.` 前缀的 `a.b` 不支持（返回 null，交给数据表达式分支）。
       final name = e is PrefixedIdentifier ? widgetMemberName(e) : e.name;
       if (name == null) return null;
+      // 局部可见的名字（build 局部 / 方法体局部 / 循环变量 / 闭包形参）优先于
+      // 字段：它们是**值**（列表、数字…），不是回调引用，折成 `this.x` 会把
+      // `Spot(id: id, tags: tags)` 里的局部列表换成同名字段（数据全丢）。
+      if (name != 'context' &&
+          !_localAliases.containsKey(name) &&
+          (_locals.contains(name) ||
+              _loopVars.contains(name) ||
+              _methodParams.contains(name))) {
+        return null;
+      }
       // getter（`list: _visiblePosts`）：JS 侧是 `get` 访问器，按值读即可；
       // 包装成调用会传出去一个函数，子组件拿到空数据。
       if (getterNames.contains(name)) return 'this.$name';
+      if (staticMethodNames.contains(name) && className != null) {
+        return '(...__a) => $className.$name(...__a)';
+      }
       if (actionByMethod.containsKey(name) || methodNames.contains(name)) {
         return '(...__a) => this.$name(...__a)';
       }
@@ -1635,59 +1685,6 @@ bool isClassName(String name) {
     n = n.substring(1);
   }
   return n.isNotEmpty && n[0] == n[0].toUpperCase();
-}
-
-/// 跨文件「静态单例类」解析器（如 theme/panel_colors.dart 的 MyColors）。
-///
-/// 组件 build 树里出现 `MyColors.background` 这类静态引用时，把它翻译成
-/// JS 表达式 `MyColors.background`（不带引号，jsLiteral 原样输出），并登记
-/// 该单例类为 import 依赖，产物顶部生成 `import { MyColors } from '...'`。
-///
-/// 由生成器从组件文件的 import 源文件解析填充；未命中映射时 staticRef
-/// 返回 null，调用方维持「丢键」现状，不影响其它产物。
-class SingletonResolver {
-  /// 类名 → 该类非私有 static 字段名集合。
-  final Map<String, Set<String>> _fields = {};
-
-  /// 类名 → 源文件 dart 路径（lib/...dart，用于推导 import 相对路径）。
-  final Map<String, String> _sourceFile = {};
-
-  /// 翻译过程中实际被引用的单例类（→ 产物 import）。
-  final Set<String> used = {};
-
-  void add(
-    String className,
-    Set<String> publicStaticFields,
-    String sourceFile,
-  ) {
-    _fields[className] = publicStaticFields;
-    _sourceFile[className] = sourceFile;
-  }
-
-  String? sourceFileOf(String className) => _sourceFile[className];
-
-  bool hasField(String className, String field) =>
-      _fields[className]?.contains(field) ?? false;
-
-  /// 命中静态单例字段引用（`MyColors.background`）→ 登记依赖并
-  /// 返回 JS 表达式 `MyColors.background`；否则返回 null。
-  String? staticRef(Expression e) {
-    String? cls;
-    String? field;
-    if (e is PropertyAccess && e.target is Identifier) {
-      cls = (e.target as Identifier).name;
-      field = e.propertyName.name;
-    } else if (e is PrefixedIdentifier) {
-      // `MyColors.background`（两段点号名，前缀是简单标识符）→ 前缀是类名
-      cls = e.prefix.name;
-      field = e.identifier.name;
-    }
-    if (cls != null && field != null && hasField(cls, field)) {
-      used.add(cls);
-      return '$cls.$field';
-    }
-    return null;
-  }
 }
 
 /// 收集表达式里出现的简单标识符名——[ElementTranslateContext.warnCapturedLocals]
