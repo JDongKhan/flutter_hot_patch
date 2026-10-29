@@ -191,13 +191,13 @@ class JsRenderContext {
   Widget? element(Object? raw) => buildJsElement(raw);
 
   /// 元素描述数组（`AppBar.actions` / `BottomNavigationBar.items` /
-  /// `MultiProvider.providers` 等）→ widget 列表（构建失败的项给兜底占位）。
+  /// `MultiProvider.providers` 等）→ widget 列表（空项跳过）。
   List<Widget> elementList(Object? raw) {
     if (raw is! List) return const [];
     final out = <Widget>[];
     for (final e in raw) {
       final w = buildJsElement(e);
-      out.add(w ?? uiFallback('元素列表项渲染失败：${_elementTypeLabel(e)}'));
+      if (w != null) out.add(w);
     }
     return out;
   }
@@ -253,7 +253,8 @@ Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
     if (value is List) {
       for (final ch in value) {
         final w = buildJsElement(ch);
-        widgets.add(w ?? uiFallback('槽位 "$key" 子元素渲染失败：${_elementTypeLabel(ch)}'));
+        // 数组槽位里解析不出的项按「没有这项」处理（可空语义），不兜底。
+        if (w != null) widgets.add(w);
         final ctx = _descriptorContext(ch);
         contexts.add(ctx);
         if (isJsDataCarrierType(ctx.type)) dataCarrier = true;
