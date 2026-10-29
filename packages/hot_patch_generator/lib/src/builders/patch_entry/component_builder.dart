@@ -15,6 +15,7 @@ import 'analysis/analyze_dart_class.dart';
 import 'analysis/class_table.dart';
 import 'analysis/component_scope.dart';
 import 'analysis/const_support.dart';
+import 'analysis/extension_support.dart';
 import 'analysis/imported_components.dart';
 import 'analysis/singleton_support.dart';
 import 'class_info.dart';
@@ -149,6 +150,10 @@ class ComponentBuilder implements Builder {
     //     宿主方法体里 `new` 出来的详情页不翻译（依赖链在 @HostInjected 处断掉）。
     //     @PatchIgnore / @HostInjected 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
+    // 本文件是否声明了 `extension`：纯扩展文件没有根类，但也必须产出产物
+    // （`__jsExtension(...)` 注册语句就写在声明处），故所有「无根类 → 不产出」
+    // 的早返回都要让位。
+    final hasExtensions = hasExtensionDeclaration(parsed.unit);
     final annotated = <ClassDeclaration>[
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>())
         if (findAnnotation(d.metadata, 'PatchEntry') != null) d,
@@ -157,7 +162,7 @@ class ComponentBuilder implements Builder {
       roots.addAll([for (final d in annotated) (d, true)]);
     } else {
       final scope = await componentTranslationScope(buildStep);
-      if (!scope.reachableFiles.contains(inputId.path)) return;
+      if (!scope.reachableFiles.contains(inputId.path) && !hasExtensions) return;
       final neededHere = scope.neededClasses[inputId.path] ?? const <String>{};
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
         final name = d.name.lexeme;
@@ -176,7 +181,8 @@ class ComponentBuilder implements Builder {
     // （包装类 + 顶层常量一起写），否则使用方的 `new X(...)` 缺类定义。
     if (roots.isEmpty &&
         sameFileSingletonInfos.isEmpty &&
-        wrapperClasses.isEmpty) {
+        wrapperClasses.isEmpty &&
+        !hasExtensions) {
       // 纯数据文件（如 lib/app/service/app_data.dart）：文件里没有任何可翻译的类，
       // 只有顶层常量 → 产出「顶层常量」产物（`export const kBanners = [...]`），
       // 组件产物才能 import 到这些值（与类产物同一个文件级产物路径）。
@@ -226,6 +232,27 @@ class ComponentBuilder implements Builder {
       ));
     }
 
+    // 本文件声明的 `extension`：注册语句**写在声明处**（该文件自身的产物里），
+    // 调用点与 Dart 一对一（成员由运行时装到目标类型原型上）。
+    final extensions = <ExtensionInfo>[];
+    for (final decl in extensionDeclarations(parsed.unit)) {
+      final info = translateExtension(
+        decl,
+        parsed.unit,
+        inputId.path,
+        ownProduct: ownProduct,
+        classTable: classTable,
+        importResolver: importResolver,
+        singletons: singletons,
+        jsClassWidgets: jsClassWidgetTypes,
+        delegateClassWidgets: builderFormTypes,
+        ignoredTypes: ignoredTypes,
+        globalConsts: globalConsts,
+        classNamesInUnit: parsedNames,
+      );
+      if (info != null) extensions.add(info);
+    }
+
     // 按依赖关系递归：从根类的 dependencies 做 BFS（组件与普通类同一套）——
     //   - 同文件**有产物**的组件（@PatchEntry / 私有 _Xxx）→ 翻译进同一产物；
     //   - 同文件普通类（模型/共享类）→ 翻译为产物内可见的 inline class；
@@ -238,6 +265,8 @@ class ComponentBuilder implements Builder {
     final doneDeps = <String>{};
     final depQueue = <String>[
       for (final c in exportedClasses) ...c.dependencies,
+      // 扩展成员体里构造/引用的类走同一条递归：同文件的内联、跨文件的 import。
+      for (final e in extensions) ...e.dependencies,
     ];
     while (depQueue.isNotEmpty) {
       final dep = depQueue.removeLast();
@@ -291,8 +320,8 @@ class ComponentBuilder implements Builder {
     // 跨文件依赖（模型/单例/组件）→ dependencyImports（ES module import）；
     // 同文件普通类上面已递归翻译为 inline class（不 export）。
     final crossModels = <String, ClassInfo>{};
-    void collectModelDeps(ClassInfo c) {
-      for (final name in c.dependencies) {
+    void collectModelDeps(Iterable<String> deps) {
+      for (final name in deps) {
         if (singletons.sourceFileOf(name) != null) continue; // 单例 import 另算
         final model = classTable[name];
         if (model == null || model.isComponent) continue;
@@ -300,8 +329,15 @@ class ComponentBuilder implements Builder {
       }
     }
 
-    exportedClasses.forEach(collectModelDeps);
-    inlineClasses.values.forEach(collectModelDeps);
+    for (final c in exportedClasses) {
+      collectModelDeps(c.dependencies);
+    }
+    for (final c in inlineClasses.values) {
+      collectModelDeps(c.dependencies);
+    }
+    for (final e in extensions) {
+      collectModelDeps(e.dependencies);
+    }
 
     final dependencyImports = <String>[];
     // 跨文件静态单例类：import（export const 单例对象，运行时注入 __modules 共享）
@@ -324,8 +360,8 @@ class ComponentBuilder implements Builder {
     // 同文件组件（importResolver 返回本产物名）已是产物内 export class，无需
     // import；null（无 JS 产物的普通组件）走原生注入。
     final importedComponents = <String>{};
-    void collectComponentImports(ClassInfo c) {
-      for (final dep in c.dependencies) {
+    void collectComponentImports(Iterable<String> deps) {
+      for (final dep in deps) {
         if (importedComponents.contains(dep)) continue;
         final rel = importResolver(dep);
         if (rel == null || rel == ownName) continue;
@@ -334,8 +370,20 @@ class ComponentBuilder implements Builder {
       }
     }
 
-    exportedClasses.forEach(collectComponentImports);
-    inlineClasses.values.forEach(collectComponentImports);
+    for (final c in exportedClasses) {
+      collectComponentImports(c.dependencies);
+    }
+    for (final c in inlineClasses.values) {
+      collectComponentImports(c.dependencies);
+    }
+    for (final e in extensions) {
+      collectComponentImports(e.dependencies);
+    }
+
+    // 扩展目标类的 import（目标类在别的产物里时，注册语句直接传构造函数）。
+    for (final e in extensions) {
+      if (e.targetImport != null) dependencyImports.add(e.targetImport!);
+    }
 
     // 顶层常量：本文件常量内联进产物（见 _renderJsProduct），引用到的跨文件常量
     // 与「常量里构造的跨文件模型」→ import。按源文件聚合，与上面的 import 合并
@@ -357,6 +405,9 @@ class ComponentBuilder implements Builder {
     for (final c in allTranslated) {
       _mergeUsedWidgets(extraUsedWidgets, c.usedWidgetPackages);
     }
+    for (final e in extensions) {
+      _mergeUsedWidgets(extraUsedWidgets, e.usedWidgetPackages);
+    }
 
     final jsOutput = buildStep.allowedOutputs.first;
     await buildStep.writeAsString(
@@ -372,6 +423,7 @@ class ComponentBuilder implements Builder {
         extraUsedWidgets: extraUsedWidgets,
         wrapperClasses: wrapperClasses,
         importResolver: importResolver,
+        extensions: extensions,
       ),
     );
   }
@@ -402,6 +454,7 @@ String _renderJsProduct(
   Map<String, Set<String>> extraUsedWidgets = const {},
   List<String> wrapperClasses = const [],
   String? Function(String component)? importResolver,
+  List<ExtensionInfo> extensions = const [],
 }) {
   // 头部（注释 + import 区）：package widget 产物的 import 依赖「实际用到的
   // 类型」，只能在各组件渲染完成后得知，所以先渲染 body 再拼装 import，
@@ -475,6 +528,14 @@ String _renderJsProduct(
       ..writeln()
       ..writeln('// ${cls.isComponent ? '组件' : '模型'} ${cls.name}')
       ..writeln(dart2js(cls, exported: true));
+  }
+
+  // 本文件声明的 `extension`：注册语句写在声明处（求值本产物即注册成员）。
+  for (final ext in extensions) {
+    b
+      ..writeln()
+      ..writeln('// 扩展 ${ext.name.isEmpty ? '<unnamed>' : ext.name}')
+      ..writeln(ext.toJs());
   }
 
   // `@PatchIgnore(isComponent: true)`：类本身不翻译，但在**它自己的源文件产物**

@@ -36,6 +36,11 @@ const String buildContextJsSource = r'''
     this.__id = null;
   }
 
+  // 登记类型别名：`extension X on BuildContext` 的注册按 Dart 类型名解析目标
+  // （见【27.5】）。BuildContext 是运行时私有代理，不挂 G——只为 extension
+  // 解析留一条别名，不把内部类暴露成全局。
+  __jsTypeAlias('BuildContext', JsBuildContext);
+
   // 句柄（首次真正需要宿主真值时才登记，宿主 onCreate 绑定 nodeId）。
   JsBuildContext.prototype.__handle = function () {
     if (this.__id == null) {

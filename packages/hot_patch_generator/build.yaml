@@ -66,6 +66,19 @@ builders:
     auto_apply: dependents
     build_to: source
 
+  # Dart extension 注册 builder：本地依赖包里的 extension → patch/extensions.js。
+  # 项目自己的扩展随各自源文件产物发射（patch_entry），这里只有「构建输入范围
+  # 之外」的本地包（path 依赖 / workspace 成员）。产物由运行时在首个模块求值
+  # 完成、任何 mount 之前求值，幂等注册（同 id 再注册 = 热更自愈）。
+  ui_extensions:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["extensionModuleBuilder"]
+    build_extensions:
+      "$package$":
+        - "patch/extensions.js"
+    auto_apply: dependents
+    build_to: source
+
   # 宿主注入注册 builder：扫描全包 @HostInjected 方法，把 registerHostMethod
   # 的注册调用集中生成到**一个 Dart 文件** lib/generated/host_methods.dart，
   # 使用方在 main() 里调用一次 registerHostMethods() 即可。

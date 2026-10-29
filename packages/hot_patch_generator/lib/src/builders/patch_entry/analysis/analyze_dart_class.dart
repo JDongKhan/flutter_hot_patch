@@ -345,6 +345,18 @@ Set<String> ctorClassNames(Expression? expression) {
   return collector.names;
 }
 
+/// 任意 AST 结点里构造调用的类名集合（与 [ctorClassNames] 同一收集器）。
+///
+/// 供「不是类声明」的成员宿主使用（如 extension 的方法体 / 初始化器）——
+/// 依赖发现口径与类完全一致，不为扩展另写一套启发式。
+Set<String> ctorClassNamesIn(Iterable<AstNode?> nodes) {
+  final collector = _CtorNameCollector();
+  for (final n in nodes) {
+    if (n != null) n.accept(collector);
+  }
+  return collector.names;
+}
+
 /// 收集表达式树里全部类型构造调用名（与类发现共用：字段类型 + 构造调用）。
 class _CtorNameCollector extends RecursiveAstVisitor<void> {
   final names = <String>{};

@@ -69,6 +69,7 @@ import 'dismissible_js.dart';
 import 'easy_refresh_js.dart';
 import 'focus_js.dart';
 import 'handle_registry_js.dart';
+import 'js_extension_js.dart';
 import 'key_js.dart';
 import 'keyboard_listener_js.dart';
 import 'layout_builder_js.dart';
@@ -223,6 +224,14 @@ const String _jsUiGlobalsTail = r'''
 
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
+
+  // Dart 类型名 → JS 构造函数别名表（见【27.5】Dart extension 注册）。
+  // 语言核心类型（int/String/List…）由 __jsExtensionTargetOf 直接映射；运行时
+  // 私有代理类（如 BuildContext）在这里登记别名——**不**挂到 G 上，避免为了
+  // extension 把一个内部类暴露成全局。产物里的类无需登记：注册时既可直接传
+  // 构造函数（跨产物 import 得到同一个类），也可按类型名走 `G[name]`。
+  var __jsTypeAliases = {};
+  function __jsTypeAlias(name, ctor) { __jsTypeAliases[name] = ctor; }
 
   // 【项目规则】凡是「翻译产物里调用的方法名，而在原生 JS 对应类型上不存在」的，
   // 一律**在本节给 JS 内建补一个同名同义的方法**，产物保持原样调用——不在生成器
@@ -765,6 +774,9 @@ String runtimeJsSource() {
     // Dismissible 的 confirmDismiss 异步回程（放最后：依赖 handle 表与 host，
     // 与能力片段互不干扰）。
     _section('【27】Dismissible 确认回程', dismissibleJsSource),
+    // Dart extension 注册机制：生成器在扩展声明处发射 `__jsExtension(...)`，
+    // 原型成员随产物注册（调用点与 Dart 一对一，无名字映射）。
+    _section('【27.5】Dart extension 注册（__jsExtension）', jsExtensionJsSource),
     _section('【28】api 收尾', _jsUiRuntimeSkeletonTailHead),
     _jsUiLeakApiMember,
     _jsUiRuntimeSkeletonTailEnd,

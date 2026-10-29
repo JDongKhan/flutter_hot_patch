@@ -12,6 +12,7 @@ import 'package:build/build.dart';
 import 'src/builders/patch_entry/component_builder.dart';
 import 'src/builders/patch_entry/project_module_builder.dart';
 import 'src/builders/runtime/runtime_builder.dart';
+import 'src/builders/ui_extensions/extension_module_builder.dart';
 import 'src/builders/ui_host_register/host_register_builder.dart';
 import 'src/builders/ui_patch_manifest/patch_manifest_builder.dart';
 import 'src/builders/ui_widget/widget_module_builder.dart';
@@ -37,6 +38,15 @@ Builder widgetModuleBuilder(BuilderOptions _) => const WidgetModuleBuilder();
 /// 挂在包根伪资产 `$package$` 下，输出清单由 [localTranslationPackages] 静态
 /// 推导；没有本地依赖包时不产出任何文件。本 builder 不读任何 options。
 Builder projectModuleBuilder(BuilderOptions _) => const ProjectModuleBuilder();
+
+/// 扩展注册 builder 工厂：`ui_extensions`。
+///
+/// 把**本地依赖包**里的 Dart `extension` 声明翻译成 `patch/extensions.js`
+/// （`__jsExtension(...)` 注册语句）。项目自身的扩展随各自源文件产物发射
+/// （见 [componentBuilder]），本 builder 只负责构建输入范围之外的本地包。
+/// 产物由运行时在首个模块求值完成、任何 mount 之前求值。本 builder 不读 options。
+Builder extensionModuleBuilder(BuilderOptions _) =>
+    const ExtensionModuleBuilder();
 
 /// JS 运行时 builder 工厂：`ui_runtime`。
 ///

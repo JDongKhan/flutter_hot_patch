@@ -1,12 +1,13 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.2",
-  "buildTime": "2026-10-28T20:53:45.344021",
+  "buildTime": "2026-10-29T08:55:12.181528",
   "resources": {
     "flutter.js": "53bf4113ec2d43522fbe6667628d3b1d221fe543e3d8899578137877fcf38cab",
     "provider.js": "81133f6f7085bb29e92f7e43ad9901cd763bbf9b19c9318fd36948991d061ca0",
-    "runtime.js": "2c4d98352ef0ce2229f9fe21d4cfa9f8860f8ac1a659fea12e321a5843c6edf1",
+    "runtime.js": "e05f48546d4545765c5534645ff743e3e1e2613ffee07a8ede9381c10881c171",
     "hot_module_base.js": "b2df62024c440012182e5af5baf1a06a25d1b6c251c729c40210f92a9603a546",
+    "extensions.js": "42fa3e3cdf6a8dbc605ce38f7aff5d4ce852d128ddc46a3c7a8789fd9f1ce53f",
     "app/model/app_models.js": "77d86c78799f58c67ae90fc8f78d4c506cea45bb46ff73268ec6707176627c72",
     "app/service/app_service.js": "560de89c9ea369f825607262ac45e7afc648ed07bb02c0e42cdb81b6bf1924ff",
     "app/pages/orders_page.js": "547b9eb32af18bb80415fa6c6db4861afba74fcfef042d19613ec9c91ab97891",

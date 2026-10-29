@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 95f4b271） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 52b43d3d） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '95f4b271') { return; }
-  G.__jsuiVersion = '95f4b271';
+  if (G.__jsui && G.__jsuiVersion === '52b43d3d') { return; }
+  G.__jsuiVersion = '52b43d3d';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -116,6 +116,14 @@ if (G.kDebugMode) {
 
   // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function compName(type) { return (type && type.name) || 'Component'; }
+
+  // Dart 类型名 → JS 构造函数别名表（见【27.5】Dart extension 注册）。
+  // 语言核心类型（int/String/List…）由 __jsExtensionTargetOf 直接映射；运行时
+  // 私有代理类（如 BuildContext）在这里登记别名——**不**挂到 G 上，避免为了
+  // extension 把一个内部类暴露成全局。产物里的类无需登记：注册时既可直接传
+  // 构造函数（跨产物 import 得到同一个类），也可按类型名走 `G[name]`。
+  var __jsTypeAliases = {};
+  function __jsTypeAlias(name, ctor) { __jsTypeAliases[name] = ctor; }
 
   // 【项目规则】凡是「翻译产物里调用的方法名，而在原生 JS 对应类型上不存在」的，
   // 一律**在本节给 JS 内建补一个同名同义的方法**，产物保持原样调用——不在生成器
@@ -3521,6 +3529,11 @@ G.ValueNotifier = ValueNotifier;
     this.__id = null;
   }
 
+  // 登记类型别名：`extension X on BuildContext` 的注册按 Dart 类型名解析目标
+  // （见【27.5】）。BuildContext 是运行时私有代理，不挂 G——只为 extension
+  // 解析留一条别名，不把内部类暴露成全局。
+  __jsTypeAlias('BuildContext', JsBuildContext);
+
   // 句柄（首次真正需要宿主真值时才登记，宿主 onCreate 绑定 nodeId）。
   JsBuildContext.prototype.__handle = function () {
     if (this.__id == null) {
@@ -3904,6 +3917,115 @@ G.ValueNotifier = ValueNotifier;
     } else {
       done(out);
     }
+  };
+
+
+// ===== 【27.5】Dart extension 注册（__jsExtension） =====
+  // 类型名 → 构造函数：语言核心映射 → 运行时别名表 → G[name]。
+  // 三者都取不到时返回 null（调用方 console.error，不静默吞掉）。
+  function __jsExtensionTargetOf(target) {
+    if (typeof target !== 'string') return target || null;
+    switch (target) {
+      case 'int':
+      case 'num':
+      case 'double': return Number;
+      case 'String': return String;
+      case 'bool': return Boolean;
+      case 'List':
+      case 'Iterable': return Array;
+      case 'Set': return Set;
+    }
+    if (Object.prototype.hasOwnProperty.call(__jsTypeAliases, target)) {
+      return __jsTypeAliases[target];
+    }
+    var g = G[target];
+    return typeof g === 'function' ? g : null;
+  }
+
+  // 原型上的扩展登记簿（owners: 成员名 → 扩展 id）。非枚举挂在原型自身，
+  // 用来区分「类/内建本来就有」（静默跳过）与「另一个扩展占了」（warn）。
+  function __jsExtensionMeta(proto) {
+    if (!Object.prototype.hasOwnProperty.call(proto, '__jsExtensionMeta')) {
+      Object.defineProperty(proto, '__jsExtensionMeta', {
+        value: { owners: {} },
+        writable: true,
+        enumerable: false,
+        configurable: true
+      });
+    }
+    return proto.__jsExtensionMeta;
+  }
+
+  // id -> { proto, names }：同 id 再注册时据此卸载上一次的成员。
+  var __jsExtensionRecords = {};
+  var __jsExtensionSeq = 0;
+
+  function __jsExtensionUninstall(id) {
+    var rec = __jsExtensionRecords[id];
+    if (!rec) return;
+    var meta = __jsExtensionMeta(rec.proto);
+    for (var i = 0; i < rec.names.length; i++) {
+      var name = rec.names[i];
+      if (meta.owners[name] === id) {
+        delete meta.owners[name];
+        // 成员一律 configurable，删除不会抛错；引擎实现差异用 try 兜住。
+        try { delete rec.proto[name]; } catch (e) {}
+      }
+    }
+    delete __jsExtensionRecords[id];
+  }
+
+  G.__jsExtension = function (target, members, opts) {
+    opts = opts || {};
+    var id = opts.id == null ? '' : String(opts.id);
+    var statics = opts.statics || {};
+    var ctor = __jsExtensionTargetOf(target);
+    if (!ctor) {
+      console.error('jsui: extension target not found: ' + String(target) +
+        (id ? ' (' + id + ')' : ''));
+      return statics;
+    }
+    var proto = ctor.prototype;
+    if (!proto) {
+      console.error('jsui: extension target has no prototype: ' + String(target));
+      return statics;
+    }
+    if (id) __jsExtensionUninstall(id);
+    var meta = __jsExtensionMeta(proto);
+    var record = { proto: proto, names: [] };
+    for (var name in members) {
+      if (!Object.prototype.hasOwnProperty.call(members, name)) continue;
+      // 目标上已有同名成员（含继承）：Dart 里显式成员优先于扩展，静默跳过。
+      if (name in proto) {
+        if (id && meta.owners[name] && meta.owners[name] !== id) {
+          console.warn('jsui: extension member conflict: ' + name +
+            ' already provided by ' + meta.owners[name] +
+            ' (later registration ignored)');
+        }
+        continue;
+      }
+      var member = members[name];
+      if (typeof member === 'function') {
+        Object.defineProperty(proto, name, {
+          value: member,
+          writable: true,
+          enumerable: false,
+          configurable: true
+        });
+      } else {
+        Object.defineProperty(proto, name, {
+          get: member.get,
+          set: member.set,
+          enumerable: false,
+          configurable: true
+        });
+      }
+      __jsExtensionSeq += 1;
+      meta.owners[name] = id || ('@' + __jsExtensionSeq);
+      record.names.push(name);
+    }
+    if (id) __jsExtensionRecords[id] = record;
+    return statics;
   };
 
 
