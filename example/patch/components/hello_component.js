@@ -5,14 +5,6 @@
 import { User } from '../hot_module_base.js';
 import { Column, ElevatedButton, Row, Text } from '../flutter.js';
 
-// 静态单例类 PanelColors
-export const PanelColors = {
-  background: new Color({value: 0xFFFF0000}),
-  adult: new Color({value: 0xFF4CAF50}),
-  primary: new Color({value: 0xFF6750A4}),
-  tagline: "demo"
-};
-
 // 组件 HelloCard
 export class HelloCard {
   constructor(args) {
@@ -172,4 +164,12 @@ export class HelloCard {
     console.log("--混入代码 1");
   }
 }
+
+// 静态单例类 PanelColors
+export const PanelColors = {
+  background: new Color({value: 0xFFFF0000}),
+  adult: new Color({value: 0xFF4CAF50}),
+  primary: new Color({value: 0xFF6750A4}),
+  tagline: "demo"
+};
 
