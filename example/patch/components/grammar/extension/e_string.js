@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/extension/e_string.dart 自动生成
+// 由 hot_patch_generator 从 lib/components/grammar/extension/e_string.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Estrange } from 'estrange.js';
@@ -15,5 +15,5 @@ export const TestString1 = __jsExtension("String", (function () {
       new Estrange().log();
     },
   };
-})(), { id: "lib/components/extension/e_string.dart#TestString1" });
+})(), { id: "lib/components/grammar/extension/e_string.dart#TestString1" });
 
