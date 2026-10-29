@@ -13,6 +13,7 @@ class GrammarShowcase extends StatelessWidget {
   static const List<_Entry> _entries = [
     _Entry('Mixin · State 扩展', 'State 混入跨包 StateLogMixin：点击时打印状态日志', 'MixinDetail'),
     _Entry('Extension · String 扩展', 'String 扩展跨包 logText：点击时打印字符串日志', 'ExtensionDetail'),
+    _Entry('extends · 类继承', 'Greeting 基类与 FancyGreeting 子类：super 调用与多态', 'InheritanceDetail'),
   ];
 
   @override

@@ -1,10 +1,40 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar_details.dart 自动生成
+// 由 hot_patch_generator 从 lib/components/grammar/grammar_details.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { StringLogExtension } from '../../extensions/hot_module_base.js';
 import { TestString1 } from 'extension/e_string.js';
-import { StringLogExtension } from '../extensions/hot_module_base.js';
-import { Column, ElevatedButton, SizedBox, Text } from '../flutter.js';
+import { Column, ElevatedButton, SizedBox, Text } from '../../flutter.js';
+
+// 模型 Greeting（同文件，仅本产物内可见）
+class Greeting {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.name = (args && args.name !== undefined) ? args.name : '';
+  }
+  greet() {
+    return "Hello, " + this.name;
+  }
+  describe() {
+    return "Greeting(" + this.name + ")";
+  }
+}
+
+// 模型 FancyGreeting（同文件，仅本产物内可见）
+class FancyGreeting extends Greeting {
+  constructor(args) {
+    super(args);
+    this.emoji = "✨";
+  }
+  greet() {
+    return super.greet() + " " + this.emoji;
+  }
+  describe() {
+    return super.describe() + " → FancyGreeting";
+  }
+}
 
 // 组件 MixinDetail
 export class MixinDetail {
@@ -102,6 +132,73 @@ export class ExtensionDetail {
           "child": (this.__k4 || (this.__k4 = new Text({
             "data": "调用 String.logText()"
           })))
+        })
+      ]
+    });
+  }
+}
+
+// 组件 InheritanceDetail
+export class InheritanceDetail {
+  constructor(args) {
+    this.props = args || {};
+  }
+  build(context) {
+    var plain = new Greeting({
+      "name": "Dart"
+    });
+    var fancy = new FancyGreeting({
+      "name": "JS"
+    });
+    return new Column({
+      "crossAxisAlignment": "stretch",
+      "children": [
+        (this.__k0 || (this.__k0 = new Text({
+          "data": "普通类单继承（extends / super / 多态）",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold"
+          }
+        }))),
+        (this.__k1 || (this.__k1 = new SizedBox({
+          "height": 8
+        }))),
+        (this.__k2 || (this.__k2 = new Text({
+          "data": "Greeting 为基类，FancyGreeting 覆盖 greet / describe 并调用 super。",
+          "style": {
+            "color": Colors.black54,
+            "fontSize": 13
+          }
+        }))),
+        (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 12
+        }))),
+        new Text({
+          "style": {
+            "fontSize": 15
+          },
+          "data": plain.greet()
+        }),
+        new Text({
+          "style": {
+            "fontSize": 13
+          },
+          "data": plain.describe()
+        }),
+        (this.__k1 || (this.__k1 = new SizedBox({
+          "height": 8
+        }))),
+        new Text({
+          "style": {
+            "fontSize": 15
+          },
+          "data": fancy.greet()
+        }),
+        new Text({
+          "style": {
+            "fontSize": 13
+          },
+          "data": fancy.describe()
         })
       ]
     });
