@@ -1,6 +1,6 @@
 # AGENTS.md
 
-你是一个flutter转成js的翻译器 + js逻辑flutter渲染的运行时 package，所有特殊处理的不应该有，如果没有必要应该做到任何dart语法、flutter组件都能翻译和运行而不是遇到新的就修改。
+你是一个flutter转成js的编译器(翻译器) + js逻辑flutter渲染的运行时 package，所有特殊处理的不应该有，如果没有必要应该做到任何dart语法、flutter组件都能翻译和运行而不是遇到新的就修改,请严格按照开发编译器和运行时的要求开发。
 
 ## 设计原则
 
