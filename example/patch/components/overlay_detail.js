@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/overlay_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Builder, Colors, Column, Container, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Row, SizedBox, Text } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Builder, Colors, Column, Container, EdgeInsets, FontWeight, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 OverlayDetail
 export class OverlayDetail {
@@ -18,19 +18,19 @@ export class OverlayDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Overlay",
-          "style": {
-            "fontWeight": "bold"
-          }
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 4
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "灰底区域就是 Overlay：第 1 条由 initialEntries 声明，" + "按钮通过 Overlay.of(context).insert / entry.remove 增删浮层",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12
@@ -47,17 +47,14 @@ export class OverlayDetail {
                       "children": [
                         (this.__k4 || (this.__k4 = new Padding({
                           "child": new Text({
-                            "style": {
+                            "style": new TextStyle({
                               "fontSize": 12
-                            },
+                            }),
                             "data": "第 1 条：initialEntries（声明式，铺满整个 Overlay）"
                           }),
-                          "padding": {
-                            "bottom": 10.0,
-                            "left": 10.0,
-                            "right": 10.0,
-                            "top": 10.0
-                          }
+                          "padding": EdgeInsets.all({
+                            "value": 10
+                          })
                         }))),
                         new Row({
                           "mainAxisAlignment": "center",
@@ -70,23 +67,22 @@ export class OverlayDetail {
                                     "right": 12,
                                     "bottom": 12,
                                     "child": new Container({
-                                      "padding": {
-                                        "left": 10.0,
-                                        "top": 10.0,
-                                        "right": 10.0,
-                                        "bottom": 10.0
-                                      },
-                                      "decoration": {
+                                      "padding": (this.__k5 || (this.__k5 = EdgeInsets.all({
+                                        "value": 10
+                                      }))),
+                                      "decoration": new BoxDecoration({
                                         "color": Colors.black87,
-                                        "borderRadius": {
-                                          "radius": 8.0
-                                        }
-                                      },
+                                        "borderRadius": BorderRadius.all({
+                                          "radius": Radius.circular({
+                                            "radius": 8
+                                          })
+                                        })
+                                      }),
                                       "child": new Text({
-                                        "style": {
+                                        "style": (this.__k6 || (this.__k6 = new TextStyle({
                                           "color": Colors.white,
                                           "fontSize": 12
-                                        },
+                                        }))),
                                         "data": "浮层 #" + this._count + "：叠在内容之上的 OverlayEntry"
                                       })
                                     })
@@ -95,11 +91,11 @@ export class OverlayDetail {
                                 this._entries.add(entry);
                                 Overlay.of(this.context).insert(entry);
                                 this.setState(() => { this._log = "插入第 " + this._count + " 条浮层"; }); }),
-                              "child": (this.__k5 || (this.__k5 = new Text({
+                              "child": (this.__k7 || (this.__k7 = new Text({
                                 "data": "插入浮层"
                               })))
                             }),
-                            (this.__k6 || (this.__k6 = new SizedBox({
+                            (this.__k8 || (this.__k8 = new SizedBox({
                               "width": 8
                             }))),
                             new OutlinedButton({
@@ -108,7 +104,7 @@ export class OverlayDetail {
                                   entry.remove();
                                 }
                                 this.setState(() => { this._log = "移除浮层（剩余 " + this._entries.length + " 层）"; }); }),
-                              "child": (this.__k7 || (this.__k7 = new Text({
+                              "child": (this.__k9 || (this.__k9 = new Text({
                                 "data": "移除浮层"
                               })))
                             })
@@ -122,14 +118,14 @@ export class OverlayDetail {
             ]
           })
         }),
-        (this.__k8 || (this.__k8 = new SizedBox({
+        (this.__k10 || (this.__k10 = new SizedBox({
           "height": 8
         }))),
         new Text({
-          "style": {
-            "fontSize": 12,
-            "color": Colors.black54
-          },
+          "style": (this.__k11 || (this.__k11 = new TextStyle({
+            "color": Colors.black54,
+            "fontSize": 12
+          }))),
           "data": "操作日志：" + this._log
         })
       ]

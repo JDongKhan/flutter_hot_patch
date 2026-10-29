@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_persistent_header_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AppBar, Colors, Column, Container, CustomScrollView, Icon, ListTile, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text } from '../flutter.js';
+import { Alignment, AppBar, Colors, Column, Container, CustomScrollView, EdgeInsets, FontWeight, Icon, ListTile, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
 
 // 组件 SliverPersistentHeaderDetail
 export class SliverPersistentHeaderDetail {
@@ -46,17 +46,14 @@ export class SliverPersistentHeaderDetail {
           }),
           new SliverToBoxAdapter({
             "child": new Padding({
-              "padding": {
-                "left": 16.0,
-                "top": 16.0,
-                "right": 16.0,
-                "bottom": 16.0
-              },
+              "padding": (this.__k5 || (this.__k5 = EdgeInsets.all({
+                "value": 16
+              }))),
               "child": new Text({
-                "style": {
-                  "fontSize": 13,
-                  "color": Colors.black54
-                },
+                "style": (this.__k6 || (this.__k6 = new TextStyle({
+                  "color": Colors.black54,
+                  "fontSize": 13
+                }))),
                 "data": "floating 头下方的内容：先向下滚过它，再向上滚一点就会浮出"
               })
             })
@@ -81,19 +78,16 @@ export class _FloatingDelegate {
   build(context, shrinkOffset, overlapsContent) {
     return new Container({
       "color": Colors.teal,
-      "alignment": "centerLeft",
-      "padding": {
-        "left": 16.0,
-        "top": 0.0,
-        "right": 16.0,
-        "bottom": 0.0
-      },
-      "child": (this.__k0 || (this.__k0 = new Text({
+      "alignment": Alignment.centerLeft,
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
+        "horizontal": 16
+      }))),
+      "child": (this.__k1 || (this.__k1 = new Text({
         "data": "floating header（向上滚回时浮出）",
-        "style": {
+        "style": new TextStyle({
           "color": Colors.white,
           "fontSize": 13
-        }
+        })
       })))
     });
   }
@@ -117,35 +111,35 @@ export class _PinnedDelegate {
     var t = ((shrinkOffset > 64) ? 1 : (shrinkOffset / 64));
     return new Container({
       "color": Colors.deepPurple,
-      "padding": {
-        "left": 16.0,
-        "top": 0.0,
-        "right": 16.0,
-        "bottom": 12.0
-      },
-      "alignment": "bottomLeft",
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
+        "bottom": 12,
+        "left": 16,
+        "right": 16,
+        "top": 0
+      }))),
+      "alignment": Alignment.bottomLeft,
       "child": new Column({
         "mainAxisSize": "min",
         "crossAxisAlignment": "start",
         "children": [
-          (this.__k0 || (this.__k0 = new Text({
+          (this.__k1 || (this.__k1 = new Text({
             "data": "pinned header",
-            "style": {
+            "style": new TextStyle({
               "color": Colors.white,
               "fontSize": 16,
-              "fontWeight": "bold"
-            }
+              "fontWeight": FontWeight.bold
+            })
           }))),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 2
           }))),
           new Opacity({
             "opacity": (1 - t),
             "child": new Text({
-              "style": {
+              "style": (this.__k3 || (this.__k3 = new TextStyle({
                 "color": Colors.white70,
                 "fontSize": 11
-              },
+              }))),
               "data": "shrinkOffset = " + shrinkOffset.toStringAsFixed(1) + " · overlaps = " + overlapsContent
             })
           })

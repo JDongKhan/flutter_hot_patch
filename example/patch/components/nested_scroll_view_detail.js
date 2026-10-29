@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/nested_scroll_view_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { CircleAvatar, Colors, Column, Container, ListTile, ListView, NestedScrollView, Padding, SizedBox, SliverAppBar, SliverToBoxAdapter, Text } from '../flutter.js';
+import { Alignment, CircleAvatar, Colors, Column, Container, EdgeInsets, FontWeight, ListTile, ListView, NestedScrollView, Padding, SizedBox, SliverAppBar, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
 
 // 组件 NestedScrollViewDetail
 export class NestedScrollViewDetail {
@@ -11,10 +11,10 @@ export class NestedScrollViewDetail {
   }
   _title(s) {
     return new Text({
-      "style": {
-        "fontSize": 12,
-        "color": Colors.black54
-      },
+      "style": (this.__k0 || (this.__k0 = new TextStyle({
+        "color": Colors.black54,
+        "fontSize": 12
+      }))),
       "data": s
     });
   }
@@ -27,10 +27,10 @@ export class NestedScrollViewDetail {
           "radius": 12,
           "backgroundColor": color,
           "child": new Text({
-            "style": {
-              "fontSize": 10,
-              "color": Colors.white
-            },
+            "style": (this.__k1 || (this.__k1 = new TextStyle({
+              "color": Colors.white,
+              "fontSize": 10
+            }))),
             "data": (index + 1)
           })
         }),
@@ -44,27 +44,27 @@ export class NestedScrollViewDetail {
     return new Column({
       "crossAxisAlignment": "start",
       "children": [
-        (this.__k0 || (this.__k0 = new Text({
-          "data": "NestedScrollView",
-          "style": {
-            "fontWeight": "bold"
-          }
-        }))),
-        (this.__k1 || (this.__k1 = new SizedBox({
-          "height": 4
-        }))),
         (this.__k2 || (this.__k2 = new Text({
-          "data": "头部 slivers 与内层 body 联动：先折叠头部，再滚内层",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "data": "NestedScrollView",
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 4
+        }))),
+        (this.__k4 || (this.__k4 = new Text({
+          "data": "头部 slivers 与内层 body 联动：先折叠头部，再滚内层",
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
+        }))),
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 10
         }))),
         this._title("① pinned 折叠头部（expandedHeight 120）"),
-        (this.__k4 || (this.__k4 = new SizedBox({
+        (this.__k6 || (this.__k6 = new SizedBox({
           "height": 6
         }))),
         new SizedBox({
@@ -73,34 +73,28 @@ export class NestedScrollViewDetail {
             "headerSliverBuilder": (context, innerBoxIsScrolled) => [new SliverAppBar({
                 "pinned": true,
                 "expandedHeight": 120,
-                "title": (this.__k5 || (this.__k5 = new Text({
+                "title": (this.__k7 || (this.__k7 = new Text({
                   "data": "pinned 头部"
                 }))),
                 "flexibleSpace": new Container({
                   "color": Colors.teal.shade300,
-                  "alignment": "bottomLeft",
-                  "padding": {
-                    "left": 12.0,
-                    "top": 12.0,
-                    "right": 12.0,
-                    "bottom": 12.0
-                  },
-                  "child": (this.__k6 || (this.__k6 = new Text({
+                  "alignment": Alignment.bottomLeft,
+                  "padding": (this.__k8 || (this.__k8 = EdgeInsets.all({
+                    "value": 12
+                  }))),
+                  "child": (this.__k9 || (this.__k9 = new Text({
                     "data": "折叠区（flexibleSpace）",
-                    "style": {
-                      "color": Colors.white,
-                      "fontSize": 11
-                    }
+                    "style": new TextStyle({
+                      "fontSize": 11,
+                      "color": Colors.white
+                    })
                   })))
                 })
-              }), (this.__k7 || (this.__k7 = new SliverToBoxAdapter({
+              }), (this.__k10 || (this.__k10 = new SliverToBoxAdapter({
                 "child": new Padding({
-                  "padding": {
-                    "left": 8.0,
-                    "top": 8.0,
-                    "right": 8.0,
-                    "bottom": 8.0
-                  },
+                  "padding": EdgeInsets.all({
+                    "value": 8
+                  }),
                   "child": new Text({
                     "data": "这段文字属于外层头部 sliver，随外层一起滚走"
                   })
@@ -109,11 +103,11 @@ export class NestedScrollViewDetail {
             "body": this._innerList("①", Colors.teal)
           })
         }),
-        (this.__k8 || (this.__k8 = new SizedBox({
+        (this.__k11 || (this.__k11 = new SizedBox({
           "height": 12
         }))),
         this._title("② floating + floatHeaderSlivers（内层滑回顶部时头部浮出）"),
-        (this.__k4 || (this.__k4 = new SizedBox({
+        (this.__k6 || (this.__k6 = new SizedBox({
           "height": 6
         }))),
         new SizedBox({
@@ -123,7 +117,7 @@ export class NestedScrollViewDetail {
             "headerSliverBuilder": (context, innerBoxIsScrolled) => [new SliverAppBar({
                 "floating": true,
                 "snap": true,
-                "title": (this.__k9 || (this.__k9 = new Text({
+                "title": (this.__k12 || (this.__k12 = new Text({
                   "data": "floating 头部"
                 }))),
                 "backgroundColor": Colors.deepOrange.shade300

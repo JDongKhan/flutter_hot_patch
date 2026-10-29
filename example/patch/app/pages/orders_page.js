@@ -7,7 +7,7 @@ import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, Divider, Expanded, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text } from '../../flutter.js';
+import { BorderRadius, BoxDecoration, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text, TextStyle } from '../../flutter.js';
 
 // 组件 OrdersPage
 export class OrdersPage {
@@ -65,43 +65,43 @@ export class OrdersPage {
           "child": new SafeArea({
             "bottom": false,
             "child": new Padding({
-              "padding": {
-                "left": 8.0,
-                "top": 6.0,
-                "right": 8.0,
-                "bottom": 10.0
-              },
+              "padding": (this.__k1 || (this.__k1 = EdgeInsets.fromLTRB({
+                "bottom": 10,
+                "left": 8,
+                "right": 8,
+                "top": 6
+              }))),
               "child": new SingleChildScrollView({
                 "scrollDirection": "horizontal",
                 "child": new Row({
                   "children": [
                     ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [new Padding({
-                            "padding": {
-                              "left": 4.0,
-                              "top": 0.0,
-                              "right": 4.0,
-                              "bottom": 0.0
-                            },
+                            "padding": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
+                              "horizontal": 4
+                            }))),
                             "child": new GestureDetector({
                               "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)),
                               "child": new Container({
-                                "padding": {
-                                  "left": 13.0,
-                                  "top": 6.0,
-                                  "right": 13.0,
-                                  "bottom": 6.0
-                                },
-                                "decoration": {
-                                  "color": ((this._status == s) ? new Color({value: 0xFFE8F2FF}) : Colors.white),
-                                  "borderRadius": {
-                                    "radius": 15.0
-                                  }
-                                },
+                                "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
+                                  "horizontal": 13,
+                                  "vertical": 6
+                                }))),
+                                "decoration": new BoxDecoration({
+                                  "color": (this._status == s) ? (this.__k4 || (this.__k4 = new Color({
+                                    "value": 0xFFE8F2FF
+                                  }))) : Colors.white,
+                                  "borderRadius": BorderRadius.circular({
+                                    "radius": 15
+                                  })
+                                }),
                                 "child": new Text({
-                                  "style": {
+                                  "style": new TextStyle({
                                     "fontSize": 13,
-                                    "color": ((this._status == s) ? kBrand : new Color({value: 0xFF5C6270}))
-                                  },
+                                    "fontWeight": (this._status == s) ? FontWeight.w700 : FontWeight.w500,
+                                    "color": (this._status == s) ? kBrand : (this.__k5 || (this.__k5 = new Color({
+                                      "value": 0xFF5C6270
+                                    })))
+                                  }),
                                   "data": s
                                 })
                               })
@@ -113,29 +113,31 @@ export class OrdersPage {
             })
           })
         }),
-        ...(this._listLoading ? [(this.__k1 || (this.__k1 = new LinearProgressIndicator({
+        ...(this._listLoading ? [(this.__k6 || (this.__k6 = new LinearProgressIndicator({
             "minHeight": 2
           })))] : []),
         new Expanded({
           "child": (this._orders == null) ? (this.__k0 || (this.__k0 = new Center({
             "child": new CircularProgressIndicator({})
-          }))) : this._orders.isEmpty ? (this.__k2 || (this.__k2 = new Center({
+          }))) : this._orders.isEmpty ? (this.__k7 || (this.__k7 = new Center({
             "child": new Text({
-              "style": {
+              "style": new TextStyle({
                 "fontSize": 13,
-                "color": new Color({value: 0xFF98A0AC})
-              },
+                "color": new Color({
+                  "value": 0xFF98A0AC
+                })
+              }),
               "data": "该状态下暂无订单"
             })
           }))) : ListView.separated({
-            "padding": {
-              "left": 12.0,
-              "top": 12.0,
-              "right": 12.0,
-              "bottom": 20.0
-            },
+            "padding": (this.__k8 || (this.__k8 = EdgeInsets.fromLTRB({
+              "bottom": 20,
+              "left": 12,
+              "right": 12,
+              "top": 12
+            }))),
             "itemCount": this._orders.length,
-            "separatorBuilder": (context, index) => (this.__k3 || (this.__k3 = new SizedBox({
+            "separatorBuilder": (context, index) => (this.__k9 || (this.__k9 = new SizedBox({
               "height": 10
             }))),
             "itemBuilder": (context, i) => {
@@ -169,60 +171,61 @@ export class _OrderCard {
     return new GestureDetector({
       "onTap": this.__bindFn(0, [], (...__a) => this.onOpen(...__a)),
       "child": new Container({
-        "decoration": {
+        "decoration": new BoxDecoration({
           "color": Colors.white,
-          "borderRadius": {
-            "radius": 14.0
-          }
-        },
+          "borderRadius": BorderRadius.circular({
+            "radius": 14
+          })
+        }),
         "child": new Column({
           "children": [
             new Padding({
-              "padding": {
-                "left": 14.0,
-                "top": 12.0,
-                "right": 14.0,
-                "bottom": 10.0
-              },
+              "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
+                "bottom": 10,
+                "left": 14,
+                "right": 14,
+                "top": 12
+              }))),
               "child": new Row({
                 "children": [
                   new Text({
-                    "style": {
-                      "fontSize": 12,
-                      "color": new Color({value: 0xFF8B909A})
-                    },
+                    "style": (this.__k1 || (this.__k1 = new TextStyle({
+                      "color": new Color({
+                        "value": 0xFF8B909A
+                      }),
+                      "fontSize": 12
+                    }))),
                     "data": "订单号 " + this.order.no
                   }),
-                  (this.__k0 || (this.__k0 = new Spacer({}))),
+                  (this.__k2 || (this.__k2 = new Spacer({}))),
                   new Text({
-                    "style": {
+                    "style": new TextStyle({
                       "fontSize": 12.5,
-                      "fontWeight": "w700",
+                      "fontWeight": FontWeight.w700,
                       "color": this.statusColor
-                    },
+                    }),
                     "data": this.order.status
                   })
                 ]
               })
             }),
-            (this.__k1 || (this.__k1 = new Divider({
-              "color": new Color({value: 0xFFF0F2F6}),
+            (this.__k3 || (this.__k3 = new Divider({
+              "color": new Color({
+                "value": 0xFFF0F2F6
+              }),
               "height": 1
             }))),
             new Padding({
-              "padding": {
-                "left": 12.0,
-                "top": 12.0,
-                "right": 12.0,
-                "bottom": 12.0
-              },
+              "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
+                "value": 12
+              }))),
               "child": new Row({
                 "crossAxisAlignment": "start",
                 "children": [
                   new ClipRRect({
-                    "borderRadius": {
-                      "radius": 10.0
-                    },
+                    "borderRadius": BorderRadius.circular({
+                      "radius": 10
+                    }),
                     "child": Image.asset({
                       "width": 66,
                       "height": 66,
@@ -230,12 +233,14 @@ export class _OrderCard {
                       "errorBuilder": (context, e, s) => new Container({
                         "width": 66,
                         "height": 66,
-                        "color": new Color({value: 0xFFE8EBF0})
+                        "color": (this.__k5 || (this.__k5 = new Color({
+                          "value": 0xFFE8EBF0
+                        })))
                       }),
                       "name": this.order.img
                     })
                   }),
-                  (this.__k2 || (this.__k2 = new SizedBox({
+                  (this.__k6 || (this.__k6 = new SizedBox({
                     "width": 11
                   }))),
                   new Expanded({
@@ -245,33 +250,37 @@ export class _OrderCard {
                         new Text({
                           "maxLines": 1,
                           "overflow": "ellipsis",
-                          "style": {
+                          "style": (this.__k7 || (this.__k7 = new TextStyle({
                             "fontSize": 14,
-                            "fontWeight": "w600"
-                          },
+                            "fontWeight": FontWeight.w600
+                          }))),
                           "data": this.order.title
                         }),
-                        (this.__k3 || (this.__k3 = new SizedBox({
+                        (this.__k8 || (this.__k8 = new SizedBox({
                           "height": 5
                         }))),
                         new Text({
                           "maxLines": 1,
                           "overflow": "ellipsis",
-                          "style": {
-                            "fontSize": 11.5,
-                            "color": new Color({value: 0xFF8B909A})
-                          },
+                          "style": (this.__k9 || (this.__k9 = new TextStyle({
+                            "color": new Color({
+                              "value": 0xFF8B909A
+                            }),
+                            "fontSize": 11.5
+                          }))),
                           "data": this.order.spec
                         }),
-                        (this.__k4 || (this.__k4 = new SizedBox({
+                        (this.__k10 || (this.__k10 = new SizedBox({
                           "height": 6
                         }))),
-                        (this.__k5 || (this.__k5 = new Text({
+                        (this.__k11 || (this.__k11 = new Text({
                           "data": "×1",
-                          "style": {
-                            "color": new Color({value: 0xFFA3A9B4}),
-                            "fontSize": 11
-                          }
+                          "style": new TextStyle({
+                            "fontSize": 11,
+                            "color": new Color({
+                              "value": 0xFFA3A9B4
+                            })
+                          })
                         })))
                       ]
                     })
@@ -279,39 +288,43 @@ export class _OrderCard {
                 ]
               })
             }),
-            (this.__k1 || (this.__k1 = new Divider({
-              "color": new Color({value: 0xFFF0F2F6}),
+            (this.__k3 || (this.__k3 = new Divider({
+              "color": new Color({
+                "value": 0xFFF0F2F6
+              }),
               "height": 1
             }))),
             new Padding({
-              "padding": {
-                "left": 14.0,
-                "top": 10.0,
-                "right": 12.0,
-                "bottom": 12.0
-              },
+              "padding": (this.__k12 || (this.__k12 = EdgeInsets.fromLTRB({
+                "bottom": 12,
+                "left": 14,
+                "right": 12,
+                "top": 10
+              }))),
               "child": new Row({
                 "children": [
-                  (this.__k6 || (this.__k6 = new Text({
+                  (this.__k13 || (this.__k13 = new Text({
                     "data": "合计 ",
-                    "style": {
-                      "color": new Color({value: 0xFF5C6270}),
-                      "fontSize": 12.5
-                    }
+                    "style": new TextStyle({
+                      "fontSize": 12.5,
+                      "color": new Color({
+                        "value": 0xFF5C6270
+                      })
+                    })
                   }))),
                   new Text({
-                    "style": {
+                    "style": (this.__k14 || (this.__k14 = new TextStyle({
+                      "color": kPrice,
                       "fontSize": 16,
-                      "fontWeight": "w700",
-                      "color": kPrice
-                    },
+                      "fontWeight": FontWeight.w700
+                    }))),
                     "data": "￥" + this.order.price
                   }),
-                  (this.__k0 || (this.__k0 = new Spacer({}))),
+                  (this.__k2 || (this.__k2 = new Spacer({}))),
                   ...(pending ? [new MiniButton({
                       "label": "取消",
                       "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); }
-                    }), (this.__k7 || (this.__k7 = new SizedBox({
+                    }), (this.__k15 || (this.__k15 = new SizedBox({
                       "width": 8
                     }))), new MiniButton({
                       "label": "去支付",

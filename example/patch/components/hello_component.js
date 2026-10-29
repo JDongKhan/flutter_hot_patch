@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { User } from '../hot_module_base.js';
-import { Color, Colors, Column, ElevatedButton, Row, Text } from '../flutter.js';
+import { Color, Colors, Column, ElevatedButton, FontWeight, Row, Text, TextStyle } from '../flutter.js';
 
 // 模型 PanelColors
 export class PanelColors {
@@ -84,11 +84,11 @@ export class HelloCard {
     return new Column({
       "children": [
         new Text({
-          "style": {
+          "style": (this.__k0 || (this.__k0 = new TextStyle({
+            "color": Colors.blue,
             "fontSize": 24,
-            "fontWeight": "bold",
-            "color": Colors.blue
-          },
+            "fontWeight": FontWeight.bold
+          }))),
           "data": "Hello from JS logic 4"
         }),
         new Text({
@@ -121,35 +121,32 @@ export class HelloCard {
           "children": [
             new ElevatedButton({
               "onPressed": this.__bindFn(0, [], (...__a) => this.inc(...__a)),
-              "style": {
-                "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background),
-                "foregroundColor": Colors.white
-              },
-              "child": (this.__k0 || (this.__k0 = new Text({
+              "style": ElevatedButton.styleFrom({ "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background), "foregroundColor": Colors.white }),
+              "child": (this.__k1 || (this.__k1 = new Text({
                 "data": "+1"
               })))
             }),
             new ElevatedButton({
               "onPressed": this.__bindFn(1, [], () => this.reset()),
-              "child": (this.__k1 || (this.__k1 = new Text({
+              "child": (this.__k2 || (this.__k2 = new Text({
                 "data": "Reset"
               })))
             }),
             new ElevatedButton({
               "onPressed": this.__bindFn(2, [], (...__a) => this.showNative(...__a)),
-              "child": (this.__k2 || (this.__k2 = new Text({
+              "child": (this.__k3 || (this.__k3 = new Text({
                 "data": "Native"
               })))
             }),
             new ElevatedButton({
               "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a)),
-              "child": (this.__k3 || (this.__k3 = new Text({
+              "child": (this.__k4 || (this.__k4 = new Text({
                 "data": "Load User"
               })))
             }),
             new ElevatedButton({
               "onPressed": this.__bindFn(4, [], (...__a) => this.demoTryCatchAssert(...__a)),
-              "child": (this.__k4 || (this.__k4 = new Text({
+              "child": (this.__k5 || (this.__k5 = new Text({
                 "data": "Try/Catch"
               })))
             })

@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/focus_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, Container, Focus, FocusNode, GestureDetector, OutlinedButton, Row, SizedBox, Text } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, Focus, FocusNode, FontWeight, GestureDetector, OutlinedButton, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 FocusDetail
 export class FocusDetail {
@@ -46,18 +46,20 @@ export class FocusDetail {
         "child": new Container({
           "width": 80,
           "height": 56,
-          "alignment": "center",
-          "decoration": {
-            "color": (node.hasFocus ? Colors.deepPurple : Colors.grey.shade200),
-            "borderRadius": {
-              "radius": 8.0
-            }
-          },
+          "alignment": Alignment.center,
+          "decoration": new BoxDecoration({
+            "color": node.hasFocus ? Colors.deepPurple : Colors.grey.shade200,
+            "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
+              "radius": Radius.circular({
+                "radius": 8
+              })
+            })))
+          }),
           "child": new Text({
-            "style": {
-              "color": (node.hasFocus ? Colors.white : Colors.black87),
-              "fontWeight": "bold"
-            },
+            "style": new TextStyle({
+              "color": node.hasFocus ? Colors.white : Colors.black87,
+              "fontWeight": FontWeight.bold
+            }),
             "data": label
           })
         })
@@ -68,33 +70,33 @@ export class FocusDetail {
     return new Column({
       "crossAxisAlignment": "stretch",
       "children": [
-        (this.__k0 || (this.__k0 = new Text({
+        (this.__k1 || (this.__k1 = new Text({
           "data": "Focus / FocusNode",
-          "style": {
-            "fontWeight": "bold"
-          }
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k2 || (this.__k2 = new SizedBox({
           "height": 4
         }))),
-        (this.__k2 || (this.__k2 = new Text({
+        (this.__k3 || (this.__k3 = new Text({
           "data": "点块或按钮切换焦点；C 声明 canRequestFocus: false，点了不聚焦",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
         }))),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 12
         }))),
         new Row({
           "children": [
             this._box("A", this._a),
-            (this.__k4 || (this.__k4 = new SizedBox({
+            (this.__k5 || (this.__k5 = new SizedBox({
               "width": 12
             }))),
             this._box("B", this._b),
-            (this.__k4 || (this.__k4 = new SizedBox({
+            (this.__k5 || (this.__k5 = new SizedBox({
               "width": 12
             }))),
             new Focus({
@@ -102,74 +104,74 @@ export class FocusDetail {
               "child": new Container({
                 "width": 80,
                 "height": 56,
-                "alignment": "center",
-                "decoration": {
+                "alignment": Alignment.center,
+                "decoration": new BoxDecoration({
                   "color": Colors.grey.shade100,
-                  "borderRadius": {
-                    "radius": 8.0
-                  },
-                  "border": {
-                    "all": {
-                      "color": Colors.grey.shade400
-                    }
-                  }
-                },
-                "child": (this.__k5 || (this.__k5 = new Text({
+                  "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
+                    "radius": Radius.circular({
+                      "radius": 8
+                    })
+                  }))),
+                  "border": Border.all({
+                    "color": Colors.grey.shade400
+                  })
+                }),
+                "child": (this.__k6 || (this.__k6 = new Text({
                   "data": "C\n(不可聚焦)",
-                  "style": {
+                  "style": new TextStyle({
                     "fontSize": 11
-                  },
+                  }),
                   "textAlign": "center"
                 })))
               })
             })
           ]
         }),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 12
         }))),
         new Text({
-          "style": {
+          "style": (this.__k7 || (this.__k7 = new TextStyle({
             "fontSize": 13
-          },
+          }))),
           "data": "当前聚焦：" + this._current
         }),
-        (this.__k6 || (this.__k6 = new SizedBox({
+        (this.__k8 || (this.__k8 = new SizedBox({
           "height": 6
         }))),
         new Text({
-          "style": {
-            "fontSize": 12,
-            "color": Colors.black54
-          },
+          "style": (this.__k9 || (this.__k9 = new TextStyle({
+            "color": Colors.black54,
+            "fontSize": 12
+          }))),
           "data": "变化日志：" + this._log
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k10 || (this.__k10 = new SizedBox({
           "height": 8
         }))),
         new Row({
           "children": [
             new OutlinedButton({
               "onPressed": this.__bindFn(2, [], () => this._a.requestFocus()),
-              "child": (this.__k8 || (this.__k8 = new Text({
+              "child": (this.__k11 || (this.__k11 = new Text({
                 "data": "聚焦 A"
               })))
             }),
-            (this.__k9 || (this.__k9 = new SizedBox({
+            (this.__k12 || (this.__k12 = new SizedBox({
               "width": 8
             }))),
             new OutlinedButton({
               "onPressed": this.__bindFn(3, [], () => this._b.requestFocus()),
-              "child": (this.__k10 || (this.__k10 = new Text({
+              "child": (this.__k13 || (this.__k13 = new Text({
                 "data": "聚焦 B"
               })))
             }),
-            (this.__k9 || (this.__k9 = new SizedBox({
+            (this.__k12 || (this.__k12 = new SizedBox({
               "width": 8
             }))),
             new OutlinedButton({
               "onPressed": this.__bindFn(4, [], () => this._a.unfocus()),
-              "child": (this.__k11 || (this.__k11 = new Text({
+              "child": (this.__k14 || (this.__k14 = new Text({
                 "data": "失焦"
               })))
             })

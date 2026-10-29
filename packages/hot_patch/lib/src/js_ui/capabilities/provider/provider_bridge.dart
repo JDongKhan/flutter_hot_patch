@@ -4,7 +4,8 @@
 //   - JS 端 `ChangeNotifierProvider` 只负责造/取模型实例，然后把宿主结点
 //     `ChangeNotifierProvider {model, notifier}` 交给宿主（见 hot_patch_generator
 //     的 widget_module_builder）——JS 侧没有 provider 专用记账，只在结点上按
-//     **类型名**声明作用域（`__provides`，注册见 provider_js.dart）；
+//     **类型名**声明作用域（`__provides`，注册见 patch/provider.js 的
+//     provider_module_js.dart）；
 //   - JS 端 `context.watch<T>()` 只是「按**类型名**沿 `__parent` 向上取最近作用域
 //     的值」+ 用原生 `addListener` 订阅（UI 更新仍由 JS 侧重建产生，
 //     这是同步取值约束决定的、无法消除的一步）。

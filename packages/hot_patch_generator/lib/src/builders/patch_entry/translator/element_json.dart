@@ -120,7 +120,21 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
 ///   - `MethodInvocation` 无 receiver（parseString 下无 const 的 `Foo(...)`）→
 ///     方法名就是类型名，不是工厂，返回 null。
 String? factoryNameOf(Expression? e) {
-  if (e is InstanceCreationExpression) return e.constructorName.name?.name;
+  if (e is InstanceCreationExpression) {
+    final cn = e.constructorName;
+    final direct = cn.name?.name;
+    if (direct != null) return direct;
+    // analyzer 7.x 把 `A.b(...)` 的**构造名整体**放进 `constructorName.type`
+    // （`type.toSource()` = `'EdgeInsets.all'`），`constructorName.name` 为 null。
+    // 按 `.` 切段：最后一段不是类名形态（小写开头）即为构造名；
+    // `ui.EdgeInsets` 这种「导入前缀 + 类名」的最后一段是类名 → 无构造名。
+    final segs = cn.toSource().split('.');
+    if (segs.length >= 2) {
+      final last = segs.last.split('<').first.trim();
+      if (!isClassName(last)) return last;
+    }
+    return null;
+  }
   if (e is MethodInvocation) {
     return e.target is Identifier ? e.methodName.name : null;
   }

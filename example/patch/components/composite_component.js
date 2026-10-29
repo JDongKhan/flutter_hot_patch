@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.js';
-import { Colors, Column, ElevatedButton, SizedBox, Text, __h } from '../flutter.js';
+import { ButtonStyle, Colors, Column, ElevatedButton, FontWeight, SizedBox, Text, TextStyle, __h } from '../flutter.js';
 
 // 组件 DashboardCard
 export class DashboardCard {
@@ -18,41 +18,38 @@ export class DashboardCard {
     return new Column({
       "children": [
         new Text({
-          "style": {
+          "style": (this.__k0 || (this.__k0 = new TextStyle({
             "fontSize": 22,
-            "fontWeight": "w600"
-          },
+            "fontWeight": FontWeight.w600
+          }))),
           "data": "Dashboard (JS)"
         }),
         new Text({
           "data": "ticks = " + this._ticks
         }),
-        (this.__k0 || (this.__k0 = new BannerCard({}))),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k1 || (this.__k1 = new BannerCard({}))),
+        (this.__k2 || (this.__k2 = new SizedBox({
           "height": 12
         }))),
-        (this.__k2 || (this.__k2 = new _LabeledDivider({
+        (this.__k3 || (this.__k3 = new _LabeledDivider({
           "child": new Text({
             "data": "native child slot"
           }),
           "text": "private widget"
         }))),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 8
         }))),
-        (this.__k4 || (this.__k4 = new LabeledDivider({
+        (this.__k5 || (this.__k5 = new LabeledDivider({
           "text": "public widget"
         }))),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k2 || (this.__k2 = new SizedBox({
           "height": 12
         }))),
         new ElevatedButton({
           "onPressed": this.__bindFn(0, [], (...__a) => this.tick(...__a)),
-          "style": {
-            "backgroundColor": Colors.orange,
-            "foregroundColor": Colors.white
-          },
-          "child": (this.__k5 || (this.__k5 = new Text({
+          "style": ElevatedButton.styleFrom({ "backgroundColor": Colors.orange, "foregroundColor": Colors.white }),
+          "child": (this.__k6 || (this.__k6 = new Text({
             "data": "Tick"
           })))
         })
@@ -76,10 +73,10 @@ export class LabeledDivider {
       "mainAxisSize": "min",
       "children": [
         new Text({
-          "style": {
-            "fontSize": 12,
-            "color": Colors.blueGrey
-          },
+          "style": (this.__k0 || (this.__k0 = new TextStyle({
+            "color": Colors.blueGrey,
+            "fontSize": 12
+          }))),
           "data": "★ " + this.text + " ★"
         }),
         ...((this.child != null) ? [this.child] : [])
@@ -93,5 +90,6 @@ class _LabeledDivider {
   constructor(props) {
     return __h('_LabeledDivider', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 

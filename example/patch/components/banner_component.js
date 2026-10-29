@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { PanelColors } from 'hello_component.js';
-import { Column, ElevatedButton, Text } from '../flutter.js';
+import { Column, ElevatedButton, Text, TextStyle } from '../flutter.js';
 
 // 组件 BannerCard
 export class BannerCard {
@@ -21,10 +21,10 @@ export class BannerCard {
     return new Column({
       "children": [
         new Text({
-          "style": {
+          "style": new TextStyle({
             "fontSize": 20,
             "color": PanelColors.background
-          },
+          }),
           "data": "Banner from another file"
         }),
         new Text({

@@ -341,6 +341,28 @@ class JsRuntimeManager {
     _applyCacheTrace();
   }
 
+  /// 加载内建能力随补丁包发布的独立 JS 模块（[JsUiLibrary.jsModuleAssets]）。
+  ///
+  /// 由页面 boot 在 [ensureJsUiRuntime] 之后、入口模块之前调用：能力模块的
+  /// 原型补丁 / 作用域声明必须早于任何组件 build。
+  ///
+  /// **不能**放进 [ensureJsUiRuntime]：后者可能正被某个模块的加载过程调用
+  /// （如 `flutter.js` 的 `loadModule` 内部），而能力模块往往 import 那个正在
+  /// 加载的模块（provider.js → flutter.js），会等自己 → 死锁。
+  ///
+  /// 走 [loadModule] 同一套流程：相对 import 递归、幂等，故与组件产物 import
+  /// 同一份文件时只求值一次。
+  Future<void> loadCapabilityModules({
+    String? localRoot,
+    String? moduleAsset,
+  }) async {
+    for (final library in jsUiLibraries) {
+      for (final name in library.jsModuleAssets) {
+        await loadModule(_assetNear(moduleAsset, name), localRoot: localRoot);
+      }
+    }
+  }
+
   /// 运行时产物在补丁根目录下的文件名（与 `patch/<package>.js` 同级）。
   static const String runtimeJsAsset = 'runtime.js';
 
@@ -355,12 +377,17 @@ class JsRuntimeManager {
   /// 组件的入口可能是 `assets/patch/components/x.js`（asset 场景），也可能是
   /// 网络包解压后的 `components/x.js`（localRoot 场景）。两者向上找到 `patch/`
   /// 这一层，再把文件名换成 [runtimeJsAsset]——不需要任何配置或映射表。
-  static String _runtimeAssetNear(String? moduleAsset) {
-    if (moduleAsset == null) return runtimeJsAsset;
+  static String _runtimeAssetNear(String? moduleAsset) =>
+      _assetNear(moduleAsset, runtimeJsAsset);
+
+  /// 补丁根目录下的 [fileName]：入口可能带 `patch/` 前缀（asset 场景），也可能
+  /// 是包内虚拟路径（网络包解压后的 localRoot 场景，此时直接拼文件名）。
+  static String _assetNear(String? moduleAsset, String fileName) {
+    if (moduleAsset == null) return fileName;
     const marker = 'patch/';
     final i = moduleAsset.lastIndexOf(marker);
-    if (i < 0) return runtimeJsAsset;
-    return '${moduleAsset.substring(0, i + marker.length)}$runtimeJsAsset';
+    if (i < 0) return fileName;
+    return '${moduleAsset.substring(0, i + marker.length)}$fileName';
   }
 
   /// App 在 `runApp` 前 `registerJsUiLibrary(...)` 注册的**外部能力**片段。

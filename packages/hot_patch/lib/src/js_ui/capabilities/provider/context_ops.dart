@@ -2,7 +2,8 @@
 //
 // 对齐 Flutter：`context.watch/read` 不是 BuildContext 的框架 API，而是 provider
 // 的 `extension BuildContextX on BuildContext`。故这套语义**属于本库**，不属于
-// 核心——JS 侧的方法补丁在 provider_js.dart，宿主侧的处理在本文件，经核心的
+// 核心——JS 侧的方法补丁在 patch/provider.js（生成器 provider_module_js.dart），
+// 宿主侧的处理在本文件，经核心的
 // 通用缝 `registerContextOp`（见 capabilities/build_context/build_context_bridge.dart）
 // 注册进来。核心从此不认识 `watch` / `read`。
 //

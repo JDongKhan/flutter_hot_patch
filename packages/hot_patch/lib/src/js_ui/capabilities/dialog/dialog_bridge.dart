@@ -1,6 +1,7 @@
 // ===== Dialog 能力：跨语言桥 =====
 //
-// 与 builders/runtime/js/portal_js.dart **对称**：JS 侧的 `showDialog` 在弹层里
+// 与 builders/runtime/js/dialogs_js.dart **对称**（该片段随 patch/flutter.js
+// 发布）：JS 侧的 `showDialog` 在弹层里
 // 执行 builder、把元素树挂在独立 root 上，宿主的唯一职责是「按 kind push 一条
 // 路由 → 内容承载那份独立 store」。
 //

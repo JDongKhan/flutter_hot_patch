@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { CommonListItem } from 'list_item.js';
-import { Align, AppBar, AspectRatio, BottomNavigationBar, BottomNavigationBarItem, CachedNetworkImage, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClipRRect, Color, Colors, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, DefaultTabController, Divider, Drawer, DrawerHeader, DropdownButton, DropdownMenuItem, ElevatedButton, Expanded, FilledButton, FloatingActionButton, FractionallySizedBox, GlobalKey, GridView, Icon, IconButton, Image, InputDecoration, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, ObjectKey, Opacity, OutlinedButton, Padding, PageController, PageStorageKey, PageView, Positioned, Radio, ReorderableListView, Row, SafeArea, Scaffold, ScrollController, SingleChildScrollView, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Tab, TabBar, TabBarView, TabController, Text, TextButton, TextEditingController, TextField, UniqueKey, ValueKey, Wrap } from '../flutter.js';
+import { Align, Alignment, AppBar, AspectRatio, Border, BorderRadius, BorderSide, BottomNavigationBar, BottomNavigationBarItem, BouncingScrollPhysics, BoxConstraints, BoxDecoration, BoxShadow, CachedNetworkImage, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClampingScrollPhysics, ClipRRect, Color, Colors, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, DefaultTabController, Divider, Drawer, DrawerHeader, DropdownButton, DropdownMenuItem, EdgeInsets, ElevatedButton, Expanded, FilledButton, FloatingActionButton, FontWeight, FractionallySizedBox, GlobalKey, GridView, Icon, IconButton, Image, InputDecoration, LinearGradient, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, ObjectKey, Offset, Opacity, OutlinedButton, Padding, PageController, PageStorageKey, PageView, Positioned, Radio, Radius, ReorderableListView, RoundedRectangleBorder, Row, SafeArea, Scaffold, ScrollController, SingleChildScrollView, Size, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithFixedCrossAxisCount, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Tab, TabBar, TabBarView, TabController, Text, TextButton, TextDecoration, TextEditingController, TextField, TextScaler, TextStyle, UniqueKey, ValueKey, Wrap } from '../flutter.js';
 
 // 组件 TextDetail
 export class TextDetail {
@@ -21,19 +21,19 @@ export class TextDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "基础文案 + TextStyle",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Text({
-          "style": {
+          "style": (this.__k1 || (this.__k1 = new TextStyle({
             "color": Colors.blue,
             "fontSize": 16
-          },
+          }))),
           "data": "普通文本，count = " + this._count + "（状态插值）"
         }),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k2 || (this.__k2 = new SizedBox({
           "height": 6
         }))),
         new Text({
@@ -41,47 +41,49 @@ export class TextDetail {
           "overflow": "ellipsis",
           "data": "maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示"
         }),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k2 || (this.__k2 = new SizedBox({
           "height": 6
         }))),
         new Text({
-          "textScaler": {
-            "linear": 1.6
-          },
+          "textScaler": TextScaler.linear({
+            "textScaleFactor": 1.6
+          }),
           "data": "textScaler.linear(1.6) 放大"
         }),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k2 || (this.__k2 = new SizedBox({
           "height": 6
         }))),
         new Text({
           "textAlign": "center",
-          "style": {
-            "decoration": "underline",
+          "style": (this.__k3 || (this.__k3 = new TextStyle({
+            "decoration": TextDecoration.underline,
             "decorationColor": Colors.orange,
             "decorationStyle": "wavy"
-          },
+          }))),
           "data": "textAlign 居中,He said \"hi\""
         }),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k2 || (this.__k2 = new SizedBox({
           "height": 6
         }))),
         new Text({
           "softWrap": false,
-          "style": {
-            "fontSize": 12,
+          "style": (this.__k4 || (this.__k4 = new TextStyle({
+            "backgroundColor": new Color({
+              "value": 0xFFFFE082
+            }),
             "color": Colors.grey,
-            "wordSpacing": 2,
+            "fontSize": 12,
             "letterSpacing": 1,
-            "backgroundColor": new Color({value: 0xFFFFE082})
-          },
+            "wordSpacing": 2
+          }))),
           "data": "softWrap=false 不换行测试"
         }),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k2 || (this.__k2 = new SizedBox({
           "height": 6
         }))),
         new TextButton({
           "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a)),
-          "child": (this.__k2 || (this.__k2 = new Text({
+          "child": (this.__k5 || (this.__k5 = new Text({
             "data": "Bump count"
           })))
         })
@@ -104,102 +106,46 @@ export class ButtonDetail {
       "crossAxisAlignment": "stretch",
       "children": [
         new Text({
-          "style": {
+          "style": (this.__k0 || (this.__k0 = new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          },
+            "fontWeight": FontWeight.bold
+          }))),
           "data": "点击次数 = " + this._pressed
         }),
-        (this.__k0 || (this.__k0 = new SizedBox({
+        (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
         new ElevatedButton({
           "onPressed": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
-          "style": {
-            "minimumSize": {
-              "width": 180,
-              "height": 48
-            },
-            "maximumSize": {
-              "width": 240,
-              "height": 56
-            },
-            "padding": {
-              "left": 24.0,
-              "top": 12.0,
-              "right": 24.0,
-              "bottom": 12.0
-            },
-            "elevation": 6,
-            "shadowColor": Colors.deepPurple,
-            "textStyle": {
-              "fontSize": 18,
-              "fontWeight": "bold",
-              "letterSpacing": 2
-            },
-            "backgroundColor": Colors.teal,
-            "foregroundColor": Colors.white
-          },
-          "child": (this.__k1 || (this.__k1 = new Text({
+          "style": ElevatedButton.styleFrom({ "minimumSize": new Size({width: 180, height: 48}), "maximumSize": new Size({width: 240, height: 56}), "padding": EdgeInsets.symmetric({horizontal: 24, vertical: 12}), "elevation": 6, "shadowColor": Colors.deepPurple, "textStyle": new TextStyle({fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2}), "backgroundColor": Colors.teal, "foregroundColor": Colors.white }),
+          "child": (this.__k2 || (this.__k2 = new Text({
             "data": "Elevated · Styled"
           })))
         }),
-        (this.__k0 || (this.__k0 = new SizedBox({
+        (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
         new TextButton({
           "onPressed": this.__bindFn(1, [], (...__a) => this.onTap(...__a)),
-          "style": {
-            "minimumSize": {
-              "width": 120,
-              "height": 40
-            },
-            "padding": {
-              "left": 16.0,
-              "top": 0.0,
-              "right": 16.0,
-              "bottom": 0.0
-            },
-            "textStyle": {
-              "fontSize": 14,
-              "letterSpacing": 1
-            },
-            "foregroundColor": Colors.indigo
-          },
-          "child": (this.__k2 || (this.__k2 = new Text({
+          "style": TextButton.styleFrom({ "minimumSize": new Size({width: 120, height: 40}), "padding": EdgeInsets.symmetric({horizontal: 16}), "textStyle": new TextStyle({fontSize: 14, letterSpacing: 1}), "foregroundColor": Colors.indigo }),
+          "child": (this.__k3 || (this.__k3 = new Text({
             "data": "TextButton"
           })))
         }),
-        (this.__k0 || (this.__k0 = new SizedBox({
+        (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
         new OutlinedButton({
           "onPressed": this.__bindFn(2, [], (...__a) => this.onTap(...__a)),
-          "style": {
-            "side": {
-              "color": Colors.orange,
-              "width": 2
-            },
-            "minimumSize": {
-              "width": 120,
-              "height": 40
-            },
-            "shape": {
-              "kind": "rounded",
-              "borderRadius": {
-                "radius": 20.0
-              }
-            },
-            "foregroundColor": Colors.deepOrange
-          },
-          "child": (this.__k3 || (this.__k3 = new Text({
+          "style": OutlinedButton.styleFrom({ "side": new BorderSide({color: Colors.orange, width: 2}), "minimumSize": new Size({width: 120, height: 40}), "shape": new RoundedRectangleBorder({borderRadius: BorderRadius.all({radius: Radius.circular({radius: 20})})}), "foregroundColor": Colors.deepOrange }),
+          "child": (this.__k4 || (this.__k4 = new Text({
             "data": "OutlinedButton"
           })))
         }),
-        (this.__k0 || (this.__k0 = new SizedBox({
+        (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
-        (this.__k4 || (this.__k4 = new ElevatedButton({
+        (this.__k5 || (this.__k5 = new ElevatedButton({
           "child": new Text({
             "data": "Disabled"
           })
@@ -220,10 +166,10 @@ export class LayoutDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Row + Expanded / Flexible / Spacer",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Row({
           "children": [
@@ -231,32 +177,26 @@ export class LayoutDetail {
               "flex": 1,
               "child": new Container({
                 "color": Colors.blue.shade100,
-                "padding": {
-                  "left": 8.0,
-                  "top": 8.0,
-                  "right": 8.0,
-                  "bottom": 8.0
-                },
-                "child": (this.__k1 || (this.__k1 = new Text({
+                "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+                  "value": 8
+                }))),
+                "child": (this.__k2 || (this.__k2 = new Text({
                   "data": "A",
                   "textAlign": "center"
                 })))
               })
             }),
-            (this.__k2 || (this.__k2 = new Spacer({
+            (this.__k3 || (this.__k3 = new Spacer({
               "flex": 1
             }))),
             new Expanded({
               "flex": 2,
               "child": new Container({
                 "color": Colors.green.shade100,
-                "padding": {
-                  "left": 8.0,
-                  "top": 8.0,
-                  "right": 8.0,
-                  "bottom": 8.0
-                },
-                "child": (this.__k3 || (this.__k3 = new Text({
+                "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+                  "value": 8
+                }))),
+                "child": (this.__k4 || (this.__k4 = new Text({
                   "data": "B（flex=2）",
                   "textAlign": "center"
                 })))
@@ -264,71 +204,63 @@ export class LayoutDetail {
             })
           ]
         }),
-        (this.__k4 || (this.__k4 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 12
         }))),
-        (this.__k5 || (this.__k5 = new Text({
+        (this.__k6 || (this.__k6 = new Text({
           "data": "Center / Align / Padding / SizedBox",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Center({
           "child": new Container({
             "color": Colors.amber.shade100,
-            "padding": {
-              "left": 12.0,
-              "top": 12.0,
-              "right": 12.0,
-              "bottom": 12.0
-            },
-            "child": (this.__k6 || (this.__k6 = new Text({
+            "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
+              "value": 12
+            }))),
+            "child": (this.__k8 || (this.__k8 = new Text({
               "data": "Center 居中"
             })))
           })
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k9 || (this.__k9 = new SizedBox({
           "height": 8
         }))),
         new Align({
-          "alignment": "centerLeft",
+          "alignment": Alignment.centerLeft,
           "child": new Container({
             "color": Colors.purple.shade50,
-            "padding": {
-              "left": 8.0,
-              "top": 8.0,
-              "right": 8.0,
-              "bottom": 8.0
-            },
-            "child": (this.__k8 || (this.__k8 = new Text({
+            "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+              "value": 8
+            }))),
+            "child": (this.__k10 || (this.__k10 = new Text({
               "data": "Align centerLeft"
             })))
           })
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k9 || (this.__k9 = new SizedBox({
           "height": 8
         }))),
         new Padding({
-          "padding": {
-            "left": 8.0,
-            "top": 4.0,
-            "right": 8.0,
-            "bottom": 4.0
-          },
-          "child": (this.__k9 || (this.__k9 = new Text({
+          "padding": (this.__k11 || (this.__k11 = EdgeInsets.symmetric({
+            "horizontal": 8,
+            "vertical": 4
+          }))),
+          "child": (this.__k12 || (this.__k12 = new Text({
             "data": "Padding 包裹文案"
           })))
         }),
-        (this.__k4 || (this.__k4 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 12
         }))),
-        (this.__k10 || (this.__k10 = new Text({
+        (this.__k13 || (this.__k13 = new Text({
           "data": "Stack + Positioned",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new SizedBox({
           "height": 100,
@@ -342,22 +274,22 @@ export class LayoutDetail {
               Positioned.fill({
                 "child": new Center({
                   "child": new Text({
-                    "style": {
+                    "style": new TextStyle({
                       "color": Colors.white,
-                      "fontWeight": "bold"
-                    },
+                      "fontWeight": FontWeight.bold
+                    }),
                     "data": "FILL"
                   })
                 })
               }),
-              (this.__k11 || (this.__k11 = new Positioned({
+              (this.__k14 || (this.__k14 = new Positioned({
                 "child": new Text({
                   "data": "TL"
                 }),
                 "left": 12,
                 "top": 12
               }))),
-              (this.__k12 || (this.__k12 = new Positioned({
+              (this.__k15 || (this.__k15 = new Positioned({
                 "bottom": 12,
                 "child": new Text({
                   "data": "BR"
@@ -367,15 +299,15 @@ export class LayoutDetail {
             ]
           })
         }),
-        (this.__k4 || (this.__k4 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 12
         }))),
-        (this.__k13 || (this.__k13 = new Text({
+        (this.__k16 || (this.__k16 = new Text({
           "data": "Wrap · 自动换行",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Wrap({
           "direction": "horizontal",
@@ -393,80 +325,71 @@ export class LayoutDetail {
                   })]); } return out; })()
           ]
         }),
-        (this.__k4 || (this.__k4 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 12
         }))),
-        (this.__k14 || (this.__k14 = new Text({
+        (this.__k17 || (this.__k17 = new Text({
           "data": "Opacity / ConstrainedBox / AspectRatio / FractionallySizedBox",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Opacity({
           "opacity": 0.5,
           "child": new Container({
             "color": Colors.red,
-            "padding": {
-              "left": 8.0,
-              "top": 8.0,
-              "right": 8.0,
-              "bottom": 8.0
-            },
-            "child": (this.__k15 || (this.__k15 = new Text({
+            "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+              "value": 8
+            }))),
+            "child": (this.__k18 || (this.__k18 = new Text({
               "data": "50% 透明"
             })))
           })
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k9 || (this.__k9 = new SizedBox({
           "height": 8
         }))),
         new ConstrainedBox({
-          "constraints": {
-            "minWidth": 120,
-            "maxWidth": 200
-          },
+          "constraints": (this.__k19 || (this.__k19 = new BoxConstraints({
+            "maxWidth": 200,
+            "minWidth": 120
+          }))),
           "child": new Container({
             "color": Colors.orange.shade100,
-            "padding": {
-              "left": 8.0,
-              "top": 8.0,
-              "right": 8.0,
-              "bottom": 8.0
-            },
-            "child": (this.__k16 || (this.__k16 = new Text({
+            "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+              "value": 8
+            }))),
+            "child": (this.__k20 || (this.__k20 = new Text({
               "data": "ConstrainedBox 宽度 120-200"
             })))
           })
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k9 || (this.__k9 = new SizedBox({
           "height": 8
         }))),
         new AspectRatio({
           "aspectRatio": 1.78,
           "child": new Container({
             "color": Colors.indigo.shade100,
-            "alignment": "center",
-            "child": (this.__k17 || (this.__k17 = new Text({
+            "alignment": Alignment.center,
+            "child": (this.__k21 || (this.__k21 = new Text({
               "data": "16:9 比例"
             })))
           })
         }),
-        (this.__k7 || (this.__k7 = new SizedBox({
+        (this.__k9 || (this.__k9 = new SizedBox({
           "height": 8
         }))),
         new FractionallySizedBox({
           "widthFactor": 0.6,
-          "alignment": "center",
+          "alignment": Alignment.center,
           "child": new Container({
             "color": Colors.pink.shade100,
-            "padding": {
-              "left": 8.0,
-              "top": 8.0,
-              "right": 8.0,
-              "bottom": 8.0
-            },
-            "child": (this.__k18 || (this.__k18 = new Text({
+            "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+              "value": 8
+            }))),
+            "child": (this.__k22 || (this.__k22 = new Text({
               "data": "60% 宽度",
               "textAlign": "center"
             })))
@@ -488,15 +411,15 @@ export class ImageDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Image · 网络图片",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new ClipRRect({
-          "borderRadius": {
-            "radius": 12.0
-          },
+          "borderRadius": BorderRadius.circular({
+            "radius": 12
+          }),
           "child": Image.network({
             "height": 120,
             "fit": "cover",
@@ -508,15 +431,15 @@ export class ImageDetail {
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "CachedNetworkImage · 磁盘缓存网络图",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new ClipRRect({
-          "borderRadius": {
-            "radius": 12.0
-          },
+          "borderRadius": BorderRadius.circular({
+            "radius": 12
+          }),
           "child": new CachedNetworkImage({
             "imageUrl": "https://picsum.photos/seed/hotpatchcache/400/160",
             "height": 120,
@@ -528,10 +451,10 @@ export class ImageDetail {
         }))),
         (this.__k3 || (this.__k3 = new Text({
           "data": "Icon / CircleAvatar",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Row({
           "children": [
@@ -563,9 +486,9 @@ export class ImageDetail {
               "radius": 20,
               "backgroundColor": Colors.teal,
               "child": new Text({
-                "style": {
+                "style": new TextStyle({
                   "color": Colors.white
-                },
+                }),
                 "data": "AV"
               })
             })
@@ -587,175 +510,163 @@ export class ContainerDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Container · 颜色/圆角/Padding",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Container({
-          "padding": {
-            "left": 16.0,
-            "top": 16.0,
-            "right": 16.0,
-            "bottom": 16.0
-          },
-          "decoration": {
-            "color": Colors.teal,
-            "borderRadius": {
-              "radius": 12.0
-            }
-          },
-          "child": (this.__k1 || (this.__k1 = new Text({
+          "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+            "value": 16
+          }))),
+          "decoration": (this.__k2 || (this.__k2 = new BoxDecoration({
+            "borderRadius": BorderRadius.all({
+              "radius": Radius.circular({
+                "radius": 12
+              })
+            }),
+            "color": Colors.teal
+          }))),
+          "child": (this.__k3 || (this.__k3 = new Text({
             "data": "容器内容（teal 圆角）",
-            "style": {
+            "style": new TextStyle({
               "color": Colors.white
-            }
+            })
           })))
         }),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 12
         }))),
-        (this.__k3 || (this.__k3 = new Text({
+        (this.__k5 || (this.__k5 = new Text({
           "data": "Container · 边框 + 阴影 + 渐变",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Container({
-          "padding": {
-            "left": 16.0,
-            "top": 16.0,
-            "right": 16.0,
-            "bottom": 16.0
-          },
-          "decoration": {
-            "gradient": {
-              "kind": "linear",
+          "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+            "value": 16
+          }))),
+          "decoration": new BoxDecoration({
+            "gradient": (this.__k6 || (this.__k6 = new LinearGradient({
+              "begin": Alignment.topLeft,
               "colors": [
                 Colors.blue,
                 Colors.purple
               ],
-              "begin": "topLeft",
-              "end": "bottomRight"
-            },
-            "borderRadius": {
-              "radius": 16.0
-            },
-            "border": {
-              "all": {
-                "color": Colors.white,
-                "width": 2
-              }
-            },
+              "end": Alignment.bottomRight
+            }))),
+            "borderRadius": BorderRadius.circular({
+              "radius": 16
+            }),
+            "border": Border.all({
+              "color": Colors.white,
+              "width": 2
+            }),
             "boxShadow": [
-              {
-                "color": new Color({value: 0x66000000}),
-                "dx": 0,
-                "dy": 4,
-                "blur": 12,
-                "spread": 1
-              }
+              new BoxShadow({
+                "color": new Color({
+                  "value": 0x66000000
+                }),
+                "offset": new Offset({
+                  "dx": 0,
+                  "dy": 4
+                }),
+                "blurRadius": 12,
+                "spreadRadius": 1
+              })
             ]
-          },
-          "child": (this.__k4 || (this.__k4 = new Text({
+          }),
+          "child": (this.__k7 || (this.__k7 = new Text({
             "data": "渐变 + 边框 + 阴影",
-            "style": {
+            "style": new TextStyle({
               "color": Colors.white
-            }
+            })
           })))
         }),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 12
         }))),
-        (this.__k5 || (this.__k5 = new Text({
+        (this.__k8 || (this.__k8 = new Text({
           "data": "DecoratedBox · 纯装饰",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new DecoratedBox({
-          "decoration": {
+          "decoration": new BoxDecoration({
             "color": Colors.amber.shade100,
-            "border": {
-              "all": {
-                "color": Colors.amber,
-                "width": 2
-              }
-            },
-            "borderRadius": {
-              "radius": 8.0
-            }
-          },
-          "child": (this.__k6 || (this.__k6 = new Padding({
+            "border": Border.all({
+              "color": Colors.amber,
+              "width": 2
+            }),
+            "borderRadius": BorderRadius.circular({
+              "radius": 8
+            })
+          }),
+          "child": (this.__k9 || (this.__k9 = new Padding({
             "child": new Text({
               "data": "DecoratedBox 内容"
             }),
-            "padding": {
-              "bottom": 12.0,
-              "left": 12.0,
-              "right": 12.0,
-              "top": 12.0
-            }
+            "padding": EdgeInsets.all({
+              "value": 12
+            })
           })))
         }),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 12
         }))),
-        (this.__k7 || (this.__k7 = new Text({
+        (this.__k10 || (this.__k10 = new Text({
           "data": "Card · shape / clipBehavior",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Card({
           "elevation": 4,
           "shadowColor": Colors.deepPurple,
-          "shape": {
-            "kind": "rounded",
-            "borderRadius": {
-              "radius": 16.0
-            },
-            "side": {
+          "shape": new RoundedRectangleBorder({
+            "borderRadius": BorderRadius.circular({
+              "radius": 16
+            }),
+            "side": (this.__k11 || (this.__k11 = new BorderSide({
               "color": Colors.deepPurple,
               "width": 1
-            }
-          },
+            })))
+          }),
           "clipBehavior": "antiAlias",
-          "child": (this.__k8 || (this.__k8 = new Padding({
+          "child": (this.__k12 || (this.__k12 = new Padding({
             "child": new Text({
               "data": "圆角卡片 + 描边 + 阴影"
             }),
-            "padding": {
-              "bottom": 16.0,
-              "left": 16.0,
-              "right": 16.0,
-              "top": 16.0
-            }
+            "padding": EdgeInsets.all({
+              "value": 16
+            })
           })))
         }),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 12
         }))),
-        (this.__k9 || (this.__k9 = new Divider({}))),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k13 || (this.__k13 = new Divider({}))),
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 12
         }))),
-        (this.__k10 || (this.__k10 = new Text({
+        (this.__k14 || (this.__k14 = new Text({
           "data": "SizedBox · 尺寸约束",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Container({
           "width": 120,
           "height": 48,
-          "alignment": "center",
+          "alignment": Alignment.center,
           "color": Colors.blueGrey.shade100,
-          "child": (this.__k11 || (this.__k11 = new Text({
+          "child": (this.__k15 || (this.__k15 = new Text({
             "data": "固定 120×48"
           })))
         })
@@ -791,10 +702,10 @@ export class ScrollDetail {
       "crossAxisAlignment": "stretch",
       "children": [
         new Text({
-          "style": {
+          "style": (this.__k0 || (this.__k0 = new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          },
+            "fontWeight": FontWeight.bold
+          }))),
           "data": "ListView.builder · 懒构建列表（offset: " + this._offset + "）"
         }),
         new NotificationListener({
@@ -802,17 +713,14 @@ export class ScrollDetail {
           "child": new SizedBox({
             "height": 160,
             "child": ListView.builder({
-              "padding": {
-                "left": 8.0,
-                "top": 8.0,
-                "right": 8.0,
-                "bottom": 8.0
-              },
+              "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+                "value": 8
+              }))),
               "itemExtent": 56,
-              "physics": "BouncingScrollPhysics",
+              "physics": (this.__k2 || (this.__k2 = new BouncingScrollPhysics({}))),
               "itemCount": 20,
               "itemBuilder": (context, index) => new ListTile({
-                "leading": (this.__k0 || (this.__k0 = new Icon({
+                "leading": (this.__k3 || (this.__k3 = new Icon({
                   "icon": "list"
                 }))),
                 "title": new CommonListItem({
@@ -825,37 +733,34 @@ export class ScrollDetail {
           "model": "ScrollNotification"
         }),
         new Align({
-          "alignment": "centerLeft",
+          "alignment": Alignment.centerLeft,
           "child": new TextButton({
             "onPressed": this.__bindFn(1, [], () => this.setState(() => {
               this._listSalt += 1;
             })),
-            "child": (this.__k1 || (this.__k1 = new Text({
+            "child": (this.__k4 || (this.__k4 = new Text({
               "data": "列表换色（真实更新）"
             })))
           })
         }),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 12
         }))),
         new Text({
-          "style": {
+          "style": (this.__k0 || (this.__k0 = new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          },
+            "fontWeight": FontWeight.bold
+          }))),
           "data": "ListView.separated · 分隔列表"
         }),
         new SizedBox({
           "height": 140,
           "child": ListView.separated({
-            "padding": {
-              "left": 8.0,
-              "top": 8.0,
-              "right": 8.0,
-              "bottom": 8.0
-            },
+            "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+              "value": 8
+            }))),
             "itemCount": 6,
-            "separatorBuilder": (context, index) => (this.__k3 || (this.__k3 = new Divider({
+            "separatorBuilder": (context, index) => (this.__k6 || (this.__k6 = new Divider({
               "height": 1
             }))),
             "itemBuilder": (context, index) => new ListTile({
@@ -870,29 +775,26 @@ export class ScrollDetail {
             })
           })
         }),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 12
         }))),
         new Text({
-          "style": {
+          "style": (this.__k0 || (this.__k0 = new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          },
+            "fontWeight": FontWeight.bold
+          }))),
           "data": "SingleChildScrollView · 长内容滚动（ctrl offset: " + this._ctrlOffset + "）"
         }),
         new SingleChildScrollView({
           "controller": this._scrollController,
           "scrollDirection": "horizontal",
-          "physics": "ClampingScrollPhysics",
+          "physics": (this.__k7 || (this.__k7 = new ClampingScrollPhysics({}))),
           "child": new Row({
             "children": [
               ...(() => { var out = []; for (let i = 1; (i <= 8); (i++)) { out.push.apply(out, [new Padding({
-                      "padding": {
-                        "left": 4.0,
-                        "top": 4.0,
-                        "right": 4.0,
-                        "bottom": 4.0
-                      },
+                      "padding": (this.__k8 || (this.__k8 = EdgeInsets.all({
+                        "value": 4
+                      }))),
                       "child": new Chip({
                         "label": new Text({
                           "data": "横向 " + i
@@ -903,10 +805,10 @@ export class ScrollDetail {
           })
         }),
         new Align({
-          "alignment": "centerLeft",
+          "alignment": Alignment.centerLeft,
           "child": new TextButton({
             "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
-            "child": (this.__k4 || (this.__k4 = new Text({
+            "child": (this.__k9 || (this.__k9 = new Text({
               "data": "横向 · 跳到底"
             })))
           })
@@ -965,7 +867,7 @@ export class SliverDetail {
     return new Scaffold({
       "body": new CustomScrollView({
         "controller": this._controller,
-        "physics": "BouncingScrollPhysics",
+        "physics": (this.__k0 || (this.__k0 = new BouncingScrollPhysics({}))),
         "slivers": [
           new SliverAppBar({
             "title": new Text({
@@ -977,14 +879,14 @@ export class SliverDetail {
             "floating": true,
             "actions": [
               new IconButton({
-                "icon": (this.__k0 || (this.__k0 = new Icon({
+                "icon": (this.__k1 || (this.__k1 = new Icon({
                   "icon": "center_focus_strong"
                 }))),
                 "tooltip": "定位到「固定高度」分区",
                 "onPressed": this.__bindFn(0, [], (...__a) => this._scrollToFixed(...__a))
               }),
               new IconButton({
-                "icon": (this.__k1 || (this.__k1 = new Icon({
+                "icon": (this.__k2 || (this.__k2 = new Icon({
                   "icon": "straighten"
                 }))),
                 "tooltip": "测量「固定高度」分区的位置与尺寸",
@@ -994,82 +896,70 @@ export class SliverDetail {
           }),
           new SliverToBoxAdapter({
             "child": new Container({
-              "margin": {
-                "left": 12.0,
-                "top": 12.0,
-                "right": 12.0,
-                "bottom": 12.0
-              },
-              "padding": {
-                "left": 16.0,
-                "top": 16.0,
-                "right": 16.0,
-                "bottom": 16.0
-              },
-              "decoration": {
+              "margin": (this.__k3 || (this.__k3 = EdgeInsets.all({
+                "value": 12
+              }))),
+              "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
+                "value": 16
+              }))),
+              "decoration": new BoxDecoration({
                 "color": Colors.deepPurple.shade50,
-                "borderRadius": {
-                  "radius": 12.0
-                }
-              },
-              "child": (this.__k2 || (this.__k2 = new Text({
+                "borderRadius": BorderRadius.circular({
+                  "radius": 12
+                })
+              }),
+              "child": (this.__k5 || (this.__k5 = new Text({
                 "data": "CustomScrollView 整页 · SliverToBoxAdapter 盒子",
-                "style": {
+                "style": new TextStyle({
                   "fontSize": 14,
-                  "fontWeight": "bold"
-                }
+                  "fontWeight": FontWeight.bold
+                })
               })))
             })
           }),
           new SliverToBoxAdapter({
             "child": new Container({
-              "margin": {
-                "left": 12.0,
-                "top": 0.0,
-                "right": 12.0,
-                "bottom": 4.0
-              },
-              "padding": {
-                "left": 10.0,
-                "top": 10.0,
-                "right": 10.0,
-                "bottom": 10.0
-              },
-              "decoration": {
+              "margin": (this.__k6 || (this.__k6 = EdgeInsets.fromLTRB({
+                "bottom": 4,
+                "left": 12,
+                "right": 12,
+                "top": 0
+              }))),
+              "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
+                "value": 10
+              }))),
+              "decoration": new BoxDecoration({
                 "color": Colors.teal.shade50,
-                "borderRadius": {
-                  "radius": 8.0
-                }
-              },
+                "borderRadius": BorderRadius.circular({
+                  "radius": 8
+                })
+              }),
               "child": new Text({
-                "style": {
-                  "fontSize": 13,
-                  "color": Colors.teal
-                },
+                "style": (this.__k8 || (this.__k8 = new TextStyle({
+                  "color": Colors.teal,
+                  "fontSize": 13
+                }))),
                 "data": "GlobalKey 测量：「固定高度」分区 " + this._measureText
               })
             })
           }),
           new SliverPadding({
-            "padding": {
-              "left": 12.0,
-              "top": 0.0,
-              "right": 12.0,
-              "bottom": 0.0
-            },
+            "padding": (this.__k9 || (this.__k9 = EdgeInsets.symmetric({
+              "horizontal": 12
+            }))),
             "sliver": new SliverList({
               "delegate": {
                 "__delegate": "list",
                 "children": [
                   ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new ListTile({
-                          "leading": (this.__k3 || (this.__k3 = new Icon({
+                          "leading": (this.__k10 || (this.__k10 = new Icon({
                             "color": Colors.deepPurple,
                             "icon": "list"
                           }))),
                           "title": new Text({
                             "data": "SliverList item " + i
                           }),
-                          "trailing": (this.__k4 || (this.__k4 = new Icon({
+                          "trailing": (this.__k11 || (this.__k11 = new Icon({
                             "icon": "chevron_right"
                           })))
                         })]); } return out; })()
@@ -1078,29 +968,24 @@ export class SliverDetail {
             })
           }),
           new SliverPadding({
-            "padding": {
-              "left": 12.0,
-              "top": 8.0,
-              "right": 12.0,
-              "bottom": 8.0
-            },
+            "padding": (this.__k12 || (this.__k12 = EdgeInsets.symmetric({
+              "horizontal": 12,
+              "vertical": 8
+            }))),
             "sliver": new SliverToBoxAdapter({
               "child": new Text({
-                "style": {
+                "style": (this.__k13 || (this.__k13 = new TextStyle({
                   "fontSize": 14,
-                  "fontWeight": "bold"
-                },
+                  "fontWeight": FontWeight.bold
+                }))),
                 "data": "SliverList.builder · 懒构建列表"
               })
             })
           }),
           new SliverPadding({
-            "padding": {
-              "left": 12.0,
-              "top": 0.0,
-              "right": 12.0,
-              "bottom": 0.0
-            },
+            "padding": (this.__k9 || (this.__k9 = EdgeInsets.symmetric({
+              "horizontal": 12
+            }))),
             "sliver": SliverList.builder({
               "itemCount": 8,
               "itemBuilder": (context, index) => new ListTile({
@@ -1118,34 +1003,29 @@ export class SliverDetail {
             })
           }),
           new SliverPadding({
-            "padding": {
-              "left": 12.0,
-              "top": 8.0,
-              "right": 12.0,
-              "bottom": 8.0
-            },
+            "padding": (this.__k12 || (this.__k12 = EdgeInsets.symmetric({
+              "horizontal": 12,
+              "vertical": 8
+            }))),
             "sliver": new SliverToBoxAdapter({
               "child": new Text({
-                "style": {
+                "style": (this.__k13 || (this.__k13 = new TextStyle({
                   "fontSize": 14,
-                  "fontWeight": "bold"
-                },
+                  "fontWeight": FontWeight.bold
+                }))),
                 "data": "SliverList.separated · 分隔列表"
               })
             })
           }),
           new SliverPadding({
-            "padding": {
-              "left": 12.0,
-              "top": 0.0,
-              "right": 12.0,
-              "bottom": 0.0
-            },
+            "padding": (this.__k9 || (this.__k9 = EdgeInsets.symmetric({
+              "horizontal": 12
+            }))),
             "sliver": SliverList.separated({
               "itemCount": 5,
               "itemBuilder": (context, index) => new ListTile({
                 "dense": true,
-                "leading": (this.__k5 || (this.__k5 = new Icon({
+                "leading": (this.__k14 || (this.__k14 = new Icon({
                   "color": Colors.deepPurple,
                   "icon": "arrow_right"
                 }))),
@@ -1153,37 +1033,33 @@ export class SliverDetail {
                   "data": "separated item " + index
                 })
               }),
-              "separatorBuilder": (context, index) => (this.__k6 || (this.__k6 = new Divider({
+              "separatorBuilder": (context, index) => (this.__k15 || (this.__k15 = new Divider({
                 "height": 1
               })))
             })
           }),
           new SliverPadding({
-            "padding": {
-              "left": 12.0,
-              "top": 8.0,
-              "right": 12.0,
-              "bottom": 8.0
-            },
+            "padding": (this.__k12 || (this.__k12 = EdgeInsets.symmetric({
+              "horizontal": 12,
+              "vertical": 8
+            }))),
             "sliver": new SliverToBoxAdapter({
               "child": new Container({
-                "padding": {
-                  "left": 10.0,
-                  "top": 8.0,
-                  "right": 10.0,
-                  "bottom": 8.0
-                },
-                "decoration": {
+                "padding": (this.__k16 || (this.__k16 = EdgeInsets.symmetric({
+                  "horizontal": 10,
+                  "vertical": 8
+                }))),
+                "decoration": new BoxDecoration({
                   "color": Colors.teal.shade50,
-                  "borderRadius": {
-                    "radius": 6.0
-                  }
-                },
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 6
+                  })
+                }),
                 "child": new Text({
-                  "style": {
+                  "style": (this.__k13 || (this.__k13 = new TextStyle({
                     "fontSize": 14,
-                    "fontWeight": "bold"
-                  },
+                    "fontWeight": FontWeight.bold
+                  }))),
                   "data": "SliverFixedExtentList · 固定高度"
                 }),
                 "key": this._fixedKey
@@ -1191,19 +1067,16 @@ export class SliverDetail {
             })
           }),
           new SliverPadding({
-            "padding": {
-              "left": 12.0,
-              "top": 0.0,
-              "right": 12.0,
-              "bottom": 0.0
-            },
+            "padding": (this.__k9 || (this.__k9 = EdgeInsets.symmetric({
+              "horizontal": 12
+            }))),
             "sliver": new SliverFixedExtentList({
               "itemExtent": 44,
               "delegate": {
                 "__delegate": "builder",
                 "builder": (context, index) => new ListTile({
                   "dense": true,
-                  "leading": (this.__k7 || (this.__k7 = new Icon({
+                  "leading": (this.__k17 || (this.__k17 = new Icon({
                     "color": Colors.teal,
                     "icon": "height"
                   }))),
@@ -1216,18 +1089,16 @@ export class SliverDetail {
             })
           }),
           new SliverPadding({
-            "padding": {
-              "left": 12.0,
-              "top": 8.0,
-              "right": 12.0,
-              "bottom": 8.0
-            },
+            "padding": (this.__k12 || (this.__k12 = EdgeInsets.symmetric({
+              "horizontal": 12,
+              "vertical": 8
+            }))),
             "sliver": new SliverToBoxAdapter({
               "child": new Text({
-                "style": {
+                "style": (this.__k13 || (this.__k13 = new TextStyle({
                   "fontSize": 14,
-                  "fontWeight": "bold"
-                },
+                  "fontWeight": FontWeight.bold
+                }))),
                 "data": "SliverOpacity + SliverGrid.builder · MaxCrossAxisExtent 九宫格"
               })
             })
@@ -1235,32 +1106,29 @@ export class SliverDetail {
           new SliverOpacity({
             "opacity": 0.6,
             "sliver": new SliverPadding({
-              "padding": {
-                "left": 12.0,
-                "top": 0.0,
-                "right": 12.0,
-                "bottom": 0.0
-              },
+              "padding": (this.__k9 || (this.__k9 = EdgeInsets.symmetric({
+                "horizontal": 12
+              }))),
               "sliver": SliverGrid.builder({
-                "gridDelegate": {
-                  "maxCrossAxisExtent": 140,
-                  "mainAxisSpacing": 8,
+                "gridDelegate": (this.__k18 || (this.__k18 = new SliverGridDelegateWithMaxCrossAxisExtent({
+                  "childAspectRatio": 1,
                   "crossAxisSpacing": 8,
-                  "childAspectRatio": 1
-                },
+                  "mainAxisSpacing": 8,
+                  "maxCrossAxisExtent": 140
+                }))),
                 "itemCount": 9,
                 "itemBuilder": (context, index) => new Container({
-                  "decoration": {
+                  "decoration": new BoxDecoration({
                     "color": Colors.teal.shade100,
-                    "borderRadius": {
-                      "radius": 8.0
-                    }
-                  },
-                  "alignment": "center",
+                    "borderRadius": BorderRadius.circular({
+                      "radius": 8
+                    })
+                  }),
+                  "alignment": Alignment.center,
                   "child": new Text({
-                    "style": {
-                      "fontWeight": "bold"
-                    },
+                    "style": (this.__k19 || (this.__k19 = new TextStyle({
+                      "fontWeight": FontWeight.bold
+                    }))),
                     "data": "格 " + index
                   })
                 })
@@ -1272,9 +1140,9 @@ export class SliverDetail {
               "hasScrollBody": false,
               "child": new Center({
                 "child": new Text({
-                  "style": {
+                  "style": (this.__k20 || (this.__k20 = new TextStyle({
                     "color": Colors.grey
-                  },
+                  }))),
                   "data": "底部 · SliverSafeArea + SliverFillRemaining"
                 })
               })
@@ -1287,7 +1155,7 @@ export class SliverDetail {
         "backgroundColor": Colors.deepPurple,
         "foregroundColor": Colors.white,
         "tooltip": "跳到底",
-        "child": (this.__k8 || (this.__k8 = new Icon({
+        "child": (this.__k21 || (this.__k21 = new Icon({
           "icon": "arrow_downward"
         })))
       })
@@ -1334,100 +1202,92 @@ export class GridDetail {
         "crossAxisAlignment": "stretch",
         "children": [
           new Padding({
-            "padding": {
-              "left": 12.0,
-              "top": 12.0,
-              "right": 12.0,
-              "bottom": 12.0
-            },
+            "padding": (this.__k2 || (this.__k2 = EdgeInsets.all({
+              "value": 12
+            }))),
             "child": new Text({
-              "style": {
-                "fontSize": 13,
-                "color": Colors.grey
-              },
+              "style": (this.__k3 || (this.__k3 = new TextStyle({
+                "color": Colors.grey,
+                "fontSize": 13
+              }))),
               "data": "controller offset: " + this._offset.toStringAsFixed(1)
             })
           }),
-          (this.__k2 || (this.__k2 = new Padding({
+          (this.__k4 || (this.__k4 = new Padding({
             "child": new Text({
-              "style": {
+              "style": new TextStyle({
                 "fontSize": 14,
-                "fontWeight": "bold"
-              },
+                "fontWeight": FontWeight.bold
+              }),
               "data": "GridView.builder · 固定 3 列 · 30 项（懒加载）"
             }),
-            "padding": {
-              "bottom": 0.0,
-              "left": 12.0,
-              "right": 12.0,
-              "top": 0.0
-            }
+            "padding": EdgeInsets.symmetric({
+              "horizontal": 12
+            })
           }))),
           new Expanded({
             "flex": 5,
             "child": GridView.builder({
               "controller": this._controller,
-              "gridDelegate": {
+              "gridDelegate": (this.__k5 || (this.__k5 = new SliverGridDelegateWithFixedCrossAxisCount({
+                "childAspectRatio": 1,
                 "crossAxisCount": 3,
-                "mainAxisSpacing": 8,
                 "crossAxisSpacing": 8,
-                "childAspectRatio": 1
-              },
+                "mainAxisSpacing": 8
+              }))),
               "itemCount": 30,
               "itemBuilder": (context, index) => new Container({
-                "decoration": {
+                "decoration": new BoxDecoration({
                   "color": Colors.teal.shade100,
-                  "borderRadius": {
-                    "radius": 8.0
-                  }
-                },
-                "alignment": "center",
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 8
+                  })
+                }),
+                "alignment": Alignment.center,
                 "child": new Text({
-                  "style": {
-                    "fontWeight": "bold"
-                  },
+                  "style": (this.__k6 || (this.__k6 = new TextStyle({
+                    "fontWeight": FontWeight.bold
+                  }))),
                   "data": "格 " + index
                 })
               })
             })
           }),
-          (this.__k3 || (this.__k3 = new Padding({
+          (this.__k7 || (this.__k7 = new Padding({
             "child": new Text({
-              "style": {
+              "style": new TextStyle({
                 "fontSize": 14,
-                "fontWeight": "bold"
-              },
+                "fontWeight": FontWeight.bold
+              }),
               "data": "GridView.builder · MaxCrossAxisExtent 120 · 20 项（懒加载）"
             }),
-            "padding": {
-              "bottom": 8.0,
-              "left": 12.0,
-              "right": 12.0,
-              "top": 8.0
-            }
+            "padding": EdgeInsets.symmetric({
+              "horizontal": 12,
+              "vertical": 8
+            })
           }))),
           new Expanded({
             "flex": 4,
             "child": GridView.builder({
-              "gridDelegate": {
-                "maxCrossAxisExtent": 120,
-                "mainAxisSpacing": 8,
+              "gridDelegate": (this.__k8 || (this.__k8 = new SliverGridDelegateWithMaxCrossAxisExtent({
+                "childAspectRatio": 1,
                 "crossAxisSpacing": 8,
-                "childAspectRatio": 1
-              },
+                "mainAxisSpacing": 8,
+                "maxCrossAxisExtent": 120
+              }))),
               "itemCount": 20,
               "itemBuilder": (context, index) => new Container({
-                "decoration": {
+                "decoration": new BoxDecoration({
                   "color": Colors.orange.shade100,
-                  "borderRadius": {
-                    "radius": 8.0
-                  }
-                },
-                "alignment": "center",
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 8
+                  })
+                }),
+                "alignment": Alignment.center,
                 "child": new Text({
-                  "style": {
-                    "fontWeight": "bold"
-                  },
+                  "style": (this.__k6 || (this.__k6 = new TextStyle({
+                    "fontWeight": FontWeight.bold
+                  }))),
                   "data": "项 " + index
                 })
               })
@@ -1581,10 +1441,10 @@ export class InputDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "TextField",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new TextField({
           "controller": this._controller,
@@ -1594,48 +1454,48 @@ export class InputDetail {
             "labelText": "用户名"
           }))),
           "maxLines": 1,
-          "style": {
+          "style": (this.__k2 || (this.__k2 = new TextStyle({
             "fontSize": 16
-          }
+          })))
         }),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k3 || (this.__k3 = new SizedBox({
           "height": 4
         }))),
         new Text({
-          "style": {
-            "fontSize": 14,
-            "color": Colors.grey
-          },
+          "style": (this.__k4 || (this.__k4 = new TextStyle({
+            "color": Colors.grey,
+            "fontSize": 14
+          }))),
           "data": "输入内容：" + this._text
         }),
         new Text({
-          "style": {
-            "fontSize": 14,
-            "color": Colors.deepPurple
-          },
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
+            "color": Colors.deepPurple,
+            "fontSize": 14
+          }))),
           "data": "controller.text：" + this._controller.text
         }),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k6 || (this.__k6 = new SizedBox({
           "height": 8
         }))),
         new Align({
-          "alignment": "centerLeft",
+          "alignment": Alignment.centerLeft,
           "child": new FilledButton({
             "onPressed": this.__bindFn(1, [], () => this._controller.clear()),
-            "child": (this.__k4 || (this.__k4 = new Text({
+            "child": (this.__k7 || (this.__k7 = new Text({
               "data": "清空输入"
             })))
           })
         }),
-        (this.__k5 || (this.__k5 = new SizedBox({
+        (this.__k8 || (this.__k8 = new SizedBox({
           "height": 12
         }))),
-        (this.__k6 || (this.__k6 = new Text({
+        (this.__k9 || (this.__k9 = new Text({
           "data": "Radio 单选",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new Row({
           "children": [
@@ -1645,7 +1505,7 @@ export class InputDetail {
               "onChanged": this.__bindFn(2, [], (...__a) => this._onChoiceChanged(...__a)),
               "activeColor": Colors.deepPurple
             }),
-            (this.__k7 || (this.__k7 = new Text({
+            (this.__k10 || (this.__k10 = new Text({
               "data": "选项 A"
             }))),
             new Radio({
@@ -1654,27 +1514,27 @@ export class InputDetail {
               "onChanged": this.__bindFn(3, [], (...__a) => this._onChoiceChanged(...__a)),
               "activeColor": Colors.deepPurple
             }),
-            (this.__k8 || (this.__k8 = new Text({
+            (this.__k11 || (this.__k11 = new Text({
               "data": "选项 B"
             })))
           ]
         }),
         new Text({
-          "style": {
-            "fontSize": 14,
-            "color": Colors.grey
-          },
+          "style": (this.__k4 || (this.__k4 = new TextStyle({
+            "color": Colors.grey,
+            "fontSize": 14
+          }))),
           "data": "当前选择：" + this._choice
         }),
-        (this.__k5 || (this.__k5 = new SizedBox({
+        (this.__k8 || (this.__k8 = new SizedBox({
           "height": 12
         }))),
-        (this.__k9 || (this.__k9 = new Text({
+        (this.__k12 || (this.__k12 = new Text({
           "data": "DropdownButton",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         new DropdownButton({
           "value": this._dropdown,
@@ -1701,7 +1561,7 @@ export class InputDetail {
             })
           ]
         }),
-        (this.__k5 || (this.__k5 = new SizedBox({
+        (this.__k8 || (this.__k8 = new SizedBox({
           "height": 12
         }))),
         new Row({
@@ -1714,7 +1574,7 @@ export class InputDetail {
               "inactiveThumbColor": Colors.grey,
               "inactiveTrackColor": Colors.grey.shade300
             }),
-            (this.__k10 || (this.__k10 = new SizedBox({
+            (this.__k13 || (this.__k13 = new SizedBox({
               "width": 8
             }))),
             new Text({
@@ -1730,7 +1590,7 @@ export class InputDetail {
               "activeColor": Colors.deepPurple,
               "checkColor": Colors.white
             }),
-            (this.__k10 || (this.__k10 = new SizedBox({
+            (this.__k13 || (this.__k13 = new SizedBox({
               "width": 8
             }))),
             new Text({
@@ -1738,13 +1598,13 @@ export class InputDetail {
             })
           ]
         }),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k6 || (this.__k6 = new SizedBox({
           "height": 8
         }))),
         new Text({
-          "style": {
+          "style": (this.__k14 || (this.__k14 = new TextStyle({
             "fontSize": 14
-          },
+          }))),
           "data": "Slider 值：" + this._slider
         }),
         new Slider({
@@ -1774,10 +1634,10 @@ export class ProgressDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "CircularProgressIndicator",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
@@ -1801,10 +1661,10 @@ export class ProgressDetail {
         }))),
         (this.__k5 || (this.__k5 = new Text({
           "data": "LinearProgressIndicator",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
@@ -1823,10 +1683,10 @@ export class ProgressDetail {
           "height": 8
         }))),
         new Text({
-          "style": {
-            "fontSize": 14,
-            "color": Colors.grey
-          },
+          "style": (this.__k8 || (this.__k8 = new TextStyle({
+            "color": Colors.grey,
+            "fontSize": 14
+          }))),
           "data": "进度值：" + this._progress
         })
       ]
@@ -1849,26 +1709,23 @@ export class NotifierCard {
   build(context) {
     return new Card({
       "child": new Padding({
-        "padding": {
-          "left": 16.0,
-          "top": 16.0,
-          "right": 16.0,
-          "bottom": 16.0
-        },
+        "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+          "value": 16
+        }))),
         "child": new Column({
           "mainAxisSize": "min",
           "children": [
             new ListenableBuilder({
               "listenable": this._model,
               "builder": (context, index) => new Text({
-                "style": {
+                "style": (this.__k1 || (this.__k1 = new TextStyle({
                   "fontSize": 24,
-                  "fontWeight": "bold"
-                },
+                  "fontWeight": FontWeight.bold
+                }))),
                 "data": "count = " + this._model.count
               })
             }),
-            (this.__k0 || (this.__k0 = new SizedBox({
+            (this.__k2 || (this.__k2 = new SizedBox({
               "height": 12
             }))),
             new Row({
@@ -1876,16 +1733,16 @@ export class NotifierCard {
               "children": [
                 new ElevatedButton({
                   "onPressed": this.__bindFn(0, [], (...__a) => this._inc(...__a)),
-                  "child": (this.__k1 || (this.__k1 = new Text({
+                  "child": (this.__k3 || (this.__k3 = new Text({
                     "data": "+1"
                   })))
                 }),
-                (this.__k2 || (this.__k2 = new SizedBox({
+                (this.__k4 || (this.__k4 = new SizedBox({
                   "width": 12
                 }))),
                 new ElevatedButton({
                   "onPressed": this.__bindFn(1, [], (...__a) => this._reset(...__a)),
-                  "child": (this.__k3 || (this.__k3 = new Text({
+                  "child": (this.__k5 || (this.__k5 = new Text({
                     "data": "Reset"
                   })))
                 })
@@ -1914,51 +1771,45 @@ export class StatelessCard {
   }
   build(context) {
     return new Card({
-      "margin": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
+      "margin": (this.__k0 || (this.__k0 = EdgeInsets.all({
+        "value": 12
+      }))),
       "child": new Padding({
-        "padding": {
-          "left": 16.0,
-          "top": 16.0,
-          "right": 16.0,
-          "bottom": 16.0
-        },
+        "padding": (this.__k1 || (this.__k1 = EdgeInsets.all({
+          "value": 16
+        }))),
         "child": new Column({
           "mainAxisSize": "min",
           "crossAxisAlignment": "start",
           "children": [
             new Row({
               "children": [
-                (this.__k0 || (this.__k0 = new Icon({
+                (this.__k2 || (this.__k2 = new Icon({
                   "color": Colors.teal,
                   "icon": "article"
                 }))),
-                (this.__k1 || (this.__k1 = new SizedBox({
+                (this.__k3 || (this.__k3 = new SizedBox({
                   "width": 8
                 }))),
                 new Expanded({
                   "child": new Text({
-                    "style": {
+                    "style": (this.__k4 || (this.__k4 = new TextStyle({
                       "fontSize": 18,
-                      "fontWeight": "bold"
-                    },
+                      "fontWeight": FontWeight.bold
+                    }))),
                     "data": this.badge + " · " + this.title
                   })
                 })
               ]
             }),
-            (this.__k2 || (this.__k2 = new Divider({
+            (this.__k5 || (this.__k5 = new Divider({
               "height": 24
             }))),
             new Text({
-              "style": {
-                "fontSize": 14,
-                "color": Colors.grey
-              },
+              "style": (this.__k6 || (this.__k6 = new TextStyle({
+                "color": Colors.grey,
+                "fontSize": 14
+              }))),
               "data": this.subtitle
             })
           ]
@@ -1990,10 +1841,10 @@ export class TabDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "DefaultTabController · 官方惯用法（controller 由祖先提供）",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 15,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 6
@@ -2050,10 +1901,10 @@ export class TabDetail {
           "height": 14
         }))),
         new Text({
-          "style": {
+          "style": (this.__k3 || (this.__k3 = new TextStyle({
             "fontSize": 15,
-            "fontWeight": "bold"
-          },
+            "fontWeight": FontWeight.bold
+          }))),
           "data": "显式 TabController · index = " + this._index
         }),
         (this.__k1 || (this.__k1 = new SizedBox({
@@ -2103,10 +1954,10 @@ export class TabDetail {
           })
         }),
         new Align({
-          "alignment": "centerLeft",
+          "alignment": Alignment.centerLeft,
           "child": new TextButton({
             "onPressed": this.__bindFn(0, [], (...__a) => this._next(...__a)),
-            "child": (this.__k3 || (this.__k3 = new Text({
+            "child": (this.__k4 || (this.__k4 = new Text({
               "data": "下一 tab · controller.animateTo"
             })))
           })
@@ -2147,13 +1998,13 @@ export class PageViewDetail {
       "crossAxisAlignment": "stretch",
       "children": [
         new Text({
-          "style": {
+          "style": (this.__k0 || (this.__k0 = new TextStyle({
             "fontSize": 15,
-            "fontWeight": "bold"
-          },
+            "fontWeight": FontWeight.bold
+          }))),
           "data": "PageView · 当前第 " + (this._page + 1) + " / 3 页"
         }),
-        (this.__k0 || (this.__k0 = new SizedBox({
+        (this.__k1 || (this.__k1 = new SizedBox({
           "height": 6
         }))),
         new SizedBox({
@@ -2164,29 +2015,29 @@ export class PageViewDetail {
             "children": [
               new Container({
                 "color": Colors.deepPurple.shade100,
-                "alignment": "center",
-                "child": (this.__k1 || (this.__k1 = new Text({
+                "alignment": Alignment.center,
+                "child": (this.__k2 || (this.__k2 = new Text({
                   "data": "第 1 页"
                 })))
               }),
               new Container({
                 "color": Colors.teal.shade100,
-                "alignment": "center",
-                "child": (this.__k2 || (this.__k2 = new Text({
+                "alignment": Alignment.center,
+                "child": (this.__k3 || (this.__k3 = new Text({
                   "data": "第 2 页"
                 })))
               }),
               new Container({
                 "color": Colors.orange.shade100,
-                "alignment": "center",
-                "child": (this.__k3 || (this.__k3 = new Text({
+                "alignment": Alignment.center,
+                "child": (this.__k4 || (this.__k4 = new Text({
                   "data": "第 3 页"
                 })))
               })
             ]
           })
         }),
-        (this.__k4 || (this.__k4 = new SizedBox({
+        (this.__k5 || (this.__k5 = new SizedBox({
           "height": 10
         }))),
         new Row({
@@ -2195,20 +2046,19 @@ export class PageViewDetail {
             ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Container({
                     "width": 9,
                     "height": 9,
-                    "margin": {
-                      "left": 4.0,
-                      "top": 4.0,
-                      "right": 4.0,
-                      "bottom": 4.0
-                    },
-                    "decoration": {
+                    "margin": (this.__k6 || (this.__k6 = EdgeInsets.all({
+                      "value": 4
+                    }))),
+                    "decoration": new BoxDecoration({
                       "shape": "circle",
-                      "color": ((i == this._page) ? Colors.deepPurple : new Color({value: 0xFFBDBDBD}))
-                    }
+                      "color": (i == this._page) ? Colors.deepPurple : (this.__k7 || (this.__k7 = new Color({
+                        "value": 0xFFBDBDBD
+                      })))
+                    })
                   })]); } return out; })()
           ]
         }),
-        (this.__k5 || (this.__k5 = new SizedBox({
+        (this.__k8 || (this.__k8 = new SizedBox({
           "height": 8
         }))),
         new Row({
@@ -2216,19 +2066,19 @@ export class PageViewDetail {
           "children": [
             new TextButton({
               "onPressed": this.__bindFn(1, [], (...__a) => this._prevPage(...__a)),
-              "child": (this.__k6 || (this.__k6 = new Text({
+              "child": (this.__k9 || (this.__k9 = new Text({
                 "data": "上一页"
               })))
             }),
             new TextButton({
               "onPressed": this.__bindFn(2, [], (...__a) => this._nextPage(...__a)),
-              "child": (this.__k7 || (this.__k7 = new Text({
+              "child": (this.__k10 || (this.__k10 = new Text({
                 "data": "下一页"
               })))
             }),
             new TextButton({
               "onPressed": this.__bindFn(3, [], (...__a) => this._jumpToLast(...__a)),
-              "child": (this.__k8 || (this.__k8 = new Text({
+              "child": (this.__k11 || (this.__k11 = new Text({
                 "data": "跳到第 3 页"
               })))
             })
@@ -2257,42 +2107,35 @@ export class KeyTile {
     var label = this.label;
     var caption = label + " · 计数 " + this._count;
     return new Container({
-      "margin": {
-        "left": 0.0,
-        "top": 2.0,
-        "right": 0.0,
-        "bottom": 2.0
-      },
-      "padding": {
-        "left": 10.0,
-        "top": 2.0,
-        "right": 10.0,
-        "bottom": 2.0
-      },
-      "decoration": {
+      "margin": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
+        "vertical": 2
+      }))),
+      "padding": (this.__k1 || (this.__k1 = EdgeInsets.symmetric({
+        "horizontal": 10,
+        "vertical": 2
+      }))),
+      "decoration": new BoxDecoration({
         "color": Colors.white,
-        "borderRadius": {
-          "radius": 6.0
-        },
-        "border": {
-          "all": {
-            "color": Colors.grey.shade300
-          }
-        }
-      },
+        "borderRadius": BorderRadius.circular({
+          "radius": 6
+        }),
+        "border": Border.all({
+          "color": Colors.grey.shade300
+        })
+      }),
       "child": new Row({
         "children": [
           new Expanded({
             "child": new Text({
-              "style": {
+              "style": (this.__k2 || (this.__k2 = new TextStyle({
                 "fontSize": 13
-              },
+              }))),
               "data": caption
             })
           }),
           new TextButton({
             "onPressed": this.__bindFn(0, [], (...__a) => this.bump(...__a)),
-            "child": (this.__k0 || (this.__k0 = new Text({
+            "child": (this.__k3 || (this.__k3 = new Text({
               "data": "+1"
             })))
           })
@@ -2326,10 +2169,10 @@ export class KeyDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "① 带 key：key: ValueKey(name)",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 13,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [new KeyTile({
                 "index": i,
@@ -2341,10 +2184,10 @@ export class KeyDetail {
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "② 不带 key：按位置匹配",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 13,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         ...(() => { var out = []; for (let i = 0; (i < this._names.length); (i++)) { out.push.apply(out, [new KeyTile({
                 "index": i,
@@ -2440,66 +2283,63 @@ export class KeyDetail {
   }
   _cardValueKey() {
     return new Container({
-      "margin": {
-        "left": 12.0,
-        "top": 6.0,
-        "right": 12.0,
-        "bottom": 6.0
-      },
-      "padding": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
-      "decoration": {
+      "margin": (this.__k3 || (this.__k3 = EdgeInsets.fromLTRB({
+        "bottom": 6,
+        "left": 12,
+        "right": 12,
+        "top": 6
+      }))),
+      "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
+        "value": 12
+      }))),
+      "decoration": new BoxDecoration({
         "color": Colors.grey.shade100,
-        "borderRadius": {
-          "radius": 10.0
-        }
-      },
+        "borderRadius": BorderRadius.circular({
+          "radius": 10
+        })
+      }),
       "child": new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          (this.__k3 || (this.__k3 = new Text({
-            "data": "ValueKey · 列表按值匹配",
-            "style": {
-              "color": Colors.deepPurple,
-              "fontSize": 15,
-              "fontWeight": "bold"
-            }
-          }))),
-          (this.__k4 || (this.__k4 = new SizedBox({
-            "height": 4
-          }))),
           (this.__k5 || (this.__k5 = new Text({
-            "data": "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。",
-            "style": {
-              "color": Colors.grey,
-              "fontSize": 12
-            }
+            "data": "ValueKey · 列表按值匹配",
+            "style": new TextStyle({
+              "fontSize": 15,
+              "fontWeight": FontWeight.bold,
+              "color": Colors.deepPurple
+            })
           }))),
           (this.__k6 || (this.__k6 = new SizedBox({
+            "height": 4
+          }))),
+          (this.__k7 || (this.__k7 = new Text({
+            "data": "换序后看两列计数：① 的状态跟着「行（值）」走，② 的状态留在「位置」上——" + "reconciler 取 keySig（v:值）做「带 key 优先、无 key 按位置」的匹配。",
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.grey
+            })
+          }))),
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           this._valueKeyRows(),
-          (this.__k6 || (this.__k6 = new SizedBox({
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           new Row({
             "children": [
               new TextButton({
                 "onPressed": this.__bindFn(0, [], (...__a) => this._rotateNames(...__a)),
-                "child": (this.__k7 || (this.__k7 = new Text({
+                "child": (this.__k9 || (this.__k9 = new Text({
                   "data": "轮换顺序（A→末尾）"
                 })))
               }),
-              (this.__k8 || (this.__k8 = new SizedBox({
+              (this.__k10 || (this.__k10 = new SizedBox({
                 "width": 8
               }))),
               new TextButton({
                 "onPressed": this.__bindFn(1, [], (...__a) => this._resetNames(...__a)),
-                "child": (this.__k9 || (this.__k9 = new Text({
+                "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "重置"
                 })))
               })
@@ -2511,77 +2351,74 @@ export class KeyDetail {
   }
   _cardObjectKey() {
     return new Container({
-      "margin": {
-        "left": 12.0,
-        "top": 6.0,
-        "right": 12.0,
-        "bottom": 6.0
-      },
-      "padding": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
-      "decoration": {
+      "margin": (this.__k3 || (this.__k3 = EdgeInsets.fromLTRB({
+        "bottom": 6,
+        "left": 12,
+        "right": 12,
+        "top": 6
+      }))),
+      "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
+        "value": 12
+      }))),
+      "decoration": new BoxDecoration({
         "color": Colors.grey.shade100,
-        "borderRadius": {
-          "radius": 10.0
-        }
-      },
+        "borderRadius": BorderRadius.circular({
+          "radius": 10
+        })
+      }),
       "child": new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          (this.__k10 || (this.__k10 = new Text({
+          (this.__k12 || (this.__k12 = new Text({
             "data": "ObjectKey · 按对象身份相等",
-            "style": {
-              "color": Colors.deepPurple,
+            "style": new TextStyle({
               "fontSize": 15,
-              "fontWeight": "bold"
-            }
-          }))),
-          (this.__k4 || (this.__k4 = new SizedBox({
-            "height": 4
-          }))),
-          (this.__k11 || (this.__k11 = new Text({
-            "data": "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。",
-            "style": {
-              "color": Colors.grey,
-              "fontSize": 12
-            }
+              "fontWeight": FontWeight.bold,
+              "color": Colors.deepPurple
+            })
           }))),
           (this.__k6 || (this.__k6 = new SizedBox({
+            "height": 4
+          }))),
+          (this.__k13 || (this.__k13 = new Text({
+            "data": "ObjectKey 的判据是 identical（是不是**同一个对象实例**），不是值相等。" + "A 行包的是字段里那个实例（跨帧恒定）→ 父级重建后元素复用、计数保留；" + "B 行每次 build 都新造一个 [1]（值一样但身份不同）→ 元素不匹配、销毁重建、计数归零。" + "注意：B 的计数是**被销毁**而不是被藏起来——归零之后回不来。",
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.grey
+            })
+          }))),
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           this._objectKeyRows(),
-          (this.__k6 || (this.__k6 = new SizedBox({
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
-          (this.__k12 || (this.__k12 = new Text({
+          (this.__k14 || (this.__k14 = new Text({
             "data": "操作：先给 A、B 各点几次 +1，再点下面的「父级重建」，对比两行的计数。" + "选型场景：数据源没有稳定 ID、但你跨帧持有同一批对象实例时用它。",
-            "style": {
-              "color": Colors.grey,
-              "fontSize": 12
-            }
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.grey
+            })
           }))),
-          (this.__k13 || (this.__k13 = new SizedBox({
+          (this.__k15 || (this.__k15 = new SizedBox({
             "height": 6
           }))),
-          (this.__k14 || (this.__k14 = new Text({
+          (this.__k16 || (this.__k16 = new Text({
             "data": "补充：Dart 里 ValueKey 按 == 比较、ObjectKey 按 identical 比较。" + "本例的 [1] 是 List，没有重写 ==（Dart 的 == 对 List 本就是身份比较），" + "所以这里两者结果相同——本案例要看的是「key 的身份稳不稳定」这件事本身。",
-            "style": {
-              "color": Colors.grey,
-              "fontSize": 11
-            }
+            "style": new TextStyle({
+              "fontSize": 11,
+              "color": Colors.grey
+            })
           }))),
-          (this.__k6 || (this.__k6 = new SizedBox({
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           new Row({
             "children": [
               new TextButton({
                 "onPressed": this.__bindFn(2, [], (...__a) => this._rebuildParent(...__a)),
-                "child": (this.__k15 || (this.__k15 = new Text({
+                "child": (this.__k17 || (this.__k17 = new Text({
                   "data": "父级重建（setState 一次）"
                 })))
               })
@@ -2593,46 +2430,43 @@ export class KeyDetail {
   }
   _cardUniqueKey() {
     return new Container({
-      "margin": {
-        "left": 12.0,
-        "top": 6.0,
-        "right": 12.0,
-        "bottom": 6.0
-      },
-      "padding": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
-      "decoration": {
+      "margin": (this.__k3 || (this.__k3 = EdgeInsets.fromLTRB({
+        "bottom": 6,
+        "left": 12,
+        "right": 12,
+        "top": 6
+      }))),
+      "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
+        "value": 12
+      }))),
+      "decoration": new BoxDecoration({
         "color": Colors.grey.shade100,
-        "borderRadius": {
-          "radius": 10.0
-        }
-      },
+        "borderRadius": BorderRadius.circular({
+          "radius": 10
+        })
+      }),
       "child": new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          (this.__k16 || (this.__k16 = new Text({
+          (this.__k18 || (this.__k18 = new Text({
             "data": "UniqueKey · 每次都是新身份",
-            "style": {
-              "color": Colors.deepPurple,
+            "style": new TextStyle({
               "fontSize": 15,
-              "fontWeight": "bold"
-            }
-          }))),
-          (this.__k4 || (this.__k4 = new SizedBox({
-            "height": 4
-          }))),
-          (this.__k17 || (this.__k17 = new Text({
-            "data": "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。",
-            "style": {
-              "color": Colors.grey,
-              "fontSize": 12
-            }
+              "fontWeight": FontWeight.bold,
+              "color": Colors.deepPurple
+            })
           }))),
           (this.__k6 || (this.__k6 = new SizedBox({
+            "height": 4
+          }))),
+          (this.__k19 || (this.__k19 = new Text({
+            "data": "点「重建」触发 setState：子树的 UniqueKey 每次都是新实例（身份新 → 元素不匹配），" + "整棵子树重建、内部计数归零。",
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.grey
+            })
+          }))),
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           new KeyTile({
@@ -2640,14 +2474,14 @@ export class KeyDetail {
             "label": "唯一身份行 #" + this._uniqueSeq,
             "key": new UniqueKey()
           }),
-          (this.__k6 || (this.__k6 = new SizedBox({
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           new Row({
             "children": [
               new TextButton({
                 "onPressed": this.__bindFn(3, [], (...__a) => this._bumpUnique(...__a)),
-                "child": (this.__k18 || (this.__k18 = new Text({
+                "child": (this.__k20 || (this.__k20 = new Text({
                   "data": "重建（setState 一次）"
                 })))
               })
@@ -2659,50 +2493,47 @@ export class KeyDetail {
   }
   _cardStorageKey() {
     return new Container({
-      "margin": {
-        "left": 12.0,
-        "top": 6.0,
-        "right": 12.0,
-        "bottom": 6.0
-      },
-      "padding": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
-      "decoration": {
+      "margin": (this.__k3 || (this.__k3 = EdgeInsets.fromLTRB({
+        "bottom": 6,
+        "left": 12,
+        "right": 12,
+        "top": 6
+      }))),
+      "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
+        "value": 12
+      }))),
+      "decoration": new BoxDecoration({
         "color": Colors.grey.shade100,
-        "borderRadius": {
-          "radius": 10.0
-        }
-      },
+        "borderRadius": BorderRadius.circular({
+          "radius": 10
+        })
+      }),
       "child": new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          (this.__k19 || (this.__k19 = new Text({
+          (this.__k21 || (this.__k21 = new Text({
             "data": "PageStorageKey · 滚动位置持久化",
-            "style": {
-              "color": Colors.deepPurple,
+            "style": new TextStyle({
               "fontSize": 15,
-              "fontWeight": "bold"
-            }
-          }))),
-          (this.__k4 || (this.__k4 = new SizedBox({
-            "height": 4
-          }))),
-          (this.__k20 || (this.__k20 = new Text({
-            "data": "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。",
-            "style": {
-              "color": Colors.grey,
-              "fontSize": 12
-            }
+              "fontWeight": FontWeight.bold,
+              "color": Colors.deepPurple
+            })
           }))),
           (this.__k6 || (this.__k6 = new SizedBox({
+            "height": 4
+          }))),
+          (this.__k22 || (this.__k22 = new Text({
+            "data": "把 A 列表滚到中间 → 切到 B → 切回 A：位置应回到原处。" + "值本体走值 codec（__psk），宿主造真实 PageStorageKey，位置由宿主端 PageStorage 存取。",
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.grey
+            })
+          }))),
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           this._storageView(),
-          (this.__k6 || (this.__k6 = new SizedBox({
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           new Row({
@@ -2721,96 +2552,90 @@ export class KeyDetail {
   }
   _cardGlobalKey() {
     return new Container({
-      "margin": {
-        "left": 12.0,
-        "top": 6.0,
-        "right": 12.0,
-        "bottom": 6.0
-      },
-      "padding": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
-      "decoration": {
+      "margin": (this.__k3 || (this.__k3 = EdgeInsets.fromLTRB({
+        "bottom": 6,
+        "left": 12,
+        "right": 12,
+        "top": 6
+      }))),
+      "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
+        "value": 12
+      }))),
+      "decoration": new BoxDecoration({
         "color": Colors.grey.shade100,
-        "borderRadius": {
-          "radius": 10.0
-        }
-      },
+        "borderRadius": BorderRadius.circular({
+          "radius": 10
+        })
+      }),
       "child": new Column({
         "crossAxisAlignment": "stretch",
         "children": [
-          (this.__k21 || (this.__k21 = new Text({
+          (this.__k23 || (this.__k23 = new Text({
             "data": "GlobalKey · 宿主端量测 / 定位",
-            "style": {
-              "color": Colors.deepPurple,
+            "style": new TextStyle({
               "fontSize": 15,
-              "fontWeight": "bold"
-            }
-          }))),
-          (this.__k4 || (this.__k4 = new SizedBox({
-            "height": 4
-          }))),
-          (this.__k22 || (this.__k22 = new Text({
-            "data": "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。",
-            "style": {
-              "color": Colors.grey,
-              "fontSize": 12
-            }
+              "fontWeight": FontWeight.bold,
+              "color": Colors.deepPurple
+            })
           }))),
           (this.__k6 || (this.__k6 = new SizedBox({
+            "height": 4
+          }))),
+          (this.__k24 || (this.__k24 = new Text({
+            "data": "currentContext → findRenderObject 这条链两端同形，但「值」只能在宿主算：" + "位置与尺寸经异步桥回填（box.measure()），定位用真实 RenderObject 的 showOnScreen。",
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.grey
+            })
+          }))),
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           new Container({
-            "padding": {
-              "left": 10.0,
-              "top": 10.0,
-              "right": 10.0,
-              "bottom": 10.0
-            },
-            "decoration": {
+            "padding": (this.__k25 || (this.__k25 = EdgeInsets.all({
+              "value": 10
+            }))),
+            "decoration": new BoxDecoration({
               "color": Colors.teal.shade50,
-              "borderRadius": {
-                "radius": 6.0
-              }
-            },
-            "child": (this.__k23 || (this.__k23 = new Text({
+              "borderRadius": BorderRadius.circular({
+                "radius": 6
+              })
+            }),
+            "child": (this.__k26 || (this.__k26 = new Text({
               "data": "目标盒子（GlobalKey 挂在这里）",
-              "style": {
+              "style": new TextStyle({
                 "fontSize": 13
-              }
+              })
             }))),
             "key": this._targetKey
           }),
-          (this.__k6 || (this.__k6 = new SizedBox({
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
           new Text({
-            "style": {
-              "fontSize": 13,
-              "color": Colors.teal
-            },
+            "style": (this.__k27 || (this.__k27 = new TextStyle({
+              "color": Colors.teal,
+              "fontSize": 13
+            }))),
             "data": "测量：" + this._measureText
           }),
-          (this.__k4 || (this.__k4 = new SizedBox({
+          (this.__k6 || (this.__k6 = new SizedBox({
             "height": 4
           }))),
           new Row({
             "children": [
               new TextButton({
                 "onPressed": this.__bindFn(5, [], (...__a) => this._measureTarget(...__a)),
-                "child": (this.__k24 || (this.__k24 = new Text({
+                "child": (this.__k28 || (this.__k28 = new Text({
                   "data": "测量位置与尺寸"
                 })))
               }),
-              (this.__k8 || (this.__k8 = new SizedBox({
+              (this.__k10 || (this.__k10 = new SizedBox({
                 "width": 8
               }))),
               new TextButton({
                 "onPressed": this.__bindFn(6, [], (...__a) => this._scrollToTarget(...__a)),
-                "child": (this.__k25 || (this.__k25 = new Text({
+                "child": (this.__k29 || (this.__k29 = new Text({
                   "data": "定位（showOnScreen）"
                 })))
               })
@@ -2824,7 +2649,7 @@ export class KeyDetail {
     return new Scaffold({
       "backgroundColor": Colors.grey.shade50,
       "appBar": new AppBar({
-        "title": (this.__k26 || (this.__k26 = new Text({
+        "title": (this.__k30 || (this.__k30 = new Text({
           "data": "Key 家族 · 全部用例"
         }))),
         "backgroundColor": Colors.deepPurple,
@@ -2832,27 +2657,27 @@ export class KeyDetail {
       }),
       "body": new ListView({
         "children": [
-          (this.__k27 || (this.__k27 = new Padding({
+          (this.__k31 || (this.__k31 = new Padding({
             "child": new Text({
-              "style": {
+              "style": new TextStyle({
                 "fontSize": 12,
                 "color": Colors.grey
-              },
+              }),
               "data": "每一张卡片一种 key 的语义；「计数」是 KeyTile 的内部 State，" + "用它来观察状态是跟着行走还是跟着位置走。"
             }),
-            "padding": {
-              "bottom": 0.0,
-              "left": 12.0,
-              "right": 12.0,
-              "top": 12.0
-            }
+            "padding": EdgeInsets.fromLTRB({
+              "left": 12,
+              "top": 12,
+              "right": 12,
+              "bottom": 0
+            })
           }))),
           this._cardValueKey(),
           this._cardObjectKey(),
           this._cardUniqueKey(),
           this._cardStorageKey(),
           this._cardGlobalKey(),
-          (this.__k28 || (this.__k28 = new SizedBox({
+          (this.__k32 || (this.__k32 = new SizedBox({
             "height": 24
           })))
         ]
@@ -2893,34 +2718,34 @@ export class DrawerDetail {
         "child": new ListView({
           "children": [
             new DrawerHeader({
-              "decoration": {
+              "decoration": (this.__k1 || (this.__k1 = new BoxDecoration({
                 "color": Colors.indigo
-              },
-              "child": (this.__k1 || (this.__k1 = new Align({
-                "alignment": "bottomLeft",
+              }))),
+              "child": (this.__k2 || (this.__k2 = new Align({
+                "alignment": Alignment.bottomLeft,
                 "child": new Text({
-                  "style": {
+                  "style": new TextStyle({
                     "color": Colors.white,
                     "fontSize": 20
-                  },
+                  }),
                   "data": "左侧抽屉"
                 })
               })))
             }),
             new ListTile({
-              "leading": (this.__k2 || (this.__k2 = new Icon({
+              "leading": (this.__k3 || (this.__k3 = new Icon({
                 "icon": "receipt_long"
               }))),
-              "title": (this.__k3 || (this.__k3 = new Text({
+              "title": (this.__k4 || (this.__k4 = new Text({
                 "data": "我的订单"
               }))),
               "onTap": this.__bindFn(0, [], (...__a) => this._pickOrders(...__a))
             }),
             new ListTile({
-              "leading": (this.__k4 || (this.__k4 = new Icon({
+              "leading": (this.__k5 || (this.__k5 = new Icon({
                 "icon": "favorite_border"
               }))),
-              "title": (this.__k5 || (this.__k5 = new Text({
+              "title": (this.__k6 || (this.__k6 = new Text({
                 "data": "我的收藏"
               }))),
               "onTap": this.__bindFn(1, [], (...__a) => this._pickFavorites(...__a))
@@ -2932,34 +2757,34 @@ export class DrawerDetail {
         "child": new ListView({
           "children": [
             new DrawerHeader({
-              "decoration": {
+              "decoration": (this.__k7 || (this.__k7 = new BoxDecoration({
                 "color": Colors.teal
-              },
-              "child": (this.__k6 || (this.__k6 = new Align({
-                "alignment": "bottomLeft",
+              }))),
+              "child": (this.__k8 || (this.__k8 = new Align({
+                "alignment": Alignment.bottomLeft,
                 "child": new Text({
-                  "style": {
+                  "style": new TextStyle({
                     "color": Colors.white,
                     "fontSize": 20
-                  },
+                  }),
                   "data": "右侧抽屉"
                 })
               })))
             }),
             new ListTile({
-              "leading": (this.__k7 || (this.__k7 = new Icon({
+              "leading": (this.__k9 || (this.__k9 = new Icon({
                 "icon": "settings"
               }))),
-              "title": (this.__k8 || (this.__k8 = new Text({
+              "title": (this.__k10 || (this.__k10 = new Text({
                 "data": "设置"
               }))),
               "onTap": this.__bindFn(2, [], (...__a) => this._pickSettings(...__a))
             }),
             new ListTile({
-              "leading": (this.__k9 || (this.__k9 = new Icon({
+              "leading": (this.__k11 || (this.__k11 = new Icon({
                 "icon": "help_outline"
               }))),
-              "title": (this.__k10 || (this.__k10 = new Text({
+              "title": (this.__k12 || (this.__k12 = new Text({
                 "data": "帮助与关于"
               }))),
               "onTap": this.__bindFn(3, [], (...__a) => this._pickHelp(...__a))
@@ -2971,18 +2796,18 @@ export class DrawerDetail {
         "child": new Column({
           "mainAxisAlignment": "center",
           "children": [
-            (this.__k11 || (this.__k11 = new Icon({
+            (this.__k13 || (this.__k13 = new Icon({
               "color": Colors.indigo,
               "icon": "menu_open",
               "size": 48
             }))),
-            (this.__k12 || (this.__k12 = new SizedBox({
+            (this.__k14 || (this.__k14 = new SizedBox({
               "height": 12
             }))),
-            (this.__k13 || (this.__k13 = new Text({
+            (this.__k15 || (this.__k15 = new Text({
               "data": "AppBar 左侧为汉堡按钮，右侧为 endDrawer 入口"
             }))),
-            (this.__k14 || (this.__k14 = new SizedBox({
+            (this.__k16 || (this.__k16 = new SizedBox({
               "height": 8
             }))),
             new Text({
@@ -3014,26 +2839,23 @@ export class ReorderListDetail {
       "mainAxisSize": "min",
       "children": [
         new Padding({
-          "padding": {
-            "left": 12.0,
-            "top": 12.0,
-            "right": 12.0,
-            "bottom": 12.0
-          },
+          "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+            "value": 12
+          }))),
           "child": new Row({
             "children": [
-              (this.__k0 || (this.__k0 = new Expanded({
+              (this.__k1 || (this.__k1 = new Expanded({
                 "child": new Text({
-                  "style": {
+                  "style": new TextStyle({
                     "fontSize": 13,
                     "color": Colors.grey
-                  },
+                  }),
                   "data": "长按拖拽调整顺序（onReorder 双参事件）"
                 })
               }))),
               new ElevatedButton({
                 "onPressed": this.__bindFn(0, [], (...__a) => this._add(...__a)),
-                "child": (this.__k1 || (this.__k1 = new Text({
+                "child": (this.__k2 || (this.__k2 = new Text({
                   "data": "添加"
                 })))
               })
@@ -3045,18 +2867,15 @@ export class ReorderListDetail {
           "child": ReorderableListView.builder({
             "scrollController": this._controller,
             "onReorder": this.__bindFn(1, [], (...__a) => this._onReorder(...__a)),
-            "padding": {
-              "left": 12.0,
-              "top": 0.0,
-              "right": 12.0,
-              "bottom": 0.0
-            },
+            "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
+              "horizontal": 12
+            }))),
             "itemCount": this._items.length,
             "itemBuilder": (context, index) => {
               var item = this._items[index];
               return new Card({
                 "child": new ListTile({
-                  "leading": (this.__k2 || (this.__k2 = new Icon({
+                  "leading": (this.__k4 || (this.__k4 = new Icon({
                     "icon": "drag_handle"
                   }))),
                   "title": new Text({

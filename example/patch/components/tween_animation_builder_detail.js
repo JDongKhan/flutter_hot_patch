@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/tween_animation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { ClipRRect, Colors, Column, Container, Curves, Duration, FractionallySizedBox, OutlinedButton, Row, SizedBox, Text, Tween, TweenAnimationBuilder } from '../flutter.js';
+import { Alignment, BorderRadius, ClipRRect, Colors, Column, Container, Curves, Duration, EdgeInsets, FontWeight, FractionallySizedBox, OutlinedButton, Row, SizedBox, Text, TextStyle, Tween, TweenAnimationBuilder } from '../flutter.js';
 
 // 组件 TweenAnimationBuilderDetail
 export class TweenAnimationBuilderDetail {
@@ -22,24 +22,21 @@ export class TweenAnimationBuilderDetail {
       "crossAxisAlignment": "stretch",
       "children": [
         new Container({
-          "padding": {
-            "left": 12.0,
-            "top": 12.0,
-            "right": 12.0,
-            "bottom": 12.0
-          },
+          "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+            "value": 12
+          }))),
           "color": Colors.grey.shade100,
           "child": new Column({
             "crossAxisAlignment": "stretch",
             "children": [
-              (this.__k0 || (this.__k0 = new Text({
+              (this.__k1 || (this.__k1 = new Text({
                 "data": "Tween<double>(begin: 0, end: _target) → 进度条",
-                "style": {
+                "style": new TextStyle({
                   "fontSize": 13,
-                  "fontWeight": "bold"
-                }
+                  "fontWeight": FontWeight.bold
+                })
               }))),
-              (this.__k1 || (this.__k1 = new SizedBox({
+              (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 10
               }))),
               new TweenAnimationBuilder({
@@ -57,13 +54,13 @@ export class TweenAnimationBuilderDetail {
                     "crossAxisAlignment": "stretch",
                     "children": [
                       new ClipRRect({
-                        "borderRadius": {
-                          "radius": 6.0
-                        },
+                        "borderRadius": BorderRadius.circular({
+                          "radius": 6
+                        }),
                         "child": new Container({
                           "height": 22,
                           "color": Colors.grey.shade300,
-                          "alignment": "centerLeft",
+                          "alignment": Alignment.centerLeft,
                           "child": new FractionallySizedBox({
                             "widthFactor": value,
                             "heightFactor": 1,
@@ -73,14 +70,14 @@ export class TweenAnimationBuilderDetail {
                           })
                         })
                       }),
-                      (this.__k2 || (this.__k2 = new SizedBox({
+                      (this.__k3 || (this.__k3 = new SizedBox({
                         "height": 6
                       }))),
                       new Text({
-                        "style": {
-                          "fontSize": 12,
-                          "color": Colors.black54
-                        },
+                        "style": (this.__k4 || (this.__k4 = new TextStyle({
+                          "color": Colors.black54,
+                          "fontSize": 12
+                        }))),
                         "data": "value = " + value.toStringAsFixed(3) + "   ·   onEnd 触发 " + this._ended + " 次"
                       })
                     ]
@@ -88,7 +85,7 @@ export class TweenAnimationBuilderDetail {
                 },
                 "model": "double"
               }),
-              (this.__k1 || (this.__k1 = new SizedBox({
+              (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 10
               }))),
               new Row({
@@ -97,35 +94,35 @@ export class TweenAnimationBuilderDetail {
                     "onPressed": this.__bindFn(0, [], () => this.setState(() => {
                       this._target = 0;
                     })),
-                    "child": (this.__k3 || (this.__k3 = new Text({
+                    "child": (this.__k5 || (this.__k5 = new Text({
                       "data": "→ 0"
                     })))
                   }),
-                  (this.__k4 || (this.__k4 = new SizedBox({
+                  (this.__k6 || (this.__k6 = new SizedBox({
                     "width": 8
                   }))),
                   new OutlinedButton({
                     "onPressed": this.__bindFn(1, [], () => this.setState(() => {
                       this._target = 0.4;
                     })),
-                    "child": (this.__k5 || (this.__k5 = new Text({
+                    "child": (this.__k7 || (this.__k7 = new Text({
                       "data": "→ 0.4"
                     })))
                   }),
-                  (this.__k4 || (this.__k4 = new SizedBox({
+                  (this.__k6 || (this.__k6 = new SizedBox({
                     "width": 8
                   }))),
                   new OutlinedButton({
                     "onPressed": this.__bindFn(2, [], () => this.setState(() => {
                       this._target = 1;
                     })),
-                    "child": (this.__k6 || (this.__k6 = new Text({
+                    "child": (this.__k8 || (this.__k8 = new Text({
                       "data": "→ 1"
                     })))
                   })
                 ]
               }),
-              (this.__k7 || (this.__k7 = new SizedBox({
+              (this.__k9 || (this.__k9 = new SizedBox({
                 "height": 4
               }))),
               new Row({
@@ -134,22 +131,22 @@ export class TweenAnimationBuilderDetail {
                     "onPressed": this.__bindFn(3, [], () => this.setState(() => {
                       this._ms = 300;
                     })),
-                    "child": (this.__k8 || (this.__k8 = new Text({
+                    "child": (this.__k10 || (this.__k10 = new Text({
                       "data": "300ms"
                     })))
                   }),
-                  (this.__k4 || (this.__k4 = new SizedBox({
+                  (this.__k6 || (this.__k6 = new SizedBox({
                     "width": 8
                   }))),
                   new OutlinedButton({
                     "onPressed": this.__bindFn(4, [], () => this.setState(() => {
                       this._ms = 1500;
                     })),
-                    "child": (this.__k9 || (this.__k9 = new Text({
+                    "child": (this.__k11 || (this.__k11 = new Text({
                       "data": "1500ms"
                     })))
                   }),
-                  (this.__k4 || (this.__k4 = new SizedBox({
+                  (this.__k6 || (this.__k6 = new SizedBox({
                     "width": 8
                   }))),
                   new OutlinedButton({

@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/dismissible_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Colors, Column, Container, DismissDirection, Dismissible, Icon, ListTile, OutlinedButton, SizedBox, Text, ValueKey } from '../flutter.js';
+import { Align, Alignment, Colors, Column, Container, DismissDirection, Dismissible, EdgeInsets, FontWeight, Icon, ListTile, OutlinedButton, SizedBox, Text, TextStyle, ValueKey } from '../flutter.js';
 
 // 组件 DismissibleDetail
 export class DismissibleDetail {
@@ -23,19 +23,19 @@ export class DismissibleDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Dismissible",
-          "style": {
-            "fontWeight": "bold"
-          }
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 4
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "左滑删除；右滑被 confirmDismiss 拒绝后弹回",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12
@@ -45,28 +45,22 @@ export class DismissibleDetail {
                 "confirmDismiss": this.__bindFn(0, [], (...__a) => this._confirm(...__a)),
                 "background": new Container({
                   "color": Colors.red,
-                  "alignment": "centerLeft",
-                  "padding": {
-                    "left": 20.0,
-                    "top": 0.0,
-                    "right": 20.0,
-                    "bottom": 0.0
-                  },
-                  "child": (this.__k4 || (this.__k4 = new Icon({
+                  "alignment": Alignment.centerLeft,
+                  "padding": (this.__k4 || (this.__k4 = EdgeInsets.symmetric({
+                    "horizontal": 20
+                  }))),
+                  "child": (this.__k5 || (this.__k5 = new Icon({
                     "color": Colors.white,
                     "icon": "delete_outline"
                   })))
                 }),
                 "secondaryBackground": new Container({
                   "color": Colors.blueGrey,
-                  "alignment": "centerRight",
-                  "padding": {
-                    "left": 20.0,
-                    "top": 0.0,
-                    "right": 20.0,
-                    "bottom": 0.0
-                  },
-                  "child": (this.__k5 || (this.__k5 = new Icon({
+                  "alignment": Alignment.centerRight,
+                  "padding": (this.__k4 || (this.__k4 = EdgeInsets.symmetric({
+                    "horizontal": 20
+                  }))),
+                  "child": (this.__k6 || (this.__k6 = new Icon({
                     "color": Colors.white,
                     "icon": "block"
                   })))
@@ -86,20 +80,20 @@ export class DismissibleDetail {
           "height": 12
         }))),
         new Text({
-          "style": {
-            "fontSize": 12,
-            "color": Colors.black54
-          },
+          "style": (this.__k7 || (this.__k7 = new TextStyle({
+            "color": Colors.black54,
+            "fontSize": 12
+          }))),
           "data": this._last
         }),
-        (this.__k6 || (this.__k6 = new SizedBox({
+        (this.__k8 || (this.__k8 = new SizedBox({
           "height": 8
         }))),
         new Align({
-          "alignment": "centerLeft",
+          "alignment": Alignment.centerLeft,
           "child": new OutlinedButton({
             "onPressed": this.__bindFn(2, [], (...__a) => this._reset(...__a)),
-            "child": (this.__k7 || (this.__k7 = new Text({
+            "child": (this.__k9 || (this.__k9 = new Text({
               "data": "重置"
             })))
           })

@@ -47,8 +47,14 @@
 /// | 【9】 | 调度（`markDirty` → `flush` 批处理） | mini-react |
 /// | 【10】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
 /// | 【11】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
-/// | 【11.5】 | 跨模块核心符号（`G.__core`，供 flutter.js 值类区解构） | 跨模块约定 |
-/// | 【13】【21】【23】【25】~【27.6】 | Dart 异常 / BuildContext 代理 / provider / 泄漏观测 / 缓存追踪 / Dismissible / extension / 命令式弹层 | 按能力自洽 |
+/// | 【11.5】 | 跨模块核心符号（`G.__core`，供 flutter.js 值类区与能力模块解构） | 跨模块约定 |
+/// | 【13】【21】【25】~【27.5】 | Dart 异常 / BuildContext 代理 / 泄漏观测 / 缓存追踪 / Dismissible / extension | 按能力自洽 |
+///
+/// **三方库与 Flutter SDK 的 API 面不在本文件**：provider 的 `context.watch/read`
+/// 与作用域声明在它自己的包模块 `patch/provider.js`（生成器
+/// `provider_module_js.dart`）；`showDialog` 系列与弹层面板机制在
+/// `patch/flutter.js`（生成器 `dialogs_js.dart` / `navigator_js.dart`）。
+/// 本文件只提供它们要用的通用机制（作用域 / 代理 / 独立根挂载），经 `G.__core` 交接。
 ///
 /// **值类区不在本文件**：`Duration` / `Size` / `Offset` / `Color` /
 /// `ChangeNotifier` / 各 Controller / `Key` / 动画等「Dart 值对象与控制器镜像」
@@ -71,8 +77,6 @@ import 'handle_registry_js.dart';
 import 'js_extension_js.dart';
 import 'key_sig_js.dart';
 import 'mini_react_js.dart';
-import 'portal_js.dart';
-import 'provider_js.dart';
 import 'state_handle_js.dart';
 
 
@@ -680,16 +684,22 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
     // （setState 只标脏，见【9】markDirty / requestFlush）。
     flushPending: flushPending,
-    // 命令式弹层（showDialog 系列）：宿主在路由内容首帧后挂载独立根，路由
-    // 关闭后回落本端卸载（见【27.6】portal_js）。
-    panelMount: panelMount,
-    panelClosed: panelClosed,
+    // `panelMount` / `panelClosed` 不在这里：命令式弹层的独立根归 flutter.js
+    // （见 dialogs_js.dart），该模块求值时把两个入口装到 `__jsui` 上。
 ''';
 
-/// 跨模块核心符号导出面：值类区（flutter.js）运行在独立 ES module 作用域，
-/// 与 runtime 的 IIFE 不共享词法环境。原型补丁、控制器注册、句柄表仍由
-/// runtime 拥有，此处一次性挂到 G，flutter.js 顶部解构取用——与 `__jsui` /
-/// `__modules` 同一约定：**跨模块只走 G**，不假设同一作用域。
+/// 跨模块核心符号导出面：值类区与能力模块（`flutter.js` / `capabilities/*.js`）
+/// 运行在独立模块作用域，与 runtime 的 IIFE 不共享词法环境。原型补丁、控制器
+/// 注册、句柄表、reconciler 仍由 runtime 拥有，此处一次性挂到 G，模块顶部解构
+/// 取用——与 `__jsui` / `__modules` 同一约定：**跨模块只走 G**，不假设同一作用域。
+///
+/// 交接的是**通用机制**，不含任何能力语义：作用域查找、BuildContext 代理、
+/// 独立根的挂载/卸载、宿主桥。具体用法（provider 的作用域声明、
+/// showDialog 的面板策略）在各自模块里。
+///
+/// **可变状态用访问器**：`building` / `activeRoot` 是核心闭包里的 var，直接
+/// 取值会把当时的快照带进模块（之后永不更新）。故都以 getter（`activeRoot`
+/// 另加 setter）暴露，按属性实时读写。
 const String _jsUiCrossModuleExports = r'''
   G.__core = {
     defineProtoGetter: __defineProtoGetter,
@@ -697,10 +707,28 @@ const String _jsUiCrossModuleExports = r'''
     defineHandleKind: defineHandleKind,
     handleOp: handleOp,
     reg: reg,
-    // 弹层路由的 JS 侧落点（flutter.js 的 Navigator 值类用；portal 在
-    // 【27.6】，函数声明提升，此处引用安全）。
-    panelPop: panelPop,
-    panelOf: panelOf
+    // 作用域机制（provider 在自己的模块 patch/provider.js 里注册作用域）。
+    registerScope: registerScope,
+    scopeOf: scopeOf,
+    subscribeListenable: subscribeListenable,
+    // 结点归属与独立根（showDialog 系列的面板机制在 flutter.js）。
+    contextOf: contextOf,
+    asElement: asElement,
+    hostIdOf: hostIdOf,
+    newRoot: newRoot,
+    mount: mount,
+    unmount: unmount,
+    commit: commit,
+    emit: emit,
+    flushNow: flushNow,
+    abortRoot: abortRoot,
+    releasePageHandles: releasePageHandles,
+    host: host,
+    roots: roots,
+    get building() { return building; },
+    get activeRoot() { return activeRoot; },
+    set activeRoot(v) { activeRoot = v; },
+    get JsBuildContext() { return JsBuildContext; }
   };
 ''';
 
@@ -732,7 +760,7 @@ const String _jsUiRuntimeSkeletonTailEnd = r'''
 /// 标志先行注入）。因此任何 JS 侧修复都只需重出产物，无需发版。
 ///
 /// 所有片段在**同一 IIFE 作用域**，片段间靠函数提升 / 后声明互相引用，与拆分前
-/// 语义一致。拼接顺序 = 核心骨架（【2】~【11.7】）→ 能力片段（【13】~【27.6】），
+/// 语义一致。拼接顺序 = 核心骨架（【2】~【11.7】）→ 能力片段（【13】~【27.5】），
 /// 后面的片段可直接引用前面已执行的内容。值类区不在这里（见 `flutter.js`）。
 ///
 /// 产物体积较大，**每个分区都以 `// ===== 【n】标题 =====` 注释隔开**，便于
@@ -761,10 +789,10 @@ String runtimeJsSource() {
     _section('【11.7】Key 签名（keySig / objectToken）', keySigJsSource),
     // 各能力片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
     _section('【13】Dart 异常（StateError / ArgumentError / …）', dartErrorsJsSource),
-    // BuildContext 代理留在核心侧：provider（§23）与 showDialog（§27.6）在
-    // 片段顶层就给它的原型补方法，二者必须同一作用域、同序求值。
+    // BuildContext 代理留在核心侧（机制：代理 / 句柄 / 通用 op 转发）。它的
+    // 库级 API（provider 的 watch/read）由 patch/provider.js 在求值时补到原型上
+    // （同一全局对象，不要求同一作用域）。
     _section('【21】BuildContext 代理', buildContextJsSource),
-    _section('【23】provider', providerJsSource),
     // 泄漏观测：无条件拼入（构建期不知道 App 是 debug 还是 release）。
     // 宿主侧调用点仍由 kDebugMode 门控，release 下这些函数不会被调用，
     // 只占体积、不影响行为。
@@ -778,10 +806,6 @@ String runtimeJsSource() {
     // Dart extension 注册机制：生成器在扩展声明处发射 `__jsExtension(...)`，
     // 原型成员随产物注册（调用点与 Dart 一对一，无名字映射）。
     _section('【27.5】Dart extension 注册（__jsExtension）', jsExtensionJsSource),
-    // 命令式弹层（showDialog 系列）：独立根（`G.showDialog` 注入；`Navigator`
-    // 值类在 flutter.js，经 `G.__core` 取这里的 panelPop / panelOf）。
-    // 依赖 reconciler / 根表 / BuildContext 代理，故排在骨架之后收尾之前。
-    _section('【27.6】命令式弹层（showDialog 系列）', portalJsSource),
     _section('【28】api 收尾', _jsUiRuntimeSkeletonTailHead),
     _jsUiLeakApiMember,
     _jsUiRuntimeSkeletonTailEnd,

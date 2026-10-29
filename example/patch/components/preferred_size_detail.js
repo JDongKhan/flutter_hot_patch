@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/preferred_size_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Container, ListView, PreferredSize, SafeArea, Scaffold, Size, SizedBox, Slider, Text } from '../flutter.js';
+import { Alignment, Colors, Container, EdgeInsets, FontWeight, ListView, PreferredSize, SafeArea, Scaffold, Size, SizedBox, Slider, Text, TextStyle } from '../flutter.js';
 
 // 组件 PreferredSizeDetail
 export class PreferredSizeDetail {
@@ -20,55 +20,49 @@ export class PreferredSizeDetail {
         "child": new Container({
           "height": this._height,
           "color": Colors.deepPurple,
-          "alignment": "centerLeft",
-          "padding": {
-            "left": 16.0,
-            "top": 0.0,
-            "right": 16.0,
-            "bottom": 0.0
-          },
+          "alignment": Alignment.centerLeft,
+          "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
+            "horizontal": 16
+          }))),
           "child": new SafeArea({
             "child": new Text({
-              "style": {
+              "style": (this.__k1 || (this.__k1 = new TextStyle({
                 "color": Colors.white,
                 "fontSize": 16
-              },
+              }))),
               "data": "自定义顶栏 · 高度 " + label
             })
           })
         })
       }),
       "body": new ListView({
-        "padding": {
-          "left": 16.0,
-          "top": 16.0,
-          "right": 16.0,
-          "bottom": 16.0
-        },
+        "padding": (this.__k2 || (this.__k2 = EdgeInsets.all({
+          "value": 16
+        }))),
         "children": [
-          (this.__k0 || (this.__k0 = new Text({
+          (this.__k3 || (this.__k3 = new Text({
             "data": "PreferredSize",
-            "style": {
-              "fontWeight": "bold"
-            }
+            "style": new TextStyle({
+              "fontWeight": FontWeight.bold
+            })
           }))),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k4 || (this.__k4 = new SizedBox({
             "height": 4
           }))),
-          (this.__k2 || (this.__k2 = new Text({
+          (this.__k5 || (this.__k5 = new Text({
             "data": "Scaffold.appBar 只接受 PreferredSizeWidget；preferredSize 是**最大高度上限**，容器自身也要占满该高度。拖滑块，顶栏高度随之变化。",
-            "style": {
-              "color": Colors.black54,
-              "fontSize": 12
-            }
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.black54
+            })
           }))),
-          (this.__k3 || (this.__k3 = new SizedBox({
+          (this.__k6 || (this.__k6 = new SizedBox({
             "height": 12
           }))),
           new Text({
-            "style": {
+            "style": (this.__k7 || (this.__k7 = new TextStyle({
               "fontSize": 12
-            },
+            }))),
             "data": "preferredSize: Size(∞, " + label + ")"
           }),
           new Slider({
@@ -81,15 +75,15 @@ export class PreferredSizeDetail {
               this._height = v;
             }))
           }),
-          (this.__k4 || (this.__k4 = new SizedBox({
+          (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8
           }))),
-          (this.__k5 || (this.__k5 = new Text({
+          (this.__k9 || (this.__k9 = new Text({
             "data": "① 高度 40~120 之间变化；② 内容区始终紧贴顶栏下方（Scaffold 按 preferredSize.height 占位）。",
-            "style": {
-              "color": Colors.black54,
-              "fontSize": 12
-            }
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.black54
+            })
           })))
         ]
       })

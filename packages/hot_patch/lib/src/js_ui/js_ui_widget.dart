@@ -165,6 +165,18 @@ class JsUiWidgetState extends State<JsUiWidget> {
         localRoot = bundle.localRoot;
       }
       _entryJsAsset = entry;
+      // 运行时就绪 → 内建能力模块（如 patch/provider.js 的作用域声明与
+      // context.watch/read 原型补丁）→ 入口模块。顺序是硬约束：能力模块必须在
+      // 任何组件 build 之前求值；且必须在 [loadModule] 之外单独加载（能力模块
+      // 普遍 import flutter.js，混在模块加载内部会自等 → 死锁）。
+      await _manager.ensureJsUiRuntime(
+        localRoot: localRoot,
+        moduleAsset: _entryJsAsset,
+      );
+      await _manager.loadCapabilityModules(
+        localRoot: localRoot,
+        moduleAsset: _entryJsAsset,
+      );
       await _manager.loadModule(_entryJsAsset, localRoot: localRoot);
       // 模块加载**汇总成一条**：连带依赖常有几十个（model/xxx.js、flutter.js…），
       // 逐条打印会把进入页面的日志刷满。顺序即加载顺序（依赖先于自身）。
@@ -336,7 +348,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
 ///   - [JsUiWidget] 自己按 URL 加载补丁并 `mount`；
 ///   - 本类用于 JS 侧命令式弹层（`showDialog` 系列）：builder 在 JS 端已执行
 ///     完毕，元素树要在本 widget 首帧之后才挂到 JS 侧独立 root 上（见
-///     builders/runtime/js/portal_js.dart 的 panelMount）。**首帧之后**是硬约束：
+///     builders/runtime/js/dialogs_js.dart 的 panelMount）。**首帧之后**是硬约束：
 ///     `jsuiPanelOpen` 的宿主处理器运行在 JS 求值期内，此刻再回调 JS 会重入引擎。
 ///
 /// 本类不做任何弹层判断：它只认「一份 store + 一个 pageKey」，页面/弹层/任何

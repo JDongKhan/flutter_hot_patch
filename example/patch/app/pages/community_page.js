@@ -7,7 +7,7 @@ import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { kBrand } from 'detail_pages.js';
-import { Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, Expanded, GestureDetector, Icon, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, Wrap } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextStyle, Wrap } from '../../flutter.js';
 
 // 组件 CommunityPage
 export class CommunityPage {
@@ -80,58 +80,64 @@ export class CommunityPage {
           "child": new SafeArea({
             "bottom": false,
             "child": new Padding({
-              "padding": {
-                "left": 12.0,
-                "top": 4.0,
-                "right": 12.0,
-                "bottom": 10.0
-              },
+              "padding": (this.__k1 || (this.__k1 = EdgeInsets.fromLTRB({
+                "bottom": 10,
+                "left": 12,
+                "right": 12,
+                "top": 4
+              }))),
               "child": new Row({
                 "children": [
                   ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [new Padding({
-                          "padding": {
-                            "left": 0.0,
-                            "top": 0.0,
-                            "right": 8.0,
-                            "bottom": 0.0
-                          },
+                          "padding": (this.__k2 || (this.__k2 = EdgeInsets.only({
+                            "right": 8
+                          }))),
                           "child": new GestureDetector({
                             "onTap": this.__bindFn(0, [t], () => this._selectTab(t)),
                             "child": new Container({
-                              "padding": {
-                                "left": 15.0,
-                                "top": 6.0,
-                                "right": 15.0,
-                                "bottom": 6.0
-                              },
-                              "decoration": {
-                                "color": ((this._tab == t) ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
-                                "borderRadius": {
-                                  "radius": 15.0
-                                }
-                              },
+                              "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
+                                "horizontal": 15,
+                                "vertical": 6
+                              }))),
+                              "decoration": new BoxDecoration({
+                                "color": (this._tab == t) ? (this.__k4 || (this.__k4 = new Color({
+                                  "value": 0xFFE8F2FF
+                                }))) : (this.__k5 || (this.__k5 = new Color({
+                                  "value": 0xFFF3F5F8
+                                }))),
+                                "borderRadius": BorderRadius.circular({
+                                  "radius": 15
+                                })
+                              }),
                               "child": new Text({
-                                "style": {
+                                "style": new TextStyle({
                                   "fontSize": 13.5,
-                                  "color": ((this._tab == t) ? kBrand : new Color({value: 0xFF5C6270}))
-                                },
+                                  "fontWeight": (this._tab == t) ? FontWeight.w700 : FontWeight.w500,
+                                  "color": (this._tab == t) ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                                    "value": 0xFF5C6270
+                                  })))
+                                }),
                                 "data": t
                               })
                             })
                           })
                         })]); } return out; })(),
-                  (this.__k1 || (this.__k1 = new Spacer({}))),
+                  (this.__k7 || (this.__k7 = new Spacer({}))),
                   new GestureDetector({
                     "onTap": this.__bindFn(1, [], () => _app_host_.invoke("toast", ["发布新动态（演示）"])),
                     "child": new Container({
                       "width": 32,
                       "height": 32,
-                      "decoration": {
-                        "color": new Color({value: 0xFFF3F5F8}),
+                      "decoration": (this.__k8 || (this.__k8 = new BoxDecoration({
+                        "color": new Color({
+                          "value": 0xFFF3F5F8
+                        }),
                         "shape": "circle"
-                      },
-                      "child": (this.__k2 || (this.__k2 = new Icon({
-                        "color": new Color({value: 0xFF5C6270}),
+                      }))),
+                      "child": (this.__k9 || (this.__k9 = new Icon({
+                        "color": new Color({
+                          "value": 0xFF5C6270
+                        }),
                         "icon": "edit",
                         "size": 16
                       })))
@@ -142,21 +148,18 @@ export class CommunityPage {
             })
           })
         }),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k10 || (this.__k10 = new SizedBox({
           "height": 10
         }))),
         new SizedBox({
           "height": 116,
           "child": ListView.separated({
             "scrollDirection": "horizontal",
-            "padding": {
-              "left": 12.0,
-              "top": 0.0,
-              "right": 12.0,
-              "bottom": 0.0
-            },
+            "padding": (this.__k11 || (this.__k11 = EdgeInsets.symmetric({
+              "horizontal": 12
+            }))),
             "itemCount": this._resources.length,
-            "separatorBuilder": (context, index) => (this.__k4 || (this.__k4 = new SizedBox({
+            "separatorBuilder": (context, index) => (this.__k12 || (this.__k12 = new SizedBox({
               "width": 10
             }))),
             "itemBuilder": (context, i) => new _ResourceCard({
@@ -165,83 +168,91 @@ export class CommunityPage {
             })
           })
         }),
-        (this.__k5 || (this.__k5 = new SizedBox({
+        (this.__k13 || (this.__k13 = new SizedBox({
           "height": 12
         }))),
         new Container({
           "color": Colors.white,
-          "padding": {
-            "left": 12.0,
-            "top": 8.0,
-            "right": 12.0,
-            "bottom": 8.0
-          },
+          "padding": (this.__k14 || (this.__k14 = EdgeInsets.fromLTRB({
+            "bottom": 8,
+            "left": 12,
+            "right": 12,
+            "top": 8
+          }))),
           "child": new Row({
             "children": [
               ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [new Padding({
-                      "padding": {
-                        "left": 0.0,
-                        "top": 0.0,
-                        "right": 6.0,
-                        "bottom": 0.0
-                      },
+                      "padding": (this.__k15 || (this.__k15 = EdgeInsets.only({
+                        "right": 6
+                      }))),
                       "child": new GestureDetector({
                         "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)),
                         "child": new Container({
-                          "padding": {
-                            "left": 12.0,
-                            "top": 5.0,
-                            "right": 12.0,
-                            "bottom": 5.0
-                          },
-                          "decoration": {
-                            "color": ((this._sort == s) ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
-                            "borderRadius": {
-                              "radius": 14.0
-                            }
-                          },
+                          "padding": (this.__k16 || (this.__k16 = EdgeInsets.symmetric({
+                            "horizontal": 12,
+                            "vertical": 5
+                          }))),
+                          "decoration": new BoxDecoration({
+                            "color": (this._sort == s) ? (this.__k4 || (this.__k4 = new Color({
+                              "value": 0xFFE8F2FF
+                            }))) : (this.__k5 || (this.__k5 = new Color({
+                              "value": 0xFFF3F5F8
+                            }))),
+                            "borderRadius": BorderRadius.circular({
+                              "radius": 14
+                            })
+                          }),
                           "child": new Text({
-                            "style": {
+                            "style": new TextStyle({
                               "fontSize": 12.5,
-                              "color": ((this._sort == s) ? kBrand : new Color({value: 0xFF5C6270}))
-                            },
+                              "fontWeight": (this._sort == s) ? FontWeight.w700 : FontWeight.w500,
+                              "color": (this._sort == s) ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                                "value": 0xFF5C6270
+                              })))
+                            }),
                             "data": s
                           })
                         })
                       })
                     })]); } return out; })(),
-              (this.__k1 || (this.__k1 = new Spacer({}))),
+              (this.__k7 || (this.__k7 = new Spacer({}))),
               new GestureDetector({
                 "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a)),
                 "child": new Container({
-                  "padding": {
-                    "left": 11.0,
-                    "top": 5.0,
-                    "right": 11.0,
-                    "bottom": 5.0
-                  },
-                  "decoration": {
-                    "color": (this._filterOpen ? new Color({value: 0xFFE8F2FF}) : new Color({value: 0xFFF3F5F8})),
-                    "borderRadius": {
-                      "radius": 14.0
-                    }
-                  },
+                  "padding": (this.__k17 || (this.__k17 = EdgeInsets.symmetric({
+                    "horizontal": 11,
+                    "vertical": 5
+                  }))),
+                  "decoration": new BoxDecoration({
+                    "color": this._filterOpen ? (this.__k4 || (this.__k4 = new Color({
+                      "value": 0xFFE8F2FF
+                    }))) : (this.__k5 || (this.__k5 = new Color({
+                      "value": 0xFFF3F5F8
+                    }))),
+                    "borderRadius": BorderRadius.circular({
+                      "radius": 14
+                    })
+                  }),
                   "child": new Row({
                     "children": [
                       new Text({
-                        "style": {
+                        "style": new TextStyle({
                           "fontSize": 12.5,
-                          "fontWeight": "w600",
-                          "color": (this._filterOpen ? kBrand : new Color({value: 0xFF5C6270}))
-                        },
+                          "fontWeight": FontWeight.w600,
+                          "color": this._filterOpen ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                            "value": 0xFF5C6270
+                          })))
+                        }),
                         "data": "筛选"
                       }),
-                      (this.__k6 || (this.__k6 = new SizedBox({
+                      (this.__k18 || (this.__k18 = new SizedBox({
                         "width": 3
                       }))),
                       new Icon({
                         "size": 14,
-                        "color": this._filterOpen ? kBrand : new Color({value: 0xFF5C6270}),
+                        "color": this._filterOpen ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                          "value": 0xFF5C6270
+                        }))),
                         "icon": "tune"
                       })
                     ]
@@ -251,7 +262,7 @@ export class CommunityPage {
             ]
           })
         }),
-        ...(this._listLoading ? [(this.__k7 || (this.__k7 = new LinearProgressIndicator({
+        ...(this._listLoading ? [(this.__k19 || (this.__k19 = new LinearProgressIndicator({
             "minHeight": 2
           })))] : []),
         new Expanded({
@@ -311,36 +322,32 @@ export class _ListContent {
     return new Stack({
       "children": [
         new ListView({
-          "padding": {
-            "left": 0.0,
-            "top": 0.0,
-            "right": 0.0,
-            "bottom": 20.0
-          },
+          "padding": (this.__k0 || (this.__k0 = EdgeInsets.only({
+            "bottom": 20
+          }))),
           "children": [
-            ...(this.list.isEmpty ? [(this.__k0 || (this.__k0 = new Padding({
+            ...(this.list.isEmpty ? [(this.__k1 || (this.__k1 = new Padding({
                 "child": new Center({
                   "child": new Text({
-                    "style": {
+                    "style": new TextStyle({
                       "fontSize": 13,
-                      "color": new Color({value: 0xFF98A0AC})
-                    },
+                      "color": new Color({
+                        "value": 0xFF98A0AC
+                      })
+                    }),
                     "data": "没有符合条件的帖子，试试放宽筛选条件"
                   })
                 }),
-                "padding": {
-                  "bottom": 60.0,
-                  "left": 0.0,
-                  "right": 0.0,
-                  "top": 60.0
-                }
+                "padding": EdgeInsets.symmetric({
+                  "vertical": 60
+                })
               })))] : (() => { var out = []; for (let p of this.list) { out.push.apply(out, [new Padding({
-                    "padding": {
-                      "left": 12.0,
-                      "top": 0.0,
-                      "right": 12.0,
-                      "bottom": 10.0
-                    },
+                    "padding": (this.__k2 || (this.__k2 = EdgeInsets.fromLTRB({
+                      "bottom": 10,
+                      "left": 12,
+                      "right": 12,
+                      "top": 0
+                    }))),
                     "child": new _PostCard({
                       "post": p,
                       "onTap": () => { return _app_host_.invoke("openPost", [p.id]); }
@@ -352,7 +359,9 @@ export class _ListContent {
             "child": new GestureDetector({
               "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)),
               "child": new Container({
-                "color": new Color({value: 0x66000000})
+                "color": (this.__k3 || (this.__k3 = new Color({
+                  "value": 0x66000000
+                })))
               })
             }),
             "factory": "fill"
@@ -415,18 +424,17 @@ export class _FilterPanel {
       "crossAxisAlignment": "start",
       "children": [
         new Padding({
-          "padding": {
-            "left": 0.0,
-            "top": 0.0,
-            "right": 0.0,
-            "bottom": 8.0
-          },
+          "padding": (this.__k0 || (this.__k0 = EdgeInsets.only({
+            "bottom": 8
+          }))),
           "child": new Text({
-            "style": {
+            "style": (this.__k1 || (this.__k1 = new TextStyle({
+              "color": new Color({
+                "value": 0xFF171A21
+              }),
               "fontSize": 12.5,
-              "fontWeight": "w700",
-              "color": new Color({value: 0xFF171A21})
-            },
+              "fontWeight": FontWeight.w700
+            }))),
             "data": title
           })
         }),
@@ -437,24 +445,26 @@ export class _FilterPanel {
             ...(() => { var out = []; for (let v of values) { out.push.apply(out, [new GestureDetector({
                     "onTap": this.__bindFn(0, [key, v], () => this.onPick(key, v)),
                     "child": new Container({
-                      "padding": {
-                        "left": 13.0,
-                        "top": 6.0,
-                        "right": 13.0,
-                        "bottom": 6.0
-                      },
-                      "decoration": {
-                        "color": ((current == v) ? kBrand : new Color({value: 0xFFF3F5F8})),
-                        "borderRadius": {
-                          "radius": 14.0
-                        }
-                      },
+                      "padding": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
+                        "horizontal": 13,
+                        "vertical": 6
+                      }))),
+                      "decoration": new BoxDecoration({
+                        "color": (current == v) ? kBrand : (this.__k3 || (this.__k3 = new Color({
+                          "value": 0xFFF3F5F8
+                        }))),
+                        "borderRadius": BorderRadius.circular({
+                          "radius": 14
+                        })
+                      }),
                       "child": new Text({
-                        "style": {
+                        "style": new TextStyle({
                           "fontSize": 12,
-                          "fontWeight": "w500",
-                          "color": ((current == v) ? Colors.white : new Color({value: 0xFF5C6270}))
-                        },
+                          "fontWeight": FontWeight.w500,
+                          "color": (current == v) ? Colors.white : (this.__k4 || (this.__k4 = new Color({
+                            "value": 0xFF5C6270
+                          })))
+                        }),
                         "data": v
                       })
                     })
@@ -469,29 +479,29 @@ export class _FilterPanel {
       "color": Colors.white,
       "elevation": 8,
       "child": new Padding({
-        "padding": {
-          "left": 16.0,
-          "top": 16.0,
-          "right": 16.0,
-          "bottom": 14.0
-        },
+        "padding": (this.__k5 || (this.__k5 = EdgeInsets.fromLTRB({
+          "bottom": 14,
+          "left": 16,
+          "right": 16,
+          "top": 16
+        }))),
         "child": new Column({
           "crossAxisAlignment": "start",
           "children": [
             this._group("排序方式", "sort", this.feed.sorts, this.sort),
-            (this.__k0 || (this.__k0 = new SizedBox({
+            (this.__k6 || (this.__k6 = new SizedBox({
               "height": 16
             }))),
             this._group("内容类型", "type", this.feed.postTypes, this.type),
-            (this.__k0 || (this.__k0 = new SizedBox({
+            (this.__k6 || (this.__k6 = new SizedBox({
               "height": 16
             }))),
             this._group("距离范围", "dist", this.feed.dists, this.dist),
-            (this.__k0 || (this.__k0 = new SizedBox({
+            (this.__k6 || (this.__k6 = new SizedBox({
               "height": 16
             }))),
             this._group("价格区间", "price", this.feed.priceRanges, this.price),
-            (this.__k1 || (this.__k1 = new SizedBox({
+            (this.__k7 || (this.__k7 = new SizedBox({
               "height": 18
             }))),
             new Row({
@@ -501,25 +511,29 @@ export class _FilterPanel {
                     "onTap": this.__bindFn(1, [], (...__a) => this.onReset(...__a)),
                     "child": new Container({
                       "height": 42,
-                      "alignment": "center",
-                      "decoration": {
-                        "color": new Color({value: 0xFFF3F5F8}),
-                        "borderRadius": {
-                          "radius": 21.0
-                        }
-                      },
-                      "child": (this.__k2 || (this.__k2 = new Text({
+                      "alignment": Alignment.center,
+                      "decoration": new BoxDecoration({
+                        "color": (this.__k3 || (this.__k3 = new Color({
+                          "value": 0xFFF3F5F8
+                        }))),
+                        "borderRadius": BorderRadius.circular({
+                          "radius": 21
+                        })
+                      }),
+                      "child": (this.__k8 || (this.__k8 = new Text({
                         "data": "重置",
-                        "style": {
-                          "color": new Color({value: 0xFF5C6270}),
+                        "style": new TextStyle({
                           "fontSize": 14,
-                          "fontWeight": "w600"
-                        }
+                          "fontWeight": FontWeight.w600,
+                          "color": new Color({
+                            "value": 0xFF5C6270
+                          })
+                        })
                       })))
                     })
                   })
                 }),
-                (this.__k3 || (this.__k3 = new SizedBox({
+                (this.__k9 || (this.__k9 = new SizedBox({
                   "width": 10
                 }))),
                 new Expanded({
@@ -527,20 +541,20 @@ export class _FilterPanel {
                     "onTap": this.__bindFn(2, [], (...__a) => this.onApply(...__a)),
                     "child": new Container({
                       "height": 42,
-                      "alignment": "center",
-                      "decoration": {
+                      "alignment": Alignment.center,
+                      "decoration": new BoxDecoration({
                         "color": kBrand,
-                        "borderRadius": {
-                          "radius": 21.0
-                        }
-                      },
-                      "child": (this.__k4 || (this.__k4 = new Text({
+                        "borderRadius": BorderRadius.circular({
+                          "radius": 21
+                        })
+                      }),
+                      "child": (this.__k10 || (this.__k10 = new Text({
                         "data": "查看结果",
-                        "style": {
-                          "color": Colors.white,
+                        "style": new TextStyle({
                           "fontSize": 14,
-                          "fontWeight": "w600"
-                        }
+                          "fontWeight": FontWeight.w600,
+                          "color": Colors.white
+                        })
                       })))
                     })
                   })
@@ -571,25 +585,22 @@ export class _PostCard {
     return new GestureDetector({
       "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
       "child": new Container({
-        "padding": {
-          "left": 10.0,
-          "top": 10.0,
-          "right": 10.0,
-          "bottom": 10.0
-        },
-        "decoration": {
+        "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+          "value": 10
+        }))),
+        "decoration": new BoxDecoration({
           "color": Colors.white,
-          "borderRadius": {
-            "radius": 14.0
-          }
-        },
+          "borderRadius": BorderRadius.circular({
+            "radius": 14
+          })
+        }),
         "child": new Row({
           "crossAxisAlignment": "start",
           "children": [
             new ClipRRect({
-              "borderRadius": {
-                "radius": 10.0
-              },
+              "borderRadius": BorderRadius.circular({
+                "radius": 10
+              }),
               "child": Image.asset({
                 "width": 92,
                 "height": 92,
@@ -597,12 +608,14 @@ export class _PostCard {
                 "errorBuilder": (context, e, s) => new Container({
                   "width": 92,
                   "height": 92,
-                  "color": new Color({value: 0xFFE8EBF0})
+                  "color": (this.__k1 || (this.__k1 = new Color({
+                    "value": 0xFFE8EBF0
+                  })))
                 }),
                 "name": this.post.img
               })
             }),
-            (this.__k0 || (this.__k0 = new SizedBox({
+            (this.__k2 || (this.__k2 = new SizedBox({
               "width": 11
             }))),
             new Expanded({
@@ -614,74 +627,84 @@ export class _PostCard {
                     new Text({
                       "maxLines": 1,
                       "overflow": "ellipsis",
-                      "style": {
+                      "style": (this.__k3 || (this.__k3 = new TextStyle({
                         "fontSize": 14.5,
-                        "fontWeight": "w600"
-                      },
+                        "fontWeight": FontWeight.w600
+                      }))),
                       "data": this.post.title
                     }),
-                    (this.__k1 || (this.__k1 = new SizedBox({
+                    (this.__k4 || (this.__k4 = new SizedBox({
                       "height": 5
                     }))),
                     new Expanded({
                       "child": new Text({
                         "maxLines": 2,
                         "overflow": "ellipsis",
-                        "style": {
+                        "style": (this.__k5 || (this.__k5 = new TextStyle({
+                          "color": new Color({
+                            "value": 0xFF8B909A
+                          }),
                           "fontSize": 11.5,
-                          "color": new Color({value: 0xFF8B909A}),
                           "height": 1.5
-                        },
+                        }))),
                         "data": this.post.sub
                       })
                     }),
                     new Row({
                       "children": [
                         new Container({
-                          "padding": {
-                            "left": 5.0,
-                            "top": 1.0,
-                            "right": 5.0,
-                            "bottom": 1.0
-                          },
-                          "decoration": {
-                            "color": new Color({value: 0xFFF3F5F8}),
-                            "borderRadius": {
-                              "radius": 5.0
-                            }
-                          },
+                          "padding": (this.__k6 || (this.__k6 = EdgeInsets.symmetric({
+                            "horizontal": 5,
+                            "vertical": 1
+                          }))),
+                          "decoration": new BoxDecoration({
+                            "color": (this.__k7 || (this.__k7 = new Color({
+                              "value": 0xFFF3F5F8
+                            }))),
+                            "borderRadius": BorderRadius.circular({
+                              "radius": 5
+                            })
+                          }),
                           "child": new Text({
-                            "style": {
-                              "fontSize": 10,
-                              "color": new Color({value: 0xFF5C6270})
-                            },
+                            "style": (this.__k8 || (this.__k8 = new TextStyle({
+                              "color": new Color({
+                                "value": 0xFF5C6270
+                              }),
+                              "fontSize": 10
+                            }))),
                             "data": this.post.type
                           })
                         }),
-                        (this.__k2 || (this.__k2 = new SizedBox({
+                        (this.__k9 || (this.__k9 = new SizedBox({
                           "width": 6
                         }))),
                         new Text({
-                          "style": {
-                            "fontSize": 10.5,
-                            "color": new Color({value: 0xFFA3A9B4})
-                          },
+                          "style": (this.__k10 || (this.__k10 = new TextStyle({
+                            "color": new Color({
+                              "value": 0xFFA3A9B4
+                            }),
+                            "fontSize": 10.5
+                          }))),
                           "data": this.post.author + " · " + this.post.time
                         }),
-                        (this.__k3 || (this.__k3 = new Spacer({}))),
-                        (this.__k4 || (this.__k4 = new Icon({
-                          "color": new Color({value: 0xFFA3A9B4}),
+                        (this.__k11 || (this.__k11 = new Spacer({}))),
+                        (this.__k12 || (this.__k12 = new Icon({
+                          "color": new Color({
+                            "value": 0xFFA3A9B4
+                          }),
                           "icon": "favorite_border",
                           "size": 13
                         }))),
-                        (this.__k5 || (this.__k5 = new SizedBox({
+                        (this.__k13 || (this.__k13 = new SizedBox({
                           "width": 3
                         }))),
                         new Text({
-                          "style": {
-                            "fontSize": 10.5,
-                            "color": new Color({value: 0xFFA3A9B4})
-                          },
+                          "style": (this.__k10 || (this.__k10 = new TextStyle({
+                            "color": new Color({
+                              "value": 0xFFA3A9B4
+                            }),
+                            "fontSize": 10.5
+                          }))),
                           "data": _PostCard._likeText(this.post.like)
                         })
                       ]
@@ -713,12 +736,12 @@ export class _ResourceCard {
       "child": new Container({
         "width": 156,
         "clipBehavior": "antiAlias",
-        "decoration": {
+        "decoration": new BoxDecoration({
           "color": Colors.white,
-          "borderRadius": {
-            "radius": 14.0
-          }
-        },
+          "borderRadius": BorderRadius.circular({
+            "radius": 14
+          })
+        }),
         "child": new Column({
           "crossAxisAlignment": "start",
           "children": [
@@ -728,40 +751,44 @@ export class _ResourceCard {
                 "fit": "cover",
                 "errorBuilder": (context, e, s) => new Container({
                   "height": 68,
-                  "color": new Color({value: 0xFFE8EBF0})
+                  "color": (this.__k0 || (this.__k0 = new Color({
+                    "value": 0xFFE8EBF0
+                  })))
                 }),
                 "name": this.resource.img
               })
             }),
             new Padding({
-              "padding": {
-                "left": 9.0,
-                "top": 6.0,
-                "right": 9.0,
-                "bottom": 6.0
-              },
+              "padding": (this.__k1 || (this.__k1 = EdgeInsets.fromLTRB({
+                "bottom": 6,
+                "left": 9,
+                "right": 9,
+                "top": 6
+              }))),
               "child": new Column({
                 "crossAxisAlignment": "start",
                 "children": [
                   new Text({
                     "maxLines": 1,
                     "overflow": "ellipsis",
-                    "style": {
+                    "style": (this.__k2 || (this.__k2 = new TextStyle({
                       "fontSize": 12.5,
-                      "fontWeight": "w600"
-                    },
+                      "fontWeight": FontWeight.w600
+                    }))),
                     "data": this.resource.title
                   }),
-                  (this.__k0 || (this.__k0 = new SizedBox({
+                  (this.__k3 || (this.__k3 = new SizedBox({
                     "height": 2
                   }))),
                   new Text({
                     "maxLines": 1,
                     "overflow": "ellipsis",
-                    "style": {
-                      "fontSize": 10.5,
-                      "color": new Color({value: 0xFF98A0AC})
-                    },
+                    "style": (this.__k4 || (this.__k4 = new TextStyle({
+                      "color": new Color({
+                        "value": 0xFF98A0AC
+                      }),
+                      "fontSize": 10.5
+                    }))),
                     "data": this.resource.sub
                   })
                 ]

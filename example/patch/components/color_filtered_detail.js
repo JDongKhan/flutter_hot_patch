@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/color_filtered_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { ColorFiltered, Colors, Column, Container, SizedBox, Text } from '../flutter.js';
+import { Alignment, BoxDecoration, ColorFilter, ColorFiltered, Colors, Column, Container, FontWeight, LinearGradient, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 ColorFilteredDetail
 export class ColorFilteredDetail {
@@ -15,19 +15,19 @@ export class ColorFilteredDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "ColorFiltered",
-          "style": {
-            "fontWeight": "bold"
-          }
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 4
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "四块内容完全相同，只有 colorFilter 不同",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12
@@ -39,12 +39,11 @@ export class ColorFilteredDetail {
           "height": 8
         }))),
         new ColorFiltered({
-          "colorFilter": {
-            "kind": "mode",
-            "color": Colors.deepOrange,
-            "blendMode": "multiply"
-          },
-          "child": (this.__k6 || (this.__k6 = new _Sample({
+          "colorFilter": (this.__k6 || (this.__k6 = ColorFilter.mode({
+            "blendMode": "multiply",
+            "color": Colors.deepOrange
+          }))),
+          "child": (this.__k7 || (this.__k7 = new _Sample({
             "label": "② mode · deepOrange × multiply"
           })))
         }),
@@ -52,12 +51,11 @@ export class ColorFilteredDetail {
           "height": 8
         }))),
         new ColorFiltered({
-          "colorFilter": {
-            "kind": "mode",
-            "color": Colors.deepPurple,
-            "blendMode": "modulate"
-          },
-          "child": (this.__k7 || (this.__k7 = new _Sample({
+          "colorFilter": (this.__k8 || (this.__k8 = ColorFilter.mode({
+            "blendMode": "modulate",
+            "color": Colors.deepPurple
+          }))),
+          "child": (this.__k9 || (this.__k9 = new _Sample({
             "label": "③ mode · deepPurple × modulate"
           })))
         }),
@@ -65,8 +63,7 @@ export class ColorFilteredDetail {
           "height": 8
         }))),
         new ColorFiltered({
-          "colorFilter": {
-            "kind": "matrix",
+          "colorFilter": (this.__k10 || (this.__k10 = ColorFilter.matrix({
             "matrix": [
               0.2126,
               0.7152,
@@ -89,8 +86,8 @@ export class ColorFilteredDetail {
               1,
               0
             ]
-          },
-          "child": (this.__k8 || (this.__k8 = new _Sample({
+          }))),
+          "child": (this.__k11 || (this.__k11 = new _Sample({
             "label": "④ matrix · 灰度（BT.709）"
           })))
         })
@@ -111,23 +108,22 @@ export class _Sample {
   build(context) {
     return new Container({
       "height": 64,
-      "alignment": "center",
-      "decoration": {
-        "gradient": {
-          "kind": "linear",
+      "alignment": Alignment.center,
+      "decoration": (this.__k0 || (this.__k0 = new BoxDecoration({
+        "gradient": new LinearGradient({
           "colors": [
             Colors.red,
             Colors.amber,
             Colors.green,
             Colors.blue
           ]
-        }
-      },
+        })
+      }))),
       "child": new Text({
-        "style": {
+        "style": (this.__k1 || (this.__k1 = new TextStyle({
           "color": Colors.white,
-          "fontWeight": "bold"
-        },
+          "fontWeight": FontWeight.bold
+        }))),
         "data": this.label
       })
     });

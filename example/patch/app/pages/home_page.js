@@ -7,7 +7,7 @@ import { HomeFeed } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
 import { BannerCarousel } from '../widgets/banner_carousel.js';
-import { Center, CircularProgressIndicator, ClipRRect, Color, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, Expanded, GridView, Icon, Image, InkWell, Padding, Positioned, Row, SafeArea, SizedBox, SliverGrid, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, ClipRRect, Color, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Image, InkWell, LinearGradient, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text, TextStyle } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {
@@ -53,7 +53,9 @@ export class HomePage {
     var spots = this._feed.spots;
     var adImg = this._feed.adImg;
     return new Container({
-      "color": new Color({value: 0xFFF4F5F7}),
+      "color": (this.__k1 || (this.__k1 = new Color({
+        "value": 0xFFF4F5F7
+      }))),
       "child": new Column({
         "crossAxisAlignment": "stretch",
         "children": [
@@ -72,43 +74,41 @@ export class HomePage {
                     "child": new Column({
                       "crossAxisAlignment": "stretch",
                       "children": [
-                        (this.__k1 || (this.__k1 = new SizedBox({
+                        (this.__k2 || (this.__k2 = new SizedBox({
                           "height": 12
                         }))),
                         new BannerCarousel({
                           "banners": this._feed.banners
                         }),
-                        (this.__k1 || (this.__k1 = new SizedBox({
+                        (this.__k2 || (this.__k2 = new SizedBox({
                           "height": 12
                         }))),
                         new Container({
-                          "margin": {
-                            "left": 12.0,
-                            "top": 0.0,
-                            "right": 12.0,
-                            "bottom": 0.0
-                          },
-                          "padding": {
-                            "left": 0.0,
-                            "top": 12.0,
-                            "right": 0.0,
-                            "bottom": 12.0
-                          },
-                          "decoration": {
-                            "color": new Color({value: 0xFFFFFFFF}),
-                            "borderRadius": {
-                              "radius": 14.0
-                            }
-                          },
+                          "margin": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
+                            "horizontal": 12
+                          }))),
+                          "padding": (this.__k4 || (this.__k4 = EdgeInsets.symmetric({
+                            "vertical": 12
+                          }))),
+                          "decoration": (this.__k5 || (this.__k5 = new BoxDecoration({
+                            "borderRadius": BorderRadius.all({
+                              "radius": Radius.circular({
+                                "radius": 14
+                              })
+                            }),
+                            "color": new Color({
+                              "value": 0xFFFFFFFF
+                            })
+                          }))),
                           "child": new GridView({
-                            "gridDelegate": {
-                              "maxCrossAxisExtent": 150,
-                              "mainAxisSpacing": 6,
+                            "gridDelegate": (this.__k6 || (this.__k6 = new SliverGridDelegateWithMaxCrossAxisExtent({
                               "crossAxisSpacing": 6,
-                              "mainAxisExtent": 84
-                            },
+                              "mainAxisExtent": 84,
+                              "mainAxisSpacing": 6,
+                              "maxCrossAxisExtent": 150
+                            }))),
                             "shrinkWrap": true,
-                            "physics": "NeverScrollableScrollPhysics",
+                            "physics": (this.__k7 || (this.__k7 = new NeverScrollableScrollPhysics({}))),
                             "children": [
                               ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({
                                       "entry": this._feed.grid[i]
@@ -116,84 +116,86 @@ export class HomePage {
                             ]
                           })
                         }),
-                        (this.__k1 || (this.__k1 = new SizedBox({
+                        (this.__k2 || (this.__k2 = new SizedBox({
                           "height": 12
                         }))),
                         new Container({
-                          "margin": {
-                            "left": 12.0,
-                            "top": 0.0,
-                            "right": 12.0,
-                            "bottom": 0.0
-                          },
+                          "margin": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
+                            "horizontal": 12
+                          }))),
                           "child": new PromoCard({
                             "img": this._feed.adImg
                           })
                         }),
-                        (this.__k2 || (this.__k2 = new SizedBox({
+                        (this.__k8 || (this.__k8 = new SizedBox({
                           "height": 16
                         }))),
                         new Padding({
-                          "padding": {
-                            "left": 14.0,
-                            "top": 0.0,
-                            "right": 14.0,
-                            "bottom": 0.0
-                          },
+                          "padding": (this.__k9 || (this.__k9 = EdgeInsets.symmetric({
+                            "horizontal": 14
+                          }))),
                           "child": new Row({
                             "children": [
                               new Container({
                                 "width": 4,
                                 "height": 16,
-                                "decoration": {
-                                  "color": new Color({value: 0xFF0E7AFB}),
-                                  "borderRadius": {
-                                    "radius": 2.0
-                                  }
-                                }
+                                "decoration": (this.__k10 || (this.__k10 = new BoxDecoration({
+                                  "borderRadius": BorderRadius.all({
+                                    "radius": Radius.circular({
+                                      "radius": 2
+                                    })
+                                  }),
+                                  "color": new Color({
+                                    "value": 0xFF0E7AFB
+                                  })
+                                })))
                               }),
-                              (this.__k3 || (this.__k3 = new SizedBox({
+                              (this.__k11 || (this.__k11 = new SizedBox({
                                 "width": 8
                               }))),
-                              (this.__k4 || (this.__k4 = new Text({
+                              (this.__k12 || (this.__k12 = new Text({
                                 "data": "景点推荐",
-                                "style": {
-                                  "color": new Color({value: 0xFF1F2430}),
+                                "style": new TextStyle({
                                   "fontSize": 17,
-                                  "fontWeight": "w700"
-                                }
+                                  "fontWeight": FontWeight.w700,
+                                  "color": new Color({
+                                    "value": 0xFF1F2430
+                                  })
+                                })
                               }))),
-                              (this.__k5 || (this.__k5 = new Spacer({}))),
-                              (this.__k6 || (this.__k6 = new Text({
+                              (this.__k13 || (this.__k13 = new Spacer({}))),
+                              (this.__k14 || (this.__k14 = new Text({
                                 "data": "为你精选",
-                                "style": {
-                                  "color": new Color({value: 0xFF8A909E}),
-                                  "fontSize": 12
-                                }
+                                "style": new TextStyle({
+                                  "fontSize": 12,
+                                  "color": new Color({
+                                    "value": 0xFF8A909E
+                                  })
+                                })
                               })))
                             ]
                           })
                         }),
-                        (this.__k7 || (this.__k7 = new SizedBox({
+                        (this.__k15 || (this.__k15 = new SizedBox({
                           "height": 10
                         })))
                       ]
                     })
                   }),
                   new SliverPadding({
-                    "padding": {
-                      "left": 12.0,
-                      "top": 0.0,
-                      "right": 12.0,
-                      "bottom": 0.0
-                    },
+                    "padding": (this.__k16 || (this.__k16 = EdgeInsets.fromLTRB({
+                      "bottom": 0,
+                      "left": 12,
+                      "right": 12,
+                      "top": 0
+                    }))),
                     "sliver": new SliverGrid({
-                      "gridDelegate": {
-                        "maxCrossAxisExtent": 300,
-                        "mainAxisSpacing": 10,
+                      "gridDelegate": (this.__k17 || (this.__k17 = new SliverGridDelegateWithMaxCrossAxisExtent({
                         "crossAxisSpacing": 10,
-                        "mainAxisExtent": 190
-                      },
+                        "mainAxisExtent": 190,
+                        "mainAxisSpacing": 10,
+                        "maxCrossAxisExtent": 300
+                      }))),
                       "delegate": {
                         "__delegate": "builder",
                         "builder": (context, index) => new SpotCard({
@@ -203,7 +205,7 @@ export class HomePage {
                       }
                     })
                   }),
-                  (this.__k8 || (this.__k8 = new SliverToBoxAdapter({
+                  (this.__k18 || (this.__k18 = new SliverToBoxAdapter({
                     "child": new SizedBox({
                       "height": 20
                     })
@@ -237,23 +239,26 @@ export class HomeHeader {
   }
   build(context) {
     return new Container({
-      "padding": {
-        "left": 16.0,
-        "top": 14.0,
-        "right": 16.0,
-        "bottom": 16.0
-      },
-      "decoration": {
-        "gradient": {
-          "kind": "linear",
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
+        "bottom": 16,
+        "left": 16,
+        "right": 16,
+        "top": 14
+      }))),
+      "decoration": (this.__k1 || (this.__k1 = new BoxDecoration({
+        "gradient": new LinearGradient({
           "colors": [
-            new Color({value: 0xFF1E88FF}),
-            new Color({value: 0xFF0E7AFB})
+            new Color({
+              "value": 0xFF1E88FF
+            }),
+            new Color({
+              "value": 0xFF0E7AFB
+            })
           ],
-          "begin": "topLeft",
-          "end": "bottomRight"
-        }
-      },
+          "begin": Alignment.topLeft,
+          "end": Alignment.bottomRight
+        })
+      }))),
       "child": new SafeArea({
         "bottom": false,
         "child": new Column({
@@ -265,69 +270,77 @@ export class HomeHeader {
                   "onTap": this.__bindFn(0, [], (...__a) => this.onPickCity(...__a)),
                   "child": new Row({
                     "children": [
-                      (this.__k0 || (this.__k0 = new Icon({
-                        "color": new Color({value: 0xFFFFFFFF}),
+                      (this.__k2 || (this.__k2 = new Icon({
+                        "color": new Color({
+                          "value": 0xFFFFFFFF
+                        }),
                         "icon": "location_on",
                         "size": 18
                       }))),
-                      (this.__k1 || (this.__k1 = new SizedBox({
+                      (this.__k3 || (this.__k3 = new SizedBox({
                         "width": 2
                       }))),
                       new Text({
-                        "style": {
-                          "color": new Color({value: 0xFFFFFFFF}),
+                        "style": (this.__k4 || (this.__k4 = new TextStyle({
+                          "color": new Color({
+                            "value": 0xFFFFFFFF
+                          }),
                           "fontSize": 15,
-                          "fontWeight": "w600"
-                        },
+                          "fontWeight": FontWeight.w600
+                        }))),
                         "data": this.city
                       }),
-                      (this.__k2 || (this.__k2 = new Icon({
-                        "color": new Color({value: 0xFFFFFFFF}),
+                      (this.__k5 || (this.__k5 = new Icon({
+                        "color": new Color({
+                          "value": 0xFFFFFFFF
+                        }),
                         "icon": "keyboard_arrow_down",
                         "size": 18
                       })))
                     ]
                   })
                 }),
-                (this.__k3 || (this.__k3 = new Spacer({}))),
+                (this.__k6 || (this.__k6 = new Spacer({}))),
                 new InkWell({
                   "onTap": this.__bindFn(1, [], (...__a) => this.onRefresh(...__a)),
-                  "borderRadius": {
-                    "radius": 18.0
-                  },
-                  "child": (this.__k4 || (this.__k4 = new Padding({
+                  "borderRadius": (this.__k7 || (this.__k7 = BorderRadius.all({
+                    "radius": Radius.circular({
+                      "radius": 18
+                    })
+                  }))),
+                  "child": (this.__k8 || (this.__k8 = new Padding({
                     "child": new Icon({
-                      "color": new Color({value: 0xFFFFFFFF}),
+                      "color": new Color({
+                        "value": 0xFFFFFFFF
+                      }),
                       "size": 24,
                       "icon": "refresh"
                     }),
-                    "padding": {
-                      "bottom": 4.0,
-                      "left": 4.0,
-                      "right": 4.0,
-                      "top": 4.0
-                    }
+                    "padding": EdgeInsets.all({
+                      "value": 4
+                    })
                   })))
                 }),
-                (this.__k5 || (this.__k5 = new SizedBox({
+                (this.__k9 || (this.__k9 = new SizedBox({
                   "width": 8
                 }))),
                 new InkWell({
                   "onTap": this.__bindFn(2, [], (...__a) => this.openMessages(...__a)),
-                  "borderRadius": {
-                    "radius": 18.0
-                  },
-                  "child": (this.__k6 || (this.__k6 = new Stack({
+                  "borderRadius": (this.__k7 || (this.__k7 = BorderRadius.all({
+                    "radius": Radius.circular({
+                      "radius": 18
+                    })
+                  }))),
+                  "child": (this.__k10 || (this.__k10 = new Stack({
                     "children": [
                       new Padding({
-                        "padding": {
-                          "left": 4.0,
-                          "top": 4.0,
-                          "right": 4.0,
-                          "bottom": 4.0
-                        },
+                        "padding": EdgeInsets.all({
+                          "value": 4
+                        }),
                         "child": new Icon({
-                          "color": new Color({value: 0xFFFFFFFF}),
+                          "color": new Color({
+                            "value": 0xFFFFFFFF
+                          }),
                           "size": 24,
                           "icon": "notifications"
                         })
@@ -336,12 +349,16 @@ export class HomeHeader {
                         "right": 3,
                         "top": 3,
                         "child": new DecoratedBox({
-                          "decoration": {
-                            "color": new Color({value: 0xFFFF5A36}),
-                            "borderRadius": {
-                              "radius": 4.0
-                            }
-                          },
+                          "decoration": new BoxDecoration({
+                            "color": new Color({
+                              "value": 0xFFFF5A36
+                            }),
+                            "borderRadius": BorderRadius.all({
+                              "radius": Radius.circular({
+                                "radius": 4
+                              })
+                            })
+                          }),
                           "child": new SizedBox({
                             "width": 8,
                             "height": 8
@@ -353,32 +370,37 @@ export class HomeHeader {
                 })
               ]
             }),
-            (this.__k7 || (this.__k7 = new SizedBox({
+            (this.__k11 || (this.__k11 = new SizedBox({
               "height": 12
             }))),
             new InkWell({
               "onTap": this.__bindFn(3, [], (...__a) => this.openSearch(...__a)),
-              "borderRadius": {
-                "radius": 20.0
-              },
+              "borderRadius": (this.__k12 || (this.__k12 = BorderRadius.all({
+                "radius": Radius.circular({
+                  "radius": 20
+                })
+              }))),
               "child": new Container({
                 "height": 42,
-                "padding": {
-                  "left": 14.0,
-                  "top": 0.0,
-                  "right": 14.0,
-                  "bottom": 0.0
-                },
-                "decoration": {
-                  "color": new Color({value: 0xFFFFFFFF}),
-                  "borderRadius": {
-                    "radius": 21.0
-                  }
-                },
-                "child": (this.__k8 || (this.__k8 = new Row({
+                "padding": (this.__k13 || (this.__k13 = EdgeInsets.symmetric({
+                  "horizontal": 14
+                }))),
+                "decoration": (this.__k14 || (this.__k14 = new BoxDecoration({
+                  "borderRadius": BorderRadius.all({
+                    "radius": Radius.circular({
+                      "radius": 21
+                    })
+                  }),
+                  "color": new Color({
+                    "value": 0xFFFFFFFF
+                  })
+                }))),
+                "child": (this.__k15 || (this.__k15 = new Row({
                   "children": [
                     new Icon({
-                      "color": new Color({value: 0xFF9AA0AC}),
+                      "color": new Color({
+                        "value": 0xFF9AA0AC
+                      }),
                       "size": 20,
                       "icon": "search"
                     }),
@@ -386,19 +408,23 @@ export class HomeHeader {
                       "width": 6
                     }),
                     new Text({
-                      "style": {
+                      "style": new TextStyle({
                         "fontSize": 14,
-                        "color": new Color({value: 0xFF9AA0AC})
-                      },
+                        "color": new Color({
+                          "value": 0xFF9AA0AC
+                        })
+                      }),
                       "data": "搜索目的地 / 关键词"
                     }),
                     new Spacer({}),
                     new Text({
-                      "style": {
+                      "style": new TextStyle({
                         "fontSize": 13,
-                        "color": new Color({value: 0xFF0E7AFB}),
-                        "fontWeight": "w600"
-                      },
+                        "color": new Color({
+                          "value": 0xFF0E7AFB
+                        }),
+                        "fontWeight": FontWeight.w600
+                      }),
                       "data": "搜索"
                     })
                   ]
@@ -431,19 +457,21 @@ export class GridCell {
         "mainAxisAlignment": "center",
         "children": [
           new Text({
-            "style": {
+            "style": (this.__k0 || (this.__k0 = new TextStyle({
               "fontSize": 22
-            },
+            }))),
             "data": this.entry.emoji
           }),
-          (this.__k0 || (this.__k0 = new SizedBox({
+          (this.__k1 || (this.__k1 = new SizedBox({
             "height": 6
           }))),
           new Text({
-            "style": {
-              "fontSize": 12,
-              "color": new Color({value: 0xFF4D5462})
-            },
+            "style": (this.__k2 || (this.__k2 = new TextStyle({
+              "color": new Color({
+                "value": 0xFF4D5462
+              }),
+              "fontSize": 12
+            }))),
             "data": this.entry.title
           })
         ]
@@ -467,16 +495,22 @@ export class SpotCard {
   build(context) {
     return new InkWell({
       "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
-      "borderRadius": {
-        "radius": 14.0
-      },
+      "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
+        "radius": Radius.circular({
+          "radius": 14
+        })
+      }))),
       "child": new Container({
-        "decoration": {
-          "color": new Color({value: 0xFFFFFFFF}),
-          "borderRadius": {
-            "radius": 14.0
-          }
-        },
+        "decoration": (this.__k1 || (this.__k1 = new BoxDecoration({
+          "borderRadius": BorderRadius.all({
+            "radius": Radius.circular({
+              "radius": 14
+            })
+          }),
+          "color": new Color({
+            "value": 0xFFFFFFFF
+          })
+        }))),
         "clipBehavior": "antiAlias",
         "child": new Column({
           "crossAxisAlignment": "start",
@@ -494,24 +528,28 @@ export class SpotCard {
                     "left": 8,
                     "top": 8,
                     "child": new Container({
-                      "padding": {
-                        "left": 6.0,
-                        "top": 2.0,
-                        "right": 6.0,
-                        "bottom": 2.0
-                      },
-                      "decoration": {
-                        "color": new Color({value: 0xFFFF5A36}),
-                        "borderRadius": {
-                          "radius": 6.0
-                        }
-                      },
+                      "padding": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
+                        "horizontal": 6,
+                        "vertical": 2
+                      }))),
+                      "decoration": (this.__k3 || (this.__k3 = new BoxDecoration({
+                        "borderRadius": BorderRadius.all({
+                          "radius": Radius.circular({
+                            "radius": 6
+                          })
+                        }),
+                        "color": new Color({
+                          "value": 0xFFFF5A36
+                        })
+                      }))),
                       "child": new Text({
-                        "style": {
-                          "color": new Color({value: 0xFFFFFFFF}),
+                        "style": (this.__k4 || (this.__k4 = new TextStyle({
+                          "color": new Color({
+                            "value": 0xFFFFFFFF
+                          }),
                           "fontSize": 10,
-                          "fontWeight": "w600"
-                        },
+                          "fontWeight": FontWeight.w600
+                        }))),
                         "data": this.spot.tag
                       })
                     })
@@ -520,64 +558,74 @@ export class SpotCard {
               })
             }),
             new Padding({
-              "padding": {
-                "left": 10.0,
-                "top": 8.0,
-                "right": 10.0,
-                "bottom": 10.0
-              },
+              "padding": (this.__k5 || (this.__k5 = EdgeInsets.fromLTRB({
+                "bottom": 10,
+                "left": 10,
+                "right": 10,
+                "top": 8
+              }))),
               "child": new Column({
                 "crossAxisAlignment": "start",
                 "children": [
                   new Text({
                     "maxLines": 1,
                     "overflow": "ellipsis",
-                    "style": {
+                    "style": (this.__k6 || (this.__k6 = new TextStyle({
+                      "color": new Color({
+                        "value": 0xFF1F2430
+                      }),
                       "fontSize": 14,
-                      "fontWeight": "w600",
-                      "color": new Color({value: 0xFF1F2430})
-                    },
+                      "fontWeight": FontWeight.w600
+                    }))),
                     "data": this.spot.title
                   }),
-                  (this.__k0 || (this.__k0 = new SizedBox({
+                  (this.__k7 || (this.__k7 = new SizedBox({
                     "height": 4
                   }))),
                   new Text({
                     "maxLines": 1,
                     "overflow": "ellipsis",
-                    "style": {
-                      "fontSize": 11,
-                      "color": new Color({value: 0xFF8A909E})
-                    },
+                    "style": (this.__k8 || (this.__k8 = new TextStyle({
+                      "color": new Color({
+                        "value": 0xFF8A909E
+                      }),
+                      "fontSize": 11
+                    }))),
                     "data": this.spot.sub
                   }),
-                  (this.__k1 || (this.__k1 = new SizedBox({
+                  (this.__k9 || (this.__k9 = new SizedBox({
                     "height": 8
                   }))),
                   new Row({
                     "children": [
-                      (this.__k2 || (this.__k2 = new Text({
+                      (this.__k10 || (this.__k10 = new Text({
                         "data": "¥",
-                        "style": {
-                          "color": new Color({value: 0xFFFF5A36}),
+                        "style": new TextStyle({
                           "fontSize": 11,
-                          "fontWeight": "w700"
-                        }
+                          "color": new Color({
+                            "value": 0xFFFF5A36
+                          }),
+                          "fontWeight": FontWeight.w700
+                        })
                       }))),
                       new Text({
-                        "style": {
+                        "style": (this.__k11 || (this.__k11 = new TextStyle({
+                          "color": new Color({
+                            "value": 0xFFFF5A36
+                          }),
                           "fontSize": 17,
-                          "color": new Color({value: 0xFFFF5A36}),
-                          "fontWeight": "w700"
-                        },
+                          "fontWeight": FontWeight.w700
+                        }))),
                         "data": this.spot.price
                       }),
-                      (this.__k3 || (this.__k3 = new Spacer({}))),
+                      (this.__k12 || (this.__k12 = new Spacer({}))),
                       new Text({
-                        "style": {
-                          "fontSize": 10,
-                          "color": new Color({value: 0xFF9AA0AC})
-                        },
+                        "style": (this.__k13 || (this.__k13 = new TextStyle({
+                          "color": new Color({
+                            "value": 0xFF9AA0AC
+                          }),
+                          "fontSize": 10
+                        }))),
                         "data": this.spot.sold
                       })
                     ]
@@ -607,15 +655,19 @@ export class PromoCard {
   build(context) {
     return new InkWell({
       "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
-      "borderRadius": {
-        "radius": 14.0
-      },
+      "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
+        "radius": Radius.circular({
+          "radius": 14
+        })
+      }))),
       "child": new SizedBox({
         "height": 96,
         "child": new ClipRRect({
-          "borderRadius": {
-            "radius": 14.0
-          },
+          "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
+            "radius": Radius.circular({
+              "radius": 14
+            })
+          }))),
           "child": new Stack({
             "fit": "expand",
             "children": [
@@ -629,37 +681,43 @@ export class PromoCard {
                 "child": new Column({
                   "crossAxisAlignment": "start",
                   "children": [
-                    (this.__k0 || (this.__k0 = new Text({
+                    (this.__k1 || (this.__k1 = new Text({
                       "data": "热气球季 · 限时特惠",
-                      "style": {
-                        "color": new Color({value: 0xFFFFFFFF}),
+                      "style": new TextStyle({
+                        "color": new Color({
+                          "value": 0xFFFFFFFF
+                        }),
                         "fontSize": 16,
-                        "fontWeight": "w700"
-                      }
+                        "fontWeight": FontWeight.w700
+                      })
                     }))),
-                    (this.__k1 || (this.__k1 = new SizedBox({
+                    (this.__k2 || (this.__k2 = new SizedBox({
                       "height": 6
                     }))),
                     new Container({
-                      "padding": {
-                        "left": 10.0,
-                        "top": 4.0,
-                        "right": 10.0,
-                        "bottom": 4.0
-                      },
-                      "decoration": {
-                        "color": new Color({value: 0xE6FFFFFF}),
-                        "borderRadius": {
-                          "radius": 12.0
-                        }
-                      },
-                      "child": (this.__k2 || (this.__k2 = new Text({
+                      "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
+                        "horizontal": 10,
+                        "vertical": 4
+                      }))),
+                      "decoration": (this.__k4 || (this.__k4 = new BoxDecoration({
+                        "borderRadius": BorderRadius.all({
+                          "radius": Radius.circular({
+                            "radius": 12
+                          })
+                        }),
+                        "color": new Color({
+                          "value": 0xE6FFFFFF
+                        })
+                      }))),
+                      "child": (this.__k5 || (this.__k5 = new Text({
                         "data": "立即查看 >",
-                        "style": {
-                          "color": new Color({value: 0xFF0E7AFB}),
+                        "style": new TextStyle({
                           "fontSize": 11,
-                          "fontWeight": "w600"
-                        }
+                          "color": new Color({
+                            "value": 0xFF0E7AFB
+                          }),
+                          "fontWeight": FontWeight.w600
+                        })
                       })))
                     })
                   ]

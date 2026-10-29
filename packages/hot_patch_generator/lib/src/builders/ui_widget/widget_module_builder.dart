@@ -17,6 +17,7 @@ import '../runtime/js/animation_js.dart';
 import '../runtime/js/change_notifier_js.dart';
 import '../runtime/js/color_js.dart';
 import '../runtime/js/dart_values_js.dart';
+import '../runtime/js/dialogs_js.dart';
 import '../runtime/js/easy_refresh_js.dart';
 import '../runtime/js/focus_js.dart';
 import '../runtime/js/key_js.dart';
@@ -24,7 +25,9 @@ import '../runtime/js/keyboard_listener_js.dart';
 import '../runtime/js/layout_builder_js.dart';
 import '../runtime/js/media_query_js.dart';
 import '../runtime/js/navigator_js.dart';
+import '../runtime/js/provider_module_js.dart';
 import '../runtime/js/scroll_controller_js.dart';
+import '../runtime/js/style_values_js.dart';
 import '../runtime/js/tab_controller_js.dart';
 import '../runtime/js/text_editing_controller_js.dart';
 import '../runtime/js/timer_js.dart';
@@ -41,6 +44,7 @@ import '../runtime/js/timer_js.dart';
 /// `function` 声明会提升，故同区内可以前后互引。
 String flutterValueClassesSource() => [
       dartValuesJsSource,
+      styleValuesJsSource,
       colorJsSource,
       changeNotifierSource,
       animationJsSource,
@@ -49,6 +53,9 @@ String flutterValueClassesSource() => [
       focusJsSource,
       keyboardListenerJsSource,
       mediaQueryJsSource,
+      // 命令式弹层（showDialog 系列）+ 面板根机制 + Navigator 的落点：
+      // Flutter SDK 的 API 面放这里，runtime.js 不留任何弹层知识。
+      dialogsJsSource,
       navigatorJsSource,
       layoutBuilderJsSource,
       tabControllerJsSource,
@@ -252,14 +259,21 @@ String lazyChildHostTypesLiteral() {
 /// 依赖包新增命名构造后重构建即自动补齐，无需登记任何类名或构造名。
 ///
 /// 静态方法内部把构造名写成 `props.factory`：宿主渲染仍按「类型 + 工厂名」
-/// 选原生工厂，翻译层与产物形态都不感知这层协议。
+/// 归一。另加一组**静态工厂转发**（[_wrapperStaticFactories]）：`styleFrom`
+/// 返回的不是元素而是样式值，转发给对应值类。
+const Map<String, String> _wrapperStaticFactories = {'styleFrom': 'ButtonStyle'};
+
 String namedCtorStatics(String type, {Iterable<String> extra = const []}) {
   final names = <String>{...?CtorSignatures.instance?.ctorNamesOf(type), ...extra};
-  if (names.isEmpty) return '';
+  final factories = _wrapperStaticFactories;
+  if (names.isEmpty && factories.isEmpty) return '';
   final b = StringBuffer();
   for (final n in names.toList()..sort()) {
     b.writeln('  static $n(props) { '
         "return new $type(Object.assign({}, props, { factory: '$n' })); }");
+  }
+  for (final f in factories.entries) {
+    b.writeln('  static ${f.key}(props) { return ${f.value}.${f.key}(props); }');
   }
   return b.toString();
 }
@@ -988,6 +1002,15 @@ export class TweenAnimationBuilder {
   }
 }''';
 
+/// package 模块的**库自有片段**：package → 追加在该模块尾部的 JS。
+///
+/// 三方库的类在对运行时提出的额外要求（作用域声明 / 扩展方法原型补丁等）是
+/// **该库自己的知识**，因此跟它的 JS 类放在同一个模块里——模块求值即生效，
+/// runtime.js 不承载任何库的 API 面。新增库只需在这里加一条。
+const Map<String, String> _packageModuleEpilogues = {
+  'provider': providerModuleEpilogue,
+};
+
 /// package 模块产物：把该 package 里**有 JS 类**的 widget 类型导出为 JS 类
 /// （逻辑组件：provider 状态处理 / Builder 委托；sliver builder 代理）。
 ///
@@ -1064,6 +1087,16 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln()
       ..writeln(src);
   }
+  // 库自有的运行期登记（如 provider 的作用域声明 + `context.watch/read`
+  // 原型补丁）：属于该**包自己**的知识，跟它的 JS 类同模块发布、同模块求值。
+  // 核心运行时只留通用机制——provider 这类库的 API 面不再进 runtime.js。
+  final epilogue = _packageModuleEpilogues[package];
+  if (epilogue != null) {
+    b
+      ..writeln()
+      ..writeln('// ===== 本包（$package）自有的运行期登记 =====')
+      ..writeln(epilogue);
+  }
   // -----------------------------------------------------------------------
   // Dart 值类区：**固定在产物最末**（所有 widget / 逻辑组件包装类之后）。
   //
@@ -1077,8 +1110,13 @@ String renderPackageModule(String package, Set<String> types) {
   // `new MaterialColor(...)`，而 MaterialColor 的原型在值类区赋值——晚于实例
   // 创建就会丢 toJSON。
   //
-  // 与 runtime 的唯一耦合面是 `G.__core`（原型补丁 / 控制器注册 / 句柄表），
-  // 见 runtime_js.dart 的【11.5】——跨模块只走 G，不假设同一 IIFE 作用域。
+  // 本区同时承载 **Flutter SDK 的 API 面**：`showDialog` 系列 / `Navigator`（见
+  // dialogs_js.dart / navigator_js.dart）——它们只做「Dart 一比一调用形状」，
+  // 不属 mini-react 核心。
+  //
+  // 与 runtime 的唯一耦合面是 `G.__core`（原型补丁 / 控制器注册 / 句柄表 /
+  // reconciler 的独立根挂载），见 runtime_js.dart 的【11.5】——跨模块只走 G，
+  // 不假设同一 IIFE 作用域。
   if (package == nodeHelperPackage) {
     b
       ..writeln()
@@ -1089,7 +1127,9 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln('const {')
       ..writeln('  defineProtoGetter: __defineProtoGetter,')
       ..writeln('  defineController, defineHandleKind, handleOp, reg,')
-      ..writeln('  panelPop, panelOf,')
+      ..writeln('  contextOf, asElement, hostIdOf, newRoot, mount, unmount,')
+      ..writeln('  commit, emit, flushNow, abortRoot, releasePageHandles, host,')
+      ..writeln('  roots, JsBuildContext,')
       ..writeln('} = G.__core;')
       ..writeln()
       ..writeln(flutterValueClassesSource());

@@ -4,8 +4,9 @@
 // 宿主结点 id → 真值 BuildContext）。宿主侧无专属组件。
 //
 // **本能力不含任何库的 API 语义**：`context.watch<T>()` / `read<T>()` 是 provider
-// 那类 `extension BuildContextX on BuildContext`，其 JS 方法补丁在各库自己的片段里
-// （provider_js.dart），宿主侧处理经核心通用缝 `registerContextOp` 注册
+// 那类 `extension BuildContextX on BuildContext`，其 JS 方法补丁在各库自己的模块里
+// （patch/provider.js ← provider_module_js.dart），宿主侧处理经核心通用缝
+// `registerContextOp` 注册
 // （provider/context_ops.dart）。核心只把 op 分发给注册者。
 import '../js_ui_library.dart';
 import 'build_context_bridge.dart';

@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/value_listenable_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, Container, Expanded, OutlinedButton, Row, SizedBox, Text, ValueListenableBuilder, ValueNotifier } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, Expanded, FontWeight, OutlinedButton, Row, SizedBox, Text, TextStyle, ValueListenableBuilder, ValueNotifier } from '../flutter.js';
 
 // 组件 ValueListenableBuilderDetail
 export class ValueListenableBuilderDetail {
@@ -37,25 +37,22 @@ export class ValueListenableBuilderDetail {
   }
   build(context) {
     return new Container({
-      "padding": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+        "value": 12
+      }))),
       "color": Colors.grey.shade100,
       "child": new Column({
         "mainAxisSize": "min",
         "crossAxisAlignment": "stretch",
         "children": [
           new Text({
-            "style": {
+            "style": (this.__k1 || (this.__k1 = new TextStyle({
               "fontSize": 13,
-              "fontWeight": "bold"
-            },
+              "fontWeight": FontWeight.bold
+            }))),
             "data": this._useA ? "订阅：_a（初值 0）" : "订阅：_b（初值 100）"
           }),
-          (this.__k0 || (this.__k0 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 10
           }))),
           new ValueListenableBuilder({
@@ -70,89 +67,89 @@ export class ValueListenableBuilderDetail {
                       new Container({
                         "width": 64,
                         "height": 44,
-                        "alignment": "center",
-                        "decoration": {
+                        "alignment": Alignment.center,
+                        "decoration": new BoxDecoration({
                           "color": Colors.indigo,
-                          "borderRadius": {
-                            "radius": 6.0
-                          }
-                        },
+                          "borderRadius": BorderRadius.circular({
+                            "radius": 6
+                          })
+                        }),
                         "child": new Text({
-                          "style": {
+                          "style": (this.__k3 || (this.__k3 = new TextStyle({
                             "color": Colors.white,
                             "fontSize": 18,
-                            "fontWeight": "bold"
-                          },
+                            "fontWeight": FontWeight.bold
+                          }))),
                           "data": value
                         })
                       }),
-                      (this.__k1 || (this.__k1 = new SizedBox({
+                      (this.__k4 || (this.__k4 = new SizedBox({
                         "width": 12
                       }))),
                       new Expanded({
                         "child": new Text({
-                          "style": {
+                          "style": (this.__k5 || (this.__k5 = new TextStyle({
                             "fontSize": 12
-                          },
+                          }))),
                           "data": "builder 已执行 " + this._builds + " 次"
                         })
                       })
                     ]
                   }),
-                  (this.__k2 || (this.__k2 = new SizedBox({
+                  (this.__k6 || (this.__k6 = new SizedBox({
                     "height": 6
                   }))),
                   (child ?? SizedBox.shrink())
                 ]
               }); },
-            "child": (this.__k3 || (this.__k3 = new Text({
+            "child": (this.__k7 || (this.__k7 = new Text({
               "data": "child 插槽：值变化时不重建这段子树",
-              "style": {
-                "color": Colors.black54,
-                "fontSize": 12
-              }
+              "style": new TextStyle({
+                "fontSize": 12,
+                "color": Colors.black54
+              })
             }))),
             "model": "int"
           }),
-          (this.__k0 || (this.__k0 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 10
           }))),
           new Row({
             "children": [
               new OutlinedButton({
                 "onPressed": this.__bindFn(0, [], (...__a) => this._dec(...__a)),
-                "child": (this.__k4 || (this.__k4 = new Text({
+                "child": (this.__k8 || (this.__k8 = new Text({
                   "data": "-1"
                 })))
               }),
-              (this.__k5 || (this.__k5 = new SizedBox({
+              (this.__k9 || (this.__k9 = new SizedBox({
                 "width": 8
               }))),
               new OutlinedButton({
                 "onPressed": this.__bindFn(1, [], (...__a) => this._inc(...__a)),
-                "child": (this.__k6 || (this.__k6 = new Text({
+                "child": (this.__k10 || (this.__k10 = new Text({
                   "data": "+1"
                 })))
               }),
-              (this.__k5 || (this.__k5 = new SizedBox({
+              (this.__k9 || (this.__k9 = new SizedBox({
                 "width": 8
               }))),
               new OutlinedButton({
                 "onPressed": this.__bindFn(2, [], (...__a) => this._same(...__a)),
-                "child": (this.__k7 || (this.__k7 = new Text({
+                "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "赋相同值"
                 })))
               })
             ]
           }),
-          (this.__k8 || (this.__k8 = new SizedBox({
+          (this.__k12 || (this.__k12 = new SizedBox({
             "height": 4
           }))),
           new Row({
             "children": [
               new OutlinedButton({
                 "onPressed": this.__bindFn(3, [], (...__a) => this._toggle(...__a)),
-                "child": (this.__k9 || (this.__k9 = new Text({
+                "child": (this.__k13 || (this.__k13 = new Text({
                   "data": "切换订阅对象"
                 })))
               })

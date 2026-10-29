@@ -109,48 +109,56 @@ export class AlertDialog {
     return __h('AlertDialog', props);
   }
   static adaptive(props) { return new AlertDialog(Object.assign({}, props, { factory: 'adaptive' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Align {
   constructor(props) {
     return __h('Align', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedAlign {
   constructor(props) {
     return __h('AnimatedAlign', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedContainer {
   constructor(props) {
     return __h('AnimatedContainer', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedCrossFade {
   constructor(props) {
     return __h('AnimatedCrossFade', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedDefaultTextStyle {
   constructor(props) {
     return __h('AnimatedDefaultTextStyle', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedOpacity {
   constructor(props) {
     return __h('AnimatedOpacity', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedPadding {
   constructor(props) {
     return __h('AnimatedPadding', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedPositioned {
@@ -158,66 +166,77 @@ export class AnimatedPositioned {
     return __h('AnimatedPositioned', props);
   }
   static fromRect(props) { return new AnimatedPositioned(Object.assign({}, props, { factory: 'fromRect' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedRotation {
   constructor(props) {
     return __h('AnimatedRotation', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedScale {
   constructor(props) {
     return __h('AnimatedScale', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedSize {
   constructor(props) {
     return __h('AnimatedSize', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedSlide {
   constructor(props) {
     return __h('AnimatedSlide', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedSwitcher {
   constructor(props) {
     return __h('AnimatedSwitcher', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AppBar {
   constructor(props) {
     return __h('AppBar', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AspectRatio {
   constructor(props) {
     return __h('AspectRatio', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class BottomNavigationBar {
   constructor(props) {
     return __h('BottomNavigationBar', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class BottomNavigationBarItem {
   constructor(props) {
     return __h('BottomNavigationBarItem', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CachedNetworkImage {
   constructor(props) {
     return __h('CachedNetworkImage', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Card {
@@ -226,12 +245,14 @@ export class Card {
   }
   static filled(props) { return new Card(Object.assign({}, props, { factory: 'filled' })); }
   static outlined(props) { return new Card(Object.assign({}, props, { factory: 'outlined' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Center {
   constructor(props) {
     return __h('Center', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Checkbox {
@@ -239,18 +260,21 @@ export class Checkbox {
     return __h('Checkbox', props);
   }
   static adaptive(props) { return new Checkbox(Object.assign({}, props, { factory: 'adaptive' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Chip {
   constructor(props) {
     return __h('Chip', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CircleAvatar {
   constructor(props) {
     return __h('CircleAvatar', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CircularProgressIndicator {
@@ -258,84 +282,98 @@ export class CircularProgressIndicator {
     return __h('CircularProgressIndicator', props);
   }
   static adaptive(props) { return new CircularProgressIndicator(Object.assign({}, props, { factory: 'adaptive' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ClipOval {
   constructor(props) {
     return __h('ClipOval', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ClipRRect {
   constructor(props) {
     return __h('ClipRRect', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ColorFiltered {
   constructor(props) {
     return __h('ColorFiltered', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Column {
   constructor(props) {
     return __h('Column', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ConstrainedBox {
   constructor(props) {
     return __h('ConstrainedBox', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Container {
   constructor(props) {
     return __h('Container', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CupertinoActionSheet {
   constructor(props) {
     return __h('CupertinoActionSheet', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CupertinoActionSheetAction {
   constructor(props) {
     return __h('CupertinoActionSheetAction', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CupertinoAlertDialog {
   constructor(props) {
     return __h('CupertinoAlertDialog', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CupertinoDialogAction {
   constructor(props) {
     return __h('CupertinoDialogAction', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class CustomScrollView {
   constructor(props) {
     return __h('CustomScrollView', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DecoratedBox {
   constructor(props) {
     return __h('DecoratedBox', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DefaultTabController {
   constructor(props) {
     return __h('DefaultTabController', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Dialog {
@@ -343,30 +381,35 @@ export class Dialog {
     return __h('Dialog', props);
   }
   static fullscreen(props) { return new Dialog(Object.assign({}, props, { factory: 'fullscreen' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Dismissible {
   constructor(props) {
     return __h('Dismissible', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Divider {
   constructor(props) {
     return __h('Divider', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Drawer {
   constructor(props) {
     return __h('Drawer', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DrawerHeader {
   constructor(props) {
     return __h('DrawerHeader', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DropdownButton {
@@ -374,12 +417,14 @@ export class DropdownButton {
     return __h('DropdownButton', props);
   }
   static _formField(props) { return new DropdownButton(Object.assign({}, props, { factory: '_formField' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class DropdownMenuItem {
   constructor(props) {
     return __h('DropdownMenuItem', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class EasyRefresh {
@@ -387,6 +432,7 @@ export class EasyRefresh {
     return __h('EasyRefresh', props);
   }
   static builder(props) { return new EasyRefresh(Object.assign({}, props, { factory: 'builder' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ElevatedButton {
@@ -394,12 +440,14 @@ export class ElevatedButton {
     return __h('ElevatedButton', props);
   }
   static icon(props) { return new ElevatedButton(Object.assign({}, props, { factory: 'icon' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Expanded {
   constructor(props) {
     return __h('Expanded', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FadeInImage {
@@ -408,12 +456,14 @@ export class FadeInImage {
   }
   static assetNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'assetNetwork' })); }
   static memoryNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'memoryNetwork' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FadeTransition {
   constructor(props) {
     return __h('FadeTransition', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FilledButton {
@@ -423,12 +473,14 @@ export class FilledButton {
   static icon(props) { return new FilledButton(Object.assign({}, props, { factory: 'icon' })); }
   static tonal(props) { return new FilledButton(Object.assign({}, props, { factory: 'tonal' })); }
   static tonalIcon(props) { return new FilledButton(Object.assign({}, props, { factory: 'tonalIcon' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Flexible {
   constructor(props) {
     return __h('Flexible', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FloatingActionButton {
@@ -438,6 +490,7 @@ export class FloatingActionButton {
   static extended(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'extended' })); }
   static large(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'large' })); }
   static small(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'small' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Focus {
@@ -445,30 +498,35 @@ export class Focus {
     return __h('Focus', props);
   }
   static withExternalFocusNode(props) { return new Focus(Object.assign({}, props, { factory: 'withExternalFocusNode' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class FractionallySizedBox {
   constructor(props) {
     return __h('FractionallySizedBox', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class GestureDetector {
   constructor(props) {
     return __h('GestureDetector', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Hero {
   constructor(props) {
     return __h('Hero', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Icon {
   constructor(props) {
     return __h('Icon', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class IconButton {
@@ -478,6 +536,7 @@ export class IconButton {
   static filled(props) { return new IconButton(Object.assign({}, props, { factory: 'filled' })); }
   static filledTonal(props) { return new IconButton(Object.assign({}, props, { factory: 'filledTonal' })); }
   static outlined(props) { return new IconButton(Object.assign({}, props, { factory: 'outlined' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Image {
@@ -489,30 +548,35 @@ export class Image {
   static file(props) { return new Image(Object.assign({}, props, { factory: 'file' })); }
   static memory(props) { return new Image(Object.assign({}, props, { factory: 'memory' })); }
   static network(props) { return new Image(Object.assign({}, props, { factory: 'network' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ImageFiltered {
   constructor(props) {
     return __h('ImageFiltered', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ImageIcon {
   constructor(props) {
     return __h('ImageIcon', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class IndexedStack {
   constructor(props) {
     return __h('IndexedStack', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class InkWell {
   constructor(props) {
     return __h('InkWell', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class InputDecoration {
@@ -520,48 +584,56 @@ export class InputDecoration {
     return __h('InputDecoration', props);
   }
   static collapsed(props) { return new InputDecoration(Object.assign({}, props, { factory: 'collapsed' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class KeyboardListener {
   constructor(props) {
     return __h('KeyboardListener', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class LinearProgressIndicator {
   constructor(props) {
     return __h('LinearProgressIndicator', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ListTile {
   constructor(props) {
     return __h('ListTile', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Material {
   constructor(props) {
     return __h('Material', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class NotificationListener {
   constructor(props) {
     return __h('NotificationListener', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Offstage {
   constructor(props) {
     return __h('Offstage', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Opacity {
   constructor(props) {
     return __h('Opacity', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class OutlinedButton {
@@ -569,18 +641,21 @@ export class OutlinedButton {
     return __h('OutlinedButton', props);
   }
   static icon(props) { return new OutlinedButton(Object.assign({}, props, { factory: 'icon' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Padding {
   constructor(props) {
     return __h('Padding', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class PopScope {
   constructor(props) {
     return __h('PopScope', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Positioned {
@@ -591,12 +666,14 @@ export class Positioned {
   static fill(props) { return new Positioned(Object.assign({}, props, { factory: 'fill' })); }
   static fromRect(props) { return new Positioned(Object.assign({}, props, { factory: 'fromRect' })); }
   static fromRelativeRect(props) { return new Positioned(Object.assign({}, props, { factory: 'fromRelativeRect' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class PreferredSize {
   constructor(props) {
     return __h('PreferredSize', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Radio {
@@ -604,66 +681,77 @@ export class Radio {
     return __h('Radio', props);
   }
   static adaptive(props) { return new Radio(Object.assign({}, props, { factory: 'adaptive' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class RadioGroup {
   constructor(props) {
     return __h('RadioGroup', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class RichText {
   constructor(props) {
     return __h('RichText', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class RotationTransition {
   constructor(props) {
     return __h('RotationTransition', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Row {
   constructor(props) {
     return __h('Row', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SafeArea {
   constructor(props) {
     return __h('SafeArea', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Scaffold {
   constructor(props) {
     return __h('Scaffold', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class ScaleTransition {
   constructor(props) {
     return __h('ScaleTransition', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SimpleDialog {
   constructor(props) {
     return __h('SimpleDialog', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SingleChildScrollView {
   constructor(props) {
     return __h('SingleChildScrollView', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SizeTransition {
   constructor(props) {
     return __h('SizeTransition', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SizedBox {
@@ -674,6 +762,7 @@ export class SizedBox {
   static fromSize(props) { return new SizedBox(Object.assign({}, props, { factory: 'fromSize' })); }
   static shrink(props) { return new SizedBox(Object.assign({}, props, { factory: 'shrink' })); }
   static square(props) { return new SizedBox(Object.assign({}, props, { factory: 'square' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Slider {
@@ -681,6 +770,7 @@ export class Slider {
     return __h('Slider', props);
   }
   static adaptive(props) { return new Slider(Object.assign({}, props, { factory: 'adaptive' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverAppBar {
@@ -689,18 +779,21 @@ export class SliverAppBar {
   }
   static large(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'large' })); }
   static medium(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'medium' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverFillRemaining {
   constructor(props) {
     return __h('SliverFillRemaining', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverFillViewport {
   constructor(props) {
     return __h('SliverFillViewport', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverFixedExtentList {
@@ -709,42 +802,49 @@ export class SliverFixedExtentList {
   }
   static builder(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'builder' })); }
   static list(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'list' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverIgnorePointer {
   constructor(props) {
     return __h('SliverIgnorePointer', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverOffstage {
   constructor(props) {
     return __h('SliverOffstage', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverOpacity {
   constructor(props) {
     return __h('SliverOpacity', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverPadding {
   constructor(props) {
     return __h('SliverPadding', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverSafeArea {
   constructor(props) {
     return __h('SliverSafeArea', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverToBoxAdapter {
   constructor(props) {
     return __h('SliverToBoxAdapter', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class SliverVisibility {
@@ -752,12 +852,14 @@ export class SliverVisibility {
     return __h('SliverVisibility', props);
   }
   static maintain(props) { return new SliverVisibility(Object.assign({}, props, { factory: 'maintain' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Spacer {
   constructor(props) {
     return __h('Spacer', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Stack {
@@ -765,6 +867,7 @@ export class Stack {
     return __h('Stack', props);
   }
   static _fromJson(props) { return new Stack(Object.assign({}, props, { factory: '_fromJson' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Switch {
@@ -772,12 +875,14 @@ export class Switch {
     return __h('Switch', props);
   }
   static adaptive(props) { return new Switch(Object.assign({}, props, { factory: 'adaptive' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Tab {
   constructor(props) {
     return __h('Tab', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class TabBar {
@@ -785,12 +890,14 @@ export class TabBar {
     return __h('TabBar', props);
   }
   static secondary(props) { return new TabBar(Object.assign({}, props, { factory: 'secondary' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class TabBarView {
   constructor(props) {
     return __h('TabBarView', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Text {
@@ -799,6 +906,7 @@ export class Text {
   }
   static _(props) { return new Text(Object.assign({}, props, { factory: '_' })); }
   static rich(props) { return new Text(Object.assign({}, props, { factory: 'rich' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class TextButton {
@@ -806,12 +914,14 @@ export class TextButton {
     return __h('TextButton', props);
   }
   static icon(props) { return new TextButton(Object.assign({}, props, { factory: 'icon' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class TextField {
   constructor(props) {
     return __h('TextField', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Transform {
@@ -823,6 +933,7 @@ export class Transform {
   static rotate(props) { return new Transform(Object.assign({}, props, { factory: 'rotate' })); }
   static scale(props) { return new Transform(Object.assign({}, props, { factory: 'scale' })); }
   static translate(props) { return new Transform(Object.assign({}, props, { factory: 'translate' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Visibility {
@@ -830,12 +941,14 @@ export class Visibility {
     return __h('Visibility', props);
   }
   static maintain(props) { return new Visibility(Object.assign({}, props, { factory: 'maintain' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class Wrap {
   constructor(props) {
     return __h('Wrap', props);
   }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 }
 
 export class AnimatedBuilder {
@@ -905,6 +1018,7 @@ export class AnimatedList {
   }
   static builder(props) { return new AnimatedList(Object.assign({}, props, { factory: 'builder' })); }
   static separated(props) { return new AnimatedList(Object.assign({}, props, { factory: 'separated' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -965,6 +1079,7 @@ export class GridView {
   static custom(props) { return new GridView(Object.assign({}, props, { factory: 'custom' })); }
   static extent(props) { return new GridView(Object.assign({}, props, { factory: 'extent' })); }
   static separated(props) { return new GridView(Object.assign({}, props, { factory: 'separated' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1042,6 +1157,7 @@ export class ListView {
   static builder(props) { return new ListView(Object.assign({}, props, { factory: 'builder' })); }
   static custom(props) { return new ListView(Object.assign({}, props, { factory: 'custom' })); }
   static separated(props) { return new ListView(Object.assign({}, props, { factory: 'separated' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1245,6 +1361,7 @@ export class PageView {
   static builder(props) { return new PageView(Object.assign({}, props, { factory: 'builder' })); }
   static custom(props) { return new PageView(Object.assign({}, props, { factory: 'custom' })); }
   static separated(props) { return new PageView(Object.assign({}, props, { factory: 'separated' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1286,6 +1403,7 @@ export class ReorderableListView {
   }
   static builder(props) { return new ReorderableListView(Object.assign({}, props, { factory: 'builder' })); }
   static separated(props) { return new ReorderableListView(Object.assign({}, props, { factory: 'separated' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1330,6 +1448,7 @@ export class SliverGrid {
   static extent(props) { return new SliverGrid(Object.assign({}, props, { factory: 'extent' })); }
   static list(props) { return new SliverGrid(Object.assign({}, props, { factory: 'list' })); }
   static separated(props) { return new SliverGrid(Object.assign({}, props, { factory: 'separated' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1372,6 +1491,7 @@ export class SliverList {
   static builder(props) { return new SliverList(Object.assign({}, props, { factory: 'builder' })); }
   static list(props) { return new SliverList(Object.assign({}, props, { factory: 'list' })); }
   static separated(props) { return new SliverList(Object.assign({}, props, { factory: 'separated' })); }
+  static styleFrom(props) { return ButtonStyle.styleFrom(props); }
 
 }
 
@@ -1577,7 +1697,9 @@ const G = globalThis;
 const {
   defineProtoGetter: __defineProtoGetter,
   defineController, defineHandleKind, handleOp, reg,
-  panelPop, panelOf,
+  contextOf, asElement, hostIdOf, newRoot, mount, unmount,
+  commit, emit, flushNow, abortRoot, releasePageHandles, host,
+  roots, JsBuildContext,
 } = G.__core;
 
 // 构建期查不到构造签名时，位置实参以 `__pos: [...]` 下发；这里按形参名顺序
@@ -1842,6 +1964,433 @@ export class DismissDirection {
   static endToStart = "endToStart";
   static up = "up";
   static down = "down";
+}
+
+// 单值构造的取值：位置实参的形参名因类而异（`value` / `radius` / `index` /
+// `textScaleFactor` …），值都是「唯一那个数」；裸数字也接受。
+function __one(props) {
+  if (props == null) { return 0; }
+  if (typeof props === 'number' || typeof props === 'string') { return props; }
+  for (var k in props) {
+    if (k !== '__pos' && props[k] != null) { return props[k]; }
+  }
+  return 0;
+}
+
+// ----- 边距 ---------------------------------------------------------------
+// 宿主协议：{left, top, right, bottom}（layout_from_json.edgeInsetsFromJson）。
+export class EdgeInsets {
+  constructor(props) {
+    props = __posArgs(props, ['left', 'top', 'right', 'bottom']);
+    this.left = props.left != null ? props.left : 0;
+    this.top = props.top != null ? props.top : 0;
+    this.right = props.right != null ? props.right : 0;
+    this.bottom = props.bottom != null ? props.bottom : 0;
+  }
+  get horizontal() { return this.left + this.right; }
+  get vertical() { return this.top + this.bottom; }
+  get isEmpty() {
+    return this.left === 0 && this.top === 0 && this.right === 0 && this.bottom === 0;
+  }
+  toJSON() {
+    return { left: this.left, top: this.top, right: this.right, bottom: this.bottom };
+  }
+  static zero = new EdgeInsets({});
+  static all(props) {
+    var v = __one(props);
+    return new EdgeInsets({ left: v, top: v, right: v, bottom: v });
+  }
+  static only(props) { return new EdgeInsets(props); }
+  static symmetric(props) {
+    var h = props.horizontal != null ? props.horizontal : 0;
+    var v = props.vertical != null ? props.vertical : 0;
+    return new EdgeInsets({ left: h, top: v, right: h, bottom: v });
+  }
+  static fromLTRB(props) {
+    props = __posArgs(props, ['left', 'top', 'right', 'bottom']);
+    return new EdgeInsets(props);
+  }
+  static fromSTEB(props) {
+    props = __posArgs(props, ['start', 'top', 'end', 'bottom']);
+    return new EdgeInsets({
+      left: props.start != null ? props.start : 0,
+      top: props.top != null ? props.top : 0,
+      right: props.end != null ? props.end : 0,
+      bottom: props.bottom != null ? props.bottom : 0,
+    });
+  }
+}
+
+// ----- 圆角 / 边框 -----------------------------------------------------------
+// 宿主协议：BorderRadius → {radius} 或四角数字；Border → {all} 或四边 side。
+function __radiusOf(v) {
+  if (v instanceof Radius) { return v; }
+  return new Radius({ radius: typeof v === 'number' ? v : __one(v) });
+}
+
+export class BorderRadius {
+  constructor(props) {
+    props = __posArgs(props, ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']);
+    this.topLeft = __radiusOf(props.topLeft);
+    this.topRight = __radiusOf(props.topRight);
+    this.bottomLeft = __radiusOf(props.bottomLeft);
+    this.bottomRight = __radiusOf(props.bottomRight);
+  }
+  toJSON() {
+    var tl = this.topLeft.x, tr = this.topRight.x;
+    var bl = this.bottomLeft.x, br = this.bottomRight.x;
+    if (tl === tr && tr === bl && bl === br) { return { radius: tl }; }
+    return { topLeft: tl, topRight: tr, bottomLeft: bl, bottomRight: br };
+  }
+  get horizontal() { return this.topLeft.x + this.bottomLeft.x; }
+  get vertical() { return this.topLeft.x + this.bottomLeft.x; }
+  static zero = new BorderRadius({});
+  static all(props) {
+    var r = __radiusOf(props.radius);
+    return new BorderRadius({ topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
+  }
+  static circular(props) { return BorderRadius.all({ radius: __one(props) }); }
+  static only(props) { return new BorderRadius(props); }
+  static vertical(props) {
+    var r = __radiusOf(__one(props));
+    return new BorderRadius({ topLeft: r, topRight: r });
+  }
+  static horizontal(props) {
+    var r = __radiusOf(__one(props));
+    return new BorderRadius({ topLeft: r, bottomLeft: r });
+  }
+}
+
+export class BorderSide {
+  constructor(props) {
+    props = __posArgs(props, ['color', 'width', 'style', 'strokeAlign']);
+    this.color = props.color != null ? props.color : null;
+    this.width = props.width != null ? props.width : 1;
+    this.style = props.style != null ? props.style : 'solid';
+    if (props.strokeAlign != null) { this.strokeAlign = props.strokeAlign; }
+  }
+  toJSON() {
+    return { color: this.color, width: this.width, style: this.style };
+  }
+  static none = new BorderSide({ width: 0, style: 'none' });
+}
+
+export class Border {
+  constructor(props) {
+    props = __posArgs(props, ['top', 'right', 'bottom', 'left']);
+    if (props.all != null) { this.all = props.all; }
+    if (props.top != null) { this.top = props.top; }
+    if (props.right != null) { this.right = props.right; }
+    if (props.bottom != null) { this.bottom = props.bottom; }
+    if (props.left != null) { this.left = props.left; }
+  }
+  // `Border.all(color:.., width:..)` 的实参与 BorderSide 同形。
+  static all(props) { return new Border({ all: new BorderSide(props) }); }
+  static fromBorderSide(props) {
+    props = __posArgs(props, ['side']);
+    return new Border({ all: props.side });
+  }
+  toJSON() {
+    if (this.all != null) { return { all: this.all }; }
+    return { top: this.top, right: this.right, bottom: this.bottom, left: this.left };
+  }
+}
+
+export class BoxShadow {
+  constructor(props) {
+    props = __posArgs(props, ['color', 'offset', 'blurRadius', 'spreadRadius', 'blurStyle']);
+    this.color = props.color != null ? props.color : null;
+    this.offset = props.offset != null ? props.offset : new Offset({ dx: 0, dy: 0 });
+    this.blurRadius = props.blurRadius != null ? props.blurRadius : 0;
+    this.spreadRadius = props.spreadRadius != null ? props.spreadRadius : 0;
+    this.blurStyle = props.blurStyle != null ? props.blurStyle : 'normal';
+  }
+  toJSON() {
+    return {
+      color: this.color,
+      dx: this.offset.dx,
+      dy: this.offset.dy,
+      blur: this.blurRadius,
+      spread: this.spreadRadius,
+      blurStyle: this.blurStyle,
+    };
+  }
+}
+
+// ----- 文字 ---------------------------------------------------------------
+// 宿主协议：TextStyle 直取同名字段；FontWeight → 'bold'/'w600'；
+// TextDecoration → 成员名；TextScaler → {linear} / 'noScaling'。
+export class TextDecoration {
+  constructor(props) { this.name = __one(props); }
+  toJSON() { return this.name; }
+  static none = new TextDecoration('none');
+  static underline = new TextDecoration('underline');
+  static overline = new TextDecoration('overline');
+  static lineThrough = new TextDecoration('lineThrough');
+}
+
+export class FontWeight {
+  constructor(props) { this.value = __one(__posArgs(props, ['index'])); }
+  toJSON() {
+    if (this.value === 400) { return 'normal'; }
+    if (this.value === 700) { return 'bold'; }
+    return 'w' + this.value;
+  }
+  static w100 = new FontWeight(100);
+  static w200 = new FontWeight(200);
+  static w300 = new FontWeight(300);
+  static w400 = new FontWeight(400);
+  static w500 = new FontWeight(500);
+  static w600 = new FontWeight(600);
+  static w700 = new FontWeight(700);
+  static w800 = new FontWeight(800);
+  static w900 = new FontWeight(900);
+  static normal = FontWeight.w400;
+  static bold = FontWeight.w700;
+}
+
+export class TextScaler {
+  constructor(props) {
+    this.__none = props === null;
+    if (!this.__none) { this.factor = __one(props); }
+  }
+  toJSON() { return this.__none ? 'noScaling' : { linear: this.factor }; }
+  static noScaling = new TextScaler(null);
+  static linear(props) {
+    props = __posArgs(props, ['textScaleFactor']);
+    return new TextScaler(
+    props.textScaleFactor != null ? props.textScaleFactor : __one(props));
+  }
+}
+
+export class TextStyle {
+  constructor(props) {
+    props = props || {};
+    for (var k in props) {
+      if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+    }
+  }
+  toJSON() {
+    var j = {};
+    for (var k in this) {
+      if (this[k] != null) { j[k] = this[k]; }
+    }
+    return j;
+  }
+}
+
+// ----- 形状 ---------------------------------------------------------------
+// 宿主协议：shapeFromJson → {kind:'rounded'|'stadium'|'circle'|'beveled'|
+// 'continuous', borderRadius, side}。
+class __OutlinedBorder {
+  constructor(kind, props) {
+    props = __posArgs(props, ['borderRadius', 'side']);
+    this.__kind = kind;
+    if (props.borderRadius != null) { this.borderRadius = props.borderRadius; }
+    if (props.side != null) { this.side = props.side; }
+  }
+  toJSON() {
+    var j = { kind: this.__kind };
+    if (this.borderRadius != null) { j.borderRadius = this.borderRadius; }
+    if (this.side != null) { j.side = this.side; }
+    return j;
+  }
+}
+export class RoundedRectangleBorder extends __OutlinedBorder {
+  constructor(props) { super('rounded', props); }
+}
+export class CircleBorder extends __OutlinedBorder {
+  constructor(props) { super('circle', props); }
+}
+export class StadiumBorder extends __OutlinedBorder {
+  constructor(props) { super('stadium', props); }
+}
+export class BeveledRectangleBorder extends __OutlinedBorder {
+  constructor(props) { super('beveled', props); }
+}
+export class ContinuousRectangleBorder extends __OutlinedBorder {
+  constructor(props) { super('continuous', props); }
+}
+
+// ----- 图片 ---------------------------------------------------------------
+// AssetImage / NetworkImage 的跨桥形态就是**源字符串**（宿主 _imageProvider
+// 按 'http' 前缀区分网络图与资源图）；DecorationImage → {source, fit}。
+export class AssetImage {
+  constructor(props) {
+    props = __posArgs(props, ['assetName']);
+    this.assetName = props.assetName != null ? props.assetName : __one(props);
+  }
+  toJSON() { return this.assetName; }
+}
+
+export class NetworkImage {
+  constructor(props) {
+    props = __posArgs(props, ['url', 'scale', 'headers']);
+    this.url = props.url != null ? props.url : __one(props);
+  }
+  toJSON() { return this.url; }
+}
+
+export class DecorationImage {
+  constructor(props) {
+    props = props || {};
+    for (var k in props) {
+      if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+    }
+  }
+  toJSON() {
+    var j = { source: this.image };
+    if (this.fit != null) { j.fit = this.fit; }
+    return j;
+  }
+}
+
+// ----- 滤镜 ---------------------------------------------------------------
+// 宿主协议：ImageFilter → {kind:'blur'|'dilate'|'erode'|'matrix'|'compose',…}；
+// ColorFilter → {kind:'mode'|'matrix'|'linearToSrgbGamma'|'srgbToLinearGamma',…}。
+class __KindValue {
+  constructor(kind, props) {
+    this.__kind = kind;
+    props = props || {};
+    for (var k in props) {
+      if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+    }
+  }
+  toJSON() {
+    var j = { kind: this.__kind };
+    for (var k in this) {
+      if (k !== '__kind' && this[k] != null) { j[k] = this[k]; }
+    }
+    return j;
+  }
+}
+
+export class ImageFilter extends __KindValue {
+  constructor(props) { super('blur', props); }
+  static blur(props) {
+    props = __posArgs(props, ['sigmaX', 'sigmaY', 'tileMode']);
+    return new __KindValue('blur', props);
+  }
+  static dilate(props) {
+    props = __posArgs(props, ['radiusX', 'radiusY']);
+    return new __KindValue('dilate', props);
+  }
+  static erode(props) {
+    props = __posArgs(props, ['radiusX', 'radiusY']);
+    return new __KindValue('erode', props);
+  }
+  static matrix(props) {
+    props = __posArgs(props, ['matrix']);
+    return new __KindValue('matrix', props);
+  }
+  static compose(props) {
+    props = __posArgs(props, ['outer', 'inner']);
+    return new __KindValue('compose', props);
+  }
+}
+
+export class ColorFilter extends __KindValue {
+  constructor(props) { super('mode', props); }
+  static mode(props) {
+    props = __posArgs(props, ['color', 'blendMode']);
+    return new __KindValue('mode', props);
+  }
+  static matrix(props) {
+    props = __posArgs(props, ['matrix']);
+    return new __KindValue('matrix', props);
+  }
+  static linearToSrgbGamma = new __KindValue('linearToSrgbGamma', {});
+  static srgbToLinearGamma = new __KindValue('srgbToLinearGamma', {});
+}
+
+// ----- 数值列表 -----------------------------------------------------------
+// `Float64List.fromList([...])`：ImageFilter.matrix 的入参（宿主只校验 16 个）。
+export class Float64List {
+  constructor(props) {
+    props = __posArgs(props, ['elements']);
+    this.elements = props.elements != null ? props.elements : (props.__pos || []);
+  }
+  get length() { return this.elements.length; }
+  toJSON() { return this.elements; }
+  static fromList(props) {
+    props = __posArgs(props, ['elements']);
+    var list = props.elements != null ? props.elements : props;
+    return new Float64List({ elements: list });
+  }
+}
+
+// ----- 栅格代理 -----------------------------------------------------------
+// 宿主协议：键名与 Dart 构造具名实参同名（scroll_controller_bridge 直接读）。
+class __GridDelegate {
+  constructor(props) {
+    props = props || {};
+    for (var k in props) {
+      if (k !== '__pos' && props[k] != null) { this[k] = props[k]; }
+    }
+  }
+  toJSON() {
+    var j = {};
+    for (var k in this) {
+      if (this[k] != null) { j[k] = this[k]; }
+    }
+    return j;
+  }
+}
+export class SliverGridDelegateWithFixedCrossAxisCount extends __GridDelegate {
+  constructor(props) {
+    super(__posArgs(props, ['crossAxisCount', 'mainAxisSpacing',
+      'crossAxisSpacing', 'childAspectRatio', 'mainAxisExtent']));
+  }
+}
+export class SliverGridDelegateWithMaxCrossAxisExtent extends __GridDelegate {
+  constructor(props) {
+    super(__posArgs(props, ['maxCrossAxisExtent', 'mainAxisSpacing',
+      'crossAxisSpacing', 'childAspectRatio', 'mainAxisExtent']));
+  }
+}
+
+// ----- 滚动物理 -----------------------------------------------------------
+// 宿主协议：scrollPhysicsFromJson 认**类名字符串**——每个物理类 toJSON 即自身
+// 类名，与 Dart 里「同一类实例同一个物理」语义一致。
+class __ScrollPhysics {
+  constructor(name, props) {
+    this.__name = name;
+    if (props && props.parent != null) { this.parent = props.parent; }
+  }
+  toJSON() { return this.__name; }
+}
+export class BouncingScrollPhysics extends __ScrollPhysics {
+  constructor(props) { super('BouncingScrollPhysics', props); }
+}
+export class ClampingScrollPhysics extends __ScrollPhysics {
+  constructor(props) { super('ClampingScrollPhysics', props); }
+}
+export class NeverScrollableScrollPhysics extends __ScrollPhysics {
+  constructor(props) { super('NeverScrollableScrollPhysics', props); }
+}
+export class AlwaysScrollableScrollPhysics extends __ScrollPhysics {
+  constructor(props) { super('AlwaysScrollableScrollPhysics', props); }
+}
+
+// ----- 按钮样式 -----------------------------------------------------------
+// 宿主协议：buttonStyleFromJson 直取同名字段（padding / minimumSize / side /
+// shape / textStyle 等由各自类 toJSON 递归）。
+export class ButtonStyle {
+  constructor(props) {
+    props = props || {};
+    for (var k in props) {
+      if (k !== '__pos' && k !== 'factory' && props[k] != null) { this[k] = props[k]; }
+    }
+  }
+  toJSON() {
+    var j = {};
+    for (var k in this) {
+      if (this[k] != null) { j[k] = this[k]; }
+    }
+    return j;
+  }
+  // `ElevatedButton.styleFrom(...)` 等静态工厂的落点（由包装类转发）。
+  static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 function __toHex(v) {
@@ -2710,6 +3259,216 @@ export const Brightness = { dark: 'dark', light: 'light' };
 export const NavigationMode = { traditional: 'traditional', directional: 'directional' };
 
 G.__jsuiSetMediaQuery = __jsuiSetMediaQuery;
+
+// 可变状态按属性实时读写：`building` / `activeRoot` 是核心闭包里的 var，
+// 解构 const 只会拿到求值当时的快照。
+function __panelBuilding() { return G.__core.building; }
+function __panelActiveRoot() { return G.__core.activeRoot; }
+function __panelSetActiveRoot(v) { G.__core.activeRoot = v; }
+
+// 面板序号：key 既是 JS 侧独立根的 pageKey，也是宿主侧 store 的路由键。
+var panelSeq = 0;
+// key -> { key, kind, el, caller, root, result, hasResult, resolve, reject }
+var panels = {};
+
+function newPanelKey() {
+  panelSeq += 1;
+  return 'jsui_panel_' + panelSeq;
+}
+
+// 弹层参数里的「可跨桥的标量 / 值对象」：builder 与 context 留在本端，
+// 其余按 JSON 下发（Color 等值类自带 toJSON）。
+function panelOptionsJson(options) {
+  var out = {};
+  for (var k in options) {
+    if (k === 'context' || k === 'builder') { continue; }
+    var v = options[k];
+    if (v === null || v === undefined) { continue; }
+    if (typeof v === 'function') { continue; }
+    out[k] = v;
+  }
+  return out;
+}
+
+// 按「消费它的调用位置」定位面板。三条命中路径按可信度排序：
+//   1. 面板上下文代理（builder 的形参 ctx 被打了 `__panelKey`）——最准，
+//      嵌套 showDialog 时每个 builder 各自指向自己的面板，不会串台；
+//   2. 组件实例的 `__root` 是面板根（弹层内容里的组件调 pop）——按树归属；
+//   3. 兜底：同一调用方打开的面板里**最近打开**的那个（LIFO，与 Dart 里
+//      `Navigator.pop` 弹最上层路由同义）。
+function panelOf(context) {
+  if (context && context.__panelKey) {
+    var tagged = panels[context.__panelKey];
+    if (tagged) { return tagged; }
+  }
+  var inst = null;
+  if (context && context.__anchor) { inst = context.__anchor; }
+  else if (context && context.__root) { inst = context; }
+  else if (__panelBuilding()) { inst = __panelBuilding(); }
+  if (!inst) { return null; }
+  var root = inst.__root;
+  if (root && panels[root.key]) { return panels[root.key]; }
+  var found = null;
+  for (var k in panels) {
+    if (panels[k].caller === inst) { found = panels[k]; }
+  }
+  return found;
+}
+
+// 打开面板：builder 执行一次 → 建面板记录 → 请求宿主 push 路由。
+// 返回的 Promise 与 Dart `showDialog<T>` 的 Future 同义（结果为 pop 传的值）。
+function openPanel(kind, options) {
+  if (!options || typeof options !== 'object') { options = {}; }
+  // 调用方实例：事件执行期取当前构建位置；延迟副作用里（构建位置为空）取
+  // 传入 context 代理的锚点实例——面板根因此挂在调用方的 `__parent` 链上，
+  // 弹层里的 `context.watch/read` 仍能看到页面的 provider 作用域。
+  var given = options.context;
+  var caller = __panelBuilding() || (given && given.__anchor) || null;
+  var callerNode = given && given.__nodeId
+  ? given.__nodeId
+  : (caller ? contextOf(caller).__nodeId : null);
+  var key = newPanelKey();
+  // builder 的形参 ctx：**专用代理**（不打在调用方那个缓存代理上——`contextOf`
+  // 按实例缓存，共用会把页面的代理永久指向某个面板）。带 `__panelKey` 后
+  // `Navigator.pop(ctx)` / `Navigator.of(ctx)` 精确落到本面板，嵌套 showDialog
+  // 也不会串台。
+  var anchor = new JsBuildContext(caller, callerNode);
+  anchor.__panelKey = key;
+  // 建树回调按 Flutter 的原形参名取：`showDialog` / `showModalBottomSheet`
+  // 等用 `builder`，`showGeneralDialog` 用 `pageBuilder`——两者都是「在弹层
+  // 上下文里建一次树」，协议相同，这里不按 API 名特判。
+  var buildFn = typeof options.builder === 'function'
+  ? options.builder
+  : (typeof options.pageBuilder === 'function' ? options.pageBuilder : null);
+  var built = null;
+  if (buildFn) {
+    // 与 Dart 一致：建树回调立即执行（在弹层上下文里建树）。
+    // 只传 ctx：`pageBuilder` 的 animation / secondaryAnimation 是宿主侧的
+    // 动画对象，JS 端没有可等价的值（用到的话属于未支持项）。
+    built = buildFn(anchor);
+  }
+  var el = asElement(built);
+  var p = {
+    key: key, kind: kind, el: el, caller: caller, root: null,
+    result: null, hasResult: false, resolve: null, reject: null
+  };
+  var promise = new Promise(function (resolve, reject) {
+    p.resolve = resolve;
+    p.reject = reject;
+  });
+  panels[key] = p;
+  host('jsuiPanelOpen', [{
+      key: key,
+      kind: kind,
+      anchor: anchor.__nodeId,
+      options: panelOptionsJson(options)
+    }]).then(function () {}, function (err) {
+    // 宿主没打开（无可用 BuildContext / 路由失败）：撤销本端记录，让
+    // `await showDialog(...)` 的调用方拿到异常，而不是永远悬着的 Promise。
+    if (panels[key] === p) { delete panels[key]; }
+    if (p.reject) { p.reject(err); }
+  });
+  return promise;
+}
+
+// 宿主首帧后回调：把 builder 产出的元素树挂到独立根上并下发首批补丁。
+// 幂等：重复调用（重建 / 二次回调）直接返回。
+function panelMount(key) {
+  var p = panels[key];
+  if (!p || p.root) { return false; }
+  var root = newRoot(key);
+  roots[key] = root;
+  var prev = __panelActiveRoot();
+  __panelSetActiveRoot(root);
+  root.mounting = true;
+  try {
+    root.ops = [];
+    // parent = 调用方实例：`__parent` 链因此与页面连通（provider 等按类型
+    // 向上的作用域照常可见）；slot=null 故不产出 insert op。
+    root.inst = mount(p.el, p.caller, null);
+    emit({ op: 'root', id: hostIdOf(root.inst) });
+    commit(root);
+  } catch (e) {
+    abortRoot(root);
+    throw e;
+  } finally {
+    root.mounting = false;
+    __panelSetActiveRoot(prev);
+  }
+  p.root = root;
+  // 挂载期间累积的 setState（initState 里同步 setState）补一次 flush。
+  if (root.dirty.length) { flushNow(root); }
+  return true;
+}
+
+// 宿主路由关闭后回调（barrier / 返回键 / Navigator.pop 都汇到这一条）：
+// 卸载独立根 → 结算 Promise。本端清理由 unmount 逐实例释放，页面兜底
+// （releasePageHandles）保证任何残留都不会跨面板累积。
+function panelClosed(key) {
+  var p = panels[key];
+  if (!p) { return false; }
+  delete panels[key];
+  var root = p.root || roots[key] || null;
+  p.root = null;
+  p.el = null;
+  p.caller = null;
+  if (root && root.inst) {
+    var prev = __panelActiveRoot();
+    __panelSetActiveRoot(root);
+    try {
+      // ops 丢弃即可：宿主那棵子树随路由一起销毁，无需回传 remove。
+      root.ops = [];
+      unmount(root.inst);
+    } finally {
+      root.ops = null;
+      __panelSetActiveRoot(prev);
+    }
+    root.inst = null;
+  }
+  delete roots[key];
+  releasePageHandles(key);
+  var resolve = p.resolve;
+  p.resolve = null;
+  p.reject = null;
+  if (resolve) { resolve(p.hasResult ? p.result : null); }
+  return true;
+}
+
+// `Navigator.pop(context, result)` 的 JS 侧落点：结果**不回传宿主**（宿主
+// 侧路由只负责关闭），所以 pop 传的值留在本端，关闭回调时直接结算。
+//
+// 返回 false 表示 context 不在任何面板里：页面级路由由宿主 App 自己管理，
+// JS 侧不越权（也做不到——路由栈在 Dart）。
+function panelPop(context, result) {
+  var p = panelOf(context);
+  if (!p) {
+    // 明确出声：这类调用不会被静默忽略，否则表现为「点了没反应」。
+    console.warn('jsui: Navigator.pop 未命中任何弹层面板（页面级路由请由宿主管理）');
+    return false;
+  }
+  p.result = result;
+  p.hasResult = true;
+  host('jsuiPanelPop', [p.key]).then(function () {}, function () {});
+  return true;
+}
+
+// ── 对外 API：Dart 顶层函数一比一（全部具名实参 → 单个 options 对象）──
+// Dart 侧签名（NamedArgument 全部落进 options 对象，由宿主按 kind 还原）：
+//   showDialog<T>({context, builder, barrierDismissible, barrierColor, …})
+export function showDialog(options) { return openPanel('dialog', options); }
+// 自适应：iOS / macOS 走 Cupertino，其余走 Material（宿主调 showAdaptiveDialog）。
+export function showAdaptiveDialog(options) { return openPanel('adaptive', options); }
+export function showGeneralDialog(options) { return openPanel('general', options); }
+export function showCupertinoDialog(options) { return openPanel('cupertino', options); }
+export function showModalBottomSheet(options) { return openPanel('sheet', options); }
+// Cupertino 的模态弹层（通常承载 CupertinoActionSheet）：与 Material 的
+// showModalBottomSheet 语义不同（路由/动画/安全区归属都是 Cupertino 的）。
+export function showCupertinoModalPopup(options) { return openPanel('cupertinoSheet', options); }
+
+// 宿主侧两个入口（路由首帧后挂载 / 路由关闭后卸载）装到 `__jsui`：
+// runtime.js 的 api 不再包含任何面板知识。
+G.__jsui.panelMount = panelMount;
+G.__jsui.panelClosed = panelClosed;
 
 export class Navigator {
   constructor(context) { this.__context = context; }

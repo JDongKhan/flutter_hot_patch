@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/animated_list_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AnimatedList, Card, CircleAvatar, Colors, Column, Duration, Expanded, GlobalKey, ListTile, Row, SizedBox, Text, TextButton } from '../flutter.js';
+import { AnimatedList, Card, CircleAvatar, Colors, Column, Duration, EdgeInsets, Expanded, FontWeight, GlobalKey, ListTile, Row, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 AnimatedListDetail
 export class AnimatedListDetail {
@@ -16,15 +16,14 @@ export class AnimatedListDetail {
   }
   _itemBuilder(context, index, animation) {
     if (((index < 0) || (index >= this._items.length))) {
-      return (this.__k0 || (this.__k0 = new SizedBox({})));
+      return (this.__k0 || (this.__k0 = new SizedBox({
+        "factory": "shrink"
+      })));
     }
     return new Card({
-      "margin": {
-        "left": 0.0,
-        "top": 4.0,
-        "right": 0.0,
-        "bottom": 4.0
-      },
+      "margin": (this.__k1 || (this.__k1 = EdgeInsets.symmetric({
+        "vertical": 4
+      }))),
       "color": Colors.indigo.shade50,
       "child": new ListTile({
         "dense": true,
@@ -32,10 +31,10 @@ export class AnimatedListDetail {
           "radius": 12,
           "backgroundColor": Colors.indigo,
           "child": new Text({
-            "style": {
+            "style": (this.__k2 || (this.__k2 = new TextStyle({
               "color": Colors.white,
               "fontSize": 11
-            },
+            }))),
             "data": (index + 1)
           })
         }),
@@ -49,7 +48,7 @@ export class AnimatedListDetail {
     var index = this._items.length;
     this.setState(() => { this._items.add("条目 " + (++this._seq)); });
     var state = this._listKey.currentState;
-    state.insertItem(index, AnimatedListDetail._insertDuration);
+    state.insertItem(index, { "duration": AnimatedListDetail._insertDuration });
   }
   _removeFirst() {
     if (this._items.isEmpty) {
@@ -59,12 +58,9 @@ export class AnimatedListDetail {
     this.setState(() => {});
     var state = this._listKey.currentState;
     state.removeItem(0, (context, animation) => { return new Card({
-        "margin": {
-          "left": 0.0,
-          "top": 4.0,
-          "right": 0.0,
-          "bottom": 4.0
-        },
+        "margin": (this.__k1 || (this.__k1 = EdgeInsets.symmetric({
+          "vertical": 4
+        }))),
         "color": Colors.indigo.shade50,
         "child": new ListTile({
           "dense": true,
@@ -72,10 +68,10 @@ export class AnimatedListDetail {
             "radius": 12,
             "backgroundColor": Colors.indigo,
             "child": new Text({
-              "style": {
+              "style": (this.__k2 || (this.__k2 = new TextStyle({
                 "color": Colors.white,
                 "fontSize": 11
-              },
+              }))),
               "data": "1"
             })
           }),
@@ -83,20 +79,20 @@ export class AnimatedListDetail {
             "data": removed
           })
         })
-      }); }, AnimatedListDetail._removeDuration);
+      }); }, { "duration": AnimatedListDetail._removeDuration });
   }
   build(context) {
     return new Column({
       "crossAxisAlignment": "stretch",
       "children": [
-        (this.__k1 || (this.__k1 = new Text({
+        (this.__k3 || (this.__k3 = new Text({
           "data": "AnimatedList · 增删补间（GlobalKey.currentState）",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 8
         }))),
         new SizedBox({
@@ -107,7 +103,7 @@ export class AnimatedListDetail {
             "key": this._listKey
           })
         }),
-        (this.__k2 || (this.__k2 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 8
         }))),
         new Row({
@@ -115,7 +111,7 @@ export class AnimatedListDetail {
             new Expanded({
               "child": new TextButton({
                 "onPressed": this.__bindFn(0, [], (...__a) => this._insert(...__a)),
-                "child": (this.__k3 || (this.__k3 = new Text({
+                "child": (this.__k5 || (this.__k5 = new Text({
                   "data": "插入末尾（350ms）"
                 })))
               })
@@ -123,7 +119,7 @@ export class AnimatedListDetail {
             new Expanded({
               "child": new TextButton({
                 "onPressed": this.__bindFn(1, [], (...__a) => this._removeFirst(...__a)),
-                "child": (this.__k4 || (this.__k4 = new Text({
+                "child": (this.__k6 || (this.__k6 = new Text({
                   "data": "移除第一项（300ms）"
                 })))
               })

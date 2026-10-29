@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/automatic_keep_alive_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, DefaultTabController, ElevatedButton, Expanded, Padding, SizedBox, Tab, TabBar, TabBarView, Text } from '../flutter.js';
+import { Colors, Column, DefaultTabController, EdgeInsets, ElevatedButton, Expanded, FontWeight, Padding, SizedBox, Tab, TabBar, TabBarView, Text, TextStyle } from '../flutter.js';
 
 // 组件 AutomaticKeepAliveDetail
 export class AutomaticKeepAliveDetail {
@@ -19,10 +19,10 @@ export class AutomaticKeepAliveDetail {
           "children": [
             (this.__k0 || (this.__k0 = new Text({
               "data": "先点「+1」再看：切到另一页，然后切回来对比计数",
-              "style": {
-                "color": Colors.black54,
-                "fontSize": 13
-              }
+              "style": new TextStyle({
+                "fontSize": 13,
+                "color": Colors.black54
+              })
             }))),
             (this.__k1 || (this.__k1 = new SizedBox({
               "height": 8
@@ -60,48 +60,45 @@ export class _PlainPage {
   }
   build(context) {
     return new Padding({
-      "padding": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+        "value": 12
+      }))),
       "child": new Column({
         "crossAxisAlignment": "start",
         "children": [
-          (this.__k0 || (this.__k0 = new Text({
+          (this.__k1 || (this.__k1 = new Text({
             "data": "不保活页 · 未声明 wantKeepAlive",
-            "style": {
-              "fontWeight": "bold"
-            }
+            "style": new TextStyle({
+              "fontWeight": FontWeight.bold
+            })
           }))),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 4
           }))),
-          (this.__k2 || (this.__k2 = new Text({
+          (this.__k3 || (this.__k3 = new Text({
             "data": "切走再回来：计数归零",
-            "style": {
-              "color": Colors.black54,
-              "fontSize": 12
-            }
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.black54
+            })
           }))),
-          (this.__k3 || (this.__k3 = new SizedBox({
+          (this.__k4 || (this.__k4 = new SizedBox({
             "height": 12
           }))),
           new Text({
-            "style": {
+            "style": (this.__k5 || (this.__k5 = new TextStyle({
               "fontSize": 20
-            },
+            }))),
             "data": "当前计数：" + this._count
           }),
-          (this.__k4 || (this.__k4 = new SizedBox({
+          (this.__k6 || (this.__k6 = new SizedBox({
             "height": 8
           }))),
           new ElevatedButton({
             "onPressed": this.__bindFn(0, [], () => this.setState(() => {
               this._count += 1;
             })),
-            "child": (this.__k5 || (this.__k5 = new Text({
+            "child": (this.__k7 || (this.__k7 = new Text({
               "data": "+1"
             })))
           })
@@ -122,48 +119,45 @@ export class _KeepAlivePage {
   }
   build(context) {
     return new Padding({
-      "padding": {
-        "left": 12.0,
-        "top": 12.0,
-        "right": 12.0,
-        "bottom": 12.0
-      },
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+        "value": 12
+      }))),
       "child": new Column({
         "crossAxisAlignment": "start",
         "children": [
-          (this.__k0 || (this.__k0 = new Text({
+          (this.__k1 || (this.__k1 = new Text({
             "data": "保活页 · wantKeepAlive = true",
-            "style": {
-              "fontWeight": "bold"
-            }
+            "style": new TextStyle({
+              "fontWeight": FontWeight.bold
+            })
           }))),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 4
           }))),
-          (this.__k2 || (this.__k2 = new Text({
+          (this.__k3 || (this.__k3 = new Text({
             "data": "切走再回来：计数保留",
-            "style": {
-              "color": Colors.black54,
-              "fontSize": 12
-            }
+            "style": new TextStyle({
+              "fontSize": 12,
+              "color": Colors.black54
+            })
           }))),
-          (this.__k3 || (this.__k3 = new SizedBox({
+          (this.__k4 || (this.__k4 = new SizedBox({
             "height": 12
           }))),
           new Text({
-            "style": {
+            "style": (this.__k5 || (this.__k5 = new TextStyle({
               "fontSize": 20
-            },
+            }))),
             "data": "当前计数：" + this._count
           }),
-          (this.__k4 || (this.__k4 = new SizedBox({
+          (this.__k6 || (this.__k6 = new SizedBox({
             "height": 8
           }))),
           new ElevatedButton({
             "onPressed": this.__bindFn(0, [], () => this.setState(() => {
               this._count += 1;
             })),
-            "child": (this.__k5 || (this.__k5 = new Text({
+            "child": (this.__k7 || (this.__k7 = new Text({
               "data": "+1"
             })))
           })

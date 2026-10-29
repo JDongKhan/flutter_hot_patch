@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/keyboard_listener_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, Container, FocusNode, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, OutlinedButton, Row, SizedBox, Text } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, FocusNode, FontWeight, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, OutlinedButton, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 KeyboardListenerDetail
 export class KeyboardListenerDetail {
@@ -39,24 +39,23 @@ export class KeyboardListenerDetail {
     return new Container({
       "width": 36,
       "height": 36,
-      "margin": {
-        "left": 3.0,
-        "top": 3.0,
-        "right": 3.0,
-        "bottom": 3.0
-      },
-      "alignment": "center",
-      "decoration": {
-        "color": (active ? ((this._lit ? Colors.amber : Colors.deepPurple)) : Colors.grey.shade200),
-        "borderRadius": {
-          "radius": 4.0
-        }
-      },
+      "margin": (this.__k0 || (this.__k0 = EdgeInsets.all({
+        "value": 3
+      }))),
+      "alignment": Alignment.center,
+      "decoration": new BoxDecoration({
+        "color": active ? ((this._lit ? Colors.amber : Colors.deepPurple)) : Colors.grey.shade200,
+        "borderRadius": (this.__k1 || (this.__k1 = BorderRadius.all({
+          "radius": Radius.circular({
+            "radius": 4
+          })
+        })))
+      }),
       "child": new Text({
-        "style": {
+        "style": (this.__k2 || (this.__k2 = new TextStyle({
           "color": Colors.white,
           "fontSize": 12
-        },
+        }))),
         "data": active ? "●" : ""
       })
     });
@@ -75,23 +74,23 @@ export class KeyboardListenerDetail {
     return new Column({
       "crossAxisAlignment": "start",
       "children": [
-        (this.__k0 || (this.__k0 = new Text({
+        (this.__k3 || (this.__k3 = new Text({
           "data": "KeyboardListener",
-          "style": {
-            "fontWeight": "bold"
-          }
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
-        (this.__k1 || (this.__k1 = new SizedBox({
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 4
         }))),
-        (this.__k2 || (this.__k2 = new Text({
+        (this.__k5 || (this.__k5 = new Text({
           "data": "方向键移动方块，空格切换颜色，Esc 复位；KeyDown / KeyRepeat / KeyUp 分别计数",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
         }))),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k6 || (this.__k6 = new SizedBox({
           "height": 10
         }))),
         new KeyboardListener({
@@ -99,22 +98,19 @@ export class KeyboardListenerDetail {
           "autofocus": true,
           "onKeyEvent": this.__bindFn(0, [], (...__a) => this._onKey(...__a)),
           "child": new Container({
-            "padding": {
-              "left": 10.0,
-              "top": 10.0,
-              "right": 10.0,
-              "bottom": 10.0
-            },
-            "decoration": {
-              "border": {
-                "all": {
-                  "color": Colors.grey.shade300
-                }
-              },
-              "borderRadius": {
-                "radius": 8.0
-              }
-            },
+            "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
+              "value": 10
+            }))),
+            "decoration": new BoxDecoration({
+              "border": Border.all({
+                "color": Colors.grey.shade300
+              }),
+              "borderRadius": (this.__k8 || (this.__k8 = BorderRadius.all({
+                "radius": Radius.circular({
+                  "radius": 8
+                })
+              })))
+            }),
             "child": new Column({
               "crossAxisAlignment": "start",
               "children": [
@@ -126,55 +122,55 @@ export class KeyboardListenerDetail {
                     this._gridRow(2)
                   ]
                 }),
-                (this.__k4 || (this.__k4 = new SizedBox({
+                (this.__k9 || (this.__k9 = new SizedBox({
                   "height": 8
                 }))),
                 new Text({
-                  "style": {
+                  "style": (this.__k10 || (this.__k10 = new TextStyle({
                     "fontSize": 12
-                  },
+                  }))),
                   "data": "最近事件：" + this._last
                 }),
                 new Text({
-                  "style": {
+                  "style": (this.__k10 || (this.__k10 = new TextStyle({
                     "fontSize": 12
-                  },
+                  }))),
                   "data": "字符 character：" + this._char
                 }),
                 new Text({
-                  "style": {
+                  "style": (this.__k10 || (this.__k10 = new TextStyle({
                     "fontSize": 12
-                  },
+                  }))),
                   "data": "物理键：" + this._phys
                 }),
                 new Text({
-                  "style": {
-                    "fontSize": 12,
-                    "color": Colors.black54
-                  },
+                  "style": (this.__k11 || (this.__k11 = new TextStyle({
+                    "color": Colors.black54,
+                    "fontSize": 12
+                  }))),
                   "data": "KeyDown " + this._down + " · KeyRepeat " + this._repeat + " · KeyUp " + this._up
                 })
               ]
             })
           })
         }),
-        (this.__k3 || (this.__k3 = new SizedBox({
+        (this.__k6 || (this.__k6 = new SizedBox({
           "height": 10
         }))),
         new Row({
           "children": [
             new OutlinedButton({
               "onPressed": this.__bindFn(1, [], () => this._node.requestFocus()),
-              "child": (this.__k5 || (this.__k5 = new Text({
+              "child": (this.__k12 || (this.__k12 = new Text({
                 "data": "让面板获得焦点"
               })))
             }),
-            (this.__k6 || (this.__k6 = new SizedBox({
+            (this.__k13 || (this.__k13 = new SizedBox({
               "width": 8
             }))),
             new OutlinedButton({
               "onPressed": this.__bindFn(2, [], () => { this.setState(() => { this._row = 1; this._col = 1; this._lit = false; }); }),
-              "child": (this.__k7 || (this.__k7 = new Text({
+              "child": (this.__k14 || (this.__k14 = new Text({
                 "data": "复位方块"
               })))
             })

@@ -11,7 +11,8 @@
 //
 // **本片段只是机制，不含任何库的 API**：`watch` / `read` 等方法由各自的三方库
 // 在自己片段里补到 `JsBuildContext.prototype` 上（对齐 Dart 的
-// `extension BuildContextX on BuildContext`）——见 capabilities/provider/provider_js.dart。
+// `extension BuildContextX on BuildContext`）——见 provider 包模块的片段
+// `provider_module_js.dart`（随 `patch/provider.js` 发布）。
 // 宿主侧由核心的 `registerContextOp` 分发给注册者，核心不认识具体 op 名。
 //
 // 代理由运行时在 build 时**传入**（`inst.build(ctx)`，对应 Dart 的
@@ -23,7 +24,7 @@
 // 同步约束（设计内）：库在自己补的 `watch` 里做的**取值**必须同步（渲染期
 // `model.count` 要直接读），而 JS→宿主只有异步桥，故取值在本端按**类型名**沿
 // `__parent` 从最近的作用域结点取（通用机制，见 mini-react【8】的 `scopeOf`；
-// 作用域声明见各三方库的接入文件，如 capabilities/provider/provider_js.dart）。
+// 作用域声明见各三方库的 package 模块片段，如 provider_module_js.dart）。
 const String buildContextJsSource = r'''
   defineHandleKind('ctx/BuildContext', {});
 
@@ -63,7 +64,7 @@ const String buildContextJsSource = r'''
 
   // `context.watch<T>()` / `read<T>()` **不在这里**：它们不是框架 API，而是
   // provider 那类 `extension BuildContextX on BuildContext`——方法补丁在
-  // capabilities/provider/provider_js.dart，宿主侧处理见 provider/context_ops.dart。
+  // patch/provider.js（provider_module_js.dart），宿主侧处理见 provider/context_ops.dart。
   // 本片段只提供机制：代理、句柄、`contextOf`/`buildContextOf`、通用 op 转发。
 
   // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，

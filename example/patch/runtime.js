@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 bac2650f） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 bc51eb06） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'bac2650f') { return; }
-  G.__jsuiVersion = 'bac2650f';
+  if (G.__jsui && G.__jsuiVersion === 'bc51eb06') { return; }
+  G.__jsuiVersion = 'bc51eb06';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2229,10 +2229,28 @@ if (G.kDebugMode) {
     defineHandleKind: defineHandleKind,
     handleOp: handleOp,
     reg: reg,
-    // 弹层路由的 JS 侧落点（flutter.js 的 Navigator 值类用；portal 在
-    // 【27.6】，函数声明提升，此处引用安全）。
-    panelPop: panelPop,
-    panelOf: panelOf
+    // 作用域机制（provider 在自己的模块 patch/provider.js 里注册作用域）。
+    registerScope: registerScope,
+    scopeOf: scopeOf,
+    subscribeListenable: subscribeListenable,
+    // 结点归属与独立根（showDialog 系列的面板机制在 flutter.js）。
+    contextOf: contextOf,
+    asElement: asElement,
+    hostIdOf: hostIdOf,
+    newRoot: newRoot,
+    mount: mount,
+    unmount: unmount,
+    commit: commit,
+    emit: emit,
+    flushNow: flushNow,
+    abortRoot: abortRoot,
+    releasePageHandles: releasePageHandles,
+    host: host,
+    roots: roots,
+    get building() { return building; },
+    get activeRoot() { return activeRoot; },
+    set activeRoot(v) { activeRoot = v; },
+    get JsBuildContext() { return JsBuildContext; }
   };
 
 
@@ -2381,7 +2399,7 @@ if (G.kDebugMode) {
 
   // `context.watch<T>()` / `read<T>()` **不在这里**：它们不是框架 API，而是
   // provider 那类 `extension BuildContextX on BuildContext`——方法补丁在
-  // capabilities/provider/provider_js.dart，宿主侧处理见 provider/context_ops.dart。
+  // patch/provider.js（provider_module_js.dart），宿主侧处理见 provider/context_ops.dart。
   // 本片段只提供机制：代理、句柄、`contextOf`/`buildContextOf`、通用 op 转发。
 
   // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，
@@ -2404,47 +2422,6 @@ if (G.kDebugMode) {
     var root = activeRoot || inst.__root;
     return new JsBuildContext(inst, root ? 'page:' + root.key : null);
   }
-
-
-// ===== 【23】provider =====
-  // model   = 类型名（生成器在翻译期写入，源自 `ChangeNotifierProvider<T>` 的 T）；
-  // notifier = JS 侧 provider 组件 build 时创建/复用的实例（活对象）。
-  registerScope('ChangeNotifierProvider', function (props) {
-    if (!props || props.model == null) { return null; }
-    var out = {};
-    out[props.model] = props.notifier;
-    return out;
-  });
-
-  // ---- extension BuildContextX on BuildContext ----
-  // 对齐 Dart：`context.watch<T>()` / `context.read<T>()` 是 **provider 的**
-  // extension，不是 BuildContext 的框架 API。故方法补丁归本库，核心的
-  // build_context 片段只提供代理与通用 op 转发（见其文件头）。
-  //
-  // 取值同步（渲染期 `model.count` 要直接读，而 JS→宿主只有异步桥）⇒ 值在本端
-  // 按**类型名**沿 `__parent` 取最近作用域（核心通用机制 `scopeOf`，只认类型名，
-  // 不关心 T 是模型还是别的）；值是否可订阅由 `subscribeListenable` 鸭子判型。
-  // 「订阅谁」这半是库相关的，交宿主：op 经 `__host` 下发到真实 BuildContext，
-  // 由 provider/context_ops.dart 解析成模型镜像并建立依赖。
-
-  // `context.watch<T>()`：取最近提供 [type] 的值并订阅（notify 时只重建调用
-  // watch 的那个位置）。
-  JsBuildContext.prototype.watch = function (type) {
-    var value = scopeOf(this.__anchor, type);
-    // 把本端查找结果一并告知宿主：宿主据此区分「消费点在 provider 子树之外」
-    // （真错误，宿主会告警）与「宿主侧本就没有该作用域的镜像」（正常，静默）。
-    this.__host('watch', { type: type, found: value != null });
-    if (value == null) { return undefined; }
-    subscribeListenable(this.__anchor, value);
-    return value;
-  };
-
-  // `context.read<T>()`：仅取实例，不订阅（按钮回调里的合法用法）。
-  JsBuildContext.prototype.read = function (type) {
-    var value = scopeOf(this.__anchor, type);
-    this.__host('read', { type: type, found: value != null });
-    return value == null ? undefined : value;
-  };
 
 
 // ===== 【25】泄漏观测（debug 用） =====
@@ -2674,210 +2651,6 @@ if (G.kDebugMode) {
   };
 
 
-// ===== 【27.6】命令式弹层（showDialog 系列） =====
-  // 面板序号：key 既是 JS 侧独立根的 pageKey，也是宿主侧 store 的路由键。
-  var panelSeq = 0;
-  // key -> { key, kind, el, caller, root, result, hasResult, resolve, reject }
-  var panels = {};
-
-  function newPanelKey() {
-    panelSeq += 1;
-    return 'jsui_panel_' + panelSeq;
-  }
-
-  // 弹层参数里的「可跨桥的标量 / 值对象」：builder 与 context 留在本端，
-  // 其余按 JSON 下发（Color 等值类自带 toJSON）。
-  function panelOptionsJson(options) {
-    var out = {};
-    for (var k in options) {
-      if (k === 'context' || k === 'builder') { continue; }
-      var v = options[k];
-      if (v === null || v === undefined) { continue; }
-      if (typeof v === 'function') { continue; }
-      out[k] = v;
-    }
-    return out;
-  }
-
-  // 按「消费它的调用位置」定位面板。三条命中路径按可信度排序：
-  //   1. 面板上下文代理（builder 的形参 ctx 被打了 `__panelKey`）——最准，
-  //      嵌套 showDialog 时每个 builder 各自指向自己的面板，不会串台；
-  //   2. 组件实例的 `__root` 是面板根（弹层内容里的组件调 pop）——按树归属；
-  //   3. 兜底：同一调用方打开的面板里**最近打开**的那个（LIFO，与 Dart 里
-  //      `Navigator.pop` 弹最上层路由同义）。
-  function panelOf(context) {
-    if (context && context.__panelKey) {
-      var tagged = panels[context.__panelKey];
-      if (tagged) { return tagged; }
-    }
-    var inst = null;
-    if (context && context.__anchor) { inst = context.__anchor; }
-    else if (context && context.__root) { inst = context; }
-    else if (building) { inst = building; }
-    if (!inst) { return null; }
-    var root = inst.__root;
-    if (root && panels[root.key]) { return panels[root.key]; }
-    var found = null;
-    for (var k in panels) {
-      if (panels[k].caller === inst) { found = panels[k]; }
-    }
-    return found;
-  }
-
-  // 打开面板：builder 执行一次 → 建面板记录 → 请求宿主 push 路由。
-  // 返回的 Promise 与 Dart `showDialog<T>` 的 Future 同义（结果为 pop 传的值）。
-  function openPanel(kind, options) {
-    if (!options || typeof options !== 'object') { options = {}; }
-    // 调用方实例：事件执行期取当前构建位置；延迟副作用里（`building` 为空）取
-    // 传入 context 代理的锚点实例——面板根因此挂在调用方的 `__parent` 链上，
-    // 弹层里的 `context.watch/read` 仍能看到页面的 provider 作用域。
-    var given = options.context;
-    var caller = building || (given && given.__anchor) || null;
-    var callerNode = given && given.__nodeId
-      ? given.__nodeId
-      : (caller ? contextOf(caller).__nodeId : null);
-    var key = newPanelKey();
-    // builder 的形参 ctx：**专用代理**（不打在调用方那个缓存代理上——`contextOf`
-    // 按实例缓存，共用会把页面的代理永久指向某个面板）。带 `__panelKey` 后
-    // `Navigator.pop(ctx)` / `Navigator.of(ctx)` 精确落到本面板，嵌套 showDialog
-    // 也不会串台。
-    var anchor = new JsBuildContext(caller, callerNode);
-    anchor.__panelKey = key;
-    // 建树回调按 Flutter 的原形参名取：`showDialog` / `showModalBottomSheet`
-    // 等用 `builder`，`showGeneralDialog` 用 `pageBuilder`——两者都是「在弹层
-    // 上下文里建一次树」，协议相同，这里不按 API 名特判。
-    var buildFn = typeof options.builder === 'function'
-      ? options.builder
-      : (typeof options.pageBuilder === 'function' ? options.pageBuilder : null);
-    var built = null;
-    if (buildFn) {
-      // 与 Dart 一致：建树回调立即执行（在弹层上下文里建树）。
-      // 只传 ctx：`pageBuilder` 的 animation / secondaryAnimation 是宿主侧的
-      // 动画对象，JS 端没有可等价的值（用到的话属于未支持项）。
-      built = buildFn(anchor);
-    }
-    var el = asElement(built);
-    var p = {
-      key: key, kind: kind, el: el, caller: caller, root: null,
-      result: null, hasResult: false, resolve: null, reject: null
-    };
-    var promise = new Promise(function (resolve, reject) {
-      p.resolve = resolve;
-      p.reject = reject;
-    });
-    panels[key] = p;
-    host('jsuiPanelOpen', [{
-      key: key,
-      kind: kind,
-      anchor: anchor.__nodeId,
-      options: panelOptionsJson(options)
-    }]).then(function () {}, function (err) {
-      // 宿主没打开（无可用 BuildContext / 路由失败）：撤销本端记录，让
-      // `await showDialog(...)` 的调用方拿到异常，而不是永远悬着的 Promise。
-      if (panels[key] === p) { delete panels[key]; }
-      if (p.reject) { p.reject(err); }
-    });
-    return promise;
-  }
-
-  // 宿主首帧后回调：把 builder 产出的元素树挂到独立根上并下发首批补丁。
-  // 幂等：重复调用（重建 / 二次回调）直接返回。
-  function panelMount(key) {
-    var p = panels[key];
-    if (!p || p.root) { return false; }
-    var root = newRoot(key);
-    roots[key] = root;
-    var prev = activeRoot;
-    activeRoot = root;
-    root.mounting = true;
-    try {
-      root.ops = [];
-      // parent = 调用方实例：`__parent` 链因此与页面连通（provider 等按类型
-      // 向上的作用域照常可见）；slot=null 故不产出 insert op。
-      root.inst = mount(p.el, p.caller, null);
-      emit({ op: 'root', id: hostIdOf(root.inst) });
-      commit(root);
-    } catch (e) {
-      abortRoot(root);
-      throw e;
-    } finally {
-      root.mounting = false;
-      activeRoot = prev;
-    }
-    p.root = root;
-    // 挂载期间累积的 setState（initState 里同步 setState）补一次 flush。
-    if (root.dirty.length) { flushNow(root); }
-    return true;
-  }
-
-  // 宿主路由关闭后回调（barrier / 返回键 / Navigator.pop 都汇到这一条）：
-  // 卸载独立根 → 结算 Promise。本端清理由 unmount 逐实例释放，页面兜底
-  // （releasePageHandles）保证任何残留都不会跨面板累积。
-  function panelClosed(key) {
-    var p = panels[key];
-    if (!p) { return false; }
-    delete panels[key];
-    var root = p.root || roots[key] || null;
-    p.root = null;
-    p.el = null;
-    p.caller = null;
-    if (root && root.inst) {
-      var prev = activeRoot;
-      activeRoot = root;
-      try {
-        // ops 丢弃即可：宿主那棵子树随路由一起销毁，无需回传 remove。
-        root.ops = [];
-        unmount(root.inst);
-      } finally {
-        root.ops = null;
-        activeRoot = prev;
-      }
-      root.inst = null;
-    }
-    delete roots[key];
-    releasePageHandles(key);
-    var resolve = p.resolve;
-    p.resolve = null;
-    p.reject = null;
-    if (resolve) { resolve(p.hasResult ? p.result : null); }
-    return true;
-  }
-
-  // `Navigator.pop(context, result)` 的 JS 侧落点：结果**不回传宿主**（宿主
-  // 侧路由只负责关闭），所以 pop 传的值留在本端，关闭回调时直接结算。
-  //
-  // 返回 false 表示 context 不在任何面板里：页面级路由由宿主 App 自己管理，
-  // JS 侧不越权（也做不到——路由栈在 Dart）。
-  function panelPop(context, result) {
-    var p = panelOf(context);
-    if (!p) {
-      // 明确出声：这类调用不会被静默忽略，否则表现为「点了没反应」。
-      console.warn('jsui: Navigator.pop 未命中任何弹层面板（页面级路由请由宿主管理）');
-      return false;
-    }
-    p.result = result;
-    p.hasResult = true;
-    host('jsuiPanelPop', [p.key]).then(function () {}, function () {});
-    return true;
-  }
-
-  // ── 对外注入（生成器对裸顶层调用原样产出同名调用，见 runtime_global_types）──
-  // Dart 侧签名（NamedArgument 全部落进 options 对象，由宿主按 kind 还原）：
-  //   showDialog<T>({context, builder, barrierDismissible, barrierColor, …})
-  G.showDialog = function (options) { return openPanel('dialog', options); };
-  // 自适应：iOS / macOS 走 Cupertino，其余走 Material（宿主调 showAdaptiveDialog）。
-  G.showAdaptiveDialog = function (options) { return openPanel('adaptive', options); };
-  G.showGeneralDialog = function (options) { return openPanel('general', options); };
-  G.showCupertinoDialog = function (options) { return openPanel('cupertino', options); };
-  G.showModalBottomSheet = function (options) { return openPanel('sheet', options); };
-  // Cupertino 的模态弹层（通常承载 CupertinoActionSheet）：与 Material 的
-  // showModalBottomSheet 语义不同（路由/动画/安全区归属都是 Cupertino 的）。
-  G.showCupertinoModalPopup = function (options) { return openPanel('cupertinoSheet', options); };
-
-  // `Navigator` 的对外类在 flutter.js 值类区（navigator_js.dart）：它只做
-  // 形状，实际落点是上面的 panelPop / panelOf，经 `G.__core` 交接。
-
-
 // ===== 【28】api 收尾 =====
 
   var api = {
@@ -2891,10 +2664,8 @@ if (G.kDebugMode) {
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
     // （setState 只标脏，见【9】markDirty / requestFlush）。
     flushPending: flushPending,
-    // 命令式弹层（showDialog 系列）：宿主在路由内容首帧后挂载独立根，路由
-    // 关闭后回落本端卸载（见【27.6】portal_js）。
-    panelMount: panelMount,
-    panelClosed: panelClosed,
+    // `panelMount` / `panelClosed` 不在这里：命令式弹层的独立根归 flutter.js
+    // （见 dialogs_js.dart），该模块求值时把两个入口装到 `__jsui` 上。
 
     leakSnapshot: leakSnapshot,
     cacheDump: cacheDump,

@@ -839,7 +839,9 @@ String? methodCallExprJs(
           ? closureToJs(inner, scope, classes)
           : rhsToJs(inner, scope, classes);
       if (v == null) return null;
-      argJs.add(v);
+      // 具名实参只进尾参对象，不占位置（Dart `f(a, b: 1)` ⟺ JS `f(a, {b: 1})`）：
+      // 运行时值类静态工厂（`EdgeInsets.symmetric({vertical: 4})`）与实例方法
+      // 都按 props 取具名实参。
       namedJs.add('${jsString(a.name.label.name)}: $v');
     } else {
       final v = rhsToJs(a, scope, classes);
@@ -857,7 +859,12 @@ String? methodCallExprJs(
       return '_app_host_.invoke(${jsString(channel)}, ${hostArgsJs(posJs, namedJs)})';
     }
   }
-  final passed = argJs.join(', ');
+  // 位置实参原样，具名实参合并成**尾参对象**（与构造 `new X({...})` 同形）；
+  // 无具名时不加空对象（`f()` 保持 `f()`）。
+  final passed = [
+    ...argJs,
+    if (namedJs.isNotEmpty) '{ ${namedJs.join(', ')} }',
+  ].join(', ');
   final target = e.target;
   if (target == null) {
     // 顶层函数（全局方法）：@HostInjected → `_app_host_.invoke("通道", {p, n})`。
@@ -865,8 +872,8 @@ String? methodCallExprJs(
     if (topChannel != null) {
       return '_app_host_.invoke(${jsString(topChannel)}, ${hostArgsJs(posJs, namedJs)})';
     }
-    // 运行时注入的全局函数（`G.showDialog = function …` / `G.showModalBottomSheet`
-    // 等）：Dart 的裸顶层调用在 JS 侧既没有 `this` 也没有宿主通道，只有运行时
+    // 运行时注入的全局函数（`export function showDialog …` / `G.showModalBottomSheet`
+    // 等）：Dart 的裸顶层调用在 JS 侧既没有 `this` 也没有宿主通道，只有 JS 侧
     // 确实存在同名函数时才能翻译，原样产出同名调用。
     if (runtimeGlobalFunctions().contains(e.methodName.name)) {
       return '${e.methodName.name}(${globalFnArgsJs(posJs, namedJs)})';

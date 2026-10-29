@@ -1,6 +1,11 @@
-// 命令式弹层（showDialog 系列）：JS 侧把 builder 产出的元素树挂到**独立 root**。
+// 命令式弹层（showDialog 系列）+ 面板根机制：**落在 `patch/flutter.js`**。
 //
-// 为什么是独立 root：弹层内容里的 ChangeNotifier / 闭包 / 组件实例都留在 JS
+// 归属理由：`showDialog` / `showModalBottomSheet` 等是 **Flutter SDK 的 API 面**
+// （与 `Navigator`、各值类同一个「Dart 一比一面子层」），不是 mini-react 核心。
+// 它们依赖的机制（独立根挂载 / 卸载、BuildContext 代理、宿主桥）仍在 runtime.js，
+// 经 `G.__core` 交接；因此 runtime.js 里不再有任何弹层知识。
+//
+// 为什么弹层是独立 root：弹层内容里的 ChangeNotifier / 闭包 / 组件实例都留在 JS
 // 本端，跨桥只传「面板 key + 标量 options + 关闭回传」。若把整棵树序列化过桥，
 // 上述对象一个都过不去（用户已确认的结论）。
 //
@@ -16,9 +21,19 @@
 //      → 宿主 pop 路由 → 路由 Future 完成 → 宿主回调 `__jsui.panelClosed(key)`
 //      → 本端卸载独立 root、结算 Promise。
 //
+// `panelMount` / `panelClosed` 的宿主入口由本模块在求值末尾装到 `__jsui` 上
+// （宿主调用点带存在性守卫，早于本模块加载时为 no-op，而打开面板必然先经过
+// 本模块的 showDialog，故不会漏挂）。
+//
 // 已知语义差（设计内）：builder 只在打开时执行一次；弹层是独立 root，页面
 // setState 不会连带重建弹层内容（弹层自己的 setState 照常生效）。
-const String portalJsSource = r'''
+const String dialogsJsSource = r'''
+  // 可变状态按属性实时读写：`building` / `activeRoot` 是核心闭包里的 var，
+  // 解构 const 只会拿到求值当时的快照。
+  function __panelBuilding() { return G.__core.building; }
+  function __panelActiveRoot() { return G.__core.activeRoot; }
+  function __panelSetActiveRoot(v) { G.__core.activeRoot = v; }
+
   // 面板序号：key 既是 JS 侧独立根的 pageKey，也是宿主侧 store 的路由键。
   var panelSeq = 0;
   // key -> { key, kind, el, caller, root, result, hasResult, resolve, reject }
@@ -57,7 +72,7 @@ const String portalJsSource = r'''
     var inst = null;
     if (context && context.__anchor) { inst = context.__anchor; }
     else if (context && context.__root) { inst = context; }
-    else if (building) { inst = building; }
+    else if (__panelBuilding()) { inst = __panelBuilding(); }
     if (!inst) { return null; }
     var root = inst.__root;
     if (root && panels[root.key]) { return panels[root.key]; }
@@ -72,11 +87,11 @@ const String portalJsSource = r'''
   // 返回的 Promise 与 Dart `showDialog<T>` 的 Future 同义（结果为 pop 传的值）。
   function openPanel(kind, options) {
     if (!options || typeof options !== 'object') { options = {}; }
-    // 调用方实例：事件执行期取当前构建位置；延迟副作用里（`building` 为空）取
+    // 调用方实例：事件执行期取当前构建位置；延迟副作用里（构建位置为空）取
     // 传入 context 代理的锚点实例——面板根因此挂在调用方的 `__parent` 链上，
     // 弹层里的 `context.watch/read` 仍能看到页面的 provider 作用域。
     var given = options.context;
-    var caller = building || (given && given.__anchor) || null;
+    var caller = __panelBuilding() || (given && given.__anchor) || null;
     var callerNode = given && given.__nodeId
       ? given.__nodeId
       : (caller ? contextOf(caller).__nodeId : null);
@@ -131,8 +146,8 @@ const String portalJsSource = r'''
     if (!p || p.root) { return false; }
     var root = newRoot(key);
     roots[key] = root;
-    var prev = activeRoot;
-    activeRoot = root;
+    var prev = __panelActiveRoot();
+    __panelSetActiveRoot(root);
     root.mounting = true;
     try {
       root.ops = [];
@@ -146,7 +161,7 @@ const String portalJsSource = r'''
       throw e;
     } finally {
       root.mounting = false;
-      activeRoot = prev;
+      __panelSetActiveRoot(prev);
     }
     p.root = root;
     // 挂载期间累积的 setState（initState 里同步 setState）补一次 flush。
@@ -166,15 +181,15 @@ const String portalJsSource = r'''
     p.el = null;
     p.caller = null;
     if (root && root.inst) {
-      var prev = activeRoot;
-      activeRoot = root;
+      var prev = __panelActiveRoot();
+      __panelSetActiveRoot(root);
       try {
         // ops 丢弃即可：宿主那棵子树随路由一起销毁，无需回传 remove。
         root.ops = [];
         unmount(root.inst);
       } finally {
         root.ops = null;
-        activeRoot = prev;
+        __panelSetActiveRoot(prev);
       }
       root.inst = null;
     }
@@ -205,19 +220,21 @@ const String portalJsSource = r'''
     return true;
   }
 
-  // ── 对外注入（生成器对裸顶层调用原样产出同名调用，见 runtime_global_types）──
+  // ── 对外 API：Dart 顶层函数一比一（全部具名实参 → 单个 options 对象）──
   // Dart 侧签名（NamedArgument 全部落进 options 对象，由宿主按 kind 还原）：
   //   showDialog<T>({context, builder, barrierDismissible, barrierColor, …})
-  G.showDialog = function (options) { return openPanel('dialog', options); };
+  export function showDialog(options) { return openPanel('dialog', options); }
   // 自适应：iOS / macOS 走 Cupertino，其余走 Material（宿主调 showAdaptiveDialog）。
-  G.showAdaptiveDialog = function (options) { return openPanel('adaptive', options); };
-  G.showGeneralDialog = function (options) { return openPanel('general', options); };
-  G.showCupertinoDialog = function (options) { return openPanel('cupertino', options); };
-  G.showModalBottomSheet = function (options) { return openPanel('sheet', options); };
+  export function showAdaptiveDialog(options) { return openPanel('adaptive', options); }
+  export function showGeneralDialog(options) { return openPanel('general', options); }
+  export function showCupertinoDialog(options) { return openPanel('cupertino', options); }
+  export function showModalBottomSheet(options) { return openPanel('sheet', options); }
   // Cupertino 的模态弹层（通常承载 CupertinoActionSheet）：与 Material 的
   // showModalBottomSheet 语义不同（路由/动画/安全区归属都是 Cupertino 的）。
-  G.showCupertinoModalPopup = function (options) { return openPanel('cupertinoSheet', options); };
+  export function showCupertinoModalPopup(options) { return openPanel('cupertinoSheet', options); }
 
-  // `Navigator` 的对外类在 flutter.js 值类区（navigator_js.dart）：它只做
-  // 形状，实际落点是上面的 panelPop / panelOf，经 `G.__core` 交接。
+  // 宿主侧两个入口（路由首帧后挂载 / 路由关闭后卸载）装到 `__jsui`：
+  // runtime.js 的 api 不再包含任何面板知识。
+  G.__jsui.panelMount = panelMount;
+  G.__jsui.panelClosed = panelClosed;
 ''';

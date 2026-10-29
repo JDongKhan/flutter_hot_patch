@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/hero_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Center, Colors, Column, GestureDetector, Hero, Material, SizedBox, Text } from '../flutter.js';
+import { BorderRadius, Center, Colors, Column, FontWeight, GestureDetector, Hero, Material, Radius, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 HeroDetail
 export class HeroDetail {
@@ -20,19 +20,19 @@ export class HeroDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Hero",
-          "style": {
-            "fontWeight": "bold"
-          }
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 4
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "点卡片跳转 → 卡片飞到目标页；返回时飞回",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12
@@ -44,18 +44,20 @@ export class HeroDetail {
             "transitionOnUserGestures": true,
             "child": new Material({
               "color": Colors.deepPurple,
-              "borderRadius": {
-                "radius": 12.0
-              },
+              "borderRadius": (this.__k4 || (this.__k4 = BorderRadius.all({
+                "radius": Radius.circular({
+                  "radius": 12
+                })
+              }))),
               "child": new SizedBox({
                 "width": 160,
                 "height": 90,
                 "child": new Center({
                   "child": new Text({
-                    "style": {
+                    "style": (this.__k5 || (this.__k5 = new TextStyle({
                       "color": Colors.white,
-                      "fontWeight": "bold"
-                    },
+                      "fontWeight": FontWeight.bold
+                    }))),
                     "data": this.label
                   })
                 })

@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/rich_text_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, Divider, Expanded, RichText, Row, SizedBox, Text, TextButton, TextSpan } from '../flutter.js';
+import { Colors, Column, Divider, Expanded, FontWeight, RichText, Row, SizedBox, Text, TextButton, TextDecoration, TextSpan, TextStyle } from '../flutter.js';
 
 // 组件 RichTextDetail
 export class RichTextDetail {
@@ -17,10 +17,10 @@ export class RichTextDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "RichText · TextSpan 富文本树",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 10
@@ -30,54 +30,54 @@ export class RichTextDetail {
           "textDirection": "ltr",
           "text": new TextSpan({
             "text": "一段文字里可以混排：",
-            "style": {
-              "fontSize": 15,
-              "color": Colors.black87
-            },
+            "style": (this.__k2 || (this.__k2 = new TextStyle({
+              "color": Colors.black87,
+              "fontSize": 15
+            }))),
             "children": [
               new TextSpan({
                 "text": "不同颜色",
-                "style": {
-                  "color": (this._highlight ? Colors.deepPurple : Colors.teal),
-                  "fontWeight": "bold"
-                }
+                "style": new TextStyle({
+                  "color": this._highlight ? Colors.deepPurple : Colors.teal,
+                  "fontWeight": FontWeight.bold
+                })
               }),
-              (this.__k2 || (this.__k2 = new TextSpan({
-                "text": "、"
-              }))),
               (this.__k3 || (this.__k3 = new TextSpan({
-                "style": {
-                  "color": Colors.orange,
-                  "fontSize": 20
-                },
-                "text": "更大字号"
-              }))),
-              (this.__k2 || (this.__k2 = new TextSpan({
                 "text": "、"
               }))),
               (this.__k4 || (this.__k4 = new TextSpan({
-                "style": {
-                  "decoration": "underline",
-                  "decorationColor": Colors.blue,
-                  "decorationStyle": "wavy"
-                },
-                "text": "下划线"
+                "style": new TextStyle({
+                  "fontSize": 20,
+                  "color": Colors.orange
+                }),
+                "text": "更大字号"
+              }))),
+              (this.__k3 || (this.__k3 = new TextSpan({
+                "text": "、"
               }))),
               (this.__k5 || (this.__k5 = new TextSpan({
+                "style": new TextStyle({
+                  "decoration": TextDecoration.underline,
+                  "decorationColor": Colors.blue,
+                  "decorationStyle": "wavy"
+                }),
+                "text": "下划线"
+              }))),
+              (this.__k6 || (this.__k6 = new TextSpan({
                 "text": "，并且可以逐级嵌套。"
               })))
             ]
           })
         }),
-        (this.__k6 || (this.__k6 = new Divider({
+        (this.__k7 || (this.__k7 = new Divider({
           "height": 24
         }))),
-        (this.__k7 || (this.__k7 = new Text({
+        (this.__k8 || (this.__k8 = new Text({
           "data": "RichText · maxLines + ellipsis 截断",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 10
@@ -87,16 +87,16 @@ export class RichTextDetail {
           "textDirection": "ltr",
           "maxLines": this._clampLines ? 1 : null,
           "overflow": this._clampLines ? "ellipsis" : "clip",
-          "text": (this.__k8 || (this.__k8 = new TextSpan({
-            "style": {
-              "color": Colors.black54,
+          "text": (this.__k9 || (this.__k9 = new TextSpan({
+            "style": new TextStyle({
               "fontSize": 14,
-              "height": 1.5
-            },
+              "height": 1.5,
+              "color": Colors.black54
+            }),
             "text": "这是一段足够长的文字，用来验证 RichText 在多行与单行之间的" + "截断行为：开启单行截断后，超出宽度的部分会以省略号结尾，" + "而关闭截断时文字会自然折行显示完整内容。"
           })))
         }),
-        (this.__k9 || (this.__k9 = new SizedBox({
+        (this.__k10 || (this.__k10 = new SizedBox({
           "height": 8
         }))),
         new Row({

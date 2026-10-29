@@ -4,9 +4,9 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// 命令式弹层演示：覆盖 Flutter「builder 建树 + 独立路由」的全部弹层 API。
 ///
-/// 共同机制（见 packages/hot_patch_generator/lib/src/builders/runtime/js/portal_js.dart）：
-///   - `showXxx(options)` 是裸顶层调用 → 运行时注入的同名全局函数，实参按具名
-///     形态打成配置对象；
+/// 共同机制（见 packages/hot_patch_generator/lib/src/builders/runtime/js/dialogs_js.dart）：
+///   - `showXxx(options)` 是裸顶层调用 → `patch/flutter.js` 导出的同名函数，实参按
+///     具名形态打成配置对象；
 ///   - `builder` 闭包在 JS 侧执行**一次**，产出的元素树挂在**独立根**上，
 ///     跨桥只传「面板 key + 标量 kind/options」；
 ///   - 关闭统一走宿主路由 pop（遮罩 / 返回键 / `Navigator.pop(ctx, v)`），

@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
-import { Card, Colors, Column, ElevatedButton, Padding, Row, SizedBox, Text } from '../flutter.js';
+import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
 
 // 组件 ProviderCard
@@ -21,17 +21,14 @@ export class ProviderCard {
     this._modelA.reset();
   }
   _loadUser() {
-    this._modelB.loadUserInfo({"h": 1});
+    this._modelB.loadUserInfo({ "params": {"h": 1} });
   }
   build(context) {
     return new Card({
       "child": new Padding({
-        "padding": {
-          "left": 16.0,
-          "top": 16.0,
-          "right": 16.0,
-          "bottom": 16.0
-        },
+        "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+          "value": 16
+        }))),
         "child": new MultiProvider({
           "providers": [
             new ChangeNotifierProvider({
@@ -52,19 +49,19 @@ export class ProviderCard {
                 "builder": (context, value, child) => this._buildBadge(),
                 "model": "CounterVm"
               }),
-              (this.__k0 || (this.__k0 = new Text({
+              (this.__k1 || (this.__k1 = new Text({
                 "data": "MultiProvider · 两个模型各自局部重建"
               }))),
-              (this.__k1 || (this.__k1 = new SizedBox({
+              (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 8
               }))),
               new Consumer({
                 "builder": (context, value, child) => new Text({
-                  "style": {
+                  "style": (this.__k3 || (this.__k3 = new TextStyle({
+                    "color": Colors.blue,
                     "fontSize": 22,
-                    "fontWeight": "bold",
-                    "color": Colors.blue
-                  },
+                    "fontWeight": FontWeight.bold
+                  }))),
                   "data": "加载用户信息："
                 }),
                 "model": "NetworkVm"
@@ -74,22 +71,22 @@ export class ProviderCard {
                 "children": [
                   new ElevatedButton({
                     "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a)),
-                    "child": (this.__k2 || (this.__k2 = new Text({
+                    "child": (this.__k4 || (this.__k4 = new Text({
                       "data": "加载用户信息"
                     })))
                   })
                 ]
               }),
-              (this.__k1 || (this.__k1 = new SizedBox({
+              (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 8
               }))),
               new Consumer({
                 "builder": (context, value, child) => new Text({
-                  "style": {
+                  "style": (this.__k5 || (this.__k5 = new TextStyle({
+                    "color": Colors.green,
                     "fontSize": 22,
-                    "fontWeight": "bold",
-                    "color": Colors.green
-                  },
+                    "fontWeight": FontWeight.bold
+                  }))),
                   "data": "B = " + value.count
                 }),
                 "model": "CounterVm"
@@ -99,16 +96,16 @@ export class ProviderCard {
                 "children": [
                   new ElevatedButton({
                     "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a)),
-                    "child": (this.__k3 || (this.__k3 = new Text({
+                    "child": (this.__k6 || (this.__k6 = new Text({
                       "data": "B +1"
                     })))
                   }),
-                  (this.__k4 || (this.__k4 = new SizedBox({
+                  (this.__k7 || (this.__k7 = new SizedBox({
                     "width": 12
                   }))),
                   new ElevatedButton({
                     "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a)),
-                    "child": (this.__k5 || (this.__k5 = new Text({
+                    "child": (this.__k8 || (this.__k8 = new Text({
                       "data": "B Reset"
                     })))
                   })

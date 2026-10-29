@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/implicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Center, Colors, Column, Container, Curves, Divider, Duration, Expanded, Row, SizedBox, Text, TextButton, ValueKey } from '../flutter.js';
+import { Alignment, AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Border, BorderRadius, BoxDecoration, Center, Colors, Column, Container, Curves, Divider, Duration, EdgeInsets, Expanded, FontWeight, Offset, Row, SizedBox, Text, TextButton, TextStyle, ValueKey } from '../flutter.js';
 
 // 组件 ImplicitAnimationDetail
 export class ImplicitAnimationDetail {
@@ -21,10 +21,10 @@ export class ImplicitAnimationDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "AnimatedContainer · 尺寸 / 颜色 / 圆角",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 10
@@ -37,18 +37,18 @@ export class ImplicitAnimationDetail {
             "curve": Curves.easeInOut,
             "width": this._big ? 220 : 110,
             "height": this._big ? 120 : 56,
-            "alignment": "center",
-            "decoration": {
-              "color": (this._big ? Colors.deepPurple : Colors.teal),
-              "borderRadius": {
-                "radius": 20.0
-              }
-            },
+            "alignment": Alignment.center,
+            "decoration": new BoxDecoration({
+              "color": this._big ? Colors.deepPurple : Colors.teal,
+              "borderRadius": BorderRadius.circular({
+                "radius": 20
+              })
+            }),
             "child": new Text({
-              "style": {
+              "style": (this.__k3 || (this.__k3 = new TextStyle({
                 "color": Colors.white,
-                "fontWeight": "w700"
-              },
+                "fontWeight": FontWeight.w700
+              }))),
               "data": this._big ? "BIG" : "small"
             })
           })
@@ -64,13 +64,13 @@ export class ImplicitAnimationDetail {
             "data": this._big ? "收缩到 small" : "放大到 BIG"
           })
         }),
-        (this.__k3 || (this.__k3 = new Divider({}))),
-        (this.__k4 || (this.__k4 = new Text({
+        (this.__k4 || (this.__k4 = new Divider({}))),
+        (this.__k5 || (this.__k5 = new Text({
           "data": "AnimatedOpacity · AnimatedScale · AnimatedRotation · AnimatedSlide",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 10
@@ -80,101 +80,107 @@ export class ImplicitAnimationDetail {
           "children": [
             new AnimatedOpacity({
               "opacity": this._visible ? 1.0 : 0.2,
-              "duration": (this.__k5 || (this.__k5 = new Duration({
+              "duration": (this.__k6 || (this.__k6 = new Duration({
                 "milliseconds": 400
               }))),
               "curve": Curves.easeOut,
               "child": new Container({
                 "width": 56,
                 "height": 56,
-                "alignment": "center",
-                "decoration": {
+                "alignment": Alignment.center,
+                "decoration": new BoxDecoration({
                   "color": Colors.orange,
-                  "borderRadius": {
-                    "radius": 12.0
-                  }
-                },
-                "child": (this.__k6 || (this.__k6 = new Text({
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 12
+                  })
+                }),
+                "child": (this.__k7 || (this.__k7 = new Text({
                   "data": "透明度",
-                  "style": {
+                  "style": new TextStyle({
                     "color": Colors.white,
                     "fontSize": 11
-                  }
+                  })
                 })))
               })
             }),
             new AnimatedScale({
               "scale": this._big ? 1.3 : 1.0,
-              "duration": (this.__k5 || (this.__k5 = new Duration({
+              "duration": (this.__k6 || (this.__k6 = new Duration({
                 "milliseconds": 400
               }))),
               "curve": Curves.easeInOut,
               "child": new Container({
                 "width": 56,
                 "height": 56,
-                "alignment": "center",
-                "decoration": {
+                "alignment": Alignment.center,
+                "decoration": new BoxDecoration({
                   "color": Colors.indigo,
-                  "borderRadius": {
-                    "radius": 12.0
-                  }
-                },
-                "child": (this.__k7 || (this.__k7 = new Text({
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 12
+                  })
+                }),
+                "child": (this.__k8 || (this.__k8 = new Text({
                   "data": "缩放",
-                  "style": {
+                  "style": new TextStyle({
                     "color": Colors.white,
                     "fontSize": 11
-                  }
+                  })
                 })))
               })
             }),
             new AnimatedRotation({
               "turns": this._moved ? 0.25 : 0.0,
-              "duration": (this.__k5 || (this.__k5 = new Duration({
+              "duration": (this.__k6 || (this.__k6 = new Duration({
                 "milliseconds": 400
               }))),
               "curve": Curves.easeInOut,
               "child": new Container({
                 "width": 56,
                 "height": 56,
-                "alignment": "center",
-                "decoration": {
+                "alignment": Alignment.center,
+                "decoration": new BoxDecoration({
                   "color": Colors.pink,
-                  "borderRadius": {
-                    "radius": 12.0
-                  }
-                },
-                "child": (this.__k8 || (this.__k8 = new Text({
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 12
+                  })
+                }),
+                "child": (this.__k9 || (this.__k9 = new Text({
                   "data": "旋转",
-                  "style": {
+                  "style": new TextStyle({
                     "color": Colors.white,
                     "fontSize": 11
-                  }
+                  })
                 })))
               })
             }),
             new AnimatedSlide({
-              "offset": this._moved ? { "dx": 0.25, "dy": 0 } : { "dx": 0, "dy": 0 },
-              "duration": (this.__k5 || (this.__k5 = new Duration({
+              "offset": this._moved ? (this.__k10 || (this.__k10 = new Offset({
+                "dx": 0.25,
+                "dy": 0
+              }))) : (this.__k11 || (this.__k11 = new Offset({
+                "dx": 0,
+                "dy": 0
+              }))),
+              "duration": (this.__k6 || (this.__k6 = new Duration({
                 "milliseconds": 400
               }))),
               "curve": Curves.easeInOut,
               "child": new Container({
                 "width": 56,
                 "height": 56,
-                "alignment": "center",
-                "decoration": {
+                "alignment": Alignment.center,
+                "decoration": new BoxDecoration({
                   "color": Colors.brown,
-                  "borderRadius": {
-                    "radius": 12.0
-                  }
-                },
-                "child": (this.__k9 || (this.__k9 = new Text({
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 12
+                  })
+                }),
+                "child": (this.__k12 || (this.__k12 = new Text({
                   "data": "位移",
-                  "style": {
+                  "style": new TextStyle({
                     "color": Colors.white,
                     "fontSize": 11
-                  }
+                  })
                 })))
               })
             })
@@ -207,57 +213,57 @@ export class ImplicitAnimationDetail {
             })
           ]
         }),
-        (this.__k3 || (this.__k3 = new Divider({}))),
-        (this.__k10 || (this.__k10 = new Text({
+        (this.__k4 || (this.__k4 = new Divider({}))),
+        (this.__k13 || (this.__k13 = new Text({
           "data": "AnimatedCrossFade · 两子树交叉淡入淡出",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 10
         }))),
         new AnimatedCrossFade({
-          "duration": (this.__k11 || (this.__k11 = new Duration({
+          "duration": (this.__k14 || (this.__k14 = new Duration({
             "milliseconds": 450
           }))),
           "crossFadeState": this._visible ? "showFirst" : "showSecond",
           "firstCurve": Curves.easeOut,
           "secondCurve": Curves.easeIn,
-          "alignment": "center",
+          "alignment": Alignment.center,
           "firstChild": new Container({
             "width": 80,
             "height": 80,
-            "alignment": "center",
-            "decoration": {
+            "alignment": Alignment.center,
+            "decoration": new BoxDecoration({
               "color": Colors.green,
-              "borderRadius": {
-                "radius": 12.0
-              }
-            },
-            "child": (this.__k12 || (this.__k12 = new Text({
+              "borderRadius": BorderRadius.circular({
+                "radius": 12
+              })
+            }),
+            "child": (this.__k15 || (this.__k15 = new Text({
               "data": "A",
-              "style": {
+              "style": new TextStyle({
                 "color": Colors.white
-              }
+              })
             })))
           }),
           "secondChild": new Container({
             "width": 80,
             "height": 80,
-            "alignment": "center",
-            "decoration": {
+            "alignment": Alignment.center,
+            "decoration": new BoxDecoration({
               "color": Colors.red,
-              "borderRadius": {
-                "radius": 12.0
-              }
-            },
-            "child": (this.__k13 || (this.__k13 = new Text({
+              "borderRadius": BorderRadius.circular({
+                "radius": 12
+              })
+            }),
+            "child": (this.__k16 || (this.__k16 = new Text({
               "data": "B",
-              "style": {
+              "style": new TextStyle({
                 "color": Colors.white
-              }
+              })
             })))
           })
         }),
@@ -269,57 +275,52 @@ export class ImplicitAnimationDetail {
             "data": this._visible ? "切到 B" : "切回 A"
           })
         }),
-        (this.__k3 || (this.__k3 = new Divider({}))),
-        (this.__k14 || (this.__k14 = new Text({
+        (this.__k4 || (this.__k4 = new Divider({}))),
+        (this.__k17 || (this.__k17 = new Text({
           "data": "AnimatedSize · 子组件尺寸变化时自动补间",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 10
         }))),
         new Center({
           "child": new Container({
-            "padding": {
-              "left": 12.0,
-              "top": 12.0,
-              "right": 12.0,
-              "bottom": 12.0
-            },
-            "decoration": {
+            "padding": (this.__k18 || (this.__k18 = EdgeInsets.all({
+              "value": 12
+            }))),
+            "decoration": new BoxDecoration({
               "color": Colors.blueGrey.shade50,
-              "borderRadius": {
-                "radius": 16.0
-              },
-              "border": {
-                "all": {
-                  "color": Colors.blueGrey.shade200
-                }
-              }
-            },
+              "borderRadius": BorderRadius.circular({
+                "radius": 16
+              }),
+              "border": Border.all({
+                "color": Colors.blueGrey.shade200
+              })
+            }),
             "child": new AnimatedSize({
               "duration": new Duration({
                 "milliseconds": this._slowSize ? 1200 : 300
               }),
               "curve": Curves.easeInOut,
-              "alignment": "center",
+              "alignment": Alignment.center,
               "child": new Container({
                 "width": this._sizeExpanded ? 240 : 120,
                 "height": this._sizeExpanded ? 120 : 56,
-                "alignment": "center",
-                "decoration": {
-                  "color": (this._sizeExpanded ? Colors.deepPurple : Colors.teal),
-                  "borderRadius": {
-                    "radius": 14.0
-                  }
-                },
+                "alignment": Alignment.center,
+                "decoration": new BoxDecoration({
+                  "color": this._sizeExpanded ? Colors.deepPurple : Colors.teal,
+                  "borderRadius": BorderRadius.circular({
+                    "radius": 14
+                  })
+                }),
                 "child": new Text({
-                  "style": {
+                  "style": (this.__k19 || (this.__k19 = new TextStyle({
                     "color": Colors.white,
-                    "fontWeight": "w600"
-                  },
+                    "fontWeight": FontWeight.w600
+                  }))),
                   "data": this._sizeExpanded ? "已展开" : "已收起"
                 })
               })
@@ -350,20 +351,20 @@ export class ImplicitAnimationDetail {
             })
           ]
         }),
-        (this.__k3 || (this.__k3 = new Divider({}))),
-        (this.__k15 || (this.__k15 = new Text({
+        (this.__k4 || (this.__k4 = new Divider({}))),
+        (this.__k20 || (this.__k20 = new Text({
           "data": "AnimatedSwitcher · 子组件切换淡入淡出",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 10
         }))),
         new Center({
           "child": new AnimatedSwitcher({
-            "duration": (this.__k11 || (this.__k11 = new Duration({
+            "duration": (this.__k14 || (this.__k14 = new Duration({
               "milliseconds": 450
             }))),
             "switchInCurve": Curves.easeOut,
@@ -371,18 +372,18 @@ export class ImplicitAnimationDetail {
             "child": new Container({
               "width": 160,
               "height": 90,
-              "alignment": "center",
-              "decoration": {
-                "color": (this._switchIndex.isEven ? Colors.indigo : Colors.orange),
-                "borderRadius": {
-                  "radius": 14.0
-                }
-              },
+              "alignment": Alignment.center,
+              "decoration": new BoxDecoration({
+                "color": this._switchIndex.isEven ? Colors.indigo : Colors.orange,
+                "borderRadius": BorderRadius.circular({
+                  "radius": 14
+                })
+              }),
               "child": new Text({
-                "style": {
+                "style": (this.__k19 || (this.__k19 = new TextStyle({
                   "color": Colors.white,
-                  "fontWeight": "w600"
-                },
+                  "fontWeight": FontWeight.w600
+                }))),
                 "data": "卡片 " + (this._switchIndex + 1)
               }),
               "key": new ValueKey({value: this._switchIndex})
@@ -393,7 +394,7 @@ export class ImplicitAnimationDetail {
           "onPressed": this.__bindFn(6, [], () => this.setState(() => {
             this._switchIndex += 1;
           })),
-          "child": (this.__k16 || (this.__k16 = new Text({
+          "child": (this.__k21 || (this.__k21 = new Text({
             "data": "切换子组件（带 ValueKey）"
           })))
         })

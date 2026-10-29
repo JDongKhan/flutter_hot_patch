@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/dialog_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AlertDialog, Colors, Column, Container, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, FilledButton, Navigator, OutlinedButton, Padding, SafeArea, SizedBox, Text, TextButton, Wrap } from '../flutter.js';
+import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, Text, TextButton, TextStyle, Wrap, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
 
 // 组件 DialogDetail
 export class DialogDetail {
@@ -50,28 +50,28 @@ export class DialogDetail {
       "children": [
         (this.__k1 || (this.__k1 = new Text({
           "data": "命令式弹层",
-          "style": {
-            "fontWeight": "bold"
-          }
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k2 || (this.__k2 = new SizedBox({
           "height": 4
         }))),
         (this.__k3 || (this.__k3 = new Text({
           "data": "每种弹层的 builder 都在 JS 侧建树并挂到独立根；返回值经 Future 回传",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
         }))),
         (this.__k4 || (this.__k4 = new SizedBox({
           "height": 12
         }))),
         (this.__k5 || (this.__k5 = new Text({
           "data": "showDialog / AlertDialog",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 13
-          }
+          })
         }))),
         (this.__k2 || (this.__k2 = new SizedBox({
           "height": 4
@@ -99,9 +99,9 @@ export class DialogDetail {
         }))),
         (this.__k8 || (this.__k8 = new Text({
           "data": "showModalBottomSheet",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 13
-          }
+          })
         }))),
         (this.__k2 || (this.__k2 = new SizedBox({
           "height": 4
@@ -117,9 +117,9 @@ export class DialogDetail {
         }))),
         (this.__k10 || (this.__k10 = new Text({
           "data": "Cupertino 弹窗 / 动作面板",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 13
-          }
+          })
         }))),
         (this.__k2 || (this.__k2 = new SizedBox({
           "height": 4
@@ -153,9 +153,9 @@ export class DialogDetail {
         }))),
         (this.__k14 || (this.__k14 = new Text({
           "data": "showGeneralDialog",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 13
-          }
+          })
         }))),
         (this.__k2 || (this.__k2 = new SizedBox({
           "height": 4
@@ -170,31 +170,30 @@ export class DialogDetail {
           "height": 12
         }))),
         new Container({
-          "padding": {
-            "left": 8.0,
-            "top": 8.0,
-            "right": 8.0,
-            "bottom": 8.0
-          },
-          "decoration": {
+          "padding": (this.__k16 || (this.__k16 = EdgeInsets.all({
+            "value": 8
+          }))),
+          "decoration": new BoxDecoration({
             "color": Colors.grey.shade100,
-            "borderRadius": {
-              "radius": 6.0
-            }
-          },
+            "borderRadius": (this.__k17 || (this.__k17 = BorderRadius.all({
+              "radius": Radius.circular({
+                "radius": 6
+              })
+            })))
+          }),
           "child": new Column({
             "crossAxisAlignment": "start",
             "children": [
               new Text({
-                "style": {
+                "style": (this.__k18 || (this.__k18 = new TextStyle({
                   "fontSize": 12
-                },
+                }))),
                 "data": "打开次数：" + this._opens
               }),
               new Text({
-                "style": {
+                "style": (this.__k18 || (this.__k18 = new TextStyle({
                   "fontSize": 12
-                },
+                }))),
                 "data": "最近结果：" + this._last
               })
             ]
@@ -213,33 +212,30 @@ export class GeneralDialogContent {
   build(context) {
     return new Dialog({
       "child": new Padding({
-        "padding": {
-          "left": 16.0,
-          "top": 16.0,
-          "right": 16.0,
-          "bottom": 16.0
-        },
+        "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
+          "value": 16
+        }))),
         "child": new Column({
           "mainAxisSize": "min",
           "crossAxisAlignment": "start",
           "children": [
-            (this.__k0 || (this.__k0 = new Text({
+            (this.__k1 || (this.__k1 = new Text({
               "data": "showGeneralDialog",
-              "style": {
-                "fontWeight": "bold"
-              }
+              "style": new TextStyle({
+                "fontWeight": FontWeight.bold
+              })
             }))),
-            (this.__k1 || (this.__k1 = new SizedBox({
+            (this.__k2 || (this.__k2 = new SizedBox({
               "height": 8
             }))),
-            (this.__k2 || (this.__k2 = new Text({
+            (this.__k3 || (this.__k3 = new Text({
               "data": "pageBuilder 建树、barrierLabel / barrierColor 由宿主还原",
-              "style": {
-                "color": Colors.black54,
-                "fontSize": 12
-              }
+              "style": new TextStyle({
+                "fontSize": 12,
+                "color": Colors.black54
+              })
             }))),
-            (this.__k3 || (this.__k3 = new SizedBox({
+            (this.__k4 || (this.__k4 = new SizedBox({
               "height": 12
             }))),
             new Wrap({
@@ -248,13 +244,13 @@ export class GeneralDialogContent {
               "children": [
                 new FilledButton({
                   "onPressed": this.__bindFn(0, [], () => Navigator.of(this.context).pop("自定义确定")),
-                  "child": (this.__k4 || (this.__k4 = new Text({
+                  "child": (this.__k5 || (this.__k5 = new Text({
                     "data": "确定"
                   })))
                 }),
                 new OutlinedButton({
                   "onPressed": this.__bindFn(1, [], () => Navigator.of(this.context).pop(null)),
-                  "child": (this.__k5 || (this.__k5 = new Text({
+                  "child": (this.__k6 || (this.__k6 = new Text({
                     "data": "取消"
                   })))
                 })
@@ -317,9 +313,9 @@ export class CupertinoDialogContent {
       }))),
       "content": (this.__k1 || (this.__k1 = new Text({
         "data": "CupertinoAlertDialog 的树也在 JS 侧建好，宿主只负责 push 路由",
-        "style": {
+        "style": new TextStyle({
           "fontSize": 12
-        }
+        })
       }))),
       "actions": [
         new CupertinoDialogAction({
@@ -348,33 +344,33 @@ export class SheetContent {
   build(context) {
     return new SafeArea({
       "child": new Padding({
-        "padding": {
-          "left": 16.0,
-          "top": 0.0,
-          "right": 16.0,
-          "bottom": 16.0
-        },
+        "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
+          "bottom": 16,
+          "left": 16,
+          "right": 16,
+          "top": 0
+        }))),
         "child": new Column({
           "mainAxisSize": "min",
           "crossAxisAlignment": "start",
           "children": [
-            (this.__k0 || (this.__k0 = new Text({
+            (this.__k1 || (this.__k1 = new Text({
               "data": "底部弹层",
-              "style": {
-                "fontWeight": "bold"
-              }
+              "style": new TextStyle({
+                "fontWeight": FontWeight.bold
+              })
             }))),
-            (this.__k1 || (this.__k1 = new SizedBox({
+            (this.__k2 || (this.__k2 = new SizedBox({
               "height": 8
             }))),
-            (this.__k2 || (this.__k2 = new Text({
+            (this.__k3 || (this.__k3 = new Text({
               "data": "showModalBottomSheet 的内容同样是 JS 独立根，可拖拽 / 点遮罩关闭",
-              "style": {
-                "color": Colors.black54,
-                "fontSize": 12
-              }
+              "style": new TextStyle({
+                "fontSize": 12,
+                "color": Colors.black54
+              })
             }))),
-            (this.__k3 || (this.__k3 = new SizedBox({
+            (this.__k4 || (this.__k4 = new SizedBox({
               "height": 12
             }))),
             new Wrap({
@@ -383,13 +379,13 @@ export class SheetContent {
               "children": [
                 new FilledButton({
                   "onPressed": this.__bindFn(0, [], () => Navigator.of(this.context).pop("底部确定")),
-                  "child": (this.__k4 || (this.__k4 = new Text({
+                  "child": (this.__k5 || (this.__k5 = new Text({
                     "data": "确定"
                   })))
                 }),
                 new OutlinedButton({
                   "onPressed": this.__bindFn(1, [], () => Navigator.of(this.context).pop(null)),
-                  "child": (this.__k5 || (this.__k5 = new Text({
+                  "child": (this.__k6 || (this.__k6 = new Text({
                     "data": "取消"
                   })))
                 })
@@ -423,27 +419,27 @@ export class DialogContent {
         "children": [
           (this.__k1 || (this.__k1 = new Text({
             "data": "这个 AlertDialog 的整棵树在 JS 侧构建，「+1」只重建本弹层",
-            "style": {
+            "style": new TextStyle({
               "fontSize": 12
-            }
+            })
           }))),
           (this.__k2 || (this.__k2 = new SizedBox({
             "height": 8
           }))),
           new Text({
-            "style": {
+            "style": (this.__k3 || (this.__k3 = new TextStyle({
               "fontSize": 13
-            },
+            }))),
             "data": "计数：" + this._count
           }),
-          (this.__k3 || (this.__k3 = new SizedBox({
+          (this.__k4 || (this.__k4 = new SizedBox({
             "height": 4
           }))),
           new Text({
-            "style": {
-              "fontSize": 12,
-              "color": Colors.black54
-            },
+            "style": (this.__k5 || (this.__k5 = new TextStyle({
+              "color": Colors.black54,
+              "fontSize": 12
+            }))),
             "data": this.barrierDismissible ? "barrierDismissible: true" : "barrierDismissible: false"
           })
         ]
@@ -453,19 +449,19 @@ export class DialogContent {
           "onPressed": this.__bindFn(0, [], () => this.setState(() => {
             this._count += 1;
           })),
-          "child": (this.__k4 || (this.__k4 = new Text({
+          "child": (this.__k6 || (this.__k6 = new Text({
             "data": "+1"
           })))
         }),
         new TextButton({
           "onPressed": this.__bindFn(1, [], () => Navigator.of(this.context).pop(null)),
-          "child": (this.__k5 || (this.__k5 = new Text({
+          "child": (this.__k7 || (this.__k7 = new Text({
             "data": "取消"
           })))
         }),
         new TextButton({
           "onPressed": this.__bindFn(2, [], () => Navigator.of(this.context).pop("确定，计数 = " + this._count)),
-          "child": (this.__k6 || (this.__k6 = new Text({
+          "child": (this.__k8 || (this.__k8 = new Text({
             "data": "确定"
           })))
         })

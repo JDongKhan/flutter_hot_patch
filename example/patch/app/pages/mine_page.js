@@ -6,7 +6,7 @@ import { AppService } from '../service/app_service.js';
 import { MineFeed } from '../model/app_models.js';
 import { MenuEntry } from '../model/app_models.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, Divider, Expanded, GestureDetector, Icon, Image, ListView, Padding, Row, SafeArea, SizedBox, Text, Transform } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, Text, TextStyle, Transform } from '../../flutter.js';
 
 // 组件 MinePage
 export class MinePage {
@@ -43,31 +43,29 @@ export class MinePage {
       })));
     }
     return new ListView({
-      "padding": {
-        "left": 0,
-        "top": 0,
-        "right": 0,
-        "bottom": 0
-      },
+      "padding": EdgeInsets.zero,
       "children": [
         new Container({
-          "padding": {
-            "left": 18.0,
-            "top": 16.0,
-            "right": 18.0,
-            "bottom": 22.0
-          },
-          "decoration": {
-            "gradient": {
-              "kind": "linear",
+          "padding": (this.__k1 || (this.__k1 = EdgeInsets.fromLTRB({
+            "bottom": 22,
+            "left": 18,
+            "right": 18,
+            "top": 16
+          }))),
+          "decoration": (this.__k2 || (this.__k2 = new BoxDecoration({
+            "gradient": new LinearGradient({
               "colors": [
-                new Color({value: 0xFF1E88FF}),
-                new Color({value: 0xFF0E7AFB})
+                new Color({
+                  "value": 0xFF1E88FF
+                }),
+                new Color({
+                  "value": 0xFF0E7AFB
+                })
               ],
-              "begin": "topLeft",
-              "end": "bottomRight"
-            }
-          },
+              "begin": Alignment.topLeft,
+              "end": Alignment.bottomRight
+            })
+          }))),
           "child": new SafeArea({
             "bottom": false,
             "child": new GestureDetector({
@@ -82,51 +80,59 @@ export class MinePage {
                       "errorBuilder": (context, e, s) => new Container({
                         "width": 58,
                         "height": 58,
-                        "color": new Color({value: 0x33FFFFFF})
+                        "color": (this.__k3 || (this.__k3 = new Color({
+                          "value": 0x33FFFFFF
+                        })))
                       }),
                       "name": this._feed.avatar
                     })
                   }),
-                  (this.__k1 || (this.__k1 = new SizedBox({
+                  (this.__k4 || (this.__k4 = new SizedBox({
                     "width": 13
                   }))),
-                  (this.__k2 || (this.__k2 = new Expanded({
+                  (this.__k5 || (this.__k5 = new Expanded({
                     "child": new Column({
                       "crossAxisAlignment": "start",
                       "children": [
                         new Text({
-                          "style": {
+                          "style": new TextStyle({
                             "fontSize": 17.5,
-                            "fontWeight": "w700",
+                            "fontWeight": FontWeight.w700,
                             "color": Colors.white
-                          },
+                          }),
                           "data": "旅行家小七"
                         }),
                         new SizedBox({
                           "height": 4
                         }),
                         new Text({
-                          "style": {
+                          "style": new TextStyle({
                             "fontSize": 12,
-                            "color": new Color({value: 0xCCFFFFFF})
-                          },
+                            "color": new Color({
+                              "value": 0xCCFFFFFF
+                            })
+                          }),
                           "data": "138****8888"
                         }),
                         new SizedBox({
                           "height": 6
                         }),
                         new Text({
-                          "style": {
+                          "style": new TextStyle({
                             "fontSize": 11,
-                            "color": new Color({value: 0xB3FFFFFF})
-                          },
+                            "color": new Color({
+                              "value": 0xB3FFFFFF
+                            })
+                          }),
                           "data": "点击头像可跳转登录页 ›"
                         })
                       ]
                     })
                   }))),
-                  (this.__k3 || (this.__k3 = new Icon({
-                    "color": new Color({value: 0xCCFFFFFF}),
+                  (this.__k6 || (this.__k6 = new Icon({
+                    "color": new Color({
+                      "value": 0xCCFFFFFF
+                    }),
                     "icon": "chevron_right",
                     "size": 20
                   })))
@@ -136,26 +142,23 @@ export class MinePage {
           })
         }),
         Transform.translate({
-          "offset": { "dx": 0, "dy": (-12) },
+          "offset": (this.__k7 || (this.__k7 = new Offset({
+            "dx": 0,
+            "dy": (-12)
+          }))),
           "child": new Container({
-            "margin": {
-              "left": 12.0,
-              "top": 0.0,
-              "right": 12.0,
-              "bottom": 0.0
-            },
-            "padding": {
-              "left": 0.0,
-              "top": 14.0,
-              "right": 0.0,
-              "bottom": 14.0
-            },
-            "decoration": {
+            "margin": (this.__k8 || (this.__k8 = EdgeInsets.symmetric({
+              "horizontal": 12
+            }))),
+            "padding": (this.__k9 || (this.__k9 = EdgeInsets.symmetric({
+              "vertical": 14
+            }))),
+            "decoration": new BoxDecoration({
               "color": Colors.white,
-              "borderRadius": {
-                "radius": 14.0
-              }
-            },
+              "borderRadius": BorderRadius.circular({
+                "radius": 14
+              })
+            }),
             "child": new Row({
               "children": [
                 ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [new Expanded({
@@ -164,21 +167,25 @@ export class MinePage {
                           "child": new Column({
                             "children": [
                               new Text({
-                                "style": {
+                                "style": (this.__k10 || (this.__k10 = new TextStyle({
+                                  "color": new Color({
+                                    "value": 0xFF171A21
+                                  }),
                                   "fontSize": 17,
-                                  "fontWeight": "w700",
-                                  "color": new Color({value: 0xFF171A21})
-                                },
+                                  "fontWeight": FontWeight.w700
+                                }))),
                                 "data": s[1]
                               }),
-                              (this.__k4 || (this.__k4 = new SizedBox({
+                              (this.__k11 || (this.__k11 = new SizedBox({
                                 "height": 3
                               }))),
                               new Text({
-                                "style": {
-                                  "fontSize": 11.5,
-                                  "color": new Color({value: 0xFF8B909A})
-                                },
+                                "style": (this.__k12 || (this.__k12 = new TextStyle({
+                                  "color": new Color({
+                                    "value": 0xFF8B909A
+                                  }),
+                                  "fontSize": 11.5
+                                }))),
                                 "data": s[0]
                               })
                             ]
@@ -190,65 +197,69 @@ export class MinePage {
           })
         }),
         new Container({
-          "margin": {
-            "left": 12.0,
-            "top": 0.0,
-            "right": 12.0,
-            "bottom": 12.0
-          },
-          "decoration": {
+          "margin": (this.__k13 || (this.__k13 = EdgeInsets.fromLTRB({
+            "bottom": 12,
+            "left": 12,
+            "right": 12,
+            "top": 0
+          }))),
+          "decoration": new BoxDecoration({
             "color": Colors.white,
-            "borderRadius": {
-              "radius": 14.0
-            }
-          },
+            "borderRadius": BorderRadius.circular({
+              "radius": 14
+            })
+          }),
           "child": new Column({
             "children": [
-              ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [(this.__k5 || (this.__k5 = new Divider({
-                        "color": new Color({value: 0xFFF0F2F6}),
+              ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [(this.__k14 || (this.__k14 = new Divider({
+                        "color": new Color({
+                          "value": 0xFFF0F2F6
+                        }),
                         "height": 1,
                         "indent": 56
                       })))] : []), new GestureDetector({
                       "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])),
                       "child": new Padding({
-                        "padding": {
-                          "left": 14.0,
-                          "top": 12.0,
-                          "right": 12.0,
-                          "bottom": 12.0
-                        },
+                        "padding": (this.__k15 || (this.__k15 = EdgeInsets.fromLTRB({
+                          "bottom": 12,
+                          "left": 14,
+                          "right": 12,
+                          "top": 12
+                        }))),
                         "child": new Row({
                           "children": [
                             new Container({
                               "width": 30,
                               "height": 30,
-                              "alignment": "center",
-                              "decoration": {
+                              "alignment": Alignment.center,
+                              "decoration": new BoxDecoration({
                                 "color": MinePage._menuTints[(i % MinePage._menuTints.length)],
-                                "borderRadius": {
-                                  "radius": 9.0
-                                }
-                              },
+                                "borderRadius": BorderRadius.circular({
+                                  "radius": 9
+                                })
+                              }),
                               "child": new Text({
-                                "style": {
+                                "style": (this.__k16 || (this.__k16 = new TextStyle({
                                   "fontSize": 15
-                                },
+                                }))),
                                 "data": this._feed.menu[i].emoji
                               })
                             }),
-                            (this.__k6 || (this.__k6 = new SizedBox({
+                            (this.__k17 || (this.__k17 = new SizedBox({
                               "width": 12
                             }))),
                             new Expanded({
                               "child": new Text({
-                                "style": {
+                                "style": (this.__k18 || (this.__k18 = new TextStyle({
                                   "fontSize": 14
-                                },
+                                }))),
                                 "data": this._feed.menu[i].title
                               })
                             }),
-                            (this.__k7 || (this.__k7 = new Icon({
-                              "color": new Color({value: 0xFFC3C8D2}),
+                            (this.__k19 || (this.__k19 = new Icon({
+                              "color": new Color({
+                                "value": 0xFFC3C8D2
+                              }),
                               "icon": "chevron_right",
                               "size": 18
                             })))
@@ -260,63 +271,65 @@ export class MinePage {
           })
         }),
         new Padding({
-          "padding": {
-            "left": 12.0,
-            "top": 0.0,
-            "right": 12.0,
-            "bottom": 20.0
-          },
+          "padding": (this.__k20 || (this.__k20 = EdgeInsets.fromLTRB({
+            "bottom": 20,
+            "left": 12,
+            "right": 12,
+            "top": 0
+          }))),
           "child": new GestureDetector({
             "onTap": this.__bindFn(3, [], () => _app_host_.invoke("toast", ["已退出登录（演示）"])),
             "child": new Container({
               "height": 46,
-              "alignment": "center",
-              "decoration": {
+              "alignment": Alignment.center,
+              "decoration": new BoxDecoration({
                 "color": Colors.white,
-                "borderRadius": {
-                  "radius": 14.0
-                }
-              },
-              "child": (this.__k8 || (this.__k8 = new Text({
+                "borderRadius": BorderRadius.circular({
+                  "radius": 14
+                })
+              }),
+              "child": (this.__k21 || (this.__k21 = new Text({
                 "data": "退出登录",
-                "style": {
-                  "color": kPrice,
+                "style": new TextStyle({
                   "fontSize": 14,
-                  "fontWeight": "w600"
-                }
+                  "fontWeight": FontWeight.w600,
+                  "color": kPrice
+                })
               })))
             })
           })
         }),
-        (this.__k9 || (this.__k9 = new Padding({
+        (this.__k22 || (this.__k22 = new Padding({
           "child": new Text({
-            "style": {
+            "style": new TextStyle({
               "fontSize": 12.5,
-              "fontWeight": "w700",
-              "color": new Color({value: 0xFF98A0AC})
-            },
+              "fontWeight": FontWeight.w700,
+              "color": new Color({
+                "value": 0xFF98A0AC
+              })
+            }),
             "data": "开发者"
           }),
-          "padding": {
-            "bottom": 8.0,
-            "left": 18.0,
-            "right": 18.0,
-            "top": 4.0
-          }
+          "padding": EdgeInsets.fromLTRB({
+            "left": 18,
+            "top": 4,
+            "right": 18,
+            "bottom": 8
+          })
         }))),
         new Container({
-          "margin": {
-            "left": 12.0,
-            "top": 0.0,
-            "right": 12.0,
-            "bottom": 24.0
-          },
-          "decoration": {
+          "margin": (this.__k23 || (this.__k23 = EdgeInsets.fromLTRB({
+            "bottom": 24,
+            "left": 12,
+            "right": 12,
+            "top": 0
+          }))),
+          "decoration": new BoxDecoration({
             "color": Colors.white,
-            "borderRadius": {
-              "radius": 14.0
-            }
-          },
+            "borderRadius": BorderRadius.circular({
+              "radius": 14
+            })
+          }),
           "child": new Column({
             "children": [
               new _DevRow({
@@ -325,8 +338,10 @@ export class MinePage {
                 "subtitle": "常用组件 原生 ↔ JS 同屏对比",
                 "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
               }),
-              (this.__k5 || (this.__k5 = new Divider({
-                "color": new Color({value: 0xFFF0F2F6}),
+              (this.__k14 || (this.__k14 = new Divider({
+                "color": new Color({
+                  "value": 0xFFF0F2F6
+                }),
                 "height": 1,
                 "indent": 56
               }))),
@@ -361,31 +376,33 @@ export class _DevRow {
       "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
       "behavior": "opaque",
       "child": new Padding({
-        "padding": {
-          "left": 14.0,
-          "top": 12.0,
-          "right": 12.0,
-          "bottom": 12.0
-        },
+        "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
+          "bottom": 12,
+          "left": 14,
+          "right": 12,
+          "top": 12
+        }))),
         "child": new Row({
           "children": [
             new Container({
               "width": 30,
               "height": 30,
-              "alignment": "center",
-              "decoration": {
-                "color": new Color({value: 0xFFE8F2FF}),
-                "borderRadius": {
-                  "radius": 9.0
-                }
-              },
+              "alignment": Alignment.center,
+              "decoration": new BoxDecoration({
+                "color": (this.__k1 || (this.__k1 = new Color({
+                  "value": 0xFFE8F2FF
+                }))),
+                "borderRadius": BorderRadius.circular({
+                  "radius": 9
+                })
+              }),
               "child": new Icon({
                 "size": 16,
                 "color": kBrand,
                 "icon": this.icon
               })
             }),
-            (this.__k0 || (this.__k0 = new SizedBox({
+            (this.__k2 || (this.__k2 = new SizedBox({
               "width": 12
             }))),
             new Expanded({
@@ -393,28 +410,32 @@ export class _DevRow {
                 "crossAxisAlignment": "start",
                 "children": [
                   new Text({
-                    "style": {
+                    "style": (this.__k3 || (this.__k3 = new TextStyle({
                       "fontSize": 14
-                    },
+                    }))),
                     "data": this.title
                   }),
-                  (this.__k1 || (this.__k1 = new SizedBox({
+                  (this.__k4 || (this.__k4 = new SizedBox({
                     "height": 3
                   }))),
                   new Text({
                     "maxLines": 1,
                     "overflow": "ellipsis",
-                    "style": {
-                      "fontSize": 11,
-                      "color": new Color({value: 0xFF98A0AC})
-                    },
+                    "style": (this.__k5 || (this.__k5 = new TextStyle({
+                      "color": new Color({
+                        "value": 0xFF98A0AC
+                      }),
+                      "fontSize": 11
+                    }))),
                     "data": this.subtitle
                   })
                 ]
               })
             }),
-            (this.__k2 || (this.__k2 = new Icon({
-              "color": new Color({value: 0xFFC3C8D2}),
+            (this.__k6 || (this.__k6 = new Icon({
+              "color": new Color({
+                "value": 0xFFC3C8D2
+              }),
               "icon": "chevron_right",
               "size": 18
             })))

@@ -1,16 +1,19 @@
 // ===== 三方库接入：provider =====
 //
-// **本文件 + 同目录两件（provider_bridge / provider_js）+ context_ops = provider
-// 支持的全部落点**。把 provider 当「新引入的三方库」看待后可以看清：接入一个库
-// 只需要一个 [JsUiLibrary] 子类 + 它自己的若干实现文件，基座（runtime_source /
-// js_ui_capabilities / build_context_bridge / js_ui_widget / mini_react /
-// handle_registry）零改动。
+// **本文件 + 同目录两件（provider_bridge / context_ops）+ 生成器的 provider
+// 包模块片段 = provider 支持的全部落点**。把 provider 当「新引入的三方库」看待
+// 后可以看清：接入一个库只需要一个 [JsUiLibrary] 子类 + 它自己的若干实现文件，
+// 基座（js_ui_capabilities / build_context_bridge / js_ui_widget / mini_react /
+// handle_registry / runtime.js）零改动。
 //
 // 落点在本库的对应关系：
-//   JS 片段         → 生成器 `builders/runtime/js/provider_js.dart`（随
-//                     patch/runtime.js 发布）：作用域声明（`registerScope`）
-//                     + context 扩展方法（`JsBuildContext.prototype.watch/read`，
-//                     对齐 Dart 的 `extension BuildContextX on BuildContext`）
+//   JS 模块         → 生成器 `builders/runtime/js/provider_module_js.dart`，
+//                     追加进本包的模块 `patch/provider.js`（与该包的 JS 类同
+//                     模块求值）：作用域声明（`registerScope`）+ context 扩展
+//                     方法（`JsBuildContext.prototype.watch/read`，对齐 Dart 的
+//                     `extension BuildContextX on BuildContext`）。该模块由
+//                     [jsModuleAssets] 声明、运行时就绪点加载（与页面产物是否
+//                     import 到无关）
 //   ensureChannels  → context_ops.dart：经核心的通用缝 `registerContextOp` 把
 //                     watch/read 的宿主处理注册进去
 //   registerWidgets → provider_bridge.dart：ChangeNotifierProvider / Consumer
@@ -30,9 +33,12 @@ class ProviderLibrary extends JsUiLibrary {
   String get id => 'provider';
 
   @override
+  List<String> get jsModuleAssets => const ['provider.js'];
+
+  @override
   void ensureChannels() {
     // `context.watch/read` 属 provider（对齐 `extension BuildContextX`）：
-    // JS 侧方法补丁见 provider_js.dart，宿主侧处理在此注册。
+    // JS 侧方法补丁在 patch/provider.js（provider_module_js.dart），宿主侧处理在此注册。
     // ChangeNotifier 句柄通道（notifier/ChangeNotifier）归 change_notifier 能力。
     ensureProviderContextOps();
   }

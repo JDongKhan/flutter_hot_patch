@@ -9,17 +9,19 @@
 //   1. [jsFragments]      —— 仅**外部库**使用：App 在 runApp 前注册的库，
 //                            片段在 `runtime.js` 之后求值（独立 IIFE，只能
 //                            用全局出口 `__jsui` / `_app_host_`）。内建能力的
-//                            JS 已随 `patch/runtime.js` 发布（生成器
-//                            `builders/runtime/js/**`），内建库的该钩子为空。
+//                            JS 已随产物发布——核心机制写进 `patch/runtime.js`，
+//                            库自己的 API 面写进该包的 `patch/<pkg>.js`
+//                            （生成器 `builders/runtime/js/**`），内建库的该
+//                            钩子为空。
 //   2. [ensureChannels]   —— 幂等登记本能力用到的跨语言句柄 kind，以及把本库的
 //                            `context.<op>(...)` 处理注册进核心的通用缝
 //                            （`registerContextOp`，见 build_context_bridge.dart）；
 //   3. [registerWidgets]  —— 本能力的宿主侧组件映射（`type` → Flutter widget）。
 //
 // **本类刻意没有 context 语义的钩子**：`context.watch/read` 是 provider 那类
-// `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁随运行时产物
-// 发布（生成器 `builders/runtime/js/provider_js.dart`），宿主侧经
-// `registerContextOp` 注册（见 capabilities/provider/context_ops.dart）。
+// `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁随该包的模块
+// 发布（生成器 `builders/runtime/js/provider_module_js.dart` → `patch/provider.js`），
+// 宿主侧经 `registerContextOp` 注册（见 capabilities/provider/context_ops.dart）。
 // 核心不认识具体 op 名。
 //
 // 接入方式（二选一）：
@@ -79,6 +81,19 @@ abstract class JsUiLibrary {
   /// 内部函数（`registerScope` / `scopeOf` 等，它们不在全局），只能用 `__jsui`
   /// 与 `_app_host_`；需要核心能力的库应把代码并入运行时产物。
   List<String> get jsFragments => const [];
+
+  /// 本库**随补丁包发布的独立 JS 模块**（相对补丁根目录的文件名，如
+  /// `'provider.js'`）。
+  ///
+  /// 用于库自己的 API 面没跟核心机制同文件发布的场合：库的 JS 类产在
+  /// `patch/<pkg>.js`（生成器按 package 出模块），而库对运行时提出的额外要求
+  /// （作用域声明 / 扩展方法原型补丁）也写在该模块里。这些模块必须在**任何
+  /// 组件 build 之前**求值，故由运行时就绪点统一加载（见
+  /// `JsRuntimeManager._loadCapabilityModules`），不依赖页面产物是否 import 到它。
+  ///
+  /// 能力模块也走 `loadModule`（相对 import 递归、幂等），与组件产物 import
+  /// 同一份文件时只求值一次。
+  List<String> get jsModuleAssets => const [];
 
   /// 幂等登记本库的跨语言句柄 kind（宿主侧句柄注册表）。
   /// 在 JS 组件 mount（即 `new` 本库对象 → `reg(...)`）之前调用一次。

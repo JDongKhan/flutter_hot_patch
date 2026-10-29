@@ -4,7 +4,7 @@
 
 import { StringLogExtension } from '../../extensions/hot_module_base.js';
 import { TestString1 } from 'extension/e_string.js';
-import { Colors, Column, ElevatedButton, SizedBox, Text } from '../../flutter.js';
+import { Colors, Column, ElevatedButton, FontWeight, SizedBox, Text, TextStyle } from '../../flutter.js';
 
 // 模型 Greeting
 export class Greeting {
@@ -52,28 +52,28 @@ export class MixinDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "State 混入 StateLogMixin（跨包 mixin）",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "点击按钮后 setState + 调用 mixin 提供的 logState，控制台输出 [StateLogMixin] ...",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 13
-          }
+          "style": new TextStyle({
+            "fontSize": 13,
+            "color": Colors.black54
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12
         }))),
         new Text({
-          "style": {
+          "style": (this.__k4 || (this.__k4 = new TextStyle({
             "fontSize": 20
-          },
+          }))),
           "data": "当前计数：" + this._count
         }),
         (this.__k1 || (this.__k1 = new SizedBox({
@@ -81,7 +81,7 @@ export class MixinDetail {
         }))),
         new ElevatedButton({
           "onPressed": this.__bindFn(0, [], (...__a) => this._bump(...__a)),
-          "child": (this.__k4 || (this.__k4 = new Text({
+          "child": (this.__k5 || (this.__k5 = new Text({
             "data": "+1 并打日志"
           })))
         })
@@ -109,20 +109,20 @@ export class ExtensionDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "String 扩展 logText（跨包 extension）",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "调用 '扩展方法打印的日志'.logText('ExtensionDetail')，控制台输出 [ExtensionDetail] ...",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 13
-          }
+          "style": new TextStyle({
+            "fontSize": 13,
+            "color": Colors.black54
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12
@@ -155,49 +155,49 @@ export class InheritanceDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "普通类单继承（extends / super / 多态）",
-          "style": {
+          "style": new TextStyle({
             "fontSize": 16,
-            "fontWeight": "bold"
-          }
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "Greeting 为基类，FancyGreeting 覆盖 greet / describe 并调用 super。",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 13
-          }
+          "style": new TextStyle({
+            "fontSize": 13,
+            "color": Colors.black54
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12
         }))),
         new Text({
-          "style": {
+          "style": (this.__k4 || (this.__k4 = new TextStyle({
             "fontSize": 15
-          },
+          }))),
           "data": plain.greet()
         }),
         new Text({
-          "style": {
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
             "fontSize": 13
-          },
+          }))),
           "data": plain.describe()
         }),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
         new Text({
-          "style": {
+          "style": (this.__k4 || (this.__k4 = new TextStyle({
             "fontSize": 15
-          },
+          }))),
           "data": fancy.greet()
         }),
         new Text({
-          "style": {
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
             "fontSize": 13
-          },
+          }))),
           "data": fancy.describe()
         })
       ]

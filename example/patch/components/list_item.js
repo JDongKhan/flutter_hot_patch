@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/list_item.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Text } from '../flutter.js';
+import { Colors, FontWeight, Text, TextStyle } from '../flutter.js';
 
 const _listItemPalette = [Colors.blueGrey, Colors.teal, Colors.indigo, Colors.deepOrange, Colors.purple, Colors.brown];
 
@@ -26,10 +26,10 @@ export class CommonListItem {
   }
   build(context) {
     return new Text({
-      "style": {
+      "style": new TextStyle({
         "color": _listItemPalette[(((this.index + this.salt)) % _listItemPalette.length)],
-        "fontWeight": "w600"
-      },
+        "fontWeight": FontWeight.w600
+      }),
       "data": "builder item " + this.index + " · u" + this._updateCount
     });
   }

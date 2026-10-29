@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/safe_area_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, Container, MediaQuery, Row, SafeArea, SizedBox, Switch, Text } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, FontWeight, MediaQuery, Radius, Row, SafeArea, SizedBox, Switch, Text, TextStyle } from '../flutter.js';
 
 // 组件 SafeAreaDetail
 export class SafeAreaDetail {
@@ -17,19 +17,19 @@ export class SafeAreaDetail {
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "SafeArea",
-          "style": {
-            "fontWeight": "bold"
-          }
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
         }))),
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 4
         }))),
         (this.__k2 || (this.__k2 = new Text({
           "data": "系统安全区 padding 全为 0 时 SafeArea 默认无可见间距；用 minimum 强制留白即可验证生效",
-          "style": {
-            "color": Colors.black54,
-            "fontSize": 12
-          }
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black54
+          })
         }))),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 10
@@ -38,9 +38,9 @@ export class SafeAreaDetail {
           "children": [
             (this.__k4 || (this.__k4 = new Text({
               "data": "minimum 留白",
-              "style": {
+              "style": new TextStyle({
                 "fontSize": 12
-              }
+              })
             }))),
             new Switch({
               "value": this._enabled,
@@ -60,18 +60,23 @@ export class SafeAreaDetail {
             "top": true,
             "right": true,
             "bottom": true,
-            "minimum": this._enabled ? {"left": 12.0, "top": 12.0, "right": 12.0, "bottom": 12.0} : {"left": 0, "top": 0, "right": 0, "bottom": 0},
+            "minimum": this._enabled ? EdgeInsets.only({
+              "top": 12,
+              "bottom": 12,
+              "left": 12,
+              "right": 12
+            }) : EdgeInsets.zero,
             "maintainBottomViewPadding": false,
             "child": new Container({
               "height": 56,
               "color": Colors.teal,
-              "alignment": "center",
+              "alignment": Alignment.center,
               "child": (this.__k6 || (this.__k6 = new Text({
                 "data": "SafeArea 内区域",
-                "style": {
+                "style": new TextStyle({
                   "color": Colors.white,
                   "fontSize": 13
-                }
+                })
               })))
             })
           })
@@ -80,35 +85,34 @@ export class SafeAreaDetail {
           "height": 10
         }))),
         new Container({
-          "padding": {
-            "left": 8.0,
-            "top": 8.0,
-            "right": 8.0,
-            "bottom": 8.0
-          },
-          "decoration": {
+          "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
+            "value": 8
+          }))),
+          "decoration": new BoxDecoration({
             "color": Colors.grey.shade100,
-            "borderRadius": {
-              "radius": 6.0
-            }
-          },
+            "borderRadius": (this.__k8 || (this.__k8 = BorderRadius.all({
+              "radius": Radius.circular({
+                "radius": 6
+              })
+            })))
+          }),
           "child": new Column({
             "crossAxisAlignment": "start",
             "children": [
               new Text({
-                "style": {
+                "style": (this.__k9 || (this.__k9 = new TextStyle({
                   "fontSize": 12
-                },
+                }))),
                 "data": "padding: L" + padding.left.toStringAsFixed(0) + " T" + padding.top.toStringAsFixed(0) + " " + "R" + padding.right.toStringAsFixed(0) + " B" + padding.bottom.toStringAsFixed(0)
               }),
-              (this.__k7 || (this.__k7 = new SizedBox({
+              (this.__k10 || (this.__k10 = new SizedBox({
                 "height": 2
               }))),
               new Text({
-                "style": {
-                  "fontSize": 12,
-                  "color": Colors.black54
-                },
+                "style": (this.__k11 || (this.__k11 = new TextStyle({
+                  "color": Colors.black54,
+                  "fontSize": 12
+                }))),
                 "data": this._enabled ? "minimum: 每边 12（灰色即为留白）" : "minimum: 0（本机系统 padding 为 0，故无留白）"
               })
             ]

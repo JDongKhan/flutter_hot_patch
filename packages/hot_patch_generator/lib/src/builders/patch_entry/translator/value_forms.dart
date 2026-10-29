@@ -7,19 +7,13 @@
 ///
 /// 约定：
 ///   - 转换函数一律「翻译不出来返回 null」，由调用方过滤掉该键——运行时
-///     （`js_widget_registry`）逐具名键取值，多余的键与缺失的键都是宽容的；
-///   - 但**不允许静默**：真正结构化、看起来该被翻译的值翻译不出来时出声
-///     （见 [_warnUnsupported]），便于补齐分派表。
+///     （`js_widget_registry`）逐具名键取值，多余的键与缺失的键都是宽容的。
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
 import '../../shared/ctor_signatures.dart';
-import 'style_translators.dart';
 import 'element2js.dart';
-
-/// 值形态转换器：`值表达式 + 上下文` → 产物值（JS 表达式字符串 / JSON map）。
-typedef ValueConverter = Object? Function(Expression e, ElementTranslateContext ctx);
 
 /// 去掉空值键（保序）：Dart `null` 与字符串 `'null'`（[TreeShape] 对 NullLiteral
 /// 的产出）都算空。
@@ -33,129 +27,13 @@ Map<String, dynamic> nonNull(Map<String, Object?> raw) => {
         if (e.value != null && e.value != 'null') e.key: e.value,
     };
 
-/// 构造 / 静态工厂名 → 结构化样式转换器。
-///
-/// 键是**类型名**：`ctx.ctorOf` 把 `EdgeInsets.all(8)`（命名构造 / 静态工厂）
-/// 与 `const EdgeInsets(...)`（直接构造）都归一成 `'EdgeInsets'`；命名构造的
-/// 细节（all / symmetric / only / circular / all / fromLTRB）由各转换函数内部处理。
-final Map<String, ValueConverter> _ctorConverters = {
-  // 内边距 / 尺寸 / 约束
-  'EdgeInsets': (e, c) => edgeInsetsToJson(e, c),
-  'BoxConstraints': (e, c) => boxConstraintsToJson(e, c),
-  'Offset': (e, c) => offsetExprToJson(e),
-  // 装饰
-  'BoxDecoration': (e, c) => boxDecorationToJson(e, c),
-  'Border': (e, c) => borderToJson(e, c),
-  'BorderSide': (e, c) => borderSideToJson(e, c),
-  'BorderRadius': (e, c) => borderRadiusToJson(e, c),
-  'BoxShadow': (e, c) => boxShadowToJson(e, c),
-  'LinearGradient': (e, c) => gradientToJson(e, c),
-  'RadialGradient': (e, c) => gradientToJson(e, c),
-  'SweepGradient': (e, c) => gradientToJson(e, c),
-  'DecorationImage': (e, c) => decorationImageToJson(e, c),
-  // 颜色滤镜（ColorFiltered.colorFilter）：{kind:'mode'|'matrix', …}。
-  'ColorFilter': (e, c) => colorFilterToJson(e, c),
-  // 图片滤镜（ImageFiltered.imageFilter）：{kind:'blur'|'dilate'|'erode'|'matrix'|'compose', …}。
-  'ImageFilter': (e, c) => imageFilterToJson(e, c),
-  // 形状
-  'RoundedRectangleBorder': (e, c) => shapeToJson(e, c),
-  'CircleBorder': (e, c) => shapeToJson(e, c),
-  'StadiumBorder': (e, c) => shapeToJson(e, c),
-  'BeveledRectangleBorder': (e, c) => shapeToJson(e, c),
-  'ContinuousRectangleBorder': (e, c) => shapeToJson(e, c),
-  // 文本 / 按钮样式
-  'TextStyle': (e, c) => textStyleToJson(e, c),
-  'ButtonStyle': (e, c) => buttonStyleToJson(e, c),
-  'TextScaler': (e, c) => textScalerToJson(e),
-  // 网格代理（`gridDelegate:` 的值形态）→ JSON 值，运行时读 crossAxisCount /
-  // maxCrossAxisExtent；不转就会变成结点，网格退化成单列。
-  'SliverGridDelegateWithFixedCrossAxisCount': (e, c) =>
-      gridDelegateToJson(e, c),
-  'SliverGridDelegateWithMaxCrossAxisExtent': (e, c) =>
-      gridDelegateToJson(e, c),
-  // 颜色：`Color(0xFF...)` / `Color.fromARGB(...)` → '#rrggbb'。
-  // 必须走结构化转换：否则会落进「类名构造 → 子结点」分支，产物变成
-  // `__h('Color', …)` 结点，运行时 `colorFromJson` 只认字符串 → 颜色整条丢失。
-  'Color': (e, c) => colorToJson(e, c),
-  // 滚动物理（含子类构造，如 `NeverScrollableScrollPhysics()`）
-  'NeverScrollableScrollPhysics': (e, c) => scrollPhysicsToJson(e),
-  'AlwaysScrollableScrollPhysics': (e, c) => scrollPhysicsToJson(e),
-  'BouncingScrollPhysics': (e, c) => scrollPhysicsToJson(e),
-  'ClampingScrollPhysics': (e, c) => scrollPhysicsToJson(e),
-  // 图片源（`AssetImage('x')` / `NetworkImage('url')`）
-  'AssetImage': (e, c) => imageSourceToJson(e, c),
-  'NetworkImage': (e, c) => imageSourceToJson(e, c),
-};
-
-/// 常量引用 owner 名 → 转换器（枚举 / 图标 / 零值常量）。
-///
-/// 键是 `Owner.name` 里的 `Owner`（`Icons.add` → `'Icons'`）。
-final Map<String, ValueConverter> _constRefConverters = {
-  // 图标
-  'Icons': (e, c) => iconDataToJson(e),
-  // 对齐 / 布局枚举
-  'Alignment': (e, c) => alignmentToJson(e, c),
-  'AlignmentDirectional': (e, c) => _enum(e, c, 'AlignmentDirectional'),
-  'MainAxisAlignment': (e, c) => mainAxisAlignmentToJson(e),
-  'CrossAxisAlignment': (e, c) => crossAxisAlignmentToJson(e),
-  'MainAxisSize': (e, c) => mainAxisSizeToJson(e),
-  'Axis': (e, c) => axisToJson(e),
-  'WrapAlignment': (e, c) => wrapAlignmentToJson(e),
-  'WrapCrossAlignment': (e, c) => wrapCrossAlignmentToJson(e),
-  'StackFit': (e, c) => stackFitToJson(e),
-  // 视觉 / 交互枚举
-  'BoxFit': (e, c) => boxFitToJson(e),
-  'Clip': (e, c) => clipBehaviorToJson(e),
-  'HitTestBehavior': (e, c) => hitTestBehaviorToJson(e),
-  'ImageRepeat': (e, c) => imageRepeatToJson(e),
-  'BlendMode': (e, c) => blendModeToJson(e),
-  'ScrollPhysics': (e, c) => scrollPhysicsToJson(e),
-  // 文本枚举 / 样式枚举
-  'TextOverflow': (e, c) => _enum(e, c, 'TextOverflow'),
-  'TextAlign': (e, c) => _enum(e, c, 'TextAlign'),
-  'TextDirection': (e, c) => _enum(e, c, 'TextDirection'),
-  'TextDecoration': (e, c) => _enum(e, c, 'TextDecoration'),
-  'TextInputType': (e, c) => textInputTypeToJson(e),
-  'BorderStyle': (e, c) => _enum(e, c, 'BorderStyle'),
-  'FontWeight': (e, c) => _enum(e, c, 'FontWeight'),
-  'FontStyle': (e, c) => _enum(e, c, 'FontStyle'),
-  // 导航 / Tab 枚举
-  'TabBarIndicatorSize': (e, c) => tabBarIndicatorSizeToJson(e),
-  'TabAlignment': (e, c) => tabAlignmentToJson(e),
-  // 零值常量（结构化，运行时按同一套 fromJson 还原）
-  'EdgeInsets': (e, c) => _zeroInsets(e, c, r'EdgeInsets.zero'),
-  'BorderRadius': (e, c) => _zeroRadius(e, c, r'BorderRadius.zero'),
-};
-
-/// 枚举 / 常量引用的兜底：`Owner.value` 里 owner 与 name 都匹配才产出（带引号）。
-Object? _enum(Expression e, ElementTranslateContext c, String owner) {
-  final name = enumName(e, owner);
-  return name == null ? null : c.jsString(name);
-}
-
-/// `EdgeInsets.zero` → `{left/top/right/bottom: '0'}`（与 [edgeInsetsToJson] 同格式）。
-Object? _zeroInsets(Expression e, ElementTranslateContext c, String source) {
-  if (e.toSource() != source) return null;
-  return {
-    'left': '0',
-    'top': '0',
-    'right': '0',
-    'bottom': '0',
-  };
-}
-
-/// `BorderRadius.zero` → `{radius: '0'}`（与 [borderRadiusToJson] 统一圆角同格式）。
-Object? _zeroRadius(Expression e, ElementTranslateContext c, String source) {
-  if (e.toSource() != source) return null;
-  return {'radius': '0'};
-}
-
 /// 按值形态翻译一个实参值；翻译不出来返回 null（由 [nonNull] 丢弃该键）。
 ///
 /// 分派顺序（形态判断，与 widget 类型无关）：
 ///   1. `NullLiteral` → 丢键；
-///   2. 构造 / 静态工厂（`ctorOf` 归一）→ [_ctorConverters]；
-///   3. 常量引用（`Owner.name`）→ [_constRefConverters]；
+///   2. 构造 / 静态工厂 → 构造统一翻译（`new X({...})` / `X.b({...})`），
+///      值类由运行时同名类承接（翻译层不做「哪些类型要转成 JSON」的判别）；
+///   3. 常量引用（`Owner.name`）→ 普通类原样引用 / enum 转成员名字符串；
 ///   4. `ListLiteral` → 元素列表（逐项交给调用方的结点翻译）；
 ///   5. 其余 → 表达式直通（[ElementTranslateContext.jsDataExpr]）。
 Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
@@ -213,16 +91,6 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
     if (fn != null) return fn;
   }
 
-  // 静态工厂（`ElevatedButton.styleFrom(...)` 等）：按**方法名**识别——它们的
-  // 构造名被归一成 receiver 类名（'ElevatedButton'），无法据此判断是样式值。
-  if (e is MethodInvocation) {
-    final f = _factoryConverters[e.methodName.name];
-    if (f != null) {
-      final r = f(e, ctx);
-      if (r != null) return r;
-    }
-  }
-
   final (ctor, _) = ctx.ctorOf(e);
   if (ctor != null && !ctx.isConstruction(e)) {
     // `X.member(...)` 不是构造（如模型的静态方法 `Spot.fromJson(e)`、SDK 静态
@@ -231,13 +99,6 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
     return _jsExprOrNull(e, ctx);
   }
   if (ctor != null) {
-    final conv = _ctorConverters[ctor];
-    if (conv != null) {
-      final r = conv(e, ctx);
-      if (r != null) return r;
-      // 命中了表但转换失败：多半是值的写法超出该转换函数的支持范围，出声。
-      _warnUnsupported('$ctor(${e.toSource()})');
-    }
     // 构造统一按**构造翻译**处理（组件 / 值对象 / 控制器同一套）：
     // 先走属性管线（builder 闭包抽成方法、集合推导展开、delegate、位置实参
     // 按源码签名映射），再渲染成 `new X({...})` / `X.b({...})`。
@@ -249,16 +110,10 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
   } else {
     final owner = staticRefOwner(e);
     if (owner != null) {
-      final conv = _constRefConverters[owner];
-      if (conv != null) {
-        final r = conv(e, ctx);
-        if (r != null) return r;
-        _warnUnsupported('$e');
-      }
       // 跨文件「普通类」的静态成员引用（`MyColors.background`）：产物已 import
-      // 该类的 JS 模块，裸引用即可解析（与 style_translators.translateColor 同口径）。
+      // 该类的 JS 模块，裸引用即可解析。
       // 其余 `Owner.name`：先查源码索引——owner 是**普通类**（`Colors.red` /
-      // 静态常量类）时按 1:1 原样引用（运行时注入同名类 / 全局常量）；
+      // 静态常量类）时按 1:1 原样引用（运行时同名类 / 产物 import）；
       // 是 **enum** 时 Dart 枚举在 JS 侧没有等价物，产物协议用**成员名字符串**
       // 表示（运行时各 `xxxFromJson` 按名还原，如
       // `BottomNavigationBarType.fixed` → `"fixed"`）。
@@ -410,12 +265,6 @@ String _valueSourceOf(Object? v) {
 bool isBuilderArg(String? name) =>
     name != null && (name == 'builder' || name.endsWith('Builder'));
 
-/// 静态工厂方法名 → 结构化样式转换器（`Xxx.styleFrom(...)` 这类：值是样式对象，
-/// 不能按「类名构造 → 子结点」处理）。
-final Map<String, ValueConverter> _factoryConverters = {
-  'styleFrom': (e, c) => buttonStyleToJson(e, c),
-};
-
 /// `Owner.name` 形态的 owner 名（`Colors.red` → `'Colors'`）；否则 null。
 String? staticRefOwner(Expression e) {
   if (e is PrefixedIdentifier) return e.prefix.name;
@@ -522,8 +371,3 @@ String? builderClosureJs(
   return '$head => {\n${preludes.map((p) => '  $p\n').join()}  return $js;\n}';
 }
 
-/// 构建期告警（不静默）：结构化值没被分派表覆盖时出声，便于补齐分派表。
-void _warnUnsupported(String source) {
-  // ignore: avoid_print - 构建期日志
-  print('[hot_patch_generator] 值形态未覆盖，该键已丢弃：$source');
-}

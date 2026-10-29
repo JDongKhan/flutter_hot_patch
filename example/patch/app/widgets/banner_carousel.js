@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { HomeBanner } from '../model/app_models.js';
-import { ClipRRect, Color, Column, Container, Curves, Duration, Image, InkWell, Padding, PageController, PageView, Positioned, Row, SizedBox, Stack, Text, Timer } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, ClipRRect, Color, Column, Container, Curves, Duration, EdgeInsets, FontWeight, Image, InkWell, LinearGradient, Padding, PageController, PageView, Positioned, Radius, Row, SizedBox, Stack, Text, TextStyle, Timer } from '../../flutter.js';
 
 // 组件 BannerCarousel
 export class BannerCarousel {
@@ -70,7 +70,7 @@ export class BannerCarousel {
       return;
     }
     var next = (((this._index + 1)) % count);
-    this._controller.animateToPage(next, BannerCarousel._animate, Curves.easeOut);
+    this._controller.animateToPage(next, { "duration": BannerCarousel._animate, "curve": Curves.easeOut });
     this.setState(() => { this._index = next; });
   }
   _onPageChanged(index) {
@@ -79,7 +79,9 @@ export class BannerCarousel {
   build(context) {
     var banners = this.banners;
     if ((banners.length == 0)) {
-      return (this.__k0 || (this.__k0 = new SizedBox({})));
+      return (this.__k0 || (this.__k0 = new SizedBox({
+        "factory": "shrink"
+      })));
     }
     return new Column({
       "mainAxisSize": "min",
@@ -103,20 +105,23 @@ export class BannerCarousel {
           "mainAxisAlignment": "center",
           "children": [
             ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [new Container({
-                    "margin": {
-                      "left": 3.0,
-                      "top": 0.0,
-                      "right": 3.0,
-                      "bottom": 0.0
-                    },
+                    "margin": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
+                      "horizontal": 3
+                    }))),
                     "width": 6,
                     "height": 6,
-                    "decoration": {
-                      "color": ((i == this._index) ? new Color({value: 0xFF0E7AFB}) : new Color({value: 0xFFD5D9E0})),
-                      "borderRadius": {
-                        "radius": 3.0
-                      }
-                    }
+                    "decoration": new BoxDecoration({
+                      "color": (i == this._index) ? (this.__k3 || (this.__k3 = new Color({
+                        "value": 0xFF0E7AFB
+                      }))) : (this.__k4 || (this.__k4 = new Color({
+                        "value": 0xFFD5D9E0
+                      }))),
+                      "borderRadius": (this.__k5 || (this.__k5 = BorderRadius.all({
+                        "radius": Radius.circular({
+                          "radius": 3
+                        })
+                      })))
+                    })
                   })]); } return out; })()
           ]
         })
@@ -139,21 +144,22 @@ export class BannerSlide {
   }
   build(context) {
     return new Padding({
-      "padding": {
-        "left": 12.0,
-        "top": 0.0,
-        "right": 12.0,
-        "bottom": 0.0
-      },
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
+        "horizontal": 12
+      }))),
       "child": new InkWell({
         "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
-        "borderRadius": {
-          "radius": 14.0
-        },
+        "borderRadius": (this.__k1 || (this.__k1 = BorderRadius.all({
+          "radius": Radius.circular({
+            "radius": 14
+          })
+        }))),
         "child": new ClipRRect({
-          "borderRadius": {
-            "radius": 14.0
-          },
+          "borderRadius": (this.__k1 || (this.__k1 = BorderRadius.all({
+            "radius": Radius.circular({
+              "radius": 14
+            })
+          }))),
           "child": new Stack({
             "fit": "expand",
             "children": [
@@ -162,17 +168,20 @@ export class BannerSlide {
                 "name": this.banner.img
               }),
               new Container({
-                "decoration": {
-                  "gradient": {
-                    "kind": "linear",
+                "decoration": (this.__k2 || (this.__k2 = new BoxDecoration({
+                  "gradient": new LinearGradient({
                     "colors": [
-                      new Color({value: 0x00000000}),
-                      new Color({value: 0xB3000000})
+                      new Color({
+                        "value": 0x00000000
+                      }),
+                      new Color({
+                        "value": 0xB3000000
+                      })
                     ],
-                    "begin": "center",
-                    "end": "bottomCenter"
-                  }
-                }
+                    "begin": Alignment.center,
+                    "end": Alignment.bottomCenter
+                  })
+                })))
               }),
               new Positioned({
                 "left": 14,
@@ -182,21 +191,25 @@ export class BannerSlide {
                   "crossAxisAlignment": "start",
                   "children": [
                     new Text({
-                      "style": {
-                        "color": new Color({value: 0xFFFFFFFF}),
+                      "style": (this.__k3 || (this.__k3 = new TextStyle({
+                        "color": new Color({
+                          "value": 0xFFFFFFFF
+                        }),
                         "fontSize": 17,
-                        "fontWeight": "w700"
-                      },
+                        "fontWeight": FontWeight.w700
+                      }))),
                       "data": this.banner.title
                     }),
-                    (this.__k0 || (this.__k0 = new SizedBox({
+                    (this.__k4 || (this.__k4 = new SizedBox({
                       "height": 4
                     }))),
                     new Text({
-                      "style": {
-                        "color": new Color({value: 0xE6FFFFFF}),
+                      "style": (this.__k5 || (this.__k5 = new TextStyle({
+                        "color": new Color({
+                          "value": 0xE6FFFFFF
+                        }),
                         "fontSize": 12
-                      },
+                      }))),
                       "data": this.banner.sub
                     })
                   ]

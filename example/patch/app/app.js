@@ -6,7 +6,7 @@ import { HomePage } from 'pages/home_page.js';
 import { CommunityPage } from 'pages/community_page.js';
 import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
-import { BottomNavigationBar, BottomNavigationBarItem, Color, Colors, Icon, Scaffold, TabBarView, TabController } from '../flutter.js';
+import { BottomNavigationBar, BottomNavigationBarItem, Color, Colors, Icon, NeverScrollableScrollPhysics, Scaffold, TabBarView, TabController } from '../flutter.js';
 
 // 组件 AppShell
 export class AppShell {
@@ -42,15 +42,17 @@ export class AppSubContent {
   build(context) {
     console.log("--AppSubContent build");
     return new Scaffold({
-      "backgroundColor": new Color({value: 0xFFF4F5F7}),
+      "backgroundColor": (this.__k0 || (this.__k0 = new Color({
+        "value": 0xFFF4F5F7
+      }))),
       "body": new TabBarView({
         "controller": this._tab,
-        "physics": "NeverScrollableScrollPhysics",
+        "physics": (this.__k1 || (this.__k1 = new NeverScrollableScrollPhysics({}))),
         "children": [
-          (this.__k0 || (this.__k0 = new HomePage({}))),
-          (this.__k1 || (this.__k1 = new CommunityPage({}))),
-          (this.__k2 || (this.__k2 = new OrdersPage({}))),
-          (this.__k3 || (this.__k3 = new MinePage({})))
+          (this.__k2 || (this.__k2 = new HomePage({}))),
+          (this.__k3 || (this.__k3 = new CommunityPage({}))),
+          (this.__k4 || (this.__k4 = new OrdersPage({}))),
+          (this.__k5 || (this.__k5 = new MinePage({})))
         ]
       }),
       "bottomNavigationBar": new BottomNavigationBar({
@@ -58,8 +60,12 @@ export class AppSubContent {
         "onTap": this.__bindFn(0, [], (...__a) => this._openTab(...__a)),
         "type": "fixed",
         "backgroundColor": Colors.white,
-        "selectedItemColor": new Color({value: 0xFF0E7AFB}),
-        "unselectedItemColor": new Color({value: 0xFF98A0AC}),
+        "selectedItemColor": (this.__k6 || (this.__k6 = new Color({
+          "value": 0xFF0E7AFB
+        }))),
+        "unselectedItemColor": (this.__k7 || (this.__k7 = new Color({
+          "value": 0xFF98A0AC
+        }))),
         "selectedFontSize": 11,
         "unselectedFontSize": 11,
         "items": [

@@ -32,13 +32,14 @@ Set<String> flutterExportTypes() => _RuntimeGlobalTypes.instance.exports;
 /// 这类目标类型在 JS 侧确实有构造函数，构建期校验需要知道它们。
 Set<String> runtimeTypeAliases() => _RuntimeGlobalTypes.instance.aliases;
 
-/// 运行时注入的**全局函数**名（`G.showDialog = function (…) {…}`）。
+/// 运行时注入的**全局函数**名（`export function showDialog(…) {…}`）。
 ///
 /// 用途：Dart 里的裸顶层调用（`showDialog<bool>(…)`）在 JS 侧没有 `this` 也没有
-/// 宿主通道可映射，只有在运行时存在同名全局函数时才能翻译。与 [runtimeGlobalTypes]
+/// 宿主通道可映射，只有在 JS 侧存在同名函数时才能翻译。与 [runtimeGlobalTypes]
 /// 分开：函数名是小写开头，永远不能用于 `instanceof` / 静态成员解析。
 ///
-/// 新增注入函数 = 在 JS 片段里写一行 `G.<name> = function …`，这里自动可见。
+/// 新增注入函数 = 在 `flutter.js` 片段里写一行 `export function <name>(…)`，
+/// 这里自动可见（同时进 [flutterExportTypes]，产物按名 import）。
 Set<String> runtimeGlobalFunctions() => _RuntimeGlobalTypes.instance.functions;
 
 /// 进程内只扫描一次（build_runner 的多个 builder 共用）。
@@ -53,7 +54,7 @@ class _RuntimeGlobalTypes {
   /// 运行时登记的别名（`__jsTypeAlias('BuildContext', …)`）。
   final Set<String> aliases;
 
-  /// 运行时注入的全局函数（`G.showDialog = function …`）。
+  /// 运行时注入的全局函数（`export function showDialog …`）。
   final Set<String> functions;
 
   /// 全局注入语句：`G.FocusNode = FocusNode;`。
@@ -70,10 +71,17 @@ class _RuntimeGlobalTypes {
   /// `export const AnimationController = defineController(...)`。
   static final _exportConst = RegExp(r'\bexport const ([A-Z][A-Za-z0-9_$]*)');
 
-  /// 全局函数注入语句：`G.showDialog = function (…) {`（关键词 `function`
-  /// 排除 `G.foo = new Foo()` 这类同名对象注入，避免把对象当函数调用）。
+  /// 全局函数注入语句：`G.foo = function (…) {`（关键词 `function` 排除
+  /// `G.foo = new Foo()` 这类同名对象注入，避免把对象当函数调用）。
   static final _globalFnAssign =
       RegExp(r'\bG\.([a-z][A-Za-z0-9_$]*)\s*=\s*function\b');
+
+  /// `flutter.js` 的顶层函数导出：`export function showDialog(options) {`。
+  ///
+  /// Flutter SDK 的顶层 API（showDialog / showModalBottomSheet …）在 JS 侧就是
+  /// 模块导出的普通函数——产物按名 import 后裸调用，与 Dart 一比一。
+  static final _exportFunction =
+      RegExp(r'\bexport function ([a-z][A-Za-z0-9_$]*)');
 
   /// 别名登记语句：`__jsTypeAlias('BuildContext', JsBuildContext);`。
   static final _typeAlias = RegExp(r"__jsTypeAlias\(\s*'([A-Za-z0-9_$]+)'");
@@ -124,6 +132,10 @@ class _RuntimeGlobalTypes {
       }
       for (final m in _globalFnAssign.allMatches(src)) {
         functions.add(m.group(1)!);
+      }
+      for (final m in _exportFunction.allMatches(src)) {
+        functions.add(m.group(1)!);
+        exports.add(m.group(1)!);
       }
       for (final m in _typeAlias.allMatches(src)) {
         aliases.add(m.group(1)!);
