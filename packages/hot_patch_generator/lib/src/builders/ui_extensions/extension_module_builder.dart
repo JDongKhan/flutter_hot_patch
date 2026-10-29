@@ -27,7 +27,6 @@ import '../patch_entry/analysis/analyze_dart_class.dart';
 import '../patch_entry/analysis/class_table.dart';
 import '../patch_entry/analysis/const_support.dart';
 import '../patch_entry/analysis/extension_support.dart';
-import '../patch_entry/analysis/singleton_support.dart';
 import '../patch_entry/class_info.dart';
 import '../patch_entry/project_module_builder.dart' show localTranslationPackages;
 import '../patch_entry/translator/dart2js.dart';
@@ -177,7 +176,6 @@ String _renderFile(
       classTable: table,
       importResolver: importResolver,
       productOf: productOf,
-      singletons: buildSingletonResolver(unit, identity),
       jsClassWidgets: jsClassWidgetTypes,
       delegateClassWidgets: builderFormTypes,
       ignoredTypes: ignoredClassNamesInScope(unit, identity),
@@ -225,7 +223,6 @@ String _renderFile(
       identity,
       classTable: table,
       importResolver: importResolver,
-      singletons: buildSingletonResolver(unit, identity),
       jsClassWidgets: jsClassWidgetTypes,
       delegateClassWidgets: builderFormTypes,
       ignoredTypes: ignoredClassNamesInScope(unit, identity),
