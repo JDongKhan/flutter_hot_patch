@@ -731,19 +731,25 @@ void registerScrollWidgets(JsWidgetRegistry r) {
 
   // SliverVisibility：与盒子版同一组参数（visible / maintain*），另加
   // replacementSliver。断言链与 Visibility 一致，由调用方保证。
-  r.register(
-    'SliverVisibility',
-    (c) => SliverVisibility(
-      visible: c.bool_('visible') ?? true,
+  // `.maintain` 命名构造把六个 maintain* 全部置 true，按 factory 还原。
+  r.register('SliverVisibility', (c) {
+    final visible = c.bool_('visible') ?? true;
+    final sliver = (c.children['sliver'] as Widget?) ?? const SizedBox.shrink();
+    if (c.str('factory') == 'maintain') {
+      return SliverVisibility.maintain(visible: visible, sliver: sliver);
+    }
+    return SliverVisibility(
+      visible: visible,
       maintainState: c.bool_('maintainState') ?? false,
       maintainAnimation: c.bool_('maintainAnimation') ?? false,
       maintainSize: c.bool_('maintainSize') ?? false,
       maintainSemantics: c.bool_('maintainSemantics') ?? false,
       maintainInteractivity: c.bool_('maintainInteractivity') ?? false,
-      replacementSliver: (c.children['replacementSliver'] as Widget?) ?? const SliverToBoxAdapter(),
-      sliver: ((c.children['sliver'] as Widget?) ?? const SizedBox.shrink()),
-    ),
-  );
+      replacementSliver:
+          (c.children['replacementSliver'] as Widget?) ?? const SliverToBoxAdapter(),
+      sliver: sliver,
+    );
+  });
 
   // SingleChildScrollView：controller 是 JS ScrollController 实例的序列化句柄
   // （{__handle: 'js:ctrl/Scroll#N'}）时走 _scrollControllerHost 桥接（按 id
