@@ -45,6 +45,10 @@ class ClassMethod {
   final bool isAsync;
   final bool isGetter;
 
+  /// Dart `static` 方法：JS 侧发射为类的静态成员，裸调用落成 `<类名>.<name>(...)`
+  /// （Dart 的 static 与实例成员在同一名字空间，调用点看不出差别，靠这个标记区分）。
+  final bool isStatic;
+
   /// 返回类型为 void：箭头体会被译为语句（不加 `return`）。
   final bool isVoid;
 
@@ -74,6 +78,7 @@ class ClassMethod {
     required this.params,
     this.isAsync = false,
     this.isGetter = false,
+    this.isStatic = false,
     this.isVoid = false,
     this.returnsWidget = true,
     this.body,
@@ -138,8 +143,6 @@ class ClassInfo {
     this.usedWidgetPackages = const {},
     this.hostMethods = const {},
   });
-
-  bool get isStaticOnly => instanceFields.isEmpty && methods.isEmpty;
 
   Set<String> get instanceFieldNames =>
       {for (final f in instanceFields) f.name};
