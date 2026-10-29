@@ -20,9 +20,12 @@ String? colorsJsSource() {
   if (file == null) return null;
   final src = file.readAsStringSync();
 
-  // 主色值常量：`static const int _redPrimaryValue = 0xFFF44336;`
+  // 色值常量表：`static const int _redPrimaryValue = 0xFFF44336;` 以及
+  // accent 的 `static const int _redAccentValue = 0xFFFF5252;`。
+  // 不按名字形态筛选（早期只认 `...PrimaryValue`，导致 accent 色板整体抽不到，
+  // 产物里 `Colors.pinkAccent` 是 undefined → 渐变里颜色丢失 → 背景消失）。
   final primaryByName = <String, int>{};
-  for (final m in _primaryConst.allMatches(src)) {
+  for (final m in _intConst.allMatches(src)) {
     final v = _parseHex(m.group(2)!);
     if (v != null) primaryByName[m.group(1)!] = v;
   }
@@ -32,14 +35,16 @@ String? colorsJsSource() {
   for (final m in _materialColor.allMatches(src)) {
     final primary = _resolvePrimary(m.group(2)!, primaryByName);
     if (primary == null) continue;
-    palettes[m.group(1)!] = _Palette(primary, _parseShades(m.group(3)!));
+    palettes[m.group(1)!] =
+        _Palette(primary, _parseShades(m.group(3)!, primaryByName));
   }
   // MaterialAccentColor（accent 色板）。
   final accents = <String, _Palette>{};
   for (final m in _materialAccent.allMatches(src)) {
     final primary = _resolvePrimary(m.group(2)!, primaryByName);
     if (primary == null) continue;
-    accents[m.group(1)!] = _Palette(primary, _parseShades(m.group(3)!));
+    accents[m.group(1)!] =
+        _Palette(primary, _parseShades(m.group(3)!, primaryByName));
   }
   // 单值常量：`static const Color black87 = Color(0xDD000000);`
   final plain = <String, int>{};
@@ -132,11 +137,13 @@ int? _resolvePrimary(String raw, Map<String, int> byName) {
   return byName[t];
 }
 
-Map<int, int> _parseShades(String body) {
+/// 档位值：`400: Color(0xFFFF1744)` 或 `200: Color(_redAccentValue)`。
+/// 常量引用按 [byName] 还原——不认引用会让该档缺失（accent 的 200 档就是这样）。
+Map<int, int> _parseShades(String body, Map<String, int> byName) {
   final out = <int, int>{};
   for (final m in _shadeEntry.allMatches(body)) {
     final shade = int.tryParse(m.group(1)!);
-    final value = _parseHex(m.group(2)!);
+    final value = _resolvePrimary(m.group(2)!, byName);
     if (shade != null && value != null) out[shade] = value;
   }
   return out;
@@ -193,18 +200,23 @@ String? _flutterPackageRoot(File cfg) {
   return null;
 }
 
-final _primaryConst =
-    RegExp(r'static const int (_\w*[Pp]rimaryValue) = (0x[0-9A-Fa-f]+)');
+/// 色值 int 常量（普通色板主色、accent 主色、各档位引用都从这里取值）。
+final _intConst = RegExp(r'static const int (\w+)\s*=\s*(0x[0-9A-Fa-f]+)');
+// 声明体允许跨行（SDK 里 `pinkAccent =` 与 `MaterialAccentColor(...)` 常分行写，
+// 只按单空格匹配会让整条色板被漏掉）。
 final _materialColor = RegExp(
-  r'static const MaterialColor (\w+) = MaterialColor\(\s*([\w]+),\s*<int, Color>\{(.*?)\}\s*,?\s*\)',
+  r'static const MaterialColor (\w+)\s*=\s*MaterialColor\(\s*([\w]+),\s*'
+  r'<int,\s*Color>\s*\{(.*?)\}\s*,?\s*\)',
   multiLine: true,
   dotAll: true,
 );
 final _materialAccent = RegExp(
-  r'static const MaterialAccentColor (\w+) = MaterialAccentColor\(\s*([\w]+),\s*<int, Color>\{(.*?)\}\s*,?\s*\)',
+  r'static const MaterialAccentColor (\w+)\s*=\s*MaterialAccentColor\(\s*([\w]+),\s*'
+  r'<int,\s*Color>\s*\{(.*?)\}\s*,?\s*\)',
   multiLine: true,
   dotAll: true,
 );
-final _plainColor =
-    RegExp(r'static const Color (\w+) = Color\((0x[0-9A-Fa-f]+)\)');
-final _shadeEntry = RegExp(r'(\d+):\s*Color\((0x[0-9A-Fa-f]+)\)');
+final _plainColor = RegExp(
+  r'static const Color (\w+)\s*=\s*Color\((0x[0-9A-Fa-f]+)\)',
+);
+final _shadeEntry = RegExp(r'(\d+):\s*Color\((0x[0-9A-Fa-f]+|\w+)\)');

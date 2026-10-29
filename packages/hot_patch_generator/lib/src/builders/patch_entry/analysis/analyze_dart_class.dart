@@ -588,26 +588,6 @@ ClassInfo translateClass(
     staticMethods: staticMethods,
     globalConsts: globalConsts,
   );
-  final staticFields = <ClassField>[];
-  for (final field in staticDecls) {
-    final typeName = field.typeName;
-    if (!_fieldTranslatable(typeName, classTable)) {
-      // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 跳过静态字段 ${field.name}（类型 $typeName 不可翻译）');
-      continue;
-    }
-    final init = field.initializer;
-    final initial = literalToJs(init) ??
-        (init == null ? null : rhsToJs(init, staticScope, used)) ??
-        (isBasicType(typeName) || _valueSdkTypes.contains(eraseType(typeName))
-            ? _defaultInitial(typeName)
-            : 'null');
-    staticFields.add(ClassField(
-      name: field.name,
-      typeName: typeName,
-      jsInitial: initial,
-    ));
-  }
 
   // 类表里的普通类（模型）名：值位置上的构造只排除这些类与值对象，其余类
   // 构造一律按组件元素翻译——不再维护「哪些类型是 widget」的白名单。
@@ -650,9 +630,30 @@ ClassInfo translateClass(
     modelClassNames: modelClassNames,
   );
 
-  // 字段初始化器统一走通用表达式翻译（`new X({...})`）：组件构造由包装类
-  // 产出元素，普通类产出实例，不再需要按类型二次补译。
-
+  // static 字段初值：与实例字段走同一条通用表达式翻译（`new X({...})`）。
+  // 值对象（`LinearGradient` / `BoxDecoration` / `Color` …）在 JS 侧有同名类
+  // （运行时注入 + `toJSON`），因此这里不做「转成 JSON」的类型特判——
+  // 与「所有 Dart 类都翻译成 JS 类」同一条原则。
+  final staticFields = <ClassField>[];
+  for (final field in staticDecls) {
+    final typeName = field.typeName;
+    if (!_fieldTranslatable(typeName, classTable)) {
+      // ignore: avoid_print - 构建期日志
+      print('[hot_patch_generator] 跳过静态字段 ${field.name}（类型 $typeName 不可翻译）');
+      continue;
+    }
+    final init = field.initializer;
+    final initial = literalToJs(init) ??
+        (init == null ? null : rhsToJs(init, staticScope, used)) ??
+        (isBasicType(typeName) || _valueSdkTypes.contains(eraseType(typeName))
+            ? _defaultInitial(typeName)
+            : 'null');
+    staticFields.add(ClassField(
+      name: field.name,
+      typeName: typeName,
+      jsInitial: initial,
+    ));
+  }
 
   // 方法增强：classInfoOf 已建好结构（形参 / async / void / 返回 widget
   // 判定），这里只叠加翻译产物——预渲染方法体 [bodyJs] 与 native 通道识别

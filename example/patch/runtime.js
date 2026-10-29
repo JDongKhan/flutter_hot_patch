@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 dd6b82a3） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 9695e6e4） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'dd6b82a3') { return; }
-  G.__jsuiVersion = 'dd6b82a3';
+  if (G.__jsui && G.__jsuiVersion === '9695e6e4') { return; }
+  G.__jsuiVersion = '9695e6e4';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2304,6 +2304,23 @@ if (G.kDebugMode) {
   };
   G.Offset = Offset;
 
+  // Alignment：产物在**值位置**（LinearGradient 的 begin/end、Container 的
+  // alignment 等）可能直接引用 `Alignment.topLeft`（不是所有位置都会经过
+  // 构建期的枚举转换器，如静态字段初值就是通用表达式翻译）。Dart 侧它是
+  // 常量对象，但跨桥协议是**成员名**（宿主 alignmentFromJson 只认字符串），
+  // 因此静态常量直接就是该字符串——与 Dart 里「同一常量是同一值」的语义一致
+  //（比较、传参、判等全部成立）。
+  function Alignment(props) {
+    props = __posArgs(props, ['x', 'y']);
+    this.x = props.x != null ? props.x : 0;
+    this.y = props.y != null ? props.y : 0;
+  }
+  Alignment.prototype.toJSON = function () { return { x: this.x, y: this.y }; };
+  ['topLeft', 'topCenter', 'topRight', 'centerLeft', 'center',
+    'centerRight', 'bottomLeft', 'bottomCenter', 'bottomRight'
+  ].forEach(function (n) { Alignment[n] = n; });
+  G.Alignment = Alignment;
+
   function Radius(props) {
     props = __posArgs(props, ['radius']);
     var r = props.radius != null ? props.radius : (props.x != null ? props.x : 0);
@@ -2362,6 +2379,80 @@ if (G.kDebugMode) {
     if (props.semanticsLabel != null) { this.semanticsLabel = props.semanticsLabel; }
   }
   G.TextSpan = TextSpan;
+
+  // ---------------------------------------------------------------------------
+  // 渐变与装饰：绘制层值对象（`LinearGradient` / `RadialGradient` /
+  // `SweepGradient` / `BoxDecoration`）。
+  //
+  // 来历与 Duration / Size 完全相同：Dart 里它们是普通的 const 构造，翻译层
+  // 按统一规则原样发射 `new LinearGradient({begin, end, colors})`，因此运行时
+  // **必须**有同名类——缺一个就是模块求值期的 `Can't find variable`，整页挂载
+  // 失败（静态字段初值在类定义时就执行，比任何方法体都早）。
+  //
+  // 跨桥协议见宿主 painting_from_json：
+  //   gradient → {kind:'linear'|'radial'|'sweep', colors, begin/end/center, radius, stops}
+  //   decoration → {color, border, borderRadius, boxShadow, gradient, image, shape}
+  // colors 里是 Color 实例：JSON.stringify 会递归调用其 toJSON 得到 '#AARRGGBB'，
+  // 宿主 colorFromJson 据此还原，无需在这里逐个转换。
+  // names[0] 恒为 colors（构造首位置实参，单独兜底成数组），其余从 1 开始。
+  function __gradientProps(props, names) {
+    props = __posArgs(props, names);
+    var out = { colors: props.colors != null ? props.colors : [] };
+    for (var i = 1; i < names.length; i++) {
+      if (props[names[i]] != null) { out[names[i]] = props[names[i]]; }
+    }
+    return out;
+  }
+  function __gradientJson(kind, self) {
+    var json = { kind: kind, colors: self.colors };
+    if (self.begin != null) { json.begin = self.begin; }
+    if (self.end != null) { json.end = self.end; }
+    if (self.center != null) { json.center = self.center; }
+    if (self.radius != null) { json.radius = self.radius; }
+    if (self.stops != null) { json.stops = self.stops; }
+    return json;
+  }
+
+  function LinearGradient(props) {
+    var p = __gradientProps(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
+    for (var k in p) { this[k] = p[k]; }
+  }
+  LinearGradient.prototype.toJSON = function () { return __gradientJson('linear', this); };
+  G.LinearGradient = LinearGradient;
+
+  function RadialGradient(props) {
+    var p = __gradientProps(props,
+      ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
+    for (var k in p) { this[k] = p[k]; }
+  }
+  RadialGradient.prototype.toJSON = function () { return __gradientJson('radial', this); };
+  G.RadialGradient = RadialGradient;
+
+  function SweepGradient(props) {
+    var p = __gradientProps(props,
+      ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
+    for (var k in p) { this[k] = p[k]; }
+  }
+  SweepGradient.prototype.toJSON = function () { return __gradientJson('sweep', this); };
+  G.SweepGradient = SweepGradient;
+
+  // BoxDecoration：字段名与 Dart 构造具名实参一致，toJSON 直出宿主协议
+  //（值为 null 的键不下发——宿主对 null 与缺省同义，少发更干净）。
+  function BoxDecoration(props) {
+    props = __posArgs(props, ['color', 'image', 'border', 'borderRadius',
+      'boxShadow', 'gradient', 'backgroundBlendMode', 'shape']);
+    for (var k in props) {
+      if (props[k] != null) { this[k] = props[k]; }
+    }
+  }
+  BoxDecoration.prototype.toJSON = function () {
+    var json = {};
+    for (var k in this) {
+      if (this[k] != null) { json[k] = this[k]; }
+    }
+    return json;
+  };
+  G.BoxDecoration = BoxDecoration;
 
 
 // ===== 【13】Dart 异常（StateError / ArgumentError / …） =====
