@@ -87,6 +87,8 @@ String renderClassDecl(
       lastMethodOrigin = m.mixinOrigin;
     }
     final fn = m.isAsync ? 'async ' : '';
+    // static 成员（Dart 的 static 与实例成员同一名字空间）：JS 侧挂在类上。
+    final st = m.isStatic ? 'static ' : '';
     // 方法体多行可读：语句各自成行、按方法体深度缩进（翻译器已带缩进），
     // 大括号独占行。
     final raw = m.bodyJs;
@@ -98,11 +100,11 @@ String renderClassDecl(
     }
     final body = (raw ?? '').trimRight();
     if (m.isGetter) {
-      b.write('  get ${m.name}() {\n');
+      b.write('  ${st}get ${m.name}() {\n');
       if (body.isNotEmpty) b.write('$body\n');
       b.write('  }\n');
     } else {
-      b.write('  $fn${m.name}(${m.params.join(', ')}) {\n');
+      b.write('  $st$fn${m.name}(${m.params.join(', ')}) {\n');
       if (body.isNotEmpty) b.write('$body\n');
       b.write('  }\n');
     }
@@ -112,6 +114,18 @@ String renderClassDecl(
   // 下发（builder 协议唯一形态），因此不再生成实例子方法。
 
   b.write('}');
+  // static 字段 → 类外后置赋值（`X.f = <init>;`）：与 ES 静态类字段语法相比
+  // 这不需要引擎额外特性，求值顺序也明确（类声明之后、本模块内）。
+  // 静态字段之间可以互相引用（`static int b = a + 1`），按源码声明序赋值。
+  if (info.staticFields.isNotEmpty) {
+    b.write('\n');
+    for (final f in info.staticFields) {
+      b.write('${info.name}.${f.name} = ${_fieldDefaultJs(f)};\n');
+    }
+    // 去掉末尾多余换行，保证多类拼接时行距一致。
+    final s = b.toString();
+    return s.substring(0, s.length - 1);
+  }
   return b.toString();
 }
 
@@ -142,19 +156,6 @@ String _fieldDefaultJs(ClassField f) =>
         ? (literalToJs(f.initializer) ?? 'undefined')
         : 'undefined');
 
-/// 纯 static 类 → JS const 对象：`const MyColors = { a: v, b: v };`。
-/// [valueRenderer] 由调用方提供（颜色/字符串/字面量统一求值）。
-String _renderStaticConst(
-  ClassInfo info, {
-  required String Function(ClassField field) valueRenderer,
-  bool exported = false,
-}) {
-  final prefix = exported ? 'export const ' : 'const ';
-  final entries =
-      info.staticFields.map((f) => '  ${f.name}: ${valueRenderer(f)}').join(',\n');
-  return '$prefix${info.name} = {\n$entries\n};';
-}
-
 /// ===========================================================================
 /// 把类按「基类在前」稳定排序（DFS 后序）。
 ///
@@ -184,7 +185,7 @@ List<ClassInfo> orderClassesByBase(
 
 /// 统一入口：Dart 类 → JS 源码。
 ///
-/// 只有这一处决定「类 → JS」的渲染：普通类（模型/状态类/静态单例）与组件
+/// 只有这一处决定「类 → JS」的渲染：普通类（模型/状态类）与组件
 /// （@PatchEntry widget，widget 与 state 已在建模期合并为同一 [ClassInfo]）
 /// 全部走这里，没有任何按用途分叉的模式开关——所有差异都由 [ClassInfo] 数据
 /// 驱动（类名、方法体、builder 子方法、字段的 JS 初值）。
@@ -193,7 +194,6 @@ List<ClassInfo> orderClassesByBase(
 ///
 /// 参数：
 ///   - [exported]：类声明是否 `export`。
-///   - [singletonValueRenderer]：纯 static 类的字段值渲染器（颜色/字面量求值）。
 ///   - [baseClass]：JS 基类名（`jsBaseClassOf` 解析），null = 不继承。
 ///
 /// `@HostInjected` 通道表不在参数里：它随 [ClassInfo.hostMethods] 一起由
@@ -202,12 +202,7 @@ List<ClassInfo> orderClassesByBase(
 String dart2js(
   ClassInfo info, {
   bool exported = false,
-  String Function(ClassField field)? singletonValueRenderer,
   String? baseClass,
 }) {
-  if (info.isStaticOnly && singletonValueRenderer != null) {
-    return _renderStaticConst(info,
-        valueRenderer: singletonValueRenderer, exported: exported);
-  }
   return renderClassDecl(info, exported: exported, baseClass: baseClass);
 }

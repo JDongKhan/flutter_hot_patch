@@ -3,9 +3,6 @@
 // 重新生成：dart run build_runner build
 
 import { HomeFeed } from '../model/app_models.js';
-import { HomeBanner } from '../model/app_models.js';
-import { GridEntry } from '../model/app_models.js';
-import { Spot } from '../model/app_models.js';
 import { CommunityFeed } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
@@ -13,9 +10,9 @@ import { AppNotice } from '../model/app_models.js';
 import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { MineFeed } from '../model/app_models.js';
-import { MenuEntry } from '../model/app_models.js';
 import { SearchFeed } from '../model/app_models.js';
 import { ResourceFeed } from '../model/app_models.js';
+import { Spot } from '../model/app_models.js';
 
 // 模型 AppService
 export class AppService {
@@ -30,23 +27,9 @@ export class AppService {
   async fetchHome(city) {
     var data = await this._request("/app/home");
     var entry = this._cityOf(data["cities"], city);
-    var banners = [];
-    for (let e of entry["banners"]) {
-      banners.add(this._banner(e));
-    }
-    var grid = [];
-    for (let e of data["grid"]) {
-      grid.add(this._grid(e));
-    }
-    var spots = [];
-    for (let e of entry["spots"]) {
-      spots.add(this._spot(e));
-    }
-    return new HomeFeed({banners: banners, grid: grid, spots: spots, adImg: entry["adImg"]});
   }
   async fetchCommunity() {
     var data = await this._request("/app/community");
-    return new CommunityFeed({tabs: this._strings(data["tabs"]), sorts: this._strings(data["sorts"]), postTypes: this._strings(data["postTypes"]), dists: this._strings(data["dists"]), priceRanges: this._strings(data["priceRanges"])});
   }
   async fetchCommunityResources(tab) {
     var data = await this._request("/app/community");
@@ -64,13 +47,12 @@ export class AppService {
     var data = await this._request("/app/notifications");
     var list = [];
     for (let e of data["list"]) {
-      list.add(this._notice(e));
+
     }
     return list;
   }
   async fetchOrders() {
     var data = await this._request("/app/orders");
-    return new OrderFeed({statuses: this._strings(data["statuses"])});
   }
   async fetchOrderList(status) {
     var data = await this._requestQuery("/app/orders/list", {"status": status});
@@ -78,26 +60,15 @@ export class AppService {
   }
   async fetchMine() {
     var data = await this._request("/app/mine");
-    var stats = [];
-    for (let row of data["stats"]) {
-      stats.add(this._strings(row));
-    }
-    var menu = [];
-    for (let e of data["menu"]) {
-      menu.add(this._menu(e));
-    }
-    return new MineFeed({avatar: data["avatar"], stats: stats, menu: menu});
   }
   async fetchSearch() {
     var data = await this._request("/app/search");
     var home = await this._request("/app/home");
     var entry = this._cityOf(home["cities"], "");
-    return new SearchFeed({hot: this._strings(data["hot"]), guesses: this._spots(entry["spots"])});
   }
   async fetchResource(id) {
     var community = await this._request("/app/community");
     var posts = await this._request("/app/posts");
-    return new ResourceFeed({resource: this._resourceOf(this._resources(community["resources"]), id), related: this._posts(posts["list"])});
   }
   async fetchSpot(id) {
     var data = await this._request("/app/home");
@@ -116,58 +87,41 @@ export class AppService {
     var data = await this._request("/app/orders/list");
     return this._orderOf(this._orders(data["list"]), no);
   }
-  _strings(raw) {
-    var list = [];
-    for (let v of raw) {
-      list.add(v);
-    }
-    return list;
-  }
   _spots(raw) {
     var list = [];
     for (let e of raw) {
-      list.add(this._spot(e));
+
     }
     return list;
   }
   _posts(raw) {
     var list = [];
     for (let e of raw) {
-      list.add(this._post(e));
+
     }
     return list;
   }
   _orders(raw) {
     var list = [];
     for (let e of raw) {
-      list.add(this._order(e));
+
     }
     return list;
   }
   _resources(raw) {
     var list = [];
     for (let e of raw) {
-      list.add(this._resource(e));
+
     }
     return list;
   }
-  _banner(e) {
-    return new HomeBanner({img: e["img"], title: e["title"], sub: e["sub"]});
-  }
-  _grid(e) {
-    return new GridEntry({emoji: e["emoji"], title: e["title"]});
-  }
-  _spot(e) {
-    return new Spot({id: e["id"], title: e["title"], sub: e["sub"], sold: e["sold"], tag: e["tag"], img: e["img"], desc: e["desc"], price: e["price"], tags: this._strings(e["tags"])});
-  }
-  _post(e) {
-    return new Post({id: e["id"], title: e["title"], sub: e["sub"], type: e["type"], author: e["author"], time: e["time"], img: e["img"], like: e["like"], tab: e["tab"]});
-  }
-  _notice(e) {
-    return new AppNotice({id: e["id"], title: e["title"], content: e["content"], time: e["time"], type: e["type"], unread: e["unread"]});
-  }
-  _resource(e) {
-    return new Resource({id: e["id"], title: e["title"], sub: e["sub"], img: e["img"], tab: e["tab"]});
+  _resourceJsonOf(raw, id) {
+    for (let r of raw) {
+      if ((r["id"] == id)) {
+        return r;
+      }
+    }
+    return raw.first;
   }
   _cityOf(cities, city) {
     for (let c of cities) {
@@ -176,12 +130,6 @@ export class AppService {
       }
     }
     return cities.first;
-  }
-  _order(e) {
-    return new Order({no: e["no"], status: e["status"], title: e["title"], spec: e["spec"], img: e["img"], price: e["price"], step: e["step"]});
-  }
-  _menu(e) {
-    return new MenuEntry({emoji: e["emoji"], title: e["title"], screen: e["screen"], arg: e["arg"]});
   }
   _postListOf(posts, tab, sort, type) {
     var result = ((tab.isEmpty || (tab == "广场")) ? posts : posts.where((p) => { return (p.tab == tab); }).toList());
@@ -225,14 +173,6 @@ export class AppService {
       }
     }
     return orders.first;
-  }
-  _resourceOf(resources, id) {
-    for (let r of resources) {
-      if ((r.id == id)) {
-        return r;
-      }
-    }
-    return resources.first;
   }
 }
 
