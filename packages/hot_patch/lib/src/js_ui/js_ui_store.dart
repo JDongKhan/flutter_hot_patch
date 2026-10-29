@@ -53,6 +53,11 @@ class JsUiStore {
   /// 根结点发生变化时回调（首次 commit 时确定根 id）。
   void Function(String id)? onRoot;
 
+  /// 当前根结点 id（root op 记录）。供「store 先收到补丁、widget 后建」的
+  /// 场景直接读取（如弹层内容的独立 store，见 JsUiContent）——不必依赖
+  /// [onRoot] 的时序。
+  String? rootId;
+
   void bind(String id, VoidCallback rebuild) => _rebuilders[id] = rebuild;
 
   void unbind(String id, VoidCallback rebuild) {
@@ -67,7 +72,10 @@ class JsUiStore {
       switch (raw['op']) {
         case 'root':
           final id = raw['id'] as String?;
-          if (id != null) onRoot?.call(id);
+          if (id != null) {
+            rootId = id;
+            onRoot?.call(id);
+          }
         case 'create':
           final id = raw['id'] as String?;
           if (id == null) break;

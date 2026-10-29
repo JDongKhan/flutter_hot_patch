@@ -45,6 +45,7 @@ import 'change_notifier/change_notifier_library.dart';
 import 'core/dart_values_library.dart';
 import 'core/dart_errors_library.dart';
 import 'core/color_library.dart';
+import 'dialog/dialog_library.dart';
 import 'dismissible/dismissible_library.dart';
 import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
@@ -155,6 +156,8 @@ void _seedBuiltins() {
   // PopScope：拦截返回（宿主 ModalRoute 语义）+ 回调回 JS。
   registerJsUiLibrary(const PopScopeLibrary());
   registerJsUiLibrary(const DrawerLibrary());
+  // Dialog：命令式弹层（showDialog 系列）的宿主通道 + 弹层容器组件。
+  registerJsUiLibrary(const DialogLibrary());
   // ── 三方库 ──
   registerJsUiLibrary(const EasyRefreshLibrary());
   registerJsUiLibrary(const CachedNetworkImageLibrary());

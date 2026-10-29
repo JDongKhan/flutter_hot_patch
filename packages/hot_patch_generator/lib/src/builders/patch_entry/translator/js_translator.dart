@@ -177,7 +177,15 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (e.name == 'mounted') return '!this.__unmounted';
     // 顶层常量（如 `kBanners`）：JS 侧是同名模块级常量，原样引用。
     if (scope.globalConsts.contains(e.name)) return e.name;
-    return scope.fieldRef(e.name);
+    final ref = scope.fieldRef(e.name);
+    if (ref != null) return ref;
+    // `State.context`：方法体里没有 `context` 形参时（`_open() { showDialog(
+    // context: context, …) }`），裸 `context` 就是 State 继承来的实例成员。
+    // 运行时每个组件的原型上都有 `context` getter（按执行位置返回代理，见
+    // build_context_js），故落成 `this.context`。只在**其余解析都落空**时兜底
+    // （形参 / 局部变量 / 字段已在上面返回，不会被它抢走）。
+    if (e.name == 'context') return 'this.context';
+    return null;
   }
   // null 字面量（`data ?? null` 等）：只影响表达式位置，字段默认值仍走
   // literalToJs 的 undefined 语义，故不并入 literalToJs。
@@ -669,6 +677,22 @@ String hostArgsJs(List<String> positional, List<String> named) {
       '${named.join(', ')}}';
 }
 
+/// 运行时注入的全局函数调用的实参串（`showDialog(context: …, builder: …)`）。
+///
+/// 与 [hostArgsJs] 同一套载荷形态，但**纯位置实参不包数组**——全局函数是普通
+/// JS 函数，直接按位置调用即可；具名实参 Dart 与 JS 都没有，故对象形态只是
+/// 「函数只接受一个配置对象」的表示法，由该函数的实现自己解构：
+///
+///   - 纯位置：`a, b`
+///   - 纯具名：`{"context": c, "builder": b}`
+///   - 混合：`{"@args": [a], "k": v}`（同 [hostPositionalKey] 约定）
+String globalFnArgsJs(List<String> positional, List<String> named) {
+  if (named.isEmpty) return positional.join(', ');
+  if (positional.isEmpty) return '{${named.join(', ')}}';
+  return '{${jsString(hostPositionalKey)}: [${positional.join(', ')}], '
+      '${named.join(', ')}}';
+}
+
 /// 闭包参数 → JS 函数表达式：`() {...}` → `() => { ... }`、
 /// `(v) => expr` → `(v) => { return <expr>; }`（一律箭头函数）。
 ///
@@ -803,7 +827,14 @@ String? methodCallExprJs(
       continue;
     }
     if (a is NamedExpression) {
-      final v = rhsToJs(a.expression, scope, classes);
+      // 具名实参的闭包（`showDialog(context: …, builder: (ctx) => …)`、
+      // `model.configure(onDone: () {...})`）：与位置实参同一口径走
+      // [closureToJs]，否则 rhsToJs 对 FunctionExpression 返回 null，连带整个
+      // 调用被判为不可翻译而丢弃（`builder` 里的组件树一起消失）。
+      final inner = a.expression;
+      final v = inner is FunctionExpression
+          ? closureToJs(inner, scope, classes)
+          : rhsToJs(inner, scope, classes);
       if (v == null) return null;
       argJs.add(v);
       namedJs.add('${jsString(a.name.label.name)}: $v');
@@ -830,6 +861,12 @@ String? methodCallExprJs(
     final topChannel = scope.hostMethods['']?[e.methodName.name];
     if (topChannel != null) {
       return '_app_host_.invoke(${jsString(topChannel)}, ${hostArgsJs(posJs, namedJs)})';
+    }
+    // 运行时注入的全局函数（`G.showDialog = function …` / `G.showModalBottomSheet`
+    // 等）：Dart 的裸顶层调用在 JS 侧既没有 `this` 也没有宿主通道，只有运行时
+    // 确实存在同名函数时才能翻译，原样产出同名调用。
+    if (runtimeGlobalFunctions().contains(e.methodName.name)) {
+      return '${e.methodName.name}(${globalFnArgsJs(posJs, namedJs)})';
     }
     if (!scope.isMethod(e.methodName.name)) return null;
     return 'this.${e.methodName.name}($passed)';

@@ -75,6 +75,7 @@ import 'keyboard_listener_js.dart';
 import 'layout_builder_js.dart';
 import 'media_query_js.dart';
 import 'mini_react_js.dart';
+import 'portal_js.dart';
 import 'provider_js.dart';
 import 'scroll_controller_js.dart';
 import 'tab_controller_js.dart';
@@ -685,6 +686,10 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
     // （setState 只标脏，见【9】markDirty / requestFlush）。
     flushPending: flushPending,
+    // 命令式弹层（showDialog 系列）：宿主在路由内容首帧后挂载独立根，路由
+    // 关闭后回落本端卸载（见【27.6】portal_js）。
+    panelMount: panelMount,
+    panelClosed: panelClosed,
 ''';
 
 /// UI 运行时骨架尾部·后段（api 收尾到 IIFE 闭包结束）。
@@ -777,6 +782,9 @@ String runtimeJsSource() {
     // Dart extension 注册机制：生成器在扩展声明处发射 `__jsExtension(...)`，
     // 原型成员随产物注册（调用点与 Dart 一对一，无名字映射）。
     _section('【27.5】Dart extension 注册（__jsExtension）', jsExtensionJsSource),
+    // 命令式弹层（showDialog 系列）：独立根 + `G.showDialog` / `G.Navigator`。
+    // 依赖 reconciler / 根表 / BuildContext 代理，故排在骨架之后收尾之前。
+    _section('【27.6】命令式弹层（showDialog 系列）', portalJsSource),
     _section('【28】api 收尾', _jsUiRuntimeSkeletonTailHead),
     _jsUiLeakApiMember,
     _jsUiRuntimeSkeletonTailEnd,

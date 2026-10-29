@@ -329,6 +329,100 @@ class JsUiWidgetState extends State<JsUiWidget> {
   }
 }
 
+/// 弹层内容的宿主入口：把**已经存在的一份独立 [JsUiStore]** 渲染成 widget 树。
+///
+/// 与 [JsUiWidget] 的区别只在「谁负责挂载 JS 根」：
+///   - [JsUiWidget] 自己按 URL 加载补丁并 `mount`；
+///   - 本类用于 JS 侧命令式弹层（`showDialog` 系列）：builder 在 JS 端已执行
+///     完毕，元素树要在本 widget 首帧之后才挂到 JS 侧独立 root 上（见
+///     builders/runtime/js/portal_js.dart 的 panelMount）。**首帧之后**是硬约束：
+///     `jsuiPanelOpen` 的宿主处理器运行在 JS 求值期内，此刻再回调 JS 会重入引擎。
+///
+/// 本类不做任何弹层判断：它只认「一份 store + 一个 pageKey」，页面/弹层/任何
+/// 别的地方都可以用它渲染独立根。
+class JsUiContent extends StatefulWidget {
+  const JsUiContent({
+    super.key,
+    required this.store,
+    required this.pageKey,
+    this.onMountFailed,
+  });
+
+  /// 该根的全部结点与补丁（由调用方创建并登记到 `jsUiPageStores`）。
+  final JsUiStore store;
+
+  /// 独立根的 key（= JS 侧 panelKey），补丁按它路由。
+  final String pageKey;
+
+  /// 首帧后挂载 JS 根失败时的回调（弹层的宿主用它关闭这条已经打开的路由，
+  /// 避免留下一个空白弹层）。
+  final VoidCallback? onMountFailed;
+
+  @override
+  State<JsUiContent> createState() => _JsUiContentState();
+}
+
+class _JsUiContentState extends State<JsUiContent> {
+  bool _mountRequested = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // root op 可能在本 widget 之前就已到达（store 先收补丁、后建 widget）：
+    // 两条路径都只触发一次 setState。
+    widget.store.onRoot = (id) {
+      if (mounted) setState(() {});
+    };
+    WidgetsBinding.instance.addPostFrameCallback((_) => _mountJsRoot());
+  }
+
+  void _mountJsRoot() {
+    if (!mounted || _mountRequested) return;
+    _mountRequested = true;
+    try {
+      JsRuntimeManager.instance.evaluateOrThrow(
+        'if (typeof __jsui !== "undefined" && __jsui.panelMount) '
+        '__jsui.panelMount(${jsonEncode(widget.pageKey)});',
+        where: 'panelMount',
+      );
+    } catch (e) {
+      HotPatchLog.error('js_ui panel mount failed: $e', error: e);
+      widget.onMountFailed?.call();
+    }
+  }
+
+  @override
+  void dispose() {
+    // 页面锚点与本页 store 都是「content 存在即有效」的簿记：先摘除，避免
+    // 路由已关闭后仍有补丁被路由进来（关闭回调里的同款清理是幂等的）。
+    unregisterJsBuildContext(jsBuildContextPageAnchor(widget.pageKey));
+    if (identical(jsUiPageStores[widget.pageKey], widget.store)) {
+      jsUiPageStores.remove(widget.pageKey);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 与 JsUiWidget 同一条锚点规则：根组件（COMP 之上没有宿主结点）的
+    // `this.context` 代理按 `page:<pageKey>` 反查真值 BuildContext。
+    registerJsBuildContext(
+      jsBuildContextPageAnchor(widget.pageKey),
+      context,
+      widget.pageKey,
+      type: 'page',
+      owner: '_JsUiContentState.build',
+    );
+    final rootId = widget.store.rootId;
+    if (rootId == null) {
+      // 根补丁尚未到达（JS 侧还没 post-frame 挂载）：先占零尺寸，等 onRoot
+      // 触发的重建再换成真实内容。
+      return const SizedBox.shrink();
+    }
+    return _JsNode(store: widget.store, id: rootId, pageKey: widget.pageKey);
+  }
+}
+
 /// JS 补丁加载失败的兜底视图。
 ///
 /// 自带 [Material]（不依赖祖先提供 Material/DefaultTextStyle——缺省时会退化成

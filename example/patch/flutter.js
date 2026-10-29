@@ -104,6 +104,13 @@ export function __h(type, props) {
 }
 
 
+export class AlertDialog {
+  constructor(props) {
+    return __h('AlertDialog', props);
+  }
+  static adaptive(props) { return new AlertDialog(Object.assign({}, props, { factory: 'adaptive' })); }
+}
+
 export class Align {
   constructor(props) {
     return __h('Align', props);
@@ -305,6 +312,13 @@ export class DefaultTabController {
   constructor(props) {
     return __h('DefaultTabController', props);
   }
+}
+
+export class Dialog {
+  constructor(props) {
+    return __h('Dialog', props);
+  }
+  static fullscreen(props) { return new Dialog(Object.assign({}, props, { factory: 'fullscreen' })); }
 }
 
 export class Dismissible {
@@ -607,6 +621,12 @@ export class Scaffold {
 export class ScaleTransition {
   constructor(props) {
     return __h('ScaleTransition', props);
+  }
+}
+
+export class SimpleDialog {
+  constructor(props) {
+    return __h('SimpleDialog', props);
   }
 }
 

@@ -3,6 +3,7 @@ import 'package:hot_patch/hot_patch.dart';
 import 'animated_list_detail.dart';
 import 'automatic_keep_alive_detail.dart';
 import 'color_filtered_detail.dart';
+import 'dialog_detail.dart';
 import 'dismissible_detail.dart';
 import 'fade_in_image_detail.dart';
 import 'focus_detail.dart';
@@ -106,6 +107,13 @@ class WidgetShowcase extends StatelessWidget {
       _Entry('Hero', '跨路由共享元素：点卡片飞向目标页，返回时飞回', 'HeroDetail'),
       _Entry('ImageFiltered', '整棵子树图片滤镜：blur / dilate / matrix / compose', 'ImageFilteredDetail'),
       _Entry('KeyboardListener', '原始按键事件：KeyDown/Repeat/Up、logicalKey 比较、focusNode', 'KeyboardListenerDetail'),
+    ]),
+    _Group('弹层', [
+      _Entry(
+        'showDialog / AlertDialog',
+        '命令式弹层：builder 在 JS 侧建树挂独立根，返回值经 Future 回传',
+        'DialogDetail',
+      ),
     ]),
     _Group('进度指示', [_Entry('ProgressIndicator', '圆形 / 线性进度条', 'ProgressDetail')]),
     _Group('状态管理', [
@@ -215,6 +223,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'AutomaticKeepAliveDetail': 'components/automatic_keep_alive_detail.js',
     'ColorFilteredDetail': 'components/color_filtered_detail.js',
     'DismissibleDetail': 'components/dismissible_detail.js',
+    'DialogDetail': 'components/dialog_detail.js',
     'FadeInImageDetail': 'components/fade_in_image_detail.js',
     'FocusDetail': 'components/focus_detail.js',
     'HeroDetail': 'components/hero_detail.js',
@@ -265,6 +274,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'AutomaticKeepAliveDetail' => const AutomaticKeepAliveDetail(),
       'ColorFilteredDetail' => const ColorFilteredDetail(),
       'DismissibleDetail' => const DismissibleDetail(),
+      'DialogDetail' => const DialogDetail(),
       'FadeInImageDetail' => const FadeInImageDetail(),
       'FocusDetail' => const FocusDetail(),
       'HeroDetail' => const HeroDetail(),
