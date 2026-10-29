@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hot_example/components/extension/e_string.dart';
 import 'package:hot_module_base/hot_module_base.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+
+import 'extension/e_string.dart';
 
 /// 基础语法 demo 集合（「基础语法 · 列表」页点击进入）。
 ///

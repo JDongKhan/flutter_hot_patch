@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'widget_showcase.dart';
+import '../widget_showcase.dart';
 
 /// 基础语法导航列表页（普通页面，无 @PatchEntry 注解）：
 /// 与「常用组件 · 列表」同级，点击条目进入对应详情页（原生 vs JS 热更）。

@@ -1,5 +1,4 @@
-import 'package:flutter_hot_example/components/extension/e_string3.dart';
-
+import 'e_string3.dart';
 import 'estrange.dart';
 
 /// @author jd
