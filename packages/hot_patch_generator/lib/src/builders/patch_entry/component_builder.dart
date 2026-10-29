@@ -17,10 +17,8 @@ import 'analysis/component_scope.dart';
 import 'analysis/const_support.dart';
 import 'analysis/extension_support.dart';
 import 'analysis/imported_components.dart';
-import 'analysis/singleton_support.dart';
 import 'class_info.dart';
 import 'translator/dart2js.dart';
-import 'translator/element2js.dart';
 import 'translator/js_value.dart';
 import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
@@ -34,9 +32,8 @@ import '../ui_widget/widget_module_builder.dart' show hostWrapperSource;
 ///
 /// 按**文件内容**分「根类」收集（与目录无关），分支只体现在 `isComponent`：
 ///   - 含 `@PatchEntry` 类 → 根类 = 这些注解类（组件产物：Component 类 + build）；
-///   - 否则 → 根类 = 本文件「可导出普通类」（非私有、非抽象、非组件、非静态
-///     单例；静态单例类另以 `export const` 渲染）→ 模型/单例产物
-///     （`export class` / `export const`，供组件产物 import）；
+///   - 否则 → 根类 = 本文件「可导出普通类」（非私有、非抽象、非组件）
+///     → 模型产物（`export class`，供组件产物 import）；
 ///   - 都没有（如 main.dart）→ 不产出。
 ///
 /// 组件本身 100% 正常可用（普通 StatefulWidget）；注解只是构建期元数据，
@@ -108,8 +105,8 @@ class ComponentBuilder implements Builder {
         resolveImportedComponentProducts(parsed.unit, inputId.path);
 
     // 全量「类表」：同文件 + 跨文件 import 的所有 Dart 类（公共、非抽象、
-    // 非 @HostInjected），组件 / widget 类打 isComponent 标记、普通类与静态
-    // 单例不打标。翻译只按名字在这张表里解析依赖（见 analyze_dart_class.dart）。
+    // 非 @HostInjected），组件 / widget 类打 isComponent 标记、普通类不打标。
+    // 翻译只按名字在这张表里解析依赖（见 analyze_dart_class.dart）。
     // 提前于 importResolver 声明：后者要用类表兜底解析「经 mixin 带入」的
     // 跨文件组件依赖。
     final classTable = buildClassTable(parsed.unit, inputId.path);
@@ -146,23 +143,7 @@ class ComponentBuilder implements Builder {
       return importProducts[name];
     }
 
-    // 跨文件「静态单例类」映射：照旧，供 build 树里 `MyColors.x` 静态引用
-    // 翻译成 JS 表达式（见 style_translators）。产物渲染统一走
-    // dart2js（singletonValueRenderer）。
-    final singletons = buildSingletonResolver(parsed.unit, inputId.path);
-
-    // 本文件声明的「静态单例类」→ inline 进本产物（const X = {...}，不 import）。
-    // 排除组件/widget 类（它们即使带 static 字段也按类翻译，不当单例）。
-    final sameFileSingletonInfos = <ClassInfo>[
-      for (final d in findSingletonClasses(parsed.unit))
-        if (classTable[d.name.lexeme] case final info? when !info.isComponent)
-          info,
-    ];
-    final sameFileSingletonNames = {
-      for (final c in sameFileSingletonInfos) c.name,
-    };
-
-    // 收集本文件「根类」——两种文件走同一入口，差别只在 isComponent 参数：
+    // 根类收集——两种文件走同一入口，差别只在 isComponent 参数：
     //   - 有 @PatchEntry 类 → 根文件：根类 = 全部注解类（组件产物）；
     //   - 否则 → 双重判据（见 componentTranslationScope）：文件级可达 + 符号级
     //     「被引用」——根类 = 本文件里**真的被会产出的类引用到**的类
@@ -193,7 +174,6 @@ class ComponentBuilder implements Builder {
         final name = d.name.lexeme;
         if (name.startsWith('_') || d.abstractKeyword != null) continue;
         if (!neededHere.contains(name)) continue;
-        if (sameFileSingletonNames.contains(name)) continue;
         if (isIgnoredClass(parsed.unit, name)) continue;
         final info = classTable[name];
         if (info == null) continue;
@@ -205,7 +185,6 @@ class ComponentBuilder implements Builder {
     // 没有根类但有 `@PatchIgnore(isComponent: true)` 包装类：仍按常规路径产出
     // （包装类 + 顶层常量一起写），否则使用方的 `new X(...)` 缺类定义。
     if (roots.isEmpty &&
-        sameFileSingletonInfos.isEmpty &&
         wrapperClasses.isEmpty &&
         !hasExtensions) {
       // 纯数据文件（如 lib/app/service/app_data.dart）：文件里没有任何可翻译的类，
@@ -248,7 +227,6 @@ class ComponentBuilder implements Builder {
         inputId.path,
         classTable: classTable,
         importResolver: importResolver,
-        singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: builderFormTypes,
         ignoredTypes: ignoredTypes,
@@ -269,7 +247,6 @@ class ComponentBuilder implements Builder {
         classTable: classTable,
         importResolver: importResolver,
         productOf: productOf,
-        singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: builderFormTypes,
         ignoredTypes: ignoredTypes,
@@ -299,8 +276,6 @@ class ComponentBuilder implements Builder {
       if (doneDeps.contains(dep)) continue;
       doneDeps.add(dep);
       if (!parsedNames.contains(dep)) continue; // 跨文件 → import 阶段处理
-      // 同文件静态单例类走 const 内联（sameFileSingletonInfos），不按类翻译。
-      if (sameFileSingletonNames.contains(dep)) continue;
       // `@PatchIgnore(isComponent: true)`：类不翻译，产物里是包装类（上面已生成）。
       if (isIgnoredComponentType(parsed.unit, dep)) continue;
       if (exportedClasses.any((c) => c.name == dep) ||
@@ -322,7 +297,6 @@ class ComponentBuilder implements Builder {
         inputId.path,
         classTable: classTable,
         importResolver: importResolver,
-        singletons: singletons,
         jsClassWidgets: jsClassWidgetTypes,
         delegateClassWidgets: builderFormTypes,
         ignoredTypes: ignoredTypes,
@@ -343,12 +317,11 @@ class ComponentBuilder implements Builder {
     );
 
     // 一次渲染合并产物：一个文件 → 一个同名 JS（注册多个组件）。
-    // 跨文件依赖（模型/单例/组件）→ dependencyImports（ES module import）；
+    // 跨文件依赖（模型/组件）→ dependencyImports（ES module import）；
     // 同文件普通类上面已递归翻译为 inline class（不 export）。
     final crossModels = <String, ClassInfo>{};
     void collectModelDeps(Iterable<String> deps) {
       for (final name in deps) {
-        if (singletons.sourceFileOf(name) != null) continue; // 单例 import 另算
         final model = classTable[name];
         if (model == null || model.isComponent) continue;
         if (model.sourceFile != inputId.path) crossModels[name] = model;
@@ -366,15 +339,6 @@ class ComponentBuilder implements Builder {
     }
 
     final dependencyImports = <String>[];
-    // 跨文件静态单例类：import（export const 单例对象，运行时注入 __modules 共享）
-    for (final cls in singletons.used) {
-      final src = singletons.sourceFileOf(cls);
-      if (src == null || src == inputId.path) continue;
-      dependencyImports.add(
-        "import { $cls } from "
-        "'${relativeProduct(ownProduct, productPath(src))}';",
-      );
-    }
     // 跨文件模型（export class，运行时按相对路径加载并全局共享一份）
     for (final m in crossModels.values) {
       dependencyImports.add(
@@ -480,7 +444,6 @@ class ComponentBuilder implements Builder {
         inputId.path,
         exportedClasses: exportedClasses,
         inlineClasses: inlineClasses.values.toList(),
-        singletons: sameFileSingletonInfos,
         consts: constResolver.sameFile,
         globalConsts: globalConsts,
         dependencyImports: dedupedImports,
@@ -498,7 +461,6 @@ class ComponentBuilder implements Builder {
 ///
 /// 组件文件与非组件（模型）文件走**同一入口**，差异全部数据驱动：
 ///   - [inlineClasses]：本产物内共享的类（不 export），组件文件里的同文件模型；
-///   - [singletons]：静态单例类 → `export const`；
 ///   - [exportedClasses]：对外产出的类（`export class`）——组件与普通模型类
 ///     走同一条渲染路径；
 ///   - [dependencyImports]：跨文件依赖的 import 行（组件文件与模型文件都可能非空）；
@@ -512,7 +474,6 @@ String _renderJsProduct(
   String sourcePath, {
   required List<ClassInfo> exportedClasses,
   List<ClassInfo> inlineClasses = const [],
-  List<ClassInfo> singletons = const [],
   Map<String, String> consts = const {},
   Set<String> globalConsts = const {},
   List<String> dependencyImports = const [],
@@ -536,18 +497,6 @@ String _renderJsProduct(
   for (final line in dependencyImports) {
     head.writeln(line);
   }
-
-  // 单例字段值渲染上下文：静态单例类由类表直接建模（未走 translateClass），
-  // 其字段初值在产物组装时求值（颜色 / 字面量 / 同文件模型构造）。
-  final ctx = ElementTranslateContext(
-    propByField: const {},
-    actionByMethod: const {},
-    sourcePath: sourcePath,
-    importResolver: importResolver,
-    globalConsts: globalConsts,
-    jsClassWidgets: jsClassWidgetTypes,
-    delegateClassWidgets: builderFormTypes,
-  );
 
   // body：各类主体（不动 import 区；末尾拼装）。
   final b = StringBuffer();
@@ -589,19 +538,6 @@ String _renderJsProduct(
       ));
   }
 
-  // 静态单例类：`export const X = {...}`（运行时按 export 名收集并注册进
-  // __modules，跨文件组件才能 `import { MyColors }` 解构拿到；仅 const 会被漏掉）
-  for (final cls in singletons) {
-    b
-      ..writeln()
-      ..writeln('// 静态单例类 ${cls.name}')
-      ..writeln(dart2js(
-        cls,
-        exported: true,
-        singletonValueRenderer: (f) => singletonFieldValue(f.initializer, ctx),
-      ));
-  }
-
   // 本文件声明的 `extension`：注册语句写在声明处（求值本产物即注册成员）。
   for (final ext in extensions) {
     b
@@ -619,10 +555,6 @@ String _renderJsProduct(
       ..writeln('// 原生组件包装 $type（@PatchIgnore(isComponent: true)）')
       ..writeln(hostWrapperSource(type, exported: !type.startsWith('_')));
   }
-
-  // 单例字段值渲染用的 [ctx] 也会收集它用到的类型（字段初值里构造的值对象 /
-  // 组件），一并并入总表，否则产物里 `new X(...)` 会缺 import。
-  _mergeUsedWidgets(usedWidgets, ctx.usedWidgetPackages);
 
   // 按 package 拼装模块 import：只 import **有 JS 类的类型**（`Builder` /
   // `ChangeNotifierProvider` / sliver 代理等），元素写成 `__h(Builder, ...)`
