@@ -241,9 +241,9 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
     // 基础语法 demo（mixin / extension / extends）：同一源文件的组件共用一个产物。
-    'MixinDetail': 'components/grammar_details.js',
-    'ExtensionDetail': 'components/grammar_details.js',
-    'InheritanceDetail': 'components/grammar_details.js',
+    'MixinDetail': 'components/grammar/grammar_details.js',
+    'ExtensionDetail': 'components/grammar/grammar_details.js',
+    'InheritanceDetail': 'components/grammar/grammar_details.js',
   };
 
   String get _jsEntry => _jsEntries[widget.component] ?? 'components/widget_details.js';

@@ -21,6 +21,7 @@ import 'analysis/singleton_support.dart';
 import 'class_info.dart';
 import 'translator/dart2js.dart';
 import 'translator/element2js.dart';
+import 'translator/js_value.dart';
 import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
 import '../shared/paths.dart';
@@ -487,6 +488,7 @@ class ComponentBuilder implements Builder {
         wrapperClasses: wrapperClasses,
         importResolver: importResolver,
         extensions: extensions,
+        baseClassOf: (c) => jsBaseClassOf(c, classTable),
       ),
     );
   }
@@ -518,6 +520,7 @@ String _renderJsProduct(
   List<String> wrapperClasses = const [],
   String? Function(String component)? importResolver,
   List<ExtensionInfo> extensions = const [],
+  String? Function(ClassInfo cls)? baseClassOf,
 }) {
   // 头部（注释 + import 区）：package widget 产物的 import 依赖「实际用到的
   // 类型」，只能在各组件渲染完成后得知，所以先渲染 body 再拼装 import，
@@ -562,12 +565,28 @@ String _renderJsProduct(
       ..write(renderTopLevelConstBody(consts));
   }
 
-  // 本产物内共享的类：inline class（不 export，本产物内可见）。
-  for (final cls in inlineClasses) {
+  // 本产物内的全部类：inline（不 export）+ 对外类，按**基类在前**排序输出。
+  // `class` 声明有 TDZ（`class A extends B` 在 B 之前求值会 ReferenceError），
+  // 而 Dart 不要求基类先声明，故渲染前做一次稳定拓扑排序——编译期解决，
+  // 运行时不引入任何装配函数。
+  final orderedClasses = orderClassesByBase(
+    [...inlineClasses, ...exportedClasses],
+    (c) => baseClassOf?.call(c),
+  );
+  final exportedNames = {for (final c in exportedClasses) c.name};
+  for (final cls in orderedClasses) {
+    final exported = exportedNames.contains(cls.name);
     b
       ..writeln()
-      ..writeln('// 模型 ${cls.name}（同文件，仅本产物内可见）')
-      ..writeln(dart2js(cls, exported: false));
+      ..writeln(
+        '// ${cls.isComponent ? '组件' : '模型'} ${cls.name}'
+        '${exported ? '' : '（同文件，仅本产物内可见）'}',
+      )
+      ..writeln(dart2js(
+        cls,
+        exported: exported,
+        baseClass: baseClassOf?.call(cls),
+      ));
   }
 
   // 静态单例类：`export const X = {...}`（运行时按 export 名收集并注册进
@@ -581,16 +600,6 @@ String _renderJsProduct(
         exported: true,
         singletonValueRenderer: (f) => singletonFieldValue(f.initializer, ctx),
       ));
-  }
-
-  // 对外产出的类：组件与普通类同一条渲染路径。
-  // 组件类 export（= Dart 类名）：既作本产物 build 树的元素 type，也供其它
-  // 产物 import 后引用；与普通类共用统一入口 dart2js，无工厂包装。
-  for (final cls in exportedClasses) {
-    b
-      ..writeln()
-      ..writeln('// ${cls.isComponent ? '组件' : '模型'} ${cls.name}')
-      ..writeln(dart2js(cls, exported: true));
   }
 
   // 本文件声明的 `extension`：注册语句写在声明处（求值本产物即注册成员）。

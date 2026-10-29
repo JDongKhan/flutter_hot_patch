@@ -31,6 +31,7 @@ import '../patch_entry/analysis/singleton_support.dart';
 import '../patch_entry/class_info.dart';
 import '../patch_entry/project_module_builder.dart' show localTranslationPackages;
 import '../patch_entry/translator/dart2js.dart';
+import '../patch_entry/translator/js_value.dart';
 import '../shared/js_class_defs.dart';
 import '../shared/js_format.dart';
 import '../shared/package_sources.dart';
@@ -243,10 +244,16 @@ String _renderFile(
   }
 
   final b = StringBuffer();
-  for (final cls in inline) {
+  // 基类在前（同 component_builder：class 有 TDZ，Dart 不要求基类先声明）。
+  final ordered = orderClassesByBase(inline, (c) => jsBaseClassOf(c, table));
+  for (final cls in ordered) {
     b
       ..writeln('// 同文件模型 ${cls.name}（扩展依赖，仅本产物内可见）')
-      ..writeln(dart2js(cls, exported: false))
+      ..writeln(dart2js(
+        cls,
+        exported: false,
+        baseClass: jsBaseClassOf(cls, table),
+      ))
       ..writeln();
   }
   for (final info in infos) {

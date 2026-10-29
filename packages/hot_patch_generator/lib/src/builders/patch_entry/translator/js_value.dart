@@ -226,6 +226,78 @@ String? sdkBaseName(ClassInfo info) {
   return sdkSuperClassMap[t.split('<').first.trim()];
 }
 
+/// 沿 `extends` 链展开的实例字段：**根父类在前、自身在后**（去重，同名以靠前为准）。
+///
+/// 这是「对象上实际存在的字段视图」，供两处使用：
+///   - 字段可见性（子类方法里 `this.name` 指向父类字段）；
+///   - 构造位置参数映射（Dart 的 `super.name` 形参占据父类字段位置，与
+///     「父类字段先、子类字段后」同序）。
+List<ClassField> objectFieldsOf(
+  ClassInfo info,
+  Map<String, ClassInfo> classTable,
+) {
+  final out = <ClassField>[];
+  final seen = <String>{};
+  for (final c in _baseChainOf(info, classTable).reversed) {
+    for (final f in c.instanceFields) {
+      if (seen.add(f.name)) out.add(f);
+    }
+  }
+  for (final f in info.instanceFields) {
+    if (seen.add(f.name)) out.add(f);
+  }
+  return out;
+}
+
+/// 沿 `extends` 链展开的方法名（含 getter）：子类可调用父类方法，
+/// 判定「裸调用是 this 方法」时需要完整视图。
+Set<String> objectMethodNamesOf(
+  ClassInfo info,
+  Map<String, ClassInfo> classTable,
+) {
+  final out = <String>{};
+  for (final c in [info, ..._baseChainOf(info, classTable)]) {
+    out.addAll(c.methodNames);
+  }
+  return out;
+}
+
+/// `extends` 链上的项目类（父类在前、根父类在最后）。SDK 基类不在类表里，止于此处。
+List<ClassInfo> _baseChainOf(ClassInfo info, Map<String, ClassInfo> classTable) {
+  final chain = <ClassInfo>[];
+  final visited = <String>{info.name};
+  var cur = info;
+  while (true) {
+    final base = jsBaseClassOf(cur, classTable);
+    if (base == null || !visited.add(base)) break;
+    final b = classTable[base];
+    if (b == null) break;
+    chain.add(b);
+    cur = b;
+  }
+  return chain;
+}
+
+/// 类的 JS 基类名（null = 不写 `extends`）。
+///
+/// 两条来源，顺序固定：
+///   1. SDK 基类表（运行时注入同名 JS 类，如 ChangeNotifier）；
+///   2. 类表里的项目类 —— JS 类名与 Dart 类名相同，直接 `extends`。
+///
+/// 项目类走原生 `extends`（而不是运行时装配原型）：`class` 不能用 `apply`
+/// 调用，只有原生继承才能让 `super(...)` 驱动父类构造里的字段初始化。
+/// 基类在同产物内的**声明顺序**由渲染前的拓扑排序保证（class 有 TDZ）。
+String? jsBaseClassOf(ClassInfo info, Map<String, ClassInfo> classTable) {
+  final sdk = sdkBaseName(info);
+  if (sdk != null) return sdk;
+  final t = info.superType;
+  if (t == null) return null;
+  final name = t.split('<').first.trim();
+  final base = classTable[name];
+  if (base == null || base.name == info.name) return null;
+  return name;
+}
+
 /// Dart 基类名 → JS 基类名（运行时注入同名类）。
 const Map<String, String> sdkSuperClassMap = {
   'ChangeNotifier': 'ChangeNotifier',
@@ -267,6 +339,10 @@ class FieldScope {
   /// 方法调用；空表 = 无 mixin，super 语句按原策略忽略。
   final Map<String, String> superMap;
 
+  /// 本类的 JS 侧是否有基类（原生 `extends`）：`super.foo()` 在此为合法 JS，
+  /// 原样发射；无基类时 super 调用的目标是 SDK 类，JS 侧不存在 → 丢弃。
+  final bool hasJsBase;
+
   /// 局部变量别名：`final list = _list;` → `list → this._list`。
   /// 抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用被捕获的
   /// 局部变量时必须落到真实字段引用，否则是未定义的自由变量。
@@ -306,6 +382,7 @@ class FieldScope {
     this.methods = const {},
     this.hostMethods = const {},
     this.superMap = const {},
+    this.hasJsBase = false,
     Map<String, String>? localAliases,
     Map<String, String>? declAliases,
     Set<String>? localVars,
@@ -328,6 +405,7 @@ class FieldScope {
         globalConsts: globalConsts,
         hostMethods: hostMethods,
         superMap: superMap,
+        hasJsBase: hasJsBase,
         localAliases: localAliases,
         // 同一个别名表实例：派生作用域里登记的别名，母作用域后续声明同样可见
         // （闭包体内的 `final x = _feed.spots;` 也算链式别名）。

@@ -9,12 +9,10 @@ import 'extension/e_string.dart';
 /// 与 [WidgetShowcase] 的常用组件详情同一套形态：每个类都是 `@PatchEntry`
 /// 组件，原生可直接用、JS 侧由 `patch/components/grammar_details.js` 实例化。
 ///
-/// 这里专门验证两类 Dart 语法能力的**跨包**引用：
+/// 这里验证三类 Dart 语法能力：
 ///   - `mixin`：State 混入 `package:hot_module_base` 的 [StateLogMixin]；
-///   - `extension`：String 调用 `package:hot_module_base` 的 [StringLogExtension]。
-///
-/// 注意：JS 侧对 mixin / extension 的翻译尚未实现，当前只有原生侧生效；
-/// 这些 demo 先作为能力落地后的验收用例。
+///   - `extension`：String 调用 `package:hot_module_base` 的 [StringLogExtension]；
+///   - `extends`：普通类单继承（父类字段 / 覆盖方法 / `super` 调用 / 多态）。
 
 // ---------------------------------------------------------------------------
 // mixin：给 State 扩展日志能力
@@ -91,6 +89,71 @@ class ExtensionDetail extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ElevatedButton(onPressed: _log, child: const Text('调用 String.logText()')),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// extends：普通类单继承
+// ---------------------------------------------------------------------------
+
+/// 基类：持有字段并提供可被子类覆盖的两个方法。
+class Greeting {
+  Greeting(this.name);
+
+  final String name;
+
+  String greet() => 'Hello, $name';
+
+  String describe() => 'Greeting($name)';
+}
+
+/// 子类：继承父类字段与 [Greeting.greet]，覆盖 [Greeting.describe]，
+/// 两处都用 `super` 复用父类实现。
+///
+/// JS 侧是**原生继承**（`class FancyGreeting extends Greeting`）：父类字段由
+/// 父类构造的 `__applyProps(args)` 填、`super.greet()` 由引擎沿原型链解析。
+class FancyGreeting extends Greeting {
+  /// `super.name` = 直接转发给父类构造的同名参数。
+  FancyGreeting(super.name);
+
+  final String emoji = '✨';
+
+  @override
+  String greet() => '${super.greet()} $emoji';
+
+  @override
+  String describe() => '${super.describe()} → FancyGreeting';
+}
+
+@PatchEntry('InheritanceDetail')
+class InheritanceDetail extends StatelessWidget {
+  const InheritanceDetail({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // 多态：同一静态类型 [Greeting]，运行期分别落到基类 / 子类实现。
+    final Greeting plain = Greeting('Dart');
+    final Greeting fancy = FancyGreeting('JS');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          '普通类单继承（extends / super / 多态）',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Greeting 为基类，FancyGreeting 覆盖 greet / describe 并调用 super。',
+          style: TextStyle(fontSize: 13, color: Colors.black54),
+        ),
+        const SizedBox(height: 12),
+        Text(plain.greet(), style: const TextStyle(fontSize: 15)),
+        Text(plain.describe(), style: const TextStyle(fontSize: 13)),
+        const SizedBox(height: 8),
+        Text(fancy.greet(), style: const TextStyle(fontSize: 15)),
+        Text(fancy.describe(), style: const TextStyle(fontSize: 13)),
       ],
     );
   }

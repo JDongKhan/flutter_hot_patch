@@ -36,6 +36,7 @@ import 'analysis/const_support.dart';
 import 'analysis/singleton_support.dart';
 import 'class_info.dart';
 import 'translator/dart2js.dart';
+import 'translator/js_value.dart';
 
 /// 参与跨包翻译的本地依赖包（按包名排序；不含构建目标包自身与框架包）。
 ///
@@ -166,6 +167,9 @@ String renderProjectPackageModule(
   final classInfos = <ClassInfo>[];
   final deps = <String>{};
   final usedWidgets = <String, Set<String>>{};
+  // 类名 → JS 基类名：类表是逐个文件建的（跨包模块按文件翻译），故渲染前按
+  // 类名汇总，供「基类在前」排序与 extends 渲染共用。
+  final baseClassByName = <String, String?>{};
   for (final e in decls.entries) {
     final (decl, file) = e.value;
     final unit = parseUnitFile(file)!;
@@ -192,6 +196,7 @@ String renderProjectPackageModule(
       isComponent: table[e.key]?.isComponent ?? false,
     );
     classInfos.add(info);
+    baseClassByName[info.name] = jsBaseClassOf(info, table);
     // 依赖：跨模块的类走 import，宿主 widget 走 package 模块 import
     // （与组件产物同一套拼装规则）。
     for (final d in info.dependencies) {
@@ -218,11 +223,16 @@ String renderProjectPackageModule(
   for (final line in deduped) {
     b.writeln(line);
   }
-  for (final info in classInfos) {
+  // 基类在前（class 有 TDZ；Dart 不要求基类先声明）。
+  for (final info in orderClassesByBase(classInfos, (c) => baseClassByName[c.name])) {
     b
       ..writeln()
       ..writeln('// ${info.isComponent ? '组件' : '模型'} ${info.name}')
-      ..writeln(dart2js(info, exported: true));
+      ..writeln(dart2js(
+        info,
+        exported: true,
+        baseClass: baseClassByName[info.name],
+      ));
   }
   return b.toString();
 }

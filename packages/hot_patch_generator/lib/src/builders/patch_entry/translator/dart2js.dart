@@ -16,14 +16,17 @@ import 'js_value.dart';
 /// analyze_dart_class 预渲染成 JS 字符串——本函数只负责拼装，不再遍历 AST。
 /// **没有对外工厂函数**：元素的 type 就是类本身（宿主 widget 则是类型名字符串），
 /// 由渲染层统一写成 `__h(type, props, children)`。
+/// [baseClass]：JS 基类名（见 `jsBaseClassOf`）；null = 不继承。项目类与 SDK
+/// 基类都走原生 `extends`，`super` 链由引擎维护。
 String renderClassDecl(
   ClassInfo info, {
   bool exported = false,
+  String? baseClass,
 }) {
   final b = StringBuffer();
   b.write(exported ? 'export class ' : 'class ');
   b.write(info.name);
-  final base = sdkBaseName(info);
+  final base = baseClass ?? sdkBaseName(info);
   if (base != null) b.write(' extends $base');
   b.write(' {\n');
 
@@ -45,10 +48,15 @@ String renderClassDecl(
   if (info.isComponent) {
     b.write('  constructor(args) {\n');
     b.write('    this.props = args || {};\n');
+  } else if (base != null) {
+    // 有基类 → 构造统一收 args 并原样转发：父类构造里的 `__applyProps(args)`
+    // 才能把同一份构造参数映射到父类字段（Dart 隐式/显式 super(...) 的等价物）。
+    // 多传实参对无参父类无害。
+    b.write('  constructor(args) {\n');
   } else {
     b.write(info.ctorParams.isEmpty ? '  constructor() {\n' : '  constructor(args) {\n');
   }
-  if (base != null) b.write('    super();\n');
+  if (base != null) b.write('    super(args);\n');
   if (info.ctorParams.isNotEmpty) b.write('    this.__applyProps(args);\n');
   _writeFieldAssignments(b, info);
   b.write('  }\n');
@@ -148,6 +156,32 @@ String _renderStaticConst(
 }
 
 /// ===========================================================================
+/// 把类按「基类在前」稳定排序（DFS 后序）。
+///
+/// `class` 声明有 TDZ：`class A extends B` 必须在 B 求值之后。Dart 不要求基类
+/// 先声明，构建期做这一次排序即可，产物里的类顺序与源码顺序无关。
+List<ClassInfo> orderClassesByBase(
+  List<ClassInfo> classes,
+  String? Function(ClassInfo cls) baseOf,
+) {
+  final byName = {for (final c in classes) c.name: c};
+  final out = <ClassInfo>[];
+  final done = <String>{};
+  final visiting = <String>{};
+  void visit(ClassInfo c) {
+    // visiting 命中 = 循环继承（Dart 里不合法），直接返回避免无限递归。
+    if (done.contains(c.name) || !visiting.add(c.name)) return;
+    if (byName[baseOf(c)] case final base?) visit(base);
+    visiting.remove(c.name);
+    if (done.add(c.name)) out.add(c);
+  }
+
+  for (final c in classes) {
+    visit(c);
+  }
+  return out;
+}
+
 /// 统一入口：Dart 类 → JS 源码。
 ///
 /// 只有这一处决定「类 → JS」的渲染：普通类（模型/状态类/静态单例）与组件
@@ -160,6 +194,7 @@ String _renderStaticConst(
 /// 参数：
 ///   - [exported]：类声明是否 `export`。
 ///   - [singletonValueRenderer]：纯 static 类的字段值渲染器（颜色/字面量求值）。
+///   - [baseClass]：JS 基类名（`jsBaseClassOf` 解析），null = 不继承。
 ///
 /// `@HostInjected` 通道表不在参数里：它随 [ClassInfo.hostMethods] 一起由
 /// analyze_dart_class 在收集期算好挂在模型上（组件与普通类同一份数据）。
@@ -168,10 +203,11 @@ String dart2js(
   ClassInfo info, {
   bool exported = false,
   String Function(ClassField field)? singletonValueRenderer,
+  String? baseClass,
 }) {
   if (info.isStaticOnly && singletonValueRenderer != null) {
     return _renderStaticConst(info,
         valueRenderer: singletonValueRenderer, exported: exported);
   }
-  return renderClassDecl(info, exported: exported);
+  return renderClassDecl(info, exported: exported, baseClass: baseClass);
 }

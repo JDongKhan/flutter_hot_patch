@@ -567,8 +567,11 @@ String? modelCtorFromPartsJs(
     }
   }
   final entries = <String>[];
-  for (var i = 0; i < info.instanceFields.length && i < positional.length; i++) {
-    entries.add('${info.instanceFields[i].name}: ${positional[i]}');
+  // 位置参数按**对象字段视图**映射（父类字段在前）：Dart 里 `super.name` 形参
+  // 占据父类字段位置，与这个顺序一致，父类构造的 `__applyProps(args)` 才拿得到值。
+  final fields = objectFieldsOf(info, classes);
+  for (var i = 0; i < fields.length && i < positional.length; i++) {
+    entries.add('${fields[i].name}: ${positional[i]}');
   }
   entries.addAll(named);
   return 'new $name({${entries.join(', ')}})';
@@ -846,6 +849,14 @@ String? methodCallExprJs(
       return '${target.name}.${e.methodName.name}($passed)';
     }
   }
+  // `super.m(...)` 出现在**表达式**位置（`'${super.greet()} x'` 这类插值 / 赋值右值）：
+  // 与语句级同一套落法——mixin 线性化目标 → `this._m$...`；原生基类 → `super.m`。
+  if (target is SuperExpression) {
+    final resolved = scope.superMap[e.methodName.name];
+    if (resolved != null) return 'this.$resolved($passed)';
+    if (scope.hasJsBase) return 'super.${e.methodName.name}($passed)';
+    return null;
+  }
   final t = exprToJs(target, scope, classes);
   if (t != null) return '$t.${e.methodName.name}($passed)';
   return null;
@@ -1021,11 +1032,13 @@ String translateStmtList(
   for (final s in stmts) {
     if (s is ExpressionStatement) {
       final e = s.expression;
-      // super 调用：查当前方法的 superMap（mixin 线性化展开后链上下一个实现）。
-      // 命中 → `this._m$Mixin$m(...)`；未命中 → 基类无 JS 等价物，忽略（原行为）。
+      // super 调用：三种落法，优先级自上而下
+      //   1. superMap 命中 → `this._m$Mixin$m(...)`（mixin 线性化展开后链上下一个实现）；
+      //   2. 有 JS 基类 → 原样 `super.m(...)`（原生 extends，由引擎沿原型链解析）；
+      //   3. 都没有（SDK 类在 JS 侧无实现）→ 丢弃。
       if (e is MethodInvocation && e.target is SuperExpression) {
         final target = scope.superMap[e.methodName.name];
-        if (target == null) continue;
+        if (target == null && !scope.hasJsBase) continue;
         final argsJs = <String>[];
         var ok = true;
         for (final a in e.argumentList.arguments) {
@@ -1044,7 +1057,13 @@ String translateStmtList(
               '产物中丢弃：${e.toSource()}');
           continue;
         }
-        out.add('$ind' 'this.$target(${argsJs.join(', ')});');
+        // 单条表达式里出现 super 调用（`f(super.x())`）会走 rhsToJs 的表达式路径，
+        // 那条路径只处理 resolved target；这里覆盖语句级（最常见）形态。
+        if (target != null) {
+          out.add('$ind' 'this.$target(${argsJs.join(', ')});');
+        } else {
+          out.add('$ind' 'super.${e.methodName.name}(${argsJs.join(', ')});');
+        }
         continue;
       }
       final t = _bodyExprStmtJs(e, scope, classes);
@@ -1560,15 +1579,23 @@ String translateClassMethodBody(
         '{ message: ${m.nativeMessage ?? '""'} });';
   }
   final scope = FieldScope(
-    instanceFields: info.instanceFieldNames,
+    // 字段与方法都取**继承链视图**：子类方法里 `this.name` 指向父类字段、
+    // 裸调用父类方法同样要解析为 `this.foo()`。
+    instanceFields: {
+      for (final f in objectFieldsOf(info, classes)) f.name,
+    },
     params: m.params.toSet(),
     methods: {
-      ...info.methodNames,
+      ...objectMethodNamesOf(info, classes),
       if (sdkBaseName(info) != null) 'notifyListeners',
     },
     hostMethods: hostMethods,
     globalConsts: globalConsts,
     superMap: m.superMap,
+    // 原生继承（SDK 基类或项目类）→ `super.foo()` 在 JS 里合法，原样发射。
+    // 判据与渲染层同一个（jsBaseClassOf）：基类在 JS 侧无实现时，类声明里不会
+    // 写 extends，此时发射 super 调用是语法错误。
+    hasJsBase: jsBaseClassOf(info, classes) != null,
   );
   // 方法形参同步登记进 widget 层（方法体期间），使返回的 widget 树里
   // `Text(title)` 这类形参引用可解析；翻译结束即恢复，不污染同类其它方法。
