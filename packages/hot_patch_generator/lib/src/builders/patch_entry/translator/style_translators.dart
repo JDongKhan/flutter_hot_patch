@@ -186,10 +186,9 @@ String? _fontStyleExpr(Expression e) {
 /// 跨桥序列化只由 `Color.prototype.toJSON`（`'#AARRGGBB'`）承担，宿主
 /// `colorFromJson` 还原——翻译层不持有任何色值表，SDK 新增颜色零改动。
 ///
-/// 跨文件静态单例类字段引用（`MyColors.background`）额外登记 import 依赖。
+/// 跨文件普通类的静态成员（`MyColors.background`）由通用表达式翻译覆盖
+/// （`Owner.name` 原样引用 + 构建期登记 import），这里不再单独解析。
 String? translateColor(Expression e, ElementTranslateContext ctx) {
-  final singleton = ctx.singletons?.staticRef(e);
-  if (singleton != null) return singleton;
   try {
     final js = ctx.jsDataExpr(e);
     return js == 'null' ? null : js;

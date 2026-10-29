@@ -31,10 +31,9 @@ String? packageNameOf(String path) {
 /// lib 相对路径 → (mtime, CompilationUnit) 进程级备忘。
 ///
 /// 一个组件文件的翻译里，类表（class_table）、@HostInjected 扫描
-/// （host_injected）、跨文件常量（const_support）、静态单例
-/// （singleton_support）、产物路径（product_path）会对**同一份** import 源
-/// 文件各自 parseString——多组件构建时是 O(组件数 × 扫描器数 × import数）
-/// 的重复解析。这里统一按路径缓存，消除重复。
+/// （host_injected）、跨文件常量（const_support）、产物路径（product_path）
+/// 会对**同一份** import 源文件各自 parseString——多组件构建时是
+/// O(组件数 × 扫描器数 × import数) 的重复解析。这里统一按路径缓存，消除重复。
 ///
 /// mtime 兜底 watch 模式的正确性：源文件变更后修改时间变化，缓存自动失效
 /// （AST 本身不可变，同一份内容可安全共享）。

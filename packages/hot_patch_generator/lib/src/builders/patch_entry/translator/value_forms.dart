@@ -224,6 +224,12 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
   }
 
   final (ctor, _) = ctx.ctorOf(e);
+  if (ctor != null && !ctx.isConstruction(e)) {
+    // `X.member(...)` 不是构造（如模型的静态方法 `Spot.fromJson(e)`、SDK 静态
+    // 工厂 `Overlay.of(context)`）：按普通表达式翻译，绝不走元素属性管线——
+    // 否则实参会被当成属性、产物变成 `Spot.fromJson({})`（数据整段丢失）。
+    return _jsExprOrNull(e, ctx);
+  }
   if (ctor != null) {
     final conv = _ctorConverters[ctor];
     if (conv != null) {
@@ -249,10 +255,8 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
         if (r != null) return r;
         _warnUnsupported('$e');
       }
-      // 跨文件「静态单例类」的字段引用（`MyColors.background`）：产物已 import
+      // 跨文件「普通类」的静态成员引用（`MyColors.background`）：产物已 import
       // 该类的 JS 模块，裸引用即可解析（与 style_translators.translateColor 同口径）。
-      final singleton = ctx.singletons?.staticRef(e);
-      if (singleton != null) return singleton;
       // 其余 `Owner.name`：先查源码索引——owner 是**普通类**（`Colors.red` /
       // 静态常量类）时按 1:1 原样引用（运行时注入同名类 / 全局常量）；
       // 是 **enum** 时 Dart 枚举在 JS 侧没有等价物，产物协议用**成员名字符串**
@@ -261,7 +265,13 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
       final member = staticMemberOf(e);
       if (member != null && isClassName(owner) && !member.startsWith('_')) {
         final sigs = CtorSignatures.instance;
-        if (sigs != null && sigs.isClass(owner) && !sigs.isEnum(owner)) {
+        // 项目普通类（含纯 static 类）：JS 侧是真实 class，静态成员挂在类上，
+        // `Owner.member` 原样引用即可（产物已 import 该类的模块）。
+        // 其余能确认是 class 的（源码索引），同样原样引用；
+        // 只有 enum 走成员名字符串（JS 侧无枚举等价物）。
+        final isProjectClass = ctx.isProjectClass(owner);
+        if (isProjectClass ||
+            (sigs != null && sigs.isClass(owner) && !sigs.isEnum(owner))) {
           return _jsExprOrNull(e, ctx);
         }
         return ctx.jsString(member);
