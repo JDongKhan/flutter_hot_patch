@@ -47,13 +47,13 @@ const String handleRegistryJsSource = r'''
   function defineHandleKind(name, desc) { handleKinds[name] = desc || {}; }
 
   // 句柄 id：`js:<kind>#N`（kind 形如 `fn` / `ctrl/Scroll` / `key`）。
-  function newHandleId(kind) {
+  function __nextHandleId(kind) {
     handleSeq += 1;
     return 'js:' + kind + '#' + handleSeq;
   }
 
   // 句柄摘要里的「是什么对象」：构造名优先（日志与泄漏/缓存全景共用同一套取法）。
-  function ctorNameOf(h) {
+  function __constructorName(h) {
     var t = h.obj === null ? 'null' : typeof h.obj;
     if (h.obj && (t === 'object' || t === 'function') && h.obj.constructor) {
       return h.obj.constructor.name || t;
@@ -65,7 +65,7 @@ const String handleRegistryJsSource = r'''
   // 已由 `[binding] + / -` 逐条记录（见 binding_cache.dart 的 _logPut / remove），
   // 且带「类型 / 页面 / 引用强度 / 存活时长 / 登记方」；JS 侧再打一遍纯属重复，
   // 异步桥还要多套一层 `[js-log]` 前缀，反而更难读。JS 端的全景视图另由
-  // `__jsui.cacheDump()`（debug）与泄漏快照汇总给出，ctorNameOf 仍供它们使用。
+  // `__jsui.cacheDump()`（debug）与泄漏快照汇总给出，__constructorName 仍供它们使用。
 
   // 登记一个 JS 侧真实对象/函数为句柄，返回 id。
   //
@@ -78,7 +78,7 @@ const String handleRegistryJsSource = r'''
   //   4. 其余（模块级 / 静态字段）：随页面；无 activeRoot 时退化为 global。
   //
   // 显式 `opts.scope`（'local' / 'page' / 'global'）优先，事件闭包等仍按原语义。
-  function reg(obj, kind, opts) {
+  function registerHandle(obj, kind, opts) {
     if (obj === null || obj === undefined) { return null; }
     var exist = handleOwnerIdx.get(obj);
     if (exist && handles[exist]) { return exist; }
@@ -103,7 +103,7 @@ const String handleRegistryJsSource = r'''
       key = opts.key || pageKey || null;
       if (key === null) { scope = 'global'; }
     }
-    var id = newHandleId(kind);
+    var id = __nextHandleId(kind);
     handles[id] = {
       id: id, kind: kind, scope: scope, key: key, obj: obj,
       meta: opts.meta || null, owner: null
@@ -118,7 +118,7 @@ const String handleRegistryJsSource = r'''
     // （scope=local 的纯本端句柄——如事件闭包——传 sync:false 不同步）。
     // pageKey 一并下发：宿主侧据此登记「句柄→页面」，页面销毁时做本端兜底回收。
     if (opts.sync !== false) {
-      host('jsHandle', [{
+      invokeHostMethod('jsHandle', [{
         id: id, op: 'create', kind: kind, pageKey: key, meta: opts.meta || null
       }]);
     }
@@ -133,10 +133,10 @@ const String handleRegistryJsSource = r'''
   // 所在的类实例——`building` 此时是被委托组件，不能用它判断资源归属。
   var ownerAnchor = null;
 
-  function withOwner(inst, fn) {
+  function withOwner(inst, callback) {
     var prev = ownerAnchor;
     ownerAnchor = inst;
-    try { return fn(); } finally { ownerAnchor = prev; }
+    try { return callback(); } finally { ownerAnchor = prev; }
   }
 
   function attachOwner(id, inst) {
@@ -196,7 +196,7 @@ const String handleRegistryJsSource = r'''
     if (desc && typeof desc.release === 'function') {
       try { desc.release(h); } catch (e) {}
     }
-    if (notify !== false) { host('jsHandle', [{ id: id, op: 'release' }]); }
+    if (notify !== false) { invokeHostMethod('jsHandle', [{ id: id, op: 'release' }]); }
   }
 
   // 页面退出兜底：释放本页登记的全部 page 句柄（数组边遍历边被 releaseHandle
@@ -253,14 +253,14 @@ const String handleRegistryJsSource = r'''
   }
 
   // 宿主 → JS：释放本端句柄（对端发起的 release，不再回通知）。
-  function releaseFromHost(id) { releaseHandle(id, false); }
+  function releaseHandleFromHost(id) { releaseHandle(id, false); }
 
   // JS → 宿主：对本端句柄对应的**宿主端真实对象**发起 op（返回 Promise）。
   // 与 callHandle 方向相反、语义对称（call/get/set/invoke）。
   function handleOp(id, op, payload) {
     var body = { id: id, op: op };
     if (payload) { for (var k in payload) { body[k] = payload[k]; } }
-    return host('jsHandle', [body]);
+    return invokeHostMethod('jsHandle', [body]);
   }
 
   // Scroll/Tab/Text 的 JS 代理类同构：__listeners 数组、内部回传句柄
@@ -289,7 +289,7 @@ const String handleRegistryJsSource = r'''
       if (spec.init) { spec.init.apply(this, arguments); }
       if (spec.onHost) {
         var self = this;
-        this.__hostFn = fn(function (p) { spec.onHost(self, p); });
+        this.__hostFn = __createFnHandle(function (p) { spec.onHost(self, p); });
       }
       // 登记为句柄（scope=page）：自动同步宿主 onCreate（meta 携带回传句柄与
       // 能力自带的构造参数，供宿主创建真实对象）；页面退出时 disposeRoot 兜底释放。
@@ -301,7 +301,7 @@ const String handleRegistryJsSource = r'''
           for (var k in extra) { meta[k] = extra[k]; }
         }
       }
-      this.__id = reg(this, kind, { meta: meta });
+      this.__id = registerHandle(this, kind, { meta: meta });
     };
     Ctor.prototype.addListener = function (f) {
       if (typeof f === 'function') { this.__listeners.push(f); }

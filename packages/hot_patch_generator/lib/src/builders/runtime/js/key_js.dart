@@ -3,7 +3,7 @@
 // Key 与 Controller 不同：它是**值**（元素 props 里的 `key`），不是结点，也不
 // 绑定到某个宿主 widget。生成器把 Dart 侧 `key: ValueKey(item)` / `key: _formKey`
 // 翻译成 `props.key = new ValueKey(item)` / `this._formKey`；reconciler 只按
-// **签名**比较（见 patchChildren 的 keySig），宿主按序列化形态还原真实 Flutter
+// **签名**比较（见 __patchChildren 的 keySig），宿主按序列化形态还原真实 Flutter
 // Key（见 capabilities/key/key_bridge.dart）。
 //
 // 五类语义（与 Flutter 对齐）：
@@ -23,7 +23,7 @@
 //     跨帧稳定；页面退出随句柄释放）。跨桥 `{__handle:id}`，签名 `h:<id>`。
 //
 // keySig 是 reconciler 唯一的 key 比较入口：把 key 归一成可比较字符串（null =
-// 无 key），patchChildren 据此做「带 key 优先按 key、无 key 按位置」匹配。
+// 无 key），__patchChildren 据此做「带 key 优先按 key、无 key 按位置」匹配。
 // 判据用**结构**（__vkey / __okey / __id）而非 instanceof——key 可能来自父级
 // props 透传，形态必须与宿主侧 key_bridge 的解析保持一致。
 const String keyJsSource = r'''
@@ -36,7 +36,7 @@ const String keyJsSource = r'''
   // 形态判据，而 props.key 传的是 live 实例（不是 toJSON 产物），两边必须同形。
   // 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
   export class ValueKey {
-    constructor(props) { this.__vkey = __posArgs(props, ['value']).value; }
+    constructor(props) { this.__vkey = __positionalArgs(props, ['value']).value; }
     toJSON() {
     var v = this.__vkey;
     if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
@@ -48,7 +48,7 @@ const String keyJsSource = r'''
 
   // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
   export class ObjectKey {
-    constructor(props) { this.__okey = objectToken(__posArgs(props, ['value']).value); }
+    constructor(props) { this.__okey = objectToken(__positionalArgs(props, ['value']).value); }
     toJSON() {
     return { __okey: this.__okey };
     }
@@ -61,7 +61,7 @@ const String keyJsSource = r'''
   // 同值的 ValueKey 不等（与 Dart 的 runtimeType 参与相等一致）。
   export class PageStorageKey {
     constructor(props) {
-      var value = __posArgs(props, ['value']).value;
+      var value = __positionalArgs(props, ['value']).value;
       this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
           ? { __vtok: objectToken(value) }
           : value;
@@ -75,13 +75,13 @@ const String keyJsSource = r'''
   defineHandleKind('key/Global', {});
   export class GlobalKey {
     constructor(props) {
-      var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
+      var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;
       // 泛型实参由产物下发（`new GlobalKey({typeArguments: ['AnimatedListState']})`）：
       // Dart 的 `GlobalKey<T>` 在 AOT 是 reified 的，T 就是「currentState 的类型」，
       // 取值不需要问宿主、也不靠 runtimeType 猜。
       var ta = (props && props.typeArguments) || [];
       this.__stateType = ta.length ? ta[0] : null;
-      this.__id = reg(this, 'key/Global', {
+      this.__id = registerHandle(this, 'key/Global', {
         meta: debugLabel == null ? null : { debugLabel: debugLabel }
       });
     }
@@ -131,7 +131,7 @@ const String keyJsSource = r'''
   defineHandleKind('key/Unique', {});
   export class UniqueKey {
     constructor() {
-      this.__id = reg(this, 'key/Unique', {});
+      this.__id = registerHandle(this, 'key/Unique', {});
     }
     toJSON() {
     return { __handle: this.__id };

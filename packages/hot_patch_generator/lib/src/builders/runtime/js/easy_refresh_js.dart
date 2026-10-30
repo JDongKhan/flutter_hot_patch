@@ -3,7 +3,7 @@
 // EasyRefresh 的「手势 / 物理 / 指示器」都在宿主侧，而回调 onRefresh / onLoad
 // 由 JS 补丁实现，因此存在一次**宿主发起、JS 异步完成**的往返：
 //
-//   宿主（用户下拉）--__jsuiAwaitRun(句柄 id, token)--> JS 执行事件方法
+//   宿主（用户下拉）--__awaitRefreshRun(句柄 id, token)--> JS 执行事件方法
 //   JS（任务结束）----> 宿主通道 'jsuiAwaitDone'（回传 token）--> 指示器收起
 //
 // 为什么要有这条回程：宿主 → JS 的 `__jsui.invoke` 是**单向**的，且 flutter_js
@@ -19,7 +19,7 @@ const String easyRefreshJsSource = r'''
   // 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart 的
   // `_runAwaitableEvent`：evaluate 本函数触发一次事件，并等 token 回传。
   // 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__jsui` 同一约定。
-  G.__jsuiAwaitRun = function (handleId, token) {
+  G.__awaitRefreshRun = function (handleId, token) {
     var h = handles[handleId];
     var out = null;
     try {
@@ -31,7 +31,7 @@ const String easyRefreshJsSource = r'''
     }
     // 完成回传走 host（唯一 JS→宿主出口）；onFulfilled / onRejected 都必须回传，
     // 否则宿主侧那条 pending 永远等不到结算。
-    var done = function () { host('jsuiAwaitDone', [token]); };
+    var done = function () { invokeHostMethod('jsuiAwaitDone', [token]); };
     if (out && typeof out.then === 'function') {
       out.then(done, done);
     } else {

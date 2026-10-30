@@ -11,7 +11,7 @@
 // 静态引用翻成同名字符串，比较结果一致。
 //
 // `confirmDismiss` 的坑在**回程**：宿主 → JS 的 invoke 是单向的，而 Dart 需要
-// `Future<bool?>`。这里复用 easy_refresh 的思路（见 its `__jsuiAwaitRun`）：
+// `Future<bool?>`。这里复用 easy_refresh 的思路（见 its `__awaitRefreshRun`）：
 // JS 执行事件、await 其 Promise，再把结果经唯一 JS→宿主出口回传 token；
 // 宿主按 token 结算 Completer（JS 片段见生成器 `dismissible_js.dart`）。
 //
@@ -75,7 +75,7 @@ Future<Object?> _awaitJsValue(Object? handler, [List<Object?> args = const []]) 
   _pendingValues[token] = completer;
   // args 与 invoke 相同：内层数组 JSON 文本，外层字符串字面量。
   JsRuntimeManager.instance.evaluate(
-    '__jsuiAwaitValue(${jsonEncode(id)}, ${jsonEncode(token)}, '
+    '__awaitDismissValue(${jsonEncode(id)}, ${jsonEncode(token)}, '
     '${jsonEncode(jsonEncode(args))});',
   );
   // 兜底超时：JS 运行时销毁 / 句柄中途释放时回程永不到达，条目不能永远悬着。

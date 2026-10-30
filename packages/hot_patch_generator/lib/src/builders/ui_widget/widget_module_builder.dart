@@ -43,7 +43,7 @@ import '../runtime/js/timer_js.dart';
 /// `ChangeNotifier` / `AnimationController` / 各 Controller / `Key` / `Timer`…
 /// 翻译层对它们一律发射 `new X({...})`（一比一），跨桥靠各自 `toJSON()`。
 ///
-/// **拼接顺序有意义**：值类在前（`__posArgs` / `__durationMs` 等工具与基础值类），
+/// **拼接顺序有意义**：值类在前（`__positionalArgs` / `__durationMs` 等工具与基础值类），
 /// 控制器在后（依赖 `G.__core` 的 `defineController` / 句柄表）。片段内的
 /// `function` 声明会提升，故同区内可以前后互引。
 String flutterValueClassesSource() => [
@@ -158,9 +158,9 @@ String jsNodeHelperSource() => '''
 // 只看这个标记，不做形状猜测。
 // 懒容器配置（**构建期唯一事实源**：shared/js_class_defs.dart 的
 // lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
-var __lazyChildHosts = ${lazyChildHostTypesLiteral()};
-function __lazyChildrenOf(type, props) {
-  var rule = __lazyChildHosts[type];
+var __lazyChildRules = ${lazyChildHostTypesLiteral()};
+function __isLazyChildHost(type, props) {
+  var rule = __lazyChildRules[type];
   if (rule === undefined) { return false; }
   if (rule === true) { return true; }
   for (var i = 0; i < rule.length; i++) {
@@ -168,49 +168,11 @@ function __lazyChildrenOf(type, props) {
   }
   return false;
 }
-function __isElement(v) {
-  return v != null && typeof v === 'object' && v.element === true;
-}
-function __isElementList(v) {
-  if (!Array.isArray(v) || v.length === 0) { return false; }
-  for (var i = 0; i < v.length; i++) {
-    if (v[i] != null && !__isElement(v[i])) { return false; }
-  }
-  return true;
-}
-// 组件实例 → 元素描述：生成类与普通类一样「构造即实例」（`new CommunityPage(...)`
-// 得到实例），父级把它当子结点消费时在这里统一折算。判定只看原型上有没有
-// build（组件类的语言级特征），不查类型名表、不需要 toJson / 特殊标记。
-// `inst` 随元素携带：reconciler mount 直接复用它（不再 new 第二次）。
-// 同一实例 → 同一元素描述：Dart「const 规范化」在 JS 侧的对应物（const 构造
-// 经 `__const` 缓存后实例唯一），reconciler 据此按引用短路子树更新。
-export function __asElement(v) {
-  if (v == null || typeof v !== 'object' || v.element === true) { return v; }
-  var C = v.constructor;
-  if (typeof C === 'function' && C.prototype &&
-      typeof C.prototype.build === 'function') {
-    if (v.__elCache) { return v.__elCache; }
-    var e = {
-      type: C, props: v.props || {}, children: {}, element: true, inst: v
-    };
-    v.__elCache = e;
-    return e;
-  }
-  return v;
-}
-// 数组逐项归一化（只复制命中项，普通值数组保持原引用）。
-export function __asElementList(v) {
-  if (!Array.isArray(v)) { return v; }
-  var out = null;
-  for (var i = 0; i < v.length; i++) {
-    var w = __asElement(v[i]);
-    if (w !== v[i]) {
-      if (!out) { out = v.slice(); }
-      out[i] = w;
-    }
-  }
-  return out || v;
-}
+// 元素判定 / 折算 / 数组归一化**只有一份实现**，在 runtime.js 核心（见【5】
+// elementOf / elementListOf / isElement / isElementList），本模块经 G.__core 取用。
+// 这里只导出 `__asElement` 这个名字作别名：其它 package 模块（key / tab 等）从
+// 本模块 import 它来折算组件实例，保持产物 import 面不变。
+export const __asElement = elementOf;
 // 组件元素描述：`type` 是 JS 类引用，props 值里的组件实例同样折算成元素
 // （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})` 这类
 // 直接构造、不经过 __h 的路径也保持一致）。真正的实例化只由 mount 完成。
@@ -219,7 +181,7 @@ export function __element(type, props) {
   var out = {};
   for (var k in p) {
     if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    out[k] = __asElementList(__asElement(p[k]));
+    out[k] = elementListOf(elementOf(p[k]));
   }
   return { type: type, props: out, children: {}, element: true };
 }
@@ -232,9 +194,9 @@ export function __h(type, props) {
   var data = {}, slots = {};
   for (var k in p) {
     if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    var v = __asElementList(__asElement(p[k]));
-    if (__isElement(v)) { slots[k] = v; continue; }
-    if (__isElementList(v)) { slots[k] = v; continue; }
+    var v = elementListOf(elementOf(p[k]));
+    if (isElement(v)) { slots[k] = v; continue; }
+    if (isElementList(v)) { slots[k] = v; continue; }
     // builder 延迟展开描述（命名构造代理写入）同样进 children，不参与 props。
     if (k === '__builder' && v != null && typeof v === 'object') {
       slots[k] = v;
@@ -250,7 +212,7 @@ export function __h(type, props) {
   var el = { type: type, props: data, children: slots, element: true };
   // 懒容器标记：由构建期配置决定（见 lazyChildHostTypes），运行时据此决定
   // 子结点是否延迟到宿主 inflate 时再挂载。
-  if (__lazyChildrenOf(type, p)) { el.lazyChildren = true; }
+  if (__isLazyChildHost(type, p)) { el.lazyChildren = true; }
   return el;
 }''';
 
@@ -748,7 +710,7 @@ export class LayoutBuilder {
     // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
     // 宿主在布局阶段调用：实参是本结点的**父约束** JSON，不是事件参数。
     var handle = this.__bindFn(0, [], function (json) {
-      var c = __jsuiBoxConstraints(json);
+      var c = __boxConstraints(json);
       var prev = self.__constraints;
       if (prev && prev.minWidth === c.minWidth && prev.maxWidth === c.maxWidth &&
           prev.minHeight === c.minHeight && prev.maxHeight === c.maxHeight) {
@@ -1058,19 +1020,9 @@ export class AnimatedBuilder {
 /// 动画进度由 JS 侧的 `AnimationController` 镜像驱动（宿主逐帧回传 value，
 /// 与 AnimatedBuilder 同一机制），因此不新增任何宿主 widget。
 const String jsTweenAnimationBuilderComponent = '''
-// Duration 可能是 JS 的 Duration 实例，也可能是裸毫秒数。
-function __tabMs(d) {
-  if (d == null) { return null; }
-  if (typeof d === 'number') { return d; }
-  if (typeof d === 'object' && typeof d.inMilliseconds === 'number') {
-    return d.inMilliseconds;
-  }
-  return null;
-}
-
 // 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
 // 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
-function __tabSame(a, b) {
+function __sameValue(a, b) {
   if (a === b) { return true; }
   if (a && b && typeof a.dx === 'number' && typeof b.dx === 'number') {
     return a.dx === b.dx && a.dy === b.dy;
@@ -1085,48 +1037,48 @@ export class TweenAnimationBuilder {
   initState() {
     var p = this.props;
     var self = this;
-    this.__tabTween = p.tween || new Tween({});
-    this.__tabValue = this.__tabTween.begin != null
-      ? this.__tabTween.begin
-      : this.__tabTween.end;
+    this.__tween = p.tween || new Tween({});
+    this.__tweenValue = this.__tween.begin != null
+      ? this.__tween.begin
+      : this.__tween.end;
     var ctrl = new AnimationController({ duration: p.duration, value: 0 });
-    this.__tabCtrl = ctrl;
-    this.__tabCurved = new CurvedAnimation({
+    this.__tweenCtrl = ctrl;
+    this.__tweenCurved = new CurvedAnimation({
       parent: ctrl,
       curve: p.curve || 'linear'
     });
-    this.__tabListener = function () {
-      self.__tabValue = self.__tabTween.lerp(self.__tabCurved.value);
+    this.__tweenListener = function () {
+      self.__tweenValue = self.__tween.lerp(self.__tweenCurved.value);
       self.setState(function () {});
-      if (ctrl.value >= 1 && !self.__tabEnded) {
-        self.__tabEnded = true;
+      if (ctrl.value >= 1 && !self.__tweenEnded) {
+        self.__tweenEnded = true;
         __invokeCallback(self.props.onEnd, []);
       }
     };
-    ctrl.addListener(this.__tabListener);
+    ctrl.addListener(this.__tweenListener);
     // 与 Flutter 的 initState 一致：begin != end 时进入即播（如 Tween(0 → 1)
     // 进场就有动画，onEnd 也会在到位时触发一次）。
-    if (!__tabSame(this.__tabTween.begin, this.__tabTween.end)) {
-      this.__tabEnded = false;
+    if (!__sameValue(this.__tween.begin, this.__tween.end)) {
+      this.__tweenEnded = false;
       ctrl.forward();
     }
   }
   didUpdateWidget() {
     var p = this.props;
     var next = p.tween || new Tween({});
-    var prev = this.__tabTween || new Tween({});
-    var ms = __tabMs(p.duration);
-    if (ms != null && ms !== this.__tabCtrl.durationMs) {
-      this.__tabCtrl.durationMs = ms;
+    var prev = this.__tween || new Tween({});
+    var ms = __durationMs(p.duration);
+    if (ms != null && ms !== this.__tweenCtrl.durationMs) {
+      this.__tweenCtrl.durationMs = ms;
     }
     // 同一段动画进行中父级重建时，目标没变就继续用原 tween——换成新实例会把
     // begin 退回源值，正在跑的进度就会跳变。
-    if (!__tabSame(next.end, prev.end)) {
-      next.begin = this.__tabValue;
-      this.__tabTween = next;
-      this.__tabEnded = false;
-      this.__tabCtrl.reset();
-      this.__tabCtrl.forward();
+    if (!__sameValue(next.end, prev.end)) {
+      next.begin = this.__tweenValue;
+      this.__tween = next;
+      this.__tweenEnded = false;
+      this.__tweenCtrl.reset();
+      this.__tweenCtrl.forward();
     }
   }
   build(context) {
@@ -1135,12 +1087,12 @@ export class TweenAnimationBuilder {
       console.warn('[TweenAnimationBuilder] builder 不是闭包');
       return null;
     }
-    return fn(context, this.__tabValue, this.props.child);
+    return fn(context, this.__tweenValue, this.props.child);
   }
   dispose() {
-    if (this.__tabCtrl) {
-      this.__tabCtrl.removeListener(this.__tabListener);
-      this.__tabCtrl.dispose();
+    if (this.__tweenCtrl) {
+      this.__tweenCtrl.removeListener(this.__tweenListener);
+      this.__tweenCtrl.dispose();
     }
   }
 }''';
@@ -1174,7 +1126,20 @@ String renderPackageModule(String package, Set<String> types) {
     ..writeln('// 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件')
     ..writeln();
   if (package == nodeHelperPackage) {
+    // 核心符号统一从 `G.__core` 解构（跨模块只走 G，见 runtime_js.dart【11.5】）。
+    // 必须写在结点工厂之前：`__h` / `__asElement` 直接引用这些核心函数，
+    // 模块求值期（Colors / 值类构造）也可能用到。
     b
+      ..writeln('const G = globalThis;')
+      ..writeln('const {')
+      ..writeln('  defineProtoGetter: __defineProtoGetter,')
+      ..writeln('  defineController, defineHandleKind, handleOp, registerHandle,')
+      ..writeln('  contextOf, elementOf, elementListOf, isElement, isElementList,')
+      ..writeln('  hostNodeIdOf, newRoot, mount, unmount,')
+      ..writeln('  commitOps, emitOp, flushNow, abortRoot, releasePageHandles, invokeHostMethod,')
+      ..writeln('  roots, JsBuildContext,')
+      ..writeln('} = G.__core;')
+      ..writeln()
       ..writeln(jsNodeHelperSource())
       ..writeln();
     // 宿主包装类：`new Text({...})` → `__h('Text', {...})`。翻译层因此可以对
@@ -1265,14 +1230,6 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln('// ===== Dart 值类（值对象 / Controller / 动画 / Key / 枚举）=====')
       ..writeln('// 翻译层对它们一律 `new X({...})` / `X.member`；')
       ..writeln('// 跨桥经各自 toJSON 输出宿主协议（不在这里做任何 JSON 拍平）。')
-      ..writeln('const G = globalThis;')
-      ..writeln('const {')
-      ..writeln('  defineProtoGetter: __defineProtoGetter,')
-      ..writeln('  defineController, defineHandleKind, handleOp, reg,')
-      ..writeln('  contextOf, asElement, hostIdOf, newRoot, mount, unmount,')
-      ..writeln('  commit, emit, flushNow, abortRoot, releasePageHandles, host,')
-      ..writeln('  roots, JsBuildContext,')
-      ..writeln('} = G.__core;')
       ..writeln()
       ..writeln(flutterValueClassesSource());
     // Colors 常量（SDK colors.dart 自动抽取）：`Colors.red` / `Colors.red[400]`

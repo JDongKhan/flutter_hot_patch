@@ -17,7 +17,7 @@ const String scrollControllerJsSource = r'''
   // `(offset, d, c)`；也兼容直接传 options 对象的形态。三种 duration 形态
   // （Duration 实例 / options.duration 毫秒数 / options.duration 为 Duration）
   // 与两种 curve 形态（字符串 / options.curve）统一归一。
-  function __animArgs(opts, curveArg) {
+  function __animateToArgs(opts, curveArg) {
     var ms = 300;
     var curve = 'easeOut';
     if (opts != null) {
@@ -56,7 +56,7 @@ const String scrollControllerJsSource = r'''
   };
   ScrollController.prototype.animateTo = function (offset, opts, curveArg) {
     if (this.__id == null) { return; }
-    var a = __animArgs(opts, curveArg);
+    var a = __animateToArgs(opts, curveArg);
     handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
   };
   Object.defineProperty(ScrollController.prototype, 'position', {
@@ -100,17 +100,17 @@ const String scrollControllerJsSource = r'''
   };
   PageController.prototype.animateToPage = function (page, opts, curveArg) {
     if (this.__id == null) { return; }
-    var a = __animArgs(opts, curveArg);
+    var a = __animateToArgs(opts, curveArg);
     handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
   };
   PageController.prototype.nextPage = function (opts, curveArg) {
     if (this.__id == null) { return; }
-    var a = __animArgs(opts, curveArg);
+    var a = __animateToArgs(opts, curveArg);
     handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
   };
   PageController.prototype.previousPage = function (opts, curveArg) {
     if (this.__id == null) { return; }
-    var a = __animArgs(opts, curveArg);
+    var a = __animateToArgs(opts, curveArg);
     handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
   };
   Object.defineProperty(PageController.prototype, 'hasClients', {

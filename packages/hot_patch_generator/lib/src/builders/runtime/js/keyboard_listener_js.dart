@@ -4,8 +4,8 @@
 // 为什么事件不在宿主直接 invoke：`__jsui.invoke` 只能传 JSON 值，而 Dart 侧的
 // 事件是**类实例**（`event.logicalKey` / `event.character` / `event is KeyDownEvent`
 // 都是对象成员与类型）。因此宿主把原生 KeyEvent 归一成 JSON，经
-// `__jsuiKeyEvent(句柄 id, 事件 JSON)` 交给本片段还原成实例后调用事件句柄——
-// 与 Dismissible 的 `__jsuiAwaitValue` 同一约定（唯一出口仍是 `handles[id].obj`）。
+// `__keyEvent(句柄 id, 事件 JSON)` 交给本片段还原成实例后调用事件句柄——
+// 与 Dismissible 的 `__awaitDismissValue` 同一约定（唯一出口仍是 `handles[id].obj`）。
 //
 // 常量身份：Dart 的 LogicalKeyboardKey 是**常量实例**，源码里的
 // `event.logicalKey == LogicalKeyboardKey.enter` 比较的是同一个常量对象。JS 侧
@@ -18,7 +18,7 @@
 const String keyboardListenerJsSource = r'''
   // LogicalKeyboardKey：keyId → 实例（身份去重，常量与事件共用同一张表）。
   var __keyInstances = {};
-  function __logicalKey(keyId, label) {
+  function __createLogicalKey(keyId, label) {
     var k = __keyInstances[keyId];
     if (!k) {
       k = { keyId: keyId, keyLabel: label || '', debugName: label || '' };
@@ -66,12 +66,12 @@ const String keyboardListenerJsSource = r'''
   export const LogicalKeyboardKey = {};
   for (var __name in __KEY_CONSTS) {
     __defineProtoGetter(LogicalKeyboardKey, __name, (function (name) {
-      return function () { return __logicalKey(__KEY_CONSTS[name][0], __KEY_CONSTS[name][1]); };
+      return function () { return __createLogicalKey(__KEY_CONSTS[name][0], __KEY_CONSTS[name][1]); };
     })(__name));
   }
 
   // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
-  var __physKeys = {};
+  var __physicalKeys = {};
   export class PhysicalKeyboardKey {
     constructor(props) {
       props = props || {};
@@ -79,11 +79,11 @@ const String keyboardListenerJsSource = r'''
       this.debugName = props.debugName || '';
     }
   }
-  function __physicalKey(usb, label) {
-    var k = __physKeys[usb];
+  function __createPhysicalKey(usb, label) {
+    var k = __physicalKeys[usb];
     if (!k) {
       k = new PhysicalKeyboardKey({ usbHidUsage: usb, debugName: label });
-      __physKeys[usb] = k;
+      __physicalKeys[usb] = k;
     }
     return k;
   }
@@ -115,7 +115,7 @@ const String keyboardListenerJsSource = r'''
   // 宿主桥接见 capabilities/keyboard_listener/keyboard_listener_bridge.dart：
   // 原生 KeyEvent → JSON（kind / character / keyId / keyLabel / usbHidUsage /
   // timeStamp），这里还原成实例并调事件句柄。挂 G：宿主经 evaluate 裸引用调用。
-  G.__jsuiKeyEvent = function (handleId, eventJson) {
+  G.__keyEvent = function (handleId, eventJson) {
     var h = handles[handleId];
     if (!h || typeof h.obj !== 'function') { return; }
     var m = {};
@@ -123,8 +123,8 @@ const String keyboardListenerJsSource = r'''
     var Ctor = __KEY_EVENT_SUBCLASSES[m.kind] || KeyEvent;
     h.obj(new Ctor({
       character: m.character,
-      logicalKey: __logicalKey(m.logicalKeyId, m.logicalKeyLabel),
-      physicalKey: __physicalKey(m.physicalKeyUsb, m.physicalKeyLabel),
+      logicalKey: __createLogicalKey(m.logicalKeyId, m.logicalKeyLabel),
+      physicalKey: __createPhysicalKey(m.physicalKeyUsb, m.physicalKeyLabel),
       timeStamp: new Duration({ microseconds: m.timeStampUs || 0 })
     }));
   };

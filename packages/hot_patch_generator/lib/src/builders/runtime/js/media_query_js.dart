@@ -11,14 +11,14 @@
 //     宿主对应调 Flutter 的 `MediaQuery.of` / `sizeOf` / `textScalerOf` 等取值
 //     （见 hot_patch 的 media_query_bridge.dart）；
 //   - aspect 粒度同时决定**重建粒度**：宿主只在某个 aspect 的值变了才回推
-//     `__jsuiSetMediaQuery(ctxId, aspect, value)`，JS 侧只标脏订阅了该 aspect 的
+//     `__setMediaQuery(ctxId, aspect, value)`，JS 侧只标脏订阅了该 aspect 的
 //     组件——与 Flutter 的 `dependOnInheritedWidgetOfExactType(aspect:)` 一致
 //     （只用了 `sizeOf` 的组件不会因字号变化而重建）。
 //
-// 入口只有两个：`__jsuiMqOf(context)` / `__jsuiMqAspect(context, aspect)` 负责
-// 同步读、缺值时向宿主取；`__jsuiSetMediaQuery` 是宿主回填同一份缓存的唯一写口。
+// 入口只有两个：`__mediaQueryOf(context)` / `__mediaQueryAspect(context, aspect)` 负责
+// 同步读、缺值时向宿主取；`__setMediaQuery` 是宿主回填同一份缓存的唯一写口。
 // 缓存不是第二套数据源，而是「同步读」在异步桥上的必要底座——build 里
-// `mq.size.width` 必须同步拿到值，而 JS→宿主只能返回 Promise（见 runtime 的 `send()`）。
+// `mq.size.width` 必须同步拿到值，而 JS→宿主只能返回 Promise（见 runtime 的 `__sendToHost()`）。
 //
 // 粒度是 **ctx（组件实例）**：同一页面不同位置的组件各读各自 BuildContext 上的
 // MediaQuery，页内嵌套 `MediaQuery` 覆盖也各归各位。
@@ -27,20 +27,20 @@ const String mediaQueryJsSource = r'''
   //   anchor, all, allKey, vals: {aspect: value}, keys: {aspect: key},
   //   pending: {aspect: true}, missing: {aspect: true}
   // }
-  var __jsuiMqByCtx = {};
+  var __mediaQueryByContext = {};
   // 最近一次解析到的整份真值：新 ctx 首帧尚未回填时先读它（同一运行时同一窗口，
   // 基本等价），避免「先显示 0x0 再校正」的闪一帧。
-  var __jsuiMqLastAll = null;
+  var __lastFullMediaQuery = null;
   // 真值到达前的兜底常量（构造一次）：字段齐全，避免读崩。
-  var __jsuiMqFallback = null;
+  var __fallbackMediaQuery = null;
 
-  function __jsuiMqScale(factor) {
+  function __createTextScaler(factor) {
     return { __factor: factor, scale: function (x) { return this.__factor * x; } };
   }
 
-  function __jsuiMqEmpty() {
-    if (__jsuiMqFallback == null) {
-      __jsuiMqFallback = __jsuiMqBuild({
+  function __emptyMediaQuery() {
+    if (__fallbackMediaQuery == null) {
+      __fallbackMediaQuery = __buildMediaQuery({
         size: { width: 0, height: 0 },
         padding: { left: 0, top: 0, right: 0, bottom: 0 },
         viewPadding: { left: 0, top: 0, right: 0, bottom: 0 },
@@ -58,11 +58,11 @@ const String mediaQueryJsSource = r'''
         navigationMode: NavigationMode.traditional,
       });
     }
-    return __jsuiMqFallback;
+    return __fallbackMediaQuery;
   }
 
   // 宿主下发的 JSON → JS 侧 MediaQueryData 同形对象（aspect = null 时整份）。
-  function __jsuiMqBuild(json) {
+  function __buildMediaQuery(json) {
     var s = json.size || { width: 0, height: 0 };
     var f = json.textScaleFactor != null ? json.textScaleFactor : 1;
     return {
@@ -72,7 +72,7 @@ const String mediaQueryJsSource = r'''
       viewInsets: json.viewInsets,
       devicePixelRatio: json.devicePixelRatio,
       textScaleFactor: f,
-      textScaler: __jsuiMqScale(f),
+      textScaler: __createTextScaler(f),
       orientation: json.orientation,
       platformBrightness: json.platformBrightness,
       alwaysUse24HourFormat: json.alwaysUse24HourFormat,
@@ -87,19 +87,19 @@ const String mediaQueryJsSource = r'''
 
   // 单 aspect 的宿主原值 → 本端值（size 包成 Size、textScaler 包出 scale 方法，
   // 其余是标量 / 已同形的对象，原样用）。
-  function __jsuiMqDecode(aspect, raw) {
-    if (aspect == null) { return __jsuiMqBuild(raw); }
+  function __decodeMediaQuery(aspect, raw) {
+    if (aspect == null) { return __buildMediaQuery(raw); }
     if (aspect === 'size') {
       return new Size({ width: raw.width, height: raw.height });
     }
-    if (aspect === 'textScaler') { return __jsuiMqScale(raw.__factor); }
+    if (aspect === 'textScaler') { return __createTextScaler(raw.__factor); }
     return raw;
   }
 
-  function __jsuiMqEntry(id, context) {
-    var e = __jsuiMqByCtx[id];
+  function __mediaQueryEntry(id, context) {
+    var e = __mediaQueryByContext[id];
     if (!e) {
-      e = __jsuiMqByCtx[id] = {
+      e = __mediaQueryByContext[id] = {
         anchor: context ? context.__anchor : null,
         all: null, allKey: '',
         vals: {}, keys: {}, pending: {}, missing: {},
@@ -111,9 +111,9 @@ const String mediaQueryJsSource = r'''
   // 唯一写口：宿主回填 / 变化回推。
   //   aspect = null → 整份数据；否则只更新该 aspect。
   //   **与缓存不同才标脏**（一次真值变化只重建一次）。
-  function __jsuiSetMediaQuery(ctxId, aspect, raw) {
+  function __setMediaQuery(ctxId, aspect, raw) {
     var id = String(ctxId);
-    var e = __jsuiMqEntry(id, null);
+    var e = __mediaQueryEntry(id, null);
     if (raw == null) {
       // 该位置上方没有 MediaQuery：标记后不再重试，避免每次 build 都发桥消息。
       e.missing[aspect] = true;
@@ -123,24 +123,24 @@ const String mediaQueryJsSource = r'''
     if (aspect == null) {
       if (e.allKey === key) { return; }
       e.allKey = key;
-      e.all = __jsuiMqBuild(raw);
-      __jsuiMqLastAll = e.all;
+      e.all = __buildMediaQuery(raw);
+      __lastFullMediaQuery = e.all;
     } else {
       if (e.keys[aspect] === key) { return; }
       e.keys[aspect] = key;
-      e.vals[aspect] = __jsuiMqDecode(aspect, raw);
+      e.vals[aspect] = __decodeMediaQuery(aspect, raw);
     }
     var a = e.anchor;
     if (a && a.__unmounted) {
       // 组件已卸载（句柄即将/已被释放）：丢掉这条缓存，不再标脏。
-      delete __jsuiMqByCtx[id];
+      delete __mediaQueryByContext[id];
       return;
     }
     if (a) { markDirty(a); }
   }
 
   // 按 aspect 向宿主取一次值（每个 aspect 只取一次，之后靠回推）。
-  function __jsuiMqFetch(e, id, aspect) {
+  function __fetchMediaQuery(e, id, aspect) {
     var slot = aspect == null ? 'all' : aspect;
     if (e.pending[slot] || e.missing[slot]) { return; }
     e.pending[slot] = true;
@@ -150,7 +150,7 @@ const String mediaQueryJsSource = r'''
       if (p && typeof p.then === 'function') {
         p.then(function (raw) {
           e.pending[slot] = false;
-          __jsuiSetMediaQuery(id, aspect, raw);
+          __setMediaQuery(id, aspect, raw);
         }, function () { e.pending[slot] = false; });
       } else {
         e.pending[slot] = false;
@@ -161,77 +161,77 @@ const String mediaQueryJsSource = r'''
   }
 
   // `MediaQuery.of(context)`：整份数据（依赖全部 aspect）。
-  function __jsuiMqOf(context) {
+  function __mediaQueryOf(context) {
     var id = null;
     try { id = context.__handle(); } catch (err) { id = null; }
-    if (id == null) { return __jsuiMqLastAll || __jsuiMqEmpty(); }
-    var e = __jsuiMqEntry(id, context);
-    if (e.all == null) { __jsuiMqFetch(e, id, null); }
-    return e.all || __jsuiMqLastAll || __jsuiMqEmpty();
+    if (id == null) { return __lastFullMediaQuery || __emptyMediaQuery(); }
+    var e = __mediaQueryEntry(id, context);
+    if (e.all == null) { __fetchMediaQuery(e, id, null); }
+    return e.all || __lastFullMediaQuery || __emptyMediaQuery();
   }
 
   // `MediaQuery.<x>Of(context)`：只依赖该 aspect。
-  function __jsuiMqAspect(context, aspect) {
+  function __mediaQueryAspect(context, aspect) {
     var id = null;
     try { id = context.__handle(); } catch (err) { id = null; }
-    if (id == null) { return (__jsuiMqLastAll || __jsuiMqEmpty())[aspect]; }
-    var e = __jsuiMqEntry(id, context);
+    if (id == null) { return (__lastFullMediaQuery || __emptyMediaQuery())[aspect]; }
+    var e = __mediaQueryEntry(id, context);
     var v = e.vals[aspect];
-    if (v === undefined) { __jsuiMqFetch(e, id, aspect); }
+    if (v === undefined) { __fetchMediaQuery(e, id, aspect); }
     if (v !== undefined) { return v; }
     // 该 aspect 还没回来：从整份数据 / 最近值 / 兜底里取同名字段投影。
-    var src = e.all || __jsuiMqLastAll || __jsuiMqEmpty();
+    var src = e.all || __lastFullMediaQuery || __emptyMediaQuery();
     return src[aspect];
   }
 
   // Dart 的静态取值方法：每个都按自己的 aspect 代理（取值 + 重建粒度都对齐）。
   export const MediaQuery = {
-    of: function (context) { return __jsuiMqOf(context); },
+    of: function (context) { return __mediaQueryOf(context); },
     // `maybeOf` 语义：没有 MediaQuery 祖先时返回 null；这里退化为兜底对象
     // （字段齐全，读不崩），与 `of` 同源。
-    maybeOf: function (context) { return __jsuiMqOf(context); },
-    sizeOf: function (context) { return __jsuiMqAspect(context, 'size'); },
-    paddingOf: function (context) { return __jsuiMqAspect(context, 'padding'); },
+    maybeOf: function (context) { return __mediaQueryOf(context); },
+    sizeOf: function (context) { return __mediaQueryAspect(context, 'size'); },
+    paddingOf: function (context) { return __mediaQueryAspect(context, 'padding'); },
     viewPaddingOf: function (context) {
-      return __jsuiMqAspect(context, 'viewPadding');
+      return __mediaQueryAspect(context, 'viewPadding');
     },
     viewInsetsOf: function (context) {
-      return __jsuiMqAspect(context, 'viewInsets');
+      return __mediaQueryAspect(context, 'viewInsets');
     },
     devicePixelRatioOf: function (context) {
-      return __jsuiMqAspect(context, 'devicePixelRatio');
+      return __mediaQueryAspect(context, 'devicePixelRatio');
     },
     textScalerOf: function (context) {
-      return __jsuiMqAspect(context, 'textScaler');
+      return __mediaQueryAspect(context, 'textScaler');
     },
     orientationOf: function (context) {
-      return __jsuiMqAspect(context, 'orientation');
+      return __mediaQueryAspect(context, 'orientation');
     },
     platformBrightnessOf: function (context) {
-      return __jsuiMqAspect(context, 'platformBrightness');
+      return __mediaQueryAspect(context, 'platformBrightness');
     },
     navigationModeOf: function (context) {
-      return __jsuiMqAspect(context, 'navigationMode');
+      return __mediaQueryAspect(context, 'navigationMode');
     },
     alwaysUse24HourFormatOf: function (context) {
-      return __jsuiMqAspect(context, 'alwaysUse24HourFormat');
+      return __mediaQueryAspect(context, 'alwaysUse24HourFormat');
     },
     accessibleNavigationOf: function (context) {
-      return __jsuiMqAspect(context, 'accessibleNavigation');
+      return __mediaQueryAspect(context, 'accessibleNavigation');
     },
     boldTextOf: function (context) {
-      return __jsuiMqAspect(context, 'boldText');
+      return __mediaQueryAspect(context, 'boldText');
     },
     disableAnimationsOf: function (context) {
-      return __jsuiMqAspect(context, 'disableAnimations');
+      return __mediaQueryAspect(context, 'disableAnimations');
     },
     highContrastOf: function (context) {
-      return __jsuiMqAspect(context, 'highContrast');
+      return __mediaQueryAspect(context, 'highContrast');
     },
     invertColorsOf: function (context) {
-      return __jsuiMqAspect(context, 'invertColors');
+      return __mediaQueryAspect(context, 'invertColors');
     },
   };
 
-  G.__jsuiSetMediaQuery = __jsuiSetMediaQuery;
+  G.__setMediaQuery = __setMediaQuery;
 ''';

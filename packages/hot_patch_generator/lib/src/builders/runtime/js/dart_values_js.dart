@@ -7,7 +7,7 @@
 //   `Radius.circular(8)`          → `Radius.circular({radius: 8})`
 //
 // 位置实参在构建期按源码构造签名映射成形参名；签名缺失时落 `__pos` 下标数组，
-// 这里统一按 [__posArgs] 展开，运行时不需要知道任何类名。
+// 这里统一按 [__positionalArgs] 展开，运行时不需要知道任何类名。
 //
 // 运行时因此必须补上这些**值类**，否则产物一执行就是 ReferenceError，整页
 // 挂载失败。值类只做两件事：镜像 Dart 字段 + `toJSON` 成宿主 `fromJson` 认得
@@ -18,7 +18,7 @@
 const String dartValuesJsSource = r'''
   // 构建期查不到构造签名时，位置实参以 `__pos: [...]` 下发；这里按形参名顺序
   // 展开。任何类都可复用，不含类名判断。
-  function __posArgs(props, names) {
+  function __positionalArgs(props, names) {
     if (!props || !props.__pos) { return props || {}; }
     var out = {};
     for (var k in props) {
@@ -43,7 +43,7 @@ const String dartValuesJsSource = r'''
   }
   export class Duration {
     constructor(opts) {
-      opts = __posArgs(opts, ['microseconds', 'milliseconds', 'seconds',
+      opts = __positionalArgs(opts, ['microseconds', 'milliseconds', 'seconds',
         'minutes', 'hours', 'days']);
       var ms = (opts.milliseconds || 0) + (opts.seconds || 0) * 1000 +
         (opts.minutes || 0) * 60000 + (opts.hours || 0) * 3600000 +
@@ -59,7 +59,7 @@ const String dartValuesJsSource = r'''
 
   export class Size {
     constructor(props) {
-      props = __posArgs(props, ['width', 'height']);
+      props = __positionalArgs(props, ['width', 'height']);
       this.width = props.width;
       this.height = props.height;
     }
@@ -67,19 +67,19 @@ const String dartValuesJsSource = r'''
     return { width: this.width, height: this.height };
     }
     static fromHeight(props) {
-    props = __posArgs(props, ['height']);
+    props = __positionalArgs(props, ['height']);
     return new Size({ width: Infinity, height: props.height });
     }
     static fromWidth(props) {
-    props = __posArgs(props, ['width']);
+    props = __positionalArgs(props, ['width']);
     return new Size({ width: props.width, height: Infinity });
     }
     static square(props) {
-    props = __posArgs(props, ['dimension']);
+    props = __positionalArgs(props, ['dimension']);
     return new Size({ width: props.dimension, height: props.dimension });
     }
     static copy(props) {
-    props = __posArgs(props, ['source']);
+    props = __positionalArgs(props, ['source']);
     return new Size({ width: props.source.width, height: props.source.height });
     }
     /** Dart 的 static const：零尺寸 / 无穷尺寸。 */
@@ -92,7 +92,7 @@ const String dartValuesJsSource = r'''
 
   export class Offset {
     constructor(props) {
-      props = __posArgs(props, ['dx', 'dy']);
+      props = __positionalArgs(props, ['dx', 'dy']);
       this.dx = props.dx != null ? props.dx : 0;
       this.dy = props.dy != null ? props.dy : 0;
     }
@@ -105,7 +105,7 @@ const String dartValuesJsSource = r'''
   // 由拖拽片段把宿主的 `{pxPerSecond: {dx, dy}}` 还原成实例。
   export class Velocity {
     constructor(props) {
-      props = __posArgs(props, ['pixelsPerSecond']);
+      props = __positionalArgs(props, ['pixelsPerSecond']);
       this.pixelsPerSecond = props.pixelsPerSecond != null
         ? props.pixelsPerSecond
         : new Offset({ dx: 0, dy: 0 });
@@ -123,7 +123,7 @@ const String dartValuesJsSource = r'''
   //（比较、传参、判等全部成立）。
   export class Alignment {
     constructor(props) {
-      props = __posArgs(props, ['x', 'y']);
+      props = __positionalArgs(props, ['x', 'y']);
       this.x = props.x != null ? props.x : 0;
       this.y = props.y != null ? props.y : 0;
     }
@@ -144,7 +144,7 @@ const String dartValuesJsSource = r'''
 
   export class Radius {
     constructor(props) {
-      props = __posArgs(props, ['radius']);
+      props = __positionalArgs(props, ['radius']);
       var r = props.radius != null ? props.radius : (props.x != null ? props.x : 0);
       this.x = r;
       this.y = r;
@@ -160,7 +160,7 @@ const String dartValuesJsSource = r'''
   // 表达 Infinity），这里还原成 +∞（见【18.8】）。
   export class BoxConstraints {
     constructor(props) {
-      props = __posArgs(props, ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']);
+      props = __positionalArgs(props, ['minWidth', 'maxWidth', 'minHeight', 'maxHeight']);
       this.minWidth = props.minWidth != null ? props.minWidth : 0;
       this.maxWidth = props.maxWidth != null ? props.maxWidth : Infinity;
       this.minHeight = props.minHeight != null ? props.minHeight : 0;
@@ -188,7 +188,7 @@ const String dartValuesJsSource = r'''
   // 还原成真正的 TextSpan 树。
   export class TextSpan {
     constructor(props) {
-      props = __posArgs(props, ['text']);
+      props = __positionalArgs(props, ['text']);
       this.text = props.text;
       if (props.style != null) { this.style = props.style; }
       if (props.children != null) { this.children = props.children; }
@@ -211,15 +211,15 @@ const String dartValuesJsSource = r'''
   // colors 里是 Color 实例：JSON.stringify 会递归调用其 toJSON 得到 '#AARRGGBB'，
   // 宿主 colorFromJson 据此还原，无需在这里逐个转换。
   // names[0] 恒为 colors（构造首位置实参，单独兜底成数组），其余从 1 开始。
-  function __gradientProps(props, names) {
-    props = __posArgs(props, names);
+  function __gradientOptions(props, names) {
+    props = __positionalArgs(props, names);
     var out = { colors: props.colors != null ? props.colors : [] };
     for (var i = 1; i < names.length; i++) {
       if (props[names[i]] != null) { out[names[i]] = props[names[i]]; }
     }
     return out;
   }
-  function __gradientJson(kind, self) {
+  function __gradientToJson(kind, self) {
     var json = { kind: kind, colors: self.colors };
     if (self.begin != null) { json.begin = self.begin; }
     if (self.end != null) { json.end = self.end; }
@@ -231,33 +231,33 @@ const String dartValuesJsSource = r'''
 
   export class LinearGradient {
     constructor(props) {
-      var p = __gradientProps(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
+      var p = __gradientOptions(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
     toJSON() {
-    return __gradientJson('linear', this);
+    return __gradientToJson('linear', this);
     }
   }
 
   export class RadialGradient {
     constructor(props) {
-      var p = __gradientProps(props,
+      var p = __gradientOptions(props,
         ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
     toJSON() {
-    return __gradientJson('radial', this);
+    return __gradientToJson('radial', this);
     }
   }
 
   export class SweepGradient {
     constructor(props) {
-      var p = __gradientProps(props,
+      var p = __gradientOptions(props,
         ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
     toJSON() {
-    return __gradientJson('sweep', this);
+    return __gradientToJson('sweep', this);
     }
   }
 
@@ -265,7 +265,7 @@ const String dartValuesJsSource = r'''
   //（值为 null 的键不下发——宿主对 null 与缺省同义，少发更干净）。
   export class BoxDecoration {
     constructor(props) {
-      props = __posArgs(props, ['color', 'image', 'border', 'borderRadius',
+      props = __positionalArgs(props, ['color', 'image', 'border', 'borderRadius',
         'boxShadow', 'gradient', 'backgroundBlendMode', 'shape']);
       for (var k in props) {
         if (props[k] != null) { this[k] = props[k]; }

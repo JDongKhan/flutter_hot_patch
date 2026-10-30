@@ -1,7 +1,7 @@
 // 缓存详细追踪**切面**（JS 侧，debug-only，默认关闭）。
 //
 // 需求：打开开关时逐条打印「JS 对象进 / 出句柄表」的日志；关闭时（含 release）
-// 不得影响正常逻辑——既不计数、也不在 reg / releaseHandle 里加分支。
+// 不得影响正常逻辑——既不计数、也不在 registerHandle / releaseHandle 里加分支。
 //
 // 做法：monkey-patch。开关关闭时 `reg` / `releaseHandle` 就是原生实现，零额外
 // 分支；打开后把同名全局函数替换为「调用原实现 + 打一条日志」的包装，卸载
@@ -17,11 +17,11 @@ const String cacheTraceJsSource = r'''
   function __cacheTraceLine(h) {
     var page = h.key || '-';
     var owner = h.owner ? (h.owner.__name || h.owner.__k || 'inst') : '-';
-    return h.id + '（' + ctorNameOf(h) + '）· kind=' + h.kind
+    return h.id + '（' + __constructorName(h) + '）· kind=' + h.kind
       + ' · scope=' + h.scope + ' · 页面=' + page + ' · 持有者=' + owner;
   }
 
-  // 安装切面（幂等）：把全局 reg / releaseHandle 换成「原实现 + 日志」。
+  // 安装切面（幂等）：把全局 registerHandle / releaseHandle 换成「原实现 + 日志」。
   function __installCacheTrace() {
     if (__cacheTraceInstalled) { return; }
     __cacheTraceInstalled = true;

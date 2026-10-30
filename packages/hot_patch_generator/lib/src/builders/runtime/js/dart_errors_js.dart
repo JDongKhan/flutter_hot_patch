@@ -10,7 +10,7 @@
 const String dartErrorsJsSource = r'''
   function __dartErrorCtor(name, positional) {
     var ctor = function (props) {
-      props = __posArgs(props, positional);
+      props = __positionalArgs(props, positional);
       var msg = props.message;
       var err = new Error(msg == null ? '' : String(msg));
       err.name = name;
@@ -19,7 +19,7 @@ const String dartErrorsJsSource = r'''
     ctor.prototype = Error.prototype;
     // 命名构造 `X.value(value, [name, message])`：Dart 侧统一映射为静态方法。
     ctor.value = function (props) {
-      props = __posArgs(props, ['value', 'name', 'message']);
+      props = __positionalArgs(props, ['value', 'name', 'message']);
       var msg = props.message != null ? props.message : props.name;
       var err = ctor({ message: msg });
       err.value = props.value;

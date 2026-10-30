@@ -16,7 +16,7 @@ const String changeNotifierSource = r'''
 export class ChangeNotifier {
   constructor() {
     this._listeners = [];
-    this.__id = reg(this, 'notifier/ChangeNotifier', {
+    this.__id = registerHandle(this, 'notifier/ChangeNotifier', {
       meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
     });
   }

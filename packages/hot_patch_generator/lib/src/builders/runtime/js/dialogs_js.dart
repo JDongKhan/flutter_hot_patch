@@ -115,7 +115,7 @@ const String dialogsJsSource = r'''
       // 动画对象，JS 端没有可等价的值（用到的话属于未支持项）。
       built = buildFn(anchor);
     }
-    var el = asElement(built);
+    var el = elementOf(built);
     var p = {
       key: key, kind: kind, el: el, caller: caller, root: null,
       result: null, hasResult: false, resolve: null, reject: null
@@ -125,7 +125,7 @@ const String dialogsJsSource = r'''
       p.reject = reject;
     });
     panels[key] = p;
-    host('jsuiPanelOpen', [{
+    invokeHostMethod('jsuiPanelOpen', [{
       key: key,
       kind: kind,
       anchor: anchor.__nodeId,
@@ -154,8 +154,8 @@ const String dialogsJsSource = r'''
       // parent = 调用方实例：`__parent` 链因此与页面连通（provider 等按类型
       // 向上的作用域照常可见）；slot=null 故不产出 insert op。
       root.inst = mount(p.el, p.caller, null);
-      emit({ op: 'root', id: hostIdOf(root.inst) });
-      commit(root);
+      emitOp({ op: 'root', id: hostNodeIdOf(root.inst) });
+      commitOps(root);
     } catch (e) {
       abortRoot(root);
       throw e;
@@ -216,7 +216,7 @@ const String dialogsJsSource = r'''
     }
     p.result = result;
     p.hasResult = true;
-    host('jsuiPanelPop', [p.key]).then(function () {}, function () {});
+    invokeHostMethod('jsuiPanelPop', [p.key]).then(function () {}, function () {});
     return true;
   }
 

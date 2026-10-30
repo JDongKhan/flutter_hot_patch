@@ -22,7 +22,7 @@
 const String animationJsSource = r'''
   // 只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主已完成真实插值）；
   // 宿主侧按同名表还原真实 Curve（见 animation_from_json.curveFromJson）。
-  function __animCurveFn(name) {
+  function __curveFunction(name) {
     switch (name) {
       case 'linear': return function (t) { return t; };
       case 'ease': case 'easeInOut': return function (t) {
@@ -42,7 +42,7 @@ const String animationJsSource = r'''
   // 成员名字符串，其它位置原样引用），运行时提供同名对象后两边口径一致。
   // 值一律是**成员名字符串**，宿主按名字查真实曲线 / 枚举（见
   // animation_from_json 的 curveFromJson / crossFadeStateFromJson）。
-  var __CURVE_NAMES = [
+  var __curveNames = [
     'linear', 'ease', 'easeIn', 'easeOut', 'easeInOut', 'easeInToLinear',
     'easeInSine', 'easeOutSine', 'easeInOutSine',
     'easeInQuad', 'easeOutQuad', 'easeInOutQuad',
@@ -58,8 +58,8 @@ const String animationJsSource = r'''
     'fastLinearToSlowEaseIn', 'fastEaseInToSlowEaseOut'
   ];
   export const Curves = {};
-  for (var __ci = 0; __ci < __CURVE_NAMES.length; __ci++) {
-    Curves[__CURVE_NAMES[__ci]] = __CURVE_NAMES[__ci];
+  for (var __ci = 0; __ci < __curveNames.length; __ci++) {
+    Curves[__curveNames[__ci]] = __curveNames[__ci];
   }
 
   // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
@@ -88,7 +88,7 @@ const String animationJsSource = r'''
     }
     get value() {
       var t = (this.parent && typeof this.parent.value === 'number') ? this.parent.value : 0;
-      return __animCurveFn(this.curve)(t);
+      return __curveFunction(this.curve)(t);
     }
     addListener(f) {
       if (this.parent && typeof this.parent.addListener === 'function') {

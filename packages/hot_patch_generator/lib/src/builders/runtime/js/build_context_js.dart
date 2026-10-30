@@ -19,7 +19,7 @@
 // `build(BuildContext context)` 签名）；`this.context` 是同一条同步可达路径
 // （事件/延迟作用域里形参不可见），但按**执行位置**解析：`building` 非空时取
 // 它的代理——被委托的 builder 方法（`this` 是 owner）因此拿到**被委托组件**的
-// 代理，与 Dart 里闭包捕获 `context` 形参同语义（见 mini-react【7】的 augment）。
+// 代理，与 Dart 里闭包捕获 `context` 形参同语义（见 mini-react【7】的 __augment）。
 //
 // 同步约束（设计内）：库在自己补的 `watch` 里做的**取值**必须同步（渲染期
 // `model.count` 要直接读），而 JS→宿主只有异步桥，故取值在本端按**类型名**沿
@@ -40,12 +40,12 @@ const String buildContextJsSource = r'''
   // 登记类型别名：`extension X on BuildContext` 的注册按 Dart 类型名解析目标
   // （见【27.5】）。BuildContext 是运行时私有代理，不挂 G——只为 extension
   // 解析留一条别名，不把内部类暴露成全局。
-  __jsTypeAlias('BuildContext', JsBuildContext);
+  __registerTypeAlias('BuildContext', JsBuildContext);
 
   // 句柄（首次真正需要宿主真值时才登记，宿主 onCreate 绑定 nodeId）。
   JsBuildContext.prototype.__handle = function () {
     if (this.__id == null) {
-      this.__id = reg(this, 'ctx/BuildContext', {
+      this.__id = registerHandle(this, 'ctx/BuildContext', {
         meta: this.__nodeId == null ? null : { node: this.__nodeId }
       });
     }
@@ -68,8 +68,8 @@ const String buildContextJsSource = r'''
   // 本片段只提供机制：代理、句柄、`contextOf`/`buildContextOf`、通用 op 转发。
 
   // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，
-  // build 形参与 `this.context` 是同一个对象：前者由 buildOf 传入 `contextOf(inst)`，
-  // 后者由 getter 传 `building`，而 `buildOf` 期间 `building === inst`。
+  // build 形参与 `this.context` 是同一个对象：前者由 __buildOf 传入 `contextOf(inst)`，
+  // 后者由 getter 传 `building`，而 `__buildOf` 期间 `building === inst`。
   function contextOf(inst) {
     if (inst.__ctx == null) { inst.__ctx = buildContextOf(inst); }
     return inst.__ctx;

@@ -53,7 +53,7 @@ String iconValuesJsSource() {
     ..writeln('  const __ICON_SRC = ${jsonEncode(table.toString())};')
     ..writeln('  const __ICON_CACHE = new Map();')
     ..writeln('  // 名字 → IconData（命中即缓存，同一名字始终同一实例，对齐 Dart const 规范化）。')
-    ..writeln('  function __iconOf(name) {')
+    ..writeln('  function __iconByName(name) {')
     ..writeln('    var hit = __ICON_CACHE.get(name);')
     ..writeln('    if (hit !== undefined) { return hit; }')
     ..writeln('    var head = name + \':\';')
@@ -83,7 +83,7 @@ String iconValuesJsSource() {
     ..writeln('  export const Icons = new Proxy({}, {')
     ..writeln('    get: function (target, name) {')
     ..writeln("      if (typeof name !== 'string') { return Reflect.get(target, name); }")
-    ..writeln('      var icon = __iconOf(name);')
+    ..writeln('      var icon = __iconByName(name);')
     ..writeln('      return icon === undefined ? Reflect.get(target, name) : icon;')
     ..writeln('    }')
     ..writeln('  });');

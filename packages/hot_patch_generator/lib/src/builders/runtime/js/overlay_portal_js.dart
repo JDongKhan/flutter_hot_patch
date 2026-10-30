@@ -16,7 +16,7 @@ const String overlayPortalJsSource = r'''
   defineHandleKind('layer/Link', {});
   export class LayerLink {
     constructor(props) {
-      this.__id = reg(this, 'layer/Link', {});
+      this.__id = registerHandle(this, 'layer/Link', {});
     }
     toJSON() {
     return { __handle: this.__id };
@@ -29,9 +29,9 @@ const String overlayPortalJsSource = r'''
   defineHandleKind('overlay/Portal', {});
   export class OverlayPortalController {
     constructor(props) {
-      var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
+      var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;
       this.__showing = false;
-      this.__id = reg(this, 'overlay/Portal', {
+      this.__id = registerHandle(this, 'overlay/Portal', {
         meta: debugLabel == null ? null : { debugLabel: debugLabel }
       });
     }

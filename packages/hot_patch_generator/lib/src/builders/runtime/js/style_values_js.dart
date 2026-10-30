@@ -15,7 +15,7 @@
 const String styleValuesJsSource = r'''
   // 单值构造的取值：位置实参的形参名因类而异（`value` / `radius` / `index` /
   // `textScaleFactor` …），值都是「唯一那个数」；裸数字也接受。
-  function __one(props) {
+  function __singleValue(props) {
     if (props == null) { return 0; }
     if (typeof props === 'number' || typeof props === 'string') { return props; }
     for (var k in props) {
@@ -28,7 +28,7 @@ const String styleValuesJsSource = r'''
   // 宿主协议：{left, top, right, bottom}（layout_from_json.edgeInsetsFromJson）。
   export class EdgeInsets {
     constructor(props) {
-      props = __posArgs(props, ['left', 'top', 'right', 'bottom']);
+      props = __positionalArgs(props, ['left', 'top', 'right', 'bottom']);
       this.left = props.left != null ? props.left : 0;
       this.top = props.top != null ? props.top : 0;
       this.right = props.right != null ? props.right : 0;
@@ -44,7 +44,7 @@ const String styleValuesJsSource = r'''
     }
     static zero = new EdgeInsets({});
     static all(props) {
-      var v = __one(props);
+      var v = __singleValue(props);
       return new EdgeInsets({ left: v, top: v, right: v, bottom: v });
     }
     static only(props) { return new EdgeInsets(props); }
@@ -54,11 +54,11 @@ const String styleValuesJsSource = r'''
       return new EdgeInsets({ left: h, top: v, right: h, bottom: v });
     }
     static fromLTRB(props) {
-      props = __posArgs(props, ['left', 'top', 'right', 'bottom']);
+      props = __positionalArgs(props, ['left', 'top', 'right', 'bottom']);
       return new EdgeInsets(props);
     }
     static fromSTEB(props) {
-      props = __posArgs(props, ['start', 'top', 'end', 'bottom']);
+      props = __positionalArgs(props, ['start', 'top', 'end', 'bottom']);
       return new EdgeInsets({
         left: props.start != null ? props.start : 0,
         top: props.top != null ? props.top : 0,
@@ -70,18 +70,18 @@ const String styleValuesJsSource = r'''
 
   // ----- 圆角 / 边框 -----------------------------------------------------------
   // 宿主协议：BorderRadius → {radius} 或四角数字；Border → {all} 或四边 side。
-  function __radiusOf(v) {
+  function __toRadius(v) {
     if (v instanceof Radius) { return v; }
-    return new Radius({ radius: typeof v === 'number' ? v : __one(v) });
+    return new Radius({ radius: typeof v === 'number' ? v : __singleValue(v) });
   }
 
   export class BorderRadius {
     constructor(props) {
-      props = __posArgs(props, ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']);
-      this.topLeft = __radiusOf(props.topLeft);
-      this.topRight = __radiusOf(props.topRight);
-      this.bottomLeft = __radiusOf(props.bottomLeft);
-      this.bottomRight = __radiusOf(props.bottomRight);
+      props = __positionalArgs(props, ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']);
+      this.topLeft = __toRadius(props.topLeft);
+      this.topRight = __toRadius(props.topRight);
+      this.bottomLeft = __toRadius(props.bottomLeft);
+      this.bottomRight = __toRadius(props.bottomRight);
     }
     toJSON() {
       var tl = this.topLeft.x, tr = this.topRight.x;
@@ -93,24 +93,24 @@ const String styleValuesJsSource = r'''
     get vertical() { return this.topLeft.x + this.bottomLeft.x; }
     static zero = new BorderRadius({});
     static all(props) {
-      var r = __radiusOf(props.radius);
+      var r = __toRadius(props.radius);
       return new BorderRadius({ topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
     }
-    static circular(props) { return BorderRadius.all({ radius: __one(props) }); }
+    static circular(props) { return BorderRadius.all({ radius: __singleValue(props) }); }
     static only(props) { return new BorderRadius(props); }
     static vertical(props) {
-      var r = __radiusOf(__one(props));
+      var r = __toRadius(__singleValue(props));
       return new BorderRadius({ topLeft: r, topRight: r });
     }
     static horizontal(props) {
-      var r = __radiusOf(__one(props));
+      var r = __toRadius(__singleValue(props));
       return new BorderRadius({ topLeft: r, bottomLeft: r });
     }
   }
 
   export class BorderSide {
     constructor(props) {
-      props = __posArgs(props, ['color', 'width', 'style', 'strokeAlign']);
+      props = __positionalArgs(props, ['color', 'width', 'style', 'strokeAlign']);
       this.color = props.color != null ? props.color : null;
       this.width = props.width != null ? props.width : 1;
       this.style = props.style != null ? props.style : 'solid';
@@ -124,7 +124,7 @@ const String styleValuesJsSource = r'''
 
   export class Border {
     constructor(props) {
-      props = __posArgs(props, ['top', 'right', 'bottom', 'left']);
+      props = __positionalArgs(props, ['top', 'right', 'bottom', 'left']);
       if (props.all != null) { this.all = props.all; }
       if (props.top != null) { this.top = props.top; }
       if (props.right != null) { this.right = props.right; }
@@ -134,7 +134,7 @@ const String styleValuesJsSource = r'''
     // `Border.all(color:.., width:..)` 的实参与 BorderSide 同形。
     static all(props) { return new Border({ all: new BorderSide(props) }); }
     static fromBorderSide(props) {
-      props = __posArgs(props, ['side']);
+      props = __positionalArgs(props, ['side']);
       return new Border({ all: props.side });
     }
     toJSON() {
@@ -145,7 +145,7 @@ const String styleValuesJsSource = r'''
 
   export class BoxShadow {
     constructor(props) {
-      props = __posArgs(props, ['color', 'offset', 'blurRadius', 'spreadRadius', 'blurStyle']);
+      props = __positionalArgs(props, ['color', 'offset', 'blurRadius', 'spreadRadius', 'blurStyle']);
       this.color = props.color != null ? props.color : null;
       this.offset = props.offset != null ? props.offset : new Offset({ dx: 0, dy: 0 });
       this.blurRadius = props.blurRadius != null ? props.blurRadius : 0;
@@ -168,7 +168,7 @@ const String styleValuesJsSource = r'''
   // 宿主协议：TextStyle 直取同名字段；FontWeight → 'bold'/'w600'；
   // TextDecoration → 成员名；TextScaler → {linear} / 'noScaling'。
   export class TextDecoration {
-    constructor(props) { this.name = __one(props); }
+    constructor(props) { this.name = __singleValue(props); }
     toJSON() { return this.name; }
     static none = new TextDecoration('none');
     static underline = new TextDecoration('underline');
@@ -177,7 +177,7 @@ const String styleValuesJsSource = r'''
   }
 
   export class FontWeight {
-    constructor(props) { this.value = __one(__posArgs(props, ['index'])); }
+    constructor(props) { this.value = __singleValue(__positionalArgs(props, ['index'])); }
     toJSON() {
       if (this.value === 400) { return 'normal'; }
       if (this.value === 700) { return 'bold'; }
@@ -199,14 +199,14 @@ const String styleValuesJsSource = r'''
   export class TextScaler {
     constructor(props) {
       this.__none = props === null;
-      if (!this.__none) { this.factor = __one(props); }
+      if (!this.__none) { this.factor = __singleValue(props); }
     }
     toJSON() { return this.__none ? 'noScaling' : { linear: this.factor }; }
     static noScaling = new TextScaler(null);
     static linear(props) {
-      props = __posArgs(props, ['textScaleFactor']);
+      props = __positionalArgs(props, ['textScaleFactor']);
       return new TextScaler(
-        props.textScaleFactor != null ? props.textScaleFactor : __one(props));
+        props.textScaleFactor != null ? props.textScaleFactor : __singleValue(props));
     }
   }
 
@@ -234,7 +234,7 @@ const String styleValuesJsSource = r'''
   // 'continuous', borderRadius, side}。
   class __OutlinedBorder {
     constructor(kind, props) {
-      props = __posArgs(props, ['borderRadius', 'side']);
+      props = __positionalArgs(props, ['borderRadius', 'side']);
       this.__kind = kind;
       if (props.borderRadius != null) { this.borderRadius = props.borderRadius; }
       if (props.side != null) { this.side = props.side; }
@@ -269,16 +269,16 @@ const String styleValuesJsSource = r'''
   // {source, fit}。
   export class AssetImage {
     constructor(props) {
-      props = __posArgs(props, ['assetName']);
-      this.assetName = props.assetName != null ? props.assetName : __one(props);
+      props = __positionalArgs(props, ['assetName']);
+      this.assetName = props.assetName != null ? props.assetName : __singleValue(props);
     }
     toJSON() { return this.assetName; }
   }
 
   export class NetworkImage {
     constructor(props) {
-      props = __posArgs(props, ['url', 'scale', 'headers']);
-      this.url = props.url != null ? props.url : __one(props);
+      props = __positionalArgs(props, ['url', 'scale', 'headers']);
+      this.url = props.url != null ? props.url : __singleValue(props);
       if (props.scale != null) { this.scale = props.scale; }
       if (props.headers != null) { this.headers = props.headers; }
     }
@@ -322,23 +322,23 @@ const String styleValuesJsSource = r'''
   export class ImageFilter extends __KindValue {
     constructor(props) { super('blur', props); }
     static blur(props) {
-      props = __posArgs(props, ['sigmaX', 'sigmaY', 'tileMode']);
+      props = __positionalArgs(props, ['sigmaX', 'sigmaY', 'tileMode']);
       return new __KindValue('blur', props);
     }
     static dilate(props) {
-      props = __posArgs(props, ['radiusX', 'radiusY']);
+      props = __positionalArgs(props, ['radiusX', 'radiusY']);
       return new __KindValue('dilate', props);
     }
     static erode(props) {
-      props = __posArgs(props, ['radiusX', 'radiusY']);
+      props = __positionalArgs(props, ['radiusX', 'radiusY']);
       return new __KindValue('erode', props);
     }
     static matrix(props) {
-      props = __posArgs(props, ['matrix']);
+      props = __positionalArgs(props, ['matrix']);
       return new __KindValue('matrix', props);
     }
     static compose(props) {
-      props = __posArgs(props, ['outer', 'inner']);
+      props = __positionalArgs(props, ['outer', 'inner']);
       return new __KindValue('compose', props);
     }
   }
@@ -346,11 +346,11 @@ const String styleValuesJsSource = r'''
   export class ColorFilter extends __KindValue {
     constructor(props) { super('mode', props); }
     static mode(props) {
-      props = __posArgs(props, ['color', 'blendMode']);
+      props = __positionalArgs(props, ['color', 'blendMode']);
       return new __KindValue('mode', props);
     }
     static matrix(props) {
-      props = __posArgs(props, ['matrix']);
+      props = __positionalArgs(props, ['matrix']);
       return new __KindValue('matrix', props);
     }
     static linearToSrgbGamma = new __KindValue('linearToSrgbGamma', {});
@@ -361,13 +361,13 @@ const String styleValuesJsSource = r'''
   // `Float64List.fromList([...])`：ImageFilter.matrix 的入参（宿主只校验 16 个）。
   export class Float64List {
     constructor(props) {
-      props = __posArgs(props, ['elements']);
+      props = __positionalArgs(props, ['elements']);
       this.elements = props.elements != null ? props.elements : (props.__pos || []);
     }
     get length() { return this.elements.length; }
     toJSON() { return this.elements; }
     static fromList(props) {
-      props = __posArgs(props, ['elements']);
+      props = __positionalArgs(props, ['elements']);
       var list = props.elements != null ? props.elements : props;
       return new Float64List({ elements: list });
     }
@@ -392,13 +392,13 @@ const String styleValuesJsSource = r'''
   }
   export class SliverGridDelegateWithFixedCrossAxisCount extends __GridDelegate {
     constructor(props) {
-      super(__posArgs(props, ['crossAxisCount', 'mainAxisSpacing',
+      super(__positionalArgs(props, ['crossAxisCount', 'mainAxisSpacing',
         'crossAxisSpacing', 'childAspectRatio', 'mainAxisExtent']));
     }
   }
   export class SliverGridDelegateWithMaxCrossAxisExtent extends __GridDelegate {
     constructor(props) {
-      super(__posArgs(props, ['maxCrossAxisExtent', 'mainAxisSpacing',
+      super(__positionalArgs(props, ['maxCrossAxisExtent', 'mainAxisSpacing',
         'crossAxisSpacing', 'childAspectRatio', 'mainAxisExtent']));
     }
   }

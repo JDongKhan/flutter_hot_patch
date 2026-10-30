@@ -14,16 +14,16 @@
 // 语义（如 `Timer.run`），只需在本文件补一个同名方法，翻译器与宿主都不动。
 const String timerJsSource = r'''
   // 实参归一：正常形态是 `{duration, callback}`；构建期查不到签名时位置实参
-  // 落在 `__pos` 里，由 __posArgs 按形参名展开。容错地再支持一次
+  // 落在 `__pos` 里，由 __positionalArgs 按形参名展开。容错地再支持一次
   // 「第一个实参直接就是 Duration 对象」的形态，避免任何调用写法静默失效。
-  function __timerArgs(props, second) {
+  function __timerOptions(props, second) {
     var duration = null;
     var callback = null;
     if (props && typeof props.inMilliseconds === 'number') {
       duration = props;
       callback = second;
     } else {
-      var opts = __posArgs(props, ['duration', 'callback']);
+      var opts = __positionalArgs(props, ['duration', 'callback']);
       duration = opts.duration;
       callback = opts.callback;
     }
@@ -34,7 +34,7 @@ const String timerJsSource = r'''
 
   export class Timer {
     constructor(props) {
-      __timerInit(this, props, false, null);
+      __initTimer(this, props, false, null);
     }
     cancel() {
     this._cancelled = true;
@@ -49,7 +49,7 @@ const String timerJsSource = r'''
     }
     static periodic(props, second) {
     var t = Object.create(Timer.prototype);
-    __timerInit(t, props, true, second);
+    __initTimer(t, props, true, second);
     return t;
     }
     get isActive() {
@@ -57,19 +57,19 @@ const String timerJsSource = r'''
     }
   }
 
-  // __timerInit 在所有 Timer 实例间共用（构造与 periodic 两条入口）。
-  function __timerInit(self, props, repeat, second) {
-    var args = __timerArgs(props, second);
+  // __initTimer 在所有 Timer 实例间共用（构造与 periodic 两条入口）。
+  function __initTimer(self, props, repeat, second) {
+    var args = __timerOptions(props, second);
     self._ms = args.ms;
     self._callback = args.callback;
     self._repeat = !!repeat;
     self._active = true;
     self._cancelled = false;
     self._handle = null;
-    __timerSchedule(self);
+    __scheduleTimer(self);
   }
 
-  function __timerSchedule(self) {
+  function __scheduleTimer(self) {
     if (self._cancelled) { return; }
     self._handle = setTimeout(function () {
       self._handle = null;
@@ -81,7 +81,7 @@ const String timerJsSource = r'''
         console.error('[patch] Timer 回调异常: ' +
           ((e && e.message) ? e.message : e));
       }
-      if (self._repeat && !self._cancelled) { __timerSchedule(self); }
+      if (self._repeat && !self._cancelled) { __scheduleTimer(self); }
     }, self._ms);
   }
 

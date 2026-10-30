@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Key 签名（reconciler 的 key 比较入口）
 //
-// 属于**运行时核心**：`patchChildren` 直接调用 `keySig`，必须在 runtime.js 里
+// 属于**运行时核心**：`__patchChildren` 直接调用 `keySig`，必须在 runtime.js 里
 // 可用（产物模块（flutter.js）里的 Key 类只负责承载值，签名判据在核心）。
 //
 // 判据用**结构**（`__vkey` / `__psk` / `__okey` / `__id`）而非 instanceof：

@@ -15,7 +15,7 @@
 //   严格模式包装见生成器（extension_support.dart）：脚本里以原始值作接收者时
 //   `this` 才会是那个值本身，而不是装箱后的 `new String(...)`。
 //
-//   - target：Dart 目标类型名（字符串，由 [__jsExtensionTargetOf] 解析），或
+//   - target：Dart 目标类型名（字符串，由 [__extensionTargetOf] 解析），或
 //     直接给构造函数（跨产物 import 到的类；同一模块表保证是同一个类）；
 //   - members：原型成员表——函数 = 方法，`{ get }` / `{ set }` = 访问器；
 //   - opts.id：稳定标识（`<源文件>#<扩展名>`）。**同 id 再注册 = 热更自愈**：
@@ -29,7 +29,7 @@
 const String jsExtensionJsSource = r'''
   // 类型名 → 构造函数：语言核心映射 → 运行时别名表 → G[name]。
   // 三者都取不到时返回 null（调用方 console.error，不静默吞掉）。
-  function __jsExtensionTargetOf(target) {
+  function __extensionTargetOf(target) {
     if (typeof target !== 'string') return target || null;
     switch (target) {
       case 'int':
@@ -41,8 +41,8 @@ const String jsExtensionJsSource = r'''
       case 'Iterable': return Array;
       case 'Set': return Set;
     }
-    if (Object.prototype.hasOwnProperty.call(__jsTypeAliases, target)) {
-      return __jsTypeAliases[target];
+    if (Object.prototype.hasOwnProperty.call(__typeAliases, target)) {
+      return __typeAliases[target];
     }
     var g = G[target];
     return typeof g === 'function' ? g : null;
@@ -50,26 +50,26 @@ const String jsExtensionJsSource = r'''
 
   // 原型上的扩展登记簿（owners: 成员名 → 扩展 id）。非枚举挂在原型自身，
   // 用来区分「类/内建本来就有」（静默跳过）与「另一个扩展占了」（warn）。
-  function __jsExtensionMeta(proto) {
-    if (!Object.prototype.hasOwnProperty.call(proto, '__jsExtensionMeta')) {
-      Object.defineProperty(proto, '__jsExtensionMeta', {
+  function __extensionMeta(proto) {
+    if (!Object.prototype.hasOwnProperty.call(proto, '__extensionMeta')) {
+      Object.defineProperty(proto, '__extensionMeta', {
         value: { owners: {} },
         writable: true,
         enumerable: false,
         configurable: true
       });
     }
-    return proto.__jsExtensionMeta;
+    return proto.__extensionMeta;
   }
 
   // id -> { proto, names }：同 id 再注册时据此卸载上一次的成员。
-  var __jsExtensionRecords = {};
-  var __jsExtensionSeq = 0;
+  var __extensionRecords = {};
+  var __extensionSeq = 0;
 
-  function __jsExtensionUninstall(id) {
-    var rec = __jsExtensionRecords[id];
+  function __uninstallExtension(id) {
+    var rec = __extensionRecords[id];
     if (!rec) return;
-    var meta = __jsExtensionMeta(rec.proto);
+    var meta = __extensionMeta(rec.proto);
     for (var i = 0; i < rec.names.length; i++) {
       var name = rec.names[i];
       if (meta.owners[name] === id) {
@@ -78,14 +78,14 @@ const String jsExtensionJsSource = r'''
         try { delete rec.proto[name]; } catch (e) {}
       }
     }
-    delete __jsExtensionRecords[id];
+    delete __extensionRecords[id];
   }
 
   G.__jsExtension = function (target, members, opts) {
     opts = opts || {};
     var id = opts.id == null ? '' : String(opts.id);
     var statics = opts.statics || {};
-    var ctor = __jsExtensionTargetOf(target);
+    var ctor = __extensionTargetOf(target);
     if (!ctor) {
       console.error('jsui: extension target not found: ' + String(target) +
         (id ? ' (' + id + ')' : ''));
@@ -96,8 +96,8 @@ const String jsExtensionJsSource = r'''
       console.error('jsui: extension target has no prototype: ' + String(target));
       return statics;
     }
-    if (id) __jsExtensionUninstall(id);
-    var meta = __jsExtensionMeta(proto);
+    if (id) __uninstallExtension(id);
+    var meta = __extensionMeta(proto);
     var record = { proto: proto, names: [] };
     for (var name in members) {
       if (!Object.prototype.hasOwnProperty.call(members, name)) continue;
@@ -126,11 +126,11 @@ const String jsExtensionJsSource = r'''
           configurable: true
         });
       }
-      __jsExtensionSeq += 1;
-      meta.owners[name] = id || ('@' + __jsExtensionSeq);
+      __extensionSeq += 1;
+      meta.owners[name] = id || ('@' + __extensionSeq);
       record.names.push(name);
     }
-    if (id) __jsExtensionRecords[id] = record;
+    if (id) __extensionRecords[id] = record;
     return statics;
   };
 ''';

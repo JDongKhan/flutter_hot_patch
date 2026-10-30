@@ -88,7 +88,7 @@ void _refreshAll() {
       if (key == aspects[aspect]) continue;
       aspects[aspect] = key;
       JsRuntimeManager.instance.evaluate(
-        '__jsuiSetMediaQuery(${jsonEncode(ctxId)}, '
+        '__setMediaQuery(${jsonEncode(ctxId)}, '
         '${aspect == null ? 'null' : jsonEncode(aspect)}, '
         '${jsonEncode(value)});',
       );
@@ -97,7 +97,7 @@ void _refreshAll() {
 }
 
 /// aspect（null = 整份）→ Flutter 真值。直接调 Flutter 的静态方法，字段形态与
-/// 生成器 media_query_js.dart 的 `__jsuiMqBuild` / `__jsuiMqDecode` 一一对应。
+/// 生成器 media_query_js.dart 的 `__buildMediaQuery` / `__decodeMediaQuery` 一一对应。
 Object? _readAspect(String ctxId, String? aspect) {
   final ctx = jsBuildContextOf(ctxId);
   if (ctx == null) return null;

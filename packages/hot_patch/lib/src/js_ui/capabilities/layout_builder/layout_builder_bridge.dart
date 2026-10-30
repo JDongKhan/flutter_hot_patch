@@ -75,5 +75,5 @@ class _JsLayoutBuilderState extends State<_JsLayoutBuilder> {
 }
 
 /// 无界维度（`double.infinity`）不能 JSON 编码（`jsonEncode` 会抛错），
-/// 统一下发 null，JS 侧还原成 +∞（见运行时【18.8】的 `__jsuiBoxConstraints`）。
+/// 统一下发 null，JS 侧还原成 +∞（见运行时【18.8】的 `__boxConstraints`）。
 double? _edge(double v) => v.isFinite ? v : null;

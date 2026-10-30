@@ -10,7 +10,7 @@
 // Flutter SDK `colors.dart` 自动生成（见 generator 的 color_constants.dart），
 // 这里只提供类，不含任何色值表。
 const String colorJsSource = r'''
-  function __toHex(v) {
+  function __colorToHex(v) {
     var n = (v >>> 0).toString(16).toUpperCase();
     while (n.length < 8) { n = '0' + n; }
     return '#' + n;
@@ -18,7 +18,7 @@ const String colorJsSource = r'''
 
   export class Color {
     constructor(props) {
-      props = __posArgs(props, ['value']);
+      props = __positionalArgs(props, ['value']);
       this.value = props.value != null ? (props.value >>> 0) : 0;
     }
     withAlpha(a) {
@@ -29,7 +29,7 @@ const String colorJsSource = r'''
     return this.withAlpha(a);
     }
     withValues(opts) {
-    opts = __posArgs(opts, []);
+    opts = __positionalArgs(opts, []);
     var a = opts.alpha != null ? Math.round(opts.alpha * 255) : this.alpha;
     var r = opts.red != null ? opts.red : this.red;
     var g = opts.green != null ? opts.green : this.green;
@@ -37,23 +37,23 @@ const String colorJsSource = r'''
     return Color.fromARGB({ a: a, r: r, g: g, b: b });
     }
     toJSON() {
-    return __toHex(this.value);
+    return __colorToHex(this.value);
     }
     toString() {
-    return __toHex(this.value);
+    return __colorToHex(this.value);
     }
     static fromARGB(props) {
-    props = __posArgs(props, ['a', 'r', 'g', 'b']);
+    props = __positionalArgs(props, ['a', 'r', 'g', 'b']);
     return new Color({ value: ((props.a & 0xFF) << 24) | ((props.r & 0xFF) << 16) |
       ((props.g & 0xFF) << 8) | (props.b & 0xFF) });
     }
     static fromRGBO(props) {
-    props = __posArgs(props, ['r', 'g', 'b', 'opacity']);
+    props = __positionalArgs(props, ['r', 'g', 'b', 'opacity']);
     var o = props.opacity != null ? props.opacity : 1;
     return Color.fromARGB({ a: Math.round(o * 255), r: props.r, g: props.g, b: props.b });
     }
     static lerp(props) {
-    props = __posArgs(props, ['a', 'b', 't']);
+    props = __positionalArgs(props, ['a', 'b', 't']);
     var a = props.a || new Color({ value: 0 });
     var b = props.b || new Color({ value: 0 });
     var t = props.t == null ? 0.5 : props.t;
@@ -81,36 +81,36 @@ const String colorJsSource = r'''
   // MaterialColor / MaterialAccentColor / ColorSwatch：值仍是 Color（主色），
   // 额外持各档位。档位同时挂在 `shadeNN` 与数字下标上，故 Dart 的
   // `Colors.red[400]` / `Colors.red.shade400` 在 JS 里都能原样求值。
-  function __swatch(base, shades) {
+  function __attachShades(base, shades) {
     base.__shades = shades || {};
     return base;
   }
-  function __swatchBase(props) {
-    props = __posArgs(props, ['primary', 'swatch']);
+  function __shadeBase(props) {
+    props = __positionalArgs(props, ['primary', 'swatch']);
     var v = props.value != null ? props.value : props.primary;
     return { value: v, swatch: props.swatch };
   }
   export class MaterialColor extends Color {
     constructor(props) {
-      var p = __swatchBase(props);
+      var p = __shadeBase(props);
       super({ value: p.value });
-      __swatch(this, p.swatch);
+      __attachShades(this, p.swatch);
     }
   }
 
   export class MaterialAccentColor extends Color {
     constructor(props) {
-      var p = __swatchBase(props);
+      var p = __shadeBase(props);
       super({ value: p.value });
-      __swatch(this, p.swatch);
+      __attachShades(this, p.swatch);
     }
   }
 
   export class ColorSwatch extends Color {
     constructor(props) {
-      var p = __swatchBase(props);
+      var p = __shadeBase(props);
       super({ value: p.value });
-      __swatch(this, p.swatch);
+      __attachShades(this, p.swatch);
     }
   }
 ''';

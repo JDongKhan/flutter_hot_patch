@@ -101,7 +101,7 @@ class ExtensionInfo {
   }
 }
 
-/// 语言核心类型：Dart 类型名 → 运行时直接映射的 JS 内建（见 `__jsExtensionTargetOf`）。
+/// 语言核心类型：Dart 类型名 → 运行时直接映射的 JS 内建（见 `__extensionTargetOf`）。
 const Set<String> _coreTargets = {
   'int',
   'num',

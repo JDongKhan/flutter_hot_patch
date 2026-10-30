@@ -142,9 +142,9 @@ void _seedBuiltins() {
   // 公共值类（Duration / Size / Offset / Radius）：跨能力复用，最先注入，
   // 后面的能力片段（如动画的 `__durationMs`）可直接引用。
   registerJsUiLibrary(const DartValuesLibrary());
-  // Dart 内置异常（StateError / ArgumentError / …）：依赖 __posArgs。
+  // Dart 内置异常（StateError / ArgumentError / …）：依赖 __positionalArgs。
   registerJsUiLibrary(const DartErrorsLibrary());
-  // Color 类族（Color / MaterialColor / ColorSwatch）：依赖 __posArgs。
+  // Color 类族（Color / MaterialColor / ColorSwatch）：依赖 __positionalArgs。
   registerJsUiLibrary(const ColorLibrary());
   registerJsUiLibrary(const ChangeNotifierLibrary());
   // 动画值类 / AnimationController 镜像：显式动画经此逐帧回传 value。
@@ -157,7 +157,7 @@ void _seedBuiltins() {
   registerJsUiLibrary(const TextEditingControllerLibrary());
   // Focus：FocusNode 句柄 + Focus 组件（焦点变化经 Host 回传镜像）。
   registerJsUiLibrary(const FocusLibrary());
-  // KeyboardListener：复用 FocusNode 句柄，按键事件经 __jsuiKeyEvent 回 JS。
+  // KeyboardListener：复用 FocusNode 句柄，按键事件经 __keyEvent 回 JS。
   registerJsUiLibrary(const KeyboardListenerLibrary());
   // LayoutBuilder：父约束在布局阶段回传 JS（OrientationBuilder 基于它实现）。
   registerJsUiLibrary(const LayoutBuilderLibrary());

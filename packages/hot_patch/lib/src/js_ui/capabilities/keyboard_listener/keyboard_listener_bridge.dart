@@ -8,7 +8,7 @@
 //
 // 事件的坑在**形态**：KeyEvent 是类实例（`logicalKey` / `character` /
 // `isKeyDownEvent`），`__jsui.invoke` 只传 JSON，因此由宿主把原生 KeyEvent
-// 归一成 JSON，交给 JS 侧 `__jsuiKeyEvent` 还原成实例再调句柄（JS 片段见
+// 归一成 JSON，交给 JS 侧 `__keyEvent` 还原成实例再调句柄（JS 片段见
 // 生成器 keyboard_listener_js.dart）。`LogicalKeyboardKey` 在 JS 侧按 keyId
 // 归一成同一实例，`event.logicalKey == LogicalKeyboardKey.enter` 等比较与
 // Dart 一比一。
@@ -22,7 +22,7 @@ import '../../js_widget_registry.dart';
 import '../core/controller_bridge.dart';
 import '../focus/focus_bridge.dart';
 
-/// 原生 KeyEvent → JSON（JS 侧 `__jsuiKeyEvent` 还原成 KeyEvent 实例）。
+/// 原生 KeyEvent → JSON（JS 侧 `__keyEvent` 还原成 KeyEvent 实例）。
 Map<String, Object?> _keyEventJson(KeyEvent event) {
   final kind = event is KeyDownEvent
       ? 'down'
@@ -47,7 +47,7 @@ void _dispatchKeyEvent(Object? handler, KeyEvent event) {
   final id = handler is Map ? handler['__fn'] : null;
   if (id is! String) return;
   JsRuntimeManager.instance.evaluate(
-    '__jsuiKeyEvent(${jsonEncode(id)}, ${jsonEncode(jsonEncode(_keyEventJson(event)))});',
+    '__keyEvent(${jsonEncode(id)}, ${jsonEncode(jsonEncode(_keyEventJson(event)))});',
   );
 }
 

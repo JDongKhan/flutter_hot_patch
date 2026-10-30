@@ -5,7 +5,7 @@
 // EasyRefresh（三方包 flutter_easy_refresh）的**手势 / 物理 / 指示器**全在宿主
 // 侧，回调 onRefresh / onLoad 由 JS 补丁实现，所以需要一次「宿主发起 → JS 异步
 // 完成」的往返：
-//   1. 宿主 → JS：用户下拉后按事件句柄触发 [jsFragments] 里的 `__jsuiAwaitRun`
+//   1. 宿主 → JS：用户下拉后按事件句柄触发 [jsFragments] 里的 `__awaitRefreshRun`
 //      （见 easy_refresh_js.dart）；
 //   2. JS → 宿主：JS 侧 await 完任务后经宿主通道 [awaitDoneChannel] 回传 token；
 //   3. 本文件把 token ↔ Completer，交给 EasyRefresh 的 onRefresh/onLoad，
@@ -194,7 +194,7 @@ Future<void> _runAwaitableEvent(Object? handler) {
   final completer = Completer<void>();
   _pendingTasks[token] = completer;
   JsRuntimeManager.instance.evaluate(
-    '__jsuiAwaitRun(${jsonEncode(id)}, ${jsonEncode(token)});',
+    '__awaitRefreshRun(${jsonEncode(id)}, ${jsonEncode(token)});',
   );
   // 兜底超时：JS 运行时被销毁 / 句柄在任务中释放时回传永不到达，指示器不能
   // 永远转圈，也不能让条目滞留在 _pendingTasks。

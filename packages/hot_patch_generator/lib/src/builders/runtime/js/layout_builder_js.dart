@@ -10,7 +10,7 @@
 const String layoutBuilderJsSource = r'''
   // 宿主下发的约束 JSON → BoxConstraints。
   // 挂 G：包模块（flutter.js）只能裸引用全局，IIFE 内的局部声明它看不见。
-  G.__jsuiBoxConstraints = function (json) {
+  G.__boxConstraints = function (json) {
     json = json || {};
     return new BoxConstraints({
       minWidth: json.minWidth == null ? 0 : json.minWidth,
