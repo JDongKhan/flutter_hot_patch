@@ -5,17 +5,16 @@
 // EasyRefresh（三方包 flutter_easy_refresh）的**手势 / 物理 / 指示器**全在宿主
 // 侧，回调 onRefresh / onLoad 由 JS 补丁实现，所以需要一次「宿主发起 → JS 异步
 // 完成」的往返：
-//   1. 宿主 → JS：用户下拉后按事件句柄触发 [jsFragments] 里的 `__awaitRefreshRun`
-//      （见 easy_refresh_js.dart）；
-//   2. JS → 宿主：JS 侧 await 完任务后经宿主通道 [awaitDoneChannel] 回传 token；
-//   3. 本文件把 token ↔ Completer，交给 EasyRefresh 的 onRefresh/onLoad，
-//      指示器在 JS 任务**真正结束**时才收起。
+//   1. 宿主 → JS：用户下拉后按事件句柄调用通用入口
+//      `JsRuntimeManager.invokeAwait(handler)`；
+//   2. JS → 宿主：JS 侧 await 完任务（含普通回调）后经通用回传通道
+//      `jsuiEventResult` 交回 token 与结果（见 mini_react_js.dart）；
+//   3. 本文件按 Future 完成时刻收起指示器。
 //
-// 为什么不直接复用 [JsUiWidgetState._invoke]：它是单向的——宿主调完 JS 即返回，
-// 而 JS 的 Promise 在 iOS/JavaScriptCore 上无法回传 Dart，拿不到完成信号，
-// 指示器会瞬间消失（用户看不到任何加载反馈）。
+// 这是**通用**机制，不是本能力专属：Dismissible 的 confirmDismiss、以后任何
+// 返回 `Future<T>` 的事件（如 async 的 onPressed）都走同一条通道；
+// `__jsui.invoke` 仍是「发了就走」的单向调用。
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/widgets.dart';
@@ -27,24 +26,14 @@ import '../animation/animation_from_json.dart';
 import '../core/controller_bridge.dart';
 import '../core/from_json/dart_values_from_json.dart';
 
-/// 完成信号通道：JS 侧 await 完事件后回传 token（见 easy_refresh_js.dart）。
-const String awaitDoneChannel = 'jsuiAwaitDone';
-
-/// token → 等待中的刷新/加载任务；JS 回传后结算并摘除（避免条目滞留）。
-final Map<String, Completer<void>> _pendingTasks = {};
-
-int _tokenSeq = 0;
-
 bool _channelsRegistered = false;
 
-/// 幂等登记本能力的宿主通道（由 js_ui_capabilities 聚合调用）。
+/// 本能力只需登记 controller 句柄桥；onRefresh / onLoad 的「等结果」走
+/// [JsRuntimeManager.invokeAwait] 的通用通道（见 js_runtime_manager.dart）。
 void ensureEasyRefreshChannels() {
   if (_channelsRegistered) return;
   _channelsRegistered = true;
   _easyRefreshBridge.ensure();
-  JsRuntimeManager.registerHostMethod(awaitDoneChannel, (String token) {
-    _pendingTasks.remove(token)?.complete();
-  });
 }
 
 /// EasyRefreshController 句柄桥（与 ScrollController 同一套通用层，见
@@ -187,21 +176,10 @@ _callArgs(List<Object?> args) {
 ///
 /// [handler] 是 JS 侧事件句柄（`{'__fn': id}`，由生成器在构建期产出）。
 /// 句柄缺失 / 形态不对时立即完成：等价于「无事可做」，不阻塞指示器收起。
-Future<void> _runAwaitableEvent(Object? handler) {
-  final id = handler is Map ? handler['__fn'] : null;
-  if (id is! String) return Future<void>.value();
-  final token = 'er${++_tokenSeq}';
-  final completer = Completer<void>();
-  _pendingTasks[token] = completer;
-  JsRuntimeManager.instance.evaluate(
-    '__awaitRefreshRun(${jsonEncode(id)}, ${jsonEncode(token)});',
-  );
-  // 兜底超时：JS 运行时被销毁 / 句柄在任务中释放时回传永不到达，指示器不能
-  // 永远转圈，也不能让条目滞留在 _pendingTasks。
-  return completer.future.timeout(
-    const Duration(seconds: 30),
-    onTimeout: () => _pendingTasks.remove(token),
-  );
+Future<void> _runAwaitableEvent(Object? handler) async {
+  // 指示器的收起时机 = JS 任务真正结束时刻（invokeAwait 自带 30s 兜底超时，
+  // 运行时销毁时不会永远转圈）。
+  await JsRuntimeManager.invokeAwait(handler);
 }
 
 /// EasyRefresh 桥接组件（对应注册 key 'EasyRefresh'）。

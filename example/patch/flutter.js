@@ -6271,16 +6271,24 @@ export class KeyRepeatEvent extends KeyEvent {
   constructor(props) { super(props); }
 }
 
+// 宿主回传的 kind → 子类（与 keyboard_listener_bridge.dart 的 `_keyEventJson`
+// 三个取值一一对应）。
+var __KEY_EVENT_SUBCLASSES = {
+  down: KeyDownEvent,
+  repeat: KeyRepeatEvent,
+  up: KeyUpEvent
+};
+
 // 宿主桥接见 capabilities/keyboard_listener/keyboard_listener_bridge.dart：
 // 原生 KeyEvent → JSON（kind / character / keyId / keyLabel / usbHidUsage /
 // timeStamp），这里还原成实例并调事件句柄。挂 G：宿主经 evaluate 裸引用调用。
 G.__keyEvent = function (handleId, eventJson) {
-  var h = handles[handleId];
-  if (!h || typeof h.obj !== 'function') { return; }
+  var f = handleObjectOf(handleId);
+  if (typeof f !== 'function') { return; }
   var m = {};
   try { m = JSON.parse(eventJson) || {}; } catch (e) { return; }
   var Ctor = __KEY_EVENT_SUBCLASSES[m.kind] || KeyEvent;
-  h.obj(new Ctor({
+  f(new Ctor({
     character: m.character,
     logicalKey: __createLogicalKey(m.logicalKeyId, m.logicalKeyLabel),
     physicalKey: __createPhysicalKey(m.physicalKeyUsb, m.physicalKeyLabel),
@@ -7089,29 +7097,6 @@ export class UniqueKey {
 }
 
 
-
-// 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart 的
-// `_runAwaitableEvent`：evaluate 本函数触发一次事件，并等 token 回传。
-// 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__jsui` 同一约定。
-G.__awaitRefreshRun = function (handleId, token) {
-  var fn = handleObjectOf(handleId);
-  var out = null;
-  try {
-    out = (typeof fn === 'function') ? fn() : null;
-  } catch (e) {
-    // 事件方法同步抛错：按「已完成」收尾——指示器必须收起，不能挂死在转圈。
-    console.error(String(e));
-
-  }
-  // 完成回传走 host（唯一 JS→宿主出口）；onFulfilled / onRejected 都必须回传，
-  // 否则宿主侧那条 pending 永远等不到结算。
-  var done = function () { invokeHostMethod('jsuiAwaitDone', [token]); };
-  if (out && typeof out.then === 'function') {
-    out.then(done, done);
-  } else {
-    done();
-  }
-};
 
 // 与 ScrollController 同款句柄层（基类见 controller_base_js.dart）：JS 实例与
 // 宿主真实 EasyRefreshController 按句柄 id 绑定。控制方法把**原始实参数组**

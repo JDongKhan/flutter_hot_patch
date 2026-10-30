@@ -170,6 +170,8 @@ const String styleValuesJsSource = r'''
   export class TextDecoration {
     constructor(props) { this.name = __singleValue(props); }
     toJSON() { return this.name; }
+    // 同枚举：跨桥值是成员名，`==` 直译为 JS `==`，靠 valueOf 归一成同一比较基准。
+    valueOf() { return this.name; }
     static none = new TextDecoration('none');
     static underline = new TextDecoration('underline');
     static overline = new TextDecoration('overline');

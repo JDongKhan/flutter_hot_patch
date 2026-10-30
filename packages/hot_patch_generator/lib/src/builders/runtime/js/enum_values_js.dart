@@ -27,6 +27,11 @@ String enumValuesJsSource() {
       ..writeln('      this.index = index;')
       ..writeln('    }')
       ..writeln('    toJSON() { return this.name; }')
+      // 跨桥传来的枚举值是成员名（toJSON 的产物），而 Dart 的 `==` 在产物里
+      // 直译为 JS `==`。valueOf 返回成员名，使 `'endToStart' ==
+      // DismissDirection.endToStart` 成立——枚举实例与宿主回传值因此可直接比较，
+      // 不需要翻译层为枚举做任何字符串特判。
+      ..writeln('    valueOf() { return this.name; }')
       ..writeln("    toString() { return '$n.' + this.name; }");
     for (var i = 0; i < e.members.length; i++) {
       final m = e.members[i];

@@ -71,7 +71,6 @@ library;
 // 不需要发版。
 import 'build_context_js.dart';
 import 'cache_trace_js.dart';
-import 'dismissible_js.dart';
 import 'handle_registry_js.dart';
 import 'js_extension_js.dart';
 import 'key_sig_js.dart';
@@ -674,6 +673,10 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
     h: __createElement,
     fn: __createFnHandle,
     invoke: __invokeEventHandler,
+    // 需要结果的事件调用（宿主等待 Future）：执行句柄 → 若返回 Promise 则
+    // await → 经宿主通道 `jsuiEventResult` 回传 token 与结果。与能力无关，
+    // 所有 `Future<T>` 回调共用（见 `JsRuntimeManager.invokeAwait`）。
+    invokeAwait: __invokeEventHandlerAwait,
     Component: Component,
     mount: mountRoot,
     dispose: disposeRoot,
@@ -801,9 +804,8 @@ String runtimeJsSource() {
     // 缓存详细追踪切面：同样无条件拼入（分不出 debug/release），默认关闭，
     // 只有宿主显式 setCacheVerbose(true) 才安装包装。
     _section('【26】缓存详细追踪（debug 用）', cacheTraceJsSource),
-    // Dismissible 的 confirmDismiss 异步回程（放最后：依赖 handle 表与 host，
-    // 与能力片段互不干扰）。
-    _section('【27】Dismissible 确认回程', dismissibleJsSource),
+    // Dismissible 没有专属 JS 逻辑：confirmDismiss 的结果走通用
+    // `__jsui.invokeAwait`（见【5】事件句柄），故不占独立片段。
     // Dart extension 注册机制：生成器在扩展声明处发射 `registerExtension(...)`，
     // 原型成员随产物注册（调用点与 Dart 一对一，无名字映射）。
     _section('【27.5】Dart extension 注册（registerExtension）', jsExtensionJsSource),

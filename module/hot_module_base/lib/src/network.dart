@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// @author jd
@@ -16,6 +17,7 @@ class Network {
 
   @HostInjected()
   static Future<Map> post({required String url, dynamic params}) async {
+    debugPrint("开始网络请求");
     final path = url.startsWith('/') ? url : '/$url';
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
     try {

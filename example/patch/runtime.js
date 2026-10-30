@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 95bc1f9b） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 2597168f） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '95bc1f9b') { return; }
-  G.__jsuiVersion = '95bc1f9b';
+  if (G.__jsui && G.__jsuiVersion === '2597168f') { return; }
+  G.__jsuiVersion = '2597168f';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -690,7 +690,43 @@ if (G.kDebugMode) {
       try { args = JSON.parse(args); } catch (e) { args = null; }
     }
     if (!Array.isArray(args)) { args = args == null ? [] : [args]; }
-    f.apply(null, args);
+    // 返回值原样给调用方：普通事件无人读（`__jsui.invoke` 丢弃），
+    // 需要结果的事件走 `__jsui.invokeAwait`（见下），二者共用本函数。
+    return f.apply(null, args);
+  }
+
+  // 宿主发起、需要拿回结果的事件调用（`__jsui.invokeAwait` 的实现）。
+  //
+  // 统一机制，与具体能力无关：Dart 侧 `Future<T>` 回调（confirmDismiss /
+  // onRefresh / 未来任何 async `onPressed`）在 JS 侧都是 async 函数，返回
+  // Promise。iOS/JavaScriptCore 无法把 Promise 交回 Dart，因此这里 await 完后
+  // 经唯一 JS→宿主出口把「token + 结果 JSON」回传，宿主按 token 结算 Future。
+  //
+  // 同步返回值也走同一条回传（`该回调不是 async` 与 `async 立即 resolve`
+  // 对宿主无差别），保证宿主那条 pending **必定结算**。
+  function __invokeEventHandlerAwait(id, argsJson, token) {
+    var out;
+    try {
+      out = __invokeEventHandler(id, argsJson);
+    } catch (e) {
+      console.error('[jsui] 事件执行抛错: ' + String(e));
+      __sendEventResult(token, null, String(e));
+      return;
+    }
+    if (out && typeof out.then === 'function') {
+      out.then(
+        function (v) { __sendEventResult(token, v, null); },
+        function (e) { __sendEventResult(token, null, String(e)); }
+      );
+      return;
+    }
+    __sendEventResult(token, out, null);
+  }
+
+  function __sendEventResult(token, value, error) {
+    var json = 'null';
+    try { json = JSON.stringify(value === undefined ? null : value); } catch (e) { json = 'null'; }
+    invokeHostMethod('jsuiEventResult', [token, json, error]);
   }
 
 
@@ -2423,36 +2459,6 @@ if (G.kDebugMode) {
   }
 
 
-// ===== 【27】Dismissible 确认回程 =====
-  // 宿主侧桥接见 capabilities/dismissible/dismissible_bridge.dart 的
-  // `_awaitJsValue`：evaluate 本函数触发一次事件，并等 token + 结果回传。
-  // 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__awaitRefreshRun` 同一约定。
-  G.__awaitDismissValue = function (handleId, token, argsJson) {
-    var h = handles[handleId];
-    var args = [];
-    try { args = argsJson ? JSON.parse(argsJson) : []; } catch (e) { args = []; }
-    var out;
-    try {
-      out = (h && typeof h.obj === 'function') ? h.obj.apply(null, args) : null;
-    } catch (e) {
-      // 事件同步抛错：按「已返回 null」收尾，宿主那条 pending 必须有结果。
-      console.error(String(e));
-      invokeHostMethod('jsuiAwaitValueDone', [token, 'null']);
-      return;
-    }
-    var done = function (v) {
-      var s = 'null';
-      try { s = JSON.stringify(v === undefined ? null : v); } catch (e) { s = 'null'; }
-      invokeHostMethod('jsuiAwaitValueDone', [token, s]);
-    };
-    if (out && typeof out.then === 'function') {
-      out.then(done, function () { done(null); });
-    } else {
-      done(out);
-    }
-  };
-
-
 // ===== 【27.5】Dart extension 注册（registerExtension） =====
   // 类型名 → 构造函数：语言核心映射 → 运行时别名表 → G[name]。
   // 三者都取不到时返回 null（调用方 console.error，不静默吞掉）。
@@ -2568,6 +2574,10 @@ if (G.kDebugMode) {
     h: __createElement,
     fn: __createFnHandle,
     invoke: __invokeEventHandler,
+    // 需要结果的事件调用（宿主等待 Future）：执行句柄 → 若返回 Promise 则
+    // await → 经宿主通道 `jsuiEventResult` 回传 token 与结果。与能力无关，
+    // 所有 `Future<T>` 回调共用（见 `JsRuntimeManager.invokeAwait`）。
+    invokeAwait: __invokeEventHandlerAwait,
     Component: Component,
     mount: mountRoot,
     dispose: disposeRoot,

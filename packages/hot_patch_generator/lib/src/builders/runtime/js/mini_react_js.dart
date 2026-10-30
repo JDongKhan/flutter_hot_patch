@@ -87,7 +87,43 @@ const String miniReactElementSource = r'''
       try { args = JSON.parse(args); } catch (e) { args = null; }
     }
     if (!Array.isArray(args)) { args = args == null ? [] : [args]; }
-    f.apply(null, args);
+    // 返回值原样给调用方：普通事件无人读（`__jsui.invoke` 丢弃），
+    // 需要结果的事件走 `__jsui.invokeAwait`（见下），二者共用本函数。
+    return f.apply(null, args);
+  }
+
+  // 宿主发起、需要拿回结果的事件调用（`__jsui.invokeAwait` 的实现）。
+  //
+  // 统一机制，与具体能力无关：Dart 侧 `Future<T>` 回调（confirmDismiss /
+  // onRefresh / 未来任何 async `onPressed`）在 JS 侧都是 async 函数，返回
+  // Promise。iOS/JavaScriptCore 无法把 Promise 交回 Dart，因此这里 await 完后
+  // 经唯一 JS→宿主出口把「token + 结果 JSON」回传，宿主按 token 结算 Future。
+  //
+  // 同步返回值也走同一条回传（`该回调不是 async` 与 `async 立即 resolve`
+  // 对宿主无差别），保证宿主那条 pending **必定结算**。
+  function __invokeEventHandlerAwait(id, argsJson, token) {
+    var out;
+    try {
+      out = __invokeEventHandler(id, argsJson);
+    } catch (e) {
+      console.error('[jsui] 事件执行抛错: ' + String(e));
+      __sendEventResult(token, null, String(e));
+      return;
+    }
+    if (out && typeof out.then === 'function') {
+      out.then(
+        function (v) { __sendEventResult(token, v, null); },
+        function (e) { __sendEventResult(token, null, String(e)); }
+      );
+      return;
+    }
+    __sendEventResult(token, out, null);
+  }
+
+  function __sendEventResult(token, value, error) {
+    var json = 'null';
+    try { json = JSON.stringify(value === undefined ? null : value); } catch (e) { json = 'null'; }
+    invokeHostMethod('jsuiEventResult', [token, json, error]);
   }
 
 ''';

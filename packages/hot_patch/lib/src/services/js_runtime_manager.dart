@@ -140,6 +140,73 @@ class JsRuntimeManager {
     };
   }
 
+  /// 触发一次 JS 事件句柄并**等待其结果**（宿主侧 `Future<T>` 回调的通用入口）。
+  ///
+  /// 为什么需要它：宿主 → JS 的 `__jsui.invoke` 是单向的；而 Dart 侧返回
+  /// `Future<T>` 的回调（`confirmDismiss` / EasyRefresh 的 `onRefresh` / 以后任何
+  /// async 事件）在 JS 侧是 Promise，iOS/JavaScriptCore 又无法把 Promise 交回
+  /// Dart。于是统一走 `__jsui.invokeAwait`：JS 执行句柄、await 结果，再经唯一
+  /// JS→宿主出口把「token + 结果」回传到 [eventResultChannel]，这里按 token 结算。
+  ///
+  /// [handler] 是 JS 侧事件句柄 `{'__fn': id}`；形态不对时立即返回 null
+  /// （等价于「没有这个回调」）。同步回调同样适用（结果原样返回）。
+  static Future<Object?> invokeAwait(
+    Object? handler, [
+    List<Object?> args = const [],
+  ]) {
+    final id = handler is Map ? handler['__fn'] : null;
+    if (id is! String) return Future<Object?>.value(null);
+    _ensureEventResultChannel();
+    final token = 'ev${++_eventSeq}';
+    final completer = Completer<Object?>();
+    _pendingEvents[token] = completer;
+    // args 与 invoke 相同：内层数组 JSON 文本，外层字符串字面量。
+    instance.evaluate(
+      '__jsui.invokeAwait(${jsonEncode(id)}, ${jsonEncode(jsonEncode(args))}, '
+      '${jsonEncode(token)});',
+    );
+    // 兜底超时：运行时销毁 / 句柄中途释放时回程永不到达，条目不能永远悬着。
+    return completer.future.timeout(const Duration(seconds: 30), onTimeout: () {
+      _pendingEvents.remove(token);
+      return null;
+    });
+  }
+
+  /// `invokeAwait` 的结果回传通道（JS 侧 `__sendEventResult`）。
+  static const String eventResultChannel = 'jsuiEventResult';
+
+  static final Map<String, Completer<Object?>> _pendingEvents = {};
+
+  static int _eventSeq = 0;
+
+  static bool _eventResultChannelRegistered = false;
+
+  static void _ensureEventResultChannel() {
+    if (_eventResultChannelRegistered) return;
+    _eventResultChannelRegistered = true;
+    registerHostMethod(eventResultChannel, (String token, String resultJson, String? error) {
+      final completer = _pendingEvents.remove(token);
+      if (completer == null || completer.isCompleted) return null;
+      if (error != null) {
+        // 回调在 JS 侧抛错：按「无结果」结算（调用方按 Flutter 默认行为兜底），
+        // 异常细节已由 JS 侧日志输出。
+        HotPatchLog.warn('[jsui] invokeAwait 回调抛错: $error');
+        completer.complete(null);
+        return null;
+      }
+      Object? value;
+      if (resultJson.isNotEmpty) {
+        try {
+          value = jsonDecode(resultJson);
+        } catch (_) {
+          value = null;
+        }
+      }
+      completer.complete(value);
+      return null;
+    });
+  }
+
   /// 帧级 flush：宿主 begin frame 阶段驱动所有活跃 runtime 执行 JS 侧待处理
   /// 重建（`__jsui.flushPending`）。JS 的 setState 只标脏，宿主每帧统一执行一次，
   /// 同一帧内多次 setState 合并为一次 build（与 Flutter 的 setState 语义一致）。
