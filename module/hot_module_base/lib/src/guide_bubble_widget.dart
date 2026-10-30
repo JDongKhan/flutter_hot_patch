@@ -104,27 +104,6 @@ class _GuideBubbleWidgetState extends State<GuideBubbleWidget> {
     _fadeTimer = null;
   }
 
-  /// 外部参数变化即视为「新一轮引导」：重播。
-  ///
-  /// 不能只靠 `key` 换新实例来重播——宿主重建时若实例被复用（key 未参与
-  /// diff），旧实例早已淡出并 `hide()`，气泡就再也不会出现。语义上「文案/
-  /// 对齐/间距/时长变了」本就该重新提示，故在这里显式重启。
-  @override
-  void didUpdateWidget(covariant GuideBubbleWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final bool restart = oldWidget.text != widget.text ||
-        oldWidget.alignment != widget.alignment ||
-        oldWidget.gap != widget.gap ||
-        oldWidget.duration != widget.duration ||
-        oldWidget.backgroundColor != widget.backgroundColor ||
-        oldWidget.textColor != widget.textColor ||
-        oldWidget.textFontSize != widget.textFontSize;
-    if (!restart) return;
-    setState(() {
-      _schedule();
-    });
-  }
-
   @override
   void dispose() {
     _cancelTimers();

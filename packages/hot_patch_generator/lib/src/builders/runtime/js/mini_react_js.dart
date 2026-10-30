@@ -1030,7 +1030,13 @@ const String miniReactReconcilerSource = r'''
     var sameType = oldIsHost
       ? (newIsHost && oldInst.__type === el.type)
       : (!newIsHost && oldInst.constructor === el.type);
-    if (!sameType) {
+    // 与 Flutter `Widget.canUpdate` 完全对齐：**类型相同且 key 相同**才复用。
+    // 单子槽（`child:` / 组件渲染根）没有 keyedMatcher 兜着，少判 key 就会把旧
+    // 结点连同它的生命周期（已 hide 的 controller、已跑完的定时器等）复用到新的
+    // widget 上——key 形同虚设，与原生行为不一致。列表槽的 key 匹配见
+    // [keyedMatcher]，这里是单结点路径的唯一判据。
+    if (!sameType ||
+        keySig(keyOf(oldInst)) !== keySig(el.props ? el.props.key : null)) {
       unmount(oldInst);
       return mount(el, parent, slot);
     }

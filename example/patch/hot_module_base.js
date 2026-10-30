@@ -64,13 +64,6 @@ export class GuideBubbleWidget {
     }
     this._fadeTimer = null;
   }
-  didUpdateWidget(oldWidget) {
-    var restart = (((((((oldWidget.text != this.text) || (oldWidget.alignment != this.alignment)) || (oldWidget.gap != this.gap)) || (oldWidget.duration != this.duration)) || (oldWidget.backgroundColor != this.backgroundColor)) || (oldWidget.textColor != this.textColor)) || (oldWidget.textFontSize != this.textFontSize));
-    if ((!restart)) {
-      return;
-    }
-    this.setState(() => { this._schedule(); });
-  }
   dispose() {
     this._cancelTimers();
   }
