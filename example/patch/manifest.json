@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.3",
-  "buildTime": "2026-10-29T19:05:28.715635",
+  "buildTime": "2026-10-30T09:15:22.032099",
   "resources": {
-    "flutter.js": "82cbd806124525f7918d91daeb7f244f7d3dbbf818601aa5f41a50941ecac8fa",
+    "flutter.js": "92df72d2f453850891268a28dbe0a3f28f264f896eb7debde96cfc7e1195d293",
     "provider.js": "a9b225de840ff9a012202721ab7f09eac821066fa58aa56b7c23c616161bd58f",
     "runtime.js": "183956b0697919699e4eaf8666c88183f03a3f345b61acbc897a7ede725241b6",
     "hot_module_base.js": "b2df62024c440012182e5af5baf1a06a25d1b6c251c729c40210f92a9603a546",
@@ -44,6 +44,7 @@
     "components/focus_detail.js": "f7781c53f43cf6e69ef67a4e90af9ad472234531c095acbb583870a4152e6e65",
     "components/rich_text_detail.js": "9c41ac65175f7fd39d5e29eb4fb2043b13d8490396f764accf626fdcbb478527",
     "components/pop_scope_detail.js": "13fd57b423bdab296b8efea4bdce5aca4ea8ec858d841170226a778b7fc122d9",
+    "components/drag_detail.js": "7c0ce0a7811c3d81f8682262f8ded6c46f5c6305b355bf958b747a585c95a6ef",
     "components/color_filtered_detail.js": "bc4f0fe0ab79d49201f4d09f03deec5505da2e36cb8a9ab6e1628133f24791ae",
     "components/overlay_detail.js": "978ba2f75f48b2b3b8153100106b4f17289072359c3ad143f44ab0a1e68b1f43",
     "components/explicit_animation_detail.js": "8e10ac3b0f12f086d918ecada77cf4f7b4b76150e2b57121862e677ca28d41dc",

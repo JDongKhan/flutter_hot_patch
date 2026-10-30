@@ -101,6 +101,20 @@ const String dartValuesJsSource = r'''
     }
   }
 
+  // Velocity：`DraggableDetails.velocity`（拖拽结束时的速度）。字段与 Dart 一致，
+  // 由拖拽片段把宿主的 `{pxPerSecond: {dx, dy}}` 还原成实例。
+  export class Velocity {
+    constructor(props) {
+      props = __posArgs(props, ['pixelsPerSecond']);
+      this.pixelsPerSecond = props.pixelsPerSecond != null
+        ? props.pixelsPerSecond
+        : new Offset({ dx: 0, dy: 0 });
+    }
+    toJSON() {
+    return { pxPerSecond: this.pixelsPerSecond };
+    }
+  }
+
   // Alignment：产物在**值位置**（LinearGradient 的 begin/end、Container 的
   // alignment 等）可能直接引用 `Alignment.topLeft`（不是所有位置都会经过
   // 构建期的枚举转换器，如静态字段初值就是通用表达式翻译）。Dart 侧它是

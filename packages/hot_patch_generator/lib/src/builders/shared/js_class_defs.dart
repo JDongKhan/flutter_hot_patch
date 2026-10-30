@@ -116,6 +116,12 @@ const Set<String> logicWidgetTypes = {
   // `OverlayEntry.builder` 都是 JS 闭包，宿主无法执行——条目在 JS 侧展开成
   // 兄弟结点，`Overlay.of(context)` 沿作用域取最近的本实例。
   'Overlay',
+  // 拖拽：`data` 是任意 JS 值（模型/闭包/数组），跨桥只能是快照——JS 侧建
+  // 按身份索引的引用表，宿主只拿 id 与原生拖动系统对齐；`DragTarget.builder`
+  // （候选/被拒数据）与 Draggable 的四个生命周期回调都必须在 JS 里执行。
+  'Draggable',
+  'LongPressDraggable',
+  'DragTarget',
 };
 
 /// 「JS 值类」类型名：**不是 widget**、不产出元素，但构造与静态引用在 JS 侧

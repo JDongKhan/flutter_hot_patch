@@ -49,6 +49,7 @@ import 'core/dart_errors_library.dart';
 import 'core/color_library.dart';
 import 'dialog/dialog_library.dart';
 import 'dismissible/dismissible_library.dart';
+import 'drag/drag_library.dart';
 import 'drawer/drawer_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
 import 'focus/focus_library.dart';
@@ -173,6 +174,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const DrawerLibrary());
   // Dialog：命令式弹层（showDialog 系列）的宿主通道 + 弹层容器组件。
   registerJsUiLibrary(const DialogLibrary());
+  // Drag：拖拽三件套（draggable 的任意 JS 负载经身份 id 对齐原生拖动系统）。
+  registerJsUiLibrary(const DragLibrary());
   // ── 三方库 ──
   registerJsUiLibrary(const EasyRefreshLibrary());
   registerJsUiLibrary(const CachedNetworkImageLibrary());

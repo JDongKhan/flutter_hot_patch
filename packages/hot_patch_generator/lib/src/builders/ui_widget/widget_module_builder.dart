@@ -18,6 +18,7 @@ import '../runtime/js/change_notifier_js.dart';
 import '../runtime/js/color_js.dart';
 import '../runtime/js/dart_values_js.dart';
 import '../runtime/js/dialogs_js.dart';
+import '../runtime/js/drag_js.dart';
 import '../runtime/js/easy_refresh_js.dart';
 import '../runtime/js/focus_js.dart';
 import '../runtime/js/key_js.dart';
@@ -57,6 +58,9 @@ String flutterValueClassesSource() => [
       // Flutter SDK 的 API 面放这里，runtime.js 不留任何弹层知识。
       dialogsJsSource,
       navigatorJsSource,
+      // 拖拽：data 身份表与事件详情还原（Draggable / DragTarget 的组件类
+      // 在同一模块里引用这里的函数）。
+      dragJsSource,
       layoutBuilderJsSource,
       tabControllerJsSource,
       keyJsSource,
@@ -440,6 +444,9 @@ const Map<String, String> logicWidgetSources = {
   'OrientationBuilder': jsOrientationBuilderComponent,
   'SliverPersistentHeader': jsSliverPersistentHeaderComponent,
   'Overlay': jsOverlayComponent,
+  'Draggable': jsDraggableComponent,
+  'LongPressDraggable': jsLongPressDraggableComponent,
+  'DragTarget': jsDragTargetComponent,
 };
 
 /// 值类（**不是 widget**、不产出元素）→ JS 类源码：同样内联在包模块里。
@@ -576,6 +583,47 @@ export class Builder {
       return null;
     }
     return fn(context);
+  }
+}''';
+
+/// 拖拽三件套：`data` 是**任意 JS 值**（模型 / 闭包 / 数组），跨桥只能是快照，
+/// 因此换成本侧身份 id（见 drag_js 的引用表），宿主只拿 id 与原生拖动系统对齐。
+///
+/// Draggable / LongPressDraggable 共用一份 props 折算、各自给出宿主类型名
+/// （两个类是同一份语义的两个宿主包装，判断依据是宿主 type 而不是类名）。
+const String jsDraggableComponent = '''
+export class Draggable {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    return __h('Draggable', __dragSourceProps(this));
+  }
+}''';
+
+const String jsLongPressDraggableComponent = '''
+export class LongPressDraggable {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    return __h('LongPressDraggable', __dragSourceProps(this));
+  }
+}''';
+
+/// DragTarget：`builder(context, candidateData, rejectedData)` 只能在 JS 里执行
+/// （候选/被拒数据只在悬停时由宿主产生，且候选里是**任意 JS 值**）。与
+/// LayoutBuilder 同一方案：登记句柄，宿主回调时带回 id 列表，本侧换回原值后
+/// 执行 builder，结果作为 `child` 插槽随下一次 patch 回填。
+const String jsDragTargetComponent = '''
+export class DragTarget {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var props = __dragTargetProps(this, context);
+    if (props == null) { return null; }
+    return __h('DragTarget', props);
   }
 }''';
 
