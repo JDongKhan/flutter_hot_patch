@@ -122,10 +122,10 @@ const String keyJsSource = r'''
     }
   }
 
-  // GlobalKey.currentState：StateHandle / stateProxyOf 与本文件同属 flutter.js 的
-  // 值类区（state_handle_js.dart 在结点辅助区之后、各类包装之前写出），这里只补
+  // GlobalKey.currentState：StateHandle 与本文件同属 flutter.js 的值类区
+  // （state_handle_js.dart 在结点辅助区之后、各类包装之前写出），这里只补
   // `currentState` getter。运行时**不认识任何业务方法**：代理类由生成器随组件
-  // 写进 flutter.js，并用 `registerStateProxy(type, class)` 登记；类型来自
+  // 写进 flutter.js，并用 `StateHandle.registerProxy(type, class)` 登记；类型来自
   // GlobalKey<T> 的泛型实参。
 
   // UniqueKey：句柄即身份（无本端资源需要清理）。

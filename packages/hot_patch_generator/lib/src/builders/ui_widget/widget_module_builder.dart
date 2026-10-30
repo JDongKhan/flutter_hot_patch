@@ -568,17 +568,25 @@ export class Builder {
 /// 拖拽三件套：`data` 是**任意 JS 值**（模型 / 闭包 / 数组），跨桥只能是快照，
 /// 因此换成本侧身份 id（见 drag_js 的 DragData），宿主只拿 id 与原生拖动系统对齐。
 ///
-/// Draggable / LongPressDraggable 共用 `DragSourceBase.__sourceProps`（同一份
-/// 语义），各自在 build 里给出宿主类型名（不按类名判断）。
+/// Draggable / LongPressDraggable 各自持一份 `__sourceProps`（同一段源码由
+/// [dragSourcePropsMethodSource] 插入），build 里给出宿主类型名（不按类名判断）。
 const String jsDraggableComponent = '''
-export class Draggable extends DragSourceBase {
+export class Draggable {
+  constructor(props) {
+    this.props = props || {};
+  }
+${dragSourcePropsMethodSource}
   build(context) {
     return __h('Draggable', this.__sourceProps());
   }
 }''';
 
 const String jsLongPressDraggableComponent = '''
-export class LongPressDraggable extends DragSourceBase {
+export class LongPressDraggable {
+  constructor(props) {
+    this.props = props || {};
+  }
+${dragSourcePropsMethodSource}
   build(context) {
     return __h('LongPressDraggable', this.__sourceProps());
   }

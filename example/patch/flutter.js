@@ -1072,7 +1072,40 @@ export class DragTarget {
   }
 }
 
-export class Draggable extends DragSourceBase {
+export class Draggable {
+  constructor(props) {
+    this.props = props || {};
+  }
+  // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
+  __sourceProps() {
+    var self = this;
+    var p = self.props || {};
+    var props = {};
+    for (var k in p) {
+      if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
+      k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
+      props[k] = p[k];
+    }
+    props.data = DragData.ref(p.data);
+    // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
+    props.onDragStarted = self.__bindFn(0, [], function () {
+      var f = self.props.onDragStarted;
+      if (typeof f === 'function') { f(); }
+    });
+    props.onDragUpdate = self.__bindFn(1, [], function (json) {
+      var f = self.props.onDragUpdate;
+      if (typeof f === 'function') { f(DragData.updateDetails(json)); }
+    });
+    props.onDragEnd = self.__bindFn(2, [], function (json) {
+      var f = self.props.onDragEnd;
+      if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
+    });
+    props.onDragCompleted = self.__bindFn(3, [], function () {
+      var f = self.props.onDragCompleted;
+      if (typeof f === 'function') { f(); }
+    });
+    return props;
+  }
   build(context) {
     return __h('Draggable', this.__sourceProps());
   }
@@ -1236,7 +1269,40 @@ export class ListenableBuilder {
   }
 }
 
-export class LongPressDraggable extends DragSourceBase {
+export class LongPressDraggable {
+  constructor(props) {
+    this.props = props || {};
+  }
+  // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
+  __sourceProps() {
+    var self = this;
+    var p = self.props || {};
+    var props = {};
+    for (var k in p) {
+      if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
+      k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
+      props[k] = p[k];
+    }
+    props.data = DragData.ref(p.data);
+    // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
+    props.onDragStarted = self.__bindFn(0, [], function () {
+      var f = self.props.onDragStarted;
+      if (typeof f === 'function') { f(); }
+    });
+    props.onDragUpdate = self.__bindFn(1, [], function (json) {
+      var f = self.props.onDragUpdate;
+      if (typeof f === 'function') { f(DragData.updateDetails(json)); }
+    });
+    props.onDragEnd = self.__bindFn(2, [], function (json) {
+      var f = self.props.onDragEnd;
+      if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
+    });
+    props.onDragCompleted = self.__bindFn(3, [], function () {
+      var f = self.props.onDragCompleted;
+      if (typeof f === 'function') { f(); }
+    });
+    return props;
+  }
   build(context) {
     return __h('LongPressDraggable', this.__sourceProps());
   }
@@ -1973,6 +2039,7 @@ export class Gradient {
 
 export class LinearGradient extends Gradient {
   constructor(props) {
+    super();
     var p = Gradient.__options(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
     for (var k in p) { this[k] = p[k]; }
   }
@@ -1983,6 +2050,7 @@ export class LinearGradient extends Gradient {
 
 export class RadialGradient extends Gradient {
   constructor(props) {
+    super();
     var p = Gradient.__options(props,
     ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
     for (var k in p) { this[k] = p[k]; }
@@ -1994,6 +2062,7 @@ export class RadialGradient extends Gradient {
 
 export class SweepGradient extends Gradient {
   constructor(props) {
+    super();
     var p = Gradient.__options(props,
     ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
     for (var k in p) { this[k] = p[k]; }
@@ -6152,7 +6221,7 @@ export class ValueNotifier extends ChangeNotifier {
 // 值一律是**成员名字符串**，宿主按名字查真实曲线 / 枚举（见
 // animation_from_json 的 curveFromJson / crossFadeStateFromJson）。
 export const Curves = {};
-var __curveNames = [
+[
   'linear', 'ease', 'easeIn', 'easeOut', 'easeInOut', 'easeInToLinear',
   'easeInSine', 'easeOutSine', 'easeInOutSine',
   'easeInQuad', 'easeOutQuad', 'easeInOutQuad',
@@ -6166,10 +6235,7 @@ var __curveNames = [
   'bounceIn', 'bounceOut', 'bounceInOut',
   'elasticIn', 'elasticOut', 'elasticInOut',
   'fastLinearToSlowEaseIn', 'fastEaseInToSlowEaseOut'
-];
-for (var __ci = 0; __ci < __curveNames.length; __ci++) {
-  Curves[__curveNames[__ci]] = __curveNames[__ci];
-}
+].forEach(function (n) { Curves[n] = n; });
 // 曲线名 → JS 估算函数：只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主
 // 已完成真实插值）；宿主侧按同名表还原真实 Curve（见 animation_from_json）。
 Curves.__fn = function (name) {
@@ -6463,61 +6529,64 @@ export class FocusNode extends ControllerBase {
   }
 }
 
-// LogicalKeyboardKey：keyId → 实例（身份去重，常量与事件共用同一张表）。
-var __keyInstances = {};
-// 常量表：名字 → [keyId, keyLabel]。宿主回传的事件按 keyId 归一，所以这里
-// 只登记「JS 源码里可能出现的名字」，两端读到的仍是同一实例。
-var __KEY_CONSTS = {
-  space: [0x00000000020, 'Space'],
-  enter: [0x0010000000D, 'Enter'],
-  escape: [0x0010000001B, 'Escape'],
-  tab: [0x00100000009, 'Tab'],
-  backspace: [0x00100000008, 'Backspace'],
-  delete: [0x0010000007F, 'Delete'],
-  capsLock: [0x00100000104, 'Caps Lock'],
-  arrowUp: [0x00100000304, 'Arrow Up'],
-  arrowDown: [0x00100000301, 'Arrow Down'],
-  arrowLeft: [0x00100000302, 'Arrow Left'],
-  arrowRight: [0x00100000303, 'Arrow Right'],
-  home: [0x00100000306, 'Home'],
-  end: [0x00100000305, 'End'],
-  pageUp: [0x00100000308, 'Page Up'],
-  pageDown: [0x00100000307, 'Page Down'],
-  controlLeft: [0x00200000100, 'Control Left'],
-  controlRight: [0x00200000101, 'Control Right'],
-  shiftLeft: [0x00200000102, 'Shift Left'],
-  shiftRight: [0x00200000103, 'Shift Right'],
-  altLeft: [0x00200000104, 'Alt Left'],
-  altRight: [0x00200000105, 'Alt Right'],
-  metaLeft: [0x00200000106, 'Meta Left'],
-  metaRight: [0x00200000107, 'Meta Right']
-};
-// 数字与字母键：logical keyId 就是字符码（digit0 = 0x30，keyA = 0x61），
-// keyLabel 与 Flutter 一致（大写字母 / 数字本身）。
-for (var __d = 0; __d < 10; __d++) {
-  __KEY_CONSTS['digit' + __d] = [0x30 + __d, String(__d)];
-}
-for (var __c = 0; __c < 26; __c++) {
-  var __letter = String.fromCharCode(0x61 + __c).toUpperCase();
-  __KEY_CONSTS['key' + __letter] = [0x61 + __c, __letter];
-}
 export const LogicalKeyboardKey = {};
 // keyId → 同一实例（常量与宿主回传的事件因此指向同一对象）。
+LogicalKeyboardKey.__instances = {};
 LogicalKeyboardKey.__byId = function (keyId, label) {
-  var k = __keyInstances[keyId];
+  var k = LogicalKeyboardKey.__instances[keyId];
   if (!k) {
     k = { keyId: keyId, keyLabel: label || '', debugName: label || '' };
-    __keyInstances[keyId] = k;
+    LogicalKeyboardKey.__instances[keyId] = k;
   }
   return k;
 };
-for (var __name in __KEY_CONSTS) {
-  __defineProtoGetter(LogicalKeyboardKey, __name, (function (name) {
-    return function () {
-      return LogicalKeyboardKey.__byId(__KEY_CONSTS[name][0], __KEY_CONSTS[name][1]);
-    };
-  })(__name));
-}
+// 常量表 + 同名 getter：名字 → [keyId, keyLabel]。宿主回传的事件按 keyId 归一，
+// 所以这里只登记「JS 源码里可能出现的名字」，两端读到的仍是同一实例。
+// 数字与字母键：logical keyId 就是字符码（digit0 = 0x30，keyA = 0x61），
+// keyLabel 与 Flutter 一致（大写字母 / 数字本身）。
+LogicalKeyboardKey.__define = function () {
+  var consts = {
+    space: [0x00000000020, 'Space'],
+    enter: [0x0010000000D, 'Enter'],
+    escape: [0x0010000001B, 'Escape'],
+    tab: [0x00100000009, 'Tab'],
+    backspace: [0x00100000008, 'Backspace'],
+    delete: [0x0010000007F, 'Delete'],
+    capsLock: [0x00100000104, 'Caps Lock'],
+    arrowUp: [0x00100000304, 'Arrow Up'],
+    arrowDown: [0x00100000301, 'Arrow Down'],
+    arrowLeft: [0x00100000302, 'Arrow Left'],
+    arrowRight: [0x00100000303, 'Arrow Right'],
+    home: [0x00100000306, 'Home'],
+    end: [0x00100000305, 'End'],
+    pageUp: [0x00100000308, 'Page Up'],
+    pageDown: [0x00100000307, 'Page Down'],
+    controlLeft: [0x00200000100, 'Control Left'],
+    controlRight: [0x00200000101, 'Control Right'],
+    shiftLeft: [0x00200000102, 'Shift Left'],
+    shiftRight: [0x00200000103, 'Shift Right'],
+    altLeft: [0x00200000104, 'Alt Left'],
+    altRight: [0x00200000105, 'Alt Right'],
+    metaLeft: [0x00200000106, 'Meta Left'],
+    metaRight: [0x00200000107, 'Meta Right']
+  };
+  for (var d = 0; d < 10; d++) {
+    consts['digit' + d] = [0x30 + d, String(d)];
+  }
+  for (var c = 0; c < 26; c++) {
+    var letter = String.fromCharCode(0x61 + c).toUpperCase();
+    consts['key' + letter] = [0x61 + c, letter];
+  }
+  LogicalKeyboardKey.__consts = consts;
+  for (var name in consts) {
+    __defineProtoGetter(LogicalKeyboardKey, name, (function (n) {
+      return function () {
+        return LogicalKeyboardKey.__byId(consts[n][0], consts[n][1]);
+      };
+    })(name));
+  }
+};
+LogicalKeyboardKey.__define();
 
 // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
 export class PhysicalKeyboardKey {
@@ -7094,44 +7163,6 @@ export class DragData {
   }
 }
 
-// ── Draggable / LongPressDraggable 共用的 props 折算 ──
-// `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
-// 两个组件类同一份语义，共用一个基类（宿主类型名仍由子类 build 给出）。
-export class DragSourceBase {
-  constructor(props) {
-    this.props = props || {};
-  }
-  __sourceProps() {
-    var self = this;
-    var p = self.props || {};
-    var props = {};
-    for (var k in p) {
-      if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
-      k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
-      props[k] = p[k];
-    }
-    props.data = DragData.ref(p.data);
-    // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
-    props.onDragStarted = self.__bindFn(0, [], function () {
-      var f = self.props.onDragStarted;
-      if (typeof f === 'function') { f(); }
-    });
-    props.onDragUpdate = self.__bindFn(1, [], function (json) {
-      var f = self.props.onDragUpdate;
-      if (typeof f === 'function') { f(DragData.updateDetails(json)); }
-    });
-    props.onDragEnd = self.__bindFn(2, [], function (json) {
-      var f = self.props.onDragEnd;
-      if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
-    });
-    props.onDragCompleted = self.__bindFn(3, [], function () {
-      var f = self.props.onDragCompleted;
-      if (typeof f === 'function') { f(); }
-    });
-    return props;
-  }
-}
-
 // ── LayerLink：CompositedTransform 的锚点，句柄即身份 ──
 export class LayerLink {
   constructor(props) {
@@ -7308,10 +7339,10 @@ export class KeyRef {
   }
 }
 
-// GlobalKey.currentState：StateHandle / stateProxyOf 与本文件同属 flutter.js 的
-// 值类区（state_handle_js.dart 在结点辅助区之后、各类包装之前写出），这里只补
+// GlobalKey.currentState：StateHandle 与本文件同属 flutter.js 的值类区
+// （state_handle_js.dart 在结点辅助区之后、各类包装之前写出），这里只补
 // `currentState` getter。运行时**不认识任何业务方法**：代理类由生成器随组件
-// 写进 flutter.js，并用 `registerStateProxy(type, class)` 登记；类型来自
+// 写进 flutter.js，并用 `StateHandle.registerProxy(type, class)` 登记；类型来自
 // GlobalKey<T> 的泛型实参。
 
 // UniqueKey：句柄即身份（无本端资源需要清理）。

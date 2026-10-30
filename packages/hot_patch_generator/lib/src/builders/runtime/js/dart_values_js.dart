@@ -235,6 +235,7 @@ const String dartValuesJsSource = r'''
 
   export class LinearGradient extends Gradient {
     constructor(props) {
+      super();
       var p = Gradient.__options(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
@@ -245,6 +246,7 @@ const String dartValuesJsSource = r'''
 
   export class RadialGradient extends Gradient {
     constructor(props) {
+      super();
       var p = Gradient.__options(props,
         ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
@@ -256,6 +258,7 @@ const String dartValuesJsSource = r'''
 
   export class SweepGradient extends Gradient {
     constructor(props) {
+      super();
       var p = Gradient.__options(props,
         ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }

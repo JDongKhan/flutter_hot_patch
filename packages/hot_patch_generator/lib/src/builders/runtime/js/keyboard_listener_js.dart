@@ -16,61 +16,64 @@
 // 生成三个**真子类**（同一构造体 + 各自原型的 `instanceof`），`is` 表达式由
 // 生成器翻成 `instanceof`（见 translator/js_value.dart 的 typeTestJs）。
 const String keyboardListenerJsSource = r'''
-  // LogicalKeyboardKey：keyId → 实例（身份去重，常量与事件共用同一张表）。
-  var __keyInstances = {};
-  // 常量表：名字 → [keyId, keyLabel]。宿主回传的事件按 keyId 归一，所以这里
-  // 只登记「JS 源码里可能出现的名字」，两端读到的仍是同一实例。
-  var __KEY_CONSTS = {
-    space: [0x00000000020, 'Space'],
-    enter: [0x0010000000D, 'Enter'],
-    escape: [0x0010000001B, 'Escape'],
-    tab: [0x00100000009, 'Tab'],
-    backspace: [0x00100000008, 'Backspace'],
-    delete: [0x0010000007F, 'Delete'],
-    capsLock: [0x00100000104, 'Caps Lock'],
-    arrowUp: [0x00100000304, 'Arrow Up'],
-    arrowDown: [0x00100000301, 'Arrow Down'],
-    arrowLeft: [0x00100000302, 'Arrow Left'],
-    arrowRight: [0x00100000303, 'Arrow Right'],
-    home: [0x00100000306, 'Home'],
-    end: [0x00100000305, 'End'],
-    pageUp: [0x00100000308, 'Page Up'],
-    pageDown: [0x00100000307, 'Page Down'],
-    controlLeft: [0x00200000100, 'Control Left'],
-    controlRight: [0x00200000101, 'Control Right'],
-    shiftLeft: [0x00200000102, 'Shift Left'],
-    shiftRight: [0x00200000103, 'Shift Right'],
-    altLeft: [0x00200000104, 'Alt Left'],
-    altRight: [0x00200000105, 'Alt Right'],
-    metaLeft: [0x00200000106, 'Meta Left'],
-    metaRight: [0x00200000107, 'Meta Right']
-  };
-  // 数字与字母键：logical keyId 就是字符码（digit0 = 0x30，keyA = 0x61），
-  // keyLabel 与 Flutter 一致（大写字母 / 数字本身）。
-  for (var __d = 0; __d < 10; __d++) {
-    __KEY_CONSTS['digit' + __d] = [0x30 + __d, String(__d)];
-  }
-  for (var __c = 0; __c < 26; __c++) {
-    var __letter = String.fromCharCode(0x61 + __c).toUpperCase();
-    __KEY_CONSTS['key' + __letter] = [0x61 + __c, __letter];
-  }
   export const LogicalKeyboardKey = {};
   // keyId → 同一实例（常量与宿主回传的事件因此指向同一对象）。
+  LogicalKeyboardKey.__instances = {};
   LogicalKeyboardKey.__byId = function (keyId, label) {
-    var k = __keyInstances[keyId];
+    var k = LogicalKeyboardKey.__instances[keyId];
     if (!k) {
       k = { keyId: keyId, keyLabel: label || '', debugName: label || '' };
-      __keyInstances[keyId] = k;
+      LogicalKeyboardKey.__instances[keyId] = k;
     }
     return k;
   };
-  for (var __name in __KEY_CONSTS) {
-    __defineProtoGetter(LogicalKeyboardKey, __name, (function (name) {
-      return function () {
-        return LogicalKeyboardKey.__byId(__KEY_CONSTS[name][0], __KEY_CONSTS[name][1]);
-      };
-    })(__name));
-  }
+  // 常量表 + 同名 getter：名字 → [keyId, keyLabel]。宿主回传的事件按 keyId 归一，
+  // 所以这里只登记「JS 源码里可能出现的名字」，两端读到的仍是同一实例。
+  // 数字与字母键：logical keyId 就是字符码（digit0 = 0x30，keyA = 0x61），
+  // keyLabel 与 Flutter 一致（大写字母 / 数字本身）。
+  LogicalKeyboardKey.__define = function () {
+    var consts = {
+      space: [0x00000000020, 'Space'],
+      enter: [0x0010000000D, 'Enter'],
+      escape: [0x0010000001B, 'Escape'],
+      tab: [0x00100000009, 'Tab'],
+      backspace: [0x00100000008, 'Backspace'],
+      delete: [0x0010000007F, 'Delete'],
+      capsLock: [0x00100000104, 'Caps Lock'],
+      arrowUp: [0x00100000304, 'Arrow Up'],
+      arrowDown: [0x00100000301, 'Arrow Down'],
+      arrowLeft: [0x00100000302, 'Arrow Left'],
+      arrowRight: [0x00100000303, 'Arrow Right'],
+      home: [0x00100000306, 'Home'],
+      end: [0x00100000305, 'End'],
+      pageUp: [0x00100000308, 'Page Up'],
+      pageDown: [0x00100000307, 'Page Down'],
+      controlLeft: [0x00200000100, 'Control Left'],
+      controlRight: [0x00200000101, 'Control Right'],
+      shiftLeft: [0x00200000102, 'Shift Left'],
+      shiftRight: [0x00200000103, 'Shift Right'],
+      altLeft: [0x00200000104, 'Alt Left'],
+      altRight: [0x00200000105, 'Alt Right'],
+      metaLeft: [0x00200000106, 'Meta Left'],
+      metaRight: [0x00200000107, 'Meta Right']
+    };
+    for (var d = 0; d < 10; d++) {
+      consts['digit' + d] = [0x30 + d, String(d)];
+    }
+    for (var c = 0; c < 26; c++) {
+      var letter = String.fromCharCode(0x61 + c).toUpperCase();
+      consts['key' + letter] = [0x61 + c, letter];
+    }
+    LogicalKeyboardKey.__consts = consts;
+    for (var name in consts) {
+      __defineProtoGetter(LogicalKeyboardKey, name, (function (n) {
+        return function () {
+          return LogicalKeyboardKey.__byId(consts[n][0], consts[n][1]);
+        };
+      })(name));
+    }
+  };
+  LogicalKeyboardKey.__define();
 
   // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
   export class PhysicalKeyboardKey {

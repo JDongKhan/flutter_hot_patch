@@ -25,7 +25,7 @@ const String animationJsSource = r'''
   // 值一律是**成员名字符串**，宿主按名字查真实曲线 / 枚举（见
   // animation_from_json 的 curveFromJson / crossFadeStateFromJson）。
   export const Curves = {};
-  var __curveNames = [
+  [
     'linear', 'ease', 'easeIn', 'easeOut', 'easeInOut', 'easeInToLinear',
     'easeInSine', 'easeOutSine', 'easeInOutSine',
     'easeInQuad', 'easeOutQuad', 'easeInOutQuad',
@@ -39,10 +39,7 @@ const String animationJsSource = r'''
     'bounceIn', 'bounceOut', 'bounceInOut',
     'elasticIn', 'elasticOut', 'elasticInOut',
     'fastLinearToSlowEaseIn', 'fastEaseInToSlowEaseOut'
-  ];
-  for (var __ci = 0; __ci < __curveNames.length; __ci++) {
-    Curves[__curveNames[__ci]] = __curveNames[__ci];
-  }
+  ].forEach(function (n) { Curves[n] = n; });
   // 曲线名 → JS 估算函数：只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主
   // 已完成真实插值）；宿主侧按同名表还原真实 Curve（见 animation_from_json）。
   Curves.__fn = function (name) {

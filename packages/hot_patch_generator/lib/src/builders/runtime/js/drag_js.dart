@@ -83,45 +83,42 @@ const String dragJsSource = r'''
       return { data: DragData.of(json.data), offset: DragData.offset(json.offset) };
     }
   }
-
-  // ── Draggable / LongPressDraggable 共用的 props 折算 ──
-  // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
-  // 两个组件类同一份语义，共用一个基类（宿主类型名仍由子类 build 给出）。
-  export class DragSourceBase {
-    constructor(props) {
-      this.props = props || {};
-    }
-    __sourceProps() {
-      var self = this;
-      var p = self.props || {};
-      var props = {};
-      for (var k in p) {
-        if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
-            k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
-        props[k] = p[k];
-      }
-      props.data = DragData.ref(p.data);
-      // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
-      props.onDragStarted = self.__bindFn(0, [], function () {
-        var f = self.props.onDragStarted;
-        if (typeof f === 'function') { f(); }
-      });
-      props.onDragUpdate = self.__bindFn(1, [], function (json) {
-        var f = self.props.onDragUpdate;
-        if (typeof f === 'function') { f(DragData.updateDetails(json)); }
-      });
-      props.onDragEnd = self.__bindFn(2, [], function (json) {
-        var f = self.props.onDragEnd;
-        if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
-      });
-      props.onDragCompleted = self.__bindFn(3, [], function () {
-        var f = self.props.onDragCompleted;
-        if (typeof f === 'function') { f(); }
-      });
-      return props;
-    }
-  }
 ''';
+
+// Draggable / LongPressDraggable 的 props 折算（同一份语义，两个组件模板各插一份，
+// build 里调 `this.__sourceProps()`）。不设基类：这两个组件类排在本模块的值类区
+// 之前，继承会撞 TDZ；同一段源码由生成器分别插进两个类即可，无重复实现。
+const String dragSourcePropsMethodSource = '''
+  // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
+  __sourceProps() {
+    var self = this;
+    var p = self.props || {};
+    var props = {};
+    for (var k in p) {
+      if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
+          k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
+      props[k] = p[k];
+    }
+    props.data = DragData.ref(p.data);
+    // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
+    props.onDragStarted = self.__bindFn(0, [], function () {
+      var f = self.props.onDragStarted;
+      if (typeof f === 'function') { f(); }
+    });
+    props.onDragUpdate = self.__bindFn(1, [], function (json) {
+      var f = self.props.onDragUpdate;
+      if (typeof f === 'function') { f(DragData.updateDetails(json)); }
+    });
+    props.onDragEnd = self.__bindFn(2, [], function (json) {
+      var f = self.props.onDragEnd;
+      if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
+    });
+    props.onDragCompleted = self.__bindFn(3, [], function () {
+      var f = self.props.onDragCompleted;
+      if (typeof f === 'function') { f(); }
+    });
+    return props;
+  }''';
 
 // DragTarget 的 props 折算：挂在类自身（build 里调 `this.__targetProps(context)`）。
 //
