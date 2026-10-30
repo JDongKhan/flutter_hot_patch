@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 dfd5320b） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 95bc1f9b） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'dfd5320b') { return; }
-  G.__jsuiVersion = 'dfd5320b';
+  if (G.__jsui && G.__jsuiVersion === '95bc1f9b') { return; }
+  G.__jsuiVersion = '95bc1f9b';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -598,6 +598,12 @@ if (G.kDebugMode) {
   // 宿主 → JS：释放本端句柄（对端发起的 release，不再回通知）。
   function releaseHandleFromHost(id) { releaseHandle(id, false); }
 
+  // 句柄对应的本端真实对象（跨模块按 id 取 obj：easy_refresh 的异步回程等）。
+  function handleObjectOf(id) {
+    var h = handles[id];
+    return h ? h.obj : null;
+  }
+
   // JS → 宿主：对本端句柄对应的**宿主端真实对象**发起 op（返回 Promise）。
   // 与 callHandle 方向相反、语义对称（call/get/set/invoke）。
   function handleOp(id, op, payload) {
@@ -606,71 +612,10 @@ if (G.kDebugMode) {
     return invokeHostMethod('jsHandle', [body]);
   }
 
-  // Scroll/Tab/Text 的 JS 代理类同构：__listeners 数组、内部回传句柄
-  // （meta.fn 交宿主回传）、句柄登记（scope=page）、release 清理、dispose、
-  // toJSON、__notify。本工厂收敛这套样板；能力只写差异：
-  //   init(self, ...)   ：构造体（镜像字段），实参透传（如 Tab 的 opts）；
-  //   onHost(self, p)   ：宿主回传 → 更新镜像 + __notify（缺省则无回传句柄）；
-  //   extraJSON(self)   ：toJSON 附加字段（如 Tab 的 length/initialIndex）；
-  //   meta(self)        ：随句柄 create 下发给宿主的构造参数（宿主据此创建
-  //                       真实对象，如 EasyRefreshController 的 controlFinish*）。
-  // ChangeNotifier 刻意不用本工厂：它是用户模型基类（无回传句柄、
-  // notifyListeners 是公开 API、双路派发），见 change_notifier_js.dart。
-  function defineController(kind, spec) {
-    spec = spec || {};
-    defineHandleKind(kind, {
-      release: function (h) {
-        var c = h.obj;
-        if (!c) { return; }
-        // 内部回传句柄是框架实现（用户无从释放），随本控制器一并释放。
-        if (c.__hostFn) { releaseHandle(c.__hostFn.__fn, false); c.__hostFn = null; }
-        c.__listeners = [];
-      }
-    });
-    var Ctor = function () {
-      this.__listeners = [];
-      if (spec.init) { spec.init.apply(this, arguments); }
-      if (spec.onHost) {
-        var self = this;
-        this.__hostFn = __createFnHandle(function (p) { spec.onHost(self, p); });
-      }
-      // 登记为句柄（scope=page）：自动同步宿主 onCreate（meta 携带回传句柄与
-      // 能力自带的构造参数，供宿主创建真实对象）；页面退出时 disposeRoot 兜底释放。
-      var meta = this.__hostFn ? { fn: this.__hostFn } : null;
-      if (spec.meta) {
-        var extra = spec.meta(this);
-        if (extra) {
-          meta = meta || {};
-          for (var k in extra) { meta[k] = extra[k]; }
-        }
-      }
-      this.__id = registerHandle(this, kind, { meta: meta });
-    };
-    Ctor.prototype.addListener = function (f) {
-      if (typeof f === 'function') { this.__listeners.push(f); }
-    };
-    Ctor.prototype.removeListener = function (f) {
-      var i = this.__listeners.indexOf(f);
-      if (i >= 0) { this.__listeners.splice(i, 1); }
-    };
-    Ctor.prototype.__notify = function () {
-      var fs = this.__listeners;
-      for (var i = 0; i < fs.length; i++) { fs[i](); }
-    };
-    Ctor.prototype.dispose = function () {
-      releaseHandle(this.__id);
-      this.__id = null;
-    };
-    Ctor.prototype.toJSON = function () {
-      var out = { __handle: this.__id };
-      if (spec.extraJSON) {
-        var extra = spec.extraJSON(this);
-        if (extra) { for (var k in extra) { out[k] = extra[k]; } }
-      }
-      return out;
-    };
-    return Ctor;
-  }
+  // 控制器（ScrollController / AnimationController / …）的 JS 基类不在这里：
+  // 它们是 Flutter 侧语义，随 flutter.js 发布（`ControllerBase`，见
+  // js/controller_base_js.dart）。本片段只提供与能力无关的句柄机制
+  // （defineHandleKind / registerHandle / handleOp / releaseHandle）。
 
 
 
@@ -2246,10 +2191,12 @@ if (G.kDebugMode) {
 // ===== 【11.5】跨模块核心符号（供 flutter.js 值类区） =====
   G.__core = {
     defineProtoGetter: __defineProtoGetter,
-    defineController: defineController,
     defineHandleKind: defineHandleKind,
     handleOp: handleOp,
     registerHandle: registerHandle,
+    releaseHandle: releaseHandle,
+    handleObjectOf: handleObjectOf,
+    createFnHandle: __createFnHandle,
     // 作用域机制（provider 在自己的模块 patch/provider.js 里注册作用域）。
     registerScope: registerScope,
     scopeOf: scopeOf,
@@ -2276,33 +2223,6 @@ if (G.kDebugMode) {
     set activeRoot(v) { activeRoot = v; },
     get JsBuildContext() { return JsBuildContext; }
   };
-
-
-// ===== 【11.6】State 句柄（GlobalKey.currentState） =====
-  // GlobalKey.currentState：State 是宿主对象，JS 侧只保留**句柄**。
-  //
-  // 运行时**不认识任何业务方法**（`insertItem` / `removeItem` 这类签名属于具体
-  // 组件）：每个 State 类型的代理类由生成器随该组件一起写进 flutter.js，并在
-  // 加载时用 `__registerStateProxy(type, class)` 登记；类型来自 **GlobalKey<T> 的
-  // 泛型实参**，随产物下发，不靠 runtimeType 猜。没有代理类时退化为通用句柄。
-  function StateHandle(id, type) { this.__key = id; this.__type = type || null; }
-  StateHandle.prototype.__op = function (op, payload) {
-    if (this.__key == null) { return null; }
-    var p = payload || {};
-    // 类型随每次调用下发（来自 GenericKey 的泛型实参）：宿主据此分派到
-    // `Type.method`，不同组件的同名方法互不覆盖。
-    if (this.__type) { p.type = this.__type; }
-    return handleOp(this.__key, '__state.' + op, p);
-  };
-  var __stateProxies = {};
-  function __registerStateProxy(type, cls) { __stateProxies[type] = cls; }
-  function __stateProxyOf(id, type) {
-    var cls = type ? __stateProxies[type] : null;
-    return cls ? new cls(id, type) : new StateHandle(id, type);
-  }
-  G.__registerStateProxy = __registerStateProxy;
-  G.__StateHandle = StateHandle;
-  G.__stateProxyOf = __stateProxyOf;
 
 
 // ===== 【11.7】Key 签名（keySig / objectToken） =====
@@ -2352,36 +2272,6 @@ if (G.kDebugMode) {
   }
 
   G.objectToken = objectToken;
-
-
-// ===== 【13】Dart 异常（StateError / ArgumentError / …） =====
-  function __dartErrorCtor(name, positional) {
-    var ctor = function (props) {
-      props = __positionalArgs(props, positional);
-      var msg = props.message;
-      var err = new Error(msg == null ? '' : String(msg));
-      err.name = name;
-      return err;
-    };
-    ctor.prototype = Error.prototype;
-    // 命名构造 `X.value(value, [name, message])`：Dart 侧统一映射为静态方法。
-    ctor.value = function (props) {
-      props = __positionalArgs(props, ['value', 'name', 'message']);
-      var msg = props.message != null ? props.message : props.name;
-      var err = ctor({ message: msg });
-      err.value = props.value;
-      return err;
-    };
-    return ctor;
-  }
-  G.StateError = __dartErrorCtor('StateError', ['message']);
-  G.ArgumentError = __dartErrorCtor('ArgumentError', ['message']);
-  G.FormatException = __dartErrorCtor('FormatException', ['message', 'source', 'offset']);
-  G.RangeError = __dartErrorCtor('RangeError', ['message']);
-  G.UnsupportedError = __dartErrorCtor('UnsupportedError', ['message']);
-  G.UnimplementedError = __dartErrorCtor('UnimplementedError', ['message']);
-  G.Exception = __dartErrorCtor('Exception', ['message']);
-  G.Error = G.Error || __dartErrorCtor('Error', ['message']);
 
 
 // ===== 【21】BuildContext 代理 =====
@@ -2563,7 +2453,7 @@ if (G.kDebugMode) {
   };
 
 
-// ===== 【27.5】Dart extension 注册（__jsExtension） =====
+// ===== 【27.5】Dart extension 注册（registerExtension） =====
   // 类型名 → 构造函数：语言核心映射 → 运行时别名表 → G[name]。
   // 三者都取不到时返回 null（调用方 console.error，不静默吞掉）。
   function __extensionTargetOf(target) {
@@ -2618,7 +2508,7 @@ if (G.kDebugMode) {
     delete __extensionRecords[id];
   }
 
-  G.__jsExtension = function (target, members, opts) {
+  G.registerExtension = function (target, members, opts) {
     opts = opts || {};
     var id = opts.id == null ? '' : String(opts.id);
     var statics = opts.statics || {};

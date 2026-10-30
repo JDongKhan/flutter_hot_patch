@@ -48,7 +48,7 @@
 /// | 【10】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
 /// | 【11】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
 /// | 【11.5】 | 跨模块核心符号（`G.__core`，供 flutter.js 值类区与能力模块解构） | 跨模块约定 |
-/// | 【13】【21】【25】~【27.5】 | Dart 异常 / BuildContext 代理 / 泄漏观测 / 缓存追踪 / Dismissible / extension | 按能力自洽 |
+/// | 【21】【25】~【27.5】 | BuildContext 代理 / 泄漏观测 / 缓存追踪 / Dismissible / extension | 按能力自洽 |
 ///
 /// **三方库与 Flutter SDK 的 API 面不在本文件**：provider 的 `context.watch/read`
 /// 与作用域声明在它自己的包模块 `patch/provider.js`（生成器
@@ -71,14 +71,11 @@ library;
 // 不需要发版。
 import 'build_context_js.dart';
 import 'cache_trace_js.dart';
-import 'dart_errors_js.dart';
 import 'dismissible_js.dart';
 import 'handle_registry_js.dart';
 import 'js_extension_js.dart';
 import 'key_sig_js.dart';
 import 'mini_react_js.dart';
-import 'state_handle_js.dart';
-
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
@@ -703,10 +700,12 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
 const String _jsUiCrossModuleExports = r'''
   G.__core = {
     defineProtoGetter: __defineProtoGetter,
-    defineController: defineController,
     defineHandleKind: defineHandleKind,
     handleOp: handleOp,
     registerHandle: registerHandle,
+    releaseHandle: releaseHandle,
+    handleObjectOf: handleObjectOf,
+    createFnHandle: __createFnHandle,
     // 作用域机制（provider 在自己的模块 patch/provider.js 里注册作用域）。
     registerScope: registerScope,
     scopeOf: scopeOf,
@@ -763,11 +762,12 @@ const String _jsUiRuntimeSkeletonTailEnd = r'''
 /// 标志先行注入）。因此任何 JS 侧修复都只需重出产物，无需发版。
 ///
 /// 所有片段在**同一 IIFE 作用域**，片段间靠函数提升 / 后声明互相引用，与拆分前
-/// 语义一致。拼接顺序 = 核心骨架（【2】~【11.7】）→ 能力片段（【13】~【27.5】），
+/// 语义一致。拼接顺序 = 核心骨架（【2】~【11.7】）→ 能力片段（【21】~【27.5】），
 /// 后面的片段可直接引用前面已执行的内容。值类区不在这里（见 `flutter.js`）。
 ///
 /// 产物体积较大，**每个分区都以 `// ===== 【n】标题 =====` 注释隔开**，便于
 /// 排查线上问题时直接定位到某一段。
+
 String runtimeJsSource() {
   // 版本 = 除头部以外的全部内容哈希（头部要写入版本号，不能参与计算）。
   // 内容一变 → 版本变 → 已上线 App 里的 runtime.js 会被原地重建。
@@ -785,13 +785,11 @@ String runtimeJsSource() {
     // 值类区（Dart 值对象 / Controller 类族）已迁至 flutter.js：runtime.js 只留
     // 语言层与 mini-react 核心。它们需要的那几个核心符号在此交接。
     _section('【11.5】跨模块核心符号（供 flutter.js 值类区）', _jsUiCrossModuleExports),
-    // State 句柄：产物里的 State 代理类 `extends __StateHandle`（模块加载时求值），
-    // 必须早于任何产物模块，故留在核心而非值类区。
-    _section('【11.6】State 句柄（GlobalKey.currentState）', stateHandleJsSource),
+    // State 句柄（GlobalKey.currentState）随 flutter.js 发布：它承载的是 Dart
+    // State 对象，与控件 / 值类同层，runtime.js 不认识它（见 state_handle_js.dart）。
     // Key 签名：reconciler 的 __patchChildren 直接用 keySig，故属核心。
     _section('【11.7】Key 签名（keySig / objectToken）', keySigJsSource),
     // 各能力片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
-    _section('【13】Dart 异常（StateError / ArgumentError / …）', dartErrorsJsSource),
     // BuildContext 代理留在核心侧（机制：代理 / 句柄 / 通用 op 转发）。它的
     // 库级 API（provider 的 watch/read）由 patch/provider.js 在求值时补到原型上
     // （同一全局对象，不要求同一作用域）。
@@ -806,9 +804,9 @@ String runtimeJsSource() {
     // Dismissible 的 confirmDismiss 异步回程（放最后：依赖 handle 表与 host，
     // 与能力片段互不干扰）。
     _section('【27】Dismissible 确认回程', dismissibleJsSource),
-    // Dart extension 注册机制：生成器在扩展声明处发射 `__jsExtension(...)`，
+    // Dart extension 注册机制：生成器在扩展声明处发射 `registerExtension(...)`，
     // 原型成员随产物注册（调用点与 Dart 一对一，无名字映射）。
-    _section('【27.5】Dart extension 注册（__jsExtension）', jsExtensionJsSource),
+    _section('【27.5】Dart extension 注册（registerExtension）', jsExtensionJsSource),
     _section('【28】api 收尾', _jsUiRuntimeSkeletonTailHead),
     _jsUiLeakApiMember,
     _jsUiRuntimeSkeletonTailEnd,

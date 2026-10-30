@@ -156,7 +156,7 @@ class ComponentBuilder implements Builder {
     //     @PatchIgnore / @HostInjected 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
     // 本文件是否声明了 `extension`：纯扩展文件没有根类，但也必须产出产物
-    // （`__jsExtension(...)` 注册语句就写在声明处），故「无根类 → 不产出」的
+    // （`registerExtension(...)` 注册语句就写在声明处），故「无根类 → 不产出」的
     // 早返回要让它让位。是否产出仍由**文件级可达**决定（component_scope 把声明
     // 扩展的文件视为有产出，因此被 import 的扩展文件一定可达；没人 import 的
     // 扩展文件在 JS 侧永远不会被加载，不产出）。
@@ -379,7 +379,7 @@ class ComponentBuilder implements Builder {
     // 本文件**使用**到的扩展：注册语句在扩展声明文件的产物里，因此那个产物
     // 必须被加载——Dart 里要用扩展就得 import 声明它的库，这里按同一套 import
     // 图（含 barrel 的 export 转发）反查声明了 extension 的源文件，import 其扩展
-    // 常量（导入即触发 `__jsExtension(...)`）。
+    // 常量（导入即触发 `registerExtension(...)`）。
     //   - 项目文件 → 该文件自身的产物（`patch/a/b.js`）；
     //   - 本地依赖包 → `patch/extensions/<pkg>.js`（一包一个，按需加载）。
     //

@@ -108,7 +108,7 @@ String renderPackageExtensions(String pkg, String libDir, String output) {
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
     ..writeln('// Dart extension 注册（package:$pkg）：由 hot_patch_generator 生成')
-    ..writeln('// 使用方 import 本文件即完成注册（`__jsExtension(...)`），无需预热。')
+    ..writeln('// 使用方 import 本文件即完成注册（`registerExtension(...)`），无需预热。')
     ..writeln();
 
   final imports = <String>{};

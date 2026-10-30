@@ -24,7 +24,7 @@ String productPath(String sourcePath) {
 /// 本地依赖包的**扩展注册产物**：`patch/extensions/<package>.js`（一包一个）。
 ///
 /// 与包模块 [packageModulePath] 分开：包模块放「被引用的类」，扩展产物放
-/// `__jsExtension(...)` 注册语句。分开的直接好处是**按需加载**——某个文件真正
+/// `registerExtension(...)` 注册语句。分开的直接好处是**按需加载**——某个文件真正
 /// import 了该包的扩展时，才在自己产物里 import 这个文件；没用到就完全不执行。
 String extensionModulePath(String package) => 'patch/extensions/$package.js';
 

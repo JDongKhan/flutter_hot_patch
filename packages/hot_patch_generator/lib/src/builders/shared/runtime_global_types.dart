@@ -21,9 +21,8 @@ Set<String> runtimeGlobalTypes() => _RuntimeGlobalTypes.instance.types;
 /// `flutter.js` **实际导出**的类型/常量名（`export class` / `export const`）。
 ///
 /// 与 [runtimeGlobalTypes] 分开的唯一原因：产物 import 只能指向模块导出。
-/// `G.StateError` 这类只存在于 runtime.js（IIFE，globalThis）上的名字由
-/// 裸引用解析，绝不能写进 `import { … } from '../flutter.js'`（会 import
-/// 不存在的导出直接语法报错）。
+/// 只存在于 runtime.js（IIFE，globalThis）上的名字由裸引用解析，绝不能写进
+/// `import { … } from '../flutter.js'`（会 import 不存在的导出直接语法报错）。
 Set<String> flutterExportTypes() => _RuntimeGlobalTypes.instance.exports;
 
 /// 运行时登记的**类型别名**（`__jsTypeAlias('BuildContext', JsBuildContext)`）。
@@ -68,8 +67,8 @@ class _RuntimeGlobalTypes {
   /// `is T` 的类型判断与产物 import 收集都会漏。
   static final _exportClass = RegExp(r'\bexport class ([A-Z][A-Za-z0-9_$]*)');
 
-  /// 值片段的导出常量 / 控制器：`export const MediaQuery = {`、
-  /// `export const AnimationController = defineController(...)`。
+  /// 值片段的导出常量 / 对象：`export const MediaQuery = {`、
+  /// `export const StateError = __dartErrorCtor(...)`。
   static final _exportConst = RegExp(r'\bexport const ([A-Z][A-Za-z0-9_$]*)');
 
   /// 全局函数注入语句：`G.foo = function (…) {`（关键词 `function` 排除

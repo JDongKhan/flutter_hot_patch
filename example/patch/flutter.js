@@ -5,7 +5,8 @@
 const G = globalThis;
 const {
   defineProtoGetter: __defineProtoGetter,
-  defineController, defineHandleKind, handleOp, registerHandle,
+  defineHandleKind, handleOp, registerHandle, releaseHandle, handleObjectOf,
+  createFnHandle: __createFnHandle,
   contextOf, elementOf, elementListOf, isElement, isElementList,
   hostNodeIdOf, newRoot, mount, unmount,
   commitOps, emitOp, flushNow, abortRoot, releasePageHandles, invokeHostMethod,
@@ -74,6 +75,33 @@ export function __h(type, props) {
   if (__isLazyChildHost(type, p)) { el.lazyChildren = true; }
   return el;
 }
+
+export class StateHandle {
+  constructor(id, type) {
+    this.__key = id;
+    this.__type = type || null;
+  }
+  // 类型随每次调用下发（来自 GlobalKey 的泛型实参）：宿主据此分派到
+  // `Type.method`，不同组件的同名方法互不覆盖。
+  __op(op, payload) {
+    if (this.__key == null) { return null; }
+    var p = payload || {};
+    if (this.__type) { p.type = this.__type; }
+    return handleOp(this.__key, '__state.' + op, p);
+  }
+}
+
+var __stateProxies = {};
+
+export function registerStateProxy(type, cls) {
+  __stateProxies[type] = cls;
+}
+
+export function stateProxyOf(id, type) {
+  var cls = type ? __stateProxies[type] : null;
+  return cls ? new cls(id, type) : new StateHandle(id, type);
+}
+
 
 
 export class AbsorbPointer {
@@ -1649,7 +1677,7 @@ export class ValueListenableBuilder {
   }
 }
 
-export class AnimatedListState extends __StateHandle {
+export class AnimatedListState extends StateHandle {
   insertItem(index, duration) {
     this.__op('insertItem', { index: index, duration: duration });
   }
@@ -1663,7 +1691,7 @@ export class AnimatedListState extends __StateHandle {
     this.__op('removeItem', { index: index, duration: duration });
   }
 }
-__registerStateProxy('AnimatedListState', AnimatedListState);
+registerStateProxy('AnimatedListState', AnimatedListState);
 
 // ===== Dart 值类（值对象 / Controller / 动画 / Key / 枚举）=====
 // 翻译层对它们一律 `new X({...})` / `X.member`；
@@ -1930,6 +1958,113 @@ export class BoxDecoration {
       if (this[k] != null) { json[k] = this[k]; }
     }
     return json;
+  }
+}
+
+function __dartErrorCtor(name, positional) {
+  var ctor = function (props) {
+    props = __positionalArgs(props, positional);
+    var msg = props.message;
+    var err = new Error(msg == null ? '' : String(msg));
+    err.name = name;
+    return err;
+  };
+  ctor.prototype = Error.prototype;
+  // 命名构造 `X.value(value, [name, message])`：Dart 侧统一映射为静态方法。
+  ctor.value = function (props) {
+    props = __positionalArgs(props, ['value', 'name', 'message']);
+    var msg = props.message != null ? props.message : props.name;
+    var err = ctor({ message: msg });
+    err.value = props.value;
+    return err;
+  };
+  return ctor;
+}
+export const StateError = __dartErrorCtor('StateError', ['message']);
+export const ArgumentError = __dartErrorCtor('ArgumentError', ['message']);
+export const FormatException =
+__dartErrorCtor('FormatException', ['message', 'source', 'offset']);
+export const RangeError = __dartErrorCtor('RangeError', ['message']);
+export const UnsupportedError = __dartErrorCtor('UnsupportedError', ['message']);
+export const UnimplementedError =
+__dartErrorCtor('UnimplementedError', ['message']);
+export const Exception = __dartErrorCtor('Exception', ['message']);
+// `Error` 不导出：JS 原生 Error 就是 Dart Error 的落点（两者同名同义），
+// 导出同名类反而会遮蔽模块内的原生 Error（dart 侧 `new Error(props)` 也
+// 极少出现，保持原生即可）。
+
+// kind → release 描述符只注册一次（同一 kind 会被多次实例化）。
+var __controllerKinds = {};
+
+// 句柄释放（宿主发起或页面兜底）：内部回传句柄是框架实现（用户无从释放），
+// 随本控制器一并释放；订阅一并清空（避免闭包引用泄漏）。
+function __releaseController(h) {
+  var c = h.obj;
+  if (!c) { return; }
+  if (c.__hostFn) { releaseHandle(c.__hostFn.__fn, false); c.__hostFn = null; }
+  c.__listeners = [];
+}
+
+export class ControllerBase {
+  constructor() {
+    this.__listeners = [];
+    this.__id = null;
+    this.__spec = null;
+  }
+
+  // 子类构造末尾调用：登记为句柄（scope 由句柄机制按当前上下文决定——通常是
+  // 「随持有它的组件实例释放」），并自动同步宿主 onCreate（meta 携带回传句柄
+  // 与子类构造参数，供宿主创建真实对象）；页面退出时 disposeRoot 兜底释放。
+  __bindHandle(kind, spec) {
+    spec = spec || {};
+    this.__spec = spec;
+    if (!__controllerKinds[kind]) {
+      __controllerKinds[kind] = true;
+      defineHandleKind(kind, { release: __releaseController });
+    }
+    var self = this;
+    if (spec.onHost) {
+      this.__hostFn = __createFnHandle(function (p) { spec.onHost(self, p); });
+    }
+    var meta = this.__hostFn ? { fn: this.__hostFn } : null;
+    if (spec.meta) {
+      var extra = spec.meta(this);
+      if (extra) {
+        meta = meta || {};
+        for (var k in extra) { meta[k] = extra[k]; }
+      }
+    }
+    this.__id = registerHandle(this, kind, { meta: meta });
+    return this.__id;
+  }
+
+  addListener(f) {
+    if (typeof f === 'function') { this.__listeners.push(f); }
+  }
+
+  removeListener(f) {
+    var i = this.__listeners.indexOf(f);
+    if (i >= 0) { this.__listeners.splice(i, 1); }
+  }
+
+  __notify() {
+    var fs = this.__listeners;
+    for (var i = 0; i < fs.length; i++) { fs[i](); }
+  }
+
+  dispose() {
+    if (this.__id != null) { releaseHandle(this.__id); }
+    this.__id = null;
+  }
+
+  toJSON() {
+    var out = { __handle: this.__id };
+    var spec = this.__spec;
+    if (spec && spec.extraJSON) {
+      var extra = spec.extraJSON(this);
+      if (extra) { for (var k in extra) { out[k] = extra[k]; } }
+    }
+    return out;
   }
 }
 
@@ -5780,28 +5915,29 @@ export class CurvedAnimation {
 //   - forward/reverse/repeat/stop/reset → `handleOp('call')`（载荷带 value 与
 //     时长，宿主据此对齐状态后再驱动）；
 //   - 宿主每帧回传 value → onHost 更新镜像 + __notify（JS listeners 据此重建）。
-export const AnimationController = defineController('ctrl/Flash', {
-  init: function (opts) {
+export class AnimationController extends ControllerBase {
+  constructor(opts) {
+    super();
     opts = opts || {};
     this._value = (typeof opts.value === 'number') ? opts.value : 0;
     this.lowerBound = (typeof opts.lowerBound === 'number') ? opts.lowerBound : 0;
     this.upperBound = (typeof opts.upperBound === 'number') ? opts.upperBound : 1;
     this.durationMs = __durationMs(opts.duration);
     if (this.durationMs == null) { this.durationMs = 300; }
-  },
-  onHost: function (self, p) {
-    if (p != null && typeof p === 'number') {
-      self._value = p;
-      self.__notify();
-    }
-  },
-  extraJSON: function (self) {
-    return { value: self._value, durationMs: self.durationMs };
+    this.__bindHandle('ctrl/Flash', {
+      onHost: function (self, p) {
+        if (p != null && typeof p === 'number') {
+          self._value = p;
+          self.__notify();
+        }
+      },
+      extraJSON: function (self) {
+        return { value: self._value, durationMs: self.durationMs };
+      }
+    });
   }
-});
-Object.defineProperty(AnimationController.prototype, 'value', {
-  get: function () { return this._value; },
-  set: function (v) {
+  get value() { return this._value; }
+  set value(v) {
     var n = (typeof v === 'number') ? v : 0;
     if (this._value === n) { return; }
     this._value = n;
@@ -5810,57 +5946,31 @@ Object.defineProperty(AnimationController.prototype, 'value', {
     }
     this.__notify();
   }
-});
-AnimationController.prototype.__play = function (method, opts) {
-  if (this.__id == null) { return; }
-  // 生成器把命名实参摊平为位置实参（`repeat(reverse: true)` → `repeat(true)`），
-  // 故 opts 可能是布尔（reverse）/ 数字（duration 毫秒）/ 对象三种形态，这里统一归一。
-  var o = opts;
-  if (o === true || o === false) { o = { reverse: o }; }
-  else if (typeof o === 'number') { o = { duration: o }; }
-  else { o = o || {}; }
-  var ms = (o.duration != null) ? __durationMs(o.duration) : this.durationMs;
-  handleOp(this.__id, 'call', {
-    // id 一并下发：宿主基座的 onOp 不带 id，而「挂逐帧回传」需要它。
-    id: this.__id,
-    method: method,
-    durationMs: ms,
-    reverse: !!o.reverse,
-    value: this._value
-  });
-};
-AnimationController.prototype.forward = function (opts) {
-  this.__play('forward', opts);
-};
-AnimationController.prototype.reverse = function (opts) {
-  this.__play('reverse', opts);
-};
-AnimationController.prototype.repeat = function (opts) {
-  this.__play('repeat', opts);
-};
-AnimationController.prototype.stop = function () {
-  this.__play('stop', null);
-};
-AnimationController.prototype.reset = function () {
-  this.__play('reset', null);
-};
+  __play(method, opts) {
+    if (this.__id == null) { return; }
+    // 生成器把命名实参摊平为位置实参（`repeat(reverse: true)` → `repeat(true)`），
+    // 故 opts 可能是布尔（reverse）/ 数字（duration 毫秒）/ 对象三种形态，这里统一归一。
+    var o = opts;
+    if (o === true || o === false) { o = { reverse: o }; }
+    else if (typeof o === 'number') { o = { duration: o }; }
+    else { o = o || {}; }
+    var ms = (o.duration != null) ? __durationMs(o.duration) : this.durationMs;
+    handleOp(this.__id, 'call', {
+      // id 一并下发：宿主基座的 onOp 不带 id，而「挂逐帧回传」需要它。
+      id: this.__id,
+      method: method,
+      durationMs: ms,
+      reverse: !!o.reverse,
+      value: this._value
+    });
+  }
+  forward(opts) { this.__play('forward', opts); }
+  reverse(opts) { this.__play('reverse', opts); }
+  repeat(opts) { this.__play('repeat', opts); }
+  stop() { this.__play('stop', null); }
+  reset() { this.__play('reset', null); }
+}
 
-// 生成器把 Dart 侧 `final ScrollController _scrollController = ScrollController();`
-// 翻译成 `this._scrollController = new ScrollController()`；实例与宿主侧真实
-// ScrollController 按**句柄 id** 绑定。
-// 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-// 工厂 defineController 提供（见【4】）；本类只写差异：
-//   - offset / position / hasClients：本地镜像（宿主回传 metrics 更新）；
-//   - jumpTo/animateTo：实例级 host 通道（载荷带 id，多实例互不干扰）；
-//   - addListener/removeListener：JS 闭包直接登记——**匿名闭包天然支持**，
-//     无需生成器合成方法名，不存在重名问题。
-// 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`，宿主据此取/建
-// 真实 controller（见 scroll_controller_bridge.dart）。
-// 动画实参归一：Dart 的具名实参在 JS 调用里是**位置化扁平**（JS 无具名参数），
-// 因此 `animateTo(offset, duration: d, curve: c)` 到运行时就是
-// `(offset, d, c)`；也兼容直接传 options 对象的形态。三种 duration 形态
-// （Duration 实例 / options.duration 毫秒数 / options.duration 为 Duration）
-// 与两种 curve 形态（字符串 / options.curve）统一归一。
 function __animateToArgs(opts, curveArg) {
   var ms = 300;
   var curve = 'easeOut';
@@ -5877,34 +5987,38 @@ function __animateToArgs(opts, curveArg) {
   if (typeof curveArg === 'string') { curve = curveArg; }
   return { ms: ms, curve: curve };
 }
-export const ScrollController = defineController('ctrl/Scroll', {
-  init: function () {
+
+export class ScrollController extends ControllerBase {
+  constructor() {
+    super();
     this.offset = 0;
     this.__maxScrollExtent = 0;
     this.__viewportDimension = 0;
     this.__extentAfter = 0;
-  },
-  // 宿主回传 metrics 快照 → 更新镜像并触发 listeners（listener 无参，
-  // 与 Dart addListener 语义一致；闭包内读 this._scrollController.offset）。
-  onHost: function (self, p) {
-    if (!p) { return; }
-    self.offset = p.pixels;
-    self.__maxScrollExtent = p.maxScrollExtent;
-    self.__viewportDimension = p.viewportDimension;
-    self.__extentAfter = p.extentAfter;
-    self.__notify();
-  },
-});
-ScrollController.prototype.jumpTo = function (offset) {
-  if (this.__id != null) { handleOp(this.__id, 'call', { method: 'jumpTo', args: [offset] }); }
-};
-ScrollController.prototype.animateTo = function (offset, opts, curveArg) {
-  if (this.__id == null) { return; }
-  var a = __animateToArgs(opts, curveArg);
-  handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
-};
-Object.defineProperty(ScrollController.prototype, 'position', {
-  get: function () {
+    // 宿主回传 metrics 快照 → 更新镜像并触发 listeners（listener 无参，
+    // 与 Dart addListener 语义一致；闭包内读 this._scrollController.offset）。
+    this.__bindHandle('ctrl/Scroll', {
+      onHost: function (self, p) {
+        if (!p) { return; }
+        self.offset = p.pixels;
+        self.__maxScrollExtent = p.maxScrollExtent;
+        self.__viewportDimension = p.viewportDimension;
+        self.__extentAfter = p.extentAfter;
+        self.__notify();
+      }
+    });
+  }
+  jumpTo(offset) {
+    if (this.__id != null) {
+      handleOp(this.__id, 'call', { method: 'jumpTo', args: [offset] });
+    }
+  }
+  animateTo(offset, opts, curveArg) {
+    if (this.__id == null) { return; }
+    var a = __animateToArgs(opts, curveArg);
+    handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
+  }
+  get position() {
     return {
       pixels: this.offset,
       maxScrollExtent: this.__maxScrollExtent,
@@ -5912,95 +6026,90 @@ Object.defineProperty(ScrollController.prototype, 'position', {
       extentAfter: this.__extentAfter
     };
   }
-});
-Object.defineProperty(ScrollController.prototype, 'hasClients', {
-  get: function () { return this.__id != null; }
-});
+  get hasClients() { return this.__id != null; }
+}
 
 // ===== PageController 代理类（对应 Flutter 官方 PageController）=====
 // 与 ScrollController 同一套句柄层；镜像字段只有 page / initialPage。
 // 构造参数（initialPage / viewportFraction）随 toJSON 的 extraJSON 下发，
 // 宿主 PageView renderer 据此创建真实 PageController。
-export const PageController = defineController('ctrl/Page', {
-  init: function (opts) {
+export class PageController extends ControllerBase {
+  constructor(opts) {
+    super();
     var o = opts || {};
     this.initialPage = (o.initialPage != null) ? o.initialPage : 0;
     this.page = this.initialPage;
     this.viewportFraction = (o.viewportFraction != null) ? o.viewportFraction : 1.0;
-  },
-  onHost: function (self, p) {
-    if (p && p.page != null) { self.page = p.page; }
-    self.__notify();
-  },
-  extraJSON: function (self) {
-    return {
-      initialPage: self.initialPage,
-      viewportFraction: self.viewportFraction
-    };
+    this.__bindHandle('ctrl/Page', {
+      onHost: function (self, p) {
+        if (p && p.page != null) { self.page = p.page; }
+        self.__notify();
+      },
+      extraJSON: function (self) {
+        return {
+          initialPage: self.initialPage,
+          viewportFraction: self.viewportFraction
+        };
+      }
+    });
   }
-});
-PageController.prototype.jumpToPage = function (page) {
-  if (this.__id != null) { handleOp(this.__id, 'call', { method: 'jumpToPage', args: [page] }); }
-};
-PageController.prototype.animateToPage = function (page, opts, curveArg) {
-  if (this.__id == null) { return; }
-  var a = __animateToArgs(opts, curveArg);
-  handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
-};
-PageController.prototype.nextPage = function (opts, curveArg) {
-  if (this.__id == null) { return; }
-  var a = __animateToArgs(opts, curveArg);
-  handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
-};
-PageController.prototype.previousPage = function (opts, curveArg) {
-  if (this.__id == null) { return; }
-  var a = __animateToArgs(opts, curveArg);
-  handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
-};
-Object.defineProperty(PageController.prototype, 'hasClients', {
-  get: function () { return this.__id != null; }
-});
+  jumpToPage(page) {
+    if (this.__id != null) {
+      handleOp(this.__id, 'call', { method: 'jumpToPage', args: [page] });
+    }
+  }
+  animateToPage(page, opts, curveArg) {
+    if (this.__id == null) { return; }
+    var a = __animateToArgs(opts, curveArg);
+    handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
+  }
+  nextPage(opts, curveArg) {
+    if (this.__id == null) { return; }
+    var a = __animateToArgs(opts, curveArg);
+    handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
+  }
+  previousPage(opts, curveArg) {
+    if (this.__id == null) { return; }
+    var a = __animateToArgs(opts, curveArg);
+    handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
+  }
+  get hasClients() { return this.__id != null; }
+}
 
 // TextEditingController：JS 侧代理类，与宿主真实 TextEditingController 按
 // **句柄 id** 绑定（通用层，同 ScrollController 模式）。
-// 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-// 工厂 defineController 提供（见【4】）；本类只写差异：
+// 句柄层（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由 flutter.js 的
+// `ControllerBase` 提供（见 controller_base_js.dart）；本类只写差异：
 //   - text：本地镜像（宿主经 textFn 回传更新），setter 发 host set 同步宿主；
 //   - selection：本地镜像，setter 发 host setSelection；
 //   - clear()：发 host clear + 清镜像；
 //   - TextField(controller: 句柄) 渲染时宿主按 id 取真实实例，用户输入经
 //     textFn 回传 JS 镜像并触发 listeners。
 // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`。
-export const TextEditingController = defineController('ctrl/Text', {
-  init: function (initial) {
+export class TextEditingController extends ControllerBase {
+  constructor(initial) {
+    super();
     this.__text =
     (initial && typeof initial.text === 'string') ? initial.text : '';
     this.__selection = null;
-  },
-  // 宿主回传（TextField 输入后同步镜像 + 触发 listeners）。
-  onHost: function (self, t) {
-    self.__text = (t == null) ? '' : String(t);
-    self.__notify();
-  },
-});
-TextEditingController.prototype.clear = function () {
-  this.__text = '';
-  if (this.__id != null) { handleOp(this.__id, 'call', { method: 'clear' }); }
-  this.__notify();
-};
-Object.defineProperty(TextEditingController.prototype, 'text', {
-  get: function () { return this.__text; },
-  set: function (v) {
+    // 宿主回传（TextField 输入后同步镜像 + 触发 listeners）。
+    this.__bindHandle('ctrl/Text', {
+      onHost: function (self, t) {
+        self.__text = (t == null) ? '' : String(t);
+        self.__notify();
+      }
+    });
+  }
+  get text() { return this.__text; }
+  set text(v) {
     this.__text = (v == null) ? '' : String(v);
     if (this.__id != null) {
       handleOp(this.__id, 'set', { name: 'text', value: this.__text });
     }
     this.__notify();
   }
-});
-Object.defineProperty(TextEditingController.prototype, 'selection', {
-  get: function () { return this.__selection; },
-  set: function (s) {
+  get selection() { return this.__selection; }
+  set selection(s) {
     this.__selection = s;
     if (this.__id != null) {
       var b = (s && typeof s.baseOffset === 'number') ? s.baseOffset : 0;
@@ -6008,39 +6117,45 @@ Object.defineProperty(TextEditingController.prototype, 'selection', {
       handleOp(this.__id, 'call', { method: 'setSelection', args: [b, e] });
     }
   }
-});
+  clear() {
+    this.__text = '';
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'clear' }); }
+    this.__notify();
+  }
+}
 
-export const FocusNode = defineController('ctrl/Focus', {
-  init: function (opts) {
+export class FocusNode extends ControllerBase {
+  constructor(opts) {
+    super();
     var o = opts || {};
     this.__hasFocus = false;
     this.__debugLabel = (o.debugLabel != null) ? String(o.debugLabel) : null;
     this.__skipTraversal = o.skipTraversal === true;
     this.__canRequestFocus = o.canRequestFocus !== false;
     this.__descendantsAreFocusable = o.descendantsAreFocusable !== false;
-  },
-  onHost: function (self, v) {
-    self.__hasFocus = v === true;
-    self.__notify();
-  },
-  meta: function (self) {
-    return {
-      debugLabel: self.__debugLabel,
-      skipTraversal: self.__skipTraversal,
-      canRequestFocus: self.__canRequestFocus,
-      descendantsAreFocusable: self.__descendantsAreFocusable
-    };
+    this.__bindHandle('ctrl/Focus', {
+      onHost: function (self, v) {
+        self.__hasFocus = v === true;
+        self.__notify();
+      },
+      meta: function (self) {
+        return {
+          debugLabel: self.__debugLabel,
+          skipTraversal: self.__skipTraversal,
+          canRequestFocus: self.__canRequestFocus,
+          descendantsAreFocusable: self.__descendantsAreFocusable
+        };
+      }
+    });
   }
-});
-FocusNode.prototype.requestFocus = function () {
-  if (this.__id != null) { handleOp(this.__id, 'call', { method: 'requestFocus' }); }
-};
-FocusNode.prototype.unfocus = function () {
-  if (this.__id != null) { handleOp(this.__id, 'call', { method: 'unfocus' }); }
-};
-Object.defineProperty(FocusNode.prototype, 'hasFocus', {
-  get: function () { return this.__hasFocus === true; }
-});
+  get hasFocus() { return this.__hasFocus === true; }
+  requestFocus() {
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'requestFocus' }); }
+  }
+  unfocus() {
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'unfocus' }); }
+  }
+}
 
 // LogicalKeyboardKey：keyId → 实例（身份去重，常量与事件共用同一张表）。
 var __keyInstances = {};
@@ -6800,42 +6915,31 @@ G.__boxConstraints = function (json) {
   });
 };
 
-// 生成器把 Dart 侧 `late final TabController _c = TabController(length: 3, vsync: this)`
-// 翻译成 `this._c = new TabController({length: 3, vsync: this})`（vsync 由本代理
-// 类忽略），实例与宿主侧真实 TabController 按**句柄 id** 绑定。
-// 三件套基座（__listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用
-// 工厂 defineController 提供（见【4】）；本类只写差异：
-//   - length/__index：本地镜像（宿主回传 index 更新）；真实实例由宿主在渲染
-//     TabBar / TabBarView 时按 id 取/建（length 随句柄下发，见 extraJSON）；
-//   - index setter：立即设置宿主 index 并通知监听者；
-//   - animateTo(i)：宿主 controller.animateTo（带动画）。
-export const TabController = defineController('ctrl/Tab', {
-  init: function (opts) {
+export class TabController extends ControllerBase {
+  constructor(opts) {
+    super();
     opts = opts || {};
     this.length = (typeof opts.length === 'number') ? opts.length : 0;
     this.__index = (typeof opts.initialIndex === 'number') ? opts.initialIndex : 0;
-  },
-  // 宿主回传（用户点 tab / animateTo 动画结束）→ 更新镜像 + 触发 listeners。
-  // 值没变就不是状态变化，不能通知：宿主 attach 时会回传一次初始 index，
-  // 若照常 notify，会让监听者（如外壳的 setState）做一次“原地刷新”，
-  // 把已挂载子组件无谓地推进 didUpdateWidget → build。
-  onHost: function (self, i) {
-    if (typeof i !== 'number' || self.__index === i) { return; }
-    self.__index = i;
-    self.__notify();
-  },
-  // 跨桥序列化：`{__handle: id, length, initialIndex}`——宿主据此取/建真实
-  // controller（见 capabilities/tab/tab_bridge.dart）。
-  extraJSON: function (self) {
-    return { length: self.length, initialIndex: self.__index };
-  },
-});
-TabController.prototype.animateTo = function (index) {
-  if (this.__id != null) { handleOp(this.__id, 'call', { method: 'animateTo', args: [index] }); }
-};
-Object.defineProperty(TabController.prototype, 'index', {
-  get: function () { return this.__index; },
-  set: function (v) {
+    this.__bindHandle('ctrl/Tab', {
+      // 宿主回传（用户点 tab / animateTo 动画结束）→ 更新镜像 + 触发 listeners。
+      // 值没变就不是状态变化，不能通知：宿主 attach 时会回传一次初始 index，
+      // 若照常 notify，会让监听者（如外壳的 setState）做一次“原地刷新”，
+      // 把已挂载子组件无谓地推进 didUpdateWidget → build。
+      onHost: function (self, i) {
+        if (typeof i !== 'number' || self.__index === i) { return; }
+        self.__index = i;
+        self.__notify();
+      },
+      // 跨桥序列化：`{__handle: id, length, initialIndex}`——宿主据此取/建真实
+      // controller（见 capabilities/tab/tab_bridge.dart）。
+      extraJSON: function (self) {
+        return { length: self.length, initialIndex: self.__index };
+      }
+    });
+  }
+  get index() { return this.__index; }
+  set index(v) {
     v = (typeof v === 'number') ? v : 0;
     // 同值：镜像没变化 → 不再下发宿主 op、也不再通知（避免一次假刷新）。
     if (this.__index === v) { return; }
@@ -6845,7 +6949,10 @@ Object.defineProperty(TabController.prototype, 'index', {
     // 会被 onHost 的同值判等吞掉，不会重复通知）。
     this.__notify();
   }
-});
+  animateTo(index) {
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'animateTo', args: [index] }); }
+  }
+}
 
 // TabBarView 是**懒容器**（子页被 SliverFillViewport 强制成整屏，零尺寸占位
 // 布局中性）——不在运行时声明：由生成器配置 lazyChildHostTypes 在 __h 里给
@@ -6920,7 +7027,7 @@ export class GlobalKey {
     // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
     // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
     var type = this.__stateType || handleOp(this.__id, '__type', {});
-    return __stateProxyOf(this.__id, type);
+    return stateProxyOf(this.__id, type);
   }
 }
 
@@ -6947,10 +7054,11 @@ export class KeyRef {
   }
 }
 
-// GlobalKey.currentState：StateHandle / __registerStateProxy 属于**运行时核心**
-// （state_handle_js.dart，随 runtime.js 先加载），这里只补 `currentState` getter。
-// 运行时**不认识任何业务方法**：代理类由生成器随组件写进 flutter.js，并用
-// `__registerStateProxy(type, class)` 登记；类型来自 GlobalKey<T> 的泛型实参。
+// GlobalKey.currentState：StateHandle / stateProxyOf 与本文件同属 flutter.js 的
+// 值类区（state_handle_js.dart 在结点辅助区之后、各类包装之前写出），这里只补
+// `currentState` getter。运行时**不认识任何业务方法**：代理类由生成器随组件
+// 写进 flutter.js，并用 `registerStateProxy(type, class)` 登记；类型来自
+// GlobalKey<T> 的泛型实参。
 
 defineHandleKind('key/Unique', {});
 export class UniqueKey {
@@ -6968,10 +7076,10 @@ export class UniqueKey {
 // `_runAwaitableEvent`：evaluate 本函数触发一次事件，并等 token 回传。
 // 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__jsui` 同一约定。
 G.__awaitRefreshRun = function (handleId, token) {
-  var h = handles[handleId];
+  var fn = handleObjectOf(handleId);
   var out = null;
   try {
-    out = (h && typeof h.obj === 'function') ? h.obj() : null;
+    out = (typeof fn === 'function') ? fn() : null;
   } catch (e) {
     // 事件方法同步抛错：按「已完成」收尾——指示器必须收起，不能挂死在转圈。
     console.error(String(e));
@@ -6987,70 +7095,69 @@ G.__awaitRefreshRun = function (handleId, token) {
   }
 };
 
-// 与 ScrollController 同款句柄层（三件套见【4】defineController）：JS 实例与
+// 与 ScrollController 同款句柄层（基类见 controller_base_js.dart）：JS 实例与
 // 宿主真实 EasyRefreshController 按句柄 id 绑定。控制方法把**原始实参数组**
 // 原样下发（`handleOp 'call'`），由宿主按 Dart 形参的类型/顺序还原：
 // 生成器对方法调用的具名实参是位置化扁平（JS 无具名参数），所以这里不臆造
 // 形参名，交给宿主按类型判别（数值 → overOffset、Duration 值 → duration、
 // 曲线名 → curve、布尔 → force）。
 // 宿主侧桥接见 capabilities/easy_refresh/easy_refresh_bridge.dart。
-export const EasyRefreshController = defineController('ctrl/EasyRefresh', {
-  init: function (opts) {
+export class EasyRefreshController extends ControllerBase {
+  constructor(opts) {
+    super();
     var o = opts || {};
     this.controlFinishRefresh = !!o.controlFinishRefresh;
     this.controlFinishLoad = !!o.controlFinishLoad;
-  },
-  // 构造参数随句柄 create 下发：宿主据此创建真实 controller（putIfAbsent——
-  // 创建消息与首帧渲染谁先到都复用同一实例）。
-  meta: function (self) {
-    return {
-      controlFinishRefresh: self.controlFinishRefresh,
-      controlFinishLoad: self.controlFinishLoad
-    };
-  },
-  // 组件渲染时 controller 经 toJSON 跨桥（`{__handle, controlFinish*}`），
-  // Host 在渲染期兜底创建时同样读得到构造参数。
-  extraJSON: function (self) {
-    return {
-      controlFinishRefresh: self.controlFinishRefresh,
-      controlFinishLoad: self.controlFinishLoad
-    };
+    this.__bindHandle('ctrl/EasyRefresh', {
+      // 构造参数随句柄 create 下发：宿主据此创建真实 controller（putIfAbsent——
+      // 创建消息与首帧渲染谁先到都复用同一实例）。
+      meta: function (self) {
+        return {
+          controlFinishRefresh: self.controlFinishRefresh,
+          controlFinishLoad: self.controlFinishLoad
+        };
+      },
+      // 组件渲染时 controller 经 toJSON 跨桥（`{__handle, controlFinish*}`），
+      // Host 在渲染期兜底创建时同样读得到构造参数。
+      extraJSON: function (self) {
+        return {
+          controlFinishRefresh: self.controlFinishRefresh,
+          controlFinishLoad: self.controlFinishLoad
+        };
+      }
+    });
   }
-});
-EasyRefreshController.prototype.__op = function (method, args) {
-  if (this.__id == null) { return undefined; }
-  return handleOp(this.__id, 'call', { method: method, args: args });
-};
-EasyRefreshController.prototype.callRefresh = function () {
-  return this.__op('callRefresh', Array.prototype.slice.call(arguments));
-};
-EasyRefreshController.prototype.callLoad = function () {
-  return this.__op('callLoad', Array.prototype.slice.call(arguments));
-};
-EasyRefreshController.prototype.openHeaderSecondary = function () {
-  return this.__op('openHeaderSecondary', Array.prototype.slice.call(arguments));
-};
-EasyRefreshController.prototype.closeHeaderSecondary = function () {
-  return this.__op('closeHeaderSecondary', Array.prototype.slice.call(arguments));
-};
-EasyRefreshController.prototype.openFooterSecondary = function () {
-  return this.__op('openFooterSecondary', Array.prototype.slice.call(arguments));
-};
-EasyRefreshController.prototype.closeFooterSecondary = function () {
-  return this.__op('closeFooterSecondary', Array.prototype.slice.call(arguments));
-};
-EasyRefreshController.prototype.resetHeader = function () {
-  return this.__op('resetHeader', []);
-};
-EasyRefreshController.prototype.resetFooter = function () {
-  return this.__op('resetFooter', []);
-};
-EasyRefreshController.prototype.finishRefresh = function () {
-  return this.__op('finishRefresh', Array.prototype.slice.call(arguments));
-};
-EasyRefreshController.prototype.finishLoad = function () {
-  return this.__op('finishLoad', Array.prototype.slice.call(arguments));
-};
+  __op(method, args) {
+    if (this.__id == null) { return undefined; }
+    return handleOp(this.__id, 'call', { method: method, args: args });
+  }
+  callRefresh() {
+    return this.__op('callRefresh', Array.prototype.slice.call(arguments));
+  }
+  callLoad() {
+    return this.__op('callLoad', Array.prototype.slice.call(arguments));
+  }
+  openHeaderSecondary() {
+    return this.__op('openHeaderSecondary', Array.prototype.slice.call(arguments));
+  }
+  closeHeaderSecondary() {
+    return this.__op('closeHeaderSecondary', Array.prototype.slice.call(arguments));
+  }
+  openFooterSecondary() {
+    return this.__op('openFooterSecondary', Array.prototype.slice.call(arguments));
+  }
+  closeFooterSecondary() {
+    return this.__op('closeFooterSecondary', Array.prototype.slice.call(arguments));
+  }
+  resetHeader() { return this.__op('resetHeader', []); }
+  resetFooter() { return this.__op('resetFooter', []); }
+  finishRefresh() {
+    return this.__op('finishRefresh', Array.prototype.slice.call(arguments));
+  }
+  finishLoad() {
+    return this.__op('finishLoad', Array.prototype.slice.call(arguments));
+  }
+}
 
 // 实参归一：正常形态是 `{duration, callback}`；构建期查不到签名时位置实参
 // 落在 `__pos` 里，由 __positionalArgs 按形参名展开。容错地再支持一次

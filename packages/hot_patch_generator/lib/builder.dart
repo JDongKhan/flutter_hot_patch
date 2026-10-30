@@ -42,7 +42,7 @@ Builder projectModuleBuilder(BuilderOptions _) => const ProjectModuleBuilder();
 /// 扩展注册 builder 工厂：`ui_extensions`。
 ///
 /// 把**本地依赖包**里的 Dart `extension` 声明翻译成 `patch/extensions.js`
-/// （`__jsExtension(...)` 注册语句）。项目自身的扩展随各自源文件产物发射
+/// （`registerExtension(...)` 注册语句）。项目自身的扩展随各自源文件产物发射
 /// （见 [componentBuilder]），本 builder 只负责构建输入范围之外的本地包。
 /// 产物由运行时在首个模块求值完成、任何 mount 之前求值。本 builder 不读 options。
 Builder extensionModuleBuilder(BuilderOptions _) =>

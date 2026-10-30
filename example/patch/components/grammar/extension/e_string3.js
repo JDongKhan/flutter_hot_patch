@@ -4,7 +4,7 @@
 
 
 // 扩展 TestString3
-export const TestString3 = __jsExtension("String", (function () {
+export const TestString3 = registerExtension("String", (function () {
   "use strict";
   return {
     log3: function () {

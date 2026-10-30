@@ -3,7 +3,8 @@ import '../js_ui_library.dart';
 
 /// Dart 内置异常（StateError / ArgumentError / …）的接入声明。
 ///
-/// 依赖 `__positionalArgs`（dart-values 能力），故注册顺序在它之后。
+/// JS 实现在 `flutter.js` 值类区（`export const StateError = …`），依赖同模块
+/// dart-values 的 `__positionalArgs`；本类只保留宿主侧能力登记。
 class DartErrorsLibrary extends JsUiLibrary {
   const DartErrorsLibrary();
 

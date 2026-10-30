@@ -6,7 +6,7 @@ import { Estrange } from 'estrange.js';
 import { TestString3 } from 'e_string3.js';
 
 // 扩展 TestString1
-export const TestString1 = __jsExtension("String", (function () {
+export const TestString1 = registerExtension("String", (function () {
   "use strict";
   return {
     log1: function () {

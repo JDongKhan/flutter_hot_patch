@@ -6,7 +6,7 @@
 //
 // 生成器在**扩展声明处**发射一行注册（模块求值时执行一次）：
 //
-//   export const StringLogExtension = __jsExtension("String",
+//   export const StringLogExtension = registerExtension("String",
 //     (function () { "use strict"; return {
 //       logText: function (tag) { ... }
 //     }; })(),
@@ -81,7 +81,7 @@ const String jsExtensionJsSource = r'''
     delete __extensionRecords[id];
   }
 
-  G.__jsExtension = function (target, members, opts) {
+  G.registerExtension = function (target, members, opts) {
     opts = opts || {};
     var id = opts.id == null ? '' : String(opts.id);
     var statics = opts.statics || {};

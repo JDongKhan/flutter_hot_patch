@@ -1,4 +1,4 @@
-/// Dart `extension` 声明 → JS 注册语句（`__jsExtension(...)`）。
+/// Dart `extension` 声明 → JS 注册语句（`registerExtension(...)`）。
 ///
 /// **翻译只有一条路径**：扩展成员体与类方法体共用 [translateClassMethodBody]
 /// （同一个 FieldScope / 表达式渲染器），因此在扩展里写什么、能调什么，与在
@@ -7,7 +7,7 @@
 ///
 /// 产物在**扩展声明处**发射（见 component_builder）：
 ///
-///   export const StringLogExtension = __jsExtension("String", {
+///   export const StringLogExtension = registerExtension("String", {
 ///     logText: function (tag) { ... }
 ///   }, { id: "lib/src/x.dart#StringLogExtension" });
 ///
@@ -33,7 +33,7 @@ import '../../shared/runtime_global_types.dart';
 import '../../shared/source_index.dart';
 import 'analyze_dart_class.dart';
 
-/// 一个已翻译的 extension 声明（产物里的一条 `__jsExtension(...)`）。
+/// 一个已翻译的 extension 声明（产物里的一条 `registerExtension(...)`）。
 class ExtensionInfo {
   /// Dart 扩展名（产物里的 `export const <name>`）；无名扩展为空串（不 export）。
   final String name;
@@ -81,7 +81,7 @@ class ExtensionInfo {
   /// 对嵌套函数**词法继承**，故整个成员表包一层即可。
   String toJs() {
     final call = StringBuffer()
-      ..writeln('__jsExtension($targetJs, (function () {')
+      ..writeln('registerExtension($targetJs, (function () {')
       ..writeln('  "use strict";')
       ..writeln('  return {');
     for (final e in membersJs.entries) {
@@ -520,7 +520,7 @@ ExtensionInfo? translateExtension(
     targetImport: targetImport,
     membersJs: membersJs,
     staticsEntries: staticsEntries,
-    // 目标类本身也是依赖：同文件声明的目标类必须连带产出（`__jsExtension(ProbeModel,
+    // 目标类本身也是依赖：同文件声明的目标类必须连带产出（`registerExtension(ProbeModel,
     // …)` 裸引用它）；类表里有它但本产物没有 → ReferenceError。
     dependencies: {
       ...parseCtx.dependencies,

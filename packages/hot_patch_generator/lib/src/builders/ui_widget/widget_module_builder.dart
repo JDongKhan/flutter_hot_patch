@@ -16,6 +16,8 @@ import '../shared/paths.dart';
 import '../runtime/js/animation_js.dart';
 import '../runtime/js/change_notifier_js.dart';
 import '../runtime/js/color_js.dart';
+import '../runtime/js/controller_base_js.dart';
+import '../runtime/js/dart_errors_js.dart';
 import '../runtime/js/dart_values_js.dart';
 import '../runtime/js/dialogs_js.dart';
 import '../runtime/js/drag_js.dart';
@@ -31,6 +33,7 @@ import '../runtime/js/navigator_js.dart';
 import '../runtime/js/overlay_portal_js.dart';
 import '../runtime/js/provider_module_js.dart';
 import '../runtime/js/scroll_controller_js.dart';
+import '../runtime/js/state_handle_js.dart';
 import '../runtime/js/style_values_js.dart';
 import '../runtime/js/tab_controller_js.dart';
 import '../runtime/js/text_editing_controller_js.dart';
@@ -43,11 +46,17 @@ import '../runtime/js/timer_js.dart';
 /// `ChangeNotifier` / `AnimationController` / 各 Controller / `Key` / `Timer`…
 /// 翻译层对它们一律发射 `new X({...})`（一比一），跨桥靠各自 `toJSON()`。
 ///
-/// **拼接顺序有意义**：值类在前（`__positionalArgs` / `__durationMs` 等工具与基础值类），
-/// 控制器在后（依赖 `G.__core` 的 `defineController` / 句柄表）。片段内的
-/// `function` 声明会提升，故同区内可以前后互引。
+/// **拼接顺序有意义**：值类与语言镜像在前（`__positionalArgs` / `__durationMs`
+/// 等工具、Dart 异常、基础值类），控制器在后（依赖 dart 值工具与 `G.__core` 的
+/// 句柄机制、`ControllerBase`）。片段内的 `function` 声明会提升，故同区内可以
+/// 前后互引。依赖方向单向：flutter.js → runtime.js，反方向禁止。
 String flutterValueClassesSource() => [
       dartValuesJsSource,
+      // Dart 内置异常（StateError / ArgumentError / …）：产物 `throw`/`catch`
+      // 的落点，按名 import；runtime.js 自身不构造异常，故归值类区。
+      dartErrorsJsSource,
+      // 控制器基类（句柄层）：各 Controller 继承它，必须排在它们之前。
+      controllerBaseJsSource,
       // SDK 枚举值类（按源码 `enum` 声明自动生成）：翻译层已改为对
       // `Owner.member` 原样引用，这些类就是那些引用的落点。
       enumValuesJsSource(),
@@ -1133,7 +1142,8 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln('const G = globalThis;')
       ..writeln('const {')
       ..writeln('  defineProtoGetter: __defineProtoGetter,')
-      ..writeln('  defineController, defineHandleKind, handleOp, registerHandle,')
+      ..writeln('  defineHandleKind, handleOp, registerHandle, releaseHandle, handleObjectOf,')
+      ..writeln('  createFnHandle: __createFnHandle,')
       ..writeln('  contextOf, elementOf, elementListOf, isElement, isElementList,')
       ..writeln('  hostNodeIdOf, newRoot, mount, unmount,')
       ..writeln('  commitOps, emitOp, flushNow, abortRoot, releasePageHandles, invokeHostMethod,')
@@ -1141,6 +1151,10 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln('} = G.__core;')
       ..writeln()
       ..writeln(jsNodeHelperSource())
+      ..writeln()
+      // State 句柄（GlobalKey.currentState 的承载）：必须早于下面 sorted 里
+      // 随组件下发的 State 代理类（`extends StateHandle` 在模块求值期即生效）。
+      ..writeln(stateHandleJsSource)
       ..writeln();
     // 宿主包装类：`new Text({...})` → `__h('Text', {...})`。翻译层因此可以对
     // 所有 widget 构造统一发射 `new Type(props)`，产物里不再出现 `__h('X', …)`。
@@ -1221,9 +1235,9 @@ String renderPackageModule(String package, Set<String> types) {
   // dialogs_js.dart / navigator_js.dart）——它们只做「Dart 一比一调用形状」，
   // 不属 mini-react 核心。
   //
-  // 与 runtime 的唯一耦合面是 `G.__core`（原型补丁 / 控制器注册 / 句柄表 /
-  // reconciler 的独立根挂载），见 runtime_js.dart 的【11.5】——跨模块只走 G，
-  // 不假设同一 IIFE 作用域。
+  // 与 runtime 的唯一耦合面是 `G.__core`（原型补丁 / 句柄表 / reconciler 的
+  // 独立根挂载 / 通用语法工具），见 runtime_js.dart 的【11.5】——跨模块只走 G，
+  // 不假设同一 IIFE 作用域；反向（runtime 引用 flutter 的类）禁止。
   if (package == nodeHelperPackage) {
     b
       ..writeln()

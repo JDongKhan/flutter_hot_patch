@@ -142,7 +142,7 @@ void _seedBuiltins() {
   // 公共值类（Duration / Size / Offset / Radius）：跨能力复用，最先注入，
   // 后面的能力片段（如动画的 `__durationMs`）可直接引用。
   registerJsUiLibrary(const DartValuesLibrary());
-  // Dart 内置异常（StateError / ArgumentError / …）：依赖 __positionalArgs。
+  // Dart 内置异常（StateError / ArgumentError / …）：JS 实现在 flutter.js 值类区。
   registerJsUiLibrary(const DartErrorsLibrary());
   // Color 类族（Color / MaterialColor / ColorSwatch）：依赖 __positionalArgs。
   registerJsUiLibrary(const ColorLibrary());

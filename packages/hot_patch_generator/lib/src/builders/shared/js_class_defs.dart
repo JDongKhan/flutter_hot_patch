@@ -64,11 +64,11 @@ String builderCountPropKey(String type) =>
 ///
 /// `GlobalKey.currentState` 的方法签名属于具体组件（`AnimatedListState.insertItem`
 /// 不是框架通用概念），因此类定义与登记都放在 flutter.js 里、紧挨对应组件，
-/// 运行时只保留通用的 `__StateHandle.__op` 与按 runtimeType 取类的登记表。
+/// 运行时只保留通用的 `StateHandle.__op` 与按 runtimeType 取类的登记表。
 /// 新增同类组件 = 在这里加一段源码，运行时与翻译器都不动。
 const Map<String, String> stateProxySources = {
   'AnimatedList': '''
-export class AnimatedListState extends __StateHandle {
+export class AnimatedListState extends StateHandle {
   insertItem(index, duration) {
     this.__op('insertItem', { index: index, duration: duration });
   }
@@ -82,7 +82,7 @@ export class AnimatedListState extends __StateHandle {
     this.__op('removeItem', { index: index, duration: duration });
   }
 }
-__registerStateProxy('AnimatedListState', AnimatedListState);''',
+registerStateProxy('AnimatedListState', AnimatedListState);''',
 };
 
 /// 「逻辑 widget」类型名：状态/订阅逻辑必须跑在 JS 里的 widget（provider 提供/

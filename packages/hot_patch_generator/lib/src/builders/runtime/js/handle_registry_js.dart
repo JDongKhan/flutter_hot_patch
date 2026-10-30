@@ -255,6 +255,12 @@ const String handleRegistryJsSource = r'''
   // 宿主 → JS：释放本端句柄（对端发起的 release，不再回通知）。
   function releaseHandleFromHost(id) { releaseHandle(id, false); }
 
+  // 句柄对应的本端真实对象（跨模块按 id 取 obj：easy_refresh 的异步回程等）。
+  function handleObjectOf(id) {
+    var h = handles[id];
+    return h ? h.obj : null;
+  }
+
   // JS → 宿主：对本端句柄对应的**宿主端真实对象**发起 op（返回 Promise）。
   // 与 callHandle 方向相反、语义对称（call/get/set/invoke）。
   function handleOp(id, op, payload) {
@@ -263,70 +269,9 @@ const String handleRegistryJsSource = r'''
     return invokeHostMethod('jsHandle', [body]);
   }
 
-  // Scroll/Tab/Text 的 JS 代理类同构：__listeners 数组、内部回传句柄
-  // （meta.fn 交宿主回传）、句柄登记（scope=page）、release 清理、dispose、
-  // toJSON、__notify。本工厂收敛这套样板；能力只写差异：
-  //   init(self, ...)   ：构造体（镜像字段），实参透传（如 Tab 的 opts）；
-  //   onHost(self, p)   ：宿主回传 → 更新镜像 + __notify（缺省则无回传句柄）；
-  //   extraJSON(self)   ：toJSON 附加字段（如 Tab 的 length/initialIndex）；
-  //   meta(self)        ：随句柄 create 下发给宿主的构造参数（宿主据此创建
-  //                       真实对象，如 EasyRefreshController 的 controlFinish*）。
-  // ChangeNotifier 刻意不用本工厂：它是用户模型基类（无回传句柄、
-  // notifyListeners 是公开 API、双路派发），见 change_notifier_js.dart。
-  function defineController(kind, spec) {
-    spec = spec || {};
-    defineHandleKind(kind, {
-      release: function (h) {
-        var c = h.obj;
-        if (!c) { return; }
-        // 内部回传句柄是框架实现（用户无从释放），随本控制器一并释放。
-        if (c.__hostFn) { releaseHandle(c.__hostFn.__fn, false); c.__hostFn = null; }
-        c.__listeners = [];
-      }
-    });
-    var Ctor = function () {
-      this.__listeners = [];
-      if (spec.init) { spec.init.apply(this, arguments); }
-      if (spec.onHost) {
-        var self = this;
-        this.__hostFn = __createFnHandle(function (p) { spec.onHost(self, p); });
-      }
-      // 登记为句柄（scope=page）：自动同步宿主 onCreate（meta 携带回传句柄与
-      // 能力自带的构造参数，供宿主创建真实对象）；页面退出时 disposeRoot 兜底释放。
-      var meta = this.__hostFn ? { fn: this.__hostFn } : null;
-      if (spec.meta) {
-        var extra = spec.meta(this);
-        if (extra) {
-          meta = meta || {};
-          for (var k in extra) { meta[k] = extra[k]; }
-        }
-      }
-      this.__id = registerHandle(this, kind, { meta: meta });
-    };
-    Ctor.prototype.addListener = function (f) {
-      if (typeof f === 'function') { this.__listeners.push(f); }
-    };
-    Ctor.prototype.removeListener = function (f) {
-      var i = this.__listeners.indexOf(f);
-      if (i >= 0) { this.__listeners.splice(i, 1); }
-    };
-    Ctor.prototype.__notify = function () {
-      var fs = this.__listeners;
-      for (var i = 0; i < fs.length; i++) { fs[i](); }
-    };
-    Ctor.prototype.dispose = function () {
-      releaseHandle(this.__id);
-      this.__id = null;
-    };
-    Ctor.prototype.toJSON = function () {
-      var out = { __handle: this.__id };
-      if (spec.extraJSON) {
-        var extra = spec.extraJSON(this);
-        if (extra) { for (var k in extra) { out[k] = extra[k]; } }
-      }
-      return out;
-    };
-    return Ctor;
-  }
+  // 控制器（ScrollController / AnimationController / …）的 JS 基类不在这里：
+  // 它们是 Flutter 侧语义，随 flutter.js 发布（`ControllerBase`，见
+  // js/controller_base_js.dart）。本片段只提供与能力无关的句柄机制
+  // （defineHandleKind / registerHandle / handleOp / releaseHandle）。
 
 ''';

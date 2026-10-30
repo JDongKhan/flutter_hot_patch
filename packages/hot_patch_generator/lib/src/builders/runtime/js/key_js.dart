@@ -96,7 +96,7 @@ const String keyJsSource = r'''
       // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
       // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
       var type = this.__stateType || handleOp(this.__id, '__type', {});
-      return __stateProxyOf(this.__id, type);
+      return stateProxyOf(this.__id, type);
     }
   }
 
@@ -123,10 +123,11 @@ const String keyJsSource = r'''
     }
   }
 
-  // GlobalKey.currentState：StateHandle / __registerStateProxy 属于**运行时核心**
-  // （state_handle_js.dart，随 runtime.js 先加载），这里只补 `currentState` getter。
-  // 运行时**不认识任何业务方法**：代理类由生成器随组件写进 flutter.js，并用
-  // `__registerStateProxy(type, class)` 登记；类型来自 GlobalKey<T> 的泛型实参。
+  // GlobalKey.currentState：StateHandle / stateProxyOf 与本文件同属 flutter.js 的
+  // 值类区（state_handle_js.dart 在结点辅助区之后、各类包装之前写出），这里只补
+  // `currentState` getter。运行时**不认识任何业务方法**：代理类由生成器随组件
+  // 写进 flutter.js，并用 `registerStateProxy(type, class)` 登记；类型来自
+  // GlobalKey<T> 的泛型实参。
 
   defineHandleKind('key/Unique', {});
   export class UniqueKey {

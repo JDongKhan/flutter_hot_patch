@@ -17,8 +17,8 @@
 // Ticker，按 vsync 推进），JS 侧只持镜像 + 句柄（`ctrl/Flash`）。每帧宿主把
 // value 回传到 JS 镜像 → 触发 listeners（AnimatedBuilder 等 JS 逻辑组件据此
 // 只重建自己的子树）；同时隐式/过渡动画由宿主原生组件自行插值，无需逐帧过桥。
-// 三件套基座（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由通用工厂
-// defineController 提供（见【4】），本片段只写差异。
+// 三件套基座（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由 flutter.js 的
+// ControllerBase 提供（见 controller_base_js.dart），本片段只写差异。
 const String animationJsSource = r'''
   // 只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主已完成真实插值）；
   // 宿主侧按同名表还原真实 Curve（见 animation_from_json.curveFromJson）。
@@ -113,28 +113,29 @@ const String animationJsSource = r'''
   //   - forward/reverse/repeat/stop/reset → `handleOp('call')`（载荷带 value 与
   //     时长，宿主据此对齐状态后再驱动）；
   //   - 宿主每帧回传 value → onHost 更新镜像 + __notify（JS listeners 据此重建）。
-  export const AnimationController = defineController('ctrl/Flash', {
-    init: function (opts) {
+  export class AnimationController extends ControllerBase {
+    constructor(opts) {
+      super();
       opts = opts || {};
       this._value = (typeof opts.value === 'number') ? opts.value : 0;
       this.lowerBound = (typeof opts.lowerBound === 'number') ? opts.lowerBound : 0;
       this.upperBound = (typeof opts.upperBound === 'number') ? opts.upperBound : 1;
       this.durationMs = __durationMs(opts.duration);
       if (this.durationMs == null) { this.durationMs = 300; }
-    },
-    onHost: function (self, p) {
-      if (p != null && typeof p === 'number') {
-        self._value = p;
-        self.__notify();
-      }
-    },
-    extraJSON: function (self) {
-      return { value: self._value, durationMs: self.durationMs };
+      this.__bindHandle('ctrl/Flash', {
+        onHost: function (self, p) {
+          if (p != null && typeof p === 'number') {
+            self._value = p;
+            self.__notify();
+          }
+        },
+        extraJSON: function (self) {
+          return { value: self._value, durationMs: self.durationMs };
+        }
+      });
     }
-  });
-  Object.defineProperty(AnimationController.prototype, 'value', {
-    get: function () { return this._value; },
-    set: function (v) {
+    get value() { return this._value; }
+    set value(v) {
       var n = (typeof v === 'number') ? v : 0;
       if (this._value === n) { return; }
       this._value = n;
@@ -143,38 +144,28 @@ const String animationJsSource = r'''
       }
       this.__notify();
     }
-  });
-  AnimationController.prototype.__play = function (method, opts) {
-    if (this.__id == null) { return; }
-    // 生成器把命名实参摊平为位置实参（`repeat(reverse: true)` → `repeat(true)`），
-    // 故 opts 可能是布尔（reverse）/ 数字（duration 毫秒）/ 对象三种形态，这里统一归一。
-    var o = opts;
-    if (o === true || o === false) { o = { reverse: o }; }
-    else if (typeof o === 'number') { o = { duration: o }; }
-    else { o = o || {}; }
-    var ms = (o.duration != null) ? __durationMs(o.duration) : this.durationMs;
-    handleOp(this.__id, 'call', {
-      // id 一并下发：宿主基座的 onOp 不带 id，而「挂逐帧回传」需要它。
-      id: this.__id,
-      method: method,
-      durationMs: ms,
-      reverse: !!o.reverse,
-      value: this._value
-    });
-  };
-  AnimationController.prototype.forward = function (opts) {
-    this.__play('forward', opts);
-  };
-  AnimationController.prototype.reverse = function (opts) {
-    this.__play('reverse', opts);
-  };
-  AnimationController.prototype.repeat = function (opts) {
-    this.__play('repeat', opts);
-  };
-  AnimationController.prototype.stop = function () {
-    this.__play('stop', null);
-  };
-  AnimationController.prototype.reset = function () {
-    this.__play('reset', null);
-  };
+    __play(method, opts) {
+      if (this.__id == null) { return; }
+      // 生成器把命名实参摊平为位置实参（`repeat(reverse: true)` → `repeat(true)`），
+      // 故 opts 可能是布尔（reverse）/ 数字（duration 毫秒）/ 对象三种形态，这里统一归一。
+      var o = opts;
+      if (o === true || o === false) { o = { reverse: o }; }
+      else if (typeof o === 'number') { o = { duration: o }; }
+      else { o = o || {}; }
+      var ms = (o.duration != null) ? __durationMs(o.duration) : this.durationMs;
+      handleOp(this.__id, 'call', {
+        // id 一并下发：宿主基座的 onOp 不带 id，而「挂逐帧回传」需要它。
+        id: this.__id,
+        method: method,
+        durationMs: ms,
+        reverse: !!o.reverse,
+        value: this._value
+      });
+    }
+    forward(opts) { this.__play('forward', opts); }
+    reverse(opts) { this.__play('reverse', opts); }
+    repeat(opts) { this.__play('repeat', opts); }
+    stop() { this.__play('stop', null); }
+    reset() { this.__play('reset', null); }
+  }
 ''';
