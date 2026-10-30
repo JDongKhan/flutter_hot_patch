@@ -1961,37 +1961,55 @@ export class BoxDecoration {
   }
 }
 
-function __dartErrorCtor(name, positional) {
-  var ctor = function (props) {
+// Dart 异常共用基类：`message` 来自 props（位置实参按 names 展开），
+// `name` 取自身类名（StateError / ArgumentError / …），栈由 JS Error 提供。
+class DartError extends Error {
+  constructor(props, positional) {
     props = __positionalArgs(props, positional);
-    var msg = props.message;
-    var err = new Error(msg == null ? '' : String(msg));
-    err.name = name;
-    return err;
-  };
-  ctor.prototype = Error.prototype;
+    super(props.message == null ? '' : String(props.message));
+    this.name = this.constructor.name;
+  }
+
   // 命名构造 `X.value(value, [name, message])`：Dart 侧统一映射为静态方法。
-  ctor.value = function (props) {
+  static value(props) {
     props = __positionalArgs(props, ['value', 'name', 'message']);
     var msg = props.message != null ? props.message : props.name;
-    var err = ctor({ message: msg });
+    var err = new this({ message: msg });
     err.value = props.value;
     return err;
-  };
-  return ctor;
+  }
 }
-export const StateError = __dartErrorCtor('StateError', ['message']);
-export const ArgumentError = __dartErrorCtor('ArgumentError', ['message']);
-export const FormatException =
-__dartErrorCtor('FormatException', ['message', 'source', 'offset']);
-export const RangeError = __dartErrorCtor('RangeError', ['message']);
-export const UnsupportedError = __dartErrorCtor('UnsupportedError', ['message']);
-export const UnimplementedError =
-__dartErrorCtor('UnimplementedError', ['message']);
-export const Exception = __dartErrorCtor('Exception', ['message']);
+
+export class StateError extends DartError {
+  constructor(props) { super(props, ['message']); }
+}
+
+export class ArgumentError extends DartError {
+  constructor(props) { super(props, ['message']); }
+}
+
+export class FormatException extends DartError {
+  constructor(props) { super(props, ['message', 'source', 'offset']); }
+}
+
+export class RangeError extends DartError {
+  constructor(props) { super(props, ['message']); }
+}
+
+export class UnsupportedError extends DartError {
+  constructor(props) { super(props, ['message']); }
+}
+
+export class UnimplementedError extends DartError {
+  constructor(props) { super(props, ['message']); }
+}
+
+export class Exception extends DartError {
+  constructor(props) { super(props, ['message']); }
+}
+
 // `Error` 不导出：JS 原生 Error 就是 Dart Error 的落点（两者同名同义），
-// 导出同名类反而会遮蔽模块内的原生 Error（dart 侧 `new Error(props)` 也
-// 极少出现，保持原生即可）。
+// 导出同名类反而会遮蔽模块内的原生 Error。
 
 // kind → release 描述符只注册一次（同一 kind 会被多次实例化）。
 var __controllerKinds = {};
