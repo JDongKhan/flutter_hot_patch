@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_persistent_header_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AppBar, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, FontWeight, Icon, ListTile, MainAxisSize, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
+import { Alignment, AppBar, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, FontWeight, Icon, Icons, ListTile, MainAxisSize, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
 
 // 组件 SliverPersistentHeaderDetail
 export class SliverPersistentHeaderDetail {
@@ -28,7 +28,7 @@ export class SliverPersistentHeaderDetail {
               "builder": (context, index) => new ListTile({
                 "leading": (this.__k2 || (this.__k2 = new Icon({
                   "color": Colors.deepPurple,
-                  "icon": "list"
+                  "icon": Icons.list
                 }))),
                 "title": new Text({
                   "data": "列表项 " + index

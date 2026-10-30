@@ -7,7 +7,7 @@ import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { kBrand } from 'detail_pages.js';
-import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
+import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
 
 // 组件 CommunityPage
 export class CommunityPage {
@@ -138,7 +138,7 @@ export class CommunityPage {
                         "color": new Color({
                           "value": 0xFF5C6270
                         }),
-                        "icon": "edit",
+                        "icon": Icons.edit,
                         "size": 16
                       })))
                     })
@@ -253,7 +253,7 @@ export class CommunityPage {
                         "color": this._filterOpen ? kBrand : (this.__k6 || (this.__k6 = new Color({
                           "value": 0xFF5C6270
                         }))),
-                        "icon": "tune"
+                        "icon": Icons.tune
                       })
                     ]
                   })
@@ -691,7 +691,7 @@ export class _PostCard {
                           "color": new Color({
                             "value": 0xFFA3A9B4
                           }),
-                          "icon": "favorite_border",
+                          "icon": Icons.favorite_border,
                           "size": 13
                         }))),
                         (this.__k13 || (this.__k13 = new SizedBox({

@@ -6,7 +6,7 @@ import { HomePage } from 'pages/home_page.js';
 import { CommunityPage } from 'pages/community_page.js';
 import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
-import { BottomNavigationBar, BottomNavigationBarItem, BottomNavigationBarType, Color, Colors, Icon, NeverScrollableScrollPhysics, Scaffold, TabBarView, TabController } from '../flutter.js';
+import { BottomNavigationBar, BottomNavigationBarItem, BottomNavigationBarType, Color, Colors, Icon, Icons, NeverScrollableScrollPhysics, Scaffold, TabBarView, TabController } from '../flutter.js';
 
 // 组件 AppShell
 export class AppShell {
@@ -71,25 +71,25 @@ export class AppSubContent {
         "items": [
           new BottomNavigationBarItem({
             "icon": new Icon({
-              "icon": "home"
+              "icon": Icons.home
             }),
             "label": "首页"
           }),
           new BottomNavigationBarItem({
             "icon": new Icon({
-              "icon": "article"
+              "icon": Icons.article
             }),
             "label": "社区"
           }),
           new BottomNavigationBarItem({
             "icon": new Icon({
-              "icon": "shopping_cart"
+              "icon": Icons.shopping_cart
             }),
             "label": "订单"
           }),
           new BottomNavigationBarItem({
             "icon": new Icon({
-              "icon": "person"
+              "icon": Icons.person
             }),
             "label": "我的"
           })

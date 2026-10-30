@@ -445,15 +445,17 @@ void registerBaseWidgets(JsWidgetRegistry r) {
     }
   });
 
-  r.register(
-    'Icon',
-    (c) => Icon(
-      // `icon` 是 Flutter `Icon` 的首个位置形参名（`Icon(Icons.star)`）。
-      iconFromJson(c.props['icon']),
+  r.register('Icon', (c) {
+    // `icon` 是 Flutter `Icon` 的首个位置形参名（`Icon(Icons.star)`）：
+    // JS 侧已是 `IconData` 对象，跨桥按码点还原（见 icon_from_json.dart）。
+    final icon = iconDataFromJson(c.props['icon']);
+    if (icon == null) return uiFallback('Icon.icon 无法还原为 IconData');
+    return Icon(
+      icon,
       size: c.num_('size'),
       color: colorFromJson(c.props['color']),
-    ),
-  );
+    );
+  });
 
   // `ImageIcon(AssetImage('a.jpg'))`：把**图片**当图标画，尺寸 / 颜色受
   // IconTheme 影响。与 Image / FadeInImage 同一套 provider 归一化：翻译层把

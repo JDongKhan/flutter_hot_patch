@@ -7,7 +7,7 @@ import { HomeFeed } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
 import { BannerCarousel } from '../widgets/banner_carousel.js';
-import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Image, InkWell, LinearGradient, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, StackFit, Text, TextOverflow, TextStyle } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Icons, Image, InkWell, LinearGradient, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, StackFit, Text, TextOverflow, TextStyle } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {
@@ -274,7 +274,7 @@ export class HomeHeader {
                         "color": new Color({
                           "value": 0xFFFFFFFF
                         }),
-                        "icon": "location_on",
+                        "icon": Icons.location_on,
                         "size": 18
                       }))),
                       (this.__k3 || (this.__k3 = new SizedBox({
@@ -294,7 +294,7 @@ export class HomeHeader {
                         "color": new Color({
                           "value": 0xFFFFFFFF
                         }),
-                        "icon": "keyboard_arrow_down",
+                        "icon": Icons.keyboard_arrow_down,
                         "size": 18
                       })))
                     ]
@@ -314,7 +314,7 @@ export class HomeHeader {
                         "value": 0xFFFFFFFF
                       }),
                       "size": 24,
-                      "icon": "refresh"
+                      "icon": Icons.refresh
                     }),
                     "padding": EdgeInsets.all({
                       "value": 4
@@ -342,7 +342,7 @@ export class HomeHeader {
                             "value": 0xFFFFFFFF
                           }),
                           "size": 24,
-                          "icon": "notifications"
+                          "icon": Icons.notifications
                         })
                       }),
                       new Positioned({
@@ -402,7 +402,7 @@ export class HomeHeader {
                         "value": 0xFF9AA0AC
                       }),
                       "size": 20,
-                      "icon": "search"
+                      "icon": Icons.search
                     }),
                     new SizedBox({
                       "width": 6

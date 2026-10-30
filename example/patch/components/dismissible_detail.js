@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/dismissible_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, Colors, Column, Container, CrossAxisAlignment, DismissDirection, Dismissible, EdgeInsets, FontWeight, Icon, ListTile, OutlinedButton, SizedBox, Text, TextStyle, ValueKey } from '../flutter.js';
+import { Align, Alignment, Colors, Column, Container, CrossAxisAlignment, DismissDirection, Dismissible, EdgeInsets, FontWeight, Icon, Icons, ListTile, OutlinedButton, SizedBox, Text, TextStyle, ValueKey } from '../flutter.js';
 
 // 组件 DismissibleDetail
 export class DismissibleDetail {
@@ -51,7 +51,7 @@ export class DismissibleDetail {
                   }))),
                   "child": (this.__k5 || (this.__k5 = new Icon({
                     "color": Colors.white,
-                    "icon": "delete_outline"
+                    "icon": Icons.delete_outline
                   })))
                 }),
                 "secondaryBackground": new Container({
@@ -62,7 +62,7 @@ export class DismissibleDetail {
                   }))),
                   "child": (this.__k6 || (this.__k6 = new Icon({
                     "color": Colors.white,
-                    "icon": "block"
+                    "icon": Icons.block
                   })))
                 }),
                 "onDismissed": this.__bindFn(1, [item], (direction) => { this.setState(() => { this._items.remove(item); this._last = "已删除：" + item; }); }),

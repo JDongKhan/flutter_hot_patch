@@ -150,6 +150,12 @@ class _RuntimeGlobalTypes {
       types.add(name);
       exports.add(name);
     }
+    // 同口径：`IconData` 类与 `Icons` 常量表也是构建期按 SDK 源码生成的
+    // （`iconValuesJsSource()`），不在片段文本里。
+    types.add('IconData');
+    exports.add('IconData');
+    types.add('Icons');
+    exports.add('Icons');
     return _RuntimeGlobalTypes(types, aliases, functions, exports);
   }
 }

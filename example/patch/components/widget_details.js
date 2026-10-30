@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { CommonListItem } from 'list_item.js';
-import { Align, Alignment, AppBar, AspectRatio, Axis, Border, BorderRadius, BorderSide, BottomNavigationBar, BottomNavigationBarItem, BouncingScrollPhysics, BoxConstraints, BoxDecoration, BoxFit, BoxShadow, BoxShape, CachedNetworkImage, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClampingScrollPhysics, Clip, ClipRRect, Color, Colors, Column, ConstrainedBox, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, DefaultTabController, Divider, Drawer, DrawerHeader, DropdownButton, DropdownMenuItem, EdgeInsets, ElevatedButton, Expanded, FilledButton, FloatingActionButton, FontWeight, FractionallySizedBox, GlobalKey, GridView, Icon, IconButton, Image, InputDecoration, LinearGradient, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, MainAxisAlignment, MainAxisSize, NotificationListener, ObjectKey, Offset, Opacity, OutlinedButton, Padding, PageController, PageStorageKey, PageView, Positioned, Radio, Radius, ReorderableListView, RoundedRectangleBorder, Row, SafeArea, Scaffold, ScrollController, SingleChildScrollView, Size, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithFixedCrossAxisCount, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, StackFit, Switch, Tab, TabBar, TabBarView, TabController, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextEditingController, TextField, TextOverflow, TextScaler, TextStyle, UniqueKey, ValueKey, Wrap, WrapAlignment, WrapCrossAlignment } from '../flutter.js';
+import { Align, Alignment, AppBar, AspectRatio, Axis, Border, BorderRadius, BorderSide, BottomNavigationBar, BottomNavigationBarItem, BouncingScrollPhysics, BoxConstraints, BoxDecoration, BoxFit, BoxShadow, BoxShape, CachedNetworkImage, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClampingScrollPhysics, Clip, ClipRRect, Color, Colors, Column, ConstrainedBox, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, DefaultTabController, Divider, Drawer, DrawerHeader, DropdownButton, DropdownMenuItem, EdgeInsets, ElevatedButton, Expanded, FilledButton, FloatingActionButton, FontWeight, FractionallySizedBox, GlobalKey, GridView, Icon, IconButton, Icons, Image, InputDecoration, LinearGradient, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, MainAxisAlignment, MainAxisSize, NotificationListener, ObjectKey, Offset, Opacity, OutlinedButton, Padding, PageController, PageStorageKey, PageView, Positioned, Radio, Radius, ReorderableListView, RoundedRectangleBorder, Row, SafeArea, Scaffold, ScrollController, SingleChildScrollView, Size, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithFixedCrossAxisCount, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, StackFit, Switch, Tab, TabBar, TabBarView, TabController, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextEditingController, TextField, TextOverflow, TextScaler, TextStyle, UniqueKey, ValueKey, Wrap, WrapAlignment, WrapCrossAlignment } from '../flutter.js';
 
 // 组件 TextDetail
 export class TextDetail {
@@ -460,7 +460,7 @@ export class ImageDetail {
           "children": [
             (this.__k4 || (this.__k4 = new Icon({
               "color": Colors.amber,
-              "icon": "star",
+              "icon": Icons.star,
               "size": 28
             }))),
             (this.__k5 || (this.__k5 = new SizedBox({
@@ -468,7 +468,7 @@ export class ImageDetail {
             }))),
             (this.__k6 || (this.__k6 = new Icon({
               "color": Colors.blue,
-              "icon": "home",
+              "icon": Icons.home,
               "size": 28
             }))),
             (this.__k5 || (this.__k5 = new SizedBox({
@@ -476,7 +476,7 @@ export class ImageDetail {
             }))),
             (this.__k7 || (this.__k7 = new Icon({
               "color": Colors.red,
-              "icon": "favorite",
+              "icon": Icons.favorite,
               "size": 28
             }))),
             (this.__k5 || (this.__k5 = new SizedBox({
@@ -721,7 +721,7 @@ export class ScrollDetail {
               "itemCount": 20,
               "itemBuilder": (context, index) => new ListTile({
                 "leading": (this.__k3 || (this.__k3 = new Icon({
-                  "icon": "list"
+                  "icon": Icons.list
                 }))),
                 "title": new CommonListItem({
                   "index": index,
@@ -767,7 +767,7 @@ export class ScrollDetail {
               "dense": true,
               "leading": new Icon({
                 "color": Colors.teal.shade300,
-                "icon": "arrow_right"
+                "icon": Icons.arrow_right
               }),
               "title": new Text({
                 "data": "separated item " + index
@@ -880,14 +880,14 @@ export class SliverDetail {
             "actions": [
               new IconButton({
                 "icon": (this.__k1 || (this.__k1 = new Icon({
-                  "icon": "center_focus_strong"
+                  "icon": Icons.center_focus_strong
                 }))),
                 "tooltip": "定位到「固定高度」分区",
                 "onPressed": this.__bindFn(0, [], (...__a) => this._scrollToFixed(...__a))
               }),
               new IconButton({
                 "icon": (this.__k2 || (this.__k2 = new Icon({
-                  "icon": "straighten"
+                  "icon": Icons.straighten
                 }))),
                 "tooltip": "测量「固定高度」分区的位置与尺寸",
                 "onPressed": this.__bindFn(1, [], (...__a) => this._measureFixed(...__a))
@@ -954,13 +954,13 @@ export class SliverDetail {
                   ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new ListTile({
                           "leading": (this.__k10 || (this.__k10 = new Icon({
                             "color": Colors.deepPurple,
-                            "icon": "list"
+                            "icon": Icons.list
                           }))),
                           "title": new Text({
                             "data": "SliverList item " + i
                           }),
                           "trailing": (this.__k11 || (this.__k11 = new Icon({
-                            "icon": "chevron_right"
+                            "icon": Icons.chevron_right
                           })))
                         })]); } return out; })()
                 ]
@@ -991,7 +991,7 @@ export class SliverDetail {
               "itemBuilder": (context, index) => new ListTile({
                 "leading": new Icon({
                   "color": Colors.orange.shade700,
-                  "icon": "build"
+                  "icon": Icons.build
                 }),
                 "title": new Text({
                   "data": "builder item " + index
@@ -1027,7 +1027,7 @@ export class SliverDetail {
                 "dense": true,
                 "leading": (this.__k14 || (this.__k14 = new Icon({
                   "color": Colors.deepPurple,
-                  "icon": "arrow_right"
+                  "icon": Icons.arrow_right
                 }))),
                 "title": new Text({
                   "data": "separated item " + index
@@ -1078,7 +1078,7 @@ export class SliverDetail {
                   "dense": true,
                   "leading": (this.__k17 || (this.__k17 = new Icon({
                     "color": Colors.teal,
-                    "icon": "height"
+                    "icon": Icons.height
                   }))),
                   "title": new Text({
                     "data": "fixed item " + index
@@ -1156,7 +1156,7 @@ export class SliverDetail {
         "foregroundColor": Colors.white,
         "tooltip": "跳到底",
         "child": (this.__k21 || (this.__k21 = new Icon({
-          "icon": "arrow_downward"
+          "icon": Icons.arrow_downward
         })))
       })
     });
@@ -1195,7 +1195,7 @@ export class GridDetail {
         "foregroundColor": Colors.white,
         "tooltip": "跳到底",
         "child": (this.__k1 || (this.__k1 = new Icon({
-          "icon": "arrow_downward"
+          "icon": Icons.arrow_downward
         })))
       }),
       "body": new Column({
@@ -1315,7 +1315,7 @@ export class ScaffoldDetail {
       "backgroundColor": Colors.grey.shade50,
       "appBar": new AppBar({
         "leading": (this.__k0 || (this.__k0 = new Icon({
-          "icon": "menu"
+          "icon": Icons.menu
         }))),
         "title": (this.__k1 || (this.__k1 = new Text({
           "data": "Scaffold / AppBar / FAB / BottomNav"
@@ -1328,7 +1328,7 @@ export class ScaffoldDetail {
         "actions": [
           new Icon({
             "color": Colors.white,
-            "icon": "search"
+            "icon": Icons.search
           }),
           new SizedBox({
             "width": 16
@@ -1342,7 +1342,7 @@ export class ScaffoldDetail {
             "children": [
               (this.__k2 || (this.__k2 = new Icon({
                 "color": Colors.deepPurple,
-                "icon": "extension",
+                "icon": Icons.extension,
                 "size": 48
               }))),
               (this.__k3 || (this.__k3 = new SizedBox({
@@ -1364,7 +1364,7 @@ export class ScaffoldDetail {
         "foregroundColor": Colors.white,
         "tooltip": "添加",
         "child": (this.__k5 || (this.__k5 = new Icon({
-          "icon": "add"
+          "icon": Icons.add
         })))
       }),
       "bottomNavigationBar": new BottomNavigationBar({
@@ -1375,19 +1375,19 @@ export class ScaffoldDetail {
         "items": [
           new BottomNavigationBarItem({
             "icon": new Icon({
-              "icon": "home"
+              "icon": Icons.home
             }),
             "label": "首页"
           }),
           new BottomNavigationBarItem({
             "icon": new Icon({
-              "icon": "search"
+              "icon": Icons.search
             }),
             "label": "搜索"
           }),
           new BottomNavigationBarItem({
             "icon": new Icon({
-              "icon": "person"
+              "icon": Icons.person
             }),
             "label": "我的"
           })
@@ -1786,7 +1786,7 @@ export class StatelessCard {
               "children": [
                 (this.__k2 || (this.__k2 = new Icon({
                   "color": Colors.teal,
-                  "icon": "article"
+                  "icon": Icons.article
                 }))),
                 (this.__k3 || (this.__k3 = new SizedBox({
                   "width": 8
@@ -2734,7 +2734,7 @@ export class DrawerDetail {
             }),
             new ListTile({
               "leading": (this.__k3 || (this.__k3 = new Icon({
-                "icon": "receipt_long"
+                "icon": Icons.receipt_long
               }))),
               "title": (this.__k4 || (this.__k4 = new Text({
                 "data": "我的订单"
@@ -2743,7 +2743,7 @@ export class DrawerDetail {
             }),
             new ListTile({
               "leading": (this.__k5 || (this.__k5 = new Icon({
-                "icon": "favorite_border"
+                "icon": Icons.favorite_border
               }))),
               "title": (this.__k6 || (this.__k6 = new Text({
                 "data": "我的收藏"
@@ -2773,7 +2773,7 @@ export class DrawerDetail {
             }),
             new ListTile({
               "leading": (this.__k9 || (this.__k9 = new Icon({
-                "icon": "settings"
+                "icon": Icons.settings
               }))),
               "title": (this.__k10 || (this.__k10 = new Text({
                 "data": "设置"
@@ -2782,7 +2782,7 @@ export class DrawerDetail {
             }),
             new ListTile({
               "leading": (this.__k11 || (this.__k11 = new Icon({
-                "icon": "help_outline"
+                "icon": Icons.help_outline
               }))),
               "title": (this.__k12 || (this.__k12 = new Text({
                 "data": "帮助与关于"
@@ -2798,7 +2798,7 @@ export class DrawerDetail {
           "children": [
             (this.__k13 || (this.__k13 = new Icon({
               "color": Colors.indigo,
-              "icon": "menu_open",
+              "icon": Icons.menu_open,
               "size": 48
             }))),
             (this.__k14 || (this.__k14 = new SizedBox({
@@ -2876,7 +2876,7 @@ export class ReorderListDetail {
               return new Card({
                 "child": new ListTile({
                   "leading": (this.__k4 || (this.__k4 = new Icon({
-                    "icon": "drag_handle"
+                    "icon": Icons.drag_handle
                   }))),
                   "title": new Text({
                     "data": item

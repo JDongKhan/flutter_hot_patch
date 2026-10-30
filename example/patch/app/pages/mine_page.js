@@ -6,7 +6,7 @@ import { AppService } from '../service/app_service.js';
 import { MineFeed } from '../model/app_models.js';
 import { MenuEntry } from '../model/app_models.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Icons, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
 
 // 组件 MinePage
 export class MinePage {
@@ -133,7 +133,7 @@ export class MinePage {
                     "color": new Color({
                       "value": 0xCCFFFFFF
                     }),
-                    "icon": "chevron_right",
+                    "icon": Icons.chevron_right,
                     "size": 20
                   })))
                 ]
@@ -260,7 +260,7 @@ export class MinePage {
                               "color": new Color({
                                 "value": 0xFFC3C8D2
                               }),
-                              "icon": "chevron_right",
+                              "icon": Icons.chevron_right,
                               "size": 18
                             })))
                           ]
@@ -333,7 +333,7 @@ export class MinePage {
           "child": new Column({
             "children": [
               new _DevRow({
-                "icon": "widgets_outlined",
+                "icon": Icons.widgets_outlined,
                 "title": "组件案例",
                 "subtitle": "常用组件 原生 ↔ JS 同屏对比",
                 "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
@@ -346,7 +346,7 @@ export class MinePage {
                 "indent": 56
               }))),
               new _DevRow({
-                "icon": "compare_arrows",
+                "icon": Icons.compare_arrows,
                 "title": "热更 Demo 列表",
                 "subtitle": "HelloCard / ProviderCard / WatchDemo 等对比",
                 "onTap": () => { return _app_host_.invoke("openDemoList", []); }
@@ -436,7 +436,7 @@ export class _DevRow {
               "color": new Color({
                 "value": 0xFFC3C8D2
               }),
-              "icon": "chevron_right",
+              "icon": Icons.chevron_right,
               "size": 18
             })))
           ]

@@ -55,10 +55,9 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (e.prefix.name == 'widget') {
       return scope.fieldRef(e.identifier.name);
     }
-    // `Icons.chevron_right` → 图标名字符串（运行时按名映射回 IconData）。
-    // 不在这里拦下来，会落到下面的「大写开头前缀原样保留」，产出未定义的 JS
-    // 全局 `Icons`——作为组件实参（`_DevRow(icon: Icons.x)`）直接运行时崩。
-    if (e.prefix.name == 'Icons') return jsString(e.identifier.name);
+    // 其余 `Owner.member` 一律按通用规则原样保留（`Icons.edit` → `Icons.edit`，
+    // 由 flutter.js 的同名常量表承接）。这里不能再按 owner 名字做特判：
+    // 曾把 `Icons.xxx` 硬编码成图标名字符串，等于按类名白名单翻译。
     final p = scope.fieldRef(e.prefix.name);
     String? base;
     if (p != null) {
