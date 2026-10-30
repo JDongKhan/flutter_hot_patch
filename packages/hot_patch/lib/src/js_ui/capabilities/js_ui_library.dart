@@ -31,7 +31,7 @@
 //
 // **不进模板的地基**（核心本体，不属于任何可插拔能力）：
 //   - `ensureHandleChannels()`：句柄注册表本身，必须先于一切能力就绪；
-//   - `registerBuiltinJsWidgets(r)`：Text/Column 等 Flutter 基础视觉组件；
+//   - `registerBaseWidgets(r)`：Text/Column 等 Flutter 基础视觉组件；
 //   - JS 骨架（mini-react / emit / host 桥）：见 runtime_js.dart。
 //
 // **边界（务必知晓）**：本模板覆盖的是**运行时/宿主侧**。若新库还要新增 UI
@@ -51,7 +51,6 @@ import 'dialog/dialog_library.dart';
 import 'dismissible/dismissible_library.dart';
 import 'drag/drag_library.dart';
 import 'drawer/drawer_library.dart';
-import 'layout_more/layout_more_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
 import 'focus/focus_library.dart';
 import 'key/key_library.dart';
@@ -178,9 +177,6 @@ void _seedBuiltins() {
   registerJsUiLibrary(const DialogLibrary());
   // Drag：拖拽三件套（draggable 的任意 JS 负载经身份 id 对齐原生拖动系统）。
   registerJsUiLibrary(const DragLibrary());
-  // LayoutMore：Tooltip / IgnorePointer / FittedBox / RotatedBox / Intrinsic /
-  // InteractiveViewer 等纯映射的单子包装组件。
-  registerJsUiLibrary(const LayoutMoreLibrary());
   // OverlayPortal：弹层挂载点 + LayerLink 锚定跟随（引导气泡那类悬浮提示）。
   registerJsUiLibrary(const OverlayPortalLibrary());
   // ── 三方库 ──

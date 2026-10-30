@@ -8,7 +8,8 @@
 //
 // 因此「新增一个能力」= 建目录 + 写一个 JsUiLibrary 子类 + 在 _seedBuiltins
 // 里加一行；**本文件与 runtime_source / js_widget_registry / js_ui_widget
-// 从此不再变动**。
+// 从此不再变动**。Flutter 基础视觉组件的宿主映射属框架地基，见
+// base_widget/base_widget_bridge.dart。
 //
 // 目录结构：**一个能力一个目录**，内有宿主侧 `<x>_bridge.dart`（通道 +
 // 宿主组件）、JS 侧 `<x>_js.dart`（片段）、接入声明 `<x>_library.dart`。
@@ -16,6 +17,7 @@
 // 注册表的 Dart 侧与 JS 侧两端，刻意不是 JsUiLibrary 子类，理由见其文件头）
 // 独立成 core/。
 import '../js_widget_registry.dart';
+import 'base_widget/base_widget_bridge.dart';
 import 'core/handle_registry.dart';
 import 'js_ui_library.dart';
 
@@ -34,7 +36,7 @@ void ensureJsUiCapabilities() {
 /// 全部组件注册 = Flutter 基础组件（核心本体）+ 各能力/三方库的自注册。
 void registerAllJsWidgets(JsWidgetRegistry r) {
   // 地基：Text/Column 等基础视觉组件，不属于任何可插拔能力。
-  registerBuiltinJsWidgets(r);
+  registerBaseWidgets(r);
   for (final library in jsUiLibraries) {
     library.registerWidgets(r);
   }

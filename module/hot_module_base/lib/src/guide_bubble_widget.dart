@@ -51,10 +51,13 @@ class GuideBubbleWidget extends StatefulWidget {
 
 class _GuideBubbleWidgetState extends State<GuideBubbleWidget> {
   static const Duration _fadeDuration = Duration(milliseconds: 200);
-  static const double _arrowWidth = 20;
-  static const double _arrowHeight = 8;
+  static const double _arrowWidth = 24;
+  static const double _arrowHeight = 9;
   static const double _arrowInset = 20;
-  static const double _arrowSide = 11.32;
+
+  /// 旋转 45° 的方块边长：对角线 = 三角的底边宽（`_arrowSide * 1.4142`），
+  /// 方块高的一半恰好 = 露出的三角高度（`_arrowHeight`）。
+  static const double _arrowSide = _arrowHeight * 1.4142;
   static const double _arrowAngle = 0.7853981633974483;
 
   final OverlayPortalController _controller = OverlayPortalController();
@@ -67,8 +70,16 @@ class _GuideBubbleWidgetState extends State<GuideBubbleWidget> {
   @override
   void initState() {
     super.initState();
-    // 控制器在 attach 前也会记住显示意图（Flutter 侧在 attach 时接管），
-    // 故不需要 post-frame 回调。
+    _schedule();
+  }
+
+  /// 重新开始一轮显示：立刻 show，并在 [GuideBubbleWidget.duration] 后淡出卸载。
+  ///
+  /// 控制器在 attach 前也会记住显示意图（Flutter 侧在 attach 时接管），故不需要
+  /// post-frame 回调。
+  void _schedule() {
+    _cancelTimers();
+    _visible = true;
     _controller.show();
     _timer = Timer(widget.duration, () {
       setState(() {
@@ -80,16 +91,43 @@ class _GuideBubbleWidgetState extends State<GuideBubbleWidget> {
     });
   }
 
-  @override
-  void dispose() {
+  void _cancelTimers() {
     final timer = _timer;
     if (timer != null) {
       timer.cancel();
     }
+    _timer = null;
     final fadeTimer = _fadeTimer;
     if (fadeTimer != null) {
       fadeTimer.cancel();
     }
+    _fadeTimer = null;
+  }
+
+  /// 外部参数变化即视为「新一轮引导」：重播。
+  ///
+  /// 不能只靠 `key` 换新实例来重播——宿主重建时若实例被复用（key 未参与
+  /// diff），旧实例早已淡出并 `hide()`，气泡就再也不会出现。语义上「文案/
+  /// 对齐/间距/时长变了」本就该重新提示，故在这里显式重启。
+  @override
+  void didUpdateWidget(covariant GuideBubbleWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final bool restart = oldWidget.text != widget.text ||
+        oldWidget.alignment != widget.alignment ||
+        oldWidget.gap != widget.gap ||
+        oldWidget.duration != widget.duration ||
+        oldWidget.backgroundColor != widget.backgroundColor ||
+        oldWidget.textColor != widget.textColor ||
+        oldWidget.textFontSize != widget.textFontSize;
+    if (!restart) return;
+    setState(() {
+      _schedule();
+    });
+  }
+
+  @override
+  void dispose() {
+    _cancelTimers();
     super.dispose();
   }
 
@@ -187,6 +225,11 @@ class _GuideBubbleWidgetState extends State<GuideBubbleWidget> {
   }
 
   /// 向上指的三角尖：把方块旋转 45°，顶点对齐裁剪框上沿，露出来的就是三角形。
+  ///
+  /// 两个定位必须与裁剪框严格对齐，否则三角会一侧压边、一侧留空（看起来像
+  /// 「被削掉半边」）：
+  ///   - 水平：菱形中心放在框的**正中**（`(_arrowWidth - _arrowSide) / 2`）；
+  ///   - 垂直：菱形中心落在框的**底边**（= 气泡顶边），恰好露出上半块。
   Widget _buildArrow() {
     return SizedBox(
       width: _arrowWidth,
@@ -194,7 +237,7 @@ class _GuideBubbleWidgetState extends State<GuideBubbleWidget> {
       child: Stack(
         children: [
           Positioned(
-            left: 2,
+            left: (_arrowWidth - _arrowSide) / 2,
             top: _arrowHeight - _arrowSide / 2,
             child: Transform.rotate(
               angle: _arrowAngle,

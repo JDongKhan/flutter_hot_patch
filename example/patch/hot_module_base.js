@@ -18,10 +18,10 @@ export class User {
 // 组件 GuideBubbleWidget
 export class GuideBubbleWidget {
   static _fadeDuration = new Duration({milliseconds: 200});
-  static _arrowWidth = 20;
-  static _arrowHeight = 8;
+  static _arrowWidth = 24;
+  static _arrowHeight = 9;
   static _arrowInset = 20;
-  static _arrowSide = 11.32;
+  static _arrowSide = (GuideBubbleWidget._arrowHeight * 1.4142);
   static _arrowAngle = 0.7853981633974483;
   constructor(args) {
     this.props = args || {};
@@ -43,19 +43,36 @@ export class GuideBubbleWidget {
     this.textFontSize = (args && args.textFontSize !== undefined) ? args.textFontSize : 16.0;
   }
   initState() {
+    this._schedule();
+  }
+  _schedule() {
+    this._cancelTimers();
+    this._visible = true;
     this._controller.show();
     this._timer = new Timer({duration: this.duration, callback: () => { this.setState(() => { this._visible = false; });
         this._fadeTimer = new Timer({duration: GuideBubbleWidget._fadeDuration, callback: () => { this._controller.hide(); }}); }});
   }
-  dispose() {
+  _cancelTimers() {
     var timer = this._timer;
     if ((timer != null)) {
       timer.cancel();
     }
+    this._timer = null;
     var fadeTimer = this._fadeTimer;
     if ((fadeTimer != null)) {
       fadeTimer.cancel();
     }
+    this._fadeTimer = null;
+  }
+  didUpdateWidget(oldWidget) {
+    var restart = (((((((oldWidget.text != this.text) || (oldWidget.alignment != this.alignment)) || (oldWidget.gap != this.gap)) || (oldWidget.duration != this.duration)) || (oldWidget.backgroundColor != this.backgroundColor)) || (oldWidget.textColor != this.textColor)) || (oldWidget.textFontSize != this.textFontSize));
+    if ((!restart)) {
+      return;
+    }
+    this.setState(() => { this._schedule(); });
+  }
+  dispose() {
+    this._cancelTimers();
   }
   build(context) {
     return new OverlayPortal({
@@ -155,7 +172,7 @@ export class GuideBubbleWidget {
       "child": new Stack({
         "children": [
           new Positioned({
-            "left": 2,
+            "left": (((GuideBubbleWidget._arrowWidth - GuideBubbleWidget._arrowSide)) / 2),
             "top": (GuideBubbleWidget._arrowHeight - (GuideBubbleWidget._arrowSide / 2)),
             "child": Transform.rotate({
               "angle": GuideBubbleWidget._arrowAngle,
