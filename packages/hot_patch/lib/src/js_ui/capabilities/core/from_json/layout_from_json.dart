@@ -70,6 +70,19 @@ CrossAxisAlignment? crossAxisAlignmentFromJson(Object? v) {
   };
 }
 
+/// JSON → TextBaseline（'alphabetic'/'ideographic'）。
+///
+/// Flex（Row / Column）用 `CrossAxisAlignment.baseline` 时必须有 textBaseline，
+/// 否则 Flutter 断言（`textBaseline is required ...`）。
+TextBaseline? textBaselineFromJson(Object? v) {
+  if (v is! String) return null;
+  return switch (v) {
+    'alphabetic' => TextBaseline.alphabetic,
+    'ideographic' => TextBaseline.ideographic,
+    _ => null,
+  };
+}
+
 /// JSON → MainAxisSize（'min'/'max'）。
 MainAxisSize? mainAxisSizeFromJson(Object? v) {
   if (v is! String) return null;

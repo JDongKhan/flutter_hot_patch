@@ -66,7 +66,7 @@ void registerLayoutMoreWidgets(JsWidgetRegistry r) {
     'Baseline',
     (c) => Baseline(
       baseline: c.num_('baseline') ?? 0,
-      baselineType: _textBaselineFromJson(c.props['baselineType']) ?? TextBaseline.alphabetic,
+      baselineType: textBaselineFromJson(c.props['baselineType']) ?? TextBaseline.alphabetic,
       child: c.children['child'] as Widget?,
     ),
   );
@@ -149,14 +149,4 @@ Map<String, dynamic> _scaleJson(dynamic d) {
     'verticalScale': d.verticalScale is double ? d.verticalScale as double : 1.0,
     'rotation': d.rotation is double ? d.rotation as double : 0.0,
   };
-}
-
-TextBaseline? _textBaselineFromJson(Object? raw) {
-  switch ('$raw') {
-    case 'alphabetic':
-      return TextBaseline.alphabetic;
-    case 'ideographic':
-      return TextBaseline.ideographic;
-  }
-  return null;
 }

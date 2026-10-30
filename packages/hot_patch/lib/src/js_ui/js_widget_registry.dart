@@ -492,6 +492,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
           CrossAxisAlignment.center,
       mainAxisSize:
           mainAxisSizeFromJson(c.props['mainAxisSize']) ?? MainAxisSize.max,
+      textBaseline: textBaselineFromJson(c.props['textBaseline']),
       children: ((c.children['children'] as List<Widget>?) ?? const []),
     ),
   );
@@ -507,6 +508,7 @@ void registerBuiltinJsWidgets(JsWidgetRegistry r) {
           CrossAxisAlignment.center,
       mainAxisSize:
           mainAxisSizeFromJson(c.props['mainAxisSize']) ?? MainAxisSize.max,
+      textBaseline: textBaselineFromJson(c.props['textBaseline']),
       children: ((c.children['children'] as List<Widget>?) ?? const []),
     ),
   );
