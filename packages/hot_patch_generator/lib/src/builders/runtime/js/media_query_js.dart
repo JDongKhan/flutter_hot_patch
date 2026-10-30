@@ -233,11 +233,5 @@ const String mediaQueryJsSource = r'''
     },
   };
 
-  // Dart 枚举 / 常量镜像：产物里 `Orientation.portrait` 等是原样引用，
-  // 值取同一套字符串（宿主 JSON 里也是这套字符串）。
-  export const Orientation = { portrait: 'portrait', landscape: 'landscape' };
-  export const Brightness = { dark: 'dark', light: 'light' };
-  export const NavigationMode = { traditional: 'traditional', directional: 'directional' };
-
   G.__jsuiSetMediaQuery = __jsuiSetMediaQuery;
 ''';

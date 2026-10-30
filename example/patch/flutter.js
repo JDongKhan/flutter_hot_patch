@@ -1979,20 +1979,6 @@ export class BoxDecoration {
   }
 }
 
-// ----- 枚举镜像 ---------------------------------------------------------
-// Dart 枚举 → JS class + static 字段，值 = 成员名字符串：跨语言只有 name 能
-// 表达（宿主也按 name 下发/回传），这样源码级比较
-// `direction == DismissDirection.endToStart` 在 JS 侧语义不变。
-// 需要运行时存在「枚举类」的枚举在此登记（只做字符串转换的仍由翻译层下发名字）。
-export class DismissDirection {
-  static horizontal = "horizontal";
-  static vertical = "vertical";
-  static startToEnd = "startToEnd";
-  static endToStart = "endToStart";
-  static up = "up";
-  static down = "down";
-}
-
 
 // ===== SDK 枚举值类（由源码 enum 声明自动生成，勿手改）=====
 // 翻译层对 `Owner.member` 一律原样引用，跨桥 toJSON() 发成员名。
@@ -13752,8 +13738,6 @@ for (var __ci = 0; __ci < __CURVE_NAMES.length; __ci++) {
   Curves[__CURVE_NAMES[__ci]] = __CURVE_NAMES[__ci];
 }
 
-export const CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
-
 // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
 // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
 export class Tween {
@@ -14389,12 +14373,6 @@ export const MediaQuery = {
     return __jsuiMqAspect(context, 'invertColors');
   },
 };
-
-// Dart 枚举 / 常量镜像：产物里 `Orientation.portrait` 等是原样引用，
-// 值取同一套字符串（宿主 JSON 里也是这套字符串）。
-export const Orientation = { portrait: 'portrait', landscape: 'landscape' };
-export const Brightness = { dark: 'dark', light: 'light' };
-export const NavigationMode = { traditional: 'traditional', directional: 'directional' };
 
 G.__jsuiSetMediaQuery = __jsuiSetMediaQuery;
 

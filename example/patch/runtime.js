@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 a569d4ff） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 d8e5f482） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'a569d4ff') { return; }
-  G.__jsuiVersion = 'a569d4ff';
+  if (G.__jsui && G.__jsuiVersion === 'd8e5f482') { return; }
+  G.__jsuiVersion = 'd8e5f482';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2516,9 +2516,6 @@ if (G.kDebugMode) {
 
 
 // ===== 【27】Dismissible 确认回程 =====
-  // DismissDirection 枚举镜像已迁至 flutter.js 值类区（class + static 字段，
-  // 与其他 Dart 枚举同一形态），此处只留事件派发。
-
   // 宿主侧桥接见 capabilities/dismissible/dismissible_bridge.dart 的
   // `_awaitJsValue`：evaluate 本函数触发一次事件，并等 token + 结果回传。
   // 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__jsuiAwaitRun` 同一约定。

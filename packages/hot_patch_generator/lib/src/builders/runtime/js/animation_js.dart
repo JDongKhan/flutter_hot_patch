@@ -62,8 +62,6 @@ const String animationJsSource = r'''
     Curves[__CURVE_NAMES[__ci]] = __CURVE_NAMES[__ci];
   }
 
-  export const CrossFadeState = { showFirst: 'showFirst', showSecond: 'showSecond' };
-
   // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
   // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
   export class Tween {

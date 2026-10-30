@@ -8,9 +8,6 @@
 // 宿主 → JS 的 invoke 是单向的，且 iOS/JavaScriptCore 无法把 JS Promise 交回
 // Dart；于是由 JS 侧 await 事件句柄的返回值，再经唯一 JS→宿主出口回传。
 const String dismissibleJsSource = r'''
-  // DismissDirection 枚举镜像已迁至 flutter.js 值类区（class + static 字段，
-  // 与其他 Dart 枚举同一形态），此处只留事件派发。
-
   // 宿主侧桥接见 capabilities/dismissible/dismissible_bridge.dart 的
   // `_awaitJsValue`：evaluate 本函数触发一次事件，并等 token + 结果回传。
   // 挂 G（globalThis）：宿主经 evaluate 裸引用调用，与 `__jsuiAwaitRun` 同一约定。
