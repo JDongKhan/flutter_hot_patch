@@ -2096,6 +2096,7 @@ export class SchedulerServiceExtensions {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SchedulerServiceExtensions.' + this.name; }
   static timeDilation = new SchedulerServiceExtensions('timeDilation', 0);
 }
@@ -2107,6 +2108,7 @@ export class SchedulerPhase {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SchedulerPhase.' + this.name; }
   static idle = new SchedulerPhase('idle', 0);
   static transientCallbacks = new SchedulerPhase('transientCallbacks', 1);
@@ -2122,6 +2124,7 @@ export class AnimationBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AnimationBehavior.' + this.name; }
   static normal = new AnimationBehavior('normal', 0);
   static preserve = new AnimationBehavior('preserve', 1);
@@ -2134,6 +2137,7 @@ export class AnimationStatus {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AnimationStatus.' + this.name; }
   static dismissed = new AnimationStatus('dismissed', 0);
   static forward = new AnimationStatus('forward', 1);
@@ -2148,6 +2152,7 @@ export class DiagnosticLevel {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DiagnosticLevel.' + this.name; }
   static hidden = new DiagnosticLevel('hidden', 0);
   static fine = new DiagnosticLevel('fine', 1);
@@ -2167,6 +2172,7 @@ export class DiagnosticsTreeStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DiagnosticsTreeStyle.' + this.name; }
   static none = new DiagnosticsTreeStyle('none', 0);
   static sparse = new DiagnosticsTreeStyle('sparse', 1);
@@ -2189,6 +2195,7 @@ export class TargetPlatform {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TargetPlatform.' + this.name; }
   static android = new TargetPlatform('android', 0);
   static fuchsia = new TargetPlatform('fuchsia', 1);
@@ -2205,6 +2212,7 @@ export class FoundationServiceExtensions {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FoundationServiceExtensions.' + this.name; }
   static reassemble = new FoundationServiceExtensions('reassemble', 0);
   static exit = new FoundationServiceExtensions('exit', 1);
@@ -2221,6 +2229,7 @@ export class Assertiveness {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'Assertiveness.' + this.name; }
   static polite = new Assertiveness('polite', 0);
   static assertive = new Assertiveness('assertive', 1);
@@ -2233,6 +2242,7 @@ export class AccessibilityFocusBlockType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AccessibilityFocusBlockType.' + this.name; }
   static none = new AccessibilityFocusBlockType('none', 0);
   static blockSubtree = new AccessibilityFocusBlockType('blockSubtree', 1);
@@ -2246,6 +2256,7 @@ export class DebugSemanticsDumpOrder {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DebugSemanticsDumpOrder.' + this.name; }
   static inverseHitTest = new DebugSemanticsDumpOrder('inverseHitTest', 0);
   static traversalOrder = new DebugSemanticsDumpOrder('traversalOrder', 1);
@@ -2258,6 +2269,7 @@ export class BorderStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BorderStyle.' + this.name; }
   static none = new BorderStyle('none', 0);
   static solid = new BorderStyle('solid', 1);
@@ -2270,6 +2282,7 @@ export class BoxShape {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BoxShape.' + this.name; }
   static rectangle = new BoxShape('rectangle', 0);
   static circle = new BoxShape('circle', 1);
@@ -2282,6 +2295,7 @@ export class ResizeImagePolicy {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ResizeImagePolicy.' + this.name; }
   static exact = new ResizeImagePolicy('exact', 0);
   static fit = new ResizeImagePolicy('fit', 1);
@@ -2294,6 +2308,7 @@ export class WebHtmlElementStrategy {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'WebHtmlElementStrategy.' + this.name; }
   static never = new WebHtmlElementStrategy('never', 0);
   static fallback = new WebHtmlElementStrategy('fallback', 1);
@@ -2307,6 +2322,7 @@ export class FlutterLogoStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FlutterLogoStyle.' + this.name; }
   static markOnly = new FlutterLogoStyle('markOnly', 0);
   static horizontal = new FlutterLogoStyle('horizontal', 1);
@@ -2320,6 +2336,7 @@ export class RenderComparison {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RenderComparison.' + this.name; }
   static identical = new RenderComparison('identical', 0);
   static metadata = new RenderComparison('metadata', 1);
@@ -2334,6 +2351,7 @@ export class Axis {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'Axis.' + this.name; }
   static horizontal = new Axis('horizontal', 0);
   static vertical = new Axis('vertical', 1);
@@ -2346,6 +2364,7 @@ export class VerticalDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'VerticalDirection.' + this.name; }
   static up = new VerticalDirection('up', 0);
   static down = new VerticalDirection('down', 1);
@@ -2358,6 +2377,7 @@ export class AxisDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AxisDirection.' + this.name; }
   static up = new AxisDirection('up', 0);
   static right = new AxisDirection('right', 1);
@@ -2372,6 +2392,7 @@ export class BoxFit {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BoxFit.' + this.name; }
   static fill = new BoxFit('fill', 0);
   static contain = new BoxFit('contain', 1);
@@ -2389,6 +2410,7 @@ export class TextOverflow {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextOverflow.' + this.name; }
   static clip = new TextOverflow('clip', 0);
   static fade = new TextOverflow('fade', 1);
@@ -2403,6 +2425,7 @@ export class TextWidthBasis {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextWidthBasis.' + this.name; }
   static parent = new TextWidthBasis('parent', 0);
   static longestLine = new TextWidthBasis('longestLine', 1);
@@ -2415,6 +2438,7 @@ export class ImageRepeat {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ImageRepeat.' + this.name; }
   static repeat = new ImageRepeat('repeat', 0);
   static repeatX = new ImageRepeat('repeatX', 1);
@@ -2429,6 +2453,7 @@ export class GestureDisposition {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'GestureDisposition.' + this.name; }
   static accepted = new GestureDisposition('accepted', 0);
   static rejected = new GestureDisposition('rejected', 1);
@@ -2441,6 +2466,7 @@ export class DragStartBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DragStartBehavior.' + this.name; }
   static down = new DragStartBehavior('down', 0);
   static start = new DragStartBehavior('start', 1);
@@ -2453,6 +2479,7 @@ export class MultitouchDragStrategy {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'MultitouchDragStrategy.' + this.name; }
   static latestPointer = new MultitouchDragStrategy('latestPointer', 0);
   static averageBoundaryPointers = new MultitouchDragStrategy('averageBoundaryPointers', 1);
@@ -2466,6 +2493,7 @@ export class GestureRecognizerState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'GestureRecognizerState.' + this.name; }
   static ready = new GestureRecognizerState('ready', 0);
   static possible = new GestureRecognizerState('possible', 1);
@@ -2479,6 +2507,7 @@ export class WrapAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'WrapAlignment.' + this.name; }
   static start = new WrapAlignment('start', 0);
   static end = new WrapAlignment('end', 1);
@@ -2495,6 +2524,7 @@ export class WrapCrossAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'WrapCrossAlignment.' + this.name; }
   static start = new WrapCrossAlignment('start', 0);
   static end = new WrapCrossAlignment('end', 1);
@@ -2508,6 +2538,7 @@ export class HitTestBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'HitTestBehavior.' + this.name; }
   static deferToChild = new HitTestBehavior('deferToChild', 0);
   static opaque = new HitTestBehavior('opaque', 1);
@@ -2521,6 +2552,7 @@ export class DecorationPosition {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DecorationPosition.' + this.name; }
   static background = new DecorationPosition('background', 0);
   static foreground = new DecorationPosition('foreground', 1);
@@ -2533,6 +2565,7 @@ export class ScrollDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ScrollDirection.' + this.name; }
   static idle = new ScrollDirection('idle', 0);
   static forward = new ScrollDirection('forward', 1);
@@ -2546,6 +2579,7 @@ export class SelectionResult {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SelectionResult.' + this.name; }
   static next = new SelectionResult('next', 0);
   static previous = new SelectionResult('previous', 1);
@@ -2561,6 +2595,7 @@ export class SelectionEventType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SelectionEventType.' + this.name; }
   static startEdgeUpdate = new SelectionEventType('startEdgeUpdate', 0);
   static endEdgeUpdate = new SelectionEventType('endEdgeUpdate', 1);
@@ -2579,6 +2614,7 @@ export class TextGranularity {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextGranularity.' + this.name; }
   static character = new TextGranularity('character', 0);
   static word = new TextGranularity('word', 1);
@@ -2594,6 +2630,7 @@ export class SelectionExtendDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SelectionExtendDirection.' + this.name; }
   static previousLine = new SelectionExtendDirection('previousLine', 0);
   static nextLine = new SelectionExtendDirection('nextLine', 1);
@@ -2608,6 +2645,7 @@ export class SelectionStatus {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SelectionStatus.' + this.name; }
   static uncollapsed = new SelectionStatus('uncollapsed', 0);
   static collapsed = new SelectionStatus('collapsed', 1);
@@ -2621,6 +2659,7 @@ export class TextSelectionHandleType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextSelectionHandleType.' + this.name; }
   static left = new TextSelectionHandleType('left', 0);
   static right = new TextSelectionHandleType('right', 1);
@@ -2634,6 +2673,7 @@ export class FlexFit {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FlexFit.' + this.name; }
   static tight = new FlexFit('tight', 0);
   static loose = new FlexFit('loose', 1);
@@ -2646,6 +2686,7 @@ export class MainAxisSize {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'MainAxisSize.' + this.name; }
   static min = new MainAxisSize('min', 0);
   static max = new MainAxisSize('max', 1);
@@ -2658,6 +2699,7 @@ export class MainAxisAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'MainAxisAlignment.' + this.name; }
   static start = new MainAxisAlignment('start', 0);
   static end = new MainAxisAlignment('end', 1);
@@ -2674,6 +2716,7 @@ export class CrossAxisAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CrossAxisAlignment.' + this.name; }
   static start = new CrossAxisAlignment('start', 0);
   static end = new CrossAxisAlignment('end', 1);
@@ -2689,6 +2732,7 @@ export class TableCellVerticalAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TableCellVerticalAlignment.' + this.name; }
   static top = new TableCellVerticalAlignment('top', 0);
   static middle = new TableCellVerticalAlignment('middle', 1);
@@ -2705,6 +2749,7 @@ export class OverflowBoxFit {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'OverflowBoxFit.' + this.name; }
   static max = new OverflowBoxFit('max', 0);
   static deferToChild = new OverflowBoxFit('deferToChild', 1);
@@ -2717,6 +2762,7 @@ export class PerformanceOverlayOption {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PerformanceOverlayOption.' + this.name; }
   static displayRasterizerStatistics = new PerformanceOverlayOption('displayRasterizerStatistics', 0);
   static visualizeRasterizerStatistics = new PerformanceOverlayOption('visualizeRasterizerStatistics', 1);
@@ -2731,6 +2777,7 @@ export class CacheExtentStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CacheExtentStyle.' + this.name; }
   static pixel = new CacheExtentStyle('pixel', 0);
   static viewport = new CacheExtentStyle('viewport', 1);
@@ -2743,6 +2790,7 @@ export class SliverPaintOrder {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SliverPaintOrder.' + this.name; }
   static firstIsTop = new SliverPaintOrder('firstIsTop', 0);
   static lastIsTop = new SliverPaintOrder('lastIsTop', 1);
@@ -2755,6 +2803,7 @@ export class GrowthDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'GrowthDirection.' + this.name; }
   static forward = new GrowthDirection('forward', 0);
   static reverse = new GrowthDirection('reverse', 1);
@@ -2767,6 +2816,7 @@ export class StackFit {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'StackFit.' + this.name; }
   static loose = new StackFit('loose', 0);
   static expand = new StackFit('expand', 1);
@@ -2780,6 +2830,7 @@ export class PlatformViewHitTestBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PlatformViewHitTestBehavior.' + this.name; }
   static opaque = new PlatformViewHitTestBehavior('opaque', 0);
   static translucent = new PlatformViewHitTestBehavior('translucent', 1);
@@ -2793,6 +2844,7 @@ export class RenderingServiceExtensions {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RenderingServiceExtensions.' + this.name; }
   static invertOversizedImages = new RenderingServiceExtensions('invertOversizedImages', 0);
   static debugPaint = new RenderingServiceExtensions('debugPaint', 1);
@@ -2816,6 +2868,7 @@ export class RenderAnimatedSizeState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RenderAnimatedSizeState.' + this.name; }
   static start = new RenderAnimatedSizeState('start', 0);
   static stable = new RenderAnimatedSizeState('stable', 1);
@@ -2830,6 +2883,7 @@ export class SpringType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SpringType.' + this.name; }
   static criticallyDamped = new SpringType('criticallyDamped', 0);
   static underDamped = new SpringType('underDamped', 1);
@@ -2843,6 +2897,7 @@ export class OverlayVisibilityMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'OverlayVisibilityMode.' + this.name; }
   static never = new OverlayVisibilityMode('never', 0);
   static editing = new OverlayVisibilityMode('editing', 1);
@@ -2857,6 +2912,7 @@ export class CupertinoButtonSize {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CupertinoButtonSize.' + this.name; }
   static small = new CupertinoButtonSize('small', 0);
   static medium = new CupertinoButtonSize('medium', 1);
@@ -2870,6 +2926,7 @@ export class CupertinoDatePickerMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CupertinoDatePickerMode.' + this.name; }
   static time = new CupertinoDatePickerMode('time', 0);
   static date = new CupertinoDatePickerMode('date', 1);
@@ -2884,6 +2941,7 @@ export class CupertinoTimerPickerMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CupertinoTimerPickerMode.' + this.name; }
   static hm = new CupertinoTimerPickerMode('hm', 0);
   static ms = new CupertinoTimerPickerMode('ms', 1);
@@ -2897,6 +2955,7 @@ export class RefreshIndicatorMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RefreshIndicatorMode.' + this.name; }
   static inactive = new RefreshIndicatorMode('inactive', 0);
   static drag = new RefreshIndicatorMode('drag', 1);
@@ -2912,6 +2971,7 @@ export class ExpansionTileTransitionMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ExpansionTileTransitionMode.' + this.name; }
   static fade = new ExpansionTileTransitionMode('fade', 0);
   static scroll = new ExpansionTileTransitionMode('scroll', 1);
@@ -2924,6 +2984,7 @@ export class CupertinoListSectionType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CupertinoListSectionType.' + this.name; }
   static base = new CupertinoListSectionType('base', 0);
   static insetGrouped = new CupertinoListSectionType('insetGrouped', 1);
@@ -2936,6 +2997,7 @@ export class CupertinoUserInterfaceLevelData {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CupertinoUserInterfaceLevelData.' + this.name; }
   static base = new CupertinoUserInterfaceLevelData('base', 0);
   static elevated = new CupertinoUserInterfaceLevelData('elevated', 1);
@@ -2948,6 +3010,7 @@ export class NavigationBarBottomMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'NavigationBarBottomMode.' + this.name; }
   static automatic = new NavigationBarBottomMode('automatic', 0);
   static always = new NavigationBarBottomMode('always', 1);
@@ -2960,6 +3023,7 @@ export class DatePickerDateTimeOrder {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DatePickerDateTimeOrder.' + this.name; }
   static date_time_dayPeriod = new DatePickerDateTimeOrder('date_time_dayPeriod', 0);
   static date_dayPeriod_time = new DatePickerDateTimeOrder('date_dayPeriod_time', 1);
@@ -2974,6 +3038,7 @@ export class DatePickerDateOrder {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DatePickerDateOrder.' + this.name; }
   static dmy = new DatePickerDateOrder('dmy', 0);
   static mdy = new DatePickerDateOrder('mdy', 1);
@@ -2988,6 +3053,7 @@ export class MaterialType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'MaterialType.' + this.name; }
   static canvas = new MaterialType('canvas', 0);
   static card = new MaterialType('card', 1);
@@ -3003,6 +3069,7 @@ export class NavigationDestinationLabelBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'NavigationDestinationLabelBehavior.' + this.name; }
   static alwaysShow = new NavigationDestinationLabelBehavior('alwaysShow', 0);
   static alwaysHide = new NavigationDestinationLabelBehavior('alwaysHide', 1);
@@ -3016,6 +3083,7 @@ export class RefreshIndicatorStatus {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RefreshIndicatorStatus.' + this.name; }
   static drag = new RefreshIndicatorStatus('drag', 0);
   static armed = new RefreshIndicatorStatus('armed', 1);
@@ -3032,6 +3100,7 @@ export class RefreshIndicatorTriggerMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RefreshIndicatorTriggerMode.' + this.name; }
   static anywhere = new RefreshIndicatorTriggerMode('anywhere', 0);
   static onEdge = new RefreshIndicatorTriggerMode('onEdge', 1);
@@ -3044,6 +3113,7 @@ export class SnackBarClosedReason {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SnackBarClosedReason.' + this.name; }
   static action = new SnackBarClosedReason('action', 0);
   static dismiss = new SnackBarClosedReason('dismiss', 1);
@@ -3060,6 +3130,7 @@ export class FloatingLabelBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FloatingLabelBehavior.' + this.name; }
   static never = new FloatingLabelBehavior('never', 0);
   static auto = new FloatingLabelBehavior('auto', 1);
@@ -3073,6 +3144,7 @@ export class DynamicSchemeVariant {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DynamicSchemeVariant.' + this.name; }
   static tonalSpot = new DynamicSchemeVariant('tonalSpot', 0);
   static fidelity = new DynamicSchemeVariant('fidelity', 1);
@@ -3092,6 +3164,7 @@ export class DayPeriod {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DayPeriod.' + this.name; }
   static am = new DayPeriod('am', 0);
   static pm = new DayPeriod('pm', 1);
@@ -3104,6 +3177,7 @@ export class TimeOfDayFormat {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TimeOfDayFormat.' + this.name; }
   static HH_colon_mm = new TimeOfDayFormat('HH_colon_mm', 0);
   static HH_dot_mm = new TimeOfDayFormat('HH_dot_mm', 1);
@@ -3120,6 +3194,7 @@ export class HourFormat {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'HourFormat.' + this.name; }
   static HH = new HourFormat('HH', 0);
   static H = new HourFormat('H', 1);
@@ -3133,6 +3208,7 @@ export class PopupMenuPosition {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PopupMenuPosition.' + this.name; }
   static over = new PopupMenuPosition('over', 0);
   static under = new PopupMenuPosition('under', 1);
@@ -3145,6 +3221,7 @@ export class NavigationRailLabelType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'NavigationRailLabelType.' + this.name; }
   static none = new NavigationRailLabelType('none', 0);
   static selected = new NavigationRailLabelType('selected', 1);
@@ -3158,6 +3235,7 @@ export class TimePickerEntryMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TimePickerEntryMode.' + this.name; }
   static dial = new TimePickerEntryMode('dial', 0);
   static input = new TimePickerEntryMode('input', 1);
@@ -3172,6 +3250,7 @@ export class StepState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'StepState.' + this.name; }
   static indexed = new StepState('indexed', 0);
   static editing = new StepState('editing', 1);
@@ -3187,6 +3266,7 @@ export class StepperType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'StepperType.' + this.name; }
   static vertical = new StepperType('vertical', 0);
   static horizontal = new StepperType('horizontal', 1);
@@ -3199,6 +3279,7 @@ export class TabBarIndicatorSize {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TabBarIndicatorSize.' + this.name; }
   static tab = new TabBarIndicatorSize('tab', 0);
   static label = new TabBarIndicatorSize('label', 1);
@@ -3211,6 +3292,7 @@ export class TabAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TabAlignment.' + this.name; }
   static start = new TabAlignment('start', 0);
   static startOffset = new TabAlignment('startOffset', 1);
@@ -3225,6 +3307,7 @@ export class TabIndicatorAnimation {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TabIndicatorAnimation.' + this.name; }
   static linear = new TabIndicatorAnimation('linear', 0);
   static elastic = new TabIndicatorAnimation('elastic', 1);
@@ -3237,6 +3320,7 @@ export class MaterialBannerClosedReason {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'MaterialBannerClosedReason.' + this.name; }
   static dismiss = new MaterialBannerClosedReason('dismiss', 0);
   static swipe = new MaterialBannerClosedReason('swipe', 1);
@@ -3251,6 +3335,7 @@ export class DropdownMenuCloseBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DropdownMenuCloseBehavior.' + this.name; }
   static all = new DropdownMenuCloseBehavior('all', 0);
   static self = new DropdownMenuCloseBehavior('self', 1);
@@ -3264,6 +3349,7 @@ export class SliderInteraction {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SliderInteraction.' + this.name; }
   static tapAndSlide = new SliderInteraction('tapAndSlide', 0);
   static tapOnly = new SliderInteraction('tapOnly', 1);
@@ -3278,6 +3364,7 @@ export class ButtonTextTheme {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ButtonTextTheme.' + this.name; }
   static normal = new ButtonTextTheme('normal', 0);
   static accent = new ButtonTextTheme('accent', 1);
@@ -3291,6 +3378,7 @@ export class ButtonBarLayoutBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ButtonBarLayoutBehavior.' + this.name; }
   static constrained = new ButtonBarLayoutBehavior('constrained', 0);
   static padded = new ButtonBarLayoutBehavior('padded', 1);
@@ -3303,6 +3391,7 @@ export class ListTileStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ListTileStyle.' + this.name; }
   static list = new ListTileStyle('list', 0);
   static drawer = new ListTileStyle('drawer', 1);
@@ -3315,6 +3404,7 @@ export class ListTileControlAffinity {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ListTileControlAffinity.' + this.name; }
   static leading = new ListTileControlAffinity('leading', 0);
   static trailing = new ListTileControlAffinity('trailing', 1);
@@ -3328,6 +3418,7 @@ export class ListTileTitleAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ListTileTitleAlignment.' + this.name; }
   static threeLine = new ListTileTitleAlignment('threeLine', 0);
   static titleHeight = new ListTileTitleAlignment('titleHeight', 1);
@@ -3343,6 +3434,7 @@ export class ScriptCategory {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ScriptCategory.' + this.name; }
   static englishLike = new ScriptCategory('englishLike', 0);
   static dense = new ScriptCategory('dense', 1);
@@ -3356,6 +3448,7 @@ export class ShowValueIndicator {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ShowValueIndicator.' + this.name; }
   static onlyForDiscrete = new ShowValueIndicator('onlyForDiscrete', 0);
   static onlyForContinuous = new ShowValueIndicator('onlyForContinuous', 1);
@@ -3372,6 +3465,7 @@ export class Thumb {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'Thumb.' + this.name; }
   static start = new Thumb('start', 0);
   static end = new Thumb('end', 1);
@@ -3384,6 +3478,7 @@ export class DrawerAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DrawerAlignment.' + this.name; }
   static start = new DrawerAlignment('start', 0);
   static end = new DrawerAlignment('end', 1);
@@ -3396,6 +3491,7 @@ export class DatePickerEntryMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DatePickerEntryMode.' + this.name; }
   static calendar = new DatePickerEntryMode('calendar', 0);
   static input = new DatePickerEntryMode('input', 1);
@@ -3410,6 +3506,7 @@ export class DatePickerMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DatePickerMode.' + this.name; }
   static day = new DatePickerMode('day', 0);
   static year = new DatePickerMode('year', 1);
@@ -3422,6 +3519,7 @@ export class SnackBarBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SnackBarBehavior.' + this.name; }
   static fixed = new SnackBarBehavior('fixed', 0);
   static floating = new SnackBarBehavior('floating', 1);
@@ -3434,6 +3532,7 @@ export class MaterialTapTargetSize {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'MaterialTapTargetSize.' + this.name; }
   static padded = new MaterialTapTargetSize('padded', 0);
   static shrinkWrap = new MaterialTapTargetSize('shrinkWrap', 1);
@@ -3446,6 +3545,7 @@ export class CollapseMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CollapseMode.' + this.name; }
   static parallax = new CollapseMode('parallax', 0);
   static pin = new CollapseMode('pin', 1);
@@ -3459,6 +3559,7 @@ export class StretchMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'StretchMode.' + this.name; }
   static zoomBackground = new StretchMode('zoomBackground', 0);
   static blurBackground = new StretchMode('blurBackground', 1);
@@ -3472,6 +3573,7 @@ export class IconAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'IconAlignment.' + this.name; }
   static start = new IconAlignment('start', 0);
   static end = new IconAlignment('end', 1);
@@ -3484,6 +3586,7 @@ export class BottomNavigationBarType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BottomNavigationBarType.' + this.name; }
   static fixed = new BottomNavigationBarType('fixed', 0);
   static shifting = new BottomNavigationBarType('shifting', 1);
@@ -3496,6 +3599,7 @@ export class BottomNavigationBarLandscapeLayout {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BottomNavigationBarLandscapeLayout.' + this.name; }
   static spread = new BottomNavigationBarLandscapeLayout('spread', 0);
   static centered = new BottomNavigationBarLandscapeLayout('centered', 1);
@@ -3509,6 +3613,7 @@ export class ThemeMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ThemeMode.' + this.name; }
   static system = new ThemeMode('system', 0);
   static light = new ThemeMode('light', 1);
@@ -3522,6 +3627,7 @@ export class KeyDataTransitMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'KeyDataTransitMode.' + this.name; }
   static rawKeyData = new KeyDataTransitMode('rawKeyData', 0);
   static keyDataThenRawKeyData = new KeyDataTransitMode('keyDataThenRawKeyData', 1);
@@ -3534,6 +3640,7 @@ export class SystemSoundType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SystemSoundType.' + this.name; }
   static click = new SystemSoundType('click', 0);
   static tick = new SystemSoundType('tick', 1);
@@ -3547,6 +3654,7 @@ export class SmartDashesType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SmartDashesType.' + this.name; }
   static disabled = new SmartDashesType('disabled', 0);
   static enabled = new SmartDashesType('enabled', 1);
@@ -3559,6 +3667,7 @@ export class SmartQuotesType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SmartQuotesType.' + this.name; }
   static disabled = new SmartQuotesType('disabled', 0);
   static enabled = new SmartQuotesType('enabled', 1);
@@ -3571,6 +3680,7 @@ export class TextInputAction {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextInputAction.' + this.name; }
   static none = new TextInputAction('none', 0);
   static unspecified = new TextInputAction('unspecified', 1);
@@ -3594,6 +3704,7 @@ export class TextCapitalization {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextCapitalization.' + this.name; }
   static words = new TextCapitalization('words', 0);
   static sentences = new TextCapitalization('sentences', 1);
@@ -3608,6 +3719,7 @@ export class FloatingCursorDragState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FloatingCursorDragState.' + this.name; }
   static Start = new FloatingCursorDragState('Start', 0);
   static Update = new FloatingCursorDragState('Update', 1);
@@ -3621,6 +3733,7 @@ export class SelectionChangedCause {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SelectionChangedCause.' + this.name; }
   static tap = new SelectionChangedCause('tap', 0);
   static doubleTap = new SelectionChangedCause('doubleTap', 1);
@@ -3639,6 +3752,7 @@ export class MaxLengthEnforcement {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'MaxLengthEnforcement.' + this.name; }
   static none = new MaxLengthEnforcement('none', 0);
   static enforced = new MaxLengthEnforcement('enforced', 1);
@@ -3652,6 +3766,7 @@ export class SwipeEdge {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SwipeEdge.' + this.name; }
   static left = new SwipeEdge('left', 0);
   static right = new SwipeEdge('right', 1);
@@ -3664,6 +3779,7 @@ export class UndoDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'UndoDirection.' + this.name; }
   static undo = new UndoDirection('undo', 0);
   static redo = new UndoDirection('redo', 1);
@@ -3676,6 +3792,7 @@ export class DeviceOrientation {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DeviceOrientation.' + this.name; }
   static portraitUp = new DeviceOrientation('portraitUp', 0);
   static landscapeLeft = new DeviceOrientation('landscapeLeft', 1);
@@ -3690,6 +3807,7 @@ export class SystemUiOverlay {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SystemUiOverlay.' + this.name; }
   static top = new SystemUiOverlay('top', 0);
   static bottom = new SystemUiOverlay('bottom', 1);
@@ -3702,6 +3820,7 @@ export class SystemUiMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SystemUiMode.' + this.name; }
   static leanBack = new SystemUiMode('leanBack', 0);
   static immersive = new SystemUiMode('immersive', 1);
@@ -3717,6 +3836,7 @@ export class ContentSensitivity {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ContentSensitivity.' + this.name; }
   static autoSensitive = new ContentSensitivity('autoSensitive', 0);
   static sensitive = new ContentSensitivity('sensitive', 1);
@@ -3731,6 +3851,7 @@ export class KeyboardSide {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'KeyboardSide.' + this.name; }
   static any = new KeyboardSide('any', 0);
   static left = new KeyboardSide('left', 1);
@@ -3745,6 +3866,7 @@ export class ModifierKey {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ModifierKey.' + this.name; }
   static controlModifier = new ModifierKey('controlModifier', 0);
   static shiftModifier = new ModifierKey('shiftModifier', 1);
@@ -3764,6 +3886,7 @@ export class ServicesServiceExtensions {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ServicesServiceExtensions.' + this.name; }
   static profilePlatformChannels = new ServicesServiceExtensions('profilePlatformChannels', 0);
   static evict = new ServicesServiceExtensions('evict', 1);
@@ -3776,6 +3899,7 @@ export class CrossFadeState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'CrossFadeState.' + this.name; }
   static showFirst = new CrossFadeState('showFirst', 0);
   static showSecond = new CrossFadeState('showSecond', 1);
@@ -3788,6 +3912,7 @@ export class ScrollIncrementType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ScrollIncrementType.' + this.name; }
   static line = new ScrollIncrementType('line', 0);
   static page = new ScrollIncrementType('page', 1);
@@ -3800,6 +3925,7 @@ export class RouteInformationReportingType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RouteInformationReportingType.' + this.name; }
   static none = new RouteInformationReportingType('none', 0);
   static neglect = new RouteInformationReportingType('neglect', 1);
@@ -3813,6 +3939,7 @@ export class WidgetState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'WidgetState.' + this.name; }
   static hovered = new WidgetState('hovered', 0);
   static focused = new WidgetState('focused', 1);
@@ -3831,6 +3958,7 @@ export class ConnectionState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ConnectionState.' + this.name; }
   static none = new ConnectionState('none', 0);
   static waiting = new ConnectionState('waiting', 1);
@@ -3845,6 +3973,7 @@ export class AutovalidateMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AutovalidateMode.' + this.name; }
   static disabled = new AutovalidateMode('disabled', 0);
   static always = new AutovalidateMode('always', 1);
@@ -3860,6 +3989,7 @@ export class ContextMenuButtonType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ContextMenuButtonType.' + this.name; }
   static cut = new ContextMenuButtonType('cut', 0);
   static copy = new ContextMenuButtonType('copy', 1);
@@ -3880,6 +4010,7 @@ export class RoutePopDisposition {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RoutePopDisposition.' + this.name; }
   static pop = new RoutePopDisposition('pop', 0);
   static doNotPop = new RoutePopDisposition('doNotPop', 1);
@@ -3893,6 +4024,7 @@ export class Orientation {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'Orientation.' + this.name; }
   static portrait = new Orientation('portrait', 0);
   static landscape = new Orientation('landscape', 1);
@@ -3905,6 +4037,7 @@ export class NavigationMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'NavigationMode.' + this.name; }
   static traditional = new NavigationMode('traditional', 0);
   static directional = new NavigationMode('directional', 1);
@@ -3917,6 +4050,7 @@ export class ScrollPositionAlignmentPolicy {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ScrollPositionAlignmentPolicy.' + this.name; }
   static explicit = new ScrollPositionAlignmentPolicy('explicit', 0);
   static keepVisibleAtEnd = new ScrollPositionAlignmentPolicy('keepVisibleAtEnd', 1);
@@ -3930,6 +4064,7 @@ export class DiagonalDragBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DiagonalDragBehavior.' + this.name; }
   static none = new DiagonalDragBehavior('none', 0);
   static weightedEvent = new DiagonalDragBehavior('weightedEvent', 1);
@@ -3944,6 +4079,7 @@ export class KeyEventResult {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'KeyEventResult.' + this.name; }
   static handled = new KeyEventResult('handled', 0);
   static ignored = new KeyEventResult('ignored', 1);
@@ -3957,6 +4093,7 @@ export class UnfocusDisposition {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'UnfocusDisposition.' + this.name; }
   static scope = new UnfocusDisposition('scope', 0);
   static previouslyFocusedChild = new UnfocusDisposition('previouslyFocusedChild', 1);
@@ -3969,6 +4106,7 @@ export class FocusHighlightMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FocusHighlightMode.' + this.name; }
   static touch = new FocusHighlightMode('touch', 0);
   static traditional = new FocusHighlightMode('traditional', 1);
@@ -3981,6 +4119,7 @@ export class FocusHighlightStrategy {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FocusHighlightStrategy.' + this.name; }
   static automatic = new FocusHighlightStrategy('automatic', 0);
   static alwaysTouch = new FocusHighlightStrategy('alwaysTouch', 1);
@@ -3994,6 +4133,7 @@ export class TraversalDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TraversalDirection.' + this.name; }
   static up = new TraversalDirection('up', 0);
   static right = new TraversalDirection('right', 1);
@@ -4008,6 +4148,7 @@ export class TraversalEdgeBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TraversalEdgeBehavior.' + this.name; }
   static closedLoop = new TraversalEdgeBehavior('closedLoop', 0);
   static leaveFlutterView = new TraversalEdgeBehavior('leaveFlutterView', 1);
@@ -4022,6 +4163,7 @@ export class SnapshotMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SnapshotMode.' + this.name; }
   static permissive = new SnapshotMode('permissive', 0);
   static normal = new SnapshotMode('normal', 1);
@@ -4035,6 +4177,7 @@ export class TooltipTriggerMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TooltipTriggerMode.' + this.name; }
   static manual = new TooltipTriggerMode('manual', 0);
   static longPress = new TooltipTriggerMode('longPress', 1);
@@ -4048,6 +4191,7 @@ export class BannerLocation {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BannerLocation.' + this.name; }
   static topStart = new BannerLocation('topStart', 0);
   static topEnd = new BannerLocation('topEnd', 1);
@@ -4062,6 +4206,7 @@ export class FloatingHeaderSnapMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FloatingHeaderSnapMode.' + this.name; }
   static overlay = new FloatingHeaderSnapMode('overlay', 0);
   static scroll = new FloatingHeaderSnapMode('scroll', 1);
@@ -4074,6 +4219,7 @@ export class LockState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'LockState.' + this.name; }
   static ignored = new LockState('ignored', 0);
   static locked = new LockState('locked', 1);
@@ -4087,6 +4233,7 @@ export class HeroFlightDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'HeroFlightDirection.' + this.name; }
   static push = new HeroFlightDirection('push', 0);
   static pop = new HeroFlightDirection('pop', 1);
@@ -4099,6 +4246,7 @@ export class StandardComponentType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'StandardComponentType.' + this.name; }
   static backButton = new StandardComponentType('backButton', 0);
   static closeButton = new StandardComponentType('closeButton', 1);
@@ -4113,6 +4261,7 @@ export class InspectorButtonVariant {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'InspectorButtonVariant.' + this.name; }
   static filled = new InspectorButtonVariant('filled', 0);
   static toggle = new InspectorButtonVariant('toggle', 1);
@@ -4126,6 +4275,7 @@ export class AndroidOverscrollIndicator {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AndroidOverscrollIndicator.' + this.name; }
   static stretch = new AndroidOverscrollIndicator('stretch', 0);
   static glow = new AndroidOverscrollIndicator('glow', 1);
@@ -4138,6 +4288,7 @@ export class ClipboardStatus {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ClipboardStatus.' + this.name; }
   static pasteable = new ClipboardStatus('pasteable', 0);
   static unknown = new ClipboardStatus('unknown', 1);
@@ -4151,6 +4302,7 @@ export class LiveTextInputStatus {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'LiveTextInputStatus.' + this.name; }
   static enabled = new LiveTextInputStatus('enabled', 0);
   static unknown = new LiveTextInputStatus('unknown', 1);
@@ -4164,6 +4316,7 @@ export class ScrollDecelerationRate {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ScrollDecelerationRate.' + this.name; }
   static normal = new ScrollDecelerationRate('normal', 0);
   static fast = new ScrollDecelerationRate('fast', 1);
@@ -4176,6 +4329,7 @@ export class OverflowBarAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'OverflowBarAlignment.' + this.name; }
   static start = new OverflowBarAlignment('start', 0);
   static end = new OverflowBarAlignment('end', 1);
@@ -4189,6 +4343,7 @@ export class PanAxis {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PanAxis.' + this.name; }
   static horizontal = new PanAxis('horizontal', 0);
   static vertical = new PanAxis('vertical', 1);
@@ -4203,6 +4358,7 @@ export class AutofillContextAction {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AutofillContextAction.' + this.name; }
   static commit = new AutofillContextAction('commit', 0);
   static cancel = new AutofillContextAction('cancel', 1);
@@ -4215,6 +4371,7 @@ export class ChangeReportingBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ChangeReportingBehavior.' + this.name; }
   static onScrollEnd = new ChangeReportingBehavior('onScrollEnd', 0);
   static onScrollUpdate = new ChangeReportingBehavior('onScrollUpdate', 1);
@@ -4227,6 +4384,7 @@ export class PlatformProvidedMenuItemType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PlatformProvidedMenuItemType.' + this.name; }
   static about = new PlatformProvidedMenuItemType('about', 0);
   static quit = new PlatformProvidedMenuItemType('quit', 1);
@@ -4249,6 +4407,7 @@ export class DismissDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DismissDirection.' + this.name; }
   static vertical = new DismissDirection('vertical', 0);
   static horizontal = new DismissDirection('horizontal', 1);
@@ -4266,6 +4425,7 @@ export class ScrollbarOrientation {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ScrollbarOrientation.' + this.name; }
   static left = new ScrollbarOrientation('left', 0);
   static right = new ScrollbarOrientation('right', 1);
@@ -4280,6 +4440,7 @@ export class RepeatMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'RepeatMode.' + this.name; }
   static restart = new RepeatMode('restart', 0);
   static reverse = new RepeatMode('reverse', 1);
@@ -4292,6 +4453,7 @@ export class OptionsViewOpenDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'OptionsViewOpenDirection.' + this.name; }
   static up = new OptionsViewOpenDirection('up', 0);
   static down = new OptionsViewOpenDirection('down', 1);
@@ -4305,6 +4467,7 @@ export class OverlayChildLocation {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'OverlayChildLocation.' + this.name; }
   static nearestOverlay = new OverlayChildLocation('nearestOverlay', 0);
   static rootOverlay = new OverlayChildLocation('rootOverlay', 1);
@@ -4317,6 +4480,7 @@ export class WidgetsServiceExtensions {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'WidgetsServiceExtensions.' + this.name; }
   static debugDumpApp = new WidgetsServiceExtensions('debugDumpApp', 0);
   static debugDumpFocusTree = new WidgetsServiceExtensions('debugDumpFocusTree', 1);
@@ -4336,6 +4500,7 @@ export class WidgetInspectorServiceExtensions {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'WidgetInspectorServiceExtensions.' + this.name; }
   static structuredErrors = new WidgetInspectorServiceExtensions('structuredErrors', 0);
   static show = new WidgetInspectorServiceExtensions('show', 1);
@@ -4378,6 +4543,7 @@ export class ScrollViewKeyboardDismissBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ScrollViewKeyboardDismissBehavior.' + this.name; }
   static manual = new ScrollViewKeyboardDismissBehavior('manual', 0);
   static onDrag = new ScrollViewKeyboardDismissBehavior('onDrag', 1);
@@ -4390,6 +4556,7 @@ export class SelectableRegionSelectionStatus {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SelectableRegionSelectionStatus.' + this.name; }
   static changing = new SelectableRegionSelectionStatus('changing', 0);
   static finalized = new SelectableRegionSelectionStatus('finalized', 1);
@@ -4402,6 +4569,7 @@ export class WindowPositionerAnchor {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'WindowPositionerAnchor.' + this.name; }
   static center = new WindowPositionerAnchor('center', 0);
   static top = new WindowPositionerAnchor('top', 1);
@@ -4421,6 +4589,7 @@ export class Brightness {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'Brightness.' + this.name; }
   static dark = new Brightness('dark', 0);
   static light = new Brightness('light', 1);
@@ -4433,6 +4602,7 @@ export class FontStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FontStyle.' + this.name; }
   static normal = new FontStyle('normal', 0);
   static italic = new FontStyle('italic', 1);
@@ -4445,6 +4615,7 @@ export class TextAlign {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextAlign.' + this.name; }
   static left = new TextAlign('left', 0);
   static right = new TextAlign('right', 1);
@@ -4461,6 +4632,7 @@ export class TextBaseline {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextBaseline.' + this.name; }
   static alphabetic = new TextBaseline('alphabetic', 0);
   static ideographic = new TextBaseline('ideographic', 1);
@@ -4473,6 +4645,7 @@ export class TextDecorationStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextDecorationStyle.' + this.name; }
   static solid = new TextDecorationStyle('solid', 0);
   static double = new TextDecorationStyle('double', 1);
@@ -4488,6 +4661,7 @@ export class TextLeadingDistribution {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextLeadingDistribution.' + this.name; }
   static proportional = new TextLeadingDistribution('proportional', 0);
   static even = new TextLeadingDistribution('even', 1);
@@ -4500,6 +4674,7 @@ export class TextDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextDirection.' + this.name; }
   static rtl = new TextDirection('rtl', 0);
   static ltr = new TextDirection('ltr', 1);
@@ -4512,6 +4687,7 @@ export class TextAffinity {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TextAffinity.' + this.name; }
   static upstream = new TextAffinity('upstream', 0);
   static downstream = new TextAffinity('downstream', 1);
@@ -4524,6 +4700,7 @@ export class BoxHeightStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BoxHeightStyle.' + this.name; }
   static tight = new BoxHeightStyle('tight', 0);
   static max = new BoxHeightStyle('max', 1);
@@ -4540,6 +4717,7 @@ export class BoxWidthStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BoxWidthStyle.' + this.name; }
   static tight = new BoxWidthStyle('tight', 0);
   static max = new BoxWidthStyle('max', 1);
@@ -4552,6 +4730,7 @@ export class PlaceholderAlignment {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PlaceholderAlignment.' + this.name; }
   static baseline = new PlaceholderAlignment('baseline', 0);
   static aboveBaseline = new PlaceholderAlignment('aboveBaseline', 1);
@@ -4568,6 +4747,7 @@ export class PointerChange {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PointerChange.' + this.name; }
   static cancel = new PointerChange('cancel', 0);
   static add = new PointerChange('add', 1);
@@ -4588,6 +4768,7 @@ export class PointerDeviceKind {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PointerDeviceKind.' + this.name; }
   static touch = new PointerDeviceKind('touch', 0);
   static mouse = new PointerDeviceKind('mouse', 1);
@@ -4604,6 +4785,7 @@ export class PointerSignalKind {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PointerSignalKind.' + this.name; }
   static none = new PointerSignalKind('none', 0);
   static scroll = new PointerSignalKind('scroll', 1);
@@ -4619,6 +4801,7 @@ export class BlendMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BlendMode.' + this.name; }
   static clear = new BlendMode('clear', 0);
   static src = new BlendMode('src', 1);
@@ -4658,6 +4841,7 @@ export class FilterQuality {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FilterQuality.' + this.name; }
   static none = new FilterQuality('none', 0);
   static low = new FilterQuality('low', 1);
@@ -4672,6 +4856,7 @@ export class StrokeCap {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'StrokeCap.' + this.name; }
   static butt = new StrokeCap('butt', 0);
   static round = new StrokeCap('round', 1);
@@ -4685,6 +4870,7 @@ export class StrokeJoin {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'StrokeJoin.' + this.name; }
   static miter = new StrokeJoin('miter', 0);
   static round = new StrokeJoin('round', 1);
@@ -4698,6 +4884,7 @@ export class PaintingStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PaintingStyle.' + this.name; }
   static fill = new PaintingStyle('fill', 0);
   static stroke = new PaintingStyle('stroke', 1);
@@ -4710,6 +4897,7 @@ export class Clip {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'Clip.' + this.name; }
   static none = new Clip('none', 0);
   static hardEdge = new Clip('hardEdge', 1);
@@ -4724,6 +4912,7 @@ export class ColorSpace {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ColorSpace.' + this.name; }
   static sRGB = new ColorSpace('sRGB', 0);
   static extendedSRGB = new ColorSpace('extendedSRGB', 1);
@@ -4737,6 +4926,7 @@ export class ImageByteFormat {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ImageByteFormat.' + this.name; }
   static rawRgba = new ImageByteFormat('rawRgba', 0);
   static rawStraightRgba = new ImageByteFormat('rawStraightRgba', 1);
@@ -4752,6 +4942,7 @@ export class PixelFormat {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PixelFormat.' + this.name; }
   static rgba8888 = new PixelFormat('rgba8888', 0);
   static bgra8888 = new PixelFormat('bgra8888', 1);
@@ -4766,6 +4957,7 @@ export class TargetPixelFormat {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TargetPixelFormat.' + this.name; }
   static dontCare = new TargetPixelFormat('dontCare', 0);
   static rgbaFloat32 = new TargetPixelFormat('rgbaFloat32', 1);
@@ -4779,6 +4971,7 @@ export class PathFillType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PathFillType.' + this.name; }
   static nonZero = new PathFillType('nonZero', 0);
   static evenOdd = new PathFillType('evenOdd', 1);
@@ -4791,6 +4984,7 @@ export class PathOperation {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PathOperation.' + this.name; }
   static difference = new PathOperation('difference', 0);
   static intersect = new PathOperation('intersect', 1);
@@ -4806,6 +5000,7 @@ export class BlurStyle {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BlurStyle.' + this.name; }
   static normal = new BlurStyle('normal', 0);
   static solid = new BlurStyle('solid', 1);
@@ -4820,6 +5015,7 @@ export class TileMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TileMode.' + this.name; }
   static clamp = new TileMode('clamp', 0);
   static repeated = new TileMode('repeated', 1);
@@ -4834,6 +5030,7 @@ export class VertexMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'VertexMode.' + this.name; }
   static triangles = new VertexMode('triangles', 0);
   static triangleStrip = new VertexMode('triangleStrip', 1);
@@ -4847,6 +5044,7 @@ export class PointMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'PointMode.' + this.name; }
   static points = new PointMode('points', 0);
   static lines = new PointMode('lines', 1);
@@ -4860,6 +5058,7 @@ export class ClipOp {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ClipOp.' + this.name; }
   static difference = new ClipOp('difference', 0);
   static intersect = new ClipOp('intersect', 1);
@@ -4872,6 +5071,7 @@ export class SemanticsRole {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SemanticsRole.' + this.name; }
   static none = new SemanticsRole('none', 0);
   static tab = new SemanticsRole('tab', 1);
@@ -4915,6 +5115,7 @@ export class SemanticsInputType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SemanticsInputType.' + this.name; }
   static none = new SemanticsInputType('none', 0);
   static text = new SemanticsInputType('text', 1);
@@ -4931,6 +5132,7 @@ export class SemanticsHitTestBehavior {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SemanticsHitTestBehavior.' + this.name; }
   static defer = new SemanticsHitTestBehavior('defer', 0);
   static opaque = new SemanticsHitTestBehavior('opaque', 1);
@@ -4944,6 +5146,7 @@ export class SemanticsValidationResult {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'SemanticsValidationResult.' + this.name; }
   static none = new SemanticsValidationResult('none', 0);
   static valid = new SemanticsValidationResult('valid', 1);
@@ -4957,6 +5160,7 @@ export class FramePhase {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'FramePhase.' + this.name; }
   static vsyncStart = new FramePhase('vsyncStart', 0);
   static buildStart = new FramePhase('buildStart', 1);
@@ -4973,6 +5177,7 @@ export class AppLifecycleState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AppLifecycleState.' + this.name; }
   static detached = new AppLifecycleState('detached', 0);
   static resumed = new AppLifecycleState('resumed', 1);
@@ -4988,6 +5193,7 @@ export class AppExitResponse {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AppExitResponse.' + this.name; }
   static exit = new AppExitResponse('exit', 0);
   static cancel = new AppExitResponse('cancel', 1);
@@ -5000,6 +5206,7 @@ export class AppExitType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'AppExitType.' + this.name; }
   static cancelable = new AppExitType('cancelable', 0);
   static required = new AppExitType('required', 1);
@@ -5012,6 +5219,7 @@ export class DisplayFeatureType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DisplayFeatureType.' + this.name; }
   static unknown = new DisplayFeatureType('unknown', 0);
   static fold = new DisplayFeatureType('fold', 1);
@@ -5026,6 +5234,7 @@ export class DisplayFeatureState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DisplayFeatureState.' + this.name; }
   static unknown = new DisplayFeatureState('unknown', 0);
   static postureFlat = new DisplayFeatureState('postureFlat', 1);
@@ -5039,6 +5248,7 @@ export class DartPerformanceMode {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'DartPerformanceMode.' + this.name; }
   static balanced = new DartPerformanceMode('balanced', 0);
   static latency = new DartPerformanceMode('latency', 1);
@@ -5053,6 +5263,7 @@ export class ViewFocusState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ViewFocusState.' + this.name; }
   static unfocused = new ViewFocusState('unfocused', 0);
   static focused = new ViewFocusState('focused', 1);
@@ -5065,6 +5276,7 @@ export class ViewFocusDirection {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'ViewFocusDirection.' + this.name; }
   static undefined = new ViewFocusDirection('undefined', 0);
   static forward = new ViewFocusDirection('forward', 1);
@@ -5078,6 +5290,7 @@ export class KeyEventType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'KeyEventType.' + this.name; }
   static down = new KeyEventType('down', 0);
   static up = new KeyEventType('up', 1);
@@ -5091,6 +5304,7 @@ export class KeyEventDeviceType {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'KeyEventDeviceType.' + this.name; }
   static keyboard = new KeyEventDeviceType('keyboard', 0);
   static directionalPad = new KeyEventDeviceType('directionalPad', 1);
@@ -5106,6 +5320,7 @@ export class TimelineRecorder {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TimelineRecorder.' + this.name; }
   static perfetto = new TimelineRecorder('perfetto', 0);
   static chrome = new TimelineRecorder('chrome', 1);
@@ -5119,6 +5334,7 @@ export class TimelineStream {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'TimelineStream.' + this.name; }
   static api = new TimelineStream('api', 0);
   static compiler = new TimelineStream('compiler', 1);
@@ -5139,6 +5355,7 @@ export class BrowserEngine {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'BrowserEngine.' + this.name; }
   static blink = new BrowserEngine('blink', 0);
   static webkit = new BrowserEngine('webkit', 1);
@@ -5152,6 +5369,7 @@ export class OperatingSystem {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'OperatingSystem.' + this.name; }
   static iOs = new OperatingSystem('iOs', 0);
   static android = new OperatingSystem('android', 1);
@@ -5168,6 +5386,7 @@ export class HttpClientResponseCompressionState {
     this.index = index;
   }
   toJSON() { return this.name; }
+  valueOf() { return this.name; }
   toString() { return 'HttpClientResponseCompressionState.' + this.name; }
   static notCompressed = new HttpClientResponseCompressionState('notCompressed', 0);
   static decompressed = new HttpClientResponseCompressionState('decompressed', 1);
@@ -5385,6 +5604,8 @@ export class BoxShadow {
 export class TextDecoration {
   constructor(props) { this.name = __singleValue(props); }
   toJSON() { return this.name; }
+  // 同枚举：跨桥值是成员名，`==` 直译为 JS `==`，靠 valueOf 归一成同一比较基准。
+  valueOf() { return this.name; }
   static none = new TextDecoration('none');
   static underline = new TextDecoration('underline');
   static overline = new TextDecoration('overline');
