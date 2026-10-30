@@ -13,6 +13,7 @@ import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
 import 'keyboard_listener_detail.dart';
+import 'layout_more_detail.dart';
 import 'nested_scroll_view_detail.dart';
 import 'orientation_builder_detail.dart';
 import 'overlay_detail.dart';
@@ -114,6 +115,13 @@ class WidgetShowcase extends StatelessWidget {
         'Draggable / DragTarget',
         '任意 JS 负载往返、长按拖拽、悬停高亮（仅 JS 热更版）',
         'DragDetail',
+      ),
+    ]),
+    _Group('布局补充', [
+      _Entry(
+        'Tooltip / FittedBox / RotatedBox / Intrinsic / InteractiveViewer',
+        '提示气泡、缩放适配、旋转、等高布局、可缩放可拖动画布',
+        'LayoutMoreDetail',
       ),
     ]),
     _Group('弹层', [
@@ -239,6 +247,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'ImageFilteredDetail': 'components/image_filtered_detail.js',
     'ImageIconDetail': 'components/image_icon_detail.js',
     'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
+    'LayoutMoreDetail': 'components/layout_more_detail.js',
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
     'OrientationBuilderDetail': 'components/orientation_builder_detail.js',
     'OverlayDetail': 'components/overlay_detail.js',
@@ -291,6 +300,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'ImageFilteredDetail' => const ImageFilteredDetail(),
       'ImageIconDetail' => const ImageIconDetail(),
       'KeyboardListenerDetail' => const KeyboardListenerDetail(),
+      'LayoutMoreDetail' => const LayoutMoreDetail(),
       'NestedScrollViewDetail' => const NestedScrollViewDetail(),
       'OrientationBuilderDetail' => const OrientationBuilderDetail(),
       'OverlayDetail' => const OverlayDetail(),

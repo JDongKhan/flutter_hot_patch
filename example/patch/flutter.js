@@ -104,6 +104,12 @@ export function __h(type, props) {
 }
 
 
+export class AbsorbPointer {
+  constructor(props) {
+    return __h('AbsorbPointer', props);
+  }
+}
+
 export class AlertDialog {
   constructor(props) {
     return __h('AlertDialog', props);
@@ -199,6 +205,12 @@ export class AppBar {
 export class AspectRatio {
   constructor(props) {
     return __h('AspectRatio', props);
+  }
+}
+
+export class Baseline {
+  constructor(props) {
+    return __h('Baseline', props);
   }
 }
 
@@ -427,6 +439,12 @@ export class FilledButton {
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
+export class FittedBox {
+  constructor(props) {
+    return __h('FittedBox', props);
+  }
+}
+
 export class Flexible {
   constructor(props) {
     return __h('Flexible', props);
@@ -483,6 +501,12 @@ export class IconButton {
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
+export class IgnorePointer {
+  constructor(props) {
+    return __h('IgnorePointer', props);
+  }
+}
+
 export class Image {
   constructor(props) {
     return __h('Image', props);
@@ -525,9 +549,34 @@ export class InputDecoration {
   static collapsed(props) { return new InputDecoration(Object.assign({}, props, { factory: 'collapsed' })); }
 }
 
+export class InteractiveViewer {
+  constructor(props) {
+    return __h('InteractiveViewer', props);
+  }
+  static builder(props) { return new InteractiveViewer(Object.assign({}, props, { factory: 'builder' })); }
+}
+
+export class IntrinsicHeight {
+  constructor(props) {
+    return __h('IntrinsicHeight', props);
+  }
+}
+
+export class IntrinsicWidth {
+  constructor(props) {
+    return __h('IntrinsicWidth', props);
+  }
+}
+
 export class KeyboardListener {
   constructor(props) {
     return __h('KeyboardListener', props);
+  }
+}
+
+export class LimitedBox {
+  constructor(props) {
+    return __h('LimitedBox', props);
   }
 }
 
@@ -616,9 +665,22 @@ export class RadioGroup {
   }
 }
 
+export class RepaintBoundary {
+  constructor(props) {
+    return __h('RepaintBoundary', props);
+  }
+  static wrap(props) { return new RepaintBoundary(Object.assign({}, props, { factory: 'wrap' })); }
+}
+
 export class RichText {
   constructor(props) {
     return __h('RichText', props);
+  }
+}
+
+export class RotatedBox {
+  constructor(props) {
+    return __h('RotatedBox', props);
   }
 }
 
@@ -816,6 +878,12 @@ export class TextButton {
 export class TextField {
   constructor(props) {
     return __h('TextField', props);
+  }
+}
+
+export class Tooltip {
+  constructor(props) {
+    return __h('Tooltip', props);
   }
 }
 

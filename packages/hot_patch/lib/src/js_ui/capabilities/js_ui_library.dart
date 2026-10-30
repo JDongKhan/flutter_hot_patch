@@ -51,6 +51,7 @@ import 'dialog/dialog_library.dart';
 import 'dismissible/dismissible_library.dart';
 import 'drag/drag_library.dart';
 import 'drawer/drawer_library.dart';
+import 'layout_more/layout_more_library.dart';
 import 'easy_refresh/easy_refresh_library.dart';
 import 'focus/focus_library.dart';
 import 'key/key_library.dart';
@@ -176,6 +177,9 @@ void _seedBuiltins() {
   registerJsUiLibrary(const DialogLibrary());
   // Drag：拖拽三件套（draggable 的任意 JS 负载经身份 id 对齐原生拖动系统）。
   registerJsUiLibrary(const DragLibrary());
+  // LayoutMore：Tooltip / IgnorePointer / FittedBox / RotatedBox / Intrinsic /
+  // InteractiveViewer 等纯映射的单子包装组件。
+  registerJsUiLibrary(const LayoutMoreLibrary());
   // ── 三方库 ──
   registerJsUiLibrary(const EasyRefreshLibrary());
   registerJsUiLibrary(const CachedNetworkImageLibrary());
