@@ -575,7 +575,7 @@ export class Draggable {
   constructor(props) {
     this.props = props || {};
   }
-${dragSourcePropsMethodSource}
+$dragSourcePropsMethodSource
   build(context) {
     return __h('Draggable', this.__sourceProps());
   }
@@ -586,7 +586,7 @@ export class LongPressDraggable {
   constructor(props) {
     this.props = props || {};
   }
-${dragSourcePropsMethodSource}
+$dragSourcePropsMethodSource
   build(context) {
     return __h('LongPressDraggable', this.__sourceProps());
   }
@@ -601,7 +601,7 @@ export class DragTarget {
   constructor(props) {
     this.props = props || {};
   }
-${dragTargetPropsMethodSource}
+$dragTargetPropsMethodSource
   build(context) {
     var props = this.__targetProps(context);
     if (props == null) { return null; }
