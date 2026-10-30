@@ -204,6 +204,9 @@ const String styleValuesJsSource = r'''
       if (!this.__none) { this.factor = __singleValue(props); }
     }
     toJSON() { return this.__none ? 'noScaling' : { linear: this.factor }; }
+    scale(x) {
+      return this.__none ? x : this.factor * x;
+    }
     static noScaling = new TextScaler(null);
     static linear(props) {
       props = __positionalArgs(props, ['textScaleFactor']);

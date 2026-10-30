@@ -69,7 +69,7 @@ const String mediaQueryJsSource = r'''
         viewInsets: json.viewInsets,
         devicePixelRatio: json.devicePixelRatio,
         textScaleFactor: f,
-        textScaler: new TextScaler({ factor: f }),
+        textScaler: TextScaler.linear({ textScaleFactor: f }),
         orientation: json.orientation,
         platformBrightness: json.platformBrightness,
         alwaysUse24HourFormat: json.alwaysUse24HourFormat,
@@ -89,7 +89,9 @@ const String mediaQueryJsSource = r'''
       if (aspect === 'size') {
         return new Size({ width: raw.width, height: raw.height });
       }
-      if (aspect === 'textScaler') { return new TextScaler({ factor: raw.__factor }); }
+      if (aspect === 'textScaler') {
+        return TextScaler.linear({ textScaleFactor: raw.__factor });
+      }
       return raw;
     }
 

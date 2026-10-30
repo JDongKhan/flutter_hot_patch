@@ -5720,6 +5720,9 @@ export class TextScaler {
     if (!this.__none) { this.factor = __singleValue(props); }
   }
   toJSON() { return this.__none ? 'noScaling' : { linear: this.factor }; }
+  scale(x) {
+    return this.__none ? x : this.factor * x;
+  }
   static noScaling = new TextScaler(null);
   static linear(props) {
     props = __positionalArgs(props, ['textScaleFactor']);
@@ -6585,17 +6588,6 @@ G.__keyEvent = function (handleId, eventJson) {
   }));
 };
 
-// `textScaler` 的 JS 镜像：`scale(x)` 即可（Dart 侧还有 clamp，解析期用不到）。
-export class TextScaler {
-  constructor(props) {
-    props = __positionalArgs(props, ['factor']);
-    this.__factor = props.factor == null ? 1 : props.factor;
-  }
-  scale(x) {
-    return this.__factor * x;
-  }
-}
-
 export class MediaQuery {
   // ctx 句柄 id -> {
   //   anchor, all, allKey, vals: {aspect: value}, keys: {aspect: key},
@@ -6642,7 +6634,7 @@ export class MediaQuery {
       viewInsets: json.viewInsets,
       devicePixelRatio: json.devicePixelRatio,
       textScaleFactor: f,
-      textScaler: new TextScaler({ factor: f }),
+      textScaler: TextScaler.linear({ textScaleFactor: f }),
       orientation: json.orientation,
       platformBrightness: json.platformBrightness,
       alwaysUse24HourFormat: json.alwaysUse24HourFormat,
@@ -6662,7 +6654,9 @@ export class MediaQuery {
     if (aspect === 'size') {
       return new Size({ width: raw.width, height: raw.height });
     }
-    if (aspect === 'textScaler') { return new TextScaler({ factor: raw.__factor }); }
+    if (aspect === 'textScaler') {
+      return TextScaler.linear({ textScaleFactor: raw.__factor });
+    }
     return raw;
   }
 
