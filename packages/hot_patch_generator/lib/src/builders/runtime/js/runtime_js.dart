@@ -703,7 +703,6 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
 const String _jsUiCrossModuleExports = r'''
   G.__core = {
     defineProtoGetter: __defineProtoGetter,
-    defineHandleKind: defineHandleKind,
     handleOp: handleOp,
     registerHandle: registerHandle,
     releaseHandle: releaseHandle,

@@ -5,7 +5,7 @@
 const G = globalThis;
 const {
   defineProtoGetter: __defineProtoGetter,
-  defineHandleKind, handleOp, registerHandle, releaseHandle, handleObjectOf,
+  handleOp, registerHandle, releaseHandle, handleObjectOf,
   createFnHandle: __createFnHandle,
   contextOf, elementOf, elementListOf, isElement, isElementList,
   hostNodeIdOf, newRoot, mount, unmount,
@@ -2011,18 +2011,6 @@ export class Exception extends DartError {
 // `Error` 不导出：JS 原生 Error 就是 Dart Error 的落点（两者同名同义），
 // 导出同名类反而会遮蔽模块内的原生 Error。
 
-// kind → release 描述符只注册一次（同一 kind 会被多次实例化）。
-var __controllerKinds = {};
-
-// 句柄释放（宿主发起或页面兜底）：内部回传句柄是框架实现（用户无从释放），
-// 随本控制器一并释放；订阅一并清空（避免闭包引用泄漏）。
-function __releaseController(h) {
-  var c = h.obj;
-  if (!c) { return; }
-  if (c.__hostFn) { releaseHandle(c.__hostFn.__fn, false); c.__hostFn = null; }
-  c.__listeners = [];
-}
-
 export class ControllerBase {
   constructor() {
     this.__listeners = [];
@@ -2036,10 +2024,6 @@ export class ControllerBase {
   __bindHandle(kind, spec) {
     spec = spec || {};
     this.__spec = spec;
-    if (!__controllerKinds[kind]) {
-      __controllerKinds[kind] = true;
-      defineHandleKind(kind, { release: __releaseController });
-    }
     var self = this;
     if (spec.onHost) {
       this.__hostFn = __createFnHandle(function (p) { spec.onHost(self, p); });
@@ -2052,8 +2036,22 @@ export class ControllerBase {
         for (var k in extra) { meta[k] = extra[k]; }
       }
     }
-    this.__id = registerHandle(this, kind, { meta: meta });
+    // 释放钩子随登记声明（由本控制器实现，不经全局 kind 注册表）。
+    this.__id = registerHandle(this, kind, {
+      meta: meta,
+      release: function (h) { if (h.obj) { h.obj.__releaseResources(); } }
+    });
     return this.__id;
+  }
+
+  // 句柄释放（宿主发起或页面兜底）：内部回传句柄是框架实现（用户无从释放），
+  // 随本控制器一并释放；订阅一并清空（避免闭包引用泄漏）。
+  __releaseResources() {
+    if (this.__hostFn) {
+      releaseHandle(this.__hostFn.__fn, false);
+      this.__hostFn = null;
+    }
+    this.__listeners = [];
   }
 
   addListener(f) {
@@ -7111,7 +7109,6 @@ function __dragTargetProps(self, context) {
 }
 
 // ── LayerLink：CompositedTransform 的锚点，句柄即身份 ──
-defineHandleKind('layer/Link', {});
 export class LayerLink {
   constructor(props) {
     this.__id = registerHandle(this, 'layer/Link', {});
@@ -7124,7 +7121,6 @@ export class LayerLink {
 // ── OverlayPortalController：命令发往宿主，本侧只镜像 isShowing ──
 // show() / hide() 在未 attach 时也不会丢：宿主 OverlayPortalController 自身
 // 记录 z 序，attach 时接管，故可以在 initState 里直接 show()。
-defineHandleKind('overlay/Portal', {});
 export class OverlayPortalController {
   constructor(props) {
     var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;
@@ -7250,7 +7246,6 @@ export class PageStorageKey {
 }
 
 // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
-defineHandleKind('key/Global', {});
 export class GlobalKey {
   constructor(props) {
     var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;
@@ -7307,7 +7302,7 @@ export class KeyRef {
 // 写进 flutter.js，并用 `registerStateProxy(type, class)` 登记；类型来自
 // GlobalKey<T> 的泛型实参。
 
-defineHandleKind('key/Unique', {});
+// UniqueKey：句柄即身份（无本端资源需要清理）。
 export class UniqueKey {
   constructor() {
     this.__id = registerHandle(this, 'key/Unique', {});

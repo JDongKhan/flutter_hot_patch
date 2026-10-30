@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 2597168f） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 4cc6aa48） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '2597168f') { return; }
-  G.__jsuiVersion = '2597168f';
+  if (G.__jsui && G.__jsuiVersion === '4cc6aa48') { return; }
+  G.__jsuiVersion = '4cc6aa48';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -379,15 +379,10 @@ if (G.kDebugMode) {
 // ===== 【4】跨语言句柄注册表 =====
   // handleSeq 与 idSeq 相互独立：句柄 id 与结点 id 分属两套命名空间。
   var handleSeq = 0;
-  // id -> { id, kind, scope, key, obj, meta }
+  // id -> { id, kind, scope, key, obj, meta, release }
   var handles = {};
   // 对象 -> id：同一对象重复登记返回同一 id（身份去重，WeakMap 不阻止回收）。
   var handleOwnerIdx = new WeakMap();
-  // kind -> { release(h) }：JS 本端登记时的真实资源清理（可选）。对端的清理
-  // 由对端各自的 kind 描述符负责，跨桥只传 id + op。
-  var handleKinds = {};
-
-  function defineHandleKind(name, desc) { handleKinds[name] = desc || {}; }
 
   // 句柄 id：`js:<kind>#N`（kind 形如 `fn` / `ctrl/Scroll` / `key`）。
   function __nextHandleId(kind) {
@@ -421,6 +416,10 @@ if (G.kDebugMode) {
   //   4. 其余（模块级 / 静态字段）：随页面；无 activeRoot 时退化为 global。
   //
   // 显式 `opts.scope`（'local' / 'page' / 'global'）优先，事件闭包等仍按原语义。
+  //
+  // `opts.release(h)`：本端真实资源的清理钩子（可选），随登记声明——只有需要
+  // 「释放时还要动内部状态」的对象才传（如控制器要连带释放回传句柄与订阅）。
+  // 对端的清理由对端自己的登记负责，跨桥只传 id + op。
   function registerHandle(obj, kind, opts) {
     if (obj === null || obj === undefined) { return null; }
     var exist = handleOwnerIdx.get(obj);
@@ -449,7 +448,7 @@ if (G.kDebugMode) {
     var id = __nextHandleId(kind);
     handles[id] = {
       id: id, kind: kind, scope: scope, key: key, obj: obj,
-      meta: opts.meta || null, owner: null
+      meta: opts.meta || null, release: opts.release || null, owner: null
     };
     handleOwnerIdx.set(obj, id);
     if (scope === 'page') {
@@ -457,7 +456,7 @@ if (G.kDebugMode) {
     }
     if (owner) { attachOwner(id, owner); }
     if (pending) { constructFrames[constructFrames.length - 1].push(id); }
-    // 自动同步宿主：宿主侧同名 kind 描述符的 onCreate 据此创建真实对象
+    // 自动同步宿主：宿主侧同名 kind 的登记处理器据此创建真实对象
     // （scope=local 的纯本端句柄——如事件闭包——传 sync:false 不同步）。
     // pageKey 一并下发：宿主侧据此登记「句柄→页面」，页面销毁时做本端兜底回收。
     if (opts.sync !== false) {
@@ -535,9 +534,8 @@ if (G.kDebugMode) {
       var i = arr.indexOf(id);
       if (i >= 0) { arr.splice(i, 1); }
     }
-    var desc = handleKinds[h.kind];
-    if (desc && typeof desc.release === 'function') {
-      try { desc.release(h); } catch (e) {}
+    if (h.release) {
+      try { h.release(h); } catch (e) {}
     }
     if (notify !== false) { invokeHostMethod('jsHandle', [{ id: id, op: 'release' }]); }
   }
@@ -615,7 +613,7 @@ if (G.kDebugMode) {
   // 控制器（ScrollController / AnimationController / …）的 JS 基类不在这里：
   // 它们是 Flutter 侧语义，随 flutter.js 发布（`ControllerBase`，见
   // js/controller_base_js.dart）。本片段只提供与能力无关的句柄机制
-  // （defineHandleKind / registerHandle / handleOp / releaseHandle）。
+  // （registerHandle / handleOp / releaseHandle）。
 
 
 
@@ -2227,7 +2225,6 @@ if (G.kDebugMode) {
 // ===== 【11.5】跨模块核心符号（供 flutter.js 值类区） =====
   G.__core = {
     defineProtoGetter: __defineProtoGetter,
-    defineHandleKind: defineHandleKind,
     handleOp: handleOp,
     registerHandle: registerHandle,
     releaseHandle: releaseHandle,
@@ -2311,8 +2308,6 @@ if (G.kDebugMode) {
 
 
 // ===== 【21】BuildContext 代理 =====
-  defineHandleKind('ctx/BuildContext', {});
-
   function JsBuildContext(anchor, nodeId) {
     // 消费它的 JS 组件实例（watch/read 的构建位置锚点）。
     this.__anchor = anchor;

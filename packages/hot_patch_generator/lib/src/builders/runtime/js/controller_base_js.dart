@@ -12,22 +12,9 @@
 //   spec.meta(self)      ：随句柄 create 下发给宿主的构造参数（宿主据此创建真实对象）；
 //   spec.extraJSON(self) ：toJSON 附加字段（如 Tab 的 length / initialIndex）。
 //
-// 依赖方向：本类用 runtime 的句柄机制（`G.__core`：defineHandleKind /
-// registerHandle / handleOp / releaseHandle / createFnHandle），runtime 不需要
-// 认识任何控制器。
+// 依赖方向：本类用 runtime 的句柄机制（`G.__core`：registerHandle / handleOp /
+// releaseHandle / createFnHandle），runtime 不需要认识任何控制器。
 const String controllerBaseJsSource = r'''
-  // kind → release 描述符只注册一次（同一 kind 会被多次实例化）。
-  var __controllerKinds = {};
-
-  // 句柄释放（宿主发起或页面兜底）：内部回传句柄是框架实现（用户无从释放），
-  // 随本控制器一并释放；订阅一并清空（避免闭包引用泄漏）。
-  function __releaseController(h) {
-    var c = h.obj;
-    if (!c) { return; }
-    if (c.__hostFn) { releaseHandle(c.__hostFn.__fn, false); c.__hostFn = null; }
-    c.__listeners = [];
-  }
-
   export class ControllerBase {
     constructor() {
       this.__listeners = [];
@@ -41,10 +28,6 @@ const String controllerBaseJsSource = r'''
     __bindHandle(kind, spec) {
       spec = spec || {};
       this.__spec = spec;
-      if (!__controllerKinds[kind]) {
-        __controllerKinds[kind] = true;
-        defineHandleKind(kind, { release: __releaseController });
-      }
       var self = this;
       if (spec.onHost) {
         this.__hostFn = __createFnHandle(function (p) { spec.onHost(self, p); });
@@ -57,8 +40,22 @@ const String controllerBaseJsSource = r'''
           for (var k in extra) { meta[k] = extra[k]; }
         }
       }
-      this.__id = registerHandle(this, kind, { meta: meta });
+      // 释放钩子随登记声明（由本控制器实现，不经全局 kind 注册表）。
+      this.__id = registerHandle(this, kind, {
+        meta: meta,
+        release: function (h) { if (h.obj) { h.obj.__releaseResources(); } }
+      });
       return this.__id;
+    }
+
+    // 句柄释放（宿主发起或页面兜底）：内部回传句柄是框架实现（用户无从释放），
+    // 随本控制器一并释放；订阅一并清空（避免闭包引用泄漏）。
+    __releaseResources() {
+      if (this.__hostFn) {
+        releaseHandle(this.__hostFn.__fn, false);
+        this.__hostFn = null;
+      }
+      this.__listeners = [];
     }
 
     addListener(f) {

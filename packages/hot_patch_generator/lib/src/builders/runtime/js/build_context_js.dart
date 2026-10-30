@@ -26,8 +26,6 @@
 // `__parent` 从最近的作用域结点取（通用机制，见 mini-react【8】的 `scopeOf`；
 // 作用域声明见各三方库的 package 模块片段，如 provider_module_js.dart）。
 const String buildContextJsSource = r'''
-  defineHandleKind('ctx/BuildContext', {});
-
   function JsBuildContext(anchor, nodeId) {
     // 消费它的 JS 组件实例（watch/read 的构建位置锚点）。
     this.__anchor = anchor;

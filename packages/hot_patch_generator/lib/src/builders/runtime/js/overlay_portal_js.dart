@@ -9,11 +9,10 @@
 //   - OverlayPortalController：show/hide 改变的是宿主 `OverlayPortal` 的挂载状态，
 //     只能由宿主执行；JS 侧发命令（handleOp）并镜像 `isShowing`。
 //
-// 两者与 GlobalKey / ScrollController 走同一套通用句柄层（defineHandleKind +
-// reg），随组件实例释放：组件卸载 → 句柄 release → 宿主侧真实对象同步摘除。
+// 两者与 GlobalKey / ScrollController 走同一套通用句柄层（registerHandle），
+// 随组件实例释放：组件卸载 → 句柄 release → 宿主侧真实对象同步摘除。
 const String overlayPortalJsSource = r'''
   // ── LayerLink：CompositedTransform 的锚点，句柄即身份 ──
-  defineHandleKind('layer/Link', {});
   export class LayerLink {
     constructor(props) {
       this.__id = registerHandle(this, 'layer/Link', {});
@@ -26,7 +25,6 @@ const String overlayPortalJsSource = r'''
   // ── OverlayPortalController：命令发往宿主，本侧只镜像 isShowing ──
   // show() / hide() 在未 attach 时也不会丢：宿主 OverlayPortalController 自身
   // 记录 z 序，attach 时接管，故可以在 initState 里直接 show()。
-  defineHandleKind('overlay/Portal', {});
   export class OverlayPortalController {
     constructor(props) {
       var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;

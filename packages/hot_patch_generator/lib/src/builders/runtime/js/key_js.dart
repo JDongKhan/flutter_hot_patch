@@ -72,7 +72,6 @@ const String keyJsSource = r'''
   }
 
   // GlobalKey / UniqueKey：登记为句柄（scope=page，随页面回收），宿主持真实实例。
-  defineHandleKind('key/Global', {});
   export class GlobalKey {
     constructor(props) {
       var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;
@@ -129,7 +128,7 @@ const String keyJsSource = r'''
   // 写进 flutter.js，并用 `registerStateProxy(type, class)` 登记；类型来自
   // GlobalKey<T> 的泛型实参。
 
-  defineHandleKind('key/Unique', {});
+  // UniqueKey：句柄即身份（无本端资源需要清理）。
   export class UniqueKey {
     constructor() {
       this.__id = registerHandle(this, 'key/Unique', {});
