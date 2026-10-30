@@ -82,7 +82,7 @@ export class AnimatedListState extends StateHandle {
     this.__op('removeItem', { index: index, duration: duration });
   }
 }
-registerStateProxy('AnimatedListState', AnimatedListState);''',
+StateHandle.registerProxy('AnimatedListState', AnimatedListState);''',
 };
 
 /// 「逻辑 widget」类型名：状态/订阅逻辑必须跑在 JS 里的 widget（provider 提供/

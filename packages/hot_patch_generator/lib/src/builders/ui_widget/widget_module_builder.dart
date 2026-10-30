@@ -27,7 +27,6 @@ import '../runtime/js/key_js.dart';
 import '../runtime/js/enum_values_js.dart';
 import '../runtime/js/icon_values_js.dart';
 import '../runtime/js/keyboard_listener_js.dart';
-import '../runtime/js/layout_builder_js.dart';
 import '../runtime/js/media_query_js.dart';
 import '../runtime/js/navigator_js.dart';
 import '../runtime/js/overlay_portal_js.dart';
@@ -81,7 +80,6 @@ String flutterValueClassesSource() => [
       // OverlayPortal：LayerLink / OverlayPortalController 两个跨语言对象
       // （句柄即身份，show/hide 命令发往宿主）。
       overlayPortalJsSource,
-      layoutBuilderJsSource,
       tabControllerJsSource,
       keyJsSource,
       easyRefreshJsSource,
@@ -168,15 +166,6 @@ String jsNodeHelperSource() => '''
 // 懒容器配置（**构建期唯一事实源**：shared/js_class_defs.dart 的
 // lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
 var __lazyChildRules = ${lazyChildHostTypesLiteral()};
-function __isLazyChildHost(type, props) {
-  var rule = __lazyChildRules[type];
-  if (rule === undefined) { return false; }
-  if (rule === true) { return true; }
-  for (var i = 0; i < rule.length; i++) {
-    if (props && props[rule[i]] !== undefined) { return true; }
-  }
-  return false;
-}
 // 元素判定 / 折算 / 数组归一化**只有一份实现**，在 runtime.js 核心（见【5】
 // elementOf / elementListOf / isElement / isElementList），本模块经 G.__core 取用。
 // 这里只导出 `__asElement` 这个名字作别名：其它 package 模块（key / tab 等）从
@@ -221,7 +210,14 @@ export function __h(type, props) {
   var el = { type: type, props: data, children: slots, element: true };
   // 懒容器标记：由构建期配置决定（见 lazyChildHostTypes），运行时据此决定
   // 子结点是否延迟到宿主 inflate 时再挂载。
-  if (__isLazyChildHost(type, p)) { el.lazyChildren = true; }
+  var rule = __lazyChildRules[type];
+  if (rule === true) {
+    el.lazyChildren = true;
+  } else if (rule !== undefined) {
+    for (var i = 0; i < rule.length; i++) {
+      if (p[rule[i]] !== undefined) { el.lazyChildren = true; break; }
+    }
+  }
   return el;
 }''';
 
@@ -570,27 +566,21 @@ export class Builder {
 }''';
 
 /// 拖拽三件套：`data` 是**任意 JS 值**（模型 / 闭包 / 数组），跨桥只能是快照，
-/// 因此换成本侧身份 id（见 drag_js 的引用表），宿主只拿 id 与原生拖动系统对齐。
+/// 因此换成本侧身份 id（见 drag_js 的 DragData），宿主只拿 id 与原生拖动系统对齐。
 ///
-/// Draggable / LongPressDraggable 共用一份 props 折算、各自给出宿主类型名
-/// （两个类是同一份语义的两个宿主包装，判断依据是宿主 type 而不是类名）。
+/// Draggable / LongPressDraggable 共用 `DragSourceBase.__sourceProps`（同一份
+/// 语义），各自在 build 里给出宿主类型名（不按类名判断）。
 const String jsDraggableComponent = '''
-export class Draggable {
-  constructor(props) {
-    this.props = props || {};
-  }
+export class Draggable extends DragSourceBase {
   build(context) {
-    return __h('Draggable', __dragSourceProps(this));
+    return __h('Draggable', this.__sourceProps());
   }
 }''';
 
 const String jsLongPressDraggableComponent = '''
-export class LongPressDraggable {
-  constructor(props) {
-    this.props = props || {};
-  }
+export class LongPressDraggable extends DragSourceBase {
   build(context) {
-    return __h('LongPressDraggable', __dragSourceProps(this));
+    return __h('LongPressDraggable', this.__sourceProps());
   }
 }''';
 
@@ -603,8 +593,9 @@ export class DragTarget {
   constructor(props) {
     this.props = props || {};
   }
+${dragTargetPropsMethodSource}
   build(context) {
-    var props = __dragTargetProps(this, context);
+    var props = this.__targetProps(context);
     if (props == null) { return null; }
     return __h('DragTarget', props);
   }
@@ -709,6 +700,16 @@ export class LayoutBuilder {
   constructor(props) {
     this.props = props || {};
   }
+  // 宿主下发的约束 JSON → BoxConstraints（无界维度发 null，还原成 +∞）。
+  __constraintsOf(json) {
+    json = json || {};
+    return new BoxConstraints({
+      minWidth: json.minWidth == null ? 0 : json.minWidth,
+      maxWidth: json.maxWidth == null ? Infinity : json.maxWidth,
+      minHeight: json.minHeight == null ? 0 : json.minHeight,
+      maxHeight: json.maxHeight == null ? Infinity : json.maxHeight,
+    });
+  }
   build(context) {
     var builder = this.props.builder;
     if (typeof builder !== 'function') {
@@ -719,7 +720,7 @@ export class LayoutBuilder {
     // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
     // 宿主在布局阶段调用：实参是本结点的**父约束** JSON，不是事件参数。
     var handle = this.__bindFn(0, [], function (json) {
-      var c = __boxConstraints(json);
+      var c = self.__constraintsOf(json);
       var prev = self.__constraints;
       if (prev && prev.minWidth === c.minWidth && prev.maxWidth === c.maxWidth &&
           prev.minHeight === c.minHeight && prev.maxHeight === c.maxHeight) {
@@ -1029,19 +1030,18 @@ export class AnimatedBuilder {
 /// 动画进度由 JS 侧的 `AnimationController` 镜像驱动（宿主逐帧回传 value，
 /// 与 AnimatedBuilder 同一机制），因此不新增任何宿主 widget。
 const String jsTweenAnimationBuilderComponent = '''
-// 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
-// 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
-function __sameValue(a, b) {
-  if (a === b) { return true; }
-  if (a && b && typeof a.dx === 'number' && typeof b.dx === 'number') {
-    return a.dx === b.dx && a.dy === b.dy;
-  }
-  return false;
-}
-
 export class TweenAnimationBuilder {
   constructor(props) {
     this.props = props || {};
+  }
+  // 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
+  // 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
+  __sameValue(a, b) {
+    if (a === b) { return true; }
+    if (a && b && typeof a.dx === 'number' && typeof b.dx === 'number') {
+      return a.dx === b.dx && a.dy === b.dy;
+    }
+    return false;
   }
   initState() {
     var p = this.props;
@@ -1067,7 +1067,7 @@ export class TweenAnimationBuilder {
     ctrl.addListener(this.__tweenListener);
     // 与 Flutter 的 initState 一致：begin != end 时进入即播（如 Tween(0 → 1)
     // 进场就有动画，onEnd 也会在到位时触发一次）。
-    if (!__sameValue(this.__tween.begin, this.__tween.end)) {
+    if (!this.__sameValue(this.__tween.begin, this.__tween.end)) {
       this.__tweenEnded = false;
       ctrl.forward();
     }
@@ -1082,7 +1082,7 @@ export class TweenAnimationBuilder {
     }
     // 同一段动画进行中父级重建时，目标没变就继续用原 tween——换成新实例会把
     // begin 退回源值，正在跑的进度就会跳变。
-    if (!__sameValue(next.end, prev.end)) {
+    if (!this.__sameValue(next.end, prev.end)) {
       next.begin = this.__tweenValue;
       this.__tween = next;
       this.__tweenEnded = false;

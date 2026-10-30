@@ -13,29 +13,8 @@
 // 跨桥序列化：props 里的实例经 toJSON 输出 `{__handle: id}`，宿主据此取/建
 // 真实 controller（见 scroll_controller_bridge.dart）。
 //
-// 动画实参归一：Dart 的具名实参在 JS 调用里是**位置化扁平**（JS 无具名参数），
-// 因此 `animateTo(offset, duration: d, curve: c)` 到运行时就是 `(offset, d, c)`；
-// 也兼容直接传 options 对象的形态。三种 duration 形态（Duration 实例 /
-// options.duration 毫秒数 / options.duration 为 Duration）与两种 curve 形态
-// （字符串 / options.curve）统一归一。
+// 动画实参归一由 `ControllerBase.__animateArgs` 提供（Scroll / Page 共用）。
 const String scrollControllerJsSource = r'''
-  function __animateToArgs(opts, curveArg) {
-    var ms = 300;
-    var curve = 'easeOut';
-    if (opts != null) {
-      if (typeof opts.inMilliseconds === 'number') {
-        ms = opts.inMilliseconds;
-      } else if (typeof opts.duration === 'number') {
-        ms = opts.duration;
-      } else if (opts.duration && typeof opts.duration.inMilliseconds === 'number') {
-        ms = opts.duration.inMilliseconds;
-      }
-      if (typeof opts.curve === 'string') { curve = opts.curve; }
-    }
-    if (typeof curveArg === 'string') { curve = curveArg; }
-    return { ms: ms, curve: curve };
-  }
-
   export class ScrollController extends ControllerBase {
     constructor() {
       super();
@@ -63,7 +42,7 @@ const String scrollControllerJsSource = r'''
     }
     animateTo(offset, opts, curveArg) {
       if (this.__id == null) { return; }
-      var a = __animateToArgs(opts, curveArg);
+      var a = this.__animateArgs(opts, curveArg);
       handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
     }
     get position() {
@@ -108,17 +87,17 @@ const String scrollControllerJsSource = r'''
     }
     animateToPage(page, opts, curveArg) {
       if (this.__id == null) { return; }
-      var a = __animateToArgs(opts, curveArg);
+      var a = this.__animateArgs(opts, curveArg);
       handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
     }
     nextPage(opts, curveArg) {
       if (this.__id == null) { return; }
-      var a = __animateToArgs(opts, curveArg);
+      var a = this.__animateArgs(opts, curveArg);
       handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
     }
     previousPage(opts, curveArg) {
       if (this.__id == null) { return; }
-      var a = __animateToArgs(opts, curveArg);
+      var a = this.__animateArgs(opts, curveArg);
       handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
     }
     get hasClients() { return this.__id != null; }

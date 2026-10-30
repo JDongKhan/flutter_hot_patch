@@ -70,18 +70,18 @@ const String styleValuesJsSource = r'''
 
   // ----- 圆角 / 边框 -----------------------------------------------------------
   // 宿主协议：BorderRadius → {radius} 或四角数字；Border → {all} 或四边 side。
-  function __toRadius(v) {
-    if (v instanceof Radius) { return v; }
-    return new Radius({ radius: typeof v === 'number' ? v : __singleValue(v) });
-  }
-
   export class BorderRadius {
     constructor(props) {
       props = __positionalArgs(props, ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']);
-      this.topLeft = __toRadius(props.topLeft);
-      this.topRight = __toRadius(props.topRight);
-      this.bottomLeft = __toRadius(props.bottomLeft);
-      this.bottomRight = __toRadius(props.bottomRight);
+      this.topLeft = BorderRadius.__radius(props.topLeft);
+      this.topRight = BorderRadius.__radius(props.topRight);
+      this.bottomLeft = BorderRadius.__radius(props.bottomLeft);
+      this.bottomRight = BorderRadius.__radius(props.bottomRight);
+    }
+    // 入参可能是 Radius / 数字 / 单值 props；只有本类用到，故收在本类。
+    static __radius(v) {
+      if (v instanceof Radius) { return v; }
+      return new Radius({ radius: typeof v === 'number' ? v : __singleValue(v) });
     }
     toJSON() {
       var tl = this.topLeft.x, tr = this.topRight.x;
@@ -93,17 +93,17 @@ const String styleValuesJsSource = r'''
     get vertical() { return this.topLeft.x + this.bottomLeft.x; }
     static zero = new BorderRadius({});
     static all(props) {
-      var r = __toRadius(props.radius);
+      var r = BorderRadius.__radius(props.radius);
       return new BorderRadius({ topLeft: r, topRight: r, bottomLeft: r, bottomRight: r });
     }
     static circular(props) { return BorderRadius.all({ radius: __singleValue(props) }); }
     static only(props) { return new BorderRadius(props); }
     static vertical(props) {
-      var r = __toRadius(__singleValue(props));
+      var r = BorderRadius.__radius(__singleValue(props));
       return new BorderRadius({ topLeft: r, topRight: r });
     }
     static horizontal(props) {
-      var r = __toRadius(__singleValue(props));
+      var r = BorderRadius.__radius(__singleValue(props));
       return new BorderRadius({ topLeft: r, bottomLeft: r });
     }
   }

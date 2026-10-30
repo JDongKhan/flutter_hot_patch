@@ -72,6 +72,29 @@ const String controllerBaseJsSource = r'''
       for (var i = 0; i < fs.length; i++) { fs[i](); }
     }
 
+    // 动画实参归一（ScrollController / PageController 共用）：Dart 的具名实参
+    // 在 JS 调用里是**位置化扁平**（JS 无具名参数），因此
+    // `animateTo(offset, duration: d, curve: c)` 到运行时就是 `(offset, d, c)`；
+    // 也兼容直接传 options 对象的形态。三种 duration 形态（Duration 实例 /
+    // options.duration 毫秒数 / options.duration 为 Duration）与两种 curve 形态
+    // （字符串 / options.curve）统一归一。
+    __animateArgs(opts, curveArg) {
+      var ms = 300;
+      var curve = 'easeOut';
+      if (opts != null) {
+        if (typeof opts.inMilliseconds === 'number') {
+          ms = opts.inMilliseconds;
+        } else if (typeof opts.duration === 'number') {
+          ms = opts.duration;
+        } else if (opts.duration && typeof opts.duration.inMilliseconds === 'number') {
+          ms = opts.duration.inMilliseconds;
+        }
+        if (typeof opts.curve === 'string') { curve = opts.curve; }
+      }
+      if (typeof curveArg === 'string') { curve = curveArg; }
+      return { ms: ms, curve: curve };
+    }
+
     dispose() {
       if (this.__id != null) { releaseHandle(this.__id); }
       this.__id = null;

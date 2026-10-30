@@ -20,28 +20,11 @@
 // 三件套基座（listeners / 回传句柄 / 句柄登记 / dispose / toJSON）由 flutter.js 的
 // ControllerBase 提供（见 controller_base_js.dart），本片段只写差异。
 const String animationJsSource = r'''
-  // 只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主已完成真实插值）；
-  // 宿主侧按同名表还原真实 Curve（见 animation_from_json.curveFromJson）。
-  function __curveFunction(name) {
-    switch (name) {
-      case 'linear': return function (t) { return t; };
-      case 'ease': case 'easeInOut': return function (t) {
-        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      };
-      case 'easeIn': return function (t) { return t * t; };
-      case 'easeOut': return function (t) { return 1 - (1 - t) * (1 - t); };
-      case 'fastOutSlowIn': return function (t) { return t * t * (3 - 2 * t); };
-      default:
-                  console.warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
-        
-        return function (t) { return t; };
-    }
-  }
-
   // 生成器对 `Curves.easeOut` 这类「类名.成员」有两种落点（props 位会翻成
   // 成员名字符串，其它位置原样引用），运行时提供同名对象后两边口径一致。
   // 值一律是**成员名字符串**，宿主按名字查真实曲线 / 枚举（见
   // animation_from_json 的 curveFromJson / crossFadeStateFromJson）。
+  export const Curves = {};
   var __curveNames = [
     'linear', 'ease', 'easeIn', 'easeOut', 'easeInOut', 'easeInToLinear',
     'easeInSine', 'easeOutSine', 'easeInOutSine',
@@ -57,10 +40,25 @@ const String animationJsSource = r'''
     'elasticIn', 'elasticOut', 'elasticInOut',
     'fastLinearToSlowEaseIn', 'fastEaseInToSlowEaseOut'
   ];
-  export const Curves = {};
   for (var __ci = 0; __ci < __curveNames.length; __ci++) {
     Curves[__curveNames[__ci]] = __curveNames[__ci];
   }
+  // 曲线名 → JS 估算函数：只用于 JS 侧推导（AnimatedBuilder 读 value 时宿主
+  // 已完成真实插值）；宿主侧按同名表还原真实 Curve（见 animation_from_json）。
+  Curves.__fn = function (name) {
+    switch (name) {
+      case 'linear': return function (t) { return t; };
+      case 'ease': case 'easeInOut': return function (t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      };
+      case 'easeIn': return function (t) { return t * t; };
+      case 'easeOut': return function (t) { return 1 - (1 - t) * (1 - t); };
+      case 'fastOutSlowIn': return function (t) { return t * t * (3 - 2 * t); };
+      default:
+        console.warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
+        return function (t) { return t; };
+    }
+  };
 
   // 只在 JS 侧推导 value；作为组件 props 下发时经 toJSON 带上 `__curve`，
   // 宿主用父控制器驱动同一条曲线（见 animation_bridge 的 jsDoubleAnimationOf）。
@@ -88,7 +86,7 @@ const String animationJsSource = r'''
     }
     get value() {
       var t = (this.parent && typeof this.parent.value === 'number') ? this.parent.value : 0;
-      return __curveFunction(this.curve)(t);
+      return Curves.__fn(this.curve)(t);
     }
     addListener(f) {
       if (this.parent && typeof this.parent.addListener === 'function') {

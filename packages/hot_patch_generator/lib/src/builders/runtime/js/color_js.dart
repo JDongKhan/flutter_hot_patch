@@ -10,13 +10,25 @@
 // Flutter SDK `colors.dart` 自动生成（见 generator 的 color_constants.dart），
 // 这里只提供类，不含任何色值表。
 const String colorJsSource = r'''
-  function __colorToHex(v) {
-    var n = (v >>> 0).toString(16).toUpperCase();
-    while (n.length < 8) { n = '0' + n; }
-    return '#' + n;
-  }
-
   export class Color {
+    // 序列化：宿主 colorFromJson 只认 '#RRGGBB' / '#AARRGGBB'。
+    static __toHex(v) {
+      var n = (v >>> 0).toString(16).toUpperCase();
+      while (n.length < 8) { n = '0' + n; }
+      return '#' + n;
+    }
+    // 色板基座：MaterialColor / MaterialAccentColor / ColorSwatch 三个子类共用
+    // （主色 + 各档位），各档位同时挂在 `shadeNN` 与数字下标上。
+    static __shadeBase(props) {
+      props = __positionalArgs(props, ['primary', 'swatch']);
+      var v = props.value != null ? props.value : props.primary;
+      return { value: v, swatch: props.swatch };
+    }
+    static __attachShades(base, shades) {
+      base.__shades = shades || {};
+      return base;
+    }
+
     constructor(props) {
       props = __positionalArgs(props, ['value']);
       this.value = props.value != null ? (props.value >>> 0) : 0;
@@ -37,10 +49,10 @@ const String colorJsSource = r'''
     return Color.fromARGB({ a: a, r: r, g: g, b: b });
     }
     toJSON() {
-    return __colorToHex(this.value);
+    return Color.__toHex(this.value);
     }
     toString() {
-    return __colorToHex(this.value);
+    return Color.__toHex(this.value);
     }
     static fromARGB(props) {
     props = __positionalArgs(props, ['a', 'r', 'g', 'b']);
@@ -76,41 +88,30 @@ const String colorJsSource = r'''
       return this.value & 0xFF;
     }
   }
-  // 序列化：宿主 colorFromJson 只认 '#RRGGBB' / '#AARRGGBB'。
-
   // MaterialColor / MaterialAccentColor / ColorSwatch：值仍是 Color（主色），
   // 额外持各档位。档位同时挂在 `shadeNN` 与数字下标上，故 Dart 的
   // `Colors.red[400]` / `Colors.red.shade400` 在 JS 里都能原样求值。
-  function __attachShades(base, shades) {
-    base.__shades = shades || {};
-    return base;
-  }
-  function __shadeBase(props) {
-    props = __positionalArgs(props, ['primary', 'swatch']);
-    var v = props.value != null ? props.value : props.primary;
-    return { value: v, swatch: props.swatch };
-  }
   export class MaterialColor extends Color {
     constructor(props) {
-      var p = __shadeBase(props);
+      var p = Color.__shadeBase(props);
       super({ value: p.value });
-      __attachShades(this, p.swatch);
+      Color.__attachShades(this, p.swatch);
     }
   }
 
   export class MaterialAccentColor extends Color {
     constructor(props) {
-      var p = __shadeBase(props);
+      var p = Color.__shadeBase(props);
       super({ value: p.value });
-      __attachShades(this, p.swatch);
+      Color.__attachShades(this, p.swatch);
     }
   }
 
   export class ColorSwatch extends Color {
     constructor(props) {
-      var p = __shadeBase(props);
+      var p = Color.__shadeBase(props);
       super({ value: p.value });
-      __attachShades(this, p.swatch);
+      Color.__attachShades(this, p.swatch);
     }
   }
 ''';

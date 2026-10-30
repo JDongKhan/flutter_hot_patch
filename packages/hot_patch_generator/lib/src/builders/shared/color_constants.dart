@@ -62,41 +62,42 @@ String? colorsJsSource() {
     ..writeln('// Dart 侧 `Colors` 是 `class Colors { static const MaterialColor red = … }`，')
     ..writeln('// 产物一比一：class + static 字段（不是对象字面量）。`Colors.red[400]`')
     ..writeln('// 原样求值，翻译层不含任何色值表，重构建即跟随 SDK。')
-    ..writeln('function __colorsColor(v) { return new Color({ value: v }); }')
-    ..writeln('function __colorsPalette(primary, shades) {')
-    ..writeln('  const m = new MaterialColor({ primary: primary });')
-    ..writeln('  for (const k in shades) {')
-    ..writeln('    m[k] = __colorsColor(shades[k]);')
-    ..writeln('    m["shade" + k] = m[k];')
-    ..writeln('  }')
+    ..writeln('export class Colors {')
+    // 色板构造辅助收在类里（只有本类在用），静态字段按名引用。
+    ..writeln('  static __color(v) { return new Color({ value: v }); }')
+    ..writeln('  static __palette(primary, shades) {')
+    ..writeln('    const m = new MaterialColor({ primary: primary });')
+    ..writeln('    for (const k in shades) {')
+    ..writeln('      m[k] = Colors.__color(shades[k]);')
+    ..writeln('      m["shade" + k] = m[k];')
+    ..writeln('    }')
     // SDK 里 500 档写作 `Color(_red500Value)`（常量引用），正则抽不到；它的值
     // 恒等于主色，这里按 Dart 语义补齐 `shade500` / `[500]`。
-    ..writeln('  if (m["shade500"] === undefined) {')
-    ..writeln('    m["500"] = m;')
-    ..writeln('    m["shade500"] = m;')
+    ..writeln('    if (m["shade500"] === undefined) {')
+    ..writeln('      m["500"] = m;')
+    ..writeln('      m["shade500"] = m;')
+    ..writeln('    }')
+    ..writeln('    return m;')
     ..writeln('  }')
-    ..writeln('  return m;')
-    ..writeln('}')
-    ..writeln('function __colorsAccent(primary, shades) {')
-    ..writeln('  const m = new MaterialAccentColor({ primary: primary });')
-    ..writeln('  for (const k in shades) {')
-    ..writeln('    m[k] = __colorsColor(shades[k]);')
-    ..writeln('    m["shade" + k] = m[k];')
-    ..writeln('  }')
-    ..writeln('  return m;')
-    ..writeln('}')
-    ..writeln('export class Colors {');
+    ..writeln('  static __accent(primary, shades) {')
+    ..writeln('    const m = new MaterialAccentColor({ primary: primary });')
+    ..writeln('    for (const k in shades) {')
+    ..writeln('      m[k] = Colors.__color(shades[k]);')
+    ..writeln('      m["shade" + k] = m[k];')
+    ..writeln('    }')
+    ..writeln('    return m;')
+    ..writeln('  }');
   final entries = <String>[];
   for (final e in palettes.entries) {
-    entries.add('  static ${e.key} = __colorsPalette(${_hex(e.value.primary)}, '
+    entries.add('  static ${e.key} = Colors.__palette(${_hex(e.value.primary)}, '
         '{${_shadesLiteral(e.value.shades)}});');
   }
   for (final e in accents.entries) {
-    entries.add('  static ${e.key} = __colorsAccent(${_hex(e.value.primary)}, '
+    entries.add('  static ${e.key} = Colors.__accent(${_hex(e.value.primary)}, '
         '{${_shadesLiteral(e.value.shades)}});');
   }
   for (final e in plain.entries) {
-    entries.add('  static ${e.key} = __colorsColor(${_hex(e.value)});');
+    entries.add('  static ${e.key} = Colors.__color(${_hex(e.value)});');
   }
   b
     ..writeln(entries.join('\n'))

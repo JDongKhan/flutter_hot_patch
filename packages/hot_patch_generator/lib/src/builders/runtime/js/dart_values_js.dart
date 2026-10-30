@@ -211,53 +211,57 @@ const String dartValuesJsSource = r'''
   // colors 里是 Color 实例：JSON.stringify 会递归调用其 toJSON 得到 '#AARRGGBB'，
   // 宿主 colorFromJson 据此还原，无需在这里逐个转换。
   // names[0] 恒为 colors（构造首位置实参，单独兜底成数组），其余从 1 开始。
-  function __gradientOptions(props, names) {
-    props = __positionalArgs(props, names);
-    var out = { colors: props.colors != null ? props.colors : [] };
-    for (var i = 1; i < names.length; i++) {
-      if (props[names[i]] != null) { out[names[i]] = props[names[i]]; }
+  export class Gradient {
+    // 构造实参归一（三个渐变子类共用）：首位置实参 colors 单独兜底成数组。
+    static __options(props, names) {
+      props = __positionalArgs(props, names);
+      var out = { colors: props.colors != null ? props.colors : [] };
+      for (var i = 1; i < names.length; i++) {
+        if (props[names[i]] != null) { out[names[i]] = props[names[i]]; }
+      }
+      return out;
     }
-    return out;
-  }
-  function __gradientToJson(kind, self) {
-    var json = { kind: kind, colors: self.colors };
-    if (self.begin != null) { json.begin = self.begin; }
-    if (self.end != null) { json.end = self.end; }
-    if (self.center != null) { json.center = self.center; }
-    if (self.radius != null) { json.radius = self.radius; }
-    if (self.stops != null) { json.stops = self.stops; }
-    return json;
+    // 跨桥形态（见宿主 painting_from_json）。
+    static __toJson(kind, self) {
+      var json = { kind: kind, colors: self.colors };
+      if (self.begin != null) { json.begin = self.begin; }
+      if (self.end != null) { json.end = self.end; }
+      if (self.center != null) { json.center = self.center; }
+      if (self.radius != null) { json.radius = self.radius; }
+      if (self.stops != null) { json.stops = self.stops; }
+      return json;
+    }
   }
 
-  export class LinearGradient {
+  export class LinearGradient extends Gradient {
     constructor(props) {
-      var p = __gradientOptions(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
+      var p = Gradient.__options(props, ['colors', 'begin', 'end', 'stops', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
     toJSON() {
-    return __gradientToJson('linear', this);
+    return Gradient.__toJson('linear', this);
     }
   }
 
-  export class RadialGradient {
+  export class RadialGradient extends Gradient {
     constructor(props) {
-      var p = __gradientOptions(props,
+      var p = Gradient.__options(props,
         ['colors', 'center', 'radius', 'stops', 'focal', 'focalRadius', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
     toJSON() {
-    return __gradientToJson('radial', this);
+    return Gradient.__toJson('radial', this);
     }
   }
 
-  export class SweepGradient {
+  export class SweepGradient extends Gradient {
     constructor(props) {
-      var p = __gradientOptions(props,
+      var p = Gradient.__options(props,
         ['colors', 'center', 'startAngle', 'endAngle', 'stops', 'tileMode']);
       for (var k in p) { this[k] = p[k]; }
     }
     toJSON() {
-    return __gradientToJson('sweep', this);
+    return Gradient.__toJson('sweep', this);
     }
   }
 

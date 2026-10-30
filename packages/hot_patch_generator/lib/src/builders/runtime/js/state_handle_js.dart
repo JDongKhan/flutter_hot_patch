@@ -11,10 +11,24 @@
 // State 是宿主对象，JS 侧只持有句柄：方法按名转发到宿主（`__state.<op>`）。
 // 运行时**不认识任何业务方法**（`insertItem` / `removeItem` 属于具体组件）：
 // 每个 State 类型的代理类随该组件发在 flutter.js 里，加载时用
-// `registerStateProxy(type, class)` 登记；类型来自 **GlobalKey<T> 的泛型实参**，
-// 随产物下发，不靠 runtimeType 猜。没有代理类时退化为通用 StateHandle。
+// `StateHandle.registerProxy(type, class)` 登记；类型来自 **GlobalKey<T> 的泛型
+// 实参**，随产物下发，不靠 runtimeType 猜。没有代理类时退化为通用 StateHandle。
 const String stateHandleJsSource = r'''
   export class StateHandle {
+    // 类型名 -> 代理类（GlobalKey<T> 泛型实参 → 具体 State 代理）。
+    static __proxies = {};
+
+    // 代理类登记（生成器为每个带 State 的组件写一行）。
+    static registerProxy(type, cls) {
+      StateHandle.__proxies[type] = cls;
+    }
+
+    // 按类型取代理实例；未登记时退化为通用 StateHandle。
+    static of(id, type) {
+      var cls = type ? StateHandle.__proxies[type] : null;
+      return cls ? new cls(id, type) : new StateHandle(id, type);
+    }
+
     constructor(id, type) {
       this.__key = id;
       this.__type = type || null;
@@ -27,16 +41,5 @@ const String stateHandleJsSource = r'''
       if (this.__type) { p.type = this.__type; }
       return handleOp(this.__key, '__state.' + op, p);
     }
-  }
-
-  var __stateProxies = {};
-
-  export function registerStateProxy(type, cls) {
-    __stateProxies[type] = cls;
-  }
-
-  export function stateProxyOf(id, type) {
-    var cls = type ? __stateProxies[type] : null;
-    return cls ? new cls(id, type) : new StateHandle(id, type);
   }
 ''';

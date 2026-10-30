@@ -12,117 +12,129 @@
 // 表按值只登记一次（对象按身份、标量按相等），体积 = 不同 data 值的个数，
 // 不随拖动次数增长。
 //
-// 本片段与它的两个使用者（Draggable / LongPressDraggable / DragTarget 的组件类）
-// 同属基础包 `patch/flutter.js`，故这里用模块级函数而非全局出口。
+// 本片段与它的使用者（Draggable / LongPressDraggable / DragTarget 的组件类）
+// 同属基础包 `patch/flutter.js`，故这里是模块级类，不做全局出口。
 const String dragJsSource = r'''
-  // ── data 身份表：任意 JS 值 ⇄ 跨桥 id ──
-  var __dragDataSeq = 0;
-  var __dragDataIds = new Map();
-  var __dragDataRefs = new Map();
+  // ── data 身份表 + 事件详情还原：全部收在 DragData 里（唯一入口）──
+  export class DragData {
+    static __seq = 0;
+    static __ids = new Map();
+    static __refs = new Map();
 
-  function __dragRef(value) {
-    if (value == null) { return null; }
-    var id = __dragDataIds.get(value);
-    if (id) { return id; }
-    id = 'jsui_drag_' + (++__dragDataSeq);
-    __dragDataIds.set(value, id);
-    __dragDataRefs.set(id, value);
-    return id;
-  }
+    static ref(value) {
+      if (value == null) { return null; }
+      var id = DragData.__ids.get(value);
+      if (id) { return id; }
+      id = 'jsui_drag_' + (++DragData.__seq);
+      DragData.__ids.set(value, id);
+      DragData.__refs.set(id, value);
+      return id;
+    }
 
-  function __dragData(id) {
-    if (id == null) { return null; }
-    return __dragDataRefs.has(id) ? __dragDataRefs.get(id) : id;
-  }
+    static of(id) {
+      if (id == null) { return null; }
+      return DragData.__refs.has(id) ? DragData.__refs.get(id) : id;
+    }
 
-  function __dragDataList(ids) {
-    var out = [];
-    if (!ids) { return out; }
-    for (var i = 0; i < ids.length; i++) { out.push(__dragData(ids[i])); }
-    return out;
-  }
+    static list(ids) {
+      var out = [];
+      if (!ids) { return out; }
+      for (var i = 0; i < ids.length; i++) { out.push(DragData.of(ids[i])); }
+      return out;
+    }
 
-  // ── 事件详情还原：宿主只发 JSON（位置 → {dx, dy}，速度 → {pxPerSecond}）──
-  function __dragOffset(json) {
-    json = json || {};
-    return new Offset({
-      dx: json.dx == null ? 0 : json.dx,
-      dy: json.dy == null ? 0 : json.dy,
-    });
-  }
+    // 宿主只发 JSON（位置 → {dx, dy}，速度 → {pxPerSecond}）。
+    static offset(json) {
+      json = json || {};
+      return new Offset({
+        dx: json.dx == null ? 0 : json.dx,
+        dy: json.dy == null ? 0 : json.dy,
+      });
+    }
 
-  function __dragUpdateDetails(json) {
-    json = json || {};
-    return {
-      globalPosition: __dragOffset(json.globalPosition),
-      localPosition: __dragOffset(json.localPosition),
-      delta: __dragOffset(json.delta),
-      primaryDelta: json.primaryDelta == null ? null : json.primaryDelta,
-      sourceTimeStamp: json.sourceTimeStampUs == null
-        ? null
-        : new Duration({ microseconds: json.sourceTimeStampUs }),
-    };
-  }
+    static updateDetails(json) {
+      json = json || {};
+      return {
+        globalPosition: DragData.offset(json.globalPosition),
+        localPosition: DragData.offset(json.localPosition),
+        delta: DragData.offset(json.delta),
+        primaryDelta: json.primaryDelta == null ? null : json.primaryDelta,
+        sourceTimeStamp: json.sourceTimeStampUs == null
+          ? null
+          : new Duration({ microseconds: json.sourceTimeStampUs }),
+      };
+    }
 
-  // `DraggableDetails`：字段与 Flutter 一致（**没有** `data`——负载要用用户
-  // 自己的闭包变量），`velocity` 是 Velocity 实例。
-  function __draggableDetails(json) {
-    json = json || {};
-    return {
-      wasAccepted: json.wasAccepted === true,
-      offset: __dragOffset(json.offset),
-      velocity: new Velocity({
-        pixelsPerSecond: __dragOffset(json.velocity && json.velocity.pxPerSecond),
-      }),
-    };
-  }
+    // `DraggableDetails`：字段与 Flutter 一致（**没有** `data`——负载要用用户
+    // 自己的闭包变量），`velocity` 是 Velocity 实例。
+    static draggableDetails(json) {
+      json = json || {};
+      return {
+        wasAccepted: json.wasAccepted === true,
+        offset: DragData.offset(json.offset),
+        velocity: new Velocity({
+          pixelsPerSecond: DragData.offset(json.velocity && json.velocity.pxPerSecond),
+        }),
+      };
+    }
 
-  function __dragTargetDetails(json) {
-    json = json || {};
-    return { data: __dragData(json.data), offset: __dragOffset(json.offset) };
+    static targetDetails(json) {
+      json = json || {};
+      return { data: DragData.of(json.data), offset: DragData.offset(json.offset) };
+    }
   }
 
   // ── Draggable / LongPressDraggable 共用的 props 折算 ──
   // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
-  // 两个类共用本函数、各自给出宿主 type 名（不做「是不是某个类」的判断）。
-  function __dragSourceProps(self) {
-    var p = self.props || {};
-    var props = {};
-    for (var k in p) {
-      if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
-          k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
-      props[k] = p[k];
+  // 两个组件类同一份语义，共用一个基类（宿主类型名仍由子类 build 给出）。
+  export class DragSourceBase {
+    constructor(props) {
+      this.props = props || {};
     }
-    props.data = __dragRef(p.data);
-    // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
-    props.onDragStarted = self.__bindFn(0, [], function () {
-      var f = self.props.onDragStarted;
-      if (typeof f === 'function') { f(); }
-    });
-    props.onDragUpdate = self.__bindFn(1, [], function (json) {
-      var f = self.props.onDragUpdate;
-      if (typeof f === 'function') { f(__dragUpdateDetails(json)); }
-    });
-    props.onDragEnd = self.__bindFn(2, [], function (json) {
-      var f = self.props.onDragEnd;
-      if (typeof f === 'function') { f(__draggableDetails(json)); }
-    });
-    props.onDragCompleted = self.__bindFn(3, [], function () {
-      var f = self.props.onDragCompleted;
-      if (typeof f === 'function') { f(); }
-    });
-    return props;
+    __sourceProps() {
+      var self = this;
+      var p = self.props || {};
+      var props = {};
+      for (var k in p) {
+        if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
+            k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
+        props[k] = p[k];
+      }
+      props.data = DragData.ref(p.data);
+      // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
+      props.onDragStarted = self.__bindFn(0, [], function () {
+        var f = self.props.onDragStarted;
+        if (typeof f === 'function') { f(); }
+      });
+      props.onDragUpdate = self.__bindFn(1, [], function (json) {
+        var f = self.props.onDragUpdate;
+        if (typeof f === 'function') { f(DragData.updateDetails(json)); }
+      });
+      props.onDragEnd = self.__bindFn(2, [], function (json) {
+        var f = self.props.onDragEnd;
+        if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
+      });
+      props.onDragCompleted = self.__bindFn(3, [], function () {
+        var f = self.props.onDragCompleted;
+        if (typeof f === 'function') { f(); }
+      });
+      return props;
+    }
   }
+''';
 
-  // ── DragTarget 的 props 折算 ──
-  // `builder(context, candidateData, rejectedData)` 只能在 JS 里执行（候选/被拒
-  // 数据只在悬停时由宿主产生），与 LayoutBuilder 同一方案：登记成句柄，宿主
-  // 回调时把**id 列表**带回来，本侧换回原值后执行 builder，结果作为 `child`
-  // 插槽随下一次 patch 回填。
-  //
-  // `onWillAccept` / `onWillAcceptWithDetails` 需要**同步**返回 bool，跨语言只能
-  // 异步，故不接（宿主侧恒接受），并用一条警告把这件事说清楚。
-  function __dragTargetProps(self, context) {
+// DragTarget 的 props 折算：挂在类自身（build 里调 `this.__targetProps(context)`）。
+//
+// `builder(context, candidateData, rejectedData)` 只能在 JS 里执行（候选/被拒
+// 数据只在悬停时由宿主产生），与 LayoutBuilder 同一方案：登记成句柄，宿主
+// 回调时把**id 列表**带回来，本侧换回原值后执行 builder，结果作为 `child`
+// 插槽随下一次 patch 回填。
+//
+// `onWillAccept` / `onWillAcceptWithDetails` 需要**同步**返回 bool，跨语言只能
+// 异步，故不接（宿主侧恒接受），并用一条警告把这件事说清楚。
+const String dragTargetPropsMethodSource = '''
+  __targetProps(context) {
+    var self = this;
     var p = self.props || {};
     var builder = p.builder;
     if (typeof builder !== 'function') {
@@ -152,26 +164,25 @@ const String dragJsSource = r'''
       // 字段名不能叫 `__child`：那是 reconciler 记录本实例挂出的子宿主结点的
       // 内部字段，props 里再塞它会成环。
       self.__dragTargetChild = builder(
-        context, __dragDataList(json.candidate), __dragDataList(json.rejected));
+        context, DragData.list(json.candidate), DragData.list(json.rejected));
       self.setState(function () {});
     });
     props.onAccept = self.__bindFn(1, [], function (id) {
       var f = self.props.onAccept;
-      if (typeof f === 'function') { f(__dragData(id)); }
+      if (typeof f === 'function') { f(DragData.of(id)); }
     });
     props.onAcceptWithDetails = self.__bindFn(2, [], function (json) {
       var f = self.props.onAcceptWithDetails;
-      if (typeof f === 'function') { f(__dragTargetDetails(json)); }
+      if (typeof f === 'function') { f(DragData.targetDetails(json)); }
     });
     props.onMove = self.__bindFn(3, [], function (json) {
       var f = self.props.onMove;
-      if (typeof f === 'function') { f(__dragTargetDetails(json)); }
+      if (typeof f === 'function') { f(DragData.targetDetails(json)); }
     });
     props.onLeave = self.__bindFn(4, [], function (id) {
       var f = self.props.onLeave;
-      if (typeof f === 'function') { f(__dragData(id)); }
+      if (typeof f === 'function') { f(DragData.of(id)); }
     });
     if (self.__dragTargetChild != null) { props.child = self.__dragTargetChild; }
     return props;
-  }
-''';
+  }''';

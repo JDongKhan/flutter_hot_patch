@@ -18,15 +18,6 @@
 const String keyboardListenerJsSource = r'''
   // LogicalKeyboardKey：keyId → 实例（身份去重，常量与事件共用同一张表）。
   var __keyInstances = {};
-  function __createLogicalKey(keyId, label) {
-    var k = __keyInstances[keyId];
-    if (!k) {
-      k = { keyId: keyId, keyLabel: label || '', debugName: label || '' };
-      __keyInstances[keyId] = k;
-    }
-    return k;
-  }
-
   // 常量表：名字 → [keyId, keyLabel]。宿主回传的事件按 keyId 归一，所以这里
   // 只登记「JS 源码里可能出现的名字」，两端读到的仍是同一实例。
   var __KEY_CONSTS = {
@@ -64,29 +55,41 @@ const String keyboardListenerJsSource = r'''
     __KEY_CONSTS['key' + __letter] = [0x61 + __c, __letter];
   }
   export const LogicalKeyboardKey = {};
+  // keyId → 同一实例（常量与宿主回传的事件因此指向同一对象）。
+  LogicalKeyboardKey.__byId = function (keyId, label) {
+    var k = __keyInstances[keyId];
+    if (!k) {
+      k = { keyId: keyId, keyLabel: label || '', debugName: label || '' };
+      __keyInstances[keyId] = k;
+    }
+    return k;
+  };
   for (var __name in __KEY_CONSTS) {
     __defineProtoGetter(LogicalKeyboardKey, __name, (function (name) {
-      return function () { return __createLogicalKey(__KEY_CONSTS[name][0], __KEY_CONSTS[name][1]); };
+      return function () {
+        return LogicalKeyboardKey.__byId(__KEY_CONSTS[name][0], __KEY_CONSTS[name][1]);
+      };
     })(__name));
   }
 
   // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
-  var __physicalKeys = {};
   export class PhysicalKeyboardKey {
     constructor(props) {
       props = props || {};
       this.usbHidUsage = props.usbHidUsage;
       this.debugName = props.debugName || '';
     }
-  }
-  function __createPhysicalKey(usb, label) {
-    var k = __physicalKeys[usb];
-    if (!k) {
-      k = new PhysicalKeyboardKey({ usbHidUsage: usb, debugName: label });
-      __physicalKeys[usb] = k;
+    static __byUsb(usb, label) {
+      var keys = PhysicalKeyboardKey.__keys;
+      var k = keys[usb];
+      if (!k) {
+        k = new PhysicalKeyboardKey({ usbHidUsage: usb, debugName: label });
+        keys[usb] = k;
+      }
+      return k;
     }
-    return k;
   }
+  PhysicalKeyboardKey.__keys = {};
 
   // KeyEvent：Dart 的 KeyEvent 是抽象基类，按下 / 抬起 / 重复是三个子类，
   // 源码用 `event is KeyDownEvent` 区分——这里生成真子类以保持同一语义。
@@ -113,8 +116,9 @@ const String keyboardListenerJsSource = r'''
   }
 
   // 宿主回传的 kind → 子类（与 keyboard_listener_bridge.dart 的 `_keyEventJson`
-  // 三个取值一一对应）。
-  var __KEY_EVENT_SUBCLASSES = {
+  // 三个取值一一对应）。子类已在本文件前文定义，故用赋值而非静态字段（避免
+  // 类求值期的 TDZ）。
+  KeyEvent.__subclasses = {
     down: KeyDownEvent,
     repeat: KeyRepeatEvent,
     up: KeyUpEvent
@@ -128,11 +132,11 @@ const String keyboardListenerJsSource = r'''
     if (typeof f !== 'function') { return; }
     var m = {};
     try { m = JSON.parse(eventJson) || {}; } catch (e) { return; }
-    var Ctor = __KEY_EVENT_SUBCLASSES[m.kind] || KeyEvent;
+    var Ctor = KeyEvent.__subclasses[m.kind] || KeyEvent;
     f(new Ctor({
       character: m.character,
-      logicalKey: __createLogicalKey(m.logicalKeyId, m.logicalKeyLabel),
-      physicalKey: __createPhysicalKey(m.physicalKeyUsb, m.physicalKeyLabel),
+      logicalKey: LogicalKeyboardKey.__byId(m.logicalKeyId, m.logicalKeyLabel),
+      physicalKey: PhysicalKeyboardKey.__byUsb(m.physicalKeyUsb, m.physicalKeyLabel),
       timeStamp: new Duration({ microseconds: m.timeStampUs || 0 })
     }));
   };

@@ -95,7 +95,7 @@ const String keyJsSource = r'''
       // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
       // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
       var type = this.__stateType || handleOp(this.__id, '__type', {});
-      return stateProxyOf(this.__id, type);
+      return StateHandle.of(this.__id, type);
     }
   }
 

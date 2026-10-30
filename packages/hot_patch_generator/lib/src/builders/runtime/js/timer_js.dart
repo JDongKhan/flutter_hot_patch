@@ -13,29 +13,61 @@
 // 与其它能力一样，这里是**唯一要改的地方**：以后 Dart 侧新增同类的定时
 // 语义（如 `Timer.run`），只需在本文件补一个同名方法，翻译器与宿主都不动。
 const String timerJsSource = r'''
-  // 实参归一：正常形态是 `{duration, callback}`；构建期查不到签名时位置实参
-  // 落在 `__pos` 里，由 __positionalArgs 按形参名展开。容错地再支持一次
-  // 「第一个实参直接就是 Duration 对象」的形态，避免任何调用写法静默失效。
-  function __timerOptions(props, second) {
-    var duration = null;
-    var callback = null;
-    if (props && typeof props.inMilliseconds === 'number') {
-      duration = props;
-      callback = second;
-    } else {
-      var opts = __positionalArgs(props, ['duration', 'callback']);
-      duration = opts.duration;
-      callback = opts.callback;
-    }
-    var ms = __durationMs(duration);
-    if (ms == null || ms < 0) { ms = 0; }
-    return { ms: ms, callback: callback };
-  }
-
   export class Timer {
     constructor(props) {
-      __initTimer(this, props, false, null);
+      this.__start(props, false, null);
     }
+
+    // 实例初始化（构造与 periodic 共用一份实现）：实参归一见 Timer.__options。
+    __start(props, repeat, second) {
+      var args = Timer.__options(props, second);
+      this._ms = args.ms;
+      this._callback = args.callback;
+      this._repeat = !!repeat;
+      this._active = true;
+      this._cancelled = false;
+      this._handle = null;
+      this.__schedule();
+    }
+
+    // 引擎（flutter_js / QuickJS）只提供一次性 setTimeout，没有 setInterval，
+    // 周期定时用「回调内再次 setTimeout」实现。
+    __schedule() {
+      var self = this;
+      if (self._cancelled) { return; }
+      self._handle = setTimeout(function () {
+        self._handle = null;
+        if (self._cancelled) { return; }
+        if (!self._repeat) { self._active = false; }
+        try {
+          if (typeof self._callback === 'function') { self._callback(self); }
+        } catch (e) {
+          console.error('[patch] Timer 回调异常: ' +
+            ((e && e.message) ? e.message : e));
+        }
+        if (self._repeat && !self._cancelled) { self.__schedule(); }
+      }, self._ms);
+    }
+
+    // 实参归一：正常形态是 `{duration, callback}`；构建期查不到签名时位置实参
+    // 落在 `__pos` 里，由 __positionalArgs 按形参名展开。容错地再支持一次
+    // 「第一个实参直接就是 Duration 对象」的形态，避免任何调用写法静默失效。
+    static __options(props, second) {
+      var duration = null;
+      var callback = null;
+      if (props && typeof props.inMilliseconds === 'number') {
+        duration = props;
+        callback = second;
+      } else {
+        var opts = __positionalArgs(props, ['duration', 'callback']);
+        duration = opts.duration;
+        callback = opts.callback;
+      }
+      var ms = __durationMs(duration);
+      if (ms == null || ms < 0) { ms = 0; }
+      return { ms: ms, callback: callback };
+    }
+
     cancel() {
     this._cancelled = true;
     this._active = false;
@@ -49,40 +81,12 @@ const String timerJsSource = r'''
     }
     static periodic(props, second) {
     var t = Object.create(Timer.prototype);
-    __initTimer(t, props, true, second);
+    t.__start(props, true, second);
     return t;
     }
     get isActive() {
       return !!this._active;
     }
-  }
-
-  // __initTimer 在所有 Timer 实例间共用（构造与 periodic 两条入口）。
-  function __initTimer(self, props, repeat, second) {
-    var args = __timerOptions(props, second);
-    self._ms = args.ms;
-    self._callback = args.callback;
-    self._repeat = !!repeat;
-    self._active = true;
-    self._cancelled = false;
-    self._handle = null;
-    __scheduleTimer(self);
-  }
-
-  function __scheduleTimer(self) {
-    if (self._cancelled) { return; }
-    self._handle = setTimeout(function () {
-      self._handle = null;
-      if (self._cancelled) { return; }
-      if (!self._repeat) { self._active = false; }
-      try {
-        if (typeof self._callback === 'function') { self._callback(self); }
-      } catch (e) {
-        console.error('[patch] Timer 回调异常: ' +
-          ((e && e.message) ? e.message : e));
-      }
-      if (self._repeat && !self._cancelled) { __scheduleTimer(self); }
-    }, self._ms);
   }
 
 
