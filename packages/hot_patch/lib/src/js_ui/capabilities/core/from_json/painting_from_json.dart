@@ -11,7 +11,8 @@ import 'layout_from_json.dart';
 import 'widget_enum_from_json.dart';
 
 /// JSON → ImageFilter（{kind:'blur', sigmaX, sigmaY, tileMode} /
-/// {kind:'dilate'|'erode', radiusX, radiusY} / {kind:'matrix', matrix:[16 个数字]} /
+/// {kind:'dilate'|'erode', radiusX, radiusY} /
+/// {kind:'matrix', matrix4:[16 个数字]}（键名与 SDK 构造形参一致）/
 /// {kind:'compose', outer, inner}）。
 ///
 /// 矩阵长度必须为 16（4×4），不满足时返回 null；[compose] 递归还原内外两层。
@@ -39,7 +40,9 @@ ImageFilter? imageFilterFromJson(Object? v) {
       if (rx == null || ry == null) return null;
       return ImageFilter.erode(radiusX: rx, radiusY: ry);
     case 'matrix':
-      final raw = v['matrix'];
+      // `ImageFilter.matrix(Float64List matrix4)` 的位置形参名就是 `matrix4`
+      // （见 SDK 的 factory 签名），翻译层按形参名原样下发，故这里读同名键。
+      final raw = v['matrix4'];
       if (raw is! List || raw.length != 16) return null;
       final matrix = <double>[];
       for (final e in raw) {

@@ -12,7 +12,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 ///   - `ImageFilter.blur(sigmaX:, sigmaY:)` → `{kind:'blur', sigmaX, sigmaY}`
 ///     （tileMode 可选，默认 clamp）；
 ///   - `ImageFilter.dilate/erode(radiusX:, radiusY:)` → `{kind, radiusX, radiusY}`；
-///   - `ImageFilter.matrix([16 项])` → `{kind:'matrix', matrix:[…]}`（4×4）；
+///   - `ImageFilter.matrix(matrix4)` → `{kind:'matrix', matrix4:[…]}`（4×4，键名同形参）；
 ///   - `ImageFilter.compose(outer:, inner:)` → `{kind:'compose', outer, inner}`（递归）。
 /// 宿主按同一份协议还原成原生 ImageFilter，因此模糊半径、矩阵、组合顺序与原生完全一致。
 @PatchEntry('ImageFilteredDetail')
