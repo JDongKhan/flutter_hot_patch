@@ -8,7 +8,7 @@ import 'components/hello_component.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
 import 'components/widget_showcase.dart';
-import 'components/widget_details.dart';
+import 'components/test_widget.dart';
 import 'generated/host_methods.dart';
 
 void main() {
@@ -146,7 +146,7 @@ class DemoListPage extends StatelessWidget {
       _CompareTest(
         native: const TestWidget(),
         js: JsUiWidget(
-          jsAsset: _patchUrl('TestWidget', 'components/widget_details.js'),
+          jsAsset: _patchUrl('TestWidget', 'components/test_widget.js'),
         ),
       ),
     ),
@@ -289,7 +289,7 @@ class _PropsUpdateDemoState extends State<_PropsUpdateDemo> {
         ),
         Expanded(
           child: JsUiWidget(
-            jsAsset: _patchUrl('StatelessCard', 'components/widget_details.js'),
+            jsAsset: _patchUrl('StatelessCard', 'components/stateless_card.js'),
             props: {
               'title': 'Props 更新 #$_revision',
               'subtitle': '宿主重建 JsUiWidget，新 props 已下发到 JS',

@@ -2,12 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 import 'animated_list_detail.dart';
 import 'automatic_keep_alive_detail.dart';
+import 'button_detail.dart';
 import 'color_filtered_detail.dart';
+import 'container_detail.dart';
 import 'dialog_detail.dart';
 import 'dismissible_detail.dart';
 import 'drag_detail.dart';
+import 'drawer_detail.dart';
 import 'fade_in_image_detail.dart';
 import 'focus_detail.dart';
+import 'grid_detail.dart';
+import 'image_detail.dart';
+import 'input_detail.dart';
+import 'key_detail.dart';
+import 'layout_detail.dart';
+import 'notifier_card.dart';
+import 'page_view_detail.dart';
+import 'progress_detail.dart';
+import 'reorder_list_detail.dart';
+import 'scaffold_detail.dart';
+import 'scroll_detail.dart';
+import 'sliver_detail.dart';
+import 'stateless_card.dart';
+import 'tab_detail.dart';
+import 'text_detail.dart';
 import 'grammar/grammar_details.dart';
 import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
@@ -32,11 +50,10 @@ import 'value_listenable_builder_detail.dart';
 import 'explicit_animation_detail.dart';
 import 'implicit_animation_detail.dart';
 import 'rich_text_detail.dart';
-import 'widget_details.dart';
 
 /// 常用组件导航列表页（普通页面，无 @PatchEntry 注解）：
 /// 分组列出 Flutter 常用组件，点击条目进入对应详情页。
-/// 详情页是 @PatchEntry 注解组件（widget_details.dart），同一份代码
+/// 详情页是 @PatchEntry 注解组件（components 下各自的 *_detail.dart），同一份代码
 /// 原生可直接用、也可由 JsUiWidget 加载 JS 产物热更（原生 vs JS 同屏）。
 class WidgetShowcase extends StatelessWidget {
   const WidgetShowcase({super.key});
@@ -220,7 +237,7 @@ class _Entry {
 class WidgetDetailPage extends StatefulWidget {
   const WidgetDetailPage({super.key, required this.component, this.fullPage = false});
 
-  /// 详情组件名（widget_details.dart 里的 @PatchEntry 类名）。
+  /// 详情组件名（components 下对应源文件里的 @PatchEntry 类名）。
   final String component;
 
   /// 页面级组件（Scaffold 等）不比对，直接 JS 热更版全屏展示。
@@ -238,34 +255,52 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
 
   /// 组件名 → 产物入口（`patch/<源文件镜像路径>.js`）。
   ///
-  /// 动画 demo 按类拆在独立源文件里，因此入口不再固定为 widget_details.js：
-  /// 产物路径由 build_runner 镜像源码路径生成（见 build.yaml 的 patch_entry）。
+  /// 每个组件各自一个源文件，产物路径由 build_runner 镜像源码路径生成
+  /// （见 build.yaml 的 patch_entry）。
   static const Map<String, String> _jsEntries = {
     'AnimatedListDetail': 'components/animated_list_detail.js',
     'AutomaticKeepAliveDetail': 'components/automatic_keep_alive_detail.js',
+    'ButtonDetail': 'components/button_detail.js',
     'ColorFilteredDetail': 'components/color_filtered_detail.js',
+    'ContainerDetail': 'components/container_detail.js',
     'DismissibleDetail': 'components/dismissible_detail.js',
     'DialogDetail': 'components/dialog_detail.js',
     'DragDetail': 'components/drag_detail.js',
+    'DrawerDetail': 'components/drawer_detail.js',
     'FadeInImageDetail': 'components/fade_in_image_detail.js',
     'FocusDetail': 'components/focus_detail.js',
+    'GridDetail': 'components/grid_detail.js',
     'HeroDetail': 'components/hero_detail.js',
+    'ImageDetail': 'components/image_detail.js',
     'ImageFilteredDetail': 'components/image_filtered_detail.js',
     'ImageIconDetail': 'components/image_icon_detail.js',
+    'InputDetail': 'components/input_detail.js',
+    'KeyDetail': 'components/key_detail.js',
     'KeyboardListenerDetail': 'components/keyboard_listener_detail.js',
+    'LayoutDetail': 'components/layout_detail.js',
     'LayoutMoreDetail': 'components/layout_more_detail.js',
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
+    'NotifierCard': 'components/notifier_card.js',
     'OrientationBuilderDetail': 'components/orientation_builder_detail.js',
     'OverlayDetail': 'components/overlay_detail.js',
     'OverlayPortalDetail': 'components/overlay_portal_detail.js',
+    'PageViewDetail': 'components/page_view_detail.js',
     'PopScopeDetail': 'components/pop_scope_detail.js',
     'PreferredSizeDetail': 'components/preferred_size_detail.js',
+    'ProgressDetail': 'components/progress_detail.js',
     'RadioGroupDetail': 'components/radio_group_detail.js',
+    'ReorderListDetail': 'components/reorder_list_detail.js',
     'SafeAreaDetail': 'components/safe_area_detail.js',
+    'ScaffoldDetail': 'components/scaffold_detail.js',
+    'ScrollDetail': 'components/scroll_detail.js',
+    'SliverDetail': 'components/sliver_detail.js',
     'SliverFillViewportDetail': 'components/sliver_fill_viewport_detail.js',
     'SliverFillRemainingDetail': 'components/sliver_fill_remaining_detail.js',
     'SliverPersistentHeaderDetail': 'components/sliver_persistent_header_detail.js',
     'SpacerDetail': 'components/spacer_detail.js',
+    'StatelessCard': 'components/stateless_card.js',
+    'TabDetail': 'components/tab_detail.js',
+    'TextDetail': 'components/text_detail.js',
     'VisibilityDetail': 'components/visibility_detail.js',
     'TweenAnimationBuilderDetail':
         'components/tween_animation_builder_detail.js',
@@ -280,7 +315,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'InheritanceDetail': 'components/grammar/grammar_details.js',
   };
 
-  String get _jsEntry => _jsEntries[widget.component] ?? 'components/widget_details.js';
+  String get _jsEntry => _jsEntries[widget.component]!;
 
   /// 拼接补丁 URL：component 动态、entry 按源文件，走 query 参数。
   String get _jsAsset =>

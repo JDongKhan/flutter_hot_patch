@@ -11,7 +11,7 @@ import 'detail_pages.dart';
 ///
 /// 对应 docs/app-prototype.html 的「我的」：渐变个人信息头（点击进登录页）
 /// + 订单统计四项 + 功能菜单 + 退出登录。末尾额外挂两项**开发者入口**：
-/// 「组件案例」（widget_details 的常用组件 demo 列表）与「热更 Demo 列表」。
+/// 「组件案例」（components 下的常用组件 demo 列表）与「热更 Demo 列表」。
 ///
 /// 本页用了翻译器覆盖不到的构造（`Navigator.push(MaterialPageRoute(...))`、
 /// 方法体 tear-off 回调），相关跳转统一收敛到 [AppRouter] 的 `@HostInjected`

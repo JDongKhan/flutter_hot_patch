@@ -6978,7 +6978,7 @@ export class GlobalKey {
 //   - showOnScreen()：void 语义，fire-and-forget，宿主算出该结点位置并滚动；
 //   - measure()：Flutter 的 `box.size` / `box.localToGlobal(Offset.zero)` 是
 //     **同步属性**，而 JS→宿主只能异步，故这里返回 Promise（单源侧 `await`
-//     后即为真实值，见 widget_details 的 _measureFixed）。
+//     后即为真实值，见 sliver_detail 的 _measureFixed）。
 export class KeyRef {
   constructor(id) { this.__key = id; }
   showOnScreen() {
