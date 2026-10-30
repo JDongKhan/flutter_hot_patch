@@ -296,6 +296,18 @@ export class Column {
   }
 }
 
+export class CompositedTransformFollower {
+  constructor(props) {
+    return __h('CompositedTransformFollower', props);
+  }
+}
+
+export class CompositedTransformTarget {
+  constructor(props) {
+    return __h('CompositedTransformTarget', props);
+  }
+}
+
 export class ConstrainedBox {
   constructor(props) {
     return __h('ConstrainedBox', props);
@@ -1299,6 +1311,35 @@ export class OverlayEntry {
   __build(context) {
     return typeof this.builder === 'function' ? this.builder(context) : null;
   }
+}
+
+export class OverlayPortal {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var src = this.props;
+    // 闭包不能进宿主 props（要跨桥序列化），展开后摘除。
+    var p = {};
+    for (var k in src) {
+      if (k === 'overlayChildBuilder') { continue; }
+      p[k] = src[k];
+    }
+    // SDK 的命名构造 `OverlayPortal.targetsRootOverlay`（已废弃）等价于挂到根
+    // Overlay。`factory` 是命名构造的通用标记（由自动生成的同名静态方法写入），
+    // 这里只补它对应的构造语义，不涉及任何类名/属性名白名单。
+    if (p.factory === 'targetsRootOverlay') { p.overlayLocation = 'rootOverlay'; }
+    var oc = null;
+    if (typeof src.overlayChildBuilder === 'function') {
+      oc = src.overlayChildBuilder(context);
+    } else {
+      console.warn('[OverlayPortal] overlayChildBuilder 不是闭包');
+    }
+    if (oc != null) { p.overlayChild = oc; }
+    return __h('OverlayPortal', p);
+  }
+  static overlayChildLayoutBuilder(props) { return new OverlayPortal(Object.assign({}, props, { factory: 'overlayChildLayoutBuilder' })); }
+  static targetsRootOverlay(props) { return new OverlayPortal(Object.assign({}, props, { factory: 'targetsRootOverlay' })); }
 }
 
 export class PageView {
@@ -3631,6 +3672,46 @@ function __dragTargetProps(self, context) {
   });
   if (self.__dragTargetChild != null) { props.child = self.__dragTargetChild; }
   return props;
+}
+
+// ── LayerLink：CompositedTransform 的锚点，句柄即身份 ──
+defineHandleKind('layer/Link', {});
+export class LayerLink {
+  constructor(props) {
+    this.__id = reg(this, 'layer/Link', {});
+  }
+  toJSON() {
+    return { __handle: this.__id };
+  }
+}
+
+// ── OverlayPortalController：命令发往宿主，本侧只镜像 isShowing ──
+// show() / hide() 在未 attach 时也不会丢：宿主 OverlayPortalController 自身
+// 记录 z 序，attach 时接管，故可以在 initState 里直接 show()。
+defineHandleKind('overlay/Portal', {});
+export class OverlayPortalController {
+  constructor(props) {
+    var debugLabel = __posArgs(props, ['debugLabel']).debugLabel;
+    this.__showing = false;
+    this.__id = reg(this, 'overlay/Portal', {
+      meta: debugLabel == null ? null : { debugLabel: debugLabel }
+    });
+  }
+  toJSON() {
+    return { __handle: this.__id };
+  }
+  show() {
+    this.__showing = true;
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'show' }); }
+  }
+  hide() {
+    this.__showing = false;
+    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'hide' }); }
+  }
+  toggle() {
+    if (this.__showing) { this.hide(); } else { this.show(); }
+  }
+  get isShowing() { return this.__showing; }
 }
 
 // 宿主下发的约束 JSON → BoxConstraints。

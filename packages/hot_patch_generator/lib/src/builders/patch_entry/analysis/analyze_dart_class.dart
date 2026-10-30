@@ -442,7 +442,7 @@ ClassInfo translateClass(
   // --- 唯一分叉：StatefulWidget → widget 类与同文件 State 类合并 ------------
   ClassDeclaration widgetClass = decl;
   ClassDeclaration hostClass = decl;
-  final stateClassName = _stateClassNameOf(decl);
+  final stateClassName = stateClassNameOf(decl);
   if (stateClassName != null) {
     for (final d in unit.declarations) {
       if (d is ClassDeclaration && d.name.lexeme == stateClassName) {
@@ -749,7 +749,7 @@ List<ClassDeclaration> classAndStateDecls(
   ClassDeclaration decl,
   CompilationUnit unit,
 ) {
-  final stateName = _stateClassNameOf(decl);
+  final stateName = stateClassNameOf(decl);
   if (stateName == null) return [decl];
   for (final d in unit.declarations) {
     if (d is ClassDeclaration && d.name.lexeme == stateName) return [decl, d];
@@ -760,7 +760,10 @@ List<ClassDeclaration> classAndStateDecls(
 /// 取 StatefulWidget 的 State 类名：解析 createState() 返回的构造
 /// （`_MyCardState()` 在无 resolution 下可能是 MethodInvocation）。
 /// 未声明 createState → null（StatelessWidget / 普通类）。
-String? _stateClassNameOf(ClassDeclaration widgetClass) {
+///
+/// 公开供跨包模块复用：State 类随 widget 类合并产出（见 [translateClass]），
+/// 不单独成为一个模型类。
+String? stateClassNameOf(ClassDeclaration widgetClass) {
   for (final m in widgetClass.members) {
     if (m is MethodDeclaration && m.name.lexeme == 'createState') {
       final e = _methodExpression(m);

@@ -122,6 +122,9 @@ const Set<String> logicWidgetTypes = {
   'Draggable',
   'LongPressDraggable',
   'DragTarget',
+  // OverlayPortal：`overlayChildBuilder` 是 JS 闭包，宿主执行不了——JS 侧先展开
+  // 成子结点，宿主只负责「挂到 Overlay 并在 controller 要求时显示」。
+  'OverlayPortal',
 };
 
 /// 「JS 值类」类型名：**不是 widget**、不产出元素，但构造与静态引用在 JS 侧

@@ -26,6 +26,7 @@ import '../runtime/js/keyboard_listener_js.dart';
 import '../runtime/js/layout_builder_js.dart';
 import '../runtime/js/media_query_js.dart';
 import '../runtime/js/navigator_js.dart';
+import '../runtime/js/overlay_portal_js.dart';
 import '../runtime/js/provider_module_js.dart';
 import '../runtime/js/scroll_controller_js.dart';
 import '../runtime/js/style_values_js.dart';
@@ -61,6 +62,9 @@ String flutterValueClassesSource() => [
       // 拖拽：data 身份表与事件详情还原（Draggable / DragTarget 的组件类
       // 在同一模块里引用这里的函数）。
       dragJsSource,
+      // OverlayPortal：LayerLink / OverlayPortalController 两个跨语言对象
+      // （句柄即身份，show/hide 命令发往宿主）。
+      overlayPortalJsSource,
       layoutBuilderJsSource,
       tabControllerJsSource,
       keyJsSource,
@@ -447,6 +451,7 @@ const Map<String, String> logicWidgetSources = {
   'Draggable': jsDraggableComponent,
   'LongPressDraggable': jsLongPressDraggableComponent,
   'DragTarget': jsDragTargetComponent,
+  'OverlayPortal': jsOverlayPortalComponent,
 };
 
 /// 值类（**不是 widget**、不产出元素）→ JS 类源码：同样内联在包模块里。
@@ -624,6 +629,37 @@ export class DragTarget {
     var props = __dragTargetProps(this, context);
     if (props == null) { return null; }
     return __h('DragTarget', props);
+  }
+}''';
+
+/// OverlayPortal：`overlayChildBuilder` 是 JS 闭包，宿主执行不了，故在本侧执行
+/// 后把结果作为 `overlayChild` 插槽下发；宿主只负责「挂到 Overlay 上并在需
+/// 要时显示」——显示与否由 controller 句柄命令驱动（见 overlay_portal_js）。
+const String jsOverlayPortalComponent = '''
+export class OverlayPortal {
+  constructor(props) {
+    this.props = props || {};
+  }
+  build(context) {
+    var src = this.props;
+    // 闭包不能进宿主 props（要跨桥序列化），展开后摘除。
+    var p = {};
+    for (var k in src) {
+      if (k === 'overlayChildBuilder') { continue; }
+      p[k] = src[k];
+    }
+    // SDK 的命名构造 `OverlayPortal.targetsRootOverlay`（已废弃）等价于挂到根
+    // Overlay。`factory` 是命名构造的通用标记（由自动生成的同名静态方法写入），
+    // 这里只补它对应的构造语义，不涉及任何类名/属性名白名单。
+    if (p.factory === 'targetsRootOverlay') { p.overlayLocation = 'rootOverlay'; }
+    var oc = null;
+    if (typeof src.overlayChildBuilder === 'function') {
+      oc = src.overlayChildBuilder(context);
+    } else {
+      console.warn('[OverlayPortal] overlayChildBuilder 不是闭包');
+    }
+    if (oc != null) { p.overlayChild = oc; }
+    return __h('OverlayPortal', p);
   }
 }''';
 

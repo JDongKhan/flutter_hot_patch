@@ -59,6 +59,7 @@ import 'keyboard_listener/keyboard_listener_library.dart';
 import 'layout_builder/layout_builder_library.dart';
 import 'media_query/media_query_library.dart';
 import 'notification_listener/notification_listener_library.dart';
+import 'overlay_portal/overlay_portal_library.dart';
 import 'pop_scope/pop_scope_library.dart';
 import 'provider/provider_library.dart';
 import 'scroll_controller/scroll_controller_library.dart';
@@ -180,6 +181,8 @@ void _seedBuiltins() {
   // LayoutMore：Tooltip / IgnorePointer / FittedBox / RotatedBox / Intrinsic /
   // InteractiveViewer 等纯映射的单子包装组件。
   registerJsUiLibrary(const LayoutMoreLibrary());
+  // OverlayPortal：弹层挂载点 + LayerLink 锚定跟随（引导气泡那类悬浮提示）。
+  registerJsUiLibrary(const OverlayPortalLibrary());
   // ── 三方库 ──
   registerJsUiLibrary(const EasyRefreshLibrary());
   registerJsUiLibrary(const CachedNetworkImageLibrary());

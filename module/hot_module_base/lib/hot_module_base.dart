@@ -10,6 +10,7 @@
 library;
 
 export 'src/account_center.dart';
+export 'src/guide_bubble_widget.dart';
 export 'src/model/user.dart';
 export 'src/network.dart';
 export 'src/state_log_mixin.dart';

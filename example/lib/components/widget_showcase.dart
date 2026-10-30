@@ -17,6 +17,7 @@ import 'layout_more_detail.dart';
 import 'nested_scroll_view_detail.dart';
 import 'orientation_builder_detail.dart';
 import 'overlay_detail.dart';
+import 'overlay_portal_detail.dart';
 import 'pop_scope_detail.dart';
 import 'preferred_size_detail.dart';
 import 'radio_group_detail.dart';
@@ -125,6 +126,11 @@ class WidgetShowcase extends StatelessWidget {
       ),
     ]),
     _Group('弹层', [
+      _Entry(
+        'OverlayPortal / CompositedTransform',
+        '弹层挂载点 + LayerLink 锚定跟随：引导气泡（hot_module_base 封装）',
+        'OverlayPortalDetail',
+      ),
       _Entry(
         'showDialog / 底部弹层 / Cupertino',
         '命令式弹层全家桶：builder 在 JS 侧建树挂独立根，返回值经 Future 回传',
@@ -251,6 +257,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'NestedScrollViewDetail': 'components/nested_scroll_view_detail.js',
     'OrientationBuilderDetail': 'components/orientation_builder_detail.js',
     'OverlayDetail': 'components/overlay_detail.js',
+    'OverlayPortalDetail': 'components/overlay_portal_detail.js',
     'PopScopeDetail': 'components/pop_scope_detail.js',
     'PreferredSizeDetail': 'components/preferred_size_detail.js',
     'RadioGroupDetail': 'components/radio_group_detail.js',
@@ -304,6 +311,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'NestedScrollViewDetail' => const NestedScrollViewDetail(),
       'OrientationBuilderDetail' => const OrientationBuilderDetail(),
       'OverlayDetail' => const OverlayDetail(),
+      'OverlayPortalDetail' => const OverlayPortalDetail(),
       'PopScopeDetail' => const PopScopeDetail(),
       'PreferredSizeDetail' => const PreferredSizeDetail(),
       'RadioGroupDetail' => const RadioGroupDetail(),

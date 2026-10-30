@@ -28,6 +28,7 @@ import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
 import '../shared/package_sources.dart';
 import '../shared/paths.dart';
+import '../shared/runtime_global_types.dart';
 import '../shared/source_index.dart';
 import 'analysis/analyze_dart_class.dart';
 import 'analysis/class_table.dart';
@@ -125,7 +126,16 @@ String renderProjectPackageModule(
           '${e.value.join(', ')} 未产出');
       continue;
     }
+    // StatefulWidget 的 State 类已随 widget 类合并产出（见 translateClass 的
+    // 唯一分叉），不能在这里再单独产出一个模型类——否则同一份实现会出现两遍，
+    // 且独立类没有宿主初始化上下文。
+    final stateNames = <String>{};
+    for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+      final n = stateClassNameOf(d);
+      if (n != null) stateNames.add(n);
+    }
     for (final name in e.value) {
+      if (stateNames.contains(name)) continue;
       final decl = unit.declarations
           .whereType<ClassDeclaration>()
           .where((d) => d.name.lexeme == name)
@@ -206,11 +216,36 @@ String renderProjectPackageModule(
     });
   }
 
+  // 类体先写进独立缓冲：import 需要按**实际出现的名字**收集（见下 usedValues）。
+  final body = StringBuffer();
+  // 基类在前（class 有 TDZ；Dart 不要求基类先声明）。
+  for (final info in orderClassesByBase(classInfos, (c) => baseClassByName[c.name])) {
+    body
+      ..writeln()
+      ..writeln('// ${info.isComponent ? '组件' : '模型'} ${info.name}')
+      ..writeln(dart2js(
+        info,
+        exported: true,
+        baseClass: baseClassByName[info.name],
+      ));
+  }
+
   final imports = <String>[
     for (final d in deps.toList()..sort())
       "import { $d } from '${importResolver(d)}';",
   ];
+  // 运行时值类（`flutter.js` 里 `export class` 的值对象 / 控制器）在值位置直接
+  // 写 `new Duration(...)` / `new OverlayPortalController()`，它们不是元素，
+  // 不进 usedWidgetPackages，必须按实际出现的名字补 import（与组件产物
+  // `_renderJsProduct` 同一口径）。
+  final bodyText = body.toString();
+  final usedValues = <String>{
+    for (final name in flutterExportTypes())
+      if (RegExp('\\b${RegExp.escape(name)}\\b').hasMatch(bodyText)) name,
+  };
+  (usedWidgets[nodeHelperPackage] ??= <String>{}).addAll(usedValues);
   for (final e in usedWidgets.entries) {
+    if (e.value.isEmpty) continue;
     imports.add("import { ${(e.value.toList()..sort()).join(', ')} } from "
         "'${relativeProduct(ownProduct, packageModulePath(e.key))}';");
   }
@@ -221,16 +256,5 @@ String renderProjectPackageModule(
   for (final line in deduped) {
     b.writeln(line);
   }
-  // 基类在前（class 有 TDZ；Dart 不要求基类先声明）。
-  for (final info in orderClassesByBase(classInfos, (c) => baseClassByName[c.name])) {
-    b
-      ..writeln()
-      ..writeln('// ${info.isComponent ? '组件' : '模型'} ${info.name}')
-      ..writeln(dart2js(
-        info,
-        exported: true,
-        baseClass: baseClassByName[info.name],
-      ));
-  }
-  return b.toString();
+  return b.toString() + body.toString();
 }
