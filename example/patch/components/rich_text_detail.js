@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/rich_text_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, Divider, Expanded, FontWeight, RichText, Row, SizedBox, Text, TextButton, TextDecoration, TextSpan, TextStyle } from '../flutter.js';
+import { Colors, Column, CrossAxisAlignment, Divider, Expanded, FontWeight, RichText, Row, SizedBox, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextDirection, TextOverflow, TextSpan, TextStyle } from '../flutter.js';
 
 // 组件 RichTextDetail
 export class RichTextDetail {
@@ -13,7 +13,7 @@ export class RichTextDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "RichText · TextSpan 富文本树",
@@ -26,8 +26,8 @@ export class RichTextDetail {
           "height": 10
         }))),
         new RichText({
-          "textAlign": "center",
-          "textDirection": "ltr",
+          "textAlign": TextAlign.center,
+          "textDirection": TextDirection.ltr,
           "text": new TextSpan({
             "text": "一段文字里可以混排：",
             "style": (this.__k2 || (this.__k2 = new TextStyle({
@@ -59,7 +59,7 @@ export class RichTextDetail {
                 "style": new TextStyle({
                   "decoration": TextDecoration.underline,
                   "decorationColor": Colors.blue,
-                  "decorationStyle": "wavy"
+                  "decorationStyle": TextDecorationStyle.wavy
                 }),
                 "text": "下划线"
               }))),
@@ -83,10 +83,10 @@ export class RichTextDetail {
           "height": 10
         }))),
         new RichText({
-          "textAlign": "start",
-          "textDirection": "ltr",
+          "textAlign": TextAlign.start,
+          "textDirection": TextDirection.ltr,
           "maxLines": this._clampLines ? 1 : null,
-          "overflow": this._clampLines ? "ellipsis" : "clip",
+          "overflow": this._clampLines ? TextOverflow.ellipsis : TextOverflow.clip,
           "text": (this.__k9 || (this.__k9 = new TextSpan({
             "style": new TextStyle({
               "fontSize": 14,

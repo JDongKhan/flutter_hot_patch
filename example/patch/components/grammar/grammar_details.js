@@ -4,7 +4,7 @@
 
 import { StringLogExtension } from '../../extensions/hot_module_base.js';
 import { TestString1 } from 'extension/e_string.js';
-import { Colors, Column, ElevatedButton, FontWeight, SizedBox, Text, TextStyle } from '../../flutter.js';
+import { Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, Text, TextStyle } from '../../flutter.js';
 
 // 模型 Greeting
 export class Greeting {
@@ -48,7 +48,7 @@ export class MixinDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "State 混入 StateLogMixin（跨包 mixin）",
@@ -105,7 +105,7 @@ export class ExtensionDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "String 扩展 logText（跨包 extension）",
@@ -151,7 +151,7 @@ export class InheritanceDetail {
       "name": "JS"
     });
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "普通类单继承（extends / super / 多态）",

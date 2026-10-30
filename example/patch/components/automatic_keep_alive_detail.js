@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/automatic_keep_alive_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, DefaultTabController, EdgeInsets, ElevatedButton, Expanded, FontWeight, Padding, SizedBox, Tab, TabBar, TabBarView, Text, TextStyle } from '../flutter.js';
+import { Colors, Column, CrossAxisAlignment, DefaultTabController, EdgeInsets, ElevatedButton, Expanded, FontWeight, Padding, SizedBox, Tab, TabBar, TabBarView, Text, TextStyle } from '../flutter.js';
 
 // 组件 AutomaticKeepAliveDetail
 export class AutomaticKeepAliveDetail {
@@ -15,7 +15,7 @@ export class AutomaticKeepAliveDetail {
       "child": new SizedBox({
         "height": 320,
         "child": new Column({
-          "crossAxisAlignment": "stretch",
+          "crossAxisAlignment": CrossAxisAlignment.stretch,
           "children": [
             (this.__k0 || (this.__k0 = new Text({
               "data": "先点「+1」再看：切到另一页，然后切回来对比计数",
@@ -64,7 +64,7 @@ export class _PlainPage {
         "value": 12
       }))),
       "child": new Column({
-        "crossAxisAlignment": "start",
+        "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
           (this.__k1 || (this.__k1 = new Text({
             "data": "不保活页 · 未声明 wantKeepAlive",
@@ -123,7 +123,7 @@ export class _KeepAlivePage {
         "value": 12
       }))),
       "child": new Column({
-        "crossAxisAlignment": "start",
+        "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
           (this.__k1 || (this.__k1 = new Text({
             "data": "保活页 · wantKeepAlive = true",

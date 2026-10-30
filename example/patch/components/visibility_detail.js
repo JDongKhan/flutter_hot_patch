@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/visibility_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Center, Colors, Column, Container, EdgeInsets, ElevatedButton, FontWeight, Offstage, OutlinedButton, Row, SizedBox, Text, TextStyle, Visibility } from '../flutter.js';
+import { Alignment, Center, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, Offstage, OutlinedButton, Row, SizedBox, Text, TextStyle, Visibility } from '../flutter.js';
 
 // 组件 VisibilityDetail
 export class VisibilityDetail {
@@ -35,8 +35,8 @@ export class VisibilityDetail {
   }
   build(context) {
     return new Column({
-      "mainAxisSize": "min",
-      "crossAxisAlignment": "stretch",
+      "mainAxisSize": MainAxisSize.min,
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         new Container({
           "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
@@ -44,8 +44,8 @@ export class VisibilityDetail {
           }))),
           "color": Colors.grey.shade100,
           "child": new Column({
-            "mainAxisSize": "min",
-            "crossAxisAlignment": "stretch",
+            "mainAxisSize": MainAxisSize.min,
+            "crossAxisAlignment": CrossAxisAlignment.stretch,
             "children": [
               new Text({
                 "style": (this.__k1 || (this.__k1 = new TextStyle({
@@ -146,8 +146,8 @@ export class VisibilityDetail {
           }))),
           "color": Colors.grey.shade100,
           "child": new Column({
-            "mainAxisSize": "min",
-            "crossAxisAlignment": "stretch",
+            "mainAxisSize": MainAxisSize.min,
+            "crossAxisAlignment": CrossAxisAlignment.stretch,
             "children": [
               new Text({
                 "style": (this.__k1 || (this.__k1 = new TextStyle({

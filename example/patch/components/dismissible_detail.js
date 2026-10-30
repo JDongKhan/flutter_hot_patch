@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/dismissible_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, Colors, Column, Container, DismissDirection, Dismissible, EdgeInsets, FontWeight, Icon, ListTile, OutlinedButton, SizedBox, Text, TextStyle, ValueKey } from '../flutter.js';
+import { Align, Alignment, Colors, Column, Container, CrossAxisAlignment, DismissDirection, Dismissible, EdgeInsets, FontWeight, Icon, ListTile, OutlinedButton, SizedBox, Text, TextStyle, ValueKey } from '../flutter.js';
 
 // 组件 DismissibleDetail
 export class DismissibleDetail {
@@ -19,7 +19,7 @@ export class DismissibleDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Dismissible",
@@ -41,7 +41,7 @@ export class DismissibleDetail {
           "height": 12
         }))),
         ...(() => { var out = []; for (let item of this._items) { out.push.apply(out, [new Dismissible({
-                "direction": "horizontal",
+                "direction": DismissDirection.horizontal,
                 "confirmDismiss": this.__bindFn(0, [], (...__a) => this._confirm(...__a)),
                 "background": new Container({
                   "color": Colors.red,

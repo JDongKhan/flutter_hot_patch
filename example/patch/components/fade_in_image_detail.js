@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/fade_in_image_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, AssetImage, BorderRadius, ClipRRect, Colors, Column, Duration, FadeInImage, FontWeight, NetworkImage, OutlinedButton, Radius, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Align, Alignment, AssetImage, BorderRadius, BoxFit, ClipRRect, Colors, Column, CrossAxisAlignment, Duration, FadeInImage, FontWeight, NetworkImage, OutlinedButton, Radius, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 FadeInImageDetail
 export class FadeInImageDetail {
@@ -12,7 +12,7 @@ export class FadeInImageDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "FadeInImage",
@@ -53,7 +53,7 @@ export class FadeInImageDetail {
             "image": "https://picsum.photos/seed/fade" + this._seed + "/600/300",
             "width": 600,
             "height": 150,
-            "fit": "cover",
+            "fit": BoxFit.cover,
             "fadeInDuration": (this.__k7 || (this.__k7 = new Duration({
               "milliseconds": 900
             }))),
@@ -103,7 +103,7 @@ export class FadeInImageDetail {
             }))),
             "width": 600,
             "height": 120,
-            "fit": "cover",
+            "fit": BoxFit.cover,
             "fadeInDuration": (this.__k14 || (this.__k14 = new Duration({
               "milliseconds": 600
             })))

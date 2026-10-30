@@ -80,9 +80,6 @@ class CtorSignatures {
   /// typedef 名 → 是否函数类型别名（解析结果缓存，每个名字只解析一次）。
   final Map<String, bool> _typedefIsFunction = {};
 
-  /// 源码里声明的 enum 名（与类索引同一次扫描建立）。
-  final Set<String> _enumNames = {};
-
   /// 已解析的编译单元缓存（同一文件只读一次）。
   final Map<String, CompilationUnit?> _units = {};
 
@@ -193,15 +190,6 @@ class CtorSignatures {
       if (type is NamedType && type.name2.lexeme == 'BuildContext') return true;
     }
     return false;
-  }
-
-  /// 源码索引：该名字是否是**枚举**（`Colors` 这类静态常量类是 class，不是 enum）。
-  ///
-  /// 翻译层用它区分 `Owner.member` 的两种语义：enum 成员 → 成员名字符串
-  /// （产物协议），普通类的静态常量 → 1:1 原样引用（运行时注入同名类）。
-  bool isEnum(String name) {
-    _ensureIndex();
-    return _enumNames.contains(name);
   }
 
   /// 源码索引：该名字是否有 **class** 声明（含 `abstract final class` 等多修饰符）。
@@ -343,10 +331,6 @@ class CtorSignatures {
           final name = m.group(1);
           if (name != null) index.putIfAbsent(name, () => []).add(entity.path);
         }
-        for (final m in _enumDecl.allMatches(content)) {
-          final name = m.group(1);
-          if (name != null) _enumNames.add(name);
-        }
         for (final m in _typedefDecl.allMatches(content)) {
           final name = m.group(1);
           if (name != null) typedefs.putIfAbsent(name, () => []).add(entity.path);
@@ -360,12 +344,6 @@ class CtorSignatures {
   /// （跳过注释里的）。修饰符可叠加，故用重复组。
   static final _classDecl = RegExp(
     r'^[ \t]*(?:(?:abstract|sealed|base|final|interface|augment)[ \t]+)*class[ \t]+([A-Za-z_$][\w$]*)',
-    multiLine: true,
-  );
-
-  /// `enum Foo` / `sealed enum Foo` 的枚举名（跳过注释里的）。
-  static final _enumDecl = RegExp(
-    r'^[ \t]*(?:(?:sealed)[ \t]+)?enum[ \t]+([A-Za-z_$][\w$]*)',
     multiLine: true,
   );
 

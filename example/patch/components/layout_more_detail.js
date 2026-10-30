@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/layout_more_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, Expanded, FilledButton, FittedBox, FontWeight, IgnorePointer, InteractiveViewer, IntrinsicHeight, Positioned, Radius, RepaintBoundary, RotatedBox, Row, SizedBox, Stack, Text, TextStyle, Tooltip } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FilledButton, FittedBox, FontWeight, IgnorePointer, InteractiveViewer, IntrinsicHeight, Positioned, Radius, RepaintBoundary, RotatedBox, Row, SizedBox, Stack, Text, TextBaseline, TextStyle, Tooltip } from '../flutter.js';
 
 // 组件 LayoutMoreDetail
 export class LayoutMoreDetail {
@@ -16,7 +16,7 @@ export class LayoutMoreDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "布局 / 交互补充",
@@ -63,7 +63,7 @@ export class LayoutMoreDetail {
           "width": 100,
           "height": 40,
           "child": new FittedBox({
-            "fit": "contain",
+            "fit": BoxFit.contain,
             "child": new Text({
               "style": new TextStyle({
                 "fontSize": 24,
@@ -109,7 +109,7 @@ export class LayoutMoreDetail {
         }))),
         new IntrinsicHeight({
           "child": new Row({
-            "crossAxisAlignment": "stretch",
+            "crossAxisAlignment": CrossAxisAlignment.stretch,
             "children": [
               new Expanded({
                 "child": new Container({
@@ -143,8 +143,8 @@ export class LayoutMoreDetail {
           "height": 12
         }))),
         new Row({
-          "crossAxisAlignment": "baseline",
-          "textBaseline": "alphabetic",
+          "crossAxisAlignment": CrossAxisAlignment.baseline,
+          "textBaseline": TextBaseline.alphabetic,
           "children": [
             (this.__k15 || (this.__k15 = new Text({
               "data": "大字",

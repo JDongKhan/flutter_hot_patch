@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/tween_animation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, ClipRRect, Colors, Column, Container, Curves, Duration, EdgeInsets, FontWeight, FractionallySizedBox, OutlinedButton, Row, SizedBox, Text, TextStyle, Tween, TweenAnimationBuilder } from '../flutter.js';
+import { Alignment, BorderRadius, ClipRRect, Colors, Column, Container, CrossAxisAlignment, Curves, Duration, EdgeInsets, FontWeight, FractionallySizedBox, MainAxisSize, OutlinedButton, Row, SizedBox, Text, TextStyle, Tween, TweenAnimationBuilder } from '../flutter.js';
 
 // 组件 TweenAnimationBuilderDetail
 export class TweenAnimationBuilderDetail {
@@ -18,8 +18,8 @@ export class TweenAnimationBuilderDetail {
   }
   build(context) {
     return new Column({
-      "mainAxisSize": "min",
-      "crossAxisAlignment": "stretch",
+      "mainAxisSize": MainAxisSize.min,
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         new Container({
           "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
@@ -27,7 +27,7 @@ export class TweenAnimationBuilderDetail {
           }))),
           "color": Colors.grey.shade100,
           "child": new Column({
-            "crossAxisAlignment": "stretch",
+            "crossAxisAlignment": CrossAxisAlignment.stretch,
             "children": [
               (this.__k1 || (this.__k1 = new Text({
                 "data": "Tween<double>(begin: 0, end: _target) → 进度条",
@@ -51,7 +51,7 @@ export class TweenAnimationBuilderDetail {
                 "onEnd": (...__a) => this._onEnd(...__a),
                 "builder": (context, value, child) => {
                   return new Column({
-                    "crossAxisAlignment": "stretch",
+                    "crossAxisAlignment": CrossAxisAlignment.stretch,
                     "children": [
                       new ClipRRect({
                         "borderRadius": BorderRadius.circular({

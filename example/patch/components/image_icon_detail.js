@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/image_icon_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AssetImage, Center, Colors, Column, EdgeInsets, FontWeight, Icon, ImageIcon, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { AssetImage, Center, Colors, Column, CrossAxisAlignment, EdgeInsets, FontWeight, Icon, ImageIcon, Padding, Row, SizedBox, Text, TextAlign, TextStyle } from '../flutter.js';
 
 // 组件 ImageIconDetail
 export class ImageIconDetail {
@@ -24,7 +24,7 @@ export class ImageIconDetail {
             "height": 6
           }))),
           new Text({
-            "textAlign": "center",
+            "textAlign": TextAlign.center,
             "style": (this.__k1 || (this.__k1 = new TextStyle({
               "color": Colors.black54,
               "fontSize": 11
@@ -41,7 +41,7 @@ export class ImageIconDetail {
         "bottom": 12
       }))),
       "child": new Column({
-        "crossAxisAlignment": "start",
+        "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
           new Text({
             "style": (this.__k3 || (this.__k3 = new TextStyle({
@@ -60,7 +60,7 @@ export class ImageIconDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k4 || (this.__k4 = new Text({
           "data": "ImageIcon",
@@ -82,7 +82,7 @@ export class ImageIconDetail {
           "height": 12
         }))),
         this._section("① size：24 / 36 / 48（颜色继承 IconTheme）", new Row({
-          "crossAxisAlignment": "end",
+          "crossAxisAlignment": CrossAxisAlignment.end,
           "children": [
             this._cell("size 24", (this.__k8 || (this.__k8 = new ImageIcon({
               "image": new AssetImage({

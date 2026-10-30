@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/implicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Border, BorderRadius, BoxDecoration, Center, Colors, Column, Container, Curves, Divider, Duration, EdgeInsets, Expanded, FontWeight, Offset, Row, SizedBox, Text, TextButton, TextStyle, ValueKey } from '../flutter.js';
+import { Alignment, AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Border, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CrossFadeState, Curves, Divider, Duration, EdgeInsets, Expanded, FontWeight, MainAxisAlignment, Offset, Row, SizedBox, Text, TextButton, TextStyle, ValueKey } from '../flutter.js';
 
 // 组件 ImplicitAnimationDetail
 export class ImplicitAnimationDetail {
@@ -17,7 +17,7 @@ export class ImplicitAnimationDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "AnimatedContainer · 尺寸 / 颜色 / 圆角",
@@ -76,7 +76,7 @@ export class ImplicitAnimationDetail {
           "height": 10
         }))),
         new Row({
-          "mainAxisAlignment": "spaceAround",
+          "mainAxisAlignment": MainAxisAlignment.spaceAround,
           "children": [
             new AnimatedOpacity({
               "opacity": this._visible ? 1.0 : 0.2,
@@ -228,7 +228,7 @@ export class ImplicitAnimationDetail {
           "duration": (this.__k14 || (this.__k14 = new Duration({
             "milliseconds": 450
           }))),
-          "crossFadeState": this._visible ? "showFirst" : "showSecond",
+          "crossFadeState": this._visible ? CrossFadeState.showFirst : CrossFadeState.showSecond,
           "firstCurve": Curves.easeOut,
           "secondCurve": Curves.easeIn,
           "alignment": Alignment.center,

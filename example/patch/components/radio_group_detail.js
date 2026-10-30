@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/radio_group_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, FontWeight, Radio, RadioGroup, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisSize, Radio, RadioGroup, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 RadioGroupDetail
 export class RadioGroupDetail {
@@ -12,7 +12,7 @@ export class RadioGroupDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "RadioGroup",
@@ -39,7 +39,7 @@ export class RadioGroupDetail {
             this._selected = (v ?? this._selected);
           })),
           "child": new Column({
-            "crossAxisAlignment": "start",
+            "crossAxisAlignment": CrossAxisAlignment.start,
             "children": [
               this._option(0, "选项 A"),
               this._option(1, "选项 B"),
@@ -85,7 +85,7 @@ export class RadioGroupDetail {
   }
   _option(value, label) {
     return new Row({
-      "mainAxisSize": "min",
+      "mainAxisSize": MainAxisSize.min,
       "children": [
         new Radio({
           "value": value,

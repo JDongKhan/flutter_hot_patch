@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/pop_scope_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, FontWeight, PopScope, Radius, Row, SizedBox, Switch, Text, TextStyle } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, PopScope, Radius, Row, SizedBox, Switch, Text, TextStyle } from '../flutter.js';
 
 // 组件 PopScopeDetail
 export class PopScopeDetail {
@@ -21,7 +21,7 @@ export class PopScopeDetail {
       "canPop": this._canPop,
       "onPopInvokedWithResult": this.__bindFn(0, [], (...__a) => this._onPopInvoked(...__a)),
       "child": new Column({
-        "crossAxisAlignment": "start",
+        "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
           (this.__k0 || (this.__k0 = new Text({
             "data": "PopScope",
@@ -81,7 +81,7 @@ export class PopScopeDetail {
               })))
             }),
             "child": new Column({
-              "crossAxisAlignment": "start",
+              "crossAxisAlignment": CrossAxisAlignment.start,
               "children": [
                 new Text({
                   "style": (this.__k9 || (this.__k9 = new TextStyle({

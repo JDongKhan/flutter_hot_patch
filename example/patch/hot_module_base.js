@@ -2,7 +2,7 @@
 // 跨包模块（package: hot_module_base）：由 hot_patch_generator 生成
 // 本包内被项目组件引用到的类集中于此文件（跨包翻译）
 
-import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors, Column, CompositedTransformFollower, CompositedTransformTarget, Container, Duration, EdgeInsets, IgnorePointer, LayerLink, Offset, OverlayPortal, OverlayPortalController, Padding, Positioned, SizedBox, Stack, Text, TextStyle, Timer, Transform } from 'flutter.js';
+import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors, Column, CompositedTransformFollower, CompositedTransformTarget, Container, CrossAxisAlignment, Duration, EdgeInsets, IgnorePointer, LayerLink, MainAxisSize, Offset, OverlayPortal, OverlayPortalController, Padding, Positioned, SizedBox, Stack, Text, TextStyle, Timer, Transform } from 'flutter.js';
 
 // 模型 User
 export class User {
@@ -121,21 +121,21 @@ export class GuideBubbleWidget {
       })];
     if ((this.alignment == "center")) {
       return new Column({
-        "mainAxisSize": "min",
-        "crossAxisAlignment": "center",
+        "mainAxisSize": MainAxisSize.min,
+        "crossAxisAlignment": CrossAxisAlignment.center,
         "children": children
       });
     }
     if ((this.alignment == "right")) {
       return new Column({
-        "mainAxisSize": "min",
-        "crossAxisAlignment": "end",
+        "mainAxisSize": MainAxisSize.min,
+        "crossAxisAlignment": CrossAxisAlignment.end,
         "children": children
       });
     }
     return new Column({
-      "mainAxisSize": "min",
-      "crossAxisAlignment": "start",
+      "mainAxisSize": MainAxisSize.min,
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": children
     });
   }

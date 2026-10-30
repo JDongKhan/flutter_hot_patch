@@ -7,7 +7,7 @@ import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { BorderRadius, BoxDecoration, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text, TextStyle } from '../../flutter.js';
+import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text, TextOverflow, TextStyle } from '../../flutter.js';
 
 // 组件 OrdersPage
 export class OrdersPage {
@@ -58,7 +58,7 @@ export class OrdersPage {
       })));
     }
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         new Container({
           "color": Colors.white,
@@ -72,7 +72,7 @@ export class OrdersPage {
                 "top": 6
               }))),
               "child": new SingleChildScrollView({
-                "scrollDirection": "horizontal",
+                "scrollDirection": Axis.horizontal,
                 "child": new Row({
                   "children": [
                     ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [new Padding({
@@ -220,7 +220,7 @@ export class _OrderCard {
                 "value": 12
               }))),
               "child": new Row({
-                "crossAxisAlignment": "start",
+                "crossAxisAlignment": CrossAxisAlignment.start,
                 "children": [
                   new ClipRRect({
                     "borderRadius": BorderRadius.circular({
@@ -229,7 +229,7 @@ export class _OrderCard {
                     "child": Image.asset({
                       "width": 66,
                       "height": 66,
-                      "fit": "cover",
+                      "fit": BoxFit.cover,
                       "errorBuilder": (context, e, s) => new Container({
                         "width": 66,
                         "height": 66,
@@ -245,11 +245,11 @@ export class _OrderCard {
                   }))),
                   new Expanded({
                     "child": new Column({
-                      "crossAxisAlignment": "start",
+                      "crossAxisAlignment": CrossAxisAlignment.start,
                       "children": [
                         new Text({
                           "maxLines": 1,
-                          "overflow": "ellipsis",
+                          "overflow": TextOverflow.ellipsis,
                           "style": (this.__k7 || (this.__k7 = new TextStyle({
                             "fontSize": 14,
                             "fontWeight": FontWeight.w600
@@ -261,7 +261,7 @@ export class _OrderCard {
                         }))),
                         new Text({
                           "maxLines": 1,
-                          "overflow": "ellipsis",
+                          "overflow": TextOverflow.ellipsis,
                           "style": (this.__k9 || (this.__k9 = new TextStyle({
                             "color": new Color({
                               "value": 0xFF8B909A

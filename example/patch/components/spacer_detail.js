@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/spacer_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, ElevatedButton, FontWeight, OutlinedButton, Row, SizedBox, Spacer, Text, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, Spacer, Text, TextStyle } from '../flutter.js';
 
 // 组件 SpacerDetail
 export class SpacerDetail {
@@ -12,8 +12,8 @@ export class SpacerDetail {
   }
   build(context) {
     return new Column({
-      "mainAxisSize": "min",
-      "crossAxisAlignment": "stretch",
+      "mainAxisSize": MainAxisSize.min,
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         new Container({
           "color": Colors.grey.shade100,
@@ -21,7 +21,7 @@ export class SpacerDetail {
             "value": 12
           }))),
           "child": new Column({
-            "crossAxisAlignment": "start",
+            "crossAxisAlignment": CrossAxisAlignment.start,
             "children": [
               new Text({
                 "style": (this.__k1 || (this.__k1 = new TextStyle({
@@ -135,7 +135,7 @@ export class SpacerDetail {
               })
             }),
             "child": new Column({
-              "crossAxisAlignment": "stretch",
+              "crossAxisAlignment": CrossAxisAlignment.stretch,
               "children": [
                 (this.__k12 || (this.__k12 = new Text({
                   "data": "Column：中间一个 Spacer()，底部按钮被顶到底",

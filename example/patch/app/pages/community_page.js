@@ -7,7 +7,7 @@ import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { kBrand } from 'detail_pages.js';
-import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextStyle, Wrap } from '../../flutter.js';
+import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
 
 // 组件 CommunityPage
 export class CommunityPage {
@@ -132,7 +132,7 @@ export class CommunityPage {
                         "color": new Color({
                           "value": 0xFFF3F5F8
                         }),
-                        "shape": "circle"
+                        "shape": BoxShape.circle
                       }))),
                       "child": (this.__k9 || (this.__k9 = new Icon({
                         "color": new Color({
@@ -154,7 +154,7 @@ export class CommunityPage {
         new SizedBox({
           "height": 116,
           "child": ListView.separated({
-            "scrollDirection": "horizontal",
+            "scrollDirection": Axis.horizontal,
             "padding": (this.__k11 || (this.__k11 = EdgeInsets.symmetric({
               "horizontal": 12
             }))),
@@ -420,7 +420,7 @@ export class _FilterPanel {
   }
   _group(title, key, values, current) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         new Padding({
           "padding": (this.__k0 || (this.__k0 = EdgeInsets.only({
@@ -485,7 +485,7 @@ export class _FilterPanel {
           "top": 16
         }))),
         "child": new Column({
-          "crossAxisAlignment": "start",
+          "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             this._group("排序方式", "sort", this.feed.sorts, this.sort),
             (this.__k6 || (this.__k6 = new SizedBox({
@@ -594,7 +594,7 @@ export class _PostCard {
           })
         }),
         "child": new Row({
-          "crossAxisAlignment": "start",
+          "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             new ClipRRect({
               "borderRadius": BorderRadius.circular({
@@ -603,7 +603,7 @@ export class _PostCard {
               "child": Image.asset({
                 "width": 92,
                 "height": 92,
-                "fit": "cover",
+                "fit": BoxFit.cover,
                 "errorBuilder": (context, e, s) => new Container({
                   "width": 92,
                   "height": 92,
@@ -621,11 +621,11 @@ export class _PostCard {
               "child": new SizedBox({
                 "height": 92,
                 "child": new Column({
-                  "crossAxisAlignment": "start",
+                  "crossAxisAlignment": CrossAxisAlignment.start,
                   "children": [
                     new Text({
                       "maxLines": 1,
-                      "overflow": "ellipsis",
+                      "overflow": TextOverflow.ellipsis,
                       "style": (this.__k3 || (this.__k3 = new TextStyle({
                         "fontSize": 14.5,
                         "fontWeight": FontWeight.w600
@@ -638,7 +638,7 @@ export class _PostCard {
                     new Expanded({
                       "child": new Text({
                         "maxLines": 2,
-                        "overflow": "ellipsis",
+                        "overflow": TextOverflow.ellipsis,
                         "style": (this.__k5 || (this.__k5 = new TextStyle({
                           "color": new Color({
                             "value": 0xFF8B909A
@@ -734,7 +734,7 @@ export class _ResourceCard {
       "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
       "child": new Container({
         "width": 156,
-        "clipBehavior": "antiAlias",
+        "clipBehavior": Clip.antiAlias,
         "decoration": new BoxDecoration({
           "color": Colors.white,
           "borderRadius": BorderRadius.circular({
@@ -742,12 +742,12 @@ export class _ResourceCard {
           })
         }),
         "child": new Column({
-          "crossAxisAlignment": "start",
+          "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             new SizedBox({
               "height": 68,
               "child": Image.asset({
-                "fit": "cover",
+                "fit": BoxFit.cover,
                 "errorBuilder": (context, e, s) => new Container({
                   "height": 68,
                   "color": (this.__k0 || (this.__k0 = new Color({
@@ -765,11 +765,11 @@ export class _ResourceCard {
                 "top": 6
               }))),
               "child": new Column({
-                "crossAxisAlignment": "start",
+                "crossAxisAlignment": CrossAxisAlignment.start,
                 "children": [
                   new Text({
                     "maxLines": 1,
-                    "overflow": "ellipsis",
+                    "overflow": TextOverflow.ellipsis,
                     "style": (this.__k2 || (this.__k2 = new TextStyle({
                       "fontSize": 12.5,
                       "fontWeight": FontWeight.w600
@@ -781,7 +781,7 @@ export class _ResourceCard {
                   }))),
                   new Text({
                     "maxLines": 1,
-                    "overflow": "ellipsis",
+                    "overflow": TextOverflow.ellipsis,
                     "style": (this.__k4 || (this.__k4 = new TextStyle({
                       "color": new Color({
                         "value": 0xFF98A0AC

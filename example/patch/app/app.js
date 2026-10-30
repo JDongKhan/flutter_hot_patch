@@ -6,7 +6,7 @@ import { HomePage } from 'pages/home_page.js';
 import { CommunityPage } from 'pages/community_page.js';
 import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
-import { BottomNavigationBar, BottomNavigationBarItem, Color, Colors, Icon, NeverScrollableScrollPhysics, Scaffold, TabBarView, TabController } from '../flutter.js';
+import { BottomNavigationBar, BottomNavigationBarItem, BottomNavigationBarType, Color, Colors, Icon, NeverScrollableScrollPhysics, Scaffold, TabBarView, TabController } from '../flutter.js';
 
 // 组件 AppShell
 export class AppShell {
@@ -58,7 +58,7 @@ export class AppSubContent {
       "bottomNavigationBar": new BottomNavigationBar({
         "currentIndex": this._index,
         "onTap": this.__bindFn(0, [], (...__a) => this._openTab(...__a)),
-        "type": "fixed",
+        "type": BottomNavigationBarType.fixed,
         "backgroundColor": Colors.white,
         "selectedItemColor": (this.__k6 || (this.__k6 = new Color({
           "value": 0xFF0E7AFB

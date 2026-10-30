@@ -13,6 +13,7 @@ library;
 import 'dart:io';
 
 import 'package_sources.dart';
+import 'sdk_enum_index.dart';
 
 /// 运行时注入的全局类型名集合（`G.X` 全局 + `export` 值类，供 `is T` 与静态调用）。
 Set<String> runtimeGlobalTypes() => _RuntimeGlobalTypes.instance.types;
@@ -140,6 +141,14 @@ class _RuntimeGlobalTypes {
       for (final m in _typeAlias.allMatches(src)) {
         aliases.add(m.group(1)!);
       }
+    }
+    // 按源码自动生成的 SDK 枚举值类：它们的 `export class X` 不存在于任何
+    // `.dart` 片段文本里（`enumValuesJsSource()` 在构建期按 SDK `enum` 声明
+    // 动态产出），但同样是 `flutter.js` 的模块导出。口径必须一致——否则产物
+    // 引用 `CrossAxisAlignment.baseline` 却不会 import 它（运行期 ReferenceError）。
+    for (final name in sdkPublicEnums().keys) {
+      types.add(name);
+      exports.add(name);
     }
     return _RuntimeGlobalTypes(types, aliases, functions, exports);
   }

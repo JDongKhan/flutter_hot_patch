@@ -22,6 +22,7 @@ import '../runtime/js/drag_js.dart';
 import '../runtime/js/easy_refresh_js.dart';
 import '../runtime/js/focus_js.dart';
 import '../runtime/js/key_js.dart';
+import '../runtime/js/enum_values_js.dart';
 import '../runtime/js/keyboard_listener_js.dart';
 import '../runtime/js/layout_builder_js.dart';
 import '../runtime/js/media_query_js.dart';
@@ -46,6 +47,9 @@ import '../runtime/js/timer_js.dart';
 /// `function` 声明会提升，故同区内可以前后互引。
 String flutterValueClassesSource() => [
       dartValuesJsSource,
+      // SDK 枚举值类（按源码 `enum` 声明自动生成）：翻译层已改为对
+      // `Owner.member` 原样引用，这些类就是那些引用的落点。
+      enumValuesJsSource(),
       styleValuesJsSource,
       colorJsSource,
       changeNotifierSource,

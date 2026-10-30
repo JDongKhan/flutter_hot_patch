@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.js';
-import { Colors, Column, ElevatedButton, FontWeight, SizedBox, Text, TextStyle, __h } from '../flutter.js';
+import { Colors, Column, ElevatedButton, FontWeight, MainAxisSize, SizedBox, Text, TextStyle, __h } from '../flutter.js';
 
 // 组件 DashboardCard
 export class DashboardCard {
@@ -70,7 +70,7 @@ export class LabeledDivider {
   }
   build(context) {
     return new Column({
-      "mainAxisSize": "min",
+      "mainAxisSize": MainAxisSize.min,
       "children": [
         new Text({
           "style": (this.__k0 || (this.__k0 = new TextStyle({

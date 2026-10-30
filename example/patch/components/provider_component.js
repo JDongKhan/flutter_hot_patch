@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
-import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
 
 // 组件 ProviderCard
@@ -41,7 +41,7 @@ export class ProviderCard {
             })
           ],
           "child": new Column({
-            "mainAxisSize": "min",
+            "mainAxisSize": MainAxisSize.min,
             "children": [
               this._buildText(),
               this._modelA.buildText(),
@@ -67,7 +67,7 @@ export class ProviderCard {
                 "model": "NetworkVm"
               }),
               new Row({
-                "mainAxisAlignment": "center",
+                "mainAxisAlignment": MainAxisAlignment.center,
                 "children": [
                   new ElevatedButton({
                     "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a)),
@@ -92,7 +92,7 @@ export class ProviderCard {
                 "model": "CounterVm"
               }),
               new Row({
-                "mainAxisAlignment": "center",
+                "mainAxisAlignment": MainAxisAlignment.center,
                 "children": [
                   new ElevatedButton({
                     "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a)),

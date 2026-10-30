@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_persistent_header_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AppBar, Colors, Column, Container, CustomScrollView, EdgeInsets, FontWeight, Icon, ListTile, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
+import { Alignment, AppBar, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, FontWeight, Icon, ListTile, MainAxisSize, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
 
 // 组件 SliverPersistentHeaderDetail
 export class SliverPersistentHeaderDetail {
@@ -119,8 +119,8 @@ export class _PinnedDelegate {
       }))),
       "alignment": Alignment.bottomLeft,
       "child": new Column({
-        "mainAxisSize": "min",
-        "crossAxisAlignment": "start",
+        "mainAxisSize": MainAxisSize.min,
+        "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
           (this.__k1 || (this.__k1 = new Text({
             "data": "pinned header",

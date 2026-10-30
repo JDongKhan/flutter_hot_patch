@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_fill_remaining_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, AppBar, BouncingScrollPhysics, Center, Colors, Column, Container, CustomScrollView, EdgeInsets, Expanded, FontWeight, OutlinedButton, Row, Scaffold, SizedBox, SliverFillRemaining, SliverToBoxAdapter, Switch, Text, TextStyle } from '../flutter.js';
+import { Align, Alignment, AppBar, BouncingScrollPhysics, Center, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, Expanded, FontWeight, MainAxisAlignment, OutlinedButton, Row, Scaffold, SizedBox, SliverFillRemaining, SliverToBoxAdapter, Switch, Text, TextAlign, TextStyle } from '../flutter.js';
 
 // 组件 SliverFillRemainingDetail
 export class SliverFillRemainingDetail {
@@ -29,7 +29,7 @@ export class SliverFillRemainingDetail {
               }))),
               "color": Colors.grey.shade100,
               "child": new Column({
-                "crossAxisAlignment": "start",
+                "crossAxisAlignment": CrossAxisAlignment.start,
                 "children": [
                   (this.__k3 || (this.__k3 = new Text({
                     "data": "child 填满视口剩余高度，贴底元素始终贴底",
@@ -121,11 +121,11 @@ export class SliverFillRemainingDetail {
                 "value": 20
               }))),
               "child": new Column({
-                "mainAxisAlignment": "spaceBetween",
-                "crossAxisAlignment": "start",
+                "mainAxisAlignment": MainAxisAlignment.spaceBetween,
+                "crossAxisAlignment": CrossAxisAlignment.start,
                 "children": [
                   new Column({
-                    "crossAxisAlignment": "start",
+                    "crossAxisAlignment": CrossAxisAlignment.start,
                     "children": [
                       (this.__k11 || (this.__k11 = new Text({
                         "data": "剩余空间区域",
@@ -149,7 +149,7 @@ export class SliverFillRemainingDetail {
                   }),
                   (this.__k14 || (this.__k14 = new Center({
                     "child": new Text({
-                      "textAlign": "center",
+                      "textAlign": TextAlign.center,
                       "style": new TextStyle({
                         "fontSize": 13,
                         "color": Colors.black87

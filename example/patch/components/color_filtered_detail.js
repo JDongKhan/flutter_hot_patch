@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/color_filtered_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BoxDecoration, ColorFilter, ColorFiltered, Colors, Column, Container, FontWeight, LinearGradient, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, BlendMode, BoxDecoration, ColorFilter, ColorFiltered, Colors, Column, Container, CrossAxisAlignment, FontWeight, LinearGradient, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 ColorFilteredDetail
 export class ColorFilteredDetail {
@@ -11,7 +11,7 @@ export class ColorFilteredDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "ColorFiltered",
@@ -40,7 +40,7 @@ export class ColorFilteredDetail {
         }))),
         new ColorFiltered({
           "colorFilter": (this.__k6 || (this.__k6 = ColorFilter.mode({
-            "blendMode": "multiply",
+            "blendMode": BlendMode.multiply,
             "color": Colors.deepOrange
           }))),
           "child": (this.__k7 || (this.__k7 = new _Sample({
@@ -52,7 +52,7 @@ export class ColorFilteredDetail {
         }))),
         new ColorFiltered({
           "colorFilter": (this.__k8 || (this.__k8 = ColorFilter.mode({
-            "blendMode": "modulate",
+            "blendMode": BlendMode.modulate,
             "color": Colors.deepPurple
           }))),
           "child": (this.__k9 || (this.__k9 = new _Sample({

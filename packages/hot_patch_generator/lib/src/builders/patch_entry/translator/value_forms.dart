@@ -12,7 +12,6 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../../shared/ctor_signatures.dart';
 import 'element2js.dart';
 
 /// 去掉空值键（保序）：Dart `null` 与字符串 `'null'`（[TreeShape] 对 NullLiteral
@@ -108,26 +107,16 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
   } else {
     final owner = staticRefOwner(e);
     if (owner != null) {
-      // 跨文件「普通类」的静态成员引用（`MyColors.background`）：产物已 import
-      // 该类的 JS 模块，裸引用即可解析。
-      // 其余 `Owner.name`：先查源码索引——owner 是**普通类**（`Colors.red` /
-      // 静态常量类）时按 1:1 原样引用（运行时同名类 / 产物 import）；
-      // 是 **enum** 时 Dart 枚举在 JS 侧没有等价物，产物协议用**成员名字符串**
-      // 表示（运行时各 `xxxFromJson` 按名还原，如
-      // `BottomNavigationBarType.fixed` → `"fixed"`）。
+      // `Owner.member` 一律**原样引用**（枚举与普通类的静态常量同一套规则）：
+      // JS 侧凡 Dart 里存在的常量对象，运行时都有同名类承接——SDK 枚举由
+      // flutter.js 按源码 `enum` 声明自动生成值类（.name/.index/values 齐全），
+      // 普通类由同名包装类 / 产物 import 承接；跨桥序列化各自负责（枚举的
+      // toJSON() 发成员名，宿主既有 `xxxFromJson` 不变）。
+      // 翻译层不再判断 owner 是 enum 还是 class——那曾导致「未知类型即按枚举
+      // 转成员名字符串」的猜测与静默降级。
       final member = staticMemberOf(e);
       if (member != null && isClassName(owner) && !member.startsWith('_')) {
-        final sigs = CtorSignatures.instance;
-        // 项目普通类（含纯 static 类）：JS 侧是真实 class，静态成员挂在类上，
-        // `Owner.member` 原样引用即可（产物已 import 该类的模块）。
-        // 其余能确认是 class 的（源码索引），同样原样引用；
-        // 只有 enum 走成员名字符串（JS 侧无枚举等价物）。
-        final isProjectClass = ctx.isProjectClass(owner);
-        if (isProjectClass ||
-            (sigs != null && sigs.isClass(owner) && !sigs.isEnum(owner))) {
-          return _jsExprOrNull(e, ctx);
-        }
-        return ctx.jsString(member);
+        return _jsExprOrNull(e, ctx);
       }
     }
   }

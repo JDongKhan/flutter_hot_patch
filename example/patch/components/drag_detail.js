@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/drag_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, DragTarget, Draggable, Duration, EdgeInsets, FontWeight, LongPressDraggable, Opacity, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, DragTarget, Draggable, Duration, EdgeInsets, FontWeight, LongPressDraggable, MainAxisSize, Opacity, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 模型 Fruit
 export class Fruit {
@@ -36,7 +36,7 @@ export class DragDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "拖拽",
@@ -139,7 +139,7 @@ export class DragDetail {
             })))
           }),
           "child": new Column({
-            "crossAxisAlignment": "start",
+            "crossAxisAlignment": CrossAxisAlignment.start,
             "children": [
               new Text({
                 "style": (this.__k15 || (this.__k15 = new TextStyle({
@@ -236,7 +236,7 @@ export class DragDetail {
             })))
           }),
           "child": new Column({
-            "mainAxisSize": "min",
+            "mainAxisSize": MainAxisSize.min,
             "children": [
               new Text({
                 "style": (this.__k20 || (this.__k20 = new TextStyle({

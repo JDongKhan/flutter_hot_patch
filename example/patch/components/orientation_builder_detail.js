@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/orientation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Colors, Column, Container, EdgeInsets, FontWeight, LayoutBuilder, MediaQuery, Orientation, OrientationBuilder, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, LayoutBuilder, MainAxisSize, MediaQuery, Orientation, OrientationBuilder, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 OrientationBuilderDetail
 export class OrientationBuilderDetail {
@@ -41,7 +41,7 @@ export class OrientationBuilderDetail {
     var mq = MediaQuery.of(context);
     var isPortrait = (mq.orientation == Orientation.portrait);
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k3 || (this.__k3 = new Text({
           "data": "OrientationBuilder",
@@ -88,12 +88,12 @@ export class OrientationBuilderDetail {
             "builder": (context, o) => { var tiles = [this._tile("A", Colors.teal), this._tile("B", Colors.orange), this._tile("C", Colors.indigo)];
               if ((o == Orientation.portrait)) {
                 return new Column({
-                  "mainAxisSize": "min",
+                  "mainAxisSize": MainAxisSize.min,
                   "children": tiles
                 });
               }
               return new Row({
-                "mainAxisSize": "min",
+                "mainAxisSize": MainAxisSize.min,
                 "children": tiles
               }); }
           })
@@ -156,7 +156,7 @@ export class OrientationBuilderDetail {
                 "value": 8
               }))),
               "child": new Column({
-                "crossAxisAlignment": "start",
+                "crossAxisAlignment": CrossAxisAlignment.start,
                 "children": [
                   new Text({
                     "style": (this.__k2 || (this.__k2 = new TextStyle({
@@ -180,10 +180,10 @@ export class OrientationBuilderDetail {
                     "height": 6
                   }))),
                   (wide ? new Row({
-                    "mainAxisSize": "min",
+                    "mainAxisSize": MainAxisSize.min,
                     "children": tiles
                   }) : new Column({
-                    "mainAxisSize": "min",
+                    "mainAxisSize": MainAxisSize.min,
                     "children": tiles
                   }))
                 ]

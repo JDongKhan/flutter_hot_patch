@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/animated_list_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AnimatedList, Card, CircleAvatar, Colors, Column, Duration, EdgeInsets, Expanded, FontWeight, GlobalKey, ListTile, Row, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
+import { AnimatedList, Card, CircleAvatar, Colors, Column, CrossAxisAlignment, Duration, EdgeInsets, Expanded, FontWeight, GlobalKey, ListTile, Row, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 AnimatedListDetail
 export class AnimatedListDetail {
@@ -81,7 +81,7 @@ export class AnimatedListDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k3 || (this.__k3 = new Text({
           "data": "AnimatedList · 增删补间（GlobalKey.currentState）",

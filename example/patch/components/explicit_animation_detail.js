@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/explicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AnimatedBuilder, AnimationController, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CurvedAnimation, Curves, Divider, Duration, Expanded, FadeTransition, FontWeight, LinearProgressIndicator, RotationTransition, Row, ScaleTransition, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
+import { Alignment, AnimatedBuilder, AnimationController, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CurvedAnimation, Curves, Divider, Duration, Expanded, FadeTransition, FontWeight, LinearProgressIndicator, RotationTransition, Row, ScaleTransition, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 ExplicitAnimationDetail
 export class ExplicitAnimationDetail {
@@ -15,7 +15,7 @@ export class ExplicitAnimationDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "AnimationController.value 驱动 AnimatedBuilder",

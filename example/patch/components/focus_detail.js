@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/focus_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, Focus, FocusNode, FontWeight, GestureDetector, OutlinedButton, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, Focus, FocusNode, FontWeight, GestureDetector, OutlinedButton, Radius, Row, SizedBox, Text, TextAlign, TextStyle } from '../flutter.js';
 
 // 组件 FocusDetail
 export class FocusDetail {
@@ -68,7 +68,7 @@ export class FocusDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k1 || (this.__k1 = new Text({
           "data": "Focus / FocusNode",
@@ -121,7 +121,7 @@ export class FocusDetail {
                   "style": new TextStyle({
                     "fontSize": 11
                   }),
-                  "textAlign": "center"
+                  "textAlign": TextAlign.center
                 })))
               })
             })

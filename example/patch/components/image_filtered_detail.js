@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/image_filtered_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BoxDecoration, Colors, Column, Container, EdgeInsets, Float64List, FontWeight, ImageFilter, ImageFiltered, LinearGradient, Padding, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Float64List, FontWeight, ImageFilter, ImageFiltered, LinearGradient, Padding, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 ImageFilteredDetail
 export class ImageFilteredDetail {
@@ -34,7 +34,7 @@ export class ImageFilteredDetail {
         "bottom": 10
       }))),
       "child": new Column({
-        "crossAxisAlignment": "start",
+        "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
           new Text({
             "style": (this.__k3 || (this.__k3 = new TextStyle({
@@ -53,7 +53,7 @@ export class ImageFilteredDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k5 || (this.__k5 = new Text({
           "data": "ImageFiltered",

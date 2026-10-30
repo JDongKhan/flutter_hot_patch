@@ -7,7 +7,7 @@ import { HomeFeed } from '../model/app_models.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
 import { BannerCarousel } from '../widgets/banner_carousel.js';
-import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, ClipRRect, Color, Column, Container, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Image, InkWell, LinearGradient, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, Text, TextStyle } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Image, InkWell, LinearGradient, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, StackFit, Text, TextOverflow, TextStyle } from '../../flutter.js';
 
 // 组件 HomePage
 export class HomePage {
@@ -57,7 +57,7 @@ export class HomePage {
         "value": 0xFFF4F5F7
       }))),
       "child": new Column({
-        "crossAxisAlignment": "stretch",
+        "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           new HomeHeader({
             "city": this._city,
@@ -72,7 +72,7 @@ export class HomePage {
                 "slivers": [
                   new SliverToBoxAdapter({
                     "child": new Column({
-                      "crossAxisAlignment": "stretch",
+                      "crossAxisAlignment": CrossAxisAlignment.stretch,
                       "children": [
                         (this.__k2 || (this.__k2 = new SizedBox({
                           "height": 12
@@ -262,7 +262,7 @@ export class HomeHeader {
       "child": new SafeArea({
         "bottom": false,
         "child": new Column({
-          "crossAxisAlignment": "start",
+          "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             new Row({
               "children": [
@@ -454,7 +454,7 @@ export class GridCell {
     return new InkWell({
       "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
       "child": new Column({
-        "mainAxisAlignment": "center",
+        "mainAxisAlignment": MainAxisAlignment.center,
         "children": [
           new Text({
             "style": (this.__k0 || (this.__k0 = new TextStyle({
@@ -511,17 +511,17 @@ export class SpotCard {
             "value": 0xFFFFFFFF
           })
         }))),
-        "clipBehavior": "antiAlias",
+        "clipBehavior": Clip.antiAlias,
         "child": new Column({
-          "crossAxisAlignment": "start",
+          "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             new SizedBox({
               "height": 96,
               "child": new Stack({
-                "fit": "expand",
+                "fit": StackFit.expand,
                 "children": [
                   Image.asset({
-                    "fit": "cover",
+                    "fit": BoxFit.cover,
                     "name": this.spot.img
                   }),
                   new Positioned({
@@ -565,11 +565,11 @@ export class SpotCard {
                 "top": 8
               }))),
               "child": new Column({
-                "crossAxisAlignment": "start",
+                "crossAxisAlignment": CrossAxisAlignment.start,
                 "children": [
                   new Text({
                     "maxLines": 1,
-                    "overflow": "ellipsis",
+                    "overflow": TextOverflow.ellipsis,
                     "style": (this.__k6 || (this.__k6 = new TextStyle({
                       "color": new Color({
                         "value": 0xFF1F2430
@@ -584,7 +584,7 @@ export class SpotCard {
                   }))),
                   new Text({
                     "maxLines": 1,
-                    "overflow": "ellipsis",
+                    "overflow": TextOverflow.ellipsis,
                     "style": (this.__k8 || (this.__k8 = new TextStyle({
                       "color": new Color({
                         "value": 0xFF8A909E
@@ -669,17 +669,17 @@ export class PromoCard {
             })
           }))),
           "child": new Stack({
-            "fit": "expand",
+            "fit": StackFit.expand,
             "children": [
               Image.asset({
-                "fit": "cover",
+                "fit": BoxFit.cover,
                 "name": this.img
               }),
               new Positioned({
                 "left": 16,
                 "top": 22,
                 "child": new Column({
-                  "crossAxisAlignment": "start",
+                  "crossAxisAlignment": CrossAxisAlignment.start,
                   "children": [
                     (this.__k1 || (this.__k1 = new Text({
                       "data": "热气球季 · 限时特惠",

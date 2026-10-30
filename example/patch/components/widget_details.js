@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { CommonListItem } from 'list_item.js';
-import { Align, Alignment, AppBar, AspectRatio, Border, BorderRadius, BorderSide, BottomNavigationBar, BottomNavigationBarItem, BouncingScrollPhysics, BoxConstraints, BoxDecoration, BoxShadow, CachedNetworkImage, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClampingScrollPhysics, ClipRRect, Color, Colors, Column, ConstrainedBox, Container, CustomScrollView, DecoratedBox, DefaultTabController, Divider, Drawer, DrawerHeader, DropdownButton, DropdownMenuItem, EdgeInsets, ElevatedButton, Expanded, FilledButton, FloatingActionButton, FontWeight, FractionallySizedBox, GlobalKey, GridView, Icon, IconButton, Image, InputDecoration, LinearGradient, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, NotificationListener, ObjectKey, Offset, Opacity, OutlinedButton, Padding, PageController, PageStorageKey, PageView, Positioned, Radio, Radius, ReorderableListView, RoundedRectangleBorder, Row, SafeArea, Scaffold, ScrollController, SingleChildScrollView, Size, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithFixedCrossAxisCount, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, Switch, Tab, TabBar, TabBarView, TabController, Text, TextButton, TextDecoration, TextEditingController, TextField, TextScaler, TextStyle, UniqueKey, ValueKey, Wrap } from '../flutter.js';
+import { Align, Alignment, AppBar, AspectRatio, Axis, Border, BorderRadius, BorderSide, BottomNavigationBar, BottomNavigationBarItem, BouncingScrollPhysics, BoxConstraints, BoxDecoration, BoxFit, BoxShadow, BoxShape, CachedNetworkImage, Card, Center, Checkbox, Chip, CircleAvatar, CircularProgressIndicator, ClampingScrollPhysics, Clip, ClipRRect, Color, Colors, Column, ConstrainedBox, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, DefaultTabController, Divider, Drawer, DrawerHeader, DropdownButton, DropdownMenuItem, EdgeInsets, ElevatedButton, Expanded, FilledButton, FloatingActionButton, FontWeight, FractionallySizedBox, GlobalKey, GridView, Icon, IconButton, Image, InputDecoration, LinearGradient, LinearProgressIndicator, ListTile, ListView, ListenableBuilder, MainAxisAlignment, MainAxisSize, NotificationListener, ObjectKey, Offset, Opacity, OutlinedButton, Padding, PageController, PageStorageKey, PageView, Positioned, Radio, Radius, ReorderableListView, RoundedRectangleBorder, Row, SafeArea, Scaffold, ScrollController, SingleChildScrollView, Size, SizedBox, Slider, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithFixedCrossAxisCount, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Spacer, Stack, StackFit, Switch, Tab, TabBar, TabBarView, TabController, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextEditingController, TextField, TextOverflow, TextScaler, TextStyle, UniqueKey, ValueKey, Wrap, WrapAlignment, WrapCrossAlignment } from '../flutter.js';
 
 // 组件 TextDetail
 export class TextDetail {
@@ -17,7 +17,7 @@ export class TextDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "基础文案 + TextStyle",
@@ -38,7 +38,7 @@ export class TextDetail {
         }))),
         new Text({
           "maxLines": 1,
-          "overflow": "ellipsis",
+          "overflow": TextOverflow.ellipsis,
           "data": "maxLines+overflow 测试：这是一段很长的文字会被截断成省略号显示"
         }),
         (this.__k2 || (this.__k2 = new SizedBox({
@@ -54,11 +54,11 @@ export class TextDetail {
           "height": 6
         }))),
         new Text({
-          "textAlign": "center",
+          "textAlign": TextAlign.center,
           "style": (this.__k3 || (this.__k3 = new TextStyle({
             "decoration": TextDecoration.underline,
             "decorationColor": Colors.orange,
-            "decorationStyle": "wavy"
+            "decorationStyle": TextDecorationStyle.wavy
           }))),
           "data": "textAlign 居中,He said \"hi\""
         }),
@@ -103,7 +103,7 @@ export class ButtonDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         new Text({
           "style": (this.__k0 || (this.__k0 = new TextStyle({
@@ -162,7 +162,7 @@ export class LayoutDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Row + Expanded / Flexible / Spacer",
@@ -182,7 +182,7 @@ export class LayoutDetail {
                 }))),
                 "child": (this.__k2 || (this.__k2 = new Text({
                   "data": "A",
-                  "textAlign": "center"
+                  "textAlign": TextAlign.center
                 })))
               })
             }),
@@ -198,7 +198,7 @@ export class LayoutDetail {
                 }))),
                 "child": (this.__k4 || (this.__k4 = new Text({
                   "data": "B（flex=2）",
-                  "textAlign": "center"
+                  "textAlign": TextAlign.center
                 })))
               })
             })
@@ -265,8 +265,8 @@ export class LayoutDetail {
         new SizedBox({
           "height": 100,
           "child": new Stack({
-            "fit": "expand",
-            "clipBehavior": "hardEdge",
+            "fit": StackFit.expand,
+            "clipBehavior": Clip.hardEdge,
             "children": [
               new Container({
                 "color": Colors.grey.shade200
@@ -310,12 +310,12 @@ export class LayoutDetail {
           })
         }))),
         new Wrap({
-          "direction": "horizontal",
+          "direction": Axis.horizontal,
           "spacing": 8,
           "runSpacing": 8,
-          "alignment": "start",
-          "runAlignment": "center",
-          "crossAxisAlignment": "center",
+          "alignment": WrapAlignment.start,
+          "runAlignment": WrapAlignment.center,
+          "crossAxisAlignment": WrapCrossAlignment.center,
           "children": [
             ...(() => { var out = []; for (let i = 1; (i <= 5); (i++)) { out.push.apply(out, [new Chip({
                     "label": new Text({
@@ -391,7 +391,7 @@ export class LayoutDetail {
             }))),
             "child": (this.__k22 || (this.__k22 = new Text({
               "data": "60% 宽度",
-              "textAlign": "center"
+              "textAlign": TextAlign.center
             })))
           })
         })
@@ -407,7 +407,7 @@ export class ImageDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Image · 网络图片",
@@ -422,7 +422,7 @@ export class ImageDetail {
           }),
           "child": Image.network({
             "height": 120,
-            "fit": "cover",
+            "fit": BoxFit.cover,
             "src": "https://picsum.photos/seed/hotpatch/400/160"
           })
         }),
@@ -443,7 +443,7 @@ export class ImageDetail {
           "child": new CachedNetworkImage({
             "imageUrl": "https://picsum.photos/seed/hotpatchcache/400/160",
             "height": 120,
-            "fit": "cover"
+            "fit": BoxFit.cover
           })
         }),
         (this.__k1 || (this.__k1 = new SizedBox({
@@ -506,7 +506,7 @@ export class ContainerDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Container · 颜色/圆角/Padding",
@@ -637,7 +637,7 @@ export class ContainerDetail {
               "width": 1
             })))
           }),
-          "clipBehavior": "antiAlias",
+          "clipBehavior": Clip.antiAlias,
           "child": (this.__k12 || (this.__k12 = new Padding({
             "child": new Text({
               "data": "圆角卡片 + 描边 + 阴影"
@@ -699,7 +699,7 @@ export class ScrollDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         new Text({
           "style": (this.__k0 || (this.__k0 = new TextStyle({
@@ -787,7 +787,7 @@ export class ScrollDetail {
         }),
         new SingleChildScrollView({
           "controller": this._scrollController,
-          "scrollDirection": "horizontal",
+          "scrollDirection": Axis.horizontal,
           "physics": (this.__k7 || (this.__k7 = new ClampingScrollPhysics({}))),
           "child": new Row({
             "children": [
@@ -1199,7 +1199,7 @@ export class GridDetail {
         })))
       }),
       "body": new Column({
-        "crossAxisAlignment": "stretch",
+        "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           new Padding({
             "padding": (this.__k2 || (this.__k2 = EdgeInsets.all({
@@ -1338,7 +1338,7 @@ export class ScaffoldDetail {
       "body": new SafeArea({
         "child": new Center({
           "child": new Column({
-            "mainAxisAlignment": "center",
+            "mainAxisAlignment": MainAxisAlignment.center,
             "children": [
               (this.__k2 || (this.__k2 = new Icon({
                 "color": Colors.deepPurple,
@@ -1437,7 +1437,7 @@ export class InputDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "TextField",
@@ -1630,7 +1630,7 @@ export class ProgressDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "CircularProgressIndicator",
@@ -1713,7 +1713,7 @@ export class NotifierCard {
           "value": 16
         }))),
         "child": new Column({
-          "mainAxisSize": "min",
+          "mainAxisSize": MainAxisSize.min,
           "children": [
             new ListenableBuilder({
               "listenable": this._model,
@@ -1729,7 +1729,7 @@ export class NotifierCard {
               "height": 12
             }))),
             new Row({
-              "mainAxisAlignment": "center",
+              "mainAxisAlignment": MainAxisAlignment.center,
               "children": [
                 new ElevatedButton({
                   "onPressed": this.__bindFn(0, [], (...__a) => this._inc(...__a)),
@@ -1779,8 +1779,8 @@ export class StatelessCard {
           "value": 16
         }))),
         "child": new Column({
-          "mainAxisSize": "min",
-          "crossAxisAlignment": "start",
+          "mainAxisSize": MainAxisSize.min,
+          "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             new Row({
               "children": [
@@ -1837,7 +1837,7 @@ export class TabDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "DefaultTabController · 官方惯用法（controller 由祖先提供）",
@@ -1995,7 +1995,7 @@ export class PageViewDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         new Text({
           "style": (this.__k0 || (this.__k0 = new TextStyle({
@@ -2041,7 +2041,7 @@ export class PageViewDetail {
           "height": 10
         }))),
         new Row({
-          "mainAxisAlignment": "center",
+          "mainAxisAlignment": MainAxisAlignment.center,
           "children": [
             ...(() => { var out = []; for (let i = 0; (i < 3); (i++)) { out.push.apply(out, [new Container({
                     "width": 9,
@@ -2050,7 +2050,7 @@ export class PageViewDetail {
                       "value": 4
                     }))),
                     "decoration": new BoxDecoration({
-                      "shape": "circle",
+                      "shape": BoxShape.circle,
                       "color": (i == this._page) ? Colors.deepPurple : (this.__k7 || (this.__k7 = new Color({
                         "value": 0xFFBDBDBD
                       })))
@@ -2062,7 +2062,7 @@ export class PageViewDetail {
           "height": 8
         }))),
         new Row({
-          "mainAxisAlignment": "center",
+          "mainAxisAlignment": MainAxisAlignment.center,
           "children": [
             new TextButton({
               "onPressed": this.__bindFn(1, [], (...__a) => this._prevPage(...__a)),
@@ -2165,7 +2165,7 @@ export class KeyDetail {
   }
   _valueKeyRows() {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "① 带 key：key: ValueKey(name)",
@@ -2201,7 +2201,7 @@ export class KeyDetail {
   }
   _objectKeyRows() {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         new KeyTile({
           "index": 0,
@@ -2299,7 +2299,7 @@ export class KeyDetail {
         })
       }),
       "child": new Column({
-        "crossAxisAlignment": "stretch",
+        "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           (this.__k5 || (this.__k5 = new Text({
             "data": "ValueKey · 列表按值匹配",
@@ -2367,7 +2367,7 @@ export class KeyDetail {
         })
       }),
       "child": new Column({
-        "crossAxisAlignment": "stretch",
+        "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           (this.__k12 || (this.__k12 = new Text({
             "data": "ObjectKey · 按对象身份相等",
@@ -2446,7 +2446,7 @@ export class KeyDetail {
         })
       }),
       "child": new Column({
-        "crossAxisAlignment": "stretch",
+        "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           (this.__k18 || (this.__k18 = new Text({
             "data": "UniqueKey · 每次都是新身份",
@@ -2509,7 +2509,7 @@ export class KeyDetail {
         })
       }),
       "child": new Column({
-        "crossAxisAlignment": "stretch",
+        "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           (this.__k21 || (this.__k21 = new Text({
             "data": "PageStorageKey · 滚动位置持久化",
@@ -2568,7 +2568,7 @@ export class KeyDetail {
         })
       }),
       "child": new Column({
-        "crossAxisAlignment": "stretch",
+        "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           (this.__k23 || (this.__k23 = new Text({
             "data": "GlobalKey · 宿主端量测 / 定位",
@@ -2794,7 +2794,7 @@ export class DrawerDetail {
       }),
       "body": new Center({
         "child": new Column({
-          "mainAxisAlignment": "center",
+          "mainAxisAlignment": MainAxisAlignment.center,
           "children": [
             (this.__k13 || (this.__k13 = new Icon({
               "color": Colors.indigo,
@@ -2836,7 +2836,7 @@ export class ReorderListDetail {
   }
   build(context) {
     return new Column({
-      "mainAxisSize": "min",
+      "mainAxisSize": MainAxisSize.min,
       "children": [
         new Padding({
           "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
@@ -2916,7 +2916,7 @@ export class TestWidget {
       })))];
     return new Center({
       "child": new Column({
-        "mainAxisSize": "min",
+        "mainAxisSize": MainAxisSize.min,
         "children": [
           text,
           (this.__k4 || (this.__k4 = new SizedBox({

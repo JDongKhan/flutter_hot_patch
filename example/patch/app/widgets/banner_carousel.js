@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { HomeBanner } from '../model/app_models.js';
-import { Alignment, BorderRadius, BoxDecoration, ClipRRect, Color, Column, Container, Curves, Duration, EdgeInsets, FontWeight, Image, InkWell, LinearGradient, Padding, PageController, PageView, Positioned, Radius, Row, SizedBox, Stack, Text, TextStyle, Timer } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, ClipRRect, Color, Column, Container, CrossAxisAlignment, Curves, Duration, EdgeInsets, FontWeight, Image, InkWell, LinearGradient, MainAxisAlignment, MainAxisSize, Padding, PageController, PageView, Positioned, Radius, Row, SizedBox, Stack, StackFit, Text, TextStyle, Timer } from '../../flutter.js';
 
 // 组件 BannerCarousel
 export class BannerCarousel {
@@ -82,7 +82,7 @@ export class BannerCarousel {
       return (this.__k0 || (this.__k0 = SizedBox.shrink({})));
     }
     return new Column({
-      "mainAxisSize": "min",
+      "mainAxisSize": MainAxisSize.min,
       "children": [
         new SizedBox({
           "height": BannerCarousel._height,
@@ -100,7 +100,7 @@ export class BannerCarousel {
           "height": 10
         }))),
         new Row({
-          "mainAxisAlignment": "center",
+          "mainAxisAlignment": MainAxisAlignment.center,
           "children": [
             ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [new Container({
                     "margin": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
@@ -159,10 +159,10 @@ export class BannerSlide {
             })
           }))),
           "child": new Stack({
-            "fit": "expand",
+            "fit": StackFit.expand,
             "children": [
               Image.asset({
-                "fit": "cover",
+                "fit": BoxFit.cover,
                 "name": this.banner.img
               }),
               new Container({
@@ -186,7 +186,7 @@ export class BannerSlide {
                 "right": 14,
                 "bottom": 14,
                 "child": new Column({
-                  "crossAxisAlignment": "start",
+                  "crossAxisAlignment": CrossAxisAlignment.start,
                   "children": [
                     new Text({
                       "style": (this.__k3 || (this.__k3 = new TextStyle({

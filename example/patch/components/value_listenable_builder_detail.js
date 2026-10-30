@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/value_listenable_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, Expanded, FontWeight, OutlinedButton, Row, SizedBox, Text, TextStyle, ValueListenableBuilder, ValueNotifier } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, Text, TextStyle, ValueListenableBuilder, ValueNotifier } from '../flutter.js';
 
 // 组件 ValueListenableBuilderDetail
 export class ValueListenableBuilderDetail {
@@ -42,8 +42,8 @@ export class ValueListenableBuilderDetail {
       }))),
       "color": Colors.grey.shade100,
       "child": new Column({
-        "mainAxisSize": "min",
-        "crossAxisAlignment": "stretch",
+        "mainAxisSize": MainAxisSize.min,
+        "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           new Text({
             "style": (this.__k1 || (this.__k1 = new TextStyle({
@@ -59,10 +59,10 @@ export class ValueListenableBuilderDetail {
             "valueListenable": this._active,
             "builder": (context, value, child) => { this._builds += 1;
               return new Column({
-                "crossAxisAlignment": "stretch",
+                "crossAxisAlignment": CrossAxisAlignment.stretch,
                 "children": [
                   new Row({
-                    "crossAxisAlignment": "center",
+                    "crossAxisAlignment": CrossAxisAlignment.center,
                     "children": [
                       new Container({
                         "width": 64,

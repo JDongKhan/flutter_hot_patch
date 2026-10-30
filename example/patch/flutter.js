@@ -1993,6 +1993,3095 @@ export class DismissDirection {
   static down = "down";
 }
 
+
+// ===== SDK 枚举值类（由源码 enum 声明自动生成，勿手改）=====
+// 翻译层对 `Owner.member` 一律原样引用，跨桥 toJSON() 发成员名。
+
+export class SchedulerServiceExtensions {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SchedulerServiceExtensions.' + this.name; }
+  static timeDilation = new SchedulerServiceExtensions('timeDilation', 0);
+}
+SchedulerServiceExtensions.values = [SchedulerServiceExtensions.timeDilation];
+
+export class SchedulerPhase {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SchedulerPhase.' + this.name; }
+  static idle = new SchedulerPhase('idle', 0);
+  static transientCallbacks = new SchedulerPhase('transientCallbacks', 1);
+  static midFrameMicrotasks = new SchedulerPhase('midFrameMicrotasks', 2);
+  static persistentCallbacks = new SchedulerPhase('persistentCallbacks', 3);
+  static postFrameCallbacks = new SchedulerPhase('postFrameCallbacks', 4);
+}
+SchedulerPhase.values = [SchedulerPhase.idle, SchedulerPhase.transientCallbacks, SchedulerPhase.midFrameMicrotasks, SchedulerPhase.persistentCallbacks, SchedulerPhase.postFrameCallbacks];
+
+export class AnimationBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AnimationBehavior.' + this.name; }
+  static normal = new AnimationBehavior('normal', 0);
+  static preserve = new AnimationBehavior('preserve', 1);
+}
+AnimationBehavior.values = [AnimationBehavior.normal, AnimationBehavior.preserve];
+
+export class AnimationStatus {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AnimationStatus.' + this.name; }
+  static dismissed = new AnimationStatus('dismissed', 0);
+  static forward = new AnimationStatus('forward', 1);
+  static reverse = new AnimationStatus('reverse', 2);
+  static completed = new AnimationStatus('completed', 3);
+}
+AnimationStatus.values = [AnimationStatus.dismissed, AnimationStatus.forward, AnimationStatus.reverse, AnimationStatus.completed];
+
+export class DiagnosticLevel {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DiagnosticLevel.' + this.name; }
+  static hidden = new DiagnosticLevel('hidden', 0);
+  static fine = new DiagnosticLevel('fine', 1);
+  static debug = new DiagnosticLevel('debug', 2);
+  static info = new DiagnosticLevel('info', 3);
+  static warning = new DiagnosticLevel('warning', 4);
+  static hint = new DiagnosticLevel('hint', 5);
+  static summary = new DiagnosticLevel('summary', 6);
+  static error = new DiagnosticLevel('error', 7);
+  static off = new DiagnosticLevel('off', 8);
+}
+DiagnosticLevel.values = [DiagnosticLevel.hidden, DiagnosticLevel.fine, DiagnosticLevel.debug, DiagnosticLevel.info, DiagnosticLevel.warning, DiagnosticLevel.hint, DiagnosticLevel.summary, DiagnosticLevel.error, DiagnosticLevel.off];
+
+export class DiagnosticsTreeStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DiagnosticsTreeStyle.' + this.name; }
+  static none = new DiagnosticsTreeStyle('none', 0);
+  static sparse = new DiagnosticsTreeStyle('sparse', 1);
+  static offstage = new DiagnosticsTreeStyle('offstage', 2);
+  static dense = new DiagnosticsTreeStyle('dense', 3);
+  static transition = new DiagnosticsTreeStyle('transition', 4);
+  static error = new DiagnosticsTreeStyle('error', 5);
+  static whitespace = new DiagnosticsTreeStyle('whitespace', 6);
+  static flat = new DiagnosticsTreeStyle('flat', 7);
+  static singleLine = new DiagnosticsTreeStyle('singleLine', 8);
+  static errorProperty = new DiagnosticsTreeStyle('errorProperty', 9);
+  static shallow = new DiagnosticsTreeStyle('shallow', 10);
+  static truncateChildren = new DiagnosticsTreeStyle('truncateChildren', 11);
+}
+DiagnosticsTreeStyle.values = [DiagnosticsTreeStyle.none, DiagnosticsTreeStyle.sparse, DiagnosticsTreeStyle.offstage, DiagnosticsTreeStyle.dense, DiagnosticsTreeStyle.transition, DiagnosticsTreeStyle.error, DiagnosticsTreeStyle.whitespace, DiagnosticsTreeStyle.flat, DiagnosticsTreeStyle.singleLine, DiagnosticsTreeStyle.errorProperty, DiagnosticsTreeStyle.shallow, DiagnosticsTreeStyle.truncateChildren];
+
+export class TargetPlatform {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TargetPlatform.' + this.name; }
+  static android = new TargetPlatform('android', 0);
+  static fuchsia = new TargetPlatform('fuchsia', 1);
+  static iOS = new TargetPlatform('iOS', 2);
+  static linux = new TargetPlatform('linux', 3);
+  static macOS = new TargetPlatform('macOS', 4);
+  static windows = new TargetPlatform('windows', 5);
+}
+TargetPlatform.values = [TargetPlatform.android, TargetPlatform.fuchsia, TargetPlatform.iOS, TargetPlatform.linux, TargetPlatform.macOS, TargetPlatform.windows];
+
+export class FoundationServiceExtensions {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FoundationServiceExtensions.' + this.name; }
+  static reassemble = new FoundationServiceExtensions('reassemble', 0);
+  static exit = new FoundationServiceExtensions('exit', 1);
+  static connectedVmServiceUri = new FoundationServiceExtensions('connectedVmServiceUri', 2);
+  static activeDevToolsServerAddress = new FoundationServiceExtensions('activeDevToolsServerAddress', 3);
+  static platformOverride = new FoundationServiceExtensions('platformOverride', 4);
+  static brightnessOverride = new FoundationServiceExtensions('brightnessOverride', 5);
+}
+FoundationServiceExtensions.values = [FoundationServiceExtensions.reassemble, FoundationServiceExtensions.exit, FoundationServiceExtensions.connectedVmServiceUri, FoundationServiceExtensions.activeDevToolsServerAddress, FoundationServiceExtensions.platformOverride, FoundationServiceExtensions.brightnessOverride];
+
+export class Assertiveness {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'Assertiveness.' + this.name; }
+  static polite = new Assertiveness('polite', 0);
+  static assertive = new Assertiveness('assertive', 1);
+}
+Assertiveness.values = [Assertiveness.polite, Assertiveness.assertive];
+
+export class AccessibilityFocusBlockType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AccessibilityFocusBlockType.' + this.name; }
+  static none = new AccessibilityFocusBlockType('none', 0);
+  static blockSubtree = new AccessibilityFocusBlockType('blockSubtree', 1);
+  static blockNode = new AccessibilityFocusBlockType('blockNode', 2);
+}
+AccessibilityFocusBlockType.values = [AccessibilityFocusBlockType.none, AccessibilityFocusBlockType.blockSubtree, AccessibilityFocusBlockType.blockNode];
+
+export class DebugSemanticsDumpOrder {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DebugSemanticsDumpOrder.' + this.name; }
+  static inverseHitTest = new DebugSemanticsDumpOrder('inverseHitTest', 0);
+  static traversalOrder = new DebugSemanticsDumpOrder('traversalOrder', 1);
+}
+DebugSemanticsDumpOrder.values = [DebugSemanticsDumpOrder.inverseHitTest, DebugSemanticsDumpOrder.traversalOrder];
+
+export class BorderStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BorderStyle.' + this.name; }
+  static none = new BorderStyle('none', 0);
+  static solid = new BorderStyle('solid', 1);
+}
+BorderStyle.values = [BorderStyle.none, BorderStyle.solid];
+
+export class BoxShape {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BoxShape.' + this.name; }
+  static rectangle = new BoxShape('rectangle', 0);
+  static circle = new BoxShape('circle', 1);
+}
+BoxShape.values = [BoxShape.rectangle, BoxShape.circle];
+
+export class ResizeImagePolicy {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ResizeImagePolicy.' + this.name; }
+  static exact = new ResizeImagePolicy('exact', 0);
+  static fit = new ResizeImagePolicy('fit', 1);
+}
+ResizeImagePolicy.values = [ResizeImagePolicy.exact, ResizeImagePolicy.fit];
+
+export class WebHtmlElementStrategy {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'WebHtmlElementStrategy.' + this.name; }
+  static never = new WebHtmlElementStrategy('never', 0);
+  static fallback = new WebHtmlElementStrategy('fallback', 1);
+  static prefer = new WebHtmlElementStrategy('prefer', 2);
+}
+WebHtmlElementStrategy.values = [WebHtmlElementStrategy.never, WebHtmlElementStrategy.fallback, WebHtmlElementStrategy.prefer];
+
+export class FlutterLogoStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FlutterLogoStyle.' + this.name; }
+  static markOnly = new FlutterLogoStyle('markOnly', 0);
+  static horizontal = new FlutterLogoStyle('horizontal', 1);
+  static stacked = new FlutterLogoStyle('stacked', 2);
+}
+FlutterLogoStyle.values = [FlutterLogoStyle.markOnly, FlutterLogoStyle.horizontal, FlutterLogoStyle.stacked];
+
+export class RenderComparison {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RenderComparison.' + this.name; }
+  static identical = new RenderComparison('identical', 0);
+  static metadata = new RenderComparison('metadata', 1);
+  static paint = new RenderComparison('paint', 2);
+  static layout = new RenderComparison('layout', 3);
+}
+RenderComparison.values = [RenderComparison.identical, RenderComparison.metadata, RenderComparison.paint, RenderComparison.layout];
+
+export class Axis {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'Axis.' + this.name; }
+  static horizontal = new Axis('horizontal', 0);
+  static vertical = new Axis('vertical', 1);
+}
+Axis.values = [Axis.horizontal, Axis.vertical];
+
+export class VerticalDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'VerticalDirection.' + this.name; }
+  static up = new VerticalDirection('up', 0);
+  static down = new VerticalDirection('down', 1);
+}
+VerticalDirection.values = [VerticalDirection.up, VerticalDirection.down];
+
+export class AxisDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AxisDirection.' + this.name; }
+  static up = new AxisDirection('up', 0);
+  static right = new AxisDirection('right', 1);
+  static down = new AxisDirection('down', 2);
+  static left = new AxisDirection('left', 3);
+}
+AxisDirection.values = [AxisDirection.up, AxisDirection.right, AxisDirection.down, AxisDirection.left];
+
+export class BoxFit {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BoxFit.' + this.name; }
+  static fill = new BoxFit('fill', 0);
+  static contain = new BoxFit('contain', 1);
+  static cover = new BoxFit('cover', 2);
+  static fitWidth = new BoxFit('fitWidth', 3);
+  static fitHeight = new BoxFit('fitHeight', 4);
+  static none = new BoxFit('none', 5);
+  static scaleDown = new BoxFit('scaleDown', 6);
+}
+BoxFit.values = [BoxFit.fill, BoxFit.contain, BoxFit.cover, BoxFit.fitWidth, BoxFit.fitHeight, BoxFit.none, BoxFit.scaleDown];
+
+export class TextOverflow {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextOverflow.' + this.name; }
+  static clip = new TextOverflow('clip', 0);
+  static fade = new TextOverflow('fade', 1);
+  static ellipsis = new TextOverflow('ellipsis', 2);
+  static visible = new TextOverflow('visible', 3);
+}
+TextOverflow.values = [TextOverflow.clip, TextOverflow.fade, TextOverflow.ellipsis, TextOverflow.visible];
+
+export class TextWidthBasis {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextWidthBasis.' + this.name; }
+  static parent = new TextWidthBasis('parent', 0);
+  static longestLine = new TextWidthBasis('longestLine', 1);
+}
+TextWidthBasis.values = [TextWidthBasis.parent, TextWidthBasis.longestLine];
+
+export class ImageRepeat {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ImageRepeat.' + this.name; }
+  static repeat = new ImageRepeat('repeat', 0);
+  static repeatX = new ImageRepeat('repeatX', 1);
+  static repeatY = new ImageRepeat('repeatY', 2);
+  static noRepeat = new ImageRepeat('noRepeat', 3);
+}
+ImageRepeat.values = [ImageRepeat.repeat, ImageRepeat.repeatX, ImageRepeat.repeatY, ImageRepeat.noRepeat];
+
+export class GestureDisposition {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'GestureDisposition.' + this.name; }
+  static accepted = new GestureDisposition('accepted', 0);
+  static rejected = new GestureDisposition('rejected', 1);
+}
+GestureDisposition.values = [GestureDisposition.accepted, GestureDisposition.rejected];
+
+export class DragStartBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DragStartBehavior.' + this.name; }
+  static down = new DragStartBehavior('down', 0);
+  static start = new DragStartBehavior('start', 1);
+}
+DragStartBehavior.values = [DragStartBehavior.down, DragStartBehavior.start];
+
+export class MultitouchDragStrategy {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'MultitouchDragStrategy.' + this.name; }
+  static latestPointer = new MultitouchDragStrategy('latestPointer', 0);
+  static averageBoundaryPointers = new MultitouchDragStrategy('averageBoundaryPointers', 1);
+  static sumAllPointers = new MultitouchDragStrategy('sumAllPointers', 2);
+}
+MultitouchDragStrategy.values = [MultitouchDragStrategy.latestPointer, MultitouchDragStrategy.averageBoundaryPointers, MultitouchDragStrategy.sumAllPointers];
+
+export class GestureRecognizerState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'GestureRecognizerState.' + this.name; }
+  static ready = new GestureRecognizerState('ready', 0);
+  static possible = new GestureRecognizerState('possible', 1);
+  static defunct = new GestureRecognizerState('defunct', 2);
+}
+GestureRecognizerState.values = [GestureRecognizerState.ready, GestureRecognizerState.possible, GestureRecognizerState.defunct];
+
+export class WrapAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'WrapAlignment.' + this.name; }
+  static start = new WrapAlignment('start', 0);
+  static end = new WrapAlignment('end', 1);
+  static center = new WrapAlignment('center', 2);
+  static spaceBetween = new WrapAlignment('spaceBetween', 3);
+  static spaceAround = new WrapAlignment('spaceAround', 4);
+  static spaceEvenly = new WrapAlignment('spaceEvenly', 5);
+}
+WrapAlignment.values = [WrapAlignment.start, WrapAlignment.end, WrapAlignment.center, WrapAlignment.spaceBetween, WrapAlignment.spaceAround, WrapAlignment.spaceEvenly];
+
+export class WrapCrossAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'WrapCrossAlignment.' + this.name; }
+  static start = new WrapCrossAlignment('start', 0);
+  static end = new WrapCrossAlignment('end', 1);
+  static center = new WrapCrossAlignment('center', 2);
+}
+WrapCrossAlignment.values = [WrapCrossAlignment.start, WrapCrossAlignment.end, WrapCrossAlignment.center];
+
+export class HitTestBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'HitTestBehavior.' + this.name; }
+  static deferToChild = new HitTestBehavior('deferToChild', 0);
+  static opaque = new HitTestBehavior('opaque', 1);
+  static translucent = new HitTestBehavior('translucent', 2);
+}
+HitTestBehavior.values = [HitTestBehavior.deferToChild, HitTestBehavior.opaque, HitTestBehavior.translucent];
+
+export class DecorationPosition {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DecorationPosition.' + this.name; }
+  static background = new DecorationPosition('background', 0);
+  static foreground = new DecorationPosition('foreground', 1);
+}
+DecorationPosition.values = [DecorationPosition.background, DecorationPosition.foreground];
+
+export class ScrollDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ScrollDirection.' + this.name; }
+  static idle = new ScrollDirection('idle', 0);
+  static forward = new ScrollDirection('forward', 1);
+  static reverse = new ScrollDirection('reverse', 2);
+}
+ScrollDirection.values = [ScrollDirection.idle, ScrollDirection.forward, ScrollDirection.reverse];
+
+export class SelectionResult {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SelectionResult.' + this.name; }
+  static next = new SelectionResult('next', 0);
+  static previous = new SelectionResult('previous', 1);
+  static end = new SelectionResult('end', 2);
+  static pending = new SelectionResult('pending', 3);
+  static none = new SelectionResult('none', 4);
+}
+SelectionResult.values = [SelectionResult.next, SelectionResult.previous, SelectionResult.end, SelectionResult.pending, SelectionResult.none];
+
+export class SelectionEventType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SelectionEventType.' + this.name; }
+  static startEdgeUpdate = new SelectionEventType('startEdgeUpdate', 0);
+  static endEdgeUpdate = new SelectionEventType('endEdgeUpdate', 1);
+  static clear = new SelectionEventType('clear', 2);
+  static selectAll = new SelectionEventType('selectAll', 3);
+  static selectWord = new SelectionEventType('selectWord', 4);
+  static selectParagraph = new SelectionEventType('selectParagraph', 5);
+  static granularlyExtendSelection = new SelectionEventType('granularlyExtendSelection', 6);
+  static directionallyExtendSelection = new SelectionEventType('directionallyExtendSelection', 7);
+}
+SelectionEventType.values = [SelectionEventType.startEdgeUpdate, SelectionEventType.endEdgeUpdate, SelectionEventType.clear, SelectionEventType.selectAll, SelectionEventType.selectWord, SelectionEventType.selectParagraph, SelectionEventType.granularlyExtendSelection, SelectionEventType.directionallyExtendSelection];
+
+export class TextGranularity {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextGranularity.' + this.name; }
+  static character = new TextGranularity('character', 0);
+  static word = new TextGranularity('word', 1);
+  static paragraph = new TextGranularity('paragraph', 2);
+  static line = new TextGranularity('line', 3);
+  static document = new TextGranularity('document', 4);
+}
+TextGranularity.values = [TextGranularity.character, TextGranularity.word, TextGranularity.paragraph, TextGranularity.line, TextGranularity.document];
+
+export class SelectionExtendDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SelectionExtendDirection.' + this.name; }
+  static previousLine = new SelectionExtendDirection('previousLine', 0);
+  static nextLine = new SelectionExtendDirection('nextLine', 1);
+  static forward = new SelectionExtendDirection('forward', 2);
+  static backward = new SelectionExtendDirection('backward', 3);
+}
+SelectionExtendDirection.values = [SelectionExtendDirection.previousLine, SelectionExtendDirection.nextLine, SelectionExtendDirection.forward, SelectionExtendDirection.backward];
+
+export class SelectionStatus {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SelectionStatus.' + this.name; }
+  static uncollapsed = new SelectionStatus('uncollapsed', 0);
+  static collapsed = new SelectionStatus('collapsed', 1);
+  static none = new SelectionStatus('none', 2);
+}
+SelectionStatus.values = [SelectionStatus.uncollapsed, SelectionStatus.collapsed, SelectionStatus.none];
+
+export class TextSelectionHandleType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextSelectionHandleType.' + this.name; }
+  static left = new TextSelectionHandleType('left', 0);
+  static right = new TextSelectionHandleType('right', 1);
+  static collapsed = new TextSelectionHandleType('collapsed', 2);
+}
+TextSelectionHandleType.values = [TextSelectionHandleType.left, TextSelectionHandleType.right, TextSelectionHandleType.collapsed];
+
+export class FlexFit {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FlexFit.' + this.name; }
+  static tight = new FlexFit('tight', 0);
+  static loose = new FlexFit('loose', 1);
+}
+FlexFit.values = [FlexFit.tight, FlexFit.loose];
+
+export class MainAxisSize {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'MainAxisSize.' + this.name; }
+  static min = new MainAxisSize('min', 0);
+  static max = new MainAxisSize('max', 1);
+}
+MainAxisSize.values = [MainAxisSize.min, MainAxisSize.max];
+
+export class MainAxisAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'MainAxisAlignment.' + this.name; }
+  static start = new MainAxisAlignment('start', 0);
+  static end = new MainAxisAlignment('end', 1);
+  static center = new MainAxisAlignment('center', 2);
+  static spaceBetween = new MainAxisAlignment('spaceBetween', 3);
+  static spaceAround = new MainAxisAlignment('spaceAround', 4);
+  static spaceEvenly = new MainAxisAlignment('spaceEvenly', 5);
+}
+MainAxisAlignment.values = [MainAxisAlignment.start, MainAxisAlignment.end, MainAxisAlignment.center, MainAxisAlignment.spaceBetween, MainAxisAlignment.spaceAround, MainAxisAlignment.spaceEvenly];
+
+export class CrossAxisAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CrossAxisAlignment.' + this.name; }
+  static start = new CrossAxisAlignment('start', 0);
+  static end = new CrossAxisAlignment('end', 1);
+  static center = new CrossAxisAlignment('center', 2);
+  static stretch = new CrossAxisAlignment('stretch', 3);
+  static baseline = new CrossAxisAlignment('baseline', 4);
+}
+CrossAxisAlignment.values = [CrossAxisAlignment.start, CrossAxisAlignment.end, CrossAxisAlignment.center, CrossAxisAlignment.stretch, CrossAxisAlignment.baseline];
+
+export class TableCellVerticalAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TableCellVerticalAlignment.' + this.name; }
+  static top = new TableCellVerticalAlignment('top', 0);
+  static middle = new TableCellVerticalAlignment('middle', 1);
+  static bottom = new TableCellVerticalAlignment('bottom', 2);
+  static baseline = new TableCellVerticalAlignment('baseline', 3);
+  static fill = new TableCellVerticalAlignment('fill', 4);
+  static intrinsicHeight = new TableCellVerticalAlignment('intrinsicHeight', 5);
+}
+TableCellVerticalAlignment.values = [TableCellVerticalAlignment.top, TableCellVerticalAlignment.middle, TableCellVerticalAlignment.bottom, TableCellVerticalAlignment.baseline, TableCellVerticalAlignment.fill, TableCellVerticalAlignment.intrinsicHeight];
+
+export class OverflowBoxFit {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'OverflowBoxFit.' + this.name; }
+  static max = new OverflowBoxFit('max', 0);
+  static deferToChild = new OverflowBoxFit('deferToChild', 1);
+}
+OverflowBoxFit.values = [OverflowBoxFit.max, OverflowBoxFit.deferToChild];
+
+export class PerformanceOverlayOption {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PerformanceOverlayOption.' + this.name; }
+  static displayRasterizerStatistics = new PerformanceOverlayOption('displayRasterizerStatistics', 0);
+  static visualizeRasterizerStatistics = new PerformanceOverlayOption('visualizeRasterizerStatistics', 1);
+  static displayEngineStatistics = new PerformanceOverlayOption('displayEngineStatistics', 2);
+  static visualizeEngineStatistics = new PerformanceOverlayOption('visualizeEngineStatistics', 3);
+}
+PerformanceOverlayOption.values = [PerformanceOverlayOption.displayRasterizerStatistics, PerformanceOverlayOption.visualizeRasterizerStatistics, PerformanceOverlayOption.displayEngineStatistics, PerformanceOverlayOption.visualizeEngineStatistics];
+
+export class CacheExtentStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CacheExtentStyle.' + this.name; }
+  static pixel = new CacheExtentStyle('pixel', 0);
+  static viewport = new CacheExtentStyle('viewport', 1);
+}
+CacheExtentStyle.values = [CacheExtentStyle.pixel, CacheExtentStyle.viewport];
+
+export class SliverPaintOrder {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SliverPaintOrder.' + this.name; }
+  static firstIsTop = new SliverPaintOrder('firstIsTop', 0);
+  static lastIsTop = new SliverPaintOrder('lastIsTop', 1);
+}
+SliverPaintOrder.values = [SliverPaintOrder.firstIsTop, SliverPaintOrder.lastIsTop];
+
+export class GrowthDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'GrowthDirection.' + this.name; }
+  static forward = new GrowthDirection('forward', 0);
+  static reverse = new GrowthDirection('reverse', 1);
+}
+GrowthDirection.values = [GrowthDirection.forward, GrowthDirection.reverse];
+
+export class StackFit {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'StackFit.' + this.name; }
+  static loose = new StackFit('loose', 0);
+  static expand = new StackFit('expand', 1);
+  static passthrough = new StackFit('passthrough', 2);
+}
+StackFit.values = [StackFit.loose, StackFit.expand, StackFit.passthrough];
+
+export class PlatformViewHitTestBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PlatformViewHitTestBehavior.' + this.name; }
+  static opaque = new PlatformViewHitTestBehavior('opaque', 0);
+  static translucent = new PlatformViewHitTestBehavior('translucent', 1);
+  static transparent = new PlatformViewHitTestBehavior('transparent', 2);
+}
+PlatformViewHitTestBehavior.values = [PlatformViewHitTestBehavior.opaque, PlatformViewHitTestBehavior.translucent, PlatformViewHitTestBehavior.transparent];
+
+export class RenderingServiceExtensions {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RenderingServiceExtensions.' + this.name; }
+  static invertOversizedImages = new RenderingServiceExtensions('invertOversizedImages', 0);
+  static debugPaint = new RenderingServiceExtensions('debugPaint', 1);
+  static debugPaintBaselinesEnabled = new RenderingServiceExtensions('debugPaintBaselinesEnabled', 2);
+  static repaintRainbow = new RenderingServiceExtensions('repaintRainbow', 3);
+  static debugDumpLayerTree = new RenderingServiceExtensions('debugDumpLayerTree', 4);
+  static debugDisableClipLayers = new RenderingServiceExtensions('debugDisableClipLayers', 5);
+  static debugDisablePhysicalShapeLayers = new RenderingServiceExtensions('debugDisablePhysicalShapeLayers', 6);
+  static debugDisableOpacityLayers = new RenderingServiceExtensions('debugDisableOpacityLayers', 7);
+  static debugDumpRenderTree = new RenderingServiceExtensions('debugDumpRenderTree', 8);
+  static debugDumpSemanticsTreeInTraversalOrder = new RenderingServiceExtensions('debugDumpSemanticsTreeInTraversalOrder', 9);
+  static debugDumpSemanticsTreeInInverseHitTestOrder = new RenderingServiceExtensions('debugDumpSemanticsTreeInInverseHitTestOrder', 10);
+  static profileRenderObjectPaints = new RenderingServiceExtensions('profileRenderObjectPaints', 11);
+  static profileRenderObjectLayouts = new RenderingServiceExtensions('profileRenderObjectLayouts', 12);
+}
+RenderingServiceExtensions.values = [RenderingServiceExtensions.invertOversizedImages, RenderingServiceExtensions.debugPaint, RenderingServiceExtensions.debugPaintBaselinesEnabled, RenderingServiceExtensions.repaintRainbow, RenderingServiceExtensions.debugDumpLayerTree, RenderingServiceExtensions.debugDisableClipLayers, RenderingServiceExtensions.debugDisablePhysicalShapeLayers, RenderingServiceExtensions.debugDisableOpacityLayers, RenderingServiceExtensions.debugDumpRenderTree, RenderingServiceExtensions.debugDumpSemanticsTreeInTraversalOrder, RenderingServiceExtensions.debugDumpSemanticsTreeInInverseHitTestOrder, RenderingServiceExtensions.profileRenderObjectPaints, RenderingServiceExtensions.profileRenderObjectLayouts];
+
+export class RenderAnimatedSizeState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RenderAnimatedSizeState.' + this.name; }
+  static start = new RenderAnimatedSizeState('start', 0);
+  static stable = new RenderAnimatedSizeState('stable', 1);
+  static changed = new RenderAnimatedSizeState('changed', 2);
+  static unstable = new RenderAnimatedSizeState('unstable', 3);
+}
+RenderAnimatedSizeState.values = [RenderAnimatedSizeState.start, RenderAnimatedSizeState.stable, RenderAnimatedSizeState.changed, RenderAnimatedSizeState.unstable];
+
+export class SpringType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SpringType.' + this.name; }
+  static criticallyDamped = new SpringType('criticallyDamped', 0);
+  static underDamped = new SpringType('underDamped', 1);
+  static overDamped = new SpringType('overDamped', 2);
+}
+SpringType.values = [SpringType.criticallyDamped, SpringType.underDamped, SpringType.overDamped];
+
+export class OverlayVisibilityMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'OverlayVisibilityMode.' + this.name; }
+  static never = new OverlayVisibilityMode('never', 0);
+  static editing = new OverlayVisibilityMode('editing', 1);
+  static notEditing = new OverlayVisibilityMode('notEditing', 2);
+  static always = new OverlayVisibilityMode('always', 3);
+}
+OverlayVisibilityMode.values = [OverlayVisibilityMode.never, OverlayVisibilityMode.editing, OverlayVisibilityMode.notEditing, OverlayVisibilityMode.always];
+
+export class CupertinoButtonSize {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CupertinoButtonSize.' + this.name; }
+  static small = new CupertinoButtonSize('small', 0);
+  static medium = new CupertinoButtonSize('medium', 1);
+  static large = new CupertinoButtonSize('large', 2);
+}
+CupertinoButtonSize.values = [CupertinoButtonSize.small, CupertinoButtonSize.medium, CupertinoButtonSize.large];
+
+export class CupertinoDatePickerMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CupertinoDatePickerMode.' + this.name; }
+  static time = new CupertinoDatePickerMode('time', 0);
+  static date = new CupertinoDatePickerMode('date', 1);
+  static dateAndTime = new CupertinoDatePickerMode('dateAndTime', 2);
+  static monthYear = new CupertinoDatePickerMode('monthYear', 3);
+}
+CupertinoDatePickerMode.values = [CupertinoDatePickerMode.time, CupertinoDatePickerMode.date, CupertinoDatePickerMode.dateAndTime, CupertinoDatePickerMode.monthYear];
+
+export class CupertinoTimerPickerMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CupertinoTimerPickerMode.' + this.name; }
+  static hm = new CupertinoTimerPickerMode('hm', 0);
+  static ms = new CupertinoTimerPickerMode('ms', 1);
+  static hms = new CupertinoTimerPickerMode('hms', 2);
+}
+CupertinoTimerPickerMode.values = [CupertinoTimerPickerMode.hm, CupertinoTimerPickerMode.ms, CupertinoTimerPickerMode.hms];
+
+export class RefreshIndicatorMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RefreshIndicatorMode.' + this.name; }
+  static inactive = new RefreshIndicatorMode('inactive', 0);
+  static drag = new RefreshIndicatorMode('drag', 1);
+  static armed = new RefreshIndicatorMode('armed', 2);
+  static refresh = new RefreshIndicatorMode('refresh', 3);
+  static done = new RefreshIndicatorMode('done', 4);
+}
+RefreshIndicatorMode.values = [RefreshIndicatorMode.inactive, RefreshIndicatorMode.drag, RefreshIndicatorMode.armed, RefreshIndicatorMode.refresh, RefreshIndicatorMode.done];
+
+export class ExpansionTileTransitionMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ExpansionTileTransitionMode.' + this.name; }
+  static fade = new ExpansionTileTransitionMode('fade', 0);
+  static scroll = new ExpansionTileTransitionMode('scroll', 1);
+}
+ExpansionTileTransitionMode.values = [ExpansionTileTransitionMode.fade, ExpansionTileTransitionMode.scroll];
+
+export class CupertinoListSectionType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CupertinoListSectionType.' + this.name; }
+  static base = new CupertinoListSectionType('base', 0);
+  static insetGrouped = new CupertinoListSectionType('insetGrouped', 1);
+}
+CupertinoListSectionType.values = [CupertinoListSectionType.base, CupertinoListSectionType.insetGrouped];
+
+export class CupertinoUserInterfaceLevelData {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CupertinoUserInterfaceLevelData.' + this.name; }
+  static base = new CupertinoUserInterfaceLevelData('base', 0);
+  static elevated = new CupertinoUserInterfaceLevelData('elevated', 1);
+}
+CupertinoUserInterfaceLevelData.values = [CupertinoUserInterfaceLevelData.base, CupertinoUserInterfaceLevelData.elevated];
+
+export class NavigationBarBottomMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'NavigationBarBottomMode.' + this.name; }
+  static automatic = new NavigationBarBottomMode('automatic', 0);
+  static always = new NavigationBarBottomMode('always', 1);
+}
+NavigationBarBottomMode.values = [NavigationBarBottomMode.automatic, NavigationBarBottomMode.always];
+
+export class DatePickerDateTimeOrder {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DatePickerDateTimeOrder.' + this.name; }
+  static date_time_dayPeriod = new DatePickerDateTimeOrder('date_time_dayPeriod', 0);
+  static date_dayPeriod_time = new DatePickerDateTimeOrder('date_dayPeriod_time', 1);
+  static time_dayPeriod_date = new DatePickerDateTimeOrder('time_dayPeriod_date', 2);
+  static dayPeriod_time_date = new DatePickerDateTimeOrder('dayPeriod_time_date', 3);
+}
+DatePickerDateTimeOrder.values = [DatePickerDateTimeOrder.date_time_dayPeriod, DatePickerDateTimeOrder.date_dayPeriod_time, DatePickerDateTimeOrder.time_dayPeriod_date, DatePickerDateTimeOrder.dayPeriod_time_date];
+
+export class DatePickerDateOrder {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DatePickerDateOrder.' + this.name; }
+  static dmy = new DatePickerDateOrder('dmy', 0);
+  static mdy = new DatePickerDateOrder('mdy', 1);
+  static ymd = new DatePickerDateOrder('ymd', 2);
+  static ydm = new DatePickerDateOrder('ydm', 3);
+}
+DatePickerDateOrder.values = [DatePickerDateOrder.dmy, DatePickerDateOrder.mdy, DatePickerDateOrder.ymd, DatePickerDateOrder.ydm];
+
+export class MaterialType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'MaterialType.' + this.name; }
+  static canvas = new MaterialType('canvas', 0);
+  static card = new MaterialType('card', 1);
+  static circle = new MaterialType('circle', 2);
+  static button = new MaterialType('button', 3);
+  static transparency = new MaterialType('transparency', 4);
+}
+MaterialType.values = [MaterialType.canvas, MaterialType.card, MaterialType.circle, MaterialType.button, MaterialType.transparency];
+
+export class NavigationDestinationLabelBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'NavigationDestinationLabelBehavior.' + this.name; }
+  static alwaysShow = new NavigationDestinationLabelBehavior('alwaysShow', 0);
+  static alwaysHide = new NavigationDestinationLabelBehavior('alwaysHide', 1);
+  static onlyShowSelected = new NavigationDestinationLabelBehavior('onlyShowSelected', 2);
+}
+NavigationDestinationLabelBehavior.values = [NavigationDestinationLabelBehavior.alwaysShow, NavigationDestinationLabelBehavior.alwaysHide, NavigationDestinationLabelBehavior.onlyShowSelected];
+
+export class RefreshIndicatorStatus {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RefreshIndicatorStatus.' + this.name; }
+  static drag = new RefreshIndicatorStatus('drag', 0);
+  static armed = new RefreshIndicatorStatus('armed', 1);
+  static snap = new RefreshIndicatorStatus('snap', 2);
+  static refresh = new RefreshIndicatorStatus('refresh', 3);
+  static done = new RefreshIndicatorStatus('done', 4);
+  static canceled = new RefreshIndicatorStatus('canceled', 5);
+}
+RefreshIndicatorStatus.values = [RefreshIndicatorStatus.drag, RefreshIndicatorStatus.armed, RefreshIndicatorStatus.snap, RefreshIndicatorStatus.refresh, RefreshIndicatorStatus.done, RefreshIndicatorStatus.canceled];
+
+export class RefreshIndicatorTriggerMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RefreshIndicatorTriggerMode.' + this.name; }
+  static anywhere = new RefreshIndicatorTriggerMode('anywhere', 0);
+  static onEdge = new RefreshIndicatorTriggerMode('onEdge', 1);
+}
+RefreshIndicatorTriggerMode.values = [RefreshIndicatorTriggerMode.anywhere, RefreshIndicatorTriggerMode.onEdge];
+
+export class SnackBarClosedReason {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SnackBarClosedReason.' + this.name; }
+  static action = new SnackBarClosedReason('action', 0);
+  static dismiss = new SnackBarClosedReason('dismiss', 1);
+  static swipe = new SnackBarClosedReason('swipe', 2);
+  static hide = new SnackBarClosedReason('hide', 3);
+  static remove = new SnackBarClosedReason('remove', 4);
+  static timeout = new SnackBarClosedReason('timeout', 5);
+}
+SnackBarClosedReason.values = [SnackBarClosedReason.action, SnackBarClosedReason.dismiss, SnackBarClosedReason.swipe, SnackBarClosedReason.hide, SnackBarClosedReason.remove, SnackBarClosedReason.timeout];
+
+export class FloatingLabelBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FloatingLabelBehavior.' + this.name; }
+  static never = new FloatingLabelBehavior('never', 0);
+  static auto = new FloatingLabelBehavior('auto', 1);
+  static always = new FloatingLabelBehavior('always', 2);
+}
+FloatingLabelBehavior.values = [FloatingLabelBehavior.never, FloatingLabelBehavior.auto, FloatingLabelBehavior.always];
+
+export class DynamicSchemeVariant {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DynamicSchemeVariant.' + this.name; }
+  static tonalSpot = new DynamicSchemeVariant('tonalSpot', 0);
+  static fidelity = new DynamicSchemeVariant('fidelity', 1);
+  static monochrome = new DynamicSchemeVariant('monochrome', 2);
+  static neutral = new DynamicSchemeVariant('neutral', 3);
+  static vibrant = new DynamicSchemeVariant('vibrant', 4);
+  static expressive = new DynamicSchemeVariant('expressive', 5);
+  static content = new DynamicSchemeVariant('content', 6);
+  static rainbow = new DynamicSchemeVariant('rainbow', 7);
+  static fruitSalad = new DynamicSchemeVariant('fruitSalad', 8);
+}
+DynamicSchemeVariant.values = [DynamicSchemeVariant.tonalSpot, DynamicSchemeVariant.fidelity, DynamicSchemeVariant.monochrome, DynamicSchemeVariant.neutral, DynamicSchemeVariant.vibrant, DynamicSchemeVariant.expressive, DynamicSchemeVariant.content, DynamicSchemeVariant.rainbow, DynamicSchemeVariant.fruitSalad];
+
+export class DayPeriod {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DayPeriod.' + this.name; }
+  static am = new DayPeriod('am', 0);
+  static pm = new DayPeriod('pm', 1);
+}
+DayPeriod.values = [DayPeriod.am, DayPeriod.pm];
+
+export class TimeOfDayFormat {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TimeOfDayFormat.' + this.name; }
+  static HH_colon_mm = new TimeOfDayFormat('HH_colon_mm', 0);
+  static HH_dot_mm = new TimeOfDayFormat('HH_dot_mm', 1);
+  static frenchCanadian = new TimeOfDayFormat('frenchCanadian', 2);
+  static H_colon_mm = new TimeOfDayFormat('H_colon_mm', 3);
+  static h_colon_mm_space_a = new TimeOfDayFormat('h_colon_mm_space_a', 4);
+  static a_space_h_colon_mm = new TimeOfDayFormat('a_space_h_colon_mm', 5);
+}
+TimeOfDayFormat.values = [TimeOfDayFormat.HH_colon_mm, TimeOfDayFormat.HH_dot_mm, TimeOfDayFormat.frenchCanadian, TimeOfDayFormat.H_colon_mm, TimeOfDayFormat.h_colon_mm_space_a, TimeOfDayFormat.a_space_h_colon_mm];
+
+export class HourFormat {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'HourFormat.' + this.name; }
+  static HH = new HourFormat('HH', 0);
+  static H = new HourFormat('H', 1);
+  static h = new HourFormat('h', 2);
+}
+HourFormat.values = [HourFormat.HH, HourFormat.H, HourFormat.h];
+
+export class PopupMenuPosition {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PopupMenuPosition.' + this.name; }
+  static over = new PopupMenuPosition('over', 0);
+  static under = new PopupMenuPosition('under', 1);
+}
+PopupMenuPosition.values = [PopupMenuPosition.over, PopupMenuPosition.under];
+
+export class NavigationRailLabelType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'NavigationRailLabelType.' + this.name; }
+  static none = new NavigationRailLabelType('none', 0);
+  static selected = new NavigationRailLabelType('selected', 1);
+  static all = new NavigationRailLabelType('all', 2);
+}
+NavigationRailLabelType.values = [NavigationRailLabelType.none, NavigationRailLabelType.selected, NavigationRailLabelType.all];
+
+export class TimePickerEntryMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TimePickerEntryMode.' + this.name; }
+  static dial = new TimePickerEntryMode('dial', 0);
+  static input = new TimePickerEntryMode('input', 1);
+  static dialOnly = new TimePickerEntryMode('dialOnly', 2);
+  static inputOnly = new TimePickerEntryMode('inputOnly', 3);
+}
+TimePickerEntryMode.values = [TimePickerEntryMode.dial, TimePickerEntryMode.input, TimePickerEntryMode.dialOnly, TimePickerEntryMode.inputOnly];
+
+export class StepState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'StepState.' + this.name; }
+  static indexed = new StepState('indexed', 0);
+  static editing = new StepState('editing', 1);
+  static complete = new StepState('complete', 2);
+  static disabled = new StepState('disabled', 3);
+  static error = new StepState('error', 4);
+}
+StepState.values = [StepState.indexed, StepState.editing, StepState.complete, StepState.disabled, StepState.error];
+
+export class StepperType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'StepperType.' + this.name; }
+  static vertical = new StepperType('vertical', 0);
+  static horizontal = new StepperType('horizontal', 1);
+}
+StepperType.values = [StepperType.vertical, StepperType.horizontal];
+
+export class TabBarIndicatorSize {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TabBarIndicatorSize.' + this.name; }
+  static tab = new TabBarIndicatorSize('tab', 0);
+  static label = new TabBarIndicatorSize('label', 1);
+}
+TabBarIndicatorSize.values = [TabBarIndicatorSize.tab, TabBarIndicatorSize.label];
+
+export class TabAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TabAlignment.' + this.name; }
+  static start = new TabAlignment('start', 0);
+  static startOffset = new TabAlignment('startOffset', 1);
+  static fill = new TabAlignment('fill', 2);
+  static center = new TabAlignment('center', 3);
+}
+TabAlignment.values = [TabAlignment.start, TabAlignment.startOffset, TabAlignment.fill, TabAlignment.center];
+
+export class TabIndicatorAnimation {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TabIndicatorAnimation.' + this.name; }
+  static linear = new TabIndicatorAnimation('linear', 0);
+  static elastic = new TabIndicatorAnimation('elastic', 1);
+}
+TabIndicatorAnimation.values = [TabIndicatorAnimation.linear, TabIndicatorAnimation.elastic];
+
+export class MaterialBannerClosedReason {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'MaterialBannerClosedReason.' + this.name; }
+  static dismiss = new MaterialBannerClosedReason('dismiss', 0);
+  static swipe = new MaterialBannerClosedReason('swipe', 1);
+  static hide = new MaterialBannerClosedReason('hide', 2);
+  static remove = new MaterialBannerClosedReason('remove', 3);
+}
+MaterialBannerClosedReason.values = [MaterialBannerClosedReason.dismiss, MaterialBannerClosedReason.swipe, MaterialBannerClosedReason.hide, MaterialBannerClosedReason.remove];
+
+export class DropdownMenuCloseBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DropdownMenuCloseBehavior.' + this.name; }
+  static all = new DropdownMenuCloseBehavior('all', 0);
+  static self = new DropdownMenuCloseBehavior('self', 1);
+  static none = new DropdownMenuCloseBehavior('none', 2);
+}
+DropdownMenuCloseBehavior.values = [DropdownMenuCloseBehavior.all, DropdownMenuCloseBehavior.self, DropdownMenuCloseBehavior.none];
+
+export class SliderInteraction {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SliderInteraction.' + this.name; }
+  static tapAndSlide = new SliderInteraction('tapAndSlide', 0);
+  static tapOnly = new SliderInteraction('tapOnly', 1);
+  static slideOnly = new SliderInteraction('slideOnly', 2);
+  static slideThumb = new SliderInteraction('slideThumb', 3);
+}
+SliderInteraction.values = [SliderInteraction.tapAndSlide, SliderInteraction.tapOnly, SliderInteraction.slideOnly, SliderInteraction.slideThumb];
+
+export class ButtonTextTheme {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ButtonTextTheme.' + this.name; }
+  static normal = new ButtonTextTheme('normal', 0);
+  static accent = new ButtonTextTheme('accent', 1);
+  static primary = new ButtonTextTheme('primary', 2);
+}
+ButtonTextTheme.values = [ButtonTextTheme.normal, ButtonTextTheme.accent, ButtonTextTheme.primary];
+
+export class ButtonBarLayoutBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ButtonBarLayoutBehavior.' + this.name; }
+  static constrained = new ButtonBarLayoutBehavior('constrained', 0);
+  static padded = new ButtonBarLayoutBehavior('padded', 1);
+}
+ButtonBarLayoutBehavior.values = [ButtonBarLayoutBehavior.constrained, ButtonBarLayoutBehavior.padded];
+
+export class ListTileStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ListTileStyle.' + this.name; }
+  static list = new ListTileStyle('list', 0);
+  static drawer = new ListTileStyle('drawer', 1);
+}
+ListTileStyle.values = [ListTileStyle.list, ListTileStyle.drawer];
+
+export class ListTileControlAffinity {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ListTileControlAffinity.' + this.name; }
+  static leading = new ListTileControlAffinity('leading', 0);
+  static trailing = new ListTileControlAffinity('trailing', 1);
+  static platform = new ListTileControlAffinity('platform', 2);
+}
+ListTileControlAffinity.values = [ListTileControlAffinity.leading, ListTileControlAffinity.trailing, ListTileControlAffinity.platform];
+
+export class ListTileTitleAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ListTileTitleAlignment.' + this.name; }
+  static threeLine = new ListTileTitleAlignment('threeLine', 0);
+  static titleHeight = new ListTileTitleAlignment('titleHeight', 1);
+  static top = new ListTileTitleAlignment('top', 2);
+  static center = new ListTileTitleAlignment('center', 3);
+  static bottom = new ListTileTitleAlignment('bottom', 4);
+}
+ListTileTitleAlignment.values = [ListTileTitleAlignment.threeLine, ListTileTitleAlignment.titleHeight, ListTileTitleAlignment.top, ListTileTitleAlignment.center, ListTileTitleAlignment.bottom];
+
+export class ScriptCategory {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ScriptCategory.' + this.name; }
+  static englishLike = new ScriptCategory('englishLike', 0);
+  static dense = new ScriptCategory('dense', 1);
+  static tall = new ScriptCategory('tall', 2);
+}
+ScriptCategory.values = [ScriptCategory.englishLike, ScriptCategory.dense, ScriptCategory.tall];
+
+export class ShowValueIndicator {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ShowValueIndicator.' + this.name; }
+  static onlyForDiscrete = new ShowValueIndicator('onlyForDiscrete', 0);
+  static onlyForContinuous = new ShowValueIndicator('onlyForContinuous', 1);
+  static always = new ShowValueIndicator('always', 2);
+  static onDrag = new ShowValueIndicator('onDrag', 3);
+  static alwaysVisible = new ShowValueIndicator('alwaysVisible', 4);
+  static never = new ShowValueIndicator('never', 5);
+}
+ShowValueIndicator.values = [ShowValueIndicator.onlyForDiscrete, ShowValueIndicator.onlyForContinuous, ShowValueIndicator.always, ShowValueIndicator.onDrag, ShowValueIndicator.alwaysVisible, ShowValueIndicator.never];
+
+export class Thumb {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'Thumb.' + this.name; }
+  static start = new Thumb('start', 0);
+  static end = new Thumb('end', 1);
+}
+Thumb.values = [Thumb.start, Thumb.end];
+
+export class DrawerAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DrawerAlignment.' + this.name; }
+  static start = new DrawerAlignment('start', 0);
+  static end = new DrawerAlignment('end', 1);
+}
+DrawerAlignment.values = [DrawerAlignment.start, DrawerAlignment.end];
+
+export class DatePickerEntryMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DatePickerEntryMode.' + this.name; }
+  static calendar = new DatePickerEntryMode('calendar', 0);
+  static input = new DatePickerEntryMode('input', 1);
+  static calendarOnly = new DatePickerEntryMode('calendarOnly', 2);
+  static inputOnly = new DatePickerEntryMode('inputOnly', 3);
+}
+DatePickerEntryMode.values = [DatePickerEntryMode.calendar, DatePickerEntryMode.input, DatePickerEntryMode.calendarOnly, DatePickerEntryMode.inputOnly];
+
+export class DatePickerMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DatePickerMode.' + this.name; }
+  static day = new DatePickerMode('day', 0);
+  static year = new DatePickerMode('year', 1);
+}
+DatePickerMode.values = [DatePickerMode.day, DatePickerMode.year];
+
+export class SnackBarBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SnackBarBehavior.' + this.name; }
+  static fixed = new SnackBarBehavior('fixed', 0);
+  static floating = new SnackBarBehavior('floating', 1);
+}
+SnackBarBehavior.values = [SnackBarBehavior.fixed, SnackBarBehavior.floating];
+
+export class MaterialTapTargetSize {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'MaterialTapTargetSize.' + this.name; }
+  static padded = new MaterialTapTargetSize('padded', 0);
+  static shrinkWrap = new MaterialTapTargetSize('shrinkWrap', 1);
+}
+MaterialTapTargetSize.values = [MaterialTapTargetSize.padded, MaterialTapTargetSize.shrinkWrap];
+
+export class CollapseMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CollapseMode.' + this.name; }
+  static parallax = new CollapseMode('parallax', 0);
+  static pin = new CollapseMode('pin', 1);
+  static none = new CollapseMode('none', 2);
+}
+CollapseMode.values = [CollapseMode.parallax, CollapseMode.pin, CollapseMode.none];
+
+export class StretchMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'StretchMode.' + this.name; }
+  static zoomBackground = new StretchMode('zoomBackground', 0);
+  static blurBackground = new StretchMode('blurBackground', 1);
+  static fadeTitle = new StretchMode('fadeTitle', 2);
+}
+StretchMode.values = [StretchMode.zoomBackground, StretchMode.blurBackground, StretchMode.fadeTitle];
+
+export class IconAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'IconAlignment.' + this.name; }
+  static start = new IconAlignment('start', 0);
+  static end = new IconAlignment('end', 1);
+}
+IconAlignment.values = [IconAlignment.start, IconAlignment.end];
+
+export class BottomNavigationBarType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BottomNavigationBarType.' + this.name; }
+  static fixed = new BottomNavigationBarType('fixed', 0);
+  static shifting = new BottomNavigationBarType('shifting', 1);
+}
+BottomNavigationBarType.values = [BottomNavigationBarType.fixed, BottomNavigationBarType.shifting];
+
+export class BottomNavigationBarLandscapeLayout {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BottomNavigationBarLandscapeLayout.' + this.name; }
+  static spread = new BottomNavigationBarLandscapeLayout('spread', 0);
+  static centered = new BottomNavigationBarLandscapeLayout('centered', 1);
+  static linear = new BottomNavigationBarLandscapeLayout('linear', 2);
+}
+BottomNavigationBarLandscapeLayout.values = [BottomNavigationBarLandscapeLayout.spread, BottomNavigationBarLandscapeLayout.centered, BottomNavigationBarLandscapeLayout.linear];
+
+export class ThemeMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ThemeMode.' + this.name; }
+  static system = new ThemeMode('system', 0);
+  static light = new ThemeMode('light', 1);
+  static dark = new ThemeMode('dark', 2);
+}
+ThemeMode.values = [ThemeMode.system, ThemeMode.light, ThemeMode.dark];
+
+export class KeyDataTransitMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'KeyDataTransitMode.' + this.name; }
+  static rawKeyData = new KeyDataTransitMode('rawKeyData', 0);
+  static keyDataThenRawKeyData = new KeyDataTransitMode('keyDataThenRawKeyData', 1);
+}
+KeyDataTransitMode.values = [KeyDataTransitMode.rawKeyData, KeyDataTransitMode.keyDataThenRawKeyData];
+
+export class SystemSoundType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SystemSoundType.' + this.name; }
+  static click = new SystemSoundType('click', 0);
+  static tick = new SystemSoundType('tick', 1);
+  static alert = new SystemSoundType('alert', 2);
+}
+SystemSoundType.values = [SystemSoundType.click, SystemSoundType.tick, SystemSoundType.alert];
+
+export class SmartDashesType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SmartDashesType.' + this.name; }
+  static disabled = new SmartDashesType('disabled', 0);
+  static enabled = new SmartDashesType('enabled', 1);
+}
+SmartDashesType.values = [SmartDashesType.disabled, SmartDashesType.enabled];
+
+export class SmartQuotesType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SmartQuotesType.' + this.name; }
+  static disabled = new SmartQuotesType('disabled', 0);
+  static enabled = new SmartQuotesType('enabled', 1);
+}
+SmartQuotesType.values = [SmartQuotesType.disabled, SmartQuotesType.enabled];
+
+export class TextInputAction {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextInputAction.' + this.name; }
+  static none = new TextInputAction('none', 0);
+  static unspecified = new TextInputAction('unspecified', 1);
+  static done = new TextInputAction('done', 2);
+  static go = new TextInputAction('go', 3);
+  static search = new TextInputAction('search', 4);
+  static send = new TextInputAction('send', 5);
+  static next = new TextInputAction('next', 6);
+  static previous = new TextInputAction('previous', 7);
+  static continueAction = new TextInputAction('continueAction', 8);
+  static join = new TextInputAction('join', 9);
+  static route = new TextInputAction('route', 10);
+  static emergencyCall = new TextInputAction('emergencyCall', 11);
+  static newline = new TextInputAction('newline', 12);
+}
+TextInputAction.values = [TextInputAction.none, TextInputAction.unspecified, TextInputAction.done, TextInputAction.go, TextInputAction.search, TextInputAction.send, TextInputAction.next, TextInputAction.previous, TextInputAction.continueAction, TextInputAction.join, TextInputAction.route, TextInputAction.emergencyCall, TextInputAction.newline];
+
+export class TextCapitalization {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextCapitalization.' + this.name; }
+  static words = new TextCapitalization('words', 0);
+  static sentences = new TextCapitalization('sentences', 1);
+  static characters = new TextCapitalization('characters', 2);
+  static none = new TextCapitalization('none', 3);
+}
+TextCapitalization.values = [TextCapitalization.words, TextCapitalization.sentences, TextCapitalization.characters, TextCapitalization.none];
+
+export class FloatingCursorDragState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FloatingCursorDragState.' + this.name; }
+  static Start = new FloatingCursorDragState('Start', 0);
+  static Update = new FloatingCursorDragState('Update', 1);
+  static End = new FloatingCursorDragState('End', 2);
+}
+FloatingCursorDragState.values = [FloatingCursorDragState.Start, FloatingCursorDragState.Update, FloatingCursorDragState.End];
+
+export class SelectionChangedCause {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SelectionChangedCause.' + this.name; }
+  static tap = new SelectionChangedCause('tap', 0);
+  static doubleTap = new SelectionChangedCause('doubleTap', 1);
+  static longPress = new SelectionChangedCause('longPress', 2);
+  static forcePress = new SelectionChangedCause('forcePress', 3);
+  static keyboard = new SelectionChangedCause('keyboard', 4);
+  static toolbar = new SelectionChangedCause('toolbar', 5);
+  static drag = new SelectionChangedCause('drag', 6);
+  static stylusHandwriting = new SelectionChangedCause('stylusHandwriting', 7);
+}
+SelectionChangedCause.values = [SelectionChangedCause.tap, SelectionChangedCause.doubleTap, SelectionChangedCause.longPress, SelectionChangedCause.forcePress, SelectionChangedCause.keyboard, SelectionChangedCause.toolbar, SelectionChangedCause.drag, SelectionChangedCause.stylusHandwriting];
+
+export class MaxLengthEnforcement {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'MaxLengthEnforcement.' + this.name; }
+  static none = new MaxLengthEnforcement('none', 0);
+  static enforced = new MaxLengthEnforcement('enforced', 1);
+  static truncateAfterCompositionEnds = new MaxLengthEnforcement('truncateAfterCompositionEnds', 2);
+}
+MaxLengthEnforcement.values = [MaxLengthEnforcement.none, MaxLengthEnforcement.enforced, MaxLengthEnforcement.truncateAfterCompositionEnds];
+
+export class SwipeEdge {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SwipeEdge.' + this.name; }
+  static left = new SwipeEdge('left', 0);
+  static right = new SwipeEdge('right', 1);
+}
+SwipeEdge.values = [SwipeEdge.left, SwipeEdge.right];
+
+export class UndoDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'UndoDirection.' + this.name; }
+  static undo = new UndoDirection('undo', 0);
+  static redo = new UndoDirection('redo', 1);
+}
+UndoDirection.values = [UndoDirection.undo, UndoDirection.redo];
+
+export class DeviceOrientation {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DeviceOrientation.' + this.name; }
+  static portraitUp = new DeviceOrientation('portraitUp', 0);
+  static landscapeLeft = new DeviceOrientation('landscapeLeft', 1);
+  static portraitDown = new DeviceOrientation('portraitDown', 2);
+  static landscapeRight = new DeviceOrientation('landscapeRight', 3);
+}
+DeviceOrientation.values = [DeviceOrientation.portraitUp, DeviceOrientation.landscapeLeft, DeviceOrientation.portraitDown, DeviceOrientation.landscapeRight];
+
+export class SystemUiOverlay {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SystemUiOverlay.' + this.name; }
+  static top = new SystemUiOverlay('top', 0);
+  static bottom = new SystemUiOverlay('bottom', 1);
+}
+SystemUiOverlay.values = [SystemUiOverlay.top, SystemUiOverlay.bottom];
+
+export class SystemUiMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SystemUiMode.' + this.name; }
+  static leanBack = new SystemUiMode('leanBack', 0);
+  static immersive = new SystemUiMode('immersive', 1);
+  static immersiveSticky = new SystemUiMode('immersiveSticky', 2);
+  static edgeToEdge = new SystemUiMode('edgeToEdge', 3);
+  static manual = new SystemUiMode('manual', 4);
+}
+SystemUiMode.values = [SystemUiMode.leanBack, SystemUiMode.immersive, SystemUiMode.immersiveSticky, SystemUiMode.edgeToEdge, SystemUiMode.manual];
+
+export class ContentSensitivity {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ContentSensitivity.' + this.name; }
+  static autoSensitive = new ContentSensitivity('autoSensitive', 0);
+  static sensitive = new ContentSensitivity('sensitive', 1);
+  static notSensitive = new ContentSensitivity('notSensitive', 2);
+  static _unknown = new ContentSensitivity('_unknown', 3);
+}
+ContentSensitivity.values = [ContentSensitivity.autoSensitive, ContentSensitivity.sensitive, ContentSensitivity.notSensitive, ContentSensitivity._unknown];
+
+export class KeyboardSide {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'KeyboardSide.' + this.name; }
+  static any = new KeyboardSide('any', 0);
+  static left = new KeyboardSide('left', 1);
+  static right = new KeyboardSide('right', 2);
+  static all = new KeyboardSide('all', 3);
+}
+KeyboardSide.values = [KeyboardSide.any, KeyboardSide.left, KeyboardSide.right, KeyboardSide.all];
+
+export class ModifierKey {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ModifierKey.' + this.name; }
+  static controlModifier = new ModifierKey('controlModifier', 0);
+  static shiftModifier = new ModifierKey('shiftModifier', 1);
+  static altModifier = new ModifierKey('altModifier', 2);
+  static metaModifier = new ModifierKey('metaModifier', 3);
+  static capsLockModifier = new ModifierKey('capsLockModifier', 4);
+  static numLockModifier = new ModifierKey('numLockModifier', 5);
+  static scrollLockModifier = new ModifierKey('scrollLockModifier', 6);
+  static functionModifier = new ModifierKey('functionModifier', 7);
+  static symbolModifier = new ModifierKey('symbolModifier', 8);
+}
+ModifierKey.values = [ModifierKey.controlModifier, ModifierKey.shiftModifier, ModifierKey.altModifier, ModifierKey.metaModifier, ModifierKey.capsLockModifier, ModifierKey.numLockModifier, ModifierKey.scrollLockModifier, ModifierKey.functionModifier, ModifierKey.symbolModifier];
+
+export class ServicesServiceExtensions {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ServicesServiceExtensions.' + this.name; }
+  static profilePlatformChannels = new ServicesServiceExtensions('profilePlatformChannels', 0);
+  static evict = new ServicesServiceExtensions('evict', 1);
+}
+ServicesServiceExtensions.values = [ServicesServiceExtensions.profilePlatformChannels, ServicesServiceExtensions.evict];
+
+export class CrossFadeState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'CrossFadeState.' + this.name; }
+  static showFirst = new CrossFadeState('showFirst', 0);
+  static showSecond = new CrossFadeState('showSecond', 1);
+}
+CrossFadeState.values = [CrossFadeState.showFirst, CrossFadeState.showSecond];
+
+export class ScrollIncrementType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ScrollIncrementType.' + this.name; }
+  static line = new ScrollIncrementType('line', 0);
+  static page = new ScrollIncrementType('page', 1);
+}
+ScrollIncrementType.values = [ScrollIncrementType.line, ScrollIncrementType.page];
+
+export class RouteInformationReportingType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RouteInformationReportingType.' + this.name; }
+  static none = new RouteInformationReportingType('none', 0);
+  static neglect = new RouteInformationReportingType('neglect', 1);
+  static navigate = new RouteInformationReportingType('navigate', 2);
+}
+RouteInformationReportingType.values = [RouteInformationReportingType.none, RouteInformationReportingType.neglect, RouteInformationReportingType.navigate];
+
+export class WidgetState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'WidgetState.' + this.name; }
+  static hovered = new WidgetState('hovered', 0);
+  static focused = new WidgetState('focused', 1);
+  static pressed = new WidgetState('pressed', 2);
+  static dragged = new WidgetState('dragged', 3);
+  static selected = new WidgetState('selected', 4);
+  static scrolledUnder = new WidgetState('scrolledUnder', 5);
+  static disabled = new WidgetState('disabled', 6);
+  static error = new WidgetState('error', 7);
+}
+WidgetState.values = [WidgetState.hovered, WidgetState.focused, WidgetState.pressed, WidgetState.dragged, WidgetState.selected, WidgetState.scrolledUnder, WidgetState.disabled, WidgetState.error];
+
+export class ConnectionState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ConnectionState.' + this.name; }
+  static none = new ConnectionState('none', 0);
+  static waiting = new ConnectionState('waiting', 1);
+  static active = new ConnectionState('active', 2);
+  static done = new ConnectionState('done', 3);
+}
+ConnectionState.values = [ConnectionState.none, ConnectionState.waiting, ConnectionState.active, ConnectionState.done];
+
+export class AutovalidateMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AutovalidateMode.' + this.name; }
+  static disabled = new AutovalidateMode('disabled', 0);
+  static always = new AutovalidateMode('always', 1);
+  static onUserInteraction = new AutovalidateMode('onUserInteraction', 2);
+  static onUnfocus = new AutovalidateMode('onUnfocus', 3);
+  static onUserInteractionIfError = new AutovalidateMode('onUserInteractionIfError', 4);
+}
+AutovalidateMode.values = [AutovalidateMode.disabled, AutovalidateMode.always, AutovalidateMode.onUserInteraction, AutovalidateMode.onUnfocus, AutovalidateMode.onUserInteractionIfError];
+
+export class ContextMenuButtonType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ContextMenuButtonType.' + this.name; }
+  static cut = new ContextMenuButtonType('cut', 0);
+  static copy = new ContextMenuButtonType('copy', 1);
+  static paste = new ContextMenuButtonType('paste', 2);
+  static selectAll = new ContextMenuButtonType('selectAll', 3);
+  static delete = new ContextMenuButtonType('delete', 4);
+  static lookUp = new ContextMenuButtonType('lookUp', 5);
+  static searchWeb = new ContextMenuButtonType('searchWeb', 6);
+  static share = new ContextMenuButtonType('share', 7);
+  static liveTextInput = new ContextMenuButtonType('liveTextInput', 8);
+  static custom = new ContextMenuButtonType('custom', 9);
+}
+ContextMenuButtonType.values = [ContextMenuButtonType.cut, ContextMenuButtonType.copy, ContextMenuButtonType.paste, ContextMenuButtonType.selectAll, ContextMenuButtonType.delete, ContextMenuButtonType.lookUp, ContextMenuButtonType.searchWeb, ContextMenuButtonType.share, ContextMenuButtonType.liveTextInput, ContextMenuButtonType.custom];
+
+export class RoutePopDisposition {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RoutePopDisposition.' + this.name; }
+  static pop = new RoutePopDisposition('pop', 0);
+  static doNotPop = new RoutePopDisposition('doNotPop', 1);
+  static bubble = new RoutePopDisposition('bubble', 2);
+}
+RoutePopDisposition.values = [RoutePopDisposition.pop, RoutePopDisposition.doNotPop, RoutePopDisposition.bubble];
+
+export class Orientation {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'Orientation.' + this.name; }
+  static portrait = new Orientation('portrait', 0);
+  static landscape = new Orientation('landscape', 1);
+}
+Orientation.values = [Orientation.portrait, Orientation.landscape];
+
+export class NavigationMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'NavigationMode.' + this.name; }
+  static traditional = new NavigationMode('traditional', 0);
+  static directional = new NavigationMode('directional', 1);
+}
+NavigationMode.values = [NavigationMode.traditional, NavigationMode.directional];
+
+export class ScrollPositionAlignmentPolicy {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ScrollPositionAlignmentPolicy.' + this.name; }
+  static explicit = new ScrollPositionAlignmentPolicy('explicit', 0);
+  static keepVisibleAtEnd = new ScrollPositionAlignmentPolicy('keepVisibleAtEnd', 1);
+  static keepVisibleAtStart = new ScrollPositionAlignmentPolicy('keepVisibleAtStart', 2);
+}
+ScrollPositionAlignmentPolicy.values = [ScrollPositionAlignmentPolicy.explicit, ScrollPositionAlignmentPolicy.keepVisibleAtEnd, ScrollPositionAlignmentPolicy.keepVisibleAtStart];
+
+export class DiagonalDragBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DiagonalDragBehavior.' + this.name; }
+  static none = new DiagonalDragBehavior('none', 0);
+  static weightedEvent = new DiagonalDragBehavior('weightedEvent', 1);
+  static weightedContinuous = new DiagonalDragBehavior('weightedContinuous', 2);
+  static free = new DiagonalDragBehavior('free', 3);
+}
+DiagonalDragBehavior.values = [DiagonalDragBehavior.none, DiagonalDragBehavior.weightedEvent, DiagonalDragBehavior.weightedContinuous, DiagonalDragBehavior.free];
+
+export class KeyEventResult {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'KeyEventResult.' + this.name; }
+  static handled = new KeyEventResult('handled', 0);
+  static ignored = new KeyEventResult('ignored', 1);
+  static skipRemainingHandlers = new KeyEventResult('skipRemainingHandlers', 2);
+}
+KeyEventResult.values = [KeyEventResult.handled, KeyEventResult.ignored, KeyEventResult.skipRemainingHandlers];
+
+export class UnfocusDisposition {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'UnfocusDisposition.' + this.name; }
+  static scope = new UnfocusDisposition('scope', 0);
+  static previouslyFocusedChild = new UnfocusDisposition('previouslyFocusedChild', 1);
+}
+UnfocusDisposition.values = [UnfocusDisposition.scope, UnfocusDisposition.previouslyFocusedChild];
+
+export class FocusHighlightMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FocusHighlightMode.' + this.name; }
+  static touch = new FocusHighlightMode('touch', 0);
+  static traditional = new FocusHighlightMode('traditional', 1);
+}
+FocusHighlightMode.values = [FocusHighlightMode.touch, FocusHighlightMode.traditional];
+
+export class FocusHighlightStrategy {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FocusHighlightStrategy.' + this.name; }
+  static automatic = new FocusHighlightStrategy('automatic', 0);
+  static alwaysTouch = new FocusHighlightStrategy('alwaysTouch', 1);
+  static alwaysTraditional = new FocusHighlightStrategy('alwaysTraditional', 2);
+}
+FocusHighlightStrategy.values = [FocusHighlightStrategy.automatic, FocusHighlightStrategy.alwaysTouch, FocusHighlightStrategy.alwaysTraditional];
+
+export class TraversalDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TraversalDirection.' + this.name; }
+  static up = new TraversalDirection('up', 0);
+  static right = new TraversalDirection('right', 1);
+  static down = new TraversalDirection('down', 2);
+  static left = new TraversalDirection('left', 3);
+}
+TraversalDirection.values = [TraversalDirection.up, TraversalDirection.right, TraversalDirection.down, TraversalDirection.left];
+
+export class TraversalEdgeBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TraversalEdgeBehavior.' + this.name; }
+  static closedLoop = new TraversalEdgeBehavior('closedLoop', 0);
+  static leaveFlutterView = new TraversalEdgeBehavior('leaveFlutterView', 1);
+  static parentScope = new TraversalEdgeBehavior('parentScope', 2);
+  static stop = new TraversalEdgeBehavior('stop', 3);
+}
+TraversalEdgeBehavior.values = [TraversalEdgeBehavior.closedLoop, TraversalEdgeBehavior.leaveFlutterView, TraversalEdgeBehavior.parentScope, TraversalEdgeBehavior.stop];
+
+export class SnapshotMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SnapshotMode.' + this.name; }
+  static permissive = new SnapshotMode('permissive', 0);
+  static normal = new SnapshotMode('normal', 1);
+  static forced = new SnapshotMode('forced', 2);
+}
+SnapshotMode.values = [SnapshotMode.permissive, SnapshotMode.normal, SnapshotMode.forced];
+
+export class TooltipTriggerMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TooltipTriggerMode.' + this.name; }
+  static manual = new TooltipTriggerMode('manual', 0);
+  static longPress = new TooltipTriggerMode('longPress', 1);
+  static tap = new TooltipTriggerMode('tap', 2);
+}
+TooltipTriggerMode.values = [TooltipTriggerMode.manual, TooltipTriggerMode.longPress, TooltipTriggerMode.tap];
+
+export class BannerLocation {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BannerLocation.' + this.name; }
+  static topStart = new BannerLocation('topStart', 0);
+  static topEnd = new BannerLocation('topEnd', 1);
+  static bottomStart = new BannerLocation('bottomStart', 2);
+  static bottomEnd = new BannerLocation('bottomEnd', 3);
+}
+BannerLocation.values = [BannerLocation.topStart, BannerLocation.topEnd, BannerLocation.bottomStart, BannerLocation.bottomEnd];
+
+export class FloatingHeaderSnapMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FloatingHeaderSnapMode.' + this.name; }
+  static overlay = new FloatingHeaderSnapMode('overlay', 0);
+  static scroll = new FloatingHeaderSnapMode('scroll', 1);
+}
+FloatingHeaderSnapMode.values = [FloatingHeaderSnapMode.overlay, FloatingHeaderSnapMode.scroll];
+
+export class LockState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'LockState.' + this.name; }
+  static ignored = new LockState('ignored', 0);
+  static locked = new LockState('locked', 1);
+  static unlocked = new LockState('unlocked', 2);
+}
+LockState.values = [LockState.ignored, LockState.locked, LockState.unlocked];
+
+export class HeroFlightDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'HeroFlightDirection.' + this.name; }
+  static push = new HeroFlightDirection('push', 0);
+  static pop = new HeroFlightDirection('pop', 1);
+}
+HeroFlightDirection.values = [HeroFlightDirection.push, HeroFlightDirection.pop];
+
+export class StandardComponentType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'StandardComponentType.' + this.name; }
+  static backButton = new StandardComponentType('backButton', 0);
+  static closeButton = new StandardComponentType('closeButton', 1);
+  static moreButton = new StandardComponentType('moreButton', 2);
+  static drawerButton = new StandardComponentType('drawerButton', 3);
+}
+StandardComponentType.values = [StandardComponentType.backButton, StandardComponentType.closeButton, StandardComponentType.moreButton, StandardComponentType.drawerButton];
+
+export class InspectorButtonVariant {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'InspectorButtonVariant.' + this.name; }
+  static filled = new InspectorButtonVariant('filled', 0);
+  static toggle = new InspectorButtonVariant('toggle', 1);
+  static iconOnly = new InspectorButtonVariant('iconOnly', 2);
+}
+InspectorButtonVariant.values = [InspectorButtonVariant.filled, InspectorButtonVariant.toggle, InspectorButtonVariant.iconOnly];
+
+export class AndroidOverscrollIndicator {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AndroidOverscrollIndicator.' + this.name; }
+  static stretch = new AndroidOverscrollIndicator('stretch', 0);
+  static glow = new AndroidOverscrollIndicator('glow', 1);
+}
+AndroidOverscrollIndicator.values = [AndroidOverscrollIndicator.stretch, AndroidOverscrollIndicator.glow];
+
+export class ClipboardStatus {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ClipboardStatus.' + this.name; }
+  static pasteable = new ClipboardStatus('pasteable', 0);
+  static unknown = new ClipboardStatus('unknown', 1);
+  static notPasteable = new ClipboardStatus('notPasteable', 2);
+}
+ClipboardStatus.values = [ClipboardStatus.pasteable, ClipboardStatus.unknown, ClipboardStatus.notPasteable];
+
+export class LiveTextInputStatus {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'LiveTextInputStatus.' + this.name; }
+  static enabled = new LiveTextInputStatus('enabled', 0);
+  static unknown = new LiveTextInputStatus('unknown', 1);
+  static disabled = new LiveTextInputStatus('disabled', 2);
+}
+LiveTextInputStatus.values = [LiveTextInputStatus.enabled, LiveTextInputStatus.unknown, LiveTextInputStatus.disabled];
+
+export class ScrollDecelerationRate {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ScrollDecelerationRate.' + this.name; }
+  static normal = new ScrollDecelerationRate('normal', 0);
+  static fast = new ScrollDecelerationRate('fast', 1);
+}
+ScrollDecelerationRate.values = [ScrollDecelerationRate.normal, ScrollDecelerationRate.fast];
+
+export class OverflowBarAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'OverflowBarAlignment.' + this.name; }
+  static start = new OverflowBarAlignment('start', 0);
+  static end = new OverflowBarAlignment('end', 1);
+  static center = new OverflowBarAlignment('center', 2);
+}
+OverflowBarAlignment.values = [OverflowBarAlignment.start, OverflowBarAlignment.end, OverflowBarAlignment.center];
+
+export class PanAxis {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PanAxis.' + this.name; }
+  static horizontal = new PanAxis('horizontal', 0);
+  static vertical = new PanAxis('vertical', 1);
+  static aligned = new PanAxis('aligned', 2);
+  static free = new PanAxis('free', 3);
+}
+PanAxis.values = [PanAxis.horizontal, PanAxis.vertical, PanAxis.aligned, PanAxis.free];
+
+export class AutofillContextAction {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AutofillContextAction.' + this.name; }
+  static commit = new AutofillContextAction('commit', 0);
+  static cancel = new AutofillContextAction('cancel', 1);
+}
+AutofillContextAction.values = [AutofillContextAction.commit, AutofillContextAction.cancel];
+
+export class ChangeReportingBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ChangeReportingBehavior.' + this.name; }
+  static onScrollEnd = new ChangeReportingBehavior('onScrollEnd', 0);
+  static onScrollUpdate = new ChangeReportingBehavior('onScrollUpdate', 1);
+}
+ChangeReportingBehavior.values = [ChangeReportingBehavior.onScrollEnd, ChangeReportingBehavior.onScrollUpdate];
+
+export class PlatformProvidedMenuItemType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PlatformProvidedMenuItemType.' + this.name; }
+  static about = new PlatformProvidedMenuItemType('about', 0);
+  static quit = new PlatformProvidedMenuItemType('quit', 1);
+  static servicesSubmenu = new PlatformProvidedMenuItemType('servicesSubmenu', 2);
+  static hide = new PlatformProvidedMenuItemType('hide', 3);
+  static hideOtherApplications = new PlatformProvidedMenuItemType('hideOtherApplications', 4);
+  static showAllApplications = new PlatformProvidedMenuItemType('showAllApplications', 5);
+  static startSpeaking = new PlatformProvidedMenuItemType('startSpeaking', 6);
+  static stopSpeaking = new PlatformProvidedMenuItemType('stopSpeaking', 7);
+  static toggleFullScreen = new PlatformProvidedMenuItemType('toggleFullScreen', 8);
+  static minimizeWindow = new PlatformProvidedMenuItemType('minimizeWindow', 9);
+  static zoomWindow = new PlatformProvidedMenuItemType('zoomWindow', 10);
+  static arrangeWindowsInFront = new PlatformProvidedMenuItemType('arrangeWindowsInFront', 11);
+}
+PlatformProvidedMenuItemType.values = [PlatformProvidedMenuItemType.about, PlatformProvidedMenuItemType.quit, PlatformProvidedMenuItemType.servicesSubmenu, PlatformProvidedMenuItemType.hide, PlatformProvidedMenuItemType.hideOtherApplications, PlatformProvidedMenuItemType.showAllApplications, PlatformProvidedMenuItemType.startSpeaking, PlatformProvidedMenuItemType.stopSpeaking, PlatformProvidedMenuItemType.toggleFullScreen, PlatformProvidedMenuItemType.minimizeWindow, PlatformProvidedMenuItemType.zoomWindow, PlatformProvidedMenuItemType.arrangeWindowsInFront];
+
+export class DismissDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DismissDirection.' + this.name; }
+  static vertical = new DismissDirection('vertical', 0);
+  static horizontal = new DismissDirection('horizontal', 1);
+  static endToStart = new DismissDirection('endToStart', 2);
+  static startToEnd = new DismissDirection('startToEnd', 3);
+  static up = new DismissDirection('up', 4);
+  static down = new DismissDirection('down', 5);
+  static none = new DismissDirection('none', 6);
+}
+DismissDirection.values = [DismissDirection.vertical, DismissDirection.horizontal, DismissDirection.endToStart, DismissDirection.startToEnd, DismissDirection.up, DismissDirection.down, DismissDirection.none];
+
+export class ScrollbarOrientation {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ScrollbarOrientation.' + this.name; }
+  static left = new ScrollbarOrientation('left', 0);
+  static right = new ScrollbarOrientation('right', 1);
+  static top = new ScrollbarOrientation('top', 2);
+  static bottom = new ScrollbarOrientation('bottom', 3);
+}
+ScrollbarOrientation.values = [ScrollbarOrientation.left, ScrollbarOrientation.right, ScrollbarOrientation.top, ScrollbarOrientation.bottom];
+
+export class RepeatMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'RepeatMode.' + this.name; }
+  static restart = new RepeatMode('restart', 0);
+  static reverse = new RepeatMode('reverse', 1);
+}
+RepeatMode.values = [RepeatMode.restart, RepeatMode.reverse];
+
+export class OptionsViewOpenDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'OptionsViewOpenDirection.' + this.name; }
+  static up = new OptionsViewOpenDirection('up', 0);
+  static down = new OptionsViewOpenDirection('down', 1);
+  static mostSpace = new OptionsViewOpenDirection('mostSpace', 2);
+}
+OptionsViewOpenDirection.values = [OptionsViewOpenDirection.up, OptionsViewOpenDirection.down, OptionsViewOpenDirection.mostSpace];
+
+export class OverlayChildLocation {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'OverlayChildLocation.' + this.name; }
+  static nearestOverlay = new OverlayChildLocation('nearestOverlay', 0);
+  static rootOverlay = new OverlayChildLocation('rootOverlay', 1);
+}
+OverlayChildLocation.values = [OverlayChildLocation.nearestOverlay, OverlayChildLocation.rootOverlay];
+
+export class WidgetsServiceExtensions {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'WidgetsServiceExtensions.' + this.name; }
+  static debugDumpApp = new WidgetsServiceExtensions('debugDumpApp', 0);
+  static debugDumpFocusTree = new WidgetsServiceExtensions('debugDumpFocusTree', 1);
+  static showPerformanceOverlay = new WidgetsServiceExtensions('showPerformanceOverlay', 2);
+  static didSendFirstFrameEvent = new WidgetsServiceExtensions('didSendFirstFrameEvent', 3);
+  static didSendFirstFrameRasterizedEvent = new WidgetsServiceExtensions('didSendFirstFrameRasterizedEvent', 4);
+  static fastReassemble = new WidgetsServiceExtensions('fastReassemble', 5);
+  static profileWidgetBuilds = new WidgetsServiceExtensions('profileWidgetBuilds', 6);
+  static profileUserWidgetBuilds = new WidgetsServiceExtensions('profileUserWidgetBuilds', 7);
+  static debugAllowBanner = new WidgetsServiceExtensions('debugAllowBanner', 8);
+}
+WidgetsServiceExtensions.values = [WidgetsServiceExtensions.debugDumpApp, WidgetsServiceExtensions.debugDumpFocusTree, WidgetsServiceExtensions.showPerformanceOverlay, WidgetsServiceExtensions.didSendFirstFrameEvent, WidgetsServiceExtensions.didSendFirstFrameRasterizedEvent, WidgetsServiceExtensions.fastReassemble, WidgetsServiceExtensions.profileWidgetBuilds, WidgetsServiceExtensions.profileUserWidgetBuilds, WidgetsServiceExtensions.debugAllowBanner];
+
+export class WidgetInspectorServiceExtensions {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'WidgetInspectorServiceExtensions.' + this.name; }
+  static structuredErrors = new WidgetInspectorServiceExtensions('structuredErrors', 0);
+  static show = new WidgetInspectorServiceExtensions('show', 1);
+  static trackRebuildDirtyWidgets = new WidgetInspectorServiceExtensions('trackRebuildDirtyWidgets', 2);
+  static widgetLocationIdMap = new WidgetInspectorServiceExtensions('widgetLocationIdMap', 3);
+  static trackRepaintWidgets = new WidgetInspectorServiceExtensions('trackRepaintWidgets', 4);
+  static disposeAllGroups = new WidgetInspectorServiceExtensions('disposeAllGroups', 5);
+  static disposeGroup = new WidgetInspectorServiceExtensions('disposeGroup', 6);
+  static isWidgetTreeReady = new WidgetInspectorServiceExtensions('isWidgetTreeReady', 7);
+  static disposeId = new WidgetInspectorServiceExtensions('disposeId', 8);
+  static setPubRootDirectories = new WidgetInspectorServiceExtensions('setPubRootDirectories', 9);
+  static addPubRootDirectories = new WidgetInspectorServiceExtensions('addPubRootDirectories', 10);
+  static removePubRootDirectories = new WidgetInspectorServiceExtensions('removePubRootDirectories', 11);
+  static getPubRootDirectories = new WidgetInspectorServiceExtensions('getPubRootDirectories', 12);
+  static setSelectionById = new WidgetInspectorServiceExtensions('setSelectionById', 13);
+  static getParentChain = new WidgetInspectorServiceExtensions('getParentChain', 14);
+  static getProperties = new WidgetInspectorServiceExtensions('getProperties', 15);
+  static getChildren = new WidgetInspectorServiceExtensions('getChildren', 16);
+  static getChildrenSummaryTree = new WidgetInspectorServiceExtensions('getChildrenSummaryTree', 17);
+  static getChildrenDetailsSubtree = new WidgetInspectorServiceExtensions('getChildrenDetailsSubtree', 18);
+  static getRootWidget = new WidgetInspectorServiceExtensions('getRootWidget', 19);
+  static getRootWidgetTree = new WidgetInspectorServiceExtensions('getRootWidgetTree', 20);
+  static getRootWidgetSummaryTree = new WidgetInspectorServiceExtensions('getRootWidgetSummaryTree', 21);
+  static getRootWidgetSummaryTreeWithPreviews = new WidgetInspectorServiceExtensions('getRootWidgetSummaryTreeWithPreviews', 22);
+  static getDetailsSubtree = new WidgetInspectorServiceExtensions('getDetailsSubtree', 23);
+  static getSelectedWidget = new WidgetInspectorServiceExtensions('getSelectedWidget', 24);
+  static getSelectedSummaryWidget = new WidgetInspectorServiceExtensions('getSelectedSummaryWidget', 25);
+  static isWidgetCreationTracked = new WidgetInspectorServiceExtensions('isWidgetCreationTracked', 26);
+  static screenshot = new WidgetInspectorServiceExtensions('screenshot', 27);
+  static getLayoutExplorerNode = new WidgetInspectorServiceExtensions('getLayoutExplorerNode', 28);
+  static setFlexFit = new WidgetInspectorServiceExtensions('setFlexFit', 29);
+  static setFlexFactor = new WidgetInspectorServiceExtensions('setFlexFactor', 30);
+  static setFlexProperties = new WidgetInspectorServiceExtensions('setFlexProperties', 31);
+}
+WidgetInspectorServiceExtensions.values = [WidgetInspectorServiceExtensions.structuredErrors, WidgetInspectorServiceExtensions.show, WidgetInspectorServiceExtensions.trackRebuildDirtyWidgets, WidgetInspectorServiceExtensions.widgetLocationIdMap, WidgetInspectorServiceExtensions.trackRepaintWidgets, WidgetInspectorServiceExtensions.disposeAllGroups, WidgetInspectorServiceExtensions.disposeGroup, WidgetInspectorServiceExtensions.isWidgetTreeReady, WidgetInspectorServiceExtensions.disposeId, WidgetInspectorServiceExtensions.setPubRootDirectories, WidgetInspectorServiceExtensions.addPubRootDirectories, WidgetInspectorServiceExtensions.removePubRootDirectories, WidgetInspectorServiceExtensions.getPubRootDirectories, WidgetInspectorServiceExtensions.setSelectionById, WidgetInspectorServiceExtensions.getParentChain, WidgetInspectorServiceExtensions.getProperties, WidgetInspectorServiceExtensions.getChildren, WidgetInspectorServiceExtensions.getChildrenSummaryTree, WidgetInspectorServiceExtensions.getChildrenDetailsSubtree, WidgetInspectorServiceExtensions.getRootWidget, WidgetInspectorServiceExtensions.getRootWidgetTree, WidgetInspectorServiceExtensions.getRootWidgetSummaryTree, WidgetInspectorServiceExtensions.getRootWidgetSummaryTreeWithPreviews, WidgetInspectorServiceExtensions.getDetailsSubtree, WidgetInspectorServiceExtensions.getSelectedWidget, WidgetInspectorServiceExtensions.getSelectedSummaryWidget, WidgetInspectorServiceExtensions.isWidgetCreationTracked, WidgetInspectorServiceExtensions.screenshot, WidgetInspectorServiceExtensions.getLayoutExplorerNode, WidgetInspectorServiceExtensions.setFlexFit, WidgetInspectorServiceExtensions.setFlexFactor, WidgetInspectorServiceExtensions.setFlexProperties];
+
+export class ScrollViewKeyboardDismissBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ScrollViewKeyboardDismissBehavior.' + this.name; }
+  static manual = new ScrollViewKeyboardDismissBehavior('manual', 0);
+  static onDrag = new ScrollViewKeyboardDismissBehavior('onDrag', 1);
+}
+ScrollViewKeyboardDismissBehavior.values = [ScrollViewKeyboardDismissBehavior.manual, ScrollViewKeyboardDismissBehavior.onDrag];
+
+export class SelectableRegionSelectionStatus {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SelectableRegionSelectionStatus.' + this.name; }
+  static changing = new SelectableRegionSelectionStatus('changing', 0);
+  static finalized = new SelectableRegionSelectionStatus('finalized', 1);
+}
+SelectableRegionSelectionStatus.values = [SelectableRegionSelectionStatus.changing, SelectableRegionSelectionStatus.finalized];
+
+export class WindowPositionerAnchor {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'WindowPositionerAnchor.' + this.name; }
+  static center = new WindowPositionerAnchor('center', 0);
+  static top = new WindowPositionerAnchor('top', 1);
+  static bottom = new WindowPositionerAnchor('bottom', 2);
+  static left = new WindowPositionerAnchor('left', 3);
+  static right = new WindowPositionerAnchor('right', 4);
+  static topLeft = new WindowPositionerAnchor('topLeft', 5);
+  static bottomLeft = new WindowPositionerAnchor('bottomLeft', 6);
+  static topRight = new WindowPositionerAnchor('topRight', 7);
+  static bottomRight = new WindowPositionerAnchor('bottomRight', 8);
+}
+WindowPositionerAnchor.values = [WindowPositionerAnchor.center, WindowPositionerAnchor.top, WindowPositionerAnchor.bottom, WindowPositionerAnchor.left, WindowPositionerAnchor.right, WindowPositionerAnchor.topLeft, WindowPositionerAnchor.bottomLeft, WindowPositionerAnchor.topRight, WindowPositionerAnchor.bottomRight];
+
+export class Brightness {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'Brightness.' + this.name; }
+  static dark = new Brightness('dark', 0);
+  static light = new Brightness('light', 1);
+}
+Brightness.values = [Brightness.dark, Brightness.light];
+
+export class FontStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FontStyle.' + this.name; }
+  static normal = new FontStyle('normal', 0);
+  static italic = new FontStyle('italic', 1);
+}
+FontStyle.values = [FontStyle.normal, FontStyle.italic];
+
+export class TextAlign {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextAlign.' + this.name; }
+  static left = new TextAlign('left', 0);
+  static right = new TextAlign('right', 1);
+  static center = new TextAlign('center', 2);
+  static justify = new TextAlign('justify', 3);
+  static start = new TextAlign('start', 4);
+  static end = new TextAlign('end', 5);
+}
+TextAlign.values = [TextAlign.left, TextAlign.right, TextAlign.center, TextAlign.justify, TextAlign.start, TextAlign.end];
+
+export class TextBaseline {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextBaseline.' + this.name; }
+  static alphabetic = new TextBaseline('alphabetic', 0);
+  static ideographic = new TextBaseline('ideographic', 1);
+}
+TextBaseline.values = [TextBaseline.alphabetic, TextBaseline.ideographic];
+
+export class TextDecorationStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextDecorationStyle.' + this.name; }
+  static solid = new TextDecorationStyle('solid', 0);
+  static double = new TextDecorationStyle('double', 1);
+  static dotted = new TextDecorationStyle('dotted', 2);
+  static dashed = new TextDecorationStyle('dashed', 3);
+  static wavy = new TextDecorationStyle('wavy', 4);
+}
+TextDecorationStyle.values = [TextDecorationStyle.solid, TextDecorationStyle.double, TextDecorationStyle.dotted, TextDecorationStyle.dashed, TextDecorationStyle.wavy];
+
+export class TextLeadingDistribution {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextLeadingDistribution.' + this.name; }
+  static proportional = new TextLeadingDistribution('proportional', 0);
+  static even = new TextLeadingDistribution('even', 1);
+}
+TextLeadingDistribution.values = [TextLeadingDistribution.proportional, TextLeadingDistribution.even];
+
+export class TextDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextDirection.' + this.name; }
+  static rtl = new TextDirection('rtl', 0);
+  static ltr = new TextDirection('ltr', 1);
+}
+TextDirection.values = [TextDirection.rtl, TextDirection.ltr];
+
+export class TextAffinity {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TextAffinity.' + this.name; }
+  static upstream = new TextAffinity('upstream', 0);
+  static downstream = new TextAffinity('downstream', 1);
+}
+TextAffinity.values = [TextAffinity.upstream, TextAffinity.downstream];
+
+export class BoxHeightStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BoxHeightStyle.' + this.name; }
+  static tight = new BoxHeightStyle('tight', 0);
+  static max = new BoxHeightStyle('max', 1);
+  static includeLineSpacingMiddle = new BoxHeightStyle('includeLineSpacingMiddle', 2);
+  static includeLineSpacingTop = new BoxHeightStyle('includeLineSpacingTop', 3);
+  static includeLineSpacingBottom = new BoxHeightStyle('includeLineSpacingBottom', 4);
+  static strut = new BoxHeightStyle('strut', 5);
+}
+BoxHeightStyle.values = [BoxHeightStyle.tight, BoxHeightStyle.max, BoxHeightStyle.includeLineSpacingMiddle, BoxHeightStyle.includeLineSpacingTop, BoxHeightStyle.includeLineSpacingBottom, BoxHeightStyle.strut];
+
+export class BoxWidthStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BoxWidthStyle.' + this.name; }
+  static tight = new BoxWidthStyle('tight', 0);
+  static max = new BoxWidthStyle('max', 1);
+}
+BoxWidthStyle.values = [BoxWidthStyle.tight, BoxWidthStyle.max];
+
+export class PlaceholderAlignment {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PlaceholderAlignment.' + this.name; }
+  static baseline = new PlaceholderAlignment('baseline', 0);
+  static aboveBaseline = new PlaceholderAlignment('aboveBaseline', 1);
+  static belowBaseline = new PlaceholderAlignment('belowBaseline', 2);
+  static top = new PlaceholderAlignment('top', 3);
+  static bottom = new PlaceholderAlignment('bottom', 4);
+  static middle = new PlaceholderAlignment('middle', 5);
+}
+PlaceholderAlignment.values = [PlaceholderAlignment.baseline, PlaceholderAlignment.aboveBaseline, PlaceholderAlignment.belowBaseline, PlaceholderAlignment.top, PlaceholderAlignment.bottom, PlaceholderAlignment.middle];
+
+export class PointerChange {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PointerChange.' + this.name; }
+  static cancel = new PointerChange('cancel', 0);
+  static add = new PointerChange('add', 1);
+  static remove = new PointerChange('remove', 2);
+  static hover = new PointerChange('hover', 3);
+  static down = new PointerChange('down', 4);
+  static move = new PointerChange('move', 5);
+  static up = new PointerChange('up', 6);
+  static panZoomStart = new PointerChange('panZoomStart', 7);
+  static panZoomUpdate = new PointerChange('panZoomUpdate', 8);
+  static panZoomEnd = new PointerChange('panZoomEnd', 9);
+}
+PointerChange.values = [PointerChange.cancel, PointerChange.add, PointerChange.remove, PointerChange.hover, PointerChange.down, PointerChange.move, PointerChange.up, PointerChange.panZoomStart, PointerChange.panZoomUpdate, PointerChange.panZoomEnd];
+
+export class PointerDeviceKind {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PointerDeviceKind.' + this.name; }
+  static touch = new PointerDeviceKind('touch', 0);
+  static mouse = new PointerDeviceKind('mouse', 1);
+  static stylus = new PointerDeviceKind('stylus', 2);
+  static invertedStylus = new PointerDeviceKind('invertedStylus', 3);
+  static trackpad = new PointerDeviceKind('trackpad', 4);
+  static unknown = new PointerDeviceKind('unknown', 5);
+}
+PointerDeviceKind.values = [PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.stylus, PointerDeviceKind.invertedStylus, PointerDeviceKind.trackpad, PointerDeviceKind.unknown];
+
+export class PointerSignalKind {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PointerSignalKind.' + this.name; }
+  static none = new PointerSignalKind('none', 0);
+  static scroll = new PointerSignalKind('scroll', 1);
+  static scrollInertiaCancel = new PointerSignalKind('scrollInertiaCancel', 2);
+  static scale = new PointerSignalKind('scale', 3);
+  static unknown = new PointerSignalKind('unknown', 4);
+}
+PointerSignalKind.values = [PointerSignalKind.none, PointerSignalKind.scroll, PointerSignalKind.scrollInertiaCancel, PointerSignalKind.scale, PointerSignalKind.unknown];
+
+export class BlendMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BlendMode.' + this.name; }
+  static clear = new BlendMode('clear', 0);
+  static src = new BlendMode('src', 1);
+  static dst = new BlendMode('dst', 2);
+  static srcOver = new BlendMode('srcOver', 3);
+  static dstOver = new BlendMode('dstOver', 4);
+  static srcIn = new BlendMode('srcIn', 5);
+  static dstIn = new BlendMode('dstIn', 6);
+  static srcOut = new BlendMode('srcOut', 7);
+  static dstOut = new BlendMode('dstOut', 8);
+  static srcATop = new BlendMode('srcATop', 9);
+  static dstATop = new BlendMode('dstATop', 10);
+  static xor = new BlendMode('xor', 11);
+  static plus = new BlendMode('plus', 12);
+  static modulate = new BlendMode('modulate', 13);
+  static screen = new BlendMode('screen', 14);
+  static overlay = new BlendMode('overlay', 15);
+  static darken = new BlendMode('darken', 16);
+  static lighten = new BlendMode('lighten', 17);
+  static colorDodge = new BlendMode('colorDodge', 18);
+  static colorBurn = new BlendMode('colorBurn', 19);
+  static hardLight = new BlendMode('hardLight', 20);
+  static softLight = new BlendMode('softLight', 21);
+  static difference = new BlendMode('difference', 22);
+  static exclusion = new BlendMode('exclusion', 23);
+  static multiply = new BlendMode('multiply', 24);
+  static hue = new BlendMode('hue', 25);
+  static saturation = new BlendMode('saturation', 26);
+  static color = new BlendMode('color', 27);
+  static luminosity = new BlendMode('luminosity', 28);
+}
+BlendMode.values = [BlendMode.clear, BlendMode.src, BlendMode.dst, BlendMode.srcOver, BlendMode.dstOver, BlendMode.srcIn, BlendMode.dstIn, BlendMode.srcOut, BlendMode.dstOut, BlendMode.srcATop, BlendMode.dstATop, BlendMode.xor, BlendMode.plus, BlendMode.modulate, BlendMode.screen, BlendMode.overlay, BlendMode.darken, BlendMode.lighten, BlendMode.colorDodge, BlendMode.colorBurn, BlendMode.hardLight, BlendMode.softLight, BlendMode.difference, BlendMode.exclusion, BlendMode.multiply, BlendMode.hue, BlendMode.saturation, BlendMode.color, BlendMode.luminosity];
+
+export class FilterQuality {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FilterQuality.' + this.name; }
+  static none = new FilterQuality('none', 0);
+  static low = new FilterQuality('low', 1);
+  static medium = new FilterQuality('medium', 2);
+  static high = new FilterQuality('high', 3);
+}
+FilterQuality.values = [FilterQuality.none, FilterQuality.low, FilterQuality.medium, FilterQuality.high];
+
+export class StrokeCap {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'StrokeCap.' + this.name; }
+  static butt = new StrokeCap('butt', 0);
+  static round = new StrokeCap('round', 1);
+  static square = new StrokeCap('square', 2);
+}
+StrokeCap.values = [StrokeCap.butt, StrokeCap.round, StrokeCap.square];
+
+export class StrokeJoin {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'StrokeJoin.' + this.name; }
+  static miter = new StrokeJoin('miter', 0);
+  static round = new StrokeJoin('round', 1);
+  static bevel = new StrokeJoin('bevel', 2);
+}
+StrokeJoin.values = [StrokeJoin.miter, StrokeJoin.round, StrokeJoin.bevel];
+
+export class PaintingStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PaintingStyle.' + this.name; }
+  static fill = new PaintingStyle('fill', 0);
+  static stroke = new PaintingStyle('stroke', 1);
+}
+PaintingStyle.values = [PaintingStyle.fill, PaintingStyle.stroke];
+
+export class Clip {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'Clip.' + this.name; }
+  static none = new Clip('none', 0);
+  static hardEdge = new Clip('hardEdge', 1);
+  static antiAlias = new Clip('antiAlias', 2);
+  static antiAliasWithSaveLayer = new Clip('antiAliasWithSaveLayer', 3);
+}
+Clip.values = [Clip.none, Clip.hardEdge, Clip.antiAlias, Clip.antiAliasWithSaveLayer];
+
+export class ColorSpace {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ColorSpace.' + this.name; }
+  static sRGB = new ColorSpace('sRGB', 0);
+  static extendedSRGB = new ColorSpace('extendedSRGB', 1);
+  static displayP3 = new ColorSpace('displayP3', 2);
+}
+ColorSpace.values = [ColorSpace.sRGB, ColorSpace.extendedSRGB, ColorSpace.displayP3];
+
+export class ImageByteFormat {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ImageByteFormat.' + this.name; }
+  static rawRgba = new ImageByteFormat('rawRgba', 0);
+  static rawStraightRgba = new ImageByteFormat('rawStraightRgba', 1);
+  static rawUnmodified = new ImageByteFormat('rawUnmodified', 2);
+  static rawExtendedRgba128 = new ImageByteFormat('rawExtendedRgba128', 3);
+  static png = new ImageByteFormat('png', 4);
+}
+ImageByteFormat.values = [ImageByteFormat.rawRgba, ImageByteFormat.rawStraightRgba, ImageByteFormat.rawUnmodified, ImageByteFormat.rawExtendedRgba128, ImageByteFormat.png];
+
+export class PixelFormat {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PixelFormat.' + this.name; }
+  static rgba8888 = new PixelFormat('rgba8888', 0);
+  static bgra8888 = new PixelFormat('bgra8888', 1);
+  static rgbaFloat32 = new PixelFormat('rgbaFloat32', 2);
+  static rFloat32 = new PixelFormat('rFloat32', 3);
+}
+PixelFormat.values = [PixelFormat.rgba8888, PixelFormat.bgra8888, PixelFormat.rgbaFloat32, PixelFormat.rFloat32];
+
+export class TargetPixelFormat {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TargetPixelFormat.' + this.name; }
+  static dontCare = new TargetPixelFormat('dontCare', 0);
+  static rgbaFloat32 = new TargetPixelFormat('rgbaFloat32', 1);
+  static rFloat32 = new TargetPixelFormat('rFloat32', 2);
+}
+TargetPixelFormat.values = [TargetPixelFormat.dontCare, TargetPixelFormat.rgbaFloat32, TargetPixelFormat.rFloat32];
+
+export class PathFillType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PathFillType.' + this.name; }
+  static nonZero = new PathFillType('nonZero', 0);
+  static evenOdd = new PathFillType('evenOdd', 1);
+}
+PathFillType.values = [PathFillType.nonZero, PathFillType.evenOdd];
+
+export class PathOperation {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PathOperation.' + this.name; }
+  static difference = new PathOperation('difference', 0);
+  static intersect = new PathOperation('intersect', 1);
+  static union = new PathOperation('union', 2);
+  static xor = new PathOperation('xor', 3);
+  static reverseDifference = new PathOperation('reverseDifference', 4);
+}
+PathOperation.values = [PathOperation.difference, PathOperation.intersect, PathOperation.union, PathOperation.xor, PathOperation.reverseDifference];
+
+export class BlurStyle {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BlurStyle.' + this.name; }
+  static normal = new BlurStyle('normal', 0);
+  static solid = new BlurStyle('solid', 1);
+  static outer = new BlurStyle('outer', 2);
+  static inner = new BlurStyle('inner', 3);
+}
+BlurStyle.values = [BlurStyle.normal, BlurStyle.solid, BlurStyle.outer, BlurStyle.inner];
+
+export class TileMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TileMode.' + this.name; }
+  static clamp = new TileMode('clamp', 0);
+  static repeated = new TileMode('repeated', 1);
+  static mirror = new TileMode('mirror', 2);
+  static decal = new TileMode('decal', 3);
+}
+TileMode.values = [TileMode.clamp, TileMode.repeated, TileMode.mirror, TileMode.decal];
+
+export class VertexMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'VertexMode.' + this.name; }
+  static triangles = new VertexMode('triangles', 0);
+  static triangleStrip = new VertexMode('triangleStrip', 1);
+  static triangleFan = new VertexMode('triangleFan', 2);
+}
+VertexMode.values = [VertexMode.triangles, VertexMode.triangleStrip, VertexMode.triangleFan];
+
+export class PointMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'PointMode.' + this.name; }
+  static points = new PointMode('points', 0);
+  static lines = new PointMode('lines', 1);
+  static polygon = new PointMode('polygon', 2);
+}
+PointMode.values = [PointMode.points, PointMode.lines, PointMode.polygon];
+
+export class ClipOp {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ClipOp.' + this.name; }
+  static difference = new ClipOp('difference', 0);
+  static intersect = new ClipOp('intersect', 1);
+}
+ClipOp.values = [ClipOp.difference, ClipOp.intersect];
+
+export class SemanticsRole {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SemanticsRole.' + this.name; }
+  static none = new SemanticsRole('none', 0);
+  static tab = new SemanticsRole('tab', 1);
+  static tabBar = new SemanticsRole('tabBar', 2);
+  static tabPanel = new SemanticsRole('tabPanel', 3);
+  static dialog = new SemanticsRole('dialog', 4);
+  static alertDialog = new SemanticsRole('alertDialog', 5);
+  static table = new SemanticsRole('table', 6);
+  static cell = new SemanticsRole('cell', 7);
+  static row = new SemanticsRole('row', 8);
+  static columnHeader = new SemanticsRole('columnHeader', 9);
+  static dragHandle = new SemanticsRole('dragHandle', 10);
+  static spinButton = new SemanticsRole('spinButton', 11);
+  static comboBox = new SemanticsRole('comboBox', 12);
+  static menuBar = new SemanticsRole('menuBar', 13);
+  static menu = new SemanticsRole('menu', 14);
+  static menuItem = new SemanticsRole('menuItem', 15);
+  static menuItemCheckbox = new SemanticsRole('menuItemCheckbox', 16);
+  static menuItemRadio = new SemanticsRole('menuItemRadio', 17);
+  static list = new SemanticsRole('list', 18);
+  static listItem = new SemanticsRole('listItem', 19);
+  static form = new SemanticsRole('form', 20);
+  static tooltip = new SemanticsRole('tooltip', 21);
+  static loadingSpinner = new SemanticsRole('loadingSpinner', 22);
+  static progressBar = new SemanticsRole('progressBar', 23);
+  static hotKey = new SemanticsRole('hotKey', 24);
+  static radioGroup = new SemanticsRole('radioGroup', 25);
+  static status = new SemanticsRole('status', 26);
+  static alert = new SemanticsRole('alert', 27);
+  static complementary = new SemanticsRole('complementary', 28);
+  static contentInfo = new SemanticsRole('contentInfo', 29);
+  static main = new SemanticsRole('main', 30);
+  static navigation = new SemanticsRole('navigation', 31);
+  static region = new SemanticsRole('region', 32);
+}
+SemanticsRole.values = [SemanticsRole.none, SemanticsRole.tab, SemanticsRole.tabBar, SemanticsRole.tabPanel, SemanticsRole.dialog, SemanticsRole.alertDialog, SemanticsRole.table, SemanticsRole.cell, SemanticsRole.row, SemanticsRole.columnHeader, SemanticsRole.dragHandle, SemanticsRole.spinButton, SemanticsRole.comboBox, SemanticsRole.menuBar, SemanticsRole.menu, SemanticsRole.menuItem, SemanticsRole.menuItemCheckbox, SemanticsRole.menuItemRadio, SemanticsRole.list, SemanticsRole.listItem, SemanticsRole.form, SemanticsRole.tooltip, SemanticsRole.loadingSpinner, SemanticsRole.progressBar, SemanticsRole.hotKey, SemanticsRole.radioGroup, SemanticsRole.status, SemanticsRole.alert, SemanticsRole.complementary, SemanticsRole.contentInfo, SemanticsRole.main, SemanticsRole.navigation, SemanticsRole.region];
+
+export class SemanticsInputType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SemanticsInputType.' + this.name; }
+  static none = new SemanticsInputType('none', 0);
+  static text = new SemanticsInputType('text', 1);
+  static url = new SemanticsInputType('url', 2);
+  static phone = new SemanticsInputType('phone', 3);
+  static search = new SemanticsInputType('search', 4);
+  static email = new SemanticsInputType('email', 5);
+}
+SemanticsInputType.values = [SemanticsInputType.none, SemanticsInputType.text, SemanticsInputType.url, SemanticsInputType.phone, SemanticsInputType.search, SemanticsInputType.email];
+
+export class SemanticsHitTestBehavior {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SemanticsHitTestBehavior.' + this.name; }
+  static defer = new SemanticsHitTestBehavior('defer', 0);
+  static opaque = new SemanticsHitTestBehavior('opaque', 1);
+  static transparent = new SemanticsHitTestBehavior('transparent', 2);
+}
+SemanticsHitTestBehavior.values = [SemanticsHitTestBehavior.defer, SemanticsHitTestBehavior.opaque, SemanticsHitTestBehavior.transparent];
+
+export class SemanticsValidationResult {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'SemanticsValidationResult.' + this.name; }
+  static none = new SemanticsValidationResult('none', 0);
+  static valid = new SemanticsValidationResult('valid', 1);
+  static invalid = new SemanticsValidationResult('invalid', 2);
+}
+SemanticsValidationResult.values = [SemanticsValidationResult.none, SemanticsValidationResult.valid, SemanticsValidationResult.invalid];
+
+export class FramePhase {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'FramePhase.' + this.name; }
+  static vsyncStart = new FramePhase('vsyncStart', 0);
+  static buildStart = new FramePhase('buildStart', 1);
+  static buildFinish = new FramePhase('buildFinish', 2);
+  static rasterStart = new FramePhase('rasterStart', 3);
+  static rasterFinish = new FramePhase('rasterFinish', 4);
+  static rasterFinishWallTime = new FramePhase('rasterFinishWallTime', 5);
+}
+FramePhase.values = [FramePhase.vsyncStart, FramePhase.buildStart, FramePhase.buildFinish, FramePhase.rasterStart, FramePhase.rasterFinish, FramePhase.rasterFinishWallTime];
+
+export class AppLifecycleState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AppLifecycleState.' + this.name; }
+  static detached = new AppLifecycleState('detached', 0);
+  static resumed = new AppLifecycleState('resumed', 1);
+  static inactive = new AppLifecycleState('inactive', 2);
+  static hidden = new AppLifecycleState('hidden', 3);
+  static paused = new AppLifecycleState('paused', 4);
+}
+AppLifecycleState.values = [AppLifecycleState.detached, AppLifecycleState.resumed, AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused];
+
+export class AppExitResponse {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AppExitResponse.' + this.name; }
+  static exit = new AppExitResponse('exit', 0);
+  static cancel = new AppExitResponse('cancel', 1);
+}
+AppExitResponse.values = [AppExitResponse.exit, AppExitResponse.cancel];
+
+export class AppExitType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'AppExitType.' + this.name; }
+  static cancelable = new AppExitType('cancelable', 0);
+  static required = new AppExitType('required', 1);
+}
+AppExitType.values = [AppExitType.cancelable, AppExitType.required];
+
+export class DisplayFeatureType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DisplayFeatureType.' + this.name; }
+  static unknown = new DisplayFeatureType('unknown', 0);
+  static fold = new DisplayFeatureType('fold', 1);
+  static hinge = new DisplayFeatureType('hinge', 2);
+  static cutout = new DisplayFeatureType('cutout', 3);
+}
+DisplayFeatureType.values = [DisplayFeatureType.unknown, DisplayFeatureType.fold, DisplayFeatureType.hinge, DisplayFeatureType.cutout];
+
+export class DisplayFeatureState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DisplayFeatureState.' + this.name; }
+  static unknown = new DisplayFeatureState('unknown', 0);
+  static postureFlat = new DisplayFeatureState('postureFlat', 1);
+  static postureHalfOpened = new DisplayFeatureState('postureHalfOpened', 2);
+}
+DisplayFeatureState.values = [DisplayFeatureState.unknown, DisplayFeatureState.postureFlat, DisplayFeatureState.postureHalfOpened];
+
+export class DartPerformanceMode {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'DartPerformanceMode.' + this.name; }
+  static balanced = new DartPerformanceMode('balanced', 0);
+  static latency = new DartPerformanceMode('latency', 1);
+  static throughput = new DartPerformanceMode('throughput', 2);
+  static memory = new DartPerformanceMode('memory', 3);
+}
+DartPerformanceMode.values = [DartPerformanceMode.balanced, DartPerformanceMode.latency, DartPerformanceMode.throughput, DartPerformanceMode.memory];
+
+export class ViewFocusState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ViewFocusState.' + this.name; }
+  static unfocused = new ViewFocusState('unfocused', 0);
+  static focused = new ViewFocusState('focused', 1);
+}
+ViewFocusState.values = [ViewFocusState.unfocused, ViewFocusState.focused];
+
+export class ViewFocusDirection {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'ViewFocusDirection.' + this.name; }
+  static undefined = new ViewFocusDirection('undefined', 0);
+  static forward = new ViewFocusDirection('forward', 1);
+  static backward = new ViewFocusDirection('backward', 2);
+}
+ViewFocusDirection.values = [ViewFocusDirection.undefined, ViewFocusDirection.forward, ViewFocusDirection.backward];
+
+export class KeyEventType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'KeyEventType.' + this.name; }
+  static down = new KeyEventType('down', 0);
+  static up = new KeyEventType('up', 1);
+  static repeat = new KeyEventType('repeat', 2);
+}
+KeyEventType.values = [KeyEventType.down, KeyEventType.up, KeyEventType.repeat];
+
+export class KeyEventDeviceType {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'KeyEventDeviceType.' + this.name; }
+  static keyboard = new KeyEventDeviceType('keyboard', 0);
+  static directionalPad = new KeyEventDeviceType('directionalPad', 1);
+  static gamepad = new KeyEventDeviceType('gamepad', 2);
+  static joystick = new KeyEventDeviceType('joystick', 3);
+  static hdmi = new KeyEventDeviceType('hdmi', 4);
+}
+KeyEventDeviceType.values = [KeyEventDeviceType.keyboard, KeyEventDeviceType.directionalPad, KeyEventDeviceType.gamepad, KeyEventDeviceType.joystick, KeyEventDeviceType.hdmi];
+
+export class TimelineRecorder {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TimelineRecorder.' + this.name; }
+  static perfetto = new TimelineRecorder('perfetto', 0);
+  static chrome = new TimelineRecorder('chrome', 1);
+  static systrace = new TimelineRecorder('systrace', 2);
+}
+TimelineRecorder.values = [TimelineRecorder.perfetto, TimelineRecorder.chrome, TimelineRecorder.systrace];
+
+export class TimelineStream {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'TimelineStream.' + this.name; }
+  static api = new TimelineStream('api', 0);
+  static compiler = new TimelineStream('compiler', 1);
+  static compilerVerbose = new TimelineStream('compilerVerbose', 2);
+  static dart = new TimelineStream('dart', 3);
+  static debugger = new TimelineStream('debugger', 4);
+  static embedder = new TimelineStream('embedder', 5);
+  static gc = new TimelineStream('gc', 6);
+  static isolate = new TimelineStream('isolate', 7);
+  static microtask = new TimelineStream('microtask', 8);
+  static vm = new TimelineStream('vm', 9);
+}
+TimelineStream.values = [TimelineStream.api, TimelineStream.compiler, TimelineStream.compilerVerbose, TimelineStream.dart, TimelineStream.debugger, TimelineStream.embedder, TimelineStream.gc, TimelineStream.isolate, TimelineStream.microtask, TimelineStream.vm];
+
+export class BrowserEngine {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'BrowserEngine.' + this.name; }
+  static blink = new BrowserEngine('blink', 0);
+  static webkit = new BrowserEngine('webkit', 1);
+  static firefox = new BrowserEngine('firefox', 2);
+}
+BrowserEngine.values = [BrowserEngine.blink, BrowserEngine.webkit, BrowserEngine.firefox];
+
+export class OperatingSystem {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'OperatingSystem.' + this.name; }
+  static iOs = new OperatingSystem('iOs', 0);
+  static android = new OperatingSystem('android', 1);
+  static linux = new OperatingSystem('linux', 2);
+  static windows = new OperatingSystem('windows', 3);
+  static macOs = new OperatingSystem('macOs', 4);
+  static unknown = new OperatingSystem('unknown', 5);
+}
+OperatingSystem.values = [OperatingSystem.iOs, OperatingSystem.android, OperatingSystem.linux, OperatingSystem.windows, OperatingSystem.macOs, OperatingSystem.unknown];
+
+export class HttpClientResponseCompressionState {
+  constructor(name, index) {
+    this.name = name;
+    this.index = index;
+  }
+  toJSON() { return this.name; }
+  toString() { return 'HttpClientResponseCompressionState.' + this.name; }
+  static notCompressed = new HttpClientResponseCompressionState('notCompressed', 0);
+  static decompressed = new HttpClientResponseCompressionState('decompressed', 1);
+  static compressed = new HttpClientResponseCompressionState('compressed', 2);
+}
+HttpClientResponseCompressionState.values = [HttpClientResponseCompressionState.notCompressed, HttpClientResponseCompressionState.decompressed, HttpClientResponseCompressionState.compressed];
+
 // 单值构造的取值：位置实参的形参名因类而异（`value` / `radius` / `index` /
 // `textScaleFactor` …），值都是「唯一那个数」；裸数字也接受。
 function __one(props) {

@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/keyboard_listener_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, EdgeInsets, FocusNode, FontWeight, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, OutlinedButton, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FocusNode, FontWeight, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, MainAxisSize, OutlinedButton, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 KeyboardListenerDetail
 export class KeyboardListenerDetail {
@@ -62,7 +62,7 @@ export class KeyboardListenerDetail {
   }
   _gridRow(r) {
     return new Row({
-      "mainAxisSize": "min",
+      "mainAxisSize": MainAxisSize.min,
       "children": [
         this._cell(r, 0),
         this._cell(r, 1),
@@ -72,7 +72,7 @@ export class KeyboardListenerDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k3 || (this.__k3 = new Text({
           "data": "KeyboardListener",
@@ -112,10 +112,10 @@ export class KeyboardListenerDetail {
               })))
             }),
             "child": new Column({
-              "crossAxisAlignment": "start",
+              "crossAxisAlignment": CrossAxisAlignment.start,
               "children": [
                 new Column({
-                  "mainAxisSize": "min",
+                  "mainAxisSize": MainAxisSize.min,
                   "children": [
                     this._gridRow(0),
                     this._gridRow(1),

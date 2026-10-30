@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 import { ChangeNotifierProvider } from '../provider.js';
 
 // 组件 WatchDemo
@@ -20,13 +20,13 @@ export class WatchDemo {
         "child": new ChangeNotifierProvider({
           "create": CounterVm,
           "child": new Column({
-            "mainAxisSize": "min",
+            "mainAxisSize": MainAxisSize.min,
             "children": [
               new Builder({
                 "builder": (context) => {
                   var model = context.watch("CounterVm");
                   return new Column({
-                    "mainAxisSize": "min",
+                    "mainAxisSize": MainAxisSize.min,
                     "children": [
                       (this.__k1 || (this.__k1 = new Text({
                         "data": "context.watch<CounterModel>"
@@ -43,7 +43,7 @@ export class WatchDemo {
                         "height": 8
                       }))),
                       new Row({
-                        "mainAxisAlignment": "center",
+                        "mainAxisAlignment": MainAxisAlignment.center,
                         "children": [
                           new ElevatedButton({
                             "onPressed": this.__bindFn(0, [model], () => model.inc()),

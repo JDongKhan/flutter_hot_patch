@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/overlay_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Builder, Colors, Column, Container, EdgeInsets, FontWeight, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Builder, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisAlignment, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 OverlayDetail
 export class OverlayDetail {
@@ -14,7 +14,7 @@ export class OverlayDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "stretch",
+      "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "Overlay",
@@ -57,7 +57,7 @@ export class OverlayDetail {
                           })
                         }))),
                         new Row({
-                          "mainAxisAlignment": "center",
+                          "mainAxisAlignment": MainAxisAlignment.center,
                           "children": [
                             new OutlinedButton({
                               "onPressed": this.__bindFn(0, [], () => { this.setState(() => { this._count = (this._count + 1); });

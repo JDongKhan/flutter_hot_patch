@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/dialog_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, Text, TextButton, TextStyle, Wrap, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
+import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, MainAxisSize, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, Text, TextButton, TextStyle, Wrap, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
 
 // 组件 DialogDetail
 export class DialogDetail {
@@ -46,7 +46,7 @@ export class DialogDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k1 || (this.__k1 = new Text({
           "data": "命令式弹层",
@@ -182,7 +182,7 @@ export class DialogDetail {
             })))
           }),
           "child": new Column({
-            "crossAxisAlignment": "start",
+            "crossAxisAlignment": CrossAxisAlignment.start,
             "children": [
               new Text({
                 "style": (this.__k18 || (this.__k18 = new TextStyle({
@@ -216,8 +216,8 @@ export class GeneralDialogContent {
           "value": 16
         }))),
         "child": new Column({
-          "mainAxisSize": "min",
-          "crossAxisAlignment": "start",
+          "mainAxisSize": MainAxisSize.min,
+          "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             (this.__k1 || (this.__k1 = new Text({
               "data": "showGeneralDialog",
@@ -351,8 +351,8 @@ export class SheetContent {
           "top": 0
         }))),
         "child": new Column({
-          "mainAxisSize": "min",
-          "crossAxisAlignment": "start",
+          "mainAxisSize": MainAxisSize.min,
+          "crossAxisAlignment": CrossAxisAlignment.start,
           "children": [
             (this.__k1 || (this.__k1 = new Text({
               "data": "底部弹层",
@@ -414,8 +414,8 @@ export class DialogContent {
         "data": "JS 弹层"
       }))),
       "content": new Column({
-        "mainAxisSize": "min",
-        "crossAxisAlignment": "start",
+        "mainAxisSize": MainAxisSize.min,
+        "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
           (this.__k1 || (this.__k1 = new Text({
             "data": "这个 AlertDialog 的整棵树在 JS 侧构建，「+1」只重建本弹层",

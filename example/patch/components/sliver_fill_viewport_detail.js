@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_fill_viewport_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AppBar, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CustomScrollView, EdgeInsets, Expanded, FontWeight, OutlinedButton, Row, Scaffold, SizedBox, SliverFillViewport, Text, TextStyle } from '../flutter.js';
+import { Alignment, AppBar, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, Scaffold, SizedBox, SliverFillViewport, Text, TextStyle } from '../flutter.js';
 
 // 组件 SliverFillViewportDetail
 export class SliverFillViewportDetail {
@@ -31,7 +31,7 @@ export class SliverFillViewportDetail {
             }))),
             "color": Colors.grey.shade100,
             "child": new Column({
-              "crossAxisAlignment": "start",
+              "crossAxisAlignment": CrossAxisAlignment.start,
               "children": [
                 new Text({
                   "style": (this.__k2 || (this.__k2 = new TextStyle({
@@ -107,7 +107,7 @@ export class SliverFillViewportDetail {
                       }),
                       "child": new Center({
                         "child": new Column({
-                          "mainAxisSize": "min",
+                          "mainAxisSize": MainAxisSize.min,
                           "children": [
                             new Text({
                               "style": (this.__k12 || (this.__k12 = new TextStyle({

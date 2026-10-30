@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { GuideBubbleWidget } from '../hot_module_base.js';
-import { Align, Alignment, Chip, Color, Column, Duration, FilledButton, FontWeight, OutlinedButton, Row, SingleChildScrollView, SizedBox, Text, TextStyle, ValueKey, Wrap } from '../flutter.js';
+import { Align, Alignment, Chip, Color, Column, CrossAxisAlignment, Duration, FilledButton, FontWeight, OutlinedButton, Row, SingleChildScrollView, SizedBox, Text, TextStyle, ValueKey, Wrap } from '../flutter.js';
 
 // 组件 OverlayPortalDetail
 export class OverlayPortalDetail {
@@ -20,7 +20,7 @@ export class OverlayPortalDetail {
   }
   build(context) {
     return new Column({
-      "crossAxisAlignment": "start",
+      "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
           "data": "OverlayPortal / CompositedTransform",

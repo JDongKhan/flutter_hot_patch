@@ -6,7 +6,7 @@ import { AppService } from '../service/app_service.js';
 import { MineFeed } from '../model/app_models.js';
 import { MenuEntry } from '../model/app_models.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, Text, TextStyle, Transform } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
 
 // 组件 MinePage
 export class MinePage {
@@ -76,7 +76,7 @@ export class MinePage {
                     "child": Image.asset({
                       "width": 58,
                       "height": 58,
-                      "fit": "cover",
+                      "fit": BoxFit.cover,
                       "errorBuilder": (context, e, s) => new Container({
                         "width": 58,
                         "height": 58,
@@ -92,7 +92,7 @@ export class MinePage {
                   }))),
                   (this.__k5 || (this.__k5 = new Expanded({
                     "child": new Column({
-                      "crossAxisAlignment": "start",
+                      "crossAxisAlignment": CrossAxisAlignment.start,
                       "children": [
                         new Text({
                           "style": new TextStyle({
@@ -374,7 +374,7 @@ export class _DevRow {
   build(context) {
     return new GestureDetector({
       "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
-      "behavior": "opaque",
+      "behavior": HitTestBehavior.opaque,
       "child": new Padding({
         "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
           "bottom": 12,
@@ -407,7 +407,7 @@ export class _DevRow {
             }))),
             new Expanded({
               "child": new Column({
-                "crossAxisAlignment": "start",
+                "crossAxisAlignment": CrossAxisAlignment.start,
                 "children": [
                   new Text({
                     "style": (this.__k3 || (this.__k3 = new TextStyle({
@@ -420,7 +420,7 @@ export class _DevRow {
                   }))),
                   new Text({
                     "maxLines": 1,
-                    "overflow": "ellipsis",
+                    "overflow": TextOverflow.ellipsis,
                     "style": (this.__k5 || (this.__k5 = new TextStyle({
                       "color": new Color({
                         "value": 0xFF98A0AC
