@@ -9,7 +9,8 @@ import 'js_runtime_manager.dart';
 //
 // 与业务 @HostInjected 方法共用唯一入口 JsRuntimeManager.registerHostMethod
 // 与唯一处理器表；JS 侧也只有唯一出口 `_app_host_.invoke`。四条内建通道：
-//   - `log`          ← console.* 桥（JS 侧 __log → _app_host_.invoke('log', [..])）
+//   - `log`          ← Dart 日志全局（JS 侧 print/debugPrint → __log →
+//                      _app_host_.invoke('log', [..])）
 //   - `nativeToast`  ← 生成器把 SnackBar 形式动作译为
 //                      `_app_host_.invoke('nativeToast', {message})`
 //   - `jsuiCommit`   ← JS 增量补丁，payload 带页面 key，路由到对应 JsUiStore
@@ -49,9 +50,9 @@ void _requestFrame() {
   });
 }
 
-/// `log`：JS console 桥 → HotPatchLog。级别由 JS 侧一并传来（见 runtime_source
-/// 的 `G.console`：debug / log·info / warn / error），未知级别按 info 处理——
-/// 这样 JS 侧 `console.error` 在宿主就是 error 级，能直接进统一上报出口。
+/// `log`：JS 侧 `print` / `debugPrint` → HotPatchLog。级别由 JS 侧一并传来
+/// （见 runtime_source 的 `G.print` / `G.debugPrint`：info / debug），未知级别
+/// 按 info 处理。
 void _log(String? level, Object? message) =>
     HotPatchLog.emit(_levelOf(level), '[js-log] $message');
 

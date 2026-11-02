@@ -26,7 +26,7 @@ export class CommunityPage {
     this._price = "";
   }
   initState() {
-    console.log("CommunityPage initState ---");
+    print("CommunityPage initState ---");
     this._load();
     this._loadPosts();
     this._loadResources();
@@ -65,7 +65,7 @@ export class CommunityPage {
     this._loadPosts();
   }
   build(context) {
-    console.log("CommunityPage build : filterOpen=" + __str(this._filterOpen));
+    print("CommunityPage build : filterOpen=" + this._filterOpen);
     var feed = this._feed;
     var resources = this._resources;
     if (((feed == null) || (resources == null))) {
@@ -308,12 +308,12 @@ export class _ListContent {
     this.toggleFilter = (args && args.toggleFilter !== undefined) ? args.toggleFilter : null;
   }
   initState() {
-    console.log("--_ListContent init");
+    print("--_ListContent init");
   }
   didUpdateWidget(oldWidget) {
-    console.log("--_ListContent didUpdateWidget 0");
+    print("--_ListContent didUpdateWidget 0");
     if ((this.list.length != oldWidget.list.length)) {
-      console.log("-- _ListContent didUpdateWidget 1");
+      print("-- _ListContent didUpdateWidget 1");
     }
   }
   build(context) {
@@ -401,22 +401,22 @@ export class _FilterPanel {
     this.onApply = (args && args.onApply !== undefined) ? args.onApply : null;
   }
   initState() {
-    console.debug("[_FilterPanel] initState");
+    debugPrint("[_FilterPanel] initState");
   }
   didChangeDependencies() {
-    console.debug("[_FilterPanel] didChangeDependencies");
+    debugPrint("[_FilterPanel] didChangeDependencies");
   }
   didUpdateWidget(oldWidget) {
-    console.debug("[_FilterPanel] didUpdateWidget: old=" + __str(oldWidget));
+    debugPrint("[_FilterPanel] didUpdateWidget: old=" + oldWidget);
   }
   deactivate() {
-    console.debug("[_FilterPanel] deactivate");
+    debugPrint("[_FilterPanel] deactivate");
   }
   activate() {
-    console.debug("[_FilterPanel] activate");
+    debugPrint("[_FilterPanel] activate");
   }
   dispose() {
-    console.debug("[_FilterPanel] dispose");
+    debugPrint("[_FilterPanel] dispose");
   }
   _group(title, key, values, current) {
     return new Column({

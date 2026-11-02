@@ -24,31 +24,31 @@ export class HelloCard {
   }
   initState() {
     this._m$TestMixin2$initState();
-    console.debug("[HelloCard] initState");
+    debugPrint("[HelloCard] initState");
   }
   didChangeDependencies() {
-    console.debug("[HelloCard] didChangeDependencies");
+    debugPrint("[HelloCard] didChangeDependencies");
   }
   didUpdateWidget(oldWidget) {
-    console.debug("[HelloCard] didUpdateWidget: old=" + __str(oldWidget));
+    debugPrint("[HelloCard] didUpdateWidget: old=" + oldWidget);
   }
   deactivate() {
-    console.debug("[HelloCard] deactivate");
+    debugPrint("[HelloCard] deactivate");
   }
   activate() {
-    console.debug("[HelloCard] activate");
+    debugPrint("[HelloCard] activate");
   }
   dispose() {
-    console.debug("[HelloCard] dispose");
+    debugPrint("[HelloCard] dispose");
   }
   inc() {
-    console.debug("inc: count=" + __str(this._count));
+    debugPrint("inc: count=" + this._count);
     this.setState(() => { this._count += 1; });
   }
   async loadUser() {
     var name = await _app_host_.invoke("getUserName", []);
     var userMap = await _app_host_.invoke("post", {"url": "hello", "params": {"name": name}});
-    console.log("用户信息:" + __str(userMap["code"]));
+    print("用户信息:" + userMap["code"]);
     await new Promise(function(r){ setTimeout(r, 1000); });
     this.setState(() => { this._user = new User({name: "Alice", age: 18}); });
   }
@@ -60,14 +60,14 @@ export class HelloCard {
       if ((this._count < 0)) {
         throw new StateError({message: "count 不能为负数"});
       }
-      console.debug("try ok: count=" + __str(this._count));
+      debugPrint("try ok: count=" + this._count);
     } catch (e) {
-      console.debug("caught: " + __str(e));
+      debugPrint("caught: " + e);
     } finally {
-      console.debug("finally");
+      debugPrint("finally");
     }
     assert((this._count >= 0), "count 不能为负数");
-    console.debug("assert passed: count=" + __str(this._count));
+    debugPrint("assert passed: count=" + this._count);
   }
   showNative() {
     _app_host_.invoke("nativeToast", { message: "Hello from native (JS-driven)" });
@@ -76,7 +76,7 @@ export class HelloCard {
     var isAdult = ((this._user != null) && (this._user.age >= 18));
     var debugActive = kDebugMode;
     var android = Platform.isAndroid;
-    console.debug("build: count=" + __str(this._count) + " debug=" + __str(debugActive) + " android=" + __str(android));
+    debugPrint("build: count=" + this._count + " debug=" + debugActive + " android=" + android);
     var stage = (() => { switch (this._count) {
         case 0: return "起步";
         default: return "推进中";
@@ -161,14 +161,14 @@ export class HelloCard {
     this._m$TestMixin$initState();
   }
   testLog() {
-    console.log("--混入代码 2");
+    print("--混入代码 2");
   }
   // ---- mixin TestMixin ----
   _m$TestMixin$initState() {
     this.testLog();
   }
   _m$TestMixin$testLog() {
-    console.log("--混入代码 1");
+    print("--混入代码 1");
   }
 }
 

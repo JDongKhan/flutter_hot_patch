@@ -77,8 +77,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     return '$base.${e.identifier.name}';
   }
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被字面量分支
-  // 吞成 ""——插值表达式丢失）：拼接触发与 _logArgJs 同一逻辑。
-  if (e is StringInterpolation) return _logArgJs(e, scope, classes);
+  // 吞成 ""——插值表达式丢失）。
+  if (e is StringInterpolation) return _stringInterpolationJs(e, scope, classes);
   // 相邻字符串字面量（`'a' 'b'`）→ `+` 拼接。
   if (e is AdjacentStrings) {
     final parts = <String>[];
@@ -254,7 +254,7 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   final hooked = constructionHook?.call(e);
   if (hooked != null) return hooked;
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被吞成 ""）
-  if (e is StringInterpolation) return _logArgJs(e, scope, classes);
+  if (e is StringInterpolation) return _stringInterpolationJs(e, scope, classes);
   // 相邻字符串字面量拼接（`'a' 'b'`，Dart 语义是**拼接**）同为 StringLiteral 子类，
   // 在 literalToJs 里只能翻「全为常量」的情况；这里交给 exprToJs 的
   // AdjacentStrings 分支逐段翻译，含插值的段才翻得出来（必须早于下面的 literalToJs）。
@@ -597,39 +597,24 @@ String? methodCallStmtJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
-  // Dart 日志 → JS 原生日志方法（运行时注入 console 对象，桥到 log 服务）：
-  // debugPrint → console.debug（仅 debug 模式输出）、print → console.log。
-  // 参数支持字符串插值（拼接翻译），插值对象时经 `__str` 展开字段
-  //（`console.log(oldWidget)` 这类直接传对象的由运行时 console 桥负责展开）。
-  if (e.target == null) {
-    final name = e.methodName.name;
-    if (name == 'debugPrint' || name == 'print') {
-      final args = e.argumentList.arguments;
-      final v = args.isEmpty
-          ? '""'
-          : _logArgJs(args.first, scope, classes, expand: true);
-      if (v == null) return null;
-      final method = name == 'debugPrint' ? 'debug' : 'log';
-      return 'console.$method($v);';
-    }
-  }
+  // `print` / `debugPrint` 不做任何特殊处理：它们就是运行时注入的全局函数
+  //（`G.print` / `G.debugPrint`，见 runtime_js 的【1】），按一比一产出同名
+  // 裸调用，由 [methodCallExprJs] 的「运行时全局函数」分支兜住。
   final call = methodCallExprJs(e, scope, classes);
   return call == null ? null : '$call;';
 }
 
-/// 日志参数 → JS 表达式：字符串 / 插值拼接 / 字段引用 / 属性链。
+/// 字符串插值 → JS 表达式：`'a $x b'` → `"a " + x + " b"`。
 ///
-/// [expand] 仅由「日志调用」置真（`print` / `debugPrint` 的实参）：插值片段
-/// 包一层运行时 `__str`，把对象/数组展开成字段文本（Dart 的 `'$x'` 走
-/// `toString()`，JS 的 `+` 只给 `[object Object]`）。
-/// **其余位置（widget 文案、props 数据、模型初始化）保持原样**：那里的插值
-/// 值都是字符串/数字，包一层只是无谓地给产物引入 `__str` 全局依赖。
-String? _logArgJs(
+/// 插值片段原样拼接（Dart 的 `'$x'` 走 `toString()`，JS 的 `+` 对字符串/数字
+/// 同样成立）。对象直接作为日志实参时由运行时的 `print` / `debugPrint` 展开，
+/// 不在这里包 `__str`——否则 widget 文案、props 数据、模型初始化等位置都会
+/// 无谓地引入 `__str` 全局依赖。
+String? _stringInterpolationJs(
   Expression a,
   FieldScope scope,
-  Map<String, ClassInfo> classes, {
-  bool expand = false,
-}) {
+  Map<String, ClassInfo> classes,
+) {
   // 注意：StringInterpolation 是 StringLiteral 的子类，必须先判插值
   //（否则 stringValue 会把插值表达式拼进字面量、丢失 this._x 引用）。
   if (a is StringInterpolation) {
@@ -640,7 +625,7 @@ String? _logArgJs(
       } else if (el is InterpolationExpression) {
         final v = exprToJs(el.expression, scope, classes);
         if (v != null) {
-          parts.add(expand ? '__str($v)' : v);
+          parts.add(v);
         } else {
           // 丢片段会让产物「看着对、其实少东西」（如 `"用户信息:$x"` →
           // `"用户信息:"`），故必须出声，不能静默。

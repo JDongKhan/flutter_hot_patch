@@ -19,7 +19,7 @@ export class HomePage {
     this._city = "上海";
   }
   initState() {
-    console.log("HomePage initState ---");
+    print("HomePage initState ---");
     this._load();
   }
   async _pickCity() {
@@ -31,7 +31,7 @@ export class HomePage {
     await this._load();
   }
   didUpdateWidget(oldWidget) {
-    console.log("--HomePage didUpdateWidget 0");
+    print("--HomePage didUpdateWidget 0");
   }
   _refresh() {
     this._refreshController.callRefresh();
@@ -41,7 +41,7 @@ export class HomePage {
     this.setState(() => { this._feed = feed; });
   }
   build(context) {
-    console.log("--HomePage build");
+    print("--HomePage build");
     var feed = this._feed;
     if ((feed == null)) {
       return (this.__k0 || (this.__k0 = new Center({

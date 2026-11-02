@@ -18,11 +18,11 @@ export class CommonListItem {
     this.salt = (args && args.salt !== undefined) ? args.salt : 0;
   }
   initState() {
-    console.log("listItem initState - " + __str(this.index));
+    print("listItem initState - " + this.index);
   }
   didUpdateWidget(oldWidget) {
     this._updateCount += 1;
-    console.log("listItem didUpdateWidget- " + __str(this.index) + " -" + __str(this._updateCount));
+    print("listItem didUpdateWidget- " + this.index + " -" + this._updateCount);
   }
   build(context) {
     return new Text({

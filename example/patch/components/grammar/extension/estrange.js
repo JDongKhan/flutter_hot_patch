@@ -8,7 +8,7 @@ export class Estrange {
   constructor() {
   }
   log() {
-    console.log("项目内日志 类");
+    print("项目内日志 类");
   }
 }
 

@@ -413,7 +413,7 @@ class JsRuntimeManager {
   /// 确保 js_ui 运行时骨架就位（幂等）。
   ///
   /// 注入 JS 运行时：`patch/runtime.js`（**构建期产物**，与组件产物同生命
-  /// 周期）——运行环境全局（模块表 `__modules` / console 桥）+ element/
+  /// 周期）——运行环境全局（模块表 `__modules` / 日志全局）+ element/
   /// component/reconciler/context + 能力桥 + ChangeNotifier 基类 + 各能力
   /// 片段 + commit 协议。与具体组件无关；组件/模型/按 package 生成的 widget
   /// 模块仍走 [loadModule]。

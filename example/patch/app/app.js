@@ -26,7 +26,7 @@ export class AppSubContent {
     this._index = 0;
   }
   initState() {
-    console.log("--AppSubContent initState");
+    print("--AppSubContent initState");
     this._tab.addListener(() => { this.setState(() => { this._index = this._tab.index; }); });
   }
   dispose() {
@@ -37,10 +37,10 @@ export class AppSubContent {
     this._tab.animateTo(index);
   }
   didUpdateWidget(oldWidget) {
-    console.log("--AppSubContent didUpdateWidget");
+    print("--AppSubContent didUpdateWidget");
   }
   build(context) {
-    console.log("--AppSubContent build");
+    print("--AppSubContent build");
     return new Scaffold({
       "backgroundColor": (this.__k0 || (this.__k0 = new Color({
         "value": 0xFFF4F5F7

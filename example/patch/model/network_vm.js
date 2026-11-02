@@ -11,7 +11,7 @@ export class NetworkVm extends ChangeNotifier {
   }
   async loadUserInfo(params) {
     var data = await _app_host_.invoke("post", {"url": "loadUserInfo", "params": params});
-    console.log("获取数据:" + __str(data));
+    print("获取数据:" + data);
     return data;
   }
 }

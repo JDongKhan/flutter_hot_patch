@@ -8,7 +8,7 @@ export const TestString3 = registerExtension("String", (function () {
   "use strict";
   return {
     log3: function () {
-      console.log("项目内日志3");
+      print("项目内日志3");
     },
   };
 })(), { id: "lib/components/grammar/extension/e_string3.dart#TestString3" });

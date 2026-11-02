@@ -27,7 +27,7 @@
 /// 本文件集中维护 JS 侧**框架代码**，由生成器的 `ui_runtime` builder 写成
 /// `patch/runtime.js`，运行时包只负责加载（幂等）：
 ///   - [runtimeJsSource]：UI 运行时骨架（IIFE）——环境全局（模块表
-///     `__modules`、console 桥，挂 globalThis）+ element/
+///     `__modules`、日志全局 `print` / `debugPrint`，挂 globalThis）+ element/
 ///     component/reconciler/context/订阅 + 能力桥 + commit 协议，
 ///     与组件无关；编译/平台标志由宿主求值前注入；
 ///   - 核心片段拆分：mini-react（mini_react_js.dart）、各能力（同目录 `*_js.dart`）。
@@ -36,7 +36,7 @@
 ///
 /// | 分区 | 内容 | 属于哪个设计 |
 /// | --- | --- | --- |
-/// | 【1】 | 运行环境 + 全局状态与工具（全局对象 / 模块表 / console 桥 / id 序号 / 页面根表） | 全体共用 |
+/// | 【1】 | 运行环境 + 全局状态与工具（全局对象 / 模块表 / 日志全局 / id 序号 / 页面根表） | 全体共用 |
 /// | 【2】 | 出方向桥（`emitOp` / `commitOps` / `__sendToHost` → `sendMessage`） | 全体共用 |
 /// | 【3】 | 宿主桥 `_app_host_`（`invoke` / `resolve` / `reject`，唯一对外出口） | @HostInjected 专用 |
 /// | 【4】 | 跨语言句柄注册表（`reg` / `release` / `call` / `handleOp`）+ 控制器三件套基座 | 全体共用（新增能力只注册 kind） |
@@ -78,8 +78,8 @@ import 'mini_react_js.dart';
 
 /// UI 运行时骨架头部（到 ScrollController 片段前）。
 /// 运行环境｜IIFE 入口 + 全局状态与工具（id 序号、句柄表、结点标记、页面根表）【1】。
-/// IIFE 骨架第一段：全局对象 + 运行环境（模块表 / 编译平台标志 / console
-/// 桥，原 jsRuntimeEnvSource 并入）。环境全局在 IIFE 内挂 G（globalThis），
+/// IIFE 骨架第一段：全局对象 + 运行环境（模块表 / 编译平台标志 / 日志全局，
+/// 原 jsRuntimeEnvSource 并入）。环境全局在 IIFE 内挂 G（globalThis），
 /// 产物（模块 evaluate）经全局对象裸引用可见，与顶层 var 语义等价。
 String _jsUiGlobals(String version) =>
     _jsUiGlobalsHead(version) + _jsUiEnvVars() + _jsUiGlobalsTail;
@@ -102,7 +102,7 @@ String _jsUiGlobalsHead(String version) =>
   G.__jsuiVersion = '$version';
 ''';
 
-/// env 标志（插值生成）：模块表 / 编译平台标志 / console 桥。
+/// env 标志（插值生成）：模块表 / 编译平台标志 / 日志全局（print、debugPrint）。
 /// 直接引用 Flutter 全局 [kDebugMode] / [kReleaseMode] / [defaultTargetPlatform]，
 /// 不再经参数传递。
 String _jsUiEnvVars() => '''
@@ -120,8 +120,8 @@ if (typeof G.__modules === 'undefined') {
 // 得到 `[object Object]`，日志里看不到任何字段。`__str` 递归展开 own 字段，
 // 函数标成 `[Function name]`、循环引用标成 `[Circular]`（与 JSON.stringify
 // 不同：不会因循环引用直接抛错，也不丢函数字段）。
-// 生成器把 Dart 字符串插值（形如 '\$name'）翻译成 __str(name)（见
-// js_translator _logArgJs），console 桥也用它，故挂在 G 上供产物裸引用。
+// 日志全局 `print` / `debugPrint` 用它展开实参；JS 值类（StringBuffer 等）
+// 也按同名约定引用它，故挂在 G 上供产物裸引用。
 function __formatValue(v, stack) {
   if (typeof v === 'string') return v;
   if (v === null) return 'null';
@@ -149,44 +149,39 @@ function __formatValue(v, stack) {
   return '{' + out.join(', ') + '}';
 }
 G.__str = function (v) { return __formatValue(v, []); };
-// 原生日志方法（Dart debugPrint/print 转换产物直接调用）：统一桥到逻辑通道
-// 'log'（宿主 log 处理器 → HotPatchLog）。支持多实参（`console.log(a, b)` 与
-// 浏览器一致，空格分隔），每个实参都走 __formatValue 展开。
+// Dart 顶层日志函数（产物按一比一原样调用 `print(...)` / `debugPrint(...)`）：
+// 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）；实参交给
+// __formatValue 展开（对象/数组字段可见，不再只得到 `[object Object]`）。
 //
-// **release 下全部关闭、零跨桥**：kDebugMode 为 false 时五个级别都是同一个空
-// 函数 —— 一次日志的代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既
-// 看不到也担不起；需要线上诊断请走显式上报通道，不要指望 print。
+// **release 下关闭、零跨桥**：kDebugMode 为 false 时 __log 直接返回 —— 一次
+// 日志的代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既看不到也担不起；
+// 需要线上诊断请走显式上报通道，不要指望 print。
 //
-// 注意：flutter_js 引擎可能自带 console（只有部分方法），不能用
-// `typeof console === 'undefined'` 判断 —— 无条件合并覆盖，保证
-// debug/info/log/warn/error 全部可用。
+// debugPrint 的 Dart 签名是 `debugPrint(String? message, {int? wrapWidth})`：
+// 混合调用由生成器按「运行时全局函数」的统一信封传入
+// `{ "@args": [message], "wrapWidth": … }`，这里取出位置实参（wrapWidth 只
+// 影响原生逐行折行，JS 侧无对应物，忽略）。
+//
 // 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
 // 故 Promise 一定被回填、不会悬挂。`_app_host_` 在本 IIFE 收尾（【25】）赋值，
-// 而 console 只可能被页面代码调用——那时它必然已存在，无需探测。
-G.console = (typeof G.console === 'undefined') ? {} : G.console;
+// 而 print/debugPrint 只可能被页面代码调用——那时它必然已存在，无需探测。
 function __log(level, args) {
+  if (!G.kDebugMode) { return; }
   var text = '';
   for (var i = 0; i < args.length; i++) {
     text += (i ? ' ' : '') + __formatValue(args[i], []);
   }
-  // 级别一并带给宿主（位置实参 [level, text]）：console.warn/error 在宿主侧
-  // 就是 warn/error 级，可直接进统一上报出口；未知级别按 info 处理（见
+  // 级别一并带给宿主（位置实参 [level, text]）：未知级别按 info 处理（见
   // builtin_host_methods.dart 的 _log）。
   G._app_host_.invoke('log', [level, text]);
 }
-function __silentLog() {}
-G.console.debug = __silentLog;
-G.console.info = __silentLog;
-G.console.log = __silentLog;
-G.console.warn = __silentLog;
-G.console.error = __silentLog;
-if (G.kDebugMode) {
-  G.console.debug = function () { __log('debug', arguments); };
-  G.console.info = function () { __log('info', arguments); };
-  G.console.log = function () { __log('info', arguments); };
-  G.console.warn = function () { __log('warn', arguments); };
-  G.console.error = function () { __log('error', arguments); };
-}
+G.print = function (message) { __log('info', [message]); };
+G.debugPrint = function (message) {
+  if (message !== null && typeof message === 'object' && message['@args']) {
+    message = message['@args'][0];
+  }
+  __log('debug', [message]);
+};
 ''';
 
 /// 静态尾部：骨架状态与工具（原 _jsUiGlobals 其余）。
@@ -814,7 +809,7 @@ String runtimeJsSource() {
   ].join('\n');
   final version = runtimeContentVersion(body);
   final head = _section(
-    '【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 $version）',
+    '【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 $version）',
     _jsUiGlobals(version),
   );
   return '$head$body';

@@ -1,3 +1,12 @@
+## 0.3.6
+
+**日志调用回归一比一：`print` / `debugPrint` 原样翻译为同名全局函数（产物调用形态变化，需配套本版本 `runtime.js`；日志通道协议不变）。**
+
+- **删除翻译层的日志特殊分支**：不再把 `print` → `console.log`、`debugPrint` → `console.debug`，改为按通用「运行时全局函数」分支一比一产出 `print(...)` / `debugPrint(...)`（含 `wrapWidth` 具名实参的统一信封）。
+- **运行时【1】新增日志全局**：`G.print`（`info` 级）、`G.debugPrint`（`debug` 级），统一经 `_app_host_.invoke('log', …)` 进 `HotPatchLog`；release 下 `__log` 直接返回，零跨桥。
+- **删除运行时对 `console` 的整套封装**（`G.console` 合并覆盖与级别映射、`__silentLog`）：运行时内部诊断改用引擎自带的 `console`（flutter_js 桥到本地打印）。
+- **字符串插值不再借日志分支包 `__str`**：插值统一按 `+` 拼接；`__str` 只保留给值类（`StringBuffer` 等）使用。
+
 ## 0.3.5
 
 **Canvas 能力新增文字与图片记录（只做加法：新增值类与 op，既有语法产物不变；使用 `TextPainter` / `drawImage*` 需 `hot_patch` ≥ 0.3.2）。**

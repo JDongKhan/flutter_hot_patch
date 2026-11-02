@@ -10,7 +10,7 @@ export const TestString1 = registerExtension("String", (function () {
   "use strict";
   return {
     log1: function () {
-      console.log("项目内日志1");
+      print("项目内日志1");
       "3".log3();
       new Estrange().log();
     },

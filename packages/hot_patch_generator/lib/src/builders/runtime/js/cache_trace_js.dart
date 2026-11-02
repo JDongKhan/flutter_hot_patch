@@ -7,8 +7,8 @@
 // 分支；打开后把同名全局函数替换为「调用原实现 + 打一条日志」的包装，卸载
 // 不必要（默认关就不会安装，运行中关掉只是 __cacheTraceOn 变 false）。
 //
-// 日志走 console 桥（G.console → 宿主 HotPatchLog，带 `[js-log]` 前缀），
-// 与 Dart 侧 `[binding] + / -` 同格式，便于按 id 对齐两端。
+// 日志走引擎自带的 console（flutter_js 桥到本地打印），与 Dart 侧
+// `[binding] + / -` 同格式，便于按 id 对齐两端。
 const String cacheTraceJsSource = r'''
   var __cacheTraceOn = false;
   var __cacheTraceInstalled = false;

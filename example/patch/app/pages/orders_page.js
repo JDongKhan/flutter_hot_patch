@@ -24,7 +24,7 @@ export class OrdersPage {
     this.initialStatus = (args && args.initialStatus !== undefined) ? args.initialStatus : null;
   }
   initState() {
-    console.log("OrdersPage initState ---");
+    print("OrdersPage initState ---");
     this._load();
     this._loadOrders();
   }

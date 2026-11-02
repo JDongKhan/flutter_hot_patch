@@ -12,7 +12,7 @@ export class ReorderListDetail {
     this._controller = new ScrollController();
   }
   _onReorder(oldIndex, newIndex) {
-    console.log(__str(oldIndex) + " - " + __str(newIndex));
+    print(oldIndex + " - " + newIndex);
     this.setState(() => { var item = this._items.removeAt(oldIndex); var target = ((newIndex > oldIndex) ? (newIndex - 1) : newIndex); this._items.insert(target, item); });
   }
   _add() {

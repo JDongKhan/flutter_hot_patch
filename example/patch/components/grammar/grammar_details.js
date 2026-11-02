@@ -90,7 +90,7 @@ export class MixinDetail {
   }
   // ---- mixin StateLogMixin ----
   logState(message) {
-    console.log("[StateLogMixin] " + __str(message));
+    print("[StateLogMixin] " + message);
   }
 }
 

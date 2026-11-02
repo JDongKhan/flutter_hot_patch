@@ -63,7 +63,7 @@ class HotPatchLog {
   /// 打开后逐条打印双端缓存的登记 / 释放：
   ///   - Dart 侧：每条绑定进 [JsBindingCache] / 出缓存（含 `quiet` 的索引类条目）；
   ///   - JS 侧：每个句柄（控制器 / Key / BuildContext 代理 / 事件闭包）的
-  ///     `reg` / `releaseHandle`，经 console 桥以 `[js-log]` 回传。
+  ///     `reg` / `releaseHandle`，经引擎 console 以 `[binding]` 前缀输出。
   ///
   /// 置 true 只影响日志：不改变任何缓存行为、不增加额外表。JS 侧切面由
   /// `JsRuntimeManager.setVerboseCacheTrace(true)` 装配（等价入口，且会立刻
@@ -95,7 +95,7 @@ class HotPatchLog {
           error: error, stackTrace: stackTrace);
 
   /// 唯一出口：打印（[enabled]）+ 上报（[sink]，按 [minSinkLevel] 过滤）。
-  /// 需要按名称**动态**定级的调用方（如 JS console 桥）直接用它。
+  /// 需要按名称**动态**定级的调用方（如 JS 侧日志桥）直接用它。
   static void emit(
     HotPatchLevel level,
     String message, {

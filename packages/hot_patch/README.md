@@ -110,8 +110,9 @@ HotPatchLog.minSinkLevel = HotPatchLevel.warn; // default: only warn/error are r
 HotPatchLog.enabled = false; // only turns off local printing (default kDebugMode); reporting is unaffected
 ```
 
-`console.*` inside the JS output is bridged to the same exit with levels (`error` / `warn` / `info` / `debug`;
-the host prefixes them with `[js-log] `). For the full level description and typical sources see
+Dart's `print` / `debugPrint` are translated 1:1 to same-named JS globals and bridged to
+the same exit with levels (`info` / `debug`; `debugPrint` only emits in kDebugMode). The host
+prefixes them with `[js-log] `. For the full level description and typical sources see
 [使用手册 §4.3](../../docs/使用手册.md).
 
 ### Related packages
@@ -223,9 +224,9 @@ HotPatchLog.minSinkLevel = HotPatchLevel.warn; // 默认：只上报 warn/error
 HotPatchLog.enabled = false; // 只关本地打印（默认 kDebugMode），不影响上报
 ```
 
-JS 产物里的 `console.*` 也桥到同一出口且带级别（`error` / `warn` / `info` / `debug`，
-宿主侧带 `[js-log] ` 前缀）。完整级别说明与典型来源见
-[使用手册 §4.3](../../docs/使用手册.md)。
+Dart 的 `print` / `debugPrint` 在 JS 侧是一比一同名全局函数，桥到同一出口且带级别
+（`info` / `debug`，`debugPrint` 仅 kDebugMode 输出；宿主侧带 `[js-log] ` 前缀）。
+完整级别说明与典型来源见 [使用手册 §4.3](../../docs/使用手册.md)。
 
 ### 相关包
 
