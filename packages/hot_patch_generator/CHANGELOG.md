@@ -1,6 +1,6 @@
 ## 0.3.4
 
-**新增 CustomPaint / CustomPainter 绘制支持（只做加法：新协议键与句柄 kind 均为新增，老产物行为不变，可与 `hot_patch` 0.3.0 搭配）。**
+**新增 CustomPaint / CustomPainter 绘制支持（只做加法：新协议键与句柄 kind 均为新增，老产物行为不变，仍可与 `hot_patch` 0.3.0 搭配；使用 CustomPaint 需 `hot_patch` ≥ 0.3.1）。**
 
 - **值类（`patch/flutter.js`）**：新增 `Rect` / `RRect` / `Path` / `Paint` / `Canvas` / `CustomPainter`（`builders/runtime/js/canvas_js.dart`，插在 Dart 值类之后、异常之前）。`Canvas` 是**录制型**：每次调用压入一条 `[方法名, …实参]`，`toJSON()` 产出 `{v:1, ops:[…]}`；`Rect → [l,t,r,b]`、`RRect → 12 项`、`Path → {ops}`、`Paint → 非空属性`。
 - **`CustomPainter` 是值类 + 句柄**（kind `canvasPainter`，`sync:false`）：宿主不创建真实对象，只用 `__jsui.call(id, 'call', {method:'__record', args:[size]})` 同步取回录制结果。宿主侧重放与还原见 `hot_patch` 的 `capabilities/canvas/`。

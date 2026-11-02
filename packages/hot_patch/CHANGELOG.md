@@ -1,3 +1,12 @@
+## 0.3.1
+
+**新增 Canvas 绘制重放能力（只做加法，需随 App 重新构建生效；CustomPaint 需与生成器 0.3.4 配套）。**
+
+- **`capabilities/canvas/`**：`CanvasLibrary` 注册 `CustomPaint` renderer，支持 `painter` / `foregroundPainter` / `size` / `isComplex` / `willChange` / `child` 全量属性。
+- **同步录制 → 宿主重放**：JS 侧 `CustomPainter` 以 `canvasPainter` 句柄（`sync:false`）存在；宿主 `paint` 时调 `__jsui.call(id, 'call', {method:'__record', args:[size]})` 同步取回 `{v:1, ops:[…]}`，用 `dart:ui Canvas` 逐条重放，并按 `(handle, size)` 缓存，避免每帧重复求值。
+- **协议还原**：`canvas_from_json.dart` 负责 `Rect` / `RRect` / `Path` / `Paint` / 渐变 shader 与绘制枚举的 JSON 还原；`Canvas` op 覆盖 save/restore/saveLayer/translate/scale/rotate/clipRect/clipRRect/clipPath/drawRect/drawRRect/drawPath/drawLine/drawCircle/drawOval/drawArc/drawPaint。
+- **不支持项出声**：未知 op、未知 Paint 属性、未知 Path 指令、`clipOp: difference` 均走 `HotPatchLog.error`，不静默丢弃；`drawImage*` / `drawParagraph` / `toImage*` 等在 JS 侧直接抛错。
+
 ## 0.3.0
 
 **新增动画能力；JS 运行时改为构建期产物（需与生成器 0.3.0 配套）。**
