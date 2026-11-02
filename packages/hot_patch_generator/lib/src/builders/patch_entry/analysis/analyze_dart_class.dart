@@ -941,10 +941,15 @@ bool _fieldTranslatable(
   String typeName,
   Map<String, ClassInfo> classTable,
 ) {
-  final t = typeName.trim();
-  if (t.endsWith('?')) {
-    return _fieldTranslatable(t.substring(0, t.length - 1), classTable);
+  if (typeName.trim().endsWith('?')) {
+    return _fieldTranslatable(
+      typeName.trim().substring(0, typeName.trim().length - 1),
+      classTable,
+    );
   }
+  // `ui.Image` / `math.Point` 这类**带 import 前缀**的类型：JS 侧没有前缀概念
+  // （类型名一律擦除前缀），按简单名继续判定（`ui.Image` → `Image`）。
+  final t = _stripImportPrefix(typeName.trim());
   if (isBasicType(t)) return true;
   final lt = t.indexOf('<');
   final base = lt >= 0 ? t.substring(0, lt).trim() : t;
@@ -985,6 +990,23 @@ bool _fieldTranslatable(
     '按宿主 Widget 值处理（组件 / 三方类型请确认其 JS 侧有同名类）',
   );
   return true;
+}
+
+/// 擦除类型名上的 **import 前缀**（`ui.Image` → `Image`、`math.Point` → `Point`）。
+///
+/// 前缀只存在于 Dart 源码（`import 'dart:ui' as ui`），JS 侧类型名一律不带前缀；
+/// 字段判定按简单名继续走构造签名 / 类表 / 值类型，避免把 `ui.Image` 这类
+/// 有宿主句柄的类型误判成「解析不到」。
+String _stripImportPrefix(String t) {
+  final lt = t.indexOf('<');
+  final base = lt >= 0 ? t.substring(0, lt) : t;
+  final dot = base.indexOf('.');
+  if (dot <= 0) return t;
+  // 只认小写开头的 import 前缀（类型名本身不允许带成员访问，点号只来自前缀）。
+  if (!RegExp(r'^[a-z_$][A-Za-z0-9_$]*$').hasMatch(base.substring(0, dot))) {
+    return t;
+  }
+  return t.substring(dot + 1);
 }
 
 /// 拆分泛型类型实参（按顶层逗号，忽略嵌套尖括号里的逗号）。

@@ -1091,6 +1091,9 @@ class ElementTranslateContext implements ExprRenderer {
         }
       }
       if (body is BlockFunctionBody) {
+        // 空块体（`onPressed: () {}`）是**合法的空操作事件**：原样产出
+        // `() => {}`，不当作翻译失败（否则会误报「事件闭包块体为空」）。
+        if (body.block.statements.isEmpty) return '($pjs) => {}';
         final stmts = translateStmtList(
           body.block.statements,
           scope,
