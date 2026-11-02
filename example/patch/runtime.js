@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 4cc6aa48） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + console 桥（版本 fb003d8e） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '4cc6aa48') { return; }
-  G.__jsuiVersion = '4cc6aa48';
+  if (G.__jsui && G.__jsuiVersion === 'fb003d8e') { return; }
+  G.__jsuiVersion = 'fb003d8e';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2225,7 +2225,6 @@ if (G.kDebugMode) {
 
 // ===== 【11.5】跨模块核心符号（供 flutter.js 值类区） =====
   G.__core = {
-    defineProtoGetter: __defineProtoGetter,
     handleOp: handleOp,
     registerHandle: registerHandle,
     releaseHandle: releaseHandle,

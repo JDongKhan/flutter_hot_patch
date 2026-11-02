@@ -703,7 +703,6 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
 /// 另加 setter）暴露，按属性实时读写。
 const String _jsUiCrossModuleExports = r'''
   G.__core = {
-    defineProtoGetter: __defineProtoGetter,
     handleOp: handleOp,
     registerHandle: registerHandle,
     releaseHandle: releaseHandle,

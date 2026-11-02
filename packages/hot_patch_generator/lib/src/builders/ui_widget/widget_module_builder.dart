@@ -1158,7 +1158,6 @@ String renderPackageModule(String package, Set<String> types) {
     b
       ..writeln('const G = globalThis;')
       ..writeln('const {')
-      ..writeln('  defineProtoGetter: __defineProtoGetter,')
       ..writeln('  handleOp, registerHandle, releaseHandle, handleObjectOf,')
       ..writeln('  createFnHandle: __createFnHandle,')
       ..writeln('  contextOf, elementOf, elementListOf, isElement, isElementList,')

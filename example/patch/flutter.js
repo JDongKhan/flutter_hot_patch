@@ -4,7 +4,6 @@
 
 const G = globalThis;
 const {
-  defineProtoGetter: __defineProtoGetter,
   handleOp, registerHandle, releaseHandle, handleObjectOf,
   createFnHandle: __createFnHandle,
   contextOf, elementOf, elementListOf, isElement, isElementList,
@@ -7265,67 +7264,93 @@ export class FocusNode extends ControllerBase {
   }
 }
 
-export const LogicalKeyboardKey = {};
-// keyId → 同一实例（常量与宿主回传的事件因此指向同一对象）。
+// 常量身份：Dart 的 LogicalKeyboardKey 是**常量实例**，源码里的
+// `event.logicalKey == LogicalKeyboardKey.enter` 比较的是同一个常量对象。JS 侧
+// 按 keyId 归一（同一 keyId 永远返回同一实例），常量与宿主回传的事件因此指向
+// 同一对象，比较语义与 Dart 一致。
+//
+// 常量是类的**静态 getter**（Dart 里它们本身就是属性）：成员随类声明，
+// 非枚举、无需运行时再往构造函数上动态挂成员。
+export class LogicalKeyboardKey {
+  constructor(props) {
+    props = props || {};
+    this.keyId = props.keyId;
+    this.keyLabel = props.keyLabel || '';
+    this.debugName = props.debugName || this.keyLabel;
+  }
+  // keyId → 同一实例（常量与宿主回传的事件因此指向同一对象）。
+  static __byId(keyId, label) {
+    var k = LogicalKeyboardKey.__instances[keyId];
+    if (!k) {
+      k = new LogicalKeyboardKey({ keyId: keyId, keyLabel: label || '' });
+      LogicalKeyboardKey.__instances[keyId] = k;
+    }
+    return k;
+  }
+  static get space() { return LogicalKeyboardKey.__byId(0x00000000020, 'Space'); }
+  static get enter() { return LogicalKeyboardKey.__byId(0x0010000000D, 'Enter'); }
+  static get escape() { return LogicalKeyboardKey.__byId(0x0010000001B, 'Escape'); }
+  static get tab() { return LogicalKeyboardKey.__byId(0x00100000009, 'Tab'); }
+  static get backspace() { return LogicalKeyboardKey.__byId(0x00100000008, 'Backspace'); }
+  static get delete() { return LogicalKeyboardKey.__byId(0x0010000007F, 'Delete'); }
+  static get capsLock() { return LogicalKeyboardKey.__byId(0x00100000104, 'Caps Lock'); }
+  static get arrowUp() { return LogicalKeyboardKey.__byId(0x00100000304, 'Arrow Up'); }
+  static get arrowDown() { return LogicalKeyboardKey.__byId(0x00100000301, 'Arrow Down'); }
+  static get arrowLeft() { return LogicalKeyboardKey.__byId(0x00100000302, 'Arrow Left'); }
+  static get arrowRight() { return LogicalKeyboardKey.__byId(0x00100000303, 'Arrow Right'); }
+  static get home() { return LogicalKeyboardKey.__byId(0x00100000306, 'Home'); }
+  static get end() { return LogicalKeyboardKey.__byId(0x00100000305, 'End'); }
+  static get pageUp() { return LogicalKeyboardKey.__byId(0x00100000308, 'Page Up'); }
+  static get pageDown() { return LogicalKeyboardKey.__byId(0x00100000307, 'Page Down'); }
+  static get controlLeft() { return LogicalKeyboardKey.__byId(0x00200000100, 'Control Left'); }
+  static get controlRight() { return LogicalKeyboardKey.__byId(0x00200000101, 'Control Right'); }
+  static get shiftLeft() { return LogicalKeyboardKey.__byId(0x00200000102, 'Shift Left'); }
+  static get shiftRight() { return LogicalKeyboardKey.__byId(0x00200000103, 'Shift Right'); }
+  static get altLeft() { return LogicalKeyboardKey.__byId(0x00200000104, 'Alt Left'); }
+  static get altRight() { return LogicalKeyboardKey.__byId(0x00200000105, 'Alt Right'); }
+  static get metaLeft() { return LogicalKeyboardKey.__byId(0x00200000106, 'Meta Left'); }
+  static get metaRight() { return LogicalKeyboardKey.__byId(0x00200000107, 'Meta Right'); }
+  // 数字与字母键：logical keyId 就是字符码（digit0 = 0x30，keyA = 0x61），
+  // keyLabel 与 Flutter 一致（数字本身 / 大写字母）。
+  static get digit0() { return LogicalKeyboardKey.__byId(0x30, '0'); }
+  static get digit1() { return LogicalKeyboardKey.__byId(0x31, '1'); }
+  static get digit2() { return LogicalKeyboardKey.__byId(0x32, '2'); }
+  static get digit3() { return LogicalKeyboardKey.__byId(0x33, '3'); }
+  static get digit4() { return LogicalKeyboardKey.__byId(0x34, '4'); }
+  static get digit5() { return LogicalKeyboardKey.__byId(0x35, '5'); }
+  static get digit6() { return LogicalKeyboardKey.__byId(0x36, '6'); }
+  static get digit7() { return LogicalKeyboardKey.__byId(0x37, '7'); }
+  static get digit8() { return LogicalKeyboardKey.__byId(0x38, '8'); }
+  static get digit9() { return LogicalKeyboardKey.__byId(0x39, '9'); }
+  static get keyA() { return LogicalKeyboardKey.__byId(0x61, 'A'); }
+  static get keyB() { return LogicalKeyboardKey.__byId(0x62, 'B'); }
+  static get keyC() { return LogicalKeyboardKey.__byId(0x63, 'C'); }
+  static get keyD() { return LogicalKeyboardKey.__byId(0x64, 'D'); }
+  static get keyE() { return LogicalKeyboardKey.__byId(0x65, 'E'); }
+  static get keyF() { return LogicalKeyboardKey.__byId(0x66, 'F'); }
+  static get keyG() { return LogicalKeyboardKey.__byId(0x67, 'G'); }
+  static get keyH() { return LogicalKeyboardKey.__byId(0x68, 'H'); }
+  static get keyI() { return LogicalKeyboardKey.__byId(0x69, 'I'); }
+  static get keyJ() { return LogicalKeyboardKey.__byId(0x6A, 'J'); }
+  static get keyK() { return LogicalKeyboardKey.__byId(0x6B, 'K'); }
+  static get keyL() { return LogicalKeyboardKey.__byId(0x6C, 'L'); }
+  static get keyM() { return LogicalKeyboardKey.__byId(0x6D, 'M'); }
+  static get keyN() { return LogicalKeyboardKey.__byId(0x6E, 'N'); }
+  static get keyO() { return LogicalKeyboardKey.__byId(0x6F, 'O'); }
+  static get keyP() { return LogicalKeyboardKey.__byId(0x70, 'P'); }
+  static get keyQ() { return LogicalKeyboardKey.__byId(0x71, 'Q'); }
+  static get keyR() { return LogicalKeyboardKey.__byId(0x72, 'R'); }
+  static get keyS() { return LogicalKeyboardKey.__byId(0x73, 'S'); }
+  static get keyT() { return LogicalKeyboardKey.__byId(0x74, 'T'); }
+  static get keyU() { return LogicalKeyboardKey.__byId(0x75, 'U'); }
+  static get keyV() { return LogicalKeyboardKey.__byId(0x76, 'V'); }
+  static get keyW() { return LogicalKeyboardKey.__byId(0x77, 'W'); }
+  static get keyX() { return LogicalKeyboardKey.__byId(0x78, 'X'); }
+  static get keyY() { return LogicalKeyboardKey.__byId(0x79, 'Y'); }
+  static get keyZ() { return LogicalKeyboardKey.__byId(0x7A, 'Z'); }
+}
+// keyId → 实例表（类字段外置，避免求值期用类自身引用做初始化）。
 LogicalKeyboardKey.__instances = {};
-LogicalKeyboardKey.__byId = function (keyId, label) {
-  var k = LogicalKeyboardKey.__instances[keyId];
-  if (!k) {
-    k = { keyId: keyId, keyLabel: label || '', debugName: label || '' };
-    LogicalKeyboardKey.__instances[keyId] = k;
-  }
-  return k;
-};
-// 常量表 + 同名 getter：名字 → [keyId, keyLabel]。宿主回传的事件按 keyId 归一，
-// 所以这里只登记「JS 源码里可能出现的名字」，两端读到的仍是同一实例。
-// 数字与字母键：logical keyId 就是字符码（digit0 = 0x30，keyA = 0x61），
-// keyLabel 与 Flutter 一致（大写字母 / 数字本身）。
-LogicalKeyboardKey.__define = function () {
-  var consts = {
-    space: [0x00000000020, 'Space'],
-    enter: [0x0010000000D, 'Enter'],
-    escape: [0x0010000001B, 'Escape'],
-    tab: [0x00100000009, 'Tab'],
-    backspace: [0x00100000008, 'Backspace'],
-    delete: [0x0010000007F, 'Delete'],
-    capsLock: [0x00100000104, 'Caps Lock'],
-    arrowUp: [0x00100000304, 'Arrow Up'],
-    arrowDown: [0x00100000301, 'Arrow Down'],
-    arrowLeft: [0x00100000302, 'Arrow Left'],
-    arrowRight: [0x00100000303, 'Arrow Right'],
-    home: [0x00100000306, 'Home'],
-    end: [0x00100000305, 'End'],
-    pageUp: [0x00100000308, 'Page Up'],
-    pageDown: [0x00100000307, 'Page Down'],
-    controlLeft: [0x00200000100, 'Control Left'],
-    controlRight: [0x00200000101, 'Control Right'],
-    shiftLeft: [0x00200000102, 'Shift Left'],
-    shiftRight: [0x00200000103, 'Shift Right'],
-    altLeft: [0x00200000104, 'Alt Left'],
-    altRight: [0x00200000105, 'Alt Right'],
-    metaLeft: [0x00200000106, 'Meta Left'],
-    metaRight: [0x00200000107, 'Meta Right']
-  };
-  for (var d = 0; d < 10; d++) {
-    consts['digit' + d] = [0x30 + d, String(d)];
-  }
-  for (var c = 0; c < 26; c++) {
-    var letter = String.fromCharCode(0x61 + c).toUpperCase();
-    consts['key' + letter] = [0x61 + c, letter];
-  }
-  LogicalKeyboardKey.__consts = consts;
-  // 静态 getter 统一成一张表，交给 __defineProtoGetter 一次挂载。
-  var keyGetters = {};
-  for (var name in consts) {
-    keyGetters[name] = (function (n) {
-      return function () {
-        return LogicalKeyboardKey.__byId(consts[n][0], consts[n][1]);
-      };
-    })(name);
-  }
-  __defineProtoGetter(LogicalKeyboardKey, keyGetters);
-};
-LogicalKeyboardKey.__define();
 
 // PhysicalKeyboardKey：`event.physicalKey.usbHidUsage` 按 usb 码归一。
 export class PhysicalKeyboardKey {
