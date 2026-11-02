@@ -1,3 +1,14 @@
+## 0.3.2
+
+**CustomPaint 新增文字与图片绘制（只做加法：新 op、图片句柄与宿主返回值编码器均为新增，老产物行为不变；需与生成器 0.3.5 配套）。**
+
+- **文字（`drawText`）**：JS `TextPainter` 只录制构造实参（text span / textDirection / textAlign / maxLines / ellipsis）与 `layout` 约束；宿主 `canvas_from_json.dart` 用真实 `TextPainter` 排版后绘制，字体与换行和原生一致。白名单之外的构造实参（`textScaler` / `strutStyle` / `locale` …）报错并跳过该指令，不静默用默认值。
+- **文字旋转**：复用已有 `save` / `translate` / `rotate` 矩阵能力，无新协议。
+- **图片（`drawImage` / `drawImageRect`）**：图片以句柄 `{__handle, width, height}` 跨桥；新增 `canvas_image_registry.dart` 维护 id ↔ `ui.Image`，`canvasImageFromJson` 按 id 还原，未知 id 报错。
+- **`JsRuntimeManager.registerHostValueEncoder<T>`**：新增通用「宿主返回值编码器」缝，`_settleHost` 改为 `jsonEncode(..., toEncodable:)`；`ui.Image` 等无 JSON 形态的对象由能力库登记编码（`CanvasLibrary.ensureChannels()`）。未登记的对象沿用 Dart 默认语义（有 `toJson` 就调它，否则抛 `JsonUnsupportedObjectError`），不改老行为。
+- **图片生命周期**：句柄与图片常驻进程（同 Flutter `imageCache` 语义），不随页面销毁释放；重复加载同一 URL 命中解码缓存。
+- **不支持项出声**：`drawImageNine` / `drawAtlas` / `drawParagraph` 等仍在 JS 侧抛错；未知绘制指令、未知 TextPainter 属性、未知图片句柄由宿主 `HotPatchLog.error`。
+
 ## 0.3.1
 
 **新增 Canvas 绘制重放能力（只做加法，需随 App 重新构建生效；CustomPaint 需与生成器 0.3.4 配套）。**

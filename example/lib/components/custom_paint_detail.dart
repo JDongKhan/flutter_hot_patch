@@ -1,13 +1,42 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
-/// CustomPaint 演示：图元 / 变换 / 裁剪 / Path / 渐变 shader / saveLayer。
+import '../base/canvas_image.dart';
+
+/// CustomPaint 演示：图元 / 变换 / 裁剪 / Path / 渐变 shader / saveLayer /
+/// 文字 / 图片（含旋转）。
 ///
 /// 约定：`CustomPainter` 在 JS 侧是值类（句柄 `canvasPainter`），`paint(canvas, size)`
-/// 里对 `Canvas` 的调用被**录制**成 JSON ops，再由宿主用 dart:ui 的 Canvas 重放。
+/// 里对 `Canvas` 的调用被**录制**成 JSON ops，再由宿主用 dart:ui 的 Canvas 重放：
+///   - `TextPainter` 只录制 span 与 layout 约束，排版/字体由宿主完成；
+///   - 图片经 `CanvasImage.load` 拿到句柄，`drawImage*` 只记录句柄；
+///   - 文字/图片的旋转由 `save / translate / rotate` 的矩阵自然生效。
 @PatchEntry('CustomPaintDetail')
-class CustomPaintDetail extends StatelessWidget {
+class CustomPaintDetail extends StatefulWidget {
   const CustomPaintDetail({super.key});
+
+  @override
+  State<CustomPaintDetail> createState() => _CustomPaintDetailState();
+}
+
+class _CustomPaintDetailState extends State<CustomPaintDetail> {
+  /// 宿主加载回来的图片句柄（JS 侧是 `{__handle, width, height}`）。
+  ui.Image? _photo;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPhoto();
+  }
+
+  Future<void> _loadPhoto() async {
+    final img = await CanvasImage.load(
+      'assets/images/photo-1504280390367-361c6d9f38f4.jpg',
+    );
+    setState(() => _photo = img);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +54,19 @@ class CustomPaintDetail extends StatelessWidget {
             width: 360,
             height: 240,
             child: CustomPaint(painter: _BoardPainter()),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          '文字排版 + 图片（含旋转 / 裁剪）',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: SizedBox(
+            width: 360,
+            height: 200,
+            child: CustomPaint(painter: _MediaPainter(image: _photo)),
           ),
         ),
         const SizedBox(height: 12),
@@ -169,4 +211,111 @@ class _FramePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// 文字 + 图片（含旋转）演示。
+///
+/// `TextPainter` / `drawImageRect` 在 JS 侧都只录制，排版与像素合成由宿主完成；
+/// 旋转完全复用 `save / translate / rotate` 的矩阵能力（无需新协议）。
+class _MediaPainter extends CustomPainter {
+  _MediaPainter({this.image, this.angle = 0.25});
+
+  /// 宿主返回的图片句柄（未加载完时为 null）。
+  final ui.Image? image;
+
+  /// 右上图片的旋转弧度。
+  final double angle;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bg = Paint();
+    bg.color = const Color(0xFF102027);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bg);
+
+    // 文字：居中标题（layout 约束由 JS 录制，排版由宿主完成）。
+    final title = TextPainter(
+      text: TextSpan(
+        text: 'Canvas 文字排版',
+        style: TextStyle(
+          color: const Color(0xFFE0F7FA),
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+    );
+    title.layout(maxWidth: size.width);
+    title.paint(canvas, Offset(0, 12));
+
+    // 旋转文字：save / translate / rotate 复用已有矩阵。
+    canvas.save();
+    canvas.translate(size.width / 2, 60);
+    canvas.rotate(-0.22);
+    final tag = TextPainter(
+      text: TextSpan(
+        text: '旋转文字 -12.6°',
+        style: TextStyle(
+          color: const Color(0xFFFFD54F),
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    tag.layout(maxWidth: 240);
+    tag.paint(canvas, Offset(-72, -12));
+    canvas.restore();
+
+    final line = Paint();
+    line.color = const Color(0xFF546E7A);
+    line.strokeWidth = 1;
+    canvas.drawLine(Offset(16, 96), Offset(size.width - 16, 96), line);
+
+    final img = image;
+    if (img == null) {
+      final waiting = TextPainter(
+        text: TextSpan(
+          text: '图片加载中…',
+          style: TextStyle(color: const Color(0xFF90A4AE), fontSize: 14),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      waiting.layout(maxWidth: size.width);
+      waiting.paint(canvas, Offset(16, 132));
+      return;
+    }
+
+    final imgPaint = Paint();
+
+    // 原图：整图铺进左侧矩形（drawImageRect 同时完成缩放）。
+    canvas.drawImageRect(
+      img,
+      Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+      Rect.fromLTWH(16, 108, 150, 80),
+      imgPaint,
+    );
+
+    // 旋转 + 裁剪：取原图中部一块，旋转后画在右侧。
+    canvas.save();
+    canvas.translate(276, 148);
+    canvas.rotate(angle);
+    canvas.drawImageRect(
+      img,
+      Rect.fromLTWH(
+        img.width / 3,
+        img.height / 4,
+        img.width / 3,
+        img.height / 3,
+      ),
+      Rect.fromLTWH(-45, -45, 90, 90),
+      imgPaint,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _MediaPainter oldDelegate) =>
+      oldDelegate.image != image || oldDelegate.angle != angle;
 }

@@ -15,8 +15,16 @@
 //   Path   → {ops: [[method, ...args], ...]}（参数里可含 Rect / RRect）
 //   Paint  → 自身非空属性（color → '#AARRGGBB'，枚举 → 成员名，shader → 协议对象）
 //
-// 不支持的能力**必须出声**：`drawImage*` / `drawParagraph` / `toImage` 直接抛
-// 异常，由宿主 JsRuntimeManager.evaluate 记 HotPatchLog.error（禁止静默降级）。
+// 文字 / 图片：
+//   - `TextPainter` 在 JS 侧只记录**构造参数 + layout 约束**（JS 无法同步测量
+//     文本），`paint(canvas, offset)` 压入 `['drawText', span, offset, layout]`；
+//     宿主用真实 `TextPainter` 排版并绘制。
+//   - `Canvas.drawImage` / `drawImageRect` 的 image 实参是**宿主返回值里的图片
+//     句柄**（`{__handle, width, height}`）：JS 从不持有像素，只按 id 回传给宿主。
+//     旋转由 `save/translate/rotate` 的矩阵自然生效，无需额外协议。
+//
+// 不支持的能力**必须出声**：`drawImageNine` / `drawParagraph` / `toImage` 等直接
+// 抛异常，由宿主 JsRuntimeManager.evaluate 记 HotPatchLog.error（禁止静默降级）。
 const String canvasJsSource = r'''
   // ---------------------------------------------------------------------------
   // Rect：`Rect.fromLTWH(...)` 等命名构造在 JS 侧是 `Rect.fromLTWH({left, …})`
@@ -210,10 +218,22 @@ const String canvasJsSource = r'''
       this.ops.push(['drawArc', rect, startAngle, sweepAngle, useCenter, paint]);
     }
     drawPaint(paint) { this.ops.push(['drawPaint', paint]); }
+    // image 是宿主返回值里的图片句柄（`{__handle, width, height}`），
+    // JS 不持有像素；宿主重放时按 id 还原成真实 ui.Image。
+    drawImage(image, offset, paint) {
+      if (image == null) {
+        throw new Error('CustomPaint: Canvas.drawImage 需要图片句柄（宿主 loadCanvasImage 的返回值），收到 null');
+      }
+      this.ops.push(['drawImage', image, offset, paint]);
+    }
+    drawImageRect(image, src, dst, paint) {
+      if (image == null) {
+        throw new Error('CustomPaint: Canvas.drawImageRect 需要图片句柄（宿主 loadCanvasImage 的返回值），收到 null');
+      }
+      this.ops.push(['drawImageRect', image, src, dst, paint]);
+    }
 
     // 未支持：显式抛错（宿主 evaluate 会记 HotPatchLog.error，不静默）。
-    drawImage() { throw new Error('CustomPaint: Canvas.drawImage 暂不支持'); }
-    drawImageRect() { throw new Error('CustomPaint: Canvas.drawImageRect 暂不支持'); }
     drawImageNine() { throw new Error('CustomPaint: Canvas.drawImageNine 暂不支持'); }
     drawAtlas() { throw new Error('CustomPaint: Canvas.drawAtlas 暂不支持'); }
     drawVertices() { throw new Error('CustomPaint: Canvas.drawVertices 暂不支持'); }
@@ -230,6 +250,60 @@ const String canvasJsSource = r'''
     getDestinationClipBounds() { throw new Error('CustomPaint: Canvas.getDestinationClipBounds 暂不支持'); }
 
     toJSON() { return { v: 1, ops: this.ops }; }
+  }
+
+  // ---------------------------------------------------------------------------
+  // TextPainter：只记录构造参数与 layout 约束，真正的排版/绘制由宿主完成。
+  //
+  // 构造实参按原名保存（`new TextPainter({text, textDirection, textAlign, …})`），
+  // 交给宿主逐项还原：宿主只支持 text / textDirection / textAlign / maxLines /
+  // ellipsis，其余键（textScaler / strutStyle / locale …）会在重放时报错，不静默。
+  //
+  // `layout(minWidth, maxWidth)` 的具名实参在 JS 侧是尾参对象
+  // （`layout({maxWidth: 200})`），这里两种形态都接受；`Infinity` 序列化成 null，
+  // 宿主按 Dart 默认值（minWidth 0 / maxWidth infinity）处理。
+  //
+  // `width` / `height` / `size` 需要同步测量，JS 侧无法做到——访问即抛错（
+  // 显式失败优于返回一个假尺寸）；需要居中时请用布局已知的常量或自己算偏移。
+  export class TextPainter {
+    constructor(props) {
+      this.__props = props || {};
+      this.__layout = null;
+    }
+    layout(minWidth, maxWidth) {
+      if (minWidth != null && typeof minWidth === 'object') {
+        var o = minWidth;
+        minWidth = o.minWidth;
+        maxWidth = o.maxWidth;
+      }
+      this.__layout = {
+        minWidth: (minWidth != null && minWidth !== Infinity) ? minWidth : null,
+        maxWidth: (maxWidth != null && maxWidth !== Infinity) ? maxWidth : null
+      };
+    }
+    paint(canvas, offset) {
+      if (this.__layout == null) {
+        throw new Error('Canvas 文字：TextPainter 需先 layout() 再 paint()');
+      }
+      // 构造实参里除 text（已单独作为 span 下发）外都作为排版选项；layout
+      // 里为 null 的项表示「用 Dart 默认值」（minWidth 0 / maxWidth infinity）。
+      var opts = {};
+      for (var k in this.__props) {
+        if (k !== 'text') { opts[k] = this.__props[k]; }
+      }
+      if (this.__layout.minWidth != null) { opts.minWidth = this.__layout.minWidth; }
+      if (this.__layout.maxWidth != null) { opts.maxWidth = this.__layout.maxWidth; }
+      canvas.ops.push(['drawText', this.__props.text, offset, opts]);
+    }
+    get width() {
+      throw new Error('Canvas 文字：TextPainter.width 需要同步测量，暂不支持；请用已知常量计算偏移');
+    }
+    get height() {
+      throw new Error('Canvas 文字：TextPainter.height 需要同步测量，暂不支持；请用已知常量计算偏移');
+    }
+    get size() {
+      throw new Error('Canvas 文字：TextPainter.size 需要同步测量，暂不支持；请用已知常量计算偏移');
+    }
   }
 
   // ---------------------------------------------------------------------------

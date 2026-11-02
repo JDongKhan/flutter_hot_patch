@@ -88,7 +88,7 @@ class WidgetShowcase extends StatelessWidget {
       _Entry('ColorFiltered', '颜色滤镜：mode(multiply/modulate) 与 20 项矩阵灰度', 'ColorFilteredDetail'),
       _Entry(
         'CustomPaint',
-        '自绘：图元 / 变换 / 裁剪 / Path / 渐变 shader / saveLayer',
+        '自绘：图元 / 文字 / 图片 / 旋转 / 裁剪 / Path / 渐变',
         'CustomPaintDetail',
       ),
     ]),

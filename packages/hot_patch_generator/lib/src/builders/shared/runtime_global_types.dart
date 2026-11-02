@@ -42,9 +42,24 @@ Set<String> runtimeTypeAliases() => _RuntimeGlobalTypes.instance.aliases;
 /// 这里自动可见（同时进 [flutterExportTypes]，产物按名 import）。
 Set<String> runtimeGlobalFunctions() => _RuntimeGlobalTypes.instance.functions;
 
+/// 运行时注入的**小写全局命名空间**（`export const int = { parse … }`）。
+///
+/// 与 [runtimeGlobalTypes] 分开：命名空间是「静态成员容器」（`int.parse` /
+/// `double.infinity`），不是构造函数，**绝不能**用于 `instanceof`；但它确实
+/// 是 `flutter.js` 的模块导出，产物引用时要 import。
+///
+/// 新增命名空间 = 在值类片段里写 `export const <小写名> = {`，这里自动可见。
+Set<String> runtimeGlobalNamespaces() => _RuntimeGlobalTypes.instance.namespaces;
+
 /// 进程内只扫描一次（build_runner 的多个 builder 共用）。
 class _RuntimeGlobalTypes {
-  const _RuntimeGlobalTypes(this.types, this.aliases, this.functions, this.exports);
+  const _RuntimeGlobalTypes(
+    this.types,
+    this.aliases,
+    this.functions,
+    this.exports,
+    this.namespaces,
+  );
 
   final Set<String> types;
 
@@ -56,6 +71,9 @@ class _RuntimeGlobalTypes {
 
   /// 运行时注入的全局函数（`export function showDialog …`）。
   final Set<String> functions;
+
+  /// 小写全局命名空间（`export const int = {`）——静态成员容器，非构造函数。
+  final Set<String> namespaces;
 
   /// 全局注入语句：`G.FocusNode = FocusNode;`。
   static final _globalAssign = RegExp(r'\bG\.([A-Z][A-Za-z0-9_$]*)\s*=');
@@ -70,6 +88,13 @@ class _RuntimeGlobalTypes {
   /// 值片段的导出常量 / 对象：`export const MediaQuery = {`、
   /// `export const StateError = __dartErrorCtor(...)`。
   static final _exportConst = RegExp(r'\bexport const ([A-Z][A-Za-z0-9_$]*)');
+
+  /// 小写命名空间的导出：`export const int = { parse … }`（静态成员容器）。
+  ///
+  /// 必须以 `= {` 结尾才算命名空间，避免把普通小写常量（字符串/数组/函数）
+  /// 误当静态成员表。
+  static final _exportNamespace =
+      RegExp(r'\bexport const ([a-z][A-Za-z0-9_$]*)\s*=\s*\{');
 
   /// 全局函数注入语句：`G.foo = function (…) {`（关键词 `function` 排除
   /// `G.foo = new Foo()` 这类同名对象注入，避免把对象当函数调用）。
@@ -93,7 +118,14 @@ class _RuntimeGlobalTypes {
     final aliases = <String>{};
     final functions = <String>{};
     final exports = <String>{};
-    const empty = _RuntimeGlobalTypes(<String>{}, <String>{}, <String>{}, <String>{});
+    final namespaces = <String>{};
+    const empty = _RuntimeGlobalTypes(
+      <String>{},
+      <String>{},
+      <String>{},
+      <String>{},
+      <String>{},
+    );
     final sources = PackageSources.locate();
     final pkg = sources?.byName('hot_patch_generator');
     if (pkg == null) return empty;
@@ -140,6 +172,11 @@ class _RuntimeGlobalTypes {
       for (final m in _typeAlias.allMatches(src)) {
         aliases.add(m.group(1)!);
       }
+      for (final m in _exportNamespace.allMatches(src)) {
+        // 命名空间是模块导出（产物要 import），但不是类型（不能 instanceof）。
+        namespaces.add(m.group(1)!);
+        exports.add(m.group(1)!);
+      }
     }
     // 按源码自动生成的 SDK 枚举值类：它们的 `export class X` 不存在于任何
     // `.dart` 片段文本里（`enumValuesJsSource()` 在构建期按 SDK `enum` 声明
@@ -155,6 +192,6 @@ class _RuntimeGlobalTypes {
     exports.add('IconData');
     types.add('Icons');
     exports.add('Icons');
-    return _RuntimeGlobalTypes(types, aliases, functions, exports);
+    return _RuntimeGlobalTypes(types, aliases, functions, exports, namespaces);
   }
 }

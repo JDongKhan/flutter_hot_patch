@@ -18,6 +18,7 @@ import '../runtime/js/canvas_js.dart';
 import '../runtime/js/change_notifier_js.dart';
 import '../runtime/js/color_js.dart';
 import '../runtime/js/controller_base_js.dart';
+import '../runtime/js/dart_core_js.dart';
 import '../runtime/js/dart_errors_js.dart';
 import '../runtime/js/dart_values_js.dart';
 import '../runtime/js/dialogs_js.dart';
@@ -52,6 +53,10 @@ import '../runtime/js/timer_js.dart';
 /// 前后互引。依赖方向单向：flutter.js → runtime.js，反方向禁止。
 String flutterValueClassesSource() => [
       dartValuesJsSource,
+      // dart:core 里 JS 无同名内建的类型（DateTime / RegExp / StringBuffer）
+      // 与小写静态命名空间（int / double / num）：依赖 __positionalArgs，
+      // 故紧随基础值类之后。
+      dartCoreJsSource,
       // 绘制值类（Rect / RRect / Path / Paint / Canvas）与 CustomPainter 句柄：
       // 依赖基础值类工具（__positionalArgs）与 core 句柄机制，故紧随其后。
       canvasJsSource,

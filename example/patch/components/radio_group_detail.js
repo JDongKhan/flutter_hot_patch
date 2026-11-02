@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/radio_group_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisSize, Radio, RadioGroup, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisSize, Radio, RadioGroup, Radius, Row, SizedBox, Text, TextStyle, double, int } from '../flutter.js';
 
 // 组件 RadioGroupDetail
 export class RadioGroupDetail {
@@ -52,6 +52,7 @@ export class RadioGroupDetail {
           "height": 10
         }))),
         new Container({
+          "width": double.infinity,
           "padding": (this.__k4 || (this.__k4 = EdgeInsets.all({
             "value": 8
           }))),

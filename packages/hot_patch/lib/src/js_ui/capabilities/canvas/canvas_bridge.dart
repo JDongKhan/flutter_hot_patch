@@ -20,6 +20,7 @@ import '../../../utils/hot_patch_log.dart';
 import '../../js_widget_registry.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import 'canvas_from_json.dart';
+import 'canvas_image_registry.dart';
 
 /// CustomPaint 宿主组件注册（能力库钩子）。
 void registerCanvasWidgets(JsWidgetRegistry r) {
@@ -257,6 +258,36 @@ class _JsPainter extends CustomPainter {
             _badOp(name, op);
           } else {
             canvas.drawPaint(paint);
+          }
+        case 'drawText':
+          // JS TextPainter 只录制 span + 排版选项；这里重建真实 TextPainter
+          // 完成排版并绘制（offset 是 TextPainter.paint 的实参）。
+          final painter = textPainterFromJson(op[1], op[3]);
+          final offset = offsetFromJson(op[2]);
+          if (painter == null || offset == null) {
+            _badOp(name, op);
+          } else {
+            painter.paint(canvas, offset);
+            painter.dispose();
+          }
+        case 'drawImage':
+          final image = canvasImageFromJson(op[1]);
+          final offset = offsetFromJson(op[2]);
+          final paint = paintFromJson(op[3]);
+          if (image == null || offset == null || paint == null) {
+            _badOp(name, op);
+          } else {
+            canvas.drawImage(image, offset, paint);
+          }
+        case 'drawImageRect':
+          final image = canvasImageFromJson(op[1]);
+          final src = rectFromJson(op[2]);
+          final dst = rectFromJson(op[3]);
+          final paint = paintFromJson(op[4]);
+          if (image == null || src == null || dst == null || paint == null) {
+            _badOp(name, op);
+          } else {
+            canvas.drawImageRect(image, src, dst, paint);
           }
         default:
           HotPatchLog.error('CustomPaint: 未知绘制指令 "$name"');

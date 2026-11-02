@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/drag_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, DragTarget, Draggable, Duration, EdgeInsets, FontWeight, LongPressDraggable, MainAxisSize, Opacity, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, DragTarget, Draggable, Duration, EdgeInsets, FontWeight, LongPressDraggable, MainAxisSize, Opacity, Radius, Row, SizedBox, Text, TextStyle, double } from '../flutter.js';
 
 // 模型 Fruit
 export class Fruit {
@@ -127,6 +127,7 @@ export class DragDetail {
           "height": 12
         }))),
         new Container({
+          "width": double.infinity,
           "padding": (this.__k13 || (this.__k13 = EdgeInsets.all({
             "value": 8
           }))),

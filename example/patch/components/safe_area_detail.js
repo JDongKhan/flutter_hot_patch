@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/safe_area_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MediaQuery, Radius, Row, SafeArea, SizedBox, Switch, Text, TextStyle } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MediaQuery, Radius, Row, SafeArea, SizedBox, Switch, Text, TextStyle, double } from '../flutter.js';
 
 // 组件 SafeAreaDetail
 export class SafeAreaDetail {
@@ -85,6 +85,7 @@ export class SafeAreaDetail {
           "height": 10
         }))),
         new Container({
+          "width": double.infinity,
           "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
             "value": 8
           }))),

@@ -140,6 +140,43 @@ class JsRuntimeManager {
     };
   }
 
+  // ---------------------------------------------------------------------
+  // 宿主返回值编码（跨语言值的扩展点）
+  // ---------------------------------------------------------------------
+
+  /// 「宿主方法的返回值里出现非 JSON 对象」时的编码器表（按注册顺序匹配）。
+  ///
+  /// @HostInjected 方法的返回值由 [_settleHost] 用 `jsonEncode` 回填 JS；
+  /// `ui.Image` 这类对象没有 JSON 形态，必须由**拥有该能力的能力库**登记
+  /// 一个编码器（如 canvas 的图片句柄 `{__handle, width, height}`）。
+  /// 核心不认识任何具体类型——与句柄 kind 一样，只在能力模块里登记。
+  static final List<(bool Function(Object), Object? Function(Object))>
+  _hostValueEncoders = [];
+
+  /// 登记一个宿主返回值编码器：[encode] 把 [T] 实例转成可 JSON 序列化的值。
+  ///
+  /// 匹配按 `is T`；没有命中任何编码器的对象沿用 Dart 的默认语义（有
+  /// `toJson` 就调它，否则抛 [JsonUnsupportedObjectError]——不静默变 null）。
+  static void registerHostValueEncoder<T>(Object? Function(T value) encode) {
+    _hostValueEncoders.add((
+      (Object v) => v is T,
+      (Object v) => encode(v as T),
+    ));
+  }
+
+  /// [jsonEncode] 的 `toEncodable`：先查已登记的能力编码器，再回落默认语义。
+  static Object? _encodeHostValue(Object? value) {
+    if (value == null) return null;
+    for (final (test, encode) in _hostValueEncoders) {
+      if (test(value)) return encode(value);
+    }
+    try {
+      return (value as dynamic).toJson();
+    } catch (_) {
+      throw JsonUnsupportedObjectError(value);
+    }
+  }
+
   /// 触发一次 JS 事件句柄并**等待其结果**（宿主侧 `Future<T>` 回调的通用入口）。
   ///
   /// 为什么需要它：宿主 → JS 的 `__jsui.invoke` 是单向的；而 Dart 侧返回
@@ -282,7 +319,8 @@ class JsRuntimeManager {
     final reject = error != null;
     final code = reject
         ? '_app_host_.reject("$id", ${jsonEncode(error)});'
-        : '_app_host_.resolve("$id", ${jsonEncode(value)});';
+        : '_app_host_.resolve("$id", '
+            '${jsonEncode(value, toEncodable: _encodeHostValue)});';
     final where = reject ? '_app_host_.reject' : '_app_host_.resolve';
     for (final m in _instances.toList()) {
       m._eval(code, where);

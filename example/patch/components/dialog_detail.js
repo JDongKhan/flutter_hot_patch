@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/dialog_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, MainAxisSize, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, Text, TextButton, TextStyle, Wrap, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
+import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, MainAxisSize, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, Text, TextButton, TextStyle, Wrap, double, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
 
 // 组件 DialogDetail
 export class DialogDetail {
@@ -170,6 +170,7 @@ export class DialogDetail {
           "height": 12
         }))),
         new Container({
+          "width": double.infinity,
           "padding": (this.__k16 || (this.__k16 = EdgeInsets.all({
             "value": 8
           }))),

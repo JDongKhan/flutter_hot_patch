@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/pop_scope_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, PopScope, Radius, Row, SizedBox, Switch, Text, TextStyle } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, PopScope, Radius, Row, SizedBox, Switch, Text, TextStyle, double } from '../flutter.js';
 
 // 组件 PopScopeDetail
 export class PopScopeDetail {
@@ -69,6 +69,7 @@ export class PopScopeDetail {
             "height": 6
           }))),
           new Container({
+            "width": double.infinity,
             "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
               "value": 8
             }))),

@@ -65,6 +65,9 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     } else if (scope.globalConsts.contains(e.prefix.name)) {
       // 前缀是顶层常量（如 `kOrderStatus.first`）→ JS 侧同名模块级常量。
       base = e.prefix.name;
+    } else if (runtimeGlobalNamespaces().contains(e.prefix.name)) {
+      // 前缀是运行时注入的小写命名空间（如 `double.infinity`）→ 同名模块导出。
+      base = e.prefix.name;
     } else if (e.prefix.name.isNotEmpty &&
         RegExp(r'^[A-Z]').hasMatch(e.prefix.name)) {
       // prefix 是大写开头的外部类名（如 Network.post）→ 原样保留。
@@ -176,6 +179,9 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (e.name == 'mounted') return '!this.__unmounted';
     // 顶层常量（如 `kBanners`）：JS 侧是同名模块级常量，原样引用。
     if (scope.globalConsts.contains(e.name)) return e.name;
+    // 运行时注入的小写命名空间（`int.parse` / `num.parse` 的接收方）：
+    // JS 侧是同名模块导出对象，原样引用（不是构造函数，不走 instanceof）。
+    if (runtimeGlobalNamespaces().contains(e.name)) return e.name;
     final ref = scope.fieldRef(e.name);
     if (ref != null) return ref;
     // `State.context`：方法体里没有 `context` 形参时（`_open() { showDialog(

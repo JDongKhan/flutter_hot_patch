@@ -1,3 +1,12 @@
+## 0.3.5
+
+**Canvas 能力新增文字与图片记录（只做加法：新增值类与 op，既有语法产物不变；使用 `TextPainter` / `drawImage*` 需 `hot_patch` ≥ 0.3.2）。**
+
+- **`TextPainter`**（`canvas_js.dart`，插在 `Canvas` 与 `CustomPainter` 之间）：构造实参按原名保存；`layout(minWidth, maxWidth)` 兼容位置与尾参对象两种形态，`Infinity` 序列化为 null（宿主按 Dart 默认值 `minWidth 0` / `maxWidth infinity`）；`paint(canvas, offset)` 记录 `['drawText', span, offset, opts]`。`width` / `height` / `size` 需要同步测量，JS 侧访问即抛错（不返回假值）。
+- **`Canvas.drawImage` / `Canvas.drawImageRect`**：由抛错桩改为记录（`image` 是宿主返回值里的图片句柄 `{__handle, width, height}`，null 时抛错）；`drawImageNine` / `drawAtlas` / `drawVertices` / `drawPoints` / `drawParagraph` 等仍抛错。
+- **旋转由矩阵承接**：文字 / 图片的旋转沿用既有 `save` / `translate` / `rotate` 产物形态，不新增协议分支。
+- **dart:core 值类补齐**（`dart_core_js.dart`，紧随基础值类之后）：新增 `DateTime` / `Match` / `RegExp` / `StringBuffer`，以及小写静态命名空间 `int` / `double` / `num`（`parse` / `tryParse` / `infinity` 等）。构造仍按唯一规则产出 `new X({...})`、静态调用 `int.parse(...)` 原样下发；翻译层只新增「小写导出名 → 命名空间」的通用解析分支（`runtime_global_types` 从 `export const <小写名> = {` 自动抽取），不维护类型白名单。
+
 ## 0.3.4
 
 **新增 CustomPaint / CustomPainter 绘制支持（只做加法：新协议键与句柄 kind 均为新增，老产物行为不变，仍可与 `hot_patch` 0.3.0 搭配；使用 CustomPaint 需 `hot_patch` ≥ 0.3.1）。**

@@ -7,7 +7,7 @@ import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { kBrand } from 'detail_pages.js';
-import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextOverflow, TextStyle, Wrap } from '../../flutter.js';
+import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextOverflow, TextStyle, Wrap, double } from '../../flutter.js';
 
 // 组件 CommunityPage
 export class CommunityPage {
@@ -746,6 +746,7 @@ export class _ResourceCard {
           "children": [
             new SizedBox({
               "height": 68,
+              "width": double.infinity,
               "child": Image.asset({
                 "fit": BoxFit.cover,
                 "errorBuilder": (context, e, s) => new Container({

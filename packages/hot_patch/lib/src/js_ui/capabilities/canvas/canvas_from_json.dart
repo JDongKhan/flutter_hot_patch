@@ -10,6 +10,7 @@ import 'dart:ui' show ClipOp;
 import 'package:flutter/material.dart';
 
 import '../../../utils/hot_patch_log.dart';
+import '../base_widget/text_from_json.dart';
 import '../core/from_json/dart_values_from_json.dart';
 import '../core/from_json/painting_from_json.dart';
 import '../core/from_json/widget_enum_from_json.dart';
@@ -287,4 +288,64 @@ Path? pathFromJson(Object? v) {
     }
   }
   return path;
+}
+
+/// TextPainter 已支持的排版选项（其余键一律报错，不静默忽略）。
+const Set<String> _textPainterKeys = {
+  'textDirection',
+  'textAlign',
+  'maxLines',
+  'ellipsis',
+  'minWidth',
+  'maxWidth',
+};
+
+/// JS `TextPainter.paint(canvas, offset)` 录制的 `text` + 选项 → 已排版的
+/// 真实 [TextPainter]。
+///
+/// JS 侧只录制构造实参与 `layout` 约束，字体、换行、省略全部由宿主完成，
+/// 与原生 `CustomPainter` 里的 TextPainter 结果一致。调用方绘制完需 `dispose()`。
+///
+/// 不支持的构造实参（`textScaler` / `strutStyle` / `locale` …）会报错并返回
+/// null（调用方跳过该条指令），不做「悄悄用默认值」的降级。
+TextPainter? textPainterFromJson(Object? spanJson, Object? optionsJson) {
+  final span = textSpanFromJson(spanJson);
+  if (span == null) {
+    HotPatchLog.error('CustomPaint: TextPainter.text 无法还原: $spanJson');
+    return null;
+  }
+  final opts = optionsJson is Map ? optionsJson : const {};
+  for (final key in opts.keys) {
+    if (!_textPainterKeys.contains('$key')) {
+      HotPatchLog.error('CustomPaint: TextPainter 属性 "$key" 暂不支持');
+      return null;
+    }
+  }
+  final direction = textDirectionFromJson(opts['textDirection']);
+  if (direction == null) {
+    HotPatchLog.error('CustomPaint: TextPainter.textDirection 必须提供（ltr / rtl）');
+    return null;
+  }
+  final rawMaxLines = opts['maxLines'];
+  if (rawMaxLines != null && rawMaxLines is! num) {
+    HotPatchLog.error('CustomPaint: TextPainter.maxLines 必须是数字: $rawMaxLines');
+    return null;
+  }
+  final rawEllipsis = opts['ellipsis'];
+  if (rawEllipsis != null && rawEllipsis is! String) {
+    HotPatchLog.error('CustomPaint: TextPainter.ellipsis 必须是字符串: $rawEllipsis');
+    return null;
+  }
+  final painter = TextPainter(
+    text: span,
+    textDirection: direction,
+    textAlign: textAlignFromJson(opts['textAlign']) ?? TextAlign.left,
+    maxLines: (rawMaxLines as num?)?.toInt(),
+    ellipsis: rawEllipsis as String?,
+  );
+  painter.layout(
+    minWidth: _d(opts['minWidth']) ?? 0,
+    maxWidth: _d(opts['maxWidth']) ?? double.infinity,
+  );
+  return painter;
 }
