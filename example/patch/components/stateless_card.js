@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/stateless_card.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Card, Colors, Column, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, Icon, Icons, MainAxisSize, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Card, Colors, Column, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, Icon, Icons, MainAxisSize, Padding, Row, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 StatelessCard
-export class StatelessCard {
+export class StatelessCard extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

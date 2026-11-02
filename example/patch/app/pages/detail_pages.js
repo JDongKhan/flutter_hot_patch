@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/app/pages/detail_pages.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Color, Colors, Container, EdgeInsets, FontWeight, GestureDetector, Text, TextStyle } from '../../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Color, Colors, Container, EdgeInsets, FontWeight, GestureDetector, StatelessWidget, Text, TextStyle } from '../../flutter.js';
 
 const _avatarImg = "assets/images/photo-1494790108377-be9c29b29330.jpg";
 const _bannerImg = "assets/images/photo-1519046904884-53103b34b206.jpg";
@@ -10,9 +10,9 @@ export const kBrand = new Color({value: 0xFF0E7AFB});
 export const kPrice = new Color({value: 0xFFFF5A36});
 
 // 组件 MiniButton
-export class MiniButton {
+export class MiniButton extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

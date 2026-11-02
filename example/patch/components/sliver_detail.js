@@ -2,22 +2,24 @@
 // 由 hot_patch_generator 从 lib/components/sliver_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BouncingScrollPhysics, BoxDecoration, Center, Colors, Container, CustomScrollView, Divider, EdgeInsets, FloatingActionButton, FontWeight, GlobalKey, Icon, IconButton, Icons, ListTile, Scaffold, ScrollController, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
+import { Alignment, BorderRadius, BouncingScrollPhysics, BoxDecoration, Center, Colors, Container, CustomScrollView, Divider, EdgeInsets, FloatingActionButton, FontWeight, GlobalKey, Icon, IconButton, Icons, ListTile, Scaffold, ScrollController, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 SliverDetail
-export class SliverDetail {
+export class SliverDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._controller = new ScrollController();
     this._offset = 0;
     this._fixedKey = new GlobalKey();
     this._measureText = "未测量";
   }
   initState() {
+    super.initState();
     this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
   }
   dispose() {
     this._controller.dispose();
+    super.dispose();
   }
   _scrollToEnd() {
     this._controller.jumpTo(this._controller.position.maxScrollExtent);

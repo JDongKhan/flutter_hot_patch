@@ -17,6 +17,7 @@ import '../runtime/js/animation_js.dart';
 import '../runtime/js/canvas_js.dart';
 import '../runtime/js/change_notifier_js.dart';
 import '../runtime/js/color_js.dart';
+import '../runtime/js/component_js.dart';
 import '../runtime/js/controller_base_js.dart';
 import '../runtime/js/dart_core_js.dart';
 import '../runtime/js/dart_errors_js.dart';
@@ -175,22 +176,13 @@ String jsNodeHelperSource() => '''
 // 懒容器配置（**构建期唯一事实源**：shared/js_class_defs.dart 的
 // lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
 var __lazyChildRules = ${lazyChildHostTypesLiteral()};
-// 元素判定 / 折算 / 数组归一化**只有一份实现**，在 runtime.js 核心（见【5】
-// elementOf / elementListOf / isElement / isElementList），本模块经 G.__core 取用。
-// 这里只导出 `__asElement` 这个名字作别名：其它 package 模块（key / tab 等）从
-// 本模块 import 它来折算组件实例，保持产物 import 面不变。
-export const __asElement = elementOf;
-// 组件元素描述：`type` 是 JS 类引用，props 值里的组件实例同样折算成元素
-// （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})` 这类
-// 直接构造、不经过 __h 的路径也保持一致）。真正的实例化只由 mount 完成。
+// 元素判定 / 数组归一化**只有一份实现**，在 runtime.js 核心（见【5】
+// isElement / isElementList），本模块经 G.__core 取用。
+// 组件元素描述：`type` 是 JS 类引用，props 原样保留（组件自己消费 widget 实参，
+// 它们本来就是元素）。真正的实例化由 mount 在构造帧内完成——这样构造期登记的
+// 控制器 / Key 句柄归属该实例，而不是正在 build 的父组件。
 export function __element(type, props) {
-  var p = props || {};
-  var out = {};
-  for (var k in p) {
-    if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    out[k] = elementListOf(elementOf(p[k]));
-  }
-  return { type: type, props: out, children: {}, element: true };
+  return { __type: type, props: props || {}, children: {}, __element: true };
 }
 export function __h(type, props) {
   // JS 组件类：只产出元素描述，不在此实例化。
@@ -201,7 +193,7 @@ export function __h(type, props) {
   var data = {}, slots = {};
   for (var k in p) {
     if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    var v = elementListOf(elementOf(p[k]));
+    var v = p[k];
     if (isElement(v)) { slots[k] = v; continue; }
     if (isElementList(v)) { slots[k] = v; continue; }
     // builder 延迟展开描述（命名构造代理写入）同样进 children，不参与 props。
@@ -216,7 +208,7 @@ export function __h(type, props) {
     }
     data[k] = v;
   }
-  var el = { type: type, props: data, children: slots, element: true };
+  var el = { __type: type, props: data, children: slots, __element: true };
   // 懒容器标记：由构建期配置决定（见 lazyChildHostTypes），运行时据此决定
   // 子结点是否延迟到宿主 inflate 时再挂载。
   var rule = __lazyChildRules[type];
@@ -342,8 +334,9 @@ String withClassStatics(String classSource, String statics) {
 /// 该组件**自己的源文件产物**里）：[exported] 为 false 时生成产物内可见的
 /// `class`（私有类只可能在本产物里使用）。
 String hostWrapperSource(String type, {bool exported = true}) => '''
-${exported ? 'export ' : ''}class $type {
+${exported ? 'export ' : ''}class $type extends Component {
   constructor(props) {
+    super(props);
     return __h('$type', props);
   }
 ${namedCtorStatics(type)}}''';
@@ -368,9 +361,9 @@ ${namedCtorStatics(type)}}''';
 String builderProxySource(String type) {
   final countKey = builderCountPropKey(type);
   return '''
-export class $type {
+export class $type extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
@@ -458,9 +451,9 @@ const Map<String, String> valueClassSources = {
 /// 语义与 Flutter 对齐：条目按整块区域叠放（`fit: expand` + `topLeft`，与
 /// `_RenderTheater` 相同）；被 `remove()` 过的条目立即退出渲染。
 const String jsOverlayComponent = '''
-export class Overlay {
+export class Overlay extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 条目表：声明式与命令式共用一张表（Dart 侧同样是 _entries）。
     this.__entries = [];
     // 作用域声明：本实例即「OverlayState」，子孙 `Overlay.of(context)` 取到它。
@@ -559,9 +552,9 @@ export class OverlayEntry {
 /// 传下去的 context 就是 **build 收到的形参**（本组件自身的 BuildContext 代理，
 /// 与 Dart 侧 `Builder(builder: (context) => …)` 的形参一致）。
 const String jsBuilderComponent = '''
-export class Builder {
+export class Builder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     // builder 协议唯一形态：闭包。闭包由组件 build 期生成（箭头函数，this 已绑定）。
@@ -580,9 +573,9 @@ export class Builder {
 /// Draggable / LongPressDraggable 各自持一份 `__sourceProps`（同一段源码由
 /// [dragSourcePropsMethodSource] 插入），build 里给出宿主类型名（不按类名判断）。
 const String jsDraggableComponent = '''
-export class Draggable {
+export class Draggable extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
 $dragSourcePropsMethodSource
   build(context) {
@@ -591,9 +584,9 @@ $dragSourcePropsMethodSource
 }''';
 
 const String jsLongPressDraggableComponent = '''
-export class LongPressDraggable {
+export class LongPressDraggable extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
 $dragSourcePropsMethodSource
   build(context) {
@@ -606,9 +599,9 @@ $dragSourcePropsMethodSource
 /// LayoutBuilder 同一方案：登记句柄，宿主回调时带回 id 列表，本侧换回原值后
 /// 执行 builder，结果作为 `child` 插槽随下一次 patch 回填。
 const String jsDragTargetComponent = '''
-export class DragTarget {
+export class DragTarget extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
 $dragTargetPropsMethodSource
   build(context) {
@@ -622,9 +615,9 @@ $dragTargetPropsMethodSource
 /// 后把结果作为 `overlayChild` 插槽下发；宿主只负责「挂到 Overlay 上并在需
 /// 要时显示」——显示与否由 controller 句柄命令驱动（见 overlay_portal_js）。
 const String jsOverlayPortalComponent = '''
-export class OverlayPortal {
+export class OverlayPortal extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var src = this.props;
@@ -656,9 +649,9 @@ export class OverlayPortal {
 /// 首帧语义一致），把结果与 `body` 一起作为插槽交给宿主结点——宿主只按
 /// `headerSlivers` / `body` 两个键取子树，不感知 builder 的存在。
 const String jsNestedScrollViewComponent = '''
-export class NestedScrollView {
+export class NestedScrollView extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var p = {};
@@ -682,9 +675,9 @@ export class NestedScrollView {
 ///   ? Orientation.landscape : Orientation.portrait))`，
 /// 这里同样**基于 LayoutBuilder 类**委托，不自己取窗口方向。
 const String jsOrientationBuilderComponent = '''
-export class OrientationBuilder {
+export class OrientationBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var builder = this.props.builder;
@@ -713,9 +706,9 @@ export class OrientationBuilder {
 /// 约束按值去重：宿主每次布局都会回调，同值不重建（避免布局→重建→再布局自激）。
 /// 首帧（还没有约束）子树为空，与 Flutter LayoutBuilder 自身的首帧语义一致。
 const String jsLayoutBuilderComponent = '''
-export class LayoutBuilder {
+export class LayoutBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   // 宿主下发的约束 JSON → BoxConstraints（无界维度发 null，还原成 +∞）。
   __constraintsOf(json) {
@@ -768,9 +761,9 @@ export class LayoutBuilder {
 ///     子树作为子结点 patch 下发，宿主下一帧用新子树重排。
 ///   - 因此滚动过程中**内容**晚一帧跟随（高度不受影响）；首帧子树为空。
 const String jsSliverPersistentHeaderComponent = '''
-export class SliverPersistentHeader {
+export class SliverPersistentHeader extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var delegate = this.props.delegate;
@@ -823,9 +816,9 @@ export class SliverPersistentHeader {
 ///      `context.watch<T>()` 的 T 就是这里的 `model`（类型名一路传给宿主）。
 /// 模型真实对象只存在于 JS 端：`notifier` 走句柄（`{__handle:id}`）下发。
 const String jsChangeNotifierProviderComponent = '''
-export class ChangeNotifierProvider {
+export class ChangeNotifierProvider extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   initState() {
     var p = this.props;
@@ -858,9 +851,9 @@ export class ChangeNotifierProvider {
 /// MultiProvider：把 providers 数组按「嵌套 Provider」语义组合——
 /// providers[0] 最外层，最后一个最内层（离 child 最近），与原生一致。
 const String jsMultiProviderComponent = '''
-export class MultiProvider {
+export class MultiProvider extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build() {
     var provs = this.props.providers || [];
@@ -868,18 +861,13 @@ export class MultiProvider {
     for (var i = provs.length - 1; i >= 0; i--) {
       // providers 项是翻译层 `new ChangeNotifierProvider(...)` 产出的实例
       // （元素携带 inst）——注入 child 后**复用同一个实例**，不再 new 第二次。
-      var prov = __asElement(provs[i]);
+      var prov = provs[i];
       var p = {};
       for (var k in prov.props) { p[k] = prov.props[k]; }
       p.child = node;
-      if (prov.inst) {
-        prov.inst.props = p;
-        node = {
-          type: prov.type, props: p, children: {}, element: true, inst: prov.inst
-        };
-      } else {
-        node = __h(prov.type, p);
-      }
+      // 实例即元素：复用同一个 provider 实例（换 child 后直接作为上一层元素）。
+      prov.props = p;
+      node = prov;
     }
     return node;
   }
@@ -894,9 +882,9 @@ export class MultiProvider {
 /// → 重读 `model.count` → 下发 patch）。宿主侧同时把这段子树映射成 Dart 的
 /// 监听边界（`Consumer` 宿主结点），使 Dart 侧的 provider 子树也能刷新（P2）。
 const String jsConsumerComponent = '''
-export class Consumer {
+export class Consumer extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var notifier = context.watch(this.props.model);
@@ -920,9 +908,9 @@ export class Consumer {
 /// 方法（`_lbBuilderN()`）里。与 Consumer 同理：JS 订阅是 UI 更新源，宿主映射
 /// 只提供 Dart 侧边界。
 const String jsListenableBuilderComponent = '''
-export class ListenableBuilder {
+export class ListenableBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   initState() {
     var l = this.props.listenable;
@@ -956,9 +944,9 @@ export class ListenableBuilder {
 /// 订阅对象是 ValueNotifier（JS 侧 extends ChangeNotifier，句柄 kind 复用
 /// `notifier/ChangeNotifier`），故 `addListener` / 宿主映射与 ListenableBuilder 同一套。
 const String jsValueListenableBuilderComponent = '''
-export class ValueListenableBuilder {
+export class ValueListenableBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   initState() {
     this.__subscribe(this.props.valueListenable);
@@ -1006,9 +994,9 @@ export class ValueListenableBuilder {
 ///   - builder 形参是 `(context, child)`，子树抽在 `props.builder` 方法里，child
 ///     作为独立子结点由宿主映射直传（与 Dart 侧 `child:` 语义一致）。
 const String jsAnimatedBuilderComponent = '''
-export class AnimatedBuilder {
+export class AnimatedBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   initState() {
     var a = this.props.animation;
@@ -1047,9 +1035,9 @@ export class AnimatedBuilder {
 /// 动画进度由 JS 侧的 `AnimationController` 镜像驱动（宿主逐帧回传 value，
 /// 与 AnimatedBuilder 同一机制），因此不新增任何宿主 widget。
 const String jsTweenAnimationBuilderComponent = '''
-export class TweenAnimationBuilder {
+export class TweenAnimationBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   // 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
   // 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
@@ -1160,11 +1148,16 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln('const {')
       ..writeln('  handleOp, registerHandle, releaseHandle, handleObjectOf,')
       ..writeln('  createFnHandle: __createFnHandle,')
-      ..writeln('  contextOf, elementOf, elementListOf, isElement, isElementList,')
-      ..writeln('  hostNodeIdOf, newRoot, mount, unmount,')
+      ..writeln('  contextOf, isElement, isElementList,')
+      ..writeln('  nodeIdOf, newRoot, mount, unmount,')
       ..writeln('  commitOps, emitOp, flushNow, abortRoot, releasePageHandles, invokeHostMethod,')
       ..writeln('  roots, JsBuildContext,')
       ..writeln('} = G.__core;')
+      ..writeln()
+      // Component 基类：必须早于下面的逻辑组件 / 宿主包装类（它们 `extends
+      // Component`，class 有 TDZ）。同时它也是翻译产物 `extends StatelessWidget /
+      // StatefulWidget` 的落点。
+      ..writeln(componentJsSource)
       ..writeln()
       ..writeln(jsNodeHelperSource())
       ..writeln()
@@ -1185,7 +1178,7 @@ String renderPackageModule(String package, Set<String> types) {
       packageModulePath(nodeHelperPackage),
     );
     b
-      ..writeln("import { __h, __asElement } from '$nodeRel';")
+      ..writeln("import { __h, Component } from '$nodeRel';")
       ..writeln();
   }
   for (final t in sorted) {

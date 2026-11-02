@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/key_tile.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Border, BorderRadius, BoxDecoration, Colors, Container, EdgeInsets, Expanded, Row, Text, TextButton, TextStyle } from '../flutter.js';
+import { Border, BorderRadius, BoxDecoration, Colors, Container, EdgeInsets, Expanded, Row, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 KeyTile
-export class KeyTile {
+export class KeyTile extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
     this._count = 0;
   }

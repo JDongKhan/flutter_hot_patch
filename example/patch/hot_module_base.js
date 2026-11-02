@@ -2,7 +2,7 @@
 // 跨包模块（package: hot_module_base）：由 hot_patch_generator 生成
 // 本包内被项目组件引用到的类集中于此文件（跨包翻译）
 
-import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors, Column, CompositedTransformFollower, CompositedTransformTarget, Container, CrossAxisAlignment, Duration, EdgeInsets, IgnorePointer, LayerLink, MainAxisSize, Offset, OverlayPortal, OverlayPortalController, Padding, Positioned, SizedBox, Stack, Text, TextStyle, Timer, Transform } from 'flutter.js';
+import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors, Column, CompositedTransformFollower, CompositedTransformTarget, Container, CrossAxisAlignment, Duration, EdgeInsets, IgnorePointer, LayerLink, MainAxisSize, Offset, OverlayPortal, OverlayPortalController, Padding, Positioned, SizedBox, Stack, StatefulWidget, Text, TextStyle, Timer, Transform } from 'flutter.js';
 
 // 模型 Network
 export class Network {
@@ -34,7 +34,7 @@ export class AccountCenter {
 }
 
 // 组件 GuideBubbleWidget
-export class GuideBubbleWidget {
+export class GuideBubbleWidget extends StatefulWidget {
   static _fadeDuration = new Duration({milliseconds: 200});
   static _arrowWidth = 24;
   static _arrowHeight = 9;
@@ -42,7 +42,7 @@ export class GuideBubbleWidget {
   static _arrowSide = (GuideBubbleWidget._arrowHeight * 1.4142);
   static _arrowAngle = 0.7853981633974483;
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
     this._controller = new OverlayPortalController();
     this._layerLink = new LayerLink();
@@ -61,6 +61,7 @@ export class GuideBubbleWidget {
     this.textFontSize = (args && args.textFontSize !== undefined) ? args.textFontSize : 16.0;
   }
   initState() {
+    super.initState();
     this._schedule();
   }
   _schedule() {
@@ -84,6 +85,7 @@ export class GuideBubbleWidget {
   }
   dispose() {
     this._cancelTimers();
+    super.dispose();
   }
   build(context) {
     return new OverlayPortal({

@@ -8,12 +8,12 @@ import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
 import { kBrand } from 'detail_pages.js';
-import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextOverflow, TextStyle, Wrap, double } from '../../flutter.js';
+import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Wrap, double } from '../../flutter.js';
 
 // 组件 CommunityPage
-export class CommunityPage {
+export class CommunityPage extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._service = new AppService();
     this._feed = null;
     this._posts = null;
@@ -27,6 +27,7 @@ export class CommunityPage {
     this._price = "";
   }
   initState() {
+    super.initState();
     print("CommunityPage initState ---");
     this._load();
     this._loadPosts();
@@ -66,6 +67,7 @@ export class CommunityPage {
     this._loadPosts();
   }
   build(context) {
+    super.build(context);
     print("CommunityPage build : filterOpen=" + this._filterOpen);
     var feed = this._feed;
     var resources = this._resources;
@@ -291,9 +293,9 @@ export class CommunityPage {
 }
 
 // 组件 _ListContent
-export class _ListContent {
+export class _ListContent extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -312,6 +314,7 @@ export class _ListContent {
     print("--_ListContent init");
   }
   didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
     print("--_ListContent didUpdateWidget 0");
     if ((this.list.length != oldWidget.list.length)) {
       print("-- _ListContent didUpdateWidget 1");
@@ -386,9 +389,9 @@ export class _ListContent {
 }
 
 // 组件 _FilterPanel
-export class _FilterPanel {
+export class _FilterPanel extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -402,22 +405,28 @@ export class _FilterPanel {
     this.onApply = (args && args.onApply !== undefined) ? args.onApply : null;
   }
   initState() {
+    super.initState();
     debugPrint("[_FilterPanel] initState");
   }
   didChangeDependencies() {
+    super.didChangeDependencies();
     debugPrint("[_FilterPanel] didChangeDependencies");
   }
   didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
     debugPrint("[_FilterPanel] didUpdateWidget: old=" + oldWidget);
   }
   deactivate() {
+    super.deactivate();
     debugPrint("[_FilterPanel] deactivate");
   }
   activate() {
+    super.activate();
     debugPrint("[_FilterPanel] activate");
   }
   dispose() {
     debugPrint("[_FilterPanel] dispose");
+    super.dispose();
   }
   _group(title, key, values, current) {
     return new Column({
@@ -569,9 +578,9 @@ export class _FilterPanel {
 }
 
 // 组件 _PostCard
-export class _PostCard {
+export class _PostCard extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -721,9 +730,9 @@ export class _PostCard {
 }
 
 // 组件 _ResourceCard
-export class _ResourceCard {
+export class _ResourceCard extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

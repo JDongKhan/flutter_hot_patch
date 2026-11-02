@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/pop_scope_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, PopScope, Radius, Row, SizedBox, Switch, Text, TextStyle, double } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, PopScope, Radius, Row, SizedBox, StatefulWidget, Switch, Text, TextStyle, double } from '../flutter.js';
 
 // 组件 PopScopeDetail
-export class PopScopeDetail {
+export class PopScopeDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._canPop = true;
     this._invoked = 0;
     this._lastDidPop = true;

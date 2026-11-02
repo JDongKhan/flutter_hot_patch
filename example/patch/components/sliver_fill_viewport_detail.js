@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/sliver_fill_viewport_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AppBar, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, Scaffold, SizedBox, SliverFillViewport, Text, TextStyle, double } from '../flutter.js';
+import { Alignment, AppBar, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, Scaffold, SizedBox, SliverFillViewport, StatefulWidget, Text, TextStyle, double } from '../flutter.js';
 
 // 组件 SliverFillViewportDetail
-export class SliverFillViewportDetail {
+export class SliverFillViewportDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._fraction = 1.0;
   }
   _setFraction(value) {

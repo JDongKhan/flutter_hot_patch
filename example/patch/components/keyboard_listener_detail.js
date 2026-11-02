@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/keyboard_listener_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FocusNode, FontWeight, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, MainAxisSize, OutlinedButton, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FocusNode, FontWeight, KeyDownEvent, KeyRepeatEvent, KeyboardListener, LogicalKeyboardKey, MainAxisSize, OutlinedButton, Radius, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 KeyboardListenerDetail
-export class KeyboardListenerDetail {
+export class KeyboardListenerDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._node = new FocusNode({debugLabel: "keyboard-listener-demo"});
     this._row = 1;
     this._col = 1;
@@ -21,6 +21,7 @@ export class KeyboardListenerDetail {
   }
   dispose() {
     this._node.dispose();
+    super.dispose();
   }
   _onKey(event) {
     var key = event.logicalKey;

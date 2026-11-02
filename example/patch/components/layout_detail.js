@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/layout_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, AspectRatio, Axis, BoxConstraints, Center, Chip, Clip, Colors, Column, ConstrainedBox, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, FractionallySizedBox, Opacity, Padding, Positioned, Row, SizedBox, Spacer, Stack, StackFit, Text, TextAlign, TextStyle, Wrap, WrapAlignment, WrapCrossAlignment } from '../flutter.js';
+import { Align, Alignment, AspectRatio, Axis, BoxConstraints, Center, Chip, Clip, Colors, Column, ConstrainedBox, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, FractionallySizedBox, Opacity, Padding, Positioned, Row, SizedBox, Spacer, Stack, StackFit, StatefulWidget, Text, TextAlign, TextStyle, Wrap, WrapAlignment, WrapCrossAlignment } from '../flutter.js';
 
 // 组件 LayoutDetail
-export class LayoutDetail {
+export class LayoutDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new Column({

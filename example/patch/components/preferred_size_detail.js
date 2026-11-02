@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/preferred_size_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Colors, Container, EdgeInsets, FontWeight, ListView, PreferredSize, SafeArea, Scaffold, Size, SizedBox, Slider, Text, TextStyle } from '../flutter.js';
+import { Alignment, Colors, Container, EdgeInsets, FontWeight, ListView, PreferredSize, SafeArea, Scaffold, Size, SizedBox, Slider, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 PreferredSizeDetail
-export class PreferredSizeDetail {
+export class PreferredSizeDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._height = 64;
   }
   build(context) {

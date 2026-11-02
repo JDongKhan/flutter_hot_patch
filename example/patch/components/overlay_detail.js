@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/overlay_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BoxDecoration, Builder, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisAlignment, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Radius, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { BorderRadius, BoxDecoration, Builder, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisAlignment, OutlinedButton, Overlay, OverlayEntry, Padding, Positioned, Radius, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 OverlayDetail
-export class OverlayDetail {
+export class OverlayDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._count = 0;
     this._log = "（暂无操作）";
     this._entries = [];

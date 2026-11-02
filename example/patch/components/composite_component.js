@@ -3,12 +3,12 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.js';
-import { Colors, Column, ElevatedButton, FontWeight, MainAxisSize, SizedBox, Text, TextStyle, __h } from '../flutter.js';
+import { Colors, Column, Component, ElevatedButton, FontWeight, MainAxisSize, SizedBox, StatefulWidget, StatelessWidget, Text, TextStyle, __h } from '../flutter.js';
 
 // 组件 DashboardCard
-export class DashboardCard {
+export class DashboardCard extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._ticks = 0;
   }
   tick() {
@@ -59,9 +59,9 @@ export class DashboardCard {
 }
 
 // 组件 LabeledDivider
-export class LabeledDivider {
+export class LabeledDivider extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -86,8 +86,9 @@ export class LabeledDivider {
 }
 
 // 原生组件包装 _LabeledDivider（@PatchIgnore(isComponent: true)）
-class _LabeledDivider {
+class _LabeledDivider extends Component {
   constructor(props) {
+    super(props);
     return __h('_LabeledDivider', props);
   }
 }

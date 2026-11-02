@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/orientation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, LayoutBuilder, MainAxisSize, MediaQuery, Orientation, OrientationBuilder, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, LayoutBuilder, MainAxisSize, MediaQuery, Orientation, OrientationBuilder, Padding, Row, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 OrientationBuilderDetail
-export class OrientationBuilderDetail {
+export class OrientationBuilderDetail extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   _tile(label, color) {
     return new Container({

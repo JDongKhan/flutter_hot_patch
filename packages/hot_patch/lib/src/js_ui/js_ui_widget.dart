@@ -301,11 +301,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     //   1. 角标自带 IgnorePointer —— 不参与命中测试；
     //   2. Stack 用 StackFit.passthrough —— 原样透传父约束给内容，不改变既有布局
     //      （loose/expand 都会给内容另一套约束，Column 里会直接改变尺寸）。
-    final content = _JsNode(
-      store: _store,
-      id: _rootId!,
-      pageKey: _pageKey,
-    );
+    final content = _renderStoreNode(_store, _rootId!, _pageKey);
     final buildTime = _buildTime;
     if (!widget.showBuildTime || buildTime == null) return content;
     return Stack(
@@ -433,7 +429,7 @@ class _JsUiContentState extends State<JsUiContent> {
       // 故不走 uiFallback（挂载真失败时由面板/页面的 onMountFailed 上报）。
       return const SizedBox.shrink();
     }
-    return _JsNode(store: widget.store, id: rootId, pageKey: widget.pageKey);
+    return _renderStoreNode(widget.store, rootId, widget.pageKey);
   }
 }
 
@@ -548,11 +544,249 @@ class _BuildTimeBadge extends StatelessWidget {
   }
 }
 
-/// 宿主树里的一个 JS 结点。
+/// 按结点 id 渲染一个 widget。
 ///
-/// 只做一件事：按 `id` 从 [JsUiStore] 取结点 → 查注册表得到真实 Flutter
-/// widget → 递归拼子结点 + prop 子结点。结点被 patch 触碰时由 store 回调
-/// 触发重建；未被触碰的结点（相同 id + 相同 key）由 Flutter 复用，状态不丢。
+/// 三类结点走三条路径：
+///   - **组件结点**（JS 的 COMP）→ [_JsComponentNode]：宿主的挂载边界，build 里
+///     先登记 BuildContext 锚点、再同步拉取 JS build 结果；
+///   - **懒槽位 / 未注册类型** → [_JsNode]：需要 element 生命周期（懒挂载/卸载、
+///     KeepAlive）或需要独立重建回调与兜底告警；
+///   - **已注册的宿主类型** → 直接建真实 widget，**不再包一层 `_JsNode`**。
+///     它的重建由最近的组件 wrapper 驱动（父级重建 → 子树 widget 重建，
+///     Flutter 复用 element / State），与原生 Flutter 的更新模型同构。
+Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
+  final node = store.nodes[id];
+  if (node == null) {
+    return uiFallback('结点 "$id" 不在 store.nodes 中（页面 $pageKey）');
+  }
+  final declared = jsKeyOf(node.props['key']);
+  if (node.component) {
+    return _JsComponentNode(
+      key: declared ?? ValueKey(id),
+      store: store,
+      id: id,
+      pageKey: pageKey,
+    );
+  }
+  final builder = jsWidgetRegistry.lookup(node.type);
+  if (node.props['__lazy'] == true || builder == null) {
+    return _JsNode(
+      key: declared ?? ValueKey(id),
+      store: store,
+      id: id,
+      pageKey: pageKey,
+    );
+  }
+  final widget = builder(_renderContextOf(store, node, pageKey));
+  // 未声明 key 时交给 Flutter 的默认语义（按位置 + 类型复用 element），与原生
+  // 一致；声明了 key 才套一层 KeyedSubtree（保证列表重排时 element 跟着 key 走）。
+  return declared == null ? widget : KeyedSubtree(key: declared, child: widget);
+}
+
+/// 结点 → renderer 的输入：props + 按 Dart 实参原名索引的 slot
+/// （子 widget / 数据载体 / delegate）。
+JsRenderContext _renderContextOf(
+  JsUiStore store,
+  JsUiNode node,
+  String pageKey,
+) {
+  final children = <String, Object?>{};
+  // builder 展开结果（内部键 __items）：有序 widget 列表。
+  if (node.childIds.isNotEmpty) {
+    children['__items'] = [
+      for (final id in node.childIds) _renderStoreNode(store, id, pageKey),
+    ];
+  }
+  // 单值 widget slot：按 Dart 实参原名索引。
+  for (final entry in node.propChildIds.entries) {
+    final childType = store.nodes[entry.value]?.type ?? '';
+    children[entry.key] = isJsDataCarrierType(childType)
+        ? _dataContextOf(store, entry.value, pageKey)
+        : _renderStoreNode(store, entry.value, pageKey);
+  }
+  // 数组 widget slot；数据载体数组给数据上下文，不构建 Widget。
+  // 同一 key 同时存在单值与列表条目时（prop 形态从列表切到单值时，JS 侧会先下发
+  // propsChild、再清空旧列表）以单值为准，避免空列表把刚绑定的 widget 覆盖掉。
+  for (final entry in node.propChildLists.entries) {
+    if (node.propChildIds.containsKey(entry.key)) continue;
+    final ids = entry.value;
+    final isData = ids.any(
+      (id) => isJsDataCarrierType(store.nodes[id]?.type ?? ''),
+    );
+    children[entry.key] = isData
+        ? [for (final id in ids) _dataContextOf(store, id, pageKey)]
+        : [for (final id in ids) _renderStoreNode(store, id, pageKey)];
+  }
+  // delegate 等非 Widget slot 描述。
+  for (final entry in node.propData.entries) {
+    children[entry.key] = entry.value;
+  }
+  return JsRenderContext(type: node.type, props: node.props, children: children);
+}
+
+/// 子结点数据上下文：只含 type/props/children，不构建 Widget。
+/// 供数据载体（items 等）由父 renderer 直接读数据组装。
+JsRenderContext _dataContextOf(JsUiStore store, String id, String pageKey) {
+  final node = store.nodes[id];
+  final children = <String, Object?>{};
+  for (final entry
+      in node?.propChildIds.entries ?? const <MapEntry<String, String>>[]) {
+    children[entry.key] = _renderStoreNode(store, entry.value, pageKey);
+  }
+  for (final entry in node?.propChildLists.entries ??
+      const <MapEntry<String, List<String>>>[]) {
+    children[entry.key] = [
+      for (final c in entry.value) _renderStoreNode(store, c, pageKey),
+    ];
+  }
+  for (final entry
+      in node?.propData.entries ?? const <MapEntry<String, dynamic>>[]) {
+    children[entry.key] = entry.value;
+  }
+  return JsRenderContext(
+    type: node?.type ?? '',
+    props: node?.props ?? const {},
+    children: children,
+  );
+}
+
+/// 组件结点的宿主 wrapper —— **Flutter build 驱动 JS build** 的落点。
+///
+/// 生命周期：Flutter 为该组件结点建立 element 时（本 wrapper 的 build），
+///   1. 先登记 `组件结点 id → 真实 BuildContext` 的锚点；
+///   2. 首次 build 同步调用 `__jsui.pull(pageKey, id)`，把 JS 侧 build 产生的
+///      补丁就地落到 store（不触发其它 wrapper 的 setState）；
+///   3. 按 store 里该组件的 `child` 槽渲染它的渲染根。
+///
+/// 由此 `MediaQuery.of(context)` / `context.watch` 这类「按位置取值」的能力在
+/// 首次 build 时锚点必然存在，不再出现「先 build 后挂载」导致的取不到值。
+class _JsComponentNode extends StatefulWidget {
+  const _JsComponentNode({
+    super.key,
+    required this.store,
+    required this.id,
+    required this.pageKey,
+  });
+
+  final JsUiStore store;
+  final String id;
+  final String pageKey;
+
+  @override
+  State<_JsComponentNode> createState() => _JsComponentNodeState();
+}
+
+class _JsComponentNodeState extends State<_JsComponentNode> {
+  bool _disposed = false;
+
+  /// 首次 build 是否已拉取过 JS build 结果（pull 只做一次；后续重建走 patch）。
+  bool _pulled = false;
+
+  /// 首次 build 失败的原因（非 null 时渲染明确的错误视图，不静默降级）。
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.store.bind(widget.id, _rebuild);
+  }
+
+  @override
+  void didUpdateWidget(covariant _JsComponentNode oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != widget.id ||
+        !identical(oldWidget.store, widget.store)) {
+      oldWidget.store.unbind(oldWidget.id, _rebuild);
+      widget.store.bind(widget.id, _rebuild);
+      _pulled = false;
+      _error = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    // 先置位：dispose 期间 JS 侧回调仍可能重建本结点，此时 element 已 defunct。
+    _disposed = true;
+    widget.store.unbind(widget.id, _rebuild);
+    unregisterJsBuildContext(widget.id);
+    super.dispose();
+  }
+
+  void _rebuild() {
+    if (_disposed || !mounted) return;
+    setState(() {});
+  }
+
+  /// 同步拉取该组件的首次 build 结果并落到 store。
+  void _pullOnce() {
+    if (_pulled) return;
+    _pulled = true;
+    final result = JsRuntimeManager.instance.evaluate(
+      'JSON.stringify(__jsui.pull(${jsonEncode(widget.pageKey)}, '
+      '${jsonEncode(widget.id)}))',
+    );
+    if (result.isError) {
+      _error = 'JS pull 失败：${result.stringResult}';
+      HotPatchLog.error('js_ui component pull failed: ${result.stringResult}');
+      return;
+    }
+    final text = result.stringResult;
+    if (text.isEmpty || text == 'undefined' || text == 'null') {
+      _error = 'JS 侧未返回补丁（组件 "${widget.id}"）';
+      HotPatchLog.error('js_ui component pull returned empty: ${widget.id}');
+      return;
+    }
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(text);
+    } catch (e) {
+      _error = '补丁不是合法 JSON: $text';
+      HotPatchLog.error('js_ui component pull decode failed: $e');
+      return;
+    }
+    if (decoded is Map && decoded['error'] != null) {
+      // JS 侧已记录详细日志，这里只把原因呈现到界面上。
+      _error = '${decoded['error']}';
+      return;
+    }
+    if (decoded is! List) {
+      _error = '补丁形态非法: $text';
+      HotPatchLog.error('js_ui component pull payload invalid: $text');
+      return;
+    }
+    // pull 发生在 build 期间：只落数据，不触发任何 wrapper 的 setState
+    // （build 期标脏会触发框架断言），渲染由本次 build 直接按新数据产出。
+    widget.store.apply(decoded, notify: false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 锚点**必须先于** JS build 登记：JS 侧 build 里的 MediaQuery / provider 查询
+    // 靠它反查该组件位置的真实 BuildContext。
+    registerJsBuildContext(
+      widget.id,
+      context,
+      widget.pageKey,
+      type: 'component',
+      owner: '_JsComponentNodeState.build',
+    );
+    _pullOnce();
+    final error = _error;
+    if (error != null) {
+      return uiFallback('组件构建失败（${widget.id}）：$error');
+    }
+    final childId = widget.store.nodes[widget.id]?.propChildIds['child'];
+    if (childId == null) {
+      return uiFallback('组件 "${widget.id}" 尚未产出渲染根');
+    }
+    return _renderStoreNode(widget.store, childId, widget.pageKey);
+  }
+}
+
+/// 懒槽位 / 未注册类型的宿主结点包装。
+///
+/// 只做一件事：按 `id` 从 [JsUiStore] 取结点 → 查注册表得到真实 Flutter widget。
+/// 懒槽位还额外承载 element 生命周期（inflate → 挂载真实子树、dispose → 卸载）。
 class _JsNode extends StatefulWidget {
   const _JsNode({
     super.key,
@@ -564,8 +798,7 @@ class _JsNode extends StatefulWidget {
   final JsUiStore store;
   final String id;
 
-  /// 本结点所属页面。BuildContext 锚点登记时一并下发，供 debug 泄漏观测按页
-  /// 归属统计（见 capabilities/build_context/build_context_bridge.dart）。
+  /// 本结点所属页面（日志与泄漏观测归属用）。
   final String pageKey;
 
   @override
@@ -573,16 +806,6 @@ class _JsNode extends StatefulWidget {
 }
 
 class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
-  /// 本 State 曾登记过 BuildContext 锚点的全部结点 id。
-  ///
-  /// 同一 key 下 JS 侧重建 host 结点时结点 id 会变、Flutter 复用本 State（见
-  /// [didUpdateWidget]），而 JS 侧组件的 `this.context` 代理**缓存了它建立时的
-  /// 那个 id**（见 build_context_js.dart 的 buildContextOf）——旧 id 必须继续能
-  /// 查到同一个 element，否则那些组件的 watch/read 会查不到真值而静默失效。
-  /// 故注销不能在 id 变化时做，只能在 element 真正卸载（dispose）时按这段历史
-  /// 一次性做：既不误伤活代理，也不留下永久的簿记残留（残留会被泄漏探针当泄漏报）。
-  final Set<String> _anchorIds = <String>{};
-
   @override
   void initState() {
     super.initState();
@@ -592,12 +815,11 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
 
   /// 懒槽位（props 带 `__lazy` 的占位结点，见 JS 侧 lazyMount）：**本结点的
   /// Element 被真正 inflate 时**才回调 JS 去挂载它待挂载的真实子树——这就是
-  /// 「initState 由 _JsNode 生命周期驱动」的落点：宿主没
-  /// inflate 到的槽位（TabBarView 离屏子页），JS 侧永远不挂载、initState 不跑。
+  /// 「initState 由 element 生命周期驱动」的落点：宿主没 inflate 到的槽位
+  /// （TabBarView 离屏子页），JS 侧永远不挂载、initState 不跑。
   ///
   /// - post-frame 触发：回调会经 commit 回来 setState 重建本结点，不能在 build 期做；
-  /// - 通道复用事件回传（`__lazyFn` 是 JS 侧登记的句柄 id，args = [本结点 id]），
-  ///   不新增任何桥接面。
+  /// - 通道复用事件回传（`__lazyFn` 是 JS 侧登记的句柄 id，args = [本结点 id]）。
   void _mountIfLazy() {
     final node = widget.store.nodes[widget.id];
     if (node == null || node.props['__lazy'] != true) return;
@@ -610,16 +832,11 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
   /// 懒槽位的对称生命周期：宿主 element 销毁（ListView 回收离屏项、TabBarView
   /// 换页、整页退出）时通知 JS 卸载已挂载子树。
   ///
-  /// 为什么必须有：JS 侧懒槽位只在宿主 **inflate** 时挂载，若销毁不回收，滚过
-  /// 的 item 会永远留在 JS 树里——每次父级重建都要 patch 全量 item（didUpdateWidget
-  /// 刷屏、列表越长越重）。与 Flutter 一致：离屏项 State 销毁，滚回来再 initState。
-  ///
   /// **必须延后到帧末再通知 JS**：本方法在 element dispose 链路里被调用，而
   /// dispose 发生在 `BuildOwner.finalizeTree` 的 `lockState` 作用域内（框架锁定）。
-  /// JS 的 `lazyUnmount` 会同步 commit 补丁回来，`_JsNode` 收到补丁后 setState
-  /// 重建**仍存活的父结点**（如 TabBarView 的容器），在锁定期调用必然触发
-  /// `setState() or markNeedsBuild() called when widget tree was locked`。
-  /// post-frame 回调在本帧 drawFrame/finalizeTree 之后执行，锁已解除。
+  /// JS 的 `lazyUnmount` 会同步 commit 补丁回来，收到补丁后 setState 重建
+  /// **仍存活的父结点**会触发 `setState() or markNeedsBuild() called when widget
+  /// tree was locked`。post-frame 回调在本帧 drawFrame/finalizeTree 之后执行。
   void _unmountIfLazy() {
     final node = widget.store.nodes[widget.id];
     if (node == null || node.props['__lazy'] != true) return;
@@ -635,9 +852,6 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
     });
   }
 
-  /// 结点 key 现在可能来自 JS 声明（见 [_JsNodeState._node]）：同一 key 下
-  /// 结点 id 变化时（JS 侧重建出新的 host 结点）Flutter 会复用本 State，
-  /// 必须把重建回调改绑到新 id，否则 build 里查到的还是旧结点。
   @override
   void didUpdateWidget(covariant _JsNode oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -650,15 +864,9 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
 
   @override
   void dispose() {
-    // 先置位：dispose 期间 JS 侧回调仍可能重建本结点（emit props /
-    // propsChild 等），此时 element 已 defunct，setState 会触发框架断言。
+    // 先置位：dispose 期间 JS 侧回调仍可能重建本结点，此时 element 已 defunct。
     _disposed = true;
     widget.store.unbind(widget.id, _rebuild);
-    // 注销本 element 曾用过的全部结点 id（见 [_anchorIds]：id 变化时必须继续
-    // 可查，卸载时一次清干净）。
-    for (final id in _anchorIds) {
-      unregisterJsBuildContext(id);
-    }
     _unmountIfLazy();
     super.dispose();
   }
@@ -673,8 +881,7 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
   /// 懒槽位子树声明的「保持存活」来自 JS（`props.__keepAlive`，见 mini-react
   /// 的 subtreeWantsKeepAlive）：true 时向最近的 AutomaticKeepAlive 祖先注册
   /// 保活，TabBarView / PageView 切走的子页 element 不再销毁 → 不会回调
-  /// lazyUnmount，JS 侧 State（已加载数据）原样保留。语义与 Flutter 的
-  /// AutomaticKeepAliveClientMixin 一致。
+  /// lazyUnmount，JS 侧 State（已加载数据）原样保留。
   @override
   bool get wantKeepAlive =>
       widget.store.nodes[widget.id]?.props['__keepAlive'] == true;
@@ -691,95 +898,44 @@ class _JsNodeState extends State<_JsNode> with AutomaticKeepAliveClientMixin {
         '结点 "${widget.id}" 不在 store.nodes 中（页面 ${widget.pageKey}）',
       );
     }
-
-    // JS 组件的 `this.context` 代理按**最近宿主祖先结点 id** 反查真实
-    // BuildContext（见 capabilities/build_context/build_context_bridge.dart）：在此登记/
-    // 刷新，element 卸载时连同历史 id 一并注销（见 [_anchorIds]）——这就是
-    // 「element 级 scope」。
-    registerJsBuildContext(widget.id, context, widget.pageKey, type: node.type);
-    _anchorIds.add(widget.id);
-
-    final children = <String, Object?>{};
-    // builder 展开结果（内部键 __items）：有序 widget 列表。
-    if (node.childIds.isNotEmpty) {
-      children['__items'] = [for (final id in node.childIds) _node(id)];
-    }
-    // 单值 widget slot：按 Dart 实参原名索引。
-    for (final entry in node.propChildIds.entries) {
-      final childType = widget.store.nodes[entry.value]?.type ?? '';
-      children[entry.key] = isJsDataCarrierType(childType)
-          ? _dataContext(entry.value)
-          : _node(entry.value);
-    }
-    // 数组 widget slot；数据载体数组给数据上下文，不构建 Widget。
-    // 同一 key 同时存在单值与列表条目时（prop 形态从列表切到单值时，JS 侧会先
-    // 下发 propsChild、再清空旧列表）以单值为准，避免空列表把刚绑定的 widget 覆盖掉。
-    for (final entry in node.propChildLists.entries) {
-      if (node.propChildIds.containsKey(entry.key)) continue;
-      final ids = entry.value;
-      final isData = ids.any(
-        (id) => isJsDataCarrierType(widget.store.nodes[id]?.type ?? ''),
-      );
-      children[entry.key] = isData
-          ? [for (final id in ids) _dataContext(id)]
-          : [for (final id in ids) _node(id)];
-    }
-    // delegate 等非 Widget slot 描述。
-    for (final entry in node.propData.entries) {
-      children[entry.key] = entry.value;
-    }
-
-
+    final ctx = _renderContextOf(widget.store, node, widget.pageKey);
     // 未注册的类型不再降级成统一的 'Component'：元素 type 就是具体类型名，
     // lookup 未命中走单例注册表的默认 builder（原生注入 / 占位）。
     final builder =
         jsWidgetRegistry.lookup(node.type) ?? jsWidgetRegistry.fallback;
-    final items = (children['__items'] as List<Widget>?) ?? const <Widget>[];
-    if (builder == null) return buildMissingJsWidget(node.type, items);
+    if (builder == null) {
+      _logUnknownType(node);
+      final items =
+          (ctx.children['__items'] as List<Widget>?) ?? const <Widget>[];
+      return buildMissingJsWidget(node.type, items);
+    }
+    if (jsWidgetRegistry.lookup(node.type) == null) {
+      _logUnknownType(node);
+    }
+    return builder(ctx);
+  }
 
-    return builder(
-      JsRenderContext(
-        type: node.type,
-        props: node.props,
-        children: children,
-      ),
+  /// 未注册类型的一次性诊断：结点 id / 页面 / type / props 摘要。
+  /// 只报第一次，避免逐帧刷屏；包含定位信息（否则只看到类型名无从排查）。
+  void _logUnknownType(JsUiNode node) {
+    final key = '${widget.pageKey}|${widget.id}|${node.type}';
+    if (!_unknownLogged.add(key)) return;
+    if (_unknownLogged.length > 512) _unknownLogged.clear();
+    final keys = node.props.keys.take(12).join(',');
+    final preview = _previewValue(node.props['data'] ?? node.props['text']);
+    HotPatchLog.error(
+      'js_ui: 未注册的结点类型 "${node.type}"'
+      '（page=${widget.pageKey}, node=${widget.id}, props=[$keys]'
+      '${preview == null ? '' : ', data=$preview'}）',
     );
   }
 
-  /// 子结点数据上下文：只含 type/props/children，不构建 Widget。
-  /// 供数据载体（items 等）由父 renderer 直接读数据组装。
-  JsRenderContext _dataContext(String id) {
-    final n = widget.store.nodes[id];
-    final children = <String, Object?>{};
-    for (final entry in n?.propChildIds.entries ??
-        const <MapEntry<String, String>>[]) {
-      children[entry.key] = _node(entry.value);
-    }
-    for (final entry in n?.propChildLists.entries ??
-        const <MapEntry<String, List<String>>>[]) {
-      children[entry.key] = [for (final c in entry.value) _node(c)];
-    }
-    for (final entry in n?.propData.entries ?? const <MapEntry<String, dynamic>>[]) {
-      children[entry.key] = entry.value;
-    }
-    return JsRenderContext(
-      type: n?.type ?? '',
-      props: n?.props ?? const {},
-      children: children,
-    );
-  }
-
-  Widget _node(String id) {
-    final node = widget.store.nodes[id];
-    // key：JS 侧声明的 key（ValueKey/ObjectKey/GlobalKey/UniqueKey → 真实 Flutter
-    // Key，见 capabilities/key/key_bridge.dart）优先；未声明时退回 `ValueKey(结点 id)`
-    // ——保证每个结点都有稳定 key，Flutter 才能复用 element（状态不丢）。
-    final declared = jsKeyOf(node?.props['key']);
-    return _JsNode(
-      key: declared ?? ValueKey(id),
-      store: widget.store,
-      id: id,
-      pageKey: widget.pageKey,
-    );
+  static String? _previewValue(Object? v) {
+    if (v == null) return null;
+    final s = '$v';
+    return s.length <= 40 ? s : '${s.substring(0, 40)}…';
   }
 }
+
+/// 未注册类型已告警过的结点（page|id|type）。
+final Set<String> _unknownLogged = <String>{};

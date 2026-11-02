@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/scaffold_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AppBar, BottomNavigationBar, BottomNavigationBarItem, Center, Colors, Column, FloatingActionButton, Icon, Icons, MainAxisAlignment, SafeArea, Scaffold, SizedBox, Text } from '../flutter.js';
+import { AppBar, BottomNavigationBar, BottomNavigationBarItem, Center, Colors, Column, FloatingActionButton, Icon, Icons, MainAxisAlignment, SafeArea, Scaffold, SizedBox, StatefulWidget, Text } from '../flutter.js';
 
 // 组件 ScaffoldDetail
-export class ScaffoldDetail {
+export class ScaffoldDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._navIndex = 0;
   }
   _onNavTap(index) {

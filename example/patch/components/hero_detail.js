@@ -3,12 +3,12 @@
 // 重新生成：dart run build_runner build
 
 import { AppRouter } from '../base/app_router.js';
-import { BorderRadius, Center, Colors, Column, CrossAxisAlignment, FontWeight, GestureDetector, Hero, Material, Radius, SizedBox, Text, TextStyle } from '../flutter.js';
+import { BorderRadius, Center, Colors, Column, CrossAxisAlignment, FontWeight, GestureDetector, Hero, Material, Radius, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 HeroDetail
-export class HeroDetail {
+export class HeroDetail extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

@@ -8,12 +8,12 @@ import { Order } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text, TextOverflow, TextStyle } from '../../flutter.js';
+import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
 
 // 组件 OrdersPage
-export class OrdersPage {
+export class OrdersPage extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
     this._service = new AppService();
     this._feed = null;
@@ -25,6 +25,7 @@ export class OrdersPage {
     this.initialStatus = (args && args.initialStatus !== undefined) ? args.initialStatus : null;
   }
   initState() {
+    super.initState();
     print("OrdersPage initState ---");
     this._load();
     this._loadOrders();
@@ -157,9 +158,9 @@ export class OrdersPage {
 }
 
 // 组件 _OrderCard
-export class _OrderCard {
+export class _OrderCard extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

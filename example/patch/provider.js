@@ -2,12 +2,12 @@
 // package 模块（package: provider）：由 hot_patch_generator 生成
 // 本包内有 JS 类的 widget（逻辑组件 / sliver 代理）集中于此文件
 
-import { __h, __asElement } from 'flutter.js';
+import { __h, Component } from 'flutter.js';
 
 
-export class ChangeNotifierProvider {
+export class ChangeNotifierProvider extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   initState() {
     var p = this.props;
@@ -38,9 +38,9 @@ export class ChangeNotifierProvider {
   static value(props) { return new ChangeNotifierProvider(Object.assign({}, props, { factory: 'value' })); }
 }
 
-export class Consumer {
+export class Consumer extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var notifier = context.watch(this.props.model);
@@ -58,9 +58,9 @@ export class Consumer {
   }
 }
 
-export class MultiProvider {
+export class MultiProvider extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build() {
     var provs = this.props.providers || [];
@@ -68,18 +68,13 @@ export class MultiProvider {
     for (var i = provs.length - 1; i >= 0; i--) {
       // providers 项是翻译层 `new ChangeNotifierProvider(...)` 产出的实例
       // （元素携带 inst）——注入 child 后**复用同一个实例**，不再 new 第二次。
-      var prov = __asElement(provs[i]);
+      var prov = provs[i];
       var p = {};
       for (var k in prov.props) { p[k] = prov.props[k]; }
       p.child = node;
-      if (prov.inst) {
-        prov.inst.props = p;
-        node = {
-          type: prov.type, props: p, children: {}, element: true, inst: prov.inst
-        };
-      } else {
-        node = __h(prov.type, p);
-      }
+      // 实例即元素：复用同一个 provider 实例（换 child 后直接作为上一层元素）。
+      prov.props = p;
+      node = prov;
     }
     return node;
   }

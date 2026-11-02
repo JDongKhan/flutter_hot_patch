@@ -2,13 +2,13 @@
 // 由 hot_patch_generator 从 lib/components/image_filtered_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Float64List, FontWeight, ImageFilter, ImageFiltered, LinearGradient, Padding, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Float64List, FontWeight, ImageFilter, ImageFiltered, LinearGradient, Padding, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 ImageFilteredDetail
-export class ImageFilteredDetail {
+export class ImageFilteredDetail extends StatelessWidget {
   static _gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.deepPurple, Colors.pinkAccent, Colors.orangeAccent]});
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   _panel(label) {
     return new Container({

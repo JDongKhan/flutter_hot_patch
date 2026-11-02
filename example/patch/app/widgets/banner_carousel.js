@@ -4,15 +4,15 @@
 
 import { HomeBanner } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
-import { Alignment, BorderRadius, BoxDecoration, BoxFit, ClipRRect, Color, Column, Container, CrossAxisAlignment, Curves, Duration, EdgeInsets, FontWeight, Image, InkWell, LinearGradient, MainAxisAlignment, MainAxisSize, Padding, PageController, PageView, Positioned, Radius, Row, SizedBox, Stack, StackFit, Text, TextStyle, Timer } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, ClipRRect, Color, Column, Container, CrossAxisAlignment, Curves, Duration, EdgeInsets, FontWeight, Image, InkWell, LinearGradient, MainAxisAlignment, MainAxisSize, Padding, PageController, PageView, Positioned, Radius, Row, SizedBox, Stack, StackFit, StatefulWidget, StatelessWidget, Text, TextStyle, Timer } from '../../flutter.js';
 
 // 组件 BannerCarousel
-export class BannerCarousel {
+export class BannerCarousel extends StatefulWidget {
   static _height = 150;
   static _interval = new Duration({seconds: 5});
   static _animate = new Duration({milliseconds: 350});
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
     this._controller = new PageController();
     this._timer = null;
@@ -22,9 +22,11 @@ export class BannerCarousel {
     this.banners = (args && args.banners !== undefined) ? args.banners : [];
   }
   initState() {
+    super.initState();
     this._startAutoPlay();
   }
   didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
     if ((oldWidget.banners != this.banners)) {
       this._reset();
     }
@@ -32,6 +34,7 @@ export class BannerCarousel {
   dispose() {
     this._stopAutoPlay();
     this._controller.dispose();
+    super.dispose();
   }
   _reset() {
     var count = this.banners.length;
@@ -130,9 +133,9 @@ export class BannerCarousel {
 }
 
 // 组件 BannerSlide
-export class BannerSlide {
+export class BannerSlide extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

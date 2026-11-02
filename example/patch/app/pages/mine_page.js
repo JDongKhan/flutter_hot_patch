@@ -8,17 +8,18 @@ import { MenuEntry } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
 import { WebView } from '../../base/web_view.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Icons, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Icons, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
 
 // 组件 MinePage
-export class MinePage {
+export class MinePage extends StatefulWidget {
   static _menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._service = new AppService();
     this._feed = null;
   }
   initState() {
+    super.initState();
     print("MinePage initState ---");
     this._load();
   }
@@ -362,9 +363,9 @@ export class MinePage {
 }
 
 // 组件 _DevRow
-export class _DevRow {
+export class _DevRow extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

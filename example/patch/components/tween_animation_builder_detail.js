@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/tween_animation_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, ClipRRect, Colors, Column, Container, CrossAxisAlignment, Curves, Duration, EdgeInsets, FontWeight, FractionallySizedBox, MainAxisSize, OutlinedButton, Row, SizedBox, Text, TextStyle, Tween, TweenAnimationBuilder, double } from '../flutter.js';
+import { Alignment, BorderRadius, ClipRRect, Colors, Column, Container, CrossAxisAlignment, Curves, Duration, EdgeInsets, FontWeight, FractionallySizedBox, MainAxisSize, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle, Tween, TweenAnimationBuilder, double } from '../flutter.js';
 
 // 组件 TweenAnimationBuilderDetail
-export class TweenAnimationBuilderDetail {
+export class TweenAnimationBuilderDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._target = 1;
     this._ms = 800;
     this._ease = true;

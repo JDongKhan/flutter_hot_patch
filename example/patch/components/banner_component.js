@@ -3,15 +3,16 @@
 // 重新生成：dart run build_runner build
 
 import { PanelColors } from 'hello_component.js';
-import { Column, ElevatedButton, Text, TextStyle } from '../flutter.js';
+import { Column, ElevatedButton, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 BannerCard
-export class BannerCard {
+export class BannerCard extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._views = 0;
   }
   initState() {
+    super.initState();
     this._views = 5;
   }
   bump() {

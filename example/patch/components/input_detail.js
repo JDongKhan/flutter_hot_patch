@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/input_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, Checkbox, Colors, Column, CrossAxisAlignment, DropdownButton, DropdownMenuItem, FilledButton, FontWeight, InputDecoration, Radio, Row, SizedBox, Slider, Switch, Text, TextEditingController, TextField, TextStyle } from '../flutter.js';
+import { Align, Alignment, Checkbox, Colors, Column, CrossAxisAlignment, DropdownButton, DropdownMenuItem, FilledButton, FontWeight, InputDecoration, Radio, Row, SizedBox, Slider, StatefulWidget, Switch, Text, TextEditingController, TextField, TextStyle } from '../flutter.js';
 
 // 组件 InputDetail
-export class InputDetail {
+export class InputDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._controller = new TextEditingController();
     this._text = "";
     this._choice = "A";
@@ -17,6 +17,7 @@ export class InputDetail {
     this._slider = 0.4;
   }
   initState() {
+    super.initState();
     this._controller.addListener((...args) => this._onControllerChanged(...args));
   }
   _onControllerChanged() {

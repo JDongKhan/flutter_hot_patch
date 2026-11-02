@@ -29,6 +29,7 @@ import 'js_value.dart';
 // 表达式 / 语句翻译（以 FieldScope + 已知类表为键）
 // ---------------------------------------------------------------------------
 
+
 /// 已告警过的「带常量参数、未生成 JS 值类」的 SDK 枚举（同一次构建只出声一次）。
 final Set<String> _warnedUnsupportedEnums = {};
 
@@ -1704,6 +1705,9 @@ String translateClassMethodBody(
     // 原生继承（SDK 基类或项目类）→ `super.foo()` 在 JS 里合法，原样发射。
     // 判据与渲染层同一个（jsBaseClassOf）：基类在 JS 侧无实现时，类声明里不会
     // 写 extends，此时发射 super 调用是语法错误。
+    // Widget 空基类（Component / StatelessWidget / StatefulWidget）上的生命周期
+    // 与 build 都有同名空实现，故 SDK 侧的 `super.initState()` / `super.build()`
+    // 可以直接落到基类，不需要在翻译层做特殊处理。
     hasJsBase: jsBaseClassOf(info, classes) != null,
   );
   // 方法形参同步登记进 widget 层（方法体期间），使返回的 widget 树里

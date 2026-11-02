@@ -2,20 +2,22 @@
 // 由 hot_patch_generator 从 lib/components/tab_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, Center, Colors, Column, CrossAxisAlignment, DefaultTabController, Expanded, FontWeight, SizedBox, Tab, TabBar, TabBarView, TabController, Text, TextButton, TextStyle } from '../flutter.js';
+import { Align, Alignment, Center, Colors, Column, CrossAxisAlignment, DefaultTabController, Expanded, FontWeight, SizedBox, StatefulWidget, Tab, TabBar, TabBarView, TabController, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 TabDetail
-export class TabDetail {
+export class TabDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._controller = new TabController({length: 3, vsync: this});
     this._index = 0;
   }
   initState() {
+    super.initState();
     this._controller.addListener(() => { this.setState(() => { this._index = this._controller.index; }); });
   }
   dispose() {
     this._controller.dispose();
+    super.dispose();
   }
   _next() {
     this._controller.animateTo((((this._index + 1)) % 3));

@@ -4,7 +4,7 @@
 
 import { StringLogExtension } from '../../extensions/hot_module_base.js';
 import { TestString1 } from 'extension/e_string.js';
-import { Colors, Column, CrossAxisAlignment, DateTime, Duration, ElevatedButton, FontWeight, RegExp, SizedBox, StringBuffer, Text, TextStyle } from '../../flutter.js';
+import { Colors, Column, CrossAxisAlignment, DateTime, Duration, ElevatedButton, FontWeight, RegExp, SizedBox, StatefulWidget, StatelessWidget, StringBuffer, Text, TextStyle } from '../../flutter.js';
 
 // 模型 Greeting
 export class Greeting {
@@ -37,9 +37,9 @@ export class FancyGreeting extends Greeting {
 }
 
 // 组件 MixinDetail
-export class MixinDetail {
+export class MixinDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._count = 0;
   }
   _bump() {
@@ -95,9 +95,9 @@ export class MixinDetail {
 }
 
 // 组件 ExtensionDetail
-export class ExtensionDetail {
+export class ExtensionDetail extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   _log() {
     "扩展方法打印的日志".logText("ExtensionDetail");
@@ -139,9 +139,9 @@ export class ExtensionDetail {
 }
 
 // 组件 InheritanceDetail
-export class InheritanceDetail {
+export class InheritanceDetail extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     var plain = new Greeting({
@@ -206,9 +206,9 @@ export class InheritanceDetail {
 }
 
 // 组件 BasicApiDetail
-export class BasicApiDetail {
+export class BasicApiDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._now = DateTime.now();
   }
   _refresh() {

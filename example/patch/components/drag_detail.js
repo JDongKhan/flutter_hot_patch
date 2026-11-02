@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/drag_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, DragTarget, Draggable, Duration, EdgeInsets, FontWeight, LongPressDraggable, MainAxisSize, Opacity, Radius, Row, SizedBox, Text, TextStyle, double } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, DragTarget, Draggable, Duration, EdgeInsets, FontWeight, LongPressDraggable, MainAxisSize, Opacity, Radius, Row, SizedBox, StatefulWidget, Text, TextStyle, double } from '../flutter.js';
 
 // 模型 Fruit
 export class Fruit {
@@ -15,10 +15,10 @@ export class Fruit {
 }
 
 // 组件 DragDetail
-export class DragDetail {
+export class DragDetail extends StatefulWidget {
   static _fruits = [new Fruit({name: "苹果"}), new Fruit({name: "香蕉"}), new Fruit({name: "橙子"})];
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._drops = 0;
     this._log = "（还没有拖拽事件）";
     this._inBasketA = null;

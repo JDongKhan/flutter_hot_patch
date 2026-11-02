@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/fade_in_image_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, AssetImage, BorderRadius, BoxFit, ClipRRect, Colors, Column, CrossAxisAlignment, Duration, FadeInImage, FontWeight, NetworkImage, OutlinedButton, Radius, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Align, Alignment, AssetImage, BorderRadius, BoxFit, ClipRRect, Colors, Column, CrossAxisAlignment, Duration, FadeInImage, FontWeight, NetworkImage, OutlinedButton, Radius, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 FadeInImageDetail
-export class FadeInImageDetail {
+export class FadeInImageDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._seed = 0;
   }
   build(context) {

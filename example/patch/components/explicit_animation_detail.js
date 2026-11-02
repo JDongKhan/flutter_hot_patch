@@ -2,16 +2,17 @@
 // 由 hot_patch_generator 从 lib/components/explicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AnimatedBuilder, AnimationController, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CurvedAnimation, Curves, Divider, Duration, Expanded, FadeTransition, FontWeight, LinearProgressIndicator, RotationTransition, Row, ScaleTransition, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
+import { Alignment, AnimatedBuilder, AnimationController, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CurvedAnimation, Curves, Divider, Duration, Expanded, FadeTransition, FontWeight, LinearProgressIndicator, RotationTransition, Row, ScaleTransition, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 ExplicitAnimationDetail
-export class ExplicitAnimationDetail {
+export class ExplicitAnimationDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._controller = new AnimationController({vsync: this, duration: new Duration({milliseconds: 900})});
   }
   dispose() {
     this._controller.dispose();
+    super.dispose();
   }
   build(context) {
     return new Column({

@@ -2,20 +2,22 @@
 // 由 hot_patch_generator 从 lib/components/grid_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AppBar, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FloatingActionButton, FontWeight, GridView, Icon, Icons, Padding, Scaffold, ScrollController, SliverGridDelegateWithFixedCrossAxisCount, SliverGridDelegateWithMaxCrossAxisExtent, Text, TextStyle } from '../flutter.js';
+import { Alignment, AppBar, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FloatingActionButton, FontWeight, GridView, Icon, Icons, Padding, Scaffold, ScrollController, SliverGridDelegateWithFixedCrossAxisCount, SliverGridDelegateWithMaxCrossAxisExtent, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 GridDetail
-export class GridDetail {
+export class GridDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._controller = new ScrollController();
     this._offset = 0;
   }
   initState() {
+    super.initState();
     this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
   }
   dispose() {
     this._controller.dispose();
+    super.dispose();
   }
   _jumpBottom() {
     this._controller.jumpTo(this._controller.position.maxScrollExtent);

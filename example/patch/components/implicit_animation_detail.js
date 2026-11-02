@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/implicit_animation_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Border, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CrossFadeState, Curves, Divider, Duration, EdgeInsets, Expanded, FontWeight, MainAxisAlignment, Offset, Row, SizedBox, Text, TextButton, TextStyle, ValueKey } from '../flutter.js';
+import { Alignment, AnimatedContainer, AnimatedCrossFade, AnimatedOpacity, AnimatedRotation, AnimatedScale, AnimatedSize, AnimatedSlide, AnimatedSwitcher, Border, BorderRadius, BoxDecoration, Center, Colors, Column, Container, CrossAxisAlignment, CrossFadeState, Curves, Divider, Duration, EdgeInsets, Expanded, FontWeight, MainAxisAlignment, Offset, Row, SizedBox, StatefulWidget, Text, TextButton, TextStyle, ValueKey } from '../flutter.js';
 
 // 组件 ImplicitAnimationDetail
-export class ImplicitAnimationDetail {
+export class ImplicitAnimationDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._big = false;
     this._visible = true;
     this._moved = false;

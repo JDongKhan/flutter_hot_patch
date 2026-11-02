@@ -9,18 +9,19 @@ import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
 import { WebView } from '../../base/web_view.js';
 import { BannerCarousel } from '../widgets/banner_carousel.js';
-import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Icons, Image, InkWell, LinearGradient, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, StackFit, Text, TextOverflow, TextStyle } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Icons, Image, InkWell, LinearGradient, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, StackFit, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
 
 // 组件 HomePage
-export class HomePage {
+export class HomePage extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._service = new AppService();
     this._refreshController = new EasyRefreshController();
     this._feed = null;
     this._city = "上海";
   }
   initState() {
+    super.initState();
     print("HomePage initState ---");
     this._load();
   }
@@ -33,6 +34,7 @@ export class HomePage {
     await this._load();
   }
   didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
     print("--HomePage didUpdateWidget 0");
   }
   _refresh() {
@@ -223,9 +225,9 @@ export class HomePage {
 }
 
 // 组件 HomeHeader
-export class HomeHeader {
+export class HomeHeader extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -441,9 +443,9 @@ export class HomeHeader {
 }
 
 // 组件 GridCell
-export class GridCell {
+export class GridCell extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -483,9 +485,9 @@ export class GridCell {
 }
 
 // 组件 SpotCard
-export class SpotCard {
+export class SpotCard extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {
@@ -643,9 +645,9 @@ export class SpotCard {
 }
 
 // 组件 PromoCard
-export class PromoCard {
+export class PromoCard extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

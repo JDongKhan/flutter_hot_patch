@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/automatic_keep_alive_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, CrossAxisAlignment, DefaultTabController, EdgeInsets, ElevatedButton, Expanded, FontWeight, Padding, SizedBox, Tab, TabBar, TabBarView, Text, TextStyle } from '../flutter.js';
+import { Colors, Column, CrossAxisAlignment, DefaultTabController, EdgeInsets, ElevatedButton, Expanded, FontWeight, Padding, SizedBox, StatefulWidget, StatelessWidget, Tab, TabBar, TabBarView, Text, TextStyle } from '../flutter.js';
 
 // 组件 AutomaticKeepAliveDetail
-export class AutomaticKeepAliveDetail {
+export class AutomaticKeepAliveDetail extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new DefaultTabController({
@@ -53,9 +53,9 @@ export class AutomaticKeepAliveDetail {
 }
 
 // 组件 _PlainPage
-export class _PlainPage {
+export class _PlainPage extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._count = 0;
   }
   build(context) {
@@ -109,15 +109,16 @@ export class _PlainPage {
 }
 
 // 组件 _KeepAlivePage
-export class _KeepAlivePage {
+export class _KeepAlivePage extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._count = 0;
   }
   get wantKeepAlive() {
     return true;
   }
   build(context) {
+    super.build(context);
     return new Padding({
       "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
         "value": 12

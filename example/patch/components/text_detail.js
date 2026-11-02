@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/text_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Color, Colors, Column, CrossAxisAlignment, FontWeight, SizedBox, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextOverflow, TextScaler, TextStyle } from '../flutter.js';
+import { Color, Colors, Column, CrossAxisAlignment, FontWeight, SizedBox, StatefulWidget, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextOverflow, TextScaler, TextStyle } from '../flutter.js';
 
 // 组件 TextDetail
-export class TextDetail {
+export class TextDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._count = 0;
   }
   bump() {

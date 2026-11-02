@@ -3,13 +3,13 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 import { ChangeNotifierProvider } from '../provider.js';
 
 // 组件 WatchDemo
-export class WatchDemo {
+export class WatchDemo extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new Card({
@@ -80,9 +80,9 @@ export class WatchDemo {
 }
 
 // 组件 WatchCountLabel
-export class WatchCountLabel {
+export class WatchCountLabel extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     var model = context.watch("CounterVm");

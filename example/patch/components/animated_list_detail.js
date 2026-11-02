@@ -2,14 +2,14 @@
 // 由 hot_patch_generator 从 lib/components/animated_list_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AnimatedList, AnimatedListState, Card, CircleAvatar, Colors, Column, CrossAxisAlignment, Duration, EdgeInsets, Expanded, FontWeight, GlobalKey, ListTile, Row, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
+import { AnimatedList, AnimatedListState, Card, CircleAvatar, Colors, Column, CrossAxisAlignment, Duration, EdgeInsets, Expanded, FontWeight, GlobalKey, ListTile, Row, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 AnimatedListDetail
-export class AnimatedListDetail {
+export class AnimatedListDetail extends StatefulWidget {
   static _insertDuration = new Duration({milliseconds: 350});
   static _removeDuration = new Duration({milliseconds: 300});
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._listKey = new GlobalKey({typeArguments: ['AnimatedListState']});
     this._seq = 3;
     this._items = ["条目 1", "条目 2", "条目 3"];

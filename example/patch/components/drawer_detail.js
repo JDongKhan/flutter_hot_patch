@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/drawer_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, AppBar, BoxDecoration, Center, Colors, Column, Drawer, DrawerHeader, Icon, Icons, ListTile, ListView, MainAxisAlignment, Scaffold, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Align, Alignment, AppBar, BoxDecoration, Center, Colors, Column, Drawer, DrawerHeader, Icon, Icons, ListTile, ListView, MainAxisAlignment, Scaffold, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 DrawerDetail
-export class DrawerDetail {
+export class DrawerDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._picked = (-1);
   }
   _pickOrders() {

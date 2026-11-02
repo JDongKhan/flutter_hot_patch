@@ -6,12 +6,12 @@ import { HomePage } from 'pages/home_page.js';
 import { CommunityPage } from 'pages/community_page.js';
 import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
-import { BottomNavigationBar, BottomNavigationBarItem, BottomNavigationBarType, Color, Colors, Icon, Icons, NeverScrollableScrollPhysics, Scaffold, TabBarView, TabController } from '../flutter.js';
+import { BottomNavigationBar, BottomNavigationBarItem, BottomNavigationBarType, Color, Colors, Icon, Icons, NeverScrollableScrollPhysics, Scaffold, StatefulWidget, TabBarView, TabController } from '../flutter.js';
 
 // 组件 AppShell
-export class AppShell {
+export class AppShell extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new AppSubContent({});
@@ -19,24 +19,27 @@ export class AppShell {
 }
 
 // 组件 AppSubContent
-export class AppSubContent {
+export class AppSubContent extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._tab = new TabController({length: 4, vsync: this});
     this._index = 0;
   }
   initState() {
+    super.initState();
     print("--AppSubContent initState");
     this._tab.addListener(() => { this.setState(() => { this._index = this._tab.index; }); });
   }
   dispose() {
     this._tab.dispose();
+    super.dispose();
   }
   _openTab(index) {
     this.setState(() => { this._index = index; });
     this._tab.animateTo(index);
   }
   didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
     print("--AppSubContent didUpdateWidget");
   }
   build(context) {

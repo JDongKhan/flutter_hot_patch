@@ -779,9 +779,11 @@ ClassInfo translateClass(
   final proto = ClassInfo(
     name: decl.name.lexeme,
     sourceFile: sourcePath,
-    // 组件（State 合并）不把 StatefulWidget/State 写成 JS 基类；普通类保留
-    // extends（如 ChangeNotifier，运行时注入同名 JS 基类）。
+    // 组件（State 合并）不把 StatefulWidget/State 写成字段继承基类；但 JS 产物
+    // 仍按 widget 自身的 extends 发射（`extends StatefulWidget / StatelessWidget`）。
     superType: isComponent ? null : decl.extendsClause?.superclass.toSource(),
+    widgetSuperType:
+        isComponent ? decl.extendsClause?.superclass.toSource() : null,
     instanceFields: instanceFields,
     staticFields: staticFields,
     methods: [for (final m in methods) buildMethod(m)],
@@ -815,6 +817,7 @@ ClassInfo translateClass(
     name: decl.name.lexeme,
     sourceFile: sourcePath,
     superType: proto.superType,
+    widgetSuperType: proto.widgetSuperType,
     instanceFields: instanceFields,
     staticFields: staticFields,
     methods: translated,
@@ -822,9 +825,22 @@ ClassInfo translateClass(
     isComponent: isComponent,
     // 依赖 = widget 树里的自定义组件（parseCtx 收集）+ 字段类型 / 方法体
     // 构造调用命中的类（含跨文件组件，如 CounterVm → BannerCard）。
-    dependencies: {...parseCtx.dependencies, ...used.keys},
+    // 组件若 extends 项目内的另一个组件，基类也要能被 import（SDK 基类
+    // StatelessWidget / StatefulWidget 由 flutter.js 导出，不进这里）。
+    dependencies: {
+      ...parseCtx.dependencies,
+      ...used.keys,
+      if (_projectBaseName(proto.widgetSuperType, classTable) case final b?) b,
+    },
     usedWidgetPackages: parseCtx.usedWidgetPackages,
   );
+}
+
+/// 组件 extends 的**项目内**基类名（SDK 基类返回 null：由 flutter.js 导出）。
+String? _projectBaseName(String? superType, Map<String, ClassInfo> classTable) {
+  final name = superType?.split('<').first.trim();
+  if (name == null || name.isEmpty) return null;
+  return classTable.containsKey(name) ? name : null;
 }
 
 /// 类 + 同文件 State 类（StatefulWidget 的字段 / 方法 / 依赖分布在两个类里，

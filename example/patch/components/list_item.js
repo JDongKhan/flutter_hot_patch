@@ -2,14 +2,14 @@
 // 由 hot_patch_generator 从 lib/components/list_item.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, FontWeight, Text, TextStyle } from '../flutter.js';
+import { Colors, FontWeight, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 const _listItemPalette = [Colors.blueGrey, Colors.teal, Colors.indigo, Colors.deepOrange, Colors.purple, Colors.brown];
 
 // 组件 CommonListItem
-export class CommonListItem {
+export class CommonListItem extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
     this._updateCount = 0;
   }
@@ -18,9 +18,11 @@ export class CommonListItem {
     this.salt = (args && args.salt !== undefined) ? args.salt : 0;
   }
   initState() {
+    super.initState();
     print("listItem initState - " + this.index);
   }
   didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
     this._updateCount += 1;
     print("listItem didUpdateWidget- " + this.index + " -" + this._updateCount);
   }

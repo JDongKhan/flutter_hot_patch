@@ -3,12 +3,12 @@
 // 重新生成：dart run build_runner build
 
 import { KeyTile } from 'key_tile.js';
-import { AppBar, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, GlobalKey, ListTile, ListView, ObjectKey, Padding, PageStorageKey, Row, Scaffold, SizedBox, Text, TextButton, TextStyle, UniqueKey, ValueKey } from '../flutter.js';
+import { AppBar, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, GlobalKey, ListTile, ListView, ObjectKey, Padding, PageStorageKey, Row, Scaffold, SizedBox, StatefulWidget, Text, TextButton, TextStyle, UniqueKey, ValueKey } from '../flutter.js';
 
 // 组件 KeyDetail
-export class KeyDetail {
+export class KeyDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._names = ["A", "B", "C", "D"];
     this._stableObj = [1];
     this._rebuildSeq = 0;

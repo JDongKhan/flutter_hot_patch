@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/dialog_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, MainAxisSize, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, Text, TextButton, TextStyle, Wrap, double, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
+import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, MainAxisSize, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, StatefulWidget, StatelessWidget, Text, TextButton, TextStyle, Wrap, double, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
 
 // 组件 DialogDetail
-export class DialogDetail {
+export class DialogDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._last = "（还没有关闭过弹层）";
     this._opens = 0;
   }
@@ -206,9 +206,9 @@ export class DialogDetail {
 }
 
 // 组件 GeneralDialogContent
-export class GeneralDialogContent {
+export class GeneralDialogContent extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new Dialog({
@@ -265,9 +265,9 @@ export class GeneralDialogContent {
 }
 
 // 组件 ActionSheetContent
-export class ActionSheetContent {
+export class ActionSheetContent extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new CupertinoActionSheet({
@@ -303,9 +303,9 @@ export class ActionSheetContent {
 }
 
 // 组件 CupertinoDialogContent
-export class CupertinoDialogContent {
+export class CupertinoDialogContent extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new CupertinoAlertDialog({
@@ -338,9 +338,9 @@ export class CupertinoDialogContent {
 }
 
 // 组件 SheetContent
-export class SheetContent {
+export class SheetContent extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new SafeArea({
@@ -400,9 +400,9 @@ export class SheetContent {
 }
 
 // 组件 DialogContent
-export class DialogContent {
+export class DialogContent extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
     this._count = 0;
   }

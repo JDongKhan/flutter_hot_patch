@@ -73,16 +73,14 @@ const String buildContextJsSource = r'''
     return inst.__ctx;
   }
 
-  // 建立代理：结点锚点 = 最近宿主祖先结点 id。上溯不到说明是**根组件**
-  // （COMP 之上再没有宿主结点）——退回页面锚点 `page:<pageKey>`（由
-  // JsUiWidgetState 在 build 期间登记的上下文），保证根组件一样拿到真值。
-  // 两条都取不到时 nodeId 为 null：代理仍可用（宿主侧反查不到），不抛错——
-  // 构建顺序变化不应让组件构建失败。
+  // 建立代理：结点锚点 = **组件自己的结点 id**。
+  // 组件结点现在是宿主的挂载边界（宿主为它建 wrapper，wrapper 在 build 里先
+  // 登记锚点、再同步拉取 JS build），因此每次 build 时锚点必然已经登记——
+  // `MediaQuery.of(context)` / `context.watch` 首帧即可拿到真值。
+  // 只有拿不到结点 id 的极端情况（未挂载的实例）才退回页面锚点。
   function buildContextOf(inst) {
-    var node = inst;
-    while (node && node.__k !== HOST) { node = node.__parent; }
-    if (node) { return new JsBuildContext(inst, node.__id); }
-    var root = activeRoot || inst.__root;
+    if (inst && inst.__id) { return new JsBuildContext(inst, inst.__id); }
+    var root = activeRoot || (inst && inst.__root);
     return new JsBuildContext(inst, root ? 'page:' + root.key : null);
   }
 ''';

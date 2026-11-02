@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/layout_more_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, BoxFit, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FilledButton, FittedBox, FontWeight, IgnorePointer, InteractiveViewer, IntrinsicHeight, Positioned, Radius, RepaintBoundary, RotatedBox, Row, SizedBox, Stack, Text, TextBaseline, TextStyle, Tooltip } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FilledButton, FittedBox, FontWeight, IgnorePointer, InteractiveViewer, IntrinsicHeight, Positioned, Radius, RepaintBoundary, RotatedBox, Row, SizedBox, Stack, StatefulWidget, Text, TextBaseline, TextStyle, Tooltip } from '../flutter.js';
 
 // 组件 LayoutMoreDetail
-export class LayoutMoreDetail {
+export class LayoutMoreDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._scale = 1;
     this._lastTap = "（没点过）";
   }

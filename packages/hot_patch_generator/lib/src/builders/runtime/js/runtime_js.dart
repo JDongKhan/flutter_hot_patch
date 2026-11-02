@@ -528,9 +528,11 @@ const String _jsUiApi = r'''
     root.mounting = true;
     try {
       root.ops = [];
-      root.inst = mount(__createElement(C, __parseProps(propsJson), null), null, null);
-      // 末位下发根结点 id，宿主据此挂载 _JsNode。
-      emitOp({ op: 'root', id: hostNodeIdOf(root.inst) });
+      // 根组件是 `Component` 实例（实例即元素），build 由宿主在它的组件 wrapper
+      // 挂载时同步拉取（见 pullComponent）。
+      root.inst = mount(new C(__parseProps(propsJson)), null, null);
+      // 末位下发根结点 id，宿主据此挂载组件 wrapper（它内部再 pull 出渲染根）。
+      emitOp({ op: 'root', id: nodeIdOf(root.inst) });
       commitOps(root);
     } catch (e) {
       // 失败即整页回滚：本次 commit 未发生（宿主侧没有半棵树），但 JS 侧已创建
@@ -584,16 +586,19 @@ const String _jsUiApi = r'''
     var next = __parseProps(propsJson);
     var prev = inst.props || {};
     inst.props = next;
-    if (inst.__el) { inst.__el.props = next; }
     if (typeof inst.__applyProps === 'function') { inst.__applyProps(next); }
     var prevBuilding = building;
-    building = inst;
-    try {
-      if (typeof inst.didUpdateWidget === 'function') {
-        inst.didUpdateWidget(prev);
+    // 首次 build 尚未由宿主拉起：只同步 props，didUpdateWidget 在「已构建」之后
+    // 才有意义；build 由 pullComponent 读取最新 props 后执行。
+    if (inst.__built) {
+      building = inst;
+      try {
+        if (typeof inst.didUpdateWidget === 'function') {
+          inst.didUpdateWidget(prev);
+        }
+      } finally {
+        building = prevBuilding;
       }
-    } finally {
-      building = prevBuilding;
     }
     markDirty(inst);
     return true;
@@ -666,15 +671,17 @@ const String _jsUiLeakApiMember =
 const String _jsUiRuntimeSkeletonTailHead = r'''
 
   var api = {
-    h: __createElement,
     fn: __createFnHandle,
     invoke: __invokeEventHandler,
     // 需要结果的事件调用（宿主等待 Future）：执行句柄 → 若返回 Promise 则
     // await → 经宿主通道 `jsuiEventResult` 回传 token 与结果。与能力无关，
     // 所有 `Future<T>` 回调共用（见 `JsRuntimeManager.invokeAwait`）。
     invokeAwait: __invokeEventHandlerAwait,
-    Component: Component,
     mount: mountRoot,
+    // 宿主挂载组件 wrapper 时**同步**拉取该组件的首次 build 结果（补丁 JSON）。
+    // 这是唯一一条「宿主 build → JS build」的入口：保证 JS build 执行时
+    // BuildContext 锚点已由 wrapper 登记。
+    pull: pullComponent,
     dispose: disposeRoot,
     updateProps: updateRootProps,
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
@@ -707,13 +714,13 @@ const String _jsUiCrossModuleExports = r'''
     registerScope: registerScope,
     scopeOf: scopeOf,
     subscribeListenable: subscribeListenable,
+    // 调度：`Component.setState`（flutter.js 的基类）需要把实例标脏。
+    markDirty: markDirty,
     // 结点归属与独立根（showDialog 系列的面板机制在 flutter.js）。
     contextOf: contextOf,
-    elementOf: elementOf,
-    elementListOf: elementListOf,
     isElement: isElement,
     isElementList: isElementList,
-    hostNodeIdOf: hostNodeIdOf,
+    nodeIdOf: nodeIdOf,
     newRoot: newRoot,
     mount: mount,
     unmount: unmount,
@@ -725,6 +732,7 @@ const String _jsUiCrossModuleExports = r'''
     invokeHostMethod: invokeHostMethod,
     roots: roots,
     get building() { return building; },
+    set building(v) { building = v; },
     get activeRoot() { return activeRoot; },
     set activeRoot(v) { activeRoot = v; },
     get JsBuildContext() { return JsBuildContext; }

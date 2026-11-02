@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/button_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { BorderRadius, BorderSide, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, OutlinedButton, Radius, RoundedRectangleBorder, Size, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
+import { BorderRadius, BorderSide, Colors, Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, OutlinedButton, Radius, RoundedRectangleBorder, Size, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 ButtonDetail
-export class ButtonDetail {
+export class ButtonDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._pressed = 0;
   }
   onTap() {

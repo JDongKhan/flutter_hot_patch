@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/dismissible_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, Colors, Column, Container, CrossAxisAlignment, DismissDirection, Dismissible, EdgeInsets, FontWeight, Icon, Icons, ListTile, OutlinedButton, SizedBox, Text, TextStyle, ValueKey } from '../flutter.js';
+import { Align, Alignment, Colors, Column, Container, CrossAxisAlignment, DismissDirection, Dismissible, EdgeInsets, FontWeight, Icon, Icons, ListTile, OutlinedButton, SizedBox, StatefulWidget, Text, TextStyle, ValueKey } from '../flutter.js';
 
 // 组件 DismissibleDetail
-export class DismissibleDetail {
+export class DismissibleDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._items = ["第一条：左滑删除，右滑弹回", "第二条：试试右滑，会被拒绝", "第三条：删光后点「重置」"];
     this._last = "还没有条目被删除";
   }

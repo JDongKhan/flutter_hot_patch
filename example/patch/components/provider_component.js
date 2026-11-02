@@ -4,13 +4,13 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
-import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
 
 // 组件 ProviderCard
-export class ProviderCard {
+export class ProviderCard extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._modelA = new CounterVm();
     this._modelB = new NetworkVm();
   }
@@ -150,6 +150,7 @@ export class ProviderCard {
   }
   dispose() {
     this._modelB.dispose();
+    super.dispose();
   }
 }
 

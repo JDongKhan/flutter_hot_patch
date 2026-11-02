@@ -294,6 +294,17 @@ List<ClassInfo> _baseChainOf(ClassInfo info, Map<String, ClassInfo> classTable) 
 String? jsBaseClassOf(ClassInfo info, Map<String, ClassInfo> classTable) {
   final sdk = sdkBaseName(info);
   if (sdk != null) return sdk;
+  if (info.isComponent) {
+    // 组件按 **widget 侧**的 extends 决定 JS 基类：`StatefulWidget` /
+    // `StatelessWidget` 在 flutter.js 里同名导出（都 `extends Component`）；
+    // 项目内组件基类照常 `extends`；都没有时落到 Component。
+    final w = info.widgetSuperType?.split('<').first.trim();
+    if (w == null || w.isEmpty) return 'Component';
+    final mapped = sdkSuperClassMap[w];
+    if (mapped != null) return mapped;
+    final base = classTable[w];
+    return (base != null && base.name != info.name) ? w : 'Component';
+  }
   final t = info.superType;
   if (t == null) return null;
   final name = t.split('<').first.trim();
@@ -306,6 +317,10 @@ String? jsBaseClassOf(ClassInfo info, Map<String, ClassInfo> classTable) {
 const Map<String, String> sdkSuperClassMap = {
   'ChangeNotifier': 'ChangeNotifier',
   'ValueNotifier': 'ValueNotifier',
+  // Widget 基类：flutter.js 里同名导出（都 `extends Component`），翻译产物原样
+  // `extends StatelessWidget / StatefulWidget`，生成器无需再为组件做特殊处理。
+  'StatelessWidget': 'StatelessWidget',
+  'StatefulWidget': 'StatefulWidget',
   // CustomPainter：JS 侧值类（canvas_js.dart），子类 `paint` 被宿主录制重放。
   'CustomPainter': 'CustomPainter',
 };

@@ -3,12 +3,12 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../model/counter_vm.js';
-import { Card, Column, EdgeInsets, ElevatedButton, FontWeight, ListenableBuilder, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Card, Column, EdgeInsets, ElevatedButton, FontWeight, ListenableBuilder, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 NotifierCard
-export class NotifierCard {
+export class NotifierCard extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._model = new CounterVm();
   }
   _inc() {
@@ -66,6 +66,7 @@ export class NotifierCard {
   }
   dispose() {
     this._model.dispose();
+    super.dispose();
   }
 }
 

@@ -6,11 +6,102 @@ const G = globalThis;
 const {
   handleOp, registerHandle, releaseHandle, handleObjectOf,
   createFnHandle: __createFnHandle,
-  contextOf, elementOf, elementListOf, isElement, isElementList,
-  hostNodeIdOf, newRoot, mount, unmount,
+  contextOf, isElement, isElementList,
+  nodeIdOf, newRoot, mount, unmount,
   commitOps, emitOp, flushNow, abortRoot, releasePageHandles, invokeHostMethod,
   roots, JsBuildContext,
 } = G.__core;
+
+// ===== Component（Dart 组件的基类）=====
+// 依赖方向单向：flutter.js → runtime.js，跨模块只走 G.__core。
+var __cc = G.__core;
+
+// 事件句柄的捕获值身份判定：对象 / 函数按引用身份，原始值按 typeof + 值。
+// WeakMap 自动回收，不延长捕获对象寿命。
+var __capIds = new WeakMap();
+var __capSeq = 0;
+function __captureKey(v) {
+  if (v === undefined) { return 'undefined'; }
+  if (v === null) { return 'null'; }
+  var t = typeof v;
+  if (t === 'object' || t === 'function') {
+    var id = __capIds.get(v);
+    if (!id) { id = ++__capSeq; __capIds.set(v, id); }
+    return t + '#' + id;
+  }
+  return t + ':' + String(v);
+}
+
+export class Component {
+  constructor(args) {
+    this.props = args || {};
+    // 实例即元素：reconciler 只认 `__element` 标记，不做任何类型猜测。
+    this.__element = true;
+    // 真实子类。**`__type` 是运行时保留名**：Dart 里业务字段常叫 `type`
+    //（`_ListContent(type: '全部')`），只有双下划线名才不会被业务字段覆盖。
+    this.__type = this.constructor;
+  }
+
+  setState(mutate) {
+    if (typeof mutate === 'function') { mutate.call(this); }
+    __cc.markDirty(this);
+  }
+
+  // 事件句柄：按 (编译期位点号, 捕获值) 缓存。重建产出同一句柄 → props 稳定
+  // （增量补丁仍生效）；循环项捕获不同值时各自独立；卸载随实例统一释放。
+  __bindFn(siteId, captures, f) {
+    var bag = this.__boundFn || (this.__boundFn = {});
+    var key = siteId + '|';
+    if (captures && captures.length) {
+      var ks = [];
+      for (var i = 0; i < captures.length; i++) { ks.push(__captureKey(captures[i])); }
+      key += ks.join(',');
+    }
+    var handle = bag[key];
+    if (handle) { handle.__run = f; return handle; }
+    var anchor = __cc.building || this;
+    handle = __cc.createFnHandle(function () {
+      var prev = __cc.building;
+      __cc.building = anchor;
+      // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
+      // 返回值保留：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
+      try { return handle.__run.apply(handle, arguments); }
+      catch (e) { console.error(String(e)); }
+      finally { __cc.building = prev; }
+    });
+    handle.__run = f;
+    handle.__key = key; // 便于调试：句柄带上构建期 key
+    bag[key] = handle;
+    return handle;
+  }
+
+  // 与 Dart 一致：`context` 既是 build 形参、也是实例上可访问的同一对象。
+  // **按执行位置解析**：委托型组件（Builder / Consumer）把 builder 方法以
+  // owner 为 this 调用时，锚点仍是当前构建位置。
+  get context() { return __cc.contextOf(__cc.building || this); }
+
+  // Dart `State` 生命周期的同名空实现：产物里 `super.initState()` /
+  // `super.didChangeDependencies()` 等一比一翻译后仍可正常调用
+  // （Flutter 原生基类的这些实现本身就是空操作）。
+  initState() {}
+  didChangeDependencies() {}
+  didUpdateWidget(oldWidget) {}
+  activate() {}
+  deactivate() {}
+  dispose() {}
+
+  // 空 build：Dart 里 `State.build` 是抽象方法，但 SDK mixin
+  // （AutomaticKeepAliveClientMixin 等）会在自己的 build 里调用 `super.build`。
+  // 这些 SDK mixin 不参与翻译，产物中的 `super.build(context)` 因此落到这里。
+  // 真正缺少 build 的组件会由 pull 阶段报「组件 build 未产出任何结点」（不静默）。
+  build(context) {}
+}
+
+// Flutter 的两个 Widget 基类：只作为翻译产物的 `extends` 落点。
+// 本模型里 widget 与 state 合并为一个实例，二者不携带额外语义。
+export class StatelessWidget extends Component {}
+export class StatefulWidget extends Component {}
+
 
 // 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
 // 元素对象统一由本函数产出，带 element: true 标记；props 值是否是 widget
@@ -18,22 +109,13 @@ const {
 // 懒容器配置（**构建期唯一事实源**：shared/js_class_defs.dart 的
 // lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
 var __lazyChildRules = {"TabBarView": true, "PageView": true, "GridView": true, "SliverGrid": true, "SliverFixedExtentList": true, "SliverFillViewport": true, "ListView": ["itemExtent"]};
-// 元素判定 / 折算 / 数组归一化**只有一份实现**，在 runtime.js 核心（见【5】
-// elementOf / elementListOf / isElement / isElementList），本模块经 G.__core 取用。
-// 这里只导出 `__asElement` 这个名字作别名：其它 package 模块（key / tab 等）从
-// 本模块 import 它来折算组件实例，保持产物 import 面不变。
-export const __asElement = elementOf;
-// 组件元素描述：`type` 是 JS 类引用，props 值里的组件实例同样折算成元素
-// （`new MultiProvider({providers: [new ChangeNotifierProvider(...)]})` 这类
-// 直接构造、不经过 __h 的路径也保持一致）。真正的实例化只由 mount 完成。
+// 元素判定 / 数组归一化**只有一份实现**，在 runtime.js 核心（见【5】
+// isElement / isElementList），本模块经 G.__core 取用。
+// 组件元素描述：`type` 是 JS 类引用，props 原样保留（组件自己消费 widget 实参，
+// 它们本来就是元素）。真正的实例化由 mount 在构造帧内完成——这样构造期登记的
+// 控制器 / Key 句柄归属该实例，而不是正在 build 的父组件。
 export function __element(type, props) {
-  var p = props || {};
-  var out = {};
-  for (var k in p) {
-    if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    out[k] = elementListOf(elementOf(p[k]));
-  }
-  return { type: type, props: out, children: {}, element: true };
+  return { __type: type, props: props || {}, children: {}, __element: true };
 }
 export function __h(type, props) {
   // JS 组件类：只产出元素描述，不在此实例化。
@@ -44,7 +126,7 @@ export function __h(type, props) {
   var data = {}, slots = {};
   for (var k in p) {
     if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    var v = elementListOf(elementOf(p[k]));
+    var v = p[k];
     if (isElement(v)) { slots[k] = v; continue; }
     if (isElementList(v)) { slots[k] = v; continue; }
     // builder 延迟展开描述（命名构造代理写入）同样进 children，不参与 props。
@@ -59,7 +141,7 @@ export function __h(type, props) {
     }
     data[k] = v;
   }
-  var el = { type: type, props: data, children: slots, element: true };
+  var el = { __type: type, props: data, children: slots, __element: true };
   // 懒容器标记：由构建期配置决定（见 lazyChildHostTypes），运行时据此决定
   // 子结点是否延迟到宿主 inflate 时再挂载。
   var rule = __lazyChildRules[type];
@@ -104,351 +186,407 @@ export class StateHandle {
 
 
 
-export class AbsorbPointer {
+export class AbsorbPointer extends Component {
   constructor(props) {
+    super(props);
     return __h('AbsorbPointer', props);
   }
 }
 
-export class AlertDialog {
+export class AlertDialog extends Component {
   constructor(props) {
+    super(props);
     return __h('AlertDialog', props);
   }
   static adaptive(props) { return new AlertDialog(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
-export class Align {
+export class Align extends Component {
   constructor(props) {
+    super(props);
     return __h('Align', props);
   }
 }
 
-export class AnimatedAlign {
+export class AnimatedAlign extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedAlign', props);
   }
 }
 
-export class AnimatedContainer {
+export class AnimatedContainer extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedContainer', props);
   }
 }
 
-export class AnimatedCrossFade {
+export class AnimatedCrossFade extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedCrossFade', props);
   }
 }
 
-export class AnimatedDefaultTextStyle {
+export class AnimatedDefaultTextStyle extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedDefaultTextStyle', props);
   }
 }
 
-export class AnimatedOpacity {
+export class AnimatedOpacity extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedOpacity', props);
   }
 }
 
-export class AnimatedPadding {
+export class AnimatedPadding extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedPadding', props);
   }
 }
 
-export class AnimatedPositioned {
+export class AnimatedPositioned extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedPositioned', props);
   }
   static fromRect(props) { return new AnimatedPositioned(Object.assign({}, props, { factory: 'fromRect' })); }
 }
 
-export class AnimatedRotation {
+export class AnimatedRotation extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedRotation', props);
   }
 }
 
-export class AnimatedScale {
+export class AnimatedScale extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedScale', props);
   }
 }
 
-export class AnimatedSize {
+export class AnimatedSize extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedSize', props);
   }
 }
 
-export class AnimatedSlide {
+export class AnimatedSlide extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedSlide', props);
   }
 }
 
-export class AnimatedSwitcher {
+export class AnimatedSwitcher extends Component {
   constructor(props) {
+    super(props);
     return __h('AnimatedSwitcher', props);
   }
 }
 
-export class AppBar {
+export class AppBar extends Component {
   constructor(props) {
+    super(props);
     return __h('AppBar', props);
   }
 }
 
-export class AspectRatio {
+export class AspectRatio extends Component {
   constructor(props) {
+    super(props);
     return __h('AspectRatio', props);
   }
 }
 
-export class Baseline {
+export class Baseline extends Component {
   constructor(props) {
+    super(props);
     return __h('Baseline', props);
   }
 }
 
-export class BottomNavigationBar {
+export class BottomNavigationBar extends Component {
   constructor(props) {
+    super(props);
     return __h('BottomNavigationBar', props);
   }
 }
 
-export class BottomNavigationBarItem {
+export class BottomNavigationBarItem extends Component {
   constructor(props) {
+    super(props);
     return __h('BottomNavigationBarItem', props);
   }
 }
 
-export class CachedNetworkImage {
+export class CachedNetworkImage extends Component {
   constructor(props) {
+    super(props);
     return __h('CachedNetworkImage', props);
   }
 }
 
-export class Card {
+export class Card extends Component {
   constructor(props) {
+    super(props);
     return __h('Card', props);
   }
   static filled(props) { return new Card(Object.assign({}, props, { factory: 'filled' })); }
   static outlined(props) { return new Card(Object.assign({}, props, { factory: 'outlined' })); }
 }
 
-export class Center {
+export class Center extends Component {
   constructor(props) {
+    super(props);
     return __h('Center', props);
   }
 }
 
-export class Checkbox {
+export class Checkbox extends Component {
   constructor(props) {
+    super(props);
     return __h('Checkbox', props);
   }
   static adaptive(props) { return new Checkbox(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
-export class Chip {
+export class Chip extends Component {
   constructor(props) {
+    super(props);
     return __h('Chip', props);
   }
 }
 
-export class CircleAvatar {
+export class CircleAvatar extends Component {
   constructor(props) {
+    super(props);
     return __h('CircleAvatar', props);
   }
 }
 
-export class CircularProgressIndicator {
+export class CircularProgressIndicator extends Component {
   constructor(props) {
+    super(props);
     return __h('CircularProgressIndicator', props);
   }
   static adaptive(props) { return new CircularProgressIndicator(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
-export class ClipOval {
+export class ClipOval extends Component {
   constructor(props) {
+    super(props);
     return __h('ClipOval', props);
   }
 }
 
-export class ClipRRect {
+export class ClipRRect extends Component {
   constructor(props) {
+    super(props);
     return __h('ClipRRect', props);
   }
 }
 
-export class ColorFiltered {
+export class ColorFiltered extends Component {
   constructor(props) {
+    super(props);
     return __h('ColorFiltered', props);
   }
 }
 
-export class Column {
+export class Column extends Component {
   constructor(props) {
+    super(props);
     return __h('Column', props);
   }
 }
 
-export class CompositedTransformFollower {
+export class CompositedTransformFollower extends Component {
   constructor(props) {
+    super(props);
     return __h('CompositedTransformFollower', props);
   }
 }
 
-export class CompositedTransformTarget {
+export class CompositedTransformTarget extends Component {
   constructor(props) {
+    super(props);
     return __h('CompositedTransformTarget', props);
   }
 }
 
-export class ConstrainedBox {
+export class ConstrainedBox extends Component {
   constructor(props) {
+    super(props);
     return __h('ConstrainedBox', props);
   }
 }
 
-export class Container {
+export class Container extends Component {
   constructor(props) {
+    super(props);
     return __h('Container', props);
   }
 }
 
-export class CupertinoActionSheet {
+export class CupertinoActionSheet extends Component {
   constructor(props) {
+    super(props);
     return __h('CupertinoActionSheet', props);
   }
 }
 
-export class CupertinoActionSheetAction {
+export class CupertinoActionSheetAction extends Component {
   constructor(props) {
+    super(props);
     return __h('CupertinoActionSheetAction', props);
   }
 }
 
-export class CupertinoAlertDialog {
+export class CupertinoAlertDialog extends Component {
   constructor(props) {
+    super(props);
     return __h('CupertinoAlertDialog', props);
   }
 }
 
-export class CupertinoDialogAction {
+export class CupertinoDialogAction extends Component {
   constructor(props) {
+    super(props);
     return __h('CupertinoDialogAction', props);
   }
 }
 
-export class CustomPaint {
+export class CustomPaint extends Component {
   constructor(props) {
+    super(props);
     return __h('CustomPaint', props);
   }
 }
 
-export class CustomScrollView {
+export class CustomScrollView extends Component {
   constructor(props) {
+    super(props);
     return __h('CustomScrollView', props);
   }
 }
 
-export class DecoratedBox {
+export class DecoratedBox extends Component {
   constructor(props) {
+    super(props);
     return __h('DecoratedBox', props);
   }
 }
 
-export class DefaultTabController {
+export class DefaultTabController extends Component {
   constructor(props) {
+    super(props);
     return __h('DefaultTabController', props);
   }
 }
 
-export class Dialog {
+export class Dialog extends Component {
   constructor(props) {
+    super(props);
     return __h('Dialog', props);
   }
   static fullscreen(props) { return new Dialog(Object.assign({}, props, { factory: 'fullscreen' })); }
 }
 
-export class Dismissible {
+export class Dismissible extends Component {
   constructor(props) {
+    super(props);
     return __h('Dismissible', props);
   }
 }
 
-export class Divider {
+export class Divider extends Component {
   constructor(props) {
+    super(props);
     return __h('Divider', props);
   }
 }
 
-export class Drawer {
+export class Drawer extends Component {
   constructor(props) {
+    super(props);
     return __h('Drawer', props);
   }
 }
 
-export class DrawerHeader {
+export class DrawerHeader extends Component {
   constructor(props) {
+    super(props);
     return __h('DrawerHeader', props);
   }
 }
 
-export class DropdownButton {
+export class DropdownButton extends Component {
   constructor(props) {
+    super(props);
     return __h('DropdownButton', props);
   }
   static _formField(props) { return new DropdownButton(Object.assign({}, props, { factory: '_formField' })); }
 }
 
-export class DropdownMenuItem {
+export class DropdownMenuItem extends Component {
   constructor(props) {
+    super(props);
     return __h('DropdownMenuItem', props);
   }
 }
 
-export class EasyRefresh {
+export class EasyRefresh extends Component {
   constructor(props) {
+    super(props);
     return __h('EasyRefresh', props);
   }
   static builder(props) { return new EasyRefresh(Object.assign({}, props, { factory: 'builder' })); }
 }
 
-export class ElevatedButton {
+export class ElevatedButton extends Component {
   constructor(props) {
+    super(props);
     return __h('ElevatedButton', props);
   }
   static icon(props) { return new ElevatedButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
-export class Expanded {
+export class Expanded extends Component {
   constructor(props) {
+    super(props);
     return __h('Expanded', props);
   }
 }
 
-export class FadeInImage {
+export class FadeInImage extends Component {
   constructor(props) {
+    super(props);
     return __h('FadeInImage', props);
   }
   static assetNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'assetNetwork' })); }
   static memoryNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'memoryNetwork' })); }
 }
 
-export class FadeTransition {
+export class FadeTransition extends Component {
   constructor(props) {
+    super(props);
     return __h('FadeTransition', props);
   }
 }
 
-export class FilledButton {
+export class FilledButton extends Component {
   constructor(props) {
+    super(props);
     return __h('FilledButton', props);
   }
   static icon(props) { return new FilledButton(Object.assign({}, props, { factory: 'icon' })); }
@@ -457,20 +595,23 @@ export class FilledButton {
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
-export class FittedBox {
+export class FittedBox extends Component {
   constructor(props) {
+    super(props);
     return __h('FittedBox', props);
   }
 }
 
-export class Flexible {
+export class Flexible extends Component {
   constructor(props) {
+    super(props);
     return __h('Flexible', props);
   }
 }
 
-export class FloatingActionButton {
+export class FloatingActionButton extends Component {
   constructor(props) {
+    super(props);
     return __h('FloatingActionButton', props);
   }
   static extended(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'extended' })); }
@@ -478,39 +619,45 @@ export class FloatingActionButton {
   static small(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'small' })); }
 }
 
-export class Focus {
+export class Focus extends Component {
   constructor(props) {
+    super(props);
     return __h('Focus', props);
   }
   static withExternalFocusNode(props) { return new Focus(Object.assign({}, props, { factory: 'withExternalFocusNode' })); }
 }
 
-export class FractionallySizedBox {
+export class FractionallySizedBox extends Component {
   constructor(props) {
+    super(props);
     return __h('FractionallySizedBox', props);
   }
 }
 
-export class GestureDetector {
+export class GestureDetector extends Component {
   constructor(props) {
+    super(props);
     return __h('GestureDetector', props);
   }
 }
 
-export class Hero {
+export class Hero extends Component {
   constructor(props) {
+    super(props);
     return __h('Hero', props);
   }
 }
 
-export class Icon {
+export class Icon extends Component {
   constructor(props) {
+    super(props);
     return __h('Icon', props);
   }
 }
 
-export class IconButton {
+export class IconButton extends Component {
   constructor(props) {
+    super(props);
     return __h('IconButton', props);
   }
   static filled(props) { return new IconButton(Object.assign({}, props, { factory: 'filled' })); }
@@ -519,14 +666,16 @@ export class IconButton {
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
-export class IgnorePointer {
+export class IgnorePointer extends Component {
   constructor(props) {
+    super(props);
     return __h('IgnorePointer', props);
   }
 }
 
-export class Image {
+export class Image extends Component {
   constructor(props) {
+    super(props);
     return __h('Image', props);
   }
   static _(props) { return new Image(Object.assign({}, props, { factory: '_' })); }
@@ -536,126 +685,146 @@ export class Image {
   static network(props) { return new Image(Object.assign({}, props, { factory: 'network' })); }
 }
 
-export class ImageFiltered {
+export class ImageFiltered extends Component {
   constructor(props) {
+    super(props);
     return __h('ImageFiltered', props);
   }
 }
 
-export class ImageIcon {
+export class ImageIcon extends Component {
   constructor(props) {
+    super(props);
     return __h('ImageIcon', props);
   }
 }
 
-export class IndexedStack {
+export class IndexedStack extends Component {
   constructor(props) {
+    super(props);
     return __h('IndexedStack', props);
   }
 }
 
-export class InkWell {
+export class InkWell extends Component {
   constructor(props) {
+    super(props);
     return __h('InkWell', props);
   }
 }
 
-export class InputDecoration {
+export class InputDecoration extends Component {
   constructor(props) {
+    super(props);
     return __h('InputDecoration', props);
   }
   static collapsed(props) { return new InputDecoration(Object.assign({}, props, { factory: 'collapsed' })); }
 }
 
-export class InteractiveViewer {
+export class InteractiveViewer extends Component {
   constructor(props) {
+    super(props);
     return __h('InteractiveViewer', props);
   }
   static builder(props) { return new InteractiveViewer(Object.assign({}, props, { factory: 'builder' })); }
 }
 
-export class IntrinsicHeight {
+export class IntrinsicHeight extends Component {
   constructor(props) {
+    super(props);
     return __h('IntrinsicHeight', props);
   }
 }
 
-export class IntrinsicWidth {
+export class IntrinsicWidth extends Component {
   constructor(props) {
+    super(props);
     return __h('IntrinsicWidth', props);
   }
 }
 
-export class KeyboardListener {
+export class KeyboardListener extends Component {
   constructor(props) {
+    super(props);
     return __h('KeyboardListener', props);
   }
 }
 
-export class LimitedBox {
+export class LimitedBox extends Component {
   constructor(props) {
+    super(props);
     return __h('LimitedBox', props);
   }
 }
 
-export class LinearProgressIndicator {
+export class LinearProgressIndicator extends Component {
   constructor(props) {
+    super(props);
     return __h('LinearProgressIndicator', props);
   }
 }
 
-export class ListTile {
+export class ListTile extends Component {
   constructor(props) {
+    super(props);
     return __h('ListTile', props);
   }
 }
 
-export class Material {
+export class Material extends Component {
   constructor(props) {
+    super(props);
     return __h('Material', props);
   }
 }
 
-export class NotificationListener {
+export class NotificationListener extends Component {
   constructor(props) {
+    super(props);
     return __h('NotificationListener', props);
   }
 }
 
-export class Offstage {
+export class Offstage extends Component {
   constructor(props) {
+    super(props);
     return __h('Offstage', props);
   }
 }
 
-export class Opacity {
+export class Opacity extends Component {
   constructor(props) {
+    super(props);
     return __h('Opacity', props);
   }
 }
 
-export class OutlinedButton {
+export class OutlinedButton extends Component {
   constructor(props) {
+    super(props);
     return __h('OutlinedButton', props);
   }
   static icon(props) { return new OutlinedButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
-export class Padding {
+export class Padding extends Component {
   constructor(props) {
+    super(props);
     return __h('Padding', props);
   }
 }
 
-export class PopScope {
+export class PopScope extends Component {
   constructor(props) {
+    super(props);
     return __h('PopScope', props);
   }
 }
 
-export class Positioned {
+export class Positioned extends Component {
   constructor(props) {
+    super(props);
     return __h('Positioned', props);
   }
   static directional(props) { return new Positioned(Object.assign({}, props, { factory: 'directional' })); }
@@ -664,94 +833,109 @@ export class Positioned {
   static fromRelativeRect(props) { return new Positioned(Object.assign({}, props, { factory: 'fromRelativeRect' })); }
 }
 
-export class PreferredSize {
+export class PreferredSize extends Component {
   constructor(props) {
+    super(props);
     return __h('PreferredSize', props);
   }
 }
 
-export class Radio {
+export class Radio extends Component {
   constructor(props) {
+    super(props);
     return __h('Radio', props);
   }
   static adaptive(props) { return new Radio(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
-export class RadioGroup {
+export class RadioGroup extends Component {
   constructor(props) {
+    super(props);
     return __h('RadioGroup', props);
   }
 }
 
-export class RepaintBoundary {
+export class RepaintBoundary extends Component {
   constructor(props) {
+    super(props);
     return __h('RepaintBoundary', props);
   }
   static wrap(props) { return new RepaintBoundary(Object.assign({}, props, { factory: 'wrap' })); }
 }
 
-export class RichText {
+export class RichText extends Component {
   constructor(props) {
+    super(props);
     return __h('RichText', props);
   }
 }
 
-export class RotatedBox {
+export class RotatedBox extends Component {
   constructor(props) {
+    super(props);
     return __h('RotatedBox', props);
   }
 }
 
-export class RotationTransition {
+export class RotationTransition extends Component {
   constructor(props) {
+    super(props);
     return __h('RotationTransition', props);
   }
 }
 
-export class Row {
+export class Row extends Component {
   constructor(props) {
+    super(props);
     return __h('Row', props);
   }
 }
 
-export class SafeArea {
+export class SafeArea extends Component {
   constructor(props) {
+    super(props);
     return __h('SafeArea', props);
   }
 }
 
-export class Scaffold {
+export class Scaffold extends Component {
   constructor(props) {
+    super(props);
     return __h('Scaffold', props);
   }
 }
 
-export class ScaleTransition {
+export class ScaleTransition extends Component {
   constructor(props) {
+    super(props);
     return __h('ScaleTransition', props);
   }
 }
 
-export class SimpleDialog {
+export class SimpleDialog extends Component {
   constructor(props) {
+    super(props);
     return __h('SimpleDialog', props);
   }
 }
 
-export class SingleChildScrollView {
+export class SingleChildScrollView extends Component {
   constructor(props) {
+    super(props);
     return __h('SingleChildScrollView', props);
   }
 }
 
-export class SizeTransition {
+export class SizeTransition extends Component {
   constructor(props) {
+    super(props);
     return __h('SizeTransition', props);
   }
 }
 
-export class SizedBox {
+export class SizedBox extends Component {
   constructor(props) {
+    super(props);
     return __h('SizedBox', props);
   }
   static expand(props) { return new SizedBox(Object.assign({}, props, { factory: 'expand' })); }
@@ -760,153 +944,176 @@ export class SizedBox {
   static square(props) { return new SizedBox(Object.assign({}, props, { factory: 'square' })); }
 }
 
-export class Slider {
+export class Slider extends Component {
   constructor(props) {
+    super(props);
     return __h('Slider', props);
   }
   static adaptive(props) { return new Slider(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
-export class SliverAppBar {
+export class SliverAppBar extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverAppBar', props);
   }
   static large(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'large' })); }
   static medium(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'medium' })); }
 }
 
-export class SliverFillRemaining {
+export class SliverFillRemaining extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverFillRemaining', props);
   }
 }
 
-export class SliverFillViewport {
+export class SliverFillViewport extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverFillViewport', props);
   }
 }
 
-export class SliverFixedExtentList {
+export class SliverFixedExtentList extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverFixedExtentList', props);
   }
   static builder(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'builder' })); }
   static list(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'list' })); }
 }
 
-export class SliverIgnorePointer {
+export class SliverIgnorePointer extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverIgnorePointer', props);
   }
 }
 
-export class SliverOffstage {
+export class SliverOffstage extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverOffstage', props);
   }
 }
 
-export class SliverOpacity {
+export class SliverOpacity extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverOpacity', props);
   }
 }
 
-export class SliverPadding {
+export class SliverPadding extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverPadding', props);
   }
 }
 
-export class SliverSafeArea {
+export class SliverSafeArea extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverSafeArea', props);
   }
 }
 
-export class SliverToBoxAdapter {
+export class SliverToBoxAdapter extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverToBoxAdapter', props);
   }
 }
 
-export class SliverVisibility {
+export class SliverVisibility extends Component {
   constructor(props) {
+    super(props);
     return __h('SliverVisibility', props);
   }
   static maintain(props) { return new SliverVisibility(Object.assign({}, props, { factory: 'maintain' })); }
 }
 
-export class Spacer {
+export class Spacer extends Component {
   constructor(props) {
+    super(props);
     return __h('Spacer', props);
   }
 }
 
-export class Stack {
+export class Stack extends Component {
   constructor(props) {
+    super(props);
     return __h('Stack', props);
   }
   static _fromJson(props) { return new Stack(Object.assign({}, props, { factory: '_fromJson' })); }
 }
 
-export class Switch {
+export class Switch extends Component {
   constructor(props) {
+    super(props);
     return __h('Switch', props);
   }
   static adaptive(props) { return new Switch(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
-export class Tab {
+export class Tab extends Component {
   constructor(props) {
+    super(props);
     return __h('Tab', props);
   }
 }
 
-export class TabBar {
+export class TabBar extends Component {
   constructor(props) {
+    super(props);
     return __h('TabBar', props);
   }
   static secondary(props) { return new TabBar(Object.assign({}, props, { factory: 'secondary' })); }
 }
 
-export class TabBarView {
+export class TabBarView extends Component {
   constructor(props) {
+    super(props);
     return __h('TabBarView', props);
   }
 }
 
-export class Text {
+export class Text extends Component {
   constructor(props) {
+    super(props);
     return __h('Text', props);
   }
   static _(props) { return new Text(Object.assign({}, props, { factory: '_' })); }
   static rich(props) { return new Text(Object.assign({}, props, { factory: 'rich' })); }
 }
 
-export class TextButton {
+export class TextButton extends Component {
   constructor(props) {
+    super(props);
     return __h('TextButton', props);
   }
   static icon(props) { return new TextButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
-export class TextField {
+export class TextField extends Component {
   constructor(props) {
+    super(props);
     return __h('TextField', props);
   }
 }
 
-export class Tooltip {
+export class Tooltip extends Component {
   constructor(props) {
+    super(props);
     return __h('Tooltip', props);
   }
 }
 
-export class Transform {
+export class Transform extends Component {
   constructor(props) {
+    super(props);
     return __h('Transform', props);
   }
   static _(props) { return new Transform(Object.assign({}, props, { factory: '_' })); }
@@ -916,22 +1123,24 @@ export class Transform {
   static translate(props) { return new Transform(Object.assign({}, props, { factory: 'translate' })); }
 }
 
-export class Visibility {
+export class Visibility extends Component {
   constructor(props) {
+    super(props);
     return __h('Visibility', props);
   }
   static maintain(props) { return new Visibility(Object.assign({}, props, { factory: 'maintain' })); }
 }
 
-export class Wrap {
+export class Wrap extends Component {
   constructor(props) {
+    super(props);
     return __h('Wrap', props);
   }
 }
 
-export class AnimatedBuilder {
+export class AnimatedBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   initState() {
     var a = this.props.animation;
@@ -957,9 +1166,9 @@ export class AnimatedBuilder {
   }
 }
 
-export class AnimatedList {
+export class AnimatedList extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
@@ -998,9 +1207,9 @@ export class AnimatedList {
 
 }
 
-export class Builder {
+export class Builder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     // builder 协议唯一形态：闭包。闭包由组件 build 期生成（箭头函数，this 已绑定）。
@@ -1013,9 +1222,9 @@ export class Builder {
   }
 }
 
-export class DragTarget {
+export class DragTarget extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   __targetProps(context) {
     var self = this;
@@ -1077,9 +1286,9 @@ export class DragTarget {
   }
 }
 
-export class Draggable {
+export class Draggable extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
   __sourceProps() {
@@ -1116,9 +1325,9 @@ export class Draggable {
   }
 }
 
-export class GridView {
+export class GridView extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
@@ -1160,9 +1369,9 @@ export class GridView {
 
 }
 
-export class LayoutBuilder {
+export class LayoutBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   // 宿主下发的约束 JSON → BoxConstraints（无界维度发 null，还原成 +∞）。
   __constraintsOf(json) {
@@ -1204,9 +1413,9 @@ export class LayoutBuilder {
   }
 }
 
-export class ListView {
+export class ListView extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
@@ -1246,9 +1455,9 @@ export class ListView {
 
 }
 
-export class ListenableBuilder {
+export class ListenableBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   initState() {
     var l = this.props.listenable;
@@ -1274,9 +1483,9 @@ export class ListenableBuilder {
   }
 }
 
-export class LongPressDraggable {
+export class LongPressDraggable extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
   __sourceProps() {
@@ -1313,9 +1522,9 @@ export class LongPressDraggable {
   }
 }
 
-export class NestedScrollView {
+export class NestedScrollView extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var p = {};
@@ -1332,9 +1541,9 @@ export class NestedScrollView {
   }
 }
 
-export class OrientationBuilder {
+export class OrientationBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var builder = this.props.builder;
@@ -1352,9 +1561,9 @@ export class OrientationBuilder {
   }
 }
 
-export class Overlay {
+export class Overlay extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 条目表：声明式与命令式共用一张表（Dart 侧同样是 _entries）。
     this.__entries = [];
     // 作用域声明：本实例即「OverlayState」，子孙 `Overlay.of(context)` 取到它。
@@ -1442,9 +1651,9 @@ export class OverlayEntry {
   }
 }
 
-export class OverlayPortal {
+export class OverlayPortal extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var src = this.props;
@@ -1471,9 +1680,9 @@ export class OverlayPortal {
   static targetsRootOverlay(props) { return new OverlayPortal(Object.assign({}, props, { factory: 'targetsRootOverlay' })); }
 }
 
-export class PageView {
+export class PageView extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
@@ -1513,9 +1722,9 @@ export class PageView {
 
 }
 
-export class ReorderableListView {
+export class ReorderableListView extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
@@ -1554,9 +1763,9 @@ export class ReorderableListView {
 
 }
 
-export class SliverGrid {
+export class SliverGrid extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
@@ -1598,9 +1807,9 @@ export class SliverGrid {
 
 }
 
-export class SliverList {
+export class SliverList extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
@@ -1640,9 +1849,9 @@ export class SliverList {
 
 }
 
-export class SliverPersistentHeader {
+export class SliverPersistentHeader extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   build(context) {
     var delegate = this.props.delegate;
@@ -1686,9 +1895,9 @@ export class SliverPersistentHeader {
   }
 }
 
-export class TweenAnimationBuilder {
+export class TweenAnimationBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   // 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
   // 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
@@ -1762,9 +1971,9 @@ export class TweenAnimationBuilder {
   }
 }
 
-export class ValueListenableBuilder {
+export class ValueListenableBuilder extends Component {
   constructor(props) {
-    this.props = props || {};
+    super(props);
   }
   initState() {
     this.__subscribe(this.props.valueListenable);
@@ -7723,7 +7932,7 @@ export class Panel {
       // 动画对象，JS 端没有可等价的值（用到的话属于未支持项）。
       built = buildFn(anchor);
     }
-    var el = elementOf(built);
+    var el = built;
     var p = {
       key: key, kind: kind, el: el, caller: caller, root: null,
       result: null, hasResult: false, resolve: null, reject: null
@@ -7762,7 +7971,7 @@ export class Panel {
       // parent = 调用方实例：`__parent` 链因此与页面连通（provider 等按类型
       // 向上的作用域照常可见）；slot=null 故不产出 insert op。
       root.inst = mount(p.el, p.caller, null);
-      emitOp({ op: 'root', id: hostNodeIdOf(root.inst) });
+      emitOp({ op: 'root', id: nodeIdOf(root.inst) });
       commitOps(root);
     } catch (e) {
       abortRoot(root);

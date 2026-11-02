@@ -5,7 +5,7 @@
 import { User } from '../hot_module_base.js';
 import { AccountCenter } from '../hot_module_base.js';
 import { Network } from '../hot_module_base.js';
-import { Color, Colors, Column, ElevatedButton, FontWeight, Row, StateError, Text, TextStyle } from '../flutter.js';
+import { Color, Colors, Column, ElevatedButton, FontWeight, Row, StateError, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 PanelColors
 export class PanelColors {
@@ -18,9 +18,9 @@ export class PanelColors {
 }
 
 // 组件 HelloCard
-export class HelloCard {
+export class HelloCard extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._count = 0;
     this._user = null;
   }
@@ -29,19 +29,24 @@ export class HelloCard {
     debugPrint("[HelloCard] initState");
   }
   didChangeDependencies() {
+    super.didChangeDependencies();
     debugPrint("[HelloCard] didChangeDependencies");
   }
   didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
     debugPrint("[HelloCard] didUpdateWidget: old=" + oldWidget);
   }
   deactivate() {
+    super.deactivate();
     debugPrint("[HelloCard] deactivate");
   }
   activate() {
+    super.activate();
     debugPrint("[HelloCard] activate");
   }
   dispose() {
     debugPrint("[HelloCard] dispose");
+    super.dispose();
   }
   inc() {
     debugPrint("inc: count=" + this._count);
@@ -168,6 +173,7 @@ export class HelloCard {
   // ---- mixin TestMixin ----
   _m$TestMixin$initState() {
     this.testLog();
+    super.initState();
   }
   _m$TestMixin$testLog() {
     print("--混入代码 1");

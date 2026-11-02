@@ -3,12 +3,12 @@
 // 重新生成：dart run build_runner build
 
 import { GuideBubbleWidget } from '../hot_module_base.js';
-import { Align, Alignment, Chip, Color, Column, CrossAxisAlignment, Duration, FilledButton, FontWeight, OutlinedButton, Row, SingleChildScrollView, SizedBox, Text, TextStyle, ValueKey, Wrap } from '../flutter.js';
+import { Align, Alignment, Chip, Color, Column, CrossAxisAlignment, Duration, FilledButton, FontWeight, OutlinedButton, Row, SingleChildScrollView, SizedBox, StatefulWidget, Text, TextStyle, ValueKey, Wrap } from '../flutter.js';
 
 // 组件 OverlayPortalDetail
-export class OverlayPortalDetail {
+export class OverlayPortalDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._alignment = "right";
     this._round = 0;
   }

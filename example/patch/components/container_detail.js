@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/container_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BorderSide, BoxDecoration, BoxShadow, Card, Clip, Color, Colors, Column, Container, CrossAxisAlignment, DecoratedBox, Divider, EdgeInsets, FontWeight, LinearGradient, Offset, Padding, Radius, RoundedRectangleBorder, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BorderSide, BoxDecoration, BoxShadow, Card, Clip, Color, Colors, Column, Container, CrossAxisAlignment, DecoratedBox, Divider, EdgeInsets, FontWeight, LinearGradient, Offset, Padding, Radius, RoundedRectangleBorder, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 ContainerDetail
-export class ContainerDetail {
+export class ContainerDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new Column({

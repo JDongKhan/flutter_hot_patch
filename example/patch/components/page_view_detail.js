@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/page_view_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BoxDecoration, BoxShape, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisAlignment, PageController, PageView, Row, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
+import { Alignment, BoxDecoration, BoxShape, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, MainAxisAlignment, PageController, PageView, Row, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 PageViewDetail
-export class PageViewDetail {
+export class PageViewDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._page = 0;
     this._pageController = new PageController({initialPage: 0});
   }
@@ -29,6 +29,7 @@ export class PageViewDetail {
   }
   dispose() {
     this._pageController.dispose();
+    super.dispose();
   }
   build(context) {
     return new Column({

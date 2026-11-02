@@ -51,8 +51,9 @@ String renderClassDecl(
   // 这个实例（不再 `new` 第二次），patch 复用旧实例、丢弃重建产生的新实例。
   // 组件实例必须保留 props（patch 复用实例时据此同步最新值）。
   if (info.isComponent) {
+    // 组件类一定有 JS 基类（StatelessWidget / StatefulWidget / Component /
+    // 项目内组件基类），props 由基类 `Component` 构造统一写入。
     b.write('  constructor(args) {\n');
-    b.write('    this.props = args || {};\n');
   } else if (base != null) {
     // 有基类 → 构造统一收 args 并原样转发：父类构造里的 `__applyProps(args)`
     // 才能把同一份构造参数映射到父类字段（Dart 隐式/显式 super(...) 的等价物）。

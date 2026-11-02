@@ -3,22 +3,24 @@
 // 重新生成：dart run build_runner build
 
 import { CommonListItem } from 'list_item.js';
-import { Align, Alignment, Axis, BouncingScrollPhysics, Chip, ClampingScrollPhysics, Colors, Column, CrossAxisAlignment, Divider, EdgeInsets, FontWeight, Icon, Icons, ListTile, ListView, NotificationListener, Padding, Row, ScrollController, SingleChildScrollView, SizedBox, Text, TextButton, TextStyle } from '../flutter.js';
+import { Align, Alignment, Axis, BouncingScrollPhysics, Chip, ClampingScrollPhysics, Colors, Column, CrossAxisAlignment, Divider, EdgeInsets, FontWeight, Icon, Icons, ListTile, ListView, NotificationListener, Padding, Row, ScrollController, SingleChildScrollView, SizedBox, StatefulWidget, Text, TextButton, TextStyle } from '../flutter.js';
 
 // 组件 ScrollDetail
-export class ScrollDetail {
+export class ScrollDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._offset = 0;
     this._ctrlOffset = 0;
     this._scrollController = new ScrollController();
     this._listSalt = 0;
   }
   initState() {
+    super.initState();
     this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); });
   }
   dispose() {
     this._scrollController.dispose();
+    super.dispose();
   }
   _onListScroll(n) {
     this.setState(() => { this._offset = n.metrics.pixels; });

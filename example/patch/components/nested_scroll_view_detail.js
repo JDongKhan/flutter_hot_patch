@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/nested_scroll_view_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, CircleAvatar, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, ListTile, ListView, NestedScrollView, Padding, SizedBox, SliverAppBar, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
+import { Alignment, CircleAvatar, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, ListTile, ListView, NestedScrollView, Padding, SizedBox, SliverAppBar, SliverToBoxAdapter, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 NestedScrollViewDetail
-export class NestedScrollViewDetail {
+export class NestedScrollViewDetail extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   _title(s) {
     return new Text({

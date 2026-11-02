@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/rich_text_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, CrossAxisAlignment, Divider, Expanded, FontWeight, RichText, Row, SizedBox, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextDirection, TextOverflow, TextSpan, TextStyle } from '../flutter.js';
+import { Colors, Column, CrossAxisAlignment, Divider, Expanded, FontWeight, RichText, Row, SizedBox, StatefulWidget, Text, TextAlign, TextButton, TextDecoration, TextDecorationStyle, TextDirection, TextOverflow, TextSpan, TextStyle } from '../flutter.js';
 
 // 组件 RichTextDetail
-export class RichTextDetail {
+export class RichTextDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._highlight = false;
     this._clampLines = false;
   }

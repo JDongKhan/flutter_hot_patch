@@ -2,17 +2,18 @@
 // 由 hot_patch_generator 从 lib/components/focus_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, Focus, FocusNode, FontWeight, GestureDetector, OutlinedButton, Radius, Row, SizedBox, Text, TextAlign, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, Focus, FocusNode, FontWeight, GestureDetector, OutlinedButton, Radius, Row, SizedBox, StatefulWidget, Text, TextAlign, TextStyle } from '../flutter.js';
 
 // 组件 FocusDetail
-export class FocusDetail {
+export class FocusDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._a = new FocusNode({debugLabel: "node-a"});
     this._b = new FocusNode({debugLabel: "node-b"});
     this._log = "（暂无焦点变化）";
   }
   initState() {
+    super.initState();
     this._a.addListener((...args) => this._refresh(...args));
     this._b.addListener((...args) => this._refresh(...args));
   }
@@ -21,6 +22,7 @@ export class FocusDetail {
     this._b.removeListener((...args) => this._refresh(...args));
     this._a.dispose();
     this._b.dispose();
+    super.dispose();
   }
   _refresh() {
     this.setState(() => {});

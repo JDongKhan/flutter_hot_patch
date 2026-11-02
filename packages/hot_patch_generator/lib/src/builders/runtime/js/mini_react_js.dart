@@ -18,48 +18,23 @@
 /// mini-react｜element 与事件句柄（__createElement / __createFnHandle / __invokeEventHandler）【5】。
 const String miniReactElementSource = r'''
 
-  function __createElement(type, props, children) {
-    var ch = [];
-    if (children != null) {
-      ch = Array.isArray(children) ? children : [children];
-    }
-    return { type: type, props: props || {}, children: ch };
+  // 元素的唯一判据：`__element === true`。
+  //   - 宿主元素（含宿主包装类 `new Text(...)` 的返回值）：`__type` 是**类型名字符串**；
+  //   - 组件元素：`Component` 实例**自身**就是元素（构造时写入 `__element` /
+  //     `__type` / props，见 flutter.js 的 Component）。
+  // 两者共用同一个标记，reconciler 不再按「原型上有没有 build」猜组件。
+  // 双下划线前缀 = 运行时保留名，Dart 业务字段不会覆盖它。
+  function isElement(v) {
+    return v != null && typeof v === 'object' && v.__element === true;
   }
 
-  // 组件实例 → 元素描述：生成类与普通类一样「构造即实例」，父级把它当子结点
-  // 消费时在这里统一折算（与 flutter.js 的 elementOf 同一协议）。
-  // `inst` 随元素一起携带：mount 直接复用该实例，**不再 new 第二次**。
-  function elementOf(v) {
-    if (v == null || typeof v !== 'object' || v.element === true) { return v; }
-    var C = v.constructor;
-    if (typeof C === 'function' && C.prototype &&
-        typeof C.prototype.build === 'function') {
-      // 同一 Widget 实例 → 同一元素描述：Dart「const 规范化」在 JS 侧的对应物。
-      // 生成器把 `const X(...)` 的产物 hoist 成同一实例后，靠这层缓存让每次
-      // 折算都得到同一个元素对象，patch 才能像原生 `updateChild` 那样按引用短路。
-      if (v.__elCache) { return v.__elCache; }
-      var e = {
-        type: C, props: v.props || {}, children: {}, element: true, inst: v
-      };
-      v.__elCache = e;
-      return e;
-    }
-    return v;
-  }
-
-  // 子项值归一化：数组里命中的组件实例换成元素描述；全部未命中时保留原数组
-  // 引用（props 深比较据此判定「没变」）。
-  function elementListOf(v) {
-    if (!Array.isArray(v)) { return v; }
-    var out = null;
+  // 元素数组（子项列表）。数组里的非元素值（数据）原样保留。
+  function isElementList(v) {
+    if (!Array.isArray(v) || v.length === 0) { return false; }
     for (var i = 0; i < v.length; i++) {
-      var w = elementOf(v[i]);
-      if (w !== v[i]) {
-        if (!out) { out = v.slice(); }
-        out[i] = w;
-      }
+      if (v[i] != null && !isElement(v[i])) { return false; }
     }
-    return out || v;
+    return true;
   }
 
   // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local：由拥有者
@@ -135,14 +110,14 @@ const String miniReactElementSource = r'''
 /// 这里提高到 32 并把入口改为函数，深度只在 Dart 常量一处维护。
 const int jsUiMaxPropDiffDepth = 32;
 
-/// mini-react｜reconciler 工具（__propsEqual / __nodeKeyOf / hostNodeIdOf / __rootOf）【6】。
+/// mini-react｜reconciler 工具（__propsEqual / __nodeKeyOf / nodeIdOf / __rootOf）【6】。
 String miniReactReconcilerUtilsSource() => _miniReactReconcilerUtilsSource
     .replaceFirst('__EQ_MAX_DEPTH__', '$jsUiMaxPropDiffDepth');
 
 const String _miniReactReconcilerUtilsSource = r'''
 
   // 深比较（用于避免每次重建都下发 props）；下面紧邻的 __nodeKeyOf /
-  // hostNodeIdOf / __rootOf 同属本分区。
+  // nodeIdOf / renderRootIdOf / __rootOf 同属本分区。
   var EQ_MAX_DEPTH = __EQ_MAX_DEPTH__;
   function __propsEqual(a, b, depth) {
     if (a === b) { return true; }
@@ -172,13 +147,18 @@ const String _miniReactReconcilerUtilsSource = r'''
   // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【20】），
   // 不在此处做归一——`__nodeKeyOf` 只负责取。
   function __nodeKeyOf(inst) {
-    var p = inst.__k === HOST ? inst.__props : (inst.__el && inst.__el.props);
+    var p = inst.__k === HOST ? inst.__props : inst.props;
     return p ? p.key : null;
   }
 
-  function hostNodeIdOf(inst) {
-    while (inst && inst.__k === COMP) { inst = inst.__child; }
-    return inst ? inst.__id : null;
+  // 结点在**父槽里的标识**：HOST / COMP 都用自己的 `__id`。
+  // 组件结点是宿主的**挂载边界**（宿主为它建 wrapper，wrapper 在 build 里同步
+  // 拉取 JS build 结果），所以父槽引用的是组件结点本身，而不是它的渲染根。
+  function nodeIdOf(inst) { return inst ? inst.__id : null; }
+
+  // 组件的**渲染根结点 id**（组件结点的 `child` 槽指向它）。
+  function renderRootIdOf(inst) {
+    return inst && inst.__child ? inst.__child.__id : null;
   }
 
   // 结点归属的根：mount 期间用 activeRoot，其余情况继承父结点。
@@ -188,74 +168,16 @@ const String _miniReactReconcilerUtilsSource = r'''
 
 ''';
 
-/// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【7】。
+/// mini-react｜回调调用（__invokeCallback）【7】。
+///
+/// `Component`（setState / __bindFn / context）已移到 flutter.js：它是
+/// 「Dart / Flutter 对象在 JS 侧的代表」，不属于 mini-react 核心。运行时只留
+/// 与句柄表相关的回调调用入口。
 const String miniReactComponentBaseSource = r'''
 
-  // 生成器产物**不** extends 本类：`__augment` 把这些方法拷到实例上。
-  // setState / __bindFn 属于 mini-react；上下文（`context.watch/read`）与
-  // BuildContext 代理见【21】（调用面与 Dart 一致，不在实例上挂 `this.watch`）。
-  function Component(props) { this.props = props || {}; }
-  Component.prototype.setState = function (mutate) {
-    if (typeof mutate === 'function') { mutate.call(this); }
-    markDirty(this);
-  };
-  // ── 回到【7】mini-react｜事件句柄（__bindFn）─────────────────────────
-  // 事件句柄：生成器把事件统一翻译成**构建期箭头闭包**，在此登记成句柄。
-  // `this` 正是 build 作用域里的组件实例，也就是**定义该事件的组件**（含
-  // Consumer/Builder 把 builder 方法 `.call(owner)` 的场景）。句柄随 props
-  // 传下去（`{__fn:id}`），宿主点击时经 invoke(id) 回来；因为句柄信息挂在
-  // props 上，包装型组件（MultiProvider 透传 child）也不会把它弄丢。
-  //   句柄执行时会还原**绑定时的构建位置**：闭包里的 `this.context.watch/read`
-  //   按定义闭包时的 context 位置解析（而非点击时的 `this`）。
-  //   按 (位点号, 捕获值) 缓存：重建产出同一句柄 → props 稳定（增量补丁仍生效）；
-  //   循环项捕获到不同值时各自独立（回调不互相覆盖）；卸载时统一释放。
-  //
-  // 捕获值的身份判定：对象 / 函数按**引用身份**（同一个对象每次重建仍是同一个
-  // → key 稳定），原始值按 **typeof 前缀 + String**（`1` 与 `'1'`、`null` 与
-  // `undefined` 与 `''` 必须是不同 key，否则不同捕获值的闭包会互相覆盖）。
-  // WeakMap 自动回收，不延长捕获对象寿命。
-  var __capIds = new WeakMap();
-  var __capSeq = 0;
-  function __captureKey(v) {
-    if (v === undefined) { return 'undefined'; }
-    if (v === null) { return 'null'; }
-    var t = typeof v;
-    if (t === 'object' || t === 'function') {
-      var id = __capIds.get(v);
-      if (!id) { id = ++__capSeq; __capIds.set(v, id); }
-      return t + '#' + id;
-    }
-    return t + ':' + String(v);
-  }
-  // [siteId] 是编译期位点号（同一个 on* 位点每次构建都相同）。它只要求
-  // **同一个组件类内**唯一：句柄缓存挂在实例自己的 `__boundFn` 上，不同实例
-  // （不同页面 / 同一页面多次挂载 / 不同组件）各有一份，编号从 0 重复也不会
-  // 互相覆盖。[captures] 是该闭包引用的构建期局部值，两者共同决定句柄复用。
-  Component.prototype.__bindFn = function (siteId, captures, f) {
-    var bag = this.__boundFn || (this.__boundFn = {});
-    var key = siteId + '|';
-    if (captures && captures.length) {
-      var ks = [];
-      for (var i = 0; i < captures.length; i++) { ks.push(__captureKey(captures[i])); }
-      key += ks.join(',');
-    }
-    var handle = bag[key];
-    if (handle) { handle.__run = f; return handle; }
-    var anchor = building || this;
-    handle = __createFnHandle(function () {
-      var prev = building;
-      building = anchor;
-      // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
-      // 返回值保留：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
-      try { return handle.__run.apply(handle, arguments); }
-      catch (e) {  console.error(String(e));  }
-      finally { building = prev; }
-    });
-    handle.__run = f;
-    handle.__key = key; // 便于调试：句柄带上构建期 key
-    bag[key] = handle;
-    return handle;
-  };
+  // 生成器产物与逻辑组件类都 `extends Component`（见 flutter.js），
+  // setState / __bindFn / context 由基类提供，不在实例上逐个挂载。
+  // 这里只留回调调用的唯一入口（见下）。
 
   // ── 回调调用（__invokeCallback）─────────────────────────────────────────
   // `__bindFn` 的**反向操作**：JS 类内部要调一个「回调 prop」时，统一走这里。
@@ -449,6 +371,9 @@ const String miniReactSchedulerSource = r'''
           var inst = batch[i];
           inst.__dirty = false;
           if (inst.__unmounted) { continue; }
+          // 首次 build 还没被宿主拉起（组件 wrapper 尚未挂载）：build 由
+          // pullComponent 驱动，它会读取此刻最新的 props / state，故这里跳过。
+          if (inst.__k === COMP && !inst.__built) { continue; }
           // 单条重建失败不连坐同批其余组件（与 Flutter「一个子树建错出
           // ErrorWidget、兄弟照常构建」对齐）：本批已由 root.dirty 整体接管
           // 并清空，异常若冲出 for 循环，后面那些组件的 __dirty 仍是 true 却
@@ -476,6 +401,10 @@ const String miniReactSchedulerSource = r'''
                   __componentName(inst.constructor) + '): ' + e2);
               
             }
+            // 宿主渲染以组件为重建粒度：props / 结构补丁已随本批下发，宿主只需
+            // 重建该组件的 wrapper（它的 build 会按 store 里的最新结点重渲染整棵
+            // 子树）。宿主叶子结点因此不必各自持有 wrapper。
+            emitOp({ op: 'rebuild', id: inst.__id });
             commitOps(root);
           } catch (e) {
             // 丢弃本次未 commit 的增量：宿主只接受整批 commit，半棵树不下发，
@@ -607,6 +536,9 @@ const String miniReactReconcilerSource = r'''
 
   // 宿主结点索引（id → 结点实例）：只为「宿主上报 inflate」的反查用（懒槽位）。
   var hostNodes = {};
+  // 组件结点索引（id → 组件实例）：宿主挂载组件 wrapper 时按 id 同步拉取
+  // build（见 pullComponent）。
+  var compNodes = {};
 
   // 挂载事务帧：记录本次尝试新增的宿主结点与组件实例，失败时**按帧**精确回滚
   // （见 __lazyMount 的 catch）。不能按 `__root` 清扫——那是整页根，会误伤同页
@@ -754,6 +686,9 @@ const String miniReactReconcilerSource = r'''
       delete ph.__props.__keepAlive;
     }
     emitOp({ op: 'props', id: ph.__id, props: ph.__props });
+    // 占位结点的 keepAlive 声明参与宿主侧 build（wantKeepAlive getter），
+    // 变化后必须重建这个 wrapper。
+    emitOp({ op: 'rebuild', id: ph.__id });
   }
 
   // 组件自身重建（setState → flush）后，把变更同步给**最近的**懒槽位：
@@ -796,16 +731,13 @@ const String miniReactReconcilerSource = r'''
     // 此时与原生 `Element.updateChild` 的 `child.widget == newWidget` 一致。
     var oldRoot = ph.__mountedRootId;
     ph.__mountedChild = patch(ph.__mountedChild, el, ph, null);
-    // 复用 / 新建的组件实例都要记住自己的父 slot：组件内部 setState 换掉渲染
-    // 根时，__patchComponentChild 靠它把新根 id 回报给本占位结点。
-    if (ph.__mountedChild && ph.__mountedChild.__k !== HOST) {
-      ph.__mountedChild.__propSlot = { parentId: ph.__id, key: 'child', index: 0 };
-    }
-    var newRoot = hostNodeIdOf(ph.__mountedChild);
+    var newRoot = nodeIdOf(ph.__mountedChild);
     if (newRoot !== oldRoot) {
       ph.__mountedRootId = newRoot;
       ph.__propsChildren['child'] = ph.__mountedChild;
       emitOp({ op: 'propsChild', parent: ph.__id, key: 'child', childId: newRoot });
+      // 占位结点的 child 槽换了：重建这个懒槽位 wrapper。
+      emitOp({ op: 'rebuild', id: ph.__id });
     }
     // 父级重建路径的保活声明同步（组件自身 setState 引起的变化走 flush 的
     // __syncEnclosingKeepAlive，见【9】）。
@@ -842,12 +774,9 @@ const String miniReactReconcilerSource = r'''
       // BuildContext 锚点与「直接挂在容器下」一致。
       var inst = mount(el, ph, null);
       ph.__mountedChild = inst;
-      ph.__mountedRootId = hostNodeIdOf(inst);
+      ph.__mountedRootId = nodeIdOf(inst);
       ph.__propsChildren = ph.__propsChildren || {};
       ph.__propsChildren['child'] = inst;
-      if (inst && inst.__k !== HOST) {
-        inst.__propSlot = { parentId: ph.__id, key: 'child', index: 0 };
-      }
       // 占位从「零尺寸空隙」变为「透传容器」：只去掉尺寸，**保留**懒槽位标记与
       // 回调句柄——宿主 element 再次 dispose 时要靠 `__lazyOffFn` 反查，重新
       // inflate 时也要靠 `__lazy` 重新回调 __lazyMount。占位结点本身保留
@@ -860,6 +789,8 @@ const String miniReactReconcilerSource = r'''
       ph.__props = mountedProps;
       emitOp({ op: 'props', id: ph.__id, props: ph.__props });
       emitOp({ op: 'propsChild', parent: ph.__id, key: 'child', childId: ph.__mountedRootId });
+      // 占位结点现在有了 child：重建这个懒槽位 wrapper。
+      emitOp({ op: 'rebuild', id: ph.__id });
       commitOps(root);
     } catch (e) {
       // 本次尝试失败：commit 未发生，宿主侧没有半棵树（create/insert 随 ops 一起
@@ -911,6 +842,8 @@ const String miniReactReconcilerSource = r'''
       // 已随本次 dispose 一起销毁，store 按 remove 递归摘除结点。
       unmount(inst);
       emitOp({ op: 'propsChildRemove', parent: ph.__id, key: 'child' });
+      // 占位结点的 child 槽已清空：重建这个懒槽位 wrapper。
+      emitOp({ op: 'rebuild', id: ph.__id });
       commitOps(root);
     } finally {
       root.mounting = false;
@@ -918,32 +851,6 @@ const String miniReactReconcilerSource = r'''
     }
     if (root.dirty.length) { flushNow(root); }
     return true;
-  }
-
-  // 普通类组件（生成器产物不 extends Component）挂载基类能力：
-  //   [mini-react] props / setState / __bindFn（构建期事件句柄）
-  //   [ctx]        context（BuildContext 代理 —— build 传参 / `this.context`）
-  // 对 extends Component 的类重复赋值无害。
-  function __augment(inst) {
-    if (inst.props === undefined || inst.props === null) {
-      inst.props = inst.__el ? inst.__el.props : {};
-    }
-    inst.setState = Component.prototype.setState;
-    inst.__bindFn = Component.prototype.__bindFn;
-    // 与 Dart 一致：`context` 既是 build 形参、也是实例上可访问的同一对象。
-    // 事件/延迟作用域里形参不可见，`this.context` 是同步可达路径。
-    //
-    // **按执行位置解析**：`building` 非空时取**它的**代理。被委托的 builder 方法
-    // （`_builderN` / `_consumerBuilderN` / `_lbBuilderN`，由 Builder / Consumer /
-    // ListView.builder 代理以 `owner[..].call(owner, context, …)` 调用）里 `this`
-    // 是 owner，而 `this.context` 必须是**被委托组件**的代理（它在 provider 子树
-    // 之内）——这正是 Dart 里闭包捕获 `context` 形参的语义。`this === building`
-    // 的路径（组件自身 build、顶层绑定）行为不变。
-    // 惰性：不用 context 的组件不建代理、不建跨语言句柄。
-    Object.defineProperty(inst, 'context', {
-      configurable: true,
-      get: function () { return contextOf(building || this); }
-    });
   }
 
   // 在 [inst] 的 build 执行期间把 `building` 指向它 —— 事件绑定据此拿到
@@ -963,12 +870,16 @@ const String miniReactReconcilerSource = r'''
   }
 
   function mount(el, parent, slot) {
-    el = elementOf(el);
     if (el == null || el === false) { return null; }
 
-    if (typeof el.type === 'string') {
+    // 宿主元素：`__type` 是类型名字符串；
+    // 组件元素：`Component` 实例（`__type` 是类）或 `__h(Class, props)` 描述
+    // （`__type` 是类引用）。
+    var elType = el.__type;
+
+    if (typeof elType === 'string') {
       var hi = {
-        __k: HOST, __id: __nextNodeId(el.type), __type: el.type, __root: __rootOf(parent),
+        __k: HOST, __id: __nextNodeId(elType), __type: elType, __root: __rootOf(parent),
         __props: el.props, __children: [], __parent: parent, __el: el
       };
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
@@ -1006,54 +917,120 @@ const String miniReactReconcilerSource = r'''
     var ownFrame = beginConstruct();
     var ci;
     try {
-      // 翻译层已经构造好的实例随元素下发（`el.inst`）→ 直接复用，不再 new
-      // 第二次；通过 `__h(X, props)` 创建的元素没有实例，才在这里构造。
-      // 已卸载（dispose 过）的实例不得复用：懒槽位被宿主回收后，滚回来时元素
-      // 仍带着上次那份实例引用，复用会拿到已 release 的控制器/句柄。
-      // 已挂在树上的实例同样不得复用：Dart 允许同一 Widget 实例出现在两个槽位
-      // （每处各自 new 一个 State），`elementListOf` 会为同一实例产出两个元素；
-      // 复用会让第二处覆盖 `__parent/__slot`、状态串位，第一处子树在 JS 侧失联。
-      ci = (el.inst && !el.inst.__unmounted && !el.inst.__parent)
-          ? el.inst
-          : new el.type(el.props, el.children);
+      // 组件元素有两种来源，都带 `element: true`：
+      //   1. 翻译层 `new X(props)` 产出的 `Component` 实例（实例即元素）；
+      //   2. `__h(类, props)` 产出的元素描述（还没有实例，逻辑组件/代理类走这条）。
+      // 只有「实例且未挂上树、未卸载」时才直接复用；同一实例出现在两个槽位时
+      // （Dart 允许）按 props 再构造一份，避免状态串位。
+      ci = (el instanceof elType && !el.__unmounted && !el.__parent)
+          ? el
+          : new elType(el.props);
     } catch (e) {
       endConstruct(null, ownFrame);
       throw e;
     }
     ci.__k = COMP;
-    ci.__id = __nextComponentId(el.type);
+    ci.__id = __nextComponentId(elType);
     // 构造期（字段初始化）里登记的控制器 / Key 句柄归属本实例：此刻 `ci` 才存在，
     // 故构造期间先暂存、新对象返回后再回填（见 handle_registry_js 的 beginConstruct）。
     endConstruct(ci, ownFrame);
     // 记入挂载事务帧（若有）：构造已成功、控制器等句柄已归属本实例，之后
     // initState / didChangeDependencies / build 任何一步抛错都要按帧回收。
     __trackInst(ci);
-    ci.__el = el;
-    // 让「父级直接把实例当子结点传入」的折算也拿到同一份元素（见 elementOf）。
-    ci.__elCache = el;
     ci.__parent = parent;
     ci.__slot = slot;
     ci.__root = __rootOf(parent);
-    __augment(ci);
-    // 生命周期与 Flutter 对齐：initState → didChangeDependencies → build。
-    // （后续「依赖变更」走 flush 的 __depDirty，「父级重建」走 patch 的
-    //  didUpdateWidget，见【9】/【10】。）
-    // initState 期间也把构建锚点指向本实例：此时 `this.context` 与新建句柄的
-    // 归属都应以本组件为准（过去 building 只在 __buildOf 里设置，initState 看到的是父级）。
+    compNodes[ci.__id] = ci;
+    // 生命周期：initState 仍在**挂载期**执行（与 Flutter 一致，它不依赖继承
+    // 上下文，控制器 / 监听器在这里登记归属本实例）；didChangeDependencies 与
+    // build 一并推迟到 [pullComponent] —— 由宿主的组件 wrapper 在 element 挂载
+    // 时同步拉起。这样 build 执行时 BuildContext 锚点已经登记，
+    // `MediaQuery.of(context)` / `context.watch` 首帧就能读到真值。
+    ci.__built = false;
+    ci.__depsDone = false;
     var prevBuilding = building;
     building = ci;
     try {
       if (typeof ci.initState === 'function') { ci.initState(); }
-      if (typeof ci.didChangeDependencies === 'function') { ci.didChangeDependencies(); }
     } finally {
       building = prevBuilding;
     }
-    ci.__child = mount(__buildOf(ci), ci, slot);
+    // 组件结点占住父槽：宿主据此为它建一个挂载边界（wrapper），并在 wrapper 的
+    // build 里同步拉取 build 结果（见 pullComponent）。
+    emitOp({ op: 'create', id: ci.__id, type: __componentName(elType), component: true });
+    if (slot && slot.hostParentId) {
+      emitOp({ op: 'insert', parent: slot.hostParentId, id: ci.__id, index: slot.index });
+    }
     return ci;
   }
 
+  // 宿主 element 挂载 → **同步拉取**组件的首次 build 结果。
+  //
+  // 调用点：宿主给每个组件结点建 wrapper，wrapper 在 build 里同步 evaluate
+  // `__jsui.pull(pageKey, id)`。此刻该组件的 BuildContext 锚点已由 wrapper 登记，
+  // 所以 build 里的上下文读取（MediaQuery / provider …）拿的是真值，不再依赖
+  // 「build 早于挂载」的兜底缓存。
+  //
+  // 返回：本次 build 产生的补丁（JSON 数组；空数组 = 无补丁）。build 抛错时返回
+  // `{"error": "…"}`，宿主据此渲染明确的错误视图（不静默降级）。
+  function pullComponent(pageKey, compId) {
+    var root = roots[pageKey];
+    var inst = compNodes[compId];
+    if (!root || !inst || inst.__unmounted) { return []; }
+    if (inst.__built) { return []; }
+    if (root.mounting || root.flushing) {
+      console.error('jsui: component pull re-entered during mount/flush: ' + compId);
+      return { error: '组件 build 与挂载/flush 重入: ' + compId };
+    }
+    var prevRoot = activeRoot;
+    var prevBuilding = building;
+    activeRoot = root;
+    root.ops = [];
+    var frame = __beginMountFrame();
+    var error = null;
+    var ops = null;
+    try {
+      if (!inst.__depsDone) {
+        inst.__depsDone = true;
+        var prevB = building;
+        building = inst;
+        try {
+          if (typeof inst.didChangeDependencies === 'function') {
+            inst.didChangeDependencies();
+          }
+        } finally { building = prevB; }
+      }
+      inst.__child = mount(__buildOf(inst), inst, null);
+      var rootId = renderRootIdOf(inst);
+      if (rootId == null) {
+        error = '组件 build 未产出任何结点: ' + __componentName(inst.constructor);
+      } else {
+        inst.__built = true;
+        emitOp({ op: 'propsChild', parent: inst.__id, key: 'child', childId: rootId });
+      }
+      // 子树里的 keep-alive 声明随挂载同步到最近的懒槽位（与 __lazyMount 同义）。
+      __syncEnclosingKeepAlive(inst);
+      ops = root.ops;
+    } catch (e) {
+      error = (e && e.message ? e.message : String(e));
+    } finally {
+      __endMountFrame(frame);
+      root.ops = null;
+      activeRoot = prevRoot;
+      building = prevBuilding;
+    }
+    if (error != null) {
+      // build 失败：按帧回滚本次新增的结点 / 句柄（宿主尚未 commit，无需 remove）。
+      inst.__built = false;
+      inst.__child = null;
+      __rollbackMountFrame(frame);
+      console.error('jsui: component build failed (' + compId + '): ' + error);
+      return { error: error };
+    }
+    return ops || [];
+  }
+
   function patch(oldInst, el, parent, slot, propSlot) {
-    el = elementOf(el);
     if (el == null || el === false) {
       if (oldInst) { unmount(oldInst); }
       return null;
@@ -1065,22 +1042,19 @@ const String miniReactReconcilerSource = r'''
     }
 
     // 对齐 Flutter `Element.updateChild` 的 `child.widget == newWidget` 短路：
-    // 两种情况命中短路：
-    //   1. 元素本身完全相同（`__el` 就是同一个对象，elementOf 缓存命中）；
-    //   2. 底层实例完全相同（`el.inst` 就是同一个 const 缓存实例，覆盖 elementOf
-    //      每次折算得到新元素对象但实例还是同一个的场景，如懒容器 children 数组）；
-    // 只认引用相等，绝不做 props 值比较——非 const 子组件即使 props 完全相同，
-    // 父级重建时也必须走 didUpdateWidget（见 __patchLazySlot 的约定）。
-    if (oldInst.__el === el || (el.inst && el.inst === oldInst)) {
+    // 元素就是实例本身，引用相同才短路（const 构造在 JS 侧 hoist 成同一实例）。
+    // 绝不做 props 值比较——非 const 子组件即使 props 完全相同，父级重建时也必须
+    // 走 didUpdateWidget（见 __patchLazySlot 的约定）。
+    if (oldInst === el) {
       if (propSlot) { oldInst.__propSlot = propSlot; }
       return oldInst;
     }
 
-    var newIsHost = (typeof el.type === 'string');
+    var newIsHost = (typeof el.__type === 'string');
     var oldIsHost = (oldInst.__k === HOST);
     var sameType = oldIsHost
-      ? (newIsHost && oldInst.__type === el.type)
-      : (!newIsHost && oldInst.constructor === el.type);
+      ? (newIsHost && oldInst.__type === el.__type)
+      : (!newIsHost && oldInst.constructor === el.__type);
     // 与 Flutter `Widget.canUpdate` 完全对齐：**类型相同且 key 相同**才复用。
     // 单子槽（`child:` / 组件渲染根）没有 __keyedMatcher 兜着，少判 key 就会把旧
     // 结点连同它的生命周期（已 hide 的 controller、已跑完的定时器等）复用到新的
@@ -1098,7 +1072,6 @@ const String miniReactReconcilerSource = r'''
         emitOp({ op: 'props', id: oldInst.__id, props: el.props });
       }
       oldInst.__props = el.props;
-      oldInst.__el = el;
       // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
       __publishScope(oldInst, el.props);
       // 子项来源按新元素声明的懒标记生成：懒容器下 builder 形态只带延迟工厂，
@@ -1114,10 +1087,6 @@ const String miniReactReconcilerSource = r'''
     // 自然保留），再把新 props 落到实例（`widget` 即新值），然后以旧 props 回调
     // didUpdateWidget，最后 build——顺序与 Flutter 完全一致。
     var oldWidget = oldInst.props;
-    oldInst.__el = el;
-    // 实例侧的折算缓存同步到最新元素：父级若再次直接把该实例当子结点传入，
-    // elementOf 必须拿到 props 与实例一致的那份描述。
-    oldInst.__elCache = el;
     oldInst.props = el.props;
     // props 变更 → 重新派生「构造参数字段」。生成器产物把 `this.x = args.x` 的
     // 参数↔字段映射放在 `__applyProps` 里；复用实例不会重跑构造函数，若不在此
@@ -1125,6 +1094,9 @@ const String miniReactReconcilerSource = r'''
     if (typeof oldInst.__applyProps === 'function') {
       oldInst.__applyProps(el.props);
     }
+    // 首次 build 尚未由宿主拉起（wrapper 还没挂载）：只同步 props，didUpdateWidget
+    // 在「已构建」之后才有意义；build 由 pullComponent 读取最新 props 后执行。
+    if (!oldInst.__built) { return oldInst; }
     // didUpdateWidget 期间把构建锚点指向本实例（新建句柄的归属 / this.context）。
     var prevBuilding = building;
     building = oldInst;
@@ -1135,33 +1107,27 @@ const String miniReactReconcilerSource = r'''
     } finally {
       building = prevBuilding;
     }
-    // 记住父级 slot 位置：组件内部 setState 重建走 flush 的
-    // __patchComponentChild，也要靠它把「渲染根 id 变化」回报给父 slot。
-    if (propSlot) { oldInst.__propSlot = propSlot; }
     __patchComponentChild(oldInst);
     return oldInst;
   }
 
-  /// 组件 build 出新子树，并在渲染根 id 变化时回报父 slot（propsChildAt）。
+  /// 组件 build 出新子树，并在渲染根 id 变化时回报它自己的 `child` 槽。
   function __patchComponentChild(inst) {
-    var oldRoot = hostNodeIdOf(inst);
-    inst.__child = patch(inst.__child, __buildOf(inst), inst, inst.__slot);
-    var slot = inst.__propSlot;
-    var newRoot = hostNodeIdOf(inst);
-    if (slot && newRoot !== oldRoot) {
+    if (!inst.__built) { return null; }
+    var oldRoot = renderRootIdOf(inst);
+    inst.__child = patch(inst.__child, __buildOf(inst), inst, null);
+    var newRoot = renderRootIdOf(inst);
+    if (newRoot !== oldRoot) {
       if (newRoot == null) {
-        // build 返回空只可能来自产物缺陷：Dart 的 `Widget build()` 必返回
-        // Widget，生成器对无法翻译的 widget 位置也会降级成 SizedBox 占位。
-        // 宿主侧 propsChildAt 的 childId 为空无法落位（会被丢弃，数组槽位因此
-        // 留一个空位），这里必须出声，不静默。
-                  console.error('jsui: component render root is empty after build (' +
-            __componentName(inst.constructor) + ')');
-        
+        // build 返回空只可能来自产物缺陷：Dart 的 `Widget build()` 必返回 Widget。
+        // 宿主侧 propsChildAt 的 childId 为空无法落位，这里必须出声，不静默。
+        console.error('jsui: component render root is empty after build (' +
+          __componentName(inst.constructor) + ')');
         return inst.__child;
       }
       emitOp({
-        op: 'propsChildAt', parent: slot.parentId, key: slot.key,
-        index: slot.index, childId: newRoot
+        op: 'propsChildAt', parent: inst.__id, key: 'child',
+        index: 0, childId: newRoot
       });
     }
     return inst.__child;
@@ -1280,7 +1246,7 @@ const String miniReactReconcilerSource = r'''
       if (inst) {
         // 复用的结点位置变化 -> 下发 move（新建的自带 insert）。
         if (inst === matched && matcher.positionOf(inst) !== hostIdx) {
-          emitOp({ op: 'move', parent: parentHost.__id, id: hostNodeIdOf(inst), index: hostIdx });
+          emitOp({ op: 'move', parent: parentHost.__id, id: nodeIdOf(inst), index: hostIdx });
         }
         next.push(inst);
         hostIdx += 1;
@@ -1295,18 +1261,8 @@ const String miniReactReconcilerSource = r'''
   }
 
   // props 里的 slot：值可能是单个元素、元素数组，或 delegate 描述
-  // （`{__delegate:'list'|'builder', …}`）。元素判据是 __h 统一加的
-  // `element: true` 标记，不做 `{type, props}` 形状猜测。
-  function isElement(v) {
-    return v != null && typeof v === 'object' && v.element === true;
-  }
-  function isElementList(v) {
-    if (!Array.isArray(v) || v.length === 0) { return false; }
-    for (var i = 0; i < v.length; i++) {
-      if (v[i] != null && !isElement(v[i])) { return false; }
-    }
-    return true;
-  }
+  // （`{__delegate:'list'|'builder', …}`）。元素判据统一为 `element === true`
+  // （见【5】的 isElement），不做 `{type, props}` 形状猜测。
 
   // 列表型 slot 的 keyed diff：复用已有实例，新键挂载，缺失卸载。
   // 不向宿主发 insert/move（宿主按 propsChildren 整表替换）。
@@ -1368,7 +1324,7 @@ const String miniReactReconcilerSource = r'''
         var inst = patch(prev, v, hostInst, null);
         if (inst) {
           nextS[k] = inst;
-          emitOp({ op: 'propsChild', parent: hostInst.__id, key: k, childId: hostNodeIdOf(inst) });
+          emitOp({ op: 'propsChild', parent: hostInst.__id, key: k, childId: nodeIdOf(inst) });
         }
         // 本 key 上其他形态的旧绑定（列表 / delegate）由下面的清理循环统一
         // 卸载并解绑：这里再 unmount 一次会让组件 dispose() 跑两遍。
@@ -1379,7 +1335,7 @@ const String miniReactReconcilerSource = r'''
         nextL[k] = arr;
         emitOp({
           op: 'propsChildren', parent: hostInst.__id, key: k,
-          childIds: arr.map(hostNodeIdOf)
+          childIds: arr.map(nodeIdOf)
         });
         continue;
       }
@@ -1389,7 +1345,7 @@ const String miniReactReconcilerSource = r'''
           nextL[k] = arr2;
           emitOp({
             op: 'propsChildren', parent: hostInst.__id, key: k,
-            childIds: arr2.map(hostNodeIdOf)
+            childIds: arr2.map(nodeIdOf)
           });
           nextD[k] = { __delegate: 'list' };
         } else {
@@ -1421,7 +1377,7 @@ const String miniReactReconcilerSource = r'''
 
   function unmount(inst) {
     if (!inst) { return; }
-    var hostId = hostNodeIdOf(inst);
+    var hostId = nodeIdOf(inst);
     if (hostId) { emitOp({ op: 'remove', id: hostId }); }
     __markUnmounted(inst);
   }
@@ -1443,6 +1399,8 @@ const String miniReactReconcilerSource = r'''
         }
       }
     } else {
+      // 组件结点索引同步摘除：宿主不会再拉取一个已卸载的组件。
+      delete compNodes[inst.__id];
       // 与 Flutter 一致：从树上摘除时先 deactivate、再最终 dispose。
       // 生命周期期间把构建锚点指向本实例（`this.context` / 新建句柄归属）。
       var prevBuilding = building;
@@ -1503,6 +1461,10 @@ const String miniReactReconcilerSource = r'''
     for (var id in hostNodes) {
       var node = hostNodes[id];
       if (node && node.__root === root) { delete hostNodes[id]; }
+    }
+    for (var cid in compNodes) {
+      var comp = compNodes[cid];
+      if (comp && comp.__root === root) { delete compNodes[cid]; }
     }
     var arr = pageHandles[pageKey] || [];
     for (i = 0; i < arr.length; i++) { seen[arr[i]] = 1; list.push(arr[i]); }

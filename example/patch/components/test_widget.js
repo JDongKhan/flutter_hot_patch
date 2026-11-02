@@ -3,12 +3,12 @@
 // 重新生成：dart run build_runner build
 
 import { StatelessCard } from 'stateless_card.js';
-import { Center, Column, MainAxisSize, SizedBox, Text } from '../flutter.js';
+import { Center, Column, MainAxisSize, SizedBox, StatelessWidget, Text } from '../flutter.js';
 
 // 组件 TestWidget
-export class TestWidget {
+export class TestWidget extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     var text = (this.__k0 || (this.__k0 = new Text({

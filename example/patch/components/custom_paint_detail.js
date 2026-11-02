@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CanvasImage } from '../base/canvas_image.js';
-import { Alignment, Canvas, Center, Color, Column, CrossAxisAlignment, CustomPaint, CustomPainter, FontWeight, LinearGradient, MainAxisSize, Offset, Paint, PaintingStyle, Path, RRect, Radius, Rect, SizedBox, StrokeCap, Text, TextAlign, TextDirection, TextPainter, TextSpan, TextStyle } from '../flutter.js';
+import { Alignment, Canvas, Center, Color, Column, CrossAxisAlignment, CustomPaint, CustomPainter, FontWeight, LinearGradient, MainAxisSize, Offset, Paint, PaintingStyle, Path, RRect, Radius, Rect, SizedBox, StatefulWidget, StrokeCap, Text, TextAlign, TextDirection, TextPainter, TextSpan, TextStyle } from '../flutter.js';
 
 // 模型 _FramePainter
 export class _FramePainter extends CustomPainter {
@@ -144,12 +144,13 @@ export class _BoardPainter extends CustomPainter {
 }
 
 // 组件 CustomPaintDetail
-export class CustomPaintDetail {
+export class CustomPaintDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._photo = null;
   }
   initState() {
+    super.initState();
     this._loadPhoto();
   }
   async _loadPhoto() {

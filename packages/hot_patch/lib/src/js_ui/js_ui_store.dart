@@ -7,10 +7,14 @@ import '../utils/hot_patch_log.dart';
 /// [props] 是 JS 侧原样下发的 Map（含事件句柄 `{'__fn': id}`）；
 /// [childIds] 指向子结点，宿主据此递归渲染 [_JsNode]。
 class JsUiNode {
-  JsUiNode({required this.type, required this.props});
+  JsUiNode({required this.type, required this.props, this.component = false});
 
   final String type;
   Map<String, dynamic> props;
+
+  /// 组件结点（JS 侧的 COMP）：宿主为它建一个挂载边界 wrapper，并在 wrapper
+  /// 的 build 里同步拉取 JS build 结果。宿主普通结点（HOST）此值为 false。
+  final bool component;
   final List<String> childIds = [];
 
   /// 值为 element 的 props（如 ListTile.leading / Scaffold.body）：
@@ -65,8 +69,13 @@ class JsUiStore {
   }
 
   /// 应用一批 patch op，然后只重建被触碰到的结点。
-  void apply(List<dynamic> ops) {
+  ///
+  /// [notify] = false 用于**宿主 build 期间**拉取的补丁（组件 wrapper 的
+  /// build → JS pull）：只落数据、不回调任何 wrapper 的 setState（build 期
+  /// 标脏会触发框架断言），渲染由当前 build 直接按新数据产出。
+  void apply(List<dynamic> ops, {bool notify = true}) {
     final touched = <String>{};
+    final target = <String>{};
     for (final raw in ops) {
       if (raw is! Map) continue;
       switch (raw['op']) {
@@ -79,7 +88,11 @@ class JsUiStore {
         case 'create':
           final id = raw['id'] as String?;
           if (id == null) break;
-          nodes[id] = JsUiNode(type: '${raw['type']}', props: _props(raw['props']));
+          nodes[id] = JsUiNode(
+            type: '${raw['type']}',
+            props: _props(raw['props']),
+            component: raw['component'] == true,
+          );
           touched.add(id);
         case 'insert':
           final parent = nodes[raw['parent']];
@@ -202,14 +215,25 @@ class JsUiStore {
           _removeSubtree(id);
           touched.remove(id);
           touched.addAll(parents);
+        case 'rebuild':
+          // 组件 / 懒槽位子树变化的**唯一重建信号**：宿主只按组件建 wrapper，
+          // 宿主叶子结点不再各自持有重建回调，因此必须由 JS 显式下发本 op。
+          final id = raw['id'] as String?;
+          if (id == null) break;
+          target.add(id);
         default:
           // 未知 op：JS 侧下发了宿主不认识的指令。静默丢弃会让 JS 状态与
           // 宿主渲染悄悄分叉（与「未注册组件」同性质）——必须留痕。
           HotPatchLog.warn('js_ui: unknown op "${raw['op']}" dropped');
       }
     }
-    for (final id in touched) {
-      _rebuilders[id]?.call();
+    if (notify) {
+      for (final id in touched) {
+        _rebuilders[id]?.call();
+      }
+      for (final id in target) {
+        _rebuilders[id]?.call();
+      }
     }
     _syncParentIndex();
   }

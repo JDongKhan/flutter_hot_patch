@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/spacer_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, Spacer, Text, TextStyle } from '../flutter.js';
+import { Alignment, Border, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, Spacer, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 SpacerDetail
-export class SpacerDetail {
+export class SpacerDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._flex = 1;
   }
   build(context) {

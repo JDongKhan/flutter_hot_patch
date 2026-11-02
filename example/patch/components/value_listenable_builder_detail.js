@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/value_listenable_builder_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, Text, TextStyle, ValueListenableBuilder, ValueNotifier, int } from '../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, MainAxisSize, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle, ValueListenableBuilder, ValueNotifier, int } from '../flutter.js';
 
 // 组件 ValueListenableBuilderDetail
-export class ValueListenableBuilderDetail {
+export class ValueListenableBuilderDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._a = new ValueNotifier({_value: 0, typeArguments: ['int']});
     this._b = new ValueNotifier({_value: 100, typeArguments: ['int']});
     this._useA = true;
@@ -19,6 +19,7 @@ export class ValueListenableBuilderDetail {
   dispose() {
     this._a.dispose();
     this._b.dispose();
+    super.dispose();
   }
   _inc() {
     var n = this._active;

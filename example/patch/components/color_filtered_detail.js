@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/color_filtered_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BlendMode, BoxDecoration, ColorFilter, ColorFiltered, Colors, Column, Container, CrossAxisAlignment, FontWeight, LinearGradient, SizedBox, Text, TextStyle } from '../flutter.js';
+import { Alignment, BlendMode, BoxDecoration, ColorFilter, ColorFiltered, Colors, Column, Container, CrossAxisAlignment, FontWeight, LinearGradient, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 ColorFilteredDetail
-export class ColorFilteredDetail {
+export class ColorFilteredDetail extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new Column({
@@ -97,9 +97,9 @@ export class ColorFilteredDetail {
 }
 
 // 组件 _Sample
-export class _Sample {
+export class _Sample extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this.__applyProps(args);
   }
   __applyProps(args) {

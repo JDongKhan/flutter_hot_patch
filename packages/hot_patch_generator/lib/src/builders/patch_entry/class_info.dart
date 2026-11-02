@@ -115,6 +115,11 @@ class ClassInfo {
   final String name;
   final String sourceFile; // dart 源文件路径（用于推导 import/相对产物）
   final String? superType; // extends 的类名（如 ChangeNotifier）
+
+  /// 组件类**widget 侧**的 extends 类名（`StatelessWidget` / `StatefulWidget` /
+  /// 项目内组件基类）。组件把 State 合并进同一个类，[superType] 因此恒为 null；
+  /// 但 JS 产物仍按这个基类发射 `extends StatelessWidget / StatefulWidget`。
+  final String? widgetSuperType;
   final List<ClassField> instanceFields;
   final List<ClassField> staticFields;
   final List<ClassMethod> methods; // 含 getter
@@ -143,6 +148,7 @@ class ClassInfo {
     required this.name,
     required this.sourceFile,
     this.superType,
+    this.widgetSuperType,
     required this.instanceFields,
     required this.staticFields,
     required this.methods,

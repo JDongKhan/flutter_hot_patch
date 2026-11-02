@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_persistent_header_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, AppBar, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, FontWeight, Icon, Icons, ListTile, MainAxisSize, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
+import { Alignment, AppBar, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, FontWeight, Icon, Icons, ListTile, MainAxisSize, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 _FloatingDelegate
 export class _FloatingDelegate {
@@ -91,9 +91,9 @@ export class _PinnedDelegate {
 }
 
 // 组件 SliverPersistentHeaderDetail
-export class SliverPersistentHeaderDetail {
+export class SliverPersistentHeaderDetail extends StatelessWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
   }
   build(context) {
     return new Scaffold({

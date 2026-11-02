@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/progress_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { CircularProgressIndicator, Colors, Column, CrossAxisAlignment, FontWeight, LinearProgressIndicator, Row, SizedBox, Text, TextStyle } from '../flutter.js';
+import { CircularProgressIndicator, Colors, Column, CrossAxisAlignment, FontWeight, LinearProgressIndicator, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 ProgressDetail
-export class ProgressDetail {
+export class ProgressDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._progress = 0.65;
   }
   build(context) {

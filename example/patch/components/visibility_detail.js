@@ -2,12 +2,12 @@
 // 由 hot_patch_generator 从 lib/components/visibility_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, Center, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, Offstage, OutlinedButton, Row, SizedBox, Text, TextStyle, Visibility } from '../flutter.js';
+import { Alignment, Center, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, Offstage, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle, Visibility } from '../flutter.js';
 
 // 组件 VisibilityDetail
-export class VisibilityDetail {
+export class VisibilityDetail extends StatefulWidget {
   constructor(args) {
-    this.props = args || {};
+    super(args);
     this._visible = true;
     this._maintainSize = false;
     this._maintainSemantics = false;
