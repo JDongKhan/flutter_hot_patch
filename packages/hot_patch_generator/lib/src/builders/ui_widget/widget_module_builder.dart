@@ -147,94 +147,6 @@ class WidgetModuleBuilder implements Builder {
   }
 }
 
-/// 共享结点工厂源码：`export function __h(type, props)`，把翻译层按原名下发的
-/// props 拆成 `{type, props, children, element}`：
-///
-///   - 组件类（`typeof type === 'function'`）走 [__element]：props 保留，**不实例化**；
-///     真正实例化只由 reconciler 的 mount 完成。
-///   - 用户代码 `new CommunityPage(props)` 按普通类语义得到**组件实例**；父级把
-///     它当子结点消费时由 [__asElement] 折算成元素描述（`build` 原型方法判定，
-///     不做类型名猜测）。宿主包装类（`new Text(props)`）在构造里直接调用 `__h`。
-///   - 每个元素对象都带 **`element: true`** 标记（`__h` / `__element` 统一加）
-///     ——这是唯一可靠的 widget 判据，不再靠 `{type, props}` 形状猜测；
-///   - 值是元素（`element === true`）或「元素数组」→ 移入 `children` 对象，
-///     key 与 props 原名**完全一致**（`child` / `content` / `top` / `body` /
-///     `items` 走同一条路径，不再有固定键表）；
-///   - `delegate` 产物（`{__delegate:'list'|'builder', …}`）也移入 `children`，
-///     **不参与 props**；运行时按 `__delegate` 形态消费；
-///   - `ListView.builder` 不再在代理类里展开：代理只写入内部键
-///     `children.__builder = {item, sep, count, ctx}`，由运行时按容器是否懒
-///     决定「立刻调 itemBuilder」还是「宿主 inflate 到该项时再调」；
-///   - 其余值留在 `props`；
-///   - `type` 是函数（JS 组件类）时 props **原样保留**——`__applyProps` 靠它
-///     派生构造参数字段。JS 组件内部 build 再调用 `__h('X', props)` 时，
-///     宿主类型才做拆分。
-String jsNodeHelperSource() => '''
-// 共享结点工厂：所有 package 模块与组件产物共用（本文件是它的唯一定义处）。
-// 元素对象统一由本函数产出，带 element: true 标记；props 值是否是 widget
-// 只看这个标记，不做形状猜测。
-// 懒容器配置（**构建期唯一事实源**：shared/js_class_defs.dart 的
-// lazyChildHostTypes）。运行时只认元素上的 lazyChildren 标记，不认识任何类型。
-var __lazyChildRules = ${lazyChildHostTypesLiteral()};
-// 元素判定 / 数组归一化**只有一份实现**，在 runtime.js 核心（见【5】
-// isElement / isElementList），本模块经 G.__core 取用。
-// 组件元素描述：`type` 是 JS 类引用，props 原样保留（组件自己消费 widget 实参，
-// 它们本来就是元素）。真正的实例化由 mount 在构造帧内完成——这样构造期登记的
-// 控制器 / Key 句柄归属该实例，而不是正在 build 的父组件。
-export function __element(type, props) {
-  return { __type: type, props: props || {}, children: {}, __element: true };
-}
-export function __h(type, props) {
-  // JS 组件类：只产出元素描述，不在此实例化。
-  if (typeof type !== 'string') {
-    return __element(type, props);
-  }
-  var p = props || {};
-  var data = {}, slots = {};
-  for (var k in p) {
-    if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    var v = p[k];
-    if (isElement(v)) { slots[k] = v; continue; }
-    if (isElementList(v)) { slots[k] = v; continue; }
-    // builder 延迟展开描述（命名构造代理写入）同样进 children，不参与 props。
-    if (k === '__builder' && v != null && typeof v === 'object') {
-      slots[k] = v;
-      continue;
-    }
-    // delegate 两种形态都进 children，不参与 props。
-    if (v != null && typeof v === 'object' && v.__delegate) {
-      slots[k] = v;
-      continue;
-    }
-    data[k] = v;
-  }
-  var el = { __type: type, props: data, children: slots, __element: true };
-  // 懒容器标记：由构建期配置决定（见 lazyChildHostTypes），运行时据此决定
-  // 子结点是否延迟到宿主 inflate 时再挂载。
-  var rule = __lazyChildRules[type];
-  if (rule === true) {
-    el.lazyChildren = true;
-  } else if (rule !== undefined) {
-    for (var i = 0; i < rule.length; i++) {
-      if (p[rule[i]] !== undefined) { el.lazyChildren = true; break; }
-    }
-  }
-  return el;
-}''';
-
-/// 懒容器配置的 JS 字面量：`{ "PageView": true, "ListView": ["itemExtent"] }`。
-/// 空键列表 = 无条件懒（`true`）；非空 = props 带其中任一键时才懒。
-String lazyChildHostTypesLiteral() {
-  final parts = <String>[];
-  lazyChildHostTypes.forEach((type, keys) {
-    final value = keys.isEmpty
-        ? 'true'
-        : '[${keys.map(jsonEncode).join(', ')}]';
-    parts.add('${jsonEncode(type)}: $value');
-  });
-  return '{${parts.join(', ')}}';
-}
-
 /// JS 侧**镜像值类**名（从 flutter.js 的值类区源码自动抽取 `export class X`）。
 ///
 /// 用途：判定「静态工厂的落点」——源码里声明的静态方法**返回类型**是镜像值类
@@ -333,13 +245,20 @@ String withClassStatics(String classSource, String statics) {
 /// 同一份源码也用于 `@PatchIgnore(isComponent: true)` 的组件包装类（生成在
 /// 该组件**自己的源文件产物**里）：[exported] 为 false 时生成产物内可见的
 /// `class`（私有类只可能在本产物里使用）。
-String hostWrapperSource(String type, {bool exported = true}) => '''
+String hostWrapperSource(String type, {bool exported = true}) {
+  final rule = lazyChildHostTypes[type];
+  final lazyLine = rule == null
+      ? ''
+      : '  static __lazy = ${rule.isEmpty ? 'true' : '[${rule.map(jsonEncode).join(', ')}]'};\n';
+  return '''
 ${exported ? 'export ' : ''}class $type extends Component {
-  constructor(props) {
+  // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
+  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
+$lazyLine  constructor(props) {
     super(props);
-    return __h('$type', props);
   }
 ${namedCtorStatics(type)}}''';
+}
 
 /// builder 命名构造（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
 /// 源码（类名 = Dart 类型名）：`.separated` 由 `separatorBuilder` 的存在区分
@@ -360,6 +279,10 @@ ${namedCtorStatics(type)}}''';
 /// 带上，展开时原样传入，保持与原实现一致的上下文语义。
 String builderProxySource(String type) {
   final countKey = builderCountPropKey(type);
+  final rule = lazyChildHostTypes[type];
+  final lazyJs = rule == null
+      ? 'false'
+      : (rule.isEmpty ? 'true' : '[${rule.map(jsonEncode).join(', ')}]');
   return '''
 export class $type extends Component {
   constructor(props) {
@@ -367,7 +290,7 @@ export class $type extends Component {
     // 普通构造形态（没有 builder 回调，如 `SliverGrid(delegate: …)` /
     // `PageView(children: […])`）：与其它宿主类型同一协议，直接产出元素。
     if (!this.__hasBuilder()) {
-      return __h('$type', this.props);
+      return Component.host('$type', this.props, $lazyJs);
     }
   }
   __hasBuilder() {
@@ -379,7 +302,7 @@ export class $type extends Component {
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
       console.warn('[$type] itemBuilder 不是闭包，按普通构造渲染');
-      return __h('$type', this.props);
+      return Component.host('$type', this.props, $lazyJs);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
@@ -388,14 +311,14 @@ export class $type extends Component {
       if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
       p[k] = this.props[k];
     }
-    // 展开描述走内部键 __builder，由 __h 归入 children，宿主 renderer 不感知。
+    // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
       sep: this.props.separatorBuilder || null,
       count: this.props.$countKey || 0,
       ctx: context
     };
-    return __h('$type', p);
+    return Component.host('$type', p, $lazyJs);
   }
 ${namedCtorStatics(type, extra: const ['builder', 'separated'])}
 }''';
@@ -404,7 +327,7 @@ ${namedCtorStatics(type, extra: const ['builder', 'separated'])}
 /// 「逻辑 widget」类型 → JS 类源码（在本模块里内联一个普通类，类名 = Dart 名）。
 ///
 /// 与宿主 type 节点不同：这些 widget 的**状态/订阅逻辑必须跑在 JS 里**，
-/// 因此元素写成 `__h(<类名>, props, children)`（类引用，由本模块 export），
+/// 因此元素写成 `Component.host(<类名>, props, children)`（类引用，由本模块 export），
 /// 运行时 `new` 该组件类并按组件路径挂载，由组件 `build()` 自行消费 props
 /// （provider 提供/消费 VM、Builder 委托拥有者方法返回子树）。运行时会给普通
 /// 类实例补挂 `props/setState/context/__bindFn`
@@ -504,7 +427,7 @@ export class Overlay extends Component {
       // 与 Dart 一致：null 条目（builder 返回 null）不占位。
       if (w != null) { kids.push(w); }
     }
-    return __h('Stack', { alignment: 'topLeft', fit: 'expand', children: kids });
+    return Component.host('Stack', { alignment: 'topLeft', fit: 'expand', children: kids });
   }
   dispose() {
     for (var i = 0; i < this.__entries.length; i++) {
@@ -579,7 +502,7 @@ export class Draggable extends Component {
   }
 $dragSourcePropsMethodSource
   build(context) {
-    return __h('Draggable', this.__sourceProps());
+    return Component.host('Draggable', this.__sourceProps());
   }
 }''';
 
@@ -590,7 +513,7 @@ export class LongPressDraggable extends Component {
   }
 $dragSourcePropsMethodSource
   build(context) {
-    return __h('LongPressDraggable', this.__sourceProps());
+    return Component.host('LongPressDraggable', this.__sourceProps());
   }
 }''';
 
@@ -607,7 +530,7 @@ $dragTargetPropsMethodSource
   build(context) {
     var props = this.__targetProps(context);
     if (props == null) { return null; }
-    return __h('DragTarget', props);
+    return Component.host('DragTarget', props);
   }
 }''';
 
@@ -638,7 +561,7 @@ export class OverlayPortal extends Component {
       console.warn('[OverlayPortal] overlayChildBuilder 不是闭包');
     }
     if (oc != null) { p.overlayChild = oc; }
-    return __h('OverlayPortal', p);
+    return Component.host('OverlayPortal', p);
   }
 }''';
 
@@ -664,7 +587,7 @@ export class NestedScrollView extends Component {
     }
     var fn = src.headerSliverBuilder;
     p.headerSlivers = typeof fn === 'function' ? (fn(context, false) || []) : [];
-    return __h('NestedScrollView', p);
+    return Component.host('NestedScrollView', p);
   }
 }''';
 
@@ -685,7 +608,7 @@ export class OrientationBuilder extends Component {
       console.warn('[OrientationBuilder] builder 不是闭包');
       return null;
     }
-    return __h(LayoutBuilder, {
+    return Component.host(LayoutBuilder, {
       'builder': function (context, constraints) {
         return builder(context, constraints.maxWidth > constraints.maxHeight
           ? Orientation.landscape
@@ -746,7 +669,7 @@ export class LayoutBuilder extends Component {
     });
     var props = { 'builder': handle };
     if (this.__lbChild != null) { props.child = this.__lbChild; }
-    return __h('LayoutBuilder', props);
+    return Component.host('LayoutBuilder', props);
   }
 }''';
 
@@ -803,7 +726,7 @@ export class SliverPersistentHeader extends Component {
     if (this.props.pinned !== undefined) { props.pinned = this.props.pinned; }
     if (this.props.floating !== undefined) { props.floating = this.props.floating; }
     if (this.__sphChild != null) { props.child = this.__sphChild; }
-    return __h('SliverPersistentHeader', props);
+    return Component.host('SliverPersistentHeader', props);
   }
 }''';
 
@@ -834,7 +757,7 @@ export class ChangeNotifierProvider extends Component {
     this.__ownsValue = owns;
   }
   build() {
-    return __h('ChangeNotifierProvider', {
+    return Component.host('ChangeNotifierProvider', {
       model: this.props.model,
       notifier: this.__value,
       child: this.props.child
@@ -894,7 +817,7 @@ export class Consumer extends Component {
       return null;
     }
     var child = fn(context, notifier);
-    return __h('Consumer', {
+    return Component.host('Consumer', {
       model: this.props.model,
       notifier: notifier,
       child: child
@@ -927,7 +850,7 @@ export class ListenableBuilder extends Component {
       console.warn('[ListenableBuilder] builder 不是闭包');
       return null;
     }
-    return __h('ListenableBuilder', { notifier: this.props.listenable, child: fn(context) });
+    return Component.host('ListenableBuilder', { notifier: this.props.listenable, child: fn(context) });
   }
   dispose() {
     if (this.__listenable && this.__listener) {
@@ -975,7 +898,7 @@ export class ValueListenableBuilder extends Component {
     }
     var l = this.props.valueListenable;
     var value = (l && l.value !== undefined) ? l.value : null;
-    return __h('ValueListenableBuilder', {
+    return Component.host('ValueListenableBuilder', {
       notifier: l,
       child: fn(context, value, this.props.child)
     });
@@ -1013,7 +936,7 @@ export class AnimatedBuilder extends Component {
       console.warn('[AnimatedBuilder] builder 不是闭包');
       return null;
     }
-    return __h('AnimatedBuilder', { child: fn(context, this.props.child) });
+    return Component.host('AnimatedBuilder', { child: fn(context, this.props.child) });
   }
   dispose() {
     if (this.__animation && this.__listener) {
@@ -1124,7 +1047,7 @@ const Map<String, String> _packageModuleEpilogues = {
 /// （逻辑组件：provider 状态处理 / Builder 委托；sliver builder 代理）。
 ///
 /// 宿主 widget（Text/Column/...）**不产出任何代码**：它们的元素 type 就是类型名
-/// 字符串（`__h('Text', {...})`），由宿主注册表映射成 Flutter widget；
+/// 字符串（`Component.host('Text', {...})`），由宿主注册表映射成 Flutter widget；
 /// 本模块只在有 JS 逻辑时才有存在意义。
 ///
 /// 一个 package 一个文件（文件名即包名）。共用元素工厂 `__h` / 归一化
@@ -1159,14 +1082,12 @@ String renderPackageModule(String package, Set<String> types) {
       // StatefulWidget` 的落点。
       ..writeln(componentJsSource)
       ..writeln()
-      ..writeln(jsNodeHelperSource())
-      ..writeln()
       // State 句柄（GlobalKey.currentState 的承载）：必须早于下面 sorted 里
       // 随组件下发的 State 代理类（`extends StateHandle` 在模块求值期即生效）。
       ..writeln(stateHandleJsSource)
       ..writeln();
-    // 宿主包装类：`new Text({...})` → `__h('Text', {...})`。翻译层因此可以对
-    // 所有 widget 构造统一发射 `new Type(props)`，产物里不再出现 `__h('X', …)`。
+    // 宿主包装类：`new Text({...})` → `Component.host('Text', {...})`。翻译层因此可以对
+    // 所有 widget 构造统一发射 `new Type(props)`，产物里不再出现 `Component.host('X', …)`。
     for (final t in hostWrapperTypes.toList()..sort()) {
       b
         ..writeln()
@@ -1178,7 +1099,7 @@ String renderPackageModule(String package, Set<String> types) {
       packageModulePath(nodeHelperPackage),
     );
     b
-      ..writeln("import { __h, Component } from '$nodeRel';")
+      ..writeln("import { Component } from '$nodeRel';")
       ..writeln();
   }
   for (final t in sorted) {
@@ -1201,7 +1122,7 @@ String renderPackageModule(String package, Set<String> types) {
     }
     // builder 命名构造代理（`.builder` / `.separated`）：元素 type 是类引用，
     // build 时循环调用拥有者方法收集子树；普通构造与 `delegate:` 形态由渲染层
-    // 直接产出宿主节点（`__h('SliverList', ...)`），不经过本类。
+    // 直接产出宿主节点（`Component.host('SliverList', ...)`），不经过本类。
     if (builderFormTypes.contains(t)) {
       b
         ..writeln()

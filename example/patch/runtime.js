@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 379758c8） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 1502fbc6） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '379758c8') { return; }
-  G.__jsuiVersion = '379758c8';
+  if (G.__jsui && G.__jsuiVersion === '1502fbc6') { return; }
+  G.__jsuiVersion = '1502fbc6';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -1052,7 +1052,7 @@ G.debugPrint = function (message) {
   }
 
   function __builderSpec(el) {
-    var slots = el.children || {};
+    var slots = el.__children || {};
     var b = slots.__builder;
     if (b && __isBuilderFn(b.item) && typeof b.count === 'number') {
       return { item: b.item, sep: __isBuilderFn(b.sep) ? b.sep : null, count: b.count, ctx: b.ctx };
@@ -1086,7 +1086,7 @@ G.debugPrint = function (message) {
   }
 
   function __childSources(el, parent, lazy) {
-    var slots = el.children || {};
+    var slots = el.__children || {};
     var pre = slots.__items;
     var out = [];
     var i;
@@ -1447,21 +1447,33 @@ G.debugPrint = function (message) {
     finally { inst.__building = false; building = prev; }
   }
 
+  // 宿主元素判据：字符串 type（Component.host 产物），或**没有重写 build** 的
+  // 包装类（宿主包装类只继承 Component 的空 build；逻辑/翻译组件一定重写 build）。
+  function __isHostElement(el) {
+    var T = el.__type;
+    if (typeof T === 'string') { return true; }
+    if (typeof T !== 'function' || T.prototype == null) { return false; }
+    return !Object.prototype.hasOwnProperty.call(T.prototype, 'build');
+  }
+
+  // 宿主结点类型名：字符串直接用；包装类用类名（类名 === 宿主类型名）。
+  function __hostTypeName(el) {
+    var T = el.__type;
+    return typeof T === 'string' ? T : T.name;
+  }
+
   function mount(el, parent, slot) {
     if (el == null || el === false) { return null; }
 
-    // 宿主元素：`__type` 是类型名字符串；
-    // 组件元素：`Component` 实例（`__type` 是类）或 `__h(Class, props)` 描述
-    // （`__type` 是类引用）。
-    var elType = el.__type;
-
-    if (typeof elType === 'string') {
+    if (__isHostElement(el)) {
+      var hostType = __hostTypeName(el);
       var hi = {
-        __k: HOST, __id: __nextNodeId(elType), __type: elType, __root: __rootOf(parent),
-        __props: el.props, __children: [], __parent: parent, __el: el
+        __k: HOST, __id: __nextNodeId(hostType), __type: hostType,
+        __root: __rootOf(parent), __props: el.props || {},
+        __children: [], __parent: parent, __el: el
       };
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
-      __publishScope(hi, el.props);
+      __publishScope(hi, hi.__props);
       hostNodes[hi.__id] = hi;
       __trackNode(hi.__id);
       emitOp({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
@@ -1472,7 +1484,7 @@ G.debugPrint = function (message) {
       // 懒容器（如 TabBarView / ListView.builder(itemExtent:)）的 children 先只
       // 下发零尺寸占位（见 __newLazySlot）：真实子树等宿主 inflate 到该槽位时
       // 回调再挂；builder 形态连 itemBuilder 的调用也一并推迟（见 __childSources）。
-      // 懒标记来自元素本身（生成的 __h 按构建期配置写入），运行时不做类型判断。
+      // 懒标记在元素构造期已由 Component / 包装类声明写好，运行时不做类型判断。
       var lazyChildren = el.lazyChildren === true;
       var srcs = __childSources(el, hi, lazyChildren);
       for (var i = 0; i < srcs.length; i++) {
@@ -1488,27 +1500,28 @@ G.debugPrint = function (message) {
       hi.__propsChildren = {};
       hi.__propsChildrenList = {};
       hi.__propsData = {};
-      __patchPropSlots(hi, el.children || {}, lazyChildren);
+      __patchPropSlots(hi, el.__children || {}, lazyChildren);
       return hi;
     }
 
     var ownFrame = beginConstruct();
     var ci;
+    var C = el.__type;
     try {
-      // 组件元素有两种来源，都带 `element: true`：
+      // 组件元素有两种来源，都带 `__element: true`：
       //   1. 翻译层 `new X(props)` 产出的 `Component` 实例（实例即元素）；
-      //   2. `__h(类, props)` 产出的元素描述（还没有实例，逻辑组件/代理类走这条）。
+      //   2. `__h(类, props)` 产出的元素描述（还没有实例，builder 代理走这条）。
       // 只有「实例且未挂上树、未卸载」时才直接复用；同一实例出现在两个槽位时
       // （Dart 允许）按 props 再构造一份，避免状态串位。
-      ci = (el instanceof elType && !el.__unmounted && !el.__parent)
+      ci = (el instanceof C && !el.__unmounted && !el.__parent)
           ? el
-          : new elType(el.props);
+          : new C(el.props);
     } catch (e) {
       endConstruct(null, ownFrame);
       throw e;
     }
     ci.__k = COMP;
-    ci.__id = __nextComponentId(elType);
+    ci.__id = __nextComponentId(C);
     // 构造期（字段初始化）里登记的控制器 / Key 句柄归属本实例：此刻 `ci` 才存在，
     // 故构造期间先暂存、新对象返回后再回填（见 handle_registry_js 的 beginConstruct）。
     endConstruct(ci, ownFrame);
@@ -1535,7 +1548,7 @@ G.debugPrint = function (message) {
     }
     // 组件结点占住父槽：宿主据此为它建一个挂载边界（wrapper），并在 wrapper 的
     // build 里同步拉取 build 结果（见 pullComponent）。
-    emitOp({ op: 'create', id: ci.__id, type: __componentName(elType), component: true });
+    emitOp({ op: 'create', id: ci.__id, type: __componentName(C), component: true });
     if (slot && slot.hostParentId) {
       emitOp({ op: 'insert', parent: slot.hostParentId, id: ci.__id, index: slot.index });
     }
@@ -1628,10 +1641,11 @@ G.debugPrint = function (message) {
       return oldInst;
     }
 
-    var newIsHost = (typeof el.__type === 'string');
+    var newIsHost = __isHostElement(el);
+    var newHostType = newIsHost ? __hostTypeName(el) : null;
     var oldIsHost = (oldInst.__k === HOST);
     var sameType = oldIsHost
-      ? (newIsHost && oldInst.__type === el.__type)
+      ? (newIsHost && oldInst.__type === newHostType)
       : (!newIsHost && oldInst.constructor === el.__type);
     // 与 Flutter `Widget.canUpdate` 完全对齐：**类型相同且 key 相同**才复用。
     // 单子槽（`child:` / 组件渲染根）没有 __keyedMatcher 兜着，少判 key 就会把旧
@@ -1650,13 +1664,14 @@ G.debugPrint = function (message) {
         emitOp({ op: 'props', id: oldInst.__id, props: el.props });
       }
       oldInst.__props = el.props;
+      oldInst.__el = el;
       // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
       __publishScope(oldInst, el.props);
       // 子项来源按新元素声明的懒标记生成：懒容器下 builder 形态只带延迟工厂，
       // 已挂载的槽位由 __patchLazySlot 现场调用工厂重建该项。
       var lazyChildren = el.lazyChildren === true;
       __patchChildren(oldInst, __childSources(el, oldInst, lazyChildren), lazyChildren);
-      __patchPropSlots(oldInst, el.children || {}, lazyChildren);
+      __patchPropSlots(oldInst, el.__children || {}, lazyChildren);
       return oldInst;
     }
 

@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { BannerCard } from 'banner_component.js';
-import { Colors, Column, Component, ElevatedButton, FontWeight, MainAxisSize, SizedBox, StatefulWidget, StatelessWidget, Text, TextStyle, __h } from '../flutter.js';
+import { Colors, Column, Component, ElevatedButton, FontWeight, MainAxisSize, SizedBox, StatefulWidget, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 DashboardCard
 export class DashboardCard extends StatefulWidget {
@@ -87,9 +87,10 @@ export class LabeledDivider extends StatelessWidget {
 
 // 原生组件包装 _LabeledDivider（@PatchIgnore(isComponent: true)）
 class _LabeledDivider extends Component {
+  // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
+  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
   constructor(props) {
     super(props);
-    return __h('_LabeledDivider', props);
   }
 }
 

@@ -34,7 +34,48 @@ const String componentJsSource = r'''
     return t + ':' + String(v);
   }
 
+  // 把宿主元素的 props 按统一协议拆成 data / `__children`：widget 实参、widget
+  // 数组、`__builder`、delegate 归子槽，其余归 props。**在元素构造期完成**，
+  // reconciler 直接消费结果，不在 mount/patch 里做业务拆分。
+  function __splitHost(el, lazyRule) {
+    var p = el.props || {};
+    var data = {}, slots = {};
+    for (var k in p) {
+      if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
+      var v = p[k];
+      if (__cc.isElement(v) || __cc.isElementList(v) ||
+          (k === '__builder' && v != null && typeof v === 'object') ||
+          (v != null && typeof v === 'object' && v.__delegate)) {
+        slots[k] = v;
+      } else {
+        data[k] = v;
+      }
+    }
+    el.__children = slots;
+    el.props = data;
+    if (lazyRule === true) {
+      el.lazyChildren = true;
+    } else if (Array.isArray(lazyRule)) {
+      for (var i = 0; i < lazyRule.length; i++) {
+        if (p[lazyRule[i]] !== undefined) { el.lazyChildren = true; break; }
+      }
+    }
+    return el;
+  }
+
   export class Component {
+    // 懒容器声明：默认 false；宿主包装类按构建期配置覆盖为 true（无条件懒）
+    // 或 props 键数组（带其中任一键时才懒）。运行时只读这个声明，不认识类型。
+    static __lazy = false;
+
+    // 按**宿主类型名**产出宿主元素（逻辑组件内部用：`ChangeNotifierProvider` /
+    // `Stack` 这类宿主结点）。props 在构造期按统一协议拆好；懒标记由调用方给出
+    // （builder 代理按构建期配置传入）。
+    static host(type, props, lazy) {
+      return __splitHost(
+        { __type: type, props: props || {}, __element: true }, lazy);
+    }
+
     constructor(args) {
       this.props = args || {};
       // 实例即元素：reconciler 只认 `__element` 标记，不做任何类型猜测。
@@ -42,6 +83,11 @@ const String componentJsSource = r'''
       // 真实子类。**`__type` 是运行时保留名**：Dart 里业务字段常叫 `type`
       //（`_ListContent(type: '全部')`），只有双下划线名才不会被业务字段覆盖。
       this.__type = this.constructor;
+      // 宿主包装类（自身原型**没有重写 build**）在构造期就拆好 props/children；
+      // 逻辑组件 / 翻译组件保留原样 props（它们自己消费构造参数）。
+      if (!Object.prototype.hasOwnProperty.call(this.constructor.prototype, 'build')) {
+        __splitHost(this, this.constructor.__lazy);
+      }
     }
 
     setState(mutate) {

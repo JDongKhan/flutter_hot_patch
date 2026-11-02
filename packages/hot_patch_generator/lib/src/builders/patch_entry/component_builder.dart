@@ -567,11 +567,9 @@ String _renderJsProduct(
   for (final entry in usedWidgets.entries) {
     (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
   }
-  // 结点工厂 `__h`：只有本产物的 `@PatchIgnore(isComponent: true)` 包装类需要
-  // （构造即 `__h('类名', props)`）；其它类统一 `new X(props)`。
-  if (wrapperClasses.isNotEmpty) {
-    (importsByPackage[nodeHelperPackage] ??= <String>{}).add('__h');
-  }
+  // 结点工厂 `__h` 不再对外导出：包装类构造即实例（`super(props)`），元素
+  // 拆分由运行时在 mount/patch 完成。`@PatchIgnore(isComponent: true)` 的包装类
+  // 同样是宿主包装类，不需要 __h。
   // 运行时值类（`flutter.js` 里 `export class` 的值对象 / 控制器 / 枚举）：
   // 产物在值位置直接写 `new Color(...)` / `Colors.red` / `MediaQuery.of(...)`，
   // 这些名字不在 any 组件的 usedWidgets 里（它们不是元素），必须按实际出现的
