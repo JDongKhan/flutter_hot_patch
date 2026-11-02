@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
-  "protocol": "0.3.3",
-  "buildTime": "2026-10-30T17:41:13.536615",
+  "protocol": "0.3.4",
+  "buildTime": "2026-11-02T10:08:09.726030",
   "resources": {
-    "flutter.js": "d29f565b3f11cecbc97f214bf0abd62fb8d96ecd1ba737002462211e61a897c9",
+    "flutter.js": "56c777bc9d10f3e7dc951c5cdd31c3977338d116a8ac0697b36b4b13be647c2a",
     "provider.js": "a9b225de840ff9a012202721ab7f09eac821066fa58aa56b7c23c616161bd58f",
     "runtime.js": "228641ecd72c5f79ab294334eb9e43ca76941e099f2debb891febec9956e6e92",
     "hot_module_base.js": "551b8a2d53e6dcc2bf83ba34c736cfa066cbbe80858384afcbfb781b77c74616",
@@ -42,7 +42,8 @@
     "components/value_listenable_builder_detail.js": "1b35b698f351094497cb33cb3d984075b6cc847ae3e673ea12ed5a76622f85f3",
     "components/fade_in_image_detail.js": "70df94704197b41f0851bfeb94a2f687ed90a440c6c862c737ee2ab57457d875",
     "components/radio_group_detail.js": "8ba60c794f7d908e2c063f635fd1467fdc193e7b566eb4f7fc102cdd9add7ef5",
-    "components/sliver_persistent_header_detail.js": "f0785b9a24a57fc7988ed47864918c213c34fb6833353276bae23702e1ed5b00",
+    "components/sliver_persistent_header_detail.js": "3c567864ef4138803467afd2b4d830a373316a3b0be8cbd93e4bffabf56ad691",
+    "components/custom_paint_detail.js": "d8d2d18a5965b791d503279e325e84413d9feac83c55a117d07e106095778df0",
     "components/image_filtered_detail.js": "356bd4e305975799ab727e362fe5d097856279562af43c1e5ac3958060b04f47",
     "components/scaffold_detail.js": "25e40d1b297af181930f7d48479602521d2be04f745df2ccb69fbed0a62438ab",
     "components/list_item.js": "a38a4e9946b34823f649a2c10fde772fc2048c6b592184bd9e1f825197b18e60",

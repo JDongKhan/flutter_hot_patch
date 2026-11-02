@@ -1,3 +1,14 @@
+## 0.3.4
+
+**新增 CustomPaint / CustomPainter 绘制支持（只做加法：新协议键与句柄 kind 均为新增，老产物行为不变，可与 `hot_patch` 0.3.0 搭配）。**
+
+- **值类（`patch/flutter.js`）**：新增 `Rect` / `RRect` / `Path` / `Paint` / `Canvas` / `CustomPainter`（`builders/runtime/js/canvas_js.dart`，插在 Dart 值类之后、异常之前）。`Canvas` 是**录制型**：每次调用压入一条 `[方法名, …实参]`，`toJSON()` 产出 `{v:1, ops:[…]}`；`Rect → [l,t,r,b]`、`RRect → 12 项`、`Path → {ops}`、`Paint → 非空属性`。
+- **`CustomPainter` 是值类 + 句柄**（kind `canvasPainter`，`sync:false`）：宿主不创建真实对象，只用 `__jsui.call(id, 'call', {method:'__record', args:[size]})` 同步取回录制结果。宿主侧重放与还原见 `hot_patch` 的 `capabilities/canvas/`。
+- **`Gradient.createShader(rect)`**：下发 `{__gradient, rect}`，供 `Paint.shader` 跨桥还原。
+- **SDK 基类表**新增 `CustomPainter`：`class X extends CustomPainter` 产物为 `extends CustomPainter` + `constructor(args){ super(args); }`。
+- **私有依赖分类改为源码事实**：`component_builder` 不再用 `_` 前缀推断「是不是组件」，改为 `isWidgetClassDecl`（`extends StatefulWidget/StatelessWidget/State` 或 `@PatchEntry`）。私有非 widget 类（如 `_XxxPainter extends CustomPainter`、`_XxxDelegate`）按普通类翻译并保留 `extends`，修复私有 painter 丢失基类能力的问题。
+- **不支持项出声**：`drawImage*` / `drawParagraph` / `drawPicture` / `drawShadow` / `drawPoints` / `drawColor` / `toImage*` / `getTransform` 等在 JS 侧直接抛错；未知绘制指令、Paint 属性、Path 指令由宿主 `HotPatchLog.error`。
+
 ## 0.3.3
 
 **产物按归属拆分（协议不变：补丁通道 / patch ops / 句柄信封一致，可与 `hot_patch` 0.3.0 搭配）。**

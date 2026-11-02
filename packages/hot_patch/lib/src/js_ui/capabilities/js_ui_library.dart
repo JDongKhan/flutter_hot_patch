@@ -43,6 +43,7 @@ import 'animated_list/animated_list_library.dart';
 import 'animation/animation_library.dart';
 import 'build_context/build_context_library.dart';
 import 'cached_network_image/cached_network_image_library.dart';
+import 'canvas/canvas_library.dart';
 import 'change_notifier/change_notifier_library.dart';
 import 'core/dart_values_library.dart';
 import 'core/dart_errors_library.dart';
@@ -146,6 +147,8 @@ void _seedBuiltins() {
   registerJsUiLibrary(const DartErrorsLibrary());
   // Color 类族（Color / MaterialColor / ColorSwatch）：依赖 __positionalArgs。
   registerJsUiLibrary(const ColorLibrary());
+  // CustomPaint：JS painter 句柄 sync:false，宿主同步求值录制指令后重放。
+  registerJsUiLibrary(const CanvasLibrary());
   registerJsUiLibrary(const ChangeNotifierLibrary());
   // 动画值类 / AnimationController 镜像：显式动画经此逐帧回传 value。
   registerJsUiLibrary(const AnimationLibrary());

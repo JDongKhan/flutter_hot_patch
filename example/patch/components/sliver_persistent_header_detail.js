@@ -4,6 +4,92 @@
 
 import { Alignment, AppBar, Colors, Column, Container, CrossAxisAlignment, CustomScrollView, EdgeInsets, FontWeight, Icon, Icons, ListTile, MainAxisSize, Opacity, Padding, Scaffold, SizedBox, SliverList, SliverPersistentHeader, SliverToBoxAdapter, Text, TextStyle } from '../flutter.js';
 
+// 模型 _FloatingDelegate
+export class _FloatingDelegate {
+  constructor() {
+  }
+  get minExtent() {
+    return 48;
+  }
+  get maxExtent() {
+    return 48;
+  }
+  build(context, shrinkOffset, overlapsContent) {
+    return new Container({
+      "color": Colors.teal,
+      "alignment": Alignment.centerLeft,
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
+        "horizontal": 16
+      }))),
+      "child": (this.__k1 || (this.__k1 = new Text({
+        "data": "floating header（向上滚回时浮出）",
+        "style": new TextStyle({
+          "color": Colors.white,
+          "fontSize": 13
+        })
+      })))
+    });
+  }
+  shouldRebuild(oldDelegate) {
+    return false;
+  }
+}
+
+// 模型 _PinnedDelegate
+export class _PinnedDelegate {
+  constructor() {
+  }
+  get minExtent() {
+    return 56;
+  }
+  get maxExtent() {
+    return 120;
+  }
+  build(context, shrinkOffset, overlapsContent) {
+    var t = ((shrinkOffset > 64) ? 1 : (shrinkOffset / 64));
+    return new Container({
+      "color": Colors.deepPurple,
+      "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
+        "bottom": 12,
+        "left": 16,
+        "right": 16,
+        "top": 0
+      }))),
+      "alignment": Alignment.bottomLeft,
+      "child": new Column({
+        "mainAxisSize": MainAxisSize.min,
+        "crossAxisAlignment": CrossAxisAlignment.start,
+        "children": [
+          (this.__k1 || (this.__k1 = new Text({
+            "data": "pinned header",
+            "style": new TextStyle({
+              "color": Colors.white,
+              "fontSize": 16,
+              "fontWeight": FontWeight.bold
+            })
+          }))),
+          (this.__k2 || (this.__k2 = new SizedBox({
+            "height": 2
+          }))),
+          new Opacity({
+            "opacity": (1 - t),
+            "child": new Text({
+              "style": (this.__k3 || (this.__k3 = new TextStyle({
+                "color": Colors.white70,
+                "fontSize": 11
+              }))),
+              "data": "shrinkOffset = " + shrinkOffset.toStringAsFixed(1) + " · overlaps = " + overlapsContent
+            })
+          })
+        ]
+      })
+    });
+  }
+  shouldRebuild(oldDelegate) {
+    return true;
+  }
+}
+
 // 组件 SliverPersistentHeaderDetail
 export class SliverPersistentHeaderDetail {
   constructor(args) {
@@ -61,94 +147,6 @@ export class SliverPersistentHeaderDetail {
         ]
       })
     });
-  }
-}
-
-// 组件 _FloatingDelegate
-export class _FloatingDelegate {
-  constructor(args) {
-    this.props = args || {};
-  }
-  get minExtent() {
-    return 48;
-  }
-  get maxExtent() {
-    return 48;
-  }
-  build(context, shrinkOffset, overlapsContent) {
-    return new Container({
-      "color": Colors.teal,
-      "alignment": Alignment.centerLeft,
-      "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
-        "horizontal": 16
-      }))),
-      "child": (this.__k1 || (this.__k1 = new Text({
-        "data": "floating header（向上滚回时浮出）",
-        "style": new TextStyle({
-          "color": Colors.white,
-          "fontSize": 13
-        })
-      })))
-    });
-  }
-  shouldRebuild(oldDelegate) {
-    return false;
-  }
-}
-
-// 组件 _PinnedDelegate
-export class _PinnedDelegate {
-  constructor(args) {
-    this.props = args || {};
-  }
-  get minExtent() {
-    return 56;
-  }
-  get maxExtent() {
-    return 120;
-  }
-  build(context, shrinkOffset, overlapsContent) {
-    var t = ((shrinkOffset > 64) ? 1 : (shrinkOffset / 64));
-    return new Container({
-      "color": Colors.deepPurple,
-      "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({
-        "bottom": 12,
-        "left": 16,
-        "right": 16,
-        "top": 0
-      }))),
-      "alignment": Alignment.bottomLeft,
-      "child": new Column({
-        "mainAxisSize": MainAxisSize.min,
-        "crossAxisAlignment": CrossAxisAlignment.start,
-        "children": [
-          (this.__k1 || (this.__k1 = new Text({
-            "data": "pinned header",
-            "style": new TextStyle({
-              "color": Colors.white,
-              "fontSize": 16,
-              "fontWeight": FontWeight.bold
-            })
-          }))),
-          (this.__k2 || (this.__k2 = new SizedBox({
-            "height": 2
-          }))),
-          new Opacity({
-            "opacity": (1 - t),
-            "child": new Text({
-              "style": (this.__k3 || (this.__k3 = new TextStyle({
-                "color": Colors.white70,
-                "fontSize": 11
-              }))),
-              "data": "shrinkOffset = " + shrinkOffset.toStringAsFixed(1) + " · overlaps = " + overlapsContent
-            })
-          })
-        ]
-      })
-    });
-  }
-  shouldRebuild(oldDelegate) {
-    return true;
   }
 }
 

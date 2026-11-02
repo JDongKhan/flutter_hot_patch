@@ -221,6 +221,12 @@ const String dartValuesJsSource = r'''
       }
       return out;
     }
+    // Shader：`gradient.createShader(rect)` 的跨桥形态——渐变本身 + 着色矩形。
+    // 宿主 painting_from_json 的 gradientFromJson 还原成真 Gradient 后再
+    // createShader，交给 dart:ui 的 Paint.shader。
+    createShader(rect) {
+      return { __gradient: this.toJSON(), rect: rect };
+    }
     // 跨桥形态（见宿主 painting_from_json）。
     static __toJson(kind, self) {
       var json = { kind: kind, colors: self.colors };

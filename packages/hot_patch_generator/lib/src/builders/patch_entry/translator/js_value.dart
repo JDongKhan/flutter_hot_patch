@@ -306,6 +306,8 @@ String? jsBaseClassOf(ClassInfo info, Map<String, ClassInfo> classTable) {
 const Map<String, String> sdkSuperClassMap = {
   'ChangeNotifier': 'ChangeNotifier',
   'ValueNotifier': 'ValueNotifier',
+  // CustomPainter：JS 侧值类（canvas_js.dart），子类 `paint` 被宿主录制重放。
+  'CustomPainter': 'CustomPainter',
 };
 
 // ---------------------------------------------------------------------------

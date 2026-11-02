@@ -5,6 +5,7 @@ import 'automatic_keep_alive_detail.dart';
 import 'button_detail.dart';
 import 'color_filtered_detail.dart';
 import 'container_detail.dart';
+import 'custom_paint_detail.dart';
 import 'dialog_detail.dart';
 import 'dismissible_detail.dart';
 import 'drag_detail.dart';
@@ -85,6 +86,11 @@ class WidgetShowcase extends StatelessWidget {
     _Group('容器装饰', [
       _Entry('Container / Card / Divider', '颜色、圆角、Padding、卡片、分割线', 'ContainerDetail'),
       _Entry('ColorFiltered', '颜色滤镜：mode(multiply/modulate) 与 20 项矩阵灰度', 'ColorFilteredDetail'),
+      _Entry(
+        'CustomPaint',
+        '自绘：图元 / 变换 / 裁剪 / Path / 渐变 shader / saveLayer',
+        'CustomPaintDetail',
+      ),
     ]),
     _Group('列表滚动', [
       _Entry('ListView / SingleChildScrollView', '滚动列表与长内容滚动', 'ScrollDetail'),
@@ -263,6 +269,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'ButtonDetail': 'components/button_detail.js',
     'ColorFilteredDetail': 'components/color_filtered_detail.js',
     'ContainerDetail': 'components/container_detail.js',
+    'CustomPaintDetail': 'components/custom_paint_detail.js',
     'DismissibleDetail': 'components/dismissible_detail.js',
     'DialogDetail': 'components/dialog_detail.js',
     'DragDetail': 'components/drag_detail.js',
@@ -329,6 +336,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'LayoutDetail' => const LayoutDetail(),
       'ImageDetail' => const ImageDetail(),
       'ContainerDetail' => const ContainerDetail(),
+      'CustomPaintDetail' => const CustomPaintDetail(),
       'ScrollDetail' => const ScrollDetail(),
       'AnimatedListDetail' => const AnimatedListDetail(),
       'AutomaticKeepAliveDetail' => const AutomaticKeepAliveDetail(),

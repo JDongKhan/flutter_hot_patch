@@ -14,6 +14,7 @@ import '../shared/js_format.dart';
 import '../shared/js_class_defs.dart';
 import '../shared/paths.dart';
 import '../runtime/js/animation_js.dart';
+import '../runtime/js/canvas_js.dart';
 import '../runtime/js/change_notifier_js.dart';
 import '../runtime/js/color_js.dart';
 import '../runtime/js/controller_base_js.dart';
@@ -51,6 +52,9 @@ import '../runtime/js/timer_js.dart';
 /// 前后互引。依赖方向单向：flutter.js → runtime.js，反方向禁止。
 String flutterValueClassesSource() => [
       dartValuesJsSource,
+      // 绘制值类（Rect / RRect / Path / Paint / Canvas）与 CustomPainter 句柄：
+      // 依赖基础值类工具（__positionalArgs）与 core 句柄机制，故紧随其后。
+      canvasJsSource,
       // Dart 内置异常（StateError / ArgumentError / …）：产物 `throw`/`catch`
       // 的落点，按名 import；runtime.js 自身不构造异常，故归值类区。
       dartErrorsJsSource,

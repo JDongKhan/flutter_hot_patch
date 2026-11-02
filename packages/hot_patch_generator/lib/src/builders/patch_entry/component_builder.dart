@@ -258,7 +258,7 @@ class ComponentBuilder implements Builder {
     }
 
     // 按依赖关系递归：从根类的 dependencies 做 BFS（组件与普通类同一套）——
-    //   - 同文件**有产物**的组件（@PatchEntry / 私有 _Xxx）→ 翻译进同一产物；
+    //   - 同文件**有产物**的组件（@PatchEntry / 私有 widget 类）→ 翻译进同一产物；
     //   - 同文件普通类（模型/共享类）→ 翻译为产物内可见的 inline class；
     //   - `@PatchIgnore(isComponent: true)` → 类本身不翻译（产物里已有包装类）；
     //   - @PatchIgnore() / 无注解公共组件（importResolver 返回 null）→
@@ -287,7 +287,11 @@ class ComponentBuilder implements Builder {
           .whereType<ClassDeclaration>()
           .firstWhere((d) => d.name.lexeme == dep);
       final tableInfo = classTable[dep];
-      final isWidgetDep = tableInfo?.isComponent ?? dep.startsWith('_');
+      // 类表只收公共类，私有依赖不在表里 → 按源码事实（extends 链 / 注解）判定，
+      // 而不是按 `_` 前缀：私有但非 widget 的类（`_XxxPainter extends CustomPainter`、
+      // `_XxxDelegate extends SliverPersistentHeaderDelegate`）是普通类，必须保留
+      // `extends` 与构造转发，否则基类能力（如 CustomPainter 的句柄注册）会丢失。
+      final isWidgetDep = tableInfo?.isComponent ?? isWidgetClassDecl(decl);
       if (isWidgetDep && importResolver(dep) != ownName) {
         // 无 JS 产物的 widget（无注解公共组件 / @PatchIgnore）。
         continue;
