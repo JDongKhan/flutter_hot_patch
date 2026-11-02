@@ -7,14 +7,15 @@ import '../utils/hot_patch_log.dart';
 /// [props] 是 JS 侧原样下发的 Map（含事件句柄 `{'__fn': id}`）；
 /// [childIds] 指向子结点，宿主据此递归渲染 [_JsNode]。
 class JsUiNode {
-  JsUiNode({required this.type, required this.props, this.component = false});
+  JsUiNode({required this.type, required this.props, this.hasBuild = false});
 
   final String type;
   Map<String, dynamic> props;
 
-  /// 组件结点（JS 侧的 COMP）：宿主为它建一个挂载边界 wrapper，并在 wrapper
-  /// 的 build 里同步拉取 JS build 结果。宿主普通结点（HOST）此值为 false。
-  final bool component;
+  /// 元素所属类是否**重写了 build**（JS 的 COMP 结点）：true 时宿主为它建一个
+  /// 挂载边界 wrapper，并在 wrapper 的 build 里同步拉取 JS build 结果。
+  /// 宿主包装类（Text / Align / Material …）不重写 build，此值为 false。
+  final bool hasBuild;
   final List<String> childIds = [];
 
   /// 值为 element 的 props（如 ListTile.leading / Scaffold.body）：
@@ -91,7 +92,7 @@ class JsUiStore {
           nodes[id] = JsUiNode(
             type: '${raw['type']}',
             props: _props(raw['props']),
-            component: raw['component'] == true,
+            hasBuild: raw['hasBuild'] == true,
           );
           touched.add(id);
         case 'insert':

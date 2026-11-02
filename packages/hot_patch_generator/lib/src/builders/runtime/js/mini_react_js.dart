@@ -970,7 +970,9 @@ const String miniReactReconcilerSource = r'''
     }
     // 组件结点占住父槽：宿主据此为它建一个挂载边界（wrapper），并在 wrapper 的
     // build 里同步拉取 build 结果（见 pullComponent）。
-    emitOp({ op: 'create', id: ci.__id, type: __componentName(C), component: true });
+    // `hasBuild: true` = 元素所属类**重写了 build**（COMP 结点）：宿主要为它建
+    // 挂载边界并在 element 挂载时驱动 build。宿主包装类没有重写 build，不带本标记。
+    emitOp({ op: 'create', id: ci.__id, type: __componentName(C), hasBuild: true });
     if (slot && slot.hostParentId) {
       emitOp({ op: 'insert', parent: slot.hostParentId, id: ci.__id, index: slot.index });
     }

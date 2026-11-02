@@ -547,8 +547,8 @@ class _BuildTimeBadge extends StatelessWidget {
 /// 按结点 id 渲染一个 widget。
 ///
 /// 三类结点走三条路径：
-///   - **组件结点**（JS 的 COMP）→ [_JsComponentNode]：宿主的挂载边界，build 里
-///     先登记 BuildContext 锚点、再同步拉取 JS build 结果；
+///   - **组件结点**（JS 的 COMP，类上重写了 `build`）→ [_JsComponentNode]：宿主的
+///     挂载边界，build 里先登记 BuildContext 锚点、再同步拉取 JS build 结果；
 ///   - **懒槽位 / 未注册类型** → [_JsNode]：需要 element 生命周期（懒挂载/卸载、
 ///     KeepAlive）或需要独立重建回调与兜底告警；
 ///   - **已注册的宿主类型** → 直接建真实 widget，**不再包一层 `_JsNode`**。
@@ -560,7 +560,7 @@ Widget _renderStoreNode(JsUiStore store, String id, String pageKey) {
     return uiFallback('结点 "$id" 不在 store.nodes 中（页面 $pageKey）');
   }
   final declared = jsKeyOf(node.props['key']);
-  if (node.component) {
+  if (node.hasBuild) {
     return _JsComponentNode(
       key: declared ?? ValueKey(id),
       store: store,
