@@ -4,6 +4,7 @@ import 'package:build/build.dart' show log;
 import '../class_info.dart';
 import '../../shared/ctor_signatures.dart';
 import '../../shared/runtime_global_types.dart';
+import '../../shared/sdk_enum_index.dart';
 import 'js_value.dart';
 
 // ===========================================================================
@@ -27,6 +28,23 @@ import 'js_value.dart';
 // ---------------------------------------------------------------------------
 // 表达式 / 语句翻译（以 FieldScope + 已知类表为键）
 // ---------------------------------------------------------------------------
+
+/// 已告警过的「带常量参数、未生成 JS 值类」的 SDK 枚举（同一次构建只出声一次）。
+final Set<String> _warnedUnsupportedEnums = {};
+
+/// 产物里引用到未生成值类的 SDK 枚举时出声。
+///
+/// 这类枚举（`enum E { a(1) }`）无法在 JS 侧还原常量参数语义，`flutter.js` 不
+/// 生成同名类；产物里的 `E.member` 因此是未定义引用。索引阶段对整包 SDK 保持
+/// 安静（绝大多数枚举项目不引用），只在**真正命中**时告警，避免刷屏。
+void _warnUnsupportedSdkEnum(String owner) {
+  final file = sdkUnsupportedEnums()[owner];
+  if (file == null) return;
+  if (!_warnedUnsupportedEnums.add(owner)) return;
+  log.warning('[hot_patch_generator] 引用了带常量参数的 SDK 枚举 $owner'
+      '（$file）：未生成 JS 值类，产物里 `$owner.xxx` 是未定义引用'
+      '（需补能力模块或改用常量）');
+}
 
 // Dart 集合 / 字符串 / 数字的同名成员（`first` / `where` / `add` / `compareTo` …）
 // **不在生成器做名字映射**：生成器看不到接收者类型，按名字改写会把同名业务方法
@@ -71,6 +89,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     } else if (e.prefix.name.isNotEmpty &&
         RegExp(r'^[A-Z]').hasMatch(e.prefix.name)) {
       // prefix 是大写开头的外部类名（如 Network.post）→ 原样保留。
+      _warnUnsupportedSdkEnum(e.prefix.name);
       base = e.prefix.name;
     }
     if (base == null) return null;
@@ -739,6 +758,8 @@ String? closureToJs(
     return null;
   }
   if (body is BlockFunctionBody) {
+    // 空块体（`() {}`）是合法的空操作闭包。
+    if (body.block.statements.isEmpty) return '($pjs) => {}';
     // 块体逐语句翻译——与方法体、`_setStateJs` 共用**同一条** [translateStmtList]：
     // 声明、if/for/while/switch、setState 展开全部覆盖。旧实现只收
     // `ExpressionStatement`，`onPick: (k, v) { setState(() { switch ... }) }`

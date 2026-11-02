@@ -8,6 +8,7 @@
 - **依赖扫描跳过方法体**：`dependenciesOf` 不再遍历 `@HostInjected` 方法的方法体，只有宿主实现里用到的类型不会被连带翻译（`new SearchPage(...)` 等页面依赖链在宿主方法体处断掉）。
 - **顶层函数仍是唯一例外**：顶层函数没有可承载的 JS 类，调用点继续翻译为 `_app_host_.invoke(...)`（`buildHostFunctions` 只收集顶层函数名）。
 - **删除旧通道表**：`ClassInfo.hostMethods` / `FieldScope.hostMethods` / `ElementTranslateContext.hostMethods` / `buildHostMethods` / `classHasHostInjectedMethod` 全部移除。
+- **构建告警降噪（不改产物行为）**：带常量参数的 SDK 枚举（`KeyboardLockMode` / `CheckedState` / `Tristate` 等）不再在索引阶段逐条告警，改为**产物真的引用其成员时**才出声（`sdkUnsupportedEnums` + 翻译层一次性告警）；空事件闭包 `() {}` 视为合法空操作，不再误报「事件闭包块体为空」；字段类型判定先擦除 import 前缀（`ui.Image` → `Image`），不再误报「无法从本地源码解析」。
 
 ## 0.3.6
 
