@@ -3,6 +3,8 @@
 // 重新生成：dart run build_runner build
 
 import { User } from '../hot_module_base.js';
+import { AccountCenter } from '../hot_module_base.js';
+import { Network } from '../hot_module_base.js';
 import { Color, Colors, Column, ElevatedButton, FontWeight, Row, StateError, Text, TextStyle } from '../flutter.js';
 
 // 模型 PanelColors
@@ -46,8 +48,8 @@ export class HelloCard {
     this.setState(() => { this._count += 1; });
   }
   async loadUser() {
-    var name = await _app_host_.invoke("getUserName", []);
-    var userMap = await _app_host_.invoke("post", {"url": "hello", "params": {"name": name}});
+    var name = await AccountCenter.getUserName();
+    var userMap = await Network.post({ "url": "hello", "params": {"name": name} });
     print("用户信息:" + userMap["code"]);
     await new Promise(function(r){ setTimeout(r, 1000); });
     this.setState(() => { this._user = new User({name: "Alice", age: 18}); });

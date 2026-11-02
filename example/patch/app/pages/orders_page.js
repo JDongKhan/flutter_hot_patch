@@ -5,6 +5,7 @@
 import { AppService } from '../service/app_service.js';
 import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
+import { AppRouter } from '../../base/app_router.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, Text, TextOverflow, TextStyle } from '../../flutter.js';
@@ -145,7 +146,7 @@ export class OrdersPage {
               return new _OrderCard({
                 "order": o,
                 "statusColor": this._statusColor(o.status),
-                "onOpen": () => { return _app_host_.invoke("openOrder", [o.no]); }
+                "onOpen": this.__bindFn(1, [o], () => AppRouter.openOrder(o.no))
               });
             }
           })
@@ -323,7 +324,7 @@ export class _OrderCard {
                   (this.__k2 || (this.__k2 = new Spacer({}))),
                   ...(pending ? [new MiniButton({
                       "label": "取消",
-                      "onTap": () => { return _app_host_.invoke("toast", ["已取消订单 " + this.order.no + "（演示）"]); }
+                      "onTap": this.__bindFn(1, [], () => AppRouter.toast("已取消订单 " + this.order.no + "（演示）"))
                     }), (this.__k15 || (this.__k15 = new SizedBox({
                       "width": 8
                     }))), new MiniButton({

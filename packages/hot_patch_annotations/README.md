@@ -93,8 +93,9 @@ Marks a **static method (or top-level function)** as a "host injected" capabilit
 a JS component (`@PatchEntry`).
 
 The implementation **stays on the Dart side** (it can reach caches, the network, routing, WebView and other
-native capabilities) and is **never translated into JS — it produces no JS output**. The generator only
-rewrites the **call site** into a host channel call:
+native capabilities). For a class method the class itself is still translated into a same-named JS class
+and the annotated method still exists on it — only the **method body** becomes a host channel call.
+Call sites stay **1:1 with Dart**:
 
 ```dart
 // Dart source: the implementation stays on the host side and is still callable directly
@@ -112,9 +113,12 @@ class Network {
 ```
 
 ```js
-// Translated output (JS side): the call site is replaced wholesale
-// AccountCenter.getUserName()   →  _app_host_.invoke("getUserName", [])
-// Network.post(url: u, params: p) →  _app_host_.invoke("post", {"url": u, "params": p})
+// Translated output (JS side)
+//   class AccountCenter { static async getUserName() { return _app_host_.invoke("getUserName", ...); } }
+//   class Network       { static async post(...)       { return _app_host_.invoke("post", ...); } }
+// Call sites are unchanged:
+//   AccountCenter.getUserName()      →  AccountCenter.getUserName()
+//   Network.post(url: u, params: p)  →  Network.post({"url": u, "params": p})
 ```
 
 Key points:
@@ -124,6 +128,10 @@ Key points:
 - **Only static methods / top-level functions work.** For an instance method the receiver on the JS side is
   a JS object and can never reach the host instance, and private declarations are not visible across
   libraries — neither takes effect even if annotated.
+- **A host-injected class only exposes the class and its annotated methods** in JS; its fields, other
+  methods and imports are not emitted (they only serve the host implementation).
+- **Top-level functions are the one exception**: they have no JS class to carry them, so the call site itself
+  is translated into a channel call.
 - **The payload follows the shape of the actual arguments**: positional only → array; named only → object;
   mixed → object plus an `"@args"` key holding the positional arguments. The host restores Dart call
   semantics with `Function.apply(fn, positional, named)`, so any number of positional/named arguments is
@@ -131,7 +139,8 @@ Key points:
   unconstrained.
 - The call returns a **Promise that can be `await`ed**; if the host implementation throws, the error is
   rethrown to the JS caller; an unregistered channel also resolves with `null`, leaving no dangling Promise.
-- Dependency scanning **stops** at a `@HostInjected` class — it is not transitively translated.
+- Dependency scanning skips the **body** of an `@HostInjected` method, so types only used there are not
+  transitively translated.
 
 Host-side registration is handled by `hot_patch_generator` automatically: it scans every `@HostInjected`
 method in the package and generates all registration calls into a single Dart file
@@ -255,8 +264,9 @@ class _CounterState extends State<Counter> {
 标记一个 **static 方法（或顶层函数）**为「宿主注入」（Host Injected）能力，让它在
 JS 组件（`@PatchEntry`）的方法体里可以被调用。
 
-这类方法的实现**留在 Dart 侧**（可访问缓存、网络、路由、WebView 等原生能力），
-**不翻译成 JS、不产出任何 JS 产物**；生成器只在遇到调用点时，把**调用点**换成宿主通道调用：
+这类方法的实现**留在 Dart 侧**（可访问缓存、网络、路由、WebView 等原生能力）。类上的方法
+会被照常翻译：类本身仍是同名 JS 类、被标注的方法也仍在类里，只有**方法体**整体换成
+宿主通道调用；**调用点与 Dart 一比一**：
 
 ```dart
 // Dart 源码：实现留在宿主侧，照旧可直接调用
@@ -274,9 +284,12 @@ class Network {
 ```
 
 ```js
-// 翻译产物（JS 侧）：调用点被整体替换
-// AccountCenter.getUserName()   →  _app_host_.invoke("getUserName", [])
-// Network.post(url: u, params: p) →  _app_host_.invoke("post", {"url": u, "params": p})
+// 翻译产物（JS 侧）
+//   class AccountCenter { static async getUserName() { return _app_host_.invoke("getUserName", ...); } }
+//   class Network       { static async post(...)       { return _app_host_.invoke("post", ...); } }
+// 调用点保持原样：
+//   AccountCenter.getUserName()      →  AccountCenter.getUserName()
+//   Network.post(url: u, params: p)  →  Network.post({"url": u, "params": p})
 ```
 
 要点：
@@ -284,12 +297,15 @@ class Network {
 - `name`：消息**通道名**，**可省略**；不传（写 `@HostInjected()`）时通道名即**方法名**。
 - **只有 static 方法 / 顶层函数可用**。实例方法的 receiver 在 JS 侧是 JS 对象、回不到宿主
   实例，私有声明又跨库不可见——这两类标了注解也不生效。
+- **宿主注入类在 JS 里只保留「类 + 被标注的方法」**：字段 / 其它方法 / import 不产出（它们只服务于
+  宿主实现）。
+- **顶层函数是唯一例外**：它没有 JS 类可承载，因此仍由调用点翻译成通道调用。
 - **参数载荷按实参形态给**：纯位置 → 数组；纯具名 → 对象；混合 → 对象 + `"@args"` 键装位置
   实参。宿主侧按 `Function.apply(fn, 位置实参, 具名实参)` 还原 Dart 调用语义，因此位置/具名
   实参个数不限、未传参数走实现自身的默认值，返回值类型也不限。
 - 调用返回 **Promise，可 `await`**；宿主实现抛错时异常抛回 JS 调用者；通道未注册也会回填
   `null` 收尾，不留悬空 Promise。
-- 依赖扫描遇到 `@HostInjected` 类会**直接断链**，不会连带把它翻译进产物。
+- 依赖扫描会**跳过 `@HostInjected` 方法的方法体**，只在其中用到的类型不会被连带翻译。
 
 宿主侧注册由 `hot_patch_generator` 自动完成：它扫描全包的 `@HostInjected` 方法，把注册调用
 集中生成到一个 Dart 文件 `lib/generated/host_methods.dart`，业务在 `main()` 里调用一次即可：

@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/model/network_vm.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { Network } from '../hot_module_base.js';
 import { ChangeNotifier } from '../flutter.js';
 
 // 模型 NetworkVm
@@ -10,7 +11,7 @@ export class NetworkVm extends ChangeNotifier {
     super(args);
   }
   async loadUserInfo(params) {
-    var data = await _app_host_.invoke("post", {"url": "loadUserInfo", "params": params});
+    var data = await Network.post({ "url": "loadUserInfo", "params": params });
     print("获取数据:" + data);
     return data;
   }

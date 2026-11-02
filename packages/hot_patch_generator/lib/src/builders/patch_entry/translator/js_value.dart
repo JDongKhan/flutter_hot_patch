@@ -332,12 +332,12 @@ class FieldScope {
   /// import 语句提供（与类引用同一套「同文件内联 / 跨文件 import」规则）。
   final Set<String> globalConsts;
 
-  /// 宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
-  /// 顶层函数（全局方法）挂在空串 key 下（`'' → {函数名 → 通道名}`）。
-  /// 命中时调用点整体翻译成 `_app_host_.invoke("通道名", 参数载荷)`（载荷形态见
-  /// [hostArgsJs]）——参数个数、是否具名、返回值类型都无关（宿主侧用
-  /// Function.apply 调实现）。
-  final Map<String, Map<String, String>> hostMethods;
+  /// 顶层 `@HostInjected` 函数名（见 `host_injected.buildHostFunctions`）。
+  /// 顶层函数在 JS 侧没有类可承载，命中时调用点整体翻译成
+  /// `_app_host_.invoke("通道名", 参数载荷)`（载荷形态见 [hostArgsJs]）。
+  /// **类上的**宿主方法不在这里：它由 JS 类里的同名方法承接，调用点与 Dart
+  /// 一比一（见 [hostMethodBodyJs]）。
+  final Set<String> hostFunctions;
 
   /// 当前方法的 super 调用映射（来自 [ClassMethod.superMap]）：`super.foo()` →
   /// `this.<target>()`。随方法体翻译入口（[translateClassMethodBody]）一次性
@@ -387,7 +387,7 @@ class FieldScope {
           methods: methods,
           localVars: localVars,
           globalConsts: globalConsts,
-          hostMethods: hostMethods,
+          hostFunctions: hostFunctions,
           superMap: superMap,
           className: className,
           staticFields: staticFields,
@@ -403,7 +403,7 @@ class FieldScope {
     this.className,
     this.staticFields = const {},
     this.staticMethods = const {},
-    this.hostMethods = const {},
+    this.hostFunctions = const {},
     this.superMap = const {},
     this.hasJsBase = false,
     Map<String, String>? localAliases,
@@ -426,7 +426,7 @@ class FieldScope {
         methods: methods,
         localVars: localVars,
         globalConsts: globalConsts,
-        hostMethods: hostMethods,
+        hostFunctions: hostFunctions,
         superMap: superMap,
         hasJsBase: hasJsBase,
         className: className,

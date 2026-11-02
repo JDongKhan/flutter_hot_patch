@@ -7,9 +7,9 @@ import '../app/pages/detail_pages.dart';
 /// 宿主 WebView 能力：与 [Network] 同款「跳转方法」。
 ///
 /// 被设计为 **@HostInjected**：实现留在 Dart 侧（真实项目里会换成
-/// webview_flutter 或原生 WebView），@PatchEntry 组件里写
-/// `WebView.open(url, title)` 时，生成器只把调用点替换为
-/// `_app_host_.invoke('openWebView', [url, title])`，由宿主
+/// webview_flutter 或原生 WebView）。JS 产物里本类仍存在，只有方法体换成
+/// `_app_host_.invoke('openWebView', [url, title])`；调用点与 Dart 一比一
+/// （`WebView.open(url, title)`），由宿主
 /// `JsRuntimeManager.registerHostMethod` 接回调并经 Navigator 推入页面。
 class WebView {
   const WebView._();

@@ -10,8 +10,9 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 /// （`tool/patch_server.dart`，默认 `http://127.0.0.1:8765`）。
 ///
 /// 服务端按 URL 路径读取 `tool/mock/<路径>.json` 并原样返回，所以新增一个
-/// 接口只需加一个 json 文件。JS 产物里本方法调用点仍走 `@HostInjected` 通道
-/// （`_app_host_.invoke('post', ...)`），由宿主执行这里的真实 http 请求。
+/// 接口只需加一个 json 文件。JS 产物里本类仍存在，只有本方法的方法体换成
+/// `_app_host_.invoke('post', ...)`；调用点与 Dart 一比一（`Network.post(...)`），
+/// 由宿主执行这里的真实 http 请求。
 class Network {
   static const String _baseUrl = 'http://127.0.0.1:8765';
 

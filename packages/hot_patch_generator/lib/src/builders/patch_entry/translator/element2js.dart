@@ -97,11 +97,10 @@ class ElementTranslateContext implements ExprRenderer {
   @override
   final Set<String> globalConsts;
 
-  /// 宿主注入方法表（`类名 → {方法名 → 通道名}`；顶层函数挂在 `''` key 下）。
-  /// 数据表达式 / 事件回调里 `AppRouter.openPost(id)` 这类 `@HostInjected`
-  /// 调用要整体换成 `_app_host_.invoke("通道", 载荷)`——与普通类方法体共用同一份表，
-  /// 否则事件里的跳转/提示整条翻译失败。
-  final Map<String, Map<String, String>> hostMethods;
+  /// 顶层 `@HostInjected` 函数名：事件表达式 / 数据表达式里的裸调用
+  /// （`toast('x')`）要译成 `_app_host_.invoke("通道", 载荷)`——顶层函数没有
+  /// 可承载的 JS 类。类上的宿主方法不走这里（调用点与 Dart 一比一）。
+  final Set<String> hostFunctions;
 
   /// 翻译过程中遇到的未注册自定义组件（兜底结点），供生成器
   /// 收集后把本文件内可解析的私有组件（_Xxx）翻译成嵌套组件注册进产物。
@@ -127,7 +126,7 @@ class ElementTranslateContext implements ExprRenderer {
     this.getterNames = const {},
     this.importResolver,
     this.globalConsts = const {},
-    this.hostMethods = const {},
+    this.hostFunctions = const {},
     this.jsClassWidgets = const {},
     this.delegateClassWidgets = const {},
     this.ignoredTypes = const {},
@@ -955,17 +954,6 @@ class ElementTranslateContext implements ExprRenderer {
           return _setStateCallJs(inner, activeScope);
         }
         final target = inner.target;
-        // @HostInjected 调用（`AppRouter.pop()` / `AppRouter.toast('x')`）：事件
-        // 表达式与方法体翻译共用同一份通道表，整体换成 `_app_host_.invoke(通道, 载荷)`。
-        // 少了这一步，事件串里的 `this.AppRouter.pop()` 在运行时只是对一个不存在
-        // 属性的访问（抛错被运行时吞掉），点击静默失效。
-        final hostCall = _hostEventJs(
-          target,
-          inner.methodName.name,
-          inner.argumentList,
-          activeScope,
-        );
-        if (hostCall != null) return hostCall;
         // 局部变量 / 形参 receiver：保留名字，由 [_eventFnJs] 生成的**构建期
         // 箭头闭包**天然捕获它（与 Dart 闭包同语义）。
         //   - 局部（`final model = context.watch<T>()` → `model.inc()`）；
@@ -1002,6 +990,13 @@ class ElementTranslateContext implements ExprRenderer {
         // 组件字段/实例 receiver（非局部变量即组件成员）：`_controller.clear()`
         // / `_scrollController.jumpTo(...)` → this._controller.clear()，
         // 不查动作表（实例方法全量生成，与 Dart 写法一致）。
+        // 例外：receiver 是**项目类**（`AppRouter.pop()` / `Network.post(...)`）→
+        // 静态调用原样写成 `类名.方法(...)`，与 Dart 一比一；这类类在 JS 侧有
+        // 同名类定义（`modelClassNames` 来自类表），补 `this.` 会访问不存在的字段。
+        if (target is Identifier && modelClassNames.contains(target.name)) {
+          return '${target.name}.${inner.methodName.name}'
+              '(${_eventArgsJs(inner.argumentList, activeScope)})';
+        }
         if (target is Identifier) {
           return 'this.${target.name}.${inner.methodName.name}'
               '(${_eventArgsJs(inner.argumentList, activeScope)})';
@@ -1010,9 +1005,8 @@ class ElementTranslateContext implements ExprRenderer {
         // 方法 → `this.<name>(<args>)`。必须保留「调用 + 实参」形态：只回方法名会
         // 让闭包体变成 `() => { _openMenu; }`（引用而非调用，点击无任何反应）。
         final method = inner.methodName.name;
-        // 顶层 @HostInjected 函数（无 receiver，如 `toast('x')`）→ 宿主通道。
-        final topHost = _hostEventJs(
-          null,
+        // 顶层 `@HostInjected` 函数（无 receiver，如 `toast('x')`）→ 宿主通道。
+        final topHost = _hostFunctionCallJs(
           method,
           inner.argumentList,
           activeScope,
@@ -1179,7 +1173,7 @@ class ElementTranslateContext implements ExprRenderer {
           staticFieldNames.contains(name) ||
           staticMethodNames.contains(name) ||
           globalConsts.contains(name) ||
-          hostMethods.containsKey(name)) {
+          hostFunctions.contains(name)) {
         continue;
       }
       if (_locals.contains(name) ||
@@ -1251,26 +1245,18 @@ class ElementTranslateContext implements ExprRenderer {
     return out.join(', ');
   }
 
-  /// 事件表达式里的 @HostInjected 调用 → `_app_host_.invoke(通道, 载荷)`。
+  /// 事件表达式里的**顶层** `@HostInjected` 函数调用 → `_app_host_.invoke`。
   ///
-  /// [target] 是 @HostInjected 类名（`AppRouter`）或 null（顶层宿主函数）；
-  /// 通道表 [hostMethods] 与方法体翻译共用同一份数据，未命中返回 null。
+  /// 类上的宿主方法是普通 JS 类方法（调用点与 Dart 一比一），只有顶层函数没有
+  /// JS 载体，才需要在这里改写成宿主通道调用。[hostFunctions] 与数据表达式翻译
+  /// 共用同一份集合，未命中返回 null。
   /// 位置 / 具名实参分开传，宿主侧用 `Function.apply` 还原 Dart 调用语义。
-  String? _hostEventJs(
-    Expression? target,
+  String? _hostFunctionCallJs(
     String method,
     ArgumentList args,
     FieldScope scope,
   ) {
-    final String? channel;
-    if (target is Identifier) {
-      channel = hostMethods[target.name]?[method];
-    } else if (target == null) {
-      channel = hostMethods['']?[method];
-    } else {
-      channel = null;
-    }
-    if (channel == null) return null;
+    if (!hostFunctions.contains(method)) return null;
     final pos = <String>[];
     final named = <String>[];
     for (final a in args.arguments) {
@@ -1285,7 +1271,8 @@ class ElementTranslateContext implements ExprRenderer {
         pos.add(jsDataExpr(a, scope));
       }
     }
-    return '_app_host_.invoke(${jsString(channel)}, ${hostArgsJs(pos, named)})';
+    return '_app_host_.invoke(${jsString(method)}, '
+        '${hostArgsJs(pos, named)})';
   }
 
   /// 数据表达式 → JS 表达式。
@@ -1427,7 +1414,7 @@ class ElementTranslateContext implements ExprRenderer {
     className: className,
     staticFields: staticFieldNames,
     staticMethods: staticMethodNames,
-    hostMethods: hostMethods,
+    hostFunctions: hostFunctions,
     globalConsts: globalConsts,
     localAliases: _localAliases,
   );
@@ -1453,7 +1440,7 @@ class ElementTranslateContext implements ExprRenderer {
       className: base.className,
       staticFields: base.staticFields,
       staticMethods: base.staticMethods,
-      hostMethods: base.hostMethods,
+      hostFunctions: base.hostFunctions,
       globalConsts: base.globalConsts,
       localVars: base.localVars,
       localAliases: {...base.localAliases, 'context': 'this.context'},

@@ -52,18 +52,18 @@ class PatchIgnore {
 
 /// 标记一个 **static 方法 / 顶层函数**为「宿主注入」（Host Injected）能力。
 ///
-/// 这类方法的实现留在 Dart 侧（可访问缓存、网络、原生能力等），**不翻译成
-/// JS、不产出任何 JS 产物**；当 @PatchEntry 组件的方法体（或模型方法体）里
-/// 调用到被标注的 static 方法时，生成器只把**调用点**替换为宿主编排的调用：
+/// 这类方法的实现留在 Dart 侧（可访问缓存、网络、原生能力等），翻译规则是：
 ///
-///   AccountCenter.getUserName(a, b)
-///     →  _app_host_.invoke("getUserName", [a, b])            // Promise，可 await
-///   Network.post(params: m)
-///     →  _app_host_.invoke("post", {"params": m})
+/// - **类上的方法**：类照常翻译成同名 JS 类，被标注的方法也照常出现在类里；
+///   只有**方法体**整体换成 `_app_host_.invoke(通道名, 实参载荷)`。调用点与 Dart
+///   **一比一**，`AccountCenter.getUserName(a)` 在 JS 侧就是
+///   `AccountCenter.getUserName(a)`，由方法体桥回宿主（返回 Promise，可 await）。
+///   宿主注入类在 JS 里只保留「类 + 被标注的方法」，字段 / 其它方法 / import 不产出。
+/// - **顶层函数**：没有可承载的 JS 类，调用点仍翻译为
+///   `_app_host_.invoke(通道名, 实参载荷)`。
 ///
-/// [name] 为消息通道名；缺省（不传）时取方法名本身。
-/// 参数载荷按实参形态给：纯位置→数组、纯具名→对象、混合→对象 + `"@args"`
-/// 键装位置实参。载荷经单桥通道以 `{id, args}` 交回宿主，宿主用
+/// 实参载荷按形参形态给：纯位置→位置实参数组、纯具名→具名对象、混合→具名对象 +
+/// `"@args"` 键装位置实参。载荷经单桥通道以 `{id, args}` 交回宿主，宿主用
 /// `JsRuntimeManager.registerHostMethod(channel, fn)` 接回调（宿主按
 /// `Function.apply(fn, 位置实参, 具名实参)` 还原 Dart 调用语义，故位置/具名
 /// 实参个数不限、未传参数走默认值），fn 完成后返回值被 resolve 回 JS 的 Promise。

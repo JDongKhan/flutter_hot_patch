@@ -105,8 +105,9 @@ class ComponentBuilder implements Builder {
     final importProducts =
         resolveImportedComponentProducts(parsed.unit, inputId.path);
 
-    // 全量「类表」：同文件 + 跨文件 import 的所有 Dart 类（公共、非抽象、
-    // 非 @HostInjected），组件 / widget 类打 isComponent 标记、普通类不打标。
+    // 全量「类表」：同文件 + 跨文件 import 的所有 Dart 类（公共、非抽象），
+    // 组件 / widget 类打 isComponent 标记、普通类不打标（含 @HostInjected 类：
+    // 它们照常产出 JS 类，只有标注方法的**方法体**改为 `_app_host_.invoke`）。
     // 翻译只按名字在这张表里解析依赖（见 analyze_dart_class.dart）。
     // 提前于 importResolver 声明：后者要用类表兜底解析「经 mixin 带入」的
     // 跨文件组件依赖。
@@ -125,7 +126,7 @@ class ComponentBuilder implements Builder {
       // 经由 mixin 带入的组件依赖：mixin 声明文件的 import 图不在本文件的
       // import directives 里（类表已并入，见 buildClassTable），按类表定位
       // 其声明文件的产物。判据与「有产物」同口径：公共 widget 类 / @PatchEntry
-      // 打 isComponent 标记；@PatchIgnore / @HostInjected 不进类表或被上面拦掉。
+      // 打 isComponent 标记；@PatchIgnore 不进类表或被上面拦掉。
       final info = classTable[name];
       if (info != null && info.isComponent && info.sourceFile != inputId.path) {
         return relativeProduct(ownProduct, productPath(info.sourceFile));
@@ -152,8 +153,8 @@ class ComponentBuilder implements Builder {
     //     （`model/user.dart` 同理）——入口页 / 展示页（main.dart、
     //     widget_showcase.dart）不被任何注解组件引用、不产出；`detail_pages.dart`
     //     只有三个 tab 页订单卡真的用到的 MiniButton 产出，只在 @HostInjected
-    //     宿主方法体里 `new` 出来的详情页不翻译（依赖链在 @HostInjected 处断掉）。
-    //     @PatchIgnore / @HostInjected 亦不翻译。
+    //     宿主方法体里 `new` 出来的详情页不翻译（依赖链在宿主方法体处断掉）。
+    //     @PatchIgnore 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
     // 本文件是否声明了 `extension`：纯扩展文件没有根类，但也必须产出产物
     // （`registerExtension(...)` 注册语句就写在声明处），故「无根类 → 不产出」的

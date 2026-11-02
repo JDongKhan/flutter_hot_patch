@@ -5,6 +5,8 @@
 import { AppService } from '../service/app_service.js';
 import { MineFeed } from '../model/app_models.js';
 import { MenuEntry } from '../model/app_models.js';
+import { AppRouter } from '../../base/app_router.js';
+import { WebView } from '../../base/web_view.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Icons, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
 
@@ -26,12 +28,12 @@ export class MinePage {
   }
   _openMenu(m) {
     if ((m.screen == "orders")) {
-      _app_host_.invoke("openOrders", []);
+      AppRouter.openOrders();
     } else {
       if ((m.screen == "showcase")) {
-        _app_host_.invoke("openWidgetShowcase", []);
+        AppRouter.openWidgetShowcase();
       } else {
-        _app_host_.invoke("open", ["https://flutter.dev", (m.arg.isEmpty ? m.title : m.arg)]);
+        WebView.open("https://flutter.dev", (m.arg.isEmpty ? m.title : m.arg));
       }
     }
   }
@@ -69,7 +71,7 @@ export class MinePage {
           "child": new SafeArea({
             "bottom": false,
             "child": new GestureDetector({
-              "onTap": this.__bindFn(0, [], () => _app_host_.invoke("openLogin", [])),
+              "onTap": this.__bindFn(0, [], () => AppRouter.openLogin()),
               "child": new Row({
                 "children": [
                   new ClipOval({
@@ -163,7 +165,7 @@ export class MinePage {
               "children": [
                 ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [new Expanded({
                         "child": new GestureDetector({
-                          "onTap": this.__bindFn(1, [], () => _app_host_.invoke("openOrders", [])),
+                          "onTap": this.__bindFn(1, [], () => AppRouter.openOrders()),
                           "child": new Column({
                             "children": [
                               new Text({
@@ -278,7 +280,7 @@ export class MinePage {
             "top": 0
           }))),
           "child": new GestureDetector({
-            "onTap": this.__bindFn(3, [], () => _app_host_.invoke("toast", ["已退出登录（演示）"])),
+            "onTap": this.__bindFn(3, [], () => AppRouter.toast("已退出登录（演示）")),
             "child": new Container({
               "height": 46,
               "alignment": Alignment.center,
@@ -336,7 +338,7 @@ export class MinePage {
                 "icon": Icons.widgets_outlined,
                 "title": "组件案例",
                 "subtitle": "常用组件 原生 ↔ JS 同屏对比",
-                "onTap": () => { return _app_host_.invoke("openWidgetShowcase", []); }
+                "onTap": this.__bindFn(4, [], () => AppRouter.openWidgetShowcase())
               }),
               (this.__k14 || (this.__k14 = new Divider({
                 "color": new Color({
@@ -349,7 +351,7 @@ export class MinePage {
                 "icon": Icons.compare_arrows,
                 "title": "热更 Demo 列表",
                 "subtitle": "HelloCard / ProviderCard / WatchDemo 等对比",
-                "onTap": () => { return _app_host_.invoke("openDemoList", []); }
+                "onTap": this.__bindFn(5, [], () => AppRouter.openDemoList())
               })
             ]
           })

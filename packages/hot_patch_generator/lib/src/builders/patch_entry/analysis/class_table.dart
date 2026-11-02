@@ -8,12 +8,12 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'analyze_dart_class.dart';
 import '../class_info.dart';
 import '../translator/js_value.dart';
-import '../../shared/host_injected.dart';
 import '../../shared/source_index.dart';
 
 /// 全量「类表」：把一个文件（同文件 + 跨文件 import）的全部公共 Dart 类
-/// （非私有 / 非抽象 / 非 @HostInjected）收集成 ClassInfo 索引——**包含**
-/// @PatchEntry 组件与 widget 类（打 [ClassInfo.isComponent] 标记）。
+/// （非私有 / 非抽象）收集成 ClassInfo 索引——**包含** @PatchEntry 组件与
+/// widget 类（打 [ClassInfo.isComponent] 标记），也包含 `@HostInjected` 类
+/// （其标注方法的实现留在宿主，JS 侧方法体改为 `_app_host_.invoke`）。
 ///
 /// 翻译只有一个入口（[translateClass]）：任意类引用到的名字（字段类型、
 /// 方法体构造、build 树自定义组件）都在这张表里按同一规则解析；widget 类
@@ -28,13 +28,9 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
     final name = d.name.lexeme;
     if (name.startsWith('_') || decls.containsKey(name)) return;
     if (d.abstractKeyword != null) return;
-    // @HostInjected 类（类级注解或方法级）：方法实现留在 Dart，不产出 JS
-    // （调用点被翻译为 _app_host_.invoke，见 buildHostMethods 与
-    // js_translator.methodCallExprJs）。判据与 component_scope 同一处。
-    if (findAnnotation(d.metadata, 'HostInjected') != null ||
-        classHasHostInjectedMethod(d)) {
-      return;
-    }
+    // `@HostInjected` 类照常进表：类结构（含方法签名）在 JS 侧仍输出，只有被
+    // 标注方法的**方法体**改为 `_app_host_.invoke`（见 ClassMethod.hostChannel），
+    // 调用点是普通静态调用（`AppRouter.pop()`）。
     decls[name] = (d, file, isWidgetClassDecl(d), from);
   }
 

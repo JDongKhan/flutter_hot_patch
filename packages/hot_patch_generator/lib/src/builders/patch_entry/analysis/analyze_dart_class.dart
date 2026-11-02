@@ -37,6 +37,20 @@ List<String> jsMethodParams(MethodDeclaration m) {
   return out;
 }
 
+/// 位置形参个数（含可选位置形参）。
+///
+/// `@HostInjected` 方法体的实参载荷据此拆分：调用点的通用约定是「位置实参在
+/// 前、具名实参合并成尾参对象」，故前 N 个实参就是位置实参。
+int positionalParamCountOf(MethodDeclaration m) =>
+    (m.parameters?.parameters ?? const <FormalParameter>[])
+        .where((p) => !p.isNamed)
+        .length;
+
+/// 方法是否声明了具名形参（`{...}`），见 [positionalParamCountOf]。
+bool hasNamedParamOf(MethodDeclaration m) =>
+    (m.parameters?.parameters ?? const <FormalParameter>[])
+        .any((p) => p.isNamed);
+
 /// 方法是否 `void`：返回类型为 `void`（箭头体译为语句，不产生 `return`）。
 bool isVoidReturn(MethodDeclaration m) {
   final t = m.returnType?.toSource().trim();
@@ -118,12 +132,26 @@ ClassInfo classInfoOf(
 
   // MethodDeclaration → ClassMethod 的同一口径（类自身与 mixin 成员共用）：
   // getter 保留为 get 访问器；setter 跳过；static 保留并打 isStatic 标记。
+  // `@HostInjected` 只标记方法（getter 没有可调用的通道），命中后方法体在
+  // 翻译期整体改为 `_app_host_.invoke`（见 hostMethodBodyJs）。
   ClassMethod? methodOf(
     MethodDeclaration m, {
     String? nameOverride,
     Map<String, String> superMap = const {},
     String? mixinOrigin,
   }) {
+    // 只有「static + 非私有」的标注方法才是宿主通道（与注册清单同一判定，
+    // 见 HostMethodDecl.usable）；其余标注（实例方法 / 私有）按普通方法翻译。
+    final ownerPrivate = decl.name.lexeme.startsWith('_');
+    final hostChannel = m.isGetter ||
+            !m.isStatic ||
+            ownerPrivate ||
+            m.name.lexeme.startsWith('_') ||
+            // mixin 成员不会被注册清单扫描到（宿主侧没有对应实现）。
+            mixinOrigin != null ||
+            nameOverride != null
+        ? null
+        : hostChannelOf(m);
     if (m.isGetter) {
       return ClassMethod(
         name: nameOverride ?? m.name.lexeme,
@@ -144,6 +172,9 @@ ClassInfo classInfoOf(
       isVoid: isVoidReturn(m),
       returnsWidget: returnsWidgetOf(m),
       body: m.body,
+      hostChannel: hostChannel,
+      positionalParamCount: hostChannel == null ? 0 : positionalParamCountOf(m),
+      hasNamedParams: hostChannel != null && hasNamedParamOf(m),
       superMap: superMap,
       mixinOrigin: mixinOrigin,
     );
@@ -216,6 +247,9 @@ ClassInfo classInfoOf(
           bodyJs: m.bodyJs,
           nativeChannel: m.nativeChannel,
           nativeMessage: m.nativeMessage,
+          hostChannel: m.hostChannel,
+          positionalParamCount: m.positionalParamCount,
+          hasNamedParams: m.hasNamedParams,
           superMap: classSuper,
           mixinOrigin: m.mixinOrigin,
         );
@@ -336,6 +370,15 @@ Set<String> dependenciesOf(AstNode node) {
 class _TypeRefCollector extends RecursiveAstVisitor<void> {
   final names = <String>{};
 
+  /// `@HostInjected` 方法：Dart 实现留在宿主，JS 侧方法体只有
+  /// `_app_host_.invoke(...)`，因此方法体里引用到的类型**不会**出现在产物里
+  /// （不参与依赖传播 / import 生成）。
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    if (hostChannelOf(node) != null) return;
+    super.visitMethodDeclaration(node);
+  }
+
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
     names.add(node.constructorName.type.name2.lexeme);
@@ -420,8 +463,10 @@ class _TypeRefCollector extends RecursiveAstVisitor<void> {
 ///   - [isComponent]：是否作为组件产物输出（仅影响注释与 superType 处理：
 ///     State 合并时不把 `State<X>` / `StatefulWidget` 写成 JS 基类）。
 ///
-/// `@HostInjected` 通道表由本入口自行扫描（见 [buildHostMethods]）并挂在产出的
-/// [ClassInfo.hostMethods] 上——组件与普通类同一条路径，调用方无需传参。
+/// 顶层 `@HostInjected` 函数名由本入口自行扫描（见 [buildHostFunctions]），
+/// 用于顶层函数调用点的通道改写；类上的宿主方法在声明处标记（方法体改为
+/// `_app_host_.invoke`），调用点与 Dart 一比一。组件与普通类同一条路径，
+/// 调用方无需传参。
 ClassInfo translateClass(
   ClassDeclaration decl,
   CompilationUnit unit,
@@ -434,10 +479,10 @@ ClassInfo translateClass(
   Set<String> globalConsts = const {},
   bool isComponent = false,
 }) {
-  // @HostInjected 通道表：翻译层自己扫（本文件 + import 源文件）。方法体里
-  // `Foo.bar(...)` 命中即整体换成 `_app_host_.invoke("通道", 载荷)`，组件与普通类
-  // 共用同一份数据、同一条翻译路径，构建层不参与。
-  final hostMethods = buildHostMethods(unit, sourcePath);
+  // 顶层 `@HostInjected` 函数名：翻译层自己扫（本文件 + import 源文件）。
+  // 类上的宿主方法不再走调用点改写（方法体在 JS 类里桥回宿主，见
+  // [ClassMethod.hostChannel]），只有顶层函数需要这张表。
+  final hostFunctions = buildHostFunctions(unit, sourcePath);
 
   // --- 唯一分叉：StatefulWidget → widget 类与同文件 State 类合并 ------------
   ClassDeclaration widgetClass = decl;
@@ -475,6 +520,43 @@ ClassInfo translateClass(
   final ctorArgs = widgetInfo.ctorParams;
   final ctorDefaults = widgetInfo.ctorDefaults;
   final methods = hostInfo.methods;
+
+  // `@HostInjected` 类（有被标注的 static 方法）：整个类的实现都在宿主侧，
+  // JS 侧只保留**类 + 被标注的方法**（方法体为 `_app_host_.invoke`）。字段、
+  // 其它方法、基类、依赖与 import 一概不产出——它们只服务于宿主实现，放进来
+  // 只会产生指向宿主才有的符号的悬空引用。调用点仍是普通静态调用
+  // （`AppRouter.pop()`），与 Dart 一比一。
+  final hostClassMethods = [
+    for (final m in methods)
+      if (m.hostChannel != null) m,
+  ];
+  if (hostClassMethods.isNotEmpty) {
+    return ClassInfo(
+      name: decl.name.lexeme,
+      sourceFile: sourcePath,
+      instanceFields: const [],
+      staticFields: const [],
+      methods: [
+        for (final m in hostClassMethods)
+          ClassMethod(
+            name: m.name,
+            params: m.params,
+            isAsync: m.isAsync,
+            isStatic: m.isStatic,
+            isVoid: m.isVoid,
+            returnsWidget: m.returnsWidget,
+            body: m.body,
+            bodyJs: hostMethodBodyJs(m),
+            hostChannel: m.hostChannel,
+            positionalParamCount: m.positionalParamCount,
+            hasNamedParams: m.hasNamedParams,
+            superMap: m.superMap,
+            mixinOrigin: m.mixinOrigin,
+          ),
+      ],
+      isComponent: isComponent,
+    );
+  }
 
   // 依赖发现：字段类型 + 方法体构造调用（referencedClassNames）∩ 全量类表。
   // 类表同时包含组件与普通类——普通类方法体里构造自定义组件（如
@@ -623,7 +705,7 @@ ClassInfo translateClass(
     staticFieldNames: staticNames,
     staticMethodNames: staticMethods,
     globalConsts: globalConsts,
-    hostMethods: hostMethods,
+    hostFunctions: hostFunctions,
     jsClassWidgets: jsClassWidgets,
     delegateClassWidgets: delegateClassWidgets,
     ignoredTypes: ignoredTypes,
@@ -686,6 +768,9 @@ ClassInfo translateClass(
       bodyJs: bodyJs,
       nativeChannel: msg != null ? 'nativeToast' : null,
       nativeMessage: msg,
+      hostChannel: cm.hostChannel,
+      positionalParamCount: cm.positionalParamCount,
+      hasNamedParams: cm.hasNamedParams,
       superMap: cm.superMap,
       mixinOrigin: cm.mixinOrigin,
     );
@@ -720,7 +805,7 @@ ClassInfo translateClass(
       buildMethod(
         m,
         bodyJs: translateClassMethodBody(proto, buildMethod(m), used,
-            hostMethods: hostMethods,
+            hostFunctions: hostFunctions,
             renderer: parseCtx,
             globalConsts: globalConsts),
       ),
@@ -735,7 +820,6 @@ ClassInfo translateClass(
     methods: translated,
     ctorParams: proto.ctorParams,
     isComponent: isComponent,
-    hostMethods: hostMethods,
     // 依赖 = widget 树里的自定义组件（parseCtx 收集）+ 字段类型 / 方法体
     // 构造调用命中的类（含跨文件组件，如 CounterVm → BannerCard）。
     dependencies: {...parseCtx.dependencies, ...used.keys},

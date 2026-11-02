@@ -8,7 +8,8 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 ///
 /// 设计要点（与 [WebView] / [AppRouter] 同一套 @HostInjected 机制）：
 /// - **原生侧直接可用**：普通 static 方法，Dart 里照常 await；
-/// - **JS 侧**：调用点被翻译为 `_app_host_.invoke('loadCanvasImage', [url])`，
+/// - **JS 侧**：本类仍存在，只有方法体换成
+///   `_app_host_.invoke('loadCanvasImage', [url])`；调用点与 Dart 一比一，
 ///   返回值 `ui.Image` 由 canvas 能力登记的编码器转成图片句柄
 ///   `{__handle, width, height}`（JS 只持有句柄，不持有像素）；
 /// - `CustomPaint` 的 `Canvas.drawImage` / `drawImageRect` 重放时按句柄还原

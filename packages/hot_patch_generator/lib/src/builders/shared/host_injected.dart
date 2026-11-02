@@ -1,18 +1,22 @@
-/// `@HostInjected` 的**唯一**识别口径：哪些声明算宿主注入、通道名怎么取、
-/// 调用点怎么落地成 `_app_host_.invoke(...)`。
+/// `@HostInjected` 的**唯一**识别口径：哪些声明算宿主注入、通道名怎么取。
 ///
-/// 这里是翻译层的一部分（不是构建层）：`@HostInjected` 方法调用在 Dart 侧写法
-/// 与普通静态方法完全一样，把它整体换成宿主通道调用是**翻译**的职责。因此
-/// [translateClass] 翻译任一方法体前自行调 [buildHostMethods] 得到通道表，
-/// 挂在 [ClassInfo.hostMethods] 上，组件与普通类共用同一份数据、同一条路径，
-/// 构建层不参与、也不需要传任何参数。
+/// 语义由「声明侧」承担，调用点不再改写：
+///   - **声明侧**：被标注的 static 方法在 JS 侧仍是普通方法（方法名、形参、
+///     类结构照常翻译），只是**方法体**整体换成
+///     `_app_host_.invoke("通道", 实参载荷)`（见 `hostMethodBodyJs`）；Dart
+///     方法体不翻译，因此它引用到的类型 / import 也不会进入 JS 产物。
+///   - **调用侧**：与 Dart 一比一——`AccountCenter.getUserName(a)` 依然产出
+///     `AccountCenter.getUserName(a)`，由上面的 JS 方法体桥回宿主。
+///   - **顶层函数**是唯一例外：顶层函数没有可承载的 JS 类，产物里不存在同名
+///     函数，调用点仍按通道翻译（`_app_host_.invoke(...)`）。判据是「有没有
+///     JS 载体」这一源码事实，不是按名字特判。
 ///
 /// 同一份扫描口径还被 `ui_host_register/host_register_builder.dart` 用来生成
-/// 宿主侧注册清单（通道 → Dart 实现），保证「翻译成 `_app_host_.invoke` 的一定被注册」。
+/// 宿主侧注册清单（通道 → Dart 实现），保证「JS 里调用的通道一定被注册」。
 ///
-/// 不支持参数个数 / 是否具名 / 返回值类型的差异：调用点整体换成
-/// `_app_host_.invoke(通道, 参数载荷)`（纯位置→数组、纯具名→对象、混合→数组+具名），
-/// 宿主侧用 `Function.apply(impl, 位置, 具名)` 还原，故任意形参与返回类型都成立。
+/// 不支持参数个数 / 是否具名 / 返回值类型的差异：实参载荷按调用点的通用约定
+/// （位置实参在前、具名实参合并成尾参对象）原样交给宿主，宿主侧用
+/// `Function.apply(impl, 位置, 具名)` 还原，故任意形参与返回类型都成立。
 library;
 
 import 'package:analyzer/dart/ast/ast.dart';
@@ -89,33 +93,26 @@ void scanHostMethods(
   }
 }
 
-/// 类是否声明了带 @HostInjected 的方法（static 宿主注入能力）→ 不产出 JS。
-bool classHasHostInjectedMethod(ClassDeclaration d) {
-  for (final m in d.members.whereType<MethodDeclaration>()) {
-    if (findAnnotation(m.metadata, 'HostInjected') != null) return true;
-  }
-  return false;
+/// 方法声明上的宿主通道名；未标注 `@HostInjected` 返回 null。
+///
+/// 翻译层用它把「哪些方法的方法体改为 `_app_host_.invoke`」判定在声明处做掉
+/// （见 `analyze_dart_class` 的 `classInfoOf`），调用点不再需要通道表。
+String? hostChannelOf(MethodDeclaration m) {
+  final a = findAnnotation(m.metadata, 'HostInjected');
+  if (a == null) return null;
+  return _positionalString(a) ?? m.name.lexeme;
 }
 
-/// 收集宿主注入方法表：`类名 → {方法名 → 通道名}`（见 @HostInjected）；
-/// 顶层函数挂在空串 key 下（`'' → {函数名 → 通道名}`）。
+/// 收集可见的**顶层** `@HostInjected` 函数名（本文件 + import 源文件）。
 ///
-/// 扫描本文件 + import 源文件（调用点能写出来，就必然 import 得到）——跨文件
-/// 声明要读源文件，统一经 [parseUnitFile] 缓存解析（与类表扫描共享同一份
-/// AST）；只有 [HostMethodDecl.usable] 的声明进表，与注册清单用同一个判定。
-///
-/// 调用方是 [translateClass]（翻译任一方法体前），结果挂在
-/// [ClassInfo.hostMethods] 上供方法体翻译把调用点整体替换为
-/// `_app_host_.invoke("通道", 参数载荷)`。
-Map<String, Map<String, String>> buildHostMethods(
-  CompilationUnit unit,
-  String sourcePath,
-) {
-  final out = <String, Map<String, String>>{};
+/// 只有顶层函数需要调用点改写：类上的宿主方法由 JS 类里的同名方法承接，调用点
+/// 与 Dart 一比一；顶层函数没有 JS 载体，调用点仍翻译成
+/// `_app_host_.invoke(通道, 载荷)`。
+Set<String> buildHostFunctions(CompilationUnit unit, String sourcePath) {
+  final out = <String>{};
   void scan(CompilationUnit u) {
     scanHostMethods(u, (h) {
-      if (!h.usable) return;
-      (out[h.owner] ??= {})[h.name] = h.channel;
+      if (h.usable && h.owner.isEmpty) out.add(h.name);
     });
   }
 

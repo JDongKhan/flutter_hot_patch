@@ -200,8 +200,8 @@ List<ClassInfo> orderClassesByBase(
 ///   - [exported]：类声明是否 `export`。
 ///   - [baseClass]：JS 基类名（`jsBaseClassOf` 解析），null = 不继承。
 ///
-/// `@HostInjected` 通道表不在参数里：它随 [ClassInfo.hostMethods] 一起由
-/// analyze_dart_class 在收集期算好挂在模型上（组件与普通类同一份数据）。
+/// `@HostInjected` 方法体在收集阶段已换成 `_app_host_.invoke`（见
+/// [ClassMethod.hostChannel]），渲染层不感知注解——所有方法都只按 [bodyJs] 拼装。
 /// ===========================================================================
 String dart2js(
   ClassInfo info, {

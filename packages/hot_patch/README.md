@@ -79,12 +79,15 @@ Promise through `_app_host_.resolve`; if the host implementation throws, the err
 through `_app_host_.reject`; an unregistered channel also resolves with `null`, leaving no dangling Promise.
 
 Business methods are annotated with `@HostInjected()` and collected and registered by the generator
-automatically; the framework's built-in channels (`log` / `nativeToast` / `jsuiCommit`) are registered
-automatically when `JsUiWidget` starts.
+automatically (the class is still translated; only the annotated method body becomes the channel call, so
+call sites stay 1:1 with Dart); the framework's built-in channels (`log` / `nativeToast` / `jsuiCommit`)
+are registered automatically when `JsUiWidget` starts.
 
 ```dart
-@HostInjected()
-static String greet(String name) => 'Hi, $name';
+class HostGreeter {
+  @HostInjected()
+  static String greet(String name) => 'Hi, $name';
+}
 ```
 
 ```dart
@@ -194,12 +197,15 @@ JS 传来的 `{id, args}` 按 Dart 调用语义（位置/具名实参、默认�
 返回值经 `_app_host_.resolve` 回填 Promise；宿主实现抛错则经 `_app_host_.reject`
 把异常抛回 JS 调用者；通道未注册也会回填 `null` 收尾（不留悬空 Promise）。
 
-业务方法用 `@HostInjected()` 注解，由生成器自动收集并注册；框架内建通道
+业务方法用 `@HostInjected()` 注解，由生成器自动收集并注册（类照常翻译，只有被标注方法的
+方法体换成通道调用，故调用点与 Dart 一比一）；框架内建通道
 （`log` / `nativeToast` / `jsuiCommit`）在 `JsUiWidget` 启动时自动注册。
 
 ```dart
-@HostInjected()
-static String greet(String name) => 'Hi, $name';
+class HostGreeter {
+  @HostInjected()
+  static String greet(String name) => 'Hi, $name';
+}
 ```
 
 ```dart

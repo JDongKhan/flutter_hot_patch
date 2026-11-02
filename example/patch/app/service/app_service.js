@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/app/service/app_service.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { Network } from '../../hot_module_base.js';
 import { HomeFeed } from '../model/app_models.js';
 import { CommunityFeed } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
@@ -19,10 +20,10 @@ export class AppService {
   constructor() {
   }
   async _request(url) {
-    return await _app_host_.invoke("post", {"url": url, "params": {"api": url}});
+    return await Network.post({ "url": url, "params": {"api": url} });
   }
   async _requestQuery(url, query) {
-    return await _app_host_.invoke("post", {"url": url, "params": {"api": url, "query": query}});
+    return await Network.post({ "url": url, "params": {"api": url, "query": query} });
   }
   async fetchHome(city) {
     var data = await this._request("/app/home");

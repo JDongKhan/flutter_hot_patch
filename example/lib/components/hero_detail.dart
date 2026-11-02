@@ -17,7 +17,7 @@ import '../base/app_router.dart';
 ///     圆角，避免素材在飞行途中「跳变」）；
 ///   - `transitionOnUserGestures: true` 表示 iOS 侧滑返回时也参与飞行；
 ///   - `AppRouter.openHeroTarget(...)` 是 `@HostInjected` 宿主方法：原生侧直接
-///     调用，JS 侧整段替换成 `_app_host_.invoke('openHeroTarget', [...])`。
+///     调用；JS 侧是同名 JS 类方法，方法体内 `_app_host_.invoke('openHeroTarget', ...)`。
 @PatchEntry('HeroDetail')
 class HeroDetail extends StatelessWidget {
   const HeroDetail({

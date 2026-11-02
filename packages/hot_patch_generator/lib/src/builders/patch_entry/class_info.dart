@@ -64,6 +64,19 @@ class ClassMethod {
   final String? nativeChannel;
   final String? nativeMessage;
 
+  /// `@HostInjected` 通道名（null = 普通方法）。标注方法的 Dart 实现留在宿主，
+  /// JS 侧方法仍在类里，只是方法体整体改为
+  /// `_app_host_.invoke(通道, 实参载荷)`（见 js_translator 的 [hostMethodBodyJs]）。
+  final String? hostChannel;
+
+  /// 位置形参个数（含可选位置形参）。宿主注入方法体据此把前 N 个实参当成
+  /// 位置实参（调用点的通用约定：位置实参在前、具名实参合并成尾参对象）。
+  final int positionalParamCount;
+
+  /// 是否含具名形参（`{...}`）：宿主注入方法体据此选择实参载荷形态
+  /// （纯具名 → 整个尾参对象；混合 → 前 N 个位置 + 尾参对象展开）。
+  final bool hasNamedParams;
+
   /// super 调用映射（mixin 线性化展开的产物）：`super.foo()` 语句里 super 的
   /// 方法名 → 链上下一个实现的 JS 方法名（如 `initState` → `_m$TestMixin$initState`）。
   /// 查不到 = 链上无更多实现（基类无 JS 等价物），super 语句按原策略忽略。
@@ -85,6 +98,9 @@ class ClassMethod {
     this.bodyJs,
     this.nativeChannel,
     this.nativeMessage,
+    this.hostChannel,
+    this.positionalParamCount = 0,
+    this.hasNamedParams = false,
     this.superMap = const {},
     this.mixinOrigin,
   });
@@ -123,12 +139,6 @@ class ClassInfo {
   /// 产出 JS widget 模块。
   final Map<String, Set<String>> usedWidgetPackages;
 
-  /// 本文件 `@HostInjected` 声明的通道表（类名 → {方法名 → 通道名}；顶层函数
-  /// 挂在空串 key 下）。由收集阶段自行扫好挂在模型上，方法体翻译据此把调用点
-  /// 整体换成 `_app_host_.invoke(通道, 载荷)`——组件与普通类同一份数据、
-  /// 同一条路径，构建层不参与。
-  final Map<String, Map<String, String>> hostMethods;
-
   const ClassInfo({
     required this.name,
     required this.sourceFile,
@@ -141,7 +151,6 @@ class ClassInfo {
     this.isComponent = false,
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
-    this.hostMethods = const {},
   });
 
   Set<String> get instanceFieldNames =>

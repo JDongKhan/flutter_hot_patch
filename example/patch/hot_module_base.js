@@ -4,6 +4,15 @@
 
 import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors, Column, CompositedTransformFollower, CompositedTransformTarget, Container, CrossAxisAlignment, Duration, EdgeInsets, IgnorePointer, LayerLink, MainAxisSize, Offset, OverlayPortal, OverlayPortalController, Padding, Positioned, SizedBox, Stack, Text, TextStyle, Timer, Transform } from 'flutter.js';
 
+// 模型 Network
+export class Network {
+  constructor() {
+  }
+  static async post(url, params) {
+    return _app_host_.invoke("post", arguments.length ? arguments[0] : {});
+  }
+}
+
 // 模型 User
 export class User {
   constructor(args) {
@@ -12,6 +21,15 @@ export class User {
   __applyProps(args) {
     this.name = (args && args.name !== undefined) ? args.name : '';
     this.age = (args && args.age !== undefined) ? args.age : 0;
+  }
+}
+
+// 模型 AccountCenter
+export class AccountCenter {
+  constructor() {
+  }
+  static async getUserName() {
+    return _app_host_.invoke("getUserName", Array.prototype.slice.call(arguments));
   }
 }
 

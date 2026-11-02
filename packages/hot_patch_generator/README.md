@@ -168,8 +168,8 @@ shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 ```
 
 `builders/shared/`: `source_index` (annotation detection / imported source parsing) · `host_injected`
-(@HostInjected channel table) · `js_class_defs` (`nodeHelperPackage` / `packageModulePath` / widget type
-tables) · `paths` (output path derivation).
+(@HostInjected recognition / channel name / top-level host functions) · `js_class_defs` (`nodeHelperPackage` /
+`packageModulePath` / widget type tables) · `paths` (output path derivation).
 
 `builders/patch_entry/` — only used by `componentBuilder`:
 
@@ -347,7 +347,7 @@ separatorBuilder: …}`、`Image.network` → `{factory: 'network', src: …}`�
 shared/  ←  patch_entry/{analysis,translator}  ←  builder.dart
 ```
 
-`builders/shared/`：`source_index`（注解识别 / import 源解析）· `host_injected`（@HostInjected 通道表）·
+`builders/shared/`：`source_index`（注解识别 / import 源解析）· `host_injected`（@HostInjected 识别 / 通道名 / 顶层宿主函数）·
 `js_class_defs`（`nodeHelperPackage` / `packageModulePath` / widget 类型登记表）· `paths`（产物路径推导）。
 
 `builders/patch_entry/`——只服务 `componentBuilder`：

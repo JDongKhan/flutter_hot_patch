@@ -14,8 +14,9 @@ import '../main.dart';
 ///
 /// 设计要点（与 [Network] / [WebView] 同一套 @HostInjected 机制）：
 /// - **原生直接可用**：这些就是普通 static 方法，首页原生渲染时同步执行；
-/// - **JS 热更可用**：标注后生成器把组件里的调用点整段替换为
-///   `_app_host_.invoke('openSpot', [id])`，由宿主 `registerHostMethod` 回调本类，
+/// - **JS 热更可用**：JS 产物里本类仍存在，只有被标注方法的方法体换成
+///   `_app_host_.invoke(...)`；调用点与 Dart 一比一（`AppRouter.openSpot(id)`），
+///   由宿主 `registerHostMethod` 回调本类，
 ///   经 [JsRuntimeManager.navigatorKey] 推入真实 Flutter 页面。
 ///
 /// 一份代码、两条通路，首页无需知道当前跑在 Dart 还是 JS 上。

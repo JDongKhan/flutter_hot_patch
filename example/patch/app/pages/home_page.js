@@ -4,8 +4,10 @@
 
 import { AppService } from '../service/app_service.js';
 import { HomeFeed } from '../model/app_models.js';
+import { AppRouter } from '../../base/app_router.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
+import { WebView } from '../../base/web_view.js';
 import { BannerCarousel } from '../widgets/banner_carousel.js';
 import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Icons, Image, InkWell, LinearGradient, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, StackFit, Text, TextOverflow, TextStyle } from '../../flutter.js';
 
@@ -23,7 +25,7 @@ export class HomePage {
     this._load();
   }
   async _pickCity() {
-    var picked = await _app_host_.invoke("openCityPicker", [this._city]);
+    var picked = await AppRouter.openCityPicker(this._city);
     if ((picked == null)) {
       return;
     }
@@ -232,10 +234,10 @@ export class HomeHeader {
     this.onPickCity = (args && args.onPickCity !== undefined) ? args.onPickCity : null;
   }
   openSearch() {
-    _app_host_.invoke("openSearch", []);
+    AppRouter.openSearch();
   }
   openMessages() {
-    _app_host_.invoke("openNotifications", []);
+    AppRouter.openNotifications();
   }
   build(context) {
     return new Container({
@@ -448,7 +450,7 @@ export class GridCell {
     this.entry = (args && args.entry !== undefined) ? args.entry : null;
   }
   open() {
-    _app_host_.invoke("openChannel", [this.entry.title, this.entry.emoji]);
+    AppRouter.openChannel(this.entry.title, this.entry.emoji);
   }
   build(context) {
     return new InkWell({
@@ -490,7 +492,7 @@ export class SpotCard {
     this.spot = (args && args.spot !== undefined) ? args.spot : null;
   }
   open() {
-    _app_host_.invoke("openSpot", [this.spot.id]);
+    AppRouter.openSpot(this.spot.id);
   }
   build(context) {
     return new InkWell({
@@ -650,7 +652,7 @@ export class PromoCard {
     this.img = (args && args.img !== undefined) ? args.img : '';
   }
   open() {
-    _app_host_.invoke("open", ["https://flutter.dev", "活动详情"]);
+    WebView.open("https://flutter.dev", "活动详情");
   }
   build(context) {
     return new InkWell({

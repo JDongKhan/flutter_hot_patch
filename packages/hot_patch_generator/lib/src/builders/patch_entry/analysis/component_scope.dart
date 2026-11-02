@@ -10,17 +10,12 @@
 ///      才产出（字段类型 / 方法体构造 / build 树里的自定义组件）。数据的可翻译性
 ///      由「被引用」决定，与模型类（`model/user.dart`）同理。
 ///
-/// 文件级遍历在两类文件处停止（它们不会出现在任何 JS 产物里，其 import 自然
-/// 无需深入）：
-///   - `@PatchIgnore` 文件（显式退出翻译，产物里保留其类型名结点、无 JS 类）；
-///   - `@HostInjected` 类所在文件（跨库不可见，只在宿主侧实现）。
+/// 文件级遍历在 `@PatchIgnore` 文件处停止（显式退出翻译，产物里保留其类型名
+/// 结点、无 JS 类）。
 ///
-/// 符号级闭包从根类出发，且**不经过 `@HostInjected` 类**（这类类不进类表，其方法
-/// 体里 `new Foo()` 在 JS 侧是 `_app_host_.invoke(...)`，不产生 JS 引用）。因此「只在
-/// 宿主路由（`AppRouter` 的 @HostInjected 方法）里 `new` 出来的页面」不会被翻译
-/// ——依赖链在 @HostInjected 处断掉：`detail_pages.dart` 只有三个 tab 页订单卡
-/// 真的用到的 `MiniButton` 与 `kBrand` / `kPrice` 两个常量会产出，`SearchPage` /
-/// `PostDetailPage` 等只在宿主方法体里出现的详情页不再跟着翻译。
+/// 符号级闭包从根类出发；`@HostInjected` 类照常参与（类与方法签名仍产出 JS），
+/// 其**标注方法的方法体**不参与引用传播——Dart 实现留在宿主，JS 侧只有
+/// `_app_host_.invoke(...)`，方法体里 `new Foo()` 的页面不会被连带翻译。
 library;
 
 import 'package:analyzer/dart/analysis/utilities.dart';
@@ -29,7 +24,6 @@ import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 
 import 'analyze_dart_class.dart';
-import '../../shared/host_injected.dart';
 import '../../shared/source_index.dart';
 
 /// 包内全部 Dart 源码（与 host_register builder 同一扫描口径）。
@@ -225,13 +219,12 @@ Map<String, Set<String>> _neededClasses(
   return needed;
 }
 
-/// 类是否参与翻译与依赖传播：非抽象、非 `@HostInjected`（类级或方法级——实现
-/// 留在宿主侧，调用点是 `_app_host_.invoke`，不产生 JS 引用）、非 `@PatchIgnore`
-/// （原生注入）。全文件只有这一处判据，文件级 / 符号级共用。
+/// 类是否参与翻译与依赖传播：非抽象、非 `@PatchIgnore`（原生注入）。
+/// `@HostInjected` 类照常参与——类与方法签名仍产出 JS，只有标注方法的**方法体**
+/// 改为 `_app_host_.invoke`（其方法体里引用到的类型由 `dependenciesOf` 跳过，
+/// 不会进入依赖传播）。
 bool _translatableDecl(ClassDeclaration d) =>
     d.abstractKeyword == null &&
-    findAnnotation(d.metadata, 'HostInjected') == null &&
-    !classHasHostInjectedMethod(d) &&
     findAnnotation(d.metadata, 'PatchIgnore') == null;
 
 /// 文件里有 `@PatchEntry` 类 → 根文件。
@@ -246,7 +239,7 @@ bool _hasComponentAnnotation(CompilationUnit unit) => unit.declarations
 /// 同一个类判据，不另写一套）：
 ///   - 声明了 `extension` → 注册语句就写在声明处，产出；
 ///   - 有公认可翻译的类（含 `@PatchEntry` 根类）→ 产出；
-///   - 其余（`@PatchIgnore` 页、宿主能力门面）→ 不产出。
+///   - 其余（`@PatchIgnore` 页）→ 不产出。
 bool _isTranslationStop(CompilationUnit unit) =>
     unit.declarations.whereType<ExtensionDeclaration>().isEmpty &&
     !unit.declarations

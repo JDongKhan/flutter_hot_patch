@@ -645,7 +645,10 @@ String? _stringInterpolationJs(
 /// 不允许 `@`：任何具名形参都不可能叫 `@args`，判定零歧义。
 const String hostPositionalKey = '@args';
 
-/// 宿主注入调用的参数载荷（按实参形态给最简编码）。
+/// 宿主通道调用的参数载荷（按实参形态给最简编码）。
+///
+/// 用于**顶层** `@HostInjected` 函数的调用点（类上的宿主方法见
+/// [hostMethodBodyJs]，载荷形态由方法内的 `arguments` 重建，规则一致）。
 ///
 ///   - 纯位置：数组 `[a, b]`（运行时用 `Array.isArray` 判定）
 ///   - 纯具名：具名表本身 `{"times": 2}`
@@ -840,15 +843,6 @@ String? methodCallExprJs(
       posJs.add(v);
     }
   }
-  // 宿主注入（@HostInjected）：static 调用 `AccountCenter.getUserName(a)`
-  // 整体替换为 `_app_host_.invoke("通道名", {p: [a], n: {...}})`（返回 Promise，可 await）。
-  final hostTarget = e.target;
-  if (hostTarget is Identifier) {
-    final channel = scope.hostMethods[hostTarget.name]?[e.methodName.name];
-    if (channel != null) {
-      return '_app_host_.invoke(${jsString(channel)}, ${hostArgsJs(posJs, namedJs)})';
-    }
-  }
   // 位置实参原样，具名实参合并成**尾参对象**（与构造 `new X({...})` 同形）；
   // 无具名时不加空对象（`f()` 保持 `f()`）。
   final passed = [
@@ -857,8 +851,11 @@ String? methodCallExprJs(
   ].join(', ');
   final target = e.target;
   if (target == null) {
-    // 顶层函数（全局方法）：@HostInjected → `_app_host_.invoke("通道", {p, n})`。
-    final topChannel = scope.hostMethods['']?[e.methodName.name];
+    // 顶层函数（全局方法）：**只有顶层** `@HostInjected` 函数在这里走通道——
+    // 顶层函数没有可承载的 JS 类，产物里不存在同名函数。
+    final topChannel = scope.hostFunctions.contains(e.methodName.name)
+        ? e.methodName.name
+        : null;
     if (topChannel != null) {
       return '_app_host_.invoke(${jsString(topChannel)}, ${hostArgsJs(posJs, namedJs)})';
     }
@@ -1601,6 +1598,42 @@ String _setStateJs(
       : 'this.setState(() => { $inner });';
 }
 
+/// `@HostInjected` 方法的 JS 方法体：Dart 实现留在宿主，这里只把实参打包成
+/// 宿主通道载荷（`_app_host_.invoke(通道, ...)`）。方法签名、类结构与其它成员
+/// 照常翻译，调用点与 Dart 一比一（不再整体改写为 `_app_host_.invoke`）。
+///
+/// 载荷形态与调用点的通用约定一致（见 [methodCallExprJs]：位置实参在前、具名
+/// 实参合并成**尾参对象**），因此直接从 `arguments` 重建：
+///   - 纯位置：`arguments` 原样——调用点传几个就是几个，可选位置参数缺省时不会
+///     补 `undefined`，宿主侧 `Function.apply` 照常走 Dart 默认值；
+///   - 纯具名：调用点把具名实参压成**第一个实参**，整个对象就是具名实参表；
+///   - 混合：前 [ClassMethod.positionalParamCount] 个实参是位置实参，尾参对象
+///     的键是具名实参（与 [hostArgsJs] 的 `@args` + 具名键同一形态）。
+String hostMethodBodyJs(ClassMethod m, {int depth = 2}) {
+  final ind = '  ' * depth;
+  final channel = jsString(m.hostChannel!);
+  if (!m.hasNamedParams) {
+    return '$ind'
+        'return _app_host_.invoke($channel, '
+        'Array.prototype.slice.call(arguments));';
+  }
+  final positionalCount = m.positionalParamCount;
+  if (positionalCount == 0) {
+    return '$ind'
+        'return _app_host_.invoke($channel, '
+        'arguments.length ? arguments[0] : {});';
+  }
+  return '$ind'
+      'var __positional = '
+      'Array.prototype.slice.call(arguments, 0, $positionalCount);\n'
+      '$ind'
+      'var __named = arguments.length > $positionalCount '
+      '? arguments[$positionalCount] : {};\n'
+      '$ind'
+      'return _app_host_.invoke($channel, Object.assign('
+      '{ ${jsString(hostPositionalKey)}: __positional }, __named));';
+}
+
 /// 翻译一个类的方法体 → JS。**组件与普通类共用这一条**：字段表 = 类自身实例
 /// 字段，返回 widget 的表达式走 widget 层渲染（与 build 无差别）。
 ///
@@ -1610,7 +1643,7 @@ String translateClassMethodBody(
   ClassInfo info,
   ClassMethod m,
   Map<String, ClassInfo> classes, {
-  Map<String, Map<String, String>> hostMethods = const {},
+  Set<String> hostFunctions = const {},
   ExprRenderer? renderer,
   Set<String> globalConsts = const {},
   int depth = 2,
@@ -1644,7 +1677,7 @@ String translateClassMethodBody(
     className: info.name,
     staticFields: staticFieldNames,
     staticMethods: staticMethodNames,
-    hostMethods: hostMethods,
+    hostFunctions: hostFunctions,
     globalConsts: globalConsts,
     superMap: m.superMap,
     // 原生继承（SDK 基类或项目类）→ `super.foo()` 在 JS 里合法，原样发射。

@@ -3,6 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { HomeBanner } from '../model/app_models.js';
+import { AppRouter } from '../../base/app_router.js';
 import { Alignment, BorderRadius, BoxDecoration, BoxFit, ClipRRect, Color, Column, Container, CrossAxisAlignment, Curves, Duration, EdgeInsets, FontWeight, Image, InkWell, LinearGradient, MainAxisAlignment, MainAxisSize, Padding, PageController, PageView, Positioned, Radius, Row, SizedBox, Stack, StackFit, Text, TextStyle, Timer } from '../../flutter.js';
 
 // 组件 BannerCarousel
@@ -138,7 +139,7 @@ export class BannerSlide {
     this.banner = (args && args.banner !== undefined) ? args.banner : null;
   }
   open() {
-    _app_host_.invoke("toast", [this.banner.title]);
+    AppRouter.toast(this.banner.title);
   }
   build(context) {
     return new Padding({

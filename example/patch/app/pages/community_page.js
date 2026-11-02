@@ -6,6 +6,7 @@ import { AppService } from '../service/app_service.js';
 import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
+import { AppRouter } from '../../base/app_router.js';
 import { kBrand } from 'detail_pages.js';
 import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, Text, TextOverflow, TextStyle, Wrap, double } from '../../flutter.js';
 
@@ -124,7 +125,7 @@ export class CommunityPage {
                         })]); } return out; })(),
                   (this.__k7 || (this.__k7 = new Spacer({}))),
                   new GestureDetector({
-                    "onTap": this.__bindFn(1, [], () => _app_host_.invoke("toast", ["发布新动态（演示）"])),
+                    "onTap": this.__bindFn(1, [], () => AppRouter.toast("发布新动态（演示）")),
                     "child": new Container({
                       "width": 32,
                       "height": 32,
@@ -164,7 +165,7 @@ export class CommunityPage {
             }))),
             "itemBuilder": (context, i) => new _ResourceCard({
               "resource": this._resources[i],
-              "onTap": () => { return _app_host_.invoke("openResource", [this._resources[i].id]); }
+              "onTap": this.__bindFn(2, [i], () => AppRouter.openResource(this._resources[i].id))
             })
           })
         }),
@@ -186,7 +187,7 @@ export class CommunityPage {
                         "right": 6
                       }))),
                       "child": new GestureDetector({
-                        "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)),
+                        "onTap": this.__bindFn(3, [s], () => this._selectFilter("sort", s)),
                         "child": new Container({
                           "padding": (this.__k16 || (this.__k16 = EdgeInsets.symmetric({
                             "horizontal": 12,
@@ -217,7 +218,7 @@ export class CommunityPage {
                     })]); } return out; })(),
               (this.__k7 || (this.__k7 = new Spacer({}))),
               new GestureDetector({
-                "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a)),
+                "onTap": this.__bindFn(4, [], (...__a) => this._toggleFilter(...__a)),
                 "child": new Container({
                   "padding": (this.__k17 || (this.__k17 = EdgeInsets.symmetric({
                     "horizontal": 11,
@@ -350,14 +351,14 @@ export class _ListContent {
                     }))),
                     "child": new _PostCard({
                       "post": p,
-                      "onTap": () => { return _app_host_.invoke("openPost", [p.id]); }
+                      "onTap": this.__bindFn(0, [p], () => AppRouter.openPost(p.id))
                     })
                   })]); } return out; })())
           ]
         }),
         ...(this.openFilter ? [Positioned.fill({
             "child": new GestureDetector({
-              "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)),
+              "onTap": this.__bindFn(1, [], (...__a) => this.toggleFilter(...__a)),
               "child": new Container({
                 "color": (this.__k3 || (this.__k3 = new Color({
                   "value": 0x66000000

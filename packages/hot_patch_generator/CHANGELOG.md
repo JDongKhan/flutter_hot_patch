@@ -1,3 +1,14 @@
+## 0.3.7
+
+**`@HostInjected` 调用点回归一比一：类照常产出 JS，只有被标注方法的**方法体**换成通道调用（产物形态变化，需配套本版本生成器；通道协议与宿主注册不变）。**
+
+- **删除调用点的通道改写**：`AccountCenter.getUserName(a)` / `Network.post(url: u, params: p)` 不再整体替换为 `_app_host_.invoke(...)`，产物保持 `类名.方法(...)`（`AppRouter.pop()` / `Network.post({...})`），事件表达式同理（`static` receiver 落成 `类名.方法(...)` 而非 `this.类名.方法(...)`）。
+- **宿主注入类照常翻译**：类表 / 翻译范围 / 跨文件产物不再排除 `@HostInjected` 类；类在产物里只保留「类 + 被标注的 static 方法」，字段、其它方法、基类、依赖与 import 一概不产出（它们只服务宿主实现）。
+- **方法体改为通道调用**：新增 `hostMethodBodyJs`，按方法形参结构从 `arguments` 重建载荷——纯位置 → `Array.prototype.slice.call(arguments)`（可选参数缺省不补 `undefined`，宿主默认值照旧生效）；纯具名 → 首个实参对象；混合 → 前 N 个实参 + 尾参对象展开（`{"@args": …}`）。
+- **依赖扫描跳过方法体**：`dependenciesOf` 不再遍历 `@HostInjected` 方法的方法体，只有宿主实现里用到的类型不会被连带翻译（`new SearchPage(...)` 等页面依赖链在宿主方法体处断掉）。
+- **顶层函数仍是唯一例外**：顶层函数没有可承载的 JS 类，调用点继续翻译为 `_app_host_.invoke(...)`（`buildHostFunctions` 只收集顶层函数名）。
+- **删除旧通道表**：`ClassInfo.hostMethods` / `FieldScope.hostMethods` / `ElementTranslateContext.hostMethods` / `buildHostMethods` / `classHasHostInjectedMethod` 全部移除。
+
 ## 0.3.6
 
 **日志调用回归一比一：`print` / `debugPrint` 原样翻译为同名全局函数（产物调用形态变化，需配套本版本 `runtime.js`；日志通道协议不变）。**

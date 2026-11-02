@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/hero_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { AppRouter } from '../base/app_router.js';
 import { BorderRadius, Center, Colors, Column, CrossAxisAlignment, FontWeight, GestureDetector, Hero, Material, Radius, SizedBox, Text, TextStyle } from '../flutter.js';
 
 // 组件 HeroDetail
@@ -38,7 +39,7 @@ export class HeroDetail {
           "height": 12
         }))),
         new GestureDetector({
-          "onTap": this.__bindFn(0, [], () => _app_host_.invoke("openHeroTarget", [this.tag, this.label])),
+          "onTap": this.__bindFn(0, [], () => AppRouter.openHeroTarget(this.tag, this.label)),
           "child": new Hero({
             "tag": this.tag,
             "transitionOnUserGestures": true,

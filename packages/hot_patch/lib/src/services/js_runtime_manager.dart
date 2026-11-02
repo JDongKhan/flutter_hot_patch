@@ -98,10 +98,10 @@ class JsRuntimeManager {
 
   /// 注册一个**宿主方法**（@HostInjected 通道；框架内建通道同用此入口）。
   ///
-  /// 生成器把 Dart 的 static 方法调用（`AccountCenter.getUserName(a)`）在
-  /// 调用点翻译为 JS 侧 `_app_host_.invoke("通道名", 参数载荷)`（返回 Promise，可
-  /// await；载荷按实参形态给数组/对象，见 [_hostCallArgs]）。本方法把该通道接到
-  /// 宿主实现 [impl]：收到 JS 的 `{id, args}` 后按
+  /// 生成器把 `@HostInjected` 方法的**方法体**翻译为 JS 侧
+  /// `_app_host_.invoke("通道名", 参数载荷)`（返回 Promise，可 await；载荷按实参
+  /// 形态给数组/对象，见 [_hostCallArgs]）——调用点与 Dart 一比一，由该方法体
+  /// 桥回宿主。本方法把该通道接到宿主实现 [impl]：收到 JS 的 `{id, args}` 后按
   /// `Function.apply(impl, 位置实参, 具名实参)` 调用——Dart 调用语义完整还原，
   /// 位置/具名实参**个数不限**，未传的参数走实现自身的默认值，返回值类型也不限。
   /// 之后把返回值经 `_app_host_.resolve(id, value)` 回填 JS 的 Promise；

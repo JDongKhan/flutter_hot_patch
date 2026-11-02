@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/custom_paint_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { CanvasImage } from '../base/canvas_image.js';
 import { Alignment, Canvas, Center, Color, Column, CrossAxisAlignment, CustomPaint, CustomPainter, FontWeight, LinearGradient, MainAxisSize, Offset, Paint, PaintingStyle, Path, RRect, Radius, Rect, SizedBox, StrokeCap, Text, TextAlign, TextDirection, TextPainter, TextSpan, TextStyle } from '../flutter.js';
 
 // 模型 _FramePainter
@@ -152,7 +153,7 @@ export class CustomPaintDetail {
     this._loadPhoto();
   }
   async _loadPhoto() {
-    var img = await _app_host_.invoke("loadCanvasImage", ["assets/images/photo-1504280390367-361c6d9f38f4.jpg"]);
+    var img = await CanvasImage.load("assets/images/photo-1504280390367-361c6d9f38f4.jpg");
     this.setState(() => { this._photo = img; });
   }
   build(context) {

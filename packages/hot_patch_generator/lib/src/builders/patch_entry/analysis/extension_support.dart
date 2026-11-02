@@ -402,7 +402,7 @@ ExtensionInfo? translateExtension(
     if (info != null) used[n] = info;
   }
 
-  final hostMethods = buildHostMethods(unit, sourcePath);
+  final hostFunctions = buildHostFunctions(unit, sourcePath);
   final modelClassNames = <String>{
     for (final e in classTable.entries)
       if (!e.value.isComponent) e.key,
@@ -421,7 +421,7 @@ ExtensionInfo? translateExtension(
     sourcePath: sourcePath,
     importResolver: importResolver,
     globalConsts: globalConsts,
-    hostMethods: hostMethods,
+    hostFunctions: hostFunctions,
     jsClassWidgets: jsClassWidgets,
     delegateClassWidgets: delegateClassWidgets,
     ignoredTypes: ignoredTypes,
@@ -446,7 +446,7 @@ ExtensionInfo? translateExtension(
         hostInfo,
         m,
         used,
-        hostMethods: hostMethods,
+        hostFunctions: hostFunctions,
         renderer: parseCtx,
         globalConsts: globalConsts,
         depth: 0,
@@ -483,7 +483,7 @@ ExtensionInfo? translateExtension(
             hostInfo,
             info,
             used,
-            hostMethods: hostMethods,
+            hostFunctions: hostFunctions,
             renderer: parseCtx,
             globalConsts: globalConsts,
             depth: 0,
