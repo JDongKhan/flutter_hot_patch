@@ -316,10 +316,12 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
-    // 基础语法 demo（mixin / extension / extends）：同一源文件的组件共用一个产物。
+    // 基础语法 demo（mixin / extension / extends / dart:core 基础 API）：
+    // 同一源文件的组件共用一个产物。
     'MixinDetail': 'components/grammar/grammar_details.js',
     'ExtensionDetail': 'components/grammar/grammar_details.js',
     'InheritanceDetail': 'components/grammar/grammar_details.js',
+    'BasicApiDetail': 'components/grammar/grammar_details.js',
   };
 
   String get _jsEntry => _jsEntries[widget.component]!;
@@ -384,6 +386,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'MixinDetail' => const MixinDetail(),
       'ExtensionDetail' => const ExtensionDetail(),
       'InheritanceDetail' => const InheritanceDetail(),
+      'BasicApiDetail' => const BasicApiDetail(),
       _ => const Text('未知组件'),
     };
   }
