@@ -143,117 +143,128 @@ if (G.kDebugMode) {
   //      且可重复注入不覆盖（运行时可能被重新求值）。
   // 注意：本节属**运行时 Dart 代码**，改动随 App 一起注入——热更/热重启不生效，
   // 必须完全重启 App。
-  //   - Array.prototype.clear()：Dart `List.clear()` 的**原地**清空（保持数组
-  //     实例，故 `final` 列表也能清；返回 void）。数组在 JS 侧就是 List。
-  // 已知缺口（未补）：Dart `Map` 字面量在 JS 侧是**普通对象**（不是 Map 实例），
-  // 故 `Map.clear()` 无处可挂（挂 Object.prototype 影响面过大），需要时得按
-  // 「字段类型是 Map」在翻译层分发；Dart `Set` 字面量翻成 `new Set([...])`，
-  // JS Set 自带 clear()，无需处理。
-  if (typeof Array.prototype.clear !== 'function') {
-    Object.defineProperty(Array.prototype, 'clear', {
-      value: function () { this.length = 0; },
-      writable: true,
-      enumerable: false,
-      configurable: true
-    });
-  }
-  //   - Array / String 的 Dart 同名成员：生成器不再按名字改写（`first` /
-  //     `where` / `add` / `removeAt` / `insert` / `toList` / `isEmpty` … 原样
-  //     产出），由本节按接收者类型补齐同名同义实现。全部不可枚举 + 存在性守卫，
-  //     避免污染 for...in / Object.keys / JSON.stringify。
-  function __defineProtoMember(proto, name, fn) {
-    if (typeof proto[name] !== 'function') {
-      Object.defineProperty(proto, name, {
-        value: fn,
-        writable: true,
-        enumerable: false,
-        configurable: true
-      });
+  // 补齐成员的声明形态统一为「目标原型 + 一张表」：表 key 是成员名，value 是
+  // 方法体 / getter 函数。新增补齐项只往对应的表里加一行，不再一项一次调用
+  // 散落各处；挂载与存在性守卫只由下面两个函数承担。
+  //   - 方法表：同名成员不是函数才挂（引擎/宿主自带优先）。
+  //   - getter 表：目标上没有同名自有属性才挂（Dart 属性写法按同名同义补齐）。
+  function __defineProtoMember(proto, members) {
+    for (var name in members) {
+      if (!Object.prototype.hasOwnProperty.call(members, name)) { continue; }
+      if (typeof proto[name] !== 'function') {
+        Object.defineProperty(proto, name, {
+          value: members[name],
+          writable: true,
+          enumerable: false,
+          configurable: true
+        });
+      }
     }
   }
-  function __defineProtoGetter(proto, name, getter) {
-    if (!Object.getOwnPropertyDescriptor(proto, name)) {
-      Object.defineProperty(proto, name, {
-        get: getter,
-        enumerable: false,
-        configurable: true
-      });
+  function __defineProtoGetter(proto, members) {
+    for (var name in members) {
+      if (!Object.prototype.hasOwnProperty.call(members, name)) { continue; }
+      if (!Object.getOwnPropertyDescriptor(proto, name)) {
+        Object.defineProperty(proto, name, {
+          get: members[name],
+          enumerable: false,
+          configurable: true
+        });
+      }
     }
   }
-  __defineProtoGetter(Array.prototype, 'first', function () { return this[0]; });
-  __defineProtoGetter(Array.prototype, 'last', function () {
-    return this[this.length - 1];
-  });
-  __defineProtoGetter(Array.prototype, 'isEmpty', function () {
-    return this.length === 0;
-  });
-  __defineProtoGetter(Array.prototype, 'isNotEmpty', function () {
-    return this.length > 0;
-  });
-  __defineProtoGetter(Array.prototype, 'reversed', function () {
-    return this.slice().reverse();
-  });
-  __defineProtoMember(Array.prototype, 'where', function (predicate) {
-    return this.filter(predicate);
-  });
-  // Dart List.toList() 返回新列表；这里保持数组实例（与既有产物行为一致），
-  // 后续链式调用 / 原地修改语义不变。
-  __defineProtoMember(Array.prototype, 'toList', function () { return this; });
-  __defineProtoMember(Array.prototype, 'add', function (value) {
-    this.push(value);
-  });
-  __defineProtoMember(Array.prototype, 'removeAt', function (index) {
-    return this.splice(index, 1)[0];
-  });
-  //   - List.remove(value) / removeLast() / removeWhere：Dart 侧极常用
-  //     （`this._items.remove(item)`），缺一个，事件回调就会抛 TypeError，
-  //     `setState` 的 mutator 半途中断、**界面不重建**（典型症状：Dismissible
-  //     已滑走但条目仍在树上，触发 "dismissed ... still part of the tree"）。
-  //     语义按 Dart：remove 删第一个 == value 的元素并返回是否删过。
-  __defineProtoMember(Array.prototype, 'remove', function (value) {
-    var i = this.indexOf(value);
-    if (i < 0) { return false; }
-    this.splice(i, 1);
-    return true;
-  });
-  __defineProtoMember(Array.prototype, 'removeLast', function () {
-    return this.pop();
-  });
-  __defineProtoMember(Array.prototype, 'removeWhere', function (predicate) {
-    var removed = false;
-    for (var i = this.length - 1; i >= 0; i--) {
-      if (predicate(this[i])) { this.splice(i, 1); removed = true; }
+  //   - Array.prototype：数组在 JS 侧就是 List。`clear` 是 Dart `List.clear()`
+  //     的**原地**清空（保持数组实例，故 `final` 列表也能清；返回 void）。
+  //     「已知缺口（未补）：Dart `Map` 字面量在 JS 侧是**普通对象**（不是 Map
+  //     实例），故 `Map.clear()` 无处可挂（挂 Object.prototype 影响面过大），
+  //     需要时得按「字段类型是 Map」在翻译层分发；Dart `Set` 字面量翻成
+  //     `new Set([...])`，JS Set 自带 clear()，无需处理。」
+  //     Dart 同名成员（`first` / `where` / `add` / `removeAt` / `insert` /
+  //     `toList` / `isEmpty` …）生成器不再按名字改写，原样产出，由本表按接收者
+  //     类型补齐同名同义实现。
+  __defineProtoMember(Array.prototype, {
+    clear: function () { this.length = 0; },
+    where: function (predicate) {
+      return this.filter(predicate);
+    },
+    // Dart List.toList() 返回新列表；这里保持数组实例（与既有产物行为一致），
+    // 后续链式调用 / 原地修改语义不变。
+    toList: function () { return this; },
+    add: function (value) {
+      this.push(value);
+    },
+    removeAt: function (index) {
+      return this.splice(index, 1)[0];
+    },
+    //   - List.remove(value) / removeLast() / removeWhere：Dart 侧极常用
+    //     （`this._items.remove(item)`），缺一个，事件回调就会抛 TypeError，
+    //     `setState` 的 mutator 半途中断、**界面不重建**（典型症状：Dismissible
+    //     已滑走但条目仍在树上，触发 "dismissed ... still part of the tree"）。
+    //     语义按 Dart：remove 删第一个 == value 的元素并返回是否删过。
+    remove: function (value) {
+      var i = this.indexOf(value);
+      if (i < 0) { return false; }
+      this.splice(i, 1);
+      return true;
+    },
+    removeLast: function () {
+      return this.pop();
+    },
+    removeWhere: function (predicate) {
+      var removed = false;
+      for (var i = this.length - 1; i >= 0; i--) {
+        if (predicate(this[i])) { this.splice(i, 1); removed = true; }
+      }
+      return removed;
+    },
+    insert: function (index, value) {
+      this.splice(index, 0, value);
     }
-    return removed;
   });
-  __defineProtoMember(Array.prototype, 'insert', function (index, value) {
-    this.splice(index, 0, value);
+  __defineProtoGetter(Array.prototype, {
+    first: function () { return this[0]; },
+    last: function () {
+      return this[this.length - 1];
+    },
+    isEmpty: function () {
+      return this.length === 0;
+    },
+    isNotEmpty: function () {
+      return this.length > 0;
+    },
+    reversed: function () {
+      return this.slice().reverse();
+    }
   });
-  __defineProtoGetter(String.prototype, 'isEmpty', function () {
-    return this.length === 0;
-  });
-  __defineProtoGetter(String.prototype, 'isNotEmpty', function () {
-    return this.length > 0;
+  __defineProtoGetter(String.prototype, {
+    isEmpty: function () {
+      return this.length === 0;
+    },
+    isNotEmpty: function () {
+      return this.length > 0;
+    }
   });
   //   - int 的 `isEven` / `isOdd` 是 Dart 的属性（不是方法），JS 数字没有；
   //     生成器按 Dart 写法一比一产出 `n.isEven`，故按同名同义补 getter。
-  __defineProtoGetter(Number.prototype, 'isEven', function () {
-    return this % 2 === 0;
-  });
-  __defineProtoGetter(Number.prototype, 'isOdd', function () {
-    return this % 2 !== 0;
+  __defineProtoGetter(Number.prototype, {
+    isEven: function () {
+      return this % 2 === 0;
+    },
+    isOdd: function () {
+      return this % 2 !== 0;
+    }
   });
   var __compareTo = function (other) {
     return this < other ? -1 : (this > other ? 1 : 0);
   };
-  __defineProtoMember(Number.prototype, 'compareTo', __compareTo);
-  __defineProtoMember(String.prototype, 'compareTo', __compareTo);
+  __defineProtoMember(String.prototype, { compareTo: __compareTo });
   //   - Number.prototype：Dart `num` 的方法在 JS 里**没有同名成员**
   //     （`(x * 100).round()` 直接抛 "is not a function"，整个组件挂载失败、
   //     页面只显示加载失败占位）。生成器按 Dart 写法一比一产出，故在数字原型上
   //     按**同名同义**补齐（与 Dart 语义一致：truncate/toInt 向零取整，
   //     字符串化/取整返回新值不改变接收者）。
-  var numPatches = {
+  __defineProtoMember(Number.prototype, {
+    compareTo: __compareTo,
     round: function () { return Math.round(this); },
     floor: function () { return Math.floor(this); },
     ceil: function () { return Math.ceil(this); },
@@ -263,17 +274,7 @@ if (G.kDebugMode) {
     toDouble: function () { return this; },
     toStringAsFixed: function (digits) { return this.toFixed(digits); },
     clamp: function (lo, hi) { return Math.min(Math.max(this, lo), hi); }
-  };
-  for (var numKey in numPatches) {
-    if (typeof Number.prototype[numKey] !== 'function') {
-      Object.defineProperty(Number.prototype, numKey, {
-        value: numPatches[numKey],
-        writable: true,
-        enumerable: false,
-        configurable: true
-      });
-    }
-  }
+  });
 
   //   - G.assert：Dart `assert(condition, [message])` 的运行时补齐。
   //     生成器产物原样调用 `assert(cond, msg)`（一比一翻译），这里按 Dart 语义

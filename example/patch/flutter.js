@@ -7314,13 +7314,16 @@ LogicalKeyboardKey.__define = function () {
     consts['key' + letter] = [0x61 + c, letter];
   }
   LogicalKeyboardKey.__consts = consts;
+  // 静态 getter 统一成一张表，交给 __defineProtoGetter 一次挂载。
+  var keyGetters = {};
   for (var name in consts) {
-    __defineProtoGetter(LogicalKeyboardKey, name, (function (n) {
+    keyGetters[name] = (function (n) {
       return function () {
         return LogicalKeyboardKey.__byId(consts[n][0], consts[n][1]);
       };
-    })(name));
+    })(name);
   }
+  __defineProtoGetter(LogicalKeyboardKey, keyGetters);
 };
 LogicalKeyboardKey.__define();
 
