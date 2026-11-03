@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 b91dc995） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 6772374c） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'b91dc995') { return; }
-  G.__jsuiVersion = 'b91dc995';
+  if (G.__jsui && G.__jsuiVersion === '6772374c') { return; }
+  G.__jsuiVersion = '6772374c';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -638,6 +638,9 @@ G.debugPrint = function (message) {
   // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local：由拥有者
   // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【4】句柄注册表）。
   // 宿主侧回调用 __invokeEventHandler 触发。
+  //
+  // 句柄**只发给宿主**：JS 侧组件之间的回调是普通函数（见 element_json 的
+  // `_isJsSideWidget` 分派），因此这里不需要可调用对象。
   function __createFnHandle(f) {
     var id = __registerHandle(f, 'fn', { scope: 'local', sync: false });
     return { __fn: id };
@@ -786,20 +789,15 @@ G.debugPrint = function (message) {
   // `__bindFn` 的**反向操作**：JS 类内部要调一个「回调 prop」时，统一走这里。
   // 双下划线 = **运行时私有**，只允许生成器产出的 JS 类（逻辑组件）调用，
   // 组件使用方的业务代码不得直接引用（回调应由组件自身消费，见 AGENTS.md）。
-  // 产物里同一个回调可能是两种形态，取决于翻译层怎么下发：
-  //   - 可调用闭包：回调属于**当前 JS 组件**（`onEnd: _onEnd` 译成方法 tear-off）；
-  //   - 构建期句柄 `{__fn:id}`：回调是宿主事件句柄（`onPressed: () => …`），
-  //     真实函数登记在**本端**句柄表，本地 invoke 即可，不必绕宿主。
+  // JS 侧的回调值**一律是可调用函数**（构建期句柄本身也是可调用函数，见
+  // __createFnHandle）；只有宿主元素 props 才归一成 `{__fn:id}` 信封。
   // 反之，`on*` 回调也可能被整个丢掉（宿主自己消费的事件），此时静默返回
   // undefined —— 调用方不需要逐处判空/判类型，这正是收敛成单一入口的意义。
   // 与上面的 `invoke(id, args)` 区分：后者是**宿主回传**（按句柄 id 反查），
-  // 这里拿到的是**回调本身**（函数或句柄引用）。
+  // 这里拿到的是**回调本身**。
   G.__invokeCallback = function (target, args) {
     args = args || [];
     if (typeof target === 'function') { return target.apply(null, args); }
-    if (target && typeof target.__fn === 'number') {
-      return __callHandle(target.__fn, 'invoke', { args: args });
-    }
     return undefined;
   };
 

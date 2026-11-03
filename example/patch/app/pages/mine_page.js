@@ -339,7 +339,7 @@ export class MinePage extends StatefulWidget {
                 "icon": Icons.widgets_outlined,
                 "title": "组件案例",
                 "subtitle": "常用组件 原生 ↔ JS 同屏对比",
-                "onTap": this.__bindFn(4, [], () => AppRouter.openWidgetShowcase())
+                "onTap": () => AppRouter.openWidgetShowcase()
               }),
               (this.__k14 || (this.__k14 = new Divider({
                 "color": new Color({
@@ -352,7 +352,7 @@ export class MinePage extends StatefulWidget {
                 "icon": Icons.compare_arrows,
                 "title": "热更 Demo 列表",
                 "subtitle": "HelloCard / ProviderCard / WatchDemo 等对比",
-                "onTap": this.__bindFn(5, [], () => AppRouter.openDemoList())
+                "onTap": () => AppRouter.openDemoList()
               })
             ]
           })

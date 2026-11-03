@@ -1460,9 +1460,15 @@ class ElementTranslateContext implements ExprRenderer {
     if (e is FunctionExpression) {
       // 闭包体里可能 return 组件（`builder: (context, o) { ... return Row(...) }`），
       // 与 build 树走同一条管线：属性归一 + import 登记。
-      return withExprRenderer(
+      final js = withExprRenderer(
         () => closureToJs(e, _dataScope(), const {}, this),
       );
+      if (js != null) return js;
+      // 通用闭包翻译翻不出的表达式（典型：闭包里是 @HostInjected 静态调用 /
+      // setState 等**只有事件作用域支持**的写法）→ 用事件闭包翻译，但**仍然
+      // 产出普通函数**（绝不降级成 `__bindFn` 句柄）：该值的消费方是 JS 组件，
+      // 子组件按 Dart 语义直接调用字段（见 element_json 的 `_isJsSideWidget`）。
+      return _eventFnJs(e);
     }
     if (e is Identifier) {
       // `widget.<name>`：State 里转发 widget 自身成员，合并类里就是实例成员；

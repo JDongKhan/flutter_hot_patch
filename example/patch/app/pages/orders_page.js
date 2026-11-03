@@ -147,7 +147,7 @@ export class OrdersPage extends StatefulWidget {
               return new _OrderCard({
                 "order": o,
                 "statusColor": this._statusColor(o.status),
-                "onOpen": this.__bindFn(1, [o], () => AppRouter.openOrder(o.no))
+                "onOpen": () => AppRouter.openOrder(o.no)
               });
             }
           })
@@ -325,7 +325,7 @@ export class _OrderCard extends StatelessWidget {
                   (this.__k2 || (this.__k2 = new Spacer({}))),
                   ...(pending ? [new MiniButton({
                       "label": "取消",
-                      "onTap": this.__bindFn(1, [], () => AppRouter.toast("已取消订单 " + this.order.no + "（演示）"))
+                      "onTap": () => AppRouter.toast("已取消订单 " + this.order.no + "（演示）")
                     }), (this.__k15 || (this.__k15 = new SizedBox({
                       "width": 8
                     }))), new MiniButton({

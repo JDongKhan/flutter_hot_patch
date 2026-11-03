@@ -167,7 +167,7 @@ export class CommunityPage extends StatefulWidget {
             }))),
             "itemBuilder": (context, i) => new _ResourceCard({
               "resource": this._resources[i],
-              "onTap": this.__bindFn(2, [i], () => AppRouter.openResource(this._resources[i].id))
+              "onTap": () => AppRouter.openResource(this._resources[i].id)
             })
           })
         }),
@@ -189,7 +189,7 @@ export class CommunityPage extends StatefulWidget {
                         "right": 6
                       }))),
                       "child": new GestureDetector({
-                        "onTap": this.__bindFn(3, [s], () => this._selectFilter("sort", s)),
+                        "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)),
                         "child": new Container({
                           "padding": (this.__k16 || (this.__k16 = EdgeInsets.symmetric({
                             "horizontal": 12,
@@ -220,7 +220,7 @@ export class CommunityPage extends StatefulWidget {
                     })]); } return out; })(),
               (this.__k7 || (this.__k7 = new Spacer({}))),
               new GestureDetector({
-                "onTap": this.__bindFn(4, [], (...__a) => this._toggleFilter(...__a)),
+                "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a)),
                 "child": new Container({
                   "padding": (this.__k17 || (this.__k17 = EdgeInsets.symmetric({
                     "horizontal": 11,
@@ -354,14 +354,14 @@ export class _ListContent extends StatefulWidget {
                     }))),
                     "child": new _PostCard({
                       "post": p,
-                      "onTap": this.__bindFn(0, [p], () => AppRouter.openPost(p.id))
+                      "onTap": () => AppRouter.openPost(p.id)
                     })
                   })]); } return out; })())
           ]
         }),
         ...(this.openFilter ? [Positioned.fill({
             "child": new GestureDetector({
-              "onTap": this.__bindFn(1, [], (...__a) => this.toggleFilter(...__a)),
+              "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)),
               "child": new Container({
                 "color": (this.__k3 || (this.__k3 = new Color({
                   "value": 0x66000000
