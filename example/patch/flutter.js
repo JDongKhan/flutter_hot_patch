@@ -24,11 +24,6 @@ export class Component {
   // 或 props 键数组（带其中任一键时才懒）。运行时只读这个声明，不认识类型。
   static __lazy = false;
 
-  // 宿主 props 里**可能是函数**的键名单（构建期来自源码构造签名）。默认空 =
-  // 本类型没有回调，运行时零循环；有回调的类型覆盖成数组，签名不可得时覆盖
-  // 成 null（运行时回退全量扫描）。静态继承让「无回调」不必逐个类写空数组。
-  static __fnProps = [];
-
   // 把宿主元素的 props 按统一协议拆成 data / `__children`：widget 实参、widget
   // 数组、`__builder`、delegate 归子槽，其余归 props。**在元素构造期完成**，
   // reconciler 直接消费结果，不在 mount/patch 里做业务拆分。

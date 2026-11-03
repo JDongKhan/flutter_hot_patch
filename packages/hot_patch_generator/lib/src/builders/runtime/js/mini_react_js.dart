@@ -49,15 +49,14 @@ const String miniReactElementSource = r'''
   }
 
   // 宿主元素的函数形参名单：元素自带（`el.__fnProps`）优先，否则取类上的静态
-  // 声明（`Component.__fnProps = []` 是基类默认 = 本类型没有回调）。
-  // 字符串类型（`Component.host('X', …)`）没有类可查 → null = 未知，走全量扫描。
+  // 声明。**未声明 = undefined = 本类型没有回调**（零循环）；数组 = 名单；
+  // `null` = 签名不可得（回退全量扫描）。字符串类型没有类可查 → null。
   function __hostFnNamesOf(el) {
     var names = el.__fnProps;
     if (names !== undefined) { return names; }
     var T = el.__type;
     if (typeof T !== 'function') { return null; }
-    var s = T.__fnProps;
-    return s === undefined ? null : s;
+    return T.__fnProps;
   }
 
   // 宿主 props 跨语言下发前的统一折算：**函数值 → `{__fn:id}` 句柄**，其它值
@@ -66,12 +65,13 @@ const String miniReactElementSource = r'''
   //   - 结点独占缓存：兄弟结点 / 列表项各自一份，天然不串味（不需要编译期位点号）；
   //   - 结点卸载时随结点释放（见 __markUnmounted）。
   function __hostProps(host, props, anchor, fnNames) {
-    // 宿主包装类的构建期名单：只查声明为函数（或类型不可得）的那几个键。
-    // `[]` = 本类型没有回调（零循环）；`null`/`undefined` = 签名不可得 → 全扫。
-    var listed = fnNames !== undefined && fnNames !== null;
+    // 名单已知（数组，或 undefined = 本类型没有回调）：只查名单里的键；
+    // `null` = 签名不可得 → 全量扫描兜底。
+    var listed = fnNames !== null;
     var need = false, k, i;
     if (listed) {
-      for (i = 0; i < fnNames.length; i++) {
+      var count = fnNames ? fnNames.length : 0;
+      for (i = 0; i < count; i++) {
         if (typeof props[fnNames[i]] === 'function') { need = true; break; }
       }
     } else {

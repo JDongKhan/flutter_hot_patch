@@ -251,8 +251,8 @@ String hostWrapperSource(String type, {bool exported = true}) {
       ? ''
       : '  static __lazy = ${rule.isEmpty ? 'true' : '[${rule.map(jsonEncode).join(', ')}]'};\n';
   // 函数形参名单（构建期源码事实）：runtime 只查这几个键，避免遍历全部 props。
-  // 空名单不写（基类默认 `[]` = 无回调）；null = 找不到源码签名 → runtime 回退
-  // 全量扫描（不静默漏回调）。
+  // 空名单不写（未声明 = undefined = 无回调）；null = 找不到源码签名 → runtime
+  // 回退全量扫描（不静默漏回调）。
   final fnParams = CtorSignatures.instance?.functionParamsOf(type);
   final fnLine = fnParams == null
       ? '  static __fnProps = null;\n'
