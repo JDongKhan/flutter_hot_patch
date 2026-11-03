@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/input_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { PhoneLabel } from 'phone_label.js';
 import { Align, Alignment, Checkbox, Colors, Column, CrossAxisAlignment, DropdownButton, DropdownMenuItem, FilledButton, FontWeight, Icon, Icons, InputDecoration, Radio, Row, SizedBox, Slider, StatefulWidget, Switch, Text, TextEditingController, TextField, TextStyle } from '../flutter.js';
 
 // 组件 InputDetail
@@ -88,8 +89,8 @@ export class InputDetail extends StatefulWidget {
             "icon": new Icon({
               "icon": Icons.phone
             }),
-            "label": new Text({
-              "data": "手机号"
+            "label": new PhoneLabel({
+              "text": "手机号"
             })
           })
         }),

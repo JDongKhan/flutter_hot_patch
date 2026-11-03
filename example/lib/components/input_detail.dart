@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
+import 'phone_label.dart';
+
 @PatchEntry('InputDetail')
 class InputDetail extends StatefulWidget {
   const InputDetail({super.key});
@@ -88,10 +90,13 @@ class _InputDetailState extends State<InputDetail> {
           ),
         ),
         const SizedBox(height: 8),
+        // 自定义 JS 组件（StatelessWidget 子类）作为 InputDecoration 的 Widget
+        // 字段：运行时在序列化时就地执行 build（内部还套了一层 PhoneText），
+        // 递归展开成宿主可渲染的 Row / Icon / Text。
         TextField(
           decoration: InputDecoration(
             icon: Icon(Icons.phone),
-            label: Text('手机号'),
+            label: PhoneLabel(text: '手机号'),
           ),
         ),
         const SizedBox(height: 4),

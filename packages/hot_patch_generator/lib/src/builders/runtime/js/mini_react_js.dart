@@ -37,6 +37,15 @@ const String miniReactElementSource = r'''
     return true;
   }
 
+  // 日志预览：值对象里的描述内容可能很深 / 带复杂实例，只取一段可读文本。
+  function __jsonPreview(v) {
+    try {
+      var s = JSON.stringify(v);
+      if (s == null) { return ''; }
+      return s.length > 200 ? s.slice(0, 200) + '…' : s;
+    } catch (e) { return '<unserializable>'; }
+  }
+
   // 值对象（值类）里携带的宿主元素 → 宿主可还原的元素描述
   // `{type, props, children, element: true}`（还原入口见宿主 js_widget_registry
   // 的 `buildJsElement`，renderer 侧即 `JsRenderContext.element`）。
@@ -45,13 +54,24 @@ const String miniReactElementSource = r'''
   // 父级每次重建重建一次（与 Flutter 一致，没有 patch/diff 语义）。
   //
   // 判据只有协议：`__element === true` 的元素、数组、delegate 列表递归摊开，
-  // 其余值原样透传。JS 组件（重写了 build）必须由运行时驱动 build，宿主无法从
-  // JSON 还原 → 明确告警并丢弃，不静默降级。
-  function __descriptorOf(v) {
+  // 其余值原样透传。
+  //
+  // **JS 组件（重写了 build）就地展开**：值对象不进结点树，宿主没有可驱动的
+  // 结点，所以在序列化时按 reconciler 的同一入口 `__buildOf` 执行一次 build，
+  // 把结果递归摊成普通元素描述。build 结果里再套自定义组件由递归继续展开，
+  // 直到落到宿主可渲染的类型。语义边界：只跑 build 一次（无 initState /
+  // didChangeDependencies / setState / dispose，状态不刷新），展开失败时保留
+  // 原描述并打 `component: true` + 告警，宿主渲染为「未注册类型」占位。
+  function __descriptorOf(v, depth) {
+    depth = depth || 0;
     if (v == null) { return null; }
+    if (depth > 16) {
+      __warn('值对象里的元素嵌套过深（疑似自引用），已丢弃');
+      return null;
+    }
     if (Array.isArray(v)) {
       var arr = [];
-      for (var i = 0; i < v.length; i++) { arr.push(__descriptorOf(v[i])); }
+      for (var i = 0; i < v.length; i++) { arr.push(__descriptorOf(v[i], depth + 1)); }
       return arr;
     }
     if (!__isElement(v)) { return v; }
@@ -61,12 +81,26 @@ const String miniReactElementSource = r'''
       __warn('值对象里的元素缺少类型名，已丢弃');
       return null;
     }
-    if (typeof T === 'function' && T.prototype != null &&
-        Object.prototype.hasOwnProperty.call(T.prototype, 'build')) {
-      __warn('值对象里的 JS 组件 "' + type + '" 无法由宿主还原，已丢弃');
-      return null;
+    var isComponent = typeof T === 'function' && T.prototype != null &&
+      Object.prototype.hasOwnProperty.call(T.prototype, 'build');
+    if (isComponent) {
+      var built = null;
+      try {
+        // 与 reconciler 同一条 build 入口（锚点 = 该实例 / 页面），只执行一次。
+        built = __buildOf(v);
+      } catch (e) {
+        __warn('值对象里的 JS 组件 "' + type + '" build 失败：' +
+          (e && e.message ? e.message : String(e)));
+      }
+      if (built != null && built !== v) { return __descriptorOf(built, depth + 1); }
+      if (built === v) {
+        __warn('值对象里的 JS 组件 "' + type + '" build 返回自身（自引用），已丢弃');
+      }
+      // 展开失败：继续往下走，保留原描述并打标记（宿主给可见占位，不静默）。
     }
-    // props / 子槽在包装类构造期已按统一协议拆好（见 Component.__splitHost）。
+    // props / 子槽：宿主包装类在构造期已按统一协议拆好（见 Component.__splitHost）；
+    // JS 组件不拆分，widget 实参仍在 props 里——这里统一递归摊开，保证整棵描述
+    // 可 JSON 化（元素实例带 `__anchor` 等循环引用，不能直接下发）。
     var props = {}, children = {};
     var src = v.props || {};
     for (var k in src) {
@@ -76,7 +110,7 @@ const String miniReactElementSource = r'''
           '" 无法跨桥（值对象不进结点树，没有句柄归属），已丢弃');
         continue;
       }
-      props[k] = src[k];
+      props[k] = __descriptorOf(src[k], depth + 1);
     }
     var slots = v.__children || {};
     for (var sk in slots) {
@@ -91,13 +125,19 @@ const String miniReactElementSource = r'''
       if (sv != null && typeof sv === 'object' && !Array.isArray(sv) &&
           sv.__delegate === 'list') {
         children[sk] = {
-          __delegate: 'list', children: __descriptorOf(sv.children || [])
+          __delegate: 'list', children: __descriptorOf(sv.children || [], depth + 1)
         };
         continue;
       }
-      children[sk] = __descriptorOf(sv);
+      children[sk] = __descriptorOf(sv, depth + 1);
     }
-    return { type: type, props: props, children: children, element: true };
+    var out = { type: type, props: props, children: children, element: true };
+    if (isComponent) {
+      out.component = true;
+      __warn('值对象里的 JS 组件 "' + type + '" 未能展开（build 为空 / 抛错 / 自引用），' +
+        '将渲染为未注册占位；下发的描述：' + __jsonPreview(out));
+    }
+    return out;
   }
 
   // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local）。
