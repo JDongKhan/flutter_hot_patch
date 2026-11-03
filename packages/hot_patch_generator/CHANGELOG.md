@@ -9,6 +9,7 @@
 - **删除无用/兼容逻辑**：移除 `newRoot`、`releaseHandleFromHost`、`__isBuilderFn`、`__jsui.fn` / `__jsui.reg`（宿主未使用）、`keySig` 的 `__handle` 兜底，以及 flutter.js 模块级 `G.__str` / `G.objectToken` 单点交接（并入 `G.__core`）。
 - **纯内部命名澄清**：`G.__scopeOf`（接收 BuildContext 代理）改名 `G.__scopeOfContext`，与核心 `__scopeOf(instance, type)` 区分；`JsBuildContext` 改回 ES class 写法。
 - **修复 JS 侧组件回调被降级成句柄**（社区 / 订单列表点击报 `this.onTap/onOpen is not a function`）：`element_json` 本来按「目标是不是 JS 侧组件」分派——JS 组件下发可调用闭包，宿主 widget 下发 `__fn` 句柄；但 `element2js.functionJs` 在通用闭包翻译失败时（典型：闭包体内是 `@HostInjected` 静态调用，只有事件作用域支持）直接返回 null，调用方**静默回退成 `__bindFn` 句柄**，破坏了这一分派。现改为回退到事件闭包翻译、但**仍产出普通函数**（绝不降级成句柄）。组件间回调恢复「就是函数」，宿主边界仍走 `__bindFn`（位点缓存，无重复 bind），不引入 `__invokeCallback`。
+- **规则定死**：JS 消费方（JS 组件 / 逻辑组件）只接收**普通函数**，宿主 widget 才接收 `__fn` 句柄；`element_json` 不再在 JS 侧回调翻译失败时回退成句柄，改为明确构建期告警并丢弃该回调。`functionJs` 同时补齐了 `父级.receiver` 回调引用、条件表达式、括号 / `as` 包装等普通函数形态（这些**仅限回调位置** `callbackJs`，值位置仍按值翻译，静态常量如 `Colors.white` 不会被误包成闭包）。
 
 ## 0.3.7
 

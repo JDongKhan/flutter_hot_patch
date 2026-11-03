@@ -1456,7 +1456,12 @@ class ElementTranslateContext implements ExprRenderer {
   ///   - 方法 tear-off（`onReset: _resetFilter` / `onReset: widget._resetFilter`）→
   ///     绑定宿主实例的箭头闭包（直接传 `this._resetFilter` 会在子组件调用时丢 this）；
   ///   - 字段型回调透传（`onTap: onTap` / `onReset: widget.onReset`）→ 原样函数值。
-  String? functionJs(Expression e) {
+  /// 回调位置专用：在通用值翻译之上，额外支持「接收者成员」回调引用 /
+  /// 条件表达式等**只有回调语义下才成立**的形态。值位置（`color: Colors.white`）
+  /// 绝不能走这里——否则静态常量会被误包成闭包。
+  String? callbackJs(Expression e) => functionJs(e, callback: true);
+
+  String? functionJs(Expression e, {bool callback = false}) {
     if (e is FunctionExpression) {
       // 闭包体里可能 return 组件（`builder: (context, o) { ... return Row(...) }`），
       // 与 build 树走同一条管线：属性归一 + import 登记。
@@ -1470,9 +1475,42 @@ class ElementTranslateContext implements ExprRenderer {
       // 子组件按 Dart 语义直接调用字段（见 element_json 的 `_isJsSideWidget`）。
       return _eventFnJs(e);
     }
+    if (e is ParenthesizedExpression) {
+      return functionJs(e.expression, callback: callback);
+    }
+    if (e is AsExpression) {
+      return functionJs(e.expression, callback: callback);
+    }
+    if (callback && e is ConditionalExpression) {
+      // 条件表达式选回调：两个分支都必须能翻译成普通函数，整体按值下发。
+      final cond = rhsToJs(e.condition, _dataScope(), const {});
+      final a = functionJs(e.thenExpression, callback: true);
+      final b = functionJs(e.elseExpression, callback: true);
+      if (cond != null && a != null && b != null) {
+        return '($cond) ? ($a) : ($b)';
+      }
+      return null;
+    }
     if (e is Identifier) {
-      // `widget.<name>`：State 里转发 widget 自身成员，合并类里就是实例成员；
-      // 非 `widget.` 前缀的 `a.b` 不支持（返回 null，交给数据表达式分支）。
+      // `foo.onTap`（非 `widget.` 前缀）：**仅回调位置**把接收者成员视为回调引用
+      // （绑定 receiver 的普通箭头闭包）。值位置必须返回 null，交给静态常量 /
+      // 字段读取（`color: Colors.white` 不能被包成闭包）。
+      if (callback && e is PrefixedIdentifier && widgetMemberName(e) == null) {
+        final prefix = e.prefix.name;
+        final scope = _dataScope();
+        final String recv;
+        if (prefix == 'this' || prefix == 'widget') {
+          recv = 'this';
+        } else if (_locals.contains(prefix) ||
+            _loopVars.contains(prefix) ||
+            _methodParams.contains(prefix)) {
+          recv = scope.fieldRef(prefix) ?? prefix;
+        } else {
+          recv = scope.fieldRef(prefix) ?? 'this.$prefix';
+        }
+        return '(...__a) => $recv.${e.identifier.name}(...__a)';
+      }
+      // `widget.<name>`：State 里转发 widget 自身成员，合并类里就是实例成员。
       final name = e is PrefixedIdentifier ? widgetMemberName(e) : e.name;
       if (name == null) return null;
       // 局部可见的名字（build 局部 / 方法体局部 / 循环变量 / 闭包形参）优先于

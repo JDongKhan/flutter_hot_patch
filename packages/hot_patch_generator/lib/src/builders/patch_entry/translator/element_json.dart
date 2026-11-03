@@ -75,8 +75,18 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
         final fn = _functionOrNull(ctx, value);
         if (fn != null) {
           props[name] = fn;
-          continue;
+        } else if (value is NullLiteral) {
+          // `onXxx: null` 是「禁用」语义（与宿主侧一致），静默不下发。
+        } else {
+          // **规则定死**：JS 消费方只接收普通函数，绝不回退成 `__fn` 句柄
+          // （子组件会直接调用字段，句柄必然 `not a function`）。
+          // 翻译不出普通函数时明确告警并丢弃该回调，不做静默降级。
+          log.warning(
+            '[hot_patch_generator] ${ctx.sourcePath}: JS 组件 '
+            '${node.type}.$name 回调无法翻译为普通函数，已丢弃：${value.toSource()}',
+          );
         }
+        continue;
       }
       final h = _eventOrNull(ctx, value);
       if (h != null) props[name] = h;
@@ -246,7 +256,7 @@ String? _eventOrNull(ElementTranslateContext ctx, Expression e) {
 String? _functionOrNull(ElementTranslateContext ctx, Expression e) {
   if (e is NullLiteral) return null;
   try {
-    return ctx.functionJs(e);
+    return ctx.callbackJs(e);
   } catch (_) {
     return null;
   }
