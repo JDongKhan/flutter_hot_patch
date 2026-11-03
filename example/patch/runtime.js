@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 4f9390a4） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 80c3b66e） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '4f9390a4') { return; }
-  G.__jsuiVersion = '4f9390a4';
+  if (G.__jsui && G.__jsuiVersion === '80c3b66e') { return; }
+  G.__jsuiVersion = '80c3b66e';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -644,6 +644,18 @@ G.debugPrint = function (message) {
   function __createFnHandle(f) {
     var id = __registerHandle(f, 'fn', { scope: 'local', sync: false });
     return { __fn: id };
+  }
+
+  // 宿主元素的函数形参名单：元素自带（`el.__fnProps`）优先，否则取类上的静态
+  // 声明（`Component.__fnProps = []` 是基类默认 = 本类型没有回调）。
+  // 字符串类型（`Component.host('X', …)`）没有类可查 → null = 未知，走全量扫描。
+  function __hostFnNamesOf(el) {
+    var names = el.__fnProps;
+    if (names !== undefined) { return names; }
+    var T = el.__type;
+    if (typeof T !== 'function') { return null; }
+    var s = T.__fnProps;
+    return s === undefined ? null : s;
   }
 
   // 宿主 props 跨语言下发前的统一折算：**函数值 → `{__fn:id}` 句柄**，其它值
@@ -1563,7 +1575,7 @@ G.debugPrint = function (message) {
         __children: [], __parent: parent, __el: el
       };
       // 宿主 props 里的函数值在这里换成句柄（唯一的句柄创建点）。
-      hi.__props = __hostProps(hi, el.props || {}, el.__anchor || null, el.__fnProps);
+      hi.__props = __hostProps(hi, el.props || {}, el.__anchor || null, __hostFnNamesOf(el));
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
       __publishScope(hi, hi.__props);
       __hostNodes[hi.__id] = hi;
@@ -1747,7 +1759,7 @@ G.debugPrint = function (message) {
     if (oldIsHost) {
       var oldProps = oldInst.__props;
       // 先按新元素折算（函数 → 结点上已缓存的同一句柄，只更新实现），再比较。
-      var newProps = __hostProps(oldInst, el.props || {}, el.__anchor || null, el.__fnProps);
+      var newProps = __hostProps(oldInst, el.props || {}, el.__anchor || null, __hostFnNamesOf(el));
       if (!__propsEqual(oldProps, newProps)) {
         __emitOp({ op: 'props', id: oldInst.__id, props: newProps });
       }

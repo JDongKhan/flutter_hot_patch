@@ -1,11 +1,11 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.8",
-  "buildTime": "2026-11-03T14:08:42.410434",
+  "buildTime": "2026-11-03T14:12:09.377846",
   "resources": {
-    "flutter.js": "1d23fcae4d4c0bb07c78b99dcac0672cac83af79fd98450f6c0fd163b018aec2",
+    "flutter.js": "9abf123599d7127622429830bc5b02168f594672faa7b14b9d60b55a8d30355c",
     "provider.js": "975cc47fc5359987461e285b87c16afaec6686c6064a952030b447e93e3c4278",
-    "runtime.js": "15d336c6494452a288c3d72bca4018f709d914da59d8220eac3d2ba96ccb52ee",
+    "runtime.js": "8cebcae3b5baab2ebadf84e0446add2e5a90a565746fca795ff75f8fb03c0f29",
     "hot_module_base.js": "3c633c367d2c06f4927f3d6849044fe390131d4e70756a57f9e024d8ecf45dcf",
     "extensions/hot_module_base.js": "6d658e57214b734243ed825ff4f715de6ff2d00e2333f5308ce789c70eb72577",
     "app/model/app_models.js": "d9349a696021957a689d35ef4697b58d530cdcb8a8e6f2acabcc88d4bee4589b",
@@ -50,7 +50,7 @@
     "components/list_item.js": "6b485830b7343aa61fb7f931a487865d97ef793de9b3925ac444e1044a9e7413",
     "components/tab_detail.js": "91a3ff4a6f8a4b7fc5d34bcb9874d8ef2607b33b21d47d8ed43550b7b5f8d5ce",
     "components/sliver_fill_viewport_detail.js": "78857fd4462427f8012d503af8e1d3540d04350f4232b98174942c228db009e9",
-    "components/composite_component.js": "0939265b6d4178e1d552f97563f14f5f4bfca9031c84f874575d7783a46b55ad",
+    "components/composite_component.js": "eebc216025193d2e74145631634f24fdd60a64fdbc43abaa95d04a56b9e642bc",
     "components/input_detail.js": "3b8d7d455068220dd25c0b1c40c82d56e195d8bde1dc4631e907b3604576d699",
     "components/focus_detail.js": "fb1081f885a0712710956316585faedac5bd4cb3615863480a67b6f123647c13",
     "components/rich_text_detail.js": "4e1157d071a7987d79e92f8c25be923498fb7745a50c442d530489844a6ded77",
