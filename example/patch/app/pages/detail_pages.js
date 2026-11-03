@@ -22,7 +22,7 @@ export class MiniButton extends StatelessWidget {
   }
   build(context) {
     return new GestureDetector({
-      "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
+      "onTap": this.onTap,
       "child": new Container({
         "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
           "horizontal": 14,

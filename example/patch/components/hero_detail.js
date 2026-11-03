@@ -39,7 +39,7 @@ export class HeroDetail extends StatelessWidget {
           "height": 12
         }))),
         new GestureDetector({
-          "onTap": this.__bindFn(0, [], () => AppRouter.openHeroTarget(this.tag, this.label)),
+          "onTap": () => AppRouter.openHeroTarget(this.tag, this.label),
           "child": new Hero({
             "tag": this.tag,
             "transitionOnUserGestures": true,

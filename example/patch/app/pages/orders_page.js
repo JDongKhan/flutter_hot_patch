@@ -82,7 +82,7 @@ export class OrdersPage extends StatefulWidget {
                               "horizontal": 4
                             }))),
                             "child": new GestureDetector({
-                              "onTap": this.__bindFn(0, [s], () => this._pickStatus(s)),
+                              "onTap": () => { return this._pickStatus(s); },
                               "child": new Container({
                                 "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
                                   "horizontal": 13,
@@ -171,7 +171,7 @@ export class _OrderCard extends StatelessWidget {
   build(context) {
     var pending = (this.order.status == "待付款");
     return new GestureDetector({
-      "onTap": this.__bindFn(0, [], (...__a) => this.onOpen(...__a)),
+      "onTap": this.onOpen,
       "child": new Container({
         "decoration": new BoxDecoration({
           "color": Colors.white,

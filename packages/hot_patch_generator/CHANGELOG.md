@@ -5,11 +5,15 @@
 - **内部符号统一 `__` 前缀**：`emitOp` / `commitOps` / `mount` / `patch` / `unmount` / `registerHandle` / `handleOp` / `markDirty` / `pullComponent` / `scopeOf` / `nodeIdOf` / `keySig` / `objectToken` 等只在框架内使用的函数与状态表（`roots` / `handles` / `hostNodes` …）全部改名，开发者可据此一眼分辨「框架内部」与「对外契约」。
 - **日志统一走宿主通道**：删除 runtime.js / flutter.js 中全部 `console.*`，内部诊断改走 `__logText`（warn / error 级别，经 `_app_host_.invoke('log')` 进 `HotPatchLog`）；缓存追踪切面改用 `debugPrint`，release 下零跨桥。
 - **合并重复设计**：新增 `__openRoot` / `__closeRoot` 统一「页面根 / 弹层独立根」的建树与卸载事务，`mountRoot` / `disposeRoot` / `Panel.mount` / `Panel.closed` 收敛为薄封装；新增 `__withBuilding` / `__callLifecycle` 收敛 6 处构建锚点与卸载生命周期样板；`ListenableBuilder` / `ValueListenableBuilder` / `AnimatedBuilder` / `TweenAnimationBuilder` 共用 `__ListenableSubscriber`；逻辑组件的 props 摘除统一走 `Component.__propsExcept`。
-- **`Component` 内聚**：`__captureKey` / `__splitHost` 从模块级函数收进 `Component` 静态成员；空无参构造从宿主包装类与逻辑组件中删除（继承默认构造即等价）。
+- **`Component` 内聚**：`__splitHost` 从模块级函数收进 `Component` 静态成员；空无参构造从宿主包装类与逻辑组件中删除（继承默认构造即等价）。
 - **删除无用/兼容逻辑**：移除 `newRoot`、`releaseHandleFromHost`、`__isBuilderFn`、`__jsui.fn` / `__jsui.reg`（宿主未使用）、`keySig` 的 `__handle` 兜底，以及 flutter.js 模块级 `G.__str` / `G.objectToken` 单点交接（并入 `G.__core`）。
 - **纯内部命名澄清**：`G.__scopeOf`（接收 BuildContext 代理）改名 `G.__scopeOfContext`，与核心 `__scopeOf(instance, type)` 区分；`JsBuildContext` 改回 ES class 写法。
-- **修复 JS 侧组件回调被降级成句柄**（社区 / 订单列表点击报 `this.onTap/onOpen is not a function`）：`element_json` 本来按「目标是不是 JS 侧组件」分派——JS 组件下发可调用闭包，宿主 widget 下发 `__fn` 句柄；但 `element2js.functionJs` 在通用闭包翻译失败时（典型：闭包体内是 `@HostInjected` 静态调用，只有事件作用域支持）直接返回 null，调用方**静默回退成 `__bindFn` 句柄**，破坏了这一分派。现改为回退到事件闭包翻译、但**仍产出普通函数**（绝不降级成句柄）。组件间回调恢复「就是函数」，宿主边界仍走 `__bindFn`（位点缓存，无重复 bind），不引入 `__invokeCallback`。
-- **规则定死**：JS 消费方（JS 组件 / 逻辑组件）只接收**普通函数**，宿主 widget 才接收 `__fn` 句柄；`element_json` 不再在 JS 侧回调翻译失败时回退成句柄，改为明确构建期告警并丢弃该回调。`functionJs` 同时补齐了 `父级.receiver` 回调引用、条件表达式、括号 / `as` 包装等普通函数形态（这些**仅限回调位置** `callbackJs`，值位置仍按值翻译，静态常量如 `Colors.white` 不会被误包成闭包）。
+- **翻译层不再判断「是不是回调」**：具名实参一律按**值的形态**字面翻译——闭包 → JS 箭头函数、`Colors.white` → `Colors.white`、方法 tear-off → 绑定 this 的闭包。`autoValue` 删除了「非 builder 闭包内联 body / 下发类引用」的旧分支（它把 `onPressed: () => _a.requestFocus()` 变成**立即调用**、把 `create: (_) => CounterVm()` 变成裸类名）；provider 的 `create` 现在就是普通工厂闭包，provider.js 改为调用 `p.create()`。
+- **宿主边界统一生成句柄**：`mini-react` 新增 `__hostProps`，在宿主元素 props 下发前按 `typeof` 把**函数值**换成 `{__fn:id}`（信封只含 id，保证可 JSON 序列化）；句柄缓存在**宿主结点**上、按 prop 名索引——重建复用同一 id 只更新实现（props 不抖动）、兄弟 / 列表项各自独立（天然不串味）、结点卸载随结点释放。回调执行时用 `__core.anchor` 还原产出该元素的组件，`this.context` 与构造期句柄归属语义不变。
+- **删除 `__bindFn`**：翻译层不再发射 `this.__bindFn(位点号, [捕获值], …)`，运行时的 `__bindFn` / `__captureKey` / `__boundFn` / 编译期位点号 / `__eventCaptures` / `eventHandle` 一并移除；逻辑组件（LayoutBuilder / SliverPersistentHeader / Draggable / DragTarget）直接下发普通函数，由宿主边界统一折算。
+- **构造签名只用于「成员引用怎么渲染」**：`element_json` 仅判断具名形参是否声明为函数类型——函数位置上的 `a.b` 是方法 tear-off（包绑定闭包），普通值位置上是成员读取（原样引用，如 `Colors.white`）；不看属性名、不用 `on*` 约定。`CtorSignatures` 补齐 `super.x` 形参类型（`TextButton` / `ElevatedButton` 的 `required super.onPressed` 沿 `extends` 链取父类字段声明），修复这类构造里回调被当成普通值的问题。
+- **JS 侧组件回调**（社区 / 订单列表 `this.onTap` / `this.onOpen is not a function`）：JS 组件 props 不再经过任何句柄化，回调**就是函数**；`functionJs` 在通用闭包翻译失败时回退事件闭包翻译但仍产出普通函数，绝不降级成句柄。
+
 
 ## 0.3.7
 

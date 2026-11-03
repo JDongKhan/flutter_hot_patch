@@ -169,7 +169,7 @@ export class LayoutMoreDetail extends StatefulWidget {
         new Stack({
           "children": [
             new FilledButton({
-              "onPressed": this.__bindFn(0, [], () => this._tap("可点按钮")),
+              "onPressed": () => { return this._tap("可点按钮"); },
               "child": (this.__k17 || (this.__k17 = new Text({
                 "data": "可点击"
               })))
@@ -220,9 +220,7 @@ export class LayoutMoreDetail extends StatefulWidget {
             "boundaryMargin": (this.__k19 || (this.__k19 = EdgeInsets.all({
               "value": 20
             }))),
-            "onInteractionUpdate": this.__bindFn(1, [], (details) => this.setState(() => {
-              this._scale = details.scale;
-            })),
+            "onInteractionUpdate": (details) => { this.setState(() => { this._scale = details.scale; }); },
             "child": new Container({
               "width": 320,
               "height": 160,

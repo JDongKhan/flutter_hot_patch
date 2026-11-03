@@ -96,7 +96,7 @@ export class CommunityPage extends StatefulWidget {
                             "right": 8
                           }))),
                           "child": new GestureDetector({
-                            "onTap": this.__bindFn(0, [t], () => this._selectTab(t)),
+                            "onTap": () => { return this._selectTab(t); },
                             "child": new Container({
                               "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
                                 "horizontal": 15,
@@ -127,7 +127,7 @@ export class CommunityPage extends StatefulWidget {
                         })]); } return out; })(),
                   (this.__k7 || (this.__k7 = new Spacer({}))),
                   new GestureDetector({
-                    "onTap": this.__bindFn(1, [], () => AppRouter.toast("发布新动态（演示）")),
+                    "onTap": () => AppRouter.toast("发布新动态（演示）"),
                     "child": new Container({
                       "width": 32,
                       "height": 32,
@@ -189,7 +189,7 @@ export class CommunityPage extends StatefulWidget {
                         "right": 6
                       }))),
                       "child": new GestureDetector({
-                        "onTap": this.__bindFn(2, [s], () => this._selectFilter("sort", s)),
+                        "onTap": () => { return this._selectFilter("sort", s); },
                         "child": new Container({
                           "padding": (this.__k16 || (this.__k16 = EdgeInsets.symmetric({
                             "horizontal": 12,
@@ -220,7 +220,7 @@ export class CommunityPage extends StatefulWidget {
                     })]); } return out; })(),
               (this.__k7 || (this.__k7 = new Spacer({}))),
               new GestureDetector({
-                "onTap": this.__bindFn(3, [], (...__a) => this._toggleFilter(...__a)),
+                "onTap": (...__a) => this._toggleFilter(...__a),
                 "child": new Container({
                   "padding": (this.__k17 || (this.__k17 = EdgeInsets.symmetric({
                     "horizontal": 11,
@@ -361,7 +361,7 @@ export class _ListContent extends StatefulWidget {
         }),
         ...(this.openFilter ? [Positioned.fill({
             "child": new GestureDetector({
-              "onTap": this.__bindFn(0, [], (...__a) => this.toggleFilter(...__a)),
+              "onTap": this.toggleFilter,
               "child": new Container({
                 "color": (this.__k3 || (this.__k3 = new Color({
                   "value": 0x66000000
@@ -452,7 +452,7 @@ export class _FilterPanel extends StatefulWidget {
           "runSpacing": 8,
           "children": [
             ...(() => { var out = []; for (let v of values) { out.push.apply(out, [new GestureDetector({
-                    "onTap": this.__bindFn(0, [key, v], () => this.onPick(key, v)),
+                    "onTap": () => this.onPick(key, v),
                     "child": new Container({
                       "padding": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
                         "horizontal": 13,
@@ -517,7 +517,7 @@ export class _FilterPanel extends StatefulWidget {
               "children": [
                 new Expanded({
                   "child": new GestureDetector({
-                    "onTap": this.__bindFn(1, [], (...__a) => this.onReset(...__a)),
+                    "onTap": this.onReset,
                     "child": new Container({
                       "height": 42,
                       "alignment": Alignment.center,
@@ -547,7 +547,7 @@ export class _FilterPanel extends StatefulWidget {
                 }))),
                 new Expanded({
                   "child": new GestureDetector({
-                    "onTap": this.__bindFn(2, [], (...__a) => this.onApply(...__a)),
+                    "onTap": this.onApply,
                     "child": new Container({
                       "height": 42,
                       "alignment": Alignment.center,
@@ -592,7 +592,7 @@ export class _PostCard extends StatelessWidget {
   }
   build(context) {
     return new GestureDetector({
-      "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
+      "onTap": this.onTap,
       "child": new Container({
         "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
           "value": 10
@@ -741,7 +741,7 @@ export class _ResourceCard extends StatelessWidget {
   }
   build(context) {
     return new GestureDetector({
-      "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
+      "onTap": this.onTap,
       "child": new Container({
         "width": 156,
         "clipBehavior": Clip.antiAlias,

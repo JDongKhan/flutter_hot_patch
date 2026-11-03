@@ -41,7 +41,7 @@ export class ScrollDetail extends StatefulWidget {
           "data": "ListView.builder · 懒构建列表（offset: " + this._offset + "）"
         }),
         new NotificationListener({
-          "onNotification": this.__bindFn(0, [], (...__a) => this._onListScroll(...__a)),
+          "onNotification": (...__a) => this._onListScroll(...__a),
           "child": new SizedBox({
             "height": 160,
             "child": ListView.builder({
@@ -67,9 +67,7 @@ export class ScrollDetail extends StatefulWidget {
         new Align({
           "alignment": Alignment.centerLeft,
           "child": new TextButton({
-            "onPressed": this.__bindFn(1, [], () => this.setState(() => {
-              this._listSalt += 1;
-            })),
+            "onPressed": () => { this.setState(() => { this._listSalt += 1; }); },
             "child": (this.__k4 || (this.__k4 = new Text({
               "data": "列表换色（真实更新）"
             })))
@@ -139,7 +137,7 @@ export class ScrollDetail extends StatefulWidget {
         new Align({
           "alignment": Alignment.centerLeft,
           "child": new TextButton({
-            "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
+            "onPressed": (...__a) => this._scrollToEnd(...__a),
             "child": (this.__k9 || (this.__k9 = new Text({
               "data": "横向 · 跳到底"
             })))

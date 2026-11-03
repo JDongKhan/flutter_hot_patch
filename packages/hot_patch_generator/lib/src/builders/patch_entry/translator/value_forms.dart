@@ -54,29 +54,16 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
     return '$cond ? $a : $b';
   }
 
-  // 闭包：按**通用参数名约定**区分语义（约定与 widget 类型无关）——
-  //   `builder` / `xxxBuilder`（返回 widget 的回调，如 ListView.builder 的
-  //     itemBuilder、Builder 的 builder）→ 抽成组件方法，props 值 = 方法名，
-  //     运行时按名调用；
-  //   其余闭包（返回**值**，如 provider 的 `create: (_) => _modelA`）→
-  //     内联闭包体的 JS 表达式；闭包体是**类构造**（`(_) => MyModel()`）时
-  //     下发类引用（见 [_classRefOf]），由运行时决定何时 new 一次。
+  // 闭包：builder 协议参数按子树展开（返回 widget 的闭包，见 [isBuilderArg]）；
+  // 其余闭包**按字面下发**（JS 箭头函数）——闭包就是一个函数值，翻译层不判断
+  // 它是「回调」还是「工厂」：provider 的 `create: (_) => CounterVm()` 落成
+  // `(_) => new CounterVm({...})`，由消费方自己调用；是否需要跨语言句柄由运行时
+  // 在宿主边界按 `typeof` 决定。
   if (e is FunctionExpression) {
     if (isBuilderArg(name)) {
       return builderClosureJs(ctx, e);
     }
-    final body = e.body;
-    if (body is ExpressionFunctionBody) {
-      // 闭包体是**类构造**（`create: (_) => CounterVm()`）→ 下发**类引用**
-      // （裸类名）：运行时按「可调用工厂」语义决定何时 `new` 一次
-      // （provider 的 create 按 `typeof` 分流：类引用 → 构造并持有生命周期）。
-      // 内联成 `new CounterVm()` 会退化成「每次 build 都新建一个实例」，
-      // 语义与 Dart 的惰性创建不一致。
-      final classRef = _classRefOf(body.expression, ctx);
-      if (classRef != null) return classRef;
-      return _jsExprOrNull(body.expression, ctx);
-    }
-    return null;
+    return ctx.functionJs(e);
   }
 
   // 方法 tear-off / 回调透传：`resetFilter: _resetFilter`、
@@ -144,19 +131,6 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
   }
 
   return _jsExprOrNull(e, ctx);
-}
-
-/// 表达式是「类构造」（`CounterVm()` / `CounterVm(5)`）→ 返回该类名（JS 裸引用，
-/// 产物会 import 该类的模块）；不是类构造返回 null。
-///
-/// 用于「惰性工厂」值（provider 的 `create: (_) => MyModel()`）：产物要下发
-/// 类引用而不是实例。构造里的实参不下发（运行时按默认构造）——与旧口径一致。
-String? _classRefOf(Expression expr, ElementTranslateContext ctx) {
-  final (ctor, _) = ctx.ctorOf(expr);
-  if (ctor == null || !isClassName(ctor)) return null;
-  // 登记依赖：确保该类（跨文件模型类）被翻译并 import 进本产物。
-  ctx.collectDependency(ctor);
-  return ctor;
 }
 
 /// sliver 子结点提供者：按**构造类型**识别，与实参名无关。

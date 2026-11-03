@@ -19,7 +19,7 @@ export class PopScopeDetail extends StatefulWidget {
   build(context) {
     return new PopScope({
       "canPop": this._canPop,
-      "onPopInvokedWithResult": this.__bindFn(0, [], (...__a) => this._onPopInvoked(...__a)),
+      "onPopInvokedWithResult": (...__a) => this._onPopInvoked(...__a),
       "child": new Column({
         "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [
@@ -52,9 +52,7 @@ export class PopScopeDetail extends StatefulWidget {
               }))),
               new Switch({
                 "value": (!this._canPop),
-                "onChanged": this.__bindFn(1, [], (v) => this.setState(() => {
-                  this._canPop = (!v);
-                }))
+                "onChanged": (v) => { this.setState(() => { this._canPop = (!v); }); }
               }),
               new Text({
                 "style": (this.__k5 || (this.__k5 = new TextStyle({

@@ -33,7 +33,7 @@ export class GridDetail extends StatefulWidget {
         "foregroundColor": Colors.white
       }),
       "floatingActionButton": new FloatingActionButton({
-        "onPressed": this.__bindFn(0, [], (...__a) => this._jumpBottom(...__a)),
+        "onPressed": (...__a) => this._jumpBottom(...__a),
         "backgroundColor": Colors.teal,
         "foregroundColor": Colors.white,
         "tooltip": "跳到底",

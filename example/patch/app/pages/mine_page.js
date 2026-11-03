@@ -72,7 +72,7 @@ export class MinePage extends StatefulWidget {
           "child": new SafeArea({
             "bottom": false,
             "child": new GestureDetector({
-              "onTap": this.__bindFn(0, [], () => AppRouter.openLogin()),
+              "onTap": () => AppRouter.openLogin(),
               "child": new Row({
                 "children": [
                   new ClipOval({
@@ -166,7 +166,7 @@ export class MinePage extends StatefulWidget {
               "children": [
                 ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [new Expanded({
                         "child": new GestureDetector({
-                          "onTap": this.__bindFn(1, [], () => AppRouter.openOrders()),
+                          "onTap": () => AppRouter.openOrders(),
                           "child": new Column({
                             "children": [
                               new Text({
@@ -221,7 +221,7 @@ export class MinePage extends StatefulWidget {
                         "height": 1,
                         "indent": 56
                       })))] : []), new GestureDetector({
-                      "onTap": this.__bindFn(2, [i], () => this._openMenu(this._feed.menu[i])),
+                      "onTap": () => { return this._openMenu(this._feed.menu[i]); },
                       "child": new Padding({
                         "padding": (this.__k15 || (this.__k15 = EdgeInsets.fromLTRB({
                           "bottom": 12,
@@ -281,7 +281,7 @@ export class MinePage extends StatefulWidget {
             "top": 0
           }))),
           "child": new GestureDetector({
-            "onTap": this.__bindFn(3, [], () => AppRouter.toast("已退出登录（演示）")),
+            "onTap": () => AppRouter.toast("已退出登录（演示）"),
             "child": new Container({
               "height": 46,
               "alignment": Alignment.center,
@@ -376,7 +376,7 @@ export class _DevRow extends StatelessWidget {
   }
   build(context) {
     return new GestureDetector({
-      "onTap": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
+      "onTap": this.onTap,
       "behavior": HitTestBehavior.opaque,
       "child": new Padding({
         "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({

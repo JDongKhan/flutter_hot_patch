@@ -323,7 +323,7 @@ ${namedCtorStatics(type, extra: const ['builder', 'separated'])}
 /// 因此元素写成 `Component.host(<类名>, props, children)`（类引用，由本模块 export），
 /// 运行时 `new` 该组件类并按组件路径挂载，由组件 `build()` 自行消费 props
 /// （provider 提供/消费 VM、Builder 委托拥有者方法返回子树）。运行时会给普通
-/// 类实例补挂 `props/setState/context/__bindFn`
+/// 类实例补挂 `props/setState/context`
 /// （见 js_ui/runtime_js.dart）。键集合与 js_class_defs 的
 /// `logicWidgetTypes` 一致。
 const Map<String, String> logicWidgetSources = {
@@ -610,9 +610,10 @@ export class LayoutBuilder extends Component {
       return null;
     }
     var self = this;
-    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
     // 宿主在布局阶段调用：实参是本结点的**父约束** JSON，不是事件参数。
-    var handle = this.__bindFn(0, [], function (json) {
+    // 这里只下发普通函数：宿主 props 下发的边界会把函数换成句柄，并按结点
+    // 复用同一个 id（见 runtime 的 `__hostProps`），重建不会新增句柄。
+    var handle = function (json) {
       var c = self.__constraintsOf(json);
       var prev = self.__constraints;
       if (prev && prev.minWidth === c.minWidth && prev.maxWidth === c.maxWidth &&
@@ -626,7 +627,7 @@ export class LayoutBuilder extends Component {
       // 就变成循环引用。
       self.__lbChild = builder(context, c);
       self.setState(function () {});
-    });
+    };
     var props = { 'builder': handle };
     if (this.__lbChild != null) { props.child = this.__lbChild; }
     return Component.host('LayoutBuilder', props);
@@ -661,9 +662,9 @@ export class SliverPersistentHeader extends Component {
       this.__sphSig = { shrinkOffset: 0, overlaps: false };
       this.__sphChild = delegate.build(context, 0, false);
     }
-    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
     // 宿主在布局阶段调用：实参是 {shrinkOffset, overlapsContent}，不是事件参数。
-    var handle = this.__bindFn(0, [], function (json) {
+    // 普通函数即可：宿主 props 下发边界会换成句柄并按结点复用（见 __hostProps）。
+    var handle = function (json) {
       var prev = self.__sphSig;
       if (prev && prev.shrinkOffset === json.shrinkOffset &&
           prev.overlaps === json.overlapsContent) {
@@ -673,7 +674,7 @@ export class SliverPersistentHeader extends Component {
       // 字段名不能叫 `__child`（reconciler 内部字段，见 LayoutBuilder 处的说明）。
       self.__sphChild = delegate.build(context, json.shrinkOffset, json.overlapsContent);
       self.setState(function () {});
-    });
+    };
     var props = {
       'minExtent': delegate.minExtent,
       'maxExtent': delegate.maxExtent,
@@ -701,8 +702,9 @@ export class ChangeNotifierProvider extends Component {
     var p = this.props;
     var notifier = null, owns = false;
     if (p.create !== undefined && p.create !== null) {
-      if (typeof p.create === 'function') { notifier = new p.create(); }
-      else { notifier = p.create; }
+      // `create` 是**函数类型**形参，按统一规则下发普通函数（工厂闭包）：
+      // 只调用一次，实例生命周期归本组件。值形态（非函数）也兼容。
+      notifier = typeof p.create === 'function' ? p.create() : p.create;
       owns = true;
     } else if (p.value !== undefined && p.value !== null) {
       notifier = p.value;

@@ -211,7 +211,7 @@ class CtorSignatures {
         if (name == null) continue;
         if (p.isNamed) {
           named.add(name);
-          final isFn = _paramIsFunction(inner, fieldTypes);
+          final isFn = _paramIsFunction(inner, fieldTypes, decl);
           if (isFn == true) functionParams.add(name);
           if (isFn == false) nonFunctionParams.add(name);
         } else {
@@ -247,17 +247,21 @@ class CtorSignatures {
     return out;
   }
 
-  /// 该形参是否**声明为函数类型**；null = 类型不可得（交给命名约定兜底）。
+  /// 该形参是否**声明为函数类型**；null = 类型不可得（交给表达式形态兜底）。
   ///
   /// 判定只看类型标注本身（语法），不需要类型解析：
   ///   - `void Function(T)` 这类 `GenericFunctionType` → 函数；
   ///   - 裸 `Function` → 函数；
   ///   - typedef（`VoidCallback` / `ValueChanged<T>` / `ConfirmDismissCallback` …）
   ///     → 查源码里的 typedef 声明，右侧是函数类型即函数；
+  ///   - `super.x`（`required super.onPressed`）在语法上无类型标注，沿 `extends`
+  ///     链找父类的同名字段 / 构造形参（Flutter 全生态用这种写法，`TextButton`
+  ///     的 `onPressed` 类型只在 `ButtonStyleButton` 的字段声明处）；
   ///   - 其余具名类型 / 内置类型 → 非函数。
   bool? _paramIsFunction(
     FormalParameter p,
     Map<String, TypeAnnotation> fieldTypes,
+    ClassDeclaration decl,
   ) {
     // 老式「函数形参」写法（`void onDone(int v)`）本身就是函数类型。
     if (p is FunctionTypedFormalParameter) return true;
@@ -267,7 +271,7 @@ class CtorSignatures {
     } else if (p is FieldFormalParameter) {
       type = p.type ?? fieldTypes[p.name.lexeme];
     } else if (p is SuperFormalParameter) {
-      type = p.type;
+      type = p.type ?? _superDeclaredType(decl, p.name.lexeme);
     }
     if (type == null) return null;
     if (type is GenericFunctionType) return true;
@@ -277,6 +281,50 @@ class CtorSignatures {
       return _isFunctionTypedef(name);
     }
     return false;
+  }
+
+  /// `super.x` 形参的类型：父类同名字段声明 / 父类构造形参 / 再上一层父类。
+  ///
+  /// 只沿 `extends` 链查源码（不解析泛型实参），找不到返回 null。
+  TypeAnnotation? _superDeclaredType(ClassDeclaration decl, String name) {
+    var current = decl;
+    final seen = <String>{};
+    while (true) {
+      final sup = current.extendsClause?.superclass.name2.lexeme;
+      if (sup == null || !seen.add(sup)) return null;
+      ClassDeclaration? target;
+      for (final file in _ensureIndex()[sup] ?? const <String>[]) {
+        final unit = _units.containsKey(file)
+            ? _units[file]
+            : _units[file] = parseUnitFile(file);
+        if (unit == null) continue;
+        for (final d in unit.declarations) {
+          if (d is ClassDeclaration && d.name.lexeme == sup) {
+            target = d;
+            break;
+          }
+        }
+        if (target != null) break;
+      }
+      if (target == null) return null;
+      final fromField = _instanceFieldTypes(target)[name];
+      if (fromField != null) return fromField;
+      for (final m in target.members) {
+        if (m is! ConstructorDeclaration) continue;
+        for (final p in m.parameters.parameters) {
+          final inner = p is DefaultFormalParameter ? p.parameter : p;
+          if (_paramName(inner) != name) continue;
+          if (inner is SimpleFormalParameter) {
+            if (inner.type != null) return inner.type;
+          } else if (inner is FieldFormalParameter) {
+            if (inner.type != null) return inner.type;
+          } else if (inner is SuperFormalParameter) {
+            if (inner.type != null) return inner.type;
+          }
+        }
+      }
+      current = target;
+    }
   }
 
   /// 源码里的 typedef 是否是**函数类型别名**。

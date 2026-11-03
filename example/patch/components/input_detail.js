@@ -56,7 +56,7 @@ export class InputDetail extends StatefulWidget {
         }))),
         new TextField({
           "controller": this._controller,
-          "onChanged": this.__bindFn(0, [], (...__a) => this._onTextChanged(...__a)),
+          "onChanged": (...__a) => this._onTextChanged(...__a),
           "decoration": (this.__k1 || (this.__k1 = new InputDecoration({
             "hintText": "请输入文本",
             "labelText": "用户名"
@@ -89,7 +89,7 @@ export class InputDetail extends StatefulWidget {
         new Align({
           "alignment": Alignment.centerLeft,
           "child": new FilledButton({
-            "onPressed": this.__bindFn(1, [], () => this._controller.clear()),
+            "onPressed": () => { return this._controller.clear(); },
             "child": (this.__k7 || (this.__k7 = new Text({
               "data": "清空输入"
             })))
@@ -110,7 +110,7 @@ export class InputDetail extends StatefulWidget {
             new Radio({
               "value": "A",
               "groupValue": this._choice,
-              "onChanged": this.__bindFn(2, [], (...__a) => this._onChoiceChanged(...__a)),
+              "onChanged": (...__a) => this._onChoiceChanged(...__a),
               "activeColor": Colors.deepPurple
             }),
             (this.__k10 || (this.__k10 = new Text({
@@ -119,7 +119,7 @@ export class InputDetail extends StatefulWidget {
             new Radio({
               "value": "B",
               "groupValue": this._choice,
-              "onChanged": this.__bindFn(3, [], (...__a) => this._onChoiceChanged(...__a)),
+              "onChanged": (...__a) => this._onChoiceChanged(...__a),
               "activeColor": Colors.deepPurple
             }),
             (this.__k11 || (this.__k11 = new Text({
@@ -147,7 +147,7 @@ export class InputDetail extends StatefulWidget {
         new DropdownButton({
           "value": this._dropdown,
           "isExpanded": true,
-          "onChanged": this.__bindFn(4, [], (...__a) => this._onDropdownChanged(...__a)),
+          "onChanged": (...__a) => this._onDropdownChanged(...__a),
           "items": [
             new DropdownMenuItem({
               "value": "苹果",
@@ -176,7 +176,7 @@ export class InputDetail extends StatefulWidget {
           "children": [
             new Switch({
               "value": this._switchOn,
-              "onChanged": this.__bindFn(5, [], (...__a) => this._onSwitchChanged(...__a)),
+              "onChanged": (...__a) => this._onSwitchChanged(...__a),
               "activeColor": Colors.white,
               "activeTrackColor": Colors.deepPurple,
               "inactiveThumbColor": Colors.grey,
@@ -194,7 +194,7 @@ export class InputDetail extends StatefulWidget {
           "children": [
             new Checkbox({
               "value": this._checked,
-              "onChanged": this.__bindFn(6, [], (...__a) => this._onCheckChanged(...__a)),
+              "onChanged": (...__a) => this._onCheckChanged(...__a),
               "activeColor": Colors.deepPurple,
               "checkColor": Colors.white
             }),
@@ -223,7 +223,7 @@ export class InputDetail extends StatefulWidget {
           "label": ((this._slider * 100)).round() + "%",
           "activeColor": Colors.deepPurple,
           "inactiveColor": Colors.grey.shade300,
-          "onChanged": this.__bindFn(7, [], (...__a) => this._onSliderChanged(...__a))
+          "onChanged": (...__a) => this._onSliderChanged(...__a)
         })
       ]
     });

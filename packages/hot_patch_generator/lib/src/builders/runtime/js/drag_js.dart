@@ -89,30 +89,32 @@ const String dragJsSource = r'''
 // build 里调 `this.__sourceProps()`）。不设基类：这两个组件类排在本模块的值类区
 // 之前，继承会撞 TDZ；同一段源码由生成器分别插进两个类即可，无重复实现。
 const String dragSourcePropsMethodSource = '''
-  // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
+  // `data` 换成 id、四个事件下发普通函数（用户回调留在本侧，宿主只回传 id / 位置；
+  // 函数在宿主 props 下发边界统一换成句柄，见 runtime 的 `__hostProps`）。
   __sourceProps() {
     var self = this;
     var p = self.props || {};
     var props = self.__propsExcept(
       ['data', 'onDragStarted', 'onDragUpdate', 'onDragEnd', 'onDragCompleted']);
     props.data = DragData.ref(p.data);
-    // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
-    props.onDragStarted = self.__bindFn(0, [], function () {
+    // 普通函数即可：宿主 props 下发边界会换成句柄并按结点复用（见 __hostProps），
+    // 用户回调留在本侧，宿主只回传 id / 位置。
+    props.onDragStarted = function () {
       var f = self.props.onDragStarted;
       if (typeof f === 'function') { f(); }
-    });
-    props.onDragUpdate = self.__bindFn(1, [], function (json) {
+    };
+    props.onDragUpdate = function (json) {
       var f = self.props.onDragUpdate;
       if (typeof f === 'function') { f(DragData.updateDetails(json)); }
-    });
-    props.onDragEnd = self.__bindFn(2, [], function (json) {
+    };
+    props.onDragEnd = function (json) {
       var f = self.props.onDragEnd;
       if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
-    });
-    props.onDragCompleted = self.__bindFn(3, [], function () {
+    };
+    props.onDragCompleted = function () {
       var f = self.props.onDragCompleted;
       if (typeof f === 'function') { f(); }
-    });
+    };
     return props;
   }''';
 
@@ -145,7 +147,7 @@ const String dragTargetPropsMethodSource = '''
       ['builder', 'onWillAccept', 'onWillAcceptWithDetails',
        'onAccept', 'onAcceptWithDetails', 'onMove', 'onLeave']);
     // 悬停时宿主会反复回调：同一次候选集合只重建一次子树（id 列表即身份签名）。
-    props.builder = self.__bindFn(0, [], function (json) {
+    props.builder = function (json) {
       json = json || {};
       var sig = (json.candidate || []).join('|') + '#' + (json.rejected || []).join('|');
       if (sig === self.__dragSig) { return; }
@@ -155,23 +157,23 @@ const String dragTargetPropsMethodSource = '''
       self.__dragTargetChild = builder(
         context, DragData.list(json.candidate), DragData.list(json.rejected));
       self.setState(function () {});
-    });
-    props.onAccept = self.__bindFn(1, [], function (id) {
+    };
+    props.onAccept = function (id) {
       var f = self.props.onAccept;
       if (typeof f === 'function') { f(DragData.of(id)); }
-    });
-    props.onAcceptWithDetails = self.__bindFn(2, [], function (json) {
+    };
+    props.onAcceptWithDetails = function (json) {
       var f = self.props.onAcceptWithDetails;
       if (typeof f === 'function') { f(DragData.targetDetails(json)); }
-    });
-    props.onMove = self.__bindFn(3, [], function (json) {
+    };
+    props.onMove = function (json) {
       var f = self.props.onMove;
       if (typeof f === 'function') { f(DragData.targetDetails(json)); }
-    });
-    props.onLeave = self.__bindFn(4, [], function (id) {
+    };
+    props.onLeave = function (id) {
       var f = self.props.onLeave;
       if (typeof f === 'function') { f(DragData.of(id)); }
-    });
+    };
     if (self.__dragTargetChild != null) { props.child = self.__dragTargetChild; }
     return props;
   }''';

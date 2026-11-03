@@ -81,13 +81,13 @@ export class DialogDetail extends StatefulWidget {
           "runSpacing": 8,
           "children": [
             new FilledButton({
-              "onPressed": this.__bindFn(0, [], () => this._openMaterial()),
+              "onPressed": () => { return this._openMaterial(); },
               "child": (this.__k6 || (this.__k6 = new Text({
                 "data": "打开"
               })))
             }),
             new OutlinedButton({
-              "onPressed": this.__bindFn(1, [], () => this._openNonDismissible()),
+              "onPressed": () => { return this._openNonDismissible(); },
               "child": (this.__k7 || (this.__k7 = new Text({
                 "data": "打开（点遮罩不关）"
               })))
@@ -107,7 +107,7 @@ export class DialogDetail extends StatefulWidget {
           "height": 4
         }))),
         new OutlinedButton({
-          "onPressed": this.__bindFn(2, [], () => this._openSheet()),
+          "onPressed": () => { return this._openSheet(); },
           "child": (this.__k9 || (this.__k9 = new Text({
             "data": "打开底部弹层"
           })))
@@ -129,19 +129,19 @@ export class DialogDetail extends StatefulWidget {
           "runSpacing": 8,
           "children": [
             new OutlinedButton({
-              "onPressed": this.__bindFn(3, [], () => this._openCupertino()),
+              "onPressed": () => { return this._openCupertino(); },
               "child": (this.__k11 || (this.__k11 = new Text({
                 "data": "showCupertinoDialog"
               })))
             }),
             new OutlinedButton({
-              "onPressed": this.__bindFn(4, [], () => this._openAdaptive()),
+              "onPressed": () => { return this._openAdaptive(); },
               "child": (this.__k12 || (this.__k12 = new Text({
                 "data": "showAdaptiveDialog"
               })))
             }),
             new OutlinedButton({
-              "onPressed": this.__bindFn(5, [], () => this._openCupertinoSheet()),
+              "onPressed": () => { return this._openCupertinoSheet(); },
               "child": (this.__k13 || (this.__k13 = new Text({
                 "data": "showCupertinoModalPopup"
               })))
@@ -161,7 +161,7 @@ export class DialogDetail extends StatefulWidget {
           "height": 4
         }))),
         new OutlinedButton({
-          "onPressed": this.__bindFn(6, [], () => this._openGeneral()),
+          "onPressed": () => { return this._openGeneral(); },
           "child": (this.__k15 || (this.__k15 = new Text({
             "data": "打开自定义弹窗"
           })))
@@ -244,13 +244,13 @@ export class GeneralDialogContent extends StatelessWidget {
               "runSpacing": 8,
               "children": [
                 new FilledButton({
-                  "onPressed": this.__bindFn(0, [], () => Navigator.of(this.context).pop("自定义确定")),
+                  "onPressed": () => { return Navigator.of(context).pop("自定义确定"); },
                   "child": (this.__k5 || (this.__k5 = new Text({
                     "data": "确定"
                   })))
                 }),
                 new OutlinedButton({
-                  "onPressed": this.__bindFn(1, [], () => Navigator.of(this.context).pop(null)),
+                  "onPressed": () => { return Navigator.of(context).pop(null); },
                   "child": (this.__k6 || (this.__k6 = new Text({
                     "data": "取消"
                   })))
@@ -279,21 +279,21 @@ export class ActionSheetContent extends StatelessWidget {
       }))),
       "actions": [
         new CupertinoActionSheetAction({
-          "onPressed": this.__bindFn(0, [], () => Navigator.of(this.context).pop("选项 A")),
+          "onPressed": () => { return Navigator.of(context).pop("选项 A"); },
           "child": (this.__k2 || (this.__k2 = new Text({
             "data": "选项 A"
           })))
         }),
         new CupertinoActionSheetAction({
           "isDestructiveAction": true,
-          "onPressed": this.__bindFn(1, [], () => Navigator.of(this.context).pop("删除")),
+          "onPressed": () => { return Navigator.of(context).pop("删除"); },
           "child": (this.__k3 || (this.__k3 = new Text({
             "data": "删除"
           })))
         })
       ],
       "cancelButton": new CupertinoActionSheetAction({
-        "onPressed": this.__bindFn(2, [], () => Navigator.of(this.context).pop(null)),
+        "onPressed": () => { return Navigator.of(context).pop(null); },
         "child": (this.__k4 || (this.__k4 = new Text({
           "data": "取消"
         })))
@@ -320,14 +320,14 @@ export class CupertinoDialogContent extends StatelessWidget {
       }))),
       "actions": [
         new CupertinoDialogAction({
-          "onPressed": this.__bindFn(0, [], () => Navigator.of(this.context).pop(null)),
+          "onPressed": () => { return Navigator.of(context).pop(null); },
           "child": (this.__k2 || (this.__k2 = new Text({
             "data": "取消"
           })))
         }),
         new CupertinoDialogAction({
           "isDefaultAction": true,
-          "onPressed": this.__bindFn(1, [], () => Navigator.of(this.context).pop("iOS 风格确定")),
+          "onPressed": () => { return Navigator.of(context).pop("iOS 风格确定"); },
           "child": (this.__k3 || (this.__k3 = new Text({
             "data": "确定"
           })))
@@ -379,13 +379,13 @@ export class SheetContent extends StatelessWidget {
               "runSpacing": 8,
               "children": [
                 new FilledButton({
-                  "onPressed": this.__bindFn(0, [], () => Navigator.of(this.context).pop("底部确定")),
+                  "onPressed": () => { return Navigator.of(context).pop("底部确定"); },
                   "child": (this.__k5 || (this.__k5 = new Text({
                     "data": "确定"
                   })))
                 }),
                 new OutlinedButton({
-                  "onPressed": this.__bindFn(1, [], () => Navigator.of(this.context).pop(null)),
+                  "onPressed": () => { return Navigator.of(context).pop(null); },
                   "child": (this.__k6 || (this.__k6 = new Text({
                     "data": "取消"
                   })))
@@ -447,21 +447,19 @@ export class DialogContent extends StatefulWidget {
       }),
       "actions": [
         new TextButton({
-          "onPressed": this.__bindFn(0, [], () => this.setState(() => {
-            this._count += 1;
-          })),
+          "onPressed": () => { this.setState(() => { this._count += 1; }); },
           "child": (this.__k6 || (this.__k6 = new Text({
             "data": "+1"
           })))
         }),
         new TextButton({
-          "onPressed": this.__bindFn(1, [], () => Navigator.of(this.context).pop(null)),
+          "onPressed": () => { return Navigator.of(context).pop(null); },
           "child": (this.__k7 || (this.__k7 = new Text({
             "data": "取消"
           })))
         }),
         new TextButton({
-          "onPressed": this.__bindFn(2, [], () => Navigator.of(this.context).pop("确定，计数 = " + this._count)),
+          "onPressed": () => { return Navigator.of(context).pop("确定，计数 = " + this._count); },
           "child": (this.__k8 || (this.__k8 = new Text({
             "data": "确定"
           })))

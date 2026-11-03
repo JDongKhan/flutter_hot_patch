@@ -71,7 +71,7 @@ export class HomePage extends StatefulWidget {
           new Expanded({
             "child": new EasyRefresh({
               "controller": this._refreshController,
-              "onRefresh": this.__bindFn(0, [], (...__a) => this._load(...__a)),
+              "onRefresh": (...__a) => this._load(...__a),
               "child": new CustomScrollView({
                 "slivers": [
                   new SliverToBoxAdapter({
@@ -271,7 +271,7 @@ export class HomeHeader extends StatelessWidget {
             new Row({
               "children": [
                 new InkWell({
-                  "onTap": this.__bindFn(0, [], (...__a) => this.onPickCity(...__a)),
+                  "onTap": this.onPickCity,
                   "child": new Row({
                     "children": [
                       (this.__k2 || (this.__k2 = new Icon({
@@ -306,7 +306,7 @@ export class HomeHeader extends StatelessWidget {
                 }),
                 (this.__k6 || (this.__k6 = new Spacer({}))),
                 new InkWell({
-                  "onTap": this.__bindFn(1, [], (...__a) => this.onRefresh(...__a)),
+                  "onTap": this.onRefresh,
                   "borderRadius": (this.__k7 || (this.__k7 = BorderRadius.all({
                     "radius": Radius.circular({
                       "radius": 18
@@ -329,7 +329,7 @@ export class HomeHeader extends StatelessWidget {
                   "width": 8
                 }))),
                 new InkWell({
-                  "onTap": this.__bindFn(2, [], (...__a) => this.openMessages(...__a)),
+                  "onTap": (...__a) => this.openMessages(...__a),
                   "borderRadius": (this.__k7 || (this.__k7 = BorderRadius.all({
                     "radius": Radius.circular({
                       "radius": 18
@@ -378,7 +378,7 @@ export class HomeHeader extends StatelessWidget {
               "height": 12
             }))),
             new InkWell({
-              "onTap": this.__bindFn(3, [], (...__a) => this.openSearch(...__a)),
+              "onTap": (...__a) => this.openSearch(...__a),
               "borderRadius": (this.__k12 || (this.__k12 = BorderRadius.all({
                 "radius": Radius.circular({
                   "radius": 20
@@ -456,7 +456,7 @@ export class GridCell extends StatelessWidget {
   }
   build(context) {
     return new InkWell({
-      "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+      "onTap": (...__a) => this.open(...__a),
       "child": new Column({
         "mainAxisAlignment": MainAxisAlignment.center,
         "children": [
@@ -498,7 +498,7 @@ export class SpotCard extends StatelessWidget {
   }
   build(context) {
     return new InkWell({
-      "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+      "onTap": (...__a) => this.open(...__a),
       "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
         "radius": Radius.circular({
           "radius": 14
@@ -658,7 +658,7 @@ export class PromoCard extends StatelessWidget {
   }
   build(context) {
     return new InkWell({
-      "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+      "onTap": (...__a) => this.open(...__a),
       "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
         "radius": Radius.circular({
           "radius": 14

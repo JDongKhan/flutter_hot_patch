@@ -97,7 +97,7 @@ export class KeyboardListenerDetail extends StatefulWidget {
         new KeyboardListener({
           "focusNode": this._node,
           "autofocus": true,
-          "onKeyEvent": this.__bindFn(0, [], (...__a) => this._onKey(...__a)),
+          "onKeyEvent": (...__a) => this._onKey(...__a),
           "child": new Container({
             "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
               "value": 10
@@ -161,7 +161,7 @@ export class KeyboardListenerDetail extends StatefulWidget {
         new Row({
           "children": [
             new OutlinedButton({
-              "onPressed": this.__bindFn(1, [], () => this._node.requestFocus()),
+              "onPressed": () => { return this._node.requestFocus(); },
               "child": (this.__k12 || (this.__k12 = new Text({
                 "data": "让面板获得焦点"
               })))
@@ -170,7 +170,7 @@ export class KeyboardListenerDetail extends StatefulWidget {
               "width": 8
             }))),
             new OutlinedButton({
-              "onPressed": this.__bindFn(2, [], () => { this.setState(() => { this._row = 1; this._col = 1; this._lit = false; }); }),
+              "onPressed": () => { this.setState(() => { this._row = 1; this._col = 1; this._lit = false; }); },
               "child": (this.__k14 || (this.__k14 = new Text({
                 "data": "复位方块"
               })))

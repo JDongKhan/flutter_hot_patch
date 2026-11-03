@@ -18,7 +18,7 @@ export class WatchDemo extends StatefulWidget {
           "value": 16
         }))),
         "child": new ChangeNotifierProvider({
-          "create": CounterVm,
+          "create": (_) => { return new CounterVm(); },
           "child": new Column({
             "mainAxisSize": MainAxisSize.min,
             "children": [
@@ -46,7 +46,7 @@ export class WatchDemo extends StatefulWidget {
                         "mainAxisAlignment": MainAxisAlignment.center,
                         "children": [
                           new ElevatedButton({
-                            "onPressed": this.__bindFn(0, [model], () => model.inc()),
+                            "onPressed": () => { return model.inc(); },
                             "child": (this.__k4 || (this.__k4 = new Text({
                               "data": "+1"
                             })))
@@ -55,7 +55,7 @@ export class WatchDemo extends StatefulWidget {
                             "width": 12
                           }))),
                           new ElevatedButton({
-                            "onPressed": this.__bindFn(1, [], () => { this.context.read("CounterVm").reset(); }),
+                            "onPressed": () => { context.read("CounterVm").reset(); },
                             "child": (this.__k6 || (this.__k6 = new Text({
                               "data": "Reset"
                             })))

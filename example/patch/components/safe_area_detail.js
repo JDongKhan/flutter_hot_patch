@@ -44,9 +44,7 @@ export class SafeAreaDetail extends StatefulWidget {
             }))),
             new Switch({
               "value": this._enabled,
-              "onChanged": this.__bindFn(0, [], (v) => this.setState(() => {
-                this._enabled = v;
-              }))
+              "onChanged": (v) => { this.setState(() => { this._enabled = v; }); }
             })
           ]
         }),

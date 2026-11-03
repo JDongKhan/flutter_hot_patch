@@ -35,9 +35,7 @@ export class RadioGroupDetail extends StatefulWidget {
         }))),
         new RadioGroup({
           "groupValue": this._selected,
-          "onChanged": this.__bindFn(0, [], (v) => this.setState(() => {
-            this._selected = (v ?? this._selected);
-          })),
+          "onChanged": (v) => { this.setState(() => { this._selected = (v ?? this._selected); }); },
           "child": new Column({
             "crossAxisAlignment": CrossAxisAlignment.start,
             "children": [

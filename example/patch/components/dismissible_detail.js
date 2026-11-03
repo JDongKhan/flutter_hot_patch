@@ -42,7 +42,7 @@ export class DismissibleDetail extends StatefulWidget {
         }))),
         ...(() => { var out = []; for (let item of this._items) { out.push.apply(out, [new Dismissible({
                 "direction": DismissDirection.horizontal,
-                "confirmDismiss": this.__bindFn(0, [], (...__a) => this._confirm(...__a)),
+                "confirmDismiss": (...__a) => this._confirm(...__a),
                 "background": new Container({
                   "color": Colors.red,
                   "alignment": Alignment.centerLeft,
@@ -65,7 +65,7 @@ export class DismissibleDetail extends StatefulWidget {
                     "icon": Icons.block
                   })))
                 }),
-                "onDismissed": this.__bindFn(1, [item], (direction) => { this.setState(() => { this._items.remove(item); this._last = "已删除：" + item; }); }),
+                "onDismissed": (direction) => { this.setState(() => { this._items.remove(item); this._last = "已删除：" + item; }); },
                 "child": new Container({
                   "color": Colors.white,
                   "child": new ListTile({
@@ -92,7 +92,7 @@ export class DismissibleDetail extends StatefulWidget {
         new Align({
           "alignment": Alignment.centerLeft,
           "child": new OutlinedButton({
-            "onPressed": this.__bindFn(2, [], (...__a) => this._reset(...__a)),
+            "onPressed": (...__a) => this._reset(...__a),
             "child": (this.__k9 || (this.__k9 = new Text({
               "data": "重置"
             })))

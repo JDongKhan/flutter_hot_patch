@@ -127,32 +127,32 @@ export class HelloCard extends StatefulWidget {
         new Row({
           "children": [
             new ElevatedButton({
-              "onPressed": this.__bindFn(0, [], (...__a) => this.inc(...__a)),
+              "onPressed": (...__a) => this.inc(...__a),
               "style": ElevatedButton.styleFrom({ "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background), "foregroundColor": Colors.white }),
               "child": (this.__k1 || (this.__k1 = new Text({
                 "data": "+1"
               })))
             }),
             new ElevatedButton({
-              "onPressed": this.__bindFn(1, [], () => this.reset()),
+              "onPressed": () => { return this.reset(); },
               "child": (this.__k2 || (this.__k2 = new Text({
                 "data": "Reset"
               })))
             }),
             new ElevatedButton({
-              "onPressed": this.__bindFn(2, [], (...__a) => this.showNative(...__a)),
+              "onPressed": (...__a) => this.showNative(...__a),
               "child": (this.__k3 || (this.__k3 = new Text({
                 "data": "Native"
               })))
             }),
             new ElevatedButton({
-              "onPressed": this.__bindFn(3, [], (...__a) => this.loadUser(...__a)),
+              "onPressed": (...__a) => this.loadUser(...__a),
               "child": (this.__k4 || (this.__k4 = new Text({
                 "data": "Load User"
               })))
             }),
             new ElevatedButton({
-              "onPressed": this.__bindFn(4, [], (...__a) => this.demoTryCatchAssert(...__a)),
+              "onPressed": (...__a) => this.demoTryCatchAssert(...__a),
               "child": (this.__k5 || (this.__k5 = new Text({
                 "data": "Try/Catch"
               })))

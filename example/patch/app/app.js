@@ -60,7 +60,7 @@ export class AppSubContent extends StatefulWidget {
       }),
       "bottomNavigationBar": new BottomNavigationBar({
         "currentIndex": this._index,
-        "onTap": this.__bindFn(0, [], (...__a) => this._openTab(...__a)),
+        "onTap": (...__a) => this._openTab(...__a),
         "type": BottomNavigationBarType.fixed,
         "backgroundColor": Colors.white,
         "selectedItemColor": (this.__k6 || (this.__k6 = new Color({

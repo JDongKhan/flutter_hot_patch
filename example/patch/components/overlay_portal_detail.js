@@ -40,7 +40,7 @@ export class OverlayPortalDetail extends StatefulWidget {
         new Row({
           "children": [
             new FilledButton({
-              "onPressed": this.__bindFn(0, [], () => this._switchAlignment("left")),
+              "onPressed": () => { return this._switchAlignment("left"); },
               "child": (this.__k3 || (this.__k3 = new Text({
                 "data": "left"
               })))
@@ -49,7 +49,7 @@ export class OverlayPortalDetail extends StatefulWidget {
               "width": 8
             }))),
             new FilledButton({
-              "onPressed": this.__bindFn(1, [], () => this._switchAlignment("center")),
+              "onPressed": () => { return this._switchAlignment("center"); },
               "child": (this.__k5 || (this.__k5 = new Text({
                 "data": "center"
               })))
@@ -58,7 +58,7 @@ export class OverlayPortalDetail extends StatefulWidget {
               "width": 8
             }))),
             new FilledButton({
-              "onPressed": this.__bindFn(2, [], () => this._switchAlignment("right")),
+              "onPressed": () => { return this._switchAlignment("right"); },
               "child": (this.__k6 || (this.__k6 = new Text({
                 "data": "right"
               })))
@@ -79,7 +79,7 @@ export class OverlayPortalDetail extends StatefulWidget {
                 "seconds": 3
               }))),
               "child": new OutlinedButton({
-                "onPressed": this.__bindFn(3, [], (...__a) => this._replay(...__a)),
+                "onPressed": (...__a) => this._replay(...__a),
                 "child": (this.__k9 || (this.__k9 = new Text({
                   "data": "目标 A"
                 })))
@@ -97,7 +97,7 @@ export class OverlayPortalDetail extends StatefulWidget {
                 "value": 0xE6307AF0
               }))),
               "child": new OutlinedButton({
-                "onPressed": this.__bindFn(4, [], (...__a) => this._replay(...__a)),
+                "onPressed": (...__a) => this._replay(...__a),
                 "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "目标 B"
                 })))

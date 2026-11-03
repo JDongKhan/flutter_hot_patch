@@ -57,9 +57,7 @@ export class ImplicitAnimationDetail extends StatefulWidget {
           "height": 10
         }))),
         new TextButton({
-          "onPressed": this.__bindFn(0, [], () => this.setState(() => {
-            this._big = (!this._big);
-          })),
+          "onPressed": () => { this.setState(() => { this._big = (!this._big); }); },
           "child": new Text({
             "data": this._big ? "收缩到 small" : "放大到 BIG"
           })
@@ -193,9 +191,7 @@ export class ImplicitAnimationDetail extends StatefulWidget {
           "children": [
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(1, [], () => this.setState(() => {
-                  this._visible = (!this._visible);
-                })),
+                "onPressed": () => { this.setState(() => { this._visible = (!this._visible); }); },
                 "child": new Text({
                   "data": this._visible ? "暗下来" : "亮起来"
                 })
@@ -203,9 +199,7 @@ export class ImplicitAnimationDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(2, [], () => this.setState(() => {
-                  this._moved = (!this._moved);
-                })),
+                "onPressed": () => { this.setState(() => { this._moved = (!this._moved); }); },
                 "child": new Text({
                   "data": this._moved ? "回到原位" : "旋转 + 位移"
                 })
@@ -268,9 +262,7 @@ export class ImplicitAnimationDetail extends StatefulWidget {
           })
         }),
         new TextButton({
-          "onPressed": this.__bindFn(3, [], () => this.setState(() => {
-            this._visible = (!this._visible);
-          })),
+          "onPressed": () => { this.setState(() => { this._visible = (!this._visible); }); },
           "child": new Text({
             "data": this._visible ? "切到 B" : "切回 A"
           })
@@ -331,9 +323,7 @@ export class ImplicitAnimationDetail extends StatefulWidget {
           "children": [
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(4, [], () => this.setState(() => {
-                  this._sizeExpanded = (!this._sizeExpanded);
-                })),
+                "onPressed": () => { this.setState(() => { this._sizeExpanded = (!this._sizeExpanded); }); },
                 "child": new Text({
                   "data": this._sizeExpanded ? "收起尺寸" : "展开尺寸"
                 })
@@ -341,9 +331,7 @@ export class ImplicitAnimationDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(5, [], () => this.setState(() => {
-                  this._slowSize = (!this._slowSize);
-                })),
+                "onPressed": () => { this.setState(() => { this._slowSize = (!this._slowSize); }); },
                 "child": new Text({
                   "data": this._slowSize ? "时长切回 300ms" : "时长切到 1200ms"
                 })
@@ -391,9 +379,7 @@ export class ImplicitAnimationDetail extends StatefulWidget {
           })
         }),
         new TextButton({
-          "onPressed": this.__bindFn(6, [], () => this.setState(() => {
-            this._switchIndex += 1;
-          })),
+          "onPressed": () => { this.setState(() => { this._switchIndex += 1; }); },
           "child": (this.__k21 || (this.__k21 = new Text({
             "data": "切换子组件（带 ValueKey）"
           })))

@@ -65,7 +65,7 @@ export class ExplicitAnimationDetail extends StatefulWidget {
           "children": [
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(0, [], () => this._controller.forward()),
+                "onPressed": () => { return this._controller.forward(); },
                 "child": (this.__k3 || (this.__k3 = new Text({
                   "data": "forward"
                 })))
@@ -73,7 +73,7 @@ export class ExplicitAnimationDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(1, [], () => this._controller.reverse()),
+                "onPressed": () => { return this._controller.reverse(); },
                 "child": (this.__k4 || (this.__k4 = new Text({
                   "data": "reverse"
                 })))
@@ -81,7 +81,7 @@ export class ExplicitAnimationDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(2, [], () => this._controller.repeat(true)),
+                "onPressed": () => { return this._controller.repeat({ "reverse": true }); },
                 "child": (this.__k5 || (this.__k5 = new Text({
                   "data": "repeat"
                 })))
@@ -89,7 +89,7 @@ export class ExplicitAnimationDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(3, [], () => this._controller.stop()),
+                "onPressed": () => { return this._controller.stop(); },
                 "child": (this.__k6 || (this.__k6 = new Text({
                   "data": "stop"
                 })))
@@ -97,7 +97,7 @@ export class ExplicitAnimationDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(4, [], () => this._controller.reset()),
+                "onPressed": () => { return this._controller.reset(); },
                 "child": (this.__k7 || (this.__k7 = new Text({
                   "data": "reset"
                 })))

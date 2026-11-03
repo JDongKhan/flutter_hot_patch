@@ -24,22 +24,6 @@ export class Component {
   // 或 props 键数组（带其中任一键时才懒）。运行时只读这个声明，不认识类型。
   static __lazy = false;
 
-  // 事件句柄的捕获值身份判定：对象 / 函数按引用身份，原始值按 typeof + 值。
-  // WeakMap 自动回收，不延长捕获对象寿命。
-  static __capIds = new WeakMap();
-  static __capSeq = 0;
-  static __captureKey(v) {
-    if (v === undefined) { return 'undefined'; }
-    if (v === null) { return 'null'; }
-    var t = typeof v;
-    if (t === 'object' || t === 'function') {
-      var id = Component.__capIds.get(v);
-      if (!id) { id = ++Component.__capSeq; Component.__capIds.set(v, id); }
-      return t + '#' + id;
-    }
-    return t + ':' + String(v);
-  }
-
   // 把宿主元素的 props 按统一协议拆成 data / `__children`：widget 实参、widget
   // 数组、`__builder`、delegate 归子槽，其余归 props。**在元素构造期完成**，
   // reconciler 直接消费结果，不在 mount/patch 里做业务拆分。
@@ -73,8 +57,10 @@ export class Component {
   // `Stack` 这类宿主结点）。props 在构造期按统一协议拆好；懒标记由调用方给出
   // （builder 代理按构建期配置传入）。
   static host(type, props, lazy) {
-    return Component.__splitHost(
+    var el = Component.__splitHost(
     { __type: type, props: props || {}, __element: true }, lazy);
+    el.__anchor = __cc.anchor || null;
+    return el;
   }
 
   constructor(args) {
@@ -84,6 +70,10 @@ export class Component {
     // 真实子类。**`__type` 是运行时保留名**：Dart 里业务字段常叫 `type`
     //（`_ListContent(type: '全部')`），只有双下划线名才不会被业务字段覆盖。
     this.__type = this.constructor;
+    // 构建锚点：本元素由哪个组件实例的 build 产出。宿主 props 里的函数值在
+    // 下发边界被换成句柄（见 mini_react 的 __hostProps），回调执行时据此还原
+    // `this.context` / 构造期句柄归属，语义与「编译期就绑定」完全一致。
+    this.__anchor = __cc.anchor || null;
     // 宿主包装类（自身原型**没有重写 build**）在构造期就拆好 props/children；
     // 逻辑组件 / 翻译组件保留原样 props（它们自己消费构造参数）。
     if (!Object.prototype.hasOwnProperty.call(this.constructor.prototype, 'build')) {
@@ -106,36 +96,6 @@ export class Component {
       out[k] = this.props[k];
     }
     return out;
-  }
-
-  // 事件句柄：按 (编译期位点号, 捕获值) 缓存。重建产出同一句柄 → props 稳定
-  // （增量补丁仍生效）；循环项捕获不同值时各自独立；卸载随实例统一释放。
-  __bindFn(siteId, captures, f) {
-    var bag = this.__boundFn || (this.__boundFn = {});
-    var key = siteId + '|';
-    if (captures && captures.length) {
-      var ks = [];
-      for (var i = 0; i < captures.length; i++) {
-        ks.push(Component.__captureKey(captures[i]));
-      }
-      key += ks.join(',');
-    }
-    var handle = bag[key];
-    if (handle) { handle.__run = f; return handle; }
-    var anchor = __cc.building || this;
-    handle = __cc.__createFnHandle(function () {
-      var prev = __cc.building;
-      __cc.building = anchor;
-      // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
-      // 返回值保留：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
-      try { return handle.__run.apply(handle, arguments); }
-      catch (e) { __error(String(e)); }
-      finally { __cc.building = prev; }
-    });
-    handle.__run = f;
-    handle.__key = key; // 便于调试：句柄带上构建期 key
-    bag[key] = handle;
-    return handle;
   }
 
   // 与 Dart 一致：`context` 既是 build 形参、也是实例上可访问的同一对象。
@@ -1014,7 +974,7 @@ export class DragTarget extends Component {
     ['builder', 'onWillAccept', 'onWillAcceptWithDetails',
       'onAccept', 'onAcceptWithDetails', 'onMove', 'onLeave']);
     // 悬停时宿主会反复回调：同一次候选集合只重建一次子树（id 列表即身份签名）。
-    props.builder = self.__bindFn(0, [], function (json) {
+    props.builder = function (json) {
       json = json || {};
       var sig = (json.candidate || []).join('|') + '#' + (json.rejected || []).join('|');
       if (sig === self.__dragSig) { return; }
@@ -1024,23 +984,23 @@ export class DragTarget extends Component {
       self.__dragTargetChild = builder(
       context, DragData.list(json.candidate), DragData.list(json.rejected));
       self.setState(function () {});
-    });
-    props.onAccept = self.__bindFn(1, [], function (id) {
+    };
+    props.onAccept = function (id) {
       var f = self.props.onAccept;
       if (typeof f === 'function') { f(DragData.of(id)); }
-    });
-    props.onAcceptWithDetails = self.__bindFn(2, [], function (json) {
+    };
+    props.onAcceptWithDetails = function (json) {
       var f = self.props.onAcceptWithDetails;
       if (typeof f === 'function') { f(DragData.targetDetails(json)); }
-    });
-    props.onMove = self.__bindFn(3, [], function (json) {
+    };
+    props.onMove = function (json) {
       var f = self.props.onMove;
       if (typeof f === 'function') { f(DragData.targetDetails(json)); }
-    });
-    props.onLeave = self.__bindFn(4, [], function (id) {
+    };
+    props.onLeave = function (id) {
       var f = self.props.onLeave;
       if (typeof f === 'function') { f(DragData.of(id)); }
-    });
+    };
     if (self.__dragTargetChild != null) { props.child = self.__dragTargetChild; }
     return props;
   }
@@ -1052,30 +1012,32 @@ export class DragTarget extends Component {
 }
 
 export class Draggable extends Component {
-  // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
+  // `data` 换成 id、四个事件下发普通函数（用户回调留在本侧，宿主只回传 id / 位置；
+  // 函数在宿主 props 下发边界统一换成句柄，见 runtime 的 `__hostProps`）。
   __sourceProps() {
     var self = this;
     var p = self.props || {};
     var props = self.__propsExcept(
     ['data', 'onDragStarted', 'onDragUpdate', 'onDragEnd', 'onDragCompleted']);
     props.data = DragData.ref(p.data);
-    // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
-    props.onDragStarted = self.__bindFn(0, [], function () {
+    // 普通函数即可：宿主 props 下发边界会换成句柄并按结点复用（见 __hostProps），
+    // 用户回调留在本侧，宿主只回传 id / 位置。
+    props.onDragStarted = function () {
       var f = self.props.onDragStarted;
       if (typeof f === 'function') { f(); }
-    });
-    props.onDragUpdate = self.__bindFn(1, [], function (json) {
+    };
+    props.onDragUpdate = function (json) {
       var f = self.props.onDragUpdate;
       if (typeof f === 'function') { f(DragData.updateDetails(json)); }
-    });
-    props.onDragEnd = self.__bindFn(2, [], function (json) {
+    };
+    props.onDragEnd = function (json) {
       var f = self.props.onDragEnd;
       if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
-    });
-    props.onDragCompleted = self.__bindFn(3, [], function () {
+    };
+    props.onDragCompleted = function () {
       var f = self.props.onDragCompleted;
       if (typeof f === 'function') { f(); }
-    });
+    };
     return props;
   }
   build(context) {
@@ -1141,9 +1103,10 @@ export class LayoutBuilder extends Component {
       return null;
     }
     var self = this;
-    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
     // 宿主在布局阶段调用：实参是本结点的**父约束** JSON，不是事件参数。
-    var handle = this.__bindFn(0, [], function (json) {
+    // 这里只下发普通函数：宿主 props 下发的边界会把函数换成句柄，并按结点
+    // 复用同一个 id（见 runtime 的 `__hostProps`），重建不会新增句柄。
+    var handle = function (json) {
       var c = self.__constraintsOf(json);
       var prev = self.__constraints;
       if (prev && prev.minWidth === c.minWidth && prev.maxWidth === c.maxWidth &&
@@ -1157,7 +1120,7 @@ export class LayoutBuilder extends Component {
       // 就变成循环引用。
       self.__lbChild = builder(context, c);
       self.setState(function () {});
-    });
+    };
     var props = { 'builder': handle };
     if (this.__lbChild != null) { props.child = this.__lbChild; }
     return Component.host('LayoutBuilder', props);
@@ -1217,30 +1180,32 @@ export class ListenableBuilder extends __ListenableSubscriber {
 }
 
 export class LongPressDraggable extends Component {
-  // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
+  // `data` 换成 id、四个事件下发普通函数（用户回调留在本侧，宿主只回传 id / 位置；
+  // 函数在宿主 props 下发边界统一换成句柄，见 runtime 的 `__hostProps`）。
   __sourceProps() {
     var self = this;
     var p = self.props || {};
     var props = self.__propsExcept(
     ['data', 'onDragStarted', 'onDragUpdate', 'onDragEnd', 'onDragCompleted']);
     props.data = DragData.ref(p.data);
-    // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
-    props.onDragStarted = self.__bindFn(0, [], function () {
+    // 普通函数即可：宿主 props 下发边界会换成句柄并按结点复用（见 __hostProps），
+    // 用户回调留在本侧，宿主只回传 id / 位置。
+    props.onDragStarted = function () {
       var f = self.props.onDragStarted;
       if (typeof f === 'function') { f(); }
-    });
-    props.onDragUpdate = self.__bindFn(1, [], function (json) {
+    };
+    props.onDragUpdate = function (json) {
       var f = self.props.onDragUpdate;
       if (typeof f === 'function') { f(DragData.updateDetails(json)); }
-    });
-    props.onDragEnd = self.__bindFn(2, [], function (json) {
+    };
+    props.onDragEnd = function (json) {
       var f = self.props.onDragEnd;
       if (typeof f === 'function') { f(DragData.draggableDetails(json)); }
-    });
-    props.onDragCompleted = self.__bindFn(3, [], function () {
+    };
+    props.onDragCompleted = function () {
       var f = self.props.onDragCompleted;
       if (typeof f === 'function') { f(); }
-    });
+    };
     return props;
   }
   build(context) {
@@ -1558,9 +1523,9 @@ export class SliverPersistentHeader extends Component {
       this.__sphSig = { shrinkOffset: 0, overlaps: false };
       this.__sphChild = delegate.build(context, 0, false);
     }
-    // 同一位点复用同一句柄（重建不新增跨语言句柄，卸载随实例释放）。
     // 宿主在布局阶段调用：实参是 {shrinkOffset, overlapsContent}，不是事件参数。
-    var handle = this.__bindFn(0, [], function (json) {
+    // 普通函数即可：宿主 props 下发边界会换成句柄并按结点复用（见 __hostProps）。
+    var handle = function (json) {
       var prev = self.__sphSig;
       if (prev && prev.shrinkOffset === json.shrinkOffset &&
       prev.overlaps === json.overlapsContent) {
@@ -1570,7 +1535,7 @@ export class SliverPersistentHeader extends Component {
       // 字段名不能叫 `__child`（reconciler 内部字段，见 LayoutBuilder 处的说明）。
       self.__sphChild = delegate.build(context, json.shrinkOffset, json.overlapsContent);
       self.setState(function () {});
-    });
+    };
     var props = {
       'minExtent': delegate.minExtent,
       'maxExtent': delegate.maxExtent,

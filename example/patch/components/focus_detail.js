@@ -42,9 +42,9 @@ export class FocusDetail extends StatefulWidget {
   _box(label, node) {
     return new Focus({
       "focusNode": node,
-      "onFocusChange": this.__bindFn(0, [label], (v) => this._record(label, v)),
+      "onFocusChange": (v) => { return this._record(label, v); },
       "child": new GestureDetector({
-        "onTap": this.__bindFn(1, [node], () => node.requestFocus()),
+        "onTap": () => { return node.requestFocus(); },
         "child": new Container({
           "width": 80,
           "height": 56,
@@ -154,7 +154,7 @@ export class FocusDetail extends StatefulWidget {
         new Row({
           "children": [
             new OutlinedButton({
-              "onPressed": this.__bindFn(2, [], () => this._a.requestFocus()),
+              "onPressed": () => { return this._a.requestFocus(); },
               "child": (this.__k11 || (this.__k11 = new Text({
                 "data": "聚焦 A"
               })))
@@ -163,7 +163,7 @@ export class FocusDetail extends StatefulWidget {
               "width": 8
             }))),
             new OutlinedButton({
-              "onPressed": this.__bindFn(3, [], () => this._b.requestFocus()),
+              "onPressed": () => { return this._b.requestFocus(); },
               "child": (this.__k13 || (this.__k13 = new Text({
                 "data": "聚焦 B"
               })))
@@ -172,7 +172,7 @@ export class FocusDetail extends StatefulWidget {
               "width": 8
             }))),
             new OutlinedButton({
-              "onPressed": this.__bindFn(4, [], () => this._a.unfocus()),
+              "onPressed": () => { return this._a.unfocus(); },
               "child": (this.__k14 || (this.__k14 = new Text({
                 "data": "失焦"
               })))

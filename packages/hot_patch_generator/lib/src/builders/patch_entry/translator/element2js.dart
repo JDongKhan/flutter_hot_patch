@@ -369,8 +369,8 @@ class ElementTranslateContext implements ExprRenderer {
         head = 'for ($initJs; $condJs; $incJs)';
       } else if (parts is ForEachPartsWithDeclaration) {
         // for-in（带声明）：`for (final s in kOrderStatus)` → `for (let s of <iter>)`。
-        // 用 `let` 而非 `var`：每次迭代一个独立绑定，迭代内注册的事件闭包
-        // （`__bindFn`）才能捕获到**本次**的值（`var` 会让所有迭代共享末值）。
+        // 用 `let` 而非 `var`：每次迭代一个独立绑定，迭代内产出的闭包才能
+        // 捕获到**本次**的值（`var` 会让所有迭代共享末值）。
         final name = parts.loopVariable.name.lexeme;
         pushLoopVar(name);
         pushed.add(name);
@@ -1034,42 +1034,6 @@ class ElementTranslateContext implements ExprRenderer {
     throw FormatException('事件参数需要直接引用方法（如 onTap: _tap 或 () => _tap()）');
   }
 
-  /// 事件的**编译期位点号**：产物是静态源码，同一个 `on*` 位点每次构建都是
-  /// 同一个号；不同位点必不相同。运行时以「位点号 + 捕获值」复用句柄 id，
-  /// 从而重建后 props 稳定、增量补丁不失效，同时循环项之间互不串味。
-  int _eventSite = 0;
-
-  /// 事件「构建期句柄」：统一产出构建期**箭头闭包**，由运行时登记成句柄
-  /// （`{__fn:id}`，函数不能跨语言传递，只能传 id）。
-  ///
-  ///     this.__bindFn(17, [i], (...__a) => this._open(i, ...__a))
-  ///     this.__bindFn(18, [], () => model.inc())
-  ///     this.__bindFn(19, [], (v) => this.setState(() => { this._v = v; }))
-  ///
-  /// 闭包在 build（或抽出的 builder 方法）里创建，天然捕获当时的局部变量 /
-  /// 循环变量——与 Dart 闭包同语义，不存在「点击时求值看不见构建期名字」的
-  /// 问题（这正是过去 `__bind` 字符串方案会静默失效的场景）。
-  ///
-  /// 第二个实参是**捕获值列表**：捕获到不同值的循环项必须拿到不同句柄
-  /// （否则点任意行都执行最后一行的回调）。
-  String eventHandle(Expression e) {
-    final site = _eventSite++;
-    try {
-      final captures = _eventCaptures(e);
-      final fnJs = _eventFnJs(e);
-      return 'this.__bindFn($site, [${captures.join(', ')}], $fnJs)';
-    } catch (err) {
-      // 单个事件翻译失败不该炸掉整棵 build 树（放大器缺陷）：降级为「空操作
-      // 句柄」，其余结点照常翻译。
-      // ignore: avoid_print - 构建期日志
-      print(
-        '[hot_patch_generator] 事件处理无法翻译，已降级为空操作：'
-        '${e.toSource()}（$err）',
-      );
-      return 'this.__bindFn($site, [], () => {})';
-    }
-  }
-
   /// 事件表达式 → JS 箭头函数源码（参数按 Dart 闭包签名逐字对应）。
   String _eventFnJs(Expression e) {
     if (e is FunctionExpression) {
@@ -1150,49 +1114,10 @@ class ElementTranslateContext implements ExprRenderer {
     return null;
   }
 
-  /// 事件表达式引用的**构建期局部名**（循环变量 / build 局部 / 方法形参 /
-  /// 方法体局部）——运行时按这些值区分句柄：
-  ///
-  ///   - 同一位点每次重建捕获到同一组值 → key 不变 → 句柄 id 不变（props 稳定）；
-  ///   - 循环里捕获到不同值 → key 不同 → 各自独立句柄（回调不互相覆盖）。
-  ///
-  /// 能折算成字段引用 / 方法 / getter / 顶层常量 / 宿主方法的名字（`this.*`
-  /// 或全局）不算捕获；`context` / `widget` 由 [_eventScope] 改写成 `this.*`。
-  /// 事件闭包自己的形参（`(v) => ...` 的 `v`）也不捕获——它们在闭包内部遮蔽。
-  List<String> _eventCaptures(Expression e) {
-    final used = <String>{};
-    e.accept(_SimpleIdentifierCollector(used));
-    final closureParams = e is FunctionExpression
-        ? _closureParamNames(e).toSet()
-        : const <String>{};
-    final out = <String>[];
-    for (final name in used) {
-      if (name == 'context' || name == 'this' || name == 'widget') continue;
-      if (closureParams.contains(name)) continue;
-      if (_localAliases.containsKey(name) ||
-          propByField.containsKey(name) ||
-          methodNames.contains(name) ||
-          getterNames.contains(name) ||
-          staticFieldNames.contains(name) ||
-          staticMethodNames.contains(name) ||
-          globalConsts.contains(name) ||
-          hostFunctions.contains(name)) {
-        continue;
-      }
-      if (_locals.contains(name) ||
-          _loopVars.contains(name) ||
-          _methodParams.contains(name) ||
-          _methodBodyLocals.contains(name)) {
-        out.add(name);
-      }
-    }
-    return out;
-  }
-
   /// `setState(() {...})` / `setState(() => _x = v)` → `this.setState(() => {...})`。
   ///
   /// 闭包体走统一的语句/表达式翻译（状态字段 → `this.<field>`，与普通方法体
-  /// 同一套作用域），翻译失败即抛错，由 [eventHandle] 统一降级为空操作。
+  /// 同一套作用域），翻译失败即抛错（由调用方决定丢弃或告警）。
   String _setStateCallJs(MethodInvocation call, FieldScope scope) {
     final args = call.argumentList.arguments;
     final fn = args.isNotEmpty ? args.first : null;
@@ -1471,8 +1396,7 @@ class ElementTranslateContext implements ExprRenderer {
       if (js != null) return js;
       // 通用闭包翻译翻不出的表达式（典型：闭包里是 @HostInjected 静态调用 /
       // setState 等**只有事件作用域支持**的写法）→ 用事件闭包翻译，但**仍然
-      // 产出普通函数**（绝不降级成 `__bindFn` 句柄）：该值的消费方是 JS 组件，
-      // 子组件按 Dart 语义直接调用字段（见 element_json 的 `_isJsSideWidget`）。
+      // 产出普通函数**：消费方自己决定怎么用（宿主边界再把函数换成句柄）。
       return _eventFnJs(e);
     }
     if (e is ParenthesizedExpression) {

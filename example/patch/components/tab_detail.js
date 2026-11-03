@@ -143,7 +143,7 @@ export class TabDetail extends StatefulWidget {
         new Align({
           "alignment": Alignment.centerLeft,
           "child": new TextButton({
-            "onPressed": this.__bindFn(0, [], (...__a) => this._next(...__a)),
+            "onPressed": (...__a) => this._next(...__a),
             "child": (this.__k4 || (this.__k4 = new Text({
               "data": "下一 tab · controller.animateTo"
             })))

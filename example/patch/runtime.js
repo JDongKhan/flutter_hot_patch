@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 6772374c） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 cc1e82d0） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '6772374c') { return; }
-  G.__jsuiVersion = '6772374c';
+  if (G.__jsui && G.__jsuiVersion === 'cc1e82d0') { return; }
+  G.__jsuiVersion = 'cc1e82d0';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -635,22 +635,80 @@ G.debugPrint = function (message) {
     return true;
   }
 
-  // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local：由拥有者
-  // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【4】句柄注册表）。
-  // 宿主侧回调用 __invokeEventHandler 触发。
+  // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local）。
+  // 宿主回调用 __invokeEventHandler 触发。
   //
-  // 句柄**只发给宿主**：JS 侧组件之间的回调是普通函数（见 element_json 的
-  // `_isJsSideWidget` 分派），因此这里不需要可调用对象。
+  // 句柄的**创建时机**只有一个：宿主 props 下发前的 [__hostProps]。翻译层只
+  // 做字面翻译（闭包就是闭包、`Colors.red` 就是 `Colors.red`），不判断某个
+  // 实参「是不是回调」；函数值是否需要句柄由运行时按 `typeof` 决定。
   function __createFnHandle(f) {
     var id = __registerHandle(f, 'fn', { scope: 'local', sync: false });
     return { __fn: id };
   }
 
+  // 宿主 props 跨语言下发前的统一折算：**函数值 → `{__fn:id}` 句柄**，其它值
+  // 原样。句柄缓存在**宿主结点**上、按 prop 名索引：
+  //   - 结点内信封与 id 稳定：重建只更新本侧实现，props 比较不抖动；
+  //   - 结点独占缓存：兄弟结点 / 列表项各自一份，天然不串味（不需要编译期位点号）；
+  //   - 结点卸载时随结点释放（见 __markUnmounted）。
+  function __hostProps(host, props, anchor) {
+    var bag = host.__hostFns || (host.__hostFns = {});
+    var out = {}, k;
+    for (k in props) {
+      if (!Object.prototype.hasOwnProperty.call(props, k)) { continue; }
+      var v = props[k];
+      if (typeof v === 'function') {
+        out[k] = __hostFnOf(bag, k, v, anchor);
+      } else {
+        // 同一个 prop 从函数变成普通值：旧句柄不再需要。
+        if (bag[k]) { __releaseHandle(bag[k].env.__fn, false); delete bag[k]; }
+        out[k] = v;
+      }
+    }
+    // props 里已移除的函数键：句柄一并释放。
+    for (k in bag) {
+      if (!(k in out)) { __releaseHandle(bag[k].env.__fn, false); delete bag[k]; }
+    }
+    return out;
+  }
+
+  // 一个宿主函数 prop 的句柄记录：`env` 是**唯一**进入 props 的信封（只含
+  // `__fn`，必须可 JSON 序列化）；`state` 存实际实现与构建锚点，留在本侧，
+  // 绝不挂到信封上（带上组件实例会让 commit 的 JSON.stringify 成环）。
+  function __hostFnOf(bag, key, fn, anchor) {
+    var rec = bag[key];
+    if (!rec) {
+      var state = { run: fn, anchor: anchor };
+      var handle = __createFnHandle(function () {
+        var args = arguments;
+        // 回调执行时还原**产出该元素的组件**为构建锚点：闭包里的 `this.context`
+        // 与构造期句柄归属都和编译期绑定时一致。
+        try {
+          return __withBuilding(state.anchor, function () {
+            return state.run.apply(null, args);
+          });
+        } catch (e) { __error(String(e)); }
+      });
+      rec = bag[key] = { env: handle, state: state };
+      return handle;
+    }
+    rec.state.run = fn;
+    rec.state.anchor = anchor;
+    return rec.env;
+  }
+
+  // 卸载宿主结点时释放它的函数句柄（句柄 scope=local，不经 owner 索引）。
+  function __releaseHostFns(node) {
+    var bag = node.__hostFns;
+    if (!bag) { return; }
+    for (var k in bag) { __releaseHandle(bag[k].env.__fn, false); }
+    node.__hostFns = null;
+  }
+
   // 事件回传载荷统一为**参数数组**（Dart 侧 `_invoke(handler, args)` 的 args）：
-  // 0 参事件 `[]`、onChanged `[v]`、多参事件 `[a,b]`…。句柄是普通位置函数——
-  // 能力桥 `__createFnHandle(function(t){…})` 按真实形参直接收下；__bindFn 生成的 wrapper
-  // 用 `arguments` 汇总任意个数再摊开转发给生成器产出的箭头闭包。故 0/1/N 参
-  // 事件共用同一条通路，新增多参事件无需改这里。
+  // 0 参事件 `[]`、onChanged `[v]`、多参事件 `[a,b]`…。句柄登记的是产物的普通
+  // 函数（见 __hostProps 的 wrapper），按 `arguments` 把任意个数原样摊开转发。
+  // 故 0/1/N 参事件共用同一条通路，新增多参事件无需改这里。
   function __invokeEventHandler(id, args) {
     var h = __handles[id];
     var f = h && h.obj;
@@ -761,11 +819,11 @@ G.debugPrint = function (message) {
 // ===== 【7】组件基类 =====
 
   // 生成器产物与逻辑组件类都 `extends Component`（见 flutter.js），
-  // setState / __bindFn / context 由基类提供，不在实例上逐个挂载。
+  // setState / context 由基类提供，不在实例上逐个挂载。
   // 这里只留回调调用与生命周期派发的唯一入口。
 
   // ── 构建锚点（__withBuilding）─────────────────────────────────────────────
-  // 「当前构建位置」的唯一读写点：`context` / `__bindFn` / 构造期句柄归属
+  // 「当前构建位置」的唯一读写点：`context` / 宿主回调执行 / 构造期句柄归属
   // 都据此定位。build / didUpdateWidget / didChangeDependencies / 卸载期
   // 生命周期都在这个锚点里执行，退出即还原。
   function __withBuilding(inst, fn) {
@@ -786,13 +844,12 @@ G.debugPrint = function (message) {
   }
 
   // ── 回调调用（__invokeCallback）─────────────────────────────────────────
-  // `__bindFn` 的**反向操作**：JS 类内部要调一个「回调 prop」时，统一走这里。
+  // JS 类内部要调一个「函数型 prop」时统一走这里。
   // 双下划线 = **运行时私有**，只允许生成器产出的 JS 类（逻辑组件）调用，
   // 组件使用方的业务代码不得直接引用（回调应由组件自身消费，见 AGENTS.md）。
-  // JS 侧的回调值**一律是可调用函数**（构建期句柄本身也是可调用函数，见
-  // __createFnHandle）；只有宿主元素 props 才归一成 `{__fn:id}` 信封。
-  // 反之，`on*` 回调也可能被整个丢掉（宿主自己消费的事件），此时静默返回
-  // undefined —— 调用方不需要逐处判空/判类型，这正是收敛成单一入口的意义。
+  // JS 侧的函数 prop 一律是可调用函数；只有宿主元素 props 才在 `__hostProps`
+  // 归一成 `{__fn:id}` 信封。
+  // 反之，函数型 prop 也可能缺省（调用方没传），此时静默返回 undefined。
   // 与上面的 `invoke(id, args)` 区分：后者是**宿主回传**（按句柄 id 反查），
   // 这里拿到的是**回调本身**。
   G.__invokeCallback = function (target, args) {
@@ -1159,7 +1216,7 @@ G.debugPrint = function (message) {
   }
 
   // 回滚一个挂载事务帧：逆序 teardown 本次挂载的组件实例（__markUnmounted 会递归
-  // 释放 `__owns` / `__ctx` / `__boundFn` 句柄、退订并删掉已挂树的宿主结点），
+  // 释放 `__owns` / `__ctx` / 宿主函数句柄、退订并删掉已挂树的宿主结点），
   // 再补齐「父结点 mount 尚未返回、因而没进任何 `__children`」的宿主结点 id。
   // 宿主侧此时 commit 未发生（create/insert 随丢弃的 ops 一起没下发），故不需要
   // 发 remove；占位结点的 `__deferred` / props 都未改动，下次 inflate 可重试。
@@ -1479,9 +1536,11 @@ G.debugPrint = function (message) {
       var hostType = __hostTypeName(el);
       var hi = {
         __k: __HOST, __id: __nextNodeId(hostType), __type: hostType,
-        __root: __rootOf(parent), __props: el.props || {},
+        __root: __rootOf(parent), __props: null,
         __children: [], __parent: parent, __el: el
       };
+      // 宿主 props 里的函数值在这里换成句柄（唯一的句柄创建点）。
+      hi.__props = __hostProps(hi, el.props || {}, el.__anchor || null);
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
       __publishScope(hi, hi.__props);
       __hostNodes[hi.__id] = hi;
@@ -1664,13 +1723,15 @@ G.debugPrint = function (message) {
 
     if (oldIsHost) {
       var oldProps = oldInst.__props;
-      if (!__propsEqual(oldProps, el.props)) {
-        __emitOp({ op: 'props', id: oldInst.__id, props: el.props });
+      // 先按新元素折算（函数 → 结点上已缓存的同一句柄，只更新实现），再比较。
+      var newProps = __hostProps(oldInst, el.props || {}, el.__anchor || null);
+      if (!__propsEqual(oldProps, newProps)) {
+        __emitOp({ op: 'props', id: oldInst.__id, props: newProps });
       }
-      oldInst.__props = el.props;
+      oldInst.__props = newProps;
       oldInst.__el = el;
       // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
-      __publishScope(oldInst, el.props);
+      __publishScope(oldInst, newProps);
       // 子项来源按新元素声明的懒标记生成：懒容器下 builder 形态只带延迟工厂，
       // 已挂载的槽位由 __patchLazySlot 现场调用工厂重建该项。
       var lazyChildren = el.lazyChildren === true;
@@ -1978,6 +2039,8 @@ G.debugPrint = function (message) {
     inst.__unmounted = true;
     if (inst.__k === __HOST) {
       delete __hostNodes[inst.__id];
+      // 宿主 props 的函数句柄随结点释放（它们只为本结点的宿主回调存在）。
+      __releaseHostFns(inst);
       for (var i = 0; i < inst.__children.length; i++) { __markUnmounted(inst.__children[i]); }
       var pcs = inst.__propsChildren;
       if (pcs) { for (var pk in pcs) { __markUnmounted(pcs[pk]); } }
@@ -2002,12 +2065,6 @@ G.debugPrint = function (message) {
       if (inst.__ctx != null && inst.__ctx.__id != null) {
         __releaseHandle(inst.__ctx.__id);
         inst.__ctx = null;
-      }
-      // [mini-react] 释放构建期登记的 (位点号, 捕获值) 事件句柄，避免句柄泄漏。
-      var bagFn = inst.__boundFn;
-      if (bagFn) {
-        for (var k in bagFn) { __releaseHandle(bagFn[k].__fn, false); }
-        inst.__boundFn = null;
       }
       __markUnmounted(inst.__child);
       // [owner] 释放该实例持有的句柄（控制器 / Key 等）：先递归卸载子树，再
@@ -2196,6 +2253,9 @@ G.debugPrint = function (message) {
     // 可变状态用访问器：直接取 const 只会拿到求值当时的快照。
     get building() { return __building; },
     set building(v) { __building = v; },
+    // 当前归属锚点：build 锚点优先，其次委托调用（builder）的拥有者实例。
+    // 宿主元素在构造期记录它，回调执行时还原（见 mini-react 的 __hostProps）。
+    get anchor() { return __building || __ownerAnchor; },
     get activeRoot() { return __activeRoot; },
     set activeRoot(v) { __activeRoot = v; },
     get JsBuildContext() { return JsBuildContext; },

@@ -57,7 +57,7 @@ export class DrawerDetail extends StatefulWidget {
               "title": (this.__k4 || (this.__k4 = new Text({
                 "data": "我的订单"
               }))),
-              "onTap": this.__bindFn(0, [], (...__a) => this._pickOrders(...__a))
+              "onTap": (...__a) => this._pickOrders(...__a)
             }),
             new ListTile({
               "leading": (this.__k5 || (this.__k5 = new Icon({
@@ -66,7 +66,7 @@ export class DrawerDetail extends StatefulWidget {
               "title": (this.__k6 || (this.__k6 = new Text({
                 "data": "我的收藏"
               }))),
-              "onTap": this.__bindFn(1, [], (...__a) => this._pickFavorites(...__a))
+              "onTap": (...__a) => this._pickFavorites(...__a)
             })
           ]
         })
@@ -96,7 +96,7 @@ export class DrawerDetail extends StatefulWidget {
               "title": (this.__k10 || (this.__k10 = new Text({
                 "data": "设置"
               }))),
-              "onTap": this.__bindFn(2, [], (...__a) => this._pickSettings(...__a))
+              "onTap": (...__a) => this._pickSettings(...__a)
             }),
             new ListTile({
               "leading": (this.__k11 || (this.__k11 = new Icon({
@@ -105,7 +105,7 @@ export class DrawerDetail extends StatefulWidget {
               "title": (this.__k12 || (this.__k12 = new Text({
                 "data": "帮助与关于"
               }))),
-              "onTap": this.__bindFn(3, [], (...__a) => this._pickHelp(...__a))
+              "onTap": (...__a) => this._pickHelp(...__a)
             })
           ]
         })

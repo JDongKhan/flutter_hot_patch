@@ -91,9 +91,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
               new Row({
                 "children": [
                   new OutlinedButton({
-                    "onPressed": this.__bindFn(0, [], () => this.setState(() => {
-                      this._target = 0;
-                    })),
+                    "onPressed": () => { this.setState(() => { this._target = 0; }); },
                     "child": (this.__k5 || (this.__k5 = new Text({
                       "data": "→ 0"
                     })))
@@ -102,9 +100,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
                     "width": 8
                   }))),
                   new OutlinedButton({
-                    "onPressed": this.__bindFn(1, [], () => this.setState(() => {
-                      this._target = 0.4;
-                    })),
+                    "onPressed": () => { this.setState(() => { this._target = 0.4; }); },
                     "child": (this.__k7 || (this.__k7 = new Text({
                       "data": "→ 0.4"
                     })))
@@ -113,9 +109,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
                     "width": 8
                   }))),
                   new OutlinedButton({
-                    "onPressed": this.__bindFn(2, [], () => this.setState(() => {
-                      this._target = 1;
-                    })),
+                    "onPressed": () => { this.setState(() => { this._target = 1; }); },
                     "child": (this.__k8 || (this.__k8 = new Text({
                       "data": "→ 1"
                     })))
@@ -128,9 +122,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
               new Row({
                 "children": [
                   new OutlinedButton({
-                    "onPressed": this.__bindFn(3, [], () => this.setState(() => {
-                      this._ms = 300;
-                    })),
+                    "onPressed": () => { this.setState(() => { this._ms = 300; }); },
                     "child": (this.__k10 || (this.__k10 = new Text({
                       "data": "300ms"
                     })))
@@ -139,9 +131,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
                     "width": 8
                   }))),
                   new OutlinedButton({
-                    "onPressed": this.__bindFn(4, [], () => this.setState(() => {
-                      this._ms = 1500;
-                    })),
+                    "onPressed": () => { this.setState(() => { this._ms = 1500; }); },
                     "child": (this.__k11 || (this.__k11 = new Text({
                       "data": "1500ms"
                     })))
@@ -150,9 +140,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
                     "width": 8
                   }))),
                   new OutlinedButton({
-                    "onPressed": this.__bindFn(5, [], () => this.setState(() => {
-                      this._ease = (!this._ease);
-                    })),
+                    "onPressed": () => { this.setState(() => { this._ease = (!this._ease); }); },
                     "child": new Text({
                       "data": this._ease ? "曲线：easeInOut" : "曲线：linear"
                     })

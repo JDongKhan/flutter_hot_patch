@@ -103,9 +103,7 @@ export class RichTextDetail extends StatefulWidget {
           "children": [
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(0, [], () => this.setState(() => {
-                  this._highlight = (!this._highlight);
-                })),
+                "onPressed": () => { this.setState(() => { this._highlight = (!this._highlight); }); },
                 "child": new Text({
                   "data": this._highlight ? "还原子串颜色" : "切换子串颜色"
                 })
@@ -113,9 +111,7 @@ export class RichTextDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(1, [], () => this.setState(() => {
-                  this._clampLines = (!this._clampLines);
-                })),
+                "onPressed": () => { this.setState(() => { this._clampLines = (!this._clampLines); }); },
                 "child": new Text({
                   "data": this._clampLines ? "关闭单行截断" : "开启单行截断"
                 })

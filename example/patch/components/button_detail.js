@@ -28,7 +28,7 @@ export class ButtonDetail extends StatefulWidget {
           "height": 8
         }))),
         new ElevatedButton({
-          "onPressed": this.__bindFn(0, [], (...__a) => this.onTap(...__a)),
+          "onPressed": (...__a) => this.onTap(...__a),
           "style": ElevatedButton.styleFrom({ "minimumSize": new Size({width: 180, height: 48}), "maximumSize": new Size({width: 240, height: 56}), "padding": EdgeInsets.symmetric({horizontal: 24, vertical: 12}), "elevation": 6, "shadowColor": Colors.deepPurple, "textStyle": new TextStyle({fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2}), "backgroundColor": Colors.teal, "foregroundColor": Colors.white }),
           "child": (this.__k2 || (this.__k2 = new Text({
             "data": "Elevated · Styled"
@@ -38,7 +38,7 @@ export class ButtonDetail extends StatefulWidget {
           "height": 8
         }))),
         new TextButton({
-          "onPressed": this.__bindFn(1, [], (...__a) => this.onTap(...__a)),
+          "onPressed": (...__a) => this.onTap(...__a),
           "style": TextButton.styleFrom({ "minimumSize": new Size({width: 120, height: 40}), "padding": EdgeInsets.symmetric({horizontal: 16}), "textStyle": new TextStyle({fontSize: 14, letterSpacing: 1}), "foregroundColor": Colors.indigo }),
           "child": (this.__k3 || (this.__k3 = new Text({
             "data": "TextButton"
@@ -48,7 +48,7 @@ export class ButtonDetail extends StatefulWidget {
           "height": 8
         }))),
         new OutlinedButton({
-          "onPressed": this.__bindFn(2, [], (...__a) => this.onTap(...__a)),
+          "onPressed": (...__a) => this.onTap(...__a),
           "style": OutlinedButton.styleFrom({ "side": new BorderSide({color: Colors.orange, width: 2}), "minimumSize": new Size({width: 120, height: 40}), "shape": new RoundedRectangleBorder({borderRadius: BorderRadius.all({radius: Radius.circular({radius: 20})})}), "foregroundColor": Colors.deepOrange }),
           "child": (this.__k4 || (this.__k4 = new Text({
             "data": "OutlinedButton"

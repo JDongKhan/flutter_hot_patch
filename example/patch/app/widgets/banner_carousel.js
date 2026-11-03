@@ -92,7 +92,7 @@ export class BannerCarousel extends StatefulWidget {
           "height": BannerCarousel._height,
           "child": new PageView({
             "controller": this._controller,
-            "onPageChanged": this.__bindFn(0, [], (...__a) => this._onPageChanged(...__a)),
+            "onPageChanged": (...__a) => this._onPageChanged(...__a),
             "children": [
               ...(() => { var out = []; for (let i = 0; (i < this.banners.length); (i++)) { out.push.apply(out, [new BannerSlide({
                       "banner": this.banners[i]
@@ -150,7 +150,7 @@ export class BannerSlide extends StatelessWidget {
         "horizontal": 12
       }))),
       "child": new InkWell({
-        "onTap": this.__bindFn(0, [], (...__a) => this.open(...__a)),
+        "onTap": (...__a) => this.open(...__a),
         "borderRadius": (this.__k1 || (this.__k1 = BorderRadius.all({
           "radius": Radius.circular({
             "radius": 14

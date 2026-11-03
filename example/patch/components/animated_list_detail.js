@@ -108,7 +108,7 @@ export class AnimatedListDetail extends StatefulWidget {
           "children": [
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(0, [], (...__a) => this._insert(...__a)),
+                "onPressed": (...__a) => this._insert(...__a),
                 "child": (this.__k5 || (this.__k5 = new Text({
                   "data": "插入末尾（350ms）"
                 })))
@@ -116,7 +116,7 @@ export class AnimatedListDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": this.__bindFn(1, [], (...__a) => this._removeFirst(...__a)),
+                "onPressed": (...__a) => this._removeFirst(...__a),
                 "child": (this.__k6 || (this.__k6 = new Text({
                   "data": "移除第一项（300ms）"
                 })))

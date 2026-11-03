@@ -57,7 +57,7 @@ export class SliverFillViewportDetail extends StatefulWidget {
                 new Row({
                   "children": [
                     new OutlinedButton({
-                      "onPressed": this.__bindFn(0, [], () => this._setFraction(1.0)),
+                      "onPressed": () => { return this._setFraction(1.0); },
                       "child": (this.__k6 || (this.__k6 = new Text({
                         "data": "1.0 整屏"
                       })))
@@ -66,7 +66,7 @@ export class SliverFillViewportDetail extends StatefulWidget {
                       "width": 8
                     }))),
                     new OutlinedButton({
-                      "onPressed": this.__bindFn(1, [], () => this._setFraction(0.8)),
+                      "onPressed": () => { return this._setFraction(0.8); },
                       "child": (this.__k8 || (this.__k8 = new Text({
                         "data": "0.8"
                       })))
@@ -75,7 +75,7 @@ export class SliverFillViewportDetail extends StatefulWidget {
                       "width": 8
                     }))),
                     new OutlinedButton({
-                      "onPressed": this.__bindFn(2, [], () => this._setFraction(0.5)),
+                      "onPressed": () => { return this._setFraction(0.5); },
                       "child": (this.__k9 || (this.__k9 = new Text({
                         "data": "0.5"
                       })))

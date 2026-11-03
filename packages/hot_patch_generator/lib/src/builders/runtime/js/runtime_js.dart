@@ -20,9 +20,9 @@
 ///
 /// **多根**：同一 JS 运行时里可并存多个页面，每个页面按 `pageKey` 隔离自己
 /// 的结点树、订阅、脏队列与出方向 ops（互不订阅、互不重建）。宿主
-/// 每次 `mount`/`dispose` 都显式带 `pageKey`；事件在**构建期**由生成器产出
-/// `this.__bindFn(位点号, [捕获值], 箭头闭包)` 绑定到产出该结点的组件实例
-/// （Dart 闭包语义），宿主点击只回传句柄 id，无任何运行时树形状启发。
+/// 每次 `mount`/`dispose` 都显式带 `pageKey`；翻译层只产出字面函数值，宿主
+/// 元素 props 在**下发边界**由 `__hostProps` 统一换成 `{__fn:id}` 句柄（按结点
+/// 缓存、重建复用），宿主点击只回传句柄 id，无任何运行时树形状启发。
 ///
 /// 本文件集中维护 JS 侧**框架代码**，由生成器的 `ui_runtime` builder 写成
 /// `patch/runtime.js`，运行时包只负责加载（幂等）：
@@ -40,7 +40,7 @@
 /// | 【2】 | 出方向桥（`__emitOp` / `__commitOps` / `__sendToHost` → `sendMessage`） | 全体共用 |
 /// | 【3】 | 宿主桥 `_app_host_`（`invoke` / `resolve` / `reject`，唯一对外出口） | @HostInjected 专用 |
 /// | 【4】 | 跨语言句柄注册表（`__registerHandle` / `__releaseHandle` / `__callHandle` / `__handleOp`）+ 控制器三件套基座 | 全体共用（新增能力只注册 kind） |
-/// | 【5】 | element 与事件句柄（`__isElement` / `__createFnHandle` / `__invokeEventHandler`） | mini-react |
+/// | 【5】 | element 与宿主回调句柄（`__isElement` / `__createFnHandle` / `__hostProps` / `__invokeEventHandler`） | mini-react |
 /// | 【6】 | reconciler 工具（`__propsEqual` / `__nodeKeyOf` / `__keyedMatcher` / `__rootOf`） | mini-react |
 /// | 【7】 | 构建锚点 / 生命周期派发 / 回调调用（`__withBuilding` / `__callLifecycle` / `G.__invokeCallback`） | mini-react（生成器产物的能力袋） |
 /// | 【8】 | 作用域｜按类型名向上查找 + 消费者订阅（`__registerScope` / `__scopeOf` / `__subscribeListenable`） | 通用机制（三方库按类型注册，见 capabilities/js_ui_library.dart） |
@@ -742,6 +742,9 @@ const String _jsUiCrossModuleExports = r'''
     // 可变状态用访问器：直接取 const 只会拿到求值当时的快照。
     get building() { return __building; },
     set building(v) { __building = v; },
+    // 当前归属锚点：build 锚点优先，其次委托调用（builder）的拥有者实例。
+    // 宿主元素在构造期记录它，回调执行时还原（见 mini-react 的 __hostProps）。
+    get anchor() { return __building || __ownerAnchor; },
     get activeRoot() { return __activeRoot; },
     set activeRoot(v) { __activeRoot = v; },
     get JsBuildContext() { return JsBuildContext; },

@@ -63,9 +63,7 @@ export class SliverFillRemainingDetail extends StatefulWidget {
                       }))),
                       new Switch({
                         "value": this._hasScrollBody,
-                        "onChanged": this.__bindFn(0, [], (v) => this.setState(() => {
-                          this._hasScrollBody = v;
-                        }))
+                        "onChanged": (v) => { this.setState(() => { this._hasScrollBody = v; }); }
                       })
                     ]
                   }),
@@ -81,9 +79,7 @@ export class SliverFillRemainingDetail extends StatefulWidget {
                       }))),
                       new Switch({
                         "value": this._fillOverscroll,
-                        "onChanged": this.__bindFn(1, [], (v) => this.setState(() => {
-                          this._fillOverscroll = v;
-                        }))
+                        "onChanged": (v) => { this.setState(() => { this._fillOverscroll = v; }); }
                       })
                     ]
                   }),
@@ -99,9 +95,7 @@ export class SliverFillRemainingDetail extends StatefulWidget {
                       }))),
                       new Switch({
                         "value": this._tallHeader,
-                        "onChanged": this.__bindFn(2, [], (v) => this.setState(() => {
-                          this._tallHeader = v;
-                        }))
+                        "onChanged": (v) => { this.setState(() => { this._tallHeader = v; }); }
                       })
                     ]
                   }),
@@ -161,7 +155,7 @@ export class SliverFillRemainingDetail extends StatefulWidget {
                   new Align({
                     "alignment": Alignment.bottomLeft,
                     "child": new OutlinedButton({
-                      "onPressed": this.__bindFn(3, [], () => {}),
+                      "onPressed": () => {},
                       "child": (this.__k15 || (this.__k15 = new Text({
                         "data": "贴底按钮"
                       })))

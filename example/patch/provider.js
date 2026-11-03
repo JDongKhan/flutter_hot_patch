@@ -10,8 +10,9 @@ export class ChangeNotifierProvider extends Component {
     var p = this.props;
     var notifier = null, owns = false;
     if (p.create !== undefined && p.create !== null) {
-      if (typeof p.create === 'function') { notifier = new p.create(); }
-      else { notifier = p.create; }
+      // `create` 是**函数类型**形参，按统一规则下发普通函数（工厂闭包）：
+      // 只调用一次，实例生命周期归本组件。值形态（非函数）也兼容。
+      notifier = typeof p.create === 'function' ? p.create() : p.create;
       owns = true;
     } else if (p.value !== undefined && p.value !== null) {
       notifier = p.value;

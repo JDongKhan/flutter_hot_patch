@@ -32,7 +32,7 @@ export class ProviderCard extends StatefulWidget {
         "child": new MultiProvider({
           "providers": [
             new ChangeNotifierProvider({
-              "create": this._modelA,
+              "create": (_) => { return this._modelA; },
               "model": "CounterVm"
             }),
             ChangeNotifierProvider.value({
@@ -70,7 +70,7 @@ export class ProviderCard extends StatefulWidget {
                 "mainAxisAlignment": MainAxisAlignment.center,
                 "children": [
                   new ElevatedButton({
-                    "onPressed": this.__bindFn(0, [], (...__a) => this._loadUser(...__a)),
+                    "onPressed": (...__a) => this._loadUser(...__a),
                     "child": (this.__k4 || (this.__k4 = new Text({
                       "data": "加载用户信息"
                     })))
@@ -95,7 +95,7 @@ export class ProviderCard extends StatefulWidget {
                 "mainAxisAlignment": MainAxisAlignment.center,
                 "children": [
                   new ElevatedButton({
-                    "onPressed": this.__bindFn(1, [], (...__a) => this._incA(...__a)),
+                    "onPressed": (...__a) => this._incA(...__a),
                     "child": (this.__k6 || (this.__k6 = new Text({
                       "data": "B +1"
                     })))
@@ -104,7 +104,7 @@ export class ProviderCard extends StatefulWidget {
                     "width": 12
                   }))),
                   new ElevatedButton({
-                    "onPressed": this.__bindFn(2, [], (...__a) => this._resetA(...__a)),
+                    "onPressed": (...__a) => this._resetA(...__a),
                     "child": (this.__k8 || (this.__k8 = new Text({
                       "data": "B Reset"
                     })))

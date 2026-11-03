@@ -71,14 +71,14 @@ export class SliverDetail extends StatefulWidget {
                   "icon": Icons.center_focus_strong
                 }))),
                 "tooltip": "定位到「固定高度」分区",
-                "onPressed": this.__bindFn(0, [], (...__a) => this._scrollToFixed(...__a))
+                "onPressed": (...__a) => this._scrollToFixed(...__a)
               }),
               new IconButton({
                 "icon": (this.__k2 || (this.__k2 = new Icon({
                   "icon": Icons.straighten
                 }))),
                 "tooltip": "测量「固定高度」分区的位置与尺寸",
-                "onPressed": this.__bindFn(1, [], (...__a) => this._measureFixed(...__a))
+                "onPressed": (...__a) => this._measureFixed(...__a)
               })
             ]
           }),
@@ -339,7 +339,7 @@ export class SliverDetail extends StatefulWidget {
         ]
       }),
       "floatingActionButton": new FloatingActionButton({
-        "onPressed": this.__bindFn(2, [], (...__a) => this._scrollToEnd(...__a)),
+        "onPressed": (...__a) => this._scrollToEnd(...__a),
         "backgroundColor": Colors.deepPurple,
         "foregroundColor": Colors.white,
         "tooltip": "跳到底",
