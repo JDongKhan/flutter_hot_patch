@@ -32,6 +32,7 @@ import 'package:flutter/widgets.dart';
 import '../../../utils/hot_patch_log.dart';
 import '../core/binding_cache.dart';
 import '../core/handle_registry.dart';
+import '../core/render_object_ops.dart';
 
 /// 页面锚点的结点键：JS 侧根组件（COMP 之上没有宿主结点）的 `this.context`
 /// 代理用它反查页面级 BuildContext（两端必须一致）。
@@ -111,6 +112,15 @@ void ensureBuildContextChannels() {
       }
     },
   ));
+  // `context.findRenderObject()` 返回的 RenderObject 代理也挂在 ctx 句柄上：
+  // 用真实 BuildContext 的 RenderObject 补全 showOnScreen / measure，与
+  // GlobalKey 上下文的 key 句柄同一套语义（取值规则见 core/render_object_ops）。
+  registerContextOp('showOnScreen', onOp: (id, op, payload) {
+    jsBuildContextOf(id)?.findRenderObject()?.showOnScreen();
+    return null;
+  });
+  registerContextOp('measure', onOp: (id, op, payload) =>
+      renderObjectMeasurePayload(jsBuildContextOf(id)?.findRenderObject()));
 }
 
 /// 把 `context.<op>(...)` 分发给注册者；未注册的 op 按项目规则告警而非静默。

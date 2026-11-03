@@ -81,7 +81,7 @@ class _SliverDetailState extends State<SliverDetail> {
   /// 都成立。
   ///
   /// 链路与 Flutter 原生一致：`currentContext → findRenderObject()` 拿到
-  /// 「RenderObject」再取位置尺寸（JS 端是带 `measure()` 的 KeyRef 代理，
+  /// 「RenderObject」再取位置尺寸（JS 端是带 `measure()` 的 RenderObject 代理，
   /// 原生端是真实 RenderObject——`dynamic` 中转在这一跳，两种形态都成立）。
   Future<void> _measureFixed() async {
     final ctx = _fixedKey.currentContext;
@@ -97,7 +97,7 @@ class _SliverDetailState extends State<SliverDetail> {
     double? width;
     double? height;
     if (kInJsRuntime) {
-      // JS 热更侧：KeyRef 代理，位置与尺寸由宿主算完异步回填。
+      // JS 热更侧：RenderObject 代理，位置与尺寸由宿主算完异步回填。
       final dynamic rect = await box.measure();
       if (rect != null) {
         dx = rect.dx;

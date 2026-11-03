@@ -7918,7 +7918,18 @@ export class GlobalKey {
     return { __handle: this.__id };
   }
   get currentContext() {
-    return this.__id == null ? null : new KeyRef(this.__id);
+    // 只有**挂载期间**非空（与 Flutter 一致）：挂在哪个结点上由 reconciler 在
+    // mount 时经 [__attachContext] 绑定，卸载时经 [__detachContext] 按身份摘除。
+    return this.__ctx == null ? null : this.__ctx;
+  }
+  // 上下文绑定的通用协议（reconciler 只认方法、不认类型，见 mini-react 的
+  // __attachKeyContext / __detachKeyContext）。GlobalKey 本身不认识
+  // BuildContext 的实现，只持有代理引用。
+  __attachContext(ctx) { this.__ctx = ctx; }
+  __detachContext(ctx) {
+    // 按身份摘除：同一个 GlobalKey 可能已被后来的结点重新挂上
+    // （元素换位 / 旧结点卸载晚于新结点挂载），此时不能清掉新绑定。
+    if (this.__ctx === ctx) { this.__ctx = null; }
   }
   get currentState() {
     if (this.__id == null) { return null; }
@@ -7931,14 +7942,28 @@ export class GlobalKey {
 
 // GlobalKey.currentContext / findRenderObject()：BuildContext 与 RenderObject 是
 // **宿主端**概念——JS 侧既没有真实对象，也没有同步取值的能力（JS→宿主只有异步
-// 桥，见 __handleOp）。故 currentContext 返回一个只携带 key 句柄 id 的代理，链式
+// 桥，见 __handleOp）。故 currentContext 返回**运行时同一份** JsBuildContext
+// （runtime.js 定义、经 G.__core 交接），由 reconciler 在挂载该 key 所在结点时
+// 绑定到 GlobalKey；findRenderObject() 再返回同 id 的 RenderObject 代理：链式
 // 调用在 JS 侧是空壳，最后一次调用经通用 op 落到宿主，由宿主用**真实**对象把
 // Flutter 原生语义补全——位置/尺寸只在真正算得出来的一端计算。
 //   - showOnScreen()：void 语义，fire-and-forget，宿主算出该结点位置并滚动；
 //   - measure()：Flutter 的 `box.size` / `box.localToGlobal(Offset.zero)` 是
 //     **同步属性**，而 JS→宿主只能异步，故这里返回 Promise（单源侧 `await`
 //     后即为真实值，见 sliver_detail 的 _measureFixed）。
-export class KeyRef {
+//
+// findRenderObject 补在 JsBuildContext 原型上（与 provider 在 provider.js 补
+// watch/read 同一范式）：类定义在 runtime.js、RenderObject 是本模块的值类，故由
+// 本模块补。句柄来源决定 op 落点——GlobalKey 上下文沿 key 句柄走 key 桥，组件
+// 上下文按 ctx 句柄走 BuildContext 桥。`x is RenderObject` 在 JS 侧即
+// `instanceof RenderObject`（本类是 flutter.js 的导出，由 runtime_global_types
+// 自动抽取并为产物补 import）。
+JsBuildContext.prototype.findRenderObject = function () {
+  if (this.__id == null && this.__nodeId == null) { return null; }
+  return new RenderObject(this.__handle());
+};
+
+export class RenderObject {
   constructor(id) { this.__key = id; }
   showOnScreen() {
     if (this.__key != null) { __handleOp(this.__key, 'showOnScreen', {}); }
@@ -7946,9 +7971,6 @@ export class KeyRef {
   measure() {
     if (this.__key == null) { return Promise.resolve(null); }
     return __handleOp(this.__key, 'measure', {});
-  }
-  findRenderObject() {
-    return new KeyRef(this.__key);
   }
 }
 

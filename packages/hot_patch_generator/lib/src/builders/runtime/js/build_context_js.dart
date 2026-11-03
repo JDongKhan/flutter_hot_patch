@@ -27,13 +27,14 @@
 // 作用域声明见各三方库的 package 模块片段，如 provider_module_js.dart）。
 const String buildContextJsSource = r'''
   class JsBuildContext {
-    constructor(anchor, nodeId) {
+    constructor(anchor, nodeId, handleId) {
       // 消费它的 JS 组件实例（watch/read 的构建位置锚点）。
       this.__anchor = anchor;
       // 最近宿主祖先结点 id（宿主侧 nodeId -> 真值 BuildContext 的键）。
       this.__nodeId = nodeId;
       // 跨语言句柄：**惰性**登记（没用过 context 的组件零句柄开销）。
-      this.__id = null;
+      // 已有句柄时（GlobalKey.currentContext 复用 key 句柄）直接沿用，不再新建。
+      this.__id = handleId == null ? null : handleId;
     }
 
     // 句柄（首次真正需要宿主真值时才登记，宿主 onCreate 绑定 nodeId）。

@@ -247,6 +247,38 @@ const String _miniReactReconcilerUtilsSource = r'''
     return p ? p.key : null;
   }
 
+  // key 的「上下文绑定」协议：只有声明了 __attachContext 的 key 对象（如
+  // GlobalKey）参与，reconciler 只认方法、不认类型。
+  //
+  // 挂载时把本结点的 BuildContext 代理挂到 key 上，卸载时按身份摘除，从而
+  // `key.currentContext` 与 Flutter 一致：**未挂载 / 已卸载为 null**，挂载期间
+  // 返回同一个代理。
+  //   - 组件结点：它自己的上下文代理（anchor + 结点 id，watch/read 可用）；
+  //   - 宿主结点：JS 侧没有组件实例，用 key 句柄——位置 / 尺寸 op 由宿主沿真实
+  //     GlobalKey 解析（见 capabilities/key/key_bridge.dart）。
+  function __attachKeyContext(inst) {
+    var k = __nodeKeyOf(inst);
+    if (!k || typeof k.__attachContext !== 'function') { return; }
+    var ctx = inst.__k === __COMP
+        ? __contextOf(inst)
+        : new JsBuildContext(null, null, k.__id);
+    k.__attachContext(ctx);
+    inst.__keyCtx = ctx;
+    inst.__keyOwner = k;
+  }
+
+  // 卸载时摘除。这里只摘引用、**不释放句柄**：组件上下文句柄由 __markUnmounted
+  // 的 [ctx] 分支释放；GlobalKey 句柄随持有它的组件 / 页面兜底释放。
+  // 按身份比较：同一个 key 可能已被后来的结点重新挂上（元素换位 / 旧结点卸载
+  // 晚于新结点挂载），此时不能清掉新绑定。
+  function __detachKeyContext(inst) {
+    var k = inst.__keyOwner;
+    if (!k) { return; }
+    if (typeof k.__detachContext === 'function') { k.__detachContext(inst.__keyCtx); }
+    inst.__keyCtx = null;
+    inst.__keyOwner = null;
+  }
+
   // 结点在**父槽里的标识**：__HOST / __COMP 都用自己的 `__id`。
   // 组件结点是宿主的**挂载边界**（宿主为它建 wrapper，wrapper 在 build 里同步
   // 拉取 JS build 结果），所以父槽引用的是组件结点本身，而不是它的渲染根。
@@ -345,6 +377,7 @@ const String miniReactScopeSource = r'''
   // 必须是同步取值：渲染期 `model.count` 直接读，不能经异步桥回宿主。
   // 取不到返回 null（不猜、不回退）。
   function __scopeOf(inst, type) {
+    if (!inst) { return null; }
     var p = inst.__parent;
     while (p) {
       var pr = p.__provides;
@@ -1001,6 +1034,7 @@ const String miniReactReconcilerSource = r'''
       __publishScope(hi, hi.__props);
       __hostNodes[hi.__id] = hi;
       __trackNode(hi.__id);
+      __attachKeyContext(hi);
       __emitOp({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
       if (slot && slot.hostParentId) {
         __emitOp({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
@@ -1057,6 +1091,7 @@ const String miniReactReconcilerSource = r'''
     ci.__slot = slot;
     ci.__root = __rootOf(parent);
     __compNodes[ci.__id] = ci;
+    __attachKeyContext(ci);
     // 生命周期：initState 仍在**挂载期**执行（与 Flutter 一致，它不依赖继承
     // 上下文，控制器 / 监听器在这里登记归属本实例）；didChangeDependencies 与
     // build 一并推迟到 [__pullComponent] —— 由宿主的组件 wrapper 在 element 挂载
@@ -1493,6 +1528,8 @@ const String miniReactReconcilerSource = r'''
     // teardown 尤其如此）。不拦会 `dispose()` 执行两遍、句柄二次释放。
     if (!inst || inst.__unmounted) { return; }
     inst.__unmounted = true;
+    // 先摘除挂在本结点 key 上的上下文绑定（此刻组件上下文句柄还没释放）。
+    __detachKeyContext(inst);
     if (inst.__k === __HOST) {
       delete __hostNodes[inst.__id];
       // 宿主 props 的函数句柄随结点释放（它们只为本结点的宿主回调存在）。

@@ -8,6 +8,6 @@
 ///   - 本文件里的声明值是**原生侧**的取值，恒为 `false`。
 ///
 /// 因此同一份 Dart 源码可以在两端走各自的分支，例如 GlobalKey 量测：
-/// JS 侧 `findRenderObject()` 返回 KeyRef 代理（`measure()` 经宿主异步桥回填），
+/// JS 侧 `findRenderObject()` 返回 RenderObject 代理（`measure()` 经宿主异步桥回填），
 /// 原生侧返回真实 RenderObject（按 RenderBox 的同步属性计算）。
 const bool kInJsRuntime = false;

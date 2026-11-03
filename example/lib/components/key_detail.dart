@@ -155,7 +155,7 @@ class _KeyDetailState extends State<KeyDetail> {
   /// 用 GlobalKey 取目标盒子的位置与尺寸。
   ///
   /// `currentContext → findRenderObject()` 两端同形，但 RenderObject 只存在于
-  /// 宿主：JS 侧拿到的是 KeyRef 代理（`measure()` 经异步桥回填），原生侧拿到的是
+  /// 宿主：JS 侧拿到的是 RenderObject 代理（`measure()` 经异步桥回填），原生侧拿到的是
   /// 真实 RenderObject（没有 `measure()`，按 RenderBox 的同步属性计算）。
   /// 用 [kInJsRuntime] 显式分流，同一份源码两端都成立。
   Future<void> _measureTarget() async {
@@ -172,7 +172,7 @@ class _KeyDetailState extends State<KeyDetail> {
     double? width;
     double? height;
     if (kInJsRuntime) {
-      // JS 热更侧：KeyRef 代理，位置与尺寸由宿主算完异步回填。
+      // JS 热更侧：RenderObject 代理，位置与尺寸由宿主算完异步回填。
       final dynamic rect = await box.measure();
       if (rect != null) {
         dx = rect.dx;

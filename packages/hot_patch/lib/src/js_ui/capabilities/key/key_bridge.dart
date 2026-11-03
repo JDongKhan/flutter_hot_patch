@@ -19,6 +19,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/binding_cache.dart';
 import '../core/handle_registry.dart';
+import '../core/render_object_ops.dart';
 
 /// Key 句柄的存储桶：句柄 id → 宿主侧真实 Key（GlobalKey / UniqueKey）。统一登记
 /// 在绑定缓存里，页面销毁时由句柄释放摘除（见 binding_cache.dart 的「唯一缓存」）。
@@ -87,7 +88,7 @@ void ensureKeyChannels() {
     },
     onOp: (id, op, payload) {
       // 「取位置 / 取尺寸」只能在宿主做：BuildContext / RenderObject 是宿主端概念，
-      // JS 侧只有句柄 id、没有同步取值能力（见 capabilities/key/key_js.dart 的 KeyRef）。
+      // JS 侧只有句柄 id、没有同步取值能力（见 capabilities/key/key_js.dart 的 RenderObject 代理）。
       // 这里还原真实 GlobalKey → 真实 BuildContext → 真实 RenderObject，把 Dart
       // 单源的整条语义补全：
       //   - `ctx.findRenderObject()?.showOnScreen()`：位置 + 滚动，void 语义；
@@ -137,18 +138,8 @@ void ensureKeyChannels() {
         ro?.showOnScreen();
         return null;
       }
-      // 位置与尺寸是 RenderBox 才有的语义（RenderObject 无 size / localToGlobal）；
-      // 未布局（hasSize=false）时算不出来，回 null 由单源侧判空。
-      if (op == 'measure') {
-        if (ro is! RenderBox || !ro.hasSize) return null;
-        final topLeft = ro.localToGlobal(Offset.zero);
-        return <String, Object?>{
-          'dx': topLeft.dx,
-          'dy': topLeft.dy,
-          'width': ro.size.width,
-          'height': ro.size.height,
-        };
-      }
+      // 位置与尺寸的取值规则见 core/render_object_ops.dart（与 ctx 句柄共用）。
+      if (op == 'measure') return renderObjectMeasurePayload(ro);
       return null;
     },
     onRelease: (id) => JsBindingCache.instance.remove(_keyBucket, id),
