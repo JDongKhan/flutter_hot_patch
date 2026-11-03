@@ -39,9 +39,8 @@ class CtorSignature {
 
   /// 具名形参中**声明类型明确不是函数**的名字（`bool` / `String` / 数据类…）。
   ///
-  /// 与 [functionParams] 区分开，是为了保留「类型不可得」这一第三态：
-  /// 两集合都不含的名字（`super.onPressed` 转发、找不到源码）由调用方
-  /// 退回命名约定兜底。
+  /// 与 [functionParams] 区分开，保留「类型不可得」这一第三态：两集合都不含
+  /// 的名字由调用方按表达式形态兜底（不再按 `on*` 命名猜）。
   final Set<String> nonFunctionParams;
 
   static const empty = CtorSignature([], {});
@@ -142,6 +141,43 @@ class CtorSignatures {
       }
     }
     return names;
+  }
+
+  /// 该类**所有构造**里「可能声明为函数类型」的具名形参并集（宿主包装类的
+  /// `__fnProps` 名单，产物在运行时只查这几个键，避免遍历全部 props）。
+  ///
+  /// 包含第三态（类型不可得，`super.x` 解不出 / `dynamic`）：运行时会再按
+  /// `typeof` 过滤，名单里多一个非函数名只是多一次判断，不会误包成句柄。
+  ///
+  /// 找不到类源码返回 null（调用方生成 `static __fnProps = null`，运行时回退
+  /// 全量扫描）；类存在但没有构造 → 空集合（确实没有函数形参）。
+  Set<String>? functionParamsOf(String className) {
+    final files = _ensureIndex()[className];
+    if (files == null || files.isEmpty) return null;
+    final out = <String>{};
+    var found = false;
+    for (final file in files) {
+      final unit = _units.containsKey(file)
+          ? _units[file]
+          : _units[file] = parseUnitFile(file);
+      if (unit == null) continue;
+      for (final d in unit.declarations) {
+        if (d is! ClassDeclaration || d.name.lexeme != className) continue;
+        found = true;
+        final fieldTypes = _instanceFieldTypes(d);
+        for (final m in d.members) {
+          if (m is! ConstructorDeclaration) continue;
+          for (final p in m.parameters.parameters) {
+            if (!p.isNamed) continue;
+            final inner = p is DefaultFormalParameter ? p.parameter : p;
+            final name = _paramName(inner);
+            if (name == null) continue;
+            if (_paramIsFunction(inner, fieldTypes, d) != false) out.add(name);
+          }
+        }
+      }
+    }
+    return found ? out : null;
   }
 
   /// 该类在源码里声明的**静态方法**名 → 源码事实（返回类型 / 是否要上下文）。

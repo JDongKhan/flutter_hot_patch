@@ -74,6 +74,11 @@ export class Component {
     // 下发边界被换成句柄（见 mini_react 的 __hostProps），回调执行时据此还原
     // `this.context` / 构造期句柄归属，语义与「编译期就绑定」完全一致。
     this.__anchor = __cc.anchor || null;
+    // 宿主包装类的构建期函数形参名单（`[]` = 无回调；`null` = 签名不可得）。
+    // 运行时据此只查这几个键，不再遍历全部 props。名单是类上的共享数组，
+    // 实例只复制引用，不产生分配。
+    var fnProps = this.constructor.__fnProps;
+    if (fnProps !== undefined) { this.__fnProps = fnProps; }
     // 宿主包装类（自身原型**没有重写 build**）在构造期就拆好 props/children；
     // 逻辑组件 / 翻译组件保留原样 props（它们自己消费构造参数）。
     if (!Object.prototype.hasOwnProperty.call(this.constructor.prototype, 'build')) {
@@ -193,113 +198,135 @@ export class StateHandle {
 export class AbsorbPointer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class AlertDialog extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static adaptive(props) { return new AlertDialog(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class Align extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class AnimatedAlign extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedContainer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedCrossFade extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["layoutBuilder"];
 }
 
 export class AnimatedDefaultTextStyle extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedOpacity extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedPadding extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedPositioned extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
   static fromRect(props) { return new AnimatedPositioned(Object.assign({}, props, { factory: 'fromRect' })); }
 }
 
 export class AnimatedRotation extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedScale extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedSize extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedSlide extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onEnd"];
 }
 
 export class AnimatedSwitcher extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["layoutBuilder", "transitionBuilder"];
 }
 
 export class AppBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["notificationPredicate"];
 }
 
 export class AspectRatio extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Baseline extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class BottomNavigationBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onTap"];
 }
 
 export class BottomNavigationBarItem extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class CachedNetworkImage extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["errorListener", "errorWidget", "imageBuilder", "placeholder", "progressIndicatorBuilder"];
 }
 
 export class Card extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static filled(props) { return new Card(Object.assign({}, props, { factory: 'filled' })); }
   static outlined(props) { return new Card(Object.assign({}, props, { factory: 'outlined' })); }
 }
@@ -307,156 +334,186 @@ export class Card extends Component {
 export class Center extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Checkbox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onChanged"];
   static adaptive(props) { return new Checkbox(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class Chip extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onDeleted"];
 }
 
 export class CircleAvatar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onBackgroundImageError", "onForegroundImageError"];
 }
 
 export class CircularProgressIndicator extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static adaptive(props) { return new CircularProgressIndicator(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class ClipOval extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class ClipRRect extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class ColorFiltered extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Column extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class CompositedTransformFollower extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class CompositedTransformTarget extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class ConstrainedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Container extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class CupertinoActionSheet extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class CupertinoActionSheetAction extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onPressed"];
 }
 
 export class CupertinoAlertDialog extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class CupertinoDialogAction extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onPressed"];
 }
 
 export class CustomPaint extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class CustomScrollView extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class DecoratedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class DefaultTabController extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Dialog extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static fullscreen(props) { return new Dialog(Object.assign({}, props, { factory: 'fullscreen' })); }
 }
 
 export class Dismissible extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["confirmDismiss", "onDismissed", "onResize", "onUpdate"];
 }
 
 export class Divider extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Drawer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class DrawerHeader extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class DropdownButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onChanged", "onTap", "selectedItemBuilder"];
   static _formField(props) { return new DropdownButton(Object.assign({}, props, { factory: '_formField' })); }
 }
 
 export class DropdownMenuItem extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onTap"];
 }
 
 export class EasyRefresh extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["childBuilder", "frictionFactor", "onLoad", "onRefresh", "scrollBehaviorBuilder"];
   static builder(props) { return new EasyRefresh(Object.assign({}, props, { factory: 'builder' })); }
 }
 
 export class ElevatedButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onFocusChange", "onHover", "onLongPress", "onPressed"];
   static icon(props) { return new ElevatedButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
@@ -464,11 +521,13 @@ export class ElevatedButton extends Component {
 export class Expanded extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class FadeInImage extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["imageErrorBuilder", "placeholderErrorBuilder"];
   static assetNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'assetNetwork' })); }
   static memoryNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'memoryNetwork' })); }
 }
@@ -476,11 +535,13 @@ export class FadeInImage extends Component {
 export class FadeTransition extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class FilledButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onFocusChange", "onHover", "onLongPress", "onPressed"];
   static icon(props) { return new FilledButton(Object.assign({}, props, { factory: 'icon' })); }
   static tonal(props) { return new FilledButton(Object.assign({}, props, { factory: 'tonal' })); }
   static tonalIcon(props) { return new FilledButton(Object.assign({}, props, { factory: 'tonalIcon' })); }
@@ -490,16 +551,19 @@ export class FilledButton extends Component {
 export class FittedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Flexible extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class FloatingActionButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onPressed"];
   static extended(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'extended' })); }
   static large(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'large' })); }
   static small(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'small' })); }
@@ -508,32 +572,38 @@ export class FloatingActionButton extends Component {
 export class Focus extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onFocusChange", "onKey", "onKeyEvent"];
   static withExternalFocusNode(props) { return new Focus(Object.assign({}, props, { factory: 'withExternalFocusNode' })); }
 }
 
 export class FractionallySizedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class GestureDetector extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onDoubleTap", "onDoubleTapCancel", "onDoubleTapDown", "onForcePressEnd", "onForcePressPeak", "onForcePressStart", "onForcePressUpdate", "onHorizontalDragCancel", "onHorizontalDragDown", "onHorizontalDragEnd", "onHorizontalDragStart", "onHorizontalDragUpdate", "onLongPress", "onLongPressCancel", "onLongPressDown", "onLongPressEnd", "onLongPressMoveUpdate", "onLongPressStart", "onLongPressUp", "onPanCancel", "onPanDown", "onPanEnd", "onPanStart", "onPanUpdate", "onScaleEnd", "onScaleStart", "onScaleUpdate", "onSecondaryLongPress", "onSecondaryLongPressCancel", "onSecondaryLongPressDown", "onSecondaryLongPressEnd", "onSecondaryLongPressMoveUpdate", "onSecondaryLongPressStart", "onSecondaryLongPressUp", "onSecondaryTap", "onSecondaryTapCancel", "onSecondaryTapDown", "onSecondaryTapUp", "onTap", "onTapCancel", "onTapDown", "onTapMove", "onTapUp", "onTertiaryLongPress", "onTertiaryLongPressCancel", "onTertiaryLongPressDown", "onTertiaryLongPressEnd", "onTertiaryLongPressMoveUpdate", "onTertiaryLongPressStart", "onTertiaryLongPressUp", "onTertiaryTapCancel", "onTertiaryTapDown", "onTertiaryTapUp", "onVerticalDragCancel", "onVerticalDragDown", "onVerticalDragEnd", "onVerticalDragStart", "onVerticalDragUpdate"];
 }
 
 export class Hero extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["createRectTween", "flightShuttleBuilder", "placeholderBuilder"];
 }
 
 export class Icon extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class IconButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onHover", "onLongPress", "onPressed"];
   static filled(props) { return new IconButton(Object.assign({}, props, { factory: 'filled' })); }
   static filledTonal(props) { return new IconButton(Object.assign({}, props, { factory: 'filledTonal' })); }
   static outlined(props) { return new IconButton(Object.assign({}, props, { factory: 'outlined' })); }
@@ -543,11 +613,13 @@ export class IconButton extends Component {
 export class IgnorePointer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Image extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["errorBuilder", "frameBuilder", "loadingBuilder"];
   static _(props) { return new Image(Object.assign({}, props, { factory: '_' })); }
   static asset(props) { return new Image(Object.assign({}, props, { factory: 'asset' })); }
   static file(props) { return new Image(Object.assign({}, props, { factory: 'file' })); }
@@ -558,88 +630,105 @@ export class Image extends Component {
 export class ImageFiltered extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class ImageIcon extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class IndexedStack extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class InkWell extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onDoubleTap", "onFocusChange", "onHighlightChanged", "onHover", "onLongPress", "onLongPressUp", "onSecondaryTap", "onSecondaryTapCancel", "onSecondaryTapDown", "onSecondaryTapUp", "onTap", "onTapCancel", "onTapDown", "onTapUp"];
 }
 
 export class InputDecoration extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static collapsed(props) { return new InputDecoration(Object.assign({}, props, { factory: 'collapsed' })); }
 }
 
 export class InteractiveViewer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["builder", "onInteractionEnd", "onInteractionStart", "onInteractionUpdate"];
   static builder(props) { return new InteractiveViewer(Object.assign({}, props, { factory: 'builder' })); }
 }
 
 export class IntrinsicHeight extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class IntrinsicWidth extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class KeyboardListener extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onKeyEvent"];
 }
 
 export class LimitedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class LinearProgressIndicator extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class ListTile extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onFocusChange", "onLongPress", "onTap"];
 }
 
 export class Material extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class NotificationListener extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onNotification"];
 }
 
 export class Offstage extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Opacity extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class OutlinedButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onFocusChange", "onHover", "onLongPress", "onPressed"];
   static icon(props) { return new OutlinedButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
@@ -647,16 +736,19 @@ export class OutlinedButton extends Component {
 export class Padding extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class PopScope extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onPopInvoked", "onPopInvokedWithResult"];
 }
 
 export class Positioned extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static directional(props) { return new Positioned(Object.assign({}, props, { factory: 'directional' })); }
   static fill(props) { return new Positioned(Object.assign({}, props, { factory: 'fill' })); }
   static fromRect(props) { return new Positioned(Object.assign({}, props, { factory: 'fromRect' })); }
@@ -666,78 +758,93 @@ export class Positioned extends Component {
 export class PreferredSize extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Radio extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onChanged"];
   static adaptive(props) { return new Radio(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class RadioGroup extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onChanged"];
 }
 
 export class RepaintBoundary extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static wrap(props) { return new RepaintBoundary(Object.assign({}, props, { factory: 'wrap' })); }
 }
 
 export class RichText extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class RotatedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class RotationTransition extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Row extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SafeArea extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Scaffold extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["bottomSheetScrimBuilder", "onDrawerChanged", "onEndDrawerChanged"];
 }
 
 export class ScaleTransition extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SimpleDialog extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SingleChildScrollView extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SizeTransition extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SizedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static expand(props) { return new SizedBox(Object.assign({}, props, { factory: 'expand' })); }
   static fromSize(props) { return new SizedBox(Object.assign({}, props, { factory: 'fromSize' })); }
   static shrink(props) { return new SizedBox(Object.assign({}, props, { factory: 'shrink' })); }
@@ -747,12 +854,14 @@ export class SizedBox extends Component {
 export class Slider extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onChangeEnd", "onChangeStart", "onChanged", "semanticFormatterCallback"];
   static adaptive(props) { return new Slider(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class SliverAppBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onStretchTrigger"];
   static large(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'large' })); }
   static medium(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'medium' })); }
 }
@@ -760,18 +869,21 @@ export class SliverAppBar extends Component {
 export class SliverFillRemaining extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SliverFillViewport extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static __lazy = true;
+  static __fnProps = [];
 }
 
 export class SliverFixedExtentList extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static __lazy = true;
+  static __fnProps = ["findChildIndexCallback", "itemBuilder"];
   static builder(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'builder' })); }
   static list(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'list' })); }
 }
@@ -779,64 +891,76 @@ export class SliverFixedExtentList extends Component {
 export class SliverIgnorePointer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SliverOffstage extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SliverOpacity extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SliverPadding extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SliverSafeArea extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SliverToBoxAdapter extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class SliverVisibility extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static maintain(props) { return new SliverVisibility(Object.assign({}, props, { factory: 'maintain' })); }
 }
 
 export class Spacer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class Stack extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static _fromJson(props) { return new Stack(Object.assign({}, props, { factory: '_fromJson' })); }
 }
 
 export class Switch extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onActiveThumbImageError", "onChanged", "onFocusChange", "onInactiveThumbImageError"];
   static adaptive(props) { return new Switch(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class Tab extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class TabBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onFocusChange", "onHover", "onTap"];
   static secondary(props) { return new TabBar(Object.assign({}, props, { factory: 'secondary' })); }
 }
 
@@ -844,11 +968,13 @@ export class TabBarView extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static __lazy = true;
+  static __fnProps = [];
 }
 
 export class Text extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static _(props) { return new Text(Object.assign({}, props, { factory: '_' })); }
   static rich(props) { return new Text(Object.assign({}, props, { factory: 'rich' })); }
 }
@@ -856,6 +982,7 @@ export class Text extends Component {
 export class TextButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["onFocusChange", "onHover", "onLongPress", "onPressed"];
   static icon(props) { return new TextButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
@@ -863,16 +990,19 @@ export class TextButton extends Component {
 export class TextField extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["buildCounter", "contextMenuBuilder", "onAppPrivateCommand", "onChanged", "onEditingComplete", "onSubmitted", "onTap", "onTapOutside", "onTapUpOutside"];
 }
 
 export class Tooltip extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = ["positionDelegate"];
 }
 
 export class Transform extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static _(props) { return new Transform(Object.assign({}, props, { factory: '_' })); }
   static flip(props) { return new Transform(Object.assign({}, props, { factory: 'flip' })); }
   static rotate(props) { return new Transform(Object.assign({}, props, { factory: 'rotate' })); }
@@ -883,12 +1013,14 @@ export class Transform extends Component {
 export class Visibility extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
   static maintain(props) { return new Visibility(Object.assign({}, props, { factory: 'maintain' })); }
 }
 
 export class Wrap extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  static __fnProps = [];
 }
 
 export class AnimatedBuilder extends __ListenableSubscriber {

@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 cc1e82d0） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 4f9390a4） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'cc1e82d0') { return; }
-  G.__jsuiVersion = 'cc1e82d0';
+  if (G.__jsui && G.__jsuiVersion === '4f9390a4') { return; }
+  G.__jsuiVersion = '4f9390a4';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -651,23 +651,46 @@ G.debugPrint = function (message) {
   //   - 结点内信封与 id 稳定：重建只更新本侧实现，props 比较不抖动；
   //   - 结点独占缓存：兄弟结点 / 列表项各自一份，天然不串味（不需要编译期位点号）；
   //   - 结点卸载时随结点释放（见 __markUnmounted）。
-  function __hostProps(host, props, anchor) {
-    var bag = host.__hostFns || (host.__hostFns = {});
-    var out = {}, k;
-    for (k in props) {
-      if (!Object.prototype.hasOwnProperty.call(props, k)) { continue; }
-      var v = props[k];
-      if (typeof v === 'function') {
-        out[k] = __hostFnOf(bag, k, v, anchor);
-      } else {
-        // 同一个 prop 从函数变成普通值：旧句柄不再需要。
-        if (bag[k]) { __releaseHandle(bag[k].env.__fn, false); delete bag[k]; }
-        out[k] = v;
+  function __hostProps(host, props, anchor, fnNames) {
+    // 宿主包装类的构建期名单：只查声明为函数（或类型不可得）的那几个键。
+    // `[]` = 本类型没有回调（零循环）；`null`/`undefined` = 签名不可得 → 全扫。
+    var listed = fnNames !== undefined && fnNames !== null;
+    var need = false, k, i;
+    if (listed) {
+      for (i = 0; i < fnNames.length; i++) {
+        if (typeof props[fnNames[i]] === 'function') { need = true; break; }
+      }
+    } else {
+      for (k in props) {
+        if (typeof props[k] === 'function') { need = true; break; }
       }
     }
-    // props 里已移除的函数键：句柄一并释放。
+    if (!need) {
+      // 上一帧有函数、这一帧全没了：旧句柄一并释放。
+      if (host.__hostFns) { __releaseHostFns(host); }
+      return props;
+    }
+
+    var bag = host.__hostFns || (host.__hostFns = {});
+    var out = {};
+    // 一次浅拷贝（只复制引用）。必须复制而不是原地改：元素对象可能被 const /
+    // 循环复用，原地写成句柄会让另一个结点也拿到同一份 props。
+    for (k in props) {
+      if (Object.prototype.hasOwnProperty.call(props, k)) { out[k] = props[k]; }
+    }
+    if (listed) {
+      for (i = 0; i < fnNames.length; i++) {
+        k = fnNames[i];
+        if (typeof props[k] === 'function') { out[k] = __hostFnOf(bag, k, props[k], anchor); }
+      }
+    } else {
+      for (k in out) {
+        if (typeof out[k] === 'function') { out[k] = __hostFnOf(bag, k, out[k], anchor); }
+      }
+    }
+    // 名单外 / 已变成普通值 / 已移除的函数键：句柄一并释放。
     for (k in bag) {
-      if (!(k in out)) { __releaseHandle(bag[k].env.__fn, false); delete bag[k]; }
+      if (out[k] !== bag[k].env) { __releaseHandle(bag[k].env.__fn, false); delete bag[k]; }
     }
     return out;
   }
@@ -1540,7 +1563,7 @@ G.debugPrint = function (message) {
         __children: [], __parent: parent, __el: el
       };
       // 宿主 props 里的函数值在这里换成句柄（唯一的句柄创建点）。
-      hi.__props = __hostProps(hi, el.props || {}, el.__anchor || null);
+      hi.__props = __hostProps(hi, el.props || {}, el.__anchor || null, el.__fnProps);
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
       __publishScope(hi, hi.__props);
       __hostNodes[hi.__id] = hi;
@@ -1724,7 +1747,7 @@ G.debugPrint = function (message) {
     if (oldIsHost) {
       var oldProps = oldInst.__props;
       // 先按新元素折算（函数 → 结点上已缓存的同一句柄，只更新实现），再比较。
-      var newProps = __hostProps(oldInst, el.props || {}, el.__anchor || null);
+      var newProps = __hostProps(oldInst, el.props || {}, el.__anchor || null, el.__fnProps);
       if (!__propsEqual(oldProps, newProps)) {
         __emitOp({ op: 'props', id: oldInst.__id, props: newProps });
       }
