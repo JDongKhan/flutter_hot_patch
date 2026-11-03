@@ -120,10 +120,10 @@ String? boolLiteralJs(Expression? e) {
   return null;
 }
 
-/// `kDebugMode` / `kReleaseMode` → 运行时注入同名全局（见 js_runtime_manager
-/// 模块表初始化），不命中返回 null。纯语言层映射，与 widget 无关。
+/// `kDebugMode` / `kReleaseMode` / `kInJsRuntime` → 运行时注入同名全局（见
+/// js_runtime_manager 模块表初始化），不命中返回 null。纯语言层映射，与 widget 无关。
 String? globalFlagJs(String dartName) {
-  const set = {'kDebugMode', 'kReleaseMode'};
+  const set = {'kDebugMode', 'kReleaseMode', 'kInJsRuntime'};
   return set.contains(dartName) ? dartName : null;
 }
 

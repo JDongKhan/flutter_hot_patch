@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:hot_patch/hot_patch.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import 'key_tile.dart';
 
-/// Key 家族全员用例页（仅 JS 热更版展示：GlobalKey 的量测必须由宿主端算）。
+/// Key 家族全员用例页：原生 / JS 热更两端同源。
+///
+/// GlobalKey 的量测用 [kInJsRuntime] 分流：JS 侧拿到的是代理，`measure()` 经
+/// 宿主异步桥回填；原生侧 `findRenderObject()` 返回真实 RenderObject，按
+/// RenderBox 的同步属性计算。
 @PatchEntry('KeyDetail')
 class KeyDetail extends StatefulWidget {
   const KeyDetail({super.key});
@@ -149,9 +154,10 @@ class _KeyDetailState extends State<KeyDetail> {
 
   /// 用 GlobalKey 取目标盒子的位置与尺寸。
   ///
-  /// 与 SliverDetail 里同款链路：`currentContext → findRenderObject` 拿到
-  /// 「RenderObject 代理」再测——`measure` 挂在代上（GlobalKey 本身没有）。
-  /// `dynamic` 中转在这一跳（原生返回 RenderObject、没有 measure()）。
+  /// `currentContext → findRenderObject()` 两端同形，但 RenderObject 只存在于
+  /// 宿主：JS 侧拿到的是 KeyRef 代理（`measure()` 经异步桥回填），原生侧拿到的是
+  /// 真实 RenderObject（没有 `measure()`，按 RenderBox 的同步属性计算）。
+  /// 用 [kInJsRuntime] 显式分流，同一份源码两端都成立。
   Future<void> _measureTarget() async {
     final ctx = _targetKey.currentContext;
     if (ctx == null) {
@@ -161,16 +167,36 @@ class _KeyDetailState extends State<KeyDetail> {
     if (box == null) {
       return;
     }
-    final dynamic rect = await box.measure();
-    if (rect == null) {
+    double? dx;
+    double? dy;
+    double? width;
+    double? height;
+    if (kInJsRuntime) {
+      // JS 热更侧：KeyRef 代理，位置与尺寸由宿主算完异步回填。
+      final dynamic rect = await box.measure();
+      if (rect != null) {
+        dx = rect.dx;
+        dy = rect.dy;
+        width = rect.width;
+        height = rect.height;
+      }
+    } else {
+      // 原生侧：真实 RenderObject，按 RenderBox 的同步属性直接计算。
+      final dynamic offset = box.localToGlobal(const Offset(0, 0));
+      final dynamic size = box.size;
+      dx = offset.dx;
+      dy = offset.dy;
+      width = size.width;
+      height = size.height;
+    }
+    if (dx == null || dy == null || width == null || height == null) {
       setState(() => _measureText = '量不到（未布局）');
       return;
     }
-    setState(() {
-      _measureText =
-          'x=${rect.dx.toStringAsFixed(1)} y=${rect.dy.toStringAsFixed(1)}'
-          ' · ${rect.width.toStringAsFixed(0)} × ${rect.height.toStringAsFixed(0)}';
-    });
+    final text =
+        'x=${dx.toStringAsFixed(1)} y=${dy.toStringAsFixed(1)}'
+        ' · ${width.toStringAsFixed(0)} × ${height.toStringAsFixed(0)}';
+    setState(() => _measureText = text);
   }
 
   void _scrollToTarget() {

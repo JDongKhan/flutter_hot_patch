@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/sliver_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Alignment, BorderRadius, BouncingScrollPhysics, BoxDecoration, Center, Colors, Container, CustomScrollView, Divider, EdgeInsets, FloatingActionButton, FontWeight, GlobalKey, Icon, IconButton, Icons, ListTile, Scaffold, ScrollController, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Alignment, BorderRadius, BouncingScrollPhysics, BoxDecoration, Center, Colors, Container, CustomScrollView, Divider, EdgeInsets, FloatingActionButton, FontWeight, GlobalKey, Icon, IconButton, Icons, ListTile, Offset, Scaffold, ScrollController, SliverAppBar, SliverFillRemaining, SliverFixedExtentList, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverList, SliverOpacity, SliverPadding, SliverSafeArea, SliverToBoxAdapter, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 SliverDetail
 export class SliverDetail extends StatefulWidget {
@@ -44,12 +44,32 @@ export class SliverDetail extends StatefulWidget {
     if ((box == null)) {
       return;
     }
-    var rect = await box.measure();
-    if ((rect == null)) {
+    var dx;
+    var dy;
+    var width;
+    var height;
+    if (kInJsRuntime) {
+      var rect = await box.measure();
+      if ((rect != null)) {
+        dx = rect.dx;
+        dy = rect.dy;
+        width = rect.width;
+        height = rect.height;
+      }
+    } else {
+      var offset = box.localToGlobal(new Offset({dx: 0, dy: 0}));
+      var size = box.size;
+      dx = offset.dx;
+      dy = offset.dy;
+      width = size.width;
+      height = size.height;
+    }
+    if (((((dx == null) || (dy == null)) || (width == null)) || (height == null))) {
       this.setState(() => { this._measureText = "量不到（未布局）"; });
       return;
     }
-    this.setState(() => { this._measureText = "x=" + rect.dx.toStringAsFixed(1) + " y=" + rect.dy.toStringAsFixed(1) + " · " + rect.width.toStringAsFixed(0) + " × " + rect.height.toStringAsFixed(0); });
+    var text = "x=" + dx.toStringAsFixed(1) + " y=" + dy.toStringAsFixed(1) + " · " + width.toStringAsFixed(0) + " × " + height.toStringAsFixed(0);
+    this.setState(() => { this._measureText = text; });
   }
   build(context) {
     return new Scaffold({

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hot_patch/hot_patch.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// CustomScrollView 完整页面 demo：SliverAppBar（导航）+ SliverToBoxAdapter
@@ -72,16 +73,16 @@ class _SliverDetailState extends State<SliverDetail> {
 
   /// 导航右侧按钮：用 GlobalKey 取「固定高度」分区的位置与尺寸。
   ///
-  /// 与「定位」不同，这里要的是**值**：Flutter 侧 `box.localToGlobal(Offset.zero)`
-  /// 与 `box.size` 都是同步属性，而 JS 侧 RenderObject 根本不存在（GlobalKey 只是
-  /// 句柄、真实实例在宿主），JS→宿主又只有异步桥——故这一处 await 宿主回填的
-  /// 测量结果（见 capabilities/key/key_bridge.dart 的 `measure` op）。
+  /// 与「定位」不同，这里要的是**值**：Flutter 侧 `box.localToGlobal` 与
+  /// `box.size` 都是同步属性，而 JS 侧 RenderObject 根本不存在（GlobalKey 只是
+  /// 句柄、真实实例在宿主），JS→宿主又只有异步桥——故 JS 侧 await 宿主回填的
+  /// 测量结果（见 capabilities/key/key_bridge.dart 的 `measure` op），原生侧直接
+  /// 按 RenderBox 的同步属性计算——用 [kInJsRuntime] 显式分流，同一份源码两端
+  /// 都成立。
   ///
   /// 链路与 Flutter 原生一致：`currentContext → findRenderObject()` 拿到
-  /// 「RenderObject 代理」再取位置尺寸（`measure` 挂在代理上，GlobalKey 本身没有
-  /// 这个方法）。`dynamic` 中转在 findRenderObject 这一跳：原生端返回 RenderObject
-  /// （没有 measure()），JS 端返回 KeyRef 代理（有 measure()）——同一份代码两端都
-  /// 成立；本组件只在 JS 热更版展示（widget_showcase 走 JsUiWidget），原生端不执行。
+  /// 「RenderObject」再取位置尺寸（JS 端是带 `measure()` 的 KeyRef 代理，
+  /// 原生端是真实 RenderObject——`dynamic` 中转在这一跳，两种形态都成立）。
   Future<void> _measureFixed() async {
     final ctx = _fixedKey.currentContext;
     if (ctx == null) {
@@ -91,16 +92,36 @@ class _SliverDetailState extends State<SliverDetail> {
     if (box == null) {
       return;
     }
-    final dynamic rect = await box.measure();
-    if (rect == null) {
+    double? dx;
+    double? dy;
+    double? width;
+    double? height;
+    if (kInJsRuntime) {
+      // JS 热更侧：KeyRef 代理，位置与尺寸由宿主算完异步回填。
+      final dynamic rect = await box.measure();
+      if (rect != null) {
+        dx = rect.dx;
+        dy = rect.dy;
+        width = rect.width;
+        height = rect.height;
+      }
+    } else {
+      // 原生侧：真实 RenderObject，按 RenderBox 的同步属性直接计算。
+      final dynamic offset = box.localToGlobal(const Offset(0, 0));
+      final dynamic size = box.size;
+      dx = offset.dx;
+      dy = offset.dy;
+      width = size.width;
+      height = size.height;
+    }
+    if (dx == null || dy == null || width == null || height == null) {
       setState(() => _measureText = '量不到（未布局）');
       return;
     }
-    setState(() {
-      _measureText =
-          'x=${rect.dx.toStringAsFixed(1)} y=${rect.dy.toStringAsFixed(1)}'
-          ' · ${rect.width.toStringAsFixed(0)} × ${rect.height.toStringAsFixed(0)}';
-    });
+    final text =
+        'x=${dx.toStringAsFixed(1)} y=${dy.toStringAsFixed(1)}'
+        ' · ${width.toStringAsFixed(0)} × ${height.toStringAsFixed(0)}';
+    setState(() => _measureText = text);
   }
 
   @override

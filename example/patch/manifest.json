@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.3.8",
-  "buildTime": "2026-11-03T14:26:32.768843",
+  "buildTime": "2026-11-03T15:15:40.841209",
   "resources": {
     "flutter.js": "5ba1224c3aef2dc9c36f45c3f56447f116d5c7a0be264170849ff0434d01dbaf",
     "provider.js": "975cc47fc5359987461e285b87c16afaec6686c6064a952030b447e93e3c4278",
@@ -39,7 +39,7 @@
     "components/preferred_size_detail.js": "f691025cfe4e048837462927d4cee9f9996310bf49dba021582b6a38ad45f09f",
     "components/dismissible_detail.js": "5c6d430041b781e71babffee9b61c2c407ecf0bfc06b14d77ff2aed7b62cdba2",
     "components/button_detail.js": "d0f7c7a24839495a6681d487a02b0732a4cc139a7f4d97b4d703bb78d7ff09fb",
-    "components/key_detail.js": "38c9aaed6dc197d73023ef20d439b852a3138cb74013217f3af6ce13f0fc5e8a",
+    "components/key_detail.js": "68f90d1480b74e73dc82e0d2a83dd95e0e8623a97fb1c6a69221f0f5cc25b514",
     "components/value_listenable_builder_detail.js": "11faea0f3dd2d3a7424a21b036a13c5b6ac8b8aa741e0e6a594d9cc0d4a7f62d",
     "components/fade_in_image_detail.js": "ad5beb2198148adcc1787990161ec78eeedf9cc27884143bdc895781984e0a94",
     "components/radio_group_detail.js": "36abf133c9daa8798e896fb3ce6bcbe2cfc00beee44d6b2a78e68c506acc4fee",
@@ -62,7 +62,7 @@
     "components/color_filtered_detail.js": "56de9b2de2a6120302de267425f20a52c71bfbedcdfde8c9c347add194b696f9",
     "components/overlay_detail.js": "1fbcaf492d2607d67af2087fc9115f90089c6115751577ea3eaee30f1599e7fd",
     "components/reorder_list_detail.js": "854bb3f62ebd9fc5e17423611dc2485d516193be5fc11ad247731024747ca612",
-    "components/sliver_detail.js": "e22a099cf3a83acb97f3b09165cb8e0111fa68f0901a1504a1cb9275fa5141d1",
+    "components/sliver_detail.js": "89a91b13de19cb3f351b9fe6231529a28baf57ce7a254957391154b01c72258a",
     "components/stateless_card.js": "17c979ef79b001aaf6e1920313e7599e577c362e078aefd7de3ea6a91923797e",
     "components/explicit_animation_detail.js": "1aa88580b767d47aadddc09692d9b2bccf2a32589475120196d0272f493ac20c",
     "components/keyboard_listener_detail.js": "3710b0313b3e70580028ba652ecccc30674cc7dc3dd4df50e6dff79b844fb520",

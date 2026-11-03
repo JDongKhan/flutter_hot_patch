@@ -101,13 +101,13 @@ class WidgetShowcase extends StatelessWidget {
     _Group('Key 家族', [
       _Entry(
         'Key / ValueKey / ObjectKey / UniqueKey / PageStorageKey / GlobalKey',
-        '列表匹配 / 对象身份 / 强制重建 / 滚动位置持久化 / 宿主端量测（仅 JS 热更版）',
+        '列表匹配 / 对象身份 / 强制重建 / 滚动位置持久化 / 宿主端量测',
         'KeyDetail',
       ),
     ]),
     _Group('Sliver 滚动', [
-      _Entry('CustomScrollView', 'Sliver 全家桶整页（仅 JS 热更版）', 'SliverDetail'),
-      _Entry('GridView', 'GridView 懒加载验证（仅 JS 热更版）', 'GridDetail'),
+      _Entry('CustomScrollView', 'Sliver 全家桶整页', 'SliverDetail'),
+      _Entry('GridView', 'GridView 懒加载验证', 'GridDetail'),
       _Entry('NestedScrollView', '头部 slivers 与内层 body 联动：pinned 折叠 / floating 浮出', 'NestedScrollViewDetail'),
       _Entry('SliverFillViewport', '每屏占视口 fraction：切 1.0/0.8/0.5，padEnds 对比', 'SliverFillViewportDetail'),
       _Entry('SliverFillRemaining', '填满视口剩余高度：hasScrollBody / fillOverscroll / 贴底', 'SliverFillRemainingDetail'),
@@ -205,9 +205,6 @@ class WidgetShowcase extends StatelessWidget {
                   builder: (_) => WidgetDetailPage(
                     component: e.component,
                     fullPage: e.component == 'ScaffoldDetail' ||
-                        e.component == 'SliverDetail' ||
-                        e.component == 'GridDetail' ||
-                        e.component == 'KeyDetail' ||
                         e.component == 'DrawerDetail' ||
                         e.component == 'PreferredSizeDetail' ||
                         e.component == 'SliverFillViewportDetail' ||
@@ -237,7 +234,8 @@ class _Entry {
 }
 
 /// 详情容器页：原生组件 ↔ JS 热更版本同屏对比。
-/// 页面级组件（fullPage=true）无法同屏，直接展示 JS 热更版。
+/// 页面级组件（fullPage=true，如 Scaffold / Drawer）无法同屏，直接展示 JS 热更版；
+/// Key / CustomScrollView / GridView 这类 Scaffold 根的整页 demo 用定高面板同屏对比。
 ///
 /// 窄屏（手机）默认只显示 JS 热更版，右上角开关可切到原生组件对照。
 class WidgetDetailPage extends StatefulWidget {
@@ -325,6 +323,13 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
   };
 
   String get _jsEntry => _jsEntries[widget.component]!;
+
+  /// Scaffold 根的整页 demo：不能塞进滚动容器，但可以放进定高面板同屏对比。
+  static const Set<String> _boundedCompare = {
+    'KeyDetail',
+    'SliverDetail',
+    'GridDetail',
+  };
 
   /// 拼接补丁 URL：component 动态、entry 按源文件，走 query 参数。
   String get _jsAsset =>
@@ -431,15 +436,19 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
+          // 整页 demo 用定高面板（fill）铺满一栏，其余组件用可滚动容器。
+          final bounded = _boundedCompare.contains(widget.component);
           // 只有宽屏才做原生 / JS 双栏对比；手机这类窄屏按开关二选一。
           final wide = constraints.maxWidth >= 700;
           if (!wide) {
+            // 整页 demo 自带 Scaffold，直接铺满 body；套滚动容器会给它无界高度。
+            if (bounded) return _narrowShowJs ? js : _native();
             return SingleChildScrollView(
               child: _narrowShowJs ? js : _native(),
             );
           }
 
-          Column side(String title, Widget child) {
+          Column side(String title, Widget child, {bool fill = false}) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -447,7 +456,27 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
                   padding: const EdgeInsets.all(12),
                   child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: child),
+                if (fill)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: child,
+                    ),
+                  )
+                else
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: child),
+              ],
+            );
+          }
+
+          if (bounded) {
+            // 两栏各自铺满，内部滚动交给组件自己的滚动容器。
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: side('原生组件', _native(), fill: true)),
+                const VerticalDivider(width: 1),
+                Expanded(child: side('JS 热更（JsUiWidget）', js, fill: true)),
               ],
             );
           }

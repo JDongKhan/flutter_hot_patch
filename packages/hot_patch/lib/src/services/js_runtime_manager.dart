@@ -509,13 +509,15 @@ class JsRuntimeManager {
     }
   }
 
-  /// 编译期标志：`kDebugMode` / `kReleaseMode` / `Platform.isXxx`，与 Dart
-  /// 产物里的裸引用同名（`globalThis` 属性即全局变量）。
+  /// 编译期标志：`kDebugMode` / `kReleaseMode` / `kInJsRuntime` / `Platform.isXxx`，
+  /// 与 Dart 产物里的裸引用同名（`globalThis` 属性即全局变量）。
+  /// `kInJsRuntime` 恒为 true：本段只在 JS 环境求值，原生侧的同名常量是 false。
   String _jsUiEnvSource() => '''
 (function () {
   var G = typeof globalThis !== 'undefined' ? globalThis : this;
   G.kDebugMode = $kDebugMode;
   G.kReleaseMode = $kReleaseMode;
+  G.kInJsRuntime = true;
   G.Platform = {
     isAndroid: ${defaultTargetPlatform == TargetPlatform.android},
     isIOS: ${defaultTargetPlatform == TargetPlatform.iOS},

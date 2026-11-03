@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { KeyTile } from 'key_tile.js';
-import { AppBar, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, GlobalKey, ListTile, ListView, ObjectKey, Padding, PageStorageKey, Row, Scaffold, SizedBox, StatefulWidget, Text, TextButton, TextStyle, UniqueKey, ValueKey } from '../flutter.js';
+import { AppBar, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, GlobalKey, ListTile, ListView, ObjectKey, Offset, Padding, PageStorageKey, Row, Scaffold, SizedBox, StatefulWidget, Text, TextButton, TextStyle, UniqueKey, ValueKey } from '../flutter.js';
 
 // 组件 KeyDetail
 export class KeyDetail extends StatefulWidget {
@@ -123,12 +123,32 @@ export class KeyDetail extends StatefulWidget {
     if ((box == null)) {
       return;
     }
-    var rect = await box.measure();
-    if ((rect == null)) {
+    var dx;
+    var dy;
+    var width;
+    var height;
+    if (kInJsRuntime) {
+      var rect = await box.measure();
+      if ((rect != null)) {
+        dx = rect.dx;
+        dy = rect.dy;
+        width = rect.width;
+        height = rect.height;
+      }
+    } else {
+      var offset = box.localToGlobal(new Offset({dx: 0, dy: 0}));
+      var size = box.size;
+      dx = offset.dx;
+      dy = offset.dy;
+      width = size.width;
+      height = size.height;
+    }
+    if (((((dx == null) || (dy == null)) || (width == null)) || (height == null))) {
       this.setState(() => { this._measureText = "量不到（未布局）"; });
       return;
     }
-    this.setState(() => { this._measureText = "x=" + rect.dx.toStringAsFixed(1) + " y=" + rect.dy.toStringAsFixed(1) + " · " + rect.width.toStringAsFixed(0) + " × " + rect.height.toStringAsFixed(0); });
+    var text = "x=" + dx.toStringAsFixed(1) + " y=" + dy.toStringAsFixed(1) + " · " + width.toStringAsFixed(0) + " × " + height.toStringAsFixed(0);
+    this.setState(() => { this._measureText = text; });
   }
   _scrollToTarget() {
     var ctx = this._targetKey.currentContext;
