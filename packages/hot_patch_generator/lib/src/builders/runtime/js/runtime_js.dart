@@ -728,6 +728,8 @@ const String _jsUiCrossModuleExports = r'''
     __contextOf: __contextOf,
     __isElement: __isElement,
     __isElementList: __isElementList,
+    // 值对象携带的嵌套元素 → 宿主可还原的元素描述（值类 toJSON 使用）。
+    __descriptorOf: __descriptorOf,
     __nodeIdOf: __nodeIdOf,
     __mount: __mount,
     __unmount: __unmount,

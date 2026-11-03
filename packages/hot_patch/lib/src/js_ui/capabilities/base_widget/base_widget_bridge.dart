@@ -1052,20 +1052,19 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   });
 
   r.register('BottomNavigationBar', (c) {
-    // items 是数据载体数组：从 children['items'] 的上下文读数据组装，
-    // 不把 BottomNavigationBarItem 当 Widget 挂载。
+    // items 是值对象数组（BottomNavigationBarItem 在 JS 侧是普通值类，不是
+    // 元素）：每项就是它的字段 JSON；携带的 Widget（icon / activeIcon）是元素
+    // 描述，用 `element` 就地还原，不进 reconciler 树。
     final items = <BottomNavigationBarItem>[];
-    final raws =
-        (c.children['items'] as List<JsRenderContext>?) ?? const [];
-    for (final raw in raws) {
-      final p = raw.props;
+    for (final raw in (c.props['items'] as List?) ?? const []) {
+      if (raw is! Map) continue;
       items.add(
         BottomNavigationBarItem(
-          icon: (raw.children['icon'] as Widget?) ??
+          icon: c.element(raw['icon']) ??
               const Icon(Icons.error_outline),
-          activeIcon: raw.children['activeIcon'] as Widget?,
-          label: p['label'] == null ? null : '${p['label']}',
-          tooltip: p['tooltip'] == null ? null : '${p['tooltip']}',
+          activeIcon: c.element(raw['activeIcon']),
+          label: raw['label'] == null ? null : '${raw['label']}',
+          tooltip: raw['tooltip'] == null ? null : '${raw['tooltip']}',
         ),
       );
     }
@@ -1077,18 +1076,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       unselectedItemColor: colorFromJson(c.props['unselectedItemColor']),
     );
   });
-
-  // BottomNavigationBarItem 非 Widget（见 BottomNavigationBar renderer，
-  // 从 props.items 的元素描述组装）；若被单独挂载则退回显示 icon。
-  r.register(
-    'BottomNavigationBarItem',
-    (c) => _JsBottomNavItem(
-      BottomNavigationBarItem(
-        icon: (c.children['icon'] as Widget?) ?? const Icon(Icons.error_outline),
-        label: c.str('label'),
-      ),
-    ),
-  );
 
   // RadioGroup：把选中值 + 回调提供给**子树内**的 Radio（子级不必再传
   // `groupValue` / `onChanged`，那两个是被它取代的旧 API）。onChanged 是必填，
@@ -1115,17 +1102,15 @@ void registerBaseWidgets(JsWidgetRegistry r) {
   );
 
   r.register('DropdownButton', (c) {
-    // items 是数据载体数组：从 children['items'] 的上下文读 value 与 child。
+    // items 是值对象数组（DropdownMenuItem 在 JS 侧是普通值类，不是元素）：
+    // 每项就是它的字段 JSON；携带的 child 是元素描述，用 `element` 就地还原。
     final items = <DropdownMenuItem<dynamic>>[];
-    final raws =
-        (c.children['items'] as List<JsRenderContext>?) ?? const [];
-    for (final raw in raws) {
-      final p = raw.props;
-      final child = raw.children['child'] as Widget?;
+    for (final raw in (c.props['items'] as List?) ?? const []) {
+      if (raw is! Map) continue;
       items.add(
         DropdownMenuItem<dynamic>(
-          value: p['value'],
-          child: child ?? const SizedBox.shrink(),
+          value: raw['value'],
+          child: c.element(raw['child']) ?? const SizedBox.shrink(),
         ),
       );
     }
@@ -1137,14 +1122,6 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       isExpanded: c.bool_('isExpanded') ?? false,
     );
   });
-
-  r.register(
-    'DropdownMenuItem',
-    (c) => DropdownMenuItem<dynamic>(
-      value: c.props['value'],
-      child: ((c.children['child'] as Widget?) ?? const SizedBox.shrink()),
-    ),
-  );
 
   // ---------------------------------------------------------------------
   // 单子包装 / 布局交互补充
@@ -1305,15 +1282,4 @@ class _JsPreferredSize extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) => child ?? const SizedBox.shrink();
-}
-
-/// BottomNavigationBarItem 不是 Widget：宿主侧用它包装 item 数据，
-/// 由 BottomNavigationBar renderer 收集还原为 items 列表。
-class _JsBottomNavItem extends StatelessWidget {
-  const _JsBottomNavItem(this.item);
-
-  final BottomNavigationBarItem item;
-
-  @override
-  Widget build(BuildContext context) => item.icon;
 }

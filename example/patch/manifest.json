@@ -1,11 +1,11 @@
 {
   "name": "flutter_hot_example",
-  "protocol": "0.3.8",
-  "buildTime": "2026-11-03T15:56:06.819464",
+  "protocol": "0.3.9",
+  "buildTime": "2026-11-03T16:26:47.906574",
   "resources": {
-    "flutter.js": "c8bc97e366a793b6629e48b91e02d0ebcdd9ac698edd17980e7a98151dc5a9b5",
+    "flutter.js": "4d3efc6e36f2912eba718b8d7f13d20bb9d6ae8dcd99fee4a406815039c6ee73",
     "provider.js": "975cc47fc5359987461e285b87c16afaec6686c6064a952030b447e93e3c4278",
-    "runtime.js": "7646507dbc118920aa20f4eee1a6e22ecc1ffffb8cae1b1907ad4654f9422739",
+    "runtime.js": "4e2c0a2aee7938956e6e00f175d0d80bfe737cb8f033ab96eaa5818fcdb6ac6f",
     "hot_module_base.js": "9c78f374567b4198b70012c5231b7bd023f273b92db5a3a3b4167243310567b7",
     "extensions/hot_module_base.js": "6d658e57214b734243ed825ff4f715de6ff2d00e2333f5308ce789c70eb72577",
     "app/model/app_models.js": "d9349a696021957a689d35ef4697b58d530cdcb8a8e6f2acabcc88d4bee4589b",

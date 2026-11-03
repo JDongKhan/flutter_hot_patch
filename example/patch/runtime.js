@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 8807fcb7） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 e8edf042） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '8807fcb7') { return; }
-  G.__jsuiVersion = '8807fcb7';
+  if (G.__jsui && G.__jsuiVersion === 'e8edf042') { return; }
+  G.__jsuiVersion = 'e8edf042';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -633,6 +633,69 @@ G.debugPrint = function (message) {
       if (v[i] != null && !__isElement(v[i])) { return false; }
     }
     return true;
+  }
+
+  // 值对象（值类）里携带的宿主元素 → 宿主可还原的元素描述
+  // `{type, props, children, element: true}`（还原入口见宿主 js_widget_registry
+  // 的 `buildJsElement`，renderer 侧即 `JsRenderContext.element`）。
+  //
+  // 这些元素**不进 reconciler 树**：父 renderer 取用时就地建 Flutter widget，
+  // 父级每次重建重建一次（与 Flutter 一致，没有 patch/diff 语义）。
+  //
+  // 判据只有协议：`__element === true` 的元素、数组、delegate 列表递归摊开，
+  // 其余值原样透传。JS 组件（重写了 build）必须由运行时驱动 build，宿主无法从
+  // JSON 还原 → 明确告警并丢弃，不静默降级。
+  function __descriptorOf(v) {
+    if (v == null) { return null; }
+    if (Array.isArray(v)) {
+      var arr = [];
+      for (var i = 0; i < v.length; i++) { arr.push(__descriptorOf(v[i])); }
+      return arr;
+    }
+    if (!__isElement(v)) { return v; }
+    var T = v.__type;
+    var type = typeof T === 'string' ? T : (T && T.name);
+    if (!type) {
+      __warn('值对象里的元素缺少类型名，已丢弃');
+      return null;
+    }
+    if (typeof T === 'function' && T.prototype != null &&
+        Object.prototype.hasOwnProperty.call(T.prototype, 'build')) {
+      __warn('值对象里的 JS 组件 "' + type + '" 无法由宿主还原，已丢弃');
+      return null;
+    }
+    // props / 子槽在包装类构造期已按统一协议拆好（见 Component.__splitHost）。
+    var props = {}, children = {};
+    var src = v.props || {};
+    for (var k in src) {
+      if (!Object.prototype.hasOwnProperty.call(src, k)) { continue; }
+      if (typeof src[k] === 'function') {
+        __warn('值对象里的元素 "' + type + '" 的回调 "' + k +
+          '" 无法跨桥（值对象不进结点树，没有句柄归属），已丢弃');
+        continue;
+      }
+      props[k] = src[k];
+    }
+    var slots = v.__children || {};
+    for (var sk in slots) {
+      if (!Object.prototype.hasOwnProperty.call(slots, sk)) { continue; }
+      var sv = slots[sk];
+      if (sv != null && typeof sv === 'object' && !Array.isArray(sv) &&
+          (sv.__builder !== undefined || sv.__delegate === 'builder')) {
+        __warn('值对象里的元素 "' + type + '" 的 builder 槽 "' + sk +
+          '" 无法跨桥，已丢弃');
+        continue;
+      }
+      if (sv != null && typeof sv === 'object' && !Array.isArray(sv) &&
+          sv.__delegate === 'list') {
+        children[sk] = {
+          __delegate: 'list', children: __descriptorOf(sv.children || [])
+        };
+        continue;
+      }
+      children[sk] = __descriptorOf(sv);
+    }
+    return { type: type, props: props, children: children, element: true };
   }
 
   // 事件回调无法跨语言传递 -> 登记为句柄（kind=fn，scope=local）。
@@ -2311,6 +2374,8 @@ G.debugPrint = function (message) {
     __contextOf: __contextOf,
     __isElement: __isElement,
     __isElementList: __isElementList,
+    // 值对象携带的嵌套元素 → 宿主可还原的元素描述（值类 toJSON 使用）。
+    __descriptorOf: __descriptorOf,
     __nodeIdOf: __nodeIdOf,
     __mount: __mount,
     __unmount: __unmount,

@@ -1,3 +1,12 @@
+## 0.3.3
+
+**值对象携带的 Widget 就地下发（需与生成器 0.3.9 配套；协议只做加法）。**
+
+- **嵌套 Widget 就地下发**：值对象字段里携带的元素描述（`{type, props, children, element: true}`）由 `JsRenderContext.element(...)`（`buildJsElement`）还原成 Flutter widget。这些子级**不进 reconciler 树**（父级每次重建重建一次，与 Flutter 每次 build 重建 items 一致），因此不需要类型表或挂载协议。
+- **`BottomNavigationBar`**：`items` 从 props 读（`BottomNavigationBarItem` 已是普通值类），`icon` / `activeIcon` 就地下发；删除该类型独立的宿主 renderer 与 `_JsBottomNavItem`。
+- **`TextField`**：`decoration` 从 props 读（`InputDecoration` 已是普通值类），并把 `icon` / `label` / `prefixIcon` / `suffixIcon` 透传给原生 `InputDecoration`，不再丢弃这些 Widget 字段。
+- **`_dataCarrierTypes`** 只保留 `DropdownMenuItem`；`registerJsDataCarrierType` 仍是公开扩展点（仅适用于产物里仍以 element 形态下发的载体类型）。
+
 ## 0.3.2
 
 **CustomPaint 新增文字与图片绘制（只做加法：新 op、图片句柄与宿主返回值编码器均为新增，老产物行为不变；需与生成器 0.3.5 配套）。**

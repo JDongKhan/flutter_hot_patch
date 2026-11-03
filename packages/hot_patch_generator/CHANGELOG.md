@@ -1,3 +1,11 @@
+## 0.3.9
+
+**InputDecoration / BottomNavigationBarItem 改为值类（协议只做加法：props 里新增 `{type, props, children, element: true}` 元素描述形态，老产物行为不变；需与 hot_patch 0.3.3 配套）。**
+
+- **值对象不再当宿主元素**：这两类从 `_dataCarrierTypes` 移出，不再生成 `extends Component` 的宿主包装类，改为 `flutter.js` 值类区的普通类（构造镜像 Dart 字段 + `toJSON`）——构造即值，留在父级 props，不再进 reconciler 树。
+- **新增通用元素描述通道**：运行时新增 `__descriptorOf`（`__element` 元素 → `{type, props, children, element: true}`，数组 / delegate 列表递归，JS 组件、builder 槽与回调值明确告警并丢弃）；值类 `toJSON` 复用它；宿主 renderer 直接读字段 JSON，再用 `c.element(...)` 就地还原成 Flutter widget（无 patch/diff）。
+- **删除**：`BottomNavigationBarItem` 的独立宿主 renderer 与 `_JsBottomNavItem`；`_dataCarrierTypes` 只保留 `DropdownMenuItem`（Flutter 里它是 StatelessWidget，仍按 element 形态下发、按数据消费）。
+
 ## 0.3.8
 
 **JS 运行时整理（纯内部重构：`patch/runtime.js` 与 `patch/flutter.js` 同步重出即可，宿主通道与补丁协议字段不变）。**

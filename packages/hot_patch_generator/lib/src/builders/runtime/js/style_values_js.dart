@@ -450,4 +450,51 @@ const String styleValuesJsSource = r'''
       return j;
     }
   }
+
+  // ----- 组件配置值对象（可携带嵌套 Widget）----------------------------------
+  // 这类类型在 Dart 里是普通值对象（`@immutable` 模型），**不是 Widget**：
+  // 构造实参原样成为字段，toJSON 直出宿主协议；字段值是 Widget 时经
+  // `__descriptorOf` 摊成元素描述，父 renderer 取用时**就地**还原成 Flutter
+  // widget（不进 reconciler 树，没有 diff/patch，与 Flutter 每次 build 重建
+  // items 一致）。因此它们不能做成宿主包装类（那样会被当子树挂载）。
+  class __ConfigValue {
+    constructor(props, names) {
+      props = __positionalArgs(props, names || []);
+      for (var k in props) {
+        if (props[k] != null) { this[k] = props[k]; }
+      }
+    }
+    toJSON() {
+      var j = {};
+      for (var k in this) {
+        if (this[k] != null) { j[k] = __descriptorOf(this[k]); }
+      }
+      return j;
+    }
+  }
+
+  // 宿主协议：bottom_navigation_bar renderer 直接读同名字段，`icon` /
+  // `activeIcon` 是元素描述（就地还原成 Widget）。
+  export class BottomNavigationBarItem extends __ConfigValue {
+    constructor(props) {
+      super(props, ['icon', 'label', 'activeIcon', 'tooltip', 'backgroundColor']);
+    }
+  }
+
+  // 宿主协议：text_field renderer 读 `decoration` 字段（hintText / labelText …）；
+  // `icon` / `prefixIcon` / `suffixIcon` 等 Widget 字段同样是元素描述。
+  export class InputDecoration extends __ConfigValue {
+    constructor(props) {
+      super(props);
+    }
+  }
+
+  // 宿主协议：dropdown_button renderer 读 `value` 与 `child`（`child` 是元素描述，
+  // 就地还原成 Widget）。`onTap` 是回调：值对象不进结点树、没有句柄归属，
+  // 因此跨桥时由 `__descriptorOf` 明确告警并丢弃（DropdownButton 也不消费它）。
+  export class DropdownMenuItem extends __ConfigValue {
+    constructor(props) {
+      super(props, ['value', 'enabled', 'alignment', 'child', 'onTap']);
+    }
+  }
 ''';

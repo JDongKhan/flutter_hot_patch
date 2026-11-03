@@ -6,7 +6,7 @@ const G = globalThis;
 const {
   __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,
   __createFnHandle, __objectToken,
-  __contextOf, __isElement, __isElementList,
+  __contextOf, __isElement, __isElementList, __descriptorOf,
   __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,
 } = G.__core;
 
@@ -299,11 +299,6 @@ export class BottomNavigationBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static __fnProps = ["onTap"];
-}
-
-export class BottomNavigationBarItem extends Component {
-  // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CachedNetworkImage extends Component {
@@ -607,12 +602,6 @@ export class InkWell extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static __fnProps = ["onDoubleTap", "onFocusChange", "onHighlightChanged", "onHover", "onLongPress", "onLongPressUp", "onSecondaryTap", "onSecondaryTapCancel", "onSecondaryTapDown", "onSecondaryTapUp", "onTap", "onTapCancel", "onTapDown", "onTapUp"];
-}
-
-export class InputDecoration extends Component {
-  // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  static collapsed(props) { return new InputDecoration(Object.assign({}, props, { factory: 'collapsed' })); }
 }
 
 export class InteractiveViewer extends Component {
@@ -6657,6 +6646,44 @@ export class ButtonStyle {
       if (this[k] != null) { j[k] = this[k]; }
     }
     return j;
+  }
+}
+
+// ----- 组件配置值对象（可携带嵌套 Widget）----------------------------------
+// 这类类型在 Dart 里是普通值对象（`@immutable` 模型），**不是 Widget**：
+// 构造实参原样成为字段，toJSON 直出宿主协议；字段值是 Widget 时经
+// `__descriptorOf` 摊成元素描述，父 renderer 取用时**就地**还原成 Flutter
+// widget（不进 reconciler 树，没有 diff/patch，与 Flutter 每次 build 重建
+// items 一致）。因此它们不能做成宿主包装类（那样会被当子树挂载）。
+class __ConfigValue {
+  constructor(props, names) {
+    props = __positionalArgs(props, names || []);
+    for (var k in props) {
+      if (props[k] != null) { this[k] = props[k]; }
+    }
+  }
+  toJSON() {
+    var j = {};
+    for (var k in this) {
+      if (this[k] != null) { j[k] = __descriptorOf(this[k]); }
+    }
+    return j;
+  }
+}
+
+// 宿主协议：bottom_navigation_bar renderer 直接读同名字段，`icon` /
+// `activeIcon` 是元素描述（就地还原成 Widget）。
+export class BottomNavigationBarItem extends __ConfigValue {
+  constructor(props) {
+    super(props, ['icon', 'label', 'activeIcon', 'tooltip', 'backgroundColor']);
+  }
+}
+
+// 宿主协议：text_field renderer 读 `decoration` 字段（hintText / labelText …）；
+// `icon` / `prefixIcon` / `suffixIcon` 等 Widget 字段同样是元素描述。
+export class InputDecoration extends __ConfigValue {
+  constructor(props) {
+    super(props);
   }
 }
 

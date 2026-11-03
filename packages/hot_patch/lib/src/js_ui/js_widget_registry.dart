@@ -11,15 +11,18 @@ import 'ui_fallback.dart';
 /// 只读数据（type/props/children）组装，不能当 Widget 挂载。
 ///
 /// 这是一张**可注册表**：内置类型在此登记；业务 / 三方自定义的条目类型
-/// （自定义导航项、下拉项、装饰配置等）在 `runApp` 前调用
+/// （自定义下拉项等）在 `runApp` 前调用
 /// [registerJsDataCarrierType] 登记即可，无需改框架源码。与
 /// [registerNativeComponent] 同属「类型 → 消费方式」的公开扩展点。
+///
+/// **值对象不走这张表**：Dart 里的纯值/模型类（`InputDecoration`、
+/// `BottomNavigationBarItem` 等）在 JS 侧是普通值类（见 `style_values_js`），
+/// 其构造不产出元素，嵌套 Widget 经 `__descriptorOf` 摊成元素描述，由父
+/// renderer 用 [JsRenderContext.descriptor] 就地还原——不挂载、不需要类型表。
 final Set<String> _dataCarrierTypes = <String>{
-  'BottomNavigationBarItem',
+  // DropdownMenuItem 在 Flutter 里是 StatelessWidget 的子类，这里按数据处理
+  // （父 renderer 只取 value / child）。
   'DropdownMenuItem',
-  // InputDecoration 是值对象（不是 Widget），TextField renderer 只读它的
-  // hintText / labelText 等 props。
-  'InputDecoration',
 };
 
 /// 登记一个「非 Widget 数据载体」类型。
@@ -180,6 +183,10 @@ class JsRenderContext {
   Map<String, dynamic>? styleMap(String key) => elementProps(props[key]);
 
   /// 单个元素描述（props 里值为 element 的键，或数组里的一项）→ widget。
+  ///
+  /// 值对象携带的 Widget 字段（`BottomNavigationBarItem.icon` /
+  /// `InputDecoration.icon` …）走这里**就地**还原：不进 reconciler 树，父级
+  /// 每次重建重建一次（与 Flutter 每次 build 重建 items 一致，没有 patch/diff）。
   Widget? element(Object? raw) => buildJsElement(raw);
 
   /// 元素描述数组（`AppBar.actions` / `BottomNavigationBar.items` /

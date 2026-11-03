@@ -52,9 +52,10 @@ void registerTextWidgets(JsWidgetRegistry r) {
     // 触发其 listeners），同时照常触发 onChanged 事件。
     final tecId = JsControllerBridge.idOf(c.props['controller']);
     final external = tecId != null ? _textBridge.controllerAt(tecId) : null;
-    // decoration 是值对象（InputDecoration）的数据上下文：只读它的 props。
-    final decoCtx = c.children['decoration'];
-    final deco = decoCtx is JsRenderContext ? decoCtx.props : null;
+    // decoration 是值对象（InputDecoration，JS 侧是普通值类）：它的字段 JSON
+    // 直接读；携带的 Widget（icon / label / prefixIcon / suffixIcon）是元素描述，
+    // 用 `element` 就地还原，不进 reconciler 树。
+    final deco = c.map('decoration');
     return _JsTextField(
       controller: external,
       onControllerText: external == null
@@ -67,6 +68,10 @@ void registerTextWidgets(JsWidgetRegistry r) {
       onChanged: c.on1<String>('onChanged'),
       hintText: deco?['hintText'] == null ? null : '${deco?['hintText']}',
       labelText: deco?['labelText'] == null ? null : '${deco?['labelText']}',
+      icon: c.element(deco?['icon']),
+      label: c.element(deco?['label']),
+      prefixIcon: c.element(deco?['prefixIcon']),
+      suffixIcon: c.element(deco?['suffixIcon']),
       obscureText: c.bool_('obscureText') ?? false,
       enabled: c.bool_('enabled'),
       keyboardType: textInputTypeFromJson(c.props['keyboardType']),
@@ -87,6 +92,10 @@ class _JsTextField extends StatefulWidget {
     required this.onChanged,
     this.hintText,
     this.labelText,
+    this.icon,
+    this.label,
+    this.prefixIcon,
+    this.suffixIcon,
     this.obscureText = false,
     this.enabled,
     this.keyboardType,
@@ -106,6 +115,13 @@ class _JsTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final String? hintText;
   final String? labelText;
+
+  /// InputDecoration 里的 Widget 字段：就地下发，不挂载。
+  final Widget? icon;
+  final Widget? label;
+  final Widget? prefixIcon;
+  final Widget? suffixIcon;
+
   final bool obscureText;
   final bool? enabled;
   final TextInputType? keyboardType;
@@ -165,6 +181,10 @@ class _JsTextFieldState extends State<_JsTextField> {
       decoration: InputDecoration(
         hintText: widget.hintText,
         labelText: widget.labelText,
+        icon: widget.icon,
+        label: widget.label,
+        prefixIcon: widget.prefixIcon,
+        suffixIcon: widget.suffixIcon,
       ),
     );
   }

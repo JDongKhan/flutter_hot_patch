@@ -977,7 +977,7 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln('const {')
       ..writeln('  __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,')
       ..writeln('  __createFnHandle, __objectToken,')
-      ..writeln('  __contextOf, __isElement, __isElementList,')
+      ..writeln('  __contextOf, __isElement, __isElementList, __descriptorOf,')
       ..writeln('  __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,')
       ..writeln('} = G.__core;')
       ..writeln()
