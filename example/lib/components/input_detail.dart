@@ -76,6 +76,24 @@ class _InputDetailState extends State<InputDetail> {
           maxLines: 1,
           style: const TextStyle(fontSize: 16),
         ),
+        const SizedBox(height: 8),
+        // InputDecoration 是值对象：icon / prefixIcon / suffixIcon / label 都是
+        // 它的 Widget 字段，JS 侧作为元素描述随 decoration 一起下发，宿主取用
+        // 时就地还原（不进结点树、不参与 diff）。
+        TextField(
+          decoration: InputDecoration(
+            hintText: '搜索目的地',
+            prefixIcon: Icon(Icons.search),
+            suffixIcon: Icon(Icons.close),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          decoration: InputDecoration(
+            icon: Icon(Icons.phone),
+            label: Text('手机号'),
+          ),
+        ),
         const SizedBox(height: 4),
         Text(
           '输入内容：$_text',

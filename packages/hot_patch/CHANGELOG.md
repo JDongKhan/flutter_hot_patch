@@ -4,8 +4,9 @@
 
 - **嵌套 Widget 就地下发**：值对象字段里携带的元素描述（`{type, props, children, element: true}`）由 `JsRenderContext.element(...)`（`buildJsElement`）还原成 Flutter widget。这些子级**不进 reconciler 树**（父级每次重建重建一次，与 Flutter 每次 build 重建 items 一致），因此不需要类型表或挂载协议。
 - **`BottomNavigationBar`**：`items` 从 props 读（`BottomNavigationBarItem` 已是普通值类），`icon` / `activeIcon` 就地下发；删除该类型独立的宿主 renderer 与 `_JsBottomNavItem`。
+- **`DropdownButton`**：`items` 从 props 读（`DropdownMenuItem` 已是普通值类），`child` 就地下发；删除该类型独立的宿主 renderer。
 - **`TextField`**：`decoration` 从 props 读（`InputDecoration` 已是普通值类），并把 `icon` / `label` / `prefixIcon` / `suffixIcon` 透传给原生 `InputDecoration`，不再丢弃这些 Widget 字段。
-- **`_dataCarrierTypes`** 只保留 `DropdownMenuItem`；`registerJsDataCarrierType` 仍是公开扩展点（仅适用于产物里仍以 element 形态下发的载体类型）。
+- **删除「数据载体类型表」**：`_dataCarrierTypes` / `registerJsDataCarrierType` / `isJsDataCarrierType` 及相关槽位分支全部移除（值对象走值类通道后已无存在意义）。
 
 ## 0.3.2
 

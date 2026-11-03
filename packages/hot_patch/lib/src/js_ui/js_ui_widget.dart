@@ -599,55 +599,22 @@ JsRenderContext _renderContextOf(
   }
   // 单值 widget slot：按 Dart 实参原名索引。
   for (final entry in node.propChildIds.entries) {
-    final childType = store.nodes[entry.value]?.type ?? '';
-    children[entry.key] = isJsDataCarrierType(childType)
-        ? _dataContextOf(store, entry.value, pageKey)
-        : _renderStoreNode(store, entry.value, pageKey);
+    children[entry.key] = _renderStoreNode(store, entry.value, pageKey);
   }
-  // 数组 widget slot；数据载体数组给数据上下文，不构建 Widget。
+  // 数组 widget slot。
   // 同一 key 同时存在单值与列表条目时（prop 形态从列表切到单值时，JS 侧会先下发
   // propsChild、再清空旧列表）以单值为准，避免空列表把刚绑定的 widget 覆盖掉。
   for (final entry in node.propChildLists.entries) {
     if (node.propChildIds.containsKey(entry.key)) continue;
-    final ids = entry.value;
-    final isData = ids.any(
-      (id) => isJsDataCarrierType(store.nodes[id]?.type ?? ''),
-    );
-    children[entry.key] = isData
-        ? [for (final id in ids) _dataContextOf(store, id, pageKey)]
-        : [for (final id in ids) _renderStoreNode(store, id, pageKey)];
+    children[entry.key] = [
+      for (final id in entry.value) _renderStoreNode(store, id, pageKey),
+    ];
   }
   // delegate 等非 Widget slot 描述。
   for (final entry in node.propData.entries) {
     children[entry.key] = entry.value;
   }
   return JsRenderContext(type: node.type, props: node.props, children: children);
-}
-
-/// 子结点数据上下文：只含 type/props/children，不构建 Widget。
-/// 供数据载体（items 等）由父 renderer 直接读数据组装。
-JsRenderContext _dataContextOf(JsUiStore store, String id, String pageKey) {
-  final node = store.nodes[id];
-  final children = <String, Object?>{};
-  for (final entry
-      in node?.propChildIds.entries ?? const <MapEntry<String, String>>[]) {
-    children[entry.key] = _renderStoreNode(store, entry.value, pageKey);
-  }
-  for (final entry in node?.propChildLists.entries ??
-      const <MapEntry<String, List<String>>>[]) {
-    children[entry.key] = [
-      for (final c in entry.value) _renderStoreNode(store, c, pageKey),
-    ];
-  }
-  for (final entry
-      in node?.propData.entries ?? const <MapEntry<String, dynamic>>[]) {
-    children[entry.key] = entry.value;
-  }
-  return JsRenderContext(
-    type: node?.type ?? '',
-    props: node?.props ?? const {},
-    children: children,
-  );
 }
 
 /// 两类宿主共用的「结点绑定」基类。

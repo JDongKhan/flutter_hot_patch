@@ -189,15 +189,15 @@ const Map<String, String> widgetPackages = {
 String widgetPackageOf(String type) =>
     widgetPackages[type] ?? nodeHelperPackage;
 
-/// 需要在 flutter.js 生成**宿主包装类**的类型：宿主 widget + 非 Widget 值对象，
-/// 排除已有 JS 类的类型（逻辑组件 / builder 代理，它们的类由各自 package 模块
-/// 产出，类名不能重复）。
+/// 需要在 flutter.js 生成**宿主包装类**的类型：宿主 widget，排除已有 JS 类的
+/// 类型（逻辑组件 / builder 代理，它们的类由各自 package 模块产出，类名不能
+/// 重复）。
 ///
-/// 宿主 widget / 数据载体清单**从运行时源码自动抽取**（见 `host_types.dart`：
-/// `r.register('X', …)` 与 `_dataCarrierTypes`），生成器不维护任何组件表。
-/// 包装类让翻译层把所有 widget 构造统一写成 `new Text({...})`，宿主包装类
-/// 在构造里直接 `return __h('Text', props)`，产物不再出现 `__h('Text', ...)`。
+/// 宿主 widget 清单**从运行时源码自动抽取**（见 `host_types.dart` 的
+/// `r.register('X', …)`），生成器不维护任何组件表。值对象（`InputDecoration` /
+/// `BottomNavigationBarItem` / `DropdownMenuItem` 等）不是宿主元素，由
+/// `style_values_js` 在值类区导出普通类，不在此生成。包装类让翻译层把所有
+/// widget 构造统一写成 `new Text({...})`，包装类实例自身即宿主元素。
 Set<String> get hostWrapperTypes => {
   ...hostWidgetTypes().where((t) => !jsClassWidgetTypes.contains(t)),
-  ...hostDataCarrierTypes(),
 };

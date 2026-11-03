@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/input_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Align, Alignment, Checkbox, Colors, Column, CrossAxisAlignment, DropdownButton, DropdownMenuItem, FilledButton, FontWeight, InputDecoration, Radio, Row, SizedBox, Slider, StatefulWidget, Switch, Text, TextEditingController, TextField, TextStyle } from '../flutter.js';
+import { Align, Alignment, Checkbox, Colors, Column, CrossAxisAlignment, DropdownButton, DropdownMenuItem, FilledButton, FontWeight, Icon, Icons, InputDecoration, Radio, Row, SizedBox, Slider, StatefulWidget, Switch, Text, TextEditingController, TextField, TextStyle } from '../flutter.js';
 
 // 组件 InputDetail
 export class InputDetail extends StatefulWidget {
@@ -67,23 +67,50 @@ export class InputDetail extends StatefulWidget {
           })))
         }),
         (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 8
+        }))),
+        new TextField({
+          "decoration": new InputDecoration({
+            "hintText": "搜索目的地",
+            "prefixIcon": new Icon({
+              "icon": Icons.search
+            }),
+            "suffixIcon": new Icon({
+              "icon": Icons.close
+            })
+          })
+        }),
+        (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 8
+        }))),
+        new TextField({
+          "decoration": new InputDecoration({
+            "icon": new Icon({
+              "icon": Icons.phone
+            }),
+            "label": new Text({
+              "data": "手机号"
+            })
+          })
+        }),
+        (this.__k4 || (this.__k4 = new SizedBox({
           "height": 4
         }))),
         new Text({
-          "style": (this.__k4 || (this.__k4 = new TextStyle({
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
             "color": Colors.grey,
             "fontSize": 14
           }))),
           "data": "输入内容：" + this._text
         }),
         new Text({
-          "style": (this.__k5 || (this.__k5 = new TextStyle({
+          "style": (this.__k6 || (this.__k6 = new TextStyle({
             "color": Colors.deepPurple,
             "fontSize": 14
           }))),
           "data": "controller.text：" + this._controller.text
         }),
-        (this.__k6 || (this.__k6 = new SizedBox({
+        (this.__k3 || (this.__k3 = new SizedBox({
           "height": 8
         }))),
         new Align({
@@ -128,7 +155,7 @@ export class InputDetail extends StatefulWidget {
           ]
         }),
         new Text({
-          "style": (this.__k4 || (this.__k4 = new TextStyle({
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
             "color": Colors.grey,
             "fontSize": 14
           }))),
@@ -206,7 +233,7 @@ export class InputDetail extends StatefulWidget {
             })
           ]
         }),
-        (this.__k6 || (this.__k6 = new SizedBox({
+        (this.__k3 || (this.__k3 = new SizedBox({
           "height": 8
         }))),
         new Text({

@@ -65,10 +65,9 @@ The generated JS of the example app can be browsed online:
   do not affect each other. Note that the **module registry (`__modules`) is runtime-global**: a fresh remote
   bundle invalidates loaded modules for every page, so two pages must not depend on different versions of the
   same module path.
-- **Rendering extension points**: `registerNativeComponent(type, build)` for native widget implementations and
-  `registerJsDataCarrierType(type)` for non-widget data carriers that still arrive as element descriptors
-  (custom dropdown items) — both are global, one-time registrations before `runApp`. Plain Dart value objects
-  (`InputDecoration`, `BottomNavigationBarItem`, …) need no registration: they are ordinary JS value classes and
+- **Rendering extension point**: `registerNativeComponent(type, build)` for native widget implementations —
+  a global, one-time registration before `runApp`. Item/config value objects (`InputDecoration`,
+  `BottomNavigationBarItem`, `DropdownMenuItem`, …) need no registration: they are ordinary JS value classes and
   their nested widgets are materialized in place by the parent renderer.
 
 ### Extension: JS → native capabilities
@@ -187,11 +186,10 @@ JsUiWidget(
   （结点树 / provider / 订阅 / 脏队列），同屏多实例互不影响。注意：**模块注册表
   `__modules` 是运行时全局的**——任一远程包 fresh 会清空全部页面已加载的模块，因此
   两个页面不能依赖同一模块路径的不同版本。
-- **渲染扩展点**：`registerNativeComponent(type, build)` 注册原生 widget 实现；
-  `registerJsDataCarrierType(type)` 注册仍以 element 形态下发的非 Widget 数据载体
-  （自定义下拉项）。两者都是全局一次性注册，放在 `runApp` 之前。Dart 纯值对象
-  （`InputDecoration` / `BottomNavigationBarItem` …）无需登记：它们是普通 JS 值类，
-  携带的 Widget 由父 renderer 就地还原。
+- **渲染扩展点**：`registerNativeComponent(type, build)` 注册原生 widget 实现，
+  全局一次性注册，放在 `runApp` 之前。条目 / 配置类值对象
+  （`InputDecoration` / `BottomNavigationBarItem` / `DropdownMenuItem` …）无需登记：
+  它们是普通 JS 值类，携带的 Widget 由父 renderer 就地还原。
 
 ### 扩展：JS → 原生能力
 

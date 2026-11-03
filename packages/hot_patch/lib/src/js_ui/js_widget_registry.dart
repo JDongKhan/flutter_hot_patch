@@ -7,33 +7,12 @@ import '../utils/hot_patch_log.dart';
 import 'capabilities/js_ui_capabilities.dart';
 import 'ui_fallback.dart';
 
-/// 非 Widget 数据载体类型：它们在产物里也是 element 形态，但宿主 renderer
-/// 只读数据（type/props/children）组装，不能当 Widget 挂载。
-///
-/// 这是一张**可注册表**：内置类型在此登记；业务 / 三方自定义的条目类型
-/// （自定义下拉项等）在 `runApp` 前调用
-/// [registerJsDataCarrierType] 登记即可，无需改框架源码。与
-/// [registerNativeComponent] 同属「类型 → 消费方式」的公开扩展点。
-///
-/// **值对象不走这张表**：Dart 里的纯值/模型类（`InputDecoration`、
-/// `BottomNavigationBarItem` 等）在 JS 侧是普通值类（见 `style_values_js`），
-/// 其构造不产出元素，嵌套 Widget 经 `__descriptorOf` 摊成元素描述，由父
-/// renderer 用 [JsRenderContext.descriptor] 就地还原——不挂载、不需要类型表。
-final Set<String> _dataCarrierTypes = <String>{
-  // DropdownMenuItem 在 Flutter 里是 StatelessWidget 的子类，这里按数据处理
-  // （父 renderer 只取 value / child）。
-  'DropdownMenuItem',
-};
-
-/// 登记一个「非 Widget 数据载体」类型。
-///
-/// 数据载体与 Widget 的区别只在**消费方式**：同为 element 描述，Widget 由
-/// 宿主挂载成子树，数据载体直接以 [JsRenderContext] 交给父 renderer 读字段。
-/// 幂等，重复登记无副作用。
-void registerJsDataCarrierType(String type) => _dataCarrierTypes.add(type);
-
-/// 该类型是否登记为非 Widget 数据载体（类型表驱动，不做类型名硬编码判断）。
-bool isJsDataCarrierType(String type) => _dataCarrierTypes.contains(type);
+/// 条目 / 配置类值对象（`InputDecoration`、`BottomNavigationBarItem`、
+/// `DropdownMenuItem` 等）在 JS 侧是普通值类（见生成器 `style_values_js`）：
+/// 构造即值、留在父级 `props` 里，**没有任何类型表**。它们携带的 Widget 字段
+/// 由运行时 `__descriptorOf` 摊成元素描述，父 renderer 用
+/// [JsRenderContext.element] 就地还原成 Flutter widget（不进 reconciler 树，
+/// 没有 patch/diff）。
 
 /// 宿主 → JS 事件回传（按钮点击、懒槽位挂载/卸载、LayoutBuilder 的 builder
 /// 回调等所有「宿主调 JS 句柄」的唯一出口）。
@@ -204,8 +183,9 @@ class JsRenderContext {
 
 /// 把产物里的**元素描述**（`{type, props, children, element}`）渲染成 widget。
 ///
-/// 用途：`__items`（builder 展开结果）/ 数据载体上下文等需要宿主自行递归渲染
-/// 的场景；具名 slot 已由 JS 侧挂载，宿主直接走 `propChild` / `propChildList`。
+/// 用途：值对象携带的 Widget 字段（`BottomNavigationBarItem.icon` /
+/// `InputDecoration.icon` / `DropdownMenuItem.child` …）就地还原；具名 slot
+/// 已由 JS 侧挂载，宿主直接走 `children[key]`。
 Widget? buildJsElement(Object? raw) {
   if (raw is! Map) return null;
   final type = raw['type'];
@@ -235,9 +215,9 @@ Widget? buildJsElement(Object? raw) {
 ///
 /// 协议唯一（由产物里的 `__h` 产出）：
 ///   - `__items`：builder 代理类展开结果（有序子结点）；
-///   - 数组：widget / 数据载体列表；
+///   - 数组：widget 列表；
 ///   - `{__delegate: 'list' | 'builder', …}`：delegate 描述；
-///   - `{element: true}`：单个 widget / 数据载体。
+///   - `{element: true}`：单个 widget。
 ///
 /// 不支持旧形状（children 是裸数组、元素混在 props 里）——产物以最新协议为准，
 /// 形状不合法时宁可丢 slot 也不猜。
@@ -247,19 +227,14 @@ Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
 
   void addList(String key, Object? value) {
     final widgets = <Widget>[];
-    final contexts = <JsRenderContext>[];
-    var dataCarrier = false;
     if (value is List) {
       for (final ch in value) {
         final w = buildJsElement(ch);
         // 数组槽位里解析不出的项按「没有这项」处理（可空语义），不兜底。
         if (w != null) widgets.add(w);
-        final ctx = _descriptorContext(ch);
-        contexts.add(ctx);
-        if (isJsDataCarrierType(ctx.type)) dataCarrier = true;
       }
     }
-    children[key] = dataCarrier ? contexts : widgets;
+    children[key] = widgets;
   }
 
   for (final entry in rawSlots.entries) {
@@ -285,10 +260,8 @@ Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
       continue;
     }
     if (v is Map && v['element'] == true) {
-      final ctx = _descriptorContext(v);
-      children[key] = isJsDataCarrierType(ctx.type)
-          ? ctx
-          : buildJsElement(v) ?? uiFallback('槽位 "$key" 元素渲染失败：${_elementTypeLabel(v)}');
+      children[key] =
+          buildJsElement(v) ?? uiFallback('槽位 "$key" 元素渲染失败：${_elementTypeLabel(v)}');
     }
   }
   return children;
@@ -301,20 +274,6 @@ String _elementTypeLabel(Object? raw) {
     if (t is String && t.isNotEmpty) return t;
   }
   return '${raw.runtimeType}';
-}
-
-/// 元素描述 → 仅含数据（type/props/children）的上下文：供
-/// `BottomNavigationBarItem` / `DropdownMenuItem` 这类**非 Widget 数据载体**
-/// 子结点由父 renderer 直接读数据组装。
-JsRenderContext _descriptorContext(Object? raw) {
-  final props = raw is Map && raw['props'] is Map
-      ? (raw['props'] as Map).cast<String, dynamic>()
-      : <String, dynamic>{};
-  return JsRenderContext(
-    type: raw is Map ? '${raw['type']}' : '',
-    props: props,
-    children: _childrenFromSlots(raw is Map ? raw['children'] : null),
-  );
 }
 
 // ===== 全局原生组件注入表 =====

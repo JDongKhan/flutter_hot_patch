@@ -460,12 +460,6 @@ export class DropdownButton extends Component {
   static _formField(props) { return new DropdownButton(Object.assign({}, props, { factory: '_formField' })); }
 }
 
-export class DropdownMenuItem extends Component {
-  // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  static __fnProps = ["onTap"];
-}
-
 export class EasyRefresh extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
   // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
@@ -6684,6 +6678,15 @@ export class BottomNavigationBarItem extends __ConfigValue {
 export class InputDecoration extends __ConfigValue {
   constructor(props) {
     super(props);
+  }
+}
+
+// 宿主协议：dropdown_button renderer 读 `value` 与 `child`（`child` 是元素描述，
+// 就地还原成 Widget）。`onTap` 是回调：值对象不进结点树、没有句柄归属，
+// 因此跨桥时由 `__descriptorOf` 明确告警并丢弃（DropdownButton 也不消费它）。
+export class DropdownMenuItem extends __ConfigValue {
+  constructor(props) {
+    super(props, ['value', 'enabled', 'alignment', 'child', 'onTap']);
   }
 }
 

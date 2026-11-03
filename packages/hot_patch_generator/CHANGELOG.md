@@ -1,10 +1,10 @@
 ## 0.3.9
 
-**InputDecoration / BottomNavigationBarItem 改为值类（协议只做加法：props 里新增 `{type, props, children, element: true}` 元素描述形态，老产物行为不变；需与 hot_patch 0.3.3 配套）。**
+**InputDecoration / BottomNavigationBarItem / DropdownMenuItem 改为值类，删除「数据载体类型表」（协议只做加法：props 里新增 `{type, props, children, element: true}` 元素描述形态，老产物行为不变；需与 hot_patch 0.3.3 配套）。**
 
-- **值对象不再当宿主元素**：这两类从 `_dataCarrierTypes` 移出，不再生成 `extends Component` 的宿主包装类，改为 `flutter.js` 值类区的普通类（构造镜像 Dart 字段 + `toJSON`）——构造即值，留在父级 props，不再进 reconciler 树。
+- **值对象不再当宿主元素**：这三类不再生成 `extends Component` 的宿主包装类，改为 `flutter.js` 值类区的普通类（构造镜像 Dart 字段 + `toJSON`）——构造即值，留在父级 props，不再进 reconciler 树。
 - **新增通用元素描述通道**：运行时新增 `__descriptorOf`（`__element` 元素 → `{type, props, children, element: true}`，数组 / delegate 列表递归，JS 组件、builder 槽与回调值明确告警并丢弃）；值类 `toJSON` 复用它；宿主 renderer 直接读字段 JSON，再用 `c.element(...)` 就地还原成 Flutter widget（无 patch/diff）。
-- **删除**：`BottomNavigationBarItem` 的独立宿主 renderer 与 `_JsBottomNavItem`；`_dataCarrierTypes` 只保留 `DropdownMenuItem`（Flutter 里它是 StatelessWidget，仍按 element 形态下发、按数据消费）。
+- **删除类型表**：`_dataCarrierTypes` 与 `registerJsDataCarrierType` / `isJsDataCarrierType` 一并删除，生成器 `host_types.dart` 不再扫描数据载体；`hostWrapperTypes` 只剩宿主 widget。三项独立宿主 renderer（`BottomNavigationBarItem` / `DropdownMenuItem`）与 `_JsBottomNavItem` 同步删除。
 
 ## 0.3.8
 
