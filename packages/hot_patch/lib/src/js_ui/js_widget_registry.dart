@@ -43,7 +43,7 @@ bool isJsDataCarrierType(String type) => _dataCarrierTypes.contains(type);
 /// 个数的事件共用同一条通路。
 ///
 /// 放在顶层（而不是挂在每个结点的 State 上传参）的原因：能力实现（各 bridge
-/// 的 renderer）与 [_JsNode] 的生命周期回调都只需要「一个 id + 一组参数」，
+/// 的 renderer）与 [_JsPlainNodeHost] 的生命周期回调都只需要「一个 id + 一组参数」，
 /// 传 `invoke` 闭包只会让每层构造多一个与语义无关的参数。
 void invokeJsHandler(Object? handler, [List<Object?> args = const []]) {
   if (handler is! Map) {

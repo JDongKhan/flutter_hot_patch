@@ -5,7 +5,7 @@ import '../utils/hot_patch_log.dart';
 /// 宿主侧的一个渲染结点：JS 对象树被 flatten 后的单位。
 ///
 /// [props] 是 JS 侧原样下发的 Map（含事件句柄 `{'__fn': id}`）；
-/// [childIds] 指向子结点，宿主据此递归渲染 [_JsNode]。
+/// [childIds] 指向子结点，宿主据此递归渲染（见 [JsUiStore] 与 `_renderStoreNode`）。
 class JsUiNode {
   JsUiNode({required this.type, required this.props, this.hasBuild = false});
 
@@ -40,7 +40,7 @@ class JsUiStore {
   /// 全部结点（id 由 JS 侧分配，仅在本页面内唯一）。
   final Map<String, JsUiNode> nodes = {};
 
-  /// id -> 该结点 _JsNodeState 的重建回调（挂载时登记、卸载时注销）。
+  /// id -> 该结点宿主 wrapper 的重建回调（挂载时登记、卸载时注销）。
   final Map<String, VoidCallback> _rebuilders = {};
 
   /// remove 的父结点定位自适应策略：结点少时全表扫一次是微秒级、零额外内存；
@@ -195,7 +195,7 @@ class JsUiStore {
         case 'remove':
           final id = raw['id'] as String?;
           if (id == null) break;
-          // 先记下父结点：`_JsNodeState.build` 只按 `node.childIds` 渲染，
+          // 先记下父结点：宿主的 `_renderStoreNode` 只按 `node.childIds` 渲染，
           // 摘除子结点后父结点必须重建，否则宿主侧会继续渲染已被删除的子树
           // （表现为：筛选弹框关不掉、切换筛选条件后列表不刷新）。
           // 索引模式 O(1) 定位；扫描模式全表找（小页面成本可忽略）。
