@@ -80,6 +80,11 @@ class ElementTranslateContext implements ExprRenderer {
   /// 注册为动作的方法。缺了它，非动作方法调用会整条翻译失败。
   final Set<String> methodNames;
 
+  /// 方法名 → 位置形参个数（含可选位置形参）。null = 含具名形参（具名实参走
+  /// 尾参对象约定，只能 `...__a` 原样转发）。方法 tear-off 据此生成精确形参：
+  /// 零参回调 `() => this._insert()`，避免无意义的 rest / spread。
+  final Map<String, int?> methodArity;
+
   /// 本类 **getter** 名（`_visiblePosts` 这类）。getter 在 JS 类里是 `get` 访问器，
   /// 作为**函数值**传参时只能按值读（`this._visiblePosts`），不能像方法那样包装成
   /// 调用（`(...__a) => this._visiblePosts(...__a)` —— 访问器不可调用，传出去的
@@ -123,6 +128,7 @@ class ElementTranslateContext implements ExprRenderer {
     required this.actionByMethod,
     required this.sourcePath,
     this.methodNames = const {},
+    this.methodArity = const {},
     this.getterNames = const {},
     this.importResolver,
     this.globalConsts = const {},
@@ -1451,15 +1457,29 @@ class ElementTranslateContext implements ExprRenderer {
       // 包装成调用会传出去一个函数，子组件拿到空数据。
       if (getterNames.contains(name)) return 'this.$name';
       if (staticMethodNames.contains(name) && className != null) {
-        return '(...__a) => $className.$name(...__a)';
+        return _methodRefJs(className!, name);
       }
       if (actionByMethod.containsKey(name) || methodNames.contains(name)) {
-        return '(...__a) => this.$name(...__a)';
+        return _methodRefJs('this', name);
       }
       final prop = propByField[name];
       if (prop != null) return 'this.$prop';
     }
     return null;
+  }
+
+  /// 方法引用 → 绑定接收者的箭头闭包。
+  ///
+  /// 形参个数来自源码方法声明（[methodArity]）：
+  ///   - 零参 → `() => this._insert()`（无 rest / spread）；
+  ///   - N 个位置形参 → `(__a0, …) => this.m(__a0, …)`（可选位置形参按
+  ///     `undefined` 传入，与 Dart 缺省值在 JS 侧的语义一致）；
+  ///   - 含具名形参（或 arity 不可得）→ `(...__a) => this.m(...__a)`。
+  String _methodRefJs(String recv, String name) {
+    final arity = methodArity[name];
+    if (arity == null) return '(...__a) => $recv.$name(...__a)';
+    final args = [for (var i = 0; i < arity; i++) '__a$i'];
+    return '(${args.join(', ')}) => $recv.$name(${args.join(', ')})';
   }
 
   /// 方法 tear-off 或 `() => _inc()` 内部的方法调用表达式

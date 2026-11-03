@@ -49,7 +49,7 @@ export class KeyTile extends StatefulWidget {
             })
           }),
           new TextButton({
-            "onPressed": (...__a) => this.bump(...__a),
+            "onPressed": () => this.bump(),
             "child": (this.__k3 || (this.__k3 = new Text({
               "data": "+1"
             })))

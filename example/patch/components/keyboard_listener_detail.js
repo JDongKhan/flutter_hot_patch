@@ -97,7 +97,7 @@ export class KeyboardListenerDetail extends StatefulWidget {
         new KeyboardListener({
           "focusNode": this._node,
           "autofocus": true,
-          "onKeyEvent": (...__a) => this._onKey(...__a),
+          "onKeyEvent": (__a0) => this._onKey(__a0),
           "child": new Container({
             "padding": (this.__k7 || (this.__k7 = EdgeInsets.all({
               "value": 10

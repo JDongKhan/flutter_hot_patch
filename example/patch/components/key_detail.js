@@ -189,7 +189,7 @@ export class KeyDetail extends StatefulWidget {
           new Row({
             "children": [
               new TextButton({
-                "onPressed": (...__a) => this._rotateNames(...__a),
+                "onPressed": () => this._rotateNames(),
                 "child": (this.__k9 || (this.__k9 = new Text({
                   "data": "轮换顺序（A→末尾）"
                 })))
@@ -198,7 +198,7 @@ export class KeyDetail extends StatefulWidget {
                 "width": 8
               }))),
               new TextButton({
-                "onPressed": (...__a) => this._resetNames(...__a),
+                "onPressed": () => this._resetNames(),
                 "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "重置"
                 })))
@@ -277,7 +277,7 @@ export class KeyDetail extends StatefulWidget {
           new Row({
             "children": [
               new TextButton({
-                "onPressed": (...__a) => this._rebuildParent(...__a),
+                "onPressed": () => this._rebuildParent(),
                 "child": (this.__k17 || (this.__k17 = new Text({
                   "data": "父级重建（setState 一次）"
                 })))
@@ -340,7 +340,7 @@ export class KeyDetail extends StatefulWidget {
           new Row({
             "children": [
               new TextButton({
-                "onPressed": (...__a) => this._bumpUnique(...__a),
+                "onPressed": () => this._bumpUnique(),
                 "child": (this.__k20 || (this.__k20 = new Text({
                   "data": "重建（setState 一次）"
                 })))
@@ -399,7 +399,7 @@ export class KeyDetail extends StatefulWidget {
           new Row({
             "children": [
               new TextButton({
-                "onPressed": (...__a) => this._flipStore(...__a),
+                "onPressed": () => this._flipStore(),
                 "child": new Text({
                   "data": this._storeA ? "切到 B 列表" : "切回 A 列表"
                 })
@@ -485,7 +485,7 @@ export class KeyDetail extends StatefulWidget {
           new Row({
             "children": [
               new TextButton({
-                "onPressed": (...__a) => this._measureTarget(...__a),
+                "onPressed": () => this._measureTarget(),
                 "child": (this.__k28 || (this.__k28 = new Text({
                   "data": "测量位置与尺寸"
                 })))
@@ -494,7 +494,7 @@ export class KeyDetail extends StatefulWidget {
                 "width": 8
               }))),
               new TextButton({
-                "onPressed": (...__a) => this._scrollToTarget(...__a),
+                "onPressed": () => this._scrollToTarget(),
                 "child": (this.__k29 || (this.__k29 = new Text({
                   "data": "定位（showOnScreen）"
                 })))

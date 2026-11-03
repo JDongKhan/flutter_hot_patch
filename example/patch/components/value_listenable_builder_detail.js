@@ -118,7 +118,7 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
           new Row({
             "children": [
               new OutlinedButton({
-                "onPressed": (...__a) => this._dec(...__a),
+                "onPressed": () => this._dec(),
                 "child": (this.__k8 || (this.__k8 = new Text({
                   "data": "-1"
                 })))
@@ -127,7 +127,7 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
                 "width": 8
               }))),
               new OutlinedButton({
-                "onPressed": (...__a) => this._inc(...__a),
+                "onPressed": () => this._inc(),
                 "child": (this.__k10 || (this.__k10 = new Text({
                   "data": "+1"
                 })))
@@ -136,7 +136,7 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
                 "width": 8
               }))),
               new OutlinedButton({
-                "onPressed": (...__a) => this._same(...__a),
+                "onPressed": () => this._same(),
                 "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "赋相同值"
                 })))
@@ -149,7 +149,7 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
           new Row({
             "children": [
               new OutlinedButton({
-                "onPressed": (...__a) => this._toggle(...__a),
+                "onPressed": () => this._toggle(),
                 "child": (this.__k13 || (this.__k13 = new Text({
                   "data": "切换订阅对象"
                 })))

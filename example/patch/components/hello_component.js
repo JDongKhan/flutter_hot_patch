@@ -127,7 +127,7 @@ export class HelloCard extends StatefulWidget {
         new Row({
           "children": [
             new ElevatedButton({
-              "onPressed": (...__a) => this.inc(...__a),
+              "onPressed": () => this.inc(),
               "style": ElevatedButton.styleFrom({ "backgroundColor": (isAdult ? PanelColors.adult : PanelColors.background), "foregroundColor": Colors.white }),
               "child": (this.__k1 || (this.__k1 = new Text({
                 "data": "+1"
@@ -140,19 +140,19 @@ export class HelloCard extends StatefulWidget {
               })))
             }),
             new ElevatedButton({
-              "onPressed": (...__a) => this.showNative(...__a),
+              "onPressed": () => this.showNative(),
               "child": (this.__k3 || (this.__k3 = new Text({
                 "data": "Native"
               })))
             }),
             new ElevatedButton({
-              "onPressed": (...__a) => this.loadUser(...__a),
+              "onPressed": () => this.loadUser(),
               "child": (this.__k4 || (this.__k4 = new Text({
                 "data": "Load User"
               })))
             }),
             new ElevatedButton({
-              "onPressed": (...__a) => this.demoTryCatchAssert(...__a),
+              "onPressed": () => this.demoTryCatchAssert(),
               "child": (this.__k5 || (this.__k5 = new Text({
                 "data": "Try/Catch"
               })))

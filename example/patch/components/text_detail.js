@@ -80,7 +80,7 @@ export class TextDetail extends StatefulWidget {
           "height": 6
         }))),
         new TextButton({
-          "onPressed": (...__a) => this.bump(...__a),
+          "onPressed": () => this.bump(),
           "child": (this.__k5 || (this.__k5 = new Text({
             "data": "Bump count"
           })))

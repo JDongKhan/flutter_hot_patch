@@ -42,7 +42,7 @@ export class DismissibleDetail extends StatefulWidget {
         }))),
         ...(() => { var out = []; for (let item of this._items) { out.push.apply(out, [new Dismissible({
                 "direction": DismissDirection.horizontal,
-                "confirmDismiss": (...__a) => this._confirm(...__a),
+                "confirmDismiss": (__a0) => this._confirm(__a0),
                 "background": new Container({
                   "color": Colors.red,
                   "alignment": Alignment.centerLeft,
@@ -92,7 +92,7 @@ export class DismissibleDetail extends StatefulWidget {
         new Align({
           "alignment": Alignment.centerLeft,
           "child": new OutlinedButton({
-            "onPressed": (...__a) => this._reset(...__a),
+            "onPressed": () => this._reset(),
             "child": (this.__k9 || (this.__k9 = new Text({
               "data": "重置"
             })))

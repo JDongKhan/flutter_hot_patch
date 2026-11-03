@@ -97,7 +97,7 @@ export class AnimatedListDetail extends StatefulWidget {
           "height": 260,
           "child": new AnimatedList({
             "initialItemCount": this._items.length,
-            "itemBuilder": (...__a) => this._itemBuilder(...__a),
+            "itemBuilder": (__a0, __a1, __a2) => this._itemBuilder(__a0, __a1, __a2),
             "key": this._listKey
           })
         }),
@@ -108,7 +108,7 @@ export class AnimatedListDetail extends StatefulWidget {
           "children": [
             new Expanded({
               "child": new TextButton({
-                "onPressed": (...__a) => this._insert(...__a),
+                "onPressed": () => this._insert(),
                 "child": (this.__k5 || (this.__k5 = new Text({
                   "data": "插入末尾（350ms）"
                 })))
@@ -116,7 +116,7 @@ export class AnimatedListDetail extends StatefulWidget {
             }),
             new Expanded({
               "child": new TextButton({
-                "onPressed": (...__a) => this._removeFirst(...__a),
+                "onPressed": () => this._removeFirst(),
                 "child": (this.__k6 || (this.__k6 = new Text({
                   "data": "移除第一项（300ms）"
                 })))

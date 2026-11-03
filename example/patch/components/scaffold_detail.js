@@ -64,7 +64,7 @@ export class ScaffoldDetail extends StatefulWidget {
         })
       }),
       "floatingActionButton": new FloatingActionButton({
-        "onPressed": (...__a) => this._onFab(...__a),
+        "onPressed": () => this._onFab(),
         "backgroundColor": Colors.deepPurple,
         "foregroundColor": Colors.white,
         "tooltip": "添加",
@@ -74,7 +74,7 @@ export class ScaffoldDetail extends StatefulWidget {
       }),
       "bottomNavigationBar": new BottomNavigationBar({
         "currentIndex": this._navIndex,
-        "onTap": (...__a) => this._onNavTap(...__a),
+        "onTap": (__a0) => this._onNavTap(__a0),
         "selectedItemColor": Colors.deepPurple,
         "unselectedItemColor": Colors.grey,
         "items": [

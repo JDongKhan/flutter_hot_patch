@@ -47,7 +47,7 @@ export class DashboardCard extends StatefulWidget {
           "height": 12
         }))),
         new ElevatedButton({
-          "onPressed": (...__a) => this.tick(...__a),
+          "onPressed": () => this.tick(),
           "style": ElevatedButton.styleFrom({ "backgroundColor": Colors.orange, "foregroundColor": Colors.white }),
           "child": (this.__k6 || (this.__k6 = new Text({
             "data": "Tick"

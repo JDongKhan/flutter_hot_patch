@@ -43,7 +43,7 @@ export class NotifierCard extends StatefulWidget {
               "mainAxisAlignment": MainAxisAlignment.center,
               "children": [
                 new ElevatedButton({
-                  "onPressed": (...__a) => this._inc(...__a),
+                  "onPressed": () => this._inc(),
                   "child": (this.__k3 || (this.__k3 = new Text({
                     "data": "+1"
                   })))
@@ -52,7 +52,7 @@ export class NotifierCard extends StatefulWidget {
                   "width": 12
                 }))),
                 new ElevatedButton({
-                  "onPressed": (...__a) => this._reset(...__a),
+                  "onPressed": () => this._reset(),
                   "child": (this.__k5 || (this.__k5 = new Text({
                     "data": "Reset"
                   })))

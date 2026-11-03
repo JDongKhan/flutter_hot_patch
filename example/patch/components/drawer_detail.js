@@ -57,7 +57,7 @@ export class DrawerDetail extends StatefulWidget {
               "title": (this.__k4 || (this.__k4 = new Text({
                 "data": "我的订单"
               }))),
-              "onTap": (...__a) => this._pickOrders(...__a)
+              "onTap": () => this._pickOrders()
             }),
             new ListTile({
               "leading": (this.__k5 || (this.__k5 = new Icon({
@@ -66,7 +66,7 @@ export class DrawerDetail extends StatefulWidget {
               "title": (this.__k6 || (this.__k6 = new Text({
                 "data": "我的收藏"
               }))),
-              "onTap": (...__a) => this._pickFavorites(...__a)
+              "onTap": () => this._pickFavorites()
             })
           ]
         })
@@ -96,7 +96,7 @@ export class DrawerDetail extends StatefulWidget {
               "title": (this.__k10 || (this.__k10 = new Text({
                 "data": "设置"
               }))),
-              "onTap": (...__a) => this._pickSettings(...__a)
+              "onTap": () => this._pickSettings()
             }),
             new ListTile({
               "leading": (this.__k11 || (this.__k11 = new Icon({
@@ -105,7 +105,7 @@ export class DrawerDetail extends StatefulWidget {
               "title": (this.__k12 || (this.__k12 = new Text({
                 "data": "帮助与关于"
               }))),
-              "onTap": (...__a) => this._pickHelp(...__a)
+              "onTap": () => this._pickHelp()
             })
           ]
         })

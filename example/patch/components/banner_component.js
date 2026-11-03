@@ -32,7 +32,7 @@ export class BannerCard extends StatefulWidget {
           "data": "views = " + this._views
         }),
         new ElevatedButton({
-          "onPressed": (...__a) => this.bump(...__a),
+          "onPressed": () => this.bump(),
           "child": (this.__k0 || (this.__k0 = new Text({
             "data": "Bump"
           })))

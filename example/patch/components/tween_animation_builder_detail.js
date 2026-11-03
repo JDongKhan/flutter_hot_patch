@@ -48,7 +48,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
                   "milliseconds": this._ms
                 }),
                 "curve": this._ease ? Curves.easeInOut : Curves.linear,
-                "onEnd": (...__a) => this._onEnd(...__a),
+                "onEnd": () => this._onEnd(),
                 "builder": (context, value, child) => {
                   return new Column({
                     "crossAxisAlignment": CrossAxisAlignment.stretch,

@@ -49,7 +49,7 @@ export class PageViewDetail extends StatefulWidget {
           "height": 150,
           "child": new PageView({
             "controller": this._pageController,
-            "onPageChanged": (...__a) => this._onPageChanged(...__a),
+            "onPageChanged": (__a0) => this._onPageChanged(__a0),
             "children": [
               new Container({
                 "color": Colors.deepPurple.shade100,
@@ -103,19 +103,19 @@ export class PageViewDetail extends StatefulWidget {
           "mainAxisAlignment": MainAxisAlignment.center,
           "children": [
             new TextButton({
-              "onPressed": (...__a) => this._prevPage(...__a),
+              "onPressed": () => this._prevPage(),
               "child": (this.__k9 || (this.__k9 = new Text({
                 "data": "上一页"
               })))
             }),
             new TextButton({
-              "onPressed": (...__a) => this._nextPage(...__a),
+              "onPressed": () => this._nextPage(),
               "child": (this.__k10 || (this.__k10 = new Text({
                 "data": "下一页"
               })))
             }),
             new TextButton({
-              "onPressed": (...__a) => this._jumpToLast(...__a),
+              "onPressed": () => this._jumpToLast(),
               "child": (this.__k11 || (this.__k11 = new Text({
                 "data": "跳到第 3 页"
               })))

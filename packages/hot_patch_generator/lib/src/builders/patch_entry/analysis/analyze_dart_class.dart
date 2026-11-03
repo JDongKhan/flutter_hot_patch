@@ -173,8 +173,10 @@ ClassInfo classInfoOf(
       returnsWidget: returnsWidgetOf(m),
       body: m.body,
       hostChannel: hostChannel,
-      positionalParamCount: hostChannel == null ? 0 : positionalParamCountOf(m),
-      hasNamedParams: hostChannel != null && hasNamedParamOf(m),
+      // 位置形参个数 / 是否含具名形参：宿主注入方法体据此拆分载荷；方法
+      // tear-off 也用它生成精确形参（见 ElementTranslateContext.methodArity）。
+      positionalParamCount: positionalParamCountOf(m),
+      hasNamedParams: hasNamedParamOf(m),
       superMap: superMap,
       mixinOrigin: mixinOrigin,
     );
@@ -692,6 +694,12 @@ ClassInfo translateClass(
     methodNames: {
       for (final m in methods)
         if (!m.isStatic) m.name,
+    },
+    // 方法位置形参个数（tear-off 生成精确形参用）。含具名形参时为 null——
+    // 具名实参走尾参对象约定，只能 `...__a` 原样转发（保留缺省值语义）。
+    methodArity: {
+      for (final m in methods)
+        m.name: (m.isGetter || m.hasNamedParams) ? null : m.positionalParamCount,
     },
     // getter 名（`_visiblePosts`）：JS 类里是 `get` 访问器，作为函数值传参时
     // 必须按值读，不能包装成调用（见 [ElementTranslateContext.getterNames]）。

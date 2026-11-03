@@ -65,13 +65,13 @@ export class HomePage extends StatefulWidget {
         "children": [
           new HomeHeader({
             "city": this._city,
-            "onRefresh": (...__a) => this._refresh(...__a),
-            "onPickCity": (...__a) => this._pickCity(...__a)
+            "onRefresh": () => this._refresh(),
+            "onPickCity": () => this._pickCity()
           }),
           new Expanded({
             "child": new EasyRefresh({
               "controller": this._refreshController,
-              "onRefresh": (...__a) => this._load(...__a),
+              "onRefresh": () => this._load(),
               "child": new CustomScrollView({
                 "slivers": [
                   new SliverToBoxAdapter({
@@ -329,7 +329,7 @@ export class HomeHeader extends StatelessWidget {
                   "width": 8
                 }))),
                 new InkWell({
-                  "onTap": (...__a) => this.openMessages(...__a),
+                  "onTap": () => this.openMessages(),
                   "borderRadius": (this.__k7 || (this.__k7 = BorderRadius.all({
                     "radius": Radius.circular({
                       "radius": 18
@@ -378,7 +378,7 @@ export class HomeHeader extends StatelessWidget {
               "height": 12
             }))),
             new InkWell({
-              "onTap": (...__a) => this.openSearch(...__a),
+              "onTap": () => this.openSearch(),
               "borderRadius": (this.__k12 || (this.__k12 = BorderRadius.all({
                 "radius": Radius.circular({
                   "radius": 20
@@ -456,7 +456,7 @@ export class GridCell extends StatelessWidget {
   }
   build(context) {
     return new InkWell({
-      "onTap": (...__a) => this.open(...__a),
+      "onTap": () => this.open(),
       "child": new Column({
         "mainAxisAlignment": MainAxisAlignment.center,
         "children": [
@@ -498,7 +498,7 @@ export class SpotCard extends StatelessWidget {
   }
   build(context) {
     return new InkWell({
-      "onTap": (...__a) => this.open(...__a),
+      "onTap": () => this.open(),
       "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
         "radius": Radius.circular({
           "radius": 14
@@ -658,7 +658,7 @@ export class PromoCard extends StatelessWidget {
   }
   build(context) {
     return new InkWell({
-      "onTap": (...__a) => this.open(...__a),
+      "onTap": () => this.open(),
       "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
         "radius": Radius.circular({
           "radius": 14

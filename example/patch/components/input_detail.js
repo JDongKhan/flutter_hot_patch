@@ -56,7 +56,7 @@ export class InputDetail extends StatefulWidget {
         }))),
         new TextField({
           "controller": this._controller,
-          "onChanged": (...__a) => this._onTextChanged(...__a),
+          "onChanged": (__a0) => this._onTextChanged(__a0),
           "decoration": (this.__k1 || (this.__k1 = new InputDecoration({
             "hintText": "请输入文本",
             "labelText": "用户名"
@@ -110,7 +110,7 @@ export class InputDetail extends StatefulWidget {
             new Radio({
               "value": "A",
               "groupValue": this._choice,
-              "onChanged": (...__a) => this._onChoiceChanged(...__a),
+              "onChanged": (__a0) => this._onChoiceChanged(__a0),
               "activeColor": Colors.deepPurple
             }),
             (this.__k10 || (this.__k10 = new Text({
@@ -119,7 +119,7 @@ export class InputDetail extends StatefulWidget {
             new Radio({
               "value": "B",
               "groupValue": this._choice,
-              "onChanged": (...__a) => this._onChoiceChanged(...__a),
+              "onChanged": (__a0) => this._onChoiceChanged(__a0),
               "activeColor": Colors.deepPurple
             }),
             (this.__k11 || (this.__k11 = new Text({
@@ -147,7 +147,7 @@ export class InputDetail extends StatefulWidget {
         new DropdownButton({
           "value": this._dropdown,
           "isExpanded": true,
-          "onChanged": (...__a) => this._onDropdownChanged(...__a),
+          "onChanged": (__a0) => this._onDropdownChanged(__a0),
           "items": [
             new DropdownMenuItem({
               "value": "苹果",
@@ -176,7 +176,7 @@ export class InputDetail extends StatefulWidget {
           "children": [
             new Switch({
               "value": this._switchOn,
-              "onChanged": (...__a) => this._onSwitchChanged(...__a),
+              "onChanged": (__a0) => this._onSwitchChanged(__a0),
               "activeColor": Colors.white,
               "activeTrackColor": Colors.deepPurple,
               "inactiveThumbColor": Colors.grey,
@@ -194,7 +194,7 @@ export class InputDetail extends StatefulWidget {
           "children": [
             new Checkbox({
               "value": this._checked,
-              "onChanged": (...__a) => this._onCheckChanged(...__a),
+              "onChanged": (__a0) => this._onCheckChanged(__a0),
               "activeColor": Colors.deepPurple,
               "checkColor": Colors.white
             }),
@@ -223,7 +223,7 @@ export class InputDetail extends StatefulWidget {
           "label": ((this._slider * 100)).round() + "%",
           "activeColor": Colors.deepPurple,
           "inactiveColor": Colors.grey.shade300,
-          "onChanged": (...__a) => this._onSliderChanged(...__a)
+          "onChanged": (__a0) => this._onSliderChanged(__a0)
         })
       ]
     });

@@ -19,7 +19,7 @@ export class PopScopeDetail extends StatefulWidget {
   build(context) {
     return new PopScope({
       "canPop": this._canPop,
-      "onPopInvokedWithResult": (...__a) => this._onPopInvoked(...__a),
+      "onPopInvokedWithResult": (__a0, __a1) => this._onPopInvoked(__a0, __a1),
       "child": new Column({
         "crossAxisAlignment": CrossAxisAlignment.start,
         "children": [

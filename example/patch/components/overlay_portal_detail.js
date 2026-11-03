@@ -79,7 +79,7 @@ export class OverlayPortalDetail extends StatefulWidget {
                 "seconds": 3
               }))),
               "child": new OutlinedButton({
-                "onPressed": (...__a) => this._replay(...__a),
+                "onPressed": () => this._replay(),
                 "child": (this.__k9 || (this.__k9 = new Text({
                   "data": "目标 A"
                 })))
@@ -97,7 +97,7 @@ export class OverlayPortalDetail extends StatefulWidget {
                 "value": 0xE6307AF0
               }))),
               "child": new OutlinedButton({
-                "onPressed": (...__a) => this._replay(...__a),
+                "onPressed": () => this._replay(),
                 "child": (this.__k11 || (this.__k11 = new Text({
                   "data": "目标 B"
                 })))

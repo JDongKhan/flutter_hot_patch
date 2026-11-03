@@ -77,7 +77,7 @@ export class VisibilityDetail extends StatefulWidget {
                   "color": Colors.teal.shade100,
                   "alignment": Alignment.center,
                   "child": new ElevatedButton({
-                    "onPressed": (...__a) => this._onTap(...__a),
+                    "onPressed": () => this._onTap(),
                     "child": new Text({
                       "data": "点我（已点 " + this._taps + " 次）"
                     })
@@ -100,7 +100,7 @@ export class VisibilityDetail extends StatefulWidget {
               new Row({
                 "children": [
                   new OutlinedButton({
-                    "onPressed": (...__a) => this._show(...__a),
+                    "onPressed": () => this._show(),
                     "child": (this.__k5 || (this.__k5 = new Text({
                       "data": "显示"
                     })))
@@ -109,7 +109,7 @@ export class VisibilityDetail extends StatefulWidget {
                     "width": 6
                   }))),
                   new OutlinedButton({
-                    "onPressed": (...__a) => this._hideTight(...__a),
+                    "onPressed": () => this._hideTight(),
                     "child": (this.__k7 || (this.__k7 = new Text({
                       "data": "隐藏·不占位"
                     })))
@@ -118,7 +118,7 @@ export class VisibilityDetail extends StatefulWidget {
                     "width": 6
                   }))),
                   new OutlinedButton({
-                    "onPressed": (...__a) => this._hideKeepSpace(...__a),
+                    "onPressed": () => this._hideKeepSpace(),
                     "child": (this.__k8 || (this.__k8 = new Text({
                       "data": "隐藏·占位"
                     })))
@@ -127,7 +127,7 @@ export class VisibilityDetail extends StatefulWidget {
                     "width": 6
                   }))),
                   new OutlinedButton({
-                    "onPressed": (...__a) => this._hideKeepTap(...__a),
+                    "onPressed": () => this._hideKeepTap(),
                     "child": (this.__k9 || (this.__k9 = new Text({
                       "data": "隐藏·仍可点"
                     })))
@@ -186,7 +186,7 @@ export class VisibilityDetail extends StatefulWidget {
               new Row({
                 "children": [
                   new OutlinedButton({
-                    "onPressed": (...__a) => this._toggleOffstage(...__a),
+                    "onPressed": () => this._toggleOffstage(),
                     "child": new Text({
                       "data": this._offstage ? "关闭 offstage" : "打开 offstage"
                     })

@@ -90,7 +90,7 @@ export class GuideBubbleWidget extends StatefulWidget {
   build(context) {
     return new OverlayPortal({
       "controller": this._controller,
-      "overlayChildBuilder": (...__a) => this._buildOverlayChild(...__a),
+      "overlayChildBuilder": (__a0) => this._buildOverlayChild(__a0),
       "child": new CompositedTransformTarget({
         "link": this._layerLink,
         "child": this.child

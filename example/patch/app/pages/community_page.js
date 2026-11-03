@@ -220,7 +220,7 @@ export class CommunityPage extends StatefulWidget {
                     })]); } return out; })(),
               (this.__k7 || (this.__k7 = new Spacer({}))),
               new GestureDetector({
-                "onTap": (...__a) => this._toggleFilter(...__a),
+                "onTap": () => this._toggleFilter(),
                 "child": new Container({
                   "padding": (this.__k17 || (this.__k17 = EdgeInsets.symmetric({
                     "horizontal": 11,
@@ -272,16 +272,16 @@ export class CommunityPage extends StatefulWidget {
           "child": (this._posts == null) ? (this.__k0 || (this.__k0 = new Center({
             "child": new CircularProgressIndicator({})
           }))) : new _ListContent({
-            "resetFilter": (...__a) => this._resetFilter(...__a),
+            "resetFilter": () => this._resetFilter(),
             "openFilter": this._filterOpen,
-            "toggleFilter": (...__a) => this._toggleFilter(...__a),
+            "toggleFilter": () => this._toggleFilter(),
             "feed": this._feed,
             "list": this._posts,
             "sort": this._sort,
             "type": this._type,
             "dist": this._dist,
             "price": this._price,
-            "onSelectFilter": (...__a) => this._selectFilter(...__a)
+            "onSelectFilter": (__a0, __a1) => this._selectFilter(__a0, __a1)
           })
         })
       ]

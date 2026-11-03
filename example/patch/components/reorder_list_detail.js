@@ -38,7 +38,7 @@ export class ReorderListDetail extends StatefulWidget {
                 })
               }))),
               new ElevatedButton({
-                "onPressed": (...__a) => this._add(...__a),
+                "onPressed": () => this._add(),
                 "child": (this.__k2 || (this.__k2 = new Text({
                   "data": "添加"
                 })))
@@ -50,7 +50,7 @@ export class ReorderListDetail extends StatefulWidget {
           "height": 320,
           "child": ReorderableListView.builder({
             "scrollController": this._controller,
-            "onReorder": (...__a) => this._onReorder(...__a),
+            "onReorder": (__a0, __a1) => this._onReorder(__a0, __a1),
             "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
               "horizontal": 12
             }))),

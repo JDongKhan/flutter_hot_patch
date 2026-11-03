@@ -80,7 +80,7 @@ export class MixinDetail extends StatefulWidget {
           "height": 8
         }))),
         new ElevatedButton({
-          "onPressed": (...__a) => this._bump(...__a),
+          "onPressed": () => this._bump(),
           "child": (this.__k5 || (this.__k5 = new Text({
             "data": "+1 并打日志"
           })))
@@ -128,7 +128,7 @@ export class ExtensionDetail extends StatelessWidget {
           "height": 12
         }))),
         new ElevatedButton({
-          "onPressed": (...__a) => this._log(...__a),
+          "onPressed": () => this._log(),
           "child": (this.__k4 || (this.__k4 = new Text({
             "data": "调用 String.logText()"
           })))
@@ -336,7 +336,7 @@ export class BasicApiDetail extends StatefulWidget {
           "height": 16
         }))),
         new ElevatedButton({
-          "onPressed": (...__a) => this._refresh(...__a),
+          "onPressed": () => this._refresh(),
           "child": (this.__k8 || (this.__k8 = new Text({
             "data": "重新计算 DateTime.now()"
           })))

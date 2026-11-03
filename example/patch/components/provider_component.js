@@ -70,7 +70,7 @@ export class ProviderCard extends StatefulWidget {
                 "mainAxisAlignment": MainAxisAlignment.center,
                 "children": [
                   new ElevatedButton({
-                    "onPressed": (...__a) => this._loadUser(...__a),
+                    "onPressed": () => this._loadUser(),
                     "child": (this.__k4 || (this.__k4 = new Text({
                       "data": "加载用户信息"
                     })))
@@ -95,7 +95,7 @@ export class ProviderCard extends StatefulWidget {
                 "mainAxisAlignment": MainAxisAlignment.center,
                 "children": [
                   new ElevatedButton({
-                    "onPressed": (...__a) => this._incA(...__a),
+                    "onPressed": () => this._incA(),
                     "child": (this.__k6 || (this.__k6 = new Text({
                       "data": "B +1"
                     })))
@@ -104,7 +104,7 @@ export class ProviderCard extends StatefulWidget {
                     "width": 12
                   }))),
                   new ElevatedButton({
-                    "onPressed": (...__a) => this._resetA(...__a),
+                    "onPressed": () => this._resetA(),
                     "child": (this.__k8 || (this.__k8 = new Text({
                       "data": "B Reset"
                     })))
