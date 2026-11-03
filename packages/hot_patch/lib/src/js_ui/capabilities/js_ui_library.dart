@@ -81,8 +81,8 @@ abstract class JsUiLibrary {
   /// 内建能力的 JS 已在构建期拼进 `patch/runtime.js`（生成器
   /// `builders/runtime/js/**`，随补丁发布，修复无需发版），故内建库都返回空。
   /// 外部库的片段在 runtime.js 之后以独立 IIFE 求值，**不能**再引用核心闭包
-  /// 内部函数（`registerScope` / `scopeOf` 等，它们不在全局），只能用 `__jsui`
-  /// 与 `_app_host_`；需要核心能力的库应把代码并入运行时产物。
+  /// 内部函数（`__registerScope` / `__scopeOf` 等，它们不在全局），只能用
+  /// `__jsui` 与 `_app_host_`；需要核心能力的库应把代码并入运行时产物。
   List<String> get jsFragments => const [];
 
   /// 本库**随补丁包发布的独立 JS 模块**（相对补丁根目录的文件名，如

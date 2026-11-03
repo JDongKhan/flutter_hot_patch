@@ -93,12 +93,8 @@ const String dragSourcePropsMethodSource = '''
   __sourceProps() {
     var self = this;
     var p = self.props || {};
-    var props = {};
-    for (var k in p) {
-      if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
-          k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
-      props[k] = p[k];
-    }
+    var props = self.__propsExcept(
+      ['data', 'onDragStarted', 'onDragUpdate', 'onDragEnd', 'onDragCompleted']);
     props.data = DragData.ref(p.data);
     // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
     props.onDragStarted = self.__bindFn(0, [], function () {
@@ -135,23 +131,19 @@ const String dragTargetPropsMethodSource = '''
     var p = self.props || {};
     var builder = p.builder;
     if (typeof builder !== 'function') {
-      console.warn('[DragTarget] builder 不是闭包');
+      __warn('[DragTarget] builder 不是闭包');
       return null;
     }
     if (typeof p.onWillAccept === 'function' ||
         typeof p.onWillAcceptWithDetails === 'function') {
-      console.warn(
+      __warn(
         '[DragTarget] onWillAccept / onWillAcceptWithDetails 需要同步返回值，' +
         '跨语言只能异步，已忽略（目标恒接受）'
       );
     }
-    var props = {};
-    for (var k in p) {
-      if (k === 'builder' || k === 'onWillAccept' || k === 'onWillAcceptWithDetails' ||
-          k === 'onAccept' || k === 'onAcceptWithDetails' ||
-          k === 'onMove' || k === 'onLeave') { continue; }
-      props[k] = p[k];
-    }
+    var props = self.__propsExcept(
+      ['builder', 'onWillAccept', 'onWillAcceptWithDetails',
+       'onAccept', 'onAcceptWithDetails', 'onMove', 'onLeave']);
     // 悬停时宿主会反复回调：同一次候选集合只重建一次子树（id 列表即身份签名）。
     props.builder = self.__bindFn(0, [], function (json) {
       json = json || {};

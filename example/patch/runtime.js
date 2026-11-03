@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 2cd8611d） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 82906520） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '2cd8611d') { return; }
-  G.__jsuiVersion = '2cd8611d';
+  if (G.__jsui && G.__jsuiVersion === '82906520') { return; }
+  G.__jsuiVersion = '82906520';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -18,11 +18,11 @@ if (typeof G.__modules === 'undefined') {
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
 // 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
 // 值 → 字符串（对象/数组完整展开，循环引用安全）：JS 侧 `String(obj)` 只会
-// 得到 `[object Object]`，日志里看不到任何字段。`__str` 递归展开 own 字段，
-// 函数标成 `[Function name]`、循环引用标成 `[Circular]`（与 JSON.stringify
+// 得到 `[object Object]`，日志里看不到任何字段。`__formatValue` 递归展开 own
+// 字段，函数标成 `[Function name]`、循环引用标成 `[Circular]`（与 JSON.stringify
 // 不同：不会因循环引用直接抛错，也不丢函数字段）。
-// 日志全局 `print` / `debugPrint` 用它展开实参；JS 值类（StringBuffer 等）
-// 也按同名约定引用它，故挂在 G 上供产物裸引用。
+// 日志全局 `print` / `debugPrint` 用它展开实参；JS 值类（StringBuffer）经
+// `__core.str` 取同一份实现，跨模块只走 G.__core。
 function __formatValue(v, stack) {
   if (typeof v === 'string') return v;
   if (v === null) return 'null';
@@ -49,67 +49,72 @@ function __formatValue(v, stack) {
   }
   return '{' + out.join(', ') + '}';
 }
-G.__str = function (v) { return __formatValue(v, []); };
-// Dart 顶层日志函数（产物按一比一原样调用 `print(...)` / `debugPrint(...)`）：
-// 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）；实参交给
-// __formatValue 展开（对象/数组字段可见，不再只得到 `[object Object]`）。
+function __str(v) { return __formatValue(v, []); }
+// 日志唯一出口：桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
 //
-// **release 下关闭、零跨桥**：kDebugMode 为 false 时 __log 直接返回 —— 一次
-// 日志的代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既看不到也担不起；
+// **release 下关闭、零跨桥**：kDebugMode 为 false 时直接返回 —— 一次日志的
+// 代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既看不到也担不起；
 // 需要线上诊断请走显式上报通道，不要指望 print。
 //
-// debugPrint 的 Dart 签名是 `debugPrint(String? message, {int? wrapWidth})`：
-// 混合调用由生成器按「运行时全局函数」的统一信封传入
-// `{ "@args": [message], "wrapWidth": … }`，这里取出位置实参（wrapWidth 只
-// 影响原生逐行折行，JS 侧无对应物，忽略）。
+// 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终
+// 已注册，故 Promise 一定被回填、不会悬挂。`_app_host_` 在本 IIFE 收尾（【25】）
+// 赋值，而日志只可能由页面代码触发——那时它必然已存在，无需探测。
 //
-// 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
-// 故 Promise 一定被回填、不会悬挂。`_app_host_` 在本 IIFE 收尾（【25】）赋值，
-// 而 print/debugPrint 只可能被页面代码调用——那时它必然已存在，无需探测。
-function __log(level, args) {
+// 级别：Dart `print` → info、`debugPrint` → debug；框架内部诊断用 warn / error
+// （宿主侧同样按级别归类，见 builtin_host_methods.dart 的 _log）。
+function __logText(level, text) {
   if (!G.kDebugMode) { return; }
+  G._app_host_.invoke('log', [level, String(text)]);
+}
+// 框架内部诊断（只在 debug 下出声，release 零开销）。
+function __warn(text) { __logText('warn', text); }
+function __error(text) { __logText('error', text); }
+// 多个实参 → 一行（与 Dart print 的空格分隔语义一致）。
+function __argsText(args) {
   var text = '';
   for (var i = 0; i < args.length; i++) {
     text += (i ? ' ' : '') + __formatValue(args[i], []);
   }
-  // 级别一并带给宿主（位置实参 [level, text]）：未知级别按 info 处理（见
-  // builtin_host_methods.dart 的 _log）。
-  G._app_host_.invoke('log', [level, text]);
+  return text;
 }
-G.print = function (message) { __log('info', [message]); };
+G.print = function (message) { __logText('info', __argsText([message])); };
+// debugPrint 的 Dart 签名是 `debugPrint(String? message, {int? wrapWidth})`：
+// 混合调用由生成器按「运行时全局函数」的统一信封传入
+// `{ "@args": [message], "wrapWidth": … }`，这里取出位置实参（wrapWidth 只
+// 影响原生逐行折行，JS 侧无对应物，忽略）。
 G.debugPrint = function (message) {
   if (message !== null && typeof message === 'object' && message['@args']) {
     message = message['@args'][0];
   }
-  __log('debug', [message]);
+  __logText('debug', __formatValue(message, []));
 };
 
-  var idSeq = 0;
-  var HOST = 1, COMP = 2;
+  var __idSeq = 0;
+  var __HOST = 1, __COMP = 2;
 
   // pageKey -> { key, inst, dirty, flushing, flushPending, mounting, ops }
-  var roots = {};
+  var __roots = {};
   // pageKey -> 句柄 id[]：本页面（scope=page）登记的全部跨语言句柄（控制器 /
-  // 函数 / 未来的 Key / 对象…）。页面退出时由 disposeRoot 统一释放——新增能力
-  // 只要按句柄登记即自动获得页面回收，无需再改 disposeRoot（见【4】句柄注册表）。
-  var pageHandles = {};
-  // 正在 mount/patch/commit 的根；emitOp / 结点归属都读它。
-  var activeRoot = null;
+  // 函数 / 未来的 Key / 对象…）。页面退出时由 __disposeRoot 统一释放——新增能力
+  // 只要按句柄登记即自动获得页面回收，无需再改 __disposeRoot（见【4】句柄注册表）。
+  var __pageHandles = {};
+  // 正在 mount/patch/commit 的根；__emitOp / 结点归属都读它。
+  var __activeRoot = null;
   // 正在构建的元素（build 执行期）——`context` 的锚点。`context.watch/read` 据此
   // 定位**作用域**（按类型名向上找，见【8】）并订阅（与 Dart 的 BuildContext
   // 语义一致：按**位置**而非「谁定义了这个方法」）。委托型组件（Builder/Consumer）
   // 把 builder 方法以 owner 为 this 调用时，锚点仍是它们自身的结点。
-  var building = null;
+  var __building = null;
 
   // id 统一规则：`<端>:<种类>/<子类>#<序号>`（子类可省），序号全局单调仅用于
   // 唯一化。带前缀是为了让宿主侧 ValueKey / Flutter DevTools 一眼看出 id 的
   // 归属端（js/dt）与种类（node/comp/ctrl/fn/key…）——调试可读性。
   //   结点：js:node/<Type>#N（宿主结点）/ js:comp/<Name>#N（组件结点）
   //   句柄：js:ctrl/Scroll#N、js:fn#N、dt:key/Global#N（见【4】句柄注册表）
-  function __nextNodeId(type) { idSeq += 1; return 'js:node/' + type + '#' + idSeq; }
-  function __nextComponentId(type) { idSeq += 1; return 'js:comp/' + __componentName(type) + '#' + idSeq; }
+  function __nextNodeId(type) { __idSeq += 1; return 'js:node/' + type + '#' + __idSeq; }
+  function __nextComponentId(type) { __idSeq += 1; return 'js:comp/' + __componentName(type) + '#' + __idSeq; }
 
-  // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
+  // __COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function __componentName(type) { return (type && type.name) || 'Component'; }
 
   // Dart 类型名 → JS 构造函数别名表（见【27.5】Dart extension 注册）。
@@ -285,21 +290,21 @@ G.debugPrint = function (message) {
   }
 
 
-// ===== 【2】出方向桥（emitOp / commitOps） =====
+// ===== 【2】出方向桥（__emitOp / __commitOps） =====
   // 所有 JS→宿主消息都打到单桥通道 `_app_bridge_`，目标通道名放在消息体
   // `ch` 字段。宿主只订阅该桥通道一次，再按 ch 二次分发。
   // `__sendToHost` 是运行时**内部**的低层发送（不对外暴露）；对外的唯一入口是
   // `_app_host_.invoke`（见【3】），它等于 `__sendToHost` + Promise 回填。
-  var APP_BRIDGE = '_app_bridge_';
+  var __APP_BRIDGE = '_app_bridge_';
   function __sendToHost(channel, data) {
     if (typeof sendMessage !== 'function') { return; }
-    sendMessage(APP_BRIDGE, JSON.stringify({ ch: channel, data: data }));
+    sendMessage(__APP_BRIDGE, JSON.stringify({ ch: channel, data: data }));
   }
 
-  function emitOp(op) {
-    if (activeRoot && activeRoot.ops) { activeRoot.ops.push(op); }
+  function __emitOp(op) {
+    if (__activeRoot && __activeRoot.ops) { __activeRoot.ops.push(op); }
   }
-  function commitOps(root) {
+  function __commitOps(root) {
     var list = root.ops;
     root.ops = null;
     if (!list || !list.length) { return; }
@@ -318,7 +323,7 @@ G.debugPrint = function (message) {
           var ks = [];
           var bp = bad.props || {};
           for (var bk in bp) { ks.push(bk + ':' + typeof bp[bk]); }
-          console.error('jsui: op not serializable #' + di + ' op=' + bad.op +
+          __error('jsui: op not serializable #' + di + ' op=' + bad.op +
             ' type=' + bad.type + ' id=' + bad.id +
             ' keys=[' + ks.join(',') + ']: ' + e2);
         }
@@ -337,13 +342,13 @@ G.debugPrint = function (message) {
   // 经桥通道把 `{id, args}` 交给宿主，宿主实现完成后用
   // `_app_host_.resolve(id, value)` 回填（见 JsRuntimeManager.registerHostMethod）。
   // 框架内建通道（日志 `log`、native 通道等）同样走这里，保持单一出口。
-  var hostSeq = 0;
-  var hostPending = {};
-  function invokeHostMethod(channel, args) {
-    hostSeq += 1;
-    var id = 'host' + hostSeq;
+  var __hostSeq = 0;
+  var __hostPending = {};
+  function __invokeHostMethod(channel, args) {
+    __hostSeq += 1;
+    var id = 'host' + __hostSeq;
     var p = new Promise(function (resolve, reject) {
-      hostPending[id] = { resolve: resolve, reject: reject };
+      __hostPending[id] = { resolve: resolve, reject: reject };
     });
     __sendToHost(channel, { id: id, args: args || [] });
     return p;
@@ -352,9 +357,9 @@ G.debugPrint = function (message) {
   // 路径都必须走这里——宿主侧不会「既不 resolve 也不 reject」（未注册通道由
   // 宿主回填 null，实现抛错由宿主 reject），所以表里不会留下永久滞留的条目。
   function __takeHostCall(id) {
-    var h = hostPending[id];
+    var h = __hostPending[id];
     if (!h) { return null; }
-    delete hostPending[id];
+    delete __hostPending[id];
     return h;
   }
   function __resolveHostCall(id, value) {
@@ -373,17 +378,17 @@ G.debugPrint = function (message) {
 
 
 // ===== 【4】跨语言句柄注册表 =====
-  // handleSeq 与 idSeq 相互独立：句柄 id 与结点 id 分属两套命名空间。
-  var handleSeq = 0;
+  // __handleSeq 与 __idSeq 相互独立：句柄 id 与结点 id 分属两套命名空间。
+  var __handleSeq = 0;
   // id -> { id, kind, scope, key, obj, meta, release }
-  var handles = {};
+  var __handles = {};
   // 对象 -> id：同一对象重复登记返回同一 id（身份去重，WeakMap 不阻止回收）。
-  var handleOwnerIdx = new WeakMap();
+  var __handleOwnerIdx = new WeakMap();
 
   // 句柄 id：`js:<kind>#N`（kind 形如 `fn` / `ctrl/Scroll` / `key`）。
   function __nextHandleId(kind) {
-    handleSeq += 1;
-    return 'js:' + kind + '#' + handleSeq;
+    __handleSeq += 1;
+    return 'js:' + kind + '#' + __handleSeq;
   }
 
   // 句柄摘要里的「是什么对象」：构造名优先（日志与泄漏/缓存全景共用同一套取法）。
@@ -405,36 +410,36 @@ G.debugPrint = function (message) {
   //
   // 归属优先级（scope 未显式指定时）：
   //   1. 组件**构造中**（`new el.type(...)` 期间）：记入最内层构造帧，返回后由
-  //      endConstruct 回填到该组件实例——字段初始化里的
+  //      __endConstruct 回填到该组件实例——字段初始化里的
   //      `this._controller = new ScrollController()` 正是这个时机；
-  //   2. 委托调用期间（withOwner）：归属方法体所在的类实例；
-  //   3. `building` 是组件结点（initState / build / 事件执行期）：直接归属它；
-  //   4. 其余（模块级 / 静态字段）：随页面；无 activeRoot 时退化为 global。
+  //   2. 委托调用期间（__withOwner）：归属方法体所在的类实例；
+  //   3. `__building` 是组件结点（initState / build / 事件执行期）：直接归属它；
+  //   4. 其余（模块级 / 静态字段）：随页面；无 __activeRoot 时退化为 global。
   //
   // 显式 `opts.scope`（'local' / 'page' / 'global'）优先，事件闭包等仍按原语义。
   //
   // `opts.release(h)`：本端真实资源的清理钩子（可选），随登记声明——只有需要
   // 「释放时还要动内部状态」的对象才传（如控制器要连带释放回传句柄与订阅）。
   // 对端的清理由对端自己的登记负责，跨桥只传 id + op。
-  function registerHandle(obj, kind, opts) {
+  function __registerHandle(obj, kind, opts) {
     if (obj === null || obj === undefined) { return null; }
-    var exist = handleOwnerIdx.get(obj);
-    if (exist && handles[exist]) { return exist; }
+    var exist = __handleOwnerIdx.get(obj);
+    if (exist && __handles[exist]) { return exist; }
     opts = opts || {};
     var explicit = opts.scope;
     var owner = opts.owner || null;
     var pending = false;
     if (!explicit && !owner) {
-      if (constructFrames.length) {
-        pending = true; // 归属最内层构造中的组件（见 beginConstruct/endConstruct）
-      } else if (ownerAnchor) {
+      if (__constructFrames.length) {
+        pending = true; // 归属最内层构造中的组件（见 __beginConstruct/__endConstruct）
+      } else if (__ownerAnchor) {
         // 委托调用期间（不是 build 锚点）：资源属于方法体所在的类实例
-        owner = ownerAnchor;
-      } else if (building && building.__k === COMP) {
-        owner = building;
+        owner = __ownerAnchor;
+      } else if (__building && __building.__k === __COMP) {
+        owner = __building;
       }
     }
-    var pageKey = (activeRoot && activeRoot.key) || null;
+    var pageKey = (__activeRoot && __activeRoot.key) || null;
     var scope = explicit || ((owner || pending) ? 'instance' : 'page');
     var key = pageKey; // 诊断 / 宿主侧页面兜底都用它
     if (scope === 'page') {
@@ -442,21 +447,21 @@ G.debugPrint = function (message) {
       if (key === null) { scope = 'global'; }
     }
     var id = __nextHandleId(kind);
-    handles[id] = {
+    __handles[id] = {
       id: id, kind: kind, scope: scope, key: key, obj: obj,
       meta: opts.meta || null, release: opts.release || null, owner: null
     };
-    handleOwnerIdx.set(obj, id);
+    __handleOwnerIdx.set(obj, id);
     if (scope === 'page') {
-      (pageHandles[key] || (pageHandles[key] = [])).push(id);
+      (__pageHandles[key] || (__pageHandles[key] = [])).push(id);
     }
-    if (owner) { attachOwner(id, owner); }
-    if (pending) { constructFrames[constructFrames.length - 1].push(id); }
+    if (owner) { __attachOwner(id, owner); }
+    if (pending) { __constructFrames[__constructFrames.length - 1].push(id); }
     // 自动同步宿主：宿主侧同名 kind 的登记处理器据此创建真实对象
     // （scope=local 的纯本端句柄——如事件闭包——传 sync:false 不同步）。
     // pageKey 一并下发：宿主侧据此登记「句柄→页面」，页面销毁时做本端兜底回收。
     if (opts.sync !== false) {
-      invokeHostMethod('jsHandle', [{
+      __invokeHostMethod('jsHandle', [{
         id: id, op: 'create', kind: kind, pageKey: key, meta: opts.meta || null
       }]);
     }
@@ -465,107 +470,107 @@ G.debugPrint = function (message) {
 
   // ── 组件实例归属（owner）────────────────────────────────────────────
   // 每个组件实例一份 `__owns`（id 数组），实例卸载时整份释放。物理存储仍在
-  // 全局 `handles`，这里只是「释放时机」的索引。
-  var constructFrames = []; // 组件构造帧栈：每帧收集该次 new 期间登记的句柄 id
+  // 全局 `__handles`，这里只是「释放时机」的索引。
+  var __constructFrames = []; // 组件构造帧栈：每帧收集该次 new 期间登记的句柄 id
   // 显式归属锚点：委托调用（`owner[name].call(owner, ...)`）期间指向方法体
-  // 所在的类实例——`building` 此时是被委托组件，不能用它判断资源归属。
-  var ownerAnchor = null;
+  // 所在的类实例——`__building` 此时是被委托组件，不能用它判断资源归属。
+  var __ownerAnchor = null;
 
-  function withOwner(inst, callback) {
-    var prev = ownerAnchor;
-    ownerAnchor = inst;
-    try { return callback(); } finally { ownerAnchor = prev; }
+  function __withOwner(inst, callback) {
+    var prev = __ownerAnchor;
+    __ownerAnchor = inst;
+    try { return callback(); } finally { __ownerAnchor = prev; }
   }
 
-  function attachOwner(id, inst) {
-    var h = handles[id];
+  function __attachOwner(id, inst) {
+    var h = __handles[id];
     if (!h || !inst) { return; }
     h.owner = inst;
     (inst.__owns || (inst.__owns = [])).push(id);
   }
 
   // 组件实例构造开始：返回本帧（mount 里紧贴 `new el.type(...)` 使用）。
-  function beginConstruct() {
+  function __beginConstruct() {
     var frame = [];
-    constructFrames.push(frame);
+    __constructFrames.push(frame);
     return frame;
   }
 
   // 构造结束：把本帧登记的句柄回填给新实例（构造抛错时 inst 传 null，
   // 这些句柄没有归属者，直接释放，避免两端残留）。
-  function endConstruct(inst, frame) {
-    var i = constructFrames.lastIndexOf(frame);
-    if (i >= 0) { constructFrames.splice(i, 1); }
+  function __endConstruct(inst, frame) {
+    var i = __constructFrames.lastIndexOf(frame);
+    if (i >= 0) { __constructFrames.splice(i, 1); }
     if (!frame) { return; }
     if (!inst) {
-      for (var k = 0; k < frame.length; k++) { releaseHandle(frame[k]); }
+      for (var k = 0; k < frame.length; k++) { __releaseHandle(frame[k]); }
       return;
     }
-    for (var j = 0; j < frame.length; j++) { attachOwner(frame[j], inst); }
+    for (var j = 0; j < frame.length; j++) { __attachOwner(frame[j], inst); }
   }
 
   // 实例卸载：释放它持有的全部句柄（`dispose()` 里已显式释放过的幂等跳过）。
-  function releaseOwnerHandles(inst) {
+  function __releaseOwnerHandles(inst) {
     if (!inst || !inst.__owns) { return; }
     var snapshot = inst.__owns.slice();
     inst.__owns = null;
-    for (var i = 0; i < snapshot.length; i++) { releaseHandle(snapshot[i]); }
+    for (var i = 0; i < snapshot.length; i++) { __releaseHandle(snapshot[i]); }
   }
 
   // 释放一个句柄（本端）。幂等：不存在即返回（不回环——对端释放时本地已删，
   // 不再二次通知）。notify=false 用于纯本端句柄（如构建期事件句柄）。
-  function releaseHandle(id, notify) {
-    var h = handles[id];
+  function __releaseHandle(id, notify) {
+    var h = __handles[id];
     if (!h) { return; }
-    delete handles[id];
-    if (h.obj) { try { handleOwnerIdx.delete(h.obj); } catch (e) {} }
+    delete __handles[id];
+    if (h.obj) { try { __handleOwnerIdx.delete(h.obj); } catch (e) {} }
     // 从所属组件实例的索引里摘除（实例卸载时 __owns 已置 null，跳过）。
     if (h.owner && h.owner.__owns) {
       var owns = h.owner.__owns;
       var oi = owns.indexOf(id);
       if (oi >= 0) { owns.splice(oi, 1); }
     }
-    if (h.scope === 'page' && h.key && pageHandles[h.key]) {
-      var arr = pageHandles[h.key];
+    if (h.scope === 'page' && h.key && __pageHandles[h.key]) {
+      var arr = __pageHandles[h.key];
       var i = arr.indexOf(id);
       if (i >= 0) { arr.splice(i, 1); }
     }
     if (h.release) {
       try { h.release(h); } catch (e) {}
     }
-    if (notify !== false) { invokeHostMethod('jsHandle', [{ id: id, op: 'release' }]); }
+    if (notify !== false) { __invokeHostMethod('jsHandle', [{ id: id, op: 'release' }]); }
   }
 
-  // 页面退出兜底：释放本页登记的全部 page 句柄（数组边遍历边被 releaseHandle
+  // 页面退出兜底：释放本页登记的全部 page 句柄（数组边遍历边被 __releaseHandle
   // 摘除，故拷贝一份再遍历）。
-  function releasePageHandles(pageKey) {
-    var arr = pageHandles[pageKey];
+  function __releasePageHandles(pageKey) {
+    var arr = __pageHandles[pageKey];
     if (!arr) { return; }
     var snapshot = arr.slice();
-    for (var i = 0; i < snapshot.length; i++) { releaseHandle(snapshot[i]); }
-    delete pageHandles[pageKey];
+    for (var i = 0; i < snapshot.length; i++) { __releaseHandle(snapshot[i]); }
+    delete __pageHandles[pageKey];
   }
 
   // 页面退出兜底（宿主在泄漏比对之后显式调用）：清掉**本页所属**的残留句柄。
   //
   // 判定「属于本页」用句柄自身的 key + 持有者归属：
   //   - key !== pageKey：别的页的，跳过；
-  //   - 持有者仍挂在**活着的**页面根上（roots[owner.__root.key] 存在）：说明该
+  //   - 持有者仍挂在**活着的**页面根上（__roots[owner.__root.key] 存在）：说明该
   //     对象被别的活页面共享使用，跳过（避免退出 A 页把 B 页还在用的对象释放掉）；
   //   - 其余（无持有者、持有者的根已销毁）即本页孤儿，释放。
   // 正常路径上组件卸载已逐实例释放，这里剩的只是卸载路径没跑到的残渣；释放幂等，
   // 因此页面挂载/卸载多少次都不会累积。放在比对之后调用，泄漏仍可被观测。
-  function sweepPage(pageKey) {
-    releasePageHandles(pageKey);
+  function __sweepPage(pageKey) {
+    __releasePageHandles(pageKey);
     var ids = [];
-    for (var id in handles) {
-      var h = handles[id];
+    for (var id in __handles) {
+      var h = __handles[id];
       if (h.key !== pageKey) { continue; }
       var owner = h.owner;
-      if (owner && owner.__root && roots[owner.__root.key]) { continue; }
+      if (owner && owner.__root && __roots[owner.__root.key]) { continue; }
       ids.push(id);
     }
-    for (var i = 0; i < ids.length; i++) { releaseHandle(ids[i]); }
+    for (var i = 0; i < ids.length; i++) { __releaseHandle(ids[i]); }
   }
 
   // 宿主 → JS：按 id 在**本端**真实对象上执行 op（宿主侧句柄注册表经 evaluate
@@ -573,11 +578,10 @@ G.debugPrint = function (message) {
   //   invoke：函数句柄调用（args 数组）
   //   call  ：对象方法调用（method + args）
   //   get/set：属性读写（name）
-  function callHandle(id, op, payload) {
-    var h = handles[id];
+  function __callHandle(id, op, payload) {
+    var h = __handles[id];
     if (!h) {
-              console.warn('jsui: handle not found (released?): ' + id + ' op=' + op);
-      
+      __warn('jsui: handle not found (released?): ' + id + ' op=' + op);
       return undefined;
     }
     var o = h.obj;
@@ -589,27 +593,24 @@ G.debugPrint = function (message) {
     return undefined;
   }
 
-  // 宿主 → JS：释放本端句柄（对端发起的 release，不再回通知）。
-  function releaseHandleFromHost(id) { releaseHandle(id, false); }
-
   // 句柄对应的本端真实对象（跨模块按 id 取 obj：easy_refresh 的异步回程等）。
-  function handleObjectOf(id) {
-    var h = handles[id];
+  function __handleObjectOf(id) {
+    var h = __handles[id];
     return h ? h.obj : null;
   }
 
   // JS → 宿主：对本端句柄对应的**宿主端真实对象**发起 op（返回 Promise）。
-  // 与 callHandle 方向相反、语义对称（call/get/set/invoke）。
-  function handleOp(id, op, payload) {
+  // 与 __callHandle 方向相反、语义对称（call/get/set/invoke）。
+  function __handleOp(id, op, payload) {
     var body = { id: id, op: op };
     if (payload) { for (var k in payload) { body[k] = payload[k]; } }
-    return invokeHostMethod('jsHandle', [body]);
+    return __invokeHostMethod('jsHandle', [body]);
   }
 
   // 控制器（ScrollController / AnimationController / …）的 JS 基类不在这里：
   // 它们是 Flutter 侧语义，随 flutter.js 发布（`ControllerBase`，见
   // js/controller_base_js.dart）。本片段只提供与能力无关的句柄机制
-  // （registerHandle / handleOp / releaseHandle）。
+  // （__registerHandle / __handleOp / __releaseHandle）。
 
 
 
@@ -621,15 +622,15 @@ G.debugPrint = function (message) {
   //     `__type` / props，见 flutter.js 的 Component）。
   // 两者共用同一个标记，reconciler 不再按「原型上有没有 build」猜组件。
   // 双下划线前缀 = 运行时保留名，Dart 业务字段不会覆盖它。
-  function isElement(v) {
+  function __isElement(v) {
     return v != null && typeof v === 'object' && v.__element === true;
   }
 
   // 元素数组（子项列表）。数组里的非元素值（数据）原样保留。
-  function isElementList(v) {
+  function __isElementList(v) {
     if (!Array.isArray(v) || v.length === 0) { return false; }
     for (var i = 0; i < v.length; i++) {
-      if (v[i] != null && !isElement(v[i])) { return false; }
+      if (v[i] != null && !__isElement(v[i])) { return false; }
     }
     return true;
   }
@@ -638,7 +639,7 @@ G.debugPrint = function (message) {
   // 代码显式释放，如构建期 __bindFn 随组件卸载释放，见【4】句柄注册表）。
   // 宿主侧回调用 __invokeEventHandler 触发。
   function __createFnHandle(f) {
-    var id = registerHandle(f, 'fn', { scope: 'local', sync: false });
+    var id = __registerHandle(f, 'fn', { scope: 'local', sync: false });
     return { __fn: id };
   }
 
@@ -648,7 +649,7 @@ G.debugPrint = function (message) {
   // 用 `arguments` 汇总任意个数再摊开转发给生成器产出的箭头闭包。故 0/1/N 参
   // 事件共用同一条通路，新增多参事件无需改这里。
   function __invokeEventHandler(id, args) {
-    var h = handles[id];
+    var h = __handles[id];
     var f = h && h.obj;
     if (typeof f !== 'function') {
       // 宿主回传的句柄 id 在 JS 侧找不到 —— 说明该结点下发时的 handler 与当前
@@ -678,7 +679,7 @@ G.debugPrint = function (message) {
     try {
       out = __invokeEventHandler(id, argsJson);
     } catch (e) {
-      console.error('[jsui] 事件执行抛错: ' + String(e));
+      __error('[jsui] 事件执行抛错: ' + String(e));
       __sendEventResult(token, null, String(e));
       return;
     }
@@ -695,7 +696,7 @@ G.debugPrint = function (message) {
   function __sendEventResult(token, value, error) {
     var json = 'null';
     try { json = JSON.stringify(value === undefined ? null : value); } catch (e) { json = 'null'; }
-    invokeHostMethod('jsuiEventResult', [token, json, error]);
+    __invokeHostMethod('jsuiEventResult', [token, json, error]);
   }
 
 
@@ -703,7 +704,7 @@ G.debugPrint = function (message) {
 // ===== 【6】reconciler 工具 =====
 
   // 深比较（用于避免每次重建都下发 props）；下面紧邻的 __nodeKeyOf /
-  // nodeIdOf / renderRootIdOf / __rootOf 同属本分区。
+  // __nodeIdOf / __renderRootIdOf / __rootOf 同属本分区。
   var EQ_MAX_DEPTH = 32;
   function __propsEqual(a, b, depth) {
     if (a === b) { return true; }
@@ -730,26 +731,26 @@ G.debugPrint = function (message) {
   }
 
   // 结点声明的 key（**值**，不是结点）：ValueKey / ObjectKey 实例、GlobalKey /
-  // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [keySig]（见【20】），
+  // UniqueKey 的句柄实例，或 null（未声明）。比较一律经 [__keySig]（见【20】），
   // 不在此处做归一——`__nodeKeyOf` 只负责取。
   function __nodeKeyOf(inst) {
-    var p = inst.__k === HOST ? inst.__props : inst.props;
+    var p = inst.__k === __HOST ? inst.__props : inst.props;
     return p ? p.key : null;
   }
 
-  // 结点在**父槽里的标识**：HOST / COMP 都用自己的 `__id`。
+  // 结点在**父槽里的标识**：__HOST / __COMP 都用自己的 `__id`。
   // 组件结点是宿主的**挂载边界**（宿主为它建 wrapper，wrapper 在 build 里同步
   // 拉取 JS build 结果），所以父槽引用的是组件结点本身，而不是它的渲染根。
-  function nodeIdOf(inst) { return inst ? inst.__id : null; }
+  function __nodeIdOf(inst) { return inst ? inst.__id : null; }
 
   // 组件的**渲染根结点 id**（组件结点的 `child` 槽指向它）。
-  function renderRootIdOf(inst) {
+  function __renderRootIdOf(inst) {
     return inst && inst.__child ? inst.__child.__id : null;
   }
 
-  // 结点归属的根：mount 期间用 activeRoot，其余情况继承父结点。
+  // 结点归属的根：mount 期间用 __activeRoot，其余情况继承父结点。
   function __rootOf(parent) {
-    return activeRoot || (parent && parent.__root) || null;
+    return __activeRoot || (parent && parent.__root) || null;
   }
 
 
@@ -758,7 +759,28 @@ G.debugPrint = function (message) {
 
   // 生成器产物与逻辑组件类都 `extends Component`（见 flutter.js），
   // setState / __bindFn / context 由基类提供，不在实例上逐个挂载。
-  // 这里只留回调调用的唯一入口（见下）。
+  // 这里只留回调调用与生命周期派发的唯一入口。
+
+  // ── 构建锚点（__withBuilding）─────────────────────────────────────────────
+  // 「当前构建位置」的唯一读写点：`context` / `__bindFn` / 构造期句柄归属
+  // 都据此定位。build / didUpdateWidget / didChangeDependencies / 卸载期
+  // 生命周期都在这个锚点里执行，退出即还原。
+  function __withBuilding(inst, fn) {
+    var prev = __building;
+    __building = inst;
+    try { return fn(); } finally { __building = prev; }
+  }
+
+  // ── 生命周期派发（__callLifecycle）─────────────────────────────────────────
+  // 卸载期的 deactivate / dispose：异常只记日志（为的是「一个组件清理失败
+  // 不能中断整棵树的拆解」），且执行期间锚点指向本实例（新建/释放句柄的归属）。
+  function __callLifecycle(inst, name, args) {
+    if (typeof inst[name] !== 'function') { return; }
+    __withBuilding(inst, function () {
+      try { inst[name].apply(inst, args || []); }
+      catch (e) { __error(name + ' failed: ' + (e && e.message ? e.message : String(e))); }
+    });
+  }
 
   // ── 回调调用（__invokeCallback）─────────────────────────────────────────
   // `__bindFn` 的**反向操作**：JS 类内部要调一个「回调 prop」时，统一走这里。
@@ -776,7 +798,7 @@ G.debugPrint = function (message) {
     args = args || [];
     if (typeof target === 'function') { return target.apply(null, args); }
     if (target && typeof target.__fn === 'number') {
-      return callHandle(target.__fn, 'invoke', { args: args });
+      return __callHandle(target.__fn, 'invoke', { args: args });
     }
     return undefined;
   };
@@ -790,21 +812,21 @@ G.debugPrint = function (message) {
   // 类型是模型、控制器还是别的什么 —— 正如 Dart 侧
   // `dependOnInheritedWidgetOfExactType<T>()` 不关心 T 是干嘛的。
   //
-  // 「谁提供什么」由**各能力自己**注册（[registerScope]）；reconciler 只在
+  // 「谁提供什么」由**各能力自己**注册（[__registerScope]）；reconciler 只在
   // mount/patch 时把结点 props 交给对应 publisher 折算成 `__provides`，核心
   // 零业务知识（与「新增能力 = 注册描述符」同构）。三方库的注册见
   // capabilities/js_ui_library.dart（provider 是其中一族）。
-  var scopePublishers = {};
+  var __scopePublishers = {};
 
   // 注册：宿主 widget 类型 → `props => {类型名: 值}`（返回空 = 不提供）。
-  function registerScope(hostType, publish) {
-    scopePublishers[hostType] = publish;
+  function __registerScope(hostType, publish) {
+    __scopePublishers[hostType] = publish;
   }
 
   // mount/patch 时调用：把该宿主结点的 props 折算进 `__provides`。
   // 每次 patch 都重放（props 变了、或 publisher 换了实例，如 create 重跑）。
   function __publishScope(inst, props) {
-    var publish = scopePublishers[inst.__type];
+    var publish = __scopePublishers[inst.__type];
     if (!publish) { return; }
     var provided = publish(props || {});
     inst.__provides = (provided && Object.keys(provided).length) ? provided : null;
@@ -813,7 +835,7 @@ G.debugPrint = function (message) {
   // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的**值**（同名就近遮蔽）。
   // 必须是同步取值：渲染期 `model.count` 直接读，不能经异步桥回宿主。
   // 取不到返回 null（不猜、不回退）。
-  function scopeOf(inst, type) {
+  function __scopeOf(inst, type) {
     var p = inst.__parent;
     while (p) {
       var pr = p.__provides;
@@ -832,7 +854,7 @@ G.debugPrint = function (message) {
   // **鸭子判型**：值是不是可监听是**值自己的事**——「找到值之后怎么用」属于
   // 调用方，与查找机制无关（与 Flutter 一致：watch 一个纯数据 InheritedWidget
   // 也合法，只是没有本端订阅可言）。
-  function subscribeListenable(anchor, value) {
+  function __subscribeListenable(anchor, value) {
     if (!value || typeof value.addListener !== 'function') { return; }
     var mine = anchor.__subs || (anchor.__subs = []);
     for (var i = 0; i < mine.length; i++) {
@@ -841,7 +863,7 @@ G.debugPrint = function (message) {
     var entry = { value: value };
     // 依赖变更必须区别于 setState：标记 __depDirty，flush 时据此在 build 前
     // 补一次 didChangeDependencies（对应 Flutter 的 InheritedWidget 变更语义）。
-    entry.listener = function () { anchor.__depDirty = true; markDirty(anchor); };
+    entry.listener = function () { anchor.__depDirty = true; __markDirty(anchor); };
     value.addListener(entry.listener);
     mine.push(entry);
   }
@@ -864,9 +886,11 @@ G.debugPrint = function (message) {
   // 传进来的 context 是任何 BuildContext 代理（取它的锚点向上找），类型名由调用方
   // 给（与 `dependOnInheritedWidgetOfExactType<T>` 同构，核心不认识具体类型）。
   // 取不到返回 null（不猜、不回退），调用方自行决定缺失时的行为。
-  G.__scopeOf = function (ctx, type) {
+  // 生成器产出的 JS 类按 context 取作用域值（Dart 的 `X.of(context)`）。
+  // 与核心 `__scopeOf(inst, type)` 区分：这里接收的是 BuildContext 代理。
+  G.__scopeOfContext = function (ctx, type) {
     var anchor = ctx && ctx.__anchor;
-    return anchor ? scopeOf(anchor, type) : null;
+    return anchor ? __scopeOf(anchor, type) : null;
   };
 
 
@@ -874,19 +898,19 @@ G.debugPrint = function (message) {
 // ===== 【9】调度 =====
 
   // collected dirty -> 重建子树 -> 一次 commit。
-  // 触发源有两处：mini-react 的 setState、作用域订阅回调（见【8】`subscribeListenable`）。
+  // 触发源有两处：mini-react 的 setState、作用域订阅回调（见【8】`__subscribeListenable`）。
   //
-  // **挂载中不 flush**：`root.mounting` 期间 `root.ops` 归 mountRoot 累积（整棵树的
+  // **挂载中不 flush**：`root.mounting` 期间 `root.ops` 归 __mountRoot 累积（整棵树的
   // create/insert），而 flush 会重置并消耗同一份 ops —— 未下发的结点连同根 op 一起
   // 丢，宿主收不到根、页面永远停在加载态。setState 在 initState / 构造里是合法写法
-  // （Flutter 也是首帧后再重建），故这里只入 dirty 队列，mountRoot 收尾时再 flush。
+  // （Flutter 也是首帧后再重建），故这里只入 dirty 队列，__mountRoot 收尾时再 flush。
   //
   // **按帧合并（与 Flutter 的 setState 语义一致）**：setState 只标脏，真正的
   // rebuild 由宿主在每帧 begin frame 调 `api.flushPending()` 统一执行。同一帧内
   // 收到多少个 setState（例如滚动通知逐条回传）都只 build 一次；此前是每次
   // setState 同步 flush，滚动时 JS 的重建次数等于通知数，是原生的数倍。
   // 没有宿主桥（命令行 / 测试 harness）时退化为同步 flush，保持原行为。
-  function markDirty(inst) {
+  function __markDirty(inst) {
     if (!inst || inst.__unmounted || inst.__dirty) { return; }
     // build 期对自己 setState 是错误写法：Flutter 原生在此直接断言（
     // "setState() or markNeedsBuild() called during build"）。若不拦截，flush
@@ -894,9 +918,8 @@ G.debugPrint = function (message) {
     // 整个 JS 线程卡死且没有任何日志。这里出声并跳过。
     // 只挡「自己正在 build」：祖先/子结点互相标脏不受影响（原生同样放行）。
     if (inst.__building) {
-              console.error('jsui: setState during build ignored (' +
-          __componentName(inst.constructor) + ')');
-      
+      __error('jsui: setState during build ignored (' +
+        __componentName(inst.constructor) + ')');
       return;
     }
     var root = inst.__root;
@@ -904,11 +927,11 @@ G.debugPrint = function (message) {
     inst.__dirty = true;
     root.dirty.push(inst);
     if (root.flushing || root.mounting) { return; }
-    requestFlush(root);
+    __requestFlush(root);
   }
 
   // 请求宿主在下一帧统一 flush。同一帧内多次 setState 只请求一次。
-  function requestFlush(root) {
+  function __requestFlush(root) {
     if (root.flushPending) { return; }
     root.flushPending = true;
     // 有宿主桥才交给它调度；否则（无 sendMessage 的纯 JS 环境，如单测）同步兜底。
@@ -916,11 +939,11 @@ G.debugPrint = function (message) {
       G._app_host_.invoke('jsuiRequestFrame', []);
       return;
     }
-    flushNow(root);
+    __flushNow(root);
   }
 
-  // 立即 flush：挂载收尾（mountRoot / __lazyMount / __lazyUnmount）与无宿主兜底用。
-  function flushNow(root) {
+  // 立即 flush：挂载收尾（__mountRoot / __lazyMount / __lazyUnmount）与无宿主兜底用。
+  function __flushNow(root) {
     if (!root || root.flushing || root.mounting) { return; }
     root.flushPending = false;
     root.flushing = true;
@@ -928,20 +951,20 @@ G.debugPrint = function (message) {
   }
 
   // 宿主每帧 begin frame 调用：跑掉所有页面根累积的重建（帧级批处理入口）。
-  function flushPending() {
-    for (var key in roots) {
-      var root = roots[key];
+  function __flushPending() {
+    for (var key in __roots) {
+      var root = __roots[key];
       if (!root || !root.flushPending || root.flushing || root.mounting) {
         continue;
       }
-      flushNow(root);
+      __flushNow(root);
     }
     return true;
   }
 
   function __rebuildDirty(root) {
-    var prev = activeRoot;
-    activeRoot = root;
+    var prev = __activeRoot;
+    __activeRoot = root;
     try {
       while (root.dirty.length) {
         var batch = root.dirty;
@@ -951,12 +974,12 @@ G.debugPrint = function (message) {
           inst.__dirty = false;
           if (inst.__unmounted) { continue; }
           // 首次 build 还没被宿主拉起（组件 wrapper 尚未挂载）：build 由
-          // pullComponent 驱动，它会读取此刻最新的 props / state，故这里跳过。
-          if (inst.__k === COMP && !inst.__built) { continue; }
+          // __pullComponent 驱动，它会读取此刻最新的 props / state，故这里跳过。
+          if (inst.__k === __COMP && !inst.__built) { continue; }
           // 单条重建失败不连坐同批其余组件（与 Flutter「一个子树建错出
           // ErrorWidget、兄弟照常构建」对齐）：本批已由 root.dirty 整体接管
           // 并清空，异常若冲出 for 循环，后面那些组件的 __dirty 仍是 true 却
-          // 已不在队列里，markDirty 会因 __dirty 早退 → 它们将永不重建。
+          // 已不在队列里，__markDirty 会因 __dirty 早退 → 它们将永不重建。
           root.ops = [];
           try {
             // 作用域依赖变更（__depDirty）走这里：与 Flutter 一致，
@@ -976,28 +999,26 @@ G.debugPrint = function (message) {
             try {
               __syncEnclosingKeepAlive(inst);
             } catch (e2) {
-                              console.error('jsui: keepAlive sync failed (' +
-                  __componentName(inst.constructor) + '): ' + e2);
-              
+              __error('jsui: keepAlive sync failed (' +
+                __componentName(inst.constructor) + '): ' + e2);
             }
             // 宿主渲染以组件为重建粒度：props / 结构补丁已随本批下发，宿主只需
             // 重建该组件的 wrapper（它的 build 会按 store 里的最新结点重渲染整棵
             // 子树）。宿主叶子结点因此不必各自持有 wrapper。
-            emitOp({ op: 'rebuild', id: inst.__id });
-            commitOps(root);
+            __emitOp({ op: 'rebuild', id: inst.__id });
+            __commitOps(root);
           } catch (e) {
             // 丢弃本次未 commit 的增量：宿主只接受整批 commit，半棵树不下发，
             // 避免 JS 树与宿主渲染在中途状态上分叉。该实例保持 __dirty=false，
             // 下次 setState / 订阅通知会重新重建。
             root.ops = null;
-                          console.error('jsui: rebuild failed (' +
-                __componentName(inst.constructor) + '): ' + e);
-            
+            __error('jsui: rebuild failed (' +
+              __componentName(inst.constructor) + '): ' + e);
           }
         }
       }
     } finally {
-      activeRoot = prev;
+      __activeRoot = prev;
     }
   }
 
@@ -1007,7 +1028,7 @@ G.debugPrint = function (message) {
 
   //
   // 「懒容器 + 延迟子结点」：容器的 children 不随容器一起挂载，而是等**宿主**
-  // 真的 inflate 到那个槽位时才挂载 —— 即 initState 由 `_JsNodeState` 的生命周期
+  // 真的 inflate 到那个槽位时才挂载 —— 即 initState 由 `_JsPlainNodeHostState` 的生命周期
   // 驱动。MiniReact 的挂载是一次性全树遍历，做不到层层按需；而「哪个子结点可见」
   // 的真值只在宿主侧（Flutter 的 element inflation）。所以这里只留一个**普通**
   // 零尺寸占位结点（复用 SizedBox 类型：不新增 widget 类型、产物形态零改动），
@@ -1047,18 +1068,14 @@ G.debugPrint = function (message) {
   // builder 回调协议只有**一种形态：闭包（函数）**。方法 tear-off 在构建期统一
   // 生成绑定闭包（`this` 由词法作用域固定），因此运行时不需要「找拥有者方法」
   // 这一层——少一条静默失败路径（找不到方法 → 空列表白屏）。
-  function __isBuilderFn(v) {
-    return typeof v === 'function';
-  }
-
   function __builderSpec(el) {
     var slots = el.__children || {};
     var b = slots.__builder;
-    if (b && __isBuilderFn(b.item) && typeof b.count === 'number') {
-      return { item: b.item, sep: __isBuilderFn(b.sep) ? b.sep : null, count: b.count, ctx: b.ctx };
+    if (b && typeof b.item === 'function' && typeof b.count === 'number') {
+      return { item: b.item, sep: typeof b.sep === 'function' ? b.sep : null, count: b.count, ctx: b.ctx };
     }
     var d = slots.delegate;
-    if (!d || d.__delegate !== 'builder' || !__isBuilderFn(d.builder)) {
+    if (!d || d.__delegate !== 'builder' || typeof d.builder !== 'function') {
       return null;
     }
     var n = d.childCount;
@@ -1070,11 +1087,11 @@ G.debugPrint = function (message) {
   // 传给 builder 的 `context` 形参：命名构造优先用代理 build 收到的那个
   // （与原行为一致），delegate 形态用拥有者组件的代理。
   function __buildItem(owner, spec, slotIndex) {
-    var ctx = spec.ctx || contextOf(owner);
+    var ctx = spec.ctx || __contextOf(owner);
     var out = null;
     // 委托调用期间 owner 锚点指向 builder 所属组件实例：builder 里创建的
-    // 控制器 / Key 归属它（`building` 在这里可能是宿主结点或已还原）。
-    withOwner(owner, function () {
+    // 控制器 / Key 归属它（`__building` 在这里可能是宿主结点或已还原）。
+    __withOwner(owner, function () {
       var sep = spec.sep;
       if (sep && slotIndex % 2 === 1) {
         out = sep(ctx, (slotIndex - 1) / 2);
@@ -1113,33 +1130,33 @@ G.debugPrint = function (message) {
   }
 
   // 宿主结点索引（id → 结点实例）：只为「宿主上报 inflate」的反查用（懒槽位）。
-  var hostNodes = {};
+  var __hostNodes = {};
   // 组件结点索引（id → 组件实例）：宿主挂载组件 wrapper 时按 id 同步拉取
-  // build（见 pullComponent）。
-  var compNodes = {};
+  // build（见 __pullComponent）。
+  var __compNodes = {};
 
   // 挂载事务帧：记录本次尝试新增的宿主结点与组件实例，失败时**按帧**精确回滚
   // （见 __lazyMount 的 catch）。不能按 `__root` 清扫——那是整页根，会误伤同页
-  // 其他已挂载的子树（整页回滚是 mountRoot 的 abortRoot，二者不要混用）。
+  // 其他已挂载的子树（整页回滚是 __mountRoot 的 __abortRoot，二者不要混用）。
   // 只在 __lazyMount 期间非空：正常挂载路径只多一次 length 判断。
-  var mountFrames = [];
+  var __mountFrames = [];
   function __beginMountFrame() {
     var frame = { nodes: [], insts: [] };
-    mountFrames.push(frame);
+    __mountFrames.push(frame);
     return frame;
   }
   function __endMountFrame(frame) {
-    var i = mountFrames.lastIndexOf(frame);
-    if (i >= 0) { mountFrames.splice(i, 1); }
+    var i = __mountFrames.lastIndexOf(frame);
+    if (i >= 0) { __mountFrames.splice(i, 1); }
   }
   function __trackNode(id) {
-    if (mountFrames.length) {
-      mountFrames[mountFrames.length - 1].nodes.push(id);
+    if (__mountFrames.length) {
+      __mountFrames[__mountFrames.length - 1].nodes.push(id);
     }
   }
   function __trackInst(inst) {
-    if (mountFrames.length) {
-      mountFrames[mountFrames.length - 1].insts.push(inst);
+    if (__mountFrames.length) {
+      __mountFrames[__mountFrames.length - 1].insts.push(inst);
     }
   }
 
@@ -1155,9 +1172,9 @@ G.debugPrint = function (message) {
       if (inst && !inst.__unmounted) { __markUnmounted(inst); }
     }
     for (i = 0; i < frame.nodes.length; i++) {
-      var node = hostNodes[frame.nodes[i]];
+      var node = __hostNodes[frame.nodes[i]];
       if (node) {
-        delete hostNodes[frame.nodes[i]];
+        delete __hostNodes[frame.nodes[i]];
         node.__unmounted = true;
       }
     }
@@ -1172,7 +1189,7 @@ G.debugPrint = function (message) {
   //     全量 item），列表越长越糟。
   //     宿主侧在 dispose（finalizeTree 的 lockState 内）不直接回调，而是延后到
   //     post-frame 再发——本方法会同步 commit 回来重建**存活**的父结点，
-  //     锁定期 setState 会触发框架断言（见 _JsNodeState._unmountIfLazy）。
+  //     锁定期 setState 会触发框架断言（见 _JsPlainNodeHostState._unmountIfLazy）。
   var __lazyMountFn = __createFnHandle(function (id) { __lazyMount(id); });
   var __lazyUnmountFn = __createFnHandle(function (id) { __lazyUnmount(id); });
 
@@ -1189,7 +1206,7 @@ G.debugPrint = function (message) {
       props.key = src.el.props.key;
     }
     var hi = {
-      __k: HOST, __id: __nextNodeId('SizedBox'), __type: 'SizedBox',
+      __k: __HOST, __id: __nextNodeId('SizedBox'), __type: 'SizedBox',
       __root: __rootOf(parent),
       __props: props,
       __children: [], __parent: parent, __slot: slot,
@@ -1197,11 +1214,11 @@ G.debugPrint = function (message) {
       __deferMake: src ? src.make : null,
       __lazySlot: true
     };
-    hostNodes[hi.__id] = hi;
+    __hostNodes[hi.__id] = hi;
     __trackNode(hi.__id);
-    emitOp({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
+    __emitOp({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
     if (slot && slot.kind === 'children' && slot.hostParentId) {
-      emitOp({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
+      __emitOp({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
     }
     return hi;
   }
@@ -1222,7 +1239,7 @@ G.debugPrint = function (message) {
   // 否则内层 item 的声明会把整页错误地保活。
   function __subtreeWantsKeepAlive(inst) {
     if (!inst) { return false; }
-    if (inst.__k !== HOST) {
+    if (inst.__k !== __HOST) {
       if (inst.wantKeepAlive === true) { return true; }
       return __subtreeWantsKeepAlive(inst.__child);
     }
@@ -1251,7 +1268,7 @@ G.debugPrint = function (message) {
   }
 
   // 把当前已挂载子树的 keep-alive 声明同步到占位结点 props（幂等）。
-  // 声明变化必须下发 props op：宿主 _JsNode 收到补丁后重建，build 里
+  // 声明变化必须下发 props op：宿主 _JsPlainNodeHost 收到补丁后重建，build 里
   // updateKeepAlive() 才会真正注册 / 释放 KeepAlive。
   function __syncKeepAlive(ph) {
     var wants = __subtreeWantsKeepAlive(ph.__mountedChild);
@@ -1263,10 +1280,10 @@ G.debugPrint = function (message) {
     } else {
       delete ph.__props.__keepAlive;
     }
-    emitOp({ op: 'props', id: ph.__id, props: ph.__props });
+    __emitOp({ op: 'props', id: ph.__id, props: ph.__props });
     // 占位结点的 keepAlive 声明参与宿主侧 build（wantKeepAlive getter），
     // 变化后必须重建这个 wrapper。
-    emitOp({ op: 'rebuild', id: ph.__id });
+    __emitOp({ op: 'rebuild', id: ph.__id });
   }
 
   // 组件自身重建（setState → flush）后，把变更同步给**最近的**懒槽位：
@@ -1298,8 +1315,7 @@ G.debugPrint = function (message) {
     var el = __lazyElementOf(src);
     if (el == null || el === false) {
       // builder 返回空属错误写法（Flutter 侧会直接抛错）：保留已挂载子树并留痕。
-              console.warn('jsui: lazy slot builder returned empty, keep mounted subtree');
-      
+      __warn('jsui: lazy slot builder returned empty, keep mounted subtree');
       return ph;
     }
     // 与原生 Flutter 对齐：父级每次重建都会重新执行 itemBuilder，并把产出的新
@@ -1308,14 +1324,14 @@ G.debugPrint = function (message) {
     // 例外只有引用相同（`const` 构造的同一实例，见 patch 的 `__el` 判等），
     // 此时与原生 `Element.updateChild` 的 `child.widget == newWidget` 一致。
     var oldRoot = ph.__mountedRootId;
-    ph.__mountedChild = patch(ph.__mountedChild, el, ph, null);
-    var newRoot = nodeIdOf(ph.__mountedChild);
+    ph.__mountedChild = __patch(ph.__mountedChild, el, ph, null);
+    var newRoot = __nodeIdOf(ph.__mountedChild);
     if (newRoot !== oldRoot) {
       ph.__mountedRootId = newRoot;
       ph.__propsChildren['child'] = ph.__mountedChild;
-      emitOp({ op: 'propsChild', parent: ph.__id, key: 'child', childId: newRoot });
+      __emitOp({ op: 'propsChild', parent: ph.__id, key: 'child', childId: newRoot });
       // 占位结点的 child 槽换了：重建这个懒槽位 wrapper。
-      emitOp({ op: 'rebuild', id: ph.__id });
+      __emitOp({ op: 'rebuild', id: ph.__id });
     }
     // 父级重建路径的保活声明同步（组件自身 setState 引起的变化走 flush 的
     // __syncEnclosingKeepAlive，见【9】）。
@@ -1324,25 +1340,24 @@ G.debugPrint = function (message) {
   }
 
   // 宿主 inflate 到懒槽位 → 真正挂载它的子元素（幂等：只对还没挂载过的占位生效）。
-  // ops 纪律与 mountRoot 一致：挂载期间 `root.ops` 归本次挂载累积，挂载期间的
+  // ops 纪律与 __mountRoot 一致：挂载期间 `root.ops` 归本次挂载累积，挂载期间的
   // setState 只入 dirty 队列，收尾再 flush（见【9】）。
   function __lazyMount(placeholderId) {
-    var ph = hostNodes[placeholderId];
+    var ph = __hostNodes[placeholderId];
     if (!ph || (!ph.__deferred && !ph.__deferMake)) { return false; }
     // 延迟工厂（builder 子项）在这里才执行：全树只展开「宿主真正 inflate 到」的那些。
     var el = ph.__deferred;
     if (el == null && ph.__deferMake) { el = ph.__deferMake(); }
     if (el == null || el === false) {
-              console.warn('jsui: lazy slot builder returned empty, placeholder=' + placeholderId);
-      
+      __warn('jsui: lazy slot builder returned empty, placeholder=' + placeholderId);
       return false;
     }
     // 来源**保留**：宿主 dispose（ListView 回收离屏项）后还要按同一来源重建，
     // 见 __lazyUnmount。
     var root = ph.__root || __rootOf(ph.__parent);
     if (!root) { return false; }
-    var prev = activeRoot;
-    activeRoot = root;
+    var prev = __activeRoot;
+    __activeRoot = root;
     root.mounting = true;
     root.ops = [];
     var frame = __beginMountFrame();
@@ -1350,9 +1365,9 @@ G.debugPrint = function (message) {
     try {
       // 真实子树的父结点是**占位结点**（宿主侧同样的父子关系），作用域链 /
       // BuildContext 锚点与「直接挂在容器下」一致。
-      var inst = mount(el, ph, null);
+      var inst = __mount(el, ph, null);
       ph.__mountedChild = inst;
-      ph.__mountedRootId = nodeIdOf(inst);
+      ph.__mountedRootId = __nodeIdOf(inst);
       ph.__propsChildren = ph.__propsChildren || {};
       ph.__propsChildren['child'] = inst;
       // 占位从「零尺寸空隙」变为「透传容器」：只去掉尺寸，**保留**懒槽位标记与
@@ -1361,15 +1376,15 @@ G.debugPrint = function (message) {
       //（id / element key 不变），父容器不需要任何列表换位。
       var mountedProps = { __lazy: true, __lazyFn: __lazyMountFn, __lazyOffFn: __lazyUnmountFn };
       if (ph.__props && ph.__props.key !== undefined) { mountedProps.key = ph.__props.key; }
-      // 保活声明随挂载一起下发：宿主 _JsNode 据此注册 KeepAlive，切走 tab 时
+      // 保活声明随挂载一起下发：宿主 _JsPlainNodeHost 据此注册 KeepAlive，切走 tab 时
       // element 不被销毁 → 不会回调 __lazyUnmount，JS 侧 State 与已加载数据保留。
       if (__subtreeWantsKeepAlive(inst)) { mountedProps.__keepAlive = true; }
       ph.__props = mountedProps;
-      emitOp({ op: 'props', id: ph.__id, props: ph.__props });
-      emitOp({ op: 'propsChild', parent: ph.__id, key: 'child', childId: ph.__mountedRootId });
+      __emitOp({ op: 'props', id: ph.__id, props: ph.__props });
+      __emitOp({ op: 'propsChild', parent: ph.__id, key: 'child', childId: ph.__mountedRootId });
       // 占位结点现在有了 child：重建这个懒槽位 wrapper。
-      emitOp({ op: 'rebuild', id: ph.__id });
-      commitOps(root);
+      __emitOp({ op: 'rebuild', id: ph.__id });
+      __commitOps(root);
     } catch (e) {
       // 本次尝试失败：commit 未发生，宿主侧没有半棵树（create/insert 随 ops 一起
       // 丢弃），故不需要发 remove；只回滚 JS 侧**本次新增**的结点与句柄。
@@ -1378,18 +1393,17 @@ G.debugPrint = function (message) {
       ok = false;
       __rollbackMountFrame(frame);
       root.ops = null;
-              console.error('jsui: lazy slot mount failed, placeholder=' +
-          placeholderId + ': ' + e);
-      
+      __error('jsui: lazy slot mount failed, placeholder=' +
+        placeholderId + ': ' + e);
     } finally {
       __endMountFrame(frame);
       root.mounting = false;
-      activeRoot = prev;
+      __activeRoot = prev;
     }
     // 挂载期间累积的 setState（如 initState 里同步 setState）补一次 flush。
     // 失败路径里本次实例已被回滚标成 __unmounted，flush 的 `continue` 会跳过；
     // 不能清 root.dirty —— 其中可能还有同页其他组件已入队的重建。
-    if (root.dirty.length) { flushNow(root); }
+    if (root.dirty.length) { __flushNow(root); }
     return ok;
   }
 
@@ -1397,7 +1411,7 @@ G.debugPrint = function (message) {
   // 槽位本身与来源保留；宿主再次 inflate 时 __lazyMount 按来源重新构建（与 Flutter
   // 「离屏项 State 销毁、滚回再 initState」一致）。幂等：未挂载的槽位直接跳过。
   function __lazyUnmount(placeholderId) {
-    var ph = hostNodes[placeholderId];
+    var ph = __hostNodes[placeholderId];
     if (!ph || !ph.__mountedChild) { return false; }
     var root = ph.__root || __rootOf(ph.__parent);
     if (!root) { return false; }
@@ -1405,8 +1419,8 @@ G.debugPrint = function (message) {
     ph.__mountedChild = null;
     ph.__mountedRootId = null;
     if (ph.__propsChildren) { delete ph.__propsChildren['child']; }
-    var prev = activeRoot;
-    activeRoot = root;
+    var prev = __activeRoot;
+    __activeRoot = root;
     root.mounting = true;
     root.ops = [];
     try {
@@ -1414,37 +1428,35 @@ G.debugPrint = function (message) {
       // 让新建 element 在未挂载时就被保活）。
       if (ph.__props && ph.__props.__keepAlive) {
         delete ph.__props.__keepAlive;
-        emitOp({ op: 'props', id: ph.__id, props: ph.__props });
+        __emitOp({ op: 'props', id: ph.__id, props: ph.__props });
       }
       // unmount 派发 deactivate → dispose，并下发子树 remove；宿主侧的 element
       // 已随本次 dispose 一起销毁，store 按 remove 递归摘除结点。
-      unmount(inst);
-      emitOp({ op: 'propsChildRemove', parent: ph.__id, key: 'child' });
+      __unmount(inst);
+      __emitOp({ op: 'propsChildRemove', parent: ph.__id, key: 'child' });
       // 占位结点的 child 槽已清空：重建这个懒槽位 wrapper。
-      emitOp({ op: 'rebuild', id: ph.__id });
-      commitOps(root);
+      __emitOp({ op: 'rebuild', id: ph.__id });
+      __commitOps(root);
     } finally {
       root.mounting = false;
-      activeRoot = prev;
+      __activeRoot = prev;
     }
-    if (root.dirty.length) { flushNow(root); }
+    if (root.dirty.length) { __flushNow(root); }
     return true;
   }
 
-  // 在 [inst] 的 build 执行期间把 `building` 指向它 —— 事件绑定据此拿到
-  // 「当前构建位置」。building 只在同步的 build 调用内有效，退出即还原
-  // （委托型组件的 builder 方法在 build 调用栈内执行，故锚点仍是该结点）。
-  //
+  // 在 [inst] 的 build 执行期间把锚点指向它 —— 事件绑定据此拿到「当前构建位置」。
   // 按 Dart 签名把 BuildContext 代理**传进去**：`build(context)`。
+  //
+  // `inst.__building` 标记「本实例正处在 build 执行期」，供 __markDirty 拦截
+  // build 内 setState（见【9】）。**不能用锚点代替**：initState / didUpdateWidget
+  // 期间锚点也指向本实例，那两个阶段 setState 是合法写法。
   function __buildOf(inst) {
-    var prev = building;
-    building = inst;
-    // `__building` 标记「本实例正处在 build 执行期」，供 markDirty 拦截 build 内
-    // setState（见【9】）。**不能用锚点 `building` 代替**：initState /
-    // didUpdateWidget 期间锚点也指向本实例，那两个阶段 setState 是合法写法。
-    inst.__building = true;
-    try { return inst.build(contextOf(inst)); }
-    finally { inst.__building = false; building = prev; }
+    return __withBuilding(inst, function () {
+      inst.__building = true;
+      try { return inst.build(__contextOf(inst)); }
+      finally { inst.__building = false; }
+    });
   }
 
   // 宿主元素判据：字符串 type（Component.host 产物），或**没有重写 build** 的
@@ -1462,23 +1474,23 @@ G.debugPrint = function (message) {
     return typeof T === 'string' ? T : T.name;
   }
 
-  function mount(el, parent, slot) {
+  function __mount(el, parent, slot) {
     if (el == null || el === false) { return null; }
 
     if (__isHostElement(el)) {
       var hostType = __hostTypeName(el);
       var hi = {
-        __k: HOST, __id: __nextNodeId(hostType), __type: hostType,
+        __k: __HOST, __id: __nextNodeId(hostType), __type: hostType,
         __root: __rootOf(parent), __props: el.props || {},
         __children: [], __parent: parent, __el: el
       };
       // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
       __publishScope(hi, hi.__props);
-      hostNodes[hi.__id] = hi;
+      __hostNodes[hi.__id] = hi;
       __trackNode(hi.__id);
-      emitOp({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
+      __emitOp({ op: 'create', id: hi.__id, type: hi.__type, props: hi.__props });
       if (slot && slot.hostParentId) {
-        emitOp({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
+        __emitOp({ op: 'insert', parent: slot.hostParentId, id: hi.__id, index: slot.index });
       }
       var idx = 0;
       // 懒容器（如 TabBarView / ListView.builder(itemExtent:)）的 children 先只
@@ -1492,7 +1504,7 @@ G.debugPrint = function (message) {
         if (!lazyChildren && (src.el == null || src.el === false)) { continue; }
         var c = lazyChildren
             ? __newLazySlot(hi, src, { kind: 'children', hostParentId: hi.__id, index: idx })
-            : mount(src.el, hi, { hostParentId: hi.__id, index: idx });
+            : __mount(src.el, hi, { hostParentId: hi.__id, index: idx });
         if (c) { hi.__children.push(c); idx += 1; }
       }
       // props 里的 widget（单值 / 数组）与 delegate：单独挂载，不入 flatten
@@ -1504,7 +1516,7 @@ G.debugPrint = function (message) {
       return hi;
     }
 
-    var ownFrame = beginConstruct();
+    var ownFrame = __beginConstruct();
     var ci;
     var C = el.__type;
     try {
@@ -1517,42 +1529,38 @@ G.debugPrint = function (message) {
           ? el
           : new C(el.props);
     } catch (e) {
-      endConstruct(null, ownFrame);
+      __endConstruct(null, ownFrame);
       throw e;
     }
-    ci.__k = COMP;
+    ci.__k = __COMP;
     ci.__id = __nextComponentId(C);
     // 构造期（字段初始化）里登记的控制器 / Key 句柄归属本实例：此刻 `ci` 才存在，
-    // 故构造期间先暂存、新对象返回后再回填（见 handle_registry_js 的 beginConstruct）。
-    endConstruct(ci, ownFrame);
+    // 故构造期间先暂存、新对象返回后再回填（见 handle_registry_js 的 __beginConstruct）。
+    __endConstruct(ci, ownFrame);
     // 记入挂载事务帧（若有）：构造已成功、控制器等句柄已归属本实例，之后
     // initState / didChangeDependencies / build 任何一步抛错都要按帧回收。
     __trackInst(ci);
     ci.__parent = parent;
     ci.__slot = slot;
     ci.__root = __rootOf(parent);
-    compNodes[ci.__id] = ci;
+    __compNodes[ci.__id] = ci;
     // 生命周期：initState 仍在**挂载期**执行（与 Flutter 一致，它不依赖继承
     // 上下文，控制器 / 监听器在这里登记归属本实例）；didChangeDependencies 与
-    // build 一并推迟到 [pullComponent] —— 由宿主的组件 wrapper 在 element 挂载
+    // build 一并推迟到 [__pullComponent] —— 由宿主的组件 wrapper 在 element 挂载
     // 时同步拉起。这样 build 执行时 BuildContext 锚点已经登记，
     // `MediaQuery.of(context)` / `context.watch` 首帧就能读到真值。
     ci.__built = false;
     ci.__depsDone = false;
-    var prevBuilding = building;
-    building = ci;
-    try {
+    __withBuilding(ci, function () {
       if (typeof ci.initState === 'function') { ci.initState(); }
-    } finally {
-      building = prevBuilding;
-    }
+    });
     // 组件结点占住父槽：宿主据此为它建一个挂载边界（wrapper），并在 wrapper 的
-    // build 里同步拉取 build 结果（见 pullComponent）。
-    // `hasBuild: true` = 元素所属类**重写了 build**（COMP 结点）：宿主要为它建
+    // build 里同步拉取 build 结果（见 __pullComponent）。
+    // `hasBuild: true` = 元素所属类**重写了 build**（__COMP 结点）：宿主要为它建
     // 挂载边界并在 element 挂载时驱动 build。宿主包装类没有重写 build，不带本标记。
-    emitOp({ op: 'create', id: ci.__id, type: __componentName(C), hasBuild: true });
+    __emitOp({ op: 'create', id: ci.__id, type: __componentName(C), hasBuild: true });
     if (slot && slot.hostParentId) {
-      emitOp({ op: 'insert', parent: slot.hostParentId, id: ci.__id, index: slot.index });
+      __emitOp({ op: 'insert', parent: slot.hostParentId, id: ci.__id, index: slot.index });
     }
     return ci;
   }
@@ -1566,18 +1574,17 @@ G.debugPrint = function (message) {
   //
   // 返回：本次 build 产生的补丁（JSON 数组；空数组 = 无补丁）。build 抛错时返回
   // `{"error": "…"}`，宿主据此渲染明确的错误视图（不静默降级）。
-  function pullComponent(pageKey, compId) {
-    var root = roots[pageKey];
-    var inst = compNodes[compId];
+  function __pullComponent(pageKey, compId) {
+    var root = __roots[pageKey];
+    var inst = __compNodes[compId];
     if (!root || !inst || inst.__unmounted) { return []; }
     if (inst.__built) { return []; }
     if (root.mounting || root.flushing) {
-      console.error('jsui: component pull re-entered during mount/flush: ' + compId);
+      __error('jsui: component pull re-entered during mount/flush: ' + compId);
       return { error: '组件 build 与挂载/flush 重入: ' + compId };
     }
-    var prevRoot = activeRoot;
-    var prevBuilding = building;
-    activeRoot = root;
+    var prevRoot = __activeRoot;
+    __activeRoot = root;
     root.ops = [];
     var frame = __beginMountFrame();
     var error = null;
@@ -1585,21 +1592,19 @@ G.debugPrint = function (message) {
     try {
       if (!inst.__depsDone) {
         inst.__depsDone = true;
-        var prevB = building;
-        building = inst;
-        try {
+        __withBuilding(inst, function () {
           if (typeof inst.didChangeDependencies === 'function') {
             inst.didChangeDependencies();
           }
-        } finally { building = prevB; }
+        });
       }
-      inst.__child = mount(__buildOf(inst), inst, null);
-      var rootId = renderRootIdOf(inst);
+      inst.__child = __mount(__buildOf(inst), inst, null);
+      var rootId = __renderRootIdOf(inst);
       if (rootId == null) {
         error = '组件 build 未产出任何结点: ' + __componentName(inst.constructor);
       } else {
         inst.__built = true;
-        emitOp({ op: 'propsChild', parent: inst.__id, key: 'child', childId: rootId });
+        __emitOp({ op: 'propsChild', parent: inst.__id, key: 'child', childId: rootId });
       }
       // 子树里的 keep-alive 声明随挂载同步到最近的懒槽位（与 __lazyMount 同义）。
       __syncEnclosingKeepAlive(inst);
@@ -1609,27 +1614,26 @@ G.debugPrint = function (message) {
     } finally {
       __endMountFrame(frame);
       root.ops = null;
-      activeRoot = prevRoot;
-      building = prevBuilding;
+      __activeRoot = prevRoot;
     }
     if (error != null) {
       // build 失败：按帧回滚本次新增的结点 / 句柄（宿主尚未 commit，无需 remove）。
       inst.__built = false;
       inst.__child = null;
       __rollbackMountFrame(frame);
-      console.error('jsui: component build failed (' + compId + '): ' + error);
+      __error('jsui: component build failed (' + compId + '): ' + error);
       return { error: error };
     }
     return ops || [];
   }
 
-  function patch(oldInst, el, parent, slot, propSlot) {
+  function __patch(oldInst, el, parent, slot, propSlot) {
     if (el == null || el === false) {
-      if (oldInst) { unmount(oldInst); }
+      if (oldInst) { __unmount(oldInst); }
       return null;
     }
     if (!oldInst) {
-      var mi = mount(el, parent, slot);
+      var mi = __mount(el, parent, slot);
       if (mi && propSlot) { mi.__propSlot = propSlot; }
       return mi;
     }
@@ -1645,7 +1649,7 @@ G.debugPrint = function (message) {
 
     var newIsHost = __isHostElement(el);
     var newHostType = newIsHost ? __hostTypeName(el) : null;
-    var oldIsHost = (oldInst.__k === HOST);
+    var oldIsHost = (oldInst.__k === __HOST);
     var sameType = oldIsHost
       ? (newIsHost && oldInst.__type === newHostType)
       : (!newIsHost && oldInst.constructor === el.__type);
@@ -1655,15 +1659,15 @@ G.debugPrint = function (message) {
     // widget 上——key 形同虚设，与原生行为不一致。列表槽的 key 匹配见
     // [__keyedMatcher]，这里是单结点路径的唯一判据。
     if (!sameType ||
-        keySig(__nodeKeyOf(oldInst)) !== keySig(el.props ? el.props.key : null)) {
-      unmount(oldInst);
-      return mount(el, parent, slot);
+        __keySig(__nodeKeyOf(oldInst)) !== __keySig(el.props ? el.props.key : null)) {
+      __unmount(oldInst);
+      return __mount(el, parent, slot);
     }
 
     if (oldIsHost) {
       var oldProps = oldInst.__props;
       if (!__propsEqual(oldProps, el.props)) {
-        emitOp({ op: 'props', id: oldInst.__id, props: el.props });
+        __emitOp({ op: 'props', id: oldInst.__id, props: el.props });
       }
       oldInst.__props = el.props;
       oldInst.__el = el;
@@ -1690,18 +1694,10 @@ G.debugPrint = function (message) {
       oldInst.__applyProps(el.props);
     }
     // 首次 build 尚未由宿主拉起（wrapper 还没挂载）：只同步 props，didUpdateWidget
-    // 在「已构建」之后才有意义；build 由 pullComponent 读取最新 props 后执行。
+    // 在「已构建」之后才有意义；build 由 __pullComponent 读取最新 props 后执行。
     if (!oldInst.__built) { return oldInst; }
     // didUpdateWidget 期间把构建锚点指向本实例（新建句柄的归属 / this.context）。
-    var prevBuilding = building;
-    building = oldInst;
-    try {
-      if (typeof oldInst.didUpdateWidget === 'function') {
-        oldInst.didUpdateWidget(oldWidget);
-      }
-    } finally {
-      building = prevBuilding;
-    }
+    __withBuilding(oldInst, function () { oldInst.didUpdateWidget(oldWidget); });
     __patchComponentChild(oldInst);
     return oldInst;
   }
@@ -1709,18 +1705,18 @@ G.debugPrint = function (message) {
   /// 组件 build 出新子树，并在渲染根 id 变化时回报它自己的 `child` 槽。
   function __patchComponentChild(inst) {
     if (!inst.__built) { return null; }
-    var oldRoot = renderRootIdOf(inst);
-    inst.__child = patch(inst.__child, __buildOf(inst), inst, null);
-    var newRoot = renderRootIdOf(inst);
+    var oldRoot = __renderRootIdOf(inst);
+    inst.__child = __patch(inst.__child, __buildOf(inst), inst, null);
+    var newRoot = __renderRootIdOf(inst);
     if (newRoot !== oldRoot) {
       if (newRoot == null) {
         // build 返回空只可能来自产物缺陷：Dart 的 `Widget build()` 必返回 Widget。
         // 宿主侧 propsChildAt 的 childId 为空无法落位，这里必须出声，不静默。
-        console.error('jsui: component render root is empty after build (' +
+        __error('jsui: component render root is empty after build (' +
           __componentName(inst.constructor) + ')');
         return inst.__child;
       }
-      emitOp({
+      __emitOp({
         op: 'propsChildAt', parent: inst.__id, key: 'child',
         index: 0, childId: newRoot
       });
@@ -1732,7 +1728,7 @@ G.debugPrint = function (message) {
   //
   // 旧实现每个子项都做「线性扫 remaining + splice + indexOf」→ O(n²)：100 项列表
   // 每次重建约 1 万次比较、100 次数组搬移。这里一次建索引，之后每项 O(1)：
-  //   - 带 key：`keySig` → 实例（同签名只认领一个，重复 key 按新建处理）；
+  //   - 带 key：`__keySig` → 实例（同签名只认领一个，重复 key 按新建处理）；
   //   - 无 key：按旧序游标推进（保持「位置优先」的复用语义）；
   //   - 位置：`__id` → 旧下标，move 判定不再 `indexOf`。
   //
@@ -1748,7 +1744,7 @@ G.debugPrint = function (message) {
       var inst = oldList[i];
       if (!inst) { continue; }
       if (inst.__id != null) { posById[inst.__id] = i; }
-      var k = keySig(__nodeKeyOf(inst));
+      var k = __keySig(__nodeKeyOf(inst));
       if (k != null) {
         // 同一签名的 key 只认领一个旧结点：重复 key（Dart 侧本就是错误写法）时
         // 另一个按新建处理，绝不让同一实例被挂两次（会串坏 __parent/__slot）。
@@ -1801,7 +1797,7 @@ G.debugPrint = function (message) {
       var el = src.el !== undefined ? src.el : null;
       // 延迟工厂形态在展开前没有 element（也没有 key），只能按位置匹配。
       if (src.el !== undefined && (el == null || el === false)) { continue; }
-      var ek = keySig(el && el.props ? el.props.key : null);
+      var ek = __keySig(el && el.props ? el.props.key : null);
       var matched = matcher.take(ek);
 
       // 已存在的懒槽位（未挂载的来源 / 已挂载的 `__mountedChild`）→ 只更新子元素，
@@ -1812,7 +1808,7 @@ G.debugPrint = function (message) {
         __patchLazySlot(matched, src);
         // 懒槽位同样要跟随排序：宿主 `childIds` 的顺序只由 insert/move 决定。
         if (matcher.positionOf(matched) !== hostIdx) {
-          emitOp({ op: 'move', parent: parentHost.__id, id: matched.__id, index: hostIdx });
+          __emitOp({ op: 'move', parent: parentHost.__id, id: matched.__id, index: hostIdx });
         }
         next.push(matched);
         hostIdx += 1;
@@ -1825,7 +1821,7 @@ G.debugPrint = function (message) {
       // 否则该子项会永远挂在 JS 树里。与 Flutter「delegate 形态改变 → 子项重建」
       // 一致。
       if (lazy) {
-        if (matched) { unmount(matched); }
+        if (matched) { __unmount(matched); }
         next.push(__newLazySlot(parentHost, src, {
           kind: 'children', hostParentId: parentHost.__id, index: hostIdx
         }));
@@ -1837,11 +1833,11 @@ G.debugPrint = function (message) {
       // 延迟工厂形态（如容器从 lazy 变为非 lazy）在此现场展开一次。
       var cel = el !== null ? el : __lazyElementOf(src);
       if (cel == null || cel === false) { continue; }
-      var inst = patch(matched, cel, parentHost, { hostParentId: parentHost.__id, index: hostIdx });
+      var inst = __patch(matched, cel, parentHost, { hostParentId: parentHost.__id, index: hostIdx });
       if (inst) {
         // 复用的结点位置变化 -> 下发 move（新建的自带 insert）。
         if (inst === matched && matcher.positionOf(inst) !== hostIdx) {
-          emitOp({ op: 'move', parent: parentHost.__id, id: nodeIdOf(inst), index: hostIdx });
+          __emitOp({ op: 'move', parent: parentHost.__id, id: __nodeIdOf(inst), index: hostIdx });
         }
         next.push(inst);
         hostIdx += 1;
@@ -1850,14 +1846,14 @@ G.debugPrint = function (message) {
 
     var leftovers = matcher.leftovers();
     for (i = 0; i < leftovers.length; i++) {
-      unmount(leftovers[i]);
+      __unmount(leftovers[i]);
     }
     parentHost.__children = next;
   }
 
   // props 里的 slot：值可能是单个元素、元素数组，或 delegate 描述
   // （`{__delegate:'list'|'builder', …}`）。元素判据统一为 `element === true`
-  // （见【5】的 isElement），不做 `{type, props}` 形状猜测。
+  // （见【5】的 __isElement），不做 `{type, props}` 形状猜测。
 
   // 列表型 slot 的 keyed diff：复用已有实例，新键挂载，缺失卸载。
   // 不向宿主发 insert/move（宿主按 propsChildren 整表替换）。
@@ -1871,7 +1867,7 @@ G.debugPrint = function (message) {
     for (j = 0; j < newEls.length; j++) {
       var el = newEls[j];
       if (el == null || el === false) { continue; }
-      var ek = keySig(el.props ? el.props.key : null);
+      var ek = __keySig(el.props ? el.props.key : null);
       var matched = matcher.take(ek);
       var slotIndex = next.length;
       if (lazy) {
@@ -1879,7 +1875,7 @@ G.debugPrint = function (message) {
         if (matched && !ph) {
           // 同 __patchChildren：容器切到懒态时旧子结点必须换成懒槽位，否则宿主
           // dispose 时不会回调 `__lazyOffFn`，JS 子树永久驻留。
-          unmount(matched);
+          __unmount(matched);
         }
         if (!ph) {
           ph = __newLazySlot(parentHost, { el: el }, { kind: 'prop' });
@@ -1889,7 +1885,7 @@ G.debugPrint = function (message) {
         next.push(ph);
         continue;
       }
-      var inst = patch(matched, el, parentHost, null, {
+      var inst = __patch(matched, el, parentHost, null, {
         key: slotKey,
         index: slotIndex,
         parentId: parentHost.__id
@@ -1898,7 +1894,7 @@ G.debugPrint = function (message) {
     }
     var leftovers = matcher.leftovers();
     for (var i = 0; i < leftovers.length; i++) {
-      unmount(leftovers[i]);
+      __unmount(leftovers[i]);
     }
     return next;
   }
@@ -1914,23 +1910,23 @@ G.debugPrint = function (message) {
       if (k === '__items' || k === '__builder') { continue; }
       if (!Object.prototype.hasOwnProperty.call(newSlots, k)) { continue; }
       var v = newSlots[k];
-      if (isElement(v)) {
+      if (__isElement(v)) {
         var prev = oldS[k] || null;
-        var inst = patch(prev, v, hostInst, null);
+        var inst = __patch(prev, v, hostInst, null);
         if (inst) {
           nextS[k] = inst;
-          emitOp({ op: 'propsChild', parent: hostInst.__id, key: k, childId: nodeIdOf(inst) });
+          __emitOp({ op: 'propsChild', parent: hostInst.__id, key: k, childId: __nodeIdOf(inst) });
         }
         // 本 key 上其他形态的旧绑定（列表 / delegate）由下面的清理循环统一
         // 卸载并解绑：这里再 unmount 一次会让组件 dispose() 跑两遍。
         continue;
       }
-      if (isElementList(v)) {
+      if (__isElementList(v)) {
         var arr = __patchSlotList(hostInst, oldL[k] || [], v, k, lazy);
         nextL[k] = arr;
-        emitOp({
+        __emitOp({
           op: 'propsChildren', parent: hostInst.__id, key: k,
-          childIds: arr.map(nodeIdOf)
+          childIds: arr.map(__nodeIdOf)
         });
         continue;
       }
@@ -1938,42 +1934,42 @@ G.debugPrint = function (message) {
         if (v.__delegate === 'list') {
           var arr2 = __patchSlotList(hostInst, oldL[k] || [], v.children || [], k, lazy);
           nextL[k] = arr2;
-          emitOp({
+          __emitOp({
             op: 'propsChildren', parent: hostInst.__id, key: k,
-            childIds: arr2.map(nodeIdOf)
+            childIds: arr2.map(__nodeIdOf)
           });
           nextD[k] = { __delegate: 'list' };
         } else {
           nextD[k] = v;
-          emitOp({ op: 'propsData', parent: hostInst.__id, key: k, value: v });
+          __emitOp({ op: 'propsData', parent: hostInst.__id, key: k, value: v });
         }
         continue;
       }
     }
     for (k in oldS) {
       if (!nextS[k]) {
-        unmount(oldS[k]);
-        emitOp({ op: 'propsChildRemove', parent: hostInst.__id, key: k });
+        __unmount(oldS[k]);
+        __emitOp({ op: 'propsChildRemove', parent: hostInst.__id, key: k });
       }
     }
     for (k in oldL) {
       if (!nextL[k]) {
-        for (i = 0; i < oldL[k].length; i++) { unmount(oldL[k][i]); }
-        emitOp({ op: 'propsChildren', parent: hostInst.__id, key: k, childIds: [] });
+        for (i = 0; i < oldL[k].length; i++) { __unmount(oldL[k][i]); }
+        __emitOp({ op: 'propsChildren', parent: hostInst.__id, key: k, childIds: [] });
       }
     }
     for (k in oldD) {
-      if (!nextD[k]) { emitOp({ op: 'propsDataRemove', parent: hostInst.__id, key: k }); }
+      if (!nextD[k]) { __emitOp({ op: 'propsDataRemove', parent: hostInst.__id, key: k }); }
     }
     hostInst.__propsChildren = nextS;
     hostInst.__propsChildrenList = nextL;
     hostInst.__propsData = nextD;
   }
 
-  function unmount(inst) {
+  function __unmount(inst) {
     if (!inst) { return; }
-    var hostId = nodeIdOf(inst);
-    if (hostId) { emitOp({ op: 'remove', id: hostId }); }
+    var hostId = __nodeIdOf(inst);
+    if (hostId) { __emitOp({ op: 'remove', id: hostId }); }
     __markUnmounted(inst);
   }
 
@@ -1982,8 +1978,8 @@ G.debugPrint = function (message) {
     // teardown 尤其如此）。不拦会 `dispose()` 执行两遍、句柄二次释放。
     if (!inst || inst.__unmounted) { return; }
     inst.__unmounted = true;
-    if (inst.__k === HOST) {
-      delete hostNodes[inst.__id];
+    if (inst.__k === __HOST) {
+      delete __hostNodes[inst.__id];
       for (var i = 0; i < inst.__children.length; i++) { __markUnmounted(inst.__children[i]); }
       var pcs = inst.__propsChildren;
       if (pcs) { for (var pk in pcs) { __markUnmounted(pcs[pk]); } }
@@ -1995,77 +1991,55 @@ G.debugPrint = function (message) {
       }
     } else {
       // 组件结点索引同步摘除：宿主不会再拉取一个已卸载的组件。
-      delete compNodes[inst.__id];
+      delete __compNodes[inst.__id];
       // 与 Flutter 一致：从树上摘除时先 deactivate、再最终 dispose。
-      // 生命周期期间把构建锚点指向本实例（`this.context` / 新建句柄归属）。
-      var prevBuilding = building;
-      building = inst;
-      try {
-        if (typeof inst.deactivate === 'function') {
-          // 生命周期异常不能静默吞掉：卸载路径出错的后果是「句柄泄漏 / 监听未摘」，
-          // 线上只能靠这条日志定位（release 下 console 是空函数，无额外开销）。
-          try {
-            inst.deactivate();
-          } catch (e) {
-                          console.error('deactivate failed: ' + (e && e.message ? e.message : String(e)));
-            
-          }
-        }
-        if (typeof inst.dispose === 'function') {
-          try {
-            inst.dispose();
-          } catch (e) {
-                          console.error('dispose failed: ' + (e && e.message ? e.message : String(e)));
-            
-          }
-        }
-      } finally {
-        building = prevBuilding;
-      }
+      // 生命周期异常不静默吞掉（后果是「句柄泄漏 / 监听未摘」，只能靠日志定位）。
+      __callLifecycle(inst, 'deactivate');
+      __callLifecycle(inst, 'dispose');
       // [scope] 从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 `__subs`）。
       __unsubscribeAll(inst);
       // [ctx] 释放 BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有
       // 真实记录（句柄→结点），纯本端删除会让宿主那条记录留到页面销毁。
-      // 与页面兜底 releasePageHandles 幂等（先删者胜，第二次是空操作）。
+      // 与页面兜底 __releasePageHandles 幂等（先删者胜，第二次是空操作）。
       if (inst.__ctx != null && inst.__ctx.__id != null) {
-        releaseHandle(inst.__ctx.__id);
+        __releaseHandle(inst.__ctx.__id);
         inst.__ctx = null;
       }
       // [mini-react] 释放构建期登记的 (位点号, 捕获值) 事件句柄，避免句柄泄漏。
       var bagFn = inst.__boundFn;
       if (bagFn) {
-        for (var k in bagFn) { releaseHandle(bagFn[k].__fn, false); }
+        for (var k in bagFn) { __releaseHandle(bagFn[k].__fn, false); }
         inst.__boundFn = null;
       }
       __markUnmounted(inst.__child);
       // [owner] 释放该实例持有的句柄（控制器 / Key 等）：先递归卸载子树，再
       // 整份释放——与 Dart 的 State.dispose 顺序一致。`dispose()` 里显式释放
       // 过的句柄已被移出 `__owns`，这里幂等跳过。
-      releaseOwnerHandles(inst);
+      __releaseOwnerHandles(inst);
     }
   }
 
-  // 整页挂载失败的回滚（mountRoot 的 catch 调用）。此刻 `root.inst` **尚未赋值**
+  // 整页挂载失败的回滚（__mountRoot 的 catch 调用）。此刻 `root.inst` **尚未赋值**
   // （mount 的返回值还没落到根上），半棵子树不可达，不能走 unmount；只能按归属
   // 清扫：宿主结点看 `__root`，句柄看 `key === pageKey`（挂载期登记的一切句柄：
   // page 作用域 / 事件闭包 / 实例持有的控制器、Key、ctx）或 `owner.__root`
-  // （兜底：判据不依赖 registerHandle 时 activeRoot 是否已就位）。
-  function abortRoot(root) {
+  // （兜底：判据不依赖 __registerHandle 时 __activeRoot 是否已就位）。
+  function __abortRoot(root) {
     var pageKey = root.key;
     var seen = {}, list = [], i;
-    for (var id in hostNodes) {
-      var node = hostNodes[id];
-      if (node && node.__root === root) { delete hostNodes[id]; }
+    for (var id in __hostNodes) {
+      var node = __hostNodes[id];
+      if (node && node.__root === root) { delete __hostNodes[id]; }
     }
-    for (var cid in compNodes) {
-      var comp = compNodes[cid];
-      if (comp && comp.__root === root) { delete compNodes[cid]; }
+    for (var cid in __compNodes) {
+      var comp = __compNodes[cid];
+      if (comp && comp.__root === root) { delete __compNodes[cid]; }
     }
-    var arr = pageHandles[pageKey] || [];
+    var arr = __pageHandles[pageKey] || [];
     for (i = 0; i < arr.length; i++) { seen[arr[i]] = 1; list.push(arr[i]); }
-    for (var hid in handles) {
+    for (var hid in __handles) {
       if (seen[hid]) { continue; }
-      var h = handles[hid];
+      var h = __handles[hid];
       if (!h) { continue; }
       if (h.key === pageKey || (h.owner && h.owner.__root === root)) {
         seen[hid] = 1;
@@ -2073,12 +2047,12 @@ G.debugPrint = function (message) {
       }
     }
     // 逐条释放会同步通知宿主摘掉对端镜像记录；重复释放幂等。
-    for (i = 0; i < list.length; i++) { releaseHandle(list[i]); }
+    for (i = 0; i < list.length; i++) { __releaseHandle(list[i]); }
     root.ops = null;
     root.dirty = [];
     root.flushPending = false;
     root.inst = null;
-    delete roots[pageKey];
+    delete __roots[pageKey];
   }
 
 
@@ -2092,107 +2066,100 @@ G.debugPrint = function (message) {
     return x;
   }
 
-  function newRoot(pageKey) {
-    return {
-      // `mounting`：根组件挂载进行中。此刻 `root.ops` 正被 mountRoot 累积整棵树
-      // 的 create/insert，而 flush 会**重置并消耗**同一份 ops（`root.ops = []`
-      // 后 commit 把它置 null），既丢掉尚未下发的结点、又让随后的根 op 被 emit
-      // 静默丢弃（宿主收不到根 → 页面停在加载态）。故挂载期间的 setState 只入
-      // dirty 队列，挂载收尾后统一 flush（见【9】markDirty 与 mountRoot）。
+  // 打开一个独立根（页面根 / 弹层面板根共用同一份事务）：
+  //   初始化根记录 → 建立建树事务（ops 归本次挂载累积）→ 挂载元素 →
+  //   下发根结点 → commit → 收尾补一次 flush。
+  // `mounting`：挂载进行中。此刻 `root.ops` 正被本次挂载累积整棵树的
+  // create/insert，而 flush 会**重置并消耗**同一份 ops（`root.ops = []` 后
+  // commit 把它置 null），既丢掉尚未下发的结点、又让随后的根 op被 emit 静默
+  // 丢弃（宿主收不到根 → 页面停在加载态）。故挂载期间的 setState 只入 dirty
+  // 队列，挂载收尾后统一 flush（见【9】__markDirty）。
+  function __openRoot(pageKey, el, parent) {
+    var root = {
       key: pageKey, inst: null, dirty: [], flushing: false,
       flushPending: false, mounting: false, ops: null
     };
-  }
-
-  // 挂载一个页面：pageKey 隔离根，moduleKey 定位模块，className 是组件类名。
-  // 组件产物里 **JS 类名 = Dart 类名**，元素 type 就是这个类本身（JS 里没有
-  // 「factory」这层包装）；`G[className]` 兜底全局注册的组件类。
-  function mountRoot(pageKey, moduleKey, className, propsJson) {
-    var mod = (G.__modules && G.__modules[moduleKey]) || null;
-    var C = (mod && mod[className]) || G[className];
-    if (!C) {
-      throw new Error('jsui: component not found: ' + className + ' in ' + moduleKey);
-    }
-    var root = newRoot(pageKey);
-    roots[pageKey] = root;
-    var prev = activeRoot;
-    activeRoot = root;
+    __roots[pageKey] = root;
+    var prev = __activeRoot;
+    __activeRoot = root;
     root.mounting = true;
     try {
       root.ops = [];
-      // 根组件是 `Component` 实例（实例即元素），build 由宿主在它的组件 wrapper
-      // 挂载时同步拉取（见 pullComponent）。
-      root.inst = mount(new C(__parseProps(propsJson)), null, null);
-      // 末位下发根结点 id，宿主据此挂载组件 wrapper（它内部再 pull 出渲染根）。
-      emitOp({ op: 'root', id: nodeIdOf(root.inst) });
-      commitOps(root);
+      root.inst = __mount(el, parent, null);
+      __emitOp({ op: 'root', id: __nodeIdOf(root.inst) });
+      __commitOps(root);
     } catch (e) {
-      // 失败即整页回滚：本次 commit 未发生（宿主侧没有半棵树），但 JS 侧已创建
+      // 失败即整根回滚：本次 commit 未发生（宿主侧没有半棵树），但 JS 侧已创建
       // 的宿主结点索引与已同步过去的句柄会随每次重试累积——只进不出。
-      // 见 abortRoot（按 __root / pageKey 归属清扫，不能走 unmount(root.inst)：
+      // 见 __abortRoot（按 __root / pageKey 归属清扫，不能走 __unmount(root.inst)：
       // 抛错时 root.inst 还没赋值）。
-      abortRoot(root);
+      __abortRoot(root);
       throw e;
     } finally {
       root.mounting = false;
-      activeRoot = prev;
+      __activeRoot = prev;
     }
-    // 挂载期间累积的 setState（如子组件 initState 里 `setState(() => _loading = true)`）
+    // 挂载期间累积的 setState（如 initState 里 `setState(() => _loading = true)`）
     // 在这里补一次 flush：根补丁已下发，实例与结点都在，走的正是 patch 增量重建，
     // 与 Flutter「initState 里 setState → 首帧后再重建」语义一致。
-    if (root.dirty.length) { flushNow(root); }
-    return true;
+    if (root.dirty.length) { __flushNow(root); }
+    return root;
   }
 
-  function disposeRoot(pageKey) {
-    var root = roots[pageKey];
+  // 关闭一个独立根：卸载整棵树 → 宿主侧子树已随页面/路由销毁，补丁丢弃即可 →
+  // 释放本页 scope=page 的句柄。组件自身持有的句柄由 __unmount 逐实例释放。
+  function __closeRoot(root) {
     if (!root) { return; }
-    // 只做正常卸载：组件 dispose 逐实例释放自己持有的句柄。**不做页面兜底**——
-    // 兜底由宿主在泄漏比对之后显式调用 sweepPage，否则会把泄漏一并抹平。
-    var prev = activeRoot;
-    activeRoot = root;
+    var prev = __activeRoot;
+    __activeRoot = root;
     try {
       root.ops = [];
-      unmount(root.inst);
-      // 宿主随页面 widget 一并销毁，无需回传 remove。
+      __unmount(root.inst);
       root.ops = null;
     } finally {
-      activeRoot = prev;
+      __activeRoot = prev;
     }
     root.inst = null;
     // 页面退出兜底（scope=page）：这类句柄就是「显式归页面所有」的，页面没了
     // 即应释放，属正常生命周期而非泄漏。scope=instance/local 的孤儿残留留给
     // 宿主在泄漏比对之后调用 sweepPage 处理。
-    releasePageHandles(pageKey);
-    delete roots[pageKey];
+    __releasePageHandles(root.key);
+    delete __roots[root.key];
   }
+
+  // 挂载一个页面：pageKey 隔离根，moduleKey 定位模块，className 是组件类名。
+  // 组件产物里 **JS 类名 = Dart 类名**，元素 type 就是这个类本身（JS 里没有
+  // 「factory」这层包装）；`G[className]` 兜底全局注册的组件类。
+  function __mountRoot(pageKey, moduleKey, className, propsJson) {
+    var mod = (G.__modules && G.__modules[moduleKey]) || null;
+    var C = (mod && mod[className]) || G[className];
+    if (!C) {
+      throw new Error('jsui: component not found: ' + className + ' in ' + moduleKey);
+    }
+    // 根组件是 `Component` 实例（实例即元素），build 由宿主在它的组件 wrapper
+    // 挂载时同步拉取（见 __pullComponent）。
+    __openRoot(pageKey, new C(__parseProps(propsJson)), null);
+    return true;
+  }
+
+  function __disposeRoot(pageKey) { __closeRoot(__roots[pageKey]); }
 
   // 宿主侧 props 更新（Dart JsUiWidget.didUpdateWidget → 这里），与 Flutter
   // 「父级重建」语义对齐：替换根实例 props → 重跑 __applyProps（构造参数
   // 派生的字段）→ 回调 didUpdateWidget(oldWidget) → 标脏重建。
   // 根尚未 mount / 已 dispose 时返回 false（不静默：Dart 侧会按返回值记日志）。
-  function updateRootProps(pageKey, propsJson) {
-    var root = roots[pageKey];
+  function __updateRootProps(pageKey, propsJson) {
+    var root = __roots[pageKey];
     if (!root || !root.inst) { return false; }
     var inst = root.inst;
     var next = __parseProps(propsJson);
     var prev = inst.props || {};
     inst.props = next;
     if (typeof inst.__applyProps === 'function') { inst.__applyProps(next); }
-    var prevBuilding = building;
     // 首次 build 尚未由宿主拉起：只同步 props，didUpdateWidget 在「已构建」之后
-    // 才有意义；build 由 pullComponent 读取最新 props 后执行。
-    if (inst.__built) {
-      building = inst;
-      try {
-        if (typeof inst.didUpdateWidget === 'function') {
-          inst.didUpdateWidget(prev);
-        }
-      } finally {
-        building = prevBuilding;
-      }
-    }
-    markDirty(inst);
+    // 才有意义；build 由 __pullComponent 读取最新 props 后执行。
+    if (inst.__built) { __withBuilding(inst, function () { inst.didUpdateWidget(prev); }); }
+    __markDirty(inst);
     return true;
   }
 
@@ -2200,68 +2167,70 @@ G.debugPrint = function (message) {
 
 // ===== 【11.5】跨模块核心符号（供 flutter.js 值类区） =====
   G.__core = {
-    handleOp: handleOp,
-    registerHandle: registerHandle,
-    releaseHandle: releaseHandle,
-    handleObjectOf: handleObjectOf,
-    createFnHandle: __createFnHandle,
+    // 句柄机制。register/release 走转发调用：debug 缓存追踪切面会在运行时
+    // 替换这两个实现，直接引用会让跨模块调用绕过切面。
+    __handleOp: __handleOp,
+    __registerHandle: function (obj, kind, opts) { return __registerHandle(obj, kind, opts); },
+    __releaseHandle: function (id, notify) { return __releaseHandle(id, notify); },
+    __handleObjectOf: __handleObjectOf,
+    __createFnHandle: __createFnHandle,
     // 作用域机制（provider 在自己的模块 patch/provider.js 里注册作用域）。
-    registerScope: registerScope,
-    scopeOf: scopeOf,
-    subscribeListenable: subscribeListenable,
+    __registerScope: __registerScope,
+    __scopeOf: __scopeOf,
+    __subscribeListenable: __subscribeListenable,
     // 调度：`Component.setState`（flutter.js 的基类）需要把实例标脏。
-    markDirty: markDirty,
-    // 结点归属与独立根（showDialog 系列的面板机制在 flutter.js）。
-    contextOf: contextOf,
-    isElement: isElement,
-    isElementList: isElementList,
-    nodeIdOf: nodeIdOf,
-    newRoot: newRoot,
-    mount: mount,
-    unmount: unmount,
-    commitOps: commitOps,
-    emitOp: emitOp,
-    flushNow: flushNow,
-    abortRoot: abortRoot,
-    releasePageHandles: releasePageHandles,
-    invokeHostMethod: invokeHostMethod,
-    roots: roots,
-    get building() { return building; },
-    set building(v) { building = v; },
-    get activeRoot() { return activeRoot; },
-    set activeRoot(v) { activeRoot = v; },
-    get JsBuildContext() { return JsBuildContext; }
+    __markDirty: __markDirty,
+    // 结点 / 独立根：弹层面板机制（dialogs）只用这几个通用入口。
+    __contextOf: __contextOf,
+    __isElement: __isElement,
+    __isElementList: __isElementList,
+    __nodeIdOf: __nodeIdOf,
+    __mount: __mount,
+    __unmount: __unmount,
+    __openRoot: __openRoot,
+    __closeRoot: __closeRoot,
+    // 日志与值展开：flutter.js 的框架内提示 / 值类（StringBuffer）共用。
+    log: __logText,
+    str: __str,
+    __roots: __roots,
+    // 可变状态用访问器：直接取 const 只会拿到求值当时的快照。
+    get building() { return __building; },
+    set building(v) { __building = v; },
+    get activeRoot() { return __activeRoot; },
+    set activeRoot(v) { __activeRoot = v; },
+    get JsBuildContext() { return JsBuildContext; },
+    __objectToken: __objectToken
   };
 
 
-// ===== 【11.7】Key 签名（keySig / objectToken） =====
+// ===== 【11.7】Key 签名（__keySig / __objectToken） =====
   // ObjectKey / ValueKey(对象值) 的身份 token：对象走 WeakMap（不阻止回收），
   // 原始值没有身份，退化为值 string。
-  var okeySeq = 0;
-  var okeyIdx = new WeakMap();
-  function objectToken(v) {
+  var __okeySeq = 0;
+  var __okeyIdx = new WeakMap();
+  function __objectToken(v) {
     if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
       return 'p:' + String(v);
     }
-    var t = okeyIdx.get(v);
-    if (t == null) { okeySeq += 1; t = 'i:' + okeySeq; okeyIdx.set(v, t); }
+    var t = __okeyIdx.get(v);
+    if (t == null) { __okeySeq += 1; t = 'i:' + __okeySeq; __okeyIdx.set(v, t); }
     return t;
   }
 
   // 值 → 签名片段（原始值按「类型 + 值」，对象按身份）。
-  function keyValueSig(v) {
+  function __keyValueSig(v) {
     if (v === null || (typeof v !== 'object' && typeof v !== 'function')) {
       return typeof v + ':' + String(v);
     }
-    return 'i:' + objectToken(v);
+    return 'i:' + __objectToken(v);
   }
 
   // key → 可比较签名；null / undefined（无 key）返回 null。
   // 形态判据用**自有字段**（`__vkey` / `__okey`）：ValueKey 的值本身可以是
   // null/undefined，故只能判「有没有这个字段」，不能判它的值。
-  function keySig(k) {
+  function __keySig(k) {
     if (k == null) { return null; }
-    if (Object.prototype.hasOwnProperty.call(k, '__vkey')) { return 'v:' + keyValueSig(k.__vkey); }
+    if (Object.prototype.hasOwnProperty.call(k, '__vkey')) { return 'v:' + __keyValueSig(k.__vkey); }
     // PageStorageKey：同值也与 ValueKey 不等（`p:` 前缀），对象值同 ValueKey 走 token。
     if (Object.prototype.hasOwnProperty.call(k, '__psk')) {
       var pv = k.__psk;
@@ -2269,28 +2238,48 @@ G.debugPrint = function (message) {
           Object.prototype.hasOwnProperty.call(pv, '__vtok')) {
         return 'p:' + pv.__vtok;
       }
-      return 'p:' + keyValueSig(pv);
+      return 'p:' + __keyValueSig(pv);
     }
     if (Object.prototype.hasOwnProperty.call(k, '__okey')) { return 'o:' + k.__okey; }
-    var hid = k.__id != null ? k.__id : k.__handle;
-    if (hid != null) { return 'h:' + hid; }
+    // GlobalKey / UniqueKey：句柄 id 即身份（props 里的 key 是 live 实例，带 __id）。
+    if (k.__id != null) { return 'h:' + k.__id; }
     // 兜底：认不出的 key 对象按**引用身份**区分。绝不能 `String(k)` ——
     // 所有对象都会拼成 "[object Object]" 而互相撞车，导致不同 key 复用同一
     // 结点（`x:` 前缀保留，表明这是兜底签名）。
-    return 'x:' + objectToken(k);
+    return 'x:' + __objectToken(k);
   }
-
-  G.objectToken = objectToken;
 
 
 // ===== 【21】BuildContext 代理 =====
-  function JsBuildContext(anchor, nodeId) {
-    // 消费它的 JS 组件实例（watch/read 的构建位置锚点）。
-    this.__anchor = anchor;
-    // 最近宿主祖先结点 id（宿主侧 nodeId -> 真值 BuildContext 的键）。
-    this.__nodeId = nodeId;
-    // 跨语言句柄：**惰性**登记（没用过 context 的组件零句柄开销）。
-    this.__id = null;
+  class JsBuildContext {
+    constructor(anchor, nodeId) {
+      // 消费它的 JS 组件实例（watch/read 的构建位置锚点）。
+      this.__anchor = anchor;
+      // 最近宿主祖先结点 id（宿主侧 nodeId -> 真值 BuildContext 的键）。
+      this.__nodeId = nodeId;
+      // 跨语言句柄：**惰性**登记（没用过 context 的组件零句柄开销）。
+      this.__id = null;
+    }
+
+    // 句柄（首次真正需要宿主真值时才登记，宿主 onCreate 绑定 nodeId）。
+    __handle() {
+      if (this.__id == null) {
+        this.__id = __registerHandle(this, 'ctx/BuildContext', {
+          meta: this.__nodeId == null ? null : { node: this.__nodeId }
+        });
+      }
+      return this.__id;
+    }
+
+    // 向宿主真值 BuildContext 发同名 op（其余 context API 走这条路）。
+    // JS→宿主只有异步桥，故 fire-and-forget：不阻塞本端同步渲染，失败静默丢弃
+    // （页面卸载竞态下句柄可能已释放）。
+    __host(op, payload) {
+      try {
+        var p = __handleOp(this.__handle(), op, payload);
+        if (p && typeof p.catch === 'function') { p.catch(function () {}); }
+      } catch (e) {}
+    }
   }
 
   // 登记类型别名：`extension X on BuildContext` 的注册按 Dart 类型名解析目标
@@ -2298,36 +2287,16 @@ G.debugPrint = function (message) {
   // 解析留一条别名，不把内部类暴露成全局。
   __registerTypeAlias('BuildContext', JsBuildContext);
 
-  // 句柄（首次真正需要宿主真值时才登记，宿主 onCreate 绑定 nodeId）。
-  JsBuildContext.prototype.__handle = function () {
-    if (this.__id == null) {
-      this.__id = registerHandle(this, 'ctx/BuildContext', {
-        meta: this.__nodeId == null ? null : { node: this.__nodeId }
-      });
-    }
-    return this.__id;
-  };
-
-  // 向宿主真值 BuildContext 发同名 op（其余 context API 走这条路）。
-  // JS→宿主只有异步桥，故 fire-and-forget：不阻塞本端同步渲染，失败静默丢弃
-  // （页面卸载竞态下句柄可能已释放）。
-  JsBuildContext.prototype.__host = function (op, payload) {
-    try {
-      var p = handleOp(this.__handle(), op, payload);
-      if (p && typeof p.catch === 'function') { p.catch(function () {}); }
-    } catch (e) {}
-  };
-
   // `context.watch<T>()` / `read<T>()` **不在这里**：它们不是框架 API，而是
   // provider 那类 `extension BuildContextX on BuildContext`——方法补丁在
   // patch/provider.js（provider_module_js.dart），宿主侧处理见 provider/context_ops.dart。
-  // 本片段只提供机制：代理、句柄、`contextOf`/`buildContextOf`、通用 op 转发。
+  // 本片段只提供机制：代理、句柄、`__contextOf`/`__createContext`、通用 op 转发。
 
   // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，
-  // build 形参与 `this.context` 是同一个对象：前者由 __buildOf 传入 `contextOf(inst)`，
-  // 后者由 getter 传 `building`，而 `__buildOf` 期间 `building === inst`。
-  function contextOf(inst) {
-    if (inst.__ctx == null) { inst.__ctx = buildContextOf(inst); }
+  // build 形参与 `this.context` 是同一个对象：前者由 __buildOf 传入 `__contextOf(inst)`，
+  // 后者由 getter 传 `__building`，而 `__buildOf` 期间 `__building === inst`。
+  function __contextOf(inst) {
+    if (inst.__ctx == null) { inst.__ctx = __createContext(inst); }
     return inst.__ctx;
   }
 
@@ -2337,37 +2306,38 @@ G.debugPrint = function (message) {
   // `MediaQuery.of(context)` / `context.watch` 首次 build 就能发起取值（真值经
   // 异步桥回填后标脏重建校正），不会卡在兜底值上。
   // 只有拿不到结点 id 的极端情况（未挂载的实例）才退回页面锚点。
-  function buildContextOf(inst) {
+  function __createContext(inst) {
     if (inst && inst.__id) { return new JsBuildContext(inst, inst.__id); }
-    var root = activeRoot || (inst && inst.__root);
+    var root = __activeRoot || (inst && inst.__root);
     return new JsBuildContext(inst, root ? 'page:' + root.key : null);
   }
 
 
 // ===== 【25】泄漏观测（debug 用） =====
 
-  function leakSnapshot() {
+  function __leakSnapshot() {
     var hs = [];
-    for (var id in handles) {
-      var h = handles[id];
+    for (var id in __handles) {
+      var h = __handles[id];
       hs.push({ id: id, kind: h.kind, scope: h.scope, key: h.key, obj: __constructorName(h) });
     }
     var ph = {};
-    for (var pk in pageHandles) { ph[pk] = pageHandles[pk].length; }
+    for (var pk in __pageHandles) { ph[pk] = __pageHandles[pk].length; }
     var rs = [];
-    for (var rk in roots) { rs.push(rk); }
+    for (var rk in __roots) { rs.push(rk); }
+    // 键名是宿主快照协议的字段（handles / pageHandles / roots），与内部变量名无关。
     return JSON.stringify({ handles: hs, pageHandles: ph, roots: rs });
   }
 
-  // 宿主侧调试入口用的**缓存全景**（仅 debug）：`handles` 是 JS 端唯一的对象
+  // 宿主侧调试入口用的**缓存全景**（仅 debug）：`__handles` 是 JS 端唯一的对象
   // 缓存（函数 / 控制器 / Key / ChangeNotifier / ctx 句柄都在这一张表里，kind 只是
   // 条目上的标签）——这里按 kind 汇总条目数 + 逐条列出 id/scope/key/构造名，外加
   // 页面句柄索引与页面根表，一眼看全 JS 端持有什么（见 JsLeakSnapshot.logJsCache）。
-  function cacheDump() {
+  function __cacheDump() {
     var byKind = {};
     var lines = [];
-    for (var id in handles) {
-      var h = handles[id];
+    for (var id in __handles) {
+      var h = __handles[id];
       byKind[h.kind] = (byKind[h.kind] || 0) + 1;
       lines.push(h.kind + ' ' + id + ' obj=' + __constructorName(h)
         + (h.key ? ' page=' + h.key : ' scope=' + h.scope));
@@ -2375,9 +2345,9 @@ G.debugPrint = function (message) {
     var kinds = [];
     for (var k in byKind) { kinds.push(k + '×' + byKind[k]); }
     var ph = [];
-    for (var pk in pageHandles) { ph.push(pk + '×' + pageHandles[pk].length); }
+    for (var pk in __pageHandles) { ph.push(pk + '×' + __pageHandles[pk].length); }
     var rs = [];
-    for (var rk in roots) { rs.push(rk); }
+    for (var rk in __roots) { rs.push(rk); }
     return 'js binding cache: ' + lines.length + ' 条（' + kinds.join(', ') + '）'
       + '\n  pageHandles: ' + (ph.length ? ph.join(', ') : '-')
       + '\n  roots: ' + (rs.length ? rs.join(', ') : '-')
@@ -2397,41 +2367,41 @@ G.debugPrint = function (message) {
       + ' · scope=' + h.scope + ' · 页面=' + page + ' · 持有者=' + owner;
   }
 
-  // 安装切面（幂等）：把全局 registerHandle / releaseHandle 换成「原实现 + 日志」。
+  // 安装切面（幂等）：把 __registerHandle / __releaseHandle 换成「原实现 + 日志」。
   function __installCacheTrace() {
     if (__cacheTraceInstalled) { return; }
     __cacheTraceInstalled = true;
-    var rawReg = reg;
-    reg = function (obj, kind, opts) {
+    var rawReg = __registerHandle;
+    __registerHandle = function (obj, kind, opts) {
       // 同一对象重复登记返回同一 id（身份去重）——那种不算「新建」，不打印。
       var existed = (obj === null || obj === undefined)
-        ? null : handleOwnerIdx.get(obj);
+        ? null : __handleOwnerIdx.get(obj);
       var id = rawReg(obj, kind, opts);
-      if (__cacheTraceOn && id && id !== existed && handles[id]) {
-        console.log('[binding] + JS ' + __cacheTraceLine(handles[id]));
+      if (__cacheTraceOn && id && id !== existed && __handles[id]) {
+        G.debugPrint('[binding] + JS ' + __cacheTraceLine(__handles[id]));
       }
       return id;
     };
-    var rawRelease = releaseHandle;
-    releaseHandle = function (id, notify) {
-      var h = __cacheTraceOn ? handles[id] : null;
+    var rawRelease = __releaseHandle;
+    __releaseHandle = function (id, notify) {
+      var h = __cacheTraceOn ? __handles[id] : null;
       rawRelease(id, notify);
       // 幂等释放（本地已删）不打印，避免与对端 release 重复刷屏。
-      if (h) { console.log('[binding] - JS ' + __cacheTraceLine(h)); }
+      if (h) { G.debugPrint('[binding] - JS ' + __cacheTraceLine(h)); }
     };
   }
 
   // 宿主入口：打开 / 关闭详细追踪。关闭即包装内日志分支短路（只多一次布尔
   // 判断），不会再安装第二层包装。
-  function setCacheVerbose(on) {
+  function __setCacheVerbose(on) {
     __cacheTraceOn = !!on;
-    if (__cacheTraceOn) { __installCacheTrace(); return; }
+    if (__cacheTraceOn) { __installCacheTrace(); }
   }
 
 
 // ===== 【27.5】Dart extension 注册（registerExtension） =====
   // 类型名 → 构造函数：语言核心映射 → 运行时别名表 → G[name]。
-  // 三者都取不到时返回 null（调用方 console.error，不静默吞掉）。
+  // 三者都取不到时返回 null（调用方 __error，不静默吞掉）。
   function __extensionTargetOf(target) {
     if (typeof target !== 'string') return target || null;
     switch (target) {
@@ -2490,13 +2460,13 @@ G.debugPrint = function (message) {
     var statics = opts.statics || {};
     var ctor = __extensionTargetOf(target);
     if (!ctor) {
-      console.error('jsui: extension target not found: ' + String(target) +
+      __error('jsui: extension target not found: ' + String(target) +
         (id ? ' (' + id + ')' : ''));
       return statics;
     }
     var proto = ctor.prototype;
     if (!proto) {
-      console.error('jsui: extension target has no prototype: ' + String(target));
+      __error('jsui: extension target has no prototype: ' + String(target));
       return statics;
     }
     if (id) __uninstallExtension(id);
@@ -2507,7 +2477,7 @@ G.debugPrint = function (message) {
       // 目标上已有同名成员（含继承）：Dart 里显式成员优先于扩展，静默跳过。
       if (name in proto) {
         if (id && meta.owners[name] && meta.owners[name] !== id) {
-          console.warn('jsui: extension member conflict: ' + name +
+          __warn('jsui: extension member conflict: ' + name +
             ' already provided by ' + meta.owners[name] +
             ' (later registration ignored)');
         }
@@ -2540,43 +2510,42 @@ G.debugPrint = function (message) {
 
 // ===== 【28】api 收尾 =====
 
+  // 宿主侧契约（`__jsui.<key>`，Dart 侧 evaluate 按名调用）：只保留宿主真正用到的入口。
   var api = {
-    fn: __createFnHandle,
     invoke: __invokeEventHandler,
     // 需要结果的事件调用（宿主等待 Future）：执行句柄 → 若返回 Promise 则
     // await → 经宿主通道 `jsuiEventResult` 回传 token 与结果。与能力无关，
     // 所有 `Future<T>` 回调共用（见 `JsRuntimeManager.invokeAwait`）。
     invokeAwait: __invokeEventHandlerAwait,
-    mount: mountRoot,
+    mount: __mountRoot,
     // 宿主挂载组件 wrapper 时**同步**拉取该组件的首次 build 结果（补丁 JSON）。
     // 这是唯一一条「宿主 build → JS build」的入口：保证 JS build 执行时
     // BuildContext 锚点已由 wrapper 登记。
-    pull: pullComponent,
-    dispose: disposeRoot,
-    updateProps: updateRootProps,
+    pull: __pullComponent,
+    dispose: __disposeRoot,
+    updateProps: __updateRootProps,
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
-    // （setState 只标脏，见【9】markDirty / requestFlush）。
-    flushPending: flushPending,
+    // （setState 只标脏，见【9】__markDirty / __requestFlush）。
+    flushPending: __flushPending,
     // `panelMount` / `panelClosed` 不在这里：命令式弹层的独立根归 flutter.js
     // （见 dialogs_js.dart），该模块求值时把两个入口装到 `__jsui` 上。
 
-    leakSnapshot: leakSnapshot,
-    cacheDump: cacheDump,
-    setCacheVerbose: setCacheVerbose,
-    sweepPage: sweepPage,
+    leakSnapshot: __leakSnapshot,
+    cacheDump: __cacheDump,
+    setCacheVerbose: __setCacheVerbose,
+    sweepPage: __sweepPage,
 
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
     // （见 capabilities/core/handle_registry.dart）。
-    reg: registerHandle,
-    release: releaseHandleFromHost,
-    call: callHandle
+    release: function (id) { __releaseHandle(id, false); },
+    call: __callHandle
   };
 
   G.__jsui = api;
   // JS→宿主唯一出口（宿主桥）：`invoke` 发起调用，宿主**必定**结算——
   // 成功 `resolve`，实现抛错 `reject`。与 `__jsui`（页面挂载/事件回传等运行
   // 入口）分开，语义单一。
-  G._app_host_ = { invoke: invokeHostMethod, resolve: __resolveHostCall, reject: __rejectHostCall };
+  G._app_host_ = { invoke: __invokeHostMethod, resolve: __resolveHostCall, reject: __rejectHostCall };
   // 模块表 `__modules` 由同一 IIFE 首段（_jsUiEnvVars）创建（挂 G），
   // 此处只登记 core，不再自带守卫。
   G.__modules['js_ui/core'] = api;

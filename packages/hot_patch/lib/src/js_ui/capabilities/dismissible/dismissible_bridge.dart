@@ -49,10 +49,9 @@ DragStartBehavior dragStartBehaviorFromJson(Object? v) =>
 void registerDismissibleWidgets(JsWidgetRegistry r) {
   r.register('Dismissible', (c) {
     final declared = jsKeyOf(c.props['key']);
-    // Dismissible 必须有 key：GlobalKey 不能与 `_JsNode` 共用（同一 key 挂在
+    // Dismissible 必须有 key：GlobalKey 不能与结点包装器的 key 共用（同一 key 挂在
     // 祖先与后代上会触发重复 key 断言），交给 hostStateKey 另分配；LocalKey 按
-    // 值重建（跨语言值相等）；未声明时用常量占位——每个 Dismissible 处在各自
-    // `_JsNode` 下，常量 key 不会与兄弟冲突，且重建时保持稳定。
+    // 值重建（跨语言值相等）；未声明时用常量占位——重建时保持稳定。
     final key = declared is GlobalKey
         ? hostStateKey(c.props['key'])
         : (declared ?? const ValueKey<String>('js.dismissible'));

@@ -39,7 +39,7 @@ const String stateHandleJsSource = r'''
       if (this.__key == null) { return null; }
       var p = payload || {};
       if (this.__type) { p.type = this.__type; }
-      return handleOp(this.__key, '__state.' + op, p);
+      return __handleOp(this.__key, '__state.' + op, p);
     }
   }
 ''';

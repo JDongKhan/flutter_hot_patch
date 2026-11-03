@@ -88,9 +88,6 @@ export class LabeledDivider extends StatelessWidget {
 // 原生组件包装 _LabeledDivider（@PatchIgnore(isComponent: true)）
 class _LabeledDivider extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 

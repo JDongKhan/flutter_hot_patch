@@ -12,7 +12,7 @@
 // 两个跨语言对象各占一个句柄 kind（通用句柄层 + 控制器桥），随组件实例释放：
 //   - `layer/Link`：LayerLink()（无方法，只做身份对齐）；
 //   - `overlay/Portal`：OverlayPortalController()，show/hide/toggle 命令由 JS
-//     `handleOp` 发来（'call' + method），isShowing 由 JS 侧镜像，不查宿主。
+//     `__handleOp` 发来（'call' + method），isShowing 由 JS 侧镜像，不查宿主。
 import 'package:flutter/widgets.dart';
 
 import '../../js_widget_registry.dart';

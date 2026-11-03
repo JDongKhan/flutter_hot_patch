@@ -9,14 +9,14 @@ const String changeNotifierSource = r'''
 // **职责只有一件事：提供模型本体**。addListener / removeListener 保留在 JS
 // 侧（JS 自身逻辑要订阅模型），notifyListeners 双路派发：
 //   ① 本端 `_listeners`（JS 侧逻辑 / JS 侧消费者重建）；
-//   ② 跨语言 `handleOp(__id, 'notify')`（通知 Dart 端**通用镜像**
+//   ② 跨语言 `__handleOp(__id, 'notify')`（通知 Dart 端**通用镜像**
 //      JsChangeNotifier，驱动 Dart 侧 ChangeNotifierProvider 子树刷新）。
 // 构造时登记句柄（kind=notifier/ChangeNotifier），meta.type = JS 端类名 —— Dart 端的
 // 通用镜像据此「记下它的 JS 端类型」（context.watch<T>() 的类型一路传到这里）。
 export class ChangeNotifier {
   constructor() {
     this._listeners = [];
-    this.__id = registerHandle(this, 'notifier/ChangeNotifier', {
+    this.__id = __registerHandle(this, 'notifier/ChangeNotifier', {
       meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
     });
   }
@@ -33,7 +33,7 @@ export class ChangeNotifier {
     var ls = this._listeners.slice();
     for (var i = 0; i < ls.length; i++) { ls[i](); }
     // 双路之②：JS→宿主只有异步桥，故这里是 fire-and-forget（不阻塞本地派发）。
-    if (this.__id != null) { handleOp(this.__id, 'notify'); }
+    if (this.__id != null) { __handleOp(this.__id, 'notify'); }
     }
     // Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
     // 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
@@ -43,7 +43,7 @@ export class ChangeNotifier {
     dispose() {
     this._listeners = [];
     if (this.__id != null) {
-  releaseHandle(this.__id);
+  __releaseHandle(this.__id);
   this.__id = null;
     }
     }

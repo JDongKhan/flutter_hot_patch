@@ -28,7 +28,7 @@ const String textEditingControllerJsSource = r'''
     set text(v) {
       this.__text = (v == null) ? '' : String(v);
       if (this.__id != null) {
-        handleOp(this.__id, 'set', { name: 'text', value: this.__text });
+        __handleOp(this.__id, 'set', { name: 'text', value: this.__text });
       }
       this.__notify();
     }
@@ -38,12 +38,12 @@ const String textEditingControllerJsSource = r'''
       if (this.__id != null) {
         var b = (s && typeof s.baseOffset === 'number') ? s.baseOffset : 0;
         var e = (s && typeof s.extentOffset === 'number') ? s.extentOffset : b;
-        handleOp(this.__id, 'call', { method: 'setSelection', args: [b, e] });
+        __handleOp(this.__id, 'call', { method: 'setSelection', args: [b, e] });
       }
     }
     clear() {
       this.__text = '';
-      if (this.__id != null) { handleOp(this.__id, 'call', { method: 'clear' }); }
+      if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'clear' }); }
       this.__notify();
     }
   }

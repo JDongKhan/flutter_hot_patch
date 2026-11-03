@@ -63,7 +63,8 @@ class HotPatchLog {
   /// 打开后逐条打印双端缓存的登记 / 释放：
   ///   - Dart 侧：每条绑定进 [JsBindingCache] / 出缓存（含 `quiet` 的索引类条目）；
   ///   - JS 侧：每个句柄（控制器 / Key / BuildContext 代理 / 事件闭包）的
-  ///     `reg` / `releaseHandle`，经引擎 console 以 `[binding]` 前缀输出。
+  ///     `__registerHandle` / `__releaseHandle`，经统一日志通道（debugPrint）
+  ///     以 `[binding]` 前缀输出。
   ///
   /// 置 true 只影响日志：不改变任何缓存行为、不增加额外表。JS 侧切面由
   /// `JsRuntimeManager.setVerboseCacheTrace(true)` 装配（等价入口，且会立刻

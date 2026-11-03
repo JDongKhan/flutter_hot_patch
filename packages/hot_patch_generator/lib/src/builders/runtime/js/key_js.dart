@@ -3,7 +3,7 @@
 // Key 与 Controller 不同：它是**值**（元素 props 里的 `key`），不是结点，也不
 // 绑定到某个宿主 widget。生成器把 Dart 侧 `key: ValueKey(item)` / `key: _formKey`
 // 翻译成 `props.key = new ValueKey(item)` / `this._formKey`；reconciler 只按
-// **签名**比较（见 __patchChildren 的 keySig），宿主按序列化形态还原真实 Flutter
+// **签名**比较（见 __patchChildren 的 __keySig），宿主按序列化形态还原真实 Flutter
 // Key（见 capabilities/key/key_bridge.dart）。
 //
 // 五类语义（与 Flutter 对齐）：
@@ -22,25 +22,25 @@
 //     持真实 GlobalKey() / UniqueKey()，按句柄 id 复用同一实例（GlobalKey 身份
 //     跨帧稳定；页面退出随句柄释放）。跨桥 `{__handle:id}`，签名 `h:<id>`。
 //
-// keySig 是 reconciler 唯一的 key 比较入口：把 key 归一成可比较字符串（null =
+// __keySig 是 reconciler 唯一的 key 比较入口：把 key 归一成可比较字符串（null =
 // 无 key），__patchChildren 据此做「带 key 优先按 key、无 key 按位置」匹配。
 // 判据用**结构**（__vkey / __okey / __id）而非 instanceof——key 可能来自父级
 // props 透传，形态必须与宿主侧 key_bridge 的解析保持一致。
 const String keyJsSource = r'''
-  // objectToken / keyValueSig / keySig 属于**运行时核心**（key_sig_js.dart，随
+  // __objectToken / __keyValueSig / __keySig 属于**运行时核心**（key_sig_js.dart，随
   // runtime.js 先加载）：identity WeakMap 由核心与这里的 Key 类共用。
-  const objectToken = G.objectToken;
+  // __objectToken 由本模块头部从 G.__core 解构。
 
   // ValueKey：按值相等，纯值 codec（不登记句柄）。
-  // 实例的**自有字段名 = 序列化字段名**（__vkey）：reconciler 的 keySig 用字段
+  // 实例的**自有字段名 = 序列化字段名**（__vkey）：reconciler 的 __keySig 用字段
   // 形态判据，而 props.key 传的是 live 实例（不是 toJSON 产物），两边必须同形。
-  // 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
+  // 对象值跨语言保不住同一性，序列化退化为身份 token（与 __keyValueSig 同源）。
   export class ValueKey {
     constructor(props) { this.__vkey = __positionalArgs(props, ['value']).value; }
     toJSON() {
     var v = this.__vkey;
     if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
-  return { __vtok: objectToken(v) };
+  return { __vtok: __objectToken(v) };
     }
     return { __vkey: v };
     }
@@ -48,7 +48,7 @@ const String keyJsSource = r'''
 
   // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
   export class ObjectKey {
-    constructor(props) { this.__okey = objectToken(__positionalArgs(props, ['value']).value); }
+    constructor(props) { this.__okey = __objectToken(__positionalArgs(props, ['value']).value); }
     toJSON() {
     return { __okey: this.__okey };
     }
@@ -57,13 +57,13 @@ const String keyJsSource = r'''
   // PageStorageKey：Dart 侧 `extends ValueKey`（按**值**相等），但宿主必须造
   // **真实** PageStorageKey——它的意义是滚动位置按 key 存进 PageStorage bucket，
   // 那是宿主端行为（JS 侧只有一个值本体）。故 codec 与 ValueKey 同构另加 `__psk`
-  // 标记：宿主据此造 PageStorageKey 而非 ValueKey，keySig 前缀 `p:` 使它与
+  // 标记：宿主据此造 PageStorageKey 而非 ValueKey，__keySig 前缀 `p:` 使它与
   // 同值的 ValueKey 不等（与 Dart 的 runtimeType 参与相等一致）。
   export class PageStorageKey {
     constructor(props) {
       var value = __positionalArgs(props, ['value']).value;
       this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
-          ? { __vtok: objectToken(value) }
+          ? { __vtok: __objectToken(value) }
           : value;
     }
     toJSON() {
@@ -80,7 +80,7 @@ const String keyJsSource = r'''
       // 取值不需要问宿主、也不靠 runtimeType 猜。
       var ta = (props && props.typeArguments) || [];
       this.__stateType = ta.length ? ta[0] : null;
-      this.__id = registerHandle(this, 'key/Global', {
+      this.__id = __registerHandle(this, 'key/Global', {
         meta: debugLabel == null ? null : { debugLabel: debugLabel }
       });
     }
@@ -94,14 +94,14 @@ const String keyJsSource = r'''
       if (this.__id == null) { return null; }
       // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
       // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
-      var type = this.__stateType || handleOp(this.__id, '__type', {});
+      var type = this.__stateType || __handleOp(this.__id, '__type', {});
       return StateHandle.of(this.__id, type);
     }
   }
 
   // GlobalKey.currentContext / findRenderObject()：BuildContext 与 RenderObject 是
   // **宿主端**概念——JS 侧既没有真实对象，也没有同步取值的能力（JS→宿主只有异步
-  // 桥，见 handleOp）。故 currentContext 返回一个只携带 key 句柄 id 的代理，链式
+  // 桥，见 __handleOp）。故 currentContext 返回一个只携带 key 句柄 id 的代理，链式
   // 调用在 JS 侧是空壳，最后一次调用经通用 op 落到宿主，由宿主用**真实**对象把
   // Flutter 原生语义补全——位置/尺寸只在真正算得出来的一端计算。
   //   - showOnScreen()：void 语义，fire-and-forget，宿主算出该结点位置并滚动；
@@ -111,11 +111,11 @@ const String keyJsSource = r'''
   export class KeyRef {
     constructor(id) { this.__key = id; }
     showOnScreen() {
-    if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
+    if (this.__key != null) { __handleOp(this.__key, 'showOnScreen', {}); }
     }
     measure() {
     if (this.__key == null) { return Promise.resolve(null); }
-    return handleOp(this.__key, 'measure', {});
+    return __handleOp(this.__key, 'measure', {});
     }
     findRenderObject() {
     return new KeyRef(this.__key);
@@ -131,7 +131,7 @@ const String keyJsSource = r'''
   // UniqueKey：句柄即身份（无本端资源需要清理）。
   export class UniqueKey {
     constructor() {
-      this.__id = registerHandle(this, 'key/Unique', {});
+      this.__id = __registerHandle(this, 'key/Unique', {});
     }
     toJSON() {
     return { __handle: this.__id };

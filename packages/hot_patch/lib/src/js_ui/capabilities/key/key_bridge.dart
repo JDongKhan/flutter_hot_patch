@@ -2,7 +2,7 @@
 //
 // Key 是**值**（元素 props 的 `key`），不是结点：JS 侧由 capabilities/key/key_js.dart
 // 的代理类产出，随 props 序列化下发（`{__vkey:…}` / `{__okey:…}` / `{__handle:…}`），
-// 宿主在渲染结点时还原成真实 Flutter Key（见 js_ui_widget 的 _JsNodeState）。
+// 宿主在渲染结点时还原成真实 Flutter Key（见 js_ui_widget 的 `_renderStoreNode`）。
 //
 // 与 ScrollController 共用同一套通用句柄层（capabilities/core/handle_registry.dart）：
 //   - GlobalKey / UniqueKey：JS 侧 `reg(this, 'key/Global'|'key/Unique')` 登记，
@@ -47,7 +47,7 @@ void registerKeyStateOp(String op, KeyStateOpHandler handler) {
 /// 「外层 JS 元素 key」→「真正挂到宿主 widget 上的 key」。
 ///
 /// Flutter 不允许同一个 GlobalKey 同时挂在两个 widget 上，而 JS 元素的 key 已由
-/// 核心挂到元素结点（`_JsNode`）做身份。需要由 JS 访问 State 的宿主组件（如
+/// 核心挂到结点宿主 wrapper 上做身份。需要由 JS 访问 State 的宿主组件（如
 /// AnimatedList）因此**换一把自己的 GlobalKey** 挂在真实 widget 上，并按外层 key
 /// 记住映射；`currentState` 解析时顺着映射找到真实 State。与具体组件无关。
 final Expando<GlobalKey> _stateKeys = Expando<GlobalKey>('hostStateKey');

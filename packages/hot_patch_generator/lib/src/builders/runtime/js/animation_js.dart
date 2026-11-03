@@ -52,7 +52,7 @@ const String animationJsSource = r'''
       case 'easeOut': return function (t) { return 1 - (1 - t) * (1 - t); };
       case 'fastOutSlowIn': return function (t) { return t * t * (3 - 2 * t); };
       default:
-        console.warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
+        __warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
         return function (t) { return t; };
     }
   };
@@ -105,7 +105,7 @@ const String animationJsSource = r'''
   }
 
   // 真实控制器在宿主（Ticker 驱动）；本镜像只保存 value 与时长：
-  //   - forward/reverse/repeat/stop/reset → `handleOp('call')`（载荷带 value 与
+  //   - forward/reverse/repeat/stop/reset → `__handleOp('call')`（载荷带 value 与
   //     时长，宿主据此对齐状态后再驱动）；
   //   - 宿主每帧回传 value → onHost 更新镜像 + __notify（JS listeners 据此重建）。
   export class AnimationController extends ControllerBase {
@@ -135,7 +135,7 @@ const String animationJsSource = r'''
       if (this._value === n) { return; }
       this._value = n;
       if (this.__id != null) {
-        handleOp(this.__id, 'set', { name: 'value', value: n });
+        __handleOp(this.__id, 'set', { name: 'value', value: n });
       }
       this.__notify();
     }
@@ -148,7 +148,7 @@ const String animationJsSource = r'''
       else if (typeof o === 'number') { o = { duration: o }; }
       else { o = o || {}; }
       var ms = (o.duration != null) ? __durationMs(o.duration) : this.durationMs;
-      handleOp(this.__id, 'call', {
+      __handleOp(this.__id, 'call', {
         // id 一并下发：宿主基座的 onOp 不带 id，而「挂逐帧回传」需要它。
         id: this.__id,
         method: method,

@@ -37,13 +37,13 @@ const String scrollControllerJsSource = r'''
     }
     jumpTo(offset) {
       if (this.__id != null) {
-        handleOp(this.__id, 'call', { method: 'jumpTo', args: [offset] });
+        __handleOp(this.__id, 'call', { method: 'jumpTo', args: [offset] });
       }
     }
     animateTo(offset, opts, curveArg) {
       if (this.__id == null) { return; }
       var a = this.__animateArgs(opts, curveArg);
-      handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
+      __handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
     }
     get position() {
       return {
@@ -82,23 +82,23 @@ const String scrollControllerJsSource = r'''
     }
     jumpToPage(page) {
       if (this.__id != null) {
-        handleOp(this.__id, 'call', { method: 'jumpToPage', args: [page] });
+        __handleOp(this.__id, 'call', { method: 'jumpToPage', args: [page] });
       }
     }
     animateToPage(page, opts, curveArg) {
       if (this.__id == null) { return; }
       var a = this.__animateArgs(opts, curveArg);
-      handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
+      __handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
     }
     nextPage(opts, curveArg) {
       if (this.__id == null) { return; }
       var a = this.__animateArgs(opts, curveArg);
-      handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
+      __handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
     }
     previousPage(opts, curveArg) {
       if (this.__id == null) { return; }
       var a = this.__animateArgs(opts, curveArg);
-      handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
+      __handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
     }
     get hasClients() { return this.__id != null; }
   }

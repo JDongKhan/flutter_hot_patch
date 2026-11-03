@@ -36,12 +36,6 @@ const String dialogsJsSource = r'''
     // key -> { key, kind, el, caller, root, result, hasResult, resolve, reject }
     static __all = {};
 
-    // 可变状态按属性实时读写：`building` / `activeRoot` 是核心闭包里的 var，
-    // 解构 const 只会拿到求值当时的快照。
-    static __building() { return G.__core.building; }
-    static __activeRoot() { return G.__core.activeRoot; }
-    static __setActiveRoot(v) { G.__core.activeRoot = v; }
-
     static __key() {
       Panel.__seq += 1;
       return 'jsui_panel_' + Panel.__seq;
@@ -76,7 +70,7 @@ const String dialogsJsSource = r'''
       var inst = null;
       if (context && context.__anchor) { inst = context.__anchor; }
       else if (context && context.__root) { inst = context; }
-      else if (Panel.__building()) { inst = Panel.__building(); }
+      else if (G.__core.building) { inst = G.__core.building; }
       if (!inst) { return null; }
       var root = inst.__root;
       if (root && panels[root.key]) { return panels[root.key]; }
@@ -95,10 +89,10 @@ const String dialogsJsSource = r'''
       // 传入 context 代理的锚点实例——面板根因此挂在调用方的 `__parent` 链上，
       // 弹层里的 `context.watch/read` 仍能看到页面的 provider 作用域。
       var given = options.context;
-      var caller = Panel.__building() || (given && given.__anchor) || null;
+      var caller = G.__core.building || (given && given.__anchor) || null;
       var callerNode = given && given.__nodeId
         ? given.__nodeId
-        : (caller ? contextOf(caller).__nodeId : null);
+        : (caller ? __contextOf(caller).__nodeId : null);
       var key = Panel.__key();
       // builder 的形参 ctx：**专用代理**（不打在调用方那个缓存代理上——`contextOf`
       // 按实例缓存，共用会把页面的代理永久指向某个面板）。带 `__panelKey` 后
@@ -129,7 +123,7 @@ const String dialogsJsSource = r'''
         p.reject = reject;
       });
       Panel.__all[key] = p;
-      invokeHostMethod('jsuiPanelOpen', [{
+      __invokeHostMethod('jsuiPanelOpen', [{
         key: key,
         kind: kind,
         anchor: anchor.__nodeId,
@@ -144,61 +138,27 @@ const String dialogsJsSource = r'''
     }
 
     // 宿主首帧后回调：把 builder 产出的元素树挂到独立根上并下发首批补丁。
-    // 幂等：重复调用（重建 / 二次回调）直接返回。
+    // 与页面根共用同一份事务（__openRoot）：parent = 调用方实例，因此
+    // `__parent` 链与页面连通（provider 等按类型向上的作用域照常可见），
+    // slot = null 故不产出 insert op。幂等：重复调用直接返回。
     static mount(key) {
       var p = Panel.__all[key];
       if (!p || p.root) { return false; }
-      var root = newRoot(key);
-      roots[key] = root;
-      var prev = Panel.__activeRoot();
-      Panel.__setActiveRoot(root);
-      root.mounting = true;
-      try {
-        root.ops = [];
-        // parent = 调用方实例：`__parent` 链因此与页面连通（provider 等按类型
-        // 向上的作用域照常可见）；slot=null 故不产出 insert op。
-        root.inst = mount(p.el, p.caller, null);
-        emitOp({ op: 'root', id: nodeIdOf(root.inst) });
-        commitOps(root);
-      } catch (e) {
-        abortRoot(root);
-        throw e;
-      } finally {
-        root.mounting = false;
-        Panel.__setActiveRoot(prev);
-      }
-      p.root = root;
-      // 挂载期间累积的 setState（initState 里同步 setState）补一次 flush。
-      if (root.dirty.length) { flushNow(root); }
+      p.root = __openRoot(key, p.el, p.caller);
       return true;
     }
 
     // 宿主路由关闭后回调（barrier / 返回键 / Navigator.pop 都汇到这一条）：
-    // 卸载独立根 → 结算 Promise。本端清理由 unmount 逐实例释放，页面兜底
-    // （releasePageHandles）保证任何残留都不会跨面板累积。
+    // 卸载独立根（__closeRoot 顺带释放本面板 scope=page 的句柄）→ 结算 Promise。
     static closed(key) {
       var p = Panel.__all[key];
       if (!p) { return false; }
       delete Panel.__all[key];
-      var root = p.root || roots[key] || null;
+      var root = p.root || __roots[key] || null;
       p.root = null;
       p.el = null;
       p.caller = null;
-      if (root && root.inst) {
-        var prev = Panel.__activeRoot();
-        Panel.__setActiveRoot(root);
-        try {
-          // ops 丢弃即可：宿主那棵子树随路由一起销毁，无需回传 remove。
-          root.ops = [];
-          unmount(root.inst);
-        } finally {
-          root.ops = null;
-          Panel.__setActiveRoot(prev);
-        }
-        root.inst = null;
-      }
-      delete roots[key];
-      releasePageHandles(key);
+      __closeRoot(root);
       var resolve = p.resolve;
       p.resolve = null;
       p.reject = null;
@@ -215,12 +175,12 @@ const String dialogsJsSource = r'''
       var p = Panel.of(context);
       if (!p) {
         // 明确出声：这类调用不会被静默忽略，否则表现为「点了没反应」。
-        console.warn('jsui: Navigator.pop 未命中任何弹层面板（页面级路由请由宿主管理）');
+        __warn('jsui: Navigator.pop 未命中任何弹层面板（页面级路由请由宿主管理）');
         return false;
       }
       p.result = result;
       p.hasResult = true;
-      invokeHostMethod('jsuiPanelPop', [p.key]).then(function () {}, function () {});
+      __invokeHostMethod('jsuiPanelPop', [p.key]).then(function () {}, function () {});
       return true;
     }
   }

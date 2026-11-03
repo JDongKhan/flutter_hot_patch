@@ -28,7 +28,7 @@
 // 生效）。成员全部非枚举定义（不污染 for...in / Object.keys / JSON.stringify）。
 const String jsExtensionJsSource = r'''
   // 类型名 → 构造函数：语言核心映射 → 运行时别名表 → G[name]。
-  // 三者都取不到时返回 null（调用方 console.error，不静默吞掉）。
+  // 三者都取不到时返回 null（调用方 __error，不静默吞掉）。
   function __extensionTargetOf(target) {
     if (typeof target !== 'string') return target || null;
     switch (target) {
@@ -87,13 +87,13 @@ const String jsExtensionJsSource = r'''
     var statics = opts.statics || {};
     var ctor = __extensionTargetOf(target);
     if (!ctor) {
-      console.error('jsui: extension target not found: ' + String(target) +
+      __error('jsui: extension target not found: ' + String(target) +
         (id ? ' (' + id + ')' : ''));
       return statics;
     }
     var proto = ctor.prototype;
     if (!proto) {
-      console.error('jsui: extension target has no prototype: ' + String(target));
+      __error('jsui: extension target has no prototype: ' + String(target));
       return statics;
     }
     if (id) __uninstallExtension(id);
@@ -104,7 +104,7 @@ const String jsExtensionJsSource = r'''
       // 目标上已有同名成员（含继承）：Dart 里显式成员优先于扩展，静默跳过。
       if (name in proto) {
         if (id && meta.owners[name] && meta.owners[name] !== id) {
-          console.warn('jsui: extension member conflict: ' + name +
+          __warn('jsui: extension member conflict: ' + name +
             ' already provided by ' + meta.owners[name] +
             ' (later registration ignored)');
         }

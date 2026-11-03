@@ -37,18 +37,25 @@
 /// | 分区 | 内容 | 属于哪个设计 |
 /// | --- | --- | --- |
 /// | 【1】 | 运行环境 + 全局状态与工具（全局对象 / 模块表 / 日志全局 / id 序号 / 页面根表） | 全体共用 |
-/// | 【2】 | 出方向桥（`emitOp` / `commitOps` / `__sendToHost` → `sendMessage`） | 全体共用 |
+/// | 【2】 | 出方向桥（`__emitOp` / `__commitOps` / `__sendToHost` → `sendMessage`） | 全体共用 |
 /// | 【3】 | 宿主桥 `_app_host_`（`invoke` / `resolve` / `reject`，唯一对外出口） | @HostInjected 专用 |
-/// | 【4】 | 跨语言句柄注册表（`reg` / `release` / `call` / `handleOp`）+ 控制器三件套基座 | 全体共用（新增能力只注册 kind） |
-/// | 【5】 | element 与事件句柄（`__createElement` / `__createFnHandle` / `__invokeEventHandler`） | mini-react |
+/// | 【4】 | 跨语言句柄注册表（`__registerHandle` / `__releaseHandle` / `__callHandle` / `__handleOp`）+ 控制器三件套基座 | 全体共用（新增能力只注册 kind） |
+/// | 【5】 | element 与事件句柄（`__isElement` / `__createFnHandle` / `__invokeEventHandler`） | mini-react |
 /// | 【6】 | reconciler 工具（`__propsEqual` / `__nodeKeyOf` / `__keyedMatcher` / `__rootOf`） | mini-react |
-/// | 【7】 | 组件基类（`setState` / `__bindFn`） | mini-react（生成器产物的能力袋） |
-/// | 【8】 | 作用域｜按类型名向上查找 + 消费者订阅（`registerScope` / `scopeOf` / `subscribeListenable`） | 通用机制（三方库按类型注册，见 capabilities/js_ui_library.dart） |
-/// | 【9】 | 调度（`markDirty` → `__rebuildDirty` 批处理） | mini-react |
-/// | 【10】 | reconciler 主流程（`mount` / `patch` / `unmount`） | mini-react |
-/// | 【11】 | 对外入口 `api`（mount / dispose / invoke / host） | 全体共用 |
+/// | 【7】 | 构建锚点 / 生命周期派发 / 回调调用（`__withBuilding` / `__callLifecycle` / `G.__invokeCallback`） | mini-react（生成器产物的能力袋） |
+/// | 【8】 | 作用域｜按类型名向上查找 + 消费者订阅（`__registerScope` / `__scopeOf` / `__subscribeListenable`） | 通用机制（三方库按类型注册，见 capabilities/js_ui_library.dart） |
+/// | 【9】 | 调度（`__markDirty` → `__rebuildDirty` 批处理） | mini-react |
+/// | 【10】 | reconciler 主流程（`__mount` / `__patch` / `__unmount`） | mini-react |
+/// | 【11】 | 对外入口 `api` + 独立根事务（`__openRoot` / `__closeRoot`：页面根与弹层根共用） | 全体共用 |
 /// | 【11.5】 | 跨模块核心符号（`G.__core`，供 flutter.js 值类区与能力模块解构） | 跨模块约定 |
 /// | 【21】【25】~【27.5】 | BuildContext 代理 / 泄漏观测 / 缓存追踪 / Dismissible / extension | 按能力自洽 |
+///
+/// **命名约定**：`__` 前缀 = 框架内部符号（只在 runtime.js / flutter.js /
+/// 能力模块之间使用）。对外只有三类入口，不在此列：
+///   - 宿主契约 `G.__jsui.*`（Dart 侧 evaluate 按名调用）；
+///   - 跨模块契约 `G.__core.*`（flutter.js / provider.js 解构）；
+///   - 产物调用入口 `print` / `debugPrint` / `G.__invokeCallback` /
+///     `G.__scopeOfContext` / `G.registerExtension`（生成器产物直接引用）。
 ///
 /// **三方库与 Flutter SDK 的 API 面不在本文件**：provider 的 `context.watch/read`
 /// 与作用域声明在它自己的包模块 `patch/provider.js`（生成器
@@ -117,11 +124,11 @@ if (typeof G.__modules === 'undefined') {
 // 产物与 Dart 一比一：kDebugMode / kReleaseMode / Platform.isAndroid 原样
 // 保留（见生成器 globalFlagJs / platformFlagJs），运行时注入同名对象。
 // 值 → 字符串（对象/数组完整展开，循环引用安全）：JS 侧 `String(obj)` 只会
-// 得到 `[object Object]`，日志里看不到任何字段。`__str` 递归展开 own 字段，
-// 函数标成 `[Function name]`、循环引用标成 `[Circular]`（与 JSON.stringify
+// 得到 `[object Object]`，日志里看不到任何字段。`__formatValue` 递归展开 own
+// 字段，函数标成 `[Function name]`、循环引用标成 `[Circular]`（与 JSON.stringify
 // 不同：不会因循环引用直接抛错，也不丢函数字段）。
-// 日志全局 `print` / `debugPrint` 用它展开实参；JS 值类（StringBuffer 等）
-// 也按同名约定引用它，故挂在 G 上供产物裸引用。
+// 日志全局 `print` / `debugPrint` 用它展开实参；JS 值类（StringBuffer）经
+// `__core.str` 取同一份实现，跨模块只走 G.__core。
 function __formatValue(v, stack) {
   if (typeof v === 'string') return v;
   if (v === null) return 'null';
@@ -148,71 +155,76 @@ function __formatValue(v, stack) {
   }
   return '{' + out.join(', ') + '}';
 }
-G.__str = function (v) { return __formatValue(v, []); };
-// Dart 顶层日志函数（产物按一比一原样调用 `print(...)` / `debugPrint(...)`）：
-// 统一桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）；实参交给
-// __formatValue 展开（对象/数组字段可见，不再只得到 `[object Object]`）。
+function __str(v) { return __formatValue(v, []); }
+// 日志唯一出口：桥到逻辑通道 'log'（宿主 log 处理器 → HotPatchLog）。
 //
-// **release 下关闭、零跨桥**：kDebugMode 为 false 时 __log 直接返回 —— 一次
-// 日志的代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既看不到也担不起；
+// **release 下关闭、零跨桥**：kDebugMode 为 false 时直接返回 —— 一次日志的
+// 代价是「格式化 + JSON 编码 + 桥消息 + Promise」，线上既看不到也担不起；
 // 需要线上诊断请走显式上报通道，不要指望 print。
 //
-// debugPrint 的 Dart 签名是 `debugPrint(String? message, {int? wrapWidth})`：
-// 混合调用由生成器按「运行时全局函数」的统一信封传入
-// `{ "@args": [message], "wrapWidth": … }`，这里取出位置实参（wrapWidth 只
-// 影响原生逐行折行，JS 侧无对应物，忽略）。
+// 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终
+// 已注册，故 Promise 一定被回填、不会悬挂。`_app_host_` 在本 IIFE 收尾（【25】）
+// 赋值，而日志只可能由页面代码触发——那时它必然已存在，无需探测。
 //
-// 出口统一走 `_app_host_.invoke`（唯一 JS→宿主入口）；宿主 'log' 处理器始终已注册，
-// 故 Promise 一定被回填、不会悬挂。`_app_host_` 在本 IIFE 收尾（【25】）赋值，
-// 而 print/debugPrint 只可能被页面代码调用——那时它必然已存在，无需探测。
-function __log(level, args) {
+// 级别：Dart `print` → info、`debugPrint` → debug；框架内部诊断用 warn / error
+// （宿主侧同样按级别归类，见 builtin_host_methods.dart 的 _log）。
+function __logText(level, text) {
   if (!G.kDebugMode) { return; }
+  G._app_host_.invoke('log', [level, String(text)]);
+}
+// 框架内部诊断（只在 debug 下出声，release 零开销）。
+function __warn(text) { __logText('warn', text); }
+function __error(text) { __logText('error', text); }
+// 多个实参 → 一行（与 Dart print 的空格分隔语义一致）。
+function __argsText(args) {
   var text = '';
   for (var i = 0; i < args.length; i++) {
     text += (i ? ' ' : '') + __formatValue(args[i], []);
   }
-  // 级别一并带给宿主（位置实参 [level, text]）：未知级别按 info 处理（见
-  // builtin_host_methods.dart 的 _log）。
-  G._app_host_.invoke('log', [level, text]);
+  return text;
 }
-G.print = function (message) { __log('info', [message]); };
+G.print = function (message) { __logText('info', __argsText([message])); };
+// debugPrint 的 Dart 签名是 `debugPrint(String? message, {int? wrapWidth})`：
+// 混合调用由生成器按「运行时全局函数」的统一信封传入
+// `{ "@args": [message], "wrapWidth": … }`，这里取出位置实参（wrapWidth 只
+// 影响原生逐行折行，JS 侧无对应物，忽略）。
 G.debugPrint = function (message) {
   if (message !== null && typeof message === 'object' && message['@args']) {
     message = message['@args'][0];
   }
-  __log('debug', [message]);
+  __logText('debug', __formatValue(message, []));
 };
 ''';
 
 /// 静态尾部：骨架状态与工具（原 _jsUiGlobals 其余）。
 const String _jsUiGlobalsTail = r'''
 
-  var idSeq = 0;
-  var HOST = 1, COMP = 2;
+  var __idSeq = 0;
+  var __HOST = 1, __COMP = 2;
 
   // pageKey -> { key, inst, dirty, flushing, flushPending, mounting, ops }
-  var roots = {};
+  var __roots = {};
   // pageKey -> 句柄 id[]：本页面（scope=page）登记的全部跨语言句柄（控制器 /
-  // 函数 / 未来的 Key / 对象…）。页面退出时由 disposeRoot 统一释放——新增能力
-  // 只要按句柄登记即自动获得页面回收，无需再改 disposeRoot（见【4】句柄注册表）。
-  var pageHandles = {};
-  // 正在 mount/patch/commit 的根；emitOp / 结点归属都读它。
-  var activeRoot = null;
+  // 函数 / 未来的 Key / 对象…）。页面退出时由 __disposeRoot 统一释放——新增能力
+  // 只要按句柄登记即自动获得页面回收，无需再改 __disposeRoot（见【4】句柄注册表）。
+  var __pageHandles = {};
+  // 正在 mount/patch/commit 的根；__emitOp / 结点归属都读它。
+  var __activeRoot = null;
   // 正在构建的元素（build 执行期）——`context` 的锚点。`context.watch/read` 据此
   // 定位**作用域**（按类型名向上找，见【8】）并订阅（与 Dart 的 BuildContext
   // 语义一致：按**位置**而非「谁定义了这个方法」）。委托型组件（Builder/Consumer）
   // 把 builder 方法以 owner 为 this 调用时，锚点仍是它们自身的结点。
-  var building = null;
+  var __building = null;
 
   // id 统一规则：`<端>:<种类>/<子类>#<序号>`（子类可省），序号全局单调仅用于
   // 唯一化。带前缀是为了让宿主侧 ValueKey / Flutter DevTools 一眼看出 id 的
   // 归属端（js/dt）与种类（node/comp/ctrl/fn/key…）——调试可读性。
   //   结点：js:node/<Type>#N（宿主结点）/ js:comp/<Name>#N（组件结点）
   //   句柄：js:ctrl/Scroll#N、js:fn#N、dt:key/Global#N（见【4】句柄注册表）
-  function __nextNodeId(type) { idSeq += 1; return 'js:node/' + type + '#' + idSeq; }
-  function __nextComponentId(type) { idSeq += 1; return 'js:comp/' + __componentName(type) + '#' + idSeq; }
+  function __nextNodeId(type) { __idSeq += 1; return 'js:node/' + type + '#' + __idSeq; }
+  function __nextComponentId(type) { __idSeq += 1; return 'js:comp/' + __componentName(type) + '#' + __idSeq; }
 
-  // COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
+  // __COMP 结点 id 用的类名：`class X {}` -> `X`（生成器产物均为具名类）。
   function __componentName(type) { return (type && type.name) || 'Component'; }
 
   // Dart 类型名 → JS 构造函数别名表（见【27.5】Dart extension 注册）。
@@ -389,22 +401,22 @@ const String _jsUiGlobalsTail = r'''
 
 ''';
 
-/// 出方向桥｜emitOp / commitOps / __sendToHost → sendMessage（唯一底层发送）【2】。
+/// 出方向桥｜__emitOp / __commitOps / __sendToHost → sendMessage（唯一底层发送）【2】。
 const String _jsUiEmit = r'''
   // 所有 JS→宿主消息都打到单桥通道 `_app_bridge_`，目标通道名放在消息体
   // `ch` 字段。宿主只订阅该桥通道一次，再按 ch 二次分发。
   // `__sendToHost` 是运行时**内部**的低层发送（不对外暴露）；对外的唯一入口是
   // `_app_host_.invoke`（见【3】），它等于 `__sendToHost` + Promise 回填。
-  var APP_BRIDGE = '_app_bridge_';
+  var __APP_BRIDGE = '_app_bridge_';
   function __sendToHost(channel, data) {
     if (typeof sendMessage !== 'function') { return; }
-    sendMessage(APP_BRIDGE, JSON.stringify({ ch: channel, data: data }));
+    sendMessage(__APP_BRIDGE, JSON.stringify({ ch: channel, data: data }));
   }
 
-  function emitOp(op) {
-    if (activeRoot && activeRoot.ops) { activeRoot.ops.push(op); }
+  function __emitOp(op) {
+    if (__activeRoot && __activeRoot.ops) { __activeRoot.ops.push(op); }
   }
-  function commitOps(root) {
+  function __commitOps(root) {
     var list = root.ops;
     root.ops = null;
     if (!list || !list.length) { return; }
@@ -423,7 +435,7 @@ const String _jsUiEmit = r'''
           var ks = [];
           var bp = bad.props || {};
           for (var bk in bp) { ks.push(bk + ':' + typeof bp[bk]); }
-          console.error('jsui: op not serializable #' + di + ' op=' + bad.op +
+          __error('jsui: op not serializable #' + di + ' op=' + bad.op +
             ' type=' + bad.type + ' id=' + bad.id +
             ' keys=[' + ks.join(',') + ']: ' + e2);
         }
@@ -443,13 +455,13 @@ const String _jsUiHostBridge = r'''
   // 经桥通道把 `{id, args}` 交给宿主，宿主实现完成后用
   // `_app_host_.resolve(id, value)` 回填（见 JsRuntimeManager.registerHostMethod）。
   // 框架内建通道（日志 `log`、native 通道等）同样走这里，保持单一出口。
-  var hostSeq = 0;
-  var hostPending = {};
-  function invokeHostMethod(channel, args) {
-    hostSeq += 1;
-    var id = 'host' + hostSeq;
+  var __hostSeq = 0;
+  var __hostPending = {};
+  function __invokeHostMethod(channel, args) {
+    __hostSeq += 1;
+    var id = 'host' + __hostSeq;
     var p = new Promise(function (resolve, reject) {
-      hostPending[id] = { resolve: resolve, reject: reject };
+      __hostPending[id] = { resolve: resolve, reject: reject };
     });
     __sendToHost(channel, { id: id, args: args || [] });
     return p;
@@ -458,9 +470,9 @@ const String _jsUiHostBridge = r'''
   // 路径都必须走这里——宿主侧不会「既不 resolve 也不 reject」（未注册通道由
   // 宿主回填 null，实现抛错由宿主 reject），所以表里不会留下永久滞留的条目。
   function __takeHostCall(id) {
-    var h = hostPending[id];
+    var h = __hostPending[id];
     if (!h) { return null; }
-    delete hostPending[id];
+    delete __hostPending[id];
     return h;
   }
   function __resolveHostCall(id, value) {
@@ -484,9 +496,9 @@ const String _jsUiHostBridge = r'''
 
 /// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【7】。
 
-/// 作用域｜按类型名向上查找 + 消费者侧订阅（registerScope / scopeOf）【8】。
+/// 作用域｜按类型名向上查找 + 消费者侧订阅（__registerScope / __scopeOf）【8】。
 
-/// mini-react｜调度（markDirty → flush 批处理）【9】。
+/// mini-react｜调度（__markDirty → flush 批处理）【9】。
 
 /// mini-react｜reconciler 主流程（mount / patch / unmount）【10】。
 
@@ -500,147 +512,141 @@ const String _jsUiApi = r'''
     return x;
   }
 
-  function newRoot(pageKey) {
-    return {
-      // `mounting`：根组件挂载进行中。此刻 `root.ops` 正被 mountRoot 累积整棵树
-      // 的 create/insert，而 flush 会**重置并消耗**同一份 ops（`root.ops = []`
-      // 后 commit 把它置 null），既丢掉尚未下发的结点、又让随后的根 op 被 emit
-      // 静默丢弃（宿主收不到根 → 页面停在加载态）。故挂载期间的 setState 只入
-      // dirty 队列，挂载收尾后统一 flush（见【9】markDirty 与 mountRoot）。
+  // 打开一个独立根（页面根 / 弹层面板根共用同一份事务）：
+  //   初始化根记录 → 建立建树事务（ops 归本次挂载累积）→ 挂载元素 →
+  //   下发根结点 → commit → 收尾补一次 flush。
+  // `mounting`：挂载进行中。此刻 `root.ops` 正被本次挂载累积整棵树的
+  // create/insert，而 flush 会**重置并消耗**同一份 ops（`root.ops = []` 后
+  // commit 把它置 null），既丢掉尚未下发的结点、又让随后的根 op被 emit 静默
+  // 丢弃（宿主收不到根 → 页面停在加载态）。故挂载期间的 setState 只入 dirty
+  // 队列，挂载收尾后统一 flush（见【9】__markDirty）。
+  function __openRoot(pageKey, el, parent) {
+    var root = {
       key: pageKey, inst: null, dirty: [], flushing: false,
       flushPending: false, mounting: false, ops: null
     };
-  }
-
-  // 挂载一个页面：pageKey 隔离根，moduleKey 定位模块，className 是组件类名。
-  // 组件产物里 **JS 类名 = Dart 类名**，元素 type 就是这个类本身（JS 里没有
-  // 「factory」这层包装）；`G[className]` 兜底全局注册的组件类。
-  function mountRoot(pageKey, moduleKey, className, propsJson) {
-    var mod = (G.__modules && G.__modules[moduleKey]) || null;
-    var C = (mod && mod[className]) || G[className];
-    if (!C) {
-      throw new Error('jsui: component not found: ' + className + ' in ' + moduleKey);
-    }
-    var root = newRoot(pageKey);
-    roots[pageKey] = root;
-    var prev = activeRoot;
-    activeRoot = root;
+    __roots[pageKey] = root;
+    var prev = __activeRoot;
+    __activeRoot = root;
     root.mounting = true;
     try {
       root.ops = [];
-      // 根组件是 `Component` 实例（实例即元素），build 由宿主在它的组件 wrapper
-      // 挂载时同步拉取（见 pullComponent）。
-      root.inst = mount(new C(__parseProps(propsJson)), null, null);
-      // 末位下发根结点 id，宿主据此挂载组件 wrapper（它内部再 pull 出渲染根）。
-      emitOp({ op: 'root', id: nodeIdOf(root.inst) });
-      commitOps(root);
+      root.inst = __mount(el, parent, null);
+      __emitOp({ op: 'root', id: __nodeIdOf(root.inst) });
+      __commitOps(root);
     } catch (e) {
-      // 失败即整页回滚：本次 commit 未发生（宿主侧没有半棵树），但 JS 侧已创建
+      // 失败即整根回滚：本次 commit 未发生（宿主侧没有半棵树），但 JS 侧已创建
       // 的宿主结点索引与已同步过去的句柄会随每次重试累积——只进不出。
-      // 见 abortRoot（按 __root / pageKey 归属清扫，不能走 unmount(root.inst)：
+      // 见 __abortRoot（按 __root / pageKey 归属清扫，不能走 __unmount(root.inst)：
       // 抛错时 root.inst 还没赋值）。
-      abortRoot(root);
+      __abortRoot(root);
       throw e;
     } finally {
       root.mounting = false;
-      activeRoot = prev;
+      __activeRoot = prev;
     }
-    // 挂载期间累积的 setState（如子组件 initState 里 `setState(() => _loading = true)`）
+    // 挂载期间累积的 setState（如 initState 里 `setState(() => _loading = true)`）
     // 在这里补一次 flush：根补丁已下发，实例与结点都在，走的正是 patch 增量重建，
     // 与 Flutter「initState 里 setState → 首帧后再重建」语义一致。
-    if (root.dirty.length) { flushNow(root); }
-    return true;
+    if (root.dirty.length) { __flushNow(root); }
+    return root;
   }
 
-  function disposeRoot(pageKey) {
-    var root = roots[pageKey];
+  // 关闭一个独立根：卸载整棵树 → 宿主侧子树已随页面/路由销毁，补丁丢弃即可 →
+  // 释放本页 scope=page 的句柄。组件自身持有的句柄由 __unmount 逐实例释放。
+  function __closeRoot(root) {
     if (!root) { return; }
-    // 只做正常卸载：组件 dispose 逐实例释放自己持有的句柄。**不做页面兜底**——
-    // 兜底由宿主在泄漏比对之后显式调用 sweepPage，否则会把泄漏一并抹平。
-    var prev = activeRoot;
-    activeRoot = root;
+    var prev = __activeRoot;
+    __activeRoot = root;
     try {
       root.ops = [];
-      unmount(root.inst);
-      // 宿主随页面 widget 一并销毁，无需回传 remove。
+      __unmount(root.inst);
       root.ops = null;
     } finally {
-      activeRoot = prev;
+      __activeRoot = prev;
     }
     root.inst = null;
     // 页面退出兜底（scope=page）：这类句柄就是「显式归页面所有」的，页面没了
     // 即应释放，属正常生命周期而非泄漏。scope=instance/local 的孤儿残留留给
     // 宿主在泄漏比对之后调用 sweepPage 处理。
-    releasePageHandles(pageKey);
-    delete roots[pageKey];
+    __releasePageHandles(root.key);
+    delete __roots[root.key];
   }
+
+  // 挂载一个页面：pageKey 隔离根，moduleKey 定位模块，className 是组件类名。
+  // 组件产物里 **JS 类名 = Dart 类名**，元素 type 就是这个类本身（JS 里没有
+  // 「factory」这层包装）；`G[className]` 兜底全局注册的组件类。
+  function __mountRoot(pageKey, moduleKey, className, propsJson) {
+    var mod = (G.__modules && G.__modules[moduleKey]) || null;
+    var C = (mod && mod[className]) || G[className];
+    if (!C) {
+      throw new Error('jsui: component not found: ' + className + ' in ' + moduleKey);
+    }
+    // 根组件是 `Component` 实例（实例即元素），build 由宿主在它的组件 wrapper
+    // 挂载时同步拉取（见 __pullComponent）。
+    __openRoot(pageKey, new C(__parseProps(propsJson)), null);
+    return true;
+  }
+
+  function __disposeRoot(pageKey) { __closeRoot(__roots[pageKey]); }
 
   // 宿主侧 props 更新（Dart JsUiWidget.didUpdateWidget → 这里），与 Flutter
   // 「父级重建」语义对齐：替换根实例 props → 重跑 __applyProps（构造参数
   // 派生的字段）→ 回调 didUpdateWidget(oldWidget) → 标脏重建。
   // 根尚未 mount / 已 dispose 时返回 false（不静默：Dart 侧会按返回值记日志）。
-  function updateRootProps(pageKey, propsJson) {
-    var root = roots[pageKey];
+  function __updateRootProps(pageKey, propsJson) {
+    var root = __roots[pageKey];
     if (!root || !root.inst) { return false; }
     var inst = root.inst;
     var next = __parseProps(propsJson);
     var prev = inst.props || {};
     inst.props = next;
     if (typeof inst.__applyProps === 'function') { inst.__applyProps(next); }
-    var prevBuilding = building;
     // 首次 build 尚未由宿主拉起：只同步 props，didUpdateWidget 在「已构建」之后
-    // 才有意义；build 由 pullComponent 读取最新 props 后执行。
-    if (inst.__built) {
-      building = inst;
-      try {
-        if (typeof inst.didUpdateWidget === 'function') {
-          inst.didUpdateWidget(prev);
-        }
-      } finally {
-        building = prevBuilding;
-      }
-    }
-    markDirty(inst);
+    // 才有意义；build 由 __pullComponent 读取最新 props 后执行。
+    if (inst.__built) { __withBuilding(inst, function () { inst.didUpdateWidget(prev); }); }
+    __markDirty(inst);
     return true;
   }
 
 ''';
 
 /// 泄漏观测**切面**：纯只读探针，只导出运行时自维护的三张表——页面根表
-/// roots、句柄表 handles、页面句柄索引 pageHandles。JS 堆无法直接枚举，但页面级
+/// __roots、句柄表 __handles、页面句柄索引 __pageHandles。JS 堆无法直接枚举，但页面级
 /// 对象（组件实例 / 控制器代理 / 函数闭包 / 监听器）全部经这三张表可达：表清
 /// 干净，其余对象失去引用自然可被 GC；表里有残留就是真泄漏。宿主在页面进入 /
 /// 销毁两端取快照做比对（见 js_leak_snapshot.dart）；[cacheDump] 则是排查用的
 /// 全量清单。
 ///
-/// **切面约束**：本段不挂在 registerHandle / releaseHandle / mount / unmount 等任何业务
+/// **切面约束**：本段不挂在 __registerHandle / __releaseHandle / mount / unmount 等任何业务
 /// 路径上（不计数、不改任何表），业务逻辑完全感知不到它存在；宿主只在 debug
 /// 构建里调用（kDebugMode 门控），release 下这些函数即使被拼入也不会执行。
 /// 之所以无条件拼入：产物分不出 debug/release，体积换「不参与业务」的简单性。
 const String _jsUiLeakSnapshotFn = r'''
 
-  function leakSnapshot() {
+  function __leakSnapshot() {
     var hs = [];
-    for (var id in handles) {
-      var h = handles[id];
+    for (var id in __handles) {
+      var h = __handles[id];
       hs.push({ id: id, kind: h.kind, scope: h.scope, key: h.key, obj: __constructorName(h) });
     }
     var ph = {};
-    for (var pk in pageHandles) { ph[pk] = pageHandles[pk].length; }
+    for (var pk in __pageHandles) { ph[pk] = __pageHandles[pk].length; }
     var rs = [];
-    for (var rk in roots) { rs.push(rk); }
+    for (var rk in __roots) { rs.push(rk); }
+    // 键名是宿主快照协议的字段（handles / pageHandles / roots），与内部变量名无关。
     return JSON.stringify({ handles: hs, pageHandles: ph, roots: rs });
   }
 
-  // 宿主侧调试入口用的**缓存全景**（仅 debug）：`handles` 是 JS 端唯一的对象
+  // 宿主侧调试入口用的**缓存全景**（仅 debug）：`__handles` 是 JS 端唯一的对象
   // 缓存（函数 / 控制器 / Key / ChangeNotifier / ctx 句柄都在这一张表里，kind 只是
   // 条目上的标签）——这里按 kind 汇总条目数 + 逐条列出 id/scope/key/构造名，外加
   // 页面句柄索引与页面根表，一眼看全 JS 端持有什么（见 JsLeakSnapshot.logJsCache）。
-  function cacheDump() {
+  function __cacheDump() {
     var byKind = {};
     var lines = [];
-    for (var id in handles) {
-      var h = handles[id];
+    for (var id in __handles) {
+      var h = __handles[id];
       byKind[h.kind] = (byKind[h.kind] || 0) + 1;
       lines.push(h.kind + ' ' + id + ' obj=' + __constructorName(h)
         + (h.key ? ' page=' + h.key : ' scope=' + h.scope));
@@ -648,9 +654,9 @@ const String _jsUiLeakSnapshotFn = r'''
     var kinds = [];
     for (var k in byKind) { kinds.push(k + '×' + byKind[k]); }
     var ph = [];
-    for (var pk in pageHandles) { ph.push(pk + '×' + pageHandles[pk].length); }
+    for (var pk in __pageHandles) { ph.push(pk + '×' + __pageHandles[pk].length); }
     var rs = [];
-    for (var rk in roots) { rs.push(rk); }
+    for (var rk in __roots) { rs.push(rk); }
     return 'js binding cache: ' + lines.length + ' 条（' + kinds.join(', ') + '）'
       + '\n  pageHandles: ' + (ph.length ? ph.join(', ') : '-')
       + '\n  roots: ' + (rs.length ? rs.join(', ') : '-')
@@ -662,31 +668,31 @@ const String _jsUiLeakSnapshotFn = r'''
 /// `__jsui.setCacheVerbose(true)` 调用；release 下无人调用（宿主调用点被
 /// kDebugMode 裁掉）。
 const String _jsUiLeakApiMember =
-    '    leakSnapshot: leakSnapshot,\n'
-    '    cacheDump: cacheDump,\n'
-    '    setCacheVerbose: setCacheVerbose,\n'
-    '    sweepPage: sweepPage,\n';
+    '    leakSnapshot: __leakSnapshot,\n'
+    '    cacheDump: __cacheDump,\n'
+    '    setCacheVerbose: __setCacheVerbose,\n'
+    '    sweepPage: __sweepPage,\n';
 
 /// UI 运行时骨架尾部·前段（TextEditingController 片段后到 api 对象开口）。
 const String _jsUiRuntimeSkeletonTailHead = r'''
 
+  // 宿主侧契约（`__jsui.<key>`，Dart 侧 evaluate 按名调用）：只保留宿主真正用到的入口。
   var api = {
-    fn: __createFnHandle,
     invoke: __invokeEventHandler,
     // 需要结果的事件调用（宿主等待 Future）：执行句柄 → 若返回 Promise 则
     // await → 经宿主通道 `jsuiEventResult` 回传 token 与结果。与能力无关，
     // 所有 `Future<T>` 回调共用（见 `JsRuntimeManager.invokeAwait`）。
     invokeAwait: __invokeEventHandlerAwait,
-    mount: mountRoot,
+    mount: __mountRoot,
     // 宿主挂载组件 wrapper 时**同步**拉取该组件的首次 build 结果（补丁 JSON）。
     // 这是唯一一条「宿主 build → JS build」的入口：保证 JS build 执行时
     // BuildContext 锚点已由 wrapper 登记。
-    pull: pullComponent,
-    dispose: disposeRoot,
-    updateProps: updateRootProps,
+    pull: __pullComponent,
+    dispose: __disposeRoot,
+    updateProps: __updateRootProps,
     // 帧级批处理入口：宿主每帧 begin frame 调用，统一跑掉待处理重建
-    // （setState 只标脏，见【9】markDirty / requestFlush）。
-    flushPending: flushPending,
+    // （setState 只标脏，见【9】__markDirty / __requestFlush）。
+    flushPending: __flushPending,
     // `panelMount` / `panelClosed` 不在这里：命令式弹层的独立根归 flutter.js
     // （见 dialogs_js.dart），该模块求值时把两个入口装到 `__jsui` 上。
 ''';
@@ -700,42 +706,44 @@ const String _jsUiRuntimeSkeletonTailHead = r'''
 /// 独立根的挂载/卸载、宿主桥。具体用法（provider 的作用域声明、
 /// showDialog 的面板策略）在各自模块里。
 ///
-/// **可变状态用访问器**：`building` / `activeRoot` 是核心闭包里的 var，直接
-/// 取值会把当时的快照带进模块（之后永不更新）。故都以 getter（`activeRoot`
+/// **可变状态用访问器**：`__building` / `__activeRoot` 是核心闭包里的 var，直接
+/// 取值会把当时的快照带进模块（之后永不更新）。故都以 getter（`__activeRoot`
 /// 另加 setter）暴露，按属性实时读写。
 const String _jsUiCrossModuleExports = r'''
   G.__core = {
-    handleOp: handleOp,
-    registerHandle: registerHandle,
-    releaseHandle: releaseHandle,
-    handleObjectOf: handleObjectOf,
-    createFnHandle: __createFnHandle,
+    // 句柄机制。register/release 走转发调用：debug 缓存追踪切面会在运行时
+    // 替换这两个实现，直接引用会让跨模块调用绕过切面。
+    __handleOp: __handleOp,
+    __registerHandle: function (obj, kind, opts) { return __registerHandle(obj, kind, opts); },
+    __releaseHandle: function (id, notify) { return __releaseHandle(id, notify); },
+    __handleObjectOf: __handleObjectOf,
+    __createFnHandle: __createFnHandle,
     // 作用域机制（provider 在自己的模块 patch/provider.js 里注册作用域）。
-    registerScope: registerScope,
-    scopeOf: scopeOf,
-    subscribeListenable: subscribeListenable,
+    __registerScope: __registerScope,
+    __scopeOf: __scopeOf,
+    __subscribeListenable: __subscribeListenable,
     // 调度：`Component.setState`（flutter.js 的基类）需要把实例标脏。
-    markDirty: markDirty,
-    // 结点归属与独立根（showDialog 系列的面板机制在 flutter.js）。
-    contextOf: contextOf,
-    isElement: isElement,
-    isElementList: isElementList,
-    nodeIdOf: nodeIdOf,
-    newRoot: newRoot,
-    mount: mount,
-    unmount: unmount,
-    commitOps: commitOps,
-    emitOp: emitOp,
-    flushNow: flushNow,
-    abortRoot: abortRoot,
-    releasePageHandles: releasePageHandles,
-    invokeHostMethod: invokeHostMethod,
-    roots: roots,
-    get building() { return building; },
-    set building(v) { building = v; },
-    get activeRoot() { return activeRoot; },
-    set activeRoot(v) { activeRoot = v; },
-    get JsBuildContext() { return JsBuildContext; }
+    __markDirty: __markDirty,
+    // 结点 / 独立根：弹层面板机制（dialogs）只用这几个通用入口。
+    __contextOf: __contextOf,
+    __isElement: __isElement,
+    __isElementList: __isElementList,
+    __nodeIdOf: __nodeIdOf,
+    __mount: __mount,
+    __unmount: __unmount,
+    __openRoot: __openRoot,
+    __closeRoot: __closeRoot,
+    // 日志与值展开：flutter.js 的框架内提示 / 值类（StringBuffer）共用。
+    log: __logText,
+    str: __str,
+    __roots: __roots,
+    // 可变状态用访问器：直接取 const 只会拿到求值当时的快照。
+    get building() { return __building; },
+    set building(v) { __building = v; },
+    get activeRoot() { return __activeRoot; },
+    set activeRoot(v) { __activeRoot = v; },
+    get JsBuildContext() { return JsBuildContext; },
+    __objectToken: __objectToken
   };
 ''';
 
@@ -743,16 +751,15 @@ const String _jsUiCrossModuleExports = r'''
 const String _jsUiRuntimeSkeletonTailEnd = r'''
     // 跨语言句柄（通用层）：宿主侧句柄注册表经 evaluate 调用本端真实对象
     // （见 capabilities/core/handle_registry.dart）。
-    reg: registerHandle,
-    release: releaseHandleFromHost,
-    call: callHandle
+    release: function (id) { __releaseHandle(id, false); },
+    call: __callHandle
   };
 
   G.__jsui = api;
   // JS→宿主唯一出口（宿主桥）：`invoke` 发起调用，宿主**必定**结算——
   // 成功 `resolve`，实现抛错 `reject`。与 `__jsui`（页面挂载/事件回传等运行
   // 入口）分开，语义单一。
-  G._app_host_ = { invoke: invokeHostMethod, resolve: __resolveHostCall, reject: __rejectHostCall };
+  G._app_host_ = { invoke: __invokeHostMethod, resolve: __resolveHostCall, reject: __rejectHostCall };
   // 模块表 `__modules` 由同一 IIFE 首段（_jsUiEnvVars）创建（挂 G），
   // 此处只登记 core，不再自带守卫。
   G.__modules['js_ui/core'] = api;
@@ -777,7 +784,7 @@ String runtimeJsSource() {
   // 版本 = 除头部以外的全部内容哈希（头部要写入版本号，不能参与计算）。
   // 内容一变 → 版本变 → 已上线 App 里的 runtime.js 会被原地重建。
   final body = [
-    _section('【2】出方向桥（emitOp / commitOps）', _jsUiEmit),
+    _section('【2】出方向桥（__emitOp / __commitOps）', _jsUiEmit),
     _section('【3】宿主桥 _app_host_', _jsUiHostBridge),
     _section('【4】跨语言句柄注册表', handleRegistryJsSource),
     _section('【5】element 与事件句柄', miniReactElementSource),
@@ -792,8 +799,8 @@ String runtimeJsSource() {
     _section('【11.5】跨模块核心符号（供 flutter.js 值类区）', _jsUiCrossModuleExports),
     // State 句柄（GlobalKey.currentState）随 flutter.js 发布：它承载的是 Dart
     // State 对象，与控件 / 值类同层，runtime.js 不认识它（见 state_handle_js.dart）。
-    // Key 签名：reconciler 的 __patchChildren 直接用 keySig，故属核心。
-    _section('【11.7】Key 签名（keySig / objectToken）', keySigJsSource),
+    // Key 签名：reconciler 的 __patchChildren 直接用 __keySig，故属核心。
+    _section('【11.7】Key 签名（__keySig / __objectToken）', keySigJsSource),
     // 各能力片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
     // BuildContext 代理留在核心侧（机制：代理 / 句柄 / 通用 op 转发）。它的
     // 库级 API（provider 的 watch/read）由 patch/provider.js 在求值时补到原型上

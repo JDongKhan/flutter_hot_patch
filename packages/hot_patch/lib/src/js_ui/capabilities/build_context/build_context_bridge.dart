@@ -4,7 +4,8 @@
 // 一个代理，真实 BuildContext 只存在于宿主。
 //
 // 两端靠 **nodeId** 对齐：JS 侧代理记「最近宿主祖先结点 id」，宿主侧
-// `_JsNodeState` 在 build 期间登记 `nodeId -> BuildContext`、element 卸载时注销。
+// `_JsComponentHostState` 在 build 期间登记 `nodeId -> BuildContext`、element
+// 卸载时注销。
 // 该映射存在**绑定缓存**的 [JsBindingBuckets.ctxNode] 桶里且是**弱引用**：
 // BuildContext 本体就是那个 Element——由 `State.context` 指向，State 由 Element
 // 持有，Element 又由 element tree 的父→子引用链强持有（根 element 由 BuildOwner
@@ -46,9 +47,8 @@ String jsBuildContextPageAnchor(String pageKey) => 'page:$pageKey';
 ///     子树**钉住无法回收；弱引用把漏删的后果降级为一条死键（几十字节字符串），
 ///     子树照常回收。结点挂在树上时 deref 必然拿得到，语义不变。
 ///
-/// 一个 element 的**每个历史结点 id 都要登记**：JS 侧代理缓存的是它建立时的那个
-/// id，同 key 下结点 id 变化时旧 id 仍要能查到同一个 element，故只能在 element
-/// 卸载时按整段历史统一注销（见 _JsNodeState 的 `_anchorIds`），不能在 id 变化时清。
+/// 一个 element 的结点 id 就是它的 key 身份：id 变化时 Flutter 会换 element，
+/// 宿主按当前 id 登记 / 注销即可（旧 id 只是弱引用死键，不钉住子树）。
 ///
 /// 条目自带 pageKey（登记时给出），故泄漏观测不需要任何额外的归属表。
 const String _ctxKind = 'ctx/BuildContext';
@@ -123,7 +123,7 @@ Object? _dispatchContextOp(String id, String op, Map payload) {
   return handler.onOp(id, op, payload);
 }
 
-/// 登记/更新某个宿主结点的 BuildContext（_JsNodeState 在 build 期间调用）。
+/// 登记/更新某个宿主结点的 BuildContext（`_JsComponentHostState` 在 build 期间调用）。
 ///
 /// 弱引用（见文件头）+ 就地覆盖：同一结点重建时刷新为新的 BuildContext（Element
 /// 复用则其实同一个对象）。[type] 是结点类型，[owner] 是登记来源——两者只进条目
@@ -137,7 +137,7 @@ void registerJsBuildContext(
   BuildContext context,
   String pageKey, {
   required String type,
-  String owner = '_JsNodeState.build',
+  String owner = '_JsComponentHostState.build',
 }) {
   JsBindingCache.instance.put<BuildContext>(
     bucket: JsBindingBuckets.ctxNode,
@@ -152,7 +152,7 @@ void registerJsBuildContext(
   );
 }
 
-/// 注销某个宿主结点（_JsNodeState.dispose）。
+/// 注销某个宿主结点（`_JsComponentHostState.onHostDispose`）。
 ///
 /// 注销后 deref 只会拿到已回收的目标（返回 null）；即便漏了一次注销，被钉住的
 /// 也只是这条簿记键，不再是整棵 Element 子树。

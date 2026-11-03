@@ -39,13 +39,13 @@ const String tabControllerJsSource = r'''
       // 同值：镜像没变化 → 不再下发宿主 op、也不再通知（避免一次假刷新）。
       if (this.__index === v) { return; }
       this.__index = v;
-      if (this.__id != null) { handleOp(this.__id, 'set', { name: 'index', value: v }); }
+      if (this.__id != null) { __handleOp(this.__id, 'set', { name: 'index', value: v }); }
       // 与 Dart 语义一致：直接设置 index 立即通知监听者（宿主回传同一值时
       // 会被 onHost 的同值判等吞掉，不会重复通知）。
       this.__notify();
     }
     animateTo(index) {
-      if (this.__id != null) { handleOp(this.__id, 'call', { method: 'animateTo', args: [index] }); }
+      if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'animateTo', args: [index] }); }
     }
   }
 

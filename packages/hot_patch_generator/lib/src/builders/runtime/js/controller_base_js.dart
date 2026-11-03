@@ -12,8 +12,8 @@
 //   spec.meta(self)      ：随句柄 create 下发给宿主的构造参数（宿主据此创建真实对象）；
 //   spec.extraJSON(self) ：toJSON 附加字段（如 Tab 的 length / initialIndex）。
 //
-// 依赖方向：本类用 runtime 的句柄机制（`G.__core`：registerHandle / handleOp /
-// releaseHandle / createFnHandle），runtime 不需要认识任何控制器。
+// 依赖方向：本类用 runtime 的句柄机制（`G.__core`：__registerHandle / __handleOp /
+// __releaseHandle / createFnHandle），runtime 不需要认识任何控制器。
 const String controllerBaseJsSource = r'''
   export class ControllerBase {
     constructor() {
@@ -24,7 +24,7 @@ const String controllerBaseJsSource = r'''
 
     // 子类构造末尾调用：登记为句柄（scope 由句柄机制按当前上下文决定——通常是
     // 「随持有它的组件实例释放」），并自动同步宿主 onCreate（meta 携带回传句柄
-    // 与子类构造参数，供宿主创建真实对象）；页面退出时 disposeRoot 兜底释放。
+    // 与子类构造参数，供宿主创建真实对象）；页面退出时 __disposeRoot 兜底释放。
     __bindHandle(kind, spec) {
       spec = spec || {};
       this.__spec = spec;
@@ -41,7 +41,7 @@ const String controllerBaseJsSource = r'''
         }
       }
       // 释放钩子随登记声明（由本控制器实现，不经全局 kind 注册表）。
-      this.__id = registerHandle(this, kind, {
+      this.__id = __registerHandle(this, kind, {
         meta: meta,
         release: function (h) { if (h.obj) { h.obj.__releaseResources(); } }
       });
@@ -52,7 +52,7 @@ const String controllerBaseJsSource = r'''
     // 随本控制器一并释放；订阅一并清空（避免闭包引用泄漏）。
     __releaseResources() {
       if (this.__hostFn) {
-        releaseHandle(this.__hostFn.__fn, false);
+        __releaseHandle(this.__hostFn.__fn, false);
         this.__hostFn = null;
       }
       this.__listeners = [];
@@ -96,7 +96,7 @@ const String controllerBaseJsSource = r'''
     }
 
     dispose() {
-      if (this.__id != null) { releaseHandle(this.__id); }
+      if (this.__id != null) { __releaseHandle(this.__id); }
       this.__id = null;
     }
 

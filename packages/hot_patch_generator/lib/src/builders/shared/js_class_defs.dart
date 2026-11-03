@@ -77,7 +77,7 @@ export class AnimatedListState extends StateHandle {
   removeItem(index, builder, duration) {
     if (typeof builder === 'function' && !AnimatedListState.__warnedRemoval) {
       AnimatedListState.__warnedRemoval = true;
-      console.warn('[AnimatedList] 退场 builder 不可跨语言执行，已回退为「被移除的原项」（样式与普通项一致）');
+      __warn('[AnimatedList] 退场 builder 不可跨语言执行，已回退为「被移除的原项」（样式与普通项一致）');
     }
     this.__op('removeItem', { index: index, duration: duration });
   }

@@ -11,7 +11,7 @@
 const String easyRefreshJsSource = r'''
   // 与 ScrollController 同款句柄层（基类见 controller_base_js.dart）：JS 实例与
   // 宿主真实 EasyRefreshController 按句柄 id 绑定。控制方法把**原始实参数组**
-  // 原样下发（`handleOp 'call'`），由宿主按 Dart 形参的类型/顺序还原：
+  // 原样下发（`__handleOp 'call'`），由宿主按 Dart 形参的类型/顺序还原：
   // 生成器对方法调用的具名实参是位置化扁平（JS 无具名参数），所以这里不臆造
   // 形参名，交给宿主按类型判别（数值 → overOffset、Duration 值 → duration、
   // 曲线名 → curve、布尔 → force）。
@@ -43,7 +43,7 @@ const String easyRefreshJsSource = r'''
     }
     __op(method, args) {
       if (this.__id == null) { return undefined; }
-      return handleOp(this.__id, 'call', { method: method, args: args });
+      return __handleOp(this.__id, 'call', { method: method, args: args });
     }
     callRefresh() {
       return this.__op('callRefresh', Array.prototype.slice.call(arguments));

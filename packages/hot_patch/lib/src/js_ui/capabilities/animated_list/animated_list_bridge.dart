@@ -53,7 +53,7 @@ Duration _durationOf(Map<String, Object?> payload) =>
 void registerAnimatedListWidgets(JsWidgetRegistry r) {
   r.register('AnimatedList', (c) {
     final items = (c.children['__items'] as List<Widget>?) ?? const <Widget>[];
-    // 元素的 key 已挂在元素结点（`_JsNode`）上，GlobalKey 不能同时挂两处，故
+    // 元素的 key 已挂在结点宿主 wrapper 上，GlobalKey 不能同时挂两处，故
     // 真实 widget 用 [hostStateKey] 分配的独立 GlobalKey；`currentState` 解析
     // 会顺着这层映射找到 AnimatedListState（见 key_bridge）。
     final key = hostStateKey(c.props['key']);

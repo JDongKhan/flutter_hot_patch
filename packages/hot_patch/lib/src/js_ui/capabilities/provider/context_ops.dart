@@ -10,7 +10,7 @@
 // **职责分工**（同步约束）：JS 侧的**取值**留在 JS 内（build 里
 // `context.watch<T>().count` 与事件串的链式调用都是同步求值，而 JS→宿主只有
 // 异步桥），JS 的 `watch` 同步返回自己沿作用域取到的值；**订阅**落在本文件——
-// `watch` op 让该位置的 `_JsNode` element 订阅按类型解析出的那个模型镜像，它
+// `watch` op 让该位置的 `_JsComponentHost` element 订阅按类型解析出的那个模型镜像，它
 // notify 时标脏重建，与 Dart `context.watch<T>()` 建立依赖的语义一致。
 import 'package:flutter/widgets.dart';
 
@@ -84,7 +84,7 @@ Object? _resolveWatchOp(String ctxId, String op, Map payload) {
   return null;
 }
 
-/// 让该位置（ctx 句柄 id 对应的 `_JsNode` element）**按类型精确订阅**。
+/// 让该位置（ctx 句柄 id 对应的 `_JsComponentHost` element）**按类型精确订阅**。
 ///
 /// 订阅挂的是 [jsChangeNotifierOfTypeAt] 按类型解析出的那个模型镜像——不是「最近的
 /// 那个提供者」（里层嵌套了别的类型时会订错），也不是 props 里顺手拿到的那个。被

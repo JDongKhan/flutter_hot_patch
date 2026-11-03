@@ -272,16 +272,16 @@ const String dartCoreJsSource = r'''
 
     __probe(flags) { return new globalThis.RegExp(this.__source, flags); }
 
-    hasMatch(input) { return this.__probe(this.__flags).test(stringOf(input)); }
+    hasMatch(input) { return this.__probe(this.__flags).test(__stringOf(input)); }
 
     firstMatch(input) {
-      var text = stringOf(input);
+      var text = __stringOf(input);
       var m = this.__probe(this.__flags).exec(text);
       return m == null ? null : new Match(m, m.index, text, m.groups);
     }
 
     allMatches(input, start) {
-      var text = stringOf(input);
+      var text = __stringOf(input);
       var re = this.__probe(this.__flags + 'g');
       var out = [];
       var from = start != null ? start : 0;
@@ -304,7 +304,7 @@ const String dartCoreJsSource = r'''
     }
   }
 
-  function stringOf(v) { return v == null ? '' : String(v); }
+  function __stringOf(v) { return v == null ? '' : String(v); }
 
   // ---------------------------------------------------------------------------
   // StringBuffer：只有「追加 + 取串」两件事，直接存分段数组。
@@ -313,20 +313,20 @@ const String dartCoreJsSource = r'''
     constructor(props) {
       props = __positionalArgs(props, ['content']);
       this.__parts = [];
-      if (props.content != null) { this.__parts.push(G.__str(props.content)); }
+      if (props.content != null) { this.__parts.push(__str(props.content)); }
     }
 
     get length() { return this.toString().length; }
     get isEmpty() { return this.__parts.length === 0; }
     get isNotEmpty() { return this.__parts.length !== 0; }
 
-    write(obj) { this.__parts.push(G.__str(obj)); }
+    write(obj) { this.__parts.push(__str(obj)); }
 
     writeln(obj) {
       if (obj == null && arguments.length === 0) {
         this.__parts.push('\n');
       } else {
-        this.__parts.push(G.__str(obj) + '\n');
+        this.__parts.push(__str(obj) + '\n');
       }
     }
 

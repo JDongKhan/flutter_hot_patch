@@ -253,11 +253,8 @@ String hostWrapperSource(String type, {bool exported = true}) {
   return '''
 ${exported ? 'export ' : ''}class $type extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-$lazyLine  constructor(props) {
-    super(props);
-  }
-${namedCtorStatics(type)}}''';
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
+$lazyLine${namedCtorStatics(type)}}''';
 }
 
 /// builder 命名构造（`X.builder(...)` / `X.separated(...)`）的 JS 侧代理类
@@ -274,7 +271,7 @@ ${namedCtorStatics(type)}}''';
 /// `ListView.builder` 只构造可见项一致），非懒容器由运行时立刻按描述展开。
 ///
 /// 被委托方法的第一个实参是 **build 的 `context` 形参**（运行时统一
-/// `inst.build(contextOf(inst))` 传入，锚点就是本代理组件自身的结点，与 Dart 侧
+/// `inst.build(__contextOf(inst))` 传入，锚点就是本代理组件自身的结点，与 Dart 侧
 /// `ListView.builder(itemBuilder: (context, i) => …)` 的形参同源），随描述一起
 /// 带上，展开时原样传入，保持与原实现一致的上下文语义。
 String builderProxySource(String type) {
@@ -301,16 +298,12 @@ export class $type extends Component {
     // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
-      console.warn('[$type] itemBuilder 不是闭包，按普通构造渲染');
+      __warn('[$type] itemBuilder 不是闭包，按普通构造渲染');
       return Component.host('$type', this.props, $lazyJs);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
     // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
@@ -437,7 +430,7 @@ export class Overlay extends Component {
   }
 }
 Overlay.of = function (context) {
-  return __scopeOf(context, 'OverlayState');
+  return __scopeOfContext(context, 'OverlayState');
 };''';
 
 /// OverlayEntry：条目的载体（值类，不是元素）。
@@ -476,14 +469,11 @@ export class OverlayEntry {
 /// 与 Dart 侧 `Builder(builder: (context) => …)` 的形参一致）。
 const String jsBuilderComponent = '''
 export class Builder extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     // builder 协议唯一形态：闭包。闭包由组件 build 期生成（箭头函数，this 已绑定）。
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[Builder] builder 不是闭包');
+      __warn('[Builder] builder 不是闭包');
       return null;
     }
     return fn(context);
@@ -497,9 +487,6 @@ export class Builder extends Component {
 /// [dragSourcePropsMethodSource] 插入），build 里给出宿主类型名（不按类名判断）。
 const String jsDraggableComponent = '''
 export class Draggable extends Component {
-  constructor(props) {
-    super(props);
-  }
 $dragSourcePropsMethodSource
   build(context) {
     return Component.host('Draggable', this.__sourceProps());
@@ -508,9 +495,6 @@ $dragSourcePropsMethodSource
 
 const String jsLongPressDraggableComponent = '''
 export class LongPressDraggable extends Component {
-  constructor(props) {
-    super(props);
-  }
 $dragSourcePropsMethodSource
   build(context) {
     return Component.host('LongPressDraggable', this.__sourceProps());
@@ -523,9 +507,6 @@ $dragSourcePropsMethodSource
 /// 执行 builder，结果作为 `child` 插槽随下一次 patch 回填。
 const String jsDragTargetComponent = '''
 export class DragTarget extends Component {
-  constructor(props) {
-    super(props);
-  }
 $dragTargetPropsMethodSource
   build(context) {
     var props = this.__targetProps(context);
@@ -539,17 +520,10 @@ $dragTargetPropsMethodSource
 /// 要时显示」——显示与否由 controller 句柄命令驱动（见 overlay_portal_js）。
 const String jsOverlayPortalComponent = '''
 export class OverlayPortal extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     var src = this.props;
     // 闭包不能进宿主 props（要跨桥序列化），展开后摘除。
-    var p = {};
-    for (var k in src) {
-      if (k === 'overlayChildBuilder') { continue; }
-      p[k] = src[k];
-    }
+    var p = this.__propsExcept(['overlayChildBuilder']);
     // SDK 的命名构造 `OverlayPortal.targetsRootOverlay`（已废弃）等价于挂到根
     // Overlay。`factory` 是命名构造的通用标记（由自动生成的同名静态方法写入），
     // 这里只补它对应的构造语义，不涉及任何类名/属性名白名单。
@@ -558,7 +532,7 @@ export class OverlayPortal extends Component {
     if (typeof src.overlayChildBuilder === 'function') {
       oc = src.overlayChildBuilder(context);
     } else {
-      console.warn('[OverlayPortal] overlayChildBuilder 不是闭包');
+      __warn('[OverlayPortal] overlayChildBuilder 不是闭包');
     }
     if (oc != null) { p.overlayChild = oc; }
     return Component.host('OverlayPortal', p);
@@ -573,18 +547,10 @@ export class OverlayPortal extends Component {
 /// `headerSlivers` / `body` 两个键取子树，不感知 builder 的存在。
 const String jsNestedScrollViewComponent = '''
 export class NestedScrollView extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
-    var p = {};
     var src = this.props;
-    for (var k in src) {
-      if (!Object.prototype.hasOwnProperty.call(src, k)) { continue; }
-      // builder 只在本类里执行，不往宿主 props 里传（函数不能跨语言）。
-      if (k === 'headerSliverBuilder') { continue; }
-      p[k] = src[k];
-    }
+    // builder 只在本类里执行，不往宿主 props 里传（函数不能跨语言）。
+    var p = this.__propsExcept(['headerSliverBuilder']);
     var fn = src.headerSliverBuilder;
     p.headerSlivers = typeof fn === 'function' ? (fn(context, false) || []) : [];
     return Component.host('NestedScrollView', p);
@@ -599,13 +565,10 @@ export class NestedScrollView extends Component {
 /// 这里同样**基于 LayoutBuilder 类**委托，不自己取窗口方向。
 const String jsOrientationBuilderComponent = '''
 export class OrientationBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     var builder = this.props.builder;
     if (typeof builder !== 'function') {
-      console.warn('[OrientationBuilder] builder 不是闭包');
+      __warn('[OrientationBuilder] builder 不是闭包');
       return null;
     }
     return Component.host(LayoutBuilder, {
@@ -630,9 +593,6 @@ export class OrientationBuilder extends Component {
 /// 首帧（还没有约束）子树为空，与 Flutter LayoutBuilder 自身的首帧语义一致。
 const String jsLayoutBuilderComponent = '''
 export class LayoutBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
   // 宿主下发的约束 JSON → BoxConstraints（无界维度发 null，还原成 +∞）。
   __constraintsOf(json) {
     json = json || {};
@@ -646,7 +606,7 @@ export class LayoutBuilder extends Component {
   build(context) {
     var builder = this.props.builder;
     if (typeof builder !== 'function') {
-      console.warn('[LayoutBuilder] builder 不是闭包');
+      __warn('[LayoutBuilder] builder 不是闭包');
       return null;
     }
     var self = this;
@@ -661,7 +621,7 @@ export class LayoutBuilder extends Component {
       }
       self.__constraints = c;
       // 字段名不能叫 `__child`：那是 reconciler 记录「本实例挂出的子宿主结点」
-      // 的内部字段（见 mini_react 的 `ci.__child = mount(...)`），mount 之后会
+      // 的内部字段（见 mini_react 的 `ci.__child = __mount(...)`），mount 之后会
       // 被覆盖成宿主实例（带 __parent/__el，序列化时成环），props 里再塞它
       // 就变成循环引用。
       self.__lbChild = builder(context, c);
@@ -685,13 +645,10 @@ export class LayoutBuilder extends Component {
 ///   - 因此滚动过程中**内容**晚一帧跟随（高度不受影响）；首帧子树为空。
 const String jsSliverPersistentHeaderComponent = '''
 export class SliverPersistentHeader extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     var delegate = this.props.delegate;
     if (!delegate || typeof delegate.build !== 'function') {
-      console.warn('[SliverPersistentHeader] delegate.build 不是闭包');
+      __warn('[SliverPersistentHeader] delegate.build 不是闭包');
       return null;
     }
     var self = this;
@@ -740,9 +697,6 @@ export class SliverPersistentHeader extends Component {
 /// 模型真实对象只存在于 JS 端：`notifier` 走句柄（`{__handle:id}`）下发。
 const String jsChangeNotifierProviderComponent = '''
 export class ChangeNotifierProvider extends Component {
-  constructor(props) {
-    super(props);
-  }
   initState() {
     var p = this.props;
     var notifier = null, owns = false;
@@ -775,9 +729,6 @@ export class ChangeNotifierProvider extends Component {
 /// providers[0] 最外层，最后一个最内层（离 child 最近），与原生一致。
 const String jsMultiProviderComponent = '''
 export class MultiProvider extends Component {
-  constructor(props) {
-    super(props);
-  }
   build() {
     var provs = this.props.providers || [];
     var node = this.props.child;
@@ -806,14 +757,11 @@ export class MultiProvider extends Component {
 /// 监听边界（`Consumer` 宿主结点），使 Dart 侧的 provider 子树也能刷新（P2）。
 const String jsConsumerComponent = '''
 export class Consumer extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     var notifier = context.watch(this.props.model);
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[Consumer] builder 不是闭包');
+      __warn('[Consumer] builder 不是闭包');
       return null;
     }
     var child = fn(context, notifier);
@@ -831,31 +779,17 @@ export class Consumer extends Component {
 /// 方法（`_lbBuilderN()`）里。与 Consumer 同理：JS 订阅是 UI 更新源，宿主映射
 /// 只提供 Dart 侧边界。
 const String jsListenableBuilderComponent = '''
-export class ListenableBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
+export class ListenableBuilder extends __ListenableSubscriber {
   initState() {
-    var l = this.props.listenable;
-    if (l && typeof l.addListener === 'function') {
-      var self = this;
-      this.__listenable = l;
-      this.__listener = function () { self.setState(function () {}); };
-      l.addListener(this.__listener);
-    }
+    this.__listen(this.props.listenable);
   }
   build(context) {
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[ListenableBuilder] builder 不是闭包');
+      __warn('[ListenableBuilder] builder 不是闭包');
       return null;
     }
     return Component.host('ListenableBuilder', { notifier: this.props.listenable, child: fn(context) });
-  }
-  dispose() {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
   }
 }''';
 
@@ -867,33 +801,18 @@ export class ListenableBuilder extends Component {
 /// 订阅对象是 ValueNotifier（JS 侧 extends ChangeNotifier，句柄 kind 复用
 /// `notifier/ChangeNotifier`），故 `addListener` / 宿主映射与 ListenableBuilder 同一套。
 const String jsValueListenableBuilderComponent = '''
-export class ValueListenableBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
+export class ValueListenableBuilder extends __ListenableSubscriber {
   initState() {
-    this.__subscribe(this.props.valueListenable);
+    this.__listen(this.props.valueListenable);
   }
   didUpdateWidget() {
     var next = this.props.valueListenable;
-    if (next !== this.__listenable) { this.__subscribe(next); }
-  }
-  __subscribe(l) {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
-    this.__listenable = l;
-    this.__listener = null;
-    if (l && typeof l.addListener === 'function') {
-      var self = this;
-      this.__listener = function () { self.setState(function () {}); };
-      l.addListener(this.__listener);
-    }
+    if (next !== this.__listenable) { this.__listen(next); }
   }
   build(context) {
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[ValueListenableBuilder] builder 不是闭包');
+      __warn('[ValueListenableBuilder] builder 不是闭包');
       return null;
     }
     var l = this.props.valueListenable;
@@ -902,11 +821,6 @@ export class ValueListenableBuilder extends Component {
       notifier: l,
       child: fn(context, value, this.props.child)
     });
-  }
-  dispose() {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
   }
 }''';
 
@@ -917,31 +831,17 @@ export class ValueListenableBuilder extends Component {
 ///   - builder 形参是 `(context, child)`，子树抽在 `props.builder` 方法里，child
 ///     作为独立子结点由宿主映射直传（与 Dart 侧 `child:` 语义一致）。
 const String jsAnimatedBuilderComponent = '''
-export class AnimatedBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
+export class AnimatedBuilder extends __ListenableSubscriber {
   initState() {
-    var a = this.props.animation;
-    if (a && typeof a.addListener === 'function') {
-      var self = this;
-      this.__animation = a;
-      this.__listener = function () { self.setState(function () {}); };
-      a.addListener(this.__listener);
-    }
+    this.__listen(this.props.animation);
   }
   build(context) {
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[AnimatedBuilder] builder 不是闭包');
+      __warn('[AnimatedBuilder] builder 不是闭包');
       return null;
     }
     return Component.host('AnimatedBuilder', { child: fn(context, this.props.child) });
-  }
-  dispose() {
-    if (this.__animation && this.__listener) {
-      this.__animation.removeListener(this.__listener);
-    }
   }
 }''';
 
@@ -958,10 +858,7 @@ export class AnimatedBuilder extends Component {
 /// 动画进度由 JS 侧的 `AnimationController` 镜像驱动（宿主逐帧回传 value，
 /// 与 AnimatedBuilder 同一机制），因此不新增任何宿主 widget。
 const String jsTweenAnimationBuilderComponent = '''
-export class TweenAnimationBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
+export class TweenAnimationBuilder extends __ListenableSubscriber {
   // 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
   // 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
   __sameValue(a, b) {
@@ -984,15 +881,15 @@ export class TweenAnimationBuilder extends Component {
       parent: ctrl,
       curve: p.curve || 'linear'
     });
-    this.__tweenListener = function () {
+    // 每帧：弯曲后的进度 → tween 求值 → 只重建本结点子树；到 1 时调 onEnd 一次。
+    this.__listen(ctrl, function () {
       self.__tweenValue = self.__tween.lerp(self.__tweenCurved.value);
       self.setState(function () {});
       if (ctrl.value >= 1 && !self.__tweenEnded) {
         self.__tweenEnded = true;
         __invokeCallback(self.props.onEnd, []);
       }
-    };
-    ctrl.addListener(this.__tweenListener);
+    });
     // 与 Flutter 的 initState 一致：begin != end 时进入即播（如 Tween(0 → 1)
     // 进场就有动画，onEnd 也会在到位时触发一次）。
     if (!this.__sameValue(this.__tween.begin, this.__tween.end)) {
@@ -1021,16 +918,14 @@ export class TweenAnimationBuilder extends Component {
   build(context) {
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[TweenAnimationBuilder] builder 不是闭包');
+      __warn('[TweenAnimationBuilder] builder 不是闭包');
       return null;
     }
     return fn(context, this.__tweenValue, this.props.child);
   }
   dispose() {
-    if (this.__tweenCtrl) {
-      this.__tweenCtrl.removeListener(this.__tweenListener);
-      this.__tweenCtrl.dispose();
-    }
+    this.__unlisten();
+    if (this.__tweenCtrl) { this.__tweenCtrl.dispose(); }
   }
 }''';
 
@@ -1069,13 +964,17 @@ String renderPackageModule(String package, Set<String> types) {
     b
       ..writeln('const G = globalThis;')
       ..writeln('const {')
-      ..writeln('  handleOp, registerHandle, releaseHandle, handleObjectOf,')
-      ..writeln('  createFnHandle: __createFnHandle,')
-      ..writeln('  contextOf, isElement, isElementList,')
-      ..writeln('  nodeIdOf, newRoot, mount, unmount,')
-      ..writeln('  commitOps, emitOp, flushNow, abortRoot, releasePageHandles, invokeHostMethod,')
-      ..writeln('  roots, JsBuildContext,')
+      ..writeln('  __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,')
+      ..writeln('  __createFnHandle, __objectToken,')
+      ..writeln('  __contextOf, __isElement, __isElementList,')
+      ..writeln('  __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,')
       ..writeln('} = G.__core;')
+      ..writeln()
+      // 框架内日志 / 值展开：runtime 的两个内部入口经 __core 交接（release 零跨桥）。
+      ..writeln('const __log = G.__core.log;')
+      ..writeln('const __str = G.__core.str;')
+      ..writeln('function __warn(text) { __log("warn", text); }')
+      ..writeln('function __error(text) { __log("error", text); }')
       ..writeln()
       // Component 基类：必须早于下面的逻辑组件 / 宿主包装类（它们 `extends
       // Component`，class 有 TDZ）。同时它也是翻译产物 `extends StatelessWidget /

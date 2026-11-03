@@ -42,7 +42,7 @@ const String timerJsSource = r'''
         try {
           if (typeof self._callback === 'function') { self._callback(self); }
         } catch (e) {
-          console.error('[patch] Timer 回调异常: ' +
+          __error('[patch] Timer 回调异常: ' +
             ((e && e.message) ? e.message : e));
         }
         if (self._repeat && !self._cancelled) { self.__schedule(); }

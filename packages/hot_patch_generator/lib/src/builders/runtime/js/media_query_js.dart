@@ -135,7 +135,7 @@ const String mediaQueryJsSource = r'''
         delete MediaQuery.__byContext[id];
         return;
       }
-      if (a) { __cc.markDirty(a); }
+      if (a) { __cc.__markDirty(a); }
     }
 
     // 按 aspect 向宿主取一次值（每个 aspect 只取一次，之后靠回推）。
@@ -144,7 +144,7 @@ const String mediaQueryJsSource = r'''
       if (e.pending[slot] || e.missing[slot]) { return; }
       e.pending[slot] = true;
       try {
-        var p = handleOp(id, 'mediaQuery',
+        var p = __handleOp(id, 'mediaQuery',
           aspect == null ? null : { 'aspect': aspect });
         if (p && typeof p.then === 'function') {
           p.then(function (raw) {

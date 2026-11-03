@@ -9,7 +9,7 @@
 // 落点在本库的对应关系：
 //   JS 模块         → 生成器 `builders/runtime/js/provider_module_js.dart`，
 //                     追加进本包的模块 `patch/provider.js`（与该包的 JS 类同
-//                     模块求值）：作用域声明（`registerScope`）+ context 扩展
+//                     模块求值）：作用域声明（`__registerScope`）+ context 扩展
 //                     方法（`JsBuildContext.prototype.watch/read`，对齐 Dart 的
 //                     `extension BuildContextX on BuildContext`）。该模块由
 //                     [jsModuleAssets] 声明、运行时就绪点加载（与页面产物是否

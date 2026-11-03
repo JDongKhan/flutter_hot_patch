@@ -36,10 +36,10 @@ const String focusJsSource = r'''
     }
     get hasFocus() { return this.__hasFocus === true; }
     requestFocus() {
-      if (this.__id != null) { handleOp(this.__id, 'call', { method: 'requestFocus' }); }
+      if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'requestFocus' }); }
     }
     unfocus() {
-      if (this.__id != null) { handleOp(this.__id, 'call', { method: 'unfocus' }); }
+      if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'unfocus' }); }
     }
   }
 ''';

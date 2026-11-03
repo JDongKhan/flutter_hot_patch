@@ -4,73 +4,76 @@
 
 const G = globalThis;
 const {
-  handleOp, registerHandle, releaseHandle, handleObjectOf,
-  createFnHandle: __createFnHandle,
-  contextOf, isElement, isElementList,
-  nodeIdOf, newRoot, mount, unmount,
-  commitOps, emitOp, flushNow, abortRoot, releasePageHandles, invokeHostMethod,
-  roots, JsBuildContext,
+  __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,
+  __createFnHandle, __objectToken,
+  __contextOf, __isElement, __isElementList,
+  __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,
 } = G.__core;
+
+const __log = G.__core.log;
+const __str = G.__core.str;
+function __warn(text) { __log("warn", text); }
+function __error(text) { __log("error", text); }
 
 // ===== Component（Dart 组件的基类）=====
 // 依赖方向单向：flutter.js → runtime.js，跨模块只走 G.__core。
 var __cc = G.__core;
-
-// 事件句柄的捕获值身份判定：对象 / 函数按引用身份，原始值按 typeof + 值。
-// WeakMap 自动回收，不延长捕获对象寿命。
-var __capIds = new WeakMap();
-var __capSeq = 0;
-function __captureKey(v) {
-  if (v === undefined) { return 'undefined'; }
-  if (v === null) { return 'null'; }
-  var t = typeof v;
-  if (t === 'object' || t === 'function') {
-    var id = __capIds.get(v);
-    if (!id) { id = ++__capSeq; __capIds.set(v, id); }
-    return t + '#' + id;
-  }
-  return t + ':' + String(v);
-}
-
-// 把宿主元素的 props 按统一协议拆成 data / `__children`：widget 实参、widget
-// 数组、`__builder`、delegate 归子槽，其余归 props。**在元素构造期完成**，
-// reconciler 直接消费结果，不在 mount/patch 里做业务拆分。
-function __splitHost(el, lazyRule) {
-  var p = el.props || {};
-  var data = {}, slots = {};
-  for (var k in p) {
-    if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
-    var v = p[k];
-    if (__cc.isElement(v) || __cc.isElementList(v) ||
-    (k === '__builder' && v != null && typeof v === 'object') ||
-    (v != null && typeof v === 'object' && v.__delegate)) {
-      slots[k] = v;
-    } else {
-      data[k] = v;
-    }
-  }
-  el.__children = slots;
-  el.props = data;
-  if (lazyRule === true) {
-    el.lazyChildren = true;
-  } else if (Array.isArray(lazyRule)) {
-    for (var i = 0; i < lazyRule.length; i++) {
-      if (p[lazyRule[i]] !== undefined) { el.lazyChildren = true; break; }
-    }
-  }
-  return el;
-}
 
 export class Component {
   // 懒容器声明：默认 false；宿主包装类按构建期配置覆盖为 true（无条件懒）
   // 或 props 键数组（带其中任一键时才懒）。运行时只读这个声明，不认识类型。
   static __lazy = false;
 
+  // 事件句柄的捕获值身份判定：对象 / 函数按引用身份，原始值按 typeof + 值。
+  // WeakMap 自动回收，不延长捕获对象寿命。
+  static __capIds = new WeakMap();
+  static __capSeq = 0;
+  static __captureKey(v) {
+    if (v === undefined) { return 'undefined'; }
+    if (v === null) { return 'null'; }
+    var t = typeof v;
+    if (t === 'object' || t === 'function') {
+      var id = Component.__capIds.get(v);
+      if (!id) { id = ++Component.__capSeq; Component.__capIds.set(v, id); }
+      return t + '#' + id;
+    }
+    return t + ':' + String(v);
+  }
+
+  // 把宿主元素的 props 按统一协议拆成 data / `__children`：widget 实参、widget
+  // 数组、`__builder`、delegate 归子槽，其余归 props。**在元素构造期完成**，
+  // reconciler 直接消费结果，不在 mount/patch 里做业务拆分。
+  static __splitHost(el, lazyRule) {
+    var p = el.props || {};
+    var data = {}, slots = {};
+    for (var k in p) {
+      if (!Object.prototype.hasOwnProperty.call(p, k)) { continue; }
+      var v = p[k];
+      if (__cc.__isElement(v) || __cc.__isElementList(v) ||
+      (k === '__builder' && v != null && typeof v === 'object') ||
+      (v != null && typeof v === 'object' && v.__delegate)) {
+        slots[k] = v;
+      } else {
+        data[k] = v;
+      }
+    }
+    el.__children = slots;
+    el.props = data;
+    if (lazyRule === true) {
+      el.lazyChildren = true;
+    } else if (Array.isArray(lazyRule)) {
+      for (var i = 0; i < lazyRule.length; i++) {
+        if (p[lazyRule[i]] !== undefined) { el.lazyChildren = true; break; }
+      }
+    }
+    return el;
+  }
+
   // 按**宿主类型名**产出宿主元素（逻辑组件内部用：`ChangeNotifierProvider` /
   // `Stack` 这类宿主结点）。props 在构造期按统一协议拆好；懒标记由调用方给出
   // （builder 代理按构建期配置传入）。
   static host(type, props, lazy) {
-    return __splitHost(
+    return Component.__splitHost(
     { __type: type, props: props || {}, __element: true }, lazy);
   }
 
@@ -84,13 +87,25 @@ export class Component {
     // 宿主包装类（自身原型**没有重写 build**）在构造期就拆好 props/children；
     // 逻辑组件 / 翻译组件保留原样 props（它们自己消费构造参数）。
     if (!Object.prototype.hasOwnProperty.call(this.constructor.prototype, 'build')) {
-      __splitHost(this, this.constructor.__lazy);
+      Component.__splitHost(this, this.constructor.__lazy);
     }
   }
 
   setState(mutate) {
     if (typeof mutate === 'function') { mutate.call(this); }
-    __cc.markDirty(this);
+    __cc.__markDirty(this);
+  }
+
+  // 复制 props 并摘除**不能跨语言**的键（回调闭包 / 内联 builder）：JS 侧自己
+  // 消费它们，宿主只接收可序列化的数据。逻辑组件统一走这一处，不再各写一遍循环。
+  __propsExcept(skip) {
+    var out = {};
+    for (var k in this.props) {
+      if (!Object.prototype.hasOwnProperty.call(this.props, k)) { continue; }
+      if (skip.indexOf(k) >= 0) { continue; }
+      out[k] = this.props[k];
+    }
+    return out;
   }
 
   // 事件句柄：按 (编译期位点号, 捕获值) 缓存。重建产出同一句柄 → props 稳定
@@ -100,19 +115,21 @@ export class Component {
     var key = siteId + '|';
     if (captures && captures.length) {
       var ks = [];
-      for (var i = 0; i < captures.length; i++) { ks.push(__captureKey(captures[i])); }
+      for (var i = 0; i < captures.length; i++) {
+        ks.push(Component.__captureKey(captures[i]));
+      }
       key += ks.join(',');
     }
     var handle = bag[key];
     if (handle) { handle.__run = f; return handle; }
     var anchor = __cc.building || this;
-    handle = __cc.createFnHandle(function () {
+    handle = __cc.__createFnHandle(function () {
       var prev = __cc.building;
       __cc.building = anchor;
       // 位置实参在 `arguments` 里（invoke 已摊开），原样转发给闭包。
       // 返回值保留：普通事件丢弃、可等待事件（EasyRefresh onRefresh）靠它拿 Promise。
       try { return handle.__run.apply(handle, arguments); }
-      catch (e) { console.error(String(e)); }
+      catch (e) { __error(String(e)); }
       finally { __cc.building = prev; }
     });
     handle.__run = f;
@@ -124,7 +141,7 @@ export class Component {
   // 与 Dart 一致：`context` 既是 build 形参、也是实例上可访问的同一对象。
   // **按执行位置解析**：委托型组件（Builder / Consumer）把 builder 方法以
   // owner 为 this 调用时，锚点仍是当前构建位置。
-  get context() { return __cc.contextOf(__cc.building || this); }
+  get context() { return __cc.__contextOf(__cc.building || this); }
 
   // Dart `State` 生命周期的同名空实现：产物里 `super.initState()` /
   // `super.didChangeDependencies()` 等一比一翻译后仍可正常调用
@@ -147,6 +164,39 @@ export class Component {
 // 本模型里 widget 与 state 合并为一个实例，二者不携带额外语义。
 export class StatelessWidget extends Component {}
 export class StatefulWidget extends Component {}
+
+// 订阅型布局组件（ListenableBuilder / ValueListenableBuilder / AnimatedBuilder）
+// 共用的一层「订阅 → 只标脏本结点」机制：绑定一个 Listenable，notify 时只重建
+// 自己的子树（不扩散到父级）；卸载时精确退订。
+class __ListenableSubscriber extends Component {
+  constructor(props) {
+    super(props);
+    this.__listenable = null;
+    this.__listener = null;
+  }
+
+  // 订阅 [l]；listener 体由子类给（缺省 = 只标脏本结点）。
+  __listen(l, body) {
+    if (this.__listenable === l && this.__listener) { return; }
+    this.__unlisten();
+    this.__listenable = l;
+    if (!l || typeof l.addListener !== 'function') { return; }
+    var self = this;
+    this.__listener = body || function () { self.setState(function () {}); };
+    l.addListener(this.__listener);
+  }
+
+  __unlisten() {
+    var l = this.__listenable;
+    if (l && this.__listener && typeof l.removeListener === 'function') {
+      l.removeListener(this.__listener);
+    }
+    this.__listenable = null;
+    this.__listener = null;
+  }
+
+  dispose() { this.__unlisten(); }
+}
 
 
 export class StateHandle {
@@ -174,7 +224,7 @@ export class StateHandle {
     if (this.__key == null) { return null; }
     var p = payload || {};
     if (this.__type) { p.type = this.__type; }
-    return handleOp(this.__key, '__state.' + op, p);
+    return __handleOp(this.__key, '__state.' + op, p);
   }
 }
 
@@ -182,463 +232,295 @@ export class StateHandle {
 
 export class AbsorbPointer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AlertDialog extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static adaptive(props) { return new AlertDialog(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class Align extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedAlign extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedContainer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedCrossFade extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedDefaultTextStyle extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedOpacity extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedPadding extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedPositioned extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static fromRect(props) { return new AnimatedPositioned(Object.assign({}, props, { factory: 'fromRect' })); }
 }
 
 export class AnimatedRotation extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedScale extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedSize extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedSlide extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AnimatedSwitcher extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AppBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class AspectRatio extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Baseline extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class BottomNavigationBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class BottomNavigationBarItem extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CachedNetworkImage extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Card extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static filled(props) { return new Card(Object.assign({}, props, { factory: 'filled' })); }
   static outlined(props) { return new Card(Object.assign({}, props, { factory: 'outlined' })); }
 }
 
 export class Center extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Checkbox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static adaptive(props) { return new Checkbox(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class Chip extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CircleAvatar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CircularProgressIndicator extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static adaptive(props) { return new CircularProgressIndicator(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class ClipOval extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class ClipRRect extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class ColorFiltered extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Column extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CompositedTransformFollower extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CompositedTransformTarget extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class ConstrainedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Container extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CupertinoActionSheet extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CupertinoActionSheetAction extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CupertinoAlertDialog extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CupertinoDialogAction extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CustomPaint extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class CustomScrollView extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class DecoratedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class DefaultTabController extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Dialog extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static fullscreen(props) { return new Dialog(Object.assign({}, props, { factory: 'fullscreen' })); }
 }
 
 export class Dismissible extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Divider extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Drawer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class DrawerHeader extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class DropdownButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static _formField(props) { return new DropdownButton(Object.assign({}, props, { factory: '_formField' })); }
 }
 
 export class DropdownMenuItem extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class EasyRefresh extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static builder(props) { return new EasyRefresh(Object.assign({}, props, { factory: 'builder' })); }
 }
 
 export class ElevatedButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static icon(props) { return new ElevatedButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 export class Expanded extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class FadeInImage extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static assetNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'assetNetwork' })); }
   static memoryNetwork(props) { return new FadeInImage(Object.assign({}, props, { factory: 'memoryNetwork' })); }
 }
 
 export class FadeTransition extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class FilledButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static icon(props) { return new FilledButton(Object.assign({}, props, { factory: 'icon' })); }
   static tonal(props) { return new FilledButton(Object.assign({}, props, { factory: 'tonal' })); }
   static tonalIcon(props) { return new FilledButton(Object.assign({}, props, { factory: 'tonalIcon' })); }
@@ -647,26 +529,17 @@ export class FilledButton extends Component {
 
 export class FittedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Flexible extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class FloatingActionButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static extended(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'extended' })); }
   static large(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'large' })); }
   static small(props) { return new FloatingActionButton(Object.assign({}, props, { factory: 'small' })); }
@@ -674,51 +547,33 @@ export class FloatingActionButton extends Component {
 
 export class Focus extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static withExternalFocusNode(props) { return new Focus(Object.assign({}, props, { factory: 'withExternalFocusNode' })); }
 }
 
 export class FractionallySizedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class GestureDetector extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Hero extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Icon extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class IconButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static filled(props) { return new IconButton(Object.assign({}, props, { factory: 'filled' })); }
   static filledTonal(props) { return new IconButton(Object.assign({}, props, { factory: 'filledTonal' })); }
   static outlined(props) { return new IconButton(Object.assign({}, props, { factory: 'outlined' })); }
@@ -727,18 +582,12 @@ export class IconButton extends Component {
 
 export class IgnorePointer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Image extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static _(props) { return new Image(Object.assign({}, props, { factory: '_' })); }
   static asset(props) { return new Image(Object.assign({}, props, { factory: 'asset' })); }
   static file(props) { return new Image(Object.assign({}, props, { factory: 'file' })); }
@@ -748,166 +597,106 @@ export class Image extends Component {
 
 export class ImageFiltered extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class ImageIcon extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class IndexedStack extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class InkWell extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class InputDecoration extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static collapsed(props) { return new InputDecoration(Object.assign({}, props, { factory: 'collapsed' })); }
 }
 
 export class InteractiveViewer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static builder(props) { return new InteractiveViewer(Object.assign({}, props, { factory: 'builder' })); }
 }
 
 export class IntrinsicHeight extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class IntrinsicWidth extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class KeyboardListener extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class LimitedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class LinearProgressIndicator extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class ListTile extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Material extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class NotificationListener extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Offstage extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Opacity extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class OutlinedButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static icon(props) { return new OutlinedButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 export class Padding extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class PopScope extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Positioned extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static directional(props) { return new Positioned(Object.assign({}, props, { factory: 'directional' })); }
   static fill(props) { return new Positioned(Object.assign({}, props, { factory: 'fill' })); }
   static fromRect(props) { return new Positioned(Object.assign({}, props, { factory: 'fromRect' })); }
@@ -916,124 +705,79 @@ export class Positioned extends Component {
 
 export class PreferredSize extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Radio extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static adaptive(props) { return new Radio(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class RadioGroup extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class RepaintBoundary extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static wrap(props) { return new RepaintBoundary(Object.assign({}, props, { factory: 'wrap' })); }
 }
 
 export class RichText extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class RotatedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class RotationTransition extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Row extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SafeArea extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Scaffold extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class ScaleTransition extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SimpleDialog extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SingleChildScrollView extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SizeTransition extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SizedBox extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static expand(props) { return new SizedBox(Object.assign({}, props, { factory: 'expand' })); }
   static fromSize(props) { return new SizedBox(Object.assign({}, props, { factory: 'fromSize' })); }
   static shrink(props) { return new SizedBox(Object.assign({}, props, { factory: 'shrink' })); }
@@ -1042,202 +786,133 @@ export class SizedBox extends Component {
 
 export class Slider extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static adaptive(props) { return new Slider(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class SliverAppBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static large(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'large' })); }
   static medium(props) { return new SliverAppBar(Object.assign({}, props, { factory: 'medium' })); }
 }
 
 export class SliverFillRemaining extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SliverFillViewport extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static __lazy = true;
-  constructor(props) {
-    super(props);
-  }
 }
 
 export class SliverFixedExtentList extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static __lazy = true;
-  constructor(props) {
-    super(props);
-  }
   static builder(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'builder' })); }
   static list(props) { return new SliverFixedExtentList(Object.assign({}, props, { factory: 'list' })); }
 }
 
 export class SliverIgnorePointer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SliverOffstage extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SliverOpacity extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SliverPadding extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SliverSafeArea extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SliverToBoxAdapter extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class SliverVisibility extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static maintain(props) { return new SliverVisibility(Object.assign({}, props, { factory: 'maintain' })); }
 }
 
 export class Spacer extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Stack extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static _fromJson(props) { return new Stack(Object.assign({}, props, { factory: '_fromJson' })); }
 }
 
 export class Switch extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static adaptive(props) { return new Switch(Object.assign({}, props, { factory: 'adaptive' })); }
 }
 
 export class Tab extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class TabBar extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static secondary(props) { return new TabBar(Object.assign({}, props, { factory: 'secondary' })); }
 }
 
 export class TabBarView extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static __lazy = true;
-  constructor(props) {
-    super(props);
-  }
 }
 
 export class Text extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static _(props) { return new Text(Object.assign({}, props, { factory: '_' })); }
   static rich(props) { return new Text(Object.assign({}, props, { factory: 'rich' })); }
 }
 
 export class TextButton extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static icon(props) { return new TextButton(Object.assign({}, props, { factory: 'icon' })); }
   static styleFrom(props) { return new ButtonStyle(props); }
 }
 
 export class TextField extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Tooltip extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
 export class Transform extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static _(props) { return new Transform(Object.assign({}, props, { factory: '_' })); }
   static flip(props) { return new Transform(Object.assign({}, props, { factory: 'flip' })); }
   static rotate(props) { return new Transform(Object.assign({}, props, { factory: 'rotate' })); }
@@ -1247,46 +922,26 @@ export class Transform extends Component {
 
 export class Visibility extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
   static maintain(props) { return new Visibility(Object.assign({}, props, { factory: 'maintain' })); }
 }
 
 export class Wrap extends Component {
   // 宿主包装类：实例**自身**就是宿主元素。类型名直接取类名（`__type.name`），
-  // props 由运行时在 mount/patch 统一拆分；懒规则通过覆盖 `__lazy` 声明。
-  constructor(props) {
-    super(props);
-  }
+  // props 由基类构造期统一拆分；懒规则通过覆盖 `__lazy` 声明。
 }
 
-export class AnimatedBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
+export class AnimatedBuilder extends __ListenableSubscriber {
   initState() {
-    var a = this.props.animation;
-    if (a && typeof a.addListener === 'function') {
-      var self = this;
-      this.__animation = a;
-      this.__listener = function () { self.setState(function () {}); };
-      a.addListener(this.__listener);
-    }
+    this.__listen(this.props.animation);
   }
   build(context) {
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[AnimatedBuilder] builder 不是闭包');
+      __warn('[AnimatedBuilder] builder 不是闭包');
       return null;
     }
     return Component.host('AnimatedBuilder', { child: fn(context, this.props.child) });
-  }
-  dispose() {
-    if (this.__animation && this.__listener) {
-      this.__animation.removeListener(this.__listener);
-    }
   }
 }
 
@@ -1307,16 +962,12 @@ export class AnimatedList extends Component {
     // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
-      console.warn('[AnimatedList] itemBuilder 不是闭包，按普通构造渲染');
+      __warn('[AnimatedList] itemBuilder 不是闭包，按普通构造渲染');
       return Component.host('AnimatedList', this.props, false);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
     // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
@@ -1332,14 +983,11 @@ export class AnimatedList extends Component {
 }
 
 export class Builder extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     // builder 协议唯一形态：闭包。闭包由组件 build 期生成（箭头函数，this 已绑定）。
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[Builder] builder 不是闭包');
+      __warn('[Builder] builder 不是闭包');
       return null;
     }
     return fn(context);
@@ -1347,31 +995,24 @@ export class Builder extends Component {
 }
 
 export class DragTarget extends Component {
-  constructor(props) {
-    super(props);
-  }
   __targetProps(context) {
     var self = this;
     var p = self.props || {};
     var builder = p.builder;
     if (typeof builder !== 'function') {
-      console.warn('[DragTarget] builder 不是闭包');
+      __warn('[DragTarget] builder 不是闭包');
       return null;
     }
     if (typeof p.onWillAccept === 'function' ||
     typeof p.onWillAcceptWithDetails === 'function') {
-      console.warn(
+      __warn(
       '[DragTarget] onWillAccept / onWillAcceptWithDetails 需要同步返回值，' +
       '跨语言只能异步，已忽略（目标恒接受）'
       );
     }
-    var props = {};
-    for (var k in p) {
-      if (k === 'builder' || k === 'onWillAccept' || k === 'onWillAcceptWithDetails' ||
-      k === 'onAccept' || k === 'onAcceptWithDetails' ||
-      k === 'onMove' || k === 'onLeave') { continue; }
-      props[k] = p[k];
-    }
+    var props = self.__propsExcept(
+    ['builder', 'onWillAccept', 'onWillAcceptWithDetails',
+      'onAccept', 'onAcceptWithDetails', 'onMove', 'onLeave']);
     // 悬停时宿主会反复回调：同一次候选集合只重建一次子树（id 列表即身份签名）。
     props.builder = self.__bindFn(0, [], function (json) {
       json = json || {};
@@ -1411,19 +1052,12 @@ export class DragTarget extends Component {
 }
 
 export class Draggable extends Component {
-  constructor(props) {
-    super(props);
-  }
   // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
   __sourceProps() {
     var self = this;
     var p = self.props || {};
-    var props = {};
-    for (var k in p) {
-      if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
-      k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
-      props[k] = p[k];
-    }
+    var props = self.__propsExcept(
+    ['data', 'onDragStarted', 'onDragUpdate', 'onDragEnd', 'onDragCompleted']);
     props.data = DragData.ref(p.data);
     // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
     props.onDragStarted = self.__bindFn(0, [], function () {
@@ -1466,16 +1100,12 @@ export class GridView extends Component {
     // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
-      console.warn('[GridView] itemBuilder 不是闭包，按普通构造渲染');
+      __warn('[GridView] itemBuilder 不是闭包，按普通构造渲染');
       return Component.host('GridView', this.props, true);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
     // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
@@ -1494,9 +1124,6 @@ export class GridView extends Component {
 }
 
 export class LayoutBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
   // 宿主下发的约束 JSON → BoxConstraints（无界维度发 null，还原成 +∞）。
   __constraintsOf(json) {
     json = json || {};
@@ -1510,7 +1137,7 @@ export class LayoutBuilder extends Component {
   build(context) {
     var builder = this.props.builder;
     if (typeof builder !== 'function') {
-      console.warn('[LayoutBuilder] builder 不是闭包');
+      __warn('[LayoutBuilder] builder 不是闭包');
       return null;
     }
     var self = this;
@@ -1525,7 +1152,7 @@ export class LayoutBuilder extends Component {
       }
       self.__constraints = c;
       // 字段名不能叫 `__child`：那是 reconciler 记录「本实例挂出的子宿主结点」
-      // 的内部字段（见 mini_react 的 `ci.__child = mount(...)`），mount 之后会
+      // 的内部字段（见 mini_react 的 `ci.__child = __mount(...)`），mount 之后会
       // 被覆盖成宿主实例（带 __parent/__el，序列化时成环），props 里再塞它
       // 就变成循环引用。
       self.__lbChild = builder(context, c);
@@ -1554,16 +1181,12 @@ export class ListView extends Component {
     // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
-      console.warn('[ListView] itemBuilder 不是闭包，按普通构造渲染');
+      __warn('[ListView] itemBuilder 不是闭包，按普通构造渲染');
       return Component.host('ListView', this.props, ["itemExtent"]);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
     // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
@@ -1579,48 +1202,27 @@ export class ListView extends Component {
 
 }
 
-export class ListenableBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
+export class ListenableBuilder extends __ListenableSubscriber {
   initState() {
-    var l = this.props.listenable;
-    if (l && typeof l.addListener === 'function') {
-      var self = this;
-      this.__listenable = l;
-      this.__listener = function () { self.setState(function () {}); };
-      l.addListener(this.__listener);
-    }
+    this.__listen(this.props.listenable);
   }
   build(context) {
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[ListenableBuilder] builder 不是闭包');
+      __warn('[ListenableBuilder] builder 不是闭包');
       return null;
     }
     return Component.host('ListenableBuilder', { notifier: this.props.listenable, child: fn(context) });
   }
-  dispose() {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
-  }
 }
 
 export class LongPressDraggable extends Component {
-  constructor(props) {
-    super(props);
-  }
   // `data` 换成 id、四个事件换成句柄（用户回调留在本侧，宿主只回传 id / 位置）。
   __sourceProps() {
     var self = this;
     var p = self.props || {};
-    var props = {};
-    for (var k in p) {
-      if (k === 'data' || k === 'onDragStarted' || k === 'onDragUpdate' ||
-      k === 'onDragEnd' || k === 'onDragCompleted') { continue; }
-      props[k] = p[k];
-    }
+    var props = self.__propsExcept(
+    ['data', 'onDragStarted', 'onDragUpdate', 'onDragEnd', 'onDragCompleted']);
     props.data = DragData.ref(p.data);
     // 同一位点复用同一句柄：重建不新增跨语言句柄，卸载随实例释放。
     props.onDragStarted = self.__bindFn(0, [], function () {
@@ -1647,18 +1249,10 @@ export class LongPressDraggable extends Component {
 }
 
 export class NestedScrollView extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
-    var p = {};
     var src = this.props;
-    for (var k in src) {
-      if (!Object.prototype.hasOwnProperty.call(src, k)) { continue; }
-      // builder 只在本类里执行，不往宿主 props 里传（函数不能跨语言）。
-      if (k === 'headerSliverBuilder') { continue; }
-      p[k] = src[k];
-    }
+    // builder 只在本类里执行，不往宿主 props 里传（函数不能跨语言）。
+    var p = this.__propsExcept(['headerSliverBuilder']);
     var fn = src.headerSliverBuilder;
     p.headerSlivers = typeof fn === 'function' ? (fn(context, false) || []) : [];
     return Component.host('NestedScrollView', p);
@@ -1666,13 +1260,10 @@ export class NestedScrollView extends Component {
 }
 
 export class OrientationBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     var builder = this.props.builder;
     if (typeof builder !== 'function') {
-      console.warn('[OrientationBuilder] builder 不是闭包');
+      __warn('[OrientationBuilder] builder 不是闭包');
       return null;
     }
     return Component.host(LayoutBuilder, {
@@ -1748,7 +1339,7 @@ export class Overlay extends Component {
   }
 }
 Overlay.of = function (context) {
-  return __scopeOf(context, 'OverlayState');
+  return __scopeOfContext(context, 'OverlayState');
 };
 
 export class OverlayEntry {
@@ -1776,17 +1367,10 @@ export class OverlayEntry {
 }
 
 export class OverlayPortal extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     var src = this.props;
     // 闭包不能进宿主 props（要跨桥序列化），展开后摘除。
-    var p = {};
-    for (var k in src) {
-      if (k === 'overlayChildBuilder') { continue; }
-      p[k] = src[k];
-    }
+    var p = this.__propsExcept(['overlayChildBuilder']);
     // SDK 的命名构造 `OverlayPortal.targetsRootOverlay`（已废弃）等价于挂到根
     // Overlay。`factory` 是命名构造的通用标记（由自动生成的同名静态方法写入），
     // 这里只补它对应的构造语义，不涉及任何类名/属性名白名单。
@@ -1795,7 +1379,7 @@ export class OverlayPortal extends Component {
     if (typeof src.overlayChildBuilder === 'function') {
       oc = src.overlayChildBuilder(context);
     } else {
-      console.warn('[OverlayPortal] overlayChildBuilder 不是闭包');
+      __warn('[OverlayPortal] overlayChildBuilder 不是闭包');
     }
     if (oc != null) { p.overlayChild = oc; }
     return Component.host('OverlayPortal', p);
@@ -1821,16 +1405,12 @@ export class PageView extends Component {
     // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
-      console.warn('[PageView] itemBuilder 不是闭包，按普通构造渲染');
+      __warn('[PageView] itemBuilder 不是闭包，按普通构造渲染');
       return Component.host('PageView', this.props, true);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
     // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
@@ -1863,16 +1443,12 @@ export class ReorderableListView extends Component {
     // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
-      console.warn('[ReorderableListView] itemBuilder 不是闭包，按普通构造渲染');
+      __warn('[ReorderableListView] itemBuilder 不是闭包，按普通构造渲染');
       return Component.host('ReorderableListView', this.props, false);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
     // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
@@ -1904,16 +1480,12 @@ export class SliverGrid extends Component {
     // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
-      console.warn('[SliverGrid] itemBuilder 不是闭包，按普通构造渲染');
+      __warn('[SliverGrid] itemBuilder 不是闭包，按普通构造渲染');
       return Component.host('SliverGrid', this.props, true);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
     // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
@@ -1948,16 +1520,12 @@ export class SliverList extends Component {
     // builder 协议只有**一种形态：闭包（函数）**。非函数说明调用方漏了闭包化，
     // 出声后按普通构造渲染（宁可空列表也不静默）。
     if (!this.__hasBuilder()) {
-      console.warn('[SliverList] itemBuilder 不是闭包，按普通构造渲染');
+      __warn('[SliverList] itemBuilder 不是闭包，按普通构造渲染');
       return Component.host('SliverList', this.props, false);
     }
     // props 原样透传（含 itemCount/factory）；**builder 回调从 props 摘除**——
     // 它只用于展开，函数不能进宿主 props（要跨桥序列化）。
-    var p = {};
-    for (var k in this.props) {
-      if (k === 'itemBuilder' || k === 'separatorBuilder') { continue; }
-      p[k] = this.props[k];
-    }
+    var p = this.__propsExcept(['itemBuilder', 'separatorBuilder']);
     // 展开描述走内部键 __builder，由运行时归入 children，宿主 renderer 不感知。
     p.__builder = {
       item: item,
@@ -1974,13 +1542,10 @@ export class SliverList extends Component {
 }
 
 export class SliverPersistentHeader extends Component {
-  constructor(props) {
-    super(props);
-  }
   build(context) {
     var delegate = this.props.delegate;
     if (!delegate || typeof delegate.build !== 'function') {
-      console.warn('[SliverPersistentHeader] delegate.build 不是闭包');
+      __warn('[SliverPersistentHeader] delegate.build 不是闭包');
       return null;
     }
     var self = this;
@@ -2019,10 +1584,7 @@ export class SliverPersistentHeader extends Component {
   }
 }
 
-export class TweenAnimationBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
+export class TweenAnimationBuilder extends __ListenableSubscriber {
   // 值相等判定：数字直接比；Offset 这类值对象按分量比（每次 build 都会新建
   // 实例，不能靠引用相等，否则每帧都被当成「目标变了」重新起动画）。
   __sameValue(a, b) {
@@ -2045,15 +1607,15 @@ export class TweenAnimationBuilder extends Component {
       parent: ctrl,
       curve: p.curve || 'linear'
     });
-    this.__tweenListener = function () {
+    // 每帧：弯曲后的进度 → tween 求值 → 只重建本结点子树；到 1 时调 onEnd 一次。
+    this.__listen(ctrl, function () {
       self.__tweenValue = self.__tween.lerp(self.__tweenCurved.value);
       self.setState(function () {});
       if (ctrl.value >= 1 && !self.__tweenEnded) {
         self.__tweenEnded = true;
         __invokeCallback(self.props.onEnd, []);
       }
-    };
-    ctrl.addListener(this.__tweenListener);
+    });
     // 与 Flutter 的 initState 一致：begin != end 时进入即播（如 Tween(0 → 1)
     // 进场就有动画，onEnd 也会在到位时触发一次）。
     if (!this.__sameValue(this.__tween.begin, this.__tween.end)) {
@@ -2082,46 +1644,29 @@ export class TweenAnimationBuilder extends Component {
   build(context) {
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[TweenAnimationBuilder] builder 不是闭包');
+      __warn('[TweenAnimationBuilder] builder 不是闭包');
       return null;
     }
     return fn(context, this.__tweenValue, this.props.child);
   }
   dispose() {
-    if (this.__tweenCtrl) {
-      this.__tweenCtrl.removeListener(this.__tweenListener);
-      this.__tweenCtrl.dispose();
-    }
+    this.__unlisten();
+    if (this.__tweenCtrl) { this.__tweenCtrl.dispose(); }
   }
 }
 
-export class ValueListenableBuilder extends Component {
-  constructor(props) {
-    super(props);
-  }
+export class ValueListenableBuilder extends __ListenableSubscriber {
   initState() {
-    this.__subscribe(this.props.valueListenable);
+    this.__listen(this.props.valueListenable);
   }
   didUpdateWidget() {
     var next = this.props.valueListenable;
-    if (next !== this.__listenable) { this.__subscribe(next); }
-  }
-  __subscribe(l) {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
-    this.__listenable = l;
-    this.__listener = null;
-    if (l && typeof l.addListener === 'function') {
-      var self = this;
-      this.__listener = function () { self.setState(function () {}); };
-      l.addListener(this.__listener);
-    }
+    if (next !== this.__listenable) { this.__listen(next); }
   }
   build(context) {
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
-      console.warn('[ValueListenableBuilder] builder 不是闭包');
+      __warn('[ValueListenableBuilder] builder 不是闭包');
       return null;
     }
     var l = this.props.valueListenable;
@@ -2130,11 +1675,6 @@ export class ValueListenableBuilder extends Component {
       notifier: l,
       child: fn(context, value, this.props.child)
     });
-  }
-  dispose() {
-    if (this.__listenable && this.__listener) {
-      this.__listenable.removeListener(this.__listener);
-    }
   }
 }
 
@@ -2147,7 +1687,7 @@ export class AnimatedListState extends StateHandle {
   removeItem(index, builder, duration) {
     if (typeof builder === 'function' && !AnimatedListState.__warnedRemoval) {
       AnimatedListState.__warnedRemoval = true;
-      console.warn('[AnimatedList] 退场 builder 不可跨语言执行，已回退为「被移除的原项」（样式与普通项一致）');
+      __warn('[AnimatedList] 退场 builder 不可跨语言执行，已回退为「被移除的原项」（样式与普通项一致）');
     }
     this.__op('removeItem', { index: index, duration: duration });
   }
@@ -2693,16 +2233,16 @@ export class RegExp {
 
   __probe(flags) { return new globalThis.RegExp(this.__source, flags); }
 
-  hasMatch(input) { return this.__probe(this.__flags).test(stringOf(input)); }
+  hasMatch(input) { return this.__probe(this.__flags).test(__stringOf(input)); }
 
   firstMatch(input) {
-    var text = stringOf(input);
+    var text = __stringOf(input);
     var m = this.__probe(this.__flags).exec(text);
     return m == null ? null : new Match(m, m.index, text, m.groups);
   }
 
   allMatches(input, start) {
-    var text = stringOf(input);
+    var text = __stringOf(input);
     var re = this.__probe(this.__flags + 'g');
     var out = [];
     var from = start != null ? start : 0;
@@ -2725,7 +2265,7 @@ export class RegExp {
   }
 }
 
-function stringOf(v) { return v == null ? '' : String(v); }
+function __stringOf(v) { return v == null ? '' : String(v); }
 
 // ---------------------------------------------------------------------------
 // StringBuffer：只有「追加 + 取串」两件事，直接存分段数组。
@@ -2734,20 +2274,20 @@ export class StringBuffer {
   constructor(props) {
     props = __positionalArgs(props, ['content']);
     this.__parts = [];
-    if (props.content != null) { this.__parts.push(G.__str(props.content)); }
+    if (props.content != null) { this.__parts.push(__str(props.content)); }
   }
 
   get length() { return this.toString().length; }
   get isEmpty() { return this.__parts.length === 0; }
   get isNotEmpty() { return this.__parts.length !== 0; }
 
-  write(obj) { this.__parts.push(G.__str(obj)); }
+  write(obj) { this.__parts.push(__str(obj)); }
 
   writeln(obj) {
     if (obj == null && arguments.length === 0) {
       this.__parts.push('\n');
     } else {
-      this.__parts.push(G.__str(obj) + '\n');
+      this.__parts.push(__str(obj) + '\n');
     }
   }
 
@@ -3140,9 +2680,9 @@ export class CustomPainter {
   constructor(props) {
     props = __positionalArgs(props, []);
     if (props.repaint != null) {
-      console.warn('CustomPainter.repaint 暂不支持（组件重建即重绘）');
+      __warn('CustomPainter.repaint 暂不支持（组件重建即重绘）');
     }
-    this.__id = registerHandle(this, 'canvasPainter', {
+    this.__id = __registerHandle(this, 'canvasPainter', {
       sync: false,
       meta: { type: (this.constructor && this.constructor.name) || 'CustomPainter' }
     });
@@ -3218,7 +2758,7 @@ export class ControllerBase {
 
   // 子类构造末尾调用：登记为句柄（scope 由句柄机制按当前上下文决定——通常是
   // 「随持有它的组件实例释放」），并自动同步宿主 onCreate（meta 携带回传句柄
-  // 与子类构造参数，供宿主创建真实对象）；页面退出时 disposeRoot 兜底释放。
+  // 与子类构造参数，供宿主创建真实对象）；页面退出时 __disposeRoot 兜底释放。
   __bindHandle(kind, spec) {
     spec = spec || {};
     this.__spec = spec;
@@ -3235,7 +2775,7 @@ export class ControllerBase {
       }
     }
     // 释放钩子随登记声明（由本控制器实现，不经全局 kind 注册表）。
-    this.__id = registerHandle(this, kind, {
+    this.__id = __registerHandle(this, kind, {
       meta: meta,
       release: function (h) { if (h.obj) { h.obj.__releaseResources(); } }
     });
@@ -3246,7 +2786,7 @@ export class ControllerBase {
   // 随本控制器一并释放；订阅一并清空（避免闭包引用泄漏）。
   __releaseResources() {
     if (this.__hostFn) {
-      releaseHandle(this.__hostFn.__fn, false);
+      __releaseHandle(this.__hostFn.__fn, false);
       this.__hostFn = null;
     }
     this.__listeners = [];
@@ -3290,7 +2830,7 @@ export class ControllerBase {
   }
 
   dispose() {
-    if (this.__id != null) { releaseHandle(this.__id); }
+    if (this.__id != null) { __releaseHandle(this.__id); }
     this.__id = null;
   }
 
@@ -7214,14 +6754,14 @@ export class ColorSwatch extends Color {
 // **职责只有一件事：提供模型本体**。addListener / removeListener 保留在 JS
 // 侧（JS 自身逻辑要订阅模型），notifyListeners 双路派发：
 //   ① 本端 `_listeners`（JS 侧逻辑 / JS 侧消费者重建）；
-//   ② 跨语言 `handleOp(__id, 'notify')`（通知 Dart 端**通用镜像**
+//   ② 跨语言 `__handleOp(__id, 'notify')`（通知 Dart 端**通用镜像**
 //      JsChangeNotifier，驱动 Dart 侧 ChangeNotifierProvider 子树刷新）。
 // 构造时登记句柄（kind=notifier/ChangeNotifier），meta.type = JS 端类名 —— Dart 端的
 // 通用镜像据此「记下它的 JS 端类型」（context.watch<T>() 的类型一路传到这里）。
 export class ChangeNotifier {
   constructor() {
     this._listeners = [];
-    this.__id = registerHandle(this, 'notifier/ChangeNotifier', {
+    this.__id = __registerHandle(this, 'notifier/ChangeNotifier', {
       meta: { type: (this.constructor && this.constructor.name) || 'ChangeNotifier' }
     });
   }
@@ -7238,7 +6778,7 @@ export class ChangeNotifier {
     var ls = this._listeners.slice();
     for (var i = 0; i < ls.length; i++) { ls[i](); }
     // 双路之②：JS→宿主只有异步桥，故这里是 fire-and-forget（不阻塞本地派发）。
-    if (this.__id != null) { handleOp(this.__id, 'notify'); }
+    if (this.__id != null) { __handleOp(this.__id, 'notify'); }
   }
   // Dart ChangeNotifier.dispose：清空订阅（释放闭包引用）。被 dispose 后
   // 不再响应 notify（原生语义：disposed 后 notify 抛错；JS 侧简化为静默）。
@@ -7248,7 +6788,7 @@ export class ChangeNotifier {
   dispose() {
     this._listeners = [];
     if (this.__id != null) {
-      releaseHandle(this.__id);
+      __releaseHandle(this.__id);
       this.__id = null;
     }
   }
@@ -7316,7 +6856,7 @@ Curves.__fn = function (name) {
     case 'easeOut': return function (t) { return 1 - (1 - t) * (1 - t); };
     case 'fastOutSlowIn': return function (t) { return t * t * (3 - 2 * t); };
     default:
-    console.warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
+    __warn('[patch] 未登记的曲线 "' + name + '"，JS 侧按 linear 估算');
     return function (t) { return t; };
   }
 };
@@ -7369,7 +6909,7 @@ export class CurvedAnimation {
 }
 
 // 真实控制器在宿主（Ticker 驱动）；本镜像只保存 value 与时长：
-//   - forward/reverse/repeat/stop/reset → `handleOp('call')`（载荷带 value 与
+//   - forward/reverse/repeat/stop/reset → `__handleOp('call')`（载荷带 value 与
 //     时长，宿主据此对齐状态后再驱动）；
 //   - 宿主每帧回传 value → onHost 更新镜像 + __notify（JS listeners 据此重建）。
 export class AnimationController extends ControllerBase {
@@ -7399,7 +6939,7 @@ export class AnimationController extends ControllerBase {
     if (this._value === n) { return; }
     this._value = n;
     if (this.__id != null) {
-      handleOp(this.__id, 'set', { name: 'value', value: n });
+      __handleOp(this.__id, 'set', { name: 'value', value: n });
     }
     this.__notify();
   }
@@ -7412,7 +6952,7 @@ export class AnimationController extends ControllerBase {
     else if (typeof o === 'number') { o = { duration: o }; }
     else { o = o || {}; }
     var ms = (o.duration != null) ? __durationMs(o.duration) : this.durationMs;
-    handleOp(this.__id, 'call', {
+    __handleOp(this.__id, 'call', {
       // id 一并下发：宿主基座的 onOp 不带 id，而「挂逐帧回传」需要它。
       id: this.__id,
       method: method,
@@ -7450,13 +6990,13 @@ export class ScrollController extends ControllerBase {
   }
   jumpTo(offset) {
     if (this.__id != null) {
-      handleOp(this.__id, 'call', { method: 'jumpTo', args: [offset] });
+      __handleOp(this.__id, 'call', { method: 'jumpTo', args: [offset] });
     }
   }
   animateTo(offset, opts, curveArg) {
     if (this.__id == null) { return; }
     var a = this.__animateArgs(opts, curveArg);
-    handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
+    __handleOp(this.__id, 'call', { method: 'animateTo', args: [offset, a.ms, a.curve] });
   }
   get position() {
     return {
@@ -7495,23 +7035,23 @@ export class PageController extends ControllerBase {
   }
   jumpToPage(page) {
     if (this.__id != null) {
-      handleOp(this.__id, 'call', { method: 'jumpToPage', args: [page] });
+      __handleOp(this.__id, 'call', { method: 'jumpToPage', args: [page] });
     }
   }
   animateToPage(page, opts, curveArg) {
     if (this.__id == null) { return; }
     var a = this.__animateArgs(opts, curveArg);
-    handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
+    __handleOp(this.__id, 'call', { method: 'animateToPage', args: [page, a.ms, a.curve] });
   }
   nextPage(opts, curveArg) {
     if (this.__id == null) { return; }
     var a = this.__animateArgs(opts, curveArg);
-    handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
+    __handleOp(this.__id, 'call', { method: 'nextPage', args: [a.ms, a.curve] });
   }
   previousPage(opts, curveArg) {
     if (this.__id == null) { return; }
     var a = this.__animateArgs(opts, curveArg);
-    handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
+    __handleOp(this.__id, 'call', { method: 'previousPage', args: [a.ms, a.curve] });
   }
   get hasClients() { return this.__id != null; }
 }
@@ -7544,7 +7084,7 @@ export class TextEditingController extends ControllerBase {
   set text(v) {
     this.__text = (v == null) ? '' : String(v);
     if (this.__id != null) {
-      handleOp(this.__id, 'set', { name: 'text', value: this.__text });
+      __handleOp(this.__id, 'set', { name: 'text', value: this.__text });
     }
     this.__notify();
   }
@@ -7554,12 +7094,12 @@ export class TextEditingController extends ControllerBase {
     if (this.__id != null) {
       var b = (s && typeof s.baseOffset === 'number') ? s.baseOffset : 0;
       var e = (s && typeof s.extentOffset === 'number') ? s.extentOffset : b;
-      handleOp(this.__id, 'call', { method: 'setSelection', args: [b, e] });
+      __handleOp(this.__id, 'call', { method: 'setSelection', args: [b, e] });
     }
   }
   clear() {
     this.__text = '';
-    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'clear' }); }
+    if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'clear' }); }
     this.__notify();
   }
 }
@@ -7590,10 +7130,10 @@ export class FocusNode extends ControllerBase {
   }
   get hasFocus() { return this.__hasFocus === true; }
   requestFocus() {
-    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'requestFocus' }); }
+    if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'requestFocus' }); }
   }
   unfocus() {
-    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'unfocus' }); }
+    if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'unfocus' }); }
   }
 }
 
@@ -7741,7 +7281,7 @@ KeyEvent.__subclasses = {
 // 原生 KeyEvent → JSON（kind / character / keyId / keyLabel / usbHidUsage /
 // timeStamp），这里还原成实例并调事件句柄。挂 G：宿主经 evaluate 裸引用调用。
 G.__keyEvent = function (handleId, eventJson) {
-  var f = handleObjectOf(handleId);
+  var f = __handleObjectOf(handleId);
   if (typeof f !== 'function') { return; }
   var m = {};
   try { m = JSON.parse(eventJson) || {}; } catch (e) { return; }
@@ -7866,7 +7406,7 @@ export class MediaQuery {
       delete MediaQuery.__byContext[id];
       return;
     }
-    if (a) { __cc.markDirty(a); }
+    if (a) { __cc.__markDirty(a); }
   }
 
   // 按 aspect 向宿主取一次值（每个 aspect 只取一次，之后靠回推）。
@@ -7875,7 +7415,7 @@ export class MediaQuery {
     if (e.pending[slot] || e.missing[slot]) { return; }
     e.pending[slot] = true;
     try {
-      var p = handleOp(id, 'mediaQuery',
+      var p = __handleOp(id, 'mediaQuery',
       aspect == null ? null : { 'aspect': aspect });
       if (p && typeof p.then === 'function') {
         p.then(function (raw) {
@@ -7973,12 +7513,6 @@ export class Panel {
   // key -> { key, kind, el, caller, root, result, hasResult, resolve, reject }
   static __all = {};
 
-  // 可变状态按属性实时读写：`building` / `activeRoot` 是核心闭包里的 var，
-  // 解构 const 只会拿到求值当时的快照。
-  static __building() { return G.__core.building; }
-  static __activeRoot() { return G.__core.activeRoot; }
-  static __setActiveRoot(v) { G.__core.activeRoot = v; }
-
   static __key() {
     Panel.__seq += 1;
     return 'jsui_panel_' + Panel.__seq;
@@ -8013,7 +7547,7 @@ export class Panel {
     var inst = null;
     if (context && context.__anchor) { inst = context.__anchor; }
     else if (context && context.__root) { inst = context; }
-    else if (Panel.__building()) { inst = Panel.__building(); }
+    else if (G.__core.building) { inst = G.__core.building; }
     if (!inst) { return null; }
     var root = inst.__root;
     if (root && panels[root.key]) { return panels[root.key]; }
@@ -8032,10 +7566,10 @@ export class Panel {
     // 传入 context 代理的锚点实例——面板根因此挂在调用方的 `__parent` 链上，
     // 弹层里的 `context.watch/read` 仍能看到页面的 provider 作用域。
     var given = options.context;
-    var caller = Panel.__building() || (given && given.__anchor) || null;
+    var caller = G.__core.building || (given && given.__anchor) || null;
     var callerNode = given && given.__nodeId
     ? given.__nodeId
-    : (caller ? contextOf(caller).__nodeId : null);
+    : (caller ? __contextOf(caller).__nodeId : null);
     var key = Panel.__key();
     // builder 的形参 ctx：**专用代理**（不打在调用方那个缓存代理上——`contextOf`
     // 按实例缓存，共用会把页面的代理永久指向某个面板）。带 `__panelKey` 后
@@ -8066,7 +7600,7 @@ export class Panel {
       p.reject = reject;
     });
     Panel.__all[key] = p;
-    invokeHostMethod('jsuiPanelOpen', [{
+    __invokeHostMethod('jsuiPanelOpen', [{
         key: key,
         kind: kind,
         anchor: anchor.__nodeId,
@@ -8081,61 +7615,27 @@ export class Panel {
   }
 
   // 宿主首帧后回调：把 builder 产出的元素树挂到独立根上并下发首批补丁。
-  // 幂等：重复调用（重建 / 二次回调）直接返回。
+  // 与页面根共用同一份事务（__openRoot）：parent = 调用方实例，因此
+  // `__parent` 链与页面连通（provider 等按类型向上的作用域照常可见），
+  // slot = null 故不产出 insert op。幂等：重复调用直接返回。
   static mount(key) {
     var p = Panel.__all[key];
     if (!p || p.root) { return false; }
-    var root = newRoot(key);
-    roots[key] = root;
-    var prev = Panel.__activeRoot();
-    Panel.__setActiveRoot(root);
-    root.mounting = true;
-    try {
-      root.ops = [];
-      // parent = 调用方实例：`__parent` 链因此与页面连通（provider 等按类型
-      // 向上的作用域照常可见）；slot=null 故不产出 insert op。
-      root.inst = mount(p.el, p.caller, null);
-      emitOp({ op: 'root', id: nodeIdOf(root.inst) });
-      commitOps(root);
-    } catch (e) {
-      abortRoot(root);
-      throw e;
-    } finally {
-      root.mounting = false;
-      Panel.__setActiveRoot(prev);
-    }
-    p.root = root;
-    // 挂载期间累积的 setState（initState 里同步 setState）补一次 flush。
-    if (root.dirty.length) { flushNow(root); }
+    p.root = __openRoot(key, p.el, p.caller);
     return true;
   }
 
   // 宿主路由关闭后回调（barrier / 返回键 / Navigator.pop 都汇到这一条）：
-  // 卸载独立根 → 结算 Promise。本端清理由 unmount 逐实例释放，页面兜底
-  // （releasePageHandles）保证任何残留都不会跨面板累积。
+  // 卸载独立根（__closeRoot 顺带释放本面板 scope=page 的句柄）→ 结算 Promise。
   static closed(key) {
     var p = Panel.__all[key];
     if (!p) { return false; }
     delete Panel.__all[key];
-    var root = p.root || roots[key] || null;
+    var root = p.root || __roots[key] || null;
     p.root = null;
     p.el = null;
     p.caller = null;
-    if (root && root.inst) {
-      var prev = Panel.__activeRoot();
-      Panel.__setActiveRoot(root);
-      try {
-        // ops 丢弃即可：宿主那棵子树随路由一起销毁，无需回传 remove。
-        root.ops = [];
-        unmount(root.inst);
-      } finally {
-        root.ops = null;
-        Panel.__setActiveRoot(prev);
-      }
-      root.inst = null;
-    }
-    delete roots[key];
-    releasePageHandles(key);
+    __closeRoot(root);
     var resolve = p.resolve;
     p.resolve = null;
     p.reject = null;
@@ -8152,12 +7652,12 @@ export class Panel {
     var p = Panel.of(context);
     if (!p) {
       // 明确出声：这类调用不会被静默忽略，否则表现为「点了没反应」。
-      console.warn('jsui: Navigator.pop 未命中任何弹层面板（页面级路由请由宿主管理）');
+      __warn('jsui: Navigator.pop 未命中任何弹层面板（页面级路由请由宿主管理）');
       return false;
     }
     p.result = result;
     p.hasResult = true;
-    invokeHostMethod('jsuiPanelPop', [p.key]).then(function () {}, function () {});
+    __invokeHostMethod('jsuiPanelPop', [p.key]).then(function () {}, function () {});
     return true;
   }
 }
@@ -8263,7 +7763,7 @@ export class DragData {
 // ── LayerLink：CompositedTransform 的锚点，句柄即身份 ──
 export class LayerLink {
   constructor(props) {
-    this.__id = registerHandle(this, 'layer/Link', {});
+    this.__id = __registerHandle(this, 'layer/Link', {});
   }
   toJSON() {
     return { __handle: this.__id };
@@ -8277,7 +7777,7 @@ export class OverlayPortalController {
   constructor(props) {
     var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;
     this.__showing = false;
-    this.__id = registerHandle(this, 'overlay/Portal', {
+    this.__id = __registerHandle(this, 'overlay/Portal', {
       meta: debugLabel == null ? null : { debugLabel: debugLabel }
     });
   }
@@ -8286,11 +7786,11 @@ export class OverlayPortalController {
   }
   show() {
     this.__showing = true;
-    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'show' }); }
+    if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'show' }); }
   }
   hide() {
     this.__showing = false;
-    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'hide' }); }
+    if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'hide' }); }
   }
   toggle() {
     if (this.__showing) { this.hide(); } else { this.show(); }
@@ -8327,13 +7827,13 @@ export class TabController extends ControllerBase {
     // 同值：镜像没变化 → 不再下发宿主 op、也不再通知（避免一次假刷新）。
     if (this.__index === v) { return; }
     this.__index = v;
-    if (this.__id != null) { handleOp(this.__id, 'set', { name: 'index', value: v }); }
+    if (this.__id != null) { __handleOp(this.__id, 'set', { name: 'index', value: v }); }
     // 与 Dart 语义一致：直接设置 index 立即通知监听者（宿主回传同一值时
     // 会被 onHost 的同值判等吞掉，不会重复通知）。
     this.__notify();
   }
   animateTo(index) {
-    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'animateTo', args: [index] }); }
+    if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'animateTo', args: [index] }); }
   }
 }
 
@@ -8341,20 +7841,20 @@ export class TabController extends ControllerBase {
 // 布局中性）——不在运行时声明：由生成器配置 lazyChildHostTypes 在 __h 里给
 // 元素打 `lazyChildren` 标记（见 hot_patch_generator 的 shared/js_class_defs.dart）。
 
-// objectToken / keyValueSig / keySig 属于**运行时核心**（key_sig_js.dart，随
+// __objectToken / __keyValueSig / __keySig 属于**运行时核心**（key_sig_js.dart，随
 // runtime.js 先加载）：identity WeakMap 由核心与这里的 Key 类共用。
-const objectToken = G.objectToken;
+// __objectToken 由本模块头部从 G.__core 解构。
 
 // ValueKey：按值相等，纯值 codec（不登记句柄）。
-// 实例的**自有字段名 = 序列化字段名**（__vkey）：reconciler 的 keySig 用字段
+// 实例的**自有字段名 = 序列化字段名**（__vkey）：reconciler 的 __keySig 用字段
 // 形态判据，而 props.key 传的是 live 实例（不是 toJSON 产物），两边必须同形。
-// 对象值跨语言保不住同一性，序列化退化为身份 token（与 keyValueSig 同源）。
+// 对象值跨语言保不住同一性，序列化退化为身份 token（与 __keyValueSig 同源）。
 export class ValueKey {
   constructor(props) { this.__vkey = __positionalArgs(props, ['value']).value; }
   toJSON() {
     var v = this.__vkey;
     if (v !== null && (typeof v === 'object' || typeof v === 'function')) {
-      return { __vtok: objectToken(v) };
+      return { __vtok: __objectToken(v) };
     }
     return { __vkey: v };
   }
@@ -8362,7 +7862,7 @@ export class ValueKey {
 
 // ObjectKey：按被包裹对象的身份相等（只留身份 token，不再持有对象引用）。
 export class ObjectKey {
-  constructor(props) { this.__okey = objectToken(__positionalArgs(props, ['value']).value); }
+  constructor(props) { this.__okey = __objectToken(__positionalArgs(props, ['value']).value); }
   toJSON() {
     return { __okey: this.__okey };
   }
@@ -8371,13 +7871,13 @@ export class ObjectKey {
 // PageStorageKey：Dart 侧 `extends ValueKey`（按**值**相等），但宿主必须造
 // **真实** PageStorageKey——它的意义是滚动位置按 key 存进 PageStorage bucket，
 // 那是宿主端行为（JS 侧只有一个值本体）。故 codec 与 ValueKey 同构另加 `__psk`
-// 标记：宿主据此造 PageStorageKey 而非 ValueKey，keySig 前缀 `p:` 使它与
+// 标记：宿主据此造 PageStorageKey 而非 ValueKey，__keySig 前缀 `p:` 使它与
 // 同值的 ValueKey 不等（与 Dart 的 runtimeType 参与相等一致）。
 export class PageStorageKey {
   constructor(props) {
     var value = __positionalArgs(props, ['value']).value;
     this.__psk = (value !== null && (typeof value === 'object' || typeof value === 'function'))
-    ? { __vtok: objectToken(value) }
+    ? { __vtok: __objectToken(value) }
     : value;
   }
   toJSON() {
@@ -8394,7 +7894,7 @@ export class GlobalKey {
     // 取值不需要问宿主、也不靠 runtimeType 猜。
     var ta = (props && props.typeArguments) || [];
     this.__stateType = ta.length ? ta[0] : null;
-    this.__id = registerHandle(this, 'key/Global', {
+    this.__id = __registerHandle(this, 'key/Global', {
       meta: debugLabel == null ? null : { debugLabel: debugLabel }
     });
   }
@@ -8408,14 +7908,14 @@ export class GlobalKey {
     if (this.__id == null) { return null; }
     // 首选泛型实参（`GlobalKey<AnimatedListState>` 的 T）；未声明泛型时才问
     // 宿主 runtimeType。两者都没有则退化为通用句柄（调用时宿主会告警）。
-    var type = this.__stateType || handleOp(this.__id, '__type', {});
+    var type = this.__stateType || __handleOp(this.__id, '__type', {});
     return StateHandle.of(this.__id, type);
   }
 }
 
 // GlobalKey.currentContext / findRenderObject()：BuildContext 与 RenderObject 是
 // **宿主端**概念——JS 侧既没有真实对象，也没有同步取值的能力（JS→宿主只有异步
-// 桥，见 handleOp）。故 currentContext 返回一个只携带 key 句柄 id 的代理，链式
+// 桥，见 __handleOp）。故 currentContext 返回一个只携带 key 句柄 id 的代理，链式
 // 调用在 JS 侧是空壳，最后一次调用经通用 op 落到宿主，由宿主用**真实**对象把
 // Flutter 原生语义补全——位置/尺寸只在真正算得出来的一端计算。
 //   - showOnScreen()：void 语义，fire-and-forget，宿主算出该结点位置并滚动；
@@ -8425,11 +7925,11 @@ export class GlobalKey {
 export class KeyRef {
   constructor(id) { this.__key = id; }
   showOnScreen() {
-    if (this.__key != null) { handleOp(this.__key, 'showOnScreen', {}); }
+    if (this.__key != null) { __handleOp(this.__key, 'showOnScreen', {}); }
   }
   measure() {
     if (this.__key == null) { return Promise.resolve(null); }
-    return handleOp(this.__key, 'measure', {});
+    return __handleOp(this.__key, 'measure', {});
   }
   findRenderObject() {
     return new KeyRef(this.__key);
@@ -8445,7 +7945,7 @@ export class KeyRef {
 // UniqueKey：句柄即身份（无本端资源需要清理）。
 export class UniqueKey {
   constructor() {
-    this.__id = registerHandle(this, 'key/Unique', {});
+    this.__id = __registerHandle(this, 'key/Unique', {});
   }
   toJSON() {
     return { __handle: this.__id };
@@ -8456,7 +7956,7 @@ export class UniqueKey {
 
 // 与 ScrollController 同款句柄层（基类见 controller_base_js.dart）：JS 实例与
 // 宿主真实 EasyRefreshController 按句柄 id 绑定。控制方法把**原始实参数组**
-// 原样下发（`handleOp 'call'`），由宿主按 Dart 形参的类型/顺序还原：
+// 原样下发（`__handleOp 'call'`），由宿主按 Dart 形参的类型/顺序还原：
 // 生成器对方法调用的具名实参是位置化扁平（JS 无具名参数），所以这里不臆造
 // 形参名，交给宿主按类型判别（数值 → overOffset、Duration 值 → duration、
 // 曲线名 → curve、布尔 → force）。
@@ -8488,7 +7988,7 @@ export class EasyRefreshController extends ControllerBase {
   }
   __op(method, args) {
     if (this.__id == null) { return undefined; }
-    return handleOp(this.__id, 'call', { method: method, args: args });
+    return __handleOp(this.__id, 'call', { method: method, args: args });
   }
   callRefresh() {
     return this.__op('callRefresh', Array.prototype.slice.call(arguments));
@@ -8547,7 +8047,7 @@ export class Timer {
       try {
         if (typeof self._callback === 'function') { self._callback(self); }
       } catch (e) {
-        console.error('[patch] Timer 回调异常: ' +
+        __error('[patch] Timer 回调异常: ' +
         ((e && e.message) ? e.message : e));
       }
       if (self._repeat && !self._cancelled) { self.__schedule(); }

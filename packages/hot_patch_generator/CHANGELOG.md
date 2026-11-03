@@ -1,3 +1,14 @@
+## 0.3.8
+
+**JS 运行时整理（纯内部重构：`patch/runtime.js` 与 `patch/flutter.js` 同步重出即可，宿主通道与补丁协议字段不变）。**
+
+- **内部符号统一 `__` 前缀**：`emitOp` / `commitOps` / `mount` / `patch` / `unmount` / `registerHandle` / `handleOp` / `markDirty` / `pullComponent` / `scopeOf` / `nodeIdOf` / `keySig` / `objectToken` 等只在框架内使用的函数与状态表（`roots` / `handles` / `hostNodes` …）全部改名，开发者可据此一眼分辨「框架内部」与「对外契约」。
+- **日志统一走宿主通道**：删除 runtime.js / flutter.js 中全部 `console.*`，内部诊断改走 `__logText`（warn / error 级别，经 `_app_host_.invoke('log')` 进 `HotPatchLog`）；缓存追踪切面改用 `debugPrint`，release 下零跨桥。
+- **合并重复设计**：新增 `__openRoot` / `__closeRoot` 统一「页面根 / 弹层独立根」的建树与卸载事务，`mountRoot` / `disposeRoot` / `Panel.mount` / `Panel.closed` 收敛为薄封装；新增 `__withBuilding` / `__callLifecycle` 收敛 6 处构建锚点与卸载生命周期样板；`ListenableBuilder` / `ValueListenableBuilder` / `AnimatedBuilder` / `TweenAnimationBuilder` 共用 `__ListenableSubscriber`；逻辑组件的 props 摘除统一走 `Component.__propsExcept`。
+- **`Component` 内聚**：`__captureKey` / `__splitHost` 从模块级函数收进 `Component` 静态成员；空无参构造从宿主包装类与逻辑组件中删除（继承默认构造即等价）。
+- **删除无用/兼容逻辑**：移除 `newRoot`、`releaseHandleFromHost`、`__isBuilderFn`、`__jsui.fn` / `__jsui.reg`（宿主未使用）、`keySig` 的 `__handle` 兜底，以及 flutter.js 模块级 `G.__str` / `G.objectToken` 单点交接（并入 `G.__core`）。
+- **纯内部命名澄清**：`G.__scopeOf`（接收 BuildContext 代理）改名 `G.__scopeOfContext`，与核心 `__scopeOf(instance, type)` 区分；`JsBuildContext` 改回 ES class 写法。
+
 ## 0.3.7
 
 **`@HostInjected` 调用点回归一比一：类照常产出 JS，只有被标注方法的**方法体**换成通道调用（产物形态变化，需配套本版本生成器；通道协议与宿主注册不变）。**

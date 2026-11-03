@@ -5,7 +5,7 @@
 // 事件是**类实例**（`event.logicalKey` / `event.character` / `event is KeyDownEvent`
 // 都是对象成员与类型）。因此宿主把原生 KeyEvent 归一成 JSON，经
 // `__keyEvent(句柄 id, 事件 JSON)` 交给本片段还原成实例后调用事件句柄——
-// 句柄对象统一经 `handleObjectOf` 取（与 `__jsui.invokeAwait` 同一约定）。
+// 句柄对象统一经 `__handleObjectOf` 取（与 `__jsui.invokeAwait` 同一约定）。
 //
 // 常量身份：Dart 的 LogicalKeyboardKey 是**常量实例**，源码里的
 // `event.logicalKey == LogicalKeyboardKey.enter` 比较的是同一个常量对象。JS 侧
@@ -160,7 +160,7 @@ const String keyboardListenerJsSource = r'''
   // 原生 KeyEvent → JSON（kind / character / keyId / keyLabel / usbHidUsage /
   // timeStamp），这里还原成实例并调事件句柄。挂 G：宿主经 evaluate 裸引用调用。
   G.__keyEvent = function (handleId, eventJson) {
-    var f = handleObjectOf(handleId);
+    var f = __handleObjectOf(handleId);
     if (typeof f !== 'function') { return; }
     var m = {};
     try { m = JSON.parse(eventJson) || {}; } catch (e) { return; }

@@ -316,9 +316,9 @@ const String canvasJsSource = r'''
     constructor(props) {
       props = __positionalArgs(props, []);
       if (props.repaint != null) {
-        console.warn('CustomPainter.repaint 暂不支持（组件重建即重绘）');
+        __warn('CustomPainter.repaint 暂不支持（组件重建即重绘）');
       }
-      this.__id = registerHandle(this, 'canvasPainter', {
+      this.__id = __registerHandle(this, 'canvasPainter', {
         sync: false,
         meta: { type: (this.constructor && this.constructor.name) || 'CustomPainter' }
       });

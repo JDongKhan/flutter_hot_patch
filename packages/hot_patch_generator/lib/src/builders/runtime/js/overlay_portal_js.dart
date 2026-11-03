@@ -7,15 +7,15 @@
 //     `LayerLink()` 实例），元素 props 里传 `{__handle:id}`，宿主按 id 复用同一
 //     实例——两端看的是同一个锚，不需要传任何几何数据。
 //   - OverlayPortalController：show/hide 改变的是宿主 `OverlayPortal` 的挂载状态，
-//     只能由宿主执行；JS 侧发命令（handleOp）并镜像 `isShowing`。
+//     只能由宿主执行；JS 侧发命令（__handleOp）并镜像 `isShowing`。
 //
-// 两者与 GlobalKey / ScrollController 走同一套通用句柄层（registerHandle），
+// 两者与 GlobalKey / ScrollController 走同一套通用句柄层（__registerHandle），
 // 随组件实例释放：组件卸载 → 句柄 release → 宿主侧真实对象同步摘除。
 const String overlayPortalJsSource = r'''
   // ── LayerLink：CompositedTransform 的锚点，句柄即身份 ──
   export class LayerLink {
     constructor(props) {
-      this.__id = registerHandle(this, 'layer/Link', {});
+      this.__id = __registerHandle(this, 'layer/Link', {});
     }
     toJSON() {
     return { __handle: this.__id };
@@ -29,7 +29,7 @@ const String overlayPortalJsSource = r'''
     constructor(props) {
       var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;
       this.__showing = false;
-      this.__id = registerHandle(this, 'overlay/Portal', {
+      this.__id = __registerHandle(this, 'overlay/Portal', {
         meta: debugLabel == null ? null : { debugLabel: debugLabel }
       });
     }
@@ -38,11 +38,11 @@ const String overlayPortalJsSource = r'''
     }
     show() {
     this.__showing = true;
-    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'show' }); }
+    if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'show' }); }
     }
     hide() {
     this.__showing = false;
-    if (this.__id != null) { handleOp(this.__id, 'call', { method: 'hide' }); }
+    if (this.__id != null) { __handleOp(this.__id, 'call', { method: 'hide' }); }
     }
     toggle() {
     if (this.__showing) { this.hide(); } else { this.show(); }
