@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 1259e729） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 2cd8611d） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '1259e729') { return; }
-  G.__jsuiVersion = '1259e729';
+  if (G.__jsui && G.__jsuiVersion === '2cd8611d') { return; }
+  G.__jsuiVersion = '2cd8611d';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2334,7 +2334,8 @@ G.debugPrint = function (message) {
   // 建立代理：结点锚点 = **组件自己的结点 id**。
   // 组件结点现在是宿主的挂载边界（宿主为它建 wrapper，wrapper 在 build 里先
   // 登记锚点、再同步拉取 JS build），因此每次 build 时锚点必然已经登记——
-  // `MediaQuery.of(context)` / `context.watch` 首帧即可拿到真值。
+  // `MediaQuery.of(context)` / `context.watch` 首次 build 就能发起取值（真值经
+  // 异步桥回填后标脏重建校正），不会卡在兜底值上。
   // 只有拿不到结点 id 的极端情况（未挂载的实例）才退回页面锚点。
   function buildContextOf(inst) {
     if (inst && inst.__id) { return new JsBuildContext(inst, inst.__id); }

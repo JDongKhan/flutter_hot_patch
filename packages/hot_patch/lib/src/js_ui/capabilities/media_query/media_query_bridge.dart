@@ -18,11 +18,15 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 
 import '../../../services/js_runtime_manager.dart';
+import '../../../utils/hot_patch_log.dart';
 import '../build_context/build_context_bridge.dart';
 
 /// ctx 句柄 id → {aspect(null=整份) → 上次下发的 payload 文本}。
 /// 键的存在即表示该 ctx 订阅过（JS 读过 MediaQuery），值用于「没变就不推」。
 final Map<String, Map<String?, String>> _subscribed = {};
+
+/// 已告警过「取不到 BuildContext」的 ctx（同一次运行只出声一次）。
+final Set<String> _unresolvedLogged = {};
 
 bool _mediaQueryOpRegistered = false;
 
@@ -100,7 +104,15 @@ void _refreshAll() {
 /// 生成器 media_query_js.dart 的 `__buildMediaQuery` / `__decodeMediaQuery` 一一对应。
 Object? _readAspect(String ctxId, String? aspect) {
   final ctx = jsBuildContextOf(ctxId);
-  if (ctx == null) return null;
+  if (ctx == null) {
+    if (_unresolvedLogged.add(ctxId)) {
+      HotPatchLog.warn(
+        'js_ui: mediaQuery 取不到 BuildContext（ctx=$ctxId, aspect=$aspect）'
+        '：组件结点的锚点未登记或已卸载',
+      );
+    }
+    return null;
+  }
   switch (aspect) {
     case null:
       final d = MediaQuery.maybeOf(ctx);

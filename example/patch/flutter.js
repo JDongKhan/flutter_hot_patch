@@ -7866,7 +7866,7 @@ export class MediaQuery {
       delete MediaQuery.__byContext[id];
       return;
     }
-    if (a) { markDirty(a); }
+    if (a) { __cc.markDirty(a); }
   }
 
   // 按 aspect 向宿主取一次值（每个 aspect 只取一次，之后靠回推）。
