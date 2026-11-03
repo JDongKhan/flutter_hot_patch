@@ -370,7 +370,7 @@ class JsRuntimeManager {
   }
 
   /// 所有 JS 求值的统一入口（纯求值，无注册副作用）。
-  /// code 内部按需寻址，如 `__jsui.invoke(...)` / `__jsui.mount(...)`。
+  /// code 内部按需寻址，如 `__jsui.invoke(...)` / `__jsui.mountRoot(...)`。
   ///
   /// 求值失败经 [_eval] 打日志（flutter_js 的 evaluate 不抛异常，
   /// 不查返回值就会静默失败）。
@@ -554,7 +554,7 @@ class JsRuntimeManager {
     }
     // 加载中（防依赖环 + 防并发竞争）→ 复用首个加载的 completer，等它完成
     // 后再继续。同屏多个 JsUiWidget 用同一 manager 时，会并发调用 loadModule，
-    // 若直接 return，后续 widget 的 __jsui.mount 会在模块注册前执行 →
+    // 若直接 return，后续 widget 的 __jsui.mountRoot 会在模块注册前执行 →
     // 找不到组件 → _rootId 为 null → 一直显示进度条。
     //
     // 「加载中」只由 [_loadingCompleters] 是否含该 key 表达；owner 用**本地

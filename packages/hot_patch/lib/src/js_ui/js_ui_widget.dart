@@ -194,10 +194,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
       // 陈旧 / 组件名拼错）时 evaluate 只记日志，root 永不下发 → 页面一直转圈。
       // 抛出来才能落进下面的 catch，进错误兜底视图。
       _manager.evaluateOrThrow(
-        '__jsui.mount(${jsonEncode(_pageKey)}, ${jsonEncode(_entryJsAsset)}, '
+        '__jsui.mountRoot(${jsonEncode(_pageKey)}, ${jsonEncode(_entryJsAsset)}, '
         '${jsonEncode(component)}, '
         '${jsonEncode(jsonEncode(widget.props))});',
-        where: 'mount',
+        where: 'mountRoot',
       );
       _jsMounted = true;
       if (mounted && _loading) setState(() => _loading = false);

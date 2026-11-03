@@ -1,3 +1,9 @@
+## 0.4.0
+
+**破坏性：宿主入口 `__jsui.mount` 更名为 `__jsui.mountRoot`（需与 hot_patch 0.3.4 配套；不保留旧别名）。**
+
+- 内部函数一直是 `__mountRoot`（挂载整个页面根），与 reconciler 的 `__mount`（挂载单个结点）区分；此前对外 api 键写成 `mount`，日志与调用链里容易混淆。现统一为 `__jsui.mountRoot(...)`，宿主 `JsUiWidget` 挂载点同步更新。
+
 ## 0.3.9
 
 **InputDecoration / BottomNavigationBarItem / DropdownMenuItem 改为值类，删除「数据载体类型表」（协议只做加法：props 里新增 `{type, props, children, element: true}` 元素描述形态，老产物行为不变；需与 hot_patch 0.3.3 配套）。**

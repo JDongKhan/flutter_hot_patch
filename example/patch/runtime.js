@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 aff34808） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 52e1aeba） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'aff34808') { return; }
-  G.__jsuiVersion = 'aff34808';
+  if (G.__jsui && G.__jsuiVersion === '52e1aeba') { return; }
+  G.__jsuiVersion = '52e1aeba';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2755,7 +2755,9 @@ G.debugPrint = function (message) {
     // await → 经宿主通道 `jsuiEventResult` 回传 token 与结果。与能力无关，
     // 所有 `Future<T>` 回调共用（见 `JsRuntimeManager.invokeAwait`）。
     invokeAwait: __invokeEventHandlerAwait,
-    mount: __mountRoot,
+    // 页面根挂载（Dart 侧 evaluate `__jsui.mountRoot(...)`）。
+    // 不要与 reconciler 内部的 `__mount`（挂载单个结点）混淆。
+    mountRoot: __mountRoot,
     // 宿主挂载组件 wrapper 时**同步**拉取该组件的首次 build 结果（补丁 JSON）。
     // 这是唯一一条「宿主 build → JS build」的入口：保证 JS build 执行时
     // BuildContext 锚点已由 wrapper 登记。
