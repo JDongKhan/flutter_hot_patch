@@ -154,10 +154,55 @@ class _InputDetailState extends State<InputDetail> {
           value: _dropdown,
           isExpanded: true,
           onChanged: _onDropdownChanged,
+          // DropdownMenuItem 是值对象：child 可带任意 Widget 子树，
+          // enabled / alignment 也按字段 JSON 下发，宿主取用时就地还原。
           items: const [
-            DropdownMenuItem(value: '苹果', child: Text('苹果')),
-            DropdownMenuItem(value: '香蕉', child: Text('香蕉')),
-            DropdownMenuItem(value: '橙子', child: Text('橙子')),
+            DropdownMenuItem(
+              value: '苹果',
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  Icon(Icons.apple, size: 18),
+                  SizedBox(width: 8),
+                  Text('苹果'),
+                ],
+              ),
+            ),
+            DropdownMenuItem(
+              value: '香蕉',
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  Icon(Icons.emoji_food_beverage, size: 18),
+                  SizedBox(width: 8),
+                  Text('香蕉'),
+                ],
+              ),
+            ),
+            DropdownMenuItem(
+              value: '橙子',
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  Icon(Icons.circle, size: 18),
+                  SizedBox(width: 8),
+                  Text('橙子'),
+                ],
+              ),
+            ),
+            // enabled: false → 菜单里置灰、不可选。
+            DropdownMenuItem(
+              value: '榴莲',
+              enabled: false,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  Icon(Icons.block, size: 18),
+                  SizedBox(width: 8),
+                  Text('榴莲（暂未开放）'),
+                ],
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),

@@ -1110,6 +1110,11 @@ void registerBaseWidgets(JsWidgetRegistry r) {
       items.add(
         DropdownMenuItem<dynamic>(
           value: raw['value'],
+          // enabled 缺省为 true（与 Flutter 默认一致）；alignment 走统一
+          // 的枚举/常量协议（JS 侧 Alignment 常量即成员名字符串）。
+          enabled: raw['enabled'] is bool ? raw['enabled'] as bool : true,
+          alignment: alignmentFromJson(raw['alignment']) ??
+              AlignmentDirectional.centerStart,
           child: c.element(raw['child']) ?? const SizedBox.shrink(),
         ),
       );

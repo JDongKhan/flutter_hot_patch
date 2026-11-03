@@ -178,20 +178,75 @@ export class InputDetail extends StatefulWidget {
           "items": [
             new DropdownMenuItem({
               "value": "苹果",
-              "child": new Text({
-                "data": "苹果"
+              "alignment": Alignment.centerLeft,
+              "child": new Row({
+                "children": [
+                  new Icon({
+                    "size": 18,
+                    "icon": Icons.apple
+                  }),
+                  new SizedBox({
+                    "width": 8
+                  }),
+                  new Text({
+                    "data": "苹果"
+                  })
+                ]
               })
             }),
             new DropdownMenuItem({
               "value": "香蕉",
-              "child": new Text({
-                "data": "香蕉"
+              "alignment": Alignment.centerLeft,
+              "child": new Row({
+                "children": [
+                  new Icon({
+                    "size": 18,
+                    "icon": Icons.emoji_food_beverage
+                  }),
+                  new SizedBox({
+                    "width": 8
+                  }),
+                  new Text({
+                    "data": "香蕉"
+                  })
+                ]
               })
             }),
             new DropdownMenuItem({
               "value": "橙子",
-              "child": new Text({
-                "data": "橙子"
+              "alignment": Alignment.centerLeft,
+              "child": new Row({
+                "children": [
+                  new Icon({
+                    "size": 18,
+                    "icon": Icons.circle
+                  }),
+                  new SizedBox({
+                    "width": 8
+                  }),
+                  new Text({
+                    "data": "橙子"
+                  })
+                ]
+              })
+            }),
+            new DropdownMenuItem({
+              "value": "榴莲",
+              "enabled": false,
+              "alignment": Alignment.centerLeft,
+              "child": new Row({
+                "children": [
+                  new Icon({
+                    "size": 18,
+                    "icon": Icons.block
+                  }),
+                  new SizedBox({
+                    "width": 8
+                  }),
+                  new Text({
+                    "data": "榴莲（暂未开放）"
+                  })
+                ]
               })
             })
           ]
