@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 82906520） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 b91dc995） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '82906520') { return; }
-  G.__jsuiVersion = '82906520';
+  if (G.__jsui && G.__jsuiVersion === 'b91dc995') { return; }
+  G.__jsuiVersion = 'b91dc995';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2189,6 +2189,8 @@ G.debugPrint = function (message) {
     __unmount: __unmount,
     __openRoot: __openRoot,
     __closeRoot: __closeRoot,
+    // 宿主桥（弹层打开/关闭等模块级通道调用）。
+    __invokeHostMethod: __invokeHostMethod,
     // 日志与值展开：flutter.js 的框架内提示 / 值类（StringBuffer）共用。
     log: __logText,
     str: __str,

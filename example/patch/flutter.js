@@ -7571,7 +7571,7 @@ export class Panel {
     ? given.__nodeId
     : (caller ? __contextOf(caller).__nodeId : null);
     var key = Panel.__key();
-    // builder 的形参 ctx：**专用代理**（不打在调用方那个缓存代理上——`contextOf`
+    // builder 的形参 ctx：**专用代理**（不打在调用方那个缓存代理上——`__contextOf`
     // 按实例缓存，共用会把页面的代理永久指向某个面板）。带 `__panelKey` 后
     // `Navigator.pop(ctx)` / `Navigator.of(ctx)` 精确落到本面板，嵌套 showDialog
     // 也不会串台。

@@ -733,6 +733,8 @@ const String _jsUiCrossModuleExports = r'''
     __unmount: __unmount,
     __openRoot: __openRoot,
     __closeRoot: __closeRoot,
+    // 宿主桥（弹层打开/关闭等模块级通道调用）。
+    __invokeHostMethod: __invokeHostMethod,
     // 日志与值展开：flutter.js 的框架内提示 / 值类（StringBuffer）共用。
     log: __logText,
     str: __str,
