@@ -70,7 +70,7 @@ class HotDemoApp extends StatelessWidget {
             if (constraints.maxWidth <= 800) return content;
             return Row(
               children: [
-                Expanded(flex: 3,child: content),
+                Expanded(flex: 2,child: content),
                 Expanded(flex: 1, child: AppLogConsole()),
               ],
             );
