@@ -72,7 +72,9 @@ class JsUiWidgetState extends State<JsUiWidget> {
   static int _seq = 0;
 
   late final JsRuntimeManager _manager;
-  final JsUiStore _store = JsUiStore();
+
+  /// 本页的结点仓库 / 补丁应用器。页面级重载（补丁版本变化）时整体换新。
+  late JsUiStore _store;
   final String _pageKey = 'jsui_${_seq++}';
 
   /// 页面的人类可读名（日志显示用）：入口组件类名，取自 jsAsset 的
@@ -101,6 +103,25 @@ class JsUiWidgetState extends State<JsUiWidget> {
   /// 取在「运行时就绪、模块加载完、组件尚未 mount」这一刻。
   JsLeakSnapshot? _leakBaseline;
 
+  /// 本页 JS root 挂载时所处的运行时代次（见 [_JsPageRegistry.runtimeEpoch]）。
+  /// 与当前代次不一致即视为 stale，需要页面级重载。
+  int _pageEpoch = _JsPageRegistry.runtimeEpoch;
+
+  /// 每次 [_boot] 的令牌：页面级重载会自增，旧的在途 boot 完成后据此丢弃结果。
+  int _bootToken = 0;
+
+  /// 页面级重载进行中（防止同一页重复进入重载流程）。
+  bool _reloading = false;
+
+  /// 初始化本页的 store 并挂根回调（首次进入与页面级重载都走这里）。
+  void _initStore() {
+    _store = JsUiStore();
+    _store.onRoot = (id) {
+      _rootId = id;
+      if (mounted) setState(() => _loading = false);
+    };
+  }
+
   @override
   void initState() {
     super.initState();
@@ -109,10 +130,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 宿主 widget 注册表是**进程内单例**（懒建一次性注册全部内建/能力/三方库
     // 组件，见 js_ui_capabilities 的 jsWidgetRegistry）——不需要、也不由外部传入。
     registerBuiltinHostMethods();
-    _store.onRoot = (id) {
-      _rootId = id;
-      if (mounted) setState(() => _loading = false);
-    };
+    _initStore();
     // 能力桥接通道（ScrollController / TextEditingController …）：必须在任何
     // JS 组件 mount（new XxxController → host 登记）前就位。新增能力只改
     // js_ui_capabilities.ensureJsUiCapabilities，本文件不再变动。
@@ -122,10 +140,15 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 页面名登记（仅日志显示）：让 `[binding] + …` 与 `leak-check …` 里的 jsui_N
     // 显示成组件类名，而不是人类看不懂的 id。
     LeakStats.registerPage(_pageKey, _pageName);
+    // 活跃页注册表：版本切换时据此找到所有需要重载的页面（含 Navigator 栈下方
+    // 仍 mounted 的离屏路由）。
+    _pageEpoch = _JsPageRegistry.runtimeEpoch;
+    _JsPageRegistry.register(this);
     _boot();
   }
 
-  Future<void> _boot() async {
+  Future<void> _boot({bool allowBundleSwitch = true}) async {
+    final token = ++_bootToken;
     try {
       // 运行时骨架不在这里注入：runtime.js 在补丁包内（需要 localRoot 才知道
       // 从哪读），由 loadModule 在求值任何模块之前自动加载（见下面 loadModule）。
@@ -152,13 +175,30 @@ class JsUiWidgetState extends State<JsUiWidget> {
           component: component,
           entryPath: entryPath,
         );
+        if (_bootSuperseded(token)) return;
         if (bundle == null) {
           throw StateError('远程补丁加载失败（需 http(s):// zip）：$realAsset');
         }
-        // 包版本记入内存：与内存中已加载的版本不一致（或本次是 fresh 下载）
-        // → 清空模块缓存与运行时标记，下一次 ensureJsUiRuntime 会重新求值
-        // runtime.js，loadModule 会重新加载全部产物。
-        _manager.syncBundleVersion(bundle.version, fresh: bundle.fresh);
+        // 包版本记入内存：与内存中已加载的版本不一致 → 清空模块缓存与运行时
+        // 标记，下一次 ensureJsUiRuntime 会重新求值 runtime.js，loadModule 会
+        // 重新加载全部产物。
+        // 自动重载（allowBundleSwitch=false）只允许加载**当前运行时版本**的
+        // 产物：不同补丁源的页面无法混在一个运行时里，宁可让该页进错误态，
+        // 也不能来回切换造成「A 重载 B / B 重载 A」的无限循环。
+        if (!allowBundleSwitch &&
+            _manager.loadedBundleVersion != null &&
+            bundle.version != _manager.loadedBundleVersion) {
+          throw StateError('页面补丁包版本（${bundle.version ?? 'unknown'}）'
+              '与当前运行时（${_manager.loadedBundleVersion}）不一致，'
+              '无法自动重载；请统一所有 JsUiWidget 的补丁源');
+        }
+        final switched =
+            _manager.syncBundleVersion(bundle.version, fresh: bundle.fresh);
+        if (switched) {
+          // 通知活跃页注册表：除本页（即将用新版本重新 boot）外，其余已挂载
+          // 页面全部 stale，需要页面级重载。
+          _JsPageRegistry.onRuntimeSwitched(bootingPageKey: _pageKey);
+        }
         // 记录该包的打包时间（调试展示用，见 showBuildTime）。
         _buildTime = bundle.buildTime;
         entry = bundle.entryJsAsset;
@@ -173,11 +213,14 @@ class JsUiWidgetState extends State<JsUiWidget> {
         localRoot: localRoot,
         moduleAsset: _entryJsAsset,
       );
+      if (_bootSuperseded(token)) return;
       await _manager.loadCapabilityModules(
         localRoot: localRoot,
         moduleAsset: _entryJsAsset,
       );
+      if (_bootSuperseded(token)) return;
       await _manager.loadModule(_entryJsAsset, localRoot: localRoot);
+      if (_bootSuperseded(token)) return;
       // 模块加载**汇总成一条**：连带依赖常有几十个（model/xxx.js、flutter.js…），
       // 逐条打印会把进入页面的日志刷满。顺序即加载顺序（依赖先于自身）。
       final loaded = _manager.drainLoadedModules();
@@ -200,16 +243,25 @@ class JsUiWidgetState extends State<JsUiWidget> {
         where: 'mountRoot',
       );
       _jsMounted = true;
+      // boot 期间可能又发生了版本切换：以当前代次为准（本页已是新版本）。
+      _pageEpoch = _JsPageRegistry.runtimeEpoch;
       if (mounted && _loading) setState(() => _loading = false);
     } catch (e) {
+      if (_bootSuperseded(token)) return;
       HotPatchLog.error('js_ui boot failed: $e', error: e);
       if (!mounted) return;
       setState(() {
         _error = '$e';
         _loading = false;
       });
+    } finally {
+      // 只有仍是当前这次 boot 才结束重载标记（被新 boot 覆盖的旧流程不能清）。
+      if (token == _bootToken) _reloading = false;
     }
   }
+
+  /// 本次 boot 是否已被页面级重载 / 卸载取代：取代后不再落任何状态。
+  bool _bootSuperseded(int token) => !mounted || token != _bootToken;
 
   @override
   void didUpdateWidget(covariant JsUiWidget oldWidget) {
@@ -237,16 +289,28 @@ class JsUiWidgetState extends State<JsUiWidget> {
 
   @override
   void dispose() {
-    // 记录进入过页面：只有 mount 成功过才有「进入 / 销毁」两端可比对。
+    // 取消仍在途的 boot（异步完成后不再落状态），并从活跃页注册表摘除。
+    _bootToken++;
+    _JsPageRegistry.unregister(_pageKey);
+    _teardownJsRoot(reportLeaks: true);
+    super.dispose();
+  }
+
+  /// 释放本页 JS root 及其全部簿记。
+  ///
+  /// 页面销毁（[dispose]）与页面级重载（[_reloadFromScratch]）共用；后者不比对
+  /// 泄漏（基线属于旧的一次生命周期，重载后重新采集）。
+  ///
+  /// 顺序很关键：
+  ///   1) disposeRoot：只走正常卸载（组件逐实例释放自己持有的句柄）；
+  ///   2) 宿主自身簿记清理（store / 页面锚点）：这些是 dispose **必定**会摘的
+  ///      基础设施，不属于被登记对象的生命周期，先摘掉，避免被当成残留误报；
+  ///   3) 快照比对：此时残留的才是真泄漏，可观测；
+  ///   4) sweepPage / dropPageEntries：把本页**全部**对象残留静默清干净，作为
+  ///      「页面退出即释放」的兜底，因此同一页面挂载多少次都不会累积。
+  void _teardownJsRoot({required bool reportLeaks}) {
     final wasMounted = _jsMounted;
     _jsMounted = false;
-    // 顺序很关键：
-    //   1) disposeRoot：只走正常卸载（组件逐实例释放自己持有的句柄）；
-    //   2) 宿主自身簿记清理（store / 页面锚点）：这些是 dispose **必定**会摘的
-    //      基础设施，不属于被登记对象的生命周期，先摘掉，避免被当成残留误报；
-    //   3) 快照比对：此时残留的才是真泄漏，可观测；
-    //   4) sweepPage / dropPageEntries：把本页**全部**对象残留静默清干净，作为
-    //      「页面退出即释放」的兜底，因此同一页面挂载多少次都不会累积。
     _manager.evaluate(
       'if (typeof __jsui !== "undefined") __jsui.dispose(${jsonEncode(_pageKey)});',
     );
@@ -254,8 +318,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 页面簿记，dispose 后必然失效，先摘除。
     unregisterJsBuildContext(jsBuildContextPageAnchor(_pageKey));
     // 注销本页 store：jsuiCommit 处理器按 key 查不到即丢弃（页面已销毁）。
-    jsUiPageStores.remove(_pageKey);
-    if (kDebugMode && wasMounted) {
+    if (identical(jsUiPageStores[_pageKey], _store)) {
+      jsUiPageStores.remove(_pageKey);
+    }
+    if (reportLeaks && kDebugMode && wasMounted) {
       JsLeakSnapshot.capture(_pageKey)?.reportLeaks(_pageKey, _leakBaseline);
     }
     // 页面兜底（拥有端在 JS）：按 pageKey 清掉本页全部句柄——任何 scope，
@@ -272,7 +338,34 @@ class JsUiWidgetState extends State<JsUiWidget> {
     // 页面名登记随之注销（与 jsUiPageStores 的按页清理同款）——放在 reportLeaks
     // 之后，保证本页最后一条日志仍然显示组件类名；不注销该表会无界增长。
     LeakStats.unregisterPage(_pageKey);
-    super.dispose();
+  }
+
+  /// 页面级重载：补丁版本切换 / 首次加载失败重试时，整页重建 JS root 与 store，
+  /// **保留 Flutter 路由与 JsUiWidget 本身**（不要求用户退出页面）。
+  void _reloadFromScratch({
+    String reason = '补丁版本变化',
+    bool allowBundleSwitch = false,
+  }) {
+    if (_reloading) return;
+    _reloading = true;
+    _bootToken++;
+    _pageEpoch = _JsPageRegistry.runtimeEpoch;
+    _teardownJsRoot(reportLeaks: false);
+    _rootId = null;
+    _error = null;
+    _loading = true;
+    _buildTime = null;
+    _leakBaseline = null;
+    _initStore();
+    jsUiPageStores[_pageKey] = _store;
+    LeakStats.registerPage(_pageKey, _pageName);
+    if (!mounted) {
+      _reloading = false;
+      return;
+    }
+    setState(() {});
+    HotPatchLog.log('页面 $_pageName（$_pageKey）重新加载：$reason');
+    _boot(allowBundleSwitch: allowBundleSwitch);
   }
 
   @override
@@ -326,16 +419,12 @@ class JsUiWidgetState extends State<JsUiWidget> {
         '${p(t.hour)}:${p(t.minute)}:${p(t.second)}';
   }
 
-  /// 失败后重走一遍加载：模块加载按文件幂等，重复调用无副作用。
-  void _retry() {
-    setState(() {
-      _error = null;
-      _loading = true;
-      _rootId = null;
-      _jsMounted = false;
-    });
-    _boot();
-  }
+  /// 失败后整页重来：模块加载按文件幂等，但可能已有半挂载状态，统一切干净再 boot。
+  /// 用户主动重试，允许按本页补丁源重新判定版本切换。
+  void _retry() => _reloadFromScratch(
+        reason: '加载失败后重试',
+        allowBundleSwitch: true,
+      );
 }
 
 /// 弹层内容的宿主入口：把**已经存在的一份独立 [JsUiStore]** 渲染成 widget 树。
@@ -922,3 +1011,132 @@ class _JsPlainNodeHostState extends _JsHostBaseState<_JsPlainNodeHost>
 
 /// 未注册类型已告警过的结点（page|id|type）。
 final Set<String> _unknownLogged = <String>{};
+
+// ===========================================================================
+// 活跃页注册表 + 补丁版本切换协调
+// ===========================================================================
+//
+// 运行时是全局唯一的，补丁版本切换会整体失效所有已挂载页面的 JS root。
+// 「需要重载的范围」不是某个路由，而是**所有仍 mounted 的 JsUiWidget**：
+// Navigator push 不会销毁栈下方的页面，它们的 State 仍然活着、JS root 仍然存在。
+// 本注册表以 initState / dispose 为唯一挂载边界，因此能精确覆盖：
+//   - 当前可见页；
+//   - 栈下方离屏路由；
+//   - 同屏多个 JsUiWidget。
+//
+// 版本切换时：
+//   1. 运行时代次 +1；
+//   2. 除「正在 boot 的新版本页」外，所有旧代次页面进入待重载集合；
+//   3. 若待重载页面里有**当前可见**的，弹一次原生 dialog 告知用户；
+//   4. 确认后（或没有可见页时直接）对全部待重载页执行页面级重载——
+//      保留 Flutter 路由与 JsUiWidget 本身，只重建 JS root 与 store。
+
+class _JsPageRegistry {
+  _JsPageRegistry._();
+
+  /// pageKey → 当前 mounted 的页面 State。
+  static final Map<String, JsUiWidgetState> _pages = {};
+
+  /// 待重载页面（按版本代次筛选后执行；dispose 时自动摘除）。
+  static final Set<JsUiWidgetState> _pending = {};
+
+  /// 运行时代次：每次补丁版本切换 +1。页面 boot 成功时记录当前代次。
+  static int _runtimeEpoch = 0;
+
+  static int get runtimeEpoch => _runtimeEpoch;
+
+  /// 已调度一次 post-frame 处理（同一批切换合并）。
+  static bool _flowScheduled = false;
+
+  /// 原生更新提示 dialog 正在显示（全局最多一个）。
+  static bool _dialogShowing = false;
+
+  static void register(JsUiWidgetState state) {
+    _pages[state._pageKey] = state;
+  }
+
+  static void unregister(String pageKey) {
+    _pages.remove(pageKey);
+    _pending.removeWhere((s) => s._pageKey == pageKey);
+  }
+
+  /// 运行时版本发生切换（由触发切换的页面在 `_boot` 中调用）。
+  ///
+  /// [bootingPageKey] 是本次用新版本重新 boot 的页面，不计入待重载集合。
+  static void onRuntimeSwitched({required String bootingPageKey}) {
+    _runtimeEpoch += 1;
+    for (final state in _pages.values.toList()) {
+      if (state._pageKey == bootingPageKey) continue;
+      if (state._pageEpoch < _runtimeEpoch) _pending.add(state);
+    }
+    if (_pending.isEmpty) return;
+    HotPatchLog.log('补丁版本切换：${_pending.length} 个已打开页面待重新加载'
+        '（代次 $_runtimeEpoch）');
+    _flush();
+  }
+
+  /// 合并处理一批待重载页：可见页先弹 dialog，确认后统一页面级重载。
+  static void _flush() {
+    if (_flowScheduled || _dialogShowing) return;
+    _flowScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _flowScheduled = false;
+      if (_dialogShowing) {
+        // 已有 dialog 流程在走：把新加入的页面留给那一轮结束后的再次 flush。
+        return;
+      }
+      // 过滤掉已卸载 / 已被别的流程重载（代次已追平）的页面。
+      _pending.removeWhere(
+        (s) => !s.mounted || s._pageEpoch >= _runtimeEpoch,
+      );
+      final stale = _pending.toList();
+      _pending.clear();
+      if (stale.isEmpty) return;
+      final visible = stale.where(_isVisible).toList();
+      if (visible.isNotEmpty) {
+        _dialogShowing = true;
+        try {
+          await _showReloadDialog(visible.first);
+        } catch (e) {
+          HotPatchLog.warn('补丁更新提示弹窗失败，直接重载页面: $e');
+        } finally {
+          _dialogShowing = false;
+        }
+      }
+      for (final state in stale) {
+        if (!state.mounted) continue;
+        if (state._pageEpoch >= _runtimeEpoch) continue;
+        state._reloadFromScratch(reason: '补丁版本更新（代次 $_runtimeEpoch）');
+      }
+      // dialog 期间可能又有页面 stale：继续下一轮。
+      if (_pending.isNotEmpty) _flush();
+    });
+  }
+
+  /// 页面是否处于当前可见路由（栈下方离屏页不弹窗，静默重载）。
+  static bool _isVisible(JsUiWidgetState state) {
+    if (!state.mounted) return false;
+    return ModalRoute.of(state.context)?.isCurrent ?? false;
+  }
+
+  /// 原生更新提示（禁止用 JS dialog：那会再创建一个属于旧运行时的根）。
+  static Future<void> _showReloadDialog(JsUiWidgetState state) {
+    return showDialog<void>(
+      context: state.context,
+      barrierDismissible: false,
+      builder: (dialogContext) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: const Text('组件已更新'),
+          content: const Text('检测到新的补丁版本，已打开的页面需要重新加载。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('立即重新加载'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

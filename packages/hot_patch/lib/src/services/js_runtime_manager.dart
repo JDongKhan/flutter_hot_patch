@@ -387,26 +387,42 @@ class JsRuntimeManager {
   /// 当前内存里已加载补丁包的版本（调试/诊断用）；未加载过 remote 包时为 null。
   String? get loadedBundleVersion => _loadedBundleVersion;
 
-  /// 记录本次要加载的补丁包版本；与内存中已加载的版本不一致（或本次是重新
-  /// 下载的 fresh 包）时，清空模块缓存与 JS 运行时标记，强制下一次
-  /// [ensureJsUiRuntime] 重新求值运行时、[loadModule] 重新加载全部模块。
+  /// 记录本次要加载的补丁包版本；与内存中已加载的版本不一致时，清空模块缓存
+  /// 与 JS 运行时标记，强制下一次 [ensureJsUiRuntime] 重新求值运行时、
+  /// [loadModule] 重新加载全部模块。
+  ///
+  /// 返回 true 表示本次发生了整体失效（调用方据此通知活跃页注册表：其他已挂载
+  /// 页面需要页面级重载）。
+  ///
+  /// **只认版本差异**：同一份身份版本（version + buildTime + protocol）即使被
+  /// 重新下载（fresh=true）也不失效——避免页面级重载后再次触发切换，形成
+  /// 「重载 → 又判切换 → 再重载」的循环。
   ///
   /// 必须在 [ensureJsUiRuntime] / [loadModule] 之前调用（见 JsUiWidget 的 boot）。
-  void syncBundleVersion(String? version, {required bool fresh}) {
+  bool syncBundleVersion(String? version, {required bool fresh}) {
     final loaded = _loadedBundleVersion;
     // 运行时还没初始化过 → 内存里没有可复用的东西，直接记录即可。
     // 已经初始化过且版本不同（含「asset 场景 null → remote 包」）→ 必须整体失效。
     final differs = _jsUiInited && version != loaded;
-    if (!fresh && !differs) {
+    if (!differs) {
       if (loaded == null && version != null) _loadedBundleVersion = version;
-      return;
+      if (version == null && _jsUiInited && !_warnedMissingBundleVersion) {
+        _warnedMissingBundleVersion = true;
+        HotPatchLog.warn('补丁包 manifest 缺少身份版本字段，'
+            '后续版本切换将无法判定（请用配套生成器重新产出 manifest）');
+      }
+      return false;
     }
     HotPatchLog.log('补丁包版本变化：memory=${loaded ?? '(none)'} '
         'bundle=${version ?? '(none)'} fresh=$fresh —— '
         '清除内存并重新加载 JS 运行时');
     invalidateModules();
     _loadedBundleVersion = version;
+    return true;
   }
+
+  /// 已告警过「补丁包无身份版本」（避免每次加载都刷屏）。
+  bool _warnedMissingBundleVersion = false;
 
   JsRuntimeManager._() {
     _instances.add(this);
