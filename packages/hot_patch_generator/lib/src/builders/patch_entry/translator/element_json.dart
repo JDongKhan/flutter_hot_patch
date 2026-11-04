@@ -71,7 +71,7 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
     // tear-off（要包成绑定 this 的闭包），在普通值位置上是数据字段（原样引用）。
     // 是否需要跨语言句柄（`{__fn:id}`）由运行时在宿主 props 下发边界按 `typeof`
     // 决定（见 runtime.js 的 `__hostProps`），翻译层不判断「这是不是事件」。
-    if (!isBuilderArg(name) && _functionTypedParam(node, name)) {
+    if (!isBuilderArg(name) && _functionTypedParam(node, name, ctx)) {
       final fn = _functionValueOrNull(ctx, value);
       if (fn != null) {
         props[name] = fn;
@@ -88,13 +88,17 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
 
   // 命名构造 / 静态工厂名（`ListView.builder` / `Image.network`）不进 props：
   // 渲染成 `X.b({...})`，由 JS 类的同名静态方法把构造名写进 `props.factory`。
-  final factory = factoryNameOf(node.expr);
+  final factory = factoryNameOf(node.expr, isPrefix: ctx.isImportPrefix);
 
   // 位置实参：按 Flutter 声明的**形参名**下发（`Text('hi')` → `data`）。
   // 构造签名查不到时没有可靠形参名，禁止伪造下标键（`$pos`）——出声告警并
   // 丢弃该结点。
   if (positional.isNotEmpty) {
-    final names = positionalArgNames(node.type, factory);
+    // 签名索引按**裸类名**查（`p.Foo` → `Foo`）：前缀只用于 JS 渲染。
+    final names = positionalArgNames(
+      ElementTranslateContext.bareTypeName(node.type),
+      factory,
+    );
     if (names != null && names.length >= positional.length) {
       for (var i = 0; i < positional.length; i++) {
         props[names[i]] = positional[i];
@@ -115,7 +119,9 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
   // 类），翻译层不做类型判断、不发明语义化键名。
   final typeArgs = typeArgsOf(
     node.expr,
-    declared: CtorSignatures.instance?.typeParamsOf(node.type) ?? const [],
+    declared: CtorSignatures.instance
+            ?.typeParamsOf(ElementTranslateContext.bareTypeName(node.type)) ??
+        const [],
   );
   if (typeArgs.isNotEmpty) {
     props['typeArguments'] = typeArgsMapJs(typeArgs);
@@ -136,7 +142,10 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
 ///     `Positioned.fill(...)`）→ 方法名；
 ///   - `MethodInvocation` 无 receiver（parseString 下无 const 的 `Foo(...)`）→
 ///     方法名就是类型名，不是工厂，返回 null。
-String? factoryNameOf(Expression? e) {
+String? factoryNameOf(
+  Expression? e, {
+  bool Function(String prefix)? isPrefix,
+}) {
   if (e is InstanceCreationExpression) {
     final cn = e.constructorName;
     final direct = cn.name?.name;
@@ -153,7 +162,20 @@ String? factoryNameOf(Expression? e) {
     return null;
   }
   if (e is MethodInvocation) {
-    return e.target is Identifier ? e.methodName.name : null;
+    final target = e.target;
+    if (target is PrefixedIdentifier) {
+      // `p.Foo(...)`：方法名与类型名同名 → 不是工厂（与无 receiver 同形）；
+      // `p.Foo.bar(...)` → 构造名 bar（`PrefixedIdentifier.name` 只给前缀，
+      // 类型名要从源码文本取）。
+      final full = target.toSource();
+      final last = full.substring(full.lastIndexOf('.') + 1).split('<').first.trim();
+      return e.methodName.name == last ? null : e.methodName.name;
+    }
+    // `p.Foo(...)`：target 是 import 前缀、方法名就是类型名 → 不是工厂。
+    if (target is SimpleIdentifier && (isPrefix?.call(target.name) ?? false)) {
+      return null;
+    }
+    return target is Identifier ? e.methodName.name : null;
   }
   return null;
 }
@@ -181,10 +203,10 @@ List<String>? positionalArgNames(String type, String? factory) {
 /// 例外（协议级，先于类型判定）：builder 协议参数（`builder` / `itemBuilder`
 /// / `pageBuilder` …）是返回 widget 的闭包，由 delegate 展开子树
 /// （[isBuilderArg]），不参与本判定。
-bool _functionTypedParam(ElementNode node, String name) {
+bool _functionTypedParam(ElementNode node, String name, ElementTranslateContext ctx) {
   final sig = CtorSignatures.instance?.of(
-    node.type,
-    ctorName: factoryNameOf(node.expr),
+    ElementTranslateContext.bareTypeName(node.type),
+    ctorName: factoryNameOf(node.expr, isPrefix: ctx.isImportPrefix),
     positionalCount: _positionalArgCount(node),
   );
   return sig != null && sig.functionParams.contains(name);

@@ -492,9 +492,17 @@ Map<String, String> typeArgsOf(
   final list = args ?? const <TypeAnnotation>[];
   return {
     for (var i = 0; i < list.length; i++)
-      (i < declared.length ? declared[i] : '$i'): list[i].toSource(),
+      (i < declared.length ? declared[i] : '$i'): _bareTypeSource(list[i].toSource()),
   };
 }
+
+/// 类型源码去掉 import 前缀（`vm.CounterVm` → `CounterVm`）。
+///
+/// `typeArguments` 是**类型身份**（provider 作用域按它键控）：Dart 里不同库的
+/// 同名类在名字上就是同一个标识，前缀只用于消解引用。嵌套泛型（`List<vm.X>`）
+/// 保持源码文本，与既有规则一致。
+String _bareTypeSource(String src) =>
+    src.replaceFirst(RegExp(r'^[a-zA-Z_$][\w$]*\.(?=[A-Z_$])'), '');
 
 /// 类型实参 Map → JS 对象字面量源码（`{ "K": "String", "V": "int" }`）。
 String typeArgsMapJs(Map<String, String> args) =>

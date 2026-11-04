@@ -27,6 +27,7 @@ import '../shared/paths.dart';
 import '../shared/source_index.dart';
 import '../ui_widget/widget_module_builder.dart'
     show hostWrapperSource, registeredWidgetPackages;
+import 'project_module_builder.dart' show localTranslationPackages;
 
 /// 把 lib/ 下的 Dart 源文件翻译为**同名** JS 产物（`lib/a/b.dart` → `patch/a/b.js`）：
 /// 文件名与 Dart 源文件一一对应，不区分组件/模型，也不预设目录结构——源码
@@ -113,6 +114,14 @@ class ComponentBuilder implements Builder {
     // 提前于 importResolver 声明：后者要用类表兜底解析「经 mixin 带入」的
     // 跨文件组件依赖。
     final classTable = buildClassTable(parsed.unit, inputId.path);
+
+    // import 前缀（`import '...' as p;`）→ 该前缀在 JS 侧的模块产物：
+    //   - `dart:` → ''（已知按裸类名：SDK 值类 / 控件由 flutter.js 同名承接）；
+    //   - `package:X` → patch/X.js（本地包模块 / 有 JS 模块的三方包）；
+    //   - 相对路径 → 目标文件自身的产物。
+    // 判据只有 import URI + package 归属，不涉及任何成员名；翻译期据此把
+    // `p.Foo` 保留成模块命名空间引用（Dart 前缀消解同名类，JS 侧同一件事）。
+    final prefixProducts = _importPrefixProducts(parsed.unit, inputId.path);
 
     String? importResolver(String name) {
       // `@PatchIgnore(isComponent: true)` 的包装类就在**声明它的源文件产物**里；
@@ -256,6 +265,7 @@ class ComponentBuilder implements Builder {
         ignoredTypes: ignoredTypes,
         globalConsts: globalConsts,
         isComponent: isComponent,
+        prefixProducts: prefixProducts,
       ));
     }
 
@@ -276,6 +286,7 @@ class ComponentBuilder implements Builder {
         ignoredTypes: ignoredTypes,
         globalConsts: globalConsts,
         classNamesInUnit: parsedNames,
+        prefixProducts: prefixProducts,
       );
       if (info != null) extensions.add(info);
     }
@@ -464,6 +475,15 @@ class ComponentBuilder implements Builder {
     for (final e in extensions) {
       _mergeUsedWidgets(extraUsedWidgets, e.usedWidgetPackages);
     }
+    // import 前缀 → 模块产物的登记：产物头部据此补 `import * as p from '<产物>'`
+    // （Dart 前缀消解同名类，JS 侧由模块命名空间承接）。
+    final namespaceImports = <String, String>{};
+    for (final c in allTranslated) {
+      namespaceImports.addAll(c.namespaceImports);
+    }
+    for (final e in extensions) {
+      namespaceImports.addAll(e.namespaceImports);
+    }
 
     final jsOutput = buildStep.allowedOutputs.first;
     await buildStep.writeAsString(
@@ -481,9 +501,48 @@ class ComponentBuilder implements Builder {
         extensions: extensions,
         baseClassOf: (c) => jsBaseClassOf(c, classTable),
         importedPackages: importedPackageNames(parsed.unit),
+        namespaceImports: namespaceImports,
       ),
     );
   }
+}
+
+/// import 前缀（`import '...' as p;`）→ 该前缀在 JS 侧的模块产物。
+///
+/// 落点只有三类，全部来自源码事实（import URI + package 归属）：
+///   - `dart:` → `''`：已知按裸类名（SDK 值类 / 控件由 flutter.js 同名承接），
+///     翻译期不保留前缀、也不告警；
+///   - `package:X` → `patch/X.js`：本地依赖包模块 / 有 JS 模块的三方包；
+///   - 相对路径 → 目标文件自身的产物（barrel 没有产物，翻译期退回裸名并告警）。
+Map<String, String> _importPrefixProducts(
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  final modulePackages = <String>{
+    nodeHelperPackage,
+    ...registeredWidgetPackages().keys,
+    ...localTranslationPackages(),
+  };
+  final out = <String, String>{};
+  for (final d in unit.directives.whereType<ImportDirective>()) {
+    final prefix = d.prefix?.name;
+    final uri = d.uri.stringValue;
+    if (prefix == null || prefix.isEmpty || uri == null) continue;
+    if (uri.startsWith('dart:')) {
+      out[prefix] = '';
+      continue;
+    }
+    if (uri.startsWith('package:')) {
+      final pkg = packageNameOf(uri);
+      if (pkg != null && modulePackages.contains(pkg)) {
+        out[prefix] = packageModulePath(pkg);
+      }
+      continue;
+    }
+    final file = resolveDirectiveTarget(uri, sourcePath);
+    if (file != null) out[prefix] = productPath(file);
+  }
+  return out;
 }
 
 /// 文件级产物入口：一个 Dart 源文件的全部类 → 一个同名 JS 产物（ES module 文本）。
@@ -512,6 +571,7 @@ String _renderJsProduct(
   List<ExtensionInfo> extensions = const [],
   String? Function(ClassInfo cls)? baseClassOf,
   Set<String> importedPackages = const {},
+  Map<String, String> namespaceImports = const {},
 }) {
   // 头部（注释 + import 区）：package widget 产物的 import 依赖「实际用到的
   // 类型」，只能在各组件渲染完成后得知，所以先渲染 body 再拼装 import，
@@ -616,19 +676,37 @@ String _renderJsProduct(
     head.writeln(line);
   }
 
+  // import 前缀 → 模块命名空间（`import * as base from '../../hot_module_base.js';`）。
+  // 带前缀的引用（`base.User`）在产物主体里原样保留，由运行时模块加载器把
+  // `import * as X from 'rel'` 预处理成 `const X = __modules['<abs>'];`。
+  final namespaceLines = <String>[
+    for (final e in namespaceImports.entries)
+      if (e.value.isNotEmpty)
+        "import * as ${e.key} from "
+            "'${relativeProduct(ownProduct, e.value)}';",
+  ]..sort();
+  for (final line in namespaceLines) {
+    head.writeln(line);
+  }
+
   // 库级 API 模块的**副作用 import**：库把对运行时提出的要求（原型补丁 /
   // 作用域登记）写在它自己的 package 模块里（如 `patch/provider.js` 给
   // `JsBuildContext` 装 `watch/read`）。Dart 里要用某库的扩展 / 顶层 API，
   // 前提就是 import 它 ——「源文件 import 了 package:X」是纯源码事实，据此
   // 保证 X 的模块在**本产物求值前**加载，判据不涉及任何成员名。
-  // 已按名 import 的模块跳过：那行 import 本身就会触发加载。
+  // 已按名 / 按命名空间 import 的模块跳过：那行 import 本身就会触发加载。
   final modulePackages = <String>{
     nodeHelperPackage,
     ...registeredWidgetPackages().keys,
   };
+  final importedModules = <String>{
+    for (final pkg in importsByPackage.keys) packageModulePath(pkg),
+    ...namespaceImports.values,
+  };
   final sideEffectImports = <String>[
     for (final pkg in importedPackages)
-      if (modulePackages.contains(pkg) && !importsByPackage.containsKey(pkg))
+      if (modulePackages.contains(pkg) &&
+          !importedModules.contains(packageModulePath(pkg)))
         "import '${relativeProduct(ownProduct, packageModulePath(pkg))}';",
   ]..sort();
   for (final line in sideEffectImports) {

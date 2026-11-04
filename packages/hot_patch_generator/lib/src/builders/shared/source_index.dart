@@ -270,6 +270,14 @@ List<String> _directiveUris(CompilationUnit unit, {required bool isExport}) {
 
 /// import / export URI → 源文件身份；不参与翻译的（`dart:` / 框架包 / 三方
 /// 宿主包 / 非法 URI）返回 null。
+///
+/// 供构建层判断「带 import 前缀的引用最终落在哪个产物」时复用，避免另写
+/// 一套 URI 解析。
+String? resolveDirectiveTarget(String uri, String sourcePath) =>
+    _resolveDirective(uri, sourcePath);
+
+/// import / export URI → 源文件身份；不参与翻译的（`dart:` / 框架包 / 三方
+/// 宿主包 / 非法 URI）返回 null。
 String? _resolveDirective(String uri, String sourcePath) {
   if (uri.startsWith('dart:')) return null;
   if (uri.startsWith('package:')) {

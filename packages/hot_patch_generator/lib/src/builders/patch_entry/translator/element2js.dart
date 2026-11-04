@@ -115,6 +115,16 @@ class ElementTranslateContext implements ExprRenderer {
   /// [renderJs] 在此登记，生成器据此按 package 产出 JS widget 模块并 import。
   final Map<String, Set<String>> usedWidgetPackages = {};
 
+  /// import 前缀（`import '...' as p;`）→ 该前缀在 JS 侧的模块产物路径。
+  ///
+  /// Dart 用前缀消解同名类；JS 侧同一件事由**模块命名空间**承接（`p.Foo`）。
+  /// 前缀不在表里（`dart:` 导入 / 没有 JS 模块的三方包）时退回裸类名。
+  final Map<String, String> prefixProducts;
+
+  /// 翻译/渲染过程中实际用到的前缀 → 产物路径。
+  /// 生成器据此为产物补 `import * as <prefix> from '<产物>';`。
+  final Map<String, String> namespaceImports = {};
+
   /// 是否产出过 `const` 元素缓存（产物头部需 `var __const = {};`）。
   /// const 缓存键的分配器：每个类一份（编号只在该类的 `this` 上做字段名，
   /// 因此不需要跨类唯一）。
@@ -141,6 +151,7 @@ class ElementTranslateContext implements ExprRenderer {
     this.staticFieldNames = const {},
     this.staticMethodNames = const {},
     this.constKeyAllocator,
+    this.prefixProducts = const {},
   });
 
   /// 本文件 / import 可见的**普通类（模型）**名（classTable 里 !isComponent）。
@@ -229,13 +240,18 @@ class ElementTranslateContext implements ExprRenderer {
     // `context.read<T>()`）与命中动作表的裸调用都是普通表达式。判据只看名字
     // 形态，与 widget 类型无关。
     if (e is MethodInvocation) {
-      if (actionByMethod.containsKey(ctor)) return _exprAsElement(e);
-      if (!isClassName(ctor)) return _exprAsElement(e);
+      // 判据用**裸类名**：`p.Foo(...)` 的类型引用 token 带前缀，但「是不是
+      // 类名形态」只取决于最后一段。
+      final ctorName = bareTypeName(ctor);
+      if (actionByMethod.containsKey(ctorName)) return _exprAsElement(e);
+      if (!isClassName(ctorName)) return _exprAsElement(e);
     }
     // 统一翻译：任意构造 → 结点（不查注册表、不区分内建/自定义）。未识别的
     // 自定义与三方组件同样产出「保留具体类型名」的结点，运行时按需原生注入
     // （registerNativeComponent）或给出可见占位。
-    collectDependency(ctor);
+    // 带 import 前缀的类定义在别的产物里（命名空间 import 已登记），不作为
+    // 本产物的依赖递归，否则会按裸名把另一个同名的本地类拉进来。
+    if (ctor == bareTypeName(ctor)) collectDependency(ctor);
     final node = _toNode(e);
     final json = elementToJson(node, this);
     // `key:` 是跨所有 widget 的通用参数（Key 是值不是结点），此处统一注入
@@ -609,11 +625,12 @@ class ElementTranslateContext implements ExprRenderer {
   String _renderValueImpl(Object? json, int depth) {
     if (json is String) return json;
     if (json is! Map<String, dynamic>) throw FormatException('无法渲染的值: $json');
-    final type = _semanticType(json['type']);
-    _assertTranslatable(type);
-    _registerWidgetImport(type);
+    final token = _typeToken(json['type']);
+    final name = bareTypeName(token);
+    _assertTranslatable(name);
+    _registerWidgetImport(token, name);
     // 值语境一律按类调用：命名构造走包装类上的同名静态方法。
-    return _renderCall(type, json, depth, asClass: true);
+    return _renderCall(token, json, depth, asClass: true);
   }
 
   String _renderJsImpl(Object? json, int depth) {
@@ -621,7 +638,8 @@ class ElementTranslateContext implements ExprRenderer {
     if (json is! Map<String, dynamic>) {
       throw FormatException('无法渲染的节点: $json');
     }
-    final type = _semanticType(json['type']);
+    final token = _typeToken(json['type']);
+    final name = bareTypeName(token);
     // 元素 type 一律是**类引用**（组件使用方不再产出 `__h('X', ...)`）：
     //   - 该类型有 JS 产物（importResolver 命中：@PatchEntry 嵌套组件、同文件
     //     私有组件）→ `new X(props)`；实例随元素一起下发，mount 直接复用；
@@ -630,12 +648,13 @@ class ElementTranslateContext implements ExprRenderer {
     //   - 宿主 widget / 值对象：flutter.js 生成了同名包装类 → `new X(props)`；
     //   - `@PatchIgnore(isComponent: true)`：声明它的源文件产物里的同名包装类
     //     → `new X(props)`（与其它有产物的类同一条路径）。
-    _assertTranslatable(type);
+    _assertTranslatable(name);
     // 判据只看「JS 侧有没有这个类」：有类就有同名静态方法（命名构造由
     // `X.b({...})` 一比一发射，静态方法负责把构造名写进 `props.factory`）。
-    final asClass = jsClassFileOf(type) != null;
-    _registerWidgetImport(type);
-    return _renderCall(type, json, depth, asClass: asClass);
+    // 带前缀（`p.Foo`）的引用一定指向模块导出，按类处理。
+    final asClass = token != name || jsClassFileOf(name) != null;
+    _registerWidgetImport(token, name);
+    return _renderCall(token, json, depth, asClass: asClass);
   }
 
   /// 按「类的定义在哪个文件」登记 import（漏登记 = 产物里
@@ -646,10 +665,54 @@ class ElementTranslateContext implements ExprRenderer {
   ///     组件）→ 按该类的 package 归属登记；
   ///   - 类定义由运行时统一注入（`TextSpan` / `Duration` 等全局同名类）→ 无
   ///     文件可 import，产物里直接 `new X(...)`。
-  void _registerWidgetImport(String type) {
-    if (importResolver?.call(type) != null) return;
-    if (jsClassFileOf(type) == null) return;
-    (usedWidgetPackages[widgetPackageOf(type)] ??= <String>{}).add(type);
+  void _registerWidgetImport(String token, String name) {
+    // 带 import 前缀（`p.Foo`）：类由模块命名空间提供，`_typeToken` 已登记
+    // `import * as p from '<产物>'`，不能再按名字补一条命名 import。
+    if (token != name) return;
+    if (importResolver?.call(name) != null) return;
+    if (jsClassFileOf(name) == null) return;
+    (usedWidgetPackages[widgetPackageOf(name)] ??= <String>{}).add(name);
+  }
+
+  /// 结点 `type` 字面量 → JS 类型引用 token。
+  ///
+  /// 带 import 前缀（`p.Foo`）时：解析到该前缀的 JS 模块产物就保留前缀并登记
+  /// 命名空间 import（Dart 用前缀消解同名类，JS 用模块命名空间做同一件事）；
+  /// 解析不到（`dart:` 导入 / 没有 JS 模块的包）则退回裸类名并告警——产物里
+  /// 绝不能留一个指向未定义命名空间的引用。
+  String _typeToken(Object? v) {
+    final token = _semanticType(v);
+    final dot = token.indexOf('.');
+    if (dot <= 0) return token;
+    final prefix = token.substring(0, dot);
+    final name = token.substring(dot + 1);
+    final product = prefixProducts[prefix];
+    // 已知「无 JS 模块但按裸名成立」（`dart:` 导入的镜像类型）→ 静默退回裸名。
+    if (product != null && product.isEmpty) return name;
+    if (product == null) {
+      if (_prefixFallbackWarned.add(prefix)) {
+        log.warning(
+          '[hot_patch_generator] $sourcePath: import 前缀 "$prefix" 在 JS 侧'
+          '没有可加载的模块（`$prefix.$name`），已按裸类名 "$name" 翻译；'
+          '若两者不同名会引用到错误的类。',
+        );
+      }
+      return name;
+    }
+    namespaceImports[prefix] = product;
+    return token;
+  }
+
+  /// 已告警过的「前缀无 JS 模块」组合（每个前缀只告警一次，避免逐处刷屏）。
+  final Set<String> _prefixFallbackWarned = {};
+
+  /// 类型 token 的裸类名（`p.Foo` → `Foo`；无前缀原样返回）。
+  ///
+  /// 名字用于**判定**（类表 / 宿主类型 / 包归属 / 构造签名）；`p.Foo` 这种
+  /// 引用形态只用于**渲染**。两者分开，判据不依赖前缀。
+  static String bareTypeName(String token) {
+    final dot = token.indexOf('.');
+    return dot <= 0 ? token : token.substring(dot + 1);
   }
 
   /// `@PatchIgnore()`（`isComponent` 非 true）的类整类不翻译：引用它的结点没有
@@ -851,16 +914,32 @@ class ElementTranslateContext implements ExprRenderer {
     if (e is InstanceCreationExpression) {
       // 带 `const` 的命名构造（`const EdgeInsets.all(8)`）在 AST 里把
       // `EdgeInsets.all` **整体**放进 `constructorName.type`，`name2` 只取最后
-      // 一段（'all'）。这里取**类型名**：从右往左取第一个类名形态的段
-      // （`EdgeInsets.all` → 'EdgeInsets'；`material.Padding` → 'Padding'）。
+      // 一段（'all'）。这里取**类型引用**：先剥泛型再按 `.` 切段，保留 import
+      // 前缀（`material.Padding` / `p.ChangeNotifierProvider.value`）。
       return (
-        _typeNameOf(e.constructorName.type.toSource()),
+        _typeRefOf(e.constructorName.type.toSource()),
         e.argumentList.arguments.toList(),
       );
     }
     if (e is MethodInvocation) {
       final target = e.target;
-      if (target is Identifier) {
+      if (target is PrefixedIdentifier) {
+        // `p.Foo(...)` / `p.Foo.value(...)`：用源码文本还原带前缀的类型引用
+        // （`PrefixedIdentifier.name` 只给出前缀，不能拿来当类型名）。
+        return (
+          _typeRefOf(target.toSource()),
+          e.argumentList.arguments.toList(),
+        );
+      }
+      if (target is SimpleIdentifier) {
+        // `p.Foo(...)`：解析成「target = import 前缀、方法名 = 类型名」，
+        // 类型引用 token 要还原成 `p.Foo`；其余 `Image.network(...)` 保持原规则。
+        if (isImportPrefix(target.name)) {
+          return (
+            '${target.name}.${e.methodName.name}',
+            e.argumentList.arguments.toList(),
+          );
+        }
         return (target.name, e.argumentList.arguments.toList());
       }
       return (e.methodName.name, e.argumentList.arguments.toList());
@@ -868,15 +947,53 @@ class ElementTranslateContext implements ExprRenderer {
     return (null, const []);
   }
 
-  /// 构造名源码 → **类型名**：`EdgeInsets.all` → 'EdgeInsets'；
-  /// `material.Padding` → 'Padding'；`Padding` → 'Padding'。
-  static String _typeNameOf(String ctorSource) {
-    final parts = ctorSource.split('.');
-    for (var i = parts.length - 1; i >= 0; i--) {
-      final seg = _stripGenerics(parts[i]);
-      if (isClassName(seg)) return seg;
+  /// 构造名源码 → **类型引用 token**。
+  ///
+  ///   - `EdgeInsets.all` → `EdgeInsets`（最后一段是构造名，类型是前一段）；
+  ///   - `p.ChangeNotifierProvider<T>.value` → `p.ChangeNotifierProvider`
+  ///     （import 前缀原样保留：它是 JS 侧的模块命名空间，删掉会把两个库的
+  ///     同名类合成同一个引用）；
+  ///   - `Padding` → `Padding`。
+  ///
+  /// **先剥类型实参再按 `.` 切段**：`p.ChangeNotifierProvider<vm.CounterVm>.value`
+  /// 里的泛型实参自身带 `.`（`vm.CounterVm`），先切段会把泛型文本当成类名。
+  static String _typeRefOf(String ctorSource) {
+    final src = _cutGenerics(ctorSource);
+    final parts = [
+      for (final seg in src.split('.'))
+        if (seg.trim().isNotEmpty) seg.trim(),
+    ];
+    if (parts.isEmpty) return src.trim();
+    final last = parts.last;
+    final typeIndex = isClassName(last) ? parts.length - 1 : parts.length - 2;
+    if (typeIndex < 0) return last;
+    final typeName = parts[typeIndex];
+    // 类型前一段是小写标识符 → import 前缀（`p.Foo` / `material.Padding`）。
+    final prefixIndex = typeIndex - 1;
+    if (prefixIndex >= 0) {
+      final prefix = parts[prefixIndex];
+      if (RegExp(r'^[a-z_$][\w$]*$').hasMatch(prefix)) return '$prefix.$typeName';
     }
-    return _stripGenerics(parts.last);
+    return typeName;
+  }
+
+  /// 去掉源码里所有类型实参（`<...>`，按嵌套深度配对），保留其余文本。
+  static String _cutGenerics(String s) {
+    final out = StringBuffer();
+    var depth = 0;
+    for (var i = 0; i < s.length; i++) {
+      final ch = s[i];
+      if (ch == '<') {
+        depth++;
+        continue;
+      }
+      if (ch == '>' && depth > 0) {
+        depth--;
+        continue;
+      }
+      if (depth == 0) out.write(ch);
+    }
+    return out.toString();
   }
 
   /// 去掉类型实参：`ChangeNotifierProvider<NetworkVm>` → 'ChangeNotifierProvider'。
@@ -1259,9 +1376,20 @@ class ElementTranslateContext implements ExprRenderer {
   /// 静态方法（`Overlay.of` / 项目类上的工厂方法）因此可以原样调用；运行时注入
   /// 的全局类（`MediaQuery` / `Theme`）没有文件归属，返回 null 由原规则承接。
   String? _classRefJs(String className) {
+    // 带 import 前缀的静态引用（`p.Foo.bar`）：登记命名空间 import。
+    final dot = className.indexOf('.');
+    if (dot > 0) {
+      final prefix = className.substring(0, dot);
+      final product = prefixProducts[prefix];
+      if (product != null && product.isNotEmpty) {
+        namespaceImports[prefix] = product;
+      }
+    }
     final file = jsClassFileOf(className);
     if (file == null) return null;
-    if (importResolver?.call(className) == null) _registerWidgetImport(className);
+    if (importResolver?.call(className) == null) {
+      _registerWidgetImport(className, className);
+    }
     return className;
   }
 
@@ -1289,14 +1417,39 @@ class ElementTranslateContext implements ExprRenderer {
   @override
   bool isConstruction(Expression e) => _ctorNameOf(e) != null;
 
+  /// 名字是否是本文件的 import 前缀（`import '...' as p;` 里的 `p`）。
+  ///
+  /// 无 resolution 的 parseString 把 `p.Foo(...)` 解析成「target = p、
+  /// 方法名 = Foo」，必须靠这张表才能把前缀还原成类型引用 `p.Foo`。
+  bool isImportPrefix(String name) => prefixProducts.containsKey(name);
+
+  /// target 是否是「import 前缀 + 类名」（`p.Foo` / `p.Foo.value` 的 target）。
+  ///
+  /// 只有本文件真实存在的 import 前缀才算，`widget.foo()` / `this.x()` 这类
+  /// 成员访问不会因此被误判为构造。
+  bool _isImportPrefixTarget(Expression? target) =>
+      target is PrefixedIdentifier &&
+      prefixProducts.containsKey(target.prefix.name);
+
   /// 类型的 JS 类定义**来自哪个产物文件**（null = JS 侧没有这个类）。
   ///
   /// 只按「类定义在哪」判断，不看它是不是组件——所有类一视同仁：
   ///   - 项目内类：按**类所在的源文件**解析出该文件的产物（[importResolver]，
   ///     含同文件类）；
+  ///   - 导入前缀引用（`p.Foo`）：该前缀指向的模块产物；
   ///   - 宿主类型 / 运行时注入类 / 产物组织的代理类：类定义写在各 package
   ///     模块 `patch/<package>.js`（宿主类型归基础包 flutter）。
   String? jsClassFileOf(String type) {
+    // 带 import 前缀的类型引用（`p.Foo`）：类定义就在该前缀指向的模块里。
+    // `dart:` 前缀（值为空串）已知按裸名，递归判断裸名即可。
+    final dot = type.indexOf('.');
+    if (dot > 0) {
+      final prefix = type.substring(0, dot);
+      final name = type.substring(dot + 1);
+      final product = prefixProducts[prefix];
+      if (product != null && product.isNotEmpty) return product;
+      if (product != null) return jsClassFileOf(name);
+    }
     final product = importResolver?.call(type);
     if (product != null) return product;
     if (hostWrapperTypes.contains(type) || jsClassWidgets.contains(type)) {
@@ -1310,11 +1463,15 @@ class ElementTranslateContext implements ExprRenderer {
   String? _ctorNameOf(Expression e) {
     final isCtor = e is InstanceCreationExpression ||
         (e is MethodInvocation &&
-            (e.target == null || e.target is SimpleIdentifier));
+            (e.target == null ||
+                e.target is SimpleIdentifier ||
+                // `p.Foo(...)`：target 是 PrefixedIdentifier，仅当前缀确实是
+                // 本文件的 import 前缀时才算构造（`widget.foo()` 等不算）。
+                _isImportPrefixTarget(e.target)));
     if (!isCtor) return null;
     final (ctor, _) = ctorOf(e);
     if (ctor == null) return null;
-    final factory = factoryNameOf(e);
+    final factory = factoryNameOf(e, isPrefix: isImportPrefix);
     if (factory == null) return ctor;
     // `X.foo(...)` 的语法与「命名构造」完全一致，`Overlay.of(context)` 这类
     // **静态方法**也会命中，被误当成构造（产物成了 `Overlay.of({})` 元素）。

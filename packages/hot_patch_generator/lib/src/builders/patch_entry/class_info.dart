@@ -155,6 +155,11 @@ class ClassInfo {
   /// 产出 JS widget 模块。
   final Map<String, Set<String>> usedWidgetPackages;
 
+  /// 本类用到的 import 前缀（`import '...' as p;`）→ 该前缀的模块产物路径。
+  /// builder 据此为产物补 `import * as p from '<产物>';`（Dart 前缀消解同名类，
+  /// JS 侧由模块命名空间承接）。
+  final Map<String, String> namespaceImports;
+
   const ClassInfo({
     required this.name,
     required this.sourceFile,
@@ -169,6 +174,7 @@ class ClassInfo {
     this.typeParams = const [],
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
+    this.namespaceImports = const {},
   });
 
   Set<String> get instanceFieldNames =>

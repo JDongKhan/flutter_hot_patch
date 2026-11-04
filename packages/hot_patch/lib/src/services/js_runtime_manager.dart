@@ -735,6 +735,13 @@ class JsRuntimeManager {
       r"^[ \t]*import\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
       multiLine: true,
     );
+    // 命名空间 import：`import * as p from 'rel';`（Dart 的 import 前缀在产物
+    // 里就是模块命名空间，用于消解同名类），同样只需要加载依赖。
+    final namespaceRe = RegExp(
+      r"^[ \t]*import\s*\*\s*as\s+[A-Za-z_$][\w$]*\s*from\s*"
+      r"[\x27\x22][^\x27\x22]+[\x27\x22]\s*;[ \t]*$",
+      multiLine: true,
+    );
     return [
       for (final m in re.allMatches(source))
         (
@@ -747,8 +754,14 @@ class JsRuntimeManager {
         ),
       for (final m in sideEffectRe.allMatches(source))
         (const <String>[], m.group(1)!),
+      for (final m in namespaceRe.allMatches(source))
+        (const <String>[], _namespaceSource(m.group(0)!),),
     ];
   }
+
+  /// 从 `import * as p from 'rel';` 里取出相对路径。
+  static String _namespaceSource(String line) =>
+      RegExp(r"from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]").firstMatch(line)!.group(1)!;
 
   /// 文本级预处理：export class -> class + 尾部 __modules 注册；
   /// import 语句 -> `const { A, B } = __modules['<解析后绝对路径>'];`。
@@ -799,6 +812,20 @@ class JsRuntimeManager {
       final abs = JsAssetResolver.resolve(base, relMatch.group(1)!);
       return "const { ${names.join(', ')} } = __modules['$abs'];";
     });
+
+    // 命名空间 import（`import * as p from 'rel';`）：`p` 就是目标模块的导出
+    // 对象——Dart 的 import 前缀在产物里靠它承接（同名类因此天然分开）。
+    out = out.replaceAllMapped(
+      RegExp(
+        r"^([ \t]*)import\s*\*\s*as\s+([A-Za-z_$][\w$]*)\s*from\s*"
+        r"[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
+        multiLine: true,
+      ),
+      (m) {
+        final abs = JsAssetResolver.resolve(base, m.group(3)!);
+        return "${m.group(1)}const ${m.group(2)} = __modules['$abs'];";
+      },
+    );
 
     // 副作用 import（`import 'rel';`）：依赖已由 [loadModule] 先求值，这里只
     // 把它改写成注释——产物是脚本模式求值，原生 import 语句会直接语法错误。

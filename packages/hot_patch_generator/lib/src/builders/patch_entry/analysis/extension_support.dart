@@ -60,6 +60,9 @@ class ExtensionInfo {
   /// 成员体里实际用到的 widget 类型（package → {type}）。
   final Map<String, Set<String>> usedWidgetPackages;
 
+  /// 成员体里用到的 import 前缀 → 模块产物路径（`import * as p` 的登记）。
+  final Map<String, String> namespaceImports;
+
   const ExtensionInfo({
     required this.name,
     required this.id,
@@ -69,6 +72,7 @@ class ExtensionInfo {
     this.staticsEntries = const [],
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
+    this.namespaceImports = const {},
   });
 
   /// 注册语句（顶层语句：模块求值时执行一次，成员随产物装到目标原型上）。
@@ -260,6 +264,7 @@ ExtensionInfo? translateExtension(
   Set<String> globalConsts = const {},
   Set<String> classNamesInUnit = const {},
   String? Function(String name)? productOf,
+  Map<String, String> prefixProducts = const {},
 }) {
   final name = decl.name?.lexeme;
   final label = name ?? '<unnamed>';
@@ -426,6 +431,7 @@ ExtensionInfo? translateExtension(
     delegateClassWidgets: delegateClassWidgets,
     ignoredTypes: ignoredTypes,
     modelClassNames: modelClassNames,
+    prefixProducts: prefixProducts,
   );
 
   // 扩展没有实例字段：作用域里只有形参 / 局部变量 / 本扩展的其它成员（`this`
@@ -528,5 +534,6 @@ ExtensionInfo? translateExtension(
       if (classNamesInUnit.contains(target)) target,
     },
     usedWidgetPackages: parseCtx.usedWidgetPackages,
+    namespaceImports: parseCtx.namespaceImports,
   );
 }

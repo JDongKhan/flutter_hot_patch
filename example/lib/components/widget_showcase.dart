@@ -27,6 +27,7 @@ import 'sliver_detail.dart';
 import 'stateless_card.dart';
 import 'tab_detail.dart';
 import 'text_detail.dart';
+import 'grammar/alias_detail.dart';
 import 'grammar/grammar_details.dart';
 import 'grammar/generic_detail.dart';
 import 'hero_detail.dart';
@@ -322,6 +323,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'InheritanceDetail': 'components/grammar/grammar_details.js',
     'BasicApiDetail': 'components/grammar/grammar_details.js',
     'GenericDetail': 'components/grammar/generic_detail.js',
+    'AliasDetail': 'components/grammar/alias_detail.js',
   };
 
   String get _jsEntry => _jsEntries[widget.component]!;
@@ -395,6 +397,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'InheritanceDetail' => const InheritanceDetail(),
       'BasicApiDetail' => const BasicApiDetail(),
       'GenericDetail' => const GenericDetail(),
+      'AliasDetail' => const AliasDetail(),
       _ => const Text('未知组件'),
     };
   }
