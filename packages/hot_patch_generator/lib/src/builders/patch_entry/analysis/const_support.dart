@@ -163,6 +163,25 @@ Set<String> referencedImportedConsts(
   return resolver.importedFileOf.keys.where(used.names.contains).toSet();
 }
 
+/// 指定顶层常量初始化器里出现的全部标识符名。
+///
+/// 纯数据产物只写「被引用到」的部分常量（见 componentTranslationScope 的
+/// neededConsts），此时 import 也必须只按这些常量的初始化器计算——否则会
+/// import 到未被引用的常量依赖的跨文件常量 / 类，目标产物本身不产出，
+/// 运行时模块解析失败。
+Set<String> constRefNames(CompilationUnit unit, Set<String> names) {
+  if (names.isEmpty) return const {};
+  final used = _IdentifierCollector();
+  for (final d in unit.declarations.whereType<TopLevelVariableDeclaration>()) {
+    for (final v in d.variables.variables) {
+      final init = v.initializer;
+      if (init == null || !names.contains(v.name.lexeme)) continue;
+      init.accept(used);
+    }
+  }
+  return used.names;
+}
+
 /// 顶层常量 → 数据产物 JS 文本（无可用常量时返回空串）。
 ///
 /// [consts] 为同文件顶层常量（名字 → 已译 JS 值）；[imports] 为已拼好的 import 行。

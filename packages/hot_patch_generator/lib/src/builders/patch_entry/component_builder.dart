@@ -210,10 +210,18 @@ class ComponentBuilder implements Builder {
       };
       if (consts.isEmpty) return;
       final importByFile = <String, Set<String>>{};
+      // 跨文件依赖只按**实际写入产物**的常量计算：未被引用的常量不写，
+      // 它依赖的产物也不会产出，按全文件扫描会 import 到不存在的模块。
+      final usedNames = constRefNames(parsed.unit, consts.keys.toSet());
       _addConstImports(importByFile, constResolver,
-          referencedImportedConsts(parsed.unit, constResolver));
-      _addClassImports(
-          importByFile, classTable, constResolver.sameFileConstClasses);
+          constResolver.importedFileOf.keys.where(usedNames.contains).toSet());
+      _addClassImports(importByFile, classTable, {
+        for (final e in classTable.entries)
+          if (!e.value.isComponent &&
+              e.value.sourceFile != inputId.path &&
+              usedNames.contains(e.key))
+            e.key,
+      });
       final text = renderTopLevelConstProduct(
         inputId.path,
         consts: consts,
