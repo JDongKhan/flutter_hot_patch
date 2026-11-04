@@ -1,213 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:provider/provider.dart';
 
 import '../../base/app_router.dart';
 import '../model/app_models.dart';
-import '../service/app_service.dart';
+import '../vm/community_vm.dart';
 import '../widgets/load_error_view.dart';
 import 'detail_pages.dart';
 
 /// 社区 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/community_page.js）。
 ///
 /// 对应 docs/app-prototype.html 的「社区」：广场/推荐双 tab + 横向资源推荐
-/// + 排序快捷条 + 「筛选」下拉面板（从顶部展开，面板内四组条件：排序方式 /
-/// 内容类型 / 距离范围 / 价格区间）+ 帖子列表。
+/// + 排序快捷条 + 「筛选」下拉面板 + 帖子列表。
 ///
-/// 筛选面板用页面内 [Stack] 实现：面板放在「列表区域」的 Stack 顶部，位置由
-/// 布局自然决定（紧贴筛选条下沿），不做 GlobalKey/RenderBox 实测——实测在
-/// JS 侧无法表达（`currentContext` / `localToGlobal` 都是宿主专有 API）。
-///
-/// 本页与「订单/我的」一样纳入连带翻译（`@PatchEntry`）：集合 for-if 展开、
-/// 条件表达式、事件闭包（`__bindFn`）、按 key 分派的 `switch` 均已支持；
-/// 过滤与排序搬到了 service（模拟后端按参数返回列表）。
-///
-/// 数据走三个本地 mock 接口：双 tab / 筛选项由 [AppService.fetchCommunity]
-/// 取，帖子列表由 [AppService.fetchPostList] 取，横向资源横幅由
-/// [AppService.fetchCommunityResources] 取。首屏三个请求**并行**发出
-/// （列表与横幅先用空参数请求，等价「广场 + 全部 + 综合」），此后切 tab 时
-/// 横幅与列表一起换，改其它筛选条件则只重发列表。
+/// 页面数据与交互状态收敛到 [CommunityVm]（provider）：页面只订阅 VM，
+/// 接口请求 / 筛选条件 / 面板开关都在 VM 内。
 @PatchEntry()
-class CommunityPage extends StatefulWidget {
+class CommunityPage extends StatelessWidget {
   const CommunityPage({super.key});
 
   @override
-  State<CommunityPage> createState() => _CommunityPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<CommunityVm>(
+      create: (_) => CommunityVm()..load(),
+      child: const CommunityView(),
+    );
+  }
 }
 
-class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveClientMixin {
-  final AppService _service = AppService();
-
-  /// 配置（双 tab / 筛选项）；null = 加载中。
-  CommunityFeed? _feed;
-
-  /// 列表接口返回；null = 列表加载中。
-  List<Post>? _posts;
-
-  /// 横向资源横幅（按 tab 过滤）；null = 加载中。
-  List<Resource>? _resources;
-
-  /// 列表请求进行中（改筛选后重新请求时贴进度条）。
-  bool _listLoading = false;
-
-  /// 各接口的失败原因（null = 该接口没有失败）。分开记录，避免某个接口
-  /// 成功把另一个接口的失败状态清掉，导致缺失的数据永远停在 loading。
-  String? _feedError;
-  String? _resourcesError;
-  String? _postsError;
-
-  bool _filterOpen = false;
-
-  // 筛选条件（与原型 state.filters 对应）；配置回来后落到各自列表首项。
-  String _tab = '';
-  String _sort = '';
-  String _type = '';
-  String _dist = '';
-  String _price = '';
+/// 社区视图：订阅 [CommunityVm]。
+class CommunityView extends StatefulWidget {
+  const CommunityView({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    print("CommunityPage initState ---");
-    // 配置、帖子列表、横向资源并行发，首屏只等一个往返（1s），不串行等多次。
-    _load();
-    _loadPosts();
-    _loadResources();
-  }
+  State<CommunityView> createState() => _CommunityViewState();
+}
 
-  Future<void> _load() async {
-    try {
-      final CommunityFeed feed = await _service.fetchCommunity();
-      if (!mounted) return;
-      setState(() {
-        _feed = feed;
-        _tab = feed.tabs.first;
-        _sort = feed.sorts.first;
-        _type = feed.postTypes.first;
-        _dist = feed.dists.first;
-        _price = feed.priceRanges.first;
-        _feedError = null;
-      });
-    } catch (e) {
-      print('CommunityPage 配置加载失败: $e');
-      if (!mounted) return;
-      setState(() => _feedError = e.toString());
-      AppRouter.toast('社区加载失败：$e');
-    }
-  }
-
-  /// 列表接口：按当前筛选条件取回帖子列表。
-  ///
-  /// 过滤 / 排序在「服务端」做（[AppService.fetchPostList]），页面不碰数据。
-  Future<void> _loadPosts() async {
-    setState(() => _listLoading = true);
-    try {
-      final List<Post> posts = await _service.fetchPostList(
-        _tab,
-        _sort,
-        _type,
-        _dist,
-        _price,
-      );
-      if (!mounted) return;
-      setState(() {
-        _posts = posts;
-        _listLoading = false;
-        _postsError = null;
-      });
-    } catch (e) {
-      print('CommunityPage 帖子列表加载失败: $e');
-      if (!mounted) return;
-      setState(() {
-        _listLoading = false;
-        _postsError = e.toString();
-      });
-      AppRouter.toast('帖子列表加载失败：$e');
-    }
-  }
-
-  /// 横向资源横幅：同样按当前 tab 取（广场 = 全部聚合）。
-  Future<void> _loadResources() async {
-    try {
-      final List<Resource> resources = await _service.fetchCommunityResources(
-        _tab,
-      );
-      if (!mounted) return;
-      setState(() {
-        _resources = resources;
-        _resourcesError = null;
-      });
-    } catch (e) {
-      print('CommunityPage 资源横幅加载失败: $e');
-      if (!mounted) return;
-      setState(() => _resourcesError = e.toString());
-      AppRouter.toast('社区资源加载失败：$e');
-    }
-  }
-
-  /// 失败态的重试：配置、列表、横幅一起重发（与首屏的并行口径一致）。
-  void _retry() {
-    setState(() {
-      _feedError = null;
-      _resourcesError = null;
-      _postsError = null;
-    });
-    _load();
-    _loadPosts();
-    _loadResources();
-  }
-
-  /// 切双 tab：横幅与帖子列表**一起换**，两个接口按新 tab 各重发一次。
-  void _selectTab(String tab) {
-    setState(() => _tab = tab);
-    _loadPosts();
-    _loadResources();
-  }
-
-  /// 面板里改任一筛选项：按新条件重新请求列表（这就是「筛选条件随请求下发」）。
-  void _selectFilter(String key, String value) {
-    setState(() {
-      switch (key) {
-        case 'sort':
-          _sort = value;
-        case 'type':
-          _type = value;
-        case 'dist':
-          _dist = value;
-        case 'price':
-          _price = value;
-      }
-    });
-    _loadPosts();
-  }
-
-  /// 打开/关闭筛选面板。面板位置由布局决定（见 [build] 的列表区 Stack），
-  /// 这里只切换开关，不做任何测量。
-  void _toggleFilter() {
-    setState(() => _filterOpen = !_filterOpen);
-  }
-
-  void _resetFilter() {
-    final feed = _feed;
-    if (feed == null) return;
-    setState(() {
-      _sort = feed.sorts.first;
-      _type = feed.postTypes.first;
-      _dist = feed.dists.first;
-      _price = feed.priceRanges.first;
-    });
-    _loadPosts();
+class _CommunityViewState extends State<CommunityView>
+    with AutomaticKeepAliveClientMixin {
+  /// 横向资源列表项：懒加载 builder 会抽成实例方法，VM 从当前 context 读取，
+  /// 不依赖 build 里的局部变量（否则产物里会成为未定义自由变量）。
+  Widget _buildResourceItem(BuildContext context, int i) {
+    final List<Resource> resources = context.read<CommunityVm>().resources!;
+    return _ResourceCard(
+      resource: resources[i],
+      onTap: () => AppRouter.openResource(resources[i].id),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // AutomaticKeepAliveClientMixin 契约
-    print("CommunityPage build : filterOpen=$_filterOpen");
-    final feed = _feed;
-    final resources = _resources;
+    final vm = context.watch<CommunityVm>();
+    final feed = vm.feed;
+    final resources = vm.resources;
     // 失败后必须退出 loading 态：给出异常信息与重试入口。
-    final error = _feedError ?? _resourcesError;
+    final error = vm.feedError ?? vm.resourcesError;
     if (feed == null || resources == null) {
-      if (error != null) return LoadErrorView(message: error, onRetry: _retry);
+      if (error != null) {
+        return LoadErrorView(message: error, onRetry: vm.retry);
+      }
       return const Center(child: CircularProgressIndicator());
     }
     return Column(
@@ -225,14 +77,14 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: GestureDetector(
-                        onTap: () => _selectTab(t),
+                        onTap: () => vm.selectTab(t),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 15,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: _tab == t
+                            color: vm.tab == t
                                 ? const Color(0xFFE8F2FF)
                                 : const Color(0xFFF3F5F8),
                             borderRadius: BorderRadius.circular(15),
@@ -241,10 +93,10 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
                             t,
                             style: TextStyle(
                               fontSize: 13.5,
-                              fontWeight: _tab == t
+                              fontWeight: vm.tab == t
                                   ? FontWeight.w700
                                   : FontWeight.w500,
-                              color: _tab == t
+                              color: vm.tab == t
                                   ? kBrand
                                   : const Color(0xFF5C6270),
                             ),
@@ -283,10 +135,7 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: resources.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, i) => _ResourceCard(
-              resource: resources[i],
-              onTap: () => AppRouter.openResource(resources[i].id),
-            ),
+            itemBuilder: _buildResourceItem,
           ),
         ),
         const SizedBox(height: 12),
@@ -300,14 +149,14 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: GestureDetector(
-                    onTap: () => _selectFilter('sort', s),
+                    onTap: () => vm.selectFilter('sort', s),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: _sort == s
+                        color: vm.sort == s
                             ? const Color(0xFFE8F2FF)
                             : const Color(0xFFF3F5F8),
                         borderRadius: BorderRadius.circular(14),
@@ -316,10 +165,12 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
                         s,
                         style: TextStyle(
                           fontSize: 12.5,
-                          fontWeight: _sort == s
+                          fontWeight: vm.sort == s
                               ? FontWeight.w700
                               : FontWeight.w500,
-                          color: _sort == s ? kBrand : const Color(0xFF5C6270),
+                          color: vm.sort == s
+                              ? kBrand
+                              : const Color(0xFF5C6270),
                         ),
                       ),
                     ),
@@ -327,14 +178,14 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
                 ),
               const Spacer(),
               GestureDetector(
-                onTap: _toggleFilter,
+                onTap: vm.toggleFilter,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 11,
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: _filterOpen
+                    color: vm.filterOpen
                         ? const Color(0xFFE8F2FF)
                         : const Color(0xFFF3F5F8),
                     borderRadius: BorderRadius.circular(14),
@@ -346,14 +197,18 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: _filterOpen ? kBrand : const Color(0xFF5C6270),
+                          color: vm.filterOpen
+                              ? kBrand
+                              : const Color(0xFF5C6270),
                         ),
                       ),
                       const SizedBox(width: 3),
                       Icon(
                         Icons.tune,
                         size: 14,
-                        color: _filterOpen ? kBrand : const Color(0xFF5C6270),
+                        color: vm.filterOpen
+                            ? kBrand
+                            : const Color(0xFF5C6270),
                       ),
                     ],
                   ),
@@ -363,25 +218,28 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
           ),
         ),
         // 列表请求中：贴一条细进度条（列表接口的加载反馈）
-        if (_listLoading) const LinearProgressIndicator(minHeight: 2),
+        if (vm.listLoading) const LinearProgressIndicator(minHeight: 2),
         // 列表 + 下拉筛选面板：面板顶 = 列表区 Stack 顶部（即筛选条下沿），
         // 位置由布局决定，不需要任何测量。
         Expanded(
-          child: _posts == null
-              ? _postsError != null
-                    ? LoadErrorView(message: _postsError!, onRetry: _retry)
+          child: vm.posts == null
+              ? vm.postsError != null
+                    ? LoadErrorView(
+                        message: vm.postsError!,
+                        onRetry: vm.retry,
+                      )
                     : const Center(child: CircularProgressIndicator())
               : _ListContent(
-                  resetFilter: _resetFilter,
-                  openFilter: _filterOpen,
-                  toggleFilter: _toggleFilter,
+                  resetFilter: vm.resetFilter,
+                  openFilter: vm.filterOpen,
+                  toggleFilter: vm.toggleFilter,
                   feed: feed,
-                  list: _posts!,
-                  sort: _sort,
-                  type: _type,
-                  dist: _dist,
-                  price: _price,
-                  onSelectFilter: _selectFilter,
+                  list: vm.posts!,
+                  sort: vm.sort,
+                  type: vm.type,
+                  dist: vm.dist,
+                  price: vm.price,
+                  onSelectFilter: vm.selectFilter,
                 ),
         ),
       ],
@@ -421,9 +279,9 @@ class _ListContent extends StatefulWidget {
 }
 
 class _ListContentState extends State<_ListContent> {
-
-
+  @override
   void initState() {
+    super.initState();
     print("--_ListContent init");
   }
 

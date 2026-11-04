@@ -219,36 +219,43 @@ class Order {
   }
 }
 
-/// 首页接口返回：banner + 九宫格 + 景点推荐 + 广告位（一次请求拿全，见 AppService）。
-class HomeFeed {
-  final List<HomeBanner> banners;
-  final List<GridEntry> grid;
-  final List<Spot> spots;
-  final String adImg;
+/// 底部导航配置（`/app/tabs`）：一个条目对应外壳的一个 tab。
+class AppTabConfig {
+  /// 页面标识（home / community / orders / mine）：外壳据此装配页面。
+  final String screen;
 
-  const HomeFeed({
-    required this.banners,
-    required this.grid,
-    required this.spots,
-    required this.adImg,
+  /// 底部文案。
+  final String label;
+
+  /// 图标标识：外壳把标识映射成 IconData，配置本身不携带字体信息。
+  final String icon;
+
+  const AppTabConfig({
+    required this.screen,
+    required this.label,
+    required this.icon,
   });
 
-  /// 入参是「拼好的一个 feed 对象」：banners / spots / adImg 来自按城市选中的
-  /// 那一份、grid 来自根节点（见 AppService.fetchHome）。
-  static HomeFeed fromJson(Map<String, dynamic> e) {
-    final banners = <HomeBanner>[];
-    for (final b in e['banners']) {
-      banners.add(HomeBanner.fromJson(b));
-    }
-    final grid = <GridEntry>[];
-    for (final g in e['grid']) {
-      grid.add(GridEntry.fromJson(g));
-    }
-    final spots = <Spot>[];
-    for (final s in e['spots']) {
-      spots.add(Spot.fromJson(s));
-    }
-    return HomeFeed(banners: banners, grid: grid, spots: spots, adImg: e['adImg']);
+  static AppTabConfig fromJson(Map<String, dynamic> e) {
+    return AppTabConfig(
+      screen: e['screen'],
+      label: e['label'],
+      icon: e['icon'],
+    );
+  }
+}
+
+/// 首页楼层配置（`/app/home/floors`）：接口只下发楼层类型。
+///
+/// 具体楼层数据由各楼层组件**自己请求各自的接口**（见各楼层 VM）。
+class HomeFloorConfig {
+  /// 楼层类型（banner / grid / spots / promo）。
+  final String type;
+
+  const HomeFloorConfig({required this.type});
+
+  static HomeFloorConfig fromJson(Map<String, dynamic> e) {
+    return HomeFloorConfig(type: e['type']);
   }
 }
 

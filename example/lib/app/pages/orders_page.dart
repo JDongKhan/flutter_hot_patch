@@ -1,135 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:provider/provider.dart';
 
 import '../../base/app_router.dart';
 import '../model/app_models.dart';
-import '../service/app_service.dart';
+import '../vm/orders_vm.dart';
 import '../widgets/load_error_view.dart';
 import 'detail_pages.dart';
 
 /// 订单 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/orders_page.js）。
 ///
-/// 对应 docs/app-prototype.html 的「订单」：顶部状态条（全部/待付款/待发货/
-/// 待收货/已完成）+ 订单卡列表（订单号 / 状态 / 商品 / 合计 / 操作按钮）。
+/// 对应 docs/app-prototype.html 的「订单」：顶部状态条 + 订单卡列表。
 ///
-/// 数据走两个本地 mock 接口：状态条由 [AppService.fetchOrders] 取，订单列表由
-/// [AppService.fetchOrderList] 取。首屏两个请求**并行**发出（列表先用空状态
-/// 参数请求，等价「全部」），此后点状态即按该状态重新请求一次列表。
-///
-/// 本页纳入连带翻译（`@PatchEntry`）：`.where().toList()` 过滤、集合 for 循环、
-/// ListView.separated 的 itemBuilder 局部变量、switch 表达式返回 Color 均已支持。
+/// 页面数据与交互状态收敛到 [OrdersVm]（provider）：配置与列表两个接口
+/// 并行发出，切状态时只重发列表。
 @PatchEntry()
-class OrdersPage extends StatefulWidget {
+class OrdersPage extends StatelessWidget {
   const OrdersPage({super.key, this.initialStatus});
 
   /// 初始选中的状态（「我的」页统计项跳进来时指定）。
   final String? initialStatus;
 
   @override
-  State<OrdersPage> createState() => _OrdersPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<OrdersVm>(
+      create: (_) => OrdersVm(initialStatus: initialStatus)..load(),
+      child: const OrdersView(),
+    );
+  }
 }
 
-class _OrdersPageState extends State<OrdersPage> {
-  final AppService _service = AppService();
-
-  /// 配置（状态条）；null = 加载中。
-  OrderFeed? _feed;
-
-  /// 列表接口返回；null = 列表加载中。
-  List<Order>? _orders;
-
-  /// 列表请求进行中（切状态后重新请求时贴进度条）。
-  bool _listLoading = false;
-
-  /// 两个接口各自的失败原因（null = 该接口没有失败）；分开记录，避免一个
-  /// 接口成功把另一个的失败状态清掉，缺失的数据永远停在 loading。
-  String? _feedError;
-  String? _ordersError;
-
-  /// 当前选中的状态；空串 = 还没定（等价首项「全部」）。
-  String _status = '';
+/// 订单视图：订阅 [OrdersVm]。
+class OrdersView extends StatefulWidget {
+  const OrdersView({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    print("OrdersPage initState ---");
-    // 配置与列表并行发，首屏只等一个往返（1s），不串行等两次。
-    _load();
-    _loadOrders();
-  }
+  State<OrdersView> createState() => _OrdersViewState();
+}
 
-  Future<void> _load() async {
-    try {
-      final OrderFeed feed = await _service.fetchOrders();
-      if (!mounted) return;
-      setState(() {
-        _feed = feed;
-        _status = widget.initialStatus ?? feed.statuses.first;
-        _feedError = null;
-      });
-      // 带具体状态跳进来时，首屏那次「空参数（=全部）」的结果不对口，按状态重发。
-      if (widget.initialStatus != null) {
-        await _loadOrders();
-      }
-    } catch (e) {
-      print('OrdersPage 状态条加载失败: $e');
-      if (!mounted) return;
-      setState(() => _feedError = e.toString());
-      AppRouter.toast('订单页加载失败：$e');
-    }
-  }
-
-  /// 列表接口：按当前状态取回订单列表。
-  Future<void> _loadOrders() async {
-    setState(() => _listLoading = true);
-    try {
-      final List<Order> orders = await _service.fetchOrderList(_status);
-      if (!mounted) return;
-      setState(() {
-        _orders = orders;
-        _listLoading = false;
-        _ordersError = null;
-      });
-    } catch (e) {
-      print('OrdersPage 订单列表加载失败: $e');
-      if (!mounted) return;
-      setState(() {
-        _listLoading = false;
-        _ordersError = e.toString();
-      });
-      AppRouter.toast('订单列表加载失败：$e');
-    }
-  }
-
-  /// 失败态的重试：状态条与列表一起重发。
-  void _retry() {
-    setState(() {
-      _feedError = null;
-      _ordersError = null;
-    });
-    _load();
-    _loadOrders();
-  }
-
-  /// 点状态：先切高亮，再按新状态请求列表。
-  void _pickStatus(String status) {
-    setState(() => _status = status);
-    _loadOrders();
-  }
-
+class _OrdersViewState extends State<OrdersView> {
   Color _statusColor(String status) => switch (status) {
     '待付款' => kPrice,
     '已完成' => const Color(0xFF8B909A),
     _ => kBrand,
   };
 
+  /// 订单列表项：懒加载 builder 会抽成实例方法，VM 从当前 context 读取，
+  /// 不依赖 build 里的局部变量（否则产物里会成为未定义自由变量）。
+  Widget _buildOrderItem(BuildContext context, int i) {
+    final List<Order> orders = context.read<OrdersVm>().orders!;
+    final o = orders[i];
+    return _OrderCard(
+      order: o,
+      statusColor: _statusColor(o.status),
+      onOpen: () => AppRouter.openOrder(o.no),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final feedError = _feedError;
-    if (_feed == null) {
-      // 失败后必须退出 loading 态：给出异常信息与重试入口。
-      if (feedError != null) {
-        return LoadErrorView(message: feedError, onRetry: _retry);
+    final vm = context.watch<OrdersVm>();
+    final feed = vm.feed;
+    // 失败后必须退出 loading 态：给出异常信息与重试入口。
+    if (feed == null) {
+      final error = vm.feedError;
+      if (error != null) {
+        return LoadErrorView(message: error, onRetry: vm.retry);
       }
       return const Center(child: CircularProgressIndicator());
     }
@@ -150,18 +86,18 @@ class _OrdersPageState extends State<OrdersPage> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    for (final s in _feed!.statuses)
+                    for (final s in feed.statuses)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: GestureDetector(
-                          onTap: () => _pickStatus(s),
+                          onTap: () => vm.pickStatus(s),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 13,
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: _status == s
+                              color: vm.status == s
                                   ? const Color(0xFFE8F2FF)
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(15),
@@ -170,10 +106,10 @@ class _OrdersPageState extends State<OrdersPage> {
                               s,
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: _status == s
+                                fontWeight: vm.status == s
                                     ? FontWeight.w700
                                     : FontWeight.w500,
-                                color: _status == s
+                                color: vm.status == s
                                     ? kBrand
                                     : const Color(0xFF5C6270),
                               ),
@@ -188,13 +124,16 @@ class _OrdersPageState extends State<OrdersPage> {
           ),
         ),
         // 列表请求中：贴一条细进度条（列表接口的加载反馈）
-        if (_listLoading) const LinearProgressIndicator(minHeight: 2),
+        if (vm.listLoading) const LinearProgressIndicator(minHeight: 2),
         Expanded(
-          child: _orders == null
-              ? _ordersError != null
-                    ? LoadErrorView(message: _ordersError!, onRetry: _retry)
+          child: vm.orders == null
+              ? vm.ordersError != null
+                    ? LoadErrorView(
+                        message: vm.ordersError!,
+                        onRetry: vm.retry,
+                      )
                     : const Center(child: CircularProgressIndicator())
-              : _orders!.isEmpty
+              : vm.orders!.isEmpty
               ? const Center(
                   child: Text(
                     '该状态下暂无订单',
@@ -203,16 +142,9 @@ class _OrdersPageState extends State<OrdersPage> {
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-                  itemCount: _orders!.length,
+                  itemCount: vm.orders!.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) {
-                    final o = _orders![i];
-                    return _OrderCard(
-                      order: o,
-                      statusColor: _statusColor(o.status),
-                      onOpen: () => AppRouter.openOrder(o.no),
-                    );
-                  },
+                  itemBuilder: _buildOrderItem,
                 ),
         ),
       ],

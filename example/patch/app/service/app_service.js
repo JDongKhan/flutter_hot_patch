@@ -3,7 +3,11 @@
 // 重新生成：dart run build_runner build
 
 import { Network } from '../../hot_module_base.js';
-import { HomeFeed } from '../model/app_models.js';
+import { AppTabConfig } from '../model/app_models.js';
+import { HomeFloorConfig } from '../model/app_models.js';
+import { HomeBanner } from '../model/app_models.js';
+import { GridEntry } from '../model/app_models.js';
+import { Spot } from '../model/app_models.js';
 import { CommunityFeed } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
@@ -13,7 +17,6 @@ import { Order } from '../model/app_models.js';
 import { MineFeed } from '../model/app_models.js';
 import { SearchFeed } from '../model/app_models.js';
 import { ResourceFeed } from '../model/app_models.js';
-import { Spot } from '../model/app_models.js';
 
 // 模型 AppService
 export class AppService {
@@ -25,10 +28,48 @@ export class AppService {
   async _requestQuery(url, query) {
     return await Network.post({ "url": url, "params": {"api": url, "query": query} });
   }
-  async fetchHome(city) {
-    var data = await this._request("/app/home");
+  async fetchAppTabs() {
+    var data = await this._request("/app/tabs");
+    var list = [];
+    for (let e of data["tabs"]) {
+      list.add(AppTabConfig.fromJson(e));
+    }
+    return list;
+  }
+  async fetchHomeFloors() {
+    var data = await this._request("/app/home/floors");
+    var list = [];
+    for (let e of data["floors"]) {
+      list.add(HomeFloorConfig.fromJson(e));
+    }
+    return list;
+  }
+  async fetchHomeBanners(city) {
+    var data = await this._request("/app/home/banner");
     var entry = this._cityOf(data["cities"], city);
-    return HomeFeed.fromJson({"banners": entry["banners"], "grid": data["grid"], "spots": entry["spots"], "adImg": entry["adImg"]});
+    var list = [];
+    for (let b of entry["banners"]) {
+      list.add(HomeBanner.fromJson(b));
+    }
+    return list;
+  }
+  async fetchHomeGrid() {
+    var data = await this._request("/app/home/grid");
+    var list = [];
+    for (let g of data["grid"]) {
+      list.add(GridEntry.fromJson(g));
+    }
+    return list;
+  }
+  async fetchHomeSpots(city) {
+    var data = await this._request("/app/home/spots");
+    var entry = this._cityOf(data["cities"], city);
+    return this._spots(entry["spots"]);
+  }
+  async fetchHomePromo(city) {
+    var data = await this._request("/app/home/promo");
+    var entry = this._cityOf(data["cities"], city);
+    return entry["adImg"];
   }
   async fetchCommunity() {
     var data = await this._request("/app/community");

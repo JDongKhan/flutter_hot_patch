@@ -180,35 +180,36 @@ export class Order {
   }
 }
 
-// 模型 HomeFeed
-export class HomeFeed {
+// 模型 AppTabConfig
+export class AppTabConfig {
   constructor(args) {
     this.__applyProps(args);
   }
   __applyProps(args) {
-    this.banners = (args && args.banners !== undefined) ? args.banners : [];
-    this.grid = (args && args.grid !== undefined) ? args.grid : [];
-    this.spots = (args && args.spots !== undefined) ? args.spots : [];
-    this.adImg = (args && args.adImg !== undefined) ? args.adImg : '';
+    this.screen = (args && args.screen !== undefined) ? args.screen : '';
+    this.label = (args && args.label !== undefined) ? args.label : '';
+    this.icon = (args && args.icon !== undefined) ? args.icon : '';
   }
   static fromJson(e) {
-    var banners = [];
-    for (let b of e["banners"]) {
-      banners.add(HomeBanner.fromJson(b));
-    }
-    var grid = [];
-    for (let g of e["grid"]) {
-      grid.add(GridEntry.fromJson(g));
-    }
-    var spots = [];
-    for (let s of e["spots"]) {
-      spots.add(Spot.fromJson(s));
-    }
-    return new HomeFeed({
-      "banners": banners,
-      "grid": grid,
-      "spots": spots,
-      "adImg": e["adImg"]
+    return new AppTabConfig({
+      "screen": e["screen"],
+      "label": e["label"],
+      "icon": e["icon"]
+    });
+  }
+}
+
+// 模型 HomeFloorConfig
+export class HomeFloorConfig {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.type = (args && args.type !== undefined) ? args.type : '';
+  }
+  static fromJson(e) {
+    return new HomeFloorConfig({
+      "type": e["type"]
     });
   }
 }

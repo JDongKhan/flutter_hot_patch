@@ -2,44 +2,34 @@
 // 由 hot_patch_generator 从 lib/app/pages/mine_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AppService } from '../service/app_service.js';
-import { MineFeed } from '../model/app_models.js';
-import { AppRouter } from '../../base/app_router.js';
+import { MineVm } from '../vm/mine_vm.js';
 import { MenuEntry } from '../model/app_models.js';
+import { AppRouter } from '../../base/app_router.js';
 import { WebView } from '../../base/web_view.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
 import { kBrand, kPrice } from 'detail_pages.js';
-import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Icons, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
+import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Icons, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, StatelessWidget, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
+import { ChangeNotifierProvider } from '../../provider.js';
 
 // 组件 MinePage
-export class MinePage extends StatefulWidget {
+export class MinePage extends StatelessWidget {
+  constructor(args) {
+    super(args);
+  }
+  build(context) {
+    return new ChangeNotifierProvider({
+      "create": (_) => { return (() => { const _t = new MineVm(); _t.load(); return _t; })(); },
+      "child": (this.__k0 || (this.__k0 = new MineView({}))),
+      "model": "MineVm"
+    });
+  }
+}
+
+// 组件 MineView
+export class MineView extends StatelessWidget {
   static _menuTints = [new Color({value: 0xFFE8F2FF}), new Color({value: 0xFFFFF3E0}), new Color({value: 0xFFEEF0F4}), new Color({value: 0xFFE9F7EF})];
   constructor(args) {
     super(args);
-    this._service = new AppService();
-    this._feed = null;
-    this._error = null;
-  }
-  initState() {
-    super.initState();
-    print("MinePage initState ---");
-    this._load();
-  }
-  async _load() {
-    try {
-      var feed = await this._service.fetchMine();
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._feed = feed; this._error = null; });
-    } catch (e) {
-      print("MinePage 加载失败: " + e);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._error = e.toString(); });
-      AppRouter.toast("我的页面加载失败：" + e);
-    }
   }
   _openMenu(m) {
     if ((m.screen == "orders")) {
@@ -53,13 +43,14 @@ export class MinePage extends StatefulWidget {
     }
   }
   build(context) {
-    var feed = this._feed;
+    var vm = context.watch("MineVm");
+    var feed = vm.feed;
     if ((feed == null)) {
-      var error = this._error;
+      var error = vm.error;
       if ((error != null)) {
         return new LoadErrorView({
-          "message": this._error,
-          "onRetry": () => this._load()
+          "message": error,
+          "onRetry": (...__a) => vm.load(...__a)
         });
       }
       return (this.__k0 || (this.__k0 = new Center({
@@ -108,7 +99,7 @@ export class MinePage extends StatefulWidget {
                           "value": 0x33FFFFFF
                         })))
                       }),
-                      "name": this._feed.avatar
+                      "name": feed.avatar
                     })
                   }),
                   (this.__k4 || (this.__k4 = new SizedBox({
@@ -185,7 +176,7 @@ export class MinePage extends StatefulWidget {
             }),
             "child": new Row({
               "children": [
-                ...(() => { var out = []; for (let s of this._feed.stats) { out.push.apply(out, [new Expanded({
+                ...(() => { var out = []; for (let s of feed.stats) { out.push.apply(out, [new Expanded({
                         "child": new GestureDetector({
                           "onTap": () => AppRouter.openOrders(),
                           "child": new Column({
@@ -235,14 +226,14 @@ export class MinePage extends StatefulWidget {
           }),
           "child": new Column({
             "children": [
-              ...(() => { var out = []; for (let i = 0; (i < this._feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [(this.__k14 || (this.__k14 = new Divider({
+              ...(() => { var out = []; for (let i = 0; (i < feed.menu.length); (i++)) { out.push.apply(out, [...((i > 0) ? [(this.__k14 || (this.__k14 = new Divider({
                         "color": new Color({
                           "value": 0xFFF0F2F6
                         }),
                         "height": 1,
                         "indent": 56
                       })))] : []), new GestureDetector({
-                      "onTap": () => { return this._openMenu(this._feed.menu[i]); },
+                      "onTap": () => { return this._openMenu(feed.menu[i]); },
                       "child": new Padding({
                         "padding": (this.__k15 || (this.__k15 = EdgeInsets.fromLTRB({
                           "bottom": 12,
@@ -257,7 +248,7 @@ export class MinePage extends StatefulWidget {
                               "height": 30,
                               "alignment": Alignment.center,
                               "decoration": new BoxDecoration({
-                                "color": MinePage._menuTints[(i % MinePage._menuTints.length)],
+                                "color": MineView._menuTints[(i % MineView._menuTints.length)],
                                 "borderRadius": BorderRadius.circular({
                                   "radius": 9
                                 })
@@ -266,7 +257,7 @@ export class MinePage extends StatefulWidget {
                                 "style": (this.__k16 || (this.__k16 = new TextStyle({
                                   "fontSize": 15
                                 }))),
-                                "data": this._feed.menu[i].emoji
+                                "data": feed.menu[i].emoji
                               })
                             }),
                             (this.__k17 || (this.__k17 = new SizedBox({
@@ -277,7 +268,7 @@ export class MinePage extends StatefulWidget {
                                 "style": (this.__k18 || (this.__k18 = new TextStyle({
                                   "fontSize": 14
                                 }))),
-                                "data": this._feed.menu[i].title
+                                "data": feed.menu[i].title
                               })
                             }),
                             (this.__k19 || (this.__k19 = new Icon({

@@ -2,81 +2,69 @@
 // 由 hot_patch_generator 从 lib/app/pages/home_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AppService } from '../service/app_service.js';
-import { HomeFeed } from '../model/app_models.js';
+import { HomeVm } from '../vm/home_vm.js';
 import { AppRouter } from '../../base/app_router.js';
-import { GridEntry } from '../model/app_models.js';
-import { Spot } from '../model/app_models.js';
-import { WebView } from '../../base/web_view.js';
+import { HomeFloor } from '../floors/floor_base.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
-import { BannerCarousel } from '../widgets/banner_carousel.js';
-import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Icons, Image, InkWell, LinearGradient, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, StackFit, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
+import { BannerFloor } from '../floors/banner_floor.js';
+import { GridFloor } from '../floors/grid_floor.js';
+import { SpotFloor } from '../floors/spot_floor.js';
+import { PromoFloor } from '../floors/promo_floor.js';
+import { Alignment, BorderRadius, BoxDecoration, Center, CircularProgressIndicator, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, Icon, Icons, InkWell, LinearGradient, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverToBoxAdapter, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextStyle } from '../../flutter.js';
+import { ChangeNotifierProvider } from '../../provider.js';
 
 // 组件 HomePage
-export class HomePage extends StatefulWidget {
+export class HomePage extends StatelessWidget {
   constructor(args) {
     super(args);
-    this._service = new AppService();
+  }
+  build(context) {
+    return new ChangeNotifierProvider({
+      "create": (_) => { return (() => { const _t = new HomeVm(); _t.load(); return _t; })(); },
+      "child": (this.__k0 || (this.__k0 = new HomeView({}))),
+      "model": "HomeVm"
+    });
+  }
+}
+
+// 组件 HomeView
+export class HomeView extends StatefulWidget {
+  constructor(args) {
+    super(args);
     this._refreshController = new EasyRefreshController();
-    this._feed = null;
-    this._error = null;
-    this._city = "上海";
   }
-  initState() {
-    super.initState();
-    print("HomePage initState ---");
-    this._load();
+  dispose() {
+    this._refreshController.dispose();
+    super.dispose();
   }
-  async _pickCity() {
-    var picked = await AppRouter.openCityPicker(this._city);
-    if ((picked == null)) {
-      return;
-    }
-    this.setState(() => { this._city = picked; });
-    await this._load();
-  }
-  didUpdateWidget(oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    print("--HomePage didUpdateWidget 0");
+  async _onRefresh() {
+    await this.context.read("HomeVm").refresh();
   }
   _refresh() {
     this._refreshController.callRefresh();
   }
-  async _load() {
-    try {
-      var feed = await this._service.fetchHome(this._city);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._feed = feed; this._error = null; });
-    } catch (e) {
-      print("HomePage 加载失败: " + e);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._error = e.toString(); });
-      AppRouter.toast("首页加载失败：" + e);
+  async _pickCity() {
+    var vm = this.context.read("HomeVm");
+    var picked = await AppRouter.openCityPicker(vm.city);
+    if ((picked == null)) {
+      return;
     }
+    await vm.changeCity(picked);
   }
   build(context) {
-    print("--HomePage build");
-    var feed = this._feed;
-    if ((feed == null)) {
-      var error = this._error;
-      if ((error != null)) {
-        return new LoadErrorView({
-          "message": this._error,
-          "onRetry": () => this._load()
-        });
-      }
+    var vm = context.watch("HomeVm");
+    if (vm.loading) {
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})
       })));
     }
-    var banners = this._feed.banners;
-    var grid = this._feed.grid;
-    var spots = this._feed.spots;
-    var adImg = this._feed.adImg;
+    var error = vm.error;
+    if ((error != null)) {
+      return new LoadErrorView({
+        "message": error,
+        "onRetry": (...__a) => vm.load(...__a)
+      });
+    }
     return new Container({
       "color": (this.__k1 || (this.__k1 = new Color({
         "value": 0xFFF4F5F7
@@ -85,162 +73,76 @@ export class HomePage extends StatefulWidget {
         "crossAxisAlignment": CrossAxisAlignment.stretch,
         "children": [
           new HomeHeader({
-            "city": this._city,
+            "city": vm.city,
             "onRefresh": () => this._refresh(),
             "onPickCity": () => this._pickCity()
           }),
           new Expanded({
             "child": new EasyRefresh({
               "controller": this._refreshController,
-              "onRefresh": () => this._load(),
+              "onRefresh": () => this._onRefresh(),
               "child": new CustomScrollView({
                 "slivers": [
                   new SliverToBoxAdapter({
                     "child": new Column({
                       "crossAxisAlignment": CrossAxisAlignment.stretch,
                       "children": [
-                        (this.__k2 || (this.__k2 = new SizedBox({
-                          "height": 12
-                        }))),
-                        new BannerCarousel({
-                          "banners": this._feed.banners
-                        }),
-                        (this.__k2 || (this.__k2 = new SizedBox({
-                          "height": 12
-                        }))),
-                        new Container({
-                          "margin": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
-                            "horizontal": 12
-                          }))),
-                          "padding": (this.__k4 || (this.__k4 = EdgeInsets.symmetric({
-                            "vertical": 12
-                          }))),
-                          "decoration": (this.__k5 || (this.__k5 = new BoxDecoration({
-                            "borderRadius": BorderRadius.all({
-                              "radius": Radius.circular({
-                                "radius": 14
-                              })
-                            }),
-                            "color": new Color({
-                              "value": 0xFFFFFFFF
-                            })
-                          }))),
-                          "child": new GridView({
-                            "gridDelegate": (this.__k6 || (this.__k6 = new SliverGridDelegateWithMaxCrossAxisExtent({
-                              "crossAxisSpacing": 6,
-                              "mainAxisExtent": 84,
-                              "mainAxisSpacing": 6,
-                              "maxCrossAxisExtent": 150
-                            }))),
-                            "shrinkWrap": true,
-                            "physics": (this.__k7 || (this.__k7 = new NeverScrollableScrollPhysics({}))),
-                            "children": [
-                              ...(() => { var out = []; for (let i = 0; (i < this._feed.grid.length); (i++)) { out.push.apply(out, [new GridCell({
-                                      "entry": this._feed.grid[i]
-                                    })]); } return out; })()
-                            ]
-                          })
-                        }),
-                        (this.__k2 || (this.__k2 = new SizedBox({
-                          "height": 12
-                        }))),
-                        new Container({
-                          "margin": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
-                            "horizontal": 12
-                          }))),
-                          "child": new PromoCard({
-                            "img": this._feed.adImg
-                          })
-                        }),
-                        (this.__k8 || (this.__k8 = new SizedBox({
-                          "height": 16
-                        }))),
-                        new Padding({
-                          "padding": (this.__k9 || (this.__k9 = EdgeInsets.symmetric({
-                            "horizontal": 14
-                          }))),
-                          "child": new Row({
-                            "children": [
-                              new Container({
-                                "width": 4,
-                                "height": 16,
-                                "decoration": (this.__k10 || (this.__k10 = new BoxDecoration({
-                                  "borderRadius": BorderRadius.all({
-                                    "radius": Radius.circular({
-                                      "radius": 2
-                                    })
-                                  }),
-                                  "color": new Color({
-                                    "value": 0xFF0E7AFB
-                                  })
-                                })))
-                              }),
-                              (this.__k11 || (this.__k11 = new SizedBox({
-                                "width": 8
-                              }))),
-                              (this.__k12 || (this.__k12 = new Text({
-                                "data": "景点推荐",
-                                "style": new TextStyle({
-                                  "fontSize": 17,
-                                  "fontWeight": FontWeight.w700,
-                                  "color": new Color({
-                                    "value": 0xFF1F2430
-                                  })
-                                })
-                              }))),
-                              (this.__k13 || (this.__k13 = new Spacer({}))),
-                              (this.__k14 || (this.__k14 = new Text({
-                                "data": "为你精选",
-                                "style": new TextStyle({
-                                  "fontSize": 12,
-                                  "color": new Color({
-                                    "value": 0xFF8A909E
-                                  })
-                                })
-                              })))
-                            ]
-                          })
-                        }),
-                        (this.__k15 || (this.__k15 = new SizedBox({
-                          "height": 10
-                        })))
+                        ...(() => { var out = []; for (let floor of vm.floors) { out.push.apply(out, [new FloorSlot({
+                                "floor": floor
+                              })]); } return out; })()
                       ]
                     })
-                  }),
-                  new SliverPadding({
-                    "padding": (this.__k16 || (this.__k16 = EdgeInsets.fromLTRB({
-                      "bottom": 0,
-                      "left": 12,
-                      "right": 12,
-                      "top": 0
-                    }))),
-                    "sliver": new SliverGrid({
-                      "gridDelegate": (this.__k17 || (this.__k17 = new SliverGridDelegateWithMaxCrossAxisExtent({
-                        "crossAxisSpacing": 10,
-                        "mainAxisExtent": 190,
-                        "mainAxisSpacing": 10,
-                        "maxCrossAxisExtent": 300
-                      }))),
-                      "delegate": {
-                        "__delegate": "builder",
-                        "builder": (context, index) => new SpotCard({
-                          "spot": this._feed.spots[index]
-                        }),
-                        "childCount": this._feed.spots.length
-                      }
-                    })
-                  }),
-                  (this.__k18 || (this.__k18 = new SliverToBoxAdapter({
-                    "child": new SizedBox({
-                      "height": 20
-                    })
-                  })))
+                  })
                 ]
               })
             })
           })
         ]
       })
+    });
+  }
+}
+
+// 组件 FloorSlot
+export class FloorSlot extends StatelessWidget {
+  constructor(args) {
+    super(args);
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.floor = (args && args.floor !== undefined) ? args.floor : null;
+  }
+  build(context) {
+    var type = this.floor.type;
+    if ((type == "banner")) {
+      return new BannerFloor({
+        "vm": this.floor.vm
+      });
+    }
+    if ((type == "grid")) {
+      return new GridFloor({
+        "vm": this.floor.vm
+      });
+    }
+    if ((type == "spots")) {
+      return new SpotFloor({
+        "vm": this.floor.vm
+      });
+    }
+    if ((type == "promo")) {
+      return new PromoFloor({
+        "vm": this.floor.vm
+      });
+    }
+    print("FloorSlot 未知楼层类型：" + type);
+    return new Text({
+      "style": (this.__k0 || (this.__k0 = new TextStyle({
+        "color": new Color({
+          "value": 0xFF8A909E
+        }),
+        "fontSize": 12
+      }))),
+      "data": "未知楼层类型：" + this.floor.type
     });
   }
 }
@@ -457,299 +359,6 @@ export class HomeHeader extends StatelessWidget {
               })
             })
           ]
-        })
-      })
-    });
-  }
-}
-
-// 组件 GridCell
-export class GridCell extends StatelessWidget {
-  constructor(args) {
-    super(args);
-    this.__applyProps(args);
-  }
-  __applyProps(args) {
-    this.entry = (args && args.entry !== undefined) ? args.entry : null;
-  }
-  open() {
-    AppRouter.openChannel(this.entry.title, this.entry.emoji);
-  }
-  build(context) {
-    return new InkWell({
-      "onTap": () => this.open(),
-      "child": new Column({
-        "mainAxisAlignment": MainAxisAlignment.center,
-        "children": [
-          new Text({
-            "style": (this.__k0 || (this.__k0 = new TextStyle({
-              "fontSize": 22
-            }))),
-            "data": this.entry.emoji
-          }),
-          (this.__k1 || (this.__k1 = new SizedBox({
-            "height": 6
-          }))),
-          new Text({
-            "style": (this.__k2 || (this.__k2 = new TextStyle({
-              "color": new Color({
-                "value": 0xFF4D5462
-              }),
-              "fontSize": 12
-            }))),
-            "data": this.entry.title
-          })
-        ]
-      })
-    });
-  }
-}
-
-// 组件 SpotCard
-export class SpotCard extends StatelessWidget {
-  constructor(args) {
-    super(args);
-    this.__applyProps(args);
-  }
-  __applyProps(args) {
-    this.spot = (args && args.spot !== undefined) ? args.spot : null;
-  }
-  open() {
-    AppRouter.openSpot(this.spot.id);
-  }
-  build(context) {
-    return new InkWell({
-      "onTap": () => this.open(),
-      "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
-        "radius": Radius.circular({
-          "radius": 14
-        })
-      }))),
-      "child": new Container({
-        "decoration": (this.__k1 || (this.__k1 = new BoxDecoration({
-          "borderRadius": BorderRadius.all({
-            "radius": Radius.circular({
-              "radius": 14
-            })
-          }),
-          "color": new Color({
-            "value": 0xFFFFFFFF
-          })
-        }))),
-        "clipBehavior": Clip.antiAlias,
-        "child": new Column({
-          "crossAxisAlignment": CrossAxisAlignment.start,
-          "children": [
-            new SizedBox({
-              "height": 96,
-              "child": new Stack({
-                "fit": StackFit.expand,
-                "children": [
-                  Image.asset({
-                    "fit": BoxFit.cover,
-                    "name": this.spot.img
-                  }),
-                  new Positioned({
-                    "left": 8,
-                    "top": 8,
-                    "child": new Container({
-                      "padding": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
-                        "horizontal": 6,
-                        "vertical": 2
-                      }))),
-                      "decoration": (this.__k3 || (this.__k3 = new BoxDecoration({
-                        "borderRadius": BorderRadius.all({
-                          "radius": Radius.circular({
-                            "radius": 6
-                          })
-                        }),
-                        "color": new Color({
-                          "value": 0xFFFF5A36
-                        })
-                      }))),
-                      "child": new Text({
-                        "style": (this.__k4 || (this.__k4 = new TextStyle({
-                          "color": new Color({
-                            "value": 0xFFFFFFFF
-                          }),
-                          "fontSize": 10,
-                          "fontWeight": FontWeight.w600
-                        }))),
-                        "data": this.spot.tag
-                      })
-                    })
-                  })
-                ]
-              })
-            }),
-            new Padding({
-              "padding": (this.__k5 || (this.__k5 = EdgeInsets.fromLTRB({
-                "bottom": 10,
-                "left": 10,
-                "right": 10,
-                "top": 8
-              }))),
-              "child": new Column({
-                "crossAxisAlignment": CrossAxisAlignment.start,
-                "children": [
-                  new Text({
-                    "maxLines": 1,
-                    "overflow": TextOverflow.ellipsis,
-                    "style": (this.__k6 || (this.__k6 = new TextStyle({
-                      "color": new Color({
-                        "value": 0xFF1F2430
-                      }),
-                      "fontSize": 14,
-                      "fontWeight": FontWeight.w600
-                    }))),
-                    "data": this.spot.title
-                  }),
-                  (this.__k7 || (this.__k7 = new SizedBox({
-                    "height": 4
-                  }))),
-                  new Text({
-                    "maxLines": 1,
-                    "overflow": TextOverflow.ellipsis,
-                    "style": (this.__k8 || (this.__k8 = new TextStyle({
-                      "color": new Color({
-                        "value": 0xFF8A909E
-                      }),
-                      "fontSize": 11
-                    }))),
-                    "data": this.spot.sub
-                  }),
-                  (this.__k9 || (this.__k9 = new SizedBox({
-                    "height": 8
-                  }))),
-                  new Row({
-                    "children": [
-                      (this.__k10 || (this.__k10 = new Text({
-                        "data": "¥",
-                        "style": new TextStyle({
-                          "fontSize": 11,
-                          "color": new Color({
-                            "value": 0xFFFF5A36
-                          }),
-                          "fontWeight": FontWeight.w700
-                        })
-                      }))),
-                      new Text({
-                        "style": (this.__k11 || (this.__k11 = new TextStyle({
-                          "color": new Color({
-                            "value": 0xFFFF5A36
-                          }),
-                          "fontSize": 17,
-                          "fontWeight": FontWeight.w700
-                        }))),
-                        "data": this.spot.price
-                      }),
-                      (this.__k12 || (this.__k12 = new Spacer({}))),
-                      new Text({
-                        "style": (this.__k13 || (this.__k13 = new TextStyle({
-                          "color": new Color({
-                            "value": 0xFF9AA0AC
-                          }),
-                          "fontSize": 10
-                        }))),
-                        "data": this.spot.sold
-                      })
-                    ]
-                  })
-                ]
-              })
-            })
-          ]
-        })
-      })
-    });
-  }
-}
-
-// 组件 PromoCard
-export class PromoCard extends StatelessWidget {
-  constructor(args) {
-    super(args);
-    this.__applyProps(args);
-  }
-  __applyProps(args) {
-    this.img = (args && args.img !== undefined) ? args.img : '';
-  }
-  open() {
-    WebView.open("https://flutter.dev", "活动详情");
-  }
-  build(context) {
-    return new InkWell({
-      "onTap": () => this.open(),
-      "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
-        "radius": Radius.circular({
-          "radius": 14
-        })
-      }))),
-      "child": new SizedBox({
-        "height": 96,
-        "child": new ClipRRect({
-          "borderRadius": (this.__k0 || (this.__k0 = BorderRadius.all({
-            "radius": Radius.circular({
-              "radius": 14
-            })
-          }))),
-          "child": new Stack({
-            "fit": StackFit.expand,
-            "children": [
-              Image.asset({
-                "fit": BoxFit.cover,
-                "name": this.img
-              }),
-              new Positioned({
-                "left": 16,
-                "top": 22,
-                "child": new Column({
-                  "crossAxisAlignment": CrossAxisAlignment.start,
-                  "children": [
-                    (this.__k1 || (this.__k1 = new Text({
-                      "data": "热气球季 · 限时特惠",
-                      "style": new TextStyle({
-                        "color": new Color({
-                          "value": 0xFFFFFFFF
-                        }),
-                        "fontSize": 16,
-                        "fontWeight": FontWeight.w700
-                      })
-                    }))),
-                    (this.__k2 || (this.__k2 = new SizedBox({
-                      "height": 6
-                    }))),
-                    new Container({
-                      "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
-                        "horizontal": 10,
-                        "vertical": 4
-                      }))),
-                      "decoration": (this.__k4 || (this.__k4 = new BoxDecoration({
-                        "borderRadius": BorderRadius.all({
-                          "radius": Radius.circular({
-                            "radius": 12
-                          })
-                        }),
-                        "color": new Color({
-                          "value": 0xE6FFFFFF
-                        })
-                      }))),
-                      "child": (this.__k5 || (this.__k5 = new Text({
-                        "data": "立即查看 >",
-                        "style": new TextStyle({
-                          "fontSize": 11,
-                          "color": new Color({
-                            "value": 0xFF0E7AFB
-                          }),
-                          "fontWeight": FontWeight.w600
-                        })
-                      })))
-                    })
-                  ]
-                })
-              })
-            ]
-          })
         })
       })
     });

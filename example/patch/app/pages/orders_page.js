@@ -2,81 +2,37 @@
 // 由 hot_patch_generator 从 lib/app/pages/orders_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AppService } from '../service/app_service.js';
-import { OrderFeed } from '../model/app_models.js';
+import { OrdersVm } from '../vm/orders_vm.js';
 import { Order } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
+import { ChangeNotifierProvider } from '../../provider.js';
 
 // 组件 OrdersPage
-export class OrdersPage extends StatefulWidget {
+export class OrdersPage extends StatelessWidget {
   constructor(args) {
     super(args);
     this.__applyProps(args);
-    this._service = new AppService();
-    this._feed = null;
-    this._orders = null;
-    this._listLoading = false;
-    this._feedError = null;
-    this._ordersError = null;
-    this._status = "";
   }
   __applyProps(args) {
     this.initialStatus = (args && args.initialStatus !== undefined) ? args.initialStatus : null;
   }
-  initState() {
-    super.initState();
-    print("OrdersPage initState ---");
-    this._load();
-    this._loadOrders();
+  build(context) {
+    return new ChangeNotifierProvider({
+      "create": (_) => { return (() => { const _t = new OrdersVm({initialStatus: this.initialStatus}); _t.load(); return _t; })(); },
+      "child": (this.__k0 || (this.__k0 = new OrdersView({}))),
+      "model": "OrdersVm"
+    });
   }
-  async _load() {
-    try {
-      var feed = await this._service.fetchOrders();
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._feed = feed; this._status = (this.initialStatus ?? feed.statuses.first); this._feedError = null; });
-      if ((this.initialStatus != null)) {
-        await this._loadOrders();
-      }
-    } catch (e) {
-      print("OrdersPage 状态条加载失败: " + e);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._feedError = e.toString(); });
-      AppRouter.toast("订单页加载失败：" + e);
-    }
-  }
-  async _loadOrders() {
-    this.setState(() => { this._listLoading = true; });
-    try {
-      var orders = await this._service.fetchOrderList(this._status);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._orders = orders; this._listLoading = false; this._ordersError = null; });
-    } catch (e) {
-      print("OrdersPage 订单列表加载失败: " + e);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._listLoading = false; this._ordersError = e.toString(); });
-      AppRouter.toast("订单列表加载失败：" + e);
-    }
-  }
-  _retry() {
-    this.setState(() => { this._feedError = null; this._ordersError = null; });
-    this._load();
-    this._loadOrders();
-  }
-  _pickStatus(status) {
-    this.setState(() => { this._status = status; });
-    this._loadOrders();
+}
+
+// 组件 OrdersView
+export class OrdersView extends StatefulWidget {
+  constructor(args) {
+    super(args);
   }
   _statusColor(status) {
     return (() => { switch (status) {
@@ -85,13 +41,24 @@ export class OrdersPage extends StatefulWidget {
         default: return kBrand;
       } })();
   }
+  _buildOrderItem(context, i) {
+    var orders = context.read("OrdersVm").orders;
+    var o = orders[i];
+    return new _OrderCard({
+      "order": o,
+      "statusColor": this._statusColor(o.status),
+      "onOpen": () => AppRouter.openOrder(o.no)
+    });
+  }
   build(context) {
-    var feedError = this._feedError;
-    if ((this._feed == null)) {
-      if ((feedError != null)) {
+    var vm = context.watch("OrdersVm");
+    var feed = vm.feed;
+    if ((feed == null)) {
+      var error = vm.feedError;
+      if ((error != null)) {
         return new LoadErrorView({
-          "message": this._feedError,
-          "onRetry": () => this._retry()
+          "message": error,
+          "onRetry": (...__a) => vm.retry(...__a)
         });
       }
       return (this.__k0 || (this.__k0 = new Center({
@@ -116,19 +83,19 @@ export class OrdersPage extends StatefulWidget {
                 "scrollDirection": Axis.horizontal,
                 "child": new Row({
                   "children": [
-                    ...(() => { var out = []; for (let s of this._feed.statuses) { out.push.apply(out, [new Padding({
+                    ...(() => { var out = []; for (let s of feed.statuses) { out.push.apply(out, [new Padding({
                             "padding": (this.__k2 || (this.__k2 = EdgeInsets.symmetric({
                               "horizontal": 4
                             }))),
                             "child": new GestureDetector({
-                              "onTap": () => { return this._pickStatus(s); },
+                              "onTap": () => { return vm.pickStatus(s); },
                               "child": new Container({
                                 "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
                                   "horizontal": 13,
                                   "vertical": 6
                                 }))),
                                 "decoration": new BoxDecoration({
-                                  "color": (this._status == s) ? (this.__k4 || (this.__k4 = new Color({
+                                  "color": (vm.status == s) ? (this.__k4 || (this.__k4 = new Color({
                                     "value": 0xFFE8F2FF
                                   }))) : Colors.white,
                                   "borderRadius": BorderRadius.circular({
@@ -138,8 +105,8 @@ export class OrdersPage extends StatefulWidget {
                                 "child": new Text({
                                   "style": new TextStyle({
                                     "fontSize": 13,
-                                    "fontWeight": (this._status == s) ? FontWeight.w700 : FontWeight.w500,
-                                    "color": (this._status == s) ? kBrand : (this.__k5 || (this.__k5 = new Color({
+                                    "fontWeight": (vm.status == s) ? FontWeight.w700 : FontWeight.w500,
+                                    "color": (vm.status == s) ? kBrand : (this.__k5 || (this.__k5 = new Color({
                                       "value": 0xFF5C6270
                                     })))
                                   }),
@@ -154,16 +121,16 @@ export class OrdersPage extends StatefulWidget {
             })
           })
         }),
-        ...(this._listLoading ? [(this.__k6 || (this.__k6 = new LinearProgressIndicator({
+        ...(vm.listLoading ? [(this.__k6 || (this.__k6 = new LinearProgressIndicator({
             "minHeight": 2
           })))] : []),
         new Expanded({
-          "child": (this._orders == null) ? (this._ordersError != null) ? new LoadErrorView({
-            "message": this._ordersError,
-            "onRetry": () => this._retry()
+          "child": (vm.orders == null) ? (vm.ordersError != null) ? new LoadErrorView({
+            "message": vm.ordersError,
+            "onRetry": (...__a) => vm.retry(...__a)
           }) : (this.__k0 || (this.__k0 = new Center({
             "child": new CircularProgressIndicator({})
-          }))) : this._orders.isEmpty ? (this.__k7 || (this.__k7 = new Center({
+          }))) : vm.orders.isEmpty ? (this.__k7 || (this.__k7 = new Center({
             "child": new Text({
               "style": new TextStyle({
                 "fontSize": 13,
@@ -180,18 +147,11 @@ export class OrdersPage extends StatefulWidget {
               "right": 12,
               "top": 12
             }))),
-            "itemCount": this._orders.length,
+            "itemCount": vm.orders.length,
             "separatorBuilder": (context, index) => (this.__k9 || (this.__k9 = new SizedBox({
               "height": 10
             }))),
-            "itemBuilder": (context, i) => {
-              var o = this._orders[i];
-              return new _OrderCard({
-                "order": o,
-                "statusColor": this._statusColor(o.status),
-                "onOpen": () => AppRouter.openOrder(o.no)
-              });
-            }
+            "itemBuilder": (__a0, __a1) => this._buildOrderItem(__a0, __a1)
           })
         })
       ]

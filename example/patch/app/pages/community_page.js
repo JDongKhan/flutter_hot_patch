@@ -2,127 +2,52 @@
 // 由 hot_patch_generator 从 lib/app/pages/community_page.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AppService } from '../service/app_service.js';
-import { CommunityFeed } from '../model/app_models.js';
-import { Post } from '../model/app_models.js';
+import { CommunityVm } from '../vm/community_vm.js';
 import { Resource } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
+import { Post } from '../model/app_models.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
 import { kBrand } from 'detail_pages.js';
 import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Wrap, double } from '../../flutter.js';
+import { ChangeNotifierProvider } from '../../provider.js';
 
 // 组件 CommunityPage
-export class CommunityPage extends StatefulWidget {
+export class CommunityPage extends StatelessWidget {
   constructor(args) {
     super(args);
-    this._service = new AppService();
-    this._feed = null;
-    this._posts = null;
-    this._resources = null;
-    this._listLoading = false;
-    this._feedError = null;
-    this._resourcesError = null;
-    this._postsError = null;
-    this._filterOpen = false;
-    this._tab = "";
-    this._sort = "";
-    this._type = "";
-    this._dist = "";
-    this._price = "";
   }
-  initState() {
-    super.initState();
-    print("CommunityPage initState ---");
-    this._load();
-    this._loadPosts();
-    this._loadResources();
+  build(context) {
+    return new ChangeNotifierProvider({
+      "create": (_) => { return (() => { const _t = new CommunityVm(); _t.load(); return _t; })(); },
+      "child": (this.__k0 || (this.__k0 = new CommunityView({}))),
+      "model": "CommunityVm"
+    });
   }
-  async _load() {
-    try {
-      var feed = await this._service.fetchCommunity();
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._feed = feed; this._tab = feed.tabs.first; this._sort = feed.sorts.first; this._type = feed.postTypes.first; this._dist = feed.dists.first; this._price = feed.priceRanges.first; this._feedError = null; });
-    } catch (e) {
-      print("CommunityPage 配置加载失败: " + e);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._feedError = e.toString(); });
-      AppRouter.toast("社区加载失败：" + e);
-    }
+}
+
+// 组件 CommunityView
+export class CommunityView extends StatefulWidget {
+  constructor(args) {
+    super(args);
   }
-  async _loadPosts() {
-    this.setState(() => { this._listLoading = true; });
-    try {
-      var posts = await this._service.fetchPostList(this._tab, this._sort, this._type, this._dist, this._price);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._posts = posts; this._listLoading = false; this._postsError = null; });
-    } catch (e) {
-      print("CommunityPage 帖子列表加载失败: " + e);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._listLoading = false; this._postsError = e.toString(); });
-      AppRouter.toast("帖子列表加载失败：" + e);
-    }
-  }
-  async _loadResources() {
-    try {
-      var resources = await this._service.fetchCommunityResources(this._tab);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._resources = resources; this._resourcesError = null; });
-    } catch (e) {
-      print("CommunityPage 资源横幅加载失败: " + e);
-      if ((!!this.__unmounted)) {
-        return;
-      }
-      this.setState(() => { this._resourcesError = e.toString(); });
-      AppRouter.toast("社区资源加载失败：" + e);
-    }
-  }
-  _retry() {
-    this.setState(() => { this._feedError = null; this._resourcesError = null; this._postsError = null; });
-    this._load();
-    this._loadPosts();
-    this._loadResources();
-  }
-  _selectTab(tab) {
-    this.setState(() => { this._tab = tab; });
-    this._loadPosts();
-    this._loadResources();
-  }
-  _selectFilter(key, value) {
-    this.setState(() => { switch (key) {   case "sort":     this._sort = value;   break;   case "type":     this._type = value;   break;   case "dist":     this._dist = value;   break;   case "price":     this._price = value;   break; } });
-    this._loadPosts();
-  }
-  _toggleFilter() {
-    this.setState(() => { this._filterOpen = (!this._filterOpen); });
-  }
-  _resetFilter() {
-    var feed = this._feed;
-    if ((feed == null)) {
-      return;
-    }
-    this.setState(() => { this._sort = feed.sorts.first; this._type = feed.postTypes.first; this._dist = feed.dists.first; this._price = feed.priceRanges.first; });
-    this._loadPosts();
+  _buildResourceItem(context, i) {
+    var resources = context.read("CommunityVm").resources;
+    return new _ResourceCard({
+      "resource": resources[i],
+      "onTap": () => AppRouter.openResource(resources[i].id)
+    });
   }
   build(context) {
     super.build(context);
-    print("CommunityPage build : filterOpen=" + this._filterOpen);
-    var feed = this._feed;
-    var resources = this._resources;
-    var error = (this._feedError ?? this._resourcesError);
+    var vm = context.watch("CommunityVm");
+    var feed = vm.feed;
+    var resources = vm.resources;
+    var error = (vm.feedError ?? vm.resourcesError);
     if (((feed == null) || (resources == null))) {
       if ((error != null)) {
         return new LoadErrorView({
           "message": error,
-          "onRetry": () => this._retry()
+          "onRetry": (...__a) => vm.retry(...__a)
         });
       }
       return (this.__k0 || (this.__k0 = new Center({
@@ -144,19 +69,19 @@ export class CommunityPage extends StatefulWidget {
               }))),
               "child": new Row({
                 "children": [
-                  ...(() => { var out = []; for (let t of this._feed.tabs) { out.push.apply(out, [new Padding({
+                  ...(() => { var out = []; for (let t of feed.tabs) { out.push.apply(out, [new Padding({
                           "padding": (this.__k2 || (this.__k2 = EdgeInsets.only({
                             "right": 8
                           }))),
                           "child": new GestureDetector({
-                            "onTap": () => { return this._selectTab(t); },
+                            "onTap": () => { return vm.selectTab(t); },
                             "child": new Container({
                               "padding": (this.__k3 || (this.__k3 = EdgeInsets.symmetric({
                                 "horizontal": 15,
                                 "vertical": 6
                               }))),
                               "decoration": new BoxDecoration({
-                                "color": (this._tab == t) ? (this.__k4 || (this.__k4 = new Color({
+                                "color": (vm.tab == t) ? (this.__k4 || (this.__k4 = new Color({
                                   "value": 0xFFE8F2FF
                                 }))) : (this.__k5 || (this.__k5 = new Color({
                                   "value": 0xFFF3F5F8
@@ -168,8 +93,8 @@ export class CommunityPage extends StatefulWidget {
                               "child": new Text({
                                 "style": new TextStyle({
                                   "fontSize": 13.5,
-                                  "fontWeight": (this._tab == t) ? FontWeight.w700 : FontWeight.w500,
-                                  "color": (this._tab == t) ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                                  "fontWeight": (vm.tab == t) ? FontWeight.w700 : FontWeight.w500,
+                                  "color": (vm.tab == t) ? kBrand : (this.__k6 || (this.__k6 = new Color({
                                     "value": 0xFF5C6270
                                   })))
                                 }),
@@ -214,14 +139,11 @@ export class CommunityPage extends StatefulWidget {
             "padding": (this.__k11 || (this.__k11 = EdgeInsets.symmetric({
               "horizontal": 12
             }))),
-            "itemCount": this._resources.length,
+            "itemCount": resources.length,
             "separatorBuilder": (context, index) => (this.__k12 || (this.__k12 = new SizedBox({
               "width": 10
             }))),
-            "itemBuilder": (context, i) => new _ResourceCard({
-              "resource": this._resources[i],
-              "onTap": () => AppRouter.openResource(this._resources[i].id)
-            })
+            "itemBuilder": (__a0, __a1) => this._buildResourceItem(__a0, __a1)
           })
         }),
         (this.__k13 || (this.__k13 = new SizedBox({
@@ -237,19 +159,19 @@ export class CommunityPage extends StatefulWidget {
           }))),
           "child": new Row({
             "children": [
-              ...(() => { var out = []; for (let s of this._feed.sorts) { out.push.apply(out, [new Padding({
+              ...(() => { var out = []; for (let s of feed.sorts) { out.push.apply(out, [new Padding({
                       "padding": (this.__k15 || (this.__k15 = EdgeInsets.only({
                         "right": 6
                       }))),
                       "child": new GestureDetector({
-                        "onTap": () => { return this._selectFilter("sort", s); },
+                        "onTap": () => { return vm.selectFilter("sort", s); },
                         "child": new Container({
                           "padding": (this.__k16 || (this.__k16 = EdgeInsets.symmetric({
                             "horizontal": 12,
                             "vertical": 5
                           }))),
                           "decoration": new BoxDecoration({
-                            "color": (this._sort == s) ? (this.__k4 || (this.__k4 = new Color({
+                            "color": (vm.sort == s) ? (this.__k4 || (this.__k4 = new Color({
                               "value": 0xFFE8F2FF
                             }))) : (this.__k5 || (this.__k5 = new Color({
                               "value": 0xFFF3F5F8
@@ -261,8 +183,8 @@ export class CommunityPage extends StatefulWidget {
                           "child": new Text({
                             "style": new TextStyle({
                               "fontSize": 12.5,
-                              "fontWeight": (this._sort == s) ? FontWeight.w700 : FontWeight.w500,
-                              "color": (this._sort == s) ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                              "fontWeight": (vm.sort == s) ? FontWeight.w700 : FontWeight.w500,
+                              "color": (vm.sort == s) ? kBrand : (this.__k6 || (this.__k6 = new Color({
                                 "value": 0xFF5C6270
                               })))
                             }),
@@ -273,14 +195,14 @@ export class CommunityPage extends StatefulWidget {
                     })]); } return out; })(),
               (this.__k7 || (this.__k7 = new Spacer({}))),
               new GestureDetector({
-                "onTap": () => this._toggleFilter(),
+                "onTap": (...__a) => vm.toggleFilter(...__a),
                 "child": new Container({
                   "padding": (this.__k17 || (this.__k17 = EdgeInsets.symmetric({
                     "horizontal": 11,
                     "vertical": 5
                   }))),
                   "decoration": new BoxDecoration({
-                    "color": this._filterOpen ? (this.__k4 || (this.__k4 = new Color({
+                    "color": vm.filterOpen ? (this.__k4 || (this.__k4 = new Color({
                       "value": 0xFFE8F2FF
                     }))) : (this.__k5 || (this.__k5 = new Color({
                       "value": 0xFFF3F5F8
@@ -295,7 +217,7 @@ export class CommunityPage extends StatefulWidget {
                         "style": new TextStyle({
                           "fontSize": 12.5,
                           "fontWeight": FontWeight.w600,
-                          "color": this._filterOpen ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                          "color": vm.filterOpen ? kBrand : (this.__k6 || (this.__k6 = new Color({
                             "value": 0xFF5C6270
                           })))
                         }),
@@ -306,7 +228,7 @@ export class CommunityPage extends StatefulWidget {
                       }))),
                       new Icon({
                         "size": 14,
-                        "color": this._filterOpen ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                        "color": vm.filterOpen ? kBrand : (this.__k6 || (this.__k6 = new Color({
                           "value": 0xFF5C6270
                         }))),
                         "icon": Icons.tune
@@ -318,26 +240,26 @@ export class CommunityPage extends StatefulWidget {
             ]
           })
         }),
-        ...(this._listLoading ? [(this.__k19 || (this.__k19 = new LinearProgressIndicator({
+        ...(vm.listLoading ? [(this.__k19 || (this.__k19 = new LinearProgressIndicator({
             "minHeight": 2
           })))] : []),
         new Expanded({
-          "child": (this._posts == null) ? (this._postsError != null) ? new LoadErrorView({
-            "message": this._postsError,
-            "onRetry": () => this._retry()
+          "child": (vm.posts == null) ? (vm.postsError != null) ? new LoadErrorView({
+            "message": vm.postsError,
+            "onRetry": (...__a) => vm.retry(...__a)
           }) : (this.__k0 || (this.__k0 = new Center({
             "child": new CircularProgressIndicator({})
           }))) : new _ListContent({
-            "resetFilter": () => this._resetFilter(),
-            "openFilter": this._filterOpen,
-            "toggleFilter": () => this._toggleFilter(),
-            "feed": this._feed,
-            "list": this._posts,
-            "sort": this._sort,
-            "type": this._type,
-            "dist": this._dist,
-            "price": this._price,
-            "onSelectFilter": (__a0, __a1) => this._selectFilter(__a0, __a1)
+            "resetFilter": (...__a) => vm.resetFilter(...__a),
+            "openFilter": vm.filterOpen,
+            "toggleFilter": (...__a) => vm.toggleFilter(...__a),
+            "feed": feed,
+            "list": vm.posts,
+            "sort": vm.sort,
+            "type": vm.type,
+            "dist": vm.dist,
+            "price": vm.price,
+            "onSelectFilter": (...__a) => vm.selectFilter(...__a)
           })
         })
       ]
@@ -367,6 +289,7 @@ export class _ListContent extends StatefulWidget {
     this.toggleFilter = (args && args.toggleFilter !== undefined) ? args.toggleFilter : null;
   }
   initState() {
+    super.initState();
     print("--_ListContent init");
   }
   didUpdateWidget(oldWidget) {

@@ -1,234 +1,142 @@
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hot_example/base/app_router.dart';
-import 'package:flutter_hot_example/base/web_view.dart';
+import 'package:provider/provider.dart';
 
-import '../model/app_models.dart';
-import '../service/app_service.dart';
-import '../widgets/banner_carousel.dart';
+import '../floors/banner_floor.dart';
+import '../floors/floor_base.dart';
+import '../floors/grid_floor.dart';
+import '../floors/promo_floor.dart';
+import '../floors/spot_floor.dart';
+import '../vm/home_vm.dart';
 import '../widgets/load_error_view.dart';
 
 /// App 首页（对应 docs/app-prototype.html 的「首页」tab）。
 ///
-/// 数据不再由构造参数注入，而是由 [AppService.fetchHome] 请求本地 mock 接口
-/// 取回：请求期间显示 loading，回来后 setState 出内容。原生与 JS 两条通路写法
-/// 完全一致（service 内部走的就是 `@HostInjected` 的宿主通道）。
+/// 页面本身只负责“壳”：
+/// - 由 [HomeVm] 先请求楼层配置（接口只下发 type）；
+/// - 按 type 装配各楼层组件，楼层组件在自己的 provider 作用域内**自己请求**
+///   自己的接口取数据；
+/// - 下拉刷新交给 [HomeVm.refresh] 逐个楼层刷新（楼层可空实现）。
 ///
 /// 首页不是 `@PatchEntry` 根类：热更载体是四 tab 外壳 `AppShell`
 /// （lib/app/app.dart），首页沿 import 链被连带翻译，产物
 /// `patch/app/pages/home_page.js`。
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<HomeVm>(
+      create: (_) => HomeVm()..load(),
+      child: const HomeView(),
+    );
+  }
 }
 
-class _HomePageState extends State<HomePage> {
-  final AppService _service = AppService();
+/// 首页视图：订阅 [HomeVm]，楼层本体各自订阅自己的楼层 VM。
+class HomeView extends StatefulWidget {
+  const HomeView({super.key});
 
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
   /// 下拉刷新控制器：JS 侧 `new EasyRefreshController()` 与宿主真实实例按
   /// 句柄绑定（同 ScrollController 模式），`callRefresh()` 可程序化触发刷新。
   final EasyRefreshController _refreshController = EasyRefreshController();
 
-  /// 接口数据；null = 加载中。
-  HomeFeed? _feed;
-
-  /// 最近一次加载失败的原因；null = 没有失败（加载中或已成功）。
-  String? _error;
-
-  /// 当前城市（顶部左上角展示）。点击唤起宿主城市选择器，选完回写并重新取数。
-  String _city = '上海';
-
   @override
-  void initState() {
-    super.initState();
-    print("HomePage initState ---");
-    _load();
+  void dispose() {
+    _refreshController.dispose();
+    super.dispose();
   }
 
-  /// 唤起城市选择器：宿主侧弹底部面板，返回选中的城市名（取消则 null）。
-  Future<void> _pickCity() async {
-    final picked = await AppRouter.openCityPicker(_city);
-    if (picked == null) return;
-    setState(() => _city = picked);
-    await _load();
-  }
-  @override
-  void didUpdateWidget(covariant HomePage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    print("--HomePage didUpdateWidget 0");
+  /// 下拉刷新 / 头部刷新按钮：统一调用页面 VM 刷新所有楼层。
+  Future<void> _onRefresh() async {
+    await context.read<HomeVm>().refresh();
   }
 
-  /// 头部刷新按钮：走 controller 主动触发（与下拉手势同一条 onRefresh 链路）。
+  /// 头部刷新按钮：走 controller 主动触发（与下拉手势同一条刷新链路）。
   void _refresh() {
     _refreshController.callRefresh();
   }
 
-  Future<void> _load() async {
-    // 城市参与取数：换城市 → 用新城市重发同一个接口 → banner / 广告位 / 景点一起换。
-    try {
-      final HomeFeed feed = await _service.fetchHome(_city);
-      if (!mounted) return;
-      setState(() {
-        _feed = feed;
-        _error = null;
-      });
-    } catch (e) {
-      // 失败必须收尾：既要把异常原样提示给用户，也不能让页面永远停在 loading。
-      print('HomePage 加载失败: $e');
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-      AppRouter.toast('首页加载失败：$e');
-    }
+  /// 唤起城市选择器：宿主侧弹底部面板，选完回写城市并由各楼层重新取数。
+  Future<void> _pickCity() async {
+    final HomeVm vm = context.read<HomeVm>();
+    final picked = await AppRouter.openCityPicker(vm.city);
+    if (picked == null) return;
+    await vm.changeCity(picked);
   }
 
   @override
   Widget build(BuildContext context) {
-    print("--HomePage build");
-    final feed = _feed;
-    if (feed == null) {
-      final error = _error;
-      if (error != null) return LoadErrorView(message: error, onRetry: _load);
+    final HomeVm vm = context.watch<HomeVm>();
+    if (vm.loading) {
       return const Center(child: CircularProgressIndicator());
     }
-    // 字段派生的 final 局部：翻译器会把它们折算成字段别名（`feed.banners`
-    // → `this._feed.banners`），因此 SliverGrid 的懒加载 builder 被抽成实例
-    // 方法后照样引用得到（见 js_translator 的链式别名 + element2js 的
-    // warnCapturedLocals 告警口径）。
-    final banners = feed.banners;
-    final grid = feed.grid;
-    final spots = feed.spots;
-    final adImg = feed.adImg;
+    final error = vm.error;
+    if (error != null) {
+      return LoadErrorView(message: error, onRetry: vm.load);
+    }
     return Container(
       color: const Color(0xFFF4F5F7),
       // 顶部头（定位 / 刷新 / 消息 / 搜索）固定在滚动区之外：下拉刷新手势只作用
-      // 在下方滚动内容上，因此刷新指示器从 Banner 处开始下拉，头不会跟着移动。
+      // 在下方滚动内容上，因此刷新指示器从第一个楼层处开始下拉，头不会跟着移动。
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          HomeHeader(city: _city, onRefresh: _refresh, onPickCity: _pickCity),
+          HomeHeader(
+            city: vm.city,
+            onRefresh: _refresh,
+            onPickCity: _pickCity,
+          ),
           Expanded(
-            // 下拉刷新：宿主侧容器由 hot_patch 的 capabilities/easy_refresh 提供
-            // （桥接 Flutter 侧 EasyRefresh）。用户下拉 → 宿主触发 JS 侧 `_load()`
-            // → JS 侧 await 完重新请求后指示器才收起；指示器样式用包内默认
-            // ClassicHeader，不参与翻译。
-            // controller 与 JS 侧 `new EasyRefreshController()` 按句柄绑定：
-            // 头部刷新按钮 → callRefresh → 宿主真实 controller 带动画拉起指示器。
+            // 下拉刷新：用户下拉 → 宿主触发 JS 侧 `_onRefresh()` → 逐个楼层刷新
+            // → await 完指示器才收起。
             child: EasyRefresh(
               controller: _refreshController,
-              onRefresh: _load,
+              onRefresh: _onRefresh,
               child: CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 12),
-                        // 轮播组件：组件内部自己管 5s 自动翻页 + 指示点跟随，
-                        // 只对外暴露一个 banners 数组（城市切换后整组替换）。
-                        BannerCarousel(banners: banners),
-                        const SizedBox(height: 12),
-                        // 九宫格入口
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 12),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFFFFFF),
-                            borderRadius: BorderRadius.all(Radius.circular(14)),
-                          ),
-                          // 九宫格的高度必须**恒定**：格子高度交给 mainAxisExtent 固定，
-                          // 列数交给 Flutter 按可用宽度动态算（maxCrossAxisExtent）。
-                          // 原先用 GridView.count(crossAxisCount: 4) —— 格子高 = 格子宽，
-                          // 窗口一宽行高就被拉高，整个白卡变成一大块空白。
-                          child: GridView(
-                            gridDelegate:
-                                const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 150,
-                                  mainAxisSpacing: 6,
-                                  crossAxisSpacing: 6,
-                                  mainAxisExtent: 84,
-                                ),
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: [
-                              for (var i = 0; i < grid.length; i++)
-                                GridCell(entry: grid[i]),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // 图片广告位
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 12),
-                          child: PromoCard(img: adImg),
-                        ),
-                        const SizedBox(height: 16),
-                        // 栏目标题
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 4,
-                                height: 16,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF0E7AFB),
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(2),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                '景点推荐',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1F2430),
-                                ),
-                              ),
-                              const Spacer(),
-                              const Text(
-                                '为你精选',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF8A909E),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
+                        for (final floor in vm.floors) FloorSlot(floor: floor),
                       ],
                     ),
                   ),
-                  // 景点两列瀑布格：SliverGrid + SliverChildBuilderDelegate 懒加载
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-                    sliver: SliverGrid(
-                      // 卡片高度固定（不再用 childAspectRatio 让高度跟着宽度走）：
-                      // 窄屏 2 列（与原型一致），宽屏按 maxCrossAxisExtent 自动铺成 3~4 列。
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 300,
-                            mainAxisSpacing: 10,
-                            crossAxisSpacing: 10,
-                            mainAxisExtent: 190,
-                          ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => SpotCard(spot: spots[index]),
-                        childCount: spots.length,
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 楼层装配点：按接口下发的 type 组装对应楼层组件。
+class FloorSlot extends StatelessWidget {
+  const FloorSlot({super.key, required this.floor});
+
+  final HomeFloor floor;
+
+  @override
+  Widget build(BuildContext context) {
+    final type = floor.type;
+    if (type == 'banner') return BannerFloor(vm: floor.vm);
+    if (type == 'grid') return GridFloor(vm: floor.vm);
+    if (type == 'spots') return SpotFloor(vm: floor.vm);
+    if (type == 'promo') return PromoFloor(vm: floor.vm);
+    // 未知楼层类型不静默丢弃：输出明确日志并显示可见提示。
+    print('FloorSlot 未知楼层类型：$type');
+    return Text(
+      '未知楼层类型：$type',
+      style: const TextStyle(fontSize: 12, color: Color(0xFF8A909E)),
     );
   }
 }
@@ -247,7 +155,7 @@ class HomeHeader extends StatelessWidget {
   /// 程序化刷新：宿主真实 EasyRefreshController.callRefresh（JS 侧同款方法）。
   final VoidCallback onRefresh;
 
-  /// 当前城市名（来自首页 state，选择器选完由首页回写）。
+  /// 当前城市名（来自首页 VM，选择器选完由 VM 回写并通知刷新）。
   final String city;
 
   /// 点击城市 → 首页唤起宿主城市选择器。
@@ -383,227 +291,6 @@ class HomeHeader extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 九宫格单元
-// ---------------------------------------------------------------------------
-class GridCell extends StatelessWidget {
-  const GridCell({super.key, required this.entry});
-
-  final GridEntry entry;
-
-  void open() {
-    AppRouter.openChannel(entry.title, entry.emoji);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: open,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(entry.emoji, style: const TextStyle(fontSize: 22)),
-          const SizedBox(height: 6),
-          Text(
-            entry.title,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF4D5462)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 景点卡片（SliverGrid 单元格）
-// ---------------------------------------------------------------------------
-class SpotCard extends StatelessWidget {
-  const SpotCard({super.key, required this.spot});
-
-  final Spot spot;
-
-  void open() {
-    AppRouter.openSpot(spot.id);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: open,
-      borderRadius: const BorderRadius.all(Radius.circular(14)),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.all(Radius.circular(14)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 96,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(spot.img, fit: BoxFit.cover),
-                  Positioned(
-                    left: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF5A36),
-                        borderRadius: BorderRadius.all(Radius.circular(6)),
-                      ),
-                      child: Text(
-                        spot.tag,
-                        style: const TextStyle(
-                          color: Color(0xFFFFFFFF),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    spot.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1F2430),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    spot.sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF8A909E),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Text(
-                        '¥',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFFFF5A36),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        '${spot.price}',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          color: Color(0xFFFF5A36),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        spot.sold,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Color(0xFF9AA0AC),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 广告位（点击走 WebView 宿主通道）
-// ---------------------------------------------------------------------------
-class PromoCard extends StatelessWidget {
-  const PromoCard({super.key, required this.img});
-
-  final String img;
-
-  void open() {
-    WebView.open('https://flutter.dev', '活动详情');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: open,
-      borderRadius: const BorderRadius.all(Radius.circular(14)),
-      child: SizedBox(
-        height: 96,
-        child: ClipRRect(
-          borderRadius: const BorderRadius.all(Radius.circular(14)),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset(img, fit: BoxFit.cover),
-              Positioned(
-                left: 16,
-                top: 22,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '热气球季 · 限时特惠',
-                      style: TextStyle(
-                        color: Color(0xFFFFFFFF),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: Color(0xE6FFFFFF),
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                      ),
-                      child: const Text(
-                        '立即查看 >',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF0E7AFB),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

@@ -1,0 +1,28 @@
+{
+  "cities": [
+    {
+      "name": "上海",
+      "adImg": "assets/images/photo-1530789253388-582c481c54b0.jpg"
+    },
+    {
+      "name": "北京",
+      "adImg": "assets/images/photo-1508804185872-d7badad00f7d.jpg"
+    },
+    {
+      "name": "成都",
+      "adImg": "assets/images/photo-1547981609-4b6bfe67ca0b.jpg"
+    },
+    {
+      "name": "杭州",
+      "adImg": "assets/images/photo-1598880940080-ff9a2982723c.jpg"
+    },
+    {
+      "name": "西安",
+      "adImg": "assets/images/photo-1599571234909-29ed5d1321d6.jpg"
+    },
+    {
+      "name": "三亚",
+      "adImg": "assets/images/photo-1507525428034-b723cf961d3e.jpg"
+    }
+  ]
+}

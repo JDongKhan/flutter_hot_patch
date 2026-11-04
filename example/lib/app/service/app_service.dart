@@ -34,20 +34,59 @@ class AppService {
     return await Network.post(url: url, params: {'api': url, 'query': query});
   }
 
-  /// 首页：banner + 九宫格 + 景点推荐 + 广告位。
-  ///
-  /// **数据跟着城市走**：接口一次返回所有城市的 banner / 景点 / 广告位，
-  /// 这里按 `city` 取对应城市那一份（城市切换后页面用新城市重发本请求）。
-  /// 城市不在列表里时回退到第一个城市，避免切换后白屏。
-  Future<HomeFeed> fetchHome(String city) async {
-    final data = await _request('/app/home');
+  /// 底部导航配置：外壳按接口下发的 tab 顺序 / 文案 / 图标装配。
+  Future<List<AppTabConfig>> fetchAppTabs() async {
+    final data = await _request('/app/tabs');
+    final list = <AppTabConfig>[];
+    for (final e in data['tabs']) {
+      list.add(AppTabConfig.fromJson(e));
+    }
+    return list;
+  }
+
+  /// 首页楼层配置：接口只返回楼层类型，楼层数据各自请求。
+  Future<List<HomeFloorConfig>> fetchHomeFloors() async {
+    final data = await _request('/app/home/floors');
+    final list = <HomeFloorConfig>[];
+    for (final e in data['floors']) {
+      list.add(HomeFloorConfig.fromJson(e));
+    }
+    return list;
+  }
+
+  /// banner 楼层数据（按城市取对应那一份）。
+  Future<List<HomeBanner>> fetchHomeBanners(String city) async {
+    final data = await _request('/app/home/banner');
     final entry = _cityOf(data['cities'], city);
-    return HomeFeed.fromJson(<String, dynamic>{
-      'banners': entry['banners'],
-      'grid': data['grid'],
-      'spots': entry['spots'],
-      'adImg': entry['adImg'],
-    });
+    final list = <HomeBanner>[];
+    for (final b in entry['banners']) {
+      list.add(HomeBanner.fromJson(b));
+    }
+    return list;
+  }
+
+  /// 九宫格楼层数据。
+  Future<List<GridEntry>> fetchHomeGrid() async {
+    final data = await _request('/app/home/grid');
+    final list = <GridEntry>[];
+    for (final g in data['grid']) {
+      list.add(GridEntry.fromJson(g));
+    }
+    return list;
+  }
+
+  /// 景点推荐楼层数据（按城市取对应那一份）。
+  Future<List<Spot>> fetchHomeSpots(String city) async {
+    final data = await _request('/app/home/spots');
+    final entry = _cityOf(data['cities'], city);
+    return _spots(entry['spots']);
+  }
+
+  /// 广告位楼层图片（按城市取对应那一份）。
+  Future<String> fetchHomePromo(String city) async {
+    final data = await _request('/app/home/promo');
+    final entry = _cityOf(data['cities'], city);
+    return entry['adImg'];
   }
 
   /// 社区：双 tab + 筛选项配置（横向资源见 [fetchCommunityResources]）。

@@ -1,71 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
+import 'package:provider/provider.dart';
 
 import '../../base/app_router.dart';
 import '../../base/web_view.dart';
 import '../model/app_models.dart';
-import '../service/app_service.dart';
+import '../vm/mine_vm.dart';
 import '../widgets/load_error_view.dart';
 import 'detail_pages.dart';
 
 /// 我的 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/mine_page.js）。
 ///
-/// 对应 docs/app-prototype.html 的「我的」：渐变个人信息头（点击进登录页）
-/// + 订单统计四项 + 功能菜单 + 退出登录。末尾额外挂两项**开发者入口**：
-/// 「组件案例」（components 下的常用组件 demo 列表）与「热更 Demo 列表」。
+/// 对应 docs/app-prototype.html 的「我的」：渐变个人信息头 + 订单统计四项
+/// + 功能菜单 + 退出登录 + 开发者入口。
 ///
-/// 本页用了翻译器覆盖不到的构造（`Navigator.push(MaterialPageRoute(...))`、
-/// 方法体 tear-off 回调），相关跳转统一收敛到 [AppRouter] 的 `@HostInjected`
-/// 通道（与 JS 侧同一条通路）。
-///
-/// 头像 / 订单统计 / 功能菜单由 [AppService.fetchMine] 请求本地 mock 接口取回，
-/// 加载期间显示 loading。
+/// 页面数据收敛到 [MineVm]（provider），页面只订阅 VM。
 @PatchEntry()
-class MinePage extends StatefulWidget {
+class MinePage extends StatelessWidget {
   const MinePage({super.key});
 
   @override
-  State<MinePage> createState() => _MinePageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<MineVm>(
+      create: (_) => MineVm()..load(),
+      child: const MineView(),
+    );
+  }
 }
 
-class _MinePageState extends State<MinePage> {
+/// 我的页视图：订阅 [MineVm]。
+class MineView extends StatelessWidget {
+  const MineView({super.key});
+
   static const List<Color> _menuTints = [
     Color(0xFFE8F2FF),
     Color(0xFFFFF3E0),
     Color(0xFFEEF0F4),
     Color(0xFFE9F7EF),
   ];
-
-  final AppService _service = AppService();
-
-  /// 接口数据；null = 加载中。
-  MineFeed? _feed;
-
-  /// 加载失败的原因；null = 没有失败。
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    print("MinePage initState ---");
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final MineFeed feed = await _service.fetchMine();
-      if (!mounted) return;
-      setState(() {
-        _feed = feed;
-        _error = null;
-      });
-    } catch (e) {
-      print('MinePage 加载失败: $e');
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-      AppRouter.toast('我的页面加载失败：$e');
-    }
-  }
 
   void _openMenu(MenuEntry m) {
     if (m.screen == 'orders') {
@@ -80,10 +52,13 @@ class _MinePageState extends State<MinePage> {
 
   @override
   Widget build(BuildContext context) {
-    final feed = _feed;
+    final vm = context.watch<MineVm>();
+    final feed = vm.feed;
     if (feed == null) {
-      final error = _error;
-      if (error != null) return LoadErrorView(message: error, onRetry: _load);
+      final error = vm.error;
+      if (error != null) {
+        return LoadErrorView(message: error, onRetry: vm.load);
+      }
       return const Center(child: CircularProgressIndicator());
     }
     return ListView(

@@ -1,0 +1,124 @@
+{
+  "cities": [
+    {
+      "name": "上海",
+      "banners": [
+        {
+          "img": "assets/images/photo-1519046904884-53103b34b206.jpg",
+          "title": "海岛季 · 早鸟立减 300",
+          "sub": "10月出行专属优惠"
+        },
+        {
+          "img": "assets/images/photo-1470770841072-f978cf4d019e.jpg",
+          "title": "雪山湖泊 6 日环线",
+          "sub": "含全程住宿与向导"
+        },
+        {
+          "img": "assets/images/photo-1523906834658-6e24ef2386f9.jpg",
+          "title": "江南水乡夜游船票",
+          "sub": "限时 8 折，可随时退"
+        }
+      ]
+    },
+    {
+      "name": "北京",
+      "banners": [
+        {
+          "img": "assets/images/photo-1508804185872-d7badad00f7d.jpg",
+          "title": "故宫深度讲解半日游",
+          "sub": "含门票与金牌讲解"
+        },
+        {
+          "img": "assets/images/photo-1547981609-4b6bfe67ca0b.jpg",
+          "title": "长城夜游 · 星空专线",
+          "sub": "每周五发车，限额 30 人"
+        },
+        {
+          "img": "assets/images/photo-1519677100203-a0e668c92439.jpg",
+          "title": "老北京胡同美食地图",
+          "sub": "20 家老字号一次吃遍"
+        }
+      ]
+    },
+    {
+      "name": "成都",
+      "banners": [
+        {
+          "img": "assets/images/photo-1547981609-4b6bfe67ca0b.jpg",
+          "title": "熊猫基地早鸟票",
+          "sub": "开园直达 · 免排队"
+        },
+        {
+          "img": "assets/images/photo-1470071459604-3b5ec3a7fe05.jpg",
+          "title": "川西环线 4 日游",
+          "sub": "雪山 · 草原 · 藏寨"
+        },
+        {
+          "img": "assets/images/photo-1514933651103-005eec06c04b.jpg",
+          "title": "火锅地图 · 本地人推荐",
+          "sub": "12 家排队王"
+        }
+      ]
+    },
+    {
+      "name": "杭州",
+      "banners": [
+        {
+          "img": "assets/images/photo-1598880940080-ff9a2982723c.jpg",
+          "title": "西湖游船 · 三潭印月",
+          "sub": "含船票与讲解"
+        },
+        {
+          "img": "assets/images/photo-1545048702-79362596cdc9.jpg",
+          "title": "龙井茶山徒步",
+          "sub": "采茶体验 · 半日往返"
+        },
+        {
+          "img": "assets/images/photo-1470004914212-05527e49370b.jpg",
+          "title": "宋城千古情",
+          "sub": "VIP 席位立减 80"
+        }
+      ]
+    },
+    {
+      "name": "西安",
+      "banners": [
+        {
+          "img": "assets/images/photo-1599571234909-29ed5d1321d6.jpg",
+          "title": "兵马俑深度一日",
+          "sub": "含门票 · 专业讲解"
+        },
+        {
+          "img": "assets/images/photo-1548013146-72479768bada.jpg",
+          "title": "城墙骑行 · 落日线",
+          "sub": "含单车与夜灯票"
+        },
+        {
+          "img": "assets/images/photo-1552566626-52f8b828add9.jpg",
+          "title": "回民街美食通行证",
+          "sub": "15 家摊铺一次打卡"
+        }
+      ]
+    },
+    {
+      "name": "三亚",
+      "banners": [
+        {
+          "img": "assets/images/photo-1507525428034-b723cf961d3e.jpg",
+          "title": "亚龙湾海景房 · 立减 500",
+          "sub": "含双早与沙滩躺椅"
+        },
+        {
+          "img": "assets/images/photo-1500375592092-40eb2168fd21.jpg",
+          "title": "蜈支洲岛一日",
+          "sub": "含往返船票与浮潜"
+        },
+        {
+          "img": "assets/images/photo-1519046904884-53103b34b206.jpg",
+          "title": "出海落日巡航",
+          "sub": "含晚餐与演出"
+        }
+      ]
+    }
+  ]
+}

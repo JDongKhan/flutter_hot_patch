@@ -18,7 +18,7 @@ class Network {
 
   @HostInjected()
   static Future<Map> post({required String url, dynamic params}) async {
-    debugPrint("开始网络请求");
+    debugPrint("开始网络请求：$url");
     final path = url.startsWith('/') ? url : '/$url';
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
     try {
