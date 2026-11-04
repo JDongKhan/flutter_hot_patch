@@ -8,6 +8,7 @@ import 'base/app_log_console.dart';
 import 'components/composite_component.dart';
 import 'components/grammar/grammar_showcase.dart';
 import 'components/hello_component.dart';
+import 'components/inherited_widget_demo.dart';
 import 'components/watch_demo.dart';
 import 'components/provider_component.dart';
 import 'components/widget_showcase.dart';
@@ -155,6 +156,14 @@ class DemoListPage extends StatelessWidget {
         native: WatchDemo(),
         // context.watch/read 的订阅与 provider 链全在 JS 侧（新运行时）。
         js: JsUiWidget(jsAsset: _patchUrl('WatchDemo', 'components/watch_demo.js')),
+      ),
+    ),
+    _DemoEntry(
+      'InheritedCard · 原生 vs JS 热更',
+      'InheritedWidget：祖先数据共享，updateShouldNotify 精确重建依赖者',
+      _CompareTest(
+        native: InheritedCard(),
+        js: JsUiWidget(jsAsset: _patchUrl('InheritedCard', 'components/inherited_widget_demo.js')),
       ),
     ),
     _DemoEntry(

@@ -5,9 +5,8 @@
 //
 // **本能力不含任何库的 API 语义**：`context.watch<T>()` / `read<T>()` 是 provider
 // 那类 `extension BuildContextX on BuildContext`，其 JS 方法补丁在各库自己的模块里
-// （patch/provider.js ← provider_module_js.dart），宿主侧处理经核心通用缝
-// `registerContextOp` 注册
-// （provider/context_ops.dart）。核心只把 op 分发给注册者。
+// （patch/provider.js ← provider_module_js.dart），取值与订阅都在 JS 内闭环。
+// 核心只把宿主侧 op 分发给注册者（showOnScreen / measure 等通用渲染操作）。
 import '../js_ui_library.dart';
 import 'build_context_bridge.dart';
 

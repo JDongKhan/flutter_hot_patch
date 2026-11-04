@@ -23,8 +23,8 @@ void registerListenableWidgets(JsWidgetRegistry r) {
 /// 把一段 JS 子树包成 Dart 的监听边界：结点 props 的 `notifier`
 /// （`{__handle:id}`）取到通用镜像就订阅它，notify 只重建 `(c.children['child'] as Widget?)` 那段子树。
 ///
-/// **共用实现**：provider 的 `Consumer` 与这里的两个组件对宿主的要求完全相同
-/// （订阅 + 重建子树），故对外公开、由 provider_bridge 复用一份。
+/// **共用实现**：ListenableBuilder / ValueListenableBuilder 对宿主的要求相同
+/// （订阅 + 重建子树），故公开一份；JS 侧的 provider 消费者不再经过宿主。
 Widget listenableBoundary(JsRenderContext c) {
   final subtree = (c.children['child'] as Widget?) ?? const SizedBox.shrink();
   final notifier = jsChangeNotifierOfProp(c.props['notifier']);

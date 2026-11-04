@@ -374,8 +374,8 @@ const Map<String, String> valueClassSources = {
 /// 为什么逻辑必须在 JS 侧：`OverlayEntry.builder` 是 JS 闭包，宿主执行不了。
 /// 因此条目在 JS 里逐条展开成**兄弟结点**，宿主只看到 `Stack` 插槽：
 ///   - 声明式：`Overlay(initialEntries: [...])` 的条目直接进表；
-///   - 命令式：`Overlay.of(context)` 沿作用域取最近的**本实例**
-///     （构造函数里声明 `__provides`，与宿主结点声明作用域同一套机制），
+///   - 命令式：`Overlay.of(context)` 沿继承链取最近的**本实例**
+///     （构造函数里登记 `OverlayState` 继承结点），
 ///     之后 `insert` / `remove` / `markNeedsBuild` 与 Dart 的 OverlayState 同义。
 ///
 /// 语义与 Flutter 对齐：条目按整块区域叠放（`fit: expand` + `topLeft`，与
@@ -386,8 +386,8 @@ export class Overlay extends Component {
     super(props);
     // 条目表：声明式与命令式共用一张表（Dart 侧同样是 _entries）。
     this.__entries = [];
-    // 作用域声明：本实例即「OverlayState」，子孙 `Overlay.of(context)` 取到它。
-    this.__provides = { OverlayState: this };
+    // 继承结点声明：本实例即「OverlayState」，子孙 `Overlay.of(context)` 取到它。
+    __inheritElement(this, 'OverlayState');
     var init = this.props.initialEntries;
     if (Array.isArray(init)) {
       for (var i = 0; i < init.length; i++) { this.__attach(init[i]); }
@@ -444,7 +444,7 @@ export class Overlay extends Component {
   }
 }
 Overlay.of = function (context) {
-  return __scopeOfContext(context, 'OverlayState');
+  return context.getInheritedWidgetOfExactType({ typeArguments: { T: 'OverlayState' } });
 };''';
 
 /// OverlayEntry：条目的载体（值类，不是元素）。
@@ -702,42 +702,48 @@ export class SliverPersistentHeader extends Component {
   }
 }''';
 
-/// ChangeNotifierProvider：解析 create/value 得到模型实例，然后**交给宿主**。
+/// ChangeNotifierProvider：解析 create/value 得到模型实例，**全部逻辑留在 JS**。
 ///
-/// JS 侧不做任何 provider 专用记账：本类只负责
-///   ① 造/取模型实例（`create` 为类引用时 new 一次，生命周期归本类；实例时复用）；
-///   ② 渲染宿主结点 `ChangeNotifierProvider`，props 带 `{typeArguments, notifier}`
-///      ——类型实参是翻译层按 `<T>` 原样下发的元信息（`['T']`），宿主据此建 Dart
-///      侧的 provider 映射（ChangeNotifier 镜像 + provider 子树），
-///      `context.watch<T>()` 的 T 就是这里的 `typeArguments[0]`（一路传给宿主）。
-/// 模型真实对象只存在于 JS 端：`notifier` 走句柄（`{__handle:id}`）下发。
+/// 不再产出宿主结点：本类自己登记为「按类型名键控的继承结点」
+/// （`__inheritedElements`，类型名取自 `props.typeArguments`），build 直接返回
+/// child。`context.watch/read` 经 `JsBuildContext` 的继承查找取到本结点后读
+/// `value`（对齐 provider 的 `_InheritedProviderScope.value`）。
 const String jsChangeNotifierProviderComponent = '''
 export class ChangeNotifierProvider extends Component {
   initState() {
     var p = this.props;
-    var notifier = null, owns = false;
     if (p.create !== undefined && p.create !== null) {
       // `create` 是**函数类型**形参，按统一规则下发普通函数（工厂闭包）：
       // 只调用一次，实例生命周期归本组件。值形态（非函数）也兼容。
-      notifier = typeof p.create === 'function' ? p.create() : p.create;
-      owns = true;
+      this._value = typeof p.create === 'function' ? p.create(this.context) : p.create;
+      this._ownsValue = true;
     } else if (p.value !== undefined && p.value !== null) {
-      notifier = p.value;
+      this._value = p.value;
+      this._ownsValue = false;
     }
-    this.__value = notifier;
-    this.__ownsValue = owns;
   }
+  // `value`：provider 作用域对外的取值入口（watch/read 读这里）。
+  get value() { return this._value; }
   build() {
-    return Component.host('ChangeNotifierProvider', {
-      typeArguments: this.props.typeArguments,
-      notifier: this.__value,
-      child: this.props.child
-    });
+    // `.value(...)` 的模型实例可能被父级替换：每次 build 从最新 props 取。
+    if (!this._ownsValue && this.props.value !== undefined) {
+      this._value = this.props.value;
+    }
+    var type = __typeArgumentOf(this.props, 'ChangeNotifierProvider');
+    if (type != null) {
+      __inheritElement(this, type);
+      // 与 provider 的 InheritedNotifier 同义：模型实例换了 → 通知依赖者重建。
+      if (this._published && this._published !== this._value) {
+        __notifyClients(this);
+      }
+      this._published = this._value;
+    }
+    return this.props.child;
   }
   dispose() {
-    if (this.__ownsValue && this.__value &&
-        typeof this.__value.dispose === 'function') {
-      this.__value.dispose();
+    if (this._ownsValue && this._value &&
+        typeof this._value.dispose === 'function') {
+      this._value.dispose();
     }
   }
 }''';
@@ -767,11 +773,10 @@ export class MultiProvider extends Component {
 /// Consumer：消费 VM——按 `props.typeArguments[0]`（类型名）经 **build 收到的
 /// context** 取值并订阅（`context.watch({typeArguments})`，与 Dart 的 `Consumer`
 /// 口径一致），再调用拥有者组件上的 `props.builder` 方法
-/// （`_consumerBuilderN(context, value)`）渲染局部子树。
+/// （`_consumerBuilderN(context, value, child)`）渲染局部子树。
 ///
-/// 本类仍必须订阅 VM：UI 的真正更新来自 **JS 侧重建**（VM notify → 标脏该位置
-/// → 重读 `model.count` → 下发 patch）。宿主侧同时把这段子树映射成 Dart 的
-/// 监听边界（`Consumer` 宿主结点），使 Dart 侧的 provider 子树也能刷新（P2）。
+/// UI 更新全部来自 **JS 侧重建**（VM notify → 标脏该位置 → 重读 `model.count`
+/// → 下发 patch）：本类直接返回 builder 子树，不再产出宿主监听结点。
 const String jsConsumerComponent = '''
 export class Consumer extends Component {
   build(context) {
@@ -781,12 +786,7 @@ export class Consumer extends Component {
       __warn('[Consumer] builder 不是闭包');
       return null;
     }
-    var child = fn(context, notifier);
-    return Component.host('Consumer', {
-      typeArguments: this.props.typeArguments,
-      notifier: notifier,
-      child: child
-    });
+    return fn(context, notifier, this.props.child);
   }
 }''';
 
@@ -982,7 +982,7 @@ String renderPackageModule(String package, Set<String> types) {
       ..writeln('const G = globalThis;')
       ..writeln('const {')
       ..writeln('  __handleOp, __registerHandle, __releaseHandle, __handleObjectOf,')
-      ..writeln('  __createFnHandle, __objectToken,')
+      ..writeln('  __createFnHandle, __objectToken, __inheritElement,')
       ..writeln('  __contextOf, __isElement, __isElementList, __descriptorOf,')
       ..writeln('  __openRoot, __closeRoot, __invokeHostMethod, __roots, JsBuildContext,')
       ..writeln('} = G.__core;')

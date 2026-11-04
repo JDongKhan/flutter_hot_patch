@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 52e1aeba） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 cf325a05） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '52e1aeba') { return; }
-  G.__jsuiVersion = '52e1aeba';
+  if (G.__jsui && G.__jsuiVersion === 'cf325a05') { return; }
+  G.__jsuiVersion = 'cf325a05';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -679,8 +679,9 @@ G.debugPrint = function (message) {
       __warn('值对象里的元素缺少类型名，已丢弃');
       return null;
     }
-    var isComponent = typeof T === 'function' && T.prototype != null &&
-      Object.prototype.hasOwnProperty.call(T.prototype, 'build');
+    // JS 组件实例由 Component 构造写入 `__host=false`（宿主包装类为 true）；
+    // 不再按原型上「有没有 build」判断（InheritedWidget 这类基类的 build 是继承的）。
+    var isComponent = v.__host === false;
     if (isComponent) {
       var built = null;
       try {
@@ -1032,45 +1033,103 @@ G.debugPrint = function (message) {
 
 // ===== 【8】作用域与订阅 =====
 
-  // **与 Flutter 的 InheritedWidget 同语义**：宿主结点用 `__provides`
-  // （类型名 → 值）声明自己对外提供的作用域；查找**只认类型名**，不关心这个
-  // 类型是模型、控制器还是别的什么 —— 正如 Dart 侧
-  // `dependOnInheritedWidgetOfExactType<T>()` 不关心 T 是干嘛的。
-  //
-  // 「谁提供什么」由**各能力自己**注册（[__registerScope]）；reconciler 只在
-  // mount/patch 时把结点 props 交给对应 publisher 折算成 `__provides`，核心
-  // 零业务知识（与「新增能力 = 注册描述符」同构）。三方库的注册见
-  // capabilities/js_ui_library.dart（provider 是其中一族）。
-  var __scopePublishers = {};
-
-  // 注册：宿主 widget 类型 → `props => {类型名: 值}`（返回空 = 不提供）。
-  function __registerScope(hostType, publish) {
-    __scopePublishers[hostType] = publish;
+  // 子结点上的 `__inheritedElements`（类型名 → 提供者结点）：InheritedWidget /
+  // provider 作用域由提供者自己登记；查找只认精确类型名（见 __getInheritedElement）。
+  // Dart 类型名 → JS 侧精确类型键：去掉泛型实参 / import 前缀。
+  function __exactTypeName(name) {
+    if (typeof name !== 'string') { return null; }
+    var s = name.trim();
+    var lt = s.indexOf('<');
+    if (lt >= 0) { s = s.slice(0, lt); }
+    var dot = s.lastIndexOf('.');
+    if (dot >= 0) { s = s.slice(dot + 1); }
+    return s || null;
   }
 
-  // mount/patch 时调用：把该宿主结点的 props 折算进 `__provides`。
-  // 每次 patch 都重放（props 变了、或 publisher 换了实例，如 create 重跑）。
-  function __publishScope(inst, props) {
-    var publish = __scopePublishers[inst.__type];
-    if (!publish) { return; }
-    var provided = publish(props || {});
-    inst.__provides = (provided && Object.keys(provided).length) ? provided : null;
+  // 泛型方法 / 构造下发的类型实参 → 第一个类型名（键名取决于声明侧类型参数名，
+  // 消费方按 Object.values 取值，与开发者写的参数名无关）。
+  function __typeArgumentOf(props, api) {
+    var ta = (props && props.typeArguments) || {};
+    var keys = Object.keys(ta);
+    if (!keys.length) {
+      if (api) { __warn('[jsui] ' + api + ' 缺少类型实参 typeArguments'); }
+      return null;
+    }
+    return ta[keys[0]];
   }
 
-  // 从 [inst] 沿 `__parent` 向上取最近提供 [type] 的**值**（同名就近遮蔽）。
-  // 必须是同步取值：渲染期 `model.count` 直接读，不能经异步桥回宿主。
-  // 取不到返回 null（不猜、不回退）。
-  function __scopeOf(inst, type) {
-    if (!inst) { return null; }
+  // 结点声明自己为某个精确类型的提供者（InheritedWidget / provider 作用域）。
+  function __inheritElement(inst, typeName) {
+    var key = __exactTypeName(typeName);
+    if (!inst || key == null) { return; }
+    if (inst.__inheritedElements == null) { inst.__inheritedElements = {}; }
+    var prev = inst.__inheritedType;
+    if (prev != null && prev !== key) { delete inst.__inheritedElements[prev]; }
+    inst.__inheritedElements[key] = inst;
+    inst.__inheritedType = key;
+  }
+
+  // 从 [inst] 沿 `__parent` 向上取最近提供 [typeName] 的结点（同名就近遮蔽），
+  // 对应 `Element.getElementForInheritedWidgetOfExactType`。
+  // 必须是同步取值：渲染期直接读，不能经异步桥回宿主。取不到返回 null。
+  function __getInheritedElement(inst, typeName) {
+    var key = __exactTypeName(typeName);
+    if (!inst || key == null) { return null; }
     var p = inst.__parent;
     while (p) {
-      var pr = p.__provides;
-      if (pr && Object.prototype.hasOwnProperty.call(pr, type)) { return pr[type]; }
+      var map = p.__inheritedElements;
+      if (map && Object.prototype.hasOwnProperty.call(map, key)) { return map[key]; }
       p = p.__parent;
     }
     return null;
   }
 
+  // 依赖登记：消费位置（anchor）挂到提供者结点的 `__dependents`（对应
+  // `InheritedElement._dependents`），anchor 自己的台账记 `__dependencies`
+  // （对应 `Element._dependencies`），重建 / 卸载时据此精确摘除。
+  function __registerDependency(anchor, element, key) {
+    if (!anchor || !element) { return; }
+    var deps = anchor.__dependencies;
+    if (!deps) { deps = anchor.__dependencies = []; }
+    for (var i = 0; i < deps.length; i++) {
+      if (deps[i].element === element && deps[i].key === key) { return; }
+    }
+    deps.push({ element: element, key: key });
+    var ds = element.__dependents;
+    if (!ds) { ds = element.__dependents = []; }
+    if (ds.indexOf(anchor) < 0) { ds.push(anchor); }
+  }
+
+  // 清空 anchor 的依赖边（每次重建 / 卸载时调用：Flutter 重建时也会重新
+  // 收集依赖，旧边必须摘掉）。
+  function __clearDependencies(anchor) {
+    var deps = anchor && anchor.__dependencies;
+    if (!deps) { return; }
+    for (var i = 0; i < deps.length; i++) {
+      var ds = deps[i].element && deps[i].element.__dependents;
+      if (!ds) { continue; }
+      var at = ds.indexOf(anchor);
+      if (at >= 0) { ds.splice(at, 1); }
+    }
+    anchor.__dependencies = null;
+  }
+
+  // 提供者变更 → 通知全部依赖者（对应 `InheritedElement.notifyClients`）。
+  // 依赖变更走 `__depDirty`（与 setState 区分：flush 时先 didChangeDependencies
+  // 再 build），与 Flutter 的 InheritedWidget 变更语义一致。
+  function __notifyClients(element) {
+    var ds = element && element.__dependents;
+    if (!ds || !ds.length) { return; }
+    for (var i = 0; i < ds.length; i++) {
+      var dependent = ds[i];
+      if (!dependent || dependent.__unmounted) { continue; }
+      dependent.__depDirty = true;
+      __markDirty(dependent);
+    }
+  }
+
+  
+  
   // 订阅：给 [value] 挂一个「把 [anchor] 标脏」的监听。订阅由**消费者自己持有**
   // （提供者不记账），台账记在消费者侧 `__subs`，卸载时精确退订。
   // 按值身份去重：重建会再次 watch，但不会重复挂监听。
@@ -1080,13 +1139,26 @@ G.debugPrint = function (message) {
   // **鸭子判型**：值是不是可监听是**值自己的事**——「找到值之后怎么用」属于
   // 调用方，与查找机制无关（与 Flutter 一致：watch 一个纯数据 InheritedWidget
   // 也合法，只是没有本端订阅可言）。
-  function __subscribeListenable(anchor, value) {
+  function __subscribeListenable(anchor, value, owner) {
     if (!value || typeof value.addListener !== 'function') { return; }
     var mine = anchor.__subs || (anchor.__subs = []);
-    for (var i = 0; i < mine.length; i++) {
-      if (mine[i].value === value) { return; }
+    var i;
+    for (i = 0; i < mine.length; i++) {
+      if (mine[i].owner === owner && mine[i].value === value) { return; }
     }
-    var entry = { value: value };
+    // 同一 owner 换了被监听实例（provider 的 notifier 被替换）：精确退订旧的，
+    // 避免悬空监听继续标脏。
+    for (i = 0; i < mine.length; i++) {
+      if (mine[i].owner === owner) {
+        var old = mine[i];
+        if (typeof old.value.removeListener === 'function') {
+          old.value.removeListener(old.listener);
+        }
+        mine.splice(i, 1);
+        break;
+      }
+    }
+    var entry = { value: value, owner: owner };
     // 依赖变更必须区别于 setState：标记 __depDirty，flush 时据此在 build 前
     // 补一次 didChangeDependencies（对应 Flutter 的 InheritedWidget 变更语义）。
     entry.listener = function () { anchor.__depDirty = true; __markDirty(anchor); };
@@ -1107,18 +1179,7 @@ G.debugPrint = function (message) {
     inst.__subs = null;
   }
 
-  // 生成器产出的 JS 类（逻辑组件，如 Overlay）需要「从 context 沿作用域取某类型
-  // 的值」——即 Dart 的 `X.of(context)`。这是**通用出口**，不是某个组件专用 API：
-  // 传进来的 context 是任何 BuildContext 代理（取它的锚点向上找），类型名由调用方
-  // 给（与 `dependOnInheritedWidgetOfExactType<T>` 同构，核心不认识具体类型）。
-  // 取不到返回 null（不猜、不回退），调用方自行决定缺失时的行为。
-  // 生成器产出的 JS 类按 context 取作用域值（Dart 的 `X.of(context)`）。
-  // 与核心 `__scopeOf(inst, type)` 区分：这里接收的是 BuildContext 代理。
-  G.__scopeOfContext = function (ctx, type) {
-    var anchor = ctx && ctx.__anchor;
-    return anchor ? __scopeOf(anchor, type) : null;
-  };
-
+  
 
 
 // ===== 【9】调度 =====
@@ -1208,6 +1269,8 @@ G.debugPrint = function (message) {
           // 已不在队列里，__markDirty 会因 __dirty 早退 → 它们将永不重建。
           root.ops = [];
           try {
+            // 继承依赖：每次重建前重新收集（与 Flutter 的重建语义一致）。
+            __clearDependencies(inst);
             // 作用域依赖变更（__depDirty）走这里：与 Flutter 一致，
             // 先 didChangeDependencies 再 build；setState 触发的重建不调。
             if (inst.__depDirty) {
@@ -1685,13 +1748,13 @@ G.debugPrint = function (message) {
     });
   }
 
-  // 宿主元素判据：字符串 type（Component.host 产物），或**没有重写 build** 的
-  // 包装类（宿主包装类只继承 Component 的空 build；逻辑/翻译组件一定重写 build）。
+  // 宿主元素判据：字符串 type（Component.host 产物），或 Component 构造写入
+  // `__host=true` 的宿主包装类（只继承 Component 的空 build）。
+  // JS 组件（含继承 InheritedWidget 基类、自身不重写 build 的翻译类）为 false。
   function __isHostElement(el) {
     var T = el.__type;
     if (typeof T === 'string') { return true; }
-    if (typeof T !== 'function' || T.prototype == null) { return false; }
-    return !Object.prototype.hasOwnProperty.call(T.prototype, 'build');
+    return el.__host === true;
   }
 
   // 宿主结点类型名：字符串直接用；包装类用类名（类名 === 宿主类型名）。
@@ -1712,8 +1775,6 @@ G.debugPrint = function (message) {
       };
       // 宿主 props 里的函数值在这里换成句柄（唯一的句柄创建点）。
       hi.__props = __hostProps(hi, el.props || {}, el.__anchor || null, __hostFnNamesOf(el));
-      // 作用域声明（`__provides`）：由该宿主类型注册的 publisher 折算（【8】）。
-      __publishScope(hi, hi.__props);
       __hostNodes[hi.__id] = hi;
       __trackNode(hi.__id);
       __attachKeyContext(hi);
@@ -1774,6 +1835,11 @@ G.debugPrint = function (message) {
     ci.__root = __rootOf(parent);
     __compNodes[ci.__id] = ci;
     __attachKeyContext(ci);
+    // InheritedWidget 子类：按**类名**登记为继承结点（对应 InheritedElement），
+    // 子孙的 `context.get/dependOnInheritedWidgetOfExactType` 据此查找。
+    if (typeof ci.updateShouldNotify === 'function') {
+      __inheritElement(ci, __componentName(C));
+    }
     // 生命周期：initState 仍在**挂载期**执行（与 Flutter 一致，它不依赖继承
     // 上下文，控制器 / 监听器在这里登记归属本实例）；didChangeDependencies 与
     // build 一并推迟到 [__pullComponent] —— 由宿主的组件 wrapper 在 element 挂载
@@ -1820,6 +1886,9 @@ G.debugPrint = function (message) {
     var error = null;
     var ops = null;
     try {
+      // 继承依赖：与 Flutter 的重建语义一致——每次 build 前重新收集依赖，
+      // 旧边先摘掉（didChangeDependencies 里也能重新登记）。
+      __clearDependencies(inst);
       if (!inst.__depsDone) {
         inst.__depsDone = true;
         __withBuilding(inst, function () {
@@ -1903,8 +1972,6 @@ G.debugPrint = function (message) {
       }
       oldInst.__props = newProps;
       oldInst.__el = el;
-      // props 变更 → 作用域声明重放（provider 的 vm 实例可能已换）。
-      __publishScope(oldInst, newProps);
       // 子项来源按新元素声明的懒标记生成：懒容器下 builder 形态只带延迟工厂，
       // 已挂载的槽位由 __patchLazySlot 现场调用工厂重建该项。
       var lazyChildren = el.lazyChildren === true;
@@ -1928,10 +1995,33 @@ G.debugPrint = function (message) {
     // 首次 build 尚未由宿主拉起（wrapper 还没挂载）：只同步 props，didUpdateWidget
     // 在「已构建」之后才有意义；build 由 __pullComponent 读取最新 props 后执行。
     if (!oldInst.__built) { return oldInst; }
+    // 继承依赖：与 Flutter 一样，重建时重新收集（旧边先摘掉）。
+    __clearDependencies(oldInst);
+    // InheritedWidget：props 变更后按 `updateShouldNotify(oldWidget)` 决定是否
+    // 通知依赖者（对应 InheritedElement.update → notifyClients）。
+    if (typeof oldInst.updateShouldNotify === 'function') {
+      var shouldNotify = false;
+      try {
+        shouldNotify = oldInst.updateShouldNotify(__oldWidgetOf(oldInst, oldWidget)) === true;
+      } catch (e) {
+        __error('jsui: updateShouldNotify failed (' +
+          __componentName(oldInst.constructor) + '): ' + e);
+      }
+      if (shouldNotify) { __notifyClients(oldInst); }
+    }
     // didUpdateWidget 期间把构建锚点指向本实例（新建句柄的归属 / this.context）。
     __withBuilding(oldInst, function () { oldInst.didUpdateWidget(oldWidget); });
     __patchComponentChild(oldInst);
     return oldInst;
+  }
+
+  // `InheritedWidget.updateShouldNotify(oldWidget)` 的旧值视图：不重跑构造副作用，
+  // 只在同原型对象上按 `__applyProps` 派生旧 props，字段读取与 Dart 同义。
+  function __oldWidgetOf(inst, oldProps) {
+    var view = Object.create(inst.constructor.prototype);
+    view.props = oldProps;
+    if (typeof view.__applyProps === 'function') { view.__applyProps(oldProps); }
+    return view;
   }
 
   /// 组件 build 出新子树，并在渲染根 id 变化时回报它自己的 `child` 槽。
@@ -2234,6 +2324,8 @@ G.debugPrint = function (message) {
       __callLifecycle(inst, 'dispose');
       // [scope] 从各被监听值的监听表里摘掉自己（订阅登记在消费者侧 `__subs`）。
       __unsubscribeAll(inst);
+      // [inherited] 从各提供者结点的 `__dependents` 里摘掉自己（台账在 `__dependencies`）。
+      __clearDependencies(inst);
       // [ctx] 释放 BuildContext 代理句柄。**必须通知宿主**：代理在宿主侧有
       // 真实记录（句柄→结点），纯本端删除会让宿主那条记录留到页面销毁。
       // 与页面兜底 __releasePageHandles 幂等（先删者胜，第二次是空操作）。
@@ -2404,9 +2496,11 @@ G.debugPrint = function (message) {
     __releaseHandle: function (id, notify) { return __releaseHandle(id, notify); },
     __handleObjectOf: __handleObjectOf,
     __createFnHandle: __createFnHandle,
-    // 作用域机制（provider 在自己的模块 patch/provider.js 里注册作用域）。
-    __registerScope: __registerScope,
-    __scopeOf: __scopeOf,
+    // 继承机制（InheritedWidget 语义）：provider 在自己的模块 patch/provider.js
+    // 里登记作用域；BuildContext 的查找方法在 runtime 内核里（同一 IIFE）。
+    __inheritElement: __inheritElement,
+    __notifyClients: __notifyClients,
+    __typeArgumentOf: __typeArgumentOf,
     __subscribeListenable: __subscribeListenable,
     // 调度：`Component.setState`（flutter.js 的基类）需要把实例标脏。
     __markDirty: __markDirty,
@@ -2518,6 +2612,27 @@ G.debugPrint = function (message) {
         if (p && typeof p.catch === 'function') { p.catch(function () {}); }
       } catch (e) {}
     }
+
+    // Flutter `BuildContext.getInheritedWidgetOfExactType<T>()`：取最近提供该
+    // **精确类型**的祖先结点，不建立依赖。类型实参由生成器按泛型元信息下发
+    // （`{ typeArguments: {...} }`），取第一个值。
+    getInheritedWidgetOfExactType(props) {
+      var type = __typeArgumentOf(props, 'context.getInheritedWidgetOfExactType');
+      if (type == null) { return null; }
+      return __getInheritedElement(this.__anchor, type);
+    }
+
+    // Flutter `BuildContext.dependOnInheritedWidgetOfExactType<T>()`：同上，并把
+    // 当前位置登记为该提供者的依赖（提供者 `__notifyClients` 时先
+    // didChangeDependencies 再重建）。
+    dependOnInheritedWidgetOfExactType(props) {
+      var type = __typeArgumentOf(props, 'context.dependOnInheritedWidgetOfExactType');
+      if (type == null) { return null; }
+      var element = __getInheritedElement(this.__anchor, type);
+      if (element == null) { return null; }
+      __registerDependency(this.__anchor, element, __exactTypeName(type));
+      return element;
+    }
   }
 
   // 登记类型别名：`extension X on BuildContext` 的注册按 Dart 类型名解析目标
@@ -2527,8 +2642,8 @@ G.debugPrint = function (message) {
 
   // `context.watch<T>()` / `read<T>()` **不在这里**：它们不是框架 API，而是
   // provider 那类 `extension BuildContextX on BuildContext`——方法补丁在
-  // patch/provider.js（provider_module_js.dart），宿主侧处理见 provider/context_ops.dart。
-  // 本片段只提供机制：代理、句柄、`__contextOf`/`__createContext`、通用 op 转发。
+  // patch/provider.js（provider_module_js.dart）。
+  // 本片段只提供机制：代理、句柄、InheritedWidget 查找（depend/get）、通用 op 转发。
 
   // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，
   // build 形参与 `this.context` 是同一个对象：前者由 __buildOf 传入 `__contextOf(inst)`，

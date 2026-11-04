@@ -560,9 +560,9 @@ class JsRuntimeManager {
   /// App 在 `runApp` 前 `registerJsUiLibrary(...)` 注册的**外部能力**片段。
   ///
   /// 内建能力的 JS 已随 `runtime.js` 发布（其 `jsFragments` 为空），这里只处理
-  /// 外部库新增的片段。它们无法再访问核心 IIFE 的闭包内部函数（`__registerScope`
-  /// 等），只能使用全局出口 `__jsui` / `_app_host_`；需要内核能力的库应改为随
-  /// 补丁发布（写进 `runtime.js`）。
+  /// 外部库新增的片段。它们无法再访问核心 IIFE 的闭包内部函数（`__inheritElement`
+  /// 等），只能使用全局出口 `__jsui` / `_app_host_` / `G.__core`；需要内核能力的库
+  /// 应改为随补丁发布（写进 `runtime.js`）。
   void _evalExternalLibraryFragments() {
     for (final library in jsUiLibraries) {
       for (final fragment in library.jsFragments) {

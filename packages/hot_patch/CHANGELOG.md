@@ -1,3 +1,11 @@
+## 0.4.0
+
+**破坏性：配套生成器 0.8.0；provider 不再有宿主侧映射，`context.watch/read` 不再注册宿主 op。旧产物（含宿主 `ChangeNotifierProvider` / `Consumer` 结点）需重出补丁包。**
+
+- 删除 `capabilities/provider/provider_bridge.dart` / `context_ops.dart`：`ChangeNotifierProvider` / `Consumer` 的状态、作用域与订阅全部在 JS 侧，宿主不再注册这两个 renderer，也不再注册 `watch/read` 的 context op。
+- `ProviderLibrary` 只保留 `jsModuleAssets`（`patch/provider.js`）。
+- `ChangeNotifier` 宿主镜像与 `ListenableBuilder` 监听边界保留（供 Listenable 系列组件使用）。
+
 ## 0.3.4
 
 **破坏性：配套生成器 0.4.0，宿主挂载入口由 `__jsui.mount` 更名为 `__jsui.mountRoot`。**

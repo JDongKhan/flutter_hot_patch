@@ -66,6 +66,9 @@ const String componentJsSource = r'''
       this.props = args || {};
       // 实例即元素：reconciler 只认 `__element` 标记，不做任何类型猜测。
       this.__element = true;
+      // 宿主包装类判据（运行时唯一来源）：只继承 Component 空 build 的类。
+      // 继承 InheritedWidget 等 JS 基类（build 由基类重写）的翻译类为 false。
+      this.__host = this.constructor.prototype.build === Component.prototype.build;
       // 真实子类。**`__type` 是运行时保留名**：Dart 里业务字段常叫 `type`
       //（`_ListContent(type: '全部')`），只有双下划线名才不会被业务字段覆盖。
       this.__type = this.constructor;
@@ -73,9 +76,9 @@ const String componentJsSource = r'''
       // 下发边界被换成句柄（见 mini_react 的 __hostProps），回调执行时据此还原
       // `this.context` / 构造期句柄归属，语义与「编译期就绑定」完全一致。
       this.__anchor = __cc.anchor || null;
-      // 宿主包装类（自身原型**没有重写 build**）在构造期就拆好 props/children；
-      // 逻辑组件 / 翻译组件保留原样 props（它们自己消费构造参数）。
-      if (!Object.prototype.hasOwnProperty.call(this.constructor.prototype, 'build')) {
+      // 宿主包装类（只继承 Component 的空 build）在构造期就拆好 props/children；
+      // 逻辑组件 / 翻译组件（含 InheritedWidget 子类）保留原样 props。
+      if (this.__host) {
         Component.__splitHost(this, this.constructor.__lazy);
       }
     }
@@ -123,6 +126,18 @@ const String componentJsSource = r'''
   // 本模型里 widget 与 state 合并为一个实例，二者不携带额外语义。
   export class StatelessWidget extends Component {}
   export class StatefulWidget extends Component {}
+
+  // Flutter `InheritedWidget`：纯数据共享结点，**没有宿主渲染语义**——build
+  // 结果就是自身的 child；子孙用 `context.getInheritedWidgetOfExactType` /
+  // `dependOnInheritedWidgetOfExactType` 按类名精确查找（见 runtime.js【8】）。
+  // `updateShouldNotify(oldWidget)` 与 Flutter 同义：数据变化时决定是否通知依赖者。
+  export class InheritedWidget extends Component {
+    build() { return this.props.child; }
+
+    get child() { return this.props.child; }
+
+    updateShouldNotify(oldWidget) { return false; }
+  }
 
   // 订阅型布局组件（ListenableBuilder / ValueListenableBuilder / AnimatedBuilder）
   // 共用的一层「订阅 → 只标脏本结点」机制：绑定一个 Listenable，notify 时只重建

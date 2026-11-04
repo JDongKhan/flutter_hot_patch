@@ -20,9 +20,8 @@
 //
 // **本类刻意没有 context 语义的钩子**：`context.watch/read` 是 provider 那类
 // `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁随该包的模块
-// 发布（生成器 `builders/runtime/js/provider_module_js.dart` → `patch/provider.js`），
-// 宿主侧经 `registerContextOp` 注册（见 capabilities/provider/context_ops.dart）。
-// 核心不认识具体 op 名。
+// 发布（生成器 `builders/runtime/js/provider_module_js.dart` → `patch/provider.js`）。
+// 核心不认识具体 op 名；provider 的取值与订阅都在 JS 内闭环，宿主不再注册 op。
 //
 // 接入方式（二选一）：
 //   - 内建：在下面的 [_seedBuiltins] 里 `registerJsUiLibrary(...)` 一行；
@@ -81,7 +80,7 @@ abstract class JsUiLibrary {
   /// 内建能力的 JS 已在构建期拼进 `patch/runtime.js`（生成器
   /// `builders/runtime/js/**`，随补丁发布，修复无需发版），故内建库都返回空。
   /// 外部库的片段在 runtime.js 之后以独立 IIFE 求值，**不能**再引用核心闭包
-  /// 内部函数（`__registerScope` / `__scopeOf` 等，它们不在全局），只能用
+  /// 内部函数（`__inheritElement` / `__getInheritedElement` 等，它们不在全局），只能用
   /// `__jsui` 与 `_app_host_`；需要核心能力的库应把代码并入运行时产物。
   List<String> get jsFragments => const [];
 
@@ -90,7 +89,7 @@ abstract class JsUiLibrary {
   ///
   /// 用于库自己的 API 面没跟核心机制同文件发布的场合：库的 JS 类产在
   /// `patch/<pkg>.js`（生成器按 package 出模块），而库对运行时提出的额外要求
-  /// （作用域声明 / 扩展方法原型补丁）也写在该模块里。这些模块必须在**任何
+  /// （继承结点登记 / 扩展方法原型补丁）也写在该模块里。这些模块必须在**任何
   /// 组件 build 之前**求值，故由运行时就绪点统一加载（见
   /// `JsRuntimeManager._loadCapabilityModules`），不依赖页面产物是否 import 到它。
   ///

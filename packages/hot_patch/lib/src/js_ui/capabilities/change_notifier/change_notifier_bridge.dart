@@ -3,14 +3,14 @@
 // 与 capabilities/change_notifier/change_notifier_js.dart **对称**：模型的真实对象
 // 只存在于 JS 端（`class CounterVm extends ChangeNotifier`），宿主侧按句柄 id
 // 持一个**通用** ChangeNotifier 镜像——它不认识任何具体业务类，只做两件事：
-//   1. **记下它的 JS 端类型**（meta.type，即 JS 侧类名）——`context.watch<T>()`
-//      的类型实参一路传下来，Dart 侧据此按类型查找（见 provider_bridge.dart）；
+//   1. **记下它的 JS 端类型**（meta.type，即 JS 侧类名）——provider 的
+//      `typeArguments` 按类型名查找作用域；
 //   2. 收到 JS 侧 `notify` op 时 `notifyListeners()` ——驱动 Dart 侧
-//      `ChangeNotifierProvider` 子树刷新（P2：重建粒度为 provider 子树）。
+//      `ListenableBuilder` 监听边界刷新（P2：重建粒度为监听子树）。
 //
-// 为什么镜像必须存在：Dart 端 `ChangeNotifierProvider` 需要真实的 Listenable
-// 才能工作（否则 InheritedNotifier 无从订阅）。JS 侧的 notifyListeners 走
-// **双路**派发：本端 `_listeners`（JS 逻辑）+ 本通道（Dart UI）。
+// 为什么镜像必须存在：ListenableBuilder / ValueListenableBuilder 的**宿主监听
+// 边界**需要真实的 Listenable 才能订阅。JS 侧的 notifyListeners 走
+// **双路**派发：本端 `_listeners`（JS 逻辑）+ 本通道（宿主边界）。
 import 'package:flutter/foundation.dart';
 
 import '../core/controller_bridge.dart';

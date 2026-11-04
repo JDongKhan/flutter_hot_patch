@@ -23,8 +23,8 @@
 //
 // 同步约束（设计内）：库在自己补的 `watch` 里做的**取值**必须同步（渲染期
 // `model.count` 要直接读），而 JS→宿主只有异步桥，故取值在本端按**类型名**沿
-// `__parent` 从最近的作用域结点取（通用机制，见 mini-react【8】的 `__scopeOf`；
-// 作用域声明见各三方库的 package 模块片段，如 provider_module_js.dart）。
+// `__parent` 从最近的继承结点取（通用机制，见 mini-react【8】的 `__getInheritedElement`；
+// 提供者登记见 InheritedWidget 的 mount 逻辑与各库的 package 模块片段）。
 const String buildContextJsSource = r'''
   class JsBuildContext {
     constructor(anchor, nodeId, handleId) {
@@ -56,6 +56,27 @@ const String buildContextJsSource = r'''
         if (p && typeof p.catch === 'function') { p.catch(function () {}); }
       } catch (e) {}
     }
+
+    // Flutter `BuildContext.getInheritedWidgetOfExactType<T>()`：取最近提供该
+    // **精确类型**的祖先结点，不建立依赖。类型实参由生成器按泛型元信息下发
+    // （`{ typeArguments: {...} }`），取第一个值。
+    getInheritedWidgetOfExactType(props) {
+      var type = __typeArgumentOf(props, 'context.getInheritedWidgetOfExactType');
+      if (type == null) { return null; }
+      return __getInheritedElement(this.__anchor, type);
+    }
+
+    // Flutter `BuildContext.dependOnInheritedWidgetOfExactType<T>()`：同上，并把
+    // 当前位置登记为该提供者的依赖（提供者 `__notifyClients` 时先
+    // didChangeDependencies 再重建）。
+    dependOnInheritedWidgetOfExactType(props) {
+      var type = __typeArgumentOf(props, 'context.dependOnInheritedWidgetOfExactType');
+      if (type == null) { return null; }
+      var element = __getInheritedElement(this.__anchor, type);
+      if (element == null) { return null; }
+      __registerDependency(this.__anchor, element, __exactTypeName(type));
+      return element;
+    }
   }
 
   // 登记类型别名：`extension X on BuildContext` 的注册按 Dart 类型名解析目标
@@ -65,8 +86,8 @@ const String buildContextJsSource = r'''
 
   // `context.watch<T>()` / `read<T>()` **不在这里**：它们不是框架 API，而是
   // provider 那类 `extension BuildContextX on BuildContext`——方法补丁在
-  // patch/provider.js（provider_module_js.dart），宿主侧处理见 provider/context_ops.dart。
-  // 本片段只提供机制：代理、句柄、`__contextOf`/`__createContext`、通用 op 转发。
+  // patch/provider.js（provider_module_js.dart）。
+  // 本片段只提供机制：代理、句柄、InheritedWidget 查找（depend/get）、通用 op 转发。
 
   // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，
   // build 形参与 `this.context` 是同一个对象：前者由 __buildOf 传入 `__contextOf(inst)`，

@@ -100,8 +100,8 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
 }
 
 /// 类是否为 widget / 组件类：带 @PatchEntry 注解，或继承
-/// StatefulWidget / StatelessWidget / State（State 子类通常私有，已在收集处
-/// 排除，这里仅作兜底）。
+/// StatefulWidget / StatelessWidget / InheritedWidget / State
+/// （State 子类通常私有，已在收集处排除，这里仅作兜底）。
 ///
 /// 产物判定（本文件根类收集、跨文件产物解析）与翻译层共用这一个口径。
 bool isWidgetClassDecl(ClassDeclaration d) {
@@ -111,6 +111,7 @@ bool isWidgetClassDecl(ClassDeclaration d) {
     switch (eraseType(sup.toSource())) {
       case 'StatefulWidget':
       case 'StatelessWidget':
+      case 'InheritedWidget':
       case 'State':
         return true;
     }

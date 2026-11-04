@@ -1,3 +1,14 @@
+## 0.8.0
+
+**破坏性：JS 侧新增原生 InheritedWidget 语义；provider 去掉宿主结点与宿主 context op（旧 `__provides` / `__registerScope` / `__scopeOfContext` 协议与 provider 宿主映射同次删除，不保留兼容）。需与 hot_patch 0.4.0 配套。**
+
+- **InheritedWidget（纯 JS）**：`flutter.js` 新增 `export class InheritedWidget extends Component`（build 返回 `props.child`，`updateShouldNotify(oldWidget)` 与 Flutter 同义）。翻译层把 `InheritedWidget` 加入 SDK 基类表与组件判据，用户子类按常规组件翻译、零宿主注册。
+- **运行时继承机制（Flutter 命名）**：结点用 `__inheritedElements`（类型名 → 提供者结点，对应 `Element._inheritedElements`）登记；`__getInheritedElement` / `__dependents` / `__dependencies` / `__notifyClients` 与 `InheritedElement` 的依赖与通知语义一致。`JsBuildContext` 新增 `getInheritedWidgetOfExactType` / `dependOnInheritedWidgetOfExactType`，类型实参沿用 `typeArguments` 元信息。
+- **宿主包装类判据修正**：由「原型上是否有自己的 build」改为 Component 构造写入的 `__host`（相对 `Component.prototype.build` 是否重写），继承基类 build 的组件（InheritedWidget 子类）不再被误判为宿主包装类。
+- **provider 纯 JS 化**：`ChangeNotifierProvider` 直接返回 child 并在自身结点登记类型键作用域；`Consumer` 直接返回 builder 子树；`context.watch/read` 不再向宿主发 op，取值与订阅全部在 JS 内闭环。
+- **删除宿主侧 provider 映射**：`provider_bridge.dart` / `context_ops.dart` 与 `__registerScope` / `__publishScope` 宿主作用域发布机制整体移除；`ChangeNotifier` 宿主镜像保留给 ListenableBuilder 系列。
+- **新增示例**：`InheritedCard`（祖先数据共享 + `updateShouldNotify` 精确重建依赖者）。
+
 ## 0.7.0
 
 **破坏性：泛型元信息由数组改为 Map（key = 声明侧类型参数名）；新增「类型参数在方法体里可用」的翻译规则（`T == String` / `as T`）。**

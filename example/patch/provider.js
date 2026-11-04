@@ -8,29 +8,38 @@ import { Component } from 'flutter.js';
 export class ChangeNotifierProvider extends Component {
   initState() {
     var p = this.props;
-    var notifier = null, owns = false;
     if (p.create !== undefined && p.create !== null) {
       // `create` 是**函数类型**形参，按统一规则下发普通函数（工厂闭包）：
       // 只调用一次，实例生命周期归本组件。值形态（非函数）也兼容。
-      notifier = typeof p.create === 'function' ? p.create() : p.create;
-      owns = true;
+      this._value = typeof p.create === 'function' ? p.create(this.context) : p.create;
+      this._ownsValue = true;
     } else if (p.value !== undefined && p.value !== null) {
-      notifier = p.value;
+      this._value = p.value;
+      this._ownsValue = false;
     }
-    this.__value = notifier;
-    this.__ownsValue = owns;
   }
+  // `value`：provider 作用域对外的取值入口（watch/read 读这里）。
+  get value() { return this._value; }
   build() {
-    return Component.host('ChangeNotifierProvider', {
-      typeArguments: this.props.typeArguments,
-      notifier: this.__value,
-      child: this.props.child
-    });
+    // `.value(...)` 的模型实例可能被父级替换：每次 build 从最新 props 取。
+    if (!this._ownsValue && this.props.value !== undefined) {
+      this._value = this.props.value;
+    }
+    var type = __typeArgumentOf(this.props, 'ChangeNotifierProvider');
+    if (type != null) {
+      __inheritElement(this, type);
+      // 与 provider 的 InheritedNotifier 同义：模型实例换了 → 通知依赖者重建。
+      if (this._published && this._published !== this._value) {
+        __notifyClients(this);
+      }
+      this._published = this._value;
+    }
+    return this.props.child;
   }
   dispose() {
-    if (this.__ownsValue && this.__value &&
-    typeof this.__value.dispose === 'function') {
-      this.__value.dispose();
+    if (this._ownsValue && this._value &&
+    typeof this._value.dispose === 'function') {
+      this._value.dispose();
     }
   }
   static value(props) { return new ChangeNotifierProvider(Object.assign({}, props, { factory: 'value' })); }
@@ -44,12 +53,7 @@ export class Consumer extends Component {
       __warn('[Consumer] builder 不是闭包');
       return null;
     }
-    var child = fn(context, notifier);
-    return Component.host('Consumer', {
-      typeArguments: this.props.typeArguments,
-      notifier: notifier,
-      child: child
-    });
+    return fn(context, notifier, this.props.child);
   }
 }
 
@@ -76,70 +80,57 @@ export class MultiProvider extends Component {
 // ── provider 库自有的运行期登记（跟本包的类同一模块，随模块求值生效）──
 var G = typeof globalThis !== 'undefined' ? globalThis : Function('return this')();
 var __core = G.__core;
-var __registerScope = __core.__registerScope;
-var __scopeOf = __core.__scopeOf;
+var __inheritElement = __core.__inheritElement;
+var __notifyClients = __core.__notifyClients;
+var __typeArgumentOf = __core.__typeArgumentOf;
 var __subscribeListenable = __core.__subscribeListenable;
 var JsBuildContext = __core.JsBuildContext;
 // 告警走核心导出的通用日志入口（debug 生效、release 零开销），不新开通道。
 function __warn(text) { __core.log('warn', text); }
 
-// 类型实参的唯一载体是 `typeArguments: {T: 'CounterVm'}`（生成器按声明侧类型
-// 参数名下发，与值构造、组件结点、泛型方法调用同一份规则）。provider 的作用域
-// 是单类型键控的，直接取第一个值（与开发者写的类型参数名无关）；缺失即翻译 /
-// 调用面不合规，出声而不是静默返回。
-function __scopeTypeOf(props, api) {
-  var ta = (props && props.typeArguments) || {};
-  var keys = Object.keys(ta);
-  if (!keys.length) {
-    __warn('[provider] ' + api + ' 缺少类型实参 typeArguments，无法定位作用域');
-    return null;
-  }
-  return ta[keys[0]];
+// 同一个消费位置重复重建时不刷屏：按 (api, 类型名) 只告警一次。
+function __warnMissingScope(anchor, props, api) {
+  var type = __typeArgumentOf(props, null);
+  if (type == null) { return; } // 缺类型实参已由 JsBuildContext 出声
+  var seen = anchor && (anchor.__missingScopeWarned ||
+  (anchor.__missingScopeWarned = {}));
+  var key = api + '|' + type;
+  if (seen && seen[key]) { return; }
+  if (seen) { seen[key] = true; }
+  __warn('[provider] ' + api + '(' + type + ') 未找到提供者'
+  + '（消费点可能不在 provider 子树内）');
 }
-
-// type      = 类型名（生成器在翻译期写入，源自 `ChangeNotifierProvider<T>` 的 T）；
-// notifier  = JS 侧 provider 组件 build 时创建/复用的实例（活对象）。
-__registerScope('ChangeNotifierProvider', function (props) {
-  var type = __scopeTypeOf(props, 'ChangeNotifierProvider');
-  if (type == null) { return null; }
-  var out = {};
-  out[type] = props.notifier;
-  return out;
-});
 
 // ---- extension BuildContextX on BuildContext ----
 // 对齐 Dart：`context.watch<T>()` / `context.read<T>()` 是 **provider 的**
-// extension，不是 BuildContext 的框架 API。故方法补丁归本模块，核心的
-// build_context 片段只提供代理与通用 op 转发（见其文件头）。
+// extension，不是 BuildContext 的框架 API。故方法补丁归本模块。
 //
-// 调用面与构造同形：类型实参并入尾参对象（`context.watch({ typeArguments: ['T'] })`）。
-//
-// 取值同步（渲染期 `model.count` 要直接读，而 JS→宿主只有异步桥）⇒ 值在本端
-// 按**类型名**沿 `__parent` 取最近作用域（核心通用机制 `__scopeOf`，只认类型名，
-// 不关心 T 是模型还是别的）；值是否可订阅由 `__subscribeListenable` 鸭子判型。
-// 「订阅谁」这半是库相关的，交宿主：op 经 `__host` 下发到真实 BuildContext，
-// 由 provider/context_ops.dart 解析成模型镜像并建立依赖。
+// 调用面与构造同形：类型实参并入尾参对象（`context.watch({ typeArguments })`）。
+// **取值必须同步**（渲染期 `model.count` 要直接读，而 JS→宿主只有异步桥），
+// 因此查找走 `JsBuildContext` 的 `getInheritedWidgetOfExactType` /
+// `dependOnInheritedWidgetOfExactType`；provider 作用域结点用 `value` 暴露模型。
+// 值是否可订阅由 `__subscribeListenable` 鸭子判型（原生 ChangeNotifier API）。
 
-// `context.watch<T>()`：取最近提供 [type] 的值并订阅（notify 时只重建调用
-// watch 的那个位置）。
+// `context.watch<T>()`：取最近提供 [type] 的作用域并订阅（notify 时只重建
+// 调用 watch 的那个位置；模型实例被 provider 替换时也会收到依赖通知）。
 JsBuildContext.prototype.watch = function (props) {
-  var type = __scopeTypeOf(props, 'context.watch');
-  if (type == null) { return undefined; }
-  var value = __scopeOf(this.__anchor, type);
-  // 把本端查找结果一并告知宿主：宿主据此区分「消费点在 provider 子树之外」
-  // （真错误，宿主会告警）与「宿主侧本就没有该作用域的镜像」（正常，静默）。
-  this.__host('watch', { type: type, found: value != null });
-  if (value == null) { return undefined; }
-  __subscribeListenable(this.__anchor, value);
+  var scope = this.dependOnInheritedWidgetOfExactType(props);
+  if (scope == null) {
+    __warnMissingScope(this.__anchor, props, 'context.watch');
+    return undefined;
+  }
+  var value = scope.value;
+  __subscribeListenable(this.__anchor, value, scope);
   return value;
 };
 
 // `context.read<T>()`：仅取实例，不订阅（按钮回调里的合法用法）。
 JsBuildContext.prototype.read = function (props) {
-  var type = __scopeTypeOf(props, 'context.read');
-  if (type == null) { return undefined; }
-  var value = __scopeOf(this.__anchor, type);
-  this.__host('read', { type: type, found: value != null });
-  return value == null ? undefined : value;
+  var scope = this.getInheritedWidgetOfExactType(props);
+  if (scope == null) {
+    __warnMissingScope(this.__anchor, props, 'context.read');
+    return undefined;
+  }
+  return scope.value;
 };
 

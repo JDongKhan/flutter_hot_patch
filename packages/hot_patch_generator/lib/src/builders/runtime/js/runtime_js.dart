@@ -43,7 +43,7 @@
 /// | 【5】 | element 与宿主回调句柄（`__isElement` / `__createFnHandle` / `__hostProps` / `__invokeEventHandler`） | mini-react |
 /// | 【6】 | reconciler 工具（`__propsEqual` / `__nodeKeyOf` / `__keyedMatcher` / `__rootOf`） | mini-react |
 /// | 【7】 | 构建锚点 / 生命周期派发 / 回调调用（`__withBuilding` / `__callLifecycle` / `G.__invokeCallback`） | mini-react（生成器产物的能力袋） |
-/// | 【8】 | 作用域｜按类型名向上查找 + 消费者订阅（`__registerScope` / `__scopeOf` / `__subscribeListenable`） | 通用机制（三方库按类型注册，见 capabilities/js_ui_library.dart） |
+/// | 【8】 | 继承｜按精确类型名向上查找 + 依赖登记 / 变更通知（`__inheritedElements` / `__dependents` / `__notifyClients`） | 通用机制（InheritedWidget 语义；提供者自行登记） |
 /// | 【9】 | 调度（`__markDirty` → `__rebuildDirty` 批处理） | mini-react |
 /// | 【10】 | reconciler 主流程（`__mount` / `__patch` / `__unmount`） | mini-react |
 /// | 【11】 | 对外入口 `api` + 独立根事务（`__openRoot` / `__closeRoot`：页面根与弹层根共用） | 全体共用 |
@@ -55,13 +55,13 @@
 ///   - 宿主契约 `G.__jsui.*`（Dart 侧 evaluate 按名调用）；
 ///   - 跨模块契约 `G.__core.*`（flutter.js / provider.js 解构）；
 ///   - 产物调用入口 `print` / `debugPrint` / `G.__invokeCallback` /
-///     `G.__scopeOfContext` / `G.registerExtension`（生成器产物直接引用）。
+///     `G.registerExtension`（生成器产物直接引用）。
 ///
 /// **三方库与 Flutter SDK 的 API 面不在本文件**：provider 的 `context.watch/read`
 /// 与作用域声明在它自己的包模块 `patch/provider.js`（生成器
 /// `provider_module_js.dart`）；`showDialog` 系列与弹层面板机制在
 /// `patch/flutter.js`（生成器 `dialogs_js.dart` / `navigator_js.dart`）。
-/// 本文件只提供它们要用的通用机制（作用域 / 代理 / 独立根挂载），经 `G.__core` 交接。
+/// 本文件只提供它们要用的通用机制（继承查找 / 代理 / 独立根挂载），经 `G.__core` 交接。
 ///
 /// **值类区不在本文件**：`Duration` / `Size` / `Offset` / `Color` /
 /// `ChangeNotifier` / 各 Controller / `Key` / 动画等「Dart 值对象与控制器镜像」
@@ -495,7 +495,7 @@ const String _jsUiHostBridge = r'''
 
 /// mini-react｜组件基类（setState / __bindFn，生成器产物的能力袋）【7】。
 
-/// 作用域｜按类型名向上查找 + 消费者侧订阅（__registerScope / __scopeOf）【8】。
+/// 继承｜按精确类型名向上查找 + 依赖登记 / 变更通知（__inheritedElements / __notifyClients）【8】。
 
 /// mini-react｜调度（__markDirty → flush 批处理）【9】。
 
@@ -719,9 +719,11 @@ const String _jsUiCrossModuleExports = r'''
     __releaseHandle: function (id, notify) { return __releaseHandle(id, notify); },
     __handleObjectOf: __handleObjectOf,
     __createFnHandle: __createFnHandle,
-    // 作用域机制（provider 在自己的模块 patch/provider.js 里注册作用域）。
-    __registerScope: __registerScope,
-    __scopeOf: __scopeOf,
+    // 继承机制（InheritedWidget 语义）：provider 在自己的模块 patch/provider.js
+    // 里登记作用域；BuildContext 的查找方法在 runtime 内核里（同一 IIFE）。
+    __inheritElement: __inheritElement,
+    __notifyClients: __notifyClients,
+    __typeArgumentOf: __typeArgumentOf,
     __subscribeListenable: __subscribeListenable,
     // 调度：`Component.setState`（flutter.js 的基类）需要把实例标脏。
     __markDirty: __markDirty,

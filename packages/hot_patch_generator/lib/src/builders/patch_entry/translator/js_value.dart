@@ -321,6 +321,9 @@ const Map<String, String> sdkSuperClassMap = {
   // `extends StatelessWidget / StatefulWidget`，生成器无需再为组件做特殊处理。
   'StatelessWidget': 'StatelessWidget',
   'StatefulWidget': 'StatefulWidget',
+  // InheritedWidget：JS 侧同名基类（flutter.js 的 component 片段），纯数据
+  // 共享结点、无宿主渲染语义；子类按常规组件翻译，`build` 由基类返回 child。
+  'InheritedWidget': 'InheritedWidget',
   // CustomPainter：JS 侧值类（canvas_js.dart），子类 `paint` 被宿主录制重放。
   'CustomPainter': 'CustomPainter',
 };

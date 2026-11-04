@@ -15,18 +15,17 @@
 //
 // **本能力只提供机制，不提供任何库的 API 语义**：`context.watch<T>()` /
 // `read<T>()` 是 provider 那类 `extension BuildContextX on BuildContext` 的东西，
-// 不是框架 API。故：
-//   - JS 侧的方法补丁写在**各库自己的模块**里（见
-//     patch/provider.js ← 生成器 provider_module_js.dart）；
-//   - 宿主侧的处理经 [registerContextOp] 注册进来（见
-//     capabilities/provider/context_ops.dart）。
-// 核心只做三件事：代理/句柄、nodeId ↔ 真值 context 的登记、把 op 分发给注册者
-// （未注册的 op 沿用「不支持 context.$op()」告警）。
+// 不是框架 API。故 JS 侧的方法补丁写在**各库自己的模块**里（见
+// patch/provider.js ← 生成器 provider_module_js.dart），取值与订阅都在 JS 内闭环；
+// 核心只做三件事：代理/句柄、nodeId ↔ 真值 context 的登记、把宿主侧 op 分发给
+// 注册者（未注册的 op 沿用「不支持 context.$op()」告警）。
 //
 // 为什么 JS 侧不自己做：BuildContext 是纯宿主端概念（Theme / MediaQuery /
 // Navigator / 三方 context 扩展全都要真值），而 JS→宿主只有异步桥，取值语义
 // 无法在 JS 内闭环。因此这类调用走 **@HostInjected 编译期类型化适配**：
 // 编译期知道 T 是什么，运行时按本文件的映射取宿主真值。
+// **例外**：InheritedWidget 的精确类型查找由 JS 树自身完成（同步、无宿主参与），
+// 见 runtime.js【8】与 JsBuildContext 的 `get/dependOnInheritedWidgetOfExactType`。
 import 'package:flutter/widgets.dart';
 
 import '../../../utils/hot_patch_log.dart';
@@ -71,7 +70,7 @@ final Map<String, JsContextOp> _contextOps = {};
 /// 注册一个 `context.<op>(...)` 的宿主处理——本能力对**各库**开放的扩展缝。
 ///
 /// 库在自己的 `ensureChannels()` 里注册；核心从此不认识任何具体 op 名
-/// （`watch` / `read` 由 provider 注册，见 provider/context_ops.dart）。
+/// （provider 的 `watch/read` 已在 JS 内闭环，不再走宿主 op）。
 void registerContextOp(
   String op, {
   required Object? Function(String ctxId, String op, Map payload) onOp,
