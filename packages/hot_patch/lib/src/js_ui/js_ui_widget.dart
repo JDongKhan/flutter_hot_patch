@@ -155,10 +155,10 @@ class JsUiWidgetState extends State<JsUiWidget> {
         if (bundle == null) {
           throw StateError('远程补丁加载失败（需 http(s):// zip）：$realAsset');
         }
-        // zip 有更新（fresh）→ 清除模块缓存，强制重新 evaluate 最新产物。
-        if (bundle.fresh) {
-          _manager.invalidateModules();
-        }
+        // 包版本记入内存：与内存中已加载的版本不一致（或本次是 fresh 下载）
+        // → 清空模块缓存与运行时标记，下一次 ensureJsUiRuntime 会重新求值
+        // runtime.js，loadModule 会重新加载全部产物。
+        _manager.syncBundleVersion(bundle.version, fresh: bundle.fresh);
         // 记录该包的打包时间（调试展示用，见 showBuildTime）。
         _buildTime = bundle.buildTime;
         entry = bundle.entryJsAsset;

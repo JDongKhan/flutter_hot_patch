@@ -84,14 +84,22 @@ class JsLeakSnapshot {
       'typeof __jsui !== "undefined" && __jsui.leakSnapshot '
       '? __jsui.leakSnapshot() : "null";',
     );
-    if (r.isError) return null;
+    if (r.isError) {
+      HotPatchLog.debug('泄漏快照跳过：JS leakSnapshot 求值失败（$pageKey）: '
+          '${r.stringResult}');
+      return null;
+    }
     final Object? raw;
     try {
       raw = jsonDecode(r.stringResult);
-    } catch (_) {
+    } catch (e) {
+      HotPatchLog.debug('泄漏快照跳过：返回不是合法 JSON（$pageKey）: $e');
       return null;
     }
-    if (raw is! Map) return null;
+    if (raw is! Map) {
+      HotPatchLog.debug('泄漏快照跳过：返回不是对象（$pageKey）: $raw');
+      return null;
+    }
     final handles = <Map<String, Object?>>[
       for (final h in raw['handles'] as List? ?? const [])
         if (h is Map) h.cast<String, Object?>(),

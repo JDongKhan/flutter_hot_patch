@@ -29,12 +29,15 @@ import 'ui_fallback.dart';
 /// 传 `invoke` 闭包只会让每层构造多一个与语义无关的参数。
 void invokeJsHandler(Object? handler, [List<Object?> args = const []]) {
   if (handler is! Map) {
-    // handler 形态不对 → 静默丢弃，点了没反应。
+    // handler 形态不对 → 事件无法执行（点了没反应）。不能静默。
+    HotPatchLog.warn('js_ui: 事件句柄形态非法（${handler.runtimeType}），'
+        '本次回调已丢弃（args=${args.length}）');
     return;
   }
   final id = handler['__fn'];
   if (id is! String) {
-    // 句柄缺 __fn → 静默丢弃。
+    // 句柄缺 __fn → 事件无法执行。不能静默。
+    HotPatchLog.warn('js_ui: 事件句柄缺少 __fn（$handler），本次回调已丢弃');
     return;
   }
   // args 双重编码：内层把数组变成 JSON 文本，外层再包成 JS 字符串字面量；
@@ -149,7 +152,11 @@ class JsRenderContext {
   /// 生成器把 `ButtonStyle(...)`/`InputDecoration(...)` 这类「构造形态的值」
   /// 也译成了元素结点，此处取它的内层 props。
   Map<String, dynamic>? elementProps(Object? raw) {
-    if (raw is! Map) return null;
+    if (raw == null) return null;
+    if (raw is! Map) {
+      HotPatchLog.warn('js_ui: 样式/值对象不是 Map（${raw.runtimeType}），已忽略');
+      return null;
+    }
     final inner = raw['props'];
     if (raw['type'] != null && inner is Map) {
       return inner.cast<String, dynamic>();
@@ -175,7 +182,12 @@ class JsRenderContext {
     final out = <Widget>[];
     for (final e in raw) {
       final w = buildJsElement(e);
-      if (w != null) out.add(w);
+      if (w != null) {
+        out.add(w);
+      } else if (e != null) {
+        HotPatchLog.warn('js_ui: 元素数组里有无法解析的项'
+            '（${_elementTypeLabel(e)}），已丢弃');
+      }
     }
     return out;
   }
@@ -187,9 +199,16 @@ class JsRenderContext {
 /// `InputDecoration.icon` / `DropdownMenuItem.child` …）就地还原；具名 slot
 /// 已由 JS 侧挂载，宿主直接走 `children[key]`。
 Widget? buildJsElement(Object? raw) {
-  if (raw is! Map) return null;
+  if (raw == null) return null;
+  if (raw is! Map) {
+    HotPatchLog.warn('js_ui: 元素描述不是对象（${raw.runtimeType}），已丢弃');
+    return null;
+  }
   final type = raw['type'];
-  if (type is! String || type.isEmpty) return null;
+  if (type is! String || type.isEmpty) {
+    HotPatchLog.warn('js_ui: 元素描述缺少 type，已丢弃: $raw');
+    return null;
+  }
   final props = raw['props'] is Map
       ? (raw['props'] as Map).cast<String, dynamic>()
       : <String, dynamic>{};
@@ -223,15 +242,26 @@ Widget? buildJsElement(Object? raw) {
 /// 形状不合法时宁可丢 slot 也不猜。
 Map<String, Object?> _childrenFromSlots(Object? rawSlots) {
   final children = <String, Object?>{};
-  if (rawSlots is! Map) return children;
+  if (rawSlots == null) return children;
+  if (rawSlots is! Map) {
+    HotPatchLog.warn('js_ui: 元素 children 槽位不是对象（${rawSlots.runtimeType}），'
+        '已按无子结点处理');
+    return children;
+  }
 
   void addList(String key, Object? value) {
     final widgets = <Widget>[];
     if (value is List) {
       for (final ch in value) {
         final w = buildJsElement(ch);
-        // 数组槽位里解析不出的项按「没有这项」处理（可空语义），不兜底。
-        if (w != null) widgets.add(w);
+        // 数组槽位里解析不出的项按「没有这项」处理（可空语义），不兜底；
+        // 但非空却解析不出来属于协议异常，必须留痕。
+        if (w != null) {
+          widgets.add(w);
+        } else if (ch != null) {
+          HotPatchLog.warn('js_ui: 槽位 "$key" 的子元素无法解析'
+              '（${_elementTypeLabel(ch)}），已丢弃');
+        }
       }
     }
     children[key] = widgets;

@@ -34,6 +34,17 @@ class _CtxWatch {
 /// 同名 op；不去重就会往同一个对象上叠无数监听器。
 final Map<String, Map<String, _CtxWatch>> _ctxWatches = {};
 
+/// 已告警过的「ctx 尚未登记 / 载荷非法」组合（同一 ctx 每帧重建会重发 op，
+/// 不能逐次刷屏）。
+final Set<String> _warnedCtxOps = {};
+
+/// 同一原因只告警一次；表有上限，避免跨页面无界增长。
+void _warnCtxOpOnce(String key, String message) {
+  if (_warnedCtxOps.length >= 512) _warnedCtxOps.clear();
+  if (!_warnedCtxOps.add(key)) return;
+  HotPatchLog.warn(message);
+}
+
 bool _contextOpsRegistered = false;
 
 /// 把 provider 的 context op 注册进核心的分发缝（由 ProviderLibrary.ensureChannels 调用）。
@@ -63,10 +74,19 @@ void ensureProviderContextOps() {
 /// provider 子树之外），按项目规则出运行时告警而非静默。
 Object? _resolveWatchOp(String ctxId, String op, Map payload) {
   final type = payload['type'];
-  if (type is! String || type.isEmpty) return null;
+  if (type is! String || type.isEmpty) {
+    _warnCtxOpOnce('type|$ctxId|$op',
+        '[jsui] context.$op 载荷缺少 type（ctx=$ctxId），已忽略');
+    return null;
+  }
   final context = jsBuildContextOf(ctxId);
-  // 结点尚未登记 / 已卸载（构建时序或卸载竞态）：静默跳过。
-  if (context == null) return null;
+  // 结点尚未登记 / 已卸载（构建时序或卸载竞态）：跳过，但要留痕（同一 ctx 只报一次）。
+  if (context == null) {
+    _warnCtxOpOnce('ctx|$ctxId|$op',
+        '[jsui] context.$op("$type") 跳过：ctx 句柄 $ctxId 尚无对应 BuildContext'
+        '（构建时序或已卸载）');
+    return null;
+  }
   final target = jsChangeNotifierOfTypeAt(context, type);
   if (target == null) {
     // 只在**本端也没找到**时告警：否则是宿主侧本就没有该作用域的镜像

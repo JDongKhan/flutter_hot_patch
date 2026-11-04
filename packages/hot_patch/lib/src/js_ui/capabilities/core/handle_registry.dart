@@ -69,14 +69,23 @@ void registerHandleKind(String kind, JsHandleKind desc) {
 
 bool _handleChannelsRegistered = false;
 
+/// 已告警过的「未知 kind / 未实现 op」组合（避免每次调用刷屏）。
+final Set<String> _warnedHandleOps = {};
+
 /// 幂等注册通用句柄通道（由 js_ui_capabilities.ensureJsUiCapabilities 聚合调用）。
 void ensureHandleChannels() {
   if (_handleChannelsRegistered) return;
   _handleChannelsRegistered = true;
   JsRuntimeManager.registerHostMethod('jsHandle', (Object? payload) {
-    if (payload is! Map) return null;
+    if (payload is! Map) {
+      HotPatchLog.warn('jsHandle: 载荷不是对象（${payload.runtimeType}），已丢弃');
+      return null;
+    }
     final id = payload['id']?.toString();
-    if (id == null || id.isEmpty) return null;
+    if (id == null || id.isEmpty) {
+      HotPatchLog.warn('jsHandle: 缺少 id，已丢弃: $payload');
+      return null;
+    }
     final op = payload['op']?.toString() ?? '';
     switch (op) {
       case 'create':
@@ -85,7 +94,16 @@ void ensureHandleChannels() {
         final pageKey = (rawPage == null || rawPage.isEmpty) ? null : rawPage;
         _handleKindById[id] = kind;
         if (pageKey != null) _handlePageById[id] = pageKey;
-        _handleKinds[kind]?.onCreate?.call(id, payload['meta'], pageKey);
+        final desc = _handleKinds[kind];
+        if (desc == null) {
+          if (_warnedHandleOps.length >= 512) _warnedHandleOps.clear();
+          if (_warnedHandleOps.add('create|$kind')) {
+            HotPatchLog.warn('jsHandle: 未注册的句柄 kind "$kind"（id=$id），'
+                '宿主不会创建对应真实对象');
+          }
+        } else {
+          desc.onCreate?.call(id, payload['meta'], pageKey);
+        }
         break;
       case 'release':
         // 拥有端为准：先摘除路由再回调（防重复释放 + 防释放中再次触发）。
@@ -95,7 +113,15 @@ void ensureHandleChannels() {
         final kind = _handleKindById[id];
         final desc = kind != null ? _handleKinds[kind] : null;
         final impl = desc?.onOp;
-        if (impl == null) return null;
+        if (impl == null) {
+          final key = 'op|${kind ?? '?'}|$op';
+          if (_warnedHandleOps.length >= 512) _warnedHandleOps.clear();
+          if (_warnedHandleOps.add(key)) {
+            HotPatchLog.warn('jsHandle: 句柄 "$id"（kind=${kind ?? '未登记'}）'
+                '的 op "$op" 无宿主实现，已按 null 返回');
+          }
+          return null;
+        }
         return impl(id, op, payload);
     }
     return null;

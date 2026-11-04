@@ -77,28 +77,44 @@ class JsUiStore {
   void apply(List<dynamic> ops, {bool notify = true}) {
     final touched = <String>{};
     final target = <String>{};
-    for (final raw in ops) {
-      if (raw is! Map) continue;
-      switch (raw['op']) {
+    for (var i = 0; i < ops.length; i++) {
+      final raw = ops[i];
+      if (raw is! Map) {
+        _drop(null, 'op[$i] 不是对象（${raw.runtimeType}）', raw);
+        continue;
+      }
+      final op = raw['op']?.toString() ?? '';
+      switch (op) {
         case 'root':
           final id = raw['id'] as String?;
-          if (id != null) {
-            rootId = id;
-            onRoot?.call(id);
+          if (id == null) {
+            _drop(op, '缺少 id', raw);
+            break;
           }
+          rootId = id;
+          onRoot?.call(id);
         case 'create':
           final id = raw['id'] as String?;
-          if (id == null) break;
+          if (id == null) {
+            _drop(op, '缺少 id', raw);
+            break;
+          }
+          if (raw['type'] is! String) {
+            _drop(op, '缺少 type（按 "${raw['type']}" 处理）', raw);
+          }
           nodes[id] = JsUiNode(
             type: '${raw['type']}',
-            props: _props(raw['props']),
+            props: _props(raw['props'], 'create($id)'),
             hasBuild: raw['hasBuild'] == true,
           );
           touched.add(id);
         case 'insert':
           final parent = nodes[raw['parent']];
           final id = raw['id'] as String?;
-          if (parent == null || id == null) break;
+          if (parent == null || id == null) {
+            _drop(op, '父结点不存在或缺少 id', raw);
+            break;
+          }
           if (!parent.childIds.contains(id)) {
             parent.childIds.insert(_index(raw['index'], parent.childIds.length), id);
             _parents?[id] = raw['parent'] as String;
@@ -108,20 +124,29 @@ class JsUiStore {
           // 同一父结点内换位，父子关系不变，索引无需更新。
           final parent = nodes[raw['parent']];
           final id = raw['id'] as String?;
-          if (parent == null || id == null) break;
+          if (parent == null || id == null) {
+            _drop(op, '父结点不存在或缺少 id', raw);
+            break;
+          }
           parent.childIds.remove(id);
           parent.childIds.insert(_index(raw['index'], parent.childIds.length), id);
           touched.add(raw['parent'] as String);
         case 'props':
           final node = nodes[raw['id']];
-          if (node == null) break;
-          node.props = _props(raw['props']);
+          if (node == null) {
+            _drop(op, '结点不存在（${raw['id']}）', raw);
+            break;
+          }
+          node.props = _props(raw['props'], 'props(${raw['id']})');
           touched.add(raw['id'] as String);
         case 'propsChild':
           final parent = nodes[raw['parent']];
           final key = raw['key'] as String?;
           final childId = raw['childId'] as String?;
-          if (parent == null || key == null || childId == null) break;
+          if (parent == null || key == null || childId == null) {
+            _drop(op, '父结点/ key / childId 缺失', raw);
+            break;
+          }
           // 覆盖同 key 旧子时，旧子的反向索引一并摘除（它不再是本结点的子）。
           final replaced = parent.propChildIds[key];
           if (replaced != null && replaced != childId) {
@@ -133,14 +158,20 @@ class JsUiStore {
         case 'propsChildRemove':
           final parent = nodes[raw['parent']];
           final key = raw['key'] as String?;
-          if (parent == null || key == null) break;
+          if (parent == null || key == null) {
+            _drop(op, '父结点或 key 缺失', raw);
+            break;
+          }
           final removed = parent.propChildIds.remove(key);
           if (removed != null) _parents?.remove(removed);
           touched.add(raw['parent'] as String);
         case 'propsChildren':
           final parent = nodes[raw['parent']];
           final key = raw['key'] as String?;
-          if (parent == null || key == null) break;
+          if (parent == null || key == null) {
+            _drop(op, '父结点或 key 缺失', raw);
+            break;
+          }
           final ids = <String>[
             for (final id in (raw['childIds'] as List? ?? const [])) '$id',
           ];
@@ -155,13 +186,19 @@ class JsUiStore {
         case 'propsData':
           final parent = nodes[raw['parent']];
           final key = raw['key'] as String?;
-          if (parent == null || key == null) break;
+          if (parent == null || key == null) {
+            _drop(op, '父结点或 key 缺失', raw);
+            break;
+          }
           parent.propData[key] = raw['value'];
           touched.add(raw['parent'] as String);
         case 'propsDataRemove':
           final parent = nodes[raw['parent']];
           final key = raw['key'] as String?;
-          if (parent == null || key == null) break;
+          if (parent == null || key == null) {
+            _drop(op, '父结点或 key 缺失', raw);
+            break;
+          }
           parent.propData.remove(key);
           touched.add(raw['parent'] as String);
         case 'propsChildAt':
@@ -171,11 +208,17 @@ class JsUiStore {
           final parent = nodes[raw['parent']];
           final key = raw['key'] as String?;
           final childId = raw['childId'] as String?;
-          if (parent == null || key == null || childId == null) break;
+          if (parent == null || key == null || childId == null) {
+            _drop(op, '父结点/ key / childId 缺失', raw);
+            break;
+          }
           final list = parent.propChildLists[key];
           if (list != null) {
             final i = raw['index'] is num ? (raw['index'] as num).toInt() : -1;
-            if (i < 0 || i >= list.length) break;
+            if (i < 0 || i >= list.length) {
+              _drop(op, 'index=$i 越界（slot "$key" 长度 ${list.length}）', raw);
+              break;
+            }
             final oldId = list[i];
             if (oldId != childId) _parents?.remove(oldId);
             list[i] = childId;
@@ -194,7 +237,10 @@ class JsUiStore {
           touched.add(raw['parent'] as String);
         case 'remove':
           final id = raw['id'] as String?;
-          if (id == null) break;
+          if (id == null) {
+            _drop(op, '缺少 id', raw);
+            break;
+          }
           // 先记下父结点：宿主的 `_renderStoreNode` 只按 `node.childIds` 渲染，
           // 摘除子结点后父结点必须重建，否则宿主侧会继续渲染已被删除的子树
           // （表现为：筛选弹框关不掉、切换筛选条件后列表不刷新）。
@@ -220,7 +266,10 @@ class JsUiStore {
           // 组件 / 懒槽位子树变化的**唯一重建信号**：宿主只按组件建 wrapper，
           // 宿主叶子结点不再各自持有重建回调，因此必须由 JS 显式下发本 op。
           final id = raw['id'] as String?;
-          if (id == null) break;
+          if (id == null) {
+            _drop(op, '缺少 id', raw);
+            break;
+          }
           target.add(id);
         default:
           // 未知 op：JS 侧下发了宿主不认识的指令。静默丢弃会让 JS 状态与
@@ -237,6 +286,11 @@ class JsUiStore {
       }
     }
     _syncParentIndex();
+  }
+
+  /// 丢弃一条无法应用的补丁 op：必须留痕（否则 JS 状态与宿主渲染会悄悄分叉）。
+  static void _drop(String? op, String reason, Object? raw) {
+    HotPatchLog.warn('js_ui: patch op "${op ?? '?'}" 已丢弃：$reason | $raw');
   }
 
   /// 批量 op 应用完后按当前结点规模升/降级父索引（见 [_parents] 注释）。
@@ -268,8 +322,14 @@ class JsUiStore {
     return i.clamp(0, length);
   }
 
-  static Map<String, dynamic> _props(Object? v) =>
-      v is Map ? v.cast<String, dynamic>() : <String, dynamic>{};
+  static Map<String, dynamic> _props(Object? v, String where) {
+    if (v is Map) return v.cast<String, dynamic>();
+    if (v != null) {
+      HotPatchLog.warn('js_ui: $where 的 props 不是对象（${v.runtimeType}），'
+          '已按空 props 处理');
+    }
+    return <String, dynamic>{};
+  }
 
   void _unlink(String id) {
     // 索引模式：只从已知父结点摘除（O(父度)）；扫描模式：全表找父（树不变式

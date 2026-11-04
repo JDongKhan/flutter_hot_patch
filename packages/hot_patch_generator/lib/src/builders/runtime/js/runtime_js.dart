@@ -94,8 +94,7 @@ String _jsUiGlobals(String version) =>
 /// 静态头部：IIFE 入口 + 全局对象 + **按内容哈希的幂等守卫**。
 ///
 /// `G.__jsuiVersion` 由本文件内容哈希生成（[runtimeContentVersion]）：
-///   - 哈希相同（同一份产物被重复加载 / 多个 manager）= 短路，不重复初始化、
-///     不丢已挂载状态；
+///   - 哈希相同（同一份产物被重复加载）= 短路，不重复初始化、不丢已挂载状态；
 ///   - 哈希不同（补丁包带了新版 runtime.js）= **继续执行并重建**整个 `__jsui`，
 ///     于是 JS 侧修复对已上线的 App 立即生效，无需发版。
 String _jsUiGlobalsHead(String version) =>

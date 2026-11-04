@@ -18,7 +18,7 @@ import 'hot_patch_log.dart';
 /// 不存在回退内置 asset——**不需要任何虚拟路径映射表**，文件系统即索引。
 class RemoteAssetBundle {
   const RemoteAssetBundle(this.entryJsAsset, this.localRoot,
-      {this.fresh = false, this.buildTime, this.protocol});
+      {this.fresh = false, this.buildTime, this.protocol, this.version});
 
   final String entryJsAsset;
   final String localRoot;
@@ -37,6 +37,17 @@ class RemoteAssetBundle {
   /// **按包读取**而不是全局共用一个值：不同来源的补丁包（不同 zip、不同批次
   /// 打出）版本可以各不相同。
   final String? protocol;
+
+  /// 补丁包的**身份版本**：用于判断「内存里已加载的 JS 运行时/模块是否来自
+  /// 另一个包」。
+  ///
+  /// 取值是清单里所有可用版本字段的组合（`version` / `buildTime` / `protocol`
+  /// 按顺序用 `|` 连接）：任一字段变化都会让整个身份版本变化。其中
+  /// `buildTime` 每次打包必然变化，因此即使使用方配置的 `version` 保持不变，
+  /// 重新打出的 zip 也一定能被识别为「另一个包」。
+  ///
+  /// 清单缺失（纯 asset 场景 / 老产物无清单）时为 null。
+  final String? version;
 }
 
 /// 网络补丁包加载器：`http(s)://` 开头的 jsAsset → 下载 zip → 校验格式 →
@@ -96,51 +107,76 @@ class RemoteAssetLoader {
   /// 拿着不认识的新协议产物静默错乱，比直接失败更难排查。清单里没有该字段
   /// （历史产物）按兼容处理。
   static RemoteAssetBundle? _bundle(String entry, String root, {bool fresh = false}) {
-    final protocol = _readProtocol(root);
+    final manifest = _readManifest(root);
+    final protocol = _manifestString(manifest, 'protocol');
     if (protocol != null && _majorOf(protocol) != _supportedProtocolMajor) {
       HotPatchLog.warn('patch protocol mismatch: bundle=$protocol, '
           'app=$_supportedProtocolMajor.x — refusing to mount');
       return null;
     }
+    final buildTime = _manifestString(manifest, 'buildTime');
+    // 身份版本：清单里所有可用版本字段的组合（见 RemoteAssetBundle.version）。
+    final version = _identityVersion(
+      version: _manifestString(manifest, 'version'),
+      buildTime: buildTime,
+      protocol: protocol,
+    );
     return RemoteAssetBundle(entry, root,
-        fresh: fresh, buildTime: _readBuildTime(root), protocol: protocol);
+        fresh: fresh,
+        buildTime: buildTime,
+        protocol: protocol,
+        version: version);
+  }
+
+  /// 组合清单里的版本字段为一个身份版本；全部缺失返回 null。
+  static String? _identityVersion({
+    String? version,
+    String? buildTime,
+    String? protocol,
+  }) {
+    final parts = <String>[
+      ?version,
+      ?buildTime,
+      ?protocol,
+    ];
+    return parts.isEmpty ? null : parts.join('|');
   }
 
   /// 读包根 `manifest.json` 的 `protocol` 字段（如 `"0.3.2"`）；缺失 / 非法返回 null。
   ///
   /// 供调用方按包读取「当前资源对应的版本」：不同 zip / 不同批次打出的包各自
   /// 独立，版本可以不同。
-  static String? readProtocol(String root) => _readProtocol(root);
+  static String? readProtocol(String root) => _manifestString(
+        _readManifest(root),
+        'protocol',
+      );
 
-  static String? _readProtocol(String root) {
+  static String? _manifestString(Map<String, dynamic>? manifest, String key) {
+    final value = manifest?[key];
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  /// 读包根清单；文件缺失返回 null（正常：老产物 / 非补丁包），存在但解析失败
+  /// 输出 debug 日志（清单损坏会影响版本与协议判断，不能完全静默）。
+  static Map<String, dynamic>? _readManifest(String root) {
+    final path = '$root/manifest.json';
     try {
-      final file = File('$root/manifest.json');
+      final file = File(path);
       if (!file.existsSync()) return null;
       final decoded = jsonDecode(file.readAsStringSync());
-      if (decoded is! Map) return null;
-      final protocol = decoded['protocol'];
-      return protocol is String && protocol.isNotEmpty ? protocol : null;
-    } catch (_) {
+      if (decoded is! Map) {
+        HotPatchLog.debug('manifest.json 不是对象：$path');
+        return null;
+      }
+      return decoded.cast<String, dynamic>();
+    } catch (e) {
+      HotPatchLog.debug('manifest.json 解析失败：$path -> $e');
       return null;
     }
   }
 
   /// 版本号的主版本段：`"1.3"` → `"1"`，`"1"` → `"1"`。
   static String _majorOf(String version) => version.split('.').first.trim();
-
-  /// 读包根 `manifest.json` 的 `buildTime` 字段；无清单 / 非 JSON / 字段缺失返回 null。
-  static String? _readBuildTime(String root) {
-    try {
-      final file = File('$root/manifest.json');
-      if (!file.existsSync()) return null;
-      final decoded = jsonDecode(file.readAsStringSync());
-      if (decoded is! Map) return null;
-      final buildTime = decoded['buildTime'];
-      return buildTime is String && buildTime.isNotEmpty ? buildTime : null;
-    } catch (_) {
-      return null;
-    }
-  }
 
   /// 判断 [jsAsset] 是否为网络补丁包地址（http:// 或 https:// 开头）。
   static bool isRemote(String jsAsset) =>
@@ -164,7 +200,12 @@ class RemoteAssetLoader {
   static Future<void> clearCache() async {
     final doc = await getApplicationDocumentsDirectory();
     final dir = Directory('${doc.path}/hot_patch');
-    if (dir.existsSync()) dir.deleteSync(recursive: true);
+    if (dir.existsSync()) {
+      dir.deleteSync(recursive: true);
+      HotPatchLog.log('已清除本地补丁缓存：${dir.path}');
+    } else {
+      HotPatchLog.debug('本地补丁缓存目录不存在，无需清除：${dir.path}');
+    }
   }
 
   /// 加载网络补丁包。
@@ -306,8 +347,9 @@ class RemoteAssetLoader {
         final fallback = _fallback(
             root, url, _resolveEntry(root, component, entryPath), 'network error');
         if (fallback != null) return fallback;
-      } catch (_) {
-        // 回退也失败，忽略。
+      } catch (e2) {
+        // 回退也失败：主异常已记录，这里补一条回退侧原因，避免只剩一条笼统报错。
+        HotPatchLog.debug('remote asset fallback errored: $url -> $e2');
       }
       return null;
     }
@@ -319,16 +361,26 @@ class RemoteAssetLoader {
     if (entryFile.existsSync() && entryFile.lengthSync() > 0) {
       return _bundle(entry, root);
     }
+    // 缓存目录存在但入口缺失/为空 = 缓存损坏（首次加载时目录根本不存在，属于
+    // 正常“无缓存”，不在这里刷日志）。
+    if (Directory(root).existsSync()) {
+      HotPatchLog.warn('本地补丁缓存入口缺失或为空，视为不可用：${entryFile.path}');
+    }
     return null;
   }
 
   /// 失败降级：本地旧缓存完整则回退使用并留痕，否则 null。
   static RemoteAssetBundle? _fallback(
       String root, String url, String? entry, String reason) {
-    if (entry == null) return null;
+    if (entry == null) {
+      HotPatchLog.debug('remote asset fallback unavailable ($reason): $url');
+      return null;
+    }
     final cached = _cachedBundle(root, entry);
     if (cached != null) {
       HotPatchLog.warn('remote asset fallback to cached ($reason): $url -> $entry');
+    } else {
+      HotPatchLog.warn('remote asset fallback failed ($reason): $url（旧缓存不可用）');
     }
     return cached;
   }

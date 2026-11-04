@@ -11,6 +11,7 @@
 // 有意义；镜像类（ChangeNotifier）的 meta.fn 为 null，无害。
 import 'package:flutter/widgets.dart';
 
+import '../../../utils/hot_patch_log.dart';
 import 'binding_cache.dart';
 import 'handle_registry.dart';
 
@@ -60,6 +61,10 @@ class JsControllerBridge<T extends Object> {
 
   bool _registered = false;
 
+  /// 已告警过的「句柄尚未创建/已释放却收到 op」组合（释放竞态属正常，但不能
+  /// 完全静默，否则调用方只看到 null、不知道为什么没执行）。
+  final Set<String> _warnedMissingOps = {};
+
   /// 幂等注册 kind 描述符（重复调用短路，与 registerHandleKind 的 assert 配合）。
   void ensure() {
     if (_registered) return;
@@ -88,7 +93,16 @@ class JsControllerBridge<T extends Object> {
           },
           onOp: (id, op, payload) {
             final c = controllerAt(id);
-            return c == null ? null : _onOp(c, op, payload);
+            if (c == null) {
+              final key = '$id|$op';
+              if (_warnedMissingOps.length >= 256) _warnedMissingOps.clear();
+              if (_warnedMissingOps.add(key)) {
+                HotPatchLog.warn('$_kind: 句柄 $id 尚未创建或已释放，'
+                    'op "$op" 已丢弃（按 null 返回）');
+              }
+              return null;
+            }
+            return _onOp(c, op, payload);
           },
           onRelease: (id) {
             final c = controllerAt(id);
