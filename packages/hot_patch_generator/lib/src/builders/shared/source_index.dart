@@ -246,6 +246,17 @@ List<String> resolveImportFiles(CompilationUnit unit, String sourcePath) {
   return out;
 }
 
+/// 本文件**直接** import / export 的 `package:` 归属包名（含三方宿主包与框架包）。
+///
+/// 与 [resolveImportFiles] 的口径不同：后者只保留参与跨包翻译的本地包，这里
+/// 保留全部 package 名。用途是「源文件 import 了 package:X → X 的 JS 模块必须
+/// 被求值」这类产物依赖判定——Dart 里要用某个库的扩展 / 顶层 API，前提就是
+/// import 它，所以这是纯源码事实（import 链 + package 归属），与具体成员名无关。
+Set<String> importedPackageNames(CompilationUnit unit) => {
+      for (final d in unit.directives)
+        if (d is NamespaceDirective) ?packageNameOf(d.uri.stringValue ?? ''),
+    };
+
 /// 本文件的 import（[isExport] 为 false）或 export（true）目标 URI。
 List<String> _directiveUris(CompilationUnit unit, {required bool isExport}) {
   final out = <String>[];

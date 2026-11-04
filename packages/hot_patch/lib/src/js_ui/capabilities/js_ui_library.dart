@@ -60,7 +60,6 @@ import 'media_query/media_query_library.dart';
 import 'notification_listener/notification_listener_library.dart';
 import 'overlay_portal/overlay_portal_library.dart';
 import 'pop_scope/pop_scope_library.dart';
-import 'provider/provider_library.dart';
 import 'scroll_controller/scroll_controller_library.dart';
 import 'sliver_persistent_header/sliver_persistent_header_library.dart';
 import 'tab/tab_library.dart';
@@ -184,5 +183,4 @@ void _seedBuiltins() {
   // ── 三方库 ──
   registerJsUiLibrary(const EasyRefreshLibrary());
   registerJsUiLibrary(const CachedNetworkImageLibrary());
-  registerJsUiLibrary(const ProviderLibrary());
 }

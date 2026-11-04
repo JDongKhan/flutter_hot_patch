@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.8.0",
-  "buildTime": "2026-11-04T17:23:59.390863",
+  "buildTime": "2026-11-04T19:19:28.039074",
   "resources": {
     "flutter.js": "d3d227f01f350aaa94dbd9fe61cbfff526bc5d4ef6e29d4da2c0a5f262150d53",
     "provider.js": "db49428c554764eb6c0c1e95550a1a00a0a688743b4048505c2d6c9703270a7e",
@@ -98,8 +98,8 @@
     "model/network_vm.js": "1f495860c6c54bbac8df62a7f25afbfe68ce590e387f3db1dcfa7927931e96f8",
     "model/counter_vm.js": "0541360274009cb3f5a17c26cb7f4c4cff46a876abe3d5ef0af1d9854312d883",
     "base/app_log_console.js": "9085e16335840d340c0398de1bfefc6bf793dc494432906853b09c461dc1dfac",
-    "base/canvas_image.js": "ece35b7ea97b548fdf73887835f5365c9f1c62d0b38626ff24c715c95f3ec57d",
-    "base/app_router.js": "34ab0ce64e1221cc431a7a495661ef7364b1e53779b269d66da4c0cda126fa7a",
-    "base/web_view.js": "d33a5e115cda6fe0c27ccb19c8aa6c5ba50275f9baa952d0ccac6496a2aa3723"
+    "base/canvas_image.js": "903379c7a8a93053d1ed1a9ce65e410e09ff9d70328c170ecedef4b04ffd8623",
+    "base/app_router.js": "1d0baad9994c4fffdb0e0ebedfc1b90bc0919ac64ca13f4f2ad6d30890d30585",
+    "base/web_view.js": "ed4cfc2b46fd3928dbe87a84069b8403ba875aaafa657b1e4cdeae83e9aaaff7"
   }
 }

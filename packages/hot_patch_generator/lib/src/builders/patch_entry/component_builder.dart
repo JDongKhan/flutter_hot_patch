@@ -25,7 +25,8 @@ import '../shared/js_class_defs.dart';
 import '../shared/runtime_global_types.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
-import '../ui_widget/widget_module_builder.dart' show hostWrapperSource;
+import '../ui_widget/widget_module_builder.dart'
+    show hostWrapperSource, registeredWidgetPackages;
 
 /// 把 lib/ 下的 Dart 源文件翻译为**同名** JS 产物（`lib/a/b.dart` → `patch/a/b.js`）：
 /// 文件名与 Dart 源文件一一对应，不区分组件/模型，也不预设目录结构——源码
@@ -479,6 +480,7 @@ class ComponentBuilder implements Builder {
         importResolver: importResolver,
         extensions: extensions,
         baseClassOf: (c) => jsBaseClassOf(c, classTable),
+        importedPackages: importedPackageNames(parsed.unit),
       ),
     );
   }
@@ -509,6 +511,7 @@ String _renderJsProduct(
   String? Function(String component)? importResolver,
   List<ExtensionInfo> extensions = const [],
   String? Function(ClassInfo cls)? baseClassOf,
+  Set<String> importedPackages = const {},
 }) {
   // 头部（注释 + import 区）：package widget 产物的 import 依赖「实际用到的
   // 类型」，只能在各组件渲染完成后得知，所以先渲染 body 再拼装 import，
@@ -610,6 +613,25 @@ String _renderJsProduct(
           "'${relativeProduct(ownProduct, packageModulePath(entry.key))}';",
   ]..sort();
   for (final line in importLines) {
+    head.writeln(line);
+  }
+
+  // 库级 API 模块的**副作用 import**：库把对运行时提出的要求（原型补丁 /
+  // 作用域登记）写在它自己的 package 模块里（如 `patch/provider.js` 给
+  // `JsBuildContext` 装 `watch/read`）。Dart 里要用某库的扩展 / 顶层 API，
+  // 前提就是 import 它 ——「源文件 import 了 package:X」是纯源码事实，据此
+  // 保证 X 的模块在**本产物求值前**加载，判据不涉及任何成员名。
+  // 已按名 import 的模块跳过：那行 import 本身就会触发加载。
+  final modulePackages = <String>{
+    nodeHelperPackage,
+    ...registeredWidgetPackages().keys,
+  };
+  final sideEffectImports = <String>[
+    for (final pkg in importedPackages)
+      if (modulePackages.contains(pkg) && !importsByPackage.containsKey(pkg))
+        "import '${relativeProduct(ownProduct, packageModulePath(pkg))}';",
+  ]..sort();
+  for (final line in sideEffectImports) {
     head.writeln(line);
   }
 

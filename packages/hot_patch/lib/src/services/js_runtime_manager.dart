@@ -599,6 +599,7 @@ class JsRuntimeManager {
   // 做文本级模块加载：把产物的 import/export 预处理成脚本模式——
   //   - `export class X {...}`   -> `class X {...}`（收集导出名）
   //   - `import { A } from 'rel'` -> `const { A } = __modules['<abs>'];`
+  //   - `import 'rel';`（副作用）-> 仅递归加载依赖，语句改写为注释
   //   - 模块尾部注册 `__modules['<jsAsset>'] = { X };`（JS 侧全局表，
   //     跨 evaluate 共享）
   // 依赖按相对路径递归加载（JsAssetResolver），同一 jsAsset 只执行一次。
@@ -721,11 +722,18 @@ class JsRuntimeManager {
   /// 已告警过的「远程包缺模块 → 回退内置 asset」路径（避免逐次刷屏）。
   static final Set<String> _assetFallbackWarned = {};
 
-  /// 解析模块源码里的 import 语句：`import { A, B } from 'rel';`
-  /// -> [(['A','B'], 'rel')]。只匹配生成器产物的单行 import 形态。
+  /// 解析模块源码里的 import 语句：`import { A, B } from 'rel';` 与
+  /// 副作用形态 `import 'rel';` -> [(名字列表, 'rel')]（副作用形态名字为空）。
+  /// 只匹配生成器产物的单行 import 形态。
   static List<(List<String>, String)> _parseImports(String source) {
     final re = RegExp(
       r"import\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
+    );
+    // 副作用 import：生成器为「源文件 import 了 package:X」的包模块补的依赖
+    // （如 `import '../provider.js';`），只需要加载、不需要绑定任何名字。
+    final sideEffectRe = RegExp(
+      r"^[ \t]*import\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
+      multiLine: true,
     );
     return [
       for (final m in re.allMatches(source))
@@ -737,6 +745,8 @@ class JsRuntimeManager {
               .toList(),
           m.group(2)!,
         ),
+      for (final m in sideEffectRe.allMatches(source))
+        (const <String>[], m.group(1)!),
     ];
   }
 
@@ -789,6 +799,17 @@ class JsRuntimeManager {
       final abs = JsAssetResolver.resolve(base, relMatch.group(1)!);
       return "const { ${names.join(', ')} } = __modules['$abs'];";
     });
+
+    // 副作用 import（`import 'rel';`）：依赖已由 [loadModule] 先求值，这里只
+    // 把它改写成注释——产物是脚本模式求值，原生 import 语句会直接语法错误。
+    final sideEffectRe = RegExp(
+      r"^([ \t]*)import\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
+      multiLine: true,
+    );
+    out = out.replaceAllMapped(
+      sideEffectRe,
+      (m) => '${m.group(1)}// 已加载 ${m.group(2)}',
+    );
 
     // 模块尾部注册导出：__modules['jsAsset'] = { A, B };
     if (exportNames.isNotEmpty) {
