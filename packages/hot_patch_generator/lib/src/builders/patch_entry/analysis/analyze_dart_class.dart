@@ -788,6 +788,7 @@ ClassInfo translateClass(
       hostChannel: cm.hostChannel,
       positionalParamCount: cm.positionalParamCount,
       hasNamedParams: cm.hasNamedParams,
+      typeParams: cm.typeParams,
       superMap: cm.superMap,
       mixinOrigin: cm.mixinOrigin,
     );

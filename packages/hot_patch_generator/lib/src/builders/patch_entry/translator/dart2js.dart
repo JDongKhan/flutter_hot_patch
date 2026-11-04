@@ -121,7 +121,14 @@ String renderClassDecl(
       if (body.isNotEmpty) b.write('$body\n');
       b.write('  }\n');
     } else {
-      b.write('  $st$fn${m.name}(${m.params.join(', ')}) {\n');
+      // 泛型方法：调用点的类型实参以**尾参对象**下发（`m<T>(…)` →
+      // `m(…, {typeArguments: {T: …}})`），方法定义侧用隐藏形参 `__ta` 接住，
+      // 方法体里的类型参数 `T` 从 `__ta.typeArguments["T"]` 读。
+      final params = [
+        ...m.params,
+        if (m.typeParams.isNotEmpty) '__ta',
+      ];
+      b.write('  $st$fn${m.name}(${params.join(', ')}) {\n');
       if (body.isNotEmpty) b.write('$body\n');
       b.write('  }\n');
     }

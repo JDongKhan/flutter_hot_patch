@@ -1751,14 +1751,17 @@ String translateClassMethodBody(
     className: info.name,
     staticFields: staticFieldNames,
     staticMethods: staticMethodNames,
-    // 类泛型：方法体里的 `T` 读实例上由构造保存的 `typeArguments` 元信息
-    // （`this.__ta["T"]`）。静态方法在 Dart 里本就不能引用类类型参数，故不进表。
-    typeParams: m.isStatic
-        ? const {}
-        : {
-            for (final tp in info.typeParams)
-              tp: 'this.__ta[${jsString(tp)}]',
-          },
+    // 类型参数 → 运行时类型名：
+    //   - 类泛型：实例上由构造保存的 `typeArguments`（`this.__ta["T"]`），
+    //     静态方法在 Dart 里本就不能引用类类型参数，故不进表；
+    //   - 方法泛型：调用点下发的尾参对象（`__ta.typeArguments["E"]`），方法定义侧
+    //     已追加隐藏形参 `__ta`；未传时读 undefined（不抛错）。
+    typeParams: {
+      if (!m.isStatic)
+        for (final tp in info.typeParams) tp: 'this.__ta[${jsString(tp)}]',
+      for (final tp in m.typeParams)
+        tp: '((__ta && __ta.typeArguments) || {})[${jsString(tp)}]',
+    },
     hostFunctions: hostFunctions,
     globalConsts: globalConsts,
     superMap: m.superMap,
