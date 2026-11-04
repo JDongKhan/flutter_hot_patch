@@ -156,6 +156,9 @@ class ComponentBuilder implements Builder {
     //     宿主方法体里 `new` 出来的详情页不翻译（依赖链在宿主方法体处断掉）。
     //     @PatchIgnore 亦不翻译。
     final roots = <(ClassDeclaration, bool)>[];
+    // 无 @PatchEntry 的文件才需要翻译范围（含顶层常量的被引用判定）；
+    // 纯数据文件分支在这一分支之外，故在此提前声明。
+    TranslationScope? scope;
     // 本文件是否声明了 `extension`：纯扩展文件没有根类，但也必须产出产物
     // （`registerExtension(...)` 注册语句就写在声明处），故「无根类 → 不产出」的
     // 早返回要让它让位。是否产出仍由**文件级可达**决定（component_scope 把声明
@@ -169,7 +172,7 @@ class ComponentBuilder implements Builder {
     if (annotated.isNotEmpty) {
       roots.addAll([for (final d in annotated) (d, true)]);
     } else {
-      final scope = await componentTranslationScope(buildStep);
+      scope = await componentTranslationScope(buildStep);
       if (!scope.reachableFiles.contains(inputId.path)) return;
       final neededHere = scope.neededClasses[inputId.path] ?? const <String>{};
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
@@ -192,10 +195,20 @@ class ComponentBuilder implements Builder {
       // 纯数据文件（如 lib/app/service/app_data.dart）：文件里没有任何可翻译的类，
       // 只有顶层常量 → 产出「顶层常量」产物（`export const kBanners = [...]`），
       // 组件产物才能 import 到这些值（与类产物同一个文件级产物路径）。
-      if (!_hasOwnTopLevelConst(parsed.unit)) return;
+      //
+      // 只写**被其它产物引用到**的常量（scope.neededConsts，与类同一套符号级
+      // 判据）：没人引用的数据文件不产出空壳产物（如 main.dart 里只被同文件
+      // 宿主代码使用的私有常量）。
+      final neededConsts =
+          scope!.neededConsts[inputId.path] ?? const <String>{};
+      if (neededConsts.isEmpty) return;
       final constResolver =
           buildTopLevelConstResolver(parsed.unit, inputId.path, classTable);
-      if (constResolver.sameFile.isEmpty) return;
+      final consts = <String, String>{
+        for (final e in constResolver.sameFile.entries)
+          if (neededConsts.contains(e.key)) e.key: e.value,
+      };
+      if (consts.isEmpty) return;
       final importByFile = <String, Set<String>>{};
       _addConstImports(importByFile, constResolver,
           referencedImportedConsts(parsed.unit, constResolver));
@@ -203,7 +216,7 @@ class ComponentBuilder implements Builder {
           importByFile, classTable, constResolver.sameFileConstClasses);
       final text = renderTopLevelConstProduct(
         inputId.path,
-        consts: constResolver.sameFile,
+        consts: consts,
         imports: _importLines(importByFile, ownProduct),
       );
       if (text.isEmpty) return;
@@ -639,10 +652,3 @@ List<String> _importLines(Map<String, Set<String>> byFile, String ownProduct) =>
         "import { ${(entry.value.toList()..sort()).join(', ')} } from "
             "'${relativeProduct(ownProduct, productPath(entry.key))}';",
     ]..sort();
-
-/// 本文件是否声明了带初始化器的顶层变量（数据文件判据；先探后建，避免为
-/// 没有任何常量、也没有类的文件白跑一遍常量解析）。
-bool _hasOwnTopLevelConst(CompilationUnit unit) => unit.declarations
-    .whereType<TopLevelVariableDeclaration>()
-    .expand((d) => d.variables.variables)
-    .any((v) => v.initializer != null);
