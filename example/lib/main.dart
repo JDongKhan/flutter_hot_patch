@@ -67,7 +67,7 @@ class HotDemoApp extends StatelessWidget {
         final content = child ?? const SizedBox();
         return LayoutBuilder(
           builder: (context, constraints) {
-            if (constraints.maxWidth <= 1200) return content;
+            if (constraints.maxWidth <= 800) return content;
             return Row(
               children: [
                 Expanded(flex: 3,child: content),
