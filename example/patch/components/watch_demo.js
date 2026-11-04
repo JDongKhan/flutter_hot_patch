@@ -24,7 +24,7 @@ export class WatchDemo extends StatefulWidget {
             "children": [
               new Builder({
                 "builder": (context) => {
-                  var model = context.watch({ typeArguments: {"0": "CounterVm"} });
+                  var model = context.watch({ typeArguments: {"T": "CounterVm"} });
                   return new Column({
                     "mainAxisSize": MainAxisSize.min,
                     "children": [
@@ -85,7 +85,7 @@ export class WatchCountLabel extends StatefulWidget {
     super(args);
   }
   build(context) {
-    var model = context.watch({ typeArguments: {"0": "CounterVm"} });
+    var model = context.watch({ typeArguments: {"T": "CounterVm"} });
     return new Text({
       "style": (this.__k0 || (this.__k0 = new TextStyle({
         "color": Colors.blue,

@@ -52,7 +52,7 @@ export class HomeView extends StatefulWidget {
     await vm.changeCity(picked);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"0": "HomeVm"} });
+    var vm = context.watch({ typeArguments: {"T": "HomeVm"} });
     if (vm.loading) {
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})

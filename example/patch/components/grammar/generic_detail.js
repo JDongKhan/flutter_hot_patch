@@ -41,6 +41,11 @@ export class TypeCodec {
     }
     throw new ArgumentError({message: "不支持的泛型类型"});
   }
+  getType() {
+    return this.__ta["T"].toString();
+  }
+  getEType() {
+  }
 }
 
 // 组件 GenericDetail
@@ -111,6 +116,24 @@ export class GenericDetail extends StatefulWidget {
         new Text({
           "data": "Pair<String, int> → " + pair.describe()
         }),
+        new Text({
+          "data": "stringCodec.getType() → " + stringCodec.getType()
+        }),
+        new Text({
+          "data": "intCodec.getType() → " + intCodec.getType()
+        }),
+        new Text({
+          "data": "doubleCodec.getType() → " + doubleCodec.getType()
+        }),
+        new Text({
+          "data": "stringCodec.getEType() → " + stringCodec.getEType({ typeArguments: {"E": "String"} })
+        }),
+        new Text({
+          "data": "intCodec.getEType() → " + intCodec.getEType({ typeArguments: {"E": "int"} })
+        }),
+        new Text({
+          "data": "doubleCodec.getEType() → " + doubleCodec.getEType({ typeArguments: {"E": "double"} })
+        }),
         (this.__k5 || (this.__k5 = new SizedBox({
           "height": 6
         }))),
@@ -147,7 +170,7 @@ export class GenericDetail extends StatefulWidget {
           "create": (_) => { return new CounterVm(); },
           "child": new Builder({
             "builder": (context) => {
-              var model = context.watch({ typeArguments: {"0": "CounterVm"} });
+              var model = context.watch({ typeArguments: {"T": "CounterVm"} });
               return new Column({
                 "crossAxisAlignment": CrossAxisAlignment.stretch,
                 "children": [

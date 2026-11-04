@@ -74,7 +74,7 @@ export class AppShellView extends StatefulWidget {
     return Icons.apps;
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"0": "AppShellVm"} });
+    var vm = context.watch({ typeArguments: {"T": "AppShellVm"} });
     if (vm.loading) {
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})

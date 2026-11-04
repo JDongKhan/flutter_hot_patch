@@ -47,6 +47,14 @@ class TypeCodec<T> {
     }
     throw ArgumentError('不支持的泛型类型');
   }
+
+  String getType() {
+    return T.toString();
+  }
+
+  String getEType<E> () {
+    return E.toString();
+  }
 }
 
 /// 多类型参数的泛型类：验证 `typeArguments` 的 key 是声明侧的 `K` / `V`。
@@ -91,10 +99,7 @@ class _GenericDetailState extends State<GenericDetail> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          '泛型：类泛型 / 方法泛型',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        const Text('泛型：类泛型 / 方法泛型', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         const Text(
           'Dart 泛型在 JS 侧擦除：<T> 只作为 typeArguments 元信息下发，不占位置参数。',
@@ -108,6 +113,15 @@ class _GenericDetailState extends State<GenericDetail> {
         Text('TypeCodec<int>().parse("42") → ${intCodec.parse('42')}'),
         Text('TypeCodec<double>().parse("3.14") → ${doubleCodec.parse('3.14')}'),
         Text('Pair<String, int> → ${pair.describe()}'),
+
+        Text('stringCodec.getType() → ${stringCodec.getType()}'),
+        Text('intCodec.getType() → ${intCodec.getType()}'),
+        Text('doubleCodec.getType() → ${doubleCodec.getType()}'),
+
+        Text('stringCodec.getEType() → ${stringCodec.getEType<String>()}'),
+        Text('intCodec.getEType() → ${intCodec.getEType<int>()}'),
+        Text('doubleCodec.getEType() → ${doubleCodec.getEType<double>()}'),
+
         const SizedBox(height: 6),
         const Text(
           '产物形态：new TypeCodec({typeArguments: {T: "String"}})；'

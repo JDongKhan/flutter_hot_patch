@@ -43,7 +43,7 @@ export class MineView extends StatelessWidget {
     }
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"0": "MineVm"} });
+    var vm = context.watch({ typeArguments: {"T": "MineVm"} });
     var feed = vm.feed;
     if ((feed == null)) {
       var error = vm.error;

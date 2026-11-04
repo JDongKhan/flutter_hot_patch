@@ -27,15 +27,15 @@ export class DialogDetail extends StatefulWidget {
   }
   _openCupertino() {
     this.setState(() => { this._opens += 1; });
-    showCupertinoDialog({"context": this.context, "builder": (ctx) => { return new CupertinoDialogContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showCupertinoDialog", v); });
+    showCupertinoDialog({"context": this.context, "builder": (ctx) => { return new CupertinoDialogContent({}); }, typeArguments: {"T": "Object?"}}).then((v) => { return this._record("showCupertinoDialog", v); });
   }
   _openAdaptive() {
     this.setState(() => { this._opens += 1; });
-    showAdaptiveDialog({"context": this.context, "builder": (ctx) => { return new CupertinoDialogContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showAdaptiveDialog", v); });
+    showAdaptiveDialog({"context": this.context, "builder": (ctx) => { return new CupertinoDialogContent({}); }, typeArguments: {"T": "Object?"}}).then((v) => { return this._record("showAdaptiveDialog", v); });
   }
   _openCupertinoSheet() {
     this.setState(() => { this._opens += 1; });
-    showCupertinoModalPopup({"context": this.context, "builder": (ctx) => { return new ActionSheetContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showCupertinoModalPopup", v); });
+    showCupertinoModalPopup({"context": this.context, "builder": (ctx) => { return new ActionSheetContent({}); }, typeArguments: {"T": "Object?"}}).then((v) => { return this._record("showCupertinoModalPopup", v); });
   }
   _openGeneral() {
     this.setState(() => { this._opens += 1; });

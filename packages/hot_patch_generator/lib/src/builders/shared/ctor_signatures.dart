@@ -86,6 +86,14 @@ class CtorSignatures {
   /// typedef 名 → 是否函数类型别名（解析结果缓存，每个名字只解析一次）。
   final Map<String, bool> _typedefIsFunction = {};
 
+  /// **泛型方法声明**索引：方法名 → 出现过的类型参数名组合（逗号连接、去重）。
+  ///
+  /// 由 [_ensureIndex] 的正则扫描源码建立（`T watch<T>(…)` / `List<T> map<T>(…)`），
+  /// 用于给「调用点定位不到声明」的泛型方法（如 `context.watch<T>()`）取元信息
+  /// 的 key。同名方法出现**多种**参数名组合时视为不可判定，返回空（调用方退化为
+  /// 位置序号键），绝不猜。
+  final Map<String, Set<String>> _genericMethodNames = {};
+
   /// 已解析的编译单元缓存（同一文件只读一次）。
   final Map<String, CompilationUnit?> _units = {};
 
@@ -279,6 +287,21 @@ class CtorSignatures {
     return const [];
   }
 
+
+  /// 泛型**方法名** → 声明侧类型参数名（`watch` → `['T']`）。
+  ///
+  /// 用于调用点无法定位接收者类型的方法（`context.watch<T>()` 这类代理方法）。
+  /// 源码里同名方法出现多种参数名组合时返回空——宁可退化为位置序号键，也不猜。
+  List<String> methodTypeParamsOfName(String methodName) {
+    _ensureIndex();
+    final sets = _genericMethodNames[methodName];
+    if (methodName == 'read' || methodName == 'watch') {
+      // ignore: avoid_print - 构建期临时诊断
+      print('[DBG] $methodName -> $sets');
+    }
+    if (sets == null || sets.length != 1) return const [];
+    return sets.first.split(',');
+  }
 
   /// 抽单个类的构造签名；[ctorName] 指定的构造不存在时返回 null。
   CtorSignature? _signatureOf(ClassDeclaration decl, String? ctorName) {
@@ -477,6 +500,18 @@ class CtorSignatures {
           final name = m.group(1);
           if (name != null) typedefs.putIfAbsent(name, () => []).add(entity.path);
         }
+        for (final m in _genericMethodDecl.allMatches(content)) {
+          final name = m.group(1);
+          final params = m.group(2);
+          if (name == null || params == null) continue;
+          final list = params
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .join(',');
+          if (list.isEmpty) continue;
+          _genericMethodNames.putIfAbsent(name, () => {}).add(list);
+        }
       }
     }
     return _classFiles = index;
@@ -493,5 +528,13 @@ class CtorSignatures {
   static final _typedefDecl = RegExp(
     r'^[ \t]*(?:(?:abstract|sealed|base|final|interface|augment)[ \t]+)*typedef[ \t]+([A-Za-z_$][\w$]*)',
     multiLine: true,
+  );
+
+  /// **泛型方法声明**：`T watch<T>(…)` / `List<T> map<T>(…)`。
+  ///
+  /// 要求方法名前有一个「返回类型 + 空白」，据此把调用形态（`x.watch<T>(…)` /
+  /// `= Foo<T>(…)`）排除在外：调用前是 `.` / `=`，不是标识符 + 空白。
+  static final _genericMethodDecl = RegExp(
+    r'[A-Za-z_$][\w$<>?, ]*[ \t]+([A-Za-z_$][\w$]*)[ \t]*<[ \t]*([A-Za-z_$][\w$]*(?:[ \t]*,[ \t]*[A-Za-z_$][\w$]*)*)[ \t]*>[ \t]*\(',
   );
 }

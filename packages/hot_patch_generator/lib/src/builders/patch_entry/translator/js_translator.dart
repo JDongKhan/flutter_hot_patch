@@ -808,10 +808,12 @@ String? closureToJs(
 
 /// 泛型方法调用点能定位到的声明侧类型参数名。
 ///
-/// 只查**静态方法**（receiver 是类名，`C.parse<T>()`）：源码索引能确定参数名，
-/// 元信息 key 因此与开发者写的 `<T>` 一致。实例方法 / 注入代理方法（如
-/// `context.watch<T>()`）在无类型解析的翻译层无法定位声明，退化为位置序号
-/// 键——消费方按 `Object.values(...)` 取值，与 key 无关。
+/// 1. receiver 是**类名**且类是项目类 / 运行时注入类（`C.parse<T>()`）：按静态
+///    方法声明取参数名；
+/// 2. 其余（注入代理方法 `context.watch<T>()`、实例方法）：按**方法名**查源码里
+///    唯一的泛型方法声明（`watch` → `['T']`）；
+/// 3. 仍不可判定（同名方法有多个参数名组合）→ 空，调用方退化为位置序号键。
+///    消费方按 `Object.values(...)` 取值，与 key 无关。
 List<String> _declaredTypeParamsFor(
   MethodInvocation e,
   Map<String, ClassInfo> classes,
@@ -819,11 +821,12 @@ List<String> _declaredTypeParamsFor(
   final tgt = e.target;
   if (tgt is SimpleIdentifier &&
       (classes.containsKey(tgt.name) || runtimeGlobalTypes().contains(tgt.name))) {
-    return CtorSignatures.instance
-            ?.staticMethodTypeParamsOf(tgt.name, e.methodName.name) ??
-        const [];
+    final declared = CtorSignatures.instance
+        ?.staticMethodTypeParamsOf(tgt.name, e.methodName.name);
+    if (declared != null && declared.isNotEmpty) return declared;
   }
-  return const [];
+  return CtorSignatures.instance?.methodTypeParamsOfName(e.methodName.name) ??
+      const [];
 }
 
 /// 闭包体内的单条表达式语句 → JS：与方法体共用 [\_bodyExprStmtJs]

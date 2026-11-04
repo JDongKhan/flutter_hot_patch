@@ -72,7 +72,7 @@ export class PromoFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"0": "PromoFloorVm"} });
+    var vm = context.watch({ typeArguments: {"T": "PromoFloorVm"} });
     var body;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({

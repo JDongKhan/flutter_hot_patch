@@ -73,7 +73,7 @@ export class GridFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"0": "GridFloorVm"} });
+    var vm = context.watch({ typeArguments: {"T": "GridFloorVm"} });
     var body;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({})));

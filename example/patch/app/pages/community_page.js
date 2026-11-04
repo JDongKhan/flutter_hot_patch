@@ -39,7 +39,7 @@ export class CommunityView extends StatefulWidget {
   }
   build(context) {
     super.build(context);
-    var vm = context.watch({ typeArguments: {"0": "CommunityVm"} });
+    var vm = context.watch({ typeArguments: {"T": "CommunityVm"} });
     var feed = vm.feed;
     var resources = vm.resources;
     var error = (vm.feedError ?? vm.resourcesError);

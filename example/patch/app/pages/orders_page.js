@@ -51,7 +51,7 @@ export class OrdersView extends StatefulWidget {
     });
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"0": "OrdersVm"} });
+    var vm = context.watch({ typeArguments: {"T": "OrdersVm"} });
     var feed = vm.feed;
     if ((feed == null)) {
       var error = vm.feedError;
