@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// 日志级别（仅用于控制台着色，不参与采集判定）。
 enum AppLogLevel { info, warn, error }
@@ -103,6 +104,10 @@ class AppLogConsole extends StatefulWidget {
 class _AppLogConsoleState extends State<AppLogConsole> {
   final ScrollController _scroll = ScrollController();
 
+  /// 复制成功后的短暂提示（如「已复制」），2 秒后自动消失。
+  String? _hint;
+  Timer? _hintTimer;
+
   @override
   void initState() {
     super.initState();
@@ -112,8 +117,21 @@ class _AppLogConsoleState extends State<AppLogConsole> {
   @override
   void dispose() {
     AppLogCenter.instance.removeListener(_onLogsChanged);
+    _hintTimer?.cancel();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// 复制文本到系统剪贴板，并在头部给一条轻提示。
+  Future<void> _copy(String text) async {
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    _hintTimer?.cancel();
+    if (!mounted) return;
+    setState(() => _hint = '已复制');
+    _hintTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _hint = null);
+    });
   }
 
   void _onLogsChanged() {
@@ -155,9 +173,27 @@ class _AppLogConsoleState extends State<AppLogConsole> {
           ),
           const SizedBox(width: 8),
           Text('($count)', style: const TextStyle(color: Color(0xFF9AA0A6), fontSize: 11)),
+          if (_hint != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              _hint!,
+              style: const TextStyle(color: Color(0xFF81C995), fontSize: 11),
+            ),
+          ],
           const Spacer(),
           IconButton(
             // 控制台在 Navigator 外层，没有 Overlay 祖先，故不使用 tooltip。
+            iconSize: 16,
+            visualDensity: VisualDensity.compact,
+            color: const Color(0xFF9AA0A6),
+            onPressed: () => _copy(
+              AppLogCenter.instance.records
+                  .map((r) => '${_formatTime(r.time)} ${r.text}')
+                  .join('\n'),
+            ),
+            icon: const Icon(Icons.copy_all),
+          ),
+          IconButton(
             iconSize: 16,
             visualDensity: VisualDensity.compact,
             color: const Color(0xFF9AA0A6),
@@ -181,18 +217,27 @@ class _AppLogConsoleState extends State<AppLogConsole> {
       itemCount: records.length,
       itemBuilder: (context, index) {
         final r = records[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          // 控制台在 Navigator 外层（没有 Overlay），不能用 SelectableText
-          //（点击时它需要 Overlay 弹选择手柄，会直接抛断言），故用普通 Text。
-          child: Text(
-            '${_formatTime(r.time)} ${r.text}',
-            style: TextStyle(
-              color: _colorOf(r.level),
-              fontSize: 11,
-              height: 1.35,
-              fontFamily: 'Menlo',
-              fontFamilyFallback: const ['Courier', 'monospace'],
+        final line = '${_formatTime(r.time)} ${r.text}';
+        // 控制台在 Navigator 外层（没有 Overlay），不能用 SelectableText
+        //（点击时它需要 Overlay 弹选择手柄，会直接抛断言），故用普通 Text +
+        // 点击整行复制到剪贴板。
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _copy(line),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(
+                line,
+                style: TextStyle(
+                  color: _colorOf(r.level),
+                  fontSize: 11,
+                  height: 1.35,
+                  fontFamily: 'Menlo',
+                  fontFamilyFallback: const ['Courier', 'monospace'],
+                ),
+              ),
             ),
           ),
         );
