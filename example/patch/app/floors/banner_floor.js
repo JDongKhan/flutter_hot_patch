@@ -61,7 +61,9 @@ export class BannerFloor extends StatelessWidget {
     return ChangeNotifierProvider.value({
       "value": this.vm,
       "child": (this.__k0 || (this.__k0 = new BannerFloorView({}))),
-      "model": "BannerFloorVm"
+      "typeArguments": [
+        "BannerFloorVm"
+      ]
     });
   }
 }
@@ -72,7 +74,7 @@ export class BannerFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch("BannerFloorVm");
+    var vm = context.watch({ typeArguments: ["BannerFloorVm"] });
     var body;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({

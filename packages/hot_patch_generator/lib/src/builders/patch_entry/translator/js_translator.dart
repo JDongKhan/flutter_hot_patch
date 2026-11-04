@@ -485,11 +485,10 @@ String? valueCtorJs(
         '的位置实参缺少形参名签名，落 __pos 兜底：${rest.join(', ')}');
     entries.add('__pos: [${rest.join(', ')}]');
   }
-  // 类型实参：Dart 泛型在 AOT 是 **reified** 的（运行时真实存在），一比一映射为
-  // `typeArguments`（类型名数组，与 `context.read<T>()` 把 T 当参数下发同一原则）。
-  // 运行时/宿主谁需要谁取（如 `GlobalKey<T>.currentState` 用它确定代理类），
-  // 翻译层不做类型判断、不维护类型名单。无类型实参时不产生该键。
-  final typeArgs = _typeArgsOf(e);
+  // 类型实参 → `typeArguments` 元信息（唯一解析见 [typeArgsOf]，与组件结点、
+  // 泛型方法调用共用同一份规则）。运行时/宿主谁需要谁取（如 `GlobalKey<T>` 的
+  // currentState 代理类、provider 的类型键），翻译层不做类型判断、不维护名单。
+  final typeArgs = typeArgsOf(e);
   if (typeArgs.isNotEmpty) {
     entries.add(
       'typeArguments: [${typeArgs.map((t) => "'${t.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'").join(', ')}]',
@@ -499,11 +498,16 @@ String? valueCtorJs(
   return ctorName == null ? 'new $cls($props)' : '$cls.$ctorName($props)';
 }
 
-/// 构造调用的类型实参名（`GlobalKey<AnimatedListState>()` → ['AnimatedListState']）。
+/// 类型实参名（`GlobalKey<AnimatedListState>()` → ['AnimatedListState']）。
+///
+/// 唯一实现，构造（值 / 组件结点）与泛型方法调用共用：Dart 泛型在 JS 侧的
+/// 唯一边界是**元信息**，形态固定为 `typeArguments: ['T1', 'T2', ...]`，按位置
+/// 顺序原样保留源码文本（嵌套泛型保留 `List<int>`）。谁需要谁读，翻译层不按
+/// 类名 / 方法名判断、不发明语义化键名。
 ///
 /// 覆盖三种写法：`const A<T>()`、`A<T>.b()`、`A<T>()`（无 const，parseString 下
-/// 是 MethodInvocation）。嵌套泛型保留源码文本（`List<int>`）。
-List<String> _typeArgsOf(Expression e) {
+/// 是 MethodInvocation）。
+List<String> typeArgsOf(Expression? e) {
   final List<TypeAnnotation>? args = switch (e) {
     InstanceCreationExpression() => e.constructorName.type.typeArguments?.arguments,
     MethodInvocation() => e.typeArguments?.arguments,
@@ -789,33 +793,9 @@ String? methodCallExprJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
-  // `context.watch<T>()` / `context.read<T>()`（provider 包）→ **调用面与 Dart
-  // 完全一致**：`context.watch("T")`，`context` 是运行时传入 build 的
-  // BuildContext 代理（见 hot_patch 的 capabilities/build_context/build_context_js.dart）。
-  // 类型实参 `T` 原样传给 JS——本端按类型名沿 `__parent` 找最近的 provider
-  // 宿主结点，同时把类型名发给宿主（Dart 端通用 VM 记着它）。
-  // receiver 走 [exprToJs] 而非硬编码：构建作用域里就是形参 `context`；
-  // 事件等**延迟作用域**里形参不可见，由作用域别名解析成 `this.context`
-  // （运行时按执行位置解析到对应代理，见 ElementTranslateContext._eventScope）。
-  final tgt = e.target;
-  if (tgt is Identifier && tgt.name == 'context') {
-    final name = e.methodName.name;
-    if ((name == 'watch' || name == 'read') &&
-        e.argumentList.arguments.isEmpty) {
-      final ta = e.typeArguments?.arguments;
-      if (ta != null && ta.length == 1 && ta.first is NamedType) {
-        final model = (ta.first as NamedType).name2.lexeme;
-        final recv = exprToJs(tgt, scope, classes) ?? 'context';
-        return '$recv.$name(${jsString(model)})';
-      }
-      return null;
-    }
-  }
-  // Dart 集合 / num 的成员与 JS 内建同名同义（`first` / `where` / `add` /
-  // `removeAt` / `insert` / `toList` / `compareTo` / `toStringAsFixed` …）：
-  // 生成器**不做任何名字映射**，统一走下面的通用调用路径原样产出
-  // `xs.where(...)` / `xs.add(...)` / `a.compareTo(b)`，由运行时【1c】节给
-  // Array / Number / String 内建原型补同名同义成员，按接收者类型分发。
+  // 泛型方法的类型实参（`context.watch<T>()` / `m<T>()`）不在这里特判：与构造
+  // 走同一条规则——原样并入调用的尾参对象 `{ typeArguments: ['T'] }`（见下方
+  // [typeArgs]，接收方 / 方法名一概不看）。
   final args = e.argumentList.arguments;
   final argJs = <String>[]; // 普通调用：位置化扁平（JS 无具名参数）
   final posJs = <String>[]; // 宿主注入：位置实参
@@ -865,16 +845,37 @@ String? methodCallExprJs(
       posJs.add(v);
     }
   }
-  // 位置实参原样，具名实参合并成**尾参对象**（与构造 `new X({...})` 同形）；
-  // 无具名时不加空对象（`f()` 保持 `f()`）。
+  // 类型实参（`m<T>()` 的 `<T,...>`）→ 元信息 `typeArguments`，并入尾参对象。
+  // 规则只看**实参形态**（不看接收方、不看方法名、不看类型）：
+  //   - 无位置实参：尾参对象是唯一载体，任何 JS 方法都能安全收下
+  //     （`context.watch<T>()` → `watch({ typeArguments: ['T'] })`）；
+  //   - 有位置实参 + 有具名实参：并入同一个尾参对象（它本就是 props 约定载体）；
+  //   - 有位置实参 + 无具名实参：尾对象会被目标当成第 N+1 个**位置实参**
+  //     （如原生 `Array.reduce<T>(fn)` 的 initialValue），属语义污染，故擦除
+  //     元信息并出声——与 dart2js 的擦除行为一致，绝不静默错译。
+  final typeArgs = typeArgsOf(e);
+  final typeArgsJs = typeArgs.isEmpty
+      ? null
+      : 'typeArguments: [${typeArgs.map(jsString).join(', ')}]';
+  final keepTypeArgs =
+      typeArgsJs != null && (argJs.isEmpty || namedJs.isNotEmpty);
+  if (typeArgsJs != null && !keepTypeArgs) {
+    log.warning('[hot_patch_generator] ${e.methodName.name}<${typeArgs.join(', ')}> '
+        '带位置实参且无具名实参，尾参对象会被当成位置实参，已擦除类型实参元信息');
+  }
+  final tailJs = [...namedJs, if (keepTypeArgs) typeArgsJs];
+  // 位置实参原样，具名实参（与类型实参）合并成**尾参对象**（与构造
+  // `new X({...})` 同形）；无尾参时不加空对象（`f()` 保持 `f()`）。
   final passed = [
     ...argJs,
-    if (namedJs.isNotEmpty) '{ ${namedJs.join(', ')} }',
+    if (tailJs.isNotEmpty) '{ ${tailJs.join(', ')} }',
   ].join(', ');
   final target = e.target;
   if (target == null) {
     // 顶层函数（全局方法）：**只有顶层** `@HostInjected` 函数在这里走通道——
     // 顶层函数没有可承载的 JS 类，产物里不存在同名函数。
+    // 宿主通道的载荷会经 `Function.apply(impl, 位置, 具名)` 还原 Dart 调用语义，
+    // 多出来的键会被当成真实具名参数而报「no named parameter」，故只传具名实参。
     final topChannel = scope.hostFunctions.contains(e.methodName.name)
         ? e.methodName.name
         : null;
@@ -883,9 +884,9 @@ String? methodCallExprJs(
     }
     // 运行时注入的全局函数（`export function showDialog …` / `G.showModalBottomSheet`
     // 等）：Dart 的裸顶层调用在 JS 侧既没有 `this` 也没有宿主通道，只有 JS 侧
-    // 确实存在同名函数时才能翻译，原样产出同名调用。
+    // 确实存在同名函数时才能翻译，原样产出同名调用（纯 JS 函数，可安全带元信息）。
     if (runtimeGlobalFunctions().contains(e.methodName.name)) {
-      return '${e.methodName.name}(${globalFnArgsJs(posJs, namedJs)})';
+      return '${e.methodName.name}(${globalFnArgsJs(posJs, tailJs)})';
     }
     final member = scope.methodRef(e.methodName.name);
     if (member == null) return null;

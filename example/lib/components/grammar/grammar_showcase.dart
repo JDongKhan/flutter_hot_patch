@@ -15,6 +15,7 @@ class GrammarShowcase extends StatelessWidget {
     _Entry('Extension · String 扩展', 'String 扩展跨包 logText：点击时打印字符串日志', 'ExtensionDetail'),
     _Entry('extends · 类继承', 'Greeting 基类与 FancyGreeting 子类：super 调用与多态', 'InheritanceDetail'),
     _Entry('基础 api', 'DateTime / RegExp / StringBuffer：dart:core 值类的一比一 JS 镜像', 'BasicApiDetail'),
+    _Entry('泛型 · 类 / 方法泛型', 'GenericBox<T> / Pair<K,V> 与 context.watch<T>()：typeArguments 元信息', 'GenericDetail'),
   ];
 
   @override

@@ -115,7 +115,9 @@ export class DragDetail extends StatefulWidget {
               "child": (this.__k12 || (this.__k12 = new Text({
                 "data": "长按拖我"
               }))),
-              "model": "String"
+              "typeArguments": [
+                "String"
+              ]
             }),
             (this.__k8 || (this.__k8 = new SizedBox({
               "width": 12
@@ -177,7 +179,9 @@ export class DragDetail extends StatefulWidget {
         "child": this._chipFace(fruit.name)
       }),
       "child": this._chipFace(fruit.name),
-      "model": "Fruit"
+      "typeArguments": [
+        "Fruit"
+      ]
     });
   }
   _chipFace(name) {
@@ -259,7 +263,9 @@ export class DragDetail extends StatefulWidget {
           })
         });
       },
-      "model": "Fruit"
+      "typeArguments": [
+        "Fruit"
+      ]
     });
   }
   _longPressBasket() {
@@ -284,7 +290,9 @@ export class DragDetail extends StatefulWidget {
           })
         });
       },
-      "model": "String"
+      "typeArguments": [
+        "String"
+      ]
     });
   }
 }

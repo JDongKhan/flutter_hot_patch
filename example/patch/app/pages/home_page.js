@@ -22,7 +22,9 @@ export class HomePage extends StatelessWidget {
     return new ChangeNotifierProvider({
       "create": (_) => { return (() => { const _t = new HomeVm(); _t.load(); return _t; })(); },
       "child": (this.__k0 || (this.__k0 = new HomeView({}))),
-      "model": "HomeVm"
+      "typeArguments": [
+        "HomeVm"
+      ]
     });
   }
 }
@@ -38,13 +40,13 @@ export class HomeView extends StatefulWidget {
     super.dispose();
   }
   async _onRefresh() {
-    await this.context.read("HomeVm").refresh();
+    await this.context.read({ typeArguments: ["HomeVm"] }).refresh();
   }
   _refresh() {
     this._refreshController.callRefresh();
   }
   async _pickCity() {
-    var vm = this.context.read("HomeVm");
+    var vm = this.context.read({ typeArguments: ["HomeVm"] });
     var picked = await AppRouter.openCityPicker(vm.city);
     if ((picked == null)) {
       return;
@@ -52,7 +54,7 @@ export class HomeView extends StatefulWidget {
     await vm.changeCity(picked);
   }
   build(context) {
-    var vm = context.watch("HomeVm");
+    var vm = context.watch({ typeArguments: ["HomeVm"] });
     if (vm.loading) {
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})

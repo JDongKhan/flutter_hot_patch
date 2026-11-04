@@ -33,11 +33,15 @@ export class ProviderCard extends StatefulWidget {
           "providers": [
             new ChangeNotifierProvider({
               "create": (_) => { return this._modelA; },
-              "model": "CounterVm"
+              "typeArguments": [
+                "CounterVm"
+              ]
             }),
             ChangeNotifierProvider.value({
               "value": this._modelB,
-              "model": "NetworkVm"
+              "typeArguments": [
+                "NetworkVm"
+              ]
             })
           ],
           "child": new Column({
@@ -47,7 +51,9 @@ export class ProviderCard extends StatefulWidget {
               this._modelA.buildText(),
               new Consumer({
                 "builder": (context, value, child) => this._buildBadge(),
-                "model": "CounterVm"
+                "typeArguments": [
+                  "CounterVm"
+                ]
               }),
               (this.__k1 || (this.__k1 = new Text({
                 "data": "MultiProvider · 两个模型各自局部重建"
@@ -64,7 +70,9 @@ export class ProviderCard extends StatefulWidget {
                   }))),
                   "data": "加载用户信息："
                 }),
-                "model": "NetworkVm"
+                "typeArguments": [
+                  "NetworkVm"
+                ]
               }),
               new Row({
                 "mainAxisAlignment": MainAxisAlignment.center,
@@ -89,7 +97,9 @@ export class ProviderCard extends StatefulWidget {
                   }))),
                   "data": "B = " + value.count
                 }),
-                "model": "CounterVm"
+                "typeArguments": [
+                  "CounterVm"
+                ]
               }),
               new Row({
                 "mainAxisAlignment": MainAxisAlignment.center,

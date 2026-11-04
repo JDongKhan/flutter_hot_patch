@@ -44,7 +44,9 @@ export class RadioGroupDetail extends StatefulWidget {
               this._option(2, "选项 C")
             ]
           }),
-          "model": "int"
+          "typeArguments": [
+            "int"
+          ]
         }),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 10
@@ -88,7 +90,9 @@ export class RadioGroupDetail extends StatefulWidget {
       "children": [
         new Radio({
           "value": value,
-          "model": "int"
+          "typeArguments": [
+            "int"
+          ]
         }),
         (this.__k9 || (this.__k9 = new SizedBox({
           "width": 4

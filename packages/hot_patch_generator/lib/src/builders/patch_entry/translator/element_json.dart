@@ -30,6 +30,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart' show log;
 
 import '../../shared/ctor_signatures.dart';
+import 'js_translator.dart';
 import 'value_forms.dart';
 import 'element2js.dart';
 
@@ -108,9 +109,14 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
   }
 
   // 构造的类型实参（`Consumer<NetworkVm>(...)` / `ChangeNotifierProvider<T>`）
-  // → `model` prop：provider 的 watch/read/notifier 语义需要模型类名。
-  final typeArg = firstTypeArgOf(node.expr);
-  if (typeArg != null) props['model'] = ctx.jsString(typeArg);
+  // → `typeArguments` 元信息：与值构造、泛型方法调用同一条规则、同一份解析
+  // （[typeArgsOf]），按位置顺序原样保留源码文本。谁需要谁读（provider 据此声明
+  // 类型键控的作用域、GlobalKey 据此决定 currentState 的代理类），翻译层不做类型
+  // 判断、不发明语义化键名（旧实现写死的 `model` 键已删除）。
+  final typeArgs = typeArgsOf(node.expr);
+  if (typeArgs.isNotEmpty) {
+    props['typeArguments'] = [for (final t in typeArgs) ctx.jsString(t)];
+  }
 
   return {
     'type': ctx.jsString(node.type),
@@ -157,18 +163,6 @@ List<String>? positionalArgNames(String type, String? factory) {
   return CtorSignatures.instance
       ?.of(type, ctorName: factory)
       ?.positional;
-}
-
-/// 构造的第一个类型实参名（`Consumer<NetworkVm>(...)` → 'NetworkVm'）。
-String? firstTypeArgOf(Expression? e) {
-  final List<TypeAnnotation>? args = switch (e) {
-    InstanceCreationExpression() =>
-      e.constructorName.type.typeArguments?.arguments,
-    MethodInvocation() => e.typeArguments?.arguments,
-    _ => null,
-  };
-  if (args == null || args.isEmpty) return null;
-  return args.first.toSource();
 }
 
 /// 具名形参是否声明为**函数类型**（构造签名的源码事实）。

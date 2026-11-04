@@ -62,7 +62,9 @@ export class SpotFloor extends StatelessWidget {
     return ChangeNotifierProvider.value({
       "value": this.vm,
       "child": (this.__k0 || (this.__k0 = new SpotFloorView({}))),
-      "model": "SpotFloorVm"
+      "typeArguments": [
+        "SpotFloorVm"
+      ]
     });
   }
 }
@@ -73,7 +75,7 @@ export class SpotFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch("SpotFloorVm");
+    var vm = context.watch({ typeArguments: ["SpotFloorVm"] });
     var body;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({})));

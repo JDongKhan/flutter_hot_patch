@@ -62,7 +62,9 @@ export class ScrollDetail extends StatefulWidget {
               })
             })
           }),
-          "model": "ScrollNotification"
+          "typeArguments": [
+            "ScrollNotification"
+          ]
         }),
         new Align({
           "alignment": Alignment.centerLeft,

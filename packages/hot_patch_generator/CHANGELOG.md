@@ -1,3 +1,13 @@
+## 0.5.0
+
+**破坏性：泛型实参协议统一为 `typeArguments`，删除 `props.model` 与泛型方法的「位置参数」形态（不保留兼容）。**
+
+- **一条规则**：源码里显式写的 `<T,...>` 一律产出 `typeArguments: ['T1', ...]`（按位置顺序、保留源码文本），作为元信息随**构造 props**（值构造与组件结点）或**调用尾参对象**（泛型方法，与具名实参合并）下发。类型实参不再占位置参数。
+- **删除语义化键名**：组件结点的 `props.model`（只取第一个类型实参）删除；`Consumer` / `ChangeNotifierProvider` 与 provider 作用域登记改读 `props.typeArguments`。多类型实参（如 `Pair<K, V>`、`Consumer2<A, B>`）不再丢失。
+- **删除 provider 专属特判**：`context.watch<T>()` / `context.read<T>()` 不再由翻译层按 `receiver == context` + 方法名特判，统一走泛型方法调用规则（`watch({typeArguments: ['T']})`）；provider.js 的 `watch/read` 改读尾参对象。
+- **擦除边界**：泛型方法有位置实参且无具名实参时，尾对象会被目标当成位置实参（如原生 `Array.reduce<T>` 的 initialValue），故擦除元信息并输出构建期告警，与 dart2js 的擦除行为一致。
+- **`firstTypeArgOf` 删除**：组件结点与值构造共用唯一解析 `typeArgsOf`。
+
 ## 0.4.0
 
 **破坏性：宿主入口 `__jsui.mount` 更名为 `__jsui.mountRoot`（需与 hot_patch 0.3.4 配套；不保留旧别名）。**

@@ -2,17 +2,17 @@
 //
 // provider 的**状态与订阅**全部下沉到 Dart 侧：
 //   - JS 端 `ChangeNotifierProvider` 只负责造/取模型实例，然后把宿主结点
-//     `ChangeNotifierProvider {model, notifier}` 交给宿主（见 hot_patch_generator
-//     的 widget_module_builder）——JS 侧没有 provider 专用记账，只在结点上按
-//     **类型名**声明作用域（`__provides`，注册见 patch/provider.js 的
-//     provider_module_js.dart）；
+//     `ChangeNotifierProvider {typeArguments, notifier}` 交给宿主（见
+//     hot_patch_generator 的 widget_module_builder）——JS 侧没有 provider 专用
+//     记账，只在结点上按**类型名**声明作用域（`__provides`，注册见
+//     patch/provider.js 的 provider_module_js.dart）；
 //   - JS 端 `context.watch<T>()` 只是「按**类型名**沿 `__parent` 向上取最近作用域
 //     的值」+ 用原生 `addListener` 订阅（UI 更新仍由 JS 侧重建产生，
 //     这是同步取值约束决定的、无法消除的一步）。
 //
-// 宿主侧映射的职责：把 JS 下发的 `{model, notifier 句柄}` 还原成真实的 Dart
-// provider 子树——notifier 是 change_notifier_bridge.dart 的**通用镜像**（不
-// 认识业务类，只记 JS 端类型 + 转发 notify）。
+// 宿主侧映射的职责：把 JS 下发的 `{typeArguments, notifier 句柄}` 还原成真实的
+// Dart provider 子树——notifier 是 change_notifier_bridge.dart 的**通用镜像**
+// （不认识业务类，只记 JS 端类型 + 转发 notify）。
 //
 // **本文件属于三方库层**（provider 的接入实现，见 provider_library.dart），核心
 // 不 import 它：核心把 `context.watch/read` 的 op 分发给本库注册的处理器

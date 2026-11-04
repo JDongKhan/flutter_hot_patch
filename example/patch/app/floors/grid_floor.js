@@ -62,7 +62,9 @@ export class GridFloor extends StatelessWidget {
     return ChangeNotifierProvider.value({
       "value": this.vm,
       "child": (this.__k0 || (this.__k0 = new GridFloorView({}))),
-      "model": "GridFloorVm"
+      "typeArguments": [
+        "GridFloorVm"
+      ]
     });
   }
 }
@@ -73,7 +75,7 @@ export class GridFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch("GridFloorVm");
+    var vm = context.watch({ typeArguments: ["GridFloorVm"] });
     var body;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({})));

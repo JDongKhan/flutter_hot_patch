@@ -701,9 +701,10 @@ export class SliverPersistentHeader extends Component {
 ///
 /// JS 侧不做任何 provider 专用记账：本类只负责
 ///   ① 造/取模型实例（`create` 为类引用时 new 一次，生命周期归本类；实例时复用）；
-///   ② 渲染宿主结点 `ChangeNotifierProvider`，props 带 `{model, notifier}`——
-///      宿主据此建 Dart 侧的 provider 映射（ChangeNotifier 镜像 + provider 子树），
-///      `context.watch<T>()` 的 T 就是这里的 `model`（类型名一路传给宿主）。
+///   ② 渲染宿主结点 `ChangeNotifierProvider`，props 带 `{typeArguments, notifier}`
+///      ——类型实参是翻译层按 `<T>` 原样下发的元信息（`['T']`），宿主据此建 Dart
+///      侧的 provider 映射（ChangeNotifier 镜像 + provider 子树），
+///      `context.watch<T>()` 的 T 就是这里的 `typeArguments[0]`（一路传给宿主）。
 /// 模型真实对象只存在于 JS 端：`notifier` 走句柄（`{__handle:id}`）下发。
 const String jsChangeNotifierProviderComponent = '''
 export class ChangeNotifierProvider extends Component {
@@ -723,7 +724,7 @@ export class ChangeNotifierProvider extends Component {
   }
   build() {
     return Component.host('ChangeNotifierProvider', {
-      model: this.props.model,
+      typeArguments: this.props.typeArguments,
       notifier: this.__value,
       child: this.props.child
     });
@@ -758,9 +759,9 @@ export class MultiProvider extends Component {
   }
 }''';
 
-/// Consumer：消费 VM——按 `props.model`（类型名）经 **build 收到的 context**
-/// 取值并订阅（`context.watch(model)`，与 Dart 的 `Consumer` 口径一致），
-/// 再调用拥有者组件上的 `props.builder` 方法
+/// Consumer：消费 VM——按 `props.typeArguments[0]`（类型名）经 **build 收到的
+/// context** 取值并订阅（`context.watch({typeArguments})`，与 Dart 的 `Consumer`
+/// 口径一致），再调用拥有者组件上的 `props.builder` 方法
 /// （`_consumerBuilderN(context, value)`）渲染局部子树。
 ///
 /// 本类仍必须订阅 VM：UI 的真正更新来自 **JS 侧重建**（VM notify → 标脏该位置
@@ -769,7 +770,7 @@ export class MultiProvider extends Component {
 const String jsConsumerComponent = '''
 export class Consumer extends Component {
   build(context) {
-    var notifier = context.watch(this.props.model);
+    var notifier = context.watch({ typeArguments: this.props.typeArguments });
     var fn = this.props.builder;
     if (typeof fn !== 'function') {
       __warn('[Consumer] builder 不是闭包');
@@ -777,7 +778,7 @@ export class Consumer extends Component {
     }
     var child = fn(context, notifier);
     return Component.host('Consumer', {
-      model: this.props.model,
+      typeArguments: this.props.typeArguments,
       notifier: notifier,
       child: child
     });

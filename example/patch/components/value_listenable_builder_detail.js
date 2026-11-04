@@ -110,7 +110,9 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
                 "color": Colors.black54
               })
             }))),
-            "model": "int"
+            "typeArguments": [
+              "int"
+            ]
           }),
           (this.__k2 || (this.__k2 = new SizedBox({
             "height": 10

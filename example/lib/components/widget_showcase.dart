@@ -28,6 +28,7 @@ import 'stateless_card.dart';
 import 'tab_detail.dart';
 import 'text_detail.dart';
 import 'grammar/grammar_details.dart';
+import 'grammar/generic_detail.dart';
 import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
@@ -320,6 +321,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'ExtensionDetail': 'components/grammar/grammar_details.js',
     'InheritanceDetail': 'components/grammar/grammar_details.js',
     'BasicApiDetail': 'components/grammar/grammar_details.js',
+    'GenericDetail': 'components/grammar/generic_detail.js',
   };
 
   String get _jsEntry => _jsEntries[widget.component]!;
@@ -392,6 +394,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'ExtensionDetail' => const ExtensionDetail(),
       'InheritanceDetail' => const InheritanceDetail(),
       'BasicApiDetail' => const BasicApiDetail(),
+      'GenericDetail' => const GenericDetail(),
       _ => const Text('未知组件'),
     };
   }
