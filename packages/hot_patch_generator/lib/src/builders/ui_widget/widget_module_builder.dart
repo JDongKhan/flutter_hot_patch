@@ -26,6 +26,7 @@ import '../runtime/js/dialogs_js.dart';
 import '../runtime/js/drag_js.dart';
 import '../runtime/js/easy_refresh_js.dart';
 import '../runtime/js/focus_js.dart';
+import '../runtime/js/future_js.dart';
 import '../runtime/js/key_js.dart';
 import '../runtime/js/enum_values_js.dart';
 import '../runtime/js/icon_values_js.dart';
@@ -64,6 +65,10 @@ String flutterValueClassesSource() => [
       // Dart 内置异常（StateError / ArgumentError / …）：产物 `throw`/`catch`
       // 的落点，按名 import；runtime.js 自身不构造异常，故归值类区。
       dartErrorsJsSource,
+      // dart:async 的 Future 同名镜像（Future.delayed / value / wait …）：
+      // 依赖基础值类工具（__positionalArgs / __durationMs）与 dartErrors 的
+      // StateError（仅 Future.any 的实参校验用），故排在两者之后。
+      futureJsSource,
       // 控制器基类（句柄层）：各 Controller 继承它，必须排在它们之前。
       controllerBaseJsSource,
       // SDK 枚举值类（按源码 `enum` 声明自动生成）：翻译层已改为对

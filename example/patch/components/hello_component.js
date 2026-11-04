@@ -5,7 +5,7 @@
 import { User } from '../hot_module_base.js';
 import { AccountCenter } from '../hot_module_base.js';
 import { Network } from '../hot_module_base.js';
-import { Color, Colors, Column, ElevatedButton, FontWeight, Row, StateError, StatefulWidget, Text, TextStyle } from '../flutter.js';
+import { Color, Colors, Column, Duration, ElevatedButton, FontWeight, Future, Row, StateError, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 PanelColors
 export class PanelColors {
@@ -56,7 +56,7 @@ export class HelloCard extends StatefulWidget {
     var name = await AccountCenter.getUserName();
     var userMap = await Network.post({ "url": "hello", "params": {"name": name} });
     print("用户信息:" + userMap["code"]);
-    await new Promise(function(r){ setTimeout(r, 1000); });
+    await Future.delayed({duration: new Duration({seconds: 1})});
     this.setState(() => { this._user = new User({name: "Alice", age: 18}); });
   }
   reset() {

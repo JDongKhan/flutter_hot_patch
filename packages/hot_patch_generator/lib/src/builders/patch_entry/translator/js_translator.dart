@@ -281,9 +281,10 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   if (e is AdjacentStrings) return exprToJs(e, scope, classes);
   // `await <expr>` 统一在这里处理：声明初始化、赋值右侧、实参、独立语句
   // 全都经过 rhsToJs，await 不再只认声明那一种位置（原来 `_x = await f()`
-  // 会整条丢掉）。
+  // 会整条丢掉）。内层表达式按普通表达式翻译——`Future.delayed(...)` 与其它
+  // 构造/静态调用同一条规则，JS 侧由 flutter.js 的同名 `Future` 承接。
   if (e is AwaitExpression) {
-    final v = _awaitInnerJs(e.expression, scope, classes);
+    final v = rhsToJs(e.expression, scope, classes);
     return v == null ? null : 'await $v';
   }
   final lit = literalToJs(e);
@@ -320,60 +321,6 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   if (e is SetOrMapLiteral) return _collectionLiteralJs(e, scope, classes);
   if (e is ListLiteral) return _listLiteralJs(e.elements, scope, classes);
   return exprToJs(e, scope, classes);
-}
-
-/// `await <expr>` 里的 `<expr>`（不含 await 前缀）。
-/// 特殊形态 `Future.delayed(Duration(...))` → setTimeout Promise——JS 没有
-/// 等价的 Dart 异步延迟 API，只映射这一种；其余 await 走普通表达式翻译。
-String? _awaitInnerJs(
-  Expression inner,
-  FieldScope scope,
-  Map<String, ClassInfo> classes,
-) {
-  final delay = delayedMsJs(inner);
-  if (delay != null) {
-    return 'new Promise(function(r){ setTimeout(r, $delay); })';
-  }
-  return rhsToJs(inner, scope, classes);
-}
-
-/// `Future.delayed(Duration(seconds: n))` → setTimeout 毫秒数（不是则 null）。
-String? delayedMsJs(Expression e) {
-  if (e is! MethodInvocation || e.methodName.name != 'delayed') return null;
-  final target = e.target;
-  if (target == null || target.toSource() != 'Future') return null;
-  final args = e.argumentList.arguments;
-  if (args.isEmpty) return null;
-  final dur = args.first;
-  String? unit;
-  double? value;
-  if (dur is InstanceCreationExpression &&
-      dur.constructorName.type.name2.lexeme == 'Duration') {
-    for (final a in dur.argumentList.arguments) {
-      if (a is NamedExpression) {
-        final lit = a.expression;
-        if (lit is IntegerLiteral) {
-          if (unit != null) return null; // 多个时间单位不支持
-          unit = a.name.label.name;
-          value = (lit.value ?? 0).toDouble();
-        } else if (lit is DoubleLiteral) {
-          if (unit != null) return null;
-          unit = a.name.label.name;
-          value = lit.value;
-        }
-      }
-    }
-  }
-  if (unit == null || value == null) return null;
-  final ms = switch (unit) {
-    'seconds' => value * 1000,
-    'milliseconds' => value,
-    'microseconds' => value / 1000,
-    'minutes' => value * 60 * 1000,
-    _ => null,
-  };
-  if (ms == null) return null;
-  return ms == ms.roundToDouble() ? '${ms.round()}' : '$ms';
 }
 
 /// `{k: v, ...}` → JS 对象字面量；`{a, b}`（Set）→ `new Set([a, b])`。

@@ -78,7 +78,7 @@ class _HelloCardState extends State<HelloCard> with TestMixin,TestMixin2 {
     setState(() => _count++);
   }
 
-  // 模拟网络请求：await Future.delayed → Promise/setTimeout；
+  // 模拟网络请求：await Future.delayed → flutter.js 的同名 Future（内部 setTimeout）；
   // setState 里构造 User（模型）→ new User({name, age})
   Future<void> loadUser() async {
     String? name = await AccountCenter.getUserName();

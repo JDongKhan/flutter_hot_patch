@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/dialog_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, MainAxisSize, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, StatefulWidget, StatelessWidget, Text, TextButton, TextStyle, Wrap, double, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
+import { AlertDialog, BorderRadius, BoxDecoration, Colors, Column, Container, CrossAxisAlignment, CupertinoActionSheet, CupertinoActionSheetAction, CupertinoAlertDialog, CupertinoDialogAction, Dialog, EdgeInsets, FilledButton, FontWeight, Future, MainAxisSize, Navigator, OutlinedButton, Padding, Radius, SafeArea, SizedBox, StatefulWidget, StatelessWidget, Text, TextButton, TextStyle, Wrap, double, showAdaptiveDialog, showCupertinoDialog, showCupertinoModalPopup, showDialog, showGeneralDialog, showModalBottomSheet } from '../flutter.js';
 
 // 组件 DialogDetail
 export class DialogDetail extends StatefulWidget {
