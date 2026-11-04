@@ -58,7 +58,7 @@ export class AppShellView extends StatefulWidget {
     }
   }
   async _retry() {
-    await this.context.read({ typeArguments: {"0": "AppShellVm"} }).load();
+    await this.context.read({ typeArguments: {"T": "AppShellVm"} }).load();
   }
   _iconOf(icon) {
     switch (icon) {

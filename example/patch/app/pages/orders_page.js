@@ -42,7 +42,7 @@ export class OrdersView extends StatefulWidget {
       } })();
   }
   _buildOrderItem(context, i) {
-    var orders = context.read({ typeArguments: {"0": "OrdersVm"} }).orders;
+    var orders = context.read({ typeArguments: {"T": "OrdersVm"} }).orders;
     var o = orders[i];
     return new _OrderCard({
       "order": o,

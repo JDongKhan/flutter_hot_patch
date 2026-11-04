@@ -55,7 +55,7 @@ export class WatchDemo extends StatefulWidget {
                             "width": 12
                           }))),
                           new ElevatedButton({
-                            "onPressed": () => { context.read({ typeArguments: {"0": "CounterVm"} }).reset(); },
+                            "onPressed": () => { context.read({ typeArguments: {"T": "CounterVm"} }).reset(); },
                             "child": (this.__k6 || (this.__k6 = new Text({
                               "data": "Reset"
                             })))

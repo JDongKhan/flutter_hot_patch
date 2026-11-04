@@ -197,7 +197,7 @@ export class GenericDetail extends StatefulWidget {
                         "width": 12
                       }))),
                       new ElevatedButton({
-                        "onPressed": () => { return this._snapshot(context.read({ typeArguments: {"0": "CounterVm"} })); },
+                        "onPressed": () => { return this._snapshot(context.read({ typeArguments: {"T": "CounterVm"} })); },
                         "child": (this.__k12 || (this.__k12 = new Text({
                           "data": "read 快照"
                         })))

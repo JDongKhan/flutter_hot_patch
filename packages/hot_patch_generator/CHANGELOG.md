@@ -6,6 +6,7 @@
 - 实例保存元信息：泛型类构造把 `typeArguments` 存到内部字段 `__ta`（无参构造 / `__applyProps` 两条路径都覆盖）。
 - 方法体里的类型参数：`T` → `this.__ta["T"]`；`T == String` / `!=` 进入「类型值比较」分支，另一侧类型名转字符串（`String` → `"String"`）；`as T` 擦除（类型断言在 JS 侧无运行时语义）。
 - 消费方同步：`GlobalKey<T>` 与 provider 的 `watch/read`、作用域登记改取 Map 的第一个值（与 key 写法无关）。
+- key 来源：构造按类声明，静态方法按方法声明；调用点定位不到接收者类型时按**方法名**查源码里的泛型方法声明（多个候选时优先 `extension`，仍歧义才退化为位置序号），因此 `context.watch<T>()` / `context.read<T>()` 都是 `{"T": …}`。
 
 ## 0.6.0
 

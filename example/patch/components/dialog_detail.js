@@ -13,17 +13,17 @@ export class DialogDetail extends StatefulWidget {
   }
   _openMaterial() {
     this.setState(() => { this._opens += 1; });
-    showDialog({"context": this.context, "builder": (ctx) => { return new DialogContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showDialog", v); });
+    showDialog({"context": this.context, "builder": (ctx) => { return new DialogContent({}); }, typeArguments: {"T": "Object?"}}).then((v) => { return this._record("showDialog", v); });
   }
   _openNonDismissible() {
     this.setState(() => { this._opens += 1; });
     showDialog({"context": this.context, "barrierDismissible": false, "builder": (ctx) => { return new DialogContent({
           "barrierDismissible": false
-        }); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showDialog(barrierDismissible: false)", v); });
+        }); }, typeArguments: {"T": "Object?"}}).then((v) => { return this._record("showDialog(barrierDismissible: false)", v); });
   }
   _openSheet() {
     this.setState(() => { this._opens += 1; });
-    showModalBottomSheet({"context": this.context, "showDragHandle": true, "builder": (ctx) => { return new SheetContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showModalBottomSheet", v); });
+    showModalBottomSheet({"context": this.context, "showDragHandle": true, "builder": (ctx) => { return new SheetContent({}); }, typeArguments: {"T": "Object?"}}).then((v) => { return this._record("showModalBottomSheet", v); });
   }
   _openCupertino() {
     this.setState(() => { this._opens += 1; });

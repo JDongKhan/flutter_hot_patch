@@ -86,13 +86,14 @@ class CtorSignatures {
   /// typedef 名 → 是否函数类型别名（解析结果缓存，每个名字只解析一次）。
   final Map<String, bool> _typedefIsFunction = {};
 
-  /// **泛型方法声明**索引：方法名 → 出现过的类型参数名组合（逗号连接、去重）。
+  /// **泛型方法声明**索引：方法名 → 候选源文件。
   ///
-  /// 由 [_ensureIndex] 的正则扫描源码建立（`T watch<T>(…)` / `List<T> map<T>(…)`），
-  /// 用于给「调用点定位不到声明」的泛型方法（如 `context.watch<T>()`）取元信息
-  /// 的 key。同名方法出现**多种**参数名组合时视为不可判定，返回空（调用方退化为
-  /// 位置序号键），绝不猜。
-  final Map<String, Set<String>> _genericMethodNames = {};
+  /// 由 [_ensureIndex] 的正则扫描建立（`T watch<T>(…)` / `List<T> map<T>(…)`）。
+  /// 同一个方法名可能在多个包里有声明（如 Flutter 的 `read<P>` 与 provider 的
+  /// `read<T>`），因此实际类型参数名在 [methodTypeParamsOfName] 里按需解析这些
+  /// 文件的 AST：优先**extension 声明**（代理方法族），仍歧义则返回空、退化
+  /// 为位置序号键，绝不猜。
+  final Map<String, Set<String>> _genericMethodFiles = {};
 
   /// 已解析的编译单元缓存（同一文件只读一次）。
   final Map<String, CompilationUnit?> _units = {};
@@ -291,16 +292,68 @@ class CtorSignatures {
   /// 泛型**方法名** → 声明侧类型参数名（`watch` → `['T']`）。
   ///
   /// 用于调用点无法定位接收者类型的方法（`context.watch<T>()` 这类代理方法）。
-  /// 源码里同名方法出现多种参数名组合时返回空——宁可退化为位置序号键，也不猜。
+  /// 同名方法可能在多个包里声明（Flutter `read<P>` / provider `read<T>`），故
+  /// 按候选文件解析 AST：
+  ///   1. 所有候选参数名一致 → 采用；
+  ///   2. 不一致时优先 **extension 声明**（代理方法族；普通调用不会消费这些元信息，
+  ///      key 仅供需要它的库读取）；
+  ///   3. 仍不可判定 → 空，调用方退化为位置序号键。
   List<String> methodTypeParamsOfName(String methodName) {
     _ensureIndex();
-    final sets = _genericMethodNames[methodName];
-    if (methodName == 'read' || methodName == 'watch') {
-      // ignore: avoid_print - 构建期临时诊断
-      print('[DBG] $methodName -> $sets');
+    final candidates = <_GenericMethodDecl>[];
+    for (final file in _genericMethodFiles[methodName] ?? const <String>{}) {
+      final unit = _units.containsKey(file)
+          ? _units[file]
+          : _units[file] = parseUnitFile(file);
+      if (unit == null) continue;
+      for (final d in unit.declarations) {
+        if (d is ExtensionDeclaration) {
+          for (final m in d.members.whereType<MethodDeclaration>()) {
+            if (m.name.lexeme != methodName) continue;
+            final tps = _typeParamNames(m);
+            if (tps.isNotEmpty) candidates.add(_GenericMethodDecl(tps, true));
+          }
+        } else if (d is ClassDeclaration) {
+          _collectMembers(d.members, methodName, candidates);
+        } else if (d is MixinDeclaration) {
+          _collectMembers(d.members, methodName, candidates);
+        } else if (d is FunctionDeclaration && d.name.lexeme == methodName) {
+          final tps = [
+            for (final t
+                in d.functionExpression.typeParameters?.typeParameters ??
+                    const <TypeParameter>[])
+              t.name.lexeme,
+          ];
+          if (tps.isNotEmpty) candidates.add(_GenericMethodDecl(tps, false));
+        }
+      }
     }
-    if (sets == null || sets.length != 1) return const [];
-    return sets.first.split(',');
+    final all = candidates.map((c) => c.names.join(',')).toSet();
+    if (all.length == 1) return all.first.split(',');
+    final ext = candidates
+        .where((c) => c.isExtension)
+        .map((c) => c.names.join(','))
+        .toSet();
+    if (ext.length == 1) return ext.first.split(',');
+    return const [];
+  }
+
+  static List<String> _typeParamNames(MethodDeclaration m) => [
+        for (final t
+            in m.typeParameters?.typeParameters ?? const <TypeParameter>[])
+          t.name.lexeme,
+      ];
+
+  static void _collectMembers(
+    Iterable<ClassMember> members,
+    String methodName,
+    List<_GenericMethodDecl> out,
+  ) {
+    for (final m in members.whereType<MethodDeclaration>()) {
+      if (m.name.lexeme != methodName) continue;
+      final tps = _typeParamNames(m);
+      if (tps.isNotEmpty) out.add(_GenericMethodDecl(tps, false));
+    }
   }
 
   /// 抽单个类的构造签名；[ctorName] 指定的构造不存在时返回 null。
@@ -502,15 +555,8 @@ class CtorSignatures {
         }
         for (final m in _genericMethodDecl.allMatches(content)) {
           final name = m.group(1);
-          final params = m.group(2);
-          if (name == null || params == null) continue;
-          final list = params
-              .split(',')
-              .map((s) => s.trim())
-              .where((s) => s.isNotEmpty)
-              .join(',');
-          if (list.isEmpty) continue;
-          _genericMethodNames.putIfAbsent(name, () => {}).add(list);
+          if (name == null) continue;
+          _genericMethodFiles.putIfAbsent(name, () => {}).add(entity.path);
         }
       }
     }
@@ -537,4 +583,15 @@ class CtorSignatures {
   static final _genericMethodDecl = RegExp(
     r'[A-Za-z_$][\w$<>?, ]*[ \t]+([A-Za-z_$][\w$]*)[ \t]*<[ \t]*([A-Za-z_$][\w$]*(?:[ \t]*,[ \t]*[A-Za-z_$][\w$]*)*)[ \t]*>[ \t]*\(',
   );
+}
+
+/// 一个泛型方法声明的候选事实（[methodTypeParamsOfName] 歧义判定用）。
+class _GenericMethodDecl {
+  const _GenericMethodDecl(this.names, this.isExtension);
+
+  /// 声明侧类型参数名，按声明顺序。
+  final List<String> names;
+
+  /// 是否声明在 `extension` 里（代理方法族优先采用）。
+  final bool isExtension;
 }

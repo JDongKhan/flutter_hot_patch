@@ -31,7 +31,7 @@ export class CommunityView extends StatefulWidget {
     super(args);
   }
   _buildResourceItem(context, i) {
-    var resources = context.read({ typeArguments: {"0": "CommunityVm"} }).resources;
+    var resources = context.read({ typeArguments: {"T": "CommunityVm"} }).resources;
     return new _ResourceCard({
       "resource": resources[i],
       "onTap": () => AppRouter.openResource(resources[i].id)

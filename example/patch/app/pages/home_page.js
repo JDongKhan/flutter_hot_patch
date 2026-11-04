@@ -38,13 +38,13 @@ export class HomeView extends StatefulWidget {
     super.dispose();
   }
   async _onRefresh() {
-    await this.context.read({ typeArguments: {"0": "HomeVm"} }).refresh();
+    await this.context.read({ typeArguments: {"T": "HomeVm"} }).refresh();
   }
   _refresh() {
     this._refreshController.callRefresh();
   }
   async _pickCity() {
-    var vm = this.context.read({ typeArguments: {"0": "HomeVm"} });
+    var vm = this.context.read({ typeArguments: {"T": "HomeVm"} });
     var picked = await AppRouter.openCityPicker(vm.city);
     if ((picked == null)) {
       return;
