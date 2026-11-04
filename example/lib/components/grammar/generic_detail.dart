@@ -23,17 +23,33 @@ import '../../model/counter_vm.dart';
 // 类泛型：单类型参数 / 多类型参数
 // ---------------------------------------------------------------------------
 
-/// 单类型参数的泛型类：构造、字段、方法都由 T 约束，但运行行为由**值**决定。
-class GenericBox<T> {
-  GenericBox(this.value, {this.label = 'box'});
+/// 单类型参数的泛型类，**真正使用 T**：`T` 在方法体里是类型值（`T == String`），
+/// 运行时从实例保存的 `typeArguments` 元信息里读类型名，按类型转换 `raw`。
+///
+/// 产物形态：`new TypeCodec({typeArguments: {T: 'String'}})`；方法体里的 `T`
+/// 译成 `this.__ta["T"]`，`T == String` 译成 `this.__ta["T"] == "String"`，
+/// `as T` 擦除（类型断言在 JS 侧无运行时语义）。
+class TypeCodec<T> {
+  const TypeCodec();
 
-  final T value;
-  final String label;
-
-  String describe() => '$label: $value';
+  T parse(String raw) {
+    if (T == String) {
+      return raw as T;
+    }
+    if (T == int) {
+      return int.tryParse(raw) as T;
+    }
+    if (T == double) {
+      return double.tryParse(raw) as T;
+    }
+    if (T == num) {
+      return num.tryParse(raw) as T;
+    }
+    throw ArgumentError('不支持的泛型类型');
+  }
 }
 
-/// 多类型参数的泛型类：验证 `typeArguments` 按位置顺序保留两个类型名。
+/// 多类型参数的泛型类：验证 `typeArguments` 的 key 是声明侧的 `K` / `V`。
 class Pair<K, V> {
   Pair(this.key, this.value);
 
@@ -65,11 +81,11 @@ class _GenericDetailState extends State<GenericDetail> {
 
   @override
   Widget build(BuildContext context) {
-    // 类泛型：`GenericBox<String>` / `GenericBox<int>` 是同一个 JS 类，
-    // 类型实参以 `typeArguments: ['String']` / `['int']` 随构造下发。
-    final stringBox = GenericBox<String>('Dart 泛型是编译期事实', label: 'string box');
-    final intBox = GenericBox<int>(42, label: 'int box');
-    // 多类型实参：`typeArguments: ['String', 'int']`。
+    // 类泛型 + 真正使用 T：同一个 `TypeCodec` 类，靠构造时的泛型实参决定转换逻辑。
+    const stringCodec = TypeCodec<String>();
+    const intCodec = TypeCodec<int>();
+    const doubleCodec = TypeCodec<double>();
+    // 多类型实参：`typeArguments: {K: 'String', V: 'int'}`。
     final pair = Pair<String, int>('answer', 42);
 
     return Column(
@@ -88,13 +104,14 @@ class _GenericDetailState extends State<GenericDetail> {
 
         const Text('类泛型', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
-        Text('GenericBox<String> → ${stringBox.describe()}'),
-        Text('GenericBox<int> → ${intBox.describe()}'),
+        Text('TypeCodec<String>().parse("123") → ${stringCodec.parse('123')}'),
+        Text('TypeCodec<int>().parse("42") → ${intCodec.parse('42')}'),
+        Text('TypeCodec<double>().parse("3.14") → ${doubleCodec.parse('3.14')}'),
         Text('Pair<String, int> → ${pair.describe()}'),
         const SizedBox(height: 6),
         const Text(
-          "产物形态：new GenericBox({value: …, typeArguments: ['String']})；"
-          "new Pair({key: …, value: …, typeArguments: ['String', 'int']})",
+          '产物形态：new TypeCodec({typeArguments: {T: "String"}})；'
+          '方法体 T → this.__ta["T"]，T == String → this.__ta["T"] == "String"。',
           style: TextStyle(fontSize: 12, color: Colors.black45),
         ),
 
@@ -111,7 +128,8 @@ class _GenericDetailState extends State<GenericDetail> {
           create: (_) => CounterVm(),
           child: Builder(
             builder: (context) {
-              // 方法泛型 + 订阅：T 以 {typeArguments: ['CounterVm']} 下发。
+              // 方法泛型 + 订阅：T 并入调用尾参对象；实例方法拿不到声明参数名时
+              // 元信息 key 用位置序号（消费方按第一个值取，与写法无关）。
               final model = context.watch<CounterVm>();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

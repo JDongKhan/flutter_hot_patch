@@ -74,7 +74,7 @@ export class DismissibleDetail extends StatefulWidget {
                     })
                   })
                 }),
-                "key": new ValueKey({value: item, typeArguments: ['String']})
+                "key": new ValueKey({value: item, typeArguments: {"T": "String"}})
               })]); } return out; })(),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12

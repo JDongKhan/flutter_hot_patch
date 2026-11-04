@@ -61,9 +61,7 @@ export class PromoFloor extends StatelessWidget {
     return ChangeNotifierProvider.value({
       "value": this.vm,
       "child": (this.__k0 || (this.__k0 = new PromoFloorView({}))),
-      "typeArguments": [
-        "PromoFloorVm"
-      ]
+      "typeArguments": {"T": "PromoFloorVm"}
     });
   }
 }
@@ -74,7 +72,7 @@ export class PromoFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: ["PromoFloorVm"] });
+    var vm = context.watch({ typeArguments: {"0": "PromoFloorVm"} });
     var body;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({

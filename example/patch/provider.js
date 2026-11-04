@@ -83,16 +83,18 @@ var JsBuildContext = __core.JsBuildContext;
 // 告警走核心导出的通用日志入口（debug 生效、release 零开销），不新开通道。
 function __warn(text) { __core.log('warn', text); }
 
-// 类型实参的唯一载体是 `typeArguments: ['T']`（生成器按位置顺序原样下发，
-// 与值构造、组件结点、泛型方法调用同一份规则）。这里只取第一个——provider 的
-// 作用域是单类型键控的；缺失即翻译/调用面不合规，出声而不是静默返回。
+// 类型实参的唯一载体是 `typeArguments: {T: 'CounterVm'}`（生成器按声明侧类型
+// 参数名下发，与值构造、组件结点、泛型方法调用同一份规则）。provider 的作用域
+// 是单类型键控的，直接取第一个值（与开发者写的类型参数名无关）；缺失即翻译 /
+// 调用面不合规，出声而不是静默返回。
 function __scopeTypeOf(props, api) {
-  var ta = (props && props.typeArguments) || [];
-  if (!ta.length) {
+  var ta = (props && props.typeArguments) || {};
+  var keys = Object.keys(ta);
+  if (!keys.length) {
     __warn('[provider] ' + api + ' 缺少类型实参 typeArguments，无法定位作用域');
     return null;
   }
-  return ta[0];
+  return ta[keys[0]];
 }
 
 // type      = 类型名（生成器在翻译期写入，源自 `ChangeNotifierProvider<T>` 的 T）；

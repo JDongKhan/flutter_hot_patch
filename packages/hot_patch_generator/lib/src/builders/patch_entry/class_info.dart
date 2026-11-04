@@ -86,6 +86,12 @@ class ClassMethod {
   /// 来源 mixin 名（线性化展开进本类的方法）；null = 类自身声明。
   /// 仅用于产物分组注释（mixin 成员集中尾部、按来源分隔），不影响翻译。
   final String? mixinOrigin;
+
+  /// 本方法声明的类型参数名（`T parse<T>(...)` → `['T']`），按声明顺序。
+  /// 方法体里这些名字是类型值（`T == String` / `as T`），运行时从调用尾参对象
+  /// 的 `typeArguments` 里按同名 key 取。
+  final List<String> typeParams;
+
   const ClassMethod({
     required this.name,
     required this.params,
@@ -101,6 +107,7 @@ class ClassMethod {
     this.hostChannel,
     this.positionalParamCount = 0,
     this.hasNamedParams = false,
+    this.typeParams = const [],
     this.superMap = const {},
     this.mixinOrigin,
   });
@@ -133,6 +140,10 @@ class ClassInfo {
   /// 是否为 @PatchEntry 组件（仅用于产物注释标注，不参与结构分叉）。
   final bool isComponent;
 
+  /// 类声明的类型参数名（`class Pair<K, V>` → `['K', 'V']`），按声明顺序。
+  /// 实例构造时把 `typeArguments` 存到 `__ta`，方法体里的 `T` 据此读运行时类型名。
+  final List<String> typeParams;
+
   // --- 翻译期发现的依赖信息（组件/普通类同一份模型，builder 据此递归、import）---
 
   /// 翻译本类时引用到的其它类/组件名：字段类型 + 方法体里构造调用 + 嵌套组件。
@@ -155,6 +166,7 @@ class ClassInfo {
     this.ctorParams = const {},
     this.ctorDefaults = const {},
     this.isComponent = false,
+    this.typeParams = const [],
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
   });

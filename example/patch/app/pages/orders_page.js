@@ -24,9 +24,7 @@ export class OrdersPage extends StatelessWidget {
     return new ChangeNotifierProvider({
       "create": (_) => { return (() => { const _t = new OrdersVm({initialStatus: this.initialStatus}); _t.load(); return _t; })(); },
       "child": (this.__k0 || (this.__k0 = new OrdersView({}))),
-      "typeArguments": [
-        "OrdersVm"
-      ]
+      "typeArguments": {"T": "OrdersVm"}
     });
   }
 }
@@ -44,7 +42,7 @@ export class OrdersView extends StatefulWidget {
       } })();
   }
   _buildOrderItem(context, i) {
-    var orders = context.read({ typeArguments: ["OrdersVm"] }).orders;
+    var orders = context.read({ typeArguments: {"0": "OrdersVm"} }).orders;
     var o = orders[i];
     return new _OrderCard({
       "order": o,
@@ -53,7 +51,7 @@ export class OrdersView extends StatefulWidget {
     });
   }
   build(context) {
-    var vm = context.watch({ typeArguments: ["OrdersVm"] });
+    var vm = context.watch({ typeArguments: {"0": "OrdersVm"} });
     var feed = vm.feed;
     if ((feed == null)) {
       var error = vm.feedError;

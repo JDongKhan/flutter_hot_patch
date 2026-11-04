@@ -120,6 +120,18 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 组件数据表达式与模型方法体共用这一处，不再各写一套）。
   if (e is BinaryExpression) {
     final op = e.operator.lexeme;
+    // 类型值比较（`T == String` / `T != int`）：任一侧是类型参数时进入专用分支，
+    // 两侧都按「类型名」翻译（T 读 `this.__ta["T"]`，`String` → `"String"`）。
+    // 判据只看操作数是不是作用域登记的类型参数，不按类名 / 方法名判断。
+    if ((op == '==' || op == '!=') &&
+        (_isTypeParamOperand(e.leftOperand, scope) ||
+            _isTypeParamOperand(e.rightOperand, scope))) {
+      final l = _typeValueJs(e.leftOperand, scope, classes) ??
+          exprToJs(e.leftOperand, scope, classes);
+      final r = _typeValueJs(e.rightOperand, scope, classes) ??
+          exprToJs(e.rightOperand, scope, classes);
+      if (l != null && r != null) return '($l $op $r)';
+    }
     if (const <String>{
       '>', '<', '>=', '<=', '==', '!=', '&&', '||', '+', '-', '*', '/', '%'
     }.contains(op)) {
@@ -187,11 +199,23 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (test == null) return null;
     return e.notOperator == null ? '($test)' : '(!$test)';
   }
+  // `x as T`：类型断言在 JS 侧无运行时语义（Dart 泛型擦除），**目标类型是
+  // 类型参数**时直接擦除断言（`value as T` → `value`）；其它具体类型的断言
+  // 仍按原策略不翻译（保持既有行为，不静默放宽）。
+  if (e is AsExpression) {
+    if (scope.typeParams.containsKey(e.type.toSource().trim())) {
+      return exprToJs(e.expression, scope, classes);
+    }
+    return null;
+  }
   // `this`（如 `TabController(length: n, vsync: this)`）：JS 侧方法/构造实参里
   // 的 this 就是组件实例，一比一透传；Dart 侧专属的实参（vsync）由 JS 代理类
   // 构造自行忽略。
   if (e is ThisExpression) return 'this';
   if (e is Identifier) {
+    // 类型参数（`T` / `E`）：Dart 里是类型值，JS 侧读实例保存的类型名元信息。
+    final tp = scope.typeParams[e.name];
+    if (tp != null) return tp;
     // kDebugMode / kReleaseMode → 运行时注入的全局标志
     final flag = globalFlagJs(e.name);
     if (flag != null) return flag;
@@ -432,35 +456,93 @@ String? valueCtorJs(
         '的位置实参缺少形参名签名，落 __pos 兜底：${rest.join(', ')}');
     entries.add('__pos: [${rest.join(', ')}]');
   }
-  // 类型实参 → `typeArguments` 元信息（唯一解析见 [typeArgsOf]，与组件结点、
-  // 泛型方法调用共用同一份规则）。运行时/宿主谁需要谁取（如 `GlobalKey<T>` 的
-  // currentState 代理类、provider 的类型键），翻译层不做类型判断、不维护名单。
-  final typeArgs = typeArgsOf(e);
+  // 类型实参 → `typeArguments` **元信息 Map**（唯一解析见 [typeArgsOf]）。
+  // 运行时/宿主谁需要谁取（如 `GlobalKey<T>` 的 currentState 代理类、provider
+  // 的类型键），翻译层不做类型判断、不维护名单。
+  final typeArgs = typeArgsOf(
+    e,
+    declared: sig?.typeParams ?? signatures?.typeParamsOf(cls) ?? const [],
+  );
   if (typeArgs.isNotEmpty) {
-    entries.add(
-      'typeArguments: [${typeArgs.map((t) => "'${t.replaceAll(r'\', r'\\').replaceAll("'", r"\'")}'").join(', ')}]',
-    );
+    entries.add('typeArguments: ${typeArgsMapJs(typeArgs)}');
   }
   final props = entries.isEmpty ? '' : '{${entries.join(', ')}}';
   return ctorName == null ? 'new $cls($props)' : '$cls.$ctorName($props)';
 }
 
-/// 类型实参名（`GlobalKey<AnimatedListState>()` → ['AnimatedListState']）。
+/// 类型实参 → **元信息 Map**（key = 声明侧类型参数名，value = 实参类型名）。
 ///
-/// 唯一实现，构造（值 / 组件结点）与泛型方法调用共用：Dart 泛型在 JS 侧的
-/// 唯一边界是**元信息**，形态固定为 `typeArguments: ['T1', 'T2', ...]`，按位置
-/// 顺序原样保留源码文本（嵌套泛型保留 `List<int>`）。谁需要谁读，翻译层不按
-/// 类名 / 方法名判断、不发明语义化键名。
+/// 唯一实现，构造（值 / 组件结点）与泛型方法调用共用。Dart 泛型在 JS 侧的
+/// 唯一边界是**元信息**：`<String, int>` → `{"K": "String", "V": "int"}`。
+/// [declared] 是声明侧的类型参数名（`class Pair<K, V>` → `['K', 'V']`，
+/// `m<T>()` → `['T']`）；查不到声明时退化为位置序号键（`"0"` / `"1"`），
+/// 保证形态唯一且多泛型不丢失。谁需要谁读，翻译层不按类名 / 方法名判断。
 ///
 /// 覆盖三种写法：`const A<T>()`、`A<T>.b()`、`A<T>()`（无 const，parseString 下
-/// 是 MethodInvocation）。
-List<String> typeArgsOf(Expression? e) {
+/// 是 MethodInvocation）。嵌套泛型保留源码文本（`List<int>`）。
+Map<String, String> typeArgsOf(
+  Expression? e, {
+  List<String> declared = const [],
+}) {
   final List<TypeAnnotation>? args = switch (e) {
     InstanceCreationExpression() => e.constructorName.type.typeArguments?.arguments,
     MethodInvocation() => e.typeArguments?.arguments,
     _ => null,
   };
-  return [for (final a in args ?? const <TypeAnnotation>[]) a.toSource()];
+  final list = args ?? const <TypeAnnotation>[];
+  return {
+    for (var i = 0; i < list.length; i++)
+      (i < declared.length ? declared[i] : '$i'): list[i].toSource(),
+  };
+}
+
+/// 类型实参 Map → JS 对象字面量源码（`{ "K": "String", "V": "int" }`）。
+String typeArgsMapJs(Map<String, String> args) =>
+    '{${args.entries.map((e) => '${jsString(e.key)}: ${jsString(e.value)}').join(', ')}}';
+
+/// 操作数是否是**类型参数**（`T` / `E`）。只看作用域里登记的类型参数名，
+/// 不按名字形态猜——`T == String` 这类「类型值比较」据此进入专用翻译分支。
+bool _isTypeParamOperand(Expression e, FieldScope scope) =>
+    e is SimpleIdentifier && scope.typeParams.containsKey(e.name);
+
+/// 类型字面量在值语境下的 JS 表示：类型名 → 字符串（`String` → `"String"`）。
+///
+/// Dart 的 `T == String` 比较的是 Type 对象；JS 侧没有类型对象，统一用**类型名
+/// 字符串**比较（T 就是 `typeArguments` 里保存的类型名）。类型参数自身返回
+/// 作用域登记的读取表达式（`this.__ta["T"]`）。非类型名返回 null，交回普通路径。
+String? _typeValueJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is! SimpleIdentifier) return null;
+  final tp = scope.typeParams[e.name];
+  if (tp != null) return tp;
+  const builders = {
+    'String',
+    'int',
+    'double',
+    'num',
+    'bool',
+    'Object',
+    'dynamic',
+    'void',
+    'Null',
+    'Function',
+    'List',
+    'Map',
+    'Set',
+    'Iterable',
+    'Future',
+  };
+  if (builders.contains(e.name)) return jsString(e.name);
+  if (classes.containsKey(e.name) || runtimeGlobalTypes().contains(e.name)) {
+    return jsString(e.name);
+  }
+  // 首字母大写 = 类名形态（项目内 / 三方类型）；未知小写名不当作类型。
+  final bare = e.name.replaceFirst(RegExp('^_+'), '');
+  if (bare.isNotEmpty && bare[0] == bare[0].toUpperCase()) return jsString(e.name);
+  return null;
 }
 
 /// 构造表达式的「结构化值」钩子：由 element2js 在翻译表达式期间安装
@@ -724,6 +806,26 @@ String? closureToJs(
   return null;
 }
 
+/// 泛型方法调用点能定位到的声明侧类型参数名。
+///
+/// 只查**静态方法**（receiver 是类名，`C.parse<T>()`）：源码索引能确定参数名，
+/// 元信息 key 因此与开发者写的 `<T>` 一致。实例方法 / 注入代理方法（如
+/// `context.watch<T>()`）在无类型解析的翻译层无法定位声明，退化为位置序号
+/// 键——消费方按 `Object.values(...)` 取值，与 key 无关。
+List<String> _declaredTypeParamsFor(
+  MethodInvocation e,
+  Map<String, ClassInfo> classes,
+) {
+  final tgt = e.target;
+  if (tgt is SimpleIdentifier &&
+      (classes.containsKey(tgt.name) || runtimeGlobalTypes().contains(tgt.name))) {
+    return CtorSignatures.instance
+            ?.staticMethodTypeParamsOf(tgt.name, e.methodName.name) ??
+        const [];
+  }
+  return const [];
+}
+
 /// 闭包体内的单条表达式语句 → JS：与方法体共用 [\_bodyExprStmtJs]
 /// （`setState(...)` 展开 + 赋值/自增/对象方法调用等）。保留本函数只为兼容
 /// 表达式体闭包的调用点（`(v) => expr` 分支）。
@@ -800,14 +902,13 @@ String? methodCallExprJs(
   //   - 有位置实参 + 无具名实参：尾对象会被目标当成第 N+1 个**位置实参**
   //     （如原生 `Array.reduce<T>(fn)` 的 initialValue），属语义污染，故擦除
   //     元信息并出声——与 dart2js 的擦除行为一致，绝不静默错译。
-  final typeArgs = typeArgsOf(e);
-  final typeArgsJs = typeArgs.isEmpty
-      ? null
-      : 'typeArguments: [${typeArgs.map(jsString).join(', ')}]';
+  final typeArgs = typeArgsOf(e, declared: _declaredTypeParamsFor(e, classes));
+  final typeArgsJs =
+      typeArgs.isEmpty ? null : 'typeArguments: ${typeArgsMapJs(typeArgs)}';
   final keepTypeArgs =
       typeArgsJs != null && (argJs.isEmpty || namedJs.isNotEmpty);
   if (typeArgsJs != null && !keepTypeArgs) {
-    log.warning('[hot_patch_generator] ${e.methodName.name}<${typeArgs.join(', ')}> '
+    log.warning('[hot_patch_generator] ${e.methodName.name}<${typeArgs.values.join(', ')}> '
         '带位置实参且无具名实参，尾参对象会被当成位置实参，已擦除类型实参元信息');
   }
   final tailJs = [...namedJs, if (keepTypeArgs) typeArgsJs];
@@ -1647,6 +1748,14 @@ String translateClassMethodBody(
     className: info.name,
     staticFields: staticFieldNames,
     staticMethods: staticMethodNames,
+    // 类泛型：方法体里的 `T` 读实例上由构造保存的 `typeArguments` 元信息
+    // （`this.__ta["T"]`）。静态方法在 Dart 里本就不能引用类类型参数，故不进表。
+    typeParams: m.isStatic
+        ? const {}
+        : {
+            for (final tp in info.typeParams)
+              tp: 'this.__ta[${jsString(tp)}]',
+          },
     hostFunctions: hostFunctions,
     globalConsts: globalConsts,
     superMap: m.superMap,

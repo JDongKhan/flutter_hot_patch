@@ -13,33 +13,33 @@ export class DialogDetail extends StatefulWidget {
   }
   _openMaterial() {
     this.setState(() => { this._opens += 1; });
-    showDialog({"context": this.context, "builder": (ctx) => { return new DialogContent({}); }, typeArguments: ["Object?"]}).then((v) => { return this._record("showDialog", v); });
+    showDialog({"context": this.context, "builder": (ctx) => { return new DialogContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showDialog", v); });
   }
   _openNonDismissible() {
     this.setState(() => { this._opens += 1; });
     showDialog({"context": this.context, "barrierDismissible": false, "builder": (ctx) => { return new DialogContent({
           "barrierDismissible": false
-        }); }, typeArguments: ["Object?"]}).then((v) => { return this._record("showDialog(barrierDismissible: false)", v); });
+        }); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showDialog(barrierDismissible: false)", v); });
   }
   _openSheet() {
     this.setState(() => { this._opens += 1; });
-    showModalBottomSheet({"context": this.context, "showDragHandle": true, "builder": (ctx) => { return new SheetContent({}); }, typeArguments: ["Object?"]}).then((v) => { return this._record("showModalBottomSheet", v); });
+    showModalBottomSheet({"context": this.context, "showDragHandle": true, "builder": (ctx) => { return new SheetContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showModalBottomSheet", v); });
   }
   _openCupertino() {
     this.setState(() => { this._opens += 1; });
-    showCupertinoDialog({"context": this.context, "builder": (ctx) => { return new CupertinoDialogContent({}); }, typeArguments: ["Object?"]}).then((v) => { return this._record("showCupertinoDialog", v); });
+    showCupertinoDialog({"context": this.context, "builder": (ctx) => { return new CupertinoDialogContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showCupertinoDialog", v); });
   }
   _openAdaptive() {
     this.setState(() => { this._opens += 1; });
-    showAdaptiveDialog({"context": this.context, "builder": (ctx) => { return new CupertinoDialogContent({}); }, typeArguments: ["Object?"]}).then((v) => { return this._record("showAdaptiveDialog", v); });
+    showAdaptiveDialog({"context": this.context, "builder": (ctx) => { return new CupertinoDialogContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showAdaptiveDialog", v); });
   }
   _openCupertinoSheet() {
     this.setState(() => { this._opens += 1; });
-    showCupertinoModalPopup({"context": this.context, "builder": (ctx) => { return new ActionSheetContent({}); }, typeArguments: ["Object?"]}).then((v) => { return this._record("showCupertinoModalPopup", v); });
+    showCupertinoModalPopup({"context": this.context, "builder": (ctx) => { return new ActionSheetContent({}); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showCupertinoModalPopup", v); });
   }
   _openGeneral() {
     this.setState(() => { this._opens += 1; });
-    showGeneralDialog({"context": this.context, "barrierDismissible": true, "barrierLabel": "关闭", "barrierColor": Colors.black54, "pageBuilder": (ctx, animation, secondaryAnimation) => { return (this.__k0 || (this.__k0 = new GeneralDialogContent({}))); }, typeArguments: ["Object?"]}).then((v) => { return this._record("showGeneralDialog", v); });
+    showGeneralDialog({"context": this.context, "barrierDismissible": true, "barrierLabel": "关闭", "barrierColor": Colors.black54, "pageBuilder": (ctx, animation, secondaryAnimation) => { return (this.__k0 || (this.__k0 = new GeneralDialogContent({}))); }, typeArguments: {"0": "Object?"}}).then((v) => { return this._record("showGeneralDialog", v); });
   }
   _record(label, v) {
     this.setState(() => { this._last = ((v == null) ? label + " → null（取消 / 遮罩 / 返回键）" : label + " → " + v); });

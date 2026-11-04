@@ -10,7 +10,7 @@ export class AnimatedListDetail extends StatefulWidget {
   static _removeDuration = new Duration({milliseconds: 300});
   constructor(args) {
     super(args);
-    this._listKey = new GlobalKey({typeArguments: ['AnimatedListState']});
+    this._listKey = new GlobalKey({typeArguments: {"T": "AnimatedListState"}});
     this._seq = 3;
     this._items = ["条目 1", "条目 2", "条目 3"];
   }

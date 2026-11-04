@@ -8,8 +8,8 @@ import { Alignment, BorderRadius, BoxDecoration, Colors, Column, Container, Cros
 export class ValueListenableBuilderDetail extends StatefulWidget {
   constructor(args) {
     super(args);
-    this._a = new ValueNotifier({_value: 0, typeArguments: ['int']});
-    this._b = new ValueNotifier({_value: 100, typeArguments: ['int']});
+    this._a = new ValueNotifier({_value: 0, typeArguments: {"T": "int"}});
+    this._b = new ValueNotifier({_value: 100, typeArguments: {"T": "int"}});
     this._useA = true;
     this._builds = 0;
   }
@@ -110,9 +110,7 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
                 "color": Colors.black54
               })
             }))),
-            "typeArguments": [
-              "int"
-            ]
+            "typeArguments": {"T": "int"}
           }),
           (this.__k2 || (this.__k2 = new SizedBox({
             "height": 10

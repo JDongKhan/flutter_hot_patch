@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { CounterVm } from '../../model/counter_vm.js';
-import { Builder, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatefulWidget, Text, TextStyle, int } from '../../flutter.js';
+import { ArgumentError, Builder, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatefulWidget, Text, TextStyle, double, int, num } from '../../flutter.js';
 import { ChangeNotifierProvider } from '../../provider.js';
 
 // 模型 Pair
@@ -14,23 +14,32 @@ export class Pair {
   __applyProps(args) {
     this.key = (args && args.key !== undefined) ? args.key : null;
     this.value = (args && args.value !== undefined) ? args.value : null;
+    this.__ta = (args && args.typeArguments) || {};
   }
   describe() {
     return this.key + " → " + this.value;
   }
 }
 
-// 模型 GenericBox
-export class GenericBox {
+// 模型 TypeCodec
+export class TypeCodec {
   constructor(args) {
-    this.__applyProps(args);
+    this.__ta = (args && args.typeArguments) || {};
   }
-  __applyProps(args) {
-    this.value = (args && args.value !== undefined) ? args.value : null;
-    this.label = (args && args.label !== undefined) ? args.label : "box";
-  }
-  describe() {
-    return this.label + ": " + this.value;
+  parse(raw) {
+    if ((this.__ta["T"] == "String")) {
+      return raw;
+    }
+    if ((this.__ta["T"] == "int")) {
+      return int.tryParse(raw);
+    }
+    if ((this.__ta["T"] == "double")) {
+      return double.tryParse(raw);
+    }
+    if ((this.__ta["T"] == "num")) {
+      return num.tryParse(raw);
+    }
+    throw new ArgumentError({message: "不支持的泛型类型"});
   }
 }
 
@@ -44,27 +53,19 @@ export class GenericDetail extends StatefulWidget {
     this.setState(() => { this._readCount = model.count; });
   }
   build(context) {
-    var stringBox = new GenericBox({
-      "label": "string box",
-      "value": "Dart 泛型是编译期事实",
-      "typeArguments": [
-        "String"
-      ]
+    var stringCodec = new TypeCodec({
+      "typeArguments": {"T": "String"}
     });
-    var intBox = new GenericBox({
-      "label": "int box",
-      "value": 42,
-      "typeArguments": [
-        "int"
-      ]
+    var intCodec = new TypeCodec({
+      "typeArguments": {"T": "int"}
+    });
+    var doubleCodec = new TypeCodec({
+      "typeArguments": {"T": "double"}
     });
     var pair = new Pair({
       "key": "answer",
       "value": 42,
-      "typeArguments": [
-        "String",
-        "int"
-      ]
+      "typeArguments": {"K": "String", "V": "int"}
     });
     return new Column({
       "crossAxisAlignment": CrossAxisAlignment.stretch,
@@ -99,10 +100,13 @@ export class GenericDetail extends StatefulWidget {
           "height": 6
         }))),
         new Text({
-          "data": "GenericBox<String> → " + stringBox.describe()
+          "data": "TypeCodec<String>().parse(\"123\") → " + stringCodec.parse("123")
         }),
         new Text({
-          "data": "GenericBox<int> → " + intBox.describe()
+          "data": "TypeCodec<int>().parse(\"42\") → " + intCodec.parse("42")
+        }),
+        new Text({
+          "data": "TypeCodec<double>().parse(\"3.14\") → " + doubleCodec.parse("3.14")
         }),
         new Text({
           "data": "Pair<String, int> → " + pair.describe()
@@ -111,7 +115,7 @@ export class GenericDetail extends StatefulWidget {
           "height": 6
         }))),
         (this.__k6 || (this.__k6 = new Text({
-          "data": "产物形态：new GenericBox({value: …, typeArguments: ['String']})；" + "new Pair({key: …, value: …, typeArguments: ['String', 'int']})",
+          "data": "产物形态：new TypeCodec({typeArguments: {T: \"String\"}})；" + "方法体 T → this.__ta[\"T\"]，T == String → this.__ta[\"T\"] == \"String\"。",
           "style": new TextStyle({
             "fontSize": 12,
             "color": Colors.black45
@@ -143,7 +147,7 @@ export class GenericDetail extends StatefulWidget {
           "create": (_) => { return new CounterVm(); },
           "child": new Builder({
             "builder": (context) => {
-              var model = context.watch({ typeArguments: ["CounterVm"] });
+              var model = context.watch({ typeArguments: {"0": "CounterVm"} });
               return new Column({
                 "crossAxisAlignment": CrossAxisAlignment.stretch,
                 "children": [
@@ -170,7 +174,7 @@ export class GenericDetail extends StatefulWidget {
                         "width": 12
                       }))),
                       new ElevatedButton({
-                        "onPressed": () => { return this._snapshot(context.read({ typeArguments: ["CounterVm"] })); },
+                        "onPressed": () => { return this._snapshot(context.read({ typeArguments: {"0": "CounterVm"} })); },
                         "child": (this.__k12 || (this.__k12 = new Text({
                           "data": "read 快照"
                         })))
@@ -187,9 +191,7 @@ export class GenericDetail extends StatefulWidget {
               });
             }
           }),
-          "typeArguments": [
-            "CounterVm"
-          ]
+          "typeArguments": {"T": "CounterVm"}
         })
       ]
     });

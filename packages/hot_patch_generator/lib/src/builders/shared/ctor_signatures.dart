@@ -20,12 +20,19 @@ class CtorSignature {
   const CtorSignature(
     this.positional,
     this.named, {
+    this.typeParams = const <String>[],
     this.functionParams = const <String>{},
     this.nonFunctionParams = const <String>{},
   });
 
   /// 位置形参名，顺序与声明一致（`Text(this.data)` → `['data']`）。
   final List<String> positional;
+
+  /// 类声明的**类型参数名**（`class Provider<T>` → `['T']`）。
+  ///
+  /// 泛型实参按它映射成 `typeArguments: {T: 'CounterVm'}`（key 是源码里开发者
+  /// 写的类型参数名，按声明顺序与实参一一对应），多泛型天然支持。
+  final List<String> typeParams;
 
   /// 具名形参名（`{this.style}` → `{'style'}`）。
   final Set<String> named;
@@ -231,6 +238,48 @@ class CtorSignatures {
   /// 源码索引：该名字是否有 **class** 声明（含 `abstract final class` 等多修饰符）。
   bool isClass(String name) => _ensureIndex().containsKey(name);
 
+  /// 类声明的类型参数名（`class Provider<T>` → `['T']`）；查不到返回空。
+  List<String> typeParamsOf(String className) {
+    for (final file in _ensureIndex()[className] ?? const <String>[]) {
+      final unit = _units.containsKey(file)
+          ? _units[file]
+          : _units[file] = parseUnitFile(file);
+      if (unit == null) continue;
+      for (final d in unit.declarations) {
+        if (d is ClassDeclaration && d.name.lexeme == className) {
+          return classTypeParamsOf(d);
+        }
+      }
+    }
+    return const [];
+  }
+
+  /// 类上**静态方法**的类型参数名（`static T parse<T>(...)` → `['T']`）。
+  List<String> staticMethodTypeParamsOf(String className, String methodName) {
+    for (final file in _ensureIndex()[className] ?? const <String>[]) {
+      final unit = _units.containsKey(file)
+          ? _units[file]
+          : _units[file] = parseUnitFile(file);
+      if (unit == null) continue;
+      for (final d in unit.declarations) {
+        if (d is! ClassDeclaration || d.name.lexeme != className) continue;
+        for (final m in d.members) {
+          if (m is MethodDeclaration &&
+              m.isStatic &&
+              m.name.lexeme == methodName) {
+            return [
+              for (final t
+                  in m.typeParameters?.typeParameters ?? const <TypeParameter>[])
+                t.name.lexeme,
+            ];
+          }
+        }
+      }
+    }
+    return const [];
+  }
+
+
   /// 抽单个类的构造签名；[ctorName] 指定的构造不存在时返回 null。
   CtorSignature? _signatureOf(ClassDeclaration decl, String? ctorName) {
     for (final m in decl.members) {
@@ -257,14 +306,23 @@ class CtorSignatures {
       return CtorSignature(
         positional,
         named,
+        typeParams: classTypeParamsOf(decl),
         functionParams: functionParams,
         nonFunctionParams: nonFunctionParams,
       );
     }
     // 无名构造且没有显式声明：默认构造无参。
-    if (ctorName == null) return CtorSignature.empty;
+    if (ctorName == null) {
+      return CtorSignature(const [], const {}, typeParams: classTypeParamsOf(decl));
+    }
     return null;
   }
+
+  /// 类声明里的类型参数名（`class Pair<K, V>` → `['K', 'V']`）。
+  static List<String> classTypeParamsOf(ClassDeclaration decl) => [
+        for (final t in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
+          t.name.lexeme,
+      ];
 
   /// 类里**实例字段**的名字 → 声明类型。
   ///

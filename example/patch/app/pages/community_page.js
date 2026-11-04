@@ -20,9 +20,7 @@ export class CommunityPage extends StatelessWidget {
     return new ChangeNotifierProvider({
       "create": (_) => { return (() => { const _t = new CommunityVm(); _t.load(); return _t; })(); },
       "child": (this.__k0 || (this.__k0 = new CommunityView({}))),
-      "typeArguments": [
-        "CommunityVm"
-      ]
+      "typeArguments": {"T": "CommunityVm"}
     });
   }
 }
@@ -33,7 +31,7 @@ export class CommunityView extends StatefulWidget {
     super(args);
   }
   _buildResourceItem(context, i) {
-    var resources = context.read({ typeArguments: ["CommunityVm"] }).resources;
+    var resources = context.read({ typeArguments: {"0": "CommunityVm"} }).resources;
     return new _ResourceCard({
       "resource": resources[i],
       "onTap": () => AppRouter.openResource(resources[i].id)
@@ -41,7 +39,7 @@ export class CommunityView extends StatefulWidget {
   }
   build(context) {
     super.build(context);
-    var vm = context.watch({ typeArguments: ["CommunityVm"] });
+    var vm = context.watch({ typeArguments: {"0": "CommunityVm"} });
     var feed = vm.feed;
     var resources = vm.resources;
     var error = (vm.feedError ?? vm.resourcesError);

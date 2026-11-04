@@ -20,9 +20,7 @@ export class AppShell extends StatelessWidget {
     return new ChangeNotifierProvider({
       "create": (_) => { return (() => { const _t = new AppShellVm(); _t.load(); return _t; })(); },
       "child": (this.__k0 || (this.__k0 = new AppShellView({}))),
-      "typeArguments": [
-        "AppShellVm"
-      ]
+      "typeArguments": {"T": "AppShellVm"}
     });
   }
 }
@@ -60,7 +58,7 @@ export class AppShellView extends StatefulWidget {
     }
   }
   async _retry() {
-    await this.context.read({ typeArguments: ["AppShellVm"] }).load();
+    await this.context.read({ typeArguments: {"0": "AppShellVm"} }).load();
   }
   _iconOf(icon) {
     switch (icon) {
@@ -76,7 +74,7 @@ export class AppShellView extends StatefulWidget {
     return Icons.apps;
   }
   build(context) {
-    var vm = context.watch({ typeArguments: ["AppShellVm"] });
+    var vm = context.watch({ typeArguments: {"0": "AppShellVm"} });
     if (vm.loading) {
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})

@@ -1,3 +1,12 @@
+## 0.7.0
+
+**破坏性：泛型元信息由数组改为 Map（key = 声明侧类型参数名）；新增「类型参数在方法体里可用」的翻译规则（`T == String` / `as T`）。**
+
+- `typeArguments` 形态改为 `{T: 'CounterVm', K: 'String', V: 'int'}`：key 取自类 / 方法的源码声明（`class Pair<K, V>` / `m<T>`），查不到声明时退化为位置序号键。多泛型不再依赖位置顺序，消费方按 key 或 `Object.values(...)[0]` 取。
+- 实例保存元信息：泛型类构造把 `typeArguments` 存到内部字段 `__ta`（无参构造 / `__applyProps` 两条路径都覆盖）。
+- 方法体里的类型参数：`T` → `this.__ta["T"]`；`T == String` / `!=` 进入「类型值比较」分支，另一侧类型名转字符串（`String` → `"String"`）；`as T` 擦除（类型断言在 JS 侧无运行时语义）。
+- 消费方同步：`GlobalKey<T>` 与 provider 的 `watch/read`、作用域登记改取 Map 的第一个值（与 key 写法无关）。
+
 ## 0.6.0
 
 **只做加法：新增 `flutter.js` 的 `Future` 同名镜像；删除翻译层 `Future.delayed` → Promise 的特判（替换即删除，旧路径不存在）。**

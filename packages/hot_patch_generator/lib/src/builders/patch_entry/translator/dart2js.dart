@@ -60,10 +60,18 @@ String renderClassDecl(
     // 多传实参对无参父类无害。
     b.write('  constructor(args) {\n');
   } else {
-    b.write(info.ctorParams.isEmpty ? '  constructor() {\n' : '  constructor(args) {\n');
+    b.write(info.ctorParams.isEmpty && info.typeParams.isEmpty
+        ? '  constructor() {\n'
+        : '  constructor(args) {\n');
   }
   if (base != null) b.write('    super(args);\n');
   if (info.ctorParams.isNotEmpty) b.write('    this.__applyProps(args);\n');
+  // 类泛型：构造下发的 `typeArguments` 元信息（参数名 → 类型名）存到实例，
+  // 方法体里的类型参数（`T == String` / `as T`）据此读运行时类型名。
+  // 有构造形参时由 `__applyProps` 统一写入（见下），这里只补无参构造的路径。
+  if (info.typeParams.isNotEmpty && info.ctorParams.isEmpty) {
+    b.write('    this.__ta = (args && args.typeArguments) || {};\n');
+  }
   _writeFieldAssignments(b, info);
   b.write('  }\n');
 
@@ -77,6 +85,9 @@ String renderClassDecl(
         '    this.${f.name} = (args && args.${f.name} !== undefined) '
         '? args.${f.name} : ${_fieldDefaultJs(f)};\n',
       );
+    }
+    if (info.typeParams.isNotEmpty) {
+      b.write('    this.__ta = (args && args.typeArguments) || {};\n');
     }
     b.write('  }\n');
   }

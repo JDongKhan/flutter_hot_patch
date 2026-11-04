@@ -83,9 +83,7 @@ export class TweenAnimationBuilderDetail extends StatefulWidget {
                     ]
                   });
                 },
-                "typeArguments": [
-                  "double"
-                ]
+                "typeArguments": {"T": "double"}
               }),
               (this.__k2 || (this.__k2 = new SizedBox({
                 "height": 10

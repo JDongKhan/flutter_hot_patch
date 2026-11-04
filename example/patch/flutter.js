@@ -8103,11 +8103,13 @@ export class PageStorageKey {
 export class GlobalKey {
   constructor(props) {
     var debugLabel = __positionalArgs(props, ['debugLabel']).debugLabel;
-    // 泛型实参由产物下发（`new GlobalKey({typeArguments: ['AnimatedListState']})`）：
+    // 泛型实参由产物下发（`new GlobalKey({typeArguments: {T: 'AnimatedListState'}})`）：
     // Dart 的 `GlobalKey<T>` 在 AOT 是 reified 的，T 就是「currentState 的类型」，
-    // 取值不需要问宿主、也不靠 runtimeType 猜。
-    var ta = (props && props.typeArguments) || [];
-    this.__stateType = ta.length ? ta[0] : null;
+    // 取值不需要问宿主、也不靠 runtimeType 猜。元信息是**参数名 → 类型名**的 Map，
+    // 单泛型场景直接取第一个值（与 key 的写法无关）。
+    var ta = (props && props.typeArguments) || {};
+    var vals = Object.keys(ta);
+    this.__stateType = vals.length ? ta[vals[0]] : null;
     this.__id = __registerHandle(this, 'key/Global', {
       meta: debugLabel == null ? null : { debugLabel: debugLabel }
     });

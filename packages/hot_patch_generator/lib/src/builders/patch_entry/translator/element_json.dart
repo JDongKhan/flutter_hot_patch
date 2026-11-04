@@ -109,13 +109,16 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
   }
 
   // 构造的类型实参（`Consumer<NetworkVm>(...)` / `ChangeNotifierProvider<T>`）
-  // → `typeArguments` 元信息：与值构造、泛型方法调用同一条规则、同一份解析
-  // （[typeArgsOf]），按位置顺序原样保留源码文本。谁需要谁读（provider 据此声明
-  // 类型键控的作用域、GlobalKey 据此决定 currentState 的代理类），翻译层不做类型
-  // 判断、不发明语义化键名（旧实现写死的 `model` 键已删除）。
-  final typeArgs = typeArgsOf(node.expr);
+  // → `typeArguments` 元信息 Map：与值构造、泛型方法调用同一条规则、同一份解析
+  // （[typeArgsOf]），key 是类声明的类型参数名（`{T: 'CounterVm'}`）。谁需要谁读
+  // （provider 据此声明类型键控的作用域、GlobalKey 据此决定 currentState 的代理
+  // 类），翻译层不做类型判断、不发明语义化键名。
+  final typeArgs = typeArgsOf(
+    node.expr,
+    declared: CtorSignatures.instance?.typeParamsOf(node.type) ?? const [],
+  );
   if (typeArgs.isNotEmpty) {
-    props['typeArguments'] = [for (final t in typeArgs) ctx.jsString(t)];
+    props['typeArguments'] = typeArgsMapJs(typeArgs);
   }
 
   return {

@@ -373,6 +373,13 @@ class FieldScope {
   /// （如扩展成员、顶层常量求值），此时静态成员不参与解析。
   final String? className;
 
+  /// 类型参数名 → 运行时类型名表达式（`T` → `this.__ta["T"]`）。
+  ///
+  /// Dart 方法体里的 `T` 是**类型值**（`T == String` / `as T`），JS 侧没有类型
+  /// 对象，统一由构造下发的 `typeArguments` 元信息（参数名 → 类型名）承载。
+  /// 只有类 / 方法的类型参数名会进这张表，普通标识符解析不受影响。
+  final Map<String, String> typeParams;
+
   /// 本类 **static 字段**名：裸引用（`background`）→ `ClassName.background`。
   /// Dart 的 static 与实例成员在同一名字空间，调用点看不出差别，靠这组集合区分。
   final Set<String> staticFields;
@@ -407,6 +414,7 @@ class FieldScope {
           className: className,
           staticFields: staticFields,
           staticMethods: staticMethods,
+          typeParams: typeParams,
           localAliases: declAliases,
         );
 
@@ -418,6 +426,7 @@ class FieldScope {
     this.className,
     this.staticFields = const {},
     this.staticMethods = const {},
+    this.typeParams = const {},
     this.hostFunctions = const {},
     this.superMap = const {},
     this.hasJsBase = false,
@@ -447,6 +456,7 @@ class FieldScope {
         className: className,
         staticFields: staticFields,
         staticMethods: staticMethods,
+        typeParams: typeParams,
         localAliases: localAliases,
         // 同一个别名表实例：派生作用域里登记的别名，母作用域后续声明同样可见
         // （闭包体内的 `final x = _feed.spots;` 也算链式别名）。

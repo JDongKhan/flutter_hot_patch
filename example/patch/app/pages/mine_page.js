@@ -20,9 +20,7 @@ export class MinePage extends StatelessWidget {
     return new ChangeNotifierProvider({
       "create": (_) => { return (() => { const _t = new MineVm(); _t.load(); return _t; })(); },
       "child": (this.__k0 || (this.__k0 = new MineView({}))),
-      "typeArguments": [
-        "MineVm"
-      ]
+      "typeArguments": {"T": "MineVm"}
     });
   }
 }
@@ -45,7 +43,7 @@ export class MineView extends StatelessWidget {
     }
   }
   build(context) {
-    var vm = context.watch({ typeArguments: ["MineVm"] });
+    var vm = context.watch({ typeArguments: {"0": "MineVm"} });
     var feed = vm.feed;
     if ((feed == null)) {
       var error = vm.error;

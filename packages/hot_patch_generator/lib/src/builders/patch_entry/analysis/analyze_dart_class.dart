@@ -177,6 +177,10 @@ ClassInfo classInfoOf(
       // tear-off 也用它生成精确形参（见 ElementTranslateContext.methodArity）。
       positionalParamCount: positionalParamCountOf(m),
       hasNamedParams: hasNamedParamOf(m),
+      typeParams: [
+        for (final t in m.typeParameters?.typeParameters ?? const <TypeParameter>[])
+          t.name.lexeme,
+      ],
       superMap: superMap,
       mixinOrigin: mixinOrigin,
     );
@@ -252,6 +256,7 @@ ClassInfo classInfoOf(
           hostChannel: m.hostChannel,
           positionalParamCount: m.positionalParamCount,
           hasNamedParams: m.hasNamedParams,
+          typeParams: m.typeParams,
           superMap: classSuper,
           mixinOrigin: m.mixinOrigin,
         );
@@ -307,6 +312,10 @@ ClassInfo classInfoOf(
     ctorParams: ctorParams,
     ctorDefaults: ctorDefaults,
     isComponent: isComponent,
+    typeParams: [
+      for (final t in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
+        t.name.lexeme,
+    ],
     dependencies: dependencies,
   );
 }
@@ -800,6 +809,10 @@ ClassInfo translateClass(
         if (ctorArgs.contains(f.name)) f.name,
     },
     isComponent: isComponent,
+    typeParams: [
+      for (final t in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
+        t.name.lexeme,
+    ],
   );
 
   // 逐个方法翻译：唯一的方法体翻译器，组件与普通类、build 与其它方法完全
@@ -831,6 +844,7 @@ ClassInfo translateClass(
     methods: translated,
     ctorParams: proto.ctorParams,
     isComponent: isComponent,
+    typeParams: proto.typeParams,
     // 依赖 = widget 树里的自定义组件（parseCtx 收集）+ 字段类型 / 方法体
     // 构造调用命中的类（含跨文件组件，如 CounterVm → BannerCard）。
     // 组件若 extends 项目内的另一个组件，基类也要能被 import（SDK 基类
