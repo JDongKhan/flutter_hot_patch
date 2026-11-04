@@ -4,6 +4,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import '../../base/app_router.dart';
 import '../model/app_models.dart';
 import '../service/app_service.dart';
+import '../widgets/load_error_view.dart';
 import 'detail_pages.dart';
 
 /// 订单 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/orders_page.js）。
@@ -40,6 +41,11 @@ class _OrdersPageState extends State<OrdersPage> {
   /// 列表请求进行中（切状态后重新请求时贴进度条）。
   bool _listLoading = false;
 
+  /// 两个接口各自的失败原因（null = 该接口没有失败）；分开记录，避免一个
+  /// 接口成功把另一个的失败状态清掉，缺失的数据永远停在 loading。
+  String? _feedError;
+  String? _ordersError;
+
   /// 当前选中的状态；空串 = 还没定（等价首项「全部」）。
   String _status = '';
 
@@ -53,25 +59,56 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   Future<void> _load() async {
-    final OrderFeed feed = await _service.fetchOrders();
-    setState(() {
-      _feed = feed;
-      _status = widget.initialStatus ?? feed.statuses.first;
-    });
-    // 带具体状态跳进来时，首屏那次「空参数（=全部）」的结果不对口，按状态重发。
-    if (widget.initialStatus != null) {
-      await _loadOrders();
+    try {
+      final OrderFeed feed = await _service.fetchOrders();
+      if (!mounted) return;
+      setState(() {
+        _feed = feed;
+        _status = widget.initialStatus ?? feed.statuses.first;
+        _feedError = null;
+      });
+      // 带具体状态跳进来时，首屏那次「空参数（=全部）」的结果不对口，按状态重发。
+      if (widget.initialStatus != null) {
+        await _loadOrders();
+      }
+    } catch (e) {
+      print('OrdersPage 状态条加载失败: $e');
+      if (!mounted) return;
+      setState(() => _feedError = e.toString());
+      AppRouter.toast('订单页加载失败：$e');
     }
   }
 
   /// 列表接口：按当前状态取回订单列表。
   Future<void> _loadOrders() async {
     setState(() => _listLoading = true);
-    final List<Order> orders = await _service.fetchOrderList(_status);
+    try {
+      final List<Order> orders = await _service.fetchOrderList(_status);
+      if (!mounted) return;
+      setState(() {
+        _orders = orders;
+        _listLoading = false;
+        _ordersError = null;
+      });
+    } catch (e) {
+      print('OrdersPage 订单列表加载失败: $e');
+      if (!mounted) return;
+      setState(() {
+        _listLoading = false;
+        _ordersError = e.toString();
+      });
+      AppRouter.toast('订单列表加载失败：$e');
+    }
+  }
+
+  /// 失败态的重试：状态条与列表一起重发。
+  void _retry() {
     setState(() {
-      _orders = orders;
-      _listLoading = false;
+      _feedError = null;
+      _ordersError = null;
     });
+    _load();
+    _loadOrders();
   }
 
   /// 点状态：先切高亮，再按新状态请求列表。
@@ -88,7 +125,12 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
+    final feedError = _feedError;
     if (_feed == null) {
+      // 失败后必须退出 loading 态：给出异常信息与重试入口。
+      if (feedError != null) {
+        return LoadErrorView(message: feedError, onRetry: _retry);
+      }
       return const Center(child: CircularProgressIndicator());
     }
     return Column(
@@ -149,7 +191,9 @@ class _OrdersPageState extends State<OrdersPage> {
         if (_listLoading) const LinearProgressIndicator(minHeight: 2),
         Expanded(
           child: _orders == null
-              ? const Center(child: CircularProgressIndicator())
+              ? _ordersError != null
+                    ? LoadErrorView(message: _ordersError!, onRetry: _retry)
+                    : const Center(child: CircularProgressIndicator())
               : _orders!.isEmpty
               ? const Center(
                   child: Text(

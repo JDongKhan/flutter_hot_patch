@@ -8,6 +8,7 @@ import { AppRouter } from '../../base/app_router.js';
 import { GridEntry } from '../model/app_models.js';
 import { Spot } from '../model/app_models.js';
 import { WebView } from '../../base/web_view.js';
+import { LoadErrorView } from '../widgets/load_error_view.js';
 import { BannerCarousel } from '../widgets/banner_carousel.js';
 import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Column, Container, CrossAxisAlignment, CustomScrollView, DecoratedBox, EasyRefresh, EasyRefreshController, EdgeInsets, Expanded, FontWeight, GridView, Icon, Icons, Image, InkWell, LinearGradient, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SafeArea, SizedBox, SliverGrid, SliverGridDelegateWithMaxCrossAxisExtent, SliverPadding, SliverToBoxAdapter, Spacer, Stack, StackFit, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
 
@@ -18,6 +19,7 @@ export class HomePage extends StatefulWidget {
     this._service = new AppService();
     this._refreshController = new EasyRefreshController();
     this._feed = null;
+    this._error = null;
     this._city = "上海";
   }
   initState() {
@@ -41,13 +43,32 @@ export class HomePage extends StatefulWidget {
     this._refreshController.callRefresh();
   }
   async _load() {
-    var feed = await this._service.fetchHome(this._city);
-    this.setState(() => { this._feed = feed; });
+    try {
+      var feed = await this._service.fetchHome(this._city);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._feed = feed; this._error = null; });
+    } catch (e) {
+      print("HomePage 加载失败: " + e);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._error = e.toString(); });
+      AppRouter.toast("首页加载失败：" + e);
+    }
   }
   build(context) {
     print("--HomePage build");
     var feed = this._feed;
     if ((feed == null)) {
+      var error = this._error;
+      if ((error != null)) {
+        return new LoadErrorView({
+          "message": this._error,
+          "onRetry": () => this._load()
+        });
+      }
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})
       })));

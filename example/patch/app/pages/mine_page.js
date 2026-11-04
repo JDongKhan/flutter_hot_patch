@@ -4,9 +4,10 @@
 
 import { AppService } from '../service/app_service.js';
 import { MineFeed } from '../model/app_models.js';
-import { MenuEntry } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
+import { MenuEntry } from '../model/app_models.js';
 import { WebView } from '../../base/web_view.js';
+import { LoadErrorView } from '../widgets/load_error_view.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Icons, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
 
@@ -17,6 +18,7 @@ export class MinePage extends StatefulWidget {
     super(args);
     this._service = new AppService();
     this._feed = null;
+    this._error = null;
   }
   initState() {
     super.initState();
@@ -24,8 +26,20 @@ export class MinePage extends StatefulWidget {
     this._load();
   }
   async _load() {
-    var feed = await this._service.fetchMine();
-    this.setState(() => { this._feed = feed; });
+    try {
+      var feed = await this._service.fetchMine();
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._feed = feed; this._error = null; });
+    } catch (e) {
+      print("MinePage 加载失败: " + e);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._error = e.toString(); });
+      AppRouter.toast("我的页面加载失败：" + e);
+    }
   }
   _openMenu(m) {
     if ((m.screen == "orders")) {
@@ -41,6 +55,13 @@ export class MinePage extends StatefulWidget {
   build(context) {
     var feed = this._feed;
     if ((feed == null)) {
+      var error = this._error;
+      if ((error != null)) {
+        return new LoadErrorView({
+          "message": this._error,
+          "onRetry": () => this._load()
+        });
+      }
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})
       })));

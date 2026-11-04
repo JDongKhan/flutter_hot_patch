@@ -4,6 +4,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import '../../base/app_router.dart';
 import '../model/app_models.dart';
 import '../service/app_service.dart';
+import '../widgets/load_error_view.dart';
 import 'detail_pages.dart';
 
 /// 社区 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/community_page.js）。
@@ -48,6 +49,12 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
   /// 列表请求进行中（改筛选后重新请求时贴进度条）。
   bool _listLoading = false;
 
+  /// 各接口的失败原因（null = 该接口没有失败）。分开记录，避免某个接口
+  /// 成功把另一个接口的失败状态清掉，导致缺失的数据永远停在 loading。
+  String? _feedError;
+  String? _resourcesError;
+  String? _postsError;
+
   bool _filterOpen = false;
 
   // 筛选条件（与原型 state.filters 对应）；配置回来后落到各自列表首项。
@@ -68,15 +75,24 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
   }
 
   Future<void> _load() async {
-    final CommunityFeed feed = await _service.fetchCommunity();
-    setState(() {
-      _feed = feed;
-      _tab = feed.tabs.first;
-      _sort = feed.sorts.first;
-      _type = feed.postTypes.first;
-      _dist = feed.dists.first;
-      _price = feed.priceRanges.first;
-    });
+    try {
+      final CommunityFeed feed = await _service.fetchCommunity();
+      if (!mounted) return;
+      setState(() {
+        _feed = feed;
+        _tab = feed.tabs.first;
+        _sort = feed.sorts.first;
+        _type = feed.postTypes.first;
+        _dist = feed.dists.first;
+        _price = feed.priceRanges.first;
+        _feedError = null;
+      });
+    } catch (e) {
+      print('CommunityPage 配置加载失败: $e');
+      if (!mounted) return;
+      setState(() => _feedError = e.toString());
+      AppRouter.toast('社区加载失败：$e');
+    }
   }
 
   /// 列表接口：按当前筛选条件取回帖子列表。
@@ -84,27 +100,60 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
   /// 过滤 / 排序在「服务端」做（[AppService.fetchPostList]），页面不碰数据。
   Future<void> _loadPosts() async {
     setState(() => _listLoading = true);
-    final List<Post> posts = await _service.fetchPostList(
-      _tab,
-      _sort,
-      _type,
-      _dist,
-      _price,
-    );
-    setState(() {
-      _posts = posts;
-      _listLoading = false;
-    });
+    try {
+      final List<Post> posts = await _service.fetchPostList(
+        _tab,
+        _sort,
+        _type,
+        _dist,
+        _price,
+      );
+      if (!mounted) return;
+      setState(() {
+        _posts = posts;
+        _listLoading = false;
+        _postsError = null;
+      });
+    } catch (e) {
+      print('CommunityPage 帖子列表加载失败: $e');
+      if (!mounted) return;
+      setState(() {
+        _listLoading = false;
+        _postsError = e.toString();
+      });
+      AppRouter.toast('帖子列表加载失败：$e');
+    }
   }
 
   /// 横向资源横幅：同样按当前 tab 取（广场 = 全部聚合）。
   Future<void> _loadResources() async {
-    final List<Resource> resources = await _service.fetchCommunityResources(
-      _tab,
-    );
+    try {
+      final List<Resource> resources = await _service.fetchCommunityResources(
+        _tab,
+      );
+      if (!mounted) return;
+      setState(() {
+        _resources = resources;
+        _resourcesError = null;
+      });
+    } catch (e) {
+      print('CommunityPage 资源横幅加载失败: $e');
+      if (!mounted) return;
+      setState(() => _resourcesError = e.toString());
+      AppRouter.toast('社区资源加载失败：$e');
+    }
+  }
+
+  /// 失败态的重试：配置、列表、横幅一起重发（与首屏的并行口径一致）。
+  void _retry() {
     setState(() {
-      _resources = resources;
+      _feedError = null;
+      _resourcesError = null;
+      _postsError = null;
     });
+    _load();
+    _loadPosts();
+    _loadResources();
   }
 
   /// 切双 tab：横幅与帖子列表**一起换**，两个接口按新 tab 各重发一次。
@@ -155,7 +204,10 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
     print("CommunityPage build : filterOpen=$_filterOpen");
     final feed = _feed;
     final resources = _resources;
+    // 失败后必须退出 loading 态：给出异常信息与重试入口。
+    final error = _feedError ?? _resourcesError;
     if (feed == null || resources == null) {
+      if (error != null) return LoadErrorView(message: error, onRetry: _retry);
       return const Center(child: CircularProgressIndicator());
     }
     return Column(
@@ -316,7 +368,9 @@ class _CommunityPageState extends State<CommunityPage> with AutomaticKeepAliveCl
         // 位置由布局决定，不需要任何测量。
         Expanded(
           child: _posts == null
-              ? const Center(child: CircularProgressIndicator())
+              ? _postsError != null
+                    ? LoadErrorView(message: _postsError!, onRetry: _retry)
+                    : const Center(child: CircularProgressIndicator())
               : _ListContent(
                   resetFilter: _resetFilter,
                   openFilter: _filterOpen,

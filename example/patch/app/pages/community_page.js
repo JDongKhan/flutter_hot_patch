@@ -7,6 +7,7 @@ import { CommunityFeed } from '../model/app_models.js';
 import { Post } from '../model/app_models.js';
 import { Resource } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
+import { LoadErrorView } from '../widgets/load_error_view.js';
 import { kBrand } from 'detail_pages.js';
 import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Wrap, double } from '../../flutter.js';
 
@@ -19,6 +20,9 @@ export class CommunityPage extends StatefulWidget {
     this._posts = null;
     this._resources = null;
     this._listLoading = false;
+    this._feedError = null;
+    this._resourcesError = null;
+    this._postsError = null;
     this._filterOpen = false;
     this._tab = "";
     this._sort = "";
@@ -34,17 +38,59 @@ export class CommunityPage extends StatefulWidget {
     this._loadResources();
   }
   async _load() {
-    var feed = await this._service.fetchCommunity();
-    this.setState(() => { this._feed = feed; this._tab = feed.tabs.first; this._sort = feed.sorts.first; this._type = feed.postTypes.first; this._dist = feed.dists.first; this._price = feed.priceRanges.first; });
+    try {
+      var feed = await this._service.fetchCommunity();
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._feed = feed; this._tab = feed.tabs.first; this._sort = feed.sorts.first; this._type = feed.postTypes.first; this._dist = feed.dists.first; this._price = feed.priceRanges.first; this._feedError = null; });
+    } catch (e) {
+      print("CommunityPage 配置加载失败: " + e);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._feedError = e.toString(); });
+      AppRouter.toast("社区加载失败：" + e);
+    }
   }
   async _loadPosts() {
     this.setState(() => { this._listLoading = true; });
-    var posts = await this._service.fetchPostList(this._tab, this._sort, this._type, this._dist, this._price);
-    this.setState(() => { this._posts = posts; this._listLoading = false; });
+    try {
+      var posts = await this._service.fetchPostList(this._tab, this._sort, this._type, this._dist, this._price);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._posts = posts; this._listLoading = false; this._postsError = null; });
+    } catch (e) {
+      print("CommunityPage 帖子列表加载失败: " + e);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._listLoading = false; this._postsError = e.toString(); });
+      AppRouter.toast("帖子列表加载失败：" + e);
+    }
   }
   async _loadResources() {
-    var resources = await this._service.fetchCommunityResources(this._tab);
-    this.setState(() => { this._resources = resources; });
+    try {
+      var resources = await this._service.fetchCommunityResources(this._tab);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._resources = resources; this._resourcesError = null; });
+    } catch (e) {
+      print("CommunityPage 资源横幅加载失败: " + e);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._resourcesError = e.toString(); });
+      AppRouter.toast("社区资源加载失败：" + e);
+    }
+  }
+  _retry() {
+    this.setState(() => { this._feedError = null; this._resourcesError = null; this._postsError = null; });
+    this._load();
+    this._loadPosts();
+    this._loadResources();
   }
   _selectTab(tab) {
     this.setState(() => { this._tab = tab; });
@@ -71,7 +117,14 @@ export class CommunityPage extends StatefulWidget {
     print("CommunityPage build : filterOpen=" + this._filterOpen);
     var feed = this._feed;
     var resources = this._resources;
+    var error = (this._feedError ?? this._resourcesError);
     if (((feed == null) || (resources == null))) {
+      if ((error != null)) {
+        return new LoadErrorView({
+          "message": error,
+          "onRetry": () => this._retry()
+        });
+      }
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})
       })));
@@ -269,7 +322,10 @@ export class CommunityPage extends StatefulWidget {
             "minHeight": 2
           })))] : []),
         new Expanded({
-          "child": (this._posts == null) ? (this.__k0 || (this.__k0 = new Center({
+          "child": (this._posts == null) ? (this._postsError != null) ? new LoadErrorView({
+            "message": this._postsError,
+            "onRetry": () => this._retry()
+          }) : (this.__k0 || (this.__k0 = new Center({
             "child": new CircularProgressIndicator({})
           }))) : new _ListContent({
             "resetFilter": () => this._resetFilter(),

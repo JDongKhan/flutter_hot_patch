@@ -34,6 +34,17 @@ class AppRouter {
     _navigator?.push(MaterialPageRoute(builder: (_) => page));
   }
 
+  /// 宿主路由的统一失败处理：请求/跳转失败时把异常原样 toast 出去，
+  /// 避免点击后既没有页面也没有任何反馈。
+  static Future<void> _guard(String action, Future<void> Function() body) async {
+    try {
+      await body();
+    } catch (e) {
+      print('$action失败: $e');
+      await toast('$action失败：$e');
+    }
+  }
+
   /// 打开 Hero 演示的目标页。
   ///
   /// [tag] 必须是**来源页那一个 Hero 的 tag**：汉化版与原版各用独立 tag，
@@ -45,17 +56,17 @@ class AppRouter {
 
   /// 打开搜索页（热搜词 + 猜你想去随接口下发）。
   @HostInjected()
-  static Future<void> openSearch() async {
-    final SearchFeed feed = await _service.fetchSearch();
-    _push(SearchPage(hot: feed.hot, guesses: feed.guesses));
-  }
+  static Future<void> openSearch() => _guard('打开搜索页', () async {
+        final SearchFeed feed = await _service.fetchSearch();
+        _push(SearchPage(hot: feed.hot, guesses: feed.guesses));
+      });
 
   /// 打开景点详情页（按 id 定位，找不到时回退首个）。
   @HostInjected()
-  static Future<void> openSpot(String id) async {
-    final Spot spot = await _service.fetchSpot(id);
-    _push(SpotDetailPage(spot: spot));
-  }
+  static Future<void> openSpot(String id) => _guard('打开景点详情', () async {
+        final Spot spot = await _service.fetchSpot(id);
+        _push(SpotDetailPage(spot: spot));
+      });
 
   /// 唤起城市选择器（底部面板），返回选中的城市名；用户直接关闭面板时返回 null。
   ///
@@ -83,31 +94,31 @@ class AppRouter {
 
   /// 打开通知列表页（消息中心，数据走 `/app/notifications`）。
   @HostInjected()
-  static Future<void> openNotifications() async {
-    final List<AppNotice> notices = await _service.fetchNotifications();
-    _push(NotificationsPage(notices: notices));
-  }
+  static Future<void> openNotifications() => _guard('打开消息中心', () async {
+        final List<AppNotice> notices = await _service.fetchNotifications();
+        _push(NotificationsPage(notices: notices));
+      });
 
   /// 打开帖子详情页。
   @HostInjected()
-  static Future<void> openPost(String id) async {
-    final Post post = await _service.fetchPost(id);
-    _push(PostDetailPage(post: post));
-  }
+  static Future<void> openPost(String id) => _guard('打开帖子详情', () async {
+        final Post post = await _service.fetchPost(id);
+        _push(PostDetailPage(post: post));
+      });
 
   /// 打开资源专题页（专题 + 相关推荐随接口下发）。
   @HostInjected()
-  static Future<void> openResource(String id) async {
-    final ResourceFeed feed = await _service.fetchResource(id);
-    _push(ResourceDetailPage(resource: feed.resource, related: feed.related));
-  }
+  static Future<void> openResource(String id) => _guard('打开资源专题', () async {
+        final ResourceFeed feed = await _service.fetchResource(id);
+        _push(ResourceDetailPage(resource: feed.resource, related: feed.related));
+      });
 
   /// 打开订单详情页。
   @HostInjected()
-  static Future<void> openOrder(String no) async {
-    final Order order = await _service.fetchOrder(no);
-    _push(OrderDetailPage(order: order));
-  }
+  static Future<void> openOrder(String no) => _guard('打开订单详情', () async {
+        final Order order = await _service.fetchOrder(no);
+        _push(OrderDetailPage(order: order));
+      });
 
   /// 返回上一页。
   @HostInjected()

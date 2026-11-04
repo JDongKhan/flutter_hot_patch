@@ -5,6 +5,7 @@ import '../../base/app_router.dart';
 import '../../base/web_view.dart';
 import '../model/app_models.dart';
 import '../service/app_service.dart';
+import '../widgets/load_error_view.dart';
 import 'detail_pages.dart';
 
 /// 我的 tab（`@PatchEntry` → 连带翻译，产物 patch/app/pages/mine_page.js）。
@@ -40,6 +41,9 @@ class _MinePageState extends State<MinePage> {
   /// 接口数据；null = 加载中。
   MineFeed? _feed;
 
+  /// 加载失败的原因；null = 没有失败。
+  String? _error;
+
   @override
   void initState() {
     super.initState();
@@ -48,10 +52,19 @@ class _MinePageState extends State<MinePage> {
   }
 
   Future<void> _load() async {
-    final MineFeed feed = await _service.fetchMine();
-    setState(() {
-      _feed = feed;
-    });
+    try {
+      final MineFeed feed = await _service.fetchMine();
+      if (!mounted) return;
+      setState(() {
+        _feed = feed;
+        _error = null;
+      });
+    } catch (e) {
+      print('MinePage 加载失败: $e');
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+      AppRouter.toast('我的页面加载失败：$e');
+    }
   }
 
   void _openMenu(MenuEntry m) {
@@ -69,6 +82,8 @@ class _MinePageState extends State<MinePage> {
   Widget build(BuildContext context) {
     final feed = _feed;
     if (feed == null) {
+      final error = _error;
+      if (error != null) return LoadErrorView(message: error, onRetry: _load);
       return const Center(child: CircularProgressIndicator());
     }
     return ListView(

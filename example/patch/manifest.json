@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.4.0",
-  "buildTime": "2026-11-04T10:16:02.807012",
+  "buildTime": "2026-11-04T13:47:58.979818",
   "resources": {
     "flutter.js": "513dd153ed3e984e5c958b8e22b6b0dd6a7ecca58c89d583d31ec897fa66e2be",
     "provider.js": "975cc47fc5359987461e285b87c16afaec6686c6064a952030b447e93e3c4278",
@@ -10,10 +10,10 @@
     "extensions/hot_module_base.js": "6d658e57214b734243ed825ff4f715de6ff2d00e2333f5308ce789c70eb72577",
     "app/model/app_models.js": "d9349a696021957a689d35ef4697b58d530cdcb8a8e6f2acabcc88d4bee4589b",
     "app/service/app_service.js": "bac22caebe989fe681764ae7957bd390c256e02ad3e4623ce611e37d2e9acef7",
-    "app/pages/orders_page.js": "43d649213b766f0317bb470f08406a59bd3cf0b8cca4fb9499121d3f26cc9e55",
-    "app/pages/community_page.js": "9b3cb733b29af945d138ef80b80dd535bf70893268348d73251fe7b539f3963e",
-    "app/pages/home_page.js": "05540f40025c4d6a2ca772ecd381dcf608c9f639458dac5254a7ff3f71dc025c",
-    "app/pages/mine_page.js": "5ae3da3157cab57be7fb227b2b8edfcb47de7770ba035abcb2263cd2b55b38cb",
+    "app/pages/orders_page.js": "80dd845a62d4a597464426edf7881c1929d724b938d65901e7aa2e06cc30fb8f",
+    "app/pages/community_page.js": "b22fdd7297d1ec424b637635a2738cb3b933586ddd32bae792441fa26abd06b1",
+    "app/pages/home_page.js": "454961773e27c3b522a619e6cf9d9e70b509c10f8c13687bc9bbbe4a9f03f067",
+    "app/pages/mine_page.js": "24e65edcc4476f691a40efabd6be692357af2b9a0933dc8c4cb5ecdc4e2c4475",
     "app/pages/detail_pages.js": "2ed43e9e860994646442163d52715a9612ffc1a0c65237208ff12be2a9afbbe3",
     "app/app.js": "1b639d10d85ceabd59efd9ff76624f11d3745eb9c9271a85352595a05d340447",
     "app/widgets/banner_carousel.js": "5a9df79501bae6780e92217dc702fa928042145549beeafd06c900a35e8189cc",
@@ -84,7 +84,9 @@
     "model/network_vm.js": "1f495860c6c54bbac8df62a7f25afbfe68ce590e387f3db1dcfa7927931e96f8",
     "model/counter_vm.js": "0541360274009cb3f5a17c26cb7f4c4cff46a876abe3d5ef0af1d9854312d883",
     "base/canvas_image.js": "ece35b7ea97b548fdf73887835f5365c9f1c62d0b38626ff24c715c95f3ec57d",
-    "base/app_router.js": "d20e493b68a17921c88a9b99540df89de42b9b7efc6dbfdd592e2a1c147f0cd3",
-    "base/web_view.js": "d33a5e115cda6fe0c27ccb19c8aa6c5ba50275f9baa952d0ccac6496a2aa3723"
+    "base/app_router.js": "34ab0ce64e1221cc431a7a495661ef7364b1e53779b269d66da4c0cda126fa7a",
+    "base/web_view.js": "d33a5e115cda6fe0c27ccb19c8aa6c5ba50275f9baa952d0ccac6496a2aa3723",
+    "app/widgets/load_error_view.js": "bca8790fd318105b764b208c34d67b415433fc18283e8d81365f0081389b86af",
+    "base/app_log_console.js": "9085e16335840d340c0398de1bfefc6bf793dc494432906853b09c461dc1dfac"
   }
 }

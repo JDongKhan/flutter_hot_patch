@@ -6,6 +6,7 @@ import { AppService } from '../service/app_service.js';
 import { OrderFeed } from '../model/app_models.js';
 import { Order } from '../model/app_models.js';
 import { AppRouter } from '../../base/app_router.js';
+import { LoadErrorView } from '../widgets/load_error_view.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
@@ -19,6 +20,8 @@ export class OrdersPage extends StatefulWidget {
     this._feed = null;
     this._orders = null;
     this._listLoading = false;
+    this._feedError = null;
+    this._ordersError = null;
     this._status = "";
   }
   __applyProps(args) {
@@ -31,16 +34,45 @@ export class OrdersPage extends StatefulWidget {
     this._loadOrders();
   }
   async _load() {
-    var feed = await this._service.fetchOrders();
-    this.setState(() => { this._feed = feed; this._status = (this.initialStatus ?? feed.statuses.first); });
-    if ((this.initialStatus != null)) {
-      await this._loadOrders();
+    try {
+      var feed = await this._service.fetchOrders();
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._feed = feed; this._status = (this.initialStatus ?? feed.statuses.first); this._feedError = null; });
+      if ((this.initialStatus != null)) {
+        await this._loadOrders();
+      }
+    } catch (e) {
+      print("OrdersPage 状态条加载失败: " + e);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._feedError = e.toString(); });
+      AppRouter.toast("订单页加载失败：" + e);
     }
   }
   async _loadOrders() {
     this.setState(() => { this._listLoading = true; });
-    var orders = await this._service.fetchOrderList(this._status);
-    this.setState(() => { this._orders = orders; this._listLoading = false; });
+    try {
+      var orders = await this._service.fetchOrderList(this._status);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._orders = orders; this._listLoading = false; this._ordersError = null; });
+    } catch (e) {
+      print("OrdersPage 订单列表加载失败: " + e);
+      if ((!!this.__unmounted)) {
+        return;
+      }
+      this.setState(() => { this._listLoading = false; this._ordersError = e.toString(); });
+      AppRouter.toast("订单列表加载失败：" + e);
+    }
+  }
+  _retry() {
+    this.setState(() => { this._feedError = null; this._ordersError = null; });
+    this._load();
+    this._loadOrders();
   }
   _pickStatus(status) {
     this.setState(() => { this._status = status; });
@@ -54,7 +86,14 @@ export class OrdersPage extends StatefulWidget {
       } })();
   }
   build(context) {
+    var feedError = this._feedError;
     if ((this._feed == null)) {
+      if ((feedError != null)) {
+        return new LoadErrorView({
+          "message": this._feedError,
+          "onRetry": () => this._retry()
+        });
+      }
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})
       })));
@@ -119,7 +158,10 @@ export class OrdersPage extends StatefulWidget {
             "minHeight": 2
           })))] : []),
         new Expanded({
-          "child": (this._orders == null) ? (this.__k0 || (this.__k0 = new Center({
+          "child": (this._orders == null) ? (this._ordersError != null) ? new LoadErrorView({
+            "message": this._ordersError,
+            "onRetry": () => this._retry()
+          }) : (this.__k0 || (this.__k0 = new Center({
             "child": new CircularProgressIndicator({})
           }))) : this._orders.isEmpty ? (this.__k7 || (this.__k7 = new Center({
             "child": new Text({

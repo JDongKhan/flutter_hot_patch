@@ -6,6 +6,7 @@ import 'package:flutter_hot_example/base/web_view.dart';
 import '../model/app_models.dart';
 import '../service/app_service.dart';
 import '../widgets/banner_carousel.dart';
+import '../widgets/load_error_view.dart';
 
 /// App 首页（对应 docs/app-prototype.html 的「首页」tab）。
 ///
@@ -32,6 +33,9 @@ class _HomePageState extends State<HomePage> {
 
   /// 接口数据；null = 加载中。
   HomeFeed? _feed;
+
+  /// 最近一次加载失败的原因；null = 没有失败（加载中或已成功）。
+  String? _error;
 
   /// 当前城市（顶部左上角展示）。点击唤起宿主城市选择器，选完回写并重新取数。
   String _city = '上海';
@@ -63,10 +67,20 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _load() async {
     // 城市参与取数：换城市 → 用新城市重发同一个接口 → banner / 广告位 / 景点一起换。
-    final HomeFeed feed = await _service.fetchHome(_city);
-    setState(() {
-      _feed = feed;
-    });
+    try {
+      final HomeFeed feed = await _service.fetchHome(_city);
+      if (!mounted) return;
+      setState(() {
+        _feed = feed;
+        _error = null;
+      });
+    } catch (e) {
+      // 失败必须收尾：既要把异常原样提示给用户，也不能让页面永远停在 loading。
+      print('HomePage 加载失败: $e');
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+      AppRouter.toast('首页加载失败：$e');
+    }
   }
 
   @override
@@ -74,6 +88,8 @@ class _HomePageState extends State<HomePage> {
     print("--HomePage build");
     final feed = _feed;
     if (feed == null) {
+      final error = _error;
+      if (error != null) return LoadErrorView(message: error, onRetry: _load);
       return const Center(child: CircularProgressIndicator());
     }
     // 字段派生的 final 局部：翻译器会把它们折算成字段别名（`feed.banners`

@@ -10,10 +10,10 @@ export class AppRouter {
   static openHeroTarget(tag, label) {
     return _app_host_.invoke("openHeroTarget", Array.prototype.slice.call(arguments));
   }
-  static async openSearch() {
+  static openSearch() {
     return _app_host_.invoke("openSearch", Array.prototype.slice.call(arguments));
   }
-  static async openSpot(id) {
+  static openSpot(id) {
     return _app_host_.invoke("openSpot", Array.prototype.slice.call(arguments));
   }
   static async openCityPicker(current) {
@@ -22,16 +22,16 @@ export class AppRouter {
   static async openChannel(title, emoji) {
     return _app_host_.invoke("openChannel", Array.prototype.slice.call(arguments));
   }
-  static async openNotifications() {
+  static openNotifications() {
     return _app_host_.invoke("openNotifications", Array.prototype.slice.call(arguments));
   }
-  static async openPost(id) {
+  static openPost(id) {
     return _app_host_.invoke("openPost", Array.prototype.slice.call(arguments));
   }
-  static async openResource(id) {
+  static openResource(id) {
     return _app_host_.invoke("openResource", Array.prototype.slice.call(arguments));
   }
-  static async openOrder(no) {
+  static openOrder(no) {
     return _app_host_.invoke("openOrder", Array.prototype.slice.call(arguments));
   }
   static async pop() {

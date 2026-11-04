@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hot_patch/hot_patch.dart';
 
 import 'app/app.dart';
+import 'base/app_log_console.dart';
 import 'components/composite_component.dart';
 import 'components/grammar/grammar_showcase.dart';
 import 'components/hello_component.dart';
@@ -12,27 +15,34 @@ import 'components/test_widget.dart';
 import 'generated/host_methods.dart';
 
 void main() {
-  // @HostInjected 宿主方法：JS 侧类与方法照常产出，只有方法体换成
-  // `_app_host_.invoke(...)`（调用点与 Dart 一比一）。
-  // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
-  // 调一次即可，无需手写每条通道。
-  registerHostMethods();
-  // JsRuntimeManager.setVerboseCacheTrace(true);
-  // 无 JS 产物的组件（产物里的 `Component` 占位结点）的原生实现：**全局一次注册**
-  // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 registerHostMethods
-  // 一致——runApp 之前。重复注册同名会覆盖（覆盖时告警），故不要放进 build()。
-  //   DashboardCard 产物里 `_LabeledDivider` 私有类跨库不可见，注册公开的同名实现。
-  //   回调收到完整 JsRenderContext：props + children slot + invoke。
-  registerNativeComponent(
-    '_LabeledDivider',
-    (c) => LabeledDivider(
-      text: c.str('text') ?? '',
-      child: c.children['child'] as Widget?,
-    ),
-  );
-  // 入口是 Demo 列表页，其中的两条「完整 App」入口分别渲染**原生外壳**与
-  // **JS 热更外壳**（AppShell，见 lib/app/app.dart）。
-  runApp(const HotDemoApp());
+  // 日志捕获：print / debugPrint（含 Flutter 框架与 hot_patch 的 HotPatchLog，
+  // JS 侧 print 最终也走这里）全部收进 AppLogCenter，供右侧日志控制台展示。
+  installLogCapture();
+  runZoned(() {
+    // binding 与 runApp 必须在同一个 zone 内初始化（否则触发 Zone mismatch）。
+    WidgetsFlutterBinding.ensureInitialized();
+    // @HostInjected 宿主方法：JS 侧类与方法照常产出，只有方法体换成
+    // `_app_host_.invoke(...)`（调用点与 Dart 一比一）。
+    // 注册清单由 build_runner 扫描注解生成（lib/generated/host_methods.dart），
+    // 调一次即可，无需手写每条通道。
+    registerHostMethods();
+    // JsRuntimeManager.setVerboseCacheTrace(true);
+    // 无 JS 产物的组件（产物里的 `Component` 占位结点）的原生实现：**全局一次注册**
+    // （进程内共用一张表，不随 JsUiWidget 实例透传），位置与 registerHostMethods
+    // 一致——runApp 之前。重复注册同名会覆盖（覆盖时告警），故不要放进 build()。
+    //   DashboardCard 产物里 `_LabeledDivider` 私有类跨库不可见，注册公开的同名实现。
+    //   回调收到完整 JsRenderContext：props + children slot + invoke。
+    registerNativeComponent(
+      '_LabeledDivider',
+      (c) => LabeledDivider(
+        text: c.str('text') ?? '',
+        child: c.children['child'] as Widget?,
+      ),
+    );
+    // 入口是 Demo 列表页，其中的两条「完整 App」入口分别渲染**原生外壳**与
+    // **JS 热更外壳**（AppShell，见 lib/app/app.dart）。
+    runApp(const HotDemoApp());
+  }, zoneSpecification: appLogZoneSpecification);
 }
 
 /// Demo 列表的外壳（App）：整体 App 结构在 lib/app/app.dart 的 [AppShell] 里，
@@ -51,6 +61,22 @@ class HotDemoApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: JsRuntimeManager.navigatorKey = navKey,
       theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0E7AFB))),
+      // 宽屏（逻辑宽度 > 1200）时在右侧固定挂一条 300 宽的日志控制台；
+      // 通过 builder 包在 Navigator 外层，所有页面（含 JS 热更外壳）都能看到。
+      builder: (context, child) {
+        final content = child ?? const SizedBox();
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth <= 1200) return content;
+            return Row(
+              children: [
+                Expanded(child: content),
+                const SizedBox(width: 300, child: AppLogConsole()),
+              ],
+            );
+          },
+        );
+      },
       home: const DemoListPage(),
     );
   }
