@@ -510,6 +510,30 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
         '/ fn(4)=${fn(4)}';
   }
 
+  /// record 作为返回值：箭头体 / 语句体 / 局部函数 / 闭包。
+  (int, String) _pairValue() => (5, 'e');
+
+  ({int x, String y}) _namedPairValue() {
+    return (x: 6, y: 'f');
+  }
+
+  /// record：positional / named / mixed 三种字面量形态 + 四种返回值来源。
+  String _recordText() {
+    final pos = (1, 'a');
+    final named = (x: 2, y: 'b');
+    final mixed = (3, ok: true);
+    final arrow = _pairValue();
+    final block = _namedPairValue();
+    (int, String) localPair() => (7, 'g');
+    final local = localPair();
+    final (int, String) Function(int) make = (v) => (v, 'h');
+    final closure = make(8);
+    return 'record：${pos.$1}/${pos.$2} / '
+        '${named.x}${named.y} / ${mixed.$1}:${mixed.ok} / '
+        '返回值：${arrow.$1}${arrow.$2} ${block.x}${block.y} '
+        '${local.$1}${local.$2} ${closure.$1}${closure.$2}';
+  }
+
   /// 可调用对象：隐式调用 `add(1)` 与显式 `add.call(2)` 都为 `invoke`。
   String _callText() {
     final add = Adder(3);
@@ -614,6 +638,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_abstractText()),
           Text(_callText()),
           Text(_functionCallText()),
+          Text(_recordText()),
           Text(_superMemberText()),
           Text(_tearOffText()),
           Text(_objTearOffText()),

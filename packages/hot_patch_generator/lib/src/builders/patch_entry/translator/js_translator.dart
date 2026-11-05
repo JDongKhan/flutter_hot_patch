@@ -504,6 +504,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 集合字面量：与 rhsToJs 共用同一对实现（ListLiteral / SetOrMapLiteral）。
   // 任意表达式位置都可能出现（`for (final x in ['a', 'b'])` 的迭代源、三元
   // 分支、函数实参、`??` 右操作数……），缺了会让外层整条表达式翻不出来。
+  if (e is RecordLiteral) return _recordLiteralJs(e, scope, classes);
   if (e is SetOrMapLiteral) return _collectionLiteralJs(e, scope, classes);
   if (e is ListLiteral) return _listLiteralJs(e.elements, scope, classes);
   return null;
@@ -604,6 +605,7 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // 集合字面量：与 JS 对象/数组一一对应（元素递归翻译）。
   // 缺了这两条，`Network.post({"name": name})` 这类调用会因「参数翻译不了」
   // 整体返回 null，调用方再把整条语句丢掉（原来的静默丢代码就出在这里）。
+  if (e is RecordLiteral) return _recordLiteralJs(e, scope, classes);
   if (e is SetOrMapLiteral) return _collectionLiteralJs(e, scope, classes);
   if (e is ListLiteral) return _listLiteralJs(e.elements, scope, classes);
   // Map 读取在**值位置**归一（未命中 undefined → null，与 Dart 一致）。
@@ -629,6 +631,33 @@ String? _mapReadValueJs(
     return v == null ? null : '__nn($v)';
   }
   return null;
+}
+
+/// Dart record 字面量 → JS 对象（手册 record 行）。
+///
+/// 位置字段用 `"$1".."$N"` 作键（`$1` 是合法 JS 标识符，`r.$1` 原样读取），
+/// 命名字段用原名；混合记录因此也只需一种承载，`.$1` / `.x` 都不必按类型改写。
+/// 已知差异：Dart record 的 `==` 是结构相等，JS 对象仍是同一性（不伪造）。
+String? _recordLiteralJs(
+  RecordLiteral e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final parts = <String>[];
+  var positional = 0;
+  for (final f in e.fields) {
+    if (f is NamedExpression) {
+      final v = rhsToJs(f.expression, scope, classes);
+      if (v == null) return null;
+      parts.add('${jsString(f.name.label.name)}: $v');
+    } else {
+      final v = rhsToJs(f, scope, classes);
+      if (v == null) return null;
+      positional++;
+      parts.add('${jsString('\$$positional')}: $v');
+    }
+  }
+  return '{${parts.join(', ')}}';
 }
 
 /// `{k: v, ...}` → JS 对象字面量；`{a, b}`（Set）→ `new Set([a, b])`。

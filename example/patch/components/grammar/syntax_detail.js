@@ -595,6 +595,24 @@ export class SyntaxDetail extends StatefulWidget {
     const typed = twice;
     return "Function.call：fn.call(3)=" + fn(3) + " " + "/ typed.call(2)=" + typed(2) + " " + "/ fn(4)=" + fn(4);
   }
+  _pairValue() {
+    return {"$1": 5, "$2": "e"};
+  }
+  _namedPairValue() {
+    return {"x": 6, "y": "f"};
+  }
+  _recordText() {
+    const pos = {"$1": 1, "$2": "a"};
+    const named = {"x": 2, "y": "b"};
+    const mixed = {"$1": 3, "ok": true};
+    const arrow = this._pairValue();
+    const block = this._namedPairValue();
+    const localPair = () => { return {"$1": 7, "$2": "g"}; };
+    const local = localPair();
+    const make = (v) => { return {"$1": v, "$2": "h"}; };
+    const closure = make(8);
+    return "record：" + pos.$1 + "/" + pos.$2 + " / " + named.x + named.y + " / " + mixed.$1 + ":" + mixed.ok + " / " + "返回值：" + arrow.$1 + arrow.$2 + " " + block.x + block.y + " " + local.$1 + local.$2 + " " + closure.$1 + closure.$2;
+  }
   _callText() {
     const add = new Adder({
       "delta": 3
@@ -739,6 +757,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._functionCallText()
+          }),
+          new Text({
+            "data": this._recordText()
           }),
           new Text({
             "data": this._superMemberText()
