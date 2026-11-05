@@ -452,6 +452,14 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '方法 tear-off：${add(1)}/$bv';
   }
 
+  /// 函数值调用：立即调用闭包 / 括号包裹的函数值（AST FunctionExpressionInvocation）。
+  String _fnValueCallText() {
+    final int Function(int) twice = (v) => v * 2;
+    final quad = ((int v) => v * 2)(3);
+    final picked = (twice ?? (v) => v)(5);
+    return '函数值调用：$quad/$picked';
+  }
+
   /// 对象上的方法 tear-off：局部变量接收者 / 构造接收者（后者只求值一次）。
   String _objTearOffText() {
     final car = SportCar();
@@ -523,6 +531,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_superMemberText()),
           Text(_tearOffText()),
           Text(_objTearOffText()),
+          Text(_fnValueCallText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),

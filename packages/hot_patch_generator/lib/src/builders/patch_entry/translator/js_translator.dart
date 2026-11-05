@@ -137,7 +137,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     final l = exprToJs(e.leftOperand, scope, classes);
     final r = exprToJs(e.rightOperand, scope, classes);
     if (l == null || r == null) return null;
-    return '($l ?? $r)';
+    return '($l ?? ${_fnParen(r, e.rightOperand)})';
   }
   // 比较 / 逻辑 / 算术二元运算：一比一翻译（条件、循环、三目、数据绑定都用得到；
   // 组件数据表达式与模型方法体共用这一处，不再各写一套）。
@@ -179,7 +179,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
         final jsOp = operatorJsName(op, unary: false);
         if (jsOp != null) return '$l.$jsOp($r)';
       }
-      return '($l $op $r)';
+      return '(${_fnParen(l, e.leftOperand)} $op ${_fnParen(r, e.rightOperand)})';
     }
     // Dart 整除 `a ~/ b`：JS 无对应运算符，转「向零取整」的除法。
     // 必须用 Math.trunc 而不是 Math.floor：Dart 的 `~/` 向零截断
@@ -188,7 +188,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       final l = exprToJs(e.leftOperand, scope, classes);
       final r = exprToJs(e.rightOperand, scope, classes);
       if (l == null || r == null) return null;
-      return 'Math.trunc($l / $r)';
+      return 'Math.trunc(${_fnParen(l, e.leftOperand)} / '
+          '${_fnParen(r, e.rightOperand)})';
     }
   }
   // 级联 `target..m(a)..n(b)`：Dart 返回 target 本身。译成 IIFE：
@@ -249,7 +250,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     final t = exprToJs(e.thenExpression, scope, classes);
     final f = exprToJs(e.elseExpression, scope, classes);
     if (c == null || t == null || f == null) return null;
-    return '($c ? $t : $f)';
+    return '($c ? ${_fnParen(t, e.thenExpression)} '
+        ': ${_fnParen(f, e.elseExpression)})';
   }
   // switch 表达式（Dart 3）→ IIFE + JS switch（JS 无 switch 表达式语法）。
   if (e is SwitchExpression) return _switchExpressionJs(e, scope, classes);
@@ -406,15 +408,61 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
         _operatorOwnerOf(e.operand, '-', scope, classes, unary: true) != null) {
       return '$v.${operatorJsName('-', unary: true)}()';
     }
-    return '(${e.operator.lexeme}$v)';
+    return '(${e.operator.lexeme}${_fnParen(v, e.operand)})';
   }
   if (e is MethodInvocation) return methodCallExprJs(e, scope, classes);
+  // 函数值调用 `(f)(args)` / `((x) => x)(v)`：AST 是 FunctionExpressionInvocation
+  //（普通 `f(...)` 是 MethodInvocation，已由上一行处理）。
+  if (e is FunctionExpressionInvocation) {
+    return _fnValueCallJs(e, scope, classes);
+  }
   // 集合字面量：与 rhsToJs 共用同一对实现（ListLiteral / SetOrMapLiteral）。
   // 任意表达式位置都可能出现（`for (final x in ['a', 'b'])` 的迭代源、三元
   // 分支、函数实参、`??` 右操作数……），缺了会让外层整条表达式翻不出来。
   if (e is SetOrMapLiteral) return _collectionLiteralJs(e, scope, classes);
   if (e is ListLiteral) return _listLiteralJs(e.elements, scope, classes);
   return null;
+}
+
+/// 闭包作为**运算符操作数**时必须加括号：`a ?? (v) => v` 在 JS 里是语法错误
+///（箭头函数优先级低于 `??` / 二元运算 / 三目）。只在这种位置加；实参 /
+/// 数组元素 / return / 赋值右侧等位置保持原样（可读性优先）。
+String _fnParen(String js, Expression e) =>
+    e is FunctionExpression ? '($js)' : js;
+
+/// 函数值调用 `(f)(args)` / `((x) => x)(v)`（AST: [FunctionExpressionInvocation]）。
+///
+/// 与会话约定一致：位置实参在前、具名实参合并成一个尾参对象；闭包实参走
+/// [closureToJs]。类型实参暂不支持（需要运行时类型元信息，先返回 null 让
+/// 调用方出声告警，避免产出错误形态）。
+String? _fnValueCallJs(
+  FunctionExpressionInvocation e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e.typeArguments != null) return null;
+  final f = exprToJs(e.function, scope, classes);
+  if (f == null) return null;
+  final positional = <String>[];
+  final named = <String>[];
+  for (final a in e.argumentList.arguments) {
+    if (a is NamedExpression) {
+      final inner = a.expression;
+      final v = inner is FunctionExpression
+          ? closureToJs(inner, scope, classes)
+          : rhsToJs(inner, scope, classes);
+      if (v == null) return null;
+      named.add('${jsString(a.name.label.name)}: $v');
+    } else {
+      final v = a is FunctionExpression
+          ? closureToJs(a, scope, classes)
+          : rhsToJs(a, scope, classes);
+      if (v == null) return null;
+      positional.add(v);
+    }
+  }
+  final tail = named.isEmpty ? null : '{${named.join(', ')}}';
+  return '$f(${[...positional, if (tail != null) tail].join(', ')})';
 }
 
 /// 赋值右侧：字面量 / 形参 / 字段读 / 模型构造 `new X({...})` /

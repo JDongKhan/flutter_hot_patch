@@ -509,6 +509,12 @@ export class SyntaxDetail extends StatefulWidget {
     var bv = this._baseValue;
     return "方法 tear-off：" + add(1) + "/" + bv;
   }
+  _fnValueCallText() {
+    var twice = (v) => { return (v * 2); };
+    var quad = ((v) => { return (v * 2); })(3);
+    var picked = ((twice ?? ((v) => { return v; })))(5);
+    return "函数值调用：" + quad + "/" + picked;
+  }
   _objTearOffText() {
     var car = new SportCar({});
     var reportFn = car.report.bind(car);
@@ -623,6 +629,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._objTearOffText()
+          }),
+          new Text({
+            "data": this._fnValueCallText()
           }),
           new Text({
             "data": this._switchExprText()
