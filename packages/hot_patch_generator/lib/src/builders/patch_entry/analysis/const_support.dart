@@ -282,7 +282,12 @@ String? _enumJs(EnumDeclaration d, String file) {
   for (final c in d.constants) {
     b.write('${c.name.lexeme}: ${c.name.lexeme}, ');
   }
-  b.write('values: __values }; })()');
+  b.write('values: __values, ');
+  // Dart `E.values.byName('x')`（EnumByName 扩展）→ `E.byName('x')`：
+  // 生成侧把 byName 挂到枚举常量对象上（找不到抛错，与 Dart 的 ArgumentError 同义）。
+  b.write('byName: function (name) { for (var i = 0; i < __values.length; i++) { '
+      'if (__values[i].name === name) return __values[i]; } '
+      'throw new Error("Invalid argument(s): Invalid value: " + name); } }; })()');
   return b.toString();
 }
 

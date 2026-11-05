@@ -1474,6 +1474,16 @@ String? _methodCallJs(
     final dot = nullAware ? '?.' : '.';
     return '$receiverJs$dot${_memberCallName(e.target, e.methodName.name, scope, classes)}($passed)';
   }
+  // Dart `E.values.byName('x')`（EnumByName 扩展）→ `E.byName('x')`：
+  // 判据是标准库扩展的固定形态（`byName` + 接收者为 `<类/枚举>.values`），
+  // 且前缀不是本作用域里的值（局部 / 形参 / 字段），不按业务方法名猜测。
+  final byNameReceiver = e.target;
+  if (e.methodName.name == 'byName' &&
+      byNameReceiver is PrefixedIdentifier &&
+      byNameReceiver.identifier.name == 'values' &&
+      _rawTypeOfName(byNameReceiver.prefix.name, scope) == null) {
+    return '${byNameReceiver.prefix.name}.byName($passed)';
+  }
   final target = e.target;
   if (target == null) {
     // 方法体内的局部函数 / 持有函数的局部变量（`void f(){}` 后 `f(x)`）：

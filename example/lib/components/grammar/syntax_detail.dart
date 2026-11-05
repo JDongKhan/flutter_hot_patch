@@ -511,6 +511,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text('枚举：${TaskLevel.values.length} 项，'
               '首个=${TaskLevel.values[0].name}，'
               'high.index=${TaskLevel.high.index}，'
+              'byName=${TaskLevel.values.byName('high').name}，'
               'high=${TaskLevel.high.toString()}'),
           const SizedBox(height: 8),
           Text('命名构造：${task == null ? '(点击按钮生成)' : task.describe()}'),
