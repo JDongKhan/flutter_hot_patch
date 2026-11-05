@@ -159,15 +159,20 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
   }
 
   /// setter + 运算符重载：`+` / 一元 `-` / `==` 走 `__op$` 分派，`p.cents = v` 走 setter。
+  ///
+  /// hashCode 只验证**契约**（`a == b` ⇒ hash 相等），不比较原生 / JS 的原始
+  /// 散列值——Dart 只保证同一执行内一致，跨运行时数值本来就不同。
   String _operatorText() {
     final Price a = Price(100);
     final Price b = Price(23);
     final Price total = a + b;
     total.cents = 150; // setter
-    final bool same = total == Price(150);
+    final Price sameValue = Price(150);
+    final bool same = total == sameValue;
+    final bool hashSame = total.hashCode == sameValue.hashCode;
     final Price neg = -b;
-    return 'setter/运算符：sum=${total.cents} / 相等=$same / 取负=${neg.cents} '
-        '/ hash=${total.hashCode} / strHash=${'abc'.hashCode}';
+    return 'setter/运算符：sum=${total.cents} / 相等=$same / hash一致=$hashSame '
+        '/ 取负=${neg.cents}';
   }
 
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。

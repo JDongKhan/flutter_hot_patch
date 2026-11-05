@@ -222,9 +222,13 @@ export class SyntaxDetail extends StatefulWidget {
     });
     var total = a.__op$add(b);
     total.cents = 150;
-    var same = ((__a, __b) => __a == null ? __b == null : __a.__op$eq(__b))(total, new Price({_cents: 150}));
+    var sameValue = new Price({
+      "_cents": 150
+    });
+    var same = ((__a, __b) => __a == null ? __b == null : __a.__op$eq(__b))(total, sameValue);
+    var hashSame = (total.hashCode == sameValue.hashCode);
     var neg = b.__op$neg();
-    return "setter/运算符：sum=" + total.cents + " / 相等=" + same + " / 取负=" + neg.cents + " " + "/ hash=" + total.hashCode + " / strHash=" + "abc".hashCode;
+    return "setter/运算符：sum=" + total.cents + " / 相等=" + same + " / hash一致=" + hashSame + " " + "/ 取负=" + neg.cents;
   }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
