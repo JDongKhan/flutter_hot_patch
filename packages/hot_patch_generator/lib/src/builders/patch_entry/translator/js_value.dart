@@ -157,6 +157,30 @@ bool isBasicType(String typeName) {
   };
 }
 
+/// Dart 运算符 → JS 成员名（`__op$…`）。
+///
+/// Dart 的运算符重载在 JS 里没有等价语法：声明侧统一改写成同名成员，调用点
+/// 在「操作数静态类型可判定」时按同一张表改写（见 js_translator 的
+/// `_operatorOwnerOf`）。返回 null = 该运算符暂不支持（声明侧出声告警）。
+String? operatorJsName(String symbol, {required bool unary}) {
+  if (unary) return symbol == '-' ? r'__op$neg' : null;
+  return switch (symbol) {
+    '+' => r'__op$add',
+    '-' => r'__op$sub',
+    '*' => r'__op$mul',
+    '/' => r'__op$div',
+    '%' => r'__op$mod',
+    '<' => r'__op$lt',
+    '<=' => r'__op$le',
+    '>' => r'__op$gt',
+    '>=' => r'__op$ge',
+    '==' => r'__op$eq',
+    '[]' => r'__op$indexGet',
+    '[]=' => r'__op$indexSet',
+    _ => null,
+  };
+}
+
 /// `x is T` → JS 类型判别表达式；T 在 JS 侧不可解析时返回 null。
 ///
 /// Dart 的运行时类型在 JS 侧没有一一对应的构造（`int` / `double` 同是 number、
@@ -397,6 +421,28 @@ class FieldScope {
   /// 本类 **static 方法**名：裸调用（`fromJson(e)`）→ `ClassName.fromJson(e)`。
   final Set<String> staticMethods;
 
+  /// 类型表：字段 / 形参 / 局部变量名 → 源码类型字符串。
+  ///
+  /// 只用于**运算符重载的调用点分派**：JS 没有运算符重载，只有明确了操作数的
+  /// 静态类型、且该类型（含继承链）声明了对应运算符时，才把 `a + b` 改写成
+  /// `a.__op$add(b)`；类型未知时保持 JS 原生运算（与既有产物一致）。
+  final Map<String, String> fieldTypes;
+  final Map<String, String> paramTypes;
+  final Map<String, String> localTypes;
+
+  /// 标识符的静态类型（已擦除可空 / 泛型）；未知返回 null。
+  String? typeOf(String name) {
+    String? raw;
+    if (localVars.contains(name)) {
+      raw = localTypes[name];
+    } else if (params.contains(name)) {
+      raw = paramTypes[name];
+    } else if (instanceFields.contains(name)) {
+      raw = fieldTypes[name];
+    }
+    return raw == null ? null : eraseType(raw);
+  }
+
   /// 声明期登记的字段别名表（`final feed = _feed;` → `feed → this._feed`）。
   ///
   /// **只供后续「变量声明的初始化器」折算**（[forInitializer]）——这样才能闭合
@@ -427,6 +473,9 @@ class FieldScope {
           typeParams: typeParams,
           localAliases: declAliases,
           thisRef: thisRef,
+          fieldTypes: fieldTypes,
+          paramTypes: paramTypes,
+          localTypes: localTypes,
         );
 
   FieldScope({
@@ -446,9 +495,15 @@ class FieldScope {
     Map<String, String>? declAliases,
     Set<String>? localVars,
     Set<String>? globalConsts,
+    Map<String, String>? fieldTypes,
+    Map<String, String>? paramTypes,
+    Map<String, String>? localTypes,
   })  : localVars = localVars ?? {},
         localAliases = localAliases ?? const {},
         declAliases = declAliases ?? {},
+        fieldTypes = fieldTypes ?? const {},
+        paramTypes = paramTypes ?? const {},
+        localTypes = localTypes ?? {},
         globalConsts = globalConsts ?? {};
 
   /// 派生作用域：追加形参名（闭包形参 `(o) => o.status`），其余照旧。
@@ -471,6 +526,9 @@ class FieldScope {
         typeParams: typeParams,
         localAliases: localAliases,
         thisRef: thisRef,
+        fieldTypes: fieldTypes,
+        paramTypes: paramTypes,
+        localTypes: localTypes,
         // 同一个别名表实例：派生作用域里登记的别名，母作用域后续声明同样可见
         // （闭包体内的 `final x = _feed.spots;` 也算链式别名）。
         declAliases: declAliases,

@@ -64,6 +64,18 @@ class ClassMethod {
   final String? nativeChannel;
   final String? nativeMessage;
 
+  /// Dart `set` 访问器：JS 侧发射为属性写访问器 `set name(v) { … }`。
+  final bool isSetter;
+
+  /// 运算符重载的 Dart 符号（`+` / `==` / `[]` …）；null = 普通方法。
+  /// JS 没有运算符重载，成员名按 [operatorJsName] 改写为 `__op$<后缀>`，
+  /// 调用点在「操作数静态类型可判定」时按同一张表改写。
+  final String? operatorSymbol;
+
+  /// 形参类型（名 → 源码类型），供调用点判定操作数是否走运算符分派。
+  /// 无类型注解的形参不登记（unknown 就按 JS 原生运算）。
+  final Map<String, String> paramTypes;
+
   /// `@HostInjected` 通道名（null = 普通方法）。标注方法的 Dart 实现留在宿主，
   /// JS 侧方法仍在类里，只是方法体整体改为
   /// `_app_host_.invoke(通道, 实参载荷)`（见 js_translator 的 [hostMethodBodyJs]）。
@@ -110,6 +122,9 @@ class ClassMethod {
     this.typeParams = const [],
     this.superMap = const {},
     this.mixinOrigin,
+    this.isSetter = false,
+    this.operatorSymbol,
+    this.paramTypes = const {},
   });
 }
 

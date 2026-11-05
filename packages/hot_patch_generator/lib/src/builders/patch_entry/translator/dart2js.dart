@@ -116,7 +116,13 @@ String renderClassDecl(
       );
     }
     final body = (raw ?? '').trimRight();
-    if (m.isGetter) {
+    if (m.isSetter) {
+      // Dart setter → JS 属性写访问器；赋值调用点 `x.name = v` 本来就按
+      // PropertyAccess 翻译，两端天然对齐。
+      b.write('  ${st}set ${m.name}(${m.params.join(', ')}) {\n');
+      if (body.isNotEmpty) b.write('$body\n');
+      b.write('  }\n');
+    } else if (m.isGetter) {
       b.write('  ${st}get ${m.name}() {\n');
       if (body.isNotEmpty) b.write('$body\n');
       b.write('  }\n');

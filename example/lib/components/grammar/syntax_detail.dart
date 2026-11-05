@@ -40,6 +40,29 @@ class TaskItem {
 }
 
 // ---------------------------------------------------------------------------
+// setter + 运算符重载（`+` / `==` / 一元 `-`）：声明侧改写为 `__op$…` 成员
+// ---------------------------------------------------------------------------
+
+class Price {
+  Price(this._cents);
+
+  int _cents;
+
+  int get cents => _cents;
+
+  /// setter → JS 属性写访问器 `set cents(v)`；`p.cents = v` 原样生效。
+  set cents(int v) => _cents = v;
+
+  Price operator +(Price other) => Price(_cents + other._cents);
+
+  Price operator -() => Price(-_cents);
+
+  bool operator ==(Object other) => other is Price && other._cents == _cents;
+
+  int get hashCode => _cents.hashCode;
+}
+
+// ---------------------------------------------------------------------------
 // 页面
 // ---------------------------------------------------------------------------
 
@@ -135,6 +158,17 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '关系/列表：未命中';
   }
 
+  /// setter + 运算符重载：`+` / 一元 `-` / `==` 走 `__op$` 分派，`p.cents = v` 走 setter。
+  String _operatorText() {
+    final Price a = Price(100);
+    final Price b = Price(23);
+    final Price total = a + b;
+    total.cents = 150; // setter
+    final bool same = total == Price(150);
+    final Price neg = -b;
+    return 'setter/运算符：sum=${total.cents} / 相等=$same / 取负=${neg.cents}';
+  }
+
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
   String _localFuncText() {
     int twice(int x) => x * 2;
@@ -206,6 +240,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_localFuncText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
+          Text(_operatorText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

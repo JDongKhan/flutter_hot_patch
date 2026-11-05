@@ -138,6 +138,21 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       final l = exprToJs(e.leftOperand, scope, classes);
       final r = exprToJs(e.rightOperand, scope, classes);
       if (l == null || r == null) return null;
+      // 运算符重载：只有左操作数静态类型可判定、且该类型声明了对应运算符时才
+      // 改写成 `l.__op$xxx(r)`；否则保持 JS 原生运算（Dart 未重载的类型本就如此）。
+      final owner = _operatorOwnerOf(e.leftOperand, op, scope, classes);
+      if (owner != null) {
+        if (op == '==' || op == '!=') {
+          // Dart 的 `==` 是方法调用：接收者为 null 时走 null 的 ==（不等于
+          // 任何非空值）。两侧先求值一次，再判空 / 分派。
+          final neg = op == '!=' ? '!' : '';
+          return '$neg((__a, __b) => __a == null ? __b == null '
+              ': __a.${operatorJsName('==', unary: false)}'
+              '(__b))($l, $r)';
+        }
+        final jsOp = operatorJsName(op, unary: false);
+        if (jsOp != null) return '$l.$jsOp($r)';
+      }
       return '($l $op $r)';
     }
     // Dart 整除 `a ~/ b`：JS 无对应运算符，转 Math.floor(a / b)。
@@ -268,6 +283,11 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     final t = exprToJs(tgt, scope, classes);
     final i = exprToJs(e.index, scope, classes);
     if (t == null || i == null) return null;
+    // `operator []`：接收者静态类型声明了下标运算符时改写成成员调用。
+    if (_operatorOwnerOf(tgt, '[]', scope, classes) != null) {
+      final get = operatorJsName('[]', unary: false)!;
+      return e.isNullAware ? '$t?.$get($i)' : '$t.$get($i)';
+    }
     // `a?[i]` → JS 原生可选下标 `a?.[i]`：接收者为 null / undefined 时整个
     // 表达式短路，且下标**不求值**（与 Dart 语义一致）。
     if (e.isNullAware) return '$t?.[$i]';
@@ -288,7 +308,13 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 前缀一元（`!flag` / `-n` / `++i` / `--i`）。
   if (e is PrefixExpression) {
     final v = exprToJs(e.operand, scope, classes);
-    return v == null ? null : '(${e.operator.lexeme}$v)';
+    if (v == null) return null;
+    // `operator -()`（一元取负）：操作数静态类型声明了它 → 成员调用。
+    if (e.operator.lexeme == '-' &&
+        _operatorOwnerOf(e.operand, '-', scope, classes, unary: true) != null) {
+      return '$v.${operatorJsName('-', unary: true)}()';
+    }
+    return '(${e.operator.lexeme}$v)';
   }
   if (e is MethodInvocation) return methodCallExprJs(e, scope, classes);
   return null;
@@ -1116,6 +1142,21 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     if (target == null) return null;
     final recv = exprToJs(target, scope, classes);
     if (recv == null) return null;
+    // `operator []=`：接收者静态类型声明了下标赋值运算符时改写成成员调用。
+    // 只支持 `=` 形态（`+=` 等复合赋值语义不同，保持原生路径）。
+    if (lhs is IndexExpression &&
+        e.operator.lexeme == '=' &&
+        _operatorOwnerOf(target, '[]=', scope, classes) != null) {
+      final index = exprToJs(lhs.index, scope, classes);
+      final rhs = rhsToJs(e.rightHandSide, scope, classes);
+      if (index == null || rhs == null) return null;
+      final set = operatorJsName('[]=', unary: false)!;
+      if (_chainHasNullAware(e.leftHandSide)) {
+        return '((__t) => { if (__t != null) '
+            '__t.$set($index, $rhs); })($recv);';
+      }
+      return '$recv.$set($index, $rhs);';
+    }
     final String member;
     if (lhs is IndexExpression) {
       final index = exprToJs(lhs.index, scope, classes);
@@ -1159,6 +1200,58 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     return v == null ? null : '$v;';
   }
   if (e is MethodInvocation) return methodCallStmtJs(e, scope, classes);
+  return null;
+}
+
+/// 操作数的静态类型（显式注解 / 项目类构造推断）；未知返回 null。
+///
+/// 只有「类型可判定」时才把运算符重载改写成成员调用，避免按名字猜测类型。
+String? _staticTypeOf(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is ParenthesizedExpression) {
+    return _staticTypeOf(e.expression, scope, classes);
+  }
+  if (e is SimpleIdentifier) return scope.typeOf(e.name);
+  if (e is ThisExpression) return scope.className;
+  String? raw;
+  if (e is InstanceCreationExpression) {
+    raw = e.constructorName.type.toSource();
+  } else if (e is MethodInvocation && e.target is SimpleIdentifier) {
+    // `Money.of(...)` / `Xxx.fromJson(...)`：receiver 是项目类名时按该类推断。
+    raw = (e.target as SimpleIdentifier).name;
+  }
+  if (raw == null) return null;
+  final bare = eraseType(raw.split('.').last);
+  return classes.containsKey(bare) ? bare : null;
+}
+
+/// 声明了 [symbol] 运算符的类（沿 extends 链查找）；没有则返回 null。
+///
+/// 一元 / 二元同名运算符（`operator -`）按形参个数区分：`unary` 为真时只认
+/// 零参声明。`!=` 在 Dart 里不可重载，按 `==` 的声明判定。
+ClassInfo? _operatorOwnerOf(
+  Expression operand,
+  String symbol,
+  FieldScope scope,
+  Map<String, ClassInfo> classes, {
+  bool unary = false,
+}) {
+  final type = _staticTypeOf(operand, scope, classes);
+  if (type == null) return null;
+  final lookup = symbol == '!=' ? '==' : symbol;
+  ClassInfo? c = classes[type];
+  while (c != null) {
+    for (final m in c.methods) {
+      if (m.operatorSymbol != lookup) continue;
+      final matches = unary ? m.params.isEmpty : m.params.isNotEmpty;
+      if (matches) return c;
+    }
+    final sup = c.superType == null ? null : eraseType(c.superType);
+    c = sup == null ? null : classes[sup];
+  }
   return null;
 }
 
@@ -1317,6 +1410,8 @@ String translateStmtList(
         if (v.initializer == null) {
           out.add('${ind}var $name;');
           scope.localVars.add(name);
+          final declared = s.variables.type?.toSource();
+          if (declared != null) scope.localTypes[name] = declared;
           continue;
         }
         // 初始化器单独用一份作用域（[FieldScope.forInitializer]）：把**已登记
@@ -1343,6 +1438,12 @@ String translateStmtList(
         }
         out.add('${ind}var $name = $init;');
         scope.localVars.add(name);
+        // 局部变量的静态类型（显式注解优先，其次按项目类构造推断）：
+        // 供后续语句里的运算符重载分派（`total + item` → `total.__op$add(item)`）。
+        final declaredType = s.variables.type?.toSource();
+        final inferred =
+            declaredType ?? _staticTypeOf(v.initializer!, scope, classes);
+        if (inferred != null) scope.localTypes[name] = inferred;
         // 该局部只是「字段 / getter 的别名」（`final list = _list;` →
         // `this._list`）：登记进 widget 层，懒加载 builder 抽成实例方法后引用它
         // 时才能落到 `this._list`，而不是未定义的自由变量（`ReferenceError`）。
@@ -2413,6 +2514,11 @@ String translateClassMethodBody(
         ? const {}
         : {for (final f in objectFieldsOf(info, classes)) f.name},
     params: m.params.toSet(),
+    // 形参 / 字段的声明类型：供运算符重载的调用点判定（JS 无运算符重载）。
+    paramTypes: m.paramTypes,
+    fieldTypes: m.isStatic
+        ? const {}
+        : {for (final f in objectFieldsOf(info, classes)) f.name: f.typeName},
     methods: m.isStatic ? const {} : instanceMethods,
     className: info.name,
     staticFields: staticFieldNames,

@@ -27,6 +27,27 @@ import '../translator/element2js.dart';
 /// 的代理，由 build 传参）。形参名在作用域内保持裸引用；仅事件等延迟作用域因
 /// 看不见形参，才由作用域别名译成 `this.context`（见 ElementTranslateContext._eventScope）。
 /// 组件与普通类共用这一处。
+/// 形参类型表（名 → 源码类型字符串）：只登记**有类型注解**的形参，供运算符
+/// 重载的调用点判定「操作数静态类型是否可知」。
+Map<String, String> _paramTypesOf(MethodDeclaration m) {
+  final out = <String, String>{};
+  for (final p in m.parameters?.parameters ?? const <FormalParameter>[]) {
+    final inner = p is DefaultFormalParameter ? p.parameter : p;
+    final name = inner.name?.lexeme;
+    final type = switch (inner) {
+      SimpleFormalParameter() => inner.type?.toSource(),
+      FieldFormalParameter() => inner.type?.toSource(),
+      SuperFormalParameter() => inner.type?.toSource(),
+      FunctionTypedFormalParameter() => inner.returnType?.toSource(),
+      _ => null,
+    };
+    if (name != null && name.isNotEmpty && type != null && type.isNotEmpty) {
+      out[name] = type;
+    }
+  }
+  return out;
+}
+
 List<String> jsMethodParams(MethodDeclaration m) {
   final out = <String>[];
   for (final p in m.parameters?.parameters ?? const <FormalParameter>[]) {
@@ -165,18 +186,47 @@ ClassInfo classInfoOf(
       );
     }
     if (m.isSetter) {
-      // setter 在 JS 侧需要属性写访问器（`set x(v)`），当前产物形态没有承载位。
-      // 静默 `return null` 会让 setter 整个消失且无任何提示，故显式告警。
-      log.warning('[hot_patch_generator] $sourceFile: ${decl.name.lexeme}'
-          '.${m.name.lexeme} 是 setter，JS 侧未支持属性写访问器，已跳过。');
-      return null;
+      // JS 侧承载位：类体里的属性写访问器 `set name(v) { … }`；赋值调用点
+      // `x.name = v` 本来就按 PropertyAccess 翻译，因此两端天然对齐。
+      return ClassMethod(
+        name: nameOverride ?? m.name.lexeme,
+        params: jsMethodParams(m),
+        isSetter: true,
+        isStatic: m.isStatic,
+        isVoid: true,
+        returnsWidget: false,
+        body: m.body,
+        paramTypes: _paramTypesOf(m),
+        superMap: superMap,
+        mixinOrigin: mixinOrigin,
+      );
     }
     if (m.isOperator) {
-      // Dart 运算符重载（`operator +` / `operator ==`）没有同名 JS 成员可挂，
-      // 原样拼进类体会产出非法 JS，故显式告警并跳过。
-      log.warning('[hot_patch_generator] $sourceFile: ${decl.name.lexeme}'
-          '.${m.name.lexeme} 是运算符重载，JS 侧未支持，已跳过。');
-      return null;
+      // Dart 运算符重载：JS 无等价语法，成员改名为 `__op$<后缀>`；调用点在
+      // 「操作数静态类型可判定」时按同一张表改写（见 _operatorOwnerOf）。
+      final symbol = m.name.lexeme;
+      final unary = (m.parameters?.parameters ?? const <FormalParameter>[])
+          .isEmpty;
+      final jsName = operatorJsName(symbol, unary: unary);
+      if (jsName == null) {
+        log.warning('[hot_patch_generator] $sourceFile: ${decl.name.lexeme}'
+            '.operator $symbol 暂不支持（JS 侧无等价成员），已跳过。');
+        return null;
+      }
+      return ClassMethod(
+        name: jsName,
+        params: jsMethodParams(m),
+        isStatic: m.isStatic,
+        isVoid: isVoidReturn(m),
+        returnsWidget: false,
+        body: m.body,
+        positionalParamCount: positionalParamCountOf(m),
+        hasNamedParams: hasNamedParamOf(m),
+        paramTypes: _paramTypesOf(m),
+        operatorSymbol: symbol,
+        superMap: superMap,
+        mixinOrigin: mixinOrigin,
+      );
     }
     return ClassMethod(
       name: nameOverride ?? m.name.lexeme,
@@ -187,6 +237,7 @@ ClassInfo classInfoOf(
       returnsWidget: returnsWidgetOf(m),
       body: m.body,
       hostChannel: hostChannel,
+      paramTypes: _paramTypesOf(m),
       // 位置形参个数 / 是否含具名形参：宿主注入方法体据此拆分载荷；方法
       // tear-off 也用它生成精确形参（见 ElementTranslateContext.methodArity）。
       positionalParamCount: positionalParamCountOf(m),
@@ -271,6 +322,9 @@ ClassInfo classInfoOf(
           positionalParamCount: m.positionalParamCount,
           hasNamedParams: m.hasNamedParams,
           typeParams: m.typeParams,
+          isSetter: m.isSetter,
+          operatorSymbol: m.operatorSymbol,
+          paramTypes: m.paramTypes,
           superMap: classSuper,
           mixinOrigin: m.mixinOrigin,
         );
@@ -784,6 +838,7 @@ ClassInfo translateClass(
         isStatic: cm.isStatic,
         body: cm.body,
         bodyJs: bodyJs,
+        paramTypes: cm.paramTypes,
         superMap: cm.superMap,
         mixinOrigin: cm.mixinOrigin,
       );
@@ -799,6 +854,9 @@ ClassInfo translateClass(
       returnsWidget: cm.returnsWidget,
       body: cm.body,
       bodyJs: bodyJs,
+      isSetter: cm.isSetter,
+      operatorSymbol: cm.operatorSymbol,
+      paramTypes: cm.paramTypes,
       nativeChannel: msg != null ? 'nativeToast' : null,
       nativeMessage: msg,
       hostChannel: cm.hostChannel,

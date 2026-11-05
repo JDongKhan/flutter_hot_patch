@@ -6,6 +6,38 @@ import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, Mai
 
 export const TaskLevel = (function () { const __values = []; function __mk(name, index) { return { name: name, index: index, toString: function () { return "TaskLevel." + name; } }; } const low = __mk("low", 0); __values.push(low); const medium = __mk("medium", 1); __values.push(medium); const high = __mk("high", 2); __values.push(high); return { low: low, medium: medium, high: high, values: __values }; })();
 
+// 模型 Price
+export class Price {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this._cents = (args && args._cents !== undefined) ? args._cents : 0;
+  }
+  get cents() {
+    return this._cents;
+  }
+  set cents(v) {
+    this._cents = v;
+  }
+  __op$add(other) {
+    return new Price({
+      "_cents": (this._cents + other._cents)
+    });
+  }
+  __op$neg() {
+    return new Price({
+      "_cents": (-this._cents)
+    });
+  }
+  __op$eq(other) {
+    return ((other instanceof Price) && (other._cents == this._cents));
+  }
+  get hashCode() {
+    return this._cents.hashCode;
+  }
+}
+
 // 模型 TaskItem
 export class TaskItem {
   constructor(args) {
@@ -181,6 +213,19 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "关系/列表：未命中";
   }
+  _operatorText() {
+    var a = new Price({
+      "_cents": 100
+    });
+    var b = new Price({
+      "_cents": 23
+    });
+    var total = a.__op$add(b);
+    total.cents = 150;
+    var same = ((__a, __b) => __a == null ? __b == null : __a.__op$eq(__b))(total, new Price({_cents: 150}));
+    var neg = b.__op$neg();
+    return "setter/运算符：sum=" + total.cents + " / 相等=" + same + " / 取负=" + neg.cents;
+  }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
     var grade = (score) => { {
@@ -300,6 +345,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._switchStmtText()
+          }),
+          new Text({
+            "data": this._operatorText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
