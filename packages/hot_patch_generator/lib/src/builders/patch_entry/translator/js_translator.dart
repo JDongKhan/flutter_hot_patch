@@ -1089,52 +1089,42 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     }
     return null;
   }
-  // 空安全赋值：`a?[i] = v` / `a?.b = v`。JS 的可选链不能作赋值目标
-  // （`a?.[i] = v` 是语法错误），故落成接收者单次求值的箭头 IIFE：接收者为
-  // null / undefined 时整条赋值（含下标与右值）不执行，与 Dart 语义一致。
+  // 下标 / 属性赋值（任意层）：`a[i] = v`、`a.b = v`、`a?.b.c = v`、
+  // `a?._scores?[1] = 1` …… 只有一条规则，深度不增加任何分支。
+  //
+  // JS 不允许可选链出现在**赋值目标**里（`a?.[i] = v` / `a?.b[i] = v` 都是
+  // SyntaxError），因此只要目标链上出现过 `?.` / `?[`，就落成「前缀单次求值 +
+  // 非空守卫」：
+  //   `((__t) => { if (__t != null) __t[1] = 1; })(this._obj?._scores)`
+  // 前缀本身按普通表达式翻译（`?.` 链仍是原生可选链，null 时短路为 undefined），
+  // 层数再多也只是前缀更长，不会嵌套守卫。链上没有空安全则直接赋值。
   if (e is AssignmentExpression &&
       (e.leftHandSide is IndexExpression ||
-          (e.leftHandSide is PropertyAccess &&
-              (e.leftHandSide as PropertyAccess).operator.lexeme == '?.'))) {
+          e.leftHandSide is PropertyAccess)) {
     final lhs = e.leftHandSide;
-    String? recv;
-    String? member;
-    if (lhs is IndexExpression && lhs.isNullAware) {
-      final target = lhs.target;
-      if (target == null) return null;
-      recv = exprToJs(target, scope, classes);
+    final target = lhs is IndexExpression
+        ? lhs.target
+        : (lhs as PropertyAccess).target;
+    if (target == null) return null;
+    final recv = exprToJs(target, scope, classes);
+    if (recv == null) return null;
+    final String member;
+    if (lhs is IndexExpression) {
       final index = exprToJs(lhs.index, scope, classes);
-      if (index != null) member = '[$index]';
-    } else if (lhs is PropertyAccess) {
-      final target = lhs.target;
-      recv = target == null ? null : exprToJs(target, scope, classes);
-      member = '.${lhs.propertyName.name}';
-    } else if (lhs is IndexExpression) {
-      // 普通下标赋值 `a[i] = v`（同一规则的非空安全形态）。
-      final target = lhs.target;
-      final t = target == null ? null : exprToJs(target, scope, classes);
-      final index = exprToJs(lhs.index, scope, classes);
-      final rhs = rhsToJs(e.rightHandSide, scope, classes);
-      if (t == null || index == null || rhs == null) return null;
-      return '$t[$index] ${e.operator.lexeme} $rhs;';
+      if (index == null) return null;
+      member = '[$index]';
+    } else {
+      member = '.${(lhs as PropertyAccess).propertyName.name}';
     }
-    if (recv == null || member == null) return null;
     final rhs = rhsToJs(e.rightHandSide, scope, classes);
     if (rhs == null) return null;
-    final assign = '__t$member ${e.operator.lexeme} $rhs';
-    return '((__t) => { if (__t != null) $assign; })($recv);';
-  }
-  // `this.x = rhs`（构造体 / 方法体里显式回写实例字段）：`this` 的落点由
-  // [FieldScope.thisRef] 决定（构造函数体翻译成静态方法时是局部实例变量）。
-  if (e is AssignmentExpression &&
-      e.leftHandSide is PropertyAccess &&
-      (e.leftHandSide as PropertyAccess).target is ThisExpression) {
-    final prop = (e.leftHandSide as PropertyAccess).propertyName.name;
-    final rhs = rhsToJs(e.rightHandSide, scope, classes);
-    if (rhs != null) {
-      return '${scope.thisRef}.$prop ${e.operator.lexeme} $rhs;';
+    // 判据看**整条目标链**（含最外层选择器）：`a?[i] = v` 的空安全在 LHS 本身，
+    // `a?.b.c = v` 的在更内层——两者都要守卫。
+    if (_chainHasNullAware(e.leftHandSide)) {
+      return '((__t) => { if (__t != null) '
+          '__t$member ${e.operator.lexeme} $rhs; })($recv);';
     }
-    return null;
+    return '$recv$member ${e.operator.lexeme} $rhs;';
   }
   // 字段的属性赋值 / 自增（`_count.value = 5`、`_count.value++`）：
   // SDK 值对象（ValueNotifier / Listenable 代理类）的典型用法，LHS 是
@@ -1162,6 +1152,24 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
   }
   if (e is MethodInvocation) return methodCallStmtJs(e, scope, classes);
   return null;
+}
+
+/// 赋值目标链上是否出现空安全选择器（`?.` / `?[` / `?.m()`）。
+///
+/// 只看选择器链本身：括号会截断 Dart 的空安全短路（`(a?.b).c = v` 在 `a`
+/// 为 null 时是抛错而非跳过），故不进入 [ParenthesizedExpression]。
+bool _chainHasNullAware(Expression e) {
+  if (e is PropertyAccess) {
+    return e.operator.lexeme == '?.' ||
+        (e.target != null && _chainHasNullAware(e.target!));
+  }
+  if (e is IndexExpression) {
+    return e.isNullAware || (e.target != null && _chainHasNullAware(e.target!));
+  }
+  if (e is MethodInvocation) {
+    return e.isNullAware || (e.target != null && _chainHasNullAware(e.target!));
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------

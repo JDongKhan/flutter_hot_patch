@@ -18,6 +18,9 @@ class TaskItem {
   final int score;
   final TaskLevel level;
 
+  /// 可变字段：用于演示多层空安全赋值 `_task?.scores?[1] = 9`。
+  List<int>? scores;
+
   /// 生成式命名构造：`this.title` 形参。
   TaskItem.highlight(this.title)
       : score = 100,
@@ -55,6 +58,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
   String? _upper;
   int? _first;
   int? _second;
+  int? _cell;
   String? _chain;
 
   /// 三个命名构造 + 空安全调用 / 空安全下标 / 空安全链。
@@ -67,6 +71,9 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
       _first = _scores?[0];
       _scores?[1] = 1;
       _second = _scores?[1];
+      _task?.scores = [0, 0];
+      _task?.scores?[1] = 9;
+      _cell = _task?.scores?[1];
       _chain = _task?.level.name;
     });
   }
@@ -82,6 +89,8 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
       _first = _scores?[0];
       _scores?[1] = 1;
       _second = _scores?[1];
+      _task?.scores?[1] = 9;
+      _cell = _task?.scores?[1];
       _chain = _task?.level.name;
     });
   }
@@ -122,6 +131,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text('空安全调用：_note?.toUpperCase() = ${_upper ?? 'null'}'),
           Text('空安全下标：_scores?[0] = ${_first ?? 'null'}'),
           Text('空安全赋值：_scores?[1] = 1 → ${_second ?? 'null'}'),
+          Text('多层空安全赋值：_task?.scores?[1] = 9 → ${_cell ?? 'null'}'),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

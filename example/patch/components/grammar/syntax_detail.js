@@ -12,6 +12,7 @@ export class TaskItem {
     this.__applyProps(args);
     this.score = 0;
     this.level = null;
+    this.scores = null;
   }
   __applyProps(args) {
     this.title = (args && args.title !== undefined) ? args.title : '';
@@ -55,6 +56,7 @@ export class SyntaxDetail extends StatefulWidget {
     this._upper = null;
     this._first = null;
     this._second = null;
+    this._cell = null;
     this._chain = null;
   }
   _run() {
@@ -68,6 +70,9 @@ export class SyntaxDetail extends StatefulWidget {
       this._first = this._scores?.[0];
       ((__t) => { if (__t != null) __t[1] = 1; })(this._scores);
       this._second = this._scores?.[1];
+      ((__t) => { if (__t != null) __t.scores = [0, 0]; })(this._task);
+      ((__t) => { if (__t != null) __t[1] = 9; })(this._task?.scores);
+      this._cell = this._task?.scores?.[1];
       this._chain = this._task?.level.name;
     });
   }
@@ -80,6 +85,8 @@ export class SyntaxDetail extends StatefulWidget {
       this._first = this._scores?.[0];
       ((__t) => { if (__t != null) __t[1] = 1; })(this._scores);
       this._second = this._scores?.[1];
+      ((__t) => { if (__t != null) __t[1] = 9; })(this._task?.scores);
+      this._cell = this._task?.scores?.[1];
       this._chain = this._task?.level.name;
     });
   }
@@ -132,6 +139,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": "空安全赋值：_scores?[1] = 1 → " + (this._second ?? "null")
+          }),
+          new Text({
+            "data": "多层空安全赋值：_task?.scores?[1] = 9 → " + (this._cell ?? "null")
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
