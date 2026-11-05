@@ -435,6 +435,11 @@ export class SyntaxDetail extends StatefulWidget {
     var skipped = ((__t) => { if (__t == null) return null; return (__t[0] = 99); })(missing);
     return "赋值表达式：steps=" + steps.join("/") + " / added=" + added + " " + "/ 整除=" + truncated + " / 列表=" + cells.join("/") + " / slot=" + slot + " " + "/ assigned=" + (assigned ?? "null") + " / hit=" + hit + " " + "/ 空目标=" + (skipped ?? "null");
   }
+  _genericLocalText() {
+    var typeName = (__ta) => { return (((__ta && __ta.typeArguments) || {})["T"]).toString(); };
+    var tagOf = (__o) => { var sample = (__o && __o.sample !== undefined) ? __o.sample : null; return "T=" + (((__o && __o.typeArguments) || {})["T"]).toString() + " sample=" + (sample ?? "null"); };
+    return "泛型局部函数：typeName<int>()=" + typeName({ typeArguments: {"T": "int"} }) + " " + "/ tagOf<int>(sample: 7)=" + tagOf({ "sample": 7, typeArguments: {"T": "int"} });
+  }
   _switchExprText() {
     var task = this._task;
     var label = (() => {
@@ -527,6 +532,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._assignExprText()
+          }),
+          new Text({
+            "data": this._genericLocalText()
           }),
           new Text({
             "data": this._switchExprText()

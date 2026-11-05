@@ -376,6 +376,15 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
         '/ 空目标=${skipped ?? 'null'}';
   }
 
+  /// 泛型局部函数：类型实参经调用点尾参对象 `typeArguments` 下发，
+  /// 函数体里的 `T` 按类型名读取（与类方法泛型同一口径）。
+  String _genericLocalText() {
+    String typeName<T>() => T.toString();
+    String tagOf<T>({T? sample}) => 'T=${T.toString()} sample=${sample ?? 'null'}';
+    return '泛型局部函数：typeName<int>()=${typeName<int>()} '
+        '/ tagOf<int>(sample: 7)=${tagOf<int>(sample: 7)}';
+  }
+
   /// switch 表达式：对象模式 + guard（`_` / 常量之外的模式以前会被丢弃）。
   String _switchExprText() {
     final task = _task;
@@ -433,6 +442,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_localFuncText()),
           Text(_paramsText()),
           Text(_assignExprText()),
+          Text(_genericLocalText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),

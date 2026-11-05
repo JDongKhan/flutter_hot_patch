@@ -414,6 +414,11 @@ class FieldScope {
   /// 只有类 / 方法的类型参数名会进这张表，普通标识符解析不受影响。
   final Map<String, String> typeParams;
 
+  /// 局部泛型函数名 → 类型参数名列表（`T f<T>(…)`）。
+  /// 裸调用（`f<int>()`）据此把类型实参写成**参数名键**（`{"T": "int"}`），
+  /// 与定义侧读取 `T` 的口径一致；查不到声明时调用点退化为位置序号键。
+  final Map<String, List<String>> localTypeParams;
+
   /// 本类 **static 字段**名：裸引用（`background`）→ `ClassName.background`。
   /// Dart 的 static 与实例成员在同一名字空间，调用点看不出差别，靠这组集合区分。
   final Set<String> staticFields;
@@ -471,6 +476,7 @@ class FieldScope {
           staticFields: staticFields,
           staticMethods: staticMethods,
           typeParams: typeParams,
+          localTypeParams: localTypeParams,
           localAliases: declAliases,
           thisRef: thisRef,
           fieldTypes: fieldTypes,
@@ -487,6 +493,7 @@ class FieldScope {
     this.staticFields = const {},
     this.staticMethods = const {},
     this.typeParams = const {},
+    Map<String, List<String>>? localTypeParams,
     this.hostFunctions = const {},
     this.superMap = const {},
     this.hasJsBase = false,
@@ -504,13 +511,19 @@ class FieldScope {
         fieldTypes = fieldTypes ?? const {},
         paramTypes = paramTypes ?? const {},
         localTypes = localTypes ?? {},
+        localTypeParams = localTypeParams ?? {},
         globalConsts = globalConsts ?? {};
 
-  /// 派生作用域：追加形参名（闭包形参 `(o) => o.status`），其余照旧。
+  /// 派生作用域：追加形参名（闭包形参 `(o) => o.status`）与类型参数
+  /// （泛型闭包 / 泛型局部函数的 `T`），其余照旧。
   ///
   /// 缺这一步，闭包体里的形参引用（`o`）解析不出来，谓词整条翻译失败，
   /// 连带 `where(...)` / `map(...)` 与外层表达式一起被丢弃。
-  FieldScope withParams(Iterable<String> names) => FieldScope(
+  FieldScope withParams(
+    Iterable<String> names, {
+    Map<String, String> typeParamRefs = const {},
+  }) =>
+      FieldScope(
         propByField: propByField,
         instanceFields: instanceFields,
         params: {...params, ...names},
@@ -523,7 +536,8 @@ class FieldScope {
         className: className,
         staticFields: staticFields,
         staticMethods: staticMethods,
-        typeParams: typeParams,
+        typeParams: {...typeParams, ...typeParamRefs},
+        localTypeParams: localTypeParams,
         localAliases: localAliases,
         thisRef: thisRef,
         fieldTypes: fieldTypes,

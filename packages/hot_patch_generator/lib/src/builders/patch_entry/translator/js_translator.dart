@@ -1038,11 +1038,28 @@ String? closureToJs(
   // `__o` 解构。默认值是常量表达式，用闭包定义处的作用域翻译。
   final plan = _functionParamPlan(
       fn.parameters, (e) => rhsToJs(e, scope, classes));
+  // 泛型闭包 / 泛型局部函数（`T f<T>(...)`）：调用点把类型实参（与具名实参）
+  // 合并成**尾参对象**下发，定义侧追加 `__ta` 接住（已有具名时直接复用 `__o`）。
+  // 函数体里的 `T` 从 `尾参.typeArguments["T"]` 读，与类方法泛型同一口径。
+  final typeParamRefs = <String, String>{};
+  final typeParams =
+      fn.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  if (typeParams.isNotEmpty) {
+    final tail = plan.jsParams.contains('__o') ? '__o' : '__ta';
+    if (!plan.jsParams.contains(tail)) plan.jsParams.add(tail);
+    for (final tp in typeParams) {
+      final name = tp.name.lexeme;
+      typeParamRefs[name] =
+          '((($tail && $tail.typeArguments) || {})[${jsString(name)}])';
+    }
+  }
   final pjs = plan.jsParams.join(', ');
   final pro = plan.prologue.isEmpty ? '' : '${plan.prologue.join(' ')} ';
   // 闭包形参登记进作用域：`where((o) => o.status == _status)` 里的 `o` 必须
   // 解析为形参，否则谓词翻译失败、连带整个 `where(...)` 与外围表达式被丢弃。
-  final bodyScope = plan.names.isEmpty ? scope : scope.withParams(plan.names);
+  final bodyScope = plan.names.isEmpty && typeParamRefs.isEmpty
+      ? scope
+      : scope.withParams(plan.names, typeParamRefs: typeParamRefs);
   final body = fn.body;
   final asyncKw = body.isAsynchronous ? 'async ' : '';
   // 一律输出箭头函数：this 词法绑定到定义处（组件实例），与 Dart 闭包
@@ -1106,7 +1123,13 @@ String? closureToJs(
 List<String> _declaredTypeParamsFor(
   MethodInvocation e,
   Map<String, ClassInfo> classes,
+  FieldScope scope,
 ) {
+  // 局部泛型函数：声明就在当前方法体内，类型参数名由 [_localFunctionJs] 登记。
+  if (e.target == null) {
+    final local = scope.localTypeParams[e.methodName.name];
+    if (local != null && local.isNotEmpty) return local;
+  }
   final tgt = e.target;
   if (tgt is SimpleIdentifier &&
       (classes.containsKey(tgt.name) || runtimeGlobalTypes().contains(tgt.name))) {
@@ -1220,7 +1243,7 @@ String? _methodCallJs(
   //   - 有位置实参 + 无具名实参：尾对象会被目标当成第 N+1 个**位置实参**
   //     （如原生 `Array.reduce<T>(fn)` 的 initialValue），属语义污染，故擦除
   //     元信息并出声——与 dart2js 的擦除行为一致，绝不静默错译。
-  final typeArgs = typeArgsOf(e, declared: _declaredTypeParamsFor(e, classes));
+  final typeArgs = typeArgsOf(e, declared: _declaredTypeParamsFor(e, classes, scope));
   final typeArgsJs =
       typeArgs.isEmpty ? null : 'typeArguments: ${typeArgsMapJs(typeArgs)}';
   final keepTypeArgs =
@@ -2012,9 +2035,10 @@ List<Statement> _bodyStmts(Statement s) => s is Block ? s.statements : [s];
 /// 函数也保留 `this`（Dart 局部函数同样捕获外层 `this`）。名称先登记进作用域，
 /// 递归调用与后续语句的裸调用按同名局部标识符解析（见 `_methodCallJs`）。
 ///
-/// 不支持：泛型局部函数、生成器 —— JS 函数没有等价签名，出现时返回 null
-/// （调用方出声告警）。局部函数须先声明后调用（Dart 允许前向引用，`var`
-/// 赋值形态做不到）。可选 / 具名形参与默认值由 [closureToJs] 统一处理。
+/// 不支持：生成器 —— JS 函数没有等价签名，出现时返回 null（调用方出声告警）。
+/// 局部函数须先声明后调用（Dart 允许前向引用，`var` 赋值形态做不到）。
+/// 可选 / 具名形参与默认值由 [closureToJs] 统一处理；泛型局部函数的类型形参
+/// 也由 [closureToJs] 登记（`T` 读尾参对象的 `typeArguments`）。
 String? _localFunctionJs(
   FunctionDeclarationStatement s,
   FieldScope scope,
@@ -2024,9 +2048,16 @@ String? _localFunctionJs(
 ) {
   final decl = s.functionDeclaration;
   final fn = decl.functionExpression;
-  if (fn.typeParameters != null || fn.body.isGenerator) return null;
+  if (fn.body.isGenerator) return null;
   final name = decl.name.lexeme;
   scope.localVars.add(name);
+  // 泛型局部函数：登记类型参数名，裸调用（`f<int>()`）据此把类型实参写成
+  // **参数名键**（`{"T": "int"}`），与函数体读取 `T` 的口径一致；不登记会退化
+  // 成位置序号键，定义侧读 `["T"]` 就是 undefined。
+  final tps = fn.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  if (tps.isNotEmpty) {
+    scope.localTypeParams[name] = [for (final tp in tps) tp.name.lexeme];
+  }
   renderer?.registerLocal(name);
   final js = closureToJs(fn, scope, classes, renderer);
   if (js == null) return null;
