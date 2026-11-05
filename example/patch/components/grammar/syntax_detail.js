@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/grammar/syntax_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, FormatException, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle, int, num } from '../../flutter.js';
+import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, FormatException, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StateError, StatefulWidget, Text, TextStyle, int, num } from '../../flutter.js';
 
 export const TaskLevel = (function () { const __values = []; function __mk(name, index) { return { name: name, index: index, toString: function () { return "TaskLevel." + name; } }; } const low = __mk("low", 0); __values.push(low); const medium = __mk("medium", 1); __values.push(medium); const high = __mk("high", 2); __values.push(high); return { low: low, medium: medium, high: high, values: __values }; })();
 
@@ -353,8 +353,10 @@ export class SyntaxDetail extends StatefulWidget {
     var alias = nums;
     var nothing = null;
     var live = ((_t) => { if (_t == null) return _t; _t.add(3); return _t; })(alias);
-    var dead = ((_t) => { if (_t == null) return _t; _t.add(9); _t.add(8); return _t; })(nothing);
-    return "级联：列表=" + nums.join("/") + " / 非空分支=" + (live?.length ?? 0) + " " + "/ 空分支=" + (dead?.length ?? "null");
+    var dead = ((_t) => { if (_t == null) return _t; _t.add(9); _t.add(8); _t[0] = 7; return _t; })(nothing);
+    var price = (() => { const _t = new Price({_cents: 1}); _t.cents = 5; _t.cents += 2; return _t; })();
+    var map = (() => { const _t = {}; _t["a"] = 1; _t["b"] = 2; return _t; })();
+    return "级联：列表=" + nums.join("/") + " / 非空分支=" + (live?.length ?? 0) + " " + "/ 空分支=" + (dead?.length ?? "null") + " / setter=" + price.cents + " " + "/ map=" + map["b"];
   }
   _bitwiseText() {
     var a = 6;
@@ -439,6 +441,32 @@ export class SyntaxDetail extends StatefulWidget {
     var typeName = (__ta) => { return (((__ta && __ta.typeArguments) || {})["T"]).toString(); };
     var tagOf = (__o) => { var sample = (__o && __o.sample !== undefined) ? __o.sample : null; return "T=" + (((__o && __o.typeArguments) || {})["T"]).toString() + " sample=" + (sample ?? "null"); };
     return "泛型局部函数：typeName<int>()=" + typeName({ typeArguments: {"T": "int"} }) + " " + "/ tagOf<int>(sample: 7)=" + tagOf({ "sample": 7, typeArguments: {"T": "int"} });
+  }
+  _throwExprText() {
+    var requireValue = (xs) => { return (xs?.first ?? ((() => { throw new StateError({message: "空列表"}); })())); };
+    var boom = () => { throw new StateError({message: "箭头体"}); };
+    var caught = "";
+    try {
+      requireValue(null);
+    } catch (__e) {
+      if (__e instanceof StateError) {
+        caught += "空值";
+      }
+      else {
+        throw __e;
+      }
+    }
+    try {
+      boom();
+    } catch (__e) {
+      if (__e instanceof StateError) {
+        caught += "/箭头";
+      }
+      else {
+        throw __e;
+      }
+    }
+    return "throw 表达式：捕获=" + caught;
   }
   _switchExprText() {
     var task = this._task;
@@ -535,6 +563,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._genericLocalText()
+          }),
+          new Text({
+            "data": this._throwExprText()
           }),
           new Text({
             "data": this._switchExprText()

@@ -276,7 +276,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return 'rethrow：$trace';
   }
 
-  /// 空安全级联：目标为 null 时整条级联短路（返回 null，section 不执行）。
+  /// 级联：空安全短路 + 级联内赋值（属性 setter / 下标 / 复合赋值）。
   String _cascadeText() {
     final nums = <int>[]
       ..add(1)
@@ -284,9 +284,16 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     final List<int>? alias = nums;
     final List<int>? nothing = null;
     final live = alias?..add(3);
-    final dead = nothing?..add(9)..add(8);
+    final dead = nothing?..add(9)..add(8)..[0] = 7;
+    final price = Price(1)
+      ..cents = 5
+      ..cents += 2;
+    final map = <String, int>{}
+      ..['a'] = 1
+      ..['b'] = 2;
     return '级联：列表=${nums.join('/')} / 非空分支=${live?.length ?? 0} '
-        '/ 空分支=${dead?.length ?? 'null'}';
+        '/ 空分支=${dead?.length ?? 'null'} / setter=${price.cents} '
+        '/ map=${map['b']}';
   }
 
   /// 位运算 / 移位 / 一元 `~` / 复合赋值（含 JS 没有的 `~/=`）。
@@ -385,6 +392,26 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
         '/ tagOf<int>(sample: 7)=${tagOf<int>(sample: 7)}';
   }
 
+  /// `throw` 作为表达式（`a ?? throw e` / 箭头体 `() => throw e`）。
+  String _throwExprText() {
+    int requireValue(List<int>? xs) =>
+        xs?.first ?? (throw StateError('空列表'));
+    final int Function() boom = () => throw StateError('箭头体');
+
+    var caught = '';
+    try {
+      requireValue(null);
+    } on StateError {
+      caught += '空值';
+    }
+    try {
+      boom();
+    } on StateError {
+      caught += '/箭头';
+    }
+    return 'throw 表达式：捕获=$caught';
+  }
+
   /// switch 表达式：对象模式 + guard（`_` / 常量之外的模式以前会被丢弃）。
   String _switchExprText() {
     final task = _task;
@@ -443,6 +470,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_paramsText()),
           Text(_assignExprText()),
           Text(_genericLocalText()),
+          Text(_throwExprText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),

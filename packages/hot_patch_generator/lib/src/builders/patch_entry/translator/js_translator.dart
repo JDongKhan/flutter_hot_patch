@@ -112,6 +112,13 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     }
     return parts.join(' + ');
   }
+  // `throw` 出现在**表达式位置**（`a ?? throw e` / 三目分支 / 实参 / switch
+  // 表达式分支）：JS 没有 throw 表达式，落成「立即抛出的 IIFE」；语句位置仍由
+  // [exprStmtToJs] 产出原生 `throw ...;`（箭头体见 [closureToJs] 的语句体路径）。
+  if (e is ThrowExpression) {
+    final v = rhsToJs(e.expression, scope, classes);
+    return v == null ? null : '(() => { throw $v; })()';
+  }
   // 赋值出现在**表达式位置**（`while ((x = f()) < n)` / `if ((v = f()) != null)`）：
   // 统一走 [_assignValueJs]（值语义见该函数；语句位置仍是 [exprStmtToJs]）。
   if (e is AssignmentExpression) return _assignValueJs(e, scope, classes);
@@ -194,8 +201,25 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
           argsJs.add(v);
         }
         stmts.add('_t.${s.methodName.name}(${argsJs.join(', ')})');
-      } else if (s is PropertyAccess) {
-        stmts.add('_t.${s.propertyName.name}');
+      } else if (s is AssignmentExpression) {
+        // 级联里**赋值** `..x = v` / `..[i] = v` / `..x += v`：目标链以 `_t`
+        // 为根（级联 target 已只求值一次），落成 IIFE 内的一条语句；赋值结果
+        // 不作为级联结果（级联结果恒为 target 本身）。`~/=` 与普通赋值位置的
+        // 展开口径一致。
+        final ref = _cascadeRefJs(s.leftHandSide, scope, classes);
+        final rhs = rhsToJs(s.rightHandSide, scope, classes);
+        if (ref == null || rhs == null) return null;
+        final op = s.operator.lexeme;
+        stmts.add(op == '~/='
+            ? '$ref = Math.trunc($ref / $rhs)'
+            : '$ref $op $rhs');
+      } else if (s is PropertyAccess ||
+          s is IndexExpression) {
+        // 级联里**读**访问 `..x` / `..a.b` / `..[i]`：同样以 `_t` 为根展开，
+        // 多级链（`..a.b`）不会丢掉中间层。
+        final ref = _cascadeRefJs(s, scope, classes);
+        if (ref == null) return null;
+        stmts.add(ref);
       } else {
         return null;
       }
@@ -1088,6 +1112,14 @@ String? closureToJs(
       return pro.isEmpty
           ? '$asyncKw($pjs) => $wv'
           : '$asyncKw($pjs) => { ${pro}return $wv; }';
+    }
+    // `throw` 箭头体（`() => throw e`）：Dart 允许，JS 箭头体只能是表达式。
+    // 直接产出语句体 `{ throw e; }`，既符合 Dart 源码意图，也避免多包一层 IIFE
+    // （表达式位置的 throw 走 `exprToJs` 的 IIFE 形态）。
+    if (body.expression is ThrowExpression) {
+      final v = closureBodyStmtJs(body.expression, bodyScope, classes);
+      if (v != null) return '$asyncKw($pjs) => { ${pro}${v} }';
+      return null;
     }
     final rv = rhsToJs(body.expression, bodyScope, classes);
     if (rv != null) return '$asyncKw($pjs) => { ${pro}return $rv; }';
@@ -2029,6 +2061,34 @@ String translateStmtList(
 /// 语句体 → 语句列表（Block 或单条语句统一成列表，供 translateStmtList 递归）。
 List<Statement> _bodyStmts(Statement s) => s is Block ? s.statements : [s];
 
+/// 级联 section 的访问链 → 以 `_t`（已求值一次的级联 target）为根的 JS 引用。
+///
+/// analyzer 对级联内的相对访问（`..x` / `..[i]` / `..a.b`）用**无 target** 的
+/// `PropertyAccess` / `IndexExpression` 表示，故 `target == null` 即级联 target
+/// 本身，换成 `_t`；其余层逐层展开，`..a.b` 得到 `_t.a.b`、`..[i] = v` 得到
+/// `_t[i] = v`。无法识别的形态返回 null（调用方整条级联告警，不静默）。
+String? _cascadeRefJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is PropertyAccess) {
+    final target = e.target;
+    final base = target == null ? '_t' : _cascadeRefJs(target, scope, classes);
+    return base == null ? null : '$base.${e.propertyName.name}';
+  }
+  if (e is IndexExpression) {
+    final target = e.target;
+    final index = e.index;
+    if (index == null) return null;
+    final base = target == null ? '_t' : _cascadeRefJs(target, scope, classes);
+    final idx = exprToJs(index, scope, classes);
+    if (base == null || idx == null) return null;
+    return '$base[$idx]';
+  }
+  return null;
+}
+
 /// 局部函数声明 `void f(...) {...}` / `int f(...) => ...` → `var f = <闭包>;`
 ///
 /// 与闭包共用 [closureToJs]：函数体与闭包 / 方法体走同一条语句翻译路径，箭头
@@ -2036,9 +2096,9 @@ List<Statement> _bodyStmts(Statement s) => s is Block ? s.statements : [s];
 /// 递归调用与后续语句的裸调用按同名局部标识符解析（见 `_methodCallJs`）。
 ///
 /// 不支持：生成器 —— JS 函数没有等价签名，出现时返回 null（调用方出声告警）。
-/// 局部函数须先声明后调用（Dart 允许前向引用，`var` 赋值形态做不到）。
+/// 局部函数须先声明后调用（Dart 同样如此：局部声明不提升，前向引用是编译错误）。
 /// 可选 / 具名形参与默认值由 [closureToJs] 统一处理；泛型局部函数的类型形参
-/// 也由 [closureToJs] 登记（`T` 读尾参对象的 `typeArguments`）。
+/// 也在此登记（`T` 读尾参对象的 `typeArguments`）。
 String? _localFunctionJs(
   FunctionDeclarationStatement s,
   FieldScope scope,
