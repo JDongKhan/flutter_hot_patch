@@ -216,6 +216,16 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return 'pattern for：sum=$sum';
   }
 
+  /// 集合 if-case 元素：`[if (x case P) a else b]`（绑定只在该元素内可见）。
+  String _caseElementText() {
+    final task = _task;
+    final labels = [
+      if (task case TaskItem(title: final t)) '标题:$t',
+      if (task case null) '空',
+    ];
+    return '集合 if-case：${labels.join('，')}';
+  }
+
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
   String _localFuncText() {
     int twice(int x) => x * 2;
@@ -291,6 +301,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_tryText()),
           Text(_collectionText()),
           Text(_patternForText()),
+          Text(_caseElementText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

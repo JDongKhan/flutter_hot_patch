@@ -443,7 +443,39 @@ String? _collectionFragmentJs(
         : '...$v';
   }
   if (el is IfElement) {
-    if (el.caseClause != null) return null; // if-case 集合元素暂不支持
+    final caseClause = el.caseClause;
+    if (caseClause != null) {
+      // 集合 if-case：`[if (v case P) a else b]`。接收值单次求值，模式检查 +
+      // 绑定放进 IIFE，命中返回 then 的数组、未命中返回 else 的数组（外层展开）。
+      final v = exprToJs(el.expression, scope, classes);
+      if (v == null) return null;
+      final plan = _PatternPlan();
+      final before = {...scope.localVars};
+      final gp = caseClause.guardedPattern;
+      if (!_compilePatternWithGuard(
+          gp.pattern, gp.whenClause?.expression, plan, scope, classes)) {
+        scope.localVars
+          ..clear()
+          ..addAll(before);
+        return null;
+      }
+      if (gp.whenClause == null) plan.lines.add('return true;');
+      final a = _collectionArrayJs(el.thenElement, scope, classes);
+      final b = el.elseElement == null
+          ? '[]'
+          : _collectionArrayJs(el.elseElement!, scope, classes);
+      scope.localVars
+        ..clear()
+        ..addAll(before);
+      if (a == null || b == null) return null;
+      final bf = StringBuffer('...(() => {\n  const __v0 = $v;\n');
+      if (plan.names.isNotEmpty) {
+        bf.write('  let ${plan.names.toSet().join(', ')};\n');
+      }
+      bf.write('  const __ok = (() => { ${plan.lines.join(' ')} })();\n');
+      bf.write('  return __ok ? $a : $b;\n})()');
+      return bf.toString();
+    }
     final c = exprToJs(el.expression, scope, classes);
     final a = _collectionArrayJs(el.thenElement, scope, classes);
     final b = el.elseElement == null

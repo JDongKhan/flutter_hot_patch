@@ -272,6 +272,20 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "pattern for：sum=" + sum;
   }
+  _caseElementText() {
+    var task = this._task;
+    var labels = [...(() => {
+        const __v0 = task;
+        let t;
+        const __ok = (() => { if (!(__v0 instanceof TaskItem)) return false; const __v1 = __v0.title; t = __v1; return true; })();
+        return __ok ? ["标题:" + t] : [];
+      })(), ...(() => {
+        const __v0 = task;
+        const __ok = (() => { if (!(__v0 === null)) return false; return true; })();
+        return __ok ? ["空"] : [];
+      })()];
+    return "集合 if-case：" + labels.join("，");
+  }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
     var grade = (score) => { {
@@ -403,6 +417,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._patternForText()
+          }),
+          new Text({
+            "data": this._caseElementText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
