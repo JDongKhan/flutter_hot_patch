@@ -21,7 +21,7 @@ export class Spot {
   }
   static fromJson(e) {
     const tags = [];
-    for (let t of e["tags"]) {
+    for (let t of __idx(e, "tags")) {
       tags.add(t);
     }
     return new Spot({
@@ -228,23 +228,23 @@ export class CommunityFeed {
   }
   static fromJson(e) {
     const tabs = [];
-    for (let v of e["tabs"]) {
+    for (let v of __idx(e, "tabs")) {
       tabs.add(v);
     }
     const sorts = [];
-    for (let v of e["sorts"]) {
+    for (let v of __idx(e, "sorts")) {
       sorts.add(v);
     }
     const postTypes = [];
-    for (let v of e["postTypes"]) {
+    for (let v of __idx(e, "postTypes")) {
       postTypes.add(v);
     }
     const dists = [];
-    for (let v of e["dists"]) {
+    for (let v of __idx(e, "dists")) {
       dists.add(v);
     }
     const priceRanges = [];
-    for (let v of e["priceRanges"]) {
+    for (let v of __idx(e, "priceRanges")) {
       priceRanges.add(v);
     }
     return new CommunityFeed({
@@ -267,7 +267,7 @@ export class OrderFeed {
   }
   static fromJson(e) {
     const statuses = [];
-    for (let v of e["statuses"]) {
+    for (let v of __idx(e, "statuses")) {
       statuses.add(v);
     }
     return new OrderFeed({
@@ -288,7 +288,7 @@ export class MineFeed {
   }
   static fromJson(e) {
     const stats = [];
-    for (let row of e["stats"]) {
+    for (let row of __idx(e, "stats")) {
       const cells = [];
       for (let v of row) {
         cells.add(v);
@@ -296,7 +296,7 @@ export class MineFeed {
       stats.add(cells);
     }
     const menu = [];
-    for (let m of e["menu"]) {
+    for (let m of __idx(e, "menu")) {
       menu.add(MenuEntry.fromJson(m));
     }
     return new MineFeed({
@@ -318,11 +318,11 @@ export class SearchFeed {
   }
   static fromJson(e) {
     const hot = [];
-    for (let v of e["hot"]) {
+    for (let v of __idx(e, "hot")) {
       hot.add(v);
     }
     const guesses = [];
-    for (let s of e["guesses"]) {
+    for (let s of __idx(e, "guesses")) {
       guesses.add(Spot.fromJson(s));
     }
     return new SearchFeed({
@@ -343,7 +343,7 @@ export class ResourceFeed {
   }
   static fromJson(e) {
     const related = [];
-    for (let p of e["related"]) {
+    for (let p of __idx(e, "related")) {
       related.add(Post.fromJson(p));
     }
     return new ResourceFeed({

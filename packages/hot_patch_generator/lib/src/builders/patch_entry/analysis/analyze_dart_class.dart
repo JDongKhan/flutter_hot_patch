@@ -1379,7 +1379,8 @@ String _defaultInitial(String typeName) {
   if (t == 'String') return "''";
   if (t == 'bool') return 'false';
   if (t == 'List' || t == 'Set' || t == 'Iterable') return '[]';
-  if (t == 'Map') return '{}';
+  // Map 默认空值：原生 JS Map（成员由运行时 Map.prototype 补齐）。
+  if (t == 'Map') return 'new Map()';
   if (isBasicType(t)) return '0'; // int / double / num
   return 'null';
 }

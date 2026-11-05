@@ -118,10 +118,10 @@ export class ArrayDetail extends StatefulWidget {
           "height": 12
         }))),
         new Text({
-          "data": "sort() 默认 → " + sortedDefault.join("-")
+          "data": "sort() 默认 → " + sortedDefault._join("-")
         }),
         new Text({
-          "data": "sort((a, b) => b - a) → " + sortedDesc.join("-")
+          "data": "sort((a, b) => b - a) → " + sortedDesc._join("-")
         }),
         new Text({
           "data": "join() 默认 → \"" + joinedDefault + "\""
@@ -148,19 +148,19 @@ export class ArrayDetail extends StatefulWidget {
           "height": 8
         }))),
         new Text({
-          "data": "remove(2) → " + removed.join("-")
+          "data": "remove(2) → " + removed._join("-")
         }),
         new Text({
-          "data": "removeWhere(偶数) → " + filtered.join("-")
+          "data": "removeWhere(偶数) → " + filtered._join("-")
         }),
         new Text({
-          "data": "insert(1, 9) → " + inserted.join("-")
+          "data": "insert(1, 9) → " + inserted._join("-")
         }),
         new Text({
-          "data": "addAll([7, 8]) → " + appended.join("-")
+          "data": "addAll([7, 8]) → " + appended._join("-")
         }),
         new Text({
-          "data": "removeAt(0) → " + removedAt.join("-")
+          "data": "removeAt(0) → " + removedAt._join("-")
         }),
         (this.__k4 || (this.__k4 = new SizedBox({
           "height": 8
@@ -190,7 +190,7 @@ export class ArrayDetail extends StatefulWidget {
           "data": "sublist(1, 3) → " + sub.join("-")
         }),
         new Text({
-          "data": "fillRange(0, 2, 7) → " + filled.join("-")
+          "data": "fillRange(0, 2, 7) → " + filled._join("-")
         }),
         new Text({
           "data": "asMap()[1] → " + map[1]

@@ -485,6 +485,9 @@ class ElementTranslateContext implements ExprRenderer {
 
   /// build() return 前的局部变量（`final isAdult = ...;`）：树里直接引用。
   final Set<String> _locals = {};
+
+  /// 方法体局部的**源码类型**：widget 层按接收者类型做成员映射时要用。
+  final Map<String, String> _localTypes = {};
   void addLocal(String name) => _locals.add(name);
 
   /// **方法体局部变量**（来自 [registerLocal]，即各方法体里 `var/final x = ...`）。
@@ -512,9 +515,10 @@ class ElementTranslateContext implements ExprRenderer {
   /// 同时记为「方法体局部变量」：被抽走的 builder 子树里引用了它就必须告警
   /// （见 [warnCapturedLocals]）。
   @override
-  void registerLocal(String name) {
+  void registerLocal(String name, {String? type}) {
     _locals.add(name);
     _methodBodyLocals.add(name);
+    if (type != null) _localTypes[name] = type;
   }
 
   /// 抽查懒加载 builder 闭包捕获的名字（构建期告警，不静默）。
@@ -1501,6 +1505,10 @@ class ElementTranslateContext implements ExprRenderer {
       for (final l in _locals)
         if (!_localAliases.containsKey(l)) l,
     },
+    paramTypes: {
+      for (final e in _localTypes.entries)
+        if (_locals.contains(e.key)) e.key: e.value,
+    },
     methods: {...actionByMethod.keys, ...methodNames},
     getterNames: getterNames,
     className: className,
@@ -1528,6 +1536,7 @@ class ElementTranslateContext implements ExprRenderer {
       propByField: base.propByField,
       instanceFields: base.instanceFields,
       params: {...base.params}..remove('context'),
+      paramTypes: base.paramTypes,
       methods: base.methods,
       getterNames: base.getterNames,
       className: base.className,

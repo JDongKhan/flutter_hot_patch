@@ -31,6 +31,7 @@ import 'grammar/alias_detail.dart';
 import 'grammar/array_detail.dart';
 import 'grammar/grammar_details.dart';
 import 'grammar/generic_detail.dart';
+import 'grammar/map_detail.dart';
 import 'grammar/syntax_detail.dart';
 import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
@@ -328,6 +329,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'AliasDetail': 'components/grammar/alias_detail.js',
     'SyntaxDetail': 'components/grammar/syntax_detail.js',
     'ArrayDetail': 'components/grammar/array_detail.js',
+    'MapDetail': 'components/grammar/map_detail.js',
   };
 
   String get _jsEntry => _jsEntries[widget.component]!;
@@ -404,6 +406,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'AliasDetail' => const AliasDetail(),
       'SyntaxDetail' => const SyntaxDetail(),
       'ArrayDetail' => const ArrayDetail(),
+      'MapDetail' => const MapDetail(),
       _ => const Text('未知组件'),
     };
   }

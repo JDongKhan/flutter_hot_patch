@@ -56,8 +56,8 @@ export class HelloCard extends StatefulWidget {
   }
   async loadUser() {
     let name = await AccountCenter.getUserName();
-    let userMap = await Network.post({ "url": "hello", "params": {"name": name} });
-    print("用户信息:" + __nn(userMap["code"]));
+    let userMap = await Network.post({ "url": "hello", "params": new Map([["name", name]]) });
+    print("用户信息:" + __nn(__idx(userMap, "code")));
     await Future.delayed({duration: new Duration({seconds: 1})});
     this.setState(() => {
       this._user = new User({name: "Alice", age: 18});

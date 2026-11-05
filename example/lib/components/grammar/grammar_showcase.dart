@@ -19,6 +19,7 @@ class GrammarShowcase extends StatelessWidget {
     _Entry('import 别名 · as', '同名类与包模块类靠前缀区分：base.User / p.ChangeNotifierProvider', 'AliasDetail'),
     _Entry('空安全 · 命名构造 · 枚举', 'a?.m() / a?[i]、命名构造与 factory、enum 的 values / name / index', 'SyntaxDetail'),
     _Entry('数组 · List 语义', 'sort / join / indexOf / fold / any / expand / take / skip / length 写等', 'ArrayDetail'),
+    _Entry('映射 · Map 语义', 'length / keys / values / entries / forEach / remove / putIfAbsent / update / addAll 等', 'MapDetail'),
   ];
 
   @override

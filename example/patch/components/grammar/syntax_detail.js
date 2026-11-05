@@ -457,8 +457,8 @@ export class SyntaxDetail extends StatefulWidget {
     const live = ((_t) => { if (_t == null) return _t; _t.add(3); return _t; })(alias);
     const dead = ((_t) => { if (_t == null) return _t; _t.add(9); _t.add(8); _t[0] = 7; return _t; })(nothing);
     const price = (() => { const _t = new Price({_cents: 1}); _t.cents = 5; _t.cents += 2; return _t; })();
-    const map = (() => { const _t = {}; _t["a"] = 1; _t["b"] = 2; return _t; })();
-    return "级联：列表=" + nums._join("/") + " / 非空分支=" + (live?.length ?? 0) + " " + "/ 空分支=" + (dead?.length ?? "null") + " / setter=" + price.cents + " " + "/ map=" + __nn(map["b"]);
+    const map = (() => { const _t = new Map(); __idxSet(_t, "a", 1); __idxSet(_t, "b", 2); return _t; })();
+    return "级联：列表=" + nums._join("/") + " / 非空分支=" + (live?.length ?? 0) + " " + "/ 空分支=" + (dead?.length ?? "null") + " / setter=" + price.cents + " " + "/ map=" + __nn(__idx(map, "b"));
   }
   _bitwiseText() {
     const a = 6;

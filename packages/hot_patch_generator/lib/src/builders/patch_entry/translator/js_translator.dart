@@ -97,7 +97,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       base = e.prefix.name;
     }
     if (base == null) return null;
-    final member = e.identifier.name;
+    final member = _mapPropertyMember(e.prefix, e.identifier.name, scope, classes);
     // `obj.method` 值位置：方法 tear-off 需绑定接收者（getter 是值读取；
     // 类型不可判定时保持原样，不按名字猜）。
     final tear = _tearOffMemberJs(
@@ -238,6 +238,9 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   if (e is CascadeExpression) {
     final t = exprToJs(e.target, scope, classes);
     if (t == null) return null;
+    // 级联 target 的根级下标读写：Map → get/set；类型不可判定 → 运行时
+    // `__idx` / `__idxSet`（Map 与普通对象都可用）。
+    final cascadeType = _staticTypeOf(e.target, scope, classes);
     final stmts = <String>[];
     for (final s in e.cascadeSections) {
       if (s is MethodInvocation) {
@@ -257,10 +260,21 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
         // 为根（级联 target 已只求值一次），落成 IIFE 内的一条语句；赋值结果
         // 不作为级联结果（级联结果恒为 target 本身）。`~/=` 与普通赋值位置的
         // 展开口径一致。
-        final ref = _cascadeRefJs(s.leftHandSide, scope, classes);
-        final rhs = rhsToJs(s.rightHandSide, scope, classes);
-        if (ref == null || rhs == null) return null;
+        final lhs = s.leftHandSide;
         final op = s.operator.lexeme;
+        final rhs = rhsToJs(s.rightHandSide, scope, classes);
+        if (rhs == null) return null;
+        if (op == '=' &&
+            lhs is IndexExpression &&
+            lhs.target == null &&
+            cascadeType == 'Map') {
+          final idx = exprToJs(lhs.index, scope, classes);
+          if (idx == null) return null;
+          stmts.add('__idxSet(_t, $idx, $rhs)');
+          continue;
+        }
+        final ref = _cascadeRefJs(lhs, scope, classes);
+        if (ref == null) return null;
         stmts.add(op == '~/='
             ? '$ref = Math.trunc($ref / $rhs)'
             : '$ref $op $rhs');
@@ -268,6 +282,12 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
           s is IndexExpression) {
         // 级联里**读**访问 `..x` / `..a.b` / `..[i]`：同样以 `_t` 为根展开，
         // 多级链（`..a.b`）不会丢掉中间层。
+        if (s is IndexExpression && s.target == null && cascadeType == 'Map') {
+          final idx = exprToJs(s.index, scope, classes);
+          if (idx == null) return null;
+          stmts.add('__idx(_t, $idx)');
+          continue;
+        }
         final ref = _cascadeRefJs(s, scope, classes);
         if (ref == null) return null;
         stmts.add(ref);
@@ -381,7 +401,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   if (e is PropertyAccess && e.target != null) {
     final t = exprToJs(e.target!, scope, classes);
     if (t == null) return null;
-    final member = e.propertyName.name;
+    final member = _mapPropertyMember(e.target!, e.propertyName.name, scope, classes);
     // 空安全属性访问 `a?.b` → JS 原生可选链：与 Dart 源码 1:1，且链式
     // （`a?.b?.c` / `a?.b.c`）的「接收者单次求值 + 整链短路」由 JS 语义天然
     // 保证。旧的 `($t == null ? null : $t.b)` 展开在链上会重复求值接收者，
@@ -422,10 +442,17 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       final get = operatorJsName('[]', unary: false)!;
       return e.isNullAware ? '$t?.$get($i)' : '$t.$get($i)';
     }
+    // Map 下标：原生 JS Map 只有 `get`；但声明为 Map 的值也可能来自宿主回包
+    // （普通对象），故统一走 `__idx`（Map → get，普通对象 → 下标）。
+    // 其它类型（List / 项目类 / 不可判定）**一律保持原生下标**。
+    final type = _staticTypeOf(tgt, scope, classes);
     // `a?[i]` → JS 原生可选下标 `a?.[i]`：接收者为 null / undefined 时整个
     // 表达式短路，且下标**不求值**（与 Dart 语义一致）。这里不能包 `__nn`：
     // 可选链可能继续被外层选择器链住（`a?[i].x` 在 a 为 null 时应整链短路）。
-    if (e.isNullAware) return '$t?.[$i]';
+    if (e.isNullAware) {
+      return type == 'Map' ? '$t?.get($i)' : '$t?.[$i]';
+    }
+    if (type == 'Map') return '__idx($t, $i)';
     // Map 未命中的 undefined → null 归一放在**值位置**（初始化器 / 赋值右侧 /
     // 实参 / 返回 / 插值，见 [rhsToJs] / [_stringInterpolationJs]），不在读取
     // 本身统一包：`for (x of m[k])` 对 null 与 undefined 同样 TypeError，包了
@@ -618,9 +645,11 @@ String? _collectionLiteralJs(
       final k = rhsToJs(el.key, scope, classes);
       final v = rhsToJs(el.value, scope, classes);
       if (k == null || v == null) return null;
-      parts.add('$k: $v');
+      parts.add('[$k, $v]');
     }
-    return '{${parts.join(', ')}}';
+    // Dart `Map` 字面量 → 原生 JS `Map`：`{k: v}` → `new Map([[k, v], …])`。
+    // 下标由生成器翻成 `get` / `set`；宿主桥序列化由 `Map.prototype.toJSON` 还原。
+    return parts.isEmpty ? 'new Map()' : 'new Map([${parts.join(', ')}])';
   }
   final items = _listLiteralJs(entries, scope, classes);
   return items == null ? null : 'new Set($items)';
@@ -815,6 +844,22 @@ String? valueCtorJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
+  // 标准库 `Map` 的实例构造：Map 在 JS 侧是普通对象，没有 JS `Map` 构造语义。
+  //   - `Map()` / `Map<K, V>()` → `{}`（空对象）；
+  //   - `Map.from(other)` / `Map.of(other)` → `__mapFrom(other)`（浅拷贝）。
+  // 这是「内建类型 + 成员名」的固定映射表项，只对可判定为 SDK `Map` 的构造生效。
+  if (e is InstanceCreationExpression) {
+    final typeName = e.constructorName.type.name2.lexeme;
+    if (typeName == 'Map') {
+      final ctor = e.constructorName.name?.name;
+      final args = e.argumentList.arguments;
+      if (ctor == null && args.isEmpty) return 'new Map()';
+      if ((ctor == 'from' || ctor == 'of') && args.length == 1) {
+        final v = rhsToJs(args.first, scope, classes);
+        return v == null ? null : 'new Map($v)';
+      }
+    }
+  }
   String? cls;
   String? ctorName;
   List<Expression> args = const [];
@@ -1466,6 +1511,15 @@ String? _methodCallJs(
   final tailJs = [...namedJs, if (keepTypeArgs) typeArgsJs];
   // 位置实参原样，具名实参（与类型实参）合并成**尾参对象**（与构造
   // `new X({...})` 同形）；无尾参时不加空对象（`f()` 保持 `f()`）。
+  // Map 的 `forEach`：原生 Map 回调是 (value, key)，Dart 是 (key, value)。
+  // 不覆盖原生方法，只在调用点把回调参数交换后转发。
+  if (e.methodName.name == 'forEach' &&
+      e.target != null &&
+      argJs.length == 1 &&
+      namedJs.isEmpty &&
+      _staticTypeOf(e.target!, scope, classes) == 'Map') {
+    argJs[0] = '((__v, __k) => (${argJs[0]})(__k, __v))';
+  }
   final passed = [
     ...argJs,
     if (tailJs.isNotEmpty) '{ ${tailJs.join(', ')} }',
@@ -1576,6 +1630,30 @@ String _memberCallName(
     if (member == 'sort') return '_sort';
     if (member == 'join') return '_join';
     if (member == 'indexOf') return '_indexOf';
+  }
+  // Map 的 `forEach` 由运行时覆盖成 Dart 语义（回调 key, value），保持同名；
+  // 只有属性 vs 方法的冲突（keys / values / entries）才见 [_mapPropertyMember]。
+  return member;
+}
+
+/// Map 的**属性成员**映射：JS Map 的 `keys` / `values` / `entries` 是**方法**
+/// （且返回迭代器），Dart 是**属性**——同名但语义不同，改用运行时的 `_` 前缀
+/// getter（`Map.prototype._keys` 等）。`length` / `isEmpty` / `isNotEmpty` 在
+/// JS Map 上不存在，运行时直接补同名 getter，无需改名。
+String _mapPropertyMember(
+  Expression receiver,
+  String member,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (_staticTypeOf(receiver, scope, classes) != 'Map') return member;
+  switch (member) {
+    case 'keys':
+      return '_keys';
+    case 'values':
+      return '_values';
+    case 'entries':
+      return '_entries';
   }
   return member;
 }
@@ -1717,6 +1795,21 @@ String? _assignValueJs(
         '($recv, $indexJs, $rhs)';
   }
 
+  // Map 下标写：类型可判定为 Map → `set`；不可判定 → `__idxSet`。
+  if (lhs is IndexExpression &&
+      op == '=' &&
+      _operatorOwnerOf(target, '[]=', scope, classes) == null) {
+    if (_staticTypeOf(target, scope, classes) == 'Map') {
+      if (nullAware) {
+        return '((__t) => { if (__t == null) return null; '
+            'const __v = $rhs; __idxSet(__t, $indexJs, __v); '
+            'return __v; })($recv)';
+      }
+      return '((__t, __i, __v) => { __idxSet(__t, __i, __v); return __v; })'
+          '($recv, $indexJs, $rhs)';
+    }
+  }
+
   // `~/=`：JS 没有该运算符，展开为「读 → 算 → 写」，表达式值即写入值。
   if (op == '~/=') {
     if (nullAware) {
@@ -1830,6 +1923,20 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
             '__t.$set($index, $rhs); })($recv);';
       }
       return '$recv.$set($index, $rhs);';
+    }
+    // Map 下标写：类型可判定为 Map → `set`；不可判定 → `__idxSet`。
+    if (lhs is IndexExpression &&
+        e.operator.lexeme == '=' &&
+        _operatorOwnerOf(target, '[]=', scope, classes) == null) {
+      if (_staticTypeOf(target, scope, classes) == 'Map') {
+        final index = exprToJs(lhs.index, scope, classes);
+        final rhs = rhsToJs(e.rightHandSide, scope, classes);
+        if (index == null || rhs == null) return null;
+        if (_chainHasNullAware(e.leftHandSide)) {
+          return '((__t) => { if (__t != null) __idxSet(__t, $index, $rhs); })($recv);';
+        }
+        return '__idxSet($recv, $index, $rhs);';
+      }
     }
     final String member;
     final String? indexJs;
@@ -2109,6 +2216,14 @@ String? _rawExprType(
   if (e is PropertyAccess && e.target != null) {
     return _rawMemberType(e.target!, e.propertyName.name, scope, classes);
   }
+  // `Map<K,V>.of(x)` 之类的构造：擦除类型实参后的类名，供局部变量类型推断
+  // （`final m = Map.of(src)` 之后的 `m.keys` / `m[k]` 才能按 Map 映射）。
+  if (e is InstanceCreationExpression) {
+    var src = e.constructorName.type.toSource();
+    final lt = src.indexOf('<');
+    if (lt >= 0) src = src.substring(0, lt);
+    return src.trim();
+  }
   return null;
 }
 
@@ -2380,13 +2495,14 @@ String translateStmtList(
       for (final v in s.variables.variables) {
         final name = v.name.lexeme;
         // 同步登记到 widget 层：方法体里随后 `return Text('$name')` 时，
-        // widget 翻译器要用同一份局部变量表解析标识符（与语句翻译同源）。
-        renderer?.registerLocal(name);
+        // widget 翻译器要用同一份局部变量表解析标识符（与语句翻译同源）；
+        // 类型一并登记，树里的 `m._keys` / `m[k]` 才能按 Map 接收者改写。
         if (v.initializer == null) {
           out.add('${ind}$keyword $name = null;');
           scope.localVars.add(name);
           final declared = s.variables.type?.toSource();
           if (declared != null) scope.localTypes[name] = declared;
+          renderer?.registerLocal(name, type: declared);
           continue;
         }
         // 初始化器单独用一份作用域（[FieldScope.forInitializer]）：把**已登记
@@ -2422,6 +2538,7 @@ String translateStmtList(
             _rawExprType(v.initializer!, scope, classes) ??
             _staticTypeOf(v.initializer!, scope, classes);
         if (inferred != null) scope.localTypes[name] = inferred;
+        renderer?.registerLocal(name, type: inferred);
         // 该局部只是「字段 / getter 的别名」（`final list = _list;` →
         // `this._list`）：登记进 widget 层，懒加载 builder 抽成实例方法后引用它
         // 时才能落到 `this._list`，而不是未定义的自由变量（`ReferenceError`）。

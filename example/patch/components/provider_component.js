@@ -21,7 +21,7 @@ export class ProviderCard extends StatefulWidget {
     this._modelA.reset();
   }
   _loadUser() {
-    this._modelB.loadUserInfo({ "params": {"h": 1} });
+    this._modelB.loadUserInfo({ "params": new Map([["h", 1]]) });
   }
   build(context) {
     return new Card({

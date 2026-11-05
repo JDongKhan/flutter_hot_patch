@@ -23,10 +23,10 @@ export class AppService {
   constructor() {
   }
   async _request(url) {
-    return await Network.post({ "url": url, "params": {"api": url} });
+    return await Network.post({ "url": url, "params": new Map([["api", url]]) });
   }
   async _requestQuery(url, query) {
-    return await Network.post({ "url": url, "params": {"api": url, "query": query} });
+    return await Network.post({ "url": url, "params": new Map([["api", url], ["query", query]]) });
   }
   async fetchAppTabs() {
     const data = await this._request("/app/tabs");
@@ -84,7 +84,7 @@ export class AppService {
     return all.where((r) => { return (r.tab === tab); }).toList();
   }
   async fetchPostList(tab, sort, type, dist, price) {
-    const data = await this._requestQuery("/app/posts", {"tab": tab, "sort": sort, "type": type, "dist": dist, "price": price});
+    const data = await this._requestQuery("/app/posts", new Map([["tab", tab], ["sort", sort], ["type", type], ["dist", dist], ["price", price]]));
     return this._postListOf(this._posts(data["list"]), tab, sort, type);
   }
   async fetchNotifications() {
@@ -100,7 +100,7 @@ export class AppService {
     return OrderFeed.fromJson(data);
   }
   async fetchOrderList(status) {
-    const data = await this._requestQuery("/app/orders/list", {"status": status});
+    const data = await this._requestQuery("/app/orders/list", new Map([["status", status]]));
     return this._orderListOf(this._orders(data["list"]), status);
   }
   async fetchMine() {
@@ -111,12 +111,12 @@ export class AppService {
     const data = await this._request("/app/search");
     const home = await this._request("/app/home");
     const entry = this._cityOf(home["cities"], "");
-    return SearchFeed.fromJson({"hot": data["hot"], "guesses": entry["spots"]});
+    return SearchFeed.fromJson(new Map([["hot", data["hot"]], ["guesses", entry["spots"]]]));
   }
   async fetchResource(id) {
     const community = await this._request("/app/community");
     const posts = await this._request("/app/posts");
-    return ResourceFeed.fromJson({"resource": this._resourceJsonOf(community["resources"], id), "related": posts["list"]});
+    return ResourceFeed.fromJson(new Map([["resource", this._resourceJsonOf(community["resources"], id)], ["related", posts["list"]]]));
   }
   async fetchSpot(id) {
     const data = await this._request("/app/home");

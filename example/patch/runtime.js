@@ -102,6 +102,109 @@ if (typeof G.__mod !== 'function') {
     return r < 0 ? r + Math.abs(b) : r;
   };
 }
+// 下标读写的承载兼容：静态类型可判定时生成器直接发 `m.get/set`（Map）或
+// `a[i]`（List / 项目类）；**类型不可判定**时走这两个运行期入口——宿主回包 /
+// `dynamic` 数据可能是原生 Map，也可能是普通对象，两者都要按 Dart 下标语义工作。
+if (typeof G.__idx !== 'function') {
+  G.__idx = function (o, k) {
+  var v = o instanceof Map ? o.get(k) : o[k];
+  return v === undefined ? null : v;
+};
+}
+if (typeof G.__idxSet !== 'function') {
+  G.__idxSet = function (o, k, v) {
+    if (o instanceof Map) { o.set(k, v); } else { o[k] = v; }
+    return v;
+  };
+}
+
+//   - Map.prototype：Dart `Map` 的承载就是 JS `Map`（字面量 → `new Map([[k, v]])`，
+//     下标 `m[k]` / `m[k] = v` 由生成器翻成 `get` / `set`）。
+//       * JS 缺同名 → 补同名（`length` / `remove` / `containsKey` / `update` …）；
+//       * JS 有同名但语义不同：`keys`/`values`/`entries` 是方法（Dart 是属性）
+//         → 挂 `_` 前缀 getter；`forEach` 回调顺序由翻译层交换参数，运行时
+//         保持原生实现；
+//       * `clear` 原生同名同义，不动；
+//       * `toJSON` 只服务宿主桥：`JSON.stringify(Map)` 默认是 `{}`。
+var __mapNativeForEach = Map.prototype.forEach;
+__defineProtoGetter(Map.prototype, {
+  length: function () { return this.size; },
+  _keys: function () { return Array.from(this.keys()); },
+  _values: function () { return Array.from(this.values()); },
+  // Dart `entries` 的元素是 MapEntry（`.key` / `.value`）。
+  _entries: function () {
+    var out = [];
+    __mapNativeForEach.call(this, function (v, k) {
+      out.push({ key: k, value: v });
+    });
+    return out;
+  },
+  isEmpty: function () { return this.size === 0; },
+  isNotEmpty: function () { return this.size > 0; }
+});
+__defineProtoMember(Map.prototype, {
+  // `remove(k)`：Dart 返回被删除的值（不存在返回 null）。
+  remove: function (k) {
+    if (!this.has(k)) { return null; }
+    var v = this.get(k);
+    this.delete(k);
+    return v;
+  },
+  containsKey: function (k) { return this.has(k); },
+  containsValue: function (v) {
+    var found = false;
+    __mapNativeForEach.call(this, function (el) {
+      if (el === v ||
+          (el != null && typeof el.__op$eq === 'function' && el.__op$eq(v))) {
+        found = true;
+      }
+    });
+    return found;
+  },
+  putIfAbsent: function (k, f) {
+    if (!this.has(k)) { this.set(k, f()); }
+    return this.get(k);
+  },
+  // `update(k, f, {ifAbsent})`：存在则更新并返回新值；不存在走 ifAbsent，
+  // 没有 ifAbsent 则抛 ArgumentError（与 Dart 一致）。
+  update: function (k, f, opts) {
+    if (this.has(k)) {
+      var v = f(this.get(k));
+      this.set(k, v);
+      return v;
+    }
+    var absent = opts && opts.ifAbsent;
+    if (typeof absent === 'function') {
+      var nv = absent();
+      this.set(k, nv);
+      return nv;
+    }
+    throw new Error('ArgumentError: Key not in map: ' + k);
+  },
+  addAll: function (other) {
+    var self = this;
+    if (other instanceof Map) {
+      __mapNativeForEach.call(other, function (v, k) { self.set(k, v); });
+      return;
+    }
+    // 宿主回包 / dynamic 传进来的普通对象也按 Dart Map 语义复制。
+    var ks = Object.keys(other);
+    for (var i = 0; i < ks.length; i++) { self.set(ks[i], other[ks[i]]); }
+  },
+  removeWhere: function (f) {
+    var out = [];
+    __mapNativeForEach.call(this, function (v, k) {
+      if (f(k, v)) { out.push(k); }
+    });
+    for (var i = 0; i < out.length; i++) { this.delete(out[i]); }
+  },
+  toJSON: function () {
+    var o = {};
+    __mapNativeForEach.call(this, function (v, k) { o[k] = v; });
+    return o;
+  }
+});
+
 
   var __idSeq = 0;
   var __HOST = 1, __COMP = 2;
@@ -189,13 +292,13 @@ if (typeof G.__mod !== 'function') {
   }
   //   - Array.prototype：数组在 JS 侧就是 List。`clear` 是 Dart `List.clear()`
   //     的**原地**清空（保持数组实例，故 `final` 列表也能清；返回 void）。
-  //     「已知缺口（未补）：Dart `Map` 字面量在 JS 侧是**普通对象**（不是 Map
-  //     实例），故 `Map.clear()` 无处可挂（挂 Object.prototype 影响面过大），
-  //     需要时得按「字段类型是 Map」在翻译层分发；Dart `Set` 字面量翻成
-  //     `new Set([...])`，JS Set 自带 clear()，无需处理。」
   //     Dart 同名成员（`first` / `where` / `add` / `removeAt` / `insert` /
   //     `toList` / `isEmpty` …）生成器不再按名字改写，原样产出，由本表按接收者
   //     类型补齐同名同义实现。
+  //     Map 不走本表：Map 字面量是普通对象，挂 Object.prototype 影响面过大
+  //     （项目规则禁止），成员改由生成器按「接收者静态类型 = Map + 成员名」
+  //     映射到 `G.__map*` 自由函数（定义在运行时头部）；Set 字面量翻成
+  //     `new Set([...])`，JS Set 自带 `clear`，无需处理。
   __defineProtoMember(Array.prototype, {
     clear: function () { this.length = 0; },
     where: function (predicate) {
@@ -310,10 +413,10 @@ if (typeof G.__mod !== 'function') {
       if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
       return this.slice(n < this.length ? n : this.length);
     },
-    // Dart `asMap()`：索引 → 值的 Map（项目 Map 形态是普通对象）。
+    // Dart `asMap()`：索引 → 值的 Map（原生 JS Map）。
     asMap: function () {
-      var m = {};
-      for (var i = 0; i < this.length; i++) { m[i] = this[i]; }
+      var m = new Map();
+      for (var i = 0; i < this.length; i++) { m.set(i, this[i]); }
       return m;
     },
     // Dart `elementAt(i)`：越界抛 RangeError（原生下标只会返回 undefined）。

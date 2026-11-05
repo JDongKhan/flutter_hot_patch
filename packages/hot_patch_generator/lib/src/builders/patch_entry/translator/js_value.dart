@@ -681,7 +681,9 @@ abstract class ExprRenderer {
   /// 方法体内声明的局部变量（`final isAdult = ...;`）→ 登记进 widget 层局部表。
   /// 方法体翻译与 widget 渲染必须共用同一份标识符作用域，否则返回的 widget
   /// 树里引用局部变量时会解析失败。
-  void registerLocal(String name);
+  /// [type] 是局部变量的源码类型（含泛型 / `?`）：widget 层按接收者类型做
+  /// 成员映射（Map 的 `_keys` / `m[k]` 等）时要用它，缺省表示不可判定。
+  void registerLocal(String name, {String? type});
 
   /// 把「字段/ getter 的局部别名」（`final list = _list;` → `this._list`）登记
   /// 进 widget 层：抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用该
