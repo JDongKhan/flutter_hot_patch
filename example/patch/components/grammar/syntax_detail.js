@@ -4,7 +4,34 @@
 
 import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, FormatException, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StateError, StatefulWidget, Text, TextStyle, int, num } from '../../flutter.js';
 
-export const TaskLevel = (function () { const __values = []; function __mk(name, index) { return { name: name, index: index, toString: function () { return "TaskLevel." + name; } }; } const low = __mk("low", 0); __values.push(low); const medium = __mk("medium", 1); __values.push(medium); const high = __mk("high", 2); __values.push(high); return { low: low, medium: medium, high: high, values: __values, byName: function (name) { for (var i = 0; i < __values.length; i++) { if (__values[i].name === name) return __values[i]; } throw new Error("Invalid argument(s): Invalid value: " + name); } }; })();
+export const TaskLevel = (function () {
+  const __values = [];
+  function __mk(name, index) {
+    return {
+      name: name,
+      index: index,
+      toString: function () { return "TaskLevel." + name; }
+    };
+  }
+  const low = __mk("low", 0);
+  __values.push(low);
+  const medium = __mk("medium", 1);
+  __values.push(medium);
+  const high = __mk("high", 2);
+  __values.push(high);
+  return {
+    low: low,
+    medium: medium,
+    high: high,
+    values: __values,
+    byName: function (name) {
+      for (var i = 0; i < __values.length; i++) {
+        if (__values[i].name === name) { return __values[i]; }
+      }
+      throw new Error("Invalid argument(s): Invalid value: " + name);
+    }
+  };
+})();
 
 // 模型 BaseVehicle
 export class BaseVehicle {

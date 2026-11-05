@@ -238,14 +238,23 @@ String renderTopLevelConstBody(Map<String, String> consts) {
 ///
 /// `enum E { a, b }` →
 /// ```
-/// (function () {
+/// export const E = (function () {
 ///   const __values = [];
-///   function __mk(name, index) { return { name: name, index: index,
-///     toString: function () { return "E." + name; } }; }
-///   const a = __mk("a", 0); __values.push(a);
-///   const b = __mk("b", 1); __values.push(b);
-///   return { a: a, b: b, values: __values };
-/// })()
+///   function __mk(name, index) {
+///     return { name: name, index: index,
+///       toString: function () { return "E." + name; } };
+///   }
+///   const a = __mk("a", 0);
+///   __values.push(a);
+///   const b = __mk("b", 1);
+///   __values.push(b);
+///   return {
+///     a: a,
+///     b: b,
+///     values: __values,
+///     byName: function (name) { ... }
+///   };
+/// })();
 /// ```
 ///
 /// 覆盖 Dart 枚举的公共形态：`E.a` 常量、`switch (e) { case E.a: }`（同一对象
@@ -270,24 +279,35 @@ String? _enumJs(EnumDeclaration d, String file) {
       return null;
     }
   }
-  final b = StringBuffer('(function () { ');
-  b.write('const __values = []; ');
-  b.write('function __mk(name, index) { return { name: name, index: index, '
-      'toString: function () { return ${jsString('$name.')} + name; } }; } ');
+  final b = StringBuffer('(function () {\n');
+  b.write('  const __values = [];\n');
+  b.write('  function __mk(name, index) {\n');
+  b.write('    return {\n');
+  b.write('      name: name,\n');
+  b.write('      index: index,\n');
+  b.write('      toString: function () { return ${jsString('$name.')} + name; }\n');
+  b.write('    };\n');
+  b.write('  }\n');
   for (final (i, c) in d.constants.indexed) {
     final n = c.name.lexeme;
-    b.write('const $n = __mk(${jsString(n)}, $i); __values.push($n); ');
+    b.write('  const $n = __mk(${jsString(n)}, $i);\n');
+    b.write('  __values.push($n);\n');
   }
-  b.write('return { ');
+  b.write('  return {\n');
   for (final c in d.constants) {
-    b.write('${c.name.lexeme}: ${c.name.lexeme}, ');
+    b.write('    ${c.name.lexeme}: ${c.name.lexeme},\n');
   }
-  b.write('values: __values, ');
+  b.write('    values: __values,\n');
   // Dart `E.values.byName('x')`（EnumByName 扩展）→ `E.byName('x')`：
   // 生成侧把 byName 挂到枚举常量对象上（找不到抛错，与 Dart 的 ArgumentError 同义）。
-  b.write('byName: function (name) { for (var i = 0; i < __values.length; i++) { '
-      'if (__values[i].name === name) return __values[i]; } '
-      'throw new Error("Invalid argument(s): Invalid value: " + name); } }; })()');
+  b.write('    byName: function (name) {\n');
+  b.write('      for (var i = 0; i < __values.length; i++) {\n');
+  b.write('        if (__values[i].name === name) { return __values[i]; }\n');
+  b.write('      }\n');
+  b.write('      throw new Error("Invalid argument(s): Invalid value: " + name);\n');
+  b.write('    }\n');
+  b.write('  };\n');
+  b.write('})()');
   return b.toString();
 }
 
