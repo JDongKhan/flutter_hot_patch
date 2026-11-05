@@ -2002,6 +2002,12 @@ String? _switchStatementJs(
   int depth,
   bool returnsWidget,
 ) {
+  // 非常量模式 / 带 guard 的 case 无法用 JS `switch` 表达，走同一条模式 if 链；
+  // 纯常量 switch 保持原有 JS switch 产物（老路径行为不变）。
+  if (_switchStatementNeedsPatternPath(s)) {
+    return _patternSwitchStatementJs(
+        s, scope, classes, renderer, depth, returnsWidget);
+  }
   final subj = exprToJs(s.expression, scope, classes);
   if (subj == null) return null;
   final ind = '  ' * depth;
@@ -2065,6 +2071,9 @@ String? _switchExpressionJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
+  if (_switchExpressionNeedsPatternPath(e)) {
+    return _patternSwitchExpressionJs(e, scope, classes);
+  }
   final subj = exprToJs(e.expression, scope, classes);
   if (subj == null) return null;
   final arms = <String>[];
@@ -2087,6 +2096,200 @@ String? _switchExpressionJs(
   }
   if (arms.isEmpty) return null;
   return '(() => { switch ($subj) {\n${arms.join('\n')}\n} })()';
+}
+
+/// switch 语句是否需要模式路径（带 guard / 非常量模式）。
+bool _switchStatementNeedsPatternPath(SwitchStatement s) {
+  for (final m in s.members) {
+    if (m is SwitchPatternCase) {
+      if (m.guardedPattern.whenClause != null) return true;
+      final p = m.guardedPattern.pattern;
+      if (p is! WildcardPattern && p is! ConstantPattern) return true;
+    } else if (m is SwitchDefault || m is SwitchCase) {
+      continue;
+    } else {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _switchExpressionNeedsPatternPath(SwitchExpression e) {
+  for (final c in e.cases) {
+    if (c.guardedPattern.whenClause != null) return true;
+    final p = c.guardedPattern.pattern;
+    if (p is! WildcardPattern && p is! ConstantPattern) return true;
+  }
+  return false;
+}
+
+/// 模式 switch 语句 → **原生 JS `switch`**（`switch (true)` + case 条件 IIFE）。
+///
+/// JS 的 `case` 只能做常量比较，模式匹配 / `when` 守卫用条件表达：把每个 case
+/// 的条件落成 `case (() => { <检查 + 绑定> })():`，仍保持原生 switch 的语义——
+/// 条件按源码顺序求值、命中即进入对应 body、连续空 case 自然贯穿、
+/// `default` 仅在无 case 命中时进入、body 里的 `break` / `continue` 原样有效。
+///
+/// ```js
+/// {
+///   const __v0 = <expr>;
+///   let title;
+///   switch (true) {
+///     case (() => { …绑定…; return guard; })():
+///       <body>
+///       break;
+///     default:
+///       <body>
+///   }
+/// }
+/// ```
+String? _patternSwitchStatementJs(
+  SwitchStatement s,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+  ExprRenderer? renderer,
+  int depth,
+  bool returnsWidget,
+) {
+  final subj = exprToJs(s.expression, scope, classes);
+  if (subj == null) return null;
+  for (final m in s.members) {
+    if (m.labels.isNotEmpty) return null;
+  }
+  final ind = '  ' * depth;
+  final caseInd = '  ' * (depth + 1);
+  final before = {...scope.localVars};
+  // 先算每个成员的条件与绑定名（两遍）：绑定统一在外层 `let` 声明，case 条件
+  // 的 IIFE 赋值、body 直接读取，因此第一遍只收集条件，第二遍翻译 body。
+  final conds = <String?>[];
+  final namesByMember = <List<String>>[];
+  for (final member in s.members) {
+    String? cond;
+    var names = const <String>[];
+    if (member is SwitchPatternCase) {
+      final gp = member.guardedPattern;
+      final p = _PatternPlan();
+      final scopeBefore = {...scope.localVars};
+      if (!_compilePatternWithGuard(
+          gp.pattern, gp.whenClause?.expression, p, scope, classes)) {
+        scope.localVars
+          ..clear()
+          ..addAll(scopeBefore);
+        return null;
+      }
+      if (gp.whenClause == null) p.lines.add('return true;');
+      scope.localVars
+        ..clear()
+        ..addAll(scopeBefore);
+      cond = '(() => { ${p.lines.join(' ')} })()';
+      names = p.names;
+    } else if (member is SwitchCase) {
+      final v = exprToJs(member.expression, scope, classes);
+      if (v == null) return null;
+      cond = '(() => { if (!(__v0 === $v)) return false; return true; })()';
+    } else if (member is! SwitchDefault) {
+      return null;
+    }
+    conds.add(cond);
+    namesByMember.add(names);
+  }
+  final allNames = <String>{for (final n in namesByMember) ...n};
+  final lines = <String>[
+    '$ind{',
+    '${ind}  const __v0 = $subj;',
+    if (allNames.isNotEmpty) '${ind}  let ${allNames.join(', ')};',
+    '${ind}  switch (true) {',
+  ];
+  for (var i = 0; i < s.members.length; i++) {
+    final member = s.members[i];
+    final cond = conds[i];
+    lines.add('$caseInd${cond == null ? 'default:' : 'case $cond:'}');
+    // 空 case 不产生语句：JS switch 会贯穿到下一个 case 的 body（与 Dart 多个
+    // case 共享 body 的写法一致）。
+    if (member.statements.isEmpty) continue;
+    scope.localVars.addAll(namesByMember[i]);
+    for (final st in member.statements) {
+      final js = translateStmtList([st], scope, classes, renderer,
+          depth: depth + 2, returnsWidget: returnsWidget);
+      if (js.isEmpty) {
+        scope.localVars
+          ..clear()
+          ..addAll(before);
+        return null;
+      }
+      lines.add(js);
+    }
+    scope.localVars
+      ..clear()
+      ..addAll(before);
+    final last = member.statements.last;
+    final terminated = last is ReturnStatement ||
+        last is BreakStatement ||
+        last is ContinueStatement ||
+        (last is ExpressionStatement && last.expression is ThrowExpression);
+    if (!terminated) lines.add('$caseInd' 'break;');
+  }
+  lines.add('${ind}  }');
+  lines.add('$ind}');
+  return lines.join('\n');
+}
+
+/// 模式 switch 表达式 → IIFE 内的原生 `switch (true)`：
+///
+/// ```js
+/// (() => {
+///   const __v0 = <expr>;
+///   let title;
+///   switch (true) {
+///     case (() => { …; return guard; })(): return <值>;
+///     default: throw new Error("switch 表达式未匹配：…");
+///   }
+/// })()
+/// ```
+/// Dart 的 switch 表达式要求穷尽，`default` 抛错只作兜底（合法源码不会走到）。
+String? _patternSwitchExpressionJs(
+  SwitchExpression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final subj = exprToJs(e.expression, scope, classes);
+  if (subj == null) return null;
+  final conds = <String>[];
+  final namesByArm = <List<String>>[];
+  final values = <String>[];
+  for (final c in e.cases) {
+    final gp = c.guardedPattern;
+    final p = _PatternPlan();
+    final scopeBefore = {...scope.localVars};
+    if (!_compilePatternWithGuard(
+        gp.pattern, gp.whenClause?.expression, p, scope, classes)) {
+      scope.localVars
+        ..clear()
+        ..addAll(scopeBefore);
+      return null;
+    }
+    if (gp.whenClause == null) p.lines.add('return true;');
+    scope.localVars.addAll(p.names);
+    final v = rhsToJs(c.expression, scope, classes);
+    scope.localVars
+      ..clear()
+      ..addAll(scopeBefore);
+    if (v == null) return null;
+    conds.add('(() => { ${p.lines.join(' ')} })()');
+    namesByArm.add(p.names);
+    values.add(v);
+  }
+  final allNames = <String>{for (final n in namesByArm) ...n};
+  final b = StringBuffer('(() => {\n  const __v0 = $subj;\n');
+  if (allNames.isNotEmpty) b.write('  let ${allNames.join(', ')};\n');
+  b.write('  switch (true) {\n');
+  for (var i = 0; i < e.cases.length; i++) {
+    b.write('    case ${conds[i]}: return ${values[i]};\n');
+  }
+  b.write('    default: throw new Error('
+      '${jsString('switch 表达式未匹配：${e.toSource()}')});\n');
+  b.write('  }\n})()');
+  return b.toString();
 }
 
 /// 一条表达式语句 → JS：`setState(...)` 展开为 `this.setState(() => {...})`，

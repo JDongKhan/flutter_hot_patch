@@ -149,6 +149,31 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '局部函数：twice($score)=${twice(score)} / ${grade(score)}';
   }
 
+  /// switch 表达式：对象模式 + guard（`_` / 常量之外的模式以前会被丢弃）。
+  String _switchExprText() {
+    final task = _task;
+    final label = switch (task) {
+      TaskItem(title: final title, score: final score) when score >= 100 =>
+        '$title（满分 $score）',
+      TaskItem(title: final title) => title,
+      null => '未生成',
+    };
+    return 'switch 表达式：$label';
+  }
+
+  /// switch 语句：关系模式 + default（body 里直接 return）。
+  String _switchStmtText() {
+    final score = _task?.score ?? 0;
+    switch (score) {
+      case > 100 && < 200:
+        return 'switch 语句：高分';
+      case > 0:
+        return 'switch 语句：普通';
+      default:
+        return 'switch 语句：无分';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final task = _task;
@@ -179,6 +204,8 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_destructureText()),
           Text(_rangeText()),
           Text(_localFuncText()),
+          Text(_switchExprText()),
+          Text(_switchStmtText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

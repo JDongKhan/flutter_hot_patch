@@ -208,6 +208,34 @@ export class SyntaxDetail extends StatefulWidget {
     var score = (this._task?.score ?? 0);
     return "局部函数：twice(" + score + ")=" + twice(score) + " / " + grade(score);
   }
+  _switchExprText() {
+    var task = this._task;
+    var label = (() => {
+      const __v0 = task;
+      let title, score;
+      switch (true) {
+        case (() => { if (!(__v0 instanceof TaskItem)) return false; const __v1 = __v0.title; title = __v1; const __v2 = __v0.score; score = __v2; return ((score >= 100)); })(): return title + "（满分 " + score + "）";
+        case (() => { if (!(__v0 instanceof TaskItem)) return false; const __v1 = __v0.title; title = __v1; return true; })(): return title;
+        case (() => { if (!(__v0 === null)) return false; return true; })(): return "未生成";
+        default: throw new Error("switch 表达式未匹配：switch (task) {TaskItem(title: final title, score: final score) when score >= 100 => '$title（满分 $score）', TaskItem(title: final title) => title, null => '未生成'}");
+      }
+    })();
+    return "switch 表达式：" + label;
+  }
+  _switchStmtText() {
+    var score = (this._task?.score ?? 0);
+    {
+      const __v0 = score;
+      switch (true) {
+        case (() => { if (!(__v0 > 100)) return false; if (!(__v0 < 200)) return false; return true; })():
+        return "switch 语句：高分";
+        case (() => { if (!(__v0 > 0)) return false; return true; })():
+        return "switch 语句：普通";
+        default:
+        return "switch 语句：无分";
+      }
+    }
+  }
   build(context) {
     var task = this._task;
     return new Padding({
@@ -262,6 +290,12 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._localFuncText()
+          }),
+          new Text({
+            "data": this._switchExprText()
+          }),
+          new Text({
+            "data": this._switchStmtText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
