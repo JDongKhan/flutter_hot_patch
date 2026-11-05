@@ -112,6 +112,9 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     }
     return parts.join(' + ');
   }
+  // 赋值出现在**表达式位置**（`while ((x = f()) < n)` / `if ((v = f()) != null)`）：
+  // 统一走 [_assignValueJs]（值语义见该函数；语句位置仍是 [exprStmtToJs]）。
+  if (e is AssignmentExpression) return _assignValueJs(e, scope, classes);
   // `a ?? b` → JS 原生空值合并（方法体内如 `_switchOn = v ?? false`）
   if (e is BinaryExpression && e.operator.lexeme == '??') {
     final l = exprToJs(e.leftOperand, scope, classes);
@@ -1332,6 +1335,88 @@ String? _compoundAssignJs(String lhsJs, String op, String rhsJs) {
     '??=',
   };
   return jsOps.contains(op) ? '$lhsJs $op $rhsJs' : null;
+}
+
+/// 赋值出现在**表达式位置**（`while ((x = f()) < n)` / `if ((v = f()) != null)`）。
+///
+/// Dart 赋值表达式的值就是赋值结果，JS 同义，因此普通目标一比一发射（外层加
+/// 括号保证优先级）。目标链含 `?.` / `?[` 时不能直接作 JS 赋值目标，落成带守卫
+/// 的 IIFE：目标为空时表达式值为 `null`，且**右值与下标不求值**（与 Dart 一致）。
+/// 语句位置见 [exprStmtToJs]；两处共用 `_compoundAssignJs` / [_prefixedFieldRef] /
+/// [_operatorOwnerOf] / [_chainHasNullAware] 同一套原语，不另立判据。
+String? _assignValueJs(
+  AssignmentExpression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final op = e.operator.lexeme;
+  final rhs = rhsToJs(e.rightHandSide, scope, classes);
+  if (rhs == null) return null;
+  // 只接受有 JS 等价形态的赋值运算符（`~/=` 在下面单独展开）。
+  if (op != '~/=' && _compoundAssignJs('__x', op, '__y') == null) return null;
+  final lhs = e.leftHandSide;
+
+  // 纯引用目标（`_x` / 局部变量 / 字段属性 `_x.y`）：可安全重复读写。
+  final ref = _isPlainIdentifier(lhs)
+      ? scope.fieldRef((lhs as Identifier).name)
+      : _prefixedFieldRef(lhs, scope);
+  if (ref != null) {
+    final rewritten = _compoundAssignJs(ref, op, rhs);
+    return rewritten == null ? null : '($rewritten)';
+  }
+
+  // 下标 / 属性目标：接收者、下标、右值都只求值一次。
+  if (lhs is! IndexExpression && lhs is! PropertyAccess) return null;
+  final target =
+      lhs is IndexExpression ? lhs.target : (lhs as PropertyAccess).target;
+  if (target == null) return null;
+  final recv = exprToJs(target, scope, classes);
+  if (recv == null) return null;
+  final indexJs =
+      lhs is IndexExpression ? exprToJs(lhs.index, scope, classes) : null;
+  if (lhs is IndexExpression && indexJs == null) return null;
+  final member = lhs is IndexExpression
+      ? '[$indexJs]'
+      : '.${(lhs as PropertyAccess).propertyName.name}';
+  final nullAware = _chainHasNullAware(lhs);
+
+  // `operator []=`：只支持 `=` 形态（与语句位置一致）；表达式值为右值。
+  if (lhs is IndexExpression &&
+      op == '=' &&
+      _operatorOwnerOf(target, '[]=', scope, classes) != null) {
+    final set = operatorJsName('[]=', unary: false)!;
+    if (nullAware) {
+      // 目标为空时右值不求值（IIFE 参数只传接收者）。
+      return '((__t) => { if (__t == null) return null; '
+          'var __v = $rhs; __t.$set($indexJs, __v); return __v; })($recv)';
+    }
+    return '((__t, __i, __v) => { __t.$set(__i, __v); return __v; })'
+        '($recv, $indexJs, $rhs)';
+  }
+
+  // `~/=`：JS 没有该运算符，展开为「读 → 算 → 写」，表达式值即写入值。
+  if (op == '~/=') {
+    if (nullAware) {
+      final read = lhs is IndexExpression ? '__t[$indexJs]' : '__t$member';
+      return '((__t) => { if (__t == null) return null; '
+          'return ($read = Math.trunc($read / $rhs)); })($recv)';
+    }
+    if (lhs is IndexExpression) {
+      return '((__t, __i) => { '
+          'return (__t[__i] = Math.trunc(__t[__i] / $rhs)); })'
+          '($recv, $indexJs)';
+    }
+    return '((__t) => { '
+        'return (__t$member = Math.trunc(__t$member / $rhs)); })($recv)';
+  }
+
+  // 其余赋值：空安全目标加守卫（下标 / 右值留在体内，目标为空时不求值），
+  // 普通目标一比一发射，JS 赋值表达式本身就返回赋值结果。
+  if (nullAware) {
+    return '((__t) => { if (__t == null) return null; '
+        'return (__t$member $op $rhs); })($recv)';
+  }
+  return '($recv$member $op $rhs)';
 }
 
 /// 一条表达式语句 → JS 语句（带分号）。

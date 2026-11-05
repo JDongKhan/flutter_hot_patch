@@ -417,6 +417,24 @@ export class SyntaxDetail extends StatefulWidget {
     });
     return "形参：方法可选=" + price.plus() + "/" + price.plus(4) + " " + "/ 方法具名=" + price.scaled({ "factor": 2, "bonus": base }) + " " + "/ 局部可选=" + localScale(4) + " " + "/ 局部具名=" + localPack(1, { "step": 3, "times": 2 }) + " " + "/ 闭包具名=" + namedClosure({ "b": 5 }) + " " + "/ 闭包可选=" + optionalClosure(1) + " " + "/ 静态具名=" + Price.fromCents(base, { "discount": 3 }).cents;
   }
+  _assignExprText() {
+    var i = 0;
+    var steps = [];
+    while ((((i = (i + 1))) < 4)) {
+      steps.add(i);
+    }
+    var cells = [9, 9];
+    var slot = 0;
+    var added = (cells[((slot = 1))] += 3);
+    var truncated = ((__t, __i) => { return (__t[__i] = Math.trunc(__t[__i] / 4)); })(cells, ((slot = 1)));
+    ((__t, __i) => { __t[__i] = Math.trunc(__t[__i] / 3); })(cells, ((slot = 0)));
+    var maybe = this._scores;
+    var missing = null;
+    var hit = 0;
+    var assigned = ((__t) => { if (__t == null) return null; return (__t[0] = ((hit = 7))); })(maybe);
+    var skipped = ((__t) => { if (__t == null) return null; return (__t[0] = 99); })(missing);
+    return "赋值表达式：steps=" + steps.join("/") + " / added=" + added + " " + "/ 整除=" + truncated + " / 列表=" + cells.join("/") + " / slot=" + slot + " " + "/ assigned=" + (assigned ?? "null") + " / hit=" + hit + " " + "/ 空目标=" + (skipped ?? "null");
+  }
   _switchExprText() {
     var task = this._task;
     var label = (() => {
@@ -506,6 +524,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._paramsText()
+          }),
+          new Text({
+            "data": this._assignExprText()
           }),
           new Text({
             "data": this._switchExprText()

@@ -349,6 +349,33 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
         '/ 静态具名=${Price.fromCents(base, discount: 3).cents}';
   }
 
+  /// 赋值作为表达式：`while ((i = i + 1) < 4)` / `if ((v = ...) != null)` /
+  /// 下标目标（接收者与下标各求值一次）/ 空安全赋值（目标为空时值为 null）。
+  String _assignExprText() {
+    var i = 0;
+    final steps = <int>[];
+    while ((i = i + 1) < 4) {
+      steps.add(i);
+    }
+
+    final cells = [9, 9];
+    var slot = 0;
+    final added = cells[(slot = 1)] += 3;
+    final truncated = cells[(slot = 1)] ~/= 4;
+    cells[(slot = 0)] ~/= 3;
+
+    final List<int>? maybe = _scores;
+    final List<int>? missing = null;
+    var hit = 0;
+    final assigned = maybe?[0] = (hit = 7);
+    final skipped = missing?[0] = 99;
+
+    return '赋值表达式：steps=${steps.join('/')} / added=$added '
+        '/ 整除=$truncated / 列表=${cells.join('/')} / slot=$slot '
+        '/ assigned=${assigned ?? 'null'} / hit=$hit '
+        '/ 空目标=${skipped ?? 'null'}';
+  }
+
   /// switch 表达式：对象模式 + guard（`_` / 常量之外的模式以前会被丢弃）。
   String _switchExprText() {
     final task = _task;
@@ -405,6 +432,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_rangeText()),
           Text(_localFuncText()),
           Text(_paramsText()),
+          Text(_assignExprText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),
