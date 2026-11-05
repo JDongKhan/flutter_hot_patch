@@ -135,6 +135,20 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '关系/列表：未命中';
   }
 
+  /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
+  String _localFuncText() {
+    int twice(int x) => x * 2;
+
+    String grade(int score) {
+      if (score case > 100 && < 200) return '高分';
+      if (score case > 0) return '普通';
+      return '无分';
+    }
+
+    final score = _task?.score ?? 0;
+    return '局部函数：twice($score)=${twice(score)} / ${grade(score)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final task = _task;
@@ -164,6 +178,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_matchText()),
           Text(_destructureText()),
           Text(_rangeText()),
+          Text(_localFuncText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

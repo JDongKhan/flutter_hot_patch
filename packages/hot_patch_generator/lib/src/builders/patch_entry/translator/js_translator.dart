@@ -787,6 +787,7 @@ String? closureToJs(
   // 解析为形参，否则谓词翻译失败、连带整个 `where(...)` 与外围表达式被丢弃。
   final bodyScope = params.isEmpty ? scope : scope.withParams(params);
   final body = fn.body;
+  final asyncKw = body.isAsynchronous ? 'async ' : '';
   // 一律输出箭头函数：this 词法绑定到定义处（组件实例），与 Dart 闭包
   // 捕获 this 的语义一致——回调（如 addListener 闭包）由宿主经 invoke
   // 普通调用触发时 this 不会丢失，无需 .bind。引擎为 flutter_js
@@ -809,11 +810,11 @@ String? closureToJs(
     final wv = renderer != null && renderer.ctorJsClassFile(body.expression) != null
         ? _widgetExprToJs(renderer, body.expression, 0)
         : null;
-    if (wv != null) return '($pjs) => $wv';
+    if (wv != null) return '$asyncKw($pjs) => $wv';
     final rv = rhsToJs(body.expression, bodyScope, classes);
-    if (rv != null) return '($pjs) => { return $rv; }';
+    if (rv != null) return '$asyncKw($pjs) => { return $rv; }';
     final v = closureBodyStmtJs(body.expression, bodyScope, classes);
-    if (v != null) return '($pjs) => { $v }';
+    if (v != null) return '$asyncKw($pjs) => { $v }';
     return null;
   }
   if (body is BlockFunctionBody) {
@@ -826,7 +827,7 @@ String? closureToJs(
     final stmts =
         translateStmtList(body.block.statements, bodyScope, classes, renderer);
     if (stmts.trim().isEmpty) return null;
-    return '($pjs) => { ${stmts.trim()} }';
+    return '$asyncKw($pjs) => { ${stmts.trim()} }';
   }
   return null;
 }
@@ -978,6 +979,13 @@ String? _methodCallJs(
   }
   final target = e.target;
   if (target == null) {
+    // 方法体内的局部函数 / 持有函数的局部变量（`void f(){}` 后 `f(x)`）：
+    // 名字已在作用域里登记，JS 侧就是同名局部标识符。局部名优先于宿主顶层
+    // 函数与运行时全局函数（Dart 作用域同样遮蔽）。
+    final name = e.methodName.name;
+    if (scope.localVars.contains(name) || scope.params.contains(name)) {
+      return '$name($passed)';
+    }
     // 顶层函数（全局方法）：**只有顶层** `@HostInjected` 函数在这里走通道——
     // 顶层函数没有可承载的 JS 类，产物里不存在同名函数。
     // 宿主通道的载荷会经 `Function.apply(impl, 位置, 具名)` 还原 Dart 调用语义，
@@ -1366,6 +1374,15 @@ String translateStmtList(
       } else {
         out.add(js);
       }
+    } else if (s is FunctionDeclarationStatement) {
+      // 方法体内的局部函数 `void f(...) {...}` / `int f(...) => ...`
+      final js = _localFunctionJs(s, scope, classes, renderer, depth);
+      if (js == null) {
+        log.warning('[hot_patch_generator] 局部函数无法翻译，已在 JS 产物中'
+            '丢弃：${s.toSource()}');
+      } else {
+        out.add(js);
+      }
     } else if (s is ReturnStatement) {
       // `return "22";` 是 ReturnStatement（不是 ExpressionStatement），
       // 需单独翻译为 `return <expr>;`，否则 async 方法体被整体丢弃。
@@ -1512,6 +1529,36 @@ String translateStmtList(
 
 /// 语句体 → 语句列表（Block 或单条语句统一成列表，供 translateStmtList 递归）。
 List<Statement> _bodyStmts(Statement s) => s is Block ? s.statements : [s];
+
+/// 局部函数声明 `void f(...) {...}` / `int f(...) => ...` → `var f = <闭包>;`
+///
+/// 与闭包共用 [closureToJs]：函数体与闭包 / 方法体走同一条语句翻译路径，箭头
+/// 函数也保留 `this`（Dart 局部函数同样捕获外层 `this`）。名称先登记进作用域，
+/// 递归调用与后续语句的裸调用按同名局部标识符解析（见 `_methodCallJs`）。
+///
+/// 不支持：具名 / 可选参数（默认值）、泛型局部函数、生成器 —— JS 函数没有等价
+/// 签名，出现时返回 null（调用方出声告警）。局部函数须先声明后调用（Dart 允许
+/// 前向引用，`var` 赋值形态做不到）。
+String? _localFunctionJs(
+  FunctionDeclarationStatement s,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+  ExprRenderer? renderer,
+  int depth,
+) {
+  final decl = s.functionDeclaration;
+  final fn = decl.functionExpression;
+  if (fn.typeParameters != null || fn.body.isGenerator) return null;
+  for (final p in fn.parameters?.parameters ?? const <FormalParameter>[]) {
+    if (p is DefaultFormalParameter) return null;
+  }
+  final name = decl.name.lexeme;
+  scope.localVars.add(name);
+  renderer?.registerLocal(name);
+  final js = closureToJs(fn, scope, classes, renderer);
+  if (js == null) return null;
+  return '${'  ' * depth}var $name = $js;';
+}
 
 // ---------------------------------------------------------------------------
 // 模式匹配（`if (x case P)` / pattern 变量声明）

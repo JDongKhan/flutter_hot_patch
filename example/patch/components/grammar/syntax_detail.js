@@ -181,6 +181,33 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "关系/列表：未命中";
   }
+  _localFuncText() {
+    var twice = (x) => { return (x * 2); };
+    var grade = (score) => { {
+        const __v0 = score;
+        const __ok = (() => {
+          if (!(__v0 > 100)) return false;
+          if (!(__v0 < 200)) return false;
+          return true;
+        })();
+        if (__ok) {
+          return "高分";
+        }
+      }
+      {
+        const __v0 = score;
+        const __ok = (() => {
+          if (!(__v0 > 0)) return false;
+          return true;
+        })();
+        if (__ok) {
+          return "普通";
+        }
+      }
+      return "无分"; };
+    var score = (this._task?.score ?? 0);
+    return "局部函数：twice(" + score + ")=" + twice(score) + " / " + grade(score);
+  }
   build(context) {
     var task = this._task;
     return new Padding({
@@ -232,6 +259,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._rangeText()
+          }),
+          new Text({
+            "data": this._localFuncText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
