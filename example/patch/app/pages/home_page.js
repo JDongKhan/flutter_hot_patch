@@ -59,7 +59,7 @@ export class HomeView extends StatefulWidget {
       })));
     }
     const error = vm.error;
-    if ((__nn(error) != null)) {
+    if ((error != null)) {
       return new LoadErrorView({
         "message": error,
         "onRetry": (...__a) => vm.load(...__a)
@@ -114,22 +114,22 @@ export class FloorSlot extends StatelessWidget {
   }
   build(context) {
     const type = this.floor.type;
-    if ((__nn(type) === "banner")) {
+    if ((type === "banner")) {
       return new BannerFloor({
         "vm": this.floor.vm
       });
     }
-    if ((__nn(type) === "grid")) {
+    if ((type === "grid")) {
       return new GridFloor({
         "vm": this.floor.vm
       });
     }
-    if ((__nn(type) === "spots")) {
+    if ((type === "spots")) {
       return new SpotFloor({
         "vm": this.floor.vm
       });
     }
-    if ((__nn(type) === "promo")) {
+    if ((type === "promo")) {
       return new PromoFloor({
         "vm": this.floor.vm
       });

@@ -38,7 +38,7 @@ export class BannerCarousel extends StatefulWidget {
   }
   _reset() {
     const count = this.banners.length;
-    if ((__nn(count) === 0)) {
+    if ((count === 0)) {
       this._stopAutoPlay();
       this._index = 0;
       return;

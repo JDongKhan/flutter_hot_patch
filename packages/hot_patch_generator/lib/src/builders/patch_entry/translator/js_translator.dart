@@ -1548,9 +1548,9 @@ String? _methodCallJs(
 }
 
 /// 构建期成员名映射：**只对可判定为 JS 内建 Array（Dart `List`）的接收者**
-/// 改写 `sort` → `_sort`、`join` → `_join`（原生同名但默认语义不同，运行时
-/// 挂下划线版本，不覆盖原生）。接收者类型不可判定 / 是自定义类 / 是 Map 等
-/// 其它类型时一律原样返回——绝不按方法名全局替换。
+/// 改写 `sort` → `_sort`、`join` → `_join`、`indexOf` → `_indexOf`（原生同名但
+/// 默认语义不同，运行时挂下划线版本，不覆盖原生）。接收者类型不可判定 /
+/// 是自定义类 / 是 Map 等其它类型时一律原样返回——绝不按方法名全局替换。
 String _memberCallName(
   Expression? receiver,
   String member,
@@ -1562,6 +1562,7 @@ String _memberCallName(
   if (type == 'List') {
     if (member == 'sort') return '_sort';
     if (member == 'join') return '_join';
+    if (member == 'indexOf') return '_indexOf';
   }
   return member;
 }
@@ -1577,6 +1578,21 @@ String? _prefixedFieldRef(Expression e, FieldScope scope) {
   final base = scope.fieldRef(e.prefix.name);
   if (base == null) return null;
   return '$base.${e.identifier.name}';
+}
+
+/// `list.length = n`（PrefixedIdentifier 形式）→ `list._setLength(n)`；
+/// 仅接收者可判定为 List 时改写，其它类型 / 不可判定返回 null（保持原样）。
+String? _listLengthWriteJs(
+  PrefixedIdentifier lhs,
+  String op,
+  String rhs,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (lhs.identifier.name != 'length' || op != '=') return null;
+  if (_staticTypeOf(lhs.prefix, scope, classes) != 'List') return null;
+  final recv = exprToJs(lhs.prefix, scope, classes);
+  return recv == null ? null : '$recv._setLength($rhs)';
 }
 
 /// 纯标识符判定：`_x` 是，`_x.y`（[PrefixedIdentifier]）**不是**。
@@ -1618,6 +1634,13 @@ String? _assignValueJs(
   // 只接受有 JS 等价形态的赋值运算符（`~/=` 在下面单独展开）。
   if (op != '~/=' && _compoundAssignJs('__x', op, '__y') == null) return null;
   final lhs = e.leftHandSide;
+
+  // `list.length = n`（`growable.length = 4` 这类 PrefixedIdentifier 目标）：
+  // 接收者可判定为 List 时改写为 `_setLength`（原生写 length 会静默截断 / 扩展）。
+  if (lhs is PrefixedIdentifier) {
+    final len = _listLengthWriteJs(lhs, op, rhs, scope, classes);
+    if (len != null) return '($len)';
+  }
 
   // 纯引用目标（`_x` / 局部变量 / 字段属性 `_x.y`）：可安全重复读写。
   final ref = _isPlainIdentifier(lhs)
@@ -1841,6 +1864,15 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     }
     return '$recv$member $op $rhs;';
   }
+  // `list.length = n`（`growable.length = 4` 这类 PrefixedIdentifier 目标）：
+  // 接收者可判定为 List 时改写为 `_setLength`。
+  if (e is AssignmentExpression && e.leftHandSide is PrefixedIdentifier) {
+    final rhs = rhsToJs(e.rightHandSide, scope, classes);
+    if (rhs == null) return null;
+    final len = _listLengthWriteJs(
+        e.leftHandSide as PrefixedIdentifier, e.operator.lexeme, rhs, scope, classes);
+    if (len != null) return '$len;';
+  }
   // 字段的属性赋值 / 自增（`_count.value = 5`、`_count.value++`）：
   // SDK 值对象（ValueNotifier / Listenable 代理类）的典型用法，LHS 是
   // PrefixedIdentifier（`<字段>.<属性>`）。字段部分走 fieldRef（→ `this._count`），
@@ -1924,6 +1956,17 @@ String? _staticTypeOf(
   // `this._car`：字段声明类型（含继承链字段视图）。
   if (e is PropertyAccess && e.target is ThisExpression) {
     return scope.typeOf(e.propertyName.name);
+  }
+  // 成员链（`bucket.nums` / `oldWidget.list`）：按字段声明的原始类型解析，
+  // 内置类型（List / Map / String 等）也照实返回，供成员映射表按接收者类型
+  // 判定；解析不到时保持 null（不按名字猜测）。
+  if (e is PrefixedIdentifier) {
+    final t = _rawMemberType(e.prefix, e.identifier.name, scope, classes);
+    return t == null ? null : eraseType(t.split('.').last);
+  }
+  if (e is PropertyAccess && e.target != null && e.target is! SuperExpression) {
+    final t = _rawMemberType(e.target!, e.propertyName.name, scope, classes);
+    return t == null ? null : eraseType(t.split('.').last);
   }
   String? raw;
   if (e is InstanceCreationExpression) {

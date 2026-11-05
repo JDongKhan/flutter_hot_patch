@@ -445,9 +445,30 @@ const String _jsUiGlobalsTail = r'''
         return a < b ? -1 : (a > b ? 1 : 0);
       });
     },
-    //     `_join()` 默认分隔符是空串（原生默认 `','`）。
+    //     `_join()` 默认分隔符是空串（原生默认 `','`）；元素为 null / undefined
+    //     时按 Dart 的 toString 语义输出 `"null"`（原生 join 会输出空串）。
     _join: function (separator) {
-      return this.join(separator === undefined ? '' : separator);
+      var sep = separator === undefined ? '' : separator;
+      var out = [];
+      for (var i = 0; i < this.length; i++) {
+        var v = this[i];
+        out.push(v === null || v === undefined ? 'null' : String(v));
+      }
+      return out.join(sep);
+    },
+    //     `_indexOf(e, [start])`：Dart 用元素的 `==` 比较（原生 indexOf 用 `===`）；
+    //     start 为负按 0 处理、超出长度返回 -1（与 Dart 实测一致，不抛错）。
+    _indexOf: function (value, start) {
+      var from = (start === undefined || start == null) ? 0 : start;
+      if (from < 0) { from = 0; }
+      for (var i = from; i < this.length; i++) {
+        var el = this[i];
+        if (el === value ||
+            (el != null && typeof el.__op$eq === 'function' && el.__op$eq(value))) {
+          return i;
+        }
+      }
+      return -1;
     },
     //     `_setLength(n)`：Dart growable list 语义（截断 / 补 null），
     //     负数或非整数抛 RangeError（原生写 length 会静默截断 / 扩展）。
