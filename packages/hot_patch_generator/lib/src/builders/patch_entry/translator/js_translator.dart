@@ -1671,10 +1671,8 @@ String? _methodCallJs(
     }
   }
   // `super.m(...)` 出现在**表达式**位置（`'${super.greet()} x'` 这类插值 / 赋值右值）：
-  // 与语句级同一套落法——mixin 线性化目标 → `this._m$...`；原生基类 → `super.m`。
+  // 与语句级同一套落法——原生基类 → `super.m`；无 JS 基类 → 丢弃。
   if (target is SuperExpression) {
-    final resolved = scope.superMap[e.methodName.name];
-    if (resolved != null) return 'this.$resolved($passed)';
     if (scope.hasJsBase) return 'super.${e.methodName.name}($passed)';
     return null;
   }
@@ -2557,13 +2555,10 @@ String translateStmtList(
   for (final s in stmts) {
     if (s is ExpressionStatement) {
       final e = s.expression;
-      // super 调用：三种落法，优先级自上而下
-      //   1. superMap 命中 → `this._m$Mixin$m(...)`（mixin 线性化展开后链上下一个实现）；
-      //   2. 有 JS 基类 → 原样 `super.m(...)`（原生 extends，由引擎沿原型链解析）；
-      //   3. 都没有（SDK 类在 JS 侧无实现）→ 丢弃。
+      // super 调用：有 JS 基类 → 原生 `super.m(...)`（application 类链由引擎沿
+      // 原型链解析）；无 JS 基类（SDK 类在 JS 侧无实现）→ 丢弃。
       if (e is MethodInvocation && e.target is SuperExpression) {
-        final target = scope.superMap[e.methodName.name];
-        if (target == null && !scope.hasJsBase) continue;
+        if (!scope.hasJsBase) continue;
         final argsJs = <String>[];
         var ok = true;
         for (final a in e.argumentList.arguments) {
@@ -2582,13 +2577,8 @@ String translateStmtList(
               '产物中丢弃：${e.toSource()}');
           continue;
         }
-        // 单条表达式里出现 super 调用（`f(super.x())`）会走 rhsToJs 的表达式路径，
-        // 那条路径只处理 resolved target；这里覆盖语句级（最常见）形态。
-        if (target != null) {
-          out.add('$ind' 'this.$target(${argsJs.join(', ')});');
-        } else {
-          out.add('$ind' 'super.${e.methodName.name}(${argsJs.join(', ')});');
-        }
+        // 表达式位置（`f(super.x())`）走 rhsToJs 的同一分支；这里覆盖语句级。
+        out.add('$ind' 'super.${e.methodName.name}(${argsJs.join(', ')});');
         continue;
       }
       final t = _bodyExprStmtJs(e, scope, classes);
@@ -3897,7 +3887,6 @@ String translateClassMethodBody(
     },
     hostFunctions: hostFunctions,
     globalConsts: globalConsts,
-    superMap: m.superMap,
     // 原生继承（SDK 基类或项目类）→ `super.foo()` 在 JS 里合法，原样发射。
     // 判据与渲染层同一个（jsBaseClassOf）：基类在 JS 侧无实现时，类声明里不会
     // 写 extends，此时发射 super 调用是语法错误。

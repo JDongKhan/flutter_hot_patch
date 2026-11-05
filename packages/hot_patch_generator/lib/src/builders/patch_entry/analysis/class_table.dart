@@ -23,7 +23,7 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
   // 两阶段：先收集类声明，再据**全量类名表**求每个类的依赖
   // （referencedClassNames 统一在 dart2js 层，builder 不自行计算）。
   // 值里的 CompilationUnit 是类的声明单元（本类 / 所在 import 文件）——
-  // 解析 with 子句的 mixin 声明需要它（resolveMixinDecls）。
+  // 解析 with 子句的 mixin 声明需要它（resolveMixinDeclRefs）。
   final decls = <String, (ClassDeclaration, String, bool, CompilationUnit)>{};
   void addFile(ClassDeclaration d, String file, CompilationUnit from) {
     final name = d.name.lexeme;
@@ -84,16 +84,13 @@ Map<String, ClassInfo> buildClassTable(CompilationUnit unit, String sourcePath) 
   final names = decls.keys.toSet();
   final out = <String, ClassInfo>{};
   for (final e in decls.entries) {
-    // 普通类同样可能 with mixin：成员合并与依赖发现都按线性化展开，
-    // 与组件 State 类同一条路径。
-    final mixins = resolveMixinDecls(e.value.$1, e.value.$4, e.value.$2);
+    // 普通类同样可能 with mixin：mixin 的成员不再线性化进本类（由消费者产物
+    // 的 application 类 + __mixinHard 承担），这里只建模类自身结构。
     out[e.key] = classInfoOf(
-      e.value.$1,
+      ClassLikeDecl.ofClass(e.value.$1),
       e.value.$2,
       isComponent: e.value.$3,
-      mixins: mixins,
-      dependencies:
-          referencedClassNames(e.value.$1, mixins: mixins).intersection(names),
+      dependencies: referencedClassNames(e.value.$1).intersection(names),
     );
   }
   return out;

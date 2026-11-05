@@ -17,15 +17,41 @@ export class PanelColors {
   }
 }
 
+// 模型 _HelloCard_StatefulWidget_TestMixin
+class _HelloCard_StatefulWidget_TestMixin extends StatefulWidget {
+  constructor(args) {
+    super(args);
+    this.__ta = (args && args.typeArguments) || {};
+  }
+  initState() {
+    this.testLog();
+    super.initState();
+  }
+}
+__mixinHard(_HelloCard_StatefulWidget_TestMixin, TestMixin);
+
+// 模型 _HelloCard_StatefulWidget_TestMixin_TestMixin2
+class _HelloCard_StatefulWidget_TestMixin_TestMixin2 extends _HelloCard_StatefulWidget_TestMixin {
+  constructor(args) {
+    super(args);
+    this.__ta = (args && args.typeArguments) || {};
+  }
+  initState() {
+    this.testLog();
+    super.initState();
+  }
+}
+__mixinHard(_HelloCard_StatefulWidget_TestMixin_TestMixin2, TestMixin2);
+
 // 组件 HelloCard
-export class HelloCard extends StatefulWidget {
+export class HelloCard extends _HelloCard_StatefulWidget_TestMixin_TestMixin2 {
   constructor(args) {
     super(args);
     this._count = 0;
     this._user = null;
   }
   initState() {
-    this._m$TestMixin2$initState();
+    super.initState();
     debugPrint("[HelloCard] initState");
   }
   didChangeDependencies() {
@@ -169,21 +195,25 @@ export class HelloCard extends StatefulWidget {
       ]
     });
   }
-  // ---- mixin TestMixin2 ----
-  _m$TestMixin2$initState() {
-    this.testLog();
-    this._m$TestMixin$initState();
+}
+
+// 模型 TestMixin
+export class TestMixin {
+  constructor(args) {
+    this.__ta = (args && args.typeArguments) || {};
+  }
+  testLog() {
+    print("--混入代码 1");
+  }
+}
+
+// 模型 TestMixin2
+export class TestMixin2 {
+  constructor(args) {
+    this.__ta = (args && args.typeArguments) || {};
   }
   testLog() {
     print("--混入代码 2");
-  }
-  // ---- mixin TestMixin ----
-  _m$TestMixin$initState() {
-    this.testLog();
-    super.initState();
-  }
-  _m$TestMixin$testLog() {
-    print("--混入代码 1");
   }
 }
 

@@ -98,7 +98,74 @@ bool returnsWidgetOf(MethodDeclaration m) {
 // 怎么算」，只按名字递归翻译 / 决定同文件内联还是跨文件 import。
 // ===========================================================================
 
-/// 提取 ClassDeclaration → ClassInfo（结构建模**唯一入口**）。
+/// 类 / mixin 的统一声明视图：建模（[classInfoOf]）只依赖这些共同字段。
+///
+/// `mixin M { ... }` 与 `mixin class M { ... }` 在 JS 侧都按普通类产出（mixin
+/// 不能实例化，但成员集合必须存在，供 `with` 的 application 类 import/复制）；
+/// 二者与 `class` 走同一套字段 / 方法建模，差异只有 [extendsType] 与构造。
+class ClassLikeDecl {
+  const ClassLikeDecl({
+    required this.name,
+    required this.members,
+    required this.node,
+    this.typeParameters,
+    this.extendsType,
+    this.isAbstract = false,
+  });
+
+  factory ClassLikeDecl.ofClass(ClassDeclaration d) => ClassLikeDecl(
+        name: d.name.lexeme,
+        members: d.members,
+        node: d,
+        typeParameters: d.typeParameters,
+        extendsType: d.extendsClause?.superclass.toSource(),
+        isAbstract: d.abstractKeyword != null,
+      );
+
+  factory ClassLikeDecl.ofMixin(MixinDeclaration d) => ClassLikeDecl(
+        name: d.name.lexeme,
+        members: d.members,
+        node: d,
+        typeParameters: d.typeParameters,
+      );
+
+  final String name;
+  final NodeList<ClassMember> members;
+  final AstNode node;
+  final TypeParameterList? typeParameters;
+
+  /// `extends` 的源码类型名；mixin 恒为 null（`on` 约束不进 JS 继承链）。
+  final String? extendsType;
+  final bool isAbstract;
+}
+
+/// 方法体里是否出现 `super`（mixin 方法要用原生 super，就必须在本层重新发射）。
+bool _methodUsesSuper(ClassMethod m) {
+  final body = m.body;
+  if (body == null) return false;
+  final visitor = _SuperUseVisitor();
+  body.accept(visitor);
+  return visitor.found;
+}
+
+class _SuperUseVisitor extends RecursiveAstVisitor<void> {
+  bool found = false;
+
+  @override
+  void visitSuperExpression(SuperExpression node) {
+    found = true;
+  }
+}
+
+/// `with` 解析出的声明 → 结构模型（纯 `mixin` 与 `mixin class` 同一口径）。
+ClassInfo _mixinStructureOf(MixinDeclRef ref, String file) {
+  final node = ref.node;
+  return node is ClassDeclaration
+      ? classInfoOf(ClassLikeDecl.ofClass(node), file)
+      : classInfoOf(ClassLikeDecl.ofMixin(node as MixinDeclaration), file);
+}
+
+/// 提取类结构 → ClassInfo（结构建模**唯一入口**）。
 ///
 /// 类表（buildClassTable）与翻译入口（translateClass）都从这里取结构，
 /// 差异只靠参数显式化，不再有第二套「构造参数 / 字段 / 方法」行走：
@@ -117,18 +184,15 @@ bool returnsWidgetOf(MethodDeclaration m) {
 /// State 子类）——类表据此把它与普通模型类区分开（组件不作为模型内联、组件
 /// 类型字段不当模型构造翻译）。
 ///
-/// [mixins]：类 `with` 子句解析出的 mixin 声明（见 resolveMixinDecls，按书写
-/// 顺序，前者优先级低）。按 Dart 线性化规则合并进字段/方法：
-/// **类自身 > 后写的 mixin > 前写的 mixin**——同名字段/方法高优先级占原名，
-/// 被覆盖的 mixin 方法改名 `_m$<Mixin>$<name>` 保留，并给每个方法挂
-/// [ClassMethod.superMap]（`super.foo()` → 链上下一个实现的 JS 名），语句翻译
-/// 据此把 super 语句落成 mixin 方法调用，链尾（基类）无 JS 等价物照旧忽略。
+/// [mixins]：类 `with` 子句解析出的 mixin / mixin class 声明（见
+/// resolveMixinDecls）。成员**不**在本类线性化：消费者产物生成 application
+/// 类链（`ClassInfo.mixinApplications`），mixin 自身按原文件独立产出
+/// （见 translateMixin）。
 ClassInfo classInfoOf(
-  ClassDeclaration decl,
+  ClassLikeDecl decl,
   String sourceFile, {
   Set<String> dependencies = const {},
   bool isComponent = false,
-  List<MixinDeclaration> mixins = const [],
 }) {
   final instanceFields = <ClassField>[];
   final staticFields = <ClassField>[];
@@ -156,40 +220,30 @@ ClassInfo classInfoOf(
   // getter 保留为 get 访问器；setter 跳过；static 保留并打 isStatic 标记。
   // `@HostInjected` 只标记方法（getter 没有可调用的通道），命中后方法体在
   // 翻译期整体改为 `_app_host_.invoke`（见 hostMethodBodyJs）。
-  ClassMethod? methodOf(
-    MethodDeclaration m, {
-    String? nameOverride,
-    Map<String, String> superMap = const {},
-    String? mixinOrigin,
-  }) {
+  ClassMethod? methodOf(MethodDeclaration m) {
     // 只有「static + 非私有」的标注方法才是宿主通道（与注册清单同一判定，
     // 见 HostMethodDecl.usable）；其余标注（实例方法 / 私有）按普通方法翻译。
-    final ownerPrivate = decl.name.lexeme.startsWith('_');
+    final ownerPrivate = decl.name.startsWith('_');
     final hostChannel = m.isGetter ||
             !m.isStatic ||
             ownerPrivate ||
-            m.name.lexeme.startsWith('_') ||
-            // mixin 成员不会被注册清单扫描到（宿主侧没有对应实现）。
-            mixinOrigin != null ||
-            nameOverride != null
+            m.name.lexeme.startsWith('_')
         ? null
         : hostChannelOf(m);
     if (m.isGetter) {
       return ClassMethod(
-        name: nameOverride ?? m.name.lexeme,
+        name: m.name.lexeme,
         params: const [],
         isGetter: true,
         isStatic: m.isStatic,
         body: m.body,
-        superMap: superMap,
-        mixinOrigin: mixinOrigin,
       );
     }
     if (m.isSetter) {
       // JS 侧承载位：类体里的属性写访问器 `set name(v) { … }`；赋值调用点
       // `x.name = v` 本来就按 PropertyAccess 翻译，因此两端天然对齐。
       return ClassMethod(
-        name: nameOverride ?? m.name.lexeme,
+        name: m.name.lexeme,
         params: jsMethodParams(m),
         isSetter: true,
         isStatic: m.isStatic,
@@ -198,8 +252,6 @@ ClassInfo classInfoOf(
         body: m.body,
         parameters: m.parameters,
         paramTypes: _paramTypesOf(m),
-        superMap: superMap,
-        mixinOrigin: mixinOrigin,
       );
     }
     if (m.isOperator) {
@@ -210,7 +262,7 @@ ClassInfo classInfoOf(
           .isEmpty;
       final jsName = operatorJsName(symbol, unary: unary);
       if (jsName == null) {
-        log.warning('[hot_patch_generator] $sourceFile: ${decl.name.lexeme}'
+        log.warning('[hot_patch_generator] $sourceFile: ${decl.name}'
             '.operator $symbol 暂不支持（JS 侧无等价成员），已跳过。');
         return null;
       }
@@ -226,18 +278,12 @@ ClassInfo classInfoOf(
         hasNamedParams: hasNamedParamOf(m),
         paramTypes: _paramTypesOf(m),
         operatorSymbol: symbol,
-        superMap: superMap,
-        mixinOrigin: mixinOrigin,
       );
     }
-    // 可调用对象的 `call` 改名为 `invoke`（手册 `call(...)` 行）：类自身、
-    // 非 static、非 mixin 带入（mixin 的 superMap 仍按原名维护）。
-    final isCallMethod = !m.isStatic &&
-        m.name.lexeme == 'call' &&
-        nameOverride == null &&
-        mixinOrigin == null;
+    // 可调用对象的 `call` 改名为 `invoke`（手册 `call(...)` 行）。
+    final isCallMethod = !m.isStatic && m.name.lexeme == 'call';
     return ClassMethod(
-      name: isCallMethod ? 'invoke' : (nameOverride ?? m.name.lexeme),
+      name: isCallMethod ? 'invoke' : m.name.lexeme,
       params: jsMethodParams(m),
       isAsync: m.body.isAsynchronous,
       isStatic: m.isStatic,
@@ -255,8 +301,6 @@ ClassInfo classInfoOf(
         for (final t in m.typeParameters?.typeParameters ?? const <TypeParameter>[])
           t.name.lexeme,
       ],
-      superMap: superMap,
-      mixinOrigin: mixinOrigin,
     );
   }
 
@@ -281,107 +325,10 @@ ClassInfo classInfoOf(
     }
   }
 
-  // --- mixin 线性化合并 -----------------------------------------------------
-  // ordered：优先级从高到低（with 书写顺序反转）。先完成全部方法的 JS 命名
-  //（高优先级占原名、低优先级改名保留），再据此给每个方法算 superMap。
-  if (mixins.isNotEmpty) {
-    final ordered = mixins.reversed.toList();
-    final taken = <String>{for (final m in methods) m.name};
-    final jsNames = <MixinDeclaration, Map<String, String>>{};
-    for (final mx in ordered) {
-      final table = <String, String>{};
-      for (final member in mx.members.whereType<MethodDeclaration>()) {
-        // setter 不翻译；static 不随 mixin 继承（Dart 语义），不进本类成员表。
-        if (member.isStatic || methodOf(member) == null) continue;
-        final name = member.name.lexeme;
-        table[name] = taken.add(name) ? name : '_m\$${mx.name.lexeme}\$$name';
-      }
-      jsNames[mx] = table;
-    }
-
-    // 链上（比某位置更低优先级的全部 mixin）各方法的第一个实现。
-    Map<String, String> superMapOf(Iterable<MixinDeclaration> lower) {
-      final map = <String, String>{};
-      for (final mx in lower) {
-        for (final e in jsNames[mx]!.entries) {
-          map.putIfAbsent(e.key, () => e.value);
-        }
-      }
-      return map;
-    }
-
-    // 类自身方法：super 链 = 全部 mixin（高 → 低取第一个实现）。
-    final classSuper = superMapOf(ordered);
-    if (classSuper.isNotEmpty) {
-      for (var i = 0; i < methods.length; i++) {
-        final m = methods[i];
-        methods[i] = ClassMethod(
-          name: m.name,
-          params: m.params,
-          isAsync: m.isAsync,
-          isGetter: m.isGetter,
-          isStatic: m.isStatic,
-          isVoid: m.isVoid,
-          returnsWidget: m.returnsWidget,
-          body: m.body,
-          bodyJs: m.bodyJs,
-          parameters: m.parameters,
-          nativeChannel: m.nativeChannel,
-          nativeMessage: m.nativeMessage,
-          hostChannel: m.hostChannel,
-          positionalParamCount: m.positionalParamCount,
-          hasNamedParams: m.hasNamedParams,
-          typeParams: m.typeParams,
-          isSetter: m.isSetter,
-          operatorSymbol: m.operatorSymbol,
-          paramTypes: m.paramTypes,
-          superMap: classSuper,
-          mixinOrigin: m.mixinOrigin,
-        );
-      }
-    }
-
-    // mixin 实例字段：高优先级先收，同名去重（类自身字段已先入列）。
-    final seenFields = {for (final f in instanceFields) f.name};
-    for (final mx in ordered) {
-      for (final member in mx.members.whereType<FieldDeclaration>()) {
-        if (member.isStatic) continue;
-        for (final v in member.fields.variables) {
-          if (seenFields.add(v.name.lexeme)) {
-            instanceFields.add(ClassField(
-              name: v.name.lexeme,
-              typeName: fieldTypeName(member, v),
-              initializer: v.initializer,
-              mixinOrigin: mx.name.lexeme,
-            ));
-          }
-        }
-      }
-    }
-
-    // mixin 方法：super 链 = 比它低优先级的其余 mixin。
-    for (var i = 0; i < ordered.length; i++) {
-      final mx = ordered[i];
-      final superMap = superMapOf(ordered.sublist(i + 1));
-      for (final member in mx.members.whereType<MethodDeclaration>()) {
-        if (member.isStatic) continue; // mixin 的 static 不随继承展开
-        final cm = methodOf(
-          member,
-          nameOverride: jsNames[mx]![member.name.lexeme],
-          superMap: superMap,
-          mixinOrigin: mx.name.lexeme,
-        );
-        if (cm != null) methods.add(cm);
-      }
-    }
-  }
-
-  String? superType;
-  final ext = decl.extendsClause;
-  if (ext != null) superType = ext.superclass.toSource();
+  String? superType = decl.extendsType;
 
   return ClassInfo(
-    name: decl.name.lexeme,
+    name: decl.name,
     sourceFile: sourceFile,
     superType: superType,
     instanceFields: instanceFields,
@@ -390,13 +337,10 @@ ClassInfo classInfoOf(
     ctorParams: ctorParams,
     ctorDefaults: ctorDefaults,
     isComponent: isComponent,
-    // 可调用对象：声明了非 static 的实例方法 `call`（含 mixin 带入）。
+    // 可调用对象：声明了非 static 的实例方法 `call`。
     isCallable: decl.members
-            .whereType<MethodDeclaration>()
-            .any((m) => !m.isStatic && m.name.lexeme == 'call') ||
-        mixins
-            .expand((d) => d.members.whereType<MethodDeclaration>())
-            .any((m) => !m.isStatic && m.name.lexeme == 'call'),
+        .whereType<MethodDeclaration>()
+        .any((m) => !m.isStatic && m.name.lexeme == 'call'),
     typeParams: [
       for (final t in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
         t.name.lexeme,
@@ -431,18 +375,10 @@ String fieldTypeName(FieldDeclaration member, VariableDeclaration variable) {
 /// 文件 import。基础类型与 widget 构造名由调用方与类表求交后自然丢弃
 /// （类表里只有真正的 Dart 类）。
 ///
-/// [mixins]：本类合并的 mixin 声明（见 classInfoOf）——mixin 的字段类型与
-/// 方法体构造调用同样是本类的依赖，漏扫会让「只在 mixin 里引用的模型类」
-/// 不被连带翻译。
-Set<String> referencedClassNames(
-  ClassDeclaration decl, {
-  List<MixinDeclaration> mixins = const [],
-}) {
-  final names = dependenciesOf(decl);
-  for (final mx in mixins) {
-    names.addAll(dependenciesOf(mx));
-  }
-  return names;
+/// mixin 声明的依赖单独按声明节点扫描（见 `resolveMixinDeclRefs` + `dependenciesOf`），
+/// 不再并入本类：mixin 成员会产出在它自己的原文件产物里。
+Set<String> referencedClassNames(AstNode decl) {
+  return dependenciesOf(decl);
 }
 
 /// 任意声明节点里出现的**全部类型引用**——依赖发现的唯一收集入口。
@@ -604,16 +540,20 @@ ClassInfo translateClass(
   // StatefulWidget 场景：widget 类出构造参数与参数字段，State 类出方法与
   // 状态字段。build 与其它返回 widget 的方法一视同仁，不做「是不是 build」的判断。
   //
-  // mixin：解析 hostClass（State 类 / 普通类自身）的 with 子句并传入建模，
-  // 字段/方法按线性化合并、super 语句落成 mixin 方法调用（见 classInfoOf）。
-  final mixins = resolveMixinDecls(hostClass, unit, sourcePath);
-  final widgetInfo = classInfoOf(widgetClass, sourcePath,
-      // 普通类（无 State 分离）时 widgetClass 就是 hostClass：mixin 必须挂进
-      // widgetInfo，否则 hostInfo 复用 widgetInfo 时 mixin 成员整批丢失。
-      mixins: identical(hostClass, widgetClass) ? mixins : const []);
+  // mixin：解析 hostClass（State 类 / 普通类自身）的 with 子句。成员不再线性化
+  // 进本类；每层 mixin 在消费者产物里生成 application 类，mixin 自身按原文件
+  // 产物独立产出（见 class_info.dart 的 MixinApplication / 手册第 10 章）。
+  final mixinRefs = resolveMixinDeclRefs(hostClass, unit, sourcePath);
+  final mixinInfos = <(MixinDeclRef, String, ClassInfo)>[
+    for (final (ref, file) in mixinRefs) (ref, file, _mixinStructureOf(ref, file)),
+  ];
+  final widgetInfo = classInfoOf(
+    ClassLikeDecl.ofClass(widgetClass),
+    sourcePath,
+  );
   final hostInfo = identical(hostClass, widgetClass)
       ? widgetInfo
-      : classInfoOf(hostClass, sourcePath, mixins: mixins);
+      : classInfoOf(ClassLikeDecl.ofClass(hostClass), sourcePath);
   final ctorArgs = widgetInfo.ctorParams;
   final ctorDefaults = widgetInfo.ctorDefaults;
   final methods = hostInfo.methods;
@@ -648,8 +588,6 @@ ClassInfo translateClass(
             hostChannel: m.hostChannel,
             positionalParamCount: m.positionalParamCount,
             hasNamedParams: m.hasNamedParams,
-            superMap: m.superMap,
-            mixinOrigin: m.mixinOrigin,
           ),
       ],
       isComponent: isComponent,
@@ -662,10 +600,19 @@ ClassInfo translateClass(
   // CounterVm.buildText() → BannerCard()）与组件 build 里构造模型走同一套。
   // 内建 widget（宿主渲染 / JS 类）由统一翻译路径接管，不能再当模型类。
   final used = <String, ClassInfo>{};
-  for (final name in referencedClassNames(hostClass, mixins: mixins)) {
+  for (final name in referencedClassNames(hostClass)) {
     final info = classTable[name];
     if (info == null) continue;
     used[name] = info;
+  }
+  // mixin 成员（application 层里的字段 / 带 super 的方法）同样可能引用模型类；
+  // 依赖按 **mixin 声明节点** 扫描，不并入 host 自身的依赖语义。
+  for (final (ref, _, _) in mixinInfos) {
+    for (final name in referencedClassNames(ref.node)) {
+      final info = classTable[name];
+      if (info == null) continue;
+      used[name] = info;
+    }
   }
 
   // 字段收集：基础类型 / JS 运行时类型 / 普通类类型字段进 JS 实例属性；
@@ -742,7 +689,6 @@ ClassInfo translateClass(
         name: fieldName,
         typeName: typeName,
         jsInitial: initial,
-        mixinOrigin: field.mixinOrigin,
       ));
       propByField[fieldName] = fieldName;
     }
@@ -777,31 +723,48 @@ ClassInfo translateClass(
       if (!e.value.isComponent) e.key,
   };
 
+  // mixin 成员在运行时属于同一个实例（application 类链 / __mixinHard），
+  // 因此**可见成员表**要并入 host 的解析上下文：host 方法里裸调用
+  // `logState(...)`、读取 mixin 字段 `_hits` 都要落成 `this.xxx`。
+  // 注意只并入“可见表”，不并入最终类的成员（成员仍在 mixin 产物/application 类）。
+  final mixinInstanceMethods = <ClassMethod>[
+    for (final (_, _, info) in mixinInfos)
+      ...info.methods.where((m) => !m.isStatic),
+  ];
+  final mixinInstanceFields = <ClassField>[
+    for (final (_, _, info) in mixinInfos)
+      ...info.instanceFields.where((f) => !f.isStatic),
+  ];
+  for (final f in mixinInstanceFields) {
+    propByField.putIfAbsent(f.name, () => f.name);
+  }
+  final visibleMethods = [...methods, ...mixinInstanceMethods];
+
   // 翻译上下文：实例字段表（propByField）+ 实例方法名表（actionByMethod）
   // ——widget 层据此解析标识符（`_count` → `this._count`）、区分本类实例
   // 方法与嵌套组件构造。普通类与组件同一个上下文。
   final parseCtx = ElementTranslateContext(
     propByField: propByField,
     actionByMethod: {
-      for (final m in methods)
+      for (final m in visibleMethods)
         if (!m.isGetter && !m.isStatic) m.name: m.name,
     },
     // 本类全部方法名（含非动作方法）；static 方法单列一张表，裸调用落成
     // `<类名>.m(...)`（Dart 的 static 与实例成员同一名字空间）。
     methodNames: {
-      for (final m in methods)
+      for (final m in visibleMethods)
         if (!m.isStatic) m.name,
     },
     // 方法位置形参个数（tear-off 生成精确形参用）。含具名形参时为 null——
     // 具名实参走尾参对象约定，只能 `...__a` 原样转发（保留缺省值语义）。
     methodArity: {
-      for (final m in methods)
+      for (final m in visibleMethods)
         m.name: (m.isGetter || m.hasNamedParams) ? null : m.positionalParamCount,
     },
     // getter 名（`_visiblePosts`）：JS 类里是 `get` 访问器，作为函数值传参时
     // 必须按值读，不能包装成调用（见 [ElementTranslateContext.getterNames]）。
     getterNames: {
-      for (final m in methods)
+      for (final m in visibleMethods)
         if (m.isGetter) m.name,
     },
     sourcePath: sourcePath,
@@ -858,8 +821,6 @@ ClassInfo translateClass(
         body: cm.body,
         bodyJs: bodyJs,
         paramTypes: cm.paramTypes,
-        superMap: cm.superMap,
-        mixinOrigin: cm.mixinOrigin,
       );
     }
     final body = cm.body;
@@ -883,8 +844,6 @@ ClassInfo translateClass(
       positionalParamCount: cm.positionalParamCount,
       hasNamedParams: cm.hasNamedParams,
       typeParams: cm.typeParams,
-      superMap: cm.superMap,
-      mixinOrigin: cm.mixinOrigin,
     );
   }
 
@@ -896,9 +855,11 @@ ClassInfo translateClass(
     superType: isComponent ? null : decl.extendsClause?.superclass.toSource(),
     widgetSuperType:
         isComponent ? decl.extendsClause?.superclass.toSource() : null,
-    instanceFields: instanceFields,
+    instanceFields: [...instanceFields, ...mixinInstanceFields],
     staticFields: staticFields,
-    methods: [for (final m in methods) buildMethod(m)],
+    methods: [
+      for (final m in [...methods, ...mixinInstanceMethods]) buildMethod(m),
+    ],
     ctorParams: {
       for (final f in instanceFields)
         if (ctorArgs.contains(f.name)) f.name,
@@ -966,6 +927,129 @@ ClassInfo translateClass(
     }
   }
 
+  // --- mixin application 类链（dart2js 结构） -------------------------------
+  // `with M1, M2` → 消费者产物里生成 `_C_Base_M1 extends Base`、
+  // `_C_Base_M1_M2 extends _C_Base_M1`，最终 C 继承最后一层。mixin 自身仍是
+  // 原文件产物里的独立类：不带 super 的成员留在 mixin 类里，由 `__mixinHard`
+  // 复制；带 super 的方法在本层重新发射，原生 `super` 指向上一层。
+  final mixinApps = <MixinApplication>[];
+  if (mixinInfos.isNotEmpty) {
+    final hostFieldNames = {for (final f in instanceFields) f.name};
+    final hostBase = jsBaseClassOf(proto, classTable);
+    final firstNamePrefix = hostBase == null
+        ? '_${proto.name}'
+        : '_${proto.name}_${hostBase.split('<').first.trim()}';
+    // 合成类也要能被 jsBaseClassOf 解析（原生 super 的 hasJsBase 判据）。
+    final layerClasses = <String, ClassInfo>{...classTable};
+    if (hostBase != null) {
+      layerClasses.putIfAbsent(
+        hostBase,
+        () => ClassInfo(
+          name: hostBase,
+          sourceFile: sourcePath,
+          instanceFields: const [],
+          staticFields: const [],
+          methods: const [],
+        ),
+      );
+    }
+    var prevName = hostBase;
+    for (final (ref, file, info) in mixinInfos) {
+      final layerName = mixinApps.isEmpty
+          ? '${firstNamePrefix}_${ref.name}'
+          : '${mixinApps.last.layer.name}_${ref.name}';
+      final layerBase = prevName;
+
+      // mixin 实例字段：由这一层 application 构造函数在 `super(args)` 之后
+      // 初始化，顺序天然是 Base → M1 → M2 → 最终类。
+      final layerFieldNames = {
+        ...hostFieldNames,
+        for (final f in info.instanceFields)
+          if (!f.isStatic) f.name,
+      };
+      final layerInitScope = FieldScope(
+        instanceFields: layerFieldNames,
+        globalConsts: globalConsts,
+      );
+      final layerFields = <ClassField>[];
+      for (final f in info.instanceFields) {
+        if (f.isStatic) continue;
+        if (!_fieldTranslatable(f.typeName, classTable)) {
+          // ignore: avoid_print - 构建期日志
+          print(
+            '[hot_patch_generator] 跳过 mixin 字段 ${ref.name}.${f.name}'
+            '（类型 ${f.typeName} 不可翻译）',
+          );
+          continue;
+        }
+        final init = f.initializer;
+        final initial = literalToJs(init) ??
+            (init == null ? null : rhsToJs(init, layerInitScope, used)) ??
+            _defaultInitial(f.typeName);
+        layerFields.add(ClassField(
+          name: f.name,
+          typeName: f.typeName,
+          jsInitial: initial,
+        ));
+      }
+
+      // 带 super 的方法：从 mixin 声明重新翻译到本层（原生 super 指向上一层）。
+      final structural = <ClassMethod>[
+        for (final m in info.methods)
+          if (!m.isStatic && _methodUsesSuper(m)) m,
+      ];
+      final layerProto = ClassInfo(
+        name: layerName,
+        sourceFile: sourcePath,
+        superType: layerBase,
+        instanceFields: layerFields,
+        staticFields: const [],
+        // 作用域里要看到 mixin 的全部成员（方法体可能调用同类其它方法）；
+        // 本层实际**发射**的只有带 super 的 structural。
+        methods: info.methods,
+        typeParams: info.typeParams,
+      );
+      layerClasses[layerName] = layerProto;
+      final layerMethods = parseCtx.withExprRenderer(() => <ClassMethod>[
+        for (final m in structural)
+          buildMethod(
+            m,
+            bodyJs: translateClassMethodBody(
+              layerProto,
+              m,
+              layerClasses,
+              hostFunctions: hostFunctions,
+              renderer: parseCtx,
+              globalConsts: globalConsts,
+            ),
+          ),
+      ]);
+      final layer = ClassInfo(
+        name: layerName,
+        sourceFile: sourcePath,
+        superType: layerBase,
+        instanceFields: layerFields,
+        staticFields: const [],
+        methods: layerMethods,
+        isAbstract: false,
+        typeParams: info.typeParams,
+        dependencies: {
+          ...referencedClassNames(ref.node).intersection(classTable.keys.toSet()),
+          ...parseCtx.dependencies,
+        },
+        usedWidgetPackages: parseCtx.usedWidgetPackages,
+        namespaceImports: parseCtx.namespaceImports,
+      );
+      layerClasses[layerName] = layer;
+      mixinApps.add(MixinApplication(
+        mixinName: ref.name,
+        sourceFile: file,
+        layer: layer,
+      ));
+      prevName = layerName;
+    }
+  }
+
   return ClassInfo(
     name: decl.name.lexeme,
     sourceFile: sourcePath,
@@ -981,6 +1065,8 @@ ClassInfo translateClass(
     ctorBodyJs: unnamed.body,
     isComponent: isComponent,
     isAbstract: decl.abstractKeyword != null || hostClass.abstractKeyword != null,
+    isCallable: proto.isCallable ||
+        mixinInfos.any((e) => e.$3.isCallable),
     typeParams: proto.typeParams,
     // 依赖 = widget 树里的自定义组件（parseCtx 收集）+ 字段类型 / 方法体
     // 构造调用命中的类（含跨文件组件，如 CounterVm → BannerCard）。
@@ -990,6 +1076,181 @@ ClassInfo translateClass(
       ...parseCtx.dependencies,
       ...used.keys,
       if (_projectBaseName(proto.widgetSuperType, classTable) case final b?) b,
+    },
+    usedWidgetPackages: parseCtx.usedWidgetPackages,
+    namespaceImports: parseCtx.namespaceImports,
+    mixinApplications: mixinApps,
+  );
+}
+
+/// 纯 `mixin M { ... }` → 独立类产物（按声明源文件路径落盘）。
+///
+/// 与 [translateClass] 的区别只有「没有构造 / 没有 extends」：字段与方法仍是
+/// 同一条翻译路径。带 `super` 的方法不在本模块发射——它在 `with` 的
+/// application 类里按原生 super 重新发射（见 translateClass 的 mixin 层）。
+ClassInfo translateMixin(
+  MixinDeclaration decl,
+  CompilationUnit unit,
+  String sourcePath, {
+  required Map<String, ClassInfo> classTable,
+  required String? Function(String name) importResolver,
+  Set<String> jsClassWidgets = const {},
+  Set<String> delegateClassWidgets = const {},
+  Set<String> ignoredTypes = const {},
+  Set<String> globalConsts = const {},
+  Map<String, String> prefixProducts = const {},
+}) {
+  final hostFunctions = buildHostFunctions(unit, sourcePath);
+  final structure = classInfoOf(ClassLikeDecl.ofMixin(decl), sourcePath);
+
+  final used = <String, ClassInfo>{};
+  for (final name in referencedClassNames(decl)) {
+    final info = classTable[name];
+    if (info != null) used[name] = info;
+  }
+
+  // 实例字段：初值口径与普通类完全一致（字面量 / 表达式 / 类型默认值）。
+  final fieldNames = {for (final f in structure.instanceFields) f.name};
+  final instanceFields = <ClassField>[];
+  final propByField = <String, String>{};
+  for (final f in structure.instanceFields) {
+    if (!_fieldTranslatable(f.typeName, classTable)) {
+      // ignore: avoid_print - 构建期日志
+      print('[hot_patch_generator] 跳过 mixin 字段 ${decl.name.lexeme}.${f.name}'
+          '（类型 ${f.typeName} 不可翻译）');
+      continue;
+    }
+    final init = f.initializer;
+    final initScope = FieldScope(
+      instanceFields: fieldNames,
+      globalConsts: globalConsts,
+    );
+    final initial = literalToJs(init) ??
+        (init == null ? null : rhsToJs(init, initScope, used)) ??
+        _defaultInitial(f.typeName);
+    instanceFields.add(ClassField(
+      name: f.name,
+      typeName: f.typeName,
+      jsInitial: initial,
+    ));
+    propByField[f.name] = f.name;
+  }
+
+  // static 字段 / 方法：mixin 类上的同名静态成员，调用点按类名访问。
+  final staticNames = {for (final f in structure.staticFields) f.name};
+  final staticMethods = {
+    for (final m in structure.methods)
+      if (m.isStatic) m.name,
+  };
+  final staticScope = FieldScope(
+    className: decl.name.lexeme,
+    staticFields: staticNames,
+    staticMethods: staticMethods,
+    globalConsts: globalConsts,
+  );
+  final staticFields = <ClassField>[];
+  for (final f in structure.staticFields) {
+    if (!_fieldTranslatable(f.typeName, classTable)) continue;
+    final init = f.initializer;
+    final initial = literalToJs(init) ??
+        (init == null ? null : rhsToJs(init, staticScope, used)) ??
+        (isBasicType(f.typeName) || _valueSdkTypes.contains(eraseType(f.typeName))
+            ? _defaultInitial(f.typeName)
+            : 'null');
+    staticFields.add(ClassField(
+      name: f.name,
+      typeName: f.typeName,
+      isStatic: true,
+      jsInitial: initial,
+    ));
+  }
+
+  final modelClassNames = <String>{
+    for (final e in classTable.entries)
+      if (!e.value.isComponent) e.key,
+  };
+  final parseCtx = ElementTranslateContext(
+    propByField: propByField,
+    actionByMethod: {
+      for (final m in structure.methods)
+        if (!m.isGetter && !m.isStatic) m.name: m.name,
+    },
+    methodNames: {
+      for (final m in structure.methods)
+        if (!m.isStatic) m.name,
+    },
+    methodArity: {
+      for (final m in structure.methods)
+        m.name: (m.isGetter || m.hasNamedParams) ? null : m.positionalParamCount,
+    },
+    getterNames: {
+      for (final m in structure.methods)
+        if (m.isGetter) m.name,
+    },
+    sourcePath: sourcePath,
+    importResolver: importResolver,
+    className: decl.name.lexeme,
+    staticFieldNames: staticNames,
+    staticMethodNames: staticMethods,
+    globalConsts: globalConsts,
+    hostFunctions: hostFunctions,
+    jsClassWidgets: jsClassWidgets,
+    delegateClassWidgets: delegateClassWidgets,
+    ignoredTypes: ignoredTypes,
+    modelClassNames: modelClassNames,
+    prefixProducts: prefixProducts,
+  );
+
+  final proto = ClassInfo(
+    name: decl.name.lexeme,
+    sourceFile: sourcePath,
+    instanceFields: instanceFields,
+    staticFields: staticFields,
+    methods: [
+      for (final m in structure.methods)
+        if (!_methodUsesSuper(m)) m,
+    ],
+    typeParams: [
+      for (final t in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
+        t.name.lexeme,
+    ],
+  );
+  final translated = parseCtx.withExprRenderer(() => <ClassMethod>[
+    for (final m in proto.methods)
+      ClassMethod(
+        name: m.name,
+        params: m.params,
+        isAsync: m.isAsync,
+        isGetter: m.isGetter,
+        isStatic: m.isStatic,
+        isVoid: m.isVoid,
+        returnsWidget: m.returnsWidget,
+        body: m.body,
+        bodyJs: translateClassMethodBody(proto, m, used,
+            hostFunctions: hostFunctions,
+            renderer: parseCtx,
+            globalConsts: globalConsts),
+        parameters: m.parameters,
+        isSetter: m.isSetter,
+        operatorSymbol: m.operatorSymbol,
+        paramTypes: m.paramTypes,
+        positionalParamCount: m.positionalParamCount,
+        hasNamedParams: m.hasNamedParams,
+        typeParams: m.typeParams,
+      ),
+  ]);
+
+  return ClassInfo(
+    name: decl.name.lexeme,
+    sourceFile: sourcePath,
+    instanceFields: instanceFields,
+    staticFields: staticFields,
+    methods: translated,
+    isCallable: structure.isCallable,
+    typeParams: proto.typeParams,
+    dependencies: {
+      ...parseCtx.dependencies,
+      ...used.keys,
     },
     usedWidgetPackages: parseCtx.usedWidgetPackages,
     namespaceImports: parseCtx.namespaceImports,

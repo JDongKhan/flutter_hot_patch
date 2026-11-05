@@ -142,37 +142,50 @@ Set<String> ignoredClassNamesInScope(CompilationUnit unit, String sourcePath) {
   return out;
 }
 
+/// `with` 子句可应用的声明视图（`mixin M {…}` 与 `mixin class M {…}`）。
+///
+/// 两者 AST 节点不同（[MixinDeclaration] / [ClassDeclaration] + `mixinKeyword`），
+/// 但线性化只需要「名字 + 成员 + 原始节点（依赖扫描）」；`mixin class` 同时仍按
+/// 普通类产出 JS，两条身份互不影响。
+class MixinDeclRef {
+  const MixinDeclRef(this.name, this.members, this.node);
+
+  final String name;
+  final NodeList<ClassMember> members;
+  final AstNode node;
+}
+
 /// 解析类 `with` 子句的 mixin 声明：同文件优先，其次 import 文件（与类表
 /// 同一套文件解析与缓存）。返回顺序保持 `with A, B` 的书写顺序（**前者
 /// 线性化优先级低**），找不到声明的名字直接跳过（无声丢弃会导致 mixin
-/// 方法静默缺失，调用方按需告警）。
+/// 成员静默缺失，调用方按需告警）。
 ///
 /// 泛型实参与 `on` 约束不校验：本层只有 parseString 语法树（无 resolution），
-/// JS 侧类型已擦除，成员合并即可（见 classInfoOf 的 mixins 参数）。
-List<MixinDeclaration> resolveMixinDecls(
-  ClassDeclaration decl,
-  CompilationUnit unit,
-  String sourcePath,
-) =>
-    [for (final e in resolveMixinDeclRefs(decl, unit, sourcePath)) e.$1];
-
-/// 同 [resolveMixinDecls]，但同时给出**mixin 声明所在的文件身份**。
+/// JS 侧类型已擦除，成员按原文件独立产出、由 `with` 的 application 链应用。
 ///
-/// 依赖发现必须按「声明所在文件」解析可见性：`with A` 的类在 `file1`，mixin A
-/// 写在 `file2` 并 import 了模型 `M`——`M` 对 `file1` 不可见，但对 `file2` 可见。
-/// 若按 `file1` 的可见表查 `M` 会漏标，mixin 方法体被线性化进 `file1` 的产物后
-/// `new M()` 就指向未产出的类。
-List<(MixinDeclaration, String)> resolveMixinDeclRefs(
+/// `mixin class`（`ClassDeclaration.mixinKeyword != null`）与 `mixin` 一样可被
+/// `with`，故一并收；普通类不参与（Dart 不允许把普通 class 当 mixin）。
+List<(MixinDeclRef, String)> resolveMixinDeclRefs(
   ClassDeclaration decl,
   CompilationUnit unit,
   String sourcePath,
 ) {
   final wc = decl.withClause;
   if (wc == null) return const [];
-  final byName = <String, (MixinDeclaration, String)>{};
+  final byName = <String, (MixinDeclRef, String)>{};
   void collect(CompilationUnit u, String file) {
-    for (final d in u.declarations.whereType<MixinDeclaration>()) {
-      byName.putIfAbsent(d.name.lexeme, () => (d, file));
+    for (final d in u.declarations) {
+      final MixinDeclRef? ref;
+      if (d is MixinDeclaration) {
+        ref = MixinDeclRef(d.name.lexeme, d.members, d);
+      } else if (d is ClassDeclaration && d.mixinKeyword != null) {
+        ref = MixinDeclRef(d.name.lexeme, d.members, d);
+      } else {
+        ref = null;
+      }
+      if (ref == null) continue;
+      final entry = (ref, file);
+      byName.putIfAbsent(ref.name, () => entry);
     }
   }
 

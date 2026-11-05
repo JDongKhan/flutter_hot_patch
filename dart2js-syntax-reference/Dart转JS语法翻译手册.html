@@ -205,7 +205,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
     <div><dt>适用源语言</dt><dd>Dart 3.x（含空安全、record、模式匹配）</dd></div>
     <div><dt>适用目标</dt><dd>ES2022+，原生 class / 模块 / 可选链</dd></div>
     <div><dt>实测环境</dt><dd>Dart 3.11.5 stable，macOS arm64</dd></div>
-    <div><dt>文档版本</dt><dd>v1.3 · 规则 18 组 · 陷阱 40+ · 2026-11-05 与 hot_patch_generator 0.9.0 核对（新增「实现者硬约束」：禁止自造产物形态 / 命名）</dd></div>
+    <div><dt>文档版本</dt><dd>v1.4 · 规则 18 组 · 陷阱 40+ · 2026-11-05 与 hot_patch_generator 0.9.0 核对（mixin 改为原文件独立类 + application 类链 + <code>__mixinHard</code>；删除旧「成员内联 / superMap」方案）</dd></div>
   </dl>
 </header>
 
@@ -963,16 +963,19 @@ Status.#locked = true;</code><button class="copy" type="button">复制</button><
 <!-- ================= 10 mixin ================= -->
 <section id="mixins">
 <h2><span class="sec-no">10</span>mixin</h2>
-<p class="h2-sub">mixin 是运行时结构：成员要复制进目标类，且 <code>super</code> 必须重新绑定。不能用一个 <code>Object.assign</code> 糊过去。</p>
+<p class="h2-sub">mixin 是编译期概念：声明按<b>原文件路径</b>产出独立类；<code>with</code> 在消费者产物里生成 application 类链，并用运行时 <code>__mixinHard</code> 复制成员。不能把 mixin 成员内联进最终类。</p>
 
 <h3>规范语义</h3>
 <p>Dart 规范里，<code>class C extends S with M1, M2</code> 等价于先构造一个匿名的 <strong>mixin application 类</strong>（父类为 S，成员为 M1 ∪ M2，后声明的覆盖先声明的），再由 <code>C</code> 继承它。官方诊断文档对 mixin application 的定义即为「mixin 应用到一个类时创建的类」。</p>
 
-<h3>dart2js 的实际做法</h3>
+<h3>dart2js 的实际做法（本项目口径）</h3>
 <ol>
-  <li>不把中间类照搬到 JS 输出，而是把 mixin 成员<strong>复制进目标类</strong>。</li>
-  <li>mixin 里的 <code>super</code> 不能靠 JS 原生 <code>super</code>——JS 的 super 是词法绑定到声明时原型链的，成员复制后链已变。做法是给方法注入<strong>隐藏的 super 参数</strong>，应用时绑定到实际父类。</li>
-  <li>mixin 的<strong>字段初始化器提升到应用类构造函数</strong>，按 <code>with</code> 子句顺序执行。</li>
+  <li>mixin 声明按<b>原文件路径</b>产出独立类（纯 <code>mixin</code> 也是 <code>export class</code>，不能实例化；成员集合与静态成员保留）。</li>
+  <li><code>class C extends S with M1, M2</code> 在消费者产物里生成 intermediate application 类链：<code>_C_S_M1 extends S</code>、<code>_C_S_M1_M2 extends _C_S_M1</code>，最终 <code>C</code> 继承最后一层。</li>
+  <li>不带 <code>super</code> 的成员留在 mixin 类里，运行时 <code>__mixinHard(app, M)</code> 复制 <b>mixin 原型上的自有成员</b>；目标已有同名自有成员时不覆盖（因此后写的 mixin / 类自身声明优先）。</li>
+  <li>带 <code>super</code> 的方法在对应的 application 类里重新发射，原生 JS <code>super</code> 指向上一层（<code>M2.log</code> 的 super → <code>_C_S_M1.log</code>，<code>M1.log</code> 的 super → <code>S.log</code>）。</li>
+  <li>mixin 实例字段不并进最终类，由对应 application 类的构造函数在 <code>super(args)</code> 之后初始化；顺序天然是 <code>S → M1 → M2 → C</code>。</li>
+  <li><code>mixin class</code> 同时按普通 class 产出（可实例化 / <code>extends</code>）；被 <code>with</code> 时走同一套 application 链，构造不参与混合。</li>
 </ol>
 
 <div class="scroll">
@@ -980,24 +983,22 @@ Status.#locked = true;</code><button class="copy" type="button">复制</button><
   <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
   <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
   <tbody>
-    <tr><td><code>mixin M { void f() {} }</code></td><td>生成成员函数集合</td><td><span class="muted">—</span></td><td>不带构造函数</td><td>classInfoOf 按线性化把 mixin 成员合并进类（mixinOrigin 标注来源）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>mixin M on S</code></td><td>super 绑定到 S</td><td><span class="muted">—</span></td><td><code>on</code> 子句只用于解析 <code>super</code> 目标</td><td>superMap 记录链上下一个实现，super 语句落 <code>this._m$Mixin$name</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>class C extends B with M</code></td><td>复制 M 成员到 C，super 绑定 B</td><td><span class="muted">—</span></td><td>单 mixin</td><td>成员合并 + superMap，单 mixin 与普通父类混合</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>... with M1, M2</code></td><td>M2 覆盖 M1；M2 的 super → M1，M1 的 super → B</td><td><span class="muted">—</span></td><td>链式绑定</td><td>按书写顺序线性化（后写优先），superMap 指向链上下一个实现</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>mixin 字段 <code>int x = 1</code></td><td>初始化提升到构造函数</td><td><span class="muted">—</span></td><td>按应用顺序</td><td>mixin 字段并入实例字段视图（objectFieldsOf）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>mixin class</code></td><td>既能当类又能当 mixin</td><td><span class="muted">—</span></td><td>同时生成 class 与成员集合</td><td>未支持：mixin class 未单独建模</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>mixin M { void f() {} }</code></td><td>原文件产出 <code>export class M</code>；with 时 <code>__mixinHard</code></td><td><span class="muted">—</span></td><td>独立类 + 运行时复制</td><td><code>translateMixin</code>（analyze_dart_class）+ ComponentBuilder / ProjectModuleBuilder 按原路径产出</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>mixin M on S</code></td><td>super 在 application 层指向上一层</td><td><span class="muted">—</span></td><td><code>on</code> 约束不进 JS 继承链；带 super 的方法在 application 类发射</td><td><code>_methodUsesSuper</code> 判定；<code>translateClass</code> 的 mixin application 层重新翻译</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>class C extends B with M</code></td><td><code>_C_B_M extends B</code> + <code>C extends _C_B_M</code></td><td><span class="muted">—</span></td><td>单 mixin application 链</td><td><code>ClassInfo.mixinApplications</code>（翻译期）→ 渲染期输出合成类与 <code>__mixinHard</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>... with M1, M2</code></td><td>chain <code>_C_B_M1</code> → <code>_C_B_M1_M2</code> → <code>C</code></td><td><span class="muted">—</span></td><td>低优先级先应用；高优先级后一层覆盖</td><td>按 <code>with</code> 书写顺序逐层生成，后层继承前层</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>mixin 字段 <code>int x = 1</code></td><td>application 类构造里初始化</td><td><span class="muted">—</span></td><td>按应用顺序</td><td>layer 的 <code>instanceFields</code> → <code>constructor(args){ super(args); this.x = …; }</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>mixin class</code></td><td>普通 class + with 时同样的 application 链</td><td><span class="muted">—</span></td><td>两种身份互不影响</td><td><code>ClassDeclaration.mixinKeyword</code> 进类表照常产出；with 由 <code>MixinDeclRef</code> 统一解析</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
   </tbody>
 </table>
 </div>
 
 <p class="cap"><span class="dart">DART</span></p>
 <pre><code>mixin A {
-  int a = 1;
-  void log() { print('A'); super.log(); }
+  void log() { print('A'); }
 }
 
-mixin B {
-  int b = 2;
+mixin B on Base {
   void log() { print('B'); super.log(); }
 }
 
@@ -1005,57 +1006,43 @@ class Base { void log() { print('Base'); } }
 
 class C extends Base with A, B {}</code><button class="copy" type="button">复制</button></pre>
 
-<p class="cap"><span class="js">JS</span> · 成员复制 + super 注入</p>
-<pre><code>// mixin 编译成「带隐藏 super 参数的成员集合」
-const A = {
-  init() { this.a = 1; },
-  log($super) { console.log('A'); $super.log.call(this); },
-};
-
-const B = {
-  init() { this.b = 2; },
-  log($super) { console.log('B'); $super.log.call(this); },
-};
-
-class Base {
-  log() { console.log('Base'); }
+<p class="cap"><span class="js">JS</span> · 独立 mixin 类 + application 链 + 运行时复制</p>
+<pre><code>// a.js（A 的原文件产物）
+export class A {
+  log() { console.log('A'); }
 }
 
-class C extends Base {
-  constructor() {
-    super();
-    A.init.call(this);          // 字段按 with 顺序初始化
-    B.init.call(this);
-  }
+// b.js（B 的原文件产物；带 super 的 log 不在本文件发射，
+//      它属于 with 生成的 application 层）
+export class B {}
 
-  // super 链：B -> A -> Base
-  log() { return B_on_A.log.call(this); }
+// c.js（消费者产物）
+import { A } from './a.js';
+import { B } from './b.js';
+
+class _C_Base_A extends Base {}
+__mixinHard(_C_Base_A, A);          // 复制 A.prototype 的自有成员
+
+class _C_Base_A_B extends _C_Base_A {
+  log() { console.log('B'); super.log(); }   // 带 super：本层发射
 }
+__mixinHard(_C_Base_A_B, B);
 
-// 逐层绑定：每层 mixin 生成一个 super 已绑死的包装
-const A_on_Base = {
-  log() { return A.log.call(this, Base.prototype); },
-};
-const B_on_A = {
-  log() { return B.log.call(this, A_on_Base); },
-};
-
-// 说明：上面 class C 的 log 必须引用 B_on_A，而不是裸的 B
-// 裸 B.log(this, A) 会让 A 的 super 落空，因为 A 还需要再收到 Base 层</code><button class="copy" type="button">复制</button></pre>
+export class C extends _C_Base_A_B {
+  // C 自身成员；`super.log()` 在这里指向 _C_Base_A_B.log
+}</code><button class="copy" type="button">复制</button></pre>
 
 <div class="note">
-  <span class="t">多级 mixin 的正确生成方式</span>
-  每一层 mixin 都需要一个「super 已经绑死」的包装函数，而不是在调用时把上一层的原始对象传进去。推荐按应用链逐层生成：<br>
-  <code>M1_on_S.log = function () { return M1.log.call(this, S.prototype); }</code><br>
-  <code>M2_on_M1.log = function () { return M2.log.call(this, M1_on_S); }</code><br>
-  <code>C.prototype.log = M2_on_M1.log</code><br>
-  这样 <code>$super</code> 参数在每一层都指向正确的上一层实现。
+  <span class="t">顺序与覆盖</span>
+  <code>with M1, M2</code> 中 M2 优先级最高：application 链按书写顺序生成，M2 在更派生的一层；<code>__mixinHard</code> 只填充目标<b>尚无自有同名成员</b>的位置，因此 M2 覆盖 M1。类自身声明写在最终 <code>C</code> 上，优先级最高。
 </div>
 
 <h3>红线</h3>
 <ul>
-  <li>不要用 <code>Object.assign(C.prototype, M.prototype)</code>：<code>super</code> 链会断，且静态成员/字段初始化全丢。</li>
-  <li>不要让 mixin 方法直接使用 JS 原生 <code>super</code>：复制后原型的 <code>[[HomeObject]]</code> 不指向目标类父类。</li>
+  <li>不要把 mixin 成员内联进最终类（<code>C</code> 里不应出现 <code>A.log</code>）；成员只在 mixin 产物 / application 层。</li>
+  <li>不要用 <code>Object.assign(C.prototype, M.prototype)</code>：原生 class 方法不可枚举，且会绕过「目标已有同名自有成员不覆盖」的优先级规则；用 <code>__mixinHard</code> 的自有属性描述符复制。</li>
+  <li>不要跳过 mixin 的原文件产物直接在本文件合并——消费者必须 import 该 mixin 类。</li>
+  <li>mixin 字段不要在最终类构造里重复初始化；由 application 类构造按 <code>with</code> 顺序负责。</li>
   <li>字段初始化顺序：superclass 构造 → 各 mixin 按 <code>with</code> 顺序初始化 → 子类构造体。</li>
 </ul>
 </section>
@@ -1557,7 +1544,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
 <!-- ================= 16 运行时补齐 ================= -->
 <section id="helpers">
 <h2><span class="sec-no">16</span>运行时补齐与辅助能力</h2>
-<p class="h2-sub">项目把跨语言差异集中到运行时（<code>packages/hot_patch_generator/lib/src/builders/runtime/js/</code>），生成器只做语法级翻译；下面的「已实现」以 <code>hot_patch_generator</code> 0.8.1 为准。</p>
+<p class="h2-sub">项目把跨语言差异集中到运行时（<code>packages/hot_patch_generator/lib/src/builders/runtime/js/</code>），生成器只做语法级翻译；下面的「已实现」以 <code>hot_patch_generator</code> 0.9.0 为准。</p>
 
 <h3>已实现</h3>
 <table>
@@ -1571,12 +1558,13 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
     <tr><td>Number：<code>isEven</code> / <code>isOdd</code> / <code>hashCode</code> / <code>compareTo</code> / <code>round</code> / <code>floor</code> / <code>ceil</code> / <code>abs</code> / <code>truncate</code> / <code>toInt</code> / <code>toDouble</code> / <code>toStringAsFixed</code> / <code>clamp</code></td><td><code>Number.prototype</code></td><td>与 Dart 同名同义（<code>toInt</code>/<code>truncate</code> 向零取整）</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>Future</code></td><td><code>future_js.dart</code></td><td><code>then</code> / <code>catchError</code> / <code>whenComplete</code> / <code>delayed</code> / <code>wait</code> / <code>value</code> / <code>error</code>，底层 Promise</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>Timer</code> / <code>Timer.periodic</code></td><td><code>timer_js.dart</code></td><td>句柄 + <code>cancel()</code>，宿主缺失时按取消标记兜底</td><td><span class="st st-pass">通过</span></td></tr>
+    <tr><td><code>__mixinHard(cls, mixin)</code></td><td><code>runtime_js.dart</code>（G.__mixinHard）</td><td>把 mixin 原型上的<b>自有成员</b>（getOwnPropertyNames + 描述符）复制到 application 类原型；目标已有同名自有成员时不覆盖，保证 <code>with</code> 链上后写的 mixin / 类自身声明优先</td><td><span class="st st-pass">通过</span></td></tr>
   </tbody>
 </table>
 
-<h3>已提供 / 未提供（手册 v1.2 核对）</h3>
+<h3>已提供 / 未提供（手册 v1.4 核对）</h3>
 <ul>
-  <li><b>已提供</b>：<code>__nn(v)</code>（undefined → null 归一，<b>不抛错</b>，其他值原样返回）、<code>__mod(a, b)</code>（欧几里得取模）、<code>assert</code>、Array / String / Number 同名成员补齐。<code>!</code> 按项目口径直接忽略（不提供非空断言函数）。</li>
+  <li><b>已提供</b>：<code>__nn(v)</code>（undefined → null 归一，<b>不抛错</b>，其他值原样返回）、<code>__mod(a, b)</code>（欧几里得取模）、<code>__mixinHard(cls, mixin)</code>（mixin application 的原型成员复制）、<code>assert</code>、Array / String / Number 同名成员补齐。<code>!</code> 按项目口径直接忽略（不提供非空断言函数）。</li>
   <li><code>__idiv</code>：不需要，<code>~/</code> 已在翻译层展开为 <code>Math.trunc(a / b)</code>。</li>
   <li><code>__isInt / __isNum / __isString …</code>：类型判断由 <code>typeTestJs</code> 内联生成（<code>int</code> → <code>Number.isInteger</code>，<code>double</code> / <code>num</code> → <code>typeof</code>）。</li>
   <li><code>__freeze</code>：const 集合不冻结（Dart const 是编译期保证，产物无需运行时冻结）。</li>
@@ -1621,7 +1609,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
     <tr><td><code>_private</code></td><td><code>_private</code> 原样</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>原样保留下划线，不转 <code>#</code> 私有</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>abstract class</code></td><td>class + 抛错</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>抽象类进类表并产出普通 class；抽象成员发 <code>throw new Error("Unimplemented: …")</code> 兜底</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>enum</code></td><td>class + 静态实例</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>项目简单枚举 → 常量对象（name/index/values/toString）；增强枚举告警跳过</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>mixin</code></td><td>成员复制 + super 注入</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>线性化合并成员 + superMap</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>mixin</code></td><td>原文件独立类 + application 类链 + <code>__mixinHard</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>mixin 按原路径产出；with 生成中间类并运行时复制；super 在 application 层走原生 super</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>extension</code></td><td>顶层函数 + 调用点重写</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>extension_support.dart 生成顶层函数 / 对象并改写调用点</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>where</code> / <code>any</code></td><td>运行时扩展同名 <code>where</code> / <code>any</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>where / any 均已补</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>fold(init, fn)</code></td><td>运行时扩展同名 <code>fold</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>Array.prototype.fold</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>

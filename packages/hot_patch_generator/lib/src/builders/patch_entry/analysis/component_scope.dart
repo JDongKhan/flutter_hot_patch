@@ -167,6 +167,8 @@ Map<String, Set<String>> _neededClasses(
 }) {
   // 类声明索引：file → 类名 → 声明（可翻译的类，含私有类）。
   final ownDecls = <String, Map<String, ClassDeclaration>>{};
+  // mixin 声明索引：file → mixin 名 → 声明（`mixin` 与 `mixin class` 都算）。
+  final ownMixins = <String, Map<String, AstNode>>{};
   // 可见性：file → 类名 → 声明所在文件（本文件含私有 + import 文件的公共类）。
   final visible = <String, Map<String, String>>{};
   for (final e in units.entries) {
@@ -176,7 +178,17 @@ Map<String, Set<String>> _neededClasses(
         if (_translatableDecl(d)) d.name.lexeme: d,
     };
     ownDecls[file] = own;
-    final owners = <String, String>{for (final n in own.keys) n: file};
+    final ownMixinMap = <String, AstNode>{
+      for (final d in e.value.declarations.whereType<MixinDeclaration>())
+        d.name.lexeme: d,
+      for (final d in e.value.declarations.whereType<ClassDeclaration>())
+        if (d.mixinKeyword != null) d.name.lexeme: d,
+    };
+    ownMixins[file] = ownMixinMap;
+    final owners = <String, String>{
+      for (final n in own.keys) n: file,
+      for (final n in ownMixinMap.keys) n: file,
+    };
     for (final imported in resolveImportFiles(e.value, file)) {
       final unit = units[imported];
       if (unit == null) continue;
@@ -186,15 +198,26 @@ Map<String, Set<String>> _neededClasses(
         if (name.startsWith('_') || !_translatableDecl(d)) continue;
         owners.putIfAbsent(name, () => imported);
       }
+      for (final d in unit.declarations.whereType<MixinDeclaration>()) {
+        final name = d.name.lexeme;
+        if (name.startsWith('_')) continue;
+        owners.putIfAbsent(name, () => imported);
+      }
+      for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+        if (d.mixinKeyword == null) continue;
+        final name = d.name.lexeme;
+        if (name.startsWith('_')) continue;
+        owners.putIfAbsent(name, () => imported);
+      }
     }
     visible[file] = owners;
   }
 
   final needed = <String, Set<String>>{};
   final visited = <String>{};
-  final queue = <(ClassDeclaration, String)>[];
+  final queue = <(AstNode, String)>[];
 
-  void mark(String owner, String name, ClassDeclaration decl) {
+  void mark(String owner, String name, AstNode decl) {
     (needed[owner] ??= <String>{}).add(name);
     if (visited.add('$owner#$name')) queue.add((decl, owner));
   }
@@ -202,7 +225,7 @@ Map<String, Set<String>> _neededClasses(
   void markVisible(String file, String name) {
     final owner = visible[file]?[name];
     if (owner == null) return;
-    final decl = ownDecls[owner]?[name];
+    final decl = ownDecls[owner]?[name] ?? ownMixins[owner]?[name];
     if (decl != null) mark(owner, name, decl);
   }
 
@@ -253,17 +276,25 @@ Map<String, Set<String>> _neededClasses(
     final (decl, file) = queue.removeLast();
     final unit = units[file];
     if (unit == null) continue;
-    // StatefulWidget 的字段 / 方法分布在 widget 类与 State 类两处，合并扫描。
-    for (final cls in classAndStateDecls(decl, unit)) {
-      for (final name in dependenciesOf(cls)) {
+    // StatefulWidget 的字段 / 方法分布在 widget 类与 State 类两处，合并扫描；
+    // mixin 声明本身就是单个节点。
+    final nodes = decl is ClassDeclaration
+        ? classAndStateDecls(decl, unit)
+        : <AstNode>[decl];
+    for (final node in nodes) {
+      for (final name in dependenciesOf(node)) {
         markVisible(file, name);
       }
-      // mixin 的引用必须按 **mixin 声明所在文件** 的可见表解析：`with A` 的
-      // 类看不见 A 所在文件 import 的模型，但 A 的成员会被线性化进本产物，
-      // 其中的 `new M()` 需要 M 的产物（按本文件的可见表查会漏标）。
-      for (final (mixinDecl, mixinFile) in
-          resolveMixinDeclRefs(cls, unit, file)) {
-        for (final name in dependenciesOf(mixinDecl)) {
+      if (node is! ClassDeclaration) continue;
+      // mixin 的引用必须按 **mixin 声明所在文件** 的可见表解析，并且 mixin 本身
+      // 也要作为「需要产出的类」标记（它在自己的原文件产物里是一个 export class）。
+      for (final (ref, mixinFile) in
+          resolveMixinDeclRefs(node, unit, file)) {
+        (needed[mixinFile] ??= <String>{}).add(ref.name);
+        if (visited.add('$mixinFile#${ref.name}')) {
+          queue.add((ref.node, mixinFile));
+        }
+        for (final name in dependenciesOf(ref.node)) {
           markVisible(mixinFile, name);
         }
       }
@@ -297,6 +328,7 @@ bool _hasComponentAnnotation(CompilationUnit unit) => unit.declarations
 ///   - 其余（`@PatchIgnore` 页）→ 不产出。
 bool _isTranslationStop(CompilationUnit unit) =>
     unit.declarations.whereType<ExtensionDeclaration>().isEmpty &&
+    unit.declarations.whereType<MixinDeclaration>().isEmpty &&
     !unit.declarations
         .whereType<ClassDeclaration>()
         .any((d) => !d.name.lexeme.startsWith('_') && _translatableDecl(d));

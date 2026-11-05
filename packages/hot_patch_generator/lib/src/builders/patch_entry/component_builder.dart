@@ -175,12 +175,26 @@ class ComponentBuilder implements Builder {
     // 扩展的文件视为有产出，因此被 import 的扩展文件一定可达；没人 import 的
     // 扩展文件在 JS 侧永远不会被加载，不产出）。
     final hasExtensions = hasExtensionDeclaration(parsed.unit);
+    final unitMixins = [
+      for (final d in parsed.unit.declarations.whereType<MixinDeclaration>()) d,
+    ];
+    // 本文件要产出的 mixin（原文件路径产物）：根文件产出全部；非根文件只产出
+    // scope 标记为「被 with 引用」的那些（与类同一套符号级判据）。
+    final mixinDecls = <MixinDeclaration>[];
     final annotated = <ClassDeclaration>[
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>())
         if (findAnnotation(d.metadata, 'PatchEntry') != null) d,
     ];
     if (annotated.isNotEmpty) {
       roots.addAll([for (final d in annotated) (d, true)]);
+      // `mixin class` 既是类也是 mixin：根文件里被 with 引用的 mixin class 必须
+      // 作为普通类产出（它自己的原文件产物），否则消费者 import 不到。
+      for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+        if (d.mixinKeyword == null) continue;
+        if (roots.any((e) => identical(e.$1, d))) continue;
+        roots.add((d, false));
+      }
+      mixinDecls.addAll(unitMixins);
     } else {
       scope = await componentTranslationScope(buildStep);
       if (!scope.reachableFiles.contains(inputId.path)) return;
@@ -198,10 +212,14 @@ class ComponentBuilder implements Builder {
         // 被具体类 extends 时，父类产物必须存在才能 `import` / `extends`。
         roots.add((d, d.abstractKeyword == null && info.isComponent));
       }
+      for (final d in unitMixins) {
+        if (neededHere.contains(d.name.lexeme)) mixinDecls.add(d);
+      }
     }
     // 没有根类但有 `@PatchIgnore(isComponent: true)` 包装类：仍按常规路径产出
     // （包装类 + 顶层常量一起写），否则使用方的 `new X(...)` 缺类定义。
     if (roots.isEmpty &&
+        mixinDecls.isEmpty &&
         wrapperClasses.isEmpty &&
         !hasExtensions) {
       // 纯数据文件（如 lib/app/service/app_data.dart）：文件里没有任何可翻译的类，
@@ -267,6 +285,23 @@ class ComponentBuilder implements Builder {
         ignoredTypes: ignoredTypes,
         globalConsts: globalConsts,
         isComponent: isComponent,
+        prefixProducts: prefixProducts,
+      ));
+    }
+
+    // 纯 mixin：按声明所在文件产出独立类（`export class M { … }`），供 with 的
+    // 消费者产物 import + `__mixinHard` 应用。
+    for (final d in mixinDecls) {
+      exportedClasses.add(translateMixin(
+        d,
+        parsed.unit,
+        inputId.path,
+        classTable: classTable,
+        importResolver: importResolver,
+        jsClassWidgets: jsClassWidgetTypes,
+        delegateClassWidgets: builderFormTypes,
+        ignoredTypes: ignoredTypes,
+        globalConsts: globalConsts,
         prefixProducts: prefixProducts,
       ));
     }
@@ -371,9 +406,15 @@ class ComponentBuilder implements Builder {
 
     for (final c in exportedClasses) {
       collectModelDeps(c.dependencies);
+      for (final a in c.mixinApplications) {
+        collectModelDeps(a.layer.dependencies);
+      }
     }
     for (final c in inlineClasses.values) {
       collectModelDeps(c.dependencies);
+      for (final a in c.mixinApplications) {
+        collectModelDeps(a.layer.dependencies);
+      }
     }
     for (final e in extensions) {
       collectModelDeps(e.dependencies);
@@ -403,12 +444,34 @@ class ComponentBuilder implements Builder {
 
     for (final c in exportedClasses) {
       collectComponentImports(c.dependencies);
+      for (final a in c.mixinApplications) {
+        collectComponentImports(a.layer.dependencies);
+      }
     }
     for (final c in inlineClasses.values) {
       collectComponentImports(c.dependencies);
+      for (final a in c.mixinApplications) {
+        collectComponentImports(a.layer.dependencies);
+      }
     }
     for (final e in extensions) {
       collectComponentImports(e.dependencies);
+    }
+
+    // mixin 类本身按**声明源文件**的产物 import（纯 mixin / mixin class 都是
+    // 该文件产物里的 `export class`）；同产物内直接裸引用。
+    for (final c in [...exportedClasses, ...inlineClasses.values]) {
+      for (final a in c.mixinApplications) {
+        final pkg = packageNameOf(a.sourceFile);
+        final product = pkg == null
+            ? productPath(a.sourceFile)
+            : packageModulePath(pkg);
+        if (product == ownProduct) continue;
+        dependencyImports.add(
+          "import { ${a.mixinName} } from "
+          "'${relativeProduct(ownProduct, product)}';",
+        );
+      }
     }
 
     // 扩展目标类的 import（目标类在别的产物里时，注册语句直接传构造函数）。
@@ -469,7 +532,12 @@ class ComponentBuilder implements Builder {
     }
 
     // 翻译阶段（含三目/if/for 内联渲染）已收集的类型并入渲染期总表。
-    final allTranslated = [...exportedClasses, ...inlineClasses.values];
+    final allTranslated = [
+      ...exportedClasses,
+      ...inlineClasses.values,
+      for (final c in [...exportedClasses, ...inlineClasses.values])
+        for (final a in c.mixinApplications) a.layer,
+    ];
     final extraUsedWidgets = <String, Set<String>>{};
     for (final c in allTranslated) {
       _mergeUsedWidgets(extraUsedWidgets, c.usedWidgetPackages);
@@ -613,18 +681,40 @@ String _renderJsProduct(
   // 全部类都 `export`：跨文件引用（`import { PanelColors } from 'hello_component.js'`）
   // 要求类在声明产物里可见。ES module 的 export 不影响本模块内部语义，同一类
   // 只会翻译到唯一产物里，不会出现同名冲突。
+  // mixin application 类（`_C_Base_M1` …）是本产物内的合成类，不 export；
+  // 它们必须排在自己的基类之后、最终类之前（[orderClassesByBase] 保证）。
+  final applications = <MixinApplication>[
+    for (final c in [...inlineClasses, ...exportedClasses]) ...c.mixinApplications,
+  ];
+  final appLayers = [for (final a in applications) a.layer];
+  final layerNames = {for (final a in applications) a.layer.name};
+  final baseOverride = <String, String?>{
+    for (final c in [...inlineClasses, ...exportedClasses])
+      if (c.mixinApplications.isNotEmpty)
+        c.name: c.mixinApplications.last.layer.name,
+    for (final a in applications) a.layer.name: a.layer.superType,
+  };
+  String? baseOf(ClassInfo c) =>
+      baseOverride.containsKey(c.name) ? baseOverride[c.name] : baseClassOf?.call(c);
+
   for (final cls in orderClassesByBase(
-    [...inlineClasses, ...exportedClasses],
-    (c) => baseClassOf?.call(c),
+    [...inlineClasses, ...exportedClasses, ...appLayers],
+    baseOf,
   )) {
     b
       ..writeln()
       ..writeln('// ${cls.isComponent ? '组件' : '模型'} ${cls.name}')
       ..writeln(dart2js(
         cls,
-        exported: true,
-        baseClass: baseClassOf?.call(cls),
+        exported: !layerNames.contains(cls.name),
+        baseClass: baseOf(cls),
       ));
+    // application 类声明后立即应用本层 mixin（运行时复制 mixin 类原型的自有成员）。
+    for (final a in applications) {
+      if (a.layer.name == cls.name) {
+        b.writeln('__mixinHard(${cls.name}, ${a.mixinName});');
+      }
+    }
   }
 
   // 本文件声明的 `extension`：注册语句写在声明处（求值本产物即注册成员）。

@@ -203,3 +203,13 @@ export class GuideBubbleWidget extends StatefulWidget {
     });
   }
 }
+
+// 模型 StateLogMixin
+export class StateLogMixin {
+  constructor(args) {
+    this.__ta = (args && args.typeArguments) || {};
+  }
+  logState(message) {
+    print("[StateLogMixin] " + message);
+  }
+}

@@ -115,8 +115,8 @@ String renderProjectPackageModule(
   Map<String, String> ownerOf,
 ) {
   final ownProduct = packageModulePath(package);
-  // 本包需要产出的类：名字必须唯一（模块内一个类一份实现），重名出声。
-  final decls = <String, (ClassDeclaration, String)>{};
+  // 本包需要产出的类 / mixin：名字必须唯一（模块内一个类一份实现），重名出声。
+  final decls = <String, (AstNode, String)>{};
   for (final e in neededClasses.entries) {
     if (packageNameOf(e.key) != package) continue;
     final unit = parseUnitFile(e.key);
@@ -136,8 +136,12 @@ String renderProjectPackageModule(
     }
     for (final name in e.value) {
       if (stateNames.contains(name)) continue;
-      final decl = unit.declarations
+      AstNode? decl = unit.declarations
           .whereType<ClassDeclaration>()
+          .where((d) => d.name.lexeme == name)
+          .firstOrNull;
+      decl ??= unit.declarations
+          .whereType<MixinDeclaration>()
           .where((d) => d.name.lexeme == name)
           .firstOrNull;
       if (decl == null) continue;
@@ -174,13 +178,14 @@ String renderProjectPackageModule(
   }
 
   final classInfos = <ClassInfo>[];
+  final applications = <MixinApplication>[];
   final deps = <String>{};
   final usedWidgets = <String, Set<String>>{};
   // 类名 → JS 基类名：类表是逐个文件建的（跨包模块按文件翻译），故渲染前按
   // 类名汇总，供「基类在前」排序与 extends 渲染共用。
   final baseClassByName = <String, String?>{};
   for (final e in decls.entries) {
-    final (decl, file) = e.value;
+    final (node, file) = e.value;
     final unit = parseUnitFile(file)!;
     final table = buildClassTable(unit, file);
     final consts = buildTopLevelConstResolver(unit, file, table);
@@ -191,20 +196,53 @@ String renderProjectPackageModule(
       print('[hot_patch_generator] 跨包类 ${e.key}（$file）引用了包内其它文件的'
           '顶层常量 ${foreignConsts.join(', ')}：暂未随跨包模块产出');
     }
-    final info = translateClass(
-      decl,
-      unit,
-      file,
-      classTable: table,
-      importResolver: importResolver,
-      jsClassWidgets: jsClassWidgetTypes,
-      delegateClassWidgets: builderFormTypes,
-      ignoredTypes: ignoredClassNamesInScope(unit, file),
-      globalConsts: consts.names,
-      isComponent: table[e.key]?.isComponent ?? false,
-    );
+    final info = node is MixinDeclaration
+        ? translateMixin(
+            node,
+            unit,
+            file,
+            classTable: table,
+            importResolver: importResolver,
+            jsClassWidgets: jsClassWidgetTypes,
+            delegateClassWidgets: builderFormTypes,
+            ignoredTypes: ignoredClassNamesInScope(unit, file),
+            globalConsts: consts.names,
+          )
+        : translateClass(
+            node as ClassDeclaration,
+            unit,
+            file,
+            classTable: table,
+            importResolver: importResolver,
+            jsClassWidgets: jsClassWidgetTypes,
+            delegateClassWidgets: builderFormTypes,
+            ignoredTypes: ignoredClassNamesInScope(unit, file),
+            globalConsts: consts.names,
+            isComponent: table[e.key]?.isComponent ?? false,
+          );
     classInfos.add(info);
     baseClassByName[info.name] = jsBaseClassOf(info, table);
+    applications.addAll(info.mixinApplications);
+    if (info.mixinApplications.isNotEmpty) {
+      baseClassByName[info.name] = info.mixinApplications.last.layer.name;
+    }
+    for (final a in info.mixinApplications) {
+      baseClassByName[a.layer.name] = a.layer.superType;
+      // mixin 类本身按声明源文件产物 import；同模块内的 mixin 已在 decls 里。
+      final mixinProduct = importResolver(a.mixinName);
+      if (!decls.containsKey(a.mixinName) &&
+          mixinProduct != null &&
+          mixinProduct != ownProduct) {
+        deps.add(a.mixinName);
+      }
+      for (final d in a.layer.dependencies) {
+        if (decls.containsKey(d)) continue;
+        if (importResolver(d) != null) deps.add(d);
+      }
+      a.layer.usedWidgetPackages.forEach((pkg, types) {
+        (usedWidgets[pkg] ??= <String>{}).addAll(types);
+      });
+    }
     // 依赖：跨模块的类走 import，宿主 widget 走 package 模块 import
     // （与组件产物同一套拼装规则）。
     for (final d in info.dependencies) {
@@ -216,18 +254,29 @@ String renderProjectPackageModule(
     });
   }
 
+  final appLayers = [for (final a in applications) a.layer];
+  final layerNames = {for (final a in applications) a.layer.name};
+
   // 类体先写进独立缓冲：import 需要按**实际出现的名字**收集（见下 usedValues）。
   final body = StringBuffer();
   // 基类在前（class 有 TDZ；Dart 不要求基类先声明）。
-  for (final info in orderClassesByBase(classInfos, (c) => baseClassByName[c.name])) {
+  for (final info in orderClassesByBase(
+    [...classInfos, ...appLayers],
+    (c) => baseClassByName[c.name],
+  )) {
     body
       ..writeln()
       ..writeln('// ${info.isComponent ? '组件' : '模型'} ${info.name}')
       ..writeln(dart2js(
         info,
-        exported: true,
+        exported: !layerNames.contains(info.name),
         baseClass: baseClassByName[info.name],
       ));
+    for (final a in applications) {
+      if (a.layer.name == info.name) {
+        body.writeln('__mixinHard(${info.name}, ${a.mixinName});');
+      }
+    }
   }
 
   final imports = <String>[

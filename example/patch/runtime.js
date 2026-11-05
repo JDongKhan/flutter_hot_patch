@@ -117,6 +117,24 @@ if (typeof G.__idxSet !== 'function') {
     return v;
   };
 }
+// mixin 应用（dart2js 的 mixinPropertiesHard 同名语义）：把 mixin 原型上的
+// **自有成员**复制到 application 类原型；目标已有同名自有成员时不覆盖，
+// 从而保证 with 链上后写的 mixin / 类自身声明优先。类方法在原生 class 里是
+// 不可枚举属性，故用 getOwnPropertyNames + 描述符复制，而不是 Object.assign。
+if (typeof G.__mixinHard !== 'function') {
+  G.__mixinHard = function (cls, mixin) {
+    var from = mixin && mixin.prototype;
+    var to = cls && cls.prototype;
+    if (!from || !to) return;
+    var keys = Object.getOwnPropertyNames(from);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (key === 'constructor') continue;
+      if (Object.prototype.hasOwnProperty.call(to, key)) continue;
+      Object.defineProperty(to, key, Object.getOwnPropertyDescriptor(from, key));
+    }
+  };
+}
 
 //   - Map.prototype：Dart `Map` 的承载就是 JS `Map`（字面量 → `new Map([[k, v]])`，
 //     下标 `m[k]` / `m[k] = v` 由生成器翻成 `get` / `set`）。

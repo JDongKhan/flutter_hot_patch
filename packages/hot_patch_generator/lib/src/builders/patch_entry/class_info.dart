@@ -17,16 +17,12 @@ class ClassField {
   final bool isStatic;
   final String? jsInitial; // 预渲染 JS 初始值（非 null 时优先于 initializer）
 
-  /// 来源 mixin 名（线性化展开进本类的成员）；null = 类自身声明。
-  /// 仅用于产物分组注释（mixin 成员集中尾部、按来源分隔），不影响翻译。
-  final String? mixinOrigin;
   const ClassField({
     required this.name,
     required this.typeName,
     this.initializer,
     this.isStatic = false,
     this.jsInitial,
-    this.mixinOrigin,
   });
 }
 
@@ -94,16 +90,6 @@ class ClassMethod {
   /// （纯具名 → 整个尾参对象；混合 → 前 N 个位置 + 尾参对象展开）。
   final bool hasNamedParams;
 
-  /// super 调用映射（mixin 线性化展开的产物）：`super.foo()` 语句里 super 的
-  /// 方法名 → 链上下一个实现的 JS 方法名（如 `initState` → `_m$TestMixin$initState`）。
-  /// 查不到 = 链上无更多实现（基类无 JS 等价物），super 语句按原策略忽略。
-  /// 空表 = 本类无 mixin，完全走原路径。
-  final Map<String, String> superMap;
-
-  /// 来源 mixin 名（线性化展开进本类的方法）；null = 类自身声明。
-  /// 仅用于产物分组注释（mixin 成员集中尾部、按来源分隔），不影响翻译。
-  final String? mixinOrigin;
-
   /// 本方法声明的类型参数名（`T parse<T>(...)` → `['T']`），按声明顺序。
   /// 方法体里这些名字是类型值（`T == String` / `as T`），运行时从调用尾参对象
   /// 的 `typeArguments` 里按同名 key 取。
@@ -126,8 +112,6 @@ class ClassMethod {
     this.positionalParamCount = 0,
     this.hasNamedParams = false,
     this.typeParams = const [],
-    this.superMap = const {},
-    this.mixinOrigin,
     this.isSetter = false,
     this.operatorSymbol,
     this.paramTypes = const {},
@@ -184,6 +168,29 @@ class ClassCtor {
     this.isFactory = false,
     this.positional = const [],
     this.named = const {},
+  });
+}
+
+/// 一层 mixin application 类（`class C extends B with M1, M2` 的一步）。
+///
+/// 按 dart2js 的结构：mixin 本身在**原文件产物**里是独立类；本类只描述消费者
+/// 文件里合成的中间类（`_C_B_M1` / `_C_B_M1_M2`），最终 `C` 继承最后一层。
+/// [layer] 是这层 application 类的中立描述（字段 / 带 super 的方法）；不带
+/// super 的成员留在 [mixinName] 指向的 mixin 类里，由 `__mixinHard` 复制。
+class MixinApplication {
+  /// 导入的 mixin 类名（mixin class 同名；纯 mixin 也是同名类）。
+  final String mixinName;
+
+  /// mixin 声明所在源文件（import 产物路径推导用）。
+  final String sourceFile;
+
+  /// 这层 application 类（字段 + 带 super 的方法），已预翻译。
+  final ClassInfo layer;
+
+  const MixinApplication({
+    required this.mixinName,
+    required this.sourceFile,
+    required this.layer,
   });
 }
 
@@ -260,6 +267,10 @@ class ClassInfo {
   /// JS 侧由模块命名空间承接）。
   final Map<String, String> namespaceImports;
 
+  /// `with` 生成的一串 application 类（顺序与 `with` 书写顺序一致，
+  /// 最终类继承最后一层）。空 = 本类没有 mixin。
+  final List<MixinApplication> mixinApplications;
+
   const ClassInfo({
     required this.name,
     required this.sourceFile,
@@ -281,6 +292,7 @@ class ClassInfo {
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
     this.namespaceImports = const {},
+    this.mixinApplications = const [],
   });
 
   Set<String> get instanceFieldNames =>
@@ -311,5 +323,6 @@ class ClassInfo {
         dependencies: dependencies,
         usedWidgetPackages: usedWidgetPackages,
         namespaceImports: namespaceImports,
+        mixinApplications: mixinApplications,
       );
 }

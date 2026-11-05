@@ -106,15 +106,7 @@ String renderClassDecl(
 
   // 方法 + getter：方法体（含 getter、builder）已在收集阶段预渲染为 [bodyJs]，
   // 这里只拼装。缺失说明收集层漏译，出声告警而不是静默产出空方法体。
-  // mixin 来源的方法集中尾部（classInfoOf 合并时已排好序）、按来源注释分隔。
-  String? lastMethodOrigin;
   for (final m in info.methods) {
-    if (m.mixinOrigin != lastMethodOrigin) {
-      if (m.mixinOrigin != null) {
-        b.write('  // ---- mixin ${m.mixinOrigin} ----\n');
-      }
-      lastMethodOrigin = m.mixinOrigin;
-    }
     final fn = m.isAsync ? 'async ' : '';
     // static 成员（Dart 的 static 与实例成员同一名字空间）：JS 侧挂在类上。
     final st = m.isStatic ? 'static ' : '';
@@ -179,17 +171,9 @@ void _writeStaticFields(StringBuffer b, ClassInfo info) {
 }
 
 /// 非构造参数字段的赋值语句（组件与普通类构造函数共用）。
-/// mixin 来源的字段集中尾部、按来源注释分隔（类自身字段在前）。
 void _writeFieldAssignments(StringBuffer b, ClassInfo info) {
-  String? lastFieldOrigin;
   for (final f in info.instanceFields) {
     if (info.ctorParams.contains(f.name)) continue;
-    if (f.mixinOrigin != lastFieldOrigin) {
-      if (f.mixinOrigin != null) {
-        b.write('    // ---- mixin ${f.mixinOrigin} ----\n');
-      }
-      lastFieldOrigin = f.mixinOrigin;
-    }
     b.write('    this.${f.name} = ${_fieldDefaultJs(f)};\n');
   }
 }

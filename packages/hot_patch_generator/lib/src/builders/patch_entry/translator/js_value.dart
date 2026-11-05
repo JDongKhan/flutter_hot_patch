@@ -415,12 +415,6 @@ class FieldScope {
   /// 一比一（见 [hostMethodBodyJs]）。
   final Set<String> hostFunctions;
 
-  /// 当前方法的 super 调用映射（来自 [ClassMethod.superMap]）：`super.foo()` →
-  /// `this.<target>()`。随方法体翻译入口（[translateClassMethodBody]）一次性
-  /// 挂进作用域，语句翻译（translateStmtList）据此把 super 语句落成 mixin
-  /// 方法调用；空表 = 无 mixin，super 语句按原策略忽略。
-  final Map<String, String> superMap;
-
   /// 本类的 JS 侧是否有基类（原生 `extends`）：`super.foo()` 在此为合法 JS，
   /// 原样发射；无基类时 super 调用的目标是 SDK 类，JS 侧不存在 → 丢弃。
   final bool hasJsBase;
@@ -506,7 +500,6 @@ class FieldScope {
           localVars: localVars,
           globalConsts: globalConsts,
           hostFunctions: hostFunctions,
-          superMap: superMap,
           hasJsBase: hasJsBase,
           className: className,
           staticFields: staticFields,
@@ -532,7 +525,6 @@ class FieldScope {
     this.typeParams = const {},
     Map<String, List<String>>? localTypeParams,
     this.hostFunctions = const {},
-    this.superMap = const {},
     this.hasJsBase = false,
     this.thisRef = 'this',
     Map<String, String>? localAliases,
@@ -569,7 +561,6 @@ class FieldScope {
         localVars: localVars,
         globalConsts: globalConsts,
         hostFunctions: hostFunctions,
-        superMap: superMap,
         hasJsBase: hasJsBase,
         className: className,
         staticFields: staticFields,

@@ -2,6 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/grammar/grammar_details.dart 自动生成
 // 重新生成：dart run build_runner build
 
+import { StateLogMixin } from '../../hot_module_base.js';
 import { StringLogExtension } from '../../extensions/hot_module_base.js';
 import { TestString1 } from 'extension/e_string.js';
 import { Colors, Column, CrossAxisAlignment, DateTime, Duration, ElevatedButton, FontWeight, RegExp, SizedBox, StatefulWidget, StatelessWidget, StringBuffer, Text, TextStyle } from '../../flutter.js';
@@ -36,8 +37,88 @@ export class FancyGreeting extends Greeting {
   }
 }
 
+// 模型 _SuperTagged_Tagged
+class _SuperTagged_Tagged {
+  constructor() {
+  }
+}
+__mixinHard(_SuperTagged_Tagged, Tagged);
+
+// 模型 _SuperTagged_Tagged_SuperM
+class _SuperTagged_Tagged_SuperM extends _SuperTagged_Tagged {
+  constructor(args) {
+    super(args);
+  }
+  describe() {
+    return "super:" + super.describe();
+  }
+}
+__mixinHard(_SuperTagged_Tagged_SuperM, SuperM);
+
+// 模型 SuperTagged
+export class SuperTagged extends _SuperTagged_Tagged_SuperM {
+  constructor(args) {
+    super(args);
+  }
+  get tag() {
+    return "Super";
+  }
+}
+
+// 模型 _MultiTagged_Tagged
+class _MultiTagged_Tagged {
+  constructor() {
+  }
+}
+__mixinHard(_MultiTagged_Tagged, Tagged);
+
+// 模型 _MultiTagged_Tagged_CounterM
+class _MultiTagged_Tagged_CounterM extends _MultiTagged_Tagged {
+  constructor(args) {
+    super(args);
+    this.hits = 0;
+  }
+}
+__mixinHard(_MultiTagged_Tagged_CounterM, CounterM);
+
+// 模型 MultiTagged
+export class MultiTagged extends _MultiTagged_Tagged_CounterM {
+  constructor(args) {
+    super(args);
+  }
+  get tag() {
+    return "Multi";
+  }
+}
+
+// 模型 _LoudTagged_Tagged
+class _LoudTagged_Tagged {
+  constructor() {
+  }
+}
+__mixinHard(_LoudTagged_Tagged, Tagged);
+
+// 模型 LoudTagged
+export class LoudTagged extends _LoudTagged_Tagged {
+  constructor(args) {
+    super(args);
+  }
+  get tag() {
+    return "Loud";
+  }
+}
+
+// 模型 _MixinDetail_StatefulWidget_StateLogMixin
+class _MixinDetail_StatefulWidget_StateLogMixin extends StatefulWidget {
+  constructor(args) {
+    super(args);
+    this.__ta = (args && args.typeArguments) || {};
+  }
+}
+__mixinHard(_MixinDetail_StatefulWidget_StateLogMixin, StateLogMixin);
+
 // 组件 MixinDetail
-export class MixinDetail extends StatefulWidget {
+export class MixinDetail extends _MixinDetail_StatefulWidget_StateLogMixin {
   constructor(args) {
     super(args);
     this._count = 0;
@@ -47,6 +128,13 @@ export class MixinDetail extends StatefulWidget {
       this._count += 1;
     });
     this.logState("计数变为 " + this._count);
+  }
+  _mixinClassText() {
+    const base = new Tagged({});
+    const mixed = new LoudTagged({});
+    const multi = new MultiTagged({});
+    const sup = new SuperTagged({});
+    return "mixin class：" + base.describe() + " / " + mixed.describe() + " / " + "多 mixin：" + multi.describe() + " " + multi.bump() + " " + multi.counterText() + " / " + "super：" + sup.describe();
   }
   build(context) {
     return new Column({
@@ -81,18 +169,23 @@ export class MixinDetail extends StatefulWidget {
         (this.__k1 || (this.__k1 = new SizedBox({
           "height": 8
         }))),
+        new Text({
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
+            "fontSize": 13
+          }))),
+          "data": this._mixinClassText()
+        }),
+        (this.__k1 || (this.__k1 = new SizedBox({
+          "height": 8
+        }))),
         new ElevatedButton({
           "onPressed": () => this._bump(),
-          "child": (this.__k5 || (this.__k5 = new Text({
+          "child": (this.__k6 || (this.__k6 = new Text({
             "data": "+1 并打日志"
           })))
         })
       ]
     });
-  }
-  // ---- mixin StateLogMixin ----
-  logState(message) {
-    print("[StateLogMixin] " + message);
   }
 }
 
@@ -347,6 +440,37 @@ export class BasicApiDetail extends StatefulWidget {
         })
       ]
     });
+  }
+}
+
+// 模型 Tagged
+export class Tagged {
+  constructor() {
+  }
+  get tag() {
+    return "Tagged";
+  }
+  describe() {
+    return "[" + this.tag + "]";
+  }
+}
+
+// 模型 CounterM
+export class CounterM {
+  constructor() {
+    this.hits = 0;
+  }
+  bump() {
+    return this.hits += 1;;
+  }
+  counterText() {
+    return "hits=" + this.hits;
+  }
+}
+
+// 模型 SuperM
+export class SuperM {
+  constructor() {
   }
 }
 
