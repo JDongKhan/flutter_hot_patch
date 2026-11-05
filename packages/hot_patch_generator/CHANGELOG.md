@@ -8,6 +8,7 @@
 - **模式匹配**：`if (x case P when g)` 与 pattern 变量声明（`final [a, b] = list;` / `final User(:name) = user;`）接入同一条 `_compilePattern`：常量 / 声明变量（含类型检查）/ 关系 / 空检查 / 逻辑与·或 / 对象（逐字段）/ 列表（定长与末位 `...rest`）。接收值单次求值，绑定只注入命中分支（if-case 结束后还原作用域），解构不匹配抛 `Error`；记录模式仍构建期告警跳过。
 - **switch 增强**：`switch` 语句与表达式支持 `when` guard 与任意模式（关系 / 对象 / 列表 / 逻辑 / 声明变量）。纯常量形态产出原生 JS `switch`；非常量形态同样使用**原生 `switch`**——主体写成 `switch (true)`，case 条件落成箭头 IIFE 并负责绑定（`case (() => { … })():`），保留原生 switch 的求值顺序、贯穿、`default` 与 `break` / `continue` 语义；switch 表达式在 IIFE 内用同一形态，`default` 抛错兜底。
 - **局部函数**：方法体内的函数声明（表达式体 / 块体）复用 `closureToJs` 产出 `var f = (…) => …`（`this` 词法捕获、可递归、块体内可用 if-case 等全部语句能力）；名字登记进方法作用域，同名裸调用按局部标识符翻译（同时覆盖「局部变量里存函数再调用」）。具名 / 可选参数、泛型、生成器局部函数仍构建期告警跳过。
+- **无静默补齐**：组件 props / 位置实参翻译失败时补构建期告警（输出源文件、`类型.参数名` 与源码表达式）。此前 `Text(style: Theme.of(context).textTheme.titleMedium)` 这类不可翻译值会被 `nonNull` 直接去掉且无任何日志；现在行为不变（仍丢弃该键），但一定会出声。
 - 产物排版统一：删除 `_setStateJs` 里「回调体折成单行」的特判，`setState` 回调与其它方法体走同一套写出前缩进归一（`canonicalizeJsIndent`）。
 - 示例：`BannerCarousel._stopAutoPlay` 删除「先取本地引用再判空」的旧绕行写法，恢复 `_timer?.cancel()`。
 

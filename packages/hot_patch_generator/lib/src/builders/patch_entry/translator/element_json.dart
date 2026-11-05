@@ -55,7 +55,14 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
 
   for (final arg in node.args) {
     if (arg is! NamedExpression) {
-      positional.add(autoValue(arg, ctx));
+      final v = autoValue(arg, ctx);
+      if (v == null && arg is! NullLiteral) {
+        log.warning(
+          '[hot_patch_generator] ${ctx.sourcePath}: ${node.type} 的位置实参'
+          '无法翻译，已从 props 中丢弃：${arg.toSource()}',
+        );
+      }
+      positional.add(v);
       continue;
     }
     final name = arg.name.label.name;
@@ -83,7 +90,16 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
       }
       continue;
     }
-    props[name] = autoValue(value, ctx, name: name);
+    final translated = autoValue(value, ctx, name: name);
+    // 翻译失败必须出声：`nonNull` 会把这个键从 props 里去掉，运行时按「实参
+    // 缺省」处理——静默丢弃会让「样式 / 颜色 / 子结点」看起来配了却不生效。
+    if (translated == null && value is! NullLiteral) {
+      log.warning(
+        '[hot_patch_generator] ${ctx.sourcePath}: ${node.type}.$name '
+        '无法翻译，已从 props 中丢弃：${value.toSource()}',
+      );
+    }
+    props[name] = translated;
   }
 
   // 命名构造 / 静态工厂名（`ListView.builder` / `Image.network`）不进 props：

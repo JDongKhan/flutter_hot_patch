@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/grammar/syntax_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StatefulWidget, Text } from '../../flutter.js';
+import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
 
 export const TaskLevel = (function () { const __values = []; function __mk(name, index) { return { name: name, index: index, toString: function () { return "TaskLevel." + name; } }; } const low = __mk("low", 0); __values.push(low); const medium = __mk("medium", 1); __values.push(medium); const high = __mk("high", 2); __values.push(high); return { low: low, medium: medium, high: high, values: __values }; })();
 
@@ -246,16 +246,20 @@ export class SyntaxDetail extends StatefulWidget {
         "crossAxisAlignment": CrossAxisAlignment.stretch,
         "mainAxisSize": MainAxisSize.min,
         "children": [
-          new Text({
-            "data": "空安全 · 命名构造 · 枚举"
-          }),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k1 || (this.__k1 = new Text({
+            "data": "空安全 · 命名构造 · 枚举",
+            "style": new TextStyle({
+              "fontSize": 16,
+              "fontWeight": FontWeight.bold
+            })
+          }))),
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 8
           }))),
           new Text({
             "data": "枚举：" + TaskLevel.values.length + " 项，" + "首个=" + TaskLevel.values[0].name + "，" + "high.index=" + TaskLevel.high.index + "，" + "high=" + TaskLevel.high.toString()
           }),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 8
           }))),
           new Text({
@@ -264,7 +268,7 @@ export class SyntaxDetail extends StatefulWidget {
           new Text({
             "data": "当前等级：" + ((this._task == null) ? "-" : this._levelText(this._task.level))
           }),
-          (this.__k1 || (this.__k1 = new SizedBox({
+          (this.__k2 || (this.__k2 = new SizedBox({
             "height": 8
           }))),
           new Text({
@@ -300,23 +304,23 @@ export class SyntaxDetail extends StatefulWidget {
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
           }),
-          (this.__k2 || (this.__k2 = new SizedBox({
+          (this.__k3 || (this.__k3 = new SizedBox({
             "height": 12
           }))),
           new Row({
             "children": [
               new ElevatedButton({
                 "onPressed": () => this._run(),
-                "child": (this.__k3 || (this.__k3 = new Text({
+                "child": (this.__k4 || (this.__k4 = new Text({
                   "data": "生成"
                 })))
               }),
-              (this.__k4 || (this.__k4 = new SizedBox({
+              (this.__k5 || (this.__k5 = new SizedBox({
                 "width": 12
               }))),
               new OutlinedButton({
                 "onPressed": () => this._clear(),
-                "child": (this.__k5 || (this.__k5 = new Text({
+                "child": (this.__k6 || (this.__k6 = new Text({
                   "data": "置空"
                 })))
               })

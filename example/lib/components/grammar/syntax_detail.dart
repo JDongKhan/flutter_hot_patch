@@ -183,9 +183,9 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
+          const Text(
             '空安全 · 命名构造 · 枚举',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text('枚举：${TaskLevel.values.length} 项，'
