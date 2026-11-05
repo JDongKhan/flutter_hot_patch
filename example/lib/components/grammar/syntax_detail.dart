@@ -452,6 +452,15 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '方法 tear-off：${add(1)}/$bv';
   }
 
+  /// 对象上的方法 tear-off：局部变量接收者 / 构造接收者（后者只求值一次）。
+  String _objTearOffText() {
+    final car = SportCar();
+    final int Function() reportFn = car.report;
+    final int Function() fresh = SportCar().report;
+    final int speedNow = car.speed;
+    return '对象 tear-off：${reportFn()}/$fresh/$speedNow';
+  }
+
   /// switch 表达式：对象模式 + guard（`_` / 常量之外的模式以前会被丢弃）。
   String _switchExprText() {
     final task = _task;
@@ -513,6 +522,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_throwExprText()),
           Text(_superMemberText()),
           Text(_tearOffText()),
+          Text(_objTearOffText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),

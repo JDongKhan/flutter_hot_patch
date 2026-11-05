@@ -97,7 +97,17 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       base = e.prefix.name;
     }
     if (base == null) return null;
-    return '$base.${e.identifier.name}';
+    final member = e.identifier.name;
+    // `obj.method` 值位置：方法 tear-off 需绑定接收者（getter 是值读取；
+    // 类型不可判定时保持原样，不按名字猜）。
+    final tear = _tearOffMemberJs(
+      receiverJs: base,
+      receiver: e.prefix,
+      member: member,
+      scope: scope,
+      classes: classes,
+    );
+    return tear ?? '$base.$member';
   }
   // StringInterpolation 是 StringLiteral 子类，必须先判（否则被字面量分支
   // 吞成 ""——插值表达式丢失）。
@@ -329,14 +339,32 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   if (e is PropertyAccess && e.target != null) {
     final t = exprToJs(e.target!, scope, classes);
     if (t == null) return null;
+    final member = e.propertyName.name;
     // 空安全属性访问 `a?.b` → JS 原生可选链：与 Dart 源码 1:1，且链式
     // （`a?.b?.c` / `a?.b.c`）的「接收者单次求值 + 整链短路」由 JS 语义天然
     // 保证。旧的 `($t == null ? null : $t.b)` 展开在链上会重复求值接收者，
     // 且 `a?.b.c` 丢失整链短路（a 为 null 时直接 TypeError）。
     if (e.operator.lexeme == '?.') {
-      return '$t?.${e.propertyName.name}';
+      // `a?.m`（方法 tear-off）：a 为 null 时整链短路；方法判定同普通成员。
+      final tear = _tearOffMemberJs(
+        receiverJs: t,
+        receiver: e.target!,
+        member: member,
+        scope: scope,
+        classes: classes,
+        nullAware: true,
+      );
+      return tear ?? '$t?.$member';
     }
-    return '$t.${e.propertyName.name}';
+    // `obj.method` 值位置：方法 tear-off 绑定接收者（与 PrefixedIdentifier 同一实现）。
+    final tear = _tearOffMemberJs(
+      receiverJs: t,
+      receiver: e.target!,
+      member: member,
+      scope: scope,
+      classes: classes,
+    );
+    return tear ?? '$t.$member';
   }
   // 下标访问 `a[b]`（如 `userMap["code"]`）：JS 的方括号语法一一对应。
   // 与上面的通用 `a.b` 同理，不在 exprToJs 里兜住就会整条翻译失败（在插值里
@@ -1666,16 +1694,72 @@ String? _staticTypeOf(
   }
   if (e is SimpleIdentifier) return scope.typeOf(e.name);
   if (e is ThisExpression) return scope.className;
+  // `this._car`：字段声明类型（含继承链字段视图）。
+  if (e is PropertyAccess && e.target is ThisExpression) {
+    return scope.typeOf(e.propertyName.name);
+  }
   String? raw;
   if (e is InstanceCreationExpression) {
     raw = e.constructorName.type.toSource();
   } else if (e is MethodInvocation && e.target is SimpleIdentifier) {
     // `Money.of(...)` / `Xxx.fromJson(...)`：receiver 是项目类名时按该类推断。
     raw = (e.target as SimpleIdentifier).name;
+  } else if (e is MethodInvocation && e.target == null && e.typeArguments == null) {
+    // 无 `new` 的项目类构造（`SportCar()`）：parseString 下是 MethodInvocation。
+    // 名字命中类表才认（否则可能是普通函数调用）。
+    raw = e.methodName.name;
   }
   if (raw == null) return null;
   final bare = eraseType(raw.split('.').last);
   return classes.containsKey(bare) ? bare : null;
+}
+
+/// [member] 在 [typeName] 的实例成员里是否是**方法**（而非 getter）。
+///
+/// 返回 null = 类型不在类表（SDK / 常量 / 类名 / 无法推断）：无法判定，
+/// 调用方保持原样产出，不按名字猜测。
+bool? _isInstanceMethodMember(
+  String? typeName,
+  String member,
+  Map<String, ClassInfo> classes,
+) {
+  final t = typeName == null ? null : eraseType(typeName);
+  final info = t == null ? null : classes[t];
+  if (info == null) return null;
+  if (!objectMethodNamesOf(info, classes).contains(member)) return false;
+  return !objectGetterNamesOf(info, classes).contains(member);
+}
+
+/// `obj.method` 值位置 → 绑定接收者的 tear-off；不适用时返回 null（原样产出）。
+///
+/// Dart 的 tear-off 自带 `this`，JS 的 `obj.m` 不带；getter 是值读取，不能绑定。
+/// 接收者**只求值一次**：简单引用（`this` / 形参 / 局部变量 / 实例字段）直接
+/// `recv.m.bind(recv)`，其余表达式落成 IIFE（避免 `make().m.bind(make())` 调两次）。
+String? _tearOffMemberJs({
+  required String receiverJs,
+  required Expression receiver,
+  required String member,
+  required FieldScope scope,
+  required Map<String, ClassInfo> classes,
+  bool nullAware = false,
+}) {
+  final type = _staticTypeOf(receiver, scope, classes);
+  if (_isInstanceMethodMember(type, member, classes) != true) return null;
+  final simple = receiver is ThisExpression ||
+      (receiver is SimpleIdentifier &&
+          (scope.params.contains(receiver.name) ||
+              scope.localVars.contains(receiver.name) ||
+              scope.instanceFields.contains(receiver.name)));
+  if (nullAware) {
+    // `a?.m`：a 为 null 时整链短路（JS 可选链不会执行 `.bind`）。
+    return simple
+        ? '$receiverJs?.$member.bind($receiverJs)'
+        : '((__o) => __o == null ? null : __o.$member.bind(__o))'
+            '($receiverJs)';
+  }
+  return simple
+      ? '$receiverJs.$member.bind($receiverJs)'
+      : '((__o) => __o.$member.bind(__o))($receiverJs)';
 }
 
 /// 声明了 [symbol] 运算符的类（沿 extends 链查找）；没有则返回 null。
