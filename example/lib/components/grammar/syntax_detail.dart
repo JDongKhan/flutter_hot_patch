@@ -73,6 +73,19 @@ class Price {
 }
 
 // ---------------------------------------------------------------------------
+// 可调用对象：实例方法 `call` → JS 侧改名 `invoke`，`add(1)` / `add.call(1)`
+// 都落到 `add.invoke(1)`（避免与 Function.prototype.call 冲突）
+// ---------------------------------------------------------------------------
+
+class Adder {
+  const Adder(this.delta);
+
+  final int delta;
+
+  int call(int v) => v + delta;
+}
+
+// ---------------------------------------------------------------------------
 // 父类成员：`super.x`（字段 / getter）与 `super.m()`
 // ---------------------------------------------------------------------------
 
@@ -486,6 +499,23 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
   /// 抽象类：具体子类继承 `describe()`，抽象 getter / 方法由子类覆盖。
   String _abstractText() => '抽象类：${RectShape(2, 3).describe()}';
 
+  /// Function 的 `call`：Dart `fn.call(3)` 等价 `fn(3)`；JS 的
+  /// `Function.prototype.call` 首参是 thisArg，必须去掉。
+  String _functionCallText() {
+    int twice(int v) => v * 2;
+    final Function fn = twice;
+    final int Function(int) typed = twice;
+    return 'Function.call：fn.call(3)=${fn.call(3)} '
+        '/ typed.call(2)=${typed.call(2)} '
+        '/ fn(4)=${fn(4)}';
+  }
+
+  /// 可调用对象：隐式调用 `add(1)` 与显式 `add.call(2)` 都为 `invoke`。
+  String _callText() {
+    final add = Adder(3);
+    return 'call：add(1)=${add(1)} / add.call(2)=${add.call(2)}';
+  }
+
   /// 父类成员：`super.x` 字段 / getter 区分 + `super.m()`。
   String _superMemberText() {
     final car = SportCar();
@@ -582,6 +612,8 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_throwExprText()),
           Text(_defaultCtorText()),
           Text(_abstractText()),
+          Text(_callText()),
+          Text(_functionCallText()),
           Text(_superMemberText()),
           Text(_tearOffText()),
           Text(_objTearOffText()),

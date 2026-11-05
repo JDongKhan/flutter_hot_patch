@@ -234,6 +234,12 @@ class ClassInfo {
   /// 其余与普通类完全同一条翻译路径（抽象类照常产出 JS class 并被 extends）。
   final bool isAbstract;
 
+  /// 本类是否为**可调用对象**（声明了非 static 的实例方法 `call`）。
+  /// 声明侧 `call` 改名为 `invoke`（避免与 `Function.prototype.call` 混淆，
+  /// 见手册 `call(...)` 行）；调用侧按静态类型把 `obj(...)` / `obj.call(...)`
+  /// 改写为 `obj.invoke(...)`。
+  final bool isCallable;
+
   /// 类声明的类型参数名（`class Pair<K, V>` → `['K', 'V']`），按声明顺序。
   /// 实例构造时把 `typeArguments` 存到 `__ta`，方法体里的 `T` 据此读运行时类型名。
   final List<String> typeParams;
@@ -270,6 +276,7 @@ class ClassInfo {
     this.ctorDefaults = const {},
     this.isComponent = false,
     this.isAbstract = false,
+    this.isCallable = false,
     this.typeParams = const [],
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
@@ -299,6 +306,7 @@ class ClassInfo {
         ctorDefaults: ctorDefaults,
         isComponent: isComponent,
         isAbstract: isAbstract,
+        isCallable: isCallable,
         typeParams: typeParams,
         dependencies: dependencies,
         usedWidgetPackages: usedWidgetPackages,

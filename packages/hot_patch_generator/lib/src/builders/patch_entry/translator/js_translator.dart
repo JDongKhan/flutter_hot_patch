@@ -1527,6 +1527,14 @@ String? _methodCallJs(
     if (tailJs.isNotEmpty) '{ ${tailJs.join(', ')} }',
   ].join(', ');
   if (receiverJs != null) {
+    // Function 的 `call`：`fn?.call(a, b)` → `fn?.(a, b)`（Dart 的 call 没有
+    // thisArg 参数，JS 的 Function.prototype.call 首参是 thisArg）。
+    final tgt = e.target;
+    if (tgt != null &&
+        e.methodName.name == 'call' &&
+        _isFunctionType(_staticTypeOf(tgt, scope, classes))) {
+      return nullAware ? '$receiverJs?.($passed)' : '$receiverJs($passed)';
+    }
     final dot = nullAware ? '?.' : '.';
     return '$receiverJs$dot${_memberCallName(e.target, e.methodName.name, scope, classes)}($passed)';
   }
@@ -1546,6 +1554,25 @@ String? _methodCallJs(
     // 名字已在作用域里登记，JS 侧就是同名局部标识符。局部名优先于宿主顶层
     // 函数与运行时全局函数（Dart 作用域同样遮蔽）。
     final name = e.methodName.name;
+    // 可调用对象（声明了实例方法 call）：`f(...)` / 字段 `cb(...)` 落成
+    // `recv.invoke(...)`（声明侧同名改名为 invoke，见手册 `call(...)` 行）。
+    final recv = scope.fieldRef(name);
+    if (recv != null &&
+        _typeIsCallable(_rawTypeOfName(name, scope), classes)) {
+      return '$recv.invoke($passed)';
+    }
+    // Function 的 `call`：Dart `fn.call(a, b)` 等价 `fn(a, b)`；JS
+    // `Function.prototype.call` 的首参是 thisArg，语义不同 → 直接调用。
+    // （可调用对象的 call 已在上面走 invoke；这里只处理函数类型。）
+    if (name == 'call' && _isFunctionType(_rawTypeOfName(name, scope))) {
+      return '${recv ?? name}($passed)';
+    }
+    // 类内部裸调用自身的 `call(...)`：方法已改名为 invoke。
+    if (name == 'call' &&
+        scope.methodRef('call') == null &&
+        _typeIsCallable(scope.className, classes)) {
+      return 'this.invoke($passed)';
+    }
     if (scope.localVars.contains(name) || scope.params.contains(name)) {
       return '$name($passed)';
     }
@@ -1581,7 +1608,21 @@ String? _methodCallJs(
   if (target is Identifier) {
     final callMember = _memberCallName(target, e.methodName.name, scope, classes);
     final ref = scope.fieldRef(target.name);
-    if (ref != null) return '$ref.$callMember($passed)';
+    if (ref != null) {
+      // Function 的 `call`：`fn.call(a, b)` → `fn(a, b)`（去掉 thisArg 语义）。
+      if (e.methodName.name == 'call' &&
+          _isFunctionType(_staticTypeOf(target, scope, classes))) {
+        return '$ref($passed)';
+      }
+      // 成员字段本身是「可调用对象」：`holder.cb(1)` → `holder.cb.invoke(1)`。
+      if (e.methodName.name != 'invoke' &&
+          _typeIsCallable(
+              _rawMemberType(target, e.methodName.name, scope, classes),
+              classes)) {
+        return '$ref.${e.methodName.name}.invoke($passed)';
+      }
+      return '$ref.$callMember($passed)';
+    }
     // receiver 是「类定义在某个产物模块里的类型」（`Overlay.of(context)` 等）：
     // 产出 `<类引用>.m(args)`，类引用串由钩子给出（含 import 登记）。
     final clsRef = classRefHook?.call(target.name);
@@ -1610,6 +1651,18 @@ String? _methodCallJs(
   }
   final t = exprToJs(target, scope, classes);
   if (t != null) {
+    // Function 的 `call`：`fn.call(a, b)` → `fn(a, b)`。
+    if (e.methodName.name == 'call' &&
+        _isFunctionType(_staticTypeOf(target, scope, classes))) {
+      return '$t($passed)';
+    }
+    // 成员字段本身是「可调用对象」：`holder.cb(1)` → `holder.cb.invoke(1)`。
+    if (e.methodName.name != 'invoke' &&
+        _typeIsCallable(
+            _rawMemberType(target, e.methodName.name, scope, classes),
+            classes)) {
+      return '$t.${e.methodName.name}.invoke($passed)';
+    }
     final callMember = _memberCallName(target, e.methodName.name, scope, classes);
     return '$t.$callMember($passed)';
   }
@@ -1633,9 +1686,37 @@ String _memberCallName(
     if (member == 'join') return '_join';
     if (member == 'indexOf') return '_indexOf';
   }
-  // Map 的 `forEach` 由运行时覆盖成 Dart 语义（回调 key, value），保持同名；
-  // 只有属性 vs 方法的冲突（keys / values / entries）才见 [_mapPropertyMember]。
+  // 可调用对象：显式 `obj.call(...)` 与声明侧同步改名为 `invoke`（手册
+  // `call(...)` 行）；仅接收者静态类型可判定为「可调用类」时改写。
+  if (member == 'call' && _typeIsCallable(type, classes)) return 'invoke';
   return member;
+}
+
+/// 是否为 Dart 函数类型（`Function` / `int Function(int)` / `void Function()`）。
+bool _isFunctionType(String? typeRaw) {
+  if (typeRaw == null) return false;
+  final t = typeRaw.trim();
+  return t == 'Function' || t.contains('Function(');
+}
+
+/// 类型（含 extends 链）是否为**可调用对象**（声明了非 static 的 `call`）。
+///
+/// 判据只来自类表：`ClassInfo.isCallable` 由 `classInfoOf` 按源码成员计算；
+/// 父子类继承链一并检查（子类未重写 call 仍可调用）。类型不可判定返回 false，
+/// 保持原样（不按名字猜测）。
+bool _typeIsCallable(String? typeRaw, Map<String, ClassInfo> classes) {
+  if (typeRaw == null) return false;
+  var name = eraseType(typeRaw.split('.').last);
+  final seen = <String>{};
+  while (seen.add(name)) {
+    final info = classes[name];
+    if (info == null) return false;
+    if (info.isCallable) return true;
+    final sup = info.superType;
+    if (sup == null) return false;
+    name = eraseType(sup.split('.').last);
+  }
+  return false;
 }
 
 /// Map 的**属性成员**映射：JS Map 的 `keys` / `values` / `entries` 是**方法**

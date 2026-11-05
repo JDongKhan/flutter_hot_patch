@@ -230,8 +230,14 @@ ClassInfo classInfoOf(
         mixinOrigin: mixinOrigin,
       );
     }
+    // 可调用对象的 `call` 改名为 `invoke`（手册 `call(...)` 行）：类自身、
+    // 非 static、非 mixin 带入（mixin 的 superMap 仍按原名维护）。
+    final isCallMethod = !m.isStatic &&
+        m.name.lexeme == 'call' &&
+        nameOverride == null &&
+        mixinOrigin == null;
     return ClassMethod(
-      name: nameOverride ?? m.name.lexeme,
+      name: isCallMethod ? 'invoke' : (nameOverride ?? m.name.lexeme),
       params: jsMethodParams(m),
       isAsync: m.body.isAsynchronous,
       isStatic: m.isStatic,
@@ -384,6 +390,13 @@ ClassInfo classInfoOf(
     ctorParams: ctorParams,
     ctorDefaults: ctorDefaults,
     isComponent: isComponent,
+    // 可调用对象：声明了非 static 的实例方法 `call`（含 mixin 带入）。
+    isCallable: decl.members
+            .whereType<MethodDeclaration>()
+            .any((m) => !m.isStatic && m.name.lexeme == 'call') ||
+        mixins
+            .expand((d) => d.members.whereType<MethodDeclaration>())
+            .any((m) => !m.isStatic && m.name.lexeme == 'call'),
     typeParams: [
       for (final t in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
         t.name.lexeme,

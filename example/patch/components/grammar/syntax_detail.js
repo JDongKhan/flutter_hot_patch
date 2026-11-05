@@ -108,6 +108,19 @@ export class SportCar extends BaseVehicle {
   }
 }
 
+// 模型 Adder
+export class Adder {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.delta = (args && args.delta !== undefined) ? args.delta : 0;
+  }
+  invoke(v) {
+    return (v + this.delta);
+  }
+}
+
 // 模型 Price
 export class Price {
   constructor(args) {
@@ -576,6 +589,18 @@ export class SyntaxDetail extends StatefulWidget {
   _abstractText() {
     return "抽象类：" + new RectShape({w: 2, h: 3}).describe();
   }
+  _functionCallText() {
+    const twice = (v) => { return (v * 2); };
+    const fn = twice;
+    const typed = twice;
+    return "Function.call：fn.call(3)=" + fn(3) + " " + "/ typed.call(2)=" + typed(2) + " " + "/ fn(4)=" + fn(4);
+  }
+  _callText() {
+    const add = new Adder({
+      "delta": 3
+    });
+    return "call：add(1)=" + add.invoke(1) + " / add.call(2)=" + add.invoke(2);
+  }
   _superMemberText() {
     const car = new SportCar({});
     return "父类成员：speed=" + car.speed + " / report=" + car.report();
@@ -708,6 +733,12 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._abstractText()
+          }),
+          new Text({
+            "data": this._callText()
+          }),
+          new Text({
+            "data": this._functionCallText()
           }),
           new Text({
             "data": this._superMemberText()
