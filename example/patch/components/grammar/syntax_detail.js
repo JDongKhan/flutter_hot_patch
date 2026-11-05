@@ -253,6 +253,25 @@ export class SyntaxDetail extends StatefulWidget {
     var merged = [1, ...(scores.isNotEmpty ? [scores.first] : []), ...base, ...(scores).map((s) => [(s * 2)])];
     return "集合元素：" + merged.join("/");
   }
+  _patternForText() {
+    var pairs = [[1, 2], [3, 4]];
+    var sum = 0;
+    for (const __v of pairs) {
+      let a, b;
+      if (!(() => {
+        if (!(Array.isArray(__v) && __v.length === 2)) return false;
+        const __v1 = __v[0];
+        a = __v1;
+        const __v2 = __v[1];
+        b = __v2;
+        return true;
+      })()) {
+        throw new Error("pattern for 未匹配：final [a, b] in pairs");
+      }
+      sum += (a * b);
+    }
+    return "pattern for：sum=" + sum;
+  }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
     var grade = (score) => { {
@@ -381,6 +400,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._collectionText()
+          }),
+          new Text({
+            "data": this._patternForText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")

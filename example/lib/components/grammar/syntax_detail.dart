@@ -203,6 +203,19 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '集合元素：${merged.join('/')}';
   }
 
+  /// pattern for 头：`for (final [a, b] in pairs)`（每轮解构，不匹配抛错）。
+  String _patternForText() {
+    final pairs = [
+      [1, 2],
+      [3, 4],
+    ];
+    var sum = 0;
+    for (final [a, b] in pairs) {
+      sum += a * b;
+    }
+    return 'pattern for：sum=$sum';
+  }
+
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
   String _localFuncText() {
     int twice(int x) => x * 2;
@@ -277,6 +290,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_operatorText()),
           Text(_tryText()),
           Text(_collectionText()),
+          Text(_patternForText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

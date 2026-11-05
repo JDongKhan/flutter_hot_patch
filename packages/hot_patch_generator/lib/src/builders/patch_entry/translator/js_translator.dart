@@ -2030,6 +2030,42 @@ String? _forStatementJs(
     final it = exprToJs(parts.iterable, scope, classes);
     if (it == null) return null;
     header = 'for (${parts.identifier.name} of $it)';
+  } else if (parts is ForEachPartsWithPattern) {
+    // `for (final [a, b] in pairs)` / `for (final User(:name) in users)`：
+    // per-item 模式匹配，复用解构声明的同一条 _compilePattern。绑定只在本轮
+    // 循环体内可见；不匹配按 Dart 语义抛错（不是静默跳过）。
+    final it = exprToJs(parts.iterable, scope, classes);
+    if (it == null) return null;
+    final plan = _PatternPlan();
+    final before = {...scope.localVars};
+    if (!_compilePattern(parts.pattern, '__v', plan, scope, classes)) {
+      scope.localVars
+        ..clear()
+        ..addAll(before);
+      return null;
+    }
+    plan.lines.add('return true;');
+    scope.localVars.addAll(plan.names);
+    final ind = '  ' * depth;
+    final indIn = '  ' * (depth + 1);
+    final pre = StringBuffer();
+    if (plan.names.isNotEmpty) {
+      pre.writeln('${indIn}let ${plan.names.toSet().join(', ')};');
+    }
+    pre.writeln('${indIn}if (!(() => {');
+    for (final l in plan.lines) {
+      pre.writeln('$indIn  $l');
+    }
+    pre.writeln('$indIn  })()) {');
+    pre.writeln('$indIn    throw new Error('
+        '${jsString('pattern for 未匹配：${parts.toSource()}')});');
+    pre.writeln('$indIn}');
+    final bodyJs = translateStmtList(_bodyStmts(s.body), scope, classes, renderer,
+        depth: depth + 1, returnsWidget: returnsWidget);
+    scope.localVars
+      ..clear()
+      ..addAll(before);
+    return '$ind' 'for (const __v of $it) {\n$pre$bodyJs\n$ind}';
   } else if (parts is ForParts) {
     // 三段式：`for (var i = 0; i < n; i++)` → 一比一。
     final inits = <String>[];
