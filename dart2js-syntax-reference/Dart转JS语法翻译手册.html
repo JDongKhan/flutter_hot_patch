@@ -1170,7 +1170,7 @@ try {
 <!-- ================= 14 异步 ================= -->
 <section id="async">
 <h2><span class="sec-no">14</span>异步与生成器</h2>
-<p class="h2-sub">Future ↔ Promise 基本同构；Stream 没有直接对应，必须自建 AsyncIterable。</p>
+<p class="h2-sub">Future ↔ Promise 基本同构；Stream 没有直接对应，必须自建 <code>Stream</code> 类，同时支撑 <code>listen</code> 与 <code>await for</code>。</p>
 
 <table>
   <colgroup><col style="width:30%"><col style="width:32%"><col style="width:38%"></colgroup>
@@ -1185,10 +1185,10 @@ try {
     <tr><td><code>.then</code> / <code>.catchError</code> / <code>.whenComplete</code></td><td><code>.then</code> / <code>.catch</code> / <code>.finally</code></td><td><span class="lv lv-must">必须改写</span> 方法名不同</td></tr>
     <tr><td><code>Completer&lt;T&gt;</code></td><td>手写 Promise + 外置 resolve</td><td><span class="lv lv-must">必须改写</span></td></tr>
     <tr><td><code>Timer(...)</code> / <code>Timer.periodic</code></td><td><code>setTimeout</code> / <code>setInterval</code></td><td><span class="lv lv-ok">直译</span> 句柄语义不同</td></tr>
-    <tr><td><code>Stream&lt;T&gt;</code></td><td>无直接对应</td><td><span class="lv lv-must">必须改写</span> 自建 AsyncIterable</td></tr>
+    <tr><td><code>Stream&lt;T&gt;</code></td><td>自建 <code>Stream</code> 类</td><td><span class="lv lv-must">必须改写</span> 推送 + AsyncIterator 双形态，见下节</td></tr>
     <tr><td><code>sync*</code> / <code>yield</code></td><td><code>function*</code> / <code>yield</code></td><td><span class="lv lv-ok">直译</span> 对应良好</td></tr>
-    <tr><td><code>async*</code> / <code>yield</code></td><td><code>async function*</code> / <code>yield</code></td><td><span class="lv lv-ok">直译</span></td></tr>
-    <tr><td><code>await for (x in stream)</code></td><td><code>for await (const x of it)</code></td><td><span class="lv lv-ok">直译</span> 需要 AsyncIterable</td></tr>
+    <tr><td><code>async*</code> / <code>yield</code></td><td><code>Stream.fromAsyncGenerator(...)</code></td><td><span class="lv lv-must">必须改写</span> 不能返回裸 <code>async function*</code>：它没有 <code>listen</code></td></tr>
+    <tr><td><code>await for (x in stream)</code></td><td><code>for await (const x of it)</code></td><td><span class="lv lv-ok">直译</span> 依赖 <code>[Symbol.asyncIterator]</code></td></tr>
     <tr><td>顶层 <code>await</code></td><td>ES2022 顶层 await</td><td><span class="lv lv-ok">直译</span> 仅 ESM 可用</td></tr>
   </tbody>
 </table>
