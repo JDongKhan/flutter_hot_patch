@@ -24,7 +24,7 @@ export class Coord {
     this.y = (args && args.y !== undefined) ? args.y : 0;
   }
   __op$eq(other) {
-    return (((other instanceof Coord) && (__nn(other.x) === this.x)) && (__nn(other.y) === this.y));
+    return (((other instanceof Coord) && (other.x === this.x)) && (other.y === this.y));
   }
   get hashCode() {
     return ((this.x * 31) + this.y);

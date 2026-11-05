@@ -165,7 +165,7 @@ export class AppService {
   }
   _resourceJsonOf(raw, id) {
     for (let r of raw) {
-      if ((__nn(r["id"]) === id)) {
+      if ((r["id"] === id)) {
         return r;
       }
     }
@@ -173,7 +173,7 @@ export class AppService {
   }
   _cityOf(cities, city) {
     for (let c of cities) {
-      if ((__nn(c["name"]) === city)) {
+      if ((c["name"] === city)) {
         return c;
       }
     }

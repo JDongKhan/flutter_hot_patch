@@ -59,7 +59,7 @@ export class HomeView extends StatefulWidget {
       })));
     }
     const error = vm.error;
-    if ((error != null)) {
+    if ((__nn(error) != null)) {
       return new LoadErrorView({
         "message": error,
         "onRetry": (...__a) => vm.load(...__a)

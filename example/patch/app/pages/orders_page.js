@@ -95,7 +95,7 @@ export class OrdersView extends StatefulWidget {
                                   "vertical": 6
                                 }))),
                                 "decoration": new BoxDecoration({
-                                  "color": (vm.status === __nn(s)) ? (this.__k4 || (this.__k4 = new Color({
+                                  "color": (vm.status === s) ? (this.__k4 || (this.__k4 = new Color({
                                     "value": 0xFFE8F2FF
                                   }))) : Colors.white,
                                   "borderRadius": BorderRadius.circular({
@@ -105,8 +105,8 @@ export class OrdersView extends StatefulWidget {
                                 "child": new Text({
                                   "style": new TextStyle({
                                     "fontSize": 13,
-                                    "fontWeight": (vm.status === __nn(s)) ? FontWeight.w700 : FontWeight.w500,
-                                    "color": (vm.status === __nn(s)) ? kBrand : (this.__k5 || (this.__k5 = new Color({
+                                    "fontWeight": (vm.status === s) ? FontWeight.w700 : FontWeight.w500,
+                                    "color": (vm.status === s) ? kBrand : (this.__k5 || (this.__k5 = new Color({
                                       "value": 0xFF5C6270
                                     })))
                                   }),

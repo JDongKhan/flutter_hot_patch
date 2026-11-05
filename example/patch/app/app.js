@@ -34,14 +34,14 @@ export class AppShellView extends StatefulWidget {
   }
   dispose() {
     const tab = this._tab;
-    if ((tab != null)) {
+    if ((__nn(tab) != null)) {
       tab.dispose();
     }
     super.dispose();
   }
   _controllerFor(length) {
     const current = this._tab;
-    if (((current != null) && (__nn(current.length) === length))) {
+    if (((__nn(current) != null) && (current.length === length))) {
       return current;
     }
     const controller = new TabController({length: length, vsync: this});
@@ -57,7 +57,7 @@ export class AppShellView extends StatefulWidget {
       this._index = index;
     });
     const tab = this._tab;
-    if ((tab != null)) {
+    if ((__nn(tab) != null)) {
       tab.animateTo(index);
     }
   }

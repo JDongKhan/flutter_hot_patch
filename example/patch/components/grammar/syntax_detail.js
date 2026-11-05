@@ -57,7 +57,7 @@ export class Price {
     });
   }
   __op$eq(other) {
-    return ((other instanceof Price) && (__nn(other._cents) === this._cents));
+    return ((other instanceof Price) && (other._cents === this._cents));
   }
   get hashCode() {
     return this._cents.hashCode;
@@ -202,7 +202,7 @@ export class SyntaxDetail extends StatefulWidget {
   }
   _destructureText() {
     const scores = this._scores;
-    if ((scores == null)) {
+    if ((__nn(scores) == null)) {
       return "解构：null";
     }
     var __v0 = scores;

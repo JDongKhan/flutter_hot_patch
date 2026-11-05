@@ -81,7 +81,7 @@ export class CommunityView extends StatefulWidget {
                                 "vertical": 6
                               }))),
                               "decoration": new BoxDecoration({
-                                "color": (vm.tab === __nn(t)) ? (this.__k4 || (this.__k4 = new Color({
+                                "color": (vm.tab === t) ? (this.__k4 || (this.__k4 = new Color({
                                   "value": 0xFFE8F2FF
                                 }))) : (this.__k5 || (this.__k5 = new Color({
                                   "value": 0xFFF3F5F8
@@ -93,8 +93,8 @@ export class CommunityView extends StatefulWidget {
                               "child": new Text({
                                 "style": new TextStyle({
                                   "fontSize": 13.5,
-                                  "fontWeight": (vm.tab === __nn(t)) ? FontWeight.w700 : FontWeight.w500,
-                                  "color": (vm.tab === __nn(t)) ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                                  "fontWeight": (vm.tab === t) ? FontWeight.w700 : FontWeight.w500,
+                                  "color": (vm.tab === t) ? kBrand : (this.__k6 || (this.__k6 = new Color({
                                     "value": 0xFF5C6270
                                   })))
                                 }),
@@ -171,7 +171,7 @@ export class CommunityView extends StatefulWidget {
                             "vertical": 5
                           }))),
                           "decoration": new BoxDecoration({
-                            "color": (vm.sort === __nn(s)) ? (this.__k4 || (this.__k4 = new Color({
+                            "color": (vm.sort === s) ? (this.__k4 || (this.__k4 = new Color({
                               "value": 0xFFE8F2FF
                             }))) : (this.__k5 || (this.__k5 = new Color({
                               "value": 0xFFF3F5F8
@@ -183,8 +183,8 @@ export class CommunityView extends StatefulWidget {
                           "child": new Text({
                             "style": new TextStyle({
                               "fontSize": 12.5,
-                              "fontWeight": (vm.sort === __nn(s)) ? FontWeight.w700 : FontWeight.w500,
-                              "color": (vm.sort === __nn(s)) ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                              "fontWeight": (vm.sort === s) ? FontWeight.w700 : FontWeight.w500,
+                              "color": (vm.sort === s) ? kBrand : (this.__k6 || (this.__k6 = new Color({
                                 "value": 0xFF5C6270
                               })))
                             }),
@@ -295,7 +295,7 @@ export class _ListContent extends StatefulWidget {
   didUpdateWidget(oldWidget) {
     super.didUpdateWidget(oldWidget);
     print("--_ListContent didUpdateWidget 0");
-    if ((this.list.length !== __nn(oldWidget.list.length))) {
+    if ((this.list.length !== oldWidget.list.length)) {
       print("-- _ListContent didUpdateWidget 1");
     }
   }

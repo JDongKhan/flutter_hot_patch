@@ -103,7 +103,7 @@ export class SliverFillViewportDetail extends StatefulWidget {
                         "value": 16
                       }))),
                       "decoration": new BoxDecoration({
-                        "color": (__nn(__mod(index, 2)) === 0) ? Colors.teal.shade100 : Colors.orange.shade100,
+                        "color": (__mod(index, 2) === 0) ? Colors.teal.shade100 : Colors.orange.shade100,
                         "borderRadius": BorderRadius.circular({
                           "radius": 16
                         })

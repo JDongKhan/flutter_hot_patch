@@ -51,7 +51,7 @@ export class InheritedCard extends StatefulWidget {
                   }))),
                   new ElevatedButton({
                     "onPressed": () => { this.setState(() => {
-                        this._mode = ((__nn(this._mode) === "A") ? "B" : "A");
+                        this._mode = ((this._mode === "A") ? "B" : "A");
                       }); },
                     "child": (this.__k5 || (this.__k5 = new Text({
                       "data": "切换 mode"
@@ -124,7 +124,7 @@ export class _DemoScope extends InheritedWidget {
     return context.getInheritedWidgetOfExactType({ typeArguments: {"0": "_DemoScope"} });;
   }
   updateShouldNotify(oldWidget) {
-    return ((this.count !== __nn(oldWidget.count)) || (this.mode !== __nn(oldWidget.mode)));
+    return ((this.count !== oldWidget.count) || (this.mode !== oldWidget.mode));
   }
 }
 

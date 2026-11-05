@@ -196,15 +196,18 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
               : otherJs;
           return '($wrapped $op null)';
         }
-        // 非判空相等：Dart 的 `==` 语义要求两侧都按「空值只有一个」比较；
-        // 只有可能为空的一侧才归一并保持严格相等（不会为空的照常直接比较）。
+        // 非判空相等：Dart 的 `==` 语义要求两侧都按「空值只有一个」比较。
+        // **只要有一侧确定非空**（字面量 / 非空类型 / 构造等），另一侧的
+        // null 与 undefined 对比较结果完全一致（都 `!==` 该非空值），不需要
+        // 归一；只有两侧都可能为空时，才需要把 undefined 归一成 null
+        // （否则 `null === undefined` 会与 Dart 的 `null == null` 不一致）。
         final strict = op == '==' ? '===' : '!==';
-        final lw = _mayBeNull(e.leftOperand, scope, classes)
-            ? '__nn(${_fnParen(l, e.leftOperand)})'
-            : l;
-        final rw = _mayBeNull(e.rightOperand, scope, classes)
-            ? '__nn(${_fnParen(r, e.rightOperand)})'
-            : r;
+        if (!_mayBeNull(e.leftOperand, scope, classes) ||
+            !_mayBeNull(e.rightOperand, scope, classes)) {
+          return '($l $strict $r)';
+        }
+        final lw = '__nn(${_fnParen(l, e.leftOperand)})';
+        final rw = '__nn(${_fnParen(r, e.rightOperand)})';
         return '($lw $strict $rw)';
       }
       return '(${_fnParen(l, e.leftOperand)} $op ${_fnParen(r, e.rightOperand)})';
@@ -2400,11 +2403,14 @@ String translateStmtList(
         }
         out.add('${ind}$keyword $name = $init;');
         scope.localVars.add(name);
-        // 局部变量的静态类型（显式注解优先，其次按项目类构造推断）：
-        // 供后续语句里的运算符重载分派（`total + item` → `total.__op$add(item)`）。
+        // 局部变量的静态类型（显式注解优先，其次按声明 / 构造推断）：
+        // 供后续语句里的运算符重载分派（`total + item` → `total.__op$add(item)`）
+        // 与判空归一（`final error = vm.error;` 必须保留 `String?` 的可空性）。
+        // 先取**原始**类型（保留 `?`），拿不到再退回擦除后的推断类型。
         final declaredType = s.variables.type?.toSource();
-        final inferred =
-            declaredType ?? _staticTypeOf(v.initializer!, scope, classes);
+        final inferred = declaredType ??
+            _rawExprType(v.initializer!, scope, classes) ??
+            _staticTypeOf(v.initializer!, scope, classes);
         if (inferred != null) scope.localTypes[name] = inferred;
         // 该局部只是「字段 / getter 的别名」（`final list = _list;` →
         // `this._list`）：登记进 widget 层，懒加载 builder 抽成实例方法后引用它

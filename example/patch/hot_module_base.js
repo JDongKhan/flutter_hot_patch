@@ -75,12 +75,12 @@ export class GuideBubbleWidget extends StatefulWidget {
   }
   _cancelTimers() {
     const timer = this._timer;
-    if ((timer != null)) {
+    if ((__nn(timer) != null)) {
       timer.cancel();
     }
     this._timer = null;
     const fadeTimer = this._fadeTimer;
-    if ((fadeTimer != null)) {
+    if ((__nn(fadeTimer) != null)) {
       fadeTimer.cancel();
     }
     this._fadeTimer = null;

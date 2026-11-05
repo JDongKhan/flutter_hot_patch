@@ -3,7 +3,7 @@
 **协议次版本：契约不变；语法翻译产物按 `Dart转JS语法翻译手册` v1.2 校准（部分形态变化，老路径语义不变）。**
 
 - **局部变量声明改用 `let` / `const`**：`var` 与无修饰声明 → `let`，`final` / `const` → `const`，不再生成 `var`；无初始化器显式补 `= null`（Dart 只有 null，JS 裸 `let` 是 undefined）。`for` 初始化、局部函数（`const f = …`）、catch 绑定、参数默认值 prologue 同步（`js_translator.dart` 的 `translateStmtList` / `_localFunctionJs` / `_forStatementJs` / `_tryStatementJs` / `_functionParamPlan`）。
-- **空值归一 `__nn`**（运行时 `G.__nn`，`undefined → null`，不抛错）：`exprToJs` 的 BinaryExpression 只在**操作数可能为空**时包（新增 `_mayBeNull`：字面量、构造、集合字面量、声明为非空类型的字段 / 形参 / 局部变量都不包；`String?` / `dynamic` / 类型不可判定才包）。判空保持 `== null`，其余相等用 `===` / `!==`。Map 读取只在**值位置**（初始化 / 赋值右侧 / 实参 / 返回 / 插值，`_mapReadValueJs`）包 `__nn`；for-in 迭代源不包（for-of 对 null / undefined 同样抛 TypeError）。
+- **空值归一 `__nn`**（运行时 `G.__nn`，`undefined → null`，不抛错）：`exprToJs` 的 BinaryExpression 只在**操作数可能为空**时包（新增 `_mayBeNull`：字面量、构造、集合字面量、声明为非空类型的字段 / 形参 / 局部变量都不包；`String?` / `dynamic` / 类型不可判定才包）。判空保持 `== null`，其余相等用 `===` / `!==`；非判空相等**只要有一侧确定非空**（字面量 / 非空类型 / 构造等）就不包 `__nn`，仅两侧都可能为空时才归一。**局部变量类型推断保留原始可空性**（`final error = vm.error;` 记为 `String?`，后续 `error != null` 才会包 `__nn`），先取 `_rawExprType` 再退回擦除后的 `_staticTypeOf`。Map 读取只在**值位置**（初始化 / 赋值右侧 / 实参 / 返回 / 插值，`_mapReadValueJs`）包 `__nn`；for-in 迭代源不包（for-of 对 null / undefined 同样抛 TypeError）。
 - **`!` 保持忽略**：`exprToJs` 的 PostfixExpression `!` 直接返回操作数（不生成非空断言；项目口径接受独立值位置与 Dart 的差异，访问位置仍由 JS 自然抛 TypeError）。
 - **空安全自增 / 自减**：`a?[i]++` / `a?.x++` / 前缀 `++` 落成接收者单次求值的守卫 IIFE（值位置保留旧值 / 新值语义，语句位置空目标整句跳过）；普通下标 / 属性自增语句补 `+= 1` / `-= 1` 形态（此前会告警丢弃）。新增 `_nullAwareUpdateJs`。
 - **运算符语义**：Dart `%` → `__mod(a, b)`（欧几里得取模，负数结果非负）；`identical(a, b)` → `Object.is(a, b)`。

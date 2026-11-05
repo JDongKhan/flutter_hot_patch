@@ -31,22 +31,22 @@ export class KeyboardListenerDetail extends StatefulWidget {
         this._last = "KeyDown  " + key.keyLabel;
         this._char = (event.character ?? "（无）");
         this._phys = (event.physicalKey.debugName ?? "（无）");
-        if ((__nn(key) === LogicalKeyboardKey.arrowUp)) {
+        if ((key === LogicalKeyboardKey.arrowUp)) {
           this._row = __mod(((this._row + 2)), 3);
         }
-        if ((__nn(key) === LogicalKeyboardKey.arrowDown)) {
+        if ((key === LogicalKeyboardKey.arrowDown)) {
           this._row = __mod(((this._row + 1)), 3);
         }
-        if ((__nn(key) === LogicalKeyboardKey.arrowLeft)) {
+        if ((key === LogicalKeyboardKey.arrowLeft)) {
           this._col = __mod(((this._col + 2)), 3);
         }
-        if ((__nn(key) === LogicalKeyboardKey.arrowRight)) {
+        if ((key === LogicalKeyboardKey.arrowRight)) {
           this._col = __mod(((this._col + 1)), 3);
         }
-        if ((__nn(key) === LogicalKeyboardKey.space)) {
+        if ((key === LogicalKeyboardKey.space)) {
           this._lit = (!this._lit);
         }
-        if ((__nn(key) === LogicalKeyboardKey.escape)) {
+        if ((key === LogicalKeyboardKey.escape)) {
           this._row = 1;
           this._col = 1;
           this._lit = false;

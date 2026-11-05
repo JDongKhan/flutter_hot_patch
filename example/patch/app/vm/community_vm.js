@@ -113,7 +113,7 @@ export class CommunityVm extends ChangeNotifier {
   }
   resetFilter() {
     const value = this.feed;
-    if ((value == null)) {
+    if ((__nn(value) == null)) {
       return;
     }
     this.sort = value.sorts.first;

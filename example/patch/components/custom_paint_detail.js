@@ -54,7 +54,7 @@ export class _MediaPainter extends CustomPainter {
     line.strokeWidth = 1;
     canvas.drawLine(new Offset({dx: 16, dy: 96}), new Offset({dx: (size.width - 16), dy: 96}), line);
     const img = this.image;
-    if ((img == null)) {
+    if ((__nn(img) == null)) {
       const waiting = new TextPainter({text: new TextSpan({text: "图片加载中…", style: new TextStyle({color: new Color({value: 0xFF90A4AE}), fontSize: 14})}), textDirection: TextDirection.ltr});
       waiting.layout({ "maxWidth": size.width });
       waiting.paint(canvas, new Offset({dx: 16, dy: 132}));
@@ -69,7 +69,7 @@ export class _MediaPainter extends CustomPainter {
     canvas.restore();
   }
   shouldRepaint(oldDelegate) {
-    return ((__nn(oldDelegate.image) !== __nn(this.image)) || (__nn(oldDelegate.angle) !== this.angle));
+    return ((__nn(oldDelegate.image) !== __nn(this.image)) || (oldDelegate.angle !== this.angle));
   }
 }
 

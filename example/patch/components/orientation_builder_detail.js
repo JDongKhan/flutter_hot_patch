@@ -86,7 +86,7 @@ export class OrientationBuilderDetail extends StatelessWidget {
           "color": Colors.teal.shade50,
           "child": new OrientationBuilder({
             "builder": (context, o) => { const tiles = [this._tile("A", Colors.teal), this._tile("B", Colors.orange), this._tile("C", Colors.indigo)];
-              if ((__nn(o) === Orientation.portrait)) {
+              if ((o === Orientation.portrait)) {
                 return new Column({
                   "mainAxisSize": MainAxisSize.min,
                   "children": tiles
@@ -112,7 +112,7 @@ export class OrientationBuilderDetail extends StatelessWidget {
           "height": 6
         }))),
         new OrientationBuilder({
-          "builder": (context, o) => { if ((__nn(o) === Orientation.portrait)) {
+          "builder": (context, o) => { if ((o === Orientation.portrait)) {
               return new Container({
                 "color": Colors.orange.shade50,
                 "padding": (this.__k11 || (this.__k11 = EdgeInsets.all({
