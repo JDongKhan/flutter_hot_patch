@@ -42,7 +42,6 @@ class _SuperTagged_Tagged {
   constructor() {
   }
 }
-__mixinHard(_SuperTagged_Tagged, Tagged);
 
 // 模型 _SuperTagged_Tagged_SuperM
 class _SuperTagged_Tagged_SuperM extends _SuperTagged_Tagged {
@@ -53,7 +52,6 @@ class _SuperTagged_Tagged_SuperM extends _SuperTagged_Tagged {
     return "super:" + super.describe();
   }
 }
-__mixinHard(_SuperTagged_Tagged_SuperM, SuperM);
 
 // 模型 SuperTagged
 export class SuperTagged extends _SuperTagged_Tagged_SuperM {
@@ -70,7 +68,6 @@ class _MultiTagged_Tagged {
   constructor() {
   }
 }
-__mixinHard(_MultiTagged_Tagged, Tagged);
 
 // 模型 _MultiTagged_Tagged_CounterM
 class _MultiTagged_Tagged_CounterM extends _MultiTagged_Tagged {
@@ -79,7 +76,6 @@ class _MultiTagged_Tagged_CounterM extends _MultiTagged_Tagged {
     this.hits = 0;
   }
 }
-__mixinHard(_MultiTagged_Tagged_CounterM, CounterM);
 
 // 模型 MultiTagged
 export class MultiTagged extends _MultiTagged_Tagged_CounterM {
@@ -96,7 +92,6 @@ class _LoudTagged_Tagged {
   constructor() {
   }
 }
-__mixinHard(_LoudTagged_Tagged, Tagged);
 
 // 模型 LoudTagged
 export class LoudTagged extends _LoudTagged_Tagged {
@@ -115,7 +110,6 @@ class _MixinDetail_StatefulWidget_StateLogMixin extends StatefulWidget {
     this.__ta = (args && args.typeArguments) || {};
   }
 }
-__mixinHard(_MixinDetail_StatefulWidget_StateLogMixin, StateLogMixin);
 
 // 组件 MixinDetail
 export class MixinDetail extends _MixinDetail_StatefulWidget_StateLogMixin {
@@ -473,4 +467,10 @@ export class SuperM {
   constructor() {
   }
 }
+__mixinHard(_SuperTagged_Tagged, Tagged);
+__mixinHard(_SuperTagged_Tagged_SuperM, SuperM);
+__mixinHard(_MultiTagged_Tagged, Tagged);
+__mixinHard(_MultiTagged_Tagged_CounterM, CounterM);
+__mixinHard(_LoudTagged_Tagged, Tagged);
+__mixinHard(_MixinDetail_StatefulWidget_StateLogMixin, StateLogMixin);
 

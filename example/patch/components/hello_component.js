@@ -28,7 +28,6 @@ class _HelloCard_StatefulWidget_TestMixin extends StatefulWidget {
     super.initState();
   }
 }
-__mixinHard(_HelloCard_StatefulWidget_TestMixin, TestMixin);
 
 // 模型 _HelloCard_StatefulWidget_TestMixin_TestMixin2
 class _HelloCard_StatefulWidget_TestMixin_TestMixin2 extends _HelloCard_StatefulWidget_TestMixin {
@@ -41,7 +40,6 @@ class _HelloCard_StatefulWidget_TestMixin_TestMixin2 extends _HelloCard_Stateful
     super.initState();
   }
 }
-__mixinHard(_HelloCard_StatefulWidget_TestMixin_TestMixin2, TestMixin2);
 
 // 组件 HelloCard
 export class HelloCard extends _HelloCard_StatefulWidget_TestMixin_TestMixin2 {
@@ -216,4 +214,6 @@ export class TestMixin2 {
     print("--混入代码 2");
   }
 }
+__mixinHard(_HelloCard_StatefulWidget_TestMixin, TestMixin);
+__mixinHard(_HelloCard_StatefulWidget_TestMixin_TestMixin2, TestMixin2);
 

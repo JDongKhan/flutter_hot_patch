@@ -272,11 +272,11 @@ String renderProjectPackageModule(
         exported: !layerNames.contains(info.name),
         baseClass: baseClassByName[info.name],
       ));
-    for (final a in applications) {
-      if (a.layer.name == info.name) {
-        body.writeln('__mixinHard(${info.name}, ${a.mixinName});');
-      }
-    }
+  }
+  // `__mixinHard` 统一放在全部类声明之后（mixin 类可能声明得比 application
+  // 类晚，类之间调用会触发 TDZ）。
+  for (final a in applications) {
+    body.writeln('__mixinHard(${a.layer.name}, ${a.mixinName});');
   }
 
   final imports = <String>[

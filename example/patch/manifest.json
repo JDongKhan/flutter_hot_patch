@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.9.0",
-  "buildTime": "2026-11-05T20:41:42.496383",
+  "buildTime": "2026-11-05T20:49:10.915271",
   "resources": {
     "flutter.js": "d3d227f01f350aaa94dbd9fe61cbfff526bc5d4ef6e29d4da2c0a5f262150d53",
     "provider.js": "db49428c554764eb6c0c1e95550a1a00a0a688743b4048505c2d6c9703270a7e",
@@ -39,7 +39,7 @@
     "components/grammar/map_detail.js": "cf81c41ae009593a269c26e93a333b60fa7d460a9636b20d8b120ed041790b50",
     "components/grammar/generic_detail.js": "04813bff7736e58b35fdf9c94c1cc497787af6683aadd6b68f92d16af4882694",
     "components/grammar/array_detail.js": "aa4ad696c527ebca8b9a3aefc8b308bdce25fd5e2b855e3ebf98c9c01a06708a",
-    "components/grammar/grammar_details.js": "40ee6184e409f9750a254ba11115232026987620cf0d780c725077e14b70fb70",
+    "components/grammar/grammar_details.js": "039e2d038ef1c0574638c7023d5fb70b81a4e026c0fedd4f1c81dac0c2287790",
     "components/grammar/syntax_detail.js": "1200d1bd240e7c2d4731b49c545498381758de6275e965df6e8c814b120ad394",
     "components/automatic_keep_alive_detail.js": "10fff0b68eecfa17cffa68e53a222656990670ef732aaea5a2b030a5a5b33ec9",
     "components/notifier_card.js": "b2c214c764d9d3bca910314305fd2c363dd9d4519b5b952ad47f6a965c1ec450",
@@ -90,7 +90,7 @@
     "components/progress_detail.js": "070662add851e61573e8e47a33c74effd53918945b1368c6a8687188f00dc78d",
     "components/key_tile.js": "54740c2d89e7c0007b2c8fa6f725487a48a4cea10f77d7dba031969d09aab2f8",
     "components/scroll_detail.js": "f85485f3ef4317dbc69a89eef6c1304f3f6438e126657446ae742e1980321a2f",
-    "components/hello_component.js": "4b977a0e6c6b81549dbd357c201c8046460eb5806ae3e658b4652b7e5c393132",
+    "components/hello_component.js": "59ad264b63f2c8b78649f5227544461b1bfa46e78c589d226de2c228679df4af",
     "components/nested_scroll_view_detail.js": "7e549e229c6bdacc972f8dfa6e267636ba84f17ecf6e64ee8fbf506b6ec0d624",
     "components/inherited_widget_demo.js": "f0423dc8df6744bba31552d866a9dc36b696043ae5171aff6763106ef350d84b",
     "components/page_view_detail.js": "493bf2f6ec45653fffd3464e5ea9702939038df8b297b03749504fdd6412ef18",

@@ -1021,20 +1021,22 @@ import { A } from './a.js';
 import { B } from './b.js';
 
 class _C_Base_A extends Base {}
-__mixinHard(_C_Base_A, A);          // 复制 A.prototype 的自有成员
 
 class _C_Base_A_B extends _C_Base_A {
   log() { console.log('B'); super.log(); }   // 带 super：本层发射
 }
-__mixinHard(_C_Base_A_B, B);
 
 export class C extends _C_Base_A_B {
   // C 自身成员；`super.log()` 在这里指向 _C_Base_A_B.log
-}</code><button class="copy" type="button">复制</button></pre>
+}
+
+// 所有类声明完成后再应用（class 有 TDZ：mixin 类可能声明得比这里晚）
+__mixinHard(_C_Base_A, A);          // 复制 A.prototype 的自有成员
+__mixinHard(_C_Base_A_B, B);</code><button class="copy" type="button">复制</button></pre>
 
 <div class="note">
   <span class="t">顺序与覆盖</span>
-  <code>with M1, M2</code> 中 M2 优先级最高：application 链按书写顺序生成，M2 在更派生的一层；<code>__mixinHard</code> 只填充目标<b>尚无自有同名成员</b>的位置，因此 M2 覆盖 M1。类自身声明写在最终 <code>C</code> 上，优先级最高。
+  <code>with M1, M2</code> 中 M2 优先级最高：application 链按书写顺序生成，M2 在更派生的一层；<code>__mixinHard</code> 只填充目标<b>尚无自有同名成员</b>的位置，因此 M2 覆盖 M1。类自身声明写在最终 <code>C</code> 上，优先级最高。<br><b>调用时机</b>：<code>__mixinHard</code> 一律放在本模块<b>全部类声明之后</b>——mixin 类可能声明得比 application 类晚，类声明之间调用会触发 TDZ（<code>Cannot access 'M' before initialization</code>）。
 </div>
 
 <h3>红线</h3>

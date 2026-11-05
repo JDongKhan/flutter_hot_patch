@@ -697,6 +697,13 @@ String _renderJsProduct(
   String? baseOf(ClassInfo c) =>
       baseOverride.containsKey(c.name) ? baseOverride[c.name] : baseClassOf?.call(c);
 
+  // mixin application 类的 `__mixinHard` 调用统一放在**全部类声明之后**：
+  // mixin 类可能在同文件里声明得比 application 类晚（class 有 TDZ），
+  // 在类声明之间调用会触发 `Cannot access 'M' before initialization`。
+  final mixinCalls = <String>[
+    for (final a in applications)
+      '__mixinHard(${a.layer.name}, ${a.mixinName});',
+  ];
   for (final cls in orderClassesByBase(
     [...inlineClasses, ...exportedClasses, ...appLayers],
     baseOf,
@@ -709,12 +716,9 @@ String _renderJsProduct(
         exported: !layerNames.contains(cls.name),
         baseClass: baseOf(cls),
       ));
-    // application 类声明后立即应用本层 mixin（运行时复制 mixin 类原型的自有成员）。
-    for (final a in applications) {
-      if (a.layer.name == cls.name) {
-        b.writeln('__mixinHard(${cls.name}, ${a.mixinName});');
-      }
-    }
+  }
+  for (final call in mixinCalls) {
+    b.writeln(call);
   }
 
   // 本文件声明的 `extension`：注册语句写在声明处（求值本产物即注册成员）。
