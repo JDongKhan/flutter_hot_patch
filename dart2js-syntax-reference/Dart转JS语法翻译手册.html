@@ -704,7 +704,7 @@ const p = (() => { const _t = new Point({}); _t.x = 1; _t.y = 2; return _t; })()
     <tr><td><code>int get x =&gt; _x;</code></td><td><code>get x() { return this._x; }</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>dart2js.dart 的 getter 分支发 <code>get name()</code>，实体走 <code>this._x</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>set x(int v) {}</code></td><td><code>set x(v) {}</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>dart2js 的 setter 分支</code> 发 <code>set name(...)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>_private</code></td><td><code>_private</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 原样保留下划线，不转 JS <code>#</code> 私有</td><td>保留 `_x` 原名，不转 JS `#` 私有</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>abstract class</code></td><td>普通 class</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 抽象成员默认抛错或留空</td><td>抽象类不进类表（class_table 过滤 abstractKeyword）；无抽象成员抛错兜底</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>abstract class</code></td><td>普通 class</td><td><span class="muted">—</span></td><td><span class="lv lv-care">注意</span> 抽象成员默认抛错或留空</td><td>抽象类照常进类表并产出 <code>export class</code>（可被具体类 <code>extends</code>）；<code>translateClassMethodBody</code> 对无方法体的抽象成员发 <code>throw new Error("Unimplemented: Class.member")</code>；具体子类按原型链覆盖</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>implements I</code></td><td>擦除</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">消除</span> 接口是编译期契约</td><td><code>dart2js 的类声明渲染（<code>extends</code>）</code> 只发 <code>extends</code>，<code>implements</code> 不进产物</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>extends</code> / <code>super.foo()</code></td><td>同</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 原生 class 支持</td><td><code>dart2js 的 <code>extends</code> 渲染</code> 发 <code>extends base</code>；<code>:67</code> 发 <code>super(args)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td>具名参数 <code>{int a}</code></td><td><code>args.a</code></td><td>统一收一个 args map，从 map 取具名参数</td><td><span class="lv lv-ok">直译</span></td><td><code>dart2js 的 constructor 生成</code> 构造统一 <code>constructor(args)</code></td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
@@ -764,9 +764,16 @@ class Child extends Base {
 <pre><code>// Dart
 abstract class Shape { double area(); }
 
-// 项目现状：抽象类不进类表（class_table 过滤 abstractKeyword），不生成该 class；
-// 「抽象成员抛错兜底」未实现（记为不通过）。
-// 若需要运行时兜底，必须先新增类表建模，不能按类名特判。</code><button class="copy" type="button">复制</button></pre>
+// 项目实际形态：抽象类照常产出普通 JS class；无方法体的抽象成员抛错兜底。
+export class Shape {
+  get area() {
+    throw new Error("Unimplemented: Shape.area");
+  }
+  label() {
+    throw new Error("Unimplemented: Shape.label");
+  }
+}
+// 具体子类 `class Rect extends Shape` 走原生 extends，覆盖抽象成员。</code><button class="copy" type="button">复制</button></pre>
 
 <h3>具名参数</h3>
 <pre><code>// Dart
@@ -1593,7 +1600,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
     <tr><td><code>factory C.fromJson()</code></td><td><code>static fromJson()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>static 工厂方法（与命名构造同一渲染路径）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td>初始化列表</td><td>constructor 内顺序赋值</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>命名构造与默认构造均支持（<code>_translateNamedCtors</code> / <code>_translateUnnamedCtor</code>）；<code>this.other(...)</code> 重定向构造仍跳过并告警</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>_private</code></td><td><code>_private</code> 原样</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>原样保留下划线，不转 <code>#</code> 私有</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>abstract class</code></td><td>class + 抛错</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>抽象类不进类表，无抛错兜底</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>abstract class</code></td><td>class + 抛错</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>抽象类进类表并产出普通 class；抽象成员发 <code>throw new Error("Unimplemented: …")</code> 兜底</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>enum</code></td><td>class + 静态实例</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>项目简单枚举 → 常量对象（name/index/values/toString）；增强枚举告警跳过</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>mixin</code></td><td>成员复制 + super 注入</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>线性化合并成员 + superMap</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>extension</code></td><td>顶层函数 + 调用点重写</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>extension_support.dart 生成顶层函数 / 对象并改写调用点</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>

@@ -15,6 +15,7 @@
 - **枚举 `byName` 与产物格式化**：`_enumJs` 给项目枚举常量对象挂 `byName(name)`（线性查找 `name`，找不到抛错）；翻译层把 Dart 标准库 `<E>.values.byName('x')`（EnumByName 扩展）改写为 `<E>.byName('x')`，仅当前缀不是本作用域的值时生效。枚举产物从单行改为多行（`__mk` / 各常量 / `return` 对象分行），可读性与普通类一致。示例 `syntax_detail.dart` 增加 `TaskLevel.values.byName('high')`。
 - **函数值 toString 差异记录**：tear-off 落成 `recv.m.bind(recv)`，函数对象本身的字符串表示与 Dart VM 的 `Closure: …` 不同（JS 为 `function m() { [native code] }`），属引擎表示差异，不伪造；手册第 07 章已加说明。
 - **默认构造（无名构造）初始化列表 / 构造体**：新增 `_translateUnnamedCtor`（`analyze_dart_class.dart`），把 `A(args) : x = …, y = … { … }` 的形参局部绑定、初始化列表（`this.x = …` / `assert(…)`）与构造体按「形参 → 字段默认值 → 初始化列表 → 构造体」顺序写入 `constructor(args)`（`dart2js.dart` 的类声明渲染）。`super(...)` / `this.other(...)` 与命名构造同口径告警跳过；空构造（widget 的 `const A({super.key})`）不生成形参绑定，既有产物形态不变。示例 `syntax_detail.dart` 增加 `Stamp`（非 `this.x` 形参 + 初始化列表 + 构造体）。
+- **抽象类**：`abstract class` 不再被类表 / 翻译范围过滤，照常产出普通 JS class（`ClassInfo.isAbstract`）；无方法体的抽象成员由 `translateClassMethodBody` 生成 `throw new Error("Unimplemented: Class.member")` 兜底，具体子类经原生 `extends` 覆盖。抽象类只会作为模型根类产出（`component_builder` 的根类收集），可被同文件内联或跨文件 `<abstract>.js` import。
 - **手册同步**：`dart2js-syntax-reference/Dart转JS语法翻译手册.html` 升 v1.2，逐行更新「现状 / 是否通过」；`late`（JS 无惰性初始化 / 未赋值检查）与 `a?.()`（Dart 无此语法）记「不适用」；`f(s!)` 按项目口径记「去掉 `!`」；Map 成员方法（普通对象形态）与 `call(...)` 记后续，写明原因。
 - 断言语义：`dart analyze` 无错误；`example` 全量产物 `node --check` 通过（ESM）。
 

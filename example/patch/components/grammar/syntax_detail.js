@@ -33,6 +33,39 @@ export const TaskLevel = (function () {
   };
 })();
 
+// 模型 Shape
+export class Shape {
+  constructor() {
+  }
+  get area() {
+    throw new Error("Unimplemented: Shape.area");
+  }
+  label() {
+    throw new Error("Unimplemented: Shape.label");
+  }
+  describe() {
+    return this.label() + "(" + this.area + ")";
+  }
+}
+
+// 模型 RectShape
+export class RectShape extends Shape {
+  constructor(args) {
+    super(args);
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.w = (args && args.w !== undefined) ? args.w : 0;
+    this.h = (args && args.h !== undefined) ? args.h : 0;
+  }
+  get area() {
+    return (this.w * this.h);
+  }
+  label() {
+    return "RectShape";
+  }
+}
+
 // 模型 Stamp
 export class Stamp {
   constructor(args) {
@@ -540,6 +573,9 @@ export class SyntaxDetail extends StatefulWidget {
   _defaultCtorText() {
     return "默认构造：" + new Stamp({base: 7}).describe();
   }
+  _abstractText() {
+    return "抽象类：" + new RectShape({w: 2, h: 3}).describe();
+  }
   _superMemberText() {
     const car = new SportCar({});
     return "父类成员：speed=" + car.speed + " / report=" + car.report();
@@ -669,6 +705,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._defaultCtorText()
+          }),
+          new Text({
+            "data": this._abstractText()
           }),
           new Text({
             "data": this._superMemberText()

@@ -640,6 +640,7 @@ ClassInfo translateClass(
           ),
       ],
       isComponent: isComponent,
+      isAbstract: hostClass.abstractKeyword != null,
     );
   }
 
@@ -890,6 +891,10 @@ ClassInfo translateClass(
         if (ctorArgs.contains(f.name)) f.name,
     },
     isComponent: isComponent,
+    // 方法体在 translateClassMethodBody 里按 proto 翻译，抽象标记必须在 proto
+    // 上就位，抽象成员的「抛错兜底」才会生效。
+    isAbstract: hostClass.abstractKeyword != null ||
+        widgetClass.abstractKeyword != null,
     typeParams: [
       for (final t in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
         t.name.lexeme,
@@ -962,6 +967,7 @@ ClassInfo translateClass(
     ctorInitJs: unnamed.inits,
     ctorBodyJs: unnamed.body,
     isComponent: isComponent,
+    isAbstract: decl.abstractKeyword != null || hostClass.abstractKeyword != null,
     typeParams: proto.typeParams,
     // 依赖 = widget 树里的自定义组件（parseCtx 收集）+ 字段类型 / 方法体
     // 构造调用命中的类（含跨文件组件，如 CounterVm → BannerCard）。

@@ -115,6 +115,32 @@ class Stamp {
 }
 
 // ---------------------------------------------------------------------------
+// 抽象类：抽象成员在 JS 侧抛错兜底；具体子类 extends 后覆盖
+// ---------------------------------------------------------------------------
+
+abstract class Shape {
+  int get area;
+
+  String label();
+
+  /// 具体方法：`label()` / `area` 在子类实例上按 JS 原型链解析。
+  String describe() => '${label()}(${area})';
+}
+
+class RectShape extends Shape {
+  final int w;
+  final int h;
+
+  RectShape(this.w, this.h);
+
+  @override
+  int get area => w * h;
+
+  @override
+  String label() => 'RectShape';
+}
+
+// ---------------------------------------------------------------------------
 // 页面
 // ---------------------------------------------------------------------------
 
@@ -457,6 +483,9 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
   /// 默认构造：初始化列表在字段默认值之后执行，构造体在初始化列表之后执行。
   String _defaultCtorText() => '默认构造：${Stamp(7).describe()}';
 
+  /// 抽象类：具体子类继承 `describe()`，抽象 getter / 方法由子类覆盖。
+  String _abstractText() => '抽象类：${RectShape(2, 3).describe()}';
+
   /// 父类成员：`super.x` 字段 / getter 区分 + `super.m()`。
   String _superMemberText() {
     final car = SportCar();
@@ -552,6 +581,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_genericLocalText()),
           Text(_throwExprText()),
           Text(_defaultCtorText()),
+          Text(_abstractText()),
           Text(_superMemberText()),
           Text(_tearOffText()),
           Text(_objTearOffText()),

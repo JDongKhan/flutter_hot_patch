@@ -230,6 +230,10 @@ class ClassInfo {
   /// 是否为 @PatchEntry 组件（仅用于产物注释标注，不参与结构分叉）。
   final bool isComponent;
 
+  /// 是否为 `abstract class`：抽象成员（无方法体）在 JS 侧生成抛错兜底，
+  /// 其余与普通类完全同一条翻译路径（抽象类照常产出 JS class 并被 extends）。
+  final bool isAbstract;
+
   /// 类声明的类型参数名（`class Pair<K, V>` → `['K', 'V']`），按声明顺序。
   /// 实例构造时把 `typeArguments` 存到 `__ta`，方法体里的 `T` 据此读运行时类型名。
   final List<String> typeParams;
@@ -265,6 +269,7 @@ class ClassInfo {
     this.ctorBodyJs = '',
     this.ctorDefaults = const {},
     this.isComponent = false,
+    this.isAbstract = false,
     this.typeParams = const [],
     this.dependencies = const {},
     this.usedWidgetPackages = const {},
@@ -293,6 +298,7 @@ class ClassInfo {
         ctorBodyJs: ctorBodyJs,
         ctorDefaults: ctorDefaults,
         isComponent: isComponent,
+        isAbstract: isAbstract,
         typeParams: typeParams,
         dependencies: dependencies,
         usedWidgetPackages: usedWidgetPackages,

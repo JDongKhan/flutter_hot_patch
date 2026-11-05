@@ -3613,6 +3613,13 @@ String translateClassMethodBody(
         '_app_host_.invoke(${jsString(channel)}, '
         '{ message: ${m.nativeMessage ?? '""'} });';
   }
+  // 抽象成员（无方法体）→ 抛错兜底：具体子类未覆盖而被调用时立即暴露，
+  // 而不是静默返回 undefined 继续执行。非抽象类的无体方法（如宿主 external）
+  // 不受影响，仍走原路径。
+  if (info.isAbstract && (m.body == null || m.body is EmptyFunctionBody)) {
+    return '$ind'
+        'throw new Error("Unimplemented: ${info.name}.${m.name}");';
+  }
   // 静态成员（Dart 的 static 与实例成员同一名字空间，调用点看不出差别）：
   // 裸引用落成 `<类名>.<name>`；static 方法体里实例成员不参与解析（Dart 禁）。
   final staticFieldNames = {for (final f in info.staticFields) f.name};

@@ -272,12 +272,14 @@ Map<String, Set<String>> _neededClasses(
   return needed;
 }
 
-/// 类是否参与翻译与依赖传播：非抽象、非 `@PatchIgnore`（原生注入）。
+/// 类是否参与翻译与依赖传播：非 `@PatchIgnore`（原生注入）。
+///
+/// 抽象类**参与**翻译（`abstract class` → 普通 JS class，抽象成员抛错兜底）：
+/// 被具体类 `extends` 时，父类的字段初始化器与具体方法必须在 JS 侧存在。
 /// `@HostInjected` 类照常参与——类与方法签名仍产出 JS，只有标注方法的**方法体**
 /// 改为 `_app_host_.invoke`（其方法体里引用到的类型由 `dependenciesOf` 跳过，
 /// 不会进入依赖传播）。
 bool _translatableDecl(ClassDeclaration d) =>
-    d.abstractKeyword == null &&
     findAnnotation(d.metadata, 'PatchIgnore') == null;
 
 /// 文件里有 `@PatchEntry` 类 → 根文件。

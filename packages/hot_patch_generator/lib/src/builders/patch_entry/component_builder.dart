@@ -187,14 +187,16 @@ class ComponentBuilder implements Builder {
       final neededHere = scope.neededClasses[inputId.path] ?? const <String>{};
       for (final d in parsed.unit.declarations.whereType<ClassDeclaration>()) {
         final name = d.name.lexeme;
-        if (name.startsWith('_') || d.abstractKeyword != null) continue;
+        if (name.startsWith('_')) continue;
         if (!neededHere.contains(name)) continue;
         if (isIgnoredClass(parsed.unit, name)) continue;
         final info = classTable[name];
         if (info == null) continue;
         // isComponent=true → 组件根类（build 树 / export class）；
         // false → 普通类根类（模型，export class）。
-        roots.add((d, info.isComponent));
+        // 抽象类只能作为模型根类产出（它没有 build，也不会是 @PatchEntry 组件）：
+        // 被具体类 extends 时，父类产物必须存在才能 `import` / `extends`。
+        roots.add((d, d.abstractKeyword == null && info.isComponent));
       }
     }
     // 没有根类但有 `@PatchIgnore(isComponent: true)` 包装类：仍按常规路径产出
