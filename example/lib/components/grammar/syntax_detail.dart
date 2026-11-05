@@ -106,6 +106,35 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     }
   }
 
+  /// `if (x case P when g)`：对象模式 + 常量字段 + 守卫，绑定只在命中分支可见。
+  String _matchText() {
+    final task = _task;
+    if (task case TaskItem(title: final title) when title.isNotEmpty) {
+      return 'if-case 命中：$title / ${task.level.name}';
+    }
+    if (task case null) return 'if-case：null';
+    return 'if-case：其它';
+  }
+
+  /// 解构声明：`final [a, b, c] = list;` → 三个绑定（先判空，避免 null 时抛错）。
+  String _destructureText() {
+    final scores = _scores;
+    if (scores == null) return '解构：null';
+    final [a, b, c] = scores;
+    return '解构：$a / $b / $c';
+  }
+
+  /// 关系模式 + 逻辑与 + 列表模式（含 rest 绑定）。
+  String _rangeText() {
+    final score = _task?.score ?? 0;
+    if (score case > 50 && < 200) return '关系模式：$score';
+    final scores = _scores;
+    if (scores case [final a, final b, ...final rest]) {
+      return '列表模式：$a,$b +${rest.length}';
+    }
+    return '关系/列表：未命中';
+  }
+
   @override
   Widget build(BuildContext context) {
     final task = _task;
@@ -132,6 +161,9 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text('空安全下标：_scores?[0] = ${_first ?? 'null'}'),
           Text('空安全赋值：_scores?[1] = 1 → ${_second ?? 'null'}'),
           Text('多层空安全赋值：_task?.scores?[1] = 9 → ${_cell ?? 'null'}'),
+          Text(_matchText()),
+          Text(_destructureText()),
+          Text(_rangeText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

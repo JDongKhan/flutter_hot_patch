@@ -1356,6 +1356,16 @@ String translateStmtList(
           }
         }
       }
+    } else if (s is PatternVariableDeclarationStatement) {
+      // 解构声明 `final [a, b] = list;` / `final User(:name) = user;`
+      // （`var x = 1` 这类普通声明仍是 VariableDeclarationStatement）。
+      final js = _patternDeclarationJs(s, scope, classes, renderer, depth);
+      if (js == null) {
+        log.warning('[hot_patch_generator] pattern 变量声明无法翻译，已在 JS '
+            '产物中丢弃：${s.toSource()}');
+      } else {
+        out.add(js);
+      }
     } else if (s is ReturnStatement) {
       // `return "22";` 是 ReturnStatement（不是 ExpressionStatement），
       // 需单独翻译为 `return <expr>;`，否则 async 方法体被整体丢弃。
@@ -1377,10 +1387,16 @@ String translateStmtList(
       }
     } else if (s is IfStatement) {
       if (s.caseClause != null) {
-        // `if (x case P)` 的判据是模式匹配，不是条件表达式。按 `if (x)` 翻译会
-        // 让 null / 类型不符的值也进入分支（静默错译），故显式告警并跳过。
-        log.warning('[hot_patch_generator] if-case 模式匹配暂不支持，已在 JS '
-            '产物中丢弃：${s.toSource()}');
+        // `if (x case P)` 的判据是模式匹配，不是条件表达式。统一交给
+        // [_ifCaseStatementJs]（与 pattern 变量声明共用 [_compilePattern]）。
+        final js = _ifCaseStatementJs(
+            s, scope, classes, renderer, depth, returnsWidget);
+        if (js == null) {
+          log.warning('[hot_patch_generator] if-case 模式匹配无法翻译，已在 JS '
+              '产物中丢弃：${s.toSource()}');
+        } else {
+          out.add(js);
+        }
         continue;
       }
       final condJs = exprToJs(s.expression, scope, classes);
@@ -1496,6 +1512,283 @@ String translateStmtList(
 
 /// 语句体 → 语句列表（Block 或单条语句统一成列表，供 translateStmtList 递归）。
 List<Statement> _bodyStmts(Statement s) => s is Block ? s.statements : [s];
+
+// ---------------------------------------------------------------------------
+// 模式匹配（`if (x case P)` / pattern 变量声明）
+//
+// **一条实现**：[_compilePattern] 把任意模式编译成「顺序检查 + 绑定赋值」，
+// 两个语法入口（if-case / 解构声明）只是外层骨架不同。Dart 的匹配语义按短路
+// 顺序落成 `if (!(cond)) return false;`，因此 `&&`、嵌套对象 / 列表模式天然
+// 获得「前面不匹配就不读后面的字段」的行为；`||` 的两个分支各自独立求值。
+// 无法翻译的模式一律返回 null，由调用方出声告警（禁止静默丢弃）。
+// ---------------------------------------------------------------------------
+
+/// 模式编译暂存：绑定变量名 + 顺序执行的检查 / 赋值语句 + 临时变量序号。
+///
+/// 外层固定持有一个匹配值 `__v0`；子模式的临时值按遍历顺序编号（`__v1`…），
+/// 同一份源码始终产出同一串名字。
+class _PatternPlan {
+  final List<String> names = [];
+  final List<String> lines = [];
+  int _seq = 0;
+  String temp() => '__v${++_seq}';
+}
+
+/// `if (x case P when g)` → 接收值只求值一次、绑定只在 then 分支可见。
+///
+/// ```js
+/// {
+///   const __v0 = <expr>;
+///   let a, b;
+///   const __ok = (() => {
+///     <检查 / 绑定>
+///     return (<guard>);
+///   })();
+///   if (__ok) { ... } else { ... }
+/// }
+/// ```
+String? _ifCaseStatementJs(
+  IfStatement s,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+  ExprRenderer? renderer,
+  int depth,
+  bool returnsWidget,
+) {
+  final matched = exprToJs(s.expression, scope, classes);
+  if (matched == null) return null;
+  final guarded = s.caseClause!.guardedPattern;
+  final plan = _PatternPlan();
+  // 模式绑定只在命中分支可见：翻译完 then / else 后把注入的局部名还原，
+  // 避免方法后续语句里同名的字段被当成「已出块的局部变量」。
+  final localVarsBefore = {...scope.localVars};
+  if (!_compilePatternWithGuard(
+      guarded.pattern, guarded.whenClause?.expression, plan, scope, classes)) {
+    scope.localVars
+      ..clear()
+      ..addAll(localVarsBefore);
+    return null;
+  }
+  if (guarded.whenClause == null) plan.lines.add('return true;');
+  for (final n in plan.names) {
+    renderer?.registerLocal(n);
+  }
+  final ind = '  ' * depth;
+  final inner = '  ' * (depth + 2);
+  final b = StringBuffer()
+    ..writeln('$ind{')
+    ..writeln('${ind}  const __v0 = $matched;');
+  if (plan.names.isNotEmpty) {
+    b.writeln('${ind}  let ${plan.names.toSet().join(', ')};');
+  }
+  b.writeln('${ind}  const __ok = (() => {');
+  for (final l in plan.lines) {
+    b.writeln('$inner$l');
+  }
+  b.writeln('${ind}  })();');
+  b.writeln('${ind}  if (__ok) {');
+  b.writeln(translateStmtList(_bodyStmts(s.thenStatement), scope, classes,
+      renderer,
+      depth: depth + 2, returnsWidget: returnsWidget));
+  b.writeln('$ind  }');
+  final els = s.elseStatement;
+  if (els != null) {
+    b.writeln('${ind}  else {');
+    b.writeln(translateStmtList(_bodyStmts(els), scope, classes, renderer,
+        depth: depth + 2, returnsWidget: returnsWidget));
+    b.writeln('$ind  }');
+  }
+  b.writeln('$ind}');
+  scope.localVars
+    ..clear()
+    ..addAll(localVarsBefore);
+  return b.toString().trimRight();
+}
+
+/// 解构声明 `final [a, b] = list;` / `final User(:name) = user;`
+///
+/// 绑定必须留在**当前作用域**（后续语句要引用），故不包块、用 `var`（JS 允许
+/// 在同一作用域内重复 `var`，不会与另一处解构撞名）。Dart 里解构不匹配会抛错，
+/// 这里同样抛错，绝不带着 undefined 的绑定继续执行。
+String? _patternDeclarationJs(
+  PatternVariableDeclarationStatement s,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+  ExprRenderer? renderer,
+  int depth,
+) {
+  final init = rhsToJs(s.declaration.expression, scope, classes);
+  if (init == null) return null;
+  final plan = _PatternPlan();
+  if (!_compilePatternWithGuard(
+      s.declaration.pattern, null, plan, scope, classes)) {
+    return null;
+  }
+  for (final n in plan.names) {
+    scope.localVars.add(n);
+    renderer?.registerLocal(n);
+  }
+  plan.lines.add('return true;');
+  final ind = '  ' * depth;
+  final b = StringBuffer()
+    ..writeln('$ind' 'var __v0 = $init;');
+  if (plan.names.isNotEmpty) {
+    b.writeln('$ind' 'var ${plan.names.toSet().join(', ')};');
+  }
+  b.writeln('${ind}if (!(() => {');
+  for (final l in plan.lines) {
+    b.writeln('${ind}  $l');
+  }
+  b.writeln('${ind}})()) {');
+  b.writeln('${ind}  throw new Error('
+      '${jsString('pattern 变量声明未匹配：${s.toSource()}')});');
+  b.writeln('$ind}');
+  return b.toString().trimRight();
+}
+
+/// 模式 + 可选 `when` 守卫的统一入口（if-case 与解构声明共用）。
+bool _compilePatternWithGuard(
+  DartPattern pattern,
+  Expression? guard,
+  _PatternPlan plan,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (!_compilePattern(pattern, '__v0', plan, scope, classes)) return false;
+  // 绑定名先登记：guard 与 then 分支里的引用都按局部变量解析。
+  scope.localVars.addAll(plan.names);
+  if (guard != null) {
+    final g = exprToJs(guard, scope, classes);
+    if (g == null) return false;
+    plan.lines.add('return ($g);');
+  }
+  return true;
+}
+
+/// 把模式 [p] 编译进 [plan]（[value] 已是 JS 表达式）。
+bool _compilePattern(
+  DartPattern p,
+  String value,
+  _PatternPlan plan,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final known = classes.keys.toSet();
+  if (p is WildcardPattern) return true;
+  if (p is ParenthesizedPattern) {
+    return _compilePattern(p.pattern, value, plan, scope, classes);
+  }
+  // 常量模式：字面量 / 枚举成员 / 顶层常量 → 严格相等（Dart `==` 在 JS 侧的
+  // 基本值与枚举成员上就是 `===`）。
+  if (p is ConstantPattern) {
+    final v = exprToJs(p.expression, scope, classes);
+    if (v == null) return false;
+    plan.lines.add('if (!($value === $v)) return false;');
+    return true;
+  }
+  // 声明变量模式：`var x` / `final x` / `int x` → 绑定（带类型注解时先做类型检查）。
+  if (p is DeclaredVariablePattern) {
+    if (p.type != null) {
+      final test = typeTestJs(p.type!.toSource(), value, knownClasses: known);
+      if (test == null) return false;
+      plan.lines.add('if (!($test)) return false;');
+    }
+    final name = p.name.lexeme;
+    plan.names.add(name);
+    plan.lines.add('$name = $value;');
+    return true;
+  }
+  // 关系模式：`case > 0` / `case <= n`。
+  if (p is RelationalPattern) {
+    final rhs = exprToJs(p.operand, scope, classes);
+    if (rhs == null) return false;
+    plan.lines.add('if (!($value ${p.operator.lexeme} $rhs)) return false;');
+    return true;
+  }
+  // 空检查模式：`case var x?` → 非空后再匹配子模式。
+  if (p is NullCheckPattern) {
+    final t = plan.temp();
+    plan.lines.add('const $t = $value;');
+    plan.lines.add('if ($t == null) return false;');
+    return _compilePattern(p.pattern, t, plan, scope, classes);
+  }
+  // 逻辑与：顺序执行即短路（前一步失败直接 return false）。
+  if (p is LogicalAndPattern) {
+    if (!_compilePattern(p.leftOperand, value, plan, scope, classes)) {
+      return false;
+    }
+    return _compilePattern(p.rightOperand, value, plan, scope, classes);
+  }
+  // 逻辑或：两个分支各自完整求值，成功者写出绑定（Dart 要求两侧绑定同名变量）。
+  if (p is LogicalOrPattern) {
+    final left = _PatternPlan();
+    final right = _PatternPlan();
+    if (!_compilePattern(p.leftOperand, value, left, scope, classes)) {
+      return false;
+    }
+    if (!_compilePattern(p.rightOperand, value, right, scope, classes)) {
+      return false;
+    }
+    plan.names.addAll({...left.names, ...right.names});
+    final t = plan.temp();
+    plan.lines.add('const $t = (() => { ${left.lines.join(' ')} '
+        'return true; })() || (() => { ${right.lines.join(' ')} '
+        'return true; })();');
+    plan.lines.add('if (!$t) return false;');
+    return true;
+  }
+  // 对象模式：`User(name: final n)` / `User(:n)` → instanceof + 逐字段取值。
+  if (p is ObjectPattern) {
+    final test = typeTestJs(p.type.toSource(), value, knownClasses: known);
+    if (test == null) return false;
+    plan.lines.add('if (!($test)) return false;');
+    for (final f in p.fields) {
+      final getter = f.effectiveName;
+      if (getter == null) return false;
+      final t = plan.temp();
+      plan.lines.add('const $t = $value.$getter;');
+      if (!_compilePattern(f.pattern, t, plan, scope, classes)) return false;
+    }
+    return true;
+  }
+  // 列表模式：`[a, b]` 定长；`[a, ...rest]` 至少 a 个，rest 为剩余切片。
+  if (p is ListPattern) {
+    final els = p.elements;
+    var restIndex = -1;
+    for (var i = 0; i < els.length; i++) {
+      if (els[i] is RestPatternElement) {
+        // Dart 的 rest 只允许一处，且只翻译末位形态（其余出声丢弃）。
+        if (restIndex >= 0 || i != els.length - 1) return false;
+        restIndex = i;
+      }
+    }
+    final fixed = restIndex >= 0 ? restIndex : els.length;
+    plan.lines.add(restIndex >= 0
+        ? 'if (!(Array.isArray($value) && $value.length >= $fixed)) '
+            'return false;'
+        : 'if (!(Array.isArray($value) && $value.length === $fixed)) '
+            'return false;');
+    for (var i = 0; i < fixed; i++) {
+      final el = els[i];
+      if (el is! DartPattern) return false;
+      final t = plan.temp();
+      plan.lines.add('const $t = $value[$i];');
+      if (!_compilePattern(el, t, plan, scope, classes)) return false;
+    }
+    if (restIndex >= 0) {
+      final rest = els[restIndex] as RestPatternElement;
+      final sub = rest.pattern;
+      if (sub != null) {
+        final t = plan.temp();
+        plan.lines.add('const $t = $value.slice($fixed);');
+        if (!_compilePattern(sub, t, plan, scope, classes)) return false;
+      }
+    }
+    return true;
+  }
+  // 记录模式 / 类型转换 / 其它模式：JS 侧无表示或未覆盖，出声丢弃。
+  return false;
+}
 
 /// for 语句 → JS（三段式与 for-in）：
 ///   - `for (var i = 0; i < n; i++)` → 一比一（循环变量登记进 localVars）；

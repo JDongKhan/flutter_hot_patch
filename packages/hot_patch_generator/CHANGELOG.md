@@ -5,6 +5,7 @@
 - 空安全属性访问 / 下标 / 方法调用改为与 Dart 源码同形：`a?.b` → `a?.b`、`a?[i]` → `a?.[i]`、`a?.m(args)` → `a?.m(args)`（`shared/js_translator.dart` 里三处旧展开删除）。接收者只求值一次、null / undefined 时整链短路，实参 / 下标不求值——链式 `a?.b?.c` 不再逐层展开三元（旧写法在链上会重复求值接收者，且 `a?.b.c` 在 `a` 为 null 时丢短路、直接 TypeError）。
 - 空安全赋值 `a?[i] = v` / `a?.b = v`（JS 可选链不能作赋值目标）落成接收者单次求值的守卫 `((__t) => { if (__t != null) __t[i] = v; })(a)`；普通下标 / 属性赋值 `a[i] = v` / `a.b = v` 同分支支持。目标链**任意一层**出现 `?.` / `?[` 都走同一守卫（`_obj?._scores?[1] = 1` 只让前缀变长，不嵌套守卫）；接收者为空时下标与右值均不执行。
 - 引擎基线：产物开始依赖 ES2020 可选链（此前已使用 `??`，同一代引擎能力）；`docs/组件支持文档.md` §7.1 与 §6.14 同步更新（iOS 口径 15+）。
+- **模式匹配**：`if (x case P when g)` 与 pattern 变量声明（`final [a, b] = list;` / `final User(:name) = user;`）接入同一条 `_compilePattern`：常量 / 声明变量（含类型检查）/ 关系 / 空检查 / 逻辑与·或 / 对象（逐字段）/ 列表（定长与末位 `...rest`）。接收值单次求值，绑定只注入命中分支（if-case 结束后还原作用域），解构不匹配抛 `Error`；记录模式仍构建期告警跳过。
 - 产物排版统一：删除 `_setStateJs` 里「回调体折成单行」的特判，`setState` 回调与其它方法体走同一套写出前缩进归一（`canonicalizeJsIndent`）。
 - 示例：`BannerCarousel._stopAutoPlay` 删除「先取本地引用再判空」的旧绕行写法，恢复 `_timer?.cancel()`。
 

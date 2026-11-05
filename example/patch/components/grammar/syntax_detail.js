@@ -100,6 +100,87 @@ export class SyntaxDetail extends StatefulWidget {
       return "低";
     }
   }
+  _matchText() {
+    var task = this._task;
+    {
+      const __v0 = task;
+      let title;
+      const __ok = (() => {
+        if (!(__v0 instanceof TaskItem)) return false;
+        const __v1 = __v0.title;
+        title = __v1;
+        return (title.isNotEmpty);
+      })();
+      if (__ok) {
+        return "if-case 命中：" + title + " / " + task.level.name;
+      }
+    }
+    {
+      const __v0 = task;
+      const __ok = (() => {
+        if (!(__v0 === null)) return false;
+        return true;
+      })();
+      if (__ok) {
+        return "if-case：null";
+      }
+    }
+    return "if-case：其它";
+  }
+  _destructureText() {
+    var scores = this._scores;
+    if ((scores == null)) {
+      return "解构：null";
+    }
+    var __v0 = scores;
+    var a, b, c;
+    if (!(() => {
+      if (!(Array.isArray(__v0) && __v0.length === 3)) return false;
+      const __v1 = __v0[0];
+      a = __v1;
+      const __v2 = __v0[1];
+      b = __v2;
+      const __v3 = __v0[2];
+      c = __v3;
+      return true;
+    })()) {
+      throw new Error("pattern 变量声明未匹配：final [a, b, c] = scores;");
+    }
+    return "解构：" + a + " / " + b + " / " + c;
+  }
+  _rangeText() {
+    var score = (this._task?.score ?? 0);
+    {
+      const __v0 = score;
+      const __ok = (() => {
+        if (!(__v0 > 50)) return false;
+        if (!(__v0 < 200)) return false;
+        return true;
+      })();
+      if (__ok) {
+        return "关系模式：" + score;
+      }
+    }
+    var scores = this._scores;
+    {
+      const __v0 = scores;
+      let a, b, rest;
+      const __ok = (() => {
+        if (!(Array.isArray(__v0) && __v0.length >= 2)) return false;
+        const __v1 = __v0[0];
+        a = __v1;
+        const __v2 = __v0[1];
+        b = __v2;
+        const __v3 = __v0.slice(2);
+        rest = __v3;
+        return true;
+      })();
+      if (__ok) {
+        return "列表模式：" + a + "," + b + " +" + rest.length;
+      }
+    }
+    return "关系/列表：未命中";
+  }
   build(context) {
     var task = this._task;
     return new Padding({
@@ -142,6 +223,15 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": "多层空安全赋值：_task?.scores?[1] = 9 → " + (this._cell ?? "null")
+          }),
+          new Text({
+            "data": this._matchText()
+          }),
+          new Text({
+            "data": this._destructureText()
+          }),
+          new Text({
+            "data": this._rangeText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
