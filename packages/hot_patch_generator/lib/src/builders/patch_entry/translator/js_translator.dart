@@ -492,15 +492,83 @@ String? _collectionFragmentJs(
     } else if (loop is ForEachPartsWithIdentifier) {
       name = loop.identifier.name;
     } else {
-      return null; // 三段式 for 元素暂不支持
+      name = null;
     }
-    final iterable = loop is ForEachPartsWithDeclaration
-        ? exprToJs(loop.iterable, scope, classes)
-        : exprToJs((loop as ForEachPartsWithIdentifier).iterable, scope, classes);
-    final body = _collectionArrayJs(
-        el.body, scope.withParams([name]), classes);
-    if (iterable == null || body == null) return null;
-    return '...($iterable).map(($name) => $body)';
+    if (name != null && loop is ForEachParts) {
+      final iterable = loop is ForEachPartsWithDeclaration
+          ? exprToJs(loop.iterable, scope, classes)
+          : exprToJs(
+              (loop as ForEachPartsWithIdentifier).iterable, scope, classes);
+      final body =
+          _collectionArrayJs(el.body, scope.withParams([name]), classes);
+      if (iterable == null || body == null) return null;
+      return '...($iterable).map(($name) => $body)';
+    }
+    if (loop is! ForParts) return null; // 其它 for 头形态
+    // 三段式：`[for (var i = 0; i < n; i++) f(i)]` → IIFE 内跑原生 for，
+    // 每轮把元素数组 push 进结果（返回数组后由外层展开）。
+    final before = {...scope.localVars};
+    final inits = <String>[];
+    if (loop is ForPartsWithDeclarations) {
+      for (final v in loop.variables.variables) {
+        final n = v.name.lexeme;
+        scope.localVars.add(n);
+        final declared = loop.variables.type?.toSource();
+        if (declared != null) scope.localTypes[n] = declared;
+        if (v.initializer == null) {
+          inits.add('let $n');
+          continue;
+        }
+        final rhs = rhsToJs(v.initializer!, scope, classes);
+        if (rhs == null) {
+          scope.localVars
+            ..clear()
+            ..addAll(before);
+          return null;
+        }
+        inits.add('let $n = $rhs');
+      }
+    } else if (loop is ForPartsWithExpression) {
+      final init = loop.initialization;
+      if (init != null) {
+        final t = exprToJs(init, scope, classes);
+        if (t == null) {
+          scope.localVars
+            ..clear()
+            ..addAll(before);
+          return null;
+        }
+        inits.add(t);
+      }
+    } else {
+      scope.localVars
+        ..clear()
+        ..addAll(before);
+      return null;
+    }
+    final condJs =
+        loop.condition == null ? '' : exprToJs(loop.condition!, scope, classes);
+    final upds = <String>[];
+    if (condJs != null) {
+      for (final u in loop.updaters) {
+        final t = exprToJs(u, scope, classes);
+        if (t == null) {
+          scope.localVars
+            ..clear()
+            ..addAll(before);
+          return null;
+        }
+        upds.add(t);
+      }
+    }
+    final body = _collectionArrayJs(el.body, scope, classes);
+    scope.localVars
+      ..clear()
+      ..addAll(before);
+    if (condJs == null || body == null) return null;
+    return '...(() => {\n  const __r = [];\n'
+        '  for (${inits.join(', ')}; $condJs; ${upds.join(', ')}) {\n'
+        '    __r.push(...$body);\n  }\n  return __r;\n})()';
   }
   return null;
 }

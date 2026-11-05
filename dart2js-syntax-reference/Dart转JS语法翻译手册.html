@@ -204,7 +204,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
 <p class="h2-sub">这七条是后面所有规则的依据。实现时先落地这七条，再逐章补特判。</p>
 
 <ol class="checklist">
-  <li><b>类型注解是编译期信息，但集合类名由运行时提供</b><span><code>int</code>、<code>String?</code> 等类型注解一律擦除；<code>List&lt;T&gt;</code> 只擦除类型参数、<strong>保留类名 <code>List</code></strong>，由 flutter.js 封装提供，不降级成 JS Array。生成代码里不保留其它类型标注形式（除非目标是 TS）。</span></li>
+  <li><b>类型注解是编译期信息，全部擦除</b><span><code>int</code>、<code>String?</code>、<code>List&lt;T&gt;</code>、<code>Map&lt;K,V&gt;</code> 等标注一律不进入 JS 产物；<code>List&lt;T&gt;</code> 擦除类型参数后就是原生 Array。生成代码里不保留任何类型标注（除非目标是 TS）。</span></li>
   <li><b>空安全没有运行时表示，但有运行时可观察行为</b><span><code>! / ?. / ?[] / ??</code> 的语义必须靠改写保住三件事：接收者只求值一次、null 时短路、表达式返回值正确。</span></li>
   <li><b>同名方法不等于同语义</b><span>落入第 12 章差异表的成员，禁止走通用“方法名直译”路径，必须走特判模板。</span></li>
   <li><b>Dart 只有 null，JS 有 null 与 undefined</b><span>翻译器必须先定一个空值模型。推荐“宽空模型”：判空统一用 <code>== null</code>，合并统一用 <code>??</code>。</span></li>
@@ -308,7 +308,7 @@ function deepFreeze(v) {
     <tr><td><code>num</code></td><td><code>typeof x === 'number'</code></td><td>直接对应</td></tr>
     <tr><td><code>String</code></td><td><code>typeof x === 'string'</code></td><td>直接对应</td></tr>
     <tr><td><code>bool</code></td><td><code>typeof x === 'boolean'</code></td><td>直接对应</td></tr>
-    <tr><td><code>List&lt;T&gt;</code></td><td><code>x instanceof List</code></td><td><code>List</code> 由 flutter.js 封装；不要再判 <code>Array.isArray</code></td></tr>
+    <tr><td><code>List&lt;T&gt;</code></td><td><code>Array.isArray(x)</code></td><td>Dart List 与 JS Array 一一对应；<code>TypedArray</code> 要另加 <code>ArrayBuffer.isView</code></td></tr>
     <tr><td><code>Map&lt;K, V&gt;</code></td><td><code>x instanceof Map</code></td><td>若翻译成普通对象则用 <code>isPlainObject</code></td></tr>
     <tr><td><code>Set&lt;T&gt;</code></td><td><code>x instanceof Set</code></td><td>直接对应</td></tr>
     <tr><td><code>Function</code></td><td><code>typeof x === 'function'</code></td><td>直接对应</td></tr>
@@ -562,7 +562,7 @@ const q = Math.trunc(a / b);</code><button class="copy" type="button">复制</bu
 <p class="cap"><span class="dart">DART</span> → <span class="js">JS</span> · 类型判断分派</p>
 <pre><code>// Dart: x is String        →  typeof x === 'string'
 // Dart: x is int           →  Number.isInteger(x)
-// Dart: x is List          →  x instanceof List      （List 由 flutter.js 提供）
+// Dart: x is List          →  Array.isArray(x)
 // Dart: x is Map           →  x instanceof Map
 // Dart: x is MyClass       →  x instanceof MyClass
 // Dart: x is! String       →  typeof x !== 'string'</code><button class="copy" type="button">复制</button></pre>
@@ -991,198 +991,53 @@ const b = NumX_get_isBlank('  ');</code><button class="copy" type="button">复�
 <!-- ================= 12 集合 ================= -->
 <section id="collections">
 <h2><span class="sec-no">12</span>集合方法差异</h2>
-<p class="h2-sub"><code>List</code> 由 flutter.js 运行时封装，类名与方法名原样保留；<code>Map</code> 仍走 JS Map，需逐项适配。</p>
+<p class="h2-sub"><code>List</code> 翻译成原生 Array，<code>Map</code> 翻译成 JS Map。同名方法多半参数顺序或语义不同，逐个适配。</p>
 
-<h3>List：保留 <code>List</code>，不做 Array 降级</h3>
-<p>翻译器<strong>保留 <code>List</code> 类名与全部成员名</strong>，不生成 JS Array，也不做 <code>filter</code> / <code>reduce</code> / <code>some</code> 之类的名字替换。下表从「差异清单」变成<strong>封装类的语义契约</strong>：实现 flutter.js 的 <code>List</code> 时逐行对齐。</p>
+<h3>List → Array：同名但语义/参数不同</h3>
+<p>Dart 的 <code>List</code> 与 JS 的 <code>Array</code> 结构最接近，差异集中在<strong>方法名、参数顺序、越界行为和惰性</strong>。按下表逐项处理，不要走通用的“同名直译”。</p>
 
 <table>
-  <colgroup><col style="width:26%"><col style="width:40%"><col style="width:34%"></colgroup>
-  <thead><tr><th>Dart 成员</th><th>List 封装必须满足</th><th>禁止的写法</th></tr></thead>
+  <colgroup><col style="width:23%"><col style="width:29%"><col style="width:48%"></colgroup>
+  <thead><tr><th>Dart 成员</th><th>JS Array 对应</th><th>必须处理的差异</th></tr></thead>
   <tbody>
-    <tr><td>字面量 <code>[1, 2, 3]</code></td><td><code>List.of([1,2,3])</code> 或 <code>new List([1,2,3])</code></td><td>裸数组字面量</td></tr>
-    <tr><td><code>for (final x in list)</code></td><td>实现 <code>[Symbol.iterator]</code>，生成 <code>for...of</code></td><td>改写成 <code>forEach</code> 回调</td></tr>
-    <tr><td><code>list[i]</code> / <code>list[i] = v</code></td><td>保留索引语法；越界抛 <code>RangeError</code></td><td>落到 Array 后返回 <code>undefined</code></td></tr>
-    <tr><td><code>length</code></td><td>属性保留，返回 int</td><td>改名 <code>size</code></td></tr>
-    <tr><td><code>add(e)</code> / <code>addAll(xs)</code></td><td>尾部追加；返回 void</td><td><code>push</code> / <code>push(...xs)</code></td></tr>
-    <tr><td><code>insert(i, e)</code></td><td>越界抛 <code>RangeError</code></td><td><code>splice(i, 0, e)</code></td></tr>
-    <tr><td><code>remove(e)</code></td><td>按 <code>==</code> 语义查找并删除，返回 bool</td><td><code>delete</code> / <code>splice</code></td></tr>
-    <tr><td><code>removeAt(i)</code></td><td>返回被删元素本身</td><td><code>splice(i,1)</code>（返回数组）</td></tr>
-    <tr><td><code>removeWhere(f)</code></td><td>原地删除所有匹配项</td><td>重建新数组</td></tr>
-    <tr><td><code>clear()</code></td><td>原地清空</td><td><code>length = 0</code></td></tr>
-    <tr><td><code>contains(e)</code> / <code>indexOf(e, [start])</code></td><td>按 <code>==</code>（对象走 <code>equals</code>）比较</td><td><code>includes</code>（SameValueZero）</td></tr>
-    <tr><td><code>sort([compare])</code></td><td>无比较器时按 Comparable 数值序</td><td>JS 默认 UTF-16 字符串序</td></tr>
-    <tr><td><code>join([sep])</code></td><td>默认分隔符 <code>''</code></td><td>JS 默认 <code>','</code></td></tr>
-    <tr><td><code>fillRange(start, end, v)</code></td><td>参数顺序 <code>(start, end, value)</code></td><td><code>fill(v, start, end)</code></td></tr>
-    <tr><td><code>sublist(a, b)</code></td><td>越界抛 <code>RangeError</code></td><td><code>slice(a, b)</code> 的静默裁剪</td></tr>
-    <tr><td><code>first</code> / <code>last</code> / <code>firstWhere</code></td><td>空列表或找不到时抛 <code>StateError</code>，或走 <code>orElse</code></td><td>返回 <code>undefined</code></td></tr>
-    <tr><td><code>map(f)</code> / <code>where(f)</code> / <code>expand(f)</code></td><td>返回 <code>Iterable</code>（惰性），消费时才求值</td><td>返回裸 Array</td></tr>
-    <tr><td><code>fold(init, fn)</code> / <code>reduce(fn)</code></td><td>参数顺序 <code>(init, fn)</code>，acc 在前</td><td><code>reduce(fn, init)</code></td></tr>
-    <tr><td><code>forEach(f)</code></td><td>回调只传元素，签名与 Dart 一致</td><td>多传 index / array</td></tr>
-    <tr><td><code>every</code> / <code>any</code> / <code>take</code> / <code>skip</code></td><td>保留原名与短路语义</td><td><code>some</code> / <code>slice</code></td></tr>
-    <tr><td><code>toList()</code> / <code>asMap()</code> / <code>cast&lt;T&gt;()</code></td><td>保留；<code>toList</code> 物化惰性结果</td><td><code>[...arr]</code> / <code>Object.fromEntries</code></td></tr>
+    <tr><td>字面量 <code>[1, 2, 3]</code></td><td><code>[1, 2, 3]</code></td><td><span class="lv lv-ok">直译</span></td></tr>
+    <tr><td><code>list[i]</code> / <code>list[i] = v</code></td><td><code>arr[i]</code></td><td><span class="lv lv-ok">直译</span> 越界时 Dart 抛 <code>RangeError</code>，JS 返回 <code>undefined</code> 或静默扩展</td></tr>
+    <tr><td><code>length</code></td><td><code>length</code></td><td><span class="lv lv-care">注意</span> Dart 只读；JS 可写，赋值会截断或扩展</td></tr>
+    <tr><td><code>add(e)</code></td><td><code>push(e)</code></td><td><span class="lv lv-must">必须改写</span></td></tr>
+    <tr><td><code>addAll(xs)</code></td><td><code>push(...xs)</code></td><td><span class="lv lv-must">必须改写</span> 大数组展开有参数上限，超 10 万改用循环</td></tr>
+    <tr><td><code>insert(i, e)</code></td><td><code>splice(i, 0, e)</code></td><td><span class="lv lv-must">必须改写</span> 越界 Dart 抛错，<code>splice</code> 静默</td></tr>
+    <tr><td><code>remove(e)</code></td><td><code>indexOf</code> + <code>splice</code></td><td><span class="lv lv-must">必须改写</span> 返回 bool，按 <code>==</code> 语义查找</td></tr>
+    <tr><td><code>removeAt(i)</code></td><td><code>splice(i, 1)[0]</code></td><td><span class="lv lv-must">必须改写</span> 返回被删元素本身</td></tr>
+    <tr><td><code>removeLast()</code></td><td><code>pop()</code></td><td><span class="lv lv-must">必须改写</span> 空列表时 Dart 抛错</td></tr>
+    <tr><td><code>removeWhere(f)</code></td><td>反向遍历 + <code>splice</code></td><td><span class="lv lv-must">必须改写</span> 正序遍历会漏删</td></tr>
+    <tr><td><code>clear()</code></td><td><code>length = 0</code></td><td><span class="lv lv-must">必须改写</span></td></tr>
+    <tr><td><code>contains(e)</code></td><td><code>includes(e)</code></td><td><span class="lv lv-care">注意</span> <code>includes</code> 用 SameValueZero，<code>NaN</code> 能匹配；Dart 的 <code>NaN != NaN</code></td></tr>
+    <tr><td><code>indexOf(e, [start])</code></td><td><code>indexOf(e, start)</code></td><td><span class="lv lv-care">注意</span> 对象元素要按 Dart <code>==</code> 比较 <code>equals</code></td></tr>
+    <tr><td><code>sort([cmp])</code></td><td><code>sort([cmp])</code></td><td><span class="lv lv-must">必须改写</span> 无比较器时 Dart 按 <code>Comparable</code>，JS 按 UTF-16 字符串序</td></tr>
+    <tr><td><code>join([sep])</code></td><td><code>join(sep)</code></td><td><span class="lv lv-must">必须改写</span> Dart 默认 <code>''</code>，JS 默认 <code>','</code></td></tr>
+    <tr><td><code>fillRange(s, e, v)</code></td><td><code>fill(v, s, e)</code></td><td><span class="lv lv-must">必须改写</span> 参数顺序不同</td></tr>
+    <tr><td><code>sublist(a, [b])</code></td><td><code>slice(a, b)</code></td><td><span class="lv lv-care">注意</span> Dart 越界抛错，<code>slice</code> 静默裁剪</td></tr>
+    <tr><td><code>first</code> / <code>last</code></td><td><code>arr[0]</code> / <code>arr[arr.length - 1]</code></td><td><span class="lv lv-care">注意</span> 空列表时 Dart 抛 <code>StateError</code></td></tr>
+    <tr><td><code>firstWhere(f, [orElse])</code></td><td><code>find(f)</code></td><td><span class="lv lv-must">必须改写</span> 找不到时 Dart 抛错或走 <code>orElse</code>，<code>find</code> 返回 <code>undefined</code></td></tr>
+    <tr><td><code>map(f)</code></td><td><code>map(f)</code></td><td><span class="lv lv-care">注意</span> Dart 返回惰性 <code>Iterable</code>，JS 立即求值并返回新数组</td></tr>
+    <tr><td><code>where(f)</code></td><td><code>filter(f)</code></td><td><span class="lv lv-must">必须改写</span> 名字不同；惰性 vs 立即</td></tr>
+    <tr><td><code>expand(f)</code></td><td><code>flatMap(f)</code></td><td><span class="lv lv-must">必须改写</span> 都只扁平一层，但名字不同</td></tr>
+    <tr><td><code>fold(init, fn)</code></td><td><code>reduce(fn, init)</code></td><td><span class="lv lv-must">必须改写</span> 参数顺序相反</td></tr>
+    <tr><td><code>reduce(fn)</code></td><td><code>reduce(fn)</code></td><td><span class="lv lv-care">注意</span> 空列表两边都抛错，错误类型不同</td></tr>
+    <tr><td><code>forEach(f)</code></td><td><code>forEach(f)</code></td><td><span class="lv lv-care">注意</span> JS 回调多传 <code>(v, i, arr)</code>；单参回调无害</td></tr>
+    <tr><td><code>any(f)</code> / <code>every(f)</code></td><td><code>some(f)</code> / <code>every(f)</code></td><td><span class="lv lv-must">必须改写</span> <code>any</code> → <code>some</code></td></tr>
+    <tr><td><code>take(n)</code> / <code>skip(n)</code></td><td><code>slice(0, n)</code> / <code>slice(n)</code></td><td><span class="lv lv-must">必须改写</span> 负数与越界按 Dart 规则处理</td></tr>
+    <tr><td><code>toList()</code> / <code>List.from(it)</code></td><td><code>[...it]</code></td><td><span class="lv lv-must">必须改写</span> 物化惰性结果</td></tr>
+    <tr><td><code>asMap()</code></td><td>手写索引映射</td><td><span class="lv lv-must">必须改写</span> JS 无对应</td></tr>
+    <tr><td><code>cast&lt;T&gt;()</code></td><td>擦除</td><td><span class="lv lv-ok">直译</span> 不做运行时检查</td></tr>
   </tbody>
 </table>
 
 <div class="note risk">
-  <span class="t">索引访问是这套方案唯一的硬点</span>
-  JS 类实例不支持 <code>list[i]</code> 的原生索引语义，会当成属性名 <code>"0"</code> 处理。二选一，不能留空：<br>
-  ① <strong>Proxy 包装</strong>：List 内部持有数组，构造函数返回 <code>new Proxy(this, { get, set })</code>，数字键转发到内部数组；<code>list[i]</code> 原样可用，代价是每次属性访问多一层拦截。<br>
-  ② <strong>翻译器重写索引</strong>：<code>list[i]</code> → <code>list.get(i)</code>，<code>list[i] = v</code> → <code>list.set(i, v)</code>；运行时零拦截开销，但生成代码不再是原生索引形态。<br>
-  ③ <strong>继承 <code>Array</code> 可选</strong>：能原生拿到索引、<code>length</code>、迭代器与真数组性能，但 Array 方法必须全部覆盖或封禁（见下节），并接受 <code>Array.isArray</code> 为 true、<code>length</code> 可写两个无法拦截的例外。
-</div>
-
-<h3>方案对比：Proxy / 索引重写 / 继承 Array</h3>
-<table>
-  <colgroup><col style="width:20%"><col style="width:26%"><col style="width:54%"></colgroup>
-  <thead><tr><th>方案</th><th>索引 <code>list[i]</code></th><th>代价与风险</th></tr></thead>
-  <tbody>
-    <tr><td>Proxy 包装</td><td>原生可用</td><td>每次属性访问多一层拦截；<code>length</code>、JSON、第三方库都要额外处理；<code>Array.isArray</code> 为 false</td></tr>
-    <tr><td>翻译器重写索引</td><td>源码改成 <code>list.get(i)</code></td><td>无拦截开销、最快；但手写代码里的 <code>list[i]</code> 会静默变成普通属性，不报错</td></tr>
-    <tr><td>继承 <code>Array</code></td><td>原生可用</td><td>真数组、最快；<code>Array.isArray</code> 为 true，<code>length</code> 可写，同名方法必须覆盖，Array 特有方法必须封禁</td></tr>
-  </tbody>
-</table>
-
-<div class="note risk">
-  <span class="t">继承 Array 的实测边界（Node 22）</span>
-  ① <code>Array.isArray(list)</code> 为 <code>true</code>，第三方数组库会把 List 当普通数组直接 mutate，无法通过类型判断拦住。<br>
-  ② <code>length</code> 是 Array exotic 的自有属性，<strong>子类 getter 拦不住</strong>：<code>list.length = 1</code> 会静默截断。<br>
-  ③ <code>map</code> / <code>filter</code> / <code>slice</code> 因 <code>Symbol.species</code> 返回 <code>List</code> 实例，看起来正确，但 <code>map</code> 是<strong>立即求值</strong>，Dart 的 <code>map</code> / <code>where</code> 是惰性 Iterable，必须覆盖。<br>
-  ④ 构造器有歧义：<code>new List([1,2,3])</code> 得到的是 <code>[[1,2,3]]</code>（长度 1），即使写成 <code>constructor(...items){ super(...items) }</code> 也一样，因为数组被当成单个参数。<br>
-  ⑤ 默认语义仍然错：<code>sort()</code> 给出 <code>[1,10,9]</code>，<code>join()</code> 给出 <code>"a,b"</code>。
-</div>
-
-<pre><code>class List extends Array {
-  constructor(iterable) {
-    super();                                  // 不用 super(...items)，避免 Array(n) 与数组展开歧义
-    if (iterable != null) {
-      for (const e of iterable) this.push(e);
-    }
-  }
-
-  static of(iterable) { return new List(iterable); }
-
-  // —— 与 Dart 同名的成员：必须覆盖成 Dart 语义 ——
-  get isEmpty() { return this.length === 0; }
-  get first() {
-    if (this.length === 0) throw new StateError('No element');
-    return this[0];
-  }
-  add(e) { this.push(e); }
-  addAll(xs) { for (const x of xs) this.push(x); }
-  insert(i, e) {
-    if (i &lt; 0 || i &gt; this.length) throw new RangeError('index ' + i);
-    Array.prototype.splice.call(this, i, 0, e);   // 不能写 this.splice，已被防火墙封禁
-  }
-  remove(e) {
-    const i = this.indexOf(e);
-    if (i &lt; 0) return false;
-    Array.prototype.splice.call(this, i, 1);
-    return true;
-  }
-  removeAt(i) {
-    if (i &lt; 0 || i &gt;= this.length) throw new RangeError('index ' + i);
-    return Array.prototype.splice.call(this, i, 1)[0];
-  }
-  clear() { this.length = 0; }
-  sort(compare) {
-    if (compare) { Array.prototype.sort.call(this, compare); return; }
-    Array.prototype.sort.call(this, (a, b) =&gt; (a &lt; b ? -1 : a &gt; b ? 1 : 0));
-  }
-  join(sep = '') { return Array.prototype.join.call(this, sep); }
-  forEach(f) {
-    for (let i = 0; i &lt; this.length; i++) f(this[i]);   // 只传元素，不传 index/array
-  }
-  map(f) { return new Iterable(this, f); }              // 惰性，不返回 List
-  where(f) { return new Iterable(this, f, true); }
-  fold(init, f) {
-    let acc = init;
-    for (const e of this) acc = f(acc, e);
-    return acc;
-  }
-  sublist(a, b) {
-    if (a &lt; 0 || (b != null &amp;&amp; b &gt; this.length) || a &gt; (b ?? this.length)) {
-      throw new RangeError('range');
-    }
-    return List.of(Array.prototype.slice.call(this, a, b));
-  }
-}
-
-// —— 防火墙：Array 特有方法一律替换成显式抛错，避免静默误用 ——
-const BANNED = [
-  'filter', 'some', 'find', 'findIndex', 'findLast', 'findLastIndex',
-  'flat', 'flatMap', 'at', 'toSorted', 'toSpliced', 'with', 'copyWithin',
-  'entries', 'keys', 'values', 'splice', 'concat', 'reverse', 'reduceRight',
-];
-
-for (const name of BANNED) {
-  Object.defineProperty(List.prototype, name, {
-    value: function () {
-      throw new TypeError('List 不支持 Array 的 ' + name + '()，请使用 Dart 对应成员');
-    },
-    writable: false, enumerable: false, configurable: false,
-  });
-}</code><button class="copy" type="button">复制</button></pre>
-
-<div class="note warn">
-  <span class="t">生成侧必须遵守的四条</span>
-  ① 只用 <code>List.of(iterable)</code>，不生成 <code>new List(...)</code>——构造器有 <code>Array(n)</code> 与数组展开两种歧义。<br>
-  ② 不生成 <code>list.length = n</code>：Array 的 length 可写且无法拦截，长度只能通过 <code>add</code> / <code>removeAt</code> / <code>clear</code> 改变。<br>
-  ③ 判 List 统一用 <code>instanceof List</code>，不用 <code>Array.isArray</code>——后者对 List 恒为 true。<br>
-  ④ 内部实现需要原生数组能力时，写 <code>Array.prototype.xxx.call(this, ...)</code>，绕开被覆盖或封禁的实例方法。
-</div>
-
-<div class="note">
-  <span class="t">翻译器只做一件事</span>
-  <code>List</code> 节点：类名保留、成员名保留、参数顺序保留、返回值语义保留；所有 Dart 语义由 flutter.js 的封装类实现，翻译器不再生成任何 Array 适配代码。
-</div>
-
-<h3>List 字面量与边界转换</h3>
-<p>不变量：<strong>翻译产物内部，凡是 Dart 静态类型为 <code>List</code> 的值，运行时必须是 <code>List</code> 实例</strong>。裸 Array 只允许在边界出现，且必须在进入 Dart 语义区之前包成 <code>List</code>。</p>
-
-<table>
-  <colgroup><col style="width:30%"><col style="width:40%"><col style="width:30%"></colgroup>
-  <thead><tr><th>Dart 写法</th><th>生成</th><th>说明</th></tr></thead>
-  <tbody>
-    <tr><td><code>List&lt;int&gt; a = [];</code></td><td><code>let a = List.of([]);</code></td><td>每次新建，不复用单例</td></tr>
-    <tr><td><code>final a = &lt;int&gt;[];</code></td><td><code>let a = List.of([]);</code></td><td>类型参数擦除</td></tr>
-    <tr><td><code>const a = &lt;int&gt;[];</code></td><td><code>const a = List.unmodifiable([]);</code></td><td>真不可变，写入抛 <code>UnsupportedError</code></td></tr>
-    <tr><td>类字段 <code>List&lt;int&gt; xs = [];</code></td><td><code>xs = List.of([]);</code>（放在字段初始化器）</td><td>每个实例独立，不能提到模块级常量</td></tr>
-    <tr><td>默认参数 <code>[List&lt;int&gt; xs = const []]</code></td><td><code>xs = List.unmodifiable([])</code></td><td>默认值模板共享，必须不可变</td></tr>
-    <tr><td><code>[1, 2, ...other]</code></td><td><code>List.of([1, 2, ...other])</code></td><td>spread 依赖 List 的 iterator</td></tr>
-    <tr><td><code>[for (...) x, if (c) y]</code></td><td><code>List.of(</code> 先拼出的普通数组 <code>)</code></td><td>JS 字面量里不能写 for/if，先生成数组再包</td></tr>
-  </tbody>
-</table>
-
-<p><strong>从 Map 取值</strong>，按静态类型分三种情况：</p>
-<table>
-  <colgroup><col style="width:36%"><col style="width:38%"><col style="width:26%"></colgroup>
-  <thead><tr><th>Dart</th><th>生成</th><th>是否需要转换</th></tr></thead>
-  <tbody>
-    <tr><td><code>Map&lt;String, List&lt;int&gt;&gt; m; m['k']!</code></td><td><code>__nn(m.get('k'))</code></td><td>不需要：写入时已是 List</td></tr>
-    <tr><td><code>final v = m['k'] as List&lt;int&gt;;</code></td><td><code>__asList(m.get('k'))</code></td><td>需要：值类型是 dynamic</td></tr>
-    <tr><td><code>jsonDecode(s)['items'] as List</code></td><td><code>__asList(jsonDecode(s)['items'])</code></td><td>需要：JSON 边界给的是裸 Array</td></tr>
-    <tr><td><code>m.values.toList()</code></td><td><code>List.of([...m.values()])</code></td><td>需要：values 是迭代器</td></tr>
-    <tr><td><code>m.keys.toList()</code></td><td><code>List.of([...m.keys()])</code></td><td>需要</td></tr>
-    <tr><td><code>it.toList()</code> / <code>List.from(it)</code></td><td><code>List.of([...it])</code></td><td>需要：物化</td></tr>
-    <tr><td><code>as List?</code></td><td><code>__asListOrNull(v)</code></td><td>null 直接返回 null</td></tr>
-  </tbody>
-</table>
-
-<pre><code>// flutter.js 运行时提供
-export function __asList(v, msg) {
-  if (v instanceof List) return v;        // 已在 List 里，不要再包
-  if (Array.isArray(v)) return List.of(v);
-  throw new TypeError(msg || ('期望 List，实际拿到 ' + typeof v));
-}
-
-export const __asListOrNull = v =&gt; (v == null ? null : __asList(v));</code><button class="copy" type="button">复制</button></pre>
-
-<div class="note warn">
-  <span class="t">三个容易踩的坑</span>
-  ① 把 <code>List.of([])</code> 提到模块级当共享常量：所有实例共用同一个可变列表，一处 <code>add</code> 污染全部。<br>
-  ② <code>List.of</code> 直接接管传入数组而不拷贝：调用方后续改数组会穿透修改 List，违反 Dart 的拷贝语义。<br>
-  ③ 对已经是 <code>List</code> 的值再包一次：<code>List.of(list)</code> 会多一次无意义的浅拷贝，边界判断先用 <code>instanceof List</code> 短路。
+  <span class="t">三个会静默算错的点</span>
+  ① <code>sort()</code> 不传比较器：JS 按字符串排，<code>[10, 9, 1]</code> 得到 <code>[1, 10, 9]</code>；必须按静态元素类型生成比较器。<br>
+  ② <code>join()</code> 默认分隔符：JS 是 <code>','</code>，Dart 是 <code>''</code>，不传参就补 <code>join('')</code>。<br>
+  ③ <code>map</code> / <code>where</code> 惰性：Dart 返回 <code>Iterable</code>，JS 立即求值；依赖副作用时机或无限序列的代码要单独处理。
 </div>
 
 <h3>Map → Map：同名但参数/返回值不同</h3>
@@ -1210,8 +1065,8 @@ export const __asListOrNull = v =&gt; (v == null ? null : __asList(v));</code><b
   JS 对象的整数键会被<strong>自动按数值升序重排</strong>，破坏 Dart Map 的插入顺序；而且 <code>size</code>、<code>has</code>、任意键类型都无法自然支持。只有确认键全是字符串且不依赖顺序时，才考虑普通对象优化。
 </div>
 
-<h3>名字映射表（仅限没有 List 封装的场景）</h3>
-<p>目标若是 flutter.js 的 <code>List</code>，下表<strong>全部禁用</strong>：<code>where</code>、<code>any</code>、<code>fold</code>、<code>take</code> 等一律保留 Dart 名，由 <code>List</code> / <code>Iterable</code> 封装实现。只有直接操作原生数组、且不经过 <code>List</code> 的代码才用这些映射。</p>
+<h3>名字映射表</h3>
+<p>把 Dart 的 <code>Iterable</code> / <code>List</code> 成员落到原生数组方法上。若运行时已经扩展 <code>Array.prototype</code> 并保留 Dart 名字，则以扩展实现为准，不再改名。</p>
 <table>
   <colgroup><col style="width:26%"><col style="width:30%"><col style="width:44%"></colgroup>
   <thead><tr><th>Dart</th><th>JS</th><th>备注</th></tr></thead>
@@ -1220,11 +1075,11 @@ export const __asListOrNull = v =&gt; (v == null ? null : __asList(v));</code><b
     <tr><td><code>any(f)</code></td><td><code>some(f)</code></td><td>短路一致</td></tr>
     <tr><td><code>add</code> / <code>addAll</code></td><td><code>push</code> / <code>push(...xs)</code></td><td>—</td></tr>
     <tr><td><code>insert(i, e)</code></td><td><code>splice(i, 0, e)</code></td><td>—</td></tr>
-    <tr><td><code>removeWhere(f)</code></td><td><code>filter</code>（重建）</td><td>原地语义需 splice</td></tr>
+    <tr><td><code>removeWhere(f)</code></td><td><code>filter</code>（重建）</td><td>原地语义需 <code>splice</code></td></tr>
     <tr><td><code>take(n)</code> / <code>skip(n)</code></td><td><code>slice(0, n)</code> / <code>slice(n)</code></td><td>负数边界需处理</td></tr>
     <tr><td><code>expand(f)</code></td><td><code>flatMap(f)</code></td><td>都只扁平一层</td></tr>
     <tr><td><code>reversed</code></td><td><code>[...arr].reverse()</code></td><td>不能原地 reverse</td></tr>
-    <tr><td><code>firstWhere(f, {orElse})</code></td><td><code>find(f)</code></td><td>找不到：Dart 抛错/走 orElse，JS 返回 undefined</td></tr>
+    <tr><td><code>firstWhere(f, {orElse})</code></td><td><code>find(f)</code></td><td>找不到：Dart 抛错/走 <code>orElse</code>，JS 返回 <code>undefined</code></td></tr>
     <tr><td><code>elementAt(i)</code></td><td><code>arr[i]</code></td><td>越界语义不同</td></tr>
     <tr><td><code>toList()</code></td><td><code>[...arr]</code> / <code>slice()</code></td><td>惰性结果物化</td></tr>
     <tr><td><code>asMap()</code></td><td><code>Object.fromEntries(idx)</code></td><td>索引 → 元素</td></tr>
@@ -1233,18 +1088,16 @@ export const __asListOrNull = v =&gt; (v == null ? null : __asList(v));</code><b
 </table>
 
 <h3>惰性 vs 立即求值</h3>
-<p>Dart 的 <code>map</code> / <code>where</code> 返回惰性 <code>Iterable</code>；<code>List</code> 封装若直接返回 <code>List</code>（立即求值），副作用时机与无限序列行为都会变。建议在封装内单独提供 <code>Iterable</code>：</p>
-<pre><code>// List 封装内的惰性实现
-class Iterable {
-  constructor(source, op) { this._src = source; this._op = op; }
-  *[Symbol.iterator]() {
-    for (const e of this._src) yield this._op(e);
-  }
+<p>Dart 的 <code>map</code> / <code>where</code> / <code>expand</code> 返回惰性 <code>Iterable</code>；JS 数组方法立即求值并返回新数组。多数业务代码只依赖最终结果，直接映射即可；涉及副作用时机、无限序列、或在迭代中途修改源列表的代码，必须改成生成器：</p>
+<pre><code>// 需要惰性时，用生成器保住求值时机
+function* lazyMap(source, fn) {
+  for (const e of source) yield fn(e);
 }
 
-// list.map(fn)   →  new Iterable(list, fn)      此时不执行 fn
-// iter.toList()  →  [...iter]                   现在才执行</code><button class="copy" type="button">复制</button></pre>
-<p class="h2-sub">若让 <code>map</code> 直接返回 <code>List</code>（立即求值），必须在文档里显式标注，并禁止对无限序列调用 <code>map</code>。</p>
+// list.map(fn)   →  lazyMap(list, fn)     此时不执行 fn
+// iter.toList()  →  [...iter]            现在才执行</code><button class="copy" type="button">复制</button></pre>
+<p class="h2-sub">若直接映射成 <code>arr.map(fn)</code>（立即求值），必须在文档里标注，并禁止对无限序列使用。</p>
+
 </section>
 
 <!-- ================= 13 控制流 ================= -->
@@ -1438,7 +1291,7 @@ export const __isInt    = v =&gt; Number.isInteger(v);
 export const __isNum    = v =&gt; typeof v === 'number';
 export const __isString = v =&gt; typeof v === 'string';
 export const __isBool   = v =&gt; typeof v === 'boolean';
-export const __isList   = v =&gt; v instanceof List;   // List 由 flutter.js 运行时提供
+export const __isList   = v =&gt; Array.isArray(v);
 export const __isMap    = v =&gt; v instanceof Map;
 export const __isSet    = v =&gt; v instanceof Set;
 
@@ -1500,11 +1353,11 @@ export function __required(args, names) {
     <tr><td><code>enum</code></td><td>class + 静态实例</td><td><span class="lv lv-must">改写</span></td></tr>
     <tr><td><code>mixin</code></td><td>成员复制 + super 注入</td><td><span class="lv lv-must">改写</span></td></tr>
     <tr><td><code>extension</code></td><td>顶层函数 + 调用点重写</td><td><span class="lv lv-must">改写</span></td></tr>
-    <tr><td><code>where</code> / <code>any</code></td><td>保留原名（List / Iterable 方法）</td><td><span class="lv lv-ok">直译</span></td></tr>
-    <tr><td><code>fold(init, fn)</code></td><td>保留，init 在前，由 List 封装实现</td><td><span class="lv lv-ok">直译</span></td></tr>
-    <tr><td><code>sort()</code>（数字）</td><td>保留，封装内按 Comparable 数值序</td><td><span class="lv lv-ok">直译</span></td></tr>
-    <tr><td><code>join()</code></td><td>保留，封装默认分隔符 <code>''</code></td><td><span class="lv lv-ok">直译</span></td></tr>
-    <tr><td><code>[1,2,3]</code> 字面量</td><td><code>List.of([1,2,3])</code></td><td><span class="lv lv-must">改写</span></td></tr>
+    <tr><td><code>where</code> / <code>any</code></td><td><code>filter</code> / <code>some</code></td><td><span class="lv lv-must">改写</span></td></tr>
+    <tr><td><code>fold(init, fn)</code></td><td><code>reduce(fn, init)</code></td><td><span class="lv lv-must">改写</span></td></tr>
+    <tr><td><code>sort()</code>（数字）</td><td><code>sort((a, b) =&gt; a - b)</code></td><td><span class="lv lv-must">改写</span></td></tr>
+    <tr><td><code>join()</code></td><td><code>join('')</code></td><td><span class="lv lv-must">改写</span></td></tr>
+    <tr><td><code>[1,2,3]</code> 字面量</td><td><code>[1,2,3]</code></td><td><span class="lv lv-ok">直译</span></td></tr>
     <tr><td><code>map.forEach((k,v))</code></td><td><code>forEach((v,k))</code></td><td><span class="lv lv-must">改写</span></td></tr>
     <tr><td><code>map.length</code></td><td><code>map.size</code></td><td><span class="lv lv-must">改写</span></td></tr>
     <tr><td><code>map.remove(k)</code></td><td><code>map.delete(k)</code></td><td><span class="lv lv-must">改写</span></td></tr>

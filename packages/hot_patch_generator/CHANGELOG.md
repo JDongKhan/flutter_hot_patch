@@ -10,7 +10,7 @@
 - **局部函数**：方法体内的函数声明（表达式体 / 块体）复用 `closureToJs` 产出 `var f = (…) => …`（`this` 词法捕获、可递归、块体内可用 if-case 等全部语句能力）；名字登记进方法作用域，同名裸调用按局部标识符翻译（同时覆盖「局部变量里存函数再调用」）。具名 / 可选参数、泛型、生成器局部函数仍构建期告警跳过。
 - **集合 if-case 元素**：`[if (v case P when g) a else b]` 支持，产物为 `...(() => { 匹配 + 绑定; return ok ? [a] : [b]; })()`（接收值单次求值、绑定只在该元素内可见）。
 - **pattern for 头**：`for (final [a, b] in pairs)` / `for (final User(:name) in users)` 复用 `_compilePattern` 逐轮解构（绑定只在本轮循环体可见，不匹配抛错）。
-- **集合元素 if / for / 展开**：`_listLiteralJs` 支持 `if (c) …` / `for (x in xs) …` / `...xs` / `...?xs`，产物为数组展开片段（`[1, ...(c ? [a] : []), ...xs, ...(xs).map((x) => [f(x)])]`）。仅保留不支持：三段式 `for` 元素（构建期告警）。
+- **集合元素 if / for / 展开**：`_listLiteralJs` 支持 `if (c) …` / `for (x in xs) …` / `...xs` / `...?xs`，产物为数组展开片段（`[1, ...(c ? [a] : []), ...xs, ...(xs).map((x) => [f(x)])]`）；三段式 `for (var i = 0; i < n; i++)` 元素落成 IIFE 内原生 for + `push` 后展开。
 - **集合字面量可在任意表达式位置**：`exprToJs` 接入与 `rhsToJs` 相同的 `_listLiteralJs` / `_collectionLiteralJs`，因此 `for (final x in ['a', 'b'])` 的迭代源、三元分支、函数实参、`??` 右操作数等位置不再整条翻译失败（此前只会出现在赋值右侧）。
 - **try/catch 多子句 + `on Type`**：JS 只有一个 catch 参数，产物改为统一捕获名 `__e` + `if/else` 链（`if (__e instanceof X)`，catch-all 落 `else`，未命中任何子句则 `throw __e`），支持 `catch (e)` / `on T` / `on T catch (e)` / `on T catch (e, s)`（栈参数取 `__e.stack` 并别名）；类型判别复用 `typeTestJs`，SDK 错误类（`FormatException` / `RangeError` / `StateError` …）随 `flutter.js` 自动 import。类型在 JS 侧无法判别时出声告警并按 catch-all 处理。
 - **`hashCode` 补齐**：运行时在 `Number.prototype` / `String.prototype` 上补 `hashCode` getter（数字返回自身、字符串为 FNV-1a 32 位稳定散列；存在性守卫 + 不可枚举）。自定义 `operator ==` 的类组合字段 `hashCode` 时不再得到 undefined。仍不挂 `Object.prototype`（项目规则禁止），未自定义 `hashCode` 的普通对象仍为 undefined。

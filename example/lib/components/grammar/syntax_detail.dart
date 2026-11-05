@@ -226,6 +226,14 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '集合 if-case：${labels.join('，')}';
   }
 
+  /// 三段式 for 集合元素：`[for (var i = 0; i < n; i++) f(i)]`。
+  String _forPartsText() {
+    final cells = [
+      for (var i = 0; i < 3; i++) i * i,
+    ];
+    return '三段式集合：${cells.join('/')}';
+  }
+
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
   String _localFuncText() {
     int twice(int x) => x * 2;
@@ -302,6 +310,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_collectionText()),
           Text(_patternForText()),
           Text(_caseElementText()),
+          Text(_forPartsText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

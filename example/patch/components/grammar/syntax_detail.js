@@ -286,6 +286,16 @@ export class SyntaxDetail extends StatefulWidget {
       })()];
     return "集合 if-case：" + labels.join("，");
   }
+  _forPartsText() {
+    var cells = [...(() => {
+        const __r = [];
+        for (let i = 0; (i < 3); (i++)) {
+          __r.push(...[(i * i)]);
+        }
+        return __r;
+      })()];
+    return "三段式集合：" + cells.join("/");
+  }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
     var grade = (score) => { {
@@ -420,6 +430,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._caseElementText()
+          }),
+          new Text({
+            "data": this._forPartsText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
