@@ -247,6 +247,12 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "try/catch：" + parts.join("，");
   }
+  _collectionText() {
+    var scores = (this._scores ?? [0, 0, 0]);
+    var base = [10, 20];
+    var merged = [1, ...(scores.isNotEmpty ? [scores.first] : []), ...base, ...(scores).map((s) => [(s * 2)])];
+    return "集合元素：" + merged.join("/");
+  }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
     var grade = (score) => { {
@@ -372,6 +378,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._tryText()
+          }),
+          new Text({
+            "data": this._collectionText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")

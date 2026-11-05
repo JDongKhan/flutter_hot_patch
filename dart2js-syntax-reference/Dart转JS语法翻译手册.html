@@ -1029,7 +1029,107 @@ const b = NumX_get_isBlank('  ');</code><button class="copy" type="button">复�
   JS 类实例不支持 <code>list[i]</code> 的原生索引语义，会当成属性名 <code>"0"</code> 处理。二选一，不能留空：<br>
   ① <strong>Proxy 包装</strong>：List 内部持有数组，构造函数返回 <code>new Proxy(this, { get, set })</code>，数字键转发到内部数组；<code>list[i]</code> 原样可用，代价是每次属性访问多一层拦截。<br>
   ② <strong>翻译器重写索引</strong>：<code>list[i]</code> → <code>list.get(i)</code>，<code>list[i] = v</code> → <code>list.set(i, v)</code>；运行时零拦截开销，但生成代码不再是原生索引形态。<br>
-  不要用 <code>class List extends Array</code>：会把 <code>map</code> / <code>filter</code> / <code>sort</code> 等 Array 方法一并继承进来，与 Dart 语义冲突，且 <code>instanceof Array</code> 为 true，容易被误判。
+  ③ <strong>继承 <code>Array</code> 可选</strong>：能原生拿到索引、<code>length</code>、迭代器与真数组性能，但 Array 方法必须全部覆盖或封禁（见下节），并接受 <code>Array.isArray</code> 为 true、<code>length</code> 可写两个无法拦截的例外。
+</div>
+
+<h3>方案对比：Proxy / 索引重写 / 继承 Array</h3>
+<table>
+  <colgroup><col style="width:20%"><col style="width:26%"><col style="width:54%"></colgroup>
+  <thead><tr><th>方案</th><th>索引 <code>list[i]</code></th><th>代价与风险</th></tr></thead>
+  <tbody>
+    <tr><td>Proxy 包装</td><td>原生可用</td><td>每次属性访问多一层拦截；<code>length</code>、JSON、第三方库都要额外处理；<code>Array.isArray</code> 为 false</td></tr>
+    <tr><td>翻译器重写索引</td><td>源码改成 <code>list.get(i)</code></td><td>无拦截开销、最快；但手写代码里的 <code>list[i]</code> 会静默变成普通属性，不报错</td></tr>
+    <tr><td>继承 <code>Array</code></td><td>原生可用</td><td>真数组、最快；<code>Array.isArray</code> 为 true，<code>length</code> 可写，同名方法必须覆盖，Array 特有方法必须封禁</td></tr>
+  </tbody>
+</table>
+
+<div class="note risk">
+  <span class="t">继承 Array 的实测边界（Node 22）</span>
+  ① <code>Array.isArray(list)</code> 为 <code>true</code>，第三方数组库会把 List 当普通数组直接 mutate，无法通过类型判断拦住。<br>
+  ② <code>length</code> 是 Array exotic 的自有属性，<strong>子类 getter 拦不住</strong>：<code>list.length = 1</code> 会静默截断。<br>
+  ③ <code>map</code> / <code>filter</code> / <code>slice</code> 因 <code>Symbol.species</code> 返回 <code>List</code> 实例，看起来正确，但 <code>map</code> 是<strong>立即求值</strong>，Dart 的 <code>map</code> / <code>where</code> 是惰性 Iterable，必须覆盖。<br>
+  ④ 构造器有歧义：<code>new List([1,2,3])</code> 得到的是 <code>[[1,2,3]]</code>（长度 1），即使写成 <code>constructor(...items){ super(...items) }</code> 也一样，因为数组被当成单个参数。<br>
+  ⑤ 默认语义仍然错：<code>sort()</code> 给出 <code>[1,10,9]</code>，<code>join()</code> 给出 <code>"a,b"</code>。
+</div>
+
+<pre><code>class List extends Array {
+  constructor(iterable) {
+    super();                                  // 不用 super(...items)，避免 Array(n) 与数组展开歧义
+    if (iterable != null) {
+      for (const e of iterable) this.push(e);
+    }
+  }
+
+  static of(iterable) { return new List(iterable); }
+
+  // —— 与 Dart 同名的成员：必须覆盖成 Dart 语义 ——
+  get isEmpty() { return this.length === 0; }
+  get first() {
+    if (this.length === 0) throw new StateError('No element');
+    return this[0];
+  }
+  add(e) { this.push(e); }
+  addAll(xs) { for (const x of xs) this.push(x); }
+  insert(i, e) {
+    if (i &lt; 0 || i &gt; this.length) throw new RangeError('index ' + i);
+    Array.prototype.splice.call(this, i, 0, e);   // 不能写 this.splice，已被防火墙封禁
+  }
+  remove(e) {
+    const i = this.indexOf(e);
+    if (i &lt; 0) return false;
+    Array.prototype.splice.call(this, i, 1);
+    return true;
+  }
+  removeAt(i) {
+    if (i &lt; 0 || i &gt;= this.length) throw new RangeError('index ' + i);
+    return Array.prototype.splice.call(this, i, 1)[0];
+  }
+  clear() { this.length = 0; }
+  sort(compare) {
+    if (compare) { Array.prototype.sort.call(this, compare); return; }
+    Array.prototype.sort.call(this, (a, b) =&gt; (a &lt; b ? -1 : a &gt; b ? 1 : 0));
+  }
+  join(sep = '') { return Array.prototype.join.call(this, sep); }
+  forEach(f) {
+    for (let i = 0; i &lt; this.length; i++) f(this[i]);   // 只传元素，不传 index/array
+  }
+  map(f) { return new Iterable(this, f); }              // 惰性，不返回 List
+  where(f) { return new Iterable(this, f, true); }
+  fold(init, f) {
+    let acc = init;
+    for (const e of this) acc = f(acc, e);
+    return acc;
+  }
+  sublist(a, b) {
+    if (a &lt; 0 || (b != null &amp;&amp; b &gt; this.length) || a &gt; (b ?? this.length)) {
+      throw new RangeError('range');
+    }
+    return List.of(Array.prototype.slice.call(this, a, b));
+  }
+}
+
+// —— 防火墙：Array 特有方法一律替换成显式抛错，避免静默误用 ——
+const BANNED = [
+  'filter', 'some', 'find', 'findIndex', 'findLast', 'findLastIndex',
+  'flat', 'flatMap', 'at', 'toSorted', 'toSpliced', 'with', 'copyWithin',
+  'entries', 'keys', 'values', 'splice', 'concat', 'reverse', 'reduceRight',
+];
+
+for (const name of BANNED) {
+  Object.defineProperty(List.prototype, name, {
+    value: function () {
+      throw new TypeError('List 不支持 Array 的 ' + name + '()，请使用 Dart 对应成员');
+    },
+    writable: false, enumerable: false, configurable: false,
+  });
+}</code><button class="copy" type="button">复制</button></pre>
+
+<div class="note warn">
+  <span class="t">生成侧必须遵守的四条</span>
+  ① 只用 <code>List.of(iterable)</code>，不生成 <code>new List(...)</code>——构造器有 <code>Array(n)</code> 与数组展开两种歧义。<br>
+  ② 不生成 <code>list.length = n</code>：Array 的 length 可写且无法拦截，长度只能通过 <code>add</code> / <code>removeAt</code> / <code>clear</code> 改变。<br>
+  ③ 判 List 统一用 <code>instanceof List</code>，不用 <code>Array.isArray</code>——后者对 List 恒为 true。<br>
+  ④ 内部实现需要原生数组能力时，写 <code>Array.prototype.xxx.call(this, ...)</code>，绕开被覆盖或封禁的实例方法。
 </div>
 
 <div class="note">

@@ -408,7 +408,11 @@ String? _collectionLiteralJs(
   return items == null ? null : 'new Set($items)';
 }
 
-/// `[a, b]` → JS 数组字面量。展开（`...xs`）与 collection-if/for 不支持。
+/// `[a, b]` → JS 数组字面量。支持 collection-if / collection-for / `...` 展开：
+///   - `[a, if (c) b else d]` → `[a, ...(c ? [b] : [d])]`
+///   - `[for (x in xs) f(x)]` → `[...(xs).map((x) => [f(x)])]`
+///   - `[...xs]` → `[...xs]`；`[...?xs]` → `[...((__s) => __s == null ? [] : __s)(xs)]`
+/// 不可翻译返回 null（调用方出声告警）。
 String? _listLiteralJs(
   NodeList<CollectionElement> elements,
   FieldScope scope,
@@ -416,12 +420,67 @@ String? _listLiteralJs(
 ) {
   final parts = <String>[];
   for (final el in elements) {
-    if (el is! Expression) return null;
-    final v = rhsToJs(el, scope, classes);
+    final v = _collectionFragmentJs(el, scope, classes);
     if (v == null) return null;
     parts.add(v);
   }
   return '[${parts.join(', ')}]';
+}
+
+/// 集合元素 → 数组**片段**（普通元素原样、展开带 `...`、if/for 用展开的三元 / map）。
+String? _collectionFragmentJs(
+  CollectionElement el,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (el is Expression) return rhsToJs(el, scope, classes);
+  if (el is SpreadElement) {
+    final v = rhsToJs(el.expression, scope, classes);
+    if (v == null) return null;
+    // Dart `...?xs`：接收者为 null 时展开为空；JS 直接 `...null` 会抛错。
+    return el.isNullAware
+        ? '...((__s) => __s == null ? [] : __s)($v)'
+        : '...$v';
+  }
+  if (el is IfElement) {
+    if (el.caseClause != null) return null; // if-case 集合元素暂不支持
+    final c = exprToJs(el.expression, scope, classes);
+    final a = _collectionArrayJs(el.thenElement, scope, classes);
+    final b = el.elseElement == null
+        ? '[]'
+        : _collectionArrayJs(el.elseElement!, scope, classes);
+    if (c == null || a == null || b == null) return null;
+    return '...($c ? $a : $b)';
+  }
+  if (el is ForElement) {
+    final loop = el.forLoopParts;
+    final String? name;
+    if (loop is ForEachPartsWithDeclaration) {
+      name = loop.loopVariable.name.lexeme;
+    } else if (loop is ForEachPartsWithIdentifier) {
+      name = loop.identifier.name;
+    } else {
+      return null; // 三段式 for 元素暂不支持
+    }
+    final iterable = loop is ForEachPartsWithDeclaration
+        ? exprToJs(loop.iterable, scope, classes)
+        : exprToJs((loop as ForEachPartsWithIdentifier).iterable, scope, classes);
+    final body = _collectionArrayJs(
+        el.body, scope.withParams([name]), classes);
+    if (iterable == null || body == null) return null;
+    return '...($iterable).map(($name) => $body)';
+  }
+  return null;
+}
+
+/// 集合元素 → 数组字面量（if/for 的分支与循环体必须是数组才能被展开）。
+String? _collectionArrayJs(
+  CollectionElement el,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final frag = _collectionFragmentJs(el, scope, classes);
+  return frag == null ? null : '[$frag]';
 }
 
 /// 构造表达式 → JS 构造调用；非构造返回 null。

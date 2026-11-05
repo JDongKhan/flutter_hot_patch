@@ -190,6 +190,19 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return 'try/catch：${parts.join('，')}';
   }
 
+  /// 集合元素：`if` 元素 / `for` 元素 / `...` 展开。
+  String _collectionText() {
+    final scores = _scores ?? const [0, 0, 0];
+    final base = [10, 20];
+    final merged = [
+      1,
+      if (scores.isNotEmpty) scores.first,
+      ...base,
+      for (final s in scores) s * 2,
+    ];
+    return '集合元素：${merged.join('/')}';
+  }
+
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
   String _localFuncText() {
     int twice(int x) => x * 2;
@@ -263,6 +276,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_switchStmtText()),
           Text(_operatorText()),
           Text(_tryText()),
+          Text(_collectionText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(
