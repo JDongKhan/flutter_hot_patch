@@ -133,7 +133,10 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       if (l != null && r != null) return '($l $op $r)';
     }
     if (const <String>{
-      '>', '<', '>=', '<=', '==', '!=', '&&', '||', '+', '-', '*', '/', '%'
+      '>', '<', '>=', '<=', '==', '!=', '&&', '||', '+', '-', '*', '/', '%',
+      // 位运算与移位：JS 同名运算符语义一致（`>>` 算术右移、`>>>` 无符号右移）。
+      // 数值口径随运行时（Dart int 在 JS 侧就是 number），按 32 位位宽参与运算。
+      '&', '|', '^', '<<', '>>', '>>>'
     }.contains(op)) {
       final l = exprToJs(e.leftOperand, scope, classes);
       final r = exprToJs(e.rightOperand, scope, classes);
@@ -1252,6 +1255,20 @@ String? _prefixedFieldRef(Expression e, FieldScope scope) {
 /// 的标识符，`fieldRef` 解析不到就整条丢弃（静默丢代码）。
 bool _isPlainIdentifier(Expression e) => e is Identifier && e is! PrefixedIdentifier;
 
+/// 复合赋值（目标可安全重复读写时）：Dart 的 `~/=` 在 JS 没有对应运算符，
+/// 按语义展开为 `a = Math.trunc(a / b)`（向零截断与 Dart 一致）。
+///
+/// 其余复合赋值 JS 同名同义，一比一透传；未知运算符返回 null（由调用方丢弃）。
+/// 目标含下标或可能有副作用时不要用它，改用单次求值的临时参数（见下标赋值分支）。
+String? _compoundAssignJs(String lhsJs, String op, String rhsJs) {
+  if (op == '~/=') return '$lhsJs = Math.trunc($lhsJs / $rhsJs)';
+  const jsOps = <String>{
+    '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '>>>=',
+    '??=',
+  };
+  return jsOps.contains(op) ? '$lhsJs $op $rhsJs' : null;
+}
+
 /// 一条表达式语句 → JS 语句（带分号）。
 ///
 /// 支持：`_x++ / _x-- / ++_x / --_x`（字段→this）、赋值 `_x = rhs / _x op= rhs`、
@@ -1285,7 +1302,10 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     final ref = scope.fieldRef((e.leftHandSide as Identifier).name);
     if (ref != null) {
       final rhs = rhsToJs(e.rightHandSide, scope, classes);
-      if (rhs != null) return '$ref ${e.operator.lexeme} $rhs;';
+      if (rhs != null) {
+        final rewritten = _compoundAssignJs(ref, e.operator.lexeme, rhs);
+        if (rewritten != null) return '$rewritten;';
+      }
     }
     return null;
   }
@@ -1324,22 +1344,40 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
       return '$recv.$set($index, $rhs);';
     }
     final String member;
+    final String? indexJs;
     if (lhs is IndexExpression) {
       final index = exprToJs(lhs.index, scope, classes);
       if (index == null) return null;
+      indexJs = index;
       member = '[$index]';
     } else {
+      indexJs = null;
       member = '.${(lhs as PropertyAccess).propertyName.name}';
     }
     final rhs = rhsToJs(e.rightHandSide, scope, classes);
     if (rhs == null) return null;
+    final op = e.operator.lexeme;
+    // `~/=`：JS 没有这个复合运算符，按语义展开成「读 → 算 → 写」。
+    // 接收者与下标都只求值一次（`a[f()] ~/= 2` 不能把 `f` 调两次），目标是
+    // 下标时把下标绑成第二个临时参数。
+    if (op == '~/=') {
+      final read = indexJs == null ? '__t$member' : '__t[__i]';
+      final write = '$read = Math.trunc($read / $rhs)';
+      final body = _chainHasNullAware(e.leftHandSide)
+          ? 'if (__t != null) $write'
+          : write;
+      if (indexJs != null) {
+        return '((__t, __i) => { $body; })($recv, $indexJs);';
+      }
+      return '((__t) => { $body; })($recv);';
+    }
     // 判据看**整条目标链**（含最外层选择器）：`a?[i] = v` 的空安全在 LHS 本身，
     // `a?.b.c = v` 的在更内层——两者都要守卫。
     if (_chainHasNullAware(e.leftHandSide)) {
       return '((__t) => { if (__t != null) '
-          '__t$member ${e.operator.lexeme} $rhs; })($recv);';
+          '__t$member $op $rhs; })($recv);';
     }
-    return '$recv$member ${e.operator.lexeme} $rhs;';
+    return '$recv$member $op $rhs;';
   }
   // 字段的属性赋值 / 自增（`_count.value = 5`、`_count.value++`）：
   // SDK 值对象（ValueNotifier / Listenable 代理类）的典型用法，LHS 是
@@ -1348,7 +1386,10 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
   if (e is AssignmentExpression && _prefixedFieldRef(e.leftHandSide, scope) != null) {
     final lhs = _prefixedFieldRef(e.leftHandSide, scope)!;
     final rhs = rhsToJs(e.rightHandSide, scope, classes);
-    if (rhs != null) return '$lhs ${e.operator.lexeme} $rhs;';
+    if (rhs != null) {
+      final rewritten = _compoundAssignJs(lhs, e.operator.lexeme, rhs);
+      if (rewritten != null) return '$rewritten;';
+    }
     return null;
   }
   if ((e is PostfixExpression || e is PrefixExpression)) {

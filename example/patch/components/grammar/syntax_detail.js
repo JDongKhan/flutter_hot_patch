@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/grammar/syntax_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, FormatException, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle, int } from '../../flutter.js';
+import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, FormatException, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle, int, num } from '../../flutter.js';
 
 export const TaskLevel = (function () { const __values = []; function __mk(name, index) { return { name: name, index: index, toString: function () { return "TaskLevel." + name; } }; } const low = __mk("low", 0); __values.push(low); const medium = __mk("medium", 1); __values.push(medium); const high = __mk("high", 2); __values.push(high); return { low: low, medium: medium, high: high, values: __values }; })();
 
@@ -309,6 +309,29 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "label：hit=" + hit;
   }
+  _bitwiseText() {
+    var a = 6;
+    var b = 3;
+    var bAnd = (a & b);
+    var bOr = (a | b);
+    var bXor = (a ^ b);
+    var lsh = (a << 2);
+    var rsh = ((-8) >> 1);
+    var lrsh = ((-8) >>> 1);
+    var inv = (~a);
+    var quot = 6;
+    quot = Math.trunc(quot / 4);
+    var mask = 6;
+    mask &= (~2);
+    var nums = [8, 16];
+    var idx = 1;
+    ((__t, __i) => { __t[__i] = Math.trunc(__t[__i] / 3); })(nums, idx);
+    var cells = [10, 20];
+    cells[0] += 5;
+    var counter = 1;
+    counter <<= 2;
+    return "位运算：and=" + bAnd + " or=" + bOr + " xor=" + bXor + " lsh=" + lsh + " rsh=" + rsh + " " + "lrsh=" + lrsh + " not=" + inv + " ~/=" + quot + " mask=" + mask + " idx-num=" + nums[idx] + " " + "cells=" + cells[0] + " shl=" + counter;
+  }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
     var grade = (score) => { {
@@ -449,6 +472,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._labelText()
+          }),
+          new Text({
+            "data": this._bitwiseText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")

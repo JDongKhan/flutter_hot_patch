@@ -250,6 +250,33 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return 'label：hit=$hit';
   }
 
+  /// 位运算 / 移位 / 一元 `~` / 复合赋值（含 JS 没有的 `~/=`）。
+  String _bitwiseText() {
+    final a = 6; // 110
+    final b = 3; // 011
+    final bAnd = a & b; // 2
+    final bOr = a | b; // 7
+    final bXor = a ^ b; // 5
+    final lsh = a << 2; // 24
+    final rsh = -8 >> 1; // -4（算术右移，符号保留）
+    final lrsh = -8 >>> 1; // 32 位无符号右移
+    final inv = ~a; // -7
+    var quot = 6;
+    quot ~/= 4; // 1（向零截断）
+    var mask = 6;
+    mask &= ~2; // 4（清位：6 & ~2）
+    final nums = [8, 16];
+    final idx = 1;
+    nums[idx] ~/= 3; // 16 ~/ 3 = 5（下标单次求值）
+    final cells = [10, 20];
+    cells[0] += 5; // 15（下标复合赋值）
+    var counter = 1;
+    counter <<= 2; // 4
+    return '位运算：and=$bAnd or=$bOr xor=$bXor lsh=$lsh rsh=$rsh '
+        'lrsh=$lrsh not=$inv ~/=$quot mask=$mask idx-num=${nums[idx]} '
+        'cells=${cells[0]} shl=$counter';
+  }
+
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
   String _localFuncText() {
     int twice(int x) => x * 2;
@@ -328,6 +355,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_caseElementText()),
           Text(_forPartsText()),
           Text(_labelText()),
+          Text(_bitwiseText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(
