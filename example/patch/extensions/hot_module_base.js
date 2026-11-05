@@ -8,6 +8,7 @@ export const StringLogExtension = registerExtension("String", (function () {
   "use strict";
   return {
     logText: function (tag) {
+      tag = (tag === undefined) ? "StringLogExtension" : tag;
       print("[" + tag + "] " + this + " 依赖库日志");
     },
   };

@@ -60,6 +60,16 @@ class Price {
   bool operator ==(Object other) => other is Price && other._cents == _cents;
 
   int get hashCode => _cents.hashCode;
+
+  /// 可选位置形参（默认值）：JS 签名保留为位置形参，函数体开头补缺省。
+  int plus([int extra = 1]) => _cents + extra;
+
+  /// 具名形参（默认值）：具名实参合并成尾参对象 `__o`，函数体开头解构。
+  int scaled({int factor = 2, int bonus = 0}) => _cents * factor + bonus;
+
+  /// 静态方法的具名形参走同一套签名规则。
+  static Price fromCents(int cents, {int discount = 0}) =>
+      Price(cents - discount);
 }
 
 // ---------------------------------------------------------------------------
@@ -266,6 +276,19 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return 'rethrow：$trace';
   }
 
+  /// 空安全级联：目标为 null 时整条级联短路（返回 null，section 不执行）。
+  String _cascadeText() {
+    final nums = <int>[]
+      ..add(1)
+      ..add(2);
+    final List<int>? alias = nums;
+    final List<int>? nothing = null;
+    final live = alias?..add(3);
+    final dead = nothing?..add(9)..add(8);
+    return '级联：列表=${nums.join('/')} / 非空分支=${live?.length ?? 0} '
+        '/ 空分支=${dead?.length ?? 'null'}';
+  }
+
   /// 位运算 / 移位 / 一元 `~` / 复合赋值（含 JS 没有的 `~/=`）。
   String _bitwiseText() {
     final a = 6; // 110
@@ -305,6 +328,25 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
 
     final score = _task?.score ?? 0;
     return '局部函数：twice($score)=${twice(score)} / ${grade(score)}';
+  }
+
+  /// 形参签名：类方法 / 局部函数 / 闭包的「可选位置 + 默认值」与「具名」。
+  String _paramsText() {
+    int localScale(int v, [int factor = 3]) => v * factor;
+    int localPack(int v, {int step = 2, int times = 1}) => v + step * times;
+
+    final namedClosure = ({int a = 1, int b = 2}) => a + b;
+    final optionalClosure = (int v, [int k = 10]) => v + k;
+
+    final base = _task?.score ?? 20;
+    final price = Price(base);
+    return '形参：方法可选=${price.plus()}/${price.plus(4)} '
+        '/ 方法具名=${price.scaled(factor: 2, bonus: base)} '
+        '/ 局部可选=${localScale(4)} '
+        '/ 局部具名=${localPack(1, step: 3, times: 2)} '
+        '/ 闭包具名=${namedClosure(b: 5)} '
+        '/ 闭包可选=${optionalClosure(1)} '
+        '/ 静态具名=${Price.fromCents(base, discount: 3).cents}';
   }
 
   /// switch 表达式：对象模式 + guard（`_` / 常量之外的模式以前会被丢弃）。
@@ -362,6 +404,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_destructureText()),
           Text(_rangeText()),
           Text(_localFuncText()),
+          Text(_paramsText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),
@@ -373,6 +416,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_labelText()),
           Text(_bitwiseText()),
           Text(_rethrowText()),
+          Text(_cascadeText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

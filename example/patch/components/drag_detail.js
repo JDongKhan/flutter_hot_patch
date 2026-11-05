@@ -234,7 +234,9 @@ export class DragDetail extends StatefulWidget {
       })
     });
   }
-  _basket(label, fruit) {
+  _basket(__o) {
+    var label = (__o && __o.label !== undefined) ? __o.label : null;
+    var fruit = (__o && __o.fruit !== undefined) ? __o.fruit : null;
     return new DragTarget({
       "onAcceptWithDetails": (details) => { return this._accept(label, details.data); },
       "onMove": (details) => { return this._hover(label, details.data); },

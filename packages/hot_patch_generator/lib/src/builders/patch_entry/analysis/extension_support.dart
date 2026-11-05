@@ -381,6 +381,7 @@ ExtensionInfo? translateExtension(
           isVoid: true,
           returnsWidget: false,
           body: member.body,
+          parameters: member.parameters,
         ));
       } else {
         memberKinds[memberName] = 'method';
@@ -391,6 +392,9 @@ ExtensionInfo? translateExtension(
           isVoid: isVoidReturn(member),
           returnsWidget: returnsWidgetOf(member),
           body: member.body,
+          parameters: member.parameters,
+          positionalParamCount: positionalParamCountOf(member),
+          hasNamedParams: hasNamedParamOf(member),
         ));
       }
     } else if (member is ConstructorDeclaration) {
@@ -466,7 +470,7 @@ ExtensionInfo? translateExtension(
         default:
           final fn = m.isAsync ? 'async ' : '';
           membersJs[m.name] =
-              '${fn}function (${m.params.join(', ')}) {\n$body\n}';
+              '${fn}function (${jsSignatureParams(m).join(', ')}) {\n$body\n}';
       }
     }
   });
@@ -484,6 +488,9 @@ ExtensionInfo? translateExtension(
         isVoid: isVoidReturn(member),
         returnsWidget: returnsWidgetOf(member),
         body: member.body,
+        parameters: member.parameters,
+        positionalParamCount: positionalParamCountOf(member),
+        hasNamedParams: hasNamedParamOf(member),
       );
       final body = parseCtx.withExprRenderer(() => translateClassMethodBody(
             hostInfo,
@@ -499,7 +506,7 @@ ExtensionInfo? translateExtension(
       } else {
         final fn = info.isAsync ? 'async ' : '';
         staticsEntries.add(
-            '$memberName: ${fn}function (${info.params.join(', ')}) {\n$body\n}');
+            '$memberName: ${fn}function (${jsSignatureParams(info).join(', ')}) {\n$body\n}');
       }
     } else if (member is FieldDeclaration) {
       if (!member.isStatic) {

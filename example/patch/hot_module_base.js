@@ -8,7 +8,7 @@ import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors,
 export class Network {
   constructor() {
   }
-  static async post(url, params) {
+  static async post(__o) {
     return _app_host_.invoke("post", arguments.length ? arguments[0] : {});
   }
 }

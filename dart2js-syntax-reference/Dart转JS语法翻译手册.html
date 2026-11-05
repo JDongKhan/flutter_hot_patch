@@ -96,6 +96,7 @@ td code{font-size:12px}
 .lv-must{background:var(--danger-soft);color:var(--danger)}
 .lv-care{background:var(--warn-soft);color:var(--warn)}
 .lv-ok{background:var(--ok-soft);color:var(--ok)}
+.lv-ban{background:var(--danger);color:#fff}
 
 .note{
   border:1px solid var(--line);border-left:3px solid var(--accent);
@@ -212,6 +213,53 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
   <li><b>表达式位置和语句位置分开处理</b><span>Dart 的赋值、复合赋值、自增都是有返回值的表达式；只按语句生成会静默丢值。</span></li>
   <li><b>改写产物必须可验证</b><span>每条改写规则都要能构造“null 分支 / 非 null 分支 / 求值次数”三个断言，任一不成立即视为实现错误。</span></li>
 </ol>
+<h3>表格约定：差异与翻译原则</h3>
+<p>对比表统一四列。第三列只回答“为什么不能照抄”，第四列只回答“生成器该怎么做”，两者不混写。存量三列表在原“规则 / 备注”列里混着这两类内容，修订时按下表拆开。</p>
+
+<table>
+  <colgroup><col style="width:16%"><col style="width:22%"><col style="width:31%"><col style="width:31%"></colgroup>
+  <thead><tr><th>列</th><th>回答的问题</th><th>写什么</th><th>不要写</th></tr></thead>
+  <tbody>
+    <tr><td>Dart 写法</td><td>源码长什么样</td><td>原样摘取，保留类型标注</td><td>改写后的形态</td></tr>
+    <tr><td>JS 对应</td><td>目标长什么样</td><td>能直接粘贴的片段</td><td>“类似 xxx”“用 xxx 实现”</td></tr>
+    <tr><td>差异</td><td>为什么不能照抄</td><td>陈述句：参数顺序、默认值、越界规则、求值时机、类型判定</td><td>动作指令、等级标签</td></tr>
+    <tr><td>翻译原则</td><td>生成器必须做什么</td><td>等级标签 + 动词开头 + 目标形态</td><td>现象复述、“注意一下”这类空话</td></tr>
+  </tbody>
+</table>
+
+<p><strong>翻译原则的四级</strong>，与第三列标签一一对应：</p>
+<table>
+  <colgroup><col style="width:16%"><col style="width:26%"><col style="width:30%"><col style="width:28%"></colgroup>
+  <thead><tr><th>等级</th><th>含义</th><th>生成器行为</th><th>例子</th></tr></thead>
+  <tbody>
+    <tr><td><span class="lv lv-must">必须改写</span></td><td>直译会语法错或语义错</td><td>强制走特判模板，禁止原样生成</td><td><code>fold(init, fn)</code> → <code>reduce(fn, init)</code></td></tr>
+    <tr><td><span class="lv lv-ban">禁止生成</span></td><td>该形态在 JS 侧不成立</td><td>报编译错误，不产出代码</td><td><code>list.length = n</code></td></tr>
+    <tr><td><span class="lv lv-care">注意</span></td><td>可直译，但边界要处理</td><td>直译 + 检查、断言或注释</td><td><code>length</code> 可写，赋值会截断</td></tr>
+    <tr><td><span class="lv lv-ok">直译</span></td><td>形态与语义一致</td><td>原样生成</td><td><code>for (final x in list)</code> → <code>for...of</code></td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="t">原则列的五条写法</span>
+  ① 动词开头：生成 / 保留 / 重写 / 禁止 / 补 / 检查。<br>
+  ② 给出目标形态，能直接敲进代码；不写“改成对应方法”这种空话。<br>
+  ③ 条件放前面：<code>无比较器时</code>、<code>静态类型为 List&lt;int&gt;</code>、<code>值为 null 时</code>。<br>
+  ④ 一行只做一个动作，两个动作拆两行。<br>
+  ⑤ 不复述“差异”列，只写动作。
+</div>
+
+<p class="cap">四列写法示例</p>
+<table>
+  <colgroup><col style="width:22%"><col style="width:22%"><col style="width:28%"><col style="width:28%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th></tr></thead>
+  <tbody>
+    <tr><td><code>list.sort()</code></td><td><code>list.sort()</code></td><td>无比较器时 JS 按 UTF-16 字符串序，Dart 按 <code>Comparable</code></td><td><span class="lv lv-must">必须改写</span> 按静态元素类型生成比较器：<code>List&lt;int&gt;</code> → <code>sort((a, b) =&gt; a - b)</code></td></tr>
+    <tr><td><code>list.join()</code></td><td><code>list.join(sep)</code></td><td>默认分隔符不同：Dart 为 <code>''</code>，JS 为 <code>','</code></td><td><span class="lv lv-must">必须改写</span> 不传参时补空串：<code>join('')</code></td></tr>
+    <tr><td><code>list.fold(0, (a, e) =&gt; a + e)</code></td><td><code>list.reduce(fn, init)</code></td><td>参数顺序相反：Dart 初值在前，JS 初值在后</td><td><span class="lv lv-must">必须改写</span> 交换实参位置：<code>reduce((a, e) =&gt; a + e, 0)</code></td></tr>
+    <tr><td><code>list.length = 3;</code></td><td>无对应成员</td><td>Dart 的 <code>length</code> 只读</td><td><span class="lv lv-ban">禁止生成</span> 报编译错误，长度只能经 <code>add</code> / <code>removeAt</code> / <code>clear</code> 改变</td></tr>
+  </tbody>
+</table>
+
 </section>
 
 <!-- ================= 01 流水线 ================= -->
@@ -251,19 +299,19 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
 <p class="h2-sub">Dart 的 const 是编译期深度不可变，JS 的 const 只锁绑定。这是最容易“看起来对、其实没锁住”的一处。</p>
 
 <table>
-  <colgroup><col style="width:30%"><col style="width:28%"><col style="width:42%"></colgroup>
-  <thead><tr><th>Dart</th><th>JS</th><th>规则</th></tr></thead>
+  <colgroup><col style="width:22%"><col style="width:22%"><col style="width:28%"><col style="width:28%"></colgroup>
+  <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th></tr></thead>
   <tbody>
-    <tr><td><code>var x = 1</code></td><td><code>let x = 1</code></td><td><span class="lv lv-ok">直译</span> Dart var 作用域为函数/库级，生成侧统一用 let 更安全</td></tr>
-    <tr><td><code>final x = 1</code></td><td><code>const x = 1</code></td><td><span class="lv lv-ok">直译</span> 单次赋值，语义一致</td></tr>
-    <tr><td><code>const x = 1</code></td><td><code>const x = 1</code></td><td><span class="lv lv-ok">直译</span> 基本类型已不可变</td></tr>
-    <tr><td><code>const list = [1, 2]</code></td><td><code>deepFreeze([1, 2])</code></td><td><span class="lv lv-care">注意</span> 必须递归冻结，否则 <code>list.push(3)</code> 仍可改</td></tr>
-    <tr><td><code>const map = {}</code></td><td><code>deepFreeze(new Map())</code></td><td><span class="lv lv-care">注意</span> Map 实例需要拦截 set/delete，冻结对象不够</td></tr>
-    <tr><td><code>late int x</code></td><td><code>let x</code></td><td><span class="lv lv-care">注意</span> 丢失 lazy 初始化与未赋值检查</td></tr>
-    <tr><td><code>int x = 1</code></td><td><code>let x = 1</code></td><td><span class="lv lv-ok">直译</span> 类型擦除</td></tr>
-    <tr><td><code>String? s</code></td><td><code>let s = null</code></td><td><span class="lv lv-care">注意</span> 可空局部变量默认值为 null，显式初始化更接近语义</td></tr>
-    <tr><td><code>static const int MAX = 9</code></td><td><code>static MAX = 9</code></td><td><span class="lv lv-ok">直译</span> 见第 08 章初始化顺序</td></tr>
-    <tr><td><code>typedef F = int Function(int)</code></td><td>无运行时表示</td><td><span class="lv lv-ok">消除</span> 仅用于类型检查，生成侧删除</td></tr>
+    <tr><td><code>var x = 1</code></td><td><code>let x = 1</code></td><td>Dart 的 <code>var</code> 是函数 / 库级作用域，JS 的 <code>var</code> 有变量提升与重复声明</td><td><span class="lv lv-ok">直译</span> 统一生成 <code>let</code>，禁止生成 <code>var</code></td></tr>
+    <tr><td><code>final x = 1</code></td><td><code>const x = 1</code></td><td>Dart 的 <code>final</code> 是单次赋值，JS 的 <code>const</code> 是常量绑定</td><td><span class="lv lv-ok">直译</span> 生成 <code>const</code>，语义一致</td></tr>
+    <tr><td><code>const x = 1</code></td><td><code>const x = 1</code></td><td>基本类型两侧都不可变</td><td><span class="lv lv-ok">直译</span> 原样生成</td></tr>
+    <tr><td><code>const list = [1, 2]</code></td><td><code>deepFreeze([1, 2])</code></td><td>JS 的 <code>const</code> 只锁绑定，数组内容仍可改</td><td><span class="lv lv-must">必须改写</span> 递归冻结元素，否则 <code>list.push(3)</code> 仍能改</td></tr>
+    <tr><td><code>const map = {}</code></td><td><code>deepFreeze(new Map())</code></td><td><code>Object.freeze</code> 拦不住 <code>Map.set</code> 与 <code>delete</code></td><td><span class="lv lv-must">必须改写</span> Map / Set 用代理包裹，拦截 <code>set</code> / <code>delete</code> / <code>add</code> / <code>clear</code></td></tr>
+    <tr><td><code>late int x</code></td><td><code>let x</code></td><td>Dart 有惰性初始化与未赋值读取检查，JS 两者都没有</td><td><span class="lv lv-care">注意</span> 生成 <code>let x</code>，读取点补未赋值断言</td></tr>
+    <tr><td><code>int x = 1</code></td><td><code>let x = 1</code></td><td>类型标注只存在于编译期</td><td><span class="lv lv-ok">直译</span> 擦除类型，生成 <code>let x = 1</code></td></tr>
+    <tr><td><code>String? s</code></td><td><code>let s = null</code></td><td>Dart 可空局部变量默认 <code>null</code>，JS 的 <code>let s</code> 是 <code>undefined</code></td><td><span class="lv lv-must">必须改写</span> 显式初始化 <code>= null</code>，保证声明值一致</td></tr>
+    <tr><td><code>static const int MAX = 9</code></td><td><code>static MAX = 9</code></td><td>Dart 静态常量在类加载期初始化，JS 静态字段按声明顺序求值</td><td><span class="lv lv-care">注意</span> 生成 <code>static MAX = 9</code>，初始化顺序见第 08 章</td></tr>
+    <tr><td><code>typedef F = int Function(int)</code></td><td>无运行时表示</td><td><code>typedef</code> 只参与类型检查</td><td><span class="lv lv-ok">直译</span> 删除该声明，类型检查交给 TS 注解</td></tr>
   </tbody>
 </table>
 
@@ -1217,9 +1265,137 @@ for await (const x of ticks(3)) {
   console.log(x);
 }</code><button class="copy" type="button">复制</button></pre>
 
-<div class="note warn">
-  <span class="t">Stream 的订阅语义需要单独建模</span>
-  Dart 的 <code>Stream</code> 支持单订阅/广播、暂停/恢复、背压。直接映射成 AsyncIterable 只覆盖“顺序消费”这一种用法；若源码里出现 <code>listen</code>、<code>StreamController</code>、<code>pause</code>，需要生成一个最小广播器，不能简单替换成 <code>for await</code>。
+<h3>Stream：运行时自建，推送 + 拉取双形态</h3>
+<p>Dart 的 <code>Stream</code> 是<strong>推送模型</strong>：有数据就推给订阅者。JS 的 <code>AsyncIterable</code> 是<strong>拉取模型</strong>：消费者主动取。只把 <code>async*</code> 生成裸 <code>async function*</code>，只能覆盖“有人 <code>await for</code>”这一种用法；源码一旦出现 <code>listen</code>、<code>StreamController</code>、<code>pause</code> 或广播，就不成立。</p>
+<p>做法：<strong>内部推送给 <code>listen</code> 的订阅者，同时实现 <code>[Symbol.asyncIterator]</code>，把推送事件放进队列供 <code>for await</code> 消费</strong>。两种用法共用同一个对象。</p>
+
+<pre><code>// flutter.js 运行时：最小 Stream 实现
+class Stream {
+  constructor({ broadcast = false } = {}) {
+    this._broadcast = broadcast;
+    this._listeners = new Set();
+    this._pullQueue = [];          // await for 尚未消费的事件
+    this._pullWaiters = [];
+    this._done = false;
+    this._gen = null;              // async* 的生成器
+    this._started = false;
+    this._asyncIterated = false;   // await for 也占用唯一的订阅位
+  }
+
+  listen(onData, { onError, onDone, cancelOnError = false } = {}) {
+    if (!this._broadcast &amp;&amp; (this._listeners.size &gt; 0 || this._asyncIterated)) {
+      throw new StateError('Stream has already been listened to');
+    }
+    const sub = new StreamSubscription(this, onData, onError, onDone, cancelOnError);
+    this._listeners.add(sub);
+    this._start();                 // 惰性：首次订阅才拉取生成器
+    return sub;
+  }
+
+  _emit(type, value) {
+    for (const sub of [...this._listeners]) sub._deliver(type, value);
+    if (type === 'done') this._done = true;
+    const ev = { type, value };
+    if (this._pullWaiters.length) this._pullWaiters.shift()(ev);
+    else this._pullQueue.push(ev);
+  }
+
+  [Symbol.asyncIterator]() {
+    if (!this._broadcast &amp;&amp; (this._listeners.size &gt; 0 || this._asyncIterated)) {
+      throw new StateError('Stream has already been listened to');
+    }
+    this._asyncIterated = true;
+    this._start();
+    return {
+      next: async () =&gt; {
+        if (this._pullQueue.length) return this._settle(this._pullQueue.shift());
+        if (this._done) return { done: true, value: undefined };
+        return this._settle(await new Promise(res =&gt; this._pullWaiters.push(res)));
+      },
+    };
+  }
+
+  _settle(ev) {
+    if (ev.type === 'error') throw ev.value;          // await for 遇错即中断
+    if (ev.type === 'done') return { done: true, value: undefined };
+    return { done: false, value: ev.value };
+  }
+
+  _start() {
+    if (this._started || !this._gen) return;
+    this._started = true;
+    (async () =&gt; {
+      try {
+        for await (const v of this._gen) this._emit('data', v);
+        this._emit('done');
+      } catch (e) {
+        this._emit('error', e);
+        this._emit('done');
+      }
+    })();
+  }
+
+  static fromAsyncGenerator(gen) {
+    const s = new Stream();
+    s._gen = gen;
+    return s;                        // 不解包、不启动，保持 Dart 惰性
+  }
+}
+
+class StreamSubscription {
+  constructor(stream, onData, onError, onDone, cancelOnError) {
+    Object.assign(this, { _stream: stream, _onData: onData, _onError: onError,
+      _onDone: onDone, _cancelOnError: cancelOnError, _paused: false, _buffer: [] });
+  }
+  pause() { this._paused = true; }
+  resume() {
+    this._paused = false;
+    while (!this._paused &amp;&amp; this._buffer.length) this._deliver('data', this._buffer.shift());
+  }
+  cancel() {
+    this._stream._listeners.delete(this);
+    return Promise.resolve();
+  }
+  _deliver(type, value) {
+    if (type === 'data') {
+      if (this._paused) { this._buffer.push(value); return; }
+      this._onData?.(value);
+    } else if (type === 'error') {
+      if (this._onError) this._onError(value);
+      else if (this._cancelOnError) this.cancel();
+    } else if (type === 'done') {
+      this._onDone?.();
+    }
+  }
+}</code><button class="copy" type="button">复制</button></pre>
+
+<h3>Stream 翻译规则</h3>
+<table>
+  <colgroup><col style="width:34%"><col style="width:40%"><col style="width:26%"></colgroup>
+  <thead><tr><th>Dart</th><th>生成</th><th>规则</th></tr></thead>
+  <tbody>
+    <tr><td><code>Stream&lt;T&gt; f() async* { ... }</code></td><td><code>Stream.fromAsyncGenerator((async function* () { ... })())</code></td><td><span class="lv lv-must">必须改写</span> 不能返回裸生成器</td></tr>
+    <tr><td><code>yield* other</code></td><td><code>yield* other</code></td><td><span class="lv lv-ok">直译</span> 生成器委托</td></tr>
+    <tr><td><code>await for (final x in s)</code></td><td><code>for await (const x of s)</code></td><td><span class="lv lv-ok">直译</span> 依赖 <code>[Symbol.asyncIterator]</code></td></tr>
+    <tr><td><code>s.listen(onData, onError: e, onDone: d)</code></td><td><code>s.listen(onData, { onError: e, onDone: d })</code></td><td><span class="lv lv-must">必须改写</span> 命名参数转对象</td></tr>
+    <tr><td><code>sub.pause()</code> / <code>resume()</code> / <code>cancel()</code></td><td>同名</td><td><span class="lv lv-ok">直译</span> <code>cancel</code> 返回 Promise</td></tr>
+    <tr><td><code>StreamController&lt;T&gt;()</code></td><td><code>new StreamController()</code></td><td><span class="lv lv-must">必须改写</span> 提供 <code>add</code> / <code>addError</code> / <code>close</code> / <code>stream</code></td></tr>
+    <tr><td><code>StreamController.broadcast()</code></td><td><code>new StreamController({ broadcast: true })</code></td><td><span class="lv lv-must">必须改写</span></td></tr>
+    <tr><td><code>Stream.value</code> / <code>empty</code> / <code>error</code> / <code>fromFuture</code> / <code>fromIterable</code> / <code>periodic</code></td><td>同名静态方法</td><td><span class="lv lv-must">必须改写</span> 运行时补齐</td></tr>
+    <tr><td><code>s.map</code> / <code>where</code> / <code>expand</code> / <code>take</code> / <code>skip</code> / <code>distinct</code></td><td>同名</td><td><span class="lv lv-must">必须改写</span> 返回新 Stream，订阅时转发</td></tr>
+    <tr><td><code>s.asyncMap(f)</code></td><td>同名</td><td><span class="lv lv-must">必须改写</span> 串行等待，禁止 <code>Promise.all</code> 并行</td></tr>
+    <tr><td><code>s.toList()</code> / <code>first</code> / <code>last</code> / <code>length</code></td><td>同名</td><td><span class="lv lv-must">必须改写</span> 返回 Promise</td></tr>
+    <tr><td><code>s.asBroadcastStream()</code> / <code>s.pipe(dest)</code></td><td>同名</td><td><span class="lv lv-ok">直译</span></td></tr>
+  </tbody>
+</table>
+
+<div class="note risk">
+  <span class="t">五个必须建模的语义</span>
+  ① <strong>惰性</strong>：<code>async*</code> 在首次订阅前不能执行函数体；包装时立刻 <code>for await</code> 会让 <code>initState</code> 里创建的流提前开跑。<br>
+  ② <strong>单订阅与广播</strong>：单订阅流第二次 <code>listen</code> 抛 <code>StateError</code>；广播流每个订阅者独立，<code>pause</code> 期间事件<strong>直接丢弃</strong>，单订阅流则要缓冲。<br>
+  ③ <strong>错误不终止流</strong>：<code>listen</code> 的 <code>onError</code> 处理完流继续，只有 <code>cancelOnError</code> 才取消订阅；<code>await for</code> 遇错则中断，所以 <code>asyncIterator</code> 必须 <code>throw</code>。<br>
+  ④ <strong>背压</strong>：单订阅流 <code>pause</code> 后缓冲事件，<code>resume</code> 按序补发；广播流不缓冲。<br>
+  ⑤ <strong><code>StreamController</code> 的 onListen 惰性</strong>：第一次 <code>listen</code> 才触发 <code>onListen</code>，<code>close</code> 之后不能再 <code>add</code>。
 </div>
 </section>
 
@@ -1367,7 +1543,7 @@ export function __required(args, names) {
     <tr><td><code>Future</code> / <code>async</code></td><td><code>Promise</code> / <code>async</code></td><td><span class="lv lv-ok">映射</span></td></tr>
     <tr><td><code>Future.wait</code></td><td><code>Promise.all</code></td><td><span class="lv lv-ok">映射</span></td></tr>
     <tr><td><code>sync*</code> / <code>yield</code></td><td><code>function*</code> / <code>yield</code></td><td><span class="lv lv-ok">映射</span></td></tr>
-    <tr><td><code>Stream</code></td><td>AsyncIterable 自建</td><td><span class="lv lv-must">改写</span></td></tr>
+    <tr><td><code>Stream</code></td><td><code>Stream</code> 类（推送 + AsyncIterator）</td><td><span class="lv lv-must">改写</span></td></tr>
   </tbody>
 </table>
 </section>

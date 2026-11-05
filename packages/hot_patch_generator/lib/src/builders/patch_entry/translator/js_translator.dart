@@ -54,6 +54,9 @@ void _warnUnsupportedSdkEnum(String owner) {
 
 /// 读位置表达式 → JS 表达式（this._model.n / this._model / 字面量 / 形参）。
 String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+  // 函数表达式（闭包）本身就是表达式：变量初始化器、实参、三元分支等位置
+  // 统一在这里翻译，可选 / 具名形参与默认值由 [closureToJs] 同一实现处理。
+  if (e is FunctionExpression) return closureToJs(e, scope, classes);
   // 构造表达式（`Color(0xFF…)` / `Color.fromARGB(…)` / 任意 `X(…)`）→
   // `new X({...})`（命名构造 `X.b({...})` 仅在签名表命中时接管）。
   // 颜色不是特殊形态：`Color` 与其它类一样由运行时注入同名类。
@@ -171,7 +174,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 级联 `target..m(a)..n(b)`：Dart 返回 target 本身。译成 IIFE：
   // `(() => { const _t = <target>; _t.m(a); _t.n(b); return _t; })()`。
   // 常见形态 `list..sort(cmp)`（原方法体内就地排序）与 `c..addListener(..)`，
-  // 顺序与返回值都与 Dart 一致。
+  // 顺序与返回值都与 Dart 一致。空安全形态 `a?..b()` 见下方入口守卫。
   if (e is CascadeExpression) {
     final t = exprToJs(e.target, scope, classes);
     if (t == null) return null;
@@ -193,6 +196,13 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       } else {
         return null;
       }
+    }
+    // 空安全级联 `a?..b()..c()`：目标为 null / undefined 时**整条级联短路**，
+    // 表达式求值为目标本身（null），后续 section 一律不执行。JS 没有等价的
+    // 可选链 + 级联组合语法，故在 IIFE 入口加一层非空守卫。
+    if (e.isNullAware) {
+      return '((_t) => { if (_t == null) return _t; '
+          '${stmts.join('; ')}; return _t; })($t)';
     }
     return '(() => { const _t = $t; ${stmts.join('; ')}; return _t; })()';
   }
@@ -959,6 +969,57 @@ String globalFnArgsJs(List<String> positional, List<String> named) {
       '${named.join(', ')}}';
 }
 
+/// Dart 函数形参 → JS 签名 + 函数体前导（闭包 / 局部函数 / 类方法共用）。
+///
+/// 调用约定（全仓库唯一，见 `_methodCallJs`）：位置实参在前、**具名实参合并成
+/// 一个尾参对象**。因此：
+///   - 位置形参按原名进 JS 签名；可选位置形参在函数体开头补缺省
+///     （Dart 缺省即 null，显式默认值按源码翻译）；
+///   - 具名形参不占位置，函数体开头从尾参对象 `__o` 解构出同名局部变量，
+///     缺省时取默认值 / null（required 具名由调用方保证传入）。
+/// [defaultJs] 负责翻译默认值表达式；返回 null 时出声告警并退回 null。
+class _ParamPlan {
+  final List<String> names = []; // 所有 Dart 形参名（作用域登记）
+  final List<String> jsParams = []; // JS 签名形参
+  final List<String> prologue = []; // 函数体前导语句（不带缩进）
+}
+
+_ParamPlan _functionParamPlan(
+  FormalParameterList? parameters,
+  String? Function(Expression) defaultJs,
+) {
+  final plan = _ParamPlan();
+  var hasNamed = false;
+  for (final p in parameters?.parameters ?? const <FormalParameter>[]) {
+    final inner = p is DefaultFormalParameter ? p.parameter : p;
+    final name = inner.name?.lexeme;
+    if (name == null || name.isEmpty) continue;
+    plan.names.add(name);
+    final defaultValue = p is DefaultFormalParameter ? p.defaultValue : null;
+    String? dj;
+    if (defaultValue != null) {
+      dj = defaultJs(defaultValue);
+      if (dj == null) {
+        log.warning('[hot_patch_generator] 形参 $name 的默认值无法翻译，'
+            '已退回 null：${defaultValue.toSource()}');
+      }
+    }
+    if (p.isNamed) {
+      hasNamed = true;
+      plan.prologue.add('var $name = (__o && __o.$name !== undefined) '
+          '? __o.$name : ${dj ?? 'null'};');
+    } else {
+      plan.jsParams.add(name);
+      if (p is DefaultFormalParameter) {
+        plan.prologue
+            .add('$name = ($name === undefined) ? ${dj ?? 'null'} : $name;');
+      }
+    }
+  }
+  if (hasNamed) plan.jsParams.add('__o');
+  return plan;
+}
+
 /// 闭包参数 → JS 函数表达式：`() {...}` → `() => { ... }`、
 /// `(v) => expr` → `(v) => { return <expr>; }`（一律箭头函数）。
 ///
@@ -970,17 +1031,15 @@ String? closureToJs(
   Map<String, ClassInfo> classes, [
   ExprRenderer? renderer,
 ]) {
-  final params = <String>[];
-  for (final p in fn.parameters?.parameters ?? const <FormalParameter>[]) {
-    final name = p is DefaultFormalParameter
-        ? p.parameter.name?.lexeme
-        : p.name?.lexeme;
-    if (name != null && name.isNotEmpty) params.add(name);
-  }
-  final pjs = params.join(', ');
+  // 形参与默认值走全仓库唯一实现：可选位置参数补缺省、具名形参从尾参对象
+  // `__o` 解构。默认值是常量表达式，用闭包定义处的作用域翻译。
+  final plan = _functionParamPlan(
+      fn.parameters, (e) => rhsToJs(e, scope, classes));
+  final pjs = plan.jsParams.join(', ');
+  final pro = plan.prologue.isEmpty ? '' : '${plan.prologue.join(' ')} ';
   // 闭包形参登记进作用域：`where((o) => o.status == _status)` 里的 `o` 必须
   // 解析为形参，否则谓词翻译失败、连带整个 `where(...)` 与外围表达式被丢弃。
-  final bodyScope = params.isEmpty ? scope : scope.withParams(params);
+  final bodyScope = plan.names.isEmpty ? scope : scope.withParams(plan.names);
   final body = fn.body;
   final asyncKw = body.isAsynchronous ? 'async ' : '';
   // 一律输出箭头函数：this 词法绑定到定义处（组件实例），与 Dart 闭包
@@ -1005,16 +1064,22 @@ String? closureToJs(
     final wv = renderer != null && renderer.ctorJsClassFile(body.expression) != null
         ? _widgetExprToJs(renderer, body.expression, 0)
         : null;
-    if (wv != null) return '$asyncKw($pjs) => $wv';
+    if (wv != null) {
+      return pro.isEmpty
+          ? '$asyncKw($pjs) => $wv'
+          : '$asyncKw($pjs) => { ${pro}return $wv; }';
+    }
     final rv = rhsToJs(body.expression, bodyScope, classes);
-    if (rv != null) return '$asyncKw($pjs) => { return $rv; }';
+    if (rv != null) return '$asyncKw($pjs) => { ${pro}return $rv; }';
     final v = closureBodyStmtJs(body.expression, bodyScope, classes);
-    if (v != null) return '$asyncKw($pjs) => { $v }';
+    if (v != null) return '$asyncKw($pjs) => { ${pro}${v} }';
     return null;
   }
   if (body is BlockFunctionBody) {
-    // 空块体（`() {}`）是合法的空操作闭包。
-    if (body.block.statements.isEmpty) return '($pjs) => {}';
+    // 空块体（`() {}`）是合法的空操作闭包（有形参默认值前导时仍需块体）。
+    if (body.block.statements.isEmpty) {
+      return pro.isEmpty ? '($pjs) => {}' : '$asyncKw($pjs) => { ${pro}}';
+    }
     // 块体逐语句翻译——与方法体、`_setStateJs` 共用**同一条** [translateStmtList]：
     // 声明、if/for/while/switch、setState 展开全部覆盖。旧实现只收
     // `ExpressionStatement`，`onPick: (k, v) { setState(() { switch ... }) }`
@@ -1022,7 +1087,7 @@ String? closureToJs(
     final stmts =
         translateStmtList(body.block.statements, bodyScope, classes, renderer);
     if (stmts.trim().isEmpty) return null;
-    return '$asyncKw($pjs) => { ${stmts.trim()} }';
+    return '$asyncKw($pjs) => { ${pro}${stmts.trim()} }';
   }
   return null;
 }
@@ -1862,9 +1927,9 @@ List<Statement> _bodyStmts(Statement s) => s is Block ? s.statements : [s];
 /// 函数也保留 `this`（Dart 局部函数同样捕获外层 `this`）。名称先登记进作用域，
 /// 递归调用与后续语句的裸调用按同名局部标识符解析（见 `_methodCallJs`）。
 ///
-/// 不支持：具名 / 可选参数（默认值）、泛型局部函数、生成器 —— JS 函数没有等价
-/// 签名，出现时返回 null（调用方出声告警）。局部函数须先声明后调用（Dart 允许
-/// 前向引用，`var` 赋值形态做不到）。
+/// 不支持：泛型局部函数、生成器 —— JS 函数没有等价签名，出现时返回 null
+/// （调用方出声告警）。局部函数须先声明后调用（Dart 允许前向引用，`var`
+/// 赋值形态做不到）。可选 / 具名形参与默认值由 [closureToJs] 统一处理。
 String? _localFunctionJs(
   FunctionDeclarationStatement s,
   FieldScope scope,
@@ -1875,9 +1940,6 @@ String? _localFunctionJs(
   final decl = s.functionDeclaration;
   final fn = decl.functionExpression;
   if (fn.typeParameters != null || fn.body.isGenerator) return null;
-  for (final p in fn.parameters?.parameters ?? const <FormalParameter>[]) {
-    if (p is DefaultFormalParameter) return null;
-  }
   final name = decl.name.lexeme;
   scope.localVars.add(name);
   renderer?.registerLocal(name);
@@ -2822,6 +2884,9 @@ String translateClassMethodBody(
     ...objectMethodNamesOf(info, classes),
     if (sdkBaseName(info) != null) 'notifyListeners',
   };
+  // 方法泛型的类型实参与具名实参共用**同一个尾参对象**（调用点合并下发）：
+  // 有具名形参时是 `__o`，否则保持既有的 `__ta`。
+  final tailParam = tailParamNameOf(m) ?? '__ta';
   final scope = FieldScope(
     // 字段与方法都取**继承链视图**：子类方法里 `this.name` 指向父类字段、
     // 裸调用父类方法同样要解析为 `this.foo()`。
@@ -2847,7 +2912,7 @@ String translateClassMethodBody(
       if (!m.isStatic)
         for (final tp in info.typeParams) tp: 'this.__ta[${jsString(tp)}]',
       for (final tp in m.typeParams)
-        tp: '((__ta && __ta.typeArguments) || {})[${jsString(tp)}]',
+        tp: '((($tailParam && $tailParam.typeArguments) || {})[${jsString(tp)}])',
     },
     hostFunctions: hostFunctions,
     globalConsts: globalConsts,
@@ -2860,19 +2925,29 @@ String translateClassMethodBody(
     // 可以直接落到基类，不需要在翻译层做特殊处理。
     hasJsBase: jsBaseClassOf(info, classes) != null,
   );
+  // 形参前导：可选位置形参补默认值、具名形参从尾参对象 `__o` 解构。与闭包 /
+  // 局部函数同一实现，避免三处默认值口径走样。
+  final paramPlan =
+      _functionParamPlan(m.parameters, (e) => rhsToJs(e, scope, classes));
   // 方法形参同步登记进 widget 层（方法体期间），使返回的 widget 树里
   // `Text(title)` 这类形参引用可解析；翻译结束即恢复，不污染同类其它方法。
   // 组件语境（构造走属性管线 / 静态类引用解析）由调用方在**整类方法翻译**上
   // 统一开启（见 analyze_dart_class），这里不再逐方法判断。
-  String run() => translateMethodBody(
-        m.body,
-        scope,
-        classes,
-        renderer: renderer,
-        returnExpressionBody: !m.isVoid,
-        returnsWidget: m.returnsWidget,
-        depth: depth,
-      );
+  String run() {
+    final body = translateMethodBody(
+      m.body,
+      scope,
+      classes,
+      renderer: renderer,
+      returnExpressionBody: !m.isVoid,
+      returnsWidget: m.returnsWidget,
+      depth: depth,
+    );
+    if (paramPlan.prologue.isEmpty) return body;
+    final pro =
+        paramPlan.prologue.map((l) => '$ind$l').join('\n');
+    return '$pro\n$body';
+  }
   if (renderer == null || m.params.isEmpty) return run();
   return renderer.withMethodParams(m.params, run);
 }

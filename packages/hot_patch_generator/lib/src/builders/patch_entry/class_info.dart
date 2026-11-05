@@ -59,6 +59,11 @@ class ClassMethod {
   final FunctionBody? body;
   final String? bodyJs; // 预渲染方法体（非 null 时优先于 body）
 
+  /// 方法形参 AST（默认值 / 可选 / 具名形态的来源）。翻译阶段据此生成 JS
+  /// 签名前导（可选位置默认值、具名实参从尾参对象解构）；渲染层只读预渲染的
+  /// [bodyJs]，不直接使用本字段。getter 为 null。
+  final FormalParameterList? parameters;
+
   /// 方法体是「宿主通道」形式（如 SnackBar → `nativeToast`）：整体译为
   /// `_app_host_.invoke("通道名", {...})`，[nativeMessage] 是已译好的消息 JS 表达式。
   final String? nativeChannel;
@@ -114,6 +119,7 @@ class ClassMethod {
     this.returnsWidget = true,
     this.body,
     this.bodyJs,
+    this.parameters,
     this.nativeChannel,
     this.nativeMessage,
     this.hostChannel,
@@ -126,6 +132,30 @@ class ClassMethod {
     this.operatorSymbol,
     this.paramTypes = const {},
   });
+}
+
+/// 方法定义侧的 JS 形参签名。
+///
+/// 调用点的通用约定（见 `_methodCallJs`）：位置实参在前，**具名实参与类型实参
+/// 合并成一个尾参对象**。因此定义侧只发射位置形参 + 一个尾参对象名：
+///   - 含具名形参 → `__o`（同时承接 `typeArguments`）；
+///   - 仅方法泛型 → `__ta`（保持既有形态）；
+///   - 都没有 → 不追加。
+/// getter 无形参；setter 恒为一个位置形参（Dart 不允许 setter 带可选/具名形参）。
+List<String> jsSignatureParams(ClassMethod m) {
+  if (m.isGetter) return const [];
+  if (m.isSetter) return m.params;
+  final out = <String>[...m.params.take(m.positionalParamCount)];
+  final tail = tailParamNameOf(m);
+  if (tail != null) out.add(tail);
+  return out;
+}
+
+/// 尾参对象名（具名实参 / 类型实参的共用载体，见 [jsSignatureParams]）。
+String? tailParamNameOf(ClassMethod m) {
+  if (m.hasNamedParams) return '__o';
+  if (m.typeParams.isNotEmpty) return '__ta';
+  return null;
 }
 
 /// 类的一个**命名构造**（`X.b(...)` / `factory X.b(...)`）。

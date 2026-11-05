@@ -127,14 +127,10 @@ String renderClassDecl(
       if (body.isNotEmpty) b.write('$body\n');
       b.write('  }\n');
     } else {
-      // 泛型方法：调用点的类型实参以**尾参对象**下发（`m<T>(…)` →
-      // `m(…, {typeArguments: {T: …}})`），方法定义侧用隐藏形参 `__ta` 接住，
-      // 方法体里的类型参数 `T` 从 `__ta.typeArguments["T"]` 读。
-      final params = [
-        ...m.params,
-        if (m.typeParams.isNotEmpty) '__ta',
-      ];
-      b.write('  $st$fn${m.name}(${params.join(', ')}) {\n');
+      // 方法签名按调用约定生成：位置形参在前，具名实参（与类型实参）合并成
+      // 一个尾参对象 `__o`（无具名时为泛型专用的 `__ta`）。方法体里的默认值
+      // 前导与具名解构已由收集阶段写进 [ClassMethod.bodyJs]。
+      b.write('  $st$fn${m.name}(${jsSignatureParams(m).join(', ')}) {\n');
       if (body.isNotEmpty) b.write('$body\n');
       b.write('  }\n');
     }

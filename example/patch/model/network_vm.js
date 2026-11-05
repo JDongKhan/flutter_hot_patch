@@ -10,7 +10,8 @@ export class NetworkVm extends ChangeNotifier {
   constructor(args) {
     super(args);
   }
-  async loadUserInfo(params) {
+  async loadUserInfo(__o) {
+    var params = (__o && __o.params !== undefined) ? __o.params : null;
     var data = await Network.post({ "url": "loadUserInfo", "params": params });
     print("获取数据:" + data);
     return data;

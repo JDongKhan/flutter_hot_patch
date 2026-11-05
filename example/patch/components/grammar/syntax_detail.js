@@ -36,6 +36,21 @@ export class Price {
   get hashCode() {
     return this._cents.hashCode;
   }
+  plus(extra) {
+    extra = (extra === undefined) ? 1 : extra;
+    return (this._cents + extra);
+  }
+  scaled(__o) {
+    var factor = (__o && __o.factor !== undefined) ? __o.factor : 2;
+    var bonus = (__o && __o.bonus !== undefined) ? __o.bonus : 0;
+    return ((this._cents * factor) + bonus);
+  }
+  static fromCents(cents, __o) {
+    var discount = (__o && __o.discount !== undefined) ? __o.discount : 0;
+    return new Price({
+      "_cents": (cents - discount)
+    });
+  }
 }
 
 // 模型 TaskItem
@@ -333,6 +348,14 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "rethrow：" + trace;
   }
+  _cascadeText() {
+    var nums = (() => { const _t = []; _t.add(1); _t.add(2); return _t; })();
+    var alias = nums;
+    var nothing = null;
+    var live = ((_t) => { if (_t == null) return _t; _t.add(3); return _t; })(alias);
+    var dead = ((_t) => { if (_t == null) return _t; _t.add(9); _t.add(8); return _t; })(nothing);
+    return "级联：列表=" + nums.join("/") + " / 非空分支=" + (live?.length ?? 0) + " " + "/ 空分支=" + (dead?.length ?? "null");
+  }
   _bitwiseText() {
     var a = 6;
     var b = 3;
@@ -382,6 +405,17 @@ export class SyntaxDetail extends StatefulWidget {
       return "无分"; };
     var score = (this._task?.score ?? 0);
     return "局部函数：twice(" + score + ")=" + twice(score) + " / " + grade(score);
+  }
+  _paramsText() {
+    var localScale = (v, factor) => { factor = (factor === undefined) ? 3 : factor; return (v * factor); };
+    var localPack = (v, __o) => { var step = (__o && __o.step !== undefined) ? __o.step : 2; var times = (__o && __o.times !== undefined) ? __o.times : 1; return (v + (step * times)); };
+    var namedClosure = (__o) => { var a = (__o && __o.a !== undefined) ? __o.a : 1; var b = (__o && __o.b !== undefined) ? __o.b : 2; return (a + b); };
+    var optionalClosure = (v, k) => { k = (k === undefined) ? 10 : k; return (v + k); };
+    var base = (this._task?.score ?? 20);
+    var price = new Price({
+      "_cents": base
+    });
+    return "形参：方法可选=" + price.plus() + "/" + price.plus(4) + " " + "/ 方法具名=" + price.scaled({ "factor": 2, "bonus": base }) + " " + "/ 局部可选=" + localScale(4) + " " + "/ 局部具名=" + localPack(1, { "step": 3, "times": 2 }) + " " + "/ 闭包具名=" + namedClosure({ "b": 5 }) + " " + "/ 闭包可选=" + optionalClosure(1) + " " + "/ 静态具名=" + Price.fromCents(base, { "discount": 3 }).cents;
   }
   _switchExprText() {
     var task = this._task;
@@ -471,6 +505,9 @@ export class SyntaxDetail extends StatefulWidget {
             "data": this._localFuncText()
           }),
           new Text({
+            "data": this._paramsText()
+          }),
+          new Text({
             "data": this._switchExprText()
           }),
           new Text({
@@ -502,6 +539,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._rethrowText()
+          }),
+          new Text({
+            "data": this._cascadeText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")

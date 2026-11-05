@@ -45,7 +45,7 @@ export class TypeCodec {
     return this.__ta["T"].toString();
   }
   getEType(__ta) {
-    return ((__ta && __ta.typeArguments) || {})["E"].toString();
+    return (((__ta && __ta.typeArguments) || {})["E"]).toString();
   }
 }
 
