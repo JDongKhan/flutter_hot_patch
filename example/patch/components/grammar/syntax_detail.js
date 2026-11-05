@@ -224,7 +224,7 @@ export class SyntaxDetail extends StatefulWidget {
     total.cents = 150;
     var same = ((__a, __b) => __a == null ? __b == null : __a.__op$eq(__b))(total, new Price({_cents: 150}));
     var neg = b.__op$neg();
-    return "setter/运算符：sum=" + total.cents + " / 相等=" + same + " / 取负=" + neg.cents;
+    return "setter/运算符：sum=" + total.cents + " / 相等=" + same + " / 取负=" + neg.cents + " " + "/ hash=" + total.hashCode + " / strHash=" + "abc".hashCode;
   }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };

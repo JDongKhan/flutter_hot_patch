@@ -242,16 +242,31 @@ G.debugPrint = function (message) {
     },
     isNotEmpty: function () {
       return this.length > 0;
+    },
+    // Dart `String.hashCode`：JS 没有同名成员，按稳定散列补齐（FNV-1a 32 位，
+    // 只用值语义一致性，不做安全用途；跨引擎结果相同）。
+    hashCode: function () {
+      var h = 2166136261;
+      for (var i = 0; i < this.length; i++) {
+        h ^= this.charCodeAt(i);
+        h = (h * 16777619) >>> 0;
+      }
+      return h >>> 0;
     }
   });
   //   - int 的 `isEven` / `isOdd` 是 Dart 的属性（不是方法），JS 数字没有；
   //     生成器按 Dart 写法一比一产出 `n.isEven`，故按同名同义补 getter。
+  //     `hashCode`：Dart 数字的 `hashCode` 是值本身（数字相等即散列相等）；
+  //     自定义 `==` 的类常组合字段 `hashCode`，缺失会得到 undefined。
   __defineProtoGetter(Number.prototype, {
     isEven: function () {
       return this % 2 === 0;
     },
     isOdd: function () {
       return this % 2 !== 0;
+    },
+    hashCode: function () {
+      return this.valueOf();
     }
   });
   var __compareTo = function (other) {

@@ -166,7 +166,8 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     total.cents = 150; // setter
     final bool same = total == Price(150);
     final Price neg = -b;
-    return 'setter/运算符：sum=${total.cents} / 相等=$same / 取负=${neg.cents}';
+    return 'setter/运算符：sum=${total.cents} / 相等=$same / 取负=${neg.cents} '
+        '/ hash=${total.hashCode} / strHash=${'abc'.hashCode}';
   }
 
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
