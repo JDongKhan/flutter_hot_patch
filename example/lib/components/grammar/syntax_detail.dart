@@ -175,6 +175,20 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
         '/ 取负=${neg.cents}';
   }
 
+  /// 多 catch 子句 + `on Type` 过滤（`int.parse('x')` 抛 FormatException）。
+  String _tryText() {
+    final parts = <String>[];
+    try {
+      parts.add('解析=${int.parse('12')}');
+      parts.add('解析=${int.parse('x')}');
+    } on FormatException {
+      parts.add('格式错误');
+    } catch (e) {
+      parts.add('其它:$e');
+    }
+    return 'try/catch：${parts.join('，')}';
+  }
+
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
   String _localFuncText() {
     int twice(int x) => x * 2;
@@ -247,6 +261,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),
+          Text(_tryText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

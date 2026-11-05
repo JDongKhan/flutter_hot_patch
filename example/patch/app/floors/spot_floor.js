@@ -30,7 +30,8 @@ export class SpotFloorVm extends ChangeNotifier {
     try {
       this.spots = await this._service.fetchHomeSpots(this.city);
       this.error = null;
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("SpotFloor 加载失败: " + e);
       this.error = e.toString();
     }

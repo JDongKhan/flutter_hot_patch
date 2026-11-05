@@ -30,7 +30,8 @@ export class GridFloorVm extends ChangeNotifier {
     try {
       this.grid = await this._service.fetchHomeGrid();
       this.error = null;
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("GridFloor 加载失败: " + e);
       this.error = e.toString();
     }

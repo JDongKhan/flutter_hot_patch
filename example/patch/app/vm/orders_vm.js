@@ -37,7 +37,8 @@ export class OrdersVm extends ChangeNotifier {
       if ((this.initialStatus != null)) {
         await this.loadOrders();
       }
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("OrdersVm 状态条加载失败: " + e);
       this.feedError = e.toString();
       this.notifyListeners();
@@ -52,7 +53,8 @@ export class OrdersVm extends ChangeNotifier {
       this.listLoading = false;
       this.ordersError = null;
       this.notifyListeners();
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("OrdersVm 订单列表加载失败: " + e);
       this.listLoading = false;
       this.ordersError = e.toString();

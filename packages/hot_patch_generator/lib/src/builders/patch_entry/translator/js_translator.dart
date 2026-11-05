@@ -2046,33 +2046,87 @@ String? _tryStatementJs(
 
   var catchPart = '';
   if (catches.isNotEmpty) {
-    final clause = catches.first;
-    if (catches.length > 1) {
-      log.warning('[hot_patch_generator] try 含 ${catches.length} 个 catch '
-          '子句，当前只翻译第一个，其余已跳过：${s.toSource()}');
+    // Dart 支持多个 catch 子句 + `on Type` 过滤；JS 只有一个 catch 参数，
+    // 故用「统一捕获名 `__e` + if/else 链」表达，顺序与 Dart 一致：
+    //   try { … } catch (__e) {
+    //     if (__e instanceof FormatException) { … }
+    //     else if (…) { … }
+    //     else { … }            // 无类型的 catch（catch-all）
+    //     else { throw __e; }    // 未命中任何子句：原样重抛
+    //   }
+    // 类型判别走 typeTestJs（项目类 instanceof / SDK 错误类由运行时注入）。
+    const exName = '__e';
+    final known = classes.keys.toSet();
+    final lines = <String>[' catch ($exName) {'];
+    var first = true;
+    var closed = false; // 已出现 catch-all（或类型不可判别）→ 后续子句不可达
+    for (final clause in catches) {
+      if (closed) {
+        log.warning('[hot_patch_generator] try 的 catch 子句位于 catch-all '
+            '之后（不可达），已跳过：${clause.toSource()}');
+        continue;
+      }
+      final type = clause.exceptionType;
+      var isCatchAll = type == null;
+      var cond = 'true';
+      if (type != null) {
+        final test =
+            typeTestJs(type.toSource(), exName, knownClasses: known);
+        if (test == null) {
+          log.warning('[hot_patch_generator] catch 的 on 类型 '
+              '${type.toSource()} 在 JS 侧无法判别，已按 catch-all 翻译：'
+              '${clause.toSource()}');
+          isCatchAll = true;
+        } else {
+          cond = test;
+        }
+      }
+      if (isCatchAll) closed = true;
+      final name = clause.exceptionParameter?.name.lexeme;
+      final stackName = clause.stackTraceParameter?.name.lexeme;
+      final branchScope = (name == null && stackName == null)
+          ? scope
+          : scope.withParams([
+              if (name != null) name,
+              if (stackName != null) stackName,
+            ]);
+      var body = translateStmtList(
+        clause.body.statements,
+        branchScope,
+        classes,
+        renderer,
+        depth: depth + 2,
+        returnsWidget: returnsWidget,
+      );
+      if (stackName != null && stackName != exName) {
+        body = '${ind}    var $stackName = $exName && $exName.stack;\n$body';
+      }
+      if (name != null && name != exName) {
+        body = '${ind}    var $name = $exName;\n$body';
+      }
+      final head = isCatchAll && first
+          ? null // 首个子句就是 catch-all：直接执行 body，无需 if/else 包装
+          : (isCatchAll
+              ? '${ind}  else {'
+              : '${ind}  ${first ? 'if' : 'else if'} ($cond) {');
+      if (head == null) {
+        lines.add(body);
+      } else {
+        lines
+          ..add(head)
+          ..add(body)
+          ..add('$ind  }');
+      }
+      first = false;
     }
-    if (clause.exceptionType != null) {
-      log.warning('[hot_patch_generator] catch 的 on 类型过滤尚未实现，'
-          '已按 catch-all 翻译：${clause.exceptionType!.toSource()}');
+    if (!closed) {
+      lines
+        ..add('${ind}  else {')
+        ..add('${ind}    throw $exName;')
+        ..add('$ind  }');
     }
-    final exName = clause.exceptionParameter?.name.lexeme ?? '__error';
-    final stackName = clause.stackTraceParameter?.name.lexeme;
-    final catchScope = stackName == null
-        ? scope.withParams([exName])
-        : scope.withParams([exName, stackName]);
-    var catchBody = translateStmtList(
-      clause.body.statements,
-      catchScope,
-      classes,
-      renderer,
-      depth: depth + 1,
-      returnsWidget: returnsWidget,
-    );
-    if (stackName != null) {
-      catchBody =
-          '$ind  var $stackName = $exName && $exName.stack;\n$catchBody';
-    }
-    catchPart = ' catch ($exName) {\n$catchBody\n$ind}';
+    lines.add('$ind}');
+    catchPart = lines.join('\n');
   }
 
   var finallyPart = '';

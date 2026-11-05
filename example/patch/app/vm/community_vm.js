@@ -43,7 +43,8 @@ export class CommunityVm extends ChangeNotifier {
       this.price = value.priceRanges.first;
       this.feedError = null;
       this.notifyListeners();
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("CommunityVm 配置加载失败: " + e);
       this.feedError = e.toString();
       this.notifyListeners();
@@ -58,7 +59,8 @@ export class CommunityVm extends ChangeNotifier {
       this.listLoading = false;
       this.postsError = null;
       this.notifyListeners();
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("CommunityVm 帖子列表加载失败: " + e);
       this.listLoading = false;
       this.postsError = e.toString();
@@ -71,7 +73,8 @@ export class CommunityVm extends ChangeNotifier {
       this.resources = value;
       this.resourcesError = null;
       this.notifyListeners();
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("CommunityVm 资源横幅加载失败: " + e);
       this.resourcesError = e.toString();
       this.notifyListeners();

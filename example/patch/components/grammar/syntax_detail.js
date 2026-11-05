@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/grammar/syntax_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
+import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, FormatException, MainAxisSize, OutlinedButton, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle, int } from '../../flutter.js';
 
 export const TaskLevel = (function () { const __values = []; function __mk(name, index) { return { name: name, index: index, toString: function () { return "TaskLevel." + name; } }; } const low = __mk("low", 0); __values.push(low); const medium = __mk("medium", 1); __values.push(medium); const high = __mk("high", 2); __values.push(high); return { low: low, medium: medium, high: high, values: __values }; })();
 
@@ -230,6 +230,22 @@ export class SyntaxDetail extends StatefulWidget {
     var neg = b.__op$neg();
     return "setter/运算符：sum=" + total.cents + " / 相等=" + same + " / hash一致=" + hashSame + " " + "/ 取负=" + neg.cents;
   }
+  _tryText() {
+    var parts = [];
+    try {
+      parts.add("解析=" + int.parse("12"));
+      parts.add("解析=" + int.parse("x"));
+    } catch (__e) {
+      if (__e instanceof FormatException) {
+        parts.add("格式错误");
+      }
+      else {
+        var e = __e;
+        parts.add("其它:" + e);
+      }
+    }
+    return "try/catch：" + parts.join("，");
+  }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
     var grade = (score) => { {
@@ -352,6 +368,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._operatorText()
+          }),
+          new Text({
+            "data": this._tryText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")

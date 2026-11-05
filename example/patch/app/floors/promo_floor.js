@@ -29,7 +29,8 @@ export class PromoFloorVm extends ChangeNotifier {
     try {
       this.img = await this._service.fetchHomePromo(this.city);
       this.error = null;
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("PromoFloor 加载失败: " + e);
       this.error = e.toString();
     }

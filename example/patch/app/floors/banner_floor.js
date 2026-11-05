@@ -30,7 +30,8 @@ export class BannerFloorVm extends ChangeNotifier {
     try {
       this.banners = await this._service.fetchHomeBanners(this.city);
       this.error = null;
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("BannerFloor 加载失败: " + e);
       this.error = e.toString();
     }

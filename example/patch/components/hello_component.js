@@ -74,7 +74,8 @@ export class HelloCard extends StatefulWidget {
         throw new StateError({message: "count 不能为负数"});
       }
       debugPrint("try ok: count=" + this._count);
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       debugPrint("caught: " + e);
     } finally {
       debugPrint("finally");

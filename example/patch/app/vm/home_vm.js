@@ -41,7 +41,8 @@ export class HomeVm extends ChangeNotifier {
         this.floors = list;
       }
       this.error = null;
-    } catch (e) {
+    } catch (__e) {
+      var e = __e;
       print("HomeVm 楼层配置加载失败: " + e);
       this.error = e.toString();
     }
