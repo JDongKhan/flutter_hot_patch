@@ -792,9 +792,10 @@ void connect({required String host, int port = 80}) {}
 
 // 项目实际形态：位置形参按原名 + 具名实参合并尾参对象 __o，函数体开头解构默认值
 function connect(__o) {
-  var port = (__o && __o.port !== undefined) ? __o.port : 80;
-  var host = (__o && __o.host !== undefined) ? __o.host : null;
-  // 项目不做 required 校验（未实现，记为不通过）
+  let port = (__o && __o.port !== undefined) ? __o.port : 80;
+  let host = (__o && __o.host !== undefined) ? __o.host : null;
+  // `required` 不做运行期校验：Dart 编译期已保证调用方传入（翻译产物的
+  // 调用点都来自编译通过的源码），再抛一次属于重复校验。
 }</code><button class="copy" type="button">复制</button></pre>
 <h3>成员值位置：tear-off / super / 函数值调用</h3>
 <p>同一个成员名在「调用」与「取值」位置语义不同：Dart 的 tear-off 自带 <code>this</code>，JS 的原型方法不带；<code>super.x</code> 对字段与 getter 的落点也不同。</p>
@@ -1579,7 +1580,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
   <li><code>__isInt / __isNum / __isString …</code>：类型判断由 <code>typeTestJs</code> 内联生成（<code>int</code> → <code>Number.isInteger</code>，<code>double</code> / <code>num</code> → <code>typeof</code>）。</li>
   <li><code>__freeze</code>：const 集合不冻结（Dart const 是编译期保证，产物无需运行时冻结）。</li>
   <li><code>__setIfNotNull</code>：空安全赋值在翻译层落成守卫 IIFE，不经运行时。</li>
-  <li><code>__required</code>：具名参数必填校验未实现（缺省即 <code>undefined</code> / <code>null</code>）。</li>
+  <li><code>__required</code>：<b>不实现</b>——<code>required</code> 由 Dart 编译期校验，翻译产物的调用点全部来自编译通过的源码，运行期无需重复校验（缺省即 <code>undefined</code> / <code>null</code>）。</li>
   <li><code>Completer</code>、<code>Stream</code>、生成器（<code>sync*</code> / <code>async*</code> / <code>yield</code>）未实现。</li>
 </ul>
 

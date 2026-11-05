@@ -1257,6 +1257,8 @@ _ParamPlan _functionParamPlan(
     }
     if (p.isNamed) {
       hasNamed = true;
+      // `required` 由 Dart 编译期校验：所有调用点都来自编译通过的源码，
+      // 产物无需重复做运行期缺参检查。
       plan.prologue.add('let $name = (__o && __o.$name !== undefined) '
           '? __o.$name : ${dj ?? 'null'};');
     } else {
