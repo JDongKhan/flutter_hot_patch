@@ -11,7 +11,7 @@ export class PreferredSizeDetail extends StatefulWidget {
     this._height = 64;
   }
   build(context) {
-    var label = this._height.toStringAsFixed(0);
+    const label = this._height.toStringAsFixed(0);
     return new Scaffold({
       "appBar": new PreferredSize({
         "preferredSize": Size.fromHeight({

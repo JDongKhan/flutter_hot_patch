@@ -46,7 +46,7 @@ export class _PinnedDelegate {
     return 120;
   }
   build(context, shrinkOffset, overlapsContent) {
-    var t = ((shrinkOffset > 64) ? 1 : (shrinkOffset / 64));
+    const t = ((shrinkOffset > 64) ? 1 : (shrinkOffset / 64));
     return new Container({
       "color": Colors.deepPurple,
       "padding": (this.__k0 || (this.__k0 = EdgeInsets.fromLTRB({

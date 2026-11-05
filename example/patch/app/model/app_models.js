@@ -20,7 +20,7 @@ export class Spot {
     this.tags = (args && args.tags !== undefined) ? args.tags : [];
   }
   static fromJson(e) {
-    var tags = [];
+    const tags = [];
     for (let t of e["tags"]) {
       tags.add(t);
     }
@@ -227,23 +227,23 @@ export class CommunityFeed {
     this.priceRanges = (args && args.priceRanges !== undefined) ? args.priceRanges : [];
   }
   static fromJson(e) {
-    var tabs = [];
+    const tabs = [];
     for (let v of e["tabs"]) {
       tabs.add(v);
     }
-    var sorts = [];
+    const sorts = [];
     for (let v of e["sorts"]) {
       sorts.add(v);
     }
-    var postTypes = [];
+    const postTypes = [];
     for (let v of e["postTypes"]) {
       postTypes.add(v);
     }
-    var dists = [];
+    const dists = [];
     for (let v of e["dists"]) {
       dists.add(v);
     }
-    var priceRanges = [];
+    const priceRanges = [];
     for (let v of e["priceRanges"]) {
       priceRanges.add(v);
     }
@@ -266,7 +266,7 @@ export class OrderFeed {
     this.statuses = (args && args.statuses !== undefined) ? args.statuses : [];
   }
   static fromJson(e) {
-    var statuses = [];
+    const statuses = [];
     for (let v of e["statuses"]) {
       statuses.add(v);
     }
@@ -287,15 +287,15 @@ export class MineFeed {
     this.menu = (args && args.menu !== undefined) ? args.menu : [];
   }
   static fromJson(e) {
-    var stats = [];
+    const stats = [];
     for (let row of e["stats"]) {
-      var cells = [];
+      const cells = [];
       for (let v of row) {
         cells.add(v);
       }
       stats.add(cells);
     }
-    var menu = [];
+    const menu = [];
     for (let m of e["menu"]) {
       menu.add(MenuEntry.fromJson(m));
     }
@@ -317,11 +317,11 @@ export class SearchFeed {
     this.guesses = (args && args.guesses !== undefined) ? args.guesses : [];
   }
   static fromJson(e) {
-    var hot = [];
+    const hot = [];
     for (let v of e["hot"]) {
       hot.add(v);
     }
-    var guesses = [];
+    const guesses = [];
     for (let s of e["guesses"]) {
       guesses.add(Spot.fromJson(s));
     }
@@ -342,7 +342,7 @@ export class ResourceFeed {
     this.related = (args && args.related !== undefined) ? args.related : [];
   }
   static fromJson(e) {
-    var related = [];
+    const related = [];
     for (let p of e["related"]) {
       related.add(Post.fromJson(p));
     }

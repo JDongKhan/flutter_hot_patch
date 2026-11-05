@@ -42,8 +42,8 @@ export class OrdersView extends StatefulWidget {
       } })();
   }
   _buildOrderItem(context, i) {
-    var orders = context.read({ typeArguments: {"T": "OrdersVm"} }).orders;
-    var o = orders[i];
+    const orders = context.read({ typeArguments: {"T": "OrdersVm"} }).orders;
+    const o = orders[i];
     return new _OrderCard({
       "order": o,
       "statusColor": this._statusColor(o.status),
@@ -51,11 +51,11 @@ export class OrdersView extends StatefulWidget {
     });
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"T": "OrdersVm"} });
-    var feed = vm.feed;
-    if ((feed == null)) {
-      var error = vm.feedError;
-      if ((error != null)) {
+    const vm = context.watch({ typeArguments: {"T": "OrdersVm"} });
+    const feed = vm.feed;
+    if ((__nn(feed) == null)) {
+      const error = vm.feedError;
+      if ((__nn(error) != null)) {
         return new LoadErrorView({
           "message": error,
           "onRetry": (...__a) => vm.retry(...__a)
@@ -95,7 +95,7 @@ export class OrdersView extends StatefulWidget {
                                   "vertical": 6
                                 }))),
                                 "decoration": new BoxDecoration({
-                                  "color": (vm.status == s) ? (this.__k4 || (this.__k4 = new Color({
+                                  "color": (vm.status === __nn(s)) ? (this.__k4 || (this.__k4 = new Color({
                                     "value": 0xFFE8F2FF
                                   }))) : Colors.white,
                                   "borderRadius": BorderRadius.circular({
@@ -105,8 +105,8 @@ export class OrdersView extends StatefulWidget {
                                 "child": new Text({
                                   "style": new TextStyle({
                                     "fontSize": 13,
-                                    "fontWeight": (vm.status == s) ? FontWeight.w700 : FontWeight.w500,
-                                    "color": (vm.status == s) ? kBrand : (this.__k5 || (this.__k5 = new Color({
+                                    "fontWeight": (vm.status === __nn(s)) ? FontWeight.w700 : FontWeight.w500,
+                                    "color": (vm.status === __nn(s)) ? kBrand : (this.__k5 || (this.__k5 = new Color({
                                       "value": 0xFF5C6270
                                     })))
                                   }),
@@ -171,7 +171,7 @@ export class _OrderCard extends StatelessWidget {
     this.onOpen = (args && args.onOpen !== undefined) ? args.onOpen : null;
   }
   build(context) {
-    var pending = (this.order.status == "待付款");
+    const pending = (this.order.status === "待付款");
     return new GestureDetector({
       "onTap": this.onOpen,
       "child": new Container({

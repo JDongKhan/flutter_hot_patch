@@ -33,18 +33,18 @@ export class AppShellView extends StatefulWidget {
     this._index = 0;
   }
   dispose() {
-    var tab = this._tab;
+    const tab = this._tab;
     if ((tab != null)) {
       tab.dispose();
     }
     super.dispose();
   }
   _controllerFor(length) {
-    var current = this._tab;
-    if (((current != null) && (current.length == length))) {
+    const current = this._tab;
+    if (((current != null) && (__nn(current.length) === length))) {
       return current;
     }
-    var controller = new TabController({length: length, vsync: this});
+    const controller = new TabController({length: length, vsync: this});
     controller.addListener(() => { this.setState(() => {
         this._index = controller.index;
       }); });
@@ -56,7 +56,7 @@ export class AppShellView extends StatefulWidget {
     this.setState(() => {
       this._index = index;
     });
-    var tab = this._tab;
+    const tab = this._tab;
     if ((tab != null)) {
       tab.animateTo(index);
     }
@@ -78,14 +78,14 @@ export class AppShellView extends StatefulWidget {
     return Icons.apps;
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"T": "AppShellVm"} });
+    const vm = context.watch({ typeArguments: {"T": "AppShellVm"} });
     if (vm.loading) {
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})
       })));
     }
-    var error = vm.error;
-    if ((error != null)) {
+    const error = vm.error;
+    if ((__nn(error) != null)) {
       return new LoadErrorView({
         "message": error,
         "onRetry": () => this._retry()
@@ -97,7 +97,7 @@ export class AppShellView extends StatefulWidget {
         "onRetry": () => this._retry()
       });
     }
-    var tab = this._controllerFor(vm.tabs.length);
+    const tab = this._controllerFor(vm.tabs.length);
     return new Scaffold({
       "backgroundColor": (this.__k1 || (this.__k1 = new Color({
         "value": 0xFFF4F5F7
@@ -147,16 +147,16 @@ export class TabPageSlot extends StatelessWidget {
     this.screen = (args && args.screen !== undefined) ? args.screen : '';
   }
   build(context) {
-    if ((this.screen == "home")) {
+    if ((this.screen === "home")) {
       return (this.__k0 || (this.__k0 = new HomePage({})));
     }
-    if ((this.screen == "community")) {
+    if ((this.screen === "community")) {
       return (this.__k1 || (this.__k1 = new CommunityPage({})));
     }
-    if ((this.screen == "orders")) {
+    if ((this.screen === "orders")) {
       return (this.__k2 || (this.__k2 = new OrdersPage({})));
     }
-    if ((this.screen == "mine")) {
+    if ((this.screen === "mine")) {
       return (this.__k3 || (this.__k3 = new MinePage({})));
     }
     print("TabPageSlot 未知 tab 页面：" + this.screen);

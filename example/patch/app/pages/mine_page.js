@@ -32,10 +32,10 @@ export class MineView extends StatelessWidget {
     super(args);
   }
   _openMenu(m) {
-    if ((m.screen == "orders")) {
+    if ((m.screen === "orders")) {
       AppRouter.openOrders();
     } else {
-      if ((m.screen == "showcase")) {
+      if ((m.screen === "showcase")) {
         AppRouter.openWidgetShowcase();
       } else {
         WebView.open("https://flutter.dev", (m.arg.isEmpty ? m.title : m.arg));
@@ -43,11 +43,11 @@ export class MineView extends StatelessWidget {
     }
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"T": "MineVm"} });
-    var feed = vm.feed;
-    if ((feed == null)) {
-      var error = vm.error;
-      if ((error != null)) {
+    const vm = context.watch({ typeArguments: {"T": "MineVm"} });
+    const feed = vm.feed;
+    if ((__nn(feed) == null)) {
+      const error = vm.error;
+      if ((__nn(error) != null)) {
         return new LoadErrorView({
           "message": error,
           "onRetry": (...__a) => vm.load(...__a)
@@ -248,7 +248,7 @@ export class MineView extends StatelessWidget {
                               "height": 30,
                               "alignment": Alignment.center,
                               "decoration": new BoxDecoration({
-                                "color": MineView._menuTints[(i % MineView._menuTints.length)],
+                                "color": MineView._menuTints[__mod(i, MineView._menuTints.length)],
                                 "borderRadius": BorderRadius.circular({
                                   "radius": 9
                                 })

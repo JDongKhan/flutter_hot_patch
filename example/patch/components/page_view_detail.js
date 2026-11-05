@@ -91,7 +91,7 @@ export class PageViewDetail extends StatefulWidget {
                     }))),
                     "decoration": new BoxDecoration({
                       "shape": BoxShape.circle,
-                      "color": (i == this._page) ? Colors.deepPurple : (this.__k7 || (this.__k7 = new Color({
+                      "color": (__nn(i) === __nn(this._page)) ? Colors.deepPurple : (this.__k7 || (this.__k7 = new Color({
                         "value": 0xFFBDBDBD
                       })))
                     })

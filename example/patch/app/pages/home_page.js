@@ -44,22 +44,22 @@ export class HomeView extends StatefulWidget {
     this._refreshController.callRefresh();
   }
   async _pickCity() {
-    var vm = this.context.read({ typeArguments: {"T": "HomeVm"} });
-    var picked = await AppRouter.openCityPicker(vm.city);
-    if ((picked == null)) {
+    const vm = this.context.read({ typeArguments: {"T": "HomeVm"} });
+    const picked = await AppRouter.openCityPicker(vm.city);
+    if ((__nn(picked) == null)) {
       return;
     }
     await vm.changeCity(picked);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"T": "HomeVm"} });
+    const vm = context.watch({ typeArguments: {"T": "HomeVm"} });
     if (vm.loading) {
       return (this.__k0 || (this.__k0 = new Center({
         "child": new CircularProgressIndicator({})
       })));
     }
-    var error = vm.error;
-    if ((error != null)) {
+    const error = vm.error;
+    if ((__nn(error) != null)) {
       return new LoadErrorView({
         "message": error,
         "onRetry": (...__a) => vm.load(...__a)
@@ -113,23 +113,23 @@ export class FloorSlot extends StatelessWidget {
     this.floor = (args && args.floor !== undefined) ? args.floor : null;
   }
   build(context) {
-    var type = this.floor.type;
-    if ((type == "banner")) {
+    const type = this.floor.type;
+    if ((__nn(type) === "banner")) {
       return new BannerFloor({
         "vm": this.floor.vm
       });
     }
-    if ((type == "grid")) {
+    if ((__nn(type) === "grid")) {
       return new GridFloor({
         "vm": this.floor.vm
       });
     }
-    if ((type == "spots")) {
+    if ((__nn(type) === "spots")) {
       return new SpotFloor({
         "vm": this.floor.vm
       });
     }
-    if ((type == "promo")) {
+    if ((__nn(type) === "promo")) {
       return new PromoFloor({
         "vm": this.floor.vm
       });

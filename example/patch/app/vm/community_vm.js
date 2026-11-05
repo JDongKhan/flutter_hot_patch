@@ -34,7 +34,7 @@ export class CommunityVm extends ChangeNotifier {
   }
   async loadFeed() {
     try {
-      var value = await this._service.fetchCommunity();
+      const value = await this._service.fetchCommunity();
       this.feed = value;
       this.tab = value.tabs.first;
       this.sort = value.sorts.first;
@@ -44,7 +44,7 @@ export class CommunityVm extends ChangeNotifier {
       this.feedError = null;
       this.notifyListeners();
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("CommunityVm 配置加载失败: " + e);
       this.feedError = e.toString();
       this.notifyListeners();
@@ -54,13 +54,13 @@ export class CommunityVm extends ChangeNotifier {
     this.listLoading = true;
     this.notifyListeners();
     try {
-      var value = await this._service.fetchPostList(this.tab, this.sort, this.type, this.dist, this.price);
+      const value = await this._service.fetchPostList(this.tab, this.sort, this.type, this.dist, this.price);
       this.posts = value;
       this.listLoading = false;
       this.postsError = null;
       this.notifyListeners();
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("CommunityVm 帖子列表加载失败: " + e);
       this.listLoading = false;
       this.postsError = e.toString();
@@ -69,12 +69,12 @@ export class CommunityVm extends ChangeNotifier {
   }
   async loadResources() {
     try {
-      var value = await this._service.fetchCommunityResources(this.tab);
+      const value = await this._service.fetchCommunityResources(this.tab);
       this.resources = value;
       this.resourcesError = null;
       this.notifyListeners();
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("CommunityVm 资源横幅加载失败: " + e);
       this.resourcesError = e.toString();
       this.notifyListeners();
@@ -112,7 +112,7 @@ export class CommunityVm extends ChangeNotifier {
     this.loadPosts();
   }
   resetFilter() {
-    var value = this.feed;
+    const value = this.feed;
     if ((value == null)) {
       return;
     }

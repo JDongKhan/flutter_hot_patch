@@ -193,6 +193,20 @@ G.debugPrint = function (message) {
   }
   __logText('debug', __formatValue(message, []));
 };
+// 空值归一（Dart 只有 null，JS 有 null 与 undefined）：`__nn(v)` 把 undefined
+// 归一为 null，其它值（含 null）原样返回——**只归一，不抛错**。生成器在判空 /
+// 相等比较处先包一层（`__nn(x) == null`），保证下游只看到 null。
+if (typeof G.__nn !== 'function') {
+  G.__nn = function (v) { return v === undefined ? null : v; };
+}
+// Dart `%` 是欧几里得取模：结果非负（`-7 % 3 == 2`，`7 % -3 == 1`）。
+// JS `%` 是截断余数（`-7 % 3 == -1`），故统一走这里。
+if (typeof G.__mod !== 'function') {
+  G.__mod = function (a, b) {
+    var r = a % b;
+    return r < 0 ? r + Math.abs(b) : r;
+  };
+}
 ''';
 
 /// 静态尾部：骨架状态与工具（原 _jsUiGlobals 其余）。
@@ -311,10 +325,15 @@ const String _jsUiGlobalsTail = r'''
     //     已滑走但条目仍在树上，触发 "dismissed ... still part of the tree"）。
     //     语义按 Dart：remove 删第一个 == value 的元素并返回是否删过。
     remove: function (value) {
-      var i = this.indexOf(value);
-      if (i < 0) { return false; }
-      this.splice(i, 1);
-      return true;
+      for (var i = 0; i < this.length; i++) {
+        var el = this[i];
+        if (el === value ||
+            (el != null && typeof el.__op$eq === 'function' && el.__op$eq(value))) {
+          this.splice(i, 1);
+          return true;
+        }
+      }
+      return false;
     },
     removeLast: function () {
       return this.pop();
@@ -327,7 +346,118 @@ const String _jsUiGlobalsTail = r'''
       return removed;
     },
     insert: function (index, value) {
+      if (index < 0 || index > this.length) {
+        throw new RangeError('RangeError: Index out of range');
+      }
       this.splice(index, 0, value);
+    },
+    //   - Dart `List` 缺同名的成员（原生没有对应名字）：直接挂同名同义实现。
+    //     `addAll` 用循环而不是 `push(...xs)`（大数组展开有实参上限）。
+    addAll: function (values) {
+      for (var v of values) { this.push(v); }
+    },
+    // Dart `contains` 用 `==`：先按 `===` 比，再尝试元素自带的 `__op$eq`
+    // （声明了 `operator ==` 的自定义类由生成器改写成该成员）。
+    contains: function (value) {
+      for (var i = 0; i < this.length; i++) {
+        var el = this[i];
+        if (el === value) { return true; }
+        if (el != null && typeof el.__op$eq === 'function' && el.__op$eq(value)) {
+          return true;
+        }
+      }
+      return false;
+    },
+    // Dart `fillRange(start, end, [value])`（参数顺序与原生 fill(value, start, end) 不同）。
+    fillRange: function (start, end, value) {
+      if (end === undefined || end == null) { end = this.length; }
+      return this.fill(value === undefined ? null : value, start, end);
+    },
+    // Dart `sublist(start, [end])`：越界抛 RangeError（原生 slice 会静默裁剪）。
+    sublist: function (start, end) {
+      if (end === undefined || end == null) { end = this.length; }
+      if (start < 0 || start > this.length || end < start || end > this.length) {
+        throw new RangeError('RangeError: invalid sublist range');
+      }
+      return this.slice(start, end);
+    },
+    // Dart `firstWhere(test, {orElse})`：找不到时走 orElse，没有就抛 StateError。
+    firstWhere: function (predicate, orElse) {
+      for (var i = 0; i < this.length; i++) {
+        if (predicate(this[i])) { return this[i]; }
+      }
+      var fallback = orElse;
+      if (fallback && typeof fallback === 'object' && fallback.orElse) {
+        fallback = fallback.orElse;
+      }
+      if (typeof fallback === 'function') { return fallback(); }
+      throw new Error('StateError: No element');
+    },
+    // Dart `Iterable.expand(f)`：把每个元素展开成序列再串接（等价 flatMap）。
+    expand: function (f) {
+      var out = [];
+      for (var i = 0; i < this.length; i++) {
+        var part = f(this[i]);
+        for (var x of part) { out.push(x); }
+      }
+      return out;
+    },
+    // Dart `fold(init, fn)`：初值在前、累加器在后（与原生 reduce 不同）。
+    fold: function (init, fn) {
+      var acc = init;
+      for (var i = 0; i < this.length; i++) { acc = fn(acc, this[i]); }
+      return acc;
+    },
+    // Dart `any(f)` ↔ 原生 `some`（`every` 原生同名同义）。
+    any: function (f) { return this.some(f); },
+    // Dart `take(n)` / `skip(n)`：负数抛 RangeError，越界按长度截断。
+    take: function (n) {
+      if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
+      return this.slice(0, n < this.length ? n : this.length);
+    },
+    skip: function (n) {
+      if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
+      return this.slice(n < this.length ? n : this.length);
+    },
+    // Dart `asMap()`：索引 → 值的 Map（项目 Map 形态是普通对象）。
+    asMap: function () {
+      var m = {};
+      for (var i = 0; i < this.length; i++) { m[i] = this[i]; }
+      return m;
+    },
+    // Dart `elementAt(i)`：越界抛 RangeError（原生下标只会返回 undefined）。
+    elementAt: function (index) {
+      if (index < 0 || index >= this.length) {
+        throw new RangeError('RangeError: Index out of range');
+      }
+      return this[index];
+    },
+    //   - 原生同名但语义不一致（不覆盖原生，挂下划线版本；生成器只对可判定为
+    //     List 的接收者按映射表改写成 `_sort` / `_join` / `_setLength`）。
+    //     `_sort()` 无比较器时按 Dart Comparable（数值 / 字符串 / 自带 compareTo）。
+    _sort: function (compare) {
+      if (typeof compare === 'function') { return this.sort(compare); }
+      return this.sort(function (a, b) {
+        if (a === b) { return 0; }
+        if (a == null) { return -1; }
+        if (b == null) { return 1; }
+        if (typeof a.compareTo === 'function') { return a.compareTo(b); }
+        return a < b ? -1 : (a > b ? 1 : 0);
+      });
+    },
+    //     `_join()` 默认分隔符是空串（原生默认 `','`）。
+    _join: function (separator) {
+      return this.join(separator === undefined ? '' : separator);
+    },
+    //     `_setLength(n)`：Dart growable list 语义（截断 / 补 null），
+    //     负数或非整数抛 RangeError（原生写 length 会静默截断 / 扩展）。
+    _setLength: function (n) {
+      if (typeof n !== 'number' || !Number.isInteger(n) || n < 0) {
+        throw new RangeError('RangeError: Invalid list length');
+      }
+      if (n < this.length) { this.length = n; }
+      while (this.length < n) { this.push(null); }
+      return n;
     }
   });
   __defineProtoGetter(Array.prototype, {

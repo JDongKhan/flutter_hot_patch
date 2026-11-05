@@ -11,8 +11,8 @@ export class NetworkVm extends ChangeNotifier {
     super(args);
   }
   async loadUserInfo(__o) {
-    var params = (__o && __o.params !== undefined) ? __o.params : null;
-    var data = await Network.post({ "url": "loadUserInfo", "params": params });
+    let params = (__o && __o.params !== undefined) ? __o.params : null;
+    let data = await Network.post({ "url": "loadUserInfo", "params": params });
     print("获取数据:" + data);
     return data;
   }

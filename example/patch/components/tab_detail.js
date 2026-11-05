@@ -22,7 +22,7 @@ export class TabDetail extends StatefulWidget {
     super.dispose();
   }
   _next() {
-    this._controller.animateTo((((this._index + 1)) % 3));
+    this._controller.animateTo(__mod(((this._index + 1)), 3));
   }
   build(context) {
     return new Column({

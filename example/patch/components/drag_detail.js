@@ -27,17 +27,17 @@ export class DragDetail extends StatefulWidget {
   }
   _accept(label, data) {
     this.setState(() => {
-      if ((label == "篮子 A")) {
+      if ((label === "篮子 A")) {
         this._inBasketA = data;
       } else {
         this._inBasketB = data;
       }
       this._drops += 1;
-      this._log = ((data == null) ? label + " 收到空数据" : label + " 收到 " + data.name);
+      this._log = ((__nn(data) == null) ? label + " 收到空数据" : label + " 收到 " + data.name);
     });
   }
   _hover(label, data) {
-    if ((data == null)) {
+    if ((__nn(data) == null)) {
       return;
     }
     this.setState(() => {
@@ -235,8 +235,8 @@ export class DragDetail extends StatefulWidget {
     });
   }
   _basket(__o) {
-    var label = (__o && __o.label !== undefined) ? __o.label : null;
-    var fruit = (__o && __o.fruit !== undefined) ? __o.fruit : null;
+    let label = (__o && __o.label !== undefined) ? __o.label : null;
+    let fruit = (__o && __o.fruit !== undefined) ? __o.fruit : null;
     return new DragTarget({
       "onAcceptWithDetails": (details) => { return this._accept(label, details.data); },
       "onMove": (details) => { return this._hover(label, details.data); },
@@ -271,7 +271,7 @@ export class DragDetail extends StatefulWidget {
                 "style": (this.__k21 || (this.__k21 = new TextStyle({
                   "fontSize": 13
                 }))),
-                "data": hovering ? "松手放入 " + (candidate.first?.name ?? "") : (((fruit == null) ? "（空）" : fruit.name))
+                "data": hovering ? "松手放入 " + (candidate.first?.name ?? "") : (((__nn(fruit) == null) ? "（空）" : fruit.name))
               })
             ]
           })

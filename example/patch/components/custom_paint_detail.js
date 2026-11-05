@@ -11,12 +11,12 @@ export class _FramePainter extends CustomPainter {
     super(args);
   }
   paint(canvas, size) {
-    var border = new Paint();
+    const border = new Paint();
     border.color = new Color({value: 0xFF00E676});
     border.style = PaintingStyle.stroke;
     border.strokeWidth = 2;
     canvas.drawRRect(RRect.fromRectAndRadius({rect: Rect.fromLTWH({left: 0, top: 0, width: size.width, height: size.height}), radius: Radius.circular({radius: 12})}), border);
-    var dot = new Paint();
+    const dot = new Paint();
     dot.color = new Color({value: 0xFFFF1744});
     canvas.drawCircle(new Offset({dx: (size.width - 16), dy: 16}), 5, dot);
   }
@@ -36,31 +36,31 @@ export class _MediaPainter extends CustomPainter {
     this.angle = (args && args.angle !== undefined) ? args.angle : 0.25;
   }
   paint(canvas, size) {
-    var bg = new Paint();
+    const bg = new Paint();
     bg.color = new Color({value: 0xFF102027});
     canvas.drawRect(Rect.fromLTWH({left: 0, top: 0, width: size.width, height: size.height}), bg);
-    var title = new TextPainter({text: new TextSpan({text: "Canvas 文字排版", style: new TextStyle({color: new Color({value: 0xFFE0F7FA}), fontSize: 18, fontWeight: FontWeight.bold})}), textDirection: TextDirection.ltr, textAlign: TextAlign.center, maxLines: 1});
+    const title = new TextPainter({text: new TextSpan({text: "Canvas 文字排版", style: new TextStyle({color: new Color({value: 0xFFE0F7FA}), fontSize: 18, fontWeight: FontWeight.bold})}), textDirection: TextDirection.ltr, textAlign: TextAlign.center, maxLines: 1});
     title.layout({ "maxWidth": size.width });
     title.paint(canvas, new Offset({dx: 0, dy: 12}));
     canvas.save();
     canvas.translate((size.width / 2), 60);
     canvas.rotate((-0.22));
-    var tag = new TextPainter({text: new TextSpan({text: "旋转文字 -12.6°", style: new TextStyle({color: new Color({value: 0xFFFFD54F}), fontSize: 15, fontWeight: FontWeight.bold})}), textDirection: TextDirection.ltr});
+    const tag = new TextPainter({text: new TextSpan({text: "旋转文字 -12.6°", style: new TextStyle({color: new Color({value: 0xFFFFD54F}), fontSize: 15, fontWeight: FontWeight.bold})}), textDirection: TextDirection.ltr});
     tag.layout({ "maxWidth": 240 });
     tag.paint(canvas, new Offset({dx: (-72), dy: (-12)}));
     canvas.restore();
-    var line = new Paint();
+    const line = new Paint();
     line.color = new Color({value: 0xFF546E7A});
     line.strokeWidth = 1;
     canvas.drawLine(new Offset({dx: 16, dy: 96}), new Offset({dx: (size.width - 16), dy: 96}), line);
-    var img = this.image;
+    const img = this.image;
     if ((img == null)) {
-      var waiting = new TextPainter({text: new TextSpan({text: "图片加载中…", style: new TextStyle({color: new Color({value: 0xFF90A4AE}), fontSize: 14})}), textDirection: TextDirection.ltr});
+      const waiting = new TextPainter({text: new TextSpan({text: "图片加载中…", style: new TextStyle({color: new Color({value: 0xFF90A4AE}), fontSize: 14})}), textDirection: TextDirection.ltr});
       waiting.layout({ "maxWidth": size.width });
       waiting.paint(canvas, new Offset({dx: 16, dy: 132}));
       return;
     }
-    var imgPaint = new Paint();
+    const imgPaint = new Paint();
     canvas.drawImageRect(img, Rect.fromLTWH({left: 0, top: 0, width: img.width.toDouble(), height: img.height.toDouble()}), Rect.fromLTWH({left: 16, top: 108, width: 150, height: 80}), imgPaint);
     canvas.save();
     canvas.translate(276, 148);
@@ -69,7 +69,7 @@ export class _MediaPainter extends CustomPainter {
     canvas.restore();
   }
   shouldRepaint(oldDelegate) {
-    return ((oldDelegate.image != this.image) || (oldDelegate.angle != this.angle));
+    return ((__nn(oldDelegate.image) !== __nn(this.image)) || (__nn(oldDelegate.angle) !== this.angle));
   }
 }
 
@@ -79,33 +79,33 @@ export class _BoardPainter extends CustomPainter {
     super(args);
   }
   paint(canvas, size) {
-    var bg = new Paint();
+    const bg = new Paint();
     bg.color = new Color({value: 0xFF102027});
     canvas.drawRect(Rect.fromLTWH({left: 0, top: 0, width: size.width, height: size.height}), bg);
-    var grid = new Paint();
+    const grid = new Paint();
     grid.color = new Color({value: 0xFF37474F});
     grid.strokeWidth = 1;
     for (let i = 1; (i < 8); (i++)) {
-      var x = ((size.width / 8) * i);
+      const x = ((size.width / 8) * i);
       canvas.drawLine(new Offset({dx: x, dy: 0}), new Offset({dx: x, dy: size.height}), grid);
     }
     for (let j = 1; (j < 6); (j++)) {
-      var y = ((size.height / 6) * j);
+      const y = ((size.height / 6) * j);
       canvas.drawLine(new Offset({dx: 0, dy: y}), new Offset({dx: size.width, dy: y}), grid);
     }
     canvas.save();
     canvas.translate(90, 78);
     canvas.rotate(0.5);
-    var fill = new Paint();
+    const fill = new Paint();
     fill.color = new Color({value: 0xFF4DD0E1});
     canvas.drawCircle(new Offset({dx: 0, dy: 0}), 30, fill);
-    var ring = new Paint();
+    const ring = new Paint();
     ring.color = new Color({value: 0xFFFFB300});
     ring.style = PaintingStyle.stroke;
     ring.strokeWidth = 4;
     canvas.drawCircle(new Offset({dx: 0, dy: 0}), 42, ring);
     canvas.restore();
-    var arc = new Paint();
+    const arc = new Paint();
     arc.color = new Color({value: 0xFF81C784});
     arc.style = PaintingStyle.stroke;
     arc.strokeWidth = 6;
@@ -113,27 +113,27 @@ export class _BoardPainter extends CustomPainter {
     canvas.drawArc(Rect.fromLTWH({left: 150, top: 24, width: 150, height: 110}), 0.2, 2.4, false, arc);
     canvas.save();
     canvas.clipRRect(RRect.fromRectAndRadius({rect: Rect.fromLTWH({left: 170, top: 150, width: 140, height: 70}), radius: Radius.circular({radius: 18})}));
-    var clipFill = new Paint();
+    const clipFill = new Paint();
     clipFill.color = new Color({value: 0x66FF5252});
     canvas.drawCircle(new Offset({dx: 240, dy: 170}), 60, clipFill);
     canvas.restore();
-    var path = new Path();
+    const path = new Path();
     path.moveTo(10, 190);
     path.quadraticBezierTo(40, 150, 70, 190);
     path.cubicTo(100, 230, 140, 150, 170, 190);
     path.close();
-    var pathPaint = new Paint();
+    const pathPaint = new Paint();
     pathPaint.color = new Color({value: 0xFFB388FF});
     pathPaint.style = PaintingStyle.stroke;
     pathPaint.strokeWidth = 3;
     canvas.drawPath(path, pathPaint);
-    var gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [new Color({value: 0xFF1A237E}), new Color({value: 0xFF00BCD4})]});
-    var shader = gradient.createShader(Rect.fromLTWH({left: 0, top: 0, width: size.width, height: size.height}));
-    var shaderPaint = new Paint();
+    const gradient = new LinearGradient({begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [new Color({value: 0xFF1A237E}), new Color({value: 0xFF00BCD4})]});
+    const shader = gradient.createShader(Rect.fromLTWH({left: 0, top: 0, width: size.width, height: size.height}));
+    const shaderPaint = new Paint();
     shaderPaint.shader = shader;
     canvas.drawRRect(RRect.fromRectAndRadius({rect: Rect.fromLTWH({left: 8, top: 196, width: 84, height: 30}), radius: Radius.circular({radius: 10})}), shaderPaint);
     canvas.saveLayer(Rect.fromLTWH({left: 0, top: 0, width: size.width, height: size.height}), new Paint());
-    var overlay = new Paint();
+    const overlay = new Paint();
     overlay.color = new Color({value: 0x33FFFFFF});
     canvas.drawRect(Rect.fromLTWH({left: 150, top: 150, width: 160, height: 70}), overlay);
     canvas.restore();
@@ -154,7 +154,7 @@ export class CustomPaintDetail extends StatefulWidget {
     this._loadPhoto();
   }
   async _loadPhoto() {
-    var img = await CanvasImage.load("assets/images/photo-1504280390367-361c6d9f38f4.jpg");
+    const img = await CanvasImage.load("assets/images/photo-1504280390367-361c6d9f38f4.jpg");
     this.setState(() => {
       this._photo = img;
     });

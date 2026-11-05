@@ -74,12 +74,12 @@ export class GuideBubbleWidget extends StatefulWidget {
         this._fadeTimer = new Timer({duration: GuideBubbleWidget._fadeDuration, callback: () => { this._controller.hide(); }}); }});
   }
   _cancelTimers() {
-    var timer = this._timer;
+    const timer = this._timer;
     if ((timer != null)) {
       timer.cancel();
     }
     this._timer = null;
-    var fadeTimer = this._fadeTimer;
+    const fadeTimer = this._fadeTimer;
     if ((fadeTimer != null)) {
       fadeTimer.cancel();
     }
@@ -100,8 +100,8 @@ export class GuideBubbleWidget extends StatefulWidget {
     });
   }
   _buildOverlayChild(context) {
-    var centered = (this.alignment == "center");
-    var right = (this.alignment == "right");
+    const centered = (this.alignment === "center");
+    const right = (this.alignment === "right");
     return new CompositedTransformFollower({
       "link": this._layerLink,
       "showWhenUnlinked": false,
@@ -121,7 +121,7 @@ export class GuideBubbleWidget extends StatefulWidget {
     });
   }
   _buildBubbleContent() {
-    var children = [this._arrowRow(), new Container({
+    const children = [this._arrowRow(), new Container({
         "padding": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
           "horizontal": 16,
           "vertical": 10
@@ -141,14 +141,14 @@ export class GuideBubbleWidget extends StatefulWidget {
           "data": this.text
         })
       })];
-    if ((this.alignment == "center")) {
+    if ((this.alignment === "center")) {
       return new Column({
         "mainAxisSize": MainAxisSize.min,
         "crossAxisAlignment": CrossAxisAlignment.center,
         "children": children
       });
     }
-    if ((this.alignment == "right")) {
+    if ((this.alignment === "right")) {
       return new Column({
         "mainAxisSize": MainAxisSize.min,
         "crossAxisAlignment": CrossAxisAlignment.end,
@@ -162,7 +162,7 @@ export class GuideBubbleWidget extends StatefulWidget {
     });
   }
   _arrowRow() {
-    if ((this.alignment == "right")) {
+    if ((this.alignment === "right")) {
       return new Padding({
         "padding": (this.__k1 || (this.__k1 = EdgeInsets.only({
           "right": GuideBubbleWidget._arrowInset
@@ -170,7 +170,7 @@ export class GuideBubbleWidget extends StatefulWidget {
         "child": this._buildArrow()
       });
     }
-    if ((this.alignment == "center")) {
+    if ((this.alignment === "center")) {
       return this._buildArrow();
     }
     return new Padding({

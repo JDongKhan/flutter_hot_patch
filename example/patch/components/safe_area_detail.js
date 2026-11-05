@@ -11,7 +11,7 @@ export class SafeAreaDetail extends StatefulWidget {
     this._enabled = true;
   }
   build(context) {
-    var padding = MediaQuery.paddingOf(context);
+    const padding = MediaQuery.paddingOf(context);
     return new Column({
       "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [

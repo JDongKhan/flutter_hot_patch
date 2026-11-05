@@ -61,16 +61,16 @@ export class GenericDetail extends StatefulWidget {
     });
   }
   build(context) {
-    var stringCodec = new TypeCodec({
+    const stringCodec = new TypeCodec({
       "typeArguments": {"T": "String"}
     });
-    var intCodec = new TypeCodec({
+    const intCodec = new TypeCodec({
       "typeArguments": {"T": "int"}
     });
-    var doubleCodec = new TypeCodec({
+    const doubleCodec = new TypeCodec({
       "typeArguments": {"T": "double"}
     });
-    var pair = new Pair({
+    const pair = new Pair({
       "key": "answer",
       "value": 42,
       "typeArguments": {"K": "String", "V": "int"}

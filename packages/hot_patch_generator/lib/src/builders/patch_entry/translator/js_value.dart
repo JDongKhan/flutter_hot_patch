@@ -195,7 +195,10 @@ String? typeTestJs(String typeName, String valueJs, {Set<String> knownClasses = 
   switch (t) {
     case 'String':
       return 'typeof $valueJs === "string"';
+    // web 上 int 与 double 都是 JS number，但 Dart 的 `is int` 仍要求整数值
+    // （`1.5 is int` 为 false）——按 `Number.isInteger` 判定。
     case 'int':
+      return 'Number.isInteger($valueJs)';
     case 'double':
     case 'num':
       return 'typeof $valueJs === "number"';
@@ -204,14 +207,21 @@ String? typeTestJs(String typeName, String valueJs, {Set<String> knownClasses = 
     case 'List':
     case 'Iterable':
       return 'Array.isArray($valueJs)';
+    case 'Set':
+      return '$valueJs instanceof Set';
     case 'Map':
       return '($valueJs != null && typeof $valueJs === "object" '
-          '&& !Array.isArray($valueJs))';
+          '&& !Array.isArray($valueJs) && !($valueJs instanceof Set))';
     case 'Function':
       return 'typeof $valueJs === "function"';
+    // Dart 的顶层类型：`dynamic` 不做任何检查（恒真），`Object?` 只排除空。
     case 'Object':
+      return '(__nn($valueJs) != null)';
     case 'dynamic':
-      return '$valueJs != null';
+      return 'true';
+    // `Never` 在运行时不可达：`is Never` 恒为 false（等价于删除该分支）。
+    case 'Never':
+      return 'false';
   }
   if (knownClasses.contains(t) ||
       hostWrapperTypes.contains(t) ||

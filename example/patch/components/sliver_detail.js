@@ -27,52 +27,52 @@ export class SliverDetail extends StatefulWidget {
     this._controller.jumpTo(this._controller.position.maxScrollExtent);
   }
   _scrollToFixed() {
-    var ctx = this._fixedKey.currentContext;
-    if ((ctx == null)) {
+    const ctx = this._fixedKey.currentContext;
+    if ((__nn(ctx) == null)) {
       return;
     }
-    var target = ctx.findRenderObject();
-    if ((target == null)) {
+    const target = ctx.findRenderObject();
+    if ((__nn(target) == null)) {
       return;
     }
     target.showOnScreen();
   }
   async _measureFixed() {
-    var ctx = this._fixedKey.currentContext;
-    if ((ctx == null)) {
+    const ctx = this._fixedKey.currentContext;
+    if ((__nn(ctx) == null)) {
       return;
     }
-    var box = ctx.findRenderObject();
-    if ((box == null)) {
+    const box = ctx.findRenderObject();
+    if ((__nn(box) == null)) {
       return;
     }
-    var dx;
-    var dy;
-    var width;
-    var height;
+    let dx = null;
+    let dy = null;
+    let width = null;
+    let height = null;
     if (kInJsRuntime) {
-      var rect = await box.measure();
-      if ((rect != null)) {
+      const rect = await box.measure();
+      if ((__nn(rect) != null)) {
         dx = rect.dx;
         dy = rect.dy;
         width = rect.width;
         height = rect.height;
       }
     } else {
-      var offset = box.localToGlobal(new Offset({dx: 0, dy: 0}));
-      var size = box.size;
+      const offset = box.localToGlobal(new Offset({dx: 0, dy: 0}));
+      const size = box.size;
       dx = offset.dx;
       dy = offset.dy;
       width = size.width;
       height = size.height;
     }
-    if (((((dx == null) || (dy == null)) || (width == null)) || (height == null))) {
+    if (((((__nn(dx) == null) || (__nn(dy) == null)) || (__nn(width) == null)) || (__nn(height) == null))) {
       this.setState(() => {
         this._measureText = "量不到（未布局）";
       });
       return;
     }
-    var text = "x=" + dx.toStringAsFixed(1) + " y=" + dy.toStringAsFixed(1) + " · " + width.toStringAsFixed(0) + " × " + height.toStringAsFixed(0);
+    const text = "x=" + dx.toStringAsFixed(1) + " y=" + dy.toStringAsFixed(1) + " · " + width.toStringAsFixed(0) + " × " + height.toStringAsFixed(0);
     this.setState(() => {
       this._measureText = text;
     });

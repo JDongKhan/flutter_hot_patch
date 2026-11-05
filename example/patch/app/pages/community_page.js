@@ -31,7 +31,7 @@ export class CommunityView extends StatefulWidget {
     super(args);
   }
   _buildResourceItem(context, i) {
-    var resources = context.read({ typeArguments: {"T": "CommunityVm"} }).resources;
+    const resources = context.read({ typeArguments: {"T": "CommunityVm"} }).resources;
     return new _ResourceCard({
       "resource": resources[i],
       "onTap": () => AppRouter.openResource(resources[i].id)
@@ -39,12 +39,12 @@ export class CommunityView extends StatefulWidget {
   }
   build(context) {
     super.build(context);
-    var vm = context.watch({ typeArguments: {"T": "CommunityVm"} });
-    var feed = vm.feed;
-    var resources = vm.resources;
-    var error = (vm.feedError ?? vm.resourcesError);
-    if (((feed == null) || (resources == null))) {
-      if ((error != null)) {
+    const vm = context.watch({ typeArguments: {"T": "CommunityVm"} });
+    const feed = vm.feed;
+    const resources = vm.resources;
+    const error = (vm.feedError ?? vm.resourcesError);
+    if (((__nn(feed) == null) || (__nn(resources) == null))) {
+      if ((__nn(error) != null)) {
         return new LoadErrorView({
           "message": error,
           "onRetry": (...__a) => vm.retry(...__a)
@@ -81,7 +81,7 @@ export class CommunityView extends StatefulWidget {
                                 "vertical": 6
                               }))),
                               "decoration": new BoxDecoration({
-                                "color": (vm.tab == t) ? (this.__k4 || (this.__k4 = new Color({
+                                "color": (vm.tab === __nn(t)) ? (this.__k4 || (this.__k4 = new Color({
                                   "value": 0xFFE8F2FF
                                 }))) : (this.__k5 || (this.__k5 = new Color({
                                   "value": 0xFFF3F5F8
@@ -93,8 +93,8 @@ export class CommunityView extends StatefulWidget {
                               "child": new Text({
                                 "style": new TextStyle({
                                   "fontSize": 13.5,
-                                  "fontWeight": (vm.tab == t) ? FontWeight.w700 : FontWeight.w500,
-                                  "color": (vm.tab == t) ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                                  "fontWeight": (vm.tab === __nn(t)) ? FontWeight.w700 : FontWeight.w500,
+                                  "color": (vm.tab === __nn(t)) ? kBrand : (this.__k6 || (this.__k6 = new Color({
                                     "value": 0xFF5C6270
                                   })))
                                 }),
@@ -171,7 +171,7 @@ export class CommunityView extends StatefulWidget {
                             "vertical": 5
                           }))),
                           "decoration": new BoxDecoration({
-                            "color": (vm.sort == s) ? (this.__k4 || (this.__k4 = new Color({
+                            "color": (vm.sort === __nn(s)) ? (this.__k4 || (this.__k4 = new Color({
                               "value": 0xFFE8F2FF
                             }))) : (this.__k5 || (this.__k5 = new Color({
                               "value": 0xFFF3F5F8
@@ -183,8 +183,8 @@ export class CommunityView extends StatefulWidget {
                           "child": new Text({
                             "style": new TextStyle({
                               "fontSize": 12.5,
-                              "fontWeight": (vm.sort == s) ? FontWeight.w700 : FontWeight.w500,
-                              "color": (vm.sort == s) ? kBrand : (this.__k6 || (this.__k6 = new Color({
+                              "fontWeight": (vm.sort === __nn(s)) ? FontWeight.w700 : FontWeight.w500,
+                              "color": (vm.sort === __nn(s)) ? kBrand : (this.__k6 || (this.__k6 = new Color({
                                 "value": 0xFF5C6270
                               })))
                             }),
@@ -295,13 +295,13 @@ export class _ListContent extends StatefulWidget {
   didUpdateWidget(oldWidget) {
     super.didUpdateWidget(oldWidget);
     print("--_ListContent didUpdateWidget 0");
-    if ((this.list.length != oldWidget.list.length)) {
+    if ((this.list.length !== __nn(oldWidget.list.length))) {
       print("-- _ListContent didUpdateWidget 1");
     }
   }
   build(context) {
-    var posts = this.list;
-    var filterOpen = this.openFilter;
+    const posts = this.list;
+    const filterOpen = this.openFilter;
     return new Stack({
       "children": [
         new ListView({
@@ -438,7 +438,7 @@ export class _FilterPanel extends StatefulWidget {
                         "vertical": 6
                       }))),
                       "decoration": new BoxDecoration({
-                        "color": (current == v) ? kBrand : (this.__k3 || (this.__k3 = new Color({
+                        "color": (__nn(current) === __nn(v)) ? kBrand : (this.__k3 || (this.__k3 = new Color({
                           "value": 0xFFF3F5F8
                         }))),
                         "borderRadius": BorderRadius.circular({
@@ -449,7 +449,7 @@ export class _FilterPanel extends StatefulWidget {
                         "style": new TextStyle({
                           "fontSize": 12,
                           "fontWeight": FontWeight.w500,
-                          "color": (current == v) ? Colors.white : (this.__k4 || (this.__k4 = new Color({
+                          "color": (__nn(current) === __nn(v)) ? Colors.white : (this.__k4 || (this.__k4 = new Color({
                             "value": 0xFF5C6270
                           })))
                         }),

@@ -29,16 +29,16 @@ export class OrdersVm extends ChangeNotifier {
   }
   async loadFeed() {
     try {
-      var value = await this._service.fetchOrders();
+      const value = await this._service.fetchOrders();
       this.feed = value;
       this.status = (this.initialStatus ?? value.statuses.first);
       this.feedError = null;
       this.notifyListeners();
-      if ((this.initialStatus != null)) {
+      if ((__nn(this.initialStatus) != null)) {
         await this.loadOrders();
       }
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("OrdersVm 状态条加载失败: " + e);
       this.feedError = e.toString();
       this.notifyListeners();
@@ -48,13 +48,13 @@ export class OrdersVm extends ChangeNotifier {
     this.listLoading = true;
     this.notifyListeners();
     try {
-      var value = await this._service.fetchOrderList(this.status);
+      const value = await this._service.fetchOrderList(this.status);
       this.orders = value;
       this.listLoading = false;
       this.ordersError = null;
       this.notifyListeners();
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("OrdersVm 订单列表加载失败: " + e);
       this.listLoading = false;
       this.ordersError = e.toString();

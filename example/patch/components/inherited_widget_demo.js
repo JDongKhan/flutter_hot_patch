@@ -51,7 +51,7 @@ export class InheritedCard extends StatefulWidget {
                   }))),
                   new ElevatedButton({
                     "onPressed": () => { this.setState(() => {
-                        this._mode = ((this._mode == "A") ? "B" : "A");
+                        this._mode = ((__nn(this._mode) === "A") ? "B" : "A");
                       }); },
                     "child": (this.__k5 || (this.__k5 = new Text({
                       "data": "切换 mode"
@@ -86,7 +86,7 @@ export class _ModeLabel extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var scope = _DemoScope.of(context);
+    const scope = _DemoScope.of(context);
     return new Text({
       "data": "mode = " + scope.mode
     });
@@ -99,7 +99,7 @@ export class _CountLabel extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var scope = _DemoScope.of(context);
+    const scope = _DemoScope.of(context);
     return new Text({
       "data": "count = " + scope.count
     });
@@ -117,14 +117,14 @@ export class _DemoScope extends InheritedWidget {
     this.mode = (args && args.mode !== undefined) ? args.mode : '';
   }
   static of(context) {
-    var scope = context.dependOnInheritedWidgetOfExactType({ typeArguments: {"0": "_DemoScope"} });
+    const scope = context.dependOnInheritedWidgetOfExactType({ typeArguments: {"0": "_DemoScope"} });
     return scope;
   }
   static read(context) {
     return context.getInheritedWidgetOfExactType({ typeArguments: {"0": "_DemoScope"} });;
   }
   updateShouldNotify(oldWidget) {
-    return ((this.count != oldWidget.count) || (this.mode != oldWidget.mode));
+    return ((this.count !== __nn(oldWidget.count)) || (this.mode !== __nn(oldWidget.mode)));
   }
 }
 

@@ -27,7 +27,7 @@ export class BannerCarousel extends StatefulWidget {
   }
   didUpdateWidget(oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if ((oldWidget.banners != this.banners)) {
+    if ((oldWidget.banners !== this.banners)) {
       this._reset();
     }
   }
@@ -37,8 +37,8 @@ export class BannerCarousel extends StatefulWidget {
     super.dispose();
   }
   _reset() {
-    var count = this.banners.length;
-    if ((count == 0)) {
+    const count = this.banners.length;
+    if ((__nn(count) === 0)) {
       this._stopAutoPlay();
       this._index = 0;
       return;
@@ -63,14 +63,14 @@ export class BannerCarousel extends StatefulWidget {
     this._timer = Timer.periodic({duration: BannerCarousel._interval, callback: (timer) => { return this._tick(timer); }});
   }
   _tick(timer) {
-    if ((this._timer == null)) {
+    if ((__nn(this._timer) == null)) {
       return;
     }
-    var count = this.banners.length;
+    const count = this.banners.length;
     if ((count < 2)) {
       return;
     }
-    var next = (((this._index + 1)) % count);
+    const next = __mod(((this._index + 1)), count);
     this._controller.animateToPage(next, { "duration": BannerCarousel._animate, "curve": Curves.easeOut });
     this.setState(() => {
       this._index = next;
@@ -82,8 +82,8 @@ export class BannerCarousel extends StatefulWidget {
     });
   }
   build(context) {
-    var banners = this.banners;
-    if ((banners.length == 0)) {
+    const banners = this.banners;
+    if ((banners.length === 0)) {
       return (this.__k0 || (this.__k0 = SizedBox.shrink({})));
     }
     return new Column({
@@ -114,7 +114,7 @@ export class BannerCarousel extends StatefulWidget {
                     "width": 6,
                     "height": 6,
                     "decoration": new BoxDecoration({
-                      "color": (i == this._index) ? (this.__k3 || (this.__k3 = new Color({
+                      "color": (__nn(i) === __nn(this._index)) ? (this.__k3 || (this.__k3 = new Color({
                         "value": 0xFF0E7AFB
                       }))) : (this.__k4 || (this.__k4 = new Color({
                         "value": 0xFFD5D9E0

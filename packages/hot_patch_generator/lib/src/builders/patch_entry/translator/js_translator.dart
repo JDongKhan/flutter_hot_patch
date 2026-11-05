@@ -156,7 +156,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       if (l != null && r != null) return '($l $op $r)';
     }
     if (const <String>{
-      '>', '<', '>=', '<=', '==', '!=', '&&', '||', '+', '-', '*', '/', '%',
+      '>', '<', '>=', '<=', '==', '!=', '&&', '||', '+', '-', '*', '/',
       // 位运算与移位：JS 同名运算符语义一致（`>>` 算术右移、`>>>` 无符号右移）。
       // 数值口径随运行时（Dart int 在 JS 侧就是 number），按 32 位位宽参与运算。
       '&', '|', '^', '<<', '>>', '>>>'
@@ -170,7 +170,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       if (owner != null) {
         if (op == '==' || op == '!=') {
           // Dart 的 `==` 是方法调用：接收者为 null 时走 null 的 ==（不等于
-          // 任何非空值）。两侧先求值一次，再判空 / 分派。
+          // 任何非空值）。两侧先求值一次，再判空 / 分派（`== null` 同时命中
+          // null 与 undefined，不在此处额外归一）。
           final neg = op == '!=' ? '!' : '';
           return '$neg((__a, __b) => __a == null ? __b == null '
               ': __a.${operatorJsName('==', unary: false)}'
@@ -179,7 +180,42 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
         final jsOp = operatorJsName(op, unary: false);
         if (jsOp != null) return '$l.$jsOp($r)';
       }
+      // 判空 / 相等：Dart 只有 null，JS 有 null 与 undefined —— 两侧先 `__nn`
+      // 归一（undefined → null），判空保持 `== null`（禁止 `=== null`），
+      // 其余相等用严格相等，避免 JS 宽松相等做类型转换。
+      if (op == '==' || op == '!=') {
+        final leftNull = e.leftOperand is NullLiteral;
+        final rightNull = e.rightOperand is NullLiteral;
+        if (leftNull || rightNull) {
+          final otherExpr = leftNull ? e.rightOperand : e.leftOperand;
+          final otherJs = leftNull ? r : l;
+          // 判空：只有另一侧**可能为空**时才包 `__nn`（非空类型的字段 / 形参、
+          // 字面量、构造等不会产出 undefined，不归一）。
+          final wrapped = _mayBeNull(otherExpr, scope, classes)
+              ? '__nn(${_fnParen(otherJs, otherExpr)})'
+              : otherJs;
+          return '($wrapped $op null)';
+        }
+        // 非判空相等：Dart 的 `==` 语义要求两侧都按「空值只有一个」比较；
+        // 只有可能为空的一侧才归一并保持严格相等（不会为空的照常直接比较）。
+        final strict = op == '==' ? '===' : '!==';
+        final lw = _mayBeNull(e.leftOperand, scope, classes)
+            ? '__nn(${_fnParen(l, e.leftOperand)})'
+            : l;
+        final rw = _mayBeNull(e.rightOperand, scope, classes)
+            ? '__nn(${_fnParen(r, e.rightOperand)})'
+            : r;
+        return '($lw $strict $rw)';
+      }
       return '(${_fnParen(l, e.leftOperand)} $op ${_fnParen(r, e.rightOperand)})';
+    }
+    // Dart `%` 是欧几里得取模（结果非负），JS `%` 是截断余数（`-7 % 3 == -1`）。
+    if (op == '%') {
+      final l = exprToJs(e.leftOperand, scope, classes);
+      final r = exprToJs(e.rightOperand, scope, classes);
+      if (l == null || r == null) return null;
+      return '__mod(${_fnParen(l, e.leftOperand)}, '
+          '${_fnParen(r, e.rightOperand)})';
     }
     // Dart 整除 `a ~/ b`：JS 无对应运算符，转「向零取整」的除法。
     // 必须用 Math.trunc 而不是 Math.floor：Dart 的 `~/` 向零截断
@@ -211,7 +247,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
           if (v == null) return null;
           argsJs.add(v);
         }
-        stmts.add('_t.${s.methodName.name}(${argsJs.join(', ')})');
+        stmts.add('_t.${_memberCallName(e.target, s.methodName.name, scope, classes)}'
+            '(${argsJs.join(', ')})');
       } else if (s is AssignmentExpression) {
         // 级联里**赋值** `..x = v` / `..[i] = v` / `..x += v`：目标链以 `_t`
         // 为根（级联 target 已只求值一次），落成 IIFE 内的一条语句；赋值结果
@@ -383,32 +420,50 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       return e.isNullAware ? '$t?.$get($i)' : '$t.$get($i)';
     }
     // `a?[i]` → JS 原生可选下标 `a?.[i]`：接收者为 null / undefined 时整个
-    // 表达式短路，且下标**不求值**（与 Dart 语义一致）。
+    // 表达式短路，且下标**不求值**（与 Dart 语义一致）。这里不能包 `__nn`：
+    // 可选链可能继续被外层选择器链住（`a?[i].x` 在 a 为 null 时应整链短路）。
     if (e.isNullAware) return '$t?.[$i]';
+    // Map 未命中的 undefined → null 归一放在**值位置**（初始化器 / 赋值右侧 /
+    // 实参 / 返回 / 插值，见 [rhsToJs] / [_stringInterpolationJs]），不在读取
+    // 本身统一包：`for (x of m[k])` 对 null 与 undefined 同样 TypeError，包了
+    // 没有意义；判断位置由相等比较分支按可空性包。
     return '$t[$i]';
   }
   if (e is ParenthesizedExpression) {
     final inner = exprToJs(e.expression, scope, classes);
     return inner == null ? null : '($inner)';
   }
-  // 自增/自减（表达式位置，如 for 更新子 `i++`）；Postfix `!` 是 Dart null
-  // 断言，JS 无此概念，直接取操作数（条件短路保护）。
+  // 自增/自减（表达式位置，如 for 更新子 `i++`）。Postfix `!` 是 Dart null
+  // 断言：项目口径直接取操作数（不额外抛错；访问位置由 JS 自然抛 TypeError，
+  // 独立值位置不校验）。`a?[i]++` / `a?.x++` 的写入目标含可选链，JS 不允许，
+  // 落成接收者单次求值的守卫 IIFE。
   if (e is PostfixExpression) {
+    final op = e.operator.lexeme;
+    if (op == '!') {
+      return exprToJs(e.operand, scope, classes);
+    }
+    if ((op == '++' || op == '--') && _chainHasNullAware(e.operand)) {
+      return _nullAwareUpdateJs(
+          e.operand, op, scope, classes, prefix: false);
+    }
     final v = exprToJs(e.operand, scope, classes);
     if (v == null) return null;
-    if (e.operator.lexeme == '!') return v;
-    return '($v${e.operator.lexeme})';
+    return '($v$op)';
   }
   // 前缀一元（`!flag` / `-n` / `++i` / `--i`）。
   if (e is PrefixExpression) {
+    final op = e.operator.lexeme;
+    if ((op == '++' || op == '--') && _chainHasNullAware(e.operand)) {
+      return _nullAwareUpdateJs(e.operand, op, scope, classes, prefix: true);
+    }
     final v = exprToJs(e.operand, scope, classes);
     if (v == null) return null;
     // `operator -()`（一元取负）：操作数静态类型声明了它 → 成员调用。
-    if (e.operator.lexeme == '-' &&
+    if (op == '-' &&
         _operatorOwnerOf(e.operand, '-', scope, classes, unary: true) != null) {
       return '$v.${operatorJsName('-', unary: true)}()';
     }
-    return '(${e.operator.lexeme}${_fnParen(v, e.operand)})';
+    return '($op${_fnParen(v, e.operand)})';
   }
   if (e is MethodInvocation) return methodCallExprJs(e, scope, classes);
   // 函数值调用 `(f)(args)` / `((x) => x)(v)`：AST 是 FunctionExpressionInvocation
@@ -521,7 +576,29 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // 整体返回 null，调用方再把整条语句丢掉（原来的静默丢代码就出在这里）。
   if (e is SetOrMapLiteral) return _collectionLiteralJs(e, scope, classes);
   if (e is ListLiteral) return _listLiteralJs(e.elements, scope, classes);
+  // Map 读取在**值位置**归一（未命中 undefined → null，与 Dart 一致）。
+  final mapRead = _mapReadValueJs(e, scope, classes);
+  if (mapRead != null) return mapRead;
   return exprToJs(e, scope, classes);
+}
+
+/// Map 读取的**值位置**归一：`m[k]` 未命中返回 undefined，Dart 返回 null。
+///
+/// 只在会被存储 / 传递 / 拼接 / 返回的位置包 `__nn`；读取本身与 for-in 迭代
+/// 源保持原样（null 与 undefined 在 for-of 里同样抛 TypeError，归一没有意义）。
+String? _mapReadValueJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is IndexExpression &&
+      !e.isNullAware &&
+      e.target != null &&
+      _staticTypeOf(e.target!, scope, classes) == 'Map') {
+    final v = exprToJs(e, scope, classes);
+    return v == null ? null : '__nn($v)';
+  }
+  return null;
 }
 
 /// `{k: v, ...}` → JS 对象字面量；`{a, b}`（Set）→ `new Set([a, b])`。
@@ -1031,7 +1108,8 @@ String? _stringInterpolationJs(
       if (el is InterpolationString) {
         if (el.value.isNotEmpty) parts.add(jsString(el.value));
       } else if (el is InterpolationExpression) {
-        final v = exprToJs(el.expression, scope, classes);
+        final v = _mapReadValueJs(el.expression, scope, classes) ??
+            exprToJs(el.expression, scope, classes);
         if (v != null) {
           parts.add(v);
         } else {
@@ -1131,7 +1209,7 @@ _ParamPlan _functionParamPlan(
     }
     if (p.isNamed) {
       hasNamed = true;
-      plan.prologue.add('var $name = (__o && __o.$name !== undefined) '
+      plan.prologue.add('let $name = (__o && __o.$name !== undefined) '
           '? __o.$name : ${dj ?? 'null'};');
     } else {
       plan.jsParams.add(name);
@@ -1391,7 +1469,7 @@ String? _methodCallJs(
   ].join(', ');
   if (receiverJs != null) {
     final dot = nullAware ? '?.' : '.';
-    return '$receiverJs$dot${e.methodName.name}($passed)';
+    return '$receiverJs$dot${_memberCallName(e.target, e.methodName.name, scope, classes)}($passed)';
   }
   final target = e.target;
   if (target == null) {
@@ -1401,6 +1479,15 @@ String? _methodCallJs(
     final name = e.methodName.name;
     if (scope.localVars.contains(name) || scope.params.contains(name)) {
       return '$name($passed)';
+    }
+    // Dart 顶层函数 `identical(a, b)` → `Object.is(a, b)`：NaN 与 -0 的语义
+    // 与 Dart 一致。判据是**标准库顶层函数名**（不是业务方法名白名单），
+    // 且只命中恰好两个位置实参、无具名实参 / 类型实参的形态。
+    if (name == 'identical' &&
+        argJs.length == 2 &&
+        namedJs.isEmpty &&
+        e.typeArguments == null) {
+      return 'Object.is(${argJs[0]}, ${argJs[1]})';
     }
     // 顶层函数（全局方法）：**只有顶层** `@HostInjected` 函数在这里走通道——
     // 顶层函数没有可承载的 JS 类，产物里不存在同名函数。
@@ -1423,24 +1510,25 @@ String? _methodCallJs(
     return '$member($passed)';
   }
   if (target is Identifier) {
+    final callMember = _memberCallName(target, e.methodName.name, scope, classes);
     final ref = scope.fieldRef(target.name);
-    if (ref != null) return '$ref.${e.methodName.name}($passed)';
+    if (ref != null) return '$ref.$callMember($passed)';
     // receiver 是「类定义在某个产物模块里的类型」（`Overlay.of(context)` 等）：
     // 产出 `<类引用>.m(args)`，类引用串由钩子给出（含 import 登记）。
     final clsRef = classRefHook?.call(target.name);
-    if (clsRef != null) return '$clsRef.${e.methodName.name}($passed)';
+    if (clsRef != null) return '$clsRef.$callMember($passed)';
     // 项目类（模型 / 静态类 / 组件）的静态方法调用（`HomeFeed.fromJson(e)`）：
     // JS 侧就是同名 class，静态方法挂在类上，1:1 产出 `X.m(args)`。类表的键
     // 即「本次分析可见的项目类名」，跨文件时 import 已由依赖收集生成。
     if (classes.containsKey(target.name)) {
-      return '${target.name}.${e.methodName.name}($passed)';
+      return '${target.name}.$callMember($passed)';
     }
     // 类方法静态调用（`MediaQuery.of(context)` / `Theme.of(context)`）：
     // receiver 是**类定义在运行时注入里**的类（`G.MediaQuery = …`，见
     // [runtimeGlobalTypes]），原样产出 `X.m(args)`。判断只看「类定义在哪」，
     // 与是不是组件无关。
     if (runtimeGlobalTypes().contains(target.name)) {
-      return '${target.name}.${e.methodName.name}($passed)';
+      return '${target.name}.$callMember($passed)';
     }
   }
   // `super.m(...)` 出现在**表达式**位置（`'${super.greet()} x'` 这类插值 / 赋值右值）：
@@ -1452,8 +1540,30 @@ String? _methodCallJs(
     return null;
   }
   final t = exprToJs(target, scope, classes);
-  if (t != null) return '$t.${e.methodName.name}($passed)';
+  if (t != null) {
+    final callMember = _memberCallName(target, e.methodName.name, scope, classes);
+    return '$t.$callMember($passed)';
+  }
   return null;
+}
+
+/// 构建期成员名映射：**只对可判定为 JS 内建 Array（Dart `List`）的接收者**
+/// 改写 `sort` → `_sort`、`join` → `_join`（原生同名但默认语义不同，运行时
+/// 挂下划线版本，不覆盖原生）。接收者类型不可判定 / 是自定义类 / 是 Map 等
+/// 其它类型时一律原样返回——绝不按方法名全局替换。
+String _memberCallName(
+  Expression? receiver,
+  String member,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (receiver == null) return member;
+  final type = _staticTypeOf(receiver, scope, classes);
+  if (type == 'List') {
+    if (member == 'sort') return '_sort';
+    if (member == 'join') return '_join';
+  }
+  return member;
 }
 
 /// `<字段>.<属性>`（PrefixedIdentifier）→ JS 引用串（`this._count.value`）。
@@ -1543,6 +1653,20 @@ String? _assignValueJs(
       : '.${(lhs as PropertyAccess).propertyName.name}';
   final nullAware = _chainHasNullAware(lhs);
 
+  // `list.length = n`：仅当接收者可判定为 List（JS Array）时改写成运行时
+  // `_setLength(n)`（原生写 length 会静默截断 / 扩展；Dart growable list 的
+  // 「截断 / 补 null」语义由运行时方法承接）。其它类型 / 不可判定时原样。
+  if (lhs is PropertyAccess &&
+      lhs.propertyName.name == 'length' &&
+      op == '=' &&
+      _staticTypeOf(target, scope, classes) == 'List') {
+    if (nullAware) {
+      return '((__t) => { if (__t == null) return null; '
+          'return __t._setLength($rhs); })($recv)';
+    }
+    return '($recv._setLength($rhs))';
+  }
+
   // `operator []=`：只支持 `=` 形态（与语句位置一致）；表达式值为右值。
   if (lhs is IndexExpression &&
       op == '=' &&
@@ -1551,7 +1675,7 @@ String? _assignValueJs(
     if (nullAware) {
       // 目标为空时右值不求值（IIFE 参数只传接收者）。
       return '((__t) => { if (__t == null) return null; '
-          'var __v = $rhs; __t.$set($indexJs, __v); return __v; })($recv)';
+          'const __v = $rhs; __t.$set($indexJs, __v); return __v; })($recv)';
     }
     return '((__t, __i, __v) => { __t.$set(__i, __v); return __v; })'
         '($recv, $indexJs, $rhs)';
@@ -1598,8 +1722,10 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
   // 捕获子句的唯一绑定名是 `__e`（见 [_tryStatementJs]），闭包内同样可见，
   // 因此一比一发射 `throw __e;`（不重建 Error，栈保持原样）。
   if (e is RethrowExpression) return 'throw __e;';
-  // _x++ / ++_x / _x--
-  if (e is PostfixExpression && _isPlainIdentifier(e.operand)) {
+  // _x++ / ++_x / _x--（只认自增 / 自减；`x!` 是空断言，不能按 -= 1 处理）
+  if (e is PostfixExpression && _isPlainIdentifier(e.operand) &&
+      (e.operator.type.name == 'PLUS_PLUS' ||
+          e.operator.type.name == 'MINUS_MINUS')) {
     final ref = scope.fieldRef((e.operand as Identifier).name);
     if (ref != null) {
       final delta = e.operator.type.name == 'PLUS_PLUS' ? '1' : '-1';
@@ -1607,13 +1733,20 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     }
     return null;
   }
-  if (e is PrefixExpression && _isPlainIdentifier(e.operand)) {
+  if (e is PrefixExpression && _isPlainIdentifier(e.operand) &&
+      (e.operator.type.name == 'PLUS_PLUS' ||
+          e.operator.type.name == 'MINUS_MINUS')) {
     final ref = scope.fieldRef((e.operand as Identifier).name);
     if (ref != null) {
       final delta = e.operator.type.name == 'PLUS_PLUS' ? '1' : '-1';
       return '$ref += $delta;';
     }
     return null;
+  }
+  // 独立空断言语句 `s!;`：项目口径忽略断言，仅保留操作数求值。
+  if (e is PostfixExpression && e.operator.lexeme == '!') {
+    final v = exprToJs(e.operand, scope, classes);
+    return v == null ? null : '$v;';
   }
   if (e is AssignmentExpression && _isPlainIdentifier(e.leftHandSide)) {
     final ref = scope.fieldRef((e.leftHandSide as Identifier).name);
@@ -1676,6 +1809,16 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     final rhs = rhsToJs(e.rightHandSide, scope, classes);
     if (rhs == null) return null;
     final op = e.operator.lexeme;
+    // `list.length = n`：仅当接收者可判定为 List（JS Array）时改写为
+    // `_setLength(n)`（与值位置同一判据；其它对象 / 不可判定保持原样）。
+    if (lhs is PropertyAccess &&
+        lhs.propertyName.name == 'length' &&
+        op == '=' &&
+        _staticTypeOf(target, scope, classes) == 'List') {
+      return _chainHasNullAware(e.leftHandSide)
+          ? '((__t) => { if (__t != null) __t._setLength($rhs); })($recv);'
+          : '$recv._setLength($rhs);';
+    }
     // `~/=`：JS 没有这个复合运算符，按语义展开成「读 → 算 → 写」。
     // 接收者与下标都只求值一次（`a[f()] ~/= 2` 不能把 `f` 调两次），目标是
     // 下标时把下标绑成第二个临时参数。
@@ -1713,11 +1856,40 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
   }
   if ((e is PostfixExpression || e is PrefixExpression)) {
     final operand = e is PostfixExpression ? e.operand : (e as PrefixExpression).operand;
+    final op = e is PostfixExpression ? e.operator : (e as PrefixExpression).operator;
+    // 空安全目标 `a?[i]++` / `a?.x++`：JS 可选链不能作写目标，走单次求值守卫。
+    if ((op.lexeme == '++' || op.lexeme == '--') &&
+        _chainHasNullAware(operand) &&
+        (operand is IndexExpression || operand is PropertyAccess)) {
+      final guarded = _nullAwareUpdateJs(
+          operand, op.lexeme, scope, classes,
+          prefix: e is PrefixExpression, statement: true);
+      return guarded == null ? null : '$guarded;';
+    }
     final lhs = _prefixedFieldRef(operand, scope);
     if (lhs != null) {
-      final op = e is PostfixExpression ? e.operator : (e as PrefixExpression).operator;
       final delta = op.type.name == 'PLUS_PLUS' ? '1' : '-1';
       return '$lhs += $delta;';
+    }
+    // 普通下标 / 属性自增（`a[i]++` / `a.b++`）：语句位置不关心返回值，
+    // 直接落成 `+= 1` / `-= 1`（接收者与下标都只求值一次）。
+    if (operand is IndexExpression || operand is PropertyAccess) {
+      final target = operand is IndexExpression
+          ? operand.target
+          : (operand as PropertyAccess).target;
+      if (target == null) return null;
+      final recv = exprToJs(target, scope, classes);
+      if (recv == null) return null;
+      final String member;
+      if (operand is IndexExpression) {
+        final index = exprToJs(operand.index, scope, classes);
+        if (index == null) return null;
+        member = '[$index]';
+      } else {
+        member = '.${(operand as PropertyAccess).propertyName.name}';
+      }
+      final delta = op.type.name == 'PLUS_PLUS' ? '1' : '-1';
+      return '$recv$member += $delta;';
     }
   }
   // 独立语句 `await <expr>;`：await 的翻译统一在 rhsToJs 里。
@@ -1740,6 +1912,13 @@ String? _staticTypeOf(
   if (e is ParenthesizedExpression) {
     return _staticTypeOf(e.expression, scope, classes);
   }
+  // 集合字面量的静态类型直接由源码形态给出（`[...]` → List、`{...}` →
+  // Set / Map）：供「按接收者内建类型决定的成员映射」（Array sort / join）
+  // 判定，不猜类型。
+  if (e is ListLiteral) return 'List';
+  if (e is SetOrMapLiteral) return e.isSet ? 'Set' : 'Map';
+  // 级联表达式 `expr..m()` 的类型就是 target 的类型（级联返回 target 本身）。
+  if (e is CascadeExpression) return _staticTypeOf(e.target, scope, classes);
   if (e is SimpleIdentifier) return scope.typeOf(e.name);
   if (e is ThisExpression) return scope.className;
   // `this._car`：字段声明类型（含继承链字段视图）。
@@ -1760,6 +1939,121 @@ String? _staticTypeOf(
   if (raw == null) return null;
   final bare = eraseType(raw.split('.').last);
   return classes.containsKey(bare) ? bare : null;
+}
+
+/// 操作数是否**可能**为 null / undefined（决定判空 / 相等比较是否包 `__nn`）。
+///
+/// 判据只来自源码事实：字面量 / 构造 / 集合字面量不会为空；标识符与
+/// `this.x` 看**声明的原始类型**（`String` 非空、`String?` / `dynamic` 可空）；
+/// 类型不可判定（方法调用、下标、普通属性链等）按「可能为空」保守处理。
+bool _mayBeNull(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is NullLiteral) return true;
+  // 编译期字面量（字符串 / 数字 / bool / 常量运算）不会为空。
+  if (literalToJs(e) != null) return false;
+  // 字符串插值的结果一定是字符串。
+  if (e is StringInterpolation) return false;
+  // `x!` 的语义就是非空（项目按「忽略 !」翻译，但仍视为非空）。
+  if (e is PostfixExpression && e.operator.lexeme == '!') return false;
+  if (e is ThisExpression) return false;
+  if (e is InstanceCreationExpression) return false;
+  if (e is ListLiteral || e is SetOrMapLiteral) return false;
+  String? raw;
+  if (e is SimpleIdentifier) {
+    raw = _rawTypeOfName(e.name, scope);
+  } else if (e is PrefixedIdentifier) {
+    // 前缀不是本作用域里的值（局部 / 形参 / 字段）时，它是类 / 命名空间引用：
+    // `Orientation.portrait` / `Colors.red` 这类静态成员访问不会产出 undefined
+    // （缺失的引用会直接抛 ReferenceError，而不是一个 undefined 值）。
+    if (_rawTypeOfName(e.prefix.name, scope) == null) return false;
+    raw = _rawMemberType(e.prefix, e.identifier.name, scope, classes);
+  } else if (e is PropertyAccess &&
+      e.target != null &&
+      e.target is! SuperExpression) {
+    raw = _rawMemberType(e.target!, e.propertyName.name, scope, classes);
+  }
+  if (raw == null) return true;
+  final t = raw.trim();
+  if (t == 'dynamic' || t == 'Object' || t == 'Null' || t.endsWith('?')) {
+    return true;
+  }
+  return false;
+}
+
+/// 名字的**原始**声明类型（保留 `?`）：局部变量 / 形参 / 实例字段，未知返回 null。
+String? _rawTypeOfName(String name, FieldScope scope) {
+  if (scope.localVars.contains(name)) return scope.localTypes[name];
+  if (scope.params.contains(name)) return scope.paramTypes[name];
+  if (scope.instanceFields.contains(name)) return scope.fieldTypes[name];
+  return null;
+}
+
+/// 成员访问的**原始**声明类型（保留 `?`），只解析能从源码事实得到的链：
+/// `this.x` / `widget.x` / `expr.x`（expr 的声明类型是项目类时查类表字段）。
+String? _rawMemberType(
+  Expression receiver,
+  String member,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  // `this.x` 与 State 内 `widget.x` 在 JS 侧都是合并类的实例字段。
+  if (receiver is ThisExpression ||
+      (receiver is SimpleIdentifier && receiver.name == 'widget')) {
+    return scope.fieldTypes[member];
+  }
+  final ownerRaw = _rawExprType(receiver, scope, classes);
+  if (ownerRaw == null) return null;
+  final owner = eraseType(ownerRaw.split('.').last);
+  // 内建集合 / 字符串的已知非空成员（不属于“可能为空”的范围）。
+  if (member == 'length' &&
+      (owner == 'List' ||
+          owner == 'Iterable' ||
+          owner == 'Set' ||
+          owner == 'Map' ||
+          owner == 'String')) {
+    return 'int';
+  }
+  // Dart 的 `hashCode` 在所有对象上都是 `int`（非空），无需按 owner 细分。
+  if (member == 'hashCode') return 'int';
+  if ((member == 'isEmpty' || member == 'isNotEmpty') &&
+      (owner == 'List' ||
+          owner == 'Iterable' ||
+          owner == 'Set' ||
+          owner == 'Map' ||
+          owner == 'String')) {
+    return 'bool';
+  }
+  final info = classes[owner];
+  if (info == null) return null;
+  for (final f in objectFieldsOf(info, classes)) {
+    if (f.name == member) return f.typeName;
+  }
+  return null;
+}
+
+/// 表达式的**原始**声明类型（用于成员链解析）；无法从源码事实判定时返回 null。
+String? _rawExprType(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is ParenthesizedExpression) {
+    return _rawExprType(e.expression, scope, classes);
+  }
+  if (e is SimpleIdentifier) return _rawTypeOfName(e.name, scope);
+  if (e is PropertyAccess && e.target is ThisExpression) {
+    return scope.fieldTypes[e.propertyName.name];
+  }
+  if (e is PrefixedIdentifier) {
+    return _rawMemberType(e.prefix, e.identifier.name, scope, classes);
+  }
+  if (e is PropertyAccess && e.target != null) {
+    return _rawMemberType(e.target!, e.propertyName.name, scope, classes);
+  }
+  return null;
 }
 
 /// [member] 在 [typeName] 的实例成员里是否是**方法**（而非 getter）。
@@ -1853,6 +2147,46 @@ bool _chainHasNullAware(Expression e) {
     return e.isNullAware || (e.target != null && _chainHasNullAware(e.target!));
   }
   return false;
+}
+
+/// `a?[i]++` / `a?.x++`（`++` / `--`）→ 接收者前缀单次求值的守卫 IIFE。
+///
+/// JS 的可选链不能出现在自增 / 自减的写目标里（`a?.[i]++` 是 SyntaxError），
+/// 故取目标链的**前缀表达式**只求值一次，再在守卫内对成员执行更新：
+///   - 值位置：目标为空时表达式值为 `null`，非空时返回 `++` / `--` 的结果
+///     （后缀返回旧值、前缀返回新值，直接交给 JS 的更新表达式本身）；
+///   - 语句位置：目标为空时整句跳过。
+String? _nullAwareUpdateJs(
+  Expression operand,
+  String op,
+  FieldScope scope,
+  Map<String, ClassInfo> classes, {
+  bool prefix = false,
+  bool statement = false,
+}) {
+  final String member;
+  final Expression? target;
+  if (operand is IndexExpression) {
+    target = operand.target;
+    final idx = exprToJs(operand.index, scope, classes);
+    if (idx == null) return null;
+    member = '[$idx]';
+  } else if (operand is PropertyAccess) {
+    target = operand.target;
+    member = '.${operand.propertyName.name}';
+  } else {
+    return null;
+  }
+  if (target == null) return null;
+  final recv = exprToJs(target, scope, classes);
+  if (recv == null) return null;
+  final base = '__t$member';
+  final update = prefix ? '$op$base' : '$base$op';
+  if (statement) {
+    return '((__t) => { if (__t != null) $update; })($recv)';
+  }
+  return '((__t) => { if (__t == null) return null; '
+      'return ($update); })($recv)';
 }
 
 // ---------------------------------------------------------------------------
@@ -1982,15 +2316,18 @@ String translateStmtList(
             '丢弃：${e.toSource()}');
       }
     } else if (s is VariableDeclarationStatement) {
-      // 局部变量声明 `String? name = await X.y();` → `var name = ...;`，
-      // 名字登记进 scope，后续语句（含插值）可直接引用。
+      // 局部变量声明 `String? name = await X.y();` → `let name = ...;` /
+      // `const name = ...;`（`final` / `const` 声明生成 `const`，`var` 与
+      // 无修饰声明生成 `let`；不生成 `var`）。无初始化器时显式补 `= null`：
+      // Dart 的空值只有 null，JS 的 `let x;` 是 undefined（判空会漏掉）。
+      final keyword = s.variables.isFinal || s.variables.isConst ? 'const' : 'let';
       for (final v in s.variables.variables) {
         final name = v.name.lexeme;
         // 同步登记到 widget 层：方法体里随后 `return Text('$name')` 时，
         // widget 翻译器要用同一份局部变量表解析标识符（与语句翻译同源）。
         renderer?.registerLocal(name);
         if (v.initializer == null) {
-          out.add('${ind}var $name;');
+          out.add('${ind}$keyword $name = null;');
           scope.localVars.add(name);
           final declared = s.variables.type?.toSource();
           if (declared != null) scope.localTypes[name] = declared;
@@ -2018,7 +2355,7 @@ String translateStmtList(
               '产物中丢弃：${s.toSource()}');
           continue;
         }
-        out.add('${ind}var $name = $init;');
+        out.add('${ind}$keyword $name = $init;');
         scope.localVars.add(name);
         // 局部变量的静态类型（显式注解优先，其次按项目类构造推断）：
         // 供后续语句里的运算符重载分派（`total + item` → `total.__op$add(item)`）。
@@ -2287,7 +2624,7 @@ String? _localFunctionJs(
   renderer?.registerLocal(name);
   final js = closureToJs(fn, scope, classes, renderer);
   if (js == null) return null;
-  return '${'  ' * depth}var $name = $js;';
+  return '${'  ' * depth}const $name = $js;';
 }
 
 // ---------------------------------------------------------------------------
@@ -2633,16 +2970,18 @@ String? _forStatementJs(
     // 三段式：`for (var i = 0; i < n; i++)` → 一比一。
     final inits = <String>[];
     if (parts is ForPartsWithDeclarations) {
+      final keyword =
+          parts.variables.isFinal || parts.variables.isConst ? 'const' : 'let';
       for (final v in parts.variables.variables) {
         final name = v.name.lexeme;
         scope.localVars.add(name);
         if (v.initializer == null) {
-          inits.add('let $name');
+          inits.add('let $name = null');
           continue;
         }
         final rhs = rhsToJs(v.initializer!, scope, classes);
         if (rhs == null) return null;
-        inits.add('let $name = $rhs');
+        inits.add('$keyword $name = $rhs');
       }
     } else if (parts is ForPartsWithExpression) {
       final init = parts.initialization;
@@ -2762,10 +3101,10 @@ String? _tryStatementJs(
         returnsWidget: returnsWidget,
       );
       if (stackName != null && stackName != exName) {
-        body = '${ind}    var $stackName = $exName && $exName.stack;\n$body';
+        body = '${ind}    const $stackName = $exName && $exName.stack;\n$body';
       }
       if (name != null && name != exName) {
-        body = '${ind}    var $name = $exName;\n$body';
+        body = '${ind}    const $name = $exName;\n$body';
       }
       final head = isCatchAll && first
           ? null // 首个子句就是 catch-all：直接执行 body，无需 if/else 包装
@@ -3184,10 +3523,10 @@ String hostMethodBodyJs(ClassMethod m, {int depth = 2}) {
         'arguments.length ? arguments[0] : {});';
   }
   return '$ind'
-      'var __positional = '
+      'const __positional = '
       'Array.prototype.slice.call(arguments, 0, $positionalCount);\n'
       '$ind'
-      'var __named = arguments.length > $positionalCount '
+      'const __named = arguments.length > $positionalCount '
       '? arguments[$positionalCount] : {};\n'
       '$ind'
       'return _app_host_.invoke($channel, Object.assign('

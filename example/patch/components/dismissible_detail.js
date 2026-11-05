@@ -12,7 +12,7 @@ export class DismissibleDetail extends StatefulWidget {
     this._last = "还没有条目被删除";
   }
   async _confirm(direction) {
-    return (direction == DismissDirection.endToStart);
+    return (direction === DismissDirection.endToStart);
   }
   _reset() {
     this.setState(() => {

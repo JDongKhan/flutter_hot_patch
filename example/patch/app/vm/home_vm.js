@@ -26,12 +26,12 @@ export class HomeVm extends ChangeNotifier {
     this.error = null;
     this.notifyListeners();
     try {
-      var configs = await this._service.fetchHomeFloors();
+      const configs = await this._service.fetchHomeFloors();
       if (this.floors.isEmpty) {
-        var list = [];
+        const list = [];
         for (let c of configs) {
-          var vm = this._createFloor(c.type);
-          if ((vm == null)) {
+          const vm = this._createFloor(c.type);
+          if ((__nn(vm) == null)) {
             print("HomeVm 未知楼层类型：" + c.type + "，已跳过");
             continue;
           }
@@ -42,7 +42,7 @@ export class HomeVm extends ChangeNotifier {
       }
       this.error = null;
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("HomeVm 楼层配置加载失败: " + e);
       this.error = e.toString();
     }
@@ -55,7 +55,7 @@ export class HomeVm extends ChangeNotifier {
     }
   }
   async changeCity(newCity) {
-    if ((newCity == this.city)) {
+    if ((newCity === this.city)) {
       return;
     }
     this.city = newCity;

@@ -21,8 +21,8 @@ export class KeyTile extends StatefulWidget {
     });
   }
   build(context) {
-    var label = this.label;
-    var caption = label + " · 计数 " + this._count;
+    const label = this.label;
+    const caption = label + " · 计数 " + this._count;
     return new Container({
       "margin": (this.__k0 || (this.__k0 = EdgeInsets.symmetric({
         "vertical": 2

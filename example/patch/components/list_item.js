@@ -29,7 +29,7 @@ export class CommonListItem extends StatefulWidget {
   build(context) {
     return new Text({
       "style": new TextStyle({
-        "color": _listItemPalette[(((this.index + this.salt)) % _listItemPalette.length)],
+        "color": _listItemPalette[__mod(((this.index + this.salt)), _listItemPalette.length)],
         "fontWeight": FontWeight.w600
       }),
       "data": "builder item " + this.index + " · u" + this._updateCount

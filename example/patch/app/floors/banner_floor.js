@@ -31,7 +31,7 @@ export class BannerFloorVm extends ChangeNotifier {
       this.banners = await this._service.fetchHomeBanners(this.city);
       this.error = null;
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("BannerFloor 加载失败: " + e);
       this.error = e.toString();
     }
@@ -41,7 +41,7 @@ export class BannerFloorVm extends ChangeNotifier {
   async refresh() {
   }
   async setCity(newCity) {
-    if ((newCity == this.city)) {
+    if ((newCity === this.city)) {
       return;
     }
     this.city = newCity;
@@ -73,8 +73,8 @@ export class BannerFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"T": "BannerFloorVm"} });
-    var body;
+    const vm = context.watch({ typeArguments: {"T": "BannerFloorVm"} });
+    let body = null;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({
         "height": 150

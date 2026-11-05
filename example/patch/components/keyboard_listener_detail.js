@@ -24,29 +24,29 @@ export class KeyboardListenerDetail extends StatefulWidget {
     super.dispose();
   }
   _onKey(event) {
-    var key = event.logicalKey;
+    const key = event.logicalKey;
     if ((event instanceof KeyDownEvent)) {
       this.setState(() => {
         this._down += 1;
         this._last = "KeyDown  " + key.keyLabel;
         this._char = (event.character ?? "（无）");
         this._phys = (event.physicalKey.debugName ?? "（无）");
-        if ((key == LogicalKeyboardKey.arrowUp)) {
-          this._row = (((this._row + 2)) % 3);
+        if ((__nn(key) === LogicalKeyboardKey.arrowUp)) {
+          this._row = __mod(((this._row + 2)), 3);
         }
-        if ((key == LogicalKeyboardKey.arrowDown)) {
-          this._row = (((this._row + 1)) % 3);
+        if ((__nn(key) === LogicalKeyboardKey.arrowDown)) {
+          this._row = __mod(((this._row + 1)), 3);
         }
-        if ((key == LogicalKeyboardKey.arrowLeft)) {
-          this._col = (((this._col + 2)) % 3);
+        if ((__nn(key) === LogicalKeyboardKey.arrowLeft)) {
+          this._col = __mod(((this._col + 2)), 3);
         }
-        if ((key == LogicalKeyboardKey.arrowRight)) {
-          this._col = (((this._col + 1)) % 3);
+        if ((__nn(key) === LogicalKeyboardKey.arrowRight)) {
+          this._col = __mod(((this._col + 1)), 3);
         }
-        if ((key == LogicalKeyboardKey.space)) {
+        if ((__nn(key) === LogicalKeyboardKey.space)) {
           this._lit = (!this._lit);
         }
-        if ((key == LogicalKeyboardKey.escape)) {
+        if ((__nn(key) === LogicalKeyboardKey.escape)) {
           this._row = 1;
           this._col = 1;
           this._lit = false;
@@ -66,7 +66,7 @@ export class KeyboardListenerDetail extends StatefulWidget {
     });
   }
   _cell(r, c) {
-    var active = ((r == this._row) && (c == this._col));
+    const active = ((r === this._row) && (c === this._col));
     return new Container({
       "width": 36,
       "height": 36,

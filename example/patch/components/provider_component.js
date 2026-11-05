@@ -123,7 +123,7 @@ export class ProviderCard extends StatefulWidget {
     });
   }
   _buildBadge() {
-    var label = "";
+    let label = "";
     switch (this._modelA.count) {
       case 0:
       label = "B·零";
@@ -140,7 +140,7 @@ export class ProviderCard extends StatefulWidget {
       label = "B·爆表";
       break;
     }
-    var dots = "";
+    let dots = "";
     for (let i = 0; (i < this._modelA.count); (i++)) {
       dots = dots + "·";
     }

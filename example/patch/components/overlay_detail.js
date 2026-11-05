@@ -63,7 +63,7 @@ export class OverlayDetail extends StatefulWidget {
                               "onPressed": () => { this.setState(() => {
                                   this._count = (this._count + 1);
                                 });
-                                var entry = new OverlayEntry({
+                                const entry = new OverlayEntry({
                                   "builder": (context) => new Positioned({
                                     "left": 12,
                                     "right": 12,
@@ -103,8 +103,8 @@ export class OverlayDetail extends StatefulWidget {
                               "width": 8
                             }))),
                             new OutlinedButton({
-                              "onPressed": () => { var entry = (this._entries.isNotEmpty ? this._entries.removeLast() : null);
-                                if ((entry != null)) {
+                              "onPressed": () => { const entry = (this._entries.isNotEmpty ? this._entries.removeLast() : null);
+                                if ((__nn(entry) != null)) {
                                   entry.remove();
                                 }
                                 this.setState(() => {

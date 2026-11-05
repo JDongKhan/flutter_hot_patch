@@ -23,7 +23,7 @@ export class AppShellVm extends ChangeNotifier {
       this.tabs = await this._service.fetchAppTabs();
       this.error = null;
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("AppShellVm 底部配置加载失败: " + e);
       this.error = e.toString();
     }

@@ -1,3 +1,18 @@
+## 0.9.0
+
+**协议次版本：契约不变；语法翻译产物按 `Dart转JS语法翻译手册` v1.2 校准（部分形态变化，老路径语义不变）。**
+
+- **局部变量声明改用 `let` / `const`**：`var` 与无修饰声明 → `let`，`final` / `const` → `const`，不再生成 `var`；无初始化器显式补 `= null`（Dart 只有 null，JS 裸 `let` 是 undefined）。`for` 初始化、局部函数（`const f = …`）、catch 绑定、参数默认值 prologue 同步（`js_translator.dart` 的 `translateStmtList` / `_localFunctionJs` / `_forStatementJs` / `_tryStatementJs` / `_functionParamPlan`）。
+- **空值归一 `__nn`**（运行时 `G.__nn`，`undefined → null`，不抛错）：`exprToJs` 的 BinaryExpression 只在**操作数可能为空**时包（新增 `_mayBeNull`：字面量、构造、集合字面量、声明为非空类型的字段 / 形参 / 局部变量都不包；`String?` / `dynamic` / 类型不可判定才包）。判空保持 `== null`，其余相等用 `===` / `!==`。Map 读取只在**值位置**（初始化 / 赋值右侧 / 实参 / 返回 / 插值，`_mapReadValueJs`）包 `__nn`；for-in 迭代源不包（for-of 对 null / undefined 同样抛 TypeError）。
+- **`!` 保持忽略**：`exprToJs` 的 PostfixExpression `!` 直接返回操作数（不生成非空断言；项目口径接受独立值位置与 Dart 的差异，访问位置仍由 JS 自然抛 TypeError）。
+- **空安全自增 / 自减**：`a?[i]++` / `a?.x++` / 前缀 `++` 落成接收者单次求值的守卫 IIFE（值位置保留旧值 / 新值语义，语句位置空目标整句跳过）；普通下标 / 属性自增语句补 `+= 1` / `-= 1` 形态（此前会告警丢弃）。新增 `_nullAwareUpdateJs`。
+- **运算符语义**：Dart `%` → `__mod(a, b)`（欧几里得取模，负数结果非负）；`identical(a, b)` → `Object.is(a, b)`。
+- **类型判断**：`is int` → `Number.isInteger`、`is Set` → `instanceof Set`、`is dynamic` → `true`、`is Object?` → `__nn(v) != null`、`is Never` → `false`（不可达分支）；`Map` 判定排除 `Set` 实例（`typeTestJs`，`js_value.dart`）。
+- **Array 内建同名补齐**（`runtime_js.dart`【1c】）：`addAll` / `contains` / `fillRange` / `sublist` / `firstWhere` / `expand` / `fold` / `any` / `take` / `skip` / `asMap` / `elementAt`；`remove` 改为「`===` + 元素自带 `__op$eq`」；`insert` 越界抛 RangeError。
+- **构建期成员映射表（只对可判定为 `List` 的接收者）**：`sort → _sort`（默认 Dart Comparable 比较器）、`join → _join`（默认空串）、`length 写 → _setLength(n)`（截断 / 补 null）。运行时挂 `Array.prototype._sort` / `_join` / `_setLength`；自定义类 / Map / 其它接收者同名成员一律原样，绝不按方法名全局替换。`_staticTypeOf` 补 `ListLiteral` / `SetOrMapLiteral` 的类型事实。
+- **手册同步**：`dart2js-syntax-reference/Dart转JS语法翻译手册.html` 升 v1.2，逐行更新「现状 / 是否通过」；`late`（JS 无惰性初始化 / 未赋值检查）与 `a?.()`（Dart 无此语法）记「不适用」；`f(s!)` 按项目口径记「去掉 `!`」；Map 成员方法（普通对象形态）与 `call(...)` 记后续，写明原因。
+- 断言语义：`dart analyze` 无错误；`example` 全量产物 `node --check` 通过（ESM）。
+
 ## 0.8.1
 
 **协议次版本：契约不变，空安全产物形态改为 JS 原生可选链；旧的三元 / IIFE 展开同次删除，不保留兼容。**

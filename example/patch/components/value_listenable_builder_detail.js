@@ -22,15 +22,15 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
     super.dispose();
   }
   _inc() {
-    var n = this._active;
+    const n = this._active;
     n.value = (n.value + 1);
   }
   _dec() {
-    var n = this._active;
+    const n = this._active;
     n.value = (n.value - 1);
   }
   _same() {
-    var n = this._active;
+    const n = this._active;
     n.value = n.value;
   }
   _toggle() {

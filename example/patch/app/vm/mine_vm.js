@@ -23,7 +23,7 @@ export class MineVm extends ChangeNotifier {
       this.feed = await this._service.fetchMine();
       this.error = null;
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("MineVm 加载失败: " + e);
       this.error = e.toString();
     }

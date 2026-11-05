@@ -31,7 +31,7 @@ export class SpotFloorVm extends ChangeNotifier {
       this.spots = await this._service.fetchHomeSpots(this.city);
       this.error = null;
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("SpotFloor 加载失败: " + e);
       this.error = e.toString();
     }
@@ -42,7 +42,7 @@ export class SpotFloorVm extends ChangeNotifier {
     await this.load();
   }
   async setCity(newCity) {
-    if ((newCity == this.city)) {
+    if ((newCity === this.city)) {
       return;
     }
     this.city = newCity;
@@ -74,8 +74,8 @@ export class SpotFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"T": "SpotFloorVm"} });
-    var body;
+    const vm = context.watch({ typeArguments: {"T": "SpotFloorVm"} });
+    let body = null;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({})));
     } else {

@@ -57,7 +57,7 @@ export class Price {
     });
   }
   __op$eq(other) {
-    return ((other instanceof Price) && (other._cents == this._cents));
+    return ((other instanceof Price) && (__nn(other._cents) === this._cents));
   }
   get hashCode() {
     return this._cents.hashCode;
@@ -67,12 +67,12 @@ export class Price {
     return (this._cents + extra);
   }
   scaled(__o) {
-    var factor = (__o && __o.factor !== undefined) ? __o.factor : 2;
-    var bonus = (__o && __o.bonus !== undefined) ? __o.bonus : 0;
+    let factor = (__o && __o.factor !== undefined) ? __o.factor : 2;
+    let bonus = (__o && __o.bonus !== undefined) ? __o.bonus : 0;
     return ((this._cents * factor) + bonus);
   }
   static fromCents(cents, __o) {
-    var discount = (__o && __o.discount !== undefined) ? __o.discount : 0;
+    let discount = (__o && __o.discount !== undefined) ? __o.discount : 0;
     return new Price({
       "_cents": (cents - discount)
     });
@@ -174,7 +174,7 @@ export class SyntaxDetail extends StatefulWidget {
     }
   }
   _matchText() {
-    var task = this._task;
+    const task = this._task;
     {
       const __v0 = task;
       let title;
@@ -201,7 +201,7 @@ export class SyntaxDetail extends StatefulWidget {
     return "if-case：其它";
   }
   _destructureText() {
-    var scores = this._scores;
+    const scores = this._scores;
     if ((scores == null)) {
       return "解构：null";
     }
@@ -222,7 +222,7 @@ export class SyntaxDetail extends StatefulWidget {
     return "解构：" + a + " / " + b + " / " + c;
   }
   _rangeText() {
-    var score = (this._task?.score ?? 0);
+    const score = (this._task?.score ?? 0);
     {
       const __v0 = score;
       const __ok = (() => {
@@ -234,7 +234,7 @@ export class SyntaxDetail extends StatefulWidget {
         return "关系模式：" + score;
       }
     }
-    var scores = this._scores;
+    const scores = this._scores;
     {
       const __v0 = scores;
       let a, b, rest;
@@ -255,24 +255,24 @@ export class SyntaxDetail extends StatefulWidget {
     return "关系/列表：未命中";
   }
   _operatorText() {
-    var a = new Price({
+    const a = new Price({
       "_cents": 100
     });
-    var b = new Price({
+    const b = new Price({
       "_cents": 23
     });
-    var total = a.__op$add(b);
+    const total = a.__op$add(b);
     total.cents = 150;
-    var sameValue = new Price({
+    const sameValue = new Price({
       "_cents": 150
     });
-    var same = ((__a, __b) => __a == null ? __b == null : __a.__op$eq(__b))(total, sameValue);
-    var hashSame = (total.hashCode == sameValue.hashCode);
-    var neg = b.__op$neg();
+    const same = ((__a, __b) => __a == null ? __b == null : __a.__op$eq(__b))(total, sameValue);
+    const hashSame = (total.hashCode === sameValue.hashCode);
+    const neg = b.__op$neg();
     return "setter/运算符：sum=" + total.cents + " / 相等=" + same + " / hash一致=" + hashSame + " " + "/ 取负=" + neg.cents;
   }
   _tryText() {
-    var parts = [];
+    const parts = [];
     for (let raw of ["12", "x"]) {
       try {
         parts.add("解析=" + int.parse(raw));
@@ -281,22 +281,22 @@ export class SyntaxDetail extends StatefulWidget {
           parts.add("格式错误");
         }
         else {
-          var e = __e;
+          const e = __e;
           parts.add("其它:" + e);
         }
       }
     }
-    return "try/catch：" + parts.join("，");
+    return "try/catch：" + parts._join("，");
   }
   _collectionText() {
-    var scores = (this._scores ?? [0, 0, 0]);
-    var base = [10, 20];
-    var merged = [1, ...(scores.isNotEmpty ? [scores.first] : []), ...base, ...(scores).map((s) => [(s * 2)])];
-    return "集合元素：" + merged.join("/");
+    const scores = (this._scores ?? [0, 0, 0]);
+    const base = [10, 20];
+    const merged = [1, ...(scores.isNotEmpty ? [scores.first] : []), ...base, ...(scores).map((s) => [(s * 2)])];
+    return "集合元素：" + merged._join("/");
   }
   _patternForText() {
-    var pairs = [[1, 2], [3, 4]];
-    var sum = 0;
+    const pairs = [[1, 2], [3, 4]];
+    let sum = 0;
     for (const __v of pairs) {
       let a, b;
       if (!(() => {
@@ -314,8 +314,8 @@ export class SyntaxDetail extends StatefulWidget {
     return "pattern for：sum=" + sum;
   }
   _caseElementText() {
-    var task = this._task;
-    var labels = [...(() => {
+    const task = this._task;
+    const labels = [...(() => {
         const __v0 = task;
         let t;
         const __ok = (() => { if (!(__v0 instanceof TaskItem)) return false; const __v1 = __v0.title; t = __v1; return true; })();
@@ -325,21 +325,21 @@ export class SyntaxDetail extends StatefulWidget {
         const __ok = (() => { if (!(__v0 === null)) return false; return true; })();
         return __ok ? ["空"] : [];
       })()];
-    return "集合 if-case：" + labels.join("，");
+    return "集合 if-case：" + labels._join("，");
   }
   _forPartsText() {
-    var cells = [...(() => {
+    const cells = [...(() => {
         const __r = [];
         for (let i = 0; (i < 3); (i++)) {
           __r.push(...[(i * i)]);
         }
         return __r;
       })()];
-    return "三段式集合：" + cells.join("/");
+    return "三段式集合：" + cells._join("/");
   }
   _labelText() {
-    var scores = this._scores;
-    var hit = 0;
+    const scores = this._scores;
+    let hit = 0;
     outer: for (let v of (scores ?? [0])) {
       for (let w of [v, (v + 1)]) {
         if ((w >= 4)) {
@@ -351,7 +351,7 @@ export class SyntaxDetail extends StatefulWidget {
     return "label：hit=" + hit;
   }
   _rethrowText() {
-    var trace = "";
+    let trace = "";
     try {
       try {
         int.parse("x");
@@ -375,41 +375,41 @@ export class SyntaxDetail extends StatefulWidget {
     return "rethrow：" + trace;
   }
   _cascadeText() {
-    var nums = (() => { const _t = []; _t.add(1); _t.add(2); return _t; })();
-    var alias = nums;
-    var nothing = null;
-    var live = ((_t) => { if (_t == null) return _t; _t.add(3); return _t; })(alias);
-    var dead = ((_t) => { if (_t == null) return _t; _t.add(9); _t.add(8); _t[0] = 7; return _t; })(nothing);
-    var price = (() => { const _t = new Price({_cents: 1}); _t.cents = 5; _t.cents += 2; return _t; })();
-    var map = (() => { const _t = {}; _t["a"] = 1; _t["b"] = 2; return _t; })();
-    return "级联：列表=" + nums.join("/") + " / 非空分支=" + (live?.length ?? 0) + " " + "/ 空分支=" + (dead?.length ?? "null") + " / setter=" + price.cents + " " + "/ map=" + map["b"];
+    const nums = (() => { const _t = []; _t.add(1); _t.add(2); return _t; })();
+    const alias = nums;
+    const nothing = null;
+    const live = ((_t) => { if (_t == null) return _t; _t.add(3); return _t; })(alias);
+    const dead = ((_t) => { if (_t == null) return _t; _t.add(9); _t.add(8); _t[0] = 7; return _t; })(nothing);
+    const price = (() => { const _t = new Price({_cents: 1}); _t.cents = 5; _t.cents += 2; return _t; })();
+    const map = (() => { const _t = {}; _t["a"] = 1; _t["b"] = 2; return _t; })();
+    return "级联：列表=" + nums._join("/") + " / 非空分支=" + (live?.length ?? 0) + " " + "/ 空分支=" + (dead?.length ?? "null") + " / setter=" + price.cents + " " + "/ map=" + __nn(map["b"]);
   }
   _bitwiseText() {
-    var a = 6;
-    var b = 3;
-    var bAnd = (a & b);
-    var bOr = (a | b);
-    var bXor = (a ^ b);
-    var lsh = (a << 2);
-    var rsh = ((-8) >> 1);
-    var lrsh = ((-8) >>> 1);
-    var inv = (~a);
-    var quot = 6;
+    const a = 6;
+    const b = 3;
+    const bAnd = (a & b);
+    const bOr = (a | b);
+    const bXor = (a ^ b);
+    const lsh = (a << 2);
+    const rsh = ((-8) >> 1);
+    const lrsh = ((-8) >>> 1);
+    const inv = (~a);
+    let quot = 6;
     quot = Math.trunc(quot / 4);
-    var mask = 6;
+    let mask = 6;
     mask &= (~2);
-    var nums = [8, 16];
-    var idx = 1;
+    const nums = [8, 16];
+    const idx = 1;
     ((__t, __i) => { __t[__i] = Math.trunc(__t[__i] / 3); })(nums, idx);
-    var cells = [10, 20];
+    const cells = [10, 20];
     cells[0] += 5;
-    var counter = 1;
+    let counter = 1;
     counter <<= 2;
     return "位运算：and=" + bAnd + " or=" + bOr + " xor=" + bXor + " lsh=" + lsh + " rsh=" + rsh + " " + "lrsh=" + lrsh + " not=" + inv + " ~/=" + quot + " mask=" + mask + " idx-num=" + nums[idx] + " " + "cells=" + cells[0] + " shl=" + counter;
   }
   _localFuncText() {
-    var twice = (x) => { return (x * 2); };
-    var grade = (score) => { {
+    const twice = (x) => { return (x * 2); };
+    const grade = (score) => { {
         const __v0 = score;
         const __ok = (() => {
           if (!(__v0 > 100)) return false;
@@ -431,47 +431,47 @@ export class SyntaxDetail extends StatefulWidget {
         }
       }
       return "无分"; };
-    var score = (this._task?.score ?? 0);
+    const score = (this._task?.score ?? 0);
     return "局部函数：twice(" + score + ")=" + twice(score) + " / " + grade(score);
   }
   _paramsText() {
-    var localScale = (v, factor) => { factor = (factor === undefined) ? 3 : factor; return (v * factor); };
-    var localPack = (v, __o) => { var step = (__o && __o.step !== undefined) ? __o.step : 2; var times = (__o && __o.times !== undefined) ? __o.times : 1; return (v + (step * times)); };
-    var namedClosure = (__o) => { var a = (__o && __o.a !== undefined) ? __o.a : 1; var b = (__o && __o.b !== undefined) ? __o.b : 2; return (a + b); };
-    var optionalClosure = (v, k) => { k = (k === undefined) ? 10 : k; return (v + k); };
-    var base = (this._task?.score ?? 20);
-    var price = new Price({
+    const localScale = (v, factor) => { factor = (factor === undefined) ? 3 : factor; return (v * factor); };
+    const localPack = (v, __o) => { let step = (__o && __o.step !== undefined) ? __o.step : 2; let times = (__o && __o.times !== undefined) ? __o.times : 1; return (v + (step * times)); };
+    const namedClosure = (__o) => { let a = (__o && __o.a !== undefined) ? __o.a : 1; let b = (__o && __o.b !== undefined) ? __o.b : 2; return (a + b); };
+    const optionalClosure = (v, k) => { k = (k === undefined) ? 10 : k; return (v + k); };
+    const base = (this._task?.score ?? 20);
+    const price = new Price({
       "_cents": base
     });
     return "形参：方法可选=" + price.plus() + "/" + price.plus(4) + " " + "/ 方法具名=" + price.scaled({ "factor": 2, "bonus": base }) + " " + "/ 局部可选=" + localScale(4) + " " + "/ 局部具名=" + localPack(1, { "step": 3, "times": 2 }) + " " + "/ 闭包具名=" + namedClosure({ "b": 5 }) + " " + "/ 闭包可选=" + optionalClosure(1) + " " + "/ 静态具名=" + Price.fromCents(base, { "discount": 3 }).cents;
   }
   _assignExprText() {
-    var i = 0;
-    var steps = [];
+    let i = 0;
+    const steps = [];
     while ((((i = (i + 1))) < 4)) {
       steps.add(i);
     }
-    var cells = [9, 9];
-    var slot = 0;
-    var added = (cells[((slot = 1))] += 3);
-    var truncated = ((__t, __i) => { return (__t[__i] = Math.trunc(__t[__i] / 4)); })(cells, ((slot = 1)));
+    const cells = [9, 9];
+    let slot = 0;
+    const added = (cells[((slot = 1))] += 3);
+    const truncated = ((__t, __i) => { return (__t[__i] = Math.trunc(__t[__i] / 4)); })(cells, ((slot = 1)));
     ((__t, __i) => { __t[__i] = Math.trunc(__t[__i] / 3); })(cells, ((slot = 0)));
-    var maybe = this._scores;
-    var missing = null;
-    var hit = 0;
-    var assigned = ((__t) => { if (__t == null) return null; return (__t[0] = ((hit = 7))); })(maybe);
-    var skipped = ((__t) => { if (__t == null) return null; return (__t[0] = 99); })(missing);
-    return "赋值表达式：steps=" + steps.join("/") + " / added=" + added + " " + "/ 整除=" + truncated + " / 列表=" + cells.join("/") + " / slot=" + slot + " " + "/ assigned=" + (assigned ?? "null") + " / hit=" + hit + " " + "/ 空目标=" + (skipped ?? "null");
+    const maybe = this._scores;
+    const missing = null;
+    let hit = 0;
+    const assigned = ((__t) => { if (__t == null) return null; return (__t[0] = ((hit = 7))); })(maybe);
+    const skipped = ((__t) => { if (__t == null) return null; return (__t[0] = 99); })(missing);
+    return "赋值表达式：steps=" + steps._join("/") + " / added=" + added + " " + "/ 整除=" + truncated + " / 列表=" + cells._join("/") + " / slot=" + slot + " " + "/ assigned=" + (assigned ?? "null") + " / hit=" + hit + " " + "/ 空目标=" + (skipped ?? "null");
   }
   _genericLocalText() {
-    var typeName = (__ta) => { return (((__ta && __ta.typeArguments) || {})["T"]).toString(); };
-    var tagOf = (__o) => { var sample = (__o && __o.sample !== undefined) ? __o.sample : null; return "T=" + (((__o && __o.typeArguments) || {})["T"]).toString() + " sample=" + (sample ?? "null"); };
+    const typeName = (__ta) => { return (((__ta && __ta.typeArguments) || {})["T"]).toString(); };
+    const tagOf = (__o) => { let sample = (__o && __o.sample !== undefined) ? __o.sample : null; return "T=" + (((__o && __o.typeArguments) || {})["T"]).toString() + " sample=" + (sample ?? "null"); };
     return "泛型局部函数：typeName<int>()=" + typeName({ typeArguments: {"T": "int"} }) + " " + "/ tagOf<int>(sample: 7)=" + tagOf({ "sample": 7, typeArguments: {"T": "int"} });
   }
   _throwExprText() {
-    var requireValue = (xs) => { return (xs?.first ?? ((() => { throw new StateError({message: "空列表"}); })())); };
-    var boom = () => { throw new StateError({message: "箭头体"}); };
-    var caught = "";
+    const requireValue = (xs) => { return (xs?.first ?? ((() => { throw new StateError({message: "空列表"}); })())); };
+    const boom = () => { throw new StateError({message: "箭头体"}); };
+    let caught = "";
     try {
       requireValue(null);
     } catch (__e) {
@@ -495,7 +495,7 @@ export class SyntaxDetail extends StatefulWidget {
     return "throw 表达式：捕获=" + caught;
   }
   _superMemberText() {
-    var car = new SportCar({});
+    const car = new SportCar({});
     return "父类成员：speed=" + car.speed + " / report=" + car.report();
   }
   get _baseValue() {
@@ -505,26 +505,26 @@ export class SyntaxDetail extends StatefulWidget {
     return (v + this._baseValue);
   }
   _tearOffText() {
-    var add = this._addBase.bind(this);
-    var bv = this._baseValue;
+    const add = this._addBase.bind(this);
+    const bv = this._baseValue;
     return "方法 tear-off：" + add(1) + "/" + bv;
   }
   _fnValueCallText() {
-    var twice = (v) => { return (v * 2); };
-    var quad = ((v) => { return (v * 2); })(3);
-    var picked = ((twice ?? ((v) => { return v; })))(5);
+    const twice = (v) => { return (v * 2); };
+    const quad = ((v) => { return (v * 2); })(3);
+    const picked = ((twice ?? ((v) => { return v; })))(5);
     return "函数值调用：" + quad + "/" + picked;
   }
   _objTearOffText() {
-    var car = new SportCar({});
-    var reportFn = car.report.bind(car);
-    var fresh = ((__o) => __o.report.bind(__o))(new SportCar());
-    var speedNow = car.speed;
+    const car = new SportCar({});
+    const reportFn = car.report.bind(car);
+    const fresh = ((__o) => __o.report.bind(__o))(new SportCar());
+    const speedNow = car.speed;
     return "对象 tear-off：" + reportFn() + "/" + fresh + "/" + speedNow;
   }
   _switchExprText() {
-    var task = this._task;
-    var label = (() => {
+    const task = this._task;
+    const label = (() => {
       const __v0 = task;
       let title, score;
       switch (true) {
@@ -537,7 +537,7 @@ export class SyntaxDetail extends StatefulWidget {
     return "switch 表达式：" + label;
   }
   _switchStmtText() {
-    var score = (this._task?.score ?? 0);
+    const score = (this._task?.score ?? 0);
     {
       const __v0 = score;
       switch (true) {
@@ -551,7 +551,7 @@ export class SyntaxDetail extends StatefulWidget {
     }
   }
   build(context) {
-    var task = this._task;
+    const task = this._task;
     return new Padding({
       "padding": (this.__k0 || (this.__k0 = EdgeInsets.all({
         "value": 16
@@ -577,10 +577,10 @@ export class SyntaxDetail extends StatefulWidget {
             "height": 8
           }))),
           new Text({
-            "data": "命名构造：" + ((this._task == null) ? "(点击按钮生成)" : this._task.describe())
+            "data": "命名构造：" + ((__nn(this._task) == null) ? "(点击按钮生成)" : this._task.describe())
           }),
           new Text({
-            "data": "当前等级：" + ((this._task == null) ? "-" : this._levelText(this._task.level))
+            "data": "当前等级：" + ((__nn(this._task) == null) ? "-" : this._levelText(this._task.level))
           }),
           (this.__k2 || (this.__k2 = new SizedBox({
             "height": 8

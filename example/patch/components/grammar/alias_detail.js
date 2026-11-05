@@ -26,11 +26,11 @@ export class AliasDetail extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var counter = new vm.CounterVm({});
-    var local = new User({
+    const counter = new vm.CounterVm({});
+    const local = new User({
       "tag": "local"
     });
-    var remote = new base.User({
+    const remote = new base.User({
       "name": "base",
       "age": 3
     });

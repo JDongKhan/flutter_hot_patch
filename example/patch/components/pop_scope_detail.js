@@ -17,7 +17,7 @@ export class PopScopeDetail extends StatefulWidget {
     this.setState(() => {
       this._invoked += 1;
       this._lastDidPop = didPop;
-      this._lastResult = ((result == null) ? "（无）" : result);
+      this._lastResult = ((__nn(result) == null) ? "（无）" : result);
     });
   }
   build(context) {

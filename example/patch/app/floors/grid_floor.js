@@ -31,7 +31,7 @@ export class GridFloorVm extends ChangeNotifier {
       this.grid = await this._service.fetchHomeGrid();
       this.error = null;
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("GridFloor 加载失败: " + e);
       this.error = e.toString();
     }
@@ -42,7 +42,7 @@ export class GridFloorVm extends ChangeNotifier {
     await this.load();
   }
   async setCity(newCity) {
-    if ((newCity == this.city)) {
+    if ((newCity === this.city)) {
       return;
     }
     this.city = newCity;
@@ -74,8 +74,8 @@ export class GridFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"T": "GridFloorVm"} });
-    var body;
+    const vm = context.watch({ typeArguments: {"T": "GridFloorVm"} });
+    let body = null;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({})));
     } else {

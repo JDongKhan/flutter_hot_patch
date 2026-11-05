@@ -55,9 +55,9 @@ export class HelloCard extends StatefulWidget {
     });
   }
   async loadUser() {
-    var name = await AccountCenter.getUserName();
-    var userMap = await Network.post({ "url": "hello", "params": {"name": name} });
-    print("用户信息:" + userMap["code"]);
+    let name = await AccountCenter.getUserName();
+    let userMap = await Network.post({ "url": "hello", "params": {"name": name} });
+    print("用户信息:" + __nn(userMap["code"]));
     await Future.delayed({duration: new Duration({seconds: 1})});
     this.setState(() => {
       this._user = new User({name: "Alice", age: 18});
@@ -75,7 +75,7 @@ export class HelloCard extends StatefulWidget {
       }
       debugPrint("try ok: count=" + this._count);
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       debugPrint("caught: " + e);
     } finally {
       debugPrint("finally");
@@ -87,11 +87,11 @@ export class HelloCard extends StatefulWidget {
     _app_host_.invoke("nativeToast", { message: "Hello from native (JS-driven)" });
   }
   build(context) {
-    var isAdult = ((this._user != null) && (this._user.age >= 18));
-    var debugActive = kDebugMode;
-    var android = Platform.isAndroid;
+    const isAdult = ((__nn(this._user) != null) && (this._user.age >= 18));
+    const debugActive = kDebugMode;
+    const android = Platform.isAndroid;
     debugPrint("build: count=" + this._count + " debug=" + debugActive + " android=" + android);
-    var stage = (() => { switch (this._count) {
+    const stage = (() => { switch (this._count) {
         case 0: return "起步";
         default: return "推进中";
       } })();
@@ -123,7 +123,7 @@ export class HelloCard extends StatefulWidget {
         ...((this._count > 0) ? [new Text({
             "data": "当前 count 是正数（if 条件渲染）"
           })] : []),
-        ...((this._user != null) ? [new Text({
+        ...((__nn(this._user) != null) ? [new Text({
             "data": "用户已加载（if + else 渲染）"
           })] : [new Text({
             "data": "用户未加载，点 Load User"

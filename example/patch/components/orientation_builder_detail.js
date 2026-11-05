@@ -38,8 +38,8 @@ export class OrientationBuilderDetail extends StatelessWidget {
     });
   }
   build(context) {
-    var mq = MediaQuery.of(context);
-    var isPortrait = (mq.orientation == Orientation.portrait);
+    const mq = MediaQuery.of(context);
+    const isPortrait = (mq.orientation === Orientation.portrait);
     return new Column({
       "crossAxisAlignment": CrossAxisAlignment.start,
       "children": [
@@ -85,8 +85,8 @@ export class OrientationBuilderDetail extends StatelessWidget {
           }))),
           "color": Colors.teal.shade50,
           "child": new OrientationBuilder({
-            "builder": (context, o) => { var tiles = [this._tile("A", Colors.teal), this._tile("B", Colors.orange), this._tile("C", Colors.indigo)];
-              if ((o == Orientation.portrait)) {
+            "builder": (context, o) => { const tiles = [this._tile("A", Colors.teal), this._tile("B", Colors.orange), this._tile("C", Colors.indigo)];
+              if ((__nn(o) === Orientation.portrait)) {
                 return new Column({
                   "mainAxisSize": MainAxisSize.min,
                   "children": tiles
@@ -112,7 +112,7 @@ export class OrientationBuilderDetail extends StatelessWidget {
           "height": 6
         }))),
         new OrientationBuilder({
-          "builder": (context, o) => { if ((o == Orientation.portrait)) {
+          "builder": (context, o) => { if ((__nn(o) === Orientation.portrait)) {
               return new Container({
                 "color": Colors.orange.shade50,
                 "padding": (this.__k11 || (this.__k11 = EdgeInsets.all({

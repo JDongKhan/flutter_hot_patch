@@ -81,7 +81,7 @@ export class LabeledDivider extends StatelessWidget {
           }))),
           "data": "★ " + this.text + " ★"
         }),
-        ...((this.child != null) ? [this.child] : [])
+        ...((__nn(this.child) != null) ? [this.child] : [])
       ]
     });
   }

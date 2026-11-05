@@ -146,10 +146,10 @@ export class InheritanceDetail extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var plain = new Greeting({
+    const plain = new Greeting({
       "name": "Dart"
     });
-    var fancy = new FancyGreeting({
+    const fancy = new FancyGreeting({
       "name": "JS"
     });
     return new Column({
@@ -219,28 +219,28 @@ export class BasicApiDetail extends StatefulWidget {
     });
   }
   build(context) {
-    var start = new DateTime({year: 2024, month: 3, day: 1, hour: 9, minute: 30});
-    var end = start.add(new Duration({hours: 2, minutes: 45}));
-    var span = end.difference(start);
-    var parsed = DateTime.parse("2024-03-01T09:30:00Z");
-    var order = (end.isAfter(start) ? "end 晚于 start" : "end 不晚于 start");
-    var text = "订单 A1001，金额 128.50 元，数量 3 件";
-    var digitRe = new RegExp({source: "\\d+"});
-    var hasDigits = digitRe.hasMatch(text);
-    var firstDigits = digitRe.firstMatch(text);
-    var allDigits = digitRe.allMatches(text);
-    var priceRe = new RegExp({source: "(\\d+)\\.(\\d+)"});
-    var price = priceRe.firstMatch(text);
-    var priceText = ((price == null) ? "未匹配" : "整数 " + price.group(1) + "，小数 " + price.group(2));
-    var buffer = new StringBuffer();
+    const start = new DateTime({year: 2024, month: 3, day: 1, hour: 9, minute: 30});
+    const end = start.add(new Duration({hours: 2, minutes: 45}));
+    const span = end.difference(start);
+    const parsed = DateTime.parse("2024-03-01T09:30:00Z");
+    const order = (end.isAfter(start) ? "end 晚于 start" : "end 不晚于 start");
+    const text = "订单 A1001，金额 128.50 元，数量 3 件";
+    const digitRe = new RegExp({source: "\\d+"});
+    const hasDigits = digitRe.hasMatch(text);
+    const firstDigits = digitRe.firstMatch(text);
+    const allDigits = digitRe.allMatches(text);
+    const priceRe = new RegExp({source: "(\\d+)\\.(\\d+)"});
+    const price = priceRe.firstMatch(text);
+    const priceText = ((__nn(price) == null) ? "未匹配" : "整数 " + price.group(1) + "，小数 " + price.group(2));
+    const buffer = new StringBuffer();
     buffer.write("匹配到 ");
     buffer.write(allDigits.length);
     buffer.writeln(" 段数字");
     buffer.write("首个片段：");
-    buffer.write(((firstDigits == null) ? "无" : firstDigits.group(0)));
-    var built = buffer.toString();
+    buffer.write(((__nn(firstDigits) == null) ? "无" : firstDigits.group(0)));
+    const built = buffer.toString();
     buffer.clear();
-    var clearedEmpty = buffer.isEmpty;
+    const clearedEmpty = buffer.isEmpty;
     return new Column({
       "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
@@ -310,7 +310,7 @@ export class BasicApiDetail extends StatefulWidget {
           "data": "RegExp(r'\\d+').hasMatch(text) → " + hasDigits
         }),
         new Text({
-          "data": "firstMatch(text).group(0) → " + ((firstDigits == null) ? "无" : firstDigits.group(0))
+          "data": "firstMatch(text).group(0) → " + ((__nn(firstDigits) == null) ? "无" : firstDigits.group(0))
         }),
         new Text({
           "data": "allMatches(text).length → " + allDigits.length

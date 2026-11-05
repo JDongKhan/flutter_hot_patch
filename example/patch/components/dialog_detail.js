@@ -57,7 +57,7 @@ export class DialogDetail extends StatefulWidget {
   }
   _record(label, v) {
     this.setState(() => {
-      this._last = ((v == null) ? label + " → null（取消 / 遮罩 / 返回键）" : label + " → " + v);
+      this._last = ((__nn(v) == null) ? label + " → null（取消 / 遮罩 / 返回键）" : label + " → " + v);
     });
   }
   build(context) {

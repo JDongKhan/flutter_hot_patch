@@ -30,7 +30,7 @@ export class PromoFloorVm extends ChangeNotifier {
       this.img = await this._service.fetchHomePromo(this.city);
       this.error = null;
     } catch (__e) {
-      var e = __e;
+      const e = __e;
       print("PromoFloor 加载失败: " + e);
       this.error = e.toString();
     }
@@ -41,7 +41,7 @@ export class PromoFloorVm extends ChangeNotifier {
     await this.load();
   }
   async setCity(newCity) {
-    if ((newCity == this.city)) {
+    if ((newCity === this.city)) {
       return;
     }
     this.city = newCity;
@@ -73,8 +73,8 @@ export class PromoFloorView extends StatelessWidget {
     super(args);
   }
   build(context) {
-    var vm = context.watch({ typeArguments: {"T": "PromoFloorVm"} });
-    var body;
+    const vm = context.watch({ typeArguments: {"T": "PromoFloorVm"} });
+    let body = null;
     if (vm.loading) {
       body = (this.__k0 || (this.__k0 = new FloorLoadingView({
         "height": 96
