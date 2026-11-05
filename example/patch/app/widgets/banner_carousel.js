@@ -52,10 +52,7 @@ export class BannerCarousel extends StatefulWidget {
     this._startAutoPlay();
   }
   _stopAutoPlay() {
-    var timer = this._timer;
-    if ((timer != null)) {
-      timer.cancel();
-    }
+    this._timer?.cancel();
     this._timer = null;
   }
   _startAutoPlay() {

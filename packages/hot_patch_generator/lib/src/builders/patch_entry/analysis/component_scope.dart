@@ -193,7 +193,9 @@ Map<String, Set<String>> _neededClasses(
     final unit = units[file];
     if (unit == null) continue;
     for (final d in unit.declarations) {
-      if (d is TopLevelVariableDeclaration || d is ExtensionDeclaration) {
+      if (d is TopLevelVariableDeclaration ||
+          d is ExtensionDeclaration ||
+          d is EnumDeclaration) {
         for (final name in dependenciesOf(d)) {
           markVisible(file, name);
         }
@@ -267,11 +269,16 @@ Map<String, Set<String>> _neededConsts(
   Map<String, Set<String>> neededClasses,
 ) {
   // 可见常量表：同文件含私有名（产物内联）；import 文件只收公共名（私有名
-  // 不可能被跨文件引用，与类可见性同口径）。
-  final visible = <String, Map<String, (String, Expression)>>{};
+  // 不可能被跨文件引用，与类可见性同口径）。枚举与顶层常量同一口径，
+  // 值用 null 初始器表示（枚举值不依赖其它常量）。
+  final visible = <String, Map<String, (String, Expression?)>>{};
   for (final e in units.entries) {
     final file = e.key;
-    final visibleHere = <String, (String, Expression)>{};
+    final visibleHere = <String, (String, Expression?)>{};
+    for (final d in e.value.declarations.whereType<EnumDeclaration>()) {
+      final name = d.name.lexeme;
+      visibleHere.putIfAbsent(name, () => (file, null));
+    }
     for (final d in e.value.declarations.whereType<TopLevelVariableDeclaration>()) {
       for (final v in d.variables.variables) {
         final init = v.initializer;
@@ -283,6 +290,11 @@ Map<String, Set<String>> _neededConsts(
     for (final imported in resolveImportFiles(e.value, file)) {
       final unit = units[imported];
       if (unit == null) continue;
+      for (final d in unit.declarations.whereType<EnumDeclaration>()) {
+        final name = d.name.lexeme;
+        if (name.startsWith('_')) continue;
+        visibleHere.putIfAbsent(name, () => (imported, null));
+      }
       for (final d in unit.declarations.whereType<TopLevelVariableDeclaration>()) {
         for (final v in d.variables.variables) {
           final init = v.initializer;
@@ -306,6 +318,8 @@ Map<String, Set<String>> _neededConsts(
     final (owner, init) = hit;
     if (!visited.add('$owner#$name')) return;
     (needed[owner] ??= <String>{}).add(name);
+    // 枚举值没有初始化器表达式（不再传播）；顶层常量继续传播其引用。
+    if (init == null) return;
     final refs = _ConstRefCollector();
     init.accept(refs);
     for (final dep in refs.names) {

@@ -211,7 +211,7 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // `this`（如 `TabController(length: n, vsync: this)`）：JS 侧方法/构造实参里
   // 的 this 就是组件实例，一比一透传；Dart 侧专属的实参（vsync）由 JS 代理类
   // 构造自行忽略。
-  if (e is ThisExpression) return 'this';
+  if (e is ThisExpression) return scope.thisRef;
   if (e is Identifier) {
     // 类型参数（`T` / `E`）：Dart 里是类型值，JS 侧读实例保存的类型名元信息。
     final tp = scope.typeParams[e.name];
@@ -250,9 +250,12 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   if (e is PropertyAccess && e.target != null) {
     final t = exprToJs(e.target!, scope, classes);
     if (t == null) return null;
-    final op = e.operator.lexeme;
-    if (op == '?.') {
-      return '($t == null ? null : $t.${e.propertyName.name})';
+    // 空安全属性访问 `a?.b` → JS 原生可选链：与 Dart 源码 1:1，且链式
+    // （`a?.b?.c` / `a?.b.c`）的「接收者单次求值 + 整链短路」由 JS 语义天然
+    // 保证。旧的 `($t == null ? null : $t.b)` 展开在链上会重复求值接收者，
+    // 且 `a?.b.c` 丢失整链短路（a 为 null 时直接 TypeError）。
+    if (e.operator.lexeme == '?.') {
+      return '$t?.${e.propertyName.name}';
     }
     return '$t.${e.propertyName.name}';
   }
@@ -265,6 +268,9 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     final t = exprToJs(tgt, scope, classes);
     final i = exprToJs(e.index, scope, classes);
     if (t == null || i == null) return null;
+    // `a?[i]` → JS 原生可选下标 `a?.[i]`：接收者为 null / undefined 时整个
+    // 表达式短路，且下标**不求值**（与 Dart 语义一致）。
+    if (e.isNullAware) return '$t?.[$i]';
     return '$t[$i]';
   }
   if (e is ParenthesizedExpression) {
@@ -428,8 +434,19 @@ String? valueCtorJs(
   final signatures = CtorSignatures.instance;
   final sig = signatures?.of(cls,
       ctorName: ctorName, positionalCount: posCount);
-  if (ctorName != null && sig == null) return null;
-  final positional = sig?.positional ?? const <String>[];
+  // 项目类的命名构造：类表里已按同一份源码 AST 收集了构造形参名，签名索引在
+  // 当前构建上下文不可得时用它兜底——两条来源都是「源码事实」，不维护白名单。
+  ClassCtor? projectCtor;
+  if (ctorName != null && sig == null) {
+    for (final c in classes[cls]?.ctors ?? const <ClassCtor>[]) {
+      if (c.name == ctorName) {
+        projectCtor = c;
+        break;
+      }
+    }
+    if (projectCtor == null) return null;
+  }
+  final positional = sig?.positional ?? projectCtor?.positional ?? const <String>[];
   final entries = <String>[];
   final rest = <String>[];
   var posIndex = 0;
@@ -848,11 +865,37 @@ String? closureBodyStmtJs(
     _bodyExprStmtJs(e, scope, classes);
 
 /// 方法调用（表达式位置）：返回 `obj.method(args)` / `this.method(args)`。
+///
+/// 空安全调用 `a?.m(args)` → JS 原生可选调用 `a?.m(args)`（ES2020）：接收者
+/// 只求值一次，为 null / undefined 时整个表达式短路、**实参不求值**，与 Dart
+/// 语义一致；链式 `a?.b?.c()` 的整链短路同样由 JS 语义保证。
 String? methodCallExprJs(
   MethodInvocation e,
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
+  if (e.isNullAware) {
+    // `?..`（空安全级联）不是方法调用语义，本层不接管（交由调用方丢弃并出声）。
+    if (e.operator?.lexeme != '?.') return null;
+    final target = e.target;
+    if (target == null) return null;
+    final recv = exprToJs(target, scope, classes);
+    if (recv == null) return null;
+    return _methodCallJs(e, scope, classes, receiverJs: recv, nullAware: true);
+  }
+  return _methodCallJs(e, scope, classes);
+}
+
+/// 方法调用的唯一实现；[receiverJs] 非空时跳过接收者解析（供空安全调用复用，
+/// 接收者由外层解析好后直接拼在这里）；[nullAware] 决定接收者与成员之间用
+/// `?.`（空安全）还是 `.`。
+String? _methodCallJs(
+  MethodInvocation e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes, {
+  String? receiverJs,
+  bool nullAware = false,
+}) {
   // 泛型方法的类型实参（`context.watch<T>()` / `m<T>()`）不在这里特判：与构造
   // 走同一条规则——原样并入调用的尾参对象 `{ typeArguments: ['T'] }`（见下方
   // [typeArgs]，接收方 / 方法名一概不看）。
@@ -929,6 +972,10 @@ String? methodCallExprJs(
     ...argJs,
     if (tailJs.isNotEmpty) '{ ${tailJs.join(', ')} }',
   ].join(', ');
+  if (receiverJs != null) {
+    final dot = nullAware ? '?.' : '.';
+    return '$receiverJs$dot${e.methodName.name}($passed)';
+  }
   final target = e.target;
   if (target == null) {
     // 顶层函数（全局方法）：**只有顶层** `@HostInjected` 函数在这里走通道——
@@ -1039,6 +1086,18 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     if (ref != null) {
       final rhs = rhsToJs(e.rightHandSide, scope, classes);
       if (rhs != null) return '$ref ${e.operator.lexeme} $rhs;';
+    }
+    return null;
+  }
+  // `this.x = rhs`（构造体 / 方法体里显式回写实例字段）：`this` 的落点由
+  // [FieldScope.thisRef] 决定（构造函数体翻译成静态方法时是局部实例变量）。
+  if (e is AssignmentExpression &&
+      e.leftHandSide is PropertyAccess &&
+      (e.leftHandSide as PropertyAccess).target is ThisExpression) {
+    final prop = (e.leftHandSide as PropertyAccess).propertyName.name;
+    final rhs = rhsToJs(e.rightHandSide, scope, classes);
+    if (rhs != null) {
+      return '${scope.thisRef}.$prop ${e.operator.lexeme} $rhs;';
     }
     return null;
   }
@@ -1274,6 +1333,13 @@ String translateStmtList(
             '产物中丢弃：${s.toSource()}');
       }
     } else if (s is IfStatement) {
+      if (s.caseClause != null) {
+        // `if (x case P)` 的判据是模式匹配，不是条件表达式。按 `if (x)` 翻译会
+        // 让 null / 类型不符的值也进入分支（静默错译），故显式告警并跳过。
+        log.warning('[hot_patch_generator] if-case 模式匹配暂不支持，已在 JS '
+            '产物中丢弃：${s.toSource()}');
+        continue;
+      }
       final condJs = exprToJs(s.expression, scope, classes);
       if (condJs == null) {
         log.warning('[hot_patch_generator] if 条件无法翻译，已在 JS 产物中'
@@ -1294,6 +1360,11 @@ String translateStmtList(
       }
       out.add(js);
     } else if (s is ForStatement) {
+      if (s.awaitKeyword != null) {
+        log.warning('[hot_patch_generator] await for 暂不支持（异步流无 JS '
+            '等价物），已在 JS 产物中丢弃：${s.toSource()}');
+        continue;
+      }
       final js = _forStatementJs(s, scope, classes, renderer, depth, returnsWidget);
       if (js == null) {
         log.warning('[hot_patch_generator] for 语句无法翻译，已在 JS 产物中'

@@ -113,6 +113,35 @@ class ClassMethod {
   });
 }
 
+/// 类的一个**命名构造**（`X.b(...)` / `factory X.b(...)`）。
+///
+/// 调用点按源码签名翻译成 `X.b({...})`（位置实参映射成形参名），JS 侧必须有
+/// 同名静态方法承接；[bodyJs] 是已预渲染的静态方法体（形参局部化、初始化列表、
+/// 构造体/工厂体全部在收集阶段译好，渲染层只拼装）。
+class ClassCtor {
+  final String name;
+
+  /// 是否 factory 构造（factory 体直接 `return`，不构造实例）。
+  final bool isFactory;
+
+  /// 位置形参名（顺序与声明一致），供调用点把位置实参映射成 props 键。
+  final List<String> positional;
+
+  /// 具名形参名（`X.b({required this.x})` → `{x}`）。
+  final Set<String> named;
+
+  /// 静态方法体（缩进已按类体内方法体口径预渲染）。
+  final String bodyJs;
+
+  const ClassCtor({
+    required this.name,
+    required this.bodyJs,
+    this.isFactory = false,
+    this.positional = const [],
+    this.named = const {},
+  });
+}
+
 /// 一个 Dart 类翻译成 JS 后的中立描述（按「声明」建模，不看用途）。
 ///
 /// 组件（@PatchEntry）与普通类都是 Dart 类，用**完全相同**的模型描述：
@@ -130,6 +159,11 @@ class ClassInfo {
   final List<ClassField> instanceFields;
   final List<ClassField> staticFields;
   final List<ClassMethod> methods; // 含 getter
+
+  /// 命名构造（`X.b`）→ 类上的同名静态方法；无名构造由 `constructor(args)`
+  /// 承接，不在这里。
+  final List<ClassCtor> ctors;
+
   final Set<String> ctorParams; // this.x 构造形参名
 
   /// 构造形参默认值（`this.banners = kBanners`）：字段名 → 默认值表达式。
@@ -168,6 +202,7 @@ class ClassInfo {
     required this.instanceFields,
     required this.staticFields,
     required this.methods,
+    this.ctors = const [],
     this.ctorParams = const {},
     this.ctorDefaults = const {},
     this.isComponent = false,
@@ -181,4 +216,24 @@ class ClassInfo {
       {for (final f in instanceFields) f.name};
 
   Set<String> get methodNames => {for (final m in methods) m.name};
+
+  /// 复制并替换命名构造表：构造体翻译时需要一份「带本类全部命名构造签名」的
+  /// 类表视图（本类条目在最终 ClassInfo 里才带上 ctors）。
+  ClassInfo copyWith({List<ClassCtor>? ctors}) => ClassInfo(
+        name: name,
+        sourceFile: sourceFile,
+        superType: superType,
+        widgetSuperType: widgetSuperType,
+        instanceFields: instanceFields,
+        staticFields: staticFields,
+        methods: methods,
+        ctors: ctors ?? this.ctors,
+        ctorParams: ctorParams,
+        ctorDefaults: ctorDefaults,
+        isComponent: isComponent,
+        typeParams: typeParams,
+        dependencies: dependencies,
+        usedWidgetPackages: usedWidgetPackages,
+        namespaceImports: namespaceImports,
+      );
 }

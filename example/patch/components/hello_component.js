@@ -105,10 +105,10 @@ export class HelloCard extends StatefulWidget {
           "data": "阶段：" + stage
         }),
         new Text({
-          "data": "user: " + ((this._user == null ? null : this._user.name) ?? "加载中")
+          "data": "user: " + (this._user?.name ?? "加载中")
         }),
         new Text({
-          "data": "age: " + ((this._user == null ? null : this._user.age) ?? "-")
+          "data": "age: " + (this._user?.age ?? "-")
         }),
         new Text({
           "data": (this._count > 3) ? "count 已经大于 3，点 Reset 归零" : "count 还小，继续 +1"

@@ -46,7 +46,7 @@ export class AnimatedListDetail extends StatefulWidget {
     var index = this._items.length;
     this.setState(() => { this._items.add("条目 " + (++this._seq)); });
     var state = this._listKey.currentState;
-    state.insertItem(index, { "duration": AnimatedListDetail._insertDuration });
+    state?.insertItem(index, { "duration": AnimatedListDetail._insertDuration });
   }
   _removeFirst() {
     if (this._items.isEmpty) {
@@ -55,7 +55,7 @@ export class AnimatedListDetail extends StatefulWidget {
     var removed = this._items.removeAt(0);
     this.setState(() => {});
     var state = this._listKey.currentState;
-    state.removeItem(0, (context, animation) => { return new Card({
+    state?.removeItem(0, (context, animation) => { return new Card({
         "margin": (this.__k1 || (this.__k1 = EdgeInsets.symmetric({
           "vertical": 4
         }))),

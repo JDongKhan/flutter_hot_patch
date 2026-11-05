@@ -137,6 +137,18 @@ String renderClassDecl(
   // 响应式 builder（ListenableBuilder/Consumer 等）现在一律以**内联闭包**
   // 下发（builder 协议唯一形态），因此不再生成实例子方法。
 
+  // 命名构造：调用点 `X.b({...})` 的落点。类上必须有同名静态方法，否则运行时
+  // 是 `X.b is not a function`。形参局部化、初始化列表、构造体 / factory 体都
+  // 已在收集阶段译好，这里只拼装。
+  for (final c in info.ctors) {
+    b.write('  // 命名构造 ${info.name}.${c.name}'
+        '${c.isFactory ? '（factory）' : ''}\n');
+    b.write('  static ${c.name}(args) {\n');
+    final ctorBody = c.bodyJs.trimRight();
+    if (ctorBody.isNotEmpty) b.write('$ctorBody\n');
+    b.write('  }\n');
+  }
+
   b.write('}');
   return b.toString();
 }

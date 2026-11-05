@@ -58,7 +58,7 @@ export class InheritedCard extends StatefulWidget {
                   }))),
                   new Builder({
                     "builder": (context) => new ElevatedButton({
-                      "onPressed": () => { this.setState(() => { this._lastRead = ((_DemoScope.read(context) == null ? null : _DemoScope.read(context).count) ?? (-1)); }); },
+                      "onPressed": () => { this.setState(() => { this._lastRead = (_DemoScope.read(context)?.count ?? (-1)); }); },
                       "child": (this.__k6 || (this.__k6 = new Text({
                         "data": "read"
                       })))

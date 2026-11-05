@@ -51,6 +51,10 @@ TopLevelConstResolver buildTopLevelConstResolver(
 ) {
   final resolver = TopLevelConstResolver();
   final exprs = <String, Expression>{};
+  // 枚举：Dart `enum E { a, b }` → 同形 JS 常量对象（成员带 name/index/values）。
+  // 枚举值不依赖其它常量，单独收集后并入 translated（同文件内联 / 跨文件 import）。
+  final enumJs = <String, String>{};
+  final enumFileOf = <String, String>{}; // 跨文件枚举来源
   final importedOf = <String, String>{}; // name → 跨文件来源（同文件不登记）
   // 跨文件私有常量：只能被它自己文件里的公共常量引用，故**不登记为可引用
   // 常量**，但必须进 [exprs] 参与翻译——否则 `'$_img?x'` 这类引用了本文件私有
@@ -62,6 +66,17 @@ TopLevelConstResolver buildTopLevelConstResolver(
   final foreignUnits = <(CompilationUnit, String)>[];
 
   void add(CompilationUnit u, String file, {required bool sameFile}) {
+    // 枚举 → JS 常量对象。可见性口径与顶层常量一致：同文件含私有名，
+    // 跨文件只收公共名。枚举值不依赖其它常量，单独登记后并入 translated。
+    for (final d in u.declarations.whereType<EnumDeclaration>()) {
+      final name = d.name.lexeme;
+      if (!sameFile && name.startsWith('_')) continue;
+      if (enumJs.containsKey(name)) continue;
+      final js = _enumJs(d, file);
+      if (js == null) continue;
+      enumJs[name] = js;
+      if (!sameFile) enumFileOf[name] = file;
+    }
     for (final d in u.declarations.whereType<TopLevelVariableDeclaration>()) {
       for (final v in d.variables.variables) {
         final init = v.initializer;
@@ -105,6 +120,9 @@ TopLevelConstResolver buildTopLevelConstResolver(
   // 按依赖序翻译（被引用者先译）：已译成功的名字才作为可引用常量注入作用域，
   // 因此「引用了失败常量」的常量自身也会翻译失败，一并被丢掉。
   final translated = <String, String>{};
+  // 枚举值先入可见常量表：顶层常量初始化器可能引用 `E.member`
+  // （`const x = TaskLevel.high`），翻译常量时名字必须已经可见。
+  translated.addAll(enumJs);
   for (final name in _dependencyOrder(exprs)) {
     final js = rhsToJs(
       exprs[name]!,
@@ -127,7 +145,9 @@ TopLevelConstResolver buildTopLevelConstResolver(
   final used = _IdentifierCollector();
   for (final e in translated.entries) {
     if (foreignPrivate.contains(e.key)) continue;
-    if (!importedOf.containsKey(e.key)) exprs[e.key]!.accept(used);
+    if (importedOf.containsKey(e.key)) continue;
+    final init = exprs[e.key]; // 枚举没有初始化器表达式
+    if (init != null) init.accept(used);
   }
   resolver.sameFileConstClasses.addAll([
     for (final e in classTable.entries)
@@ -139,7 +159,7 @@ TopLevelConstResolver buildTopLevelConstResolver(
 
   for (final e in translated.entries) {
     if (foreignPrivate.contains(e.key)) continue; // 只作作用域，不进产物
-    final file = importedOf[e.key];
+    final file = importedOf[e.key] ?? enumFileOf[e.key];
     if (file == null) {
       resolver.sameFile[e.key] = e.value; // 同文件：内联（保持依赖序）
     } else {
@@ -211,6 +231,58 @@ String renderTopLevelConstBody(Map<String, String> consts) {
     final prefix = e.key.startsWith('_') ? '' : 'export ';
     b.writeln('${prefix}const ${e.key} = ${e.value};');
   }
+  return b.toString();
+}
+
+/// 简单枚举 → JS 常量对象表达式。
+///
+/// `enum E { a, b }` →
+/// ```
+/// (function () {
+///   const __values = [];
+///   function __mk(name, index) { return { name: name, index: index,
+///     toString: function () { return "E." + name; } }; }
+///   const a = __mk("a", 0); __values.push(a);
+///   const b = __mk("b", 1); __values.push(b);
+///   return { a: a, b: b, values: __values };
+/// })()
+/// ```
+///
+/// 覆盖 Dart 枚举的公共形态：`E.a` 常量、`switch (e) { case E.a: }`（同一对象
+/// 身份）、`e.name` / `e.index` / `E.values` / `e.toString()`。
+///
+/// 增强枚举（带成员或构造实参）在 JS 侧没有对应承载位，显式告警并跳过（不生成
+/// 悬空引用）。
+String? _enumJs(EnumDeclaration d, String file) {
+  final name = d.name.lexeme;
+  if (d.members.isNotEmpty) {
+    // ignore: avoid_print - 构建期日志（与本文件既有口径一致）
+    print('[hot_patch_generator] $file: enum $name 含成员 / 构造函数（增强枚举），'
+        'JS 侧暂不支持，已跳过。');
+    return null;
+  }
+  for (final c in d.constants) {
+    if (c.arguments != null &&
+        c.arguments!.argumentList.arguments.isNotEmpty) {
+      // ignore: avoid_print
+      print('[hot_patch_generator] $file: enum $name.${c.name.lexeme} 带构造实参'
+          '（增强枚举），JS 侧暂不支持，已跳过。');
+      return null;
+    }
+  }
+  final b = StringBuffer('(function () { ');
+  b.write('const __values = []; ');
+  b.write('function __mk(name, index) { return { name: name, index: index, '
+      'toString: function () { return ${jsString('$name.')} + name; } }; } ');
+  for (final (i, c) in d.constants.indexed) {
+    final n = c.name.lexeme;
+    b.write('const $n = __mk(${jsString(n)}, $i); __values.push($n); ');
+  }
+  b.write('return { ');
+  for (final c in d.constants) {
+    b.write('${c.name.lexeme}: ${c.name.lexeme}, ');
+  }
+  b.write('values: __values }; })()');
   return b.toString();
 }
 

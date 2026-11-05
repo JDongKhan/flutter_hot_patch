@@ -83,14 +83,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
   }
 
   /// 停止自动播放。
-  ///
-  /// 先取本地引用再判空调用（写成 `_timer?.cancel()` 在热更产物里不会保留空安全
-  /// 语义，会直接对 null 发起调用）。
   void _stopAutoPlay() {
-    final timer = _timer;
-    if (timer != null) {
-      timer.cancel();
-    }
+    _timer?.cancel();
     _timer = null;
   }
 

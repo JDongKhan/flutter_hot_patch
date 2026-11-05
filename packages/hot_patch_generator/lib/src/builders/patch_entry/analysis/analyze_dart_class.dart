@@ -11,6 +11,7 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:build/build.dart' show log;
 import '../class_info.dart';
 import '../../shared/ctor_signatures.dart';
 import '../../shared/host_injected.dart';
@@ -163,7 +164,20 @@ ClassInfo classInfoOf(
         mixinOrigin: mixinOrigin,
       );
     }
-    if (m.isSetter) return null;
+    if (m.isSetter) {
+      // setter 在 JS 侧需要属性写访问器（`set x(v)`），当前产物形态没有承载位。
+      // 静默 `return null` 会让 setter 整个消失且无任何提示，故显式告警。
+      log.warning('[hot_patch_generator] $sourceFile: ${decl.name.lexeme}'
+          '.${m.name.lexeme} 是 setter，JS 侧未支持属性写访问器，已跳过。');
+      return null;
+    }
+    if (m.isOperator) {
+      // Dart 运算符重载（`operator +` / `operator ==`）没有同名 JS 成员可挂，
+      // 原样拼进类体会产出非法 JS，故显式告警并跳过。
+      log.warning('[hot_patch_generator] $sourceFile: ${decl.name.lexeme}'
+          '.${m.name.lexeme} 是运算符重载，JS 侧未支持，已跳过。');
+      return null;
+    }
     return ClassMethod(
       name: nameOverride ?? m.name.lexeme,
       params: jsMethodParams(m),
@@ -837,6 +851,17 @@ ClassInfo translateClass(
       ),
   ]);
 
+  // 命名构造（`X.b` / `factory X.b`）：调用点翻译成 `X.b({...})`，类上必须有
+  // 同名静态方法承接。无名构造由 `constructor(args)` 承担，不在这一步。
+  final ctors = parseCtx.withExprRenderer(() => _translateNamedCtors(
+        decl,
+        proto,
+        used,
+        hostFunctions: hostFunctions,
+        globalConsts: globalConsts,
+        renderer: parseCtx,
+      ));
+
   return ClassInfo(
     name: decl.name.lexeme,
     sourceFile: sourcePath,
@@ -845,6 +870,7 @@ ClassInfo translateClass(
     instanceFields: instanceFields,
     staticFields: staticFields,
     methods: translated,
+    ctors: ctors,
     ctorParams: proto.ctorParams,
     isComponent: isComponent,
     typeParams: proto.typeParams,
@@ -860,6 +886,196 @@ ClassInfo translateClass(
     usedWidgetPackages: parseCtx.usedWidgetPackages,
     namespaceImports: parseCtx.namespaceImports,
   );
+}
+
+/// 命名构造 → 类上的同名静态方法（`static b(args) { ... }`）。
+///
+/// 调用点把构造实参按源码签名映射成 props 对象（`X.b(1, k: v)` →
+/// `X.b({x: 1, k: v})`），因此静态方法只收一个 `args`，所有形参在方法体开头
+/// 局部化成同名常量。
+///
+/// - 生成式构造：先 `new X(args)`（this.x 形参由 `constructor(args)` 应用），
+///   再执行初始化列表的字段赋值，最后执行构造体；`this` 落点是 `__o`。
+/// - factory 构造：直接翻译构造体（Dart 的 factory 里不允许 `this`）。
+///
+/// 无法等价翻译的初始化项（`super(...)` / `this.other(...)`）显式告警并跳过。
+List<ClassCtor> _translateNamedCtors(
+  ClassDeclaration decl,
+  ClassInfo proto,
+  Map<String, ClassInfo> classes, {
+  required Set<String> hostFunctions,
+  required Set<String> globalConsts,
+  ExprRenderer? renderer,
+}) {
+  final cn = decl.name.lexeme;
+  final instanceMethods = {
+    ...objectMethodNamesOf(proto, classes),
+    if (sdkBaseName(proto) != null) 'notifyListeners',
+  };
+  // 第一遍：只收集签名（形参名 / 是否 factory）。第二遍翻译构造体时需要看到
+  // **全部**命名构造（构造体可能调用本类的另一个命名构造，前后顺序无关）。
+  final decls = <_NamedCtorDecl>[];
+  for (final c in decl.members.whereType<ConstructorDeclaration>()) {
+    final name = c.name?.lexeme;
+    // 无名构造由 `constructor(args)` 承接，不发射静态方法。
+    if (name == null || name.isEmpty) continue;
+    final params = <String>[];
+    final positional = <String>[];
+    final named = <String>{};
+    final defaults = <String, Expression>{};
+    for (final p in c.parameters.parameters) {
+      final inner = p is DefaultFormalParameter ? p.parameter : p;
+      final n = inner.name?.lexeme;
+      if (n == null || n.isEmpty) continue;
+      params.add(n);
+      if (p.isNamed) {
+        named.add(n);
+      } else {
+        positional.add(n);
+      }
+      if (p is DefaultFormalParameter && p.defaultValue != null) {
+        defaults[n] = p.defaultValue!;
+      }
+    }
+    decls.add(_NamedCtorDecl(
+      decl: c,
+      name: name,
+      isFactory: c.factoryKeyword != null,
+      params: params,
+      positional: positional,
+      named: named,
+      defaults: defaults,
+    ));
+  }
+  if (decls.isEmpty) return const <ClassCtor>[];
+  // 类表里当前类的条目尚未带上 ctors（本函数正在生成它），用一份带签名的
+  // 视图参与第二遍翻译，这样构造体里的 `X.other(...)` 能按源码签名映射 props。
+  final localClasses = <String, ClassInfo>{
+    ...classes,
+    cn: (classes[cn] ?? proto).copyWith(ctors: [
+      for (final d in decls)
+        ClassCtor(
+          name: d.name,
+          bodyJs: '',
+          isFactory: d.isFactory,
+          positional: d.positional,
+          named: d.named,
+        ),
+    ]),
+  };
+  final out = <ClassCtor>[];
+  for (final d in decls) {
+    final c = d.decl;
+    final scope = FieldScope(
+      instanceFields: d.isFactory
+          ? const {}
+          : {for (final f in objectFieldsOf(proto, classes)) f.name},
+      params: d.params.toSet(),
+      methods: d.isFactory ? const {} : instanceMethods,
+      className: cn,
+      staticFields: {for (final f in proto.staticFields) f.name},
+      staticMethods: {
+        for (final m in proto.methods)
+          if (m.isStatic) m.name,
+      },
+      // 类泛型：静态方法从调用点下发的 `args.typeArguments` 取实参。
+      typeParams: {
+        for (final t in proto.typeParams) t: '((args && args.typeArguments) || {})["$t"]',
+      },
+      hostFunctions: hostFunctions,
+      globalConsts: globalConsts,
+      thisRef: d.isFactory ? 'this' : '__o',
+    );
+    final b = StringBuffer();
+    // 构造体里的构造调用先走 valueCtorJs：rhsToJs 的 constructionHook 会用
+    // 「类自身字段作用域」渲染实参，把构造形参误当成实例字段（`this.title`）。
+    String? ctorAware(Expression e) =>
+        valueCtorJs(e, scope, localClasses) ?? rhsToJs(e, scope, localClasses);
+    for (final p in d.params) {
+      final dv = d.defaults[p];
+      final dj = dv == null ? null : ctorAware(dv);
+      if (dj != null && dj != 'undefined') {
+        b.writeln('    const $p = args.$p !== undefined ? args.$p : $dj;');
+      } else {
+        b.writeln('    const $p = args.$p;');
+      }
+    }
+    if (!d.isFactory) {
+      b.writeln('    const __o = new $cn(args);');
+      for (final init in c.initializers) {
+        if (init is ConstructorFieldInitializer) {
+          final v = ctorAware(init.expression);
+          if (v == null) {
+            log.warning('[hot_patch_generator] $cn.${d.name} 初始化列表项无法翻译，'
+                '已跳过：${init.toSource()}');
+            continue;
+          }
+          b.writeln('    __o.${init.fieldName.name} = $v;');
+        } else if (init is AssertInitializer) {
+          final cond = exprToJs(init.condition, scope, localClasses);
+          final msg =
+              init.message == null ? null : exprToJs(init.message!, scope, localClasses);
+          if (cond == null) continue;
+          b.writeln('    assert($cond${msg == null ? '' : ', $msg'});');
+        } else {
+          log.warning('[hot_patch_generator] $cn.${d.name} 初始化项 '
+              '${init.toSource()} 无法等价翻译（基类构造已由 new 承接），已跳过。');
+        }
+      }
+    }
+    final body = c.body;
+    if (body is ExpressionFunctionBody) {
+      // factory 的箭头体（`factory X.b(...) => X.other(...)`）：按**值表达式**
+      // 翻译，走 rhsToJs 的构造统一规则（`X.other(...)` → `X.other({...})`）。
+      final v = ctorAware(body.expression);
+      if (v == null) {
+        log.warning('[hot_patch_generator] $cn.${d.name} 构造体表达式无法翻译，'
+            '已丢弃：${body.expression.toSource()}');
+      } else {
+        b.writeln('    return $v;');
+      }
+    } else {
+      b.write(translateMethodBody(
+        body,
+        scope,
+        localClasses,
+        renderer: renderer,
+        returnExpressionBody: true,
+        returnsWidget: false,
+        depth: 2,
+      ));
+    }
+    if (!d.isFactory) b.writeln('    return __o;');
+    out.add(ClassCtor(
+      name: d.name,
+      bodyJs: b.toString(),
+      isFactory: d.isFactory,
+      positional: d.positional,
+      named: d.named,
+    ));
+  }
+  return out;
+}
+
+/// [_translateNamedCtors] 第一遍收集的签名事实。
+class _NamedCtorDecl {
+  const _NamedCtorDecl({
+    required this.decl,
+    required this.name,
+    required this.isFactory,
+    required this.params,
+    required this.positional,
+    required this.named,
+    required this.defaults,
+  });
+
+  final ConstructorDeclaration decl;
+  final String name;
+  final bool isFactory;
+  final List<String> params;
+  final List<String> positional;
+  final Set<String> named;
+  final Map<String, Expression> defaults;
 }
 
 /// 组件 extends 的**项目内**基类名（SDK 基类返回 null：由 flutter.js 导出）。

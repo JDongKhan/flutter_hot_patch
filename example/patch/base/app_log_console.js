@@ -4,6 +4,7 @@
 
 import { ChangeNotifier, DateTime } from '../flutter.js';
 
+export const AppLogLevel = (function () { const __values = []; function __mk(name, index) { return { name: name, index: index, toString: function () { return "AppLogLevel." + name; } }; } const info = __mk("info", 0); __values.push(info); const warn = __mk("warn", 1); __values.push(warn); const error = __mk("error", 2); __values.push(error); return { info: info, warn: warn, error: error, values: __values }; })();
 export const appLogZoneSpecification = new ZoneSpecification({print: (self, parent, zone, line) => { AppLogCenter.instance.add(line);
     parent.print(zone, line); }});
 
@@ -66,6 +67,11 @@ export class AppLogCenter extends ChangeNotifier {
       return AppLogLevel.warn;
     }
     return AppLogLevel.info;
+  }
+  // 命名构造 AppLogCenter._
+  static _(args) {
+    const __o = new AppLogCenter(args);
+    return __o;
   }
 }
 

@@ -376,6 +376,13 @@ class FieldScope {
   /// （如扩展成员、顶层常量求值），此时静态成员不参与解析。
   final String? className;
 
+  /// Dart `this` 在 JS 侧的落点（默认 `'this'`）。
+  ///
+  /// 构造函数体被翻译成静态方法（`static b(args)`）时，Dart 的 `this` 指向
+  /// 「正在构造的实例」，JS 侧落点是局部实例变量 `__o`。这是语法级的唯一口径，
+  /// 不按构造名 / 类名判断。
+  final String thisRef;
+
   /// 类型参数名 → 运行时类型名表达式（`T` → `this.__ta["T"]`）。
   ///
   /// Dart 方法体里的 `T` 是**类型值**（`T == String` / `as T`），JS 侧没有类型
@@ -419,6 +426,7 @@ class FieldScope {
           staticMethods: staticMethods,
           typeParams: typeParams,
           localAliases: declAliases,
+          thisRef: thisRef,
         );
 
   FieldScope({
@@ -433,6 +441,7 @@ class FieldScope {
     this.hostFunctions = const {},
     this.superMap = const {},
     this.hasJsBase = false,
+    this.thisRef = 'this',
     Map<String, String>? localAliases,
     Map<String, String>? declAliases,
     Set<String>? localVars,
@@ -461,6 +470,7 @@ class FieldScope {
         staticMethods: staticMethods,
         typeParams: typeParams,
         localAliases: localAliases,
+        thisRef: thisRef,
         // 同一个别名表实例：派生作用域里登记的别名，母作用域后续声明同样可见
         // （闭包体内的 `final x = _feed.spots;` 也算链式别名）。
         declAliases: declAliases,

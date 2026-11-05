@@ -253,7 +253,7 @@ export class DragDetail extends StatefulWidget {
                 "style": (this.__k21 || (this.__k21 = new TextStyle({
                   "fontSize": 13
                 }))),
-                "data": hovering ? "松手放入 " + ((candidate.first == null ? null : candidate.first.name) ?? "") : (((fruit == null) ? "（空）" : fruit.name))
+                "data": hovering ? "松手放入 " + (candidate.first?.name ?? "") : (((fruit == null) ? "（空）" : fruit.name))
               })
             ]
           })

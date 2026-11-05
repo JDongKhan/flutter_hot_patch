@@ -1,3 +1,11 @@
+## 0.8.1
+
+**协议次版本：契约不变，空安全产物形态改为 JS 原生可选链；旧的三元 / IIFE 展开同次删除，不保留兼容。**
+
+- 空安全属性访问 / 下标 / 方法调用改为与 Dart 源码同形：`a?.b` → `a?.b`、`a?[i]` → `a?.[i]`、`a?.m(args)` → `a?.m(args)`（`shared/js_translator.dart` 里三处旧展开删除）。接收者只求值一次、null / undefined 时整链短路，实参 / 下标不求值——链式 `a?.b?.c` 不再逐层展开三元（旧写法在链上会重复求值接收者，且 `a?.b.c` 在 `a` 为 null 时丢短路、直接 TypeError）。
+- 引擎基线：产物开始依赖 ES2020 可选链（此前已使用 `??`，同一代引擎能力）；`docs/组件支持文档.md` §7.1 与 §6.14 同步更新（iOS 口径 15+）。
+- 示例：`BannerCarousel._stopAutoPlay` 删除「先取本地引用再判空」的旧绕行写法，恢复 `_timer?.cancel()`。
+
 ## 0.8.0
 
 **破坏性：JS 侧新增原生 InheritedWidget 语义；provider 去掉宿主结点与宿主 context op（旧 `__provides` / `__registerScope` / `__scopeOfContext` 协议与 provider 宿主映射同次删除，不保留兼容）。需与 hot_patch 0.4.0 配套。**
