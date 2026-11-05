@@ -155,12 +155,14 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       }
       return '($l $op $r)';
     }
-    // Dart 整除 `a ~/ b`：JS 无对应运算符，转 Math.floor(a / b)。
+    // Dart 整除 `a ~/ b`：JS 无对应运算符，转「向零取整」的除法。
+    // 必须用 Math.trunc 而不是 Math.floor：Dart 的 `~/` 向零截断
+    // （`-3 ~/ 2 == -1`），Math.floor 对负数会向下取整得到 -2。
     if (op == '~/') {
       final l = exprToJs(e.leftOperand, scope, classes);
       final r = exprToJs(e.rightOperand, scope, classes);
       if (l == null || r == null) return null;
-      return 'Math.floor($l / $r)';
+      return 'Math.trunc($l / $r)';
     }
   }
   // 级联 `target..m(a)..n(b)`：Dart 返回 target 本身。译成 IIFE：
