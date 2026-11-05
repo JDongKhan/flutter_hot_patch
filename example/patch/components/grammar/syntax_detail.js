@@ -309,6 +309,30 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "label：hit=" + hit;
   }
+  _rethrowText() {
+    var trace = "";
+    try {
+      try {
+        int.parse("x");
+      } catch (__e) {
+        if (__e instanceof FormatException) {
+          trace = "内层";
+          throw __e;
+        }
+        else {
+          throw __e;
+        }
+      }
+    } catch (__e) {
+      if (__e instanceof FormatException) {
+        trace = trace + " → 外层捕获";
+      }
+      else {
+        throw __e;
+      }
+    }
+    return "rethrow：" + trace;
+  }
   _bitwiseText() {
     var a = 6;
     var b = 3;
@@ -475,6 +499,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._bitwiseText()
+          }),
+          new Text({
+            "data": this._rethrowText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")

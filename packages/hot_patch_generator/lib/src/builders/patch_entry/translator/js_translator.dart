@@ -1281,6 +1281,10 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     final v = rhsToJs(e.expression, scope, classes);
     return v == null ? null : 'throw $v;';
   }
+  // `rethrow;`：Dart 只允许出现在 catch 内，抛出的必须是**原始异常对象**。
+  // 捕获子句的唯一绑定名是 `__e`（见 [_tryStatementJs]），闭包内同样可见，
+  // 因此一比一发射 `throw __e;`（不重建 Error，栈保持原样）。
+  if (e is RethrowExpression) return 'throw __e;';
   // _x++ / ++_x / _x--
   if (e is PostfixExpression && _isPlainIdentifier(e.operand)) {
     final ref = scope.fieldRef((e.operand as Identifier).name);

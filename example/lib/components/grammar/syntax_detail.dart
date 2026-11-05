@@ -250,6 +250,22 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return 'label：hit=$hit';
   }
 
+  /// rethrow：catch 内原样重抛原始异常，外层继续捕获。
+  String _rethrowText() {
+    var trace = '';
+    try {
+      try {
+        int.parse('x');
+      } on FormatException {
+        trace = '内层';
+        rethrow;
+      }
+    } on FormatException {
+      trace = '$trace → 外层捕获';
+    }
+    return 'rethrow：$trace';
+  }
+
   /// 位运算 / 移位 / 一元 `~` / 复合赋值（含 JS 没有的 `~/=`）。
   String _bitwiseText() {
     final a = 6; // 110
@@ -356,6 +372,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_forPartsText()),
           Text(_labelText()),
           Text(_bitwiseText()),
+          Text(_rethrowText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(
