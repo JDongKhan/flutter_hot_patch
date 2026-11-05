@@ -205,7 +205,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
     <div><dt>适用源语言</dt><dd>Dart 3.x（含空安全、record、模式匹配）</dd></div>
     <div><dt>适用目标</dt><dd>ES2022+，原生 class / 模块 / 可选链</dd></div>
     <div><dt>实测环境</dt><dd>Dart 3.11.5 stable，macOS arm64</dd></div>
-    <div><dt>文档版本</dt><dd>v1.2 · 规则 18 组 · 陷阱 40+ · 2026-11-05 与 hot_patch_generator 0.9.0 核对</dd></div>
+    <div><dt>文档版本</dt><dd>v1.3 · 规则 18 组 · 陷阱 40+ · 2026-11-05 与 hot_patch_generator 0.9.0 核对（新增「实现者硬约束」：禁止自造产物形态 / 命名）</dd></div>
   </dl>
 </header>
 
@@ -1165,7 +1165,7 @@ const b = NumX_get_isBlank('  ');</code><button class="copy" type="button">复�
     <tr><td><code>any(f)</code> / <code>every(f)</code></td><td><code>any(f)</code> / <code>every(f)</code></td><td><span class="lv lv-care">扩展</span> 同名 <code>every</code> 已存在；<code>any</code> 缺同名，运行时挂同名（内部 <code>some</code>）</td><td><span class="muted">—</span></td><td>every 原生同名同义；<code>Array.prototype.any</code>（内部 some）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>take(n)</code> / <code>skip(n)</code></td><td><code>slice(0, n)</code> / <code>slice(n)</code></td><td><span class="lv lv-must">必须改写</span> 负数与越界按 Dart 规则处理</td><td><span class="muted">—</span></td><td><code>Array.prototype.take</code> / <code>skip</code>（负数抛 RangeError，越界按长度截断）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>toList()</code> / <code>List.from(it)</code></td><td><code>[...it]</code></td><td><span class="lv lv-must">必须改写</span> 物化惰性结果</td><td><span class="muted">—</span></td><td>Array.prototype.toList（返回自身，保持链式原地语义）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>asMap()</code></td><td>手写索引映射</td><td><span class="lv lv-must">必须改写</span> JS 无对应</td><td><span class="muted">—</span></td><td><code>Array.prototype.asMap</code>（索引 → 值的普通对象）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>asMap()</code></td><td>手写索引映射</td><td><span class="lv lv-must">必须改写</span> JS 无对应</td><td><span class="muted">—</span></td><td><code>Array.prototype.asMap</code>（索引 → 值的 Map：<code>new Map([[i, v], …])</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>cast&lt;T&gt;()</code></td><td>擦除</td><td><span class="lv lv-ok">直译</span> 不做运行时检查</td><td><span class="muted">—</span></td><td>类型擦除，无运行时检查</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
   </tbody>
 </table>
@@ -1227,7 +1227,10 @@ const b = NumX_get_isBlank('  ');</code><button class="copy" type="button">复�
     <tr><td><code>firstWhere(f, {orElse})</code></td><td><code>find(f)</code></td><td><span class="muted">—</span></td><td>找不到：Dart 抛错/走 <code>orElse</code>，JS 返回 <code>undefined</code></td><td><code>Array.prototype.firstWhere</code>（命中返回值；否则走 orElse，缺失时抛 StateError）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>elementAt(i)</code></td><td><code>arr[i]</code></td><td><span class="muted">—</span></td><td>越界语义不同</td><td><code>Array.prototype.elementAt</code>（越界抛 RangeError）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>toList()</code></td><td><code>[...arr]</code> / <code>slice()</code></td><td><span class="muted">—</span></td><td>惰性结果物化</td><td>Array.prototype.toList（返回自身）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>asMap()</code></td><td><code>Object.fromEntries(idx)</code></td><td><span class="muted">—</span></td><td>索引 → 元素</td><td><code>Array.prototype.asMap</code>（索引 → 值普通对象）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>asMap()</code></td><td><code>Object.fromEntries(idx)</code></td><td><span class="muted">—</span></td><td>索引 → 元素</td><td><code>Array.prototype.asMap</code>（索引 → 值的 Map：<code>new Map([[i, v], …])</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>keys</code> / <code>values</code> / <code>entries</code></td><td><code>_keys</code> / <code>_values</code> / <code>_entries</code></td><td>JS 同名是方法、Dart 是属性</td><td>运行时挂 <code>_</code> 前缀 getter；仅接收者可判定为 Map 时改写</td><td><code>js_translator</code> 的 <code>_mapPropertyMember</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>length</code> / <code>remove</code> / <code>containsKey</code> / <code>containsValue</code> / <code>putIfAbsent</code> / <code>update</code> / <code>addAll</code> / <code>removeWhere</code> / <code>isEmpty</code> / <code>isNotEmpty</code></td><td>同名</td><td>JS Map 缺同名</td><td>运行时在 <code>Map.prototype</code> 上用 <code>__defineProtoMember</code> / <code>__defineProtoGetter</code> 补同名（不改名）</td><td><code>runtime_js.dart</code> 的 Map 成员表</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>forEach(f)</code></td><td><code>forEach((__v, __k) =&gt; f(__k, __v))</code></td><td>回调顺序相反</td><td>调用点交换参数，<b>不覆盖原生</b></td><td><code>js_translator</code> 的 <code>_methodCallJs</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>cast&lt;T&gt;()</code></td><td>擦除</td><td><span class="muted">—</span></td><td>不做检查</td><td>类型擦除</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
   </tbody>
 </table>
