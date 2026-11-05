@@ -71,7 +71,9 @@ export class PreferredSizeDetail extends StatefulWidget {
             "max": 120,
             "divisions": 8,
             "label": label,
-            "onChanged": (v) => { this.setState(() => { this._height = v; }); }
+            "onChanged": (v) => { this.setState(() => {
+                this._height = v;
+              }); }
           }),
           (this.__k8 || (this.__k8 = new SizedBox({
             "height": 8

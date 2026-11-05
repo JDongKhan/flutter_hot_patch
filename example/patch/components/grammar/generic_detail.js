@@ -56,7 +56,9 @@ export class GenericDetail extends StatefulWidget {
     this._readCount = 0;
   }
   _snapshot(model) {
-    this.setState(() => { this._readCount = model.count; });
+    this.setState(() => {
+      this._readCount = model.count;
+    });
   }
   build(context) {
     var stringCodec = new TypeCodec({

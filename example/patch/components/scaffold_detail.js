@@ -11,7 +11,9 @@ export class ScaffoldDetail extends StatefulWidget {
     this._navIndex = 0;
   }
   _onNavTap(index) {
-    this.setState(() => { this._navIndex = index; });
+    this.setState(() => {
+      this._navIndex = index;
+    });
   }
   _onFab() {
   }

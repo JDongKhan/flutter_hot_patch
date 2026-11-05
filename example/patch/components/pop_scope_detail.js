@@ -14,7 +14,11 @@ export class PopScopeDetail extends StatefulWidget {
     this._lastResult = "（无）";
   }
   _onPopInvoked(didPop, result) {
-    this.setState(() => { this._invoked += 1; this._lastDidPop = didPop; this._lastResult = ((result == null) ? "（无）" : result); });
+    this.setState(() => {
+      this._invoked += 1;
+      this._lastDidPop = didPop;
+      this._lastResult = ((result == null) ? "（无）" : result);
+    });
   }
   build(context) {
     return new PopScope({
@@ -52,7 +56,9 @@ export class PopScopeDetail extends StatefulWidget {
               }))),
               new Switch({
                 "value": (!this._canPop),
-                "onChanged": (v) => { this.setState(() => { this._canPop = (!v); }); }
+                "onChanged": (v) => { this.setState(() => {
+                    this._canPop = (!v);
+                  }); }
               }),
               new Text({
                 "style": (this.__k5 || (this.__k5 = new TextStyle({

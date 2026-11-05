@@ -45,13 +45,17 @@ export class AppShellView extends StatefulWidget {
       return current;
     }
     var controller = new TabController({length: length, vsync: this});
-    controller.addListener(() => { this.setState(() => { this._index = controller.index; }); });
+    controller.addListener(() => { this.setState(() => {
+        this._index = controller.index;
+      }); });
     this._tab = controller;
     this._index = 0;
     return controller;
   }
   _openTab(index) {
-    this.setState(() => { this._index = index; });
+    this.setState(() => {
+      this._index = index;
+    });
     var tab = this._tab;
     if ((tab != null)) {
       tab.animateTo(index);

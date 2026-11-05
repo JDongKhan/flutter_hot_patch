@@ -15,7 +15,10 @@ export class DismissibleDetail extends StatefulWidget {
     return (direction == DismissDirection.endToStart);
   }
   _reset() {
-    this.setState(() => { this._items = ["第一条：左滑删除，右滑弹回", "第二条：试试右滑，会被拒绝", "第三条：删光后点「重置」"]; this._last = "还没有条目被删除"; });
+    this.setState(() => {
+      this._items = ["第一条：左滑删除，右滑弹回", "第二条：试试右滑，会被拒绝", "第三条：删光后点「重置」"];
+      this._last = "还没有条目被删除";
+    });
   }
   build(context) {
     return new Column({
@@ -65,7 +68,10 @@ export class DismissibleDetail extends StatefulWidget {
                     "icon": Icons.block
                   })))
                 }),
-                "onDismissed": (direction) => { this.setState(() => { this._items.remove(item); this._last = "已删除：" + item; }); },
+                "onDismissed": (direction) => { this.setState(() => {
+                    this._items.remove(item);
+                    this._last = "已删除：" + item;
+                  }); },
                 "child": new Container({
                   "color": Colors.white,
                   "child": new ListTile({

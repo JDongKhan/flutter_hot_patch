@@ -23,26 +23,40 @@ export class InputDetail extends StatefulWidget {
   }
   _onControllerChanged() {
     if (!this.__unmounted) {
-      this.setState(() => { this._text = this._controller.text; });
+      this.setState(() => {
+        this._text = this._controller.text;
+      });
     }
   }
   _onTextChanged(v) {
-    this.setState(() => { this._text = v; });
+    this.setState(() => {
+      this._text = v;
+    });
   }
   _onChoiceChanged(v) {
-    this.setState(() => { this._choice = v; });
+    this.setState(() => {
+      this._choice = v;
+    });
   }
   _onDropdownChanged(v) {
-    this.setState(() => { this._dropdown = v; });
+    this.setState(() => {
+      this._dropdown = v;
+    });
   }
   _onSwitchChanged(v) {
-    this.setState(() => { this._switchOn = (v ?? false); });
+    this.setState(() => {
+      this._switchOn = (v ?? false);
+    });
   }
   _onCheckChanged(v) {
-    this.setState(() => { this._checked = v; });
+    this.setState(() => {
+      this._checked = v;
+    });
   }
   _onSliderChanged(v) {
-    this.setState(() => { this._slider = v; });
+    this.setState(() => {
+      this._slider = v;
+    });
   }
   build(context) {
     return new Column({

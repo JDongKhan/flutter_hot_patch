@@ -34,7 +34,9 @@ export class ValueListenableBuilderDetail extends StatefulWidget {
     n.value = n.value;
   }
   _toggle() {
-    this.setState(() => { this._useA = (!this._useA); });
+    this.setState(() => {
+      this._useA = (!this._useA);
+    });
   }
   build(context) {
     return new Container({

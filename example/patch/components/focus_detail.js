@@ -28,7 +28,9 @@ export class FocusDetail extends StatefulWidget {
     this.setState(() => {});
   }
   _record(label, hasFocus) {
-    this.setState(() => { this._log = (hasFocus ? label + " 获得焦点" : label + " 失去焦点"); });
+    this.setState(() => {
+      this._log = (hasFocus ? label + " 获得焦点" : label + " 失去焦点");
+    });
   }
   get _current() {
     if (this._a.hasFocus) {

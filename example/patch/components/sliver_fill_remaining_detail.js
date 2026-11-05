@@ -63,7 +63,9 @@ export class SliverFillRemainingDetail extends StatefulWidget {
                       }))),
                       new Switch({
                         "value": this._hasScrollBody,
-                        "onChanged": (v) => { this.setState(() => { this._hasScrollBody = v; }); }
+                        "onChanged": (v) => { this.setState(() => {
+                            this._hasScrollBody = v;
+                          }); }
                       })
                     ]
                   }),
@@ -79,7 +81,9 @@ export class SliverFillRemainingDetail extends StatefulWidget {
                       }))),
                       new Switch({
                         "value": this._fillOverscroll,
-                        "onChanged": (v) => { this.setState(() => { this._fillOverscroll = v; }); }
+                        "onChanged": (v) => { this.setState(() => {
+                            this._fillOverscroll = v;
+                          }); }
                       })
                     ]
                   }),
@@ -95,7 +99,9 @@ export class SliverFillRemainingDetail extends StatefulWidget {
                       }))),
                       new Switch({
                         "value": this._tallHeader,
-                        "onChanged": (v) => { this.setState(() => { this._tallHeader = v; }); }
+                        "onChanged": (v) => { this.setState(() => {
+                            this._tallHeader = v;
+                          }); }
                       })
                     ]
                   }),

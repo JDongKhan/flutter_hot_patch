@@ -13,10 +13,15 @@ export class OverlayPortalDetail extends StatefulWidget {
     this._round = 0;
   }
   _replay() {
-    this.setState(() => { this._round += 1; });
+    this.setState(() => {
+      this._round += 1;
+    });
   }
   _switchAlignment(value) {
-    this.setState(() => { this._alignment = value; this._round += 1; });
+    this.setState(() => {
+      this._alignment = value;
+      this._round += 1;
+    });
   }
   build(context) {
     return new Column({

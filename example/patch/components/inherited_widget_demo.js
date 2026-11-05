@@ -39,7 +39,9 @@ export class InheritedCard extends StatefulWidget {
                 "mainAxisAlignment": MainAxisAlignment.center,
                 "children": [
                   new ElevatedButton({
-                    "onPressed": () => { this.setState(() => { this._count += 1; }); },
+                    "onPressed": () => { this.setState(() => {
+                        this._count += 1;
+                      }); },
                     "child": (this.__k3 || (this.__k3 = new Text({
                       "data": "count +1"
                     })))
@@ -48,7 +50,9 @@ export class InheritedCard extends StatefulWidget {
                     "width": 12
                   }))),
                   new ElevatedButton({
-                    "onPressed": () => { this.setState(() => { this._mode = ((this._mode == "A") ? "B" : "A"); }); },
+                    "onPressed": () => { this.setState(() => {
+                        this._mode = ((this._mode == "A") ? "B" : "A");
+                      }); },
                     "child": (this.__k5 || (this.__k5 = new Text({
                       "data": "切换 mode"
                     })))
@@ -58,7 +62,9 @@ export class InheritedCard extends StatefulWidget {
                   }))),
                   new Builder({
                     "builder": (context) => new ElevatedButton({
-                      "onPressed": () => { this.setState(() => { this._lastRead = (_DemoScope.read(context)?.count ?? (-1)); }); },
+                      "onPressed": () => { this.setState(() => {
+                          this._lastRead = (_DemoScope.read(context)?.count ?? (-1));
+                        }); },
                       "child": (this.__k6 || (this.__k6 = new Text({
                         "data": "read"
                       })))

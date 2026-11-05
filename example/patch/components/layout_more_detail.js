@@ -12,7 +12,9 @@ export class LayoutMoreDetail extends StatefulWidget {
     this._lastTap = "（没点过）";
   }
   _tap(who) {
-    this.setState(() => { this._lastTap = who; });
+    this.setState(() => {
+      this._lastTap = who;
+    });
   }
   build(context) {
     return new Column({
@@ -220,7 +222,9 @@ export class LayoutMoreDetail extends StatefulWidget {
             "boundaryMargin": (this.__k19 || (this.__k19 = EdgeInsets.all({
               "value": 20
             }))),
-            "onInteractionUpdate": (details) => { this.setState(() => { this._scale = details.scale; }); },
+            "onInteractionUpdate": (details) => { this.setState(() => {
+                this._scale = details.scale;
+              }); },
             "child": new Container({
               "width": 320,
               "height": 160,

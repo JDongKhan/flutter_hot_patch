@@ -11,7 +11,9 @@ export class ButtonDetail extends StatefulWidget {
     this._pressed = 0;
   }
   onTap() {
-    this.setState(() => { this._pressed += 1; });
+    this.setState(() => {
+      this._pressed += 1;
+    });
   }
   build(context) {
     return new Column({

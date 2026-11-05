@@ -44,7 +44,9 @@ export class AnimatedListDetail extends StatefulWidget {
   }
   _insert() {
     var index = this._items.length;
-    this.setState(() => { this._items.add("条目 " + (++this._seq)); });
+    this.setState(() => {
+      this._items.add("条目 " + (++this._seq));
+    });
     var state = this._listKey.currentState;
     state?.insertItem(index, { "duration": AnimatedListDetail._insertDuration });
   }

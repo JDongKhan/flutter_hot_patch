@@ -11,7 +11,9 @@ export class TextDetail extends StatefulWidget {
     this._count = 0;
   }
   bump() {
-    this.setState(() => { this._count += 1; });
+    this.setState(() => {
+      this._count += 1;
+    });
   }
   build(context) {
     return new Column({

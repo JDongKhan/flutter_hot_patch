@@ -11,7 +11,9 @@ export class SliverFillViewportDetail extends StatefulWidget {
     this._fraction = 1.0;
   }
   _setFraction(value) {
-    this.setState(() => { this._fraction = value; });
+    this.setState(() => {
+      this._fraction = value;
+    });
   }
   build(context) {
     return new Scaffold({

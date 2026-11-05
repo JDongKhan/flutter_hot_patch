@@ -1089,6 +1089,41 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     }
     return null;
   }
+  // 空安全赋值：`a?[i] = v` / `a?.b = v`。JS 的可选链不能作赋值目标
+  // （`a?.[i] = v` 是语法错误），故落成接收者单次求值的箭头 IIFE：接收者为
+  // null / undefined 时整条赋值（含下标与右值）不执行，与 Dart 语义一致。
+  if (e is AssignmentExpression &&
+      (e.leftHandSide is IndexExpression ||
+          (e.leftHandSide is PropertyAccess &&
+              (e.leftHandSide as PropertyAccess).operator.lexeme == '?.'))) {
+    final lhs = e.leftHandSide;
+    String? recv;
+    String? member;
+    if (lhs is IndexExpression && lhs.isNullAware) {
+      final target = lhs.target;
+      if (target == null) return null;
+      recv = exprToJs(target, scope, classes);
+      final index = exprToJs(lhs.index, scope, classes);
+      if (index != null) member = '[$index]';
+    } else if (lhs is PropertyAccess) {
+      final target = lhs.target;
+      recv = target == null ? null : exprToJs(target, scope, classes);
+      member = '.${lhs.propertyName.name}';
+    } else if (lhs is IndexExpression) {
+      // 普通下标赋值 `a[i] = v`（同一规则的非空安全形态）。
+      final target = lhs.target;
+      final t = target == null ? null : exprToJs(target, scope, classes);
+      final index = exprToJs(lhs.index, scope, classes);
+      final rhs = rhsToJs(e.rightHandSide, scope, classes);
+      if (t == null || index == null || rhs == null) return null;
+      return '$t[$index] ${e.operator.lexeme} $rhs;';
+    }
+    if (recv == null || member == null) return null;
+    final rhs = rhsToJs(e.rightHandSide, scope, classes);
+    if (rhs == null) return null;
+    final assign = '__t$member ${e.operator.lexeme} $rhs';
+    return '((__t) => { if (__t != null) $assign; })($recv);';
+  }
   // `this.x = rhs`（构造体 / 方法体里显式回写实例字段）：`this` 的落点由
   // [FieldScope.thisRef] 决定（构造函数体翻译成静态方法时是局部实例变量）。
   if (e is AssignmentExpression &&
@@ -1744,11 +1779,12 @@ String _setStateJs(
   } else if (body is BlockFunctionBody) {
     inner = translateStmtList(body.block.statements, scope, classes, null);
   }
-  // 回调体保持内联（`() => { ... }`），把多行折回单行。
-  inner = inner.replaceAll('\n', ' ');
+  // 回调体与其它方法体同一口径：多行可读，缩进由写出前的统一重排
+  // （`canonicalizeJsIndent`）按括号嵌套决定。这里**不再把换行折成单行**：
+  // 那会让同一份 AST 在 `setState` 里和别处产出不同形态，绕过统一格式化。
   return inner.isEmpty
       ? 'this.setState(() => {});'
-      : 'this.setState(() => { $inner });';
+      : 'this.setState(() => {\n$inner\n});';
 }
 
 /// `@HostInjected` 方法的 JS 方法体：Dart 实现留在宿主，这里只把实参打包成

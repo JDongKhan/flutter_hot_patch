@@ -13,7 +13,9 @@ export class TabDetail extends StatefulWidget {
   }
   initState() {
     super.initState();
-    this._controller.addListener(() => { this.setState(() => { this._index = this._controller.index; }); });
+    this._controller.addListener(() => { this.setState(() => {
+        this._index = this._controller.index;
+      }); });
   }
   dispose() {
     this._controller.dispose();

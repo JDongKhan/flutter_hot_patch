@@ -26,14 +26,44 @@ export class KeyboardListenerDetail extends StatefulWidget {
   _onKey(event) {
     var key = event.logicalKey;
     if ((event instanceof KeyDownEvent)) {
-      this.setState(() => { this._down += 1; this._last = "KeyDown  " + key.keyLabel; this._char = (event.character ?? "（无）"); this._phys = (event.physicalKey.debugName ?? "（无）"); if ((key == LogicalKeyboardKey.arrowUp)) {   this._row = (((this._row + 2)) % 3); } if ((key == LogicalKeyboardKey.arrowDown)) {   this._row = (((this._row + 1)) % 3); } if ((key == LogicalKeyboardKey.arrowLeft)) {   this._col = (((this._col + 2)) % 3); } if ((key == LogicalKeyboardKey.arrowRight)) {   this._col = (((this._col + 1)) % 3); } if ((key == LogicalKeyboardKey.space)) {   this._lit = (!this._lit); } if ((key == LogicalKeyboardKey.escape)) {   this._row = 1;   this._col = 1;   this._lit = false; } });
+      this.setState(() => {
+        this._down += 1;
+        this._last = "KeyDown  " + key.keyLabel;
+        this._char = (event.character ?? "（无）");
+        this._phys = (event.physicalKey.debugName ?? "（无）");
+        if ((key == LogicalKeyboardKey.arrowUp)) {
+          this._row = (((this._row + 2)) % 3);
+        }
+        if ((key == LogicalKeyboardKey.arrowDown)) {
+          this._row = (((this._row + 1)) % 3);
+        }
+        if ((key == LogicalKeyboardKey.arrowLeft)) {
+          this._col = (((this._col + 2)) % 3);
+        }
+        if ((key == LogicalKeyboardKey.arrowRight)) {
+          this._col = (((this._col + 1)) % 3);
+        }
+        if ((key == LogicalKeyboardKey.space)) {
+          this._lit = (!this._lit);
+        }
+        if ((key == LogicalKeyboardKey.escape)) {
+          this._row = 1;
+          this._col = 1;
+          this._lit = false;
+        }
+      });
       return;
     }
     if ((event instanceof KeyRepeatEvent)) {
-      this.setState(() => { this._repeat += 1; });
+      this.setState(() => {
+        this._repeat += 1;
+      });
       return;
     }
-    this.setState(() => { this._up += 1; this._last = "KeyUp  " + key.keyLabel; });
+    this.setState(() => {
+      this._up += 1;
+      this._last = "KeyUp  " + key.keyLabel;
+    });
   }
   _cell(r, c) {
     var active = ((r == this._row) && (c == this._col));
@@ -170,7 +200,11 @@ export class KeyboardListenerDetail extends StatefulWidget {
               "width": 8
             }))),
             new OutlinedButton({
-              "onPressed": () => { this.setState(() => { this._row = 1; this._col = 1; this._lit = false; }); },
+              "onPressed": () => { this.setState(() => {
+                  this._row = 1;
+                  this._col = 1;
+                  this._lit = false;
+                }); },
               "child": (this.__k14 || (this.__k14 = new Text({
                 "data": "复位方块"
               })))

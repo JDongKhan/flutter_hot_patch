@@ -95,7 +95,9 @@ export class _PlainPage extends StatefulWidget {
             "height": 8
           }))),
           new ElevatedButton({
-            "onPressed": () => { this.setState(() => { this._count += 1; }); },
+            "onPressed": () => { this.setState(() => {
+                this._count += 1;
+              }); },
             "child": (this.__k7 || (this.__k7 = new Text({
               "data": "+1"
             })))
@@ -153,7 +155,9 @@ export class _KeepAlivePage extends StatefulWidget {
             "height": 8
           }))),
           new ElevatedButton({
-            "onPressed": () => { this.setState(() => { this._count += 1; }); },
+            "onPressed": () => { this.setState(() => {
+                this._count += 1;
+              }); },
             "child": (this.__k7 || (this.__k7 = new Text({
               "data": "+1"
             })))

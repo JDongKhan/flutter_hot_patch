@@ -68,7 +68,9 @@ export class GuideBubbleWidget extends StatefulWidget {
     this._cancelTimers();
     this._visible = true;
     this._controller.show();
-    this._timer = new Timer({duration: this.duration, callback: () => { this.setState(() => { this._visible = false; });
+    this._timer = new Timer({duration: this.duration, callback: () => { this.setState(() => {
+          this._visible = false;
+        });
         this._fadeTimer = new Timer({duration: GuideBubbleWidget._fadeDuration, callback: () => { this._controller.hide(); }}); }});
   }
   _cancelTimers() {

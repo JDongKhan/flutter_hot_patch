@@ -83,7 +83,9 @@ export class SpacerDetail extends StatefulWidget {
               new Row({
                 "children": [
                   new OutlinedButton({
-                    "onPressed": () => { this.setState(() => { this._flex = 1; }); },
+                    "onPressed": () => { this.setState(() => {
+                        this._flex = 1;
+                      }); },
                     "child": (this.__k7 || (this.__k7 = new Text({
                       "data": "flex 1"
                     })))
@@ -92,7 +94,9 @@ export class SpacerDetail extends StatefulWidget {
                     "width": 8
                   }))),
                   new OutlinedButton({
-                    "onPressed": () => { this.setState(() => { this._flex = 2; }); },
+                    "onPressed": () => { this.setState(() => {
+                        this._flex = 2;
+                      }); },
                     "child": (this.__k9 || (this.__k9 = new Text({
                       "data": "flex 2"
                     })))
@@ -101,7 +105,9 @@ export class SpacerDetail extends StatefulWidget {
                     "width": 8
                   }))),
                   new OutlinedButton({
-                    "onPressed": () => { this.setState(() => { this._flex = 3; }); },
+                    "onPressed": () => { this.setState(() => {
+                        this._flex = 3;
+                      }); },
                     "child": (this.__k10 || (this.__k10 = new Text({
                       "data": "flex 3"
                     })))

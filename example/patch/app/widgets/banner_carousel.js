@@ -72,10 +72,14 @@ export class BannerCarousel extends StatefulWidget {
     }
     var next = (((this._index + 1)) % count);
     this._controller.animateToPage(next, { "duration": BannerCarousel._animate, "curve": Curves.easeOut });
-    this.setState(() => { this._index = next; });
+    this.setState(() => {
+      this._index = next;
+    });
   }
   _onPageChanged(index) {
-    this.setState(() => { this._index = index; });
+    this.setState(() => {
+      this._index = index;
+    });
   }
   build(context) {
     var banners = this.banners;

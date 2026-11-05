@@ -155,7 +155,9 @@ export class CustomPaintDetail extends StatefulWidget {
   }
   async _loadPhoto() {
     var img = await CanvasImage.load("assets/images/photo-1504280390367-361c6d9f38f4.jpg");
-    this.setState(() => { this._photo = img; });
+    this.setState(() => {
+      this._photo = img;
+    });
   }
   build(context) {
     return new Column({

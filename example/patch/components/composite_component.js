@@ -12,7 +12,9 @@ export class DashboardCard extends StatefulWidget {
     this._ticks = 0;
   }
   tick() {
-    this.setState(() => { this._ticks += 1; });
+    this.setState(() => {
+      this._ticks += 1;
+    });
   }
   build(context) {
     return new Column({

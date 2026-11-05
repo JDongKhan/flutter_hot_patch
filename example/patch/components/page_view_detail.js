@@ -12,7 +12,9 @@ export class PageViewDetail extends StatefulWidget {
     this._pageController = new PageController({initialPage: 0});
   }
   _onPageChanged(index) {
-    this.setState(() => { this._page = index; });
+    this.setState(() => {
+      this._page = index;
+    });
   }
   _prevPage() {
     if ((this._page > 0)) {

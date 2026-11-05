@@ -13,10 +13,16 @@ export class ReorderListDetail extends StatefulWidget {
   }
   _onReorder(oldIndex, newIndex) {
     print(oldIndex + " - " + newIndex);
-    this.setState(() => { var item = this._items.removeAt(oldIndex); var target = ((newIndex > oldIndex) ? (newIndex - 1) : newIndex); this._items.insert(target, item); });
+    this.setState(() => {
+      var item = this._items.removeAt(oldIndex);
+      var target = ((newIndex > oldIndex) ? (newIndex - 1) : newIndex);
+      this._items.insert(target, item);
+    });
   }
   _add() {
-    this.setState(() => { this._items.add("城市 " + (this._items.length + 1)); });
+    this.setState(() => {
+      this._items.add("城市 " + (this._items.length + 1));
+    });
   }
   build(context) {
     return new Column({

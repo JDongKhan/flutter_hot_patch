@@ -50,17 +50,23 @@ export class HelloCard extends StatefulWidget {
   }
   inc() {
     debugPrint("inc: count=" + this._count);
-    this.setState(() => { this._count += 1; });
+    this.setState(() => {
+      this._count += 1;
+    });
   }
   async loadUser() {
     var name = await AccountCenter.getUserName();
     var userMap = await Network.post({ "url": "hello", "params": {"name": name} });
     print("用户信息:" + userMap["code"]);
     await Future.delayed({duration: new Duration({seconds: 1})});
-    this.setState(() => { this._user = new User({name: "Alice", age: 18}); });
+    this.setState(() => {
+      this._user = new User({name: "Alice", age: 18});
+    });
   }
   reset() {
-    this.setState(() => { this._count = 0; });
+    this.setState(() => {
+      this._count = 0;
+    });
   }
   demoTryCatchAssert() {
     try {

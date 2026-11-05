@@ -60,7 +60,9 @@ export class OverlayDetail extends StatefulWidget {
                           "mainAxisAlignment": MainAxisAlignment.center,
                           "children": [
                             new OutlinedButton({
-                              "onPressed": () => { this.setState(() => { this._count = (this._count + 1); });
+                              "onPressed": () => { this.setState(() => {
+                                  this._count = (this._count + 1);
+                                });
                                 var entry = new OverlayEntry({
                                   "builder": (context) => new Positioned({
                                     "left": 12,
@@ -90,7 +92,9 @@ export class OverlayDetail extends StatefulWidget {
                                 });
                                 this._entries.add(entry);
                                 Overlay.of(context).insert(entry);
-                                this.setState(() => { this._log = "插入第 " + this._count + " 条浮层"; }); },
+                                this.setState(() => {
+                                  this._log = "插入第 " + this._count + " 条浮层";
+                                }); },
                               "child": (this.__k7 || (this.__k7 = new Text({
                                 "data": "插入浮层"
                               })))
@@ -103,7 +107,9 @@ export class OverlayDetail extends StatefulWidget {
                                 if ((entry != null)) {
                                   entry.remove();
                                 }
-                                this.setState(() => { this._log = "移除浮层（剩余 " + this._entries.length + " 层）"; }); },
+                                this.setState(() => {
+                                  this._log = "移除浮层（剩余 " + this._entries.length + " 层）";
+                                }); },
                               "child": (this.__k9 || (this.__k9 = new Text({
                                 "data": "移除浮层"
                               })))

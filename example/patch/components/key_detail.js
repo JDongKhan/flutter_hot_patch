@@ -18,10 +18,20 @@ export class KeyDetail extends StatefulWidget {
     this._measureText = "未测量";
   }
   _rotateNames() {
-    this.setState(() => { var head = this._names[0]; this._names.removeAt(0); this._names.add(head); });
+    this.setState(() => {
+      var head = this._names[0];
+      this._names.removeAt(0);
+      this._names.add(head);
+    });
   }
   _resetNames() {
-    this.setState(() => { this._names.clear(); this._names.add("A"); this._names.add("B"); this._names.add("C"); this._names.add("D"); });
+    this.setState(() => {
+      this._names.clear();
+      this._names.add("A");
+      this._names.add("B");
+      this._names.add("C");
+      this._names.add("D");
+    });
   }
   _valueKeyRows() {
     return new Column({
@@ -57,7 +67,9 @@ export class KeyDetail extends StatefulWidget {
     });
   }
   _rebuildParent() {
-    this.setState(() => { this._rebuildSeq += 1; });
+    this.setState(() => {
+      this._rebuildSeq += 1;
+    });
   }
   _objectKeyRows() {
     return new Column({
@@ -77,10 +89,14 @@ export class KeyDetail extends StatefulWidget {
     });
   }
   _bumpUnique() {
-    this.setState(() => { this._uniqueSeq += 1; });
+    this.setState(() => {
+      this._uniqueSeq += 1;
+    });
   }
   _flipStore() {
-    this.setState(() => { this._storeA = (!this._storeA); });
+    this.setState(() => {
+      this._storeA = (!this._storeA);
+    });
   }
   _storageView() {
     if (this._storeA) {
@@ -144,11 +160,15 @@ export class KeyDetail extends StatefulWidget {
       height = size.height;
     }
     if (((((dx == null) || (dy == null)) || (width == null)) || (height == null))) {
-      this.setState(() => { this._measureText = "量不到（未布局）"; });
+      this.setState(() => {
+        this._measureText = "量不到（未布局）";
+      });
       return;
     }
     var text = "x=" + dx.toStringAsFixed(1) + " y=" + dy.toStringAsFixed(1) + " · " + width.toStringAsFixed(0) + " × " + height.toStringAsFixed(0);
-    this.setState(() => { this._measureText = text; });
+    this.setState(() => {
+      this._measureText = text;
+    });
   }
   _scrollToTarget() {
     var ctx = this._targetKey.currentContext;

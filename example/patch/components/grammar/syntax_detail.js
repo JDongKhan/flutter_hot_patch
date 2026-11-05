@@ -54,13 +54,34 @@ export class SyntaxDetail extends StatefulWidget {
     this._scores = null;
     this._upper = null;
     this._first = null;
+    this._second = null;
     this._chain = null;
   }
   _run() {
-    this.setState(() => { this._task = TaskItem.highlight({     "title": "阅读"   }); this._note = "hello"; this._scores = [3, 1, 4]; this._upper = this._note?.toUpperCase(); this._first = this._scores?.[0]; this._chain = this._task?.level.name; });
+    this.setState(() => {
+      this._task = TaskItem.highlight({
+        "title": "阅读"
+      });
+      this._note = "hello";
+      this._scores = [3, 1, 4];
+      this._upper = this._note?.toUpperCase();
+      this._first = this._scores?.[0];
+      ((__t) => { if (__t != null) __t[1] = 1; })(this._scores);
+      this._second = this._scores?.[1];
+      this._chain = this._task?.level.name;
+    });
   }
   _clear() {
-    this.setState(() => { this._task = null; this._note = null; this._scores = null; this._upper = this._note?.toUpperCase(); this._first = this._scores?.[0]; this._chain = this._task?.level.name; });
+    this.setState(() => {
+      this._task = null;
+      this._note = null;
+      this._scores = null;
+      this._upper = this._note?.toUpperCase();
+      this._first = this._scores?.[0];
+      ((__t) => { if (__t != null) __t[1] = 1; })(this._scores);
+      this._second = this._scores?.[1];
+      this._chain = this._task?.level.name;
+    });
   }
   _levelText(level) {
     switch (level) {
@@ -108,6 +129,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": "空安全下标：_scores?[0] = " + (this._first ?? "null")
+          }),
+          new Text({
+            "data": "空安全赋值：_scores?[1] = 1 → " + (this._second ?? "null")
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")

@@ -13,7 +13,9 @@ export class GridDetail extends StatefulWidget {
   }
   initState() {
     super.initState();
-    this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
+    this._controller.addListener(() => { this.setState(() => {
+        this._offset = this._controller.offset;
+      }); });
   }
   dispose() {
     this._controller.dispose();

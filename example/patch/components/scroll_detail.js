@@ -16,14 +16,18 @@ export class ScrollDetail extends StatefulWidget {
   }
   initState() {
     super.initState();
-    this._scrollController.addListener(() => { this.setState(() => { this._ctrlOffset = this._scrollController.offset; }); });
+    this._scrollController.addListener(() => { this.setState(() => {
+        this._ctrlOffset = this._scrollController.offset;
+      }); });
   }
   dispose() {
     this._scrollController.dispose();
     super.dispose();
   }
   _onListScroll(n) {
-    this.setState(() => { this._offset = n.metrics.pixels; });
+    this.setState(() => {
+      this._offset = n.metrics.pixels;
+    });
     return false;
   }
   _scrollToEnd() {
@@ -67,7 +71,9 @@ export class ScrollDetail extends StatefulWidget {
         new Align({
           "alignment": Alignment.centerLeft,
           "child": new TextButton({
-            "onPressed": () => { this.setState(() => { this._listSalt += 1; }); },
+            "onPressed": () => { this.setState(() => {
+                this._listSalt += 1;
+              }); },
             "child": (this.__k4 || (this.__k4 = new Text({
               "data": "列表换色（真实更新）"
             })))

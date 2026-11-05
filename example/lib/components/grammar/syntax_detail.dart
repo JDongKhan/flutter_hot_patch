@@ -54,6 +54,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
   List<int>? _scores;
   String? _upper;
   int? _first;
+  int? _second;
   String? _chain;
 
   /// 三个命名构造 + 空安全调用 / 空安全下标 / 空安全链。
@@ -64,11 +65,14 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
       _scores = [3, 1, 4];
       _upper = _note?.toUpperCase();
       _first = _scores?[0];
+      _scores?[1] = 1;
+      _second = _scores?[1];
       _chain = _task?.level.name;
     });
   }
 
-  /// 接收者为 null：`?.` 整条链为 null（`a?.b.c` 不会再去取 `b.c`）。
+  /// 接收者为 null：`?.` 整条链为 null（`a?.b.c` 不会再去取 `b.c`），
+  /// 空安全赋值同样整条跳过。
   void _clear() {
     setState(() {
       _task = null;
@@ -76,6 +80,8 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
       _scores = null;
       _upper = _note?.toUpperCase();
       _first = _scores?[0];
+      _scores?[1] = 1;
+      _second = _scores?[1];
       _chain = _task?.level.name;
     });
   }
@@ -115,6 +121,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           const SizedBox(height: 8),
           Text('空安全调用：_note?.toUpperCase() = ${_upper ?? 'null'}'),
           Text('空安全下标：_scores?[0] = ${_first ?? 'null'}'),
+          Text('空安全赋值：_scores?[1] = 1 → ${_second ?? 'null'}'),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

@@ -15,7 +15,9 @@ export class SliverDetail extends StatefulWidget {
   }
   initState() {
     super.initState();
-    this._controller.addListener(() => { this.setState(() => { this._offset = this._controller.offset; }); });
+    this._controller.addListener(() => { this.setState(() => {
+        this._offset = this._controller.offset;
+      }); });
   }
   dispose() {
     this._controller.dispose();
@@ -65,11 +67,15 @@ export class SliverDetail extends StatefulWidget {
       height = size.height;
     }
     if (((((dx == null) || (dy == null)) || (width == null)) || (height == null))) {
-      this.setState(() => { this._measureText = "量不到（未布局）"; });
+      this.setState(() => {
+        this._measureText = "量不到（未布局）";
+      });
       return;
     }
     var text = "x=" + dx.toStringAsFixed(1) + " y=" + dy.toStringAsFixed(1) + " · " + width.toStringAsFixed(0) + " × " + height.toStringAsFixed(0);
-    this.setState(() => { this._measureText = text; });
+    this.setState(() => {
+      this._measureText = text;
+    });
   }
   build(context) {
     return new Scaffold({

@@ -43,7 +43,9 @@ export class MixinDetail extends StatefulWidget {
     this._count = 0;
   }
   _bump() {
-    this.setState(() => { this._count += 1; });
+    this.setState(() => {
+      this._count += 1;
+    });
     this.logState("计数变为 " + this._count);
   }
   build(context) {
@@ -212,7 +214,9 @@ export class BasicApiDetail extends StatefulWidget {
     this._now = DateTime.now();
   }
   _refresh() {
-    this.setState(() => { this._now = DateTime.now(); });
+    this.setState(() => {
+      this._now = DateTime.now();
+    });
   }
   build(context) {
     var start = new DateTime({year: 2024, month: 3, day: 1, hour: 9, minute: 30});

@@ -26,13 +26,23 @@ export class DragDetail extends StatefulWidget {
     this._longPressDrop = null;
   }
   _accept(label, data) {
-    this.setState(() => { if ((label == "篮子 A")) {   this._inBasketA = data; } else {   this._inBasketB = data; } this._drops += 1; this._log = ((data == null) ? label + " 收到空数据" : label + " 收到 " + data.name); });
+    this.setState(() => {
+      if ((label == "篮子 A")) {
+        this._inBasketA = data;
+      } else {
+        this._inBasketB = data;
+      }
+      this._drops += 1;
+      this._log = ((data == null) ? label + " 收到空数据" : label + " 收到 " + data.name);
+    });
   }
   _hover(label, data) {
     if ((data == null)) {
       return;
     }
-    this.setState(() => { this._log = "正悬停在 " + label + "：" + data.name; });
+    this.setState(() => {
+      this._log = "正悬停在 " + label + "：" + data.name;
+    });
   }
   build(context) {
     return new Column({
@@ -104,7 +114,9 @@ export class DragDetail extends StatefulWidget {
               "delay": (this.__k10 || (this.__k10 = new Duration({
                 "milliseconds": 400
               }))),
-              "onDragStarted": () => { this.setState(() => { this._log = "长按 400ms 后开始拖动"; }); },
+              "onDragStarted": () => { this.setState(() => {
+                  this._log = "长按 400ms 后开始拖动";
+                }); },
               "feedback": this._feedbackFace("长按拖我"),
               "childWhenDragging": (this.__k11 || (this.__k11 = new Opacity({
                 "child": new Text({
@@ -169,8 +181,12 @@ export class DragDetail extends StatefulWidget {
   _chip(fruit) {
     return new Draggable({
       "data": fruit,
-      "onDragStarted": () => { this.setState(() => { this._log = "开始拖动 " + fruit.name; }); },
-      "onDragEnd": (details) => { this.setState(() => { this._log = (details.wasAccepted ? fruit.name + " 被接收（速度 " + details.velocity.pixelsPerSecond.dy + "）" : fruit.name + " 没被接收"); }); },
+      "onDragStarted": () => { this.setState(() => {
+          this._log = "开始拖动 " + fruit.name;
+        }); },
+      "onDragEnd": (details) => { this.setState(() => {
+          this._log = (details.wasAccepted ? fruit.name + " 被接收（速度 " + details.velocity.pixelsPerSecond.dy + "）" : fruit.name + " 没被接收");
+        }); },
       "feedback": this._feedbackFace(fruit.name),
       "childWhenDragging": new Opacity({
         "opacity": 0.3,
@@ -264,7 +280,11 @@ export class DragDetail extends StatefulWidget {
   }
   _longPressBasket() {
     return new DragTarget({
-      "onAcceptWithDetails": (details) => { this.setState(() => { this._longPressDrop = details.data; this._drops += 1; this._log = "长按落点收到 " + details.data; }); },
+      "onAcceptWithDetails": (details) => { this.setState(() => {
+          this._longPressDrop = details.data;
+          this._drops += 1;
+          this._log = "长按落点收到 " + details.data;
+        }); },
       "builder": (context, candidate, rejected) => {
         var hovering = (candidate.length > 0);
         return new Container({

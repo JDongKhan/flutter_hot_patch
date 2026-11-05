@@ -11,16 +11,24 @@ export class DrawerDetail extends StatefulWidget {
     this._picked = (-1);
   }
   _pickOrders() {
-    this.setState(() => { this._picked = 0; });
+    this.setState(() => {
+      this._picked = 0;
+    });
   }
   _pickFavorites() {
-    this.setState(() => { this._picked = 1; });
+    this.setState(() => {
+      this._picked = 1;
+    });
   }
   _pickSettings() {
-    this.setState(() => { this._picked = 2; });
+    this.setState(() => {
+      this._picked = 2;
+    });
   }
   _pickHelp() {
-    this.setState(() => { this._picked = 3; });
+    this.setState(() => {
+      this._picked = 3;
+    });
   }
   build(context) {
     return new Scaffold({

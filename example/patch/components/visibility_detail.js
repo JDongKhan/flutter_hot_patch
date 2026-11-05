@@ -16,22 +16,46 @@ export class VisibilityDetail extends StatefulWidget {
     this._taps = 0;
   }
   _show() {
-    this.setState(() => { this._visible = true; this._maintainSize = false; this._maintainSemantics = false; this._maintainInteractivity = false; });
+    this.setState(() => {
+      this._visible = true;
+      this._maintainSize = false;
+      this._maintainSemantics = false;
+      this._maintainInteractivity = false;
+    });
   }
   _hideTight() {
-    this.setState(() => { this._visible = false; this._maintainSize = false; this._maintainSemantics = false; this._maintainInteractivity = false; });
+    this.setState(() => {
+      this._visible = false;
+      this._maintainSize = false;
+      this._maintainSemantics = false;
+      this._maintainInteractivity = false;
+    });
   }
   _hideKeepSpace() {
-    this.setState(() => { this._visible = false; this._maintainSize = true; this._maintainSemantics = false; this._maintainInteractivity = false; });
+    this.setState(() => {
+      this._visible = false;
+      this._maintainSize = true;
+      this._maintainSemantics = false;
+      this._maintainInteractivity = false;
+    });
   }
   _hideKeepTap() {
-    this.setState(() => { this._visible = false; this._maintainSize = true; this._maintainSemantics = true; this._maintainInteractivity = true; });
+    this.setState(() => {
+      this._visible = false;
+      this._maintainSize = true;
+      this._maintainSemantics = true;
+      this._maintainInteractivity = true;
+    });
   }
   _toggleOffstage() {
-    this.setState(() => { this._offstage = (!this._offstage); });
+    this.setState(() => {
+      this._offstage = (!this._offstage);
+    });
   }
   _onTap() {
-    this.setState(() => { this._taps += 1; });
+    this.setState(() => {
+      this._taps += 1;
+    });
   }
   build(context) {
     return new Column({

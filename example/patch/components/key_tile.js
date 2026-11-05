@@ -16,7 +16,9 @@ export class KeyTile extends StatefulWidget {
     this.label = (args && args.label !== undefined) ? args.label : '';
   }
   bump() {
-    this.setState(() => { this._count += 1; });
+    this.setState(() => {
+      this._count += 1;
+    });
   }
   build(context) {
     var label = this.label;
