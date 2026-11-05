@@ -269,6 +269,11 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 的 this 就是组件实例，一比一透传；Dart 侧专属的实参（vsync）由 JS 代理类
   // 构造自行忽略。
   if (e is ThisExpression) return scope.thisRef;
+  // `super`：只能作为成员访问 / 调用的接收者出现（Dart 语法限制，JS 的 class
+  // 语法完全同形）。属性读取 `super.x` 走下面的 `a.b` 分支拼成 `super.x`；
+  // 方法调用 `super.m()` 由 `_methodCallJs` 的 SuperExpression 分支处理；
+  // `super.x = v` 由 `_assignValueJs` 直接发射（super 不是值，不能作 IIFE 参数）。
+  if (e is SuperExpression) return 'super';
   if (e is Identifier) {
     // 类型参数（`T` / `E`）：Dart 里是类型值，JS 侧读实例保存的类型名元信息。
     final tp = scope.typeParams[e.name];
@@ -303,6 +308,18 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     // Platform.isAndroid 等 → 运行时注入的平台标志
     final flag = platformFlagJs(e.propertyName.name);
     if (flag != null) return flag;
+  }
+  // `super.x`：父类**字段**在 JS 侧是实例属性（父类构造里 `this.x = …`），
+  // 而 `super.x` 只沿父类**原型**查找，读不到实例属性；故字段落成 `this.x`。
+  // getter / 方法定义在原型上，保持 `super.x`（子类 override 时语义才与 Dart 一致）。
+  // 判据是源码事实：该名字是否在继承链字段视图（[FieldScope.instanceFields]
+  // 本身就是 objectFieldsOf 的「含父类字段」视图）。
+  if (e is PropertyAccess && e.target is SuperExpression) {
+    final name = e.propertyName.name;
+    if (scope.instanceFields.contains(name)) return 'this.$name';
+    // 基类在 JS 侧没有实现（类声明里不会写 extends）时，发射 super 是语法错误。
+    if (!scope.hasJsBase) return null;
+    return 'super.$name';
   }
   if (e is PropertyAccess && e.target != null) {
     final t = exprToJs(e.target!, scope, classes);
@@ -1420,6 +1437,16 @@ String? _assignValueJs(
     return rewritten == null ? null : '($rewritten)';
   }
 
+  // `super.x = v`：`super` 只能出现在成员访问位置、**不能作为值传递**（放进
+  // IIFE 参数会变 SyntaxError），故直接发射成员赋值；JS class 语法天然支持。
+  if (lhs is PropertyAccess && lhs.target is SuperExpression) {
+    // `~/=` 要读两次属性（getter 执行两次），不产出近似语义：交由调用方告警。
+    if (op == '~/=') return null;
+    final rewritten =
+        _compoundAssignJs('super.${lhs.propertyName.name}', op, rhs);
+    return rewritten == null ? null : '($rewritten)';
+  }
+
   // 下标 / 属性目标：接收者、下标、右值都只求值一次。
   if (lhs is! IndexExpression && lhs is! PropertyAccess) return null;
   final target =
@@ -1535,6 +1562,8 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
         ? lhs.target
         : (lhs as PropertyAccess).target;
     if (target == null) return null;
+    // `super` 不是值：`~/.` 的 IIFE 展开会把它当参数传递（非法 JS），不支持。
+    if (target is SuperExpression && e.operator.lexeme == '~/=') return null;
     final recv = exprToJs(target, scope, classes);
     if (recv == null) return null;
     // `operator []=`：接收者静态类型声明了下标赋值运算符时改写成成员调用。

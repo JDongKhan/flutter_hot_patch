@@ -73,6 +73,29 @@ class Price {
 }
 
 // ---------------------------------------------------------------------------
+// 父类成员：`super.x`（字段 / getter）与 `super.m()`
+// ---------------------------------------------------------------------------
+
+class BaseVehicle {
+  /// 父类**字段**：JS 侧是实例属性，`super.wheels` 读不到，应落 `this.wheels`。
+  final int wheels = 4;
+
+  /// 父类 **getter**：定义在原型上，`super.speed` 必须保持（子类会 override）。
+  int get speed => 60;
+
+  int describe() => speed + 10;
+}
+
+class SportCar extends BaseVehicle {
+  /// getter 里读父类 getter：必须绕过子类的 override。
+  @override
+  int get speed => super.speed + 20;
+
+  /// 同时覆盖父类字段读取与父类方法调用。
+  int report() => super.wheels * 10 + super.describe();
+}
+
+// ---------------------------------------------------------------------------
 // 页面
 // ---------------------------------------------------------------------------
 
@@ -412,6 +435,12 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return 'throw 表达式：捕获=$caught';
   }
 
+  /// 父类成员：`super.x` 字段 / getter 区分 + `super.m()`。
+  String _superMemberText() {
+    final car = SportCar();
+    return '父类成员：speed=${car.speed} / report=${car.report()}';
+  }
+
   /// switch 表达式：对象模式 + guard（`_` / 常量之外的模式以前会被丢弃）。
   String _switchExprText() {
     final task = _task;
@@ -471,6 +500,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_assignExprText()),
           Text(_genericLocalText()),
           Text(_throwExprText()),
+          Text(_superMemberText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),

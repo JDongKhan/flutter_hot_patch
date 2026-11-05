@@ -6,6 +6,32 @@ import { Column, CrossAxisAlignment, EdgeInsets, ElevatedButton, FontWeight, For
 
 export const TaskLevel = (function () { const __values = []; function __mk(name, index) { return { name: name, index: index, toString: function () { return "TaskLevel." + name; } }; } const low = __mk("low", 0); __values.push(low); const medium = __mk("medium", 1); __values.push(medium); const high = __mk("high", 2); __values.push(high); return { low: low, medium: medium, high: high, values: __values }; })();
 
+// 模型 BaseVehicle
+export class BaseVehicle {
+  constructor() {
+    this.wheels = 4;
+  }
+  get speed() {
+    return 60;
+  }
+  describe() {
+    return (this.speed + 10);
+  }
+}
+
+// 模型 SportCar
+export class SportCar extends BaseVehicle {
+  constructor(args) {
+    super(args);
+  }
+  get speed() {
+    return (super.speed + 20);
+  }
+  report() {
+    return ((this.wheels * 10) + super.describe());
+  }
+}
+
 // 模型 Price
 export class Price {
   constructor(args) {
@@ -468,6 +494,10 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "throw 表达式：捕获=" + caught;
   }
+  _superMemberText() {
+    var car = new SportCar({});
+    return "父类成员：speed=" + car.speed + " / report=" + car.report();
+  }
   _switchExprText() {
     var task = this._task;
     var label = (() => {
@@ -566,6 +596,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._throwExprText()
+          }),
+          new Text({
+            "data": this._superMemberText()
           }),
           new Text({
             "data": this._switchExprText()
