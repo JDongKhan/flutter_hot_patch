@@ -96,6 +96,25 @@ class SportCar extends BaseVehicle {
 }
 
 // ---------------------------------------------------------------------------
+// 默认构造（无名构造）：初始化列表 + 构造体 → JS `constructor(args)`
+// ---------------------------------------------------------------------------
+
+class Stamp {
+  final int base;
+  final int doubled;
+  String trace = '';
+
+  /// 非 `this.x` 形参 + 初始化列表 + 构造体：三者都必须在实例创建时执行。
+  Stamp(int base)
+      : base = base,
+        doubled = base * 2 {
+    trace = 'built:$base';
+  }
+
+  String describe() => 'base=$base doubled=$doubled trace=$trace';
+}
+
+// ---------------------------------------------------------------------------
 // 页面
 // ---------------------------------------------------------------------------
 
@@ -435,6 +454,9 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return 'throw 表达式：捕获=$caught';
   }
 
+  /// 默认构造：初始化列表在字段默认值之后执行，构造体在初始化列表之后执行。
+  String _defaultCtorText() => '默认构造：${Stamp(7).describe()}';
+
   /// 父类成员：`super.x` 字段 / getter 区分 + `super.m()`。
   String _superMemberText() {
     final car = SportCar();
@@ -529,6 +551,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_assignExprText()),
           Text(_genericLocalText()),
           Text(_throwExprText()),
+          Text(_defaultCtorText()),
           Text(_superMemberText()),
           Text(_tearOffText()),
           Text(_objTearOffText()),

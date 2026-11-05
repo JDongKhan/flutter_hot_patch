@@ -926,6 +926,28 @@ ClassInfo translateClass(
         renderer: parseCtx,
       ));
 
+  // 无名构造（默认构造）：初始化列表 / 构造体落在 `constructor(args)` 里。
+  // StatefulWidget 的 State 类构造在合并产物里没有独立落点（实例由 widget
+  // 构造创建），有内容时告警而不是静默丢弃。
+  final unnamed = parseCtx.withExprRenderer(() => _translateUnnamedCtor(
+        decl,
+        proto,
+        used,
+        instanceFields,
+        hostFunctions: hostFunctions,
+        globalConsts: globalConsts,
+        renderer: parseCtx,
+      ));
+  if (!identical(hostClass, widgetClass)) {
+    for (final m in hostClass.members.whereType<ConstructorDeclaration>()) {
+      if ((m.name?.lexeme ?? '').isEmpty &&
+          (m.initializers.isNotEmpty || m.body is! EmptyFunctionBody)) {
+        log.warning('[hot_patch_generator] ${hostClass.name.lexeme} 的默认构造'
+            '体在 State 合并产物中没有独立落点，已跳过。');
+      }
+    }
+  }
+
   return ClassInfo(
     name: decl.name.lexeme,
     sourceFile: sourcePath,
@@ -936,6 +958,9 @@ ClassInfo translateClass(
     methods: translated,
     ctors: ctors,
     ctorParams: proto.ctorParams,
+    ctorParamJs: unnamed.params,
+    ctorInitJs: unnamed.inits,
+    ctorBodyJs: unnamed.body,
     isComponent: isComponent,
     typeParams: proto.typeParams,
     // 依赖 = widget 树里的自定义组件（parseCtx 收集）+ 字段类型 / 方法体
@@ -1121,6 +1146,143 @@ List<ClassCtor> _translateNamedCtors(
     ));
   }
   return out;
+}
+
+/// 无名构造（默认构造）→ `constructor(args)` 内的三段语句。
+///
+/// 与命名构造同一套规则（[ConstructorFieldInitializer] / [AssertInitializer]
+/// 翻译、`super(...)` / `this.other(...)` 跳过并告警），差别只在落点：
+///   - [params]：形参局部绑定 `const p = args.p;`（供初始化列表 / 构造体引用）；
+///   - [inits]：初始化列表 → `this.x = <expr>;`（排在字段默认赋值之后，
+///     等价于 Dart 的「字段初始化器 → 初始化列表 → 构造体」）；
+///   - [body]：构造体语句。
+///
+/// 没有初始化列表 / 构造体的空构造（widget 的 `const A({super.key})`）返回全空，
+/// 既有 `constructor()` / `constructor(args)` 形态不变。
+({List<String> params, List<String> inits, String body}) _translateUnnamedCtor(
+  ClassDeclaration decl,
+  ClassInfo proto,
+  Map<String, ClassInfo> classes,
+  List<ClassField> instanceFields, {
+  required Set<String> hostFunctions,
+  required Set<String> globalConsts,
+  ExprRenderer? renderer,
+}) {
+  const empty = (params: <String>[], inits: <String>[], body: '');
+  ConstructorDeclaration? c;
+  for (final m in decl.members) {
+    if (m is ConstructorDeclaration && (m.name?.lexeme ?? '').isEmpty) {
+      c = m;
+      break;
+    }
+  }
+  if (c == null || c.factoryKeyword != null) return empty;
+
+  final paramNames = <String>[];
+  final defaults = <String, Expression>{};
+  for (final p in c.parameters.parameters) {
+    final inner = p is DefaultFormalParameter ? p.parameter : p;
+    final n = inner.name?.lexeme;
+    if (n == null || n.isEmpty) continue;
+    paramNames.add(n);
+    if (p is DefaultFormalParameter && p.defaultValue != null) {
+      defaults[n] = p.defaultValue!;
+    }
+  }
+
+  // 初始化列表只能引用形参与静态成员（Dart 禁止 `this`），因此作用域不给
+  // 实例字段 / 实例方法——把裸字段名当 `this.x` 会改变语义。
+  final initScope = FieldScope(
+    params: paramNames.toSet(),
+    className: proto.name,
+    staticFields: {for (final f in proto.staticFields) f.name},
+    staticMethods: {
+      for (final m in proto.methods)
+        if (m.isStatic) m.name,
+    },
+    typeParams: {
+      for (final t in proto.typeParams)
+        t: '((args && args.typeArguments) || {})["$t"]',
+    },
+    hostFunctions: hostFunctions,
+    globalConsts: globalConsts,
+  );
+  final inits = <String>[];
+  for (final init in c.initializers) {
+    if (init is ConstructorFieldInitializer) {
+      final v = rhsToJs(init.expression, initScope, classes);
+      if (v == null) {
+        log.warning('[hot_patch_generator] ${proto.name} 默认构造初始化列表项'
+            '无法翻译，已跳过：${init.toSource()}');
+        continue;
+      }
+      inits.add('this.${init.fieldName.name} = $v;');
+    } else if (init is AssertInitializer) {
+      final cond = exprToJs(init.condition, initScope, classes);
+      final msg =
+          init.message == null ? null : exprToJs(init.message!, initScope, classes);
+      if (cond == null) continue;
+      inits.add('assert($cond${msg == null ? '' : ', $msg'});');
+    } else {
+      log.warning('[hot_patch_generator] ${proto.name} 默认构造初始化项 '
+          '${init.toSource()} 无法等价翻译（基类构造已由 new 承接），已跳过。');
+    }
+  }
+
+  // 构造体：实例成员可读（`this` 落点是 JS 构造器本身），与命名构造同一条
+  // 方法体翻译器。
+  final bodyScope = FieldScope(
+    instanceFields: {for (final f in instanceFields) f.name},
+    params: paramNames.toSet(),
+    methods: {
+      for (final m in proto.methods)
+        if (!m.isGetter && !m.isStatic) m.name,
+    },
+    getterNames: {
+      for (final m in proto.methods)
+        if (m.isGetter) m.name,
+    },
+    className: proto.name,
+    staticFields: {for (final f in proto.staticFields) f.name},
+    staticMethods: {
+      for (final m in proto.methods)
+        if (m.isStatic) m.name,
+    },
+    typeParams: {
+      for (final t in proto.typeParams)
+        t: '((args && args.typeArguments) || {})["$t"]',
+    },
+    hostFunctions: hostFunctions,
+    globalConsts: globalConsts,
+    thisRef: 'this',
+  );
+  final body = c.body;
+  String bodyJs = '';
+  if (body is BlockFunctionBody) {
+    bodyJs = translateMethodBody(
+      body,
+      bodyScope,
+      classes,
+      renderer: renderer,
+      returnExpressionBody: false,
+      returnsWidget: false,
+      depth: 2,
+    );
+  } else if (body is! EmptyFunctionBody) {
+    log.warning('[hot_patch_generator] ${proto.name} 默认构造体形态无法翻译，'
+        '已跳过：${body.toSource()}');
+  }
+
+  if (inits.isEmpty && bodyJs.isEmpty) return empty;
+  final params = <String>[];
+  for (final n in paramNames) {
+    final dv = defaults[n];
+    final dj = dv == null ? null : rhsToJs(dv, initScope, classes);
+    params.add(dj != null && dj != 'undefined'
+        ? 'const $n = args.$n !== undefined ? args.$n : $dj;'
+        : 'const $n = args.$n;');
+  }
+  return (params: params, inits: inits, body: bodyJs);
 }
 
 /// [_translateNamedCtors] 第一遍收集的签名事实。

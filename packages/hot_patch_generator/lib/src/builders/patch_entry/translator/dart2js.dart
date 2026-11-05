@@ -60,7 +60,10 @@ String renderClassDecl(
     // 多传实参对无参父类无害。
     b.write('  constructor(args) {\n');
   } else {
-    b.write(info.ctorParams.isEmpty && info.typeParams.isEmpty
+    // 默认构造有初始化列表 / 构造体时也必须收 args（形参局部绑定要从 args 取）。
+    b.write(info.ctorParams.isEmpty &&
+            info.typeParams.isEmpty &&
+            info.ctorParamJs.isEmpty
         ? '  constructor() {\n'
         : '  constructor(args) {\n');
   }
@@ -72,7 +75,16 @@ String renderClassDecl(
   if (info.typeParams.isNotEmpty && info.ctorParams.isEmpty) {
     b.write('    this.__ta = (args && args.typeArguments) || {};\n');
   }
+  // 默认构造的形参局部绑定 → 字段默认赋值 → 初始化列表 → 构造体：
+  // 与 Dart 的「字段初始化器 → 初始化列表 → 构造体」顺序一致。
+  for (final p in info.ctorParamJs) {
+    b.write('    $p\n');
+  }
   _writeFieldAssignments(b, info);
+  for (final s in info.ctorInitJs) {
+    b.write('    $s\n');
+  }
+  if (info.ctorBodyJs.isNotEmpty) b.write('${info.ctorBodyJs}\n');
   b.write('  }\n');
 
   // 构造参数 → 实例字段的唯一映射：构造函数首行调用；实例被 patch 复用

@@ -211,6 +211,17 @@ class ClassInfo {
 
   final Set<String> ctorParams; // this.x 构造形参名
 
+  /// 无名构造（默认构造）的形参局部绑定：`const p = args.p;`（带默认值时同
+  /// 命名构造。仅当无名构造有初始化列表 / 构造体时才生成——widget 的
+  /// `const A({super.key})` 保持既有 `constructor(args)` 形态不变）。
+  final List<String> ctorParamJs;
+
+  /// 无名构造的初始化列表语句：`this.x = <expr>;` / `assert(...)`。
+  final List<String> ctorInitJs;
+
+  /// 无名构造的构造体语句（已按 4 空格缩进；空串 = 无构造体）。
+  final String ctorBodyJs;
+
   /// 构造形参默认值（`this.banners = kBanners`）：字段名 → 默认值表达式。
   /// 建模期（classInfoOf）随构造参数一并收集；翻译期作为字段初值的兜底
   ///（JS 侧漏传 props 时用它，而不是类型默认值 `[]`/`''`）。
@@ -249,6 +260,9 @@ class ClassInfo {
     required this.methods,
     this.ctors = const [],
     this.ctorParams = const {},
+    this.ctorParamJs = const [],
+    this.ctorInitJs = const [],
+    this.ctorBodyJs = '',
     this.ctorDefaults = const {},
     this.isComponent = false,
     this.typeParams = const [],
@@ -274,6 +288,9 @@ class ClassInfo {
         methods: methods,
         ctors: ctors ?? this.ctors,
         ctorParams: ctorParams,
+        ctorParamJs: ctorParamJs,
+        ctorInitJs: ctorInitJs,
+        ctorBodyJs: ctorBodyJs,
         ctorDefaults: ctorDefaults,
         isComponent: isComponent,
         typeParams: typeParams,

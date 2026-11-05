@@ -74,12 +74,39 @@ Future<TranslationScope> componentTranslationScope(BuildStep buildStep) async {
   }
 
   final reachable = _reachableFiles(units);
-  final needed = _neededClasses(units, reachable);
+  var needed = _neededClasses(units, reachable);
+  var neededConsts = _neededConsts(units, reachable, needed);
+  // 顶层常量与类互相引用：常量初始化器里 `new M()` / 静态调用引用到的类必须
+  // 一起产出，这些类的方法体又可能引用新的常量。迭代到集合不再增长为止
+  // （文件 / 类 / 常量都是有限集，最多几轮）。
+  //
+  // 这一步替代了旧实现里「可达文件的**所有**顶层常量都先按依赖标记类」的
+  // 保守做法：那个做法会让没人引用的常量（如 App 基础设施的 Zone 配置）
+  // 把整个文件拖进产物（app_log_console 就是被这样带出来的）。
+  for (var i = 0; i < 10; i++) {
+    final next = _neededClasses(units, reachable, neededConsts: neededConsts);
+    if (_neededSetsEqual(next, needed)) break;
+    needed = next;
+    neededConsts = _neededConsts(units, reachable, needed);
+  }
   return (
     reachableFiles: reachable,
     neededClasses: needed,
-    neededConsts: _neededConsts(units, reachable, needed),
+    neededConsts: neededConsts,
   );
+}
+
+/// 两个「文件 → 名字集合」产物的等价判断（迭代收敛用）。
+bool _neededSetsEqual(Map<String, Set<String>> a, Map<String, Set<String>> b) {
+  if (a.length != b.length) return false;
+  for (final e in a.entries) {
+    final other = b[e.key];
+    if (other == null || other.length != e.value.length) return false;
+    for (final name in e.value) {
+      if (!other.contains(name)) return false;
+    }
+  }
+  return true;
 }
 
 /// 跨包依赖闭包：从项目文件的 import 出发，收集本地依赖包里的源文件身份
@@ -127,14 +154,17 @@ Set<String> _reachableFiles(Map<String, CompilationUnit> units) {
   return reachable;
 }
 
-/// 符号级「需要产出的类」：从根类（+ 可达文件的顶层常量初始化器）出发，沿
-///**类引用**递归——只把真的被会产出的类引用到的类标记为需要。
+/// 符号级「需要产出的类」：从根类（+ 已确认要产出的顶层常量 / extension）出发，
+/// 沿**类引用**递归——只把真的被会产出的类引用到的类标记为需要。
 ///
 /// 同文件私有类也会入队（产物内 inline 承载，但仍要继续传播它的跨文件引用）。
 Map<String, Set<String>> _neededClasses(
   Map<String, CompilationUnit> units,
-  Set<String> reachableFiles,
-) {
+  Set<String> reachableFiles, {
+  /// 已确认要写进产物的顶层常量（文件 → 常量名）。只对它们传播「常量初始化器
+  /// 里引用到的类」，避免可达文件里没人引用的常量把整个文件拖进产物。
+  Map<String, Set<String>> neededConsts = const {},
+}) {
   // 类声明索引：file → 类名 → 声明（可翻译的类，含私有类）。
   final ownDecls = <String, Map<String, ClassDeclaration>>{};
   // 可见性：file → 类名 → 声明所在文件（本文件含私有 + import 文件的公共类）。
@@ -185,19 +215,33 @@ Map<String, Set<String>> _neededClasses(
     }
   }
 
-  // 种子 2：可达文件里「不是类」的承载代码——顶层常量与 extension 的注册语句
-  // 都随产物求值（见 component_builder 的顶层常量产物 / 扩展注册），它们引用
-  // 到的类必须一起产出，否则那些产物里的 import 会指向不存在的模块。
-  // 类声明走下面的引用闭包（种子 1 只标根类，其余按引用逐步发现）。
+  // 种子 2：可达文件里的 **extension**——有 extension 的文件一定产出产物
+  // （`registerExtension(...)` 写在声明处，见 component_builder），其方法体引用
+  // 到的类必须一起产出，否则注册语句里的 `new M()` 指向不存在的模块。
   for (final file in reachableFiles) {
     final unit = units[file];
     if (unit == null) continue;
-    for (final d in unit.declarations) {
-      if (d is TopLevelVariableDeclaration ||
-          d is ExtensionDeclaration ||
-          d is EnumDeclaration) {
-        for (final name in dependenciesOf(d)) {
-          markVisible(file, name);
+    for (final d in unit.declarations.whereType<ExtensionDeclaration>()) {
+      for (final name in dependenciesOf(d)) {
+        markVisible(file, name);
+      }
+    }
+  }
+
+  // 种子 3：**已经被引用的顶层常量**所依赖的类——常量初始化器里的 `new M()` /
+  // 静态调用（如 `kMenu = [MenuEntry(...)]`）需要 M 的产物。
+  //
+  // 只遍历 [neededConsts] 里的常量：可达文件里没人引用的常量（如 App 基础设施
+  // 的 Zone 配置）不能把整个文件拖进产物。枚举没有初始化器依赖，其产出由
+  // neededConsts 自身记录，这里不需要传播。
+  for (final e in neededConsts.entries) {
+    final unit = units[e.key];
+    if (unit == null) continue;
+    for (final d in unit.declarations.whereType<TopLevelVariableDeclaration>()) {
+      for (final v in d.variables.variables) {
+        if (!e.value.contains(v.name.lexeme)) continue;
+        for (final name in dependenciesOf(v)) {
+          markVisible(e.key, name);
         }
       }
     }

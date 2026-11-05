@@ -33,6 +33,22 @@ export const TaskLevel = (function () {
   };
 })();
 
+// 模型 Stamp
+export class Stamp {
+  constructor(args) {
+    const base = args.base;
+    this.base = 0;
+    this.doubled = 0;
+    this.trace = "";
+    this.base = base;
+    this.doubled = (base * 2);
+    this.trace = "built:" + base;
+  }
+  describe() {
+    return "base=" + this.base + " doubled=" + this.doubled + " trace=" + this.trace;
+  }
+}
+
 // 模型 BaseVehicle
 export class BaseVehicle {
   constructor() {
@@ -521,6 +537,9 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "throw 表达式：捕获=" + caught;
   }
+  _defaultCtorText() {
+    return "默认构造：" + new Stamp({base: 7}).describe();
+  }
   _superMemberText() {
     const car = new SportCar({});
     return "父类成员：speed=" + car.speed + " / report=" + car.report();
@@ -647,6 +666,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._throwExprText()
+          }),
+          new Text({
+            "data": this._defaultCtorText()
           }),
           new Text({
             "data": this._superMemberText()

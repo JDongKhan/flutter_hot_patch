@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// 日志级别（仅用于控制台着色，不参与采集判定）。
 enum AppLogLevel { info, warn, error }
@@ -29,11 +28,6 @@ class AppLogRecord {
 ///     由 [installLogCapture] 统一改写成 `print`，进入同一条通道；
 ///   - JS 侧 `print` / `debugPrint`：经运行时 `log` 通道 → HotPatchLog → `debugPrint`，
 ///     同样落到上面的通道，无需额外接线。
-///
-/// 纯原生 App 基础设施（日志采集 / 右侧控制台）：不参与 JS 热更，也不需要被
-/// 任何 JS 产物引用。标 `@PatchIgnore` 退出连带转换，避免顶层
-/// `appLogZoneSpecification` 的引用把整个文件拖进 patch 产物。
-@PatchIgnore()
 class AppLogCenter extends ChangeNotifier {
   AppLogCenter._();
 
