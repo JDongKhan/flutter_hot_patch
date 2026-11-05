@@ -234,6 +234,22 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '三段式集合：${cells.join('/')}';
   }
 
+  /// label 语句：外层标签 + `break outer`（JS 原生同形）。
+  String _labelText() {
+    final scores = _scores;
+    var hit = 0;
+    outer:
+    for (final v in scores ?? const [0]) {
+      for (final w in [v, v + 1]) {
+        if (w >= 4) {
+          hit = w;
+          break outer;
+        }
+      }
+    }
+    return 'label：hit=$hit';
+  }
+
   /// 局部函数：表达式体 + 块体（块体内再用 if-case），两者都捕获外层字段。
   String _localFuncText() {
     int twice(int x) => x * 2;
@@ -311,6 +327,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_patternForText()),
           Text(_caseElementText()),
           Text(_forPartsText()),
+          Text(_labelText()),
           Text('空安全链：_task?.level.name = ${_chain ?? 'null'}'),
           const SizedBox(height: 12),
           Row(

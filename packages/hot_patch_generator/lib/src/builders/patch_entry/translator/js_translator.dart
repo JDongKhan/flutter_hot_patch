@@ -1743,10 +1743,24 @@ String translateStmtList(
       } else {
         out.add(js);
       }
+    } else if (s is LabeledStatement) {
+      // `outer: for (…) { … break outer; }`：JS 原生支持标签语句与带标签的
+      // break / continue，一比一发射（标签加在被标记语句的首行前）。
+      final prefix = [for (final l in s.labels) '${l.label.name}: '].join();
+      final inner = translateStmtList([s.statement], scope, classes, renderer,
+          depth: depth, returnsWidget: returnsWidget);
+      if (inner.trim().isEmpty) {
+        log.warning('[hot_patch_generator] label 语句无法翻译，已在 JS 产物中'
+            '丢弃：${s.toSource()}');
+      } else {
+        out.add(inner.replaceFirst('$ind', '$ind$prefix'));
+      }
     } else if (s is BreakStatement) {
-      out.add('${ind}break;');
+      final label = s.label?.name;
+      out.add('${ind}break${label == null ? '' : ' $label'};');
     } else if (s is ContinueStatement) {
-      out.add('${ind}continue;');
+      final label = s.label?.name;
+      out.add('${ind}continue${label == null ? '' : ' $label'};');
     } else if (s is AssertStatement) {
       // Dart `assert(condition, [message])` → JS 原样调用 `assert(...)`；
       // 函数本体由运行时【1c】节注入（debug 门控 + 失败抛 Error），

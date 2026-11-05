@@ -296,6 +296,19 @@ export class SyntaxDetail extends StatefulWidget {
       })()];
     return "三段式集合：" + cells.join("/");
   }
+  _labelText() {
+    var scores = this._scores;
+    var hit = 0;
+    outer: for (let v of (scores ?? [0])) {
+      for (let w of [v, (v + 1)]) {
+        if ((w >= 4)) {
+          hit = w;
+          break outer;
+        }
+      }
+    }
+    return "label：hit=" + hit;
+  }
   _localFuncText() {
     var twice = (x) => { return (x * 2); };
     var grade = (score) => { {
@@ -433,6 +446,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._forPartsText()
+          }),
+          new Text({
+            "data": this._labelText()
           }),
           new Text({
             "data": "空安全链：_task?.level.name = " + (this._chain ?? "null")
