@@ -178,13 +178,14 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
   /// 多 catch 子句 + `on Type` 过滤（`int.parse('x')` 抛 FormatException）。
   String _tryText() {
     final parts = <String>[];
-    try {
-      parts.add('解析=${int.parse('12')}');
-      parts.add('解析=${int.parse('x')}');
-    } on FormatException {
-      parts.add('格式错误');
-    } catch (e) {
-      parts.add('其它:$e');
+    for (final raw in ['12', 'x']) {
+      try {
+        parts.add('解析=${int.parse(raw)}');
+      } on FormatException {
+        parts.add('格式错误');
+      } catch (e) {
+        parts.add('其它:$e');
+      }
     }
     return 'try/catch：${parts.join('，')}';
   }

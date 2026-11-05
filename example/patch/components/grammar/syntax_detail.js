@@ -232,16 +232,17 @@ export class SyntaxDetail extends StatefulWidget {
   }
   _tryText() {
     var parts = [];
-    try {
-      parts.add("解析=" + int.parse("12"));
-      parts.add("解析=" + int.parse("x"));
-    } catch (__e) {
-      if (__e instanceof FormatException) {
-        parts.add("格式错误");
-      }
-      else {
-        var e = __e;
-        parts.add("其它:" + e);
+    for (let raw of ["12", "x"]) {
+      try {
+        parts.add("解析=" + int.parse(raw));
+      } catch (__e) {
+        if (__e instanceof FormatException) {
+          parts.add("格式错误");
+        }
+        else {
+          var e = __e;
+          parts.add("其它:" + e);
+        }
       }
     }
     return "try/catch：" + parts.join("，");

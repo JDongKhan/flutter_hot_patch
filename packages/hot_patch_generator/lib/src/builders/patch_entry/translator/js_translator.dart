@@ -319,6 +319,11 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     return '(${e.operator.lexeme}$v)';
   }
   if (e is MethodInvocation) return methodCallExprJs(e, scope, classes);
+  // 集合字面量：与 rhsToJs 共用同一对实现（ListLiteral / SetOrMapLiteral）。
+  // 任意表达式位置都可能出现（`for (final x in ['a', 'b'])` 的迭代源、三元
+  // 分支、函数实参、`??` 右操作数……），缺了会让外层整条表达式翻不出来。
+  if (e is SetOrMapLiteral) return _collectionLiteralJs(e, scope, classes);
+  if (e is ListLiteral) return _listLiteralJs(e.elements, scope, classes);
   return null;
 }
 
