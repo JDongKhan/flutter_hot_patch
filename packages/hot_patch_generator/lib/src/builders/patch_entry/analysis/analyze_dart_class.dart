@@ -1036,6 +1036,8 @@ List<ClassCtor> _translateNamedCtors(
           : {for (final f in objectFieldsOf(proto, classes)) f.name},
       params: d.params.toSet(),
       methods: d.isFactory ? const {} : instanceMethods,
+      // 构造初始化器里的值位置同样要区分 getter（读值）与方法 tear-off（绑定）。
+      getterNames: d.isFactory ? const {} : objectGetterNamesOf(proto, classes),
       className: cn,
       staticFields: {for (final f in proto.staticFields) f.name},
       staticMethods: {

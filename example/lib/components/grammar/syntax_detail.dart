@@ -441,6 +441,17 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '父类成员：speed=${car.speed} / report=${car.report()}';
   }
 
+  /// getter（读值）与方法 tear-off（取函数并绑定 this）在值位置的区分。
+  int get _baseValue => 11;
+
+  int _addBase(int v) => v + _baseValue;
+
+  String _tearOffText() {
+    final int Function(int) add = _addBase;
+    final int bv = _baseValue;
+    return '方法 tear-off：${add(1)}/$bv';
+  }
+
   /// switch 表达式：对象模式 + guard（`_` / 常量之外的模式以前会被丢弃）。
   String _switchExprText() {
     final task = _task;
@@ -501,6 +512,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_genericLocalText()),
           Text(_throwExprText()),
           Text(_superMemberText()),
+          Text(_tearOffText()),
           Text(_switchExprText()),
           Text(_switchStmtText()),
           Text(_operatorText()),

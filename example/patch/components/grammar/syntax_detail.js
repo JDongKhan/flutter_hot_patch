@@ -498,6 +498,17 @@ export class SyntaxDetail extends StatefulWidget {
     var car = new SportCar({});
     return "父类成员：speed=" + car.speed + " / report=" + car.report();
   }
+  get _baseValue() {
+    return 11;
+  }
+  _addBase(v) {
+    return (v + this._baseValue);
+  }
+  _tearOffText() {
+    var add = this._addBase.bind(this);
+    var bv = this._baseValue;
+    return "方法 tear-off：" + add(1) + "/" + bv;
+  }
   _switchExprText() {
     var task = this._task;
     var label = (() => {
@@ -599,6 +610,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._superMemberText()
+          }),
+          new Text({
+            "data": this._tearOffText()
           }),
           new Text({
             "data": this._switchExprText()

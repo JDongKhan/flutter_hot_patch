@@ -290,6 +290,23 @@ Set<String> objectMethodNamesOf(
   return out;
 }
 
+/// 沿 `extends` 链展开的**实例 getter** 名（与 [objectMethodNamesOf] 同一遍历）。
+///
+/// 值位置上的同名引用要区分：getter 是读取值（`this.x`），方法才是 tear-off
+/// （`this.m.bind(this)`）。只按名字判断会把 getter 误包成函数。
+Set<String> objectGetterNamesOf(
+  ClassInfo info,
+  Map<String, ClassInfo> classTable,
+) {
+  final out = <String>{};
+  for (final c in [info, ..._baseChainOf(info, classTable)]) {
+    for (final m in c.methods) {
+      if (!m.isStatic && m.isGetter) out.add(m.name);
+    }
+  }
+  return out;
+}
+
 /// `extends` 链上的项目类（父类在前、根父类在最后）。SDK 基类不在类表里，止于此处。
 List<ClassInfo> _baseChainOf(ClassInfo info, Map<String, ClassInfo> classTable) {
   final chain = <ClassInfo>[];
@@ -365,6 +382,13 @@ class FieldScope {
   final Set<String> instanceFields; // 模型：自身实例字段名
   final Set<String> params; // 形参名（原样引用）
   final Set<String> methods; // 裸调白名单（this.method()）
+
+  /// 其中属于 **getter** 的名字（方法的补集才是 tear-off）。
+  ///
+  /// 同一个名字在值位置的语义不同：getter 是「读取值」，方法 tear-off 是
+  /// 「取函数并绑定当前实例」（Dart tear-off 自带 `this`，JS 的 `this.m` 不带）。
+  /// 继承链视图（含父类 getter），与 [methods] 同一来源。
+  final Set<String> getterNames;
 
   /// 方法体内声明的局部变量（`var data = ...`），后续引用原样返回。
   final Set<String> localVars;
@@ -468,10 +492,12 @@ class FieldScope {
           instanceFields: instanceFields,
           params: params,
           methods: methods,
+          getterNames: getterNames,
           localVars: localVars,
           globalConsts: globalConsts,
           hostFunctions: hostFunctions,
           superMap: superMap,
+          hasJsBase: hasJsBase,
           className: className,
           staticFields: staticFields,
           staticMethods: staticMethods,
@@ -489,6 +515,7 @@ class FieldScope {
     this.instanceFields = const {},
     this.params = const {},
     this.methods = const {},
+    this.getterNames = const {},
     this.className,
     this.staticFields = const {},
     this.staticMethods = const {},
@@ -528,6 +555,7 @@ class FieldScope {
         instanceFields: instanceFields,
         params: {...params, ...names},
         methods: methods,
+        getterNames: getterNames,
         localVars: localVars,
         globalConsts: globalConsts,
         hostFunctions: hostFunctions,
@@ -565,14 +593,18 @@ class FieldScope {
     if (localVars.contains(name)) return name;
     // static 字段在 JS 侧挂在类上（`ClassName.background`），不是实例成员。
     if (staticFields.contains(name) && className != null) return '$className.$name';
+    // static 方法 tear-off（`final f = fromJson;`）：静态成员挂在类上，无 this 可绑。
+    if (staticMethods.contains(name) && className != null) return '$className.$name';
     final p = propByField[name];
     if (p != null) return 'this.$p';
     if (instanceFields.contains(name)) return 'this.$name';
     // 实例方法 / getter 引用（`_toggleFilter`、`_visiblePosts` 这类）：
-    // JS 类里它们就是原型上的方法 / `get` 访问器，裸引用一律落成 `this.<name>`。
-    // 少了这一条，`final list = _list;`（getter）与 tear-off 实参会整条翻译失败，
-    // 进而连带把整个 build 树丢掉。
-    if (methods.contains(name)) return 'this.$name';
+    // JS 类里它们就是原型上的方法 / `get` 访问器。getter 是**值读取**；
+    // 方法在值位置是 **tear-off**——Dart 的 tear-off 自带 `this`，JS 的
+    // `this.m` 不带，故显式绑定当前实例（调用时 this 才与 Dart 一致）。
+    if (methods.contains(name)) {
+      return getterNames.contains(name) ? 'this.$name' : 'this.$name.bind(this)';
+    }
     return null;
   }
 

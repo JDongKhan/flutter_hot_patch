@@ -319,6 +319,11 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
     if (scope.instanceFields.contains(name)) return 'this.$name';
     // 基类在 JS 侧没有实现（类声明里不会写 extends）时，发射 super 是语法错误。
     if (!scope.hasJsBase) return null;
+    // 方法 tear-off（`super.m` 作为值）：取到的是原型方法，this 仍是当前实例，
+    // 需显式绑定；getter 是值读取，保持 `super.x`。
+    if (scope.methods.contains(name) && !scope.getterNames.contains(name)) {
+      return 'super.$name.bind(this)';
+    }
     return 'super.$name';
   }
   if (e is PropertyAccess && e.target != null) {
@@ -3089,6 +3094,10 @@ String translateClassMethodBody(
     ...objectMethodNamesOf(info, classes),
     if (sdkBaseName(info) != null) 'notifyListeners',
   };
+  // getter 视图与 instanceMethods 同源：值位置要区分「读值」与「方法 tear-off」。
+  final instanceGetters = m.isStatic
+      ? const <String>{}
+      : objectGetterNamesOf(info, classes);
   // 方法泛型的类型实参与具名实参共用**同一个尾参对象**（调用点合并下发）：
   // 有具名形参时是 `__o`，否则保持既有的 `__ta`。
   final tailParam = tailParamNameOf(m) ?? '__ta';
@@ -3105,6 +3114,7 @@ String translateClassMethodBody(
         ? const {}
         : {for (final f in objectFieldsOf(info, classes)) f.name: f.typeName},
     methods: m.isStatic ? const {} : instanceMethods,
+    getterNames: instanceGetters,
     className: info.name,
     staticFields: staticFieldNames,
     staticMethods: staticMethodNames,
