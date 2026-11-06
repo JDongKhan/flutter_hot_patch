@@ -180,6 +180,30 @@ Map<String, Map<String, String>> extensionOperatorsInScope(
   return out;
 }
 
+/// 本文件（含 import / export 转发图）可见的**具名 extension**名集合。
+///
+/// 用途：显式调用 `E(x).m(...)` 的绑定判据——只有内层调用的目标名确实是当前
+/// 作用域可见的 extension 声明时，才改写成 `x.m(...)`。私有扩展只在声明它的
+/// library 内可见，故跨文件扫描时不收 `_` 开头的名字。
+Set<String> extensionNamesInScope(CompilationUnit unit, String sourcePath) {
+  final out = <String>{};
+  void scan(CompilationUnit u, {required bool includePrivate}) {
+    for (final d in u.declarations.whereType<ExtensionDeclaration>()) {
+      final name = d.name?.lexeme;
+      if (name == null || name.isEmpty) continue;
+      if (!includePrivate && name.startsWith('_')) continue;
+      out.add(name);
+    }
+  }
+
+  scan(unit, includePrivate: true);
+  for (final file in resolveImportFiles(unit, sourcePath)) {
+    final u = parseUnitFile(file);
+    if (u != null) scan(u, includePrivate: false);
+  }
+  return out;
+}
+
 /// 本文件声明的全部 `extension`（含无名扩展）。
 List<ExtensionDeclaration> extensionDeclarations(CompilationUnit unit) => [
       for (final d in unit.declarations.whereType<ExtensionDeclaration>()) d,
@@ -318,6 +342,7 @@ ExtensionInfo? translateExtension(
   String? Function(String name)? productOf,
   Map<String, String> prefixProducts = const {},
   Map<String, Map<String, String>> extensionOperators = const {},
+  Set<String> extensionNames = const {},
 }) {
   final name = decl.name?.lexeme;
   final label = name ?? '<unnamed>';
@@ -335,6 +360,16 @@ ExtensionInfo? translateExtension(
     return null;
   }
   final extendedType = onClause.extendedType;
+  // 可空目标（`extension E on String?`）：null 接收者在 JS 侧没有原型可分派，
+  // 只能靠编译期静态分派承接，而当前是原型注册方案 → 构建期直接拒绝，不产出
+  // 必然失效的注册（Dart 里这类扩展允许在 null 上调用）。
+  if (extendedType is NamedType && extendedType.question != null) {
+    log.warning(
+      '[hot_patch_generator] $sourcePath: extension $label 的目标可空'
+      '（${extendedType.toSource()}）：null 接收者无法在原型上分派，已跳过。',
+    );
+    return null;
+  }
   final target = extendedType is NamedType
       ? extendedType.name2.lexeme
       : extendedType.toSource().trim();
@@ -537,6 +572,7 @@ ExtensionInfo? translateExtension(
         globalConsts: globalConsts,
         depth: 0,
         extensionOperators: extensionOperators,
+        extensionNames: extensionNames,
       );
       switch (memberKinds[m.name]) {
         case 'getter':
@@ -578,6 +614,7 @@ ExtensionInfo? translateExtension(
             globalConsts: globalConsts,
             depth: 0,
             extensionOperators: extensionOperators,
+            extensionNames: extensionNames,
           ));
       if (member.isGetter) {
         staticsEntries.add('get $memberName() {\n$body\n}');

@@ -208,7 +208,8 @@ export class ExtensionDetail extends StatelessWidget {
     const sum = a.__op$add(b);
     const neg = a.__op$neg();
     const rest = a.__op$mod(4);
-    return "extension operator：sum=" + sum.x + " / neg=" + neg.x + " / mod=" + rest;
+    const shout = "explicit".shout();
+    return "extension operator：sum=" + sum.x + " / neg=" + neg.x + " / mod=" + rest + " " + "/ 显式调用=" + shout;
   }
   _log() {
     "扩展方法打印的日志".logText("ExtensionDetail");
@@ -524,4 +525,14 @@ export const VectorOps = registerExtension(Vector, (function () {
     },
   };
 })(), { id: "lib/components/grammar/grammar_details.dart#VectorOps" });
+
+// 扩展 ShoutEx
+export const ShoutEx = registerExtension("String", (function () {
+  "use strict";
+  return {
+    shout: function () {
+      return this + "!";
+    },
+  };
+})(), { id: "lib/components/grammar/grammar_details.dart#ShoutEx" });
 

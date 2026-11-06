@@ -57,6 +57,15 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 函数表达式（闭包）本身就是表达式：变量初始化器、实参、三元分支等位置
   // 统一在这里翻译，可选 / 具名形参与默认值由 [closureToJs] 同一实现处理。
   if (e is FunctionExpression) return closureToJs(e, scope, classes);
+  // 显式 extension 调用 `E(x).m(args)`：必须在构造翻译之前拦截——[valueCtorJs]
+  // 会把 `E(x)` 当成 `new E({...})` 构造（E 是扩展名，不是类）。改写为
+  // `x.m(args)`：成员已由 `registerExtension` 装在目标原型上。
+  if (e is MethodInvocation) {
+    final explicitRecv = _explicitExtensionReceiver(e, scope, classes);
+    if (explicitRecv != null) {
+      return _methodCallJs(e, scope, classes, receiverJs: explicitRecv);
+    }
+  }
   // 构造表达式（`Color(0xFF…)` / `Color.fromARGB(…)` / 任意 `X(…)`）→
   // `new X({...})`（命名构造 `X.b({...})` 仅在签名表命中时接管）。
   // 颜色不是特殊形态：`Color` 与其它类一样由运行时注入同名类。
@@ -584,6 +593,14 @@ String? _fnValueCallJs(
 /// 赋值右侧：字面量 / 形参 / 字段读 / 模型构造 `new X({...})` /
 /// 插值、`??` 等其余形态兜底走 exprToJs。
 String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
+  // 显式 extension 调用 `E(x).m(...)`：先于构造钩子 / 构造翻译拦截——否则
+  // `E(x)` 会被当成 `new E({...})` 构造（E 是扩展名，不是类）。
+  if (e is MethodInvocation) {
+    final explicitRecv = _explicitExtensionReceiver(e, scope, classes);
+    if (explicitRecv != null) {
+      return _methodCallJs(e, scope, classes, receiverJs: explicitRecv);
+    }
+  }
   // 组件/值对象出现在**任意表达式位置**（方法实参、三元分支、列表元素）时，
   // 先交给属性管线（[constructionHook]，由 element2js 安装）：子结点槽位与
   // 值转换器必须与 children 里的组件一致，否则会出现「JS 侧不存在的类调用」
@@ -1487,7 +1504,49 @@ String? methodCallExprJs(
     if (recv == null) return null;
     return _methodCallJs(e, scope, classes, receiverJs: recv, nullAware: true);
   }
+  // 显式 extension 调用 `E(x).m(args)`：Dart 里它把接收者绑定到扩展 E，绕过
+  // 实例成员与其它扩展；JS 侧成员已装在目标原型上，故等价于 `x.m(args)`。
+  // 判据 = 内层调用的目标名属于**本文件可见的具名 extension**（源码事实，
+  // 不按名字白名单判断），且恰好一个位置实参（`E(x)` 的形态）。
+  final explicitRecv = _explicitExtensionReceiver(e, scope, classes);
+  if (explicitRecv != null) {
+    return _methodCallJs(e, scope, classes, receiverJs: explicitRecv);
+  }
   return _methodCallJs(e, scope, classes);
+}
+
+/// `E(x).m(...)` → `x`（显式 extension 调用的接收者 JS 表达式）；不匹配返回 null。
+///
+/// 只有「内层是裸名调用 + 该名字是可见具名 extension + 单位置实参」才成立；
+/// `factory()` / `p.E(x).m()` 等其它形态一律不接管（保持原有翻译）。
+String? _explicitExtensionReceiver(
+  MethodInvocation e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final target = e.target;
+  // analyzer 对扩展显式调用给出专用节点 `ExtensionOverride`（`E(x)`），
+  // 只有真正解析成 extension 时才会出现；名字必须是当前作用域可见的具名
+  // extension（源码事实，不按名字白名单）。
+  if (target is ExtensionOverride) {
+    if (target.importPrefix != null) return null;
+    final name = target.name.lexeme;
+    if (!scope.extensionNames.contains(name)) return null;
+    final args = target.argumentList.arguments;
+    if (args.length != 1 || args.first is NamedExpression) return null;
+    return exprToJs(args.first, scope, classes);
+  }
+  if (target is! MethodInvocation) return null;
+  if (target.typeArguments != null) return null;
+  // `E(x)` 是无接收者的裸名调用：analyzer 对未解析的显式扩展调用给出
+  // `target == null` + `methodName == 扩展名`（已解析时则是 ExtensionOverride，
+  // 见上）；两者都要求名字是当前作用域可见的具名 extension。
+  if (target.target != null) return null;
+  final name = target.methodName.name;
+  if (!scope.extensionNames.contains(name)) return null;
+  final args = target.argumentList.arguments;
+  if (args.length != 1 || args.first is NamedExpression) return null;
+  return exprToJs(args.first, scope, classes);
 }
 
 /// 方法调用的唯一实现；[receiverJs] 非空时跳过接收者解析（供空安全调用复用，
@@ -3894,6 +3953,7 @@ String translateClassMethodBody(
   Set<String> globalConsts = const {},
   int depth = 2,
   Map<String, Map<String, String>> extensionOperators = const {},
+  Set<String> extensionNames = const {},
 }) {
   final ind = '  ' * depth;
   final channel = m.nativeChannel;
@@ -3965,6 +4025,7 @@ String translateClassMethodBody(
     // 可以直接落到基类，不需要在翻译层做特殊处理。
     hasJsBase: jsBaseClassOf(info, classes) != null,
     extensionOperators: extensionOperators,
+    extensionNames: extensionNames,
   );
   // 形参前导：可选位置形参补默认值、具名形参从尾参对象 `__o` 解构。与闭包 /
   // 局部函数同一实现，避免三处默认值口径走样。

@@ -174,6 +174,7 @@ String renderProjectPackageFile(
   final table = buildClassTable(unit, sourceFile);
   final consts = buildTopLevelConstResolver(unit, sourceFile, table);
   final extensionOperators = extensionOperatorsInScope(unit, sourceFile);
+  final extensionNames = extensionNamesInScope(unit, sourceFile);
   final localNames = <String>{
     for (final d in unit.declarations.whereType<ClassDeclaration>())
       d.name.lexeme,
@@ -235,6 +236,7 @@ String renderProjectPackageFile(
       globalConsts: consts.names,
       classNamesInUnit: localNames,
       extensionOperators: extensionOperators,
+      extensionNames: extensionNames,
     );
     if (info != null) extensions.add(info);
   }
@@ -276,6 +278,7 @@ String renderProjectPackageFile(
             ignoredTypes: ignoredClassNamesInScope(unit, sourceFile),
             globalConsts: consts.names,
             extensionOperators: extensionOperators,
+            extensionNames: extensionNames,
           )
         : translateClass(
             node as ClassDeclaration,
@@ -289,6 +292,7 @@ String renderProjectPackageFile(
             globalConsts: consts.names,
             isComponent: table[e.key]?.isComponent ?? false,
             extensionOperators: extensionOperators,
+            extensionNames: extensionNames,
           );
     classInfos.add(info);
     baseClassByName[info.name] = jsBaseClassOf(info, table);

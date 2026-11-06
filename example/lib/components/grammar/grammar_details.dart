@@ -137,6 +137,16 @@ extension VectorOps on Vector {
   int operator %(int mod) => this.x % mod;
 }
 
+/// 显式调用 `ShoutEx(x).shout()`：调用点改写成 `x.shout()`（成员在原型上）。
+extension ShoutEx on String {
+  String shout() => '${this}!';
+}
+
+/// 可空目标：JS 侧没有可挂载的原型，构建期应出声跳过（不产出注册）。
+extension NullableTag on String? {
+  String tagText() => this == null ? 'null' : '有值';
+}
+
 @PatchEntry('ExtensionDetail')
 class ExtensionDetail extends StatelessWidget {
   const ExtensionDetail({super.key});
@@ -148,7 +158,10 @@ class ExtensionDetail extends StatelessWidget {
     final sum = a + b;
     final neg = -a;
     final rest = a % 4;
-    return 'extension operator：sum=${sum.x} / neg=${neg.x} / mod=$rest';
+    // 显式 extension 调用：等价于 `'explicit'.shout()`。
+    final shout = ShoutEx('explicit').shout();
+    return 'extension operator：sum=${sum.x} / neg=${neg.x} / mod=$rest '
+        '/ 显式调用=$shout';
   }
 
   void _log() {

@@ -118,6 +118,8 @@ class ComponentBuilder implements Builder {
     // 调用点按接收者静态类型改写，类自身运算符优先（见 js_translator）。
     final extensionOperators =
         extensionOperatorsInScope(parsed.unit, inputId.path);
+    // 本文件可见的具名 extension（显式调用 `E(x).m()` 的绑定判据）。
+    final extensionNames = extensionNamesInScope(parsed.unit, inputId.path);
 
     // import 前缀（`import '...' as p;`）→ 该前缀在 JS 侧的模块产物：
     //   - `dart:` → ''（已知按裸类名：SDK 值类 / 控件由 flutter.js 同名承接）；
@@ -291,6 +293,7 @@ class ComponentBuilder implements Builder {
         isComponent: isComponent,
         prefixProducts: prefixProducts,
         extensionOperators: extensionOperators,
+        extensionNames: extensionNames,
       ));
     }
 
@@ -309,6 +312,7 @@ class ComponentBuilder implements Builder {
         globalConsts: globalConsts,
         prefixProducts: prefixProducts,
         extensionOperators: extensionOperators,
+        extensionNames: extensionNames,
       ));
     }
 
@@ -331,6 +335,7 @@ class ComponentBuilder implements Builder {
         classNamesInUnit: parsedNames,
         prefixProducts: prefixProducts,
         extensionOperators: extensionOperators,
+        extensionNames: extensionNames,
       );
       if (info != null) extensions.add(info);
     }
@@ -386,6 +391,7 @@ class ComponentBuilder implements Builder {
         globalConsts: globalConsts,
         isComponent: isWidgetDep,
         extensionOperators: extensionOperators,
+        extensionNames: extensionNames,
       );
       if (isWidgetDep) {
         exportedClasses.add(translated);
