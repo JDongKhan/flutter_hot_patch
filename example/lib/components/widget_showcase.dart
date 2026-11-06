@@ -27,26 +27,26 @@ import 'sliver_detail.dart';
 import 'stateless_card.dart';
 import 'tab_detail.dart';
 import 'text_detail.dart';
-import 'grammar/alias_detail.dart';
-import 'grammar/array_detail.dart';
-import 'grammar/async_detail.dart';
-import 'grammar/basic_api_detail.dart';
-import 'grammar/callable_detail.dart';
-import 'grammar/collection_detail.dart';
-import 'grammar/constructor_detail.dart';
-import 'grammar/enum_detail.dart';
-import 'grammar/expression_detail.dart';
-import 'grammar/extension_detail.dart';
-import 'grammar/function_detail.dart';
-import 'grammar/generic_detail.dart';
-import 'grammar/inheritance_detail.dart';
-import 'grammar/map_detail.dart';
-import 'grammar/mixin_detail.dart';
-import 'grammar/null_safety_detail.dart';
-import 'grammar/operator_detail.dart';
-import 'grammar/pattern_detail.dart';
-import 'grammar/record_detail.dart';
-import 'grammar/statement_detail.dart';
+import '../grammar/alias_detail.dart';
+import '../grammar/array_detail.dart';
+import '../grammar/async_detail.dart';
+import '../grammar/basic_api_detail.dart';
+import '../grammar/callable_detail.dart';
+import '../grammar/collection_detail.dart';
+import '../grammar/constructor_detail.dart';
+import '../grammar/enum_detail.dart';
+import '../grammar/expression_detail.dart';
+import '../grammar/extension_detail.dart';
+import '../grammar/function_detail.dart';
+import '../grammar/generic_detail.dart';
+import '../grammar/inheritance_detail.dart';
+import '../grammar/map_detail.dart';
+import '../grammar/mixin_detail.dart';
+import '../grammar/null_safety_detail.dart';
+import '../grammar/operator_detail.dart';
+import '../grammar/pattern_detail.dart';
+import '../grammar/record_detail.dart';
+import '../grammar/statement_detail.dart';
 import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
@@ -334,26 +334,26 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
     // 基础语法 demo（每个语法一个源文件，产物镜像源文件路径）：
-    'MixinDetail': 'components/grammar/mixin_detail.js',
-    'ExtensionDetail': 'components/grammar/extension_detail.js',
-    'InheritanceDetail': 'components/grammar/inheritance_detail.js',
-    'BasicApiDetail': 'components/grammar/basic_api_detail.js',
-    'EnumDetail': 'components/grammar/enum_detail.js',
-    'ConstructorDetail': 'components/grammar/constructor_detail.js',
-    'NullSafetyDetail': 'components/grammar/null_safety_detail.js',
-    'PatternDetail': 'components/grammar/pattern_detail.js',
-    'RecordDetail': 'components/grammar/record_detail.js',
-    'OperatorDetail': 'components/grammar/operator_detail.js',
-    'CallableDetail': 'components/grammar/callable_detail.js',
-    'FunctionDetail': 'components/grammar/function_detail.js',
-    'ExpressionDetail': 'components/grammar/expression_detail.js',
-    'StatementDetail': 'components/grammar/statement_detail.js',
-    'CollectionDetail': 'components/grammar/collection_detail.js',
-    'AsyncDetail': 'components/grammar/async_detail.js',
-    'GenericDetail': 'components/grammar/generic_detail.js',
-    'AliasDetail': 'components/grammar/alias_detail.js',
-    'ArrayDetail': 'components/grammar/array_detail.js',
-    'MapDetail': 'components/grammar/map_detail.js',
+    'MixinDetail': 'grammar/mixin_detail.js',
+    'ExtensionDetail': 'grammar/extension_detail.js',
+    'InheritanceDetail': 'grammar/inheritance_detail.js',
+    'BasicApiDetail': 'grammar/basic_api_detail.js',
+    'EnumDetail': 'grammar/enum_detail.js',
+    'ConstructorDetail': 'grammar/constructor_detail.js',
+    'NullSafetyDetail': 'grammar/null_safety_detail.js',
+    'PatternDetail': 'grammar/pattern_detail.js',
+    'RecordDetail': 'grammar/record_detail.js',
+    'OperatorDetail': 'grammar/operator_detail.js',
+    'CallableDetail': 'grammar/callable_detail.js',
+    'FunctionDetail': 'grammar/function_detail.js',
+    'ExpressionDetail': 'grammar/expression_detail.js',
+    'StatementDetail': 'grammar/statement_detail.js',
+    'CollectionDetail': 'grammar/collection_detail.js',
+    'AsyncDetail': 'grammar/async_detail.js',
+    'GenericDetail': 'grammar/generic_detail.js',
+    'AliasDetail': 'grammar/alias_detail.js',
+    'ArrayDetail': 'grammar/array_detail.js',
+    'MapDetail': 'grammar/map_detail.js',
   };
 
   String get _jsEntry => _jsEntries[widget.component]!;

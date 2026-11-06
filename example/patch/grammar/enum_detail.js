@@ -1,8 +1,8 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/enum_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/enum_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
+import { Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 export const TaskLevel = (function () {
   const __values = [];

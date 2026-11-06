@@ -1,9 +1,9 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/constructor_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/constructor_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { TaskLevel } from 'enum_detail.js';
-import { Colors, Column, CrossAxisAlignment, FontWeight, SizedBox, StatelessWidget, Text, TextStyle } from '../../flutter.js';
+import { Colors, Column, CrossAxisAlignment, FontWeight, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 Stamp
 export class Stamp {

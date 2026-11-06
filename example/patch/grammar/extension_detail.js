@@ -1,10 +1,10 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/extension_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/extension_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { IntExtension } from '../../packages/hot_module_base/src/int_extension.js';
+import { IntExtension } from '../packages/hot_module_base/src/int_extension.js';
 import { TestString1 } from 'extension/e_string.js';
-import { Center, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
+import { Center, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 Vector
 export class Vector {
@@ -111,7 +111,7 @@ export const VectorOps = registerExtension(Vector, (function () {
       return __mod(this.x, mod);
     },
   };
-})(), { id: "lib/components/grammar/extension_detail.dart#VectorOps" });
+})(), { id: "lib/grammar/extension_detail.dart#VectorOps" });
 
 // 扩展 ShoutEx
 export const ShoutEx = registerExtension("String", (function () {
@@ -121,5 +121,5 @@ export const ShoutEx = registerExtension("String", (function () {
       return this + "!";
     },
   };
-})(), { id: "lib/components/grammar/extension_detail.dart#ShoutEx" });
+})(), { id: "lib/grammar/extension_detail.dart#ShoutEx" });
 

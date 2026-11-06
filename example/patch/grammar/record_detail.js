@@ -1,8 +1,8 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/record_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/record_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Column, CrossAxisAlignment, FontWeight, SizedBox, StatelessWidget, Text, TextStyle } from '../../flutter.js';
+import { Column, CrossAxisAlignment, FontWeight, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 RecordDetail
 export class RecordDetail extends StatelessWidget {

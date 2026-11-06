@@ -1,9 +1,9 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/pattern_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/pattern_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { TaskItem } from 'constructor_detail.js';
-import { Column, CrossAxisAlignment, ElevatedButton, FontWeight, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
+import { Column, CrossAxisAlignment, ElevatedButton, FontWeight, OutlinedButton, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 组件 PatternDetail
 export class PatternDetail extends StatefulWidget {

@@ -1,9 +1,9 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/expression_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/expression_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
 import { Price } from 'operator_detail.js';
-import { Column, CrossAxisAlignment, FontWeight, SizedBox, StateError, StatelessWidget, Text, TextStyle, num } from '../../flutter.js';
+import { Column, CrossAxisAlignment, FontWeight, SizedBox, StateError, StatelessWidget, Text, TextStyle, num } from '../flutter.js';
 
 // 组件 ExpressionDetail
 export class ExpressionDetail extends StatelessWidget {

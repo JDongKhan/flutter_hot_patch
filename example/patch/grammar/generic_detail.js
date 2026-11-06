@@ -1,10 +1,10 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/generic_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/generic_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { CounterVm } from '../../model/counter_vm.js';
-import { ArgumentError, Builder, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatefulWidget, Text, TextStyle, double, int, num } from '../../flutter.js';
-import { ChangeNotifierProvider } from '../../provider.js';
+import { CounterVm } from '../model/counter_vm.js';
+import { ArgumentError, Builder, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatefulWidget, Text, TextStyle, double, int, num } from '../flutter.js';
+import { ChangeNotifierProvider } from '../provider.js';
 
 // 模型 Pair
 export class Pair {

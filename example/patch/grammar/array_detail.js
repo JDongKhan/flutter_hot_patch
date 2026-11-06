@@ -1,8 +1,8 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/array_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/array_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Colors, Column, CrossAxisAlignment, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
+import { Colors, Column, CrossAxisAlignment, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 Bucket
 export class Bucket {

@@ -1,10 +1,10 @@
 // GENERATED CODE - DO NOT EDIT
-// 由 hot_patch_generator 从 lib/components/grammar/mixin_detail.dart 自动生成
+// 由 hot_patch_generator 从 lib/grammar/mixin_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { StateLogMixin } from '../../packages/hot_module_base/src/state_log_mixin.js';
-import { IntExtension } from '../../packages/hot_module_base/src/int_extension.js';
-import { Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
+import { StateLogMixin } from '../packages/hot_module_base/src/state_log_mixin.js';
+import { IntExtension } from '../packages/hot_module_base/src/int_extension.js';
+import { Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 _SuperTagged_Tagged
 class _SuperTagged_Tagged {

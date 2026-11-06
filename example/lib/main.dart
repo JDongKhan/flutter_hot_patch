@@ -6,7 +6,6 @@ import 'package:hot_patch/hot_patch.dart';
 import 'app/app.dart';
 import 'base/app_log_console.dart';
 import 'components/composite_component.dart';
-import 'components/grammar/grammar_showcase.dart';
 import 'components/hello_component.dart';
 import 'components/inherited_widget_demo.dart';
 import 'components/watch_demo.dart';
@@ -14,6 +13,7 @@ import 'components/provider_component.dart';
 import 'components/widget_showcase.dart';
 import 'components/test_widget.dart';
 import 'generated/host_methods.dart';
+import 'grammar/grammar_showcase.dart';
 
 void main() {
   // 日志捕获：print / debugPrint（含 Flutter 框架与 hot_patch 的 HotPatchLog，

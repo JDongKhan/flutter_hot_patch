@@ -3,7 +3,7 @@ import 'package:hot_module_base/hot_module_base.dart' as base;
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'package:provider/provider.dart' as p;
 
-import '../../model/counter_vm.dart' as vm;
+import '../model/counter_vm.dart' as vm;
 
 /// import 前缀别名（`as`）demo。
 ///

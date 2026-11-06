@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
-import '../../model/counter_vm.dart';
+import '../model/counter_vm.dart';
 
 /// 泛型 demo（「基础语法 · 列表」页点击进入）：类泛型 / 方法泛型。
 ///
