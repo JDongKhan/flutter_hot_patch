@@ -3001,12 +3001,25 @@ export class Stream {
     })();
   }
 
+  // 与 Dart 一致：控制器 add 的事件异步投递（微任务），订阅者不能在 add
+  // 调用栈内收到回调。async* 生成器本身已异步，补一次微任务不改变时序。
+  // 同一订阅者的 error / done 必须排在已排队的 data 之后（_deliver 内再排队）。
   _emit(type, value) {
+    var self = this;
+    Promise.resolve().then(function () { self._deliverNow(type, value); });
+  }
+
+  _deliverNow(type, value) {
     if (type === 'done') {
       this._done = true;
+      // 队列里可能还有未消费的 data：done 追加在队尾（不能清空，否则
+      // `add(1); add(2); close()` 的 await for 会丢掉最后一个值）。
       for (var p of this._pulls) {
-        while (p.waiters.length) p.waiters.shift()({ type: 'done', value: undefined });
-        p.queue.length = 0;
+        if (p.waiters.length) {
+          while (p.waiters.length) p.waiters.shift()({ type: 'done', value: undefined });
+        } else {
+          p.queue.push({ type: 'done', value: undefined });
+        }
       }
       for (var sub of Array.from(this._listeners)) sub._deliver('done', undefined);
       return;

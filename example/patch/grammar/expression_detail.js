@@ -44,8 +44,13 @@ export class ExpressionDetail extends StatelessWidget {
     const added = (cells[((slot = 1))] += 3);
     const truncated = ((__t, __i) => { return (__t[__i] = Math.trunc(__t[__i] / 4)); })(cells, ((slot = 1)));
     ((__t, __i) => { __t[__i] = Math.trunc(__t[__i] / 3); })(cells, ((slot = 0)));
+    const maybeCells = (present) => { return (present ? cells : null); };
+    const maybe = maybeCells(true);
+    const missing = maybeCells(false);
     let hit = 0;
-    return "赋值表达式：steps=" + steps._join("/") + " / added=" + added + " " + "/ 整除=" + truncated + " / 列表=" + cells._join("/") + " / slot=" + slot + " " + "/ assigned=" + " / hit=" + hit + " " + "/ 空目标=";
+    const assigned = ((__t) => { if (__t == null) return null; return (__t[0] = ((hit = 7))); })(maybe);
+    const skipped = ((__t) => { if (__t == null) return null; return (__t[0] = 99); })(missing);
+    return "赋值表达式：steps=" + steps._join("/") + " / added=" + added + " " + "/ 整除=" + truncated + " / 列表=" + cells._join("/") + " / slot=" + slot + " " + "/ assigned=" + (assigned ?? "null") + " / hit=" + hit + " " + "/ 空目标=" + (skipped ?? "null");
   }
   _cascadeText() {
     const nums = (() => { const _t = []; _t.add(1); _t.add(2); return _t; })();

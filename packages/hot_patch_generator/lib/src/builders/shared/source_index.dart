@@ -218,16 +218,35 @@ Set<String> get thirdPartyJsPackages =>
 Set<String>? _thirdPartyJsPackages;
 
 Set<String> _scanThirdPartyJsPackages() {
-  final root = PackageSources.instance?.projectRoot;
-  if (root == null) return const {};
-  final dir = Directory('$root${Platform.pathSeparator}$thirdPartyJsRoot');
-  if (!dir.existsSync()) return const {};
   final out = <String>{};
-  for (final entity in dir.listSync(followLinks: false)) {
-    if (entity is! File || !entity.path.endsWith('.js')) continue;
-    final name = entity.uri.pathSegments.last;
-    out.add(name.substring(0, name.length - '.js'.length));
+  for (final rel in thirdPartyJsFiles) {
+    if (rel.contains('/')) continue; // 仅顶层 `<package>.js` 作为包模块
+    out.add(rel.substring(0, rel.length - '.js'.length));
   }
+  return out;
+}
+
+/// 宿主工程 `js/` 下的全部 JS 文件（相对 `js/` 的 POSIX 路径，递归）。
+///
+/// 构建期由 `ui_third_party_js` 原样拷贝到 `patch/packages/`；用文件系统即索引，
+/// 不要求宿主动 `build.yaml` 的 `sources`。进程内只扫描一次。
+List<String> get thirdPartyJsFiles => _thirdPartyJsFiles ??= _scanThirdPartyJsFiles();
+List<String>? _thirdPartyJsFiles;
+
+List<String> _scanThirdPartyJsFiles() {
+  final root = PackageSources.instance?.projectRoot;
+  if (root == null) return const [];
+  final dir = Directory('$root${Platform.pathSeparator}$thirdPartyJsRoot');
+  if (!dir.existsSync()) return const [];
+  final out = <String>[];
+  for (final entity in dir.listSync(recursive: true, followLinks: false)) {
+    if (entity is! File || !entity.path.endsWith('.js')) continue;
+    final rel = entity.path
+        .substring(dir.path.length + 1)
+        .replaceAll(Platform.pathSeparator, '/');
+    out.add(rel);
+  }
+  out.sort();
   return out;
 }
 

@@ -1,9 +1,9 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.11.0",
-  "buildTime": "2026-11-06T11:30:38.400246",
+  "buildTime": "2026-11-06T13:07:05.674695",
   "resources": {
-    "flutter.js": "6c8241b4a2a5a64c723e01b9db9aa393e05f78cc4bd18969ca98b2947a43f3e7",
+    "flutter.js": "2f814ddd7daaf79bf07d24ae4b60946bbe9589fa866311206d81e3e8c8625e25",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
     "runtime.js": "72d9e799e28b9f9dfe4e3af09c3a65599c62890dd4e610c2b2c5f3d7f871335e",
     "packages/hot_module_base/hot_module_base.js": "f2277d31eee25cd1c288ed66dbc59c46e0175109832207fcd512a6620acdf7f4",
@@ -27,8 +27,8 @@
     "grammar/inheritance_detail.js": "05659aebb0cd685668ab2e54331baeb2f7fa495784fe3ef85dd63b7717285415",
     "grammar/pattern_detail.js": "ce6339d73f25fdc923fc31c0287a846500de62803955ba97bf8ed3d66d4f78dc",
     "grammar/basic_api_detail.js": "3647025cf5ce8e4bc5e031e0c17add25ea359843e010208407259ddd3bfabbc2",
-    "grammar/stream_detail.js": "a6e8f00433489aab8c1fdfed8c01d5e5c08836c84aa086dd95a3cae30ae0ee88",
-    "grammar/expression_detail.js": "e102d52c449d8e91a45329d232b3871d8eaa442035877c1483105808e5402c40",
+    "grammar/stream_detail.js": "6ef243f1a8ad36bce48c2a79e53496ed554a6687675d3c9a35292a2fb7556707",
+    "grammar/expression_detail.js": "e557b981a4d843bfec754ea10de0f3f680ac9375b022cc83331de5274bffa757",
     "grammar/mixin_detail.js": "e19595b3609f5cc8dafbd5ca5ceba86c48e52ad4824ac4867bf0ed2ed91a8c36",
     "grammar/extension_detail.js": "0ed8f61e5c627166309d45dae192dbd941d9519e567f32ccda760d11a77f533d",
     "grammar/generic_detail.js": "29e0b4f844e1c9f57d826076d0b1d6807e2303bea837288d46682380aba6894c",

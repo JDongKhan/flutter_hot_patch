@@ -65,21 +65,24 @@ export class StreamDetail extends StatefulWidget {
       this._controller = values.join(",") + " / isClosed=" + controller.isClosed;
     });
   }
-  _runBroadcast() {
-    const controller = new StreamController({typeArguments: {"T": "int"}});
+  async _runBroadcast() {
+    const controller = StreamController.broadcast({typeArguments: {"T": "int"}});
     const a = [];
     const b = [];
     controller.stream.listen((v) => { return a.add(v); });
     controller.stream.listen((v) => { return b.add(v); });
     controller.add(1);
     controller.add(2);
-    controller.close();
+    await controller.close();
     this.setState(() => {
       this._broadcast = "A=" + a._join(",") + " / B=" + b._join(",");
     });
   }
   async _runAwaitFor() {
     const parts = [];
+    for await (let v of this._ticks(3)) {
+      parts.add("#" + v);
+    }
     this.setState(() => {
       this._awaitFor = parts._join(" ");
     });

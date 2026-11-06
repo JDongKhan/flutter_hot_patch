@@ -942,12 +942,23 @@ String? valueCtorJs(
   if (e is InstanceCreationExpression) {
     // 类型实参在 JS 里不存在（Dart→JS 语义即擦除），构造名只取类型实参之前
     // 的部分：`GlobalKey<AnimatedListState>()` 与 `GlobalKey()` 是同一个类。
+    // 命名构造的名字在 `constructorName.name`（类型部分的 toSource 不含它）：
+    // `StreamController<int>.broadcast()` 必须落 `new StreamController.broadcast(...)`，
+    // 只按类型源码解析会把 `.broadcast` 丢掉。
     var src = e.constructorName.type.toSource();
     final lt = src.indexOf('<');
     if (lt >= 0) src = src.substring(0, lt).trim();
-    final dot = src.indexOf('.');
-    cls = dot < 0 ? src : src.substring(0, dot);
-    ctorName = dot < 0 ? null : src.substring(dot + 1);
+    final ctorTok = e.constructorName.name?.name;
+    if (ctorTok != null) {
+      // 带 import 前缀的类型（`p.A.b(...)`）交给通用调用分支，避免把前缀当类名。
+      if (src.contains('.')) return null;
+      cls = src.trim();
+      ctorName = ctorTok;
+    } else {
+      final dot = src.indexOf('.');
+      cls = dot < 0 ? src : src.substring(0, dot);
+      ctorName = dot < 0 ? null : src.substring(dot + 1);
+    }
     args = e.argumentList.arguments.toList();
   } else if (e is MethodInvocation && e.target is SimpleIdentifier) {
     cls = (e.target! as SimpleIdentifier).name;

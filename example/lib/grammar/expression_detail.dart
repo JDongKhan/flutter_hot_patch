@@ -60,7 +60,6 @@ class ExpressionDetail extends StatelessWidget {
     var hit = 0;
     final assigned = maybe?[0] = (hit = 7);
     final skipped = missing?[0] = 99;
-    maybe = null;
 
     return '赋值表达式：steps=${steps.join('/')} / added=$added '
         '/ 整除=$truncated / 列表=${cells.join('/')} / slot=$slot '

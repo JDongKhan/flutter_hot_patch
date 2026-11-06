@@ -656,10 +656,33 @@ class ElementTranslateContext implements ExprRenderer {
     // 判据只看「JS 侧有没有这个类」：有类就有同名静态方法（命名构造由
     // `X.b({...})` 一比一发射，静态方法负责把构造名写进 `props.factory`）。
     // 带前缀（`p.Foo`）的引用一定指向模块导出，按类处理。
-    final asClass = token != name || jsClassFileOf(name) != null;
+    final classFile = jsClassFileOf(name);
+    final asClass = token != name || classFile != null;
+    // JS 侧既没有这个类、宿主也没有同名 widget 渲染器时，元素 type 只能退化成
+    // 字符串 —— 宿主注册表查不到必然失败。若类来自某个 pub 依赖包而宿主 `js/`
+    // 没提供该包模块（`js/<package>.js`），构建期直接出声（每个类型一次）。
+    if (classFile == null) _warnMissingHostJs(name);
     _registerWidgetImport(token, name);
     return _renderCall(token, json, depth, asClass: asClass);
   }
+
+  /// 类型在 JS 侧没有类、且缺失的是宿主三方 JS 模块时告警（每类型一次）。
+  ///
+  /// 判据见 [missingHostJsPackageOf]（类声明所在包 + 宿主 `js/` 是否提供模块），
+  /// 不涉及任何库名 / 类型名白名单。
+  void _warnMissingHostJs(String type) {
+    final pkg = missingHostJsPackageOf(type);
+    if (pkg == null || !_missingHostJsWarned.add(type)) return;
+    log.warning(
+      '[hot_patch_generator] $sourcePath: 类型 "$type" 声明在 package:$pkg，'
+      '但宿主 js/ 目录没有 $pkg.js（应在工程根 js/$pkg.js 提供该包 JS，'
+      '构建时原样拷贝为 patch/packages/$pkg.js）。该类型在 JS 侧没有类，'
+      '产物运行时会失败。',
+    );
+  }
+
+  /// 已告警过的「三方包缺 JS 模块」类型（每类型一次，避免逐处刷屏）。
+  final Set<String> _missingHostJsWarned = {};
 
   /// 按「类的定义在哪个文件」登记 import（漏登记 = 产物里
   /// 「Can't find variable: X」）。

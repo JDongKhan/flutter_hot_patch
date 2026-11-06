@@ -77,8 +77,9 @@ class _StreamDetailState extends State<StreamDetail> {
     });
   }
 
-  /// broadcast：每个订阅者独立收到同一批事件。
-  void _runBroadcast() {
+  /// broadcast：每个订阅者独立收到同一批事件（事件异步投递，close 后 await
+  /// 再读结果，与 Dart 的事件队列时序一致）。
+  Future<void> _runBroadcast() async {
     final controller = StreamController<int>.broadcast();
     final a = <int>[];
     final b = <int>[];
@@ -86,7 +87,7 @@ class _StreamDetailState extends State<StreamDetail> {
     controller.stream.listen((v) => b.add(v));
     controller.add(1);
     controller.add(2);
-    controller.close();
+    await controller.close();
     setState(() => _broadcast = 'A=${a.join(',')} / B=${b.join(',')}');
   }
 

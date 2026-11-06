@@ -11,6 +11,8 @@ library;
 
 import 'ctor_signatures.dart';
 import 'host_types.dart';
+import 'package_sources.dart';
+import 'runtime_global_types.dart';
 import 'source_index.dart';
 
 export 'host_types.dart';
@@ -216,6 +218,41 @@ String widgetPackageOf(String type) {
     return nodeHelperPackage;
   }
   return thirdPartyPackageOf(type) ?? nodeHelperPackage;
+}
+
+/// 类型在 JS 侧**没有类**、且本应有宿主 JS 模块时，返回缺失的 Dart 包名
+/// （null = 不是「三方包缺 JS 模块」这种情况）。
+///
+/// 判据全部是源码事实，不看库名 / 类型名：
+///   - 类声明所在包（[CtorSignatures.declaringPackagesOf]）；
+///   - 该包是不是 pub 依赖（非本项目 / 非本地依赖包）；
+///   - 宿主 `js/` 是否提供了该包的模块（[thirdPartyJsPackages]）。
+///
+/// 以下情形一律不算缺失（各有自己的 JS 来源，不归宿主 `js/`）：
+///   - 本项目包（类有自己的产物文件）；
+///   - 本地依赖包（跨包翻译产物 `patch/packages/<pkg>/<rel>.js`）；
+///   - 框架包（[nonTranslatedPackages]，JS 侧由宿主注入实现）；
+///   - `dart:` 核心库；
+///   - 运行时已提供同名类（`runtime.js` 注入全局 / `flutter.js` 值类区）。
+String? missingHostJsPackageOf(String type) {
+  final sources = PackageSources.instance;
+  if (sources == null) return null;
+  // 运行时已提供同名类：`new X(...)` 由注入全局 / 值类区承接，不需要模块。
+  if (runtimeGlobalTypes().contains(type) ||
+      flutterExportTypes().contains(type)) {
+    return null;
+  }
+  final packages =
+      CtorSignatures.instance?.declaringPackagesOf(type) ?? const <String>{};
+  for (final pkg in packages) {
+    if (pkg == sources.projectName) continue;
+    if (pkg.startsWith('dart:')) continue;
+    if (nonTranslatedPackages.contains(pkg)) continue;
+    if (sources.isLocalPackage(pkg)) continue;
+    if (thirdPartyJsPackages.contains(pkg)) continue;
+    return pkg;
+  }
+  return null;
 }
 
 /// 需要在 flutter.js 生成**宿主包装类**的类型：宿主 widget，排除已有 JS 类的
