@@ -3,10 +3,6 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import 'operator_detail.dart';
 
-/// 返回可空列表：让 `?[` / 空安全赋值演示保持「目标可能为空」的静态类型，
-/// 避免分析器把局部变量收窄成非空后把演示代码判成无效。
-List<int>? _maybeCells(List<int> xs, bool present) => present ? xs : null;
-
 /// 表达式语法 demo：位运算 / 移位 / 复合赋值、赋值作为表达式、级联、
 /// `throw` 作为表达式。
 @PatchEntry('ExpressionDetail')
@@ -55,8 +51,12 @@ class ExpressionDetail extends StatelessWidget {
     final truncated = cells[(slot = 1)] ~/= 4;
     cells[(slot = 0)] ~/= 3;
 
-    List<int>? maybe = _maybeCells(cells, true);
-    final List<int>? missing = _maybeCells(cells, false);
+    // 可空列表：让 `?[` / 空安全赋值演示保持「目标可能为空」的静态类型
+    // （局部函数，避免分析器把局部变量收窄成非空后把演示代码判成无效）。
+    List<int>? maybeCells(bool present) => present ? cells : null;
+
+    final List<int>? maybe = maybeCells(true);
+    final List<int>? missing = maybeCells(false);
     var hit = 0;
     final assigned = maybe?[0] = (hit = 7);
     final skipped = missing?[0] = 99;
