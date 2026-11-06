@@ -9,6 +9,7 @@
 - **record 模式**：`_compilePattern` 新增 `RecordPattern` 分支，位置字段按 record 字面量产物取 `["$1"…"$N"]`、命名字段取原名，逐字段递归匹配（常量 / 变量 / 嵌套模式全部复用同一套编译）；JS 侧 record 是普通对象，只做 `typeof === "object"` 浅检查。示例 `record_detail.dart` 增加 `_recordPatternText`（位置 + 命名 record）。
 - **extension 显式调用与可空目标**：`_explicitExtensionReceiver`（`js_translator.dart`）识别 `E(x).m(...)` 的两种 AST 形态（已解析 `ExtensionOverride` / 未解析裸名 `MethodInvocation`），按 `extensionNamesInScope`（本文件 + import 图）确认可见具名扩展后改写为 `x.m(...)`；拦截点放在 `rhsToJs` / `exprToJs` 的构造翻译之前，避免 `E(x)` 被误当 `new E(...)`。`translateExtension` 对可空目标（`extendedType.question != null`，如 `String?`）构建期出声跳过。示例 `extension_detail.dart` 增加 `ShoutEx` 显式调用与 `NullableTag`（可空目标告警）。
 - **修复 `flutterExportTypes` 误抽取**：运行时片段扫描跳过行首注释行，不再把注释示例里的 `export const StringLogExtension = ...` 当成 `flutter.js` 导出（否则产物会 import 不存在的名字）。
+- **`Completer<T>`（运行时能力，翻译器零改动）**：`future_js.dart` 新增 `export class Completer`——`future` 是 `Future.__wrap` 包住的外置 resolve/reject Promise（`await` / `then` 与 Future 同一通道）；`complete` / `completeError` 只允许一次，重复完成抛 `StateError`；`isCompleted` 为 getter。产物按普通构造翻译（`new Completer({typeArguments: …})`），导出名由运行时片段自动抽取。example 新增 `async_detail.dart`（`AsyncDetail`）：`Future.delayed` + `Completer.complete` 与 `completeError` 两条路径。
 
 ## 0.9.0
 

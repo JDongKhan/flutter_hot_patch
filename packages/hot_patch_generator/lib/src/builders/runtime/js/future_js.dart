@@ -179,4 +179,36 @@ const String futureJsSource = r'''
       }));
     }
   }
+
+  // `Completer<T>()`：与 Future 配套的手动完成器。`future` 是 Future 实例
+  // （`await` / `then` 走同一套 `__wrap`）；`complete` / `completeError` 只允许
+  // 调用一次，重复完成按 Dart 语义抛 StateError。
+  export class Completer {
+    constructor(props) {
+      var self = this;
+      this.__completed = false;
+      this.future = Future.__wrap(new Promise(function (resolve, reject) {
+        self.__resolve = resolve;
+        self.__reject = reject;
+      }));
+    }
+
+    get isCompleted() { return this.__completed; }
+
+    complete(value) {
+      if (this.__completed) {
+        throw new StateError({ message: 'Future already completed' });
+      }
+      this.__completed = true;
+      this.__resolve(value);
+    }
+
+    completeError(error, stackTrace) {
+      if (this.__completed) {
+        throw new StateError({ message: 'Future already completed' });
+      }
+      this.__completed = true;
+      this.__reject(error);
+    }
+  }
 ''';

@@ -205,7 +205,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
     <div><dt>适用源语言</dt><dd>Dart 3.x（含空安全、record、模式匹配）</dd></div>
     <div><dt>适用目标</dt><dd>ES2022+，原生 class / 模块 / 可选链</dd></div>
     <div><dt>实测环境</dt><dd>Dart 3.11.5 stable，macOS arm64</dd></div>
-    <div><dt>文档版本</dt><dd>v1.6 · 规则 18 组 · 陷阱 40+ · 2026-11-06 与 hot_patch_generator 0.10.0 核对（extension 章节写明当前原型注册方案与 dart2js 静态分派的差别，并按实际口径把显式调用 / 泛型目标 / 可空目标标为不通过；record 模式已支持）</dd></div>
+    <div><dt>文档版本</dt><dd>v1.7 · 规则 18 组 · 陷阱 40+ · 2026-11-06 与 hot_patch_generator 0.10.0 核对（extension 章节写明当前原型注册方案与 dart2js 静态分派的差别：显式调用 / 可空目标已通过，泛型目标仍不通过；record 模式、Completer 已支持）</dd></div>
   </dl>
 </header>
 
@@ -1333,7 +1333,7 @@ try {
     <tr><td><code>Future.error(e)</code></td><td><code>Promise.reject(e)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>运行时 <code>Future</code> 类同名方法承接</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>Future.delayed(d)</code></td><td><code>new Promise(r =&gt; setTimeout(r, ms))</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> Duration 换算毫秒</td><td>运行时 <code>Future.delayed</code> 同名方法承接</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>.then</code> / <code>.catchError</code> / <code>.whenComplete</code></td><td><code>.then</code> / <code>.catch</code> / <code>.finally</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 方法名不同</td><td>future_js.dart 的 Future 类实现 then / catchError / whenComplete</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>Completer&lt;T&gt;</code></td><td>手写 Promise + 外置 resolve</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span></td><td>未实现：运行时无 Completer 类</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>Completer&lt;T&gt;</code></td><td>手写 Promise + 外置 resolve</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span></td><td>已实现：<code>future_js.dart</code> 的 <code>export class Completer</code>——<code>future</code> 为 <code>Future.__wrap</code> 包住的外置 resolve/reject Promise；<code>complete</code> / <code>completeError</code> 只允许一次，重复完成抛 <code>StateError</code>；<code>isCompleted</code> getter</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>Timer(...)</code> / <code>Timer.periodic</code></td><td><code>setTimeout</code> / <code>setInterval</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 句柄语义不同</td><td>timer_js.dart 提供 Timer / Timer.periodic 同名类</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>Stream&lt;T&gt;</code></td><td>自建 <code>Stream</code> 类</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 推送 + AsyncIterator 双形态，见下节</td><td>未实现：运行时无 Stream 类（下面 Stream 设计为建议，非现状）</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>sync*</code> / <code>yield</code></td><td><code>function*</code> / <code>yield</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 对应良好</td><td>未实现：生成器函数与方法均无分支（构建期告警跳过）</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
@@ -1652,6 +1652,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
   <p>v1.1（2026-11-05）：按 <code>hot_patch_generator</code> 0.8.1 全量核对「现状」列，把「待实检」改为代码事实；补充 tear-off / <code>super.x</code> / 函数值调用 / 级联内赋值 / <code>throw</code> 表达式等近期实现的语法。行号引用已改为函数 / 分支名，避免随版本漂移。</p>
   <p>v1.5（2026-11-05）：第 11 章补「当前方案（本项目）」说明（原型注册的选择理由、与 dart2js 静态分派的一句话差别）；按实际代码口径把 <code>E(x).m()</code> 显式调用、泛型目标、可空目标三项改判为不通过，并写明限制。</p>
   <p>v1.6（2026-11-06）：record 模式 <code>case (a, b)</code> / <code>case (x: a)</code> 已实现（<code>_compilePattern</code> 的 <code>RecordPattern</code> 分支），第 14 / 15 章同步为通过；第 11 章补 macOS example 实测记录；第 12 章 <code>list[i]</code> 越界按项目口径记为「接受差异，不模拟 <code>RangeError</code>」；第 11 章 <code>E(x).m()</code> 显式调用改写与可空目标构建期拒绝已实现。</p>
+  <p>v1.7（2026-11-06）：第 14 章 <code>Completer&lt;T&gt;</code> 已实现（<code>future_js.dart</code> 的 <code>export class Completer</code>：<code>future</code> / <code>complete</code> / <code>completeError</code> / <code>isCompleted</code>，重复完成抛 <code>StateError</code>），记为通过；example 新增 <code>async_detail.dart</code>（<code>AsyncDetail</code>）验证正常完成与异常完成两条路径。</p>
 </footer>
 
 </main>
