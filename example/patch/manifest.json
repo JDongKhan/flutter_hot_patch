@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.10.0",
-  "buildTime": "2026-11-06T10:39:35.698072",
+  "buildTime": "2026-11-06T10:47:21.786603",
   "resources": {
     "flutter.js": "d3d227f01f350aaa94dbd9fe61cbfff526bc5d4ef6e29d4da2c0a5f262150d53",
     "provider.js": "db49428c554764eb6c0c1e95550a1a00a0a688743b4048505c2d6c9703270a7e",
@@ -11,7 +11,7 @@
     "packages/hot_module_base/src/guide_bubble_widget.js": "8fc9270c7b523dc7d185a055456beab601232530b00377370114659814c4bb22",
     "packages/hot_module_base/src/model/user.js": "21f4d29fadc39886ef45e23e8aff8e3b83fe77ed4ba2b5d999287cfaa927fff7",
     "packages/hot_module_base/src/network.js": "79c5f2f797d4d9f92043e6c3bbed01dee82594e064af652d8f1da9994dd20ef5",
-    "packages/hot_module_base/src/state_log_mixin.js": "c85ca9d74219c86186b746569202abb5660979162a00df31de80019976db3fef",
+    "packages/hot_module_base/src/state_log_mixin.js": "2486342a1861df9968412dcf1439043e549113bf1adf26c96b3be6d43b68e081",
     "packages/hot_module_base/src/string_log_extension.js": "6c4d0123ab6e3ae39f99e2d0de0b8e12bf9d9823ebb31373bcef2fa7471acf27",
     "app/vm/app_shell_vm.js": "d4a7566b52b49635039890dc817bfd73389b55f8bd72bf48cde90a9a6375e4b4",
     "app/vm/home_vm.js": "5f2f5664e8f7df669e68d45e94d2b59dd8f9e92b3b298a092bfbeb2acbc80bb6",
@@ -116,7 +116,7 @@
     "components/grammar/pattern_detail.js": "efc2e675f86dea40f32f94a2748d37d56eb0311237f127055e70848555ccf4eb",
     "components/grammar/basic_api_detail.js": "af5a617046b996b52cb56a63426ead1ac7bbcf9692d735cb5bc69cdca56da926",
     "components/grammar/expression_detail.js": "85114bfac8163a6a4c8ec1feaf00bee0debc1dce388f9b1f4a29d16d23de8fec",
-    "components/grammar/mixin_detail.js": "aa1a9d2dad15c0b49a429d4d5920d4eb919d9019459a211e6c7c4e82816ca801",
+    "components/grammar/mixin_detail.js": "5e5ff4cacecdf4cdcc69f229b442fa1e2689c32a98cbd4d672f898b9f19b3d01",
     "components/grammar/extension_detail.js": "72c4f9c0d1b08fe483486624d54f7377af4b7767044bb41a8d42a54de59ce654",
     "components/grammar/enum_detail.js": "2b45be31c3350b03ceb633d9ddca4fa10528368a7bf117a1b3d4976543ee1b91",
     "components/grammar/constructor_detail.js": "f4ac2f38d6c8732614d8aca6b866c82ff127d2bd860158630f091d36e90331a8",

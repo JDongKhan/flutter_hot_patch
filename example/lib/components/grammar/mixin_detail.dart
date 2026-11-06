@@ -21,8 +21,7 @@ class _MixinDetailState extends State<MixinDetail> with StateLogMixin<MixinDetai
   int _count = 0;
 
   void _bump() {
-    setState(() => _count++);
-    logState('计数变为 $_count');
+    setState(() => _count = increment(_count));
   }
 
   /// mixin class / 纯 mixin / 多个 with / 带 super 的 mixin。
@@ -41,10 +40,7 @@ class _MixinDetailState extends State<MixinDetail> with StateLogMixin<MixinDetai
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'State 混入 StateLogMixin（跨包 mixin）',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        const Text('State 混入 StateLogMixin（跨包 mixin）', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         const Text(
           '点击按钮后 setState + 调用 mixin 提供的 logState，控制台输出 [StateLogMixin] ...',

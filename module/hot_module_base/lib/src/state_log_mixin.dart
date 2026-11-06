@@ -7,9 +7,8 @@ import 'package:flutter/widgets.dart';
 ///
 /// 目前只做日志（后续 mixin 能力落地时再补状态相关的通用方法）。
 mixin StateLogMixin<T extends StatefulWidget> on State<T> {
-  /// 打印一条状态日志：`[StateLogMixin] xxx`。
-  void logState(String message) {
-    // ignore: avoid_print
-    print('[StateLogMixin] $message');
+
+  int increment(int count) {
+    return count + 1;
   }
 }

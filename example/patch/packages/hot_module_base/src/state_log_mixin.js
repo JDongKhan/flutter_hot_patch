@@ -8,7 +8,7 @@ export class StateLogMixin {
   constructor(args) {
     this.__ta = (args && args.typeArguments) || {};
   }
-  logState(message) {
-    print("[StateLogMixin] " + message);
+  increment(count) {
+    return (count + 1);
   }
 }

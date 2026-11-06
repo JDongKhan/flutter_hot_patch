@@ -87,9 +87,8 @@ export class MixinDetail extends _MixinDetail_StatefulWidget_StateLogMixin {
   }
   _bump() {
     this.setState(() => {
-      this._count += 1;
+      this._count = this.increment(this._count);
     });
-    this.logState("计数变为 " + this._count);
   }
   _mixinClassText() {
     const base = new Tagged({});
