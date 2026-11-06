@@ -107,7 +107,13 @@ String renderClassDecl(
   // 方法 + getter：方法体（含 getter、builder）已在收集阶段预渲染为 [bodyJs]，
   // 这里只拼装。缺失说明收集层漏译，出声告警而不是静默产出空方法体。
   for (final m in info.methods) {
-    final fn = m.isAsync ? 'async ' : '';
+    // 生成器方法：`sync*` → `*name(...)`，`async*` → `async *name(...)`
+    // （JS 方法语法把 `*` 放在方法名之前；裸异步生成器缺 `listen`，Stream
+    // 能力落地前记为部分实现，手册第 14 章有说明）。
+    final gen = m.body?.isGenerator == true;
+    final fn = m.isAsync
+        ? (gen ? 'async *' : 'async ')
+        : (gen ? '*' : '');
     // static 成员（Dart 的 static 与实例成员同一名字空间）：JS 侧挂在类上。
     final st = m.isStatic ? 'static ' : '';
     // 方法体多行可读：语句各自成行、按方法体深度缩进（翻译器已带缩进），

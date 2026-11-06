@@ -27,6 +27,7 @@ class GrammarShowcase extends StatelessWidget {
     _Entry('语句', '多 catch + on 过滤、rethrow、label 与 break', 'StatementDetail'),
     _Entry('集合字面量', 'if / for 元素、... 展开、三段式 for 元素', 'CollectionDetail'),
     _Entry('异步 · Completer', 'async / await、Future.delayed、Completer 的 complete / completeError', 'AsyncDetail'),
+    _Entry('生成器 · sync*', 'sync* / yield / yield*：方法、局部函数、闭包与 Iterable 成员', 'GeneratorDetail'),
     _Entry('泛型 · 类 / 方法泛型', 'GenericBox<T> / Pair<K,V> 与 context.watch<T>()：typeArguments 元信息', 'GenericDetail'),
     _Entry('import 别名 · as', '同名类与包模块类靠前缀区分：base.User / p.ChangeNotifierProvider', 'AliasDetail'),
     _Entry('数组 · List 语义', 'sort / join / indexOf / fold / any / expand / take / skip / length 写等', 'ArrayDetail'),

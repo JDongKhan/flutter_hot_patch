@@ -39,6 +39,7 @@ import '../grammar/expression_detail.dart';
 import '../grammar/extension_detail.dart';
 import '../grammar/function_detail.dart';
 import '../grammar/generic_detail.dart';
+import '../grammar/generator_detail.dart';
 import '../grammar/inheritance_detail.dart';
 import '../grammar/map_detail.dart';
 import '../grammar/mixin_detail.dart';
@@ -350,6 +351,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'StatementDetail': 'grammar/statement_detail.js',
     'CollectionDetail': 'grammar/collection_detail.js',
     'AsyncDetail': 'grammar/async_detail.js',
+    'GeneratorDetail': 'grammar/generator_detail.js',
     'GenericDetail': 'grammar/generic_detail.js',
     'AliasDetail': 'grammar/alias_detail.js',
     'ArrayDetail': 'grammar/array_detail.js',
@@ -438,6 +440,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'StatementDetail' => const StatementDetail(),
       'CollectionDetail' => const CollectionDetail(),
       'AsyncDetail' => const AsyncDetail(),
+      'GeneratorDetail' => const GeneratorDetail(),
       'GenericDetail' => const GenericDetail(),
       'AliasDetail' => const AliasDetail(),
       'ArrayDetail' => const ArrayDetail(),

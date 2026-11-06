@@ -1387,6 +1387,15 @@ String? closureToJs(
       ? scope
       : scope.withParams(plan.names, typeParamRefs: typeParamRefs);
   final body = fn.body;
+  // 生成器闭包 / 生成器局部函数（`() sync* { … }`）：JS 箭头函数不能是生成器，
+  // 必须产出 `function* (params) { … }`；`async*` 产出 `async function*`（裸
+  // 异步生成器，`listen` 由后续 Stream 能力承接，当前记为部分实现）。
+  if (body is BlockFunctionBody && body.isGenerator) {
+    final stmts =
+        translateStmtList(body.block.statements, bodyScope, classes, renderer);
+    final kw = body.isAsynchronous ? 'async function* ' : 'function* ';
+    return '$kw($pjs) { ${pro}${stmts.trim()} }';
+  }
   final asyncKw = body.isAsynchronous ? 'async ' : '';
   // 一律输出箭头函数：this 词法绑定到定义处（组件实例），与 Dart 闭包
   // 捕获 this 的语义一致——回调（如 addListener 闭包）由宿主经 invoke
@@ -2803,6 +2812,17 @@ String translateStmtList(
         log.warning('[hot_patch_generator] return 表达式无法翻译，已在 JS '
             '产物中丢弃：${s.toSource()}');
       }
+    } else if (s is YieldStatement) {
+      // 生成器产出：`yield e;` / `yield* e;`（委托）与 JS 同形，一比一发射。
+      // 产物所在的函数必须是 `function*` / `*method` / `async function*`
+      // （见 [closureToJs] 与 dart2js 的方法渲染），否则 JS 侧是语法错误。
+      final v = rhsToJs(s.expression, scope, classes);
+      if (v == null) {
+        log.warning('[hot_patch_generator] yield 表达式无法翻译，已在 JS '
+            '产物中丢弃：${s.toSource()}');
+      } else {
+        out.add('${ind}yield${s.star != null ? '*' : ''} $v;');
+      }
     } else if (s is IfStatement) {
       if (s.caseClause != null) {
         // `if (x case P)` 的判据是模式匹配，不是条件表达式。统一交给
@@ -2992,7 +3012,6 @@ String? _localFunctionJs(
 ) {
   final decl = s.functionDeclaration;
   final fn = decl.functionExpression;
-  if (fn.body.isGenerator) return null;
   final name = decl.name.lexeme;
   scope.localVars.add(name);
   // 泛型局部函数：登记类型参数名，裸调用（`f<int>()`）据此把类型实参写成

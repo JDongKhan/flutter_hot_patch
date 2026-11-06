@@ -390,12 +390,13 @@ const String _jsUiGlobalsTail = r'''
   // 补齐成员的声明形态统一为「目标原型 + 一张表」：表 key 是成员名，value 是
   // 方法体 / getter 函数。新增补齐项只往对应的表里加一行，不再一项一次调用
   // 散落各处；挂载与存在性守卫只由下面两个函数承担。
-  //   - 方法表：同名成员不是函数才挂（引擎/宿主自带优先）。
-  //   - getter 表：目标上没有同名自有属性才挂（Dart 属性写法按同名同义补齐）。
-  function __defineProtoMember(proto, members) {
+  //   - 方法表：同名成员不是函数才挂（引擎/宿主自带优先）；[overwrite] 为 true
+  //     时无条件覆盖（仅用于语义必须与 Dart 对齐、而引擎同名是另一套 API 的
+  //     场景，如生成器上新增的 Iterator Helpers）。
+  function __defineProtoMember(proto, members, overwrite) {
     for (var name in members) {
       if (!Object.prototype.hasOwnProperty.call(members, name)) { continue; }
-      if (typeof proto[name] !== 'function') {
+      if (overwrite === true || typeof proto[name] !== 'function') {
         Object.defineProperty(proto, name, {
           value: members[name],
           writable: true,
@@ -405,10 +406,11 @@ const String _jsUiGlobalsTail = r'''
       }
     }
   }
-  function __defineProtoGetter(proto, members) {
+  //   - getter 表：目标上没有同名自有属性才挂；[overwrite] 语义同上。
+  function __defineProtoGetter(proto, members, overwrite) {
     for (var name in members) {
       if (!Object.prototype.hasOwnProperty.call(members, name)) { continue; }
-      if (!Object.getOwnPropertyDescriptor(proto, name)) {
+      if (overwrite === true || !Object.getOwnPropertyDescriptor(proto, name)) {
         Object.defineProperty(proto, name, {
           get: members[name],
           enumerable: false,
@@ -617,6 +619,44 @@ const String _jsUiGlobalsTail = r'''
       return this.slice().reverse();
     }
   });
+  //   - 生成器对象（`sync*` 产物）：Dart 侧是 Iterable，JS 生成器只有
+  //     `next` 与迭代协议，产物里按 Dart 写法调用的 `toList()` / `map()` /
+  //     `.first` / `.length` 直接抛 "is not a function"。在共享的
+  //     %GeneratorPrototype% 上按同名同义补齐：需要随机访问的成员先
+  //     `Array.from(this)` 物化，再复用 Array.prototype 上的 Dart 语义实现。
+  //     已知差异：JS 生成器一次性迭代（Dart 的 sync* Iterable 可重复迭代）；
+  //     惰性与 List 同口径（立即求值）。
+  var __generatorProto =
+      Object.getPrototypeOf(Object.getPrototypeOf((function* () {})()));
+  __defineProtoMember(__generatorProto, {
+    toList: function () { return Array.from(this); },
+    toSet: function () { return new Set(this); },
+    map: function (fn) { return Array.from(this).map(fn); },
+    where: function (fn) { return Array.from(this).where(fn); },
+    expand: function (fn) { return Array.from(this).expand(fn); },
+    fold: function (init, fn) { return Array.from(this).fold(init, fn); },
+    any: function (fn) { return Array.from(this).any(fn); },
+    every: function (fn) { return Array.from(this).every(fn); },
+    take: function (n) { return Array.from(this).take(n); },
+    skip: function (n) { return Array.from(this).skip(n); },
+    join: function (sep) { return Array.from(this)._join(sep); },
+    contains: function (e) { return Array.from(this).contains(e); },
+    indexOf: function (e, start) { return Array.from(this)._indexOf(e, start); }
+  }, true);
+  __defineProtoGetter(__generatorProto, {
+    first: function () { return Array.from(this)[0]; },
+    last: function () {
+      var list = Array.from(this);
+      return list[list.length - 1];
+    },
+    length: function () { return Array.from(this).length; },
+    isEmpty: function () {
+      return Array.from(this).length === 0;
+    },
+    isNotEmpty: function () {
+      return Array.from(this).length > 0;
+    }
+  }, true);
   __defineProtoGetter(String.prototype, {
     isEmpty: function () {
       return this.length === 0;
