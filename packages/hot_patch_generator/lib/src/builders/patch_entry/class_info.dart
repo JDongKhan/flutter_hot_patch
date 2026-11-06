@@ -44,8 +44,8 @@ class ExtensionScope {
   /// 声明该扩展的源文件（跨文件时据此 import 扩展命名空间）。
   final String sourceFile;
 
-  /// 实例成员名 → 种类（不含 static / 运算符）。
-  final Map<String, ExtensionMemberKind> members;
+  /// 实例成员名 → 种类集合（同名 get / set 可并存，故用集合而非单值）。
+  final Map<String, Set<ExtensionMemberKind>> members;
 }
 
 /// 类的实例方法 / getter。

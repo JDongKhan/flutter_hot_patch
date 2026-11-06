@@ -46,8 +46,14 @@ class _ExtensionDetailState extends State<ExtensionDetail> {
     final counter = Counter();
     counter.level = 3; // setter
     final steps = counter.steps(3).toList(); // sync* 生成器
+
+    // 显式扩展 setter / 复合赋值：`CounterLevel(x).level = v` 与 `+=`。
+    final explicit = Counter();
+    CounterLevel(explicit).level = 2;
+    CounterLevel(explicit).level += 1;
     return '扩展 getter/setter：level=${counter.level} / value=${counter.value} '
-        '/ 生成器=${steps.join(',')}';
+        '/ 生成器=${steps.join(',')} / 显式 setter=${explicit.level}'
+        '/${explicit.value}';
   }
 
   /// 同目标同名扩展的**显式**调用：按扩展身份分派。

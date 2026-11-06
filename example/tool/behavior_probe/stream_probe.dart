@@ -96,6 +96,12 @@ Future<void> main() async {
 
   // F 同目标同名扩展的显式分派。
   print('F ${TagA('x').tag()} / ${TagB('x').tag()} / ${TagA('y').loud()}');
+
+  // G 显式扩展 setter / 复合赋值（读 getter → 运算 → 写 setter）。
+  final counter = Counter();
+  LevelEx(counter).level = 2;
+  LevelEx(counter).level += 1;
+  print('G ${LevelEx(counter).level}/${counter.value}');
 }
 
 extension TagA on String {
@@ -107,4 +113,14 @@ extension TagA on String {
 
 extension TagB on String {
   String tag() => 'B';
+}
+
+class Counter {
+  int value = 0;
+}
+
+extension LevelEx on Counter {
+  int get level => this.value ~/ 10;
+
+  set level(int v) => this.value = v * 10;
 }

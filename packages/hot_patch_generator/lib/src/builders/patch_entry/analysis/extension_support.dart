@@ -198,14 +198,15 @@ Map<String, ExtensionScope> extensionScopesInScope(
       if (name == null || name.isEmpty) continue;
       if (!includePrivate && name.startsWith('_')) continue;
       if (out.containsKey(name)) continue;
-      final members = <String, ExtensionMemberKind>{};
+      final members = <String, Set<ExtensionMemberKind>>{};
       for (final m in d.members) {
         if (m is! MethodDeclaration || m.isStatic || m.isOperator) continue;
-        members[m.name.lexeme] = m.isGetter
+        final kind = m.isGetter
             ? ExtensionMemberKind.getter
             : m.isSetter
                 ? ExtensionMemberKind.setter
                 : ExtensionMemberKind.method;
+        (members[m.name.lexeme] ??= <ExtensionMemberKind>{}).add(kind);
       }
       out[name] = ExtensionScope(file, members);
     }

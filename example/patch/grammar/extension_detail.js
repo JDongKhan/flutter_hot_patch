@@ -52,7 +52,10 @@ export class ExtensionDetail extends StatefulWidget {
     const counter = new Counter({});
     counter.level = 3;
     const steps = counter.steps(3).toList();
-    return "扩展 getter/setter：level=" + counter.level + " / value=" + counter.value + " " + "/ 生成器=" + steps.join(",");
+    const explicit = new Counter({});
+    ((__r) => { const __v = 2; CounterLevel.level.set.call(__r, __v); return __v; })(explicit);
+    ((__r) => { const __v = 1; const __n = CounterLevel.level.get.call(__r) + __v; CounterLevel.level.set.call(__r, __n); return __n; })(explicit);
+    return "扩展 getter/setter：level=" + counter.level + " / value=" + counter.value + " " + "/ 生成器=" + steps.join(",") + " / 显式 setter=" + explicit.level + "/" + explicit.value;
   }
   _identityText() {
     return "显式分派：TagA=" + TagA.tag.call("x") + " / TagB=" + TagB.tag.call("x") + " " + "/ 自身调用=" + TagA.loud.call("y");

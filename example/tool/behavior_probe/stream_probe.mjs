@@ -97,8 +97,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 }
 
 // F 同目标同名扩展的显式分派（等价于产物里的 `TagA.tag.call(x)`）
+const register = globalThis.registerExtension;
 {
-  const register = globalThis.registerExtension;
   const A = register('String', {
     tag() {
       return 'A';
@@ -109,4 +109,27 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   }, { id: 'probe#TagA' });
   const B = register('String', { tag() { return 'B'; } }, { id: 'probe#TagB' });
   console.log(`F ${A.tag.call('x')} / ${B.tag.call('x')} / ${A.loud.call('y')}`);
+}
+
+// G 显式扩展 setter / 复合赋值（与产物同一形态：先接收者，再右值）
+class Counter {
+  constructor() {
+    this.value = 0;
+  }
+}
+{
+  const L = register(Counter, {
+    level: {
+      get() {
+        return Math.trunc(this.value / 10);
+      },
+      set(v) {
+        this.value = v * 10;
+      },
+    },
+  }, { id: 'probe#LevelEx' });
+  const c = new Counter();
+  ((__r) => { const __v = 2; L.level.set.call(__r, __v); return __v; })(c);
+  ((__r) => { const __v = 1; const __n = L.level.get.call(__r) + __v; L.level.set.call(__r, __n); return __n; })(c);
+  console.log(`G ${L.level.get.call(c)}/${c.value}`);
 }

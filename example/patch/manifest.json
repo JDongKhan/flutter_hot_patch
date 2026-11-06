@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.12.0",
-  "buildTime": "2026-11-06T16:05:32.329527",
+  "buildTime": "2026-11-06T16:20:46.868786",
   "resources": {
     "flutter.js": "5ccb87a808b9f1289b1774c6fda19dabf7b3cd3b99a6549390352410748af999",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
@@ -31,7 +31,7 @@
     "grammar/stream_detail.js": "6ef243f1a8ad36bce48c2a79e53496ed554a6687675d3c9a35292a2fb7556707",
     "grammar/expression_detail.js": "e557b981a4d843bfec754ea10de0f3f680ac9375b022cc83331de5274bffa757",
     "grammar/mixin_detail.js": "e19595b3609f5cc8dafbd5ca5ceba86c48e52ad4824ac4867bf0ed2ed91a8c36",
-    "grammar/extension_detail.js": "7fc3c0dfa9ea1b28860432a94d3fc5602f7262497b8b8bb7d2f8934ad5a43ff9",
+    "grammar/extension_detail.js": "d8b614cd10b36c4da9864342a9dcdd0bd239b4721e3bc9cc8a98893f40c98d4a",
     "grammar/generic_detail.js": "6f79c5942af0a0949fc54911ff4bf1ea2aacfae8345288109930bbb132019226",
     "grammar/array_detail.js": "fbf9cf7fba0d453163a8a24b9659fbaa451d6651da455dcc70037801741d5257",
     "grammar/async_detail.js": "30144327c1087ab8fcfe87b28e0f1bb2d89e59a10cabd2dff6abe0563760bb23",

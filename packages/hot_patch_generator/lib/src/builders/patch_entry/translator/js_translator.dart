@@ -1557,7 +1557,9 @@ String? _explicitExtensionCallJs(
   final scopeInfo = scope.extensionNames[resolved.$1];
   if (scopeInfo == null) return null;
   final member = e.methodName.name;
-  if (scopeInfo.members[member] != ExtensionMemberKind.method) return null;
+  if (scopeInfo.members[member]?.contains(ExtensionMemberKind.method) != true) {
+    return null;
+  }
   final recvJs = exprToJs(resolved.$2, scope, classes);
   if (recvJs == null) return null;
   final args = _extensionArgsJs(e, scope, classes);
@@ -1577,10 +1579,53 @@ String? _explicitExtensionGetterJs(
   final scopeInfo = scope.extensionNames[resolved.$1];
   if (scopeInfo == null) return null;
   final member = e.propertyName.name;
-  if (scopeInfo.members[member] != ExtensionMemberKind.getter) return null;
+  if (scopeInfo.members[member]?.contains(ExtensionMemberKind.getter) != true) {
+    return null;
+  }
   final recvJs = exprToJs(resolved.$2, scope, classes);
   if (recvJs == null) return null;
   return '${resolved.$1}.$member.get.call($recvJs)';
+}
+
+/// 显式扩展 setter：`E(x).g = v` / `E(x).g op= v` → `E.g.set.call(x, v)`。
+///
+/// 接收者与右值各求值一次（顺序与 Dart 一致：先接收者，再右值），赋值表达式的
+/// 值是右值 / 复合运算结果（IIFE 里 `const __v` / `const __n` 承载）。
+/// 只在该扩展确实声明了同名 setter 时接管；`??=` 需要 getter，未支持（出声丢弃）。
+String? _explicitExtensionSetterJs(
+  AssignmentExpression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final lhs = e.leftHandSide;
+  if (lhs is! PropertyAccess) return null;
+  final resolved = _extensionOverrideInfo(lhs.target, scope);
+  if (resolved == null) return null;
+  final ext = resolved.$1;
+  final scopeInfo = scope.extensionNames[ext];
+  if (scopeInfo == null) return null;
+  final member = lhs.propertyName.name;
+  final kinds = scopeInfo.members[member];
+  if (kinds == null || !kinds.contains(ExtensionMemberKind.setter)) return null;
+  final op = e.operator.lexeme;
+  // 复合赋值要读回旧值：该扩展必须同时声明 getter（否则无值可读）。
+  if (op != '=' &&
+      (kinds == null || !kinds.contains(ExtensionMemberKind.getter))) {
+    return null;
+  }
+  if (op == '??=') return null;
+  final recvJs = exprToJs(resolved.$2, scope, classes);
+  if (recvJs == null) return null;
+  final rhsJs = rhsToJs(e.rightHandSide, scope, classes);
+  if (rhsJs == null) return null;
+  if (op == '=') {
+    return '((__r) => { const __v = $rhsJs; $ext.$member.set.call(__r, __v); '
+        'return __v; })($recvJs)';
+  }
+  final compound = _compoundBinaryJs('$ext.$member.get.call(__r)', op, '__v');
+  if (compound == null) return null;
+  return '((__r) => { const __v = $rhsJs; const __n = $compound; '
+      '$ext.$member.set.call(__r, __n); return __n; })($recvJs)';
 }
 
 /// `E(x)` 的两种 AST 形态 → (扩展名, 接收者表达式)；不是扩展覆盖则 null。
@@ -2021,6 +2066,29 @@ String? _compoundAssignJs(String lhsJs, String op, String rhsJs) {
   return jsOps.contains(op) ? '$lhsJs $op $rhsJs' : null;
 }
 
+/// 复合赋值运算符 → 等价的**二元表达式**（用于「读 getter → 运算 → 写 setter」）。
+///
+/// 与 [_compoundAssignJs] 的语义逐项对齐：`~/=` 向零截断（`Math.trunc`），其余
+/// 位运算 / 算术与 JS 同名运算符一致；不支持的运算符返回 null（调用方出声）。
+String? _compoundBinaryJs(String lhsJs, String op, String rhsJs) {
+  if (op == '~/=') return 'Math.trunc($lhsJs / $rhsJs)';
+  const binary = <String, String>{
+    '+=': '+',
+    '-=': '-',
+    '*=': '*',
+    '/=': '/',
+    '%=': '%',
+    '&=': '&',
+    '|=': '|',
+    '^=': '^',
+    '<<=': '<<',
+    '>>=': '>>',
+    '>>>=': '>>>',
+  };
+  final b = binary[op];
+  return b == null ? null : '$lhsJs $b $rhsJs';
+}
+
 /// 赋值出现在**表达式位置**（`while ((x = f()) < n)` / `if ((v = f()) != null)`）。
 ///
 /// Dart 赋值表达式的值就是赋值结果，JS 同义，因此普通目标一比一发射（外层加
@@ -2033,6 +2101,8 @@ String? _assignValueJs(
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
+  final setter = _explicitExtensionSetterJs(e, scope, classes);
+  if (setter != null) return setter;
   final op = e.operator.lexeme;
   final rhs = rhsToJs(e.rightHandSide, scope, classes);
   if (rhs == null) return null;
@@ -2208,6 +2278,11 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
       }
     }
     return null;
+  }
+  // 显式扩展 setter：`E(x).g = v` / `E(x).g op= v` → `E.g.set.call(x, …)`。
+  if (e is AssignmentExpression) {
+    final setter = _explicitExtensionSetterJs(e, scope, classes);
+    if (setter != null) return '$setter;';
   }
   // 下标 / 属性赋值（任意层）：`a[i] = v`、`a.b = v`、`a?.b.c = v`、
   // `a?._scores?[1] = 1` …… 只有一条规则，深度不增加任何分支。
