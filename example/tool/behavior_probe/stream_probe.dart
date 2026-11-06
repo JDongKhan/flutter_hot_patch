@@ -168,6 +168,76 @@ Future<void> main() async {
     final it = [1, 2, 3, 4].where((x) => x.isEven).map((x) => x * 10);
     print('M ${it.toList().join(',')}/${it.length}/${it.join('-')}');
   }
+
+  // N 订阅前缓冲在 listen 返回后才异步交付（不在调用栈内同步回调）。
+  {
+    final c = StreamController<int>();
+    c.add(1);
+    var sync = true;
+    c.stream.listen((_) => sync = false);
+    print('N $sync');
+  }
+
+  // O done 交付后订阅自动移除（hasListener=false），close 的 Future 完成。
+  {
+    final c = StreamController<int>();
+    c.stream.listen((_) {}, onDone: () {});
+    var done = false;
+    unawaited(c.close().then((_) => done = true));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    print('O ${c.hasListener}/$done');
+  }
+
+  // P 唯一订阅取消后 add：事件无人接收，close 仍能完成。
+  {
+    final c = StreamController<int>();
+    final sub = c.stream.listen((_) {});
+    await sub.cancel();
+    c.add(1);
+    var done = false;
+    unawaited(c.close().then((_) => done = true));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    print('P $done');
+  }
+
+  // Q 从未被订阅的控制器：close 的 Future 不算提前完成（等 done 被交付）。
+  {
+    final c = StreamController<int>();
+    var done = false;
+    unawaited(c.close().then((_) => done = true));
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    print('Q $done');
+  }
+
+  // R 广播每个「最后一个订阅者离开」周期都触发 onCancel。
+  {
+    var cancels = 0;
+    final c = StreamController<int>.broadcast(onCancel: () => cancels++);
+    final s1 = c.stream.listen((_) {});
+    await s1.cancel();
+    final s2 = c.stream.listen((_) {});
+    await s2.cancel();
+    print('R $cancels');
+  }
+
+  // S await for 遇 error 退出：取消订阅（onCancel 触发、hasListener=false）。
+  {
+    var cancels = 0;
+    final got = <int>[];
+    final c = StreamController<int>(onCancel: () => cancels++);
+    final f = () async {
+      try {
+        await for (final v in c.stream) {
+          got.add(v);
+          if (v == 1) c.addError('boom');
+        }
+      } catch (_) {}
+    }();
+    c.add(1);
+    await f;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    print('S ${got.join(',')}/$cancels/${c.hasListener}');
+  }
 }
 
 class Pair implements Comparable<Pair> {

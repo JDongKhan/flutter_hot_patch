@@ -219,3 +219,73 @@ class Counter {
   const it = [1, 2, 3, 4].where((x) => x % 2 === 0).map((x) => x * 10);
   console.log(`M ${it.toList().join(',')}/${it.length}/${it.join('-')}`);
 }
+
+// N 订阅前缓冲在 listen 返回后才异步交付（不在调用栈内同步回调）。
+{
+  const c = new StreamController({});
+  c.add(1);
+  let sync = true;
+  c.stream.listen(() => { sync = false; });
+  console.log(`N ${sync}`);
+}
+
+// O done 交付后订阅自动移除（hasListener=false），close 的 Future 完成。
+{
+  const c = new StreamController({});
+  c.stream.listen(() => {}, { onDone: () => {} });
+  let done = false;
+  c.close().then(() => { done = true; });
+  await sleep(20);
+  console.log(`O ${c.hasListener}/${done}`);
+}
+
+// P 唯一订阅取消后 add：事件无人接收，close 仍能完成。
+{
+  const c = new StreamController({});
+  const sub = c.stream.listen(() => {});
+  await sub.cancel();
+  c.add(1);
+  let done = false;
+  c.close().then(() => { done = true; });
+  await sleep(20);
+  console.log(`P ${done}`);
+}
+
+// Q 从未被订阅的控制器：close 的 Future 不算提前完成（等 done 被交付）。
+{
+  const c = new StreamController({});
+  let done = false;
+  c.close().then(() => { done = true; });
+  await sleep(20);
+  console.log(`Q ${done}`);
+}
+
+// R 广播每个「最后一个订阅者离开」周期都触发 onCancel。
+{
+  let cancels = 0;
+  const c = StreamController.broadcast({ onCancel: () => { cancels += 1; } });
+  const s1 = c.stream.listen(() => {});
+  await s1.cancel();
+  const s2 = c.stream.listen(() => {});
+  await s2.cancel();
+  console.log(`R ${cancels}`);
+}
+
+// S await for 遇 error 退出：取消订阅（onCancel 触发、hasListener=false）。
+{
+  let cancels = 0;
+  const got = [];
+  const c = new StreamController({ onCancel: () => { cancels += 1; } });
+  const f = (async () => {
+    try {
+      for await (const v of c.stream) {
+        got.push(v);
+        if (v === 1) { c.addError('boom'); }
+      }
+    } catch (e) {}
+  })();
+  c.add(1);
+  await f;
+  await sleep(10);
+  console.log(`S ${got.join(',')}/${cancels}/${c.hasListener}`);
+}

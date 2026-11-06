@@ -37,6 +37,8 @@ const String streamJsSource = r'''
       this._started = false;
       this._stopped = false;
       this._closed = false;
+      // done 事件是否已经真正交付（或被广播丢弃）：close() 的 Future 等它。
+      this._doneEventDelivered = false;
       this._iterator = null;
       // 单订阅流**一生只能被订阅一次**（Dart 语义）：取消后再次 listen / await for
       // 必须抛 StateError，不能静默返回一个永远收不到事件的订阅。
@@ -133,7 +135,14 @@ const String streamJsSource = r'''
     // 分发（唯一出口）：单订阅 / 广播 / 拉取方在这里统一处理缓冲与投递。
     _deliverEvent(type, value, stack) {
       if (this._subs.size === 0 && this._pullers.size === 0) {
-        if (this._broadcast) { return; }   // 广播无订阅者：丢弃 data / error
+        if (this._broadcast) {
+          // 广播无订阅者：丢弃 data / error；done 视为已交付（close 据此完成）。
+          if (type === 'done') {
+            this._doneEventDelivered = true;
+            this._tryResolveClose();
+          }
+          return;
+        }
         this._pending.push({ type: type, value: value, stack: stack });
         return;
       }
@@ -180,11 +189,9 @@ const String streamJsSource = r'''
         })();
       }
       return cleanup.then(function () {
-        if (self._onCancel != null) {
-          var f = self._onCancel;
-          self._onCancel = null;
-          f();
-        }
+        // 广播：每个「最后一个订阅者离开」周期都要触发 onCancel；因此不能把
+        // 回调置空（单订阅侧由 _stopped 保证只执行一次）。
+        if (self._onCancel != null) { self._onCancel(); }
       });
     }
 
@@ -200,10 +207,14 @@ const String streamJsSource = r'''
           opts.cancelOnError === true);
       this._subs.add(sub);
       if (this._pending.length > 0) {
-        // 单订阅：把首个订阅前缓冲的事件按序交给该订阅者。
+        // 单订阅：把首个订阅前缓冲的事件按序交给该订阅者。Dart 在 listen 返回
+        // **之后**才异步交付，不能在调用栈内同步回调；后续 add 的事件也是微任务，
+        // 先排队的 replay 自然先执行，顺序不变。
         var buffered = this._pending;
         this._pending = [];
-        for (var ev of buffered) { sub._enqueue(ev.type, ev.value, ev.stack); }
+        Promise.resolve().then(function () {
+          for (var ev of buffered) { sub._enqueue(ev.type, ev.value, ev.stack); }
+        });
       } else if (this._done && this._broadcast) {
         // 广播：close 之后订阅仍会收到 done（data 已丢弃）。
         sub._enqueue('done', undefined);
@@ -233,18 +244,24 @@ const String streamJsSource = r'''
         next: function () {
           if (pull.queue.length) {
             var ev = pull.queue.shift();
-            return Promise.resolve().then(function () { return self._settle(ev); });
+            return Promise.resolve().then(function () { return self._settle(ev, pull); });
           }
-          if (self._done) { return Promise.resolve({ done: true, value: undefined }); }
+          if (self._done) {
+            // 终态兜底：done 已交付过，确保拉取方也已注销。
+            self._pullers.delete(pull);
+            self._asyncIterated = false;
+            return Promise.resolve({ done: true, value: undefined });
+          }
           return new Promise(function (resolve) {
             pull.waiters.push(function (e) {
-              resolve(Promise.resolve().then(function () { return self._settle(e); }));
+              resolve(Promise.resolve().then(function () { return self._settle(e, pull); }));
             });
             self._wake();
           });
         },
         return: function () {
           self._pullers.delete(pull);
+          self._asyncIterated = false;
           // break / return / 抛错退出：传播取消并等待上游清理完成。
           return self._cleanupIfIdle().then(function () {
             return { done: true, value: undefined };
@@ -253,9 +270,23 @@ const String streamJsSource = r'''
       };
     }
 
-    _settle(ev) {
-      if (ev.type === 'error') { throw ev.value; }
-      if (ev.type === 'done') { return { done: true, value: undefined }; }
+    // error / done 都要先注销拉取方再返回/抛出（Dart 的 await for 遇错即取消
+    // 订阅；done 后订阅自动移除）。error 需等上游清理完成后再抛，保持时序一致。
+    _settle(ev, pull) {
+      var self = this;
+      if (ev.type === 'error') {
+        this._pullers.delete(pull);
+        this._asyncIterated = false;
+        return this._cleanupIfIdle().then(function () { throw ev.value; });
+      }
+      if (ev.type === 'done') {
+        this._pullers.delete(pull);
+        this._asyncIterated = false;
+        this._doneEventDelivered = true;
+        this._cleanupIfIdle();
+        this._tryResolveClose();
+        return { done: true, value: undefined };
+      }
       return { done: false, value: ev.value };
     }
 
@@ -286,8 +317,19 @@ const String streamJsSource = r'''
         if (this._closePendingSubs.size === 0) { this._finishClose(); }
         return;
       }
-      // 关闭时没有订阅者：有未消费缓冲就等首个订阅者消费完 done；否则立即完成。
-      if (this._pending.length === 0) { this._finishClose(); }
+      // 单订阅已经用掉唯一的订阅位且当前没有消费者：后续事件再也无人接收，
+      // 直接丢弃缓冲并完成 close（否则 close 的 Future 永久挂起）。
+      if (!this._broadcast && this._listenedOnce &&
+          this._subs.size === 0 && this._pullers.size === 0) {
+        this._pending = [];
+        this._finishClose();
+        return;
+      }
+      // 关闭时还没有订阅者：等首个订阅者消费完 done；done 尚未真正交付时也
+      // 不能提前完成（与 Dart 的「done 交付后 close 才完成」一致）。
+      if (this._pending.length === 0 && this._doneEventDelivered) {
+        this._finishClose();
+      }
     }
 
     _finishClose() {
@@ -598,11 +640,14 @@ const String streamJsSource = r'''
         if (this._cancelOnError) { this.cancel(); }
         return;
       }
-      // done：每个订阅只交付一次。
+      // done：每个订阅只交付一次；交付后订阅自动取消并从流上移除（Dart 语义）。
       if (this._doneDelivered) { return; }
       this._doneDelivered = true;
       if (typeof this._onDone === 'function') { this._onDone(); }
+      this._stream._subs.delete(this);
+      this._stream._doneEventDelivered = true;
       this._stream._onDoneDelivered(this);
+      this._stream._cleanupIfIdle();
     }
   }
 
