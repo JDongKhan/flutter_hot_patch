@@ -36,19 +36,21 @@ builders:
 
   # 宿主三方 JS builder：宿主工程根下的 `js/**.js` → 原样拷贝到
   # `patch/packages/**.js`。三方库的 JS 由宿主维护（不在生成器 / 运行时包内），
-  # 文件名即 Dart 包名（`js/provider.js` ↔ `package:provider`）。业务产物按
-  # `import { X } from '../packages/provider.js'` 消费；`patch_entry` 的依赖
+  # 文件名即 Dart 包名（`js/<package>.js` ↔ `package:<package>`，例如
+  # `js/provider.js` ↔ `package:provider`）。业务产物按
+  # `import { X } from '../packages/<package>.js'` 消费；`patch_entry` 的依赖
   # 归属按「类声明所在包 + 该包是否有 js/<package>.js」自动判定。
   #
   # 输入是包根伪资产 `$package$`、输出清单由 Builder 实例的 buildExtensions
   # getter 按**文件系统扫描**推导（与 ui_project_module 同款），因此不要求宿主
-  # 把 `js/**` 加进 build.yaml 的 sources；这里只填一条占位输入键。
+  # 把 `js/**` 加进 build.yaml 的 sources。这里的 build_extensions 只是
+  # build_config 要求的占位键（输出清单为空），**不列任何具体包**——新增三方
+  # 库只需往宿主 `js/` 放文件，生成器与配置都不用改。
   ui_third_party_js:
     import: "package:hot_patch_generator/builder.dart"
     builder_factories: ["thirdPartyJsBuilder"]
     build_extensions:
-      "$package$":
-        - "patch/packages/provider.js"
+      "$package$": []
     auto_apply: dependents
     build_to: source
 

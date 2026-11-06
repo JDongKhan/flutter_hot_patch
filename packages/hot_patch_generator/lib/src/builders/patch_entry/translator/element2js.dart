@@ -633,8 +633,8 @@ class ElementTranslateContext implements ExprRenderer {
     final name = bareTypeName(token);
     _assertTranslatable(name);
     // 值语境一律按类调用（`new X(...)`）：JS 侧没有这个类就是未定义全局。
-    // 若类来自某个 pub 依赖包而宿主 `js/` 没提供该包模块，构建期直接出声。
-    if (jsClassFileOf(name) == null) _warnMissingHostJs(name);
+    // 若类来自某个 pub 依赖包而宿主 `js/` 没提供该包模块，构建期直接报错。
+    if (jsClassFileOf(name) == null) _reportMissingHostJs(name);
     _registerWidgetImport(token, name);
     // 值语境一律按类调用：命名构造走包装类上的同名静态方法。
     return _renderCall(token, json, depth, asClass: true);
@@ -663,20 +663,23 @@ class ElementTranslateContext implements ExprRenderer {
     final asClass = token != name || classFile != null;
     // JS 侧既没有这个类、宿主也没有同名 widget 渲染器时，元素 type 只能退化成
     // 字符串 —— 宿主注册表查不到必然失败。若类来自某个 pub 依赖包而宿主 `js/`
-    // 没提供该包模块（`js/<package>.js`），构建期直接出声（每个类型一次）。
-    if (classFile == null) _warnMissingHostJs(name);
+    // 没提供该包模块（`js/<package>.js`），构建期直接报错（每个类型一次）。
+    if (classFile == null) _reportMissingHostJs(name);
     _registerWidgetImport(token, name);
     return _renderCall(token, json, depth, asClass: asClass);
   }
 
-  /// 类型在 JS 侧没有类、且缺失的是宿主三方 JS 模块时告警（每类型一次）。
+  /// 类型在 JS 侧没有类、且缺失的是宿主三方 JS 模块时报错（每类型一次）。
   ///
   /// 判据见 [missingHostJsPackageOf]（类声明所在包 + 宿主 `js/` 是否提供模块），
   /// 不涉及任何库名 / 类型名白名单。
-  void _warnMissingHostJs(String type) {
+  ///
+  /// 用 `severe` 而不是 `warning`：产物里这个类型**没有类**，运行时必然失败
+  /// （未注册类型 / 未定义全局），属于「影响运行」而不是「有风险但能跑」。
+  void _reportMissingHostJs(String type) {
     final pkg = missingHostJsPackageOf(type);
-    if (pkg == null || !_missingHostJsWarned.add(type)) return;
-    log.warning(
+    if (pkg == null || !_missingHostJsReported.add(type)) return;
+    log.severe(
       '[hot_patch_generator] $sourcePath: 类型 "$type" 声明在 package:$pkg，'
       '但宿主 js/ 目录没有 $pkg.js（应在工程根 js/$pkg.js 提供该包 JS，'
       '构建时原样拷贝为 patch/packages/$pkg.js）。该类型在 JS 侧没有类，'
@@ -684,8 +687,8 @@ class ElementTranslateContext implements ExprRenderer {
     );
   }
 
-  /// 已告警过的「三方包缺 JS 模块」类型（每类型一次，避免逐处刷屏）。
-  final Set<String> _missingHostJsWarned = {};
+  /// 已报错过的「三方包缺 JS 模块」类型（每类型一次，避免逐处刷屏）。
+  final Set<String> _missingHostJsReported = {};
 
   /// 按「类的定义在哪个文件」登记 import（漏登记 = 产物里
   /// 「Can't find variable: X」）。

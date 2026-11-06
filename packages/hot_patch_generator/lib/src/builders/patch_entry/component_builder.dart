@@ -401,8 +401,9 @@ class ComponentBuilder implements Builder {
       }
       depQueue.addAll(translated.dependencies);
     }
-    // ignore: avoid_print - 构建期日志
-    print(
+    // 普通进度日志（info）：只说明本文件产出了哪些类，不代表任何风险，
+    // 不能用 warning（warning 留给「有风险但仍能运行」，影响运行走 severe）。
+    log.info(
       '[hot_patch_generator] $inputId: '
       '${exportedClasses.map((c) => c.name).join(', ')}',
     );

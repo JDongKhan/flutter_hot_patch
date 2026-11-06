@@ -2972,8 +2972,10 @@ export class Stream {
     this._onCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
     this._listeners = new Set();
     this._pulls = new Set();
+    this._readyWaiters = [];
     this._done = false;
     this._started = false;
+    this._stopped = false;
     this._asyncIterated = false;
     this._hasListener = false;
   }
@@ -2981,6 +2983,11 @@ export class Stream {
   get isBroadcast() { return this._broadcast; }
 
   // 惰性启动：async* 产出的生成器在首次订阅 / 迭代时才开跑。
+  //
+  // 拉取式背压（与 Dart 的 async* 一致）：单订阅流被 pause 时不在 `yield`
+  // 之后继续推进生成器，`_waitReady` 阻塞到 resume；订阅全部取消则停掉
+  // 生成器（`it.return()` 让 Dart 侧 finally / 收尾逻辑照常执行）。
+  // 广播流不传播 pause（Dart 语义），暂停的订阅者由 `_deliver` 丢弃事件。
   _start() {
     if (this._started) return;
     this._started = true;
@@ -2992,13 +2999,42 @@ export class Stream {
     var self = this;
     (async function () {
       try {
-        for await (var v of gen) { self._emit('data', v); }
-        self._emit('done');
+        var it = gen[Symbol.asyncIterator]();
+        while (true) {
+          await self._waitReady();
+          if (self._stopped) {
+            if (typeof it.return === 'function') {
+              try { await it.return(); } catch (ignored) {}
+            }
+            return;
+          }
+          var r = await it.next();
+          if (r.done) { self._emit('done'); return; }
+          self._emit('data', r.value);
+        }
       } catch (e) {
         self._emit('error', e);
         self._emit('done');
       }
     })();
+  }
+
+  /// 有单订阅订阅者处于 pause 时返回一个挂起的 Promise，resume / cancel 时唤醒。
+  _waitReady() {
+    var self = this;
+    if (self._stopped || self._broadcast) return Promise.resolve();
+    for (var sub of self._listeners) {
+      if (sub._paused && !sub._cancelled) {
+        return new Promise(function (resolve) { self._readyWaiters.push(resolve); });
+      }
+    }
+    return Promise.resolve();
+  }
+
+  _wake() {
+    var ws = this._readyWaiters;
+    this._readyWaiters = [];
+    for (var w of ws) w();
   }
 
   // 与 Dart 一致：控制器 add 的事件异步投递（微任务），订阅者不能在 add
@@ -3038,6 +3074,8 @@ export class Stream {
   }
 
   _cancelSource() {
+    this._stopped = true;
+    this._wake();
     if (this._onCancel != null) {
       var f = this._onCancel;
       this._onCancel = null;
@@ -3298,10 +3336,12 @@ export class StreamSubscription {
   resume() {
     if (!this._paused) return;
     this._paused = false;
+    // 先补发暂停期间缓冲的事件，再唤醒上游生成器（保持事件顺序）。
     while (!this._paused && this._buffer.length) {
       var ev = this._buffer.shift();
       this._deliverNow(ev.type, ev.value);
     }
+    this._stream._wake();
   }
 
   cancel() {
@@ -3309,6 +3349,8 @@ export class StreamSubscription {
     this._stream._listeners.delete(this);
     if (this._stream._listeners.size === 0 && this._stream._pulls.size === 0) {
       this._stream._cancelSource();
+    } else {
+      this._stream._wake();
     }
     return Promise.resolve();
   }
