@@ -535,6 +535,17 @@ ClassInfo translateClass(
     }
   }
 
+  /// 本类（widget / State）的类型参数名：字段类型写成 `K` / `V` 这类类型变量时，
+  /// JS 侧泛型擦除，字段仍可持有任意值（见 [_fieldTranslatable]）。
+  final classTypeParams = <String>{
+    for (final t
+        in widgetClass.typeParameters?.typeParameters ?? const <TypeParameter>[])
+      t.name.lexeme,
+    for (final t
+        in hostClass.typeParameters?.typeParameters ?? const <TypeParameter>[])
+      t.name.lexeme,
+  };
+
   // 结构建模唯一入口 classInfoOf：构造参数（含形参默认值）、实例字段
   //（fieldTypeName 推断、声明序）、方法（getter 保留、setter 跳过、
   // static 带 isStatic 收）都来自它，本函数只做翻译增强（可翻译性
@@ -644,7 +655,8 @@ ClassInfo translateClass(
       final typeName = field.typeName;
       final erased = eraseType(typeName);
       final isBasic = isBasicType(typeName) || _valueSdkTypes.contains(erased);
-      if (!_fieldTranslatable(typeName, classTable)) {
+      if (!_fieldTranslatable(typeName, classTable,
+          typeParams: classTypeParams)) {
         // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
         // ignore: avoid_print - 构建期日志
         print(
@@ -790,7 +802,8 @@ ClassInfo translateClass(
   final staticFields = <ClassField>[];
   for (final field in staticDecls) {
     final typeName = field.typeName;
-    if (!_fieldTranslatable(typeName, classTable)) {
+    if (!_fieldTranslatable(typeName, classTable,
+        typeParams: classTypeParams)) {
       // ignore: avoid_print - 构建期日志
       print('[hot_patch_generator] 跳过静态字段 ${field.name}（类型 $typeName 不可翻译）');
       continue;
@@ -976,9 +989,19 @@ ClassInfo translateClass(
         globalConsts: globalConsts,
       );
       final layerFields = <ClassField>[];
+      // 本层可见的类型参数 = 消费者类自身的 + 该 mixin 声明的（字段写成 `T`
+      // 时同样是类型变量，JS 侧擦除）。
+      final layerTypeParams = <String>{
+        ...classTypeParams,
+        if (ref.node case final MixinDeclaration mixin)
+          for (final t in mixin.typeParameters?.typeParameters ??
+              const <TypeParameter>[])
+            t.name.lexeme,
+      };
       for (final f in info.instanceFields) {
         if (f.isStatic) continue;
-        if (!_fieldTranslatable(f.typeName, classTable)) {
+        if (!_fieldTranslatable(f.typeName, classTable,
+            typeParams: layerTypeParams)) {
           // ignore: avoid_print - 构建期日志
           print(
             '[hot_patch_generator] 跳过 mixin 字段 ${ref.name}.${f.name}'
@@ -1121,8 +1144,13 @@ ClassInfo translateMixin(
   final fieldNames = {for (final f in structure.instanceFields) f.name};
   final instanceFields = <ClassField>[];
   final propByField = <String, String>{};
+  final mixinTypeParams = {
+    for (final t in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
+      t.name.lexeme,
+  };
   for (final f in structure.instanceFields) {
-    if (!_fieldTranslatable(f.typeName, classTable)) {
+    if (!_fieldTranslatable(f.typeName, classTable,
+        typeParams: mixinTypeParams)) {
       // ignore: avoid_print - 构建期日志
       print('[hot_patch_generator] 跳过 mixin 字段 ${decl.name.lexeme}.${f.name}'
           '（类型 ${f.typeName} 不可翻译）');
@@ -1158,7 +1186,10 @@ ClassInfo translateMixin(
   );
   final staticFields = <ClassField>[];
   for (final f in structure.staticFields) {
-    if (!_fieldTranslatable(f.typeName, classTable)) continue;
+    if (!_fieldTranslatable(f.typeName, classTable,
+        typeParams: mixinTypeParams)) {
+      continue;
+    }
     final init = f.initializer;
     final initial = literalToJs(init) ??
         (init == null ? null : rhsToJs(init, staticScope, used)) ??
@@ -1712,16 +1743,21 @@ const Set<String> _valueSdkTypes = {'Color', 'IconData', 'ValueNotifier'};
 ///   - 元素值类型（`Widget` / `List<Widget>`）——JS 侧元素是普通对象；
 ///   - 泛型容器按**类型实参**递归判定：`List<Spot>` / `Map<String, int>` /
 ///     `List<Widget>` 可翻译，`Key?` 不可翻译；
+///   - **类自身的类型参数**（`class Pair<K, V>` 的 `K` / `V`）：泛型擦除，字段
+///     值任意，可翻译且不出声（[typeParams]）；
+///   - 源码里的**简单枚举**：JS 侧是声明文件产物里的同名值对象，可翻译；
 ///   - **解析不到的类型**（如 `package:flutter` 的 `Text` / `Column`，或三方类型）：
 ///     按宿主 Widget 值处理并输出构建期告警——字段判定不做任何类型名单过滤。
 bool _fieldTranslatable(
   String typeName,
-  Map<String, ClassInfo> classTable,
-) {
+  Map<String, ClassInfo> classTable, {
+  Set<String> typeParams = const {},
+}) {
   if (typeName.trim().endsWith('?')) {
     return _fieldTranslatable(
       typeName.trim().substring(0, typeName.trim().length - 1),
       classTable,
+      typeParams: typeParams,
     );
   }
   // `ui.Image` / `math.Point` 这类**带 import 前缀**的类型：JS 侧没有前缀概念
@@ -1730,6 +1766,9 @@ bool _fieldTranslatable(
   if (isBasicType(t)) return true;
   final lt = t.indexOf('<');
   final base = lt >= 0 ? t.substring(0, lt).trim() : t;
+  // 类自身的**类型参数**（`class Pair<K, V>` 的 `K` / `V`）：JS 侧泛型擦除，
+  // 字段值是任意对象，按可翻译处理（不是「解析不到的类型」，不该出声）。
+  if (typeParams.contains(base)) return true;
   // 函数值：`void Function(String, String)`（`Function(` 形态）与
   // `VoidCallback` / `ValueChanged<int>` 这类 typedef 都放行。
   if (_callbackTypes.contains(base) || t.contains('Function(')) return true;
@@ -1742,13 +1781,14 @@ bool _fieldTranslatable(
     if (_containerTypes.contains(base)) {
       final args = _typeArgs(t.substring(lt + 1, t.length - 1));
       return args.isNotEmpty &&
-          args.every((a) => _fieldTranslatable(a, classTable));
+          args.every((a) =>
+              _fieldTranslatable(a, classTable, typeParams: typeParams));
     }
     // 非容器泛型（`GlobalKey<AnimatedListState>` / `ValueNotifier<int>` / 自定义
     // `Foo<T>`）：JS 无泛型，类型实参只是**静态信息**，字段本体是否可持有只看
     // base 类型。这里递归按 base 判定，等价于把类型实参擦除——与 Dart→JS 的
     // 类型擦除一致，不做任何类型名单过滤。
-    return _fieldTranslatable(base, classTable);
+    return _fieldTranslatable(base, classTable, typeParams: typeParams);
   }
   if (t.isEmpty) return false;
   // 源码里能解析到构造的类（SDK / 依赖包 / 项目类）：JS 侧有同名类承载，
@@ -1760,6 +1800,9 @@ bool _fieldTranslatable(
   if (_widgetValueTypes.contains(t)) return true;
   // 类表里能解析到的类（组件 / 模型）。
   if (classTable.containsKey(t)) return true;
+  // 源码里的简单枚举：JS 侧是声明文件产物里的同名值对象（`export const X`），
+  // 字段持有的是枚举值，可翻译且不需要出声。
+  if (CtorSignatures.instance?.isEnum(t) ?? false) return true;
   // 解析不到的其余类型：按宿主 Widget 值处理，并出声（避免静默误判）。
   // ignore: avoid_print - 构建期日志
   print(

@@ -9,6 +9,10 @@
 - **缺失宿主 JS 模块时构建期报错**：`js_class_defs.dart` 新增 `missingHostJsPackageOf`（类声明所在包 ∈ pub 依赖、且该包没有 `js/<package>.js` 时返回包名；本项目包 / 本地依赖包 / 框架包 / `dart:` / 运行时已注入的类一律不算缺失）；`element2js` 的元素渲染（`_renderJsImpl`）与值渲染（`_renderValueImpl`）在 `jsClassFileOf` 为空时按类型 `log.severe`（构建失败）一次，指明应在工程根 `js/<package>.js` 提供该包 JS——此时产物必然在运行期失败，不属于「有风险但能跑」的 warning。`js/` 为空且源码没用到三方类型时构建照常完成、零三方产物。
 - **日志级别归位**：`component_builder` 的「本文件产出哪些类」由 `print`（build_runner 显示为 W）改为 `log.info`；warning 保留给「有风险但仍能运行」，影响运行的一律 error。
 - **`ui_third_party_js` 配置去具体包**：`build.yaml` 的占位 `build_extensions` 由写死 `patch/packages/provider.js` 改为空列表（输出清单只由 Builder 实例按宿主 `js/**.js` 扫描推导），新增任何三方库都不用改生成器配置。
+- **构建期日志降噪（只改判定，产物不变）**：
+  - `element2js` 的 `_SimpleIdentifierCollector` 只收**变量引用**：具名实参名 / 语句标签（`Label`）、成员名（`Icons.height` 的 `height`）、命名构造名、带接收者的方法名不再算「被 builder 捕获的局部变量」，修复 `sliver_detail.dart` 的误报。
+  - `js_translator` 擦除泛型实参时，若接收者是 **JS 内建**（List/Array/Iterable/Set/Map/String/num/int/double），不再告警（`fold<int>` 这类本就无 JS 语义），自定义类 / 类型不可判定时才出声。
+  - `_fieldTranslatable` 新增「类自身类型参数」（`Pair<K, V>` 的 `K`/`V`）与「源码简单枚举」两条放行判据（`CtorSignatures.isEnum` 按源码 `enum` 声明判定，增强枚举不算），修复 `generic_detail.dart` / `constructor_detail.dart` / `enum_detail.dart` 的误报。
 - **文档同步**：架构文档、使用手册、组件支持文档与 README 的产物布局 / 三方库接入指引改为 `js/` → `patch/packages/` 约定。
 
 ## 0.10.0

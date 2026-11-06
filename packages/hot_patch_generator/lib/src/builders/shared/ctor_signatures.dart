@@ -83,6 +83,12 @@ class CtorSignatures {
   /// typedef 名 → 候选源文件绝对路径（与 [classFiles] 同一次扫描建立）。
   Map<String, List<String>>? _typedefFiles;
 
+  /// enum 名 → 候选源文件绝对路径（与 [classFiles] 同一次扫描建立）。
+  ///
+  /// 只用于「该类型名是不是源码里的枚举」判定（字段类型可翻译性）：枚举在
+  /// JS 侧是同名值对象（声明文件产物 `export const X`），不是类，[of] 查不到。
+  final Map<String, List<String>> _enumFiles = {};
+
   /// typedef 名 → 是否函数类型别名（解析结果缓存，每个名字只解析一次）。
   final Map<String, bool> _typedefIsFunction = {};
 
@@ -246,6 +252,26 @@ class CtorSignatures {
 
   /// 源码索引：该名字是否有 **class** 声明（含 `abstract final class` 等多修饰符）。
   bool isClass(String name) => _ensureIndex().containsKey(name);
+
+  /// 源码索引：该名字是否是**会产出 JS 值对象的枚举**。
+  ///
+  /// 判据只看源码事实：存在同名 `enum` 声明，且它是**简单枚举**（成员不带
+  /// 构造实参）。增强枚举（`enum E { a(1) }`）在 JS 侧不生成值对象
+  /// （见 const_support 的 `_enumJs`），故不算「有 JS 值」，避免字段判定
+  /// 放行后产出悬空引用。
+  bool isEnum(String name) {
+    _ensureIndex();
+    for (final file in _enumFiles[name] ?? const <String>[]) {
+      final unit =
+          _units.containsKey(file) ? _units[file] : _units[file] = parseUnitFile(file);
+      if (unit == null) continue;
+      for (final d in unit.declarations.whereType<EnumDeclaration>()) {
+        if (d.name.lexeme != name) continue;
+        if (d.constants.every((c) => c.arguments == null)) return true;
+      }
+    }
+    return false;
+  }
 
   /// 该名字的类声明**所在包**（同名类可能存在于多个包，全部返回）。
   ///
@@ -566,6 +592,12 @@ class CtorSignatures {
           final name = m.group(1);
           if (name != null) typedefs.putIfAbsent(name, () => []).add(entity.path);
         }
+        for (final m in _enumDecl.allMatches(content)) {
+          final name = m.group(1);
+          if (name != null) {
+            _enumFiles.putIfAbsent(name, () => []).add(entity.path);
+          }
+        }
         for (final m in _genericMethodDecl.allMatches(content)) {
           final name = m.group(1);
           if (name == null) continue;
@@ -586,6 +618,13 @@ class CtorSignatures {
   /// `typedef Foo = …` / 老式 `typedef void Foo(…)` 的别名名（跳过注释里的）。
   static final _typedefDecl = RegExp(
     r'^[ \t]*(?:(?:abstract|sealed|base|final|interface|augment)[ \t]+)*typedef[ \t]+([A-Za-z_$][\w$]*)',
+    multiLine: true,
+  );
+
+  /// `enum Foo { … }` 的枚举名（允许上方有注解行）。
+  static final _enumDecl = RegExp(
+    r'^[ \t]*(?:@[\w.]+(?:[ \t]*\([^)]*\))?[ \t]*\r?\n[ \t]*)*'
+    r'enum[ \t]+([A-Za-z_$][\w$]*)',
     multiLine: true,
   );
 

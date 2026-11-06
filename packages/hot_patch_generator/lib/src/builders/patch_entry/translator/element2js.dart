@@ -1832,12 +1832,41 @@ bool isClassName(String name) {
 /// 的构建期抽查用。
 ///
 /// 成员名（`a.b` 里的 `b`）也会被收进来，误报面由「名字必须是**本类**的方法体
-/// 局部变量 / 循环变量」这条过滤限制住，故不做 AST 位置细分。
+/// 局部变量 / 循环变量」这条过滤限制住；`Label`（具名实参名 / 语句标签）不是
+/// 变量引用，单独排除。
 class _SimpleIdentifierCollector extends RecursiveAstVisitor<void> {
   _SimpleIdentifierCollector(this.names);
 
   final Set<String> names;
 
   @override
-  void visitSimpleIdentifier(SimpleIdentifier node) => names.add(node.name);
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    // 只收**变量引用**。名字位置的标识符不是变量：具名实参 / 语句标签
+    //（`Divider(height: 1)` 的 `height`）、成员名（`Icons.height` 的 `height`）、
+    // 命名构造名（`Foo.named` 的 `named`）、带接收者的方法名（`a.build()`）。
+    // 把它们当变量收集会误报「builder 捕获了方法体局部变量」——只要同名局部
+    // 变量在别的方法里出现过（如 `_measureFixed` 的 `height`）。
+    if (_isNamePosition(node)) return;
+    names.add(node.name);
+  }
+
+  /// [node] 是否处于「名字」位置而非「变量引用」位置。
+  static bool _isNamePosition(SimpleIdentifier node) {
+    final parent = node.parent;
+    if (parent is Label) return true;
+    if (parent is PrefixedIdentifier) {
+      return identical(parent.identifier, node);
+    }
+    if (parent is PropertyAccess) {
+      return identical(parent.propertyName, node);
+    }
+    if (parent is ConstructorName) {
+      return identical(parent.name, node);
+    }
+    // `a.foo()` 的 `foo` 是成员名；无接收者的 `foo()` 仍可能是局部闭包变量。
+    if (parent is MethodInvocation) {
+      return identical(parent.methodName, node) && parent.target != null;
+    }
+    return false;
+  }
 }

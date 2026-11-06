@@ -1650,7 +1650,14 @@ String? _methodCallJs(
       typeArgs.isEmpty ? null : 'typeArguments: ${typeArgsMapJs(typeArgs)}';
   final keepTypeArgs =
       typeArgsJs != null && (argJs.isEmpty || namedJs.isNotEmpty);
-  if (typeArgsJs != null && !keepTypeArgs) {
+  // 接收者以 **JS 内建**为运行时（List/Set/Map/String/Iterable 等）时，泛型
+  // 实参在 JS 侧本就没有语义，擦除是正常行为、不需要出声；只有自定义类 /
+  // 类型不可判定时，`typeArguments` 才可能是实现要读的元信息，擦除要告警。
+  final receiverType =
+      e.target == null ? null : _staticTypeOf(e.target!, scope, classes);
+  final erasedByJsBuiltin =
+      _jsBuiltinReceiverTypes.contains(eraseType(receiverType ?? ''));
+  if (typeArgsJs != null && !keepTypeArgs && !erasedByJsBuiltin) {
     log.warning('[hot_patch_generator] ${e.methodName.name}<${typeArgs.values.join(', ')}> '
         '带位置实参且无具名实参，尾参对象会被当成位置实参，已擦除类型实参元信息');
   }
@@ -1810,6 +1817,21 @@ String? _methodCallJs(
   }
   return null;
 }
+
+/// 以 **JS 内建**为运行时的接收者类型：它们的方法由 JS 原生 / 运行时补齐实现，
+/// 泛型实参在 JS 侧没有语义（与 dart2js 的擦除一致），`typeArguments` 元信息
+/// 被擦除时不算「丢失信息」。自定义类不在此列——它们的实现可能真的读该元信息。
+const Set<String> _jsBuiltinReceiverTypes = {
+  'List',
+  'Array',
+  'Iterable',
+  'Set',
+  'Map',
+  'String',
+  'num',
+  'int',
+  'double',
+};
 
 /// 构建期成员名映射：**只对可判定为 JS 内建 Array（Dart `List`）的接收者**
 /// 改写 `sort` → `_sort`、`join` → `_join`、`indexOf` → `_indexOf`（原生同名但
