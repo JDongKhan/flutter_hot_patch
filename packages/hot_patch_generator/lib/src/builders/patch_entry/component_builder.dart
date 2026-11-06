@@ -123,7 +123,7 @@ class ComponentBuilder implements Builder {
     final extensionOperators =
         extensionOperatorsInScope(parsed.unit, inputId.path);
     // 本文件可见的具名 extension（显式调用 `E(x).m()` 的绑定判据）。
-    final extensionNames = extensionNamesInScope(parsed.unit, inputId.path);
+    final extensionNames = extensionScopesInScope(parsed.unit, inputId.path);
 
     // import 前缀（`import '...' as p;`）→ 该前缀在 JS 侧的模块产物：
     //   - `dart:` → ''（已知按裸类名：SDK 值类 / 控件由 flutter.js 同名承接）；

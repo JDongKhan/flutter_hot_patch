@@ -16,6 +16,7 @@ export class ScaffoldDetail extends StatefulWidget {
     });
   }
   _onFab() {
+
   }
   build(context) {
     return new Scaffold({

@@ -23,6 +23,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:build/build.dart' show log;
 
 import '../class_info.dart';
+import '../translator/js_member.dart';
 import '../translator/js_translator.dart';
 import '../translator/js_value.dart';
 import '../translator/element2js.dart';
@@ -181,26 +182,39 @@ Map<String, Map<String, String>> extensionOperatorsInScope(
   return out;
 }
 
-/// 本文件（含 import / export 转发图）可见的**具名 extension**名集合。
+/// 本文件（含 import / export 转发图）可见的**具名 extension** → 分派信息。
 ///
-/// 用途：显式调用 `E(x).m(...)` 的绑定判据——只有内层调用的目标名确实是当前
-/// 作用域可见的 extension 声明时，才改写成 `x.m(...)`。私有扩展只在声明它的
-/// library 内可见，故跨文件扫描时不收 `_` 开头的名字。
-Set<String> extensionNamesInScope(CompilationUnit unit, String sourcePath) {
-  final out = <String>{};
-  void scan(CompilationUnit u, {required bool includePrivate}) {
+/// 用途：显式调用 `E(x).m(...)` 必须按**扩展身份**分派（Dart 的第三条规则），
+/// 不能退化成 `x.m()` 交给原型——同目标同名扩展时只有身份能区分。
+/// 私有扩展只在声明它的 library 内可见，故跨文件扫描时不收 `_` 开头的名字。
+Map<String, ExtensionScope> extensionScopesInScope(
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  final out = <String, ExtensionScope>{};
+  void scan(CompilationUnit u, String file, {required bool includePrivate}) {
     for (final d in u.declarations.whereType<ExtensionDeclaration>()) {
       final name = d.name?.lexeme;
       if (name == null || name.isEmpty) continue;
       if (!includePrivate && name.startsWith('_')) continue;
-      out.add(name);
+      if (out.containsKey(name)) continue;
+      final members = <String, ExtensionMemberKind>{};
+      for (final m in d.members) {
+        if (m is! MethodDeclaration || m.isStatic || m.isOperator) continue;
+        members[m.name.lexeme] = m.isGetter
+            ? ExtensionMemberKind.getter
+            : m.isSetter
+                ? ExtensionMemberKind.setter
+                : ExtensionMemberKind.method;
+      }
+      out[name] = ExtensionScope(file, members);
     }
   }
 
-  scan(unit, includePrivate: true);
+  scan(unit, sourcePath, includePrivate: true);
   for (final file in resolveImportFiles(unit, sourcePath)) {
     final u = parseUnitFile(file);
-    if (u != null) scan(u, includePrivate: false);
+    if (u != null) scan(u, file, includePrivate: false);
   }
   return out;
 }
@@ -336,6 +350,28 @@ class _TypeParamValueUse extends RecursiveAstVisitor<void> {
   }
 }
 
+/// 一个扩展成员的声明种类（跟着声明走，不按名字存）。
+enum _ExtMemberKind { method, getter, setter }
+
+/// 扩展成员声明 → 方法模型 + 种类。
+class _ExtMemberDecl {
+  const _ExtMemberDecl({required this.kind, required this.method});
+
+  final _ExtMemberKind kind;
+  final ClassMethod method;
+}
+
+/// 一个扩展成员名的聚合槽位：同名 getter / setter 共用一个槽（Dart 允许），
+/// 方法单独占 [methodValue]。
+class _ExtMemberSlot {
+  String? getBody;
+  String? setBody;
+  List<String> setParams = const [];
+
+  /// 方法（含运算符）的函数表达式源码（已由 [jsMethodValue] 渲染）。
+  String? methodValue;
+}
+
 /// 翻译一个 extension → [ExtensionInfo]；构建期不成立的声明返回 null（已告警）。
 ///
 /// [ownProduct]：本产物的身份（`patch/a/b.js`），用于判断目标类是否就在**同
@@ -358,7 +394,7 @@ ExtensionInfo? translateExtension(
   String? Function(String name)? productOf,
   Map<String, String> prefixProducts = const {},
   Map<String, Map<String, String>> extensionOperators = const {},
-  Set<String> extensionNames = const {},
+  Map<String, ExtensionScope> extensionNames = const {},
 }) {
   final name = decl.name?.lexeme;
   final label = name ?? '<unnamed>';
@@ -462,8 +498,9 @@ ExtensionInfo? translateExtension(
   }
 
   // 成员建模：与类完全同一口径（getter / setter 都保留，static 另放）。
-  final memberMethods = <ClassMethod>[];
-  final memberKinds = <String, String>{};
+  // **kind 跟着声明走**，不放进「名字 → kind」的表：同名 getter / setter 是两个
+  // 独立声明，按名字存 kind 会被后者覆盖（产物只剩 setter）。
+  final memberDecls = <_ExtMemberDecl>[];
   for (final member in decl.members) {
     if (member is MethodDeclaration) {
       if (member.isStatic) continue;
@@ -478,50 +515,58 @@ ExtensionInfo? translateExtension(
               '.operator $memberName 暂不支持（JS 侧无等价成员），已跳过。');
           continue;
         }
-        memberKinds[jsName] = 'method';
-        memberMethods.add(ClassMethod(
-          name: jsName,
-          params: jsMethodParams(member),
-          isAsync: member.body.isAsynchronous,
-          isVoid: isVoidReturn(member),
-          returnsWidget: false,
-          body: member.body,
-          parameters: member.parameters,
-          positionalParamCount: positionalParamCountOf(member),
-          hasNamedParams: hasNamedParamOf(member),
-          operatorSymbol: memberName,
+        memberDecls.add(_ExtMemberDecl(
+          kind: _ExtMemberKind.method,
+          method: ClassMethod(
+            name: jsName,
+            params: jsMethodParams(member),
+            isAsync: member.body.isAsynchronous,
+            isVoid: isVoidReturn(member),
+            returnsWidget: false,
+            body: member.body,
+            parameters: member.parameters,
+            positionalParamCount: positionalParamCountOf(member),
+            hasNamedParams: hasNamedParamOf(member),
+            operatorSymbol: memberName,
+          ),
         ));
       } else if (member.isGetter) {
-        memberKinds[memberName] = 'getter';
-        memberMethods.add(ClassMethod(
-          name: memberName,
-          params: const [],
-          isGetter: true,
-          returnsWidget: returnsWidgetOf(member),
-          body: member.body,
+        memberDecls.add(_ExtMemberDecl(
+          kind: _ExtMemberKind.getter,
+          method: ClassMethod(
+            name: memberName,
+            params: const [],
+            isGetter: true,
+            returnsWidget: returnsWidgetOf(member),
+            body: member.body,
+          ),
         ));
       } else if (member.isSetter) {
-        memberKinds[memberName] = 'setter';
-        memberMethods.add(ClassMethod(
-          name: memberName,
-          params: jsMethodParams(member),
-          isVoid: true,
-          returnsWidget: false,
-          body: member.body,
-          parameters: member.parameters,
+        memberDecls.add(_ExtMemberDecl(
+          kind: _ExtMemberKind.setter,
+          method: ClassMethod(
+            name: memberName,
+            params: jsMethodParams(member),
+            isVoid: true,
+            returnsWidget: false,
+            body: member.body,
+            parameters: member.parameters,
+          ),
         ));
       } else {
-        memberKinds[memberName] = 'method';
-        memberMethods.add(ClassMethod(
-          name: memberName,
-          params: jsMethodParams(member),
-          isAsync: member.body.isAsynchronous,
-          isVoid: isVoidReturn(member),
-          returnsWidget: returnsWidgetOf(member),
-          body: member.body,
-          parameters: member.parameters,
-          positionalParamCount: positionalParamCountOf(member),
-          hasNamedParams: hasNamedParamOf(member),
+        memberDecls.add(_ExtMemberDecl(
+          kind: _ExtMemberKind.method,
+          method: ClassMethod(
+            name: memberName,
+            params: jsMethodParams(member),
+            isAsync: member.body.isAsynchronous,
+            isVoid: isVoidReturn(member),
+            returnsWidget: returnsWidgetOf(member),
+            body: member.body,
+            parameters: member.parameters,
+            positionalParamCount: positionalParamCountOf(member),
+            hasNamedParams: hasNamedParamOf(member),
+          ),
         ));
       }
     } else if (member is ConstructorDeclaration) {
@@ -529,6 +574,7 @@ ExtensionInfo? translateExtension(
           '构造函数（Dart 不允许），已忽略。');
     }
   }
+  final memberMethods = [for (final d in memberDecls) d.method];
 
   // 依赖：整个扩展声明里出现的类型引用（成员体 / 初始化器 / 字段类型 /
   // `on` 目标），与类共用同一个收集器——不另写扩展专用的启发式。
@@ -604,8 +650,12 @@ ExtensionInfo? translateExtension(
   }
 
   final membersJs = <String, String>{};
+  // 按**名字**聚合成员：Dart 允许同名 `get x` / `set x` 共存，成员表里必须合并成
+  // 一个 `{ get, set }` 描述符（按名字各写一项会让后写的一方覆盖前一方）。
+  final memberSlots = <String, _ExtMemberSlot>{};
   parseCtx.withExprRenderer(() {
-    for (final m in memberMethods) {
+    for (final decl in memberDecls) {
+      final m = decl.method;
       final body = translateClassMethodBody(
         hostInfo,
         m,
@@ -617,19 +667,34 @@ ExtensionInfo? translateExtension(
         extensionOperators: extensionOperators,
         extensionNames: extensionNames,
       );
-      switch (memberKinds[m.name]) {
-        case 'getter':
-          membersJs[m.name] = '{ get: function () {\n$body\n} }';
-        case 'setter':
-          membersJs[m.name] =
-              '{ set: function (${m.params.join(', ')}) {\n$body\n} }';
-        default:
-          final fn = m.isAsync ? 'async ' : '';
-          membersJs[m.name] =
-              '${fn}function (${jsSignatureParams(m).join(', ')}) {\n$body\n}';
+      final slot = memberSlots.putIfAbsent(m.name, () => _ExtMemberSlot());
+      switch (decl.kind) {
+        case _ExtMemberKind.getter:
+          slot.getBody = body;
+        case _ExtMemberKind.setter:
+          slot.setBody = body;
+          slot.setParams = m.params;
+        case _ExtMemberKind.method:
+          // 方法（含运算符）与类方法共用同一条发射规则：生成器 / async / 参数
+          // 约定全部一致，不再由 extension 自己拼函数头。
+          slot.methodValue = jsMethodValue(
+            params: jsSignatureParams(m),
+            body: body,
+            isAsync: m.isAsync,
+            isGenerator: m.body?.isGenerator == true,
+          );
       }
     }
   });
+  for (final e in memberSlots.entries) {
+    final slot = e.value;
+    membersJs[e.key] = slot.methodValue ??
+        jsAccessorValue(
+          getBody: slot.getBody,
+          setBody: slot.setBody,
+          setParams: slot.setParams,
+        );
+  }
 
   // 静态成员：与实例成员同一条翻译（静态里 `this` 是类本身，与 Dart 一致）。
   final staticsEntries = <String>[];
@@ -660,11 +725,18 @@ ExtensionInfo? translateExtension(
             extensionNames: extensionNames,
           ));
       if (member.isGetter) {
-        staticsEntries.add('get $memberName() {\n$body\n}');
+        staticsEntries.add(jsLiteralAccessor(
+          name: memberName,
+          isGetter: true,
+          body: body,
+        ));
       } else {
-        final fn = info.isAsync ? 'async ' : '';
-        staticsEntries.add(
-            '$memberName: ${fn}function (${jsSignatureParams(info).join(', ')}) {\n$body\n}');
+        staticsEntries.add('$memberName: ${jsMethodValue(
+          params: jsSignatureParams(info),
+          body: body,
+          isAsync: info.isAsync,
+          isGenerator: member.body.isGenerator,
+        )}');
       }
     } else if (member is FieldDeclaration) {
       if (!member.isStatic) {

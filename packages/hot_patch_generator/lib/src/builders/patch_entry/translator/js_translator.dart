@@ -62,11 +62,13 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 会把 `E(x)` 当成 `new E({...})` 构造（E 是扩展名，不是类）。改写为
   // `x.m(args)`：成员已由 `registerExtension` 装在目标原型上。
   if (e is MethodInvocation) {
-    final explicitRecv = _explicitExtensionReceiver(e, scope, classes);
-    if (explicitRecv != null) {
-      return _methodCallJs(e, scope, classes, receiverJs: explicitRecv);
-    }
+    // 显式扩展调用：按**扩展身份**分派（`E.m.call(x, …)`），不走原型。
+    final explicit = _explicitExtensionCallJs(e, scope, classes);
+    if (explicit != null) return explicit;
   }
+  // 显式扩展 getter：`E(x).g` → `E.g.get.call(x)`。
+  final explicitGetter = _explicitExtensionGetterJs(e, scope, classes);
+  if (explicitGetter != null) return explicitGetter;
   // 构造表达式（`Color(0xFF…)` / `Color.fromARGB(…)` / 任意 `X(…)`）→
   // `new X({...})`（命名构造 `X.b({...})` 仅在签名表命中时接管）。
   // 颜色不是特殊形态：`Color` 与其它类一样由运行时注入同名类。
@@ -597,11 +599,13 @@ String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) 
   // 显式 extension 调用 `E(x).m(...)`：先于构造钩子 / 构造翻译拦截——否则
   // `E(x)` 会被当成 `new E({...})` 构造（E 是扩展名，不是类）。
   if (e is MethodInvocation) {
-    final explicitRecv = _explicitExtensionReceiver(e, scope, classes);
-    if (explicitRecv != null) {
-      return _methodCallJs(e, scope, classes, receiverJs: explicitRecv);
-    }
+    // 显式扩展调用：按**扩展身份**分派（`E.m.call(x, …)`），不走原型。
+    final explicit = _explicitExtensionCallJs(e, scope, classes);
+    if (explicit != null) return explicit;
   }
+  // 显式扩展 getter：`E(x).g` → `E.g.get.call(x)`。
+  final explicitGetter = _explicitExtensionGetterJs(e, scope, classes);
+  if (explicitGetter != null) return explicitGetter;
   // 组件/值对象出现在**任意表达式位置**（方法实参、三元分支、列表元素）时，
   // 先交给属性管线（[constructionHook]，由 element2js 安装）：子结点槽位与
   // 值转换器必须与 children 里的组件一致，否则会出现「JS 侧不存在的类调用」
@@ -1532,49 +1536,109 @@ String? methodCallExprJs(
     if (recv == null) return null;
     return _methodCallJs(e, scope, classes, receiverJs: recv, nullAware: true);
   }
-  // 显式 extension 调用 `E(x).m(args)`：Dart 里它把接收者绑定到扩展 E，绕过
-  // 实例成员与其它扩展；JS 侧成员已装在目标原型上，故等价于 `x.m(args)`。
-  // 判据 = 内层调用的目标名属于**本文件可见的具名 extension**（源码事实，
-  // 不按名字白名单判断），且恰好一个位置实参（`E(x)` 的形态）。
-  final explicitRecv = _explicitExtensionReceiver(e, scope, classes);
-  if (explicitRecv != null) {
-    return _methodCallJs(e, scope, classes, receiverJs: explicitRecv);
-  }
+  // 显式 extension 调用 `E(x).m(args)`：按扩展身份分派（`E.m.call(x, …)`）。
+  final explicit = _explicitExtensionCallJs(e, scope, classes);
+  if (explicit != null) return explicit;
   return _methodCallJs(e, scope, classes);
 }
 
-/// `E(x).m(...)` → `x`（显式 extension 调用的接收者 JS 表达式）；不匹配返回 null。
+/// 显式 extension 调用的**身份分派**：`E(x).m(a)` → `E.m.call(x, a)`。
 ///
-/// 只有「内层是裸名调用 + 该名字是可见具名 extension + 单位置实参」才成立；
-/// `factory()` / `p.E(x).m()` 等其它形态一律不接管（保持原有翻译）。
-String? _explicitExtensionReceiver(
+/// 原型只承接隐式调用（实例成员优先 + 原型链特异性）；显式调用必须按扩展身份
+/// 分派——同目标同名扩展时只有身份能区分（Dart 里隐式调用本身是歧义编译错误）。
+/// 返回 null 表示不是「可见具名扩展的实例方法」，交回通用调用路径。
+String? _explicitExtensionCallJs(
   MethodInvocation e,
   FieldScope scope,
   Map<String, ClassInfo> classes,
 ) {
-  final target = e.target;
-  // analyzer 对扩展显式调用给出专用节点 `ExtensionOverride`（`E(x)`），
-  // 只有真正解析成 extension 时才会出现；名字必须是当前作用域可见的具名
-  // extension（源码事实，不按名字白名单）。
+  final resolved = _extensionOverrideInfo(e.target, scope);
+  if (resolved == null) return null;
+  final scopeInfo = scope.extensionNames[resolved.$1];
+  if (scopeInfo == null) return null;
+  final member = e.methodName.name;
+  if (scopeInfo.members[member] != ExtensionMemberKind.method) return null;
+  final recvJs = exprToJs(resolved.$2, scope, classes);
+  if (recvJs == null) return null;
+  final args = _extensionArgsJs(e, scope, classes);
+  if (args == null) return null;
+  return '${resolved.$1}.$member.call($recvJs${args.isEmpty ? '' : ', $args'})';
+}
+
+/// 显式 extension getter：`E(x).g` → `E.g.get.call(x)`。
+String? _explicitExtensionGetterJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is! PropertyAccess) return null;
+  final resolved = _extensionOverrideInfo(e.target, scope);
+  if (resolved == null) return null;
+  final scopeInfo = scope.extensionNames[resolved.$1];
+  if (scopeInfo == null) return null;
+  final member = e.propertyName.name;
+  if (scopeInfo.members[member] != ExtensionMemberKind.getter) return null;
+  final recvJs = exprToJs(resolved.$2, scope, classes);
+  if (recvJs == null) return null;
+  return '${resolved.$1}.$member.get.call($recvJs)';
+}
+
+/// `E(x)` 的两种 AST 形态 → (扩展名, 接收者表达式)；不是扩展覆盖则 null。
+///
+///   - 已解析：`ExtensionOverride`（analyzer 给出专用节点）；
+///   - 未解析：无接收者的裸名 `MethodInvocation`（`target == null` + 名称即扩展名）。
+(String, Expression)? _extensionOverrideInfo(
+  Expression? target,
+  FieldScope scope,
+) {
   if (target is ExtensionOverride) {
     if (target.importPrefix != null) return null;
     final name = target.name.lexeme;
-    if (!scope.extensionNames.contains(name)) return null;
+    if (!scope.extensionNames.containsKey(name)) return null;
     final args = target.argumentList.arguments;
     if (args.length != 1 || args.first is NamedExpression) return null;
-    return exprToJs(args.first, scope, classes);
+    return (name, args.first);
   }
   if (target is! MethodInvocation) return null;
-  if (target.typeArguments != null) return null;
-  // `E(x)` 是无接收者的裸名调用：analyzer 对未解析的显式扩展调用给出
-  // `target == null` + `methodName == 扩展名`（已解析时则是 ExtensionOverride，
-  // 见上）；两者都要求名字是当前作用域可见的具名 extension。
-  if (target.target != null) return null;
+  if (target.typeArguments != null || target.target != null) return null;
   final name = target.methodName.name;
-  if (!scope.extensionNames.contains(name)) return null;
+  if (!scope.extensionNames.containsKey(name)) return null;
   final args = target.argumentList.arguments;
   if (args.length != 1 || args.first is NamedExpression) return null;
-  return exprToJs(args.first, scope, classes);
+  return (name, args.first);
+}
+
+/// 扩展成员调用的实参：位置实参扁平 + 具名实参合并成尾参对象（与类方法同一
+/// 调用约定）；不掺入 Map / 可调用对象等「按接收者类型改写」的分支。
+String? _extensionArgsJs(
+  MethodInvocation e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final positional = <String>[];
+  final named = <String>[];
+  for (final a in e.argumentList.arguments) {
+    if (a is NamedExpression) {
+      final inner = a.expression;
+      final v = inner is FunctionExpression
+          ? closureToJs(inner, scope, classes)
+          : rhsToJs(inner, scope, classes);
+      if (v == null) return null;
+      named.add('${jsString(a.name.label.name)}: $v');
+    } else if (a is FunctionExpression) {
+      final v = closureToJs(a, scope, classes);
+      if (v == null) return null;
+      positional.add(v);
+    } else {
+      final v = rhsToJs(a, scope, classes);
+      if (v == null) return null;
+      positional.add(v);
+    }
+  }
+  return [
+    ...positional,
+    if (named.isNotEmpty) '{ ${named.join(', ')} }',
+  ].join(', ');
 }
 
 /// 方法调用的唯一实现；[receiverJs] 非空时跳过接收者解析（供空安全调用复用，
@@ -4032,7 +4096,7 @@ String translateClassMethodBody(
   Set<String> globalConsts = const {},
   int depth = 2,
   Map<String, Map<String, String>> extensionOperators = const {},
-  Set<String> extensionNames = const {},
+  Map<String, ExtensionScope> extensionNames = const {},
 }) {
   final ind = '  ' * depth;
   final channel = m.nativeChannel;

@@ -7,6 +7,7 @@ library;
 import 'package:build/build.dart' show log;
 
 import '../class_info.dart';
+import 'js_member.dart';
 import 'js_value.dart';
 
 /// 类声明 → JS（export 可选）。含 constructor / 方法 / getter / extends 基类，
@@ -106,18 +107,10 @@ String renderClassDecl(
 
   // 方法 + getter：方法体（含 getter、builder）已在收集阶段预渲染为 [bodyJs]，
   // 这里只拼装。缺失说明收集层漏译，出声告警而不是静默产出空方法体。
+  // 生成器 / async / 访问器的发射规则只有一处（[jsClassMember] /
+  // [jsClassAccessor]），与 extension 的成员表共用，不再各写一套。
   for (final m in info.methods) {
-    // 生成器方法：`sync*` → `*name(...)`，`async*` → `async *name(...)`
-    // （JS 方法语法把 `*` 放在方法名之前；裸异步生成器缺 `listen`，Stream
-    // 能力落地前记为部分实现，手册第 14 章有说明）。
     final gen = m.body?.isGenerator == true;
-    final fn = m.isAsync
-        ? (gen ? 'async *' : 'async ')
-        : (gen ? '*' : '');
-    // static 成员（Dart 的 static 与实例成员同一名字空间）：JS 侧挂在类上。
-    final st = m.isStatic ? 'static ' : '';
-    // 方法体多行可读：语句各自成行、按方法体深度缩进（翻译器已带缩进），
-    // 大括号独占行。
     final raw = m.bodyJs;
     if (raw == null) {
       log.warning(
@@ -129,30 +122,32 @@ String renderClassDecl(
     if (m.isSetter) {
       // Dart setter → JS 属性写访问器；赋值调用点 `x.name = v` 本来就按
       // PropertyAccess 翻译，两端天然对齐。
-      b.write('  ${st}set ${m.name}(${m.params.join(', ')}) {\n');
-      if (body.isNotEmpty) b.write('$body\n');
-      b.write('  }\n');
+      b.write('${jsClassAccessor(
+        name: m.name,
+        isGetter: false,
+        body: body,
+        setParams: m.params,
+        isStatic: m.isStatic,
+      )}\n');
     } else if (m.isGetter) {
-      b.write('  ${st}get ${m.name}() {\n');
-      if (body.isNotEmpty) b.write('$body\n');
-      b.write('  }\n');
+      b.write('${jsClassAccessor(
+        name: m.name,
+        isGetter: true,
+        body: body,
+        isStatic: m.isStatic,
+      )}\n');
     } else {
       // 方法签名按调用约定生成：位置形参在前，具名实参（与类型实参）合并成
       // 一个尾参对象 `__o`（无具名时为泛型专用的 `__ta`）。方法体里的默认值
       // 前导与具名解构已由收集阶段写进 [ClassMethod.bodyJs]。
-      if (gen && m.isAsync) {
-        // `async*` 不能返回裸异步生成器（没有 listen）：包成 Stream，
-        // 首次订阅才启动生成器；`.bind(this)` 保住方法体里的 `this`。
-        b.write('  $st${m.name}(${jsSignatureParams(m).join(', ')}) {\n');
-        b.write('    return Stream.fromAsyncGenerator((async function* () {\n');
-        if (body.isNotEmpty) b.write('$body\n');
-        b.write('    }).bind(this)());\n');
-        b.write('  }\n');
-      } else {
-        b.write('  $st$fn${m.name}(${jsSignatureParams(m).join(', ')}) {\n');
-        if (body.isNotEmpty) b.write('$body\n');
-        b.write('  }\n');
-      }
+      b.write('${jsClassMember(
+        name: m.name,
+        params: jsSignatureParams(m),
+        body: body,
+        isStatic: m.isStatic,
+        isAsync: m.isAsync,
+        isGenerator: gen,
+      )}\n');
     }
   }
 

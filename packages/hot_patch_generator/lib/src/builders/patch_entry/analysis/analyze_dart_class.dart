@@ -514,7 +514,7 @@ ClassInfo translateClass(
   bool isComponent = false,
   Map<String, String> prefixProducts = const {},
   Map<String, Map<String, String>> extensionOperators = const {},
-  Set<String> extensionNames = const {},
+  Map<String, ExtensionScope> extensionNames = const {},
 }) {
   // 顶层 `@HostInjected` 函数名：翻译层自己扫（本文件 + import 源文件）。
   // 类上的宿主方法不再走调用点改写（方法体在 JS 类里桥回宿主，见
@@ -1142,7 +1142,7 @@ ClassInfo translateMixin(
   Set<String> globalConsts = const {},
   Map<String, String> prefixProducts = const {},
   Map<String, Map<String, String>> extensionOperators = const {},
-  Set<String> extensionNames = const {},
+  Map<String, ExtensionScope> extensionNames = const {},
 }) {
   final hostFunctions = buildHostFunctions(unit, sourcePath);
   final structure = classInfoOf(ClassLikeDecl.ofMixin(decl), sourcePath);

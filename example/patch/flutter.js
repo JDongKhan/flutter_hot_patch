@@ -2967,150 +2967,198 @@ export class Stream {
   constructor(opts) {
     opts = opts || {};
     this._broadcast = opts.broadcast === true;
-    this._gen = opts.gen || null;
-    this._onStart = typeof opts.onStart === 'function' ? opts.onStart : null;
+    // 惰性事件源：返回 AsyncIterator 的函数（async* 产物）。null = 由
+    // StreamController.add/addError/close 外部驱动。
+    this._source = typeof opts.source === 'function' ? opts.source : null;
+    this._onListen = typeof opts.onListen === 'function' ? opts.onListen : null;
     this._onCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
-    this._listeners = new Set();
-    this._pulls = new Set();
+    this._subs = new Set();
+    this._pullers = new Set();
+    // 单订阅：首个订阅者出现前的 data / error / done 都留在这里。
+    this._pending = [];
     this._readyWaiters = [];
     this._done = false;
     this._started = false;
     this._stopped = false;
+    this._closed = false;
+    this._iterator = null;
     this._asyncIterated = false;
-    this._hasListener = false;
+    // close() 的 Future：等订阅者处理完 done 才完成（与 Dart 一致）。
+    this._closeWaiters = [];
+    this._closeDone = false;
+    this._closePendingSubs = null;
   }
 
   get isBroadcast() { return this._broadcast; }
 
-  // 惰性启动：async* 产出的生成器在首次订阅 / 迭代时才开跑。
-  //
-  // 拉取式背压（与 Dart 的 async* 一致）：单订阅流被 pause 时不在 `yield`
-  // 之后继续推进生成器，`_waitReady` 阻塞到 resume；订阅全部取消则停掉
-  // 生成器（`it.return()` 让 Dart 侧 finally / 收尾逻辑照常执行）。
-  // 广播流不传播 pause（Dart 语义），暂停的订阅者由 `_deliver` 丢弃事件。
+  get _hasListener() {
+    return this._subs.size > 0 || this._pullers.size > 0 || this._asyncIterated;
+  }
+
+  // ---- 事件源驱动（async*）----
+
   _start() {
     if (this._started) return;
     this._started = true;
-    if (this._onStart != null) {
-      try { this._onStart(); } catch (e) { this._emit('error', e); }
+    if (this._onListen != null) {
+      try { this._onListen(); } catch (e) { this._emit('error', e); }
     }
-    var gen = this._gen;
-    if (gen == null) return;
-    var self = this;
-    (async function () {
-      try {
-        var it = gen[Symbol.asyncIterator]();
-        while (true) {
-          await self._waitReady();
-          if (self._stopped) {
-            if (typeof it.return === 'function') {
-              try { await it.return(); } catch (ignored) {}
-            }
-            return;
-          }
-          var r = await it.next();
-          if (r.done) { self._emit('done'); return; }
-          self._emit('data', r.value);
-        }
-      } catch (e) {
-        self._emit('error', e);
-        self._emit('done');
-      }
-    })();
+    if (this._source != null) this._pump();
   }
 
-  /// 有单订阅订阅者处于 pause 时返回一个挂起的 Promise，resume / cancel 时唤醒。
-  _waitReady() {
-    var self = this;
-    if (self._stopped || self._broadcast) return Promise.resolve();
-    for (var sub of self._listeners) {
-      if (sub._paused && !sub._cancelled) {
-        return new Promise(function (resolve) { self._readyWaiters.push(resolve); });
+  async _pump() {
+    try {
+      var it = this._source();
+      this._iterator = it;
+      while (!this._stopped) {
+        await this._waitDemand();
+        if (this._stopped) { return; }
+        var r = await it.next();
+        if (r.done) { await this._emit('done'); return; }
+        await this._emit('data', r.value);
       }
+    } catch (e) {
+      await this._emit('error', e);
+      await this._emit('done');
     }
-    return Promise.resolve();
+  }
+
+  // 需求：单订阅要等订阅者可接收（未暂停）；拉取方要等它有等待中的 next。
+  // 广播不传播暂停，只要有订阅者就继续拉。
+  _hasDemand() {
+    if (this._broadcast) return this._subs.size > 0;
+    for (var sub of this._subs) {
+      if (!sub._paused && !sub._cancelled) { return true; }
+    }
+    for (var p of this._pullers) {
+      if (p.waiters.length > 0) { return true; }
+    }
+    return false;
+  }
+
+  _waitDemand() {
+    if (this._stopped || this._hasDemand()) return Promise.resolve();
+    var self = this;
+    return new Promise(function (resolve) { self._readyWaiters.push(resolve); });
   }
 
   _wake() {
     var ws = this._readyWaiters;
     this._readyWaiters = [];
-    for (var w of ws) w();
+    for (var w of ws) { w(); }
   }
 
-  // 与 Dart 一致：控制器 add 的事件异步投递（微任务），订阅者不能在 add
-  // 调用栈内收到回调。async* 生成器本身已异步，补一次微任务不改变时序。
-  // 同一订阅者的 error / done 必须排在已排队的 data 之后（_deliver 内再排队）。
+  // ---- 事件投递 ----
+
+  // 与 Dart 一致：事件异步投递（微任务），add 调用栈内不触发回调。
+  // done 的「终态」在 emit 时立即记下（close 后 add 抛错、done 后不再投递）。
+  // 返回投递完成的 Promise：拉取源（_pump）要等这一项真正被消费后再拉下一项，
+  // 否则「消费方 break」会晚于下一次拉取（上游多生产一项）。
   _emit(type, value) {
+    if (type === 'done') {
+      if (this._done) { return Promise.resolve(); }
+      this._done = true;
+    } else if (this._done) {
+      return Promise.resolve();
+    }
     var self = this;
-    Promise.resolve().then(function () { self._deliverNow(type, value); });
+    return Promise.resolve().then(function () { self._deliverEvent(type, value); });
   }
 
-  _deliverNow(type, value) {
-    if (type === 'done') {
-      this._done = true;
-      // 队列里可能还有未消费的 data：done 追加在队尾（不能清空，否则
-      // `add(1); add(2); close()` 的 await for 会丢掉最后一个值）。
-      for (var p of this._pulls) {
-        if (p.waiters.length) {
-          while (p.waiters.length) p.waiters.shift()({ type: 'done', value: undefined });
-        } else {
-          p.queue.push({ type: 'done', value: undefined });
-        }
-      }
-      for (var sub of Array.from(this._listeners)) sub._deliver('done', undefined);
+  // 分发（唯一出口）：单订阅 / 广播 / 拉取方在这里统一处理缓冲与投递。
+  _deliverEvent(type, value) {
+    if (this._subs.size === 0 && this._pullers.size === 0) {
+      if (this._broadcast) { return; }   // 广播无订阅者：丢弃 data / error
+      this._pending.push({ type: type, value: value });
       return;
     }
-    for (var sub of Array.from(this._listeners)) sub._deliver(type, value);
-    for (var p of this._pulls) {
+    for (var sub of Array.from(this._subs)) { sub._enqueue(type, value); }
+    if (this._pullers.size > 0) {
       var ev = { type: type, value: value };
-      if (p.waiters.length) p.waiters.shift()(ev); else p.queue.push(ev);
+      for (var p of Array.from(this._pullers)) {
+        if (p.waiters.length > 0) { p.waiters.shift()(ev); } else { p.queue.push(ev); }
+      }
     }
   }
 
-  _settle(ev) {
-    if (ev.type === 'error') throw ev.value;
-    if (ev.type === 'done') return { done: true, value: undefined };
-    return { done: false, value: ev.value };
+  // ---- 生命周期 ----
+
+  _cleanupIfIdle() {
+    if (this._subs.size > 0 || this._pullers.size > 0) {
+      this._wake();
+      return Promise.resolve();
+    }
+    var self = this;
+    return this._cancelSource().then(function () {
+      self._tryResolveClose();
+      if (self._broadcast) {
+        // 广播：订阅者归零后允许再次订阅（onListen / onCancel 按转换次数成对调用）。
+        self._stopped = false;
+        self._started = false;
+      }
+    });
   }
 
   _cancelSource() {
+    if (this._stopped) { return Promise.resolve(); }
     this._stopped = true;
     this._wake();
-    if (this._onCancel != null) {
-      var f = this._onCancel;
-      this._onCancel = null;
-      f();
+    var self = this;
+    var cleanup = Promise.resolve();
+    var it = this._iterator;
+    this._iterator = null;
+    if (it != null && typeof it.return === 'function') {
+      cleanup = (async function () {
+        try { await it.return(); } catch (e) {}
+      })();
     }
+    return cleanup.then(function () {
+      if (self._onCancel != null) {
+        var f = self._onCancel;
+        self._onCancel = null;
+        f();
+      }
+    });
   }
 
   listen(onData, opts) {
     opts = opts || {};
-    if (!this._broadcast && (this._hasListener || this._asyncIterated)) {
+    if (!this._broadcast && (this._subs.size > 0 || this._asyncIterated)) {
       throw new StateError({ message: 'Stream has already been listened to' });
     }
-    this._hasListener = true;
     var sub = new StreamSubscription(this, onData,
     typeof opts.onError === 'function' ? opts.onError : null,
     typeof opts.onDone === 'function' ? opts.onDone : null,
     opts.cancelOnError === true);
-    this._listeners.add(sub);
-    if (this._done) {
-      sub._deliver('done', undefined);
-    } else {
-      this._start();
+    this._subs.add(sub);
+    if (this._pending.length > 0) {
+      // 单订阅：把首个订阅前缓冲的事件按序交给该订阅者。
+      var buffered = this._pending;
+      this._pending = [];
+      for (var ev of buffered) { sub._enqueue(ev.type, ev.value); }
+    } else if (this._done && this._broadcast) {
+      // 广播：close 之后订阅仍会收到 done（data 已丢弃）。
+      sub._enqueue('done', undefined);
     }
+    if (this._closePendingSubs != null) { this._closePendingSubs.add(sub); }
+    this._start();
     return sub;
   }
 
+  // ---- 拉取形态（await for）----
+
   [Symbol.asyncIterator]() {
-    if (!this._broadcast && (this._hasListener || this._asyncIterated)) {
+    if (!this._broadcast && (this._subs.size > 0 || this._asyncIterated)) {
       throw new StateError({ message: 'Stream has already been listened to' });
     }
     this._asyncIterated = true;
-    this._hasListener = true;
     var self = this;
     var pull = { queue: [], waiters: [] };
-    this._pulls.add(pull);
+    if (this._pending.length > 0) {
+      pull.queue = this._pending;
+      this._pending = [];
+    }
+    this._pullers.add(pull);
     this._start();
     return {
       next: function () {
@@ -3118,86 +3166,169 @@ export class Stream {
           var ev = pull.queue.shift();
           return Promise.resolve().then(function () { return self._settle(ev); });
         }
-        if (self._done) return Promise.resolve({ done: true, value: undefined });
+        if (self._done) { return Promise.resolve({ done: true, value: undefined }); }
         return new Promise(function (resolve) {
           pull.waiters.push(function (e) {
             resolve(Promise.resolve().then(function () { return self._settle(e); }));
           });
+          self._wake();
         });
       },
       return: function () {
-        self._pulls.delete(pull);
-        return Promise.resolve({ done: true, value: undefined });
+        self._pullers.delete(pull);
+        // break / return / 抛错退出：传播取消并等待上游清理完成。
+        return self._cleanupIfIdle().then(function () {
+          return { done: true, value: undefined };
+        });
       }
     };
   }
 
-  // ---- 转换方法：新 Stream 在订阅时串行消费上游（保持惰性）----
-  map(fn) {
+  _settle(ev) {
+    if (ev.type === 'error') { throw ev.value; }
+    if (ev.type === 'done') { return { done: true, value: undefined }; }
+    return { done: false, value: ev.value };
+  }
+
+  // ---- 关闭 ----
+
+  close() {
+    if (!this._closed) {
+      this._closed = true;
+      if (this._subs.size > 0) { this._closePendingSubs = new Set(this._subs); }
+      this._emit('done');
+    }
+    if (this._closeDone) { return Future.value(); }
     var self = this;
-    return Stream.fromAsyncGenerator((async function* () {
-      for await (var v of self) { yield fn(v); }
-    })());
+    return Future.__wrap(new Promise(function (resolve) {
+      self._closeWaiters.push(resolve);
+      self._tryResolveClose();
+    }));
+  }
+
+  _onDoneDelivered(sub) {
+    if (this._closePendingSubs != null) { this._closePendingSubs.delete(sub); }
+    this._tryResolveClose();
+  }
+
+  _tryResolveClose() {
+    if (this._closeDone || !this._closed) { return; }
+    if (this._closePendingSubs != null) {
+      if (this._closePendingSubs.size === 0) { this._finishClose(); }
+      return;
+    }
+    // 关闭时没有订阅者：有未消费缓冲就等首个订阅者消费完 done；否则立即完成。
+    if (this._pending.length === 0) { this._finishClose(); }
+  }
+
+  _finishClose() {
+    this._closeDone = true;
+    var ws = this._closeWaiters;
+    this._closeWaiters = [];
+    for (var w of ws) { w(); }
+  }
+
+  // ---- 转换：订阅上游 + 转发事件（error 不终止下游）----
+
+  _forwardEach(onEach) {
+    var self = this;
+    var sub = null;
+    var ctl = new StreamController({
+      onListen: function () {
+        if (sub != null) { return; }
+        sub = self.listen(function (v) {
+          if (ctl.isClosed) { return; }
+          onEach(v, ctl);
+        }, {
+          onError: function (e) { if (!ctl.isClosed) { ctl.addError(e); } },
+          onDone: function () { sub = null; if (!ctl.isClosed) { ctl.close(); } }
+        });
+      },
+      onCancel: function () {
+        if (sub != null) { sub.cancel(); sub = null; }
+      }
+    });
+    return ctl.stream;
+  }
+
+  map(fn) {
+    return this._forwardEach(function (v, ctl) { ctl.add(fn(v)); });
   }
 
   where(fn) {
-    var self = this;
-    return Stream.fromAsyncGenerator((async function* () {
-      for await (var v of self) { if (fn(v)) yield v; }
-    })());
+    return this._forwardEach(function (v, ctl) { if (fn(v)) { ctl.add(v); } });
   }
 
   expand(fn) {
-    var self = this;
-    return Stream.fromAsyncGenerator((async function* () {
-      for await (var v of self) {
-        for (var x of fn(v)) { yield x; }
-      }
-    })());
+    return this._forwardEach(function (v, ctl) {
+      for (var x of fn(v)) { ctl.add(x); }
+    });
+  }
+
+  skip(n) {
+    var seen = 0;
+    return this._forwardEach(function (v, ctl) {
+      seen += 1;
+      if (seen > n) { ctl.add(v); }
+    });
+  }
+
+  distinct() {
+    var seen = [];
+    return this._forwardEach(function (v, ctl) {
+      if (seen.contains(v)) { return; }
+      seen.push(v);
+      ctl.add(v);
+    });
   }
 
   take(n) {
     var self = this;
-    return Stream.fromAsyncGenerator((async function* () {
-      if (n <= 0) return;
-      var i = 0;
-      for await (var v of self) {
-        yield v;
-        i += 1;
-        if (i >= n) return;
-      }
-    })());
+    var sub = null;
+    var count = 0;
+    var ctl = new StreamController({
+      onListen: function () {
+        if (n <= 0) { ctl.close(); return; }
+        sub = self.listen(function (v) {
+          ctl.add(v);
+          count += 1;
+          if (count >= n) {
+            if (sub != null) { sub.cancel(); sub = null; }
+            ctl.close();
+          }
+        }, {
+          onError: function (e) { if (!ctl.isClosed) { ctl.addError(e); } },
+          onDone: function () { sub = null; ctl.close(); }
+        });
+      },
+      onCancel: function () { if (sub != null) { sub.cancel(); sub = null; } }
+    });
+    return ctl.stream;
   }
 
-  skip(n) {
-    var self = this;
-    return Stream.fromAsyncGenerator((async function* () {
-      var i = 0;
-      for await (var v of self) {
-        if (i < n) { i += 1; continue; }
-        yield v;
-      }
-    })());
-  }
-
-  distinct() {
-    var self = this;
-    return Stream.fromAsyncGenerator((async function* () {
-      var seen = [];
-      for await (var v of self) {
-        if (seen.contains(v)) continue;
-        seen.push(v);
-        yield v;
-      }
-    })());
-  }
-
-  // 串行等待：禁止 Promise.all 并行（与 Dart asyncMap 一致）。
+  // 串行等待：逐个 await，禁止 Promise.all 并行；error / done 照常转发。
   asyncMap(fn) {
     var self = this;
-    return Stream.fromAsyncGenerator((async function* () {
-      for await (var v of self) { yield await fn(v); }
-    })());
+    var sub = null;
+    var chain = Promise.resolve();
+    var ctl = new StreamController({
+      onListen: function () {
+        if (sub != null) { return; }
+        sub = self.listen(function (v) {
+          chain = chain.then(function () { return fn(v); }).then(function (r) {
+            if (!ctl.isClosed) { ctl.add(r); }
+          }, function (e) { if (!ctl.isClosed) { ctl.addError(e); } });
+        }, {
+          onError: function (e) { if (!ctl.isClosed) { ctl.addError(e); } },
+          onDone: function () {
+            sub = null;
+            chain.then(function () { if (!ctl.isClosed) { ctl.close(); } });
+          }
+        });
+      },
+      onCancel: function () { if (sub != null) { sub.cancel(); sub = null; } }
+    });
+    return ctl.stream;
   }
 
   asBroadcastStream() {
@@ -3206,76 +3337,83 @@ export class Stream {
     var ctl = new StreamController({
       broadcast: true,
       onListen: function () {
+        if (sub != null) { return; }
         sub = self.listen(function (v) { ctl.add(v); }, {
-          onError: function (e) { ctl.addError(e); },
-          onDone: function () { ctl.close(); }
+          onError: function (e) { if (!ctl.isClosed) { ctl.addError(e); } },
+          onDone: function () { sub = null; ctl.close(); }
         });
       },
-      onCancel: function () { if (sub != null) { sub.cancel(); } }
+      onCancel: function () {
+        if (sub != null) { sub.cancel(); sub = null; }
+      }
     });
     return ctl.stream;
   }
 
   pipe(dest) {
     this.listen(function (v) { dest.add(v); }, {
-      onError: function (e) { if (dest.addError != null) dest.addError(e); },
+      onError: function (e) { if (dest.addError != null) { dest.addError(e); } },
       onDone: function () { dest.close(); }
     });
     return dest.stream;
   }
 
-  // ---- 终止操作：返回 Future（Promise 包装）----
+  // ---- 终止操作：返回 Future ----
+
   toList() {
-    var self = this;
-    return Future.__wrap((async function () {
-      var out = [];
-      for await (var v of self) { out.push(v); }
-      return out;
-    })());
+    var out = [];
+    return this._consume(function (v) { out.push(v); }).then(function () { return out; });
+  }
+
+  toSet() {
+    var out = new Set();
+    return this._consume(function (v) { out.add(v); }).then(function () { return out; });
   }
 
   get first() {
     var self = this;
     return Future.__wrap(new Promise(function (resolve, reject) {
-      var sub = self.listen(function (v) { sub.cancel(); resolve(v); }, {
+      var sub = self.listen(function (v) {
+        sub.cancel();
+        resolve(v);
+      }, {
         onError: function (e) { reject(e); },
-        onDone: function () { reject(new StateError({ message: 'No element' })); }
+        onDone: function () { reject(new StateError({ message: 'No element' })); },
+        cancelOnError: true
       });
     }));
   }
 
   get last() {
-    return this.toList().then(function (l) {
-      if (l.length === 0) throw new StateError({ message: 'No element' });
-      return l[l.length - 1];
+    var lastValue = null;
+    var seen = false;
+    return this._consume(function (v) { lastValue = v; seen = true; }).then(function () {
+      if (!seen) { throw new StateError({ message: 'No element' }); }
+      return lastValue;
     });
   }
 
-  get length() {
-    return this.toList().then(function (l) { return l.length; });
-  }
+  get length() { return this.toList().then(function (l) { return l.length; }); }
 
-  get isEmpty() {
-    return this.toList().then(function (l) { return l.length === 0; });
-  }
+  get isEmpty() { return this.toList().then(function (l) { return l.length === 0; }); }
 
-  get isNotEmpty() {
-    return this.toList().then(function (l) { return l.length > 0; });
-  }
+  get isNotEmpty() { return this.toList().then(function (l) { return l.length > 0; }); }
 
-  toSet() {
+  _consume(onValue) {
     var self = this;
-    return Future.__wrap((async function () {
-      var out = new Set();
-      for await (var v of self) { out.add(v); }
-      return out;
-    })());
+    return Future.__wrap(new Promise(function (resolve, reject) {
+      self.listen(function (v) { onValue(v); }, {
+        onError: function (e) { reject(e); },
+        onDone: function () { resolve(); },
+        cancelOnError: true
+      });
+    }));
   }
 
-  // ---- 静态工厂 / async* 包装入口 ----
-  // `async*` 方法 / 闭包统一经这里包装，保留惰性（首次订阅才启动生成器）。
+  // ---- 静态工厂 ----
+
   static fromAsyncGenerator(gen) {
-    return new Stream({ gen: gen });
+    return new Stream({ source: function () { return gen; } });
   }
 
   static value(v) {
@@ -3304,15 +3442,18 @@ export class Stream {
     var ms = __durationMs(duration);
     if (ms == null || ms < 0) { ms = 0; }
     var stopped = false;
-    var s = Stream.fromAsyncGenerator((async function* () {
-      while (!stopped) {
-        await new Promise(function (r) { setTimeout(r, ms); });
-        if (stopped) { return; }
-        yield typeof computation === 'function' ? computation() : 0;
-      }
-    })());
-    s._onCancel = function () { stopped = true; };
-    return s;
+    return new Stream({
+      source: function () {
+        return (async function* () {
+          while (!stopped) {
+            await new Promise(function (r) { setTimeout(r, ms); });
+            if (stopped) { return; }
+            yield typeof computation === 'function' ? computation() : 0;
+          }
+        })();
+      },
+      onCancel: function () { stopped = true; }
+    });
   }
 }
 
@@ -3324,65 +3465,67 @@ export class StreamSubscription {
     this._onDone = onDone;
     this._cancelOnError = cancelOnError === true;
     this._paused = false;
-    this._buffer = [];
+    // data / error / done 统一走一条队列：暂停期间全部缓冲，恢复后按序补发。
+    this._queue = [];
+    this._draining = false;
     this._cancelled = false;
     this._doneDelivered = false;
   }
 
   get isPaused() { return this._paused; }
 
-  pause() { this._paused = true; }
+  pause() {
+    this._paused = true;
+  }
 
   resume() {
-    if (!this._paused) return;
+    if (!this._paused) { return; }
     this._paused = false;
-    // 先补发暂停期间缓冲的事件，再唤醒上游生成器（保持事件顺序）。
-    while (!this._paused && this._buffer.length) {
-      var ev = this._buffer.shift();
-      this._deliverNow(ev.type, ev.value);
-    }
+    this._drain();
+    // 恢复接收 → 允许上游继续拉取（背压）。
     this._stream._wake();
   }
 
   cancel() {
+    if (this._cancelled) { return Promise.resolve(); }
     this._cancelled = true;
-    this._stream._listeners.delete(this);
-    if (this._stream._listeners.size === 0 && this._stream._pulls.size === 0) {
-      this._stream._cancelSource();
-    } else {
-      this._stream._wake();
+    this._queue.length = 0;
+    this._stream._subs.delete(this);
+    return this._stream._cleanupIfIdle();
+  }
+
+  _enqueue(type, value) {
+    if (this._cancelled) { return; }
+    this._queue.push({ type: type, value: value });
+    this._drain();
+  }
+
+  _drain() {
+    if (this._draining) { return; }
+    this._draining = true;
+    while (!this._paused && !this._cancelled && this._queue.length > 0) {
+      var ev = this._queue.shift();
+      this._deliver(ev.type, ev.value);
     }
-    return Promise.resolve();
+    this._draining = false;
   }
 
   _deliver(type, value) {
-    if (this._cancelled) return;
-    if (this._paused) {
-      // 单订阅：缓冲事件；广播：按 Dart 语义直接丢弃 data（错误仍上报）。
-      if (this._stream._broadcast) {
-        if (type === 'error') { this._deliverNow(type, value); }
-        return;
-      }
-      this._buffer.push({ type: type, value: value });
-      return;
-    }
-    this._deliverNow(type, value);
-  }
-
-  _deliverNow(type, value) {
     if (type === 'data') {
       if (typeof this._onData === 'function') { this._onData(value); }
-    } else if (type === 'error') {
-      if (typeof this._onError === 'function') {
-        this._onError(value);
-      } else if (this._cancelOnError) {
-        this.cancel();
-      }
-    } else if (type === 'done') {
-      if (this._doneDelivered) return;
-      this._doneDelivered = true;
-      if (typeof this._onDone === 'function') { this._onDone(); }
+      return;
     }
+    if (type === 'error') {
+      if (typeof this._onError === 'function') { this._onError(value); }
+      // Dart 语义：cancelOnError 与是否提供 onError 无关，交付后即取消。
+      if (this._cancelOnError) { this.cancel(); }
+      return;
+    }
+    // done：每个订阅只交付一次。
+    if (this._doneDelivered) { return; }
+    this._doneDelivered = true;
+    if (typeof this._onDone === 'function') { this._onDone(); }
+    this._stream._onDoneDelivered(this);
   }
 }
 
@@ -3392,7 +3535,7 @@ export class StreamController {
     this._closed = false;
     this.stream = new Stream({
       broadcast: props.broadcast === true,
-      onStart: typeof props.onListen === 'function' ? props.onListen : null,
+      onListen: typeof props.onListen === 'function' ? props.onListen : null,
       onCancel: typeof props.onCancel === 'function' ? props.onCancel : null
     });
   }
@@ -3402,25 +3545,21 @@ export class StreamController {
   get hasListener() { return this.stream._hasListener; }
 
   add(value) {
-    if (this._closed) throw new StateError({ message: 'Cannot add event after closing' });
+    if (this._closed) { throw new StateError({ message: 'Cannot add event after closing' }); }
     this.stream._emit('data', value);
   }
 
   addError(error) {
-    if (this._closed) throw new StateError({ message: 'Cannot add event after closing' });
+    if (this._closed) { throw new StateError({ message: 'Cannot add event after closing' }); }
     this.stream._emit('error', error);
   }
 
   close() {
-    if (!this._closed) {
-      this._closed = true;
-      this.stream._emit('done');
-    }
-    return Future.value();
+    if (this._closed) { return Future.value(); }
+    this._closed = true;
+    return this.stream.close();
   }
 
-  // `StreamController.broadcast({onListen, onCancel})`：产物按命名构造发射
-  // `new StreamController.broadcast({...})`；构造函数返回对象即生效。
   static broadcast(props) {
     var opts = {};
     if (props != null) { for (var k in props) { opts[k] = props[k]; } }

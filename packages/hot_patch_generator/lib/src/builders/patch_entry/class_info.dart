@@ -30,6 +30,24 @@ class ClassField {
   });
 }
 
+/// 扩展成员的种类：显式分派要据此选形态
+/// （方法 `E.m.call(x, …)` / getter `E.g.get.call(x)` / setter `E.g.set.call(x, v)`）。
+enum ExtensionMemberKind { method, getter, setter }
+
+/// 一个可见具名 extension 的分派信息（声明文件 + 成员表）。
+///
+/// 显式调用 `E(x).m()` 必须按**扩展身份**分派（Dart 的第三条规则）；原型只承接
+/// 隐式调用（实例成员优先 + 原型链特异性）。
+class ExtensionScope {
+  const ExtensionScope(this.sourceFile, this.members);
+
+  /// 声明该扩展的源文件（跨文件时据此 import 扩展命名空间）。
+  final String sourceFile;
+
+  /// 实例成员名 → 种类（不含 static / 运算符）。
+  final Map<String, ExtensionMemberKind> members;
+}
+
 /// 类的实例方法 / getter。
 ///
 /// **方法体翻译只有一条路径**：收集阶段（analyze_dart_class）统一翻译所有

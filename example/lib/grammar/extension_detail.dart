@@ -3,6 +3,7 @@ import 'package:hot_module_base/hot_module_base.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import 'extension/e_string.dart';
+import 'extension/e_tag.dart';
 
 /// extension 语法 demo：
 ///   - 跨包 extension（`StringLogExtension.logText`）与项目内多文件 extension；
@@ -40,6 +41,20 @@ class _ExtensionDetailState extends State<ExtensionDetail> {
     setState(() {});
   }
 
+  /// 成对 getter/setter + 生成器成员：扩展成员与类方法共用同一条发射规则。
+  String _accessorGeneratorText() {
+    final counter = Counter();
+    counter.level = 3; // setter
+    final steps = counter.steps(3).toList(); // sync* 生成器
+    return '扩展 getter/setter：level=${counter.level} / value=${counter.value} '
+        '/ 生成器=${steps.join(',')}';
+  }
+
+  /// 同目标同名扩展的**显式**调用：按扩展身份分派。
+  String _identityText() =>
+      '显式分派：TagA=${TagA('x').tag()} / TagB=${TagB('x').tag()} '
+      '/ 自身调用=${TagA('y').loud()}';
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -56,6 +71,10 @@ class _ExtensionDetailState extends State<ExtensionDetail> {
         ElevatedButton(onPressed: _increment, child: const Text('add')),
         const SizedBox(height: 12),
         Text(_extensionOperatorText(), style: const TextStyle(fontSize: 13)),
+        const SizedBox(height: 8),
+        Text(_accessorGeneratorText(), style: const TextStyle(fontSize: 13)),
+        const SizedBox(height: 8),
+        Text(_identityText(), style: const TextStyle(fontSize: 13)),
       ],
     );
   }
@@ -78,7 +97,17 @@ extension VectorOps on Vector {
   int operator %(int mod) => this.x % mod;
 }
 
-/// 显式调用 `ShoutEx(x).shout()`：调用点改写成 `x.shout()`（成员在原型上）。
+/// 与 `TagB` 同目标同名：显式调用必须按扩展身份分派（`TagA(x).tag()` ≠ `TagB(x).tag()`）。
+extension TagA on String {
+  String tag() => 'A';
+
+  /// 调用同名成员必须显式写出扩展（`TagA(this)`）：Dart 里 `this.tag()` 在
+  /// 两个扩展都适用时是歧义编译错误，产物按同一口径处理（不替开发者选一个）。
+  String loud() => '${TagA(this).tag()}!';
+}
+
+/// 显式调用 `ShoutEx(x).shout()`：按扩展身份分派（`ShoutEx.m.call(x)`），
+/// 不走原型抢注；同名成员由两个扩展提供时也只有身份能区分。
 extension ShoutEx on String {
   String shout() => '${this}!';
 }
@@ -86,4 +115,26 @@ extension ShoutEx on String {
 /// 可空目标：JS 侧没有可挂载的原型，构建期应出声跳过（不产出注册）。
 extension NullableTag on String? {
   String tagText() => this == null ? 'null' : '有值';
+}
+
+// ---------------------------------------------------------------------------
+// 同名 getter / setter + 生成器成员
+// ---------------------------------------------------------------------------
+
+class Counter {
+  int value = 0;
+}
+
+extension CounterLevel on Counter {
+  /// 与下面的 setter 同名：产物里必须合并成同一个 `{ get, set }` 描述符。
+  int get level => this.value ~/ 10;
+
+  set level(int v) => this.value = v * 10;
+
+  /// `sync*` 成员：与类方法同一发射规则（`function*`）。
+  Iterable<int> steps(int count) sync* {
+    for (var i = 0; i < count; i++) {
+      yield this.value + i;
+    }
+  }
 }

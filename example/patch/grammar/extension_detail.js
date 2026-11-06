@@ -4,7 +4,15 @@
 
 import { IntExtension } from '../packages/hot_module_base/src/int_extension.js';
 import { TestString1 } from 'extension/e_string.js';
+import { TagB } from 'extension/e_tag.js';
 import { Center, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
+
+// 模型 Counter
+export class Counter {
+  constructor() {
+    this.value = 0;
+  }
+}
 
 // 模型 Vector
 export class Vector {
@@ -32,13 +40,22 @@ export class ExtensionDetail extends StatefulWidget {
     const sum = a.__op$add(b);
     const neg = a.__op$neg();
     const rest = a.__op$mod(4);
-    const shout = "explicit".shout();
+    const shout = ShoutEx.shout.call("explicit");
     return "extension operator：sum=" + sum.x + " / neg=" + neg.x + " / mod=" + rest + " " + "/ 显式调用=" + shout;
   }
   _increment() {
     this._count = this._count.increment();
     "test".log1();
     this.setState(() => {});
+  }
+  _accessorGeneratorText() {
+    const counter = new Counter({});
+    counter.level = 3;
+    const steps = counter.steps(3).toList();
+    return "扩展 getter/setter：level=" + counter.level + " / value=" + counter.value + " " + "/ 生成器=" + steps.join(",");
+  }
+  _identityText() {
+    return "显式分派：TagA=" + TagA.tag.call("x") + " / TagB=" + TagB.tag.call("x") + " " + "/ 自身调用=" + TagA.loud.call("y");
   }
   build(context) {
     return new Column({
@@ -87,6 +104,24 @@ export class ExtensionDetail extends StatefulWidget {
             "fontSize": 13
           }))),
           "data": this._extensionOperatorText()
+        }),
+        (this.__k1 || (this.__k1 = new SizedBox({
+          "height": 8
+        }))),
+        new Text({
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
+            "fontSize": 13
+          }))),
+          "data": this._accessorGeneratorText()
+        }),
+        (this.__k1 || (this.__k1 = new SizedBox({
+          "height": 8
+        }))),
+        new Text({
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
+            "fontSize": 13
+          }))),
+          "data": this._identityText()
         })
       ]
     });
@@ -113,6 +148,19 @@ export const VectorOps = registerExtension(Vector, (function () {
   };
 })(), { id: "lib/grammar/extension_detail.dart#VectorOps" });
 
+// 扩展 TagA
+export const TagA = registerExtension("String", (function () {
+  "use strict";
+  return {
+    tag: function () {
+      return "A";
+    },
+    loud: function () {
+      return TagA.tag.call(this) + "!";
+    },
+  };
+})(), { id: "lib/grammar/extension_detail.dart#TagA" });
+
 // 扩展 ShoutEx
 export const ShoutEx = registerExtension("String", (function () {
   "use strict";
@@ -122,4 +170,21 @@ export const ShoutEx = registerExtension("String", (function () {
     },
   };
 })(), { id: "lib/grammar/extension_detail.dart#ShoutEx" });
+
+// 扩展 CounterLevel
+export const CounterLevel = registerExtension(Counter, (function () {
+  "use strict";
+  return {
+    level: { get: function () {
+        return Math.trunc(this.value / 10);
+      }, set: function (v) {
+        this.value = (v * 10);
+      } },
+    steps: function* (count) {
+      for (let i = 0; (i < count); (i++)) {
+        yield (this.value + i);
+      }
+    },
+  };
+})(), { id: "lib/grammar/extension_detail.dart#CounterLevel" });
 

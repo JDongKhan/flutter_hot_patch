@@ -99,17 +99,32 @@ const String jsExtensionJsSource = r'''
     if (id) __uninstallExtension(id);
     var meta = __extensionMeta(proto);
     var record = { proto: proto, names: [] };
+    // 返回值 = 扩展命名空间：静态成员 + 实例成员实现（显式调用
+    // `E.m.call(x, …)` / `E.g.get.call(x)` 从这里取函数，与原型共用同一份实现）。
+    var namespace = {};
+    for (var s in statics) {
+      if (Object.prototype.hasOwnProperty.call(statics, s)) { namespace[s] = statics[s]; }
+    }
     for (var name in members) {
       if (!Object.prototype.hasOwnProperty.call(members, name)) continue;
-      // 目标上已有同名成员（含继承）：Dart 里显式成员优先于扩展，静默跳过。
-      if (name in proto) {
-        if (id && meta.owners[name] && meta.owners[name] !== id) {
-          __warn('jsui: extension member conflict: ' + name +
-            ' already provided by ' + meta.owners[name] +
-            ' (later registration ignored)');
-        }
+      namespace[name] = members[name];
+      // 冲突判定必须在「目标上已有同名成员」之前：那个成员可能正是**另一个扩展**
+      // 装上去的（owners 里有登记），不属于「实例成员优先」。
+      // 同一目标上的同名成员由两个扩展提供：Dart 里隐式调用是歧义编译错误，
+      // 因此不安装任何一方（把先注册的一方也卸掉），行为与注册顺序无关；
+      // 显式调用仍按扩展身份走命名空间，不受影响。
+      var prev = meta.owners[name];
+      if (prev === '@conflict') continue;
+      if (prev != null && prev !== id) {
+        try { delete proto[name]; } catch (e) {}
+        meta.owners[name] = '@conflict';
+        __warn('jsui: extension member conflict: ' + name + ' on the same target'
+          + ' is declared by both ' + prev + ' and ' + id
+          + '; implicit dispatch is disabled for it (use E(x).' + name + '())');
         continue;
       }
+      // 目标上已有同名成员（含继承）：Dart 里显式成员优先于扩展，静默跳过。
+      if (name in proto) continue;
       var member = members[name];
       if (typeof member === 'function') {
         Object.defineProperty(proto, name, {
@@ -131,6 +146,6 @@ const String jsExtensionJsSource = r'''
       record.names.push(name);
     }
     if (id) __extensionRecords[id] = record;
-    return statics;
+    return namespace;
   };
 ''';

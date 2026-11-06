@@ -39,6 +39,7 @@ export class BannerFloorVm extends ChangeNotifier {
     this.notifyListeners();
   }
   async refresh() {
+
   }
   async setCity(newCity) {
     if ((newCity === this.city)) {

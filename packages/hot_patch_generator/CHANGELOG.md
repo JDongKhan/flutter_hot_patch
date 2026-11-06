@@ -1,3 +1,13 @@
+## 0.12.0
+
+**语义修复（extension 分派 / Stream 状态机）；产物形态为加法，无破坏性协议变更。**
+
+- **extension 分派改为三层模型**：隐式调用仍走原型（实例成员优先由 `name in proto` 承接、`on` 类型特异性由原型链承接）；显式 `E(x).m(a)` 改为 `E.m.call(x, a)`、`E(x).g` 改为 `E.g.get.call(x)`（`_explicitExtensionCallJs` / `_explicitExtensionGetterJs`，`extensionScopesInScope` 提供「扩展名 → 声明文件 + 成员表」）。同目标同名成员不再「先注册者胜」：两个扩展都不安装该成员并运行时告警（Dart 里隐式调用本是歧义编译错误），显式调用不受影响。`registerExtension` 返回值从 statics 改为「statics + 实例成员实现」的命名空间对象（与原型共用同一份函数）。
+- **extension 成员发射与类方法合并**：新增 `translator/js_member.dart`（`jsMethodValue` / `jsClassMember` / `jsClassAccessor` / `jsLiteralAccessor` / `jsAccessorValue`），类与 extension 共用；`sync*` / `async*` 成员不再产出非法 JS（此前 extension 生成器成员缺少 `*`，严格模式 SyntaxError 阻断整模块加载）；同名 `get` / `set` 合并成一个 `{ get, set }` 描述符（此前按名字各写一项，后者覆盖前者）。
+- **Stream 重写为显式事件 + 订阅状态机**（`stream_js.dart`）：单订阅首个订阅前的 data/error/done 缓冲；暂停期间 data/error/done 均进订阅者队列（广播同样缓冲，与 Dart 实测一致）；`close()` 的 Future 等所有订阅者处理完 done（暂停时等待 resume，广播无订阅者/已取消立即完成）；取消传播到上游并 await `iterator.return()`（`break` / `take(1)` / 异常退出 / `cancel()` 同一路径）；`cancelOnError` 与是否提供 `onError` 无关；转换方法改为「订阅上游 + 转发事件」，一次 error 不再终止下游流。删除旧的 `for await` 转发与临时背压计数。
+- **行为对照基线**：新增 `example/tool/behavior_probe/stream_probe.dart` 与 `stream_probe.mjs`（同一组 A–F 用例，Dart 与 node 输出必须逐字一致）；`example/test/widget_test.dart` 从空文件改为最小冒烟测试（此前缺少 `main()` 使 `flutter test` 直接失败）。
+- example：`extension_detail.dart` 增加同名 getter/setter、`sync*` 成员、同目标同名扩展（`TagA` / `TagB`）的显式分派用例。
+
 ## 0.11.0
 
 **破坏性变更：三方库 JS 不再由生成器生成。** provider 的 `patch/provider.js` 改为宿主维护的 `js/provider.js`，构建时拷贝到 `patch/packages/provider.js`；业务产物 import 路径随之变化，旧补丁包不兼容。

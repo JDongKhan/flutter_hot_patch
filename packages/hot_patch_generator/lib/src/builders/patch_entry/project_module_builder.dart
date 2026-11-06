@@ -174,7 +174,7 @@ String renderProjectPackageFile(
   final table = buildClassTable(unit, sourceFile);
   final consts = buildTopLevelConstResolver(unit, sourceFile, table);
   final extensionOperators = extensionOperatorsInScope(unit, sourceFile);
-  final extensionNames = extensionNamesInScope(unit, sourceFile);
+  final extensionNames = extensionScopesInScope(unit, sourceFile);
   final localNames = <String>{
     for (final d in unit.declarations.whereType<ClassDeclaration>())
       d.name.lexeme,

@@ -436,9 +436,9 @@ class FieldScope {
   /// （`__op$add` …）。实例运算符（类自身）优先级更高，见 `_operatorOwnerOf`。
   final Map<String, Map<String, String>> extensionOperators;
 
-  /// 本文件可见的**具名 extension**：显式调用 `E(x).m(...)` 的绑定判据。
-  /// 成员名 / 目标类型都来自源码声明，不按名字白名单判断。
-  final Set<String> extensionNames;
+  /// 本文件可见的**具名 extension**：显式调用 `E(x).m(...)` 的分派依据
+  /// （声明文件 + 成员表，来自源码声明，不按名字白名单判断）。
+  final Map<String, ExtensionScope> extensionNames;
 
   /// 局部变量别名：`final list = _list;` → `list → this._list`。
   /// 抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用被捕获的
