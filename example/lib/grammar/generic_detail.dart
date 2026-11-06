@@ -68,6 +68,26 @@ class Pair<K, V> {
 }
 
 // ---------------------------------------------------------------------------
+// 泛型 extension：目标类型带类型参数（`on List<T>` / `on TypeCodec<T>`）
+// ---------------------------------------------------------------------------
+
+/// `List<T>` 上的扩展：成员注册在擦除后的目标原型（`Array`）上，因此对所有
+/// List 实例可见；成员体只把 `T` 用在**类型位置**（返回类型），不读运行时类型名。
+///
+/// 目标类型的成员要显式写 `this.`（`this.isEmpty` / `this.last`）：省略形式的
+/// 裸名在翻译层无法与顶层函数区分，构建期会出声跳过该片段。
+extension ListTail<T> on List<T> {
+  T? get tailOrNull => this.isEmpty ? null : this.last;
+
+  String tailText() => this.isEmpty ? '(空)' : '${this.last}';
+}
+
+/// 泛型类目标上的扩展：同样注册在 `TypeCodec` 原型上。
+extension TypeCodecLabel<T> on TypeCodec<T> {
+  String label(String prefix) => '$prefix:${this.getType()}';
+}
+
+// ---------------------------------------------------------------------------
 // 页面
 // ---------------------------------------------------------------------------
 
@@ -126,6 +146,20 @@ class _GenericDetailState extends State<GenericDetail> {
         const Text(
           '产物形态：new TypeCodec({typeArguments: {T: "String"}})；'
           '方法体 T → this.__ta["T"]，T == String → this.__ta["T"] == "String"。',
+          style: TextStyle(fontSize: 12, color: Colors.black45),
+        ),
+
+        const SizedBox(height: 16),
+        const Text('泛型 extension', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Text('List<int>[1, 2, 3].tailOrNull → ${const [1, 2, 3].tailOrNull}'),
+        Text('List<String>[].tailOrNull → ${const <String>[].tailOrNull ?? 'null'}'),
+        Text('List<String>["a", "b"].tailText() → ${const ['a', 'b'].tailText()}'),
+        Text('TypeCodec<int>().label("type") → ${intCodec.label('type')}'),
+        const SizedBox(height: 6),
+        const Text(
+          '泛型 extension 注册在擦除后的目标原型上（List<T> → Array），'
+          'T 只在返回类型等类型位置可用；成员体里按值使用 T（T.toString()）无法还原。',
           style: TextStyle(fontSize: 12, color: Colors.black45),
         ),
 

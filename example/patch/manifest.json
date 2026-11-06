@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.11.0",
-  "buildTime": "2026-11-06T13:55:52.772299",
+  "buildTime": "2026-11-06T14:10:05.589752",
   "resources": {
     "flutter.js": "481f161a0549d0ceeba9a7a4de38406deeb8d4a3f1797ef61430f5625f0cfa6d",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
@@ -31,7 +31,7 @@
     "grammar/expression_detail.js": "e557b981a4d843bfec754ea10de0f3f680ac9375b022cc83331de5274bffa757",
     "grammar/mixin_detail.js": "e19595b3609f5cc8dafbd5ca5ceba86c48e52ad4824ac4867bf0ed2ed91a8c36",
     "grammar/extension_detail.js": "0ed8f61e5c627166309d45dae192dbd941d9519e567f32ccda760d11a77f533d",
-    "grammar/generic_detail.js": "29e0b4f844e1c9f57d826076d0b1d6807e2303bea837288d46682380aba6894c",
+    "grammar/generic_detail.js": "6f79c5942af0a0949fc54911ff4bf1ea2aacfae8345288109930bbb132019226",
     "grammar/array_detail.js": "fbf9cf7fba0d453163a8a24b9659fbaa451d6651da455dcc70037801741d5257",
     "grammar/async_detail.js": "30144327c1087ab8fcfe87b28e0f1bb2d89e59a10cabd2dff6abe0563760bb23",
     "grammar/enum_detail.js": "6149b51891d0950a032e7bfe709462f2b0e18664f64fb49f2e76d438fd0fca4d",

@@ -6,21 +6,6 @@ import { CounterVm } from '../model/counter_vm.js';
 import { ArgumentError, Builder, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatefulWidget, Text, TextStyle, double, int, num } from '../flutter.js';
 import { ChangeNotifierProvider } from '../packages/provider.js';
 
-// 模型 Pair
-export class Pair {
-  constructor(args) {
-    this.__applyProps(args);
-  }
-  __applyProps(args) {
-    this.key = (args && args.key !== undefined) ? args.key : null;
-    this.value = (args && args.value !== undefined) ? args.value : null;
-    this.__ta = (args && args.typeArguments) || {};
-  }
-  describe() {
-    return this.key + " → " + this.value;
-  }
-}
-
 // 模型 TypeCodec
 export class TypeCodec {
   constructor(args) {
@@ -46,6 +31,21 @@ export class TypeCodec {
   }
   getEType(__ta) {
     return (((__ta && __ta.typeArguments) || {})["E"]).toString();
+  }
+}
+
+// 模型 Pair
+export class Pair {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.key = (args && args.key !== undefined) ? args.key : null;
+    this.value = (args && args.value !== undefined) ? args.value : null;
+    this.__ta = (args && args.typeArguments) || {};
+  }
+  describe() {
+    return this.key + " → " + this.value;
   }
 }
 
@@ -151,6 +151,40 @@ export class GenericDetail extends StatefulWidget {
           "height": 16
         }))),
         (this.__k7 || (this.__k7 = new Text({
+          "data": "泛型 extension",
+          "style": new TextStyle({
+            "fontWeight": FontWeight.bold
+          })
+        }))),
+        (this.__k5 || (this.__k5 = new SizedBox({
+          "height": 6
+        }))),
+        new Text({
+          "data": "List<int>[1, 2, 3].tailOrNull → " + [1, 2, 3].tailOrNull
+        }),
+        new Text({
+          "data": "List<String>[].tailOrNull → " + ([].tailOrNull ?? "null")
+        }),
+        new Text({
+          "data": "List<String>[\"a\", \"b\"].tailText() → " + ["a", "b"].tailText()
+        }),
+        new Text({
+          "data": "TypeCodec<int>().label(\"type\") → " + intCodec.label("type")
+        }),
+        (this.__k5 || (this.__k5 = new SizedBox({
+          "height": 6
+        }))),
+        (this.__k8 || (this.__k8 = new Text({
+          "data": "泛型 extension 注册在擦除后的目标原型上（List<T> → Array），" + "T 只在返回类型等类型位置可用；成员体里按值使用 T（T.toString()）无法还原。",
+          "style": new TextStyle({
+            "fontSize": 12,
+            "color": Colors.black45
+          })
+        }))),
+        (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 16
+        }))),
+        (this.__k9 || (this.__k9 = new Text({
           "data": "方法泛型",
           "style": new TextStyle({
             "fontWeight": FontWeight.bold
@@ -159,7 +193,7 @@ export class GenericDetail extends StatefulWidget {
         (this.__k5 || (this.__k5 = new SizedBox({
           "height": 6
         }))),
-        (this.__k8 || (this.__k8 = new Text({
+        (this.__k10 || (this.__k10 = new Text({
           "data": "context.watch<T>() / context.read<T>()：零位置实参的泛型方法，" + "T 并入调用尾参对象，运行时按类型名定位作用域。",
           "style": new TextStyle({
             "fontSize": 12,
@@ -178,7 +212,7 @@ export class GenericDetail extends StatefulWidget {
                 "crossAxisAlignment": CrossAxisAlignment.stretch,
                 "children": [
                   new Text({
-                    "style": (this.__k9 || (this.__k9 = new TextStyle({
+                    "style": (this.__k11 || (this.__k11 = new TextStyle({
                       "color": Colors.deepOrange,
                       "fontSize": 16,
                       "fontWeight": FontWeight.bold
@@ -192,16 +226,16 @@ export class GenericDetail extends StatefulWidget {
                     "children": [
                       new ElevatedButton({
                         "onPressed": (...__a) => model.inc(...__a),
-                        "child": (this.__k10 || (this.__k10 = new Text({
+                        "child": (this.__k12 || (this.__k12 = new Text({
                           "data": "+1"
                         })))
                       }),
-                      (this.__k11 || (this.__k11 = new SizedBox({
+                      (this.__k13 || (this.__k13 = new SizedBox({
                         "width": 12
                       }))),
                       new ElevatedButton({
                         "onPressed": () => { return this._snapshot(context.read({ typeArguments: {"T": "CounterVm"} })); },
-                        "child": (this.__k12 || (this.__k12 = new Text({
+                        "child": (this.__k14 || (this.__k14 = new Text({
                           "data": "read 快照"
                         })))
                       })
@@ -223,4 +257,27 @@ export class GenericDetail extends StatefulWidget {
     });
   }
 }
+
+// 扩展 ListTail
+export const ListTail = registerExtension("List", (function () {
+  "use strict";
+  return {
+    tailOrNull: { get: function () {
+        return (this.isEmpty ? null : this.last);
+      } },
+    tailText: function () {
+      return (this.isEmpty ? "(空)" : this.last);
+    },
+  };
+})(), { id: "lib/grammar/generic_detail.dart#ListTail" });
+
+// 扩展 TypeCodecLabel
+export const TypeCodecLabel = registerExtension(TypeCodec, (function () {
+  "use strict";
+  return {
+    label: function (prefix) {
+      return prefix + ":" + this.getType();
+    },
+  };
+})(), { id: "lib/grammar/generic_detail.dart#TypeCodecLabel" });
 

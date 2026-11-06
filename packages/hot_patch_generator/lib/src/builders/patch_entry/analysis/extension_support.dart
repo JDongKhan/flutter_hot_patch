@@ -321,6 +321,21 @@ class _IdentifierCollector extends RecursiveAstVisitor<void> {
   }
 }
 
+/// 成员体里把类型参数当**值**用的位置（`T.toString()` / `T == int` / `as T` 的
+/// 表达式侧）。类型注解走 `NamedType`（名字是 Token），不会命中这里。
+class _TypeParamValueUse extends RecursiveAstVisitor<void> {
+  _TypeParamValueUse(this.names);
+
+  final Set<String> names;
+  final Set<String> found = {};
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    if (names.contains(node.name)) found.add(node.name);
+    super.visitSimpleIdentifier(node);
+  }
+}
+
 /// 翻译一个 extension → [ExtensionInfo]；构建期不成立的声明返回 null（已告警）。
 ///
 /// [ownProduct]：本产物的身份（`patch/a/b.js`），用于判断目标类是否就在**同
@@ -560,6 +575,33 @@ ExtensionInfo? translateExtension(
     methods: memberMethods,
     isComponent: false,
   );
+
+  // 泛型扩展（`extension E<T> on List<T>`）：成员注册在**擦除后的目标原型**
+  // 上（`List<T>` → `Array`），签名里的类型位置不受影响；但成员体里把 `T`
+  // 当值用（`T.toString()` / `T == int`）时，接收者没有类型元信息可读——
+  // 原型方案下无法还原，出声说明而不是让产物里留一个未定义名。
+  final extTypeParams = [
+    for (final tp
+        in decl.typeParameters?.typeParameters ?? const <TypeParameter>[])
+      tp.name.lexeme,
+  ];
+  if (extTypeParams.isNotEmpty) {
+    final usedInBody = <String>{};
+    for (final member in decl.members) {
+      if (member is! MethodDeclaration) continue;
+      final v = _TypeParamValueUse({...extTypeParams});
+      member.body.accept(v);
+      usedInBody.addAll(v.found);
+    }
+    if (usedInBody.isNotEmpty) {
+      log.warning(
+        '[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 的类型参数 '
+        '${usedInBody.join(' / ')} 在成员体里按值使用；目标 $target 在 JS 侧只有'
+        '「擦除后的原型」（无 typeArguments 元信息），这些用法运行时读不到类型名。'
+        '仅类型位置（返回类型 / 形参类型 / 局部变量声明）可用。',
+      );
+    }
+  }
 
   final membersJs = <String, String>{};
   parseCtx.withExprRenderer(() {
