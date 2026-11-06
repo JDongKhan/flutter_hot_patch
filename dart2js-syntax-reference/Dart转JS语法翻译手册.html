@@ -205,7 +205,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
     <div><dt>适用源语言</dt><dd>Dart 3.x（含空安全、record、模式匹配）</dd></div>
     <div><dt>适用目标</dt><dd>ES2022+，原生 class / 模块 / 可选链</dd></div>
     <div><dt>实测环境</dt><dd>Dart 3.11.5 stable，macOS arm64</dd></div>
-    <div><dt>文档版本</dt><dd>v1.9 · 规则 18 组 · 陷阱 40+ · 2026-11-06 与 hot_patch_generator 0.10.0 核对（extension：显式调用 / 可空目标已通过，泛型目标仍不通过；record 模式、Completer、<code>sync*</code> / <code>yield</code>、Stream / <code>async*</code> / <code>await for</code> 已通过）</dd></div>
+    <div><dt>文档版本</dt><dd>v2.0 · 规则 18 组 · 陷阱 40+ · 2026-11-06 与 hot_patch_generator 0.10.0 核对（extension：显式调用 / 可空目标已通过，泛型目标仍不通过；record 模式、Completer、<code>sync*</code> / <code>yield</code>、Stream / <code>async*</code> / <code>await for</code> 已通过）</dd></div>
   </dl>
 </header>
 
@@ -251,7 +251,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
   </tbody>
 </table>
 
-<p>“现状”与“是否通过”两列只在核对过的表里出现，判定口径固定：现状必须落到具体文件与函数 / 分支名（不写会漂移的行号），没有代码证据的项一律记“未检测”，不推测；通过与否只看是否满足“翻译原则”列的完整要求，部分实现（如做了类型擦除却没做常量绑定）记为不通过，并在现状里写明差在哪。确实是 Dart 语法不存在或 JS 无等价能力的项，记“不适用”并写明原因，不硬凑实现。</p>
+<p>“现状”与“是否通过”两列只在核对过的表里出现，判定口径固定：现状必须落到具体文件与函数 / 分支名（不写会漂移的行号），没有代码证据的项一律记“未检测”，不推测；通过与否只看是否满足“翻译原则”列的完整要求，部分实现（如做了类型擦除却没做常量绑定）记为不通过，并在现状里写明差在哪。确实是 JS 无等价能力的项，记“不适用”并写明原因，不硬凑实现；<b>Dart 语法本身不存在的写法不收录</b>，直接不进行表。</p>
 
 <p><strong>翻译原则的五级</strong>，与第三列标签一一对应（直译 / 注意 / 扩展 / 必须改写 / 禁止生成）：</p>
 <table>
@@ -1339,7 +1339,6 @@ try {
     <tr><td><code>sync*</code> / <code>yield</code></td><td><code>function*</code> / <code>yield</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 对应良好</td><td><code>closureToJs</code> 的 <code>BlockFunctionBody + isGenerator</code> 分支产出 <code>function*</code>（局部函数 / 闭包）；<code>dart2js</code> 方法渲染按 <code>isGenerator</code> 加 <code>*</code> 前缀；<code>translateStmtList</code> 的 <code>YieldStatement</code> 分支产出 <code>yield</code> / <code>yield*</code>。生成器对象不是数组：运行时在共享 <code>%GeneratorPrototype%</code> 上补 <code>toList</code> / <code>map</code> / <code>where</code> / <code>first</code> / <code>length</code> 等 Array 同名同义成员（先 <code>Array.from(this)</code> 物化；覆盖引擎的 Iterator Helpers 以保证跨引擎一致）。已知差异：JS 生成器一次性迭代（Dart 的 sync* Iterable 可重复迭代）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>async*</code> / <code>yield</code></td><td><code>Stream.fromAsyncGenerator(...)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 不能返回裸 <code>async function*</code>：它没有 <code>listen</code></td><td>已实现：<code>dart2js</code> 的 <code>async*</code> 方法渲染为普通方法 <code>return Stream.fromAsyncGenerator((async function* () { … }).bind(this)())</code>；<code>closureToJs</code> 的生成器分支对闭包 / 局部函数做同样包装（外层仍是箭头，默认值在调用时求值）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>await for (x in stream)</code></td><td><code>for await (const x of it)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 依赖 <code>[Symbol.asyncIterator]</code></td><td><code>_forStatementJs</code> 检测 <code>ForStatement.awaitKeyword</code> 后输出 <code>for await (... of ...)</code>；默认保留 <code>let</code> 绑定，<code>Stream</code> 的 <code>[Symbol.asyncIterator]</code> 供事件队列消费</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>顶层 <code>await</code></td><td>ES2022 顶层 await</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 仅 ESM 可用</td><td>未实现：产物为 ESM，但翻译层未处理模块顶层 await</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
   </tbody>
 </table>
 </div>
@@ -1655,6 +1654,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
   <p>v1.7（2026-11-06）：第 14 章 <code>Completer&lt;T&gt;</code> 已实现（<code>future_js.dart</code> 的 <code>export class Completer</code>：<code>future</code> / <code>complete</code> / <code>completeError</code> / <code>isCompleted</code>，重复完成抛 <code>StateError</code>），记为通过；example 新增 <code>async_detail.dart</code>（<code>AsyncDetail</code>）验证正常完成与异常完成两条路径。</p>
   <p>v1.8（2026-11-06）：第 14 章 <code>sync*</code> / <code>yield</code> / <code>yield*</code> 已实现——<code>closureToJs</code> 的生成器分支产出 <code>function*</code>，方法渲染按 <code>isGenerator</code> 加 <code>*</code>，<code>translateStmtList</code> 的 <code>YieldStatement</code> 分支发射 <code>yield</code> / <code>yield*</code>；运行时在 <code>%GeneratorPrototype%</code> 上补 <code>toList</code> / <code>map</code> / <code>where</code> / <code>first</code> / <code>length</code> 等 Iterable 同名成员（<code>__defineProtoMember</code> / <code>__defineProtoGetter</code> 新增 <code>overwrite</code> 参数，覆盖引擎自带的 Iterator Helpers 以保证跨引擎一致）。<code>async*</code> 已产出裸 <code>async function*</code>（部分实现，未包装 <code>Stream</code>，仍记为不通过）。example 新增 <code>generator_detail.dart</code>（<code>GeneratorDetail</code>）。</p>
   <p>v1.9（2026-11-06）：第 14 章 Stream 全家落地——新增 <code>stream_js.dart</code> 的 <code>Stream</code> / <code>StreamSubscription</code> / <code>StreamController</code>（推送 + <code>[Symbol.asyncIterator]</code> 双形态、惰性启动、单订阅 / 广播、pause 缓冲、错误不终止流）；<code>async*</code> 方法 / 闭包统一包装为 <code>Stream.fromAsyncGenerator(...)</code>；<code>await for</code> 由 <code>_forStatementJs</code> 的 <code>awaitKeyword</code> 分支输出 <code>for await (... of ...)</code>；<code>valueCtorJs</code> 修复「泛型类型 + 命名构造」被吞（<code>StreamController&lt;int&gt;.broadcast()</code> 现正确发射）。example 新增 <code>stream_detail.dart</code>（<code>StreamDetail</code>）。</p>
+  <p>v2.0（2026-11-06）：清理表中 Dart 语法本身不存在的条目（不属于本手册的翻译范围）；补充：Dart 的 Stream 事件异步投递与拉取式背压（<code>pause</code> 停住上游生成器）已在运行时对齐。</p>
 </footer>
 
 </main>
