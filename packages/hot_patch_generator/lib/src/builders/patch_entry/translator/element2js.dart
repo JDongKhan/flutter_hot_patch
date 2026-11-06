@@ -4,6 +4,7 @@ import 'package:build/build.dart' show log;
 
 import '../../shared/ctor_signatures.dart';
 import '../../shared/js_class_defs.dart';
+import '../../shared/source_location.dart';
 import 'js_translator.dart';
 import 'js_value.dart';
 import 'element_json.dart';
@@ -208,7 +209,7 @@ class ElementTranslateContext implements ExprRenderer {
     try {
       return _translateExpr(e);
     } catch (err) {
-      _warnDegrade('widget 表达式', e.toSource(), err);
+      _warnDegrade(sourcePath, 'widget 表达式', e.toSource(), err, node: e);
       return null;
     }
   }
@@ -300,7 +301,7 @@ class ElementTranslateContext implements ExprRenderer {
     try {
       js = jsDataExpr(keyExpr);
     } catch (err) {
-      _warnDegrade('key', keyExpr.toSource(), err);
+      _warnDegrade(sourcePath, 'key', keyExpr.toSource(), err, node: keyExpr);
       return;
     }
     final props = json['props'];
@@ -335,7 +336,7 @@ class ElementTranslateContext implements ExprRenderer {
     } catch (err) {
       // 单个集合元素（如 `...[...]` spread）无法翻译：告警丢弃该元素，
       // 兄弟元素照常翻译（不伪造元素）。
-      _warnDegrade('集合元素', e.toSource(), err);
+      _warnDegrade(sourcePath, '集合元素', e.toSource(), err, node: e);
       return null;
     }
   }
@@ -532,9 +533,10 @@ class ElementTranslateContext implements ExprRenderer {
   /// 正常路径（`final spots = _feed.spots;` 这类字段派生的 final 局部）会先被
   /// [registerLocalAlias] 折算成 `this._feed.spots`，不会命中本告警。
   void warnCapturedLocals(Expression body) {
-    final used = <String>{};
+    final used = <String, SimpleIdentifier>{};
     body.accept(_SimpleIdentifierCollector(used));
-    for (final name in used) {
+    for (final e in used.entries) {
+      final name = e.key;
       if (!_methodBodyLocals.contains(name) && !_loopVars.contains(name)) {
         continue;
       }
@@ -549,7 +551,7 @@ class ElementTranslateContext implements ExprRenderer {
         continue;
       }
       log.warning(
-        '[hot_patch_generator] $sourcePath: "$name" 被懒加载 builder '
+        '[hot_patch_generator] ${sourceAt(sourcePath, e.value)}: "$name" 被懒加载 builder '
         '捕获，却折算不成字段引用（字段 / getter / 顶层常量）：抽取成实例方法'
         '后 JS 侧是未定义自由变量（运行时 ReferenceError，页面会停在 loading）。'
         '请把该值放到字段 / getter 上，或改用「字段派生的 final 局部」'
@@ -600,7 +602,7 @@ class ElementTranslateContext implements ExprRenderer {
     try {
       return _renderJsImpl(json, depth);
     } catch (err) {
-      _warnDegrade('结点', json.toString(), err);
+      _warnDegrade(sourcePath, '结点', json, err);
       return null;
     }
   }
@@ -616,7 +618,7 @@ class ElementTranslateContext implements ExprRenderer {
     try {
       return _renderValueImpl(json, depth);
     } catch (err) {
-      _warnDegrade('值', json.toString(), err);
+      _warnDegrade(sourcePath, '值', json, err);
       return null;
     }
   }
@@ -629,12 +631,14 @@ class ElementTranslateContext implements ExprRenderer {
   String _renderValueImpl(Object? json, int depth) {
     if (json is String) return json;
     if (json is! Map<String, dynamic>) throw FormatException('无法渲染的值: $json');
-    final token = _typeToken(json['type']);
+    final token = _typeToken(json['type'], node: nodeSourceOf(json));
     final name = bareTypeName(token);
     _assertTranslatable(name);
     // 值语境一律按类调用（`new X(...)`）：JS 侧没有这个类就是未定义全局。
     // 若类来自某个 pub 依赖包而宿主 `js/` 没提供该包模块，构建期直接报错。
-    if (jsClassFileOf(name) == null) _reportMissingHostJs(name);
+    if (jsClassFileOf(name) == null) {
+      _reportMissingHostJs(name, nodeSourceOf(json));
+    }
     _registerWidgetImport(token, name);
     // 值语境一律按类调用：命名构造走包装类上的同名静态方法。
     return _renderCall(token, json, depth, asClass: true);
@@ -645,7 +649,7 @@ class ElementTranslateContext implements ExprRenderer {
     if (json is! Map<String, dynamic>) {
       throw FormatException('无法渲染的节点: $json');
     }
-    final token = _typeToken(json['type']);
+    final token = _typeToken(json['type'], node: nodeSourceOf(json));
     final name = bareTypeName(token);
     // 元素 type 一律是**类引用**（组件使用方不再产出 `__h('X', ...)`）：
     //   - 该类型有 JS 产物（importResolver 命中：@PatchEntry 嵌套组件、同文件
@@ -664,7 +668,7 @@ class ElementTranslateContext implements ExprRenderer {
     // JS 侧既没有这个类、宿主也没有同名 widget 渲染器时，元素 type 只能退化成
     // 字符串 —— 宿主注册表查不到必然失败。若类来自某个 pub 依赖包而宿主 `js/`
     // 没提供该包模块（`js/<package>.js`），构建期直接报错（每个类型一次）。
-    if (classFile == null) _reportMissingHostJs(name);
+    if (classFile == null) _reportMissingHostJs(name, nodeSourceOf(json));
     _registerWidgetImport(token, name);
     return _renderCall(token, json, depth, asClass: asClass);
   }
@@ -676,11 +680,11 @@ class ElementTranslateContext implements ExprRenderer {
   ///
   /// 用 `severe` 而不是 `warning`：产物里这个类型**没有类**，运行时必然失败
   /// （未注册类型 / 未定义全局），属于「影响运行」而不是「有风险但能跑」。
-  void _reportMissingHostJs(String type) {
+  void _reportMissingHostJs(String type, AstNode? node) {
     final pkg = missingHostJsPackageOf(type);
     if (pkg == null || !_missingHostJsReported.add(type)) return;
     log.severe(
-      '[hot_patch_generator] $sourcePath: 类型 "$type" 声明在 package:$pkg，'
+      '[hot_patch_generator] ${sourceAt(sourcePath, node)}: 类型 "$type" 声明在 package:$pkg，'
       '但宿主 js/ 目录没有 $pkg.js（应在工程根 js/$pkg.js 提供该包 JS，'
       '构建时原样拷贝为 patch/packages/$pkg.js）。该类型在 JS 侧没有类，'
       '产物运行时会失败。',
@@ -713,7 +717,7 @@ class ElementTranslateContext implements ExprRenderer {
   /// 命名空间 import（Dart 用前缀消解同名类，JS 用模块命名空间做同一件事）；
   /// 解析不到（`dart:` 导入 / 没有 JS 模块的包）则退回裸类名并告警——产物里
   /// 绝不能留一个指向未定义命名空间的引用。
-  String _typeToken(Object? v) {
+  String _typeToken(Object? v, {AstNode? node}) {
     final token = _semanticType(v);
     final dot = token.indexOf('.');
     if (dot <= 0) return token;
@@ -725,7 +729,7 @@ class ElementTranslateContext implements ExprRenderer {
     if (product == null) {
       if (_prefixFallbackWarned.add(prefix)) {
         log.warning(
-          '[hot_patch_generator] $sourcePath: import 前缀 "$prefix" 在 JS 侧'
+          '[hot_patch_generator] ${sourceAt(sourcePath, node)}: import 前缀 "$prefix" 在 JS 侧'
           '没有可加载的模块（`$prefix.$name`），已按裸类名 "$name" 翻译；'
           '若两者不同名会引用到错误的类。',
         );
@@ -1532,6 +1536,7 @@ class ElementTranslateContext implements ExprRenderer {
   /// [FieldScope.fieldRef] 先查形参，若不剔除就会把 `list` 原样透传成未定义的
   /// 自由变量（懒加载 builder 抽成实例方法后尤其致命）。
   FieldScope _dataScope() => FieldScope(
+    sourcePath: sourcePath,
     propByField: propByField,
     params: {
       ..._loopVars,
@@ -1567,6 +1572,7 @@ class ElementTranslateContext implements ExprRenderer {
   FieldScope _eventScope() {
     final base = _dataScope();
     return FieldScope(
+      sourcePath: base.sourcePath,
       propByField: base.propByField,
       instanceFields: base.instanceFields,
       params: {...base.params}..remove('context'),
@@ -1807,11 +1813,20 @@ class ElementTranslateContext implements ExprRenderer {
 // ---------------------------------------------------------------------------
 
 /// 构建期告警：出声（不静默丢代码），但不再抛错连累兄弟结点。
-void _warnDegrade(String what, String source, Object err) {
-  // ignore: avoid_print - 构建期日志
-  print(
-    '[hot_patch_generator] $what 无法翻译，已丢弃该结点：'
-    '$source（$err）',
+///
+/// [json] 是元素的中间态描述：按身份取回来源 AST 结点，日志带上
+/// `文件:行 | 源码行`，否则只能靠函数名猜位置。
+void _warnDegrade(
+  String sourcePath,
+  String what,
+  Object? json,
+  Object err, {
+  AstNode? node,
+}) {
+  final where = sourceAt(sourcePath, node ?? nodeSourceOf(json));
+  log.warning(
+    '[hot_patch_generator] $where: '
+    '$what 无法翻译，已丢弃该结点：${json.toString()}（$err）',
   );
 }
 
@@ -1837,7 +1852,8 @@ bool isClassName(String name) {
 class _SimpleIdentifierCollector extends RecursiveAstVisitor<void> {
   _SimpleIdentifierCollector(this.names);
 
-  final Set<String> names;
+  /// 名字 → 首次出现的结点（构建期告警定位用）。
+  final Map<String, SimpleIdentifier> names;
 
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
@@ -1847,7 +1863,7 @@ class _SimpleIdentifierCollector extends RecursiveAstVisitor<void> {
     // 把它们当变量收集会误报「builder 捕获了方法体局部变量」——只要同名局部
     // 变量在别的方法里出现过（如 `_measureFixed` 的 `height`）。
     if (_isNamePosition(node)) return;
-    names.add(node.name);
+    names.putIfAbsent(node.name, () => node);
   }
 
   /// [node] 是否处于「名字」位置而非「变量引用」位置。

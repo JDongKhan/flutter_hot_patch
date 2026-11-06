@@ -13,6 +13,7 @@
   - `element2js` 的 `_SimpleIdentifierCollector` 只收**变量引用**：具名实参名 / 语句标签（`Label`）、成员名（`Icons.height` 的 `height`）、命名构造名、带接收者的方法名不再算「被 builder 捕获的局部变量」，修复 `sliver_detail.dart` 的误报。
   - `js_translator` 擦除泛型实参时，若接收者是 **JS 内建**（List/Array/Iterable/Set/Map/String/num/int/double），不再告警（`fold<int>` 这类本就无 JS 语义），自定义类 / 类型不可判定时才出声。
   - `_fieldTranslatable` 新增「类自身类型参数」（`Pair<K, V>` 的 `K`/`V`）与「源码简单枚举」两条放行判据（`CtorSignatures.isEnum` 按源码 `enum` 声明判定，增强枚举不算），修复 `generic_detail.dart` / `constructor_detail.dart` / `enum_detail.dart` 的误报。
+- **构建期日志带源码定位**：新增 `shared/source_location.dart`（`registerSource` 在解析处登记 `LineInfo` + 原文；`sourceAt` 输出 `<文件>:<行>  |  <该行源码>`，定位到**声明本体**而非文档注释）。element2js / element_json / analyze_dart_class / extension_support / const_support / js_translator 的告警与报错统一改用该格式；渲染阶段通过 `registerNodeSource` 从元素中间态描述反查来源 AST 结点。
 - **文档同步**：架构文档、使用手册、组件支持文档与 README 的产物布局 / 三方库接入指引改为 `js/` → `patch/packages/` 约定。
 
 ## 0.10.0

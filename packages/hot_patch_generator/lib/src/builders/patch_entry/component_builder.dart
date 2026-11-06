@@ -25,6 +25,7 @@ import '../shared/js_class_defs.dart';
 import '../shared/runtime_global_types.dart';
 import '../shared/paths.dart';
 import '../shared/source_index.dart';
+import '../shared/source_location.dart';
 import '../ui_widget/widget_module_builder.dart'
     show hostWrapperSource, registeredWidgetPackages;
 import 'project_module_builder.dart' show localTranslationPackages;
@@ -81,6 +82,8 @@ class ComponentBuilder implements Builder {
       throwIfDiagnostics: false,
       path: inputId.path,
     );
+    // 登记行号信息：本文件产出的告警 / 报错按 AST 结点定位到 `文件:行 | 源码行`。
+    registerSource(inputId.path, source, parsed.lineInfo);
 
     // 组件名 → 依赖产物 jsAsset 路径。规则：
     //   本文件类（注解组件 / public 或私有 widget 类）→ 本文件产物（同产物注册）；

@@ -11,6 +11,7 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
 import 'package_sources.dart';
+import 'source_location.dart';
 
 /// 源文件身份的两种形态：
 ///   - `lib/a/b.dart`：**本项目包内**的包相对路径（顶层数字字面量身份）；
@@ -57,9 +58,12 @@ CompilationUnit? parseUnitFile(String path) {
   final mtime = f.lastModifiedSync();
   final cached = _unitFileCache[path];
   if (cached != null && cached.$1 == mtime) return cached.$2;
-  final unit = parseString(content: f.readAsStringSync()).unit;
-  _unitFileCache[path] = (mtime, unit);
-  return unit;
+  final content = f.readAsStringSync();
+  final parsed = parseString(content: content);
+  // 登记行号信息：构建期告警 / 报错按 AST 结点换算成 `文件:行 | 源码行`。
+  registerSource(path, content, parsed.lineInfo);
+  _unitFileCache[path] = (mtime, parsed.unit);
+  return parsed.unit;
 }
 
 /// 在注解列表里按**简单名**查找注解（支持 `@Foo` 与 `@a.Foo` 两种写法）。

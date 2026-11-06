@@ -27,6 +27,7 @@ import 'package:glob/glob.dart';
 import 'analyze_dart_class.dart';
 import '../../shared/host_injected.dart';
 import '../../shared/source_index.dart';
+import '../../shared/source_location.dart';
 
 /// 包内全部 Dart 源码（与 host_register builder 同一扫描口径）。
 final Glob _libDartSources = Glob('lib/**.dart');
@@ -53,11 +54,13 @@ Future<TranslationScope> componentTranslationScope(BuildStep buildStep) async {
     // 生成代码（*.g.dart 等）不参与依赖图。
     if (id.path.endsWith('.g.dart')) continue;
     final content = await buildStep.readAsString(id);
-    units[id.path] = parseString(
+    final parsed = parseString(
       content: content,
       throwIfDiagnostics: false,
       path: id.path,
-    ).unit;
+    );
+    registerSource(id.path, content, parsed.lineInfo);
+    units[id.path] = parsed.unit;
   }
   // 跨包源文件（本地依赖包，见 [resolveImportFiles] 的身份约定）：它们不是本包
   // 资产，`readAsString` 读不到，直接按 package_config 定位读盘（[parseUnitFile]）。

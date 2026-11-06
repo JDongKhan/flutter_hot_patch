@@ -31,6 +31,7 @@ import '../../shared/js_class_defs.dart';
 import '../../shared/paths.dart';
 import '../../shared/runtime_global_types.dart';
 import '../../shared/source_index.dart';
+import '../../shared/source_location.dart';
 import 'analyze_dart_class.dart';
 
 /// 一个已翻译的 extension 声明（产物里的一条 `registerExtension(...)`）。
@@ -348,14 +349,14 @@ ExtensionInfo? translateExtension(
   final label = name ?? '<unnamed>';
   if (name != null && classNamesInUnit.contains(name)) {
     log.warning(
-      '[hot_patch_generator] $sourcePath: extension $name 与本文件里的类名冲突，'
+      '[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $name 与本文件里的类名冲突，'
       '已跳过（Dart 里同名二者无法被引用）。',
     );
     return null;
   }
   final onClause = decl.onClause;
   if (onClause == null) {
-    log.warning('[hot_patch_generator] $sourcePath: extension $label 缺少 on 子句，'
+    log.warning('[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 缺少 on 子句，'
         '已跳过。');
     return null;
   }
@@ -365,7 +366,7 @@ ExtensionInfo? translateExtension(
   // 必然失效的注册（Dart 里这类扩展允许在 null 上调用）。
   if (extendedType is NamedType && extendedType.question != null) {
     log.warning(
-      '[hot_patch_generator] $sourcePath: extension $label 的目标可空'
+      '[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 的目标可空'
       '（${extendedType.toSource()}）：null 接收者无法在原型上分派，已跳过。',
     );
     return null;
@@ -375,7 +376,7 @@ ExtensionInfo? translateExtension(
       : extendedType.toSource().trim();
   if (_unsupportedTargets.contains(target)) {
     log.warning(
-      '[hot_patch_generator] $sourcePath: extension $label 的目标 $target '
+      '[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 的目标 $target '
       '在 JS 侧没有单一类型（Map/Object/dynamic…），已跳过。',
     );
     return null;
@@ -384,7 +385,7 @@ ExtensionInfo? translateExtension(
     // 宿主 widget 的 JS 包装类是「构造即产出元素」：把成员挂到它的原型上不会
     // 作用到宿主真对象，属于必然无效的注册，构建期直接拒绝。
     log.warning(
-      '[hot_patch_generator] $sourcePath: extension $label 的目标 $target 是'
+      '[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 的目标 $target 是'
       '宿主 widget（JS 侧没有实体原型），已跳过。',
     );
     return null;
@@ -396,7 +397,7 @@ ExtensionInfo? translateExtension(
       targetPkg != null &&
       nonTranslatedPackages.contains(targetPkg)) {
     log.warning(
-      '[hot_patch_generator] $sourcePath: extension $label 的目标 $target '
+      '[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 的目标 $target '
       '来自未翻译的框架包（$targetPkg），JS 侧没有代理类，已跳过。',
     );
     return null;
@@ -408,7 +409,7 @@ ExtensionInfo? translateExtension(
       classInfo != null;
   if (!known) {
     log.warning(
-      '[hot_patch_generator] $sourcePath: extension $label 的目标 $target '
+      '[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 的目标 $target '
       '在本文件可见范围内找不到 JS 侧实现，注册会失败，已跳过。',
     );
     return null;
@@ -438,7 +439,7 @@ ExtensionInfo? translateExtension(
       // 兜底，而生成的类都包在模块 IIFE 内、不挂 G → 注册会失败。
       // 出声提示（不阻断构建）：该扩展在 JS 侧不会生效。
       log.warning(
-        '[hot_patch_generator] $sourcePath: extension $label 的目标 $target '
+        '[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 的目标 $target '
         '在 ${classInfo.sourceFile} 里，但那个文件没有本文件可引用的 JS 产物'
         '（未被任何组件引用），该扩展在 JS 侧不会生效。',
       );
@@ -458,7 +459,7 @@ ExtensionInfo? translateExtension(
         final unary = (member.parameters?.parameters ?? const []).isEmpty;
         final jsName = operatorJsName(memberName, unary: unary);
         if (jsName == null) {
-          log.warning('[hot_patch_generator] $sourcePath: extension $label'
+          log.warning('[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label'
               '.operator $memberName 暂不支持（JS 侧无等价成员），已跳过。');
           continue;
         }
@@ -509,7 +510,7 @@ ExtensionInfo? translateExtension(
         ));
       }
     } else if (member is ConstructorDeclaration) {
-      log.warning('[hot_patch_generator] $sourcePath: extension $label 里声明了'
+      log.warning('[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 里声明了'
           '构造函数（Dart 不允许），已忽略。');
     }
   }
@@ -625,14 +626,14 @@ ExtensionInfo? translateExtension(
       }
     } else if (member is FieldDeclaration) {
       if (!member.isStatic) {
-        log.warning('[hot_patch_generator] $sourcePath: extension $label 里声明了'
+        log.warning('[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 里声明了'
             '实例字段（Dart 不允许），已忽略。');
         continue;
       }
       for (final v in member.fields.variables) {
         final value = literalToJs(v.initializer);
         if (value == null) {
-          log.warning('[hot_patch_generator] $sourcePath: extension $label 的静态'
+          log.warning('[hot_patch_generator] ${sourceAt(sourcePath, decl)}: extension $label 的静态'
               '字段 ${v.name.lexeme} 初值不是编译期常量，已跳过。');
           continue;
         }

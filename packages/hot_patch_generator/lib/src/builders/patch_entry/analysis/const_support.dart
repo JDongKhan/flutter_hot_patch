@@ -12,11 +12,13 @@ library;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:build/build.dart' show log;
 
 import '../class_info.dart';
 import '../translator/js_translator.dart';
 import '../translator/js_value.dart';
 import '../../shared/source_index.dart';
+import '../../shared/source_location.dart';
 import 'class_table.dart';
 
 /// 本文件可见的顶层常量表（值已在解析期翻译为 JS）。
@@ -133,9 +135,9 @@ TopLevelConstResolver buildTopLevelConstResolver(
       // 跨文件常量由它的声明文件负责翻译与告警，本文件只跳过（避免同一条
       // 告警在每一个 import 它的文件里重复刷屏）。
       if (importedOf.containsKey(name)) continue;
-      // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 顶层常量 $name 无法翻译，已跳过：'
-          '${exprs[name]!.toSource()}');
+      log.warning(
+          '[hot_patch_generator] ${sourceAt(sourcePath, exprs[name])}: '
+          '顶层常量 $name 无法翻译，已跳过：${exprs[name]!.toSource()}');
       continue;
     }
     translated[name] = js;
@@ -265,17 +267,16 @@ String renderTopLevelConstBody(Map<String, String> consts) {
 String? _enumJs(EnumDeclaration d, String file) {
   final name = d.name.lexeme;
   if (d.members.isNotEmpty) {
-    // ignore: avoid_print - 构建期日志（与本文件既有口径一致）
-    print('[hot_patch_generator] $file: enum $name 含成员 / 构造函数（增强枚举），'
-        'JS 侧暂不支持，已跳过。');
+    log.warning('[hot_patch_generator] ${sourceAt(file, d)}: enum $name '
+        '含成员 / 构造函数（增强枚举），JS 侧暂不支持，已跳过。');
     return null;
   }
   for (final c in d.constants) {
     if (c.arguments != null &&
         c.arguments!.argumentList.arguments.isNotEmpty) {
-      // ignore: avoid_print
-      print('[hot_patch_generator] $file: enum $name.${c.name.lexeme} 带构造实参'
-          '（增强枚举），JS 侧暂不支持，已跳过。');
+      log.warning('[hot_patch_generator] ${sourceAt(file, c)}: '
+          'enum $name.${c.name.lexeme} 带构造实参（增强枚举），'
+          'JS 侧暂不支持，已跳过。');
       return null;
     }
   }

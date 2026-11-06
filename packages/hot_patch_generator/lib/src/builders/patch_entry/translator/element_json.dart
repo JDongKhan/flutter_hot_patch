@@ -30,6 +30,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart' show log;
 
 import '../../shared/ctor_signatures.dart';
+import '../../shared/source_location.dart';
 import 'js_translator.dart';
 import 'value_forms.dart';
 import 'element2js.dart';
@@ -58,7 +59,7 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
       final v = autoValue(arg, ctx);
       if (v == null && arg is! NullLiteral) {
         log.warning(
-          '[hot_patch_generator] ${ctx.sourcePath}: ${node.type} 的位置实参'
+          '[hot_patch_generator] ${sourceAt(ctx.sourcePath, arg)}: ${node.type} 的位置实参'
           '无法翻译，已从 props 中丢弃：${arg.toSource()}',
         );
       }
@@ -84,7 +85,7 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
         props[name] = fn;
       } else if (value is! NullLiteral) {
         log.warning(
-          '[hot_patch_generator] ${ctx.sourcePath}: ${node.type}.$name '
+          '[hot_patch_generator] ${sourceAt(ctx.sourcePath, value)}: ${node.type}.$name '
           '声明为函数类型，但无法翻译为函数值，已丢弃：${value.toSource()}',
         );
       }
@@ -95,7 +96,7 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
     // 缺省」处理——静默丢弃会让「样式 / 颜色 / 子结点」看起来配了却不生效。
     if (translated == null && value is! NullLiteral) {
       log.warning(
-        '[hot_patch_generator] ${ctx.sourcePath}: ${node.type}.$name '
+        '[hot_patch_generator] ${sourceAt(ctx.sourcePath, value)}: ${node.type}.$name '
         '无法翻译，已从 props 中丢弃：${value.toSource()}',
       );
     }
@@ -121,7 +122,7 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
       }
     } else {
       log.warning(
-        '[hot_patch_generator] ${ctx.sourcePath}: ${node.type} 的位置实参'
+        '[hot_patch_generator] ${sourceAt(ctx.sourcePath, node.expr)}: ${node.type} 的位置实参'
         '未找到构造签名里的形参名，已丢弃；'
         '请确认该构造的源码可被 ctor_signatures.dart 索引。',
       );
@@ -143,12 +144,16 @@ Map<String, dynamic> elementToJson(ElementNode node, ElementTranslateContext ctx
     props['typeArguments'] = typeArgsMapJs(typeArgs);
   }
 
-  return {
+  final result = <String, dynamic>{
     'type': ctx.jsString(node.type),
     'props': nonNull(props),
     nodeMarkerKey: true,
     if (factory != null) ctorNodeKey: factory,
   };
+  // 渲染层只有这份中立描述、没有 AST：登记来源结点，告警 / 报错时才能定位到
+  // `文件:行 | 源码行`（见 source_location.dart）。不写进产物。
+  registerNodeSource(result, node.expr);
+  return result;
 }
 
 /// 命名构造 / 静态工厂名；普通构造返回 null。

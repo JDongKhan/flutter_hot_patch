@@ -17,12 +17,16 @@ class ClassField {
   final bool isStatic;
   final String? jsInitial; // 预渲染 JS 初始值（非 null 时优先于 initializer）
 
+  /// 声明处的 AST 结点（构建期告警定位到 `文件:行 | 源码行` 用，不参与翻译）。
+  final AstNode? node;
+
   const ClassField({
     required this.name,
     required this.typeName,
     this.initializer,
     this.isStatic = false,
     this.jsInitial,
+    this.node,
   });
 }
 

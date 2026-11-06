@@ -513,6 +513,7 @@ class FieldScope {
   FieldScope forInitializer() => declAliases.isEmpty
       ? this
       : FieldScope(
+          sourcePath: sourcePath,
           propByField: propByField,
           instanceFields: instanceFields,
           params: params,
@@ -536,7 +537,12 @@ class FieldScope {
           localTypes: localTypes,
         );
 
+  /// 本作用域所属源文件身份（`lib/...` / `package:foo/...`）：仅用于构建期
+  /// 告警定位（`文件:行 | 源码行`，见 `source_location.dart`），不参与翻译判定。
+  final String sourcePath;
+
   FieldScope({
+    this.sourcePath = '',
     this.propByField = const {},
     this.instanceFields = const {},
     this.params = const {},
@@ -578,6 +584,7 @@ class FieldScope {
     Map<String, String> typeParamRefs = const {},
   }) =>
       FieldScope(
+        sourcePath: sourcePath,
         propByField: propByField,
         instanceFields: instanceFields,
         params: {...params, ...names},

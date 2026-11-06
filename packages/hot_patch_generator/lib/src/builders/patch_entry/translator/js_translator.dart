@@ -5,6 +5,7 @@ import '../class_info.dart';
 import '../../shared/ctor_signatures.dart';
 import '../../shared/runtime_global_types.dart';
 import '../../shared/sdk_enum_index.dart';
+import '../../shared/source_location.dart';
 import 'js_value.dart';
 
 // ===========================================================================
@@ -1010,8 +1011,8 @@ String? valueCtorJs(
   }
   if (rest.isNotEmpty) {
     // 签名未知（源码里找不到该类）→ 下标兜底，运行时按构造签名展开。
-    // ignore: avoid_print - 构建期日志
-    print('[hot_patch_generator] 构造 $cls${ctorName == null ? '' : '.$ctorName'} '
+    log.warning('[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
+        '构造 $cls${ctorName == null ? '' : '.$ctorName'} '
         '的位置实参缺少形参名签名，落 __pos 兜底：${rest.join(', ')}');
     entries.add('__pos: [${rest.join(', ')}]');
   }
@@ -1250,7 +1251,8 @@ String? _stringInterpolationJs(
         } else {
           // 丢片段会让产物「看着对、其实少东西」（如 `"用户信息:$x"` →
           // `"用户信息:"`），故必须出声，不能静默。
-          log.warning('[hot_patch_generator] 插值片段无法翻译，已在 JS 产物中'
+          log.warning('[hot_patch_generator] '
+              '${sourceAt(scope.sourcePath, el.expression)}: 插值片段无法翻译，已在 JS 产物中'
               '丢失：\${${el.expression.toSource()}}');
         }
       }
@@ -1658,7 +1660,8 @@ String? _methodCallJs(
   final erasedByJsBuiltin =
       _jsBuiltinReceiverTypes.contains(eraseType(receiverType ?? ''));
   if (typeArgsJs != null && !keepTypeArgs && !erasedByJsBuiltin) {
-    log.warning('[hot_patch_generator] ${e.methodName.name}<${typeArgs.values.join(', ')}> '
+    log.warning('[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
+        '${e.methodName.name}<${typeArgs.values.join(', ')}> '
         '带位置实参且无具名实参，尾参对象会被当成位置实参，已擦除类型实参元信息');
   }
   final tailJs = [...namedJs, if (keepTypeArgs) typeArgsJs];
@@ -2724,7 +2727,8 @@ String translateStmtList(
           argsJs.add(v);
         }
         if (!ok) {
-          log.warning('[hot_patch_generator] super 调用实参无法翻译，已在 JS '
+          log.warning('[hot_patch_generator] '
+              '${sourceAt(scope.sourcePath, e)}: super 调用实参无法翻译，已在 JS '
               '产物中丢弃：${e.toSource()}');
           continue;
         }
@@ -2736,7 +2740,8 @@ String translateStmtList(
       if (t != null) {
         out.add('$ind$t');
       } else {
-        log.warning('[hot_patch_generator] 语句无法翻译，已在 JS 产物中'
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, e)}: 语句无法翻译，已在 JS 产物中'
             '丢弃：${e.toSource()}');
       }
     } else if (s is VariableDeclarationStatement) {
@@ -2776,7 +2781,8 @@ String translateStmtList(
         );
         if (init == null) {
           // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
-          log.warning('[hot_patch_generator] 局部变量声明无法翻译，已在 JS '
+          log.warning('[hot_patch_generator] '
+              '${sourceAt(scope.sourcePath, v)}: 局部变量声明无法翻译，已在 JS '
               '产物中丢弃：${s.toSource()}');
           continue;
         }
@@ -2818,7 +2824,8 @@ String translateStmtList(
       // （`var x = 1` 这类普通声明仍是 VariableDeclarationStatement）。
       final js = _patternDeclarationJs(s, scope, classes, renderer, depth);
       if (js == null) {
-        log.warning('[hot_patch_generator] pattern 变量声明无法翻译，已在 JS '
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: pattern 变量声明无法翻译，已在 JS '
             '产物中丢弃：${s.toSource()}');
       } else {
         out.add(js);
@@ -2827,7 +2834,8 @@ String translateStmtList(
       // 方法体内的局部函数 `void f(...) {...}` / `int f(...) => ...`
       final js = _localFunctionJs(s, scope, classes, renderer, depth);
       if (js == null) {
-        log.warning('[hot_patch_generator] 局部函数无法翻译，已在 JS 产物中'
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: 局部函数无法翻译，已在 JS 产物中'
             '丢弃：${s.toSource()}');
       } else {
         out.add(js);
@@ -2848,7 +2856,8 @@ String translateStmtList(
       if (v != null) {
         out.add('${ind}return $v;');
       } else {
-        log.warning('[hot_patch_generator] return 表达式无法翻译，已在 JS '
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: return 表达式无法翻译，已在 JS '
             '产物中丢弃：${s.toSource()}');
       }
     } else if (s is YieldStatement) {
@@ -2857,7 +2866,8 @@ String translateStmtList(
       // （见 [closureToJs] 与 dart2js 的方法渲染），否则 JS 侧是语法错误。
       final v = rhsToJs(s.expression, scope, classes);
       if (v == null) {
-        log.warning('[hot_patch_generator] yield 表达式无法翻译，已在 JS '
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: yield 表达式无法翻译，已在 JS '
             '产物中丢弃：${s.toSource()}');
       } else {
         out.add('${ind}yield${s.star != null ? '*' : ''} $v;');
@@ -2869,7 +2879,8 @@ String translateStmtList(
         final js = _ifCaseStatementJs(
             s, scope, classes, renderer, depth, returnsWidget);
         if (js == null) {
-          log.warning('[hot_patch_generator] if-case 模式匹配无法翻译，已在 JS '
+          log.warning('[hot_patch_generator] '
+              '${sourceAt(scope.sourcePath, s)}: if-case 模式匹配无法翻译，已在 JS '
               '产物中丢弃：${s.toSource()}');
         } else {
           out.add(js);
@@ -2878,7 +2889,8 @@ String translateStmtList(
       }
       final condJs = exprToJs(s.expression, scope, classes);
       if (condJs == null) {
-        log.warning('[hot_patch_generator] if 条件无法翻译，已在 JS 产物中'
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: if 条件无法翻译，已在 JS 产物中'
             '丢弃：${s.toSource()}');
         continue;
       }
@@ -2898,7 +2910,8 @@ String translateStmtList(
     } else if (s is ForStatement) {
       final js = _forStatementJs(s, scope, classes, renderer, depth, returnsWidget);
       if (js == null) {
-        log.warning('[hot_patch_generator] for 语句无法翻译，已在 JS 产物中'
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: for 语句无法翻译，已在 JS 产物中'
             '丢弃：${s.toSource()}');
       } else {
         out.add(js);
@@ -2906,7 +2919,8 @@ String translateStmtList(
     } else if (s is WhileStatement) {
       final condJs = exprToJs(s.condition, scope, classes);
       if (condJs == null) {
-        log.warning('[hot_patch_generator] while 条件无法翻译，已在 JS 产物'
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: while 条件无法翻译，已在 JS 产物'
             '中丢弃：${s.toSource()}');
         continue;
       }
@@ -2916,7 +2930,8 @@ String translateStmtList(
     } else if (s is DoStatement) {
       final condJs = exprToJs(s.condition, scope, classes);
       if (condJs == null) {
-        log.warning('[hot_patch_generator] do-while 条件无法翻译，已在 JS '
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: do-while 条件无法翻译，已在 JS '
             '产物中丢弃：${s.toSource()}');
         continue;
       }
@@ -2926,7 +2941,8 @@ String translateStmtList(
     } else if (s is SwitchStatement) {
       final js = _switchStatementJs(s, scope, classes, renderer, depth, returnsWidget);
       if (js == null) {
-        log.warning('[hot_patch_generator] switch 语句无法翻译（仅支持常量 '
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: switch 语句无法翻译（仅支持常量 '
             'case），已在 JS 产物中丢弃：${s.toSource()}');
       } else {
         out.add(js);
@@ -2938,7 +2954,8 @@ String translateStmtList(
       final inner = translateStmtList([s.statement], scope, classes, renderer,
           depth: depth, returnsWidget: returnsWidget);
       if (inner.trim().isEmpty) {
-        log.warning('[hot_patch_generator] label 语句无法翻译，已在 JS 产物中'
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: label 语句无法翻译，已在 JS 产物中'
             '丢弃：${s.toSource()}');
       } else {
         out.add(inner.replaceFirst('$ind', '$ind$prefix'));
@@ -2955,7 +2972,8 @@ String translateStmtList(
       // 生成器不改写语义，保持与 Dart 源码一比一。
       final condJs = exprToJs(s.condition, scope, classes);
       if (condJs == null) {
-        log.warning('[hot_patch_generator] assert 条件无法翻译，已在 JS 产物'
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: assert 条件无法翻译，已在 JS 产物'
             '中跳过：${s.toSource()}');
         continue;
       }
@@ -2964,7 +2982,8 @@ String translateStmtList(
       if (message != null) {
         msgJs = rhsToJs(message, scope, classes);
         if (msgJs == null) {
-          log.warning('[hot_patch_generator] assert 消息无法翻译，已在 JS 产物'
+          log.warning('[hot_patch_generator] '
+              '${sourceAt(scope.sourcePath, message)}: assert 消息无法翻译，已在 JS 产物'
               '中跳过：${s.toSource()}');
           continue;
         }
@@ -2974,7 +2993,8 @@ String translateStmtList(
       final js =
           _tryStatementJs(s, scope, classes, renderer, depth, returnsWidget);
       if (js == null) {
-        log.warning('[hot_patch_generator] try 语句无法翻译，已在 JS 产物中'
+        log.warning('[hot_patch_generator] '
+            '${sourceAt(scope.sourcePath, s)}: try 语句无法翻译，已在 JS 产物中'
             '跳过：${s.toSource()}');
       } else {
         out.add(js);

@@ -18,6 +18,7 @@ import '../../shared/host_injected.dart';
 import '../translator/js_translator.dart';
 import '../translator/js_value.dart';
 import '../../shared/source_index.dart';
+import '../../shared/source_location.dart';
 import '../translator/element2js.dart';
 
 /// 方法形参 → JS 形参名列表（解 DefaultFormalParameter 包裹）。
@@ -262,8 +263,8 @@ ClassInfo classInfoOf(
           .isEmpty;
       final jsName = operatorJsName(symbol, unary: unary);
       if (jsName == null) {
-        log.warning('[hot_patch_generator] $sourceFile: ${decl.name}'
-            '.operator $symbol 暂不支持（JS 侧无等价成员），已跳过。');
+        log.warning('[hot_patch_generator] ${sourceAt(sourceFile, m)}: '
+            '${decl.name}.operator $symbol 暂不支持（JS 侧无等价成员），已跳过。');
         return null;
       }
       return ClassMethod(
@@ -312,6 +313,7 @@ ClassInfo classInfoOf(
           typeName: fieldTypeName(m, v),
           initializer: v.initializer,
           isStatic: m.isStatic,
+          node: v,
         );
         if (m.isStatic) {
           staticFields.add(f);
@@ -656,11 +658,13 @@ ClassInfo translateClass(
       final erased = eraseType(typeName);
       final isBasic = isBasicType(typeName) || _valueSdkTypes.contains(erased);
       if (!_fieldTranslatable(typeName, classTable,
-          typeParams: classTypeParams)) {
+          typeParams: classTypeParams,
+          sourcePath: sourcePath,
+          node: field.node)) {
         // 对象类型字段（Controller/Widget/Key 等）没有 JS 等价物，自动跳过。
-        // ignore: avoid_print - 构建期日志
-        print(
-          '[hot_patch_generator] 跳过字段 $fieldName（类型 $typeName 不可翻译）',
+        log.warning(
+          '[hot_patch_generator] ${sourceAt(sourcePath, field.node)}: '
+          '跳过字段 $fieldName（类型 $typeName 不可翻译）',
         );
         continue;
       }
@@ -669,6 +673,7 @@ ClassInfo translateClass(
       // 两者都走同一条通用表达式翻译（顶层常量 / 集合字面量 / 模型构造都支持）。
       final defaultExpr = ctorDefaults[fieldName];
       final initScope = FieldScope(
+        sourcePath: sourcePath,
         instanceFields: fieldNames,
         globalConsts: globalConsts,
       );
@@ -724,6 +729,7 @@ ClassInfo translateClass(
       if (m.isStatic) m.name,
   };
   final staticScope = FieldScope(
+    sourcePath: sourcePath,
     className: decl.name.lexeme,
     staticFields: staticNames,
     staticMethods: staticMethods,
@@ -803,9 +809,13 @@ ClassInfo translateClass(
   for (final field in staticDecls) {
     final typeName = field.typeName;
     if (!_fieldTranslatable(typeName, classTable,
-        typeParams: classTypeParams)) {
-      // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 跳过静态字段 ${field.name}（类型 $typeName 不可翻译）');
+        typeParams: classTypeParams,
+        sourcePath: sourcePath,
+        node: field.node)) {
+      log.warning(
+        '[hot_patch_generator] ${sourceAt(sourcePath, field.node)}: '
+        '跳过静态字段 ${field.name}（类型 $typeName 不可翻译）',
+      );
       continue;
     }
     final init = field.initializer;
@@ -985,6 +995,7 @@ ClassInfo translateClass(
           if (!f.isStatic) f.name,
       };
       final layerInitScope = FieldScope(
+        sourcePath: sourcePath,
         instanceFields: layerFieldNames,
         globalConsts: globalConsts,
       );
@@ -1001,10 +1012,12 @@ ClassInfo translateClass(
       for (final f in info.instanceFields) {
         if (f.isStatic) continue;
         if (!_fieldTranslatable(f.typeName, classTable,
-            typeParams: layerTypeParams)) {
-          // ignore: avoid_print - 构建期日志
-          print(
-            '[hot_patch_generator] 跳过 mixin 字段 ${ref.name}.${f.name}'
+            typeParams: layerTypeParams,
+            sourcePath: sourcePath,
+            node: f.node)) {
+          log.warning(
+            '[hot_patch_generator] ${sourceAt(sourcePath, f.node)}: '
+            '跳过 mixin 字段 ${ref.name}.${f.name}'
             '（类型 ${f.typeName} 不可翻译）',
           );
           continue;
@@ -1150,14 +1163,19 @@ ClassInfo translateMixin(
   };
   for (final f in structure.instanceFields) {
     if (!_fieldTranslatable(f.typeName, classTable,
-        typeParams: mixinTypeParams)) {
-      // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 跳过 mixin 字段 ${decl.name.lexeme}.${f.name}'
-          '（类型 ${f.typeName} 不可翻译）');
+        typeParams: mixinTypeParams,
+        sourcePath: sourcePath,
+        node: f.node)) {
+      log.warning(
+        '[hot_patch_generator] ${sourceAt(sourcePath, f.node)}: '
+        '跳过 mixin 字段 ${decl.name.lexeme}.${f.name}'
+        '（类型 ${f.typeName} 不可翻译）',
+      );
       continue;
     }
     final init = f.initializer;
     final initScope = FieldScope(
+      sourcePath: sourcePath,
       instanceFields: fieldNames,
       globalConsts: globalConsts,
     );
@@ -1179,6 +1197,7 @@ ClassInfo translateMixin(
       if (m.isStatic) m.name,
   };
   final staticScope = FieldScope(
+    sourcePath: sourcePath,
     className: decl.name.lexeme,
     staticFields: staticNames,
     staticMethods: staticMethods,
@@ -1187,7 +1206,9 @@ ClassInfo translateMixin(
   final staticFields = <ClassField>[];
   for (final f in structure.staticFields) {
     if (!_fieldTranslatable(f.typeName, classTable,
-        typeParams: mixinTypeParams)) {
+        typeParams: mixinTypeParams,
+        sourcePath: sourcePath,
+        node: f.node)) {
       continue;
     }
     final init = f.initializer;
@@ -1752,12 +1773,16 @@ bool _fieldTranslatable(
   String typeName,
   Map<String, ClassInfo> classTable, {
   Set<String> typeParams = const {},
+  String sourcePath = '',
+  AstNode? node,
 }) {
   if (typeName.trim().endsWith('?')) {
     return _fieldTranslatable(
       typeName.trim().substring(0, typeName.trim().length - 1),
       classTable,
       typeParams: typeParams,
+      sourcePath: sourcePath,
+      node: node,
     );
   }
   // `ui.Image` / `math.Point` 这类**带 import 前缀**的类型：JS 侧没有前缀概念
@@ -1781,14 +1806,15 @@ bool _fieldTranslatable(
     if (_containerTypes.contains(base)) {
       final args = _typeArgs(t.substring(lt + 1, t.length - 1));
       return args.isNotEmpty &&
-          args.every((a) =>
-              _fieldTranslatable(a, classTable, typeParams: typeParams));
+          args.every((a) => _fieldTranslatable(a, classTable,
+              typeParams: typeParams, sourcePath: sourcePath, node: node));
     }
     // 非容器泛型（`GlobalKey<AnimatedListState>` / `ValueNotifier<int>` / 自定义
     // `Foo<T>`）：JS 无泛型，类型实参只是**静态信息**，字段本体是否可持有只看
     // base 类型。这里递归按 base 判定，等价于把类型实参擦除——与 Dart→JS 的
     // 类型擦除一致，不做任何类型名单过滤。
-    return _fieldTranslatable(base, classTable, typeParams: typeParams);
+    return _fieldTranslatable(base, classTable,
+        typeParams: typeParams, sourcePath: sourcePath, node: node);
   }
   if (t.isEmpty) return false;
   // 源码里能解析到构造的类（SDK / 依赖包 / 项目类）：JS 侧有同名类承载，
@@ -1804,9 +1830,8 @@ bool _fieldTranslatable(
   // 字段持有的是枚举值，可翻译且不需要出声。
   if (CtorSignatures.instance?.isEnum(t) ?? false) return true;
   // 解析不到的其余类型：按宿主 Widget 值处理，并出声（避免静默误判）。
-  // ignore: avoid_print - 构建期日志
-  print(
-    '[hot_patch_generator] 字段类型 $t 无法从本地源码解析，'
+  log.warning(
+    '[hot_patch_generator] ${sourceAt(sourcePath, node)}: 字段类型 $t 无法从本地源码解析，'
     '按宿主 Widget 值处理（组件 / 三方类型请确认其 JS 侧有同名类）',
   );
   return true;
