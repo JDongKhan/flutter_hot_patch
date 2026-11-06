@@ -2,9 +2,9 @@
 // 由 hot_patch_generator 从 lib/components/hello_component.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { User } from '../hot_module_base.js';
-import { AccountCenter } from '../hot_module_base.js';
-import { Network } from '../hot_module_base.js';
+import { User } from '../packages/hot_module_base/src/model/user.js';
+import { AccountCenter } from '../packages/hot_module_base/src/account_center.js';
+import { Network } from '../packages/hot_module_base/src/network.js';
 import { Color, Colors, Column, Duration, ElevatedButton, FontWeight, Future, Row, StateError, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 PanelColors

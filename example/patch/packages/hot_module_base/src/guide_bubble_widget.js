@@ -1,37 +1,8 @@
 // GENERATED CODE - DO NOT EDIT
-// 跨包模块（package: hot_module_base）：由 hot_patch_generator 生成
-// 本包内被项目组件引用到的类集中于此文件（跨包翻译）
+// 跨包产物（package: hot_module_base）：由 hot_patch_generator 生成
+// 源文件：package:hot_module_base/src/guide_bubble_widget.dart（一个源文件一份产物）
 
-import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors, Column, CompositedTransformFollower, CompositedTransformTarget, Container, CrossAxisAlignment, Duration, EdgeInsets, IgnorePointer, LayerLink, MainAxisSize, Offset, OverlayPortal, OverlayPortalController, Padding, Positioned, SizedBox, Stack, StatefulWidget, Text, TextStyle, Timer, Transform } from 'flutter.js';
-
-// 模型 Network
-export class Network {
-  constructor() {
-  }
-  static async post(__o) {
-    return _app_host_.invoke("post", arguments.length ? arguments[0] : {});
-  }
-}
-
-// 模型 User
-export class User {
-  constructor(args) {
-    this.__applyProps(args);
-  }
-  __applyProps(args) {
-    this.name = (args && args.name !== undefined) ? args.name : '';
-    this.age = (args && args.age !== undefined) ? args.age : 0;
-  }
-}
-
-// 模型 AccountCenter
-export class AccountCenter {
-  constructor() {
-  }
-  static async getUserName() {
-    return _app_host_.invoke("getUserName", Array.prototype.slice.call(arguments));
-  }
-}
+import { Alignment, AnimatedOpacity, BorderRadius, BoxDecoration, Color, Colors, Column, CompositedTransformFollower, CompositedTransformTarget, Container, CrossAxisAlignment, Duration, EdgeInsets, IgnorePointer, LayerLink, MainAxisSize, Offset, OverlayPortal, OverlayPortalController, Padding, Positioned, SizedBox, Stack, StatefulWidget, Text, TextStyle, Timer, Transform } from '../../../flutter.js';
 
 // 组件 GuideBubbleWidget
 export class GuideBubbleWidget extends StatefulWidget {
@@ -201,15 +172,5 @@ export class GuideBubbleWidget extends StatefulWidget {
         ]
       })
     });
-  }
-}
-
-// 模型 StateLogMixin
-export class StateLogMixin {
-  constructor(args) {
-    this.__ta = (args && args.typeArguments) || {};
-  }
-  logState(message) {
-    print("[StateLogMixin] " + message);
   }
 }

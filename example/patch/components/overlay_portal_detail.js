@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/components/overlay_portal_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { GuideBubbleWidget } from '../hot_module_base.js';
+import { GuideBubbleWidget } from '../packages/hot_module_base/src/guide_bubble_widget.js';
 import { Align, Alignment, Chip, Color, Column, CrossAxisAlignment, Duration, FilledButton, FontWeight, OutlinedButton, Row, SingleChildScrollView, SizedBox, StatefulWidget, Text, TextStyle, ValueKey, Wrap } from '../flutter.js';
 
 // 组件 OverlayPortalDetail

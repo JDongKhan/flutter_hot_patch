@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/app/service/app_service.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Network } from '../../hot_module_base.js';
+import { Network } from '../../packages/hot_module_base/src/network.js';
 import { AppTabConfig } from '../model/app_models.js';
 import { HomeFloorConfig } from '../model/app_models.js';
 import { HomeBanner } from '../model/app_models.js';

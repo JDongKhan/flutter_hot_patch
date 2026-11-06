@@ -1,25 +1,29 @@
-/// 跨包模块 builder：把**本地依赖包**里被项目组件引用到的类翻译成一个包模块
-/// `patch/<package>.js`。
+/// 跨包模块 builder：把**本地依赖包**里的 Dart 源文件翻译成
+/// `patch/packages/<package>/<lib 内相对路径>.js`。
 ///
-/// 一个本地依赖包一个文件（与 [packageModulePath] 同一约定）：包内被引用的
-/// 全部类集中在这一个模块里 `export class`；引用它的组件产物按
-/// `import { Foo } from '../<package>.js'` 取用——与「跨文件模型产物」同一套
-/// ES module import 协议，运行时不新增任何机制，产物也天然只有一份实现
-/// （不像按源文件镜像产物那样，不同包的 `lib/` 结构会互相撞名）。
+/// **一个源文件一份产物**（与 [productPath] 同一约定）：包内文件按原路径镜像
+/// 到自己的包目录下，`export class` / mixin / `registerExtension(...)` 都写在
+/// 声明它的文件产物里；引用方按 `import { Foo } from
+/// '../packages/<package>/<rel>.js'` 取用——与「跨文件模型产物」同一套
+/// ES module import 协议，运行时不新增任何机制。
+///
+/// 为什么要独立的 `packages/` 前缀：本项目产物是 `patch/<lib 相对路径>.js`，
+/// 若直接放 `patch/<package>/`，项目 `lib/` 下恰好存在同名目录时会撞名。
 ///
 /// **谁产出**：「被引用」判定复用 [componentTranslationScope]（文件级可达 +
-/// 符号级引用闭包），只有项目组件真的引用到的类才产出，依赖包不会被无差别
-/// 翻译。**哪些包参与**：只认**本地包**（path 依赖 / workspace 成员，见
-/// [PackageSources.isLocalPackage]），排除框架包（[nonTranslatedPackages]）
-/// ——三方宿主包的类型在 JS 侧没有等价实现，仍走宿主注册表 / 原生注入。
+/// 符号级引用闭包），只有项目组件真的引用到的类才翻译；但产物按**文件**存在，
+/// 未被引用的文件写空模块（build_runner 要求写全声明的产物）。**哪些包参与**：
+/// 只认**本地包**（path 依赖 / workspace 成员，见 [PackageSources.isLocalPackage]），
+/// 排除框架包（[nonTranslatedPackages]）——三方宿主包的类型在 JS 侧没有等价
+/// 实现，仍走宿主注册表 / 原生注入。
 ///
-/// 尚未覆盖（构建期出声，不静默降级）：本地依赖包里的**顶层常量**与
-/// **静态单例类**产物（跨包常量引用与单例值不会随本模块产出）。
-///
-/// **归属唯一**：`patch/<package>.js` 只能有一个产出方——框架包（flutter /
-/// provider 之流）归 `ui_widget`（宿主包装类 + 逻辑组件），本地依赖包归本
-/// builder，两者按「包是否是本地包」天然互斥（见 [localTranslationPackages]）。
+/// **归属唯一**：`patch/packages/<package>/**` 只能有一个产出方——本地依赖包
+/// 归本 builder，框架包（flutter / provider 之流）仍归 `ui_widget` 的单文件
+/// 模块 `patch/<package>.js`，两者按「包是否是本地包」天然互斥
+/// （见 [localTranslationPackages]）。
 library;
+
+import 'dart:io';
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:build/build.dart';
@@ -56,17 +60,46 @@ List<String> localTranslationPackages() {
   ]..sort();
 }
 
-/// 跨包模块 builder：`$package$` 输入 → 每个本地依赖包一个
-/// `patch/<package>.js`。输出清单由 [localTranslationPackages] 静态推导，
-/// 与 `ui_widget` 同款（无需种子文件）；即使包内没有任何被引用的类也照常产出
-/// （空模块 + 一句注释），因为 build_runner 要求写全声明的产物。
+/// 参与产出的本地依赖包源文件（`package:<pkg>/<lib 内相对路径>`）。
+///
+/// build_runner 的 buildExtensions 必须在建图阶段给出完整输出清单，而跨包
+/// 文件不在构建输入范围内、拿不到引用分析，故按包**全量扫描**；结果进程级
+/// 缓存（包集合与文件列表在一次构建内稳定）。
+List<String> localTranslationPackageFiles() =>
+    _localPackageFiles ??= _scanPackageFiles();
+
+List<String>? _localPackageFiles;
+
+List<String> _scanPackageFiles() {
+  final sources = PackageSources.instance;
+  if (sources == null) return const [];
+  final out = <String>[];
+  for (final pkg in localTranslationPackages()) {
+    final root = sources.byName(pkg);
+    if (root == null) continue;
+    final libDir = root.libDir;
+    if (!Directory(libDir).existsSync()) continue;
+    for (final f in Directory(libDir).listSync(recursive: true)) {
+      if (f is! File || !f.path.endsWith('.dart')) continue;
+      final rel =
+          f.path.substring(libDir.length + 1).replaceAll(Platform.pathSeparator, '/');
+      out.add('package:$pkg/$rel');
+    }
+  }
+  out.sort();
+  return out;
+}
+
+/// 跨包模块 builder：`$package$` 输入 → 每个本地依赖包源文件一份
+/// `patch/packages/<package>/<rel>.js`。输出清单由
+/// [localTranslationPackageFiles] 静态推导（无需种子文件）。
 class ProjectModuleBuilder implements Builder {
   const ProjectModuleBuilder();
 
   @override
   Map<String, List<String>> get buildExtensions => {
         r'$package$': [
-          for (final p in localTranslationPackages()) packageModulePath(p),
+          for (final f in localTranslationPackageFiles()) productPath(f),
         ],
       };
 
@@ -74,8 +107,8 @@ class ProjectModuleBuilder implements Builder {
   Future<void> build(BuildStep buildStep) async {
     final outputs = <String, AssetId>{};
     for (final o in buildStep.allowedOutputs) {
-      final pkg = _packageOfModulePath(o.path);
-      if (pkg != null) outputs[pkg] = o;
+      final source = _sourceFileOfProductPath(o.path);
+      if (source != null) outputs[source] = o;
     }
     if (outputs.isEmpty) return;
     final scope = await componentTranslationScope(buildStep);
@@ -90,136 +123,169 @@ class ProjectModuleBuilder implements Builder {
       await buildStep.writeAsString(
         e.value,
         canonicalizeJsIndent(
-          renderProjectPackageModule(e.key, scope.neededClasses, ownerOf),
+          renderProjectPackageFile(
+            e.key,
+            neededNames: scope.neededClasses[e.key] ?? const {},
+            ownerOf: ownerOf,
+          ),
         ),
       );
     }
   }
 }
 
-/// `patch/<package>.js` → 包名；不是包模块路径返回 null。
-String? _packageOfModulePath(String path) {
-  const prefix = 'patch/';
+/// `patch/packages/<package>/<rel>.js` → `package:<package>/<rel>.dart`；
+/// 不是依赖包产物路径返回 null。
+String? _sourceFileOfProductPath(String path) {
+  const prefix = '$packageProductsRoot/';
   if (!path.startsWith(prefix) || !path.endsWith('.js')) return null;
-  final name = path.substring(prefix.length, path.length - '.js'.length);
-  if (name.isEmpty || name.contains('/')) return null;
-  return name;
+  final rest = path.substring(prefix.length);
+  final slash = rest.indexOf('/');
+  if (slash <= 0) return null;
+  final pkg = rest.substring(0, slash);
+  final rel = rest.substring(slash + 1, rest.length - '.js'.length);
+  if (rel.isEmpty) return null;
+  return 'package:$pkg/$rel.dart';
 }
 
-/// 一个本地依赖包的模块产物（`patch/<package>.js`）。
+/// 一个依赖包源文件的产物（`patch/packages/<package>/<rel>.js`）。
 ///
-/// [neededClasses] 是全局「需要产出的类」（文件身份 → 类名集合），只取属于
-/// [package] 的文件；[ownerOf] 是类名 → 声明文件身份（依赖产物路径解析用）。
-String renderProjectPackageModule(
-  String package,
-  Map<String, Set<String>> neededClasses,
-  Map<String, String> ownerOf,
-) {
-  final ownProduct = packageModulePath(package);
-  // 本包需要产出的类 / mixin：名字必须唯一（模块内一个类一份实现），重名出声。
-  final decls = <String, (AstNode, String)>{};
-  for (final e in neededClasses.entries) {
-    if (packageNameOf(e.key) != package) continue;
-    final unit = parseUnitFile(e.key);
-    if (unit == null) {
-      // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 无法解析跨包源文件 ${e.key}（包 $package）：'
-          '${e.value.join(', ')} 未产出');
-      continue;
-    }
-    // StatefulWidget 的 State 类已随 widget 类合并产出（见 translateClass 的
-    // 唯一分叉），不能在这里再单独产出一个模型类——否则同一份实现会出现两遍，
-    // 且独立类没有宿主初始化上下文。
-    final stateNames = <String>{};
-    for (final d in unit.declarations.whereType<ClassDeclaration>()) {
-      final n = stateClassNameOf(d);
-      if (n != null) stateNames.add(n);
-    }
-    for (final name in e.value) {
-      if (stateNames.contains(name)) continue;
-      AstNode? decl = unit.declarations
-          .whereType<ClassDeclaration>()
-          .where((d) => d.name.lexeme == name)
-          .firstOrNull;
-      decl ??= unit.declarations
-          .whereType<MixinDeclaration>()
-          .where((d) => d.name.lexeme == name)
-          .firstOrNull;
-      if (decl == null) continue;
-      if (decls.containsKey(name)) {
-        // ignore: avoid_print - 构建期日志
-        print('[hot_patch_generator] 跨包模块 $package 里类名 $name 重复'
-            '（${decls[name]!.$2} 与 ${e.key}），只保留前者');
-        continue;
-      }
-      decls[name] = (decl, e.key);
-    }
-  }
-
+/// [neededNames] 是全局「需要产出的类 / mixin」中属于本文件的部分；产物同时
+/// 承载本文件声明的 `extension` 注册语句（与声明处一对一，见
+/// [translateExtension]）。[ownerOf] 是类名 → 声明文件身份（跨文件 import 用）。
+String renderProjectPackageFile(
+  String sourceFile, {
+  required Set<String> neededNames,
+  required Map<String, String> ownerOf,
+}) {
+  final package = packageNameOf(sourceFile) ?? '';
+  final ownProduct = productPath(sourceFile);
   final b = StringBuffer()
     ..writeln('// GENERATED CODE - DO NOT EDIT')
-    ..writeln('// 跨包模块（package: $package）：由 hot_patch_generator 生成')
-    ..writeln('// 本包内被项目组件引用到的类集中于此文件（跨包翻译）')
+    ..writeln('// 跨包产物（package: $package）：由 hot_patch_generator 生成')
+    ..writeln('// 源文件：$sourceFile（一个源文件一份产物）')
     ..writeln();
 
-  if (decls.isEmpty) {
-    b.writeln('// 本包没有被项目组件引用的类，空模块。');
+  final unit = parseUnitFile(sourceFile);
+  if (unit == null) {
+    b.writeln('// 无法解析该源文件，空模块。');
     return b.toString();
   }
+  final table = buildClassTable(unit, sourceFile);
+  final consts = buildTopLevelConstResolver(unit, sourceFile, table);
+  final extensionOperators = extensionOperatorsInScope(unit, sourceFile);
+  final localNames = <String>{
+    for (final d in unit.declarations.whereType<ClassDeclaration>())
+      d.name.lexeme,
+    for (final d in unit.declarations.whereType<MixinDeclaration>())
+      d.name.lexeme,
+  };
 
-  // 依赖产物路径：同模块的类直接内联引用（本模块已 export），其余按
-  // 「类名 → 声明文件身份 → 产物路径」推导（项目产物 / 其它跨包模块）。
-  String? importResolver(String name) {
+  // 本文件里被引用到的类 / mixin：只取本文件声明，跨文件由 import 承接。
+  final decls = <String, AstNode>{};
+  // StatefulWidget 的 State 类已随 widget 类合并产出（见 translateClass 的
+  // 唯一分叉），不能在这里再单独产出一个模型类——否则同一份实现会出现两遍，
+  // 且独立类没有宿主初始化上下文。
+  final stateNames = <String>{
+    for (final d in unit.declarations.whereType<ClassDeclaration>())
+      if (stateClassNameOf(d) case final n?) n,
+  };
+  for (final name in neededNames) {
+    if (!localNames.contains(name) || stateNames.contains(name)) continue;
+    final decl = unit.declarations
+            .whereType<ClassDeclaration>()
+            .where((d) => d.name.lexeme == name)
+            .firstOrNull ??
+        unit.declarations
+            .whereType<MixinDeclaration>()
+            .where((d) => d.name.lexeme == name)
+            .firstOrNull;
+    if (decl != null) decls[name] = decl;
+  }
+
+  // 依赖产物路径：本文件已产出 → 本产物；跨文件 → 该文件的产物。
+  String? productOf(String name) {
     final owner = ownerOf[name];
     if (owner == null) return null;
-    if (packageNameOf(owner) == package) {
-      return decls.containsKey(name) ? packageModulePath(package) : null;
+    if (owner == sourceFile) {
+      return decls.containsKey(name) ? ownProduct : null;
     }
-    return relativeProduct(ownProduct, productPath(owner));
+    return productPath(owner);
+  }
+
+  String? importResolver(String name) {
+    final product = productOf(name);
+    return product == null ? null : relativeProduct(ownProduct, product);
+  }
+
+  // 本文件声明的 extension：注册语句写在本文件产物里，调用方 import 即注册。
+  final extensions = <ExtensionInfo>[];
+  for (final decl in extensionDeclarations(unit)) {
+    final info = translateExtension(
+      decl,
+      unit,
+      sourceFile,
+      ownProduct: ownProduct,
+      classTable: table,
+      importResolver: importResolver,
+      productOf: productOf,
+      jsClassWidgets: jsClassWidgetTypes,
+      delegateClassWidgets: builderFormTypes,
+      ignoredTypes: ignoredClassNamesInScope(unit, sourceFile),
+      globalConsts: consts.names,
+      classNamesInUnit: localNames,
+      extensionOperators: extensionOperators,
+    );
+    if (info != null) extensions.add(info);
+  }
+
+  // barrel（只有 export 转发、没有声明，如包入口 `lib/hot_module_base.dart`）：
+  // 产物负责把目标文件的符号 re-export 出来，供 `import ... as p` 的命名空间
+  // 引用（`p.User`）继续可用。
+  final barrelExports = _barrelExportLines(unit, sourceFile, ownProduct);
+
+  if (decls.isEmpty && extensions.isEmpty && barrelExports.isEmpty) {
+    b.writeln('// 本文件没有被项目引用的类 / mixin，也没有 extension，空模块。');
+    return b.toString();
   }
 
   final classInfos = <ClassInfo>[];
   final applications = <MixinApplication>[];
   final deps = <String>{};
   final usedWidgets = <String, Set<String>>{};
-  // 类名 → JS 基类名：类表是逐个文件建的（跨包模块按文件翻译），故渲染前按
-  // 类名汇总，供「基类在前」排序与 extends 渲染共用。
+  // 类名 → JS 基类名：渲染前按类名汇总，供「基类在前」排序与 extends 渲染共用。
   final baseClassByName = <String, String?>{};
   for (final e in decls.entries) {
-    final (node, file) = e.value;
-    final unit = parseUnitFile(file)!;
-    final table = buildClassTable(unit, file);
-    final consts = buildTopLevelConstResolver(unit, file, table);
-    final extensionOperators = extensionOperatorsInScope(unit, file);
-    // 跨包文件里的顶层常量产物不在本模块内（同文件常量已内联），出声提示。
+    final node = e.value;
+    // 跨包文件里的顶层常量产物不在本产物内（同文件常量已内联），出声提示。
     final foreignConsts = referencedImportedConsts(unit, consts);
     if (foreignConsts.isNotEmpty) {
       // ignore: avoid_print - 构建期日志
-      print('[hot_patch_generator] 跨包类 ${e.key}（$file）引用了包内其它文件的'
-          '顶层常量 ${foreignConsts.join(', ')}：暂未随跨包模块产出');
+      print('[hot_patch_generator] 跨包类 ${e.key}（$sourceFile）引用了包内其它'
+          '文件的顶层常量 ${foreignConsts.join(', ')}：暂未随跨包产物产出');
     }
     final info = node is MixinDeclaration
         ? translateMixin(
             node,
             unit,
-            file,
+            sourceFile,
             classTable: table,
             importResolver: importResolver,
             jsClassWidgets: jsClassWidgetTypes,
             delegateClassWidgets: builderFormTypes,
-            ignoredTypes: ignoredClassNamesInScope(unit, file),
+            ignoredTypes: ignoredClassNamesInScope(unit, sourceFile),
             globalConsts: consts.names,
             extensionOperators: extensionOperators,
           )
         : translateClass(
             node as ClassDeclaration,
             unit,
-            file,
+            sourceFile,
             classTable: table,
             importResolver: importResolver,
             jsClassWidgets: jsClassWidgetTypes,
             delegateClassWidgets: builderFormTypes,
-            ignoredTypes: ignoredClassNamesInScope(unit, file),
+            ignoredTypes: ignoredClassNamesInScope(unit, sourceFile),
             globalConsts: consts.names,
             isComponent: table[e.key]?.isComponent ?? false,
             extensionOperators: extensionOperators,
@@ -258,6 +324,19 @@ String renderProjectPackageModule(
     });
   }
 
+  // 本文件扩展的依赖与 widget 引用并入产物 import 区。
+  final namespaceImports = <String, String>{};
+  for (final e in extensions) {
+    for (final d in e.dependencies) {
+      if (decls.containsKey(d)) continue;
+      if (importResolver(d) != null) deps.add(d);
+    }
+    e.usedWidgetPackages.forEach((pkg, types) {
+      (usedWidgets[pkg] ??= <String>{}).addAll(types);
+    });
+    namespaceImports.addAll(e.namespaceImports);
+  }
+
   final appLayers = [for (final a in applications) a.layer];
   final layerNames = {for (final a in applications) a.layer.name};
 
@@ -282,6 +361,16 @@ String renderProjectPackageModule(
   for (final a in applications) {
     body.writeln('__mixinHard(${a.layer.name}, ${a.mixinName});');
   }
+  // 扩展注册语句：与 Dart 声明处一对一，调用方 import 本产物即完成注册。
+  for (final e in extensions) {
+    body
+      ..writeln()
+      ..writeln(e.toJs());
+  }
+  // barrel 的 re-export：把转发目标的产物符号透出，维持模块命名空间引用。
+  for (final line in barrelExports) {
+    body.writeln(line);
+  }
 
   final imports = <String>[
     for (final d in deps.toList()..sort())
@@ -302,6 +391,12 @@ String renderProjectPackageModule(
     imports.add("import { ${(e.value.toList()..sort()).join(', ')} } from "
         "'${relativeProduct(ownProduct, packageModulePath(e.key))}';");
   }
+  // 扩展成员体里的 `p.Foo`（import 前缀）→ 模块命名空间 import。
+  for (final e in namespaceImports.entries) {
+    if (e.value.isEmpty) continue;
+    imports.add("import * as ${e.key} from "
+        "'${relativeProduct(ownProduct, e.value)}';");
+  }
   final deduped = <String>[];
   for (final line in imports..sort()) {
     if (!deduped.contains(line)) deduped.add(line);
@@ -310,4 +405,56 @@ String renderProjectPackageModule(
     b.writeln(line);
   }
   return b.toString() + body.toString();
+}
+
+/// barrel 文件的 re-export 行：`export { A, B } from './src/a.js';`
+///
+/// 只对本地依赖包内的目标生效（框架包 / `dart:` 由宿主模块承接，不在这里
+/// 转发）；`show` / `hide` 按声明名过滤，私有名不导出。
+List<String> _barrelExportLines(
+  CompilationUnit unit,
+  String sourceFile,
+  String ownProduct,
+) {
+  final out = <String>[];
+  for (final d in unit.directives.whereType<ExportDirective>()) {
+    final uri = d.uri.stringValue;
+    if (uri == null || uri.startsWith('dart:')) continue;
+    final target = resolveDirectiveTarget(uri, sourceFile);
+    if (target == null) continue;
+    final pkg = packageNameOf(target);
+    if (pkg != null && !isFileLayoutPackage(pkg)) continue;
+    final targetUnit = parseUnitFile(target);
+    if (targetUnit == null) continue;
+    final names = _publicDeclarationNames(targetUnit);
+    var shown = names;
+    for (final c in d.combinators) {
+      if (c is ShowCombinator) {
+        shown = shown.where((n) => c.shownNames.any((s) => s.name == n)).toSet();
+      } else if (c is HideCombinator) {
+        shown = shown.where((n) => !c.hiddenNames.any((s) => s.name == n)).toSet();
+      }
+    }
+    if (shown.isEmpty) continue;
+    final sorted = shown.toList()..sort();
+    out.add("export { ${sorted.join(', ')} } from "
+        "'${relativeProduct(ownProduct, productPath(target))}';");
+  }
+  return out;
+}
+
+/// 文件里可被 re-export 的公共顶层声明（类 / mixin / 具名 extension）。
+Set<String> _publicDeclarationNames(CompilationUnit unit) {
+  final out = <String>{};
+  for (final d in unit.declarations) {
+    final name = d is ClassDeclaration
+        ? d.name.lexeme
+        : d is MixinDeclaration
+            ? d.name.lexeme
+            : d is ExtensionDeclaration
+                ? d.name?.lexeme
+                : null;
+    if (name != null && !name.startsWith('_')) out.add(name);
+  }
+  return out;
 }

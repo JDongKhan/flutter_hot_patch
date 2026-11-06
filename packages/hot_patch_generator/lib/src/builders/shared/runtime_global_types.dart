@@ -150,7 +150,13 @@ class _RuntimeGlobalTypes {
         if (f.existsSync()) f,
     ];
     for (final file in files) {
-      final src = file.readAsStringSync();
+      // 只扫描非注释行：片段模板里的示例代码（`//   export const X = ...`）
+      // 不是真实导出，按源码事实抽取时必须排除，否则产物会 import 不存在的
+      // 名字（曾把扩展注册示例里的 `StringLogExtension` 误当成 flutter 导出）。
+      final src = file
+          .readAsLinesSync()
+          .where((l) => !l.trimLeft().startsWith('//'))
+          .join('\n');
       for (final m in _globalAssign.allMatches(src)) {
         types.add(m.group(1)!);
       }

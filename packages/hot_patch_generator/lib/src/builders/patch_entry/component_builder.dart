@@ -470,10 +470,7 @@ class ComponentBuilder implements Builder {
     // 该文件产物里的 `export class`）；同产物内直接裸引用。
     for (final c in [...exportedClasses, ...inlineClasses.values]) {
       for (final a in c.mixinApplications) {
-        final pkg = packageNameOf(a.sourceFile);
-        final product = pkg == null
-            ? productPath(a.sourceFile)
-            : packageModulePath(pkg);
+        final product = productPath(a.sourceFile);
         if (product == ownProduct) continue;
         dependencyImports.add(
           "import { ${a.mixinName} } from "
@@ -491,8 +488,8 @@ class ComponentBuilder implements Builder {
     // 必须被加载——Dart 里要用扩展就得 import 声明它的库，这里按同一套 import
     // 图（含 barrel 的 export 转发）反查声明了 extension 的源文件，import 其扩展
     // 常量（导入即触发 `registerExtension(...)`）。
-    //   - 项目文件 → 该文件自身的产物（`patch/a/b.js`）；
-    //   - 本地依赖包 → `patch/extensions/<pkg>.js`（一包一个，按需加载）。
+    //   - 项目文件 / 本地依赖包 → 声明文件自身的产物（`patch/.../<rel>.js`）；
+    //     本地依赖包的扩展与其声明文件一起产出（见 ui_project_module）。
     //
     // **只用「用到」的扩展**：import 了扩展文件但整个文件没调用它时，不产生
     // 任何 import（否则每次加载本模块都要白注册一批原型成员）。判据见
@@ -514,9 +511,7 @@ class ComponentBuilder implements Builder {
             n,
       };
       if (names.isEmpty) continue;
-      final owner = packageNameOf(file);
-      final product =
-          owner == null ? productPath(file) : extensionModulePath(owner);
+      final product = productPath(file);
       (extNamesByProduct[product] ??= <String>{}).addAll(names);
     }
     for (final e in extNamesByProduct.entries) {
@@ -612,8 +607,15 @@ Map<String, String> _importPrefixProducts(
     }
     if (uri.startsWith('package:')) {
       final pkg = packageNameOf(uri);
-      if (pkg != null && modulePackages.contains(pkg)) {
-        out[prefix] = packageModulePath(pkg);
+      if (pkg != null) {
+        // 本地依赖包：前缀对应**该 import URI 的文件产物**（barrel 产物会
+        // re-export 它转发出去的符号），保证 `p.User` 这类引用可用；
+        // 框架包（flutter / provider）仍是整包一个模块。
+        if (isFileLayoutPackage(pkg)) {
+          out[prefix] = productPath(uri);
+        } else if (modulePackages.contains(pkg)) {
+          out[prefix] = packageModulePath(pkg);
+        }
       }
       continue;
     }

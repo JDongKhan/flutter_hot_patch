@@ -1,9 +1,8 @@
 // GENERATED CODE - DO NOT EDIT
-// Dart extension 注册（package:hot_module_base）：由 hot_patch_generator 生成
-// 使用方 import 本文件即完成注册（`registerExtension(...)`），无需预热。
+// 跨包产物（package: hot_module_base）：由 hot_patch_generator 生成
+// 源文件：package:hot_module_base/src/string_log_extension.dart（一个源文件一份产物）
 
 
-// 扩展 StringLogExtension（package:hot_module_base/src/string_log_extension.dart）
 export const StringLogExtension = registerExtension("String", (function () {
   "use strict";
   return {

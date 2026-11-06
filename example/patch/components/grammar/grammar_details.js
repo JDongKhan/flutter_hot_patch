@@ -2,8 +2,8 @@
 // 由 hot_patch_generator 从 lib/components/grammar/grammar_details.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { StateLogMixin } from '../../hot_module_base.js';
-import { StringLogExtension } from '../../extensions/hot_module_base.js';
+import { StateLogMixin } from '../../packages/hot_module_base/src/state_log_mixin.js';
+import { StringLogExtension } from '../../packages/hot_module_base/src/string_log_extension.js';
 import { TestString1 } from 'extension/e_string.js';
 import { Colors, Column, CrossAxisAlignment, DateTime, Duration, ElevatedButton, FontWeight, RegExp, SizedBox, StatefulWidget, StatelessWidget, StringBuffer, Text, TextStyle } from '../../flutter.js';
 

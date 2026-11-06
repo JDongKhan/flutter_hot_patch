@@ -1,3 +1,13 @@
+## 0.10.0
+
+**破坏性变更：产物布局。** 本地依赖包不再一包一个模块，改为**按源文件同名镜像**；旧 `patch.zip` 与本版本产物不兼容，需与生成器同版本配套使用。
+
+- **依赖包产物按原文件路径镜像**：`package:foo/src/a.dart` → `patch/packages/foo/src/a.js`（`paths.dart` 的 `productPath` / `packageSourceProductPath`）。加 `packages/` 前缀是为了与本项目 `patch/<lib 相对路径>.js` 隔离，避免项目 `lib/` 下同名目录撞名。框架包（`flutter` / `provider`）仍是 `patch/<pkg>.js` 单模块。
+- **跨包 builder 改为按文件产出**（`project_module_builder.dart`）：输出清单由 `localTranslationPackageFiles()` 静态扫描本地包全部 `.dart` 文件推导，未引用的文件写空模块；每个文件只翻译本文件里被引用到的类 / mixin，并承载本文件的 `extension` 注册语句。
+- **删除独立的 extensions 产物**：`ui_extensions` builder、`extensionModulePath`、`patch/extensions/<pkg>.js` 全部移除；扩展随声明文件产物 `registerExtension(...)` 发射，调用方 import 该文件即完成注册。AGENTS 与架构文档的产物布局同步更新。
+- **barrel 生成 re-export**：只有 `export` 转发的包入口（如 `lib/foo.dart`）产出 `export { A } from './src/a.js';`，保证 `import 'package:foo/foo.dart' as p` 的 `p.A` 引用继续可用；`show` / `hide` 按声明名过滤。
+- **修复 `flutterExportTypes` 误抽取**：运行时片段扫描跳过行首注释行，不再把注释示例里的 `export const StringLogExtension = ...` 当成 `flutter.js` 导出（否则产物会 import 不存在的名字）。
+
 ## 0.9.0
 
 **协议次版本：契约不变；语法翻译产物按 `Dart转JS语法翻译手册` v1.4 校准（mixin 产物形态变更，老路径语义不变）。**

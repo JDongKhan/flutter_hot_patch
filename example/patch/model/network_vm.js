@@ -2,7 +2,7 @@
 // 由 hot_patch_generator 从 lib/model/network_vm.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { Network } from '../hot_module_base.js';
+import { Network } from '../packages/hot_module_base/src/network.js';
 import { ChangeNotifier } from '../flutter.js';
 
 // 模型 NetworkVm

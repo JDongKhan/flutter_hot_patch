@@ -3,7 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatelessWidget, Text, TextStyle } from '../../flutter.js';
-import * as base from '../../hot_module_base.js';
+import * as base from '../../packages/hot_module_base/hot_module_base.js';
 import * as p from '../../provider.js';
 import * as vm from '../../model/counter_vm.js';
 
