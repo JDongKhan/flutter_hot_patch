@@ -632,6 +632,9 @@ class ElementTranslateContext implements ExprRenderer {
     final token = _typeToken(json['type']);
     final name = bareTypeName(token);
     _assertTranslatable(name);
+    // 值语境一律按类调用（`new X(...)`）：JS 侧没有这个类就是未定义全局。
+    // 若类来自某个 pub 依赖包而宿主 `js/` 没提供该包模块，构建期直接出声。
+    if (jsClassFileOf(name) == null) _warnMissingHostJs(name);
     _registerWidgetImport(token, name);
     // 值语境一律按类调用：命名构造走包装类上的同名静态方法。
     return _renderCall(token, json, depth, asClass: true);

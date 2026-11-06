@@ -6,6 +6,7 @@
 - **新增 `ui_third_party_js` builder**（`third_party_js_builder.dart`）：宿主工程 `js/**.js` → `patch/packages/**.js` 原样拷贝。文件名即 Dart 包名（`js/provider.js` ↔ `package:provider`）；输出清单按文件系统扫描静态推导（与 `ui_project_module` 同款），无需改宿主 `build.yaml` 的 `sources`。
 - **三方类型归属改为源码事实**：`js_class_defs.dart` 的 `thirdPartyPackageOf` 用「类声明所在包（`CtorSignatures.declaringPackagesOf`）+ 该包是否有 `js/<package>.js`」判定，`packageModulePath` 对三方包返回 `patch/packages/<package>.js`；`element2js` 的 `jsClassFileOf` / `_registerWidgetImport` 与 `component_builder` 的前缀 / 副作用 import 同步走该规则，无库名 / 类型名白名单。
 - **provider JS 迁到宿主**：新增 `example/js/provider.js`（`ChangeNotifierProvider` / `MultiProvider` / `Consumer` + `context.watch/read` 原型补丁），对 `flutter.js` 的相对 import 改为 `../flutter.js`；删除生成的 `example/patch/provider.js`。
+- **缺失宿主 JS 模块时构建期告警**：`js_class_defs.dart` 新增 `missingHostJsPackageOf`（类声明所在包 ∈ pub 依赖、且该包没有 `js/<package>.js` 时返回包名；本项目包 / 本地依赖包 / 框架包 / `dart:` / 运行时已注入的类一律不算缺失）；`element2js` 的元素渲染（`_renderJsImpl`）与值渲染（`_renderValueImpl`）在 `jsClassFileOf` 为空时按类型告警一次，指明应在工程根 `js/<package>.js` 提供该包 JS。`js/` 为空或缺失时构建照常完成、产物里不会留下指向缺失模块的 import。
 - **文档同步**：架构文档、使用手册、组件支持文档与 README 的产物布局 / 三方库接入指引改为 `js/` → `patch/packages/` 约定。
 
 ## 0.10.0
