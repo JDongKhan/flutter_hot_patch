@@ -10,9 +10,9 @@
 //                  就是调 Dart 端 context」。
 //
 // **本片段只是机制，不含任何库的 API**：`watch` / `read` 等方法由各自的三方库
-// 在自己片段里补到 `JsBuildContext.prototype` 上（对齐 Dart 的
-// `extension BuildContextX on BuildContext`）——见 provider 包模块的片段
-// `provider_module_js.dart`（随 `patch/provider.js` 发布）。
+// 在自己的 JS 模块里补到 `JsBuildContext.prototype` 上（对齐 Dart 的
+// `extension BuildContextX on BuildContext`）——见宿主维护的 `js/provider.js`
+// （构建拷贝到 `patch/packages/provider.js`）。
 // 宿主侧由核心的 `registerContextOp` 分发给注册者，核心不认识具体 op 名。
 //
 // 代理由运行时在 build 时**传入**（`inst.build(ctx)`，对应 Dart 的
@@ -86,7 +86,7 @@ const String buildContextJsSource = r'''
 
   // `context.watch<T>()` / `read<T>()` **不在这里**：它们不是框架 API，而是
   // provider 那类 `extension BuildContextX on BuildContext`——方法补丁在
-  // patch/provider.js（provider_module_js.dart）。
+  // patch/packages/provider.js（宿主维护的 js/provider.js）。
   // 本片段只提供机制：代理、句柄、InheritedWidget 查找（depend/get）、通用 op 转发。
 
   // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，

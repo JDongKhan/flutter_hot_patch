@@ -515,7 +515,7 @@ class JsRuntimeManager {
   ///
   /// **不能**放进 [ensureJsUiRuntime]：后者可能正被某个模块的加载过程调用
   /// （如 `flutter.js` 的 `loadModule` 内部），而能力模块往往 import 那个正在
-  /// 加载的模块（provider.js → flutter.js），会等自己 → 死锁。
+  /// 加载的模块（packages/provider.js → flutter.js），会等自己 → 死锁。
   ///
   /// 走 [loadModule] 同一套流程：相对 import 递归、幂等，故与组件产物 import
   /// 同一份文件时只求值一次。
@@ -730,7 +730,7 @@ class JsRuntimeManager {
       r"import\s*\{([^}]+)\}\s*from\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;",
     );
     // 副作用 import：生成器为「源文件 import 了 package:X」的包模块补的依赖
-    // （如 `import '../provider.js';`），只需要加载、不需要绑定任何名字。
+    // （如 `import '../packages/provider.js';`），只需要加载、不需要绑定任何名字。
     final sideEffectRe = RegExp(
       r"^[ \t]*import\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]\s*;[ \t]*$",
       multiLine: true,
@@ -873,7 +873,7 @@ $out
   }
 
   /// 清除所有已加载模块缓存（远程 zip 更新后调用，强制下次重新 evaluate）。
-  /// 同时清空 JS 侧 `__modules` 表——依赖模块（flutter.js / provider.js 等）
+  /// 同时清空 JS 侧 `__modules` 表——依赖模块（flutter.js / packages/provider.js 等）
   /// 下次也会重新加载，避免拿到旧类引用。
   ///
   /// **不清 [_loadingCompleters]**：in-flight 加载各由自己的 owner 用本地

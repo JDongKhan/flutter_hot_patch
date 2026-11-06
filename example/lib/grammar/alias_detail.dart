@@ -12,7 +12,8 @@ import '../model/counter_vm.dart' as vm;
 ///     `base.User` 简单名相同——Dart 里靠前缀区分，JS 侧必须同样分成两个
 ///     不同的类引用（`User` 与 `base.User`），不能合并成一条；
 ///   - **包模块类**：`p.ChangeNotifierProvider` / `p.Consumer` 来自
-///     `package:provider` 的 `patch/provider.js`，别名引用同样要落到该模块。
+///     `package:provider` 的 `patch/packages/provider.js`（宿主 `js/provider.js`
+///     拷贝），别名引用同样要落到该模块。
 class User {
   const User(this.tag);
 

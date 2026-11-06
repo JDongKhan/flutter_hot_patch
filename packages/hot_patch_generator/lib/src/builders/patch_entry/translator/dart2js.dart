@@ -140,9 +140,19 @@ String renderClassDecl(
       // 方法签名按调用约定生成：位置形参在前，具名实参（与类型实参）合并成
       // 一个尾参对象 `__o`（无具名时为泛型专用的 `__ta`）。方法体里的默认值
       // 前导与具名解构已由收集阶段写进 [ClassMethod.bodyJs]。
-      b.write('  $st$fn${m.name}(${jsSignatureParams(m).join(', ')}) {\n');
-      if (body.isNotEmpty) b.write('$body\n');
-      b.write('  }\n');
+      if (gen && m.isAsync) {
+        // `async*` 不能返回裸异步生成器（没有 listen）：包成 Stream，
+        // 首次订阅才启动生成器；`.bind(this)` 保住方法体里的 `this`。
+        b.write('  $st${m.name}(${jsSignatureParams(m).join(', ')}) {\n');
+        b.write('    return Stream.fromAsyncGenerator((async function* () {\n');
+        if (body.isNotEmpty) b.write('$body\n');
+        b.write('    }).bind(this)());\n');
+        b.write('  }\n');
+      } else {
+        b.write('  $st$fn${m.name}(${jsSignatureParams(m).join(', ')}) {\n');
+        if (body.isNotEmpty) b.write('$body\n');
+        b.write('  }\n');
+      }
     }
   }
 

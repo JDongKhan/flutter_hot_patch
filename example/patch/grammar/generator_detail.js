@@ -20,11 +20,11 @@ export class GeneratorDetail extends StatelessWidget {
     yield 99;
   }
   _generatorText() {
-    const tags = function* () { yield "a";
-      yield "b"; };
-    const evens = function* (n) { for (let i = 0; (i < n); (i++)) {
+    const tags = () => (function* () { yield "a";
+      yield "b"; }).bind(this)();
+    const evens = (n) => (function* () { for (let i = 0; (i < n); (i++)) {
         yield (i * 2);
-      } };
+      } }).bind(this)();
     const chained = this._chain(3).toList();
     const tagList = tags().toList();
     let sum = 0;

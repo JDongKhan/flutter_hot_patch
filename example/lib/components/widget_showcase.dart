@@ -48,6 +48,7 @@ import '../grammar/operator_detail.dart';
 import '../grammar/pattern_detail.dart';
 import '../grammar/record_detail.dart';
 import '../grammar/statement_detail.dart';
+import '../grammar/stream_detail.dart';
 import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
@@ -352,6 +353,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'CollectionDetail': 'grammar/collection_detail.js',
     'AsyncDetail': 'grammar/async_detail.js',
     'GeneratorDetail': 'grammar/generator_detail.js',
+    'StreamDetail': 'grammar/stream_detail.js',
     'GenericDetail': 'grammar/generic_detail.js',
     'AliasDetail': 'grammar/alias_detail.js',
     'ArrayDetail': 'grammar/array_detail.js',
@@ -441,6 +443,7 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'CollectionDetail' => const CollectionDetail(),
       'AsyncDetail' => const AsyncDetail(),
       'GeneratorDetail' => const GeneratorDetail(),
+      'StreamDetail' => const StreamDetail(),
       'GenericDetail' => const GenericDetail(),
       'AliasDetail' => const AliasDetail(),
       'ArrayDetail' => const ArrayDetail(),

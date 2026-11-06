@@ -9,7 +9,7 @@ import { CommunityPage } from 'pages/community_page.js';
 import { OrdersPage } from 'pages/orders_page.js';
 import { MinePage } from 'pages/mine_page.js';
 import { BottomNavigationBar, BottomNavigationBarItem, BottomNavigationBarType, Center, CircularProgressIndicator, Color, Colors, Icon, Icons, NeverScrollableScrollPhysics, Scaffold, StatefulWidget, StatelessWidget, TabBarView, TabController, Text } from '../flutter.js';
-import { ChangeNotifierProvider } from '../provider.js';
+import { ChangeNotifierProvider } from '../packages/provider.js';
 
 // 组件 AppShell
 export class AppShell extends StatelessWidget {

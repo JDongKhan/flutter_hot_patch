@@ -59,8 +59,9 @@ import 'project_module_builder.dart' show localTranslationPackages;
 class ComponentBuilder implements Builder {
   const ComponentBuilder();
 
-  /// JS widget 模块（`patch/flutter.js` / `patch/provider.js` …）
-  /// 由 WidgetModuleBuilder 产出；本 builder 只产出与源文件同名的产物。
+  /// JS widget 模块（`patch/flutter.js`）由 WidgetModuleBuilder 产出；宿主三方
+  /// JS（`patch/packages/<pkg>.js`）由 ThirdPartyJsBuilder 拷贝；本 builder 只
+  /// 产出与源文件同名的产物。
   ///
   /// 输出路径**直接镜像 lib 源码路径**（`lib/a/b.dart` → `patch/a/b.js`），
   /// 文件名与 Dart 源文件一致，不预设目录名、不区分组件/模型。
@@ -601,6 +602,8 @@ Map<String, String> _importPrefixProducts(
     nodeHelperPackage,
     ...registeredWidgetPackages().keys,
     ...localTranslationPackages(),
+    // 宿主维护的三方 JS（`js/<package>.js` → `patch/packages/<package>.js`）。
+    ...thirdPartyJsPackages,
   };
   final out = <String, String>{};
   for (final d in unit.directives.whereType<ImportDirective>()) {
@@ -802,7 +805,7 @@ String _renderJsProduct(
   }
 
   // 库级 API 模块的**副作用 import**：库把对运行时提出的要求（原型补丁 /
-  // 作用域登记）写在它自己的 package 模块里（如 `patch/provider.js` 给
+  // 作用域登记）写在它自己的模块里（如 `patch/packages/provider.js` 给
   // `JsBuildContext` 装 `watch/read`）。Dart 里要用某库的扩展 / 顶层 API，
   // 前提就是 import 它 ——「源文件 import 了 package:X」是纯源码事实，据此
   // 保证 X 的模块在**本产物求值前**加载，判据不涉及任何成员名。
@@ -810,6 +813,9 @@ String _renderJsProduct(
   final modulePackages = <String>{
     nodeHelperPackage,
     ...registeredWidgetPackages().keys,
+    // 宿主维护的三方 JS：源文件 import 了该包 → 其模块必须先于本产物求值
+    // （provider 的 `context.watch/read` 原型补丁就装在那里）。
+    ...thirdPartyJsPackages,
   };
   final importedModules = <String>{
     for (final pkg in importsByPackage.keys) packageModulePath(pkg),

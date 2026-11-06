@@ -9,7 +9,7 @@ import { Post } from '../model/app_models.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
 import { kBrand } from 'detail_pages.js';
 import { Alignment, Axis, BorderRadius, BoxDecoration, BoxFit, BoxShape, Center, CircularProgressIndicator, Clip, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, EdgeInsets, Expanded, FontWeight, GestureDetector, Icon, Icons, Image, LinearProgressIndicator, ListView, Material, Padding, Positioned, Row, SafeArea, SizedBox, Spacer, Stack, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle, Wrap, double } from '../../flutter.js';
-import { ChangeNotifierProvider } from '../../provider.js';
+import { ChangeNotifierProvider } from '../../packages/provider.js';
 
 // 组件 CommunityPage
 export class CommunityPage extends StatelessWidget {

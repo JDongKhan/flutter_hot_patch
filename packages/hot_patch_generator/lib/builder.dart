@@ -14,6 +14,7 @@ import 'src/builders/patch_entry/project_module_builder.dart';
 import 'src/builders/runtime/runtime_builder.dart';
 import 'src/builders/ui_host_register/host_register_builder.dart';
 import 'src/builders/ui_patch_manifest/patch_manifest_builder.dart';
+import 'src/builders/ui_third_party_js/third_party_js_builder.dart';
 import 'src/builders/ui_widget/widget_module_builder.dart';
 
 /// 组件/模型 builder 工厂：`patch_entry`。
@@ -29,6 +30,14 @@ Builder componentBuilder(BuilderOptions _) => const ComponentBuilder();
 /// 每个 package → 一个共享 JS 模块 `patch/<package>.js`；产物清单由 translator
 /// 注册表静态推导，挂在包根伪资产 `$package$` 下，使用方无需任何种子文件或配置。
 Builder widgetModuleBuilder(BuilderOptions _) => const WidgetModuleBuilder();
+
+/// 宿主三方 JS builder 工厂：`ui_third_party_js`。
+///
+/// 把宿主工程 `js/**.js` 原样拷贝到 `patch/packages/**.js`。文件名即 Dart
+/// 包名（`js/provider.js` ↔ `package:provider`），业务产物依赖该模块时按
+/// `patch/packages/<package>.js` 相对 import。三方 JS 由宿主维护，生成器不
+/// 生成、不改写。本 builder 不读任何 options。
+Builder thirdPartyJsBuilder(BuilderOptions _) => const ThirdPartyJsBuilder();
 
 /// 跨包模块 builder 工厂：`ui_project_module`。
 ///

@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { Builder, Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
-import { ChangeNotifierProvider } from '../provider.js';
+import { ChangeNotifierProvider } from '../packages/provider.js';
 
 // 组件 WatchDemo
 export class WatchDemo extends StatefulWidget {

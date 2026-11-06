@@ -19,8 +19,8 @@
 //   3. [registerWidgets]  —— 本能力的宿主侧组件映射（`type` → Flutter widget）。
 //
 // **本类刻意没有 context 语义的钩子**：`context.watch/read` 是 provider 那类
-// `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁随该包的模块
-// 发布（生成器 `builders/runtime/js/provider_module_js.dart` → `patch/provider.js`）。
+// `extension BuildContextX on BuildContext`，属库自己；JS 侧补丁由宿主维护在
+// `js/provider.js`（构建拷贝到 `patch/packages/provider.js`）。
 // 核心不认识具体 op 名；provider 的取值与订阅都在 JS 内闭环，宿主不再注册 op。
 //
 // 接入方式（二选一）：
@@ -84,13 +84,13 @@ abstract class JsUiLibrary {
   List<String> get jsFragments => const [];
 
   /// 本库**随补丁包发布的独立 JS 模块**（相对补丁根目录的文件名，如
-  /// `'provider.js'`）。
+  /// `'packages/provider.js'`）。
   ///
-  /// 用于库自己的 API 面没跟核心机制同文件发布的场合：库的 JS 类产在
-  /// `patch/<pkg>.js`（生成器按 package 出模块），而库对运行时提出的额外要求
-  /// （继承结点登记 / 扩展方法原型补丁）也写在该模块里。这些模块必须在**任何
-  /// 组件 build 之前**求值，故由运行时就绪点统一加载（见
-  /// `JsRuntimeManager._loadCapabilityModules`），不依赖页面产物是否 import 到它。
+  /// 三方库的 JS 由宿主维护在工程根 `js/<package>.js`，构建时原样拷贝到
+  /// `patch/packages/<package>.js`，库对运行时提出的额外要求（继承结点登记 /
+  /// 扩展方法原型补丁）也写在该模块里。这些模块必须在**任何组件 build 之前**
+  /// 求值；若页面产物 import 了它，就绪点无需重复声明，故由运行时就绪点统一
+  /// 加载（见 `JsRuntimeManager._loadCapabilityModules`）作为兜底。
   ///
   /// 能力模块也走 `loadModule`（相对 import 递归、幂等），与组件产物 import
   /// 同一份文件时只求值一次。

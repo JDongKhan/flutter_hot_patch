@@ -1,0 +1,9 @@
+# build_runner 的输入范围：除默认的 lib/ 外，还要把宿主维护的三方 JS 目录
+# `js/`（文件名为 Dart 包名，如 js/provider.js）纳入构建，供
+# `hot_patch_generator:ui_third_party_js` 拷贝到 patch/packages/。
+targets:
+  $default:
+    sources:
+      - lib/**
+      - js/**
+      - $package$

@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 cf325a05） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 7c640752） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'cf325a05') { return; }
-  G.__jsuiVersion = 'cf325a05';
+  if (G.__jsui && G.__jsuiVersion === '7c640752') { return; }
+  G.__jsuiVersion = '7c640752';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -2823,8 +2823,9 @@ __defineProtoMember(Map.prototype, {
     __releaseHandle: function (id, notify) { return __releaseHandle(id, notify); },
     __handleObjectOf: __handleObjectOf,
     __createFnHandle: __createFnHandle,
-    // 继承机制（InheritedWidget 语义）：provider 在自己的模块 patch/provider.js
-    // 里登记作用域；BuildContext 的查找方法在 runtime 内核里（同一 IIFE）。
+    // 继承机制（InheritedWidget 语义）：provider 在自己的模块
+    // patch/packages/provider.js 里登记作用域；BuildContext 的查找方法在
+    // runtime 内核里（同一 IIFE）。
     __inheritElement: __inheritElement,
     __notifyClients: __notifyClients,
     __typeArgumentOf: __typeArgumentOf,
@@ -2969,7 +2970,7 @@ __defineProtoMember(Map.prototype, {
 
   // `context.watch<T>()` / `read<T>()` **不在这里**：它们不是框架 API，而是
   // provider 那类 `extension BuildContextX on BuildContext`——方法补丁在
-  // patch/provider.js（provider_module_js.dart）。
+  // patch/packages/provider.js（宿主维护的 js/provider.js）。
   // 本片段只提供机制：代理、句柄、InheritedWidget 查找（depend/get）、通用 op 转发。
 
   // 组件实例 → 代理（每个实例一个，缓存进 `__ctx`）。**同一执行位置**下，

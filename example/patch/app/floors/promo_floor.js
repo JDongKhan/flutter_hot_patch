@@ -7,7 +7,7 @@ import { WebView } from '../../base/web_view.js';
 import { FloorLoadingView } from 'floor_status.js';
 import { FloorErrorView } from 'floor_status.js';
 import { BorderRadius, BoxDecoration, BoxFit, ChangeNotifier, ClipRRect, Color, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, Image, InkWell, Padding, Positioned, Radius, SizedBox, Stack, StackFit, StatelessWidget, Text, TextStyle } from '../../flutter.js';
-import { ChangeNotifierProvider } from '../../provider.js';
+import { ChangeNotifierProvider } from '../../packages/provider.js';
 
 // 模型 PromoFloorVm
 export class PromoFloorVm extends ChangeNotifier {

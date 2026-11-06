@@ -197,6 +197,18 @@ class PackageSources {
   /// 该包是否参与跨包翻译（本地包）。
   bool isLocalPackage(String name) => byName(name)?.isLocal ?? false;
 
+  /// 源文件绝对路径 → 所属包名；不在任何已知包 lib 目录下返回 null。
+  ///
+  /// 用于「这个类由哪个 Dart 包声明」的源码事实判定（三方 JS 模块归属）。
+  String? packageOfFile(String absolutePath) {
+    for (final r in packages) {
+      if (absolutePath == r.libDir) return r.name;
+      final sep = Platform.pathSeparator;
+      if (absolutePath.startsWith('${r.libDir}$sep')) return r.name;
+    }
+    return null;
+  }
+
   /// `package:foo/bar.dart` → 源文件绝对路径；非 package URI / 解析不到返回 null。
   String? fileOfPackageUri(String uri) {
     if (!uri.startsWith('package:')) return null;

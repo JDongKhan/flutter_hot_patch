@@ -210,7 +210,7 @@ class JsUiWidgetState extends State<JsUiWidget> {
         localRoot = bundle.localRoot;
       }
       _entryJsAsset = entry;
-      // 运行时就绪 → 内建能力模块（如 patch/provider.js 的作用域声明与
+      // 运行时就绪 → 内建能力模块（如 patch/packages/provider.js 的作用域声明与
       // context.watch/read 原型补丁）→ 入口模块。顺序是硬约束：能力模块必须在
       // 任何组件 build 之前求值；且必须在 [loadModule] 之外单独加载（能力模块
       // 普遍 import flutter.js，混在模块加载内部会自等 → 死锁）。

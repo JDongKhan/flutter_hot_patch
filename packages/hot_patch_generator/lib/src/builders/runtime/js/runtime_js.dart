@@ -58,8 +58,8 @@
 ///     `G.registerExtension`（生成器产物直接引用）。
 ///
 /// **三方库与 Flutter SDK 的 API 面不在本文件**：provider 的 `context.watch/read`
-/// 与作用域声明在它自己的包模块 `patch/provider.js`（生成器
-/// `provider_module_js.dart`）；`showDialog` 系列与弹层面板机制在
+/// 与作用域声明在宿主维护的 `js/provider.js`（构建拷贝到
+/// `patch/packages/provider.js`）；`showDialog` 系列与弹层面板机制在
 /// `patch/flutter.js`（生成器 `dialogs_js.dart` / `navigator_js.dart`）。
 /// 本文件只提供它们要用的通用机制（继承查找 / 代理 / 独立根挂载），经 `G.__core` 交接。
 ///
@@ -1046,8 +1046,9 @@ const String _jsUiCrossModuleExports = r'''
     __releaseHandle: function (id, notify) { return __releaseHandle(id, notify); },
     __handleObjectOf: __handleObjectOf,
     __createFnHandle: __createFnHandle,
-    // 继承机制（InheritedWidget 语义）：provider 在自己的模块 patch/provider.js
-    // 里登记作用域；BuildContext 的查找方法在 runtime 内核里（同一 IIFE）。
+    // 继承机制（InheritedWidget 语义）：provider 在自己的模块
+    // patch/packages/provider.js 里登记作用域；BuildContext 的查找方法在
+    // runtime 内核里（同一 IIFE）。
     __inheritElement: __inheritElement,
     __notifyClients: __notifyClients,
     __typeArgumentOf: __typeArgumentOf,
@@ -1140,8 +1141,8 @@ String runtimeJsSource() {
     _section('【11.7】Key 签名（__keySig / __objectToken）', keySigJsSource),
     // 各能力片段：位于骨架之后（可安全调用核心函数）、IIFE 收尾之前。
     // BuildContext 代理留在核心侧（机制：代理 / 句柄 / 通用 op 转发）。它的
-    // 库级 API（provider 的 watch/read）由 patch/provider.js 在求值时补到原型上
-    // （同一全局对象，不要求同一作用域）。
+    // 库级 API（provider 的 watch/read）由 patch/packages/provider.js 在求值时
+    // 补到原型上（同一全局对象，不要求同一作用域）。
     _section('【21】BuildContext 代理', buildContextJsSource),
     // 泄漏观测：无条件拼入（构建期不知道 App 是 debug 还是 release）。
     // 宿主侧调用点仍由 kDebugMode 门控，release 下这些函数不会被调用，

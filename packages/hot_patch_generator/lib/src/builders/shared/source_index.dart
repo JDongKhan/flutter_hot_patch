@@ -200,6 +200,41 @@ List<(MixinDeclRef, String)> resolveMixinDeclRefs(
   ];
 }
 
+/// 宿主工程的三方 JS 目录（项目根下）：`js/<package>.js`。
+///
+/// 三方库的 JS 由宿主自己维护（不在生成器 / 运行时包内），文件名即对应的
+/// Dart 包名；构建时由 `ui_third_party_js` 原样拷贝到
+/// `patch/packages/<package>.js`，业务产物按相对路径 import 该模块。
+const String thirdPartyJsRoot = 'js';
+
+/// 三方 JS 模块产物根目录：与本地依赖包产物共用一个 `packages/` 前缀。
+const String thirdPartyJsProductsRoot = 'patch/packages';
+
+/// 宿主工程 `js/` 目录下声明的三方包名（= 文件名去掉 `.js`，仅顶层文件）。
+///
+/// 进程内只扫描一次：构建期间该目录不会变化。
+Set<String> get thirdPartyJsPackages =>
+    _thirdPartyJsPackages ??= _scanThirdPartyJsPackages();
+Set<String>? _thirdPartyJsPackages;
+
+Set<String> _scanThirdPartyJsPackages() {
+  final root = PackageSources.instance?.projectRoot;
+  if (root == null) return const {};
+  final dir = Directory('$root${Platform.pathSeparator}$thirdPartyJsRoot');
+  if (!dir.existsSync()) return const {};
+  final out = <String>{};
+  for (final entity in dir.listSync(followLinks: false)) {
+    if (entity is! File || !entity.path.endsWith('.js')) continue;
+    final name = entity.uri.pathSegments.last;
+    out.add(name.substring(0, name.length - '.js'.length));
+  }
+  return out;
+}
+
+/// 三方包对应的 JS 模块产物路径（`ui_third_party_js` 的拷贝目标）。
+String thirdPartyJsModulePath(String package) =>
+    '$thirdPartyJsProductsRoot/$package.js';
+
 /// 不参与翻译的框架包：SDK `flutter` 与运行时 / 注解 / 生成器包——它们的类型
 /// 在 JS 侧另有实现（宿主注册表 / 注入类），源码不需要跨包翻译。
 const Set<String> nonTranslatedPackages = {

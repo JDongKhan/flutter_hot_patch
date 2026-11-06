@@ -4,7 +4,7 @@
 
 import { CounterVm } from '../model/counter_vm.js';
 import { ArgumentError, Builder, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, Row, SizedBox, StatefulWidget, Text, TextStyle, double, int, num } from '../flutter.js';
-import { ChangeNotifierProvider } from '../provider.js';
+import { ChangeNotifierProvider } from '../packages/provider.js';
 
 // 模型 Pair
 export class Pair {

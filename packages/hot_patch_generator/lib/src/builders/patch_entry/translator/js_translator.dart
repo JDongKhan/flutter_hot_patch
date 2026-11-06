@@ -1388,13 +1388,19 @@ String? closureToJs(
       : scope.withParams(plan.names, typeParamRefs: typeParamRefs);
   final body = fn.body;
   // 生成器闭包 / 生成器局部函数（`() sync* { … }`）：JS 箭头函数不能是生成器，
-  // 必须产出 `function* (params) { … }`；`async*` 产出 `async function*`（裸
-  // 异步生成器，`listen` 由后续 Stream 能力承接，当前记为部分实现）。
+  // 外层仍是箭头（保住 this 与默认值求值时机），内层用 `function*` 产出生成器；
+  // `sync*` 直接返回生成器，`async*` 包成 `Stream.fromAsyncGenerator(...)`。
   if (body is BlockFunctionBody && body.isGenerator) {
     final stmts =
         translateStmtList(body.block.statements, bodyScope, classes, renderer);
-    final kw = body.isAsynchronous ? 'async function* ' : 'function* ';
-    return '$kw($pjs) { ${pro}${stmts.trim()} }';
+    final inner = body.isAsynchronous ? 'async function*' : 'function*';
+    final genExpr = '($inner () { ${stmts.trim()} }).bind(this)()';
+    final call = body.isAsynchronous
+        ? 'Stream.fromAsyncGenerator($genExpr)'
+        : genExpr;
+    return pro.isEmpty
+        ? '($pjs) => $call'
+        : '($pjs) => { ${pro}return $call; }';
   }
   final asyncKw = body.isAsynchronous ? 'async ' : '';
   // 一律输出箭头函数：this 词法绑定到定义处（组件实例），与 Dart 闭包
@@ -2857,11 +2863,6 @@ String translateStmtList(
       }
       out.add(js);
     } else if (s is ForStatement) {
-      if (s.awaitKeyword != null) {
-        log.warning('[hot_patch_generator] await for 暂不支持（异步流无 JS '
-            '等价物），已在 JS 产物中丢弃：${s.toSource()}');
-        continue;
-      }
       final js = _forStatementJs(s, scope, classes, renderer, depth, returnsWidget);
       if (js == null) {
         log.warning('[hot_patch_generator] for 语句无法翻译，已在 JS 产物中'
@@ -3390,7 +3391,8 @@ String? _forStatementJs(
     scope.localVars
       ..clear()
       ..addAll(before);
-    return '$ind' 'for (const __v of $it) {\n$pre$bodyJs\n$ind}';
+    final awaitKw = s.awaitKeyword != null ? 'await ' : '';
+    return '$ind' 'for $awaitKw(const __v of $it) {\n$pre$bodyJs\n$ind}';
   } else if (parts is ForParts) {
     // 三段式：`for (var i = 0; i < n; i++)` → 一比一。
     final inits = <String>[];
@@ -3432,6 +3434,11 @@ String? _forStatementJs(
     header = 'for (${inits.join(', ')}; ${condJs ?? ''}; ${upds.join(', ')})';
   } else {
     return null;
+  }
+  // `await for (final x in stream)`：Dart 的异步迭代 → JS `for await (... of ...)`，
+  // 依赖被迭代对象的 `[Symbol.asyncIterator]`（Stream 能力模块提供）。
+  if (s.awaitKeyword != null) {
+    header = header.replaceFirst('for (', 'for await (');
   }
   final ind = '  ' * depth;
   final bodyJs = translateStmtList(_bodyStmts(s.body), scope, classes, renderer,

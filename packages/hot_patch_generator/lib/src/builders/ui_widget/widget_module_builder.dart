@@ -34,9 +34,9 @@ import '../runtime/js/keyboard_listener_js.dart';
 import '../runtime/js/media_query_js.dart';
 import '../runtime/js/navigator_js.dart';
 import '../runtime/js/overlay_portal_js.dart';
-import '../runtime/js/provider_module_js.dart';
 import '../runtime/js/scroll_controller_js.dart';
 import '../runtime/js/state_handle_js.dart';
+import '../runtime/js/stream_js.dart';
 import '../runtime/js/style_values_js.dart';
 import '../runtime/js/tab_controller_js.dart';
 import '../runtime/js/text_editing_controller_js.dart';
@@ -69,6 +69,10 @@ String flutterValueClassesSource() => [
       // 依赖基础值类工具（__positionalArgs / __durationMs）与 dartErrors 的
       // StateError（仅 Future.any 的实参校验用），故排在两者之后。
       futureJsSource,
+      // dart:async 的 Stream / StreamController / StreamSubscription：依赖
+      // Future（Future.__wrap 包装终止操作）与 __durationMs（periodic），
+      // 故紧随 Future 之后。
+      streamJsSource,
       // 控制器基类（句柄层）：各 Controller 继承它，必须排在它们之前。
       controllerBaseJsSource,
       // SDK 枚举值类（按源码 `enum` 声明自动生成）：翻译层已改为对
@@ -342,9 +346,6 @@ ${namedCtorStatics(type, extra: const ['builder', 'separated'])}
 /// `logicWidgetTypes` 一致。
 const Map<String, String> logicWidgetSources = {
   'Builder': jsBuilderComponent,
-  'ChangeNotifierProvider': jsChangeNotifierProviderComponent,
-  'MultiProvider': jsMultiProviderComponent,
-  'Consumer': jsConsumerComponent,
   'ListenableBuilder': jsListenableBuilderComponent,
   'ValueListenableBuilder': jsValueListenableBuilderComponent,
   'TweenAnimationBuilder': jsTweenAnimationBuilderComponent,
@@ -702,94 +703,6 @@ export class SliverPersistentHeader extends Component {
   }
 }''';
 
-/// ChangeNotifierProvider：解析 create/value 得到模型实例，**全部逻辑留在 JS**。
-///
-/// 不再产出宿主结点：本类自己登记为「按类型名键控的继承结点」
-/// （`__inheritedElements`，类型名取自 `props.typeArguments`），build 直接返回
-/// child。`context.watch/read` 经 `JsBuildContext` 的继承查找取到本结点后读
-/// `value`（对齐 provider 的 `_InheritedProviderScope.value`）。
-const String jsChangeNotifierProviderComponent = '''
-export class ChangeNotifierProvider extends Component {
-  initState() {
-    var p = this.props;
-    if (p.create !== undefined && p.create !== null) {
-      // `create` 是**函数类型**形参，按统一规则下发普通函数（工厂闭包）：
-      // 只调用一次，实例生命周期归本组件。值形态（非函数）也兼容。
-      this._value = typeof p.create === 'function' ? p.create(this.context) : p.create;
-      this._ownsValue = true;
-    } else if (p.value !== undefined && p.value !== null) {
-      this._value = p.value;
-      this._ownsValue = false;
-    }
-  }
-  // `value`：provider 作用域对外的取值入口（watch/read 读这里）。
-  get value() { return this._value; }
-  build() {
-    // `.value(...)` 的模型实例可能被父级替换：每次 build 从最新 props 取。
-    if (!this._ownsValue && this.props.value !== undefined) {
-      this._value = this.props.value;
-    }
-    var type = __typeArgumentOf(this.props, 'ChangeNotifierProvider');
-    if (type != null) {
-      __inheritElement(this, type);
-      // 与 provider 的 InheritedNotifier 同义：模型实例换了 → 通知依赖者重建。
-      if (this._published && this._published !== this._value) {
-        __notifyClients(this);
-      }
-      this._published = this._value;
-    }
-    return this.props.child;
-  }
-  dispose() {
-    if (this._ownsValue && this._value &&
-        typeof this._value.dispose === 'function') {
-      this._value.dispose();
-    }
-  }
-}''';
-
-/// MultiProvider：把 providers 数组按「嵌套 Provider」语义组合——
-/// providers[0] 最外层，最后一个最内层（离 child 最近），与原生一致。
-const String jsMultiProviderComponent = '''
-export class MultiProvider extends Component {
-  build() {
-    var provs = this.props.providers || [];
-    var node = this.props.child;
-    for (var i = provs.length - 1; i >= 0; i--) {
-      // providers 项是翻译层 `new ChangeNotifierProvider(...)` 产出的实例
-      // （元素携带 inst）——注入 child 后**复用同一个实例**，不再 new 第二次。
-      var prov = provs[i];
-      var p = {};
-      for (var k in prov.props) { p[k] = prov.props[k]; }
-      p.child = node;
-      // 实例即元素：复用同一个 provider 实例（换 child 后直接作为上一层元素）。
-      prov.props = p;
-      node = prov;
-    }
-    return node;
-  }
-}''';
-
-/// Consumer：消费 VM——按 `props.typeArguments[0]`（类型名）经 **build 收到的
-/// context** 取值并订阅（`context.watch({typeArguments})`，与 Dart 的 `Consumer`
-/// 口径一致），再调用拥有者组件上的 `props.builder` 方法
-/// （`_consumerBuilderN(context, value, child)`）渲染局部子树。
-///
-/// UI 更新全部来自 **JS 侧重建**（VM notify → 标脏该位置 → 重读 `model.count`
-/// → 下发 patch）：本类直接返回 builder 子树，不再产出宿主监听结点。
-const String jsConsumerComponent = '''
-export class Consumer extends Component {
-  build(context) {
-    var notifier = context.watch({ typeArguments: this.props.typeArguments });
-    var fn = this.props.builder;
-    if (typeof fn !== 'function') {
-      __warn('[Consumer] builder 不是闭包');
-      return null;
-    }
-    return fn(context, notifier, this.props.child);
-  }
-}''';
-
 /// ListenableBuilder：局部重建——订阅 `listenable`（**产物下发的是 listenable
 /// 实例本身**，如 `this._model`，不是字段名）、模型 notify 时仅重建本结点子树
 /// （`setState` 只标记本结点 dirty）。子树抽在拥有者组件的 `props.builder`
@@ -946,17 +859,11 @@ export class TweenAnimationBuilder extends __ListenableSubscriber {
   }
 }''';
 
-/// package 模块的**库自有片段**：package → 追加在该模块尾部的 JS。
-///
-/// 三方库的类在对运行时提出的额外要求（作用域声明 / 扩展方法原型补丁等）是
-/// **该库自己的知识**，因此跟它的 JS 类放在同一个模块里——模块求值即生效，
-/// runtime.js 不承载任何库的 API 面。新增库只需在这里加一条。
-const Map<String, String> _packageModuleEpilogues = {
-  'provider': providerModuleEpilogue,
-};
-
 /// package 模块产物：把该 package 里**有 JS 类**的 widget 类型导出为 JS 类
-/// （逻辑组件：provider 状态处理 / Builder 委托；sliver builder 代理）。
+/// （逻辑组件：Builder 委托 / 订阅式局部重建；sliver builder 代理）。
+///
+/// 三方库（provider 等）的 JS 类不在这里生成：由宿主放在 `js/<package>.js`，
+/// 构建时原样拷贝到 `patch/packages/<package>.js`（见 `ui_third_party_js`）。
 ///
 /// 宿主 widget（Text/Column/...）**不产出任何代码**：它们的元素 type 就是类型名
 /// 字符串（`Component.host('Text', {...})`），由宿主注册表映射成 Flutter widget；
@@ -1053,16 +960,6 @@ String renderPackageModule(String package, Set<String> types) {
     b
       ..writeln()
       ..writeln(src);
-  }
-  // 库自有的运行期登记（如 provider 的作用域声明 + `context.watch/read`
-  // 原型补丁）：属于该**包自己**的知识，跟它的 JS 类同模块发布、同模块求值。
-  // 核心运行时只留通用机制——provider 这类库的 API 面不再进 runtime.js。
-  final epilogue = _packageModuleEpilogues[package];
-  if (epilogue != null) {
-    b
-      ..writeln()
-      ..writeln('// ===== 本包（$package）自有的运行期登记 =====')
-      ..writeln(epilogue);
   }
   // -----------------------------------------------------------------------
   // Dart 值类区：**固定在产物最末**（所有 widget / 逻辑组件包装类之后）。

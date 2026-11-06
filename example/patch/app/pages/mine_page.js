@@ -9,7 +9,7 @@ import { WebView } from '../../base/web_view.js';
 import { LoadErrorView } from '../widgets/load_error_view.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Alignment, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipOval, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, HitTestBehavior, Icon, Icons, Image, LinearGradient, ListView, Offset, Padding, Row, SafeArea, SizedBox, StatelessWidget, Text, TextOverflow, TextStyle, Transform } from '../../flutter.js';
-import { ChangeNotifierProvider } from '../../provider.js';
+import { ChangeNotifierProvider } from '../../packages/provider.js';
 
 // 组件 MinePage
 export class MinePage extends StatelessWidget {

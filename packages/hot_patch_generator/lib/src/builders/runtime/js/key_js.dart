@@ -124,7 +124,8 @@ const String keyJsSource = r'''
   //     **同步属性**，而 JS→宿主只能异步，故这里返回 Promise（单源侧 `await`
   //     后即为真实值，见 sliver_detail 的 _measureFixed）。
   //
-  // findRenderObject 补在 JsBuildContext 原型上（与 provider 在 provider.js 补
+  // findRenderObject 补在 JsBuildContext 原型上（与 provider 在
+  // patch/packages/provider.js 补
   // watch/read 同一范式）：类定义在 runtime.js、RenderObject 是本模块的值类，故由
   // 本模块补。句柄来源决定 op 落点——GlobalKey 上下文沿 key 句柄走 key 桥，组件
   // 上下文按 ctx 句柄走 BuildContext 桥。`x is RenderObject` 在 JS 侧即

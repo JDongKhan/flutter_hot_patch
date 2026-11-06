@@ -8,7 +8,7 @@ import { AppRouter } from '../../base/app_router.js';
 import { FloorLoadingView } from 'floor_status.js';
 import { FloorErrorView } from 'floor_status.js';
 import { BorderRadius, BoxDecoration, BoxFit, ChangeNotifier, Clip, Color, Column, Container, CrossAxisAlignment, EdgeInsets, FontWeight, GridView, Image, InkWell, NeverScrollableScrollPhysics, Padding, Positioned, Radius, Row, SizedBox, SliverGridDelegateWithMaxCrossAxisExtent, Spacer, Stack, StackFit, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
-import { ChangeNotifierProvider } from '../../provider.js';
+import { ChangeNotifierProvider } from '../../packages/provider.js';
 
 // 模型 SpotFloorVm
 export class SpotFloorVm extends ChangeNotifier {

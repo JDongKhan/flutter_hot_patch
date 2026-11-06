@@ -1459,6 +1459,11 @@ class ElementTranslateContext implements ExprRenderer {
     if (hostWrapperTypes.contains(type) || jsClassWidgets.contains(type)) {
       return packageModulePath(widgetPackageOf(type));
     }
+    // 三方库（provider 等）：类声明所在的包在宿主 `js/` 目录提供了 JS 模块
+    // （`js/<package>.js` → `patch/packages/<package>.js`）。归属只由源码事实
+    // （类声明文件 → 包 → 是否有宿主模块）判定，生成器不维护任何库/类型表。
+    final thirdParty = thirdPartyPackageOf(type);
+    if (thirdParty != null) return packageModulePath(thirdParty);
     return null;
   }
 

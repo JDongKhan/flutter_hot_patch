@@ -8,7 +8,7 @@ import { FloorLoadingView } from 'floor_status.js';
 import { FloorErrorView } from 'floor_status.js';
 import { BannerCarousel } from '../widgets/banner_carousel.js';
 import { ChangeNotifier, EdgeInsets, Padding, StatelessWidget } from '../../flutter.js';
-import { ChangeNotifierProvider } from '../../provider.js';
+import { ChangeNotifierProvider } from '../../packages/provider.js';
 
 // 模型 BannerFloorVm
 export class BannerFloorVm extends ChangeNotifier {

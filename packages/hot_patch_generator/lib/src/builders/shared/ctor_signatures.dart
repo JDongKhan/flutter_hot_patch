@@ -247,6 +247,19 @@ class CtorSignatures {
   /// 源码索引：该名字是否有 **class** 声明（含 `abstract final class` 等多修饰符）。
   bool isClass(String name) => _ensureIndex().containsKey(name);
 
+  /// 该名字的类声明**所在包**（同名类可能存在于多个包，全部返回）。
+  ///
+  /// 只读源码事实（类声明文件 → 包），用于判定「这个类型是否由宿主的三方
+  /// JS 模块提供」；找不到源码时返回空集合。
+  Set<String> declaringPackagesOf(String className) {
+    final out = <String>{};
+    for (final file in _ensureIndex()[className] ?? const <String>[]) {
+      final pkg = _sources?.packageOfFile(file);
+      if (pkg != null) out.add(pkg);
+    }
+    return out;
+  }
+
   /// 类声明的类型参数名（`class Provider<T>` → `['T']`）；查不到返回空。
   List<String> typeParamsOf(String className) {
     for (final file in _ensureIndex()[className] ?? const <String>[]) {

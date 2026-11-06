@@ -34,6 +34,20 @@ builders:
     auto_apply: dependents
     build_to: source
 
+  # 宿主三方 JS builder：宿主工程根下的 `js/**.js` → 原样拷贝到
+  # `patch/packages/**.js`。三方库的 JS 由宿主维护（不在生成器 / 运行时包内），
+  # 文件名即 Dart 包名（`js/provider.js` ↔ `package:provider`）。业务产物按
+  # `import { X } from '../packages/provider.js'` 消费；`patch_entry` 的依赖
+  # 归属按「类声明所在包 + 该包是否有 js/<package>.js」自动判定。
+  ui_third_party_js:
+    import: "package:hot_patch_generator/builder.dart"
+    builder_factories: ["thirdPartyJsBuilder"]
+    build_extensions:
+      "^js/{{}}.js":
+        - "patch/packages/{{}}.js"
+    auto_apply: dependents
+    build_to: source
+
   # 跨包模块 builder：每个**本地依赖包**（path 依赖 / workspace 成员）→ 一个共享
   # JS 文件 patch/<package>.js，内容是「被项目组件引用到」的该包类（跨包翻译）。
   # 与 ui_widget 同款输入（包根伪资产 $package$）与同一套包模块路径约定；差别是

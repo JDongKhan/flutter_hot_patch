@@ -1,3 +1,13 @@
+## 0.11.0
+
+**破坏性变更：三方库 JS 不再由生成器生成。** provider 的 `patch/provider.js` 改为宿主维护的 `js/provider.js`，构建时拷贝到 `patch/packages/provider.js`；业务产物 import 路径随之变化，旧补丁包不兼容。
+
+- **删除 provider 产物生成**：删除 `builders/runtime/js/provider_module_js.dart`、`logicWidgetSources` 里的 provider 三件套、`_packageModuleEpilogues`、`widgetPackages` 硬编码表；生成器不再认识任何具体三方库。
+- **新增 `ui_third_party_js` builder**（`third_party_js_builder.dart`）：宿主工程 `js/**.js` → `patch/packages/**.js` 原样拷贝。文件名即 Dart 包名（`js/provider.js` ↔ `package:provider`）；工程 `build.yaml` 的 `sources` 需包含 `js/**`（example 已补）。
+- **三方类型归属改为源码事实**：`js_class_defs.dart` 的 `thirdPartyPackageOf` 用「类声明所在包（`CtorSignatures.declaringPackagesOf`）+ 该包是否有 `js/<package>.js`」判定，`packageModulePath` 对三方包返回 `patch/packages/<package>.js`；`element2js` 的 `jsClassFileOf` / `_registerWidgetImport` 与 `component_builder` 的前缀 / 副作用 import 同步走该规则，无库名 / 类型名白名单。
+- **provider JS 迁到宿主**：新增 `example/js/provider.js`（`ChangeNotifierProvider` / `MultiProvider` / `Consumer` + `context.watch/read` 原型补丁），对 `flutter.js` 的相对 import 改为 `../flutter.js`；删除生成的 `example/patch/provider.js`。
+- **文档同步**：架构文档、使用手册、组件支持文档与 README 的产物布局 / 三方库接入指引改为 `js/` → `patch/packages/` 约定。
+
 ## 0.10.0
 
 **破坏性变更：产物布局。** 本地依赖包不再一包一个模块，改为**按源文件同名镜像**；旧 `patch.zip` 与本版本产物不兼容，需与生成器同版本配套使用。

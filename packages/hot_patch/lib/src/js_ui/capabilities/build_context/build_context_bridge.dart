@@ -16,7 +16,7 @@
 // **本能力只提供机制，不提供任何库的 API 语义**：`context.watch<T>()` /
 // `read<T>()` 是 provider 那类 `extension BuildContextX on BuildContext` 的东西，
 // 不是框架 API。故 JS 侧的方法补丁写在**各库自己的模块**里（见
-// patch/provider.js ← 生成器 provider_module_js.dart），取值与订阅都在 JS 内闭环；
+// patch/packages/provider.js ← 宿主 js/provider.js），取值与订阅都在 JS 内闭环；
 // 核心只做三件事：代理/句柄、nodeId ↔ 真值 context 的登记、把宿主侧 op 分发给
 // 注册者（未注册的 op 沿用「不支持 context.$op()」告警）。
 //

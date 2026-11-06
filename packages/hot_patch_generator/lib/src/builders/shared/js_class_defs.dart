@@ -9,7 +9,9 @@
 /// 文件里（见 `ui_widget/widget_module_builder.dart`）。
 library;
 
+import 'ctor_signatures.dart';
 import 'host_types.dart';
+import 'source_index.dart';
 
 export 'host_types.dart';
 
@@ -18,13 +20,16 @@ export 'host_types.dart';
 /// `import { __h }`，使 `__h` 全局只定义一次。
 const String nodeHelperPackage = 'flutter';
 
-/// package 模块产物路径：`patch/<package>.js`（**一个 package 一个文件**）。
+/// package 模块产物路径（**一个 package 一个文件**）。
 ///
-/// 这类产物是 **package 级**（`flutter` / `provider` 等，与 lib 源码目录无关），
-/// 因此直接落在 patch 根下；而组件/模型产物落在 `patch/` 下镜像 lib 源码路径。
-/// 同包的 widget 工厂/逻辑组件集中在一个文件里，避免按类型拆成大量小文件难以
-/// 维护，也天然只保留一份实现。
-String packageModulePath(String package) => 'patch/$package.js';
+///   - 内建 package 模块（`flutter` 等，由 `ui_widget` 产出）→ `patch/<package>.js`；
+///   - 宿主维护的三方 JS（`js/<package>.js`，由 `ui_third_party_js` 拷贝）→
+///     `patch/packages/<package>.js`。
+///
+/// 两类都是 **package 级**，与 lib 源码目录无关；业务产物按同一路径规则 import。
+String packageModulePath(String package) => thirdPartyJsPackages.contains(package)
+    ? thirdPartyJsModulePath(package)
+    : 'patch/$package.js';
 
 /// 有 **builder 命名构造**（`.builder` / `.separated`）的组件类型。
 ///
@@ -85,14 +90,14 @@ export class AnimatedListState extends StateHandle {
 StateHandle.registerProxy('AnimatedListState', AnimatedListState);''',
 };
 
-/// 「逻辑 widget」类型名：状态/订阅逻辑必须跑在 JS 里的 widget（provider 提供/
-/// 消费 VM、Builder 委托）。对应的 JS 类源码见 `ui_widget/widget_module_builder.dart`
+/// 「逻辑 widget」类型名：状态/订阅逻辑必须跑在 JS 里的 widget（Builder 委托 /
+/// 订阅式局部重建）。对应的 JS 类源码见 `ui_widget/widget_module_builder.dart`
 /// 的 `logicWidgetSources`（键集合与本表一致）。
+///
+/// 三方库（provider 等）的 JS 类**不在本表**：由宿主在自己的 `js/<package>.js`
+/// 维护，生成器只按「类声明所在包 + 该包是否有宿主 JS 模块」自动归属。
 const Set<String> logicWidgetTypes = {
   'Builder',
-  'ChangeNotifierProvider',
-  'MultiProvider',
-  'Consumer',
   'ListenableBuilder',
   'ValueListenableBuilder',
   // 隐式动画：`tween` 变化时从当前值过渡到新 end，动画进度由 JS 侧控制器镜像
@@ -173,21 +178,45 @@ Set<String> get jsClassWidgetTypes => {
   ...valueClassTypes,
 };
 
-/// 类型 → package 模块：决定该类型的 JS 工厂/类落在哪个 `patch/<package>.js`
-/// （未登记的类型一律归基础包 [nodeHelperPackage]）。
+/// 类型 → 持有其 JS 类的 package（默认基础包 [nodeHelperPackage]）。
 ///
-/// 这份登记替代了原先「由 translator 的 `packageName` 推导」的做法——它是**产物
-/// 组织信息**（哪个模块持有该类型的 JS 类），与翻译策略无关。
-const Map<String, String> widgetPackages = {
-  // provider 三件套：状态处理逻辑自成一个模块 patch/provider.js。
-  'ChangeNotifierProvider': 'provider',
-  'Consumer': 'provider',
-  'MultiProvider': 'provider',
-};
+/// 三方库不在这里登记：宿主在 `js/<package>.js` 提供 JS 模块后，生成器按
+/// **类声明所在的 Dart 包**（[CtorSignatures.declaringPackagesOf]）自动判定归属；
+/// 只有「该包确实有宿主 JS 模块」时才返回该包，其余（SDK / 项目类）一律归
+/// 基础包 flutter。
+String? thirdPartyPackageOf(String type) => _thirdPartyPackageCache.putIfAbsent(
+      type,
+      () => _resolveThirdPartyPackage(type),
+    );
+
+final Map<String, String?> _thirdPartyPackageCache = {};
+
+String? _resolveThirdPartyPackage(String type) {
+  final modules = thirdPartyJsPackages;
+  if (modules.isEmpty) return null;
+  final packages =
+      CtorSignatures.instance?.declaringPackagesOf(type) ?? const <String>{};
+  final hits = packages.where(modules.contains).toSet();
+  // 同名类在多个三方包都有声明时无法判定归属：不猜，交回基础包并出声。
+  if (hits.length > 1) {
+    // ignore: avoid_print - 构建期日志
+    print('[hot_patch_generator] 类型 $type 同时声明在多个三方包 '
+        '${hits.join(' / ')}，无法判定 JS 模块归属，按 flutter 处理');
+    return null;
+  }
+  return hits.isEmpty ? null : hits.first;
+}
 
 /// 类型的 package 归属（默认 [nodeHelperPackage]）。
-String widgetPackageOf(String type) =>
-    widgetPackages[type] ?? nodeHelperPackage;
+///
+/// 内建类型（宿主包装类 / 逻辑组件 / builder 代理）固定归 flutter；其余才按
+/// 三方源码归属判定（避免对每个 flutter 类型都走一遍类索引）。
+String widgetPackageOf(String type) {
+  if (jsClassWidgetTypes.contains(type) || hostWrapperTypes.contains(type)) {
+    return nodeHelperPackage;
+  }
+  return thirdPartyPackageOf(type) ?? nodeHelperPackage;
+}
 
 /// 需要在 flutter.js 生成**宿主包装类**的类型：宿主 widget，排除已有 JS 类的
 /// 类型（逻辑组件 / builder 代理，它们的类由各自 package 模块产出，类名不能

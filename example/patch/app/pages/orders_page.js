@@ -9,7 +9,7 @@ import { LoadErrorView } from '../widgets/load_error_view.js';
 import { MiniButton } from 'detail_pages.js';
 import { kBrand, kPrice } from 'detail_pages.js';
 import { Axis, BorderRadius, BoxDecoration, BoxFit, Center, CircularProgressIndicator, ClipRRect, Color, Colors, Column, Container, CrossAxisAlignment, Divider, EdgeInsets, Expanded, FontWeight, GestureDetector, Image, LinearProgressIndicator, ListView, Padding, Row, SafeArea, SingleChildScrollView, SizedBox, Spacer, StatefulWidget, StatelessWidget, Text, TextOverflow, TextStyle } from '../../flutter.js';
-import { ChangeNotifierProvider } from '../../provider.js';
+import { ChangeNotifierProvider } from '../../packages/provider.js';
 
 // 组件 OrdersPage
 export class OrdersPage extends StatelessWidget {

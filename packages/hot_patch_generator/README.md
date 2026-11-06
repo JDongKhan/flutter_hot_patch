@@ -33,7 +33,8 @@ source file names:
 | --- | --- | --- |
 | `lib/components/counter.dart` | `patch/components/counter.js` | Component output containing `@PatchEntry` |
 | `lib/model/user.dart` | `patch/model/user.js` | Plain classes / static singletons (`export class` / `export const`) |
-| (package-root pseudo asset `$package$`) | `patch/flutter.js`, `patch/provider.js` | Package modules: shared node factory `__h` / instance normalizer `__asElement` plus host-widget wrapper classes and JS logic-component / builder-proxy classes, **one file per package** |
+| (package-root pseudo asset `$package$`) | `patch/flutter.js` | Package modules: shared node factory `__h` / instance normalizer `__asElement` plus host-widget wrapper classes and JS logic-component / builder-proxy classes, **one file per package** |
+| `js/<package>.js` (host-maintained third-party JS) | `patch/packages/<package>.js` | Third-party library JS lives in the host project's `js/` directory (file name = Dart package name) and is copied verbatim by `ui_third_party_js`. Business outputs import it as `../packages/<package>.js`. The project `build.yaml` must include `js/**` in `sources` |
 | (package-root pseudo asset `$package$`) | `patch/runtime.js` | The whole JS runtime (mini-react, handle registry, capability fragments) as one file, sections separated by `// ===== 【n】… =====`. Shipped with the patch, so JS fixes never need an app release. Its content hash is baked into `G.__jsuiVersion`; a new hash rebuilds the runtime in place |
 | (package-root pseudo asset `$package$`) | `patch/manifest.json` | Patch manifest: basic info + **artifact protocol version** (`protocol`, e.g. `1.0`) + build time + content hash of every JS asset. The runtime refuses bundles whose protocol **major** differs from what the app supports |
 
@@ -238,7 +239,8 @@ dart run build_runner build --delete-conflicting-outputs
 | --- | --- | --- |
 | `lib/components/counter.dart` | `patch/components/counter.js` | 含 `@PatchEntry` 的组件产物 |
 | `lib/model/user.dart` | `patch/model/user.js` | 普通类 / 静态单例（`export class` / `export const`） |
-| （包根伪资产 `$package$`） | `patch/flutter.js`、`patch/provider.js` | package 模块：共享结点工厂 `__h` / 实例归一化 `__asElement` + 宿主 widget 包装类 + JS 逻辑组件 / builder 代理类，**每个 package 一个文件** |
+| （包根伪资产 `$package$`） | `patch/flutter.js` | package 模块：共享结点工厂 `__h` / 实例归一化 `__asElement` + 宿主 widget 包装类 + JS 逻辑组件 / builder 代理类，**每个 package 一个文件** |
+| `js/<package>.js`（宿主维护的三方 JS） | `patch/packages/<package>.js` | 三方库 JS 由宿主放在工程根 `js/` 下（文件名 = Dart 包名），`ui_third_party_js` 原样拷贝；业务产物按 `../packages/<package>.js` import。工程 `build.yaml` 的 `sources` 需包含 `js/**` |
 | （包根伪资产 `$package$`） | `patch/runtime.js` | 整个 JS 运行时（mini-react / 句柄表 / 各能力片段）**一个文件**，分区用 `// ===== 【n】… =====` 注释隔开。随补丁发布，JS 修复无需发版；内容哈希写进 `G.__jsuiVersion`，哈希变化即原地重建运行时 |
 | （包根伪资产 `$package$`） | `patch/manifest.json` | patch 清单：基本信息 + **产物协议版本**（`protocol`，如 `1.0`）+ 打包时间 + 各 JS 资源的内容 hash。运行时拒绝载荷**主版本**与应用不匹配的包 |
 

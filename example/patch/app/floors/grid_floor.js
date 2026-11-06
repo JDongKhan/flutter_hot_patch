@@ -8,7 +8,7 @@ import { AppRouter } from '../../base/app_router.js';
 import { FloorLoadingView } from 'floor_status.js';
 import { FloorErrorView } from 'floor_status.js';
 import { BorderRadius, BoxDecoration, ChangeNotifier, Color, Column, Container, EdgeInsets, GridView, InkWell, MainAxisAlignment, NeverScrollableScrollPhysics, Padding, Radius, SizedBox, SliverGridDelegateWithMaxCrossAxisExtent, StatelessWidget, Text, TextStyle } from '../../flutter.js';
-import { ChangeNotifierProvider } from '../../provider.js';
+import { ChangeNotifierProvider } from '../../packages/provider.js';
 
 // 模型 GridFloorVm
 export class GridFloorVm extends ChangeNotifier {

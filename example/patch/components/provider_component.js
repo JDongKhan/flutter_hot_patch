@@ -5,7 +5,7 @@
 import { CounterVm } from '../model/counter_vm.js';
 import { NetworkVm } from '../model/network_vm.js';
 import { Card, Colors, Column, EdgeInsets, ElevatedButton, FontWeight, MainAxisAlignment, MainAxisSize, Padding, Row, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
-import { ChangeNotifierProvider, Consumer, MultiProvider } from '../provider.js';
+import { ChangeNotifierProvider, Consumer, MultiProvider } from '../packages/provider.js';
 
 // 组件 ProviderCard
 export class ProviderCard extends StatefulWidget {
