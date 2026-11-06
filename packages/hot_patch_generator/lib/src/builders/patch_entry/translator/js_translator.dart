@@ -503,6 +503,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   // 独立值位置不校验）。`a?[i]++` / `a?.x++` 的写入目标含可选链，JS 不允许，
   // 落成接收者单次求值的守卫 IIFE。
   if (e is PostfixExpression) {
+    final extUpdate = _explicitExtensionUpdateJs(e, scope, classes);
+    if (extUpdate != null) return extUpdate;
     final op = e.operator.lexeme;
     if (op == '!') {
       return exprToJs(e.operand, scope, classes);
@@ -517,6 +519,8 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
   }
   // 前缀一元（`!flag` / `-n` / `++i` / `--i`）。
   if (e is PrefixExpression) {
+    final extUpdate = _explicitExtensionUpdateJs(e, scope, classes);
+    if (extUpdate != null) return extUpdate;
     final op = e.operator.lexeme;
     if ((op == '++' || op == '--') && _chainHasNullAware(e.operand)) {
       return _nullAwareUpdateJs(e.operand, op, scope, classes, prefix: true);
@@ -1613,11 +1617,16 @@ String? _explicitExtensionSetterJs(
       (kinds == null || !kinds.contains(ExtensionMemberKind.getter))) {
     return null;
   }
-  if (op == '??=') return null;
   final recvJs = exprToJs(resolved.$2, scope, classes);
   if (recvJs == null) return null;
   final rhsJs = rhsToJs(e.rightHandSide, scope, classes);
   if (rhsJs == null) return null;
+  if (op == '??=') {
+    // 空合并赋值：读 getter 一次；非空则原值即结果，为空才求值并写 setter。
+    return '((__r) => { const __c = $ext.$member.get.call(__r); '
+        'if (__c != null) return __c; const __v = $rhsJs; '
+        '$ext.$member.set.call(__r, __v); return __v; })($recvJs)';
+  }
   if (op == '=') {
     return '((__r) => { const __v = $rhsJs; $ext.$member.set.call(__r, __v); '
         'return __v; })($recvJs)';
@@ -1626,6 +1635,45 @@ String? _explicitExtensionSetterJs(
   if (compound == null) return null;
   return '((__r) => { const __v = $rhsJs; const __n = $compound; '
       '$ext.$member.set.call(__r, __n); return __n; })($recvJs)';
+}
+
+/// 显式扩展访问器的自增 / 自减：`E(x).g++` / `++E(x).g`。
+///
+/// 需要该扩展同时声明 getter 与 setter（读旧值 → 运算 → 写回）。前缀返回新值、
+/// 后缀返回旧值（与 Dart 一致）；接收者只求值一次。
+String? _explicitExtensionUpdateJs(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final operand =
+      e is PrefixExpression ? e.operand : (e as PostfixExpression).operand;
+  final op = e is PrefixExpression
+      ? e.operator.lexeme
+      : (e as PostfixExpression).operator.lexeme;
+  if (op != '++' && op != '--') return null;
+  if (operand is! PropertyAccess) return null;
+  final resolved = _extensionOverrideInfo(operand.target, scope);
+  if (resolved == null) return null;
+  final ext = resolved.$1;
+  final meta = scope.extensionNames[ext];
+  if (meta == null) return null;
+  final kinds = meta.members[operand.propertyName.name];
+  if (kinds == null ||
+      !kinds.contains(ExtensionMemberKind.getter) ||
+      !kinds.contains(ExtensionMemberKind.setter)) {
+    return null;
+  }
+  final recvJs = exprToJs(resolved.$2, scope, classes);
+  if (recvJs == null) return null;
+  final member = operand.propertyName.name;
+  final delta = op == '++' ? '+ 1' : '- 1';
+  if (e is PrefixExpression) {
+    return '((__r) => { const __n = $ext.$member.get.call(__r) $delta; '
+        '$ext.$member.set.call(__r, __n); return __n; })($recvJs)';
+  }
+  return '((__r) => { const __o = $ext.$member.get.call(__r); '
+      '$ext.$member.set.call(__r, __o $delta); return __o; })($recvJs)';
 }
 
 /// `E(x)` 的两种 AST 形态 → (扩展名, 接收者表达式)；不是扩展覆盖则 null。
@@ -2410,6 +2458,8 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     return null;
   }
   if ((e is PostfixExpression || e is PrefixExpression)) {
+    final extUpdate = _explicitExtensionUpdateJs(e, scope, classes);
+    if (extUpdate != null) return '$extUpdate;';
     final operand = e is PostfixExpression ? e.operand : (e as PrefixExpression).operand;
     final op = e is PostfixExpression ? e.operator : (e as PrefixExpression).operator;
     // 空安全目标 `a?[i]++` / `a?.x++`：JS 可选链不能作写目标，走单次求值守卫。

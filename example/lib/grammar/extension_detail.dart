@@ -51,9 +51,14 @@ class _ExtensionDetailState extends State<ExtensionDetail> {
     final explicit = Counter();
     CounterLevel(explicit).level = 2;
     CounterLevel(explicit).level += 1;
+    // 显式访问器的自增 / 自减与空合并赋值：读 getter → 运算 → 写 setter。
+    final post = CounterLevel(explicit).level++;
+    final pre = ++CounterLevel(explicit).level;
+    CounterLevel(explicit).label ??= 'x';
+    CounterLevel(explicit).label ??= 'y';
     return '扩展 getter/setter：level=${counter.level} / value=${counter.value} '
         '/ 生成器=${steps.join(',')} / 显式 setter=${explicit.level}'
-        '/${explicit.value}';
+        '/${explicit.value} / ++--=$post,$pre / ??==${CounterLevel(explicit).label}';
   }
 
   /// 同目标同名扩展的**显式**调用：按扩展身份分派。
@@ -129,6 +134,7 @@ extension NullableTag on String? {
 
 class Counter {
   int value = 0;
+  String? note;
 }
 
 extension CounterLevel on Counter {
@@ -136,6 +142,11 @@ extension CounterLevel on Counter {
   int get level => this.value ~/ 10;
 
   set level(int v) => this.value = v * 10;
+
+  /// 可空访问器：`??=` 的两种分支都走它（read → 判空 → 写回）。
+  String? get label => this.note;
+
+  set label(String? v) => this.note = v;
 
   /// `sync*` 成员：与类方法同一发射规则（`function*`）。
   Iterable<int> steps(int count) sync* {

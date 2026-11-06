@@ -39,10 +39,14 @@ enum ExtensionMemberKind { method, getter, setter }
 /// 显式调用 `E(x).m()` 必须按**扩展身份**分派（Dart 的第三条规则）；原型只承接
 /// 隐式调用（实例成员优先 + 原型链特异性）。
 class ExtensionScope {
-  const ExtensionScope(this.sourceFile, this.members);
+  const ExtensionScope(this.sourceFile, this.target, this.members);
 
   /// 声明该扩展的源文件（跨文件时据此 import 扩展命名空间）。
   final String sourceFile;
+
+  /// 擦除后的目标类型名（`extension E on List<int>` → `List`）；无名 / 非具名
+  /// 目标为 null。用于构建期发现「同目标同名成员」的歧义。
+  final String? target;
 
   /// 实例成员名 → 种类集合（同名 get / set 可并存，故用集合而非单值）。
   final Map<String, Set<ExtensionMemberKind>> members;

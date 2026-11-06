@@ -102,6 +102,16 @@ Future<void> main() async {
   LevelEx(counter).level = 2;
   LevelEx(counter).level += 1;
   print('G ${LevelEx(counter).level}/${counter.value}');
+
+  // H 显式访问器的自增 / 自减 / 空合并赋值（读 getter → 运算 → 写 setter）。
+  final c2 = Counter();
+  LevelEx(c2).level = 2;
+  LevelEx(c2).level += 1;
+  final post = LevelEx(c2).level++;
+  final pre = ++LevelEx(c2).level;
+  LevelEx(c2).label ??= 'x';
+  LevelEx(c2).label ??= 'y';
+  print('H ${LevelEx(c2).level}/${c2.value}/$post/$pre/${LevelEx(c2).label}');
 }
 
 extension TagA on String {
@@ -117,10 +127,15 @@ extension TagB on String {
 
 class Counter {
   int value = 0;
+  String? note;
 }
 
 extension LevelEx on Counter {
   int get level => this.value ~/ 10;
 
   set level(int v) => this.value = v * 10;
+
+  String? get label => this.note;
+
+  set label(String? v) => this.note = v;
 }

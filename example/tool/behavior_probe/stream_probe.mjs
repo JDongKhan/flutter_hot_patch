@@ -115,6 +115,7 @@ const register = globalThis.registerExtension;
 class Counter {
   constructor() {
     this.value = 0;
+    this.note = null;
   }
 }
 {
@@ -127,9 +128,27 @@ class Counter {
         this.value = v * 10;
       },
     },
+    label: {
+      get() {
+        return this.note;
+      },
+      set(v) {
+        this.note = v;
+      },
+    },
   }, { id: 'probe#LevelEx' });
   const c = new Counter();
   ((__r) => { const __v = 2; L.level.set.call(__r, __v); return __v; })(c);
   ((__r) => { const __v = 1; const __n = L.level.get.call(__r) + __v; L.level.set.call(__r, __n); return __n; })(c);
   console.log(`G ${L.level.get.call(c)}/${c.value}`);
+
+  // H 显式访问器的自增 / 自减 / 空合并赋值（与产物同一形态）
+  const c2 = new Counter();
+  L.level.set.call(c2, 2);
+  ((__r) => { const __v = 1; const __n = L.level.get.call(__r) + __v; L.level.set.call(__r, __n); return __n; })(c2);
+  const post = ((__r) => { const __o = L.level.get.call(__r); L.level.set.call(__r, __o + 1); return __o; })(c2);
+  const pre = ((__r) => { const __n = L.level.get.call(__r) + 1; L.level.set.call(__r, __n); return __n; })(c2);
+  ((__r) => { const __c = L.label.get.call(__r); if (__c != null) return __c; const __v = 'x'; L.label.set.call(__r, __v); return __v; })(c2);
+  ((__r) => { const __c = L.label.get.call(__r); if (__c != null) return __c; const __v = 'y'; L.label.set.call(__r, __v); return __v; })(c2);
+  console.log(`H ${L.level.get.call(c2)}/${c2.value}/${post}/${pre}/${L.label.get.call(c2)}`);
 }

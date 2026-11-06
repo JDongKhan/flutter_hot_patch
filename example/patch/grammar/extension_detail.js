@@ -11,6 +11,7 @@ import { Center, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight,
 export class Counter {
   constructor() {
     this.value = 0;
+    this.note = null;
   }
 }
 
@@ -55,7 +56,11 @@ export class ExtensionDetail extends StatefulWidget {
     const explicit = new Counter({});
     ((__r) => { const __v = 2; CounterLevel.level.set.call(__r, __v); return __v; })(explicit);
     ((__r) => { const __v = 1; const __n = CounterLevel.level.get.call(__r) + __v; CounterLevel.level.set.call(__r, __n); return __n; })(explicit);
-    return "扩展 getter/setter：level=" + counter.level + " / value=" + counter.value + " " + "/ 生成器=" + steps.join(",") + " / 显式 setter=" + explicit.level + "/" + explicit.value;
+    const post = ((__r) => { const __o = CounterLevel.level.get.call(__r); CounterLevel.level.set.call(__r, __o + 1); return __o; })(explicit);
+    const pre = ((__r) => { const __n = CounterLevel.level.get.call(__r) + 1; CounterLevel.level.set.call(__r, __n); return __n; })(explicit);
+    ((__r) => { const __c = CounterLevel.label.get.call(__r); if (__c != null) return __c; const __v = "x"; CounterLevel.label.set.call(__r, __v); return __v; })(explicit);
+    ((__r) => { const __c = CounterLevel.label.get.call(__r); if (__c != null) return __c; const __v = "y"; CounterLevel.label.set.call(__r, __v); return __v; })(explicit);
+    return "扩展 getter/setter：level=" + counter.level + " / value=" + counter.value + " " + "/ 生成器=" + steps.join(",") + " / 显式 setter=" + explicit.level + "/" + explicit.value + " / ++--=" + post + "," + pre + " / ??==" + CounterLevel.label.get.call(explicit);
   }
   _identityText() {
     return "显式分派：TagA=" + TagA.tag.call("x") + " / TagB=" + TagB.tag.call("x") + " " + "/ 自身调用=" + TagA.loud.call("y");
@@ -182,6 +187,11 @@ export const CounterLevel = registerExtension(Counter, (function () {
         return Math.trunc(this.value / 10);
       }, set: function (v) {
         this.value = (v * 10);
+      } },
+    label: { get: function () {
+        return this.note;
+      }, set: function (v) {
+        this.note = v;
       } },
     steps: function* (count) {
       for (let i = 0; (i < count); (i++)) {

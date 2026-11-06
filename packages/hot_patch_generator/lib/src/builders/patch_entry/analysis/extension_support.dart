@@ -208,7 +208,12 @@ Map<String, ExtensionScope> extensionScopesInScope(
                 : ExtensionMemberKind.method;
         (members[m.name.lexeme] ??= <ExtensionMemberKind>{}).add(kind);
       }
-      out[name] = ExtensionScope(file, members);
+      final onType = d.onClause?.extendedType;
+      out[name] = ExtensionScope(
+        file,
+        onType is NamedType ? onType.name2.lexeme : null,
+        members,
+      );
     }
   }
 
@@ -218,6 +223,31 @@ Map<String, ExtensionScope> extensionScopesInScope(
     if (u != null) scan(u, file, includePrivate: false);
   }
   return out;
+}
+
+/// 构建期发现「同一目标类型上两个扩展声明了同名成员」：Dart 里隐式调用是
+/// 歧义编译错误，产物不会安装该成员（显式 `E(x).m` 仍可用）。运行时不告知
+/// 加载顺序，构建期先说清楚，避免把问题留到线上。
+void warnExtensionConflicts(
+  Map<String, ExtensionScope> scopes,
+  String sourcePath,
+) {
+  final byTarget = <String, Map<String, List<String>>>{};
+  for (final e in scopes.entries) {
+    final target = e.value.target;
+    if (target == null) continue;
+    for (final member in e.value.members.keys) {
+      (byTarget[target] ??= {}).putIfAbsent(member, () => []).add(e.key);
+    }
+  }
+  for (final t in byTarget.entries) {
+    for (final m in t.value.entries) {
+      if (m.value.length < 2) continue;
+      log.warning('[hot_patch_generator] $sourcePath: 扩展 ${m.value.join(' / ')} '
+          '都在 ${t.key} 上声明了 ${m.key}：隐式调用在 Dart 里是歧义编译错误，'
+          '产物不安装该成员；请改用显式调用（${m.value.first}(x).${m.key}）。');
+    }
+  }
 }
 
 /// 本文件声明的全部 `extension`（含无名扩展）。
