@@ -29,10 +29,23 @@ import 'tab_detail.dart';
 import 'text_detail.dart';
 import 'grammar/alias_detail.dart';
 import 'grammar/array_detail.dart';
-import 'grammar/grammar_details.dart';
+import 'grammar/basic_api_detail.dart';
+import 'grammar/callable_detail.dart';
+import 'grammar/collection_detail.dart';
+import 'grammar/constructor_detail.dart';
+import 'grammar/enum_detail.dart';
+import 'grammar/expression_detail.dart';
+import 'grammar/extension_detail.dart';
+import 'grammar/function_detail.dart';
 import 'grammar/generic_detail.dart';
+import 'grammar/inheritance_detail.dart';
 import 'grammar/map_detail.dart';
-import 'grammar/syntax_detail.dart';
+import 'grammar/mixin_detail.dart';
+import 'grammar/null_safety_detail.dart';
+import 'grammar/operator_detail.dart';
+import 'grammar/pattern_detail.dart';
+import 'grammar/record_detail.dart';
+import 'grammar/statement_detail.dart';
 import 'hero_detail.dart';
 import 'image_filtered_detail.dart';
 import 'image_icon_detail.dart';
@@ -319,15 +332,24 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
     'RichTextDetail': 'components/rich_text_detail.js',
     'ImplicitAnimationDetail': 'components/implicit_animation_detail.js',
     'ExplicitAnimationDetail': 'components/explicit_animation_detail.js',
-    // 基础语法 demo（mixin / extension / extends / dart:core 基础 API）：
-    // 同一源文件的组件共用一个产物。
-    'MixinDetail': 'components/grammar/grammar_details.js',
-    'ExtensionDetail': 'components/grammar/grammar_details.js',
-    'InheritanceDetail': 'components/grammar/grammar_details.js',
-    'BasicApiDetail': 'components/grammar/grammar_details.js',
+    // 基础语法 demo（每个语法一个源文件，产物镜像源文件路径）：
+    'MixinDetail': 'components/grammar/mixin_detail.js',
+    'ExtensionDetail': 'components/grammar/extension_detail.js',
+    'InheritanceDetail': 'components/grammar/inheritance_detail.js',
+    'BasicApiDetail': 'components/grammar/basic_api_detail.js',
+    'EnumDetail': 'components/grammar/enum_detail.js',
+    'ConstructorDetail': 'components/grammar/constructor_detail.js',
+    'NullSafetyDetail': 'components/grammar/null_safety_detail.js',
+    'PatternDetail': 'components/grammar/pattern_detail.js',
+    'RecordDetail': 'components/grammar/record_detail.js',
+    'OperatorDetail': 'components/grammar/operator_detail.js',
+    'CallableDetail': 'components/grammar/callable_detail.js',
+    'FunctionDetail': 'components/grammar/function_detail.js',
+    'ExpressionDetail': 'components/grammar/expression_detail.js',
+    'StatementDetail': 'components/grammar/statement_detail.js',
+    'CollectionDetail': 'components/grammar/collection_detail.js',
     'GenericDetail': 'components/grammar/generic_detail.js',
     'AliasDetail': 'components/grammar/alias_detail.js',
-    'SyntaxDetail': 'components/grammar/syntax_detail.js',
     'ArrayDetail': 'components/grammar/array_detail.js',
     'MapDetail': 'components/grammar/map_detail.js',
   };
@@ -402,9 +424,19 @@ class _WidgetDetailPageState extends State<WidgetDetailPage> {
       'ExtensionDetail' => const ExtensionDetail(),
       'InheritanceDetail' => const InheritanceDetail(),
       'BasicApiDetail' => const BasicApiDetail(),
+      'EnumDetail' => const EnumDetail(),
+      'ConstructorDetail' => const ConstructorDetail(),
+      'NullSafetyDetail' => const NullSafetyDetail(),
+      'PatternDetail' => const PatternDetail(),
+      'RecordDetail' => const RecordDetail(),
+      'OperatorDetail' => const OperatorDetail(),
+      'CallableDetail' => const CallableDetail(),
+      'FunctionDetail' => const FunctionDetail(),
+      'ExpressionDetail' => const ExpressionDetail(),
+      'StatementDetail' => const StatementDetail(),
+      'CollectionDetail' => const CollectionDetail(),
       'GenericDetail' => const GenericDetail(),
       'AliasDetail' => const AliasDetail(),
-      'SyntaxDetail' => const SyntaxDetail(),
       'ArrayDetail' => const ArrayDetail(),
       'MapDetail' => const MapDetail(),
       _ => const Text('未知组件'),

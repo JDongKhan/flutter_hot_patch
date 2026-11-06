@@ -6,8 +6,8 @@
 - **跨包 builder 改为按文件产出**（`project_module_builder.dart`）：输出清单由 `localTranslationPackageFiles()` 静态扫描本地包全部 `.dart` 文件推导，未引用的文件写空模块；每个文件只翻译本文件里被引用到的类 / mixin，并承载本文件的 `extension` 注册语句。
 - **删除独立的 extensions 产物**：`ui_extensions` builder、`extensionModulePath`、`patch/extensions/<pkg>.js` 全部移除；扩展随声明文件产物 `registerExtension(...)` 发射，调用方 import 该文件即完成注册。AGENTS 与架构文档的产物布局同步更新。
 - **barrel 生成 re-export**：只有 `export` 转发的包入口（如 `lib/foo.dart`）产出 `export { A } from './src/a.js';`，保证 `import 'package:foo/foo.dart' as p` 的 `p.A` 引用继续可用；`show` / `hide` 按声明名过滤。
-- **record 模式**：`_compilePattern` 新增 `RecordPattern` 分支，位置字段按 record 字面量产物取 `["$1"…"$N"]`、命名字段取原名，逐字段递归匹配（常量 / 变量 / 嵌套模式全部复用同一套编译）；JS 侧 record 是普通对象，只做 `typeof === "object"` 浅检查。示例 `syntax_detail.dart` 增加 `_recordPatternText`（位置 + 命名 record）。
-- **extension 显式调用与可空目标**：`_explicitExtensionReceiver`（`js_translator.dart`）识别 `E(x).m(...)` 的两种 AST 形态（已解析 `ExtensionOverride` / 未解析裸名 `MethodInvocation`），按 `extensionNamesInScope`（本文件 + import 图）确认可见具名扩展后改写为 `x.m(...)`；拦截点放在 `rhsToJs` / `exprToJs` 的构造翻译之前，避免 `E(x)` 被误当 `new E(...)`。`translateExtension` 对可空目标（`extendedType.question != null`，如 `String?`）构建期出声跳过。示例 `grammar_details.dart` 增加 `ShoutEx` 显式调用与 `NullableTag`（可空目标告警）。
+- **record 模式**：`_compilePattern` 新增 `RecordPattern` 分支，位置字段按 record 字面量产物取 `["$1"…"$N"]`、命名字段取原名，逐字段递归匹配（常量 / 变量 / 嵌套模式全部复用同一套编译）；JS 侧 record 是普通对象，只做 `typeof === "object"` 浅检查。示例 `record_detail.dart` 增加 `_recordPatternText`（位置 + 命名 record）。
+- **extension 显式调用与可空目标**：`_explicitExtensionReceiver`（`js_translator.dart`）识别 `E(x).m(...)` 的两种 AST 形态（已解析 `ExtensionOverride` / 未解析裸名 `MethodInvocation`），按 `extensionNamesInScope`（本文件 + import 图）确认可见具名扩展后改写为 `x.m(...)`；拦截点放在 `rhsToJs` / `exprToJs` 的构造翻译之前，避免 `E(x)` 被误当 `new E(...)`。`translateExtension` 对可空目标（`extendedType.question != null`，如 `String?`）构建期出声跳过。示例 `extension_detail.dart` 增加 `ShoutEx` 显式调用与 `NullableTag`（可空目标告警）。
 - **修复 `flutterExportTypes` 误抽取**：运行时片段扫描跳过行首注释行，不再把注释示例里的 `export const StringLogExtension = ...` 当成 `flutter.js` 导出（否则产物会 import 不存在的名字）。
 
 ## 0.9.0
