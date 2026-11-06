@@ -60,7 +60,7 @@ export class ExtensionDetail extends StatefulWidget {
     const pre = ((__r) => { const __n = CounterLevel.level.get.call(__r) + 1; CounterLevel.level.set.call(__r, __n); return __n; })(explicit);
     ((__r) => { const __c = CounterLevel.label.get.call(__r); if (__c != null) return __c; const __v = "x"; CounterLevel.label.set.call(__r, __v); return __v; })(explicit);
     ((__r) => { const __c = CounterLevel.label.get.call(__r); if (__c != null) return __c; const __v = "y"; CounterLevel.label.set.call(__r, __v); return __v; })(explicit);
-    return "扩展 getter/setter：level=" + counter.level + " / value=" + counter.value + " " + "/ 生成器=" + steps.join(",") + " / 显式 setter=" + explicit.level + "/" + explicit.value + " / ++--=" + post + "," + pre + " / ??==" + CounterLevel.label.get.call(explicit);
+    return "扩展 getter/setter：level=" + counter.level + " / value=" + counter.value + " " + "/ 生成器=" + steps.join(",") + " / 显式 setter=" + explicit.level + "/" + explicit.value + " / ++--=" + post + "," + pre + " / ??==" + CounterLevel.label.get.call(explicit) + " / static=" + CounterLevel.v + ",";
   }
   _identityText() {
     return "显式分派：TagA=" + TagA.tag.call("x") + " / TagB=" + TagB.tag.call("x") + " " + "/ 自身调用=" + TagA.loud.call("y");
@@ -199,5 +199,12 @@ export const CounterLevel = registerExtension(Counter, (function () {
       }
     },
   };
-})(), { id: "lib/grammar/extension_detail.dart#CounterLevel" });
+})(), { id: "lib/grammar/extension_detail.dart#CounterLevel", statics: { _v: 0, get v() {
+      return CounterLevel._v;
+    }, set v(next) {
+      return CounterLevel._v = next;;
+    }, bump: function () {
+      CounterLevel._v = (CounterLevel._v + 1);
+      return CounterLevel._v;
+    }, } });
 

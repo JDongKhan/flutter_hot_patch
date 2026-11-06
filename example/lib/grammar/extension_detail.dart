@@ -56,9 +56,13 @@ class _ExtensionDetailState extends State<ExtensionDetail> {
     final pre = ++CounterLevel(explicit).level;
     CounterLevel(explicit).label ??= 'x';
     CounterLevel(explicit).label ??= 'y';
+    // 静态成员：同名 get/set 与静态字段引用。
+    CounterLevel.v = 7;
+    final bumped = CounterLevel.bump();
     return '扩展 getter/setter：level=${counter.level} / value=${counter.value} '
         '/ 生成器=${steps.join(',')} / 显式 setter=${explicit.level}'
-        '/${explicit.value} / ++--=$post,$pre / ??==${CounterLevel(explicit).label}';
+        '/${explicit.value} / ++--=$post,$pre / ??==${CounterLevel(explicit).label}'
+        ' / static=${CounterLevel.v},$bumped';
   }
 
   /// 同目标同名扩展的**显式**调用：按扩展身份分派。
@@ -138,6 +142,19 @@ class Counter {
 }
 
 extension CounterLevel on Counter {
+  /// 静态字段：静态成员体里的裸引用应落成 `CounterLevel._v`。
+  static int _v = 0;
+
+  /// 同名 static get / set：产物里必须是同一个对象字面量的两个访问器。
+  static int get v => _v;
+
+  static set v(int next) => _v = next;
+
+  static int bump() {
+    _v = _v + 1;
+    return _v;
+  }
+
   /// 与下面的 setter 同名：产物里必须合并成同一个 `{ get, set }` 描述符。
   int get level => this.value ~/ 10;
 

@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 aa76b1b4） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 415a652d） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === 'aa76b1b4') { return; }
-  G.__jsuiVersion = 'aa76b1b4';
+  if (G.__jsui && G.__jsuiVersion === '415a652d') { return; }
+  G.__jsuiVersion = '415a652d';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -3169,7 +3169,20 @@ __defineProtoMember(Map.prototype, {
     // `E.m.call(x, …)` / `E.g.get.call(x)` 从这里取函数，与原型共用同一份实现）。
     var namespace = {};
     for (var s in statics) {
-      if (Object.prototype.hasOwnProperty.call(statics, s)) { namespace[s] = statics[s]; }
+      if (!Object.prototype.hasOwnProperty.call(statics, s)) { continue; }
+      // 静态访问器必须按**描述符**搬运：按值读会立刻执行 getter，而 getter 体里
+      // 引用的命名空间（`E._v`）此刻还没初始化（TDZ）。字段仍按值拷贝。
+      var sd = Object.getOwnPropertyDescriptor(statics, s);
+      if (sd != null && (sd.get != null || sd.set != null)) {
+        Object.defineProperty(namespace, s, {
+          get: sd.get,
+          set: sd.set,
+          enumerable: true,
+          configurable: true
+        });
+      } else {
+        namespace[s] = statics[s];
+      }
     }
     for (var name in members) {
       if (!Object.prototype.hasOwnProperty.call(members, name)) continue;

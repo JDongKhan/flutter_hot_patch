@@ -1,9 +1,10 @@
 ## 0.13.0
 
-**加法：Dart `Iterable` 惰性语义对齐（调用点保持同名）；Stream 生命周期补齐。无破坏性协议变更。**
+**加法：Dart `Iterable` 惰性语义对齐（调用点保持同名）；extension 静态成员修复；Stream 生命周期补齐。无破坏性协议变更。**
 
 - **Dart `Iterable` 惰性、调用点保持同名**：新增运行时片段 `iterable_js.dart`（`LazyIterable` + 内部原语 `G.__iter*`）。`where` / `expand` / `take` / `skip` 在 Array / Set / `%GeneratorPrototype%` 上的**同名实现**直接返回 `LazyIterable`（调用时零副作用、每次迭代重新执行回调、可重复迭代）；`map` 因不能覆盖原生 `Array.prototype.map`，由 `_memberCallName` 按既有映射表改名 `map → _map`（与 `sort → _sort` / `join → _join` 同规则，仅对静态类型可判定为 `List` / `Iterable` 的接收者生效）。`__iter*` 只是原型实现共用的内部原语，不出现在产物里。
 - **隐式扩展调用保持原样**：`x.m()` / `x.m` 不改写，仍由 `registerExtension` 装到原型的同名成员承接；`this._count.increment()` 等调用点与 Dart 完全一致。显式 `E(x).m()` 仍按扩展身份分派。**已知限制**：不同库的同名扩展在同一目标上全局冲突时，运行期 `@conflict` 双方不安装（显式调用不受影响）——全局原型无法表达 import 可见性。
+- **extension 静态成员修复**：`translateExtension` 先把静态字段 / 方法收进翻译作用域，成员体里的裸引用正确落成 `<扩展名>.<成员>`（此前 `hostInfo.staticFields` 为空，语句被静默丢弃）；同名 `static get` / `static set` 聚合到同一对象字面量的两个访问器（setter 不再被发成普通方法覆盖 getter）；静态方法补齐生成器 / async 发射规则。`registerExtension` 改为按属性描述符搬运 `statics`，避免静态 getter 在命名空间初始化前被求值（TDZ）。
 - **Stream 生命周期补齐**：单订阅流新增 `_listenedOnce`，取消后再次 `listen` / `await for` 抛 `StateError`；无 `onError` 的错误改为 `__error` 上报；`onError` 第二参传错误栈字符串（`addError` 未给栈时为空串，与 Dart `StackTrace.empty` 一致）。另修六项：订阅前缓冲改为 `listen` 返回后的**微任务**交付；`await for` 遇 error / done 注销拉取方（error 先传播取消再抛出）；唯一订阅取消后 `add` 不再让 `close()` 永久挂起；无订阅者 `close()` 等 done 真正交付（或被广播丢弃）后才完成；done 交付后订阅自动从 `_subs` 移除（`hasListener` 变 false）；广播每个「最后一个订阅者离开」周期都触发 `onCancel`。
 - 行为基线：`example/tool/behavior_probe/stream_probe.dart` / `.mjs` 新增 J（单订阅取消后重听）、K（`onError` 第二参）、L / M（Iterable 惰性、可重复迭代）与 N–S（订阅前缓冲异步交付、done 后 hasListener、cancel 后 close 完成、无订阅者 close、广播 onCancel、`await for` 错误取消）用例，双端输出逐字一致。
 

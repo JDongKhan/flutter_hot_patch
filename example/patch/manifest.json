@@ -1,11 +1,11 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-06T17:27:42.467008",
+  "buildTime": "2026-11-06T17:33:00.990418",
   "resources": {
     "flutter.js": "07fdf7109f0bed52b05dd6c2da81837686a17f7c774810e89ea23ffaa79fecc3",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",
-    "runtime.js": "59d4568dc7c99c0550e520592d93681a6a0de13f5d82c7dc805d41571caee3e8",
+    "runtime.js": "bee5a791b0711bf940730ffcac60dc8fa53af2f274b7c685b12f372ddc968f26",
     "packages/hot_module_base/hot_module_base.js": "f2277d31eee25cd1c288ed66dbc59c46e0175109832207fcd512a6620acdf7f4",
     "packages/hot_module_base/src/account_center.js": "1e0b2389c45cf44f37d762ca12dcbbbc6b0d96f7ba1df7256f9481a251ef006e",
     "packages/hot_module_base/src/guide_bubble_widget.js": "8fc9270c7b523dc7d185a055456beab601232530b00377370114659814c4bb22",
@@ -31,7 +31,7 @@
     "grammar/stream_detail.js": "6ef243f1a8ad36bce48c2a79e53496ed554a6687675d3c9a35292a2fb7556707",
     "grammar/expression_detail.js": "e557b981a4d843bfec754ea10de0f3f680ac9375b022cc83331de5274bffa757",
     "grammar/mixin_detail.js": "e19595b3609f5cc8dafbd5ca5ceba86c48e52ad4824ac4867bf0ed2ed91a8c36",
-    "grammar/extension_detail.js": "7dfeda13c163ef943a5b295f3e8af13cbc156778a0bc5ea935f4db1bee870cfe",
+    "grammar/extension_detail.js": "af63f512bc6557b155945aa21dd177eab668a18c21768fdaa5446ef869d19d2f",
     "grammar/generic_detail.js": "6f79c5942af0a0949fc54911ff4bf1ea2aacfae8345288109930bbb132019226",
     "grammar/array_detail.js": "c4823acd0700646f650aa83f234f088407d412dcf7f0bdb685aaa177482584b8",
     "grammar/async_detail.js": "30144327c1087ab8fcfe87b28e0f1bb2d89e59a10cabd2dff6abe0563760bb23",

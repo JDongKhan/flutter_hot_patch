@@ -403,6 +403,15 @@ class _ExtMemberSlot {
   String? methodValue;
 }
 
+/// 静态成员的聚合槽位：与实例成员同一模型（同名 get/set 合并、方法与字段互斥）。
+/// 对象字面量里 `get x() {}` 与 `set x(v) {}` 可以并存，两个方向各发一项。
+class _ExtStaticSlot {
+  String? value;
+  String? getBody;
+  String? setBody;
+  List<String> setParams = const [];
+}
+
 /// 翻译一个 extension → [ExtensionInfo]；构建期不成立的声明返回 null（已告警）。
 ///
 /// [ownProduct]：本产物的身份（`patch/a/b.js`），用于判断目标类是否就在**同
@@ -607,6 +616,41 @@ ExtensionInfo? translateExtension(
   }
   final memberMethods = [for (final d in memberDecls) d.method];
 
+  // 静态成员：与实例成员同一条翻译规则。必须**先**收进 hostInfo，成员体翻译时
+  // 裸引用静态字段 / 方法才能解析成 `<扩展名>.<name>`（此前 staticFields 为空，
+  // 这些语句被静默丢弃）。
+  final staticFields = <ClassField>[];
+  final staticMethodInfos = <ClassMethod>[];
+  final staticMethodByDecl = <MethodDeclaration, ClassMethod>{};
+  for (final member in decl.members) {
+    if (member is FieldDeclaration && member.isStatic) {
+      for (final v in member.fields.variables) {
+        staticFields.add(ClassField(
+          name: v.name.lexeme,
+          typeName: member.fields.type?.toSource() ?? 'dynamic',
+          isStatic: true,
+          initializer: v.initializer,
+        ));
+      }
+    } else if (member is MethodDeclaration && member.isStatic) {
+      final info = ClassMethod(
+        name: member.name.lexeme,
+        params: member.isGetter ? const [] : jsMethodParams(member),
+        isGetter: member.isGetter,
+        isAsync: member.body.isAsynchronous,
+        isVoid: isVoidReturn(member),
+        returnsWidget: returnsWidgetOf(member),
+        body: member.body,
+        parameters: member.parameters,
+        positionalParamCount: positionalParamCountOf(member),
+        hasNamedParams: hasNamedParamOf(member),
+        isStatic: true,
+      );
+      staticMethodInfos.add(info);
+      staticMethodByDecl[member] = info;
+    }
+  }
+
   // 依赖：整个扩展声明里出现的类型引用（成员体 / 初始化器 / 字段类型 /
   // `on` 目标），与类共用同一个收集器——不另写扩展专用的启发式。
   final used = <String, ClassInfo>{};
@@ -645,11 +689,14 @@ ExtensionInfo? translateExtension(
   // 扩展没有实例字段：作用域里只有形参 / 局部变量 / 本扩展的其它成员（`this`
   // 就是接收者，故成员间调用落成 `this.xxx(...)`）。
   final hostInfo = ClassInfo(
-    name: label,
+    // 具名扩展的静态成员在 JS 侧挂在 `export const <扩展名>` 命名空间上；
+    // 无名扩展没有可引用的命名空间（静态成员本就无法从 Dart 侧引用），
+    // className 置空，避免产出 `<unnamed>._v` 这种非法标识符。
+    name: name ?? '',
     sourceFile: sourcePath,
     instanceFields: const [],
-    staticFields: const [],
-    methods: memberMethods,
+    staticFields: staticFields,
+    methods: [...memberMethods, ...staticMethodInfos],
     isComponent: false,
   );
 
@@ -727,23 +774,15 @@ ExtensionInfo? translateExtension(
         );
   }
 
-  // 静态成员：与实例成员同一条翻译（静态里 `this` 是类本身，与 Dart 一致）。
+  // 静态成员：与实例成员同一条翻译（静态里成员裸引用落成 `<扩展名>.<name>`）。
+  // 按名字聚合槽位：`static get x` / `static set x` 必须在同一个对象字面量里
+  // 各发一项访问器（若把 setter 当普通方法发 `x: function(v){}`，同名 getter 会被
+  // 这个 data property 覆盖）。
   final staticsEntries = <String>[];
+  final staticSlots = <String, _ExtStaticSlot>{};
   for (final member in decl.members) {
     if (member is MethodDeclaration && member.isStatic) {
-      final memberName = member.name.lexeme;
-      final info = ClassMethod(
-        name: memberName,
-        params: member.isGetter ? const [] : jsMethodParams(member),
-        isGetter: member.isGetter,
-        isAsync: member.body.isAsynchronous,
-        isVoid: isVoidReturn(member),
-        returnsWidget: returnsWidgetOf(member),
-        body: member.body,
-        parameters: member.parameters,
-        positionalParamCount: positionalParamCountOf(member),
-        hasNamedParams: hasNamedParamOf(member),
-      );
+      final info = staticMethodByDecl[member]!;
       final body = parseCtx.withExprRenderer(() => translateClassMethodBody(
             hostInfo,
             info,
@@ -755,19 +794,19 @@ ExtensionInfo? translateExtension(
             extensionOperators: extensionOperators,
             extensionNames: extensionNames,
           ));
+      final slot = staticSlots.putIfAbsent(info.name, () => _ExtStaticSlot());
       if (member.isGetter) {
-        staticsEntries.add(jsLiteralAccessor(
-          name: memberName,
-          isGetter: true,
-          body: body,
-        ));
+        slot.getBody = body;
+      } else if (member.isSetter) {
+        slot.setBody = body;
+        slot.setParams = info.params;
       } else {
-        staticsEntries.add('$memberName: ${jsMethodValue(
+        slot.value = jsMethodValue(
           params: jsSignatureParams(info),
           body: body,
           isAsync: info.isAsync,
           isGenerator: member.body.isGenerator,
-        )}');
+        );
       }
     } else if (member is FieldDeclaration) {
       if (!member.isStatic) {
@@ -782,8 +821,29 @@ ExtensionInfo? translateExtension(
               '字段 ${v.name.lexeme} 初值不是编译期常量，已跳过。');
           continue;
         }
-        staticsEntries.add('${v.name.lexeme}: $value');
+        staticSlots.putIfAbsent(v.name.lexeme, () => _ExtStaticSlot()).value = value;
       }
+    }
+  }
+  for (final e in staticSlots.entries) {
+    final slot = e.value;
+    if (slot.getBody != null) {
+      staticsEntries.add(jsLiteralAccessor(
+        name: e.key,
+        isGetter: true,
+        body: slot.getBody!,
+      ));
+    }
+    if (slot.setBody != null) {
+      staticsEntries.add(jsLiteralAccessor(
+        name: e.key,
+        isGetter: false,
+        body: slot.setBody!,
+        setParams: slot.setParams,
+      ));
+    }
+    if (slot.getBody == null && slot.setBody == null && slot.value != null) {
+      staticsEntries.add('${e.key}: ${slot.value}');
     }
   }
 
