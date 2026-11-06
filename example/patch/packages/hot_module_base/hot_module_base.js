@@ -7,4 +7,4 @@ export { GuideBubbleWidget } from 'src/guide_bubble_widget.js';
 export { User } from 'src/model/user.js';
 export { Network } from 'src/network.js';
 export { StateLogMixin } from 'src/state_log_mixin.js';
-export { StringLogExtension } from 'src/string_log_extension.js';
+export { IntExtension } from 'src/int_extension.js';

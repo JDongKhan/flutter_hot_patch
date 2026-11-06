@@ -3,6 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { StateLogMixin } from '../../packages/hot_module_base/src/state_log_mixin.js';
+import { IntExtension } from '../../packages/hot_module_base/src/int_extension.js';
 import { Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
 
 // 模型 _SuperTagged_Tagged

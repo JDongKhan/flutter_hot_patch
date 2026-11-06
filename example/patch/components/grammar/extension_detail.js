@@ -2,9 +2,9 @@
 // 由 hot_patch_generator 从 lib/components/grammar/extension_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { StringLogExtension } from '../../packages/hot_module_base/src/string_log_extension.js';
+import { IntExtension } from '../../packages/hot_module_base/src/int_extension.js';
 import { TestString1 } from 'extension/e_string.js';
-import { Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatelessWidget, Text, TextStyle } from '../../flutter.js';
+import { Center, Colors, Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../../flutter.js';
 
 // 模型 Vector
 export class Vector {
@@ -17,9 +17,10 @@ export class Vector {
 }
 
 // 组件 ExtensionDetail
-export class ExtensionDetail extends StatelessWidget {
+export class ExtensionDetail extends StatefulWidget {
   constructor(args) {
     super(args);
+    this._count = 0;
   }
   _extensionOperatorText() {
     const a = new Vector({
@@ -34,9 +35,10 @@ export class ExtensionDetail extends StatelessWidget {
     const shout = "explicit".shout();
     return "extension operator：sum=" + sum.x + " / neg=" + neg.x + " / mod=" + rest + " " + "/ 显式调用=" + shout;
   }
-  _log() {
-    "扩展方法打印的日志".logText("ExtensionDetail");
+  _increment() {
+    this._count = this._count.increment();
     "test".log1();
+    this.setState(() => {});
   }
   build(context) {
     return new Column({
@@ -59,13 +61,22 @@ export class ExtensionDetail extends StatelessWidget {
             "color": Colors.black54
           })
         }))),
+        new Center({
+          "child": new Text({
+            "style": new TextStyle({
+              "fontSize": 20,
+              "color": Colors.black54
+            }),
+            "data": this._count
+          })
+        }),
         (this.__k3 || (this.__k3 = new SizedBox({
           "height": 12
         }))),
         new ElevatedButton({
-          "onPressed": () => this._log(),
+          "onPressed": () => this._increment(),
           "child": (this.__k4 || (this.__k4 = new Text({
-            "data": "调用 String.logText()"
+            "data": "add"
           })))
         }),
         (this.__k3 || (this.__k3 = new SizedBox({

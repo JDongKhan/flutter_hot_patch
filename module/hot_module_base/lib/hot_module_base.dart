@@ -14,4 +14,4 @@ export 'src/guide_bubble_widget.dart';
 export 'src/model/user.dart';
 export 'src/network.dart';
 export 'src/state_log_mixin.dart';
-export 'src/string_log_extension.dart';
+export 'src/int_extension.dart';

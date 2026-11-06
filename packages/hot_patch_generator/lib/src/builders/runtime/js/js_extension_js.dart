@@ -10,7 +10,7 @@
 //     (function () { "use strict"; return {
 //       logText: function (tag) { ... }
 //     }; })(),
-//     { id: "lib/src/string_log_extension.dart#StringLogExtension" });
+//     { id: "lib/src/int_extension.dart#StringLogExtension" });
 //
 //   严格模式包装见生成器（extension_support.dart）：脚本里以原始值作接收者时
 //   `this` 才会是那个值本身，而不是装箱后的 `new String(...)`。

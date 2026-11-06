@@ -10,8 +10,15 @@ import 'extension/e_string.dart';
 ///   - 显式调用 `ShoutEx(x).shout()` 的调用点改写；
 ///   - 可空目标扩展（构建期出声跳过，不产出注册）。
 @PatchEntry('ExtensionDetail')
-class ExtensionDetail extends StatelessWidget {
+class ExtensionDetail extends StatefulWidget {
   const ExtensionDetail({super.key});
+
+  @override
+  State<ExtensionDetail> createState() => _ExtensionDetailState();
+}
+
+class _ExtensionDetailState extends State<ExtensionDetail> {
+  int _count = 0;
 
   /// 扩展运算符：调用点 `receiver.__op$xxx(args)`，成员随注册装到原型上。
   String _extensionOperatorText() {
@@ -26,10 +33,11 @@ class ExtensionDetail extends StatelessWidget {
         '/ 显式调用=$shout';
   }
 
-  void _log() {
+  void _increment() {
     // 跨包 extension：String 本身没有 logText，由 StringLogExtension 提供。
-    '扩展方法打印的日志'.logText('ExtensionDetail');
+    _count =  _count.increment();
     "test".log1();
+    setState(() {});
   }
 
   @override
@@ -37,17 +45,15 @@ class ExtensionDetail extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'String 扩展 logText（跨包 extension）',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        const Text('String 扩展 logText（跨包 extension）', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         const Text(
           "调用 '扩展方法打印的日志'.logText('ExtensionDetail')，控制台输出 [ExtensionDetail] ...",
           style: TextStyle(fontSize: 13, color: Colors.black54),
         ),
+        Center(child: Text("$_count", style: TextStyle(fontSize: 20, color: Colors.black54))),
         const SizedBox(height: 12),
-        ElevatedButton(onPressed: _log, child: const Text('调用 String.logText()')),
+        ElevatedButton(onPressed: _increment, child: const Text('add')),
         const SizedBox(height: 12),
         Text(_extensionOperatorText(), style: const TextStyle(fontSize: 13)),
       ],
