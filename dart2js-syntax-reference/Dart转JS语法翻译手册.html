@@ -205,7 +205,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
     <div><dt>适用源语言</dt><dd>Dart 3.x（含空安全、record、模式匹配）</dd></div>
     <div><dt>适用目标</dt><dd>ES2022+，原生 class / 模块 / 可选链</dd></div>
     <div><dt>实测环境</dt><dd>Dart 3.11.5 stable，macOS arm64</dd></div>
-    <div><dt>文档版本</dt><dd>v1.5 · 规则 18 组 · 陷阱 40+ · 2026-11-05 与 hot_patch_generator 0.9.0 核对（mixin 改为原文件独立类 + application 类链 + <code>__mixinHard</code>；extension 章节写明当前原型注册方案与 dart2js 静态分派的差别，并按实际口径把显式调用 / 泛型目标 / 可空目标标为不通过）</dd></div>
+    <div><dt>文档版本</dt><dd>v1.6 · 规则 18 组 · 陷阱 40+ · 2026-11-06 与 hot_patch_generator 0.10.0 核对（extension 章节写明当前原型注册方案与 dart2js 静态分派的差别，并按实际口径把显式调用 / 泛型目标 / 可空目标标为不通过；record 模式已支持）</dd></div>
   </dl>
 </header>
 
@@ -1115,6 +1115,11 @@ const b = '  '.isBlank;</code><button class="copy" type="button">复制</button>
   <span class="t">注册语义</span>
   扩展的 <code>id</code> 是稳定标识（<code>&lt;sourcePath&gt;#&lt;name&gt;</code>）：同 id 再注册时运行时会先卸载旧成员，热更不会重复叠加。目标类型没有实体原型（Map / Object / dynamic / 宿主 widget 包装类）时构建期直接拒绝，不产出必然无效的注册。
 </div>
+
+<div class="note">
+  <span class="t">实测（2026-11-06，macOS example）</span>
+  跨包 <code>StringLogExtension.logText</code> 与 <code>VectorOps</code> 的 <code>+</code> / 一元 <code>-</code> / <code>%</code> 已跑通：产物落在 <code>patch/packages/&lt;包名&gt;/&lt;原路径&gt;.js</code>，调用方按文件 import，注册随声明文件求值。上表三处标「不通过」的是**已知语义缺口**（显式调用 <code>E(x).m()</code>、泛型实例化目标、可空目标），不影响已实现路径。
+</div>
 </section>
 
 <!-- ================= 12 集合 ================= -->
@@ -1258,7 +1263,7 @@ function* lazyMap(source, fn) {
     <tr><td><code>switch</code>（Dart 3 隐式 break）</td><td><code>switch</code>（会穿透）</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 每个 case 末尾补 <code>break</code></td><td><code>_switchStatementJs</code> / <code>:2652</code> SwitchStatement 与模式 switch</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td>有意穿透（Dart 3 用 <code>continue</code> 标签）</td><td>不写 break</td><td><span class="muted">—</span></td><td>按标签映射</td><td>label 语句 + <code>continue outer;</code> 一比一发射为 JS 标签</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td>switch 表达式</td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 转 if 链或查表</td><td>IIFE + 原生 switch；非常量条件写 <code>switch (true)</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>模式匹配 <code>case (a, b)</code></td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 解构 + 守卫条件</td><td>_compilePattern 覆盖常量/声明变量/关系/空检查/逻辑/对象/列表；<b>RecordPattern 未支持</b>（出声丢弃）</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>模式匹配 <code>case (a, b)</code></td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 解构 + 守卫条件</td><td><code>_compilePattern</code> 的 <code>RecordPattern</code> 分支：位置字段取 <code>["$1"…"$N"]</code>、命名字段取原名，逐字段递归匹配；JS 侧 record 就是普通对象，只做 <code>typeof === "object"</code> 浅检查</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>if (x case T v)</code></td><td>无</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 先 instanceof 再绑定</td><td><code>typeTestJs</code> 的 <code>instanceof</code> 判定 已知类/宿主类型走 instanceof</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>try / on X catch (e)</code></td><td><code>try / catch (e)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 用 <code>instanceof</code> 分派</td><td><code>typeTestJs</code> 的 <code>instanceof</code> 判定 已知类/宿主类型走 instanceof</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>rethrow</code></td><td><code>throw e</code></td><td><span class="muted">—</span></td><td>保留原始堆栈需额外处理</td><td>catch 内统一重抛 <code>throw __e;</code>，保留原异常对象与栈</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
@@ -1518,7 +1523,7 @@ class StreamSubscription {
     <tr><td>3</td><td>运算符重载</td><td>类声明了 <code>operator</code></td><td>语义错误</td><td><code>operatorJsName</code> 映射 + <code>_operatorOwnerOf</code>（按操作数静态类型改写，不可判定时保持原生运算）</td></tr>
     <tr><td>4</td><td><code>%</code> / <code>~/</code> / <code>is</code></td><td>取模、整除、类型判断</td><td>数值/类型判断错</td><td><code>~/</code> 展开 <code>Math.trunc(a / b)</code>；<code>%</code> 发 <code>__mod(a, b)</code>（欧几里得取模）；<code>is</code> 走 <code>typeTestJs</code>（含 int / Set / dynamic / Never / Object?）</td></tr>
     <tr><td>5</td><td>类型提升流分析</td><td><code>x!</code> 出现在 <code>if (x != null)</code> 之后</td><td>多余断言或误删断言</td><td><b>未实现流分析</b>：无 resolution 的 parseString 拿不到类型提升；项目口径统一忽略 <code>!</code>（去掉断言，访问位置由 JS 自然抛错）</td></tr>
-    <tr><td>6</td><td>Dart 3 Record</td><td><code>(1, 'a')</code>、命名记录</td><td>值变成逗号表达式结果</td><td><b>字面量已实现</b>：<code>_recordLiteralJs</code> 生成统一对象（位置字段 <code>"$1"…"$N"</code>、命名字段原名），<code>r.$1</code> / <code>r.x</code> 原样访问；<b>RecordPattern 仍未支持</b>（<code>_compilePattern</code> 出声丢弃）</td></tr>
+    <tr><td>6</td><td>Dart 3 Record</td><td><code>(1, 'a')</code>、命名记录</td><td>值变成逗号表达式结果</td><td><b>字面量已实现</b>：<code>_recordLiteralJs</code> 生成统一对象（位置字段 <code>"$1"…"$N"</code>、命名字段原名），<code>r.$1</code> / <code>r.x</code> 原样访问；<b>RecordPattern 已支持</b>（<code>_compilePattern</code> 按同一对象形态解构）</td></tr>
     <tr><td>7</td><td>int 精度</td><td>大整数、位运算、<code>~/</code></td><td>静默精度丢失</td><td><b>未处理</b>：int / double 一比一为 JS number，超 2^53 无标记</td></tr>
   </tbody>
 </table>
@@ -1646,6 +1651,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
   <p>使用建议：先落地第 00 章总则与第 16 章运行时，再按第 15 章优先级逐项核对；每条改写配三条断言（null 分支、非 null 分支、求值次数）。<b>禁止按类名 / 方法名 / 属性名特判</b>：新增能力走扩展点或运行时内建补齐。</p>
   <p>v1.1（2026-11-05）：按 <code>hot_patch_generator</code> 0.8.1 全量核对「现状」列，把「待实检」改为代码事实；补充 tear-off / <code>super.x</code> / 函数值调用 / 级联内赋值 / <code>throw</code> 表达式等近期实现的语法。行号引用已改为函数 / 分支名，避免随版本漂移。</p>
   <p>v1.5（2026-11-05）：第 11 章补「当前方案（本项目）」说明（原型注册的选择理由、与 dart2js 静态分派的一句话差别）；按实际代码口径把 <code>E(x).m()</code> 显式调用、泛型目标、可空目标三项改判为不通过，并写明限制。</p>
+  <p>v1.6（2026-11-06）：record 模式 <code>case (a, b)</code> / <code>case (x: a)</code> 已实现（<code>_compilePattern</code> 的 <code>RecordPattern</code> 分支），第 14 / 15 章同步为通过；第 11 章补 macOS example 实测记录。</p>
 </footer>
 
 </main>

@@ -3222,7 +3222,32 @@ bool _compilePattern(
     }
     return true;
   }
-  // 记录模式 / 类型转换 / 其它模式：JS 侧无表示或未覆盖，出声丢弃。
+  // 记录模式：`case (a, b)` / `case (x: a)` / `case (1, 'a')`。
+  //
+  // record 的 JS 表示是**普通对象**（`_recordLiteralJs`：位置字段 `"$1"`…`"$N"`、
+  // 命名字段原名），故解构即逐字段取值再递归匹配；JS 侧无法区分 record 与普通
+  // 对象，只做 `typeof === "object"` 的浅检查（Dart 的 record 类型检查依赖静态
+  // 类型，运行期本就没有额外信息）。
+  if (p is RecordPattern) {
+    if (p.fields.isEmpty) {
+      plan.lines.add('if ($value == null || typeof $value !== "object") '
+          'return false;');
+      return true;
+    }
+    var positional = 0;
+    for (final f in p.fields) {
+      final fieldName = f.name;
+      final name = fieldName?.name?.lexeme;
+      final key = name ?? '\$${++positional}';
+      plan.lines.add('if ($value == null || typeof $value !== "object") '
+          'return false;');
+      final t = plan.temp();
+      plan.lines.add('const $t = $value[${jsString(key)}];');
+      if (!_compilePattern(f.pattern, t, plan, scope, classes)) return false;
+    }
+    return true;
+  }
+  // 类型转换 / 其它模式：JS 侧无表示或未覆盖，出声丢弃。
   return false;
 }
 

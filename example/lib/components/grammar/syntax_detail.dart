@@ -249,6 +249,16 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
     return '关系/列表：未命中';
   }
 
+  /// 记录模式：位置 `(a, b)` / 命名 `(x: a, y: b)` → 解构 record 的统一对象表示。
+  String _recordPatternText() {
+    final pair = (1, 'a');
+    final named = (x: 2, y: 3);
+    if (pair case (final first, final second)) {
+      return 'record 模式：$first / $second，命名：${named.x}+${named.y}';
+    }
+    return 'record 模式：未命中';
+  }
+
   /// setter + 运算符重载：`+` / 一元 `-` / `==` 走 `__op$` 分派，`p.cents = v` 走 setter。
   ///
   /// hashCode 只验证**契约**（`a == b` ⇒ hash 相等），不比较原生 / JS 的原始
@@ -629,6 +639,7 @@ class _SyntaxDetailState extends State<SyntaxDetail> {
           Text(_matchText()),
           Text(_destructureText()),
           Text(_rangeText()),
+          Text(_recordPatternText()),
           Text(_localFuncText()),
           Text(_paramsText()),
           Text(_assignExprText()),

@@ -343,6 +343,27 @@ export class SyntaxDetail extends StatefulWidget {
     }
     return "关系/列表：未命中";
   }
+  _recordPatternText() {
+    const pair = {"$1": 1, "$2": "a"};
+    const named = {"x": 2, "y": 3};
+    {
+      const __v0 = pair;
+      let first, second;
+      const __ok = (() => {
+        if (__v0 == null || typeof __v0 !== "object") return false;
+        const __v1 = __v0["$1"];
+        first = __v1;
+        if (__v0 == null || typeof __v0 !== "object") return false;
+        const __v2 = __v0["$2"];
+        second = __v2;
+        return true;
+      })();
+      if (__ok) {
+        return "record 模式：" + first + " / " + second + "，命名：" + named.x + "+" + named.y;
+      }
+    }
+    return "record 模式：未命中";
+  }
   _operatorText() {
     const a = new Price({
       "_cents": 100
@@ -730,6 +751,9 @@ export class SyntaxDetail extends StatefulWidget {
           }),
           new Text({
             "data": this._rangeText()
+          }),
+          new Text({
+            "data": this._recordPatternText()
           }),
           new Text({
             "data": this._localFuncText()
