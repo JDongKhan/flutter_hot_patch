@@ -34,6 +34,7 @@ import 'analysis/analyze_dart_class.dart';
 import 'analysis/class_table.dart';
 import 'analysis/component_scope.dart';
 import 'analysis/const_support.dart';
+import 'analysis/extension_support.dart';
 import 'class_info.dart';
 import 'translator/dart2js.dart';
 import 'translator/js_value.dart';
@@ -189,6 +190,7 @@ String renderProjectPackageModule(
     final unit = parseUnitFile(file)!;
     final table = buildClassTable(unit, file);
     final consts = buildTopLevelConstResolver(unit, file, table);
+    final extensionOperators = extensionOperatorsInScope(unit, file);
     // 跨包文件里的顶层常量产物不在本模块内（同文件常量已内联），出声提示。
     final foreignConsts = referencedImportedConsts(unit, consts);
     if (foreignConsts.isNotEmpty) {
@@ -207,6 +209,7 @@ String renderProjectPackageModule(
             delegateClassWidgets: builderFormTypes,
             ignoredTypes: ignoredClassNamesInScope(unit, file),
             globalConsts: consts.names,
+            extensionOperators: extensionOperators,
           )
         : translateClass(
             node as ClassDeclaration,
@@ -219,6 +222,7 @@ String renderProjectPackageModule(
             ignoredTypes: ignoredClassNamesInScope(unit, file),
             globalConsts: consts.names,
             isComponent: table[e.key]?.isComponent ?? false,
+            extensionOperators: extensionOperators,
           );
     classInfos.add(info);
     baseClassByName[info.name] = jsBaseClassOf(info, table);

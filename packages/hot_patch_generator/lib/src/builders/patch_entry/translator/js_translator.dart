@@ -180,6 +180,14 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
         final jsOp = operatorJsName(op, unary: false);
         if (jsOp != null) return '$l.$jsOp($r)';
       }
+      // extension 运算符：静态类型命中 extension 的 `on` 目标时，同样落成
+      // `receiver.__op$xxx(rhs)`（成员由 `registerExtension` 装到目标原型上）。
+      final extOp = extensionOperatorMember(
+        scope.extensionOperators,
+        _staticTypeOf(e.leftOperand, scope, classes),
+        op,
+      );
+      if (extOp != null) return '$l.$extOp($r)';
       // 判空 / 相等：Dart 只有 null，JS 有 null 与 undefined —— 两侧先 `__nn`
       // 归一（undefined → null），判空保持 `== null`（禁止 `=== null`），
       // 其余相等用严格相等，避免 JS 宽松相等做类型转换。
@@ -217,6 +225,12 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       final l = exprToJs(e.leftOperand, scope, classes);
       final r = exprToJs(e.rightOperand, scope, classes);
       if (l == null || r == null) return null;
+      final extOp = extensionOperatorMember(
+        scope.extensionOperators,
+        _staticTypeOf(e.leftOperand, scope, classes),
+        op,
+      );
+      if (extOp != null) return '$l.$extOp($r)';
       return '__mod(${_fnParen(l, e.leftOperand)}, '
           '${_fnParen(r, e.rightOperand)})';
     }
@@ -442,6 +456,15 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
       final get = operatorJsName('[]', unary: false)!;
       return e.isNullAware ? '$t?.$get($i)' : '$t.$get($i)';
     }
+    // extension `operator []`：目标类型命中时同样落成员调用。
+    final extGet = extensionOperatorMember(
+      scope.extensionOperators,
+      _staticTypeOf(tgt, scope, classes),
+      '[]',
+    );
+    if (extGet != null) {
+      return e.isNullAware ? '$t?.$extGet($i)' : '$t.$extGet($i)';
+    }
     // Map 下标：原生 JS Map 只有 `get`；但声明为 Map 的值也可能来自宿主回包
     // （普通对象），故统一走 `__idx`（Map → get，普通对象 → 下标）。
     // 其它类型（List / 项目类 / 不可判定）**一律保持原生下标**。
@@ -493,6 +516,13 @@ String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes)
         _operatorOwnerOf(e.operand, '-', scope, classes, unary: true) != null) {
       return '$v.${operatorJsName('-', unary: true)}()';
     }
+    // extension 一元运算符：目标类型命中时 → `receiver.__op$neg()`。
+    final extUnary = extensionOperatorMember(
+      scope.extensionOperators,
+      _staticTypeOf(e.operand, scope, classes),
+      op,
+    );
+    if (extUnary != null) return '$v.$extUnary()';
     return '($op${_fnParen(v, e.operand)})';
   }
   if (e is MethodInvocation) return methodCallExprJs(e, scope, classes);
@@ -1892,9 +1922,15 @@ String? _assignValueJs(
   }
 
   // `operator []=`：只支持 `=` 形态（与语句位置一致）；表达式值为右值。
+  final extSet = extensionOperatorMember(
+    scope.extensionOperators,
+    _staticTypeOf(target, scope, classes),
+    '[]=',
+  );
   if (lhs is IndexExpression &&
       op == '=' &&
-      _operatorOwnerOf(target, '[]=', scope, classes) != null) {
+      (_operatorOwnerOf(target, '[]=', scope, classes) != null ||
+          extSet != null)) {
     final set = operatorJsName('[]=', unary: false)!;
     if (nullAware) {
       // 目标为空时右值不求值（IIFE 参数只传接收者）。
@@ -1908,7 +1944,8 @@ String? _assignValueJs(
   // Map 下标写：类型可判定为 Map → `set`；不可判定 → `__idxSet`。
   if (lhs is IndexExpression &&
       op == '=' &&
-      _operatorOwnerOf(target, '[]=', scope, classes) == null) {
+      _operatorOwnerOf(target, '[]=', scope, classes) == null &&
+      extSet == null) {
     if (_staticTypeOf(target, scope, classes) == 'Map') {
       if (nullAware) {
         return '((__t) => { if (__t == null) return null; '
@@ -2021,9 +2058,15 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     if (recv == null) return null;
     // `operator []=`：接收者静态类型声明了下标赋值运算符时改写成成员调用。
     // 只支持 `=` 形态（`+=` 等复合赋值语义不同，保持原生路径）。
+    final extSet = extensionOperatorMember(
+      scope.extensionOperators,
+      _staticTypeOf(target, scope, classes),
+      '[]=',
+    );
     if (lhs is IndexExpression &&
         e.operator.lexeme == '=' &&
-        _operatorOwnerOf(target, '[]=', scope, classes) != null) {
+        (_operatorOwnerOf(target, '[]=', scope, classes) != null ||
+            extSet != null)) {
       final index = exprToJs(lhs.index, scope, classes);
       final rhs = rhsToJs(e.rightHandSide, scope, classes);
       if (index == null || rhs == null) return null;
@@ -2037,7 +2080,8 @@ String? exprStmtToJs(Expression e, FieldScope scope, Map<String, ClassInfo> clas
     // Map 下标写：类型可判定为 Map → `set`；不可判定 → `__idxSet`。
     if (lhs is IndexExpression &&
         e.operator.lexeme == '=' &&
-        _operatorOwnerOf(target, '[]=', scope, classes) == null) {
+        _operatorOwnerOf(target, '[]=', scope, classes) == null &&
+        extSet == null) {
       if (_staticTypeOf(target, scope, classes) == 'Map') {
         final index = exprToJs(lhs.index, scope, classes);
         final rhs = rhsToJs(e.rightHandSide, scope, classes);
@@ -3824,6 +3868,7 @@ String translateClassMethodBody(
   ExprRenderer? renderer,
   Set<String> globalConsts = const {},
   int depth = 2,
+  Map<String, Map<String, String>> extensionOperators = const {},
 }) {
   final ind = '  ' * depth;
   final channel = m.nativeChannel;
@@ -3894,6 +3939,7 @@ String translateClassMethodBody(
     // 与 build 都有同名空实现，故 SDK 侧的 `super.initState()` / `super.build()`
     // 可以直接落到基类，不需要在翻译层做特殊处理。
     hasJsBase: jsBaseClassOf(info, classes) != null,
+    extensionOperators: extensionOperators,
   );
   // 形参前导：可选位置形参补默认值、具名形参从尾参对象 `__o` 解构。与闭包 /
   // 局部函数同一实现，避免三处默认值口径走样。

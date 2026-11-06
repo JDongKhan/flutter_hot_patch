@@ -511,6 +511,7 @@ ClassInfo translateClass(
   Set<String> globalConsts = const {},
   bool isComponent = false,
   Map<String, String> prefixProducts = const {},
+  Map<String, Map<String, String>> extensionOperators = const {},
 }) {
   // 顶层 `@HostInjected` 函数名：翻译层自己扫（本文件 + import 源文件）。
   // 类上的宿主方法不再走调用点改写（方法体在 JS 类里桥回宿主，见
@@ -890,7 +891,8 @@ ClassInfo translateClass(
         bodyJs: translateClassMethodBody(proto, buildMethod(m), used,
             hostFunctions: hostFunctions,
             renderer: parseCtx,
-            globalConsts: globalConsts),
+            globalConsts: globalConsts,
+            extensionOperators: extensionOperators),
       ),
   ]);
 
@@ -1021,6 +1023,7 @@ ClassInfo translateClass(
               hostFunctions: hostFunctions,
               renderer: parseCtx,
               globalConsts: globalConsts,
+              extensionOperators: extensionOperators,
             ),
           ),
       ]);
@@ -1099,6 +1102,7 @@ ClassInfo translateMixin(
   Set<String> ignoredTypes = const {},
   Set<String> globalConsts = const {},
   Map<String, String> prefixProducts = const {},
+  Map<String, Map<String, String>> extensionOperators = const {},
 }) {
   final hostFunctions = buildHostFunctions(unit, sourcePath);
   final structure = classInfoOf(ClassLikeDecl.ofMixin(decl), sourcePath);
@@ -1229,7 +1233,8 @@ ClassInfo translateMixin(
         bodyJs: translateClassMethodBody(proto, m, used,
             hostFunctions: hostFunctions,
             renderer: parseCtx,
-            globalConsts: globalConsts),
+            globalConsts: globalConsts,
+            extensionOperators: extensionOperators),
         parameters: m.parameters,
         isSetter: m.isSetter,
         operatorSymbol: m.operatorSymbol,

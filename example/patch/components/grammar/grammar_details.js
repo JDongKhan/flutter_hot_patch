@@ -7,6 +7,16 @@ import { StringLogExtension } from '../../extensions/hot_module_base.js';
 import { TestString1 } from 'extension/e_string.js';
 import { Colors, Column, CrossAxisAlignment, DateTime, Duration, ElevatedButton, FontWeight, RegExp, SizedBox, StatefulWidget, StatelessWidget, StringBuffer, Text, TextStyle } from '../../flutter.js';
 
+// 模型 Vector
+export class Vector {
+  constructor(args) {
+    this.__applyProps(args);
+  }
+  __applyProps(args) {
+    this.x = (args && args.x !== undefined) ? args.x : 0;
+  }
+}
+
 // 模型 Greeting
 export class Greeting {
   constructor(args) {
@@ -188,6 +198,18 @@ export class ExtensionDetail extends StatelessWidget {
   constructor(args) {
     super(args);
   }
+  _extensionOperatorText() {
+    const a = new Vector({
+      "x": 2
+    });
+    const b = new Vector({
+      "x": 3
+    });
+    const sum = a.__op$add(b);
+    const neg = a.__op$neg();
+    const rest = a.__op$mod(4);
+    return "extension operator：sum=" + sum.x + " / neg=" + neg.x + " / mod=" + rest;
+  }
   _log() {
     "扩展方法打印的日志".logText("ExtensionDetail");
     "test".log1();
@@ -221,6 +243,15 @@ export class ExtensionDetail extends StatelessWidget {
           "child": (this.__k4 || (this.__k4 = new Text({
             "data": "调用 String.logText()"
           })))
+        }),
+        (this.__k3 || (this.__k3 = new SizedBox({
+          "height": 12
+        }))),
+        new Text({
+          "style": (this.__k5 || (this.__k5 = new TextStyle({
+            "fontSize": 13
+          }))),
+          "data": this._extensionOperatorText()
         })
       ]
     });
@@ -473,4 +504,24 @@ __mixinHard(_MultiTagged_Tagged, Tagged);
 __mixinHard(_MultiTagged_Tagged_CounterM, CounterM);
 __mixinHard(_LoudTagged_Tagged, Tagged);
 __mixinHard(_MixinDetail_StatefulWidget_StateLogMixin, StateLogMixin);
+
+// 扩展 VectorOps
+export const VectorOps = registerExtension(Vector, (function () {
+  "use strict";
+  return {
+    __op$add: function (other) {
+      return new Vector({
+        "x": (this.x + other.x)
+      });
+    },
+    __op$neg: function () {
+      return new Vector({
+        "x": (-this.x)
+      });
+    },
+    __op$mod: function (mod) {
+      return __mod(this.x, mod);
+    },
+  };
+})(), { id: "lib/components/grammar/grammar_details.dart#VectorOps" });
 

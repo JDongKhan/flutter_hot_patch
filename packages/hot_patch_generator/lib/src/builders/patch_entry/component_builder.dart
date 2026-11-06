@@ -114,6 +114,10 @@ class ComponentBuilder implements Builder {
     // 提前于 importResolver 声明：后者要用类表兜底解析「经 mixin 带入」的
     // 跨文件组件依赖。
     final classTable = buildClassTable(parsed.unit, inputId.path);
+    // 本文件可见的 extension 运算符（目标类型 → 运算符 → `__op$…`）：
+    // 调用点按接收者静态类型改写，类自身运算符优先（见 js_translator）。
+    final extensionOperators =
+        extensionOperatorsInScope(parsed.unit, inputId.path);
 
     // import 前缀（`import '...' as p;`）→ 该前缀在 JS 侧的模块产物：
     //   - `dart:` → ''（已知按裸类名：SDK 值类 / 控件由 flutter.js 同名承接）；
@@ -286,6 +290,7 @@ class ComponentBuilder implements Builder {
         globalConsts: globalConsts,
         isComponent: isComponent,
         prefixProducts: prefixProducts,
+        extensionOperators: extensionOperators,
       ));
     }
 
@@ -303,6 +308,7 @@ class ComponentBuilder implements Builder {
         ignoredTypes: ignoredTypes,
         globalConsts: globalConsts,
         prefixProducts: prefixProducts,
+        extensionOperators: extensionOperators,
       ));
     }
 
@@ -324,6 +330,7 @@ class ComponentBuilder implements Builder {
         globalConsts: globalConsts,
         classNamesInUnit: parsedNames,
         prefixProducts: prefixProducts,
+        extensionOperators: extensionOperators,
       );
       if (info != null) extensions.add(info);
     }
@@ -378,6 +385,7 @@ class ComponentBuilder implements Builder {
         ignoredTypes: ignoredTypes,
         globalConsts: globalConsts,
         isComponent: isWidgetDep,
+        extensionOperators: extensionOperators,
       );
       if (isWidgetDep) {
         exportedClasses.add(translated);

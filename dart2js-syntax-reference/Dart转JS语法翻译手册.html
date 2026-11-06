@@ -205,7 +205,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
     <div><dt>适用源语言</dt><dd>Dart 3.x（含空安全、record、模式匹配）</dd></div>
     <div><dt>适用目标</dt><dd>ES2022+，原生 class / 模块 / 可选链</dd></div>
     <div><dt>实测环境</dt><dd>Dart 3.11.5 stable，macOS arm64</dd></div>
-    <div><dt>文档版本</dt><dd>v1.4 · 规则 18 组 · 陷阱 40+ · 2026-11-05 与 hot_patch_generator 0.9.0 核对（mixin 改为原文件独立类 + application 类链 + <code>__mixinHard</code>；删除旧「成员内联 / superMap」方案）</dd></div>
+    <div><dt>文档版本</dt><dd>v1.5 · 规则 18 组 · 陷阱 40+ · 2026-11-05 与 hot_patch_generator 0.9.0 核对（mixin 改为原文件独立类 + application 类链 + <code>__mixinHard</code>；extension 章节写明当前原型注册方案与 dart2js 静态分派的差别，并按实际口径把显式调用 / 泛型目标 / 可空目标标为不通过）</dd></div>
   </dl>
 </header>
 
@@ -965,10 +965,7 @@ Status.#locked = true;</code><button class="copy" type="button">复制</button><
 <h2><span class="sec-no">10</span>mixin</h2>
 <p class="h2-sub">mixin 是编译期概念：声明按<b>原文件路径</b>产出独立类；<code>with</code> 在消费者产物里生成 application 类链，并用运行时 <code>__mixinHard</code> 复制成员。不能把 mixin 成员内联进最终类。</p>
 
-<h3>规范语义</h3>
-<p>Dart 规范里，<code>class C extends S with M1, M2</code> 等价于先构造一个匿名的 <strong>mixin application 类</strong>（父类为 S，成员为 M1 ∪ M2，后声明的覆盖先声明的），再由 <code>C</code> 继承它。官方诊断文档对 mixin application 的定义即为「mixin 应用到一个类时创建的类」。</p>
-
-<h3>dart2js 的实际做法（本项目口径）</h3>
+<h3>实现方案（唯一）</h3>
 <ol>
   <li>mixin 声明按<b>原文件路径</b>产出独立类（纯 <code>mixin</code> 也是 <code>export class</code>，不能实例化；成员集合与静态成员保留）。</li>
   <li><code>class C extends S with M1, M2</code> 在消费者产物里生成 intermediate application 类链：<code>_C_S_M1 extends S</code>、<code>_C_S_M1_M2 extends _C_S_M1</code>，最终 <code>C</code> 继承最后一层。</li>
@@ -976,6 +973,7 @@ Status.#locked = true;</code><button class="copy" type="button">复制</button><
   <li>带 <code>super</code> 的方法在对应的 application 类里重新发射，原生 JS <code>super</code> 指向上一层（<code>M2.log</code> 的 super → <code>_C_S_M1.log</code>，<code>M1.log</code> 的 super → <code>S.log</code>）。</li>
   <li>mixin 实例字段不并进最终类，由对应 application 类的构造函数在 <code>super(args)</code> 之后初始化；顺序天然是 <code>S → M1 → M2 → C</code>。</li>
   <li><code>mixin class</code> 同时按普通 class 产出（可实例化 / <code>extends</code>）；被 <code>with</code> 时走同一套 application 链，构造不参与混合。</li>
+  <li><code>__mixinHard</code> 调用统一下发在本模块<b>全部类声明之后</b>（class 有 TDZ，mixin 类可能声明得比 application 类晚）。</li>
 </ol>
 
 <div class="scroll">
@@ -1052,14 +1050,16 @@ __mixinHard(_C_Base_A_B, B);</code><button class="copy" type="button">复制</bu
 <!-- ================= 11 extension ================= -->
 <section id="extensions">
 <h2><span class="sec-no">11</span>extension</h2>
-<p class="h2-sub">extension 是纯编译期概念，运行时不存在。官方文档明确：按接收者静态类型解析，调用开销等同静态函数。</p>
+<p class="h2-sub">extension 是纯编译期概念：Dart 按接收者静态类型解析；本项目把成员装到目标类型原型上，调用点保持原样。</p>
 
-<h3>编译策略</h3>
+<h3>当前方案（本项目）</h3>
+<p>选择原型注册而不是编译期静态分派，原因是本项目只有源码级静态判定、没有完整类型推断：表达式的接收者类型经常不可判定，照搬静态分派会让大量调用退化成“无法改写”。原型注册让调用点保持 Dart 原样，且 <code>registerExtension</code> 的稳定 <code>id</code> 支持热更时先卸载再重注册。作为参照，dart2js 的做法是把扩展成员编译成模块内顶层函数、在调用点静态改写成函数调用（不碰原型），本项目未采用该形态。</p>
 <ol>
-  <li>extension 的每个成员编译成<strong>顶层函数</strong>，接收者作为第一个参数。</li>
-  <li><strong>调用点静态重写</strong>：<code>'42'.parseInt()</code> 解析后直接生成 <code>NumX_parseInt('42')</code>。</li>
-  <li>extension 名与成员名编码进函数名，避免不同 extension 的同名成员冲突。</li>
-  <li>静态成员编译成顶层函数/变量，通过扩展名访问。</li>
+  <li>成员（方法 / getter / setter / 运算符）编译成目标类型原型上的同名成员；声明所在的产物求值时执行一次 <code>registerExtension(Target, { members }, { id })</code>。</li>
+  <li>函数成员由<b>严格模式函数</b>承载，<code>this</code> 就是接收者（避免原始值装箱），与 Dart 的 <code>this</code> 语义一致。</li>
+  <li>调用点保持 Dart 原样：<code>x.m()</code> / <code>x.m</code> 直接落到 JS 成员读取。运算符无 JS 语法，声明侧改名 <code>__op$add</code> / <code>__op$neg</code> …，调用点按接收者静态类型改写成 <code>receiver.__op$xxx(args)</code>。</li>
+  <li>静态成员放在 extension 命名空间对象上（<code>E.foo</code> 原样访问）。</li>
+  <li>目标类型必须在 JS 侧有可挂载的原型（核心类型 / 运行时注入类 / 项目类）；Map / Object / dynamic / 宿主 widget 等没有单一实体原型的注册在构建期拒绝。</li>
 </ol>
 
 <div class="scroll">
@@ -1067,12 +1067,13 @@ __mixinHard(_C_Base_A_B, B);</code><button class="copy" type="button">复制</bu
   <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
   <thead><tr><th>Dart</th><th>JS</th><th>差异</th><th>翻译原则</th><th>现状（项目实现）</th><th>是否通过</th><th>建议</th></tr></thead>
   <tbody>
-    <tr><td><code>extension E on T { R m() {} }</code></td><td><code>function E_m(receiver) {}</code></td><td><span class="muted">—</span></td><td>receiver 第一参数</td><td>analysis/extension_support.dart 生成顶层函数 / 对象，调用点改写</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>x.m()</code></td><td><code>E_m(x)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">调用点重写</span></td><td>调用点按接收者类型改写为顶层函数调用</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>E(x).m()</code> 显式调用</td><td><code>E_m(x)</code></td><td><span class="muted">—</span></td><td>去掉包装语法</td><td>显式 extension 调用同样改写</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>getter / setter / operator</td><td>同名顶层函数</td><td><span class="muted">—</span></td><td>setter 需要 <code>(receiver, value)</code></td><td>getter / setter / 普通方法已支持；extension 上的 <code>operator</code> 未建模</td><td><span class="st st-fail">不通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>extension E on T { R m() {} }</code></td><td><code>registerExtension(T, { m() {} }, { id })</code></td><td><span class="muted">—</span></td><td>成员装到目标原型，<code>this</code> = 接收者</td><td>analysis/extension_support.dart 生成注册语句，产物求值时安装</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>x.m()</code></td><td><code>x.m()</code></td><td><span class="muted">—</span></td><td>调用点原样</td><td>成员已装在原型上，调用点无需改写</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>E(x).m()</code> 显式调用</td><td><code>x.m()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 按扩展名绑定，绕过实例成员与其它扩展</td><td>未实现：<code>E</code> 在产物里是 <code>registerExtension</code> 返回的静态命名空间对象（不可调用），<code>E(x).m()</code> 原样产出会 TypeError；<code>methodCallExprJs</code> 未识别「target 是扩展名调用」的形态</td><td><span class="st st-fail">不通过</span></td><td>需补调用点改写：<code>E(x).m(...)</code> → <code>x.m(...)</code></td></tr>
+    <tr><td>getter / setter / operator</td><td>原型同名 getter / setter / <code>__op$xxx</code></td><td><span class="muted">—</span></td><td>运算符声明侧改名、调用点按接收者静态类型改写</td><td>getter / setter 已支持；运算符用与类运算符同一张映射表（<code>operatorJsName</code>），<code>extensionOperatorsInScope</code> 建立可见运算符表，调用点 <code>_operatorOwnerOf</code> 之后再查表</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>E.staticField</code></td><td>模块级变量 <code>E_staticField</code></td><td><span class="muted">—</span></td><td>或挂在命名空间对象上</td><td>staticsEntries 发射到 extension 命名空间对象</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>泛型 <code>extension E&lt;T&gt; on List&lt;T&gt;</code></td><td>类型参数擦除</td><td><span class="muted">—</span></td><td>运行时无 T 信息</td><td>类型参数擦除</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td>泛型 <code>extension E&lt;T&gt; on List&lt;T&gt;</code></td><td>类型参数擦除</td><td><span class="muted">—</span></td><td>运行时无 T 信息</td><td><b>部分实现</b>：类型参数擦除，<code>translateExtension</code> 取 <code>extendedType.name2.lexeme</code> 后挂到擦除类型（<code>List&lt;int&gt;</code> → <code>Array</code> 原型），成员对所有该类型实例可见，Dart 的“仅此实例化可调”约束丢失</td><td><span class="st st-fail">不通过</span></td><td>接受擦除，但需在手册与本表如实标注限制</td></tr>
+    <tr><td><code>extension E on T?</code>（可空目标）</td><td>无原型可挂</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> null 接收者由静态分派承接</td><td>未实现：<code>translateExtension</code> 用 <code>name2.lexeme</code> 取目标时丢掉 <code>?</code>，<code>String?</code> 被当作 <code>String</code> 挂原型；null 上调用在 JS 侧直接 TypeError，且构建期未拒绝</td><td><span class="st st-fail">不通过</span></td><td>构建期对可空目标出声拒绝，或改静态分派</td></tr>
     <tr><td><code>dynamic</code> 接收者</td><td>解析失败</td><td><span class="muted">—</span></td><td>Dart 侧本就运行时报 NoSuchMethod，生成侧应报编译错误</td><td>N/A：无 resolution，dynamic 成员编译期不解析（Dart 侧本身运行时报错）</td><td><span class="st st-skip">未检测</span></td><td>按原则翻译</td></tr>
   </tbody>
 </table>
@@ -1089,17 +1090,18 @@ void main() {
   final b = '  '.isBlank;
 }</code><button class="copy" type="button">复制</button></pre>
 
-<p class="cap"><span class="js">JS</span> · 静态擦除</p>
-<pre><code>function NumX_parseInt(receiver) {
-  return int_parse(receiver);
-}
-function NumX_get_isBlank(receiver) {
-  return receiver.trim().length === 0;
-}
+<p class="cap"><span class="js">JS</span> · 注册原型成员，调用点原样</p>
+<pre><code>export const NumX = registerExtension(String, (function () {
+  "use strict";
+  return {
+    parseInt: function () { return int_parse(this); },
+    get isBlank() { return this.trim().isEmpty; },
+  };
+})(), { id: "lib/...dart#NumX" });
 
-// 调用点重写
-const n = NumX_parseInt('42');
-const b = NumX_get_isBlank('  ');</code><button class="copy" type="button">复制</button></pre>
+// 调用点
+const n = '42'.parseInt();
+const b = '  '.isBlank;</code><button class="copy" type="button">复制</button></pre>
 
 <h3>成员解析顺序（调用点重写必须遵守）</h3>
 <ol>
@@ -1109,9 +1111,9 @@ const b = NumX_get_isBlank('  ');</code><button class="copy" type="button">复�
   <li>同文件多个 extension 同名成员冲突：Dart 报编译错误，生成侧不应静默择一。</li>
 </ol>
 
-<div class="note warn">
-  <span class="t">不要挂到原型</span>
-  把 extension 成员挂到 <code>T.prototype</code> 会让所有同类型对象“长出”方法，与 Dart 的静态解析语义不一致，还会污染第三方对象、引发跨模块冲突。坚持「顶层函数 + 调用点重写」。
+<div class="note">
+  <span class="t">注册语义</span>
+  扩展的 <code>id</code> 是稳定标识（<code>&lt;sourcePath&gt;#&lt;name&gt;</code>）：同 id 再注册时运行时会先卸载旧成员，热更不会重复叠加。目标类型没有实体原型（Map / Object / dynamic / 宿主 widget 包装类）时构建期直接拒绝，不产出必然无效的注册。
 </div>
 </section>
 
@@ -1612,7 +1614,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
     <tr><td><code>abstract class</code></td><td>class + 抛错</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>抽象类进类表并产出普通 class；抽象成员发 <code>throw new Error("Unimplemented: …")</code> 兜底</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>enum</code></td><td>class + 静态实例</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>项目简单枚举 → 常量对象（name/index/values/toString）；增强枚举告警跳过</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>mixin</code></td><td>原文件独立类 + application 类链 + <code>__mixinHard</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>mixin 按原路径产出；with 生成中间类并运行时复制；super 在 application 层走原生 super</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>extension</code></td><td>顶层函数 + 调用点重写</td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>extension_support.dart 生成顶层函数 / 对象并改写调用点</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>extension</code></td><td><code>registerExtension(Target, members, { id })</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">改写</span></td><td>extension_support.dart 生成注册语句，成员装到目标原型；运算符按 <code>__op$xxx</code> 且在调用点按静态类型改写</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>where</code> / <code>any</code></td><td>运行时扩展同名 <code>where</code> / <code>any</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td>where / any 均已补</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>fold(init, fn)</code></td><td>运行时扩展同名 <code>fold</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>Array.prototype.fold</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>sort()</code></td><td>运行时扩展 <code>Array.prototype._sort</code>（仅 Array 接收者映射，不覆盖原生）</td><td><span class="muted">—</span></td><td><span class="lv lv-care">扩展</span></td><td>已挂 <code>_sort</code>；<code>_memberCallName</code> 只对 List 接收者改写</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
@@ -1643,6 +1645,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
   <p>未覆盖范围：<code>dart:isolate</code>、<code>dart:mirrors</code> 反射、<code>TypedData</code> 数值精度、正则命名组差异、JS interop 桥接、编译器特有优化（tree-shaking / minify）。</p>
   <p>使用建议：先落地第 00 章总则与第 16 章运行时，再按第 15 章优先级逐项核对；每条改写配三条断言（null 分支、非 null 分支、求值次数）。<b>禁止按类名 / 方法名 / 属性名特判</b>：新增能力走扩展点或运行时内建补齐。</p>
   <p>v1.1（2026-11-05）：按 <code>hot_patch_generator</code> 0.8.1 全量核对「现状」列，把「待实检」改为代码事实；补充 tear-off / <code>super.x</code> / 函数值调用 / 级联内赋值 / <code>throw</code> 表达式等近期实现的语法。行号引用已改为函数 / 分支名，避免随版本漂移。</p>
+  <p>v1.5（2026-11-05）：第 11 章补「当前方案（本项目）」说明（原型注册的选择理由、与 dart2js 静态分派的一句话差别）；按实际代码口径把 <code>E(x).m()</code> 显式调用、泛型目标、可空目标三项改判为不通过，并写明限制。</p>
 </footer>
 
 </main>

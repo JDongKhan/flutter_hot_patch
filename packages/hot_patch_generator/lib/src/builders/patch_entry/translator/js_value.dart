@@ -181,6 +181,19 @@ String? operatorJsName(String symbol, {required bool unary}) {
   };
 }
 
+/// 可见 extension 运算符的 JS 成员名（目标类型 + 运算符 → `__op$…`）。
+///
+/// 只有接收者静态类型可判定、且与 extension 的 `on` 目标擦除后同名时命中；
+/// 类自身声明的实例运算符优先级更高（调用点在类分支之后才查这里）。
+String? extensionOperatorMember(
+  Map<String, Map<String, String>> operators,
+  String? receiverType,
+  String symbol,
+) {
+  if (receiverType == null) return null;
+  return operators[eraseType(receiverType)]?[symbol];
+}
+
 /// `x is T` → JS 类型判别表达式；T 在 JS 侧不可解析时返回 null。
 ///
 /// Dart 的运行时类型在 JS 侧没有一一对应的构造（`int` / `double` 同是 number、
@@ -419,6 +432,10 @@ class FieldScope {
   /// 原样发射；无基类时 super 调用的目标是 SDK 类，JS 侧不存在 → 丢弃。
   final bool hasJsBase;
 
+  /// 当前作用域可见的 extension 运算符：目标类型 → Dart 运算符 → JS 成员名
+  /// （`__op$add` …）。实例运算符（类自身）优先级更高，见 `_operatorOwnerOf`。
+  final Map<String, Map<String, String>> extensionOperators;
+
   /// 局部变量别名：`final list = _list;` → `list → this._list`。
   /// 抽成实例方法的懒加载 builder（`_listViewBuilderN`）里引用被捕获的
   /// 局部变量时必须落到真实字段引用，否则是未定义的自由变量。
@@ -501,6 +518,7 @@ class FieldScope {
           globalConsts: globalConsts,
           hostFunctions: hostFunctions,
           hasJsBase: hasJsBase,
+          extensionOperators: extensionOperators,
           className: className,
           staticFields: staticFields,
           staticMethods: staticMethods,
@@ -526,6 +544,7 @@ class FieldScope {
     Map<String, List<String>>? localTypeParams,
     this.hostFunctions = const {},
     this.hasJsBase = false,
+    this.extensionOperators = const {},
     this.thisRef = 'this',
     Map<String, String>? localAliases,
     Map<String, String>? declAliases,
@@ -562,6 +581,7 @@ class FieldScope {
         globalConsts: globalConsts,
         hostFunctions: hostFunctions,
         hasJsBase: hasJsBase,
+        extensionOperators: extensionOperators,
         className: className,
         staticFields: staticFields,
         staticMethods: staticMethods,

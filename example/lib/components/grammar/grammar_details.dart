@@ -124,9 +124,32 @@ class SuperTagged with Tagged, SuperM {
 // extension：给 String 扩展日志能力
 // ---------------------------------------------------------------------------
 
+/// extension 运算符的接收者（普通类，无自身运算符）。
+class Vector {
+  const Vector(this.x);
+
+  final int x;
+}
+
+extension VectorOps on Vector {
+  Vector operator +(Vector other) => Vector(this.x + other.x);
+  Vector operator -() => Vector(-this.x);
+  int operator %(int mod) => this.x % mod;
+}
+
 @PatchEntry('ExtensionDetail')
 class ExtensionDetail extends StatelessWidget {
   const ExtensionDetail({super.key});
+
+  /// 扩展运算符：调用点 `receiver.__op$xxx(args)`，成员随注册装到原型上。
+  String _extensionOperatorText() {
+    final Vector a = Vector(2);
+    final Vector b = Vector(3);
+    final sum = a + b;
+    final neg = -a;
+    final rest = a % 4;
+    return 'extension operator：sum=${sum.x} / neg=${neg.x} / mod=$rest';
+  }
 
   void _log() {
     // 跨包 extension：String 本身没有 logText，由 StringLogExtension 提供。
@@ -150,6 +173,8 @@ class ExtensionDetail extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ElevatedButton(onPressed: _log, child: const Text('调用 String.logText()')),
+        const SizedBox(height: 12),
+        Text(_extensionOperatorText(), style: const TextStyle(fontSize: 13)),
       ],
     );
   }

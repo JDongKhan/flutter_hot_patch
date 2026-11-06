@@ -128,6 +128,58 @@ const Set<String> _unsupportedTargets = {
   'Function',
 };
 
+/// 本文件（含 import 图）里可用的 extension 运算符：目标类型 → 运算符 → JS 成员名。
+///
+/// 调用点按**接收者静态类型**查表（类自身声明的实例运算符优先，见
+/// `_operatorOwnerOf`）。同一目标 + 同一运算符出现多个声明时视为歧义，不登记——
+/// Dart 侧隐式调用本就不合法，生成侧不静默择一。
+///
+/// 核心类型（int/num/double/String/bool/List/Map/Set/Iterable）不登记：这些类型
+/// 已有对应实例运算符，Dart 的 extension 解析不会命中它们，登记只会误改原生运算。
+Map<String, Map<String, String>> extensionOperatorsInScope(
+  CompilationUnit unit,
+  String sourcePath,
+) {
+  const coreWithOperators = {
+    'int', 'num', 'double', 'String', 'bool',
+    'List', 'Map', 'Set', 'Iterable', 'Object', 'dynamic',
+  };
+  final out = <String, Map<String, String>>{};
+  final ambiguous = <String>{};
+  void scan(CompilationUnit u) {
+    for (final d in u.declarations.whereType<ExtensionDeclaration>()) {
+      final on = d.onClause?.extendedType;
+      if (on == null) continue;
+      final target = eraseType(on.toSource());
+      if (target.isEmpty || coreWithOperators.contains(target)) continue;
+      for (final m in d.members.whereType<MethodDeclaration>()) {
+        if (m.isStatic || !m.isOperator) continue;
+        final symbol = m.name.lexeme;
+        final unary = (m.parameters?.parameters ?? const []).isEmpty;
+        final jsName = operatorJsName(symbol, unary: unary);
+        if (jsName == null) continue;
+        final key = '$target:$symbol';
+        if (ambiguous.contains(key)) continue;
+        final bySymbol = out[target] ??= <String, String>{};
+        final prev = bySymbol[symbol];
+        if (prev != null && prev != jsName) {
+          ambiguous.add(key);
+          bySymbol.remove(symbol);
+          continue;
+        }
+        bySymbol[symbol] = jsName;
+      }
+    }
+  }
+
+  scan(unit);
+  for (final file in resolveImportFiles(unit, sourcePath)) {
+    final u = parseUnitFile(file);
+    if (u != null) scan(u);
+  }
+  return out;
+}
+
 /// 本文件声明的全部 `extension`（含无名扩展）。
 List<ExtensionDeclaration> extensionDeclarations(CompilationUnit unit) => [
       for (final d in unit.declarations.whereType<ExtensionDeclaration>()) d,
@@ -265,6 +317,7 @@ ExtensionInfo? translateExtension(
   Set<String> classNamesInUnit = const {},
   String? Function(String name)? productOf,
   Map<String, String> prefixProducts = const {},
+  Map<String, Map<String, String>> extensionOperators = const {},
 }) {
   final name = decl.name?.lexeme;
   final label = name ?? '<unnamed>';
@@ -364,7 +417,30 @@ ExtensionInfo? translateExtension(
     if (member is MethodDeclaration) {
       if (member.isStatic) continue;
       final memberName = member.name.lexeme;
-      if (member.isGetter) {
+      if (member.isOperator) {
+        // extension 运算符：与类运算符同一张映射表（`__op$add` …），成员挂到
+        // 目标原型；调用点按接收者静态类型改写成 `receiver.__op$xxx(...)`。
+        final unary = (member.parameters?.parameters ?? const []).isEmpty;
+        final jsName = operatorJsName(memberName, unary: unary);
+        if (jsName == null) {
+          log.warning('[hot_patch_generator] $sourcePath: extension $label'
+              '.operator $memberName 暂不支持（JS 侧无等价成员），已跳过。');
+          continue;
+        }
+        memberKinds[jsName] = 'method';
+        memberMethods.add(ClassMethod(
+          name: jsName,
+          params: jsMethodParams(member),
+          isAsync: member.body.isAsynchronous,
+          isVoid: isVoidReturn(member),
+          returnsWidget: false,
+          body: member.body,
+          parameters: member.parameters,
+          positionalParamCount: positionalParamCountOf(member),
+          hasNamedParams: hasNamedParamOf(member),
+          operatorSymbol: memberName,
+        ));
+      } else if (member.isGetter) {
         memberKinds[memberName] = 'getter';
         memberMethods.add(ClassMethod(
           name: memberName,
@@ -460,6 +536,7 @@ ExtensionInfo? translateExtension(
         renderer: parseCtx,
         globalConsts: globalConsts,
         depth: 0,
+        extensionOperators: extensionOperators,
       );
       switch (memberKinds[m.name]) {
         case 'getter':
@@ -500,6 +577,7 @@ ExtensionInfo? translateExtension(
             renderer: parseCtx,
             globalConsts: globalConsts,
             depth: 0,
+            extensionOperators: extensionOperators,
           ));
       if (member.isGetter) {
         staticsEntries.add('get $memberName() {\n$body\n}');
