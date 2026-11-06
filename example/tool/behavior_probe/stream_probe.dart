@@ -1,5 +1,5 @@
 // CLI 行为探针：输出即断言，故允许 print。
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, unnecessary_this
 
 import 'dart:async';
 
@@ -112,6 +112,34 @@ Future<void> main() async {
   LevelEx(c2).label ??= 'x';
   LevelEx(c2).label ??= 'y';
   print('H ${LevelEx(c2).level}/${c2.value}/$post/$pre/${LevelEx(c2).label}');
+
+  // I List 语义：== 比较（indexOf / contains / remove）、默认排序、默认分隔符、
+  //   length 写（构建期映射表把它们改名为 _indexOf / _sort / _join / _setLength）。
+  final list = [Pair(1), Pair(2)];
+  final idx = list.indexOf(Pair(2));
+  final has = list.contains(Pair(1));
+  final removed = list.remove(Pair(1));
+  final sorted = ([Pair(3), Pair(1), Pair(2)]..sort())
+      .map((p) => p.v)
+      .join(',');
+  final shrunk = [1, 2, 3]..length = 1;
+  print('I $idx/$has/$removed/${list.length}/$sorted/${[1, 2].join()}'
+      '/${shrunk.join('|')}');
+}
+
+class Pair implements Comparable<Pair> {
+  Pair(this.v);
+
+  final int v;
+
+  @override
+  bool operator ==(Object other) => other is Pair && other.v == v;
+
+  @override
+  int get hashCode => v;
+
+  @override
+  int compareTo(Pair other) => v.compareTo(other.v);
 }
 
 extension TagA on String {

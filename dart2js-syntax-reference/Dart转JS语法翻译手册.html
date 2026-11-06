@@ -205,7 +205,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
     <div><dt>适用源语言</dt><dd>Dart 3.x（含空安全、record、模式匹配）</dd></div>
     <div><dt>适用目标</dt><dd>ES2022+，原生 class / 模块 / 可选链</dd></div>
     <div><dt>实测环境</dt><dd>Dart 3.11.5 stable，macOS arm64</dd></div>
-    <div><dt>文档版本</dt><dd>v2.1 · 规则 18 组 · 陷阱 40+ · 2026-11-06 与 hot_patch_generator 0.11.0 核对（extension 改为「隐式走原型 / 显式按身份分派」三层模型；Stream 重写为事件 + 订阅状态机；仅泛型 extension 目标仍不通过）</dd></div>
+    <div><dt>文档版本</dt><dd>v2.3 · 规则 18 组 · 陷阱 40+ · 2026-11-06 与 hot_patch_generator 0.12.0 核对（extension 三层模型；Stream 重写为事件 + 订阅状态机；第 14 / 16 章校正「Stream / Completer / 生成器未实现」「广播暂停丢事件」等陈旧描述；仅泛型 extension 目标仍不通过）</dd></div>
   </dl>
 </header>
 
@@ -1142,7 +1142,7 @@ const b = '  '.isBlank;</code><button class="copy" type="button">复制</button>
 <p class="h2-sub"><code>List</code> 翻译成原生 Array；<code>Map</code> 字面量翻译成<strong>原生 JS Map</strong>（`m[k]` → <code>get</code> / <code>set</code>）。项目策略是<strong>同名直译 + 运行时按接收者类型补同名</strong>，<b>禁止在翻译层把方法名改成 push / splice / filter / find / size / delete</b>（AGENTS §5）；只有 JS 已有同名但语义不同（Array 的 sort/join/indexOf、Map 的 keys/values/entries）才按映射表加 <code>_</code>。</p>
 
 <h3>List → Array：同名但语义/参数不同</h3>
-<p>Dart 的 <code>List</code> 与 JS 的 <code>Array</code> 结构最接近，差异集中在<strong>方法名、参数顺序、越界行为和惰性</strong>。项目处理口径：<strong>产物原样同名；运行时在 <code>Array.prototype</code> 补同名同义实现</strong>；内建已有同名但语义不一致（<code>sort</code> / <code>join</code> / <code>length</code> 写）项目不改名、记为不通过。</p>
+<p>Dart 的 <code>List</code> 与 JS 的 <code>Array</code> 结构最接近，差异集中在<strong>方法名、参数顺序、越界行为和惰性</strong>。项目处理口径：<strong>产物原样同名；运行时在 <code>Array.prototype</code> 补同名同义实现</strong>。内建已有同名但语义不一致的三项由**构建期映射表**改名（主键 = 接收者内建类型 + Dart 成员名，且仅当接收者可判定为 <code>List</code> 时生效）：<code>sort → _sort</code>（默认比较器）、<code>join → _join</code>（默认空串、null 元素输出 <code>"null"</code>）、<code>length 写 → _setLength(n)</code>（截断 / 补 null，负数抛 <code>RangeError</code>）；其它接收者上的同名成员一律原样。</p>
 
 <div class="scroll">
 <table>
@@ -1188,7 +1188,7 @@ const b = '  '.isBlank;</code><button class="copy" type="button">复制</button>
   ① <code>sort()</code> 不传比较器：运行时挂 <code>Array.prototype._sort</code>（数值 / 字符串 / 自带 <code>compareTo</code> 的默认比较器），生成器只对可判定为 <code>List</code> 的接收者按映射表改写 <code>sort → _sort</code>；其它类型的同名方法原样，绝不全局改名。<br>
   ② <code>join()</code> 默认分隔符：运行时挂 <code>Array.prototype._join</code>（默认空串），同样只对 <code>List</code> 接收者改写 <code>join → _join</code>。<br>
   ③ <code>map</code> / <code>where</code> 惰性：Dart 返回 <code>Iterable</code>，JS 立即求值；依赖副作用时机或无限序列的代码要单独处理。<br>
-  ④ <code>indexOf</code> 的对象元素仍按 <code>===</code> 比较（与 Dart 的 <code>==</code> 不同），记为不通过；<code>contains</code> / <code>remove</code> 已按「<code>===</code> + 元素自带 <code>__op$eq</code>」对齐。
+  ④ <code>indexOf</code> / <code>contains</code> / <code>remove</code> 均已按「<code>===</code> + 元素自带 <code>__op$eq</code>」对齐（Dart 默认 <code>==</code> 即同一性，声明了 <code>operator ==</code> 的类由 <code>__op$eq</code> 承接）；<code>sort()</code> 的默认比较器同样是数值 / 字符串 / 元素自带 <code>compareTo</code>。
 </div>
 
 <h3>Map → Map：同名但参数/返回值不同</h3>
@@ -1249,7 +1249,7 @@ const b = '  '.isBlank;</code><button class="copy" type="button">复制</button>
 </div>
 
 <h3>惰性 vs 立即求值</h3>
-<p>Dart 的 <code>map</code> / <code>where</code> / <code>expand</code> 返回惰性 <code>Iterable</code>；JS 数组方法立即求值并返回新数组。项目当前<b>直接同名调用（立即求值）</b>，结果集一致、求值时机不同；<b>生成器（<code>sync*</code> / <code>yield</code>）未实现</b>，所以「必须改成生成器」的写法在项目中不可用（记为不通过）：</p>
+<p>Dart 的 <code>map</code> / <code>where</code> / <code>expand</code> 返回惰性 <code>Iterable</code>；JS 数组方法立即求值并返回新数组。项目<b>直接同名调用（立即求值）</b>：结果集一致、求值时机不同，属于<b>已接受差异</b>——Dart 的 <code>Iterable</code> 与 JS 的 <code>Array</code> 是两套载体，强行改生成器会破坏下标 / <code>length</code> / 序列化等既有语义。<code>sync*</code> / <code>yield</code> 本身已支持（见第 14 章），需要惰性时可显式写生成器：</p>
 <pre><code>// 需要惰性时，用生成器保住求值时机
 function* lazyMap(source, fn) {
   for (const e of source) yield fn(e);
@@ -1396,108 +1396,87 @@ for await (const x of ticks(3)) {
 <p>Dart 的 <code>Stream</code> 是<strong>推送模型</strong>：有数据就推给订阅者。JS 的 <code>AsyncIterable</code> 是<strong>拉取模型</strong>：消费者主动取。只把 <code>async*</code> 生成裸 <code>async function*</code>，只能覆盖“有人 <code>await for</code>”这一种用法；源码一旦出现 <code>listen</code>、<code>StreamController</code>、<code>pause</code> 或广播，就不成立。</p>
 <p>做法：<strong>内部推送给 <code>listen</code> 的订阅者，同时实现 <code>[Symbol.asyncIterator]</code>，把推送事件放进队列供 <code>for await</code> 消费</strong>。两种用法共用同一个对象。</p>
 
-<pre><code>// flutter.js 运行时：最小 Stream 实现
+<pre><code>// flutter.js 运行时（stream_js.dart 结构摘要）：显式事件 + 订阅状态机
 class Stream {
-  constructor({ broadcast = false } = {}) {
+  constructor({ broadcast = false, source = null, onListen = null } = {}) {
     this._broadcast = broadcast;
-    this._listeners = new Set();
-    this._pullQueue = [];          // await for 尚未消费的事件
-    this._pullWaiters = [];
+    this._source = source;           // async* 产物：() =&gt; AsyncIterator
+    this._onListen = onListen;
+    this._subs = new Set();          // listen 订阅者
+    this._pullers = new Set();       // await for 拉取方
+    this._pending = [];              // 单订阅：首个订阅者出现前的事件
+    this._readyWaiters = [];         // 背压：等待需求唤醒
+    this._iterator = null;           // 当前 async* 迭代器
+    this._asyncIterated = false;     // await for 也占用唯一的订阅位
     this._done = false;
-    this._gen = null;              // async* 的生成器
     this._started = false;
-    this._asyncIterated = false;   // await for 也占用唯一的订阅位
+    this._stopped = false;
   }
 
   listen(onData, { onError, onDone, cancelOnError = false } = {}) {
-    if (!this._broadcast &amp;&amp; (this._listeners.size &gt; 0 || this._asyncIterated)) {
+    if (!this._broadcast &amp;&amp; (this._subs.size &gt; 0 || this._asyncIterated)) {
       throw new StateError('Stream has already been listened to');
     }
     const sub = new StreamSubscription(this, onData, onError, onDone, cancelOnError);
-    this._listeners.add(sub);
+    this._subs.add(sub);
+    for (const ev of this._pending.splice(0)) sub._enqueue(ev.type, ev.value);
     this._start();                 // 惰性：首次订阅才拉取生成器
     return sub;
   }
 
-  _emit(type, value) {
-    for (const sub of [...this._listeners]) sub._deliver(type, value);
-    if (type === 'done') this._done = true;
-    const ev = { type, value };
-    if (this._pullWaiters.length) this._pullWaiters.shift()(ev);
-    else this._pullQueue.push(ev);
+  _emit(type, value) {             // 事件异步投递：add() 调用栈内不触发回调
+    return Promise.resolve().then(() =&gt; this._deliverEvent(type, value));
   }
 
-  [Symbol.asyncIterator]() {
-    if (!this._broadcast &amp;&amp; (this._listeners.size &gt; 0 || this._asyncIterated)) {
-      throw new StateError('Stream has already been listened to');
+  _deliverEvent(type, value) {     // 唯一分发出口：单订阅 / 广播 / 拉取方
+    if (this._subs.size === 0 &amp;&amp; this._pullers.size === 0) {
+      if (!this._broadcast) this._pending.push({ type, value });  // 广播：丢弃 data / error
+      return;
     }
-    this._asyncIterated = true;
-    this._start();
-    return {
-      next: async () =&gt; {
-        if (this._pullQueue.length) return this._settle(this._pullQueue.shift());
-        if (this._done) return { done: true, value: undefined };
-        return this._settle(await new Promise(res =&gt; this._pullWaiters.push(res)));
-      },
-    };
+    for (const sub of [...this._subs]) sub._enqueue(type, value);
+    // 拉取方：有等待中的 next 直接交付，否则进队列
   }
 
-  _settle(ev) {
-    if (ev.type === 'error') throw ev.value;          // await for 遇错即中断
-    if (ev.type === 'done') return { done: true, value: undefined };
-    return { done: false, value: ev.value };
-  }
-
-  _start() {
-    if (this._started || !this._gen) return;
-    this._started = true;
-    (async () =&gt; {
-      try {
-        for await (const v of this._gen) this._emit('data', v);
-        this._emit('done');
-      } catch (e) {
-        this._emit('error', e);
-        this._emit('done');
-      }
-    })();
+  async _pump() {                 // async* 源：先等需求（背压）再 next
+    while (!this._stopped) {
+      await this._waitDemand();
+      const r = await this._iterator.next();
+      if (r.done) { await this._emit('done'); return; }
+      await this._emit('data', r.value);   // 等这一项被消费，避免多生产
+    }
   }
 
   static fromAsyncGenerator(gen) {
-    const s = new Stream();
-    s._gen = gen;
-    return s;                        // 不解包、不启动，保持 Dart 惰性
+    return new Stream({ source: () =&gt; gen });   // 不解包、不启动，保持 Dart 惰性
   }
 }
 
 class StreamSubscription {
   constructor(stream, onData, onError, onDone, cancelOnError) {
     Object.assign(this, { _stream: stream, _onData: onData, _onError: onError,
-      _onDone: onDone, _cancelOnError: cancelOnError, _paused: false, _buffer: [] });
+      _onDone: onDone, _cancelOnError: cancelOnError, _paused: false, _queue: [] });
   }
   pause() { this._paused = true; }
   resume() {
     this._paused = false;
-    while (!this._paused &amp;&amp; this._buffer.length) this._deliver('data', this._buffer.shift());
+    this._drain();
+    this._stream._wake();          // 恢复接收 → 允许上游继续拉取（背压）
   }
-  cancel() {
-    this._stream._listeners.delete(this);
-    return Promise.resolve();
+  cancel() {                       // 传播取消并 await 上游 iterator.return()
+    this._stream._subs.delete(this);
+    return this._stream._cleanupIfIdle();
   }
-  _deliver(type, value) {
-    if (type === 'data') {
-      if (this._paused) { this._buffer.push(value); return; }
-      this._onData?.(value);
-    } else if (type === 'error') {
-      if (this._onError) this._onError(value);
-      else if (this._cancelOnError) this.cancel();
-    } else if (type === 'done') {
-      this._onDone?.();
+  _enqueue(type, value) { this._queue.push({ type, value }); this._drain(); }
+  _drain() {                       // 暂停期间 data / error / done 全部缓冲
+    while (!this._paused &amp;&amp; this._queue.length) {
+      const ev = this._queue.shift();
+      this._deliver(ev.type, ev.value);
     }
   }
 }</code><button class="copy" type="button">复制</button></pre>
 
 <h3>Stream 翻译规则</h3>
-<p><b>项目现状：以下规则均未实现</b>（引用仅为设计参考）。</p>
+<p><b>项目现状：以下规则全部已实现</b>（<code>stream_js.dart</code> + <code>js_translator.dart</code>）；行为由 <code>example/tool/behavior_probe/stream_probe.dart</code> 与 <code>stream_probe.mjs</code> 的双端输出逐字比对。</p>
 <div class="scroll">
 <table>
   <colgroup><col style="width:14%"><col style="width:14%"><col style="width:16%"><col style="width:19%"><col style="width:18%"><col style="width:6%"><col style="width:12%"></colgroup>
@@ -1507,7 +1486,7 @@ class StreamSubscription {
     <tr><td><code>yield* other</code></td><td><code>yield* other</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 生成器委托</td><td><code>translateStmtList</code> 的 <code>YieldStatement.star</code> 分支直接发射 <code>yield* expr</code>；目标须是可迭代对象（数组 / 生成器，<code>async*</code> 内为异步可迭代）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>await for (final x in s)</code></td><td><code>for await (const x of s)</code></td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> 依赖 <code>[Symbol.asyncIterator]</code></td><td><code>_forStatementJs</code> 的 <code>awaitKeyword</code> 分支输出 <code>for await (... of ...)</code>；<code>Stream</code> 的 <code>[Symbol.asyncIterator]</code> 提供事件队列，遇 error 事件抛错中断</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>s.listen(onData, onError: e, onDone: d)</code></td><td><code>s.listen(onData, { onError: e, onDone: d })</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 命名参数转对象</td><td><code>stream_js.dart</code> 的 <code>Stream.listen(onData, opts)</code>：具名实参天然是尾参对象；单订阅二次订阅抛 <code>StateError</code>，广播每订阅者独立</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td><code>sub.pause()</code> / <code>resume()</code> / <code>cancel()</code></td><td>同名</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> <code>cancel</code> 返回 Promise</td><td><code>StreamSubscription</code>：单订阅 pause 缓冲、resume 补发；广播 pause 丢弃 data（error 仍上报）；<code>cancel()</code> 返回 <code>Promise.resolve()</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>sub.pause()</code> / <code>resume()</code> / <code>cancel()</code></td><td>同名</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span> <code>cancel</code> 返回 Promise</td><td><code>StreamSubscription</code>：pause 期间 data / error / done 全部进该订阅者队列（单订阅与广播一致，与 Dart 实测相符），resume 按序补发并唤醒上游拉取；<code>cancel()</code> 传播取消并 <b>await</b> 上游 <code>iterator.return()</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>StreamController&lt;T&gt;()</code></td><td><code>new StreamController()</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 提供 <code>add</code> / <code>addError</code> / <code>close</code> / <code>stream</code></td><td><code>export class StreamController</code>：<code>add</code> / <code>addError</code> / <code>close()</code>（返回 Future）/ <code>stream</code> / <code>isClosed</code> / <code>onListen</code> 惰性触发；close 后再 add 抛 <code>StateError</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>StreamController.broadcast()</code></td><td><code>new StreamController({ broadcast: true })</code></td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span></td><td><code>valueCtorJs</code> 按 <code>constructorName.name</code> 解析命名构造（修复泛型类型 + 命名构造被吞）；运行时 <code>static broadcast(props)</code> 置 <code>broadcast: true</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>Stream.value</code> / <code>empty</code> / <code>error</code> / <code>fromFuture</code> / <code>fromIterable</code> / <code>periodic</code></td><td>同名静态方法</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 运行时补齐</td><td><code>Stream</code> 的同名静态方法（产物静态调用原样保留位置实参）；<code>periodic</code> 用一次性 <code>setTimeout</code> 链，订阅全部取消时停止</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
@@ -1522,9 +1501,9 @@ class StreamSubscription {
 <div class="note risk">
   <span class="t">五个必须建模的语义</span>
   ① <strong>惰性</strong>：<code>async*</code> 在首次订阅前不能执行函数体；包装时立刻 <code>for await</code> 会让 <code>initState</code> 里创建的流提前开跑。<br>
-  ② <strong>单订阅与广播</strong>：单订阅流第二次 <code>listen</code> 抛 <code>StateError</code>；广播流每个订阅者独立，<code>pause</code> 期间事件<strong>直接丢弃</strong>，单订阅流则要缓冲。<br>
+  ② <strong>单订阅与广播</strong>：单订阅流第二次 <code>listen</code> 抛 <code>StateError</code>；广播流每个订阅者独立，<b>无订阅者时</b> data / error 直接丢弃（done 粘滞给后续订阅者），<code>pause</code> 期间与单订阅一样按订阅者缓冲（与 Dart 实测一致）。<br>
   ③ <strong>错误不终止流</strong>：<code>listen</code> 的 <code>onError</code> 处理完流继续，只有 <code>cancelOnError</code> 才取消订阅；<code>await for</code> 遇错则中断，所以 <code>asyncIterator</code> 必须 <code>throw</code>。<br>
-  ④ <strong>背压</strong>：单订阅流 <code>pause</code> 后缓冲事件，<code>resume</code> 按序补发；广播流不缓冲。<br>
+  ④ <strong>背压</strong>：单订阅流 <code>pause</code> 后缓冲事件并停止拉取上游（<code>async*</code> 停在 <code>yield</code>），<code>resume</code> 按序补发后继续拉取；广播不向源传播暂停（事件进各订阅者队列）。<br>
   ⑤ <strong><code>StreamController</code> 的 onListen 惰性</strong>：第一次 <code>listen</code> 才触发 <code>onListen</code>，<code>close</code> 之后不能再 <code>add</code>。
 </div>
 </section>
@@ -1573,7 +1552,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
 <!-- ================= 16 运行时补齐 ================= -->
 <section id="helpers">
 <h2><span class="sec-no">16</span>运行时补齐与辅助能力</h2>
-<p class="h2-sub">项目把跨语言差异集中到运行时（<code>packages/hot_patch_generator/lib/src/builders/runtime/js/</code>），生成器只做语法级翻译；下面的「已实现」以 <code>hot_patch_generator</code> 0.9.0 为准。</p>
+<p class="h2-sub">项目把跨语言差异集中到运行时（<code>packages/hot_patch_generator/lib/src/builders/runtime/js/</code>），生成器只做语法级翻译；下面的「已实现」以 <code>hot_patch_generator</code> 0.12.0 为准。</p>
 
 <h3>已实现</h3>
 <table>
@@ -1586,12 +1565,15 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
     <tr><td>String：<code>isEmpty</code> / <code>isNotEmpty</code> / <code>hashCode</code> / <code>compareTo</code></td><td><code>String.prototype</code></td><td><code>hashCode</code> 为 FNV-1a 32 位稳定散列</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td>Number：<code>isEven</code> / <code>isOdd</code> / <code>hashCode</code> / <code>compareTo</code> / <code>round</code> / <code>floor</code> / <code>ceil</code> / <code>abs</code> / <code>truncate</code> / <code>toInt</code> / <code>toDouble</code> / <code>toStringAsFixed</code> / <code>clamp</code></td><td><code>Number.prototype</code></td><td>与 Dart 同名同义（<code>toInt</code>/<code>truncate</code> 向零取整）</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>Future</code></td><td><code>future_js.dart</code></td><td><code>then</code> / <code>catchError</code> / <code>whenComplete</code> / <code>delayed</code> / <code>wait</code> / <code>value</code> / <code>error</code>，底层 Promise</td><td><span class="st st-pass">通过</span></td></tr>
+    <tr><td><code>Completer</code></td><td><code>future_js.dart</code></td><td><code>future</code> / <code>complete</code> / <code>completeError</code> / <code>isCompleted</code>；重复完成抛 <code>StateError</code></td><td><span class="st st-pass">通过</span></td></tr>
+    <tr><td><code>Stream</code> / <code>StreamController</code> / <code>StreamSubscription</code></td><td><code>stream_js.dart</code></td><td>显式事件 + 订阅状态机：订阅前缓冲、暂停缓冲（单订阅与广播一致）、背压、取消传播并 await <code>iterator.return()</code>、<code>close()</code> 等 done 被消费、转换 = 订阅上游 + 事件转发</td><td><span class="st st-pass">通过</span></td></tr>
+    <tr><td><code>sync*</code> / <code>async*</code> / <code>yield</code> / <code>yield*</code></td><td><code>js_member.dart</code> + <code>js_translator.dart</code></td><td><code>function*</code> / <code>async function*</code>；<code>async*</code> 由 <code>Stream.fromAsyncGenerator</code> 包装；生成器原型补 Iterable 同名成员</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>Timer</code> / <code>Timer.periodic</code></td><td><code>timer_js.dart</code></td><td>句柄 + <code>cancel()</code>，宿主缺失时按取消标记兜底</td><td><span class="st st-pass">通过</span></td></tr>
     <tr><td><code>__mixinHard(cls, mixin)</code></td><td><code>runtime_js.dart</code>（G.__mixinHard）</td><td>把 mixin 原型上的<b>自有成员</b>（getOwnPropertyNames + 描述符）复制到 application 类原型；目标已有同名自有成员时不覆盖，保证 <code>with</code> 链上后写的 mixin / 类自身声明优先</td><td><span class="st st-pass">通过</span></td></tr>
   </tbody>
 </table>
 
-<h3>已提供 / 未提供（手册 v1.4 核对）</h3>
+<h3>已提供 / 未提供（手册 v2.3 核对）</h3>
 <ul>
   <li><b>已提供</b>：<code>__nn(v)</code>（undefined → null 归一，<b>不抛错</b>，其他值原样返回）、<code>__mod(a, b)</code>（欧几里得取模）、<code>__mixinHard(cls, mixin)</code>（mixin application 的原型成员复制）、<code>assert</code>、Array / String / Number 同名成员补齐。<code>!</code> 按项目口径直接忽略（不提供非空断言函数）。</li>
   <li><code>__idiv</code>：不需要，<code>~/</code> 已在翻译层展开为 <code>Math.trunc(a / b)</code>。</li>
@@ -1599,7 +1581,7 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
   <li><code>__freeze</code>：const 集合不冻结（Dart const 是编译期保证，产物无需运行时冻结）。</li>
   <li><code>__setIfNotNull</code>：空安全赋值在翻译层落成守卫 IIFE，不经运行时。</li>
   <li><code>__required</code>：<b>不实现</b>——<code>required</code> 由 Dart 编译期校验，翻译产物的调用点全部来自编译通过的源码，运行期无需重复校验（缺省即 <code>undefined</code> / <code>null</code>）。</li>
-  <li><code>Completer</code>、<code>Stream</code>、生成器（<code>sync*</code> / <code>async*</code> / <code>yield</code>）未实现。</li>
+  <li><code>Completer</code>、<code>Stream</code> 及其订阅 / 控制器、<code>sync*</code> / <code>async*</code> / <code>yield</code> 生成器<b>均已实现</b>（见上表），不再是缺口。</li>
 </ul>
 
 <div class="note">
@@ -1675,6 +1657,8 @@ assert(r2 === null);</code><button class="copy" type="button">复制</button></p
   <p>v1.7（2026-11-06）：第 14 章 <code>Completer&lt;T&gt;</code> 已实现（<code>future_js.dart</code> 的 <code>export class Completer</code>：<code>future</code> / <code>complete</code> / <code>completeError</code> / <code>isCompleted</code>，重复完成抛 <code>StateError</code>），记为通过；example 新增 <code>async_detail.dart</code>（<code>AsyncDetail</code>）验证正常完成与异常完成两条路径。</p>
   <p>v1.8（2026-11-06）：第 14 章 <code>sync*</code> / <code>yield</code> / <code>yield*</code> 已实现——<code>closureToJs</code> 的生成器分支产出 <code>function*</code>，方法渲染按 <code>isGenerator</code> 加 <code>*</code>，<code>translateStmtList</code> 的 <code>YieldStatement</code> 分支发射 <code>yield</code> / <code>yield*</code>；运行时在 <code>%GeneratorPrototype%</code> 上补 <code>toList</code> / <code>map</code> / <code>where</code> / <code>first</code> / <code>length</code> 等 Iterable 同名成员（<code>__defineProtoMember</code> / <code>__defineProtoGetter</code> 新增 <code>overwrite</code> 参数，覆盖引擎自带的 Iterator Helpers 以保证跨引擎一致）。<code>async*</code> 已产出裸 <code>async function*</code>（部分实现，未包装 <code>Stream</code>，仍记为不通过）。example 新增 <code>generator_detail.dart</code>（<code>GeneratorDetail</code>）。</p>
   <p>v1.9（2026-11-06）：第 14 章 Stream 全家落地——新增 <code>stream_js.dart</code> 的 <code>Stream</code> / <code>StreamSubscription</code> / <code>StreamController</code>（推送 + <code>[Symbol.asyncIterator]</code> 双形态、惰性启动、单订阅 / 广播、pause 缓冲、错误不终止流）；<code>async*</code> 方法 / 闭包统一包装为 <code>Stream.fromAsyncGenerator(...)</code>；<code>await for</code> 由 <code>_forStatementJs</code> 的 <code>awaitKeyword</code> 分支输出 <code>for await (... of ...)</code>；<code>valueCtorJs</code> 修复「泛型类型 + 命名构造」被吞（<code>StreamController&lt;int&gt;.broadcast()</code> 现正确发射）。example 新增 <code>stream_detail.dart</code>（<code>StreamDetail</code>）。</p>
+  <p>v2.2（2026-11-06）：第 12 章三处陈旧描述按实测校正——<code>sort</code> / <code>join</code> / <code>length</code> 写已由构建期映射表改名并记为通过（删除「不改名、记为不通过」）；<code>indexOf</code> / <code>contains</code> / <code>remove</code> 均按「<code>===</code> + <code>__op$eq</code>」对齐，删除「indexOf 仍按 <code>===</code>、记为不通过」；<code>sync*</code> / <code>yield</code> 已支持，惰性 vs 立即求值明确标为「已接受差异」。实测脚本输出与 Dart 逐项一致（indexOf / contains / remove / sort / join / length 写）。</p>
+  <p>v2.3（2026-11-06）：第 14 / 16 章陈旧描述校正——删除「Stream 翻译规则均未实现」与「页面现状：Stream 任一规则均未实现」；删除「<code>Completer</code> / <code>Stream</code> / 生成器未实现」；<code>pause</code> / <code>resume</code> 行与「五个必须建模的语义」②④ 按 Dart 实测改为「暂停期间 data / error / done 全部按订阅者缓冲（广播一致），无订阅者时广播丢弃 data / error、done 粘滞」；第 14 章示例代码换成 <code>stream_js.dart</code> 的事件 + 订阅状态机结构；第 16 章「已实现」表补 <code>Completer</code> / <code>Stream</code> 三件套 / 生成器三行，版本基准从 0.9.0 更新到 0.12.0。</p>
   <p>v2.1（2026-11-06）：extension 分派改为三层模型——隐式调用走原型（实例成员优先 + 原型链特异性），显式 `E(x).m()` / `E(x).g` 改为按扩展身份分派（`E.m.call(x, …)` / `E.g.get.call(x)`，命名空间保存与原型同一份实现），同目标同名冲突改为「双方都不安装 + 告警」，删除「先注册者胜」；extension 成员发射与类方法合并为唯一发射器（新增 `js_member.dart`），生成器成员与同名 get/set 合并随之修复。Stream 重写为显式事件 + 订阅状态机（订阅前缓冲、广播暂停缓冲、close 等待消费、取消传播并 await 清理、cancelOnError 独立、转换改为事件转发），新增 `example/tool/behavior_probe/` 双端对照基线（Dart 与 node 输出逐字一致）。</p>
 </footer>
 

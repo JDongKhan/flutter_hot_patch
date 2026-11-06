@@ -152,3 +152,29 @@ class Counter {
   ((__r) => { const __c = L.label.get.call(__r); if (__c != null) return __c; const __v = 'y'; L.label.set.call(__r, __v); return __v; })(c2);
   console.log(`H ${L.level.get.call(c2)}/${c2.value}/${post}/${pre}/${L.label.get.call(c2)}`);
 }
+
+// I List 语义（产物里的成员名已被构建期映射表改写：_indexOf / _sort / _join / _setLength）
+{
+  class Pair {
+    constructor(v) {
+      this.v = v;
+    }
+    __op$eq(o) {
+      return o instanceof Pair && o.v === this.v;
+    }
+    compareTo(o) {
+      return this.v < o.v ? -1 : (this.v > o.v ? 1 : 0);
+    }
+    toString() {
+      return `${this.v}`;
+    }
+  }
+  const list = [new Pair(1), new Pair(2)];
+  const idx = list._indexOf(new Pair(2));
+  const has = list.contains(new Pair(1));
+  const removed = list.remove(new Pair(1));
+  const sorted = [new Pair(3), new Pair(1), new Pair(2)]._sort().map((p) => p.v).join(',');
+  const shrunk = [1, 2, 3];
+  shrunk._setLength(1);
+  console.log(`I ${idx}/${has}/${removed}/${list.length}/${sorted}/${[1, 2]._join()}/${shrunk.join('|')}`);
+}
