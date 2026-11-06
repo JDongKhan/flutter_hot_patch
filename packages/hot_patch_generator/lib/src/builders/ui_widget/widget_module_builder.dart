@@ -27,6 +27,7 @@ import '../runtime/js/drag_js.dart';
 import '../runtime/js/easy_refresh_js.dart';
 import '../runtime/js/focus_js.dart';
 import '../runtime/js/future_js.dart';
+import '../runtime/js/iterable_js.dart';
 import '../runtime/js/key_js.dart';
 import '../runtime/js/enum_values_js.dart';
 import '../runtime/js/icon_values_js.dart';
@@ -69,6 +70,9 @@ String flutterValueClassesSource() => [
       // 依赖基础值类工具（__positionalArgs / __durationMs）与 dartErrors 的
       // StateError（仅 Future.any 的实参校验用），故排在两者之后。
       futureJsSource,
+      // Dart `Iterable` 的惰性载体：`__iterMap` / `__iterWhere` / … 与
+      // `LazyIterable`（Array 立即求值，语义不同；生成器按静态类型改写）。
+      iterableJsSource,
       // dart:async 的 Stream / StreamController / StreamSubscription：依赖
       // Future（Future.__wrap 包装终止操作）与 __durationMs（periodic），
       // 故紧随 Future 之后。

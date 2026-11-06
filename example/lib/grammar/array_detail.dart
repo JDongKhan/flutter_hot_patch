@@ -76,6 +76,8 @@ class _ArrayDetailState extends State<ArrayDetail> {
     final hasLarge = bag.any((v) => v > 2);
     final allPositive = bag.every((v) => v > 0);
     final doubled = bag.expand((v) => <int>[v, v]).toList();
+    // map 在 List 接收者上按映射表改名为 `_map`（原生 map 立即求值，Dart 惰性）。
+    final mapped = <int>[1, 2, 3].map((v) => v * 2).toList();
     final firstTwo = bag.take(2);
     final skipped = bag.skip(1);
     final found = bag.firstWhere((v) => v > 5, orElse: () => -1);
@@ -132,6 +134,7 @@ class _ArrayDetailState extends State<ArrayDetail> {
         Text('fold(0, +) → $total'),
         Text('any(> 2) → $hasLarge / every(> 0) → $allPositive'),
         Text('expand((v) => [v, v]) → ${doubled.join('-')}'),
+        Text('map((v) => v * 2) → ${mapped.join('-')}'),
         Text('take(2) → ${firstTwo.join('-')} / skip(1) → ${skipped.join('-')}'),
         Text('firstWhere(> 5, orElse: -1) → $found'),
         const SizedBox(height: 8),

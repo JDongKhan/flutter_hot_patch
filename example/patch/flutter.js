@@ -2963,6 +2963,192 @@ export class Completer {
   }
 }
 
+class LazyIterable {
+  constructor(factory) {
+    this._factory = factory;
+  }
+
+  [Symbol.iterator]() {
+    return this._factory();
+  }
+
+  // ---- 惰性变换：返回新的 LazyIterable，调用时零副作用 ----
+
+  map(fn) {
+    var self = this;
+    return new LazyIterable(function* () {
+      for (var v of self) { yield fn(v); }
+    });
+  }
+
+  // 生成器对可判定为 List / Iterable 的接收者把 `map` 改名为 `_map`。
+  _map(fn) { return this.map(fn); }
+
+  where(fn) {
+    var self = this;
+    return new LazyIterable(function* () {
+      for (var v of self) { if (fn(v)) { yield v; } }
+    });
+  }
+
+  expand(fn) {
+    var self = this;
+    return new LazyIterable(function* () {
+      for (var v of self) {
+        for (var x of fn(v)) { yield x; }
+      }
+    });
+  }
+
+  take(n) {
+    if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
+    var self = this;
+    return new LazyIterable(function* () {
+      if (n === 0) { return; }
+      var seen = 0;
+      for (var v of self) {
+        yield v;
+        seen += 1;
+        if (seen >= n) { return; }
+      }
+    });
+  }
+
+  skip(n) {
+    if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
+    var self = this;
+    return new LazyIterable(function* () {
+      var seen = 0;
+      for (var v of self) {
+        if (seen < n) { seen += 1; continue; }
+        yield v;
+      }
+    });
+  }
+
+  // ---- 终止操作：消费一次（Dart 同名同义）----
+
+  toList() { return Array.from(this); }
+
+  toSet() { return new Set(this); }
+
+  forEach(fn) {
+    for (var v of this) { fn(v); }
+  }
+
+  fold(init, fn) {
+    var acc = init;
+    for (var v of this) { acc = fn(acc, v); }
+    return acc;
+  }
+
+  any(fn) {
+    for (var v of this) { if (fn(v)) { return true; } }
+    return false;
+  }
+
+  every(fn) {
+    for (var v of this) { if (!fn(v)) { return false; } }
+    return true;
+  }
+
+  join(separator) { return Array.from(this)._join(separator); }
+
+  contains(value) { return Array.from(this).contains(value); }
+
+  indexOf(value, start) { return Array.from(this)._indexOf(value, start); }
+
+  get first() {
+    for (var v of this) { return v; }
+    throw new StateError({ message: 'No element' });
+  }
+
+  get last() {
+    var seen = false;
+    var result = null;
+    for (var v of this) { result = v; seen = true; }
+    if (!seen) { throw new StateError({ message: 'No element' }); }
+    return result;
+  }
+
+  get length() {
+    var n = 0;
+    for (var _ of this) { n += 1; }
+    return n;
+  }
+
+  get isEmpty() {
+    for (var _ of this) { return false; }
+    return true;
+  }
+
+  get isNotEmpty() {
+    for (var _ of this) { return true; }
+    return false;
+  }
+
+  elementAt(index) {
+    if (index < 0) { throw new RangeError('RangeError: Index out of range'); }
+    var i = 0;
+    for (var v of this) {
+      if (i === index) { return v; }
+      i += 1;
+    }
+    throw new RangeError('RangeError: Index out of range');
+  }
+}
+
+// ---- 生成器发射的运行时原语（与 __nn / __mod 同口径，挂在全局）----
+function __iterMap(src, fn) {
+  return new LazyIterable(function* () {
+    for (var v of src) { yield fn(v); }
+  });
+}
+
+function __iterWhere(src, fn) {
+  return new LazyIterable(function* () {
+    for (var v of src) { if (fn(v)) { yield v; } }
+  });
+}
+
+function __iterExpand(src, fn) {
+  return new LazyIterable(function* () {
+    for (var v of src) {
+      for (var x of fn(v)) { yield x; }
+    }
+  });
+}
+
+function __iterTake(src, n) {
+  if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
+  return new LazyIterable(function* () {
+    if (n === 0) { return; }
+    var seen = 0;
+    for (var v of src) {
+      yield v;
+      seen += 1;
+      if (seen >= n) { return; }
+    }
+  });
+}
+
+function __iterSkip(src, n) {
+  if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
+  return new LazyIterable(function* () {
+    var seen = 0;
+    for (var v of src) {
+      if (seen < n) { seen += 1; continue; }
+      yield v;
+    }
+  });
+}
+
+G.__iterMap = __iterMap;
+G.__iterWhere = __iterWhere;
+G.__iterExpand = __iterExpand;
+G.__iterTake = __iterTake;
+G.__iterSkip = __iterSkip;
+
 export class Stream {
   constructor(opts) {
     opts = opts || {};
@@ -2982,6 +3168,9 @@ export class Stream {
     this._stopped = false;
     this._closed = false;
     this._iterator = null;
+    // 单订阅流**一生只能被订阅一次**（Dart 语义）：取消后再次 listen / await for
+    // 必须抛 StateError，不能静默返回一个永远收不到事件的订阅。
+    this._listenedOnce = false;
     this._asyncIterated = false;
     // close() 的 Future：等订阅者处理完 done 才完成（与 Dart 一致）。
     this._closeWaiters = [];
@@ -3018,7 +3207,7 @@ export class Stream {
         await this._emit('data', r.value);
       }
     } catch (e) {
-      await this._emit('error', e);
+      await this._emit('error', e, e instanceof Error ? e.stack : '');
       await this._emit('done');
     }
   }
@@ -3054,25 +3243,33 @@ export class Stream {
   // done 的「终态」在 emit 时立即记下（close 后 add 抛错、done 后不再投递）。
   // 返回投递完成的 Promise：拉取源（_pump）要等这一项真正被消费后再拉下一项，
   // 否则「消费方 break」会晚于下一次拉取（上游多生产一项）。
-  _emit(type, value) {
+  _emit(type, value, stack) {
     if (type === 'done') {
       if (this._done) { return Promise.resolve(); }
       this._done = true;
     } else if (this._done) {
       return Promise.resolve();
     }
+    // error 的栈由**产生错误的一方**提供（与 Dart 一致）：`addError(e)` 不带
+    // stackTrace 时是空栈；生成器 `throw` 时取 Error 自带的栈。JS 侧传栈
+    // 字符串（不是 StackTrace 对象，见手册已知差异），空栈统一为 `''`。
+    if (stack == null) { stack = ''; }
     var self = this;
-    return Promise.resolve().then(function () { self._deliverEvent(type, value); });
+    return Promise.resolve().then(function () {
+      self._deliverEvent(type, value, stack);
+    });
   }
 
   // 分发（唯一出口）：单订阅 / 广播 / 拉取方在这里统一处理缓冲与投递。
-  _deliverEvent(type, value) {
+  _deliverEvent(type, value, stack) {
     if (this._subs.size === 0 && this._pullers.size === 0) {
       if (this._broadcast) { return; }   // 广播无订阅者：丢弃 data / error
-      this._pending.push({ type: type, value: value });
+      this._pending.push({ type: type, value: value, stack: stack });
       return;
     }
-    for (var sub of Array.from(this._subs)) { sub._enqueue(type, value); }
+    for (var sub of Array.from(this._subs)) {
+      sub._enqueue(type, value, stack);
+    }
     if (this._pullers.size > 0) {
       var ev = { type: type, value: value };
       for (var p of Array.from(this._pullers)) {
@@ -3123,9 +3320,10 @@ export class Stream {
 
   listen(onData, opts) {
     opts = opts || {};
-    if (!this._broadcast && (this._subs.size > 0 || this._asyncIterated)) {
+    if (!this._broadcast && this._listenedOnce) {
       throw new StateError({ message: 'Stream has already been listened to' });
     }
+    this._listenedOnce = true;
     var sub = new StreamSubscription(this, onData,
     typeof opts.onError === 'function' ? opts.onError : null,
     typeof opts.onDone === 'function' ? opts.onDone : null,
@@ -3135,7 +3333,7 @@ export class Stream {
       // 单订阅：把首个订阅前缓冲的事件按序交给该订阅者。
       var buffered = this._pending;
       this._pending = [];
-      for (var ev of buffered) { sub._enqueue(ev.type, ev.value); }
+      for (var ev of buffered) { sub._enqueue(ev.type, ev.value, ev.stack); }
     } else if (this._done && this._broadcast) {
       // 广播：close 之后订阅仍会收到 done（data 已丢弃）。
       sub._enqueue('done', undefined);
@@ -3148,9 +3346,10 @@ export class Stream {
   // ---- 拉取形态（await for）----
 
   [Symbol.asyncIterator]() {
-    if (!this._broadcast && (this._subs.size > 0 || this._asyncIterated)) {
+    if (!this._broadcast && this._listenedOnce) {
       throw new StateError({ message: 'Stream has already been listened to' });
     }
+    this._listenedOnce = true;
     this._asyncIterated = true;
     var self = this;
     var pull = { queue: [], waiters: [] };
@@ -3494,9 +3693,9 @@ export class StreamSubscription {
     return this._stream._cleanupIfIdle();
   }
 
-  _enqueue(type, value) {
+  _enqueue(type, value, stack) {
     if (this._cancelled) { return; }
-    this._queue.push({ type: type, value: value });
+    this._queue.push({ type: type, value: value, stack: stack });
     this._drain();
   }
 
@@ -3505,18 +3704,26 @@ export class StreamSubscription {
     this._draining = true;
     while (!this._paused && !this._cancelled && this._queue.length > 0) {
       var ev = this._queue.shift();
-      this._deliver(ev.type, ev.value);
+      this._deliver(ev.type, ev.value, ev.stack);
     }
     this._draining = false;
   }
 
-  _deliver(type, value) {
+  _deliver(type, value, stack) {
     if (type === 'data') {
       if (typeof this._onData === 'function') { this._onData(value); }
       return;
     }
     if (type === 'error') {
-      if (typeof this._onError === 'function') { this._onError(value); }
+      if (typeof this._onError === 'function') {
+        // Dart 的 onError 可声明 (error, stackTrace) 两个形参；单参处理器忽略第二参。
+        this._onError(value, stack);
+      } else {
+        // Dart 把无 onError 的错误报为「未捕获错误」，绝不静默丢弃。
+        var text = value instanceof Error ? String(value) : __str(value);
+        __error('jsui: unhandled stream error: ' + text
+        + (stack ? '\n' + stack : ''));
+      }
       // Dart 语义：cancelOnError 与是否提供 onError 无关，交付后即取消。
       if (this._cancelOnError) { this.cancel(); }
       return;
@@ -3549,9 +3756,9 @@ export class StreamController {
     this.stream._emit('data', value);
   }
 
-  addError(error) {
+  addError(error, stackTrace) {
     if (this._closed) { throw new StateError({ message: 'Cannot add event after closing' }); }
-    this.stream._emit('error', error);
+    this.stream._emit('error', error, stackTrace);
   }
 
   close() {

@@ -178,3 +178,44 @@ class Counter {
   shrunk._setLength(1);
   console.log(`I ${idx}/${has}/${removed}/${list.length}/${sorted}/${[1, 2]._join()}/${shrunk.join('|')}`);
 }
+
+// J 单订阅流一生只可订阅一次：取消后再次 listen 必须抛 StateError。
+{
+  const c = new StreamController({});
+  const sub = c.stream.listen(() => {});
+  await sub.cancel();
+  let error = 'none';
+  try {
+    c.stream.listen(() => {});
+  } catch (e) {
+    error = (e && e.constructor && e.constructor.name) || String(e);
+  }
+  console.log(`J ${error}`);
+}
+
+// K onError 的第二参（Dart StackTrace / JS 栈字符串）都非空。
+{
+  const c = new StreamController({});
+  const got = [];
+  c.stream.listen(() => {}, {
+    onError: (e, st) => got.push(`${e}:${st != null && String(st).length > 0}`),
+  });
+  c.addError('boom');
+  await sleep(10);
+  console.log(`K ${got.join(',')}`);
+}
+
+// L Iterable.map 惰性（产物把 List/Iterable 的 map 改名为 _map）：调用时不执行
+// 回调，toList 才执行；可重复迭代。
+{
+  let calls = 0;
+  const it = [1, 2, 3]._map((x) => { calls += 1; return x * 2; });
+  console.log(`L before=${calls}`);
+  console.log(`L list=${it.toList().join(',')}/${calls}/${it.toList().join(',')}`);
+}
+
+// M where → map 链：成员保持同名，惰性 + 可重复迭代（length / join 各自重新消费）。
+{
+  const it = [1, 2, 3, 4].where((x) => x % 2 === 0).map((x) => x * 10);
+  console.log(`M ${it.toList().join(',')}/${it.length}/${it.join('-')}`);
+}

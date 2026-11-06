@@ -1994,9 +1994,12 @@ const Set<String> _jsBuiltinReceiverTypes = {
 };
 
 /// 构建期成员名映射：**只对可判定为 JS 内建 Array（Dart `List`）的接收者**
-/// 改写 `sort` → `_sort`、`join` → `_join`、`indexOf` → `_indexOf`（原生同名但
-/// 默认语义不同，运行时挂下划线版本，不覆盖原生）。接收者类型不可判定 /
-/// 是自定义类 / 是 Map 等其它类型时一律原样返回——绝不按方法名全局替换。
+/// 改写 `sort` → `_sort`、`join` → `_join`、`indexOf` → `_indexOf`、
+/// `map` → `_map`（原生同名但语义不同，运行时挂下划线版本，不覆盖原生）。
+/// `map` 在 `Iterable` 接收者上同样要改名（运行时可能是 Array，原生 map 无法
+/// 覆盖成惰性）；其余成员保持同名——`where` / `expand` / `take` / `skip` 的
+/// 惰性由原型上的同名实现承接。接收者类型不可判定 / 是自定义类 / 是 Map 等
+/// 其它类型时一律原样返回——绝不按方法名全局替换。
 String _memberCallName(
   Expression? receiver,
   String member,
@@ -2009,7 +2012,9 @@ String _memberCallName(
     if (member == 'sort') return '_sort';
     if (member == 'join') return '_join';
     if (member == 'indexOf') return '_indexOf';
+    if (member == 'map') return '_map';
   }
+  if (type == 'Iterable' && member == 'map') return '_map';
   // 可调用对象：显式 `obj.call(...)` 与声明侧同步改名为 `invoke`（手册
   // `call(...)` 行）；仅接收者静态类型可判定为「可调用类」时改写。
   if (member == 'call' && _typeIsCallable(type, classes)) return 'invoke';

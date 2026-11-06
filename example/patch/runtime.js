@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 2ccbeb62） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 aa76b1b4） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '2ccbeb62') { return; }
-  G.__jsuiVersion = '2ccbeb62';
+  if (G.__jsui && G.__jsuiVersion === 'aa76b1b4') { return; }
+  G.__jsuiVersion = 'aa76b1b4';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -321,8 +321,14 @@ __defineProtoMember(Map.prototype, {
   //     `new Set([...])`，JS Set 自带 `clear`，无需处理。
   __defineProtoMember(Array.prototype, {
     clear: function () { this.length = 0; },
+    // Dart `Iterable.where` 是惰性的：同名成员直接返回 LazyIterable（不覆盖
+    // 原生 `filter`，运行时内部仍用原生方法）。`map` 不能覆盖原生
+    // `Array.prototype.map`，由生成器按映射表改名为 `_map`。
     where: function (predicate) {
-      return this.filter(predicate);
+      return G.__iterWhere(this, predicate);
+    },
+    _map: function (fn) {
+      return G.__iterMap(this, fn);
     },
     // Dart List.toList() 返回新列表；这里保持数组实例（与既有产物行为一致），
     // 后续链式调用 / 原地修改语义不变。
@@ -407,14 +413,9 @@ __defineProtoMember(Map.prototype, {
       if (typeof fallback === 'function') { return fallback(); }
       throw new Error('StateError: No element');
     },
-    // Dart `Iterable.expand(f)`：把每个元素展开成序列再串接（等价 flatMap）。
+    // Dart `Iterable.expand(f)`：惰性展开（等价 flatMap），返回 LazyIterable。
     expand: function (f) {
-      var out = [];
-      for (var i = 0; i < this.length; i++) {
-        var part = f(this[i]);
-        for (var x of part) { out.push(x); }
-      }
-      return out;
+      return G.__iterExpand(this, f);
     },
     // Dart `fold(init, fn)`：初值在前、累加器在后（与原生 reduce 不同）。
     fold: function (init, fn) {
@@ -424,14 +425,12 @@ __defineProtoMember(Map.prototype, {
     },
     // Dart `any(f)` ↔ 原生 `some`（`every` 原生同名同义）。
     any: function (f) { return this.some(f); },
-    // Dart `take(n)` / `skip(n)`：负数抛 RangeError，越界按长度截断。
+    // Dart `take(n)` / `skip(n)`：惰性，负数抛 RangeError（越界按实际长度截断）。
     take: function (n) {
-      if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
-      return this.slice(0, n < this.length ? n : this.length);
+      return G.__iterTake(this, n);
     },
     skip: function (n) {
-      if (n < 0) { throw new RangeError('RangeError: count must not be negative'); }
-      return this.slice(n < this.length ? n : this.length);
+      return G.__iterSkip(this, n);
     },
     // Dart `asMap()`：索引 → 值的 Map（原生 JS Map）。
     asMap: function () {
@@ -510,26 +509,39 @@ __defineProtoMember(Map.prototype, {
       return this.slice().reverse();
     }
   });
+  //   - Set 的迭代成员：Dart 的 Set 继承 Iterable，JS Set 没有这些同名方法，
+  //     按「缺失方法同名补齐」挂到 Set.prototype（与 Array / 生成器共用
+  //     `__iter*` 的惰性实现）。`map` 在 Set 上没有原生同名，无需改名。
+  __defineProtoMember(Set.prototype, {
+    map: function (fn) { return G.__iterMap(this, fn); },
+    _map: function (fn) { return G.__iterMap(this, fn); },
+    where: function (fn) { return G.__iterWhere(this, fn); },
+    expand: function (fn) { return G.__iterExpand(this, fn); },
+    take: function (n) { return G.__iterTake(this, n); },
+    skip: function (n) { return G.__iterSkip(this, n); }
+  });
   //   - 生成器对象（`sync*` 产物）：Dart 侧是 Iterable，JS 生成器只有
   //     `next` 与迭代协议，产物里按 Dart 写法调用的 `toList()` / `map()` /
   //     `.first` / `.length` 直接抛 "is not a function"。在共享的
   //     %GeneratorPrototype% 上按同名同义补齐：需要随机访问的成员先
   //     `Array.from(this)` 物化，再复用 Array.prototype 上的 Dart 语义实现。
   //     已知差异：JS 生成器一次性迭代（Dart 的 sync* Iterable 可重复迭代）；
-  //     惰性与 List 同口径（立即求值）。
+  //     `map` / `where` / `expand` / `take` / `skip` 与 Dart 一样**惰性**
+  //     （由 flutter.js 的 `__iter*` / `LazyIterable` 承接，可重复迭代）。
   var __generatorProto =
       Object.getPrototypeOf(Object.getPrototypeOf((function* () {})()));
   __defineProtoMember(__generatorProto, {
     toList: function () { return Array.from(this); },
     toSet: function () { return new Set(this); },
-    map: function (fn) { return Array.from(this).map(fn); },
-    where: function (fn) { return Array.from(this).where(fn); },
-    expand: function (fn) { return Array.from(this).expand(fn); },
+    map: function (fn) { return G.__iterMap(this, fn); },
+    _map: function (fn) { return G.__iterMap(this, fn); },
+    where: function (fn) { return G.__iterWhere(this, fn); },
+    expand: function (fn) { return G.__iterExpand(this, fn); },
     fold: function (init, fn) { return Array.from(this).fold(init, fn); },
     any: function (fn) { return Array.from(this).any(fn); },
     every: function (fn) { return Array.from(this).every(fn); },
-    take: function (n) { return Array.from(this).take(n); },
-    skip: function (n) { return Array.from(this).skip(n); },
+    take: function (n) { return G.__iterTake(this, n); },
+    skip: function (n) { return G.__iterSkip(this, n); },
     join: function (sep) { return Array.from(this)._join(sep); },
     contains: function (e) { return Array.from(this).contains(e); },
     indexOf: function (e, start) { return Array.from(this)._indexOf(e, start); }
@@ -3202,6 +3214,7 @@ __defineProtoMember(Map.prototype, {
     if (id) __extensionRecords[id] = record;
     return namespace;
   };
+
 
 
 // ===== 【28】api 收尾 =====

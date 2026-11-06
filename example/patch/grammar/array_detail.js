@@ -76,6 +76,7 @@ export class ArrayDetail extends StatefulWidget {
     const hasLarge = bag.any((v) => { return (v > 2); });
     const allPositive = bag.every((v) => { return (v > 0); });
     const doubled = bag.expand((v) => { return [v, v]; }).toList();
+    const mapped = [1, 2, 3]._map((v) => { return (v * 2); }).toList();
     const firstTwo = bag.take(2);
     const skipped = bag.skip(1);
     const found = bag.firstWhere((v) => { return (v > 5); }, { "orElse": () => { return (-1); } });
@@ -173,6 +174,9 @@ export class ArrayDetail extends StatefulWidget {
         }),
         new Text({
           "data": "expand((v) => [v, v]) → " + doubled.join("-")
+        }),
+        new Text({
+          "data": "map((v) => v * 2) → " + mapped.join("-")
         }),
         new Text({
           "data": "take(2) → " + firstTwo.join("-") + " / skip(1) → " + skipped.join("-")

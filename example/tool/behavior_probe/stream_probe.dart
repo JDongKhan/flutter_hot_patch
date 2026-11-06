@@ -125,6 +125,49 @@ Future<void> main() async {
   final shrunk = [1, 2, 3]..length = 1;
   print('I $idx/$has/$removed/${list.length}/$sorted/${[1, 2].join()}'
       '/${shrunk.join('|')}');
+
+  // J 单订阅流一生只可订阅一次：取消后再次 listen 必须抛 StateError。
+  {
+    final c = StreamController<int>();
+    final sub = c.stream.listen((_) {});
+    await sub.cancel();
+    var error = 'none';
+    try {
+      c.stream.listen((_) {});
+    } catch (e) {
+      error = e.runtimeType.toString();
+    }
+    print('J $error');
+  }
+
+  // K onError 的第二参（Dart StackTrace / JS 栈字符串）都非空。
+  {
+    final c = StreamController<int>();
+    final got = <String>[];
+    c.stream.listen((_) {}, onError: (Object e, StackTrace st) {
+      got.add('$e:${st.toString().isNotEmpty}');
+    });
+    c.addError('boom');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    print('K ${got.join(',')}');
+  }
+
+  // L Iterable.map 惰性：调用时不执行回调，toList 才执行；可重复迭代。
+  {
+    var calls = 0;
+    final it = [1, 2, 3].map((x) {
+      calls++;
+      return x * 2;
+    });
+    print('L before=$calls');
+    print('L list=${it.toList().join(',')}/$calls/${it.toList().join(',')}');
+  }
+
+  // M where → map 链：惰性 + 可重复迭代（length / join 各自重新消费）。
+  {
+    final it = [1, 2, 3, 4].where((x) => x.isEven).map((x) => x * 10);
+    print('M ${it.toList().join(',')}/${it.length}/${it.join('-')}');
+  }
 }
 
 class Pair implements Comparable<Pair> {

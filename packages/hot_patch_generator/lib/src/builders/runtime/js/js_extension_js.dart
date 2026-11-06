@@ -148,4 +148,5 @@ const String jsExtensionJsSource = r'''
     if (id) __extensionRecords[id] = record;
     return namespace;
   };
+
 ''';

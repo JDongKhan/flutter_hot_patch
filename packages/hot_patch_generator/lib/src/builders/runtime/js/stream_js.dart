@@ -38,6 +38,9 @@ const String streamJsSource = r'''
       this._stopped = false;
       this._closed = false;
       this._iterator = null;
+      // 单订阅流**一生只能被订阅一次**（Dart 语义）：取消后再次 listen / await for
+      // 必须抛 StateError，不能静默返回一个永远收不到事件的订阅。
+      this._listenedOnce = false;
       this._asyncIterated = false;
       // close() 的 Future：等订阅者处理完 done 才完成（与 Dart 一致）。
       this._closeWaiters = [];
@@ -74,7 +77,7 @@ const String streamJsSource = r'''
           await this._emit('data', r.value);
         }
       } catch (e) {
-        await this._emit('error', e);
+        await this._emit('error', e, e instanceof Error ? e.stack : '');
         await this._emit('done');
       }
     }
@@ -110,25 +113,33 @@ const String streamJsSource = r'''
     // done 的「终态」在 emit 时立即记下（close 后 add 抛错、done 后不再投递）。
     // 返回投递完成的 Promise：拉取源（_pump）要等这一项真正被消费后再拉下一项，
     // 否则「消费方 break」会晚于下一次拉取（上游多生产一项）。
-    _emit(type, value) {
+    _emit(type, value, stack) {
       if (type === 'done') {
         if (this._done) { return Promise.resolve(); }
         this._done = true;
       } else if (this._done) {
         return Promise.resolve();
       }
+      // error 的栈由**产生错误的一方**提供（与 Dart 一致）：`addError(e)` 不带
+      // stackTrace 时是空栈；生成器 `throw` 时取 Error 自带的栈。JS 侧传栈
+      // 字符串（不是 StackTrace 对象，见手册已知差异），空栈统一为 `''`。
+      if (stack == null) { stack = ''; }
       var self = this;
-      return Promise.resolve().then(function () { self._deliverEvent(type, value); });
+      return Promise.resolve().then(function () {
+        self._deliverEvent(type, value, stack);
+      });
     }
 
     // 分发（唯一出口）：单订阅 / 广播 / 拉取方在这里统一处理缓冲与投递。
-    _deliverEvent(type, value) {
+    _deliverEvent(type, value, stack) {
       if (this._subs.size === 0 && this._pullers.size === 0) {
         if (this._broadcast) { return; }   // 广播无订阅者：丢弃 data / error
-        this._pending.push({ type: type, value: value });
+        this._pending.push({ type: type, value: value, stack: stack });
         return;
       }
-      for (var sub of Array.from(this._subs)) { sub._enqueue(type, value); }
+      for (var sub of Array.from(this._subs)) {
+        sub._enqueue(type, value, stack);
+      }
       if (this._pullers.size > 0) {
         var ev = { type: type, value: value };
         for (var p of Array.from(this._pullers)) {
@@ -179,9 +190,10 @@ const String streamJsSource = r'''
 
     listen(onData, opts) {
       opts = opts || {};
-      if (!this._broadcast && (this._subs.size > 0 || this._asyncIterated)) {
+      if (!this._broadcast && this._listenedOnce) {
         throw new StateError({ message: 'Stream has already been listened to' });
       }
+      this._listenedOnce = true;
       var sub = new StreamSubscription(this, onData,
           typeof opts.onError === 'function' ? opts.onError : null,
           typeof opts.onDone === 'function' ? opts.onDone : null,
@@ -191,7 +203,7 @@ const String streamJsSource = r'''
         // 单订阅：把首个订阅前缓冲的事件按序交给该订阅者。
         var buffered = this._pending;
         this._pending = [];
-        for (var ev of buffered) { sub._enqueue(ev.type, ev.value); }
+        for (var ev of buffered) { sub._enqueue(ev.type, ev.value, ev.stack); }
       } else if (this._done && this._broadcast) {
         // 广播：close 之后订阅仍会收到 done（data 已丢弃）。
         sub._enqueue('done', undefined);
@@ -204,9 +216,10 @@ const String streamJsSource = r'''
     // ---- 拉取形态（await for）----
 
     [Symbol.asyncIterator]() {
-      if (!this._broadcast && (this._subs.size > 0 || this._asyncIterated)) {
+      if (!this._broadcast && this._listenedOnce) {
         throw new StateError({ message: 'Stream has already been listened to' });
       }
+      this._listenedOnce = true;
       this._asyncIterated = true;
       var self = this;
       var pull = { queue: [], waiters: [] };
@@ -550,9 +563,9 @@ const String streamJsSource = r'''
       return this._stream._cleanupIfIdle();
     }
 
-    _enqueue(type, value) {
+    _enqueue(type, value, stack) {
       if (this._cancelled) { return; }
-      this._queue.push({ type: type, value: value });
+      this._queue.push({ type: type, value: value, stack: stack });
       this._drain();
     }
 
@@ -561,18 +574,26 @@ const String streamJsSource = r'''
       this._draining = true;
       while (!this._paused && !this._cancelled && this._queue.length > 0) {
         var ev = this._queue.shift();
-        this._deliver(ev.type, ev.value);
+        this._deliver(ev.type, ev.value, ev.stack);
       }
       this._draining = false;
     }
 
-    _deliver(type, value) {
+    _deliver(type, value, stack) {
       if (type === 'data') {
         if (typeof this._onData === 'function') { this._onData(value); }
         return;
       }
       if (type === 'error') {
-        if (typeof this._onError === 'function') { this._onError(value); }
+        if (typeof this._onError === 'function') {
+          // Dart 的 onError 可声明 (error, stackTrace) 两个形参；单参处理器忽略第二参。
+          this._onError(value, stack);
+        } else {
+          // Dart 把无 onError 的错误报为「未捕获错误」，绝不静默丢弃。
+          var text = value instanceof Error ? String(value) : __str(value);
+          __error('jsui: unhandled stream error: ' + text
+            + (stack ? '\n' + stack : ''));
+        }
         // Dart 语义：cancelOnError 与是否提供 onError 无关，交付后即取消。
         if (this._cancelOnError) { this.cancel(); }
         return;
@@ -605,9 +626,9 @@ const String streamJsSource = r'''
       this.stream._emit('data', value);
     }
 
-    addError(error) {
+    addError(error, stackTrace) {
       if (this._closed) { throw new StateError({ message: 'Cannot add event after closing' }); }
-      this.stream._emit('error', error);
+      this.stream._emit('error', error, stackTrace);
     }
 
     close() {
