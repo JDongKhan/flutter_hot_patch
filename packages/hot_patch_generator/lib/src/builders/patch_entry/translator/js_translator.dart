@@ -1993,13 +1993,24 @@ const Set<String> _jsBuiltinReceiverTypes = {
   'double',
 };
 
-/// 构建期成员名映射：**只对可判定为 JS 内建 Array（Dart `List`）的接收者**
-/// 改写 `sort` → `_sort`、`join` → `_join`、`indexOf` → `_indexOf`、
-/// `map` → `_map`（原生同名但语义不同，运行时挂下划线版本，不覆盖原生）。
-/// `map` 在 `Iterable` 接收者上同样要改名（运行时可能是 Array，原生 map 无法
-/// 覆盖成惰性）；其余成员保持同名——`where` / `expand` / `take` / `skip` 的
-/// 惰性由原型上的同名实现承接。接收者类型不可判定 / 是自定义类 / 是 Map 等
-/// 其它类型时一律原样返回——绝不按方法名全局替换。
+/// 构建期成员改名表：**接收者内建类型 → { Dart 成员名: JS 产物成员名 }**。
+/// 只对可判定为该内建类型的接收者生效；自定义类 / 类型不可判定一律原样。
+/// 运行时在这些内建原型上挂 `_` 前缀实现（原生同名但语义不同，不覆盖原生）。
+/// 新增映射只改这张表，不在 `_memberCallName` 里加分支。
+const Map<String, Map<String, String>> _memberRenameByType = {
+  'List': {
+    'sort': '_sort',
+    'join': '_join',
+    'indexOf': '_indexOf',
+    'map': '_map',
+  },
+  // `map` 在 Iterable 接收者上同样要改名（运行时可能是 Array，原生 map 无法
+  // 覆盖成惰性）；`where` / `expand` / `take` / `skip` 的惰性由原型同名实现承接。
+  'Iterable': {
+    'map': '_map',
+  },
+};
+
 String _memberCallName(
   Expression? receiver,
   String member,
@@ -2008,15 +2019,11 @@ String _memberCallName(
 ) {
   if (receiver == null) return member;
   final type = _staticTypeOf(receiver, scope, classes);
-  if (type == 'List') {
-    if (member == 'sort') return '_sort';
-    if (member == 'join') return '_join';
-    if (member == 'indexOf') return '_indexOf';
-    if (member == 'map') return '_map';
-  }
-  if (type == 'Iterable' && member == 'map') return '_map';
+  final renamed = _memberRenameByType[type]?[member];
+  if (renamed != null) return renamed;
   // 可调用对象：显式 `obj.call(...)` 与声明侧同步改名为 `invoke`（手册
-  // `call(...)` 行）；仅接收者静态类型可判定为「可调用类」时改写。
+  // `call(...)` 行）；仅接收者静态类型可判定为「可调用类」时改写。该判断依赖
+  // 类表的 isCallable，不是「内建类型 → 成员名」映射，故不进上表。
   if (member == 'call' && _typeIsCallable(type, classes)) return 'invoke';
   return member;
 }
