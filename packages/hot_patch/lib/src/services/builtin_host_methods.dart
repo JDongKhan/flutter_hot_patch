@@ -51,7 +51,7 @@ void _requestFrame() {
 }
 
 /// `log`：JS 侧 `print` / `debugPrint` → HotPatchLog。级别由 JS 侧一并传来
-/// （见 runtime_source 的 `G.print` / `G.debugPrint`：info / debug），未知级别
+/// （见 runtime_js 的 `G.print` / `G.debugPrint`：info / debug），未知级别
 /// 按 info 处理。
 void _log(String? level, Object? message) =>
     HotPatchLog.emit(_levelOf(level), '[js-log] $message');

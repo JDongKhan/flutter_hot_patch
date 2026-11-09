@@ -1,12 +1,12 @@
 
-// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 415a652d） =====
+// ===== 【1】运行环境｜IIFE 入口 + 全局对象 + 日志全局（版本 5c5e28ab） =====
 
 (function () {
   var G = typeof globalThis !== 'undefined'
     ? globalThis
     : Function('return this')();
-  if (G.__jsui && G.__jsuiVersion === '415a652d') { return; }
-  G.__jsuiVersion = '415a652d';
+  if (G.__jsui && G.__jsuiVersion === '5c5e28ab') { return; }
+  G.__jsuiVersion = '5c5e28ab';
 
 
 if (typeof G.__modules === 'undefined') {
@@ -956,7 +956,8 @@ __defineProtoMember(Map.prototype, {
 // ===== 【5】element 与事件句柄 =====
 
   // 元素的唯一判据：`__element === true`。
-  //   - 宿主元素（含宿主包装类 `new Text(...)` 的返回值）：`__type` 是**类型名字符串**；
+  //   - 宿主元素：`__type` 是类型名字符串（`Component.host`），或宿主包装类
+  //     实例（`__host=true`，类型名取类名）；
   //   - 组件元素：`Component` 实例**自身**就是元素（构造时写入 `__element` /
   //     `__type` / props，见 flutter.js 的 Component）。
   // 两者共用同一个标记，reconciler 不再按「原型上有没有 build」猜组件。
@@ -1674,7 +1675,7 @@ __defineProtoMember(Map.prototype, {
   //   - prop：props 里的 widget 数组（`TabBarView(children: [...])` /
   //     `PageView(children: [...])`），位置由 propsChildren 下发。
   //
-  // **是否懒由元素自己声明**：`el.lazyChildren === true`，由生成的 `__h`
+  // **是否懒由元素自己声明**：`el.lazyChildren === true`，由生成的宿主包装类
   // （flutter.js）按构建期配置打标。运行时**零类型知识**——不认识 PageView /
   // TabBarView / ListView，也不维护任何类型表；新增懒容器只改生成器配置
   // （shared/js_class_defs.dart）并重出产物，运行时代码不动。
@@ -1684,8 +1685,8 @@ __defineProtoMember(Map.prototype, {
   //
   // builder 只消费产物里的**显式形态协议**，不按类型名、不猜属性名——
   //   1) 命名构造（`.builder` / `.separated`）由生成的 JS 代理类下发
-  //      `children.__builder = {item, sep, count, ctx}`（内部键，由 __h 归入
-  //      children）；
+  //      `children.__builder = {item, sep, count, ctx}`（内部键，由
+  //      `Component.__splitHost` 归入 `__children`）；
   //   2) `delegate: SliverChildBuilderDelegate(...)` 由生成器译成
   //      `{__delegate:'builder', builder, childCount}` 放进 `children.delegate`。
   // 未来新增自定义滚动容器只要沿用上述任一协议即可，运行时无需登记类型。
@@ -2151,7 +2152,7 @@ __defineProtoMember(Map.prototype, {
     try {
       // 组件元素有两种来源，都带 `__element: true`：
       //   1. 翻译层 `new X(props)` 产出的 `Component` 实例（实例即元素）；
-      //   2. `__h(类, props)` 产出的元素描述（还没有实例，builder 代理走这条）。
+      //   2. `Component.host(类名, props)` 产出的宿主元素（builder 代理走这条）。
       // 只有「实例且未挂上树、未卸载」时才直接复用；同一实例出现在两个槽位时
       // （Dart 允许）按 props 再构造一份，避免状态串位。
       ci = (el instanceof C && !el.__unmounted && !el.__parent)

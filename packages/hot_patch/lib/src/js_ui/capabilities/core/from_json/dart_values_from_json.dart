@@ -32,7 +32,7 @@ Size? sizeFromJson(Object? v) {
 
 /// JSON → Offset（`{'dx': 0, 'dy': 1}`）。
 ///
-/// 生成器把 `Offset(...)` 译成该 JSON 形态（见 style_translators.offsetExprToJson）；
+/// 生成器把 `Offset(...)` 译成该 JSON 形态（运行时值类 `dart_values_js.dart` 的 `toJSON`）；
 /// 动画偏移（AnimatedSlide）等场景直接消费。
 Offset? offsetFromJson(Object? v) {
   if (v is! Map) return null;

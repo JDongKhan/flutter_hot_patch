@@ -39,12 +39,12 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
   // sliver 子结点提供者：按**构造类型**识别（与参数名无关）。
   //   - `SliverChildListDelegate([...])` → 元素数组；
   //   - `SliverChildBuilderDelegate((c, i) => ..., childCount: n)` → 方法名 + 计数。
-  // 产物不是元素（没有 `element: true` 标记），由元素工厂归入 children。
+  // 产物不是元素（没有 `element: true` 标记），由宿主包装类构造期归入 `__children`。
   final delegate = _delegateValue(e, ctx);
   if (delegate != null) return delegate;
 
   // 条件表达式：先按标量翻译；分支是 widget / widget 列表时改走元素翻译，
-  // 产物是运行时求值的 JS 三元（`flag ? __h(...) : null`）。
+  // 产物是运行时求值的 JS 三元（`flag ? new X(...) : null`）。
   if (e is ConditionalExpression) {
     final cond = _jsExprOrNull(e.condition, ctx);
     if (cond == null) return null;
@@ -110,7 +110,7 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
 
   // 列表字面量（`providers: [...]` / `actions: [...]` / `children: [...]`）：
   // 元素与任意值位置的构造**同一套语法翻译**（`new X({...})`）——翻译层不区分
-  // widget 与普通类：宿主包装类的构造内部再 `return __h('X', props)`，值类
+  // widget 与普通类：宿主包装类构造即宿主元素（`super(props)`），值类
   // （`TextSpan` / `Duration` …）则保持普通对象。仅 if/for/spread 这类集合
   // 语法仍走元素数组展开（`...(cond ? [a] : [b])`）。
   if (e is ListLiteral) {
@@ -135,7 +135,7 @@ Object? autoValue(Expression e, ElementTranslateContext ctx, {String? name}) {
 
 /// sliver 子结点提供者：按**构造类型**识别，与实参名无关。
 ///
-/// 产物形态（均不带 `element: true`，由 `__h` 归入 children 对象）：
+/// 产物形态（均不带 `element: true`，由宿主包装类构造期的 `__splitHost` 归入 `__children`）：
 ///   - `{__delegate: 'list', children: [元素…]}`；
 ///   - `{__delegate: 'builder', builder: '<方法名>', childCount: <jsExpr>}`。
 ///

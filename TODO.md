@@ -82,37 +82,38 @@
 ## 4. widget-class 协议重构（已完成）
 
 > 目标：不再让生成器判断「这个类是不是 widget」。所有构造统一翻译成
-> `new X({...})`；`__h` 下沉到 `flutter.js` 的宿主包装类内部；局部变量 / 字段 /
-> 列表 / 三目不再需要 widget 特判。
+> `new X({...})`；组件实例自身就是元素；局部变量 / 字段 / 列表 / 三目不再需要 widget 特判。
 >
-> 采用方案：**构造即实例 + 消费时归一化**（不做构造函数双模、不生成 XxxElement）。
+> 采用方案：**构造即元素 + 值对象归一化**（不做构造函数双模、不生成 XxxElement）。
 >
 > 分支：`feature/widget-class-protocol`
 > 起点：`5f3b5ac`（任务 9、局部 widget 变量、spread 修复已提交）
 
 ### 4.1 运行时协议
 
-- `__element(type, props)`：组件类元素描述（`{type, props, children, element}`）。
-- `__h(type, props)`：`type` 是函数时返回 `__element(type, props)`，不实例化。
-- `__asElement(v)` / `__asElementList(v)`：组件实例按普通类语义构造后，父级消费
-  时折算成元素描述。判据是原型上有没有 `build`（组件类的语言级特征），
-  **不查类型名表**，也不需要 `toJson` / 内部 token / 特殊标记。
-- `mount` / `patch` 入口、`__h` 的每个 props 值（含数组）都走同一归一化。
-- 生成类构造函数恢复普通语义：`new CommunityPage(props)` 即实例，首行保留
-  `this.props = args`，供归一化还原元素 props。
+- `Component` 实例自身就是元素：构造写入 `__element = true`、`__type = this.constructor`；
+  宿主包装类额外写 `__host = true`。reconciler 只认 `__element` 标记，不按原型上有没有
+  `build` 猜组件。
+- 宿主包装类在构造期由 `Component.__splitHost` 按**值形态**拆分：元素值 / 元素数组 /
+  `__builder` / delegate 进 `__children`，其余留在 `props`，与键名无关。
+- 值对象里的 Widget 字段由 `__descriptorOf` 摊成元素描述
+  `{type, props, children, element: true}`；普通子结点本身就是元素，不需要二次折算。
+- 生成类构造恢复普通语义：`new CommunityPage(props)` 即元素，首行保留
+  `this.props = args`。
 
 ### 4.2 宿主包装类生成（已完成）
 
 - `flutter.js` 为 `hostWrapperTypes`（宿主 widget + 数据载体，排除逻辑组件 /
-  builder 代理）生成包装类：`class Text { constructor(props) { return __h('Text', props); } }`。
+  builder 代理）生成 `class Text extends Component {}` 形式的包装类：构造即宿主元素，
+  props 由基类构造期拆分。
 - 数据载体 `InputDecoration` 同样生成包装类。
-- builder 命名构造类型（ListView 等）保持真实类，供 `.builder/.separated`
-  挂载；普通构造 / delegate 形态仍由翻译层发 `__h('ListView', ...)` 宿主结点。
+- builder 命名构造类型（ListView 等）保持真实类，供 `.builder/.separated` 挂载；
+  普通构造 / delegate 形态由包装类构造即宿主元素。
 
 ### 4.3 翻译器统一发射 `new`（已完成）
 
 - 有 JS 类的类型（宿主包装 / 组件 / 逻辑组件 / 代理）→ `new Type(props)`；
-  无 JS 类的原生注入类型 → `__h('Type', props)` 兜底。
+  无 JS 类的原生注入类型由声明它的源文件产物里的同名包装类承接。
 - 宿主类型纳入 `usedWidgetPackages`，组件产物从 `flutter.js` import 对应类。
 - 局部 widget 变量 / 字段 / 列表 / 三目的产物均为 `new`（如
   `new Text({data: …})`、`new StatelessCard({…})`）。
@@ -127,24 +128,22 @@
 
 - 删除局部值路径的 widget 白名单（`widgetClassNames` / `_isWidgetValueExpr`），改为仅排除
   模型类与值对象。
-- 更新架构文档、组件支持文档、使用手册与生成器 README（中英文）：产物协议改为
-  `new Type(props)`、宿主包装类、`__asElement` 归一化。
-- 版本协议兼容边界：
-  - **旧产物在新运行时下可用**：`__h('X', props)` 仍产出元素描述；旧组件类忽略多余实参，
-    构造即实例，`__asElement` 按原型 `build` 归一化；
-  - **新产物需要新运行时 / 新 `flutter.js`**：产物会 `import` 宿主包装类与 `__asElement`，
-    旧运行时缺少这些导出；补丁包按整包更新，不存在新旧混载；
-  - 无 JS 类的类型（无产物自定义组件 / 原生注入）继续走 `__h('X', props)` 兜底。
+- 更新架构文档、组件支持文档、使用手册与生成器 README：产物协议改为
+  `new Type(props)`、宿主包装类、`__element` / `__children` 拆分、`__descriptorOf` 归一化。
+- 兼容边界：
+  - 当前运行时不再支持旧产物形态；补丁包需按整包重出；
+  - 新产物需要与之配套的 `flutter.js` / `runtime.js`，不存在新旧混载；
+  - 无 JS 类的类型由声明它的源文件产物里的同名包装类承接。
 - 全量 demo 验证：TestWidget、Provider、PageView、列表页、详情页均由用户手动确认。
 
 ### 4.5 已知风险
 
 | 风险 | 处理 |
 |---|---|
-| 自定义组件的用户代码构造会执行字段初始化（控制器 / Key 句柄） | 已修复二次构造：实例随元素下发（`el.inst`），mount 直接复用、不再 new 第二次；patch 复用旧实例保持状态 |
-| 懒容器声明式子项（`TabBarView(children:)` / `PageView(children:)`）一次性挂载全部子页 | **已修复（2026-10-23 重构）**：懒与否改为**构建期配置**——生成器 `js_widget_defs.dart` 的 `lazyChildHostTypes` 写入 `flutter.js`，`__h` 给元素打 `lazyChildren` 标记；运行时只认元素标记，零类型表。懒槽位协议不变：先下发零尺寸占位，宿主 inflate 时经 `__lazyFn` 回调 `lazyMount`、dispose 时经 `__lazyOffFn` 回调 `lazyUnmount`；真实子树挂成占位结点的 `child` slot（占位 id/key 不变）。builder 形态（`ListView.builder` / `GridView.builder`）在懒容器下**连 itemBuilder 调用也推迟**，宿主 inflate 到该项时才执行 |
-| builder 代理类型（ListView 等）无宿主包装类 | 普通构造 / delegate 形态仍发 `__h('ListView', …)` 宿主结点；`.builder/.separated` 才 `new ListView(props)` |
+| 自定义组件的用户代码构造会执行字段初始化（控制器 / Key 句柄） | 已修复二次构造：实例随元素下发，mount 直接复用、不再 new 第二次；patch 复用旧实例保持状态 |
+| 懒容器声明式子项（`TabBarView(children:)` / `PageView(children:)`）一次性挂载全部子页 | **已修复（2026-10-23 重构）**：懒与否改为**构建期配置**——生成器 `js_class_defs.dart` 的 `lazyChildHostTypes` 写入 `flutter.js`（包装类 `static __lazy` / `Component.host` 的 lazyRule），`Component.__splitHost` 在构造期给元素打 `lazyChildren` 标记；运行时只认元素标记，零类型表。懒槽位协议不变：先下发零尺寸占位，宿主 inflate 时经 `__lazyFn` 回调 `lazyMount`、dispose 时经 `__lazyOffFn` 回调 `lazyUnmount`；真实子树挂成占位结点的 `child` slot（占位 id/key 不变）。builder 形态（`ListView.builder` / `GridView.builder`）在懒容器下**连 itemBuilder 调用也推迟**，宿主 inflate 到该项时才执行 |
+| builder 代理类型（ListView 等）无宿主包装类 | 普通构造 / delegate 形态由包装类构造即宿主元素；`.builder/.separated` 才 `new ListView(props)` |
 | 数据载体 / InputDecoration | 生成包装类，保持宿主 renderer 读取方式不变 |
 | 宿主包装类名与本地组件类名同名 | 暂未处理（JS 会重复声明）；命名冲突时需单独约定 |
 | const widget 身份 | 仍按 props/key diff，不依赖对象身份 |
-| 旧产物兼容 | 旧产物里的 `__h(X, props)` / 实例构造继续按原语义工作 |
+| 旧产物兼容 | 当前运行时不再支持旧产物形态；补丁包需按整包重出（历史兼容说明见 CHANGELOG） |

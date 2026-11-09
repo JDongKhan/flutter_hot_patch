@@ -14,9 +14,8 @@
 ///     不解析调用形状；
 ///   - 所有具名实参**按原名**放进 `props`，值按形态翻译：widget 构造 → 元素
 ///     结点、widget 列表 → 元素数组、样式/枚举 → 结构化值；
-///   - 元素工厂 `__h` 再按**显式标记**（`element: true`，由 `__h` 给每个元素
-///     统一加）把 widget 值归入按原名作 key 的 `children` 对象，运行时从对象
-///     按 prop 名取；
+///   - 宿主包装类在构造期由 `Component.__splitHost` 按**值形态**把 widget 值
+///     归入按原名作 key 的 `__children` 对象，运行时从对象按 prop 名取；
 ///   - `delegate:` 按构造**类型**转换后放进 `children`，不进 props；
 ///   - 具名实参是否为回调**只看形参声明类型**（源码构造签名，
 ///     [CtorSignatures]），不看名字（`onTap` / `buttonClick` 一视同仁）；

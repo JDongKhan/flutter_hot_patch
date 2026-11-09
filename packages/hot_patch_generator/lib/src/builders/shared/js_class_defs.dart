@@ -17,9 +17,8 @@ import 'source_index.dart';
 
 export 'host_types.dart';
 
-/// 共享结点工厂 `__h` 的宿主 package：并入基础包 flutter 的模块
-/// （`patch/flutter.js`）。其它 package 模块与组件产物统一从它
-/// `import { __h }`，使 `__h` 全局只定义一次。
+/// 共享 `Component` 基类 / 宿主包装类的宿主 package：并入基础包 flutter 的模块
+/// （`patch/flutter.js`）。其它 package 模块与组件产物统一从它 import 需要的类。
 const String nodeHelperPackage = 'flutter';
 
 /// package 模块产物路径（**一个 package 一个文件**）。
@@ -144,7 +143,7 @@ const Set<String> valueClassTypes = {'OverlayEntry'};
 /// 懒容器类型 → 触发懒的 props 键（空列表 = 无条件懒）。
 ///
 /// **这是懒加载语义的唯一事实源**（构建期配置）：生成器把它写进 `flutter.js`，
-/// 由 `__h` 给元素打 `lazyChildren` 标记；运行时只认元素标记，不认识任何类型，
+/// 由包装类 `static __lazy` / `Component.host` 的 lazyRule 在构造期打 `lazyChildren` 标记；运行时只认元素标记，不认识任何类型，
 /// 也不维护任何类型表 —— 新增懒容器（包括 carousel_slider 这类三方组件）只改
 /// 这里 + 重出产物，运行时代码零改动。
 ///

@@ -4,7 +4,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 import 'stateless_card.dart';
 
 /// 局部 widget 变量 / 列表演示：验证 `Text text = Text();` 这类写法也按
-/// 元素翻译（`var text = __h('Text', {...})`），而不是被当成模型构造丢弃。
+/// 元素翻译（`var text = new Text({...})`），而不是被当成模型构造丢弃。
 @PatchEntry('TestWidget')
 class TestWidget extends StatelessWidget {
   const TestWidget({super.key});

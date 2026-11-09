@@ -3,12 +3,11 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 /// Map 语法 demo（「基础语法 · 映射」页点击进入）。
 ///
-/// Dart `Map` 字面量在 JS 侧就是普通对象（`{k: v}`），普通对象没有
-/// `length` / `keys` / `values` / `entries` / `forEach` / `remove` 等成员；
-/// 挂 `Object.prototype` 会污染所有对象（项目规则禁止），因此由构建期
-/// 「接收者静态类型 = Map + 成员名」的固定映射表把调用点改写成运行时
-/// 自由函数（`__mapLength` / `__mapKeys` / `__mapForEach` …），与 Array 的
-/// `_sort` / `_join` 映射是同一套机制——自定义类上的同名成员原样保留。
+/// Dart `Map` 字面量在 JS 侧是原生 `Map`（`new Map([[...]])`）：成员由运行时
+/// 在 `Map.prototype` 上补齐；`keys` / `values` / `entries` 因 JS 同名成员是
+/// 方法，按 `_keys` / `_values` / `_entries` 改写（仅接收者可判定为 Map 时生效）。
+/// 下标 `m[k]` / `m[k] = v` 按接收者类型改写成 `__idx` / `__idxSet`，兼容原生
+/// Map 与宿主回包的普通对象；自定义类上的同名成员原样保留。
 
 @PatchEntry('MapDetail')
 class MapDetail extends StatefulWidget {
@@ -78,9 +77,9 @@ class _MapDetailState extends State<MapDetail> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         const Text(
-          'Map 字面量是 JS 普通对象：成员由构建期映射表改写成运行时自由函数'
-          '（length / keys / values / entries / forEach / remove / putIfAbsent / '
-          'update / addAll / removeWhere / clear 等），只对可判定为 Map 的接收者生效。',
+          'Map 字面量是原生 JS Map（new Map([[...]])）：成员由运行时在 Map.prototype '
+          '补齐，keys / values / entries 改名为 _keys / _values / _entries；下标读写按'
+          '接收者类型改写，只对可判定为 Map 的接收者生效。',
           style: TextStyle(fontSize: 13, color: Colors.black54),
         ),
         const SizedBox(height: 12),

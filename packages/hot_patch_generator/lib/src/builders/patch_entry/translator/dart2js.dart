@@ -16,7 +16,7 @@ import 'js_value.dart';
 /// 组件与普通类共用这一条渲染路径。方法体、getter、builder 子树都已由
 /// analyze_dart_class 预渲染成 JS 字符串——本函数只负责拼装，不再遍历 AST。
 /// **没有对外工厂函数**：元素的 type 就是类本身（宿主 widget 则是类型名字符串），
-/// 由渲染层统一写成 `__h(type, props, children)`。
+/// 由渲染层统一写成 `new Type(props)`；元素实例自带 `__element`。
 /// [baseClass]：JS 基类名（见 `jsBaseClassOf`）；null = 不继承。项目类与 SDK
 /// 基类都走原生 `extends`，`super` 链由引擎维护。
 String renderClassDecl(

@@ -132,7 +132,7 @@ class WidgetModuleBuilder implements Builder {
   @override
   Map<String, List<String>> get buildExtensions {
     final pkgs = <String>{
-      // `__h` 宿主（基础包 flutter）即使未注册任何 flutter widget 也要产出。
+      // 基础包 flutter（Component / 宿主包装类）即使未注册任何 flutter widget 也要产出。
       nodeHelperPackage,
       ...registeredWidgetPackages().keys,
     }.toList()..sort();
@@ -252,7 +252,7 @@ String withClassStatics(String classSource, String statics) {
   return '$head\n$statics${classSource.substring(i)}';
 }
 
-/// 宿主包装类源码：类名 = 宿主类型名，构造即产出元素描述（type 仍是**字符串**）。
+/// 宿主包装类源码：类名 = 宿主类型名，构造即宿主元素（`__host=true`，type 名取类名）。
 /// 宿主结点的实例化由宿主注册表完成，reconciler 从不 `new` 这个类。
 ///
 /// 同一份源码也用于 `@PatchIgnore(isComponent: true)` 的组件包装类（生成在
@@ -873,8 +873,8 @@ export class TweenAnimationBuilder extends __ListenableSubscriber {
 /// 字符串（`Component.host('Text', {...})`），由宿主注册表映射成 Flutter widget；
 /// 本模块只在有 JS 逻辑时才有存在意义。
 ///
-/// 一个 package 一个文件（文件名即包名）。共用元素工厂 `__h` / 归一化
-/// `__asElement` 只在其宿主包（[nodeHelperPackage]）里定义一次，其它包从
+/// 一个 package 一个文件（文件名即包名）。共享 `Component` 基类 / 宿主包装类只在
+/// 其宿主包（[nodeHelperPackage]）里定义一次，其它包从
 /// `<host>.js` 相对 import。
 /// 产物自包含（不依赖运行时 `__jsui`），宿主既有渲染路径与 JS 运行时都能
 /// 消费同一份产物。
@@ -887,7 +887,7 @@ String renderPackageModule(String package, Set<String> types) {
     ..writeln();
   if (package == nodeHelperPackage) {
     // 核心符号统一从 `G.__core` 解构（跨模块只走 G，见 runtime_js.dart【11.5】）。
-    // 必须写在结点工厂之前：`__h` / `__asElement` 直接引用这些核心函数，
+    // 必须写在组件 / 包装类定义之前：它们直接引用这些核心函数，
     // 模块求值期（Colors / 值类构造）也可能用到。
     b
       ..writeln('const G = globalThis;')

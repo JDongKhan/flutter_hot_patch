@@ -99,7 +99,7 @@ bool isIgnoredClass(CompilationUnit unit, String className) {
 /// 类是否带 `@PatchIgnore(isComponent: true)`。
 ///
 /// true = 不翻译该类，但在**声明它的源文件产物**里生成同名包装类
-/// （构造即 `__h('类名', props)`），使用方按 Dart 一比一 `new 类名({...})` 构造；
+/// （`class X extends Component {}`，构造即宿主元素），使用方按 Dart 一比一 `new 类名({...})` 构造；
 /// false = 整类忽略（不产出任何 JS 类，引用它的结点直接丢弃）。
 bool isIgnoredComponentClass(ClassDeclaration decl) {
   final a = findAnnotation(decl.metadata, 'PatchIgnore');

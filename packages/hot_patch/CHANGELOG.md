@@ -1,3 +1,5 @@
+> 注：本文件是历史版本记录，早期协议名称可能与当前实现不同；当前协议见 `docs/项目架构文档.md`。
+
 ## 0.4.0
 
 **破坏性：配套生成器 0.8.0；provider 不再有宿主侧映射，`context.watch/read` 不再注册宿主 op。旧产物（含宿主 `ChangeNotifierProvider` / `Consumer` 结点）需重出补丁包。**

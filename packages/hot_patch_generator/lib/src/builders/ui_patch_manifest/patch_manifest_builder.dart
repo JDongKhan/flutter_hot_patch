@@ -20,8 +20,8 @@ import 'package:glob/glob.dart';
 
 import '../shared/artifact_protocol.dart';
 
-/// patch 协议版本：**产物 JS 与宿主 Dart 之间的契约版本**（`__h` / 元素
-/// `element: true` / `__delegate` / `factory` / `itemBuilder` / 句柄信封
+/// patch 协议版本：**产物 JS 与宿主 Dart 之间的契约版本**（元素实例
+/// `__element` / 描述 `element: true` / `__delegate` / `factory` / `itemBuilder` / 句柄信封
 /// `{ch,data}` / 颜色 `#AARRGGBB`）。
 ///
 /// 取值见 [patchProtocolVersion]（= 生成器包版本），只写进清单的 `protocol`

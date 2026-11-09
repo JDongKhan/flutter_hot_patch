@@ -6,7 +6,7 @@
 // CachedNetworkImage。
 //
 // JS 侧写法（生成器由 Dart 的 `CachedNetworkImage(imageUrl: …, fit: …)` 产出）：
-//   __h('CachedNetworkImage', { source: "https://…", height: 120, fit: "cover" })
+//   new CachedNetworkImage({ source: "https://…", height: 120, fit: "cover" })
 //   source → 包要求的 imageUrl。
 //
 // 不还原的部分：placeholder / errorWidget（包内均为 builder 闭包，非 Widget）、

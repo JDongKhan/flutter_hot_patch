@@ -441,7 +441,7 @@ void registerScrollWidgets(JsWidgetRegistry r) {
     return build(null);
   });
 
-  // CustomScrollView：slivers 按原名进 props，元素工厂抽成有序 children
+  // CustomScrollView：slivers 按原名进 props，宿主包装类构造期抽成有序 __children
   // （宿主侧 SliverList/SliverAppBar 等已注册为 widget）；controller 与
   // ListView 同款分流 _scrollControllerHost 桥接。
   r.register('CustomScrollView', (c) {

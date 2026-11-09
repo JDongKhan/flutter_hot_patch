@@ -36,7 +36,7 @@ class PatchEntry {
 ///
 /// [isComponent] 决定使用方怎么翻译：
 ///   - `true`：不翻译该类，但在声明它的源文件产物里生成同名**包装类**
-///     （`constructor(props) { return __h('类名', props); }`），使用方仍按 Dart
+///     （`class 类名 extends Component {}`，构造即宿主元素），使用方仍按 Dart
 ///     一比一翻译成 `new 类名({...})`，宿主按 `registerNativeComponent` 注册的
 ///     原生实现渲染；
 ///   - `false`（默认）：整类忽略——不翻译、不生成任何类，使用方引用它的结点

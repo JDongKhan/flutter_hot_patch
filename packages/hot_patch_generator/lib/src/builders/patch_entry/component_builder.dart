@@ -826,7 +826,7 @@ String _renderJsProduct(
   }
 
   // `@PatchIgnore(isComponent: true)`：类本身不翻译，但在**它自己的源文件产物**
-  // 里生成同名包装类（构造即 `__h('类名', props)`，宿主持久化后由原生实现渲染），
+  // 里生成同名包装类（`class X extends Component {}`，构造即宿主元素，宿主持久化后由原生实现渲染），
   // 使用方按 Dart 一比一 `new 类名({...})` 构造。私有类不 export（只在本产物可见）。
   for (final type in wrapperClasses) {
     b
@@ -836,16 +836,15 @@ String _renderJsProduct(
   }
 
   // 按 package 拼装模块 import：只 import **有 JS 类的类型**（`Builder` /
-  // `ChangeNotifierProvider` / sliver 代理等），元素写成 `__h(Builder, ...)`
-  // 需要类引用。宿主 widget 的元素 type 是字符串字面量（`__h('Text', ...)`），
-  // 由宿主注册表映射，无需 import。
+  // `ChangeNotifierProvider` / sliver 代理等），元素写成 `new Builder(...)`；
+  // 宿主 widget 写 `new Text(...)`，由宿主注册表按类名映射，不需要 type 字符串。
   final importsByPackage = <String, Set<String>>{};
   for (final entry in usedWidgets.entries) {
     (importsByPackage[entry.key] ??= <String>{}).addAll(entry.value);
   }
-  // 结点工厂 `__h` 不再对外导出：包装类构造即实例（`super(props)`），元素
-  // 拆分由运行时在 mount/patch 完成。`@PatchIgnore(isComponent: true)` 的包装类
-  // 同样是宿主包装类，不需要 __h。
+  // 统一走类构造：包装类构造即实例（`super(props)`），宿主包装类在构造期
+  // 由 Component.__splitHost 拆分 props / __children。`@PatchIgnore(isComponent: true)`
+  // 的包装类同样是宿主包装类。
   // 运行时值类（`flutter.js` 里 `export class` 的值对象 / 控制器 / 枚举）：
   // 产物在值位置直接写 `new Color(...)` / `Colors.red` / `MediaQuery.of(...)`，
   // 这些名字不在 any 组件的 usedWidgets 里（它们不是元素），必须按实际出现的

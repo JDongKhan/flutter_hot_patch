@@ -55,7 +55,7 @@ export class MapDetail extends StatefulWidget {
           "height": 8
         }))),
         (this.__k2 || (this.__k2 = new Text({
-          "data": "Map 字面量是 JS 普通对象：成员由构建期映射表改写成运行时自由函数" + "（length / keys / values / entries / forEach / remove / putIfAbsent / " + "update / addAll / removeWhere / clear 等），只对可判定为 Map 的接收者生效。",
+          "data": "Map 字面量是原生 JS Map（new Map([[...]])）：成员由运行时在 Map.prototype " + "补齐，keys / values / entries 改名为 _keys / _values / _entries；下标读写按" + "接收者类型改写，只对可判定为 Map 的接收者生效。",
           "style": new TextStyle({
             "fontSize": 13,
             "color": Colors.black54

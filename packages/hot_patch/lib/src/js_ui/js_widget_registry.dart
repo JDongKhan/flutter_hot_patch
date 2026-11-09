@@ -232,7 +232,7 @@ Widget? buildJsElement(Object? raw) {
 
 /// 解析元素 `children` 槽位协议 → 按 Dart 实参原名索引的槽位表。
 ///
-/// 协议唯一（由产物里的 `__h` 产出）：
+/// 协议唯一（由宿主包装类构造期的 `Component.__splitHost` 产出）：
 ///   - `__items`：builder 代理类展开结果（有序子结点）；
 ///   - 数组：widget 列表；
 ///   - `{__delegate: 'list' | 'builder', …}`：delegate 描述；

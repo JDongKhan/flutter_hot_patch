@@ -7,7 +7,7 @@
 // capabilities/js_ui_library.dart 的注册表驱动，机制完全一致。
 //
 // 因此「新增一个能力」= 建目录 + 写一个 JsUiLibrary 子类 + 在 _seedBuiltins
-// 里加一行；**本文件与 runtime_source / js_widget_registry / js_ui_widget
+// 里加一行；**本文件与 runtime_js / js_widget_registry / js_ui_widget
 // 从此不再变动**。Flutter 基础视觉组件的宿主映射属框架地基，见
 // base_widget/base_widget_bridge.dart。
 //

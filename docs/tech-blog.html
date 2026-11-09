@@ -1026,7 +1026,7 @@ td code{font-size:11.5px}
             <text class="arch-node-sub" x="278" y="318">mini-react</text>
             <rect class="arch-node arch-node--dark" x="404" y="281" width="128" height="50" rx="8"/>
             <text class="arch-node-title" x="416" y="302">flutter.js</text>
-            <text class="arch-node-sub" x="416" y="318">__h · wrappers</text>
+            <text class="arch-node-sub" x="416" y="318">Component · 包装类</text>
             <rect class="arch-node arch-node--dark" x="542" y="281" width="136" height="50" rx="8"/>
             <text class="arch-node-title" x="554" y="302">components/*.js</text>
             <text class="arch-node-sub" x="554" y="318">组件产物</text>
@@ -1082,11 +1082,12 @@ td code{font-size:11.5px}
             <rect class="arch-rail" x="840" y="16" width="224" height="676" rx="14"/>
             <rect x="841" y="17" width="222" height="674" rx="13" fill="url(#railGrad)"/>
             <text class="arch-rail-title" x="860" y="47">跨语言契约</text>
-            <text class="arch-sub" x="860" y="64">contract · 只增不改</text>
+            <text class="arch-sub" x="860" y="64">contract · 版本化</text>
 
             <text class="arch-rail-key" x="860" y="98">element</text>
             <text class="arch-rail-val" x="860" y="115">{ type, props,</text>
-            <text class="arch-rail-val" x="860" y="129">  children }</text>
+            <text class="arch-rail-val" x="860" y="129">  children,</text>
+            <text class="arch-rail-val" x="860" y="143">  element: true }</text>
 
             <text class="arch-rail-key" x="860" y="166">patch ops</text>
             <text class="arch-rail-val" x="860" y="183">add / remove / update</text>
@@ -1282,7 +1283,7 @@ bash start_patch_server.sh
       </div>
       <ul class="check-list">
         <li>只改业务 Dart：重跑 <code>start_patch_server.sh</code>，在 App 里重进该页面即可看到新产物。</li>
-        <li>改运行时 Dart（<code>runtime_source.dart</code> 等）：随 App 注入，<strong>热重启不生效，必须完全重启 App</strong>。</li>
+        <li>改运行时 JS 源（<code>packages/hot_patch_generator/lib/src/builders/runtime/js/**</code>）：重跑 build_runner，随 <code>patch/runtime.js</code> 发布，页面重进 / 重载生效，<strong>不需要重装 App</strong>。</li>
         <li>改组件属性：生成侧与运行侧要同时更新，详见<a href="#ui">组件支持总览</a>。</li>
       </ul>
     </section>
@@ -1343,8 +1344,8 @@ bash start_patch_server.sh
           <p>同一语法现象只有一处实现；不存在 per-widget / per-class 的翻译器子类。组件与普通类共用同一条翻译路径。</p>
         </div>
         <div class="card">
-          <h4>协议只增不改</h4>
-          <p><code>__h</code>、element 形态、patch ops、句柄信封、颜色序列化、<code>lazyChildren</code> 等已发布协议只增不改语义；破坏性改动必须升主协议版本并给迁移方案。</p>
+          <h4>协议版本化</h4>
+          <p>当前协议（element 形态 <code>__element</code> / <code>__children</code>、patch ops、句柄信封、颜色序列化、<code>lazyChildren</code>）按只增不改维护；必须替换已发布形态时，升主协议版本并给迁移方案。</p>
         </div>
         <div class="card">
           <h4>设计变更即清理</h4>
@@ -1401,7 +1402,7 @@ bash start_patch_server.sh
           <thead><tr><th style="width:27%">Builder</th><th>产出</th><th style="width:30%">说明</th></tr></thead>
           <tbody>
             <tr><td><code>patch_entry</code></td><td><code>patch/&lt;原路径&gt;.js</code></td><td>组件 / 模型 / 单例，与 <code>lib/</code> 镜像</td></tr>
-            <tr><td><code>ui_widget</code></td><td><code>patch/&lt;package&gt;.js</code></td><td>包级模块：<code>__h</code>、宿主包装类、builder 代理</td></tr>
+            <tr><td><code>ui_widget</code></td><td><code>patch/&lt;package&gt;.js</code></td><td>包级模块：<code>Component</code> 基类、宿主包装类、builder 代理</td></tr>
             <tr><td><code>ui_third_party_js</code></td><td><code>patch/packages/&lt;package&gt;.js</code></td><td>宿主 <code>js/**.js</code> 原样拷贝</td></tr>
             <tr><td><code>ui_project_module</code></td><td><code>patch/&lt;package&gt;.js</code></td><td>本地依赖包中被引用到的类（跨包翻译）</td></tr>
             <tr><td><code>ui_runtime</code></td><td><code>patch/runtime.js</code></td><td>整个 JS 运行时，一个文件</td></tr>
@@ -1446,12 +1447,12 @@ bash start_patch_server.sh
         <div class="tl-item">
           <span class="tl-time">STAGE 04 · build 树翻译</span>
           <b>没有 per-widget 实现，只有值形态分派</b>
-          <p><code>element_json.dart</code> 是统一入口，<code>value_forms.dart</code> 按值的形态（字面量 / 构造 / 静态工厂 / 常量引用 / 列表 / 闭包）分派，结构化样式由 <code>style_translators.dart</code> 转换。所有实参按原名进 props。</p>
+          <p><code>element_json.dart</code> 是统一入口，<code>value_forms.dart</code> 按值的形态（字面量 / 构造 / 静态工厂 / 常量引用 / 列表 / 闭包）分派，结构化样式的运行时值类见 <code>builders/runtime/js/style_values_js.dart</code>。所有实参按原名进 props。</p>
         </div>
         <div class="tl-item">
           <span class="tl-time">STAGE 05 · 产物组装</span>
           <b>路径镜像 + 依赖 import + 清单 hash</b>
-          <p>产物与 <code>lib/</code> 路径一一对应；<code>flutter.js</code> 生成宿主包装类与 <code>__h</code>；最后 <code>ui_patch_manifest</code> 用 <code>findAssets('patch/**.js')</code> 列出全部 JS 并逐个算 hash。</p>
+          <p>产物与 <code>lib/</code> 路径一一对应；<code>flutter.js</code> 生成 <code>Component</code> 基类、宿主包装类与值类；最后 <code>ui_patch_manifest</code> 用 <code>findAssets('patch/**.js')</code> 列出全部 JS 并逐个算 hash。</p>
         </div>
       </div>
 
@@ -1608,7 +1609,7 @@ bash start_patch_server.sh
       <div class="section-head">
         <div class="section-kicker"><span class="line"></span>06 / Contracts</div>
         <h2 id="protocol-title">协议、句柄与版本</h2>
-        <p>已发布的 JS 协议与运行时策略只增不改。破坏性改动必须升主协议版本、给出兼容或迁移方案，并与开发确认。</p>
+        <p>协议遵循「新增只做加法、破坏性变更升主协议版本」。下表按<strong>当前产物形态</strong>描述：当前产物没有额外的元素构造层，宿主包装类与组件类统一构造即实例（<code>new Type(props)</code>），实例自带 <code>__element</code> / <code>__type</code>，由 reconciler 直接消费。</p>
       </div>
 
       <h3>跨语言协议一览</h3>
@@ -1616,8 +1617,9 @@ bash start_patch_server.sh
         <table>
           <thead><tr><th style="width:22%">协议</th><th style="width:38%">形态</th><th>说明</th></tr></thead>
           <tbody>
-            <tr><td>element 描述</td><td><code>{ type, props, children }</code></td><td>结点工厂 <code>__h(type, props)</code> 生成；宿主按 <code>type</code> 找 renderer</td></tr>
-            <tr><td>children 拆分</td><td>按<strong>值形态</strong>而非键名</td><td>值是 element 或 element 数组 / delegate 描述 → 按原名移入 <code>children</code>；其余留在 <code>props</code></td></tr>
+            <tr><td>元素实例</td><td><code>new Type(props)</code>，实例带 <code>__element</code> / <code>__type</code></td><td>构造即实例；宿主包装类与 JS 组件类同形，reconciler 只认 <code>__element</code> 标记</td></tr>
+            <tr><td>children 拆分</td><td>宿主包装类在构造期由 <code>Component.__splitHost</code> 按<strong>值形态</strong>拆分</td><td>元素值 / 元素数组 / <code>__builder</code> / delegate 进 <code>__children</code>；其余留在 <code>props</code>，与键名无关</td></tr>
+            <tr><td>元素描述</td><td><code>{ type, props, children, element: true }</code></td><td>值对象内联 / 跨桥时由 <code>__descriptorOf</code> 归一化；不进 reconciler 树</td></tr>
             <tr><td>factory</td><td><code>props.factory = 'separated'</code></td><td>命名构造 / 静态工厂的唯一信号；构造名不单独进 props</td></tr>
             <tr><td>builder delegate</td><td><code>{ __delegate:'builder', builder, childCount }</code></td><td>懒容器 / 列表代理只消费这个显式协议</td></tr>
             <tr><td>事件</td><td>宿主 widget：<code>{ __fn: id }</code>；JS 组件：可调用闭包</td><td>按最终消费方分流；构建期锚定，禁止运行时按事件名分发</td></tr>
@@ -1979,7 +1981,7 @@ bash start_patch_server.sh
         <span><b>已注册类型</b> 81</span>
         <span><b>翻译入口</b> element_json.dart</span>
         <span><b>值形态</b> value_forms.dart</span>
-        <span><b>产物登记</b> js_widget_defs.dart</span>
+        <span><b>产物登记</b> js_class_defs.dart</span>
         <span><b>宿主注册</b> JsWidgetRegistry</span>
       </div>
       <p class="subtle">下列为按类型整理的代表组件，不是全量清单；完整属性、默认值与限制以 <code>docs/组件支持文档.md</code> 为准。</p>
@@ -1988,7 +1990,7 @@ bash start_patch_server.sh
       <div class="grid grid-2">
         <div class="card">
           <h4>实参按原名进 props</h4>
-          <p><code>child</code> / <code>children</code> / <code>slivers</code> / <code>tabs</code> 都是普通具名实参。<code>__h</code> 在运行时按<strong>值形态</strong>拆分：元素值、元素数组、delegate 描述进 <code>children</code>，其余留在 <code>props</code>，与键名无关。</p>
+          <p><code>child</code> / <code>children</code> / <code>slivers</code> / <code>tabs</code> 都是普通具名实参。宿主包装类在构造期由 <code>Component.__splitHost</code> 按<strong>值形态</strong>拆分：元素值、元素数组、<code>__builder</code>、delegate 描述进 <code>__children</code>，其余留在 <code>props</code>，与键名无关。</p>
         </div>
         <div class="card">
           <h4>命名构造只存在于调用形状</h4>
@@ -2034,7 +2036,7 @@ bash start_patch_server.sh
         </ul>
 
         <h4>懒容器：是否懒只在构建期决定</h4>
-        <p>唯一事实源是生成器的 <code>lazyChildHostTypes</code>。生成器把它写进 <code>flutter.js</code>，<code>__h</code> 给元素打 <code>lazyChildren: true</code>；运行时只认这个元素标记，不认识具体类型。只有「子项尺寸由容器强制、不由内容决定」的容器才能懒。</p>
+        <p>唯一事实源是生成器的 <code>lazyChildHostTypes</code>。生成器把规则写进 <code>flutter.js</code>：无条件懒用包装类的 <code>static __lazy</code>，条件懒（如带 <code>itemExtent</code> 的 <code>ListView</code>）用 <code>Component.host(..., lazyRule)</code>；<code>Component.__splitHost</code> 在构造期打 <code>lazyChildren: true</code>。运行时只认这个元素标记，不认识具体类型。只有「子项尺寸由容器强制、不由内容决定」的容器才能懒。</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th style="width:32%">可以懒</th><th>不要懒</th></tr></thead>
@@ -2417,8 +2419,8 @@ bash start_patch_server.sh
           <div>
             <h4>构建期</h4>
             <ul class="note-list">
-              <li><code>lazyChildHostTypes</code> 是唯一事实源，写出 <code>__lazyChildrenOf</code></li>
-              <li><code>__h</code> 给元素打 <code>lazyChildren: true</code></li>
+              <li><code>lazyChildHostTypes</code> 是唯一事实源，构建期生成包装类的 <code>static __lazy</code> 或 <code>Component.host</code> 的 lazyRule</li>
+              <li>包装类 / <code>Component.host</code> 按构建期规则，在构造期打 <code>lazyChildren: true</code></li>
               <li>新增 / 调整懒容器 = 改这一处配置 + 重出产物</li>
             </ul>
           </div>
@@ -2605,7 +2607,7 @@ bash start_patch_server.sh
             <thead><tr><th style="width:30%">路径</th><th>内容</th></tr></thead>
             <tbody>
               <tr><td><code>patch/&lt;原路径&gt;.js</code></td><td>组件 / 模型产物，与 <code>lib/</code> 镜像</td></tr>
-              <tr><td><code>patch/flutter.js</code></td><td><code>__h</code>、<code>__asElement</code>、宿主包装类、值类、builder 代理</td></tr>
+              <tr><td><code>patch/flutter.js</code></td><td><code>Component</code> 基类、宿主包装类、值类、builder 代理</td></tr>
               <tr><td><code>patch/runtime.js</code></td><td>mini-react、句柄表、各能力片段；一个文件，分区注释</td></tr>
               <tr><td><code>patch/packages/&lt;package&gt;.js</code></td><td>宿主维护的三方 JS</td></tr>
               <tr><td><code>patch/manifest.json</code> + <code>patch.zip</code></td><td>清单与热更分发包</td></tr>
@@ -2628,7 +2630,7 @@ bash start_patch_server.sh
           <thead><tr><th style="width:26%">我想……</th><th style="width:38%">应该改哪里</th><th>不应该改哪里</th></tr></thead>
           <tbody>
             <tr><td>支持一个新的 Flutter widget</td><td>翻译路径本身通常无需 per-widget 代码；宿主 <code>JsWidgetRegistry</code> 或能力库注册 <code>type → renderer</code>；产物形态不同时调 <code>builderFormTypes</code> 等构建期表</td><td>mini-react、<code>JsUiWidget</code>、业务代码</td></tr>
-            <tr><td>新增 <code>.builder</code> / <code>.separated</code> 滚动容器</td><td><code>js_widget_defs.dart</code> 的 <code>builderFormTypes</code> 登记类型 + 宿主 renderer 按 <code>children.__items</code> / <code>itemCount</code> 还原</td><td>运行时类型白名单（不存在）、mini-react 核心</td></tr>
+            <tr><td>新增 <code>.builder</code> / <code>.separated</code> 滚动容器</td><td><code>js_class_defs.dart</code> 的 <code>builderFormTypes</code> 登记类型 + 宿主 renderer 按 <code>children.__items</code> / <code>itemCount</code> 还原</td><td>运行时类型白名单（不存在）、mini-react 核心</td></tr>
             <tr><td>新增组件配置值对象</td><td>生成器 <code>style_values_js.dart</code> 写普通值类（构造 + <code>toJSON</code>，Widget 字段过 <code>__descriptorOf</code>）；宿主 renderer 读字段 JSON，用 <code>c.element(...)</code> 就地还原</td><td>运行时类型表、宿主包装类、reconciler</td></tr>
             <tr><td>新增宿主能力（如新的 Controller）</td><td><code>capabilities/&lt;name&gt;/</code>：Dart 桥 + kind 描述符 + <code>JsUiLibrary</code> 子类；通用机制写进生成器运行时片段</td><td>runtime.js 骨架、句柄注册表核心</td></tr>
             <tr><td>接入三方状态管理库</td><td>宿主 <code>js/&lt;package&gt;.js</code> 写 JS 类与运行期登记；构建自动拷贝；JS 内可闭环的 context 扩展不注册宿主 op</td><td>生成器库 / 类型白名单、<code>hot_patch</code> 核心、runtime.js</td></tr>
@@ -2672,7 +2674,7 @@ bash start_patch_server.sh
       <ol>
         <li>先确认翻译路径是否已覆盖：构造实参、值形态、样式、事件、children 拆分都是通用的。</li>
         <li>补宿主 renderer（<code>JsWidgetRegistry</code> 或能力库 <code>registerWidgets</code>），注册 key 必须与产物里的 type 字符串同名。</li>
-        <li>若子项组织方式不同（builder / separated / delegate / 懒容器），调整 <code>js_widget_defs.dart</code> 的构建期表。</li>
+        <li>若子项组织方式不同（builder / separated / delegate / 懒容器），调整 <code>js_class_defs.dart</code> 的构建期表。</li>
         <li>若涉及新的值对象，在 <code>flutter.js</code> 值类区写普通类（构造 + <code>toJSON</code>），宿主用 <code>c.element(...)</code> 还原嵌套 Widget。</li>
       </ol>
 
@@ -2779,7 +2781,7 @@ bash start_patch_server.sh
             <tr><td>运行时引擎 / 补丁加载</td><td><span class="file-path">packages/hot_patch/lib/src/services/js_runtime_manager.dart</span></td></tr>
             <tr><td>翻译唯一入口</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/patch_entry/analysis/analyze_dart_class.dart</span></td></tr>
             <tr><td>组件产物组装</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/patch_entry/component_builder.dart</span></td></tr>
-            <tr><td>widget 统一翻译</td><td><span class="file-path">.../translator/element_json.dart</span> · <span class="file-path">.../translator/value_forms.dart</span> · <span class="file-path">.../translator/style_translators.dart</span></td></tr>
+            <tr><td>widget 统一翻译</td><td><span class="file-path">.../translator/element_json.dart</span> · <span class="file-path">.../translator/value_forms.dart</span> · <span class="file-path">.../runtime/js/style_values_js.dart</span></td></tr>
             <tr><td>语言层翻译</td><td><span class="file-path">.../translator/js_translator.dart</span> · <span class="file-path">.../translator/dart2js.dart</span></td></tr>
             <tr><td>构建期登记表</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/shared/js_class_defs.dart</span> · <span class="file-path">.../shared/ctor_signatures.dart</span></td></tr>
             <tr><td>JS 运行时骨架</td><td><span class="file-path">packages/hot_patch_generator/lib/src/builders/runtime/js/runtime_js.dart</span></td></tr>
@@ -2805,7 +2807,7 @@ bash start_patch_server.sh
         <span class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span>
         <div class="callout-body">
           <span class="callout-title">文档与代码同步</span>
-          <p>改组件属性时，同步更新生成侧的 <code>widget_json.dart</code> / <code>value_forms.dart</code> / <code>style_translators.dart</code> 与运行侧的 <code>flutter_from_json.dart</code> / <code>js_widget_registry.dart</code>。涉及语法翻译时，手册未更新视为未完成。</p>
+          <p>改组件属性时，同步更新生成侧的 <code>element_json.dart</code> / <code>value_forms.dart</code> 与运行侧的 <code>capabilities/core/from_json/</code> / <code>capabilities/base_widget/*_from_json.dart</code> / <code>js_widget_registry.dart</code>。涉及语法翻译时，手册未更新视为未完成。</p>
         </div>
       </div>
     </section>
@@ -2813,7 +2815,7 @@ bash start_patch_server.sh
     <footer class="footer">
       <div>
         <b>flutter_hot_patch</b> · 注解组件 → JS 热更<br>
-        文档基于仓库 <code>bd8238a</code> · protocol 0.13.0 · MIT License
+        文档基于当前工作区 · protocol 0.13.0 · MIT License
       </div>
       <div class="footer-links">
         <a href="https://github.com/JDongKhan/flutter_hot_patch" target="_blank" rel="noopener">GitHub</a>

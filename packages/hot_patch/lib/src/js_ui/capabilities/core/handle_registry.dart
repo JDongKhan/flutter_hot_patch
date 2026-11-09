@@ -13,7 +13,7 @@
 //   - JS → 宿主端真实对象：host 通道 **异步**（返回 Promise）。
 //
 // **扩展点**：新增能力 = 两端各 registerHandleKind 注册一个描述符
-// （onCreate / onOp / onRelease），核心文件（本文件 / runtime_source 骨架 /
+// （onCreate / onOp / onRelease），核心文件（本文件 / runtime_js 骨架 /
 // disposeRoot）零改动。
 //
 // **为什么本文件刻意不是 [JsUiLibrary] 子类**（地基而非能力）：
@@ -22,7 +22,7 @@
 //      js_ui_capabilities 的遍历循环之前；若改成靠注册表顺序自律，重排
 //      清单会静默炸掉全部能力；
 //   2. JS 侧 handle_registry_js.dart 目前拼在 mini-react 骨架**之前**
-//      （见 runtime_source），进模板循环会被挪到骨架之后，需逐段重新论证
+//      （见 runtime_js），进模板循环会被挪到骨架之后，需逐段重新论证
 //      求值顺序；
 //   3. 全框架只有这一个句柄注册表，永无「第二个实现」，模板的幂等注册/
 //      可替换价值在此为零。

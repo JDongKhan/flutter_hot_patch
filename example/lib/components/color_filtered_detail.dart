@@ -12,7 +12,7 @@ import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 /// 一比一翻译说明：`colorFilter` 是**值对象**（不是 widget），产物里翻成
 /// `{kind:'mode', color, blendMode}` / `{kind:'matrix', matrix:[20 项]}` 普通
 /// 对象，宿主 `colorFilterFromJson` 还原成原生 ColorFilter 后交给
-/// ColorFiltered 渲染；子树照常由 `__h` 挂载。
+/// ColorFiltered 渲染；子树照常在元素构造期归入 `__children`。
 @PatchEntry('ColorFilteredDetail')
 class ColorFilteredDetail extends StatelessWidget {
   const ColorFilteredDetail({super.key});

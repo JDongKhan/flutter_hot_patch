@@ -1,8 +1,8 @@
 /// 宿主类型清单：**从运行时源码自动抽取**，是生成器唯一的类型来源。
 ///
 /// 生成器只在构建期读取这份清单，用来决定：
-///   - `patch/flutter.js` 为哪些类型生成同名包装类（`new Text(props)` →
-///     `__h('Text', props)`）；
+///   - `patch/flutter.js` 为哪些类型生成同名包装类（`new Text(props)` 构造即
+///     宿主元素，props 由 `Component.__splitHost` 拆分）；
 ///   - 组件产物 import 哪些类名（宿主包装类在 flutter.js，全局注入类不 import）。
 ///
 /// 抽取目标 = `hot_patch` 包的 `lib/src/js_ui/**`：

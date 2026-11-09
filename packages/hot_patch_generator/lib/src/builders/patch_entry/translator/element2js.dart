@@ -14,8 +14,8 @@ import 'element_json.dart';
 //
 // widget 在 JS 端没有等价物，需专门翻译：
 //   - build 树解析：ElementNode / ElementTranslateContext（表达式 → 中立描述）
-//   - 中立描述 → JS：`__h(type, props)` 构造调用树（实参按原名进 props，
-//     元素工厂在运行时按元素 type 拆结构子结点，见 widget_module_builder 的 __h）
+//   - 中立描述 → JS：`new Type(props)` 构造调用树（实参按原名进 props，
+//     宿主包装类在构造期由 Component.__splitHost 拆分 props / __children）
 //   - 统一翻译入口：element_json.dart（elementToJson）+ value_forms.dart（autoValue）
 //   静态成员引用（`MyColors.background` / 类内 `fromJson(...)`）走通用
 //   `类名.成员` 规则，与普通实例成员同一套作用域
@@ -218,7 +218,7 @@ class ElementTranslateContext implements ExprRenderer {
     if (e is ConditionalExpression) {
       // widget 位置三目：每支都是**单个**元素（`child: cond ? A : B`）。
       // 绝不能走 [_collectionArrayJs]——那产出的是「元素数组」，用在单子位置
-      // 会变成 props.child 里的嵌套数组（`[ (cond ? [A] : [B]) ]`），元素工厂
+      // 会变成 props.child 里的嵌套数组（`[ (cond ? [A] : [B]) ]`），宿主包装类
       // 抽 children 时 `mount` 拿到数组 → `el.type` undefined → `new el.type` 抛错。
       final cond = jsDataExpr(e.condition);
       // 分支翻译失败 → 该分支渲染成 `null`（= 没有元素）；魔术占位元素不允许。
@@ -310,9 +310,8 @@ class ElementTranslateContext implements ExprRenderer {
     } else {
       json['props'] = <String, dynamic>{'key': js};
     }
-    // 结点上另记一份 `json['key']`：**组件的**两条渲染路径（有产物
-    // `__h(X, props)` / 无产物 `__h("X", props)`）取的是 `json['key']`
-    // （见 _renderJsImpl），只写 props['key'] 会让挂在
+    // 结点上另记一份 `json['key']`：**组件的**渲染路径（`new X(props)`）
+    // 取的是 `json['key']`（见 _renderJsImpl），只写 props['key'] 会让挂在
     // 组件结点上的 key 静默丢失（宿主结点读 props['key']，故宿主不受影响）。
     // 两处值同源，读哪一份都一样。
     json['key'] = js;
@@ -591,7 +590,7 @@ class ElementTranslateContext implements ExprRenderer {
     }
   }
 
-  /// 渲染一个已翻译的中立节点为统一元素构造 `__h(type, props)`。
+  /// 渲染一个已翻译的中立节点为统一类构造 `new Type(props)`（命名构造 `X.b(...)`）。
   ///
   /// 值契约：toJson 的叶子值一律是 JS 表达式字符串（`"Text"` 这类字符串
   /// 字面量由 [jsString] 产生），因此分发前剥离字符串字面量的引号取语义名。
@@ -627,7 +626,7 @@ class ElementTranslateContext implements ExprRenderer {
   ///
   /// 与 [renderJs] 的唯一区别是不切「字符串结点」形态——那个形态是宿主
   /// widget 的兼容写法，属于结点语境；值语境里同名类总是存在的（注入类或
-  /// 包装类），因此不需要兜底。组件使用方一律 `new X(...)`，不再产出 `__h`。
+  /// 包装类），因此不需要兜底。组件使用方一律 `new X(...)`，不经过额外构造层。
   String _renderValueImpl(Object? json, int depth) {
     if (json is String) return json;
     if (json is! Map<String, dynamic>) throw FormatException('无法渲染的值: $json');
@@ -651,7 +650,7 @@ class ElementTranslateContext implements ExprRenderer {
     }
     final token = _typeToken(json['type'], node: nodeSourceOf(json));
     final name = bareTypeName(token);
-    // 元素 type 一律是**类引用**（组件使用方不再产出 `__h('X', ...)`）：
+    // 元素 type 一律是**类引用**（组件使用方统一 `new X(...)`）：
     //   - 该类型有 JS 产物（importResolver 命中：@PatchEntry 嵌套组件、同文件
     //     私有组件）→ `new X(props)`；实例随元素一起下发，mount 直接复用；
     //   - 该类型在 JS 侧有类（逻辑组件 / builder 代理，含普通构造形态——代理类
@@ -792,12 +791,12 @@ class ElementTranslateContext implements ExprRenderer {
   }
 
   /// 把已翻译的 JSON 节点渲染成构造表达式 `new X({...})`（命名构造为
-  /// `X.factory({...})`）。组件使用方一律 Dart 一比一构造，不再产出 `__h`。
+  /// `X.factory({...})`）。组件使用方一律 Dart 一比一构造，不经过额外构造层。
   ///
   /// 所有 Dart 实参都按原名进 props——`child` / `children` / `slivers` / `tabs`
-  /// 也在 props 里，由元素工厂 `__h` 在**运行时按元素类型**拆分：宿主类型抽成
-  /// `element.children`，JS 组件类型保留给 `__applyProps`。因此这里不传第三参，
-  /// 也不区分单子/多子。
+  /// 也在 props 里，由宿主包装类在**构造期**经 `Component.__splitHost` 按值形态
+  /// 拆分：元素值 / 元素数组 / `__builder` / delegate 进 `__children`，其余留 props；
+  /// JS 组件类保留全部 props 供 `__applyProps`。因此这里不传第三参，也不区分单子/多子。
   String _renderCall(
     String type,
     Map<String, dynamic> json,
