@@ -848,6 +848,7 @@ td code{font-size:11.5px}
     <div class="nav-group nav-sub">
       <div class="nav-label">工程化能力</div>
       <a class="nav-link" href="#eng-patch">补丁分发与版本切换</a>
+      <a class="nav-link" href="#eng-assets">assets 资源热更</a>
       <a class="nav-link" href="#eng-host">宿主注入与原生组件</a>
       <a class="nav-link" href="#eng-log">日志、隔离与构建产物</a>
     </div>
@@ -872,7 +873,7 @@ td code{font-size:11.5px}
     <button class="menu-btn" id="menuBtn" aria-label="打开目录" aria-expanded="false" aria-controls="sidebar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
-    <div class="crumb">docs / <b>技术博客</b> / v0.4.0</div>
+    <div class="crumb">docs / <b>技术博客</b> / v0.4.1</div>
     <div class="top-actions">
       <span class="ver-badge">protocol 0.13.0</span>
       <button class="icon-btn" id="themeBtn" aria-label="切换深浅色主题" title="切换深浅色主题">
@@ -1727,7 +1728,7 @@ bash start_patch_server.sh
           <div class="map-head"><h4>D · 工程化能力</h4><span class="map-en">Delivery</span></div>
           <p>7 个 builder、三种补丁源、身份版本与页面级重载、<code>@HostInjected</code> 注册、原生组件注入、统一日志、多实例隔离。</p>
           <div class="map-tags">
-            <a href="#eng-patch">补丁 / 版本</a><a href="#eng-host">宿主注入</a><a href="#eng-log">日志 / 构建</a><a href="#extensions">扩展点</a>
+            <a href="#eng-patch">补丁 / 版本</a><a href="#eng-assets">assets 热更</a><a href="#eng-host">宿主注入</a><a href="#eng-log">日志 / 构建</a><a href="#extensions">扩展点</a>
           </div>
         </div>
       </div>
@@ -2507,10 +2508,67 @@ bash start_patch_server.sh
         </ul>
       </div>
 
+      <!-- ENG ASSETS -->
+      <div class="cap-block" id="eng-assets">
+        <div class="cap-block-head">
+          <h3>02 · assets 资源热更</h3>
+          <span class="tag green">同名覆盖 · 缺失回退</span>
+        </div>
+        <p class="cap-intro">图片、JSON 等 assets 也可以随补丁包发布：<strong>补丁包根下存在同路径文件时优先使用补丁内资源</strong>，否则回退项目 assets。业务代码不需要区分资源来源。</p>
+
+        <div class="meta-strip">
+          <span><b>解析入口</b> HotPatchAssets</span>
+          <span><b>优先级</b> 补丁包 → 项目 assets</span>
+          <span><b>失败策略</b> 告警并回退</span>
+          <span><b>图片接入</b> 5 类读取路径</span>
+        </div>
+
+        <h4>目录约定：路径就是 key</h4>
+        <p>补丁包内保留与 Flutter 项目一致的资源路径，解压后与 JS 模块共用同一个包根：</p>
+        <div class="code-block" data-lang="text">
+<pre>patch/
+  manifest.json
+  runtime.js
+  components/hello_component.js
+  assets/images/photo.jpg      <span class="c">// 覆盖项目的 assets/images/photo.jpg</span>
+  assets/data/config.json      <span class="c">// 覆盖项目的 assets/data/config.json</span></pre>
+        </div>
+        <p class="subtle"><code>patch.zip</code> 直接打包包根目录，因此 <code>assets/</code> 会随补丁一起分发；散文件模式同样可通过 <code>/patch/assets/...</code> 访问。</p>
+
+        <h4>已接入的读取路径</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:40%">读取方式</th><th>行为</th></tr></thead>
+            <tbody>
+              <tr><td><code>Image.asset(...)</code></td><td>经当前补丁包的 <code>AssetBundle</code> 解析，同名图片覆盖</td></tr>
+              <tr><td><code>ImageIcon</code> / <code>CircleAvatar.backgroundImage</code> / <code>FadeInImage</code></td><td>与 <code>Image.asset</code> 共用同一 provider 入口</td></tr>
+              <tr><td><code>BoxDecoration(image: DecorationImage(...))</code></td><td>背景图同样走补丁包优先</td></tr>
+              <tr><td><code>rootBundle.loadString(key)</code></td><td>JS 侧同名顶层对象 → 宿主通道 <code>assetLoadString</code>，按同一规则读文本 / JSON</td></tr>
+              <tr><td>宿主自定义资源读取</td><td>使用 <code>HotPatchAssets.bundle</code>（如示例 <code>CanvasImage.load</code>）即可复用该规则</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block" data-lang="dart">
+<pre><span class="c">// Dart 源码写法不变，运行期自动走补丁包优先</span>
+<span class="t">Image</span>.asset(<span class="s">'assets/images/photo.jpg'</span>)
+
+<span class="c">// JSON 同理：补丁包内同名文件优先，缺失回退项目 assets</span>
+<span class="k">final</span> text = <span class="k">await</span> rootBundle.loadString(<span class="s">'assets/data/config.json'</span>);</pre>
+        </div>
+
+        <ul class="note-list">
+          <li><strong>包切换即缓存失效</strong>：每个补丁包对应独立的 bundle 实例，<code>AssetImage</code> 的缓存 key 随包身份变化，不会复用旧包图片。</li>
+          <li><strong>失败不静默</strong>：同名文件存在但读取失败时输出告警并回退项目 assets；路径含 <code>..</code> 或绝对路径会被忽略并告警。</li>
+          <li><strong>DPR 变体</strong>：Flutter 会按屏幕像素比选择 <code>@2x</code> / <code>@3x</code>，补丁需覆盖对应变体文件才算命中。</li>
+          <li><strong>当前范围</strong>：已支持 <code>rootBundle.loadString</code>；<code>load</code> / <code>loadStructuredData</code> 尚未提供，读取二进制请走宿主能力。</li>
+        </ul>
+      </div>
+
       <!-- ENG HOST -->
       <div class="cap-block" id="eng-host">
         <div class="cap-block-head">
-          <h3>02 · 宿主注入与原生组件</h3>
+          <h3>03 · 宿主注入与原生组件</h3>
           <span class="tag green">唯一出口</span>
         </div>
         <p class="cap-intro">JS 只能通过宿主方法触达原生能力；宿主方法只有一个注册入口。另有原生组件注入作为“不翻译也能量”的兜底。</p>
@@ -2563,7 +2621,7 @@ bash start_patch_server.sh
 
         <h4>框架内建通道</h4>
         <div class="chips">
-          <span class="chip hot">log</span><span class="chip hot">nativeToast</span><span class="chip hot">jsuiCommit</span><span class="chip">jsuiEventResult</span>
+          <span class="chip hot">log</span><span class="chip hot">nativeToast</span><span class="chip hot">jsuiCommit</span><span class="chip">assetLoadString</span><span class="chip">jsuiEventResult</span>
         </div>
         <p class="subtle">内建通道在 <code>JsUiWidget</code> 启动时自动注册；业务只需注册自己的 <code>@HostInjected</code> 方法。<code>JsRuntimeManager.navigatorKey</code> 需传入 <code>MaterialApp.navigatorKey</code>，全局级服务（toast / 路由推页）靠它定位 Navigator 与 ScaffoldMessenger。</p>
       </div>
@@ -2571,7 +2629,7 @@ bash start_patch_server.sh
       <!-- ENG LOG -->
       <div class="cap-block" id="eng-log">
         <div class="cap-block-head">
-          <h3>03 · 日志、隔离与构建产物</h3>
+          <h3>04 · 日志、隔离与构建产物</h3>
           <span class="tag amber">可观测</span>
         </div>
         <p class="cap-intro">所有输出走唯一出口 <code>HotPatchLog</code>。本地打印与上报彼此独立：注册一个 sink 即可接入日志平台，release 下依然可上报。</p>
