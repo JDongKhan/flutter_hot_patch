@@ -83,7 +83,7 @@
 
 ## 0.8.1
 
-**协议次版本：契约不变，空安全产物形态改为 JS 原生可选链；旧的三元 / IIFE 展开同次删除，不保留兼容。**
+**协议次版本：契约不变，空安全产物形态改为 JS 原生可选链；旧的三元 / IIFE 展开在同一次变更中删除，不保留兼容。**
 
 - 空安全属性访问 / 下标 / 方法调用改为与 Dart 源码同形：`a?.b` → `a?.b`、`a?[i]` → `a?.[i]`、`a?.m(args)` → `a?.m(args)`（`shared/js_translator.dart` 里三处旧展开删除）。接收者只求值一次、null / undefined 时整链短路，实参 / 下标不求值——链式 `a?.b?.c` 不再逐层展开三元（旧写法在链上会重复求值接收者，且 `a?.b.c` 在 `a` 为 null 时丢短路、直接 TypeError）。
 - 空安全赋值 `a?[i] = v` / `a?.b = v`（JS 可选链不能作赋值目标）落成接收者单次求值的守卫 `((__t) => { if (__t != null) __t[i] = v; })(a)`；普通下标 / 属性赋值 `a[i] = v` / `a.b = v` 同分支支持。目标链**任意一层**出现 `?.` / `?[` 都走同一守卫（`_obj?._scores?[1] = 1` 只让前缀变长，不嵌套守卫）；接收者为空时下标与右值均不执行。
@@ -117,7 +117,7 @@
 
 ## 0.8.0
 
-**破坏性：JS 侧新增原生 InheritedWidget 语义；provider 去掉宿主结点与宿主 context op（旧 `__provides` / `__registerScope` / `__scopeOfContext` 协议与 provider 宿主映射同次删除，不保留兼容）。需与 hot_patch 0.4.0 配套。**
+**破坏性：JS 侧新增原生 InheritedWidget 语义；provider 去掉宿主结点与宿主 context op（旧 `__provides` / `__registerScope` / `__scopeOfContext` 协议与 provider 宿主映射在同一次变更中删除，不保留兼容）。需与 hot_patch 0.4.0 配套。**
 
 - **InheritedWidget（纯 JS）**：`flutter.js` 新增 `export class InheritedWidget extends Component`（build 返回 `props.child`，`updateShouldNotify(oldWidget)` 与 Flutter 同义）。翻译层把 `InheritedWidget` 加入 SDK 基类表与组件判据，用户子类按常规组件翻译、零宿主注册。
 - **运行时继承机制（Flutter 命名）**：结点用 `__inheritedElements`（类型名 → 提供者结点，对应 `Element._inheritedElements`）登记；`__getInheritedElement` / `__dependents` / `__dependencies` / `__notifyClients` 与 `InheritedElement` 的依赖与通知语义一致。`JsBuildContext` 新增 `getInheritedWidgetOfExactType` / `dependOnInheritedWidgetOfExactType`，类型实参沿用 `typeArguments` 元信息。
@@ -141,7 +141,7 @@
 
 **只做加法：新增 `flutter.js` 的 `Future` 同名镜像；删除翻译层 `Future.delayed` → Promise 的特判（替换即删除，旧路径不存在）。**
 
-- **翻译层回归一比一**：`await Future.delayed(const Duration(seconds: 1))` 不再被反向映射成 `new Promise(function(r){ setTimeout(r, 1000); })`。`await` 的内层表达式按普通表达式翻译，`Future.delayed` 与其它构造 / 静态调用同一条规则——`Future.delayed({duration: new Duration({seconds: 1})})`（`shared/js_translator.dart` 的 `_awaitInnerJs` / `delayedMsJs` 同次删除）。
+- **翻译层回归一比一**：`await Future.delayed(const Duration(seconds: 1))` 不再被反向映射成 `new Promise(function(r){ setTimeout(r, 1000); })`。`await` 的内层表达式按普通表达式翻译，`Future.delayed` 与其它构造 / 静态调用同一条规则——`Future.delayed({duration: new Duration({seconds: 1})})`（`shared/js_translator.dart` 的 `_awaitInnerJs` / `delayedMsJs` 在同一次变更中删除）。
 - **新增 `export class Future`**（`builders/runtime/js/future_js.dart`，随 `flutter.js` 发布）：构造与 `delayed` / `value` / `error` / `sync` / `microtask` / `wait` / `any`，实例 `then` / `catchError` / `whenComplete`；内部持有一个原生 Promise，`await` / thenable 语义与 Dart 一致（`Future(...)` 异步启动、`Future.sync` 同步启动）。
 - **import 自动可见**：`export class` 由导出名自动抽取，产物按实际出现的名字 `import { Future } from '../flutter.js'`，无需登记。
 - **宿主通道不变**：`_app_host_.invoke` 仍返回原生 Promise，JS 侧可直接 `await`，与 `Future` 互操作（`then` 兼容 `await` 传入的裸回调与具名实参尾对象）。
