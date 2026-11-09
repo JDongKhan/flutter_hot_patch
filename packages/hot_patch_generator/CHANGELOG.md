@@ -4,7 +4,9 @@
 
 - **顶层函数**：收集同文件 / import 文件的 `FunctionDeclaration`，复用 `_functionParamPlan` + `closureToJs`，产物落成 `export const foo = <closure>`；支持具名参数、默认值、async、`sync*` / `async*`。调用点同名解析，跨文件按顶层常量机制 `import { foo }`。`main` 入口函数不参与补丁翻译；`@HostInjected` 顶层函数仍走 `_app_host_.invoke`。
 - **依赖收集**：函数体引用的跨文件类 / 常量沿用顶层常量的 import 收集；纯函数文件（无类 / 常量）也会产出模块。
-- 示例新增 `example/lib/grammar/top_level_helper.dart`，`statement_detail.dart` 覆盖同文件 / 跨文件、具名参数、跨文件模型构造与生成器调用。
+- **依赖以 JS 产物为准**：顶层函数 / 常量只从会产出的类 / 常量 / 函数引用闭包标记；`main.dart` / `app_log_console.dart` 等应用壳不再因 Dart 可达而产出空壳（规则写入手册第 01 章）。
+- **可读性**：枚举产物内部辅助名 `__mk` → `__makeEnumValue`、`__values` → `__enumValues`；新增内部辅助名必须语义完整（既有协议名 `__t` / `__o` / `__ta` 等保持不动），规则写入手册「实现总则」。
+- 示例新增 `example/lib/grammar/top_level_helper.dart`，`function_detail.dart` 覆盖同文件 / 跨文件、具名参数、跨文件模型构造与生成器调用。
 
 ## 0.13.0
 

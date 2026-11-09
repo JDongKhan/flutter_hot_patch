@@ -300,19 +300,19 @@ String renderTopLevelConstBody(Map<String, String> consts) {
 /// `enum E { a, b }` →
 /// ```
 /// export const E = (function () {
-///   const __values = [];
-///   function __mk(name, index) {
+///   const __enumValues = [];
+///   function __makeEnumValue(name, index) {
 ///     return { name: name, index: index,
 ///       toString: function () { return "E." + name; } };
 ///   }
-///   const a = __mk("a", 0);
-///   __values.push(a);
-///   const b = __mk("b", 1);
-///   __values.push(b);
+///   const a = __makeEnumValue("a", 0);
+///   __enumValues.push(a);
+///   const b = __makeEnumValue("b", 1);
+///   __enumValues.push(b);
 ///   return {
 ///     a: a,
 ///     b: b,
-///     values: __values,
+///     values: __enumValues,
 ///     byName: function (name) { ... }
 ///   };
 /// })();
@@ -340,8 +340,8 @@ String? _enumJs(EnumDeclaration d, String file) {
     }
   }
   final b = StringBuffer('(function () {\n');
-  b.write('  const __values = [];\n');
-  b.write('  function __mk(name, index) {\n');
+  b.write('  const __enumValues = [];\n');
+  b.write('  function __makeEnumValue(name, index) {\n');
   b.write('    return {\n');
   b.write('      name: name,\n');
   b.write('      index: index,\n');
@@ -350,19 +350,19 @@ String? _enumJs(EnumDeclaration d, String file) {
   b.write('  }\n');
   for (final (i, c) in d.constants.indexed) {
     final n = c.name.lexeme;
-    b.write('  const $n = __mk(${jsString(n)}, $i);\n');
-    b.write('  __values.push($n);\n');
+    b.write('  const $n = __makeEnumValue(${jsString(n)}, $i);\n');
+    b.write('  __enumValues.push($n);\n');
   }
   b.write('  return {\n');
   for (final c in d.constants) {
     b.write('    ${c.name.lexeme}: ${c.name.lexeme},\n');
   }
-  b.write('    values: __values,\n');
+  b.write('    values: __enumValues,\n');
   // Dart `E.values.byName('x')`（EnumByName 扩展）→ `E.byName('x')`：
   // 生成侧把 byName 挂到枚举常量对象上（找不到抛错，与 Dart 的 ArgumentError 同义）。
   b.write('    byName: function (name) {\n');
-  b.write('      for (var i = 0; i < __values.length; i++) {\n');
-  b.write('        if (__values[i].name === name) { return __values[i]; }\n');
+  b.write('      for (var i = 0; i < __enumValues.length; i++) {\n');
+  b.write('        if (__enumValues[i].name === name) { return __enumValues[i]; }\n');
   b.write('      }\n');
   b.write('      throw new Error("Invalid argument(s): Invalid value: " + name);\n');
   b.write('    }\n');

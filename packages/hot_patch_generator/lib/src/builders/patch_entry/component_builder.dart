@@ -229,14 +229,10 @@ class ComponentBuilder implements Builder {
     }
     // 没有根类但有 `@PatchIgnore(isComponent: true)` 包装类：仍按常规路径产出
     // （包装类 + 顶层常量一起写），否则使用方的 `new X(...)` 缺类定义。
-    final hasFunctions = parsed.unit.declarations
-        .whereType<FunctionDeclaration>()
-        .isNotEmpty;
     if (roots.isEmpty &&
         mixinDecls.isEmpty &&
         wrapperClasses.isEmpty &&
-        !hasExtensions &&
-        !hasFunctions) {
+        !hasExtensions) {
       // 纯数据文件（如 lib/app/service/app_data.dart）：文件里没有任何可翻译的类，
       // 只有顶层常量 → 产出「顶层常量」产物（`export const kBanners = [...]`），
       // 组件产物才能 import 到这些值（与类产物同一个文件级产物路径）。
@@ -285,10 +281,14 @@ class ComponentBuilder implements Builder {
     final constResolver =
         buildTopLevelConstResolver(parsed.unit, inputId.path, classTable);
     final globalConsts = constResolver.names;
-    // 顶层函数按符号级引用过滤：根文件（@PatchEntry）没有 scope，直接发射本文件
-    // 全部函数；非根文件按 neededFunctions 过滤。
-    final neededFunctions = scope?.neededFunctions[inputId.path] ??
-        constResolver.functionNames;
+    // 顶层函数按符号级引用过滤：根文件（@PatchEntry，scope 为 null）直接发射
+    // 本文件全部函数；非根文件只发射 scope.neededFunctions 标记的函数。
+    final neededFunctions = scope == null
+        ? constResolver.functionNames
+        : (scope.neededFunctions[inputId.path] ?? const <String>{});
+    final neededConsts = scope == null
+        ? null
+        : (scope.neededConsts[inputId.path] ?? const <String>{});
 
     // 逐个根类翻译：JS 类名 = Dart 类名；State 合并、字段 / 方法 / 依赖处理
     // 全部在 translateClass 内部完成，builder 只决定「以组件身份还是普通类身份」。
@@ -588,8 +588,10 @@ class ComponentBuilder implements Builder {
         inlineClasses: inlineClasses.values.toList(),
         consts: {
           for (final e in constResolver.sameFile.entries)
-            if (!constResolver.functionNames.contains(e.key) ||
-                neededFunctions.contains(e.key))
+            if (neededConsts == null ||
+                neededConsts.contains(e.key) ||
+                (constResolver.functionNames.contains(e.key) &&
+                    neededFunctions.contains(e.key)))
               e.key: e.value,
         },
         globalConsts: globalConsts,

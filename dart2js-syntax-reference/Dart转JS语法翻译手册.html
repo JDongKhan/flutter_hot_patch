@@ -221,7 +221,7 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
   <li><b>成员翻译只有三种合法写法</b><span>① 同名直译；② JS 已有同名但语义不同 → <code>_</code> 前缀 + 构建期映射表（主键 = 接收者内建类型 + Dart 成员名，如 <code>(List, sort) → _sort</code>、<code>(Map, keys) → _keys</code>）；③ JS 缺同名 → 运行时在<b>具体内建原型</b>上用 <code>__defineProtoMember</code> / <code>__defineProtoGetter</code> 补同名。映射只在接收者静态类型可判定为该内建类型时生效；自定义类 / 控制器等其它接收者一律原样，<b>绝不按方法名全局替换</b>；新增映射必须同时改表与手册。<b>禁止</b>为单个成员另写 helper、禁止覆盖原生同名方法（手册明确登记的除外，如 <code>forEach</code> 只在调用点交换参数）、禁止挂 <code>Object.prototype</code>；运行时补齐统一用 <code>Object.defineProperty</code>、<code>enumerable:false</code> + 存在性守卫。</span></li>
   <li><b>Dart 只有 null，JS 有 null 与 undefined</b><span>翻译器采用“宽空模型”：凡可能产出 <code>undefined</code> 的位置（Map 未命中、数组越界、可选链短路、缺省实参），判空与取用前先用 <code>__nn</code> 归一（<code>undefined → null</code>，其他值原样返回，不抛错），再用 <code>== null</code>（同时命中两者，禁止 <code>=== null</code>），合并统一用 <code>??</code>。只对可能为空的操作数包：非空类型 / 字面量 / 构造不包，<code>String?</code> / <code>dynamic</code> / 类型不可判定才包。</span></li>
   <li><b>编译期概念靠展开，不靠 JS 运行时特性</b><span>mixin、extension、运算符重载、枚举都是编译期展开；<strong>判据只来自源码事实</strong>（类表、<code>extends</code> / <code>with</code> 链、import 归属、显式类型注解与项目类构造推断），<strong>不做运行时名字猜测，也不维护类型白名单</strong>（AGENTS §1 / §5）。</span></li>
-  <li><b>产物形态与命名必须手册登记</b><span>产物里出现的每一个非 Dart 名字（包装函数、类名、成员名、前缀、临时对象形态）都必须是<b>本手册表格里登记过</b>的；手册没写的一律不许实现，确需新增时<b>先补手册 + 让开发确认</b>再改代码。典型反例：<code>__map(...)</code> 包装字面量、<code>__Map</code> 类、<code>{__proto__: Map.prototype, …}</code>、<code>__mapLength/__mapKeys</code>。字面量的目标形态（List → <code>[]</code>、Map → <code>new Map([[k, v]])</code>）不得擅自更改；改成包装函数 / 额外类 / 原型注入属于<b>改协议</b>，必须先确认，并在同一次变更中更新手册与架构文档。索引改写只允许手册登记的表项：仅 <code>List</code> / 项目类 / 类型不可判定保持原生 <code>a[i]</code>，只有 <code>Map</code> 类型才按手册改写，<b>禁止把辅助函数扩大到 List / 未知类型</b>。</span></li>
+  <li><b>产物形态与命名必须手册登记</b><span>产物里出现的每一个非 Dart 名字（包装函数、类名、成员名、前缀、临时对象形态）都必须是<b>本手册表格里登记过</b>的；手册没写的一律不许实现，确需新增时<b>先补手册 + 让开发确认</b>再改代码。典型反例：<code>__map(...)</code> 包装字面量、<code>__Map</code> 类、<code>{__proto__: Map.prototype, …}</code>、<code>__mapLength/__mapKeys</code>。字面量的目标形态（List → <code>[]</code>、Map → <code>new Map([[k, v]])</code>）不得擅自更改；改成包装函数 / 额外类 / 原型注入属于<b>改协议</b>，必须先确认，并在同一次变更中更新手册与架构文档。索引改写只允许手册登记的表项：仅 <code>List</code> / 项目类 / 类型不可判定保持原生 <code>a[i]</code>，只有 <code>Map</code> 类型才按手册改写，<b>禁止把辅助函数扩大到 List / 未知类型</b>。新增内部辅助名必须语义完整（如 <code>__makeEnumValue</code>），禁止新增 <code>__mk</code> / <code>__v</code> 这类纯缩写；已发布协议名（<code>__t</code> / <code>__o</code> / <code>__ta</code> 等）保持不动。</span></li>
   <li><b>产物必须可验证，且手册先行</b><span>每条改写规则都要能构造“null 分支 / 非 null 分支 / 求值次数”三个断言，任一不成立即视为实现错误。动手前先定位本手册对应章节（含「翻译原则 / 现状 / 是否通过」）；改完必须在同一次变更中更新对应行、<code>CHANGELOG</code> 与（涉及行为时）示例。<b>手册未更新视为未完成</b>；代码与手册不一致时以手册为准并立即收敛。<b>禁止“先实现再解释”</b>：无法在手册中找到依据的实现，一律停下先确认，不得用“内部原语 / 临时包装 / 为了兼容”绕过约束；新增 <code>__</code> 前缀原语同属产物形态，必须登记。</span></li>
 </ol>
 
@@ -241,6 +241,11 @@ footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);color:#
   <li><strong>代码生成</strong>：ES2020 输出，括号按目标语言优先级重建。</li>
   <li><strong>自检</strong>：求值次数、短路、返回值三类断言。</li>
 </ul>
+
+<div class="note">
+  <span class="t">依赖以 JS 产物为准</span>
+  Dart 的 import / 类型引用只是<strong>候选依赖</strong>；只有该引用真的进入产物（目标类、顶层常量或顶层函数被发射，且调用点被翻译）才形成依赖。JS 侧依赖链断开时（类没有产出、语句被丢弃、成员未翻译），<strong>不得为了 Dart 依赖强行发射目标文件</strong>。典型：应用壳 <code>main.dart</code> / <code>app_log_console.dart</code> 只被宿主入口引用，不进入补丁；它们的顶层常量 / 函数不因文件可达而产出。
+</div>
 
 <div class="note">
   <span class="t">引擎能力边界（硬约束）</span>

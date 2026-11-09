@@ -3,6 +3,7 @@
 // 重新生成：dart run build_runner build
 
 import { SportCar } from 'inheritance_detail.js';
+import { topLevelCounter, topLevelGreet, topLevelNums, topLevelPrefix } from 'top_level_helper.js';
 import { Column, CrossAxisAlignment, FontWeight, SizedBox, StatelessWidget, Text, TextStyle } from '../flutter.js';
 
 // 模型 Scale
@@ -91,12 +92,16 @@ export class FunctionDetail extends StatelessWidget {
     const speedNow = car.speed;
     return "对象 tear-off：" + reportFn() + "/" + fresh + "/" + speedNow;
   }
+  _topLevelText() {
+    const counter = topLevelCounter();
+    return "顶层函数：" + topLevelPrefix("fn") + " / " + topLevelGreet({ "name": "Dart" }) + " / " + counter.count + " / " + topLevelNums().length;
+  }
   build(context) {
     return new Column({
       "crossAxisAlignment": CrossAxisAlignment.stretch,
       "children": [
         (this.__k0 || (this.__k0 = new Text({
-          "data": "函数：局部函数 · 形参签名 · tear-off",
+          "data": "函数：局部函数 · 顶层函数 · 形参签名 · tear-off",
           "style": new TextStyle({
             "fontSize": 16,
             "fontWeight": FontWeight.bold
@@ -107,6 +112,9 @@ export class FunctionDetail extends StatelessWidget {
         }))),
         new Text({
           "data": this._localFuncText()
+        }),
+        new Text({
+          "data": this._topLevelText()
         }),
         new Text({
           "data": this._paramsText()

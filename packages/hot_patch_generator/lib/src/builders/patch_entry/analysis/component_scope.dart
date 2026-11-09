@@ -485,7 +485,6 @@ Map<String, Set<String>> _neededFunctions(
     final (owner, decl) = hit;
     if (!visited.add('$owner#$name')) return;
     (needed[owner] ??= <String>{}).add(name);
-    log.info('[neededFunctions] $owner#$name (from $file)');
     // 只扫函数体，不扫声明名，避免“自己引用自己”把所有函数都标记进来。
     final refs = _ConstRefCollector();
     decl.functionExpression.body.accept(refs);
@@ -502,13 +501,14 @@ Map<String, Set<String>> _neededFunctions(
     }
   }
 
-  // 种子 1：会产出的根类（@PatchEntry）——只从**真的会进入产物**的类出发；
-  // 普通可达类（如应用壳 main.dart 的 HotDemoApp）不在这里播种，避免其
-  // Dart 引用把从未进入 JS 的顶层函数拖进补丁。
-  for (final e in units.entries) {
-    for (final d in e.value.declarations.whereType<ClassDeclaration>()) {
-      if (findAnnotation(d.metadata, 'PatchEntry') == null) continue;
-      for (final cls in classAndStateDecls(d, e.value)) {
+  // 种子 1：会产出的类（含 @PatchEntry 根类，State 合并扫描）。
+  // neededClasses 已经是「符号级真正要产出的类」；不在产物里的应用壳类不会进来。
+  for (final e in neededClasses.entries) {
+    final unit = units[e.key];
+    if (unit == null) continue;
+    for (final d in unit.declarations.whereType<ClassDeclaration>()) {
+      if (!e.value.contains(d.name.lexeme)) continue;
+      for (final cls in classAndStateDecls(d, unit)) {
         markAll(e.key, cls);
       }
     }

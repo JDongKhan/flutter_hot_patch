@@ -4,8 +4,6 @@
 
 import { Alignment, Border, BorderRadius, BoxDecoration, Color, Colors, Container, EdgeInsets, FontWeight, GestureDetector, StatelessWidget, Text, TextStyle } from '../../flutter.js';
 
-const _avatarImg = "assets/images/photo-1494790108377-be9c29b29330.jpg";
-const _bannerImg = "assets/images/photo-1519046904884-53103b34b206.jpg";
 export const kBrand = new Color({value: 0xFF0E7AFB});
 export const kPrice = new Color({value: 0xFFFF5A36});
 

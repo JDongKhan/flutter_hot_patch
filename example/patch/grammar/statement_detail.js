@@ -2,7 +2,6 @@
 // 由 hot_patch_generator 从 lib/grammar/statement_detail.dart 自动生成
 // 重新生成：dart run build_runner build
 
-import { topLevelCounter, topLevelGreet, topLevelNums, topLevelPrefix } from 'top_level_helper.js';
 import { Column, CrossAxisAlignment, FontWeight, FormatException, SizedBox, StatelessWidget, Text, TextStyle, int } from '../flutter.js';
 
 // 组件 StatementDetail
@@ -25,7 +24,7 @@ export class StatementDetail extends StatelessWidget {
         }
       }
     }
-    return topLevelPrefix("try/catch") + "/" + topLevelGreet({ "name": "x" }) + "/" + topLevelCounter().count + "/" + topLevelNums().length + "：" + parts._join("，");
+    return "try/catch：" + parts._join("，");
   }
   _rethrowText() {
     let trace = "";

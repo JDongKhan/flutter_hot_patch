@@ -8,5 +8,4 @@ export const topLevelPrefix = (value) => { return "顶层:" + value; };
 export const topLevelGreet = (__o) => { let name = (__o && __o.name !== undefined) ? __o.name : null; let prefix = (__o && __o.prefix !== undefined) ? __o.prefix : "Hi"; return prefix + ":" + name; };
 export const topLevelCounter = () => { return new CounterVm(); };
 export const topLevelNums = () => (function* () { yield 1;
-  yield 2; }).bind(this)();
-
+yield 2; }).bind(this)();

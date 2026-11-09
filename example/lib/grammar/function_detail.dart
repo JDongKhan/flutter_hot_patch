@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:hot_patch_annotations/hot_patch_annotations.dart';
 
 import 'inheritance_detail.dart';
+import 'top_level_helper.dart';
 
-/// 函数语法 demo：局部函数（表达式体 / 块体）、形参签名（可选位置 / 默认值 /
-/// 具名）、方法 tear-off 与对象上的 tear-off。
+/// 函数语法 demo：局部函数、顶层函数、形参签名、方法 / 对象 tear-off。
 @PatchEntry('FunctionDetail')
 class FunctionDetail extends StatelessWidget {
   const FunctionDetail({super.key});
@@ -62,17 +62,26 @@ class FunctionDetail extends StatelessWidget {
     return '对象 tear-off：${reportFn()}/$fresh/$speedNow';
   }
 
+  /// 顶层函数：与成员函数共用形参 / 函数体翻译，跨文件调用。
+  String _topLevelText() {
+    final counter = topLevelCounter();
+    return '顶层函数：${topLevelPrefix('fn')} / '
+        '${topLevelGreet(name: 'Dart')} / '
+        '${counter.count} / ${topLevelNums().length}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          '函数：局部函数 · 形参签名 · tear-off',
+          '函数：局部函数 · 顶层函数 · 形参签名 · tear-off',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(_localFuncText()),
+        Text(_topLevelText()),
         Text(_paramsText()),
         Text(_tearOffText()),
         Text(_objTearOffText()),

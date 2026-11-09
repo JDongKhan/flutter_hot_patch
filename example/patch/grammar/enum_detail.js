@@ -5,28 +5,28 @@
 import { Column, CrossAxisAlignment, ElevatedButton, FontWeight, SizedBox, StatefulWidget, Text, TextStyle } from '../flutter.js';
 
 export const TaskLevel = (function () {
-  const __values = [];
-  function __mk(name, index) {
+  const __enumValues = [];
+  function __makeEnumValue(name, index) {
     return {
       name: name,
       index: index,
       toString: function () { return "TaskLevel." + name; }
     };
   }
-  const low = __mk("low", 0);
-  __values.push(low);
-  const medium = __mk("medium", 1);
-  __values.push(medium);
-  const high = __mk("high", 2);
-  __values.push(high);
+  const low = __makeEnumValue("low", 0);
+  __enumValues.push(low);
+  const medium = __makeEnumValue("medium", 1);
+  __enumValues.push(medium);
+  const high = __makeEnumValue("high", 2);
+  __enumValues.push(high);
   return {
     low: low,
     medium: medium,
     high: high,
-    values: __values,
+    values: __enumValues,
     byName: function (name) {
-      for (var i = 0; i < __values.length; i++) {
-        if (__values[i].name === name) { return __values[i]; }
+      for (var i = 0; i < __enumValues.length; i++) {
+        if (__enumValues[i].name === name) { return __enumValues[i]; }
       }
       throw new Error("Invalid argument(s): Invalid value: " + name);
     }
