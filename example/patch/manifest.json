@@ -1,7 +1,7 @@
 {
   "name": "flutter_hot_example",
   "protocol": "0.13.0",
-  "buildTime": "2026-11-09T13:45:44.933494",
+  "buildTime": "2026-11-09T13:53:49.380265",
   "resources": {
     "flutter.js": "07fdf7109f0bed52b05dd6c2da81837686a17f7c774810e89ea23ffaa79fecc3",
     "packages/provider.js": "d40ab93d077438aea6d27aa7d5ae738b9b931e50ecf2acd1924d62238b3a055b",

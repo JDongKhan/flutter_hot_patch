@@ -53,11 +53,34 @@ void _warnUnsupportedSdkEnum(String owner) {
 // 静默改错。统一原样产出 `x.first` / `x.where(...)` / `x.add(...)`，由运行时
 //【1c】节给 Array / Number / String 内建原型补同名同义成员，按接收者类型分发。
 
+/// Dart 的 `#name` / `Symbol('name')` 在 JS 侧**不适用**（运行时没有 Symbol
+/// 承载 / noSuchMethod 反射桥）：构建期出声并返回 true（调用方据此丢弃）。
+///
+/// 必须在构造翻译（`valueCtorJs`）之前拦截——SDK 的 `Symbol` 构造签名存在，
+/// 否则会被译成 `new Symbol({name: …})`（JS 的 Symbol 不是构造函数）。
+bool _rejectSymbolExpression(Expression e, FieldScope scope) {
+  if (e is SymbolLiteral) {
+    log.warning('[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
+        'Symbol 字面量 ${e.toSource()} 在 JS 侧不适用'
+        '（无 Symbol / noSuchMethod 承载），已丢弃');
+    return true;
+  }
+  if (e is MethodInvocation &&
+      e.target == null &&
+      e.methodName.name == 'Symbol') {
+    log.warning('[hot_patch_generator] ${sourceAt(scope.sourcePath, e)}: '
+        'Symbol(...) 在 JS 侧不适用（无 Symbol / noSuchMethod 承载），已丢弃');
+    return true;
+  }
+  return false;
+}
+
 /// 读位置表达式 → JS 表达式（this._model.n / this._model / 字面量 / 形参）。
 String? exprToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
   // 函数表达式（闭包）本身就是表达式：变量初始化器、实参、三元分支等位置
   // 统一在这里翻译，可选 / 具名形参与默认值由 [closureToJs] 同一实现处理。
   if (e is FunctionExpression) return closureToJs(e, scope, classes);
+  if (_rejectSymbolExpression(e, scope)) return null;
   // 显式 extension 调用 `E(x).m(args)`：必须在构造翻译之前拦截——[valueCtorJs]
   // 会把 `E(x)` 当成 `new E({...})` 构造（E 是扩展名，不是类）。改写为
   // `x.m(args)`：成员已由 `registerExtension` 装在目标原型上。
@@ -602,6 +625,7 @@ String? _fnValueCallJs(
 String? rhsToJs(Expression e, FieldScope scope, Map<String, ClassInfo> classes) {
   // 显式 extension 调用 `E(x).m(...)`：先于构造钩子 / 构造翻译拦截——否则
   // `E(x)` 会被当成 `new E({...})` 构造（E 是扩展名，不是类）。
+  if (_rejectSymbolExpression(e, scope)) return null;
   if (e is MethodInvocation) {
     // 显式扩展调用：按**扩展身份**分派（`E.m.call(x, …)`），不走原型。
     final explicit = _explicitExtensionCallJs(e, scope, classes);
@@ -1554,6 +1578,12 @@ String _expressionFailureReason(
 ) {
   if (e is ParenthesizedExpression) {
     return _expressionFailureReason(e.expression, scope, classes);
+  }
+  if (e is SymbolLiteral ||
+      (e is MethodInvocation &&
+          e.target == null &&
+          e.methodName.name == 'Symbol')) {
+    return 'Symbol 在 JS 侧不适用（无 Symbol / noSuchMethod 承载）';
   }
   if (e is StringInterpolation) {
     for (final el in e.elements) {

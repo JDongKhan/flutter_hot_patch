@@ -1307,7 +1307,7 @@ __mixinHard(_C_Base_A_B, B);</code><button class="copy" type="button">复制</bu
 <!-- ================= 11 枚举与符号 ================= -->
 <section id="enums-symbols">
 <h2><span class="sec-no">11</span>枚举与符号</h2>
-<p class="h2-sub">简单枚举产出常量对象；增强枚举告警跳过。Dart Symbol 在 JS 侧没有对应，未覆盖。</p>
+<p class="h2-sub">简单枚举产出常量对象；增强枚举告警跳过。Dart Symbol 在 JS 侧不适用（无反射承载），构建期出声跳过。</p>
 
 
 
@@ -1396,6 +1396,7 @@ Status.#locked = true;</code><button class="copy" type="button">复制</button><
     <tr><td><code>switch (c) { case Color.red: }</code>（<code>enum Color { red }</code>）</td><td><code>switch (c) { case Color.red: }</code></td><td><span class="muted">—</span></td><td>JS 需要显式 break</td><td><code>_switchStatementJs</code> <code>SwitchStatement</code> 分支；<code>:2652</code> 模式 switch</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
     <tr><td><code>print(c)</code> → <code>Color.red</code></td><td><code>String(c)</code> → <code>'red'</code></td><td><span class="muted">—</span></td><td>由 toString 保证</td><td>字符串插值 / <code>toString()</code> 走枚举对象的 toString</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>c.index</code> / <code>c.name</code></td><td>同</td><td><span class="muted">—</span></td><td>getter 实现</td><td>项目简单枚举对象带 <code>name</code> / <code>index</code></td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
+    <tr><td><code>#name</code> / <code>Symbol('name')</code></td><td>无</td><td>JS 没有同名语义；本项目不支持 mirrors / <code>noSuchMethod</code> 反射</td><td><span class="lv lv-ban">不适用</span> 构建期告警并丢弃</td><td><code>exprToJs</code> 的 <code>SymbolLiteral</code> / <code>Symbol(...)</code> 分支：输出「无 Symbol / noSuchMethod 承载」告警并返回 null，产物不落 <code>#name</code>（脚本模式下是非法语法）</td><td><span class="st st-skip">不适用</span></td><td>改用字符串常量</td></tr>
   </tbody>
 </table>
 </div>
@@ -1412,8 +1413,8 @@ Status.#locked = true;</code><button class="copy" type="button">复制</button><
 
 
 <div class="note risk">
-  <span class="t">Symbol 未覆盖</span>
-  Dart 的 <code>Symbol</code> / <code>#name</code> 字面量在 JS 侧没有等价物；项目未生成 Symbol 承载，相关写法不进入翻译范围。
+  <span class="t">Symbol 不适用</span>
+  本项目没有 mirrors / <code>noSuchMethod</code> 的运行时桥，<code>Symbol</code> 在 JS 侧没有可承载的同义对象，因此按「不适用」处理：<code>#name</code> 与 <code>Symbol('name')</code> 在构建期告警并丢弃，不生成悬空引用，也不产出脚本模式下非法的 <code>#name</code>。需要稳定标识时改用字符串常量。
 </div>
 </section>
 
@@ -1685,11 +1686,11 @@ class StreamSubscription {
     <tr><td><code>s.asyncMap(f)</code></td><td>同名</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 串行等待，禁止 <code>Promise.all</code> 并行</td><td><code>asyncMap</code> 用 <code>_forwardEach</code> + 串行 <code>chain</code>，逐个 <code>await fn(v)</code> 后转发，无并行</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>s.toList()</code> / <code>first</code> / <code>last</code> / <code>length</code></td><td>同名</td><td><span class="muted">—</span></td><td><span class="lv lv-must">必须改写</span> 返回 Promise</td><td><code>Stream</code> 自身实现：<code>toList</code> / <code>toSet</code> / <code>first</code> / <code>last</code> / <code>length</code> / <code>isEmpty</code> / <code>isNotEmpty</code> 均返回 <code>Future.__wrap(...)</code>（空流 first / last 抛 <code>StateError</code>）</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
     <tr><td><code>s.asBroadcastStream()</code> / <code>s.pipe(dest)</code></td><td>同名</td><td><span class="muted">—</span></td><td><span class="lv lv-ok">直译</span></td><td><code>asBroadcastStream</code> 用广播 <code>StreamController</code> 在首个订阅时转发上游；<code>pipe</code> 转发到目标 controller 并随 done 关闭</td><td><span class="st st-pass">通过</span></td><td>按原则翻译</td></tr>
-    <tr><td>首个订阅前的 data / error / done</td><td>Dart：<code>listen</code> 返回后按微任务补发；当前 <code>listen</code> 内同步 <code>_enqueue</code> → <code>_drain</code></td><td><span class="lv lv-care">注意</span> 交付时机不同</td><td>补发必须异步（与 <code>_emit</code> 同一投递规则）</td><td><b>不通过</b>：<code>Stream.listen</code> 交付 <code>_pending</code> 时直接 <code>sub._enqueue(...)</code>，回调在 <code>listen</code> 调用栈内执行。实测 <code>add(1); 等一拍; listen</code>：Dart <code>afterListen,d1</code> / JS <code>d1,afterListen</code>；<code>late StreamSubscription sub; sub = stream.listen((v) =&gt; sub.cancel())</code> 在 JS 抛 <code>TypeError</code></td><td><span class="st st-fail">不通过</span></td><td>把 <code>_pending</code> 的补发排进微任务</td></tr>
-    <tr><td><code>sub.cancel()</code> / <code>cancelOnError</code> 后继续 <code>controller.add(…)</code>，再 <code>close()</code></td><td>Dart：事件丢弃，close Future 正常完成；当前：事件进 <code>_pending</code>，close 等不到消费者</td><td><span class="lv lv-must">必须改写</span></td><td>取消后的单订阅流不再缓冲</td><td><b>不通过</b>：<code>_deliverEvent</code> 在无订阅者时仍把 data / done 推入 <code>_pending</code>，<code>_tryResolveClose</code> 因 <code>_pending</code> 非空永久等待。实测 <code>cancelOnError</code> 场景 <code>close()</code>：Dart 完成 / JS 永不完成（<code>pending=2</code>）；取消后 <code>add</code> 再 <code>close</code> 同样 <code>closeDone=false</code></td><td><span class="st st-fail">不通过</span></td><td>记录「单订阅已消耗」状态：取消后 <code>add</code> 直接丢弃，<code>close()</code> 立即完成</td></tr>
-    <tr><td>无订阅者时同 tick <code>add(…) + close()</code></td><td>Dart：close Future 等 done 被消费；当前：done 还没落进 <code>_pending</code> 就判定为空</td><td><span class="lv lv-care">注意</span></td><td>close 完成时机与 Dart 一致</td><td><b>不通过</b>：<code>_emit</code> 异步投递，<code>close()</code> 内的 <code>_tryResolveClose</code> 在 done 进入 <code>_pending</code> 之前执行，<code>_pending.length === 0</code> 直接 <code>_finishClose()</code>。实测 20ms 时 <code>closed</code>：Dart <code>false</code> / JS <code>true</code></td><td><span class="st st-fail">不通过</span></td><td><code>_tryResolveClose</code> 需感知「已 emit 但尚未投递」的 done</td></tr>
-    <tr><td>done 交付后的订阅自动移除 / <code>hasListener</code></td><td>Dart：订阅自动取消，<code>hasListener=false</code>；当前：订阅留在 <code>_subs</code></td><td><span class="lv lv-care">注意</span></td><td>done 即终止该订阅</td><td><b>不通过</b>：<code>StreamSubscription._deliver</code> 处理 done 后只调 <code>_onDoneDelivered</code>，不从 <code>_subs</code> 删除，也不置 <code>_cancelled</code>。实测 <code>hasListener</code>：Dart <code>false</code> / JS <code>true</code>（广播与单订阅均如此），完成后的订阅与回调一直挂在流上</td><td><span class="st st-fail">不通过</span></td><td>done 交付后按自动取消处理（移出 <code>_subs</code>，必要时触发 <code>_cleanupIfIdle</code>）</td></tr>
-    <tr><td>广播 <code>onListen</code> / <code>onCancel</code> 成对（订阅者归零后再次订阅）</td><td>Dart：每次首订阅 / 末取消各触发一次；当前：onCancel 只在第一次触发</td><td><span class="lv lv-care">注意</span></td><td>回调按订阅周期成对</td><td><b>不通过</b>：<code>_cancelSource</code> 首次调用后把 <code>_onCancel</code> 置 <code>null</code>；广播订阅者归零 → 再订阅时只触发 <code>_onListen</code>。实测两次订阅 / 取消：Dart <code>2/2</code> / JS <code>2/1</code>；<code>asBroadcastStream</code> 等依赖 onCancel 释放上游的路径第二次不再触发</td><td><span class="st st-fail">不通过</span></td><td>不要清空 <code>_onCancel</code>；依赖 <code>_stopped</code> 防重入</td></tr>
+    <tr><td>首个订阅前的 data / error / done</td><td>Dart：<code>listen</code> 返回后按微任务补发；产物同样在微任务交付</td><td><span class="muted">—</span></td><td>补发与 <code>_emit</code> 同一投递规则</td><td><code>Stream.listen</code> 把 <code>_pending</code> 排进微任务后交付；探针 N 双端逐字一致（<code>afterListen</code> 先于回调）</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td><code>sub.cancel()</code> / <code>cancelOnError</code> 后继续 <code>controller.add(…)</code>，再 <code>close()</code></td><td>Dart：事件丢弃，close Future 正常完成；产物一致</td><td><span class="muted">—</span></td><td>取消后的单订阅流不再缓冲</td><td>取消后 <code>add</code> 直接丢弃（不再进 <code>_pending</code>），<code>close()</code> 正常完成；探针 P 双端一致</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td>无订阅者时同 tick <code>add(…) + close()</code></td><td>Dart：close Future 等 done 被消费；产物一致</td><td><span class="muted">—</span></td><td>close 完成时机与 Dart 一致</td><td><code>_tryResolveClose</code> 感知「已 emit 但尚未投递」的 done，等 done 真正交付（或广播丢弃）后才完成；探针 Q 双端一致</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td>done 交付后的订阅自动移除 / <code>hasListener</code></td><td>Dart：订阅自动取消，<code>hasListener=false</code>；产物一致</td><td><span class="muted">—</span></td><td>done 即终止该订阅</td><td>done 交付后订阅从 <code>_subs</code> 移除（广播与单订阅一致），<code>hasListener</code> 变 false；探针 O 双端一致</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
+    <tr><td>广播 <code>onListen</code> / <code>onCancel</code> 成对（订阅者归零后再次订阅）</td><td>Dart：每次首订阅 / 末取消各触发一次；产物一致</td><td><span class="muted">—</span></td><td>回调按订阅周期成对</td><td><code>onCancel</code> 不再被清空，每个「最后一个订阅者离开」周期都触发；探针 R 双端一致</td><td><span class="st st-pass">通过</span></td><td>保持项目现状</td></tr>
   </tbody>
 </table>
 </div>
@@ -1698,11 +1699,11 @@ class StreamSubscription {
   <span class="t">七个必须建模的语义</span>
   ① <strong>惰性</strong>：<code>async*</code> 在首次订阅前不能执行函数体；包装时立刻 <code>for await</code> 会让 <code>initState</code> 里创建的流提前开跑。<br>
   ② <strong>单订阅与广播</strong>：单订阅流第二次 <code>listen</code> 抛 <code>StateError</code>；广播流每个订阅者独立，<b>无订阅者时</b> data / error 直接丢弃（done 粘滞给后续订阅者），<code>pause</code> 期间与单订阅一样按订阅者缓冲（与 Dart 实测一致）。<br>
-  ③ <strong>错误不终止流</strong>：<code>listen</code> 的 <code>onError</code> 处理完流继续，只有 <code>cancelOnError</code> 才取消订阅；<code>await for</code> 遇错则中断，所以 <code>asyncIterator</code> 必须 <code>throw</code>。<b>未对齐</b>：Dart 在 <code>await for</code> 因错误退出时会取消订阅，当前只中断、不取消（不通过）。<br>
+  ③ <strong>错误不终止流</strong>：<code>listen</code> 的 <code>onError</code> 处理完流继续，只有 <code>cancelOnError</code> 才取消订阅；<code>await for</code> 遇错则中断，所以 <code>asyncIterator</code> 必须 <code>throw</code>，并在抛出前注销拉取方、await 上游清理（探针 S）。<br>
   ④ <strong>背压</strong>：单订阅流 <code>pause</code> 后缓冲事件并停止拉取上游（<code>async*</code> 停在 <code>yield</code>），<code>resume</code> 按序补发后继续拉取；广播不向源传播暂停（事件进各订阅者队列）。<br>
   ⑤ <strong><code>StreamController</code> 的 onListen 惰性</strong>：第一次 <code>listen</code> 才触发 <code>onListen</code>，<code>close</code> 之后不能再 <code>add</code>。<br>
   ⑥ <strong>单订阅一生一次 / 错误不静默</strong>：取消后再次 <code>listen</code> 或 <code>await for</code> 抛 <code>StateError</code>；无 <code>onError</code> 的错误经 <code>__error</code> 上报；<code>onError</code> 第二参为栈字符串（<code>addError</code> 未给栈时为空串，对应 Dart <code>StackTrace.empty</code>；生成器 <code>throw</code> 取 <code>Error.stack</code>）。<br>
-  ⑦ <strong>close / done / onCancel 生命周期</strong>：Dart 的单订阅流在 <code>cancel()</code> 后不再缓冲（<code>add</code> 丢弃、<code>close()</code> 立即完成），done 交付后订阅自动取消（<code>hasListener=false</code>），广播的 <code>onListen</code> / <code>onCancel</code> 按订阅周期成对触发。<b>当前四项均未对齐</b>：取消后 <code>_pending</code> 仍累积导致 <code>close()</code> 挂起、无订阅者同 tick <code>close()</code> 提前完成、done 后订阅留在 <code>_subs</code>、广播 <code>onCancel</code> 只触发一次（见上表不通过行）。
+  ⑦ <strong>close / done / onCancel 生命周期</strong>：Dart 的单订阅流在 <code>cancel()</code> 后不再缓冲（<code>add</code> 丢弃、<code>close()</code> 立即完成），done 交付后订阅自动取消（<code>hasListener=false</code>），广播的 <code>onListen</code> / <code>onCancel</code> 按订阅周期成对触发。四项均已对齐（探针 O / P / Q / R）。
 </div>
 
 </section>
@@ -1749,12 +1750,26 @@ class StreamSubscription {
 <h3>已提供</h3>
 <ul>
   <li><code>__nn(v)</code>（undefined → null 归一，<b>不抛错</b>，其他值原样返回）、<code>__mod(a, b)</code>（欧几里得取模）、<code>__mixinHard(cls, mixin)</code>（mixin application 的原型成员复制）、<code>assert</code>、Array / String / Number 同名成员补齐。</li>
-  <li>已知边界以各章「现状」列为准：<code>Stream</code> 六项语义边界见第 16 章，extension 跨库同名隐式分派 / 泛型目标见第 07 章「extension 扩展成员」。</li>
+  <li>已知边界以各章「现状」列为准：<code>Stream</code> 语义见第 16 章与本节行为基线；extension 跨库同名隐式分派 / 泛型目标见第 07 章「extension 扩展成员」；其余接受差异见本节「接受差异（不修复）」。</li>
 </ul>
 
 <div class="note">
   <span class="t">为什么补齐放运行时</span>
   生成器不带类型解析，只看得到方法名；同名成员按<b>接收者类型</b>分发（挂 <code>Array.prototype</code> 只影响数组，不会误伤同名的控制器方法）。补齐项必须不可枚举、带存在性守卫，禁止挂 <code>Object.prototype</code>。
+</div>
+
+<h3>接受差异（不修复）</h3>
+<p>以下差异由 JS 运行时模型决定，项目明确接受、不作为缺陷跟踪；对应章节的「是否通过」列按同一口径标注。</p>
+<div class="scroll">
+<table>
+  <colgroup><col style="width:18%"><col style="width:34%"><col style="width:34%"><col style="width:14%"></colgroup>
+  <thead><tr><th>差异</th><th>表现</th><th>原因</th><th>结论</th></tr></thead>
+  <tbody>
+    <tr><td>List 下标越界</td><td><code>list[i]</code> 越界：Dart 抛 <code>RangeError</code>，JS 返回 <code>undefined</code>；<code>elementAt</code> / <code>sublist</code> / <code>insert</code> / <code>take</code> / <code>skip</code> 等成员已按 Dart 抛 <code>RangeError</code></td><td>JS 原生下标不做边界检查；给所有 <code>a[i]</code> 加检查会改变产物形态与性能，且接收者不一定是 List</td><td>接受；需要越界校验时用 <code>elementAt</code></td></tr>
+    <tr><td>泛型 extension 目标</td><td><code>extension E&lt;T&gt; on List&lt;T&gt;</code> 挂到擦除后的 Array 原型，成员对所有元素类型可见</td><td>运行时没有类型实参可用于区分原型；类型参数只在类型位置保留</td><td>接受擦除限制（第 07 章标注不通过）</td></tr>
+    <tr><td>跨库同名 extension</td><td>不同库在同一目标上声明同名成员时，隐式调用无法按 import 可见性分派；运行期 <code>@conflict</code> 双方都不安装</td><td>原型是全局的，import 可见性是编译期概念，全局原型无法表达</td><td>接受；改用显式 <code>E(x).m()</code></td></tr>
+  </tbody>
+</table>
 </div>
 
 </section>
