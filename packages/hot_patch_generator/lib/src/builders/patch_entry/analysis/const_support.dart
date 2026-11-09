@@ -53,8 +53,10 @@ class TopLevelConstResolver {
 TopLevelConstResolver buildTopLevelConstResolver(
   CompilationUnit unit,
   String sourcePath,
-  Map<String, ClassInfo> classTable,
-) {
+  Map<String, ClassInfo> classTable, {
+  /// 只翻译 / 发射这些同文件顶层函数；null = 全部（根文件）。
+  Set<String>? emitFunctions,
+}) {
   final resolver = TopLevelConstResolver();
   final exprs = <String, Expression>{};
   // 枚举：Dart `enum E { a, b }` → 同形 JS 常量对象（成员带 name/index/values）。
@@ -194,18 +196,17 @@ TopLevelConstResolver buildTopLevelConstResolver(
   final allNames = {...translated.keys, ...functionNames};
   final hostFunctions = buildHostFunctions(unit, sourcePath);
   for (final e in sameFileFunctions.entries) {
-    final js = translateTopLevelFunctionJs(
-      e.value,
-      FieldScope(
-        sourcePath: sourcePath,
-        globalConsts: allNames,
-        hostFunctions: hostFunctions,
-      ),
-      classTable,
+    if (emitFunctions != null && !emitFunctions.contains(e.key)) continue;
+    final scope = FieldScope(
+      sourcePath: sourcePath,
+      globalConsts: allNames,
+      hostFunctions: hostFunctions,
     );
+    final js = translateTopLevelFunctionJs(e.value, scope, classTable);
     if (js == null) {
+      final reason = topLevelFunctionFailureReason(e.value, scope, classTable);
       log.warning('[hot_patch_generator] ${sourceAt(sourcePath, e.value)}: '
-          '顶层函数 ${e.key} 无法翻译，已跳过');
+          '顶层函数 ${e.key} 无法翻译，已跳过（原因：$reason）');
       continue;
     }
     resolver.sameFile[e.key] = js;

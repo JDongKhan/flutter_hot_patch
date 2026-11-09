@@ -242,11 +242,15 @@ class ComponentBuilder implements Builder {
       // 宿主代码使用的私有常量）。
       final neededConsts =
           scope!.neededConsts[inputId.path] ?? const <String>{};
-      final constResolver =
-          buildTopLevelConstResolver(parsed.unit, inputId.path, classTable);
       final neededFunctions =
           scope.neededFunctions[inputId.path] ?? const <String>{};
       if (neededConsts.isEmpty && neededFunctions.isEmpty) return;
+      final constResolver = buildTopLevelConstResolver(
+        parsed.unit,
+        inputId.path,
+        classTable,
+        emitFunctions: neededFunctions,
+      );
       final consts = <String, String>{
         for (final e in constResolver.sameFile.entries)
           if (neededConsts.contains(e.key) || neededFunctions.contains(e.key))
@@ -278,17 +282,25 @@ class ComponentBuilder implements Builder {
     // 在解析期翻译成 JS 值。同文件的 inline 进本产物，跨文件的 import——与类
     // 同一套「同文件内联 / 跨文件 import」规则。globalConsts 是「已译成功」的
     // 常量名集合，注入翻译作用域后组件里的 `kBanners` 才能解析为同名 JS 常量。
-    final constResolver =
-        buildTopLevelConstResolver(parsed.unit, inputId.path, classTable);
-    final globalConsts = constResolver.names;
-    // 顶层函数按符号级引用过滤：根文件（@PatchEntry，scope 为 null）直接发射
-    // 本文件全部函数；非根文件只发射 scope.neededFunctions 标记的函数。
+    // 顶层函数 / 常量按符号级引用过滤：根文件（@PatchEntry，scope 为 null）
+    // 直接发射本文件全部；非根文件只发射 scope 标记的项。
+    final allFunctionNames = <String>{
+      for (final d in parsed.unit.declarations.whereType<FunctionDeclaration>())
+        if (d.name.lexeme != 'main') d.name.lexeme,
+    };
     final neededFunctions = scope == null
-        ? constResolver.functionNames
+        ? allFunctionNames
         : (scope.neededFunctions[inputId.path] ?? const <String>{});
     final neededConsts = scope == null
         ? null
         : (scope.neededConsts[inputId.path] ?? const <String>{});
+    final constResolver = buildTopLevelConstResolver(
+      parsed.unit,
+      inputId.path,
+      classTable,
+      emitFunctions: scope == null ? null : neededFunctions,
+    );
+    final globalConsts = constResolver.names;
 
     // 逐个根类翻译：JS 类名 = Dart 类名；State 合并、字段 / 方法 / 依赖处理
     // 全部在 translateClass 内部完成，builder 只决定「以组件身份还是普通类身份」。

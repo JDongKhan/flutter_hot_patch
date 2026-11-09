@@ -1261,7 +1261,8 @@ String? _stringInterpolationJs(
           // `"用户信息:"`），故必须出声，不能静默。
           log.warning('[hot_patch_generator] '
               '${sourceAt(scope.sourcePath, el.expression)}: 插值片段无法翻译，已在 JS 产物中'
-              '丢失：\${${el.expression.toSource()}}');
+              '丢失：\${${el.expression.toSource()}}'
+              '（原因：${_expressionFailureReason(el.expression, scope, classes)}）');
         }
       }
     }
@@ -1492,6 +1493,160 @@ String? translateTopLevelFunctionJs(
   Map<String, ClassInfo> classes,
 ) =>
     closureToJs(decl.functionExpression, scope, classes);
+
+/// 顶层函数翻译失败的可读原因：只按 AST 形态与作用域判定，不重新翻译。
+String topLevelFunctionFailureReason(
+  FunctionDeclaration decl,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  final body = decl.functionExpression.body;
+  if (body is ExpressionFunctionBody) {
+    return _expressionFailureReason(body.expression, scope, classes);
+  }
+  if (body is BlockFunctionBody) {
+    for (final s in body.block.statements) {
+      final reason = _statementFailureReason(s, scope, classes);
+      if (reason.isNotEmpty) return reason;
+    }
+  }
+  return '函数体包含当前未支持的语法';
+}
+
+/// 语句失败原因（用于告警；不触发二次翻译 / 告警）。
+String _statementFailureReason(
+  Statement s,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (s is ExpressionStatement) {
+    return _expressionFailureReason(s.expression, scope, classes);
+  }
+  if (s is VariableDeclarationStatement) {
+    for (final v in s.variables.variables) {
+      final init = v.initializer;
+      if (init != null) {
+        return '局部变量 `${v.name.lexeme}`：'
+            '${_expressionFailureReason(init, scope, classes)}';
+      }
+    }
+  }
+  if (s is ReturnStatement) {
+    final e = s.expression;
+    if (e != null) {
+      return 'return：${_expressionFailureReason(e, scope, classes)}';
+    }
+  }
+  if (s is Block) {
+    for (final inner in s.statements) {
+      final reason = _statementFailureReason(inner, scope, classes);
+      if (reason.isNotEmpty) return reason;
+    }
+  }
+  return '语句类型 ${s.runtimeType} 暂无翻译规则';
+}
+
+/// 表达式失败原因：按节点类型给出可读结论，用于补齐告警。
+String _expressionFailureReason(
+  Expression e,
+  FieldScope scope,
+  Map<String, ClassInfo> classes,
+) {
+  if (e is ParenthesizedExpression) {
+    return _expressionFailureReason(e.expression, scope, classes);
+  }
+  if (e is StringInterpolation) {
+    for (final el in e.elements) {
+      if (el is InterpolationExpression) {
+        return '插值 `${el.expression.toSource()}`：'
+            '${_expressionFailureReason(el.expression, scope, classes)}';
+      }
+    }
+    return '字符串插值片段无法翻译';
+  }
+  if (e is AssignmentExpression) {
+    final lhs = e.leftHandSide;
+    if (lhs is PrefixedIdentifier) {
+      final recv = lhs.prefix.name;
+      final known = scope.fieldRef(recv) != null ||
+          scope.localVars.contains(recv) ||
+          scope.params.contains(recv) ||
+          classes.containsKey(recv) ||
+          runtimeGlobalTypes().contains(recv) ||
+          scope.className == recv;
+      if (!known) {
+        return '赋值目标 `${lhs.toSource()}` 的接收者 `$recv` 不可解析';
+      }
+      return '赋值目标 `${lhs.toSource()}` 的成员无法翻译';
+    }
+    if (lhs is PropertyAccess) {
+      return '赋值目标 `${lhs.toSource()}` 的属性无法翻译';
+    }
+    if (lhs is SimpleIdentifier) {
+      final n = lhs.name;
+      final visible = scope.fieldRef(n) != null ||
+          scope.localVars.contains(n) ||
+          scope.params.contains(n) ||
+          scope.globalConsts.contains(n) ||
+          scope.staticFields.contains(n) ||
+          scope.staticMethods.contains(n) ||
+          scope.methods.contains(n);
+      if (!visible) {
+        return '赋值目标 `$n` 不在可见的字段 / 局部变量 / 顶层常量表';
+      }
+    }
+    return '赋值目标 / 右值无法翻译';
+  }
+  if (e is CascadeExpression) {
+    return '级联链 `${e.target.toSource()}` 中存在无法翻译的 section';
+  }
+  if (e is MethodInvocation) {
+    final t = e.target;
+    if (t is SimpleIdentifier) {
+      final n = t.name;
+      final known = scope.fieldRef(n) != null ||
+          scope.localVars.contains(n) ||
+          scope.params.contains(n) ||
+          classes.containsKey(n) ||
+          runtimeGlobalTypes().contains(n) ||
+          scope.className == n;
+      if (!known) {
+        return '调用 `${e.methodName.name}(...)` 的接收者 `$n` 不可解析';
+      }
+    }
+    return '调用 `${e.methodName.name}(...)` 的目标 / 实参 / 闭包体无法翻译';
+  }
+  if (e is InstanceCreationExpression) {
+    return '构造 `${e.constructorName.type.toSource()}(...)` 的实参 / 具名参数无法翻译';
+  }
+  if (e is PropertyAccess) {
+    return '属性 `${e.propertyName.name}` 无法翻译（接收者类型不可判定或成员未实现）';
+  }
+  if (e is PrefixedIdentifier) {
+    return '属性 `${e.prefix.name}.${e.identifier.name}` 无法翻译（静态目标不可解析）';
+  }
+  if (e is AwaitExpression) return 'await 的内层表达式无法翻译';
+  if (e is ConditionalExpression) return '三目分支无法翻译';
+  if (e is BinaryExpression) {
+    return '二元运算 `${e.operator.lexeme}` 的操作数无法翻译';
+  }
+  if (e is SimpleIdentifier) {
+    final n = e.name;
+    final known = scope.fieldRef(n) != null ||
+        scope.localVars.contains(n) ||
+        scope.params.contains(n) ||
+        scope.globalConsts.contains(n) ||
+        scope.methods.contains(n) ||
+        scope.staticFields.contains(n) ||
+        scope.staticMethods.contains(n);
+    if (!known) {
+      return '标识符 `$n` 不在可见作用域（可能来自被丢弃的声明 / 不可见 import）';
+    }
+    return '标识符 `$n` 的引用无法翻译（声明可能已被丢弃）';
+  }
+  if (e is FunctionExpression) return '闭包体无法翻译';
+  return '表达式类型 ${e.runtimeType} 暂无翻译规则';
+}
 
 ///
 /// 泛型方法调用点能定位到的声明侧类型参数名。
@@ -2974,7 +3129,8 @@ String translateStmtList(
       } else {
         log.warning('[hot_patch_generator] '
             '${sourceAt(scope.sourcePath, e)}: 语句无法翻译，已在 JS 产物中'
-            '丢弃：${e.toSource()}');
+            '丢弃：${e.toSource()}'
+            '（原因：${_expressionFailureReason(e, scope, classes)}）');
       }
     } else if (s is VariableDeclarationStatement) {
       // 局部变量声明 `String? name = await X.y();` → `let name = ...;` /
@@ -3015,7 +3171,8 @@ String translateStmtList(
           // 变量没声明 → 后面引用它的语句（含插值）会连带失效，必须出声。
           log.warning('[hot_patch_generator] '
               '${sourceAt(scope.sourcePath, v)}: 局部变量声明无法翻译，已在 JS '
-              '产物中丢弃：${s.toSource()}');
+              '产物中丢弃：${s.toSource()}'
+              '（原因：${v.initializer == null ? '初始化器缺失' : _expressionFailureReason(v.initializer!, scope, classes)}）');
           continue;
         }
         out.add('${ind}$keyword $name = $init;');
