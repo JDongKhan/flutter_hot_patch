@@ -45,3 +45,6 @@ app.*.map.json
 **/android/app/profile
 **/android/app/release
 /AGENTS.md
+
+# Trae HTML 分享功能生成的临时打包产物
+.trae-html-share-packages/
